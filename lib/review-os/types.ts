@@ -65,6 +65,9 @@ export type WrongAnswerItemInput = {
   referenceStructure?: string;
   myAnswerSummary?: string;
   caseSummary?: string;
+  rewriteSourceItemId?: string;
+  rewriteSourceGap?: string;
+  rewriteCompleted?: boolean;
   extractionPayload?: {
     raw_ocr_text?: string;
     raw_extraction_json?: Record<string, unknown>;

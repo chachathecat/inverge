@@ -23,6 +23,14 @@ type CaptureFormProps = {
   userId: string;
   mode: AppraisalMode;
   initialPreferredSubjects?: string[];
+  rewriteContext?: {
+    sourceItemId: string;
+    sourceTitle: string;
+    biggestGap: string;
+    rewriteInstruction: string;
+    referenceSummary: string;
+    myAnswerSummary: string;
+  } | null;
 };
 
 type DraftState = {
@@ -164,7 +172,7 @@ function pickConcepts(text: string, fallback: string) {
   return Array.from(new Set(words)).slice(0, 3).join(", ") || fallback;
 }
 
-export function WrongAnswerCaptureForm({ userId, mode, initialPreferredSubjects = [] }: CaptureFormProps) {
+export function WrongAnswerCaptureForm({ userId, mode, initialPreferredSubjects = [], rewriteContext = null }: CaptureFormProps) {
   const router = useRouter();
   const config = getModeConfig(mode);
   const storageKey = { userId, feature: "capture-draft", entityId: mode };
@@ -182,12 +190,12 @@ export function WrongAnswerCaptureForm({ userId, mode, initialPreferredSubjects 
         subjectLabel: initialSubject,
         sourceType: "manual",
         sourceLabel: "",
-        problemTitle: "",
+        problemTitle: rewriteContext?.sourceTitle ?? "",
         problemIdentifier: mode === "second" ? SECOND_TASK_PRESETS[0] : "",
         rawQuestionText: "",
-        correctAnswer: "",
+        correctAnswer: rewriteContext?.referenceSummary ?? "",
         userAnswer: "",
-        userReasonText: mode === "second" ? secondDefaults(initialSubject).issue : firstDefaults(initialSubject).reason,
+        userReasonText: rewriteContext?.biggestGap ?? (mode === "second" ? secondDefaults(initialSubject).issue : firstDefaults(initialSubject).reason),
         userReasonPreset: "",
         confidence: "중간",
         timeSpentSeconds: "",
@@ -195,12 +203,12 @@ export function WrongAnswerCaptureForm({ userId, mode, initialPreferredSubjects 
         keyConcepts: firstDefaults(initialSubject).concepts,
         coreFormula: firstDefaults(initialSubject).formula,
         comparisonPoint: firstDefaults(initialSubject).comparison,
-        missingIssue: secondDefaults(initialSubject).issue,
+        missingIssue: rewriteContext?.biggestGap ?? secondDefaults(initialSubject).issue,
         weakStructurePoint: secondDefaults(initialSubject).structure,
         weakApplicationSentence: secondDefaults(initialSubject).sentence,
-        rewriteInstruction: secondDefaults(initialSubject).rewrite,
+        rewriteInstruction: rewriteContext?.rewriteInstruction ?? secondDefaults(initialSubject).rewrite,
         referenceStructure: secondDefaults(initialSubject).structure,
-        myAnswerSummary: "",
+        myAnswerSummary: rewriteContext?.myAnswerSummary ?? "",
         caseSummary: secondDefaults(initialSubject).caseSummary,
         rawOcrText: "",
         rawExtractionJson: {},
@@ -208,7 +216,7 @@ export function WrongAnswerCaptureForm({ userId, mode, initialPreferredSubjects 
         extractionNeedsReview: false,
       };
   });
-  const [stage, setStage] = useState<"intake" | "preview" | "confirm">("intake");
+  const [stage, setStage] = useState<"intake" | "preview" | "confirm">(rewriteContext && mode === "second" ? "confirm" : "intake");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [extracting, setExtracting] = useState(false);
@@ -456,8 +464,15 @@ export function WrongAnswerCaptureForm({ userId, mode, initialPreferredSubjects 
               userReasonPreset: form.userReasonPreset,
               nextReviewDate: form.nextReviewDate,
               problemTitle: form.problemTitle,
+              rewrite_source_item_id: rewriteContext?.sourceItemId ?? null,
+              rewrite_source_gap: rewriteContext?.biggestGap ?? null,
+              rewrite_instruction: form.rewriteInstruction || rewriteContext?.rewriteInstruction || null,
+              rewrite_completed: mode === "second" && Boolean(rewriteContext),
             },
           },
+          rewriteSourceItemId: rewriteContext?.sourceItemId ?? undefined,
+          rewriteSourceGap: rewriteContext?.biggestGap ?? undefined,
+          rewriteCompleted: mode === "second" && Boolean(rewriteContext),
         }),
       });
       const result = (await response.json()) as { ok?: boolean; item?: { id: string } };
@@ -477,29 +492,48 @@ export function WrongAnswerCaptureForm({ userId, mode, initialPreferredSubjects 
 
   return (
     <form className="space-y-6" onSubmit={handleSubmit}>
-      <IntakePanel
-        form={form}
-        mode={mode}
-        extracting={extracting}
-        extractError={extractError}
-        update={update}
-        onImage={handleImageImport}
-        onPdf={handlePdfImport}
-        onGenerate={() => generateStructuredDraft()}
-      />
+      {rewriteContext && mode === "second" ? (
+        <>
+          <RewriteContextPanel
+            title={rewriteContext.sourceTitle}
+            biggestGap={rewriteContext.biggestGap}
+            rewriteInstruction={rewriteContext.rewriteInstruction}
+            referenceSummary={rewriteContext.referenceSummary}
+            myAnswerSummary={rewriteContext.myAnswerSummary}
+          />
+          <RewriteParagraphPanel form={form} update={update} />
+        </>
+      ) : (
+        <>
+          <IntakePanel
+            form={form}
+            mode={mode}
+            extracting={extracting}
+            extractError={extractError}
+            update={update}
+            onImage={handleImageImport}
+            onPdf={handlePdfImport}
+            onGenerate={() => generateStructuredDraft()}
+          />
 
-      {stage !== "intake" ? (
-        <ExtractionPreview form={form} mode={mode} onEdit={() => setStage("confirm")} onRegenerate={() => generateStructuredDraft()} />
-      ) : null}
+          {stage !== "intake" ? (
+            <ExtractionPreview form={form} mode={mode} onEdit={() => setStage("confirm")} onRegenerate={() => generateStructuredDraft()} />
+          ) : null}
 
-      {stage === "confirm" ? (
-        <ConfirmPanel form={form} mode={mode} config={config} update={update} updateSubject={updateSubject} />
-      ) : null}
+          {stage === "confirm" ? (
+            <ConfirmPanel form={form} mode={mode} config={config} update={update} updateSubject={updateSubject} />
+          ) : null}
+        </>
+      )}
 
       {error ? <p className="text-sm text-[color:var(--status-red)]">{error}</p> : null}
 
       <div className="flex flex-col gap-3 sm:flex-row">
-        {stage === "preview" ? (
+        {rewriteContext && mode === "second" ? (
+          <Button type="submit" disabled={submitting || !form.userAnswer.trim()}>
+            {submitting ? "저장 중" : "문단 다시쓰기 저장"}
+          </Button>
+        ) : stage === "preview" ? (
           <Button type="button" onClick={() => setStage("confirm")}>
             확인하고 저장하기
           </Button>
@@ -862,6 +896,77 @@ function SecondConfirmFields(props: FieldProps) {
         </label>
       </div>
     </div>
+  );
+}
+
+function RewriteContextPanel({
+  title,
+  biggestGap,
+  rewriteInstruction,
+  referenceSummary,
+  myAnswerSummary,
+}: {
+  title: string;
+  biggestGap: string;
+  rewriteInstruction: string;
+  referenceSummary: string;
+  myAnswerSummary: string;
+}) {
+  return (
+    <section className="rounded-[var(--radius-card)] border border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] p-5">
+      <p className="text-caption text-[color:var(--cue-review)]">문단 다시쓰기 컨텍스트</p>
+      <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">{title}</h3>
+      <div className="mt-4 grid gap-3 md:grid-cols-2">
+        <PreviewLine label="가장 큰 간극" value={biggestGap} />
+        <PreviewLine label="다시쓰기 지시" value={rewriteInstruction} />
+      </div>
+      <div className="mt-3 grid gap-3 md:grid-cols-2">
+        <PreviewLine label="기준 답안 요약" value={referenceSummary} />
+        <PreviewLine label="내 답안 요약" value={myAnswerSummary} />
+      </div>
+      <p className="mt-4 text-sm leading-6 text-[color:var(--muted)]">
+        전체 답안이 아니라 한 문단만 다시 씁니다. 위 간극 1개만 반영해 짧고 정확하게 작성하세요.
+      </p>
+    </section>
+  );
+}
+
+function RewriteParagraphPanel({
+  form,
+  update,
+}: {
+  form: DraftState;
+  update: <K extends keyof DraftState>(key: K, value: DraftState[K]) => void;
+}) {
+  return (
+    <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-5">
+      <p className="text-caption text-[color:var(--muted)]">실행 입력</p>
+      <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">보강 문단을 바로 작성합니다</h3>
+      <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">하나의 간극만 보강한 문단으로 저장하면 다음 review 일정이 자동 연결됩니다.</p>
+      <label className="mt-4 block space-y-2">
+        <span className="text-sm text-[color:var(--foreground-strong)]">다시 쓴 문단</span>
+        <Textarea
+          value={form.userAnswer}
+          onChange={(event) => {
+            update("userAnswer", event.target.value);
+            update("myAnswerSummary", firstLine(event.target.value, form.myAnswerSummary || "문단 다시쓰기"));
+          }}
+          className="min-h-44 border-[var(--border)] bg-[color:var(--surface)] text-[color:var(--foreground-strong)]"
+          placeholder="누락 논점 1개를 반영해 문단을 다시 작성하세요."
+        />
+      </label>
+      <label className="mt-4 block space-y-2">
+        <span className="text-sm text-[color:var(--foreground-strong)]">보강할 논점 1개</span>
+        <input
+          value={form.userReasonText}
+          onChange={(event) => {
+            update("userReasonText", event.target.value);
+            update("missingIssue", event.target.value);
+          }}
+          className="h-12 w-full rounded-2xl border border-[var(--border)] bg-[color:var(--surface)] px-4 text-sm outline-none"
+        />
+      </label>
+    </section>
   );
 }
 
