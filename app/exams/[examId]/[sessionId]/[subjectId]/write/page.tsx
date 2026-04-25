@@ -1,12 +1,15 @@
+import { notFound } from "next/navigation";
+
 import { SubmitWorkspace } from "@/components/inverge/submit-workspace";
-import { readWorkRouteParams } from "@/lib/inverge/router";
+import { readWorkRouteParamsStrict } from "@/lib/inverge/router";
 
 type WritePageProps = {
   params: Promise<{ examId: string; sessionId: string; subjectId: string }>;
 };
 
 export default async function WritePage({ params }: WritePageProps) {
-  const route = readWorkRouteParams(await params);
+  const route = readWorkRouteParamsStrict(await params);
+  if (!route) notFound();
 
   return <SubmitWorkspace {...route} />;
 }

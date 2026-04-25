@@ -1,11 +1,5 @@
-import { ActuaryFirstReviewQueuePage } from "@/components/inverge/actuary-first-review-queue";
+import { notFound } from "next/navigation";
 
-type RouteProps = {
-  params: Promise<{ subjectId: string }>;
-};
-
-export default async function ActuaryFirstReviewRoute({ params }: RouteProps) {
-  const { subjectId } = await params;
-  return <ActuaryFirstReviewQueuePage subjectId={subjectId} />;
+export default function UnsupportedActuaryRoute() {
+  notFound();
 }
-

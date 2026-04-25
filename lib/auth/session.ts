@@ -48,6 +48,12 @@ export function isLocalhostUrl(url: string) {
   return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
 }
 
+function canUseHeaderFallback(request: Request) {
+  if (isSupabaseConfigured()) return false;
+  if (process.env.NODE_ENV === "production") return false;
+  return isLocalhostUrl(request.url);
+}
+
 export function createSmokeAuthCookieValue(userId: string, email = DEV_SMOKE_AUTH_EMAIL) {
   return Buffer.from(JSON.stringify({ userId, email }), "utf8").toString("base64url");
 }
@@ -140,8 +146,12 @@ export async function getRequestUserId(request: Request, fallbackUserId = DEMO_U
   const smokeSession = await getDevSmokeSession();
   if (smokeSession) return smokeSession.userId;
 
-  if (!isSupabaseConfigured()) {
+  if (canUseHeaderFallback(request)) {
     return headerUserId || fallbackUserId;
+  }
+
+  if (!isSupabaseConfigured()) {
+    return null;
   }
 
   const session = await getServerSessionUser(fallbackUserId);
