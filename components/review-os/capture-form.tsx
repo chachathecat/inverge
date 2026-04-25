@@ -114,6 +114,15 @@ const SECOND_DEFAULTS: Record<string, { structure: string; issue: string; senten
   },
 };
 
+const FIRST_STAGE_ERROR_REASON_OPTIONS = [
+  "개념 부족",
+  "선지 오독",
+  "계산 실수",
+  "시간 부족",
+  "헷갈리는 개념과 혼동",
+  "찍음/확신 부족",
+] as const;
+
 function getDefaultNextReviewDate(mode: AppraisalMode) {
   const schedule = resolveReviewSchedule({
     mode,
@@ -150,6 +159,19 @@ function firstLine(text: string, fallback: string) {
     .map((line) => line.trim())
     .find(Boolean)
     ?.slice(0, 64) ?? fallback;
+}
+
+function normalizeAnswerForCompare(value: string) {
+  const normalized = value.replace(/\s+/g, " ").trim();
+  if (!normalized || normalized === "-" || normalized === "–" || normalized === "—") return null;
+  return normalized;
+}
+
+function isLikelyWrongAnswer(correctAnswer: string, userAnswer: string) {
+  const normalizedCorrect = normalizeAnswerForCompare(correctAnswer);
+  const normalizedUser = normalizeAnswerForCompare(userAnswer);
+  if (!normalizedCorrect || !normalizedUser) return true;
+  return normalizedCorrect !== normalizedUser;
 }
 
 function findField(text: string, labels: string[]) {
@@ -423,6 +445,17 @@ export function WrongAnswerCaptureForm({ userId, mode, initialPreferredSubjects 
     setError("");
 
     try {
+      if (mode === "first" && isLikelyWrongAnswer(form.correctAnswer, form.userAnswer)) {
+        if (!form.userReasonPreset.trim()) {
+          setError("1차 오답은 실수 원인을 먼저 선택해 주세요.");
+          return;
+        }
+        if (!form.comparisonPoint.trim()) {
+          setError("해설 보기 전에 근거를 한 문장으로 먼저 회상해 주세요.");
+          return;
+        }
+      }
+
       const response = await fetch("/api/os/items", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -775,22 +808,24 @@ function ConfirmPanel({
 
       {mode === "first" ? <FirstConfirmFields form={form} mode={mode} update={update} /> : <SecondConfirmFields form={form} mode={mode} update={update} />}
 
-      <div className="mt-5 grid gap-4 sm:grid-cols-3">
-        <label className="space-y-2">
-          <span className="text-sm text-[color:var(--foreground-strong)]">분류</span>
-          <select
-            value={form.userReasonPreset}
-            onChange={(event) => update("userReasonPreset", event.target.value)}
-            className="h-12 w-full rounded-2xl border border-[var(--border)] bg-[color:var(--surface)] px-4 text-sm outline-none"
-          >
-            <option value="">선택 안 함</option>
-            {MISTAKE_REASON_PRESETS.map((preset) => (
-              <option key={preset} value={preset}>
-                {preset}
-              </option>
-            ))}
-          </select>
-        </label>
+      <div className={`mt-5 grid gap-4 ${mode === "second" ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
+        {mode === "second" ? (
+          <label className="space-y-2">
+            <span className="text-sm text-[color:var(--foreground-strong)]">분류</span>
+            <select
+              value={form.userReasonPreset}
+              onChange={(event) => update("userReasonPreset", event.target.value)}
+              className="h-12 w-full rounded-2xl border border-[var(--border)] bg-[color:var(--surface)] px-4 text-sm outline-none"
+            >
+              <option value="">선택 안 함</option>
+              {MISTAKE_REASON_PRESETS.map((preset) => (
+                <option key={preset} value={preset}>
+                  {preset}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
         <label className="space-y-2">
           <span className="text-sm text-[color:var(--foreground-strong)]">확신 정도</span>
           <select
@@ -832,6 +867,12 @@ function FirstConfirmFields(props: FieldProps) {
   const { form, update } = props;
   return (
     <div className="mt-5 space-y-4">
+      <section className="rounded-2xl border border-[color:var(--cue-focus)] bg-[color:var(--cue-focus-bg)] px-4 py-3">
+        <p className="text-sm font-medium text-[color:var(--foreground-strong)]">해설 보기 전에 회상 먼저</p>
+        <p className="mt-1 text-sm leading-6 text-[color:var(--muted)]">
+          해설 보기 전에, 이 선지가 틀린 이유를 한 문장으로 적어보세요. 이 한 줄이 다음 retry 기준이 됩니다.
+        </p>
+      </section>
       <div className="grid gap-4 md:grid-cols-2">
         <label className="space-y-2">
           <span className="text-sm text-[color:var(--foreground-strong)]">정답</span>
@@ -850,6 +891,30 @@ function FirstConfirmFields(props: FieldProps) {
           />
         </label>
       </div>
+      <label className="space-y-2">
+        <span className="text-sm text-[color:var(--foreground-strong)]">실수 원인 분류 (1차)</span>
+        <select
+          value={form.userReasonPreset}
+          onChange={(event) => update("userReasonPreset", event.target.value)}
+          className="h-12 w-full rounded-2xl border border-[var(--border)] bg-[color:var(--surface)] px-4 text-sm outline-none"
+        >
+          <option value="">필수 선택</option>
+          {FIRST_STAGE_ERROR_REASON_OPTIONS.map((preset) => (
+            <option key={preset} value={preset}>
+              {preset}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="block space-y-2">
+        <span className="text-sm text-[color:var(--foreground-strong)]">회상 한 문장 (해설 전)</span>
+        <Textarea
+          value={form.comparisonPoint}
+          onChange={(event) => update("comparisonPoint", event.target.value)}
+          className="min-h-20 border-[var(--border)] bg-[color:var(--surface)] text-[color:var(--foreground-strong)]"
+          placeholder="예: 조문 예외 요건을 확인하지 않고 일반 원칙만 보고 2번을 골랐습니다."
+        />
+      </label>
       <label className="block space-y-2">
         <span className="text-sm text-[color:var(--foreground-strong)]">왜 틀렸는지</span>
         <Textarea

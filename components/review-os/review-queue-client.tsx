@@ -15,7 +15,7 @@ export function ReviewQueueClient({ items }: { items: ReviewQueueCard[] }) {
       Object.fromEntries(
         items.map((item) => [
           item.queueId,
-          item.examName === "감정평가사 2차" ? "second_paragraph_rewrite" : "first_short_retry",
+          item.examName === "감정평가사 2차" ? "second_paragraph_rewrite" : "first_confirm_recall",
         ]),
       ) as Record<string, ReviewCompletionAction>,
     [items],
@@ -72,6 +72,14 @@ export function ReviewQueueClient({ items }: { items: ReviewQueueCard[] }) {
               <p className="text-sm text-[color:var(--foreground-strong)]">
                 반복 {item.recurrenceCount}회 · {item.mistakeType}
               </p>
+              {item.examName === "감정평가사 1차" ? (
+                <div className="space-y-1 rounded-[var(--radius-md)] border border-[color:var(--cue-focus)] bg-[color:var(--cue-focus-bg)] p-3">
+                  <p className="text-sm font-medium text-[color:var(--foreground-strong)]">해설 전에 10초 회상</p>
+                  <p className="text-sm leading-6 text-[color:var(--muted)]">
+                    해설 보기 전에, 이 선지가 틀린 이유를 한 문장으로 먼저 떠올리세요.
+                  </p>
+                </div>
+              ) : null}
               <div className="space-y-2 rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface-muted)] p-3">
                 <p className="text-sm font-medium text-[color:var(--foreground-strong)]">완료 전에 다음 행동을 하나 선택하세요.</p>
                 <div className="space-y-2 text-sm text-[color:var(--foreground)]">
@@ -82,7 +90,7 @@ export function ReviewQueueClient({ items }: { items: ReviewQueueCard[] }) {
                       ]
                     : [
                         { value: "first_short_retry", label: "짧은 재시도 후 완료" },
-                        { value: "first_confirm_recall", label: "핵심 근거를 회상 확인 후 완료" },
+                        { value: "first_confirm_recall", label: "핵심 근거를 먼저 회상하고 완료" },
                         { value: "first_keep_scheduled_review", label: "예약된 복습 일정 유지" },
                       ]
                   ).map((option) => (
@@ -116,7 +124,7 @@ export function ReviewQueueClient({ items }: { items: ReviewQueueCard[] }) {
                 onClick={() => void complete(item.queueId)}
                 disabled={pendingId === item.queueId}
               >
-                {pendingId === item.queueId ? "처리 중" : "오늘 정리 완료"}
+                {pendingId === item.queueId ? "처리 중" : "완료하고 다음 복습 예약"}
               </Button>
               {inlineErrorByQueueId[item.queueId] ? (
                 <p className="max-w-52 text-right text-xs text-[color:var(--danger)]">{inlineErrorByQueueId[item.queueId]}</p>
