@@ -25,11 +25,11 @@ export default async function ReviewOsWeeklyPage({ searchParams }: PageProps) {
   const primaryHref = primaryTask ? `/app/review?mode=${mode}` : `/app/capture?mode=${mode}`;
 
   return (
-    <div className="space-y-5 sm:space-y-6">
-      <Card className="border-[var(--border)] bg-[color:var(--surface)] shadow-none">
+    <div className="space-y-6 sm:space-y-7">
+      <Card className="border-[color:var(--border-strong)] bg-[color:var(--surface)] shadow-none">
         <CardHeader className="space-y-3 p-4 sm:p-6">
-          <div className="rounded-2xl border border-[color:var(--cue-risk)] bg-[color:var(--cue-risk-bg)] px-4 py-3">
-            <p className="text-caption text-[color:var(--cue-risk)]">이번 주 우선 작업</p>
+          <div className="rounded-[var(--radius-md)] border border-[color:var(--brand-700)] bg-[color:var(--brand-050)] px-4 py-3">
+            <p className="text-caption text-[color:var(--brand-800)]">이번 주 우선 작업</p>
             <p className="mt-1 text-body-lg text-[color:var(--foreground-strong)]">{plan.primaryActionLabel}</p>
           </div>
           <CardTitle>{mode === "second" ? "이번 주 2차 실행 계획" : "이번 주 1차 실행 계획"}</CardTitle>
@@ -37,7 +37,7 @@ export default async function ReviewOsWeeklyPage({ searchParams }: PageProps) {
         </CardHeader>
         <CardContent className="space-y-5 p-4 pt-0 sm:p-6 sm:pt-0">
           {plan.recovery ? (
-            <div className="rounded-2xl border border-[color:var(--cue-risk)] bg-[color:var(--cue-risk-bg)] p-4">
+            <div className="rounded-[var(--radius-md)] border border-[color:var(--cue-risk)] bg-[color:var(--cue-risk-bg)] p-4">
               <p className="text-sm text-[color:var(--foreground-strong)]">{plan.recovery.message}</p>
               <p className="mt-1 text-sm text-[color:var(--foreground-strong)]">
                 오늘은 {plan.recovery.task.estimatedDurationMinutes}분짜리 복구 작업 하나만 하세요.
@@ -60,7 +60,7 @@ export default async function ReviewOsWeeklyPage({ searchParams }: PageProps) {
               ) : null}
             </div>
           ) : (
-            <div className="space-y-4 rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] p-4">
+            <div className="space-y-4 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] p-4">
               <p className="text-sm leading-7 text-[color:var(--muted)]">{config.emptyDescription}</p>
               <p className="text-sm leading-7 text-[color:var(--foreground-strong)]">오늘은 오답 1건만 입력해 주간 계획의 기준점을 만듭니다.</p>
               <Link href={`/app/capture?mode=${mode}`}>
@@ -82,7 +82,7 @@ export default async function ReviewOsWeeklyPage({ searchParams }: PageProps) {
         </CardContent>
       </Card>
 
-      <details className="group rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
+      <details className="group rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
         <summary className="cursor-pointer list-none px-4 py-4 text-sm font-medium text-[color:var(--foreground-strong)] sm:px-5">
           기록 보기 (보조 정보)
         </summary>
@@ -109,7 +109,7 @@ export default async function ReviewOsWeeklyPage({ searchParams }: PageProps) {
 function WeeklyTaskItem({ task }: { task: WeeklyPlanTask }) {
   const actionLabel = task.action === "rewrite" ? "문단 다시쓰기" : task.action === "retry" ? "재시도" : "복습";
   return (
-    <article className="rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] p-4">
+    <article className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] p-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-caption text-[color:var(--muted)]">우선순위 {task.priorityOrder}</p>
@@ -117,7 +117,7 @@ function WeeklyTaskItem({ task }: { task: WeeklyPlanTask }) {
             {task.subject} · {actionLabel}
           </p>
         </div>
-        <span className="rounded-full border border-[color:var(--border-subtle)] px-2 py-1 text-[11px] text-[color:var(--muted)]">
+        <span className="rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] px-2 py-1 text-[11px] text-[color:var(--muted)]">
           {task.estimatedDurationMinutes}분
         </span>
       </div>
@@ -129,7 +129,7 @@ function WeeklyTaskItem({ task }: { task: WeeklyPlanTask }) {
 
 function SecondaryRecord({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-[color:var(--border-subtle)] p-4">
+    <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] p-4">
       <p className="text-[color:var(--muted)]">{label}</p>
       <p className="mt-1 text-[color:var(--foreground-strong)]">{value}</p>
     </div>

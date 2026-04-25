@@ -673,7 +673,7 @@ function IntakePanel({
         이미지/PDF는 현재 실험 범위입니다. alpha 검증은 텍스트 원문을 기준으로 진행합니다.
       </p>
       {calculatorWorkflow ? (
-        <div className="mt-4 rounded-2xl border border-[color:var(--cue-focus)] bg-[color:var(--cue-focus-bg)] px-4 py-3">
+        <div className="mt-4 rounded-[var(--radius-md)] border border-[color:var(--cue-focus)] bg-[color:var(--cue-focus-bg)] px-4 py-3">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm leading-6 text-[color:var(--foreground-strong)]">
               {calculatorWorkflow.subject} 계산형 기록이면 계산기 스텝을 먼저 고정할 수 있습니다.
@@ -687,7 +687,7 @@ function IntakePanel({
         </div>
       ) : null}
       {form.extractionNeedsReview ? (
-        <p className="mt-3 rounded-2xl border border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] px-4 py-3 text-sm leading-6 text-[color:var(--foreground-strong)]">
+        <p className="mt-3 rounded-[var(--radius-md)] border border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] px-4 py-3 text-sm leading-6 text-[color:var(--foreground-strong)]">
           초안 값은 저장 전 확인이 필요합니다. 과목, 답, 보강 논점만 한 번 더 고정하세요.
         </p>
       ) : null}
@@ -772,7 +772,7 @@ function ConfirmPanel({
           <select
             value={form.subjectLabel}
             onChange={(event) => updateSubject(event.target.value)}
-            className="h-12 w-full rounded-2xl border border-[var(--border)] bg-[color:var(--surface)] px-4 text-sm outline-none"
+            className="form-control"
           >
             {config.subjects.map((option) => (
               <option key={option} value={option}>
@@ -787,7 +787,7 @@ function ConfirmPanel({
             <select
               value={form.problemIdentifier}
               onChange={(event) => update("problemIdentifier", event.target.value)}
-              className="h-12 w-full rounded-2xl border border-[var(--border)] bg-[color:var(--surface)] px-4 text-sm outline-none"
+              className="form-control"
             >
               {SECOND_TASK_PRESETS.map((preset) => (
                 <option key={preset} value={preset}>
@@ -799,7 +799,7 @@ function ConfirmPanel({
             <input
               value={form.problemIdentifier}
               onChange={(event) => update("problemIdentifier", event.target.value)}
-              className="h-12 w-full rounded-2xl border border-[var(--border)] bg-[color:var(--surface)] px-4 text-sm outline-none"
+              className="form-control"
               placeholder="예: 2024 기출 / 12번"
             />
           )}
@@ -815,7 +815,7 @@ function ConfirmPanel({
             <select
               value={form.userReasonPreset}
               onChange={(event) => update("userReasonPreset", event.target.value)}
-              className="h-12 w-full rounded-2xl border border-[var(--border)] bg-[color:var(--surface)] px-4 text-sm outline-none"
+              className="form-control"
             >
               <option value="">선택 안 함</option>
               {MISTAKE_REASON_PRESETS.map((preset) => (
@@ -831,7 +831,7 @@ function ConfirmPanel({
           <select
             value={form.confidence}
             onChange={(event) => update("confidence", event.target.value as ConfidenceLevel)}
-            className="h-12 w-full rounded-2xl border border-[var(--border)] bg-[color:var(--surface)] px-4 text-sm outline-none"
+            className="form-control"
           >
             {CONFIDENCE_OPTIONS.map((option) => (
               <option key={option} value={option}>
@@ -846,12 +846,12 @@ function ConfirmPanel({
             type="date"
             value={form.nextReviewDate}
             onChange={(event) => update("nextReviewDate", event.target.value)}
-            className="h-12 w-full rounded-2xl border border-[var(--border)] bg-[color:var(--surface)] px-4 text-sm outline-none"
+            className="form-control"
           />
         </label>
       </div>
 
-      <details className="mt-5 rounded-2xl border border-[color:var(--border-subtle)] p-4">
+      <details className="mt-5 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] p-4">
         <summary className="cursor-pointer text-sm font-medium text-[color:var(--foreground-strong)]">저장될 원문 보기</summary>
         <Textarea
           value={form.rawQuestionText}
@@ -867,7 +867,7 @@ function FirstConfirmFields(props: FieldProps) {
   const { form, update } = props;
   return (
     <div className="mt-5 space-y-4">
-      <section className="rounded-2xl border border-[color:var(--cue-focus)] bg-[color:var(--cue-focus-bg)] px-4 py-3">
+      <section className="rounded-[var(--radius-md)] border border-[color:var(--cue-focus)] bg-[color:var(--cue-focus-bg)] px-4 py-3">
         <p className="text-sm font-medium text-[color:var(--foreground-strong)]">해설 보기 전에 회상 먼저</p>
         <p className="mt-1 text-sm leading-6 text-[color:var(--muted)]">
           해설 보기 전에, 이 선지가 틀린 이유를 한 문장으로 적어보세요. 이 한 줄이 다음 retry 기준이 됩니다.
@@ -879,7 +879,7 @@ function FirstConfirmFields(props: FieldProps) {
           <input
             value={form.correctAnswer}
             onChange={(event) => update("correctAnswer", event.target.value)}
-            className="h-12 w-full rounded-2xl border border-[var(--border)] bg-[color:var(--surface)] px-4 text-sm outline-none"
+            className="form-control"
           />
         </label>
         <label className="space-y-2">
@@ -887,7 +887,7 @@ function FirstConfirmFields(props: FieldProps) {
           <input
             value={form.userAnswer}
             onChange={(event) => update("userAnswer", event.target.value)}
-            className="h-12 w-full rounded-2xl border border-[var(--border)] bg-[color:var(--surface)] px-4 text-sm outline-none"
+            className="form-control"
           />
         </label>
       </div>
@@ -896,7 +896,7 @@ function FirstConfirmFields(props: FieldProps) {
         <select
           value={form.userReasonPreset}
           onChange={(event) => update("userReasonPreset", event.target.value)}
-          className="h-12 w-full rounded-2xl border border-[var(--border)] bg-[color:var(--surface)] px-4 text-sm outline-none"
+          className="form-control"
         >
           <option value="">필수 선택</option>
           {FIRST_STAGE_ERROR_REASON_OPTIONS.map((preset) => (
@@ -948,7 +948,7 @@ function SecondConfirmFields(props: FieldProps) {
           <input
             value={form.myAnswerSummary}
             onChange={(event) => update("myAnswerSummary", event.target.value)}
-            className="h-12 w-full rounded-2xl border border-[var(--border)] bg-[color:var(--surface)] px-4 text-sm outline-none"
+            className="form-control"
           />
         </label>
         <label className="space-y-2">
@@ -956,7 +956,7 @@ function SecondConfirmFields(props: FieldProps) {
           <input
             value={form.rewriteInstruction}
             onChange={(event) => update("rewriteInstruction", event.target.value)}
-            className="h-12 w-full rounded-2xl border border-[var(--border)] bg-[color:var(--surface)] px-4 text-sm outline-none"
+            className="form-control"
           />
         </label>
       </div>
@@ -985,7 +985,7 @@ function RewriteContextPanel({
         <PreviewLine label="가장 큰 간극" value={biggestGap} />
         <PreviewLine label="다시쓰기 지시" value={rewriteInstruction} />
       </div>
-      <details className="mt-3 rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)]">
+      <details className="mt-3 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)]">
         <summary className="cursor-pointer list-none px-4 py-3 text-sm font-medium text-[color:var(--foreground-strong)]">
           비교 요약 펼쳐서 보기
         </summary>
@@ -1033,7 +1033,7 @@ function RewriteParagraphPanel({
             update("userReasonText", event.target.value);
             update("missingIssue", event.target.value);
           }}
-          className="h-12 w-full rounded-2xl border border-[var(--border)] bg-[color:var(--surface)] px-4 text-sm outline-none"
+          className="form-control"
         />
       </label>
     </section>
@@ -1042,7 +1042,7 @@ function RewriteParagraphPanel({
 
 function PreviewLine({ label, value }: { label: string; value?: string }) {
   return (
-    <div className="rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] px-4 py-3">
+    <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] px-4 py-3">
       <p className="text-caption text-[color:var(--muted)]">{label}</p>
       <p className="mt-1 text-sm leading-6 text-[color:var(--foreground-strong)]">{value?.trim() ? value : "확인 필요"}</p>
     </div>

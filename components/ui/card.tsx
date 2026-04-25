@@ -15,11 +15,11 @@ function Card({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
 }
 
 function CardHeader({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("p-6 pb-4", className)} {...props} />;
+  return <div className={cn("p-6 pb-3 sm:p-7 sm:pb-3", className)} {...props} />;
 }
 
 function CardContent({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("px-6 pb-6", className)} {...props} />;
+  return <div className={cn("px-6 pb-6 sm:px-7 sm:pb-7", className)} {...props} />;
 }
 
 function CardTitle({ className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) {
@@ -27,7 +27,7 @@ function CardTitle({ className, ...props }: React.HTMLAttributes<HTMLHeadingElem
 }
 
 function CardDescription({ className, ...props }: React.HTMLAttributes<HTMLParagraphElement>) {
-  return <p className={cn("mt-2 max-w-[66ch] text-sm leading-6 text-[color:var(--muted)]", className)} {...props} />;
+  return <p className={cn("mt-2 max-w-[66ch] text-sm leading-7 text-[color:var(--muted)]", className)} {...props} />;
 }
 
 export { Card, CardHeader, CardContent, CardTitle, CardDescription };

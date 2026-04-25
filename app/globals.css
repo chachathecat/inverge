@@ -50,14 +50,14 @@
   --status-red: var(--cue-risk);
   --status-red-soft: var(--cue-risk-bg);
   --border: var(--border-subtle);
-  --radius-sm: 12px;
-  --radius-md: 20px;
-  --radius-lg: 20px;
-  --radius-card: 20px;
-  --radius-input: 16px;
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 18px;
+  --radius-card: 18px;
+  --radius-input: 14px;
   --radius-pill: 999px;
   --shadow-soft: none;
-  --shadow-focus: 0 14px 36px rgba(16, 35, 63, 0.06);
+  --shadow-focus: 0 10px 30px rgba(16, 35, 63, 0.04);
   --space-page: 40px;
   --chart-grid: rgba(17, 20, 24, 0.1);
   --font-ui: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -106,7 +106,7 @@ html {
 body {
   min-height: 100vh;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.72) 0%, transparent 240px),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.62) 0%, transparent 220px),
     var(--background);
   color: var(--foreground);
   font-family: var(--font-ui);
@@ -165,6 +165,32 @@ body {
 
 .tabular-nums {
   font-variant-numeric: tabular-nums;
+}
+
+:where(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
+  border-radius: var(--radius-input);
+}
+
+.form-control {
+  height: 2.95rem;
+  width: 100%;
+  border-radius: var(--radius-input);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  padding-inline: 0.95rem;
+  font-size: 0.925rem;
+  color: var(--foreground-strong);
+  outline: none;
+  transition: border-color 120ms ease, box-shadow 120ms ease, background-color 120ms ease;
+}
+
+.form-control::placeholder {
+  color: var(--text-tertiary);
+}
+
+.form-control:focus-visible {
+  border-color: var(--border-strong);
+  box-shadow: 0 0 0 3px rgba(16, 35, 63, 0.08);
 }
 
 @keyframes inverge-rise {

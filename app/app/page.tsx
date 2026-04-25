@@ -48,7 +48,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
   const primaryTaskLabel = focus.primaryTaskLabel ?? (selectedQueueItem ? `${selectedQueueItem.subjectLabel} 복습` : config.nextActionFallback);
 
   return (
-    <div className="space-y-6 md:space-y-7">
+    <div className="space-y-7 md:space-y-8">
       <section className="space-y-3">
         <div>
           <h2 className="text-xl font-medium tracking-[-0.04em] text-[color:var(--foreground-strong)] sm:text-2xl">
@@ -58,11 +58,11 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
         </div>
       </section>
 
-      <section className="space-y-5">
-        <Card className="border-[color:var(--brand-700)] bg-[color:var(--brand-050)] shadow-none">
+      <section className="space-y-6">
+        <Card className="border-[color:var(--border-strong)] bg-[color:var(--bg-elevated)] shadow-none">
           <CardHeader className="space-y-3 p-4 sm:p-6">
-            <div className="rounded-2xl border border-[color:var(--cue-risk)] bg-[color:var(--cue-risk-bg)] px-4 py-3">
-              <p className="text-caption text-[color:var(--cue-risk)]">오늘 최우선 작업</p>
+            <div className="rounded-[var(--radius-md)] border border-[color:var(--brand-700)] bg-[color:var(--brand-050)] px-4 py-3">
+              <p className="text-caption text-[color:var(--brand-800)]">오늘 최우선 작업</p>
               <p className="mt-1 text-body-lg text-[color:var(--foreground-strong)]">{primaryTaskLabel}</p>
             </div>
             <CardTitle>오늘 우선순위 1개만 먼저 실행합니다.</CardTitle>
@@ -89,7 +89,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                 </Link>
               </div>
             </div>
-            <details className="rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
+            <details className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
               <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">
                 우선순위 근거 보기
               </summary>
@@ -109,7 +109,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
               </div>
             </details>
             {firstUse ? (
-              <div className="rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-4 py-3 text-sm text-[color:var(--muted)]">
+              <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-4 py-3 text-sm text-[color:var(--muted)]">
                 {config.emptyDescription}{" "}
                 <Link href="/app/settings" className="underline-offset-2 hover:underline">
                   수험 설정 확인
@@ -120,24 +120,24 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
         </Card>
 
         <section className="space-y-3">
-          <details className="group rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
+          <details className="group rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
             <summary className="cursor-pointer list-none px-4 py-4 text-sm font-medium text-[color:var(--foreground-strong)] sm:px-5">
               기록·요약·현재 흐름 보기
             </summary>
             <div className="space-y-5 border-t border-[color:var(--border-subtle)] px-4 py-5 sm:px-5">
               <div className="grid gap-3 text-sm lg:grid-cols-3">
-                <div className="rounded-2xl border border-[color:var(--border-subtle)] p-4">
+                <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] p-4">
                   <p className="text-[color:var(--muted)]">현재 모드</p>
                   <p className="mt-1 text-[color:var(--foreground-strong)]">{config.label}</p>
                 </div>
-                <div className="rounded-2xl border border-[color:var(--border-subtle)] p-4">
+                <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] p-4">
                   <p className="text-[color:var(--muted)]">우선 과목</p>
                   <p className="mt-1 text-[color:var(--foreground-strong)]">
                     {profile?.preferredSubjects.filter((subject) => (config.subjects as readonly string[]).includes(subject)).join(", ") ||
                       config.subjects[0]}
                   </p>
                 </div>
-                <div className="rounded-2xl border border-[color:var(--border-subtle)] p-4">
+                <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] p-4">
                   <p className="text-[color:var(--muted)]">오늘 다시 볼 항목</p>
                   <p className="mt-1 tabular-nums text-[color:var(--foreground-strong)]">{queue.length}개</p>
                 </div>
@@ -175,7 +175,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                       <Link
                         key={`${note.title}-${index}`}
                         href={`/app/items/${items[index].id}?mode=${mode}`}
-                        className="block rounded-2xl border border-[color:var(--border-subtle)] px-4 py-4 text-sm transition duration-150 hover:bg-[color:var(--bg-subtle)]"
+                        className="block rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] px-4 py-4 text-sm transition duration-150 hover:bg-[color:var(--bg-subtle)]"
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div>
