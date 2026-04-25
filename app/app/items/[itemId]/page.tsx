@@ -1,0 +1,236 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import type { ReactNode } from "react";
+
+import { ReviewOsFeedbackButton } from "@/components/review-os/feedback-button";
+import { Button } from "@/components/ui/button";
+import { getAppraisalMode, parseAppraisalMode } from "@/lib/review-os/appraisal";
+import { getCalculatorWorkflowForSubject, hasCalculationSignal } from "@/lib/review-os/calculator-workflow";
+import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
+import { reviewOsService } from "@/lib/review-os/service";
+import { buildDetailStudyNote } from "@/lib/review-os/study-note";
+
+type PageProps = {
+  params: Promise<{ itemId: string }>;
+  searchParams?: Promise<{ mode?: string }>;
+};
+
+export default async function ReviewOsItemDetailPage({ params, searchParams }: PageProps) {
+  const [{ itemId }, modeParam] = await Promise.all([params, searchParams?.then((value) => value.mode)]);
+  const { session } = await getReviewOsServerContext(
+    buildReviewOsReturnTo(`/app/items/${itemId}`, modeParam),
+  );
+  if (!session.userId || !session.email) return null;
+
+  const detail = await reviewOsService.getWrongAnswerDetail(session.userId, session.email, itemId);
+  if (!detail) notFound();
+
+  const mode =
+    parseAppraisalMode(typeof detail.item.rawPayload?.mode === "string" ? detail.item.rawPayload.mode : null) ??
+    getAppraisalMode(detail.item.examName);
+  const isSecond = mode === "second";
+  const note = buildDetailStudyNote(detail);
+  const title = detail.item.problemTitle ?? detail.item.problemIdentifier ?? note.title;
+  const calculatorWorkflow = getCalculatorWorkflowForSubject(detail.item.subjectLabel);
+  const hasCalculationMistake = hasCalculationSignal([
+    detail.item.userReasonText,
+    detail.item.userReasonPreset,
+    detail.item.problemTitle,
+    detail.item.correctAnswer,
+    detail.item.userAnswer,
+    note.weakPoint,
+    note.coreLine,
+    note.missingIssue,
+    note.weakStructurePoint,
+    note.rewriteInstruction,
+    ...detail.tags.flatMap((tag) => [tag.topicTag, tag.mistakeType, tag.taskType]),
+  ]);
+
+  return (
+    <div className="space-y-6">
+      <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-6 md:p-7">
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div className="max-w-[66ch] space-y-3">
+            <div className="flex flex-wrap gap-2">
+              <QuietPill>{isSecond ? "감평 2차" : "감평 1차"}</QuietPill>
+              <QuietPill>{detail.item.subjectLabel}</QuietPill>
+              <QuietPill>{note.noteLabel}</QuietPill>
+            </div>
+            <h2 className="text-2xl font-semibold tracking-[-0.035em] text-[color:var(--foreground-strong)]">{title}</h2>
+            <p className="text-sm leading-7 text-[color:var(--muted)]">{note.summaryLine}</p>
+          </div>
+          <Link href={`/app?mode=${mode}`}>
+            <Button type="button" variant="outline">
+              오늘로 돌아가기
+            </Button>
+          </Link>
+        </div>
+      </section>
+
+      <section className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+        <ArtifactBlock tone="brand" eyebrow="AI 요약" title={note.summary}>
+          <p className="text-sm leading-7 text-[color:var(--muted)]">
+            AI는 점수를 판정하지 않고, 기록에서 다음 review/rewrite에 필요한 신호만 정리합니다.
+          </p>
+        </ArtifactBlock>
+        <ArtifactBlock tone="review" eyebrow="다음 행동" title={isSecond ? (note.rewriteInstruction ?? note.nextAction) : note.nextAction}>
+          <p className="text-sm leading-7 text-[color:var(--muted)]">오늘은 이 행동 하나만 남기면 됩니다.</p>
+        </ArtifactBlock>
+      </section>
+
+      <section className="grid gap-4 md:grid-cols-2">
+        <ArtifactBlock tone="risk" eyebrow="부족한 부분" title={note.weakPoint}>
+          <p className="text-sm leading-7 text-[color:var(--muted)]">
+            {isSecond ? "다음 답안에서 먼저 메울 누락 논점입니다." : "다음 review에서 먼저 확인할 오답 원인입니다."}
+          </p>
+        </ArtifactBlock>
+        <ArtifactBlock tone="focus" eyebrow={isSecond ? "핵심 문장" : "핵심 공식"} title={note.coreLine}>
+          <p className="text-sm leading-7 text-[color:var(--muted)]">
+            {isSecond ? "답안에 다시 넣어야 할 문장 단위 신호입니다." : "선지 판단 전에 먼저 고정할 구조입니다."}
+          </p>
+        </ArtifactBlock>
+      </section>
+
+      {isSecond ? (
+        <section className="grid gap-4 md:grid-cols-3">
+          <MiniArtifact label="누락 논점" value={note.missingIssue ?? note.weakPoint} />
+          <MiniArtifact label="구조 약한 부분" value={note.weakStructurePoint ?? "목차와 사례 적용 순서를 다시 정리합니다."} />
+          <MiniArtifact label="사례 적용 문장" value={note.weakApplicationSentence ?? note.coreLine} />
+        </section>
+      ) : (
+        <ArtifactBlock tone="neutral" eyebrow="헷갈린 비교 포인트" title={note.comparisonPoint ?? note.weakPoint}>
+          <p className="text-sm leading-7 text-[color:var(--muted)]">
+            정답 근거와 내가 고른 판단이 갈라진 지점을 짧게 남깁니다.
+          </p>
+        </ArtifactBlock>
+      )}
+
+      <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-6">
+        <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+          <div>
+            <p className="text-caption text-[color:var(--muted)]">핵심 키워드</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {note.keyTerms.length > 0 ? (
+                note.keyTerms.map((term) => <StudyCue key={term}>{term}</StudyCue>)
+              ) : (
+                <StudyCue>{detail.item.subjectLabel}</StudyCue>
+              )}
+            </div>
+          </div>
+          <div className="rounded-2xl border border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] px-4 py-3">
+            <p className="text-caption text-[color:var(--cue-review)]">다음 review 시점</p>
+            <p className="mt-1 text-sm font-medium text-[color:var(--foreground-strong)]">{note.nextReviewDate}</p>
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-4 lg:grid-cols-2">
+        <SourceBlock label={isSecond ? "기준 답안 / 강평" : "정답 / 근거"} value={detail.item.correctAnswer} />
+        <SourceBlock label={isSecond ? "내 답안" : "내 답 / 선택"} value={detail.item.userAnswer} />
+      </section>
+
+      <ArtifactBlock tone="review" eyebrow={isSecond ? "교정노트" : "오답노트"} title={note.noteCard}>
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          <p className="rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 text-sm leading-7 text-[color:var(--foreground-strong)]">
+            {note.notebookLine}
+          </p>
+          <p className="rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 text-sm leading-7 text-[color:var(--foreground-strong)]">
+            {note.recurrenceText}
+          </p>
+        </div>
+      </ArtifactBlock>
+
+      {calculatorWorkflow && hasCalculationMistake ? (
+        <ArtifactBlock tone="focus" eyebrow="계산 실수 연결" title={`${calculatorWorkflow.subject} 관련 계산기 스텝 보기`}>
+          <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm leading-7 text-[color:var(--muted)]">
+              자동 풀이가 아니라, 다음 계산형 문제에서 적을 값과 검산 순서를 고정하는 실행 aid입니다.
+            </p>
+            <Link href={`/app/calculator?context=${calculatorWorkflow.context}&mode=${calculatorWorkflow.mode}`}>
+              <Button type="button" variant="outline">
+                관련 계산기 스텝 보기
+              </Button>
+            </Link>
+          </div>
+        </ArtifactBlock>
+      ) : null}
+
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <Link href={`/app/review?mode=${mode}`}>
+          <Button type="button">review queue 보기</Button>
+        </Link>
+        <Link href={`/app/capture?mode=${mode}`}>
+          <Button type="button" variant="outline">
+            {isSecond ? "답안 하나 더 올리기" : "문제 하나 더 올리기"}
+          </Button>
+        </Link>
+      </div>
+
+      <ReviewOsFeedbackButton route={`/app/items/${itemId}`} pageContext={{ itemId, isSecond }} />
+    </div>
+  );
+}
+
+function QuietPill({ children }: { children: ReactNode }) {
+  return (
+    <span className="rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--bg-subtle)] px-3 py-1 text-xs text-[color:var(--muted)]">
+      {children}
+    </span>
+  );
+}
+
+function StudyCue({ children }: { children: ReactNode }) {
+  return (
+    <span className="rounded-full border border-[color:var(--cue-focus)] bg-[color:var(--cue-focus-bg)] px-3 py-1 text-xs font-medium text-[color:var(--cue-focus)]">
+      {children}
+    </span>
+  );
+}
+
+function ArtifactBlock({
+  tone,
+  eyebrow,
+  title,
+  children,
+}: {
+  tone: "brand" | "focus" | "neutral" | "review" | "risk";
+  eyebrow: string;
+  title: string;
+  children?: ReactNode;
+}) {
+  const toneClass = {
+    brand: "border-[color:var(--brand-700)] bg-[color:var(--brand-050)] text-[color:var(--brand-700)]",
+    focus: "border-[color:var(--cue-focus)] bg-[color:var(--cue-focus-bg)] text-[color:var(--cue-focus)]",
+    neutral: "border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] text-[color:var(--muted)]",
+    review: "border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] text-[color:var(--cue-review)]",
+    risk: "border-[color:var(--cue-risk)] bg-[color:var(--cue-risk-bg)] text-[color:var(--cue-risk)]",
+  }[tone];
+
+  return (
+    <section className={`rounded-[var(--radius-card)] border p-5 ${toneClass}`}>
+      <p className="text-caption">{eyebrow}</p>
+      <p className="mt-2 text-body-lg font-medium leading-8 text-[color:var(--foreground-strong)]">{title}</p>
+      {children ? <div className="mt-3">{children}</div> : null}
+    </section>
+  );
+}
+
+function MiniArtifact({ label, value }: { label: string; value: string }) {
+  return (
+    <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-5">
+      <p className="text-caption text-[color:var(--muted)]">{label}</p>
+      <p className="mt-2 text-sm leading-7 text-[color:var(--foreground-strong)]">{value}</p>
+    </section>
+  );
+}
+
+function SourceBlock({ label, value }: { label: string; value?: string | null }) {
+  return (
+    <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-5">
+      <p className="text-caption text-[color:var(--muted)]">{label}</p>
+      <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-[color:var(--foreground-strong)]">
+        {value?.trim() ? value : "아직 원문이 없습니다. 다음 입력에서 업로드 또는 텍스트로 보강할 수 있습니다."}
+      </p>
+    </section>
+  );
+}
