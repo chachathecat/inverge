@@ -45,7 +45,7 @@ function addHours(base: Date, hours: number) {
 
 function isConceptGap(mistakeType: string | null | undefined) {
   if (!mistakeType) return false;
-  return ["개념 혼동", "암기 누락", "판례/논점 적용 부족", "구조 약함"].some((candidate) => mistakeType.includes(candidate));
+  return ["개념 부족", "헷갈리는 개념과 혼동", "개념 혼동", "암기 누락"].some((candidate) => mistakeType.includes(candidate));
 }
 
 function dateOnlyToIso(dateOnly: string) {
@@ -132,5 +132,6 @@ export function resolveReviewSchedule(input: ReviewScheduleInput): ReviewSchedul
 
 export function resolveScheduleOverrideDate(reviewDateOverride: string | null | undefined, fallbackDueAt: string) {
   if (!reviewDateOverride) return fallbackDueAt;
+  // Manual date-only override (YYYY-MM-DD) is normalized to deterministic UTC date-start ISO.
   return dateOnlyToIso(reviewDateOverride);
 }
