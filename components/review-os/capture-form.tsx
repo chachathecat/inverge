@@ -16,6 +16,7 @@ import {
 import { clearReviewOsDraft, loadReviewOsDraft, saveReviewOsDraft } from "@/lib/review-os/browser-storage";
 import { getCalculatorWorkflowForSubject } from "@/lib/review-os/calculator-workflow";
 import { applyDraftToConfirmedSubject, type ExtractionDraft, type ExtractionPipelineResult } from "@/lib/review-os/extraction";
+import { resolveReviewSchedule } from "@/lib/review-os/scheduling";
 import { CONFIDENCE_OPTIONS, MISTAKE_REASON_PRESETS, SECOND_TASK_PRESETS, type ConfidenceLevel, type SourceType } from "@/lib/review-os/types";
 
 type CaptureFormProps = {
@@ -105,10 +106,15 @@ const SECOND_DEFAULTS: Record<string, { structure: string; issue: string; senten
   },
 };
 
-function getDefaultNextReviewDate() {
-  const date = new Date();
-  date.setDate(date.getDate() + 2);
-  return date.toISOString().slice(0, 10);
+function getDefaultNextReviewDate(mode: AppraisalMode) {
+  const schedule = resolveReviewSchedule({
+    mode,
+    isCorrect: false,
+    confidence: "중간",
+    mistakeType: "개념 혼동",
+    hasWeakParagraph: mode === "second",
+  });
+  return schedule.nextReviewDate;
 }
 
 function firstDefaults(subject: string) {
@@ -185,7 +191,7 @@ export function WrongAnswerCaptureForm({ userId, mode, initialPreferredSubjects 
         userReasonPreset: "",
         confidence: "중간",
         timeSpentSeconds: "",
-        nextReviewDate: getDefaultNextReviewDate(),
+        nextReviewDate: getDefaultNextReviewDate(mode),
         keyConcepts: firstDefaults(initialSubject).concepts,
         coreFormula: firstDefaults(initialSubject).formula,
         comparisonPoint: firstDefaults(initialSubject).comparison,
@@ -253,7 +259,7 @@ export function WrongAnswerCaptureForm({ userId, mode, initialPreferredSubjects 
           keyConcepts: pickConcepts(sourceText, first.concepts),
           coreFormula: base.coreFormula || first.formula,
           comparisonPoint: base.comparisonPoint || first.comparison,
-          nextReviewDate: base.nextReviewDate || getDefaultNextReviewDate(),
+          nextReviewDate: base.nextReviewDate || getDefaultNextReviewDate(mode),
         }
       : {
           ...base,
@@ -270,7 +276,7 @@ export function WrongAnswerCaptureForm({ userId, mode, initialPreferredSubjects 
           weakApplicationSentence: base.weakApplicationSentence || second.sentence,
           rewriteInstruction: base.rewriteInstruction || second.rewrite,
           userReasonText: base.userReasonText || second.issue,
-          nextReviewDate: base.nextReviewDate || getDefaultNextReviewDate(),
+          nextReviewDate: base.nextReviewDate || getDefaultNextReviewDate(mode),
         };
   }
 
