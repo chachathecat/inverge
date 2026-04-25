@@ -38,6 +38,26 @@ function getDraftStringArray(rawPayload: Record<string, unknown> | undefined, ke
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string" && Boolean(item.trim())) : [];
 }
 
+function getRawPayloadString(rawPayload: Record<string, unknown> | undefined, key: string) {
+  const value = rawPayload?.[key];
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function getConfirmedFieldString(rawPayload: Record<string, unknown> | undefined, key: string) {
+  const confirmed =
+    rawPayload && typeof rawPayload.user_confirmed_fields === "object" && rawPayload.user_confirmed_fields
+      ? (rawPayload.user_confirmed_fields as Record<string, unknown>)
+      : null;
+  const value = confirmed?.[key];
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function truncateLine(value: string, max = 220) {
+  const line = compact(value).replace(/([.!?])\s+/g, "$1 ");
+  if (line.length <= max) return line;
+  return `${line.slice(0, max - 1)}…`;
+}
+
 export function getNextReviewDate(rawPayload?: Record<string, unknown>) {
   return typeof rawPayload?.nextReviewDate === "string" && rawPayload.nextReviewDate
     ? rawPayload.nextReviewDate
@@ -131,5 +151,60 @@ export function buildDetailStudyNote(detail: WrongAnswerDetail) {
       detail.recurrence && detail.recurrence.recurrenceCount > 1
         ? `${detail.recurrence.recurrenceCount}회 반복된 신호입니다.`
         : "첫 기록입니다. 다음 review에서 반복 여부를 확인합니다.",
+  };
+}
+
+export type RewriteComparisonNote = {
+  sourceGap: string;
+  previousParagraph: string;
+  sourceAnswerSummary: string;
+  rewrittenParagraph: string;
+  improvement: string;
+  remainingNextGap: string;
+};
+
+export function buildRewriteComparisonNote(
+  detail: WrongAnswerDetail,
+  detailNote: ReturnType<typeof buildDetailStudyNote>,
+  sourceDetail?: WrongAnswerDetail | null,
+): RewriteComparisonNote | null {
+  const mode =
+    parseAppraisalMode(typeof detail.item.rawPayload?.mode === "string" ? detail.item.rawPayload.mode : null) ??
+    getAppraisalMode(detail.item.examName);
+  if (mode !== "second") return null;
+
+  const rewriteSourceItemId =
+    getRawPayloadString(detail.item.rawPayload, "rewrite_source_item_id") ??
+    getConfirmedFieldString(detail.item.rawPayload, "rewrite_source_item_id");
+  if (!rewriteSourceItemId) return null;
+
+  const sourceGap =
+    getRawPayloadString(detail.item.rawPayload, "rewrite_source_gap") ??
+    getConfirmedFieldString(detail.item.rawPayload, "rewrite_source_gap") ??
+    detailNote.missingIssue ??
+    detailNote.weakPoint;
+
+  const previousParagraph =
+    sourceDetail?.item.userAnswer?.trim() ||
+    getDraftString(sourceDetail?.item.rawPayload, "myAnswerSummary") ||
+    getDraftString(detail.item.rawPayload, "myAnswerSummary") ||
+    "이전 문단 기록이 없습니다.";
+  const sourceAnswerSummary =
+    sourceDetail?.item.correctAnswer?.trim() ||
+    getDraftString(sourceDetail?.item.rawPayload, "caseSummary") ||
+    getDraftString(detail.item.rawPayload, "caseSummary") ||
+    "기준 답안 요약 기록이 없습니다.";
+  const rewrittenParagraph = detail.item.userAnswer?.trim() || "다시 쓴 문단이 아직 기록되지 않았습니다.";
+
+  const remainingNextGap = detailNote.weakStructurePoint ?? detailNote.weakApplicationSentence ?? detailNote.weakPoint;
+  const improvement = truncateLine(`${sourceGap}을 문단에 반영해 이전 문단보다 근거 연결이 또렷해졌습니다.`);
+
+  return {
+    sourceGap: truncateLine(sourceGap, 140),
+    previousParagraph: truncateLine(previousParagraph, 260),
+    sourceAnswerSummary: truncateLine(sourceAnswerSummary, 260),
+    rewrittenParagraph,
+    improvement,
+    remainingNextGap: truncateLine(remainingNextGap, 160),
   };
 }
