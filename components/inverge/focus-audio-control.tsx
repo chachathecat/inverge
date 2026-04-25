@@ -38,14 +38,14 @@ export function FocusAudioControl({ className }: FocusAudioControlProps) {
         type="button"
         variant="outline"
         onClick={() => setPanelOpen(!panelOpen)}
-        className="h-9 px-3 text-xs sm:text-sm"
+        className="h-8 px-2.5 text-xs sm:h-9 sm:px-3 sm:text-sm"
       >
-        <Headphones className="mr-1.5 h-4 w-4" />
+        <Headphones className="mr-1 h-3.5 w-3.5 sm:mr-1.5 sm:h-4 sm:w-4" />
         집중음
       </Button>
 
       {panelOpen ? (
-        <section className="absolute right-0 top-[calc(100%+8px)] w-[272px] rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] p-4 shadow-[var(--shadow-soft)]">
+        <section className="absolute right-0 top-[calc(100%+8px)] w-[min(272px,calc(100vw-24px))] rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] p-3.5 shadow-[var(--shadow-soft)] sm:p-4">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-sm font-medium text-[color:var(--foreground-strong)]">집중음</p>

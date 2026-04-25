@@ -87,7 +87,15 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
               <p className="text-caption text-[color:var(--cue-review)]">2차 rewrite 전/후 비교</p>
               <div className="mt-3 space-y-3">
                 <MiniArtifact label="source gap" value={rewriteComparison.sourceGap} />
-                <MiniArtifact label="이전 문단 / 기준 답안 요약" value={`${rewriteComparison.previousParagraph}\n\n기준 요약: ${rewriteComparison.sourceAnswerSummary}`} />
+                <details className="rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4">
+                  <summary className="cursor-pointer list-none text-sm font-medium text-[color:var(--foreground-strong)]">
+                    이전 문단 / 기준 답안 요약 펼쳐서 보기
+                  </summary>
+                  <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-[color:var(--foreground-strong)]">
+                    {rewriteComparison.previousParagraph}
+                  </p>
+                  <p className="mt-3 text-xs leading-6 text-[color:var(--muted)]">기준 요약: {rewriteComparison.sourceAnswerSummary}</p>
+                </details>
                 <SourceBlock label="다시 쓴 문단" value={rewriteComparison.rewrittenParagraph} />
                 <div className="grid gap-3 md:grid-cols-2">
                   <MiniArtifact label="좋아진 점 1개" value={rewriteComparison.improvement} />

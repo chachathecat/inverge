@@ -20,6 +20,7 @@ export default async function ReviewOsWeeklyPage({ searchParams }: PageProps) {
   const mode = resolveAppraisalMode(profile, modeParam);
   const config = getModeConfig(mode);
   const plan = await reviewOsService.getWeeklyPlan(session.userId, session.email, mode);
+  const visibleTasks = plan.tasks.slice(0, 3);
   const primaryTask = plan.recovery?.task ?? plan.tasks[0] ?? null;
   const primaryHref = primaryTask ? `/app/review?mode=${mode}` : `/app/capture?mode=${mode}`;
 
@@ -47,11 +48,16 @@ export default async function ReviewOsWeeklyPage({ searchParams }: PageProps) {
             </div>
           ) : null}
 
-          {plan.tasks.length > 0 ? (
+          {visibleTasks.length > 0 ? (
             <div className="space-y-3">
-              {plan.tasks.map((task) => (
+              {visibleTasks.map((task) => (
                 <WeeklyTaskItem key={task.queueId} task={task} />
               ))}
+              {plan.tasks.length > 3 ? (
+                <p className="text-xs leading-5 text-[color:var(--muted)]">
+                  이번 주 작업은 최대 3개만 먼저 제시합니다. 나머지는 첫 작업 완료 후 자동으로 이어집니다.
+                </p>
+              ) : null}
             </div>
           ) : (
             <div className="space-y-4 rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] p-4">
@@ -64,8 +70,10 @@ export default async function ReviewOsWeeklyPage({ searchParams }: PageProps) {
           )}
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <Link href={primaryHref}>
-              <Button type="button">{plan.recovery ? "복구 작업 시작" : "이번 주 첫 작업 시작"}</Button>
+            <Link href={primaryHref} className="w-full sm:w-auto">
+              <Button type="button" className="w-full sm:w-auto">
+                {plan.recovery ? "복구 작업 시작" : "이번 주 첫 작업 시작"}
+              </Button>
             </Link>
             <Link href={`/app/review?mode=${mode}`} className="text-xs text-[color:var(--muted)] underline-offset-2 hover:underline">
               다른 작업 보기
