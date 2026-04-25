@@ -179,6 +179,41 @@ export type WeeklyLearningSummaryRecord = {
   updatedAt: string;
 };
 
+export type WeeklyPlanTaskAction = "retry" | "rewrite" | "review";
+
+export type WeeklyPlanTask = {
+  queueId: string;
+  itemId: string;
+  action: WeeklyPlanTaskAction;
+  subject: string;
+  title: string;
+  reason: string;
+  estimatedDurationMinutes: number;
+  target: string;
+  priorityOrder: number;
+  dueAt: string;
+  priorityScore: number;
+};
+
+export type WeeklyRecoveryTask = {
+  message: string;
+  task: WeeklyPlanTask;
+  overdueCount: number;
+};
+
+export type WeeklyPlan = {
+  mode: "first" | "second";
+  summary: string;
+  primaryActionLabel: string;
+  tasks: WeeklyPlanTask[];
+  recovery: WeeklyRecoveryTask | null;
+  secondaryRecords: {
+    overdueCount: number;
+    queueCount: number;
+    recentWrongCount: number;
+  };
+};
+
 export type ActionSeedRecord = {
   id: string;
   userId: string;

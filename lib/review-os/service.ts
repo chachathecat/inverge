@@ -20,6 +20,9 @@ import type {
   StudyProfile,
   TodayFocus,
   UsageSummary,
+  WeeklyPlan,
+  WeeklyPlanTask,
+  WeeklyPlanTaskAction,
   WeeklyLearningSummaryRecord,
   WrongAnswerDetail,
   ReviewCompletionAction,
@@ -256,6 +259,170 @@ function makeWeeklySummaryText(topMistakes: string[], topTopics: string[], slowC
       ? "시간이 오래 걸린 항목은 풀이 순서를 줄이는 연습으로 다시 보세요."
       : "확신이 낮았던 항목은 근거 문장부터 다시 고정하세요.";
   return [first, second, third].join(" ");
+}
+
+function resolveWeeklyTaskAction(queueItem: ReviewQueueCard, mode: "first" | "second"): WeeklyPlanTaskAction {
+  const rewriteSignal = /rewrite|재작성|문단/.test(queueItem.reviewReason) || /구조|문단|논점 누락|누락/.test(queueItem.mistakeType);
+  if (mode === "second" && rewriteSignal) return "rewrite";
+  if (mode === "first" && /재시도|retry/.test(queueItem.reviewReason)) return "retry";
+  return "review";
+}
+
+function buildWeeklyTaskReason(queueItem: ReviewQueueCard, overdueDays: number) {
+  if (overdueDays > 0) return `예정 복습 시점에서 ${overdueDays}일 지났습니다.`;
+  if (queueItem.recurrenceCount >= 3) return "반복된 실수가 누적되어 이번 주에 먼저 줄여야 합니다.";
+  if (queueItem.confidence === "낮음") return "확신이 낮았던 항목이라 근거를 다시 고정해야 합니다.";
+  if ((queueItem.timeSpentSeconds ?? 0) >= 180) return "풀이 시간이 길어져 처리 순서 점검이 필요합니다.";
+  return `${queueItem.mistakeType} 실수를 이번 주에 한 번 더 줄입니다.`;
+}
+
+function buildWeeklyTaskTarget(
+  queueItem: ReviewQueueCard,
+  action: WeeklyPlanTaskAction,
+  mode: "first" | "second",
+) {
+  if (action === "rewrite") {
+    return `${queueItem.problemTitle}에서 누락된 논점 1개를 문단으로 다시 작성`;
+  }
+  if (action === "retry") {
+    return `${queueItem.problemTitle} 재시도 후 놓친 조건 1개 기록`;
+  }
+  return mode === "second"
+    ? `${queueItem.problemTitle} 핵심 논점 1개 회상 후 근거 문장 확인`
+    : `${queueItem.problemTitle} 핵심 개념 1개 회상 후 정답 근거 확인`;
+}
+
+function buildWeeklyTaskDuration(queueItem: ReviewQueueCard, action: WeeklyPlanTaskAction, mode: "first" | "second") {
+  const baselineSeconds = queueItem.timeSpentSeconds ?? (mode === "second" ? 22 * 60 : 15 * 60);
+  const multiplier = action === "rewrite" ? 1.0 : action === "retry" ? 0.9 : 0.75;
+  const rawMinutes = Math.round((baselineSeconds * multiplier) / 60);
+  const floor = action === "rewrite" ? 18 : 12;
+  const ceil = action === "rewrite" ? 35 : 28;
+  return Math.min(ceil, Math.max(floor, rawMinutes));
+}
+
+function buildWeeklyPlanSummary(
+  mode: "first" | "second",
+  tasks: WeeklyPlanTask[],
+  overdueCount: number,
+  recoveryTask: WeeklyPlanTask | null,
+) {
+  if (tasks.length === 0) {
+    return mode === "second"
+      ? "이번 주 기록이 아직 없습니다. 답안 1건을 입력하면 주간 계획이 생성됩니다."
+      : "이번 주 기록이 아직 없습니다. 오답 1건을 입력하면 주간 계획이 생성됩니다.";
+  }
+
+  const retryCount = tasks.filter((task) => task.action === "retry").length;
+  const rewriteCount = tasks.filter((task) => task.action === "rewrite").length;
+
+  if (overdueCount > 0 && recoveryTask) {
+    return `이번 주 계획이 조금 밀렸습니다. 오늘은 ${recoveryTask.estimatedDurationMinutes}분짜리 복구 작업 하나만 하세요.`;
+  }
+
+  if (mode === "second") {
+    return `이번 주는 재시도 ${retryCount}개와 문단 다시쓰기 ${rewriteCount}개만 우선합니다.`;
+  }
+
+  return "새 범위를 넓히기보다 반복된 실수 하나를 줄입니다.";
+}
+
+function buildWeeklyPlan(
+  queue: ReviewQueueCard[],
+  recentItems: WrongAnswerItemRecord[],
+  mode: "first" | "second",
+): WeeklyPlan {
+  const now = new Date();
+  const overdueQueue = queue.filter((item) => Date.parse(item.dueAt) < now.getTime());
+  const recentWindow = recentItems.filter((item) => now.getTime() - Date.parse(item.createdAt) <= 14 * 86_400_000);
+  const sorted = queue
+    .map((item) => {
+      const dueScore = getDueScore(item.dueAt, now);
+      const recurrenceScore = Math.min(item.recurrenceCount, 5) * 10;
+      const confidenceScore = getConfidenceScore(item.confidence);
+      const instabilityScore = getTimeInstabilityScore(item.timeSpentSeconds);
+      const mistakeScore = getMistakeTypeScore(item.mistakeType);
+      const dueTs = Date.parse(item.dueAt);
+      const overdueDays = Math.max(0, Math.floor((now.getTime() - dueTs) / 86_400_000));
+      const todayPriorityBonus = dueScore >= 36 ? 9 : 0;
+      const priorityScore =
+        dueScore + recurrenceScore + confidenceScore + instabilityScore + mistakeScore + todayPriorityBonus + item.priorityScore * 0.05;
+      return { item, priorityScore, overdueDays };
+    })
+    .sort((a, b) => {
+      if (b.priorityScore !== a.priorityScore) return b.priorityScore - a.priorityScore;
+      const dueDiff = Date.parse(a.item.dueAt) - Date.parse(b.item.dueAt);
+      if (dueDiff !== 0) return dueDiff;
+      return a.item.queueId.localeCompare(b.item.queueId);
+    });
+
+  const tasks: WeeklyPlanTask[] = sorted.slice(0, 3).map((entry, index) => {
+    const action = resolveWeeklyTaskAction(entry.item, mode);
+    return {
+      queueId: entry.item.queueId,
+      itemId: entry.item.itemId,
+      action,
+      subject: entry.item.subjectLabel,
+      title: entry.item.problemTitle,
+      reason: buildWeeklyTaskReason(entry.item, entry.overdueDays),
+      estimatedDurationMinutes: buildWeeklyTaskDuration(entry.item, action, mode),
+      target: buildWeeklyTaskTarget(entry.item, action, mode),
+      priorityOrder: index + 1,
+      dueAt: entry.item.dueAt,
+      priorityScore: Math.round(entry.priorityScore),
+    };
+  });
+
+  const recoveryCandidateEntry = sorted.find((entry) => entry.overdueDays >= 2) ?? sorted.find((entry) => entry.overdueDays >= 1) ?? null;
+  const recoveryTask = recoveryCandidateEntry
+    ? {
+        queueId: recoveryCandidateEntry.item.queueId,
+        itemId: recoveryCandidateEntry.item.itemId,
+        action: resolveWeeklyTaskAction(recoveryCandidateEntry.item, mode),
+        subject: recoveryCandidateEntry.item.subjectLabel,
+        title: recoveryCandidateEntry.item.problemTitle,
+        reason: "밀린 항목에서 가장 작은 단위 1개만 먼저 복구합니다.",
+        estimatedDurationMinutes: Math.min(
+          18,
+          buildWeeklyTaskDuration(
+            recoveryCandidateEntry.item,
+            resolveWeeklyTaskAction(recoveryCandidateEntry.item, mode),
+            mode,
+          ),
+        ),
+        target: mode === "second" ? "문단 1개만 다시 작성 후 저장" : "재시도 1회 후 근거 1줄만 기록",
+        priorityOrder: 1,
+        dueAt: recoveryCandidateEntry.item.dueAt,
+        priorityScore: Math.round(recoveryCandidateEntry.priorityScore),
+      }
+    : null;
+
+  const summary = buildWeeklyPlanSummary(mode, tasks, overdueQueue.length, recoveryTask);
+  const primaryActionLabel = tasks[0]
+    ? `${tasks[0].subject} ${tasks[0].action === "rewrite" ? "문단 다시쓰기" : tasks[0].action === "retry" ? "재시도" : "복습"}`
+    : mode === "second"
+      ? "2차 답안 1건 입력"
+      : "1차 오답 1건 입력";
+
+  return {
+    mode,
+    summary,
+    primaryActionLabel,
+    tasks,
+    recovery:
+      overdueQueue.length > 0 && recoveryTask
+        ? {
+            message: "이번 주 계획이 조금 밀렸습니다.",
+            task: recoveryTask,
+            overdueCount: overdueQueue.length,
+          }
+        : null,
+    secondaryRecords: {
+      overdueCount: overdueQueue.length,
+      queueCount: queue.length,
+      recentWrongCount: recentWindow.length,
+    },
+  };
 }
 
 function normalizeAnswer(value: string) {
@@ -661,6 +828,52 @@ export class ReviewOsService {
     });
     await reviewOsRepository.logUsageEvent(userId, "today_focus_view", "today_focus", null, { queueCount: queue.length });
     return focus;
+  }
+
+  async getWeeklyPlan(userId: string, email: string | null, preferredMode: "first" | "second"): Promise<WeeklyPlan> {
+    await this.ensureAccess(userId, email);
+    const targetExamName = getModeLabel(preferredMode);
+    const [rawQueue, rawItems] = await Promise.all([
+      reviewOsRepository.listReviewQueue(userId, 30),
+      reviewOsRepository.listWrongAnswerItems(userId, 60),
+    ]);
+    const queue = rawQueue.filter((item) => item.examName === targetExamName);
+    const recentItems = rawItems.filter((item) => item.examName === targetExamName);
+    const plan = buildWeeklyPlan(queue, recentItems, preferredMode);
+    await reviewOsRepository.insertActionSeed(userId, {
+      sourceType: "weekly_focus",
+      seedType: "summary",
+      priorityScore: plan.tasks[0]?.priorityScore ?? 0,
+      renderedText: plan.summary,
+      rawPayload: {
+        mode: preferredMode,
+        primaryActionLabel: plan.primaryActionLabel,
+        tasks: plan.tasks.map((task) => ({
+          queueId: task.queueId,
+          action: task.action,
+          subject: task.subject,
+          reason: task.reason,
+          estimatedDurationMinutes: task.estimatedDurationMinutes,
+          target: task.target,
+          priorityOrder: task.priorityOrder,
+          dueAt: task.dueAt,
+        })),
+        recovery: plan.recovery
+          ? {
+              overdueCount: plan.recovery.overdueCount,
+              queueId: plan.recovery.task.queueId,
+              estimatedDurationMinutes: plan.recovery.task.estimatedDurationMinutes,
+            }
+          : null,
+      },
+    });
+    await reviewOsRepository.logUsageEvent(userId, "weekly_plan_view", "weekly_summary", null, {
+      mode: preferredMode,
+      queueCount: plan.secondaryRecords.queueCount,
+      overdueCount: plan.secondaryRecords.overdueCount,
+      taskCount: plan.tasks.length,
+    });
+    return plan;
   }
 
   async getWeeklySummary(userId: string, email: string | null): Promise<WeeklyLearningSummaryRecord | null> {
