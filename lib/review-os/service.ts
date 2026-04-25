@@ -11,6 +11,7 @@ import {
 } from "@/lib/review-os/appraisal";
 import { getEntitlementLimit } from "@/lib/review-os/entitlements";
 import { reviewOsRepository } from "@/lib/review-os/repository";
+import { resolveReviewSchedule, resolveScheduleOverrideDate } from "@/lib/review-os/scheduling";
 import type {
   AccessState,
   AdminAlphaFeed,
@@ -136,6 +137,10 @@ function makeWeeklySummaryText(topMistakes: string[], topTopics: string[], slowC
   return [first, second, third].join(" ");
 }
 
+function normalizeAnswer(value: string) {
+  return value.replace(/\s+/g, " ").trim();
+}
+
 export class ReviewOsUsageLimitError extends Error {
   constructor() {
     super("review-os-usage-limit");
@@ -237,13 +242,23 @@ export class ReviewOsService {
         topicTag: artifacts.tags.topicTag,
         mistakeType: artifacts.tags.mistakeType,
       });
+      const schedule = resolveReviewSchedule({
+        mode,
+        isCorrect: normalizeAnswer(normalizedInput.correctAnswer) === normalizeAnswer(normalizedInput.userAnswer),
+        confidence: normalizedInput.confidence,
+        mistakeType: artifacts.tags.mistakeType,
+        recurrenceCount: recurrence?.recurrenceCount ?? 1,
+        hasWeakParagraph: mode === "second" && Boolean(normalizedInput.weakStructurePoint || normalizedInput.missingIssue),
+      });
+      const effectiveNextReviewDate = input.nextReviewDate ?? schedule.nextReviewDate;
+      const queueDueAt = resolveScheduleOverrideDate(effectiveNextReviewDate, schedule.reviewDueAt);
 
       const item = await reviewOsRepository.insertWrongAnswerItem(
         userId,
         normalizedInput,
         {
           captureMethod: input.sourceType,
-          nextReviewDate: input.nextReviewDate ?? null,
+          nextReviewDate: effectiveNextReviewDate,
           raw_ocr_text: input.extractionPayload?.raw_ocr_text ?? input.rawQuestionText ?? null,
           raw_extraction_json: input.extractionPayload?.raw_extraction_json ?? {},
           normalized_draft: input.extractionPayload?.normalized_draft ?? null,
@@ -253,7 +268,7 @@ export class ReviewOsService {
             userAnswer: normalizedInput.userAnswer,
             userReasonText: normalizedInput.userReasonText ?? null,
             userReasonPreset: normalizedInput.userReasonPreset ?? null,
-            nextReviewDate: input.nextReviewDate ?? null,
+            nextReviewDate: effectiveNextReviewDate,
           },
           mode,
           artifactType: config.artifactType,
@@ -297,10 +312,14 @@ export class ReviewOsService {
         mistakeType: artifacts.tags.mistakeType,
       });
 
-      await reviewOsRepository.insertReviewQueueEntry(userId, item, reviewReason, priorityScore, new Date().toISOString(), {
+      await reviewOsRepository.insertReviewQueueEntry(userId, item, reviewReason, priorityScore, queueDueAt, {
         topicTag: artifacts.tags.topicTag,
         mistakeType: artifacts.tags.mistakeType,
         recurrenceCount: recurrence?.recurrenceCount ?? 1,
+        schedulingPolicy: schedule.policy,
+        retryDueAt: schedule.retryDueAt,
+        followUpReviewAt: schedule.followUpReviewAt,
+        nextReviewDate: effectiveNextReviewDate,
       });
 
       await reviewOsRepository.logUsageEvent(userId, "wrong_answer_create", "wrong_answer_item", item.id, {

@@ -5,6 +5,7 @@ import {
   normalizeSubjectForMode,
   type AppraisalMode,
 } from "@/lib/review-os/appraisal";
+import { resolveReviewSchedule } from "@/lib/review-os/scheduling";
 
 export type FirstExtractionDraft = {
   subject_guess: string;
@@ -46,10 +47,15 @@ export type ExtractionPipelineResult = {
 
 const UNKNOWN = "unknown";
 
-function nextReviewDate() {
-  const date = new Date();
-  date.setDate(date.getDate() + 2);
-  return date.toISOString().slice(0, 10);
+function nextReviewDate(mode: AppraisalMode) {
+  const schedule = resolveReviewSchedule({
+    mode,
+    isCorrect: false,
+    confidence: "중간",
+    mistakeType: "개념 혼동",
+    hasWeakParagraph: mode === "second",
+  });
+  return schedule.nextReviewDate;
 }
 
 function clean(text: string) {
@@ -155,7 +161,7 @@ export function normalizeExtractionDraft(
   const subject = guessedSubject !== UNKNOWN ? guessedSubject : fallbackSubject;
   const hasWeakSubject = subject === UNKNOWN;
   const reviewDate = getString(rawJson.review_date_suggestion);
-  const review_date_suggestion = reviewDate === UNKNOWN ? nextReviewDate() : reviewDate;
+  const review_date_suggestion = reviewDate === UNKNOWN ? nextReviewDate(mode) : reviewDate;
 
   if (mode === "second") {
     const caseSummary = getString(rawJson.case_summary);
