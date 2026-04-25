@@ -43,7 +43,7 @@ export default async function LoginPage({ searchParams }: PageProps) {
             <CardTitle>초대 계정으로 시작합니다</CardTitle>
             <CardDescription>
               {authEnabled
-                ? "Inverge alpha는 초대 기반으로 운영합니다. 로그인 후 선택한 모드로 바로 이어집니다."
+                ? "Inverge closed beta는 초대 기반으로 운영합니다. 로그인 후 선택한 모드로 바로 이어집니다."
                 : "현재 환경에서는 demo mode만 확인할 수 있습니다."}
             </CardDescription>
             {modeLabel ? (
