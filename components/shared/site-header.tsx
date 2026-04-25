@@ -15,7 +15,7 @@ export async function SiteHeader() {
           </div>
           <div className="min-w-0">
             <p className="text-base font-medium tracking-tight text-[color:var(--foreground-strong)]">Inverge</p>
-            <p className="truncate text-caption text-[color:var(--muted)]">감정평가사 학습 코치</p>
+            <p className="truncate text-caption text-[color:var(--muted)]">감정평가사 합격 운영 시스템</p>
           </div>
         </Link>
 
@@ -45,7 +45,7 @@ export async function SiteHeader() {
               >
                 alpha 플랜
               </Link>
-              <Link href="/app" className="rounded-full bg-[color:var(--primary)] px-4 py-2 text-sm font-medium text-white">
+              <Link href="/exams" className="rounded-full bg-[color:var(--primary)] px-4 py-2 text-sm font-medium text-white">
                 시작하기
               </Link>
               {session.authEnabled ? (
