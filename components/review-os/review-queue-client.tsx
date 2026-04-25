@@ -6,7 +6,7 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { ReviewCompletionAction, ReviewQueueCard } from "@/lib/review-os/types";
 
-export function ReviewQueueClient({ items }: { items: ReviewQueueCard[] }) {
+export function ReviewQueueClient({ items, mode }: { items: ReviewQueueCard[]; mode: "first" | "second" }) {
   const router = useRouter();
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [inlineErrorByQueueId, setInlineErrorByQueueId] = useState<Record<string, string>>({});
@@ -115,7 +115,7 @@ export function ReviewQueueClient({ items }: { items: ReviewQueueCard[] }) {
               </div>
             </div>
             <div className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-52 sm:items-end">
-              <Button type="button" onClick={() => router.push(`/app/items/${item.itemId}`)} className="w-full sm:w-auto">
+              <Button type="button" onClick={() => router.push(`/app/items/${item.itemId}?mode=${mode}`)} className="w-full sm:w-auto">
                 항목 열기
               </Button>
               <Button
