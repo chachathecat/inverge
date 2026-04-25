@@ -83,45 +83,161 @@ function getReviewReason(item: {
   return `${item.mistakeType} 흐름을 다시 확인해야 합니다.`;
 }
 
+type TodayPriorityPlan = {
+  queueItem: ReviewQueueCard | null;
+  score: number;
+  reason: string;
+  estimatedDurationMinutes: number;
+  nextActionType: TodayFocus["nextActionType"];
+};
+
 function getFocusMode(queue: ReviewQueueCard[], recentItems: WrongAnswerItemRecord[]) {
-  return queue[0]?.examName === "감정평가사 2차" || recentItems[0]?.examName === "감정평가사 2차"
-    ? "second"
-    : "first";
+  const source = [...queue.map((item) => item.examName), ...recentItems.map((item) => item.examName)];
+  return source.find((name) => name === "감정평가사 2차") ? "second" : "first";
+}
+
+function getDueScore(dueAt: string, now = new Date()) {
+  const diff = now.getTime() - Date.parse(dueAt);
+  const overdueDays = Math.max(0, Math.floor(diff / 86_400_000));
+  if (diff >= 0) {
+    return 36 + Math.min(4, overdueDays) * 10;
+  }
+  if (Math.abs(diff) <= 24 * 60 * 60 * 1000) {
+    return 18;
+  }
+  return 4;
+}
+
+function getConfidenceScore(confidence: string) {
+  if (confidence === "낮음") return 16;
+  if (confidence === "중간") return 8;
+  return 2;
+}
+
+function getTimeInstabilityScore(timeSpentSeconds: number | null) {
+  if (!timeSpentSeconds) return 0;
+  if (timeSpentSeconds >= 240) return 12;
+  if (timeSpentSeconds >= 150) return 8;
+  if (timeSpentSeconds <= 45) return 4;
+  return 2;
+}
+
+function getMistakeTypeScore(mistakeType: string) {
+  if (/누락|구조|논점|문단|적용/.test(mistakeType)) return 10;
+  if (/계산|조건|개념|시간/.test(mistakeType)) return 7;
+  return 4;
+}
+
+function resolveNextActionType(item: ReviewQueueCard, mode: "first" | "second"): TodayFocus["nextActionType"] {
+  const rewriteSignal = /rewrite|재작성|문단/.test(item.reviewReason) || /구조|문단|논점 누락/.test(item.mistakeType);
+  if (mode === "second" && rewriteSignal) return "rewrite_now";
+  if (mode === "first" && /재시도|retry/.test(item.reviewReason)) return "retry_now";
+  return "review_now";
+}
+
+function buildTodayPriorityPlan(
+  queue: ReviewQueueCard[],
+  mode: "first" | "second",
+  now = new Date(),
+): TodayPriorityPlan {
+  if (queue.length === 0) {
+    return {
+      queueItem: null,
+      score: 0,
+      reason: "오늘은 이 작업 하나만 먼저 합니다.",
+      estimatedDurationMinutes: 20,
+      nextActionType: "capture_now",
+    };
+  }
+
+  const scored = queue.map((item) => {
+    const recurrenceScore = Math.min(item.recurrenceCount, 5) * 10;
+    const dueScore = getDueScore(item.dueAt, now);
+    const confidenceScore = getConfidenceScore(item.confidence);
+    const instabilityScore = getTimeInstabilityScore(item.timeSpentSeconds);
+    const mistakeScore = getMistakeTypeScore(item.mistakeType);
+    const nextActionType = resolveNextActionType(item, mode);
+    const rewriteRetryUrgency = nextActionType === "rewrite_now" || nextActionType === "retry_now" ? 14 : 0;
+    const modeScore = mode === "second" && nextActionType === "rewrite_now" ? 8 : 4;
+    const score =
+      dueScore +
+      recurrenceScore +
+      confidenceScore +
+      instabilityScore +
+      mistakeScore +
+      rewriteRetryUrgency +
+      modeScore;
+    return { item, score, nextActionType };
+  });
+
+  scored.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    const dueDiff = Date.parse(a.item.dueAt) - Date.parse(b.item.dueAt);
+    if (dueDiff !== 0) return dueDiff;
+    return a.item.queueId.localeCompare(b.item.queueId);
+  });
+
+  const top = scored[0];
+  const reason = top.item.recurrenceCount >= 3
+    ? "최근 반복된 실수라 먼저 확인합니다."
+    : top.nextActionType === "rewrite_now"
+      ? "문단 다시쓰기 후속 확인이 필요합니다."
+      : Date.parse(top.item.dueAt) <= now.getTime()
+        ? "예정된 복습 시점이 도래했습니다."
+        : "오늘은 이 작업 하나만 먼저 합니다.";
+  const estimatedDurationMinutes = Math.max(
+    mode === "second" ? 18 : 12,
+    Math.min(35, Math.round(((top.item.timeSpentSeconds ?? (mode === "second" ? 22 * 60 : 15 * 60)) * 0.8) / 60)),
+  );
+
+  return {
+    queueItem: top.item,
+    score: top.score,
+    reason,
+    estimatedDurationMinutes,
+    nextActionType: top.nextActionType,
+  };
 }
 
 function makeTodayFocus(queue: ReviewQueueCard[], recentItems: WrongAnswerItemRecord[]): TodayFocus {
-  const top = queue[0];
   const mode = getFocusMode(queue, recentItems);
+  const priority = buildTodayPriorityPlan(queue, mode);
+  const top = priority.queueItem;
   const topMistake = top?.mistakeType ?? "반복 실수";
-  const topTopic = top?.topicTag ?? recentItems[0]?.subjectLabel ?? (mode === "second" ? "최근 답안" : "최근 오답");
   const staleCount = queue.filter((item) => Date.now() - Date.parse(item.dueAt) > 2 * 86_400_000).length;
+  const mistakeLine = mode === "second" ? `먼저 볼 보강 지점은 ${topMistake}입니다.` : `오늘 줄일 실수는 ${topMistake}입니다.`;
+  const staleLine =
+    staleCount > 0 ? `밀린 다시 볼 항목 ${staleCount}개 중 1개만 먼저 처리합니다.` : "한 번에 하나씩 실행하고 다음 항목으로 넘어갑니다.";
+  const primaryTaskLabel = top
+    ? mode === "second"
+      ? `${top.subjectLabel} 문단 보강`
+      : `${top.subjectLabel} 재시도 점검`
+    : mode === "second"
+      ? "2차 답안 1건 입력"
+      : "1차 오답 1건 기록";
 
   const lines: [string, string, string] = [
-    top
-      ? mode === "second"
-        ? `오늘은 ${top.subjectLabel} 답안의 ${topTopic}부터 보강하세요.`
-        : `오늘은 ${top.subjectLabel} ${topTopic}부터 다시 보세요.`
-      : mode === "second"
-        ? "2차 답안 한 건을 넣고 기준 답안과 비교해 보세요."
-        : "민법 오답 1개를 먼저 기록해 오늘 볼 항목을 만드세요.",
-    mode === "second" ? `먼저 볼 보강 지점은 ${topMistake}입니다.` : `오늘 줄일 실수는 ${topMistake}입니다.`,
-    staleCount > 0
-      ? `밀린 다시 볼 항목 ${staleCount}개를 오늘 안에 한 번만 정리하세요.`
-      : mode === "second"
-        ? "오늘은 전체 답안보다 누락 논점 1개만 고치는 것이 우선입니다."
-        : "오늘은 새 문제보다 이미 틀린 항목 1개를 먼저 고정하세요.",
+    "오늘은 이 작업 하나만 먼저 합니다.",
+    priority.reason,
+    `${mistakeLine} ${staleLine}`,
   ];
 
   return {
     lines,
     nextAction: top
       ? mode === "second"
-        ? `${top.problemTitle}에서 빠진 논점 1개만 표시하고 8~10줄로 다시 써 보세요.`
+        ? `${top.problemTitle}에서 빠진 논점 1개를 표시하고 짧게 다시 작성하세요.`
         : `${top.problemTitle}을 다시 풀고, 놓친 조건 1개만 메모하세요.`
       : mode === "second"
         ? "2차 답안 한 건을 입력하고 compare 흐름을 시작하세요."
-        : "민법 오답 1개를 입력하고 첫 review queue를 만드세요.",
-    nextActionType: top ? "review_now" : "capture_now",
+        : "오답 1개를 입력하고 첫 review queue를 만드세요.",
+    nextActionType: priority.nextActionType,
+    primaryTaskLabel,
+    reason: priority.reason,
+    estimatedDurationMinutes: priority.estimatedDurationMinutes,
+    priorityScore: priority.score,
+    sourceQueueId: top?.queueId ?? null,
+    sourceItemId: top?.itemId ?? null,
     queue,
   };
 }
@@ -506,26 +622,38 @@ export class ReviewOsService {
     await reviewOsRepository.logUsageEvent(userId, "review_complete", "review_queue_item", queueId, { action });
   }
 
-  async getTodayFocus(userId: string, email: string | null): Promise<TodayFocus> {
+  async getTodayFocus(userId: string, email: string | null, preferredMode?: "first" | "second"): Promise<TodayFocus> {
     await this.ensureAccess(userId, email);
-    const [queue, recentItems] = await Promise.all([
+    const [rawQueue, rawRecentItems] = await Promise.all([
       reviewOsRepository.listReviewQueue(userId, 5),
       reviewOsRepository.listWrongAnswerItems(userId, 8),
     ]);
+    const targetExamName = preferredMode ? getModeLabel(preferredMode) : null;
+    const queue = targetExamName ? rawQueue.filter((item) => item.examName === targetExamName) : rawQueue;
+    const recentItems = targetExamName
+      ? rawRecentItems.filter((item) => item.examName === targetExamName)
+      : rawRecentItems;
     const focus = makeTodayFocus(queue, recentItems);
     await reviewOsRepository.insertActionSeed(userId, {
       sourceType: "today_focus",
       seedType: "summary",
-      priorityScore: queue[0]?.priorityScore ?? 0,
+      priorityScore: focus.priorityScore,
       renderedText: focus.lines.join(" "),
-      rawPayload: { lines: focus.lines, nextAction: focus.nextAction },
+      rawPayload: {
+        lines: focus.lines,
+        nextAction: focus.nextAction,
+        reason: focus.reason,
+        estimatedDurationMinutes: focus.estimatedDurationMinutes,
+        sourceQueueId: focus.sourceQueueId,
+        sourceItemId: focus.sourceItemId,
+      },
     });
     await reviewOsRepository.insertActionSeed(userId, {
       sourceType: "next_action",
       seedType: "action",
-      priorityScore: queue[0]?.priorityScore ?? 0,
+      priorityScore: focus.priorityScore,
       renderedText: focus.nextAction,
-      rawPayload: { nextActionType: focus.nextActionType },
+      rawPayload: { nextActionType: focus.nextActionType, sourceQueueId: focus.sourceQueueId, sourceItemId: focus.sourceItemId },
     });
     await reviewOsRepository.logUsageEvent(userId, "today_focus_view", "today_focus", null, { queueCount: queue.length });
     return focus;

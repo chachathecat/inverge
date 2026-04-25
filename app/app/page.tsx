@@ -23,7 +23,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
   const mode = resolveAppraisalMode(profile, modeParam);
   const config = getModeConfig(mode);
   const [focus, weekly, allItems] = await Promise.all([
-    reviewOsService.getTodayFocus(session.userId, session.email),
+    reviewOsService.getTodayFocus(session.userId, session.email, mode),
     reviewOsService.getWeeklySummary(session.userId, session.email),
     reviewOsService.listWrongAnswerItems(session.userId, session.email, 12),
   ]);
@@ -31,15 +31,19 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
   const items = allItems.filter((item) => item.examName === config.label).slice(0, 5);
   const queue = focus.queue.filter((item) => item.examName === config.label);
   const firstUse = items.length === 0;
-  const nextAction = queue[0]?.reviewReason ?? config.nextActionFallback;
-  const primaryHref = `/app/capture?mode=${mode}`;
+  const selectedQueueItem = queue.find((item) => item.queueId === focus.sourceQueueId) ?? queue[0] ?? null;
+  const nextAction = focus.nextAction ?? selectedQueueItem?.reviewReason ?? config.nextActionFallback;
+  const primaryHref =
+    focus.nextActionType === "capture_now" || focus.nextActionType === "move_on"
+      ? `/app/capture?mode=${mode}`
+      : `/app/review?mode=${mode}`;
   const secondaryHref = mode === "second" ? `/app/items?mode=${mode}` : `/app/review?mode=${mode}`;
-  const diagnosedWeakPoint = queue[0]?.mistakeType ?? (items[0] ? buildNotebookPreview(items[0]).weakPoint : config.emptyTitle);
+  const diagnosedWeakPoint = selectedQueueItem?.mistakeType ?? (items[0] ? buildNotebookPreview(items[0]).weakPoint : config.emptyTitle);
   const notebookPreview = items.slice(0, 3).map((item) => buildNotebookPreview(item));
   const calculatorWorkflow = mode === "second" ? CALCULATOR_WORKFLOWS.practice : CALCULATOR_WORKFLOWS.accounting;
-  const primaryReason = queue[0]?.reviewReason ?? focus.lines[0];
-  const estimatedMinutes = queue[0]?.timeSpentSeconds ? Math.max(10, Math.round(queue[0].timeSpentSeconds / 60)) : 25;
-  const primaryTaskLabel = queue[0] ? `${queue[0].subjectLabel} 복습` : config.nextActionFallback;
+  const primaryReason = focus.reason ?? selectedQueueItem?.reviewReason ?? focus.lines[0];
+  const estimatedMinutes = focus.estimatedDurationMinutes ?? 25;
+  const primaryTaskLabel = focus.primaryTaskLabel ?? (selectedQueueItem ? `${selectedQueueItem.subjectLabel} 복습` : config.nextActionFallback);
 
   return (
     <div className="space-y-7">
