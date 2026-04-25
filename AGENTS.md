@@ -1,11 +1,11 @@
 # Inverge agent rules
 
 ## Product scope (fixed)
-This repository is currently focused ONLY on:
+This repository is currently focused ONLY on learner-facing:
 - 감정평가사 1차
 - 감정평가사 2차
 
-Do not add, expose, or expand product-facing scope to:
+Do not add, expose, or expand learner-facing scope to:
 - 보험계리사 / 계리사
 - CPA
 - 세무사
@@ -14,7 +14,27 @@ Do not add, expose, or expand product-facing scope to:
 - universal exam track framing
 - generic multi-exam messaging
 
-If actuarial/insurance-related code exists internally, treat it as out of current product scope and do not surface it in landing, onboarding, navigation, exam selection, or product copy.
+If actuarial/insurance-related code exists internally, treat it as out of current learner product scope and do not surface it in landing, onboarding, navigation, exam selection, or learner product copy.
+
+## Separate B2B Instructor Console scope (documentation policy)
+A separate instructor-facing B2B scope is allowed in documentation when clearly separated from learner-facing Inverge.
+
+- Product name for this surface: **학원용 답안 운영 콘솔**
+- Audience: academy staff / instructors / graders only
+- Purpose: **첨삭 운영 보조**, not learner-facing final judgment
+- Allowed capability framing:
+  - OCR answer upload
+  - 채점 초안
+  - rubric-based scoring draft
+  - feedback/comment draft
+  - reference answer draft
+  - mandatory **강사 검수** before final release
+
+Guardrails:
+- Never present instructor console tools in learner navigation or learner UI
+- Never claim AI final judgment or no-review grading
+- Keep instructor routes separate (future direction: `/instructor` or `/studio`)
+- Keep tenant separation and consent/reuse controls explicit in docs and implementation
 
 ## Product identity and positioning
 Inverge is:
