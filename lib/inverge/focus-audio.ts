@@ -25,8 +25,8 @@ export const FOCUS_AUDIO_TRACKS: FocusAudioTrack[] = [
   },
   {
     id: "quiet-flow",
-    label: "조용한 흐름",
-    description: "반복감이 적고 길게 이어지는 배경음입니다.",
+    label: "낮은 소리",
+    description: "작은 음량에서도 거슬림이 적은 배경음입니다.",
     src: "/focus-audio/quiet-flow.wav",
   },
   {

@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, RotateCcw } from "lucide-react";
 
-import { FocusAudioControl } from "@/components/inverge/focus-audio-control";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { postActuaryFirst } from "@/lib/actuary-first/client";
 import type { ChoiceId, ReviewQueueCandidate } from "@/lib/actuary-first/types";
@@ -122,9 +121,6 @@ export function ActuaryFirstReviewQueuePage({ subjectId }: { subjectId: string }
   return (
     <main className="mx-auto w-full max-w-[880px] px-5 py-10">
       <div className="space-y-6">
-        <div className="flex justify-end">
-          <FocusAudioControl />
-        </div>
         <section className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] p-6 sm:p-8">
           <div className="flex items-center justify-between gap-4 border-b border-[var(--border)] pb-5">
             <div>
