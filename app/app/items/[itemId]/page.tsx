@@ -67,78 +67,154 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
         </div>
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-        <ArtifactBlock tone="brand" eyebrow="AI 요약" title={note.summary}>
-          <p className="text-sm leading-7 text-[color:var(--muted)]">
-            AI는 점수를 판정하지 않고, 기록에서 다음 review/rewrite에 필요한 신호만 정리합니다.
-          </p>
-        </ArtifactBlock>
-        <ArtifactBlock tone="review" eyebrow="다음 행동" title={isSecond ? (note.rewriteInstruction ?? note.nextAction) : note.nextAction}>
-          <p className="text-sm leading-7 text-[color:var(--muted)]">오늘은 이 행동 하나만 남기면 됩니다.</p>
-        </ArtifactBlock>
-      </section>
-
-      <section className="grid gap-4 md:grid-cols-2">
-        <ArtifactBlock tone="risk" eyebrow="부족한 부분" title={note.weakPoint}>
-          <p className="text-sm leading-7 text-[color:var(--muted)]">
-            {isSecond ? "다음 답안에서 먼저 메울 누락 논점입니다." : "다음 review에서 먼저 확인할 오답 원인입니다."}
-          </p>
-        </ArtifactBlock>
-        <ArtifactBlock tone="focus" eyebrow={isSecond ? "핵심 문장" : "핵심 공식"} title={note.coreLine}>
-          <p className="text-sm leading-7 text-[color:var(--muted)]">
-            {isSecond ? "답안에 다시 넣어야 할 문장 단위 신호입니다." : "선지 판단 전에 먼저 고정할 구조입니다."}
-          </p>
-        </ArtifactBlock>
-      </section>
-
       {isSecond ? (
-        <section className="grid gap-4 md:grid-cols-3">
-          <MiniArtifact label="누락 논점" value={note.missingIssue ?? note.weakPoint} />
-          <MiniArtifact label="구조 약한 부분" value={note.weakStructurePoint ?? "목차와 사례 적용 순서를 다시 정리합니다."} />
-          <MiniArtifact label="사례 적용 문장" value={note.weakApplicationSentence ?? note.coreLine} />
+        <section className="space-y-4">
+          <ArtifactBlock tone="risk" eyebrow="가장 큰 간극" title={note.missingIssue ?? note.weakPoint}>
+            <p className="text-sm leading-7 text-[color:var(--muted)]">
+              이번 비교에서는 이 한 가지를 먼저 메우는 데 집중합니다. 교정 답안은 문단 단위로 바로 다시 씁니다.
+            </p>
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <Link href={`/app/capture?mode=${mode}`}>
+                <Button type="button">문단 다시쓰기 시작</Button>
+              </Link>
+              <p className="text-xs text-[color:var(--muted)]">
+                기준 답안과 내 답안을 옆에 두고, 누락 논점 1개를 먼저 넣어 작성합니다.
+              </p>
+            </div>
+          </ArtifactBlock>
+
+          <details className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-5">
+            <summary className="cursor-pointer list-none text-sm font-medium text-[color:var(--foreground-strong)]">
+              세부 비교 기록 보기
+            </summary>
+            <p className="mt-2 text-xs leading-6 text-[color:var(--muted)]">
+              점수/약점/구조 노트는 보조 기록으로 접어두고, 다시쓰기 실행 이후에 확인합니다.
+            </p>
+
+            <div className="mt-4 space-y-4">
+              <section className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+                <ArtifactBlock tone="brand" eyebrow="AI 요약" title={note.summary}>
+                  <p className="text-sm leading-7 text-[color:var(--muted)]">
+                    AI는 점수를 판정하지 않고, 기록에서 다음 review/rewrite에 필요한 신호만 정리합니다.
+                  </p>
+                </ArtifactBlock>
+                <ArtifactBlock tone="review" eyebrow="다시쓰기 지시" title={note.rewriteInstruction ?? note.nextAction}>
+                  <p className="text-sm leading-7 text-[color:var(--muted)]">오늘은 이 행동 하나만 남기면 됩니다.</p>
+                </ArtifactBlock>
+              </section>
+
+              <section className="grid gap-4 md:grid-cols-2">
+                <ArtifactBlock tone="focus" eyebrow="핵심 문장" title={note.coreLine}>
+                  <p className="text-sm leading-7 text-[color:var(--muted)]">답안에 다시 넣어야 할 문장 단위 신호입니다.</p>
+                </ArtifactBlock>
+                <ArtifactBlock tone="neutral" eyebrow="구조 약한 부분" title={note.weakStructurePoint ?? "목차와 사례 적용 순서를 다시 정리합니다."}>
+                  <p className="text-sm leading-7 text-[color:var(--muted)]">구조 메모는 보조 기록으로만 확인합니다.</p>
+                </ArtifactBlock>
+              </section>
+
+              <section className="grid gap-4 md:grid-cols-3">
+                <MiniArtifact label="누락 논점" value={note.missingIssue ?? note.weakPoint} />
+                <MiniArtifact label="사례 적용 문장" value={note.weakApplicationSentence ?? note.coreLine} />
+                <MiniArtifact label="다음 review 시점" value={note.nextReviewDate} />
+              </section>
+
+              <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-6">
+                <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+                  <div>
+                    <p className="text-caption text-[color:var(--muted)]">핵심 키워드</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {note.keyTerms.length > 0 ? (
+                        note.keyTerms.map((term) => <StudyCue key={term}>{term}</StudyCue>)
+                      ) : (
+                        <StudyCue>{detail.item.subjectLabel}</StudyCue>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section className="grid gap-4 lg:grid-cols-2">
+                <SourceBlock label="기준 답안 / 강평" value={detail.item.correctAnswer} />
+                <SourceBlock label="내 답안" value={detail.item.userAnswer} />
+              </section>
+
+              <ArtifactBlock tone="review" eyebrow="교정노트" title={note.noteCard}>
+                <div className="mt-4 grid gap-3 md:grid-cols-2">
+                  <p className="rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 text-sm leading-7 text-[color:var(--foreground-strong)]">
+                    {note.notebookLine}
+                  </p>
+                  <p className="rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 text-sm leading-7 text-[color:var(--foreground-strong)]">
+                    {note.recurrenceText}
+                  </p>
+                </div>
+              </ArtifactBlock>
+            </div>
+          </details>
         </section>
       ) : (
-        <ArtifactBlock tone="neutral" eyebrow="헷갈린 비교 포인트" title={note.comparisonPoint ?? note.weakPoint}>
-          <p className="text-sm leading-7 text-[color:var(--muted)]">
-            정답 근거와 내가 고른 판단이 갈라진 지점을 짧게 남깁니다.
-          </p>
-        </ArtifactBlock>
-      )}
+        <>
+          <section className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+            <ArtifactBlock tone="brand" eyebrow="AI 요약" title={note.summary}>
+              <p className="text-sm leading-7 text-[color:var(--muted)]">
+                AI는 점수를 판정하지 않고, 기록에서 다음 review/rewrite에 필요한 신호만 정리합니다.
+              </p>
+            </ArtifactBlock>
+            <ArtifactBlock tone="review" eyebrow="다음 행동" title={note.nextAction}>
+              <p className="text-sm leading-7 text-[color:var(--muted)]">오늘은 이 행동 하나만 남기면 됩니다.</p>
+            </ArtifactBlock>
+          </section>
 
-      <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-6">
-        <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
-          <div>
-            <p className="text-caption text-[color:var(--muted)]">핵심 키워드</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {note.keyTerms.length > 0 ? (
-                note.keyTerms.map((term) => <StudyCue key={term}>{term}</StudyCue>)
-              ) : (
-                <StudyCue>{detail.item.subjectLabel}</StudyCue>
-              )}
+          <section className="grid gap-4 md:grid-cols-2">
+            <ArtifactBlock tone="risk" eyebrow="부족한 부분" title={note.weakPoint}>
+              <p className="text-sm leading-7 text-[color:var(--muted)]">다음 review에서 먼저 확인할 오답 원인입니다.</p>
+            </ArtifactBlock>
+            <ArtifactBlock tone="focus" eyebrow="핵심 공식" title={note.coreLine}>
+              <p className="text-sm leading-7 text-[color:var(--muted)]">선지 판단 전에 먼저 고정할 구조입니다.</p>
+            </ArtifactBlock>
+          </section>
+
+          <ArtifactBlock tone="neutral" eyebrow="헷갈린 비교 포인트" title={note.comparisonPoint ?? note.weakPoint}>
+            <p className="text-sm leading-7 text-[color:var(--muted)]">
+              정답 근거와 내가 고른 판단이 갈라진 지점을 짧게 남깁니다.
+            </p>
+          </ArtifactBlock>
+
+          <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-6">
+            <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+              <div>
+                <p className="text-caption text-[color:var(--muted)]">핵심 키워드</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {note.keyTerms.length > 0 ? (
+                    note.keyTerms.map((term) => <StudyCue key={term}>{term}</StudyCue>)
+                  ) : (
+                    <StudyCue>{detail.item.subjectLabel}</StudyCue>
+                  )}
+                </div>
+              </div>
+              <div className="rounded-2xl border border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] px-4 py-3">
+                <p className="text-caption text-[color:var(--cue-review)]">다음 review 시점</p>
+                <p className="mt-1 text-sm font-medium text-[color:var(--foreground-strong)]">{note.nextReviewDate}</p>
+              </div>
             </div>
-          </div>
-          <div className="rounded-2xl border border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] px-4 py-3">
-            <p className="text-caption text-[color:var(--cue-review)]">다음 review 시점</p>
-            <p className="mt-1 text-sm font-medium text-[color:var(--foreground-strong)]">{note.nextReviewDate}</p>
-          </div>
-        </div>
-      </section>
+          </section>
 
-      <section className="grid gap-4 lg:grid-cols-2">
-        <SourceBlock label={isSecond ? "기준 답안 / 강평" : "정답 / 근거"} value={detail.item.correctAnswer} />
-        <SourceBlock label={isSecond ? "내 답안" : "내 답 / 선택"} value={detail.item.userAnswer} />
-      </section>
+          <section className="grid gap-4 lg:grid-cols-2">
+            <SourceBlock label="정답 / 근거" value={detail.item.correctAnswer} />
+            <SourceBlock label="내 답 / 선택" value={detail.item.userAnswer} />
+          </section>
 
-      <ArtifactBlock tone="review" eyebrow={isSecond ? "교정노트" : "오답노트"} title={note.noteCard}>
-        <div className="mt-4 grid gap-3 md:grid-cols-2">
-          <p className="rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 text-sm leading-7 text-[color:var(--foreground-strong)]">
-            {note.notebookLine}
-          </p>
-          <p className="rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 text-sm leading-7 text-[color:var(--foreground-strong)]">
-            {note.recurrenceText}
-          </p>
-        </div>
-      </ArtifactBlock>
+          <ArtifactBlock tone="review" eyebrow="오답노트" title={note.noteCard}>
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <p className="rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 text-sm leading-7 text-[color:var(--foreground-strong)]">
+                {note.notebookLine}
+              </p>
+              <p className="rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 text-sm leading-7 text-[color:var(--foreground-strong)]">
+                {note.recurrenceText}
+              </p>
+            </div>
+          </ArtifactBlock>
+        </>
+      )}
 
       {calculatorWorkflow && hasCalculationMistake ? (
         <ArtifactBlock tone="focus" eyebrow="계산 실수 연결" title={`${calculatorWorkflow.subject} 관련 계산기 스텝 보기`}>
