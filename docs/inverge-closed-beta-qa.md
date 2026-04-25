@@ -32,6 +32,12 @@
 - [x] learner 네비게이션에 `/instructor`, `/studio` 링크가 노출되지 않는다.
 - [x] `/instructor`, `/studio` 직접 접근은 `notFound` 처리된다.
 
+## 6) Capture subject selection visibility (`/app/capture`)
+- [x] `/app/capture?mode=first` 최초 진입 시 과목 드롭다운이 텍스트 입력영역보다 먼저 즉시 노출된다.
+- [x] 1차 과목 드롭다운에 공식 5과목(민법, 경제학원론, 부동산학원론, 감정평가관계법규, 회계학)이 모두 표시된다.
+- [x] `/app/capture?mode=second` 과목 드롭다운에 공식 3과목(감정평가실무, 감정평가이론, 감정평가 및 보상법규)이 모두 표시된다.
+- [x] 1차에서 `감정평가관계법규` 선택 후 저장 시 선택 과목이 유지된다.
+
 ---
 
 ## Final closed-beta QA pass (2026-04-25)
