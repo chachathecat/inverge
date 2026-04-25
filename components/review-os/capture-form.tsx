@@ -547,9 +547,11 @@ export function WrongAnswerCaptureForm({ userId, mode, initialPreferredSubjects 
           <IntakePanel
             form={form}
             mode={mode}
+            config={config}
             extracting={extracting}
             extractError={extractError}
             update={update}
+            updateSubject={updateSubject}
             onImage={handleImageImport}
             onPdf={handlePdfImport}
             onGenerate={() => generateStructuredDraft()}
@@ -595,18 +597,49 @@ type FieldProps = {
   update: <K extends keyof DraftState>(key: K, value: DraftState[K]) => void;
 };
 
+function SubjectSelect({
+  subjectLabel,
+  subjects,
+  value,
+  onChange,
+  className = "form-control",
+}: {
+  subjectLabel: string;
+  subjects: readonly string[];
+  value: string;
+  onChange: (value: string) => void;
+  className?: string;
+}) {
+  return (
+    <label className="space-y-2">
+      <span className="text-sm text-[color:var(--foreground-strong)]">{subjectLabel}</span>
+      <select value={value} onChange={(event) => onChange(event.target.value)} className={className}>
+        {subjects.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
 function IntakePanel({
   form,
   mode,
+  config,
   extracting,
   extractError,
   update,
+  updateSubject,
   onImage,
   onPdf,
   onGenerate,
 }: FieldProps & {
+  config: ReturnType<typeof getModeConfig>;
   extracting: boolean;
   extractError: string;
+  updateSubject: (value: string) => void;
   onImage: (file: File) => void;
   onPdf: (file: File) => void;
   onGenerate: () => void | Promise<void>;
@@ -653,6 +686,15 @@ function IntakePanel({
             />
           </label>
         </div>
+      </div>
+      <div className="mt-5">
+        <SubjectSelect
+          subjectLabel={config.subjectLabel}
+          subjects={config.subjects}
+          value={form.subjectLabel}
+          onChange={updateSubject}
+          className="form-control w-full"
+        />
       </div>
       <label className="mt-5 block space-y-2">
         <span className="text-sm text-[color:var(--foreground-strong)]">
@@ -773,20 +815,7 @@ function ConfirmPanel({
       <p className="text-caption text-[color:var(--muted)]">Step 3. Confirm</p>
       <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">필수 항목만 확인합니다</h3>
       <div className="mt-5 grid gap-4 lg:grid-cols-2">
-        <label className="space-y-2">
-          <span className="text-sm text-[color:var(--foreground-strong)]">{config.subjectLabel}</span>
-          <select
-            value={form.subjectLabel}
-            onChange={(event) => updateSubject(event.target.value)}
-            className="form-control"
-          >
-            {config.subjects.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
-        </label>
+        <SubjectSelect subjectLabel={config.subjectLabel} subjects={config.subjects} value={form.subjectLabel} onChange={updateSubject} />
         <label className="space-y-2">
           <span className="text-sm text-[color:var(--foreground-strong)]">{mode === "second" ? "작업 단계" : "회차 / 번호"}</span>
           {mode === "second" ? (
