@@ -20,8 +20,8 @@ export default async function ReviewOsLayout({ children }: { children: ReactNode
             아직 초대된 계정이 아닙니다.
           </h1>
           <p className="mt-4 text-sm leading-7 text-[color:var(--muted)]">
-            Inverge alpha는 감정평가사 1차와 2차 수험 운영을 검증하기 위한 invite-only 베타입니다.
-            초대가 열리면 같은 계정으로 바로 사용할 수 있습니다.
+            Inverge alpha는 invite-only로 운영 중이며, 감정평가사 1차·2차 흐름을 순차적으로 열고 있습니다.
+            지금 로그인한 같은 계정은 초대가 열리면 그대로 사용할 수 있습니다.
           </p>
           <div className="mt-6">
             <Link href="/" className="inline-flex">

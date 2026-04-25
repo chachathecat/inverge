@@ -3,7 +3,6 @@ import Link from "next/link";
 import { RefinedBadge, RefinedShell } from "@/components/inverge/refined-primitives";
 import { buttonVariants } from "@/components/ui/button";
 import { getServerSessionUser } from "@/lib/auth/session";
-import { buildAppraiserHomeState } from "@/lib/inverge/exam-home";
 import { cn } from "@/lib/utils";
 
 type ExamSelectionCard = {
@@ -12,6 +11,12 @@ type ExamSelectionCard = {
   loop: string;
   href: string;
 };
+
+function buildModeEntryHref(isAuthenticated: boolean, authEnabled: boolean, mode: "first" | "second") {
+  const appHref = `/app?mode=${mode}`;
+  if (!authEnabled || isAuthenticated) return appHref;
+  return `/login?returnTo=${encodeURIComponent(appHref)}`;
+}
 
 function SelectionCard({ card }: { card: ExamSelectionCard }) {
   return (
@@ -25,7 +30,7 @@ function SelectionCard({ card }: { card: ExamSelectionCard }) {
 
       <div className="mt-7">
         <Link href={card.href} className={cn(buttonVariants({ variant: "outline" }), "w-full sm:w-auto")}>
-          선택하기
+          이 모드로 시작
         </Link>
       </div>
     </section>
@@ -34,21 +39,19 @@ function SelectionCard({ card }: { card: ExamSelectionCard }) {
 
 export default async function ExamsPage() {
   const session = await getServerSessionUser();
-  const userId = session.userId ?? "mvp-user";
-  const appraiserState = await buildAppraiserHomeState(userId);
 
   const cards: ExamSelectionCard[] = [
     {
       title: "감정평가사 1차",
       description: "객관식 세트 풀이 중심으로 오답 원인을 정리하고 재시도 큐를 운영합니다.",
       loop: "세트 풀이 → 오답 이유 → 회상 → 재시도 큐",
-      href: appraiserState.firstCard.ctaHref,
+      href: buildModeEntryHref(session.isAuthenticated, session.authEnabled, "first"),
     },
     {
       title: "감정평가사 2차",
       description: "답안을 비교해 가장 큰 간극 하나를 찾고 문단 다시쓰기로 연결합니다.",
       loop: "쟁점 회상 → 답안 비교 → 가장 큰 간극 → 문단 다시쓰기",
-      href: appraiserState.secondCard.ctaHref,
+      href: buildModeEntryHref(session.isAuthenticated, session.authEnabled, "second"),
     },
   ];
 
@@ -60,7 +63,7 @@ export default async function ExamsPage() {
           감정평가사 트랙을 선택하세요.
         </h1>
         <p className="mt-5 text-body text-[color:var(--muted)]">
-          감정평가사 1차와 2차만 제공합니다. 점수보다 다음 행동을 정리하는 흐름으로 이어집니다.
+          감정평가사 1차와 2차만 제공합니다. 선택한 모드로 로그인 후 바로 실행 화면으로 이어집니다.
         </p>
       </section>
 
