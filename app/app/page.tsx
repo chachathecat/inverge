@@ -33,7 +33,8 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
   const firstUse = items.length === 0;
   const selectedQueueItem = queue.find((item) => item.queueId === focus.sourceQueueId) ?? queue[0] ?? null;
   const nextAction = focus.nextAction ?? selectedQueueItem?.reviewReason ?? config.nextActionFallback;
-  const primaryHref = `/app/session?mode=${mode}`;
+  const isFirstSetStart = mode === "first" && focus.nextActionType === "capture_now";
+  const primaryHref = isFirstSetStart ? "/app/sets?mode=first" : `/app/session?mode=${mode}`;
   const secondaryHref = mode === "second" ? `/app/items?mode=${mode}` : `/app/review?mode=${mode}`;
   const diagnosedWeakPoint = selectedQueueItem?.mistakeType ?? (items[0] ? buildNotebookPreview(items[0]).weakPoint : config.emptyTitle);
   const notebookPreview = items.slice(0, 3).map((item) => buildNotebookPreview(item));
@@ -68,11 +69,16 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <Link href={primaryHref} className="w-full sm:w-auto">
                 <Button type="button" className="w-full sm:w-auto">
-                  오늘 최우선 작업 시작
+                  {isFirstSetStart ? "세트 풀이 시작" : "오늘 최우선 작업 시작"}
                 </Button>
               </Link>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-[color:var(--muted)]">
                 <span>다른 작업 선택:</span>
+                {mode === "first" ? (
+                  <Link href="/app/capture?mode=first" className="underline-offset-2 hover:underline">
+                    오답 1개만 빠르게 기록
+                  </Link>
+                ) : null}
                 <Link href={secondaryHref} className="underline-offset-2 hover:underline">
                   {config.secondaryCta}
                 </Link>

@@ -6,7 +6,13 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { AppraisalMode } from "@/lib/review-os/appraisal";
-import type { ReviewCompletionAction, ReviewCompletionMetadata, ReviewQueueCard, TodayFocus } from "@/lib/review-os/types";
+import {
+  FIRST_STAGE_ERROR_REASON_OPTIONS,
+  type ReviewCompletionAction,
+  type ReviewCompletionMetadata,
+  type ReviewQueueCard,
+  type TodayFocus,
+} from "@/lib/review-os/types";
 
 type SessionNote = {
   summary: string;
@@ -35,15 +41,6 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note }: 
   const [retrievalSentence, setRetrievalSentence] = useState("");
 
   const [issueRecall, setIssueRecall] = useState("");
-  const FIRST_STAGE_ERROR_REASON_OPTIONS = [
-    "개념 부족",
-    "선지 오독",
-    "계산 실수",
-    "시간 부족",
-    "헷갈리는 개념과 혼동",
-    "찍음/확신 부족",
-  ] as const;
-
   const hasQueueItem = Boolean(queueItem);
   const steps = useMemo(() => {
     if (!hasQueueItem) {
@@ -285,11 +282,19 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note }: 
             <p className="text-sm leading-7 text-[color:var(--foreground-strong)]">
               오늘 queue가 아직 없어 먼저 기록 1건을 남기면 session 루프가 시작됩니다.
             </p>
-            <Link href={`/app/capture?mode=${mode}`} className="inline-flex w-full sm:w-auto">
+            <Link href={mode === "first" ? "/app/sets?mode=first" : `/app/capture?mode=${mode}`} className="inline-flex w-full sm:w-auto">
               <Button type="button" className="w-full sm:w-auto">
-                {mode === "second" ? "2차 답안 1건 입력" : "1차 오답 1건 입력"}
+                {mode === "second" ? "2차 답안 1건 입력" : "세트 풀이 시작"}
               </Button>
             </Link>
+            {mode === "first" ? (
+              <Link
+                href="/app/capture?mode=first"
+                className="inline-flex text-xs text-[color:var(--muted)] underline-offset-2 hover:underline"
+              >
+                오답 1개만 빠르게 기록
+              </Link>
+            ) : null}
             {quietLinks}
           </section>
         ) : null}
