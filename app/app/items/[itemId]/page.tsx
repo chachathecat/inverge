@@ -74,7 +74,7 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
               이번 비교에서는 이 한 가지를 먼저 메우는 데 집중합니다. 교정 답안은 문단 단위로 바로 다시 씁니다.
             </p>
             <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-              <Link href={`/app/capture?mode=${mode}`}>
+              <Link href={`/app/capture?mode=${mode}&rewriteFrom=${itemId}`}>
                 <Button type="button">문단 다시쓰기 시작</Button>
               </Link>
               <p className="text-xs text-[color:var(--muted)]">

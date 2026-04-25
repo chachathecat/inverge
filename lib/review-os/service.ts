@@ -382,6 +382,10 @@ export class ReviewOsService {
             myAnswerSummary: input.myAnswerSummary ?? null,
             caseSummary: input.caseSummary ?? null,
           },
+          rewrite_source_item_id: input.rewriteSourceItemId ?? null,
+          rewrite_source_gap: input.rewriteSourceGap ?? null,
+          rewrite_instruction: input.rewriteInstruction ?? null,
+          rewrite_completed: input.rewriteCompleted ?? null,
         },
         {
           topicTag: artifacts.tags.topicTag,
@@ -429,6 +433,13 @@ export class ReviewOsService {
         topicTag: artifacts.tags.topicTag,
         mistakeType: artifacts.tags.mistakeType,
       });
+      if (mode === "second" && input.rewriteSourceItemId) {
+        await reviewOsRepository.logUsageEvent(userId, "second_stage_rewrite_completed", "wrong_answer_item", item.id, {
+          rewrite_source_item_id: input.rewriteSourceItemId,
+          rewrite_source_gap: input.rewriteSourceGap ?? null,
+          rewrite_completed: input.rewriteCompleted ?? true,
+        });
+      }
 
       return { item, deduped: false };
     } finally {
