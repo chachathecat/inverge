@@ -15,8 +15,10 @@
 Inverge를 “감정평가사 합격 운영 시스템”으로 명확히 설명.
 
 ### Primary action
-- 감정평가사 1차 시작
-- 감정평가사 2차 시작
+- 시작하기
+
+### Next step (subordinate)
+- 시작하기 이후 Exam Selection에서 감정평가사 1차 / 감정평가사 2차를 선택
 
 ### Must include
 - 운영 루프(입력→진단→추적→추천→실행→재시도/재작성)의 간결한 소개
@@ -31,6 +33,9 @@ Inverge를 “감정평가사 합격 운영 시스템”으로 명확히 설명.
 ---
 
 ## 2) Exam Selection
+### Role
+Landing의 시작하기 이후 진입하는 하위 분기 단계.
+
 ### Allowed options only
 - 감정평가사 1차
 - 감정평가사 2차
