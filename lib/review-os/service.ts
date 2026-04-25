@@ -199,8 +199,12 @@ function buildTodayPriorityPlan(
   };
 }
 
-function makeTodayFocus(queue: ReviewQueueCard[], recentItems: WrongAnswerItemRecord[]): TodayFocus {
-  const mode = getFocusMode(queue, recentItems);
+function makeTodayFocus(
+  queue: ReviewQueueCard[],
+  recentItems: WrongAnswerItemRecord[],
+  preferredMode?: "first" | "second",
+): TodayFocus {
+  const mode = preferredMode ?? getFocusMode(queue, recentItems);
   const priority = buildTodayPriorityPlan(queue, mode);
   const top = priority.queueItem;
   const topMistake = top?.mistakeType ?? "반복 실수";
@@ -633,7 +637,7 @@ export class ReviewOsService {
     const recentItems = targetExamName
       ? rawRecentItems.filter((item) => item.examName === targetExamName)
       : rawRecentItems;
-    const focus = makeTodayFocus(queue, recentItems);
+    const focus = makeTodayFocus(queue, recentItems, preferredMode);
     await reviewOsRepository.insertActionSeed(userId, {
       sourceType: "today_focus",
       seedType: "summary",
