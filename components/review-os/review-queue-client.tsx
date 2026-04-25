@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import type { ReviewCompletionAction, ReviewQueueCard } from "@/lib/review-os/types";
@@ -9,25 +9,38 @@ import type { ReviewCompletionAction, ReviewQueueCard } from "@/lib/review-os/ty
 export function ReviewQueueClient({ items }: { items: ReviewQueueCard[] }) {
   const router = useRouter();
   const [pendingId, setPendingId] = useState<string | null>(null);
-  const [actionsByQueueId, setActionsByQueueId] = useState<Record<string, ReviewCompletionAction>>(
-    Object.fromEntries(
-      items.map((item) => [
-        item.queueId,
-        item.examName === "감정평가사 2차" ? "second_paragraph_rewrite" : "first_short_retry",
-      ]),
-    ),
+  const [inlineErrorByQueueId, setInlineErrorByQueueId] = useState<Record<string, string>>({});
+  const defaultActionsByQueueId = useMemo(
+    () =>
+      Object.fromEntries(
+        items.map((item) => [
+          item.queueId,
+          item.examName === "감정평가사 2차" ? "second_paragraph_rewrite" : "first_short_retry",
+        ]),
+      ) as Record<string, ReviewCompletionAction>,
+    [items],
   );
+  const [actionsByQueueId, setActionsByQueueId] = useState<Record<string, ReviewCompletionAction>>({});
 
   async function complete(queueId: string) {
-    const selectedAction = actionsByQueueId[queueId];
+    const selectedAction = actionsByQueueId[queueId] ?? defaultActionsByQueueId[queueId];
     if (!selectedAction) return;
+    setInlineErrorByQueueId((prev) => ({ ...prev, [queueId]: "" }));
     setPendingId(queueId);
     try {
-      await fetch(`/api/os/review-queue/${queueId}/complete`, {
+      const response = await fetch(`/api/os/review-queue/${queueId}/complete`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: selectedAction }),
       });
+      if (!response.ok) {
+        const data = (await response.json().catch(() => null)) as { message?: string } | null;
+        setInlineErrorByQueueId((prev) => ({
+          ...prev,
+          [queueId]: data?.message ?? "완료 처리 중 문제가 있었습니다. 잠시 후 다시 시도해 주세요.",
+        }));
+        return;
+      }
       router.refresh();
     } finally {
       setPendingId(null);
@@ -79,7 +92,7 @@ export function ReviewQueueClient({ items }: { items: ReviewQueueCard[] }) {
                         className="h-4 w-4"
                         name={`next-action-${item.queueId}`}
                         value={option.value}
-                        checked={actionsByQueueId[item.queueId] === option.value}
+                        checked={(actionsByQueueId[item.queueId] ?? defaultActionsByQueueId[item.queueId]) === option.value}
                         onChange={() =>
                           setActionsByQueueId((prev) => ({
                             ...prev,
@@ -105,6 +118,9 @@ export function ReviewQueueClient({ items }: { items: ReviewQueueCard[] }) {
               >
                 {pendingId === item.queueId ? "처리 중" : "오늘 정리 완료"}
               </Button>
+              {inlineErrorByQueueId[item.queueId] ? (
+                <p className="max-w-52 text-right text-xs text-[color:var(--danger)]">{inlineErrorByQueueId[item.queueId]}</p>
+              ) : null}
             </div>
           </div>
         </section>

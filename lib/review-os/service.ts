@@ -179,6 +179,12 @@ export class ReviewOsInviteRequiredError extends Error {
   }
 }
 
+export class ReviewOsInvalidCompletionActionError extends Error {
+  constructor() {
+    super("review-os-invalid-completion-action");
+  }
+}
+
 export class ReviewOsService {
   private resolveFollowUpDueAtFromAction(
     action: ReviewCompletionAction,
@@ -210,6 +216,50 @@ export class ReviewOsService {
     return examName === "감정평가사 2차"
       ? "예약된 재작성 일정을 유지해 다시 보강합니다."
       : "예약된 복습 일정을 유지해 같은 실수를 줄입니다.";
+  }
+
+  private isCompletionActionCompatible(examName: string, action: ReviewCompletionAction) {
+    if (examName === "감정평가사 2차") {
+      return action === "second_paragraph_rewrite" || action === "second_keep_scheduled_rewrite";
+    }
+    return (
+      action === "first_short_retry" ||
+      action === "first_confirm_recall" ||
+      action === "first_keep_scheduled_review"
+    );
+  }
+
+  private readPreservedNextReviewDate(
+    context: Awaited<ReturnType<typeof reviewOsRepository.getReviewQueueItemContext>>,
+  ) {
+    if (!context) return null;
+
+    const itemRawPayload =
+      typeof context.item.rawPayload === "object" && context.item.rawPayload
+        ? (context.item.rawPayload as Record<string, unknown>)
+        : null;
+    const queueRawPayload =
+      typeof context.queueRow.raw_payload === "object" && context.queueRow.raw_payload
+        ? (context.queueRow.raw_payload as Record<string, unknown>)
+        : null;
+    const userConfirmedFields =
+      itemRawPayload?.user_confirmed_fields &&
+      typeof itemRawPayload.user_confirmed_fields === "object"
+        ? (itemRawPayload.user_confirmed_fields as Record<string, unknown>)
+        : null;
+    const normalizedDraft =
+      itemRawPayload?.normalized_draft && typeof itemRawPayload.normalized_draft === "object"
+        ? (itemRawPayload.normalized_draft as Record<string, unknown>)
+        : null;
+
+    const candidates = [
+      context.item.nextReviewDate,
+      typeof itemRawPayload?.nextReviewDate === "string" ? itemRawPayload.nextReviewDate : null,
+      typeof normalizedDraft?.nextReviewDate === "string" ? normalizedDraft.nextReviewDate : null,
+      typeof userConfirmedFields?.nextReviewDate === "string" ? userConfirmedFields.nextReviewDate : null,
+      typeof queueRawPayload?.dueAt === "string" ? queueRawPayload.dueAt : null,
+    ];
+    return candidates.find((candidate) => typeof candidate === "string" && candidate.trim().length > 0) ?? null;
   }
 
   async ensureAccess(userId: string, email: string | null): Promise<AccessState> {
@@ -404,23 +454,19 @@ export class ReviewOsService {
   async completeReview(userId: string, email: string | null, queueId: string, action: ReviewCompletionAction) {
     await this.ensureAccess(userId, email);
     const context = await reviewOsRepository.getReviewQueueItemContext(userId, queueId);
+    if (context && !this.isCompletionActionCompatible(context.item.examName, action)) {
+      throw new ReviewOsInvalidCompletionActionError();
+    }
     await reviewOsRepository.completeReviewQueueItem(userId, queueId);
     if (context) {
       const derivedPayload =
         typeof context.queueRow.derived_payload === "object" && context.queueRow.derived_payload
           ? (context.queueRow.derived_payload as Record<string, unknown>)
           : {};
-      const userConfirmedFields = context.item.rawPayload.user_confirmed_fields;
-      const confirmedFieldsRecord =
-        userConfirmedFields && typeof userConfirmedFields === "object"
-          ? (userConfirmedFields as Record<string, unknown>)
-          : null;
-      const confirmedNextReviewDate =
-        typeof confirmedFieldsRecord?.nextReviewDate === "string" ? confirmedFieldsRecord.nextReviewDate : null;
       const followUpDueAt = this.resolveFollowUpDueAtFromAction(
         action,
         context.item.examName,
-        confirmedNextReviewDate ?? null,
+        this.readPreservedNextReviewDate(context),
       );
       const recurrenceCount = typeof derivedPayload.recurrenceCount === "number" ? derivedPayload.recurrenceCount : 1;
       const followUpPriority = Math.max(
