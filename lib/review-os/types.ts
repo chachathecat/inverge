@@ -4,6 +4,14 @@ export const REVIEW_OS_STAGE = "alpha";
 export const EXAM_OPTIONS = ["감정평가사 1차", "감정평가사 2차"] as const;
 
 export const APPRAISAL_FIRST_SUBJECTS = ["민법", "경제학원론", "부동산학원론", "감정평가관계법규", "회계학"] as const;
+export const FIRST_STAGE_ERROR_REASON_OPTIONS = [
+  "개념 부족",
+  "선지 오독",
+  "계산 실수",
+  "시간 부족",
+  "헷갈리는 개념과 혼동",
+  "찍음/확신 부족",
+] as const;
 
 export const APPRAISAL_SECOND_SUBJECTS = ["감정평가실무", "감정평가이론", "감정평가 및 보상법규"] as const;
 
