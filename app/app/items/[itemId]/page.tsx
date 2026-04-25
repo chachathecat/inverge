@@ -87,7 +87,7 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
               <p className="text-caption text-[color:var(--cue-review)]">2차 rewrite 전/후 비교</p>
               <div className="mt-3 space-y-3">
                 <MiniArtifact label="source gap" value={rewriteComparison.sourceGap} />
-                <details className="rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4">
+                <details className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4">
                   <summary className="cursor-pointer list-none text-sm font-medium text-[color:var(--foreground-strong)]">
                     이전 문단 / 기준 답안 요약 펼쳐서 보기
                   </summary>
@@ -192,10 +192,10 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
 
               <ArtifactBlock tone="review" eyebrow="교정노트" title={note.noteCard}>
                 <div className="mt-4 grid gap-3 md:grid-cols-2">
-                  <p className="rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 text-sm leading-7 text-[color:var(--foreground-strong)]">
+                  <p className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 text-sm leading-7 text-[color:var(--foreground-strong)]">
                     {note.notebookLine}
                   </p>
-                  <p className="rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 text-sm leading-7 text-[color:var(--foreground-strong)]">
+                  <p className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 text-sm leading-7 text-[color:var(--foreground-strong)]">
                     {note.recurrenceText}
                   </p>
                 </div>
@@ -243,7 +243,7 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
                   )}
                 </div>
               </div>
-              <div className="rounded-2xl border border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] px-4 py-3">
+              <div className="rounded-[var(--radius-md)] border border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] px-4 py-3">
                 <p className="text-caption text-[color:var(--cue-review)]">다음 review 시점</p>
                 <p className="mt-1 text-sm font-medium text-[color:var(--foreground-strong)]">{note.nextReviewDate}</p>
               </div>
@@ -257,10 +257,10 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
 
           <ArtifactBlock tone="review" eyebrow="오답노트" title={note.noteCard}>
             <div className="mt-4 grid gap-3 md:grid-cols-2">
-              <p className="rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 text-sm leading-7 text-[color:var(--foreground-strong)]">
+              <p className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 text-sm leading-7 text-[color:var(--foreground-strong)]">
                 {note.notebookLine}
               </p>
-              <p className="rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 text-sm leading-7 text-[color:var(--foreground-strong)]">
+              <p className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 text-sm leading-7 text-[color:var(--foreground-strong)]">
                 {note.recurrenceText}
               </p>
             </div>

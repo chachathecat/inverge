@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 
 import { RefinedShell } from "@/components/inverge/refined-primitives";
@@ -30,13 +30,14 @@ const NAV_ITEMS = [
 
 export function ReviewOsAppShell({ title, description, email, mode, children, rightSlot }: AppShellProps) {
   const searchParams = useSearchParams();
+  const pathname = usePathname();
   const currentMode = parseAppraisalMode(searchParams.get("mode")) ?? mode;
   const config = getModeConfig(currentMode);
   const homeHref = `/app?mode=${currentMode}`;
 
   return (
-    <RefinedShell className="space-y-7 py-7 sm:py-9">
-      <div className="flex flex-col gap-5 border-b border-[var(--border)] pb-5 sm:flex-row sm:items-end sm:justify-between">
+    <RefinedShell className="space-y-8 py-7 sm:py-10">
+      <div className="flex flex-col gap-6 border-b border-[var(--border)] pb-6 sm:flex-row sm:items-end sm:justify-between">
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-3">
             <Link href={homeHref} className="flex items-center gap-3">
@@ -45,7 +46,7 @@ export function ReviewOsAppShell({ title, description, email, mode, children, ri
               </span>
               <span className="text-title text-[color:var(--foreground-strong)]">Inverge</span>
             </Link>
-            <span className="rounded-full border border-[var(--border)] px-3 py-1 text-xs text-[color:var(--muted)]">
+            <span className="rounded-full border border-[var(--border)] bg-[color:var(--bg-elevated)] px-3 py-1 text-xs text-[color:var(--muted)]">
               {config.shortLabel}
             </span>
           </div>
@@ -76,7 +77,10 @@ export function ReviewOsAppShell({ title, description, email, mode, children, ri
                 key={item.href}
                 href={`${item.href}?mode=${currentMode}`}
                 className={cn(
-                  "rounded-full border border-[var(--border)] px-4 py-2 text-sm text-[color:var(--muted)] transition hover:text-[color:var(--foreground-strong)]",
+                  "rounded-full border px-4 py-2 text-sm transition",
+                  pathname === item.href
+                    ? "border-[color:var(--brand-700)] bg-[color:var(--brand-050)] text-[color:var(--brand-900)]"
+                    : "border-[var(--border)] text-[color:var(--muted)] hover:bg-[color:var(--bg-elevated)] hover:text-[color:var(--foreground-strong)]",
                 )}
               >
                 {item.label}

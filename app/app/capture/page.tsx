@@ -38,7 +38,7 @@ export default async function ReviewOsCapturePage({ searchParams }: PageProps) {
   const isRewriteFlow = mode === "second" && Boolean(rewriteContext);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-7">
       <section className="space-y-3">
         <div>
           <h2 className="text-2xl font-medium tracking-[-0.04em] text-[color:var(--foreground-strong)]">
@@ -52,7 +52,7 @@ export default async function ReviewOsCapturePage({ searchParams }: PageProps) {
         </div>
       </section>
 
-      <Card className="border-[var(--border)] bg-[color:var(--surface)] shadow-none">
+      <Card className="border-[color:var(--border-strong)] bg-[color:var(--surface)] shadow-none">
         <CardHeader>
           <CardTitle>
             {isRewriteFlow ? "문단 다시쓰기 입력" : mode === "second" ? "교정노트를 위한 최소 입력" : "오답노트를 위한 최소 입력"}
