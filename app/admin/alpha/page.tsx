@@ -1,22 +1,12 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { isAllowedAdminEmail } from "@/lib/auth/admin";
 import { getServerSessionUser } from "@/lib/auth/session";
 import { reviewOsService } from "@/lib/review-os/service";
-
-function isAdminEmail(email: string | null) {
-  const allow = (process.env.ALPHA_ADMIN_EMAILS ?? "")
-    .split(",")
-    .map((item) => item.trim().toLowerCase())
-    .filter(Boolean);
-
-  if (allow.length === 0) return process.env.NODE_ENV !== "production";
-
-  return email ? allow.includes(email.toLowerCase()) : false;
-}
 
 export default async function AlphaAdminPage() {
   const session = await getServerSessionUser();
 
-  if (!session.isAuthenticated || !isAdminEmail(session.email)) {
+  if (!session.isAuthenticated || !isAllowedAdminEmail(session.email)) {
     return <div className="mx-auto max-w-3xl px-5 py-12 text-sm text-[color:var(--muted)]">접근 권한이 없습니다.</div>;
   }
 

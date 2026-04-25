@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { requireAdminRouteSession } from "@/lib/auth/admin";
 import { isAdminSetSubjectId, type AdminSetMetadataSaveInput } from "@/lib/inverge/admin-set-metadata";
 import { listAdminSets, saveAdminSetMetadata, setAdminSetActive } from "@/lib/inverge/admin-set-metadata-repository";
 
@@ -22,6 +23,9 @@ export function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const adminDenied = await requireAdminRouteSession();
+  if (adminDenied) return adminDenied;
+
   try {
     const body = (await request.json()) as unknown;
     if (!isRecord(body)) {

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { requireAdminRouteSession } from "@/lib/auth/admin";
 import {
   listAdminRewriteSeedTemplates,
   saveAdminRewriteSeedTemplate,
@@ -17,6 +18,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const adminDenied = await requireAdminRouteSession();
+  if (adminDenied) return adminDenied;
+
   try {
     const body = (await request.json()) as
       | (AdminRewriteSeedTemplateSaveInput & { action?: undefined })

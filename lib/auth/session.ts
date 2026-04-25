@@ -147,7 +147,8 @@ export async function getRequestUserId(request: Request, fallbackUserId = DEMO_U
   if (smokeSession) return smokeSession.userId;
 
   if (canUseHeaderFallback(request)) {
-    return headerUserId || fallbackUserId;
+    if (headerUserId && isUuid(headerUserId)) return headerUserId;
+    return fallbackUserId;
   }
 
   if (!isSupabaseConfigured()) {

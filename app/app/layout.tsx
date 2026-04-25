@@ -15,13 +15,13 @@ export default async function ReviewOsLayout({ children }: { children: ReactNode
     return (
       <div className="mx-auto flex min-h-[calc(100vh-96px)] w-full max-w-2xl items-center px-5 py-12">
         <section className="w-full rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] p-8">
-          <p className="text-sm text-[color:var(--muted)]">감정평가사 closed alpha</p>
+          <p className="text-sm text-[color:var(--muted)]">감정평가사 closed beta</p>
           <h1 className="mt-3 text-[28px] font-medium tracking-[-0.04em] text-[color:var(--foreground-strong)]">
             아직 초대된 계정이 아닙니다.
           </h1>
           <p className="mt-4 text-sm leading-7 text-[color:var(--muted)]">
-            Inverge alpha는 invite-only로 운영 중이며, 감정평가사 1차·2차 흐름을 순차적으로 열고 있습니다.
-            지금 로그인한 같은 계정은 초대가 열리면 그대로 사용할 수 있습니다.
+            Inverge closed beta는 초대 계정만 이용할 수 있습니다. 감정평가사 1차·2차 흐름을 순차적으로 열고 있어,
+            초대가 승인되면 지금 계정으로 바로 이어서 사용할 수 있습니다.
           </p>
           <div className="mt-6">
             <Link href="/" className="inline-flex">
