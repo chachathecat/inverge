@@ -255,17 +255,37 @@ function mapReviewQueueCard(
 export class ReviewOsRepository {
   async ensureAccess(userId: string, email: string | null): Promise<AccessState> {
     const client = getUserClient(userId);
-    const upsertResult = await client.from("profiles").upsert(
-      {
+    const existingProfileResult = await client
+      .from("profiles")
+      .select("user_id, email, invite_status, entitlement_tier")
+      .eq("user_id", userId)
+      .maybeSingle();
+    assertSupabaseOperation("review-os.ensureAccess.selectExistingProfile", existingProfileResult);
+
+    const now = new Date().toISOString();
+    const existingProfile = existingProfileResult.data as Record<string, unknown> | null;
+
+    if (existingProfile) {
+      // Routine access checks must never reset invite/entitlement state for existing users.
+      const updateResult = await client
+        .from("profiles")
+        .update({
+          email,
+          updated_at: now,
+        })
+        .eq("user_id", userId);
+      assertSupabaseOperation("review-os.ensureAccess.updateExistingProfile", updateResult);
+    } else {
+      // First insert decides initial entitlement; later ensureAccess calls only refresh email/updated_at.
+      const insertResult = await client.from("profiles").insert({
         user_id: userId,
         email,
         invite_status: isAllowlisted(email) ? "active" : "pending",
         entitlement_tier: "free_trial",
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "user_id" },
-    );
-    assertSupabaseOperation("review-os.ensureAccess.upsertProfile", upsertResult);
+        updated_at: now,
+      });
+      assertSupabaseOperation("review-os.ensureAccess.insertProfile", insertResult);
+    }
 
     const profileResult = await client
       .from("profiles")

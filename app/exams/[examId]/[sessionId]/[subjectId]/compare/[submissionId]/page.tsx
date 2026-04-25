@@ -1,10 +1,14 @@
+import { notFound } from "next/navigation";
+
 import { ComparisonView } from "@/components/inverge/comparison-view";
-import { readWorkRouteParams } from "@/lib/inverge/router";
+import { readWorkRouteParamsStrict } from "@/lib/inverge/router";
 
 type ComparePageProps = {
   params: Promise<{ examId: string; sessionId: string; subjectId: string; submissionId: string }>;
 };
 
 export default async function ComparePage({ params }: ComparePageProps) {
-  return <ComparisonView {...readWorkRouteParams(await params)} />;
+  const route = readWorkRouteParamsStrict(await params);
+  if (!route) notFound();
+  return <ComparisonView {...route} />;
 }

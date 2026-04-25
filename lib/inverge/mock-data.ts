@@ -73,101 +73,28 @@ export const APPRAISER_SECOND_EXAM: InvergeExam = {
   ],
 };
 
-function createSingleSubjectExam({
-  id,
-  name,
-  shortName,
-  sessionLabel,
-  subjectName,
-  focusAxis,
-  expectedTime,
-  inputPlaceholder,
-}: {
-  id: string;
-  name: string;
-  shortName: string;
-  sessionLabel: string;
-  subjectName: string;
-  focusAxis: string;
-  expectedTime: string;
-  inputPlaceholder: string;
-}): InvergeExam {
-  return {
-    id,
-    name,
-    shortName,
-    sessions: [{ id: DEFAULT_SESSION_ID, label: sessionLabel }],
-    subjects: [
-      {
-        id: "core",
-        name: subjectName,
-        shortName: subjectName,
-        focusAxis,
-        expectedTime,
-        inputPlaceholder,
-      },
-    ],
-  };
-}
-
-export const CPA_SECOND_EXAM = createSingleSubjectExam({
-  id: "cpa-second",
-  name: ko("\\ud68c\\uacc4\\uc0ac 2\\ucc28"),
-  shortName: "CPA 2",
-  sessionLabel: ko("2026\\ub144 2\\ucc28 \\ub300\\ube44"),
-  subjectName: ko("\\uc11c\\uc220\\ud615 \\ub2f5\\uc548"),
-  focusAxis: ko("\\uacb0\\ub860 \\uba85\\ub8cc\\ub3c4"),
-  expectedTime: ko("25\\ubd84"),
-  inputPlaceholder: ko(
-    "\\ud68c\\uacc4\\uc0ac 2\\ucc28 \\uc11c\\uc220\\ud615 \\ub2f5\\uc548\\uc744 \\ubd99\\uc5ec \\ub123\\uc5b4 \\uc8fc\\uc138\\uc694. \\uacc4\\uc0b0 \\uadfc\\uac70\\uc640 \\uacb0\\ub860 \\ubb38\\uc7a5\\uc744 \\ud568\\uaed8 \\ub0a8\\uae30\\uba74 \\uc88b\\uc2b5\\ub2c8\\ub2e4.",
-  ),
-});
-
-export const TAX_SECOND_EXAM = createSingleSubjectExam({
-  id: "tax-second",
-  name: ko("\\uc138\\ubb34\\uc0ac 2\\ucc28"),
-  shortName: ko("\\uc138\\ubb34 2"),
-  sessionLabel: ko("2026\\ub144 2\\ucc28 \\ub300\\ube44"),
-  subjectName: ko("\\uc138\\ubc95 \\ub2f5\\uc548"),
-  focusAxis: ko("\\ubc95\\ub839 \\uc5f0\\uacb0"),
-  expectedTime: ko("26\\ubd84"),
-  inputPlaceholder: ko(
-    "\\uc138\\ubb34\\uc0ac 2\\ucc28 \\ub2f5\\uc548\\uc744 \\uc7c1\\uc810 \\ub2e8\\uc704\\ub85c \\ubd99\\uc5ec \\ub123\\uc5b4 \\uc8fc\\uc138\\uc694. \\ubc95\\ub839 \\uadfc\\uac70\\uc640 \\uc0ac\\uc548 \\uc801\\uc6a9 \\ubb38\\uc7a5\\uc744 \\ud3ec\\ud568\\ud574 \\uc8fc\\uc138\\uc694.",
-  ),
-});
-
-export const TOEFL_ESSAY_EXAM = createSingleSubjectExam({
-  id: "toefl-essay",
-  name: "TOEFL Essay",
-  shortName: "TOEFL",
-  sessionLabel: "Task 1 & 2",
-  subjectName: "Essay",
-  focusAxis: ko("\\uadfc\\uac70 \\ud655\\uc7a5"),
-  expectedTime: ko("22\\ubd84"),
-  inputPlaceholder: ko(
-    "TOEFL Essay \\ub2f5\\uc548\\uc744 \\ubd99\\uc5ec \\ub123\\uc5b4 \\uc8fc\\uc138\\uc694. \\ubcf8\\ubb38 \\ubb38\\ub2e8\\uacfc \\uadfc\\uac70 \\uc804\\uac1c\\uac00 \\ubcf4\\uc774\\ub3c4\\ub85d \\uc791\\uc131\\ud574 \\uc8fc\\uc138\\uc694.",
-  ),
-});
-
-export const SAT_ESSAY_EXAM = createSingleSubjectExam({
-  id: "sat-essay",
-  name: "SAT Essay",
-  shortName: "SAT",
-  sessionLabel: "Reading & Analysis",
-  subjectName: "Essay",
-  focusAxis: ko("\\ubd84\\uc11d \\ubc00\\ub3c4"),
-  expectedTime: ko("24\\ubd84"),
-  inputPlaceholder: ko(
-    "SAT Essay \\ub2f5\\uc548\\uc744 \\ubd99\\uc5ec \\ub123\\uc5b4 \\uc8fc\\uc138\\uc694. \\uc81c\\uc2dc\\ubb38 \\ud574\\uc11d, \\uc124\\ub4dd \\uc804\\ub7b5 \\ubd84\\uc11d, \\ubb38\\ub2e8 \\uc5f0\\uacb0\\uc774 \\ubcf4\\uc774\\ub3c4\\ub85d \\uc791\\uc131\\ud574 \\uc8fc\\uc138\\uc694.",
-  ),
-});
+export const APPRAISER_FIRST_EXAM: InvergeExam = {
+  id: "appraiser-first",
+  name: ko("\\uac10\\uc815\\ud3c9\\uac00\\uc0ac 1\\ucc28"),
+  shortName: ko("\\uac10\\ud3c9 1\\ucc28"),
+  sessions: [{ id: DEFAULT_SESSION_ID, label: ko("2026\\ub144 1\\ucc28 \\ub300\\ube44") }],
+  subjects: [
+    {
+      id: "core",
+      name: ko("\\uacfc\\ubaa9\\ubcc4 \\ud575\\uc2ec \\ubcf5\\uc2b5"),
+      shortName: ko("1\\ucc28"),
+      focusAxis: ko("\\uac1c\\ub150 \\ud68c\\uc0c1-\\ubb38\\uc81c \\uc801\\uc6a9"),
+      expectedTime: ko("25\\ubd84"),
+      inputPlaceholder: ko(
+        "\\uac10\\uc815\\ud3c9\\uac00\\uc0ac 1\\ucc28 \\ubb38\\ud56d\\uc758 \\uc624\\ub2f5 \\uadfc\\uac70\\ub97c \\uc815\\ub9ac\\ud574 \\uc8fc\\uc138\\uc694. \\ud575\\uc2ec \\uac1c\\ub150\\uacfc \\ub2e4\\uc74c \\uc7ac\\uc2dc\\ub3c4 \\ud3ec\\uc778\\ud2b8\\ub97c \\ud568\\uaed8 \\ub0a8\\uae30\\uba74 \\uc88b\\uc2b5\\ub2c8\\ub2e4.",
+      ),
+    },
+  ],
+};
 
 export const INVERGE_EXAMS: InvergeExam[] = [
+  APPRAISER_FIRST_EXAM,
   APPRAISER_SECOND_EXAM,
-  CPA_SECOND_EXAM,
-  TAX_SECOND_EXAM,
-  TOEFL_ESSAY_EXAM,
-  SAT_ESSAY_EXAM,
 ];
 
 export type ExamSelectionSummary = {
@@ -182,10 +109,20 @@ export type ExamSelectionSummary = {
 
 export const EXAM_SELECTION_SUMMARIES: ExamSelectionSummary[] = [
   {
+    id: "appraiser-first",
+    name: ko("\\uac10\\uc815\\ud3c9\\uac00\\uc0ac 1\\ucc28"),
+    sessionLabel: ko("\\uac1d\\uad00\\uc2dd \\uc6b4\\uc601"),
+    recommended: true,
+    axes: [ko("\\uac1c\\ub150 \\ud68c\\uc0c1"), ko("\\ubb38\\ud56d \\uc801\\uc6a9"), ko("\\uc2e4\\uc218 \\ubcf5\\uae30")],
+    description: ko(
+      "\\uc628\\ubcf4\\ub529, \\ucd08\\uae30 \\uc9c4\\ub2e8, \\uc138\\ud2b8 \\ud480\\uc774, \\ub9ac\\ubdf0, \\uc8fc\\uac04 \\ucf54\\uce6d\\uc73c\\ub85c 1\\ucc28 \\ud750\\ub984\\uc744 \\uad00\\ub9ac\\ud569\\ub2c8\\ub2e4.",
+    ),
+    proof: ko("\\uac10\\uc815\\ud3c9\\uac00\\uc0ac 1\\ucc28 \\uc804\\uc6a9"),
+  },
+  {
     id: "appraiser-second",
     name: ko("\\uac10\\uc815\\ud3c9\\uac00\\uc0ac 2\\ucc28"),
     sessionLabel: ko("\\uc2e4\\ubb34 · \\uc774\\ub860 · \\ubc95\\uaddc"),
-    recommended: true,
     axes: [
       ko("\\uacc4\\uc0b0-\\ub17c\\ub9ac \\uc5f0\\uacb0"),
       ko("\\ub17c\\uc810 \\uad6c\\uc870\\ud654"),
@@ -195,46 +132,6 @@ export const EXAM_SELECTION_SUMMARIES: ExamSelectionSummary[] = [
       "\\uacfc\\ubaa9\\ubcc4 \\ub2f5\\uc548 \\uad6c\\uc870\\uc640 \\uc0c1\\uc704 10% \\ub2f5\\uc548\\uc758 \\ucc28\\uc774\\ub97c \\ubb38\\ub2e8 \\ub2e8\\uc704\\ub85c \\uc9c4\\ub2e8\\ud569\\ub2c8\\ub2e4.",
     ),
     proof: ko("\\ucd5c\\uadfc \\ubd84\\uc11d\\uc774 \\uac00\\uc7a5 \\ub9ce\\uc740 \\ud2b8\\ub799"),
-  },
-  {
-    id: "cpa-second",
-    name: ko("\\ud68c\\uacc4\\uc0ac 2\\ucc28"),
-    sessionLabel: ko("\\uc11c\\uc220\\ud615 \\ub2f5\\uc548"),
-    axes: [ko("\\uacb0\\ub860 \\uba85\\ub8cc\\ub3c4"), ko("\\uacc4\\uc0b0 \\uadfc\\uac70"), ko("\\uc11c\\uc220 \\uc77c\\uad00\\uc131")],
-    description: ko(
-      "\\uacc4\\uc0b0 \\uacb0\\uacfc\\uc640 \\uacb0\\ub860 \\ubb38\\uc7a5\\uc774 \\ud3c9\\uac00 \\ud750\\ub984 \\uc548\\uc5d0\\uc11c \\uc77c\\uad00\\ub418\\uac8c \\uc774\\uc5b4\\uc9c0\\ub294\\uc9c0 \\ud655\\uc778\\ud569\\ub2c8\\ub2e4.",
-    ),
-    proof: ko("\\uc804\\ubb38\\uc9c1 \\uc11c\\uc220\\ud615 \\ub2f5\\uc548 \\uc9c0\\uc6d0"),
-  },
-  {
-    id: "tax-second",
-    name: ko("\\uc138\\ubb34\\uc0ac 2\\ucc28"),
-    sessionLabel: ko("\\uc138\\ubc95 \\ub2f5\\uc548"),
-    axes: [ko("\\ubc95\\ub839 \\uc5f0\\uacb0"), ko("\\uc7c1\\uc810 \\ubd84\\ub9ac"), ko("\\uacb0\\ub860 \\uc555\\ucd95")],
-    description: ko(
-      "\\ubc95\\ub839 \\uadfc\\uac70, \\uc7c1\\uc810 \\ubd84\\ub9ac, \\uc0ac\\uc548 \\uc801\\uc6a9 \\ubb38\\uc7a5\\uc758 \\ubc00\\ub3c4\\ub97c \\uae30\\uc900\\uc73c\\ub85c \\uc0c1\\ub300 \\uc704\\uce58\\ub97c \\uc9c4\\ub2e8\\ud569\\ub2c8\\ub2e4.",
-    ),
-    proof: ko("\\uc7c1\\uc810\\ud615 \\ub2f5\\uc548 \\ube44\\uad50 \\uc9c0\\uc6d0"),
-  },
-  {
-    id: "toefl-essay",
-    name: "TOEFL Essay",
-    sessionLabel: "Task 1 & 2",
-    axes: [ko("\\uadfc\\uac70 \\ud655\\uc7a5"), ko("\\ubb38\\uc7a5 \\ub2e4\\uc591\\uc131"), ko("\\uc751\\uc9d1\\ub825")],
-    description: ko(
-      "\\uadfc\\uac70 \\uc804\\uac1c\\uc640 \\ubb38\\ub2e8 \\uc751\\uc9d1\\ub825\\uc744 \\uae30\\uc900\\uc73c\\ub85c \\uc0c1\\uc704\\uad8c \\uc0d8\\ud50c \\ub2f5\\uc548\\uacfc \\ube44\\uad50\\ud569\\ub2c8\\ub2e4.",
-    ),
-    proof: ko("\\uc601\\uc5b4 \\uc5d0\\uc138\\uc774 \\ud2b8\\ub799"),
-  },
-  {
-    id: "sat-essay",
-    name: "SAT Essay",
-    sessionLabel: "Reading & Analysis",
-    axes: [ko("\\uadfc\\uac70 \\ud574\\uc11d"), ko("\\ubd84\\uc11d \\ubc00\\ub3c4"), ko("\\ubb38\\uc7a5 \\uc751\\uc9d1\\ub825")],
-    description: ko(
-      "\\uc81c\\uc2dc\\ubb38 \\ud574\\uc11d, \\uc124\\ub4dd \\uc804\\ub7b5 \\ubd84\\uc11d, \\ubb38\\ub2e8 \\uad6c\\uc870\\uc640 \\ubb38\\uc7a5 \\uc751\\uc9d1\\ub825\\uc744 \\ud568\\uaed8 \\ubd05\\ub2c8\\ub2e4.",
-    ),
-    proof: ko("\\uc0c1\\uc704\\uad8c \\ub2f5\\uc548 \\ube44\\uad50 \\uc9c0\\uc6d0"),
   },
 ];
 

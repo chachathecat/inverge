@@ -12,7 +12,7 @@ export default function NotFound() {
         요청하신 화면을 찾을 수 없습니다.
       </h1>
       <p className="max-w-2xl text-sm leading-8 text-slate-600 sm:text-base">
-        시험 선택 화면으로 돌아가 감정평가사 또는 보험계리사 흐름 중 하나를 다시 선택해 주세요.
+        시험 선택 화면으로 돌아가 감정평가사 1차 또는 감정평가사 2차 흐름을 다시 선택해 주세요.
       </p>
       <Link href="/exams">
         <Button size="lg">시험 선택 화면으로 이동</Button>
