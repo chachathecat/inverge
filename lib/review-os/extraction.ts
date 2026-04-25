@@ -246,7 +246,7 @@ export function buildExtractionPrompt(mode: AppraisalMode) {
   return [
     "감정평가사 1차 오답 자료에서 JSON만 추출하라.",
     "요약보다 schema 채우기를 우선한다. 보이지 않거나 약한 값은 unknown으로 둔다.",
-    "subject_guess는 민법, 경제학원론, 회계학, 부동산학원론 중 하나이거나 unknown이어야 한다.",
+    "subject_guess는 민법, 경제학원론, 부동산학원론, 감정평가관계법규, 회계학 중 하나이거나 unknown이어야 한다.",
     "필드: subject_guess, problem_title, source_label, question_summary, correct_answer, user_answer, wrong_reason_candidate, key_concepts, core_formula, comparison_point, review_date_suggestion, needs_review.",
     "needs_review는 subject, 정답, 사용자 답, 틀린 이유 중 하나라도 불확실하면 true다.",
   ].join(" ");

@@ -6,6 +6,7 @@ const FIRST_CORE_FORMULA_BY_SUBJECT: Record<string, string> = {
   경제학원론: "정의 -> 그래프 이동 -> 균형 변화",
   회계학: "분개 -> 금액 -> 재무제표 표시",
   부동산학원론: "개념 -> 계산 기준 -> 적용 조건",
+  감정평가관계법규: "요건 -> 절차 -> 법리 적용",
 };
 
 const SECOND_CORE_SENTENCE_BY_SUBJECT: Record<string, string> = {

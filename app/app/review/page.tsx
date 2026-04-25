@@ -33,7 +33,7 @@ export default async function ReviewOsReviewPage({ searchParams }: PageProps) {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <ReviewQueueClient items={items} />
+          <ReviewQueueClient items={items} mode={mode} />
         </CardContent>
       </Card>
 

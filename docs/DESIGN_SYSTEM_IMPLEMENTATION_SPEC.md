@@ -73,8 +73,9 @@ MODE A: 감정평가사 1차
 Subjects:
 - 민법
 - 경제학원론
-- 회계학
 - 부동산학원론
+- 감정평가관계법규
+- 회계학
 
 Core mental model:
 - wrong-answer operating loop

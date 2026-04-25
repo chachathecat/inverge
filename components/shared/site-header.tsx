@@ -39,12 +39,6 @@ export async function SiteHeader() {
               >
                 소개
               </Link>
-              <Link
-                href="/pricing"
-                className="rounded-full px-3 py-2 text-sm text-[color:var(--muted)] hover:text-[color:var(--foreground-strong)]"
-              >
-                alpha 플랜
-              </Link>
               <Link href="/exams" className="rounded-full bg-[color:var(--primary)] px-4 py-2 text-sm font-medium text-white">
                 시작하기
               </Link>
