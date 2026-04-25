@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { ArrowRight } from "lucide-react";
 
-import { FocusAudioControl } from "@/components/inverge/focus-audio-control";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { postActuarySecond } from "@/lib/actuary-second/client";
@@ -75,9 +74,6 @@ export function ActuarySecondProblemWorkspace({ questionId }: { questionId: stri
     return (
       <main className="mx-auto w-full max-w-[960px] px-5 py-10">
         <section className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] p-6 sm:p-10">
-          <div className="mb-5 flex justify-end">
-            <FocusAudioControl />
-          </div>
           <p className="text-caption font-medium text-[color:var(--muted)]">보험계리사 2차 샘플</p>
           <h1 className="mt-3 text-h1 font-medium text-[color:var(--foreground-strong)]">{evaluation.correction_seed.gap_title}</h1>
           <p className="mt-3 max-w-3xl text-body text-[color:var(--muted-strong)]">{evaluation.correction_seed.gap_summary}</p>
@@ -124,9 +120,6 @@ export function ActuarySecondProblemWorkspace({ questionId }: { questionId: stri
   return (
     <main className="mx-auto w-full max-w-[960px] px-5 py-10">
       <div className="space-y-6">
-        <div className="flex justify-end">
-          <FocusAudioControl />
-        </div>
         <section className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] p-6 sm:p-8">
           <p className="text-caption font-medium text-[color:var(--muted)]">보험계리사 2차 샘플</p>
           <h1 className="mt-3 text-h2 font-medium text-[color:var(--foreground-strong)]">{question.raw_problem_text}</h1>

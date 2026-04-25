@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { ArrowRight } from "lucide-react";
 
-import { FocusAudioControl } from "@/components/inverge/focus-audio-control";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { postActuaryFirst } from "@/lib/actuary-first/client";
 import { probabilityFormulaFamilies } from "@/lib/actuary-first/formula-families";
@@ -151,9 +150,6 @@ export function ActuaryFirstPastSetSolvingPage({ subjectId, setId }: { subjectId
   return (
     <main className="mx-auto w-full max-w-[900px] px-5 py-10">
       <div className="space-y-6">
-        <div className="flex justify-end">
-          <FocusAudioControl />
-        </div>
         <section className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] p-6">
           <p className="text-sm font-medium text-[color:var(--foreground-strong)]">계리사 1차 · 확률론 샘플 세트</p>
           <p className="mt-1 text-caption text-[color:var(--muted)]">
