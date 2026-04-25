@@ -6,7 +6,7 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { AppraisalMode } from "@/lib/review-os/appraisal";
-import type { ReviewCompletionAction, ReviewQueueCard, TodayFocus } from "@/lib/review-os/types";
+import type { ReviewCompletionAction, ReviewCompletionMetadata, ReviewQueueCard, TodayFocus } from "@/lib/review-os/types";
 
 type SessionNote = {
   summary: string;
@@ -35,7 +35,14 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note }: 
   const [retrievalSentence, setRetrievalSentence] = useState("");
 
   const [issueRecall, setIssueRecall] = useState("");
-  const [rewriteDraft, setRewriteDraft] = useState("");
+  const FIRST_STAGE_ERROR_REASON_OPTIONS = [
+    "개념 부족",
+    "선지 오독",
+    "계산 실수",
+    "시간 부족",
+    "헷갈리는 개념과 혼동",
+    "찍음/확신 부족",
+  ] as const;
 
   const hasQueueItem = Boolean(queueItem);
   const steps = useMemo(() => {
@@ -43,13 +50,13 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note }: 
       return ["intro", "capture-guide", "done"] as const;
     }
     return mode === "second"
-      ? (["intro", "issue-recall", "one-gap", "rewrite", "schedule", "done"] as const)
+      ? (["intro", "issue-recall", "one-gap", "rewrite", "done"] as const)
       : (["intro", "retry", "error-reason", "retrieval", "schedule", "done"] as const);
   }, [hasQueueItem, mode]);
 
   const currentStep = steps[stepIndex];
 
-  async function completeAndFinish(action: ReviewCompletionAction) {
+  async function completeAndFinish(action: ReviewCompletionAction, metadata: ReviewCompletionMetadata = {}) {
     if (!queueItem) {
       setStepIndex(steps.length - 1);
       return;
@@ -61,7 +68,7 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note }: 
       const response = await fetch(`/api/os/review-queue/${queueItem.queueId}/complete`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action }),
+        body: JSON.stringify({ action, metadata }),
       });
       if (!response.ok) {
         const data = (await response.json().catch(() => null)) as { message?: string } | null;
@@ -135,7 +142,7 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note }: 
           <section className="space-y-4">
             <p className="text-sm font-medium text-[color:var(--foreground-strong)]">2) 틀린 원인 1개만 지정합니다.</p>
             <div className="space-y-2">
-              {["개념 혼동", "조건 누락", "계산 실수", "시간 부족", "구조 약함"].map((reason) => (
+              {FIRST_STAGE_ERROR_REASON_OPTIONS.map((reason) => (
                 <label key={reason} className="flex items-start gap-2 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] px-3 py-2 text-sm">
                   <input
                     type="radio"
@@ -226,21 +233,24 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note }: 
 
         {currentStep === "rewrite" ? (
           <section className="space-y-4">
-            <p className="text-sm font-medium text-[color:var(--foreground-strong)]">3) 교정 문단을 짧게 다시 작성합니다.</p>
-            <textarea
-              className="min-h-28 w-full rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] px-3 py-2 text-sm"
-              value={rewriteDraft}
-              onChange={(event) => setRewriteDraft(event.target.value)}
-              placeholder="간극을 메우는 핵심 문장 중심으로 5~8줄"
-            />
-            <Button
+            <p className="text-sm font-medium text-[color:var(--foreground-strong)]">3) 교정 문단은 기존 입력 화면에서 남깁니다.</p>
+            <p className="text-sm leading-7 text-[color:var(--foreground-strong)]">
+              문단이 사라지지 않도록, 지금은 rewrite 연결 입력으로 이동해 저장합니다.
+            </p>
+            <Link href={`/app/capture?mode=second&rewriteFrom=${queueItem?.itemId ?? ""}`} className="inline-flex w-full sm:w-auto">
+              <Button type="button" className="w-full sm:w-auto">
+                rewrite 저장하러 이동
+              </Button>
+            </Link>
+            <button
               type="button"
-              className="w-full sm:w-auto"
-              disabled={rewriteDraft.trim().length < 6}
-              onClick={() => setStepIndex((prev) => prev + 1)}
+              className="text-xs text-[color:var(--muted)] underline-offset-2 hover:underline"
+              disabled={pending}
+              onClick={() => void completeAndFinish("second_paragraph_rewrite", { issueRecall })}
             >
-              다음: 복습 예약
-            </Button>
+              {pending ? "예약 중" : "이미 저장을 마쳤다면 완료로 표시"}
+            </button>
+            {errorMessage ? <p className="text-xs text-[color:var(--danger)]">{errorMessage}</p> : null}
             {quietLinks}
           </section>
         ) : null}
@@ -256,7 +266,11 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note }: 
               className="w-full sm:w-auto"
               disabled={pending}
               onClick={() =>
-                void completeAndFinish(mode === "second" ? "second_paragraph_rewrite" : "first_short_retry")
+                void completeAndFinish(mode === "second" ? "second_paragraph_rewrite" : "first_short_retry", {
+                  retryDraft,
+                  errorReason,
+                  retrievalSentence,
+                })
               }
             >
               {pending ? "예약 중" : "다음 복습 자동 예약하고 마치기"}
