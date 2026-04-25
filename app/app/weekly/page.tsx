@@ -25,9 +25,9 @@ export default async function ReviewOsWeeklyPage({ searchParams }: PageProps) {
   const primaryHref = primaryTask ? `/app/review?mode=${mode}` : `/app/capture?mode=${mode}`;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 sm:space-y-6">
       <Card className="border-[var(--border)] bg-[color:var(--surface)] shadow-none">
-        <CardHeader className="space-y-3">
+        <CardHeader className="space-y-3 p-4 sm:p-6">
           <div className="rounded-2xl border border-[color:var(--cue-risk)] bg-[color:var(--cue-risk-bg)] px-4 py-3">
             <p className="text-caption text-[color:var(--cue-risk)]">이번 주 우선 작업</p>
             <p className="mt-1 text-body-lg text-[color:var(--foreground-strong)]">{plan.primaryActionLabel}</p>
@@ -35,7 +35,7 @@ export default async function ReviewOsWeeklyPage({ searchParams }: PageProps) {
           <CardTitle>{mode === "second" ? "이번 주 2차 실행 계획" : "이번 주 1차 실행 계획"}</CardTitle>
           <CardDescription>{plan.summary}</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-5">
+        <CardContent className="space-y-5 p-4 pt-0 sm:p-6 sm:pt-0">
           {plan.recovery ? (
             <div className="rounded-2xl border border-[color:var(--cue-risk)] bg-[color:var(--cue-risk-bg)] p-4">
               <p className="text-sm text-[color:var(--foreground-strong)]">{plan.recovery.message}</p>
@@ -83,10 +83,10 @@ export default async function ReviewOsWeeklyPage({ searchParams }: PageProps) {
       </Card>
 
       <details className="group rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
-        <summary className="cursor-pointer list-none px-5 py-4 text-sm font-medium text-[color:var(--foreground-strong)]">
+        <summary className="cursor-pointer list-none px-4 py-4 text-sm font-medium text-[color:var(--foreground-strong)] sm:px-5">
           기록 보기 (보조 정보)
         </summary>
-        <div className="grid gap-3 border-t border-[color:var(--border-subtle)] px-5 py-5 text-sm sm:grid-cols-3">
+        <div className="grid gap-3 border-t border-[color:var(--border-subtle)] px-4 py-5 text-sm sm:px-5 lg:grid-cols-3">
           <SecondaryRecord label="대기 큐" value={`${plan.secondaryRecords.queueCount}개`} />
           <SecondaryRecord label="밀린 항목" value={`${plan.secondaryRecords.overdueCount}개`} />
           <SecondaryRecord label="최근 오답(14일)" value={`${plan.secondaryRecords.recentWrongCount}개`} />
@@ -110,7 +110,7 @@ function WeeklyTaskItem({ task }: { task: WeeklyPlanTask }) {
   const actionLabel = task.action === "rewrite" ? "문단 다시쓰기" : task.action === "retry" ? "재시도" : "복습";
   return (
     <article className="rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] p-4">
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-caption text-[color:var(--muted)]">우선순위 {task.priorityOrder}</p>
           <p className="mt-1 text-sm font-medium text-[color:var(--foreground-strong)]">
@@ -121,7 +121,7 @@ function WeeklyTaskItem({ task }: { task: WeeklyPlanTask }) {
           {task.estimatedDurationMinutes}분
         </span>
       </div>
-      <p className="mt-3 text-sm leading-6 text-[color:var(--foreground-strong)]">{task.reason}</p>
+      <p className="mt-2 text-sm leading-7 text-[color:var(--foreground-strong)]">{task.reason}</p>
       <p className="mt-2 text-xs leading-5 text-[color:var(--muted)]">목표: {task.target}</p>
     </article>
   );

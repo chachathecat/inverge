@@ -34,18 +34,13 @@ export function FocusAudioControl({ className }: FocusAudioControlProps) {
 
   return (
     <div className={cn("relative z-20 flex justify-end", className)}>
-      <Button
-        type="button"
-        variant="outline"
-        onClick={() => setPanelOpen(!panelOpen)}
-        className="h-8 px-2.5 text-xs sm:h-9 sm:px-3 sm:text-sm"
-      >
+      <Button type="button" variant="outline" onClick={() => setPanelOpen(!panelOpen)} className="h-8 px-2.5 text-xs">
         <Headphones className="mr-1 h-3.5 w-3.5 sm:mr-1.5 sm:h-4 sm:w-4" />
         집중음
       </Button>
 
       {panelOpen ? (
-        <section className="absolute right-0 top-[calc(100%+8px)] w-[min(272px,calc(100vw-24px))] rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] p-3.5 shadow-[var(--shadow-soft)] sm:p-4">
+        <section className="absolute right-0 top-[calc(100%+8px)] w-[min(256px,calc(100vw-20px))] rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] p-3 shadow-[var(--shadow-soft)] sm:w-[272px] sm:p-4">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-sm font-medium text-[color:var(--foreground-strong)]">집중음</p>

@@ -608,7 +608,7 @@ function IntakePanel({
   const calculatorWorkflow = getCalculatorWorkflowForSubject(form.subjectLabel);
 
   return (
-    <section className="rounded-[var(--radius-card)] border border-[color:var(--brand-700)] bg-[color:var(--brand-050)] p-5">
+    <section className="rounded-[var(--radius-card)] border border-[color:var(--brand-700)] bg-[color:var(--brand-050)] p-4 sm:p-5">
       <p className="text-caption text-[color:var(--brand-700)]">Step 1. Text transcript</p>
       <div className="mt-2 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="max-w-[62ch]">
@@ -660,7 +660,7 @@ function IntakePanel({
               ? "권장: 사례, 기준 답안, 내 답안을 텍스트로 붙여넣으세요. 예: 기준 답안: ... / 내 답안: ..."
               : "권장: 문제와 정답, 내가 고른 답을 텍스트로 붙여넣으세요. 예: 정답: 3 / 내 답: 2"
           }
-          className="min-h-44 border-[var(--border)] bg-[color:var(--bg-surface)] text-[color:var(--foreground-strong)] leading-7"
+          className="min-h-52 border-[var(--border)] bg-[color:var(--bg-surface)] text-[color:var(--foreground-strong)] leading-7"
         />
       </label>
       <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -708,7 +708,7 @@ function ExtractionPreview({
   onRegenerate: () => void;
 }) {
   return (
-    <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-5">
+    <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 sm:p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-caption text-[color:var(--muted)]">Step 2. Extraction preview</p>
@@ -726,7 +726,7 @@ function ExtractionPreview({
         </div>
       </div>
       {mode === "first" ? (
-        <div className="mt-5 grid gap-3 md:grid-cols-2">
+        <div className="mt-5 grid gap-3 lg:grid-cols-2">
           <PreviewLine label="과목 추정" value={form.subjectLabel} />
           <PreviewLine label="문제 제목" value={form.problemTitle} />
           <PreviewLine label="정답" value={form.correctAnswer || "확인 필요"} />
@@ -737,7 +737,7 @@ function ExtractionPreview({
           <PreviewLine label="다음 review" value={form.nextReviewDate} />
         </div>
       ) : (
-        <div className="mt-5 grid gap-3 md:grid-cols-2">
+        <div className="mt-5 grid gap-3 lg:grid-cols-2">
           <PreviewLine label="과목 추정" value={form.subjectLabel} />
           <PreviewLine label="사례 요약" value={form.caseSummary} />
           <PreviewLine label="기준 답안 구조" value={form.referenceStructure} />
@@ -763,10 +763,10 @@ function ConfirmPanel({
   updateSubject: (value: string) => void;
 }) {
   return (
-    <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-5">
+    <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 sm:p-5">
       <p className="text-caption text-[color:var(--muted)]">Step 3. Confirm</p>
       <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">필수 항목만 확인합니다</h3>
-      <div className="mt-5 grid gap-4 md:grid-cols-2">
+      <div className="mt-5 grid gap-4 lg:grid-cols-2">
         <label className="space-y-2">
           <span className="text-sm text-[color:var(--foreground-strong)]">{config.subjectLabel}</span>
           <select
@@ -808,7 +808,7 @@ function ConfirmPanel({
 
       {mode === "first" ? <FirstConfirmFields form={form} mode={mode} update={update} /> : <SecondConfirmFields form={form} mode={mode} update={update} />}
 
-      <div className={`mt-5 grid gap-4 ${mode === "second" ? "md:grid-cols-3" : "md:grid-cols-2"}`}>
+      <div className={`mt-5 grid gap-4 ${mode === "second" ? "lg:grid-cols-3" : "lg:grid-cols-2"}`}>
         {mode === "second" ? (
           <label className="space-y-2">
             <span className="text-sm text-[color:var(--foreground-strong)]">분류</span>
@@ -873,7 +873,7 @@ function FirstConfirmFields(props: FieldProps) {
           해설 보기 전에, 이 선지가 틀린 이유를 한 문장으로 적어보세요. 이 한 줄이 다음 retry 기준이 됩니다.
         </p>
       </section>
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2">
         <label className="space-y-2">
           <span className="text-sm text-[color:var(--foreground-strong)]">정답</span>
           <input
@@ -911,7 +911,7 @@ function FirstConfirmFields(props: FieldProps) {
         <Textarea
           value={form.comparisonPoint}
           onChange={(event) => update("comparisonPoint", event.target.value)}
-          className="min-h-28 border-[var(--border)] bg-[color:var(--surface)] text-[color:var(--foreground-strong)] leading-7"
+          className="min-h-32 border-[var(--border)] bg-[color:var(--surface)] text-[color:var(--foreground-strong)] leading-7"
           placeholder="예: 조문 예외 요건을 확인하지 않고 일반 원칙만 보고 2번을 골랐습니다."
         />
       </label>
@@ -942,7 +942,7 @@ function SecondConfirmFields(props: FieldProps) {
           className="min-h-32 border-[var(--border)] bg-[color:var(--surface)] text-[color:var(--foreground-strong)] leading-7"
         />
       </label>
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2">
         <label className="space-y-2">
           <span className="text-sm text-[color:var(--foreground-strong)]">내 답안 요약</span>
           <input
@@ -978,10 +978,10 @@ function RewriteContextPanel({
   myAnswerSummary: string;
 }) {
   return (
-    <section className="rounded-[var(--radius-card)] border border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] p-5">
+    <section className="rounded-[var(--radius-card)] border border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] p-4 sm:p-5">
       <p className="text-caption text-[color:var(--cue-review)]">문단 다시쓰기 컨텍스트</p>
       <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">{title}</h3>
-      <div className="mt-4 grid gap-3 md:grid-cols-2">
+      <div className="mt-4 grid gap-3">
         <PreviewLine label="가장 큰 간극" value={biggestGap} />
         <PreviewLine label="다시쓰기 지시" value={rewriteInstruction} />
       </div>
@@ -989,7 +989,7 @@ function RewriteContextPanel({
         <summary className="cursor-pointer list-none px-4 py-3 text-sm font-medium text-[color:var(--foreground-strong)]">
           비교 요약 펼쳐서 보기
         </summary>
-        <div className="grid gap-3 border-t border-[color:var(--border-subtle)] p-4 md:grid-cols-2">
+        <div className="grid gap-3 border-t border-[color:var(--border-subtle)] p-4 lg:grid-cols-2">
           <PreviewLine label="기준 답안 요약" value={referenceSummary} />
           <PreviewLine label="내 답안 요약" value={myAnswerSummary} />
         </div>
@@ -1009,7 +1009,7 @@ function RewriteParagraphPanel({
   update: <K extends keyof DraftState>(key: K, value: DraftState[K]) => void;
 }) {
   return (
-    <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-5">
+    <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 sm:p-5">
       <p className="text-caption text-[color:var(--muted)]">실행 입력</p>
       <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">보강 문단을 바로 작성합니다</h3>
       <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">하나의 간극만 보강한 문단으로 저장하면 다음 review 일정이 자동 연결됩니다.</p>
@@ -1021,7 +1021,7 @@ function RewriteParagraphPanel({
             update("userAnswer", event.target.value);
             update("myAnswerSummary", firstLine(event.target.value, form.myAnswerSummary || "문단 다시쓰기"));
           }}
-          className="min-h-56 border-[var(--border)] bg-[color:var(--surface)] text-[color:var(--foreground-strong)] leading-7"
+          className="min-h-64 border-[var(--border)] bg-[color:var(--surface)] text-[color:var(--foreground-strong)] leading-7"
           placeholder="누락 논점 1개를 반영해 문단을 다시 작성하세요."
         />
       </label>

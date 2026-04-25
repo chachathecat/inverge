@@ -48,10 +48,10 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
   const primaryTaskLabel = focus.primaryTaskLabel ?? (selectedQueueItem ? `${selectedQueueItem.subjectLabel} 복습` : config.nextActionFallback);
 
   return (
-    <div className="space-y-7">
+    <div className="space-y-6 md:space-y-7">
       <section className="space-y-3">
         <div>
-          <h2 className="text-2xl font-medium tracking-[-0.04em] text-[color:var(--foreground-strong)]">
+          <h2 className="text-xl font-medium tracking-[-0.04em] text-[color:var(--foreground-strong)] sm:text-2xl">
             {config.pageTitle}
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-7 text-[color:var(--muted)]">{config.pageDescription}</p>
@@ -60,7 +60,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
 
       <section className="space-y-5">
         <Card className="border-[color:var(--brand-700)] bg-[color:var(--brand-050)] shadow-none">
-          <CardHeader className="space-y-3">
+          <CardHeader className="space-y-3 p-4 sm:p-6">
             <div className="rounded-2xl border border-[color:var(--cue-risk)] bg-[color:var(--cue-risk-bg)] px-4 py-3">
               <p className="text-caption text-[color:var(--cue-risk)]">오늘 최우선 작업</p>
               <p className="mt-1 text-body-lg text-[color:var(--foreground-strong)]">{primaryTaskLabel}</p>
@@ -68,7 +68,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
             <CardTitle>오늘 우선순위 1개만 먼저 실행합니다.</CardTitle>
             <CardDescription className="max-w-[66ch]">{config.priorityCopy}</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 p-4 pt-0 sm:p-6 sm:pt-0">
             <p className="text-sm text-[color:var(--foreground-strong)]">{nextAction}</p>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <Link href={primaryHref} className="w-full sm:w-auto">
@@ -93,7 +93,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
               <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">
                 우선순위 근거 보기
               </summary>
-              <div className="grid gap-3 border-t border-[color:var(--border-subtle)] p-4 sm:grid-cols-3">
+              <div className="grid gap-3 border-t border-[color:var(--border-subtle)] p-4 lg:grid-cols-3">
                 <div>
                   <p className="text-xs text-[color:var(--muted)]">선택 이유</p>
                   <p className="mt-1 text-sm leading-6 text-[color:var(--foreground-strong)]">{primaryReason}</p>
@@ -121,11 +121,11 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
 
         <section className="space-y-3">
           <details className="group rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
-            <summary className="cursor-pointer list-none px-5 py-4 text-sm font-medium text-[color:var(--foreground-strong)]">
+            <summary className="cursor-pointer list-none px-4 py-4 text-sm font-medium text-[color:var(--foreground-strong)] sm:px-5">
               기록·요약·현재 흐름 보기
             </summary>
-            <div className="space-y-5 border-t border-[color:var(--border-subtle)] px-5 py-5">
-              <div className="grid gap-3 text-sm sm:grid-cols-3">
+            <div className="space-y-5 border-t border-[color:var(--border-subtle)] px-4 py-5 sm:px-5">
+              <div className="grid gap-3 text-sm lg:grid-cols-3">
                 <div className="rounded-2xl border border-[color:var(--border-subtle)] p-4">
                   <p className="text-[color:var(--muted)]">현재 모드</p>
                   <p className="mt-1 text-[color:var(--foreground-strong)]">{config.label}</p>
