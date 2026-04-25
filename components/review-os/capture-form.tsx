@@ -88,6 +88,12 @@ const FIRST_DEFAULTS: Record<string, { concepts: string; formula: string; compar
     comparison: "정의와 계산 조건을 분리합니다.",
     reason: "개념 정의와 적용 조건이 섞였습니다.",
   },
+  감정평가관계법규: {
+    concepts: "요건, 절차, 법리",
+    formula: "요건 -> 절차 -> 사안 포섭",
+    comparison: "조문 요건과 사안 사실관계를 직접 연결합니다.",
+    reason: "요건 검토 순서 또는 사안 포섭 문장이 누락되었습니다.",
+  },
 };
 
 const SECOND_DEFAULTS: Record<string, { structure: string; issue: string; sentence: string; rewrite: string; caseSummary: string }> = {

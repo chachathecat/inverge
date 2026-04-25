@@ -94,7 +94,7 @@ export function ProfileSetupForm({
             <p className="text-sm font-medium text-[color:var(--foreground-strong)]">{getModeLabel(item)}</p>
             <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">
               {item === "first"
-                ? "민법, 경제학원론, 회계학, 부동산학원론의 반복 오답을 review queue로 운영합니다."
+                ? "민법, 경제학원론, 부동산학원론, 감정평가관계법규, 회계학의 반복 오답을 review queue로 운영합니다."
                 : "감정평가실무, 감정평가이론, 보상법규 답안을 compare와 rewrite 흐름으로 정리합니다."}
             </p>
           </button>

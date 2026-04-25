@@ -3,7 +3,7 @@ export const REVIEW_OS_STAGE = "alpha";
 
 export const EXAM_OPTIONS = ["감정평가사 1차", "감정평가사 2차"] as const;
 
-export const APPRAISAL_FIRST_SUBJECTS = ["민법", "경제학원론", "회계학", "부동산학원론"] as const;
+export const APPRAISAL_FIRST_SUBJECTS = ["민법", "경제학원론", "부동산학원론", "감정평가관계법규", "회계학"] as const;
 
 export const APPRAISAL_SECOND_SUBJECTS = ["감정평가실무", "감정평가이론", "감정평가 및 보상법규"] as const;
 
