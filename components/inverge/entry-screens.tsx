@@ -21,24 +21,8 @@ import {
 import { cn } from "@/lib/utils";
 
 const HERO_STATS = [
-  { label: "지원 시험 트랙", value: "5+" },
-  { label: "누적 분석 세션", value: "24,860" },
-  { label: "상위 10% 샘플", value: "1,834" },
-];
-
-const WORKFLOW = [
-  {
-    title: "답안 제출",
-    description: "텍스트로 쓰거나 이미지 답안을 올립니다.",
-  },
-  {
-    title: "가장 큰 차이 진단",
-    description: "과거 응시자 데이터와 상위 10% 샘플 기준으로 핵심 간극을 찾습니다.",
-  },
-  {
-    title: "재작성",
-    description: "한 문단만 다시 쓰고 같은 기준으로 재제출합니다.",
-  },
+  { label: "운영 트랙", value: "감정평가사 1차/2차" },
+  { label: "핵심 원칙", value: "점수보다 다음 행동" },
 ];
 
 const ABILITY_PREVIEW = [
@@ -75,31 +59,31 @@ export function FrontPage() {
     <RefinedShell className="space-y-16 py-12 sm:py-16 lg:py-20">
       <section className="grid items-center gap-10 lg:grid-cols-[1.08fr_0.92fr]">
         <div className="animate-in-up">
-          <RefinedBadge>프리미엄 답안 재작성 워크플로우</RefinedBadge>
+          <RefinedBadge>감정평가사 합격 운영 시스템</RefinedBadge>
           <h1 className="mt-6 max-w-3xl text-[44px] font-medium leading-[1.08] tracking-[-0.055em] text-[color:var(--foreground-strong)] sm:text-[58px]">
-            답안을 쓰고, 가장 큰 차이를 찾고, 바로 다시 씁니다.
+            오늘 해야 할 학습 행동을 정리합니다.
           </h1>
           <p className="mt-6 max-w-2xl text-body text-[color:var(--muted)]">
-            Inverge는 시험 준비를 복잡한 대시보드로 만들지 않습니다. 과거 응시자 데이터와 상위권 답안 비교를
-            바탕으로 지금 고쳐야 할 한 지점을 조용히 정리합니다.
+            감정평가사 1차와 2차를 분리해 운영하고, 점수보다 다음 행동을 정리합니다.
           </p>
           <div className="mt-9 flex flex-col gap-3 sm:flex-row">
             <Link href="/exams" className={cn(buttonVariants({ size: "lg" }), "w-full sm:w-auto")}>
-              시험 선택하기
+              시작하기
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
             <Link href="#workflow" className={cn(buttonVariants({ variant: "outline", size: "lg" }), "w-full sm:w-auto")}>
               작동 방식 보기
             </Link>
           </div>
-          <div className="mt-10 grid max-w-xl grid-cols-3 gap-3">
+          <div className="mt-10 grid max-w-xl grid-cols-1 gap-3 sm:grid-cols-2">
             {HERO_STATS.map((stat) => (
               <div key={stat.label} className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
-                <p className="text-h3 font-medium text-[color:var(--foreground-strong)]">{stat.value}</p>
+                <p className="text-sm font-medium text-[color:var(--foreground-strong)]">{stat.value}</p>
                 <p className="mt-1 text-caption text-[color:var(--muted)]">{stat.label}</p>
               </div>
             ))}
           </div>
+          <p className="mt-6 text-sm text-[color:var(--muted)]">학원용 답안 운영 콘솔은 별도 준비 중</p>
         </div>
 
         <FocusSurface className="animate-in-up overflow-hidden [animation-delay:120ms]">
@@ -140,19 +124,22 @@ export function FrontPage() {
       <section id="workflow" className="space-y-6">
         <SectionHeading
           eyebrow="작동 방식"
-          title="세 단계만 반복합니다"
-          description="복잡한 관리 화면보다 실행 속도를 우선합니다. 제출, 진단, 재작성의 루프만 선명하게 남겼습니다."
+          title="점수보다 다음 행동을 정리합니다"
+          description="1차와 2차는 아래 루프로 운영합니다."
         />
         <div className="grid gap-4 md:grid-cols-3">
-          {WORKFLOW.map((step, index) => (
-            <QuietSection key={step.title} className="p-6">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[color:var(--primary)] text-sm text-white">
-                {index + 1}
-              </div>
-              <h3 className="mt-5 text-h3 font-medium text-[color:var(--foreground-strong)]">{step.title}</h3>
-              <p className="mt-3 text-sm leading-7 text-[color:var(--muted)]">{step.description}</p>
-            </QuietSection>
-          ))}
+          <QuietSection className="p-6 md:col-span-3">
+            <h3 className="text-h3 font-medium text-[color:var(--foreground-strong)]">감정평가사 1차</h3>
+            <p className="mt-3 text-sm leading-7 text-[color:var(--foreground-strong)]">
+              세트 풀이 → 오답 이유 → 회상 → 재시도 큐
+            </p>
+          </QuietSection>
+          <QuietSection className="p-6 md:col-span-3">
+            <h3 className="text-h3 font-medium text-[color:var(--foreground-strong)]">감정평가사 2차</h3>
+            <p className="mt-3 text-sm leading-7 text-[color:var(--foreground-strong)]">
+              쟁점 회상 → 답안 비교 → 가장 큰 간극 → 문단 다시쓰기
+            </p>
+          </QuietSection>
         </div>
       </section>
     </RefinedShell>
@@ -160,20 +147,19 @@ export function FrontPage() {
 }
 
 export function ExamSelectionPage() {
-  const recommended = EXAM_SELECTION_SUMMARIES.filter((exam) => exam.recommended);
-  const others = EXAM_SELECTION_SUMMARIES.filter((exam) => !exam.recommended);
-  const ordered = [...recommended, ...others];
+  const ordered = EXAM_SELECTION_SUMMARIES.filter(
+    (exam) => exam.name === "감정평가사 1차" || exam.name === "감정평가사 2차",
+  );
 
   return (
     <RefinedShell className="space-y-10">
       <section className="max-w-3xl animate-in-up">
         <RefinedBadge>시험 선택</RefinedBadge>
         <h1 className="mt-5 text-[40px] font-medium leading-[1.12] tracking-[-0.05em] text-[color:var(--foreground-strong)] sm:text-[52px]">
-          준비 중인 시험을 선택하세요.
+          감정평가사 트랙을 선택하세요.
         </h1>
         <p className="mt-5 text-body text-[color:var(--muted)]">
-          시험마다 답안의 구조와 평가 축이 다릅니다. 선택한 시험과 과목 맥락은 이후 작성, 비교, 기록 화면에
-          그대로 적용됩니다.
+          감정평가사 1차와 2차만 제공합니다. 점수보다 다음 행동을 정리하는 운영 흐름으로 이어집니다.
         </p>
       </section>
 
