@@ -22,6 +22,7 @@ import type {
   UsageSummary,
   WeeklyLearningSummaryRecord,
   WrongAnswerDetail,
+  ReviewCompletionAction,
   WrongAnswerItemInput,
   WrongAnswerItemRecord,
 } from "@/lib/review-os/types";
@@ -179,6 +180,38 @@ export class ReviewOsInviteRequiredError extends Error {
 }
 
 export class ReviewOsService {
+  private resolveFollowUpDueAtFromAction(
+    action: ReviewCompletionAction,
+    examName: string,
+    existingNextReviewDate: string | null,
+    now = new Date(),
+  ) {
+    const addDays = (days: number) => {
+      const next = new Date(now);
+      next.setUTCDate(next.getUTCDate() + days);
+      return next.toISOString();
+    };
+
+    if (action === "first_short_retry") return addDays(2);
+    if (action === "first_confirm_recall") return addDays(3);
+    if (action === "second_paragraph_rewrite") return addDays(2);
+
+    if (existingNextReviewDate) {
+      return resolveScheduleOverrideDate(existingNextReviewDate, addDays(examName === "감정평가사 2차" ? 2 : 3));
+    }
+
+    return addDays(examName === "감정평가사 2차" ? 2 : 3);
+  }
+
+  private getCompletionReviewReason(action: ReviewCompletionAction, examName: string) {
+    if (action === "first_short_retry") return "짧은 재시도를 완료한 뒤 2일 후 다시 확인합니다.";
+    if (action === "first_confirm_recall") return "근거 회상을 확인했고 3일 후 다시 점검합니다.";
+    if (action === "second_paragraph_rewrite") return "문단 재작성을 진행했고 2일 후 다시 보강합니다.";
+    return examName === "감정평가사 2차"
+      ? "예약된 재작성 일정을 유지해 다시 보강합니다."
+      : "예약된 복습 일정을 유지해 같은 실수를 줄입니다.";
+  }
+
   async ensureAccess(userId: string, email: string | null): Promise<AccessState> {
     const access = await reviewOsRepository.ensureAccess(userId, email);
     if (!access.allowed) throw new ReviewOsInviteRequiredError();
@@ -368,10 +401,52 @@ export class ReviewOsService {
     return queue;
   }
 
-  async completeReview(userId: string, email: string | null, queueId: string) {
+  async completeReview(userId: string, email: string | null, queueId: string, action: ReviewCompletionAction) {
     await this.ensureAccess(userId, email);
+    const context = await reviewOsRepository.getReviewQueueItemContext(userId, queueId);
     await reviewOsRepository.completeReviewQueueItem(userId, queueId);
-    await reviewOsRepository.logUsageEvent(userId, "review_complete", "review_queue_item", queueId, {});
+    if (context) {
+      const derivedPayload =
+        typeof context.queueRow.derived_payload === "object" && context.queueRow.derived_payload
+          ? (context.queueRow.derived_payload as Record<string, unknown>)
+          : {};
+      const userConfirmedFields = context.item.rawPayload.user_confirmed_fields;
+      const confirmedFieldsRecord =
+        userConfirmedFields && typeof userConfirmedFields === "object"
+          ? (userConfirmedFields as Record<string, unknown>)
+          : null;
+      const confirmedNextReviewDate =
+        typeof confirmedFieldsRecord?.nextReviewDate === "string" ? confirmedFieldsRecord.nextReviewDate : null;
+      const followUpDueAt = this.resolveFollowUpDueAtFromAction(
+        action,
+        context.item.examName,
+        confirmedNextReviewDate ?? null,
+      );
+      const recurrenceCount = typeof derivedPayload.recurrenceCount === "number" ? derivedPayload.recurrenceCount : 1;
+      const followUpPriority = Math.max(
+        32,
+        rankQueueItem({
+          recurrenceCount,
+          confidence: context.item.confidence,
+          timeSpentSeconds: context.item.timeSpentSeconds ?? null,
+          createdAt: context.item.createdAt,
+        }),
+      );
+      await reviewOsRepository.createFollowUpReviewQueueEntry(
+        userId,
+        context.item,
+        action,
+        followUpDueAt,
+        this.getCompletionReviewReason(action, context.item.examName),
+        followUpPriority,
+        {
+          recurrenceCount,
+          mistakeType: context.primaryTag?.mistakeType ?? "반복 실수",
+          topicTag: context.primaryTag?.topicTag ?? context.item.subjectLabel,
+        },
+      );
+    }
+    await reviewOsRepository.logUsageEvent(userId, "review_complete", "review_queue_item", queueId, { action });
   }
 
   async getTodayFocus(userId: string, email: string | null): Promise<TodayFocus> {

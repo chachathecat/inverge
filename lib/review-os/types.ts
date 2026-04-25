@@ -149,6 +149,13 @@ export type ReviewQueueCard = {
   timeSpentSeconds: number | null;
 };
 
+export type ReviewCompletionAction =
+  | "first_short_retry"
+  | "first_confirm_recall"
+  | "first_keep_scheduled_review"
+  | "second_paragraph_rewrite"
+  | "second_keep_scheduled_rewrite";
+
 export type WrongAnswerDetail = {
   item: WrongAnswerItemRecord;
   note: WrongAnswerNoteRecord | null;

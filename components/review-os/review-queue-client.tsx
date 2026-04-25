@@ -4,16 +4,30 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import type { ReviewQueueCard } from "@/lib/review-os/types";
+import type { ReviewCompletionAction, ReviewQueueCard } from "@/lib/review-os/types";
 
 export function ReviewQueueClient({ items }: { items: ReviewQueueCard[] }) {
   const router = useRouter();
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [actionsByQueueId, setActionsByQueueId] = useState<Record<string, ReviewCompletionAction>>(
+    Object.fromEntries(
+      items.map((item) => [
+        item.queueId,
+        item.examName === "감정평가사 2차" ? "second_paragraph_rewrite" : "first_short_retry",
+      ]),
+    ),
+  );
 
   async function complete(queueId: string) {
+    const selectedAction = actionsByQueueId[queueId];
+    if (!selectedAction) return;
     setPendingId(queueId);
     try {
-      await fetch(`/api/os/review-queue/${queueId}/complete`, { method: "POST" });
+      await fetch(`/api/os/review-queue/${queueId}/complete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: selectedAction }),
+      });
       router.refresh();
     } finally {
       setPendingId(null);
@@ -45,6 +59,39 @@ export function ReviewQueueClient({ items }: { items: ReviewQueueCard[] }) {
               <p className="text-sm text-[color:var(--foreground-strong)]">
                 반복 {item.recurrenceCount}회 · {item.mistakeType}
               </p>
+              <div className="space-y-2 rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface-muted)] p-3">
+                <p className="text-sm font-medium text-[color:var(--foreground-strong)]">완료 전에 다음 행동을 하나 선택하세요.</p>
+                <div className="space-y-2 text-sm text-[color:var(--foreground)]">
+                  {(item.examName === "감정평가사 2차"
+                    ? [
+                        { value: "second_paragraph_rewrite", label: "문단 재작성 후 완료" },
+                        { value: "second_keep_scheduled_rewrite", label: "예약된 재작성 일정 유지" },
+                      ]
+                    : [
+                        { value: "first_short_retry", label: "짧은 재시도 후 완료" },
+                        { value: "first_confirm_recall", label: "핵심 근거를 회상 확인 후 완료" },
+                        { value: "first_keep_scheduled_review", label: "예약된 복습 일정 유지" },
+                      ]
+                  ).map((option) => (
+                    <label key={option.value} className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        className="h-4 w-4"
+                        name={`next-action-${item.queueId}`}
+                        value={option.value}
+                        checked={actionsByQueueId[item.queueId] === option.value}
+                        onChange={() =>
+                          setActionsByQueueId((prev) => ({
+                            ...prev,
+                            [item.queueId]: option.value as ReviewCompletionAction,
+                          }))
+                        }
+                      />
+                      <span>{option.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
             </div>
             <div className="flex flex-col gap-2 sm:items-end">
               <Button type="button" onClick={() => router.push(`/app/items/${item.itemId}`)}>
