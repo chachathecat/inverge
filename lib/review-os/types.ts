@@ -193,7 +193,13 @@ export type ActionSeedRecord = {
 export type TodayFocus = {
   lines: [string, string, string];
   nextAction: string;
-  nextActionType: "review_now" | "capture_now" | "move_on";
+  nextActionType: "review_now" | "capture_now" | "move_on" | "retry_now" | "rewrite_now";
+  primaryTaskLabel: string;
+  reason: string;
+  estimatedDurationMinutes: number;
+  priorityScore: number;
+  sourceQueueId: string | null;
+  sourceItemId: string | null;
   queue: ReviewQueueCard[];
 };
 
