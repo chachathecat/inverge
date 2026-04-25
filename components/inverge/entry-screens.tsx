@@ -31,6 +31,10 @@ const ABILITY_PREVIEW = [
   { label: "결론 명료도", value: 58 },
 ];
 
+function buildModeLoginHref(mode: "first" | "second") {
+  return `/login?returnTo=${encodeURIComponent(`/app?mode=${mode}`)}`;
+}
+
 type ExamHomeDashboardProps = {
   examId?: string;
   sessionId?: string;
@@ -83,7 +87,7 @@ export function FrontPage() {
               </div>
             ))}
           </div>
-          <p className="mt-6 text-sm text-[color:var(--muted)]">학원용 답안 운영 콘솔은 별도 준비 중</p>
+          <p className="mt-6 text-sm text-[color:var(--muted)]">현재 초대 기반 알파로 차분하게 운영 중입니다.</p>
         </div>
 
         <FocusSurface className="animate-in-up overflow-hidden [animation-delay:120ms]">
@@ -167,7 +171,7 @@ export function ExamSelectionPage() {
         {ordered.map((exam) => (
           <Link
             key={exam.id}
-            href={getExamHomePath(exam.id)}
+            href={exam.name === "감정평가사 1차" ? buildModeLoginHref("first") : buildModeLoginHref("second")}
             className="group grid gap-6 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] p-5 transition hover:border-[var(--border-strong)] hover:shadow-[var(--shadow-soft)] sm:grid-cols-[1fr_auto] sm:items-center sm:p-6"
           >
             <div>

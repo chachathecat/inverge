@@ -37,6 +37,10 @@ function sanitizeInternalReturnTo(value: string | null | undefined, fallback = "
   try {
     const url = new URL(trimmed, "http://inverge.local");
     if (url.origin !== "http://inverge.local") return fallback;
+    if (url.pathname === "/app") {
+      const safeMode = parseAppraisalMode(url.searchParams.get("mode"));
+      return safeMode ? `/app?mode=${safeMode}` : "/app";
+    }
     return `${url.pathname}${url.search}${url.hash}`;
   } catch {
     return fallback;
@@ -93,6 +97,10 @@ export function AuthForm() {
 
   return (
     <form className="space-y-4" onSubmit={handleSubmit}>
+      <p className="text-sm leading-6 text-[color:var(--muted)]">
+        감정평가사 1차·2차 학습 운영은 초대 계정으로 이용할 수 있습니다. 초대 전에도 같은 계정을 그대로 사용하게 됩니다.
+      </p>
+
       <div className="flex gap-2 rounded-full border border-[var(--border)] p-1">
         <button
           type="button"
