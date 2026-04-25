@@ -141,6 +141,19 @@ function normalizeAnswer(value: string) {
   return value.replace(/\s+/g, " ").trim();
 }
 
+function normalizeMeaningfulAnswer(value: string) {
+  const normalized = normalizeAnswer(value);
+  if (!normalized) return null;
+  if (normalized === "-" || normalized === "–" || normalized === "—") return null;
+  return normalized;
+}
+
+function isMeaningfullyCorrectAnswer(correctAnswer: string, userAnswer: string) {
+  const normalizedCorrectAnswer = normalizeMeaningfulAnswer(correctAnswer);
+  const normalizedUserAnswer = normalizeMeaningfulAnswer(userAnswer);
+  return Boolean(normalizedCorrectAnswer && normalizedUserAnswer && normalizedCorrectAnswer === normalizedUserAnswer);
+}
+
 export class ReviewOsUsageLimitError extends Error {
   constructor() {
     super("review-os-usage-limit");
@@ -244,14 +257,14 @@ export class ReviewOsService {
       });
       const schedule = resolveReviewSchedule({
         mode,
-        isCorrect: normalizeAnswer(normalizedInput.correctAnswer) === normalizeAnswer(normalizedInput.userAnswer),
+        isCorrect: isMeaningfullyCorrectAnswer(normalizedInput.correctAnswer, normalizedInput.userAnswer),
         confidence: normalizedInput.confidence,
         mistakeType: artifacts.tags.mistakeType,
         recurrenceCount: recurrence?.recurrenceCount ?? 1,
         hasWeakParagraph: mode === "second" && Boolean(normalizedInput.weakStructurePoint || normalizedInput.missingIssue),
       });
       const effectiveNextReviewDate = input.nextReviewDate ?? schedule.nextReviewDate;
-      const queueDueAt = resolveScheduleOverrideDate(effectiveNextReviewDate, schedule.reviewDueAt);
+      const queueDueAt = schedule.retryDueAt ?? resolveScheduleOverrideDate(effectiveNextReviewDate, schedule.reviewDueAt);
 
       const item = await reviewOsRepository.insertWrongAnswerItem(
         userId,
