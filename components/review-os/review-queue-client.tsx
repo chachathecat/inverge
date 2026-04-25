@@ -63,7 +63,7 @@ export function ReviewQueueClient({ items }: { items: ReviewQueueCard[] }) {
           className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] p-4 sm:p-6"
         >
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="space-y-2">
+            <div className="min-w-0 space-y-2">
               <p className="text-xs text-[color:var(--muted)]">
                 {item.examName} · {item.subjectLabel} · {item.topicTag}
               </p>
@@ -94,7 +94,7 @@ export function ReviewQueueClient({ items }: { items: ReviewQueueCard[] }) {
                         { value: "first_keep_scheduled_review", label: "예약된 복습 일정 유지" },
                       ]
                   ).map((option) => (
-                    <label key={option.value} className="flex items-start gap-2 rounded-xl px-1 py-1">
+                    <label key={option.value} className="flex items-start gap-2 rounded-xl border border-transparent px-2 py-2 hover:border-[var(--border)]">
                       <input
                         type="radio"
                         className="mt-1 h-4 w-4"
@@ -108,13 +108,13 @@ export function ReviewQueueClient({ items }: { items: ReviewQueueCard[] }) {
                           }))
                         }
                       />
-                      <span>{option.label}</span>
+                      <span className="leading-6">{option.label}</span>
                     </label>
                   ))}
                 </div>
               </div>
             </div>
-            <div className="flex flex-col gap-2 sm:items-end">
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-52 sm:items-end">
               <Button type="button" onClick={() => router.push(`/app/items/${item.itemId}`)} className="w-full sm:w-auto">
                 항목 열기
               </Button>
@@ -128,7 +128,9 @@ export function ReviewQueueClient({ items }: { items: ReviewQueueCard[] }) {
                 {pendingId === item.queueId ? "처리 중" : "완료하고 다음 복습 예약"}
               </Button>
               {inlineErrorByQueueId[item.queueId] ? (
-                <p className="max-w-52 text-right text-xs text-[color:var(--danger)]">{inlineErrorByQueueId[item.queueId]}</p>
+                <p className="max-w-full text-left text-xs text-[color:var(--danger)] sm:max-w-52 sm:text-right">
+                  {inlineErrorByQueueId[item.queueId]}
+                </p>
               ) : null}
             </div>
           </div>
