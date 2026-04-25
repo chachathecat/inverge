@@ -26,6 +26,7 @@ import type {
   WeeklyLearningSummaryRecord,
   WrongAnswerDetail,
   ReviewCompletionAction,
+  ReviewCompletionMetadata,
   WrongAnswerItemInput,
   WrongAnswerItemRecord,
 } from "@/lib/review-os/types";
@@ -749,7 +750,13 @@ export class ReviewOsService {
     return queue;
   }
 
-  async completeReview(userId: string, email: string | null, queueId: string, action: ReviewCompletionAction) {
+  async completeReview(
+    userId: string,
+    email: string | null,
+    queueId: string,
+    action: ReviewCompletionAction,
+    metadata: ReviewCompletionMetadata = {},
+  ) {
     await this.ensureAccess(userId, email);
     const context = await reviewOsRepository.getReviewQueueItemContext(userId, queueId);
     if (context && !this.isCompletionActionCompatible(context.item.examName, action)) {
@@ -790,7 +797,10 @@ export class ReviewOsService {
         },
       );
     }
-    await reviewOsRepository.logUsageEvent(userId, "review_complete", "review_queue_item", queueId, { action });
+    await reviewOsRepository.logUsageEvent(userId, "review_complete", "review_queue_item", queueId, {
+      action,
+      ...metadata,
+    });
   }
 
   async getTodayFocus(userId: string, email: string | null, preferredMode?: "first" | "second"): Promise<TodayFocus> {

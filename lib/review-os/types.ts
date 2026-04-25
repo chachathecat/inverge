@@ -159,6 +159,13 @@ export type ReviewCompletionAction =
   | "second_paragraph_rewrite"
   | "second_keep_scheduled_rewrite";
 
+export type ReviewCompletionMetadata = {
+  retryDraft?: string;
+  errorReason?: string;
+  retrievalSentence?: string;
+  issueRecall?: string;
+};
+
 export type WrongAnswerDetail = {
   item: WrongAnswerItemRecord;
   note: WrongAnswerNoteRecord | null;

@@ -33,12 +33,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
   const firstUse = items.length === 0;
   const selectedQueueItem = queue.find((item) => item.queueId === focus.sourceQueueId) ?? queue[0] ?? null;
   const nextAction = focus.nextAction ?? selectedQueueItem?.reviewReason ?? config.nextActionFallback;
-  const primaryHref =
-    focus.nextActionType === "rewrite_now" && focus.sourceItemId
-      ? `/app/items/${focus.sourceItemId}?mode=second`
-      : focus.nextActionType === "capture_now" || focus.nextActionType === "move_on"
-        ? `/app/capture?mode=${mode}`
-        : `/app/review?mode=${mode}`;
+  const primaryHref = `/app/session?mode=${mode}`;
   const secondaryHref = mode === "second" ? `/app/items?mode=${mode}` : `/app/review?mode=${mode}`;
   const diagnosedWeakPoint = selectedQueueItem?.mistakeType ?? (items[0] ? buildNotebookPreview(items[0]).weakPoint : config.emptyTitle);
   const notebookPreview = items.slice(0, 3).map((item) => buildNotebookPreview(item));

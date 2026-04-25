@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { getServerSessionUser, requireRequestUserId } from "@/lib/auth/session";
 import { reviewOsErrorResponse } from "@/lib/review-os/http";
 import { reviewOsService } from "@/lib/review-os/service";
-import type { ReviewCompletionAction } from "@/lib/review-os/types";
+import type { ReviewCompletionAction, ReviewCompletionMetadata } from "@/lib/review-os/types";
 
 export const dynamic = "force-dynamic";
 
@@ -23,12 +23,14 @@ export async function POST(
     const session = await getServerSessionUser();
     const userId = await requireRequestUserId(request);
     const { queueId } = await params;
-    const payload = (await request.json().catch(() => null)) as { action?: ReviewCompletionAction } | null;
+    const payload = (await request.json().catch(() => null)) as
+      | { action?: ReviewCompletionAction; metadata?: ReviewCompletionMetadata }
+      | null;
     const action = payload?.action;
     if (!action || !ALLOWED_ACTIONS.includes(action)) {
       return NextResponse.json({ message: "다음 행동을 선택해 주세요." }, { status: 400 });
     }
-    await reviewOsService.completeReview(userId, session.email, queueId, action);
+    await reviewOsService.completeReview(userId, session.email, queueId, action, payload?.metadata ?? {});
     return NextResponse.json({ ok: true });
   } catch (error) {
     return reviewOsErrorResponse(error);
