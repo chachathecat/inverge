@@ -284,7 +284,10 @@ export class ReviewOsRepository {
         entitlement_tier: "free_trial",
         updated_at: now,
       });
-      assertSupabaseOperation("review-os.ensureAccess.insertProfile", insertResult);
+      // Concurrent first-time requests can race on user_id uniqueness; keep existing row and continue.
+      if (insertResult.error && insertResult.error.code !== "23505") {
+        assertSupabaseOperation("review-os.ensureAccess.insertProfile", insertResult);
+      }
     }
 
     const profileResult = await client
