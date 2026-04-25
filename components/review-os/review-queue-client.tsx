@@ -60,14 +60,14 @@ export function ReviewQueueClient({ items }: { items: ReviewQueueCard[] }) {
       {items.map((item) => (
         <section
           key={item.queueId}
-          className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] p-6"
+          className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] p-4 sm:p-6"
         >
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="space-y-2">
               <p className="text-xs text-[color:var(--muted)]">
                 {item.examName} · {item.subjectLabel} · {item.topicTag}
               </p>
-              <h3 className="text-lg font-medium text-[color:var(--foreground-strong)]">{item.problemTitle}</h3>
+              <h3 className="text-base font-medium leading-7 text-[color:var(--foreground-strong)] sm:text-lg">{item.problemTitle}</h3>
               <p className="text-sm leading-7 text-[color:var(--muted)]">{item.reviewReason}</p>
               <p className="text-sm text-[color:var(--foreground-strong)]">
                 반복 {item.recurrenceCount}회 · {item.mistakeType}
@@ -94,10 +94,10 @@ export function ReviewQueueClient({ items }: { items: ReviewQueueCard[] }) {
                         { value: "first_keep_scheduled_review", label: "예약된 복습 일정 유지" },
                       ]
                   ).map((option) => (
-                    <label key={option.value} className="flex items-center gap-2">
+                    <label key={option.value} className="flex items-start gap-2 rounded-xl px-1 py-1">
                       <input
                         type="radio"
-                        className="h-4 w-4"
+                        className="mt-1 h-4 w-4"
                         name={`next-action-${item.queueId}`}
                         value={option.value}
                         checked={(actionsByQueueId[item.queueId] ?? defaultActionsByQueueId[item.queueId]) === option.value}
@@ -115,7 +115,7 @@ export function ReviewQueueClient({ items }: { items: ReviewQueueCard[] }) {
               </div>
             </div>
             <div className="flex flex-col gap-2 sm:items-end">
-              <Button type="button" onClick={() => router.push(`/app/items/${item.itemId}`)}>
+              <Button type="button" onClick={() => router.push(`/app/items/${item.itemId}`)} className="w-full sm:w-auto">
                 항목 열기
               </Button>
               <Button
@@ -123,6 +123,7 @@ export function ReviewQueueClient({ items }: { items: ReviewQueueCard[] }) {
                 variant="outline"
                 onClick={() => void complete(item.queueId)}
                 disabled={pendingId === item.queueId}
+                className="w-full sm:w-auto"
               >
                 {pendingId === item.queueId ? "처리 중" : "완료하고 다음 복습 예약"}
               </Button>

@@ -69,24 +69,12 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
             <CardDescription className="max-w-[66ch]">{config.priorityCopy}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid gap-3 rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-4 sm:grid-cols-3">
-              <div>
-                <p className="text-xs text-[color:var(--muted)]">선택 이유</p>
-                <p className="mt-1 text-sm leading-6 text-[color:var(--foreground-strong)]">{primaryReason}</p>
-              </div>
-              <div>
-                <p className="text-xs text-[color:var(--muted)]">예상 소요 시간</p>
-                <p className="mt-1 text-sm text-[color:var(--foreground-strong)]">{estimatedMinutes}분</p>
-              </div>
-              <div>
-                <p className="text-xs text-[color:var(--muted)]">진단된 약점</p>
-                <p className="mt-1 text-sm leading-6 text-[color:var(--foreground-strong)]">{diagnosedWeakPoint}</p>
-              </div>
-            </div>
             <p className="text-sm text-[color:var(--foreground-strong)]">{nextAction}</p>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <Link href={primaryHref}>
-                <Button type="button">오늘 최우선 작업 시작</Button>
+              <Link href={primaryHref} className="w-full sm:w-auto">
+                <Button type="button" className="w-full sm:w-auto">
+                  오늘 최우선 작업 시작
+                </Button>
               </Link>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-[color:var(--muted)]">
                 <span>다른 작업 선택:</span>
@@ -101,6 +89,25 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                 </Link>
               </div>
             </div>
+            <details className="rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
+              <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">
+                우선순위 근거 보기
+              </summary>
+              <div className="grid gap-3 border-t border-[color:var(--border-subtle)] p-4 sm:grid-cols-3">
+                <div>
+                  <p className="text-xs text-[color:var(--muted)]">선택 이유</p>
+                  <p className="mt-1 text-sm leading-6 text-[color:var(--foreground-strong)]">{primaryReason}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-[color:var(--muted)]">예상 소요 시간</p>
+                  <p className="mt-1 text-sm text-[color:var(--foreground-strong)]">{estimatedMinutes}분</p>
+                </div>
+                <div>
+                  <p className="text-xs text-[color:var(--muted)]">진단된 약점</p>
+                  <p className="mt-1 text-sm leading-6 text-[color:var(--foreground-strong)]">{diagnosedWeakPoint}</p>
+                </div>
+              </div>
+            </details>
             {firstUse ? (
               <div className="rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-4 py-3 text-sm text-[color:var(--muted)]">
                 {config.emptyDescription}{" "}
