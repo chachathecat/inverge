@@ -16,6 +16,7 @@ import type {
   FeedbackItemRecord,
   InviteStatus,
   ReviewQueueCard,
+  ReviewCompletionAction,
   StudyProfile,
   UsageEventRecord,
   WeeklyLearningSummaryRecord,
@@ -253,6 +254,78 @@ function mapReviewQueueCard(
 }
 
 export class ReviewOsRepository {
+  async getReviewQueueItemContext(userId: string, queueId: string) {
+    const client = getUserClient(userId);
+    const queueResult = await client
+      .from("review_queue_items")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("id", queueId)
+      .eq("exam_id", "wrong_answer_os")
+      .maybeSingle();
+    assertSupabaseOperation("review-os.getReviewQueueItemContext.queue", queueResult);
+
+    const queueRow = queueResult.data as Record<string, unknown> | null;
+    if (!queueRow) return null;
+
+    const itemId = typeof queueRow.source_submission_id === "string" ? queueRow.source_submission_id : null;
+    if (!itemId) return null;
+
+    const item = await this.getWrongAnswerItem(userId, itemId);
+    if (!item) return null;
+
+    const tags = await this.listWrongAnswerTags(userId, itemId);
+    return { queueRow, item, primaryTag: tags[0] ?? null };
+  }
+
+  async createFollowUpReviewQueueEntry(
+    userId: string,
+    item: WrongAnswerItemRecord,
+    action: ReviewCompletionAction,
+    dueAt: string,
+    reviewReason: string,
+    priorityScore: number,
+    derivedPayload: Record<string, unknown>,
+  ) {
+    const client = getUserClient(userId);
+
+    const existingPendingResult = await client
+      .from("review_queue_items")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("exam_id", "wrong_answer_os")
+      .eq("source_submission_id", item.id)
+      .eq("status", "pending")
+      .limit(1);
+    assertSupabaseOperation("review-os.createFollowUpReviewQueueEntry.selectPending", existingPendingResult);
+    if ((existingPendingResult.data ?? []).length > 0) return;
+
+    const now = new Date().toISOString();
+    const result = await client.from("review_queue_items").insert({
+      id: createUuid(),
+      user_id: userId,
+      exam_id: "wrong_answer_os",
+      subject_id: item.subjectLabel,
+      stage: "alpha",
+      source_submission_id: item.id,
+      source_kind: "wrong_answer",
+      status: "pending",
+      priority_score: priorityScore,
+      raw_payload: {
+        dueAt,
+        reviewReason,
+      },
+      derived_payload: {
+        ...derivedPayload,
+        completionAction: action,
+        followUpScheduledAt: dueAt,
+      },
+      created_at: now,
+      updated_at: now,
+    });
+    assertSupabaseOperation("review-os.createFollowUpReviewQueueEntry.insert", result);
+  }
+
   async ensureAccess(userId: string, email: string | null): Promise<AccessState> {
     const client = getUserClient(userId);
     const existingProfileResult = await client

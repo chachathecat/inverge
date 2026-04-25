@@ -4,6 +4,7 @@ import { isAuthRequiredError } from "@/lib/auth/session";
 import {
   ReviewOsBurstLimitError,
   ReviewOsConcurrentGenerationError,
+  ReviewOsInvalidCompletionActionError,
   ReviewOsInviteRequiredError,
   ReviewOsUsageLimitError,
 } from "@/lib/review-os/service";
@@ -27,6 +28,12 @@ export function reviewOsErrorResponse(error: unknown) {
   }
   if (error instanceof ReviewOsConcurrentGenerationError) {
     return NextResponse.json({ ok: false, error: "generation-in-progress" }, { status: 409 });
+  }
+  if (error instanceof ReviewOsInvalidCompletionActionError) {
+    return NextResponse.json(
+      { ok: false, error: "invalid-completion-action", message: "이 항목 단계와 맞는 다음 행동을 선택해 주세요." },
+      { status: 400 },
+    );
   }
   if (isSupabasePersistenceUnavailableError(error)) {
     return NextResponse.json({ ok: false, error: "supabase-persistence-unavailable" }, { status: 503 });
