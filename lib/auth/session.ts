@@ -151,7 +151,7 @@ export async function getRequestUserId(request: Request, fallbackUserId = DEMO_U
   }
 
   if (!isSupabaseConfigured()) {
-    return fallbackUserId;
+    return null;
   }
 
   const session = await getServerSessionUser(fallbackUserId);

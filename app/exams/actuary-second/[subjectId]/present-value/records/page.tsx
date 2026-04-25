@@ -1,10 +1,5 @@
-import { ActuarySecondRecordsPage } from "@/components/inverge/actuary-second-records";
+import { notFound } from "next/navigation";
 
-type RouteProps = {
-  params: Promise<{ subjectId: string }>;
-};
-
-export default async function ActuarySecondRecordsRoute({ params }: RouteProps) {
-  const { subjectId } = await params;
-  return <ActuarySecondRecordsPage subjectId={subjectId} />;
+export default function UnsupportedActuaryRoute() {
+  notFound();
 }

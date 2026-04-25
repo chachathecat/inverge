@@ -1,11 +1,5 @@
-import { ActuaryFirstPastSetSolvingPage } from "@/components/inverge/actuary-first-past-set-solving";
+import { notFound } from "next/navigation";
 
-type RouteProps = {
-  params: Promise<{ subjectId: string; setId: string }>;
-};
-
-export default async function ActuaryFirstPastSetRoute({ params }: RouteProps) {
-  const { subjectId, setId } = await params;
-  return <ActuaryFirstPastSetSolvingPage subjectId={subjectId} setId={setId} />;
+export default function UnsupportedActuaryRoute() {
+  notFound();
 }
-
