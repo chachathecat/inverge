@@ -8,7 +8,7 @@ import { getAppraisalMode, parseAppraisalMode } from "@/lib/review-os/appraisal"
 import { getCalculatorWorkflowForSubject, hasCalculationSignal } from "@/lib/review-os/calculator-workflow";
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
 import { reviewOsService } from "@/lib/review-os/service";
-import { buildDetailStudyNote } from "@/lib/review-os/study-note";
+import { buildDetailStudyNote, buildRewriteComparisonNote } from "@/lib/review-os/study-note";
 
 type PageProps = {
   params: Promise<{ itemId: string }>;
@@ -30,6 +30,19 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
     getAppraisalMode(detail.item.examName);
   const isSecond = mode === "second";
   const note = buildDetailStudyNote(detail);
+  const rewriteSourceItemId =
+    typeof detail.item.rawPayload?.rewrite_source_item_id === "string"
+      ? detail.item.rawPayload.rewrite_source_item_id
+      : typeof detail.item.rawPayload?.user_confirmed_fields === "object" &&
+          detail.item.rawPayload.user_confirmed_fields &&
+          typeof (detail.item.rawPayload.user_confirmed_fields as Record<string, unknown>).rewrite_source_item_id === "string"
+        ? ((detail.item.rawPayload.user_confirmed_fields as Record<string, unknown>).rewrite_source_item_id as string)
+        : null;
+  const rewriteSourceDetail =
+    isSecond && rewriteSourceItemId
+      ? await reviewOsService.getWrongAnswerDetail(session.userId, session.email, rewriteSourceItemId)
+      : null;
+  const rewriteComparison = buildRewriteComparisonNote(detail, note, rewriteSourceDetail);
   const title = detail.item.problemTitle ?? detail.item.problemIdentifier ?? note.title;
   const calculatorWorkflow = getCalculatorWorkflowForSubject(detail.item.subjectLabel);
   const hasCalculationMistake = hasCalculationSignal([
@@ -69,6 +82,37 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
 
       {isSecond ? (
         <section className="space-y-4">
+          {rewriteComparison ? (
+            <section className="rounded-[var(--radius-card)] border border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] p-5">
+              <p className="text-caption text-[color:var(--cue-review)]">2차 rewrite 전/후 비교</p>
+              <div className="mt-3 space-y-3">
+                <MiniArtifact label="source gap" value={rewriteComparison.sourceGap} />
+                <MiniArtifact label="이전 문단 / 기준 답안 요약" value={`${rewriteComparison.previousParagraph}\n\n기준 요약: ${rewriteComparison.sourceAnswerSummary}`} />
+                <SourceBlock label="다시 쓴 문단" value={rewriteComparison.rewrittenParagraph} />
+                <div className="grid gap-3 md:grid-cols-2">
+                  <MiniArtifact label="좋아진 점 1개" value={rewriteComparison.improvement} />
+                  <MiniArtifact label="아직 남은 간극 1개" value={rewriteComparison.remainingNextGap} />
+                </div>
+                <p className="text-sm text-[color:var(--foreground-strong)]">다음에는 이 문장만 다시 확인합니다.</p>
+                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                  <Link href={`/app/review?mode=${mode}`}>
+                    <Button type="button">다음 review 일정 잡기</Button>
+                  </Link>
+                  <Link href={`/app/review?mode=${mode}`}>
+                    <Button type="button" variant="outline">
+                      review queue 계속 보기
+                    </Button>
+                  </Link>
+                  <Link href={`/app/capture?mode=${mode}&rewriteFrom=${rewriteSourceItemId ?? itemId}`}>
+                    <Button type="button" variant="outline">
+                      문단 한 번 더 다시쓰기
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </section>
+          ) : null}
+
           <ArtifactBlock tone="risk" eyebrow="가장 큰 간극" title={note.missingIssue ?? note.weakPoint}>
             <p className="text-sm leading-7 text-[color:var(--muted)]">
               이번 비교에서는 이 한 가지를 먼저 메우는 데 집중합니다. 교정 답안은 문단 단위로 바로 다시 씁니다.
