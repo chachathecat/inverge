@@ -4,6 +4,10 @@ const required = [
   { key: 'E2E_BASE_URL', secret: false },
   { key: 'E2E_USER_EMAIL', secret: false },
   { key: 'E2E_USER_PASSWORD', secret: true },
+  { key: 'E2E_USER_A_EMAIL', secret: false },
+  { key: 'E2E_USER_A_PASSWORD', secret: true },
+  { key: 'E2E_USER_B_EMAIL', secret: false },
+  { key: 'E2E_USER_B_PASSWORD', secret: true },
 ];
 
 console.log('Inverge E2E environment check');
