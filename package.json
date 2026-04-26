@@ -9,7 +9,9 @@
     "lint": "eslint",
     "verify:review-os-schema": "node scripts/verify-review-os-schema.mjs",
     "smoke:review-os-auth": "node scripts/smoke-review-os-auth.mjs",
-    "eval:ocr-extraction": "node scripts/eval-ocr-extraction.mjs"
+    "eval:ocr-extraction": "node scripts/eval-ocr-extraction.mjs",
+    "test:e2e": "npx playwright test",
+    "test:e2e:headed": "npx playwright test --headed"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
@@ -36,6 +38,7 @@
     "eslint-config-next": "16.2.4",
     "supabase": "^2.95.0",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "@playwright/test": "^1.55.0"
   }
 }

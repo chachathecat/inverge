@@ -139,3 +139,47 @@
 - review queue 완료는 다음 행동 선택 구조 유지.
 - learner-facing instructor route 노출 추가 없음.
 - 1차/2차 subject template 기반 가이드 문구 유지.
+
+---
+
+## Playwright E2E smoke (closed beta learner flows)
+
+### 실행 방법 (로컬)
+1. 의존성 설치
+   - `npm install`
+2. (선택) 로컬 서버 대신 외부 환경을 사용할 경우
+   - `E2E_BASE_URL` 설정 (예: 스테이징 URL)
+3. 테스트 실행
+   - `npm run test:e2e`
+   - 디버깅 시: `npm run test:e2e:headed`
+
+### 환경 변수
+- `E2E_BASE_URL` (optional)
+  - 미설정 시 기본값: `http://127.0.0.1:3000`
+- `E2E_USER_EMAIL` (authenticated smoke용)
+- `E2E_USER_PASSWORD` (authenticated smoke용)
+
+### 커버하는 흐름
+- Public smoke (항상 실행)
+  - `/` 로드 및 `시작하기` CTA 존재
+  - `/exams`에 감정평가사 1차/2차만 노출
+  - unsupported exam 키워드(보험계리사, CPA, 세무사, TOEFL, SAT) 비노출
+- Authenticated learner smoke (자격 증명 있을 때만 실행)
+  - 로그인(`/login`) 후 `/app?mode=first` Today CTA 확인
+  - `/app/sets?mode=first` 5개 공식 과목 확인
+  - 3문항 bulk 입력, 오답 생성, 공식 오답 이유 선택, 회상 문장 입력, 완료 상태 확인, `/app/review?mode=first` 확인
+  - `/app?mode=second` 및 `/app/write?mode=second` 진입
+  - 2차 3개 공식 과목 확인
+  - 쟁점 회상 → 목차 → 내 답안 → 기준답안 → 간극 → 문단 다시쓰기 저장 및 완료 상태 확인
+- Route safety smoke
+  - `/instructor`, `/studio`는 learner UI 미노출
+  - `/exams/actuary-first`, `/exams/actuary-second`는 blocked/notFound (404) 기대
+
+### 자격 증명 누락 시 동작
+- `E2E_USER_EMAIL` 또는 `E2E_USER_PASSWORD`가 없으면 authenticated smoke suite는
+  명시적 사유 메시지와 함께 `skip`된다.
+- public/route safety smoke는 계속 실행된다.
+
+### 알려진 제한사항
+- 인증 계정 상태(allowlist, 초대 상태, 실제 데이터 분리)는 실행 환경 Supabase 설정에 영향을 받는다.
+- 브라우저 바이너리/패키지 설치가 제한된 환경에서는 e2e 실행이 실패할 수 있다.
