@@ -17,7 +17,14 @@ import { clearReviewOsDraft, loadReviewOsDraft, saveReviewOsDraft } from "@/lib/
 import { getCalculatorWorkflowForSubject } from "@/lib/review-os/calculator-workflow";
 import { applyDraftToConfirmedSubject, type ExtractionDraft, type ExtractionPipelineResult } from "@/lib/review-os/extraction";
 import { resolveReviewSchedule } from "@/lib/review-os/scheduling";
-import { CONFIDENCE_OPTIONS, MISTAKE_REASON_PRESETS, SECOND_TASK_PRESETS, type ConfidenceLevel, type SourceType } from "@/lib/review-os/types";
+import {
+  CONFIDENCE_OPTIONS,
+  getFirstSubjectTemplate,
+  MISTAKE_REASON_PRESETS,
+  SECOND_TASK_PRESETS,
+  type ConfidenceLevel,
+  type SourceType,
+} from "@/lib/review-os/types";
 
 type CaptureFormProps = {
   userId: string;
@@ -69,39 +76,6 @@ type DraftState = {
   extractionNeedsReview?: boolean;
 };
 
-const FIRST_DEFAULTS: Record<string, { concepts: string; formula: string; comparison: string; reason: string }> = {
-  민법: {
-    concepts: "요건, 효과, 예외",
-    formula: "요건 -> 효과 -> 예외",
-    comparison: "원칙과 예외를 같은 문장 안에서 구분합니다.",
-    reason: "조건 누락 또는 원칙/예외 구분이 흐려졌습니다.",
-  },
-  경제학원론: {
-    concepts: "수요, 공급, 균형",
-    formula: "정의 -> 그래프 이동 -> 균형 변화",
-    comparison: "곡선 이동과 곡선 위 이동을 구분합니다.",
-    reason: "그래프 이동 방향 또는 균형 변화 판단이 흔들렸습니다.",
-  },
-  회계학: {
-    concepts: "분개, 금액, 표시",
-    formula: "분개 -> 금액 -> 재무제표 표시",
-    comparison: "인식 시점과 측정 금액을 분리합니다.",
-    reason: "분개 순서 또는 금액 산정 기준을 놓쳤습니다.",
-  },
-  부동산학원론: {
-    concepts: "개념, 기준, 적용",
-    formula: "개념 -> 계산 기준 -> 적용 조건",
-    comparison: "정의와 계산 조건을 분리합니다.",
-    reason: "개념 정의와 적용 조건이 섞였습니다.",
-  },
-  감정평가관계법규: {
-    concepts: "요건, 절차, 법리",
-    formula: "요건 -> 절차 -> 사안 포섭",
-    comparison: "조문 요건과 사안 사실관계를 직접 연결합니다.",
-    reason: "요건 검토 순서 또는 사안 포섭 문장이 누락되었습니다.",
-  },
-};
-
 const SECOND_DEFAULTS: Record<string, { structure: string; issue: string; sentence: string; rewrite: string; caseSummary: string }> = {
   감정평가실무: {
     structure: "문제 요구 -> 평가 근거 -> 계산 -> 결론",
@@ -147,11 +121,12 @@ function getDefaultNextReviewDate(mode: AppraisalMode) {
 }
 
 function firstDefaults(subject: string) {
-  return FIRST_DEFAULTS[subject] ?? {
-    concepts: "개념, 조건, 적용",
-    formula: "개념 -> 조건 -> 적용",
-    comparison: "정답 근거와 내가 고른 판단의 차이를 분리합니다.",
-    reason: "정답 근거와 선택 근거가 갈라진 지점을 놓쳤습니다.",
+  const template = getFirstSubjectTemplate(subject);
+  return {
+    concepts: template.keyConcepts,
+    formula: template.coreFormula,
+    comparison: template.comparisonPoint,
+    reason: template.defaultReason,
   };
 }
 
@@ -1097,6 +1072,7 @@ function ConfirmPanel({
 
 function FirstConfirmFields(props: FieldProps) {
   const { form, update } = props;
+  const subjectTemplate = getFirstSubjectTemplate(form.subjectLabel);
   return (
     <div className="mt-5 space-y-4">
       <div className="grid gap-4 lg:grid-cols-2">
@@ -1120,10 +1096,12 @@ function FirstConfirmFields(props: FieldProps) {
         </label>
       </div>
       <section className="rounded-[var(--radius-md)] border border-[color:var(--cue-focus)] bg-[color:var(--cue-focus-bg)] px-4 py-3">
-        <p className="text-sm font-medium text-[color:var(--foreground-strong)]">해설 보기 전에 회상 먼저</p>
+        <p className="text-sm font-medium text-[color:var(--foreground-strong)]">이 과목은 먼저 이 기준으로 확인합니다.</p>
         <p className="mt-1 text-sm leading-6 text-[color:var(--muted)]">
-          해설 보기 전에, 이 선지가 틀린 이유를 한 문장으로 적어보세요. 이 한 줄이 다음 retry 기준이 됩니다.
+          {subjectTemplate.checkpoints.join(" · ")}
         </p>
+        <p className="mt-1 text-sm leading-6 text-[color:var(--muted)]">해설 전에 이 기준 중 하나를 떠올립니다.</p>
+        <p className="mt-1 text-sm leading-6 text-[color:var(--muted)]">{subjectTemplate.fixedCondition}</p>
       </section>
       <div className="grid gap-4 lg:grid-cols-2">
         <label className="space-y-2">
@@ -1164,7 +1142,7 @@ function FirstConfirmFields(props: FieldProps) {
           value={form.comparisonPoint}
           onChange={(event) => update("comparisonPoint", event.target.value)}
           className="min-h-32 border-[var(--border)] bg-[color:var(--surface)] text-[color:var(--foreground-strong)] leading-7"
-          placeholder="예: 조문 예외 요건을 확인하지 않고 일반 원칙만 보고 2번을 골랐습니다."
+          placeholder={subjectTemplate.retrievalHint}
         />
       </label>
       <label className="block space-y-2">

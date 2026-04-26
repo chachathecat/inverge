@@ -9,6 +9,7 @@ import {
   APPRAISAL_FIRST_SUBJECTS,
   CONFIDENCE_OPTIONS,
   FIRST_STAGE_ERROR_REASON_OPTIONS,
+  getFirstSubjectTemplate,
   type ConfidenceLevel,
   type WrongAnswerItemInput,
 } from "@/lib/review-os/types";
@@ -88,6 +89,7 @@ export function FirstSetSolvingForm() {
   const [bulkCorrectAnswers, setBulkCorrectAnswers] = useState("");
   const [wrongDetails, setWrongDetails] = useState<WrongDetailRow[]>([]);
   const [createdCount, setCreatedCount] = useState(0);
+  const subjectTemplate = useMemo(() => getFirstSubjectTemplate(subject), [subject]);
 
   const summary = useMemo(() => {
     const total = answerRows.length;
@@ -169,8 +171,8 @@ export function FirstSetSolvingForm() {
         questionNumber: row.questionNumber,
         userAnswer: normalizeAnswer(row.userAnswer),
         correctAnswer: normalizeAnswer(row.correctAnswer),
-        errorReason: "",
-        retrievalSentence: "",
+        errorReason: subjectTemplate.commonErrorHints[0] ?? "",
+        retrievalSentence: subjectTemplate.retrievalHint,
       }));
 
     setWrongDetails(wrongRows);
@@ -288,6 +290,12 @@ export function FirstSetSolvingForm() {
                 ))}
               </select>
             </label>
+            <div className="rounded-[var(--radius-md)] border border-[color:var(--cue-focus)] bg-[color:var(--cue-focus-bg)] p-3">
+              <p className="text-sm font-medium text-[color:var(--foreground-strong)]">이 과목은 먼저 이 기준으로 확인합니다.</p>
+              <p className="mt-1 text-xs text-[color:var(--muted)]">{subjectTemplate.checkpoints.join(" · ")}</p>
+              <p className="mt-2 text-xs text-[color:var(--muted)]">해설 전에 이 기준 중 하나를 떠올립니다.</p>
+              <p className="text-xs text-[color:var(--muted)]">{subjectTemplate.fixedCondition}</p>
+            </div>
 
             <label className="block space-y-2 text-sm">
               <span className="font-medium text-[color:var(--foreground-strong)]">세트 제목/출처</span>
@@ -417,6 +425,7 @@ export function FirstSetSolvingForm() {
         {step === "wrong-details" ? (
           <section className="space-y-4">
             <p className="text-sm font-medium text-[color:var(--foreground-strong)]">해설 보기 전에, 이 선지가 틀린 이유를 한 문장으로 적어보세요.</p>
+            <p className="text-xs text-[color:var(--muted)]">자주 나오는 실수: {subjectTemplate.commonErrorHints.join(" · ")}</p>
             <div className="space-y-4">
               {wrongDetails.map((row) => (
                 <div key={row.questionNumber} className="space-y-3 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] p-3">
@@ -442,7 +451,7 @@ export function FirstSetSolvingForm() {
                   <textarea
                     value={row.retrievalSentence}
                     onChange={(event) => updateWrongDetail(row.questionNumber, "retrievalSentence", event.target.value)}
-                    placeholder="해설 전에 떠오른 이유를 한 문장으로 적습니다."
+                    placeholder={subjectTemplate.retrievalHint}
                     className="min-h-24 w-full rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] px-3 py-2 text-sm"
                   />
                 </div>
