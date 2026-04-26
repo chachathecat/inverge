@@ -13,6 +13,86 @@ export const FIRST_STAGE_ERROR_REASON_OPTIONS = [
   "찍음/확신 부족",
 ] as const;
 
+export type FirstSubjectTemplate = {
+  keyConcepts: string;
+  coreFormula: string;
+  comparisonPoint: string;
+  defaultReason: string;
+  checkpoints: string[];
+  commonErrorHints: string[];
+  retrievalHint: string;
+  fixedCondition: string;
+};
+
+export const FIRST_SUBJECT_TEMPLATES: Record<(typeof APPRAISAL_FIRST_SUBJECTS)[number], FirstSubjectTemplate> = {
+  민법: {
+    keyConcepts: "요건, 효과, 예외, 판례/조문 연결",
+    coreFormula: "요건 -> 효과 -> 예외 -> 판례/조문 연결",
+    comparisonPoint: "해설 전에 요건·효과·예외 중 하나를 떠올리고 판례/조문 연결 여부를 확인합니다.",
+    defaultReason: "요건 누락 또는 원칙/예외 혼동이 있었습니다.",
+    checkpoints: ["요건", "효과", "예외", "판례/조문 연결"],
+    commonErrorHints: ["요건 누락", "원칙/예외 혼동", "선지 표현 오독"],
+    retrievalHint: "해설 전에 요건·효과·예외 중 하나를 먼저 떠올립니다.",
+    fixedCondition: "오늘은 요건 1개를 먼저 고정합니다.",
+  },
+  경제학원론: {
+    keyConcepts: "수요/공급, 그래프 이동, 균형 변화, 탄력성/한계개념",
+    coreFormula: "수요/공급 -> 그래프 이동 -> 균형 변화 -> 탄력성/한계개념",
+    comparisonPoint: "해설 전에 그래프 이동 방향과 균형 변화를 먼저 떠올립니다.",
+    defaultReason: "곡선 이동을 혼동했거나 수식/그래프 연결이 약했습니다.",
+    checkpoints: ["수요/공급", "그래프 이동", "균형 변화", "탄력성/한계개념"],
+    commonErrorHints: ["곡선 이동 혼동", "수식/그래프 연결 실패"],
+    retrievalHint: "해설 전에 그래프 이동인지 곡선 위 이동인지 먼저 구분합니다.",
+    fixedCondition: "오늘은 그래프 이동 기준 1개만 고정합니다.",
+  },
+  부동산학원론: {
+    keyConcepts: "개념 정의, 시장/정책/금융, 공식/계산 기준",
+    coreFormula: "개념 정의 -> 시장/정책/금융 -> 공식/계산 기준",
+    comparisonPoint: "해설 전에 정의와 계산 조건을 분리해 떠올립니다.",
+    defaultReason: "정의 혼동 또는 계산 조건 누락이 있었습니다.",
+    checkpoints: ["개념 정의", "시장/정책/금융", "공식/계산 기준"],
+    commonErrorHints: ["정의 혼동", "정책 효과 오독", "계산 조건 누락"],
+    retrievalHint: "해설 전에 개념 정의 1줄과 계산 기준 1개를 먼저 적습니다.",
+    fixedCondition: "오늘은 계산 조건 1개만 고정합니다.",
+  },
+  감정평가관계법규: {
+    keyConcepts: "조문, 요건, 절차, 예외",
+    coreFormula: "조문 -> 요건 -> 절차 -> 예외 -> 사안 포섭",
+    comparisonPoint: "해설 전에 조문-요건-절차 중 하나를 떠올리고 사안 포섭 문장을 확인합니다.",
+    defaultReason: "조문 요건 누락 또는 절차 순서 혼동이 있었습니다.",
+    checkpoints: ["조문", "요건", "절차", "예외"],
+    commonErrorHints: ["조문 요건 누락", "절차 순서 혼동", "사안 포섭 실패"],
+    retrievalHint: "해설 전에 조문과 요건을 먼저 짝지어 떠올립니다.",
+    fixedCondition: "오늘은 절차 순서 1개만 고정합니다.",
+  },
+  회계학: {
+    keyConcepts: "분개, 인식, 측정, 표시, 계산",
+    coreFormula: "분개 -> 인식 -> 측정 -> 표시 -> 계산",
+    comparisonPoint: "해설 전에 분개 방향과 인식 시점을 먼저 떠올립니다.",
+    defaultReason: "분개 방향 또는 인식·측정·표시 기준에서 오류가 있었습니다.",
+    checkpoints: ["분개", "인식", "측정", "표시", "계산"],
+    commonErrorHints: ["분개 방향 오류", "인식 시점 오류", "측정금액 오류", "표시구분 오류"],
+    retrievalHint: "해설 전에 분개 방향과 인식 시점을 먼저 확인합니다.",
+    fixedCondition: "오늘은 분개 방향 1개만 고정합니다.",
+  },
+};
+
+export function getFirstSubjectTemplate(subject: string): FirstSubjectTemplate {
+  if (subject in FIRST_SUBJECT_TEMPLATES) {
+    return FIRST_SUBJECT_TEMPLATES[subject as (typeof APPRAISAL_FIRST_SUBJECTS)[number]];
+  }
+  return {
+    keyConcepts: "개념, 조건, 적용",
+    coreFormula: "개념 -> 조건 -> 적용",
+    comparisonPoint: "해설 전에 기준 1개를 먼저 떠올립니다.",
+    defaultReason: "조건 점검이 부족했습니다.",
+    checkpoints: ["개념", "조건", "적용"],
+    commonErrorHints: ["조건 누락", "표현 오독"],
+    retrievalHint: "해설 전에 기준 하나를 먼저 떠올립니다.",
+    fixedCondition: "오늘은 조건 하나만 고정합니다.",
+  };
+}
+
 export const APPRAISAL_SECOND_SUBJECTS = ["감정평가실무", "감정평가이론", "감정평가 및 보상법규"] as const;
 
 export const SECOND_TASK_PRESETS = ["답안 작성", "비교", "보강", "교정노트"] as const;
