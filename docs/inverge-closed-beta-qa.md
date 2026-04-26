@@ -183,3 +183,21 @@
 ### 알려진 제한사항
 - 인증 계정 상태(allowlist, 초대 상태, 실제 데이터 분리)는 실행 환경 Supabase 설정에 영향을 받는다.
 - 브라우저 바이너리/패키지 설치가 제한된 환경에서는 e2e 실행이 실패할 수 있다.
+
+---
+
+## E2E smoke blocker follow-up (2026-04-26)
+
+### Fixed in focused pass
+1. **`/exams` public 접근 복구**
+   - `/exams` 레이아웃의 세션 강제 검증을 제거해, 페이지 자체가 `/login`으로 리다이렉트되지 않도록 복구.
+   - 카드 CTA는 기존대로 비로그인 시 `returnTo=/app?mode=...` 로그인 경로를 사용.
+2. **1차 authenticated smoke test-data mismatch 수정**
+   - 3문항 샘플에서 오답이 2개가 되도록 정답 입력값을 조정해, 오답 이유 입력 2개 시나리오와 일치시킴.
+3. **2차 `/app/write?mode=second` 과목 선택 노출**
+   - 2차 작성 워크스페이스(`workflow=second-write`) 진입 시 상단에 공식 3과목 선택 드롭다운을 항상 노출.
+   - 과목 변경 시 쟁점 회상/목차/가장 큰 간극/rewrite 가이드가 subject template에 맞춰 즉시 반영됨.
+
+### Guardrail re-check
+- `/app`, `/app/sets`, `/app/write`, `/app/review`, `/app/items`, `/admin` 보호 정책은 유지.
+- `/exams` 안정 셀렉터(`exam-card-first`, `exam-card-second`)는 유지.

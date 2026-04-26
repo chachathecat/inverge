@@ -598,6 +598,18 @@ export function WrongAnswerCaptureForm({
         </>
       ) : secondWriteEnabled ? (
         <>
+          <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 sm:p-5">
+            <div className="max-w-xl space-y-2">
+              <p className="text-caption text-[color:var(--muted)]">설정</p>
+              <SubjectSelect
+                subjectLabel={config.subjectLabel}
+                subjects={config.subjects}
+                value={form.subjectLabel}
+                onChange={updateSubject}
+                className="form-control w-full"
+              />
+            </div>
+          </section>
           {stage === "second-issue-recall" ? (
             <SecondIssueRecallPanel
               subject={form.subjectLabel}
