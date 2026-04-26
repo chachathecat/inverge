@@ -95,6 +95,66 @@ export function getFirstSubjectTemplate(subject: string): FirstSubjectTemplate {
 
 export const APPRAISAL_SECOND_SUBJECTS = ["감정평가실무", "감정평가이론", "감정평가 및 보상법규"] as const;
 
+export type SecondSubjectTemplate = {
+  structure: string;
+  checklist: string[];
+  commonGaps: string[];
+  rewriteGuidance: string;
+  issueRecallPlaceholder: string;
+  outlinePlaceholder: string;
+  biggestGapGuidance: string;
+  detailLine: string;
+};
+
+export const SECOND_SUBJECT_TEMPLATES: Record<(typeof APPRAISAL_SECOND_SUBJECTS)[number], SecondSubjectTemplate> = {
+  감정평가실무: {
+    structure: "문제 요구 → 평가 근거 → 계산 → 결론",
+    checklist: ["평가방법 선택", "자료 적정성", "계산 근거", "단위/시점", "결론"],
+    commonGaps: ["계산 근거 누락", "보정 요인 누락", "결론 수치 불명확"],
+    rewriteGuidance: "산식/근거/결론을 분리해 한 문단 보강",
+    issueRecallPlaceholder: "1) 문제 요구\n2) 평가 근거\n3) 계산 검토 포인트",
+    outlinePlaceholder: "I. 문제 요구\nII. 평가 근거\nIII. 계산\nIV. 결론",
+    biggestGapGuidance: "오늘은 간극 1개만 문단으로 보강합니다. 계산 근거와 결론 수치를 분리해 확인합니다.",
+    detailLine: "이 과목은 먼저 이 구조로 답안을 잡습니다.",
+  },
+  감정평가이론: {
+    structure: "정의 → 논거 → 사례 적용 → 결론",
+    checklist: ["개념 정의", "이론적 근거", "비교/대립점", "사례 적용", "결론"],
+    commonGaps: ["정의만 있고 사례 적용 부족", "논거 연결 약함", "결론 추상적"],
+    rewriteGuidance: "정의 다음에 사례 사실관계 연결 문장 추가",
+    issueRecallPlaceholder: "1) 개념 정의\n2) 핵심 논거\n3) 사례 적용 기준",
+    outlinePlaceholder: "I. 정의\nII. 논거\nIII. 사례 적용\nIV. 결론",
+    biggestGapGuidance: "오늘은 간극 1개만 문단으로 보강합니다. 정의 다음 사례 연결 문장을 먼저 추가합니다.",
+    detailLine: "이 과목은 먼저 이 구조로 답안을 잡습니다.",
+  },
+  "감정평가 및 보상법규": {
+    structure: "요건 → 조문/법리 → 절차 → 사안 포섭 → 결론",
+    checklist: ["조문", "요건", "절차", "판례/법리", "사안 포섭", "결론"],
+    commonGaps: ["요건 누락", "절차 순서 혼동", "조문 없는 포섭", "결론 불명확"],
+    rewriteGuidance: "누락 요건 1개와 사안 포섭 문장 1개 보강",
+    issueRecallPlaceholder: "1) 요건\n2) 조문/법리\n3) 사안 포섭 쟁점",
+    outlinePlaceholder: "I. 요건\nII. 조문/법리\nIII. 절차\nIV. 사안 포섭\nV. 결론",
+    biggestGapGuidance: "오늘은 간극 1개만 문단으로 보강합니다. 누락 요건과 사안 포섭 문장을 함께 보완합니다.",
+    detailLine: "이 과목은 먼저 이 구조로 답안을 잡습니다.",
+  },
+};
+
+export function getSecondSubjectTemplate(subject: string): SecondSubjectTemplate {
+  if (subject in SECOND_SUBJECT_TEMPLATES) {
+    return SECOND_SUBJECT_TEMPLATES[subject as (typeof APPRAISAL_SECOND_SUBJECTS)[number]];
+  }
+  return {
+    structure: "문제 요구 → 논거 → 적용 → 결론",
+    checklist: ["핵심 쟁점", "적용 근거", "결론"],
+    commonGaps: ["핵심 쟁점 누락", "적용 문장 부족", "결론 불명확"],
+    rewriteGuidance: "간극 1개를 분리해 한 문단 보강",
+    issueRecallPlaceholder: "1) \n2) \n3) ",
+    outlinePlaceholder: "I. \nII. \nIII. ",
+    biggestGapGuidance: "오늘은 간극 1개만 문단으로 보강합니다.",
+    detailLine: "이 과목은 먼저 이 구조로 답안을 잡습니다.",
+  };
+}
+
 export const SECOND_TASK_PRESETS = ["답안 작성", "비교", "보강", "교정노트"] as const;
 
 export const MISTAKE_REASON_PRESETS = [

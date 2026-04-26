@@ -1,4 +1,5 @@
 import { getAppraisalMode, parseAppraisalMode } from "@/lib/review-os/appraisal";
+import { getSecondSubjectTemplate } from "@/lib/review-os/types";
 import type { WrongAnswerDetail, WrongAnswerItemRecord, WrongAnswerTagRecord } from "@/lib/review-os/types";
 
 const FIRST_CORE_FORMULA_BY_SUBJECT: Record<string, string> = {
@@ -95,7 +96,7 @@ export function buildNotebookPreview(item: WrongAnswerItemRecord, tag?: WrongAns
   const nextAction = compact(
     isSecond
       ? (getDraftString(item.rawPayload, "rewriteInstruction") ??
-          "누락 논점 1개를 표시하고 8~10줄로 다시 씁니다.")
+          getSecondSubjectTemplate(item.subjectLabel).rewriteGuidance)
       : "같은 유형 1문제를 다시 풀고, 헷갈린 차이 5줄을 남깁니다."
   );
 

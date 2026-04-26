@@ -20,6 +20,7 @@ import { resolveReviewSchedule } from "@/lib/review-os/scheduling";
 import {
   CONFIDENCE_OPTIONS,
   getFirstSubjectTemplate,
+  getSecondSubjectTemplate,
   MISTAKE_REASON_PRESETS,
   SECOND_TASK_PRESETS,
   type ConfidenceLevel,
@@ -76,30 +77,6 @@ type DraftState = {
   extractionNeedsReview?: boolean;
 };
 
-const SECOND_DEFAULTS: Record<string, { structure: string; issue: string; sentence: string; rewrite: string; caseSummary: string }> = {
-  감정평가실무: {
-    structure: "문제 요구 -> 평가 근거 -> 계산 -> 결론",
-    issue: "계산 근거 또는 적용 조건 누락",
-    sentence: "평가 절차와 계산 근거를 분리해 적습니다.",
-    rewrite: "빠진 평가 근거 1개를 먼저 보강하고 8~10줄로 다시 씁니다.",
-    caseSummary: "평가 절차와 계산 근거를 확인할 사례입니다.",
-  },
-  감정평가이론: {
-    structure: "정의 -> 논점 -> 사례 적용 -> 결론",
-    issue: "개념 정의 뒤 사례 적용 문장 부족",
-    sentence: "이론 개념을 사례 사실관계에 연결하는 문장을 추가합니다.",
-    rewrite: "정의 2줄, 적용 4줄, 결론 1줄로 다시 씁니다.",
-    caseSummary: "이론 개념을 사례에 적용해야 하는 문제입니다.",
-  },
-  "감정평가 및 보상법규": {
-    structure: "요건 -> 절차 -> 조문/법리 -> 사안 포섭",
-    issue: "요건 또는 조문 적용 누락",
-    sentence: "요건 충족 여부를 사안 사실과 직접 연결합니다.",
-    rewrite: "누락된 요건 1개와 사안 포섭 문장 1개를 보강합니다.",
-    caseSummary: "요건과 절차를 사안에 포섭해야 하는 문제입니다.",
-  },
-};
-
 const FIRST_STAGE_ERROR_REASON_OPTIONS = [
   "개념 부족",
   "선지 오독",
@@ -131,12 +108,13 @@ function firstDefaults(subject: string) {
 }
 
 function secondDefaults(subject: string) {
-  return SECOND_DEFAULTS[subject] ?? {
-    structure: "문제 요구 -> 논점 -> 적용 -> 결론",
-    issue: "핵심 논점 또는 적용 문장 누락",
-    sentence: "논점을 사례 사실관계에 연결하는 문장을 추가합니다.",
-    rewrite: "누락 논점 1개를 먼저 표시하고 짧게 다시 씁니다.",
-    caseSummary: "답안 구조와 누락 논점을 확인할 사례입니다.",
+  const template = getSecondSubjectTemplate(subject);
+  return {
+    structure: template.structure,
+    issue: template.commonGaps[0] ?? "핵심 쟁점 누락",
+    sentence: template.biggestGapGuidance,
+    rewrite: template.rewriteGuidance,
+    caseSummary: `${template.detailLine} ${template.structure}`,
   };
 }
 
@@ -616,10 +594,20 @@ export function WrongAnswerCaptureForm({
       ) : secondWriteEnabled ? (
         <>
           {stage === "second-issue-recall" ? (
-            <SecondIssueRecallPanel issueRecall={form.issueRecall} onChange={(value) => update("issueRecall", value)} onNext={() => setStage("second-outline")} />
+            <SecondIssueRecallPanel
+              subject={form.subjectLabel}
+              issueRecall={form.issueRecall}
+              onChange={(value) => update("issueRecall", value)}
+              onNext={() => setStage("second-outline")}
+            />
           ) : null}
           {stage === "second-outline" ? (
-            <SecondOutlinePanel outlineDraft={form.outlineDraft} onChange={(value) => update("outlineDraft", value)} onNext={() => setStage("second-answer")} />
+            <SecondOutlinePanel
+              subject={form.subjectLabel}
+              outlineDraft={form.outlineDraft}
+              onChange={(value) => update("outlineDraft", value)}
+              onNext={() => setStage("second-answer")}
+            />
           ) : null}
           {stage === "second-answer" ? (
             <SecondAnswerPanel
@@ -640,6 +628,7 @@ export function WrongAnswerCaptureForm({
           ) : null}
           {stage === "second-gap" ? (
             <SecondGapPanel
+              subject={form.subjectLabel}
               biggestGap={form.biggestGap}
               onChange={(value) => {
                 update("biggestGap", value);
@@ -650,7 +639,7 @@ export function WrongAnswerCaptureForm({
             />
           ) : null}
           {stage === "second-rewrite" ? (
-            <SecondGapRewritePanel form={form} update={update} onBack={() => setStage("second-gap")} />
+            <SecondGapRewritePanel form={form} subject={form.subjectLabel} update={update} onBack={() => setStage("second-gap")} />
           ) : null}
         </>
       ) : (
@@ -685,10 +674,20 @@ export function WrongAnswerCaptureForm({
             <ConfirmPanel form={form} mode={mode} config={config} update={update} updateSubject={updateSubject} />
           ) : null}
           {mode === "second" && stage === "second-issue-recall" ? (
-            <SecondIssueRecallPanel issueRecall={form.issueRecall} onChange={(value) => update("issueRecall", value)} onNext={() => setStage("second-outline")} />
+            <SecondIssueRecallPanel
+              subject={form.subjectLabel}
+              issueRecall={form.issueRecall}
+              onChange={(value) => update("issueRecall", value)}
+              onNext={() => setStage("second-outline")}
+            />
           ) : null}
           {mode === "second" && stage === "second-outline" ? (
-            <SecondOutlinePanel outlineDraft={form.outlineDraft} onChange={(value) => update("outlineDraft", value)} onNext={() => setStage("second-answer")} />
+            <SecondOutlinePanel
+              subject={form.subjectLabel}
+              outlineDraft={form.outlineDraft}
+              onChange={(value) => update("outlineDraft", value)}
+              onNext={() => setStage("second-answer")}
+            />
           ) : null}
           {mode === "second" && stage === "second-answer" ? (
             <SecondAnswerPanel
@@ -705,6 +704,7 @@ export function WrongAnswerCaptureForm({
           ) : null}
           {mode === "second" && stage === "second-gap" ? (
             <SecondGapPanel
+              subject={form.subjectLabel}
               biggestGap={form.biggestGap}
               onChange={(value) => {
                 update("biggestGap", value);
@@ -715,7 +715,7 @@ export function WrongAnswerCaptureForm({
             />
           ) : null}
           {mode === "second" && stage === "second-rewrite" ? (
-            <SecondGapRewritePanel form={form} update={update} onBack={() => setStage("second-gap")} />
+            <SecondGapRewritePanel form={form} subject={form.subjectLabel} update={update} onBack={() => setStage("second-gap")} />
           ) : null}
         </>
       )}
@@ -1195,26 +1195,29 @@ function SecondConfirmFields(props: FieldProps) {
 }
 
 function SecondIssueRecallPanel({
+  subject,
   issueRecall,
   onChange,
   onNext,
 }: {
+  subject: string;
   issueRecall: string;
   onChange: (value: string) => void;
   onNext: () => void;
 }) {
+  const template = getSecondSubjectTemplate(subject);
   return (
     <section className="rounded-[var(--radius-card)] border border-[color:var(--cue-focus)] bg-[color:var(--cue-focus-bg)] p-4 sm:p-5">
       <p className="text-caption text-[color:var(--muted)]">Step 1. 쟁점 회상</p>
       <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">기준 답안 보기 전에 쟁점 3개를 먼저 적습니다</h3>
-      <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">기준 답안 보기 전에 쟁점 3개를 먼저 떠올립니다.</p>
+      <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">이 과목은 먼저 이 구조로 답안을 잡습니다. {template.structure}</p>
       <label className="mt-4 block space-y-2">
         <span className="text-sm text-[color:var(--foreground-strong)]">쟁점 회상</span>
         <Textarea
           value={issueRecall}
           onChange={(event) => onChange(event.target.value)}
           className="min-h-44 border-[var(--border)] bg-[color:var(--surface)] text-[color:var(--foreground-strong)] leading-7"
-          placeholder={"1) \n2) \n3) "}
+          placeholder={template.issueRecallPlaceholder}
         />
       </label>
       <Button type="button" className="mt-4 w-full sm:w-auto" disabled={issueRecall.trim().length < 8} onClick={onNext}>
@@ -1225,26 +1228,29 @@ function SecondIssueRecallPanel({
 }
 
 function SecondOutlinePanel({
+  subject,
   outlineDraft,
   onChange,
   onNext,
 }: {
+  subject: string;
   outlineDraft: string;
   onChange: (value: string) => void;
   onNext: () => void;
 }) {
+  const template = getSecondSubjectTemplate(subject);
   return (
     <section className="rounded-[var(--radius-card)] border border-[color:var(--cue-focus)] bg-[color:var(--cue-focus-bg)] p-4 sm:p-5">
       <p className="text-caption text-[color:var(--muted)]">Step 2. 목차 작성</p>
       <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">전체 답안보다 목차를 먼저 잡습니다</h3>
-      <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">답안 작성 전에 목차를 먼저 잡아보세요.</p>
+      <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">기준 답안 보기 전에 이 체크포인트 중 3개를 떠올립니다: {template.checklist.slice(0, 3).join(", ")}</p>
       <label className="mt-4 block space-y-2">
         <span className="text-sm text-[color:var(--foreground-strong)]">목차 초안</span>
         <Textarea
           value={outlineDraft}
           onChange={(event) => onChange(event.target.value)}
           className="min-h-44 border-[var(--border)] bg-[color:var(--surface)] text-[color:var(--foreground-strong)] leading-7"
-          placeholder={"I. \nII. \nIII. "}
+          placeholder={template.outlinePlaceholder}
         />
       </label>
       <Button type="button" className="mt-4 w-full sm:w-auto" disabled={outlineDraft.trim().length < 8} onClick={onNext}>
@@ -1311,24 +1317,29 @@ function SecondReferencePanel({
 }
 
 function SecondGapPanel({
+  subject,
   biggestGap,
   onChange,
   onNext,
 }: {
+  subject: string;
   biggestGap: string;
   onChange: (value: string) => void;
   onNext: () => void;
 }) {
+  const template = getSecondSubjectTemplate(subject);
   return (
     <section className="rounded-[var(--radius-card)] border border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] p-4 sm:p-5">
       <p className="text-caption text-[color:var(--muted)]">Step 5. 가장 큰 간극 1개</p>
       <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">오늘은 간극 1개만 고칩니다</h3>
+      <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">{template.biggestGapGuidance}</p>
       <label className="mt-4 block space-y-2">
         <span className="text-sm text-[color:var(--foreground-strong)]">보강할 논점 1개</span>
         <Textarea
           value={biggestGap}
           onChange={(event) => onChange(event.target.value)}
           className="min-h-32 border-[var(--border)] bg-[color:var(--surface)] text-[color:var(--foreground-strong)] leading-7"
+          placeholder={template.commonGaps[0]}
         />
       </label>
       <Button type="button" className="mt-4 w-full sm:w-auto" disabled={biggestGap.trim().length < 4} onClick={onNext}>
@@ -1340,17 +1351,21 @@ function SecondGapPanel({
 
 function SecondGapRewritePanel({
   form,
+  subject,
   update,
   onBack,
 }: {
   form: DraftState;
+  subject: string;
   update: <K extends keyof DraftState>(key: K, value: DraftState[K]) => void;
   onBack: () => void;
 }) {
+  const template = getSecondSubjectTemplate(subject);
   return (
     <section className="rounded-[var(--radius-card)] border border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] p-4 sm:p-5">
       <p className="text-caption text-[color:var(--muted)]">Step 6. 문단 다시쓰기</p>
       <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">한 문단 다시쓰기로 보강을 마무리합니다</h3>
+      <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">{template.rewriteGuidance}</p>
       <div className="mt-4 space-y-4">
         <label className="block space-y-2">
           <span className="text-sm text-[color:var(--foreground-strong)]">보강할 논점 1개</span>
