@@ -206,6 +206,31 @@ function pickConcepts(text: string, fallback: string) {
   return Array.from(new Set(words)).slice(0, 3).join(", ") || fallback;
 }
 
+function hasValue(value: string) {
+  return value.trim().length > 0;
+}
+
+function getMissingConfirmationFields(form: DraftState, mode: AppraisalMode) {
+  if (mode === "first") {
+    return [
+      { key: "subject", label: "과목", ok: hasValue(form.subjectLabel) },
+      { key: "title", label: "문제 제목/출처", ok: hasValue(form.problemTitle) || hasValue(form.problemIdentifier) || hasValue(form.sourceLabel) },
+      { key: "correct", label: "정답", ok: hasValue(form.correctAnswer) },
+      { key: "user", label: "내 답", ok: hasValue(form.userAnswer) },
+      { key: "reason", label: "오답 원인", ok: hasValue(form.userReasonText) || hasValue(form.userReasonPreset) },
+      { key: "retrieval", label: "회상 한 문장", ok: hasValue(form.comparisonPoint) },
+    ].filter((field) => !field.ok);
+  }
+
+  return [
+    { key: "subject", label: "과목", ok: hasValue(form.subjectLabel) },
+    { key: "recall", label: "쟁점 회상/목차", ok: hasValue(form.issueRecall) || hasValue(form.outlineDraft) },
+    { key: "reference", label: "기준 답안", ok: hasValue(form.correctAnswer) },
+    { key: "user", label: "내 답안", ok: hasValue(form.userAnswer) },
+    { key: "gap", label: "가장 큰 간극 1개", ok: hasValue(form.biggestGap) || hasValue(form.missingIssue) || hasValue(form.userReasonText) },
+  ].filter((field) => !field.ok);
+}
+
 export function WrongAnswerCaptureForm({
   userId,
   mode,
@@ -277,6 +302,8 @@ export function WrongAnswerCaptureForm({
   const [error, setError] = useState("");
   const [extracting, setExtracting] = useState(false);
   const [extractError, setExtractError] = useState("");
+  const missingConfirmationFields = getMissingConfirmationFields(form, mode);
+  const needsOcrConfirmation = Boolean(form.extractionNeedsReview || missingConfirmationFields.length > 0);
 
   function persist(next: DraftState) {
     saveReviewOsDraft(storageKey, next);
@@ -491,6 +518,15 @@ export function WrongAnswerCaptureForm({
           return;
         }
       }
+      if (needsOcrConfirmation) {
+        const missingLabels = missingConfirmationFields.map((field) => field.label).join(", ");
+        setError(
+          missingLabels
+            ? `OCR 확인 필요: ${missingLabels} 항목을 확인해 주세요.`
+            : "OCR 확인 필요: 추출 초안을 다시 확인한 뒤 저장해 주세요.",
+        );
+        return;
+      }
       if (mode === "second" && !rewriteContext) {
         if (form.issueRecall.trim().length < 8) {
           setError("기준 답안 보기 전에 쟁점 회상을 먼저 적어주세요.");
@@ -650,6 +686,8 @@ export function WrongAnswerCaptureForm({
             config={config}
             extracting={extracting}
             extractError={extractError}
+            needsOcrConfirmation={needsOcrConfirmation}
+            missingConfirmationFields={missingConfirmationFields.map((field) => field.label)}
             update={update}
             updateSubject={updateSubject}
             onImage={handleImageImport}
@@ -661,6 +699,8 @@ export function WrongAnswerCaptureForm({
             <ExtractionPreview
               form={form}
               mode={mode}
+              needsOcrConfirmation={needsOcrConfirmation}
+              missingConfirmationFields={missingConfirmationFields.map((field) => field.label)}
               onEdit={() => setStage(mode === "second" ? "second-answer" : "confirm")}
               onRegenerate={() => generateStructuredDraft()}
             />
@@ -778,6 +818,8 @@ function IntakePanel({
   extractError,
   update,
   updateSubject,
+  needsOcrConfirmation,
+  missingConfirmationFields,
   onImage,
   onPdf,
   onGenerate,
@@ -786,6 +828,8 @@ function IntakePanel({
   extracting: boolean;
   extractError: string;
   updateSubject: (value: string) => void;
+  needsOcrConfirmation: boolean;
+  missingConfirmationFields: string[];
   onImage: (file: File) => void;
   onPdf: (file: File) => void;
   onGenerate: () => void | Promise<void>;
@@ -794,7 +838,7 @@ function IntakePanel({
 
   return (
     <section className="rounded-[var(--radius-card)] border border-[color:var(--brand-700)] bg-[color:var(--brand-050)] p-4 sm:p-5">
-      <p className="text-caption text-[color:var(--brand-700)]">Step 1. Text transcript</p>
+      <p className="text-caption text-[color:var(--brand-700)]">Step 1. 입력 선택</p>
       <div className="mt-2 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="max-w-[62ch]">
           <h3 className="text-title text-[color:var(--foreground-strong)]">
@@ -802,13 +846,13 @@ function IntakePanel({
           </h3>
           <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">
             {mode === "second"
-              ? "닫힌 alpha에서는 붙여넣은 사례, 기준 답안, 내 답안 텍스트가 가장 안정적입니다. 이미지와 PDF는 보관 또는 실험용으로만 다룹니다."
-              : "닫힌 alpha에서는 붙여넣은 문제, 정답, 내 답 텍스트가 가장 안정적입니다. 이미지와 PDF는 보관 또는 실험용으로만 다룹니다."}
+              ? "사진은 초안 추출용입니다. 저장 전 반드시 과목/기준 답안/내 답안/가장 큰 간극을 확인합니다. OCR 결과는 사용자가 확인한 뒤 저장됩니다."
+              : "사진은 초안 추출용입니다. 저장 전 반드시 과목/정답/내 답/오답 원인/회상 문장을 확인합니다. OCR 결과는 사용자가 확인한 뒤 저장됩니다."}
           </p>
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <label className="inline-flex cursor-pointer items-center justify-center rounded-full border border-[color:var(--border-strong)] bg-[color:var(--bg-surface)] px-4 py-2 text-sm text-[color:var(--foreground-strong)]">
-            이미지 보관 / 실험
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <label className="inline-flex min-h-11 w-full cursor-pointer items-center justify-center rounded-full border border-[color:var(--border-strong)] bg-[color:var(--bg-surface)] px-5 py-3 text-sm font-medium text-[color:var(--foreground-strong)] sm:w-auto">
+            사진 업로드 (OCR 초안)
             <input
               type="file"
               accept="image/*"
@@ -819,7 +863,7 @@ function IntakePanel({
               }}
             />
           </label>
-          <label className="inline-flex cursor-pointer items-center justify-center rounded-full border border-[color:var(--border-strong)] bg-[color:var(--bg-surface)] px-4 py-2 text-sm text-[color:var(--foreground-strong)]">
+          <label className="inline-flex min-h-11 w-full cursor-pointer items-center justify-center rounded-full border border-[color:var(--border-strong)] bg-[color:var(--bg-surface)] px-5 py-3 text-sm text-[color:var(--foreground-strong)] sm:w-auto">
             PDF 보관
             <input
               type="file"
@@ -863,9 +907,7 @@ function IntakePanel({
         </Button>
         {form.sourceLabel ? <p className="text-sm text-[color:var(--muted)]">보관한 파일: {form.sourceLabel}</p> : null}
       </div>
-      <p className="mt-3 text-caption leading-5 text-[color:var(--muted)]">
-        이미지/PDF는 현재 실험 범위입니다. alpha 검증은 텍스트 원문을 기준으로 진행합니다.
-      </p>
+      <p className="mt-3 text-caption leading-5 text-[color:var(--muted)]">텍스트 붙여넣기/수기 입력 경로는 계속 사용할 수 있습니다.</p>
       {calculatorWorkflow ? (
         <div className="mt-4 rounded-[var(--radius-md)] border border-[color:var(--cue-focus)] bg-[color:var(--cue-focus-bg)] px-4 py-3">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -880,9 +922,9 @@ function IntakePanel({
           </div>
         </div>
       ) : null}
-      {form.extractionNeedsReview ? (
+      {needsOcrConfirmation ? (
         <p className="mt-3 rounded-[var(--radius-md)] border border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] px-4 py-3 text-sm leading-6 text-[color:var(--foreground-strong)]">
-          초안 값은 저장 전 확인이 필요합니다. 과목, 답, 보강 논점만 한 번 더 고정하세요.
+          OCR 확인 필요{missingConfirmationFields.length > 0 ? `: ${missingConfirmationFields.join(", ")}` : ""}. 저장 전에 필수 항목을 확인해 주세요.
         </p>
       ) : null}
       {extractError ? <p className="mt-3 text-sm leading-6 text-[color:var(--cue-risk)]">{extractError}</p> : null}
@@ -893,11 +935,15 @@ function IntakePanel({
 function ExtractionPreview({
   form,
   mode,
+  needsOcrConfirmation,
+  missingConfirmationFields,
   onEdit,
   onRegenerate,
 }: {
   form: DraftState;
   mode: AppraisalMode;
+  needsOcrConfirmation: boolean;
+  missingConfirmationFields: string[];
   onEdit: () => void;
   onRegenerate: () => void;
 }) {
@@ -919,6 +965,11 @@ function ExtractionPreview({
           </Button>
         </div>
       </div>
+      {needsOcrConfirmation ? (
+        <p className="mt-4 rounded-[var(--radius-md)] border border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] px-4 py-3 text-sm leading-6 text-[color:var(--foreground-strong)]">
+          OCR 확인 필요{missingConfirmationFields.length > 0 ? `: ${missingConfirmationFields.join(", ")}` : ""}. 필드 확인 후 저장할 수 있습니다.
+        </p>
+      ) : null}
       {mode === "first" ? (
         <div className="mt-5 grid gap-3 lg:grid-cols-2">
           <PreviewLine label="과목 추정" value={form.subjectLabel} />
@@ -1048,6 +1099,26 @@ function FirstConfirmFields(props: FieldProps) {
   const { form, update } = props;
   return (
     <div className="mt-5 space-y-4">
+      <div className="grid gap-4 lg:grid-cols-2">
+        <label className="space-y-2">
+          <span className="text-sm text-[color:var(--foreground-strong)]">문제 제목</span>
+          <input
+            value={form.problemTitle}
+            onChange={(event) => update("problemTitle", event.target.value)}
+            className="form-control"
+            placeholder="예: 민법 총칙 12번"
+          />
+        </label>
+        <label className="space-y-2">
+          <span className="text-sm text-[color:var(--foreground-strong)]">출처/세트</span>
+          <input
+            value={form.sourceLabel}
+            onChange={(event) => update("sourceLabel", event.target.value)}
+            className="form-control"
+            placeholder="예: 2025 모의고사 3회"
+          />
+        </label>
+      </div>
       <section className="rounded-[var(--radius-md)] border border-[color:var(--cue-focus)] bg-[color:var(--cue-focus-bg)] px-4 py-3">
         <p className="text-sm font-medium text-[color:var(--foreground-strong)]">해설 보기 전에 회상 먼저</p>
         <p className="mt-1 text-sm leading-6 text-[color:var(--muted)]">
