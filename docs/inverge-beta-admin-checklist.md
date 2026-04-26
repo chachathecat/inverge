@@ -32,3 +32,17 @@
 - [ ] review queue가 사용자별로 분리됨
 - [ ] item detail이 사용자별로 분리됨
 - [ ] admin route 보호가 유지됨
+
+## E. Data Isolation E2E (optional but recommended before invite)
+1. Supabase Auth에서 테스트용 사용자 2개를 수동 생성합니다. (User A / User B)
+2. 두 이메일을 `ALPHA_INVITE_EMAILS`에 수동 추가합니다.
+3. 로컬 환경 변수에 아래 값을 설정합니다. (값은 절대 커밋 금지)
+   - `E2E_USER_A_EMAIL`
+   - `E2E_USER_A_PASSWORD`
+   - `E2E_USER_B_EMAIL`
+   - `E2E_USER_B_PASSWORD`
+4. 기본 스모크를 먼저 실행합니다.
+   - `npm run test:e2e`
+5. 2인 데이터 분리 스모크를 실행합니다.
+   - `npx playwright test tests/e2e/data-isolation.spec.ts`
+6. 자격증명은 로컬 `.env` 또는 시크릿 매니저로만 관리하고, 저장소/PR 본문/스크린샷에 포함하지 않습니다.
