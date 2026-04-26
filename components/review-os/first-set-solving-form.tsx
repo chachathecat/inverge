@@ -61,6 +61,16 @@ export function FirstSetSolvingForm() {
     const accuracy = total > 0 ? Math.round((correct / total) * 100) : 0;
     return { total, correct, wrong, accuracy };
   }, [answerRows]);
+  const biggestSignal = useMemo(() => {
+    if (wrongDetails.length === 0) return "정답 근거를 유지했습니다.";
+    const counts = wrongDetails.reduce<Record<string, number>>((acc, row) => {
+      if (!row.errorReason) return acc;
+      acc[row.errorReason] = (acc[row.errorReason] ?? 0) + 1;
+      return acc;
+    }, {});
+    const top = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+    return top ? `${top[0]}이 반복됐습니다.` : "해설 전 회상 문장을 더 짧게 고정하면 좋습니다.";
+  }, [wrongDetails]);
 
   function handleSetupNext() {
     const parsedCount = Number(questionCount);
@@ -367,10 +377,18 @@ export function FirstSetSolvingForm() {
         {step === "done" ? (
           <section className="space-y-4">
             <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] p-4">
-              <p className="text-sm font-medium text-[color:var(--foreground-strong)]">재시도 큐에 자동으로 넣었습니다.</p>
-              <p className="mt-2 text-sm text-[color:var(--foreground-strong)]">
-                {summary.wrong > 0 ? `틀린 문항 ${createdCount}개를 오답 기록으로 생성했습니다.` : "이번 세트는 전부 정답입니다."}
-              </p>
+              <p className="text-sm font-medium text-[color:var(--foreground-strong)]">오늘 작업은 여기까지입니다.</p>
+              <ul className="mt-2 space-y-1 text-sm text-[color:var(--foreground-strong)]">
+                <li>
+                  오늘 한 일:{" "}
+                  {summary.wrong > 0
+                    ? `틀린 문항 ${createdCount}개를 재시도 큐에 넣었습니다.`
+                    : "세트 풀이를 마치고 오답 없이 종료했습니다."}
+                </li>
+                <li>가장 큰 신호: {biggestSignal}</li>
+                <li>다음 복습: {summary.wrong > 0 ? "재시도 큐에 자동 예약했습니다." : "다음 세트 풀이를 예약할 수 있습니다."}</li>
+              </ul>
+              <p className="mt-2 text-sm text-[color:var(--foreground-strong)]">지금은 종료해도 됩니다.</p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <Link href="/app/review?mode=first" className="w-full sm:w-auto">
@@ -378,8 +396,8 @@ export function FirstSetSolvingForm() {
                   다시 볼 항목 확인
                 </Button>
               </Link>
-              <Link href="/app/capture?mode=first" className="text-xs text-[color:var(--muted)] underline-offset-2 hover:underline">
-                오답 1개만 빠르게 기록
+              <Link href="/app?mode=first" className="text-xs text-[color:var(--muted)] underline-offset-2 hover:underline">
+                종료하고 오늘 화면으로
               </Link>
             </div>
           </section>
