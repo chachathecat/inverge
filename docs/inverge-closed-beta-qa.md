@@ -201,3 +201,15 @@
 ### Guardrail re-check
 - `/app`, `/app/sets`, `/app/write`, `/app/review`, `/app/items`, `/admin` 보호 정책은 유지.
 - `/exams` 안정 셀렉터(`exam-card-first`, `exam-card-second`)는 유지.
+
+---
+
+## Closed beta operations final note (after PR #40)
+
+- Local E2E smoke passed after PR #40.
+- Closed beta rollout can proceed **only after** manual account/environment checks are completed.
+- Remaining non-automated checks:
+  - Supabase Auth user creation
+  - `ALPHA_INVITE_EMAILS` configuration
+  - production redeploy confirmation
+  - real user feedback collection
