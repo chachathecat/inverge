@@ -756,6 +756,7 @@ export function WrongAnswerCaptureForm({
           <Button
             type="submit"
             disabled={submitting || stage === "intake" || (mode === "second" && stage !== "second-rewrite" && stage !== "confirm")}
+            data-testid={mode === "second" && stage === "second-rewrite" && !rewriteContext ? "second-write-submit" : undefined}
             className="w-full sm:w-auto"
           >
             {submitting ? "구조화 중" : mode === "second" ? "교정노트 저장" : "오답노트 저장"}
