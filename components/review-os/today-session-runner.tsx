@@ -279,9 +279,22 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note }: 
 
         {currentStep === "capture-guide" ? (
           <section className="space-y-4">
-            <p className="text-sm leading-7 text-[color:var(--foreground-strong)]">
-              오늘 queue가 아직 없어 먼저 기록 1건을 남기면 session 루프가 시작됩니다.
-            </p>
+            {mode === "second" ? (
+              <div className="space-y-3">
+                <p className="text-sm leading-7 text-[color:var(--foreground-strong)]">
+                  오늘 queue가 아직 없어 먼저 기록 1건을 남기면 session 루프가 시작됩니다.
+                </p>
+                <div className="rounded-[var(--radius-md)] border border-[color:var(--cue-focus)] bg-[color:var(--cue-focus-bg)] px-4 py-3 text-sm text-[color:var(--foreground-strong)]">
+                  <p>기준 답안 보기 전에 쟁점 3개를 먼저 떠올립니다.</p>
+                  <p>전체 답안보다 목차를 먼저 잡습니다.</p>
+                  <p>비교는 작성 이후에 합니다.</p>
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm leading-7 text-[color:var(--foreground-strong)]">
+                오늘 queue가 아직 없어 먼저 기록 1건을 남기면 session 루프가 시작됩니다.
+              </p>
+            )}
             <Link href={mode === "first" ? "/app/sets?mode=first" : `/app/capture?mode=${mode}`} className="inline-flex w-full sm:w-auto">
               <Button type="button" className="w-full sm:w-auto">
                 {mode === "second" ? "2차 답안 1건 입력" : "세트 풀이 시작"}
