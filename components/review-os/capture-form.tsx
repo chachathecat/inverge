@@ -568,9 +568,10 @@ export function WrongAnswerCaptureForm({
           rewriteCompleted: mode === "second" && Boolean(rewriteContext),
         }),
       });
-      const result = (await response.json()) as { ok?: boolean; item?: { id: string } };
+      const result = (await response.json()) as { ok?: boolean; item?: { id: string }; error?: string; message?: string };
       if (!response.ok || !result.ok || !result.item) {
-        setError("항목을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+        const reason = result.message || result.error;
+        setError(reason ? `항목을 저장하지 못했습니다. ${reason}` : "항목을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.");
         return;
       }
       clearReviewOsDraft(storageKey);
@@ -737,7 +738,11 @@ export function WrongAnswerCaptureForm({
         </>
       )}
 
-      {error ? <p className="text-sm text-[color:var(--status-red)]">{error}</p> : null}
+      {error ? (
+        <p className="text-sm text-[color:var(--status-red)]" data-testid={mode === "second" ? "second-write-error" : "capture-form-error"}>
+          {error}
+        </p>
+      ) : null}
 
       <div className="flex flex-col gap-3 sm:flex-row">
         {rewriteContext && mode === "second" ? (

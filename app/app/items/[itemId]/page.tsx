@@ -399,7 +399,10 @@ function SessionCompletionSummary({
   quietLinks: ReactNode;
 }) {
   return (
-    <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] p-5">
+    <section
+      className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] p-5"
+      data-testid="second-item-completion-summary"
+    >
       <p className="text-sm font-medium text-[color:var(--foreground-strong)]">오늘 작업은 여기까지입니다.</p>
       <ul className="mt-2 space-y-1 text-sm text-[color:var(--foreground-strong)]">
         <li>오늘 한 일: {completedWork}</li>

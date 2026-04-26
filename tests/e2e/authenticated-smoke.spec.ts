@@ -3,6 +3,8 @@ import { expect, test } from '@playwright/test';
 import { login, skipIfMissingAuth } from './helpers';
 
 test.describe('authenticated learner smoke', () => {
+  test.describe.configure({ timeout: 120_000 });
+
   test.beforeEach(async ({ page }, testInfo) => {
     skipIfMissingAuth(testInfo);
     await login(page);
@@ -88,6 +90,22 @@ test.describe('authenticated learner smoke', () => {
     await expect(saveButton).toBeEnabled();
     await page.getByTestId('second-write-final-textarea').fill('각 쟁점에서 요건을 먼저 제시하고 사실을 대응한 뒤 소결론을 명시해 작성합니다.');
     await saveButton.click();
+
+    const doneSummary = page.getByTestId('second-item-completion-summary');
+    const saveError = page.getByTestId('second-write-error');
+    const saveState = await Promise.race([
+      doneSummary.waitFor({ state: 'visible', timeout: 45_000 }).then(() => 'done' as const),
+      saveError.waitFor({ state: 'visible', timeout: 45_000 }).then(() => 'error' as const),
+      page.waitForURL(/\/app\/items\/.+\?mode=second/, { timeout: 45_000 }).then(() => 'redirect' as const),
+    ]);
+    if (saveState === 'error') {
+      const errorText = (await saveError.textContent())?.trim() ?? '(오류 메시지 없음)';
+      throw new Error(`2차 writing 저장 실패: ${errorText}`);
+    }
+
+    if (saveState === 'redirect') {
+      await expect(doneSummary).toBeVisible({ timeout: 45_000 });
+    }
 
     await expect(page.getByText('오늘 작업은 여기까지입니다.')).toBeVisible();
     await expect(page.getByRole('link', { name: '다른 답안 작업 보기' })).toBeVisible();
