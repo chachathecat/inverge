@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import type { AppraisalMode } from "@/lib/review-os/appraisal";
 import {
   FIRST_STAGE_ERROR_REASON_OPTIONS,
+  getSecondSubjectTemplate,
   type ReviewCompletionAction,
   type ReviewCompletionMetadata,
   type ReviewQueueCard,
@@ -41,6 +42,7 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note }: 
   const [retrievalSentence, setRetrievalSentence] = useState("");
 
   const [issueRecall, setIssueRecall] = useState("");
+  const secondTemplate = getSecondSubjectTemplate(queueItem?.subjectLabel ?? "");
   const hasQueueItem = Boolean(queueItem);
   const steps = useMemo(() => {
     if (!hasQueueItem) {
@@ -204,11 +206,12 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note }: 
         {currentStep === "issue-recall" ? (
           <section className="space-y-4">
             <p className="text-sm font-medium text-[color:var(--foreground-strong)]">1) 모범답안 보기 전, 쟁점 회상 문장을 적습니다.</p>
+            <p className="text-sm leading-7 text-[color:var(--muted)]">이 과목은 먼저 이 구조로 답안을 잡습니다. {secondTemplate.structure}</p>
             <textarea
               className="min-h-28 w-full rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] px-3 py-2 text-sm"
               value={issueRecall}
               onChange={(event) => setIssueRecall(event.target.value)}
-              placeholder="누락되기 쉬운 쟁점 1개를 먼저 적습니다."
+              placeholder={secondTemplate.issueRecallPlaceholder}
             />
             <Button
               type="button"
@@ -230,7 +233,7 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note }: 
               <p className="mt-1 text-sm text-[color:var(--foreground-strong)]">{note?.missingIssue ?? note?.weakPoint ?? "누락 논점 1개"}</p>
             </div>
             <p className="text-sm leading-7 text-[color:var(--muted)]">
-              {note?.rewriteInstruction ?? "해당 간극을 문단 1개에 반영해 다시 씁니다."}
+              {note?.rewriteInstruction ?? secondTemplate.rewriteGuidance}
             </p>
             <Button type="button" className="w-full sm:w-auto" onClick={() => setStepIndex((prev) => prev + 1)}>
               다음: 문단 교정 작성
