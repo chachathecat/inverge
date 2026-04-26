@@ -25,7 +25,7 @@ test.describe('authenticated learner smoke', () => {
     await page.getByRole('button', { name: '다음: 답 입력' }).click();
 
     await page.getByPlaceholder('내 답: 1 3 2 4 5').fill('1 2 3');
-    await page.getByPlaceholder('정답: 1 4 2 4 3').fill('1 4 3');
+    await page.getByPlaceholder('정답: 1 4 2 4 3').fill('1 4 5');
     await page.getByRole('button', { name: '입력값 행에 반영' }).click();
     await page.getByRole('button', { name: '채점하고 결과 보기' }).click();
     await page.getByRole('button', { name: '다음: 오답 이유 입력' }).click();
