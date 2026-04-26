@@ -61,7 +61,7 @@ export default async function ReviewOsCapturePage({ searchParams }: PageProps) {
             {isRewriteFlow
               ? "한 문단 실행 기록만 남깁니다. 비교 컨텍스트는 상단 패널에 고정되어 있습니다."
               : mode === "second"
-              ? "텍스트 원문을 기준으로 누락 논점과 rewrite 지시 초안을 정리합니다. 점수 판정은 하지 않습니다."
+              ? "쟁점 회상 → 목차 작성 → 답안/비교 입력 → one biggest gap 교정 순서로 기록합니다. 점수 판정은 하지 않습니다."
               : "텍스트 원문을 기준으로 오답노트 초안을 만들고, 정답과 선택 근거는 사용자가 확인한 뒤 저장합니다."}
           </CardDescription>
         </CardHeader>

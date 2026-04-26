@@ -57,6 +57,9 @@ type DraftState = {
   referenceStructure: string;
   myAnswerSummary: string;
   caseSummary: string;
+  issueRecall: string;
+  outlineDraft: string;
+  productionBeforeComparison: boolean;
   rawOcrText?: string;
   rawExtractionJson?: Record<string, unknown>;
   normalizedDraft?: ExtractionDraft;
@@ -238,13 +241,18 @@ export function WrongAnswerCaptureForm({ userId, mode, initialPreferredSubjects 
         referenceStructure: secondDefaults(initialSubject).structure,
         myAnswerSummary: rewriteContext?.myAnswerSummary ?? "",
         caseSummary: secondDefaults(initialSubject).caseSummary,
+        issueRecall: "",
+        outlineDraft: "",
+        productionBeforeComparison: mode === "second",
         rawOcrText: "",
         rawExtractionJson: {},
         normalizedDraft: undefined,
         extractionNeedsReview: false,
       };
   });
-  const [stage, setStage] = useState<"intake" | "preview" | "confirm">(rewriteContext && mode === "second" ? "confirm" : "intake");
+  const [stage, setStage] = useState<
+    "intake" | "preview" | "confirm" | "second-issue-recall" | "second-outline" | "second-compare" | "second-rewrite"
+  >(rewriteContext && mode === "second" ? "confirm" : "intake");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [extracting, setExtracting] = useState(false);
@@ -312,6 +320,7 @@ export function WrongAnswerCaptureForm({ userId, mode, initialPreferredSubjects 
           weakApplicationSentence: base.weakApplicationSentence || second.sentence,
           rewriteInstruction: base.rewriteInstruction || second.rewrite,
           userReasonText: base.userReasonText || second.issue,
+          productionBeforeComparison: true,
           nextReviewDate: base.nextReviewDate || getDefaultNextReviewDate(mode),
         };
   }
@@ -342,6 +351,7 @@ export function WrongAnswerCaptureForm({ userId, mode, initialPreferredSubjects 
         rawExtractionJson: extraction.raw_extraction_json,
         normalizedDraft: extraction.normalized_draft,
         extractionNeedsReview: extraction.normalized_draft.needs_review,
+        productionBeforeComparison: true,
       };
     }
 
@@ -461,6 +471,16 @@ export function WrongAnswerCaptureForm({ userId, mode, initialPreferredSubjects 
           return;
         }
       }
+      if (mode === "second" && !rewriteContext) {
+        if (form.issueRecall.trim().length < 8) {
+          setError("기준 답안 보기 전에 쟁점 회상을 먼저 적어주세요.");
+          return;
+        }
+        if (form.outlineDraft.trim().length < 8) {
+          setError("전체 답안보다 목차를 먼저 잡아주세요.");
+          return;
+        }
+      }
 
       const response = await fetch("/api/os/items", {
         method: "POST",
@@ -507,8 +527,14 @@ export function WrongAnswerCaptureForm({ userId, mode, initialPreferredSubjects 
               rewrite_source_gap: rewriteContext?.biggestGap ?? null,
               rewrite_instruction: form.rewriteInstruction || rewriteContext?.rewriteInstruction || null,
               rewrite_completed: mode === "second" && Boolean(rewriteContext),
+              issue_recall: form.issueRecall || null,
+              outline_draft: form.outlineDraft || null,
+              production_before_comparison: mode === "second" ? form.productionBeforeComparison : null,
             },
           },
+          issueRecall: form.issueRecall || undefined,
+          outlineDraft: form.outlineDraft || undefined,
+          productionBeforeComparison: mode === "second" ? form.productionBeforeComparison : undefined,
           rewriteSourceItemId: rewriteContext?.sourceItemId ?? undefined,
           rewriteSourceGap: rewriteContext?.biggestGap ?? undefined,
           rewriteCompleted: mode === "second" && Boolean(rewriteContext),
@@ -558,11 +584,32 @@ export function WrongAnswerCaptureForm({ userId, mode, initialPreferredSubjects 
           />
 
           {stage !== "intake" ? (
-            <ExtractionPreview form={form} mode={mode} onEdit={() => setStage("confirm")} onRegenerate={() => generateStructuredDraft()} />
+            <ExtractionPreview
+              form={form}
+              mode={mode}
+              onEdit={() => setStage(mode === "second" ? "second-compare" : "confirm")}
+              onRegenerate={() => generateStructuredDraft()}
+            />
           ) : null}
 
           {stage === "confirm" ? (
             <ConfirmPanel form={form} mode={mode} config={config} update={update} updateSubject={updateSubject} />
+          ) : null}
+          {mode === "second" && stage === "second-issue-recall" ? (
+            <SecondIssueRecallPanel issueRecall={form.issueRecall} onChange={(value) => update("issueRecall", value)} onNext={() => setStage("second-outline")} />
+          ) : null}
+          {mode === "second" && stage === "second-outline" ? (
+            <SecondOutlinePanel outlineDraft={form.outlineDraft} onChange={(value) => update("outlineDraft", value)} onNext={() => setStage("second-compare")} />
+          ) : null}
+          {mode === "second" && stage === "second-compare" ? (
+            <SecondAnswerComparePanel
+              form={form}
+              update={update}
+              onNext={() => setStage("second-rewrite")}
+            />
+          ) : null}
+          {mode === "second" && stage === "second-rewrite" ? (
+            <SecondGapRewritePanel form={form} update={update} onBack={() => setStage("second-compare")} />
           ) : null}
         </>
       )}
@@ -575,11 +622,19 @@ export function WrongAnswerCaptureForm({ userId, mode, initialPreferredSubjects 
             {submitting ? "저장 중" : "문단 다시쓰기 저장"}
           </Button>
         ) : stage === "preview" ? (
-          <Button type="button" onClick={() => setStage("confirm")} className="w-full sm:w-auto">
-            확인하고 저장하기
+          <Button
+            type="button"
+            onClick={() => setStage(mode === "second" ? "second-issue-recall" : "confirm")}
+            className="w-full sm:w-auto"
+          >
+            {mode === "second" ? "쟁점 회상부터 시작" : "확인하고 저장하기"}
           </Button>
         ) : (
-          <Button type="submit" disabled={submitting || stage === "intake"} className="w-full sm:w-auto">
+          <Button
+            type="submit"
+            disabled={submitting || stage === "intake" || (mode === "second" && stage !== "second-rewrite" && stage !== "confirm")}
+            className="w-full sm:w-auto"
+          >
             {submitting ? "구조화 중" : mode === "second" ? "교정노트 저장" : "오답노트 저장"}
           </Button>
         )}
@@ -996,6 +1051,149 @@ function SecondConfirmFields(props: FieldProps) {
         </label>
       </div>
     </div>
+  );
+}
+
+function SecondIssueRecallPanel({
+  issueRecall,
+  onChange,
+  onNext,
+}: {
+  issueRecall: string;
+  onChange: (value: string) => void;
+  onNext: () => void;
+}) {
+  return (
+    <section className="rounded-[var(--radius-card)] border border-[color:var(--cue-focus)] bg-[color:var(--cue-focus-bg)] p-4 sm:p-5">
+      <p className="text-caption text-[color:var(--muted)]">Step 3. 쟁점 회상</p>
+      <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">기준 답안 보기 전에 쟁점 3개를 먼저 적습니다</h3>
+      <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">기준 답안 보기 전에 쟁점 3개를 먼저 떠올립니다.</p>
+      <label className="mt-4 block space-y-2">
+        <span className="text-sm text-[color:var(--foreground-strong)]">쟁점 회상</span>
+        <Textarea
+          value={issueRecall}
+          onChange={(event) => onChange(event.target.value)}
+          className="min-h-44 border-[var(--border)] bg-[color:var(--surface)] text-[color:var(--foreground-strong)] leading-7"
+          placeholder={"1) \n2) \n3) "}
+        />
+      </label>
+      <Button type="button" className="mt-4 w-full sm:w-auto" disabled={issueRecall.trim().length < 8} onClick={onNext}>
+        다음: 목차 작성
+      </Button>
+    </section>
+  );
+}
+
+function SecondOutlinePanel({
+  outlineDraft,
+  onChange,
+  onNext,
+}: {
+  outlineDraft: string;
+  onChange: (value: string) => void;
+  onNext: () => void;
+}) {
+  return (
+    <section className="rounded-[var(--radius-card)] border border-[color:var(--cue-focus)] bg-[color:var(--cue-focus-bg)] p-4 sm:p-5">
+      <p className="text-caption text-[color:var(--muted)]">Step 4. 목차 작성</p>
+      <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">전체 답안보다 목차를 먼저 잡습니다</h3>
+      <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">답안 작성 전에 목차를 먼저 잡아보세요.</p>
+      <label className="mt-4 block space-y-2">
+        <span className="text-sm text-[color:var(--foreground-strong)]">목차 초안</span>
+        <Textarea
+          value={outlineDraft}
+          onChange={(event) => onChange(event.target.value)}
+          className="min-h-44 border-[var(--border)] bg-[color:var(--surface)] text-[color:var(--foreground-strong)] leading-7"
+          placeholder={"I. \nII. \nIII. "}
+        />
+      </label>
+      <Button type="button" className="mt-4 w-full sm:w-auto" disabled={outlineDraft.trim().length < 8} onClick={onNext}>
+        다음: 답안 작성/비교 입력
+      </Button>
+    </section>
+  );
+}
+
+function SecondAnswerComparePanel({
+  form,
+  update,
+  onNext,
+}: {
+  form: DraftState;
+  update: <K extends keyof DraftState>(key: K, value: DraftState[K]) => void;
+  onNext: () => void;
+}) {
+  return (
+    <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 sm:p-5">
+      <p className="text-caption text-[color:var(--muted)]">Step 5. 답안 작성/비교 입력</p>
+      <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">비교는 작성 이후에 합니다</h3>
+      <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">기준 답안과 내 답안을 함께 정리해 compare 기록을 남깁니다.</p>
+      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+        <label className="space-y-2">
+          <span className="text-sm text-[color:var(--foreground-strong)]">기준 답안 요약</span>
+          <Textarea
+            value={form.correctAnswer}
+            onChange={(event) => update("correctAnswer", event.target.value)}
+            className="min-h-40 border-[var(--border)] bg-[color:var(--surface)] text-[color:var(--foreground-strong)] leading-7"
+          />
+        </label>
+        <label className="space-y-2">
+          <span className="text-sm text-[color:var(--foreground-strong)]">내 답안</span>
+          <Textarea
+            value={form.userAnswer}
+            onChange={(event) => {
+              update("userAnswer", event.target.value);
+              update("myAnswerSummary", firstLine(event.target.value, form.myAnswerSummary || "내 답안 요약"));
+            }}
+            className="min-h-40 border-[var(--border)] bg-[color:var(--surface)] text-[color:var(--foreground-strong)] leading-7"
+          />
+        </label>
+      </div>
+      <Button type="button" className="mt-4 w-full sm:w-auto" disabled={form.userAnswer.trim().length < 8} onClick={onNext}>
+        다음: 가장 큰 간극/교정
+      </Button>
+    </section>
+  );
+}
+
+function SecondGapRewritePanel({
+  form,
+  update,
+  onBack,
+}: {
+  form: DraftState;
+  update: <K extends keyof DraftState>(key: K, value: DraftState[K]) => void;
+  onBack: () => void;
+}) {
+  return (
+    <section className="rounded-[var(--radius-card)] border border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] p-4 sm:p-5">
+      <p className="text-caption text-[color:var(--muted)]">Step 6. one biggest gap</p>
+      <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">가장 큰 간극 1개를 지정하고 교정 지시를 남깁니다</h3>
+      <div className="mt-4 space-y-4">
+        <label className="block space-y-2">
+          <span className="text-sm text-[color:var(--foreground-strong)]">보강할 논점 1개</span>
+          <Textarea
+            value={form.userReasonText}
+            onChange={(event) => {
+              update("userReasonText", event.target.value);
+              update("missingIssue", event.target.value);
+            }}
+            className="min-h-28 border-[var(--border)] bg-[color:var(--surface)] text-[color:var(--foreground-strong)] leading-7"
+          />
+        </label>
+        <label className="space-y-2">
+          <span className="text-sm text-[color:var(--foreground-strong)]">rewrite 지시</span>
+          <input
+            value={form.rewriteInstruction}
+            onChange={(event) => update("rewriteInstruction", event.target.value)}
+            className="form-control"
+          />
+        </label>
+      </div>
+      <button type="button" onClick={onBack} className="mt-4 text-xs text-[color:var(--muted)] underline-offset-2 hover:underline">
+        이전 단계로 돌아가기
+      </button>
+    </section>
   );
 }
 

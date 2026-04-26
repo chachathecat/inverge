@@ -674,6 +674,9 @@ export class ReviewOsService {
           rewrite_source_gap: input.rewriteSourceGap ?? null,
           rewrite_instruction: input.rewriteInstruction ?? null,
           rewrite_completed: input.rewriteCompleted ?? null,
+          issue_recall: input.issueRecall ?? null,
+          outline_draft: input.outlineDraft ?? null,
+          production_before_comparison: input.productionBeforeComparison ?? null,
         },
         {
           topicTag: artifacts.tags.topicTag,
