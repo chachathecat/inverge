@@ -1,0 +1,80 @@
+import { expect, test } from '@playwright/test';
+
+import { login, skipIfMissingAuth } from './helpers';
+
+test.describe('authenticated learner smoke', () => {
+  test.beforeEach(async ({ page }, testInfo) => {
+    skipIfMissingAuth(testInfo);
+    await login(page);
+  });
+
+  test('1차 flow smoke', async ({ page }) => {
+    await page.goto('/app?mode=first');
+    await expect(page.getByRole('button', { name: /세트 풀이 시작|오늘 최우선 작업 시작/ })).toBeVisible();
+
+    await page.goto('/app/sets?mode=first');
+    await expect(page.getByRole('heading', { name: '1차 세트 풀이' })).toBeVisible();
+
+    const subjectSelect = page.getByLabel('과목').first();
+    for (const subject of ['민법', '경제학원론', '부동산학원론', '감정평가관계법규', '회계학']) {
+      await expect(subjectSelect.locator(`option:has-text("${subject}")`)).toHaveCount(1);
+    }
+
+    await page.getByLabel('세트 제목/출처').fill('E2E 스모크 세트');
+    await page.getByLabel('문항 수').fill('3');
+    await page.getByRole('button', { name: '다음: 답 입력' }).click();
+
+    await page.getByPlaceholder('내 답: 1 3 2 4 5').fill('1 2 3');
+    await page.getByPlaceholder('정답: 1 4 2 4 3').fill('1 4 3');
+    await page.getByRole('button', { name: '입력값 행에 반영' }).click();
+    await page.getByRole('button', { name: '채점하고 결과 보기' }).click();
+    await page.getByRole('button', { name: '다음: 오답 이유 입력' }).click();
+
+    await page.getByRole('button', { name: '개념 부족' }).first().click();
+    await page.locator('textarea').first().fill('핵심 개념 정의를 먼저 떠올려야 합니다.');
+    await page.getByRole('button', { name: '계산 실수' }).first().click();
+    await page.locator('textarea').nth(1).fill('계산 전 조건을 먼저 적고 검산합니다.');
+
+    await page.getByRole('button', { name: '재시도 큐 자동 생성' }).click();
+
+    await expect(page.getByText('오늘 작업은 여기까지입니다.')).toBeVisible();
+    await page.getByRole('button', { name: '다시 볼 항목 확인' }).click();
+    await expect(page).toHaveURL(/\/app\/review\?mode=first/);
+  });
+
+  test('2차 flow smoke', async ({ page }) => {
+    await page.goto('/app?mode=second');
+    await expect(page.getByRole('button', { name: /오늘 최우선 작업 시작/ })).toBeVisible();
+
+    await page.goto('/app/write?mode=second');
+    await expect(page.getByRole('heading', { name: '2차 답안 작성 워크스페이스' })).toBeVisible();
+
+    const subjectSelect = page.locator('select').first();
+    for (const subject of ['감정평가실무', '감정평가이론', '감정평가 및 보상법규']) {
+      await expect(subjectSelect.locator(`option:has-text("${subject}")`)).toHaveCount(1);
+    }
+
+    await page.getByLabel('쟁점 회상').fill('쟁점1 사실관계 정리, 쟁점2 법적요건 검토, 쟁점3 결론 도출 순서로 작성합니다.');
+    await page.getByRole('button', { name: '다음: 목차 작성' }).click();
+
+    await page.getByLabel('목차 초안').fill('I. 쟁점 정리 II. 법리 검토 III. 사실 적용 IV. 결론');
+    await page.getByRole('button', { name: '다음: 내 답안 작성' }).click();
+
+    await page.getByLabel('내 답안').fill('쟁점별로 요건과 사실관계를 대응시켜 결론을 작성했습니다.');
+    await page.getByRole('button', { name: '다음: 기준답안/해설 입력' }).click();
+
+    await page.getByLabel('기준 답안 요약').fill('기준답안은 요건 분해와 사실 적용을 더 명확히 제시합니다.');
+    await page.getByRole('button', { name: '다음: 가장 큰 간극 1개' }).click();
+
+    await page.getByLabel('보강할 논점 1개').fill('요건-사실 대응 문장을 각 소결론마다 명시하지 못함.');
+    await page.getByRole('button', { name: '다음: 문단 다시쓰기' }).click();
+
+    const saveButton = page.getByRole('button', { name: '문단 다시쓰기 저장' });
+    await expect(saveButton).toBeEnabled();
+    await page.getByLabel('다시 쓴 문단').fill('각 쟁점에서 요건을 먼저 제시하고 사실을 대응한 뒤 소결론을 명시해 작성합니다.');
+    await saveButton.click();
+
+    await expect(page.getByText('오늘 작업은 여기까지입니다.')).toBeVisible();
+    await expect(page.getByRole('link', { name: '다른 답안 작업 보기' })).toBeVisible();
+  });
+});
