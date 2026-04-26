@@ -52,6 +52,17 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note }: 
   }, [hasQueueItem, mode]);
 
   const currentStep = steps[stepIndex];
+  const biggestSignal =
+    mode === "second"
+      ? note?.missingIssue ?? note?.weakPoint ?? "누락 논점 1개를 먼저 보강할 시점입니다."
+      : errorReason || note?.weakPoint || "선지 판단 전에 조건 확인이 필요합니다.";
+  const completedWorkLabel = hasQueueItem
+    ? mode === "second"
+      ? "오늘 선택한 2차 보강 작업 1건을 완료 처리했습니다."
+      : "오늘 선택한 재시도 작업 1건을 완료 처리했습니다."
+    : mode === "second"
+      ? "2차 작성 워크스페이스 시작 준비를 마쳤습니다."
+      : "1차 입력 루프 시작 준비를 마쳤습니다.";
 
   async function completeAndFinish(action: ReviewCompletionAction, metadata: ReviewCompletionMetadata = {}) {
     if (!queueItem) {
@@ -316,17 +327,21 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note }: 
           <section className="space-y-4">
             <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] px-4 py-4">
               <p className="text-sm font-medium text-[color:var(--foreground-strong)]">오늘 작업은 여기까지입니다.</p>
-              <p className="mt-2 text-sm text-[color:var(--foreground-strong)]">다음 복습은 자동으로 예약했습니다.</p>
-              <p className="mt-2 text-sm text-[color:var(--muted)]">원하면 다른 작업을 볼 수 있습니다.</p>
+              <ul className="mt-2 space-y-1 text-sm text-[color:var(--foreground-strong)]">
+                <li>오늘 한 일: {completedWorkLabel}</li>
+                <li>가장 큰 신호: {biggestSignal}</li>
+                <li>다음 복습: {note?.nextReviewDate ?? "자동 예약 완료"}</li>
+              </ul>
+              <p className="mt-2 text-sm text-[color:var(--foreground-strong)]">지금은 종료해도 됩니다.</p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <Link href={`/app/review?mode=${mode}`} className="w-full sm:w-auto">
+              <Link href={`/app?mode=${mode}`} className="w-full sm:w-auto">
                 <Button type="button" className="w-full sm:w-auto">
-                  review queue 보기
+                  종료하고 오늘 화면으로
                 </Button>
               </Link>
-              <Link href={`/app?mode=${mode}`} className="text-xs text-[color:var(--muted)] underline-offset-2 hover:underline">
-                오늘 화면으로 돌아가기
+              <Link href={`/app/review?mode=${mode}`} className="text-xs text-[color:var(--muted)] underline-offset-2 hover:underline">
+                다시 볼 항목 확인
               </Link>
             </div>
           </section>

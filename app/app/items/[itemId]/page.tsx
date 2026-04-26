@@ -58,6 +58,13 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
     note.rewriteInstruction,
     ...detail.tags.flatMap((tag) => [tag.topicTag, tag.mistakeType, tag.taskType]),
   ]);
+  const secondCompletionWork = rewriteComparison
+    ? "문단 다시쓰기를 저장하고 전/후 비교까지 확인했습니다."
+    : "2차 작성 기록을 저장하고 비교 노트를 만들었습니다.";
+  const secondCompletionSignal = note.missingIssue ?? note.weakPoint;
+  const secondCompletionNext = rewriteComparison
+    ? `다음 review는 ${note.nextReviewDate}로 자동 예약됩니다.`
+    : `다음 cue: ${note.rewriteInstruction ?? "가장 큰 간극 1개를 문단 다시쓰기로 보강합니다."}`;
 
   return (
     <div className="space-y-6">
@@ -82,6 +89,23 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
 
       {isSecond ? (
         <section className="space-y-4">
+          <SessionCompletionSummary
+            completedWork={secondCompletionWork}
+            biggestSignal={secondCompletionSignal}
+            nextSchedule={secondCompletionNext}
+            primaryHref={`/app?mode=${mode}`}
+            primaryLabel="종료하고 오늘 화면으로"
+            quietLinks={
+              <>
+                <Link href={`/app/review?mode=${mode}`} className="underline-offset-2 hover:underline">
+                  다시 볼 항목 확인
+                </Link>
+                <Link href={`/app/capture?mode=${mode}`} className="underline-offset-2 hover:underline">
+                  다른 답안 작업 보기
+                </Link>
+              </>
+            }
+          />
           {rewriteComparison ? (
             <section className="rounded-[var(--radius-card)] border border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] p-5">
               <p className="text-caption text-[color:var(--cue-review)]">2차 rewrite 전/후 비교</p>
@@ -102,19 +126,15 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
                   <MiniArtifact label="아직 남은 간극 1개" value={rewriteComparison.remainingNextGap} />
                 </div>
                 <p className="text-sm text-[color:var(--foreground-strong)]">다음에는 이 문장만 다시 확인합니다.</p>
-                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-                  <Link href={`/app/review?mode=${mode}`}>
-                    <Button type="button">다음 review 일정 잡기</Button>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-[color:var(--muted)]">
+                  <Link href={`/app/review?mode=${mode}`} className="underline-offset-2 hover:underline">
+                    다시 볼 항목 확인
                   </Link>
-                  <Link href={`/app/review?mode=${mode}`}>
-                    <Button type="button" variant="outline">
-                      review queue 계속 보기
-                    </Button>
-                  </Link>
-                  <Link href={`/app/capture?mode=${mode}&rewriteFrom=${rewriteSourceItemId ?? itemId}`}>
-                    <Button type="button" variant="outline">
-                      문단 한 번 더 다시쓰기
-                    </Button>
+                  <Link
+                    href={`/app/capture?mode=${mode}&rewriteFrom=${rewriteSourceItemId ?? itemId}`}
+                    className="underline-offset-2 hover:underline"
+                  >
+                    문단 한 번 더 다시쓰기
                   </Link>
                 </div>
               </div>
@@ -359,6 +379,42 @@ function SourceBlock({ label, value }: { label: string; value?: string | null })
       <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-[color:var(--foreground-strong)]">
         {value?.trim() ? value : "아직 원문이 없습니다. 다음 입력에서 업로드 또는 텍스트로 보강할 수 있습니다."}
       </p>
+    </section>
+  );
+}
+
+function SessionCompletionSummary({
+  completedWork,
+  biggestSignal,
+  nextSchedule,
+  primaryHref,
+  primaryLabel,
+  quietLinks,
+}: {
+  completedWork: string;
+  biggestSignal: string;
+  nextSchedule: string;
+  primaryHref: string;
+  primaryLabel: string;
+  quietLinks: ReactNode;
+}) {
+  return (
+    <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] p-5">
+      <p className="text-sm font-medium text-[color:var(--foreground-strong)]">오늘 작업은 여기까지입니다.</p>
+      <ul className="mt-2 space-y-1 text-sm text-[color:var(--foreground-strong)]">
+        <li>오늘 한 일: {completedWork}</li>
+        <li>가장 큰 신호: {biggestSignal}</li>
+        <li>다음 예약 / 다음 복습: {nextSchedule}</li>
+      </ul>
+      <p className="mt-2 text-sm text-[color:var(--foreground-strong)]">지금은 종료해도 됩니다.</p>
+      <div className="mt-4 space-y-3">
+        <Link href={primaryHref} className="inline-flex w-full sm:w-auto">
+          <Button type="button" className="w-full sm:w-auto">
+            {primaryLabel}
+          </Button>
+        </Link>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-[color:var(--muted)]">{quietLinks}</div>
+      </div>
     </section>
   );
 }
