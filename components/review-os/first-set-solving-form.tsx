@@ -433,8 +433,12 @@ export function FirstSetSolvingForm() {
             <p className="text-sm font-medium text-[color:var(--foreground-strong)]">해설 보기 전에, 이 선지가 틀린 이유를 한 문장으로 적어보세요.</p>
             <p className="text-xs text-[color:var(--muted)]">자주 나오는 실수: {subjectTemplate.commonErrorHints.join(" · ")}</p>
             <div className="space-y-4">
-              {wrongDetails.map((row) => (
-                <div key={row.questionNumber} className="space-y-3 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] p-3">
+              {wrongDetails.map((row, index) => (
+                <div
+                  key={row.questionNumber}
+                  data-testid={`first-set-wrong-detail-${index}`}
+                  className="space-y-3 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] p-3"
+                >
                   <p className="text-sm font-medium text-[color:var(--foreground-strong)]">
                     {row.questionNumber}번 · 내 답 {row.userAnswer} / 정답 {row.correctAnswer}
                   </p>

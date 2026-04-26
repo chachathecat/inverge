@@ -30,10 +30,14 @@ test.describe('authenticated learner smoke', () => {
     await page.getByRole('button', { name: '채점하고 결과 보기' }).click();
     await page.getByRole('button', { name: '다음: 오답 이유 입력' }).click();
 
-    await page.getByRole('button', { name: '개념 부족' }).first().click();
-    await page.locator('textarea').first().fill('핵심 개념 정의를 먼저 떠올려야 합니다.');
-    await page.getByRole('button', { name: '계산 실수' }).first().click();
-    await page.locator('textarea').nth(1).fill('계산 전 조건을 먼저 적고 검산합니다.');
+    const firstWrongDetail = page.getByTestId('first-set-wrong-detail-0');
+    const secondWrongDetail = page.getByTestId('first-set-wrong-detail-1');
+
+    await firstWrongDetail.getByRole('button', { name: '개념 부족' }).click();
+    await firstWrongDetail.locator('textarea').fill('핵심 개념 정의를 먼저 떠올려야 합니다.');
+
+    await secondWrongDetail.getByRole('button', { name: '계산 실수' }).click();
+    await secondWrongDetail.locator('textarea').fill('계산 전 조건을 먼저 적고 검산합니다.');
 
     await page.getByRole('button', { name: '재시도 큐 자동 생성' }).click();
 
@@ -69,7 +73,7 @@ test.describe('authenticated learner smoke', () => {
     await page.getByLabel('보강할 논점 1개').fill('요건-사실 대응 문장을 각 소결론마다 명시하지 못함.');
     await page.getByRole('button', { name: '다음: 문단 다시쓰기' }).click();
 
-    const saveButton = page.getByRole('button', { name: '문단 다시쓰기 저장' });
+    const saveButton = page.getByTestId('second-write-submit');
     await expect(saveButton).toBeEnabled();
     await page.getByLabel('다시 쓴 문단').fill('각 쟁점에서 요건을 먼저 제시하고 사실을 대응한 뒤 소결론을 명시해 작성합니다.');
     await saveButton.click();
