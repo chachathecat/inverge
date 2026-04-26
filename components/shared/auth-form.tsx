@@ -144,7 +144,7 @@ export function AuthForm() {
         <p className={`text-sm ${status === "error" ? "text-[color:var(--status-red)]" : "text-[color:var(--muted)]"}`}>{message}</p>
       ) : null}
 
-      <Button type="submit" className="w-full" disabled={status === "submitting"}>
+      <Button type="submit" data-testid="login-submit" className="w-full" disabled={status === "submitting"}>
         {status === "submitting" ? "처리 중" : mode === "sign-in" ? "로그인" : "계정 만들기"}
       </Button>
     </form>

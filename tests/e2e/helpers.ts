@@ -18,7 +18,7 @@ export async function login(page: Page) {
   await page.goto('/login');
   await page.getByLabel('이메일').fill(authEmail);
   await page.getByLabel('비밀번호').fill(authPassword);
-  await page.getByRole('button', { name: '로그인' }).click();
+  await page.getByTestId('login-submit').click();
 
   await expect(page).toHaveURL(/\/app/);
 }

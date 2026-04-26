@@ -9,8 +9,8 @@ test('public landing loads and 시작하기 CTA exists', async ({ page }) => {
 
 test('/exams only exposes appraisal 1차/2차', async ({ page }) => {
   await page.goto('/exams');
-  await expect(page.getByRole('heading', { name: '감정평가사 1차' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: '감정평가사 2차' })).toBeVisible();
+  await expect(page.getByTestId('exam-card-first')).toBeVisible();
+  await expect(page.getByTestId('exam-card-second')).toBeVisible();
 
   for (const exam of unsupportedExams) {
     await expect(page.getByText(exam)).toHaveCount(0);
