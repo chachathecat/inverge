@@ -6,6 +6,7 @@ import { getServerSessionUser } from "@/lib/auth/session";
 import { cn } from "@/lib/utils";
 
 type ExamSelectionCard = {
+  testId: "exam-card-first" | "exam-card-second";
   title: string;
   description: string;
   loop: string;
@@ -20,7 +21,7 @@ function buildModeEntryHref(isAuthenticated: boolean, authEnabled: boolean, mode
 
 function SelectionCard({ card }: { card: ExamSelectionCard }) {
   return (
-    <section className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] p-7">
+    <section data-testid={card.testId} className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] p-7">
       <div className="flex items-center justify-between gap-4">
         <h2 className="text-h2 font-medium text-[color:var(--foreground-strong)]">{card.title}</h2>
         <RefinedBadge>감정평가사</RefinedBadge>
@@ -42,12 +43,14 @@ export default async function ExamsPage() {
 
   const cards: ExamSelectionCard[] = [
     {
+      testId: "exam-card-first",
       title: "감정평가사 1차",
       description: "객관식 세트 풀이 중심으로 오답 원인을 정리하고 재시도 큐를 운영합니다.",
       loop: "세트 풀이 → 오답 이유 → 회상 → 재시도 큐",
       href: buildModeEntryHref(session.isAuthenticated, session.authEnabled, "first"),
     },
     {
+      testId: "exam-card-second",
       title: "감정평가사 2차",
       description: "답안을 비교해 가장 큰 간극 하나를 찾고 문단 다시쓰기로 연결합니다.",
       loop: "쟁점 회상 → 답안 비교 → 가장 큰 간극 → 문단 다시쓰기",
