@@ -20,7 +20,7 @@ test.describe('authenticated learner smoke', () => {
       await expect(subjectSelect.locator(`option:has-text("${subject}")`)).toHaveCount(1);
     }
 
-    await page.getByLabel('세트 제목/출처').fill('E2E 스모크 세트');
+    await page.getByLabel('세트 제목/출처').fill(`E2E 스모크 세트 ${Date.now()}`);
     await page.getByLabel('문항 수').fill('3');
     await page.getByRole('button', { name: '다음: 답 입력' }).click();
 
@@ -41,7 +41,18 @@ test.describe('authenticated learner smoke', () => {
 
     await page.getByRole('button', { name: '재시도 큐 자동 생성' }).click();
 
-    await expect(page.getByText('오늘 작업은 여기까지입니다.')).toBeVisible();
+    const doneSummary = page.getByTestId('first-set-solving-done');
+    const saveError = page.getByTestId('first-set-solving-error');
+    const saveState = await Promise.race([
+      doneSummary.waitFor({ state: 'visible', timeout: 45_000 }).then(() => 'done' as const),
+      saveError.waitFor({ state: 'visible', timeout: 45_000 }).then(() => 'error' as const),
+    ]);
+    if (saveState === 'error') {
+      const errorText = (await saveError.textContent())?.trim() ?? '(오류 메시지 없음)';
+      throw new Error(`1차 set-solving 저장 실패: ${errorText}`);
+    }
+
+    await expect(doneSummary).toBeVisible();
     await page.getByRole('button', { name: '다시 볼 항목 확인' }).click();
     await expect(page).toHaveURL(/\/app\/review\?mode=first/);
   });
