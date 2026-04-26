@@ -63,7 +63,7 @@ async function readItemList(page: Page) {
   return page.evaluate(async () => {
     const response = await fetch('/api/os/items?limit=100', { credentials: 'include' });
     const payload = (await response.json().catch(() => ({}))) as {
-      items?: Array<{ itemId?: string; problemTitle?: string; sourceLabel?: string }>;
+      items?: Array<{ id?: string; itemId?: string; problemTitle?: string; sourceLabel?: string }>;
     };
     return {
       status: response.status,
@@ -93,7 +93,10 @@ test('data isolation smoke: User A and User B cannot view each other records', a
     (item) => item.problemTitle?.includes(userATitle) || item.sourceLabel?.includes(userATitle),
   );
   expect(userARecord).toBeDefined();
-  const userAItemId = userARecord?.itemId;
+  const userAItemId = userARecord?.id ?? userARecord?.itemId;
+  if (!userAItemId) {
+    throw new Error('data-isolation: could not resolve User A item id from /api/os/items');
+  }
 
   await logout(page);
 
@@ -109,23 +112,21 @@ test('data isolation smoke: User A and User B cannot view each other records', a
     ),
   ).toBe(false);
 
-  if (userAItemId) {
-    const userBViewOfA = await page.evaluate(async (itemId) => {
-      const response = await fetch(`/api/os/items/${itemId}`, { credentials: 'include' });
-      const payload = (await response.json().catch(() => ({}))) as { detail?: { item?: { problemTitle?: string } } | null };
-      return {
-        status: response.status,
-        revealedTitle: payload.detail?.item?.problemTitle ?? null,
-      };
-    }, userAItemId);
+  const userBViewOfA = await page.evaluate(async (itemId) => {
+    const response = await fetch(`/api/os/items/${itemId}`, { credentials: 'include' });
+    const payload = (await response.json().catch(() => ({}))) as { detail?: { item?: { problemTitle?: string } } | null };
+    return {
+      status: response.status,
+      revealedTitle: payload.detail?.item?.problemTitle ?? null,
+    };
+  }, userAItemId);
 
-    expect(
-      userBViewOfA.status === 404 ||
-        userBViewOfA.status === 401 ||
-        userBViewOfA.revealedTitle === null ||
-        !userBViewOfA.revealedTitle.includes(userATitle),
-    ).toBe(true);
-  }
+  expect(
+    userBViewOfA.status === 404 ||
+      userBViewOfA.status === 401 ||
+      userBViewOfA.revealedTitle === null ||
+      !userBViewOfA.revealedTitle.includes(userATitle),
+  ).toBe(true);
 
   await createFirstSetRecord(page, userBTitle);
   await logout(page);
