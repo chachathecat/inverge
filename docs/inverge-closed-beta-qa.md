@@ -94,3 +94,25 @@
 - 1차/2차 완료 요약(오늘 한 일/가장 큰 신호/다음 복습)이 계속 노출됨.
 - review queue 완료는 다음 행동 선택이 선행되는 구조를 유지함.
 - learner-facing `/instructor` 라우트 노출 추가 없음.
+
+---
+
+## Learner E2E QA follow-up pass after PR #30 (2026-04-26, final)
+
+### Re-checked transitions (1차/2차)
+- 1차 Today CTA → `/app/sets?mode=first` 진입과 quick capture(`/app/capture?mode=first`) 분리 유지 확인.
+- 1차 set solving의 bulk 입력 → 오답 이유/회상 → retry queue 생성 → 완료 요약/다음 행동 동선 유지 확인.
+- 2차 Today CTA → `/app/write?mode=second` 진입, 작성 단계(쟁점 회상→목차→답안→기준답안→간극→rewrite) 유지 확인.
+- 2차 `rewriteFrom` 진입(`/app/capture?mode=second&rewriteFrom=...`)이 문단 직접 다시쓰기 컨텍스트를 유지하는지 확인.
+- `/app/review?mode=first|second`와 `/app/items/[itemId]?mode=second`에서 mode 보존 및 completion summary/next action 구조 유지 확인.
+
+### Small fix applied in this pass
+1. **2차 빈 상태 CTA 문구를 실제 이동 경로와 일치시킴**
+   - `primaryCta`를 `답안 비교 시작`에서 `2차 작성 워크스페이스 시작`으로 조정.
+   - `/app/review?mode=second`, `/app/items?mode=second`의 빈 상태 버튼이 실제 타깃(`/app/write?mode=second`)과 동일 의미를 갖도록 정리.
+
+### Final QA notes
+- quick wrong-answer capture는 계속 `/app/capture?mode=first`로 제공됨.
+- set solving은 `/app/sets?mode=first`로 유지되며 quick capture를 대체하지 않음.
+- 2차 write workspace와 generic capture 경로가 분리되어 공존함.
+- learner-facing `/instructor`, `/studio` 노출/진입 변화 없음.

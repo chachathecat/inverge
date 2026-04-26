@@ -58,7 +58,7 @@ export const APPRAISAL_MODE_CONFIG = {
     noteKind: "교정노트",
     pageTitle: "감평 2차 답안 운영",
     pageDescription: "작성한 답안을 기준 답안과 비교하고, 오늘 보강할 논점 하나를 정리합니다.",
-    primaryCta: "답안 비교 시작",
+    primaryCta: "2차 작성 워크스페이스 시작",
     secondaryCta: "최근 교정 보기",
     captureTitle: "2차 답안 비교",
     captureDescription: "사례, 기준 답안, 내 답안에서 보강할 논점 하나를 교정노트로 저장합니다.",
