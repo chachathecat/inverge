@@ -240,6 +240,11 @@ export function WrongAnswerCaptureForm({
       };
   });
   const secondWriteEnabled = mode === "second" && workflow === "second-write" && !rewriteContext;
+  const getInitialStage = () => {
+    if (rewriteContext && mode === "second") return "confirm" as const;
+    if (secondWriteEnabled) return "second-issue-recall" as const;
+    return "intake" as const;
+  };
   const [stage, setStage] = useState<
     | "intake"
     | "preview"
@@ -250,7 +255,7 @@ export function WrongAnswerCaptureForm({
     | "second-reference"
     | "second-gap"
     | "second-rewrite"
-  >(rewriteContext && mode === "second" ? "confirm" : secondWriteEnabled ? "second-issue-recall" : "intake");
+  >(getInitialStage());
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [extracting, setExtracting] = useState(false);
@@ -450,7 +455,7 @@ export function WrongAnswerCaptureForm({
 
   function resetDraft() {
     clearReviewOsDraft(storageKey);
-    setStage("intake");
+    setStage(getInitialStage());
     setError("");
     setExtractError("");
   }

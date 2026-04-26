@@ -116,3 +116,26 @@
 - set solving은 `/app/sets?mode=first`로 유지되며 quick capture를 대체하지 않음.
 - 2차 write workspace와 generic capture 경로가 분리되어 공존함.
 - learner-facing `/instructor`, `/studio` 노출/진입 변화 없음.
+
+---
+
+## Focused learner-flow QA pass after subject-template updates (2026-04-26)
+
+### Scope re-run (E2E, learner only)
+- 1차: `/app?mode=first` → Today CTA → `/app/sets?mode=first` → bulk answer input → 오답 이유/회상 → retry queue → `/app/review?mode=first` → `/app/capture?mode=first`
+- 2차: `/app?mode=second` → Today CTA → `/app/write?mode=second` → 쟁점 회상/목차/답안/기준답안/간극/rewrite → `/app/capture?mode=second&rewriteFrom=...` → `/app/review?mode=second` → `/app/items/[itemId]?mode=second`
+
+### Small blocker fixed
+1. **2차 작성 워크스페이스에서 임시 입력 초기화 시 막힘 상태 해소**
+   - `workflow="second-write"` 상태에서 `임시 입력 지우기`를 누르면 단계가 `intake`로 리셋되어, 2차 단계 패널이 보이지 않고 저장 버튼이 비활성화된 채로 남는 문제가 있었음.
+   - reset 시 워크플로별 초기 단계(`second-issue-recall` / `confirm` / `intake`)로 되돌리도록 수정해 즉시 다음 행동으로 복귀되게 조정.
+
+### QA confirmations
+- quick wrong-answer capture(`/app/capture?mode=first`) 유지.
+- set solving(`/app/sets?mode=first`)은 quick capture를 대체하지 않음.
+- 2차 write workspace(`/app/write?mode=second`)와 generic capture(`/app/capture?mode=second`) 공존 유지.
+- `rewriteFrom` direct paragraph rewrite(`/app/capture?mode=second&rewriteFrom=...`) 유지.
+- 완료 요약(오늘 한 일/가장 큰 신호/다음 행동) 노출 유지.
+- review queue 완료는 다음 행동 선택 구조 유지.
+- learner-facing instructor route 노출 추가 없음.
+- 1차/2차 subject template 기반 가이드 문구 유지.
