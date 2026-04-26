@@ -26,6 +26,8 @@ import type {
   WrongAnswerNoteRecord,
   WrongAnswerTagRecord,
   RecurrenceFeatureRecord,
+  StudyLogInput,
+  StudyLogRecord,
 } from "@/lib/review-os/types";
 
 function createUuid() {
@@ -192,6 +194,23 @@ function mapWeeklySummary(row: Record<string, unknown> | null): WeeklyLearningSu
     topMistakeTypes: toStringArray(row.top_mistake_types),
     topTopics: toStringArray(row.top_topics),
     nextWeekFocus: toStringArray(row.next_week_focus),
+    createdAt: String(row.created_at),
+    updatedAt: String(row.updated_at),
+  };
+}
+
+function mapStudyLog(row: Record<string, unknown>): StudyLogRecord {
+  return {
+    id: String(row.id),
+    userId: String(row.user_id),
+    mode: String(row.mode) as StudyLogRecord["mode"],
+    subject: String(row.subject),
+    studyType: String(row.study_type) as StudyLogRecord["studyType"],
+    sourceLabel: String(row.source_label),
+    timeSpentMinutes: typeof row.time_spent_minutes === "number" ? row.time_spent_minutes : null,
+    notUnderstood: String(row.not_understood),
+    revisitNeeded: String(row.revisit_needed),
+    confidence: String(row.confidence) as StudyLogRecord["confidence"],
     createdAt: String(row.created_at),
     updatedAt: String(row.updated_at),
   };
@@ -792,6 +811,46 @@ export class ReviewOsRepository {
       .maybeSingle();
     assertSupabaseOperation("review-os.getWeeklySummary", result);
     return mapWeeklySummary(result.data as Record<string, unknown> | null);
+  }
+
+  async createStudyLog(userId: string, input: StudyLogInput) {
+    const client = getUserClient(userId);
+    const id = createUuid();
+    const now = new Date().toISOString();
+    const result = await client.from("study_logs").insert({
+      id,
+      user_id: userId,
+      mode: input.mode,
+      subject: input.subject,
+      study_type: input.studyType,
+      source_label: input.sourceLabel,
+      time_spent_minutes: input.timeSpentMinutes ?? null,
+      not_understood: input.notUnderstood,
+      revisit_needed: input.revisitNeeded,
+      confidence: input.confidence,
+      created_at: now,
+      updated_at: now,
+    });
+    assertSupabaseOperation("review-os.createStudyLog", result);
+    return this.getStudyLog(userId, id);
+  }
+
+  async getStudyLog(userId: string, logId: string) {
+    const client = getUserClient(userId);
+    const result = await client.from("study_logs").select("*").eq("user_id", userId).eq("id", logId).maybeSingle();
+    assertSupabaseOperation("review-os.getStudyLog", result);
+    return result.data ? mapStudyLog(result.data as Record<string, unknown>) : null;
+  }
+
+  async listStudyLogs(userId: string, mode?: "first" | "second", limit = 10) {
+    const client = getUserClient(userId);
+    let query = client.from("study_logs").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(limit);
+    if (mode) {
+      query = query.eq("mode", mode);
+    }
+    const result = await query;
+    assertSupabaseOperation("review-os.listStudyLogs", result);
+    return ((result.data ?? []) as Record<string, unknown>[]).map(mapStudyLog);
   }
 
   async insertActionSeed(userId: string, input: Omit<ActionSeedRecord, "id" | "userId" | "createdAt">) {

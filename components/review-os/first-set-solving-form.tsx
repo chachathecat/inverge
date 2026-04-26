@@ -75,12 +75,21 @@ function getIsCorrect(userAnswer: string, correctAnswer: string) {
   return normalizedUser.length > 0 && normalizedCorrect.length > 0 && normalizedUser === normalizedCorrect;
 }
 
-export function FirstSetSolvingForm() {
+type FirstSetSolvingFormProps = {
+  initialSubject?: string;
+};
+
+export function FirstSetSolvingForm({ initialSubject }: FirstSetSolvingFormProps) {
   const [step, setStep] = useState<Step>("setup");
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  const [subject, setSubject] = useState<(typeof APPRAISAL_FIRST_SUBJECTS)[number]>(APPRAISAL_FIRST_SUBJECTS[0]);
+  const [subject, setSubject] = useState<(typeof APPRAISAL_FIRST_SUBJECTS)[number]>(() => {
+    if (initialSubject && APPRAISAL_FIRST_SUBJECTS.includes(initialSubject as (typeof APPRAISAL_FIRST_SUBJECTS)[number])) {
+      return initialSubject as (typeof APPRAISAL_FIRST_SUBJECTS)[number];
+    }
+    return APPRAISAL_FIRST_SUBJECTS[0];
+  });
   const [setTitle, setSetTitle] = useState("");
   const [questionCount, setQuestionCount] = useState("5");
   const [timeSpentSeconds, setTimeSpentSeconds] = useState("");
@@ -352,7 +361,10 @@ export function FirstSetSolvingForm() {
             <Button type="button" className="w-full sm:w-auto" onClick={handleSetupNext}>
               다음: 답 입력
             </Button>
-            <Link href="/app/capture?mode=first" className="block text-xs text-[color:var(--muted)] underline-offset-2 hover:underline">
+            <Link
+              href={`/app/capture?mode=first&subject=${encodeURIComponent(subject)}`}
+              className="block text-xs text-[color:var(--muted)] underline-offset-2 hover:underline"
+            >
               오답 1개만 빠르게 기록할 수도 있습니다.
             </Link>
           </section>

@@ -2,20 +2,24 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { ReviewOsFeedbackButton } from "@/components/review-os/feedback-button";
+import { TodayFirstSubjectSelector } from "@/components/review-os/today-first-subject-selector";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { getModeConfig, resolveAppraisalMode } from "@/lib/review-os/appraisal";
+import { getModeConfig, normalizeSubjectForMode, resolveAppraisalMode } from "@/lib/review-os/appraisal";
 import { CALCULATOR_WORKFLOWS } from "@/lib/review-os/calculator-workflow";
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
 import { reviewOsService } from "@/lib/review-os/service";
 import { buildNotebookPreview } from "@/lib/review-os/study-note";
+import { APPRAISAL_FIRST_SUBJECTS } from "@/lib/review-os/types";
 
 type PageProps = {
-  searchParams?: Promise<{ mode?: string }>;
+  searchParams?: Promise<{ mode?: string; subject?: string }>;
 };
 
 export default async function ReviewOsDashboardPage({ searchParams }: PageProps) {
-  const modeParam = (await searchParams)?.mode;
+  const query = await searchParams;
+  const modeParam = query?.mode;
+  const subjectParam = query?.subject;
   const { session, profile } = await getReviewOsServerContext(buildReviewOsReturnTo("/app", modeParam));
   if (!session.userId || !session.email) return null;
 
@@ -34,7 +38,10 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
   const selectedQueueItem = queue.find((item) => item.queueId === focus.sourceQueueId) ?? queue[0] ?? null;
   const nextAction = focus.nextAction ?? selectedQueueItem?.reviewReason ?? config.nextActionFallback;
   const isFirstSetStart = mode === "first" && focus.nextActionType === "capture_now";
-  const primaryHref = isFirstSetStart ? "/app/sets?mode=first" : `/app/session?mode=${mode}`;
+  const selectedFirstSubject = normalizeSubjectForMode(subjectParam, "first");
+  const firstSetHref = `/app/sets?mode=first&subject=${encodeURIComponent(selectedFirstSubject)}`;
+  const firstCaptureHref = `/app/capture?mode=first&subject=${encodeURIComponent(selectedFirstSubject)}`;
+  const primaryHref = isFirstSetStart ? firstSetHref : `/app/session?mode=${mode}`;
   const secondaryHref = mode === "second" ? `/app/items?mode=${mode}` : `/app/review?mode=${mode}`;
   const diagnosedWeakPoint = selectedQueueItem?.mistakeType ?? (items[0] ? buildNotebookPreview(items[0]).weakPoint : config.emptyTitle);
   const notebookPreview = items.slice(0, 3).map((item) => buildNotebookPreview(item));
@@ -42,6 +49,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
   const primaryReason = focus.reason ?? selectedQueueItem?.reviewReason ?? focus.lines[0];
   const estimatedMinutes = focus.estimatedDurationMinutes ?? 25;
   const primaryTaskLabel = focus.primaryTaskLabel ?? (selectedQueueItem ? `${selectedQueueItem.subjectLabel} 복습` : config.nextActionFallback);
+  const recentStudyLog = mode === "first" ? await reviewOsService.getRecentStudyLog(session.userId, session.email, "first") : null;
 
   return (
     <div className="space-y-7 md:space-y-8">
@@ -66,30 +74,44 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
           </CardHeader>
           <CardContent className="space-y-4 p-4 pt-0 sm:p-6 sm:pt-0">
             <p className="text-sm text-[color:var(--foreground-strong)]">{nextAction}</p>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <Link href={primaryHref} className="w-full sm:w-auto">
-                <Button type="button" className="w-full sm:w-auto">
-                  {isFirstSetStart ? "세트 풀이 시작" : "오늘 최우선 작업 시작"}
-                </Button>
-              </Link>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-[color:var(--muted)]">
-                <span>다른 작업 선택:</span>
-                {mode === "first" ? (
-                  <Link href="/app/capture?mode=first" className="underline-offset-2 hover:underline">
-                    오답 1개만 빠르게 기록
+            {mode === "first" ? (
+              <TodayFirstSubjectSelector
+                selectedSubject={selectedFirstSubject}
+                primaryHref={primaryHref}
+                isFirstSetStart={isFirstSetStart}
+                secondaryHref={secondaryHref}
+                captureHref={firstCaptureHref}
+                setHref={firstSetHref}
+              />
+            ) : (
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <Link href={primaryHref} className="w-full sm:w-auto">
+                  <Button type="button" className="w-full sm:w-auto">
+                    {isFirstSetStart ? "세트 풀이 시작" : "오늘 최우선 작업 시작"}
+                  </Button>
+                </Link>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-[color:var(--muted)]">
+                  <span>다른 작업 선택:</span>
+                  <Link href={secondaryHref} className="underline-offset-2 hover:underline">
+                    {config.secondaryCta}
                   </Link>
-                ) : null}
-                <Link href={secondaryHref} className="underline-offset-2 hover:underline">
-                  {config.secondaryCta}
-                </Link>
-                <Link href={`/app/weekly?mode=${mode}`} className="underline-offset-2 hover:underline">
-                  주간 정리
-                </Link>
-                <Link href={`/app/calculator?context=${calculatorWorkflow.context}&mode=${mode}`} className="underline-offset-2 hover:underline">
-                  계산기 스텝
-                </Link>
+                  <Link href={`/app/weekly?mode=${mode}`} className="underline-offset-2 hover:underline">
+                    주간 정리
+                  </Link>
+                  <Link href={`/app/calculator?context=${calculatorWorkflow.context}&mode=${mode}`} className="underline-offset-2 hover:underline">
+                    계산기 스텝
+                  </Link>
+                </div>
               </div>
-            </div>
+            )}
+            {mode === "first" && recentStudyLog ? (
+              <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-4 py-3 text-sm">
+                <p className="text-[color:var(--foreground-strong)]">
+                  최근 기록: {recentStudyLog.subject} {recentStudyLog.sourceLabel} / 확신도 {recentStudyLog.confidence}
+                </p>
+                <p className="mt-1 text-xs text-[color:var(--muted)]">다음에는 이 범위를 먼저 다시 봅니다.</p>
+              </div>
+            ) : null}
             <details className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
               <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">
                 우선순위 근거 보기
@@ -134,8 +156,10 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                 <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] p-4">
                   <p className="text-[color:var(--muted)]">우선 과목</p>
                   <p className="mt-1 text-[color:var(--foreground-strong)]">
-                    {profile?.preferredSubjects.filter((subject) => (config.subjects as readonly string[]).includes(subject)).join(", ") ||
-                      config.subjects[0]}
+                    {mode === "first"
+                      ? APPRAISAL_FIRST_SUBJECTS.join(", ")
+                      : profile?.preferredSubjects.filter((subject) => (config.subjects as readonly string[]).includes(subject)).join(", ") ||
+                        config.subjects[0]}
                   </p>
                 </div>
                 <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] p-4">
