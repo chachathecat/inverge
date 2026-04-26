@@ -32,7 +32,7 @@ export default async function ReviewOsItemsPage({ searchParams }: PageProps) {
           {items.length === 0 ? (
             <div className="space-y-4">
               <p className="text-sm text-[color:var(--muted)]">{config.emptyDescription}</p>
-              <Link href={`/app/capture?mode=${mode}`}>
+              <Link href={mode === "second" ? `/app/write?mode=${mode}` : `/app/capture?mode=${mode}`}>
                 <Button type="button">{config.primaryCta}</Button>
               </Link>
             </div>
