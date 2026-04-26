@@ -677,6 +677,9 @@ export class ReviewOsService {
           issue_recall: input.issueRecall ?? null,
           outline_draft: input.outlineDraft ?? null,
           production_before_comparison: input.productionBeforeComparison ?? null,
+          produced_answer_before_reference: input.productionBeforeComparison ?? null,
+          reference_answer_added_after_production: input.referenceAnswerAddedAfterProduction ?? null,
+          biggest_gap: input.biggestGap ?? input.missingIssue ?? null,
         },
         {
           topicTag: artifacts.tags.topicTag,

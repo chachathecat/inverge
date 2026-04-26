@@ -76,6 +76,8 @@ export type WrongAnswerItemInput = {
   issueRecall?: string;
   outlineDraft?: string;
   productionBeforeComparison?: boolean;
+  referenceAnswerAddedAfterProduction?: boolean;
+  biggestGap?: string;
   rewriteSourceItemId?: string;
   rewriteSourceGap?: string;
   rewriteCompleted?: boolean;

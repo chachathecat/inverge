@@ -108,7 +108,7 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note }: 
             </div>
             <p className="text-sm leading-7 text-[color:var(--foreground-strong)]">{focus.nextAction}</p>
             <Button type="button" className="w-full sm:w-auto" onClick={() => setStepIndex((prev) => prev + 1)}>
-              {hasQueueItem ? "추천 작업으로 시작" : "오늘 입력 작업 시작"}
+              {hasQueueItem ? "추천 작업으로 시작" : mode === "second" ? "2차 작성 워크스페이스 시작" : "오늘 입력 작업 시작"}
             </Button>
             {quietLinks}
           </section>
@@ -295,9 +295,9 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note }: 
                 오늘 queue가 아직 없어 먼저 기록 1건을 남기면 session 루프가 시작됩니다.
               </p>
             )}
-            <Link href={mode === "first" ? "/app/sets?mode=first" : `/app/capture?mode=${mode}`} className="inline-flex w-full sm:w-auto">
+            <Link href={mode === "first" ? "/app/sets?mode=first" : `/app/write?mode=${mode}`} className="inline-flex w-full sm:w-auto">
               <Button type="button" className="w-full sm:w-auto">
-                {mode === "second" ? "2차 답안 1건 입력" : "세트 풀이 시작"}
+                {mode === "second" ? "2차 작성 워크스페이스로 이동" : "세트 풀이 시작"}
               </Button>
             </Link>
             {mode === "first" ? (

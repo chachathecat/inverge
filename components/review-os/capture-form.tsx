@@ -23,6 +23,7 @@ type CaptureFormProps = {
   userId: string;
   mode: AppraisalMode;
   initialPreferredSubjects?: string[];
+  workflow?: "default" | "second-write";
   rewriteContext?: {
     sourceItemId: string;
     sourceTitle: string;
@@ -60,6 +61,8 @@ type DraftState = {
   issueRecall: string;
   outlineDraft: string;
   productionBeforeComparison: boolean;
+  referenceAnswerAddedAfterProduction: boolean;
+  biggestGap: string;
   rawOcrText?: string;
   rawExtractionJson?: Record<string, unknown>;
   normalizedDraft?: ExtractionDraft;
@@ -203,7 +206,13 @@ function pickConcepts(text: string, fallback: string) {
   return Array.from(new Set(words)).slice(0, 3).join(", ") || fallback;
 }
 
-export function WrongAnswerCaptureForm({ userId, mode, initialPreferredSubjects = [], rewriteContext = null }: CaptureFormProps) {
+export function WrongAnswerCaptureForm({
+  userId,
+  mode,
+  initialPreferredSubjects = [],
+  workflow = "default",
+  rewriteContext = null,
+}: CaptureFormProps) {
   const router = useRouter();
   const config = getModeConfig(mode);
   const storageKey = { userId, feature: "capture-draft", entityId: mode };
@@ -244,15 +253,26 @@ export function WrongAnswerCaptureForm({ userId, mode, initialPreferredSubjects 
         issueRecall: "",
         outlineDraft: "",
         productionBeforeComparison: mode === "second",
+        referenceAnswerAddedAfterProduction: mode === "second",
+        biggestGap: rewriteContext?.biggestGap ?? secondDefaults(initialSubject).issue,
         rawOcrText: "",
         rawExtractionJson: {},
         normalizedDraft: undefined,
         extractionNeedsReview: false,
       };
   });
+  const secondWriteEnabled = mode === "second" && workflow === "second-write" && !rewriteContext;
   const [stage, setStage] = useState<
-    "intake" | "preview" | "confirm" | "second-issue-recall" | "second-outline" | "second-compare" | "second-rewrite"
-  >(rewriteContext && mode === "second" ? "confirm" : "intake");
+    | "intake"
+    | "preview"
+    | "confirm"
+    | "second-issue-recall"
+    | "second-outline"
+    | "second-answer"
+    | "second-reference"
+    | "second-gap"
+    | "second-rewrite"
+  >(rewriteContext && mode === "second" ? "confirm" : secondWriteEnabled ? "second-issue-recall" : "intake");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [extracting, setExtracting] = useState(false);
@@ -480,6 +500,14 @@ export function WrongAnswerCaptureForm({ userId, mode, initialPreferredSubjects 
           setError("전체 답안보다 목차를 먼저 잡아주세요.");
           return;
         }
+        if (form.userAnswer.trim().length < 8) {
+          setError("내 답안을 먼저 작성해 주세요.");
+          return;
+        }
+        if (form.correctAnswer.trim().length < 8) {
+          setError("작성 이후 기준답안/해설을 입력해 주세요.");
+          return;
+        }
       }
 
       const response = await fetch("/api/os/items", {
@@ -530,11 +558,17 @@ export function WrongAnswerCaptureForm({ userId, mode, initialPreferredSubjects 
               issue_recall: form.issueRecall || null,
               outline_draft: form.outlineDraft || null,
               production_before_comparison: mode === "second" ? form.productionBeforeComparison : null,
+              produced_answer_before_reference: mode === "second" ? form.productionBeforeComparison : null,
+              reference_answer_added_after_production:
+                mode === "second" ? form.referenceAnswerAddedAfterProduction : null,
+              biggest_gap: mode === "second" ? form.biggestGap || form.missingIssue || null : null,
             },
           },
           issueRecall: form.issueRecall || undefined,
           outlineDraft: form.outlineDraft || undefined,
           productionBeforeComparison: mode === "second" ? form.productionBeforeComparison : undefined,
+          referenceAnswerAddedAfterProduction: mode === "second" ? form.referenceAnswerAddedAfterProduction : undefined,
+          biggestGap: mode === "second" ? form.biggestGap || form.missingIssue || undefined : undefined,
           rewriteSourceItemId: rewriteContext?.sourceItemId ?? undefined,
           rewriteSourceGap: rewriteContext?.biggestGap ?? undefined,
           rewriteCompleted: mode === "second" && Boolean(rewriteContext),
@@ -568,6 +602,46 @@ export function WrongAnswerCaptureForm({ userId, mode, initialPreferredSubjects 
           />
           <RewriteParagraphPanel form={form} update={update} />
         </>
+      ) : secondWriteEnabled ? (
+        <>
+          {stage === "second-issue-recall" ? (
+            <SecondIssueRecallPanel issueRecall={form.issueRecall} onChange={(value) => update("issueRecall", value)} onNext={() => setStage("second-outline")} />
+          ) : null}
+          {stage === "second-outline" ? (
+            <SecondOutlinePanel outlineDraft={form.outlineDraft} onChange={(value) => update("outlineDraft", value)} onNext={() => setStage("second-answer")} />
+          ) : null}
+          {stage === "second-answer" ? (
+            <SecondAnswerPanel
+              answer={form.userAnswer}
+              onChange={(value) => {
+                update("userAnswer", value);
+                update("myAnswerSummary", firstLine(value, form.myAnswerSummary || "내 답안 요약"));
+              }}
+              onNext={() => setStage("second-reference")}
+            />
+          ) : null}
+          {stage === "second-reference" ? (
+            <SecondReferencePanel
+              reference={form.correctAnswer}
+              onChange={(value) => update("correctAnswer", value)}
+              onNext={() => setStage("second-gap")}
+            />
+          ) : null}
+          {stage === "second-gap" ? (
+            <SecondGapPanel
+              biggestGap={form.biggestGap}
+              onChange={(value) => {
+                update("biggestGap", value);
+                update("missingIssue", value);
+                update("userReasonText", value);
+              }}
+              onNext={() => setStage("second-rewrite")}
+            />
+          ) : null}
+          {stage === "second-rewrite" ? (
+            <SecondGapRewritePanel form={form} update={update} onBack={() => setStage("second-gap")} />
+          ) : null}
+        </>
       ) : (
         <>
           <IntakePanel
@@ -587,7 +661,7 @@ export function WrongAnswerCaptureForm({ userId, mode, initialPreferredSubjects 
             <ExtractionPreview
               form={form}
               mode={mode}
-              onEdit={() => setStage(mode === "second" ? "second-compare" : "confirm")}
+              onEdit={() => setStage(mode === "second" ? "second-answer" : "confirm")}
               onRegenerate={() => generateStructuredDraft()}
             />
           ) : null}
@@ -599,17 +673,34 @@ export function WrongAnswerCaptureForm({ userId, mode, initialPreferredSubjects 
             <SecondIssueRecallPanel issueRecall={form.issueRecall} onChange={(value) => update("issueRecall", value)} onNext={() => setStage("second-outline")} />
           ) : null}
           {mode === "second" && stage === "second-outline" ? (
-            <SecondOutlinePanel outlineDraft={form.outlineDraft} onChange={(value) => update("outlineDraft", value)} onNext={() => setStage("second-compare")} />
+            <SecondOutlinePanel outlineDraft={form.outlineDraft} onChange={(value) => update("outlineDraft", value)} onNext={() => setStage("second-answer")} />
           ) : null}
-          {mode === "second" && stage === "second-compare" ? (
-            <SecondAnswerComparePanel
-              form={form}
-              update={update}
+          {mode === "second" && stage === "second-answer" ? (
+            <SecondAnswerPanel
+              answer={form.userAnswer}
+              onChange={(value) => {
+                update("userAnswer", value);
+                update("myAnswerSummary", firstLine(value, form.myAnswerSummary || "내 답안 요약"));
+              }}
+              onNext={() => setStage("second-reference")}
+            />
+          ) : null}
+          {mode === "second" && stage === "second-reference" ? (
+            <SecondReferencePanel reference={form.correctAnswer} onChange={(value) => update("correctAnswer", value)} onNext={() => setStage("second-gap")} />
+          ) : null}
+          {mode === "second" && stage === "second-gap" ? (
+            <SecondGapPanel
+              biggestGap={form.biggestGap}
+              onChange={(value) => {
+                update("biggestGap", value);
+                update("missingIssue", value);
+                update("userReasonText", value);
+              }}
               onNext={() => setStage("second-rewrite")}
             />
           ) : null}
           {mode === "second" && stage === "second-rewrite" ? (
-            <SecondGapRewritePanel form={form} update={update} onBack={() => setStage("second-compare")} />
+            <SecondGapRewritePanel form={form} update={update} onBack={() => setStage("second-gap")} />
           ) : null}
         </>
       )}
@@ -1065,7 +1156,7 @@ function SecondIssueRecallPanel({
 }) {
   return (
     <section className="rounded-[var(--radius-card)] border border-[color:var(--cue-focus)] bg-[color:var(--cue-focus-bg)] p-4 sm:p-5">
-      <p className="text-caption text-[color:var(--muted)]">Step 3. 쟁점 회상</p>
+      <p className="text-caption text-[color:var(--muted)]">Step 1. 쟁점 회상</p>
       <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">기준 답안 보기 전에 쟁점 3개를 먼저 적습니다</h3>
       <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">기준 답안 보기 전에 쟁점 3개를 먼저 떠올립니다.</p>
       <label className="mt-4 block space-y-2">
@@ -1095,7 +1186,7 @@ function SecondOutlinePanel({
 }) {
   return (
     <section className="rounded-[var(--radius-card)] border border-[color:var(--cue-focus)] bg-[color:var(--cue-focus-bg)] p-4 sm:p-5">
-      <p className="text-caption text-[color:var(--muted)]">Step 4. 목차 작성</p>
+      <p className="text-caption text-[color:var(--muted)]">Step 2. 목차 작성</p>
       <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">전체 답안보다 목차를 먼저 잡습니다</h3>
       <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">답안 작성 전에 목차를 먼저 잡아보세요.</p>
       <label className="mt-4 block space-y-2">
@@ -1108,49 +1199,91 @@ function SecondOutlinePanel({
         />
       </label>
       <Button type="button" className="mt-4 w-full sm:w-auto" disabled={outlineDraft.trim().length < 8} onClick={onNext}>
-        다음: 답안 작성/비교 입력
+        다음: 내 답안 작성
       </Button>
     </section>
   );
 }
 
-function SecondAnswerComparePanel({
-  form,
-  update,
+function SecondAnswerPanel({
+  answer,
+  onChange,
   onNext,
 }: {
-  form: DraftState;
-  update: <K extends keyof DraftState>(key: K, value: DraftState[K]) => void;
+  answer: string;
+  onChange: (value: string) => void;
   onNext: () => void;
 }) {
   return (
     <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 sm:p-5">
-      <p className="text-caption text-[color:var(--muted)]">Step 5. 답안 작성/비교 입력</p>
+      <p className="text-caption text-[color:var(--muted)]">Step 3. 내 답안 작성</p>
       <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">비교는 작성 이후에 합니다</h3>
-      <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">기준 답안과 내 답안을 함께 정리해 compare 기록을 남깁니다.</p>
-      <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        <label className="space-y-2">
-          <span className="text-sm text-[color:var(--foreground-strong)]">기준 답안 요약</span>
-          <Textarea
-            value={form.correctAnswer}
-            onChange={(event) => update("correctAnswer", event.target.value)}
-            className="min-h-40 border-[var(--border)] bg-[color:var(--surface)] text-[color:var(--foreground-strong)] leading-7"
-          />
-        </label>
-        <label className="space-y-2">
-          <span className="text-sm text-[color:var(--foreground-strong)]">내 답안</span>
-          <Textarea
-            value={form.userAnswer}
-            onChange={(event) => {
-              update("userAnswer", event.target.value);
-              update("myAnswerSummary", firstLine(event.target.value, form.myAnswerSummary || "내 답안 요약"));
-            }}
-            className="min-h-40 border-[var(--border)] bg-[color:var(--surface)] text-[color:var(--foreground-strong)] leading-7"
-          />
-        </label>
-      </div>
-      <Button type="button" className="mt-4 w-full sm:w-auto" disabled={form.userAnswer.trim().length < 8} onClick={onNext}>
-        다음: 가장 큰 간극/교정
+      <label className="mt-4 block space-y-2">
+        <span className="text-sm text-[color:var(--foreground-strong)]">내 답안</span>
+        <Textarea
+          value={answer}
+          onChange={(event) => onChange(event.target.value)}
+          className="min-h-56 border-[var(--border)] bg-[color:var(--surface)] text-[color:var(--foreground-strong)] leading-7"
+        />
+      </label>
+      <Button type="button" className="mt-4 w-full sm:w-auto" disabled={answer.trim().length < 8} onClick={onNext}>
+        다음: 기준답안/해설 입력
+      </Button>
+    </section>
+  );
+}
+
+function SecondReferencePanel({
+  reference,
+  onChange,
+  onNext,
+}: {
+  reference: string;
+  onChange: (value: string) => void;
+  onNext: () => void;
+}) {
+  return (
+    <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 sm:p-5">
+      <p className="text-caption text-[color:var(--muted)]">Step 4. 기준답안/해설 입력</p>
+      <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">작성 이후에 기준답안을 입력합니다</h3>
+      <label className="mt-4 block space-y-2">
+        <span className="text-sm text-[color:var(--foreground-strong)]">기준 답안 요약</span>
+        <Textarea
+          value={reference}
+          onChange={(event) => onChange(event.target.value)}
+          className="min-h-56 border-[var(--border)] bg-[color:var(--surface)] text-[color:var(--foreground-strong)] leading-7"
+        />
+      </label>
+      <Button type="button" className="mt-4 w-full sm:w-auto" disabled={reference.trim().length < 8} onClick={onNext}>
+        다음: 가장 큰 간극 1개
+      </Button>
+    </section>
+  );
+}
+
+function SecondGapPanel({
+  biggestGap,
+  onChange,
+  onNext,
+}: {
+  biggestGap: string;
+  onChange: (value: string) => void;
+  onNext: () => void;
+}) {
+  return (
+    <section className="rounded-[var(--radius-card)] border border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] p-4 sm:p-5">
+      <p className="text-caption text-[color:var(--muted)]">Step 5. 가장 큰 간극 1개</p>
+      <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">오늘은 간극 1개만 고칩니다</h3>
+      <label className="mt-4 block space-y-2">
+        <span className="text-sm text-[color:var(--foreground-strong)]">보강할 논점 1개</span>
+        <Textarea
+          value={biggestGap}
+          onChange={(event) => onChange(event.target.value)}
+          className="min-h-32 border-[var(--border)] bg-[color:var(--surface)] text-[color:var(--foreground-strong)] leading-7"
+        />
+      </label>
+      <Button type="button" className="mt-4 w-full sm:w-auto" disabled={biggestGap.trim().length < 4} onClick={onNext}>
+        다음: 문단 다시쓰기
       </Button>
     </section>
   );
@@ -1167,8 +1300,8 @@ function SecondGapRewritePanel({
 }) {
   return (
     <section className="rounded-[var(--radius-card)] border border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] p-4 sm:p-5">
-      <p className="text-caption text-[color:var(--muted)]">Step 6. one biggest gap</p>
-      <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">가장 큰 간극 1개를 지정하고 교정 지시를 남깁니다</h3>
+      <p className="text-caption text-[color:var(--muted)]">Step 6. 문단 다시쓰기</p>
+      <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">한 문단 다시쓰기로 보강을 마무리합니다</h3>
       <div className="mt-4 space-y-4">
         <label className="block space-y-2">
           <span className="text-sm text-[color:var(--foreground-strong)]">보강할 논점 1개</span>
