@@ -22,11 +22,13 @@ type AnswerRow = {
   correctAnswer: string;
 };
 
+type FirstStageErrorReason = (typeof FIRST_STAGE_ERROR_REASON_OPTIONS)[number];
+
 type WrongDetailRow = {
   questionNumber: number;
   userAnswer: string;
   correctAnswer: string;
-  errorReason: string;
+  errorReason: FirstStageErrorReason | "";
   retrievalSentence: string;
 };
 
@@ -165,14 +167,14 @@ export function FirstSetSolvingForm() {
       return;
     }
 
-    const wrongRows = answerRows
+    const wrongRows: WrongDetailRow[] = answerRows
       .filter((row) => !getIsCorrect(row.userAnswer, row.correctAnswer))
       .map((row) => ({
         questionNumber: row.questionNumber,
         userAnswer: normalizeAnswer(row.userAnswer),
         correctAnswer: normalizeAnswer(row.correctAnswer),
-        errorReason: subjectTemplate.commonErrorHints[0] ?? "",
-        retrievalSentence: subjectTemplate.retrievalHint,
+        errorReason: "",
+        retrievalSentence: "",
       }));
 
     setWrongDetails(wrongRows);
@@ -193,8 +195,12 @@ export function FirstSetSolvingForm() {
   }
 
   async function handleCreateWrongAnswers() {
-    if (wrongDetails.some((row) => !row.errorReason)) {
-      setErrorMessage("틀린 문항마다 오답 이유를 선택해 주세요.");
+    if (
+      wrongDetails.some(
+        (row) => !FIRST_STAGE_ERROR_REASON_OPTIONS.includes(row.errorReason as FirstStageErrorReason),
+      )
+    ) {
+      setErrorMessage("틀린 문항마다 공식 오답 이유를 선택해 주세요.");
       return;
     }
     if (wrongDetails.some((row) => row.retrievalSentence.trim().length < 4)) {
