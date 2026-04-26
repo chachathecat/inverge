@@ -53,8 +53,15 @@ function normalizeChoiceToken(value: string) {
 }
 
 function parseBulkAnswers(value: string) {
-  return value
-    .split(/[\s,\n\r\t/|;]+/g)
+  const normalized = value.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  const hasExplicitDelimiters = /[,\n/|;]/.test(normalized);
+
+  if (hasExplicitDelimiters) {
+    return normalized.split(/[,\n/|;]/g).map((token) => normalizeChoiceToken(token));
+  }
+
+  return normalized
+    .split(/\s+/g)
     .map((token) => normalizeChoiceToken(token))
     .filter((token) => token.length > 0);
 }
@@ -136,7 +143,7 @@ export function FirstSetSolvingForm() {
       return;
     }
     if (userTokens.some((token) => !token) || correctTokens.some((token) => !token)) {
-      setErrorMessage("비어 있는 답이 없는지 확인해 주세요.");
+      setErrorMessage("비어 있는 답이 있습니다. 빠진 문항을 확인해 주세요.");
       return;
     }
 
