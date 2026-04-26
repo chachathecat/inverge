@@ -75,7 +75,7 @@ test.describe('authenticated learner smoke', () => {
 
     const saveButton = page.getByTestId('second-write-submit');
     await expect(saveButton).toBeEnabled();
-    await page.getByLabel('다시 쓴 문단').fill('각 쟁점에서 요건을 먼저 제시하고 사실을 대응한 뒤 소결론을 명시해 작성합니다.');
+    await page.getByTestId('second-write-final-textarea').fill('각 쟁점에서 요건을 먼저 제시하고 사실을 대응한 뒤 소결론을 명시해 작성합니다.');
     await saveButton.click();
 
     await expect(page.getByText('오늘 작업은 여기까지입니다.')).toBeVisible();
