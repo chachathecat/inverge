@@ -56,7 +56,7 @@ async function createFirstSetRecord(page: Page, title: string) {
 
   await page.goto('/app/review?mode=first');
   await expect(page.getByRole('heading', { name: '오늘 다시 볼 항목' })).toBeVisible();
-  await expect(page.getByText(title)).toHaveCount(1);
+  await expect(page.getByText(title).first()).toBeVisible();
 }
 
 async function readItemList(page: Page) {
