@@ -475,7 +475,7 @@ export function FirstSetSolvingForm() {
         ) : null}
 
         {step === "done" ? (
-          <section className="space-y-4">
+          <section className="space-y-4" data-testid="first-set-solving-done">
             <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] p-4">
               <p className="text-sm font-medium text-[color:var(--foreground-strong)]">오늘 작업은 여기까지입니다.</p>
               <ul className="mt-2 space-y-1 text-sm text-[color:var(--foreground-strong)]">
@@ -503,7 +503,11 @@ export function FirstSetSolvingForm() {
           </section>
         ) : null}
 
-        {errorMessage ? <p className="text-xs text-[color:var(--danger)]">{errorMessage}</p> : null}
+        {errorMessage ? (
+          <p data-testid="first-set-solving-error" className="text-xs text-[color:var(--danger)]">
+            {errorMessage}
+          </p>
+        ) : null}
       </CardContent>
     </Card>
   );

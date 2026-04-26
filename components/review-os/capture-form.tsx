@@ -1396,6 +1396,19 @@ function SecondGapRewritePanel({
             className="min-h-28 border-[var(--border)] bg-[color:var(--surface)] text-[color:var(--foreground-strong)] leading-7"
           />
         </label>
+        <label className="block space-y-2">
+          <span className="text-sm text-[color:var(--foreground-strong)]">다시 쓴 문단</span>
+          <Textarea
+            value={form.userAnswer}
+            onChange={(event) => {
+              update("userAnswer", event.target.value);
+              update("myAnswerSummary", firstLine(event.target.value, form.myAnswerSummary || "문단 다시쓰기"));
+            }}
+            data-testid="second-write-final-textarea"
+            className="min-h-56 border-[var(--border)] bg-[color:var(--surface)] text-[color:var(--foreground-strong)] leading-7"
+            placeholder="누락 논점 1개를 반영해 문단을 다시 작성하세요."
+          />
+        </label>
         <label className="space-y-2">
           <span className="text-sm text-[color:var(--foreground-strong)]">rewrite 지시</span>
           <input
@@ -1469,7 +1482,6 @@ function RewriteParagraphPanel({
             update("userAnswer", event.target.value);
             update("myAnswerSummary", firstLine(event.target.value, form.myAnswerSummary || "문단 다시쓰기"));
           }}
-          data-testid="second-write-final-textarea"
           className="min-h-64 border-[var(--border)] bg-[color:var(--surface)] text-[color:var(--foreground-strong)] leading-7"
           placeholder="누락 논점 1개를 반영해 문단을 다시 작성하세요."
         />
