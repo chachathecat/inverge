@@ -70,3 +70,27 @@
 ### Closed beta readiness
 - **판정: Ready (P0 blocker 없음)**  
   현재 범위(감정평가사 1차/2차 learner closed beta) 기준으로 출시 가능한 상태.
+
+---
+
+## Focused learner-flow QA pass after PR #30 (2026-04-26)
+
+### Scope checked (learner only)
+- 1차: `/app?mode=first` → Today CTA → `/app/sets?mode=first` → bulk answer input → 오답 이유/회상 → retry queue → `/app/review?mode=first` → `/app/capture?mode=first`
+- 2차: `/app?mode=second` → Today CTA → `/app/write?mode=second` → 쟁점 회상/목차/답안/기준답안/간극/rewrite → `/app/capture?mode=second&rewriteFrom=...` → `/app/review?mode=second` → `/app/items/[itemId]?mode=second`
+
+### Small fixes applied
+1. **2차 빈 상태 CTA 목적지 정리**
+   - review queue가 비어 있을 때, 2차는 generic capture 대신 `/app/write?mode=second`로 유도하도록 조정.
+   - 기록 목록이 비어 있을 때도 동일하게 `/app/write?mode=second`를 기본 시작점으로 정리.
+2. **2차 완료 요약의 다음 행동 링크 정리**
+   - 항목 상세 완료 요약에서 “다른 답안 작업 보기” 링크를 `/app/write?mode=second`로 조정해 2차 실행 순서(회상→목차→작성→비교→rewrite)와 일치시킴.
+
+### QA confirmations
+- quick wrong-answer capture(`/app/capture?mode=first`)는 그대로 유지됨.
+- set solving은 별도 경로(`/app/sets?mode=first`)이며 quick capture를 대체하지 않음.
+- 2차 write workspace(`/app/write?mode=second`)와 generic capture(`/app/capture?mode=second`)가 분리되어 공존함.
+- `rewriteFrom` 기반 direct paragraph rewrite 진입(`/app/capture?mode=second&rewriteFrom=...`)이 유지됨.
+- 1차/2차 완료 요약(오늘 한 일/가장 큰 신호/다음 복습)이 계속 노출됨.
+- review queue 완료는 다음 행동 선택이 선행되는 구조를 유지함.
+- learner-facing `/instructor` 라우트 노출 추가 없음.

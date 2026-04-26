@@ -100,7 +100,7 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
                 <Link href={`/app/review?mode=${mode}`} className="underline-offset-2 hover:underline">
                   다시 볼 항목 확인
                 </Link>
-                <Link href={`/app/capture?mode=${mode}`} className="underline-offset-2 hover:underline">
+                <Link href={`/app/write?mode=${mode}`} className="underline-offset-2 hover:underline">
                   다른 답안 작업 보기
                 </Link>
               </>

@@ -44,7 +44,7 @@ export default async function ReviewOsReviewPage({ searchParams }: PageProps) {
             <CardDescription>{config.emptyDescription}</CardDescription>
           </CardHeader>
           <CardContent>
-            <Link href={`/app/capture?mode=${mode}`}>
+            <Link href={mode === "second" ? `/app/write?mode=${mode}` : `/app/capture?mode=${mode}`}>
               <Button type="button">{config.primaryCta}</Button>
             </Link>
           </CardContent>
