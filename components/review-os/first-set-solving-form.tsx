@@ -33,6 +33,39 @@ function normalizeAnswer(value: string) {
   return value.replace(/\s+/g, " ").trim();
 }
 
+function normalizeChoiceToken(value: string) {
+  const trimmed = normalizeAnswer(value)
+    .replace(/[()]/g, "")
+    .replace(/번$/u, "");
+  const map: Record<string, string> = {
+    "①": "1",
+    "②": "2",
+    "③": "3",
+    "④": "4",
+    "⑤": "5",
+    "❶": "1",
+    "❷": "2",
+    "❸": "3",
+    "❹": "4",
+    "❺": "5",
+  };
+  return map[trimmed] ?? trimmed;
+}
+
+function parseBulkAnswers(value: string) {
+  const normalized = value.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  const hasExplicitDelimiters = /[,\n/|;]/.test(normalized);
+
+  if (hasExplicitDelimiters) {
+    return normalized.split(/[,\n/|;]/g).map((token) => normalizeChoiceToken(token));
+  }
+
+  return normalized
+    .split(/\s+/g)
+    .map((token) => normalizeChoiceToken(token))
+    .filter((token) => token.length > 0);
+}
+
 function getIsCorrect(userAnswer: string, correctAnswer: string) {
   const normalizedUser = normalizeAnswer(userAnswer);
   const normalizedCorrect = normalizeAnswer(correctAnswer);
@@ -51,6 +84,8 @@ export function FirstSetSolvingForm() {
   const [confidence, setConfidence] = useState<ConfidenceLevel>("중간");
 
   const [answerRows, setAnswerRows] = useState<AnswerRow[]>([]);
+  const [bulkUserAnswers, setBulkUserAnswers] = useState("");
+  const [bulkCorrectAnswers, setBulkCorrectAnswers] = useState("");
   const [wrongDetails, setWrongDetails] = useState<WrongDetailRow[]>([]);
   const [createdCount, setCreatedCount] = useState(0);
 
@@ -96,6 +131,30 @@ export function FirstSetSolvingForm() {
 
   function updateAnswerRow(questionNumber: number, key: "userAnswer" | "correctAnswer", value: string) {
     setAnswerRows((prev) => prev.map((row) => (row.questionNumber === questionNumber ? { ...row, [key]: value } : row)));
+  }
+
+  function handleApplyBulkInput() {
+    const userTokens = parseBulkAnswers(bulkUserAnswers);
+    const correctTokens = parseBulkAnswers(bulkCorrectAnswers);
+    const expectedCount = answerRows.length;
+
+    if (userTokens.length !== expectedCount || correctTokens.length !== expectedCount) {
+      setErrorMessage(`입력 개수를 확인해 주세요. 문항 수는 ${expectedCount}개입니다.`);
+      return;
+    }
+    if (userTokens.some((token) => !token) || correctTokens.some((token) => !token)) {
+      setErrorMessage("비어 있는 답이 있습니다. 빠진 문항을 확인해 주세요.");
+      return;
+    }
+
+    setAnswerRows((prev) =>
+      prev.map((row, index) => ({
+        ...row,
+        userAnswer: userTokens[index] ?? "",
+        correctAnswer: correctTokens[index] ?? "",
+      })),
+    );
+    setErrorMessage("");
   }
 
   function handleCheckAnswers() {
@@ -287,7 +346,29 @@ export function FirstSetSolvingForm() {
 
         {step === "answers" ? (
           <section className="space-y-4">
-            <p className="text-sm text-[color:var(--foreground-strong)]">문항별 내 답과 정답을 입력합니다.</p>
+            <div className="space-y-2 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] p-3">
+              <p className="text-sm font-medium text-[color:var(--foreground-strong)]">답을 한 줄로 붙여넣어도 됩니다.</p>
+              <p className="text-xs text-[color:var(--muted)]">공백, 쉼표, 줄바꿈을 구분자로 사용할 수 있습니다. 예: 1 3 2 4 5 / ①,③,②,④,⑤</p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <textarea
+                  value={bulkUserAnswers}
+                  onChange={(event) => setBulkUserAnswers(event.target.value)}
+                  placeholder="내 답: 1 3 2 4 5"
+                  className="min-h-20 w-full rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] px-3 py-2 text-sm"
+                />
+                <textarea
+                  value={bulkCorrectAnswers}
+                  onChange={(event) => setBulkCorrectAnswers(event.target.value)}
+                  placeholder="정답: 1 4 2 4 3"
+                  className="min-h-20 w-full rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] px-3 py-2 text-sm"
+                />
+              </div>
+              <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={handleApplyBulkInput}>
+                입력값 행에 반영
+              </Button>
+            </div>
+
+            <p className="text-sm text-[color:var(--foreground-strong)]">입력이 맞는지 확인한 뒤 채점합니다.</p>
             <div className="space-y-3">
               {answerRows.map((row) => (
                 <div key={row.questionNumber} className="space-y-2 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] p-3">
