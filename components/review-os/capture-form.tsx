@@ -1469,6 +1469,7 @@ function RewriteParagraphPanel({
             update("userAnswer", event.target.value);
             update("myAnswerSummary", firstLine(event.target.value, form.myAnswerSummary || "문단 다시쓰기"));
           }}
+          data-testid="second-write-final-textarea"
           className="min-h-64 border-[var(--border)] bg-[color:var(--surface)] text-[color:var(--foreground-strong)] leading-7"
           placeholder="누락 논점 1개를 반영해 문단을 다시 작성하세요."
         />
