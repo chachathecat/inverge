@@ -6,11 +6,14 @@ import { getServerSessionUser } from "@/lib/auth/session";
 import { cn } from "@/lib/utils";
 
 type ExamSelectionCard = {
-  testId: "exam-card-first" | "exam-card-second";
+  testId: "exam-card-first" | "exam-card-second" | "exam-card-answer-review";
   title: string;
   description: string;
-  loop: string;
+  badge?: string;
+  helper?: string;
   href: string;
+  cta: string;
+  disabled?: boolean;
 };
 
 function buildModeEntryHref(isAuthenticated: boolean, authEnabled: boolean, mode: "first" | "second") {
@@ -20,18 +23,24 @@ function buildModeEntryHref(isAuthenticated: boolean, authEnabled: boolean, mode
 }
 
 function SelectionCard({ card }: { card: ExamSelectionCard }) {
+  const ctaClassName = cn(
+    buttonVariants({ variant: "outline" }),
+    "w-full sm:w-auto",
+    card.disabled ? "pointer-events-none opacity-60" : "",
+  );
+
   return (
     <section data-testid={card.testId} className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] p-7">
       <div className="flex items-center justify-between gap-4">
         <h2 className="text-h2 font-medium text-[color:var(--foreground-strong)]">{card.title}</h2>
-        <RefinedBadge>감정평가사</RefinedBadge>
+        <RefinedBadge>{card.badge ?? "감정평가사"}</RefinedBadge>
       </div>
       <p className="mt-4 text-sm leading-7 text-[color:var(--foreground-strong)]">{card.description}</p>
-      <p className="mt-3 text-sm leading-7 text-[color:var(--muted)]">{card.loop}</p>
+      {card.helper ? <p className="mt-3 text-sm leading-7 text-[color:var(--muted)]">{card.helper}</p> : null}
 
       <div className="mt-7">
-        <Link href={card.href} className={cn(buttonVariants({ variant: "outline" }), "w-full sm:w-auto")}>
-          이 모드로 시작
+        <Link href={card.href} aria-disabled={card.disabled} className={ctaClassName}>
+          {card.cta}
         </Link>
       </div>
     </section>
@@ -45,16 +54,25 @@ export default async function ExamsPage() {
     {
       testId: "exam-card-first",
       title: "감정평가사 1차",
-      description: "객관식 세트 풀이 중심으로 오답 원인을 정리하고 재시도 큐를 운영합니다.",
-      loop: "세트 풀이 → 오답 이유 → 회상 → 재시도 큐",
+      description: "객관식 세트 풀이, 오답 원인, 회상, 재시도 큐를 운영합니다.",
       href: buildModeEntryHref(session.isAuthenticated, session.authEnabled, "first"),
+      cta: "이 트랙으로 시작",
     },
     {
       testId: "exam-card-second",
       title: "감정평가사 2차",
-      description: "답안을 비교해 가장 큰 간극 하나를 찾고 문단 다시쓰기로 연결합니다.",
-      loop: "쟁점 회상 → 답안 비교 → 가장 큰 간극 → 문단 다시쓰기",
+      description: "쟁점 회상, 목차, 답안 작성, 기준답안 비교, 문단 다시쓰기를 운영합니다.",
       href: buildModeEntryHref(session.isAuthenticated, session.authEnabled, "second"),
+      cta: "이 트랙으로 시작",
+    },
+    {
+      testId: "exam-card-answer-review",
+      title: "답안 검토실",
+      description: "수기 답안 OCR, 기준답안 비교, 누락논점 확인, 교정 문단 작성을 준비 중입니다.",
+      badge: "운영자용 베타",
+      helper: "최종 채점이나 합격 판정을 제공하지 않습니다.",
+      href: "/answer-review",
+      cta: "베타 준비 중",
     },
   ];
 

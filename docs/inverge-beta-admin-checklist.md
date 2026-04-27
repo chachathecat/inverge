@@ -24,12 +24,15 @@
 - [ ] 마이그레이션 미적용 상태에서도 `/app?mode=first`가 최근 기록 없이 정상 렌더링되는지 확인
 
 ## C. Manual QA
+- [ ] `/exams`에 카드 3개(감정평가사 1차/2차/답안 검토실)만 노출되는지 확인
+- [ ] 답안 검토실 카드가 안내성 페이지(`/answer-review`)로만 이동하고 업로드/변경 기능이 없는지 확인
 - [ ] invite pending 계정 확인
 - [ ] allowlist 허용 계정 확인
 - [ ] 1차 set solving 흐름 확인
 - [ ] 1차 quick wrong-answer capture 확인
 - [ ] 2차 writing workspace 흐름 확인
 - [ ] 2차 `rewriteFrom` 흐름 확인
+- [ ] 1차/2차 실행 화면에서 모드 전환 picker가 노출되지 않는지 확인
 - [ ] review queue 확인
 - [ ] 데이터 분리 관점 수동 점검
 
@@ -37,7 +40,12 @@
 - [ ] 사용자 A 기록이 사용자 B 화면에 나타나지 않음
 - [ ] review queue가 사용자별로 분리됨
 - [ ] item detail이 사용자별로 분리됨
+- [ ] 1차/2차 모드 링크가 섞이지 않고 현재 트랙으로 유지됨
 - [ ] admin route 보호가 유지됨
+
+## F. Messaging guardrails
+- [ ] learner-facing 화면/문서에 `AI 채점기`, `자동 채점`, `최종 채점`, `합격 판정`, `점수 보장` 문구가 없는지 확인
+- [ ] 답안 검토실 관련 문구가 운영자용 베타/보조 흐름으로만 표현되는지 확인
 
 ## E. Data Isolation E2E (optional but recommended before invite)
 1. Supabase Auth에서 테스트용 사용자 2개를 수동 생성합니다. (User A / User B)
