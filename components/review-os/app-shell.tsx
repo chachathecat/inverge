@@ -10,8 +10,6 @@ import { getModeConfig, parseAppraisalMode, type AppraisalMode } from "@/lib/rev
 import { cn } from "@/lib/utils";
 
 type AppShellProps = {
-  title: string;
-  description?: string;
   email: string | null;
   mode: AppraisalMode;
   children: ReactNode;
@@ -27,7 +25,7 @@ const NAV_ITEMS = [
   { href: "/app/settings", label: "수험 설정" },
 ] as const;
 
-export function ReviewOsAppShell({ title, description, email, mode, children, rightSlot }: AppShellProps) {
+export function ReviewOsAppShell({ email, mode, children, rightSlot }: AppShellProps) {
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const currentMode = parseAppraisalMode(searchParams.get("mode")) ?? mode;
@@ -49,14 +47,7 @@ export function ReviewOsAppShell({ title, description, email, mode, children, ri
               {config.shortLabel}
             </span>
           </div>
-          <div className="space-y-2">
-            <h1 className="text-[30px] font-medium tracking-[-0.04em] text-[color:var(--foreground-strong)] sm:text-[36px]">
-              {currentMode === mode ? title : config.pageTitle}
-            </h1>
-            <p className="max-w-3xl text-sm leading-7 text-[color:var(--muted)]">
-              {currentMode === mode ? description : config.pageDescription}
-            </p>
-          </div>
+          <p className="text-xs text-[color:var(--muted)]">{config.label} 운영 화면</p>
         </div>
         <div className="flex flex-col items-start gap-3 sm:items-end">
           {rightSlot}

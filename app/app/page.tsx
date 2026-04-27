@@ -49,6 +49,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
   const primaryReason = focus.reason ?? selectedQueueItem?.reviewReason ?? focus.lines[0];
   const estimatedMinutes = focus.estimatedDurationMinutes ?? 25;
   const primaryTaskLabel = focus.primaryTaskLabel ?? (selectedQueueItem ? `${selectedQueueItem.subjectLabel} 복습` : config.nextActionFallback);
+  const shouldShowFirstSubjectSelector = mode === "first" && isFirstSetStart;
   let recentStudyLog: Awaited<ReturnType<typeof reviewOsService.getRecentStudyLog>> | null = null;
   if (mode === "first") {
     try {
@@ -77,23 +78,23 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
           <h2 className="text-xl font-medium tracking-[-0.04em] text-[color:var(--foreground-strong)] sm:text-2xl">
             {config.pageTitle}
           </h2>
-          <p className="mt-2 max-w-2xl text-sm leading-7 text-[color:var(--muted)]">{config.pageDescription}</p>
+          <p className="mt-2 max-w-2xl text-sm leading-7 text-[color:var(--muted)]">오늘은 이 작업 하나만 먼저 합니다.</p>
         </div>
       </section>
 
-      <section className="space-y-6">
-        <Card className="border-[color:var(--border-strong)] bg-[color:var(--bg-elevated)] shadow-none">
+      <section className="space-y-4">
+        <Card className="border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] shadow-none">
           <CardHeader className="space-y-3 p-4 sm:p-6">
-            <div className="rounded-[var(--radius-md)] border border-[color:var(--brand-700)] bg-[color:var(--brand-050)] px-4 py-3">
-              <p className="text-caption text-[color:var(--brand-800)]">오늘 최우선 작업</p>
+            <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--brand-050)] px-4 py-3">
+              <p className="text-caption text-[color:var(--muted)]">오늘 최우선 작업</p>
               <p className="mt-1 text-body-lg text-[color:var(--foreground-strong)]">{primaryTaskLabel}</p>
             </div>
-            <CardTitle>오늘 우선순위 1개만 먼저 실행합니다.</CardTitle>
-            <CardDescription className="max-w-[66ch]">{config.priorityCopy}</CardDescription>
+            <CardTitle>지금 해야 할 한 가지에만 집중합니다.</CardTitle>
+            <CardDescription className="max-w-[66ch]">기록에서 다음 복습 신호를 정리했습니다. 먼저 실행하고, 이후 작업은 차분히 이어갑니다.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 p-4 pt-0 sm:p-6 sm:pt-0">
             <p className="text-sm text-[color:var(--foreground-strong)]">{nextAction}</p>
-            {mode === "first" ? (
+            {shouldShowFirstSubjectSelector ? (
               <TodayFirstSubjectSelector
                 selectedSubject={selectedFirstSubject}
                 primaryHref={primaryHref}
@@ -106,11 +107,19 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <Link href={primaryHref} className="w-full sm:w-auto">
                   <Button type="button" className="w-full sm:w-auto">
-                    {isFirstSetStart ? "세트 풀이 시작" : "오늘 최우선 작업 시작"}
+                    오늘 최우선 작업 시작
                   </Button>
                 </Link>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-[color:var(--muted)]">
                   <span>다른 작업 선택:</span>
+                  {mode === "first" ? (
+                    <Link
+                      href={`/app/study-log?mode=first&subject=${encodeURIComponent(normalizeSubjectForMode(selectedQueueItem?.subjectLabel, "first"))}`}
+                      className="underline-offset-2 hover:underline"
+                    >
+                      오늘 공부 기록
+                    </Link>
+                  ) : null}
                   <Link href={secondaryHref} className="underline-offset-2 hover:underline">
                     {config.secondaryCta}
                   </Link>
@@ -129,7 +138,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                   최근 기록: {recentStudyLog.subject} {recentStudyLog.sourceLabel} / 확신도 {recentStudyLog.confidence}
                 </p>
                 {recentStudyTaxonomyLine ? <p className="mt-1 text-xs text-[color:var(--muted)]">{recentStudyTaxonomyLine}</p> : null}
-                <p className="mt-1 text-xs text-[color:var(--muted)]">다음에는 이 범위를 먼저 다시 봅니다.</p>
+                <p className="mt-1 text-xs text-[color:var(--muted)]">기록을 기준으로 다음 복습 범위를 정리했습니다.</p>
               </div>
             ) : null}
             <details className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
@@ -188,7 +197,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                 </div>
               </div>
 
-              <Card>
+              <Card className="border-[color:var(--border-subtle)] shadow-none">
                 <CardHeader>
                   <CardTitle>이번 주 학습 정리</CardTitle>
                 </CardHeader>
@@ -208,7 +217,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="border-[color:var(--border-subtle)] shadow-none">
                 <CardHeader>
                   <CardTitle>자동 정리 노트</CardTitle>
                 </CardHeader>
