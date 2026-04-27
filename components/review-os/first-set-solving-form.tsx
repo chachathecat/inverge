@@ -283,14 +283,15 @@ export function FirstSetSolvingForm({ initialSubject }: FirstSetSolvingFormProps
   return (
     <Card className="border-[color:var(--border-strong)] bg-[color:var(--surface)] shadow-none">
       <CardHeader className="space-y-3 p-4 sm:p-6">
-        <p className="text-caption text-[color:var(--muted)]">감정평가사 1차 · Set Solving Engine v1</p>
-        <CardTitle>오늘은 작은 세트 하나만 풉니다.</CardTitle>
-        <CardDescription>틀린 문항만 다시 보고, 해설 전에 이유를 한 문장으로 떠올립니다.</CardDescription>
+        <p className="text-caption text-[color:var(--muted)]">감정평가사 1차 · 실행 화면</p>
+        <CardTitle>세트 하나를 끝내고 필요한 오답만 남깁니다.</CardTitle>
+        <CardDescription>지금 해야 할 작업만 보여줍니다. 입력 후 바로 다음 단계로 이동하세요.</CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-5 p-4 pt-0 sm:p-6 sm:pt-0">
         {step === "setup" ? (
           <section className="space-y-4">
+            <p className="text-sm text-[color:var(--muted)]">1) 세트 정보를 적고 시작을 누르면 답 입력 화면으로 넘어갑니다.</p>
             <label className="block space-y-2 text-sm">
               <span className="font-medium text-[color:var(--foreground-strong)]">과목</span>
               <select
@@ -305,7 +306,7 @@ export function FirstSetSolvingForm({ initialSubject }: FirstSetSolvingFormProps
                 ))}
               </select>
             </label>
-            <div className="rounded-[var(--radius-md)] border border-[color:var(--cue-focus)] bg-[color:var(--cue-focus-bg)] p-3">
+            <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] p-3">
               <p className="text-sm font-medium text-[color:var(--foreground-strong)]">이 과목은 먼저 이 기준으로 확인합니다.</p>
               <p className="mt-1 text-xs text-[color:var(--muted)]">{subjectTemplate.checkpoints.join(" · ")}</p>
               <p className="mt-2 text-xs text-[color:var(--muted)]">해설 전에 이 기준 중 하나를 떠올립니다.</p>
@@ -359,14 +360,8 @@ export function FirstSetSolvingForm({ initialSubject }: FirstSetSolvingFormProps
             </div>
 
             <Button type="button" className="w-full sm:w-auto" onClick={handleSetupNext}>
-              다음: 답 입력
+              세트 풀이 시작
             </Button>
-            <Link
-              href={`/app/capture?mode=first&subject=${encodeURIComponent(subject)}`}
-              className="block text-xs text-[color:var(--muted)] underline-offset-2 hover:underline"
-            >
-              오답 1개만 빠르게 기록할 수도 있습니다.
-            </Link>
           </section>
         ) : null}
 
@@ -394,7 +389,7 @@ export function FirstSetSolvingForm({ initialSubject }: FirstSetSolvingFormProps
               </Button>
             </div>
 
-            <p className="text-sm text-[color:var(--foreground-strong)]">입력이 맞는지 확인한 뒤 채점합니다.</p>
+            <p className="text-sm text-[color:var(--foreground-strong)]">2) 내 답과 정답을 입력한 뒤 결과 확인을 누릅니다.</p>
             <div className="space-y-3">
               {answerRows.map((row) => (
                 <div key={row.questionNumber} className="space-y-2 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] p-3">
@@ -417,23 +412,21 @@ export function FirstSetSolvingForm({ initialSubject }: FirstSetSolvingFormProps
               ))}
             </div>
             <Button type="button" className="w-full sm:w-auto" onClick={handleCheckAnswers}>
-              채점하고 결과 보기
+              결과 확인
             </Button>
           </section>
         ) : null}
 
         {step === "result" ? (
           <section className="space-y-4">
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] p-3 text-sm">총 {summary.total}문항</div>
               <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] p-3 text-sm">정답 {summary.correct}</div>
               <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] p-3 text-sm">오답 {summary.wrong}</div>
               <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] p-3 text-sm">정확도 {summary.accuracy}%</div>
-              <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] p-3 text-sm">
-                소요 시간 {timeSpentSeconds.trim() ? `${timeSpentSeconds}초` : "미입력"}
-              </div>
             </div>
-            <p className="text-sm text-[color:var(--foreground-strong)]">틀린 문항만 다시 봅니다.</p>
+            <p className="text-sm text-[color:var(--foreground-strong)]">3) 틀린 문항만 다음 단계에서 오답 기록으로 넘깁니다.</p>
+            <p className="text-xs text-[color:var(--muted)]">소요 시간: {timeSpentSeconds.trim() ? `${timeSpentSeconds}초` : "미입력"}</p>
             <Button type="button" className="w-full sm:w-auto" onClick={handleResultNext}>
               {summary.wrong > 0 ? "다음: 오답 이유 입력" : "완료"}
             </Button>
@@ -481,7 +474,7 @@ export function FirstSetSolvingForm({ initialSubject }: FirstSetSolvingFormProps
             </div>
 
             <Button type="button" className="w-full sm:w-auto" disabled={submitting} onClick={() => void handleCreateWrongAnswers()}>
-              {submitting ? "저장 중" : "재시도 큐 자동 생성"}
+              {submitting ? "저장 중" : "틀린 문항 오답 기록 저장"}
             </Button>
           </section>
         ) : null}
@@ -500,7 +493,7 @@ export function FirstSetSolvingForm({ initialSubject }: FirstSetSolvingFormProps
                 <li>가장 큰 신호: {biggestSignal}</li>
                 <li>다음 복습: {summary.wrong > 0 ? "재시도 큐에 자동 예약했습니다." : "다음 세트 풀이를 예약할 수 있습니다."}</li>
               </ul>
-              <p className="mt-2 text-sm text-[color:var(--foreground-strong)]">지금은 종료해도 됩니다.</p>
+              <p className="mt-2 text-sm text-[color:var(--foreground-strong)]">기록에서 다음 복습 신호를 정리했습니다.</p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <Link href="/app/review?mode=first" className="w-full sm:w-auto">
