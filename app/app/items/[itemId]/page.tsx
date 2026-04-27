@@ -24,39 +24,40 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
 
   const detail = await reviewOsService.getWrongAnswerDetail(session.userId, session.email, itemId);
   if (!detail) notFound();
+  const resolvedDetail = detail;
 
   const mode =
-    parseAppraisalMode(typeof detail.item.rawPayload?.mode === "string" ? detail.item.rawPayload.mode : null) ??
-    getAppraisalMode(detail.item.examName);
+    parseAppraisalMode(typeof resolvedDetail.item.rawPayload?.mode === "string" ? resolvedDetail.item.rawPayload.mode : null) ??
+    getAppraisalMode(resolvedDetail.item.examName);
   const isSecond = mode === "second";
-  const note = buildDetailStudyNote(detail);
+  const note = buildDetailStudyNote(resolvedDetail);
   const rewriteSourceItemId =
-    typeof detail.item.rawPayload?.rewrite_source_item_id === "string"
-      ? detail.item.rawPayload.rewrite_source_item_id
-      : typeof detail.item.rawPayload?.user_confirmed_fields === "object" &&
-          detail.item.rawPayload.user_confirmed_fields &&
-          typeof (detail.item.rawPayload.user_confirmed_fields as Record<string, unknown>).rewrite_source_item_id === "string"
-        ? ((detail.item.rawPayload.user_confirmed_fields as Record<string, unknown>).rewrite_source_item_id as string)
+    typeof resolvedDetail.item.rawPayload?.rewrite_source_item_id === "string"
+      ? resolvedDetail.item.rawPayload.rewrite_source_item_id
+      : typeof resolvedDetail.item.rawPayload?.user_confirmed_fields === "object" &&
+          resolvedDetail.item.rawPayload.user_confirmed_fields &&
+          typeof (resolvedDetail.item.rawPayload.user_confirmed_fields as Record<string, unknown>).rewrite_source_item_id === "string"
+        ? ((resolvedDetail.item.rawPayload.user_confirmed_fields as Record<string, unknown>).rewrite_source_item_id as string)
         : null;
   const rewriteSourceDetail =
     isSecond && rewriteSourceItemId
       ? await reviewOsService.getWrongAnswerDetail(session.userId, session.email, rewriteSourceItemId)
       : null;
-  const rewriteComparison = buildRewriteComparisonNote(detail, note, rewriteSourceDetail);
-  const title = detail.item.problemTitle ?? detail.item.problemIdentifier ?? note.title;
-  const calculatorWorkflow = getCalculatorWorkflowForSubject(detail.item.subjectLabel);
+  const rewriteComparison = buildRewriteComparisonNote(resolvedDetail, note, rewriteSourceDetail);
+  const title = resolvedDetail.item.problemTitle ?? resolvedDetail.item.problemIdentifier ?? note.title;
+  const calculatorWorkflow = getCalculatorWorkflowForSubject(resolvedDetail.item.subjectLabel);
   const hasCalculationMistake = hasCalculationSignal([
-    detail.item.userReasonText,
-    detail.item.userReasonPreset,
-    detail.item.problemTitle,
-    detail.item.correctAnswer,
-    detail.item.userAnswer,
+    resolvedDetail.item.userReasonText,
+    resolvedDetail.item.userReasonPreset,
+    resolvedDetail.item.problemTitle,
+    resolvedDetail.item.correctAnswer,
+    resolvedDetail.item.userAnswer,
     note.weakPoint,
     note.coreLine,
     note.missingIssue,
     note.weakStructurePoint,
     note.rewriteInstruction,
-    ...detail.tags.flatMap((tag) => [tag.topicTag, tag.mistakeType, tag.taskType]),
+    ...resolvedDetail.tags.flatMap((tag) => [tag.topicTag, tag.mistakeType, tag.taskType]),
   ]);
   const secondCompletionWork = rewriteComparison
     ? "문단 다시쓰기를 저장하고 전/후 비교까지 확인했습니다."
@@ -66,8 +67,8 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
     ? `다음 review는 ${note.nextReviewDate}로 자동 예약됩니다.`
     : `다음 cue: ${note.rewriteInstruction ?? "가장 큰 간극 1개를 문단 다시쓰기로 보강합니다."}`;
   const payloadTaxonomy =
-    readTaxonomyClassificationPayload(detail.item.derivedPayload) ??
-    readTaxonomyClassificationPayload(detail.item.rawPayload);
+    readTaxonomyClassificationPayload(resolvedDetail.item.derivedPayload) ??
+    readTaxonomyClassificationPayload(resolvedDetail.item.rawPayload);
   const taxonomyCandidate = resolveTaxonomyCandidate(payloadTaxonomy);
 
   return (
@@ -77,7 +78,7 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
           <div className="max-w-[66ch] space-y-3">
             <div className="flex flex-wrap gap-2">
               <QuietPill>{isSecond ? "감평 2차" : "감평 1차"}</QuietPill>
-              <QuietPill>{detail.item.subjectLabel}</QuietPill>
+              <QuietPill>{resolvedDetail.item.subjectLabel}</QuietPill>
               <QuietPill>{note.noteLabel}</QuietPill>
             </div>
             <h2 className="text-2xl font-semibold tracking-[-0.035em] text-[color:var(--foreground-strong)]">{title}</h2>
@@ -202,7 +203,7 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
                       {note.keyTerms.length > 0 ? (
                         note.keyTerms.map((term) => <StudyCue key={term}>{term}</StudyCue>)
                       ) : (
-                        <StudyCue>{detail.item.subjectLabel}</StudyCue>
+                        <StudyCue>{resolvedDetail.item.subjectLabel}</StudyCue>
                       )}
                     </div>
                   </div>
@@ -210,8 +211,8 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
               </section>
 
               <section className="grid gap-4 lg:grid-cols-2">
-                <SourceBlock label="기준 답안 / 강평" value={detail.item.correctAnswer} />
-                <SourceBlock label="내 답안" value={detail.item.userAnswer} />
+                <SourceBlock label="기준 답안 / 강평" value={resolvedDetail.item.correctAnswer} />
+                <SourceBlock label="내 답안" value={resolvedDetail.item.userAnswer} />
               </section>
 
               <ArtifactBlock tone="review" eyebrow="교정노트" title={note.noteCard}>
@@ -263,7 +264,7 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
                   {note.keyTerms.length > 0 ? (
                     note.keyTerms.map((term) => <StudyCue key={term}>{term}</StudyCue>)
                   ) : (
-                    <StudyCue>{detail.item.subjectLabel}</StudyCue>
+                    <StudyCue>{resolvedDetail.item.subjectLabel}</StudyCue>
                   )}
                 </div>
               </div>
@@ -275,8 +276,8 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
           </section>
 
           <section className="grid gap-4 lg:grid-cols-2">
-            <SourceBlock label="정답 / 근거" value={detail.item.correctAnswer} />
-            <SourceBlock label="내 답 / 선택" value={detail.item.userAnswer} />
+            <SourceBlock label="정답 / 근거" value={resolvedDetail.item.correctAnswer} />
+            <SourceBlock label="내 답 / 선택" value={resolvedDetail.item.userAnswer} />
           </section>
 
           <ArtifactBlock tone="review" eyebrow="오답노트" title={note.noteCard}>
