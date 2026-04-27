@@ -59,6 +59,39 @@ function getWeekKey(now = new Date()) {
   return date.toISOString().slice(0, 10);
 }
 
+function containsSmokeSeedText(value: string | null | undefined) {
+  if (!value) return false;
+  return /e2e|smoke|스모크/i.test(value);
+}
+
+function isSmokeSeedItem(item: Pick<WrongAnswerItemRecord, "sourceLabel" | "problemTitle" | "rawQuestionText" | "rawAnswerText">) {
+  return (
+    containsSmokeSeedText(item.sourceLabel) ||
+    containsSmokeSeedText(item.problemTitle) ||
+    containsSmokeSeedText(item.rawQuestionText) ||
+    containsSmokeSeedText(item.rawAnswerText)
+  );
+}
+
+function isSmokeSeedQueueItem(item: Pick<ReviewQueueCard, "subjectLabel" | "problemTitle" | "reviewReason" | "topicTag">) {
+  return (
+    containsSmokeSeedText(item.subjectLabel) ||
+    containsSmokeSeedText(item.problemTitle) ||
+    containsSmokeSeedText(item.reviewReason) ||
+    containsSmokeSeedText(item.topicTag)
+  );
+}
+
+function isSmokeSeedStudyLog(log: { sourceLabel: string; notUnderstood: string; revisitNeeded: string }) {
+  return containsSmokeSeedText(log.sourceLabel) || containsSmokeSeedText(log.notUnderstood) || containsSmokeSeedText(log.revisitNeeded);
+}
+
+function isSmokeSeedWeeklySummary(summary: WeeklyLearningSummaryRecord | null) {
+  if (!summary) return false;
+  if (containsSmokeSeedText(summary.summaryText)) return true;
+  return [...summary.topMistakeTypes, ...summary.topTopics, ...summary.nextWeekFocus].some((value) => containsSmokeSeedText(value));
+}
+
 function rankQueueItem(item: {
   recurrenceCount: number;
   confidence: string;
@@ -784,7 +817,9 @@ export class ReviewOsService {
   }
 
   listWrongAnswerItems(userId: string, email: string | null, limit = 20) {
-    return this.ensureAccess(userId, email).then(() => reviewOsRepository.listWrongAnswerItems(userId, limit));
+    return this.ensureAccess(userId, email)
+      .then(() => reviewOsRepository.listWrongAnswerItems(userId, Math.max(limit + 20, limit)))
+      .then((items) => items.filter((item) => !isSmokeSeedItem(item)).slice(0, limit));
   }
 
   getWrongAnswerDetail(userId: string, email: string | null, itemId: string): Promise<WrongAnswerDetail | null> {
@@ -862,7 +897,9 @@ export class ReviewOsService {
     const recentItems = targetExamName
       ? rawRecentItems.filter((item) => item.examName === targetExamName)
       : rawRecentItems;
-    const focus = makeTodayFocus(queue, recentItems, preferredMode);
+    const visibleQueue = queue.filter((item) => !isSmokeSeedQueueItem(item));
+    const visibleRecentItems = recentItems.filter((item) => !isSmokeSeedItem(item));
+    const focus = makeTodayFocus(visibleQueue, visibleRecentItems, preferredMode);
     await reviewOsRepository.insertActionSeed(userId, {
       sourceType: "today_focus",
       seedType: "summary",
@@ -884,7 +921,7 @@ export class ReviewOsService {
       renderedText: focus.nextAction,
       rawPayload: { nextActionType: focus.nextActionType, sourceQueueId: focus.sourceQueueId, sourceItemId: focus.sourceItemId },
     });
-    await reviewOsRepository.logUsageEvent(userId, "today_focus_view", "today_focus", null, { queueCount: queue.length });
+    await reviewOsRepository.logUsageEvent(userId, "today_focus_view", "today_focus", null, { queueCount: visibleQueue.length });
     return focus;
   }
 
@@ -938,12 +975,12 @@ export class ReviewOsService {
     await this.ensureAccess(userId, email);
     const weekKey = getWeekKey();
     const existing = await reviewOsRepository.getWeeklySummary(userId, weekKey);
-    if (existing) {
+    if (existing && !isSmokeSeedWeeklySummary(existing)) {
       await reviewOsRepository.logUsageEvent(userId, "weekly_summary_view", "weekly_summary", existing.id, { weekKey });
       return existing;
     }
 
-    const items = await reviewOsRepository.listWrongAnswerItems(userId, 50);
+    const items = (await reviewOsRepository.listWrongAnswerItems(userId, 70)).filter((item) => !isSmokeSeedItem(item));
     const recentWeekItems = items.filter((item) => Date.now() - Date.parse(item.createdAt) <= 7 * 86_400_000);
     if (recentWeekItems.length === 0) return null;
 
@@ -1036,7 +1073,8 @@ export class ReviewOsService {
 
   async listStudyLogs(userId: string, email: string | null, mode?: "first" | "second", limit = 10) {
     await this.ensureAccess(userId, email);
-    return reviewOsRepository.listStudyLogs(userId, mode, limit);
+    const logs = await reviewOsRepository.listStudyLogs(userId, mode, Math.max(limit + 10, limit));
+    return logs.filter((log) => !isSmokeSeedStudyLog(log)).slice(0, limit);
   }
 
   async getRecentStudyLog(userId: string, email: string | null, mode: "first" | "second") {
