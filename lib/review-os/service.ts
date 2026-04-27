@@ -889,7 +889,7 @@ export class ReviewOsService {
   async getTodayFocus(userId: string, email: string | null, preferredMode?: "first" | "second"): Promise<TodayFocus> {
     await this.ensureAccess(userId, email);
     const [rawQueue, rawRecentItems] = await Promise.all([
-      reviewOsRepository.listReviewQueue(userId, 5),
+      reviewOsRepository.listReviewQueue(userId, 30),
       reviewOsRepository.listWrongAnswerItems(userId, 8),
     ]);
     const targetExamName = preferredMode ? getModeLabel(preferredMode) : null;
