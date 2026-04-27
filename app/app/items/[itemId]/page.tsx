@@ -66,6 +66,10 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
   const secondCompletionNext = rewriteComparison
     ? `다음 review는 ${note.nextReviewDate}로 자동 예약됩니다.`
     : `다음 cue: ${note.rewriteInstruction ?? "가장 큰 간극 1개를 문단 다시쓰기로 보강합니다."}`;
+  const biggestSignal = isSecond ? note.missingIssue ?? note.weakPoint : note.weakPoint;
+  const nextActionLine = isSecond
+    ? note.rewriteInstruction ?? "문단 하나를 다시 쓰고 오늘 작업을 끝냅니다."
+    : "이번 항목에서는 이 조건 하나만 다시 확인합니다.";
   const payloadTaxonomy =
     readTaxonomyClassificationPayload(resolvedDetail.item.derivedPayload) ??
     readTaxonomyClassificationPayload(resolvedDetail.item.rawPayload);
@@ -92,6 +96,14 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
         </div>
       </section>
 
+      <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] p-5">
+        <p className="text-caption text-[color:var(--muted)]">이번 항목의 핵심</p>
+        <div className="mt-3 grid gap-3 md:grid-cols-2">
+          <MiniArtifact label="가장 큰 신호 1개" value={biggestSignal} />
+          <MiniArtifact label="다음 행동 1개" value={nextActionLine} />
+        </div>
+      </section>
+
       {isSecond ? (
         <section className="space-y-4">
           <SessionCompletionSummary
@@ -111,6 +123,11 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
               </>
             }
           />
+          <section className="grid gap-4 md:grid-cols-3">
+            <MiniArtifact label="누락 논점" value={note.missingIssue ?? note.weakPoint} />
+            <MiniArtifact label="문단 다시쓰기" value={note.rewriteInstruction ?? "문단 하나를 다시 쓰고 근거 문장을 보강합니다."} />
+            <MiniArtifact label="다음 review" value={note.nextReviewDate} />
+          </section>
           {rewriteComparison ? (
             <section className="rounded-[var(--radius-card)] border border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] p-5">
               <p className="text-caption text-[color:var(--cue-review)]">2차 rewrite 전/후 비교</p>
@@ -170,9 +187,9 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
 
             <div className="mt-4 space-y-4">
               <section className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-                <ArtifactBlock tone="brand" eyebrow="AI 요약" title={note.summary}>
+                <ArtifactBlock tone="brand" eyebrow="기록 요약" title={note.summary}>
                   <p className="text-sm leading-7 text-[color:var(--muted)]">
-                    AI는 점수를 판정하지 않고, 기록에서 다음 review/rewrite에 필요한 신호만 정리합니다.
+                    기록에서 다음 review/rewrite에 필요한 신호만 정리합니다. 최종 판정이나 자동 채점 결과는 제공하지 않습니다.
                   </p>
                 </ArtifactBlock>
                 <ArtifactBlock tone="review" eyebrow="다시쓰기 지시" title={note.rewriteInstruction ?? note.nextAction}>
@@ -230,66 +247,72 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
         </section>
       ) : (
         <>
-          <section className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-            <ArtifactBlock tone="brand" eyebrow="AI 요약" title={note.summary}>
-              <p className="text-sm leading-7 text-[color:var(--muted)]">
-                AI는 점수를 판정하지 않고, 기록에서 다음 review/rewrite에 필요한 신호만 정리합니다.
-              </p>
-            </ArtifactBlock>
-            <ArtifactBlock tone="review" eyebrow="다음 행동" title={note.nextAction}>
-              <p className="text-sm leading-7 text-[color:var(--muted)]">오늘은 이 행동 하나만 남기면 됩니다.</p>
-            </ArtifactBlock>
+          <section className="grid gap-4 md:grid-cols-3">
+            <MiniArtifact label="놓친 조건" value={note.weakPoint} />
+            <MiniArtifact label="핵심 개념" value={note.coreLine} />
+            <MiniArtifact label="다음 재시도" value={note.nextAction} />
           </section>
 
-          <section className="grid gap-4 md:grid-cols-2">
-            <ArtifactBlock tone="risk" eyebrow="부족한 부분" title={note.weakPoint}>
-              <p className="text-sm leading-7 text-[color:var(--muted)]">다음 review에서 먼저 확인할 오답 원인입니다.</p>
-            </ArtifactBlock>
-            <ArtifactBlock tone="focus" eyebrow="핵심 공식" title={note.coreLine}>
-              <p className="text-sm leading-7 text-[color:var(--muted)]">선지 판단 전에 먼저 고정할 구조입니다.</p>
-            </ArtifactBlock>
-          </section>
-
-          <ArtifactBlock tone="neutral" eyebrow="헷갈린 비교 포인트" title={note.comparisonPoint ?? note.weakPoint}>
-            <p className="text-sm leading-7 text-[color:var(--muted)]">
-              정답 근거와 내가 고른 판단이 갈라진 지점을 짧게 남깁니다.
-            </p>
+          <ArtifactBlock tone="review" eyebrow="실행 안내" title="이번 항목에서는 이 조건 하나만 다시 확인합니다.">
+            <p className="text-sm leading-7 text-[color:var(--muted)]">조건 확인 후 1문항만 짧게 재시도하고 오늘 review를 마칩니다.</p>
+            <div className="mt-4">
+              <Link href={`/app/capture?mode=${mode}`}>
+                <Button type="button">짧은 재시도 시작</Button>
+              </Link>
+            </div>
           </ArtifactBlock>
 
-          <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-6">
-            <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
-              <div>
-                <p className="text-caption text-[color:var(--muted)]">핵심 키워드</p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {note.keyTerms.length > 0 ? (
-                    note.keyTerms.map((term) => <StudyCue key={term}>{term}</StudyCue>)
-                  ) : (
-                    <StudyCue>{resolvedDetail.item.subjectLabel}</StudyCue>
-                  )}
+          <details className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-5">
+            <summary className="cursor-pointer list-none text-sm font-medium text-[color:var(--foreground-strong)]">세부 기록 펼쳐보기</summary>
+            <div className="mt-4 space-y-4">
+              <ArtifactBlock tone="neutral" eyebrow="기록 요약" title={note.summary}>
+                <p className="text-sm leading-7 text-[color:var(--muted)]">
+                  기록에서 다음 복습 신호를 정리합니다. 판정이나 자동 채점 결과를 제공하지 않습니다.
+                </p>
+              </ArtifactBlock>
+
+              <ArtifactBlock tone="neutral" eyebrow="헷갈린 비교 포인트" title={note.comparisonPoint ?? note.weakPoint}>
+                <p className="text-sm leading-7 text-[color:var(--muted)]">
+                  정답 근거와 내가 고른 판단이 갈라진 지점을 짧게 남깁니다.
+                </p>
+              </ArtifactBlock>
+
+              <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-6">
+                <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+                  <div>
+                    <p className="text-caption text-[color:var(--muted)]">핵심 키워드</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {note.keyTerms.length > 0 ? (
+                        note.keyTerms.map((term) => <StudyCue key={term}>{term}</StudyCue>)
+                      ) : (
+                        <StudyCue>{resolvedDetail.item.subjectLabel}</StudyCue>
+                      )}
+                    </div>
+                  </div>
+                  <div className="rounded-[var(--radius-md)] border border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] px-4 py-3">
+                    <p className="text-caption text-[color:var(--cue-review)]">다음 review 시점</p>
+                    <p className="mt-1 text-sm font-medium text-[color:var(--foreground-strong)]">{note.nextReviewDate}</p>
+                  </div>
                 </div>
-              </div>
-              <div className="rounded-[var(--radius-md)] border border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] px-4 py-3">
-                <p className="text-caption text-[color:var(--cue-review)]">다음 review 시점</p>
-                <p className="mt-1 text-sm font-medium text-[color:var(--foreground-strong)]">{note.nextReviewDate}</p>
-              </div>
-            </div>
-          </section>
+              </section>
 
-          <section className="grid gap-4 lg:grid-cols-2">
-            <SourceBlock label="정답 / 근거" value={resolvedDetail.item.correctAnswer} />
-            <SourceBlock label="내 답 / 선택" value={resolvedDetail.item.userAnswer} />
-          </section>
+              <section className="grid gap-4 lg:grid-cols-2">
+                <SourceBlock label="정답 / 근거" value={resolvedDetail.item.correctAnswer} />
+                <SourceBlock label="내 답 / 선택" value={resolvedDetail.item.userAnswer} />
+              </section>
 
-          <ArtifactBlock tone="review" eyebrow="오답노트" title={note.noteCard}>
-            <div className="mt-4 grid gap-3 md:grid-cols-2">
-              <p className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 text-sm leading-7 text-[color:var(--foreground-strong)]">
-                {note.notebookLine}
-              </p>
-              <p className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 text-sm leading-7 text-[color:var(--foreground-strong)]">
-                {note.recurrenceText}
-              </p>
+              <ArtifactBlock tone="review" eyebrow="오답노트" title={note.noteCard}>
+                <div className="mt-4 grid gap-3 md:grid-cols-2">
+                  <p className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 text-sm leading-7 text-[color:var(--foreground-strong)]">
+                    {note.notebookLine}
+                  </p>
+                  <p className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 text-sm leading-7 text-[color:var(--foreground-strong)]">
+                    {note.recurrenceText}
+                  </p>
+                </div>
+              </ArtifactBlock>
             </div>
-          </ArtifactBlock>
+          </details>
         </>
       )}
 

@@ -28,8 +28,8 @@ export default async function ReviewOsReviewPage({ searchParams }: PageProps) {
           <CardTitle>{mode === "second" ? "다시 볼 교정 포인트" : "오늘 다시 볼 항목"}</CardTitle>
           <CardDescription>
             {mode === "second"
-              ? "compare에서 잡힌 누락 논점 중 rewrite로 이어질 항목만 남깁니다."
-              : "반복 오답, 시간 초과, 확신 불일치를 줄일 항목만 보여줍니다."}
+              ? "기록에서 다음 복습 신호를 정리합니다. 각 항목은 문단 하나 다시쓰기로 이어집니다."
+              : "기록에서 다음 복습 신호를 정리합니다. 각 항목은 조건 1개 재확인과 재시도로 이어집니다."}
           </CardDescription>
         </CardHeader>
         <CardContent>
