@@ -60,3 +60,9 @@
 5. 2인 데이터 분리 스모크를 실행합니다.
    - `npx playwright test tests/e2e/data-isolation.spec.ts`
 6. 자격증명은 로컬 `.env` 또는 시크릿 매니저로만 관리하고, 저장소/PR 본문/스크린샷에 포함하지 않습니다.
+
+## G. Past Exam Taxonomy v1 gate
+- [ ] Taxonomy v1은 starter map이며 전체 커리큘럼 완전본이 아님을 운영팀이 인지했는지 확인
+- [ ] 20년치 기출 import는 raw text가 아니라 metadata부터 시작하는지 확인
+- [ ] AI 분류 결과는 `human_verified` 이전에 운영 신뢰 대상으로 사용하지 않는지 확인
+- [ ] 저작권이 불명확한 raw question corpus를 저장소/배포 산출물에 커밋하지 않았는지 확인
