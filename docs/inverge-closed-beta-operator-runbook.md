@@ -111,3 +111,11 @@ Fail 대응(즉시):
 - AI 분류(`ai_suggested`)는 운영 반영 전에 반드시 사람 검수(`human_verified`)를 거쳐야 합니다.
 - 저작권/이용권한이 불명확한 문제 원문 코퍼스는 저장소에 커밋하지 않습니다.
 - 메타데이터/택소노미는 학습 운영 분류와 계획 보조 용도로 사용합니다.
+
+
+## 9) Study log / wrong-answer taxonomy candidate v1 운영 지침
+- 본 분류는 **local heuristic v1**이며 자동 제안(candidates) 단계입니다.
+- `ai_suggested`는 후보 상태만 의미하며, 확정 분류가 아닙니다.
+- `human_verified`는 이후 운영자 수동 검수 플로우에서만 부여합니다.
+- confidence가 낮거나 primary가 비어 있으면 `needs_review`로 처리합니다.
+- taxonomy 후보를 최종 채점/최종 syllabus 판단 근거로 사용하지 않습니다.

@@ -12,6 +12,11 @@ import {
 import { getEntitlementLimit } from "@/lib/review-os/entitlements";
 import { reviewOsRepository } from "@/lib/review-os/repository";
 import { resolveReviewSchedule, resolveScheduleOverrideDate } from "@/lib/review-os/scheduling";
+import {
+  classifyStudyLogTaxonomy,
+  classifyWrongAnswerTaxonomy,
+  type TaxonomyClassificationCandidate,
+} from "@/lib/review-os/taxonomy-classification";
 import type {
   AccessState,
   AdminAlphaFeed,
@@ -638,6 +643,40 @@ export class ReviewOsService {
       const effectiveNextReviewDate = input.nextReviewDate ?? schedule.nextReviewDate;
       const queueDueAt = schedule.retryDueAt ?? resolveScheduleOverrideDate(effectiveNextReviewDate, schedule.reviewDueAt);
 
+      let taxonomyClassification: {
+        primaryNodeId: string | null;
+        candidates: TaxonomyClassificationCandidate[];
+        classificationStatus: "ai_suggested" | "needs_review";
+        classificationConfidence: number;
+        classifierSource: "local_taxonomy_v1";
+      } | null = null;
+      try {
+        const taxonomy = classifyWrongAnswerTaxonomy({
+          examName: normalizedInput.examName,
+          mode,
+          subjectLabel: normalizedInput.subjectLabel,
+          problemTitle: normalizedInput.problemTitle,
+          rawQuestionText: normalizedInput.rawQuestionText,
+          userReasonText: normalizedInput.userReasonText,
+          userReasonPreset: normalizedInput.userReasonPreset,
+          keyConcepts: normalizedInput.keyConcepts,
+          coreFormula: normalizedInput.coreFormula,
+          comparisonPoint: normalizedInput.comparisonPoint,
+          missingIssue: normalizedInput.missingIssue,
+          weakStructurePoint: normalizedInput.weakStructurePoint,
+          weakApplicationSentence: normalizedInput.weakApplicationSentence,
+        });
+        taxonomyClassification = {
+          primaryNodeId: taxonomy.primary?.taxonomyNodeId ?? null,
+          candidates: taxonomy.candidates,
+          classificationStatus: taxonomy.classificationStatus,
+          classificationConfidence: taxonomy.classificationConfidence,
+          classifierSource: "local_taxonomy_v1",
+        };
+      } catch (error) {
+        console.warn("[review-os] wrong answer taxonomy classification fallback", error);
+      }
+
       const item = await reviewOsRepository.insertWrongAnswerItem(
         userId,
         normalizedInput,
@@ -671,6 +710,7 @@ export class ReviewOsService {
             myAnswerSummary: input.myAnswerSummary ?? null,
             caseSummary: input.caseSummary ?? null,
           },
+          taxonomyClassification,
           rewrite_source_item_id: input.rewriteSourceItemId ?? null,
           rewrite_source_gap: input.rewriteSourceGap ?? null,
           rewrite_instruction: input.rewriteInstruction ?? null,
@@ -686,6 +726,7 @@ export class ReviewOsService {
           topicTag: artifacts.tags.topicTag,
           mistakeType: artifacts.tags.mistakeType,
           recurrenceCount: recurrence?.recurrenceCount ?? 1,
+          taxonomyClassification,
         },
       );
 
@@ -969,7 +1010,21 @@ export class ReviewOsService {
       revisitNeeded: input.revisitNeeded.trim(),
       timeSpentMinutes: input.timeSpentMinutes ?? null,
     };
-    const log = await reviewOsRepository.createStudyLog(userId, normalizedInput);
+    const taxonomy = classifyStudyLogTaxonomy({
+      mode: normalizedInput.mode,
+      subject: normalizedInput.subject,
+      studyType: normalizedInput.studyType,
+      sourceLabel: normalizedInput.sourceLabel,
+      notUnderstood: normalizedInput.notUnderstood,
+      revisitNeeded: normalizedInput.revisitNeeded,
+    });
+
+    const log = await reviewOsRepository.createStudyLog(userId, normalizedInput, {
+      taxonomyNodeId: taxonomy.primary?.taxonomyNodeId ?? null,
+      taxonomyCandidates: taxonomy.candidates,
+      taxonomyClassificationStatus: taxonomy.classificationStatus,
+      taxonomyClassificationConfidence: taxonomy.classificationConfidence,
+    });
     if (!log) throw new Error("review-os-study-log-missing-after-insert");
     await reviewOsRepository.logUsageEvent(userId, "study_log_create", "study_log", log.id, {
       mode: normalizedMode,

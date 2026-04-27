@@ -12,7 +12,8 @@
     "eval:ocr-extraction": "node scripts/eval-ocr-extraction.mjs",
     "test:e2e": "npx playwright test",
     "test:e2e:headed": "npx playwright test --headed",
-    "check:e2e-env": "node scripts/check-e2e-env.mjs"
+    "check:e2e-env": "node scripts/check-e2e-env.mjs",
+    "check:taxonomy": "node scripts/check-taxonomy-classification.mjs"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

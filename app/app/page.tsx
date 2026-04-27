@@ -58,6 +58,18 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
     }
   }
 
+  const recentStudyTaxonomyCandidates = recentStudyLog?.taxonomyCandidates ?? [];
+  const recentStudyTaxonomyNodeId = recentStudyLog?.taxonomyNodeId ?? null;
+  const recentStudyTaxonomyCandidate =
+    (recentStudyTaxonomyNodeId
+      ? recentStudyTaxonomyCandidates.find((candidate) => candidate.taxonomyNodeId === recentStudyTaxonomyNodeId)
+      : null) ??
+    recentStudyTaxonomyCandidates[0] ??
+    null;
+  const recentStudyTaxonomyLine = recentStudyTaxonomyCandidate
+    ? `범위 후보: ${recentStudyTaxonomyCandidate.subject} · ${recentStudyTaxonomyCandidate.unit} · ${recentStudyTaxonomyCandidate.topic}`
+    : null;
+
   return (
     <div className="space-y-7 md:space-y-8">
       <section className="space-y-3">
@@ -116,6 +128,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                 <p className="text-[color:var(--foreground-strong)]">
                   최근 기록: {recentStudyLog.subject} {recentStudyLog.sourceLabel} / 확신도 {recentStudyLog.confidence}
                 </p>
+                {recentStudyTaxonomyLine ? <p className="mt-1 text-xs text-[color:var(--muted)]">{recentStudyTaxonomyLine}</p> : null}
                 <p className="mt-1 text-xs text-[color:var(--muted)]">다음에는 이 범위를 먼저 다시 봅니다.</p>
               </div>
             ) : null}

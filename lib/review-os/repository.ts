@@ -28,6 +28,7 @@ import type {
   RecurrenceFeatureRecord,
   StudyLogInput,
   StudyLogRecord,
+  TaxonomyClassificationCandidate,
 } from "@/lib/review-os/types";
 
 function createUuid() {
@@ -40,6 +41,42 @@ function hashPayload(value: string) {
 
 function toStringArray(value: unknown) {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+}
+
+
+function toTaxonomyCandidates(value: unknown): TaxonomyClassificationCandidate[] {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .map((item) => {
+      if (!item || typeof item !== "object") return null;
+      const row = item as Record<string, unknown>;
+      if (typeof row.taxonomyNodeId !== "string") return null;
+      const candidate: TaxonomyClassificationCandidate = {
+        taxonomyNodeId: row.taxonomyNodeId,
+        mode: row.mode === "second" ? "second" : "first",
+        subject: typeof row.subject === "string" ? row.subject : "",
+        unit: typeof row.unit === "string" ? row.unit : "",
+        topic: typeof row.topic === "string" ? row.topic : "",
+        subtopic: typeof row.subtopic === "string" ? row.subtopic : undefined,
+        examSkill: typeof row.examSkill === "string" ? row.examSkill : "",
+        score: Number(row.score ?? 0),
+        confidence: Number(row.confidence ?? 0),
+        matchedKeywords: toStringArray(row.matchedKeywords),
+        classificationStatus: row.classificationStatus === "ai_suggested" ? "ai_suggested" : "needs_review",
+      };
+      return candidate;
+    })
+    .filter((candidate): candidate is TaxonomyClassificationCandidate => candidate !== null);
+}
+
+function toNullableNumber(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
 }
 
 function getAdminClient() {
@@ -200,6 +237,7 @@ function mapWeeklySummary(row: Record<string, unknown> | null): WeeklyLearningSu
 }
 
 function mapStudyLog(row: Record<string, unknown>): StudyLogRecord {
+  const taxonomyCandidates = toTaxonomyCandidates(row.taxonomy_candidates);
   return {
     id: String(row.id),
     userId: String(row.user_id),
@@ -211,6 +249,14 @@ function mapStudyLog(row: Record<string, unknown>): StudyLogRecord {
     notUnderstood: String(row.not_understood),
     revisitNeeded: String(row.revisit_needed),
     confidence: String(row.confidence) as StudyLogRecord["confidence"],
+    taxonomyNodeId: typeof row.taxonomy_node_id === "string" ? row.taxonomy_node_id : null,
+    taxonomyCandidates,
+    taxonomyClassificationStatus:
+      row.taxonomy_classification_status === "ai_suggested" || row.taxonomy_classification_status === "human_verified"
+        ? row.taxonomy_classification_status
+        : "needs_review",
+    taxonomyClassificationConfidence:
+      toNullableNumber(row.taxonomy_classification_confidence),
     createdAt: String(row.created_at),
     updatedAt: String(row.updated_at),
   };
@@ -813,7 +859,16 @@ export class ReviewOsRepository {
     return mapWeeklySummary(result.data as Record<string, unknown> | null);
   }
 
-  async createStudyLog(userId: string, input: StudyLogInput) {
+  async createStudyLog(
+    userId: string,
+    input: StudyLogInput,
+    taxonomy?: {
+      taxonomyNodeId: string | null;
+      taxonomyCandidates: TaxonomyClassificationCandidate[];
+      taxonomyClassificationStatus: "ai_suggested" | "needs_review";
+      taxonomyClassificationConfidence: number | null;
+    },
+  ) {
     const client = getUserClient(userId);
     const id = createUuid();
     const now = new Date().toISOString();
@@ -828,6 +883,10 @@ export class ReviewOsRepository {
       not_understood: input.notUnderstood,
       revisit_needed: input.revisitNeeded,
       confidence: input.confidence,
+      taxonomy_node_id: taxonomy?.taxonomyNodeId ?? null,
+      taxonomy_candidates: taxonomy?.taxonomyCandidates ?? [],
+      taxonomy_classification_status: taxonomy?.taxonomyClassificationStatus ?? "needs_review",
+      taxonomy_classification_confidence: taxonomy?.taxonomyClassificationConfidence ?? null,
       created_at: now,
       updated_at: now,
     });
