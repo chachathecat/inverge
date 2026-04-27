@@ -61,55 +61,93 @@ export function StudyLogIntakeForm({ mode, initialSubject, subjectOptions }: Pro
   }
 
   return (
-    <div className="space-y-4">
-      <p className="text-sm text-[color:var(--muted)]">공부한 범위를 짧게 남기면 다음 우선순위가 더 정확해집니다.</p>
-      <label className="block space-y-2 text-sm">
-        <span className="font-medium text-[color:var(--foreground-strong)]">과목</span>
-        <select value={subject} onChange={(event) => setSubject(event.target.value)} className="w-full rounded-[var(--radius-md)] border px-3 py-2">
-          {subjectOptions.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="block space-y-2 text-sm">
-        <span className="font-medium text-[color:var(--foreground-strong)]">학습 유형</span>
-        <select value={studyType} onChange={(event) => setStudyType(event.target.value as (typeof STUDY_TYPE_OPTIONS)[number])} className="w-full rounded-[var(--radius-md)] border px-3 py-2">
-          {STUDY_TYPE_OPTIONS.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="block space-y-2 text-sm">
-        <span className="font-medium text-[color:var(--foreground-strong)]">공부 범위 / 출처</span>
-        <input value={sourceLabel} onChange={(event) => setSourceLabel(event.target.value)} placeholder="예: 회계학 재고자산" className="w-full rounded-[var(--radius-md)] border px-3 py-2" />
-      </label>
-      <label className="block space-y-2 text-sm">
-        <span className="font-medium text-[color:var(--foreground-strong)]">소요 시간(분, 선택)</span>
-        <input value={timeSpentMinutes} onChange={(event) => setTimeSpentMinutes(event.target.value)} inputMode="numeric" className="w-full rounded-[var(--radius-md)] border px-3 py-2" />
-      </label>
-      <label className="block space-y-2 text-sm">
-        <span className="font-medium text-[color:var(--foreground-strong)]">이해가 어려웠던 점</span>
-        <textarea value={notUnderstood} onChange={(event) => setNotUnderstood(event.target.value)} className="min-h-20 w-full rounded-[var(--radius-md)] border px-3 py-2" />
-      </label>
-      <label className="block space-y-2 text-sm">
-        <span className="font-medium text-[color:var(--foreground-strong)]">다시 볼 범위</span>
-        <textarea value={revisitNeeded} onChange={(event) => setRevisitNeeded(event.target.value)} className="min-h-20 w-full rounded-[var(--radius-md)] border px-3 py-2" />
-      </label>
-      <label className="block space-y-2 text-sm">
-        <span className="font-medium text-[color:var(--foreground-strong)]">확신도</span>
-        <select value={confidence} onChange={(event) => setConfidence(event.target.value as ConfidenceLevel)} className="w-full rounded-[var(--radius-md)] border px-3 py-2">
-          <option value="낮음">낮음</option>
-          <option value="중간">중간</option>
-          <option value="높음">높음</option>
-        </select>
-      </label>
-      <p className="text-xs text-[color:var(--muted)]">모르는 것은 답이 아니라 다음 복습 신호입니다.</p>
+    <div className="space-y-5">
+      <p className="text-sm text-[color:var(--muted)]">기록에서 다음 복습 신호를 정리합니다. 각 항목은 한두 줄이면 충분합니다.</p>
+      <section className="space-y-3 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] p-3">
+        <p className="text-xs font-medium uppercase tracking-[0.12em] text-[color:var(--muted)]">1. 오늘 실제로 한 학습</p>
+        <label className="block space-y-2 text-sm">
+          <span className="font-medium text-[color:var(--foreground-strong)]">과목</span>
+          <select
+            value={subject}
+            onChange={(event) => setSubject(event.target.value)}
+            className="w-full rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-3 py-2"
+          >
+            {subjectOptions.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="block space-y-2 text-sm">
+          <span className="font-medium text-[color:var(--foreground-strong)]">학습 유형</span>
+          <select
+            value={studyType}
+            onChange={(event) => setStudyType(event.target.value as (typeof STUDY_TYPE_OPTIONS)[number])}
+            className="w-full rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-3 py-2"
+          >
+            {STUDY_TYPE_OPTIONS.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="block space-y-2 text-sm">
+          <span className="font-medium text-[color:var(--foreground-strong)]">공부 범위 / 출처</span>
+          <input
+            value={sourceLabel}
+            onChange={(event) => setSourceLabel(event.target.value)}
+            placeholder="예: 회계학 재고자산 / 2026 모의고사 2회"
+            className="w-full rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-3 py-2"
+          />
+        </label>
+        <label className="block space-y-2 text-sm">
+          <span className="font-medium text-[color:var(--foreground-strong)]">소요 시간(분, 선택)</span>
+          <input
+            value={timeSpentMinutes}
+            onChange={(event) => setTimeSpentMinutes(event.target.value)}
+            inputMode="numeric"
+            className="w-full rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-3 py-2"
+          />
+        </label>
+      </section>
+      <section className="space-y-3 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] p-3">
+        <p className="text-xs font-medium uppercase tracking-[0.12em] text-[color:var(--muted)]">2. 다음 복습 신호</p>
+        <label className="block space-y-2 text-sm">
+          <span className="font-medium text-[color:var(--foreground-strong)]">이해가 어려웠던 점</span>
+          <textarea
+            value={notUnderstood}
+            onChange={(event) => setNotUnderstood(event.target.value)}
+            placeholder="예: 감가수정에서 기준시점 반영 순서를 자주 헷갈림"
+            className="min-h-20 w-full rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-3 py-2"
+          />
+        </label>
+        <label className="block space-y-2 text-sm">
+          <span className="font-medium text-[color:var(--foreground-strong)]">다시 볼 범위</span>
+          <textarea
+            value={revisitNeeded}
+            onChange={(event) => setRevisitNeeded(event.target.value)}
+            placeholder="예: 기준시점/가격시점 판정 문제 5개 재풀이"
+            className="min-h-20 w-full rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-3 py-2"
+          />
+        </label>
+        <label className="block space-y-2 text-sm">
+          <span className="font-medium text-[color:var(--foreground-strong)]">확신도</span>
+          <select
+            value={confidence}
+            onChange={(event) => setConfidence(event.target.value as ConfidenceLevel)}
+            className="w-full rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-3 py-2"
+          >
+            <option value="낮음">낮음</option>
+            <option value="중간">중간</option>
+            <option value="높음">높음</option>
+          </select>
+        </label>
+      </section>
+      <p className="text-xs text-[color:var(--muted)]">오늘 실제로 본 범위를 남기면 다음 복습 후보가 정리됩니다.</p>
       {error ? <p className="text-xs text-[color:var(--danger)]">{error}</p> : null}
-      <Button type="button" onClick={() => void onSubmit()} disabled={submitting}>
+      <Button type="button" className="w-full sm:w-auto" onClick={() => void onSubmit()} disabled={submitting}>
         {submitting ? "저장 중" : "오늘 공부 기록 저장"}
       </Button>
     </div>
