@@ -338,7 +338,7 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
 }
 
 type ItemTaxonomyCandidate = {
-  taxonomyNodeId?: string;
+  taxonomyNodeId: string | undefined;
   subject: string;
   unit: string;
   topic: string;
