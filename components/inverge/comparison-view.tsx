@@ -221,9 +221,9 @@ export function ComparisonView({ examId, sessionId, subjectId, submissionId = "l
             <p className="text-caption font-medium text-[color:var(--muted)]">
               {exam.shortName} · {session.label} · {subject.name}
             </p>
-            <h1 className="mt-2 text-h1 font-medium text-[color:var(--foreground-strong)]">가장 큰 차이</h1>
+            <h1 className="mt-2 text-h1 font-medium text-[color:var(--foreground-strong)]">비교 · 간극 1개</h1>
             <p className="mt-3 max-w-2xl text-body text-[color:var(--muted)]">
-              여러 분석을 펼치지 않습니다. 이번 답안에서 먼저 고칠 곳 하나만 확인합니다.
+              점수 대신 보강할 한 가지에 집중합니다. 이 화면에서 바로 다시 쓰기로 이어집니다.
             </p>
           </div>
           <div className="flex flex-col items-end gap-3">
@@ -282,10 +282,10 @@ export function ComparisonView({ examId, sessionId, subjectId, submissionId = "l
         ) : null}
 
         {sourceStatus === "ready" ? (
-          <section className="grid flex-1 gap-6 py-6 lg:grid-cols-[1fr_300px]">
-            <article className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] shadow-[var(--shadow-focus)]">
+          <section className="grid flex-1 gap-6 py-6 lg:grid-cols-[1fr_280px]">
+            <article className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)]">
               <div className="px-6 py-7 sm:px-8 lg:px-10 lg:py-10">
-                <p className="text-caption font-medium text-[color:var(--muted)]">{enhancedGap.focusLabel}</p>
+                <p className="text-caption font-medium text-[color:var(--muted)]">이번 답안의 가장 큰 간극</p>
                 <h2 className="mt-3 max-w-3xl text-h2 font-medium leading-tight text-[color:var(--foreground-strong)]">
                   {enhancedGap.title}
                 </h2>
@@ -293,8 +293,8 @@ export function ComparisonView({ examId, sessionId, subjectId, submissionId = "l
                   {enhancedGap.summary}
                 </p>
 
-                <div className="mt-7 rounded-[var(--radius-md)] bg-[color:var(--surface-soft)] px-5 py-4">
-                  <p className="text-caption font-medium text-[color:var(--muted)]">다시 쓰기 안내</p>
+                <div className="mt-7 rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface-soft)] px-5 py-4">
+                  <p className="text-caption font-medium text-[color:var(--muted)]">다음 rewrite 지시</p>
                   <p className="mt-2 text-body leading-7 text-[color:var(--foreground-strong)]">
                     {enhancedGap.rewriteInstruction}
                   </p>
@@ -304,7 +304,7 @@ export function ComparisonView({ examId, sessionId, subjectId, submissionId = "l
                   <Link href={rewriteHref}>
                     <Button size="lg">
                       <PenLine className="mr-2 h-4 w-4" />
-                      이 차이를 반영해 다시 쓰기
+                      이번 간극 반영해 문단 다시 쓰기
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
                   </Link>
@@ -313,6 +313,13 @@ export function ComparisonView({ examId, sessionId, subjectId, submissionId = "l
             </article>
 
             <aside className="space-y-5">
+              <section className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] px-4 py-4">
+                <p className="text-caption font-medium text-[color:var(--muted)]">다음 행동</p>
+                <p className="mt-2 text-sm leading-7 text-[color:var(--foreground-strong)]">
+                  누락 논점 하나를 보강하는 문장을 바로 작성합니다.
+                </p>
+              </section>
+
               <section className="border-b border-[var(--border)] pb-5">
                 <div className="flex items-center gap-2 text-sm font-medium text-[color:var(--foreground-strong)]">
                   <FileText className="h-4 w-4" />
@@ -321,10 +328,10 @@ export function ComparisonView({ examId, sessionId, subjectId, submissionId = "l
                 <p className="mt-3 text-sm leading-7 text-[color:var(--muted)]">{userAnswerSummary}</p>
               </section>
 
-              <section className="border-b border-[var(--border)] pb-5">
-                <p className="text-sm font-medium text-[color:var(--foreground-strong)]">기준 구조 요약</p>
+              <details className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] px-4 py-4">
+                <summary className="cursor-pointer text-sm font-medium text-[color:var(--foreground-strong)]">기준 답안 구조 보기</summary>
                 <p className="mt-3 text-sm leading-7 text-[color:var(--muted)]">{getReferenceSummary(subject.id)}</p>
-              </section>
+              </details>
 
               <UpgradeNudge
                 feature="second.ai_enhancement"

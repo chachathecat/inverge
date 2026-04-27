@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -20,14 +20,8 @@ import {
   subscribeSecondExamStorage,
 } from "@/lib/inverge/second-exam-client";
 import { diagnoseSecondExamAnswer, summarizeSecondExamAnswer } from "@/lib/inverge/second-exam-diagnosis";
-import {
-  applyRewriteSeedAiOutput,
-  buildRewriteSeedAiInput,
-  type SecondExamAiOutput,
-} from "@/lib/inverge/second-exam-ai";
-import {
-  applySeedTemplateToDiagnosis,
-} from "@/lib/inverge/second-exam-seed-template";
+import { applyRewriteSeedAiOutput, buildRewriteSeedAiInput, type SecondExamAiOutput } from "@/lib/inverge/second-exam-ai";
+import { applySeedTemplateToDiagnosis } from "@/lib/inverge/second-exam-seed-template";
 import { useSecondExamSeedTemplate } from "@/lib/inverge/second-exam-seed-template-client";
 import { cn } from "@/lib/utils";
 
@@ -264,8 +258,8 @@ export function RewriteView({ examId, sessionId, subjectId, submissionId = "late
       setStatus("error");
       setErrorMessage(
         derived.changedFromOriginal
-          ? `援먯젙 ?듭븞??議곌툑 ???묒꽦??二쇱꽭?? 理쒖냼 ${seed.minimumLength}??湲곗??낅땲??`
-          : "?댁쟾 ?듭븞怨??ㅻⅨ 援먯젙 臾몄옣???꾩슂?⑸땲??",
+          ? `문단을 조금 더 보강해 주세요. 최소 ${seed.minimumLength}자 기준입니다.`
+          : "이전 답안과 다른 보강 문장을 먼저 작성해 주세요.",
       );
       return;
     }
@@ -317,13 +311,13 @@ export function RewriteView({ examId, sessionId, subjectId, submissionId = "late
       <div className="mx-auto flex min-h-screen w-full max-w-[1080px] flex-col px-5 py-8 sm:px-8 lg:py-10">
         <header className="flex flex-col gap-5 border-b border-[var(--border)] pb-6 sm:flex-row sm:items-end sm:justify-between">
           <div>
-          <p className="text-caption font-medium text-[color:var(--muted)]">
-            {exam.shortName} 쨌 {session.label} 쨌 {subject.name}
-          </p>
-          <h1 className="mt-2 text-h1 font-medium text-[color:var(--foreground-strong)]">?ㅼ떆 ?곌린</h1>
-          <p className="mt-3 max-w-2xl text-body text-[color:var(--muted)]">
-            ?대쾲 ?듭븞?먯꽌 媛???ш쾶 媛덈┛ ??吏?먮쭔 怨좎묩?덈떎.
-          </p>
+            <p className="text-caption font-medium text-[color:var(--muted)]">
+              {exam.shortName} · {session.label} · {subject.name}
+            </p>
+            <h1 className="mt-2 text-h1 font-medium text-[color:var(--foreground-strong)]">rewrite · 문단 하나 보강</h1>
+            <p className="mt-3 max-w-2xl text-body text-[color:var(--muted)]">
+              문단 하나를 다시 쓰고 저장하면 오늘의 보강 루프를 마무리합니다.
+            </p>
           </div>
           <div className="flex justify-end">
             <FocusAudioControl />
@@ -341,14 +335,14 @@ export function RewriteView({ examId, sessionId, subjectId, submissionId = "late
 
         {sourceStatus === "empty" ? (
           <section className="mt-6 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] px-6 py-8">
-            <h2 className="text-h2 font-medium text-[color:var(--foreground-strong)]">援먯젙???듭븞???꾩쭅 ?놁뒿?덈떎.</h2>
+            <h2 className="text-h2 font-medium text-[color:var(--foreground-strong)]">교정할 답안이 아직 없습니다.</h2>
             <p className="mt-3 max-w-2xl text-body text-[color:var(--muted)]">
-              write瑜?癒쇱? 留덉튂硫?compare瑜?嫄곗퀜 諛붾줈 rewrite濡??댁뼱吏묐땲??
+              먼저 답안을 제출하면 compare를 거쳐 rewrite로 이어집니다.
             </p>
             <div className="mt-6">
               <Link href={writeHref}>
                 <Button size="lg">
-                  ?듭븞 ?묒꽦?쇰줈 ?대룞
+                  답안 작성으로 이동
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
@@ -361,17 +355,17 @@ export function RewriteView({ examId, sessionId, subjectId, submissionId = "late
             <div className="flex items-start gap-3">
               <AlertCircle className="mt-1 h-4 w-4 text-[color:var(--status-red)]" />
               <div>
-                <h2 className="text-h3 font-medium text-[color:var(--foreground-strong)]">援먯젙??source瑜?李얠? 紐삵뻽?듬땲??</h2>
+                <h2 className="text-h3 font-medium text-[color:var(--foreground-strong)]">교정 기준 답안을 찾지 못했습니다.</h2>
                 <p className="mt-2 text-sm leading-7 text-[color:var(--muted)]">
-                  理쒖떊 ?듭븞 ??μ씠 ?꾩쭅 ?앸굹吏 ?딆븯?????덉뒿?덈떎. source瑜??ㅼ떆 遺덈윭?ㅺ굅??write濡??뚯븘媛?몄슂.
+                  저장이 아직 끝나지 않았을 수 있습니다. 다시 불러오거나 write 화면으로 돌아가세요.
                 </p>
                 <div className="mt-4 flex flex-wrap gap-2">
                   <Button type="button" variant="outline" onClick={() => void loadSource()}>
                     <RotateCcw className="mr-2 h-4 w-4" />
-                    ?ㅼ떆 遺덈윭?ㅺ린
+                    다시 불러오기
                   </Button>
                   <Link href={writeHref} className={buttonVariants()}>
-                    ?듭븞 ?묒꽦?쇰줈 ?대룞
+                    답안 작성으로 이동
                   </Link>
                 </div>
               </div>
@@ -380,149 +374,147 @@ export function RewriteView({ examId, sessionId, subjectId, submissionId = "late
         ) : null}
 
         {sourceStatus === "ready" ? (
-        <>
-        <section className="border-b border-[var(--border)] py-7">
-          <p className="text-caption font-medium text-[color:var(--muted)]">媛????李⑥씠</p>
-          <div className="mt-3 grid gap-5 lg:grid-cols-[1fr_260px] lg:items-end">
-            <div>
-              <h2 className="max-w-3xl text-h2 font-medium leading-tight text-[color:var(--foreground-strong)]">
-                {seed.gapTitle}
-              </h2>
-              <p className="mt-3 max-w-3xl text-body text-[color:var(--muted-strong)]">{seed.gapSummary}</p>
-            </div>
-            <div className="rounded-[var(--radius-md)] bg-[color:var(--surface-soft)] px-4 py-3">
-              <p className="text-caption text-[color:var(--muted)]">이번에 고칠 곳</p>
-              <p className="mt-1 text-sm font-medium text-[color:var(--foreground-strong)]">{seed.rewriteTarget}</p>
-            </div>
-          </div>
-        </section>
-
-        <section className="grid flex-1 gap-6 py-6 lg:grid-cols-[300px_1fr]">
-          <aside className="space-y-5 lg:pt-2">
-            <section>
-              <p className="text-caption font-medium text-[color:var(--muted)]">{seed.guidanceTitle}</p>
-              <ul className="mt-3 space-y-2 text-sm leading-7 text-[color:var(--muted-strong)]">
-                {seed.guidance.map((item) => (
-                  <li key={item} className="flex gap-2">
-                    <span className="mt-[11px] h-1 w-1 flex-none rounded-full bg-[color:var(--muted)]" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
+          <>
+            <section className="border-b border-[var(--border)] py-7">
+              <p className="text-caption font-medium text-[color:var(--muted)]">이번 rewrite 목표</p>
+              <div className="mt-3 grid gap-5 lg:grid-cols-[1fr_280px] lg:items-end">
+                <div>
+                  <h2 className="max-w-3xl text-h2 font-medium leading-tight text-[color:var(--foreground-strong)]">{seed.gapTitle}</h2>
+                  <p className="mt-3 max-w-3xl text-body text-[color:var(--muted-strong)]">{seed.gapSummary}</p>
+                </div>
+                <div className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface-soft)] px-4 py-3">
+                  <p className="text-caption text-[color:var(--muted)]">지금 할 일</p>
+                  <p className="mt-1 text-sm font-medium text-[color:var(--foreground-strong)]">{seed.rewriteTarget}</p>
+                </div>
+              </div>
             </section>
 
-            <UpgradeNudge
-              feature="second.ai_enhancement"
-              title="다시 쓰기 초안 보조"
-              helper="臾대즺 ?뚮옖?먯꽌??洹쒖튃 湲곕컲 seed濡?援먯젙?⑸땲?? Core遺??seed 臾몄옣?????먯뿰?ㅻ읇寃??ㅻ벉?듬땲??"
-              returnPath={currentPath}
-              context={{ examId: exam.id, sessionId: session.id, subjectId: subject.id, submissionId }}
-            />
+            <section className="grid flex-1 gap-6 py-6 lg:grid-cols-[300px_1fr]">
+              <aside className="space-y-5 lg:pt-2">
+                <section>
+                  <p className="text-caption font-medium text-[color:var(--muted)]">보강 기준</p>
+                  <ul className="mt-3 space-y-2 text-sm leading-7 text-[color:var(--muted-strong)]">
+                    {seed.guidance.map((item) => (
+                      <li key={item} className="flex gap-2">
+                        <span className="mt-[11px] h-1 w-1 flex-none rounded-full bg-[color:var(--muted)]" />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
 
-            <section className="border-t border-[var(--border)] pt-5">
-              <p className="text-caption font-medium text-[color:var(--muted)]">?댁쟾 ?듭븞 ?쇰?</p>
-              <p className="mt-3 text-sm leading-7 text-[color:var(--muted)]">
-                {summarizeSecondExamAnswer(submission?.answerText, 180)}
+                <UpgradeNudge
+                  feature="second.ai_enhancement"
+                  title="rewrite 문장 보조"
+                  helper="무료 플랜에서는 규칙 기반 seed를 보여줍니다. Core부터는 문장 흐름 보조를 추가로 제공합니다."
+                  returnPath={currentPath}
+                  context={{ examId: exam.id, sessionId: session.id, subjectId: subject.id, submissionId }}
+                />
+
+                <details className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] px-4 py-4">
+                  <summary className="cursor-pointer text-caption font-medium text-[color:var(--muted)]">이전 답안 요약 보기</summary>
+                  <p className="mt-3 text-sm leading-7 text-[color:var(--muted)]">
+                    {summarizeSecondExamAnswer(submission?.answerText, 180)}
+                  </p>
+                </details>
+
+                <section className="border-t border-[var(--border)] pt-5">
+                  <p className="text-caption text-[color:var(--muted)]">상태</p>
+                  <div className="mt-2 flex items-center gap-2 text-sm text-[color:var(--foreground-strong)]">
+                    {status === "saved" || status === "submitted" ? <Check className="h-4 w-4" /> : null}
+                    <span>
+                      {status === "submitted" ? "저장 완료" : status === "submitting" ? "저장 중" : `최근 저장 ${formatSavedAt(savedAt)}`}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-caption text-[color:var(--muted)]">
+                    {derived.length.toLocaleString("ko-KR")}자
+                    {derived.remainingLength > 0 ? ` · ${derived.remainingLength.toLocaleString("ko-KR")}자 더 필요` : ""}
+                  </p>
+                </section>
+              </aside>
+
+              <section className="flex min-h-[60vh] flex-col rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)]">
+                <div className="flex items-center justify-between gap-4 border-b border-[var(--border)] px-5 py-4">
+                  <p className="text-sm font-medium text-[color:var(--foreground-strong)]">{seed.focusLabel}</p>
+                  <p className="text-caption text-[color:var(--muted)]">문단 하나만 다시 씁니다</p>
+                </div>
+                <Textarea
+                  value={rewriteValue}
+                  onChange={(event) => {
+                    setRewrite(event.target.value);
+                    setHasCustomRewrite(true);
+                    if (status !== "idle") setStatus("idle");
+                    if (errorMessage) setErrorMessage("");
+                  }}
+                  className="min-h-[56vh] flex-1 resize-none rounded-none border-0 bg-transparent px-5 py-5 text-[16px] leading-8 text-[color:var(--foreground-strong)] shadow-none outline-none placeholder:text-[color:var(--muted)] focus:border-transparent focus:ring-0 sm:px-6"
+                  placeholder={seed.placeholder}
+                />
+              </section>
+            </section>
+
+            {errorMessage ? (
+              <p className="pb-3 text-sm text-[color:var(--status-red)]" role="alert">
+                {errorMessage}
               </p>
-            </section>
+            ) : null}
 
-            <section className="border-t border-[var(--border)] pt-5">
-              <p className="text-caption text-[color:var(--muted)]">상태</p>
-              <div className="mt-2 flex items-center gap-2 text-sm text-[color:var(--foreground-strong)]">
-                {status === "saved" || status === "submitted" ? <Check className="h-4 w-4" /> : null}
-                <span>
-                  {status === "submitted"
-                    ? "제출됨"
-                    : status === "submitting"
-                      ? "제출 중"
-                      : `저장 ${formatSavedAt(savedAt)}`}
-                </span>
+            {status === "submitted" ? (
+              <section className="mb-5 rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] px-5 py-4">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-[color:var(--foreground-strong)]">문단 보강을 저장했습니다.</p>
+                    <p className="mt-1 text-caption text-[color:var(--muted)]">
+                      오늘 작업은 여기까지입니다. 다음 review에 이 문단을 다시 확인합니다.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Link href={recordsHref} className={cn(buttonVariants({ variant: "ghost" }), "px-4")}>
+                      기록 보기
+                    </Link>
+                    <Link href={nextCompareHref} className={buttonVariants()}>
+                      다시 비교 확인
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </div>
+                </div>
+              </section>
+            ) : null}
+
+            {status === "submitted" ? (
+              <FeedbackPrompt
+                trigger="second_rewrite_completed"
+                context={{
+                  examId: exam.id,
+                  stage: "second",
+                  sessionId: session.id,
+                  subjectId: subject.id,
+                  submissionId,
+                  rewriteId: rewriteId || undefined,
+                }}
+                className="mb-5"
+              />
+            ) : null}
+
+            <footer className="sticky bottom-0 -mx-5 border-t border-[var(--border)] bg-[color:color-mix(in_srgb,var(--background)_92%,transparent)] px-5 py-4 backdrop-blur sm:-mx-8 sm:px-8">
+              <div className="mx-auto flex max-w-[1080px] items-center justify-between gap-3">
+                <Button type="button" variant="ghost" onClick={handleSaveDraft} disabled={status === "submitting"}>
+                  <Save className="mr-2 h-4 w-4" />
+                  임시 저장
+                </Button>
+                <Button
+                  type="button"
+                  size="lg"
+                  onClick={() => void handleSubmit()}
+                  disabled={status === "submitting" || status === "submitted"}
+                >
+                  <Send className="mr-2 h-4 w-4" />
+                  {status === "submitting" ? "저장 중" : "문단 보강 저장"}
+                </Button>
               </div>
-              <p className="mt-2 text-caption text-[color:var(--muted)]">
-                {derived.length.toLocaleString("ko-KR")}자
-                {derived.remainingLength > 0 ? ` · ${derived.remainingLength.toLocaleString("ko-KR")}자 더 필요` : ""}
-              </p>
-            </section>
-          </aside>
-
-          <section className="flex min-h-[60vh] flex-col rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] shadow-[var(--shadow-focus)]">
-            <div className="flex items-center justify-between gap-4 border-b border-[var(--border)] px-5 py-4">
-              <p className="text-sm font-medium text-[color:var(--foreground-strong)]">{seed.focusLabel}</p>
-              <p className="text-caption text-[color:var(--muted)]">이전 답안이 아니라 교정본</p>
-            </div>
-            <Textarea
-              value={rewriteValue}
-              onChange={(event) => {
-                setRewrite(event.target.value);
-                setHasCustomRewrite(true);
-                if (status !== "idle") setStatus("idle");
-                if (errorMessage) setErrorMessage("");
-              }}
-              className="min-h-[56vh] flex-1 resize-none rounded-none border-0 bg-transparent px-5 py-5 text-[16px] leading-8 text-[color:var(--foreground-strong)] shadow-none outline-none placeholder:text-[color:var(--muted)] focus:border-transparent focus:ring-0 sm:px-6"
-              placeholder={seed.placeholder}
-            />
-          </section>
-        </section>
-
-        {errorMessage ? (
-          <p className="pb-3 text-sm text-[color:var(--status-red)]" role="alert">
-            {errorMessage}
-          </p>
-        ) : null}
-
-        {status === "submitted" ? (
-          <section className="mb-5 rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] px-5 py-4">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm font-medium text-[color:var(--foreground-strong)]">교정본을 저장했습니다.</p>
-                <p className="mt-1 text-caption text-[color:var(--muted)]">
-                  다음 비교에서도 같은 기준으로 다시 확인할 수 있습니다.
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Link href={recordsHref} className={cn(buttonVariants({ variant: "ghost" }), "px-4")}>
-                  기록 보기
-                </Link>
-                <Link href={nextCompareHref} className={buttonVariants()}>
-                  다음 비교
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </div>
-            </div>
-          </section>
-        ) : null}
-
-        {status === "submitted" ? (
-          <FeedbackPrompt
-            trigger="second_rewrite_completed"
-            context={{
-              examId: exam.id,
-              stage: "second",
-              sessionId: session.id,
-              subjectId: subject.id,
-              submissionId,
-              rewriteId: rewriteId || undefined,
-            }}
-            className="mb-5"
-          />
-        ) : null}
-
-        <footer className="sticky bottom-0 -mx-5 border-t border-[var(--border)] bg-[color:color-mix(in_srgb,var(--background)_92%,transparent)] px-5 py-4 backdrop-blur sm:-mx-8 sm:px-8">
-          <div className="mx-auto flex max-w-[1080px] items-center justify-between gap-3">
-            <Button type="button" variant="ghost" onClick={handleSaveDraft} disabled={status === "submitting"}>
-              <Save className="mr-2 h-4 w-4" />
-              임시 저장
-            </Button>
-            <Button type="button" size="lg" onClick={() => void handleSubmit()} disabled={status === "submitting" || status === "submitted"}>
-              <Send className="mr-2 h-4 w-4" />
-              {status === "submitting" ? "제출 중" : "교정본 제출"}
-            </Button>
-          </div>
-        </footer>
-        </>
+            </footer>
+          </>
         ) : null}
       </div>
     </main>
   );
 }
-

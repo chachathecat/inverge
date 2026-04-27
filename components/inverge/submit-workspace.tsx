@@ -176,7 +176,7 @@ export function SubmitWorkspace({ examId, sessionId, subjectId }: WorkScreenProp
             </p>
             <h1 className="mt-2 text-h1 font-medium text-[color:var(--foreground-strong)]">{subject.name} 답안 작성</h1>
             <p className="mt-3 max-w-2xl text-body text-[color:var(--muted)]">
-              비교는 제출 뒤에만 확인합니다. 지금은 답안 구조와 결론이 먼저 보이도록 차분하게 정리해 주세요.
+              지금 할 일은 답안 한 개를 끝내는 것입니다. 작성을 마치면 바로 비교 화면으로 넘어갑니다.
             </p>
           </div>
           <div className="flex flex-col items-end gap-3">
@@ -193,8 +193,13 @@ export function SubmitWorkspace({ examId, sessionId, subjectId }: WorkScreenProp
           </div>
         </header>
 
-        <section className="grid flex-1 gap-6 py-6 lg:grid-cols-[320px_1fr]">
+        <section className="grid flex-1 gap-6 py-6 lg:grid-cols-[300px_1fr]">
           <aside className="space-y-5 lg:pt-2">
+            <div className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] px-4 py-4">
+              <p className="text-caption font-medium text-[color:var(--muted)]">이번 순서</p>
+              <p className="mt-2 text-sm leading-7 text-[color:var(--foreground-strong)]">1) 답안 작성 → 2) 비교에서 간극 1개 확인</p>
+            </div>
+
             <div>
               <p className="text-caption font-medium text-[color:var(--muted)]">이번 문제</p>
               <h2 className="mt-2 text-h2 font-medium leading-tight text-[color:var(--foreground-strong)]">{prompt.title}</h2>
@@ -203,11 +208,11 @@ export function SubmitWorkspace({ examId, sessionId, subjectId }: WorkScreenProp
 
             <OcrAssistPanel
               title="답안 불러오기"
-              description="필요할 때만 사진에서 초안을 가져온 뒤 검토해서 반영합니다."
+              description="필요할 때만 초안을 가져와 확인 후 반영합니다."
               applyLabel="초안에 반영"
               directInputPlaceholder="답안 초안을 붙여 넣거나 사진에서 불러온 내용을 검토해 바로 고쳐 쓰세요."
               initialText={ocrPreview}
-              helperText="사진으로 불러온 답안도 바로 확정하지 않고, 검토한 뒤 현재 초안에만 반영합니다."
+              helperText="불러온 내용은 검토 후 초안에만 반영됩니다."
               onApply={(text, fileNames) => {
                 setAnswer(text);
                 setUploadedFiles(fileNames);
@@ -233,7 +238,7 @@ export function SubmitWorkspace({ examId, sessionId, subjectId }: WorkScreenProp
             </div>
           </aside>
 
-          <section className="flex min-h-[62vh] flex-col rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] shadow-[var(--shadow-focus)]">
+          <section className="flex min-h-[62vh] flex-col rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)]">
             <div className="border-b border-[var(--border)] px-5 py-4">
               <p className="text-sm font-medium text-[color:var(--foreground-strong)]">{subject.focusAxis}</p>
             </div>
