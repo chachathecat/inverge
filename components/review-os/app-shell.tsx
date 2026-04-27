@@ -5,7 +5,6 @@ import { usePathname, useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 
 import { RefinedShell } from "@/components/inverge/refined-primitives";
-import { ReviewOsModeSwitch } from "@/components/review-os/mode-switch";
 import { SignOutButton } from "@/components/shared/sign-out-button";
 import { getModeConfig, parseAppraisalMode, type AppraisalMode } from "@/lib/review-os/appraisal";
 import { cn } from "@/lib/utils";
@@ -69,7 +68,7 @@ export function ReviewOsAppShell({ title, description, email, mode, children, ri
       </div>
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <ReviewOsModeSwitch mode={currentMode} basePath="/app" />
+        <div className="text-sm text-[color:var(--muted)]">{config.label} 학습 실행 화면</div>
         <nav className="overflow-x-auto">
           <div className="flex min-w-max gap-2">
             {NAV_ITEMS.map((item) => (

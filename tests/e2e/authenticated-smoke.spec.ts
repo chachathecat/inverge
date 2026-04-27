@@ -14,6 +14,7 @@ test.describe('authenticated learner smoke', () => {
     await page.goto('/app?mode=first');
     await expect(page.getByRole('button', { name: /세트 풀이 시작|오늘 최우선 작업 시작/ })).toBeVisible();
     await expect(page.getByLabel('오늘 공부할 과목')).toBeVisible();
+    await expect(page.getByLabel('감정평가사 단계 선택')).toHaveCount(0);
     await page.getByLabel('오늘 공부할 과목').selectOption('회계학');
 
     await page.goto('/app/sets?mode=first&subject=회계학');
@@ -65,6 +66,7 @@ test.describe('authenticated learner smoke', () => {
   test('2차 flow smoke', async ({ page }) => {
     await page.goto('/app?mode=second');
     await expect(page.getByRole('button', { name: /오늘 최우선 작업 시작/ })).toBeVisible();
+    await expect(page.getByLabel('감정평가사 단계 선택')).toHaveCount(0);
 
     await page.goto('/app/write?mode=second');
     await expect(page.getByRole('heading', { name: '2차 답안 작성 워크스페이스' })).toBeVisible();
