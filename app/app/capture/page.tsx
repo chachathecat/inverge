@@ -1,13 +1,13 @@
 import { WrongAnswerCaptureForm } from "@/components/review-os/capture-form";
 import { ReviewOsFeedbackButton } from "@/components/review-os/feedback-button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { getModeConfig, resolveAppraisalMode } from "@/lib/review-os/appraisal";
+import { getModeConfig, normalizeSubjectForMode, resolveAppraisalMode } from "@/lib/review-os/appraisal";
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
 import { reviewOsService } from "@/lib/review-os/service";
 import { buildDetailStudyNote } from "@/lib/review-os/study-note";
 
 type PageProps = {
-  searchParams?: Promise<{ mode?: string; rewriteFrom?: string }>;
+  searchParams?: Promise<{ mode?: string; rewriteFrom?: string; subject?: string }>;
 };
 
 export default async function ReviewOsCapturePage({ searchParams }: PageProps) {
@@ -18,6 +18,7 @@ export default async function ReviewOsCapturePage({ searchParams }: PageProps) {
   if (!session.userId) return null;
 
   const mode = resolveAppraisalMode(profile, modeParam);
+  const initialSubject = normalizeSubjectForMode(query?.subject, mode);
   const config = getModeConfig(mode);
   const rewriteDetail =
     mode === "second" && rewriteFrom && session.email
@@ -70,6 +71,7 @@ export default async function ReviewOsCapturePage({ searchParams }: PageProps) {
             userId={session.userId}
             mode={mode}
             initialPreferredSubjects={profile?.preferredSubjects}
+            initialSubject={initialSubject}
             rewriteContext={rewriteContext}
           />
         </CardContent>

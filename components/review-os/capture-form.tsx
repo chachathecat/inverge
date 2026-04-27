@@ -31,6 +31,7 @@ type CaptureFormProps = {
   userId: string;
   mode: AppraisalMode;
   initialPreferredSubjects?: string[];
+  initialSubject?: string;
   workflow?: "default" | "second-write";
   rewriteContext?: {
     sourceItemId: string;
@@ -188,14 +189,17 @@ export function WrongAnswerCaptureForm({
   userId,
   mode,
   initialPreferredSubjects = [],
+  initialSubject,
   workflow = "default",
   rewriteContext = null,
 }: CaptureFormProps) {
   const router = useRouter();
   const config = getModeConfig(mode);
   const storageKey = { userId, feature: "capture-draft", entityId: mode };
-  const initialSubject =
-    initialPreferredSubjects.find((subject) => (config.subjects as readonly string[]).includes(subject)) ?? getDefaultSubject(mode);
+  const resolvedInitialSubject =
+    (initialSubject && (config.subjects as readonly string[]).includes(initialSubject) ? initialSubject : null) ??
+    initialPreferredSubjects.find((subject) => (config.subjects as readonly string[]).includes(subject)) ??
+    getDefaultSubject(mode);
   const [form, setForm] = useState<DraftState>(() => {
     const saved = loadReviewOsDraft<DraftState>(storageKey);
     if (saved) {
@@ -205,7 +209,7 @@ export function WrongAnswerCaptureForm({
       };
     }
     return {
-        subjectLabel: initialSubject,
+        subjectLabel: resolvedInitialSubject,
         sourceType: "manual",
         sourceLabel: "",
         problemTitle: rewriteContext?.sourceTitle ?? "",
@@ -213,26 +217,28 @@ export function WrongAnswerCaptureForm({
         rawQuestionText: "",
         correctAnswer: rewriteContext?.referenceSummary ?? "",
         userAnswer: "",
-        userReasonText: rewriteContext?.biggestGap ?? (mode === "second" ? secondDefaults(initialSubject).issue : firstDefaults(initialSubject).reason),
+        userReasonText:
+          rewriteContext?.biggestGap ??
+          (mode === "second" ? secondDefaults(resolvedInitialSubject).issue : firstDefaults(resolvedInitialSubject).reason),
         userReasonPreset: "",
         confidence: "중간",
         timeSpentSeconds: "",
         nextReviewDate: getDefaultNextReviewDate(mode),
-        keyConcepts: firstDefaults(initialSubject).concepts,
-        coreFormula: firstDefaults(initialSubject).formula,
-        comparisonPoint: firstDefaults(initialSubject).comparison,
-        missingIssue: rewriteContext?.biggestGap ?? secondDefaults(initialSubject).issue,
-        weakStructurePoint: secondDefaults(initialSubject).structure,
-        weakApplicationSentence: secondDefaults(initialSubject).sentence,
-        rewriteInstruction: rewriteContext?.rewriteInstruction ?? secondDefaults(initialSubject).rewrite,
-        referenceStructure: secondDefaults(initialSubject).structure,
+        keyConcepts: firstDefaults(resolvedInitialSubject).concepts,
+        coreFormula: firstDefaults(resolvedInitialSubject).formula,
+        comparisonPoint: firstDefaults(resolvedInitialSubject).comparison,
+        missingIssue: rewriteContext?.biggestGap ?? secondDefaults(resolvedInitialSubject).issue,
+        weakStructurePoint: secondDefaults(resolvedInitialSubject).structure,
+        weakApplicationSentence: secondDefaults(resolvedInitialSubject).sentence,
+        rewriteInstruction: rewriteContext?.rewriteInstruction ?? secondDefaults(resolvedInitialSubject).rewrite,
+        referenceStructure: secondDefaults(resolvedInitialSubject).structure,
         myAnswerSummary: rewriteContext?.myAnswerSummary ?? "",
-        caseSummary: secondDefaults(initialSubject).caseSummary,
+        caseSummary: secondDefaults(resolvedInitialSubject).caseSummary,
         issueRecall: "",
         outlineDraft: "",
         productionBeforeComparison: mode === "second",
         referenceAnswerAddedAfterProduction: mode === "second",
-        biggestGap: rewriteContext?.biggestGap ?? secondDefaults(initialSubject).issue,
+        biggestGap: rewriteContext?.biggestGap ?? secondDefaults(resolvedInitialSubject).issue,
         rawOcrText: "",
         rawExtractionJson: {},
         normalizedDraft: undefined,
@@ -294,7 +300,7 @@ export function WrongAnswerCaptureForm({
   }
 
   function buildStructuredDraft(base: DraftState, sourceText = base.rawQuestionText) {
-    const subject = pickSubject(sourceText, config.subjects, base.subjectLabel || initialSubject);
+    const subject = pickSubject(sourceText, config.subjects, base.subjectLabel || resolvedInitialSubject);
     const first = firstDefaults(subject);
     const second = secondDefaults(subject);
     return mode === "first"

@@ -168,11 +168,13 @@ export const MISTAKE_REASON_PRESETS = [
 ] as const;
 
 export const CONFIDENCE_OPTIONS = ["낮음", "중간", "높음"] as const;
+export const STUDY_TYPE_OPTIONS = ["기출", "기본서", "강의", "문제풀이", "암기", "기타"] as const;
 export const SOURCE_TYPE_OPTIONS = ["text", "image", "pdf", "manual"] as const;
 export const ENTITLEMENT_TIERS = ["free_trial", "core", "extra_credits_ready"] as const;
 
 export type SourceType = (typeof SOURCE_TYPE_OPTIONS)[number];
 export type ConfidenceLevel = (typeof CONFIDENCE_OPTIONS)[number];
+export type StudyType = (typeof STUDY_TYPE_OPTIONS)[number];
 export type EntitlementTier = (typeof ENTITLEMENT_TIERS)[number];
 export type InviteStatus = "pending" | "invited" | "active" | "blocked";
 export type ReviewQueueStatus = "pending" | "completed" | "skipped";
@@ -335,6 +337,24 @@ export type WeeklyLearningSummaryRecord = {
   topMistakeTypes: string[];
   topTopics: string[];
   nextWeekFocus: string[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type StudyLogInput = {
+  mode: "first" | "second";
+  subject: string;
+  studyType: StudyType;
+  sourceLabel: string;
+  timeSpentMinutes?: number | null;
+  notUnderstood: string;
+  revisitNeeded: string;
+  confidence: ConfidenceLevel;
+};
+
+export type StudyLogRecord = StudyLogInput & {
+  id: string;
+  userId: string;
   createdAt: string;
   updatedAt: string;
 };

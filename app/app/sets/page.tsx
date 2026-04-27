@@ -2,15 +2,16 @@ import { redirect } from "next/navigation";
 
 import { FirstSetSolvingForm } from "@/components/review-os/first-set-solving-form";
 import { ReviewOsFeedbackButton } from "@/components/review-os/feedback-button";
-import { resolveAppraisalMode } from "@/lib/review-os/appraisal";
+import { normalizeSubjectForMode, resolveAppraisalMode } from "@/lib/review-os/appraisal";
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
 
 type PageProps = {
-  searchParams?: Promise<{ mode?: string }>;
+  searchParams?: Promise<{ mode?: string; subject?: string }>;
 };
 
 export default async function FirstSetSolvingPage({ searchParams }: PageProps) {
-  const modeParam = (await searchParams)?.mode;
+  const query = await searchParams;
+  const modeParam = query?.mode;
   const { session, profile } = await getReviewOsServerContext(buildReviewOsReturnTo("/app/sets", modeParam));
   if (!session.userId) return null;
 
@@ -18,6 +19,8 @@ export default async function FirstSetSolvingPage({ searchParams }: PageProps) {
   if (mode !== "first") {
     redirect(`/app/session?mode=${mode}`);
   }
+
+  const subject = normalizeSubjectForMode(query?.subject, "first");
 
   return (
     <div className="space-y-6">
@@ -28,7 +31,7 @@ export default async function FirstSetSolvingPage({ searchParams }: PageProps) {
         </p>
       </section>
 
-      <FirstSetSolvingForm />
+      <FirstSetSolvingForm initialSubject={subject} />
 
       <ReviewOsFeedbackButton route="/app/sets" pageContext={{ mode: "first", section: "set-solving" }} />
     </div>

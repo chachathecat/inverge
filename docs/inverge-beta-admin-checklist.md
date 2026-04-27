@@ -17,6 +17,12 @@
 - [ ] 자격증명(이메일/비밀번호)을 저장소에 커밋하지 않음
 - [ ] E2E는 테스트 전용 자격증명으로만 실행
 
+## B-1. Study log migration gate (PR #44)
+- [ ] 운영 반영 전 `supabase/migrations/20260426_review_os_study_logs.sql` 적용
+- [ ] 마이그레이션 적용 후 `/app?mode=first` 수동 스모크
+- [ ] 마이그레이션 적용 후 `/app/study-log?mode=first` 수동 스모크
+- [ ] 마이그레이션 미적용 상태에서도 `/app?mode=first`가 최근 기록 없이 정상 렌더링되는지 확인
+
 ## C. Manual QA
 - [ ] invite pending 계정 확인
 - [ ] allowlist 허용 계정 확인

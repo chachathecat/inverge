@@ -29,6 +29,7 @@ import type {
   ReviewCompletionMetadata,
   WrongAnswerItemInput,
   WrongAnswerItemRecord,
+  StudyLogInput,
 } from "@/lib/review-os/types";
 
 const globalCache = globalThis as typeof globalThis & {
@@ -954,6 +955,38 @@ export class ReviewOsService {
     await this.ensureAccess(userId, email);
     await reviewOsRepository.createFeedback(userId, input);
     await reviewOsRepository.logUsageEvent(userId, "feedback_submit", "feedback_item", null, { route: input.route });
+  }
+
+  async createStudyLog(userId: string, email: string | null, input: StudyLogInput) {
+    await this.ensureAccess(userId, email);
+    const normalizedMode = input.mode === "second" ? "second" : "first";
+    const normalizedInput: StudyLogInput = {
+      ...input,
+      mode: normalizedMode,
+      subject: normalizeSubjectForMode(input.subject, normalizedMode),
+      sourceLabel: input.sourceLabel.trim(),
+      notUnderstood: input.notUnderstood.trim(),
+      revisitNeeded: input.revisitNeeded.trim(),
+      timeSpentMinutes: input.timeSpentMinutes ?? null,
+    };
+    const log = await reviewOsRepository.createStudyLog(userId, normalizedInput);
+    if (!log) throw new Error("review-os-study-log-missing-after-insert");
+    await reviewOsRepository.logUsageEvent(userId, "study_log_create", "study_log", log.id, {
+      mode: normalizedMode,
+      subject: log.subject,
+      studyType: log.studyType,
+    });
+    return log;
+  }
+
+  async listStudyLogs(userId: string, email: string | null, mode?: "first" | "second", limit = 10) {
+    await this.ensureAccess(userId, email);
+    return reviewOsRepository.listStudyLogs(userId, mode, limit);
+  }
+
+  async getRecentStudyLog(userId: string, email: string | null, mode: "first" | "second") {
+    const logs = await this.listStudyLogs(userId, email, mode, 1);
+    return logs[0] ?? null;
   }
 
   getAdminFeed(): Promise<AdminAlphaFeed> {
