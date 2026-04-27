@@ -58,9 +58,13 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
     }
   }
 
+  const recentStudyTaxonomyCandidates = recentStudyLog?.taxonomyCandidates ?? [];
+  const recentStudyTaxonomyNodeId = recentStudyLog?.taxonomyNodeId ?? null;
   const recentStudyTaxonomyCandidate =
-    recentStudyLog?.taxonomyCandidates?.find((candidate) => candidate.taxonomyNodeId === recentStudyLog.taxonomyNodeId) ??
-    recentStudyLog?.taxonomyCandidates?.[0] ??
+    (recentStudyTaxonomyNodeId
+      ? recentStudyTaxonomyCandidates.find((candidate) => candidate.taxonomyNodeId === recentStudyTaxonomyNodeId)
+      : null) ??
+    recentStudyTaxonomyCandidates[0] ??
     null;
   const recentStudyTaxonomyLine = recentStudyTaxonomyCandidate
     ? `범위 후보: ${recentStudyTaxonomyCandidate.subject} · ${recentStudyTaxonomyCandidate.unit} · ${recentStudyTaxonomyCandidate.topic}`
