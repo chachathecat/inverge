@@ -31,28 +31,33 @@ export function StudyLogIntakeForm({ mode, initialSubject, subjectOptions }: Pro
     }
     setSubmitting(true);
     setError("");
-    const response = await fetch("/api/os/study-logs", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        mode,
-        subject,
-        studyType,
-        sourceLabel: sourceLabel.trim(),
-        timeSpentMinutes: timeSpentMinutes.trim() ? Number(timeSpentMinutes) : null,
-        notUnderstood: notUnderstood.trim(),
-        revisitNeeded: revisitNeeded.trim(),
-        confidence,
-      }),
-    });
-    const payload = (await response.json().catch(() => null)) as { ok?: boolean } | null;
-    if (!response.ok || !payload?.ok) {
+    try {
+      const response = await fetch("/api/os/study-logs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode,
+          subject,
+          studyType,
+          sourceLabel: sourceLabel.trim(),
+          timeSpentMinutes: timeSpentMinutes.trim() ? Number(timeSpentMinutes) : null,
+          notUnderstood: notUnderstood.trim(),
+          revisitNeeded: revisitNeeded.trim(),
+          confidence,
+        }),
+      });
+      const payload = (await response.json().catch(() => null)) as { ok?: boolean } | null;
+      if (!response.ok || !payload?.ok) {
+        setError("공부 기록 저장 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.");
+        return;
+      }
+      router.push(`/app?mode=${mode}&subject=${encodeURIComponent(subject)}`);
+      router.refresh();
+    } catch {
       setError("공부 기록 저장 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.");
+    } finally {
       setSubmitting(false);
-      return;
     }
-    router.push(`/app?mode=${mode}&subject=${encodeURIComponent(subject)}`);
-    router.refresh();
   }
 
   return (

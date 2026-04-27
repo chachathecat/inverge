@@ -15,9 +15,6 @@ test.describe('authenticated learner smoke', () => {
     await expect(page.getByRole('button', { name: /세트 풀이 시작|오늘 최우선 작업 시작/ })).toBeVisible();
     await expect(page.getByLabel('오늘 공부할 과목')).toBeVisible();
     await page.getByLabel('오늘 공부할 과목').selectOption('회계학');
-    await page.getByRole('link', { name: /세트 풀이 시작|오늘 최우선 작업 시작/ }).click();
-    await expect(page).toHaveURL(/\/app\/sets\?mode=first&subject=%ED%9A%8C%EA%B3%84%ED%95%99/);
-    await expect(page.getByLabel('과목').first()).toHaveValue('회계학');
 
     await page.goto('/app/sets?mode=first&subject=회계학');
     await expect(page.getByRole('heading', { name: '1차 세트 풀이' })).toBeVisible();

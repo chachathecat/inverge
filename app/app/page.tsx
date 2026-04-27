@@ -49,7 +49,14 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
   const primaryReason = focus.reason ?? selectedQueueItem?.reviewReason ?? focus.lines[0];
   const estimatedMinutes = focus.estimatedDurationMinutes ?? 25;
   const primaryTaskLabel = focus.primaryTaskLabel ?? (selectedQueueItem ? `${selectedQueueItem.subjectLabel} 복습` : config.nextActionFallback);
-  const recentStudyLog = mode === "first" ? await reviewOsService.getRecentStudyLog(session.userId, session.email, "first") : null;
+  let recentStudyLog: Awaited<ReturnType<typeof reviewOsService.getRecentStudyLog>> | null = null;
+  if (mode === "first") {
+    try {
+      recentStudyLog = await reviewOsService.getRecentStudyLog(session.userId, session.email, "first");
+    } catch (error) {
+      console.warn("[review-os] failed to load optional recent study log", error);
+    }
+  }
 
   return (
     <div className="space-y-7 md:space-y-8">
