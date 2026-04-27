@@ -61,6 +61,14 @@ test.describe('authenticated learner smoke', () => {
     await expect(doneSummary).toBeVisible();
     await page.getByRole('button', { name: '다시 볼 항목 확인' }).click();
     await expect(page).toHaveURL(/\/app\/review\?mode=first/);
+
+    await page.goto('/app/study-log?mode=first&subject=회계학');
+    await page.getByLabel('공부 범위 / 출처').fill(`E2E taxonomy log ${Date.now()}`);
+    await page.getByLabel('이해가 어려웠던 점').fill('재고자산 저가법 계산에서 기준이 흔들렸습니다.');
+    await page.getByLabel('다시 볼 범위').fill('재고자산 저가법 기준을 다시 확인합니다.');
+    await page.getByRole('button', { name: '오늘 공부 기록 저장' }).click();
+    await expect(page).toHaveURL(/\/app\?mode=first/);
+    await expect(page.getByRole('button', { name: /세트 풀이 시작|오늘 최우선 작업 시작/ })).toBeVisible();
   });
 
   test('2차 flow smoke', async ({ page }) => {

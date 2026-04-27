@@ -98,3 +98,11 @@ type PastExamMetadataV1 = {
 - 저장된 study log 자동 분류 연결
 - instructor console 구현
 - 결제/과금 흐름 추가
+
+
+## 7) Study log / wrong-answer taxonomy candidate connection v1
+- Study log 및 wrong-answer 분류는 **local heuristic v1**만 사용합니다. (외부 AI 호출 없음)
+- `ai_suggested`는 **후보 제안 상태**이며 확정 분류가 아닙니다.
+- `human_verified` 상태는 향후 운영자 수동 검수 플로우에서만 설정해야 합니다.
+- confidence가 낮거나 primary가 없으면 `needs_review`로 유지합니다.
+- taxonomy 분류는 최종 채점/최종 커리큘럼 판정 근거로 사용하지 않습니다.

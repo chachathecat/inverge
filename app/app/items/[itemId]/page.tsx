@@ -65,6 +65,10 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
   const secondCompletionNext = rewriteComparison
     ? `다음 review는 ${note.nextReviewDate}로 자동 예약됩니다.`
     : `다음 cue: ${note.rewriteInstruction ?? "가장 큰 간극 1개를 문단 다시쓰기로 보강합니다."}`;
+  const payloadTaxonomy =
+    readTaxonomyClassificationPayload(detail.item.derivedPayload) ??
+    readTaxonomyClassificationPayload(detail.item.rawPayload);
+  const taxonomyCandidate = resolveTaxonomyCandidate(payloadTaxonomy);
 
   return (
     <div className="space-y-6">
@@ -303,6 +307,19 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
         </ArtifactBlock>
       ) : null}
 
+      {taxonomyCandidate ? (
+        <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-5">
+          <p className="text-caption text-[color:var(--muted)]">시험 범위 후보</p>
+          <p className="mt-1 text-xs leading-6 text-[color:var(--muted)]">
+            이 분류는 자동 제안이며, 확정 분류가 아닙니다.
+          </p>
+          <p className="mt-3 text-sm text-[color:var(--foreground-strong)]">
+            {taxonomyCandidate.subject} · {taxonomyCandidate.unit} · {taxonomyCandidate.topic}
+          </p>
+          <p className="mt-1 text-xs text-[color:var(--muted)]">평가 스킬: {taxonomyCandidate.examSkill}</p>
+        </section>
+      ) : null}
+
       <div className="flex flex-col gap-3 sm:flex-row">
         <Link href={`/app/review?mode=${mode}`}>
           <Button type="button">review queue 보기</Button>
@@ -317,6 +334,60 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
       <ReviewOsFeedbackButton route={`/app/items/${itemId}`} pageContext={{ itemId, isSecond }} />
     </div>
   );
+}
+
+type ItemTaxonomyCandidate = {
+  taxonomyNodeId?: string;
+  subject: string;
+  unit: string;
+  topic: string;
+  examSkill: string;
+};
+
+function readTaxonomyClassificationPayload(
+  payload: Record<string, unknown> | null | undefined,
+): { primaryNodeId: string | null; candidates: ItemTaxonomyCandidate[] } | null {
+  if (!payload || typeof payload !== "object") return null;
+  const taxonomy = payload.taxonomyClassification;
+  if (!taxonomy || typeof taxonomy !== "object") return null;
+  const taxonomyRow = taxonomy as Record<string, unknown>;
+  const candidates = Array.isArray(taxonomyRow.candidates)
+    ? taxonomyRow.candidates
+        .map((candidate) => {
+          if (!candidate || typeof candidate !== "object") return null;
+          const row = candidate as Record<string, unknown>;
+          if (
+            typeof row.subject !== "string" ||
+            typeof row.unit !== "string" ||
+            typeof row.topic !== "string" ||
+            typeof row.examSkill !== "string"
+          ) {
+            return null;
+          }
+          return {
+            taxonomyNodeId: typeof row.taxonomyNodeId === "string" ? row.taxonomyNodeId : undefined,
+            subject: row.subject,
+            unit: row.unit,
+            topic: row.topic,
+            examSkill: row.examSkill,
+          } satisfies ItemTaxonomyCandidate;
+        })
+        .filter((candidate): candidate is ItemTaxonomyCandidate => Boolean(candidate))
+    : [];
+
+  return {
+    primaryNodeId: typeof taxonomyRow.primaryNodeId === "string" ? taxonomyRow.primaryNodeId : null,
+    candidates,
+  };
+}
+
+function resolveTaxonomyCandidate(payload: { primaryNodeId: string | null; candidates: ItemTaxonomyCandidate[] } | null) {
+  if (!payload) return null;
+  if (payload.primaryNodeId) {
+    const matched = payload.candidates.find((candidate) => candidate.taxonomyNodeId === payload.primaryNodeId);
+    if (matched) return matched;
+  }
+  return payload.candidates[0] ?? null;
 }
 
 function QuietPill({ children }: { children: ReactNode }) {

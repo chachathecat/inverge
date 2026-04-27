@@ -66,3 +66,11 @@
 - [ ] 20년치 기출 import는 raw text가 아니라 metadata부터 시작하는지 확인
 - [ ] AI 분류 결과는 `human_verified` 이전에 운영 신뢰 대상으로 사용하지 않는지 확인
 - [ ] 저작권이 불명확한 raw question corpus를 저장소/배포 산출물에 커밋하지 않았는지 확인
+
+
+## H. Taxonomy candidate 운영 체크 (Study log / Wrong answer v1)
+- [ ] taxonomy 분류가 local heuristic v1 후보 제안임을 운영팀이 인지했는지 확인
+- [ ] `ai_suggested`를 확정 분류로 취급하지 않는지 확인
+- [ ] `human_verified`는 수동 검수 플로우 없이 임의 설정하지 않는지 확인
+- [ ] confidence가 낮은 항목은 `needs_review`로 유지되는지 확인
+- [ ] taxonomy 후보를 최종 채점/최종 syllabus 판정에 사용하지 않는지 확인

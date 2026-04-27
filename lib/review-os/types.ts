@@ -341,6 +341,20 @@ export type WeeklyLearningSummaryRecord = {
   updatedAt: string;
 };
 
+export type TaxonomyClassificationCandidate = {
+  taxonomyNodeId: string;
+  mode: "first" | "second";
+  subject: string;
+  unit: string;
+  topic: string;
+  subtopic?: string;
+  examSkill: string;
+  score: number;
+  confidence: number;
+  matchedKeywords: string[];
+  classificationStatus: "ai_suggested" | "needs_review";
+};
+
 export type StudyLogInput = {
   mode: "first" | "second";
   subject: string;
@@ -355,6 +369,10 @@ export type StudyLogInput = {
 export type StudyLogRecord = StudyLogInput & {
   id: string;
   userId: string;
+  taxonomyNodeId?: string | null;
+  taxonomyCandidates?: TaxonomyClassificationCandidate[];
+  taxonomyClassificationStatus: "ai_suggested" | "human_verified" | "needs_review";
+  taxonomyClassificationConfidence?: number | null;
   createdAt: string;
   updatedAt: string;
 };
