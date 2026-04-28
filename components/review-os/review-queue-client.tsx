@@ -40,7 +40,9 @@ export function ReviewQueueClient({ items, mode }: { items: ReviewQueueCard[]; m
   if (items.length === 0) {
     return (
       <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] p-6 text-sm leading-7 text-[color:var(--muted)]">
-        오늘 다시 볼 항목이 없습니다. 1차는 민법 오답 1개를, 2차는 답안 한 건을 먼저 기록해 보세요.
+        {mode === "second"
+          ? "오늘 다시 볼 항목이 없습니다. 2차 답안 한 건을 먼저 기록해 보세요."
+          : "오늘 다시 볼 항목이 없습니다. 1차 오답 1개를 먼저 기록해 보세요."}
       </div>
     );
   }
