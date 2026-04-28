@@ -61,7 +61,7 @@ function getWeekKey(now = new Date()) {
 
 function containsSmokeSeedText(value: string | null | undefined) {
   if (!value) return false;
-  return /e2e|smoke|스모크|test-user|test data/i.test(value);
+  return /e2e|smoke|스모크|test-user|test[ -]?data|qa[ -]?seed/i.test(value);
 }
 
 function isSmokeSeedItem(item: Pick<WrongAnswerItemRecord, "sourceLabel" | "problemTitle" | "rawQuestionText" | "rawAnswerText">) {

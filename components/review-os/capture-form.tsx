@@ -407,13 +407,23 @@ export function WrongAnswerCaptureForm({
       const response = await fetch("/api/inverge/ocr", { method: "POST", body });
       const extraction = (await response.json()) as ({ ok?: boolean; error?: string } & ExtractionPipelineResult);
       if (!response.ok || !extraction.ok) {
-        setExtractError(extraction.error ?? "구조 초안을 만들지 못했습니다.");
+        const fallback = buildStructuredDraft(form, text);
+        setForm(persist(fallback));
+        setStage("preview");
+        setExtractError(
+          extraction.error
+            ? `${extraction.error} 텍스트 입력 경로로 계속 진행합니다.`
+            : "구조 초안을 만들지 못했습니다. 텍스트 입력 경로로 계속 진행합니다.",
+        );
         return;
       }
       setForm(persist(applyExtraction(form, extraction)));
       setStage("preview");
     } catch {
-      setExtractError("구조 초안을 만들지 못했습니다.");
+      const fallback = buildStructuredDraft(form, text);
+      setForm(persist(fallback));
+      setStage("preview");
+      setExtractError("구조 초안을 만들지 못했습니다. 텍스트 입력 경로로 계속 진행합니다.");
     } finally {
       setExtracting(false);
     }
@@ -429,7 +439,18 @@ export function WrongAnswerCaptureForm({
       const response = await fetch("/api/inverge/ocr", { method: "POST", body });
       const result = (await response.json()) as ({ ok?: boolean; text?: string; extractedText?: string; error?: string } & ExtractionPipelineResult);
       if (!response.ok || !result.ok) {
-        setExtractError(result.error ?? "이미지에서 텍스트를 불러오지 못했습니다.");
+        const fallback: DraftState = {
+          ...form,
+          sourceType: "image",
+          sourceLabel: file.name,
+        };
+        setForm(persist(fallback));
+        setStage("preview");
+        setExtractError(
+          result.error
+            ? `${result.error} 텍스트 입력으로 계속 진행해 주세요.`
+            : "이미지에서 텍스트를 불러오지 못했습니다. 텍스트 입력으로 계속 진행해 주세요.",
+        );
         return;
       }
       const extractedText = result.text ?? result.extractedText ?? "";
@@ -442,7 +463,14 @@ export function WrongAnswerCaptureForm({
       setForm(persist(result.normalized_draft ? applyExtraction(base, result) : buildStructuredDraft(base, extractedText || base.rawQuestionText)));
       setStage("preview");
     } catch {
-      setExtractError("이미지에서 텍스트를 불러오지 못했습니다.");
+      const fallback: DraftState = {
+        ...form,
+        sourceType: "image",
+        sourceLabel: file.name,
+      };
+      setForm(persist(fallback));
+      setStage("preview");
+      setExtractError("이미지에서 텍스트를 불러오지 못했습니다. 텍스트 입력으로 계속 진행해 주세요.");
     } finally {
       setExtracting(false);
     }
@@ -902,7 +930,7 @@ function IntakePanel({
               ? "권장: 사례, 기준 답안, 내 답안을 텍스트로 붙여넣으세요. 예: 기준 답안: ... / 내 답안: ..."
               : "권장: 문제와 정답, 내가 고른 답을 텍스트로 붙여넣으세요. 예: 정답: 3 / 내 답: 2"
           }
-          className="min-h-52 border-[var(--border)] bg-[color:var(--bg-surface)] text-[color:var(--foreground-strong)] leading-7"
+          className="min-h-44 border-[var(--border)] bg-[color:var(--bg-surface)] text-[color:var(--foreground-strong)] leading-7"
         />
       </label>
       <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
