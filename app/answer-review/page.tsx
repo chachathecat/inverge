@@ -157,6 +157,7 @@ export default function AnswerReviewInfoPage() {
       setStructureDraft(normalizedDraft);
       setMissingPointMemo(normalizedDraft.missingIssueCandidates.join(", "));
       setRevisionParagraph(normalizedDraft.rewriteDraftSuggestion);
+      setCurrentStep(2);
     } catch (error) {
       setStructureDraft(null);
       setStructureError(
@@ -233,7 +234,7 @@ export default function AnswerReviewInfoPage() {
   };
 
   const didCopyCurrentDraft = feedbackCopyStatus === "success" && copiedFeedbackDraftText === feedbackDraftText;
-  const primaryActionLabel = currentStep === 1 ? (isStructuring ? "정리 중..." : "OCR 구조화 시작") : currentStep === 2 ? "피드백 초안 확인" : "피드백 초안 복사";
+  const primaryActionLabel = currentStep === 1 ? (isStructuring ? "정리 중..." : "OCR 구조화 시작") : currentStep === 2 ? "다음 행동 하나 정리" : "피드백 초안 복사";
   const isPrimaryActionDisabled = currentStep === 1 ? !hasMyAnswer || isStructuring : false;
   const handlePrimaryAction = () => {
     if (currentStep === 1) {
@@ -291,7 +292,7 @@ export default function AnswerReviewInfoPage() {
 
           {currentStep === 1 ? (
             <section className="space-y-4">
-              <p className="text-caption leading-5 text-[color:var(--muted)]">AI가 먼저 구조화하고, 검토자는 확인만 합니다.</p>
+              <p className="text-caption leading-5 text-[color:var(--muted)]">AI가 먼저 구조화하고, 검토자는 확인만 합니다. Gemini가 멈춰도 수동 검토로 이어갈 수 있습니다.</p>
               <p className="text-caption leading-5 text-[color:var(--muted)]">문제/사례, 내 답안, 기준답안을 역할별로 나눠 넣으면 구조화가 더 안정적입니다.</p>
               <div className="grid gap-2 sm:grid-cols-3">
                 <InputStatusCard title="문제/사례" isFilled={hasProblemInput} helper="문제 이미지 또는 텍스트" />
@@ -394,13 +395,7 @@ export default function AnswerReviewInfoPage() {
                 </div>
               </div>
 
-              {structureError ? (
-                <p className="text-caption leading-5 text-[color:var(--muted)]">
-                  {structureError}
-                  <br />
-                  텍스트 입력으로 검토를 계속할 수 있습니다.
-                </p>
-              ) : null}
+              {structureError ? <p className="text-caption leading-5 text-[color:var(--muted)]">{structureError}</p> : null}
             </section>
           ) : null}
 
@@ -505,7 +500,6 @@ export default function AnswerReviewInfoPage() {
                 <pre className="max-h-[240px] overflow-auto whitespace-pre-wrap rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3 text-caption leading-6 text-[color:var(--foreground-strong)]">
                   {reviewerNoteText}
                 </pre>
-                <p className="text-caption leading-5 text-[color:var(--muted)]">현재 화면에서만 확인하는 초안입니다.</p>
               </section>
 
               <section className="space-y-2">
