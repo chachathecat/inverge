@@ -9,22 +9,22 @@ const INPUT_EXAMPLES = [
   {
     title: "1차 오답 기록",
     fields: "틀린 문제 / 내가 고른 답 / 틀린 이유",
-    outcome: "문제 1개만 남겨도 review queue가 정리됩니다.",
+    outcome: "문제 1개면 다음 복습이 잡힙니다.",
   },
   {
     title: "1차 세트 풀이",
     fields: "과목 / 문항 수 / 정답 / 내 답",
-    outcome: "세트 결과를 넣으면 다음 재시도 순서가 만들어집니다.",
+    outcome: "세트 입력 후 재시도 순서가 정리됩니다.",
   },
   {
     title: "오늘 공부 기록",
     fields: "본 범위 / 어려웠던 점 / 다시 볼 범위",
-    outcome: "오늘 공부한 것을 넣으면 다음 복습 신호가 정리됩니다.",
+    outcome: "학습 기록 후 다음 복습 신호를 정리합니다.",
   },
   {
     title: "2차 답안",
     fields: "내 답안 / 기준 답안 / 보강할 문단",
-    outcome: "답안 1개를 넣으면 보강할 간극 1개로 줄입니다.",
+    outcome: "답안 1개로 보강 간극 1개를 찾습니다.",
   },
 ] as const;
 
@@ -43,7 +43,7 @@ const LOOP_SUMMARY = [
 
 export function FrontPage() {
   return (
-    <RefinedShell className="space-y-16 py-12 sm:py-16 lg:py-20">
+    <RefinedShell className="space-y-12 py-10 sm:py-14 lg:py-16">
       <section className="max-w-4xl space-y-6">
         <RefinedBadge>감정평가사 합격 운영 시스템</RefinedBadge>
         <div className="space-y-5">
@@ -51,7 +51,7 @@ export function FrontPage() {
             오늘 입력한 기록으로 다음 행동을 정리합니다.
           </h1>
           <p className="max-w-3xl text-body text-[color:var(--muted)]">
-            설명을 읽기 전에 오늘 학습 입력부터 시작하세요. 입력한 내용 기준으로 복습과 재시도 순서를 차분히 정리합니다.
+            설명보다 입력을 먼저 시작하세요. 입력 1개를 남기면 다음 실행 1개를 바로 정리합니다.
           </p>
         </div>
         <div className="space-y-4">
@@ -59,7 +59,7 @@ export function FrontPage() {
             오늘 입력 시작
             <ArrowRight className="ml-2 h-4 w-4" />
           </Link>
-          <p className="text-sm text-[color:var(--muted)]">감정평가사 1차/2차 alpha 작업 공간으로 바로 이동합니다.</p>
+          <p className="text-sm text-[color:var(--muted)]">감정평가사 1차/2차 입력 화면으로 바로 이동합니다.</p>
         </div>
         <p className="text-sm leading-7 text-[color:var(--muted)]">학원용 답안 운영 콘솔은 별도 준비 중</p>
       </section>
@@ -68,14 +68,14 @@ export function FrontPage() {
         <SectionHeading
           eyebrow="오늘 입력할 수 있는 것"
           title="입력 1개에서 다음 실행 1개를 만듭니다"
-          description="첫 화면에서 입력을 시작하면 이후 흐름은 review queue와 다시쓰기로 자동 연결됩니다."
+          description="입력을 먼저 남기면 복습·비교·다시쓰기 순서를 차분히 이어갑니다."
         />
         <div className="grid gap-4 md:grid-cols-2">
           {INPUT_EXAMPLES.map((example) => (
-            <QuietSection key={example.title} className="space-y-3 p-6">
+            <QuietSection key={example.title} className="space-y-2.5 p-4 sm:p-5">
               <h2 className="text-title text-[color:var(--foreground-strong)]">{example.title}</h2>
-              <p className="text-sm leading-7 text-[color:var(--foreground-strong)]">{example.fields}</p>
-              <p className="text-sm leading-7 text-[color:var(--muted)]">{example.outcome}</p>
+              <p className="text-sm leading-6 text-[color:var(--foreground-strong)]">{example.fields}</p>
+              <p className="text-sm leading-6 text-[color:var(--muted)]">{example.outcome}</p>
             </QuietSection>
           ))}
         </div>
@@ -85,14 +85,14 @@ export function FrontPage() {
         <SectionHeading
           eyebrow="학습 운영 루프"
           title="점수보다 다음 행동을 정리합니다"
-          description="필요할 때만 확인할 수 있도록 하단에 배치했습니다."
+          description="입력 이후 흐름이 궁금할 때만 하단에서 확인하세요."
         />
         <div className="grid gap-4 md:grid-cols-2">
           {LOOP_SUMMARY.map((step) => (
-            <QuietSection key={step.title} className="p-6">
+            <QuietSection key={step.title} className="p-4 sm:p-5">
               <h2 className="text-title text-[color:var(--foreground-strong)]">{step.title}</h2>
-              <p className="mt-3 text-sm leading-7 text-[color:var(--foreground-strong)]">{step.description}</p>
-              <p className="mt-3 text-sm leading-7 text-[color:var(--muted)]">{step.detail}</p>
+              <p className="mt-2 text-sm leading-6 text-[color:var(--foreground-strong)]">{step.description}</p>
+              <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">{step.detail}</p>
             </QuietSection>
           ))}
         </div>
