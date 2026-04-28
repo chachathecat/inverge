@@ -43,9 +43,44 @@ function createModel() {
     throw new GeminiEnvError("GEMINI_API_KEY가 설정되지 않았습니다.");
   }
 
-  const modelName = process.env.GEMINI_MODEL ?? "gemini-1.5-pro";
+  const modelName = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
   const client = new GoogleGenerativeAI(apiKey);
   return client.getGenerativeModel({ model: modelName });
+}
+
+function includesQuotaMessage(message: string) {
+  const normalized = message.toLowerCase();
+  return (
+    normalized.includes("429") ||
+    normalized.includes("too many requests") ||
+    normalized.includes("quota") ||
+    normalized.includes("resource_exhausted")
+  );
+}
+
+export function isGeminiQuotaExceededError(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+
+  const maybeError = error as {
+    message?: unknown;
+    status?: unknown;
+    code?: unknown;
+    errorDetails?: unknown;
+  };
+
+  if (maybeError.status === 429 || maybeError.code === 429) {
+    return true;
+  }
+
+  if (typeof maybeError.message === "string" && includesQuotaMessage(maybeError.message)) {
+    return true;
+  }
+
+  if (Array.isArray(maybeError.errorDetails)) {
+    return maybeError.errorDetails.some((detail) => typeof detail === "string" && includesQuotaMessage(detail));
+  }
+
+  return false;
 }
 
 function fileToPart(file: File): Promise<{ inlineData: { data: string; mimeType: string } }> {

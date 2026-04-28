@@ -259,6 +259,8 @@ export default function AnswerReviewInfoPage() {
           <p className="text-caption text-[color:var(--muted)]">AI가 먼저 구조화하고, 검토자는 맞는지만 확인합니다.</p>
           <p className="text-caption text-[color:var(--muted)]">OCR과 구조화 결과는 초안이며, 검토자가 최종 확인합니다.</p>
           <p className="text-caption text-[color:var(--muted)]">이 화면은 답안 검토와 보강을 돕는 운영형 흐름입니다.</p>
+          <p className="text-caption text-[color:var(--muted)]">긴 PDF는 필요한 문제/답안/기준답안 페이지만 나눠 넣는 것이 좋습니다.</p>
+          <p className="text-caption text-[color:var(--muted)]">문제/사례, 내 답안, 기준답안 역할을 나누면 구조화 품질이 높아집니다.</p>
 
           <div className="grid gap-3 lg:grid-cols-2">
             <section className="space-y-3" id="problem-upload">
