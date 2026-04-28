@@ -26,25 +26,6 @@ type AnswerReviewStructureDraft = {
   caution: string;
 };
 
-const flowCards = [
-  {
-    title: "1) 문제 맥락 입력",
-    description: "문제/사례를 먼저 입력해 답안 검토의 기준 맥락을 고정합니다.",
-  },
-  {
-    title: "2) 내 답안 입력",
-    description: "답안 이미지를 올리거나 텍스트를 붙여 넣어 검토할 원문을 준비합니다.",
-  },
-  {
-    title: "3) 기준답안 입력",
-    description: "기준답안/기준목차를 텍스트로 붙여 넣고 누락 논점을 수동으로 점검합니다.",
-  },
-  {
-    title: "4) 교정 실행",
-    description: "누락 논점 후보와 교정 문단을 작성해 다음 답안 재작성으로 이어집니다.",
-  },
-];
-
 type InputStatusCardProps = {
   title: string;
   isFilled: boolean;
@@ -227,7 +208,7 @@ export default function AnswerReviewInfoPage() {
         </div>
 
         <section className="space-y-4 rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-4 sm:p-5">
-          <div className="space-y-3">
+          <div className="space-y-2">
             <p className="text-sm font-medium text-[color:var(--foreground-strong)]">검토 준비 상태</p>
             <div className="grid gap-2 sm:grid-cols-3">
               <InputStatusCard title="문제/사례" isFilled={hasProblemInput} helper="문제 이미지 또는 텍스트" />
@@ -239,28 +220,13 @@ export default function AnswerReviewInfoPage() {
             </button>
             <p className="text-caption text-[color:var(--muted)]">
               {isReviewReady
-                ? "세 입력이 모두 준비되었습니다. OCR 구조화 초안을 실행해 검토 포인트를 빠르게 확인하세요."
-                : "문제 요구와 기준답안을 함께 넣어야 답안의 빠진 부분을 안전하게 볼 수 있습니다."}
+                ? "세 입력이 모두 준비되었습니다. OCR 구조화 초안을 실행해 주세요."
+                : "문제 요구와 기준답안을 함께 넣으면 구조화 품질이 높아집니다."}
             </p>
+            <p className="text-caption text-[color:var(--muted)]">AI 초안은 검토 보조입니다. 검토자는 확인만 진행합니다.</p>
+            <p className="text-caption text-[color:var(--muted)]">긴 PDF는 필요한 문제/답안/기준답안 페이지만 나눠 넣는 것이 좋습니다.</p>
+            <p className="text-caption text-[color:var(--muted)]">역할을 나누면 구조화 품질이 높아집니다.</p>
           </div>
-
-          <div className="space-y-2">
-            <h1 className="text-[26px] font-medium leading-[1.2] tracking-[-0.03em] text-[color:var(--foreground-strong)] sm:text-[34px]">
-              문제/사례 + 내 답안 + 기준답안을 함께 입력해 수동 검토 preview로 이어갑니다.
-            </h1>
-            <p className="text-sm leading-7 text-[color:var(--muted)]">
-              평가 확정 화면이 아니라 답안 검토와 보강을 돕는 운영형 흐름입니다.
-            </p>
-          </div>
-
-          <div className="rounded-[var(--radius-sm)] border border-dashed border-[var(--border)] bg-[color:var(--surface)] p-3 text-caption text-[color:var(--muted)]">
-            OCR 결과와 구조화 결과는 초안이며, 강사 검수 전 확정하지 않습니다.
-          </div>
-          <p className="text-caption text-[color:var(--muted)]">AI가 먼저 구조화하고, 검토자는 맞는지만 확인합니다.</p>
-          <p className="text-caption text-[color:var(--muted)]">OCR과 구조화 결과는 초안이며, 검토자가 최종 확인합니다.</p>
-          <p className="text-caption text-[color:var(--muted)]">이 화면은 답안 검토와 보강을 돕는 운영형 흐름입니다.</p>
-          <p className="text-caption text-[color:var(--muted)]">긴 PDF는 필요한 문제/답안/기준답안 페이지만 나눠 넣는 것이 좋습니다.</p>
-          <p className="text-caption text-[color:var(--muted)]">문제/사례, 내 답안, 기준답안 역할을 나누면 구조화 품질이 높아집니다.</p>
 
           <div className="grid gap-3 lg:grid-cols-2">
             <section className="space-y-3" id="problem-upload">
@@ -428,58 +394,6 @@ export default function AnswerReviewInfoPage() {
             ) : null}
           </section>
 
-          <section id="manual-comparison-preview" className="space-y-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
-            <p className="text-sm font-medium text-[color:var(--foreground-strong)]">Manual comparison preview</p>
-            <ul className="space-y-2 text-caption text-[color:var(--muted)]">
-              <li>
-                문제/사례: <span className="font-medium text-[color:var(--foreground-strong)]">{hasProblemInput ? "입력됨" : "미입력"}</span>
-              </li>
-              <li>
-                내 답안: <span className="font-medium text-[color:var(--foreground-strong)]">{hasMyAnswer ? "입력됨" : "미입력"}</span>
-              </li>
-              <li>
-                기준답안: <span className="font-medium text-[color:var(--foreground-strong)]">{hasReferenceAnswer ? "입력됨" : "미입력"}</span>
-              </li>
-              <li>
-                준비 상태:{" "}
-                <span className="font-medium text-[color:var(--foreground-strong)]">
-                  {isReviewReady ? "검토 준비 완료" : "세 입력을 모두 준비하면 검토 준비 완료로 전환됩니다."}
-                </span>
-              </li>
-            </ul>
-            {isReviewReady ? (
-              <p className="text-caption text-[color:var(--muted)]">
-                입력 요약: 내 답안 {myAnswerText.trim().length}자/{getParagraphCount(myAnswerText)}문단, 기준답안 {referenceAnswerText.trim().length}자/
-                {getParagraphCount(referenceAnswerText)}문단.
-              </p>
-            ) : null}
-          </section>
-
-          <section className="space-y-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
-            <p className="text-sm font-medium text-[color:var(--foreground-strong)]">수동 검토 메모</p>
-            <div className="space-y-2">
-              <p className="text-caption font-medium text-[color:var(--muted)]">누락 논점 후보</p>
-              <Textarea
-                className="min-h-[96px] bg-[color:var(--surface)]"
-                placeholder="예: 처분 근거 조문 제시가 누락되어 논증 연결이 약함"
-                value={missingPointMemo}
-                onChange={(event) => setMissingPointMemo(event.target.value)}
-              />
-              <p className="text-caption text-[color:var(--muted)]">자동 산출이 아니라 운영자/검토자가 직접 적는 메모입니다.</p>
-            </div>
-            <div className="space-y-2">
-              <p className="text-caption font-medium text-[color:var(--muted)]">교정 문단</p>
-              <Textarea
-                className="min-h-[120px] bg-[color:var(--surface)]"
-                placeholder="누락 논점을 반영해 보강 문단을 직접 작성해 주세요."
-                value={revisionParagraph}
-                onChange={(event) => setRevisionParagraph(event.target.value)}
-              />
-              <p className="text-caption text-[color:var(--muted)]">자동 생성이 아니라 운영자/검토자가 직접 적는 교정 초안입니다.</p>
-            </div>
-            <p className="text-caption text-[color:var(--muted)]">현재 화면에서만 확인하는 초안입니다. 저장 완료처럼 표시되지 않습니다.</p>
-          </section>
-
           <section className="space-y-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-sm font-medium text-[color:var(--foreground-strong)]">학생에게 줄 피드백 초안</p>
@@ -505,23 +419,57 @@ export default function AnswerReviewInfoPage() {
             </details>
           </section>
 
-          <section className="space-y-2 rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
-            <p className="text-sm font-medium text-[color:var(--foreground-strong)]">검토자 노트</p>
-            <pre className="max-h-[240px] overflow-auto whitespace-pre-wrap rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3 text-caption leading-6 text-[color:var(--foreground-strong)]">
-              {reviewerNoteText}
-            </pre>
-            <p className="text-caption text-[color:var(--muted)]">현재 화면에서만 확인하는 초안입니다.</p>
-          </section>
-        </section>
-      </section>
+          <details className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
+            <summary className="cursor-pointer text-sm font-medium text-[color:var(--foreground-strong)]">보조 영역 펼치기</summary>
+            <div className="mt-3 space-y-3">
+              <section id="manual-comparison-preview" className="space-y-2">
+                <p className="text-caption font-medium text-[color:var(--muted)]">Flow cards</p>
+                <ul className="space-y-1 text-caption text-[color:var(--muted)]">
+                  <li>1) 문제/사례 입력</li>
+                  <li>2) 내 답안 입력</li>
+                  <li>3) 기준답안 입력</li>
+                  <li>4) 피드백 전달 전 검수</li>
+                </ul>
+                {isReviewReady ? (
+                  <p className="text-caption text-[color:var(--muted)]">
+                    입력 요약: 내 답안 {myAnswerText.trim().length}자/{getParagraphCount(myAnswerText)}문단, 기준답안 {referenceAnswerText.trim().length}자/
+                    {getParagraphCount(referenceAnswerText)}문단.
+                  </p>
+                ) : null}
+              </section>
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {flowCards.map((card) => (
-          <article key={card.title} className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
-            <p className="text-sm font-medium text-[color:var(--foreground-strong)]">{card.title}</p>
-            <p className="mt-2 text-caption leading-6 text-[color:var(--muted)]">{card.description}</p>
-          </article>
-        ))}
+              <section className="space-y-3">
+                <p className="text-caption font-medium text-[color:var(--muted)]">수동 검토 메모</p>
+                <div className="space-y-2">
+                  <p className="text-caption font-medium text-[color:var(--muted)]">누락 논점 후보</p>
+                  <Textarea
+                    className="min-h-[96px] bg-[color:var(--surface)]"
+                    placeholder="예: 처분 근거 조문 제시가 누락되어 논증 연결이 약함"
+                    value={missingPointMemo}
+                    onChange={(event) => setMissingPointMemo(event.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <p className="text-caption font-medium text-[color:var(--muted)]">교정 문단</p>
+                  <Textarea
+                    className="min-h-[120px] bg-[color:var(--surface)]"
+                    placeholder="누락 논점을 반영해 보강 문단을 직접 작성해 주세요."
+                    value={revisionParagraph}
+                    onChange={(event) => setRevisionParagraph(event.target.value)}
+                  />
+                </div>
+              </section>
+
+              <section className="space-y-2">
+                <p className="text-caption font-medium text-[color:var(--muted)]">검토자 노트</p>
+                <pre className="max-h-[240px] overflow-auto whitespace-pre-wrap rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3 text-caption leading-6 text-[color:var(--foreground-strong)]">
+                  {reviewerNoteText}
+                </pre>
+                <p className="text-caption text-[color:var(--muted)]">현재 화면에서만 확인하는 초안입니다.</p>
+              </section>
+            </div>
+          </details>
+        </section>
       </section>
 
       <div>
