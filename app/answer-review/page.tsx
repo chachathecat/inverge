@@ -29,6 +29,10 @@ const flowCards = [
 
 export default function AnswerReviewInfoPage() {
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
+  const [myAnswerText, setMyAnswerText] = useState("");
+  const [referenceAnswerText, setReferenceAnswerText] = useState("");
+  const [missingPointMemo, setMissingPointMemo] = useState("");
+  const [revisionParagraph, setRevisionParagraph] = useState("");
   const isOcrConnected = false;
 
   const fileState = useMemo(() => {
@@ -58,6 +62,19 @@ export default function AnswerReviewInfoPage() {
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     setSelectedFileName(file ? file.name : null);
+  };
+
+  const hasMyAnswer = myAnswerText.trim().length > 0;
+  const hasReferenceAnswer = referenceAnswerText.trim().length > 0;
+  const showManualPreview = hasMyAnswer && hasReferenceAnswer;
+
+  const getParagraphCount = (text: string) => {
+    const normalized = text.trim();
+    if (!normalized) return 0;
+    return normalized
+      .split(/\n\s*\n/)
+      .map((paragraph) => paragraph.trim())
+      .filter(Boolean).length;
   };
 
   return (
@@ -126,6 +143,8 @@ export default function AnswerReviewInfoPage() {
               <Textarea
                 className="min-h-[160px] bg-[color:var(--surface)]"
                 placeholder="OCR 초안(있는 경우)을 붙여 넣거나 직접 입력해 주세요. 문단 단위로 나누면 비교가 쉬워집니다."
+                value={myAnswerText}
+                onChange={(event) => setMyAnswerText(event.target.value)}
               />
             </div>
             <div className="space-y-2" id="answer-review-reference">
@@ -133,9 +152,96 @@ export default function AnswerReviewInfoPage() {
               <Textarea
                 className="min-h-[160px] bg-[color:var(--surface)]"
                 placeholder="기준답안 또는 목차 구조를 붙여 넣어 누락 논점을 확인하세요."
+                value={referenceAnswerText}
+                onChange={(event) => setReferenceAnswerText(event.target.value)}
               />
             </div>
           </div>
+
+          <details className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface)] p-3 text-caption text-[color:var(--muted)]">
+            <summary className="cursor-pointer font-medium text-[color:var(--foreground-strong)]">검토 preview 안내</summary>
+            <p className="mt-2">
+              아래 preview는 자동 분석이 아닌 수동 검토 보조입니다. 이 화면은 최종 채점이나 합격 판정이 아니라 답안 검토와
+              보강을 위한 작업 공간입니다.
+            </p>
+          </details>
+
+          {showManualPreview ? (
+            <section className="space-y-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
+              <p className="text-sm font-medium text-[color:var(--foreground-strong)]">검토 preview</p>
+              <ul className="space-y-2 text-caption text-[color:var(--muted)]">
+                <li>
+                  내 답안:{" "}
+                  <span className="font-medium text-[color:var(--foreground-strong)]">
+                    입력됨 (글자 수 {myAnswerText.trim().length}, 문단 수 {getParagraphCount(myAnswerText)})
+                  </span>
+                </li>
+                <li>
+                  기준답안:{" "}
+                  <span className="font-medium text-[color:var(--foreground-strong)]">
+                    입력됨 (글자 수 {referenceAnswerText.trim().length}, 문단 수 {getParagraphCount(referenceAnswerText)})
+                  </span>
+                </li>
+                <li>
+                  다음 검토:{" "}
+                  <span className="font-medium text-[color:var(--foreground-strong)]">
+                    누락 논점 후보를 직접 표시하고, 교정 문단을 작성하세요.
+                  </span>
+                </li>
+              </ul>
+            </section>
+          ) : (
+            <section className="space-y-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
+              <p className="text-sm font-medium text-[color:var(--foreground-strong)]">검토 preview</p>
+              <ul className="space-y-2 text-caption text-[color:var(--muted)]">
+                <li>
+                  내 답안:{" "}
+                  <span className="font-medium text-[color:var(--foreground-strong)]">
+                    {hasMyAnswer ? "입력됨" : "미입력"}
+                  </span>
+                </li>
+                <li>
+                  기준답안:{" "}
+                  <span className="font-medium text-[color:var(--foreground-strong)]">
+                    {hasReferenceAnswer ? "입력됨" : "미입력"}
+                  </span>
+                </li>
+                <li>
+                  다음 검토:{" "}
+                  <span className="font-medium text-[color:var(--foreground-strong)]">
+                    두 텍스트를 입력하면 수동 비교 preview가 표시됩니다.
+                  </span>
+                </li>
+              </ul>
+            </section>
+          )}
+
+          <section className="space-y-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
+            <p className="text-sm font-medium text-[color:var(--foreground-strong)]">수동 검토 메모</p>
+            <div className="space-y-2">
+              <p className="text-caption font-medium text-[color:var(--muted)]">누락 논점 후보</p>
+              <Textarea
+                className="min-h-[96px] bg-[color:var(--surface)]"
+                placeholder="예: 보상계획 공고 이후 절차 언급 부족"
+                value={missingPointMemo}
+                onChange={(event) => setMissingPointMemo(event.target.value)}
+              />
+              <p className="text-caption text-[color:var(--muted)]">자동 산출이 아닌, 사용자가 직접 입력하는 메모입니다.</p>
+            </div>
+            <div className="space-y-2">
+              <p className="text-caption font-medium text-[color:var(--muted)]">교정 문단</p>
+              <Textarea
+                className="min-h-[120px] bg-[color:var(--surface)]"
+                placeholder="기준답안과 비교해 보강할 문단을 한 단락으로 다시 작성하세요."
+                value={revisionParagraph}
+                onChange={(event) => setRevisionParagraph(event.target.value)}
+              />
+            </div>
+            <p className="text-caption text-[color:var(--muted)]">
+              현재 화면에서만 확인하는 초안입니다. 저장된 것처럼 표시되지 않습니다.
+            </p>
+            <p className="text-caption font-medium text-[color:var(--foreground-strong)]">검토 메모 확인</p>
+          </section>
         </section>
       </section>
 
