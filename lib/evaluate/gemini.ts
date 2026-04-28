@@ -1,4 +1,5 @@
-﻿import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
+import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
+import type { Schema } from "@google/generative-ai";
 
 import type { AppraisalMode } from "@/lib/review-os/appraisal";
 import { buildExtractionPrompt } from "@/lib/review-os/extraction";
@@ -11,14 +12,51 @@ type GeminiEvaluationPayload = {
   transcription: string;
 };
 
+export const GEMINI_API_KEY_ERROR_MESSAGE = "GEMINI_API_KEY가 설정되지 않았습니다.";
+export const GEMINI_QUOTA_ERROR_MESSAGE =
+  "Gemini 사용량 한도에 도달했습니다. 잠시 후 다시 시도하거나 텍스트 입력으로 검토를 계속해 주세요.";
+
+function isGeminiQuotaError(error: unknown): boolean {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const candidate = error as {
+    message?: string;
+    status?: number;
+    code?: number;
+    response?: { status?: number };
+  };
+  const normalizedMessage = candidate.message?.toLowerCase() ?? "";
+  return (
+    candidate.status === 429 ||
+    candidate.code === 429 ||
+    candidate.response?.status === 429 ||
+    normalizedMessage.includes("429") ||
+    normalizedMessage.includes("quota") ||
+    normalizedMessage.includes("too many requests") ||
+    normalizedMessage.includes("resource exhausted")
+  );
+}
+
+function handleGeminiError(error: unknown): never {
+  if (isGeminiQuotaError(error)) {
+    throw new Error(GEMINI_QUOTA_ERROR_MESSAGE);
+  }
+  if (error instanceof Error) {
+    throw error;
+  }
+  throw new Error("Gemini 호출에 실패했습니다.");
+}
+
 function createModel() {
   const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey) {
-    throw new Error("GEMINI_API_KEY가 설정되지 않았습니다.");
+    throw new Error(GEMINI_API_KEY_ERROR_MESSAGE);
   }
 
-  const modelName = process.env.GEMINI_MODEL ?? "gemini-1.5-pro";
+  const modelName = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
   const client = new GoogleGenerativeAI(apiKey);
   return client.getGenerativeModel({ model: modelName });
 }
@@ -36,25 +74,30 @@ export async function extractTranscriptionFromImages(files: File[]): Promise<str
   const model = createModel();
   const imageParts = await Promise.all(files.map((file) => fileToPart(file)));
 
-  const response = await model.generateContent({
-    contents: [
-      {
-        role: "user",
-        parts: [
-          {
-            text: [
-              "첨부된 감정평가사 학습 자료 이미지에서 텍스트를 OCR로 최대한 정확히 추출하라.",
-              "문제 번호, 선택지, 정답, 내 답, 해설, 답안 문단의 줄바꿈을 유지하라.",
-              "표와 계산식은 행 단위로 보존하라.",
-              "보이지 않는 내용은 추정하지 말고 [unclear]로 표시하라.",
-              "출력은 순수 텍스트만 반환하라.",
-            ].join(" "),
-          },
-          ...imageParts,
-        ],
-      },
-    ],
-  });
+  let response;
+  try {
+    response = await model.generateContent({
+      contents: [
+        {
+          role: "user",
+          parts: [
+            {
+              text: [
+                "첨부된 감정평가사 학습 자료 이미지에서 텍스트를 OCR로 최대한 정확히 추출하라.",
+                "문제 번호, 선택지, 정답, 내 답, 해설, 답안 문단의 줄바꿈을 유지하라.",
+                "표와 계산식은 행 단위로 보존하라.",
+                "보이지 않는 내용은 추정하지 말고 [unclear]로 표시하라.",
+                "출력은 순수 텍스트만 반환하라.",
+              ].join(" "),
+            },
+            ...imageParts,
+          ],
+        },
+      ],
+    });
+  } catch (error) {
+    handleGeminiError(error);
+  }
 
   const text = response.response.text();
 
@@ -67,19 +110,24 @@ export async function extractTranscriptionFromImages(files: File[]): Promise<str
 
 export async function extractStructuredDraftWithGemini(mode: AppraisalMode, text: string): Promise<Record<string, unknown>> {
   const model = createModel();
-  const result = await model.generateContent({
-    contents: [
-      {
-        role: "user",
-        parts: [{ text: `${buildExtractionPrompt(mode)}\n\nINPUT:\n${text}` }],
+  let result;
+  try {
+    result = await model.generateContent({
+      contents: [
+        {
+          role: "user",
+          parts: [{ text: `${buildExtractionPrompt(mode)}\n\nINPUT:\n${text}` }],
+        },
+      ],
+      generationConfig: {
+        temperature: 0.1,
+        responseMimeType: "application/json",
+        responseSchema: mode === "second" ? secondExtractionSchema() : firstExtractionSchema(),
       },
-    ],
-    generationConfig: {
-      temperature: 0.1,
-      responseMimeType: "application/json",
-      responseSchema: mode === "second" ? secondExtractionSchema() : firstExtractionSchema(),
-    },
-  });
+    });
+  } catch (error) {
+    handleGeminiError(error);
+  }
 
   const responseText = result.response.text();
   return responseText?.trim() ? (JSON.parse(responseText) as Record<string, unknown>) : {};
@@ -155,36 +203,41 @@ export async function evaluateWithGemini(answer: string): Promise<EvaluationResu
   const model = createModel();
   const prompts = buildEvaluationPrompts(answer);
 
-  const result = await model.generateContent({
-    contents: [{ role: "user", parts: [{ text: `${prompts.system}\n\n${prompts.user}` }] }],
-    generationConfig: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: SchemaType.OBJECT,
-        properties: {
-          total_score: { type: SchemaType.NUMBER },
-          structure_score: { type: SchemaType.NUMBER },
-          content_score: { type: SchemaType.NUMBER },
-          expression_score: { type: SchemaType.NUMBER },
-          weaknesses: {
-            type: SchemaType.ARRAY,
-            minItems: 3,
-            maxItems: 3,
-            items: { type: SchemaType.STRING },
+  let result;
+  try {
+    result = await model.generateContent({
+      contents: [{ role: "user", parts: [{ text: `${prompts.system}\n\n${prompts.user}` }] }],
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: SchemaType.OBJECT,
+          properties: {
+            total_score: { type: SchemaType.NUMBER },
+            structure_score: { type: SchemaType.NUMBER },
+            content_score: { type: SchemaType.NUMBER },
+            expression_score: { type: SchemaType.NUMBER },
+            weaknesses: {
+              type: SchemaType.ARRAY,
+              minItems: 3,
+              maxItems: 3,
+              items: { type: SchemaType.STRING },
+            },
+            next_action: { type: SchemaType.STRING },
           },
-          next_action: { type: SchemaType.STRING },
+          required: [
+            "total_score",
+            "structure_score",
+            "content_score",
+            "expression_score",
+            "weaknesses",
+            "next_action",
+          ],
         },
-        required: [
-          "total_score",
-          "structure_score",
-          "content_score",
-          "expression_score",
-          "weaknesses",
-          "next_action",
-        ],
       },
-    },
-  });
+    });
+  } catch (error) {
+    handleGeminiError(error);
+  }
 
   const text = result.response.text();
 
@@ -212,4 +265,3 @@ export async function evaluateWithGeminiImage(
     transcription,
   };
 }
-import type { Schema } from "@google/generative-ai";

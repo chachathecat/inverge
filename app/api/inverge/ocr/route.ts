@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 
-import { extractStructuredDraftWithGemini, extractTranscriptionFromImages } from "@/lib/evaluate/gemini";
+import {
+  extractStructuredDraftWithGemini,
+  extractTranscriptionFromImages,
+  GEMINI_API_KEY_ERROR_MESSAGE,
+  GEMINI_QUOTA_ERROR_MESSAGE,
+} from "@/lib/evaluate/gemini";
 import { parseAppraisalMode } from "@/lib/review-os/appraisal";
 import { normalizeExtractionDraft } from "@/lib/review-os/extraction";
 
@@ -31,7 +36,7 @@ export async function POST(request: Request) {
     if (process.env.OCR_STRUCTURED_EXTRACTION_AI === "true") {
       try {
         rawExtractionJson = await extractStructuredDraftWithGemini(mode, rawOcrText);
-      } catch {
+      } catch (error) {
         rawExtractionJson = {};
       }
     }
@@ -44,12 +49,16 @@ export async function POST(request: Request) {
       ...extraction,
     });
   } catch (error) {
-    return NextResponse.json(
-      {
-        ok: false,
-        error: error instanceof Error ? error.message : "텍스트를 불러오지 못했습니다.",
-      },
-      { status: 500 },
-    );
+    const message = error instanceof Error ? error.message : "텍스트를 불러오지 못했습니다.";
+
+    if (message === GEMINI_QUOTA_ERROR_MESSAGE) {
+      return NextResponse.json({ ok: false, error: message }, { status: 429 });
+    }
+
+    if (message === GEMINI_API_KEY_ERROR_MESSAGE) {
+      return NextResponse.json({ ok: false, error: "Gemini 설정을 확인해 주세요. 관리자에게 문의해 주세요." }, { status: 500 });
+    }
+
+    return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 }
