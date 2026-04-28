@@ -13,30 +13,43 @@ export function ReviewOsFeedbackButton({ route, pageContext }: FeedbackButtonPro
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit() {
-    if (!message.trim()) return;
+    if (!message.trim() || submitting) return;
+    setSubmitting(true);
+    setError(null);
 
-    const response = await fetch("/api/os/feedback", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ route, pageContext, message }),
-    });
+    try {
+      const response = await fetch("/api/os/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ route, pageContext, message }),
+      });
 
-    if (response.ok) {
+      if (!response.ok) {
+        setError("전송이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.");
+        return;
+      }
+
       setSubmitted(true);
       setMessage("");
       window.setTimeout(() => {
         setSubmitted(false);
         setOpen(false);
       }, 900);
+    } catch {
+      setError("전송이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.");
+    } finally {
+      setSubmitting(false);
     }
   }
 
   return (
     <div className="space-y-3">
       <Button type="button" variant="outline" onClick={() => setOpen((prev) => !prev)}>
-        beta 피드백 보내기
+        closed beta 피드백 보내기
       </Button>
 
       {open ? (
@@ -49,10 +62,11 @@ export function ReviewOsFeedbackButton({ route, pageContext }: FeedbackButtonPro
           />
           <div className="mt-3 flex items-center justify-between gap-3">
             <p className="text-xs text-[color:var(--muted)]">closed beta 개선용으로만 사용합니다.</p>
-            <Button type="button" onClick={() => void handleSubmit()} disabled={!message.trim()}>
-              {submitted ? "보냈습니다" : "보내기"}
+            <Button type="button" onClick={() => void handleSubmit()} disabled={!message.trim() || submitting}>
+              {submitted ? "보냈습니다" : submitting ? "보내는 중..." : "보내기"}
             </Button>
           </div>
+          {error ? <p className="mt-2 text-xs text-[color:var(--muted)]">{error}</p> : null}
         </div>
       ) : null}
     </div>

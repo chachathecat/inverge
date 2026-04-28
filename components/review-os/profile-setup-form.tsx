@@ -68,7 +68,9 @@ export function ProfileSetupForm({
         return;
       }
 
-      router.push(redirectAfterSave === "settings" ? `/app/settings?mode=${mode}` : `/app/capture?mode=${mode}`);
+      const nextHref =
+        redirectAfterSave === "settings" ? `/app/settings?mode=${mode}` : mode === "second" ? `/app/write?mode=${mode}` : `/app/capture?mode=${mode}`;
+      router.push(nextHref);
       router.refresh();
     } catch {
       setError("수험 설정을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.");

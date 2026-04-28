@@ -77,13 +77,13 @@ export default async function ExamsPage() {
   ];
 
   return (
-    <RefinedShell className="space-y-10">
+    <RefinedShell className="space-y-8 sm:space-y-10">
       <section className="max-w-3xl">
         <RefinedBadge>시험 선택</RefinedBadge>
         <h1 className="mt-5 text-[40px] font-medium leading-[1.12] tracking-[-0.05em] text-[color:var(--foreground-strong)] sm:text-[52px]">
           감정평가사 트랙을 선택하세요.
         </h1>
-        <p className="mt-5 text-body text-[color:var(--muted)]">
+        <p className="mt-3 text-body text-[color:var(--muted)] sm:mt-5">
           감정평가사 1차와 2차만 제공합니다. 선택한 모드로 로그인 후 바로 실행 화면으로 이어집니다.
         </p>
       </section>

@@ -87,7 +87,7 @@ export function FrontPage() {
               </div>
             ))}
           </div>
-          <p className="mt-6 text-sm text-[color:var(--muted)]">현재 초대 기반 알파로 차분하게 운영 중입니다.</p>
+          <p className="mt-6 text-sm text-[color:var(--muted)]">현재 초대 기반 closed beta로 차분하게 운영 중입니다.</p>
         </div>
 
         <FocusSurface className="animate-in-up overflow-hidden [animation-delay:120ms]">
