@@ -6,6 +6,7 @@ const authEmail = process.env.TEST_USER_EMAIL || process.env.E2E_USER_EMAIL;
 const authPassword = process.env.TEST_USER_PASSWORD || process.env.E2E_USER_PASSWORD;
 const hasAuthState = Boolean(authStatePath && fs.existsSync(authStatePath));
 const hasAuthCredentials = Boolean(authEmail && authPassword);
+const hasAuthSignal = Boolean(hasAuthState || authEmail);
 
 const forbiddenCopy = ['AI 채점', '합격 판정', '점수 보장'];
 
@@ -25,8 +26,12 @@ async function loginIfNeeded(page: Page) {
 }
 
 function skipIfMissingAuth(testInfo: TestInfo) {
-  if (!hasAuthState && !hasAuthCredentials) {
-    testInfo.skip('Skipping auth-required smoke: TEST_AUTH_STATE_PATH or TEST_USER_EMAIL/TEST_USER_PASSWORD is required.');
+  if (!hasAuthSignal) {
+    testInfo.skip('Skipping auth-required smoke: TEST_AUTH_STATE_PATH or TEST_USER_EMAIL is required.');
+  }
+
+  if (!hasAuthState && authEmail && !authPassword) {
+    testInfo.skip('Skipping auth-required smoke: TEST_USER_PASSWORD is required when TEST_USER_EMAIL is provided.');
   }
 }
 

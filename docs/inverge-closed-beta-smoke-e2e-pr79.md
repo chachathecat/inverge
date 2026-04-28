@@ -37,11 +37,13 @@ npm run test:e2e:smoke
 
 1. `TEST_AUTH_STATE_PATH`
    - Playwright `storageState` 파일 경로
-2. `TEST_USER_EMAIL` + `TEST_USER_PASSWORD`
-   - 로그인 기반 실행
+2. `TEST_USER_EMAIL`
+   - 로그인 기반 실행 신호
+   - 실제 로그인 수행에는 `TEST_USER_PASSWORD`가 함께 필요
 3. 호환 fallback: `E2E_USER_EMAIL` + `E2E_USER_PASSWORD`
 
 어떤 조건도 없으면 auth-required smoke는 **skip** 처리됩니다.
+`TEST_USER_EMAIL`만 있고 비밀번호가 없으면 auth-required smoke는 **skip** 처리됩니다.
 
 ## CI / Vercel 권장 env
 
