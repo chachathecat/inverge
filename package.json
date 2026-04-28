@@ -11,6 +11,7 @@
     "smoke:review-os-auth": "node scripts/smoke-review-os-auth.mjs",
     "eval:ocr-extraction": "node scripts/eval-ocr-extraction.mjs",
     "test:e2e": "npx playwright test",
+    "test:e2e:smoke": "npx playwright test tests/e2e/closed-beta-smoke.spec.ts",
     "test:e2e:headed": "npx playwright test --headed",
     "check:e2e-env": "node scripts/check-e2e-env.mjs",
     "check:taxonomy": "node scripts/check-taxonomy-classification.mjs"
