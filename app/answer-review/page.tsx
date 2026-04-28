@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { ChangeEvent, useMemo, useState } from "react";
 
 import { RefinedBadge, RefinedShell } from "@/components/inverge/refined-primitives";
 import { buttonVariants } from "@/components/ui/button";
@@ -25,6 +28,38 @@ const flowCards = [
 ];
 
 export default function AnswerReviewInfoPage() {
+  const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
+  const isOcrConnected = false;
+
+  const fileState = useMemo(() => {
+    if (!selectedFileName) {
+      return {
+        statusLabel: "파일 미선택",
+        statusMessage: "답안 이미지 또는 PDF를 업로드해 OCR 초안 확인 준비를 시작해 주세요.",
+        primaryCta: "답안 이미지 업로드",
+      };
+    }
+
+    if (!isOcrConnected) {
+      return {
+        statusLabel: "파일 선택 완료",
+        statusMessage: "OCR 기능 연결 전입니다. 업로드한 파일을 확인한 뒤 텍스트 입력으로 계속 진행해 주세요.",
+        primaryCta: "텍스트로 확인 계속하기",
+      };
+    }
+
+    return {
+      statusLabel: "OCR 초안 확인 가능",
+      statusMessage: "OCR 결과는 초안이며 저장 전 확인이 필요합니다.",
+      primaryCta: "OCR 초안 확인",
+    };
+  }, [isOcrConnected, selectedFileName]);
+
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    setSelectedFileName(file ? file.name : null);
+  };
+
   return (
     <RefinedShell className="space-y-5 py-6 sm:space-y-8 sm:py-10">
       <section className="space-y-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] p-5 sm:p-7">
@@ -36,15 +71,31 @@ export default function AnswerReviewInfoPage() {
         <section className="space-y-4 rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-4 sm:p-5">
           <div className="flex flex-col gap-2">
             <p className="text-sm font-medium text-[color:var(--foreground-strong)]">답안 입력 시작</p>
-            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
               <label
                 htmlFor="answer-review-file-upload"
                 className={cn(buttonVariants({ variant: "default" }), "cursor-pointer justify-center sm:w-auto")}
               >
-                답안 이미지 업로드
+                {fileState.primaryCta}
               </label>
-              <input id="answer-review-file-upload" type="file" accept="image/*,.pdf" className="hidden" />
+              <input
+                id="answer-review-file-upload"
+                type="file"
+                accept="image/*,.pdf"
+                className="hidden"
+                onChange={handleFileChange}
+              />
+              <p className="text-caption text-[color:var(--muted)]">
+                상태: <span className="font-medium text-[color:var(--foreground-strong)]">{fileState.statusLabel}</span>
+              </p>
             </div>
+            <p className="text-caption text-[color:var(--muted)]">
+              파일:{" "}
+              <span className="font-medium text-[color:var(--foreground-strong)]">
+                {selectedFileName ?? "선택된 파일이 없습니다."}
+              </span>
+            </p>
+            <p className="text-caption text-[color:var(--muted)]">{fileState.statusMessage}</p>
             <div className="flex flex-wrap gap-3 text-caption text-[color:var(--muted)]">
               <a href="#answer-review-text" className="underline underline-offset-4">
                 텍스트로 답안 입력
@@ -66,7 +117,7 @@ export default function AnswerReviewInfoPage() {
           </div>
 
           <div className="rounded-[var(--radius-sm)] border border-dashed border-[var(--border)] bg-[color:var(--surface)] p-3 text-caption text-[color:var(--muted)]">
-            업로드한 답안은 OCR 초안 확인용으로 활용하고, 아래 입력칸에서 내 답안과 기준답안을 바로 비교할 수 있습니다.
+            OCR 초안이 없거나 확인이 필요한 경우, 아래 입력칸에서 내 답안과 기준답안을 직접 입력해 즉시 비교할 수 있습니다.
           </div>
 
           <div className="grid gap-3 lg:grid-cols-2">
@@ -74,7 +125,7 @@ export default function AnswerReviewInfoPage() {
               <p className="text-caption font-medium text-[color:var(--muted)]">내 답안 텍스트</p>
               <Textarea
                 className="min-h-[160px] bg-[color:var(--surface)]"
-                placeholder="OCR 결과를 붙여 넣거나 직접 입력해 주세요. 문단 단위로 나누면 비교가 쉬워집니다."
+                placeholder="OCR 초안(있는 경우)을 붙여 넣거나 직접 입력해 주세요. 문단 단위로 나누면 비교가 쉬워집니다."
               />
             </div>
             <div className="space-y-2" id="answer-review-reference">
