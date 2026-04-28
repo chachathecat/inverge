@@ -163,7 +163,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
             {firstUse ? (
               <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-4 py-3 text-sm text-[color:var(--muted)]">
                 {config.emptyDescription}{" "}
-                <Link href="/app/settings" className="underline-offset-2 hover:underline">
+                <Link href={`/app/settings?mode=${mode}`} className="underline-offset-2 hover:underline">
                   수험 설정 확인
                 </Link>
               </div>
