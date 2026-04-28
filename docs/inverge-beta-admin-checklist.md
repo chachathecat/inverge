@@ -4,8 +4,11 @@
 
 ## A. Before inviting users
 - [ ] Vercel production deployment가 latest `main` 커밋인지 확인
+- [ ] Vercel preview deployment가 정상 성공했는지 확인
 - [ ] Supabase 관련 환경 변수 구성 확인
 - [ ] `ALPHA_INVITE_EMAILS` 구성 확인
+- [ ] `GEMINI_API_KEY` 설정 확인
+- [ ] `GEMINI_MODEL=gemini-2.5-flash` 설정 확인
 - [ ] `E2E_BASE_URL`가 production URL로 설정되었는지 확인
 - [ ] `npm run test:e2e` 로컬 통과 확인
 - [ ] `test-results` 산출물 정리(필요 시 삭제)
