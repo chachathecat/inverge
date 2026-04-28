@@ -3,6 +3,8 @@
 이 문서는 **PR47~54 MVP를 새 기능 추가 없이 운영 가능한 상태로 인계**하기 위한 운영자용 handoff 문서입니다.
 범위는 learner-facing **감정평가사 1차 / 2차**만 포함합니다.
 
+> PR77 운영 준비용 최신 체크리스트/테스트 스크립트: `docs/inverge-closed-beta-operator-checklist-pr77.md`
+
 ---
 
 ## 1) 베타 운영 목적
