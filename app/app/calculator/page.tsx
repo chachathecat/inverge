@@ -1,5 +1,5 @@
 import { CalculatorWorkflowPage } from "@/components/review-os/calculator-workflow-page";
-import { parseAppraisalMode } from "@/lib/review-os/appraisal";
+import { resolveAppraisalMode } from "@/lib/review-os/appraisal";
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
 import { getCalculatorWorkflow } from "@/lib/review-os/calculator-workflow";
 
@@ -9,11 +9,18 @@ type PageProps = {
 
 export default async function CalculatorWorkflowRoute({ searchParams }: PageProps) {
   const params = await searchParams;
-  const mode = parseAppraisalMode(params?.mode) ?? "first";
-  const context = params?.context ?? (mode === "second" ? "practice" : "accounting");
-  const workflow = getCalculatorWorkflow(context);
-  const { session } = await getReviewOsServerContext(buildReviewOsReturnTo("/app/calculator", workflow.mode));
+  const { session, profile } = await getReviewOsServerContext(buildReviewOsReturnTo("/app/calculator", params?.mode));
   if (!session.userId) return null;
 
-  return <CalculatorWorkflowPage workflow={workflow} />;
+  const mode = resolveAppraisalMode(profile, params?.mode);
+  const requestedContext = params?.context;
+  const fallbackContext = mode === "second" ? "practice" : "accounting";
+  const context =
+    requestedContext === "practice" || requestedContext === "accounting"
+      ? requestedContext
+      : fallbackContext;
+  const workflow = getCalculatorWorkflow(context);
+  const resolvedWorkflow = workflow.mode === mode ? workflow : getCalculatorWorkflow(fallbackContext);
+
+  return <CalculatorWorkflowPage workflow={resolvedWorkflow} />;
 }

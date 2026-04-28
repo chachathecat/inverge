@@ -62,7 +62,11 @@ export default async function ReviewOsWeeklyPage({ searchParams }: PageProps) {
           ) : (
             <div className="space-y-4 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] p-4">
               <p className="text-sm leading-7 text-[color:var(--muted)]">{config.emptyDescription}</p>
-              <p className="text-sm leading-7 text-[color:var(--foreground-strong)]">오늘은 오답 1건만 입력해 주간 계획의 기준점을 만듭니다.</p>
+              <p className="text-sm leading-7 text-[color:var(--foreground-strong)]">
+                {mode === "second"
+                  ? "오늘은 답안 1건만 입력해 주간 계획의 기준점을 만듭니다."
+                  : "오늘은 오답 1건만 입력해 주간 계획의 기준점을 만듭니다."}
+              </p>
               <Link href={`/app/capture?mode=${mode}`}>
                 <Button type="button">{config.primaryCta}</Button>
               </Link>
