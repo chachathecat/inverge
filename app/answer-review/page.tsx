@@ -187,6 +187,10 @@ export default function AnswerReviewInfoPage() {
 
           <div className="rounded-[var(--radius-sm)] border border-dashed border-[var(--border)] bg-[color:var(--surface)] p-3 text-caption text-[color:var(--muted)]">
             OCR 결과는 초안이며 저장 전 확인이 필요합니다. 기준답안은 텍스트 붙여넣기 중심으로 입력해 주세요.
+            <br />
+            긴 PDF는 필요한 문제/답안/기준답안 페이지만 나눠 넣는 것이 좋습니다.
+            <br />
+            역할을 나누면 구조화 품질이 높아집니다.
           </div>
 
           <div className="grid gap-3 lg:grid-cols-2">
@@ -262,7 +266,7 @@ export default function AnswerReviewInfoPage() {
           </div>
 
           <section id="manual-comparison-preview" className="space-y-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
-            <p className="text-sm font-medium text-[color:var(--foreground-strong)]">Manual comparison preview</p>
+            <p className="text-sm font-medium text-[color:var(--foreground-strong)]">OCR 구조화 결과</p>
             <ul className="space-y-2 text-caption text-[color:var(--muted)]">
               <li>
                 문제/사례: <span className="font-medium text-[color:var(--foreground-strong)]">{hasProblemInput ? "입력됨" : "미입력"}</span>
@@ -289,28 +293,30 @@ export default function AnswerReviewInfoPage() {
           </section>
 
           <section className="space-y-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
-            <p className="text-sm font-medium text-[color:var(--foreground-strong)]">수동 검토 메모</p>
-            <div className="space-y-2">
-              <p className="text-caption font-medium text-[color:var(--muted)]">누락 논점 후보</p>
-              <Textarea
-                className="min-h-[96px] bg-[color:var(--surface)]"
-                placeholder="예: 처분 근거 조문 제시가 누락되어 논증 연결이 약함"
-                value={missingPointMemo}
-                onChange={(event) => setMissingPointMemo(event.target.value)}
-              />
-              <p className="text-caption text-[color:var(--muted)]">자동 산출이 아니라 운영자/검토자가 직접 적는 메모입니다.</p>
-            </div>
-            <div className="space-y-2">
-              <p className="text-caption font-medium text-[color:var(--muted)]">교정 문단</p>
-              <Textarea
-                className="min-h-[120px] bg-[color:var(--surface)]"
-                placeholder="누락 논점을 반영해 보강 문단을 직접 작성해 주세요."
-                value={revisionParagraph}
-                onChange={(event) => setRevisionParagraph(event.target.value)}
-              />
-              <p className="text-caption text-[color:var(--muted)]">자동 생성이 아니라 운영자/검토자가 직접 적는 교정 초안입니다.</p>
-            </div>
-            <p className="text-caption text-[color:var(--muted)]">현재 화면에서만 확인하는 초안입니다. 저장 완료처럼 표시되지 않습니다.</p>
+            <details>
+              <summary className="cursor-pointer text-sm font-medium text-[color:var(--foreground-strong)]">수동 검토 메모</summary>
+              <div className="mt-3 space-y-2">
+                <p className="text-caption font-medium text-[color:var(--muted)]">누락 논점 후보</p>
+                <Textarea
+                  className="min-h-[96px] bg-[color:var(--surface)]"
+                  placeholder="예: 처분 근거 조문 제시가 누락되어 논증 연결이 약함"
+                  value={missingPointMemo}
+                  onChange={(event) => setMissingPointMemo(event.target.value)}
+                />
+                <p className="text-caption text-[color:var(--muted)]">자동 산출이 아니라 운영자/검토자가 직접 적는 메모입니다.</p>
+              </div>
+              <div className="mt-3 space-y-2">
+                <p className="text-caption font-medium text-[color:var(--muted)]">교정 문단</p>
+                <Textarea
+                  className="min-h-[120px] bg-[color:var(--surface)]"
+                  placeholder="누락 논점을 반영해 보강 문단을 직접 작성해 주세요."
+                  value={revisionParagraph}
+                  onChange={(event) => setRevisionParagraph(event.target.value)}
+                />
+                <p className="text-caption text-[color:var(--muted)]">자동 생성이 아니라 운영자/검토자가 직접 적는 교정 초안입니다.</p>
+              </div>
+              <p className="mt-3 text-caption text-[color:var(--muted)]">현재 화면에서만 확인하는 초안입니다. 저장 완료처럼 표시되지 않습니다.</p>
+            </details>
           </section>
 
           <section className="space-y-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
@@ -339,23 +345,28 @@ export default function AnswerReviewInfoPage() {
           </section>
 
           <section className="space-y-2 rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
-            <p className="text-sm font-medium text-[color:var(--foreground-strong)]">검토자 노트</p>
-            <pre className="max-h-[240px] overflow-auto whitespace-pre-wrap rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3 text-caption leading-6 text-[color:var(--foreground-strong)]">
-              {reviewerNoteText}
-            </pre>
-            <p className="text-caption text-[color:var(--muted)]">현재 화면에서만 확인하는 초안입니다.</p>
+            <details>
+              <summary className="cursor-pointer text-sm font-medium text-[color:var(--foreground-strong)]">검토자 노트</summary>
+              <pre className="mt-3 max-h-[240px] overflow-auto whitespace-pre-wrap rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3 text-caption leading-6 text-[color:var(--foreground-strong)]">
+                {reviewerNoteText}
+              </pre>
+              <p className="mt-2 text-caption text-[color:var(--muted)]">현재 화면에서만 확인하는 초안입니다.</p>
+            </details>
           </section>
         </section>
       </section>
 
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {flowCards.map((card) => (
-          <article key={card.title} className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
-            <p className="text-sm font-medium text-[color:var(--foreground-strong)]">{card.title}</p>
-            <p className="mt-2 text-caption leading-6 text-[color:var(--muted)]">{card.description}</p>
-          </article>
-        ))}
-      </section>
+      <details className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
+        <summary className="cursor-pointer text-sm font-medium text-[color:var(--foreground-strong)]">Flow cards 보기</summary>
+        <section className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {flowCards.map((card) => (
+            <article key={card.title} className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
+              <p className="text-sm font-medium text-[color:var(--foreground-strong)]">{card.title}</p>
+              <p className="mt-2 text-caption leading-6 text-[color:var(--muted)]">{card.description}</p>
+            </article>
+          ))}
+        </section>
+      </details>
 
       <div>
         <Link href="/exams" className={cn(buttonVariants({ variant: "outline" }), "w-full sm:w-auto")}>

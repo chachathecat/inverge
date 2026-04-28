@@ -1,6 +1,7 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
 import { evaluateSubmission } from "@/lib/evaluate";
+import { GEMINI_API_KEY_ERROR_MESSAGE, GEMINI_QUOTA_ERROR_MESSAGE } from "@/lib/evaluate/gemini";
 import { consumeRateLimit } from "@/lib/rate-limit";
 import type { EvaluateRequestBody } from "@/types/evaluation";
 
@@ -61,6 +62,14 @@ export async function POST(request: Request) {
       error instanceof Error
         ? error.message
         : "분석 엔진 호출에 실패했습니다. 잠시 후 다시 시도해 주세요.";
+
+    if (message === GEMINI_QUOTA_ERROR_MESSAGE) {
+      return NextResponse.json({ error: message }, { status: 429 });
+    }
+
+    if (message === GEMINI_API_KEY_ERROR_MESSAGE) {
+      return NextResponse.json({ error: "Gemini 설정을 확인해 주세요. 관리자에게 문의해 주세요." }, { status: 500 });
+    }
 
     return NextResponse.json({ error: message }, { status: 500 });
   }
