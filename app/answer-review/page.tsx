@@ -293,7 +293,7 @@ export default function AnswerReviewInfoPage() {
           {currentStep === 1 ? (
             <section className="space-y-4">
               <p className="text-caption leading-5 text-[color:var(--muted)]">
-                AI가 먼저 구조화하고, 검토자는 확인만 합니다. Gemini가 멈춰도 수동 검토로 이어갈 수 있으며 문제/사례·내 답안·기준답안을 역할별로 나눠 넣으면 구조화가 더 안정적입니다.
+                AI가 먼저 구조화하고, 검토자는 확인만 합니다. Gemini가 멈춰도 수동 검토로 이어갈 수 있습니다.
               </p>
               <div className="grid gap-2 sm:grid-cols-3">
                 <InputStatusCard title="문제/사례" isFilled={hasProblemInput} helper="문제 이미지 또는 텍스트" />

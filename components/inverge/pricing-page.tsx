@@ -59,12 +59,12 @@ export function PricingPage({ initialSubscriptionState }: PricingPageProps) {
   return (
     <main className="mx-auto w-full max-w-[1080px] px-5 py-8 sm:px-8 lg:py-12">
       <section className="max-w-3xl">
-        <p className="text-caption font-medium text-[color:var(--muted)]">감정평가사 alpha 플랜</p>
+        <p className="text-caption font-medium text-[color:var(--muted)]">감정평가사 closed beta 플랜</p>
         <h1 className="mt-3 text-[40px] font-medium leading-[1.12] tracking-[-0.05em] text-[color:var(--foreground-strong)] sm:text-[52px]">
           결제보다 먼저, 감평사 수험 운영 흐름을 검증합니다.
         </h1>
         <p className="mt-5 max-w-2xl text-body text-[color:var(--muted)]">
-          현재는 invite-only alpha입니다. 1차 오답과 2차 답안 보강을 안정적으로 처리하는 범위부터 닫아서 운영합니다.
+          현재는 invite-only closed beta입니다. 1차 오답과 2차 답안 보강을 안정적으로 처리하는 범위부터 닫아서 운영합니다.
         </p>
       </section>
 
@@ -88,7 +88,7 @@ export function PricingPage({ initialSubscriptionState }: PricingPageProps) {
                 </div>
                 {plan.recommended ? (
                   <span className="rounded-full border border-[var(--border)] bg-[color:var(--surface-soft)] px-3 py-1 text-caption text-[color:var(--muted-strong)]">
-                    alpha 기본
+                    beta 기본
                   </span>
                 ) : null}
               </div>
@@ -124,7 +124,7 @@ export function PricingPage({ initialSubscriptionState }: PricingPageProps) {
                   href={returnPath}
                   className="mt-7 inline-flex h-11 w-full items-center justify-center rounded-full border border-[var(--border-strong)] text-sm font-medium text-[color:var(--foreground-strong)]"
                 >
-                  alpha 계속 사용
+                  beta 계속 사용
                 </Link>
               )}
             </section>

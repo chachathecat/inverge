@@ -49,7 +49,7 @@ export default async function ReviewOsSettingsPage({ searchParams }: PageProps) 
 
         <Card className="border-[var(--border)] bg-[color:var(--surface)] shadow-none">
           <CardHeader>
-            <CardTitle>beta 사용량</CardTitle>
+            <CardTitle>closed beta 사용량</CardTitle>
             <CardDescription>closed beta 안정성을 위해 처리량을 조용히 제한합니다.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
