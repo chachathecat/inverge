@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { ChangeEvent, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import type { ChangeEvent } from "react";
 
 import { RefinedBadge, RefinedShell } from "@/components/inverge/refined-primitives";
 import { buttonVariants } from "@/components/ui/button";
@@ -52,6 +53,7 @@ export default function AnswerReviewInfoPage() {
   const [missingPointMemo, setMissingPointMemo] = useState("");
   const [revisionParagraph, setRevisionParagraph] = useState("");
   const [feedbackCopyStatus, setFeedbackCopyStatus] = useState<"idle" | "success" | "failed">("idle");
+  const [copiedFeedbackDraftText, setCopiedFeedbackDraftText] = useState<string | null>(null);
 
   const handleProblemFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -138,11 +140,15 @@ export default function AnswerReviewInfoPage() {
   const copyFeedbackDraft = async () => {
     try {
       await navigator.clipboard.writeText(feedbackDraftText);
+      setCopiedFeedbackDraftText(feedbackDraftText);
       setFeedbackCopyStatus("success");
     } catch {
+      setCopiedFeedbackDraftText(null);
       setFeedbackCopyStatus("failed");
     }
   };
+
+  const didCopyCurrentDraft = feedbackCopyStatus === "success" && copiedFeedbackDraftText === feedbackDraftText;
 
   return (
     <RefinedShell className="space-y-5 py-6 sm:space-y-8 sm:py-10">
@@ -310,7 +316,7 @@ export default function AnswerReviewInfoPage() {
           <section className="space-y-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-sm font-medium text-[color:var(--foreground-strong)]">학생에게 줄 피드백 초안</p>
-              <button type="button" className={cn(buttonVariants({ variant: "outline", size: "sm" }))} onClick={copyFeedbackDraft}>
+              <button type="button" className={cn(buttonVariants({ variant: "outline" }), "h-9 px-3 text-xs")} onClick={copyFeedbackDraft}>
                 피드백 초안 복사
               </button>
             </div>
@@ -318,7 +324,7 @@ export default function AnswerReviewInfoPage() {
             <pre className="max-h-[320px] overflow-auto whitespace-pre-wrap rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3 text-caption leading-6 text-[color:var(--foreground-strong)]">
               {feedbackDraftText}
             </pre>
-            {feedbackCopyStatus === "success" ? (
+            {didCopyCurrentDraft ? (
               <p className="text-caption text-[color:var(--muted)]">복사했습니다. 전달 전 검토해 주세요.</p>
             ) : null}
             {feedbackCopyStatus === "failed" ? (
