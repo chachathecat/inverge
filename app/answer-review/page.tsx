@@ -10,63 +10,67 @@ import { cn } from "@/lib/utils";
 
 const flowCards = [
   {
-    title: "1) OCR 입력",
-    description: "수기 답안 이미지/PDF를 올리고 OCR 초안을 확인합니다.",
+    title: "1) 문제 맥락 입력",
+    description: "문제/사례를 먼저 입력해 답안 검토의 기준 맥락을 고정합니다.",
   },
   {
-    title: "2) 기준답안 비교",
-    description: "기준답안 또는 기준 구조를 붙여 넣고 내 답안과 나란히 점검합니다.",
+    title: "2) 내 답안 입력",
+    description: "답안 이미지를 올리거나 텍스트를 붙여 넣어 검토할 원문을 준비합니다.",
   },
   {
-    title: "3) 누락 논점 확인",
-    description: "핵심 논점 중 빠진 부분 하나를 우선으로 표시합니다.",
+    title: "3) 기준답안 입력",
+    description: "기준답안/기준목차를 텍스트로 붙여 넣고 누락 논점을 수동으로 점검합니다.",
   },
   {
-    title: "4) 교정 문단 작성",
-    description: "누락 논점을 반영한 교정 문단을 작성해 다음 답안에 바로 반영합니다.",
+    title: "4) 교정 실행",
+    description: "누락 논점 후보와 교정 문단을 작성해 다음 답안 재작성으로 이어집니다.",
   },
 ];
 
+type InputStatusCardProps = {
+  title: string;
+  isFilled: boolean;
+  helper: string;
+};
+
+function InputStatusCard({ title, isFilled, helper }: InputStatusCardProps) {
+  return (
+    <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface)] p-3">
+      <p className="text-caption font-medium text-[color:var(--muted)]">{title}</p>
+      <p className="mt-1 text-sm font-medium text-[color:var(--foreground-strong)]">{isFilled ? "입력됨" : "미입력"}</p>
+      <p className="mt-1 text-caption text-[color:var(--muted)]">{helper}</p>
+    </article>
+  );
+}
+
 export default function AnswerReviewInfoPage() {
-  const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
+  const [problemFileName, setProblemFileName] = useState<string | null>(null);
+  const [myAnswerFileName, setMyAnswerFileName] = useState<string | null>(null);
+  const [problemText, setProblemText] = useState("");
   const [myAnswerText, setMyAnswerText] = useState("");
   const [referenceAnswerText, setReferenceAnswerText] = useState("");
   const [missingPointMemo, setMissingPointMemo] = useState("");
   const [revisionParagraph, setRevisionParagraph] = useState("");
-  const isOcrConnected = false;
 
-  const fileState = useMemo(() => {
-    if (!selectedFileName) {
-      return {
-        statusLabel: "파일 미선택",
-        statusMessage: "답안 이미지 또는 PDF를 업로드해 OCR 초안 확인 준비를 시작해 주세요.",
-        primaryCta: "답안 이미지 업로드",
-      };
-    }
-
-    if (!isOcrConnected) {
-      return {
-        statusLabel: "파일 선택 완료",
-        statusMessage: "OCR 기능 연결 전입니다. 업로드한 파일을 확인한 뒤 텍스트 입력으로 계속 진행해 주세요.",
-        primaryCta: "텍스트로 확인 계속하기",
-      };
-    }
-
-    return {
-      statusLabel: "OCR 초안 확인 가능",
-      statusMessage: "OCR 결과는 초안이며 저장 전 확인이 필요합니다.",
-      primaryCta: "OCR 초안 확인",
-    };
-  }, [isOcrConnected, selectedFileName]);
-
-  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+  const handleProblemFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    setSelectedFileName(file ? file.name : null);
+    setProblemFileName(file ? file.name : null);
   };
 
-  const hasMyAnswer = myAnswerText.trim().length > 0;
+  const handleMyAnswerFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    setMyAnswerFileName(file ? file.name : null);
+  };
+
+  const hasProblemInput = problemText.trim().length > 0 || Boolean(problemFileName);
+  const hasMyAnswer = myAnswerText.trim().length > 0 || Boolean(myAnswerFileName);
   const hasReferenceAnswer = referenceAnswerText.trim().length > 0;
-  const showManualPreview = hasMyAnswer && hasReferenceAnswer;
+  const isReviewReady = hasProblemInput && hasMyAnswer && hasReferenceAnswer;
+
+  const primaryCtaLabel = useMemo(() => {
+    if (isReviewReady) return "검토 preview 확인";
+    return "답안 이미지 업로드";
+  }, [isReviewReady]);
 
   const getParagraphCount = (text: string) => {
     const normalized = text.trim();
@@ -75,6 +79,11 @@ export default function AnswerReviewInfoPage() {
       .split(/\n\s*\n/)
       .map((paragraph) => paragraph.trim())
       .filter(Boolean).length;
+  };
+
+  const jumpToSection = () => {
+    const targetId = isReviewReady ? "manual-comparison-preview" : "my-answer-upload";
+    document.getElementById(targetId)?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   return (
@@ -86,47 +95,26 @@ export default function AnswerReviewInfoPage() {
         </div>
 
         <section className="space-y-4 rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-4 sm:p-5">
-          <div className="flex flex-col gap-2">
-            <p className="text-sm font-medium text-[color:var(--foreground-strong)]">답안 입력 시작</p>
-            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-              <label
-                htmlFor="answer-review-file-upload"
-                className={cn(buttonVariants({ variant: "default" }), "cursor-pointer justify-center sm:w-auto")}
-              >
-                {fileState.primaryCta}
-              </label>
-              <input
-                id="answer-review-file-upload"
-                type="file"
-                accept="image/*,.pdf"
-                className="hidden"
-                onChange={handleFileChange}
-              />
-              <p className="text-caption text-[color:var(--muted)]">
-                상태: <span className="font-medium text-[color:var(--foreground-strong)]">{fileState.statusLabel}</span>
-              </p>
+          <div className="space-y-3">
+            <p className="text-sm font-medium text-[color:var(--foreground-strong)]">검토 준비 상태</p>
+            <div className="grid gap-2 sm:grid-cols-3">
+              <InputStatusCard title="문제/사례" isFilled={hasProblemInput} helper="문제 이미지 또는 텍스트" />
+              <InputStatusCard title="내 답안" isFilled={hasMyAnswer} helper="답안 이미지 또는 텍스트" />
+              <InputStatusCard title="기준답안" isFilled={hasReferenceAnswer} helper="기준답안/기준목차 텍스트" />
             </div>
+            <button type="button" className={cn(buttonVariants({ variant: "default" }), "w-full sm:w-auto")} onClick={jumpToSection}>
+              {primaryCtaLabel}
+            </button>
             <p className="text-caption text-[color:var(--muted)]">
-              파일:{" "}
-              <span className="font-medium text-[color:var(--foreground-strong)]">
-                {selectedFileName ?? "선택된 파일이 없습니다."}
-              </span>
+              {isReviewReady
+                ? "세 입력이 모두 준비되었습니다. 아래 수동 검토 preview에서 상태를 확인하세요."
+                : "문제 요구와 기준답안을 함께 넣어야 답안의 빠진 부분을 안전하게 볼 수 있습니다."}
             </p>
-            <p className="text-caption text-[color:var(--muted)]">{fileState.statusMessage}</p>
-            <div className="flex flex-wrap gap-3 text-caption text-[color:var(--muted)]">
-              <a href="#answer-review-text" className="underline underline-offset-4">
-                텍스트로 답안 입력
-              </a>
-              <a href="#answer-review-reference" className="underline underline-offset-4">
-                기준답안 붙여넣기
-              </a>
-            </div>
-            <p className="text-caption text-[color:var(--muted)]">OCR 결과는 초안이며 저장 전 확인이 필요합니다.</p>
           </div>
 
           <div className="space-y-2">
             <h1 className="text-[26px] font-medium leading-[1.2] tracking-[-0.03em] text-[color:var(--foreground-strong)] sm:text-[34px]">
-              수기 답안을 OCR로 읽고, 기준답안과 비교해 보강할 논점 하나를 정리합니다.
+              문제/사례 + 내 답안 + 기준답안을 함께 입력해 수동 검토 preview로 이어갑니다.
             </h1>
             <p className="text-sm leading-7 text-[color:var(--muted)]">
               최종 채점이나 합격 판정이 아니라 답안 검토와 보강을 돕는 운영형 흐름입니다.
@@ -134,87 +122,107 @@ export default function AnswerReviewInfoPage() {
           </div>
 
           <div className="rounded-[var(--radius-sm)] border border-dashed border-[var(--border)] bg-[color:var(--surface)] p-3 text-caption text-[color:var(--muted)]">
-            OCR 초안이 없거나 확인이 필요한 경우, 아래 입력칸에서 내 답안과 기준답안을 직접 입력해 즉시 비교할 수 있습니다.
+            OCR 결과는 초안이며 저장 전 확인이 필요합니다. 기준답안은 텍스트 붙여넣기 중심으로 입력해 주세요.
           </div>
 
           <div className="grid gap-3 lg:grid-cols-2">
-            <div className="space-y-2" id="answer-review-text">
-              <p className="text-caption font-medium text-[color:var(--muted)]">내 답안 텍스트</p>
+            <section className="space-y-3" id="problem-upload">
+              <p className="text-caption font-medium text-[color:var(--muted)]">문제/사례 이미지 업로드 (OCR 초안용)</p>
+              <label
+                htmlFor="answer-review-problem-file-upload"
+                className={cn(buttonVariants({ variant: "outline" }), "cursor-pointer justify-center w-full sm:w-auto")}
+              >
+                문제/사례 이미지 선택
+              </label>
+              <input
+                id="answer-review-problem-file-upload"
+                type="file"
+                accept="image/*,.pdf"
+                className="hidden"
+                onChange={handleProblemFileChange}
+              />
+              <p className="text-caption text-[color:var(--muted)]">
+                파일: <span className="font-medium text-[color:var(--foreground-strong)]">{problemFileName ?? "선택된 파일이 없습니다."}</span>
+              </p>
+            </section>
+
+            <section className="space-y-3" id="my-answer-upload">
+              <p className="text-caption font-medium text-[color:var(--muted)]">내 답안 이미지 업로드 (OCR 초안용)</p>
+              <label
+                htmlFor="answer-review-my-answer-file-upload"
+                className={cn(buttonVariants({ variant: "outline" }), "cursor-pointer justify-center w-full sm:w-auto")}
+              >
+                내 답안 이미지 선택
+              </label>
+              <input
+                id="answer-review-my-answer-file-upload"
+                type="file"
+                accept="image/*,.pdf"
+                className="hidden"
+                onChange={handleMyAnswerFileChange}
+              />
+              <p className="text-caption text-[color:var(--muted)]">
+                파일: <span className="font-medium text-[color:var(--foreground-strong)]">{myAnswerFileName ?? "선택된 파일이 없습니다."}</span>
+              </p>
+            </section>
+          </div>
+
+          <div className="grid gap-3 lg:grid-cols-3">
+            <div className="space-y-2" id="answer-review-problem">
+              <p className="text-caption font-medium text-[color:var(--muted)]">문제/사례 입력</p>
               <Textarea
                 className="min-h-[160px] bg-[color:var(--surface)]"
-                placeholder="OCR 초안(있는 경우)을 붙여 넣거나 직접 입력해 주세요. 문단 단위로 나누면 비교가 쉬워집니다."
+                placeholder="문제 요구사항, 사례 조건, 논점 키워드를 입력해 주세요."
+                value={problemText}
+                onChange={(event) => setProblemText(event.target.value)}
+              />
+            </div>
+            <div className="space-y-2" id="answer-review-text">
+              <p className="text-caption font-medium text-[color:var(--muted)]">내 답안 입력</p>
+              <Textarea
+                className="min-h-[160px] bg-[color:var(--surface)]"
+                placeholder="OCR 초안(있는 경우)을 붙여 넣거나 직접 입력해 주세요."
                 value={myAnswerText}
                 onChange={(event) => setMyAnswerText(event.target.value)}
               />
             </div>
             <div className="space-y-2" id="answer-review-reference">
-              <p className="text-caption font-medium text-[color:var(--muted)]">기준답안/기준 구조</p>
+              <p className="text-caption font-medium text-[color:var(--muted)]">기준답안/기준목차 입력</p>
               <Textarea
                 className="min-h-[160px] bg-[color:var(--surface)]"
-                placeholder="기준답안 또는 목차 구조를 붙여 넣어 누락 논점을 확인하세요."
+                placeholder="기준답안 또는 기준목차를 텍스트로 붙여 넣어 주세요."
                 value={referenceAnswerText}
                 onChange={(event) => setReferenceAnswerText(event.target.value)}
               />
             </div>
           </div>
 
-          <details className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface)] p-3 text-caption text-[color:var(--muted)]">
-            <summary className="cursor-pointer font-medium text-[color:var(--foreground-strong)]">검토 preview 안내</summary>
-            <p className="mt-2">
-              아래 preview는 자동 분석이 아닌 수동 검토 보조입니다. 이 화면은 최종 채점이나 합격 판정이 아니라 답안 검토와
-              보강을 위한 작업 공간입니다.
-            </p>
-          </details>
-
-          {showManualPreview ? (
-            <section className="space-y-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
-              <p className="text-sm font-medium text-[color:var(--foreground-strong)]">검토 preview</p>
-              <ul className="space-y-2 text-caption text-[color:var(--muted)]">
-                <li>
-                  내 답안:{" "}
-                  <span className="font-medium text-[color:var(--foreground-strong)]">
-                    입력됨 (글자 수 {myAnswerText.trim().length}, 문단 수 {getParagraphCount(myAnswerText)})
-                  </span>
-                </li>
-                <li>
-                  기준답안:{" "}
-                  <span className="font-medium text-[color:var(--foreground-strong)]">
-                    입력됨 (글자 수 {referenceAnswerText.trim().length}, 문단 수 {getParagraphCount(referenceAnswerText)})
-                  </span>
-                </li>
-                <li>
-                  다음 검토:{" "}
-                  <span className="font-medium text-[color:var(--foreground-strong)]">
-                    누락 논점 후보를 직접 표시하고, 교정 문단을 작성하세요.
-                  </span>
-                </li>
-              </ul>
-            </section>
-          ) : (
-            <section className="space-y-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
-              <p className="text-sm font-medium text-[color:var(--foreground-strong)]">검토 preview</p>
-              <ul className="space-y-2 text-caption text-[color:var(--muted)]">
-                <li>
-                  내 답안:{" "}
-                  <span className="font-medium text-[color:var(--foreground-strong)]">
-                    {hasMyAnswer ? "입력됨" : "미입력"}
-                  </span>
-                </li>
-                <li>
-                  기준답안:{" "}
-                  <span className="font-medium text-[color:var(--foreground-strong)]">
-                    {hasReferenceAnswer ? "입력됨" : "미입력"}
-                  </span>
-                </li>
-                <li>
-                  다음 검토:{" "}
-                  <span className="font-medium text-[color:var(--foreground-strong)]">
-                    두 텍스트를 입력하면 수동 비교 preview가 표시됩니다.
-                  </span>
-                </li>
-              </ul>
-            </section>
-          )}
+          <section id="manual-comparison-preview" className="space-y-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
+            <p className="text-sm font-medium text-[color:var(--foreground-strong)]">Manual comparison preview</p>
+            <ul className="space-y-2 text-caption text-[color:var(--muted)]">
+              <li>
+                문제/사례: <span className="font-medium text-[color:var(--foreground-strong)]">{hasProblemInput ? "입력됨" : "미입력"}</span>
+              </li>
+              <li>
+                내 답안: <span className="font-medium text-[color:var(--foreground-strong)]">{hasMyAnswer ? "입력됨" : "미입력"}</span>
+              </li>
+              <li>
+                기준답안: <span className="font-medium text-[color:var(--foreground-strong)]">{hasReferenceAnswer ? "입력됨" : "미입력"}</span>
+              </li>
+              <li>
+                준비 상태:{" "}
+                <span className="font-medium text-[color:var(--foreground-strong)]">
+                  {isReviewReady ? "검토 준비 완료" : "세 입력을 모두 준비하면 검토 준비 완료로 전환됩니다."}
+                </span>
+              </li>
+            </ul>
+            {isReviewReady ? (
+              <p className="text-caption text-[color:var(--muted)]">
+                입력 요약: 내 답안 {myAnswerText.trim().length}자/{getParagraphCount(myAnswerText)}문단, 기준답안 {referenceAnswerText.trim().length}자/
+                {getParagraphCount(referenceAnswerText)}문단.
+              </p>
+            ) : null}
+          </section>
 
           <section className="space-y-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
             <p className="text-sm font-medium text-[color:var(--foreground-strong)]">수동 검토 메모</p>
@@ -222,25 +230,23 @@ export default function AnswerReviewInfoPage() {
               <p className="text-caption font-medium text-[color:var(--muted)]">누락 논점 후보</p>
               <Textarea
                 className="min-h-[96px] bg-[color:var(--surface)]"
-                placeholder="예: 보상계획 공고 이후 절차 언급 부족"
+                placeholder="예: 처분 근거 조문 제시가 누락되어 논증 연결이 약함"
                 value={missingPointMemo}
                 onChange={(event) => setMissingPointMemo(event.target.value)}
               />
-              <p className="text-caption text-[color:var(--muted)]">자동 산출이 아닌, 사용자가 직접 입력하는 메모입니다.</p>
+              <p className="text-caption text-[color:var(--muted)]">자동 산출이 아니라 운영자/검토자가 직접 적는 메모입니다.</p>
             </div>
             <div className="space-y-2">
               <p className="text-caption font-medium text-[color:var(--muted)]">교정 문단</p>
               <Textarea
                 className="min-h-[120px] bg-[color:var(--surface)]"
-                placeholder="기준답안과 비교해 보강할 문단을 한 단락으로 다시 작성하세요."
+                placeholder="누락 논점을 반영해 보강 문단을 직접 작성해 주세요."
                 value={revisionParagraph}
                 onChange={(event) => setRevisionParagraph(event.target.value)}
               />
+              <p className="text-caption text-[color:var(--muted)]">자동 생성이 아니라 운영자/검토자가 직접 적는 교정 초안입니다.</p>
             </div>
-            <p className="text-caption text-[color:var(--muted)]">
-              현재 화면에서만 확인하는 초안입니다. 저장된 것처럼 표시되지 않습니다.
-            </p>
-            <p className="text-caption font-medium text-[color:var(--foreground-strong)]">검토 메모 확인</p>
+            <p className="text-caption text-[color:var(--muted)]">현재 화면에서만 확인하는 초안입니다. 저장 완료처럼 표시되지 않습니다.</p>
           </section>
         </section>
       </section>
