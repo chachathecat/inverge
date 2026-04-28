@@ -122,6 +122,8 @@ export async function structureAnswerReviewWithGemini({
             text: [
               "너는 감정평가사 답안 검토실의 구조화 보조다.",
               "절대 수치화 평가나 합격 여부 추정을 하지 마라.",
+              "nextTask는 반드시 하나만 제시하고, nextTaskType은 concept_recall | formula_retry | paragraph_rewrite | issue_spotting | similar_problem 중 하나만 사용하라.",
+              "relatedFormulas는 수식이 있으면 LaTeX 문자열 배열로 작성하고, 없으면 빈 배열로 두어라.",
               "출력은 반드시 JSON 하나만 반환하라.",
               "OCR 결과와 구조화 결과는 초안이며 검토자 확인이 필요하다는 점을 caution에 반영하라.",
               "입력이 부족하면 추정하지 말고 부족한 맥락을 명확히 적어라.",
@@ -174,6 +176,7 @@ export async function structureAnswerReviewWithGemini({
     const hasExpectedField = [
       "questionSummary",
       "coreConcepts",
+      "relatedFormulas",
       "requiredIssues",
       "userAnswerSummary",
       "userAnswerStructure",
@@ -184,6 +187,8 @@ export async function structureAnswerReviewWithGemini({
       "weakLogicPoint",
       "rewriteTarget",
       "rewriteDraftSuggestion",
+      "nextTaskType",
+      "nextTask",
       "nextAction",
       "caution",
     ].some((field) => field in source);
@@ -330,6 +335,7 @@ function answerReviewStructureSchema(): Schema {
     properties: {
       questionSummary: { type: SchemaType.STRING },
       coreConcepts: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+      relatedFormulas: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
       requiredIssues: { type: SchemaType.STRING },
       userAnswerSummary: { type: SchemaType.STRING },
       userAnswerStructure: { type: SchemaType.STRING },
@@ -340,12 +346,15 @@ function answerReviewStructureSchema(): Schema {
       weakLogicPoint: { type: SchemaType.STRING },
       rewriteTarget: { type: SchemaType.STRING },
       rewriteDraftSuggestion: { type: SchemaType.STRING },
+      nextTaskType: { type: SchemaType.STRING, enum: ["concept_recall", "formula_retry", "paragraph_rewrite", "issue_spotting", "similar_problem"] },
+      nextTask: { type: SchemaType.STRING },
       nextAction: { type: SchemaType.STRING },
       caution: { type: SchemaType.STRING },
     },
     required: [
       "questionSummary",
       "coreConcepts",
+      "relatedFormulas",
       "requiredIssues",
       "userAnswerSummary",
       "userAnswerStructure",
@@ -356,6 +365,8 @@ function answerReviewStructureSchema(): Schema {
       "weakLogicPoint",
       "rewriteTarget",
       "rewriteDraftSuggestion",
+      "nextTaskType",
+      "nextTask",
       "nextAction",
       "caution",
     ],

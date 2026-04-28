@@ -35,7 +35,10 @@ import type {
   WrongAnswerItemInput,
   WrongAnswerItemRecord,
   StudyLogInput,
+  LearningSignalEventInput,
+  LearningSignalSummary,
 } from "@/lib/review-os/types";
+import { canUseSupabasePersistence } from "@/lib/supabase/persistence";
 
 const globalCache = globalThis as typeof globalThis & {
   __reviewOsGenerationLocks?: Map<string, boolean>;
@@ -1080,6 +1083,39 @@ export class ReviewOsService {
   async getRecentStudyLog(userId: string, email: string | null, mode: "first" | "second") {
     const logs = await this.listStudyLogs(userId, email, mode, 1);
     return logs[0] ?? null;
+  }
+
+  async createLearningSignalEvent(userId: string | null, input: LearningSignalEventInput) {
+    if (!userId || !canUseSupabasePersistence(userId)) {
+      throw new Error("learning-signal-persistence-unavailable");
+    }
+    await reviewOsRepository.createLearningSignalEvent(userId, input);
+  }
+
+  async getLearningSignalSummary(userId: string, email: string | null, mode: "first" | "second"): Promise<LearningSignalSummary> {
+    await this.ensureAccess(userId, email);
+    const events = await reviewOsRepository.listLearningSignalEvents(userId, mode, 120);
+    const weaknessCounts = new Map<string, number>();
+    events.forEach((event) => {
+      event.weaknessTags.forEach((tag) => {
+        const normalized = tag.trim();
+        if (!normalized) return;
+        weaknessCounts.set(normalized, (weaknessCounts.get(normalized) ?? 0) + 1);
+      });
+    });
+
+    const repeatedWeaknessSignals =
+      events.length >= 5
+        ? [...weaknessCounts.entries()]
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 3)
+            .map(([tag]) => tag)
+        : [];
+
+    return {
+      totalEvents: events.length,
+      repeatedWeaknessSignals,
+    };
   }
 
   getAdminFeed(): Promise<AdminAlphaFeed> {

@@ -11,6 +11,8 @@ import {
   normalizeAnswerReviewStructureDraft,
   type AnswerReviewStructureDraft,
 } from "@/lib/evaluate/answer-review-structure";
+import { normalizeSubjectForMode } from "@/lib/review-os/appraisal";
+import { APPRAISAL_FIRST_SUBJECTS, APPRAISAL_SECOND_SUBJECTS } from "@/lib/review-os/types";
 import { cn } from "@/lib/utils";
 
 type InputStatusCardProps = {
@@ -42,6 +44,8 @@ function InputStatusCard({ title, isFilled, helper }: InputStatusCardProps) {
 }
 
 export default function AnswerReviewInfoPage() {
+  const [examMode, setExamMode] = useState<"first" | "second">("first");
+  const [subject, setSubject] = useState<string>(APPRAISAL_FIRST_SUBJECTS[0]);
   const [problemFiles, setProblemFiles] = useState<File[]>([]);
   const [myAnswerFiles, setMyAnswerFiles] = useState<File[]>([]);
   const [referenceFiles, setReferenceFiles] = useState<File[]>([]);
@@ -54,8 +58,11 @@ export default function AnswerReviewInfoPage() {
   const [copiedFeedbackDraftText, setCopiedFeedbackDraftText] = useState<string | null>(null);
   const [isStructuring, setIsStructuring] = useState(false);
   const [structureError, setStructureError] = useState<string | null>(null);
+  const [learningSignalCaption, setLearningSignalCaption] = useState<string | null>(null);
   const [structureDraft, setStructureDraft] = useState<AnswerReviewStructureDraft | null>(null);
   const [currentStep, setCurrentStep] = useState<StepId>(1);
+
+  const subjectOptions = examMode === "second" ? APPRAISAL_SECOND_SUBJECTS : APPRAISAL_FIRST_SUBJECTS;
 
   const handleProblemFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     setProblemFiles(Array.from(event.target.files ?? []));
@@ -140,13 +147,15 @@ export default function AnswerReviewInfoPage() {
       formData.set("questionText", problemText);
       formData.set("answerText", myAnswerText);
       formData.set("referenceText", referenceAnswerText);
+      formData.set("examMode", examMode);
+      formData.set("subject", normalizeSubjectForMode(subject, examMode));
 
       const response = await fetch("/api/answer-review/structure", {
         method: "POST",
         body: formData,
       });
       const payload = (await response.json()) as
-        | { ok: true; draft: unknown }
+        | { ok: true; draft: unknown; learningSignalStatus?: { ok: boolean; message: string } }
         | { ok: false; error: string };
 
       if (!response.ok || !payload.ok) {
@@ -155,6 +164,7 @@ export default function AnswerReviewInfoPage() {
 
       const normalizedDraft = normalizeAnswerReviewStructureDraft(payload.draft);
       setStructureDraft(normalizedDraft);
+      setLearningSignalCaption(payload.learningSignalStatus?.message ?? null);
       setMissingPointMemo(normalizedDraft.missingIssueCandidates.join(", "));
       setRevisionParagraph(normalizedDraft.rewriteDraftSuggestion);
       setCurrentStep(2);
@@ -165,6 +175,7 @@ export default function AnswerReviewInfoPage() {
           ? error.message
           : "OCR 기능을 사용하려면 GEMINI_API_KEY 설정이 필요합니다. 지금은 텍스트 입력으로 검토를 계속할 수 있습니다.",
       );
+      setLearningSignalCaption(null);
       setCurrentStep(2);
     } finally {
       setIsStructuring(false);
@@ -295,6 +306,37 @@ export default function AnswerReviewInfoPage() {
               <p className="text-caption leading-5 text-[color:var(--muted)]">
                 AI가 먼저 구조화하고, 검토자는 확인만 합니다. Gemini가 멈춰도 수동 검토로 이어갈 수 있습니다.
               </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <p className="text-caption font-medium text-[color:var(--muted)]">시험 모드</p>
+                  <select
+                    className="w-full rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface)] px-3 py-2 text-sm"
+                    value={examMode}
+                    onChange={(event) => {
+                      const nextMode = event.target.value === "second" ? "second" : "first";
+                      setExamMode(nextMode);
+                      setSubject(nextMode === "second" ? APPRAISAL_SECOND_SUBJECTS[0] : APPRAISAL_FIRST_SUBJECTS[0]);
+                    }}
+                  >
+                    <option value="first">감정평가사 1차</option>
+                    <option value="second">감정평가사 2차</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-caption font-medium text-[color:var(--muted)]">과목</p>
+                  <select
+                    className="w-full rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface)] px-3 py-2 text-sm"
+                    value={subject}
+                    onChange={(event) => setSubject(event.target.value)}
+                  >
+                    {subjectOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
               <div className="grid gap-2 sm:grid-cols-3">
                 <InputStatusCard title="문제/사례" isFilled={hasProblemInput} helper="문제 이미지 또는 텍스트" />
                 <InputStatusCard title="내 답안" isFilled={hasMyAnswer} helper="답안 이미지 또는 텍스트" />
@@ -432,12 +474,13 @@ export default function AnswerReviewInfoPage() {
                   </p>
                 </article>
                 <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface)] p-3">
-                  <p className="text-caption font-medium text-[color:var(--muted)]">다음 행동</p>
+                  <p className="text-caption font-medium text-[color:var(--muted)]">다음 학습 task</p>
                   <p className="mt-1 text-caption leading-5 text-[color:var(--foreground-strong)]">
-                    {toShortLine(structureDraft?.nextAction || "", "문단 하나를 다시 쓰고 검토자 확인을 진행하세요.")}
+                    {toShortLine(structureDraft?.nextTask || "", "문단 하나를 다시 쓰고 검토자 확인을 진행하세요.")}
                   </p>
                 </article>
               </div>
+              {learningSignalCaption ? <p className="text-caption leading-5 text-[color:var(--muted)]">{learningSignalCaption}</p> : null}
             </section>
           ) : null}
 

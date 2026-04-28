@@ -29,6 +29,8 @@ import type {
   StudyLogInput,
   StudyLogRecord,
   TaxonomyClassificationCandidate,
+  LearningSignalEventInput,
+  LearningSignalEventRecord,
 } from "@/lib/review-os/types";
 
 function createUuid() {
@@ -77,6 +79,11 @@ function toNullableNumber(value: unknown): number | null {
     return Number.isFinite(parsed) ? parsed : null;
   }
   return null;
+}
+
+function clampConfidence(value: number) {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(1, value));
 }
 
 function getAdminClient() {
@@ -129,6 +136,36 @@ function mapStudyProfile(row: Record<string, unknown> | null): StudyProfile | nu
     preferredSubjects: toStringArray(row.preferred_subjects),
     createdAt: String(row.created_at),
     updatedAt: String(row.updated_at),
+  };
+}
+
+function mapLearningSignalEvent(row: Record<string, unknown>): LearningSignalEventRecord {
+  const nextTaskRaw =
+    row.next_task && typeof row.next_task === "object" ? (row.next_task as Record<string, unknown>) : {};
+  return {
+    id: String(row.id),
+    userId: String(row.user_id),
+    examMode: row.exam_mode === "second" ? "second" : "first",
+    subject: typeof row.subject === "string" ? row.subject : "",
+    sourceType: typeof row.source_type === "string" ? (row.source_type as LearningSignalEventRecord["sourceType"]) : "manual",
+    conceptTags: toStringArray(row.concept_tags),
+    formulaTags: toStringArray(row.formula_tags),
+    issueTags: toStringArray(row.issue_tags),
+    strengthTags: toStringArray(row.strength_tags),
+    weaknessTags: toStringArray(row.weakness_tags),
+    nextTask: {
+      type: nextTaskRaw.type === "concept_recall" ||
+        nextTaskRaw.type === "formula_retry" ||
+        nextTaskRaw.type === "paragraph_rewrite" ||
+        nextTaskRaw.type === "issue_spotting" ||
+        nextTaskRaw.type === "similar_problem"
+        ? nextTaskRaw.type
+        : "paragraph_rewrite",
+      instruction: typeof nextTaskRaw.instruction === "string" ? nextTaskRaw.instruction : "",
+    },
+    confidence: toNullableNumber(row.confidence) ?? 0,
+    sourceSummary: typeof row.source_summary === "string" ? row.source_summary : "",
+    createdAt: String(row.created_at),
   };
 }
 
@@ -910,6 +947,39 @@ export class ReviewOsRepository {
     const result = await query;
     assertSupabaseOperation("review-os.listStudyLogs", result);
     return ((result.data ?? []) as Record<string, unknown>[]).map(mapStudyLog);
+  }
+
+  async createLearningSignalEvent(userId: string, input: LearningSignalEventInput) {
+    const client = getUserClient(userId);
+    const result = await client.from("learning_signal_events").insert({
+      id: createUuid(),
+      user_id: userId,
+      exam_mode: input.examMode,
+      subject: input.subject,
+      source_type: input.sourceType,
+      concept_tags: input.conceptTags,
+      formula_tags: input.formulaTags,
+      issue_tags: input.issueTags,
+      strength_tags: input.strengthTags,
+      weakness_tags: input.weaknessTags,
+      next_task: input.nextTask,
+      confidence: clampConfidence(input.confidence),
+      source_summary: input.sourceSummary,
+    });
+    assertSupabaseOperation("review-os.createLearningSignalEvent", result);
+  }
+
+  async listLearningSignalEvents(userId: string, mode: "first" | "second", limit = 50) {
+    const client = getUserClient(userId);
+    const result = await client
+      .from("learning_signal_events")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("exam_mode", mode)
+      .order("created_at", { ascending: false })
+      .limit(limit);
+    assertSupabaseOperation("review-os.listLearningSignalEvents", result);
+    return ((result.data ?? []) as Record<string, unknown>[]).map(mapLearningSignalEvent);
   }
 
   async insertActionSeed(userId: string, input: Omit<ActionSeedRecord, "id" | "userId" | "createdAt">) {

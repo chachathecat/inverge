@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { getServerSessionUser } from "@/lib/auth/session";
 import {
   GeminiEnvError,
   GeminiStructureParseError,
@@ -7,6 +8,9 @@ import {
   isGeminiConfigured,
   structureAnswerReviewWithGemini,
 } from "@/lib/evaluate/gemini";
+import { normalizeSubjectForMode } from "@/lib/review-os/appraisal";
+import { reviewOsService } from "@/lib/review-os/service";
+import type { LearningSignalEventInput, SourceType } from "@/lib/review-os/types";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +30,55 @@ function getFiles(formData: FormData, fieldName: string) {
   return formData.getAll(fieldName).filter((item): item is File => item instanceof File && item.size > 0);
 }
 
+function toTagArray(values: string[], limit = 4) {
+  return values.map((value) => value.trim()).filter(Boolean).slice(0, limit);
+}
+
+function resolveSourceType(questionFiles: File[], answerFiles: File[], referenceFiles: File[]): SourceType {
+  const allFiles = [...questionFiles, ...answerFiles, ...referenceFiles];
+  if (allFiles.length === 0) return "text";
+  if (allFiles.some((file) => file.type.includes("pdf") || file.name.toLowerCase().endsWith(".pdf"))) return "pdf";
+  return "image";
+}
+
+function buildLearningSignalInput(params: {
+  draft: Awaited<ReturnType<typeof structureAnswerReviewWithGemini>>;
+  examMode: "first" | "second";
+  subject: string;
+  sourceType: SourceType;
+}): LearningSignalEventInput {
+  const { draft, examMode, subject, sourceType } = params;
+  const weaknessTags = toTagArray([draft.weakParagraphPoint, draft.weakLogicPoint, ...draft.missingIssueCandidates], 5);
+  const confidenceRaw =
+    (draft.coreConcepts.length > 0 ? 0.25 : 0) +
+    (draft.relatedFormulas.length > 0 ? 0.2 : 0) +
+    (draft.strengths.length > 0 ? 0.2 : 0) +
+    (weaknessTags.length > 0 ? 0.2 : 0) +
+    (draft.nextTask.trim().length > 0 ? 0.15 : 0);
+  const sourceSummary = [draft.questionSummary, draft.userAnswerSummary]
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .join(" / ")
+    .slice(0, 480);
+
+  return {
+    examMode,
+    subject,
+    sourceType,
+    conceptTags: toTagArray(draft.coreConcepts),
+    formulaTags: toTagArray(draft.relatedFormulas),
+    issueTags: toTagArray([draft.requiredIssues, ...draft.missingIssueCandidates]),
+    strengthTags: toTagArray(draft.strengths),
+    weaknessTags,
+    nextTask: {
+      type: draft.nextTaskType,
+      instruction: draft.nextTask,
+    },
+    confidence: Math.max(0, Math.min(1, confidenceRaw)),
+    sourceSummary,
+  };
+}
+
 export async function POST(request: Request) {
   let formData: FormData;
 
@@ -42,6 +95,8 @@ export async function POST(request: Request) {
   const questionText = formData.get("questionText")?.toString() ?? "";
   const answerText = formData.get("answerText")?.toString() ?? "";
   const referenceText = formData.get("referenceText")?.toString() ?? "";
+  const examMode = formData.get("examMode")?.toString() === "second" ? "second" : "first";
+  const subject = normalizeSubjectForMode(formData.get("subject")?.toString() ?? "", examMode);
 
   if (answerFiles.length === 0 && !answerText.trim()) {
     return NextResponse.json(
@@ -65,6 +120,7 @@ export async function POST(request: Request) {
   }
 
   try {
+    const session = await getServerSessionUser();
     const draft = await structureAnswerReviewWithGemini({
       questionFiles,
       answerFiles,
@@ -73,8 +129,28 @@ export async function POST(request: Request) {
       answerText,
       referenceText,
     });
+    const sourceType = resolveSourceType(questionFiles, answerFiles, referenceFiles);
+    let learningSignalStatus: { ok: boolean; message: string } = {
+      ok: false,
+      message: "저장에 실패했지만 검토는 계속할 수 있습니다.",
+    };
 
-    return NextResponse.json({ ok: true, draft });
+    try {
+      await reviewOsService.createLearningSignalEvent(
+        session.userId,
+        buildLearningSignalInput({
+          draft,
+          examMode,
+          subject,
+          sourceType,
+        }),
+      );
+      learningSignalStatus = { ok: true, message: "학습 신호가 저장되었습니다." };
+    } catch {
+      learningSignalStatus = { ok: false, message: "저장에 실패했지만 검토는 계속할 수 있습니다." };
+    }
+
+    return NextResponse.json({ ok: true, draft, learningSignalStatus });
   } catch (error) {
     if (error instanceof GeminiEnvError) {
       return NextResponse.json(

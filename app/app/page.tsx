@@ -73,6 +73,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
     reviewOsService.getWeeklySummary(session.userId, session.email),
     reviewOsService.listWrongAnswerItems(session.userId, session.email, 12),
   ]);
+  const learningSignalSummary = await reviewOsService.getLearningSignalSummary(session.userId, session.email, mode);
 
   const items = allItems.filter((item) => item.examName === config.label).slice(0, 5);
   const queue = focus.queue.filter((item) => item.examName === config.label);
@@ -147,6 +148,30 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
       </section>
 
       <section className="space-y-4">
+        <Card className="border-[color:var(--border-subtle)] bg-[color:var(--surface)] shadow-none">
+          <CardHeader className="space-y-2 p-4 sm:p-6">
+            <CardTitle>학습 신호</CardTitle>
+            {learningSignalSummary.totalEvents < 5 ? (
+              <CardDescription>아직 수준을 판단하지 않습니다. 학습 신호가 5개 이상 쌓이면 반복 약점을 보여줍니다.</CardDescription>
+            ) : (
+              <CardDescription>반복 약점 신호를 1~3개만 먼저 보여줍니다.</CardDescription>
+            )}
+          </CardHeader>
+          <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
+            {learningSignalSummary.totalEvents < 5 ? (
+              <p className="text-sm text-[color:var(--muted)]">누적 신호 {learningSignalSummary.totalEvents}개</p>
+            ) : (
+              <ul className="space-y-2 text-sm text-[color:var(--foreground-strong)]">
+                {learningSignalSummary.repeatedWeaknessSignals.length > 0 ? (
+                  learningSignalSummary.repeatedWeaknessSignals.map((signal) => <li key={signal}>• {signal}</li>)
+                ) : (
+                  <li>• 반복 약점 신호를 더 수집 중입니다.</li>
+                )}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
         {firstUse ? (
           <Card className="border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] shadow-none">
             <CardHeader className="space-y-3 p-4 sm:p-6">

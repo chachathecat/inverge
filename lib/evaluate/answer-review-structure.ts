@@ -1,6 +1,7 @@
 export type AnswerReviewStructureDraft = {
   questionSummary: string;
   coreConcepts: string[];
+  relatedFormulas: string[];
   requiredIssues: string;
   userAnswerSummary: string;
   userAnswerStructure: string;
@@ -11,6 +12,8 @@ export type AnswerReviewStructureDraft = {
   weakLogicPoint: string;
   rewriteTarget: string;
   rewriteDraftSuggestion: string;
+  nextTaskType: "concept_recall" | "formula_retry" | "paragraph_rewrite" | "issue_spotting" | "similar_problem";
+  nextTask: string;
   nextAction: string;
   caution: string;
 };
@@ -23,6 +26,7 @@ const BANNED_TERMS = ["점수", "합격 가능성", "합격 판정", "최종 채
 const STRING_FALLBACKS: Record<keyof AnswerReviewStructureDraft, string> = {
   questionSummary: "문제 요구를 더 입력하면 구조화를 보강할 수 있습니다.",
   coreConcepts: "",
+  relatedFormulas: "",
   requiredIssues: "기준답안과 문제 요구를 더 입력하면 보강할 간극이 선명해집니다.",
   userAnswerSummary: "내 답안의 핵심을 한 줄로 정리해 주세요.",
   userAnswerStructure: "문단별 주장과 근거를 정리하면 구조 분석이 선명해집니다.",
@@ -33,6 +37,8 @@ const STRING_FALLBACKS: Record<keyof AnswerReviewStructureDraft, string> = {
   weakLogicPoint: "논리 연결이 약한 지점을 검토자가 직접 확인해 주세요.",
   rewriteTarget: "교정 문단을 직접 작성해 다음 답안에 반영해 주세요.",
   rewriteDraftSuggestion: "교정 문단을 직접 작성해 다음 답안에 반영해 주세요.",
+  nextTaskType: "paragraph_rewrite",
+  nextTask: "누락된 논점 하나를 넣어 문단을 다시 쓰세요.",
   nextAction: "문단 하나를 다시 쓰고 검토자 확인을 진행하세요.",
   caution: "구조화 결과는 검토 보조 초안이며 검토자 확인이 필요합니다.",
 };
@@ -99,12 +105,25 @@ function normalizeStringField(field: keyof AnswerReviewStructureDraft, value: un
   return truncateText(normalized, maxLength);
 }
 
+function normalizeNextTaskType(value: unknown): AnswerReviewStructureDraft["nextTaskType"] {
+  const normalized = normalizeText(value);
+  if (normalized === "concept_recall") return "concept_recall";
+  if (normalized === "formula_retry") return "formula_retry";
+  if (normalized === "paragraph_rewrite") return "paragraph_rewrite";
+  if (normalized === "issue_spotting") return "issue_spotting";
+  if (normalized === "similar_problem") return "similar_problem";
+  return "paragraph_rewrite";
+}
+
 export function normalizeAnswerReviewStructureDraft(input: unknown): AnswerReviewStructureDraft {
   const source = input && typeof input === "object" ? (input as Record<string, unknown>) : {};
+  const nextTaskType = normalizeNextTaskType(source.nextTaskType);
+  const nextTask = normalizeStringField("nextTask", source.nextTask);
 
   return {
     questionSummary: normalizeStringField("questionSummary", source.questionSummary),
     coreConcepts: normalizeArray(source.coreConcepts),
+    relatedFormulas: normalizeArray(source.relatedFormulas),
     requiredIssues: normalizeStringField("requiredIssues", source.requiredIssues),
     userAnswerSummary: normalizeStringField("userAnswerSummary", source.userAnswerSummary),
     userAnswerStructure: normalizeStringField("userAnswerStructure", source.userAnswerStructure),
@@ -115,7 +134,9 @@ export function normalizeAnswerReviewStructureDraft(input: unknown): AnswerRevie
     weakLogicPoint: normalizeStringField("weakLogicPoint", source.weakLogicPoint),
     rewriteTarget: normalizeStringField("rewriteTarget", source.rewriteTarget),
     rewriteDraftSuggestion: normalizeStringField("rewriteDraftSuggestion", source.rewriteDraftSuggestion),
-    nextAction: normalizeStringField("nextAction", source.nextAction),
+    nextTaskType,
+    nextTask,
+    nextAction: normalizeStringField("nextAction", source.nextAction ?? nextTask),
     caution: normalizeStringField("caution", source.caution),
   };
 }

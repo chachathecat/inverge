@@ -377,6 +377,41 @@ export type StudyLogRecord = StudyLogInput & {
   updatedAt: string;
 };
 
+export type LearningSignalNextTaskType =
+  | "concept_recall"
+  | "formula_retry"
+  | "paragraph_rewrite"
+  | "issue_spotting"
+  | "similar_problem";
+
+export type LearningSignalEventInput = {
+  examMode: "first" | "second";
+  subject: string;
+  sourceType: SourceType;
+  conceptTags: string[];
+  formulaTags: string[];
+  issueTags: string[];
+  strengthTags: string[];
+  weaknessTags: string[];
+  nextTask: {
+    type: LearningSignalNextTaskType;
+    instruction: string;
+  };
+  confidence: number;
+  sourceSummary: string;
+};
+
+export type LearningSignalEventRecord = LearningSignalEventInput & {
+  id: string;
+  userId: string;
+  createdAt: string;
+};
+
+export type LearningSignalSummary = {
+  totalEvents: number;
+  repeatedWeaknessSignals: string[];
+};
+
 export type WeeklyPlanTaskAction = "retry" | "rewrite" | "review";
 
 export type WeeklyPlanTask = {
