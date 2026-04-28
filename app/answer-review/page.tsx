@@ -90,6 +90,22 @@ export default function AnswerReviewInfoPage() {
       .filter(Boolean).length;
   };
 
+  const toShortLine = (text: string, fallback: string, maxLength = 120) => {
+    const normalized = text.trim().replace(/\s+/g, " ");
+    if (!normalized) return fallback;
+    if (normalized.length <= maxLength) return normalized;
+    return `${normalized.slice(0, maxLength).trimEnd()}…`;
+  };
+
+  const firstBigGap = useMemo(() => {
+    if (!structureDraft) return "";
+    const missingCandidate = structureDraft.missingIssueCandidates.find((candidate) => candidate.trim().length > 0);
+    if (missingCandidate) return missingCandidate;
+    if (structureDraft.weakLogicPoint.trim().length > 0) return structureDraft.weakLogicPoint;
+    if (structureDraft.weakParagraphPoint.trim().length > 0) return structureDraft.weakParagraphPoint;
+    return "";
+  }, [structureDraft]);
+
   const jumpToSection = () => {
     const targetId = hasMyAnswer ? "answer-review-structure-result" : "my-answer-upload";
     document.getElementById(targetId)?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -334,12 +350,12 @@ export default function AnswerReviewInfoPage() {
 
           <section id="answer-review-structure-result" className="space-y-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-sm font-medium text-[color:var(--foreground-strong)]">OCR 구조화 결과</p>
+              <p className="text-sm font-medium text-[color:var(--foreground-strong)]">구조화 초안</p>
               <button type="button" className={cn(buttonVariants({ variant: "default" }), "h-9 px-3 text-xs")} onClick={runStructure} disabled={isStructuring}>
                 {isStructuring ? "정리 중..." : "검토 preview 확인"}
               </button>
             </div>
-            <p className="text-caption text-[color:var(--muted)]">문제/사례와 기준답안을 함께 넣으면 구조화 품질이 높아집니다.</p>
+            <p className="text-caption text-[color:var(--muted)]">검토자가 확인합니다. 최종 채점이나 합격 판정이 아닙니다.</p>
             {isStructuring ? <p className="text-caption text-[color:var(--muted)]">OCR 초안과 답안 구조를 정리하고 있습니다.</p> : null}
             {structureError ? (
               <p className="text-caption text-[color:var(--muted)]">
@@ -349,47 +365,74 @@ export default function AnswerReviewInfoPage() {
               </p>
             ) : null}
             {structureDraft ? (
-              <div className="grid gap-3 lg:grid-cols-2">
-                <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3">
-                  <p className="text-caption font-medium text-[color:var(--muted)]">문제 요구</p>
-                  <p className="mt-1 text-caption text-[color:var(--foreground-strong)]">{structureDraft.requiredIssues || structureDraft.questionSummary}</p>
-                </article>
-                <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3">
-                  <p className="text-caption font-medium text-[color:var(--muted)]">핵심 개념</p>
-                  <p className="mt-1 text-caption text-[color:var(--foreground-strong)]">
-                    {structureDraft.coreConcepts.length > 0 ? structureDraft.coreConcepts.join(", ") : "핵심 개념을 더 입력해 주세요."}
-                  </p>
-                </article>
-                <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3">
-                  <p className="text-caption font-medium text-[color:var(--muted)]">잘한 부분</p>
-                  <p className="mt-1 text-caption text-[color:var(--foreground-strong)]">
-                    {structureDraft.strengths.length > 0 ? structureDraft.strengths.join(", ") : "잘한 부분을 확인 중입니다."}
-                  </p>
-                </article>
-                <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3">
-                  <p className="text-caption font-medium text-[color:var(--muted)]">놓친 부분</p>
-                  <p className="mt-1 text-caption text-[color:var(--foreground-strong)]">
-                    {structureDraft.missingIssueCandidates.length > 0
-                      ? structureDraft.missingIssueCandidates.join(", ")
-                      : "문제 요구/기준답안을 보강하면 놓친 부분 후보가 더 선명해집니다."}
-                  </p>
-                </article>
-                <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3">
-                  <p className="text-caption font-medium text-[color:var(--muted)]">문단 구조 약점</p>
-                  <p className="mt-1 text-caption text-[color:var(--foreground-strong)]">{structureDraft.weakParagraphPoint}</p>
-                </article>
-                <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3">
-                  <p className="text-caption font-medium text-[color:var(--muted)]">논리 구조 약점</p>
-                  <p className="mt-1 text-caption text-[color:var(--foreground-strong)]">{structureDraft.weakLogicPoint}</p>
-                </article>
-                <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3">
-                  <p className="text-caption font-medium text-[color:var(--muted)]">다시 쓸 문장</p>
-                  <p className="mt-1 text-caption text-[color:var(--foreground-strong)]">{structureDraft.rewriteDraftSuggestion || structureDraft.rewriteTarget}</p>
-                </article>
-                <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3">
-                  <p className="text-caption font-medium text-[color:var(--muted)]">다음 행동</p>
-                  <p className="mt-1 text-caption text-[color:var(--foreground-strong)]">{structureDraft.nextAction}</p>
-                </article>
+              <div className="space-y-3">
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3">
+                    <p className="text-caption font-medium text-[color:var(--muted)]">보강 필요</p>
+                    <p className="mt-1 text-xs font-medium text-[color:var(--foreground-strong)]">이 답안에서 먼저 볼 간극 하나</p>
+                    <p className="mt-1 text-caption text-[color:var(--foreground-strong)]">
+                      {toShortLine(firstBigGap, "문제 요구/기준답안을 보강하면 가장 큰 간극이 더 선명해집니다.")}
+                    </p>
+                  </article>
+                  <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3">
+                    <p className="text-caption font-medium text-[color:var(--muted)]">잘한 부분</p>
+                    <p className="mt-1 text-caption text-[color:var(--foreground-strong)]">
+                      {toShortLine(
+                        structureDraft.strengths.length > 0 ? structureDraft.strengths[0] ?? "" : "",
+                        "잘한 부분을 확인 중입니다.",
+                      )}
+                    </p>
+                  </article>
+                  <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3">
+                    <p className="text-caption font-medium text-[color:var(--muted)]">다시 쓸 문장</p>
+                    <p className="mt-1 text-caption text-[color:var(--foreground-strong)]">
+                      {toShortLine(structureDraft.rewriteDraftSuggestion || structureDraft.rewriteTarget, "다시 쓸 문장을 준비 중입니다.")}
+                    </p>
+                  </article>
+                  <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3">
+                    <p className="text-caption font-medium text-[color:var(--muted)]">다음 행동</p>
+                    <p className="mt-1 text-caption text-[color:var(--foreground-strong)]">{toShortLine(structureDraft.nextAction, "한 문단 다시 쓰기를 먼저 진행해 주세요.")}</p>
+                  </article>
+                </div>
+                <details className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3">
+                  <summary className="cursor-pointer text-caption font-medium text-[color:var(--muted)]">세부 분석 보기</summary>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface)] p-3">
+                      <p className="text-caption font-medium text-[color:var(--muted)]">문제 요구</p>
+                      <p className="mt-1 text-caption text-[color:var(--foreground-strong)]">{structureDraft.questionSummary}</p>
+                    </article>
+                    <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface)] p-3">
+                      <p className="text-caption font-medium text-[color:var(--muted)]">핵심 개념</p>
+                      <p className="mt-1 text-caption text-[color:var(--foreground-strong)]">
+                        {structureDraft.coreConcepts.length > 0 ? structureDraft.coreConcepts.join(", ") : "핵심 개념을 더 입력해 주세요."}
+                      </p>
+                    </article>
+                    <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface)] p-3">
+                      <p className="text-caption font-medium text-[color:var(--muted)]">requiredIssues</p>
+                      <p className="mt-1 text-caption text-[color:var(--foreground-strong)]">{structureDraft.requiredIssues}</p>
+                    </article>
+                    <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface)] p-3">
+                      <p className="text-caption font-medium text-[color:var(--muted)]">userAnswerStructure</p>
+                      <p className="mt-1 text-caption text-[color:var(--foreground-strong)]">{structureDraft.userAnswerStructure}</p>
+                    </article>
+                    <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface)] p-3">
+                      <p className="text-caption font-medium text-[color:var(--muted)]">referenceStructure</p>
+                      <p className="mt-1 text-caption text-[color:var(--foreground-strong)]">{structureDraft.referenceStructure}</p>
+                    </article>
+                    <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface)] p-3">
+                      <p className="text-caption font-medium text-[color:var(--muted)]">weakParagraphPoint</p>
+                      <p className="mt-1 text-caption text-[color:var(--foreground-strong)]">{structureDraft.weakParagraphPoint}</p>
+                    </article>
+                    <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface)] p-3">
+                      <p className="text-caption font-medium text-[color:var(--muted)]">weakLogicPoint</p>
+                      <p className="mt-1 text-caption text-[color:var(--foreground-strong)]">{structureDraft.weakLogicPoint}</p>
+                    </article>
+                    <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface)] p-3">
+                      <p className="text-caption font-medium text-[color:var(--muted)]">caution</p>
+                      <p className="mt-1 text-caption text-[color:var(--foreground-strong)]">{structureDraft.caution}</p>
+                    </article>
+                  </div>
+                </details>
               </div>
             ) : null}
           </section>
