@@ -42,13 +42,13 @@ const SECOND_MODE_INPUT_OPTIONS = [
   },
   {
     title: "기준 답안과 비교",
-    description: "작성한 답안을 기준 답안과 비교해 보강할 간극을 찾습니다.",
+    description: "답안 작성 후 비교로 이어집니다. 보강할 간극을 정리합니다.",
     hrefLabel: "비교 기록 보기",
     hrefKey: "items",
   },
   {
     title: "문단 다시쓰기",
-    description: "간극 하나를 골라 문단을 다시 쓰고 다음 교정 큐로 넘깁니다.",
+    description: "비교 이후 진행됩니다. 간극 하나를 골라 문단을 다시 씁니다.",
     hrefLabel: "다시쓰기 큐 열기",
     hrefKey: "review",
   },
@@ -161,18 +161,19 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                   : "입력을 남기면 비교와 다시쓰기로 이어질 다음 교정 작업이 정리됩니다."}
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4 p-4 pt-0 sm:p-6 sm:pt-0">
+            <CardContent className="space-y-3 p-4 pt-0 sm:space-y-4 sm:p-6 sm:pt-0">
               <Link href={inputOptions[0].href} className="w-full sm:w-auto">
                 <Button type="button" className="w-full sm:w-auto">
                   {inputOptions[0].hrefLabel}
                 </Button>
               </Link>
-              <div className="grid gap-3">
-                {inputOptions.map((option) => (
+              <div className="grid gap-2.5">
+                <p className="text-xs text-[color:var(--muted)]">다른 입력 선택지</p>
+                {inputOptions.slice(1).map((option) => (
                   <Link
                     key={option.title}
                     href={option.href}
-                    className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-4 py-4 transition hover:bg-[color:var(--bg-subtle)]"
+                    className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-4 py-3 transition hover:bg-[color:var(--bg-subtle)]"
                   >
                     <p className="text-sm font-medium text-[color:var(--foreground-strong)]">{option.title}</p>
                     <p className="mt-1 text-xs leading-6 text-[color:var(--muted)]">{option.description}</p>
@@ -197,7 +198,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
               <CardTitle>지금 해야 할 한 가지에만 집중합니다.</CardTitle>
               <CardDescription className="max-w-[66ch]">기록에서 다음 복습 신호를 정리했습니다. 먼저 실행하고, 이후 작업은 차분히 이어갑니다.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4 p-4 pt-0 sm:p-6 sm:pt-0">
+            <CardContent className="space-y-3 p-4 pt-0 sm:space-y-4 sm:p-6 sm:pt-0">
               <p className="text-sm text-[color:var(--foreground-strong)]">{nextAction}</p>
               {shouldShowFirstSubjectSelector ? (
                 <TodayFirstSubjectSelector
