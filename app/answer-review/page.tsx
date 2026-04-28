@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { ChangeEvent, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import type { ChangeEvent } from "react";
 
 import { RefinedBadge, RefinedShell } from "@/components/inverge/refined-primitives";
 import { buttonVariants } from "@/components/ui/button";
@@ -51,6 +52,8 @@ export default function AnswerReviewInfoPage() {
   const [referenceAnswerText, setReferenceAnswerText] = useState("");
   const [missingPointMemo, setMissingPointMemo] = useState("");
   const [revisionParagraph, setRevisionParagraph] = useState("");
+  const [feedbackCopyStatus, setFeedbackCopyStatus] = useState<"idle" | "success" | "failed">("idle");
+  const [copiedFeedbackDraftText, setCopiedFeedbackDraftText] = useState<string | null>(null);
 
   const handleProblemFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -65,6 +68,8 @@ export default function AnswerReviewInfoPage() {
   const hasProblemInput = problemText.trim().length > 0 || Boolean(problemFileName);
   const hasMyAnswer = myAnswerText.trim().length > 0 || Boolean(myAnswerFileName);
   const hasReferenceAnswer = referenceAnswerText.trim().length > 0;
+  const hasMissingPointMemo = missingPointMemo.trim().length > 0;
+  const hasRevisionParagraph = revisionParagraph.trim().length > 0;
   const isReviewReady = hasProblemInput && hasMyAnswer && hasReferenceAnswer;
 
   const primaryCtaLabel = useMemo(() => {
@@ -85,6 +90,65 @@ export default function AnswerReviewInfoPage() {
     const targetId = isReviewReady ? "manual-comparison-preview" : "my-answer-upload";
     document.getElementById(targetId)?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
+
+  const feedbackDraftText = useMemo(() => {
+    const inputStatusSummary = `문제/사례 ${hasProblemInput ? "입력됨" : "미입력"}, 내 답안 ${hasMyAnswer ? "입력됨" : "미입력"}, 기준답안 ${
+      hasReferenceAnswer ? "입력됨" : "미입력"
+    }`;
+    const missingPointSummary = hasMissingPointMemo
+      ? `이번 답안은 ${missingPointMemo.trim()} 보강이 우선입니다.`
+      : "누락 논점 후보를 먼저 적으면 피드백 초안이 완성됩니다.";
+    const revisionSummary = hasRevisionParagraph
+      ? revisionParagraph.trim()
+      : "교정 문단을 작성하면 학생에게 줄 다음 행동이 더 선명해집니다.";
+
+    return [
+      "이번 답안에서 먼저 볼 부분",
+      `- 입력 상태: ${inputStatusSummary}`,
+      "",
+      "보강할 논점",
+      `- ${missingPointSummary}`,
+      "",
+      "다시 쓸 문장/문단",
+      `- ${revisionSummary}`,
+      "",
+      "다음 행동",
+      "- 다음 답안에서는 아래 교정 문단의 구조를 참고해 한 문단만 다시 써보세요.",
+      "",
+      "이 피드백은 검토자가 확인한 뒤 전달하는 초안입니다.",
+    ].join("\n");
+  }, [hasMissingPointMemo, hasMyAnswer, hasProblemInput, hasReferenceAnswer, hasRevisionParagraph, missingPointMemo, revisionParagraph]);
+
+  const reviewerNoteText = useMemo(() => {
+    return [
+      "입력 상태",
+      `- 문제/사례: ${hasProblemInput ? "입력됨" : "미입력"}`,
+      `- 내 답안: ${hasMyAnswer ? "입력됨" : "미입력"}`,
+      `- 기준답안: ${hasReferenceAnswer ? "입력됨" : "미입력"}`,
+      "",
+      "누락 후보",
+      `- ${hasMissingPointMemo ? missingPointMemo.trim() : "누락 논점 후보 메모 필요"}`,
+      "",
+      "교정 문단",
+      `- ${hasRevisionParagraph ? revisionParagraph.trim() : "교정 문단 작성 필요"}`,
+      "",
+      "확인 필요",
+      "- 현재 화면에서만 확인하는 초안입니다.",
+    ].join("\n");
+  }, [hasMissingPointMemo, hasMyAnswer, hasProblemInput, hasReferenceAnswer, hasRevisionParagraph, missingPointMemo, revisionParagraph]);
+
+  const copyFeedbackDraft = async () => {
+    try {
+      await navigator.clipboard.writeText(feedbackDraftText);
+      setCopiedFeedbackDraftText(feedbackDraftText);
+      setFeedbackCopyStatus("success");
+    } catch {
+      setCopiedFeedbackDraftText(null);
+      setFeedbackCopyStatus("failed");
+    }
+  };
+
+  const didCopyCurrentDraft = feedbackCopyStatus === "success" && copiedFeedbackDraftText === feedbackDraftText;
 
   return (
     <RefinedShell className="space-y-5 py-6 sm:space-y-8 sm:py-10">
@@ -247,6 +311,39 @@ export default function AnswerReviewInfoPage() {
               <p className="text-caption text-[color:var(--muted)]">자동 생성이 아니라 운영자/검토자가 직접 적는 교정 초안입니다.</p>
             </div>
             <p className="text-caption text-[color:var(--muted)]">현재 화면에서만 확인하는 초안입니다. 저장 완료처럼 표시되지 않습니다.</p>
+          </section>
+
+          <section className="space-y-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-medium text-[color:var(--foreground-strong)]">학생에게 줄 피드백 초안</p>
+              <button type="button" className={cn(buttonVariants({ variant: "outline" }), "h-9 px-3 text-xs")} onClick={copyFeedbackDraft}>
+                피드백 초안 복사
+              </button>
+            </div>
+            <p className="text-caption text-[color:var(--muted)]">이 피드백은 검토자가 확인한 뒤 전달하는 초안입니다.</p>
+            <pre className="max-h-[320px] overflow-auto whitespace-pre-wrap rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3 text-caption leading-6 text-[color:var(--foreground-strong)]">
+              {feedbackDraftText}
+            </pre>
+            {didCopyCurrentDraft ? (
+              <p className="text-caption text-[color:var(--muted)]">복사했습니다. 전달 전 검토해 주세요.</p>
+            ) : null}
+            {feedbackCopyStatus === "failed" ? (
+              <p className="text-caption text-[color:var(--muted)]">클립보드 복사에 실패했습니다. 텍스트를 수동으로 복사해 주세요.</p>
+            ) : null}
+            <details>
+              <summary className="cursor-pointer text-caption text-[color:var(--muted)]">보조 설명 보기</summary>
+              <p className="mt-2 text-caption text-[color:var(--muted)]">
+                OCR/하이라이트/피드백은 모두 초안이며, 강사 검수 전 확정하지 않습니다.
+              </p>
+            </details>
+          </section>
+
+          <section className="space-y-2 rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
+            <p className="text-sm font-medium text-[color:var(--foreground-strong)]">검토자 노트</p>
+            <pre className="max-h-[240px] overflow-auto whitespace-pre-wrap rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3 text-caption leading-6 text-[color:var(--foreground-strong)]">
+              {reviewerNoteText}
+            </pre>
+            <p className="text-caption text-[color:var(--muted)]">현재 화면에서만 확인하는 초안입니다.</p>
           </section>
         </section>
       </section>
