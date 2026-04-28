@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ChangeEvent } from "react";
 
 import { RefinedBadge, RefinedShell } from "@/components/inverge/refined-primitives";
@@ -23,6 +23,7 @@ type StepId = 1 | 2 | 3;
 
 const CARD_TEXT_MAX_LENGTH = 200;
 const DETAILS_TEXT_MAX_LENGTH = 560;
+const FILE_NAME_MAX_LENGTH = 34;
 
 const STEP_ITEMS: Array<{ id: StepId; label: string }> = [
   { id: 1, label: "자료 넣기" },
@@ -97,6 +98,22 @@ export default function AnswerReviewInfoPage() {
     return `${normalized.slice(0, maxLength).trimEnd()}…`;
   };
 
+  const shortenFileName = (name: string, maxLength = FILE_NAME_MAX_LENGTH) => {
+    if (name.length <= maxLength) return name;
+    const extIndex = name.lastIndexOf(".");
+    if (extIndex <= 0 || extIndex >= name.length - 1) return `${name.slice(0, maxLength - 1).trimEnd()}…`;
+    const ext = name.slice(extIndex);
+    const base = name.slice(0, extIndex);
+    const baseMaxLength = Math.max(8, maxLength - ext.length - 1);
+    return `${base.slice(0, baseMaxLength).trimEnd()}…${ext}`;
+  };
+
+  const summarizeFiles = (files: File[]) => {
+    if (files.length === 0) return "선택된 파일이 없습니다.";
+    if (files.length <= 2) return files.map((file) => shortenFileName(file.name)).join(", ");
+    return `${shortenFileName(files[0].name)}, ${shortenFileName(files[1].name)} 외 ${files.length - 2}개`;
+  };
+
   const firstBigGap = useMemo(() => {
     if (!structureDraft) return "";
     const missingCandidate = structureDraft.missingIssueCandidates.find((candidate) => candidate.trim().length > 0);
@@ -140,7 +157,6 @@ export default function AnswerReviewInfoPage() {
       setStructureDraft(normalizedDraft);
       setMissingPointMemo(normalizedDraft.missingIssueCandidates.join(", "));
       setRevisionParagraph(normalizedDraft.rewriteDraftSuggestion);
-      setCurrentStep(2);
     } catch (error) {
       setStructureDraft(null);
       setStructureError(
@@ -148,6 +164,7 @@ export default function AnswerReviewInfoPage() {
           ? error.message
           : "OCR 기능을 사용하려면 GEMINI_API_KEY 설정이 필요합니다. 지금은 텍스트 입력으로 검토를 계속할 수 있습니다.",
       );
+      setCurrentStep(2);
     } finally {
       setIsStructuring(false);
     }
@@ -165,21 +182,26 @@ export default function AnswerReviewInfoPage() {
       : "교정 문단을 작성하면 학생에게 줄 다음 행동이 더 선명해집니다.";
 
     return [
-      "이번 답안에서 먼저 볼 부분",
-      `- 입력 상태: ${inputStatusSummary}`,
+      "[입력 상태]",
+      `- ${inputStatusSummary}`,
       "",
-      "보강할 논점",
+      "[가장 큰 간극]",
       `- ${missingPointSummary}`,
       "",
-      "다시 쓸 문장/문단",
+      "[다시 쓸 문장]",
       `- ${revisionSummary}`,
       "",
-      "다음 행동",
-      "- 다음 답안에서는 아래 교정 문단의 구조를 참고해 한 문단만 다시 써보세요.",
+      "[다음 행동]",
+      "- 교정 문단 구조를 기준으로 한 문단만 다시 작성해 보세요.",
       "",
-      "이 피드백은 검토자가 확인한 뒤 전달하는 초안입니다.",
+      "※ 검토자 확인 전 전달하지 않는 피드백 초안입니다.",
     ].join("\n");
   }, [hasMissingPointMemo, hasMyAnswer, hasProblemInput, hasReferenceAnswer, hasRevisionParagraph, missingPointMemo, revisionParagraph]);
+
+  useEffect(() => {
+    setFeedbackCopyStatus("idle");
+    setCopiedFeedbackDraftText(null);
+  }, [feedbackDraftText]);
 
   const reviewerNoteText = useMemo(() => {
     return [
@@ -270,6 +292,7 @@ export default function AnswerReviewInfoPage() {
           {currentStep === 1 ? (
             <section className="space-y-4">
               <p className="text-caption leading-5 text-[color:var(--muted)]">AI가 먼저 구조화하고, 검토자는 확인만 합니다.</p>
+              <p className="text-caption leading-5 text-[color:var(--muted)]">문제/사례, 내 답안, 기준답안을 역할별로 나눠 넣으면 구조화가 더 안정적입니다.</p>
               <div className="grid gap-2 sm:grid-cols-3">
                 <InputStatusCard title="문제/사례" isFilled={hasProblemInput} helper="문제 이미지 또는 텍스트" />
                 <InputStatusCard title="내 답안" isFilled={hasMyAnswer} helper="답안 이미지 또는 텍스트" />
@@ -294,7 +317,7 @@ export default function AnswerReviewInfoPage() {
                     onChange={handleProblemFileChange}
                   />
                   <p className="text-caption leading-5 text-[color:var(--muted)]">
-                    파일: <span className="font-medium text-[color:var(--foreground-strong)]">{problemFiles.length > 0 ? problemFiles.map((file) => file.name).join(", ") : "선택된 파일이 없습니다."}</span>
+                    파일: <span className="font-medium text-[color:var(--foreground-strong)]">{summarizeFiles(problemFiles)}</span>
                   </p>
                 </section>
 
@@ -315,7 +338,7 @@ export default function AnswerReviewInfoPage() {
                     onChange={handleMyAnswerFileChange}
                   />
                   <p className="text-caption leading-5 text-[color:var(--muted)]">
-                    파일: <span className="font-medium text-[color:var(--foreground-strong)]">{myAnswerFiles.length > 0 ? myAnswerFiles.map((file) => file.name).join(", ") : "선택된 파일이 없습니다."}</span>
+                    파일: <span className="font-medium text-[color:var(--foreground-strong)]">{summarizeFiles(myAnswerFiles)}</span>
                   </p>
                 </section>
 
@@ -336,7 +359,7 @@ export default function AnswerReviewInfoPage() {
                     onChange={handleReferenceFileChange}
                   />
                   <p className="text-caption leading-5 text-[color:var(--muted)]">
-                    파일: <span className="font-medium text-[color:var(--foreground-strong)]">{referenceFiles.length > 0 ? referenceFiles.map((file) => file.name).join(", ") : "선택된 파일이 없습니다."}</span>
+                    파일: <span className="font-medium text-[color:var(--foreground-strong)]">{summarizeFiles(referenceFiles)}</span>
                   </p>
                 </section>
               </div>
@@ -345,7 +368,7 @@ export default function AnswerReviewInfoPage() {
                 <div className="space-y-2" id="answer-review-problem">
                   <p className="text-caption font-medium text-[color:var(--muted)]">문제/사례 입력</p>
                   <Textarea
-                    className="min-h-[140px] bg-[color:var(--surface)]"
+                    className="min-h-[120px] bg-[color:var(--surface)]"
                     placeholder="문제 요구사항, 사례 조건, 논점 키워드를 입력해 주세요."
                     value={problemText}
                     onChange={(event) => setProblemText(event.target.value)}
@@ -354,7 +377,7 @@ export default function AnswerReviewInfoPage() {
                 <div className="space-y-2" id="answer-review-text">
                   <p className="text-caption font-medium text-[color:var(--muted)]">내 답안 입력</p>
                   <Textarea
-                    className="min-h-[140px] bg-[color:var(--surface)]"
+                    className="min-h-[120px] bg-[color:var(--surface)]"
                     placeholder="OCR 초안(있는 경우)을 붙여 넣거나 직접 입력해 주세요."
                     value={myAnswerText}
                     onChange={(event) => setMyAnswerText(event.target.value)}
@@ -363,7 +386,7 @@ export default function AnswerReviewInfoPage() {
                 <div className="space-y-2" id="answer-review-reference">
                   <p className="text-caption font-medium text-[color:var(--muted)]">기준답안/기준목차 입력</p>
                   <Textarea
-                    className="min-h-[140px] bg-[color:var(--surface)]"
+                    className="min-h-[120px] bg-[color:var(--surface)]"
                     placeholder="기준답안 또는 기준목차를 텍스트로 붙여 넣어 주세요."
                     value={referenceAnswerText}
                     onChange={(event) => setReferenceAnswerText(event.target.value)}
@@ -384,6 +407,9 @@ export default function AnswerReviewInfoPage() {
           {currentStep === 2 ? (
             <section id="answer-review-structure-result" className="space-y-4">
               <p className="text-caption leading-5 text-[color:var(--muted)]">먼저 볼 것은 가장 큰 간극 하나입니다.</p>
+              {structureError ? (
+                <p className="text-caption leading-5 text-[color:var(--muted)]">{structureError}</p>
+              ) : null}
               <div className="grid gap-2 sm:grid-cols-2">
                 <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface)] p-3">
                   <p className="text-caption font-medium text-[color:var(--muted)]">가장 큰 간극</p>
@@ -425,7 +451,7 @@ export default function AnswerReviewInfoPage() {
               <pre className="max-h-[320px] overflow-auto whitespace-pre-wrap rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface)] p-3 text-caption leading-6 text-[color:var(--foreground-strong)]">
                 {feedbackDraftText}
               </pre>
-              {didCopyCurrentDraft ? <p className="text-caption leading-5 text-[color:var(--muted)]">복사했습니다. 전달 전 검토해 주세요.</p> : null}
+              {didCopyCurrentDraft ? <p className="text-caption leading-5 text-[color:var(--muted)]">복사 완료. 전달 전 검토해 주세요.</p> : null}
               {feedbackCopyStatus === "failed" ? (
                 <p className="text-caption leading-5 text-[color:var(--muted)]">클립보드 복사에 실패했습니다. 텍스트를 수동으로 복사해 주세요.</p>
               ) : null}
