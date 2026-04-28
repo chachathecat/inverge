@@ -61,7 +61,9 @@ export function FrontPage() {
           </Link>
           <p className="text-sm text-[color:var(--muted)]">감정평가사 1차/2차 입력 화면으로 바로 이동합니다.</p>
         </div>
-        <p className="text-sm leading-7 text-[color:var(--muted)]">학원용 답안 운영 콘솔은 별도 준비 중</p>
+        <p className="text-sm leading-7 text-[color:var(--muted)]">
+          답안 검토실은 학원과 고빈도 답안 검토 사용자를 위한 운영형 검토 공간으로 확장 예정입니다.
+        </p>
       </section>
 
       <section className="space-y-6">
