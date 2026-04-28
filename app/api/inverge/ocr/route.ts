@@ -37,9 +37,6 @@ export async function POST(request: Request) {
       try {
         rawExtractionJson = await extractStructuredDraftWithGemini(mode, rawOcrText);
       } catch (error) {
-        if (error instanceof Error && error.message === GEMINI_QUOTA_ERROR_MESSAGE) {
-          throw error;
-        }
         rawExtractionJson = {};
       }
     }

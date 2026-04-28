@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
+import type { Schema } from "@google/generative-ai";
 
 import type { AppraisalMode } from "@/lib/review-os/appraisal";
 import { buildExtractionPrompt } from "@/lib/review-os/extraction";
