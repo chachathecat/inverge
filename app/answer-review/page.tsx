@@ -26,40 +26,47 @@ const flowCards = [
 
 export default function AnswerReviewInfoPage() {
   return (
-    <RefinedShell className="space-y-6 py-8 sm:space-y-8 sm:py-10">
+    <RefinedShell className="space-y-5 py-6 sm:space-y-8 sm:py-10">
       <section className="space-y-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] p-5 sm:p-7">
         <div className="flex flex-wrap items-center gap-2">
           <RefinedBadge>운영자용 베타</RefinedBadge>
           <RefinedBadge tone="amber">강사 검수 전 확정 금지</RefinedBadge>
         </div>
-        <h1 className="text-[30px] font-medium leading-[1.18] tracking-[-0.04em] text-[color:var(--foreground-strong)] sm:text-[40px]">
-          수기 답안을 OCR로 읽고, 기준답안과 비교해 보강할 논점 하나를 정리합니다.
-        </h1>
-        <p className="text-sm leading-7 text-[color:var(--muted)]">
-          최종 채점이나 합격 판정이 아니라 답안 검토와 보강을 돕는 운영형 흐름입니다.
-        </p>
 
         <section className="space-y-4 rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-4 sm:p-5">
           <div className="flex flex-col gap-2">
             <p className="text-sm font-medium text-[color:var(--foreground-strong)]">답안 입력 시작</p>
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+              <label
+                htmlFor="answer-review-file-upload"
+                className={cn(buttonVariants({ variant: "default" }), "cursor-pointer justify-center sm:w-auto")}
+              >
+                답안 이미지 업로드
+              </label>
+              <input id="answer-review-file-upload" type="file" accept="image/*,.pdf" className="hidden" />
+            </div>
+            <div className="flex flex-wrap gap-3 text-caption text-[color:var(--muted)]">
+              <a href="#answer-review-text" className="underline underline-offset-4">
+                텍스트로 답안 입력
+              </a>
+              <a href="#answer-review-reference" className="underline underline-offset-4">
+                기준답안 붙여넣기
+              </a>
+            </div>
             <p className="text-caption text-[color:var(--muted)]">OCR 결과는 초안이며 저장 전 확인이 필요합니다.</p>
           </div>
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-            <label
-              htmlFor="answer-review-file-upload"
-              className={cn(buttonVariants({ variant: "default" }), "cursor-pointer justify-center")}
-            >
-              답안 이미지 업로드
-            </label>
-            <input id="answer-review-file-upload" type="file" accept="image/*,.pdf" className="hidden" />
+          <div className="space-y-2">
+            <h1 className="text-[26px] font-medium leading-[1.2] tracking-[-0.03em] text-[color:var(--foreground-strong)] sm:text-[34px]">
+              수기 답안을 OCR로 읽고, 기준답안과 비교해 보강할 논점 하나를 정리합니다.
+            </h1>
+            <p className="text-sm leading-7 text-[color:var(--muted)]">
+              최종 채점이나 합격 판정이 아니라 답안 검토와 보강을 돕는 운영형 흐름입니다.
+            </p>
+          </div>
 
-            <a href="#answer-review-text" className={cn(buttonVariants({ variant: "outline" }), "justify-center")}>
-              텍스트로 답안 입력
-            </a>
-            <a href="#answer-review-reference" className={cn(buttonVariants({ variant: "ghost" }), "justify-center")}>
-              기준답안 붙여넣기
-            </a>
+          <div className="rounded-[var(--radius-sm)] border border-dashed border-[var(--border)] bg-[color:var(--surface)] p-3 text-caption text-[color:var(--muted)]">
+            업로드한 답안은 OCR 초안 확인용으로 활용하고, 아래 입력칸에서 내 답안과 기준답안을 바로 비교할 수 있습니다.
           </div>
 
           <div className="grid gap-3 lg:grid-cols-2">
