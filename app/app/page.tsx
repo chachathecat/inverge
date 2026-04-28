@@ -183,7 +183,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
               <details className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
                 <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">왜 입력부터 시작하나요?</summary>
                 <div className="border-t border-[color:var(--border-subtle)] px-4 py-3 text-xs leading-6 text-[color:var(--muted)]">
-                  입력이 없는 상태에서는 우선순위를 정확히 계산할 수 없습니다. 오늘 입력 하나를 남기면 내일 복습과 재시도 작업이 자동으로 이어집니다.
+                  입력이 아직 없으면 우선순위가 흐려질 수 있습니다. 오늘 입력 하나만 남겨 두면 다음 복습과 재시도 순서를 더 편하게 이어갈 수 있습니다.
                 </div>
               </details>
             </CardContent>
