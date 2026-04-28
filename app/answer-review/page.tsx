@@ -7,30 +7,20 @@ import type { ChangeEvent } from "react";
 import { RefinedBadge, RefinedShell } from "@/components/inverge/refined-primitives";
 import { buttonVariants } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  normalizeAnswerReviewStructureDraft,
+  type AnswerReviewStructureDraft,
+} from "@/lib/evaluate/answer-review-structure";
 import { cn } from "@/lib/utils";
-
-type AnswerReviewStructureDraft = {
-  questionSummary: string;
-  coreConcepts: string[];
-  requiredIssues: string;
-  userAnswerSummary: string;
-  userAnswerStructure: string;
-  referenceStructure: string;
-  strengths: string[];
-  missingIssueCandidates: string[];
-  weakParagraphPoint: string;
-  weakLogicPoint: string;
-  rewriteTarget: string;
-  rewriteDraftSuggestion: string;
-  nextAction: string;
-  caution: string;
-};
 
 type InputStatusCardProps = {
   title: string;
   isFilled: boolean;
   helper: string;
 };
+
+const CARD_TEXT_MAX_LENGTH = 200;
+const DETAILS_TEXT_MAX_LENGTH = 560;
 
 function InputStatusCard({ title, isFilled, helper }: InputStatusCardProps) {
   return (
@@ -90,7 +80,14 @@ export default function AnswerReviewInfoPage() {
       .filter(Boolean).length;
   };
 
-  const toShortLine = (text: string, fallback: string, maxLength = 120) => {
+  const toShortLine = (text: string, fallback: string, maxLength = CARD_TEXT_MAX_LENGTH) => {
+    const normalized = text.trim().replace(/\s+/g, " ");
+    if (!normalized) return fallback;
+    if (normalized.length <= maxLength) return normalized;
+    return `${normalized.slice(0, maxLength).trimEnd()}…`;
+  };
+
+  const toDetailLine = (text: string, fallback: string, maxLength = DETAILS_TEXT_MAX_LENGTH) => {
     const normalized = text.trim().replace(/\s+/g, " ");
     if (!normalized) return fallback;
     if (normalized.length <= maxLength) return normalized;
@@ -134,16 +131,17 @@ export default function AnswerReviewInfoPage() {
         body: formData,
       });
       const payload = (await response.json()) as
-        | { ok: true; draft: AnswerReviewStructureDraft }
+        | { ok: true; draft: unknown }
         | { ok: false; error: string };
 
       if (!response.ok || !payload.ok) {
         throw new Error(payload.ok ? "구조화 결과를 불러오지 못했습니다." : payload.error);
       }
 
-      setStructureDraft(payload.draft);
-      setMissingPointMemo(payload.draft.missingIssueCandidates.join(", "));
-      setRevisionParagraph(payload.draft.rewriteDraftSuggestion);
+      const normalizedDraft = normalizeAnswerReviewStructureDraft(payload.draft);
+      setStructureDraft(normalizedDraft);
+      setMissingPointMemo(normalizedDraft.missingIssueCandidates.join(", "));
+      setRevisionParagraph(normalizedDraft.rewriteDraftSuggestion);
     } catch (error) {
       setStructureDraft(null);
       setStructureError(
@@ -371,7 +369,7 @@ export default function AnswerReviewInfoPage() {
                     <p className="text-caption font-medium text-[color:var(--muted)]">보강 필요</p>
                     <p className="mt-1 text-xs font-medium text-[color:var(--foreground-strong)]">이 답안에서 먼저 볼 간극 하나</p>
                     <p className="mt-1 text-caption text-[color:var(--foreground-strong)]">
-                      {toShortLine(firstBigGap, "문제 요구/기준답안을 보강하면 가장 큰 간극이 더 선명해집니다.")}
+                      {toShortLine(firstBigGap, "기준답안과 문제 요구를 더 입력하면 보강할 간극이 선명해집니다.")}
                     </p>
                   </article>
                   <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3">
@@ -379,19 +377,19 @@ export default function AnswerReviewInfoPage() {
                     <p className="mt-1 text-caption text-[color:var(--foreground-strong)]">
                       {toShortLine(
                         structureDraft.strengths.length > 0 ? structureDraft.strengths[0] ?? "" : "",
-                        "잘한 부분을 확인 중입니다.",
+                        "잘한 부분은 검토자가 확인해 보강할 수 있습니다.",
                       )}
                     </p>
                   </article>
                   <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3">
                     <p className="text-caption font-medium text-[color:var(--muted)]">다시 쓸 문장</p>
                     <p className="mt-1 text-caption text-[color:var(--foreground-strong)]">
-                      {toShortLine(structureDraft.rewriteDraftSuggestion || structureDraft.rewriteTarget, "다시 쓸 문장을 준비 중입니다.")}
+                      {toShortLine(structureDraft.rewriteDraftSuggestion || structureDraft.rewriteTarget, "교정 문단을 직접 작성해 다음 답안에 반영해 주세요.")}
                     </p>
                   </article>
                   <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3">
                     <p className="text-caption font-medium text-[color:var(--muted)]">다음 행동</p>
-                    <p className="mt-1 text-caption text-[color:var(--foreground-strong)]">{toShortLine(structureDraft.nextAction, "한 문단 다시 쓰기를 먼저 진행해 주세요.")}</p>
+                    <p className="mt-1 text-caption text-[color:var(--foreground-strong)]">{toShortLine(structureDraft.nextAction, "문단 하나를 다시 쓰고 검토자 확인을 진행하세요.")}</p>
                   </article>
                 </div>
                 <details className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3">
@@ -399,37 +397,37 @@ export default function AnswerReviewInfoPage() {
                   <div className="mt-3 grid gap-2 sm:grid-cols-2">
                     <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface)] p-3">
                       <p className="text-caption font-medium text-[color:var(--muted)]">문제 요구</p>
-                      <p className="mt-1 text-caption text-[color:var(--foreground-strong)]">{structureDraft.questionSummary}</p>
+                      <p className="mt-1 text-caption text-[color:var(--foreground-strong)]">{toDetailLine(structureDraft.questionSummary, "문제 요구를 더 입력하면 구조화를 보강할 수 있습니다.")}</p>
                     </article>
                     <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface)] p-3">
                       <p className="text-caption font-medium text-[color:var(--muted)]">핵심 개념</p>
                       <p className="mt-1 text-caption text-[color:var(--foreground-strong)]">
-                        {structureDraft.coreConcepts.length > 0 ? structureDraft.coreConcepts.join(", ") : "핵심 개념을 더 입력해 주세요."}
+                        {toDetailLine(structureDraft.coreConcepts.length > 0 ? structureDraft.coreConcepts.join(", ") : "", "핵심 개념을 더 입력해 주세요.")}
                       </p>
                     </article>
                     <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface)] p-3">
                       <p className="text-caption font-medium text-[color:var(--muted)]">requiredIssues</p>
-                      <p className="mt-1 text-caption text-[color:var(--foreground-strong)]">{structureDraft.requiredIssues}</p>
+                      <p className="mt-1 text-caption text-[color:var(--foreground-strong)]">{toDetailLine(structureDraft.requiredIssues, "기준답안과 문제 요구를 더 입력하면 보강할 간극이 선명해집니다.")}</p>
                     </article>
                     <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface)] p-3">
                       <p className="text-caption font-medium text-[color:var(--muted)]">userAnswerStructure</p>
-                      <p className="mt-1 text-caption text-[color:var(--foreground-strong)]">{structureDraft.userAnswerStructure}</p>
+                      <p className="mt-1 text-caption text-[color:var(--foreground-strong)]">{toDetailLine(structureDraft.userAnswerStructure, "문단별 주장과 근거를 정리하면 구조 분석이 선명해집니다.")}</p>
                     </article>
                     <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface)] p-3">
                       <p className="text-caption font-medium text-[color:var(--muted)]">referenceStructure</p>
-                      <p className="mt-1 text-caption text-[color:var(--foreground-strong)]">{structureDraft.referenceStructure}</p>
+                      <p className="mt-1 text-caption text-[color:var(--foreground-strong)]">{toDetailLine(structureDraft.referenceStructure, "기준답안의 목차를 입력하면 비교가 정확해집니다.")}</p>
                     </article>
                     <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface)] p-3">
                       <p className="text-caption font-medium text-[color:var(--muted)]">weakParagraphPoint</p>
-                      <p className="mt-1 text-caption text-[color:var(--foreground-strong)]">{structureDraft.weakParagraphPoint}</p>
+                      <p className="mt-1 text-caption text-[color:var(--foreground-strong)]">{toDetailLine(structureDraft.weakParagraphPoint, "보강할 문단 포인트를 검토자가 직접 확인해 주세요.")}</p>
                     </article>
                     <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface)] p-3">
                       <p className="text-caption font-medium text-[color:var(--muted)]">weakLogicPoint</p>
-                      <p className="mt-1 text-caption text-[color:var(--foreground-strong)]">{structureDraft.weakLogicPoint}</p>
+                      <p className="mt-1 text-caption text-[color:var(--foreground-strong)]">{toDetailLine(structureDraft.weakLogicPoint, "논리 연결이 약한 지점을 검토자가 직접 확인해 주세요.")}</p>
                     </article>
                     <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface)] p-3">
                       <p className="text-caption font-medium text-[color:var(--muted)]">caution</p>
-                      <p className="mt-1 text-caption text-[color:var(--foreground-strong)]">{structureDraft.caution}</p>
+                      <p className="mt-1 text-caption text-[color:var(--foreground-strong)]">{toDetailLine(structureDraft.caution, "구조화 결과는 검토 보조 초안이며 검토자 확인이 필요합니다.")}</p>
                     </article>
                   </div>
                 </details>

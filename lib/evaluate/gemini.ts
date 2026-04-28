@@ -5,6 +5,10 @@ import { buildExtractionPrompt } from "@/lib/review-os/extraction";
 
 import { buildEvaluationPrompts } from "./prompt";
 import type { EvaluationResult } from "./types";
+import {
+  normalizeAnswerReviewStructureDraft,
+  type AnswerReviewStructureDraft,
+} from "./answer-review-structure";
 
 type GeminiEvaluationPayload = {
   result: EvaluationResult;
@@ -15,22 +19,10 @@ export class GeminiEnvError extends Error {
   readonly code = "GEMINI_NOT_CONFIGURED";
 }
 
-export type AnswerReviewStructureDraft = {
-  questionSummary: string;
-  coreConcepts: string[];
-  requiredIssues: string;
-  userAnswerSummary: string;
-  userAnswerStructure: string;
-  referenceStructure: string;
-  strengths: string[];
-  missingIssueCandidates: string[];
-  weakParagraphPoint: string;
-  weakLogicPoint: string;
-  rewriteTarget: string;
-  rewriteDraftSuggestion: string;
-  nextAction: string;
-  caution: string;
-};
+export class GeminiStructureParseError extends Error {
+  readonly code = "GEMINI_STRUCTURE_PARSE_FAILED";
+}
+
 
 export function isGeminiConfigured() {
   return Boolean(process.env.GEMINI_API_KEY);
@@ -155,10 +147,15 @@ export async function structureAnswerReviewWithGemini({
   const text = result.response.text();
 
   if (!text?.trim()) {
-    throw new Error("답안 구조화 결과가 비어 있습니다.");
+    throw new GeminiStructureParseError("구조화 결과를 안전하게 읽지 못했습니다. 텍스트 입력으로 검토를 계속해 주세요.");
   }
 
-  return JSON.parse(text) as AnswerReviewStructureDraft;
+  try {
+    const parsed = JSON.parse(text) as unknown;
+    return normalizeAnswerReviewStructureDraft(parsed);
+  } catch {
+    throw new GeminiStructureParseError("구조화 결과를 안전하게 읽지 못했습니다. 텍스트 입력으로 검토를 계속해 주세요.");
+  }
 }
 
 export async function extractTranscriptionFromImages(files: File[]): Promise<string> {
