@@ -9,6 +9,23 @@ import { buttonVariants } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
+type AnswerReviewStructureDraft = {
+  questionSummary: string;
+  coreConcepts: string[];
+  requiredIssues: string;
+  userAnswerSummary: string;
+  userAnswerStructure: string;
+  referenceStructure: string;
+  strengths: string[];
+  missingIssueCandidates: string[];
+  weakParagraphPoint: string;
+  weakLogicPoint: string;
+  rewriteTarget: string;
+  rewriteDraftSuggestion: string;
+  nextAction: string;
+  caution: string;
+};
+
 const flowCards = [
   {
     title: "1) 문제 맥락 입력",
@@ -45,8 +62,9 @@ function InputStatusCard({ title, isFilled, helper }: InputStatusCardProps) {
 }
 
 export default function AnswerReviewInfoPage() {
-  const [problemFileName, setProblemFileName] = useState<string | null>(null);
-  const [myAnswerFileName, setMyAnswerFileName] = useState<string | null>(null);
+  const [problemFiles, setProblemFiles] = useState<File[]>([]);
+  const [myAnswerFiles, setMyAnswerFiles] = useState<File[]>([]);
+  const [referenceFiles, setReferenceFiles] = useState<File[]>([]);
   const [problemText, setProblemText] = useState("");
   const [myAnswerText, setMyAnswerText] = useState("");
   const [referenceAnswerText, setReferenceAnswerText] = useState("");
@@ -54,28 +72,33 @@ export default function AnswerReviewInfoPage() {
   const [revisionParagraph, setRevisionParagraph] = useState("");
   const [feedbackCopyStatus, setFeedbackCopyStatus] = useState<"idle" | "success" | "failed">("idle");
   const [copiedFeedbackDraftText, setCopiedFeedbackDraftText] = useState<string | null>(null);
+  const [isStructuring, setIsStructuring] = useState(false);
+  const [structureError, setStructureError] = useState<string | null>(null);
+  const [structureDraft, setStructureDraft] = useState<AnswerReviewStructureDraft | null>(null);
 
   const handleProblemFileChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    setProblemFileName(file ? file.name : null);
+    setProblemFiles(Array.from(event.target.files ?? []));
   };
 
   const handleMyAnswerFileChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    setMyAnswerFileName(file ? file.name : null);
+    setMyAnswerFiles(Array.from(event.target.files ?? []));
   };
 
-  const hasProblemInput = problemText.trim().length > 0 || Boolean(problemFileName);
-  const hasMyAnswer = myAnswerText.trim().length > 0 || Boolean(myAnswerFileName);
-  const hasReferenceAnswer = referenceAnswerText.trim().length > 0;
+  const handleReferenceFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setReferenceFiles(Array.from(event.target.files ?? []));
+  };
+
+  const hasProblemInput = problemText.trim().length > 0 || problemFiles.length > 0;
+  const hasMyAnswer = myAnswerText.trim().length > 0 || myAnswerFiles.length > 0;
+  const hasReferenceAnswer = referenceAnswerText.trim().length > 0 || referenceFiles.length > 0;
   const hasMissingPointMemo = missingPointMemo.trim().length > 0;
   const hasRevisionParagraph = revisionParagraph.trim().length > 0;
   const isReviewReady = hasProblemInput && hasMyAnswer && hasReferenceAnswer;
 
   const primaryCtaLabel = useMemo(() => {
-    if (isReviewReady) return "검토 preview 확인";
+    if (hasMyAnswer) return "OCR 구조화 시작";
     return "답안 이미지 업로드";
-  }, [isReviewReady]);
+  }, [hasMyAnswer]);
 
   const getParagraphCount = (text: string) => {
     const normalized = text.trim();
@@ -87,8 +110,53 @@ export default function AnswerReviewInfoPage() {
   };
 
   const jumpToSection = () => {
-    const targetId = isReviewReady ? "manual-comparison-preview" : "my-answer-upload";
+    const targetId = hasMyAnswer ? "answer-review-structure-result" : "my-answer-upload";
     document.getElementById(targetId)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const runStructure = async () => {
+    if (!hasMyAnswer) {
+      setStructureError("내 답안 파일 또는 텍스트를 먼저 입력해 주세요.");
+      return;
+    }
+
+    setIsStructuring(true);
+    setStructureError(null);
+
+    try {
+      const formData = new FormData();
+      for (const file of problemFiles) formData.append("questionFiles", file);
+      for (const file of myAnswerFiles) formData.append("answerFiles", file);
+      for (const file of referenceFiles) formData.append("referenceFiles", file);
+      formData.set("questionText", problemText);
+      formData.set("answerText", myAnswerText);
+      formData.set("referenceText", referenceAnswerText);
+
+      const response = await fetch("/api/answer-review/structure", {
+        method: "POST",
+        body: formData,
+      });
+      const payload = (await response.json()) as
+        | { ok: true; draft: AnswerReviewStructureDraft }
+        | { ok: false; error: string };
+
+      if (!response.ok || !payload.ok) {
+        throw new Error(payload.ok ? "구조화 결과를 불러오지 못했습니다." : payload.error);
+      }
+
+      setStructureDraft(payload.draft);
+      setMissingPointMemo(payload.draft.missingIssueCandidates.join(", "));
+      setRevisionParagraph(payload.draft.rewriteDraftSuggestion);
+    } catch (error) {
+      setStructureDraft(null);
+      setStructureError(
+        error instanceof Error
+          ? error.message
+          : "OCR 기능을 사용하려면 GEMINI_API_KEY 설정이 필요합니다. 지금은 텍스트 입력으로 검토를 계속할 수 있습니다.",
+      );
+    } finally {
+      setIsStructuring(false);
+    }
   };
 
   const feedbackDraftText = useMemo(() => {
@@ -166,12 +234,12 @@ export default function AnswerReviewInfoPage() {
               <InputStatusCard title="내 답안" isFilled={hasMyAnswer} helper="답안 이미지 또는 텍스트" />
               <InputStatusCard title="기준답안" isFilled={hasReferenceAnswer} helper="기준답안/기준목차 텍스트" />
             </div>
-            <button type="button" className={cn(buttonVariants({ variant: "default" }), "w-full sm:w-auto")} onClick={jumpToSection}>
+            <button type="button" className={cn(buttonVariants({ variant: "default" }), "w-full sm:w-auto")} onClick={hasMyAnswer ? runStructure : jumpToSection}>
               {primaryCtaLabel}
             </button>
             <p className="text-caption text-[color:var(--muted)]">
               {isReviewReady
-                ? "세 입력이 모두 준비되었습니다. 아래 수동 검토 preview에서 상태를 확인하세요."
+                ? "세 입력이 모두 준비되었습니다. OCR 구조화 초안을 실행해 검토 포인트를 빠르게 확인하세요."
                 : "문제 요구와 기준답안을 함께 넣어야 답안의 빠진 부분을 안전하게 볼 수 있습니다."}
             </p>
           </div>
@@ -181,13 +249,16 @@ export default function AnswerReviewInfoPage() {
               문제/사례 + 내 답안 + 기준답안을 함께 입력해 수동 검토 preview로 이어갑니다.
             </h1>
             <p className="text-sm leading-7 text-[color:var(--muted)]">
-              최종 채점이나 합격 판정이 아니라 답안 검토와 보강을 돕는 운영형 흐름입니다.
+              평가 확정 화면이 아니라 답안 검토와 보강을 돕는 운영형 흐름입니다.
             </p>
           </div>
 
           <div className="rounded-[var(--radius-sm)] border border-dashed border-[var(--border)] bg-[color:var(--surface)] p-3 text-caption text-[color:var(--muted)]">
-            OCR 결과는 초안이며 저장 전 확인이 필요합니다. 기준답안은 텍스트 붙여넣기 중심으로 입력해 주세요.
+            OCR 결과와 구조화 결과는 초안이며, 강사 검수 전 확정하지 않습니다.
           </div>
+          <p className="text-caption text-[color:var(--muted)]">AI가 먼저 구조화하고, 검토자는 맞는지만 확인합니다.</p>
+          <p className="text-caption text-[color:var(--muted)]">OCR과 구조화 결과는 초안이며, 검토자가 최종 확인합니다.</p>
+          <p className="text-caption text-[color:var(--muted)]">이 화면은 답안 검토와 보강을 돕는 운영형 흐름입니다.</p>
 
           <div className="grid gap-3 lg:grid-cols-2">
             <section className="space-y-3" id="problem-upload">
@@ -202,11 +273,15 @@ export default function AnswerReviewInfoPage() {
                 id="answer-review-problem-file-upload"
                 type="file"
                 accept="image/*,.pdf"
+                multiple
                 className="hidden"
                 onChange={handleProblemFileChange}
               />
               <p className="text-caption text-[color:var(--muted)]">
-                파일: <span className="font-medium text-[color:var(--foreground-strong)]">{problemFileName ?? "선택된 파일이 없습니다."}</span>
+                파일:{" "}
+                <span className="font-medium text-[color:var(--foreground-strong)]">
+                  {problemFiles.length > 0 ? problemFiles.map((file) => file.name).join(", ") : "선택된 파일이 없습니다."}
+                </span>
               </p>
             </section>
 
@@ -222,11 +297,39 @@ export default function AnswerReviewInfoPage() {
                 id="answer-review-my-answer-file-upload"
                 type="file"
                 accept="image/*,.pdf"
+                multiple
                 className="hidden"
                 onChange={handleMyAnswerFileChange}
               />
               <p className="text-caption text-[color:var(--muted)]">
-                파일: <span className="font-medium text-[color:var(--foreground-strong)]">{myAnswerFileName ?? "선택된 파일이 없습니다."}</span>
+                파일:{" "}
+                <span className="font-medium text-[color:var(--foreground-strong)]">
+                  {myAnswerFiles.length > 0 ? myAnswerFiles.map((file) => file.name).join(", ") : "선택된 파일이 없습니다."}
+                </span>
+              </p>
+            </section>
+
+            <section className="space-y-3" id="reference-upload">
+              <p className="text-caption font-medium text-[color:var(--muted)]">기준답안 이미지 업로드 (선택)</p>
+              <label
+                htmlFor="answer-review-reference-file-upload"
+                className={cn(buttonVariants({ variant: "outline" }), "cursor-pointer justify-center w-full sm:w-auto")}
+              >
+                기준답안 이미지 선택
+              </label>
+              <input
+                id="answer-review-reference-file-upload"
+                type="file"
+                accept="image/*,.pdf"
+                multiple
+                className="hidden"
+                onChange={handleReferenceFileChange}
+              />
+              <p className="text-caption text-[color:var(--muted)]">
+                파일:{" "}
+                <span className="font-medium text-[color:var(--foreground-strong)]">
+                  {referenceFiles.length > 0 ? referenceFiles.map((file) => file.name).join(", ") : "선택된 파일이 없습니다."}
+                </span>
               </p>
             </section>
           </div>
@@ -260,6 +363,68 @@ export default function AnswerReviewInfoPage() {
               />
             </div>
           </div>
+
+          <section id="answer-review-structure-result" className="space-y-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-medium text-[color:var(--foreground-strong)]">OCR 구조화 결과</p>
+              <button type="button" className={cn(buttonVariants({ variant: "default" }), "h-9 px-3 text-xs")} onClick={runStructure} disabled={isStructuring}>
+                {isStructuring ? "정리 중..." : "검토 preview 확인"}
+              </button>
+            </div>
+            <p className="text-caption text-[color:var(--muted)]">문제/사례와 기준답안을 함께 넣으면 구조화 품질이 높아집니다.</p>
+            {isStructuring ? <p className="text-caption text-[color:var(--muted)]">OCR 초안과 답안 구조를 정리하고 있습니다.</p> : null}
+            {structureError ? (
+              <p className="text-caption text-[color:var(--muted)]">
+                {structureError}
+                <br />
+                텍스트 입력으로 검토를 계속할 수 있습니다.
+              </p>
+            ) : null}
+            {structureDraft ? (
+              <div className="grid gap-3 lg:grid-cols-2">
+                <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3">
+                  <p className="text-caption font-medium text-[color:var(--muted)]">문제 요구</p>
+                  <p className="mt-1 text-caption text-[color:var(--foreground-strong)]">{structureDraft.requiredIssues || structureDraft.questionSummary}</p>
+                </article>
+                <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3">
+                  <p className="text-caption font-medium text-[color:var(--muted)]">핵심 개념</p>
+                  <p className="mt-1 text-caption text-[color:var(--foreground-strong)]">
+                    {structureDraft.coreConcepts.length > 0 ? structureDraft.coreConcepts.join(", ") : "핵심 개념을 더 입력해 주세요."}
+                  </p>
+                </article>
+                <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3">
+                  <p className="text-caption font-medium text-[color:var(--muted)]">잘한 부분</p>
+                  <p className="mt-1 text-caption text-[color:var(--foreground-strong)]">
+                    {structureDraft.strengths.length > 0 ? structureDraft.strengths.join(", ") : "잘한 부분을 확인 중입니다."}
+                  </p>
+                </article>
+                <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3">
+                  <p className="text-caption font-medium text-[color:var(--muted)]">놓친 부분</p>
+                  <p className="mt-1 text-caption text-[color:var(--foreground-strong)]">
+                    {structureDraft.missingIssueCandidates.length > 0
+                      ? structureDraft.missingIssueCandidates.join(", ")
+                      : "문제 요구/기준답안을 보강하면 놓친 부분 후보가 더 선명해집니다."}
+                  </p>
+                </article>
+                <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3">
+                  <p className="text-caption font-medium text-[color:var(--muted)]">문단 구조 약점</p>
+                  <p className="mt-1 text-caption text-[color:var(--foreground-strong)]">{structureDraft.weakParagraphPoint}</p>
+                </article>
+                <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3">
+                  <p className="text-caption font-medium text-[color:var(--muted)]">논리 구조 약점</p>
+                  <p className="mt-1 text-caption text-[color:var(--foreground-strong)]">{structureDraft.weakLogicPoint}</p>
+                </article>
+                <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3">
+                  <p className="text-caption font-medium text-[color:var(--muted)]">다시 쓸 문장</p>
+                  <p className="mt-1 text-caption text-[color:var(--foreground-strong)]">{structureDraft.rewriteDraftSuggestion || structureDraft.rewriteTarget}</p>
+                </article>
+                <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3">
+                  <p className="text-caption font-medium text-[color:var(--muted)]">다음 행동</p>
+                  <p className="mt-1 text-caption text-[color:var(--foreground-strong)]">{structureDraft.nextAction}</p>
+                </article>
+              </div>
+            ) : null}
+          </section>
 
           <section id="manual-comparison-preview" className="space-y-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
             <p className="text-sm font-medium text-[color:var(--foreground-strong)]">Manual comparison preview</p>

@@ -11,11 +11,36 @@ type GeminiEvaluationPayload = {
   transcription: string;
 };
 
+export class GeminiEnvError extends Error {
+  readonly code = "GEMINI_NOT_CONFIGURED";
+}
+
+export type AnswerReviewStructureDraft = {
+  questionSummary: string;
+  coreConcepts: string[];
+  requiredIssues: string;
+  userAnswerSummary: string;
+  userAnswerStructure: string;
+  referenceStructure: string;
+  strengths: string[];
+  missingIssueCandidates: string[];
+  weakParagraphPoint: string;
+  weakLogicPoint: string;
+  rewriteTarget: string;
+  rewriteDraftSuggestion: string;
+  nextAction: string;
+  caution: string;
+};
+
+export function isGeminiConfigured() {
+  return Boolean(process.env.GEMINI_API_KEY);
+}
+
 function createModel() {
   const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey) {
-    throw new Error("GEMINI_API_KEY가 설정되지 않았습니다.");
+    throw new GeminiEnvError("GEMINI_API_KEY가 설정되지 않았습니다.");
   }
 
   const modelName = process.env.GEMINI_MODEL ?? "gemini-1.5-pro";
@@ -30,6 +55,75 @@ function fileToPart(file: File): Promise<{ inlineData: { data: string; mimeType:
       mimeType: file.type || "image/jpeg",
     },
   }));
+}
+
+type AnswerReviewStructureInput = {
+  questionFiles: File[];
+  answerFiles: File[];
+  referenceFiles: File[];
+  questionText: string;
+  answerText: string;
+  referenceText: string;
+};
+
+export async function structureAnswerReviewWithGemini({
+  questionFiles,
+  answerFiles,
+  referenceFiles,
+  questionText,
+  answerText,
+  referenceText,
+}: AnswerReviewStructureInput): Promise<AnswerReviewStructureDraft> {
+  const model = createModel();
+  const questionParts = await Promise.all(questionFiles.map((file) => fileToPart(file)));
+  const answerParts = await Promise.all(answerFiles.map((file) => fileToPart(file)));
+  const referenceParts = await Promise.all(referenceFiles.map((file) => fileToPart(file)));
+
+  const result = await model.generateContent({
+    contents: [
+      {
+        role: "user",
+        parts: [
+          {
+            text: [
+              "너는 감정평가사 답안 검토실의 구조화 보조다.",
+              "절대 수치화 평가나 합격 여부 추정을 하지 마라.",
+              "출력은 반드시 JSON 하나만 반환하라.",
+              "OCR 결과와 구조화 결과는 초안이며 검토자 확인이 필요하다는 점을 caution에 반영하라.",
+              "입력이 부족하면 추정하지 말고 부족한 맥락을 명확히 적어라.",
+              "",
+              `questionText:\n${questionText.trim() || "[없음]"}`,
+              "",
+              `answerText:\n${answerText.trim() || "[없음]"}`,
+              "",
+              `referenceText:\n${referenceText.trim() || "[없음]"}`,
+              "",
+              "이후에 questionFiles, answerFiles, referenceFiles 순서의 첨부가 이어진다.",
+            ].join("\n"),
+          },
+          { text: "questionFiles 시작" },
+          ...questionParts,
+          { text: "answerFiles 시작" },
+          ...answerParts,
+          { text: "referenceFiles 시작" },
+          ...referenceParts,
+        ],
+      },
+    ],
+    generationConfig: {
+      temperature: 0.1,
+      responseMimeType: "application/json",
+      responseSchema: answerReviewStructureSchema(),
+    },
+  });
+
+  const text = result.response.text();
+
+  if (!text?.trim()) {
+    throw new Error("답안 구조화 결과가 비어 있습니다.");
+  }
+
+  return JSON.parse(text) as AnswerReviewStructureDraft;
 }
 
 export async function extractTranscriptionFromImages(files: File[]): Promise<string> {
@@ -147,6 +241,44 @@ function secondExtractionSchema(): Schema {
       "rewrite_instruction",
       "review_date_suggestion",
       "needs_review",
+    ],
+  };
+}
+
+function answerReviewStructureSchema(): Schema {
+  return {
+    type: SchemaType.OBJECT,
+    properties: {
+      questionSummary: { type: SchemaType.STRING },
+      coreConcepts: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+      requiredIssues: { type: SchemaType.STRING },
+      userAnswerSummary: { type: SchemaType.STRING },
+      userAnswerStructure: { type: SchemaType.STRING },
+      referenceStructure: { type: SchemaType.STRING },
+      strengths: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+      missingIssueCandidates: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+      weakParagraphPoint: { type: SchemaType.STRING },
+      weakLogicPoint: { type: SchemaType.STRING },
+      rewriteTarget: { type: SchemaType.STRING },
+      rewriteDraftSuggestion: { type: SchemaType.STRING },
+      nextAction: { type: SchemaType.STRING },
+      caution: { type: SchemaType.STRING },
+    },
+    required: [
+      "questionSummary",
+      "coreConcepts",
+      "requiredIssues",
+      "userAnswerSummary",
+      "userAnswerStructure",
+      "referenceStructure",
+      "strengths",
+      "missingIssueCandidates",
+      "weakParagraphPoint",
+      "weakLogicPoint",
+      "rewriteTarget",
+      "rewriteDraftSuggestion",
+      "nextAction",
+      "caution",
     ],
   };
 }
