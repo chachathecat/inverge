@@ -60,8 +60,8 @@ export const INVERGE_SUBSCRIPTION_STORAGE_KEY = "inverge:billing:subscription";
 export const INVERGE_PLANS: InvergePlan[] = [
   {
     id: "free",
-    name: "Alpha Trial",
-    description: "감정평가사 alpha 흐름을 가볍게 확인하는 시작 플랜입니다.",
+    name: "Closed Beta Trial",
+    description: "감정평가사 closed beta 흐름을 가볍게 확인하는 시작 플랜입니다.",
     priceLabel: "0원",
     interval: "month",
     features: ["월 20개 항목 처리", "오늘 다시 볼 항목", "최근 기록 14일"],
@@ -86,10 +86,10 @@ export const INVERGE_PLANS: InvergePlan[] = [
   {
     id: "premium",
     name: "Season Pack",
-    description: "시험 시즌에 처리량을 늘리는 확장 플랜입니다. alpha에서는 운영 검증만 진행합니다.",
+    description: "시험 시즌에 처리량을 늘리는 확장 플랜입니다. closed beta에서는 운영 검증만 진행합니다.",
     priceLabel: "준비 중",
     interval: "season",
-    features: ["Core 전체", "추가 처리량 준비", "alpha 피드백 우선 반영"],
+    features: ["Core 전체", "추가 처리량 준비", "closed beta 피드백 우선 반영"],
     includedFeatureKeys: [
       "review_os.capture",
       "review_os.queue",

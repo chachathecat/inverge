@@ -88,7 +88,7 @@ export function PricingPage({ initialSubscriptionState }: PricingPageProps) {
                 </div>
                 {plan.recommended ? (
                   <span className="rounded-full border border-[var(--border)] bg-[color:var(--surface-soft)] px-3 py-1 text-caption text-[color:var(--muted-strong)]">
-                    beta 기본
+                    closed beta 기본
                   </span>
                 ) : null}
               </div>
@@ -124,7 +124,7 @@ export function PricingPage({ initialSubscriptionState }: PricingPageProps) {
                   href={returnPath}
                   className="mt-7 inline-flex h-11 w-full items-center justify-center rounded-full border border-[var(--border-strong)] text-sm font-medium text-[color:var(--foreground-strong)]"
                 >
-                  beta 계속 사용
+                  closed beta 계속 사용
                 </Link>
               )}
             </section>
