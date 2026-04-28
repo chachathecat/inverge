@@ -19,8 +19,8 @@ export default async function ReviewOsLayout({ children }: { children: ReactNode
             아직 초대 승인 전입니다.
           </h1>
           <p className="mt-4 text-sm leading-7 text-[color:var(--muted)]">
-            Inverge closed beta는 초대 계정만 이용할 수 있습니다. 감정평가사 1차·2차 흐름을 순차적으로 열고 있으니,
-            승인되면 지금 계정으로 바로 이어서 사용할 수 있습니다.
+            Inverge closed beta는 초대 계정부터 순차적으로 열고 있습니다. 감정평가사 1차·2차 흐름을 안정적으로 준비 중이며,
+            승인되면 지금 계정으로 /app에서 바로 이어서 사용할 수 있습니다.
           </p>
           <div className="mt-6">
             <Link href="/" className="inline-flex">
