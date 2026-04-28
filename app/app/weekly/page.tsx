@@ -22,7 +22,8 @@ export default async function ReviewOsWeeklyPage({ searchParams }: PageProps) {
   const plan = await reviewOsService.getWeeklyPlan(session.userId, session.email, mode);
   const visibleTasks = plan.tasks.slice(0, 3);
   const primaryTask = plan.recovery?.task ?? plan.tasks[0] ?? null;
-  const primaryHref = primaryTask ? `/app/review?mode=${mode}` : `/app/capture?mode=${mode}`;
+  const inputStartHref = mode === "second" ? `/app/write?mode=${mode}` : `/app/capture?mode=${mode}`;
+  const primaryHref = primaryTask ? `/app/review?mode=${mode}` : inputStartHref;
 
   return (
     <div className="space-y-6 sm:space-y-7">
@@ -67,7 +68,7 @@ export default async function ReviewOsWeeklyPage({ searchParams }: PageProps) {
                   ? "오늘은 답안 1건만 입력해 주간 계획의 기준점을 만듭니다."
                   : "오늘은 오답 1건만 입력해 주간 계획의 기준점을 만듭니다."}
               </p>
-              <Link href={`/app/capture?mode=${mode}`}>
+              <Link href={inputStartHref}>
                 <Button type="button">{config.primaryCta}</Button>
               </Link>
             </div>
