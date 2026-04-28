@@ -211,6 +211,19 @@ export default function AnswerReviewInfoPage() {
   };
 
   const didCopyCurrentDraft = feedbackCopyStatus === "success" && copiedFeedbackDraftText === feedbackDraftText;
+  const primaryActionLabel = currentStep === 1 ? (isStructuring ? "정리 중..." : "OCR 구조화 시작") : currentStep === 2 ? "피드백 초안 확인" : "피드백 초안 복사";
+  const isPrimaryActionDisabled = currentStep === 1 ? !hasMyAnswer || isStructuring : false;
+  const handlePrimaryAction = () => {
+    if (currentStep === 1) {
+      void runStructure();
+      return;
+    }
+    if (currentStep === 2) {
+      setCurrentStep(3);
+      return;
+    }
+    void copyFeedbackDraft();
+  };
 
   return (
     <RefinedShell className="space-y-5 py-6 sm:space-y-8 sm:py-10">
@@ -232,18 +245,27 @@ export default function AnswerReviewInfoPage() {
                     className={cn(
                       "rounded-[var(--radius-sm)] border px-3 py-2 text-caption leading-5",
                       isActive
-                        ? "border-[color:var(--foreground-strong)] text-[color:var(--foreground-strong)]"
+                        ? "border-[#1E2A46] text-[#1E2A46]"
                         : "border-[var(--border)] text-[color:var(--muted)]",
                     )}
                     aria-current={isActive ? "step" : undefined}
                   >
-                    <span className={cn("mr-1", isDone ? "text-[color:var(--foreground-strong)]" : "text-[color:var(--muted)]")}>{item.id}.</span>
+                    <span className={cn("mr-1", isDone ? "text-[#1E2A46]" : "text-[color:var(--muted)]")}>{item.id}.</span>
                     {item.label}
                   </li>
                 );
               })}
             </ol>
           </div>
+
+          <button
+            type="button"
+            className={cn(buttonVariants({ variant: "default" }), "w-full sm:w-auto")}
+            onClick={handlePrimaryAction}
+            disabled={isPrimaryActionDisabled}
+          >
+            {primaryActionLabel}
+          </button>
 
           {currentStep === 1 ? (
             <section className="space-y-4">
@@ -349,14 +371,6 @@ export default function AnswerReviewInfoPage() {
                 </div>
               </div>
 
-              <button
-                type="button"
-                className={cn(buttonVariants({ variant: "default" }), "w-full sm:w-auto")}
-                onClick={runStructure}
-                disabled={!hasMyAnswer || isStructuring}
-              >
-                {isStructuring ? "정리 중..." : "OCR 구조화 시작"}
-              </button>
               {structureError ? (
                 <p className="text-caption leading-5 text-[color:var(--muted)]">
                   {structureError}
@@ -402,13 +416,6 @@ export default function AnswerReviewInfoPage() {
                   </p>
                 </article>
               </div>
-              <button
-                type="button"
-                className={cn(buttonVariants({ variant: "default" }), "w-full sm:w-auto")}
-                onClick={() => setCurrentStep(3)}
-              >
-                피드백 초안 확인
-              </button>
             </section>
           ) : null}
 
@@ -418,9 +425,6 @@ export default function AnswerReviewInfoPage() {
               <pre className="max-h-[320px] overflow-auto whitespace-pre-wrap rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface)] p-3 text-caption leading-6 text-[color:var(--foreground-strong)]">
                 {feedbackDraftText}
               </pre>
-              <button type="button" className={cn(buttonVariants({ variant: "default" }), "w-full sm:w-auto")} onClick={copyFeedbackDraft}>
-                피드백 초안 복사
-              </button>
               {didCopyCurrentDraft ? <p className="text-caption leading-5 text-[color:var(--muted)]">복사했습니다. 전달 전 검토해 주세요.</p> : null}
               {feedbackCopyStatus === "failed" ? (
                 <p className="text-caption leading-5 text-[color:var(--muted)]">클립보드 복사에 실패했습니다. 텍스트를 수동으로 복사해 주세요.</p>
