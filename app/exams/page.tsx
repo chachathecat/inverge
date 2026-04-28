@@ -68,11 +68,11 @@ export default async function ExamsPage() {
     {
       testId: "exam-card-answer-review",
       title: "답안 검토실",
-      description: "수기 답안 OCR, 기준답안 비교, 누락논점 확인, 교정 문단 작성을 준비 중입니다.",
+      description: "수기 답안 OCR로 텍스트를 추출하고, 기준답안 비교와 누락 논점 확인, 교정 문단 작성을 진행합니다.",
       badge: "운영자용 베타",
-      helper: "최종 채점이나 합격 판정을 제공하지 않습니다.",
+      helper: "최종 채점이나 합격 판정이 아니라 답안 검토와 보강을 돕는 운영자용 흐름입니다.",
       href: "/answer-review",
-      cta: "베타 준비 중",
+      cta: "OCR 답안 검토 시작",
     },
   ];
 

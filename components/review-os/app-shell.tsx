@@ -17,10 +17,10 @@ type AppShellProps = {
 };
 
 const NAV_ITEMS = [
-  { href: "/app", label: "오늘" },
   { href: "/app/capture", label: "입력" },
-  { href: "/app/items", label: "기록" },
+  { href: "/app", label: "오늘 실행" },
   { href: "/app/review", label: "다시 볼 항목" },
+  { href: "/app/items", label: "기록" },
   { href: "/app/weekly", label: "주간 정리" },
   { href: "/app/settings", label: "수험 설정" },
 ] as const;
@@ -59,7 +59,7 @@ export function ReviewOsAppShell({ email, mode, children, rightSlot }: AppShellP
       </div>
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="text-sm text-[color:var(--muted)]">{config.label} 학습 실행 화면</div>
+        <div className="text-sm text-[color:var(--muted)]">{config.label} 입력 기반 학습 실행 화면</div>
         <nav className="overflow-x-auto">
           <div className="flex min-w-max gap-2">
             {NAV_ITEMS.map((item) => (

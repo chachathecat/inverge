@@ -139,7 +139,9 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
         <div>
           <h2 className="text-xl font-medium tracking-[-0.04em] text-[color:var(--foreground-strong)] sm:text-2xl">{config.pageTitle}</h2>
           <p className="mt-2 max-w-2xl text-sm leading-7 text-[color:var(--muted)]">
-            {firstUse ? "오늘 무엇을 입력할지 먼저 고르면, 다음 작업이 바로 정리됩니다." : "오늘은 이 작업 하나만 먼저 합니다."}
+            {mode === "first"
+              ? "오답 기록·세트 풀이·공부 기록 입력을 기준으로 오늘 할 일을 정리합니다."
+              : "답안 작성·기준답안 비교·문단 다시쓰기 입력을 기준으로 오늘 할 일을 정리합니다."}
           </p>
         </div>
       </section>
@@ -196,7 +198,9 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                 <p className="mt-1 text-body-lg text-[color:var(--foreground-strong)]">{primaryTaskLabel}</p>
               </div>
               <CardTitle>지금 해야 할 한 가지에만 집중합니다.</CardTitle>
-              <CardDescription className="max-w-[66ch]">기록에서 다음 복습 신호를 정리했습니다. 먼저 실행하고, 이후 작업은 차분히 이어갑니다.</CardDescription>
+              <CardDescription className="max-w-[66ch]">
+                이미 남긴 입력 기록에서 다음 복습 신호를 정리했습니다. 먼저 실행하고, 이후 입력·복습을 차분히 이어갑니다.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 p-4 pt-0 sm:space-y-4 sm:p-6 sm:pt-0">
               <p className="text-sm text-[color:var(--foreground-strong)]">{nextAction}</p>
@@ -213,7 +217,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                   <Link href={primaryHref} className="w-full sm:w-auto">
                     <Button type="button" className="w-full sm:w-auto">
-                      오늘 최우선 작업 시작
+                      입력 기록 기준 최우선 작업 시작
                     </Button>
                   </Link>
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-[color:var(--muted)]">
@@ -223,7 +227,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                         href={`/app/study-log?mode=first&subject=${encodeURIComponent(normalizeSubjectForMode(selectedQueueItem?.subjectLabel, "first"))}`}
                         className="underline-offset-2 hover:underline"
                       >
-                        오늘 공부 기록
+                        공부 기록 입력
                       </Link>
                     ) : null}
                     <Link href={secondaryHref} className="underline-offset-2 hover:underline">
@@ -271,7 +275,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
         <section className="space-y-3">
           <details className="group rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
             <summary className="cursor-pointer list-none px-4 py-4 text-sm font-medium text-[color:var(--foreground-strong)] sm:px-5">
-              기록·요약·현재 흐름 보기
+              입력 기록 기준 요약 보기
             </summary>
             <div className="space-y-5 border-t border-[color:var(--border-subtle)] px-4 py-5 sm:px-5">
               <div className="grid gap-3 text-sm lg:grid-cols-3">
