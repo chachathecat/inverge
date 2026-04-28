@@ -21,6 +21,13 @@ export class GeminiEnvError extends Error {
 
 export class GeminiStructureParseError extends Error {
   readonly code = "GEMINI_STRUCTURE_PARSE_FAILED";
+
+  constructor(
+    message: string,
+    readonly reason: "empty_response" | "parse_failure" | "schema_mismatch",
+  ) {
+    super(message);
+  }
 }
 
 
@@ -147,14 +154,54 @@ export async function structureAnswerReviewWithGemini({
   const text = result.response.text();
 
   if (!text?.trim()) {
-    throw new GeminiStructureParseError("구조화 결과를 안전하게 읽지 못했습니다. 텍스트 입력으로 검토를 계속해 주세요.");
+    throw new GeminiStructureParseError(
+      "구조화 결과를 안전하게 읽지 못했습니다. 텍스트 입력으로 검토를 계속해 주세요.",
+      "empty_response",
+    );
   }
 
   try {
     const parsed = JSON.parse(text) as unknown;
+
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      throw new GeminiStructureParseError(
+        "구조화 결과를 안전하게 읽지 못했습니다. 텍스트 입력으로 검토를 계속해 주세요.",
+        "schema_mismatch",
+      );
+    }
+
+    const source = parsed as Record<string, unknown>;
+    const hasExpectedField = [
+      "questionSummary",
+      "coreConcepts",
+      "requiredIssues",
+      "userAnswerSummary",
+      "userAnswerStructure",
+      "referenceStructure",
+      "strengths",
+      "missingIssueCandidates",
+      "weakParagraphPoint",
+      "weakLogicPoint",
+      "rewriteTarget",
+      "rewriteDraftSuggestion",
+      "nextAction",
+      "caution",
+    ].some((field) => field in source);
+
+    if (!hasExpectedField) {
+      throw new GeminiStructureParseError(
+        "구조화 결과를 안전하게 읽지 못했습니다. 텍스트 입력으로 검토를 계속해 주세요.",
+        "schema_mismatch",
+      );
+    }
+
     return normalizeAnswerReviewStructureDraft(parsed);
-  } catch {
-    throw new GeminiStructureParseError("구조화 결과를 안전하게 읽지 못했습니다. 텍스트 입력으로 검토를 계속해 주세요.");
+  } catch (error) {
+    if (error instanceof GeminiStructureParseError) throw error;
+    throw new GeminiStructureParseError(
+      "구조화 결과를 안전하게 읽지 못했습니다. 텍스트 입력으로 검토를 계속해 주세요.",
+      "parse_failure",
+    );
   }
 }
 

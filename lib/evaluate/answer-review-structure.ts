@@ -15,6 +15,9 @@ export type AnswerReviewStructureDraft = {
   caution: string;
 };
 
+const CARD_TEXT_MAX_LENGTH = 220;
+const DETAIL_TEXT_MAX_LENGTH = 1200;
+
 const BANNED_TERMS = ["점수", "합격 가능성", "합격 판정", "최종 채점", "AI 판정", "등급"];
 
 const STRING_FALLBACKS: Record<keyof AnswerReviewStructureDraft, string> = {
@@ -37,9 +40,14 @@ const STRING_FALLBACKS: Record<keyof AnswerReviewStructureDraft, string> = {
 function sanitizeBannedPhrases(input: string): string {
   let text = input;
   for (const term of BANNED_TERMS) {
-    text = text.replaceAll(term, "검토 메모");
+    text = text.replaceAll(term, "검토 의견");
   }
   return text.replace(/\s+/g, " ").trim();
+}
+
+function truncateText(input: string, maxLength: number): string {
+  if (input.length <= maxLength) return input;
+  return `${input.slice(0, maxLength).trimEnd()}…`;
 }
 
 function normalizeText(value: unknown): string {
@@ -65,17 +73,30 @@ function normalizeArray(value: unknown): string[] {
         if (typeof item === "number" || typeof item === "boolean") return [String(item)];
         return [];
       })
-      .map((item) => sanitizeBannedPhrases(item))
+      .map((item) => truncateText(sanitizeBannedPhrases(item), DETAIL_TEXT_MAX_LENGTH))
       .filter(Boolean);
   }
 
-  const text = sanitizeBannedPhrases(normalizeText(value));
+  const text = truncateText(sanitizeBannedPhrases(normalizeText(value)), DETAIL_TEXT_MAX_LENGTH);
   return text ? [text] : [];
 }
 
 function normalizeStringField(field: keyof AnswerReviewStructureDraft, value: unknown): string {
   const sanitized = sanitizeBannedPhrases(normalizeText(value));
-  return sanitized || STRING_FALLBACKS[field];
+  const normalized = sanitized || STRING_FALLBACKS[field];
+  const maxLength =
+    field === "questionSummary" ||
+    field === "requiredIssues" ||
+    field === "userAnswerSummary" ||
+    field === "userAnswerStructure" ||
+    field === "referenceStructure" ||
+    field === "weakParagraphPoint" ||
+    field === "weakLogicPoint" ||
+    field === "caution"
+      ? DETAIL_TEXT_MAX_LENGTH
+      : CARD_TEXT_MAX_LENGTH;
+
+  return truncateText(normalized, maxLength);
 }
 
 export function normalizeAnswerReviewStructureDraft(input: unknown): AnswerReviewStructureDraft {

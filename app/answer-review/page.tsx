@@ -353,7 +353,7 @@ export default function AnswerReviewInfoPage() {
                 {isStructuring ? "정리 중..." : "검토 preview 확인"}
               </button>
             </div>
-            <p className="text-caption text-[color:var(--muted)]">검토자가 확인합니다. 최종 채점이나 합격 판정이 아닙니다.</p>
+            <p className="text-caption text-[color:var(--muted)]">검토자가 확인하는 운영 초안입니다. 최종 전달 전 검토를 진행해 주세요.</p>
             {isStructuring ? <p className="text-caption text-[color:var(--muted)]">OCR 초안과 답안 구조를 정리하고 있습니다.</p> : null}
             {structureError ? (
               <p className="text-caption text-[color:var(--muted)]">
