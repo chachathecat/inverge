@@ -1,6 +1,6 @@
-import type { AnswerReviewStructureDraft } from "../evaluate/answer-review-structure.ts";
-import { normalizeSubjectForMode, type AppraisalMode } from "./appraisal.ts";
-import type { LearningSignalEventInput } from "./types.ts";
+import type { AnswerReviewStructureDraft } from "../evaluate/answer-review-structure";
+import { normalizeSubjectForMode, type AppraisalMode } from "./appraisal";
+import type { LearningSignalEventInput } from "./types";
 
 const MAX_TAGS = 6;
 const MAX_FORMULAS = 4;

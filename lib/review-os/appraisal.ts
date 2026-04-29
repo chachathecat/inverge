@@ -2,7 +2,7 @@ import {
   APPRAISAL_FIRST_SUBJECTS,
   APPRAISAL_SECOND_SUBJECTS,
   type StudyProfile,
-} from "./types.ts";
+} from "./types";
 
 export type AppraisalMode = "first" | "second";
 
