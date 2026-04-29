@@ -44,6 +44,19 @@ function InputStatusCard({ title, isFilled, helper }: InputStatusCardProps) {
 }
 
 export default function AnswerReviewClientPage() {
+  const getInitialReviewContext = () => {
+    if (typeof window === "undefined") {
+      return { examMode: "first" as AppraisalMode, subject: getDefaultSubject("first") };
+    }
+    const params = new URLSearchParams(window.location.search);
+    const parsedMode = parseAppraisalMode(params.get("mode")) ?? "first";
+    return {
+      examMode: parsedMode,
+      subject: normalizeSubjectForMode(params.get("subject"), parsedMode),
+    };
+  };
+
+  const initialReviewContext = getInitialReviewContext();
   const [problemFiles, setProblemFiles] = useState<File[]>([]);
   const [myAnswerFiles, setMyAnswerFiles] = useState<File[]>([]);
   const [referenceFiles, setReferenceFiles] = useState<File[]>([]);
@@ -58,8 +71,8 @@ export default function AnswerReviewClientPage() {
   const [structureError, setStructureError] = useState<string | null>(null);
   const [structureDraft, setStructureDraft] = useState<AnswerReviewStructureDraft | null>(null);
   const [currentStep, setCurrentStep] = useState<StepId>(1);
-  const [examMode, setExamMode] = useState<AppraisalMode>("first");
-  const [subject, setSubject] = useState<string>(getDefaultSubject("first"));
+  const [examMode, setExamMode] = useState<AppraisalMode>(initialReviewContext.examMode);
+  const [subject, setSubject] = useState<string>(initialReviewContext.subject);
 
   const subjectOptions = examMode === "second" ? APPRAISAL_SECOND_SUBJECTS : APPRAISAL_FIRST_SUBJECTS;
 
@@ -212,18 +225,10 @@ export default function AnswerReviewClientPage() {
     setCopiedFeedbackDraftText(null);
   }, [feedbackDraftText]);
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const parsedMode = parseAppraisalMode(params.get("mode"));
-    if (parsedMode) {
-      setExamMode(parsedMode);
-      setSubject(normalizeSubjectForMode(params.get("subject"), parsedMode));
-    }
-  }, []);
-
-  useEffect(() => {
-    setSubject((prev) => normalizeSubjectForMode(prev, examMode));
-  }, [examMode]);
+  const handleExamModeChange = (nextMode: AppraisalMode) => {
+    setExamMode(nextMode);
+    setSubject((prev) => normalizeSubjectForMode(prev, nextMode));
+  };
 
   const reviewerNoteText = useMemo(() => {
     return [
@@ -327,7 +332,7 @@ export default function AnswerReviewClientPage() {
                   <select
                     className="w-full rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface)] px-3 py-2 text-sm text-[color:var(--foreground-strong)]"
                     value={examMode}
-                    onChange={(event) => setExamMode(event.target.value === "second" ? "second" : "first")}
+                    onChange={(event) => handleExamModeChange(event.target.value === "second" ? "second" : "first")}
                   >
                     <option value="first">감정평가사 1차</option>
                     <option value="second">감정평가사 2차</option>
