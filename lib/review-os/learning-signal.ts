@@ -78,10 +78,21 @@ export function getAnswerReviewInputQualityIssue(params: {
 
 export function shouldSkipLearningSignalSave(normalizedDraft: AnswerReviewStructureDraft): "insufficient_structure" | null {
   const weakTaxonomy = isMostlyFallbackLike(normalizedDraft.coreConcepts) && isMostlyFallbackLike(normalizedDraft.missingIssueCandidates);
-  const genericAction =
-    isFallbackLikeText(normalizedDraft.nextAction) ||
-    isFallbackLikeText(normalizedDraft.rewriteDraftSuggestion) ||
-    (normalizeCompact(normalizedDraft.nextAction).length < 8 && normalizeCompact(normalizedDraft.rewriteDraftSuggestion).length < 12);
+  const hasConcreteTaxonomySignal = !weakTaxonomy;
+
+  const nextAction = normalizeCompact(normalizedDraft.nextAction);
+  const rewriteDraftSuggestion = normalizeCompact(normalizedDraft.rewriteDraftSuggestion);
+
+  const nextActionFallbackLike = isFallbackLikeText(nextAction);
+  const rewriteFallbackLike = isFallbackLikeText(rewriteDraftSuggestion);
+
+  const bothFallbackLike = nextActionFallbackLike && rewriteFallbackLike;
+  const bothTooShortOrEmpty = nextAction.length < 8 && rewriteDraftSuggestion.length < 12;
+  const oneMissingOrFallbackWithoutTaxonomy =
+    !hasConcreteTaxonomySignal &&
+    ((nextActionFallbackLike && !rewriteFallbackLike) || (!nextActionFallbackLike && rewriteFallbackLike));
+
+  const genericAction = bothFallbackLike || bothTooShortOrEmpty || oneMissingOrFallbackWithoutTaxonomy;
 
   const fallbackHeavy = weakTaxonomy && genericAction;
 
