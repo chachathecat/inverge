@@ -17,12 +17,9 @@ type AppShellProps = {
 };
 
 const NAV_ITEMS = [
+  { href: "/app", label: "오늘 할 일" },
   { href: "/app/capture", label: "입력" },
-  { href: "/app", label: "오늘 실행" },
-  { href: "/app/review", label: "다시 볼 항목" },
   { href: "/app/items", label: "기록" },
-  { href: "/app/weekly", label: "주간 정리" },
-  { href: "/app/settings", label: "수험 설정" },
 ] as const;
 
 export function ReviewOsAppShell({ email, mode, children, rightSlot }: AppShellProps) {
@@ -59,7 +56,7 @@ export function ReviewOsAppShell({ email, mode, children, rightSlot }: AppShellP
       </div>
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="text-sm text-[color:var(--muted)]">{config.label} 입력 기반 학습 실행 화면</div>
+        <div className="text-sm text-[color:var(--muted)]">{config.label} 실행 화면</div>
         <nav className="overflow-x-auto">
           <div className="flex min-w-max gap-2">
             {NAV_ITEMS.map((item) => (
@@ -67,7 +64,7 @@ export function ReviewOsAppShell({ email, mode, children, rightSlot }: AppShellP
                 key={item.href}
                 href={`${item.href}?mode=${currentMode}`}
                 className={cn(
-                  "rounded-full border px-4 py-2 text-sm transition",
+                  "rounded-full border px-3.5 py-1.5 text-xs transition sm:text-sm",
                   pathname === item.href
                     ? "border-[color:var(--brand-700)] bg-[color:var(--brand-050)] text-[color:var(--brand-900)]"
                     : "border-[var(--border)] text-[color:var(--muted)] hover:bg-[color:var(--bg-elevated)] hover:text-[color:var(--foreground-strong)]",

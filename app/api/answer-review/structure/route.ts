@@ -21,9 +21,9 @@ import {
 export const dynamic = "force-dynamic";
 
 const GEMINI_MISSING_MESSAGE =
-  "OCR 기능을 사용하려면 GEMINI_API_KEY 설정이 필요합니다. 지금은 텍스트 입력으로 검토를 계속할 수 있습니다.";
+  "지금은 파일 구조화를 사용할 수 없습니다. 텍스트 입력으로 검토를 계속해 주세요.";
 const GEMINI_QUOTA_MESSAGE =
-  "Gemini 사용량 한도에 도달했습니다. 잠시 후 다시 시도하거나 텍스트 입력으로 검토를 계속해 주세요.";
+  "요청이 잠시 몰려 구조화를 진행하지 못했습니다. 잠시 후 다시 시도하거나 텍스트 입력으로 검토를 계속해 주세요.";
 const STRUCTURE_PARSE_FALLBACK_MESSAGE =
   "구조화 결과를 안전하게 읽지 못했습니다. 텍스트 입력으로 검토를 계속해 주세요.";
 const STRUCTURE_EMPTY_FALLBACK_MESSAGE =

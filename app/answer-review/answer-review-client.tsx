@@ -187,7 +187,7 @@ export default function AnswerReviewClientPage() {
       setStructureError(
         error instanceof Error
           ? error.message
-          : "OCR 기능을 사용하려면 GEMINI_API_KEY 설정이 필요합니다. 지금은 텍스트 입력으로 검토를 계속할 수 있습니다.",
+          : "지금은 파일 구조화를 사용할 수 없습니다. 텍스트 입력으로 검토를 계속해 주세요.",
       );
       setCurrentStep(2);
     } finally {
@@ -329,7 +329,7 @@ export default function AnswerReviewClientPage() {
           {currentStep === 1 ? (
             <section className="space-y-4">
               <p className="text-caption leading-5 text-[color:var(--muted)]">
-                답안을 먼저 정리해 핵심 간극을 빠르게 확인합니다. 필요하면 직접 입력으로 계속 검토할 수 있습니다.
+                답안을 먼저 정리해 핵심 간극을 빠르게 확인합니다. 필요하면 텍스트 입력으로 계속 검토할 수 있습니다.
               </p>
               <div className="grid gap-2 sm:grid-cols-3">
                 <InputStatusCard title="문제/사례" isFilled={hasProblemInput} helper="문제 이미지 또는 텍스트" />
