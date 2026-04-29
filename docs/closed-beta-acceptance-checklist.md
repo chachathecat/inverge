@@ -316,3 +316,11 @@
 - 결정일:
 - 결정자:
 - 비고:
+
+
+## Paid beta conversion checks
+- [ ] 첫 입력 직후 사용자가 오늘 할 일 또는 기록 화면에서 반영 위치를 바로 찾을 수 있다.
+- [ ] Today Plan의 선택 이유 문장이 최근 기록(답안 검토/오답/다시 볼 목록)과 자연스럽게 연결된다.
+- [ ] 기록이 1개여도 "첫 기록이 쌓였습니다" 안내와 다음 누적 기대가 보인다.
+- [ ] answer-review 결과의 saved/skipped/입력 부족 상태 문구가 각각 이해 가능하다.
+- [ ] learner 화면에서 internal 용어(learning_signal_events/raw payload/review queue/API/Gemini)가 노출되지 않는다.

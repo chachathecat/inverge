@@ -7,11 +7,13 @@ import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os
 import { reviewOsService } from "@/lib/review-os/service";
 
 type PageProps = {
-  searchParams?: Promise<{ mode?: string }>;
+  searchParams?: Promise<{ mode?: string; saved?: string }>;
 };
 
 export default async function ReviewOsItemsPage({ searchParams }: PageProps) {
-  const modeParam = (await searchParams)?.mode;
+  const query = await searchParams;
+  const modeParam = query?.mode;
+  const savedParam = query?.saved;
   const { session, profile } = await getReviewOsServerContext(buildReviewOsReturnTo("/app/items", modeParam));
   if (!session.userId || !session.email) return null;
 
@@ -39,7 +41,15 @@ export default async function ReviewOsItemsPage({ searchParams }: PageProps) {
               </Link>
             </div>
           ) : (
-            items.map((item) => (
+            <div className="space-y-4">
+              {items.length <= 3 ? (
+                <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] px-4 py-3">
+                  <p className="text-sm text-[color:var(--foreground-strong)]">첫 기록이 쌓였습니다.</p>
+                  <p className="mt-1 text-xs text-[color:var(--muted)]">아직 반복 패턴은 충분하지 않습니다. 기록이 2~3개 더 쌓이면 반복 약점이 보입니다.</p>
+                </div>
+              ) : null}
+              {savedParam ? <p className="text-xs text-[color:var(--muted)]">방금 남긴 기록이 목록에 반영되었습니다.</p> : null}
+              {items.map((item) => (
               <Link
                 key={item.id}
                 href={`/app/items/${item.id}?mode=${mode}`}
@@ -52,7 +62,8 @@ export default async function ReviewOsItemsPage({ searchParams }: PageProps) {
                   {item.subjectLabel} · {item.confidence}
                 </p>
               </Link>
-            ))
+            ))}
+            </div>
           )}
         </CardContent>
       </Card>
