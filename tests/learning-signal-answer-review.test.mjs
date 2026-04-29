@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { buildAnswerReviewLearningSignalInput } from "../lib/review-os/learning-signal.test-runner.mjs";
+import { buildAnswerReviewLearningSignalInput } from "../lib/review-os/learning-signal.ts";
 
 test("separates first/second mode labels and normalizes subject", () => {
   const baseDraft = {
