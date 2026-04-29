@@ -11,6 +11,7 @@ import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os
 import { reviewOsService } from "@/lib/review-os/service";
 import { buildNotebookPreview } from "@/lib/review-os/study-note";
 import { APPRAISAL_FIRST_SUBJECTS } from "@/lib/review-os/types";
+import { buildTodayPlanCard } from "@/lib/review-os/today-plan";
 
 const FIRST_MODE_INPUT_OPTIONS = [
   {
@@ -68,17 +69,19 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
   if (!profile && !modeParam) redirect("/app/onboarding");
   const mode = resolveAppraisalMode(profile, modeParam);
   const config = getModeConfig(mode);
-  const [focus, weekly, allItems, learningSignal] = await Promise.all([
+  const [focus, weekly, allItems, learningSignal, learningSignalEvents] = await Promise.all([
     reviewOsService.getTodayFocus(session.userId, session.email, mode),
     reviewOsService.getWeeklySummary(session.userId, session.email),
     reviewOsService.listWrongAnswerItems(session.userId, session.email, 12),
     reviewOsService.getLearningSignalSummary(session.userId, session.email, mode).catch(() => null),
+    reviewOsService.listLearningSignalEvents(session.userId, session.email, mode, 10).catch(() => []),
   ]);
 
   const items = allItems.filter((item) => item.examName === config.label).slice(0, 5);
   const queue = focus.queue.filter((item) => item.examName === config.label);
   const firstUse = items.length === 0;
   const selectedQueueItem = queue.find((item) => item.queueId === focus.sourceQueueId) ?? queue[0] ?? null;
+  const todayPlan = buildTodayPlanCard({ mode, learningSignals: learningSignalEvents, queue, items });
   const nextAction = focus.nextAction ?? selectedQueueItem?.reviewReason ?? config.nextActionFallback;
   const isFirstSetStart = mode === "first" && focus.nextActionType === "capture_now";
   const selectedFirstSubject = normalizeSubjectForMode(subjectParam, "first");
@@ -89,9 +92,6 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
   const diagnosedWeakPoint = selectedQueueItem?.mistakeType ?? (items[0] ? buildNotebookPreview(items[0]).weakPoint : config.emptyTitle);
   const notebookPreview = items.slice(0, 3).map((item) => buildNotebookPreview(item));
   const calculatorWorkflow = mode === "second" ? CALCULATOR_WORKFLOWS.practice : CALCULATOR_WORKFLOWS.accounting;
-  const primaryReason = focus.reason ?? selectedQueueItem?.reviewReason ?? focus.lines[0];
-  const estimatedMinutes = focus.estimatedDurationMinutes ?? 25;
-  const primaryTaskLabel = focus.primaryTaskLabel ?? (selectedQueueItem ? `${selectedQueueItem.subjectLabel} 복습` : config.nextActionFallback);
   const shouldShowFirstSubjectSelector = mode === "first" && isFirstSetStart;
   let recentStudyLog: Awaited<ReturnType<typeof reviewOsService.getRecentStudyLog>> | null = null;
   if (mode === "first") {
@@ -208,7 +208,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
             <CardHeader className="space-y-3 p-4 sm:p-6">
               <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--brand-050)] px-4 py-3">
                 <p className="text-caption text-[color:var(--muted)]">오늘 최우선 작업</p>
-                <p className="mt-1 text-body-lg text-[color:var(--foreground-strong)]">{primaryTaskLabel}</p>
+                <p className="mt-1 text-body-lg text-[color:var(--foreground-strong)]">{todayPlan.primaryTask}</p>
               </div>
               <CardTitle>지금 해야 할 한 가지에만 집중합니다.</CardTitle>
               <CardDescription className="max-w-[66ch]">
@@ -230,7 +230,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                   <Link href={primaryHref} className="w-full sm:w-auto">
                     <Button type="button" className="w-full sm:w-auto">
-                      입력 기록 기준 최우선 작업 시작
+                      {todayPlan.ctaLabel}
                     </Button>
                   </Link>
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-[color:var(--muted)]">
@@ -269,11 +269,11 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                 <div className="grid gap-3 border-t border-[color:var(--border-subtle)] p-4 lg:grid-cols-3">
                   <div>
                     <p className="text-xs text-[color:var(--muted)]">선택 이유</p>
-                    <p className="mt-1 text-sm leading-6 text-[color:var(--foreground-strong)]">{primaryReason}</p>
+                    <p className="mt-1 text-sm leading-6 text-[color:var(--foreground-strong)]">{todayPlan.reason}</p>
                   </div>
                   <div>
                     <p className="text-xs text-[color:var(--muted)]">예상 소요 시간</p>
-                    <p className="mt-1 text-sm text-[color:var(--foreground-strong)]">{estimatedMinutes}분</p>
+                    <p className="mt-1 text-sm text-[color:var(--foreground-strong)]">{todayPlan.estimatedDuration}</p>
                   </div>
                   <div>
                     <p className="text-xs text-[color:var(--muted)]">진단된 약점</p>
