@@ -111,3 +111,63 @@ test("fallback-heavy structure skips learning signal save", () => {
   });
   assert.equal(skipReason, "insufficient_structure");
 });
+
+test("normalized fallback draft is skipped", () => {
+  const skipReason = shouldSkipLearningSignalSave({
+    questionSummary: "문제 요구를 더 입력하면 구조화를 보강할 수 있습니다.",
+    requiredIssues: "기준답안과 문제 요구를 더 입력하면 보강할 간극이 선명해집니다.",
+    userAnswerSummary: "내 답안의 핵심을 한 줄로 정리해 주세요.",
+    userAnswerStructure: "문단별 주장과 근거를 정리하면 구조 분석이 선명해집니다.",
+    referenceStructure: "기준답안의 목차를 입력하면 비교가 정확해집니다.",
+    strengths: [],
+    missingIssueCandidates: [],
+    weakParagraphPoint: "보강할 문단 포인트를 검토자가 직접 확인해 주세요.",
+    weakLogicPoint: "논리 연결이 약한 지점을 검토자가 직접 확인해 주세요.",
+    rewriteTarget: "교정 문단을 직접 작성해 다음 답안에 반영해 주세요.",
+    rewriteDraftSuggestion: "교정 문단을 직접 작성해 다음 답안에 반영해 주세요.",
+    nextAction: "문단 하나를 다시 쓰고 검토자 확인을 진행하세요.",
+    caution: "구조화 결과는 검토 보조 초안이며 검토자 확인이 필요합니다.",
+    coreConcepts: [],
+  });
+  assert.equal(skipReason, "insufficient_structure");
+});
+
+test("insufficient Gemini-style fallback text is skipped", () => {
+  const skipReason = shouldSkipLearningSignalSave({
+    questionSummary: "",
+    requiredIssues: "",
+    userAnswerSummary: "",
+    userAnswerStructure: "",
+    referenceStructure: "",
+    strengths: [],
+    missingIssueCandidates: ["답안 길이가 짧아 쟁점을 파악할 수 없습니다."],
+    weakParagraphPoint: "",
+    weakLogicPoint: "",
+    rewriteTarget: "",
+    rewriteDraftSuggestion: "답안을 더 입력하면 분석하기에 충분하지 않습니다.",
+    nextAction: "검토자가 확인 후 직접 작성해 주세요.",
+    caution: "",
+    coreConcepts: ["추정 불가"],
+  });
+  assert.equal(skipReason, "insufficient_structure");
+});
+
+test("meaningful structure with real concepts is not skipped", () => {
+  const skipReason = shouldSkipLearningSignalSave({
+    questionSummary: "",
+    requiredIssues: "",
+    userAnswerSummary: "",
+    userAnswerStructure: "",
+    referenceStructure: "",
+    strengths: [],
+    missingIssueCandidates: ["우선변제권 성립요건 검토 누락"],
+    weakParagraphPoint: "",
+    weakLogicPoint: "",
+    rewriteTarget: "",
+    rewriteDraftSuggestion: "결론 문단에서 사실관계를 요건별로 다시 배치해 재작성하세요.",
+    nextAction: "대항력·우선변제권을 분리한 2단락 개요를 먼저 작성하세요.",
+    caution: "",
+    coreConcepts: ["대항력 요건", "우선변제권 요건"],
+  });
+  assert.equal(skipReason, null);
+});
