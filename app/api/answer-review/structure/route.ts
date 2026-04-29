@@ -3,7 +3,11 @@ import { NextResponse } from "next/server";
 import { getServerSessionUser } from "@/lib/auth/session";
 import { normalizeAnswerReviewStructureDraft } from "@/lib/evaluate/answer-review-structure";
 import { parseAppraisalMode } from "@/lib/review-os/appraisal";
-import { buildAnswerReviewLearningSignalInput } from "@/lib/review-os/learning-signal";
+import {
+  buildAnswerReviewLearningSignalInput,
+  getAnswerReviewInputQualityIssue,
+  shouldSkipLearningSignalSave,
+} from "@/lib/review-os/learning-signal";
 import { reviewOsService } from "@/lib/review-os/service";
 
 import {
@@ -27,6 +31,7 @@ const STRUCTURE_EMPTY_FALLBACK_MESSAGE =
 const STRUCTURE_SCHEMA_FALLBACK_MESSAGE =
   "구조화 형식을 안전하게 확인하지 못했습니다. 텍스트 입력으로 검토를 계속해 주세요.";
 const STRUCTURE_UNKNOWN_MESSAGE = "구조화 요청을 처리하지 못했습니다. 텍스트 입력으로 검토를 계속해 주세요.";
+const INPUT_QUALITY_MESSAGE = "검토에 필요한 정보가 부족합니다. 문제와 답안을 조금 더 입력해 주세요.";
 
 function getFiles(formData: FormData, fieldName: string) {
   return formData.getAll(fieldName).filter((item): item is File => item instanceof File && item.size > 0);
@@ -66,6 +71,25 @@ export async function POST(request: Request) {
     );
   }
 
+  const inputQualityIssue = getAnswerReviewInputQualityIssue({
+    questionText,
+    answerText,
+    referenceText,
+    questionFileCount: questionFiles.length,
+    answerFileCount: answerFiles.length,
+    referenceFileCount: referenceFiles.length,
+  });
+  if (inputQualityIssue) {
+    return NextResponse.json(
+      {
+        ok: false,
+        errorCode: "INSUFFICIENT_INPUT",
+        error: INPUT_QUALITY_MESSAGE,
+      },
+      { status: 400 },
+    );
+  }
+
   if (!isGeminiConfigured()) {
     return NextResponse.json(
       {
@@ -88,7 +112,8 @@ export async function POST(request: Request) {
     });
     const normalized = normalizeAnswerReviewStructureDraft(draft);
     let learningSignalStatus: "saved" | "skipped" | "failed" = "skipped";
-    if (session.userId && session.email) {
+    const learningSignalSkipReason = shouldSkipLearningSignalSave(normalized);
+    if (session.userId && session.email && !learningSignalSkipReason) {
       try {
         const mode = examModeInput ?? "first";
         const learningSignalInput = buildAnswerReviewLearningSignalInput({
@@ -103,6 +128,9 @@ export async function POST(request: Request) {
         console.warn("[answer-review] learning signal save failed", error);
         learningSignalStatus = "failed";
       }
+    } else if (learningSignalSkipReason) {
+      console.info("[answer-review] learning signal skipped", { reason: learningSignalSkipReason });
+      learningSignalStatus = "skipped";
     }
     return NextResponse.json({ ok: true, draft, learningSignalStatus });
   } catch (error) {
