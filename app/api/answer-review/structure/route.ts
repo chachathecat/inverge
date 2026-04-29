@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+import { getServerSessionUser } from "@/lib/auth/session";
+
 import {
   GeminiEnvError,
   GeminiStructureParseError,
@@ -27,6 +29,11 @@ function getFiles(formData: FormData, fieldName: string) {
 }
 
 export async function POST(request: Request) {
+  const session = await getServerSessionUser();
+  if (session.authEnabled && !session.isAuthenticated) {
+    return NextResponse.json({ ok: false, error: "로그인이 필요합니다." }, { status: 401 });
+  }
+
   let formData: FormData;
 
   try {

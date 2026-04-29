@@ -22,6 +22,12 @@ function buildModeEntryHref(isAuthenticated: boolean, authEnabled: boolean, mode
   return `/login?returnTo=${encodeURIComponent(appHref)}`;
 }
 
+
+function buildAnswerReviewHref(isAuthenticated: boolean, authEnabled: boolean) {
+  if (!authEnabled || isAuthenticated) return "/answer-review";
+  return "/login?returnTo=%2Fanswer-review";
+}
+
 function SelectionCard({ card }: { card: ExamSelectionCard }) {
   const ctaClassName = cn(
     buttonVariants({ variant: "outline" }),
@@ -71,7 +77,7 @@ export default async function ExamsPage() {
       description: "수기 답안 OCR로 텍스트를 추출하고, 기준답안 비교와 누락 논점 확인, 교정 문단 작성을 진행합니다.",
       badge: "운영자용 베타",
       helper: "최종 채점이나 합격 판정이 아니라 답안 검토와 보강을 돕는 운영자용 흐름입니다.",
-      href: "/answer-review",
+      href: buildAnswerReviewHref(session.isAuthenticated, session.authEnabled),
       cta: "OCR 답안 검토 시작",
     },
   ];
