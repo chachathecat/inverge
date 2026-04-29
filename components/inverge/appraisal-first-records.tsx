@@ -14,7 +14,6 @@ type SubjectId = "civil_law" | "economics" | "real_estate" | "appraisal_law" | "
 type AbilityAxis = "accuracy" | "timeManagement" | "choiceJudgment" | "lawRecall" | "calculationStability";
 type RecordsTimelineType = "pastSet" | "review" | "weeklyPlan";
 type RecordsPageStatus = "loading" | "ready" | "empty" | "error";
-type RecordsFilter = "all" | "pastSet" | "review" | "weeklyPlan";
 
 type RecordsTimelineItemData = {
   id: string;
@@ -70,13 +69,6 @@ const ABILITY_LABELS: Record<AbilityAxis, string> = {
   lawRecall: "법령 기억",
   calculationStability: "계산 안정성",
 };
-
-const FILTERS: { value: RecordsFilter; label: string }[] = [
-  { value: "all", label: "전체" },
-  { value: "pastSet", label: "세트" },
-  { value: "review", label: "리뷰" },
-  { value: "weeklyPlan", label: "주간 코칭" },
-];
 
 function normalizeSubjectId(subjectId: string): SubjectId {
   return normalizeAppraisalFirstSubjectId(subjectId);
@@ -165,34 +157,6 @@ function SummaryItem({ label, value }: { label: string; value: string }) {
   );
 }
 
-function FilterRow({
-  selectedFilter,
-  onChange,
-}: {
-  selectedFilter: RecordsFilter;
-  onChange: (filter: RecordsFilter) => void;
-}) {
-  return (
-    <div className="flex gap-2 overflow-x-auto pb-1" aria-label="기록 필터">
-      {FILTERS.map((filter) => (
-        <button
-          key={filter.value}
-          type="button"
-          onClick={() => onChange(filter.value)}
-          className={cn(
-            "shrink-0 rounded-full border px-3 py-2 text-caption transition",
-            selectedFilter === filter.value
-              ? "border-[var(--primary)] bg-[color:var(--primary-soft)] text-[color:var(--foreground-strong)]"
-              : "border-[var(--border)] bg-[color:var(--surface)] text-[color:var(--muted)] hover:border-[var(--border-strong)]",
-          )}
-        >
-          {filter.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 function Timeline({ items }: { items: RecordsTimelineItemData[] }) {
   if (!items.length) {
     return (
@@ -247,15 +211,6 @@ function TimelineItem({ item }: { item: RecordsTimelineItemData }) {
   );
 }
 
-function QuietInsight({ insight }: { insight: string }) {
-  return (
-    <section className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] px-5 py-4">
-      <p className="text-caption font-medium text-[color:var(--muted)]">조용한 요약</p>
-      <p className="mt-2 text-sm leading-6 text-[color:var(--muted-strong)]">{insight}</p>
-    </section>
-  );
-}
-
 function LoadingState() {
   return (
     <section className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] p-6">
@@ -274,7 +229,7 @@ function EmptyState({ subjectId }: { subjectId: SubjectId }) {
   return (
     <section className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] p-8 sm:p-10">
       <h2 className="text-h2 font-medium text-[color:var(--foreground-strong)]">아직 쌓인 기록이 없습니다.</h2>
-      <p className="mt-3 max-w-xl text-body text-[color:var(--muted)]">첫 세트를 풀면 최근 리뷰와 코칭 흐름이 이곳에 쌓이기 시작합니다.</p>
+      <p className="mt-3 max-w-xl text-body text-[color:var(--muted)]">입력 기록이 쌓이면 오답과 다시 볼 항목이 정리됩니다.</p>
       <Link href={`/exams/appraisal-first/${subjectId}/past-set/intro-10`} className={cn(buttonVariants({ size: "lg" }), "mt-7 w-full sm:w-auto")}>
         기출 세트로 이동
       </Link>
@@ -317,7 +272,6 @@ export function AppraisalFirstRecordsPage({ subjectId }: { subjectId: string }) 
   const isAuthBlocked = session.authEnabled && !session.isAuthenticated;
   const [status, setStatus] = useState<RecordsPageStatus>("loading");
   const [timelineItems, setTimelineItems] = useState<RecordsTimelineItemData[]>([]);
-  const [selectedFilter, setSelectedFilter] = useState<RecordsFilter>("all");
 
   useEffect(() => {
     logInvergeEvent("first.records.viewed", {
@@ -366,15 +320,16 @@ export function AppraisalFirstRecordsPage({ subjectId }: { subjectId: string }) 
     setStatus("loading");
   }
 
-  const visibleTimelineItems = useMemo(() => {
-    if (selectedFilter === "all") return timelineItems;
-    return timelineItems.filter((item) => item.type === selectedFilter);
-  }, [selectedFilter, timelineItems]);
-
   const recentActivity = timelineItems[0]?.occurredAt ?? null;
   const pastSetCount = timelineItems.filter((item) => item.type === "pastSet").length;
   const reviewCount = timelineItems.filter((item) => item.type === "review").length;
   const quietInsight = buildQuietInsight(timelineItems);
+  const recurringWeaknessItems = useMemo(
+    () => timelineItems.filter((item) => (item.linkedAbilityAxes?.length ?? 0) > 0).slice(0, 4),
+    [timelineItems],
+  );
+  const reviewItems = useMemo(() => timelineItems.filter((item) => item.type === "review").slice(0, 4), [timelineItems]);
+  const weeklyItems = useMemo(() => timelineItems.filter((item) => item.type === "weeklyPlan").slice(0, 3), [timelineItems]);
 
   return (
     <main className="min-h-screen bg-[color:var(--background)] px-4 py-6 text-[color:var(--foreground)] sm:px-6 sm:py-10">
@@ -388,13 +343,35 @@ export function AppraisalFirstRecordsPage({ subjectId }: { subjectId: string }) 
         {status === "ready" ? (
           <>
             <SummaryStrip recentActivity={recentActivity} pastSetCount={pastSetCount} reviewCount={reviewCount} />
-            <QuietInsight insight={quietInsight} />
-            <FilterRow selectedFilter={selectedFilter} onChange={setSelectedFilter} />
-            <Timeline items={visibleTimelineItems} />
+            <section className="space-y-4">
+              <SectionHeading title="최근 기록" description="가장 최근에 남긴 입력과 실행 흐름입니다." />
+              <Timeline items={timelineItems.slice(0, 6)} />
+            </section>
+            <section className="space-y-4">
+              <SectionHeading title="반복되는 약점" description={quietInsight} />
+              <Timeline items={recurringWeaknessItems} />
+            </section>
+            <section className="space-y-4">
+              <SectionHeading title="다시 볼 항목" description="리뷰 기록을 기준으로 바로 다시 볼 범위를 정리합니다." />
+              <Timeline items={reviewItems} />
+            </section>
+            <section className="space-y-4">
+              <SectionHeading title="주간 정리" description="주간 코칭에서 잡힌 목표와 복습 흐름만 모아봅니다." />
+              <Timeline items={weeklyItems} />
+            </section>
             <ActionBar subjectId={safeSubjectId} />
           </>
         ) : null}
       </div>
     </main>
+  );
+}
+
+function SectionHeading({ title, description }: { title: string; description: string }) {
+  return (
+    <div>
+      <h2 className="text-h3 font-medium text-[color:var(--foreground-strong)]">{title}</h2>
+      <p className="mt-1 text-sm leading-6 text-[color:var(--muted)]">{description}</p>
+    </div>
   );
 }
