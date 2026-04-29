@@ -2,7 +2,7 @@ import {
   APPRAISAL_FIRST_SUBJECTS,
   APPRAISAL_SECOND_SUBJECTS,
   type StudyProfile,
-} from "@/lib/review-os/types";
+} from "./types";
 
 export type AppraisalMode = "first" | "second";
 
