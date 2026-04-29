@@ -72,7 +72,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
     reviewOsService.getTodayFocus(session.userId, session.email, mode),
     reviewOsService.getWeeklySummary(session.userId, session.email),
     reviewOsService.listWrongAnswerItems(session.userId, session.email, 12),
-    reviewOsService.getLearningSignalSummary(session.userId, session.email).catch(() => null),
+    reviewOsService.getLearningSignalSummary(session.userId, session.email, mode).catch(() => null),
   ]);
 
   const items = allItems.filter((item) => item.examName === config.label).slice(0, 5);

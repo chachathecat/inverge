@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { getServerSessionUser } from "@/lib/auth/session";
 import { normalizeAnswerReviewStructureDraft } from "@/lib/evaluate/answer-review-structure";
+import { normalizeSubjectForMode, parseAppraisalMode } from "@/lib/review-os/appraisal";
 import { reviewOsService } from "@/lib/review-os/service";
 
 import {
@@ -51,6 +52,8 @@ export async function POST(request: Request) {
   const questionText = formData.get("questionText")?.toString() ?? "";
   const answerText = formData.get("answerText")?.toString() ?? "";
   const referenceText = formData.get("referenceText")?.toString() ?? "";
+  const examModeInput = parseAppraisalMode(formData.get("examMode")?.toString() ?? null);
+  const subjectInput = formData.get("subject")?.toString() ?? "";
 
   if (answerFiles.length === 0 && !answerText.trim()) {
     return NextResponse.json(
@@ -86,10 +89,9 @@ export async function POST(request: Request) {
     let learningSignalStatus: "saved" | "skipped" | "failed" = "skipped";
     if (session.userId && session.email) {
       try {
-        const examMode = /법규|실무|이론/.test(`${normalized.requiredIssues} ${normalized.referenceStructure}`)
-          ? "감정평가사 2차"
-          : "감정평가사 1차";
-        const subject = normalized.coreConcepts[0] || (examMode === "감정평가사 2차" ? "감정평가실무" : "민법");
+        const mode = examModeInput ?? "first";
+        const examMode = mode === "second" ? "감정평가사 2차" : "감정평가사 1차";
+        const subject = normalizeSubjectForMode(subjectInput, mode);
         const sourceType = answerFiles.length > 0 ? "file" : "text";
         const derivedTags = [...normalized.coreConcepts, ...normalized.missingIssueCandidates].filter(Boolean).slice(0, 6);
         const relatedFormulas = normalized.coreConcepts.filter((item) => /공식|산식|요건|절차/.test(item)).slice(0, 4);

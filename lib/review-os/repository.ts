@@ -32,6 +32,7 @@ import type {
   StudyLogRecord,
   TaxonomyClassificationCandidate,
 } from "@/lib/review-os/types";
+import type { AppraisalMode } from "@/lib/review-os/appraisal";
 
 function createUuid() {
   return crypto.randomUUID();
@@ -334,6 +335,10 @@ function mapLearningSignalEvent(row: Record<string, unknown>): LearningSignalEve
     metadataJson: typeof row.metadata_json === "object" && row.metadata_json ? (row.metadata_json as Record<string, unknown>) : {},
     createdAt: String(row.created_at),
   };
+}
+
+function getExamModeLabel(mode: AppraisalMode): LearningSignalEventRecord["examMode"] {
+  return mode === "second" ? "감정평가사 2차" : "감정평가사 1차";
 }
 
 export class ReviewOsRepository {
@@ -979,16 +984,28 @@ export class ReviewOsRepository {
     assertSupabaseOperation("review-os.createLearningSignalEvent", result);
   }
 
-  async listLearningSignalEvents(userId: string, limit = 30) {
+  async listLearningSignalEvents(userId: string, mode: AppraisalMode, limit = 30) {
     const client = getUserClient(userId);
     const result = await client
       .from("learning_signal_events")
       .select("*")
       .eq("user_id", userId)
+      .eq("exam_mode", getExamModeLabel(mode))
       .order("created_at", { ascending: false })
       .limit(limit);
     assertSupabaseOperation("review-os.listLearningSignalEvents", result);
     return ((result.data ?? []) as Record<string, unknown>[]).map(mapLearningSignalEvent);
+  }
+
+  async countLearningSignalEvents(userId: string, mode: AppraisalMode) {
+    const client = getUserClient(userId);
+    const result = await client
+      .from("learning_signal_events")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("exam_mode", getExamModeLabel(mode));
+    assertSupabaseOperation("review-os.countLearningSignalEvents", result);
+    return result.count ?? 0;
   }
 
   async logUsageEvent(

@@ -7,6 +7,7 @@ import {
   getModeLabel,
   normalizePreferredSubjectsForMode,
   normalizeSubjectForMode,
+  type AppraisalMode,
   resolveAppraisalMode,
 } from "@/lib/review-os/appraisal";
 import { getEntitlementLimit } from "@/lib/review-os/entitlements";
@@ -520,9 +521,10 @@ export class ReviewOsService {
     return reviewOsRepository.createLearningSignalEvent(userId, input);
   }
 
-  async getLearningSignalSummary(userId: string, email: string | null): Promise<LearningSignalSummary> {
+  async getLearningSignalSummary(userId: string, email: string | null, mode: AppraisalMode): Promise<LearningSignalSummary> {
     await this.ensureAccess(userId, email);
-    const events = await reviewOsRepository.listLearningSignalEvents(userId, 50);
+    const events = await reviewOsRepository.listLearningSignalEvents(userId, mode, 50);
+    const totalCount = await reviewOsRepository.countLearningSignalEvents(userId, mode);
     const tagCount = new Map<string, number>();
     const subjectCount = new Map<string, number>();
     const nextTaskTypeCount = new Map<string, number>();
@@ -536,7 +538,7 @@ export class ReviewOsService {
         .sort((a, b) => b[1] - a[1])
         .slice(0, limit);
     return {
-      totalCount: events.length,
+      totalCount,
       latestEventAt: events[0]?.createdAt ?? null,
       topTags: rank(tagCount).map(([tag]) => tag),
       topSubjects: rank(subjectCount).map(([subject]) => subject),
