@@ -470,9 +470,14 @@ export default function AnswerReviewClientPage() {
             <section id="answer-review-structure-result" className="space-y-4">
               <p className="text-caption leading-5 text-[color:var(--muted)]">먼저 볼 것은 가장 큰 간극 하나입니다.</p>
               {learningSignalStatus === "saved" ? (
-                <p className="text-caption leading-5 text-[color:var(--muted)]">
-                  이번 검토가 학습 기록에 반영되었습니다. (모드: {examMode === "second" ? "감정평가사 2차" : "감정평가사 1차"})
-                </p>
+                <div className="space-y-1">
+                  <p className="text-caption leading-5 text-[color:var(--muted)]">
+                    이번 검토가 학습 기록에 반영되었습니다. (모드: {examMode === "second" ? "감정평가사 2차" : "감정평가사 1차"})
+                  </p>
+                  <Link href={examMode === "second" ? "/app?mode=second" : "/app?mode=first"} className="text-caption text-[color:var(--muted)] underline-offset-2 hover:underline">
+                    오늘 할 일에서 반영 여부 보기
+                  </Link>
+                </div>
               ) : null}
               {learningSignalStatus === "failed" ? (
                 <p className="text-caption leading-5 text-[color:var(--muted)]">

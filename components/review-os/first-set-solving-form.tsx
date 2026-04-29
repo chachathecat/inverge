@@ -493,12 +493,12 @@ export function FirstSetSolvingForm({ initialSubject }: FirstSetSolvingFormProps
                 <li>가장 큰 신호: {biggestSignal}</li>
                 <li>다음 복습: {summary.wrong > 0 ? "재시도 큐에 자동 예약했습니다." : "다음 세트 풀이를 예약할 수 있습니다."}</li>
               </ul>
-              <p className="mt-2 text-sm text-[color:var(--foreground-strong)]">기록에서 다음 복습 신호를 정리했습니다.</p>
+              <p className="mt-2 text-sm text-[color:var(--foreground-strong)]">방금 남긴 기록은 오늘 할 일과 기록 화면에 반영됩니다.</p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <Link href="/app/review?mode=first" className="w-full sm:w-auto">
                 <Button type="button" className="w-full sm:w-auto">
-                  다시 볼 항목 확인
+                  기록에서 확인
                 </Button>
               </Link>
               <Link href="/app?mode=first" className="text-xs text-[color:var(--muted)] underline-offset-2 hover:underline">

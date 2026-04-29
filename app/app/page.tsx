@@ -55,13 +55,14 @@ const SECOND_MODE_INPUT_OPTIONS = [
 ] as const;
 
 type PageProps = {
-  searchParams?: Promise<{ mode?: string; subject?: string }>;
+  searchParams?: Promise<{ mode?: string; subject?: string; saved?: string }>;
 };
 
 export default async function ReviewOsDashboardPage({ searchParams }: PageProps) {
   const query = await searchParams;
   const modeParam = query?.mode;
   const subjectParam = query?.subject;
+  const savedParam = query?.saved;
   const { session, profile } = await getReviewOsServerContext(buildReviewOsReturnTo("/app", modeParam));
   if (!session.userId || !session.email) return null;
 
@@ -154,6 +155,15 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
           <p className="mt-1 max-w-2xl text-xs leading-6 text-[color:var(--muted)]">채점 확정이 아니라, 다음 행동을 정리하는 학습 운영 도구입니다.</p>
         </div>
       </section>
+
+      {savedParam ? (
+        <section className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] px-4 py-3">
+          <p className="text-sm text-[color:var(--foreground-strong)]">방금 남긴 기록은 오늘 할 일과 기록 화면에 반영됩니다.</p>
+          <Link href={`/app/items?mode=${mode}`} className="mt-1 inline-block text-xs text-[color:var(--muted)] underline-offset-2 hover:underline">
+            기록에서 확인
+          </Link>
+        </section>
+      ) : null}
 
       <section className="space-y-4">
         {firstUse ? (

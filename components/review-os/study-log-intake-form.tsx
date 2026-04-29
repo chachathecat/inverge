@@ -51,7 +51,7 @@ export function StudyLogIntakeForm({ mode, initialSubject, subjectOptions }: Pro
         setError("공부 기록 저장 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.");
         return;
       }
-      router.push(`/app?mode=${mode}&subject=${encodeURIComponent(subject)}`);
+      router.push(`/app?mode=${mode}&subject=${encodeURIComponent(subject)}&saved=study-log`);
       router.refresh();
     } catch {
       setError("공부 기록 저장 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.");

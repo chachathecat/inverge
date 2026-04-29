@@ -14,11 +14,13 @@ export type TodayPlanCard = {
 };
 
 const EMPTY_STATE_COPY = "답안 검토나 오답 기록을 1개 남기면 오늘 할 일을 제안합니다.";
-const SOURCE_REASON_BY_TYPE: Record<string, string> = {
-  answer_review: "최근 답안 검토 기록을 기준으로 가장 먼저 보강할 작업을 골랐습니다.",
-  wrong_answer: "최근 오답 기록을 기준으로 가장 먼저 보강할 작업을 골랐습니다.",
-  review_queue: "최근 다시 볼 목록을 기준으로 가장 먼저 보강할 작업을 골랐습니다.",
-};
+function resolveSourceReason(sourceType: string, subject: string | null | undefined) {
+  const cleanSubject = subject?.trim();
+  if (sourceType === "answer_review") return cleanSubject ? `최근 ${cleanSubject} 답안 검토 기록을 기준으로 오늘 작업을 정했습니다.` : "최근 답안 검토 기록을 기준으로 오늘 작업을 정했습니다.";
+  if (sourceType === "wrong_answer") return cleanSubject ? `최근 ${cleanSubject} 오답 기록을 기준으로 오늘 작업을 정했습니다.` : "최근 오답 기록을 기준으로 오늘 작업을 정했습니다.";
+  if (sourceType === "review_queue") return cleanSubject ? `최근 ${cleanSubject} 다시 볼 목록을 기준으로 오늘 작업을 정했습니다.` : "최근 다시 볼 목록을 기준으로 오늘 작업을 정했습니다.";
+  return cleanSubject ? `최근 ${cleanSubject} 학습 기록을 기준으로 오늘 작업을 정했습니다.` : "최근 학습 기록을 기준으로 오늘 작업을 정했습니다.";
+}
 
 function resolveModeTaskLabel(mode: AppMode, signalTask: string | null) {
   if (signalTask && signalTask.trim().length > 0) return signalTask.trim();
@@ -83,7 +85,7 @@ export function buildTodayPlanCard(input: {
 
   const topSignal = recentSignals[0];
   const primaryTask = resolveRecommendedTask(input.mode, topSignal.nextTask);
-  const reason = SOURCE_REASON_BY_TYPE[topSignal.sourceType] ?? "최근 학습 기록을 기준으로 가장 먼저 보강할 작업을 골랐습니다.";
+  const reason = resolveSourceReason(topSignal.sourceType, topSignal.subject);
   const estimatedDuration = input.mode === "second" ? "20분" : "15분";
 
   const cta = resolveCtaAction(input.mode, resolveModeTaskLabel(input.mode, topSignal.nextTask));
