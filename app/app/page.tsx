@@ -16,7 +16,7 @@ import { buildTodayPlanCard, type TodayPlanActionKind } from "@/lib/review-os/to
 const FIRST_MODE_INPUT_OPTIONS = [
   {
     title: "1차 오답 기록",
-    description: "틀린 문제, 내가 고른 답, 틀린 이유를 남기면 review queue가 만들어집니다.",
+    description: "틀린 문제, 내가 고른 답, 틀린 이유를 남기면 다시 볼 목록이 만들어집니다.",
     hrefLabel: "오답 기록 시작",
     hrefKey: "capture",
   },
@@ -177,7 +177,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
               <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--brand-050)] px-4 py-3">
                 <p className="text-caption text-[color:var(--muted)]">오늘 입력 시작</p>
                 <p className="mt-1 text-body-lg text-[color:var(--foreground-strong)]">
-                  {mode === "first" ? "틀린 문제 하나만 남겨도 review queue가 만들어집니다." : "답안 하나를 넣으면 보강할 간극 하나로 줄입니다."}
+                  {mode === "first" ? "틀린 문제 하나만 남겨도 다시 볼 목록이 만들어집니다." : "답안 하나를 넣으면 보강할 간극 하나로 줄입니다."}
                 </p>
               </div>
               <CardTitle>오늘 무엇을 입력할까요?</CardTitle>
