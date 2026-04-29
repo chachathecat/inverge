@@ -99,6 +99,25 @@ function normalizeStringField(field: keyof AnswerReviewStructureDraft, value: un
   return truncateText(normalized, maxLength);
 }
 
+
+function resolveNextAction(source: Record<string, unknown>): unknown {
+  if (source.nextAction != null) return source.nextAction;
+
+  const nextTask = normalizeText(source.nextTask);
+  const nextTaskType = normalizeText(source.nextTaskType);
+  const relatedFormulas = normalizeArray(source.relatedFormulas);
+
+  if (nextTask) return nextTask;
+  if (relatedFormulas.length > 0) {
+    return `관련 공식 점검: ${relatedFormulas.join(", ")}`;
+  }
+  if (nextTaskType) {
+    return `${nextTaskType} 기준으로 문단 하나를 다시 작성해 보세요.`;
+  }
+
+  return source.nextAction;
+}
+
 export function normalizeAnswerReviewStructureDraft(input: unknown): AnswerReviewStructureDraft {
   const source = input && typeof input === "object" ? (input as Record<string, unknown>) : {};
 
@@ -115,7 +134,7 @@ export function normalizeAnswerReviewStructureDraft(input: unknown): AnswerRevie
     weakLogicPoint: normalizeStringField("weakLogicPoint", source.weakLogicPoint),
     rewriteTarget: normalizeStringField("rewriteTarget", source.rewriteTarget),
     rewriteDraftSuggestion: normalizeStringField("rewriteDraftSuggestion", source.rewriteDraftSuggestion),
-    nextAction: normalizeStringField("nextAction", source.nextAction),
+    nextAction: normalizeStringField("nextAction", resolveNextAction(source)),
     caution: normalizeStringField("caution", source.caution),
   };
 }
