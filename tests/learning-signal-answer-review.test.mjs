@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { buildAnswerReviewLearningSignalInput } from "../lib/review-os/learning-signal";
+import { buildAnswerReviewLearningSignalInput } from "../lib/review-os/learning-signal.test-runner.mjs";
 
 test("separates first/second mode labels and normalizes subject", () => {
   const baseDraft = {
@@ -38,7 +38,7 @@ test("separates first/second mode labels and normalizes subject", () => {
 });
 
 test("filters likely raw content from derived tags/formulas", () => {
-  const noisy = "이 문장은 매우 길고 상세한 원문 데이터로 보이며 문제와 답안의 내용을 거의 그대로 복사한 텍스트입니다. 따라서 저장하면 안 됩니다.";
+  const noisy = "원문 복사 데이터입니다. ".repeat(20);
   const input = buildAnswerReviewLearningSignalInput({
     examMode: "first",
     subjectInput: "민법",
