@@ -219,13 +219,18 @@ test("today plan keeps first/second separation", () => {
   });
 
   assert.equal(firstPlan.primaryTask, "개념 회상 1세트");
+  assert.equal(firstPlan.actionKind, "first_session");
+  assert.equal(firstPlan.ctaLabel, "짧은 재시도 시작");
   assert.equal(secondPlan.primaryTask, "문단 다시쓰기");
+  assert.equal(secondPlan.actionKind, "second_review");
+  assert.equal(secondPlan.ctaLabel, "문단 다시쓰기");
 });
 
 test("today plan fallback is shown when no learning data exists", () => {
   const plan = buildTodayPlanCard({ mode: "first", learningSignals: [], queue: [], items: [] });
   assert.equal(plan.hasPlan, false);
   assert.equal(plan.primaryTask, "답안 검토나 오답 기록을 1개 남기면 오늘 할 일을 제안합니다.");
+  assert.equal(plan.actionKind, "first_capture");
 });
 
 test("today plan uses recent learning signal for primary task", () => {
@@ -251,4 +256,38 @@ test("today plan uses recent learning signal for primary task", () => {
   assert.equal(plan.hasPlan, true);
   assert.equal(plan.reason.includes("보상법규"), true);
   assert.equal(plan.ctaLabel, "문단 다시쓰기");
+  assert.equal(plan.actionKind, "second_review");
+});
+
+test("today plan maps first-mode set and capture actions", () => {
+  const base = {
+    id: "s3",
+    userId: "u1",
+    examMode: "감정평가사 1차",
+    subject: "회계학",
+    sourceType: "answer_review",
+    derivedTags: [],
+    relatedFormulas: [],
+    nextTaskType: "retry",
+    metadataJson: {},
+    createdAt: new Date().toISOString(),
+  };
+
+  const setPlan = buildTodayPlanCard({
+    mode: "first",
+    learningSignals: [{ ...base, nextTask: "유사 문제 1개 재도전" }],
+    queue: [],
+    items: [],
+  });
+  const capturePlan = buildTodayPlanCard({
+    mode: "first",
+    learningSignals: [{ ...base, nextTask: "오답 기록 1개 남기기" }],
+    queue: [],
+    items: [],
+  });
+
+  assert.equal(setPlan.actionKind, "first_set");
+  assert.equal(setPlan.ctaLabel, "세트 풀이 열기");
+  assert.equal(capturePlan.actionKind, "first_capture");
+  assert.equal(capturePlan.ctaLabel, "오답 기록 시작");
 });

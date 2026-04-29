@@ -11,7 +11,7 @@ import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os
 import { reviewOsService } from "@/lib/review-os/service";
 import { buildNotebookPreview } from "@/lib/review-os/study-note";
 import { APPRAISAL_FIRST_SUBJECTS } from "@/lib/review-os/types";
-import { buildTodayPlanCard } from "@/lib/review-os/today-plan";
+import { buildTodayPlanCard, type TodayPlanActionKind } from "@/lib/review-os/today-plan";
 
 const FIRST_MODE_INPUT_OPTIONS = [
   {
@@ -87,8 +87,19 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
   const selectedFirstSubject = normalizeSubjectForMode(subjectParam, "first");
   const firstSetHref = `/app/sets?mode=first&subject=${encodeURIComponent(selectedFirstSubject)}`;
   const firstCaptureHref = `/app/capture?mode=first&subject=${encodeURIComponent(selectedFirstSubject)}`;
-  const primaryHref = isFirstSetStart ? firstSetHref : `/app/session?mode=${mode}`;
+  const defaultPrimaryHref = isFirstSetStart ? firstSetHref : `/app/session?mode=${mode}`;
   const secondaryHref = mode === "second" ? `/app/items?mode=${mode}` : `/app/review?mode=${mode}`;
+
+  const resolveTodayPlanHref = (actionKind: TodayPlanActionKind) => {
+    if (actionKind === "first_capture") return firstCaptureHref;
+    if (actionKind === "first_set") return firstSetHref;
+    if (actionKind === "second_write") return "/app/write?mode=second";
+    if (actionKind === "second_review") return "/app/review?mode=second";
+    if (actionKind === "second_items") return "/app/items?mode=second";
+    return `/app/session?mode=first`;
+  };
+
+  const primaryHref = todayPlan.hasPlan ? resolveTodayPlanHref(todayPlan.actionKind) : defaultPrimaryHref;
   const diagnosedWeakPoint = selectedQueueItem?.mistakeType ?? (items[0] ? buildNotebookPreview(items[0]).weakPoint : config.emptyTitle);
   const notebookPreview = items.slice(0, 3).map((item) => buildNotebookPreview(item));
   const calculatorWorkflow = mode === "second" ? CALCULATOR_WORKFLOWS.practice : CALCULATOR_WORKFLOWS.accounting;
