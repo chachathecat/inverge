@@ -68,10 +68,11 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
   if (!profile && !modeParam) redirect("/app/onboarding");
   const mode = resolveAppraisalMode(profile, modeParam);
   const config = getModeConfig(mode);
-  const [focus, weekly, allItems] = await Promise.all([
+  const [focus, weekly, allItems, learningSignal] = await Promise.all([
     reviewOsService.getTodayFocus(session.userId, session.email, mode),
     reviewOsService.getWeeklySummary(session.userId, session.email),
     reviewOsService.listWrongAnswerItems(session.userId, session.email, 12),
+    reviewOsService.getLearningSignalSummary(session.userId, session.email).catch(() => null),
   ]);
 
   const items = allItems.filter((item) => item.examName === config.label).slice(0, 5);
@@ -147,6 +148,18 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
       </section>
 
       <section className="space-y-4">
+        <Card className="border-[color:var(--border-subtle)] bg-[color:var(--surface)] shadow-none">
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle>학습 신호 요약</CardTitle>
+            <CardDescription>답안 검토에서 누적된 다음 행동 신호입니다.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2 p-4 pt-0 text-sm sm:p-6 sm:pt-0">
+            <p>누적 {learningSignal?.totalCount ?? 0}건 · 최근 {learningSignal?.latestEventAt ? new Date(learningSignal.latestEventAt).toLocaleDateString("ko-KR") : "-"}</p>
+            <p>주요 과목: {(learningSignal?.topSubjects ?? []).join(", ") || "-"}</p>
+            <p>주요 태그: {(learningSignal?.topTags ?? []).join(", ") || "-"}</p>
+          </CardContent>
+        </Card>
+
         {firstUse ? (
           <Card className="border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] shadow-none">
             <CardHeader className="space-y-3 p-4 sm:p-6">

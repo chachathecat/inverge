@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 
 import { getServerSessionUser } from "@/lib/auth/session";
+import { normalizeAnswerReviewStructureDraft } from "@/lib/evaluate/answer-review-structure";
+import { reviewOsService } from "@/lib/review-os/service";
 
 import {
   GeminiEnvError,
@@ -80,8 +82,36 @@ export async function POST(request: Request) {
       answerText,
       referenceText,
     });
-
-    return NextResponse.json({ ok: true, draft });
+    const normalized = normalizeAnswerReviewStructureDraft(draft);
+    let learningSignalStatus: "saved" | "skipped" | "failed" = "skipped";
+    if (session.userId && session.email) {
+      try {
+        const examMode = /법규|실무|이론/.test(`${normalized.requiredIssues} ${normalized.referenceStructure}`)
+          ? "감정평가사 2차"
+          : "감정평가사 1차";
+        const subject = normalized.coreConcepts[0] || (examMode === "감정평가사 2차" ? "감정평가실무" : "민법");
+        const sourceType = answerFiles.length > 0 ? "file" : "text";
+        const derivedTags = [...normalized.coreConcepts, ...normalized.missingIssueCandidates].filter(Boolean).slice(0, 6);
+        const relatedFormulas = normalized.coreConcepts.filter((item) => /공식|산식|요건|절차/.test(item)).slice(0, 4);
+        const nextTask = normalized.nextAction || normalized.rewriteDraftSuggestion;
+        const nextTaskType = /다시|재작성|문단/.test(nextTask) ? "rewrite" : "review";
+        await reviewOsService.createLearningSignalEvent(session.userId, session.email, {
+          examMode,
+          subject,
+          sourceType,
+          derivedTags,
+          relatedFormulas,
+          nextTaskType,
+          nextTask,
+          metadataJson: { structureVersion: "answer-review-v2" },
+        });
+        learningSignalStatus = "saved";
+      } catch (error) {
+        console.warn("[answer-review] learning signal save failed", error);
+        learningSignalStatus = "failed";
+      }
+    }
+    return NextResponse.json({ ok: true, draft, learningSignalStatus });
   } catch (error) {
     if (error instanceof GeminiEnvError) {
       return NextResponse.json(
