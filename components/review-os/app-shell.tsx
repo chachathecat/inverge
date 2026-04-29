@@ -18,7 +18,7 @@ type AppShellProps = {
 
 const NAV_ITEMS = [
   { href: "/app", label: "오늘 할 일" },
-  { href: "/app/capture", label: "입력" },
+  { href: { first: "/app/capture", second: "/app/write" }, label: "입력" },
   { href: "/app/items", label: "기록" },
 ] as const;
 
@@ -59,20 +59,23 @@ export function ReviewOsAppShell({ email, mode, children, rightSlot }: AppShellP
         <div className="text-sm text-[color:var(--muted)]">{config.label} 실행 화면</div>
         <nav className="overflow-x-auto">
           <div className="flex min-w-max gap-2">
-            {NAV_ITEMS.map((item) => (
+            {NAV_ITEMS.map((item) => {
+              const href = typeof item.href === "string" ? item.href : item.href[currentMode];
+              return (
               <Link
-                key={item.href}
-                href={`${item.href}?mode=${currentMode}`}
+                key={typeof item.href === "string" ? item.href : item.label}
+                href={`${href}?mode=${currentMode}`}
                 className={cn(
                   "rounded-full border px-3.5 py-1.5 text-xs transition sm:text-sm",
-                  pathname === item.href
+                  pathname === href
                     ? "border-[color:var(--brand-700)] bg-[color:var(--brand-050)] text-[color:var(--brand-900)]"
                     : "border-[var(--border)] text-[color:var(--muted)] hover:bg-[color:var(--bg-elevated)] hover:text-[color:var(--foreground-strong)]",
                 )}
               >
                 {item.label}
               </Link>
-            ))}
+              );
+            })}
           </div>
         </nav>
       </div>

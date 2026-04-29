@@ -149,10 +149,9 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
         <div>
           <h2 className="text-xl font-medium tracking-[-0.04em] text-[color:var(--foreground-strong)] sm:text-2xl">{config.pageTitle}</h2>
           <p className="mt-2 max-w-2xl text-sm leading-7 text-[color:var(--muted)]">
-            {mode === "first"
-              ? "오답 기록·세트 풀이·공부 기록 입력을 기준으로 오늘 할 일을 정리합니다."
-              : "답안 작성·기준답안 비교·문단 다시쓰기 입력을 기준으로 오늘 할 일을 정리합니다."}
+            입력 기록을 바탕으로 오늘 할 일을 한 가지로 줄입니다.
           </p>
+          <p className="mt-1 max-w-2xl text-xs leading-6 text-[color:var(--muted)]">Inverge는 채점 결과를 확정하지 않고, 기록을 바탕으로 다음 행동을 정리합니다.</p>
         </div>
       </section>
 
@@ -161,12 +160,15 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
           <Card className="border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] shadow-none">
             <CardHeader className="space-y-3 p-4 sm:p-6">
               <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--brand-050)] px-4 py-3">
-                <p className="text-caption text-[color:var(--muted)]">오늘 입력 시작</p>
+                <p className="text-caption text-[color:var(--muted)]">처음이라면</p>
                 <p className="mt-1 text-body-lg text-[color:var(--foreground-strong)]">
-                  {mode === "first" ? "틀린 문제 하나만 남겨도 다시 볼 목록이 만들어집니다." : "답안 하나를 넣으면 보강할 간극 하나로 줄입니다."}
+                  {mode === "first"
+                    ? "틀린 문제 하나를 남기면 오늘 다시 볼 항목이 정리됩니다."
+                    : "답안 하나를 남기면 보강할 문단과 다음 할 일이 정리됩니다."}
                 </p>
+                <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">입력 1개 남기기 → 오늘 할 일 생성 → 기록에 누적</p>
               </div>
-              <CardTitle>오늘 무엇을 입력할까요?</CardTitle>
+              <CardTitle>오늘 첫 입력을 남겨 보세요.</CardTitle>
               <CardDescription className="max-w-[66ch]">
                 {mode === "first"
                   ? "입력을 남기면 다음 복습 신호와 재시도 순서가 정리됩니다."
