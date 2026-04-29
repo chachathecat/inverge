@@ -152,7 +152,7 @@ test("insufficient Gemini-style fallback text is skipped", () => {
   assert.equal(skipReason, "insufficient_structure");
 });
 
-test("meaningful structure with real concepts is not skipped", () => {
+test("meaningful taxonomy + concrete nextAction is not skipped even if rewriteDraftSuggestion is fallback", () => {
   const skipReason = shouldSkipLearningSignalSave({
     questionSummary: "",
     requiredIssues: "",
@@ -164,10 +164,31 @@ test("meaningful structure with real concepts is not skipped", () => {
     weakParagraphPoint: "",
     weakLogicPoint: "",
     rewriteTarget: "",
-    rewriteDraftSuggestion: "결론 문단에서 사실관계를 요건별로 다시 배치해 재작성하세요.",
+    rewriteDraftSuggestion: "검토자가 확인 후 직접 작성해 주세요.",
     nextAction: "대항력·우선변제권을 분리한 2단락 개요를 먼저 작성하세요.",
     caution: "",
     coreConcepts: ["대항력 요건", "우선변제권 요건"],
   });
   assert.equal(skipReason, null);
+});
+
+
+test("weak taxonomy + both generic guidance fields is skipped", () => {
+  const skipReason = shouldSkipLearningSignalSave({
+    questionSummary: "",
+    requiredIssues: "",
+    userAnswerSummary: "",
+    userAnswerStructure: "",
+    referenceStructure: "",
+    strengths: [],
+    missingIssueCandidates: ["파악할 수 없습니다."],
+    weakParagraphPoint: "",
+    weakLogicPoint: "",
+    rewriteTarget: "",
+    rewriteDraftSuggestion: "직접 작성",
+    nextAction: "검토",
+    caution: "",
+    coreConcepts: ["추정 불가"],
+  });
+  assert.equal(skipReason, "insufficient_structure");
 });
