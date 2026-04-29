@@ -1094,28 +1094,38 @@ export class ReviewOsService {
 
   async getLearningSignalSummary(userId: string, email: string | null, mode: "first" | "second"): Promise<LearningSignalSummary> {
     await this.ensureAccess(userId, email);
-    const events = await reviewOsRepository.listLearningSignalEvents(userId, mode, 120);
-    const weaknessCounts = new Map<string, number>();
-    events.forEach((event) => {
-      event.weaknessTags.forEach((tag) => {
-        const normalized = tag.trim();
-        if (!normalized) return;
-        weaknessCounts.set(normalized, (weaknessCounts.get(normalized) ?? 0) + 1);
+
+    try {
+      const events = await reviewOsRepository.listLearningSignalEvents(userId, mode, 120);
+      const weaknessCounts = new Map<string, number>();
+      events.forEach((event) => {
+        event.weaknessTags.forEach((tag) => {
+          const normalized = tag.trim();
+          if (!normalized) return;
+          weaknessCounts.set(normalized, (weaknessCounts.get(normalized) ?? 0) + 1);
+        });
       });
-    });
 
-    const repeatedWeaknessSignals =
-      events.length >= 5
-        ? [...weaknessCounts.entries()]
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 3)
-            .map(([tag]) => tag)
-        : [];
+      const repeatedWeaknessSignals =
+        events.length >= 5
+          ? [...weaknessCounts.entries()]
+              .filter(([, count]) => count >= 2)
+              .sort((a, b) => b[1] - a[1])
+              .slice(0, 3)
+              .map(([tag]) => tag)
+          : [];
 
-    return {
-      totalEvents: events.length,
-      repeatedWeaknessSignals,
-    };
+      return {
+        totalEvents: events.length,
+        repeatedWeaknessSignals,
+      };
+    } catch (error) {
+      console.warn("[review-os] learning signal summary unavailable; continuing with fallback", error);
+      return {
+        totalEvents: 0,
+        repeatedWeaknessSignals: [],
+      };
+    }
   }
 
   getAdminFeed(): Promise<AdminAlphaFeed> {

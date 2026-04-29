@@ -73,7 +73,15 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
     reviewOsService.getWeeklySummary(session.userId, session.email),
     reviewOsService.listWrongAnswerItems(session.userId, session.email, 12),
   ]);
-  const learningSignalSummary = await reviewOsService.getLearningSignalSummary(session.userId, session.email, mode);
+  let learningSignalSummary = {
+    totalEvents: 0,
+    repeatedWeaknessSignals: [] as string[],
+  };
+  try {
+    learningSignalSummary = await reviewOsService.getLearningSignalSummary(session.userId, session.email, mode);
+  } catch (error) {
+    console.warn("[review-os] failed to load learning signal summary", error);
+  }
 
   const items = allItems.filter((item) => item.examName === config.label).slice(0, 5);
   const queue = focus.queue.filter((item) => item.examName === config.label);
