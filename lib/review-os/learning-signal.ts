@@ -7,6 +7,16 @@ const MAX_FORMULAS = 4;
 const MIN_ANSWER_TEXT_LENGTH = 20;
 const MIN_CONTEXT_TEXT_LENGTH = 10;
 const PLACEHOLDER_PATTERN = /^(없음|n\/?a|na|null|미입력|미정|test|테스트|sample|샘플|asdf|qwer|1234+)$/i;
+const FALLBACK_INDICATOR_PHRASES = [
+  "입력하면",
+  "직접 작성",
+  "직접 확인",
+  "분석하기에 충분하지",
+  "파악할 수 없습니다",
+  "추정 불가",
+  "검토자가 확인",
+  "검토자 확인",
+] as const;
 
 function sanitizeLine(value: string) {
   return value.replace(/\s+/g, " ").trim();
@@ -34,6 +44,18 @@ function isPlaceholderLike(text: string) {
   return PLACEHOLDER_PATTERN.test(compact) || isRepeatedGibberish(compact);
 }
 
+function isFallbackLikeText(text: string) {
+  const compact = normalizeCompact(text);
+  if (!compact) return true;
+  return FALLBACK_INDICATOR_PHRASES.some((phrase) => compact.includes(phrase));
+}
+
+function isMostlyFallbackLike(items: string[]) {
+  if (items.length === 0) return true;
+  const fallbackCount = items.map(normalizeCompact).filter((item) => item.length === 0 || isFallbackLikeText(item)).length;
+  return fallbackCount / items.length >= 0.6;
+}
+
 export function getAnswerReviewInputQualityIssue(params: {
   questionText: string;
   answerText: string;
@@ -55,11 +77,13 @@ export function getAnswerReviewInputQualityIssue(params: {
 }
 
 export function shouldSkipLearningSignalSave(normalizedDraft: AnswerReviewStructureDraft): "insufficient_structure" | null {
-  const fallbackHeavy =
-    normalizedDraft.missingIssueCandidates.length === 0 &&
-    normalizedDraft.coreConcepts.length === 0 &&
-    normalizeCompact(normalizedDraft.rewriteDraftSuggestion).length < 12 &&
-    normalizeCompact(normalizedDraft.nextAction).length < 8;
+  const weakTaxonomy = isMostlyFallbackLike(normalizedDraft.coreConcepts) && isMostlyFallbackLike(normalizedDraft.missingIssueCandidates);
+  const genericAction =
+    isFallbackLikeText(normalizedDraft.nextAction) ||
+    isFallbackLikeText(normalizedDraft.rewriteDraftSuggestion) ||
+    (normalizeCompact(normalizedDraft.nextAction).length < 8 && normalizeCompact(normalizedDraft.rewriteDraftSuggestion).length < 12);
+
+  const fallbackHeavy = weakTaxonomy && genericAction;
 
   if (fallbackHeavy) return "insufficient_structure";
   return null;
