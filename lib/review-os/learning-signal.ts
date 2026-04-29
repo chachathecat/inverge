@@ -89,8 +89,7 @@ export function shouldSkipLearningSignalSave(normalizedDraft: AnswerReviewStruct
   const bothFallbackLike = nextActionFallbackLike && rewriteFallbackLike;
   const bothTooShortOrEmpty = nextAction.length < 8 && rewriteDraftSuggestion.length < 12;
   const oneMissingOrFallbackWithoutTaxonomy =
-    !hasConcreteTaxonomySignal &&
-    ((nextActionFallbackLike && !rewriteFallbackLike) || (!nextActionFallbackLike && rewriteFallbackLike));
+    !hasConcreteTaxonomySignal && (nextActionFallbackLike || rewriteFallbackLike);
 
   const genericAction = bothFallbackLike || bothTooShortOrEmpty || oneMissingOrFallbackWithoutTaxonomy;
 
