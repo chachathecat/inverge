@@ -28,9 +28,9 @@ const DETAILS_TEXT_MAX_LENGTH = 560;
 const FILE_NAME_MAX_LENGTH = 34;
 
 const STEP_ITEMS: Array<{ id: StepId; label: string }> = [
-  { id: 1, label: "자료 넣기" },
-  { id: 2, label: "구조화 확인" },
-  { id: 3, label: "피드백 복사" },
+  { id: 1, label: "자료 입력" },
+  { id: 2, label: "검토 결과 확인" },
+  { id: 3, label: "피드백 초안 정리" },
 ];
 
 function InputStatusCard({ title, isFilled, helper }: InputStatusCardProps) {
@@ -263,7 +263,14 @@ export default function AnswerReviewClientPage() {
   };
 
   const didCopyCurrentDraft = feedbackCopyStatus === "success" && copiedFeedbackDraftText === feedbackDraftText;
-  const primaryActionLabel = currentStep === 1 ? (isStructuring ? "정리 중..." : "OCR 구조화 시작") : currentStep === 2 ? "다음 행동 하나 정리" : "피드백 초안 복사";
+  const primaryActionLabel =
+    currentStep === 1
+      ? isStructuring
+        ? "답안 구조화 중..."
+        : "답안 검토 시작"
+      : currentStep === 2
+        ? "피드백 초안 만들기"
+        : "피드백 초안 복사";
   const isPrimaryActionDisabled = currentStep === 1 ? !hasMyAnswer || isStructuring : false;
   const handlePrimaryAction = () => {
     if (currentStep === 1) {
@@ -322,7 +329,7 @@ export default function AnswerReviewClientPage() {
           {currentStep === 1 ? (
             <section className="space-y-4">
               <p className="text-caption leading-5 text-[color:var(--muted)]">
-                AI가 먼저 구조화하고, 검토자는 확인만 합니다. Gemini가 멈춰도 수동 검토로 이어갈 수 있습니다.
+                답안을 먼저 정리해 핵심 간극을 빠르게 확인합니다. 필요하면 직접 입력으로 계속 검토할 수 있습니다.
               </p>
               <div className="grid gap-2 sm:grid-cols-3">
                 <InputStatusCard title="문제/사례" isFilled={hasProblemInput} helper="문제 이미지 또는 텍스트" />
@@ -436,7 +443,7 @@ export default function AnswerReviewClientPage() {
                   <p className="text-caption font-medium text-[color:var(--muted)]">내 답안 입력</p>
                   <Textarea
                     className="min-h-[120px] bg-[color:var(--surface)]"
-                    placeholder="OCR 초안(있는 경우)을 붙여 넣거나 직접 입력해 주세요."
+                    placeholder="초안 텍스트가 있으면 붙여 넣고, 없으면 직접 입력해 주세요."
                     value={myAnswerText}
                     onChange={(event) => setMyAnswerText(event.target.value)}
                   />
@@ -461,16 +468,16 @@ export default function AnswerReviewClientPage() {
               <p className="text-caption leading-5 text-[color:var(--muted)]">먼저 볼 것은 가장 큰 간극 하나입니다.</p>
               {learningSignalStatus === "saved" ? (
                 <p className="text-caption leading-5 text-[color:var(--muted)]">
-                  학습 신호가 저장되었습니다. (모드: {examMode === "second" ? "감정평가사 2차" : "감정평가사 1차"})
+                  이번 검토가 학습 기록에 반영되었습니다. (모드: {examMode === "second" ? "감정평가사 2차" : "감정평가사 1차"})
                 </p>
               ) : null}
               {learningSignalStatus === "failed" ? (
                 <p className="text-caption leading-5 text-[color:var(--muted)]">
-                  구조화는 완료되었지만 학습 신호 저장은 실패했습니다. 관리자 검증 API로 저장 상태를 확인해 주세요.
+                  검토는 완료되었습니다. 다만 학습 기록 반영은 나중에 다시 확인해 주세요.
                 </p>
               ) : null}
               {learningSignalStatus === "skipped" ? (
-                <p className="text-caption leading-5 text-[color:var(--muted)]">현재 요청에서는 학습 신호 저장이 생략되었습니다.</p>
+                <p className="text-caption leading-5 text-[color:var(--muted)]">이번 검토는 학습 기록에 반영되지 않았습니다.</p>
               ) : null}
               {structureError ? (
                 <p className="text-caption leading-5 text-[color:var(--muted)]">{structureError}</p>
