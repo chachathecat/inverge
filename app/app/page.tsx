@@ -151,7 +151,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
           <p className="mt-2 max-w-2xl text-sm leading-7 text-[color:var(--muted)]">
             입력 기록을 바탕으로 오늘 할 일을 한 가지로 줄입니다.
           </p>
-          <p className="mt-1 max-w-2xl text-xs leading-6 text-[color:var(--muted)]">Inverge는 채점 결과를 확정하지 않고, 기록을 바탕으로 다음 행동을 정리합니다.</p>
+          <p className="mt-1 max-w-2xl text-xs leading-6 text-[color:var(--muted)]">채점 확정이 아니라, 다음 행동을 정리하는 학습 운영 도구입니다.</p>
         </div>
       </section>
 
@@ -286,7 +286,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
 
 
         <details className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
-          <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">학습 신호 요약 보기</summary>
+          <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">학습 기록 요약 보기</summary>
           <div className="space-y-2 border-t border-[color:var(--border-subtle)] p-4 text-sm">
             <p>누적 {learningSignal?.totalCount ?? 0}건 · 최근 {learningSignal?.latestEventAt ? new Date(learningSignal.latestEventAt).toLocaleDateString("ko-KR") : "-"}</p>
             <p>주요 과목: {(learningSignal?.topSubjects ?? []).join(", ") || "-"}</p>

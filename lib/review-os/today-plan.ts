@@ -14,6 +14,11 @@ export type TodayPlanCard = {
 };
 
 const EMPTY_STATE_COPY = "답안 검토나 오답 기록을 1개 남기면 오늘 할 일을 제안합니다.";
+const SOURCE_REASON_BY_TYPE: Record<string, string> = {
+  answer_review: "최근 답안 검토 기록을 기준으로 가장 먼저 보강할 작업을 골랐습니다.",
+  wrong_answer: "최근 오답 기록을 기준으로 가장 먼저 보강할 작업을 골랐습니다.",
+  review_queue: "최근 다시 볼 목록을 기준으로 가장 먼저 보강할 작업을 골랐습니다.",
+};
 
 function resolveModeTaskLabel(mode: AppMode, signalTask: string | null) {
   if (signalTask && signalTask.trim().length > 0) return signalTask.trim();
@@ -58,7 +63,7 @@ export function buildTodayPlanCard(input: {
     return {
       hasPlan: false,
       primaryTask: EMPTY_STATE_COPY,
-      reason: "아직 오늘 계획을 계산할 학습 신호가 없습니다.",
+      reason: "아직 오늘 계획을 계산할 학습 기록이 없습니다.",
       estimatedDuration: "-",
       ctaLabel: input.mode === "second" ? "답안 작성 시작" : "오답 기록 시작",
       actionKind: input.mode === "second" ? "second_write" : "first_capture",
@@ -69,7 +74,7 @@ export function buildTodayPlanCard(input: {
     return {
       hasPlan: false,
       primaryTask: EMPTY_STATE_COPY,
-      reason: "review queue와 기록은 있지만 최근 학습 신호가 부족합니다.",
+      reason: "최근 학습 기록이 부족해 먼저 입력 1개를 권장합니다.",
       estimatedDuration: "10분",
       ctaLabel: input.mode === "second" ? "답안 검토 1개 남기기" : "오답 기록 1개 남기기",
       actionKind: input.mode === "second" ? "second_write" : "first_capture",
@@ -78,7 +83,7 @@ export function buildTodayPlanCard(input: {
 
   const topSignal = recentSignals[0];
   const primaryTask = resolveRecommendedTask(input.mode, topSignal.nextTask);
-  const reason = `${topSignal.subject} 최근 신호를 기준으로 가장 먼저 보강할 작업입니다.`;
+  const reason = SOURCE_REASON_BY_TYPE[topSignal.sourceType] ?? "최근 학습 기록을 기준으로 가장 먼저 보강할 작업을 골랐습니다.";
   const estimatedDuration = input.mode === "second" ? "20분" : "15분";
 
   const cta = resolveCtaAction(input.mode, resolveModeTaskLabel(input.mode, topSignal.nextTask));
@@ -91,4 +96,3 @@ export function buildTodayPlanCard(input: {
     ...cta,
   };
 }
-
