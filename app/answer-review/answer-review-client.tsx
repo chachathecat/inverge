@@ -172,7 +172,7 @@ export default function AnswerReviewClientPage() {
         | { ok: false; error: string };
 
       if (!response.ok || !payload.ok) {
-        throw new Error(payload.ok ? "구조화 결과를 불러오지 못했습니다." : payload.error);
+        throw new Error(payload.ok ? "검토 결과를 불러오지 못했습니다." : payload.error);
       }
 
       const normalizedDraft = normalizeAnswerReviewStructureDraft(payload.draft);
@@ -187,7 +187,7 @@ export default function AnswerReviewClientPage() {
       setStructureError(
         error instanceof Error
           ? error.message
-          : "지금은 파일 구조화를 사용할 수 없습니다. 텍스트 입력으로 검토를 계속해 주세요.",
+          : "지금은 파일 검토를 진행할 수 없습니다. 텍스트 입력으로 계속해 주세요.",
       );
       setCurrentStep(2);
     } finally {
@@ -266,7 +266,7 @@ export default function AnswerReviewClientPage() {
   const primaryActionLabel =
     currentStep === 1
       ? isStructuring
-        ? "답안 구조화 중..."
+        ? "답안 검토 중..."
         : "답안 검토 시작"
       : currentStep === 2
         ? "피드백 초안 만들기"
@@ -585,7 +585,7 @@ export default function AnswerReviewClientPage() {
                   <div className="grid gap-2 sm:grid-cols-2">
                     <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3">
                       <p className="text-caption font-medium text-[color:var(--muted)]">문제 요구</p>
-                      <p className="mt-1 text-caption leading-5 text-[color:var(--foreground-strong)]">{toDetailLine(structureDraft.questionSummary, "문제 요구를 더 입력하면 구조화를 보강할 수 있습니다.")}</p>
+                      <p className="mt-1 text-caption leading-5 text-[color:var(--foreground-strong)]">{toDetailLine(structureDraft.questionSummary, "문제 요구를 더 입력하면 검토 정확도가 높아집니다.")}</p>
                     </article>
                     <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3">
                       <p className="text-caption font-medium text-[color:var(--muted)]">핵심 개념</p>
@@ -594,32 +594,32 @@ export default function AnswerReviewClientPage() {
                       </p>
                     </article>
                     <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3">
-                      <p className="text-caption font-medium text-[color:var(--muted)]">requiredIssues</p>
+                      <p className="text-caption font-medium text-[color:var(--muted)]">필수 논점</p>
                       <p className="mt-1 text-caption leading-5 text-[color:var(--foreground-strong)]">{toDetailLine(structureDraft.requiredIssues, "기준답안과 문제 요구를 더 입력하면 보강할 간극이 선명해집니다.")}</p>
                     </article>
                     <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3">
-                      <p className="text-caption font-medium text-[color:var(--muted)]">userAnswerStructure</p>
+                      <p className="text-caption font-medium text-[color:var(--muted)]">내 답안 구조</p>
                       <p className="mt-1 text-caption leading-5 text-[color:var(--foreground-strong)]">{toDetailLine(structureDraft.userAnswerStructure, "문단별 주장과 근거를 정리하면 구조 분석이 선명해집니다.")}</p>
                     </article>
                     <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3">
-                      <p className="text-caption font-medium text-[color:var(--muted)]">referenceStructure</p>
+                      <p className="text-caption font-medium text-[color:var(--muted)]">기준답안 구조</p>
                       <p className="mt-1 text-caption leading-5 text-[color:var(--foreground-strong)]">{toDetailLine(structureDraft.referenceStructure, "기준답안의 목차를 입력하면 비교가 정확해집니다.")}</p>
                     </article>
                     <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3">
-                      <p className="text-caption font-medium text-[color:var(--muted)]">weakParagraphPoint</p>
+                      <p className="text-caption font-medium text-[color:var(--muted)]">보강 문단 포인트</p>
                       <p className="mt-1 text-caption leading-5 text-[color:var(--foreground-strong)]">{toDetailLine(structureDraft.weakParagraphPoint, "보강할 문단 포인트를 검토자가 직접 확인해 주세요.")}</p>
                     </article>
                     <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3">
-                      <p className="text-caption font-medium text-[color:var(--muted)]">weakLogicPoint</p>
+                      <p className="text-caption font-medium text-[color:var(--muted)]">논리 보강 포인트</p>
                       <p className="mt-1 text-caption leading-5 text-[color:var(--foreground-strong)]">{toDetailLine(structureDraft.weakLogicPoint, "논리 연결이 약한 지점을 검토자가 직접 확인해 주세요.")}</p>
                     </article>
                     <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3">
-                      <p className="text-caption font-medium text-[color:var(--muted)]">caution</p>
-                      <p className="mt-1 text-caption leading-5 text-[color:var(--foreground-strong)]">{toDetailLine(structureDraft.caution, "구조화 결과는 검토 보조 초안이며 검토자 확인이 필요합니다.")}</p>
+                      <p className="text-caption font-medium text-[color:var(--muted)]">검토 메모</p>
+                      <p className="mt-1 text-caption leading-5 text-[color:var(--foreground-strong)]">{toDetailLine(structureDraft.caution, "이 결과는 검토 보조 초안이며 검토자 확인이 필요합니다.")}</p>
                     </article>
                   </div>
                 ) : (
-                  <p className="text-caption leading-5 text-[color:var(--muted)]">구조화 결과를 먼저 실행하면 세부 분석을 확인할 수 있습니다.</p>
+                  <p className="text-caption leading-5 text-[color:var(--muted)]">먼저 답안 검토를 실행하면 세부 분석을 확인할 수 있습니다.</p>
                 )}
               </section>
             </div>
