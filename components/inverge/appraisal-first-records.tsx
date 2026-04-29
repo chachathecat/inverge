@@ -122,7 +122,10 @@ function RecordsHeader({ subjectId }: { subjectId: SubjectId }) {
           점수판이 아니라, 지금까지 어떤 루프로 이어졌는지와 다음에 어디를 다시 볼지 정리합니다.
         </p>
       </div>
-      <Link href={`/exams/appraisal-first/${subjectId}/past-set/intro-10`} className={cn(buttonVariants({ size: "lg" }), "w-full sm:w-auto")}>
+      <Link
+        href={`/exams/appraisal-first/${subjectId}/past-set/intro-10`}
+        className={cn(buttonVariants({ size: "lg" }), "w-full whitespace-nowrap sm:w-auto sm:min-w-[9.5rem]")}
+      >
         기출 세트로 이동
         <ArrowRight className="h-4 w-4" aria-hidden="true" />
       </Link>
@@ -230,7 +233,10 @@ function EmptyState({ subjectId }: { subjectId: SubjectId }) {
     <section className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] p-8 sm:p-10">
       <h2 className="text-h2 font-medium text-[color:var(--foreground-strong)]">아직 쌓인 기록이 없습니다.</h2>
       <p className="mt-3 max-w-xl text-body text-[color:var(--muted)]">입력 기록이 쌓이면 오답과 다시 볼 항목이 정리됩니다.</p>
-      <Link href={`/exams/appraisal-first/${subjectId}/past-set/intro-10`} className={cn(buttonVariants({ size: "lg" }), "mt-7 w-full sm:w-auto")}>
+      <Link
+        href={`/exams/appraisal-first/${subjectId}/past-set/intro-10`}
+        className={cn(buttonVariants({ size: "lg" }), "mt-7 w-full whitespace-nowrap sm:w-auto sm:min-w-[9.5rem]")}
+      >
         기출 세트로 이동
       </Link>
     </section>
@@ -255,10 +261,10 @@ function ActionBar({ subjectId }: { subjectId: SubjectId }) {
     <section className="flex flex-col gap-3 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] p-5 sm:flex-row sm:items-center sm:justify-between">
       <p className="text-sm leading-6 text-[color:var(--muted)]">기록은 확인용입니다. 다음 작업은 다시 세트를 풀거나 리뷰 큐를 정리하는 흐름으로 이어지는 편이 좋습니다.</p>
       <div className="flex flex-col gap-2 sm:flex-row">
-        <Link href={`/exams/appraisal-first/${subjectId}/past-set/intro-10`} className={cn(buttonVariants(), "w-full sm:w-auto")}>
+        <Link href={`/exams/appraisal-first/${subjectId}/past-set/intro-10`} className={cn(buttonVariants(), "w-full whitespace-nowrap sm:w-auto sm:min-w-[9.5rem]")}>
           기출 세트로 이동
         </Link>
-        <Link href={`/exams/appraisal-first/${subjectId}/review`} className={cn(buttonVariants({ variant: "outline" }), "w-full sm:w-auto")}>
+        <Link href={`/exams/appraisal-first/${subjectId}/review`} className={cn(buttonVariants({ variant: "outline" }), "w-full whitespace-nowrap sm:w-auto sm:min-w-[7.5rem]")}>
           리뷰 보기
         </Link>
       </div>

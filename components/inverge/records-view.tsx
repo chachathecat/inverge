@@ -299,7 +299,7 @@ export function RecordsView({ examId, sessionId, subjectId }: WorkScreenProps) {
   return (
     <>
       <ContextBar exam={exam} session={session} subject={subject} screen="records" />
-      <main className="mx-auto w-full max-w-[1080px] px-5 py-8 sm:px-8 lg:py-10">
+      <main className="mx-auto w-full max-w-[920px] px-5 py-8 sm:px-8 lg:py-10">
         <header className="border-b border-[var(--border)] pb-6">
           <p className="text-caption font-medium text-[color:var(--muted)]">{UI_TERMS.records}</p>
           <div className="mt-2 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -310,7 +310,7 @@ export function RecordsView({ examId, sessionId, subjectId }: WorkScreenProps) {
               </p>
             </div>
             <Link href={writeHref}>
-              <Button size="lg">
+              <Button size="lg" className="whitespace-nowrap sm:min-w-[8.5rem]">
                 다시 작성하기
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
@@ -348,13 +348,13 @@ export function RecordsView({ examId, sessionId, subjectId }: WorkScreenProps) {
         {records.status === "ready" && viewModel?.isEmpty ? (
           <section className="mt-8 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] px-6 py-10 sm:px-8">
             <p className="text-caption font-medium text-[color:var(--muted)]">아직 기록이 없습니다.</p>
-            <h2 className="mt-2 text-h2 font-medium text-[color:var(--foreground-strong)]">첫 작성이 기록 흐름의 시작입니다.</h2>
+            <h2 className="mt-2 text-h2 font-medium text-[color:var(--foreground-strong)]">첫 답안이 기록 흐름의 시작입니다.</h2>
             <p className="mt-3 max-w-2xl text-body text-[color:var(--muted)]">
-              기록은 보조 화면으로만 남겨 둡니다. 루프가 어떻게 쌓이고 있는지만 차분하게 확인하면 됩니다.
+              답안 기록이 쌓이면 보강할 문단과 다시 볼 항목이 정리됩니다.
             </p>
             <div className="mt-6">
-              <Link href={writeHref} className={buttonVariants()}>
-                작성 시작
+              <Link href={writeHref} className={cn(buttonVariants(), "whitespace-nowrap sm:min-w-[8.5rem]")}>
+                답안 작성하기
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </div>
@@ -362,60 +362,17 @@ export function RecordsView({ examId, sessionId, subjectId }: WorkScreenProps) {
         ) : null}
 
         {records.status === "ready" && viewModel && !viewModel.isEmpty ? (
-          <div className="grid gap-7 py-7 lg:grid-cols-[280px_1fr]">
-            <aside className="space-y-5">
-              <section className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] px-5 py-5">
-                <p className="text-caption font-medium text-[color:var(--muted)]">{UI_TERMS.summary}</p>
-                <div className="mt-5 space-y-4">
-                  <SummaryLine label="작성" value={`${viewModel.summary.writes}`} />
-                  <SummaryLine label={UI_TERMS.compare} value={`${viewModel.summary.compares}`} />
-                  <SummaryLine label={UI_TERMS.rewrite} value={`${viewModel.summary.rewrites}`} />
-                </div>
-              </section>
-
-              <section className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] px-5 py-5">
-                <p className="text-caption font-medium text-[color:var(--muted)]">{UI_TERMS.correctionTarget}</p>
-                <div className="mt-3">
-                  <p className="text-sm font-medium leading-6 text-[color:var(--foreground-strong)]">
-                    {enhancedRecordsSeed?.gapTitle ?? viewModel.recordsSeed.gapTitle}
-                  </p>
-                  <p className="mt-2 text-caption text-[color:var(--muted)]">
-                    {enhancedRecordsSeed?.focusLabel ?? viewModel.recordsSeed.focusLabel}
-                  </p>
-                  <p className="mt-3 text-sm leading-7 text-[color:var(--muted)]">{enhancedRecordsSeed?.note ?? viewModel.recordsSeed.note}</p>
-                </div>
-              </section>
-
-              {viewModel.isSparse ? (
-                <section className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface-soft)] px-5 py-5">
-                  <p className="text-sm leading-7 text-[color:var(--muted-strong)]">
-                    {enhancedRecordsSeed?.recurringHint ?? viewModel.recordsSeed.recurringHint ?? "아직 기록이 짧습니다. 한 번 더 돌면 반복되는 패턴이 더 선명해집니다."}
-                  </p>
-                </section>
-              ) : null}
-
-              <section className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] px-5 py-5">
-                <p className="text-caption font-medium text-[color:var(--muted)]">{UI_TERMS.nextAction}</p>
-                <p className="mt-3 text-sm leading-7 text-[color:var(--muted)]">{enhancedRecordsSeed?.nextActionLabel ?? viewModel.recordsSeed.nextActionLabel}</p>
-                <div className="mt-4">
-                  <Link href={writeHref} className={cn(buttonVariants({ variant: "outline" }), "w-full")}>
-                    다시 작성하기
-                  </Link>
-                </div>
-              </section>
-            </aside>
-
+          <div className="space-y-6 py-7">
             <section className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)]">
               <div className="border-b border-[var(--border)] px-6 py-5 sm:px-7">
                 <div className="flex items-center justify-between gap-4">
                   <div>
-                    <p className="text-caption font-medium text-[color:var(--muted)]">타임라인</p>
+                    <p className="text-caption font-medium text-[color:var(--muted)]">최근 답안 기록</p>
                     <h2 className="mt-1 text-h2 font-medium text-[color:var(--foreground-strong)]">최근 루프 기록</h2>
                   </div>
                   <RefinedBadge>최근 {Math.min(viewModel.timeline.length, 8)}개</RefinedBadge>
                 </div>
               </div>
-
               <ol className="divide-y divide-[var(--border)]">
                 {viewModel.timeline.slice(0, 8).map((entry) => (
                   <li key={entry.id} className="grid gap-4 px-6 py-5 sm:grid-cols-[130px_1fr_auto] sm:px-7">
@@ -439,6 +396,39 @@ export function RecordsView({ examId, sessionId, subjectId }: WorkScreenProps) {
                 ))}
               </ol>
             </section>
+
+            <section className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] px-6 py-6 sm:px-7">
+              <p className="text-caption font-medium text-[color:var(--muted)]">반복되는 약점</p>
+              <p className="mt-3 text-sm font-medium leading-6 text-[color:var(--foreground-strong)]">
+                {enhancedRecordsSeed?.gapTitle ?? viewModel.recordsSeed.gapTitle}
+              </p>
+              <p className="mt-2 text-caption text-[color:var(--muted)]">{enhancedRecordsSeed?.focusLabel ?? viewModel.recordsSeed.focusLabel}</p>
+              <p className="mt-3 text-sm leading-7 text-[color:var(--muted)]">{enhancedRecordsSeed?.note ?? viewModel.recordsSeed.note}</p>
+              {viewModel.isSparse ? (
+                <p className="mt-3 text-sm leading-7 text-[color:var(--muted-strong)]">
+                  {enhancedRecordsSeed?.recurringHint ?? viewModel.recordsSeed.recurringHint ?? "아직 기록이 짧습니다. 한 번 더 돌면 반복되는 패턴이 더 선명해집니다."}
+                </p>
+              ) : null}
+            </section>
+
+            <section className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] px-6 py-6 sm:px-7">
+              <p className="text-caption font-medium text-[color:var(--muted)]">다시 볼 항목</p>
+              <p className="mt-3 text-sm leading-7 text-[color:var(--muted)]">{enhancedRecordsSeed?.nextActionLabel ?? viewModel.recordsSeed.nextActionLabel}</p>
+              <div className="mt-4">
+                <Link href={writeHref} className={cn(buttonVariants({ variant: "outline" }), "w-full whitespace-nowrap sm:w-auto sm:min-w-[8.5rem]")}>
+                  다시 작성하기
+                </Link>
+              </div>
+            </section>
+
+            <section className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] px-6 py-6 sm:px-7">
+              <p className="text-caption font-medium text-[color:var(--muted)]">주간 정리</p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                <SummaryLine label="작성" value={`${viewModel.summary.writes}`} />
+                <SummaryLine label={UI_TERMS.compare} value={`${viewModel.summary.compares}`} />
+                <SummaryLine label={UI_TERMS.rewrite} value={`${viewModel.summary.rewrites}`} />
+              </div>
+            </section>
           </div>
         ) : null}
       </main>
@@ -448,12 +438,14 @@ export function RecordsView({ examId, sessionId, subjectId }: WorkScreenProps) {
 
 function SummaryLine({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between gap-4">
-      <div className="flex items-center gap-2 text-sm text-[color:var(--muted-strong)]">
+    <div className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] px-4 py-3">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-2 text-sm text-[color:var(--muted-strong)]">
         <Check className="h-4 w-4 text-[color:var(--muted)]" />
         {label}
+        </div>
+        <span className="text-sm font-medium text-[color:var(--foreground-strong)]">{value}</span>
       </div>
-      <span className="text-sm font-medium text-[color:var(--foreground-strong)]">{value}</span>
     </div>
   );
 }
