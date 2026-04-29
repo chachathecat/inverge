@@ -6,6 +6,7 @@ import {
   getAnswerReviewInputQualityIssue,
   shouldSkipLearningSignalSave,
 } from "../lib/review-os/learning-signal.ts";
+import { buildTodayPlanCard } from "../lib/review-os/today-plan.ts";
 
 test("separates first/second mode labels and normalizes subject", () => {
   const baseDraft = {
@@ -191,4 +192,102 @@ test("weak taxonomy + both generic guidance fields is skipped", () => {
     coreConcepts: ["추정 불가"],
   });
   assert.equal(skipReason, "insufficient_structure");
+});
+
+
+test("today plan keeps first/second separation", () => {
+  const baseSignal = {
+    id: "s1",
+    userId: "u1",
+    examMode: "감정평가사 1차",
+    subject: "민법",
+    sourceType: "answer_review",
+    derivedTags: ["요건"],
+    relatedFormulas: [],
+    nextTaskType: "recall",
+    nextTask: "핵심 개념 회상",
+    metadataJson: {},
+    createdAt: new Date().toISOString(),
+  };
+
+  const firstPlan = buildTodayPlanCard({ mode: "first", learningSignals: [baseSignal], queue: [], items: [] });
+  const secondPlan = buildTodayPlanCard({
+    mode: "second",
+    learningSignals: [{ ...baseSignal, examMode: "감정평가사 2차", nextTask: "문단 다시쓰기" }],
+    queue: [],
+    items: [],
+  });
+
+  assert.equal(firstPlan.primaryTask, "개념 회상 1세트");
+  assert.equal(firstPlan.actionKind, "first_session");
+  assert.equal(firstPlan.ctaLabel, "짧은 재시도 시작");
+  assert.equal(secondPlan.primaryTask, "문단 다시쓰기");
+  assert.equal(secondPlan.actionKind, "second_review");
+  assert.equal(secondPlan.ctaLabel, "문단 다시쓰기");
+});
+
+test("today plan fallback is shown when no learning data exists", () => {
+  const plan = buildTodayPlanCard({ mode: "first", learningSignals: [], queue: [], items: [] });
+  assert.equal(plan.hasPlan, false);
+  assert.equal(plan.primaryTask, "답안 검토나 오답 기록을 1개 남기면 오늘 할 일을 제안합니다.");
+  assert.equal(plan.actionKind, "first_capture");
+});
+
+test("today plan uses recent learning signal for primary task", () => {
+  const plan = buildTodayPlanCard({
+    mode: "second",
+    learningSignals: [{
+      id: "s2",
+      userId: "u1",
+      examMode: "감정평가사 2차",
+      subject: "보상법규",
+      sourceType: "answer_review",
+      derivedTags: ["논점 누락"],
+      relatedFormulas: [],
+      nextTaskType: "rewrite",
+      nextTask: "문단 다시쓰기",
+      metadataJson: {},
+      createdAt: new Date().toISOString(),
+    }],
+    queue: [],
+    items: [],
+  });
+
+  assert.equal(plan.hasPlan, true);
+  assert.equal(plan.reason.includes("보상법규"), true);
+  assert.equal(plan.ctaLabel, "문단 다시쓰기");
+  assert.equal(plan.actionKind, "second_review");
+});
+
+test("today plan maps first-mode set and capture actions", () => {
+  const base = {
+    id: "s3",
+    userId: "u1",
+    examMode: "감정평가사 1차",
+    subject: "회계학",
+    sourceType: "answer_review",
+    derivedTags: [],
+    relatedFormulas: [],
+    nextTaskType: "retry",
+    metadataJson: {},
+    createdAt: new Date().toISOString(),
+  };
+
+  const setPlan = buildTodayPlanCard({
+    mode: "first",
+    learningSignals: [{ ...base, nextTask: "유사 문제 1개 재도전" }],
+    queue: [],
+    items: [],
+  });
+  const capturePlan = buildTodayPlanCard({
+    mode: "first",
+    learningSignals: [{ ...base, nextTask: "오답 기록 1개 남기기" }],
+    queue: [],
+    items: [],
+  });
+
+  assert.equal(setPlan.actionKind, "first_set");
+  assert.equal(setPlan.ctaLabel, "세트 풀이 열기");
+  assert.equal(capturePlan.actionKind, "first_capture");
+  assert.equal(capturePlan.ctaLabel, "오답 기록 시작");
 });
