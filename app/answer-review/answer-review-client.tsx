@@ -70,6 +70,7 @@ export default function AnswerReviewClientPage() {
   const [isStructuring, setIsStructuring] = useState(false);
   const [structureError, setStructureError] = useState<string | null>(null);
   const [structureDraft, setStructureDraft] = useState<AnswerReviewStructureDraft | null>(null);
+  const [learningSignalStatus, setLearningSignalStatus] = useState<"saved" | "skipped" | "failed" | null>(null);
   const [currentStep, setCurrentStep] = useState<StepId>(1);
   const [examMode, setExamMode] = useState<AppraisalMode>(initialReviewContext.examMode);
   const [subject, setSubject] = useState<string>(initialReviewContext.subject);
@@ -167,7 +168,7 @@ export default function AnswerReviewClientPage() {
         body: formData,
       });
       const payload = (await response.json()) as
-        | { ok: true; draft: unknown }
+        | { ok: true; draft: unknown; learningSignalStatus?: "saved" | "skipped" | "failed" }
         | { ok: false; error: string };
 
       if (!response.ok || !payload.ok) {
@@ -176,11 +177,13 @@ export default function AnswerReviewClientPage() {
 
       const normalizedDraft = normalizeAnswerReviewStructureDraft(payload.draft);
       setStructureDraft(normalizedDraft);
+      setLearningSignalStatus(payload.learningSignalStatus ?? "skipped");
       setMissingPointMemo(normalizedDraft.missingIssueCandidates.join(", "));
       setRevisionParagraph(normalizedDraft.rewriteDraftSuggestion);
       setCurrentStep(2);
     } catch (error) {
       setStructureDraft(null);
+      setLearningSignalStatus(null);
       setStructureError(
         error instanceof Error
           ? error.message
@@ -456,6 +459,19 @@ export default function AnswerReviewClientPage() {
           {currentStep === 2 ? (
             <section id="answer-review-structure-result" className="space-y-4">
               <p className="text-caption leading-5 text-[color:var(--muted)]">먼저 볼 것은 가장 큰 간극 하나입니다.</p>
+              {learningSignalStatus === "saved" ? (
+                <p className="text-caption leading-5 text-[color:var(--muted)]">
+                  학습 신호가 저장되었습니다. (모드: {examMode === "second" ? "감정평가사 2차" : "감정평가사 1차"})
+                </p>
+              ) : null}
+              {learningSignalStatus === "failed" ? (
+                <p className="text-caption leading-5 text-[color:var(--muted)]">
+                  구조화는 완료되었지만 학습 신호 저장은 실패했습니다. 관리자 검증 API로 저장 상태를 확인해 주세요.
+                </p>
+              ) : null}
+              {learningSignalStatus === "skipped" ? (
+                <p className="text-caption leading-5 text-[color:var(--muted)]">현재 요청에서는 학습 신호 저장이 생략되었습니다.</p>
+              ) : null}
               {structureError ? (
                 <p className="text-caption leading-5 text-[color:var(--muted)]">{structureError}</p>
               ) : null}
