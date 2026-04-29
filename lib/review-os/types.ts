@@ -341,6 +341,31 @@ export type WeeklyLearningSummaryRecord = {
   updatedAt: string;
 };
 
+export type LearningSignalEventInput = {
+  examMode: "감정평가사 1차" | "감정평가사 2차";
+  subject: string;
+  sourceType: string;
+  derivedTags: string[];
+  relatedFormulas: string[];
+  nextTaskType: string;
+  nextTask: string;
+  metadataJson?: Record<string, unknown>;
+};
+
+export type LearningSignalEventRecord = LearningSignalEventInput & {
+  id: string;
+  userId: string;
+  createdAt: string;
+};
+
+export type LearningSignalSummary = {
+  totalCount: number;
+  latestEventAt: string | null;
+  topTags: string[];
+  topSubjects: string[];
+  nextTaskTypes: Array<{ type: string; count: number }>;
+};
+
 export type TaxonomyClassificationCandidate = {
   taxonomyNodeId: string;
   mode: "first" | "second";

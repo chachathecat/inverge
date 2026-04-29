@@ -14,6 +14,8 @@ import type {
   AdminAlphaFeed,
   FeedbackItemInput,
   FeedbackItemRecord,
+  LearningSignalEventInput,
+  LearningSignalEventRecord,
   InviteStatus,
   ReviewQueueCard,
   ReviewCompletionAction,
@@ -30,6 +32,7 @@ import type {
   StudyLogRecord,
   TaxonomyClassificationCandidate,
 } from "@/lib/review-os/types";
+import type { AppraisalMode } from "@/lib/review-os/appraisal";
 
 function createUuid() {
   return crypto.randomUUID();
@@ -316,6 +319,26 @@ function mapReviewQueueCard(
     confidence: item.confidence,
     timeSpentSeconds: item.timeSpentSeconds ?? null,
   };
+}
+
+function mapLearningSignalEvent(row: Record<string, unknown>): LearningSignalEventRecord {
+  return {
+    id: String(row.id),
+    userId: String(row.user_id),
+    examMode: String(row.exam_mode) as LearningSignalEventRecord["examMode"],
+    subject: String(row.subject),
+    sourceType: String(row.source_type),
+    derivedTags: toStringArray(row.derived_tags),
+    relatedFormulas: toStringArray(row.related_formulas),
+    nextTaskType: String(row.next_task_type),
+    nextTask: String(row.next_task),
+    metadataJson: typeof row.metadata_json === "object" && row.metadata_json ? (row.metadata_json as Record<string, unknown>) : {},
+    createdAt: String(row.created_at),
+  };
+}
+
+function getExamModeLabel(mode: AppraisalMode): LearningSignalEventRecord["examMode"] {
+  return mode === "second" ? "감정평가사 2차" : "감정평가사 1차";
 }
 
 export class ReviewOsRepository {
@@ -942,6 +965,47 @@ export class ReviewOsRepository {
     const result = await query;
     assertSupabaseOperation("review-os.listActionSeeds", result);
     return ((result.data ?? []) as Record<string, unknown>[]).map(mapActionSeed);
+  }
+
+  async createLearningSignalEvent(userId: string, input: LearningSignalEventInput) {
+    const client = getUserClient(userId);
+    const result = await client.from("learning_signal_events").insert({
+      id: createUuid(),
+      user_id: userId,
+      exam_mode: input.examMode,
+      subject: input.subject,
+      source_type: input.sourceType,
+      derived_tags: input.derivedTags,
+      related_formulas: input.relatedFormulas,
+      next_task_type: input.nextTaskType,
+      next_task: input.nextTask,
+      metadata_json: input.metadataJson ?? {},
+    });
+    assertSupabaseOperation("review-os.createLearningSignalEvent", result);
+  }
+
+  async listLearningSignalEvents(userId: string, mode: AppraisalMode, limit = 30) {
+    const client = getUserClient(userId);
+    const result = await client
+      .from("learning_signal_events")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("exam_mode", getExamModeLabel(mode))
+      .order("created_at", { ascending: false })
+      .limit(limit);
+    assertSupabaseOperation("review-os.listLearningSignalEvents", result);
+    return ((result.data ?? []) as Record<string, unknown>[]).map(mapLearningSignalEvent);
+  }
+
+  async countLearningSignalEvents(userId: string, mode: AppraisalMode) {
+    const client = getUserClient(userId);
+    const result = await client
+      .from("learning_signal_events")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("exam_mode", getExamModeLabel(mode));
+    assertSupabaseOperation("review-os.countLearningSignalEvents", result);
+    return result.count ?? 0;
   }
 
   async logUsageEvent(

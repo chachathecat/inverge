@@ -7,6 +7,7 @@ import {
   getModeLabel,
   normalizePreferredSubjectsForMode,
   normalizeSubjectForMode,
+  type AppraisalMode,
   resolveAppraisalMode,
 } from "@/lib/review-os/appraisal";
 import { getEntitlementLimit } from "@/lib/review-os/entitlements";
@@ -21,6 +22,8 @@ import type {
   AccessState,
   AdminAlphaFeed,
   FeedbackItemInput,
+  LearningSignalEventInput,
+  LearningSignalSummary,
   ReviewQueueCard,
   StudyProfile,
   TodayFocus,
@@ -513,6 +516,35 @@ export class ReviewOsInvalidCompletionActionError extends Error {
 }
 
 export class ReviewOsService {
+  async createLearningSignalEvent(userId: string, email: string | null, input: LearningSignalEventInput) {
+    await this.ensureAccess(userId, email);
+    return reviewOsRepository.createLearningSignalEvent(userId, input);
+  }
+
+  async getLearningSignalSummary(userId: string, email: string | null, mode: AppraisalMode): Promise<LearningSignalSummary> {
+    await this.ensureAccess(userId, email);
+    const events = await reviewOsRepository.listLearningSignalEvents(userId, mode, 50);
+    const totalCount = await reviewOsRepository.countLearningSignalEvents(userId, mode);
+    const tagCount = new Map<string, number>();
+    const subjectCount = new Map<string, number>();
+    const nextTaskTypeCount = new Map<string, number>();
+    for (const event of events) {
+      subjectCount.set(event.subject, (subjectCount.get(event.subject) ?? 0) + 1);
+      nextTaskTypeCount.set(event.nextTaskType, (nextTaskTypeCount.get(event.nextTaskType) ?? 0) + 1);
+      for (const tag of event.derivedTags) tagCount.set(tag, (tagCount.get(tag) ?? 0) + 1);
+    }
+    const rank = (map: Map<string, number>, limit = 3) =>
+      [...map.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, limit);
+    return {
+      totalCount,
+      latestEventAt: events[0]?.createdAt ?? null,
+      topTags: rank(tagCount).map(([tag]) => tag),
+      topSubjects: rank(subjectCount).map(([subject]) => subject),
+      nextTaskTypes: rank(nextTaskTypeCount).map(([type, count]) => ({ type, count })),
+    };
+  }
   private resolveFollowUpDueAtFromAction(
     action: ReviewCompletionAction,
     examName: string,
