@@ -6,7 +6,6 @@ import { TodayFirstSubjectSelector } from "@/components/review-os/today-first-su
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getModeConfig, normalizeSubjectForMode, resolveAppraisalMode } from "@/lib/review-os/appraisal";
-import { CALCULATOR_WORKFLOWS } from "@/lib/review-os/calculator-workflow";
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
 import { reviewOsService } from "@/lib/review-os/service";
 import { buildNotebookPreview } from "@/lib/review-os/study-note";
@@ -102,7 +101,6 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
   const primaryHref = todayPlan.hasPlan ? resolveTodayPlanHref(todayPlan.actionKind) : defaultPrimaryHref;
   const diagnosedWeakPoint = selectedQueueItem?.mistakeType ?? (items[0] ? buildNotebookPreview(items[0]).weakPoint : config.emptyTitle);
   const notebookPreview = items.slice(0, 3).map((item) => buildNotebookPreview(item));
-  const calculatorWorkflow = mode === "second" ? CALCULATOR_WORKFLOWS.practice : CALCULATOR_WORKFLOWS.accounting;
   const shouldShowFirstSubjectSelector = mode === "first" && isFirstSetStart;
   let recentStudyLog: Awaited<ReturnType<typeof reviewOsService.getRecentStudyLog>> | null = null;
   if (mode === "first") {
@@ -159,18 +157,6 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
       </section>
 
       <section className="space-y-4">
-        <Card className="border-[color:var(--border-subtle)] bg-[color:var(--surface)] shadow-none">
-          <CardHeader className="p-4 sm:p-6">
-            <CardTitle>학습 신호 요약</CardTitle>
-            <CardDescription>답안 검토에서 누적된 다음 행동 신호입니다.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2 p-4 pt-0 text-sm sm:p-6 sm:pt-0">
-            <p>누적 {learningSignal?.totalCount ?? 0}건 · 최근 {learningSignal?.latestEventAt ? new Date(learningSignal.latestEventAt).toLocaleDateString("ko-KR") : "-"}</p>
-            <p>주요 과목: {(learningSignal?.topSubjects ?? []).join(", ") || "-"}</p>
-            <p>주요 태그: {(learningSignal?.topTags ?? []).join(", ") || "-"}</p>
-          </CardContent>
-        </Card>
-
         {firstUse ? (
           <Card className="border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] shadow-none">
             <CardHeader className="space-y-3 p-4 sm:p-6">
@@ -244,26 +230,25 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                       {todayPlan.ctaLabel}
                     </Button>
                   </Link>
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-[color:var(--muted)]">
-                    <span>다른 작업 선택:</span>
-                    {mode === "first" ? (
-                      <Link
-                        href={`/app/study-log?mode=first&subject=${encodeURIComponent(normalizeSubjectForMode(selectedQueueItem?.subjectLabel, "first"))}`}
-                        className="underline-offset-2 hover:underline"
-                      >
-                        공부 기록 입력
+                  <details className="w-full rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] sm:w-auto sm:min-w-[20rem]">
+                    <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">다른 작업 보기</summary>
+                    <div className="flex flex-col gap-2 border-t border-[color:var(--border-subtle)] px-4 py-3 text-xs text-[color:var(--muted)]">
+                      {mode === "first" ? (
+                        <Link
+                          href={`/app/study-log?mode=first&subject=${encodeURIComponent(normalizeSubjectForMode(selectedQueueItem?.subjectLabel, "first"))}`}
+                          className="underline-offset-2 hover:underline"
+                        >
+                          공부 기록 입력
+                        </Link>
+                      ) : null}
+                      <Link href={secondaryHref} className="underline-offset-2 hover:underline">
+                        {config.secondaryCta}
                       </Link>
-                    ) : null}
-                    <Link href={secondaryHref} className="underline-offset-2 hover:underline">
-                      {config.secondaryCta}
-                    </Link>
-                    <Link href={`/app/weekly?mode=${mode}`} className="underline-offset-2 hover:underline">
-                      주간 정리
-                    </Link>
-                    <Link href={`/app/calculator?context=${calculatorWorkflow.context}&mode=${mode}`} className="underline-offset-2 hover:underline">
-                      계산기 스텝
-                    </Link>
-                  </div>
+                      <Link href={`/app/weekly?mode=${mode}`} className="underline-offset-2 hover:underline">
+                        주간 정리
+                      </Link>
+                    </div>
+                  </details>
                 </div>
               )}
               {mode === "first" && recentStudyLog ? (
@@ -296,10 +281,21 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
           </Card>
         )}
 
+
+
+        <details className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
+          <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">학습 신호 요약 보기</summary>
+          <div className="space-y-2 border-t border-[color:var(--border-subtle)] p-4 text-sm">
+            <p>누적 {learningSignal?.totalCount ?? 0}건 · 최근 {learningSignal?.latestEventAt ? new Date(learningSignal.latestEventAt).toLocaleDateString("ko-KR") : "-"}</p>
+            <p>주요 과목: {(learningSignal?.topSubjects ?? []).join(", ") || "-"}</p>
+            <p>주요 태그: {(learningSignal?.topTags ?? []).join(", ") || "-"}</p>
+          </div>
+        </details>
+
         <section className="space-y-3">
           <details className="group rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
             <summary className="cursor-pointer list-none px-4 py-4 text-sm font-medium text-[color:var(--foreground-strong)] sm:px-5">
-              입력 기록 기준 요약 보기
+              기록 요약 보기
             </summary>
             <div className="space-y-5 border-t border-[color:var(--border-subtle)] px-4 py-5 sm:px-5">
               <div className="grid gap-3 text-sm lg:grid-cols-3">
@@ -344,7 +340,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
 
               <Card className="border-[color:var(--border-subtle)] shadow-none">
                 <CardHeader>
-                  <CardTitle>자동 정리 노트</CardTitle>
+                  <CardTitle>정리된 기록</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {notebookPreview.length === 0 ? (
@@ -365,7 +361,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                             {note.noteLabel}
                           </span>
                         </div>
-                        <p className="mt-3 text-xs leading-5 text-[color:var(--muted)]">다음 review: {note.nextReviewDate}</p>
+                        <p className="mt-3 text-xs leading-5 text-[color:var(--muted)]">다음 확인: {note.nextReviewDate}</p>
                       </Link>
                     ))
                   )}
