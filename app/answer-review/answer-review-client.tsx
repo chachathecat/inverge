@@ -292,7 +292,7 @@ export default function AnswerReviewClientPage() {
           <RefinedBadge tone="amber">최종 판단은 검토자 확인이 필요합니다</RefinedBadge>
         </div>
         <p className="text-caption leading-5 text-[color:var(--muted)]">
-          의미 있는 입력만 학습 기록에 반영되며, 원문 답안은 학습 신호 요약에 직접 저장하지 않습니다.
+          의미 있는 입력만 학습 기록에 반영되며, 원문 답안은 기록 요약에 직접 저장하지 않습니다.
         </p>
 
         <section className="space-y-4 rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-4 sm:p-5">
@@ -480,7 +480,9 @@ export default function AnswerReviewClientPage() {
                 </p>
               ) : null}
               {learningSignalStatus === "skipped" ? (
-                <p className="text-caption leading-5 text-[color:var(--muted)]">입력 정보가 짧아 이번에는 학습 기록 반영을 보류했습니다. 필요한 항목을 보강해 다시 검토해 주세요.</p>
+                <p className="text-caption leading-5 text-[color:var(--muted)]">
+                  이번 검토는 학습 기록에 반영하지 않았습니다. 결과가 충분히 구체적이지 않으면 기록에 남기지 않습니다.
+                </p>
               ) : null}
               {structureError ? (
                 <p className="text-caption leading-5 text-[color:var(--muted)]">{structureError}</p>
@@ -537,7 +539,7 @@ export default function AnswerReviewClientPage() {
             <summary className="cursor-pointer text-sm font-medium text-[color:var(--foreground-strong)]">보조 영역 펼치기</summary>
             <div className="mt-3 space-y-3">
               <section id="manual-comparison-preview" className="space-y-2">
-                <p className="text-caption font-medium text-[color:var(--muted)]">Flow cards</p>
+                <p className="text-caption font-medium text-[color:var(--muted)]">검토 흐름</p>
                 <ul className="space-y-1 text-caption leading-5 text-[color:var(--muted)]">
                   <li>1) 문제/사례 입력</li>
                   <li>2) 내 답안 입력</li>

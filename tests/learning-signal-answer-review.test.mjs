@@ -254,7 +254,7 @@ test("today plan uses recent learning signal for primary task", () => {
   });
 
   assert.equal(plan.hasPlan, true);
-  assert.equal(plan.reason.includes("보상법규"), true);
+  assert.equal(plan.reason, "최근 답안 검토 기록을 기준으로 가장 먼저 보강할 작업을 골랐습니다.");
   assert.equal(plan.ctaLabel, "문단 다시쓰기");
   assert.equal(plan.actionKind, "second_review");
 });
