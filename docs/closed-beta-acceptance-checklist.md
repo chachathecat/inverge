@@ -1,130 +1,305 @@
 # Inverge Closed Beta Acceptance Checklist
 
-## 목적
-Closed Beta 초대 전, 운영팀/QA가 학습자 핵심 경험(감정평가사 1차/2차)과 데이터 안전성을 일관되게 검증하기 위한 수동 점검 체크리스트다.
+이 문서는 **감정평가사 1차/2차** 범위에서, 클로즈드 베타 사용자 초대 전에 수행해야 하는 수동 QA 체크리스트입니다.
 
-## 사용 범위
-- learner-facing 범위: **감정평가사 1차, 감정평가사 2차**
-- 본 문서는 기능 변경이 아닌 **수용(acceptance) 확인** 목적
-- 점검 중 발견 이슈는 severity와 재현 절차를 함께 기록
+- 목적: 초대 전 최소 품질 기준 확인
+- 범위: 문서 기반 수동 검증 (제품 동작 변경 없음)
+- 제외: 스키마/Auth/Gemini/Supabase/learning-signal 로직/라우트/UI/카피 변경 작업
 
 ---
 
-## 1) First-stage happy path (1차)
+## 테스트 기본 정보
 
-### 1-1. 진입/컨텍스트
-- [ ] 로그인 후 학습 앱으로 정상 진입된다.
-- [ ] `/app?mode=first` 진입 시 1차 컨텍스트가 명확하다.
-- [ ] 2차 전용 안내/CTA와 혼선이 없다.
-
-### 1-2. 문제 풀이 → 피드백 → 다음 행동
-- [ ] 1차 문항 학습 흐름(입력/제출/결과)이 오류 없이 완료된다.
-- [ ] 결과 화면이 점수만 보여주고 끝나지 않으며, 즉시 실행 가능한 다음 행동(재시도/복기/예약 복습)을 제공한다.
-- [ ] 한 화면의 1차 행동이 3개 이상 경쟁하지 않는다(주요 CTA 1개 중심).
-
-### 1-3. 기록 반영
-- [ ] 방금 수행한 1차 학습 활동이 Records에 반영된다.
-- [ ] 시간순/학습 맥락이 이해 가능하게 표시된다.
+- 테스트 일시:
+- 테스트 환경 (예: local/staging):
+- 테스트 계정:
+- 테스트 담당자:
+- 앱 버전/커밋:
 
 ---
 
-## 2) Second-stage happy path (2차)
+## 결과 기록 포맷 (모든 항목 공통)
 
-### 2-1. 진입/컨텍스트
-- [ ] `/app?mode=second` 진입 시 2차 컨텍스트가 명확하다.
-- [ ] 1차 카피/레이아웃과 혼선이 없다.
+각 항목마다 아래 형식으로 기록합니다.
 
-### 2-2. write → compare → rewrite 루프
-- [ ] Write: 답안 작성 입력이 정상 동작한다.
-- [ ] Compare: 비교 피드백을 읽고 핵심 갭을 식별할 수 있다.
-- [ ] Rewrite: 재작성으로 자연스럽게 이어진다.
-- [ ] 각 단계의 CTA가 다음 목적지와 의미적으로 일치한다.
+- **Status:** Pass / Fail / Needs fix
+- **Notes:** 관찰 내용, 재현 조건, 기대 대비 차이
+- **Screenshot (optional):** 파일 경로 또는 링크
 
-### 2-3. 기록 반영
-- [ ] 2차 활동이 Records에 반영된다.
-- [ ] “무엇을 했는지/다음에 무엇을 할지”가 사용자 기준으로 명확하다.
+예시:
+
+- Status: Pass
+- Notes: `/app?mode=first` 진입 직후 첫 카드가 단일 CTA로 노출되며, 클릭 시 입력 화면으로 이동함.
+- Screenshot (optional): `screenshots/first-home-cta.png`
 
 ---
 
-## 3) Answer-review learning signal path
+## 1) 1차 (First-stage) 해피패스
 
-### 3-1. 정상 저장 케이스
-- [ ] 충분한 길이와 의미를 가진 입력으로 answer-review를 수행한다.
-- [ ] 완료 후 learning signal 이벤트가 정상 저장된다.
+### 1.1 로그인
+- [ ] 로그인 가능 여부 확인
+- 기록:
+  - Status:
+  - Notes:
+  - Screenshot (optional):
 
-### 3-2. 차단 케이스
-- [ ] 무의미하거나 지나치게 짧은 입력을 시도한다.
-- [ ] 시스템이 진행을 차단하고 수정 유도 메시지를 제공한다.
-- [ ] 차단 케이스에서는 learning signal이 저장되지 않는다.
+### 1.2 `/app?mode=first` 이동
+- [ ] URL 진입 후 1차 모드로 정상 로드되는지 확인
+- 기록:
+  - Status:
+  - Notes:
+  - Screenshot (optional):
 
-### 3-3. fallback-heavy 보호
-- [ ] fallback-heavy 결과 상황을 재현한다.
-- [ ] 결과 노출 여부와 무관하게 learning signal 저장이 방지된다.
-- [ ] 사용자 메시지에 내부 구현 용어가 노출되지 않는다.
+### 1.3 첫 가시 카드의 단일 다음 행동
+- [ ] 첫 번째로 보이는 카드가 **명확한 하나의 다음 행동**을 제시하는지 확인
+- 기록:
+  - Status:
+  - Notes:
+  - Screenshot (optional):
+
+### 1.4 입력 화면 진입
+- [ ] 상단 내비 또는 CTA를 통해 `입력`으로 이동
+- 기록:
+  - Status:
+  - Notes:
+  - Screenshot (optional):
+
+### 1.5 오답/학습 기록 1건 추가
+- [ ] 오답 또는 학습 기록 1건 저장
+- 기록:
+  - Status:
+  - Notes:
+  - Screenshot (optional):
+
+### 1.6 `/app?mode=first` 복귀 후 Today Plan 확인
+- [ ] 홈 복귀 시 Today Plan이 업데이트되거나, 합리적인 다음 행동을 제시하는지 확인
+- 기록:
+  - Status:
+  - Notes:
+  - Screenshot (optional):
+
+### 1.7 기록 화면 확인
+- [ ] `기록`에서 아래 항목이 이해 가능한지 확인
+  - 최근 기록
+  - 반복 약점
+  - 다시 볼 항목
+  - 주간 정리
+- 기록:
+  - Status:
+  - Notes:
+  - Screenshot (optional):
 
 ---
 
-## 4) Records page check
-- [ ] 최신 학습 활동이 지연 없이 보인다.
-- [ ] 1차/2차 기록이 명확히 구분된다.
-- [ ] 기록 항목에서 다음 행동으로 이동하는 CTA가 동작한다.
-- [ ] 빈 상태/오류 상태 문구가 차분하고 운영적 톤을 유지한다.
+## 2) 2차 (Second-stage) 해피패스
+
+### 2.1 `/app?mode=second` 이동
+- [ ] URL 진입 후 2차 모드로 정상 로드되는지 확인
+- 기록:
+  - Status:
+  - Notes:
+  - Screenshot (optional):
+
+### 2.2 명확한 단일 다음 행동 확인
+- [ ] 홈 첫 영역에서 **하나의 분명한 다음 행동**이 보이는지 확인
+- 기록:
+  - Status:
+  - Notes:
+  - Screenshot (optional):
+
+### 2.3 답안 작성 또는 답안 리뷰 시작
+- [ ] 답안 작성/답안 리뷰 중 하나를 시작
+- 기록:
+  - Status:
+  - Notes:
+  - Screenshot (optional):
+
+### 2.4 답안/리뷰 기록 1건 추가
+- [ ] 답안 또는 리뷰 기록 1건 저장
+- 기록:
+  - Status:
+  - Notes:
+  - Screenshot (optional):
+
+### 2.5 `/app?mode=second` 복귀 후 Today Plan 확인
+- [ ] 홈 복귀 시 Today Plan이 업데이트되는지 확인
+- 기록:
+  - Status:
+  - Notes:
+  - Screenshot (optional):
+
+### 2.6 기록 화면 확인
+- [ ] `기록`에서 아래 항목이 이해 가능한지 확인
+  - 최근 답안 기록
+  - 반복 약점
+  - 다시 볼 항목
+  - 주간 정리
+- 기록:
+  - Status:
+  - Notes:
+  - Screenshot (optional):
 
 ---
 
-## 5) Today Plan check
-- [ ] 1차 활동 직후 Today Plan이 갱신된다.
-- [ ] 2차 활동 직후 Today Plan이 갱신된다.
-- [ ] 항목 우선순위/상태가 실제 방금 수행한 행동과 일치한다.
-- [ ] Today Plan이 score-only 종결이 아니라 실행 행동(재시도/재작성/복습 예약)을 제시한다.
+## 3) 답안 리뷰 경로 (Answer-review path)
+
+### 3.1 의미 있는 입력 → 리뷰 결과 생성
+- [ ] 충분한 길이/내용의 입력 시 리뷰 결과가 생성되는지 확인
+- 기록:
+  - Status:
+  - Notes:
+  - Screenshot (optional):
+
+### 3.2 의미 있는 결과 → learning signal 저장
+- [ ] 의미 있는 리뷰 결과일 때 learning signal이 저장되는지 확인
+- 기록:
+  - Status:
+  - Notes:
+  - Screenshot (optional):
+
+### 3.3 불충분/placeholder 입력 차단
+- [ ] placeholder 수준 입력은 차단되며, **차분한 톤의 안내 문구**가 표시되는지 확인
+- 기록:
+  - Status:
+  - Notes:
+  - Screenshot (optional):
+
+### 3.4 fallback-heavy 결과 저장 방지
+- [ ] fallback-heavy로 판단되는 결과는 learning signal 저장이 되지 않는지 확인
+- 기록:
+  - Status:
+  - Notes:
+  - Screenshot (optional):
+
+### 3.5 사용자 카피의 내부 용어 노출 금지
+- [ ] 사용자 노출 카피에서 아래 내부 용어가 나타나지 않는지 확인
+  - Gemini
+  - API
+  - review queue
+  - raw field names
+- 기록:
+  - Status:
+  - Notes:
+  - Screenshot (optional):
 
 ---
 
-## 6) Supabase data checks
+## 4) 데이터 검증
 
-### 6-1. learning_signal_events 안전성
-- [ ] `learning_signal_events`에 raw answer/question/reference 원문 텍스트가 저장되지 않는다.
-- [ ] 최소 3건 이상 샘플 레코드로 반복 확인한다.
+> 필요 시 DB 콘솔/관리자 검증 엔드포인트를 사용하되, 사용자 개인정보/원문 데이터 노출 없이 점검합니다.
 
-### 6-2. 모드 분리
-- [ ] first/second 모드 값이 정확히 저장된다.
-- [ ] 1차/2차 데이터 교차 오염이 없다.
+### 4.1 `learning_signal_events` 저장 필드 제한
+- [ ] 다음 파생 필드만 저장되는지 확인
+  - derived tags
+  - nextTask
+  - subject
+  - mode
+  - sourceType
+  - metadata
+- 기록:
+  - Status:
+  - Notes:
+  - Screenshot (optional):
 
-### 6-3. 검증 응답 로그 안전성
-- [ ] 관리자 검증/확인 응답이 log-safe 형식이다.
-- [ ] 민감 데이터 및 내부 디버그 필드가 노출되지 않는다.
+### 4.2 원문 데이터 미저장
+- [ ] 아래 원문 데이터가 저장되지 않는지 확인
+  - raw question
+  - raw answer
+  - OCR text
+  - reference answer
+- 기록:
+  - Status:
+  - Notes:
+  - Screenshot (optional):
+
+### 4.3 1차/2차 signal 혼합 방지
+- [ ] first/second 모드 signal이 서로 섞이지 않는지 확인
+- 기록:
+  - Status:
+  - Notes:
+  - Screenshot (optional):
+
+### 4.4 Admin verify endpoint 로그-세이프 출력
+- [ ] 관리자 검증 endpoint가 로그-세이프 출력만 반환하는지 확인
+- 기록:
+  - Status:
+  - Notes:
+  - Screenshot (optional):
 
 ---
 
-## 7) Copy/CTA wrapping checks
-- [ ] Primary CTA 텍스트가 모바일/데스크톱에서 어색하게 줄바꿈되지 않는다.
-- [ ] 버튼 라벨과 실제 이동 목적지가 일치한다.
-- [ ] 학습자 화면에서 내부 용어(예: API, raw field, model/provider 명칭)가 노출되지 않는다.
-- [ ] 카피 톤이 차분하고 정확하며 과장된 AI 마케팅 표현을 사용하지 않는다.
+## 5) UX 검증
+
+### 5.1 Primary CTA 시각적 우선순위
+- [ ] 주요 CTA가 다른 액션 대비 시각적으로 우선되는지 확인
+- 기록:
+  - Status:
+  - Notes:
+  - Screenshot (optional):
+
+### 5.2 버튼 라벨-목적지 일치
+- [ ] 버튼 라벨이 실제 이동 목적지/행동과 일치하는지 확인
+- 기록:
+  - Status:
+  - Notes:
+  - Screenshot (optional):
+
+### 5.3 한국어 CTA 줄바꿈 자연스러움
+- [ ] CTA 텍스트 줄바꿈이 어색하지 않은지 확인
+- 기록:
+  - Status:
+  - Notes:
+  - Screenshot (optional):
+
+### 5.4 상단 내비 단순성
+- [ ] 상단 내비가 `오늘 할 일 / 입력 / 기록` 중심으로 단순하게 유지되는지 확인
+- 기록:
+  - Status:
+  - Notes:
+  - Screenshot (optional):
+
+### 5.5 기록 화면의 비-대시보드 톤
+- [ ] 기록 페이지가 복잡한 관제 대시보드처럼 느껴지지 않는지 확인
+- 기록:
+  - Status:
+  - Notes:
+  - Screenshot (optional):
+
+### 5.6 빈 상태의 단일 다음 행동 유도
+- [ ] 빈 상태에서 사용자가 해야 할 다음 행동 1개가 명확한지 확인
+- 기록:
+  - Status:
+  - Notes:
+  - Screenshot (optional):
 
 ---
 
-## 8) Required commands
-아래 명령은 Closed Beta 승인 전 반드시 실행하고 결과를 기록한다.
+## 6) 실행 커맨드
+
+아래 커맨드를 실행하고 결과를 기록합니다.
 
 - [ ] `npm run test:learning-signal`
 - [ ] `npm run check:taxonomy`
 
-실행 기록 템플릿
-- 실행 일시:
-- 실행 환경(브랜치/배포 SHA/DB 환경):
-- 명령:
-- 결과(성공/실패):
-- 실패 시 원인 요약:
-- 재실행 결과:
+기록:
+- Command:
+- Exit code:
+- Status: Pass / Fail / Needs fix
+- Notes:
 
 ---
 
-## 최종 승인 게이트
-- [ ] 본 문서 전체 체크 완료
-- [ ] 차단 이슈 0건(로그인 실패, 모드 혼선, 기록 누락, 민감 데이터 노출, 핵심 경로 중단)
-- [ ] 잔여 경미 이슈는 티켓화 및 오너/ETA 지정 완료
+## 7) 최종 게이트 (베타 초대 전)
 
-### 승인 결론
-- [ ] Closed Beta 초대 진행 가능
-- [ ] Closed Beta 초대 보류 (사유 기입):
+아래 조건을 모두 만족해야 클로즈드 베타 초대 진행이 가능합니다.
+
+- [ ] 섹션 1~5의 치명 이슈(사용 불가/데이터 오염/모드 혼합/오해 유발 카피) 없음
+- [ ] 섹션 6 커맨드 통과 또는 차단 사유와 대응 계획 문서화 완료
+- [ ] Fail/Needs fix 항목에 대해 담당자와 수정 일정이 배정됨
+- [ ] 범위가 감정평가사 1차/2차로 유지됨
+
+최종 판정:
+- Release Decision: Go / No-Go
+- 결정일:
+- 결정자:
+- 비고:
