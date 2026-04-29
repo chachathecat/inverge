@@ -20,10 +20,10 @@ export async function GET() {
     }
 
     const [firstCount, secondCount, firstRecent, secondRecent] = await Promise.all([
-      reviewOsService.countLearningSignalEvents(session.userId, "first"),
-      reviewOsService.countLearningSignalEvents(session.userId, "second"),
-      reviewOsService.listLearningSignalEvents(session.userId, "first", 5),
-      reviewOsService.listLearningSignalEvents(session.userId, "second", 5),
+      reviewOsService.countLearningSignalEvents(session.userId, session.email, "first"),
+      reviewOsService.countLearningSignalEvents(session.userId, session.email, "second"),
+      reviewOsService.listLearningSignalEvents(session.userId, session.email, "first", 5),
+      reviewOsService.listLearningSignalEvents(session.userId, session.email, "second", 5),
     ]);
 
     return NextResponse.json({

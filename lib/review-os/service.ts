@@ -521,10 +521,20 @@ export class ReviewOsService {
     return reviewOsRepository.createLearningSignalEvent(userId, input);
   }
 
+  async countLearningSignalEvents(userId: string, email: string | null, mode: AppraisalMode) {
+    await this.ensureAccess(userId, email);
+    return reviewOsRepository.countLearningSignalEvents(userId, mode);
+  }
+
+  async listLearningSignalEvents(userId: string, email: string | null, mode: AppraisalMode, limit = 30) {
+    await this.ensureAccess(userId, email);
+    return reviewOsRepository.listLearningSignalEvents(userId, mode, limit);
+  }
+
   async getLearningSignalSummary(userId: string, email: string | null, mode: AppraisalMode): Promise<LearningSignalSummary> {
     await this.ensureAccess(userId, email);
-    const events = await reviewOsRepository.listLearningSignalEvents(userId, mode, 50);
-    const totalCount = await reviewOsRepository.countLearningSignalEvents(userId, mode);
+    const events = await this.listLearningSignalEvents(userId, email, mode, 50);
+    const totalCount = await this.countLearningSignalEvents(userId, email, mode);
     const tagCount = new Map<string, number>();
     const subjectCount = new Map<string, number>();
     const nextTaskTypeCount = new Map<string, number>();
