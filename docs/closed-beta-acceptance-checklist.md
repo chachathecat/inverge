@@ -272,6 +272,19 @@
   - Notes:
   - Screenshot (optional):
 
+### 5.7 Paid beta readiness checks
+- [ ] 신규 사용자가 첫 행동(입력 1개)을 5초 내 이해하는지 확인
+- [ ] Primary CTA 라벨과 실제 목적지가 모드별로 일치하는지 확인
+- [ ] 사용자 화면에 내부 용어(API/Gemini/raw field/review queue)가 직접 노출되지 않는지 확인
+- [ ] 의미 있는 입력 시 Today Plan/검토 결과가 실제 다음 행동으로 이어지는지 확인
+- [ ] 입력이 부족할 때 오류처럼 보이지 않고 차분한 안내로 보강을 유도하는지 확인
+- [ ] Today Plan/기록 화면이 누적 가치(최근 행동/반복 신호/다시 볼 항목)를 보여주는지 확인
+- [ ] 초대 기반 접근 통제(invite gating)가 유지되고 비초대 사용자가 학습 플로우로 진입하지 않는지 확인
+- 기록:
+  - Status:
+  - Notes:
+  - Screenshot (optional):
+
 ---
 
 ## 6) 실행 커맨드

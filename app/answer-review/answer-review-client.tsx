@@ -288,9 +288,12 @@ export default function AnswerReviewClientPage() {
     <RefinedShell className="space-y-5 py-6 sm:space-y-8 sm:py-10">
       <section className="space-y-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] p-4 sm:p-6">
         <div className="flex flex-wrap items-center gap-2">
-          <RefinedBadge>운영자용 베타</RefinedBadge>
-          <RefinedBadge tone="amber">강사 검수 전 확정 금지</RefinedBadge>
+          <RefinedBadge>검토 보조 초안 베타</RefinedBadge>
+          <RefinedBadge tone="amber">최종 판단은 검토자 확인이 필요합니다</RefinedBadge>
         </div>
+        <p className="text-caption leading-5 text-[color:var(--muted)]">
+          의미 있는 입력만 학습 기록에 반영되며, 원문 답안은 학습 신호 요약에 직접 저장하지 않습니다.
+        </p>
 
         <section className="space-y-4 rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-4 sm:p-5">
           <div className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface)] p-3">
@@ -477,7 +480,7 @@ export default function AnswerReviewClientPage() {
                 </p>
               ) : null}
               {learningSignalStatus === "skipped" ? (
-                <p className="text-caption leading-5 text-[color:var(--muted)]">이번 검토는 학습 기록에 반영되지 않았습니다.</p>
+                <p className="text-caption leading-5 text-[color:var(--muted)]">입력 정보가 짧아 이번에는 학습 기록 반영을 보류했습니다. 필요한 항목을 보강해 다시 검토해 주세요.</p>
               ) : null}
               {structureError ? (
                 <p className="text-caption leading-5 text-[color:var(--muted)]">{structureError}</p>
