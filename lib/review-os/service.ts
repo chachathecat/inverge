@@ -1124,6 +1124,20 @@ export class ReviewOsService {
     return logs[0] ?? null;
   }
 
+  async hasMeaningfulLearningData(userId: string, email: string | null, mode: "first" | "second") {
+    await this.ensureAccess(userId, email);
+    const [items, queue, learningSignals, recentStudyLog] = await Promise.all([
+      this.listWrongAnswerItems(userId, email, 1).catch(() => []),
+      this.getReviewQueue(userId, email).catch(() => []),
+      this.listLearningSignalEvents(userId, email, mode, 1).catch(() => []),
+      this.getRecentStudyLog(userId, email, mode).catch(() => null),
+    ]);
+    const modeLabel = getModeLabel(mode);
+    const hasItems = items.some((item) => item.examName === modeLabel);
+    const hasQueue = queue.some((item) => item.examName === modeLabel);
+    return hasItems || hasQueue || learningSignals.length > 0 || Boolean(recentStudyLog);
+  }
+
   getAdminFeed(): Promise<AdminAlphaFeed> {
     return reviewOsRepository.getAdminAlphaFeed(80);
   }
