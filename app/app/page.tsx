@@ -150,7 +150,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
         <div>
           <h2 className="text-xl font-medium tracking-[-0.04em] text-[color:var(--foreground-strong)] sm:text-2xl">{config.pageTitle}</h2>
           <p className="mt-2 max-w-2xl text-sm leading-7 text-[color:var(--muted)]">
-            입력 기록을 바탕으로 오늘 할 일을 한 가지로 줄입니다.
+            입력을 바탕으로 오늘 할 일을 한 가지로 줄입니다.
           </p>
           <p className="mt-1 max-w-2xl text-xs leading-6 text-[color:var(--muted)]">채점 확정이 아니라, 다음 행동을 정리하는 학습 운영 도구입니다.</p>
         </div>
@@ -225,7 +225,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
               </div>
               <CardTitle>지금 해야 할 한 가지에만 집중합니다.</CardTitle>
               <CardDescription className="max-w-[66ch]">
-                이미 남긴 입력 기록에서 다음 복습 신호를 정리했습니다. 먼저 실행하고, 이후 입력·복습을 차분히 이어갑니다.
+                이미 남긴 입력에서 다음 복습 신호를 정리했습니다. 먼저 실행하고, 이후 입력·복습을 차분히 이어갑니다.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 p-4 pt-0 sm:space-y-4 sm:p-6 sm:pt-0">
@@ -270,10 +270,10 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
               {mode === "first" && recentStudyLog ? (
                 <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-4 py-3 text-sm">
                   <p className="text-[color:var(--foreground-strong)]">
-                    최근 기록: {recentStudyLog.subject} {recentStudyLog.sourceLabel} / 확신도 {recentStudyLog.confidence}
+                    최근 입력: {recentStudyLog.subject} {recentStudyLog.sourceLabel} / 확신도 {recentStudyLog.confidence}
                   </p>
                   {recentStudyTaxonomyLine ? <p className="mt-1 text-xs text-[color:var(--muted)]">{recentStudyTaxonomyLine}</p> : null}
-                  <p className="mt-1 text-xs text-[color:var(--muted)]">기록을 기준으로 다음 복습 범위를 정리했습니다.</p>
+                  <p className="mt-1 text-xs text-[color:var(--muted)]">입력을 기준으로 다음 복습 범위를 정리했습니다.</p>
                 </div>
               ) : null}
               <details className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
@@ -300,7 +300,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
 
 
         <details className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
-          <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">노트 요약 보기</summary>
+          <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">누적 신호 보기</summary>
           <div className="space-y-2 border-t border-[color:var(--border-subtle)] p-4 text-sm">
             <p>누적 {learningSignal?.totalCount ?? 0}건 · 최근 {learningSignal?.latestEventAt ? new Date(learningSignal.latestEventAt).toLocaleDateString("ko-KR") : "-"}</p>
             <p>주요 과목: {(learningSignal?.topSubjects ?? []).join(", ") || "-"}</p>
@@ -311,7 +311,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
         <section className="space-y-3">
           <details className="group rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
             <summary className="cursor-pointer list-none px-4 py-4 text-sm font-medium text-[color:var(--foreground-strong)] sm:px-5">
-              노트 요약 보기
+              노트와 주간 흐름 보기
             </summary>
             <div className="space-y-5 border-t border-[color:var(--border-subtle)] px-4 py-5 sm:px-5">
               <div className="grid gap-3 text-sm lg:grid-cols-3">
@@ -349,7 +349,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                       </Link>
                     </>
                   ) : (
-                    <p className="text-sm text-[color:var(--muted)]">아직 주간 정리가 없습니다. 기록이 쌓이면 우선순위가 만들어집니다.</p>
+                    <p className="text-sm text-[color:var(--muted)]">아직 주간 정리가 없습니다. 입력이 쌓이면 우선순위가 만들어집니다.</p>
                   )}
                 </CardContent>
               </Card>

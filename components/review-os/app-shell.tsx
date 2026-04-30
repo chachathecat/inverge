@@ -44,7 +44,7 @@ export function ReviewOsAppShell({ email, mode, children, rightSlot }: AppShellP
               {config.shortLabel}
             </span>
           </div>
-          <p className="text-xs text-[color:var(--muted)]">{config.label} 운영 화면</p>
+          <p className="text-xs text-[color:var(--muted)]">{config.label} 학습 루프</p>
         </div>
         <div className="flex flex-col items-start gap-3 sm:items-end">
           {rightSlot}
@@ -56,7 +56,7 @@ export function ReviewOsAppShell({ email, mode, children, rightSlot }: AppShellP
       </div>
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="text-sm text-[color:var(--muted)]">{config.label} 실행 화면</div>
+        <div className="text-sm text-[color:var(--muted)]">{config.label} 오늘의 학습 공간</div>
         <nav className="overflow-x-auto">
           <div className="flex min-w-max gap-2">
             {NAV_ITEMS.map((item) => {
