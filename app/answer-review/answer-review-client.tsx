@@ -332,7 +332,7 @@ export default function AnswerReviewClientPage() {
           {currentStep === 1 ? (
             <section className="space-y-4">
               <p className="text-caption leading-5 text-[color:var(--muted)]">
-                답안을 먼저 정리해 핵심 간극을 빠르게 확인합니다. 필요하면 텍스트 입력으로 계속 검토할 수 있습니다.
+                텍스트 입력이 가장 빠른 기본 경로입니다. 이미 쓴 답안을 붙여 넣고 바로 검토를 시작하세요.
               </p>
               <div className="grid gap-2 sm:grid-cols-3">
                 <InputStatusCard title="문제/사례" isFilled={hasProblemInput} helper="문제 이미지 또는 텍스트" />
@@ -367,7 +367,9 @@ export default function AnswerReviewClientPage() {
                 </label>
               </div>
 
-              <div className="grid gap-3 lg:grid-cols-2">
+              <details className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
+                <summary className="cursor-pointer text-caption font-medium text-[color:var(--muted)]">이미지/PDF로 입력하기</summary>
+                <div className="mt-3 grid gap-3 lg:grid-cols-2">
                 <section className="space-y-2" id="problem-upload">
                   <p className="text-caption font-medium text-[color:var(--muted)]">문제/사례 이미지 업로드</p>
                   <label
@@ -430,7 +432,8 @@ export default function AnswerReviewClientPage() {
                     파일: <span className="font-medium text-[color:var(--foreground-strong)]">{summarizeFiles(referenceFiles)}</span>
                   </p>
                 </section>
-              </div>
+                </div>
+              </details>
 
               <div className="grid gap-3 lg:grid-cols-3">
                 <div className="space-y-2" id="answer-review-problem">

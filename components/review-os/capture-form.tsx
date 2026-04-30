@@ -609,7 +609,7 @@ export function WrongAnswerCaptureForm({
         return;
       }
       clearReviewOsDraft(storageKey);
-      router.push(`/app/items/${result.item.id}?mode=${mode}`);
+      router.push(`/app/items?mode=${mode}&saved=1`);
       router.refresh();
     } catch {
       setError("항목을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.");
@@ -909,7 +909,8 @@ function IntakePanel({
           </label>
         </div>
       </div>
-      <div className="mt-5">
+      <div className="mt-5 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-4">
+        <p className="text-xs font-medium text-[color:var(--muted)]">필수 입력</p>
         <SubjectSelect
           subjectLabel={config.subjectLabel}
           subjects={config.subjects}
@@ -918,7 +919,7 @@ function IntakePanel({
           className="form-control w-full"
         />
       </div>
-      <label className="mt-5 block space-y-2">
+      <label className="mt-4 block space-y-2">
         <span className="text-sm text-[color:var(--foreground-strong)]">
           {mode === "second" ? "사례 / 기준 답안 / 내 답안 텍스트" : "문제 / 정답 / 내가 고른 답 텍스트"}
         </span>
@@ -933,13 +934,18 @@ function IntakePanel({
           className="min-h-44 border-[var(--border)] bg-[color:var(--bg-surface)] text-[color:var(--foreground-strong)] leading-7"
         />
       </label>
-      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+      <details className="mt-4 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
+        <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">이미지/PDF로 입력하기 (선택)</summary>
+        <div className="border-t border-[color:var(--border-subtle)] px-4 py-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <Button type="button" onClick={onGenerate} disabled={extracting} className="w-full sm:w-auto">
           {extracting ? "추출 중" : "구조 초안 만들기"}
         </Button>
         {form.sourceLabel ? <p className="text-sm text-[color:var(--muted)]">보관한 파일: {form.sourceLabel}</p> : null}
       </div>
-      <p className="mt-3 text-caption leading-5 text-[color:var(--muted)]">텍스트 붙여넣기/수기 입력 경로는 계속 사용할 수 있습니다.</p>
+        </div>
+      </details>
+      <p className="mt-3 text-caption leading-5 text-[color:var(--muted)]">텍스트 붙여넣기/수기 입력이 기본 경로입니다.</p>
       {calculatorWorkflow ? (
         <div className="mt-4 rounded-[var(--radius-md)] border border-[color:var(--cue-focus)] bg-[color:var(--cue-focus-bg)] px-4 py-3">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1143,12 +1149,12 @@ function FirstConfirmFields(props: FieldProps) {
           />
         </label>
         <label className="space-y-2">
-          <span className="text-sm text-[color:var(--foreground-strong)]">출처/세트</span>
+          <span className="text-sm text-[color:var(--foreground-strong)]">출처/세트 (선택)</span>
           <input
             value={form.sourceLabel}
             onChange={(event) => update("sourceLabel", event.target.value)}
             className="form-control"
-            placeholder="예: 2025 모의고사 3회"
+            placeholder="예: 기출, 모의, 오답노트"
           />
         </label>
       </div>
@@ -1180,6 +1186,7 @@ function FirstConfirmFields(props: FieldProps) {
       </div>
       <label className="space-y-2">
         <span className="text-sm text-[color:var(--foreground-strong)]">실수 원인 분류 (1차)</span>
+        <span className="text-xs text-[color:var(--muted)]">이 선택이 다시 볼 목록을 만드는 기준이 됩니다.</span>
         <select
           value={form.userReasonPreset}
           onChange={(event) => update("userReasonPreset", event.target.value)}

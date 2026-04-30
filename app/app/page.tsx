@@ -158,10 +158,13 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
 
       {savedParam ? (
         <section className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] px-4 py-3">
-          <p className="text-sm text-[color:var(--foreground-strong)]">방금 남긴 기록은 오늘 할 일과 기록 화면에 반영됩니다.</p>
-          <Link href={`/app/items?mode=${mode}`} className="mt-1 inline-block text-xs text-[color:var(--muted)] underline-offset-2 hover:underline">
-            기록에서 확인
-          </Link>
+          <p className="text-sm font-medium text-[color:var(--foreground-strong)]">첫 기록이 쌓였습니다.</p>
+          <p className="mt-1 text-sm text-[color:var(--foreground-strong)]">방금 남긴 기록은 오늘 할 일과 기록 화면에 반영됩니다.</p>
+          <div className="mt-2">
+            <Link href={`/app/items?mode=${mode}`} className="inline-flex rounded-full bg-[color:var(--foreground-strong)] px-4 py-2 text-xs font-medium text-white">
+              기록에서 확인
+            </Link>
+          </div>
         </section>
       ) : null}
 
@@ -191,8 +194,9 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                   {inputOptions[0].hrefLabel}
                 </Button>
               </Link>
-              <div className="grid gap-2.5">
-                <p className="text-xs text-[color:var(--muted)]">다른 입력 선택지</p>
+              <details className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
+                <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">다른 입력 방식 보기</summary>
+                <div className="grid gap-2.5 border-t border-[color:var(--border-subtle)] px-4 py-3">
                 {inputOptions.slice(1).map((option) => (
                   <Link
                     key={option.title}
@@ -203,7 +207,8 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                     <p className="mt-1 text-xs leading-6 text-[color:var(--muted)]">{option.description}</p>
                   </Link>
                 ))}
-              </div>
+                </div>
+              </details>
               <details className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
                 <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">왜 입력부터 시작하나요?</summary>
                 <div className="border-t border-[color:var(--border-subtle)] px-4 py-3 text-xs leading-6 text-[color:var(--muted)]">

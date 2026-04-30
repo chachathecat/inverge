@@ -1,7 +1,9 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { WrongAnswerCaptureForm } from "@/components/review-os/capture-form";
 import { ReviewOsFeedbackButton } from "@/components/review-os/feedback-button";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { resolveAppraisalMode } from "@/lib/review-os/appraisal";
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
@@ -26,8 +28,13 @@ export default async function ReviewOsWritePage({ searchParams }: PageProps) {
         <div>
           <h2 className="text-2xl font-medium tracking-[-0.04em] text-[color:var(--foreground-strong)]">2차 답안 작성 워크스페이스</h2>
           <p className="mt-2 max-w-2xl text-sm leading-7 text-[color:var(--muted)]">
-            기준 답안 보기 전에 쟁점 3개를 먼저 떠올립니다. 전체 답안보다 목차를 먼저 잡습니다. 비교는 작성 이후에 합니다.
+            새로 작성할 답안이면 여기서 바로 시작하세요. 이미 쓴 답안이 있다면 답안 검토로 바로 정리할 수 있습니다.
           </p>
+          <div className="mt-3">
+            <Link href="/answer-review?mode=second">
+              <Button type="button" variant="outline">답안 검토로 바로 정리</Button>
+            </Link>
+          </div>
         </div>
       </section>
 
