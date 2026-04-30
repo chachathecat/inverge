@@ -125,3 +125,35 @@ for select using (auth.uid() = user_id);
 
 create policy "users can update own daily missions" on public.daily_missions
 for update using (auth.uid() = user_id);
+
+create table if not exists public.exams (
+  id uuid primary key default gen_random_uuid(),
+  year int not null,
+  round int not null,
+  type text not null check (type in ('first', 'second')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.questions (
+  id uuid primary key default gen_random_uuid(),
+  exam_id uuid not null references public.exams(id) on delete cascade,
+  subject text not null,
+  question_no int not null,
+  question_text text,
+  choices jsonb,
+  explanation text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.answers (
+  id uuid primary key default gen_random_uuid(),
+  question_id uuid not null references public.questions(id) on delete cascade,
+  answer_text text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists idx_exams_year_round_type on public.exams (year desc, round desc, type asc);
+create index if not exists idx_questions_exam_subject_no on public.questions (exam_id, subject, question_no);

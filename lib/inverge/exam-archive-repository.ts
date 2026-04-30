@@ -20,6 +20,18 @@ export async function listExamArchive() {
     .order("round", { ascending: false })
     .order("type", { ascending: true });
 
+  const missingTable =
+    result.error?.code === "PGRST205" ||
+    result.error?.message?.includes("Could not find the table");
+
+  if (missingTable) {
+    console.warn("[exam_archive_list] Missing public.exams table; returning empty archive list.", {
+      code: result.error?.code,
+      message: result.error?.message,
+    });
+    return [] as ExamArchiveRow[];
+  }
+
   assertSupabaseOperation("exam_archive_list", result);
   return (result.data ?? []) as ExamArchiveRow[];
 }

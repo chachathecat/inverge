@@ -3,6 +3,8 @@ import { listExamArchive } from "@/lib/inverge/exam-archive-repository";
 
 import { ExamListClient } from "./exam-list-client";
 
+export const dynamic = "force-dynamic";
+
 export default async function ExamsPage() {
   const exams = await listExamArchive();
 
