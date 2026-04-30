@@ -15,7 +15,8 @@
     "test:e2e:headed": "npx playwright test --headed",
     "check:e2e-env": "node scripts/check-e2e-env.mjs",
     "check:taxonomy": "node scripts/check-taxonomy-classification.mjs",
-    "test:learning-signal": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs --test tests/learning-signal-answer-review.test.mjs"
+    "test:learning-signal": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs --test tests/learning-signal-answer-review.test.mjs",
+    "seed:exams": "node --experimental-strip-types scripts/seedExamData.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

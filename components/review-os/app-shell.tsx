@@ -17,9 +17,10 @@ type AppShellProps = {
 };
 
 const NAV_ITEMS = [
-  { href: { first: "/app/capture", second: "/app/write" }, label: "입력" },
-  { href: "/app", label: "오늘" },
-  { href: "/app/items", label: "노트" },
+  { href: "/exams", label: "시험", preserveMode: false },
+  { href: { first: "/app/capture", second: "/app/write" }, label: "입력", preserveMode: true },
+  { href: "/app", label: "오늘", preserveMode: true },
+  { href: "/app/items", label: "노트", preserveMode: true },
 ] as const;
 
 export function ReviewOsAppShell({ email, mode, children, rightSlot }: AppShellProps) {
@@ -61,10 +62,11 @@ export function ReviewOsAppShell({ email, mode, children, rightSlot }: AppShellP
           <div className="flex min-w-max gap-2">
             {NAV_ITEMS.map((item) => {
               const href = typeof item.href === "string" ? item.href : item.href[currentMode];
+              const nextHref = item.preserveMode ? `${href}?mode=${currentMode}` : href;
               return (
               <Link
                 key={typeof item.href === "string" ? item.href : item.label}
-                href={`${href}?mode=${currentMode}`}
+                href={nextHref}
                 className={cn(
                   "rounded-full border px-3.5 py-1.5 text-xs transition sm:text-sm",
                   pathname === href
