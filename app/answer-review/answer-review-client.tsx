@@ -84,6 +84,7 @@ export default function AnswerReviewClientPage() {
   const [currentStep, setCurrentStep] = useState<StepId>(1);
   const [examMode, setExamMode] = useState<AppraisalMode>(initialReviewContext.examMode);
   const [subject, setSubject] = useState<string>(initialReviewContext.subject);
+  const [showExampleAnswer, setShowExampleAnswer] = useState(false);
 
   const shouldReduceMotion = useReducedMotion();
   const subjectOptions = examMode === "second" ? APPRAISAL_SECOND_SUBJECTS : APPRAISAL_FIRST_SUBJECTS;
@@ -105,6 +106,8 @@ export default function AnswerReviewClientPage() {
   const hasReferenceAnswer = referenceAnswerText.trim().length > 0 || referenceFiles.length > 0;
   const hasMissingPointMemo = missingPointMemo.trim().length > 0;
   const hasRevisionParagraph = revisionParagraph.trim().length > 0;
+  const myAnswerLength = myAnswerText.trim().length;
+  const isVeryShortAnswer = myAnswerLength > 0 && myAnswerLength < 120;
 
   const getParagraphCount = (text: string) => {
     const normalized = text.trim();
@@ -419,6 +422,10 @@ export default function AnswerReviewClientPage() {
                       value={myAnswerText}
                       onChange={(event) => setMyAnswerText(event.target.value)}
                     />
+                    <div className="mt-2 flex items-center justify-between text-caption text-[color:var(--muted)]">
+                      <span>현재 {myAnswerLength}자</span>
+                      {isVeryShortAnswer ? <motion.span animate={shouldReduceMotion ? undefined : { opacity: [0.6, 1, 0.6] }} transition={{ duration: 1.2, repeat: Infinity }} className="text-[#7a5a2a]">답안이 너무 짧을 수 있습니다.</motion.span> : null}
+                    </div>
                   </article>
 
                   <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
@@ -541,6 +548,17 @@ export default function AnswerReviewClientPage() {
                   </article>
                 </motion.aside>
               </div>
+
+              <section className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
+                <button type="button" onClick={() => setShowExampleAnswer((prev) => !prev)} className="text-caption font-medium text-[color:var(--foreground-strong)]">예시 답안 보기</button>
+                <AnimatePresence>
+                  {showExampleAnswer ? (
+                    <motion.div initial={shouldReduceMotion ? false : { opacity: 0, height: 0 }} animate={shouldReduceMotion ? undefined : { opacity: 1, height: "auto" }} exit={shouldReduceMotion ? undefined : { opacity: 0, height: 0 }} className="mt-3 overflow-hidden rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3 text-caption leading-6 text-[color:var(--foreground-strong)]">
+                      결론을 먼저 제시한 뒤, 근거 조문/판례 포인트를 2~3개로 연결하고 마지막에 사안 적용을 짧게 정리한 문단 구조를 권장합니다.
+                    </motion.div>
+                  ) : null}
+                </AnimatePresence>
+              </section>
 
               {structureError ? <p className="text-caption leading-5 text-[color:var(--muted)]">{structureError}</p> : null}
             </motion.section>
