@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 
 type InputStatusCardProps = {
   title: string;
-  isFilled: boolean;
+  statusText: string;
   helper: string;
 };
 
@@ -39,13 +39,17 @@ const STEP_ITEMS: Array<{ id: StepId; label: string }> = [
   { id: 3, label: "피드백 초안 정리" },
 ];
 
-function InputStatusCard({ title, isFilled, helper }: InputStatusCardProps) {
+function InputStatusCard({ title, statusText, helper }: InputStatusCardProps) {
   return (
-    <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface)] p-3">
+    <motion.article
+      layout
+      transition={{ duration: 0.22, ease: "easeOut" }}
+      className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface)] p-3"
+    >
       <p className="text-caption font-medium text-[color:var(--muted)]">{title}</p>
-      <p className="mt-1 text-sm font-medium text-[color:var(--foreground-strong)]">{isFilled ? "입력됨" : "미입력"}</p>
+      <p className="mt-1 text-sm font-medium text-[color:var(--foreground-strong)]">{statusText}</p>
       <p className="mt-1 text-caption leading-5 text-[color:var(--muted)]">{helper}</p>
-    </article>
+    </motion.article>
   );
 }
 
@@ -337,26 +341,38 @@ export default function AnswerReviewClientPage() {
             </ol>
           </div>
 
-          <button
-            type="button"
-            className={cn(buttonVariants({ variant: "default" }), "w-full sm:w-auto")}
-            onClick={handlePrimaryAction}
-            disabled={isPrimaryActionDisabled}
-          >
-            {primaryActionLabel}
-          </button>
+          {currentStep !== 1 ? (
+            <button
+              type="button"
+              className={cn(buttonVariants({ variant: "default" }), "w-full sm:w-auto")}
+              onClick={handlePrimaryAction}
+              disabled={isPrimaryActionDisabled}
+            >
+              {primaryActionLabel}
+            </button>
+          ) : null}
 
           {currentStep === 1 ? (
-            <section className="space-y-4">
-              <p className="text-caption leading-5 text-[color:var(--muted)]">
-                텍스트 입력이 가장 빠른 기본 경로입니다. 이미 쓴 답안을 붙여 넣고 바로 검토를 시작하세요.
-              </p>
-              <div className="grid gap-2 sm:grid-cols-3">
-                <InputStatusCard title="문제/사례" isFilled={hasProblemInput} helper="문제 이미지 또는 텍스트" />
-                <InputStatusCard title="내 답안" isFilled={hasMyAnswer} helper="답안 이미지 또는 텍스트" />
-                <InputStatusCard title="기준답안" isFilled={hasReferenceAnswer} helper="기준답안/기준목차 텍스트" />
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2">
+            <motion.section
+              className="space-y-4"
+              initial={shouldReduceMotion ? false : "hidden"}
+              animate={shouldReduceMotion ? undefined : "visible"}
+              variants={SECTION_FADE}
+              transition={{ duration: 0.28, ease: "easeOut" }}
+            >
+              <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
+                <motion.div
+                  className="space-y-4"
+                  initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
+                  animate={shouldReduceMotion ? undefined : { opacity: 1, y: 0 }}
+                  transition={{ duration: 0.26, ease: "easeOut" }}
+                >
+                  <article className="rounded-[var(--radius-md)] border border-[#27375f] bg-[linear-gradient(160deg,#f8f7f3_0%,#f3f1eb_100%)] p-4 sm:p-5">
+                    <p className="text-caption font-medium text-[#3f4c66]">입력 스튜디오 · 빠른 시작</p>
+                    <p className="mt-2 text-sm font-semibold text-[#1e2a46]">내 답안만 있어도 검토를 시작할 수 있습니다.</p>
+                    <p className="mt-1 text-caption leading-5 text-[#3f4c66]">문제와 기준답안을 추가하면 간극이 더 정확해집니다.</p>
+                  </article>
+                  <div className="grid gap-3 sm:grid-cols-2">
                 <label className="space-y-2 text-caption font-medium text-[color:var(--muted)]">
                   시험 모드
                   <select
@@ -382,18 +398,31 @@ export default function AnswerReviewClientPage() {
                     ))}
                   </select>
                 </label>
-              </div>
+                  </div>
+                  <article className="space-y-2 rounded-[var(--radius-md)] border border-[#27375f] bg-[color:var(--surface)] p-4" id="answer-review-text">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-caption font-medium text-[#3f4c66]">내 답안 입력 (필수)</p>
+                      <span className="rounded-full bg-[#eef2fb] px-2.5 py-1 text-[11px] font-semibold text-[#1e2a46]">최소 입력</span>
+                    </div>
+                    <Textarea
+                      className="min-h-[210px] border-[#c9d1e7] bg-[color:var(--surface)]"
+                      placeholder="초안 텍스트가 있으면 붙여 넣고, 없으면 직접 입력해 주세요."
+                      value={myAnswerText}
+                      onChange={(event) => setMyAnswerText(event.target.value)}
+                    />
+                  </article>
 
-              <details className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
-                <summary className="cursor-pointer text-caption font-medium text-[color:var(--muted)]">이미지/PDF로 입력하기</summary>
-                <div className="mt-3 grid gap-3 lg:grid-cols-2">
-                <section className="space-y-2" id="problem-upload">
-                  <p className="text-caption font-medium text-[color:var(--muted)]">문제/사례 이미지 업로드</p>
+                  <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
+                    <p className="text-caption font-medium text-[color:var(--muted)]">이미지/PDF 입력</p>
+                    <p className="mt-1 text-caption leading-5 text-[color:var(--muted)]">텍스트가 가장 빠르지만, 파일 업로드도 바로 사용할 수 있습니다.</p>
+                    <div className="mt-3 grid gap-3 lg:grid-cols-3">
+                <section className="space-y-2 rounded-[var(--radius-sm)] border border-[var(--border)] p-3" id="problem-upload">
+                  <p className="text-caption font-medium text-[color:var(--muted)]">문제/사례 파일</p>
                   <label
                     htmlFor="answer-review-problem-file-upload"
                     className={cn(buttonVariants({ variant: "outline" }), "w-full cursor-pointer justify-center sm:w-auto")}
                   >
-                    문제/사례 이미지 선택
+                    파일 선택
                   </label>
                   <input
                     id="answer-review-problem-file-upload"
@@ -408,13 +437,13 @@ export default function AnswerReviewClientPage() {
                   </p>
                 </section>
 
-                <section className="space-y-2" id="my-answer-upload">
-                  <p className="text-caption font-medium text-[color:var(--muted)]">내 답안 이미지 업로드</p>
+                <section className="space-y-2 rounded-[var(--radius-sm)] border border-[#b7c1dd] bg-[#f8faff] p-3" id="my-answer-upload">
+                  <p className="text-caption font-medium text-[#3f4c66]">내 답안 파일 (필수)</p>
                   <label
                     htmlFor="answer-review-my-answer-file-upload"
                     className={cn(buttonVariants({ variant: "outline" }), "w-full cursor-pointer justify-center sm:w-auto")}
                   >
-                    내 답안 이미지 선택
+                    파일 선택
                   </label>
                   <input
                     id="answer-review-my-answer-file-upload"
@@ -429,13 +458,13 @@ export default function AnswerReviewClientPage() {
                   </p>
                 </section>
 
-                <section className="space-y-2" id="reference-upload">
-                  <p className="text-caption font-medium text-[color:var(--muted)]">기준답안 이미지 업로드 (선택)</p>
+                <section className="space-y-2 rounded-[var(--radius-sm)] border border-[var(--border)] p-3" id="reference-upload">
+                  <p className="text-caption font-medium text-[color:var(--muted)]">기준답안 파일 (선택)</p>
                   <label
                     htmlFor="answer-review-reference-file-upload"
                     className={cn(buttonVariants({ variant: "outline" }), "w-full cursor-pointer justify-center sm:w-auto")}
                   >
-                    기준답안 이미지 선택
+                    파일 선택
                   </label>
                   <input
                     id="answer-review-reference-file-upload"
@@ -449,10 +478,9 @@ export default function AnswerReviewClientPage() {
                     파일: <span className="font-medium text-[color:var(--foreground-strong)]">{summarizeFiles(referenceFiles)}</span>
                   </p>
                 </section>
-                </div>
-              </details>
+                </div></article>
 
-              <div className="grid gap-3 lg:grid-cols-3">
+              <div className="grid gap-3 lg:grid-cols-2">
                 <div className="space-y-2" id="answer-review-problem">
                   <p className="text-caption font-medium text-[color:var(--muted)]">문제/사례 입력</p>
                   <Textarea
@@ -481,9 +509,41 @@ export default function AnswerReviewClientPage() {
                   />
                 </div>
               </div>
+                </motion.div>
+
+                <motion.aside
+                  className="space-y-3 lg:sticky lg:top-6 lg:self-start"
+                  initial={shouldReduceMotion ? false : { opacity: 0, x: 10 }}
+                  animate={shouldReduceMotion ? undefined : { opacity: 1, x: 0 }}
+                  transition={{ duration: 0.28, ease: "easeOut", delay: shouldReduceMotion ? 0 : 0.05 }}
+                >
+                  <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
+                    <p className="text-caption font-medium text-[color:var(--muted)]">입력 준비 상태</p>
+                    <div className="mt-3 grid gap-2">
+                      <InputStatusCard title="문제/사례" statusText={hasProblemInput ? "입력됨" : "미입력"} helper="선택 입력" />
+                      <InputStatusCard title="내 답안" statusText={hasMyAnswer ? "입력됨" : "미입력"} helper="필수 입력" />
+                      <InputStatusCard title="기준답안" statusText={hasReferenceAnswer ? "입력됨" : "선택"} helper="선택 입력" />
+                    </div>
+                  </article>
+                  <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
+                    <p className="text-caption leading-5 text-[color:var(--muted)]">
+                      {hasMyAnswer ? "준비가 완료되었습니다. 바로 검토를 시작하세요." : "내 답안 텍스트 또는 파일을 입력하면 검토를 시작할 수 있습니다."}
+                    </p>
+                    <motion.button
+                      whileTap={shouldReduceMotion ? undefined : { scale: 0.985 }}
+                      type="button"
+                      className={cn(buttonVariants({ variant: "default" }), "mt-3 w-full")}
+                      onClick={handlePrimaryAction}
+                      disabled={isPrimaryActionDisabled}
+                    >
+                      {primaryActionLabel}
+                    </motion.button>
+                  </article>
+                </motion.aside>
+              </div>
 
               {structureError ? <p className="text-caption leading-5 text-[color:var(--muted)]">{structureError}</p> : null}
-            </section>
+            </motion.section>
           ) : null}
 
           {currentStep === 2 ? (
