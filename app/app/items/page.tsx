@@ -54,8 +54,8 @@ export default async function ReviewOsItemsPage({ searchParams }: PageProps) {
               ) : null}
               {savedParam ? (
                 <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] px-4 py-3">
-                  <p className="text-sm font-medium text-[color:var(--foreground-strong)]">첫 기록이 쌓였습니다.</p>
-                  <p className="mt-1 text-sm text-[color:var(--foreground-strong)]">방금 남긴 기록은 오늘 할 일과 기록 화면에 반영됩니다.</p>
+                  <p className="text-sm font-medium text-[color:var(--foreground-strong)]">방금 남긴 기록이 목록에 반영되었습니다.</p>
+                  <p className="mt-1 text-sm text-[color:var(--foreground-strong)]">오늘 할 일에도 반영됩니다.</p>
                 </div>
               ) : null}
               {items.map((item) => (
