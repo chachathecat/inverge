@@ -292,6 +292,15 @@ export default function AnswerReviewClientPage() {
         : "검토 대기";
 
   const biggestGapFix = toShortLine(structureDraft?.rewriteTarget || structureDraft?.nextAction || "", "누락된 핵심 논점을 문단 하나로 다시 구성해 보세요.");
+  const inputStatusSummary = `문제/사례 ${hasProblemInput ? "입력됨" : "미입력"}, 내 답안 ${hasMyAnswer ? "입력됨" : "미입력"}, 기준답안 ${
+    hasReferenceAnswer ? "입력됨" : "미입력"
+  }`;
+  const missingPointSummary = hasMissingPointMemo
+    ? `이번 답안은 ${missingPointMemo.trim()} 보강이 우선입니다.`
+    : "누락 논점 후보를 먼저 적으면 피드백 초안이 완성됩니다.";
+  const revisionSummary = hasRevisionParagraph
+    ? revisionParagraph.trim()
+    : "교정 문단을 작성하면 학생에게 줄 다음 행동이 더 선명해집니다.";
 
   const handlePrimaryAction = () => {
     if (currentStep === 1) {
@@ -669,16 +678,103 @@ export default function AnswerReviewClientPage() {
           ) : null}
 
           {currentStep === 3 ? (
-            <section className="space-y-3">
-              <p className="text-caption leading-5 text-[color:var(--muted)]">전달 전 검토자 확인이 필요합니다.</p>
-              <pre className="max-h-[320px] overflow-auto whitespace-pre-wrap rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface)] p-3 text-caption leading-6 text-[color:var(--foreground-strong)]">
-                {feedbackDraftText}
-              </pre>
+            <motion.section
+              className="space-y-5"
+              initial={shouldReduceMotion ? false : "hidden"}
+              animate={shouldReduceMotion ? undefined : "visible"}
+              variants={SECTION_FADE}
+              transition={{ duration: 0.32, ease: "easeOut" }}
+            >
+              <div className="flex flex-wrap items-start justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4 sm:p-5">
+                <div className="space-y-1">
+                  <p className="text-caption text-[color:var(--muted)]">{examMode === "second" ? "감정평가사 2차" : "감정평가사 1차"} · {subject}</p>
+                  <h2 className="text-base font-semibold text-[color:var(--foreground-strong)]">피드백 초안 스튜디오</h2>
+                  <p className="text-caption leading-5 text-[color:var(--muted)]">검토자 확인 전 전달하지 않는 초안입니다.</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <motion.button
+                    whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
+                    type="button"
+                    onClick={() => setCurrentStep(2)}
+                    className={cn(buttonVariants({ variant: "outline" }), "h-9 px-4")}
+                  >
+                    검토 결과로 돌아가기
+                  </motion.button>
+                  <motion.button
+                    whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
+                    type="button"
+                    onClick={copyFeedbackDraft}
+                    className={cn(buttonVariants({ variant: "default" }), "h-9 px-4")}
+                  >
+                    피드백 초안 복사
+                  </motion.button>
+                </div>
+              </div>
+
+              <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
+                <div className="space-y-4">
+                  {[
+                    { title: "입력 상태", body: inputStatusSummary },
+                    { title: "가장 큰 간극", body: missingPointSummary },
+                    { title: "다시 쓸 문장", body: revisionSummary },
+                    { title: "다음 행동", body: "교정 문단 구조를 기준으로 한 문단만 다시 작성해 보세요." },
+                  ].map((section, index) => (
+                    <motion.article
+                      key={section.title}
+                      className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-4"
+                      initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
+                      animate={shouldReduceMotion ? undefined : { opacity: 1, y: 0 }}
+                      transition={{ duration: 0.24, ease: "easeOut", delay: shouldReduceMotion ? 0 : index * 0.04 }}
+                    >
+                      <p className="text-caption font-medium text-[color:var(--muted)]">{section.title}</p>
+                      <p className="mt-2 text-caption leading-6 text-[color:var(--foreground-strong)]">{toDetailLine(section.body, "검토 보강 내용을 입력해 주세요.")}</p>
+                    </motion.article>
+                  ))}
+                </div>
+
+                <motion.aside
+                  className="space-y-3 lg:sticky lg:top-6 lg:self-start"
+                  initial={shouldReduceMotion ? false : { opacity: 0, x: 10 }}
+                  animate={shouldReduceMotion ? undefined : { opacity: 1, x: 0 }}
+                  transition={{ duration: 0.3, ease: "easeOut", delay: shouldReduceMotion ? 0 : 0.08 }}
+                >
+                  <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
+                    <p className="text-caption font-medium text-[color:var(--muted)]">입력 상태 요약</p>
+                    <ul className="mt-2 space-y-1 text-caption leading-5 text-[color:var(--foreground-strong)]">
+                      <li>문제/사례: {hasProblemInput ? "입력됨" : "미입력"}</li>
+                      <li>내 답안: {hasMyAnswer ? "입력됨" : "미입력"}</li>
+                      <li>기준답안: {hasReferenceAnswer ? "입력됨" : "미입력"}</li>
+                    </ul>
+                  </article>
+                  <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
+                    <p className="text-caption font-medium text-[color:var(--muted)]">초안 구성 요약</p>
+                    <ul className="mt-2 space-y-1 text-caption leading-5 text-[color:var(--foreground-strong)]">
+                      <li>누락 후보: {hasMissingPointMemo ? toShortLine(missingPointMemo, "메모 필요", 72) : "메모 필요"}</li>
+                      <li>교정 문단: {hasRevisionParagraph ? `${getParagraphCount(revisionParagraph)}문단` : "작성 필요"}</li>
+                      <li>강점 {structureDraft?.strengths.length ?? 0}개 / 간극 {structureDraft?.missingIssueCandidates.length ?? 0}개</li>
+                    </ul>
+                  </article>
+                  <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
+                    <div className="grid gap-2">
+                      <motion.button whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }} type="button" onClick={copyFeedbackDraft} className={cn(buttonVariants({ variant: "default" }), "h-9")}>
+                        피드백 초안 복사
+                      </motion.button>
+                      <motion.button whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }} type="button" onClick={() => setCurrentStep(2)} className={cn(buttonVariants({ variant: "outline" }), "h-9")}>
+                        다시 보강하기
+                      </motion.button>
+                    </div>
+                    <p className="mt-3 text-caption leading-5 text-[color:var(--muted)]">
+                      이 초안은 검토 보조용입니다. 전달 전 반드시 검토자가 확인해 주세요.
+                    </p>
+                  </article>
+                </motion.aside>
+              </div>
+
               {didCopyCurrentDraft ? <p className="text-caption leading-5 text-[color:var(--muted)]">복사 완료. 전달 전 검토해 주세요.</p> : null}
               {feedbackCopyStatus === "failed" ? (
                 <p className="text-caption leading-5 text-[color:var(--muted)]">클립보드 복사에 실패했습니다. 텍스트를 수동으로 복사해 주세요.</p>
               ) : null}
-            </section>
+            </motion.section>
           ) : null}
 
           <details className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
