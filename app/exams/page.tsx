@@ -3,6 +3,7 @@ import Link from "next/link";
 import { RefinedBadge, RefinedShell } from "@/components/inverge/refined-primitives";
 import { buttonVariants } from "@/components/ui/button";
 import { getServerSessionUser } from "@/lib/auth/session";
+import { reviewOsService } from "@/lib/review-os/service";
 import { cn } from "@/lib/utils";
 
 type ExamSelectionCard = {
@@ -20,6 +21,10 @@ function buildModeEntryHref(isAuthenticated: boolean, authEnabled: boolean, mode
   const appHref = `/app?mode=${mode}`;
   if (!authEnabled || isAuthenticated) return appHref;
   return `/login?returnTo=${encodeURIComponent(appHref)}`;
+}
+
+function buildModeInputHref(mode: "first" | "second") {
+  return mode === "first" ? "/app/capture?mode=first" : "/app/write?mode=second";
 }
 
 
@@ -55,20 +60,33 @@ function SelectionCard({ card }: { card: ExamSelectionCard }) {
 
 export default async function ExamsPage() {
   const session = await getServerSessionUser();
+  const modeHrefByData: { first: string; second: string } = {
+    first: buildModeEntryHref(session.isAuthenticated, session.authEnabled, "first"),
+    second: buildModeEntryHref(session.isAuthenticated, session.authEnabled, "second"),
+  };
+
+  if (session.userId) {
+    const [hasFirstData, hasSecondData] = await Promise.all([
+      reviewOsService.hasMeaningfulLearningData(session.userId, session.email, "first").catch(() => false),
+      reviewOsService.hasMeaningfulLearningData(session.userId, session.email, "second").catch(() => false),
+    ]);
+    modeHrefByData.first = hasFirstData ? "/app?mode=first" : buildModeInputHref("first");
+    modeHrefByData.second = hasSecondData ? "/app?mode=second" : buildModeInputHref("second");
+  }
 
   const cards: ExamSelectionCard[] = [
     {
       testId: "exam-card-first",
       title: "감정평가사 1차",
       description: "객관식 세트 풀이, 오답 원인, 회상, 재시도 큐를 운영합니다.",
-      href: buildModeEntryHref(session.isAuthenticated, session.authEnabled, "first"),
+      href: modeHrefByData.first,
       cta: "이 트랙으로 시작",
     },
     {
       testId: "exam-card-second",
       title: "감정평가사 2차",
       description: "쟁점 회상, 목차, 답안 작성, 기준답안 비교, 문단 다시쓰기를 운영합니다.",
-      href: buildModeEntryHref(session.isAuthenticated, session.authEnabled, "second"),
+      href: modeHrefByData.second,
       cta: "이 트랙으로 시작",
     },
     {

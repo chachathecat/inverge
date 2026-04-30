@@ -175,8 +175,8 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                 <p className="text-caption text-[color:var(--muted)]">처음이라면</p>
                 <p className="mt-1 text-body-lg text-[color:var(--foreground-strong)]">
                   {mode === "first"
-                    ? "틀린 문제 하나를 남기면 오늘 다시 볼 항목이 정리됩니다."
-                    : "답안 하나를 남기면 보강할 문단과 다음 할 일이 정리됩니다."}
+                    ? "오답 하나만 남기면 오늘 할 일과 노트가 만들어집니다."
+                    : "답안 하나를 남기면 보강할 문단과 오늘 할 일이 정리됩니다."}
                 </p>
                 <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">입력 1개 남기기 → 오늘 할 일 생성 → 노트에 누적</p>
               </div>
@@ -190,7 +190,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
             <CardContent className="space-y-3 p-4 pt-0 sm:space-y-4 sm:p-6 sm:pt-0">
               <Link href={inputOptions[0].href} className="w-full sm:w-auto">
                 <Button type="button" className="w-full sm:w-auto">
-                  {inputOptions[0].hrefLabel}
+                  {mode === "first" ? "오답 하나 남기기" : "답안 하나 작성하기"}
                 </Button>
               </Link>
               <details className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
