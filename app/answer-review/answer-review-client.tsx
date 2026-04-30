@@ -475,7 +475,7 @@ export default function AnswerReviewClientPage() {
                     이번 검토가 학습 기록에 반영되었습니다. (모드: {examMode === "second" ? "감정평가사 2차" : "감정평가사 1차"})
                   </p>
                   <Link href={examMode === "second" ? "/app?mode=second" : "/app?mode=first"} className="text-caption text-[color:var(--muted)] underline-offset-2 hover:underline">
-                    오늘 할 일에서 반영 여부 보기
+                    오늘 할 일 보기
                   </Link>
                 </div>
               ) : null}
@@ -486,7 +486,7 @@ export default function AnswerReviewClientPage() {
               ) : null}
               {learningSignalStatus === "skipped" ? (
                 <p className="text-caption leading-5 text-[color:var(--muted)]">
-                  이번 검토는 학습 기록에 반영하지 않았습니다. 결과가 충분히 구체적이지 않으면 기록에 남기지 않습니다.
+                  이번 검토는 학습 기록에 반영하지 않았습니다. 입력을 보강해 다시 검토하면 다음 행동 연결이 더 선명해집니다.
                 </p>
               ) : null}
               {structureError ? (
