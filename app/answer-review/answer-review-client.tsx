@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { ChangeEvent } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
 import { RefinedBadge, RefinedShell } from "@/components/inverge/refined-primitives";
 import { buttonVariants } from "@/components/ui/button";
@@ -22,6 +23,11 @@ type InputStatusCardProps = {
 };
 
 type StepId = 1 | 2 | 3;
+
+const SECTION_FADE = {
+  hidden: { opacity: 0, y: 10 },
+  visible: { opacity: 1, y: 0 },
+};
 
 const CARD_TEXT_MAX_LENGTH = 200;
 const DETAILS_TEXT_MAX_LENGTH = 560;
@@ -75,6 +81,7 @@ export default function AnswerReviewClientPage() {
   const [examMode, setExamMode] = useState<AppraisalMode>(initialReviewContext.examMode);
   const [subject, setSubject] = useState<string>(initialReviewContext.subject);
 
+  const shouldReduceMotion = useReducedMotion();
   const subjectOptions = examMode === "second" ? APPRAISAL_SECOND_SUBJECTS : APPRAISAL_FIRST_SUBJECTS;
 
   const handleProblemFileChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -272,6 +279,17 @@ export default function AnswerReviewClientPage() {
         ? "피드백 초안 만들기"
         : "피드백 초안 복사";
   const isPrimaryActionDisabled = currentStep === 1 ? !hasMyAnswer || isStructuring : false;
+  const completionStatus = structureDraft ? "검토 완료" : isStructuring ? "검토 중" : "검토 대기";
+  const overallScore = useMemo(() => {
+    if (!structureDraft) return null;
+    const strengths = structureDraft.strengths.length;
+    const gaps = structureDraft.missingIssueCandidates.length + (structureDraft.weakLogicPoint.trim() ? 1 : 0);
+    const base = 68 + strengths * 7 - gaps * 4;
+    return Math.max(45, Math.min(92, base));
+  }, [structureDraft]);
+
+  const biggestGapFix = toShortLine(structureDraft?.rewriteTarget || structureDraft?.nextAction || "", "누락된 핵심 논점을 문단 하나로 다시 구성해 보세요.");
+
   const handlePrimaryAction = () => {
     if (currentStep === 1) {
       void runStructure();
@@ -470,64 +488,99 @@ export default function AnswerReviewClientPage() {
           ) : null}
 
           {currentStep === 2 ? (
-            <section id="answer-review-structure-result" className="space-y-4">
-              <p className="text-caption leading-5 text-[color:var(--muted)]">먼저 볼 것은 가장 큰 간극 하나입니다.</p>
-              {learningSignalStatus === "saved" ? (
-                <div className="space-y-1">
-                  <p className="text-caption leading-5 text-[color:var(--muted)]">
-                    이번 검토가 학습 노트에 반영되었습니다. (모드: {examMode === "second" ? "감정평가사 2차" : "감정평가사 1차"})
-                  </p>
-                  <Link href={examMode === "second" ? "/app?mode=second" : "/app?mode=first"} className="text-caption text-[color:var(--muted)] underline-offset-2 hover:underline">
-                    오늘 확인
-                  </Link>
+            <AnimatePresence mode="wait">
+              <motion.section
+                key="studio-step-2"
+                id="answer-review-structure-result"
+                className="space-y-5"
+                initial={shouldReduceMotion ? false : "hidden"}
+                animate={shouldReduceMotion ? undefined : "visible"}
+                variants={SECTION_FADE}
+                transition={{ duration: 0.32, ease: "easeOut" }}
+              >
+                <motion.div
+                  className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4 sm:p-5"
+                  initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
+                  animate={shouldReduceMotion ? undefined : { opacity: 1, y: 0 }}
+                  transition={{ duration: 0.28, ease: "easeOut" }}
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="space-y-1">
+                      <p className="text-caption text-[color:var(--muted)]">{examMode === "second" ? "감정평가사 2차" : "감정평가사 1차"} · {subject}</p>
+                      <h2 className="text-base font-semibold text-[color:var(--foreground-strong)]">답안 리뷰 스튜디오</h2>
+                      <p className="text-caption leading-5 text-[color:var(--muted)]">{toShortLine(structureDraft?.nextAction || "", "가장 큰 간극 하나를 먼저 보강하면 다음 초안의 완성도가 올라갑니다.")}</p>
+                    </div>
+                    <div className="space-y-2 text-right">
+                      <p className="text-caption text-[color:var(--muted)]">상태 · {completionStatus}</p>
+                      <button type="button" onClick={() => setCurrentStep(1)} className={cn(buttonVariants({ variant: "default" }), "h-9 px-4")}>
+                        다시 쓰기 시작
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+
+                <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
+                  <div className="space-y-4">
+                    <article className="rounded-[var(--radius-md)] border border-[#27375f] bg-[linear-gradient(150deg,#f8f7f3_0%,#f3f1eb_100%)] p-5">
+                      <p className="text-caption font-medium text-[#3f4c66]">가장 큰 간극</p>
+                      <p className="mt-2 text-sm font-semibold leading-6 text-[#1e2a46]">{toDetailLine(firstBigGap, "핵심 논점 입력을 보강하면 가장 큰 간극이 자동 정리됩니다.")}</p>
+                      <div className="mt-3 space-y-1 text-caption leading-5 text-[#3f4c66]">
+                        <p>왜 중요한가: 채점 포인트를 놓치면 논리 전개가 맞아도 점수 회수가 어렵습니다.</p>
+                        <p>어떻게 고칠까: {biggestGapFix}</p>
+                      </div>
+                      <motion.button whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }} type="button" onClick={() => setCurrentStep(1)} className={cn(buttonVariants({ variant: "default" }), "mt-4 h-9 px-4")}>다시 쓰기 시작</motion.button>
+                    </article>
+
+                    <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
+                      <p className="text-caption font-medium text-[color:var(--muted)]">전체 리뷰</p>
+                      <p className="mt-2 text-caption leading-6 text-[color:var(--foreground-strong)]">{toDetailLine(structureDraft?.caution || structureDraft?.requiredIssues || "", "입력을 보강하면 전체 리뷰가 더 구체화됩니다.")}</p>
+                    </article>
+
+                    <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
+                      <p className="text-caption font-medium text-[color:var(--muted)]">문단/이슈 단위 피드백</p>
+                      <ul className="mt-2 space-y-2 text-caption leading-6 text-[color:var(--foreground-strong)]">
+                        <li>• 약한 문단 포인트: {toShortLine(structureDraft?.weakParagraphPoint || "", "보강할 문단 포인트를 직접 지정해 주세요.")}</li>
+                        <li>• 논리 보강 포인트: {toShortLine(structureDraft?.weakLogicPoint || "", "논리 연결 근거를 한 줄 더 추가해 보세요.")}</li>
+                        <li>• 잘한 부분: {toShortLine(structureDraft?.strengths[0] || "", "강점은 유지하고 간극 하나만 우선 보강하세요.")}</li>
+                      </ul>
+                    </article>
+
+                    <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
+                      <p className="text-caption font-medium text-[color:var(--muted)]">추천 다시쓰기 초안</p>
+                      <p className="mt-2 text-caption leading-6 text-[color:var(--foreground-strong)]">{toDetailLine(structureDraft?.rewriteDraftSuggestion || structureDraft?.rewriteTarget || "", "추천 다시쓰기 초안이 아직 없습니다. 수동 메모를 활용해 보강하세요.")}</p>
+                    </article>
+                  </div>
+
+                  <motion.aside
+                    className="space-y-3 lg:sticky lg:top-6 lg:self-start"
+                    initial={shouldReduceMotion ? false : { opacity: 0, x: 10 }}
+                    animate={shouldReduceMotion ? undefined : { opacity: 1, x: 0 }}
+                    transition={{ duration: 0.3, ease: "easeOut", delay: shouldReduceMotion ? 0 : 0.08 }}
+                  >
+                    <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
+                      <p className="text-caption text-[color:var(--muted)]">총점(참고)</p>
+                      <p className="mt-1 text-xl font-semibold tracking-tight text-[color:var(--foreground-strong)]">{overallScore ?? "-"}<span className="ml-1 text-sm font-medium text-[color:var(--muted)]">/100</span></p>
+                      <p className="mt-2 text-caption leading-5 text-[color:var(--muted)]">점수보다 간극 1개 보강을 우선하세요.</p>
+                    </article>
+                    <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
+                      <p className="text-caption font-medium text-[color:var(--muted)]">보조 지표</p>
+                      <ul className="mt-2 space-y-1 text-caption leading-5 text-[color:var(--foreground-strong)]">
+                        <li>강점 {structureDraft?.strengths.length ?? 0}개</li>
+                        <li>누락 후보 {structureDraft?.missingIssueCandidates.length ?? 0}개</li>
+                        <li>다음 행동 제안 {structureDraft?.nextAction ? "있음" : "없음"}</li>
+                      </ul>
+                    </article>
+                    <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
+                      <p className="text-caption font-medium text-[color:var(--muted)]">다음 행동</p>
+                      <div className="mt-2 grid gap-2">
+                        <motion.button whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }} type="button" onClick={() => setCurrentStep(1)} className={cn(buttonVariants({ variant: "default" }), "h-9")}>다시쓰기</motion.button>
+                        <motion.button whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }} type="button" onClick={() => setCurrentStep(3)} className={cn(buttonVariants({ variant: "outline" }), "h-9")}>비교/피드백 정리</motion.button>
+                      </div>
+                    </article>
+                  </motion.aside>
                 </div>
-              ) : null}
-              {learningSignalStatus === "failed" ? (
-                <p className="text-caption leading-5 text-[color:var(--muted)]">
-                  검토는 완료되었습니다. 다만 학습 기록 반영은 나중에 다시 확인해 주세요.
-                </p>
-              ) : null}
-              {learningSignalStatus === "skipped" ? (
-                <p className="text-caption leading-5 text-[color:var(--muted)]">
-                  이번 검토는 학습 기록에 반영하지 않았습니다. 입력을 보강해 다시 검토하면 다음 행동 연결이 더 선명해집니다.
-                </p>
-              ) : null}
-              {structureError ? (
-                <p className="text-caption leading-5 text-[color:var(--muted)]">{structureError}</p>
-              ) : null}
-              <div className="grid gap-2 sm:grid-cols-2">
-                <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface)] p-3">
-                  <p className="text-caption font-medium text-[color:var(--muted)]">가장 큰 간극</p>
-                  <p className="mt-1 text-caption leading-5 text-[color:var(--foreground-strong)]">
-                    {toShortLine(firstBigGap, "기준답안과 문제 요구를 더 입력하면 보강할 간극이 선명해집니다.")}
-                  </p>
-                </article>
-                <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface)] p-3">
-                  <p className="text-caption font-medium text-[color:var(--muted)]">잘한 부분</p>
-                  <p className="mt-1 text-caption leading-5 text-[color:var(--foreground-strong)]">
-                    {toShortLine(
-                      structureDraft?.strengths.length ? structureDraft.strengths[0] ?? "" : "",
-                      "잘한 부분은 검토자가 확인해 보강할 수 있습니다.",
-                    )}
-                  </p>
-                </article>
-                <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface)] p-3">
-                  <p className="text-caption font-medium text-[color:var(--muted)]">다시 쓸 문장</p>
-                  <p className="mt-1 text-caption leading-5 text-[color:var(--foreground-strong)]">
-                    {toShortLine(
-                      structureDraft?.rewriteDraftSuggestion || structureDraft?.rewriteTarget || "",
-                      "교정 문단을 직접 작성해 다음 답안에 반영해 주세요.",
-                    )}
-                  </p>
-                </article>
-                <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface)] p-3">
-                  <p className="text-caption font-medium text-[color:var(--muted)]">다음 행동</p>
-                  <p className="mt-1 text-caption leading-5 text-[color:var(--foreground-strong)]">
-                    {toShortLine(structureDraft?.nextAction || "", "문단 하나를 다시 쓰고 검토자 확인을 진행하세요.")}
-                  </p>
-                </article>
-              </div>
-            </section>
+              </motion.section>
+            </AnimatePresence>
           ) : null}
 
           {currentStep === 3 ? (
