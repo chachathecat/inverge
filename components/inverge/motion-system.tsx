@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 export function MotionSection({ children, className, delay = 0 }: { children: ReactNode; className?: string; delay?: number }) {
@@ -22,7 +22,7 @@ export function MotionCard({ children, className, delay = 0 }: { children: React
   return <MotionSection className={className} delay={delay}>{children}</MotionSection>;
 }
 
-export function MotionButton({ children, className, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
+export function MotionButton({ children, className, ...props }: ButtonHTMLAttributes<HTMLButtonElement>) {
   const reduce = useReducedMotion();
   return <motion.button whileTap={reduce ? undefined : { scale: 0.98 }} whileHover={reduce ? undefined : { y: -1 }} className={className} {...props}>{children}</motion.button>;
 }
