@@ -32,6 +32,38 @@ export default async function ReviewOsItemsPage({ searchParams }: PageProps) {
     if (sourceType === "review_queue") return "다시 볼 항목";
     return "학습 기록";
   };
+  const formatCreatedDate = (value?: string | null) => {
+    if (!value) return null;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return null;
+    return new Intl.DateTimeFormat("ko-KR", { month: "numeric", day: "numeric" }).format(date);
+  };
+  const formatNextAction = (item: (typeof items)[number]) => {
+    const reviewReason =
+      typeof item.rawPayload?.reviewReason === "string"
+        ? item.rawPayload.reviewReason
+        : typeof item.derivedPayload?.reviewReason === "string"
+          ? item.derivedPayload.reviewReason
+          : null;
+    const mistakeType =
+      typeof item.rawPayload?.mistakeType === "string"
+        ? item.rawPayload.mistakeType
+        : typeof item.derivedPayload?.mistakeType === "string"
+          ? item.derivedPayload.mistakeType
+          : null;
+    const lines = [
+      item.nextReviewDate ? `복습 예정 ${item.nextReviewDate}` : null,
+      item.comparisonPoint ? `비교 포인트 ${item.comparisonPoint}` : null,
+      mistakeType ? `실수 유형 ${mistakeType}` : null,
+      reviewReason ? `검토 이유 ${reviewReason}` : null,
+    ].filter(Boolean);
+    return lines[0] ?? "오늘 할 일에서 확인";
+  };
+  const signalFallbackTask = mode === "second" ? "한 번 더 검토하기" : "오늘 할 일에서 확인";
+  const signalCta = (sourceType: string) =>
+    sourceType === "answer_review"
+      ? { label: "답안 검토하기", href: `/answer-review?mode=${mode}` }
+      : { label: "오늘에서 보기", href: `/app?mode=${mode}` };
 
   return (
     <div className="space-y-6">
@@ -75,19 +107,22 @@ export default async function ReviewOsItemsPage({ searchParams }: PageProps) {
                 </div>
               ) : null}
               {items.map((item) => (
-              <Link
-                key={item.id}
-                href={`/app/items/${item.id}?mode=${mode}`}
-                className="block rounded-2xl border border-[var(--border)] px-4 py-4 hover:bg-[color:var(--surface-soft)]"
-              >
-                <p className="text-sm font-medium text-[color:var(--foreground-strong)]">
-                  {item.problemTitle ?? item.problemIdentifier ?? "감평 기록 항목"}
-                </p>
-                <p className="mt-1 text-sm text-[color:var(--muted)]">
-                  {item.subjectLabel} · {item.confidence}
-                </p>
-              </Link>
-            ))}
+                <div key={item.id} className="rounded-2xl border border-[var(--border)] px-4 py-4">
+                  <p className="text-sm font-medium text-[color:var(--foreground-strong)]">
+                    {item.problemTitle ?? item.problemIdentifier ?? "감평 기록 항목"}
+                  </p>
+                  <p className="mt-1 text-sm text-[color:var(--muted)]">
+                    {item.subjectLabel} · {item.confidence}
+                  </p>
+                  <p className="mt-1 text-sm text-[color:var(--muted)]">다음 행동: {formatNextAction(item)}</p>
+                  <Link
+                    href={`/app/items/${item.id}?mode=${mode}`}
+                    className="mt-2 inline-flex text-sm font-medium text-[color:var(--foreground-strong)] underline-offset-4 hover:underline"
+                  >
+                    다시 보기
+                  </Link>
+                </div>
+              ))}
             </div>
           ) : (
             <div className="space-y-3">
@@ -96,7 +131,16 @@ export default async function ReviewOsItemsPage({ searchParams }: PageProps) {
                   <p className="text-sm font-medium text-[color:var(--foreground-strong)]">
                     {signal.subject} · {sourceTypeLabel(signal.sourceType)}
                   </p>
-                  <p className="mt-1 text-sm text-[color:var(--muted)]">다음 행동: {signal.nextTask || "다시 볼 항목 정리"}</p>
+                  <p className="mt-1 text-sm text-[color:var(--muted)]">다음 행동: {signal.nextTask || signalFallbackTask}</p>
+                  {formatCreatedDate(signal.createdAt) ? (
+                    <p className="mt-1 text-xs text-[color:var(--muted)]">{formatCreatedDate(signal.createdAt)}</p>
+                  ) : null}
+                  <Link
+                    href={signalCta(signal.sourceType).href}
+                    className="mt-2 inline-flex text-sm font-medium text-[color:var(--foreground-strong)] underline-offset-4 hover:underline"
+                  >
+                    {signalCta(signal.sourceType).label}
+                  </Link>
                 </div>
               ))}
             </div>
@@ -115,7 +159,16 @@ export default async function ReviewOsItemsPage({ searchParams }: PageProps) {
                 <p className="text-sm font-medium text-[color:var(--foreground-strong)]">
                   {signal.subject} · {sourceTypeLabel(signal.sourceType)}
                 </p>
-                <p className="mt-1 text-sm text-[color:var(--muted)]">다음 행동: {signal.nextTask || "다시 볼 항목 정리"}</p>
+                <p className="mt-1 text-sm text-[color:var(--muted)]">다음 행동: {signal.nextTask || signalFallbackTask}</p>
+                {formatCreatedDate(signal.createdAt) ? (
+                  <p className="mt-1 text-xs text-[color:var(--muted)]">{formatCreatedDate(signal.createdAt)}</p>
+                ) : null}
+                <Link
+                  href={signalCta(signal.sourceType).href}
+                  className="mt-2 inline-flex text-sm font-medium text-[color:var(--foreground-strong)] underline-offset-4 hover:underline"
+                >
+                  {signalCta(signal.sourceType).label}
+                </Link>
               </div>
             ))}
           </CardContent>
