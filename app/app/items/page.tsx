@@ -22,16 +22,23 @@ export default async function ReviewOsItemsPage({ searchParams }: PageProps) {
   const items = (await reviewOsService.listWrongAnswerItems(session.userId, session.email, 60)).filter(
     (item) => item.examName === config.label,
   );
+  const learningSignals = await reviewOsService.listLearningSignalEvents(session.userId, session.email, mode, 20).catch(() => []);
+  const sourceTypeLabel = (sourceType: string) => {
+    if (sourceType === "answer_review") return "답안 검토 기록";
+    if (sourceType === "wrong_answer") return "오답 기록";
+    if (sourceType === "review_queue") return "다시 볼 항목";
+    return "학습 기록";
+  };
 
   return (
     <div className="space-y-6">
       <Card className="border-[var(--border)] bg-[color:var(--surface)] shadow-none">
         <CardHeader>
-          <CardTitle>{mode === "second" ? "2차 교정 기록" : "1차 오답 기록"}</CardTitle>
+          <CardTitle>{mode === "second" ? "2차 답안노트" : "1차 오답노트"}</CardTitle>
           <CardDescription>{config.recentDescription}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {items.length === 0 ? (
+          {items.length === 0 && learningSignals.length === 0 ? (
             <div className="space-y-4">
               <p className="text-sm text-[color:var(--muted)]">{config.emptyDescription}</p>
               <Link href={mode === "second" ? `/app/write?mode=${mode}` : `/app/capture?mode=${mode}`} className="w-full sm:w-auto">
@@ -76,6 +83,24 @@ export default async function ReviewOsItemsPage({ searchParams }: PageProps) {
           )}
         </CardContent>
       </Card>
+      {learningSignals.length > 0 ? (
+        <Card className="border-[var(--border)] bg-[color:var(--surface)] shadow-none">
+          <CardHeader>
+            <CardTitle>{items.length === 0 ? "최근 검토 기록" : "답안 검토 기록"}</CardTitle>
+            <CardDescription>노트에 누적된 최근 학습 신호를 간단히 확인합니다.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {learningSignals.slice(0, 8).map((signal) => (
+              <div key={signal.id} className="rounded-2xl border border-[var(--border)] px-4 py-4">
+                <p className="text-sm font-medium text-[color:var(--foreground-strong)]">
+                  {signal.subject} · {sourceTypeLabel(signal.sourceType)}
+                </p>
+                <p className="mt-1 text-sm text-[color:var(--muted)]">다음 행동: {signal.nextTask || "다시 볼 항목 정리"}</p>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      ) : null}
     </div>
   );
 }
