@@ -79,7 +79,16 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
 
   const items = allItems.filter((item) => item.examName === config.label).slice(0, 5);
   const queue = focus.queue.filter((item) => item.examName === config.label);
-  const firstUse = items.length === 0;
+  let recentStudyLog: Awaited<ReturnType<typeof reviewOsService.getRecentStudyLog>> | null = null;
+  if (mode === "first") {
+    try {
+      recentStudyLog = await reviewOsService.getRecentStudyLog(session.userId, session.email, "first");
+    } catch (error) {
+      console.warn("[review-os] failed to load optional recent study log", error);
+    }
+  }
+  const hasDataSignals = learningSignalEvents.length > 0 || queue.length > 0 || Boolean(recentStudyLog);
+  const firstUse = items.length === 0 && !hasDataSignals;
   const selectedQueueItem = queue.find((item) => item.queueId === focus.sourceQueueId) ?? queue[0] ?? null;
   const todayPlan = buildTodayPlanCard({ mode, learningSignals: learningSignalEvents, queue, items });
   const nextAction = focus.nextAction ?? selectedQueueItem?.reviewReason ?? config.nextActionFallback;
@@ -103,15 +112,6 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
   const diagnosedWeakPoint = selectedQueueItem?.mistakeType ?? (items[0] ? buildNotebookPreview(items[0]).weakPoint : config.emptyTitle);
   const notebookPreview = items.slice(0, 3).map((item) => buildNotebookPreview(item));
   const shouldShowFirstSubjectSelector = mode === "first" && isFirstSetStart;
-  let recentStudyLog: Awaited<ReturnType<typeof reviewOsService.getRecentStudyLog>> | null = null;
-  if (mode === "first") {
-    try {
-      recentStudyLog = await reviewOsService.getRecentStudyLog(session.userId, session.email, "first");
-    } catch (error) {
-      console.warn("[review-os] failed to load optional recent study log", error);
-    }
-  }
-
   const recentStudyTaxonomyCandidates = recentStudyLog?.taxonomyCandidates ?? [];
   const recentStudyTaxonomyNodeId = recentStudyLog?.taxonomyNodeId ?? null;
   const recentStudyTaxonomyCandidate =
@@ -158,10 +158,10 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
 
       {savedParam ? (
         <section className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] px-4 py-3">
-          <p className="mt-1 text-sm text-[color:var(--foreground-strong)]">방금 남긴 기록은 오늘 할 일과 기록 화면에 반영됩니다.</p>
+          <p className="mt-1 text-sm text-[color:var(--foreground-strong)]">방금 남긴 입력은 오늘 할 일과 노트에 반영됩니다.</p>
           <div className="mt-2">
             <Link href={`/app/items?mode=${mode}`} className="inline-flex rounded-full bg-[color:var(--foreground-strong)] px-4 py-2 text-xs font-medium text-white">
-              기록에서 확인
+              노트에서 확인
             </Link>
           </div>
         </section>
@@ -178,7 +178,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                     ? "틀린 문제 하나를 남기면 오늘 다시 볼 항목이 정리됩니다."
                     : "답안 하나를 남기면 보강할 문단과 다음 할 일이 정리됩니다."}
                 </p>
-                <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">입력 1개 남기기 → 오늘 할 일 생성 → 기록에 누적</p>
+                <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">입력 1개 남기기 → 오늘 할 일 생성 → 노트에 누적</p>
               </div>
               <CardTitle>오늘 첫 입력을 남겨 보세요.</CardTitle>
               <CardDescription className="max-w-[66ch]">
@@ -300,7 +300,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
 
 
         <details className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
-          <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">학습 기록 요약 보기</summary>
+          <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">노트 요약 보기</summary>
           <div className="space-y-2 border-t border-[color:var(--border-subtle)] p-4 text-sm">
             <p>누적 {learningSignal?.totalCount ?? 0}건 · 최근 {learningSignal?.latestEventAt ? new Date(learningSignal.latestEventAt).toLocaleDateString("ko-KR") : "-"}</p>
             <p>주요 과목: {(learningSignal?.topSubjects ?? []).join(", ") || "-"}</p>
@@ -311,7 +311,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
         <section className="space-y-3">
           <details className="group rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
             <summary className="cursor-pointer list-none px-4 py-4 text-sm font-medium text-[color:var(--foreground-strong)] sm:px-5">
-              기록 요약 보기
+              노트 요약 보기
             </summary>
             <div className="space-y-5 border-t border-[color:var(--border-subtle)] px-4 py-5 sm:px-5">
               <div className="grid gap-3 text-sm lg:grid-cols-3">

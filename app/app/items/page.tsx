@@ -22,16 +22,32 @@ export default async function ReviewOsItemsPage({ searchParams }: PageProps) {
   const items = (await reviewOsService.listWrongAnswerItems(session.userId, session.email, 60)).filter(
     (item) => item.examName === config.label,
   );
+  const learningSignals = await reviewOsService.listLearningSignalEvents(session.userId, session.email, mode, 20).catch(() => []);
+  const hasItems = items.length > 0;
+  const hasLearningSignals = learningSignals.length > 0;
+  const signalPrimaryTitle = mode === "second" ? "최근 답안 검토 기록" : "최근 검토 기록";
+  const sourceTypeLabel = (sourceType: string) => {
+    if (sourceType === "answer_review") return "답안 검토 기록";
+    if (sourceType === "wrong_answer") return "오답 기록";
+    if (sourceType === "review_queue") return "다시 볼 항목";
+    return "학습 기록";
+  };
 
   return (
     <div className="space-y-6">
       <Card className="border-[var(--border)] bg-[color:var(--surface)] shadow-none">
         <CardHeader>
-          <CardTitle>{mode === "second" ? "2차 교정 기록" : "1차 오답 기록"}</CardTitle>
-          <CardDescription>{config.recentDescription}</CardDescription>
+          <CardTitle>{hasItems ? (mode === "second" ? "2차 답안노트" : "1차 오답노트") : signalPrimaryTitle}</CardTitle>
+          <CardDescription>
+            {hasItems
+              ? config.recentDescription
+              : mode === "second"
+                ? "검토 기록을 기준으로 오늘 할 일이 정리됩니다."
+                : "답안 검토 기록이 노트에 쌓였습니다."}
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {items.length === 0 ? (
+          {!hasItems && !hasLearningSignals ? (
             <div className="space-y-4">
               <p className="text-sm text-[color:var(--muted)]">{config.emptyDescription}</p>
               <Link href={mode === "second" ? `/app/write?mode=${mode}` : `/app/capture?mode=${mode}`} className="w-full sm:w-auto">
@@ -40,7 +56,7 @@ export default async function ReviewOsItemsPage({ searchParams }: PageProps) {
                 </Button>
               </Link>
             </div>
-          ) : (
+          ) : hasItems ? (
             <div className="space-y-4">
               {items.length === 1 ? (
                 <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] px-4 py-3">
@@ -73,9 +89,38 @@ export default async function ReviewOsItemsPage({ searchParams }: PageProps) {
               </Link>
             ))}
             </div>
+          ) : (
+            <div className="space-y-3">
+              {learningSignals.slice(0, 8).map((signal) => (
+                <div key={signal.id} className="rounded-2xl border border-[var(--border)] px-4 py-4">
+                  <p className="text-sm font-medium text-[color:var(--foreground-strong)]">
+                    {signal.subject} · {sourceTypeLabel(signal.sourceType)}
+                  </p>
+                  <p className="mt-1 text-sm text-[color:var(--muted)]">다음 행동: {signal.nextTask || "다시 볼 항목 정리"}</p>
+                </div>
+              ))}
+            </div>
           )}
         </CardContent>
       </Card>
+      {hasItems && hasLearningSignals ? (
+        <Card className="border-[var(--border)] bg-[color:var(--surface)] shadow-none">
+          <CardHeader>
+            <CardTitle>{signalPrimaryTitle}</CardTitle>
+            <CardDescription>최근 검토 기록에서 이어질 다음 행동을 확인합니다.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {learningSignals.slice(0, 8).map((signal) => (
+              <div key={signal.id} className="rounded-2xl border border-[var(--border)] px-4 py-4">
+                <p className="text-sm font-medium text-[color:var(--foreground-strong)]">
+                  {signal.subject} · {sourceTypeLabel(signal.sourceType)}
+                </p>
+                <p className="mt-1 text-sm text-[color:var(--muted)]">다음 행동: {signal.nextTask || "다시 볼 항목 정리"}</p>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      ) : null}
     </div>
   );
 }

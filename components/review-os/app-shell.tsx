@@ -17,9 +17,9 @@ type AppShellProps = {
 };
 
 const NAV_ITEMS = [
-  { href: "/app", label: "오늘 할 일" },
   { href: { first: "/app/capture", second: "/app/write" }, label: "입력" },
-  { href: "/app/items", label: "기록" },
+  { href: "/app", label: "오늘" },
+  { href: "/app/items", label: "노트" },
 ] as const;
 
 export function ReviewOsAppShell({ email, mode, children, rightSlot }: AppShellProps) {
