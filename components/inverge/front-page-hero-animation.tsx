@@ -3,10 +3,10 @@
 import { motion, useReducedMotion } from "framer-motion";
 
 const FLOW_STEPS = [
-  { label: "오답/답안 입력", detail: "입력 1개" },
-  { label: "원인·쟁점 정리", detail: "핵심 간극 1개" },
-  { label: "오늘 할 일 생성", detail: "재시도 순서" },
-  { label: "노트에 누적", detail: "다음 복습 연결" },
+  { label: "오답/답안 입력", detail: "입력 1개", status: "입력됨" },
+  { label: "원인·쟁점 정리", detail: "핵심 간극 1개", status: "분석 중" },
+  { label: "오늘 할 일 생성", detail: "재시도 순서", status: "생성됨" },
+  { label: "노트에 누적", detail: "다음 복습 연결", status: "누적됨" },
 ] as const;
 
 export function FrontPageHeroAnimation() {
@@ -45,7 +45,7 @@ export function FrontPageHeroAnimation() {
               </div>
               <div className="ml-auto flex shrink-0 items-center gap-1.5 rounded-full border border-[color:var(--border)] bg-[color:var(--surface)] px-2.5 py-1">
                 <span className="h-1.5 w-1.5 rounded-full bg-[color:var(--primary)]" />
-                <span className="text-[11px] text-[color:var(--muted)]">진행 중</span>
+                <span className="text-[11px] text-[color:var(--muted)]">{step.status}</span>
               </div>
             </div>
           </motion.div>
