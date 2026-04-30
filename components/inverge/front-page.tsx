@@ -5,6 +5,8 @@ import { QuietSection, RefinedBadge, RefinedShell, SectionHeading } from "@/comp
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
+import { FrontPageHeroAnimation } from "@/components/inverge/front-page-hero-animation";
+
 const INPUT_EXAMPLES = [
   {
     title: "1차 오답 기록",
@@ -44,26 +46,31 @@ const LOOP_SUMMARY = [
 export function FrontPage() {
   return (
     <RefinedShell className="space-y-12 py-10 sm:py-14 lg:py-16">
-      <section className="max-w-4xl space-y-6">
-        <RefinedBadge>감정평가사 합격 운영 시스템</RefinedBadge>
-        <div className="space-y-5">
-          <h1 className="max-w-4xl text-[42px] font-medium leading-[1.08] tracking-[-0.055em] text-[color:var(--foreground-strong)] sm:text-[58px]">
-            오늘 입력한 기록으로 다음 행동을 정리합니다.
-          </h1>
-          <p className="max-w-3xl text-body text-[color:var(--muted)]">
-            설명보다 입력을 먼저 시작하세요. 입력 1개를 남기면 다음 실행 1개를 바로 정리합니다.
+      <section className="grid items-center gap-8 lg:grid-cols-[minmax(0,1fr)_460px] lg:gap-10">
+        <div className="space-y-6">
+          <RefinedBadge>감정평가사 합격 운영 시스템</RefinedBadge>
+          <div className="space-y-5">
+            <h1 className="max-w-4xl text-[42px] font-medium leading-[1.08] tracking-[-0.055em] text-[color:var(--foreground-strong)] sm:text-[58px]">
+              오늘의 오답과 답안을
+              <br className="hidden sm:block" />
+              내일의 실행 순서로 바꿉니다.
+            </h1>
+            <p className="max-w-3xl text-body text-[color:var(--muted)]">
+              오답 하나, 답안 하나만 남기면 인버지가 원인·쟁점·다음 복습을 정리합니다. 감정평가사 1차/2차 공부를 오늘 할 일 중심으로 굴러가게 만듭니다.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <Link href="/exams" className={cn(buttonVariants({ size: "lg" }), "w-full sm:w-auto")}>
+              오늘 입력 시작
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+            <p className="text-sm text-[color:var(--muted)]">감정평가사 1차/2차 입력 화면으로 바로 이동합니다.</p>
+          </div>
+          <p className="text-sm leading-7 text-[color:var(--muted)]">
+            답안 검토실은 학원과 고빈도 답안 검토 사용자를 위한 운영형 검토 공간으로 확장 예정입니다.
           </p>
         </div>
-        <div className="space-y-4">
-          <Link href="/exams" className={cn(buttonVariants({ size: "lg" }), "w-full sm:w-auto")}>
-            오늘 입력 시작
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Link>
-          <p className="text-sm text-[color:var(--muted)]">감정평가사 1차/2차 입력 화면으로 바로 이동합니다.</p>
-        </div>
-        <p className="text-sm leading-7 text-[color:var(--muted)]">
-          답안 검토실은 학원과 고빈도 답안 검토 사용자를 위한 운영형 검토 공간으로 확장 예정입니다.
-        </p>
+        <FrontPageHeroAnimation />
       </section>
 
       <section className="space-y-6">
