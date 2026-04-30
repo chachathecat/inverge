@@ -279,14 +279,13 @@ export default function AnswerReviewClientPage() {
         ? "피드백 초안 만들기"
         : "피드백 초안 복사";
   const isPrimaryActionDisabled = currentStep === 1 ? !hasMyAnswer || isStructuring : false;
-  const completionStatus = structureDraft ? "검토 완료" : isStructuring ? "검토 중" : "검토 대기";
-  const overallScore = useMemo(() => {
-    if (!structureDraft) return null;
-    const strengths = structureDraft.strengths.length;
-    const gaps = structureDraft.missingIssueCandidates.length + (structureDraft.weakLogicPoint.trim() ? 1 : 0);
-    const base = 68 + strengths * 7 - gaps * 4;
-    return Math.max(45, Math.min(92, base));
-  }, [structureDraft]);
+  const completionStatus = structureError
+    ? "검토 오류"
+    : isStructuring
+      ? "검토 중"
+      : structureDraft
+        ? "검토 완료"
+        : "검토 대기";
 
   const biggestGapFix = toShortLine(structureDraft?.rewriteTarget || structureDraft?.nextAction || "", "누락된 핵심 논점을 문단 하나로 다시 구성해 보세요.");
 
@@ -513,11 +512,41 @@ export default function AnswerReviewClientPage() {
                     <div className="space-y-2 text-right">
                       <p className="text-caption text-[color:var(--muted)]">상태 · {completionStatus}</p>
                       <button type="button" onClick={() => setCurrentStep(1)} className={cn(buttonVariants({ variant: "default" }), "h-9 px-4")}>
-                        다시 쓰기 시작
+                        입력 수정하기
                       </button>
                     </div>
                   </div>
                 </motion.div>
+                {structureError ? (
+                  <article className="rounded-[var(--radius-sm)] border border-[#b9a98a] bg-[#f8f4ea] px-4 py-3">
+                    <p className="text-caption font-medium text-[#5a4b32]">검토 오류</p>
+                    <p className="mt-1 text-caption leading-5 text-[#5a4b32]">{structureError}</p>
+                  </article>
+                ) : null}
+                {learningSignalStatus === "saved" ? (
+                  <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] px-4 py-3">
+                    <p className="text-caption leading-5 text-[color:var(--muted)]">
+                      학습 신호가 기록되었습니다.{" "}
+                      <Link href="/today" className="font-medium text-[color:var(--foreground-strong)] underline underline-offset-2">
+                        오늘 확인
+                      </Link>
+                    </p>
+                  </article>
+                ) : null}
+                {learningSignalStatus === "failed" ? (
+                  <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] px-4 py-3">
+                    <p className="text-caption leading-5 text-[color:var(--muted)]">
+                      학습 신호를 저장하지 못했습니다. 검토자 확인 후 수동 기록해 주세요.
+                    </p>
+                  </article>
+                ) : null}
+                {learningSignalStatus === "skipped" ? (
+                  <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] px-4 py-3">
+                    <p className="text-caption leading-5 text-[color:var(--muted)]">
+                      입력 정보가 충분하지 않아 학습 신호 저장은 건너뛰었습니다.
+                    </p>
+                  </article>
+                ) : null}
 
                 <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
                   <div className="space-y-4">
@@ -528,7 +557,7 @@ export default function AnswerReviewClientPage() {
                         <p>왜 중요한가: 채점 포인트를 놓치면 논리 전개가 맞아도 점수 회수가 어렵습니다.</p>
                         <p>어떻게 고칠까: {biggestGapFix}</p>
                       </div>
-                      <motion.button whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }} type="button" onClick={() => setCurrentStep(1)} className={cn(buttonVariants({ variant: "default" }), "mt-4 h-9 px-4")}>다시 쓰기 시작</motion.button>
+                      <motion.button whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }} type="button" onClick={() => setCurrentStep(1)} className={cn(buttonVariants({ variant: "default" }), "mt-4 h-9 px-4")}>자료 보강하기</motion.button>
                     </article>
 
                     <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
@@ -558,9 +587,11 @@ export default function AnswerReviewClientPage() {
                     transition={{ duration: 0.3, ease: "easeOut", delay: shouldReduceMotion ? 0 : 0.08 }}
                   >
                     <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
-                      <p className="text-caption text-[color:var(--muted)]">총점(참고)</p>
-                      <p className="mt-1 text-xl font-semibold tracking-tight text-[color:var(--foreground-strong)]">{overallScore ?? "-"}<span className="ml-1 text-sm font-medium text-[color:var(--muted)]">/100</span></p>
-                      <p className="mt-2 text-caption leading-5 text-[color:var(--muted)]">점수보다 간극 1개 보강을 우선하세요.</p>
+                      <p className="text-caption text-[color:var(--muted)]">보강 우선도</p>
+                      <p className="mt-1 text-sm font-semibold leading-6 text-[color:var(--foreground-strong)]">
+                        간극 1개 우선 보강
+                      </p>
+                      <p className="mt-2 text-caption leading-5 text-[color:var(--muted)]">공식 점수 대신 다음 보강 행동을 먼저 실행해 주세요.</p>
                     </article>
                     <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
                       <p className="text-caption font-medium text-[color:var(--muted)]">보조 지표</p>
@@ -573,7 +604,7 @@ export default function AnswerReviewClientPage() {
                     <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
                       <p className="text-caption font-medium text-[color:var(--muted)]">다음 행동</p>
                       <div className="mt-2 grid gap-2">
-                        <motion.button whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }} type="button" onClick={() => setCurrentStep(1)} className={cn(buttonVariants({ variant: "default" }), "h-9")}>다시쓰기</motion.button>
+                        <motion.button whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }} type="button" onClick={() => setCurrentStep(1)} className={cn(buttonVariants({ variant: "default" }), "h-9")}>입력 수정하기</motion.button>
                         <motion.button whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }} type="button" onClick={() => setCurrentStep(3)} className={cn(buttonVariants({ variant: "outline" }), "h-9")}>비교/피드백 정리</motion.button>
                       </div>
                     </article>
