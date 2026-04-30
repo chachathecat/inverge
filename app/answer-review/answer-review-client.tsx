@@ -500,7 +500,6 @@ export default function AnswerReviewClientPage() {
                   />
                 </div>
               </div>
-              </div>
                 </motion.div>
 
                 <motion.aside
