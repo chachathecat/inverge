@@ -10,6 +10,7 @@ import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os
 import { reviewOsService } from "@/lib/review-os/service";
 import { buildNotebookPreview } from "@/lib/review-os/study-note";
 import { APPRAISAL_FIRST_SUBJECTS } from "@/lib/review-os/types";
+import { FirstInputTooltip, MotionCard, MotionDetails, MotionSection } from "@/components/inverge/motion-system";
 import { buildTodayPlanCard, type TodayPlanActionKind } from "@/lib/review-os/today-plan";
 
 const FIRST_MODE_INPUT_OPTIONS = [
@@ -167,9 +168,9 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
         </section>
       ) : null}
 
-      <section className="space-y-4">
+      <MotionSection className="space-y-4">
         {firstUse ? (
-          <Card className="border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] shadow-none">
+          <MotionCard delay={0.04} className="border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] shadow-none rounded-[var(--radius-lg)]"><Card className="border-0 bg-transparent shadow-none">
             <CardHeader className="space-y-3 p-4 sm:p-6">
               <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--brand-050)] px-4 py-3">
                 <p className="text-caption text-[color:var(--muted)]">처음이라면</p>
@@ -193,6 +194,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                   {mode === "first" ? "오답 하나 남기기" : "답안 하나 작성하기"}
                 </Button>
               </Link>
+              <FirstInputTooltip />
               <details className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
                 <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">다른 입력 방식 보기</summary>
                 <div className="grid gap-2.5 border-t border-[color:var(--border-subtle)] px-4 py-3">
@@ -207,17 +209,15 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                   </Link>
                 ))}
                 </div>
-              </details>
-              <details className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
-                <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">왜 입력부터 시작하나요?</summary>
-                <div className="border-t border-[color:var(--border-subtle)] px-4 py-3 text-xs leading-6 text-[color:var(--muted)]">
+              </MotionDetails>
+              <MotionDetails className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]" summaryClassName="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]" contentClassName="border-t border-[color:var(--border-subtle)] px-4 py-3 text-xs leading-6 text-[color:var(--muted)]" summary="왜 입력부터 시작하나요?">
                   입력이 아직 없으면 우선순위가 흐려질 수 있습니다. 오늘 입력 하나만 남겨 두면 다음 복습과 재시도 순서를 더 편하게 이어갈 수 있습니다.
                 </div>
               </details>
             </CardContent>
-          </Card>
+          </Card></MotionCard>
         ) : (
-          <Card className="border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] shadow-none">
+          <MotionCard delay={0.04} className="border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] shadow-none rounded-[var(--radius-lg)]"><Card className="border-0 bg-transparent shadow-none">
             <CardHeader className="space-y-3 p-4 sm:p-6">
               <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--brand-050)] px-4 py-3">
                 <p className="text-caption text-[color:var(--muted)]">오늘 최우선 작업</p>
@@ -294,19 +294,18 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                 </div>
               </details>
             </CardContent>
-          </Card>
+          </Card></MotionCard>
         )}
 
 
 
         <details className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
-          <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">누적 신호 보기</summary>
-          <div className="space-y-2 border-t border-[color:var(--border-subtle)] p-4 text-sm">
+          
             <p>누적 {learningSignal?.totalCount ?? 0}건 · 최근 {learningSignal?.latestEventAt ? new Date(learningSignal.latestEventAt).toLocaleDateString("ko-KR") : "-"}</p>
             <p>주요 과목: {(learningSignal?.topSubjects ?? []).join(", ") || "-"}</p>
             <p>주요 태그: {(learningSignal?.topTags ?? []).join(", ") || "-"}</p>
           </div>
-        </details>
+        </MotionDetails>
 
         <section className="space-y-3">
           <details className="group rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
