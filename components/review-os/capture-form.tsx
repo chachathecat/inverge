@@ -791,10 +791,10 @@ export function WrongAnswerCaptureForm({
           >
             {mode === "second" ? "쟁점 회상부터 시작" : "확인하고 저장하기"}
           </Button>
-        ) : (
+        ) : stage === "intake" ? null : (
           <Button
             type="submit"
-            disabled={submitting || stage === "intake" || (mode === "second" && stage !== "second-rewrite" && stage !== "confirm")}
+            disabled={submitting || (mode === "second" && stage !== "second-rewrite" && stage !== "confirm")}
             data-testid={mode === "second" && stage === "second-rewrite" && !rewriteContext ? "second-write-submit" : undefined}
             className="w-full sm:w-auto"
           >
@@ -934,15 +934,21 @@ function IntakePanel({
           className="min-h-44 border-[var(--border)] bg-[color:var(--bg-surface)] text-[color:var(--foreground-strong)] leading-7"
         />
       </label>
+      {mode === "first" ? (
+        <p className="mt-2 text-xs leading-6 text-[color:var(--muted)]">
+          최소 입력: 정답, 내 답, 틀린 이유를 한 줄로 남겨도 됩니다. 예: 정답: 3 / 내 답: 2 / 이유: 선지 오독
+        </p>
+      ) : null}
+      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <Button type="button" onClick={onGenerate} disabled={extracting} className="w-full sm:w-auto">
+          {extracting ? "입력 내용 확인 중" : mode === "second" ? "노트 초안 만들기" : "입력 내용 확인"}
+        </Button>
+        <p className="text-xs text-[color:var(--muted)]">노트에 반영됩니다.</p>
+      </div>
       <details className="mt-4 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
         <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">이미지/PDF로 입력하기 (선택)</summary>
         <div className="border-t border-[color:var(--border-subtle)] px-4 py-3">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <Button type="button" onClick={onGenerate} disabled={extracting} className="w-full sm:w-auto">
-          {extracting ? "추출 중" : "구조 초안 만들기"}
-        </Button>
-        {form.sourceLabel ? <p className="text-sm text-[color:var(--muted)]">보관한 파일: {form.sourceLabel}</p> : null}
-      </div>
+          {form.sourceLabel ? <p className="text-sm text-[color:var(--muted)]">보관한 파일: {form.sourceLabel}</p> : null}
         </div>
       </details>
       <p className="mt-3 text-caption leading-5 text-[color:var(--muted)]">텍스트 붙여넣기/수기 입력이 기본 경로입니다.</p>

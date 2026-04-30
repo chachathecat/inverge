@@ -28,19 +28,20 @@ export default async function ReviewOsWritePage({ searchParams }: PageProps) {
         <div>
           <h2 className="text-2xl font-medium tracking-[-0.04em] text-[color:var(--foreground-strong)]">2차 답안 작성 워크스페이스</h2>
           <p className="mt-2 max-w-2xl text-sm leading-7 text-[color:var(--muted)]">
-            새로 작성할 답안이면 여기서 바로 시작하세요. 이미 쓴 답안이 있다면 답안 검토로 바로 정리할 수 있습니다.
+            첫 시작이라면 이미 작성한 답안을 붙여넣어 빠르게 검토해보세요. 새로 작성하는 흐름도 그대로 사용할 수 있습니다.
           </p>
-          <div className="mt-3">
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
             <Link href="/answer-review?mode=second">
-              <Button type="button" variant="outline">답안 검토로 바로 정리</Button>
+              <Button type="button">이미 쓴 답안 검토하기</Button>
             </Link>
+            <p className="text-xs text-[color:var(--muted)]">추천 시작 경로</p>
           </div>
         </div>
       </section>
 
       <Card className="border-[color:var(--border-strong)] bg-[color:var(--surface)] shadow-none">
         <CardHeader>
-          <CardTitle>실행 순서</CardTitle>
+          <CardTitle>새 답안 작성하기</CardTitle>
           <CardDescription>쟁점 회상 → 목차 작성 → 내 답안 작성 → 기준답안/해설 입력 → 가장 큰 간극 1개 → 문단 다시쓰기</CardDescription>
         </CardHeader>
         <CardContent>
