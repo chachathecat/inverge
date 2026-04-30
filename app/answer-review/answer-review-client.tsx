@@ -438,7 +438,7 @@ export default function AnswerReviewClientPage() {
                 </section>
 
                 <section className="space-y-2 rounded-[var(--radius-sm)] border border-[#b7c1dd] bg-[#f8faff] p-3" id="my-answer-upload">
-                  <p className="text-caption font-medium text-[#3f4c66]">내 답안 파일 (필수)</p>
+                  <p className="text-caption font-medium text-[#3f4c66]">내 답안 파일</p>
                   <label
                     htmlFor="answer-review-my-answer-file-upload"
                     className={cn(buttonVariants({ variant: "outline" }), "w-full cursor-pointer justify-center sm:w-auto")}
@@ -490,15 +490,6 @@ export default function AnswerReviewClientPage() {
                     onChange={(event) => setProblemText(event.target.value)}
                   />
                 </div>
-                <div className="space-y-2" id="answer-review-text">
-                  <p className="text-caption font-medium text-[color:var(--muted)]">내 답안 입력</p>
-                  <Textarea
-                    className="min-h-[120px] bg-[color:var(--surface)]"
-                    placeholder="초안 텍스트가 있으면 붙여 넣고, 없으면 직접 입력해 주세요."
-                    value={myAnswerText}
-                    onChange={(event) => setMyAnswerText(event.target.value)}
-                  />
-                </div>
                 <div className="space-y-2" id="answer-review-reference">
                   <p className="text-caption font-medium text-[color:var(--muted)]">기준답안/기준목차 입력</p>
                   <Textarea
@@ -508,6 +499,7 @@ export default function AnswerReviewClientPage() {
                     onChange={(event) => setReferenceAnswerText(event.target.value)}
                   />
                 </div>
+              </div>
               </div>
                 </motion.div>
 
@@ -587,7 +579,10 @@ export default function AnswerReviewClientPage() {
                   <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] px-4 py-3">
                     <p className="text-caption leading-5 text-[color:var(--muted)]">
                       학습 신호가 기록되었습니다.{" "}
-                      <Link href="/today" className="font-medium text-[color:var(--foreground-strong)] underline underline-offset-2">
+                      <Link
+                        href={examMode === "second" ? "/app?mode=second" : "/app?mode=first"}
+                        className="font-medium text-[color:var(--foreground-strong)] underline underline-offset-2"
+                      >
                         오늘 확인
                       </Link>
                     </p>
