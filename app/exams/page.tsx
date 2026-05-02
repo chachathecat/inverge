@@ -20,7 +20,7 @@ type ExamSelectionCard = {
 function buildModeEntryHref(isAuthenticated: boolean, authEnabled: boolean, mode: "first" | "second") {
   const appHref = `/app?mode=${mode}`;
   if (!authEnabled || isAuthenticated) return appHref;
-  return `/login?returnTo=${encodeURIComponent(appHref)}`;
+  return `/login?returnTo=${encodeURIComponent(buildModeInputHref(mode))}`;
 }
 
 function buildModeInputHref(mode: "first" | "second") {

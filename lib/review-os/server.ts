@@ -36,11 +36,16 @@ async function resolveReviewOsReturnTo(returnTo: string) {
   ].filter((value): value is string => Boolean(value));
 
   for (const candidate of candidates) {
-    const query = candidate.includes("?") ? candidate.slice(candidate.indexOf("?")) : "";
-    if (!query) continue;
     try {
-      const params = new URLSearchParams(query.slice(1));
-      return buildReviewOsReturnTo(returnTo, params.get("mode"));
+      const parsed = new URL(candidate, "http://inverge.local");
+      if (parsed.pathname.startsWith("/app")) {
+        return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+      }
+
+      const modeParam = parsed.searchParams.get("mode");
+      if (modeParam === "first" || modeParam === "second") {
+        return buildReviewOsReturnTo(returnTo, modeParam);
+      }
     } catch {
       continue;
     }
