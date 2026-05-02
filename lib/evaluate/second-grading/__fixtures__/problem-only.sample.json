@@ -1,0 +1,49 @@
+{
+  "mode": "problem_only",
+  "subject": "감정평가이론",
+  "questionType": "theory",
+  "issueGate": {
+    "triggered": false,
+    "reason": "문제 단독 입력으로 결정적 누락 판단 불가"
+  },
+  "rubricScores": [
+    { "category": "issue", "maxScore": 25, "score": 0, "rationale": "판단 불가", "evidence": [] },
+    { "category": "structure", "maxScore": 20, "score": 0, "rationale": "판단 불가", "evidence": [] },
+    { "category": "standard", "maxScore": 25, "score": 0, "rationale": "판단 불가", "evidence": [] },
+    { "category": "application", "maxScore": 20, "score": 0, "rationale": "판단 불가", "evidence": [] },
+    { "category": "conclusion", "maxScore": 10, "score": 0, "rationale": "판단 불가", "evidence": [] }
+  ],
+  "rubricSubtotal": 0,
+  "baseScore": 0,
+  "deductions": [],
+  "deductionTotal": 0,
+  "finalScore": 0,
+  "passProbabilitySimulation": {
+    "band": "very_low",
+    "estimatedRange": [0, 20],
+    "rationale": "답안 미입력 상태",
+    "caveat": "실제 채점 결과 아님"
+  },
+  "skeletonModelAnswer": {
+    "format": "outline_only",
+    "caution": "학습용 개요. 완성형 답안 작성 금지",
+    "outline": [
+      {
+        "heading": "I. 쟁점 정리",
+        "bullets": ["핵심 쟁점 A를 정의", "쟁점 B와의 경계 제시"],
+        "requiredKeywords": ["가상키워드A", "가상키워드B"],
+        "statutesOrCases": ["가상법령 제00조"],
+        "formulasLatex": [],
+        "applicationDirection": "사실관계 대비 쟁점 범위를 먼저 확정"
+      }
+    ]
+  },
+  "weaknessDrill": {
+    "targetWeakness": "쟁점 선별",
+    "improvementGoalPercent": 15,
+    "durationMinutes": 5,
+    "prompt": "가상 문제에서 핵심 쟁점 1개와 보조 쟁점 1개를 분리해 쓰세요.",
+    "expectedOutputChecklist": ["핵심 쟁점 1개", "보조 쟁점 1개", "구분 근거 1개"]
+  },
+  "notes": ["실제 시험문항이 아닌 플레이스홀더 데이터"]
+}
