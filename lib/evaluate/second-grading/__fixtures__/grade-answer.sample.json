@@ -1,0 +1,59 @@
+{
+  "mode": "grade_answer",
+  "subject": "감정평가및보상법규",
+  "questionType": "law",
+  "issueGate": {
+    "triggered": false,
+    "reason": "핵심 쟁점은 식별됨"
+  },
+  "rubricScores": [
+    { "category": "issue", "maxScore": 25, "score": 18, "rationale": "주요 쟁점 식별", "evidence": ["답안 1문단"] },
+    { "category": "structure", "maxScore": 15, "score": 10, "rationale": "목차 연결이 일부 약함", "evidence": ["답안 2문단"] },
+    { "category": "legalRule", "maxScore": 25, "score": 16, "rationale": "법조문 근거 일부 누락", "evidence": ["답안 3문단"] },
+    { "category": "application", "maxScore": 25, "score": 14, "rationale": "사안포섭이 추상적", "evidence": ["답안 4문단"] },
+    { "category": "conclusion", "maxScore": 10, "score": 7, "rationale": "결론은 있으나 조건부 한계 미표시", "evidence": ["답안 결론"] }
+  ],
+  "rubricSubtotal": 65,
+  "baseScore": 65,
+  "deductions": [
+    {
+      "code": "weak_application_subsumption",
+      "label": "사안포섭 약함",
+      "points": -25,
+      "rootCauseId": "subsumption_weak_1",
+      "reason": "사실-법규 연결 부족",
+      "evidence": ["답안 4문단"],
+      "cumulative": true
+    }
+  ],
+  "deductionTotal": -25,
+  "finalScore": 40,
+  "passProbabilitySimulation": {
+    "band": "low",
+    "estimatedRange": [30, 45],
+    "rationale": "쟁점 식별은 가능하나 포섭 약점 큼",
+    "caveat": "추정치이며 강사 검수 필요"
+  },
+  "skeletonModelAnswer": {
+    "format": "outline_only",
+    "caution": "문단형 모범답안 제공 금지",
+    "outline": [
+      {
+        "heading": "I. 쟁점",
+        "bullets": ["핵심 쟁점 분리", "판단 기준 제시"],
+        "requiredKeywords": ["가상키워드C"],
+        "statutesOrCases": ["가상판례 20XX다0000"],
+        "formulasLatex": [],
+        "applicationDirection": "사실관계와 법리를 1:1 대응"
+      }
+    ]
+  },
+  "weaknessDrill": {
+    "targetWeakness": "사안포섭 밀도",
+    "improvementGoalPercent": 15,
+    "durationMinutes": 5,
+    "prompt": "가상 사실관계를 법규 요소와 2행 매칭표로 작성하세요.",
+    "expectedOutputChecklist": ["사실요소 2개", "법규요소 2개", "연결문장 2개"]
+  },
+  "notes": ["가상 데이터", "실제 시험문항/답안 아님"]
+}
