@@ -143,6 +143,7 @@ create table if not exists public.questions (
   question_text text,
   choices jsonb,
   explanation text,
+  question_metadata jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -157,3 +158,12 @@ create table if not exists public.answers (
 
 create index if not exists idx_exams_year_round_type on public.exams (year desc, round desc, type asc);
 create index if not exists idx_questions_exam_subject_no on public.questions (exam_id, subject, question_no);
+
+
+alter table public.answers
+  add column if not exists answer_type text not null default 'model_answer',
+  add column if not exists answer_metadata jsonb not null default '{}'::jsonb;
+
+create unique index if not exists uq_exams_year_round_type on public.exams (year, round, type);
+create unique index if not exists uq_questions_exam_subject_no on public.questions (exam_id, subject, question_no);
+create unique index if not exists uq_answers_question_type on public.answers (question_id, answer_type);

@@ -43,3 +43,28 @@ create policy "questions_read_all" on public.questions for select using (true);
 
 drop policy if exists "answers_read_all" on public.answers;
 create policy "answers_read_all" on public.answers for select using (true);
+
+
+alter table public.questions
+  add column if not exists subject text not null default '공통',
+  add column if not exists question_text text,
+  add column if not exists question_metadata jsonb not null default '{}'::jsonb;
+
+alter table public.questions
+  alter column question_text set default '',
+  alter column question_text set not null;
+
+update public.questions
+set question_text = coalesce(nullif(question_text, ''), text)
+where question_text is null or question_text = '';
+
+alter table public.questions
+  add column if not exists choices jsonb not null default '[]'::jsonb,
+  add column if not exists explanation text;
+
+alter table public.answers
+  add column if not exists answer_type text not null default 'model_answer',
+  add column if not exists answer_metadata jsonb not null default '{}'::jsonb;
+
+create unique index if not exists uq_questions_exam_subject_no on public.questions(exam_id, subject, question_no);
+create unique index if not exists uq_answers_question_type on public.answers(question_id, answer_type);
