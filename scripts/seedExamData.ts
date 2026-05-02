@@ -67,6 +67,46 @@ function ensure(condition: unknown, message: string): asserts condition {
   }
 }
 
+function readInteger(value: unknown, label: string, options: { min?: number; max?: number } = {}): number {
+  ensure(typeof value === "number" && Number.isInteger(value), `${label}는 정수여야 합니다.`);
+  if (options.min !== undefined) ensure(value >= options.min, `${label}는 ${options.min} 이상이어야 합니다.`);
+  if (options.max !== undefined) ensure(value <= options.max, `${label}는 ${options.max} 이하여야 합니다.`);
+  return value;
+}
+
+function readString(value: unknown, label: string): string {
+  ensure(typeof value === "string", `${label}는 문자열이어야 합니다.`);
+  const trimmed = value.trim();
+  ensure(trimmed.length > 0, `${label}는 비어있지 않아야 합니다.`);
+  return trimmed;
+}
+
+function readOptionalString(value: unknown, _label: string): string | undefined {
+  if (value === undefined) return undefined;
+  if (value === null) return undefined;
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function readStringArray(value: unknown, label: string): string[] {
+  ensure(Array.isArray(value), `${label}는 배열이어야 합니다.`);
+  const parsed = value.map((item, index) => readString(item, `${label}[${index}]`));
+  ensure(parsed.length > 0, `${label}는 비어있지 않아야 합니다.`);
+  return parsed;
+}
+
+function readOptionalStringArray(value: unknown, label: string): string[] | undefined {
+  if (value === undefined || value === null) return undefined;
+  ensure(Array.isArray(value), `${label}가 있으면 배열이어야 합니다.`);
+  return value.map((item, index) => readString(item, `${label}[${index}]`));
+}
+
+function readExamType(value: unknown, label: string): ExamType {
+  ensure(value === "first" || value === "second", `${label}은 first 또는 second여야 합니다.`);
+  return value;
+}
+
 function validatePayload(input: unknown): SeedPayload {
   ensure(isObject(input), "루트는 객체여야 합니다.");
   ensure(input.version === 1, "version은 1이어야 합니다.");
@@ -76,52 +116,71 @@ function validatePayload(input: unknown): SeedPayload {
 
   const exams: SeedExam[] = input.exams.map((exam, examIndex) => {
     ensure(isObject(exam), `exams[${examIndex}]는 객체여야 합니다.`);
-    const year = exam.year;
-    const round = exam.round;
-    const type = exam.type;
-    ensure(Number.isInteger(year) && year >= 1900 && year <= 2100, `exams[${examIndex}].year는 1900~2100 정수여야 합니다.`);
-    ensure(Number.isInteger(round) && round > 0, `exams[${examIndex}].round는 양의 정수여야 합니다.`);
-    ensure(type === "first" || type === "second", `exams[${examIndex}].type은 first 또는 second여야 합니다.`);
+    const year = readInteger(exam.year, `exams[${examIndex}].year`, { min: 1900, max: 2100 });
+    const round = readInteger(exam.round, `exams[${examIndex}].round`, { min: 1, max: 999 });
+    const type = readExamType(exam.type, `exams[${examIndex}].type`);
     ensure(Array.isArray(exam.subjects), `exams[${examIndex}].subjects는 배열이어야 합니다.`);
 
     const subjects: SeedSubject[] = exam.subjects.map((subject, subjectIndex) => {
       ensure(isObject(subject), `exams[${examIndex}].subjects[${subjectIndex}]는 객체여야 합니다.`);
-      ensure(typeof subject.name === "string" && subject.name.trim().length > 0, `exams[${examIndex}].subjects[${subjectIndex}].name은 비어있지 않아야 합니다.`);
+      const subjectName = readString(subject.name, `exams[${examIndex}].subjects[${subjectIndex}].name`);
       ensure(Array.isArray(subject.questions), `exams[${examIndex}].subjects[${subjectIndex}].questions는 배열이어야 합니다.`);
 
       const questions: SeedQuestion[] = subject.questions.map((question, questionIndex) => {
         ensure(isObject(question), `question 객체 형식이 잘못되었습니다. (exams[${examIndex}].subjects[${subjectIndex}].questions[${questionIndex}])`);
-        ensure(Number.isInteger(question.questionNo) && (question.questionNo as number) > 0, "questionNo는 양의 정수여야 합니다.");
-        ensure(typeof question.questionText === "string" && question.questionText.trim().length > 0, "questionText는 비어있지 않아야 합니다.");
+        const questionNo = readInteger(question.questionNo, `exams[${examIndex}].subjects[${subjectIndex}].questions[${questionIndex}].questionNo`, { min: 1 });
+        const questionText = readString(question.questionText, `exams[${examIndex}].subjects[${subjectIndex}].questions[${questionIndex}].questionText`);
+        const choices = readOptionalStringArray(question.choices, `exams[${examIndex}].subjects[${subjectIndex}].questions[${questionIndex}].choices`);
+        const explanation = readOptionalString(question.explanation, `exams[${examIndex}].subjects[${subjectIndex}].questions[${questionIndex}].explanation`);
+        const tags = readOptionalStringArray(question.tags, `exams[${examIndex}].subjects[${subjectIndex}].questions[${questionIndex}].tags`);
+        const isVerified = question.isVerified === undefined ? undefined : (() => { ensure(typeof question.isVerified === "boolean", `exams[${examIndex}].subjects[${subjectIndex}].questions[${questionIndex}].isVerified는 boolean이어야 합니다.`); return question.isVerified; })();
 
-        if (question.choices !== undefined) {
-          ensure(Array.isArray(question.choices), "choices가 있으면 배열이어야 합니다.");
-        }
+        const answerText = readOptionalString(question.answerText, `exams[${examIndex}].subjects[${subjectIndex}].questions[${questionIndex}].answerText`);
+        const modelAnswer = readOptionalString(question.modelAnswer, `exams[${examIndex}].subjects[${subjectIndex}].questions[${questionIndex}].modelAnswer`);
+        const gradingPoints = readOptionalStringArray(
+          question.gradingPoints,
+          `exams[${examIndex}].subjects[${subjectIndex}].questions[${questionIndex}].gradingPoints`,
+        );
 
         if (type === "first") {
-          ensure(typeof question.answerText === "string" && question.answerText.trim().length > 0, "first 문항은 answerText가 필요합니다.");
-        }
-        if (type === "second") {
-          ensure(typeof question.modelAnswer === "string" && question.modelAnswer.trim().length > 0, "second 문항은 modelAnswer가 필요합니다.");
-          if (question.gradingPoints !== undefined) {
-            ensure(Array.isArray(question.gradingPoints), "gradingPoints가 있으면 배열이어야 합니다.");
+          readString(answerText, "first 문항 answerText");
+          if (choices !== undefined) {
+            readStringArray(choices, "first 문항 choices");
           }
         }
+        if (type === "second") {
+          readString(modelAnswer, "second 문항 modelAnswer");
+        }
 
-        const duplicateKey = `${year}-${round}-${type}-${subject.name.trim()}-${question.questionNo}`;
+        const duplicateKey = `${year}-${round}-${type}-${subjectName}-${questionNo}`;
         ensure(!seen.has(duplicateKey), `중복 문항 키가 있습니다: ${duplicateKey}`);
         seen.add(duplicateKey);
 
-        return question as SeedQuestion;
+        return {
+          questionNo,
+          questionText,
+          choices,
+          answerText,
+          modelAnswer,
+          gradingPoints,
+          explanation,
+          tags,
+          isVerified,
+        };
       });
 
-      return { name: subject.name.trim(), questions };
+      return { name: subjectName, questions };
     });
 
-    return { year, round, type, subjects } as SeedExam;
+    return { year, round, type, subjects };
   });
 
-  const source = isObject(input.source) ? { name: typeof input.source.name === "string" ? input.source.name : undefined, note: typeof input.source.note === "string" ? input.source.note : undefined } : undefined;
+  const source = isObject(input.source)
+    ? {
+        name: readOptionalString(input.source.name, "source.name"),
+        note: readOptionalString(input.source.note, "source.note"),
+      }
+    : undefined;
 
   return {
     version: 1,
@@ -208,11 +267,7 @@ async function main() {
   let answersUpserted = 0;
 
   for (const exam of payload.exams) {
-    const examRes = await client
-      .from("exams")
-      .upsert({ year: exam.year, round: exam.round, type: exam.type }, { onConflict: "year,round,type" })
-      .select("id")
-      .single();
+    const examRes = await client.from("exams").upsert({ year: exam.year, round: exam.round, type: exam.type }, { onConflict: "year,round,type" }).select("id").single();
 
     if (examRes.error) throw examRes.error;
     examsUpserted += 1;
@@ -231,6 +286,12 @@ async function main() {
               question_text: validatedQuestion.questionText,
               choices: validatedQuestion.choices ?? null,
               explanation: validatedQuestion.explanation ?? null,
+              question_metadata: {
+                tags: validatedQuestion.tags ?? [],
+                isVerified: validatedQuestion.isVerified ?? false,
+                sourceName,
+                sourceNote: payload.source?.note ?? null,
+              },
             },
             { onConflict: "exam_id,subject,question_no" },
           )

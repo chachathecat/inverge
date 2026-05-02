@@ -143,6 +143,7 @@ create table if not exists public.questions (
   question_text text,
   choices jsonb,
   explanation text,
+  question_metadata jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

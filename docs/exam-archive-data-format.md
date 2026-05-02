@@ -115,6 +115,10 @@
   - `실제 답안이 아닙니다`
 - 중복 키(`year/round/type/subject/questionNo`)는 하나의 입력 파일 내에서 허용하지 않음
 
+- `answers(question_id, answer_type)` 고유 인덱스 적용 전 주의:
+  - 기존 DB에 동일 `question_id`의 중복 answer 행이 있으면 인덱스 생성이 실패할 수 있음
+  - 인덱스 적용 전에 중복 answer 행을 먼저 통합(consolidate)한 뒤 적용
+
 ## 7) 전체 예시
 
 ```json

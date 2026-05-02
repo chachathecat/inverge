@@ -1,13 +1,13 @@
 {
   "version": 1,
   "source": {
-    "name": "manual-sample",
-    "note": "샘플 데이터입니다. 실제 기출 원문이 아닙니다."
+    "name": "placeholder-only-do-not-seed-production",
+    "note": "placeholder-only / do-not-seed-production / actual exam contents are not included"
   },
   "exams": [
     {
-      "year": 2024,
-      "round": 35,
+      "year": 2099,
+      "round": 99,
       "type": "first",
       "subjects": [
         {
@@ -25,7 +25,9 @@
               ],
               "answerText": "③ 샘플 정답입니다. 실제 답안이 아닙니다.",
               "explanation": "샘플 해설입니다. 실제 기출 원문이 아닙니다.",
-              "tags": ["sample"],
+              "tags": [
+                "sample"
+              ],
               "isVerified": false
             }
           ]
@@ -33,8 +35,8 @@
       ]
     },
     {
-      "year": 2024,
-      "round": 35,
+      "year": 2099,
+      "round": 99,
       "type": "second",
       "subjects": [
         {
@@ -44,9 +46,15 @@
               "questionNo": 1,
               "questionText": "샘플 논술형 문제입니다. 실제 기출 원문이 아닙니다.",
               "modelAnswer": "샘플 모범답안입니다. 실제 답안이 아닙니다.",
-              "gradingPoints": ["샘플 쟁점", "샘플 논리", "샘플 적용"],
+              "gradingPoints": [
+                "샘플 쟁점",
+                "샘플 논리",
+                "샘플 적용"
+              ],
               "explanation": "샘플 해설입니다. 실제 기출 원문이 아닙니다.",
-              "tags": ["sample"],
+              "tags": [
+                "sample"
+              ],
               "isVerified": false
             }
           ]
