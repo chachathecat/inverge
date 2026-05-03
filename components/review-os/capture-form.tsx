@@ -878,16 +878,17 @@ function IntakePanel({
           </h3>
           <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">
             {mode === "second"
-              ? "사진은 초안 추출용입니다. 저장 전 반드시 과목/기준 답안/내 답안/가장 큰 간극을 확인합니다. OCR 결과는 사용자가 확인한 뒤 저장됩니다."
-              : "사진은 초안 추출용입니다. 저장 전 반드시 과목/정답/내 답/오답 원인/회상 문장을 확인합니다. OCR 결과는 사용자가 확인한 뒤 저장됩니다."}
+              ? "사진은 초안 추출용입니다. 저장 전 반드시 과목/기준 답안/내 답안/가장 큰 간극을 확인합니다. OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요."
+              : "사진은 초안 추출용입니다. 저장 전 반드시 과목/정답/내 답/오답 원인/회상 문장을 확인합니다. OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요."}
           </p>
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <label className="inline-flex min-h-11 w-full cursor-pointer items-center justify-center rounded-full border border-[color:var(--border-strong)] bg-[color:var(--bg-surface)] px-5 py-3 text-sm font-medium text-[color:var(--foreground-strong)] sm:w-auto">
-            사진 업로드 (OCR 초안)
+            사진 업로드 (OCR 초안, 모바일 카메라 가능)
             <input
               type="file"
               accept="image/*"
+              capture="environment"
               className="sr-only"
               onChange={(event) => {
                 const file = event.target.files?.[0];
