@@ -223,6 +223,8 @@ export type WrongAnswerItemInput = {
   rewriteSourceItemId?: string;
   rewriteSourceGap?: string;
   rewriteCompleted?: boolean;
+  captureIntent?: "save" | "defer";
+  createdFromCapture?: boolean;
   extractionPayload?: {
     raw_ocr_text?: string;
     raw_extraction_json?: Record<string, unknown>;

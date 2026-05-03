@@ -11,6 +11,7 @@ import {
   resolveAppraisalMode,
 } from "@/lib/review-os/appraisal";
 import { getEntitlementLimit } from "@/lib/review-os/entitlements";
+import { buildCaptureNoteSignals } from "@/lib/review-os/capture-note-engine";
 import { reviewOsRepository } from "@/lib/review-os/repository";
 import { resolveReviewSchedule, resolveScheduleOverrideDate } from "@/lib/review-os/scheduling";
 import {
@@ -718,6 +719,9 @@ export class ReviewOsService {
       const effectiveNextReviewDate = input.nextReviewDate ?? schedule.nextReviewDate;
       const queueDueAt = schedule.retryDueAt ?? resolveScheduleOverrideDate(effectiveNextReviewDate, schedule.reviewDueAt);
 
+      const isCaptureCreated = input.createdFromCapture === true;
+      const captureSignals = isCaptureCreated ? buildCaptureNoteSignals(mode, normalizedInput) : null;
+
       let taxonomyClassification: {
         primaryNodeId: string | null;
         candidates: TaxonomyClassificationCandidate[];
@@ -796,12 +800,16 @@ export class ReviewOsService {
           produced_answer_before_reference: input.productionBeforeComparison ?? null,
           reference_answer_added_after_production: input.referenceAnswerAddedAfterProduction ?? null,
           biggest_gap: input.biggestGap ?? input.missingIssue ?? null,
+          created_from_capture: isCaptureCreated,
+          capture_intent: isCaptureCreated ? (input.captureIntent ?? "save") : null,
         },
         {
           topicTag: artifacts.tags.topicTag,
           mistakeType: artifacts.tags.mistakeType,
           recurrenceCount: recurrence?.recurrenceCount ?? 1,
           taxonomyClassification,
+          created_from_capture: isCaptureCreated,
+          capture_note_engine_v1: captureSignals,
         },
       );
 

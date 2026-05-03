@@ -600,6 +600,8 @@ export function WrongAnswerCaptureForm({
           rewriteSourceItemId: rewriteContext?.sourceItemId ?? undefined,
           rewriteSourceGap: rewriteContext?.biggestGap ?? undefined,
           rewriteCompleted: mode === "second" && Boolean(rewriteContext),
+          captureIntent: "save",
+          createdFromCapture: true,
         }),
       });
       const result = (await response.json()) as { ok?: boolean; item?: { id: string }; error?: string; message?: string };
@@ -609,7 +611,7 @@ export function WrongAnswerCaptureForm({
         return;
       }
       clearReviewOsDraft(storageKey);
-      router.push(`/app/items?mode=${mode}&saved=1`);
+      router.push(`/app/session?mode=${mode}&savedCapture=1`);
       router.refresh();
     } catch {
       setError("항목을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.");
@@ -805,7 +807,7 @@ export function WrongAnswerCaptureForm({
           {mode === "second" ? "다시 쓰기" : "다시 풀기"}
         </Button>
         <Button type="button" variant="ghost" onClick={resetDraft} className="w-full sm:w-auto">
-          나중에 복습
+          나중에 하기
         </Button>
       </div>
     </form>
