@@ -4,6 +4,9 @@ import type { AppraisalMode } from "@/lib/review-os/appraisal";
 import { buildExtractionPrompt } from "@/lib/review-os/extraction";
 
 import { buildEvaluationPrompts } from "./prompt";
+import { buildSecondGradingPrompt } from "./second-grading/prompt";
+import { REQUIRED_OUTPUT_KEYS } from "./second-grading/schema";
+import type { SecondExamQuestionType, SecondExamSubject } from "./second-grading/types";
 import type { EvaluationResult } from "./types";
 import {
   normalizeAnswerReviewStructureDraft,
@@ -28,6 +31,10 @@ export class GeminiStructureParseError extends Error {
   ) {
     super(message);
   }
+}
+
+export class GeminiSecondGradingParseError extends Error {
+  readonly code = "GEMINI_SECOND_GRADING_PARSE_FAILED";
 }
 
 
@@ -99,6 +106,52 @@ type AnswerReviewStructureInput = {
   answerText: string;
   referenceText: string;
 };
+
+type SecondGradingInput = {
+  subject: SecondExamSubject;
+  questionType: SecondExamQuestionType;
+  questionText: string;
+  userAnswerText?: string;
+  referenceText?: string;
+};
+
+export async function gradeSecondRoundWithGemini(input: SecondGradingInput): Promise<Record<string, unknown>> {
+  const model = createModel();
+  const result = await model.generateContent({
+    contents: [
+      {
+        role: "user",
+        parts: [{ text: buildSecondGradingPrompt(input) }],
+      },
+    ],
+    generationConfig: {
+      temperature: 0.1,
+      responseMimeType: "application/json",
+    },
+  });
+
+  const text = result.response.text();
+  if (!text?.trim()) {
+    throw new GeminiSecondGradingParseError("2차 채점 결과가 비어 있습니다.");
+  }
+
+  try {
+    const parsed = JSON.parse(text) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      throw new GeminiSecondGradingParseError("2차 채점 결과 JSON 형식이 올바르지 않습니다.");
+    }
+
+    const source = parsed as Record<string, unknown>;
+    const hasRequired = REQUIRED_OUTPUT_KEYS.some((key) => key in source);
+    if (!hasRequired) {
+      throw new GeminiSecondGradingParseError("2차 채점 결과 필수 키가 누락되었습니다.");
+    }
+    return source;
+  } catch (error) {
+    if (error instanceof GeminiSecondGradingParseError) throw error;
+    throw new GeminiSecondGradingParseError("2차 채점 결과를 파싱하지 못했습니다.");
+  }
+}
 
 export async function structureAnswerReviewWithGemini({
   questionFiles,

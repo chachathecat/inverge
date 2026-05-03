@@ -83,3 +83,32 @@ test("prompt switches between problem_only and grade_answer modes", () => {
   assert.match(gradeAnswer, /\[실행 모드\] grade_answer/);
   assert.match(gradeAnswer, /모델답안은 문단형 완성답안을 금지/);
 });
+
+test("problem_only mode does not require userAnswerText", () => {
+  const prompt = buildSecondGradingPrompt({
+    subject: "감정평가이론",
+    questionType: "theory",
+    questionText: "문제 본문",
+  });
+  assert.match(prompt, /\[실행 모드\] problem_only/);
+  assert.match(prompt, /\[입력 수험생 답안\] 판단 불가/);
+});
+
+test("grade_answer mode requires user answer grounding in prompt", () => {
+  const gradeAnswer = buildSecondGradingPrompt({
+    subject: "감정평가실무",
+    questionType: "practice",
+    questionText: "문제 본문",
+    userAnswerText: "수험생 답안 근거 문장",
+  });
+  assert.match(gradeAnswer, /\[입력 수험생 답안\] 수험생 답안 근거 문장/);
+  assert.doesNotMatch(gradeAnswer, /\[입력 수험생 답안\] 판단 불가/);
+});
+
+test("skeleton model answer stays outline-only after normalization", () => {
+  const normalized = normalizeSecondGradingResult({
+    questionType: "theory",
+    skeletonModelAnswer: { format: "essay", outline: [{ heading: "쟁점", bullets: ["논점"] }] },
+  });
+  assert.equal(normalized.skeletonModelAnswer.format, "outline_only");
+});
