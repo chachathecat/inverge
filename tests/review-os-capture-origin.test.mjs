@@ -15,6 +15,14 @@ test("learner capture form explicitly marks capture-origin saves", async () => {
   const source = await readFile(new URL("../components/review-os/capture-form.tsx", import.meta.url), "utf8");
   assert.ok(source.includes('captureIntent: "save"'));
   assert.ok(source.includes("createdFromCapture: true"));
+  assert.ok(source.includes("savedCapture=1&itemId=${result.item.id}"));
+});
+
+test("review queue adds a small boost for recent capture-origin items", async () => {
+  const source = await readFile(new URL("../lib/review-os/service.ts", import.meta.url), "utf8");
+  assert.ok(source.includes("left.createdFromCapture"));
+  assert.ok(source.includes("right.createdFromCapture"));
+  assert.ok(source.includes("1000 * 60 * 60 * 24"));
 });
 
 test("first-set solving flow does not send capture-origin flags by default", async () => {

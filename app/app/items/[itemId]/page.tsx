@@ -110,13 +110,13 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
 
       {captureNoteEngine ? (
         <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-5">
-          <p className="text-caption text-[color:var(--muted)]">capture_note_engine_v1</p>
+          <p className="text-caption text-[color:var(--muted)]">오늘 기록 요약</p>
           <div className="mt-3 grid gap-3 md:grid-cols-2">
-            <MiniArtifact label="one_biggest_gap" value={String(captureNoteEngine.one_biggest_gap ?? "-")} />
-            <MiniArtifact label="one_next_action" value={String(captureNoteEngine.one_next_action ?? "-")} />
-            <MiniArtifact label="topic_candidate" value={String(captureNoteEngine.topic_candidate ?? "-")} />
-            <MiniArtifact label="mistake_type" value={String(captureNoteEngine.mistake_type ?? "-")} />
-            <MiniArtifact label="next_task_type" value={String(captureNoteEngine.next_task_type ?? "-")} />
+            <MiniArtifact label="가장 큰 간극" value={String(captureNoteEngine.one_biggest_gap ?? "-")} />
+            <MiniArtifact label="다음 행동" value={String(captureNoteEngine.one_next_action ?? "-")} />
+            <MiniArtifact label="논점 후보" value={String(captureNoteEngine.topic_candidate ?? "-")} />
+            <MiniArtifact label="오류 유형" value={String(captureNoteEngine.mistake_type ?? "-")} />
+            <MiniArtifact label="다음 과제 유형" value={String(captureNoteEngine.next_task_type ?? "-")} />
           </div>
           <p className="mt-3 text-xs text-[color:var(--muted)]">원문 OCR/텍스트는 사용자 소유 입력으로 보관되며, 이 화면에 학습 데이터처럼 노출하지 않습니다.</p>
         </section>

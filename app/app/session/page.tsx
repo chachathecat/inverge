@@ -7,13 +7,14 @@ import { buildDetailStudyNote } from "@/lib/review-os/study-note";
 import { redirect } from "next/navigation";
 
 type PageProps = {
-  searchParams?: Promise<{ mode?: string; savedCapture?: string }>;
+  searchParams?: Promise<{ mode?: string; savedCapture?: string; itemId?: string }>;
 };
 
 export default async function ReviewOsSessionPage({ searchParams }: PageProps) {
   const query = await searchParams;
   const modeParam = query?.mode;
   const savedCapture = query?.savedCapture === "1";
+  const savedCaptureItemId = typeof query?.itemId === "string" ? query.itemId : null;
   const { session, profile } = await getReviewOsServerContext(buildReviewOsReturnTo("/app/session", modeParam));
   if (!session.userId || !session.email) return null;
 
@@ -25,6 +26,15 @@ export default async function ReviewOsSessionPage({ searchParams }: PageProps) {
   }
   const queueItem = focus.queue.find((item) => item.queueId === focus.sourceQueueId) ?? focus.queue[0] ?? null;
   const detail = queueItem ? await reviewOsService.getWrongAnswerDetail(session.userId, session.email, queueItem.itemId) : null;
+  const savedCaptureDetail =
+    savedCapture && savedCaptureItemId
+      ? await reviewOsService.getWrongAnswerDetail(session.userId, session.email, savedCaptureItemId).catch(() => null)
+      : null;
+  const savedCaptureSignals =
+    typeof savedCaptureDetail?.item.derivedPayload?.capture_note_engine_v1 === "object" &&
+    savedCaptureDetail.item.derivedPayload.capture_note_engine_v1
+      ? (savedCaptureDetail.item.derivedPayload.capture_note_engine_v1 as Record<string, unknown>)
+      : null;
   const note = detail ? buildDetailStudyNote(detail) : null;
 
   return (
@@ -33,11 +43,19 @@ export default async function ReviewOsSessionPage({ searchParams }: PageProps) {
         <section className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] px-4 py-3">
           <p className="text-sm font-medium text-[color:var(--foreground-strong)]">방금 남긴 기록을 오늘 계획에 반영했습니다.</p>
           <p className="mt-1 text-xs text-[color:var(--muted)]">
-            가장 큰 간극: {note?.missingIssue ?? note?.weakPoint ?? "간극 1개를 먼저 고정합니다."}
+            가장 큰 간극:{" "}
+            {String(savedCaptureSignals?.one_biggest_gap ?? note?.missingIssue ?? note?.weakPoint ?? "간극 1개를 먼저 고정합니다.")}
           </p>
           <p className="mt-1 text-xs text-[color:var(--muted)]">
-            다음 행동: {note?.rewriteInstruction ?? note?.coreLine ?? "한 문장 재시도/다시쓰기로 바로 이어갑니다."}
+            다음 행동:{" "}
+            {String(savedCaptureSignals?.one_next_action ?? note?.rewriteInstruction ?? note?.coreLine ?? "한 문장 재시도/다시쓰기로 바로 이어갑니다.")}
           </p>
+          {savedCaptureSignals?.topic_candidate ? (
+            <p className="mt-1 text-xs text-[color:var(--muted)]">논점 후보: {String(savedCaptureSignals.topic_candidate)}</p>
+          ) : null}
+          {savedCaptureSignals?.next_task_type ? (
+            <p className="mt-1 text-xs text-[color:var(--muted)]">다음 과제 유형: {String(savedCaptureSignals.next_task_type)}</p>
+          ) : null}
         </section>
       ) : null}
       <TodaySessionRunner

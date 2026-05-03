@@ -611,7 +611,7 @@ export function WrongAnswerCaptureForm({
         return;
       }
       clearReviewOsDraft(storageKey);
-      router.push(`/app/session?mode=${mode}&savedCapture=1`);
+      router.push(`/app/session?mode=${mode}&savedCapture=1&itemId=${result.item.id}`);
       router.refresh();
     } catch {
       setError("항목을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.");

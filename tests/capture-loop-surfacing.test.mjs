@@ -7,6 +7,8 @@ test("first capture save shows reflected today-plan message with one gap and nex
   assert.ok(source.includes("방금 남긴 기록을 오늘 계획에 반영했습니다."));
   assert.ok(source.includes("가장 큰 간극:"));
   assert.ok(source.includes("다음 행동:"));
+  assert.ok(source.includes("savedCaptureItemId"));
+  assert.ok(source.includes("getWrongAnswerDetail(session.userId, session.email, savedCaptureItemId)"));
 });
 
 test("second capture save keeps rewrite action and review queue CTA", async () => {
@@ -24,11 +26,12 @@ test("review queue marks only capture-originated items", async () => {
 test("item detail surfaces capture_note_engine_v1 fields without exposing raw OCR learning data", async () => {
   const source = await readFile(new URL("../app/app/items/[itemId]/page.tsx", import.meta.url), "utf8");
   assert.ok(source.includes("capture_note_engine_v1"));
-  assert.ok(source.includes("one_biggest_gap"));
-  assert.ok(source.includes("one_next_action"));
-  assert.ok(source.includes("topic_candidate"));
-  assert.ok(source.includes("mistake_type"));
-  assert.ok(source.includes("next_task_type"));
+  assert.ok(source.includes("오늘 기록 요약"));
+  assert.ok(source.includes("가장 큰 간극"));
+  assert.ok(source.includes("다음 행동"));
+  assert.ok(source.includes("논점 후보"));
+  assert.ok(source.includes("오류 유형"));
+  assert.ok(source.includes("다음 과제 유형"));
   assert.ok(source.includes("원문 OCR/텍스트는 사용자 소유 입력"));
 });
 
