@@ -798,11 +798,14 @@ export function WrongAnswerCaptureForm({
             data-testid={mode === "second" && stage === "second-rewrite" && !rewriteContext ? "second-write-submit" : undefined}
             className="w-full sm:w-auto"
           >
-            {submitting ? "구조화 중" : mode === "second" ? "교정노트 저장" : "오답노트 저장"}
+            {submitting ? "저장 중" : "저장하고 오늘 계획에 반영"}
           </Button>
         )}
         <Button type="button" variant="outline" onClick={resetDraft} className="w-full sm:w-auto">
-          임시 입력 지우기
+          {mode === "second" ? "다시 쓰기" : "다시 풀기"}
+        </Button>
+        <Button type="button" variant="ghost" onClick={resetDraft} className="w-full sm:w-auto">
+          나중에 복습
         </Button>
       </div>
     </form>
@@ -874,7 +877,7 @@ function IntakePanel({
       <div className="mt-2 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="max-w-[62ch]">
           <h3 className="text-title text-[color:var(--foreground-strong)]">
-            {mode === "second" ? "텍스트 원문으로 교정 초안을 만듭니다" : "텍스트 원문으로 오답 초안을 만듭니다"}
+            {mode === "second" ? "오늘 학습한 내용을 노트 초안으로 정리합니다" : "오늘 학습한 내용을 오답노트 초안으로 정리합니다"}
           </h3>
           <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">
             {mode === "second"
@@ -1012,7 +1015,8 @@ function ExtractionPreview({
       </div>
       {needsOcrConfirmation ? (
         <p className="mt-4 rounded-[var(--radius-md)] border border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] px-4 py-3 text-sm leading-6 text-[color:var(--foreground-strong)]">
-          OCR 확인 필요{missingConfirmationFields.length > 0 ? `: ${missingConfirmationFields.join(", ")}` : ""}. 필드 확인 후 저장할 수 있습니다.
+          OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요.
+          {missingConfirmationFields.length > 0 ? ` 확인 필요: ${missingConfirmationFields.join(", ")}` : ""}
         </p>
       ) : null}
       {mode === "first" ? (
@@ -1054,8 +1058,13 @@ function ConfirmPanel({
 }) {
   return (
     <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 sm:p-5">
-      <p className="text-caption text-[color:var(--muted)]">Step 3. Confirm</p>
-      <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">필수 항목만 확인합니다</h3>
+      <p className="text-caption text-[color:var(--muted)]">Step 3. 정리 결과 확인</p>
+      <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">정리되었습니다</h3>
+      <div className="mt-4 grid gap-3 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-4">
+        <PreviewLine label="가장 큰 간극" value={mode === "second" ? form.biggestGap || form.missingIssue : form.userReasonText} />
+        <PreviewLine label="다음 행동" value={mode === "second" ? form.rewriteInstruction : form.comparisonPoint} />
+        <PreviewLine label="노트 요약" value={`${form.subjectLabel} · ${mode === "second" ? form.caseSummary : form.problemTitle || form.sourceLabel}`} />
+      </div>
       <div className="mt-5 grid gap-4 lg:grid-cols-2">
         <SubjectSelect subjectLabel={config.subjectLabel} subjects={config.subjects} value={form.subjectLabel} onChange={updateSubject} />
         <label className="space-y-2">
