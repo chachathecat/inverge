@@ -36,6 +36,33 @@ test("learner capture flow keeps instructor OCR route separated and editable OCR
   assert.ok(learnerCapture.includes("capture=\"environment\""));
 });
 
+test("learner capture mobile inputs and extraction states are explicit", async () => {
+  const learnerCapture = await readFile(new URL("../components/review-os/capture-form.tsx", import.meta.url), "utf8");
+  assert.ok(learnerCapture.includes("사진 찍기"));
+  assert.ok(learnerCapture.includes("이미지 업로드"));
+  assert.ok(learnerCapture.includes("PDF 선택"));
+  assert.ok(learnerCapture.includes("입력 상태"));
+  assert.ok(learnerCapture.includes("manual"));
+  assert.ok(learnerCapture.includes("uploading"));
+  assert.ok(learnerCapture.includes("extracting"));
+  assert.ok(learnerCapture.includes("succeeded"));
+  assert.ok(learnerCapture.includes("failed"));
+});
+
+test("learner capture failure copy is calm and draft-preserving", async () => {
+  const learnerCapture = await readFile(new URL("../components/review-os/capture-form.tsx", import.meta.url), "utf8");
+  assert.ok(learnerCapture.includes("텍스트 추출에 실패했습니다. 직접 붙여넣거나 다시 시도해 주세요."));
+  assert.ok(learnerCapture.includes("저장 전 내용을 한 번 확인해 주세요."));
+  assert.ok(learnerCapture.includes("rawQuestionText: extractedText || form.rawQuestionText"));
+});
+
+test("learner capture does not auto-save or auto-grade after OCR/PDF", async () => {
+  const learnerCapture = await readFile(new URL("../components/review-os/capture-form.tsx", import.meta.url), "utf8");
+  assert.equal(learnerCapture.includes("/api/answer-review/grade-second"), false);
+  assert.ok(learnerCapture.includes('setStage("preview")'));
+  assert.ok(learnerCapture.includes("페이지 순서"));
+});
+
 test("saved learner capture copy shows one biggest gap and one next action choices", async () => {
   const itemsPage = await readFile(new URL("../app/app/items/page.tsx", import.meta.url), "utf8");
   assert.ok(itemsPage.includes("가장 큰 간극 1개와 다음 행동 1개"));

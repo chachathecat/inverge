@@ -27,6 +27,8 @@ import {
   type SourceType,
 } from "@/lib/review-os/types";
 
+type ExtractionState = "idle" | "uploading" | "extracting" | "succeeded" | "failed" | "manual";
+
 type CaptureFormProps = {
   userId: string;
   mode: AppraisalMode;
@@ -266,6 +268,8 @@ export function WrongAnswerCaptureForm({
   const [error, setError] = useState("");
   const [extracting, setExtracting] = useState(false);
   const [extractError, setExtractError] = useState("");
+  const [extractionState, setExtractionState] = useState<ExtractionState>("idle");
+  const [uploadedPages, setUploadedPages] = useState<string[]>([]);
   const missingConfirmationFields = getMissingConfirmationFields(form, mode);
   const needsOcrConfirmation = Boolean(form.extractionNeedsReview || missingConfirmationFields.length > 0);
 
@@ -399,6 +403,7 @@ export function WrongAnswerCaptureForm({
 
     setExtracting(true);
     setExtractError("");
+    setExtractionState("extracting");
     try {
       const body = new FormData();
       body.append("mode", mode);
@@ -410,67 +415,70 @@ export function WrongAnswerCaptureForm({
         const fallback = buildStructuredDraft(form, text);
         setForm(persist(fallback));
         setStage("preview");
-        setExtractError(
-          extraction.error
-            ? `${extraction.error} 텍스트 입력 경로로 계속 진행합니다.`
-            : "구조 초안을 만들지 못했습니다. 텍스트 입력 경로로 계속 진행합니다.",
-        );
+        setExtractionState("failed");
+        setExtractError("텍스트 추출에 실패했습니다. 직접 붙여넣거나 다시 시도해 주세요.");
         return;
       }
       setForm(persist(applyExtraction(form, extraction)));
+      setExtractionState("succeeded");
       setStage("preview");
     } catch {
       const fallback = buildStructuredDraft(form, text);
       setForm(persist(fallback));
       setStage("preview");
-      setExtractError("구조 초안을 만들지 못했습니다. 텍스트 입력 경로로 계속 진행합니다.");
+      setExtractionState("failed");
+      setExtractError("텍스트 추출에 실패했습니다. 직접 붙여넣거나 다시 시도해 주세요.");
     } finally {
       setExtracting(false);
     }
   }
 
-  async function handleImageImport(file: File) {
+  async function handleImageImport(fileList: FileList) {
+    const files = Array.from(fileList);
+    if (files.length === 0) return;
     setExtracting(true);
     setExtractError("");
+    setExtractionState("uploading");
+    setUploadedPages(files.map((file, index) => `${index + 1}페이지 · ${file.name}`));
     try {
       const body = new FormData();
       body.append("mode", mode);
-      body.append("images", file);
+      for (const file of files) body.append("images", file);
+      setExtractionState("extracting");
       const response = await fetch("/api/inverge/ocr", { method: "POST", body });
       const result = (await response.json()) as ({ ok?: boolean; text?: string; extractedText?: string; error?: string } & ExtractionPipelineResult);
       if (!response.ok || !result.ok) {
         const fallback: DraftState = {
           ...form,
           sourceType: "image",
-          sourceLabel: file.name,
+          sourceLabel: files.map((file) => file.name).join(", "),
         };
         setForm(persist(fallback));
         setStage("preview");
-        setExtractError(
-          result.error
-            ? `${result.error} 텍스트 입력으로 계속 진행해 주세요.`
-            : "이미지에서 텍스트를 불러오지 못했습니다. 텍스트 입력으로 계속 진행해 주세요.",
-        );
+        setExtractionState("failed");
+        setExtractError("텍스트 추출에 실패했습니다. 직접 붙여넣거나 다시 시도해 주세요.");
         return;
       }
       const extractedText = result.text ?? result.extractedText ?? "";
       const base: DraftState = {
         ...form,
         sourceType: "image",
-        sourceLabel: file.name,
+        sourceLabel: files.map((file) => file.name).join(", "),
         rawQuestionText: extractedText || form.rawQuestionText,
       };
       setForm(persist(result.normalized_draft ? applyExtraction(base, result) : buildStructuredDraft(base, extractedText || base.rawQuestionText)));
+      setExtractionState("succeeded");
       setStage("preview");
     } catch {
       const fallback: DraftState = {
         ...form,
         sourceType: "image",
-        sourceLabel: file.name,
+        sourceLabel: files.map((file) => file.name).join(", "),
       };
       setForm(persist(fallback));
       setStage("preview");
-      setExtractError("이미지에서 텍스트를 불러오지 못했습니다. 텍스트 입력으로 계속 진행해 주세요.");
+      setExtractionState("failed");
+      setExtractError("텍스트 추출에 실패했습니다. 직접 붙여넣거나 다시 시도해 주세요.");
     } finally {
       setExtracting(false);
     }
@@ -484,7 +492,9 @@ export function WrongAnswerCaptureForm({
         sourceLabel: file.name,
       }),
     );
-    setExtractError("PDF는 이번 v1에서 파일명과 원문 보관까지만 지원합니다. 필요한 텍스트를 붙여넣고 초안을 만드세요.");
+    setUploadedPages([`1페이지 · ${file.name}`]);
+    setExtractionState("manual");
+    setExtractError("저장 전 내용을 한 번 확인해 주세요.");
   }
 
   function resetDraft() {
@@ -704,6 +714,8 @@ export function WrongAnswerCaptureForm({
             config={config}
             extracting={extracting}
             extractError={extractError}
+            extractionState={extractionState}
+            uploadedPages={uploadedPages}
             needsOcrConfirmation={needsOcrConfirmation}
             missingConfirmationFields={missingConfirmationFields.map((field) => field.label)}
             update={update}
@@ -867,16 +879,26 @@ function IntakePanel({
   updateSubject: (value: string) => void;
   needsOcrConfirmation: boolean;
   missingConfirmationFields: string[];
-  onImage: (file: File) => void;
+  extractionState: ExtractionState;
+  uploadedPages: string[];
+  onImage: (fileList: FileList) => void;
   onPdf: (file: File) => void;
   onGenerate: () => void | Promise<void>;
 }) {
   const calculatorWorkflow = getCalculatorWorkflowForSubject(form.subjectLabel);
+  const extractionStateLabel: Record<ExtractionState, string> = {
+    idle: "대기",
+    uploading: "업로드 중",
+    extracting: "텍스트 추출 중",
+    succeeded: "추출 완료",
+    failed: "추출 실패",
+    manual: "수동 텍스트 모드",
+  };
 
   return (
     <section className="rounded-[var(--radius-card)] border border-[color:var(--brand-700)] bg-[color:var(--brand-050)] p-4 sm:p-5">
       <p className="text-caption text-[color:var(--brand-700)]">Step 1. 입력 선택</p>
-      <div className="mt-2 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+      <div className="mt-2 flex flex-col gap-4">
         <div className="max-w-[62ch]">
           <h3 className="text-title text-[color:var(--foreground-strong)]">
             {mode === "second" ? "오늘 학습한 내용을 노트 초안으로 정리합니다" : "오늘 학습한 내용을 오답노트 초안으로 정리합니다"}
@@ -887,22 +909,25 @@ function IntakePanel({
               : "사진은 초안 추출용입니다. 저장 전 반드시 과목/정답/내 답/오답 원인/회상 문장을 확인합니다. OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요."}
           </p>
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <label className="inline-flex min-h-11 w-full cursor-pointer items-center justify-center rounded-full border border-[color:var(--border-strong)] bg-[color:var(--bg-surface)] px-5 py-3 text-sm font-medium text-[color:var(--foreground-strong)] sm:w-auto">
-            사진 업로드 (OCR 초안, 모바일 카메라 가능)
+        <div className="grid gap-2 sm:grid-cols-2">
+          <label className="inline-flex min-h-12 w-full cursor-pointer items-center justify-center rounded-full border border-[color:var(--border-strong)] bg-[color:var(--bg-surface)] px-5 py-3 text-sm font-medium text-[color:var(--foreground-strong)]">
+            사진 찍기
             <input
               type="file"
               accept="image/*"
               capture="environment"
               className="sr-only"
               onChange={(event) => {
-                const file = event.target.files?.[0];
-                if (file) onImage(file);
+                if (event.target.files) onImage(event.target.files);
               }}
             />
           </label>
-          <label className="inline-flex min-h-11 w-full cursor-pointer items-center justify-center rounded-full border border-[color:var(--border-strong)] bg-[color:var(--bg-surface)] px-5 py-3 text-sm text-[color:var(--foreground-strong)] sm:w-auto">
-            PDF 보관
+          <label className="inline-flex min-h-12 w-full cursor-pointer items-center justify-center rounded-full border border-[color:var(--border-strong)] bg-[color:var(--bg-surface)] px-5 py-3 text-sm text-[color:var(--foreground-strong)]">
+            이미지 업로드
+            <input type="file" accept="image/*" multiple className="sr-only" onChange={(event) => event.target.files && onImage(event.target.files)} />
+          </label>
+          <label className="inline-flex min-h-12 w-full cursor-pointer items-center justify-center rounded-full border border-[color:var(--border-strong)] bg-[color:var(--bg-surface)] px-5 py-3 text-sm text-[color:var(--foreground-strong)]">
+            PDF 선택
             <input
               type="file"
               accept="application/pdf"
@@ -915,6 +940,7 @@ function IntakePanel({
           </label>
         </div>
       </div>
+      <p className="text-xs text-[color:var(--muted)]">입력 상태: {extractionStateLabel[extractionState]}</p>
       <div className="mt-5 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-4">
         <p className="text-xs font-medium text-[color:var(--muted)]">필수 입력</p>
         <SubjectSelect
@@ -955,6 +981,7 @@ function IntakePanel({
         <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">이미지/PDF로 입력하기 (선택)</summary>
         <div className="border-t border-[color:var(--border-subtle)] px-4 py-3">
           {form.sourceLabel ? <p className="text-sm text-[color:var(--muted)]">보관한 파일: {form.sourceLabel}</p> : null}
+          {uploadedPages.length > 0 ? <p className="mt-2 text-sm text-[color:var(--muted)]">페이지 순서: {uploadedPages.join(" / ")}</p> : null}
         </div>
       </details>
       <p className="mt-3 text-caption leading-5 text-[color:var(--muted)]">텍스트 붙여넣기/수기 입력이 기본 경로입니다.</p>
@@ -978,6 +1005,9 @@ function IntakePanel({
         </p>
       ) : null}
       {extractError ? <p className="mt-3 text-sm leading-6 text-[color:var(--cue-risk)]">{extractError}</p> : null}
+      <ul className="mt-3 list-disc space-y-1 pl-5 text-xs text-[color:var(--muted)]">
+        <li>문제번호 확인</li><li>계산과정/답/단위 확인</li><li>페이지 순서 확인</li><li>“끝”/“이하여백” 등 형식 확인</li>
+      </ul>
     </section>
   );
 }
