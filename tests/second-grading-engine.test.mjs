@@ -6,9 +6,11 @@ import { buildSecondGradingPrompt } from "../lib/evaluate/second-grading/prompt.
 import { normalizeSecondGradingResult } from "../lib/evaluate/second-grading/normalize.ts";
 import { SECOND_GRADING_RUBRIC_BY_TYPE } from "../lib/evaluate/second-grading/schema.ts";
 
-const fixtures = JSON.parse(
-  readFileSync("lib/evaluate/second-grading/__fixtures__/second-grading-2025-36-fixtures.json", "utf8"),
+const fixturesFileUrl = new URL(
+  "../lib/evaluate/second-grading/__fixtures__/second-grading-2025-36-fixtures.json",
+  import.meta.url,
 );
+const fixtures = JSON.parse(readFileSync(fixturesFileUrl, "utf8"));
 
 function hasLatexFormula(line) {
   return /\\\(|\\\)|\$[^$]+\$|\\frac|\\sum|\\times|\\hat|\\beta/.test(line);
