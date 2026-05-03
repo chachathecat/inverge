@@ -9,7 +9,8 @@ import {
   isGeminiQuotaExceededError,
 } from "@/lib/evaluate/gemini";
 import { normalizeSecondGradingResult } from "@/lib/evaluate/second-grading/normalize";
-import type { SecondExamQuestionType, SecondExamSubject, SecondGradingMode } from "@/lib/evaluate/second-grading/types";
+import { parseQuestionType, parseSubject, resolveQuestionType, resolveSubject } from "@/lib/evaluate/second-grading/input";
+import type { SecondGradingMode } from "@/lib/evaluate/second-grading/types";
 
 export const dynamic = "force-dynamic";
 
@@ -25,25 +26,6 @@ type GradeSecondPayload = {
   userAnswerText?: string;
   referenceText?: string;
 };
-
-const SUBJECT_AUTO_MAP: Record<Exclude<GradeSecondPayload["questionType"], "auto" | undefined>, SecondExamSubject> = {
-  theory: "감정평가이론",
-  law: "감정평가및보상법규",
-  practice: "감정평가실무",
-};
-
-function parseQuestionType(input?: string): SecondExamQuestionType | null {
-  if (!input || input === "auto") return "theory";
-  if (input === "theory" || input === "law" || input === "practice") return input;
-  return null;
-}
-
-function parseSubject(input: string | undefined, questionType: SecondExamQuestionType): SecondExamSubject | null {
-  if (!input?.trim()) return SUBJECT_AUTO_MAP[questionType];
-  const trimmed = input.trim();
-  if (trimmed === "감정평가이론" || trimmed === "감정평가실무" || trimmed === "감정평가및보상법규") return trimmed;
-  return null;
-}
 
 function detectMode(userAnswerText?: string): SecondGradingMode {
   return userAnswerText?.trim() ? "grade_answer" : "problem_only";
@@ -63,18 +45,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "JSON 요청만 지원합니다." }, { status: 400 });
   }
 
-  const questionType = parseQuestionType(payload.questionType);
+  const parsedQuestionType = parseQuestionType(payload.questionType);
   const questionText = payload.questionText?.trim() ?? "";
   const mode = detectMode(payload.userAnswerText);
 
-  if (!questionType || !questionText) {
+  if (!parsedQuestionType || !questionText) {
     return NextResponse.json({ ok: false, error: INSUFFICIENT_INPUT_MESSAGE }, { status: 400 });
   }
 
-  const subject = parseSubject(payload.subject, questionType);
-  if (!subject) {
-    return NextResponse.json({ ok: false, error: INSUFFICIENT_INPUT_MESSAGE }, { status: 400 });
+  const parsedSubject = parseSubject(payload.subject);
+  const questionType = resolveQuestionType(parsedQuestionType, parsedSubject);
+
+  if (!questionType) {
+    return NextResponse.json({ ok: false, error: "questionType가 auto인 경우 subject를 함께 입력하거나 명시적 questionType을 사용해 주세요." }, { status: 400 });
   }
+
+  const subject = resolveSubject(parsedSubject, questionType);
 
   if (!isGeminiConfigured()) {
     return NextResponse.json({ ok: false, errorCode: "GEMINI_NOT_CONFIGURED", error: GEMINI_MISSING_MESSAGE }, { status: 503 });
@@ -108,4 +94,4 @@ export async function POST(request: Request) {
   }
 }
 
-export const __testables__ = { detectMode, parseQuestionType, parseSubject };
+export const __testables__ = { detectMode };

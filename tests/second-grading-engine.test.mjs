@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 import { buildSecondGradingPrompt } from "../lib/evaluate/second-grading/prompt.ts";
 import { normalizeSecondGradingResult } from "../lib/evaluate/second-grading/normalize.ts";
 import { SECOND_GRADING_RUBRIC_BY_TYPE } from "../lib/evaluate/second-grading/schema.ts";
+import { parseQuestionType, parseSubject, resolveQuestionType, resolveSubject } from "../lib/evaluate/second-grading/input.ts";
 
 const fixturesFileUrl = new URL(
   "../lib/evaluate/second-grading/__fixtures__/second-grading-2025-36-fixtures.json",
@@ -111,4 +112,27 @@ test("skeleton model answer stays outline-only after normalization", () => {
     skeletonModelAnswer: { format: "essay", outline: [{ heading: "쟁점", bullets: ["논점"] }] },
   });
   assert.equal(normalized.skeletonModelAnswer.format, "outline_only");
+});
+
+
+test("subject alias parser accepts spaced and unspaced law subject", () => {
+  assert.equal(parseSubject("감정평가 및 보상법규"), "감정평가및보상법규");
+  assert.equal(parseSubject("감정평가및보상법규"), "감정평가및보상법규");
+});
+
+test("questionType auto resolves by subject mapping", () => {
+  assert.equal(resolveQuestionType("auto", parseSubject("감정평가실무")), "practice");
+  assert.equal(resolveQuestionType("auto", parseSubject("감정평가이론")), "theory");
+  assert.equal(resolveQuestionType("auto", parseSubject("감정평가 및 보상법규")), "law");
+});
+
+test("invalid subject returns null and auto without subject is unresolved", () => {
+  assert.equal(parseSubject("민법"), null);
+  assert.equal(resolveQuestionType("auto", null), null);
+});
+
+test("questionType parse and subject fallback still work for explicit types", () => {
+  assert.equal(parseQuestionType("auto"), "auto");
+  assert.equal(parseQuestionType("theory"), "theory");
+  assert.equal(resolveSubject(null, "practice"), "감정평가실무");
 });
