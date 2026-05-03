@@ -879,8 +879,26 @@ export class ReviewOsService {
   async getReviewQueue(userId: string, email: string | null) {
     await this.ensureAccess(userId, email);
     const queue = await reviewOsRepository.listReviewQueue(userId, 10);
+    const now = Date.now();
+    const recentCaptureWindowMs = 1000 * 60 * 60 * 24;
+    const getRecentCaptureBoost = (queueItem: (typeof queue)[number]) => {
+      if (!queueItem.createdFromCapture) {
+        return 0;
+      }
+      const parsedCreatedAt = Date.parse(queueItem.itemCreatedAt);
+      if (Number.isFinite(parsedCreatedAt)) {
+        return now >= parsedCreatedAt && now - parsedCreatedAt <= recentCaptureWindowMs ? 15 : 0;
+      }
+      const parsedDueAt = Date.parse(queueItem.dueAt);
+      return Number.isFinite(parsedDueAt) && now >= parsedDueAt && now - parsedDueAt <= recentCaptureWindowMs ? 15 : 0;
+    };
+    const prioritizedQueue = [...queue].sort((left, right) => {
+      const leftRecentCaptureBoost = getRecentCaptureBoost(left);
+      const rightRecentCaptureBoost = getRecentCaptureBoost(right);
+      return right.priorityScore + rightRecentCaptureBoost - (left.priorityScore + leftRecentCaptureBoost);
+    });
     await reviewOsRepository.logUsageEvent(userId, "review_queue_view", "review_queue", null, { itemCount: queue.length });
-    return queue;
+    return prioritizedQueue;
   }
 
   async completeReview(
