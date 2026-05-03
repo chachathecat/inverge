@@ -63,6 +63,9 @@ export function ReviewQueueClient({ items, mode }: { items: ReviewQueueCard[]; m
               <p className="text-sm leading-7 text-[color:var(--foreground-strong)]">
                 다시 보는 이유: {item.reviewReason}
               </p>
+              {item.createdFromCapture ? (
+                <p className="text-xs text-[color:var(--muted)]">오늘 기록에서 생성</p>
+              ) : null}
               <div className="flex flex-wrap gap-2">
                 {buildPrioritySignals(item).map((signal) => (
                   <span

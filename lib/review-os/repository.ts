@@ -318,6 +318,11 @@ function mapReviewQueueCard(
     recurrenceCount: Number(derivedPayload.recurrenceCount ?? 1),
     confidence: item.confidence,
     timeSpentSeconds: item.timeSpentSeconds ?? null,
+    createdFromCapture: Boolean(
+      typeof item.rawPayload?.created_from_capture === "boolean"
+        ? item.rawPayload.created_from_capture
+        : item.derivedPayload?.created_from_capture,
+    ),
   };
 }
 
