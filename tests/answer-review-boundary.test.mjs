@@ -47,6 +47,7 @@ test("learner capture mobile inputs and extraction states are explicit", async (
   assert.ok(learnerCapture.includes("extracting"));
   assert.ok(learnerCapture.includes("succeeded"));
   assert.ok(learnerCapture.includes("failed"));
+  assert.ok(learnerCapture.includes("PDF는 현재 파일명 보관과 수동 텍스트 입력을 지원합니다. 필요한 부분을 아래 입력창에 붙여넣어 주세요."));
 });
 
 test("learner capture failure copy is calm and draft-preserving", async () => {
@@ -75,4 +76,11 @@ test("capture defer action label does not imply persistence", async () => {
   const learnerCapture = await readFile(new URL("../components/review-os/capture-form.tsx", import.meta.url), "utf8");
   assert.ok(learnerCapture.includes("나중에 하기"));
   assert.equal(learnerCapture.includes("나중에 복습"), false);
+});
+
+
+test("reset clears extraction state and uploaded pages", async () => {
+  const learnerCapture = await readFile(new URL("../components/review-os/capture-form.tsx", import.meta.url), "utf8");
+  assert.ok(learnerCapture.includes("setExtractionState(\"idle\")"));
+  assert.ok(learnerCapture.includes("setUploadedPages([])"));
 });

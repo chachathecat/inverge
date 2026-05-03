@@ -502,6 +502,8 @@ export function WrongAnswerCaptureForm({
     setStage(getInitialStage());
     setError("");
     setExtractError("");
+    setExtractionState("idle");
+    setUploadedPages([]);
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -869,6 +871,8 @@ function IntakePanel({
   updateSubject,
   needsOcrConfirmation,
   missingConfirmationFields,
+  extractionState,
+  uploadedPages,
   onImage,
   onPdf,
   onGenerate,
@@ -982,6 +986,9 @@ function IntakePanel({
         <div className="border-t border-[color:var(--border-subtle)] px-4 py-3">
           {form.sourceLabel ? <p className="text-sm text-[color:var(--muted)]">보관한 파일: {form.sourceLabel}</p> : null}
           {uploadedPages.length > 0 ? <p className="mt-2 text-sm text-[color:var(--muted)]">페이지 순서: {uploadedPages.join(" / ")}</p> : null}
+          {form.sourceType === "pdf" ? (
+            <p className="mt-2 text-sm text-[color:var(--muted)]">PDF는 현재 파일명 보관과 수동 텍스트 입력을 지원합니다. 필요한 부분을 아래 입력창에 붙여넣어 주세요.</p>
+          ) : null}
         </div>
       </details>
       <p className="mt-3 text-caption leading-5 text-[color:var(--muted)]">텍스트 붙여넣기/수기 입력이 기본 경로입니다.</p>
