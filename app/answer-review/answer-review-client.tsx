@@ -25,9 +25,6 @@ type InputStatusCardProps = {
 type StepId = 1 | 2 | 3;
 
 
-type ReviewPanel = "structure" | "second_grader";
-type SecondQuestionType = "auto" | "theory" | "law" | "practice";
-type GradeSecondResponse = { ok: true; mode: "problem_only" | "grade_answer"; result: any } | { ok: false; error: string };
 
 const SECTION_FADE = {
   hidden: { opacity: 0, y: 10 },
@@ -90,16 +87,6 @@ export default function AnswerReviewClientPage() {
   const [examMode, setExamMode] = useState<AppraisalMode>(initialReviewContext.examMode);
   const [subject, setSubject] = useState<string>(initialReviewContext.subject);
   const [showExampleAnswer, setShowExampleAnswer] = useState(false);
-  const [activePanel, setActivePanel] = useState<ReviewPanel>("structure");
-  const [secondSubject, setSecondSubject] = useState("감정평가실무");
-  const [secondQuestionType, setSecondQuestionType] = useState<SecondQuestionType>("auto");
-  const [secondQuestionText, setSecondQuestionText] = useState("");
-  const [secondUserAnswerText, setSecondUserAnswerText] = useState("");
-  const [secondReferenceText, setSecondReferenceText] = useState("");
-  const [isSecondGrading, setIsSecondGrading] = useState(false);
-  const [secondError, setSecondError] = useState<string | null>(null);
-  const [secondResult, setSecondResult] = useState<any | null>(null);
-  const [secondMode, setSecondMode] = useState<"problem_only" | "grade_answer" | null>(null);
 
   const shouldReduceMotion = useReducedMotion();
   const subjectOptions = examMode === "second" ? APPRAISAL_SECOND_SUBJECTS : APPRAISAL_FIRST_SUBJECTS;
@@ -321,33 +308,6 @@ export default function AnswerReviewClientPage() {
     : "교정 문단을 작성하면 학생에게 줄 다음 행동이 더 선명해집니다.";
 
 
-  const runSecondGrading = async () => {
-    setIsSecondGrading(true);
-    setSecondError(null);
-    setSecondResult(null);
-    try {
-      const response = await fetch("/api/answer-review/grade-second", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          subject: secondSubject,
-          questionType: secondQuestionType,
-          questionText: secondQuestionText,
-          userAnswerText: secondUserAnswerText,
-          referenceText: secondReferenceText,
-        }),
-      });
-      const payload = (await response.json()) as GradeSecondResponse;
-      if (!response.ok || !payload.ok) throw new Error(payload.ok ? "2차 채점 결과를 불러오지 못했습니다." : payload.error);
-      setSecondMode(payload.mode);
-      setSecondResult(payload.result);
-    } catch (error) {
-      setSecondError(error instanceof Error ? error.message : "2차 채점 요청 중 오류가 발생했습니다.");
-    } finally {
-      setIsSecondGrading(false);
-    }
-  };
-
   const handlePrimaryAction = () => {
     if (currentStep === 1) {
       void runStructure();
@@ -362,11 +322,6 @@ export default function AnswerReviewClientPage() {
 
   return (
     <RefinedShell className="space-y-5 py-6 sm:space-y-8 sm:py-10">
-      <section className="flex flex-wrap gap-2">
-        <button type="button" onClick={() => setActivePanel("structure")} className={cn(buttonVariants({ variant: activePanel === "structure" ? "default" : "outline" }), "h-9")}>검토 보조 초안 베타</button>
-        <button type="button" onClick={() => setActivePanel("second_grader")} className={cn(buttonVariants({ variant: activePanel === "second_grader" ? "default" : "outline" }), "h-9")}>2차 채점관 모드</button>
-      </section>
-      {activePanel === "structure" ? (
       <section className="space-y-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] p-4 sm:p-6">
         <div className="flex flex-wrap items-center gap-2">
           <RefinedBadge>검토 보조 초안 베타</RefinedBadge>
@@ -939,37 +894,6 @@ export default function AnswerReviewClientPage() {
           </details>
         </section>
       </section>
-      ) : (
-        <section className="space-y-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] p-4 sm:p-6">
-          <div className="flex flex-wrap items-center gap-2">
-            <RefinedBadge>2차 채점관 모드</RefinedBadge>
-            <RefinedBadge tone="amber">훈련/진단용 채점 결과 · 강사 검수 필요</RefinedBadge>
-          </div>
-          <p className="text-caption leading-5 text-[color:var(--muted)]">공식 채점이 아닌 학습용 진단 결과입니다. Skeleton은 구조 연습용입니다.</p>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="space-y-2 text-caption font-medium text-[color:var(--muted)]">과목<select className="w-full rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface)] px-3 py-2 text-sm" value={secondSubject} onChange={(e)=>setSecondSubject(e.target.value)}><option>감정평가실무</option><option>감정평가이론</option><option>감정평가 및 보상법규</option></select></label>
-            <label className="space-y-2 text-caption font-medium text-[color:var(--muted)]">문제 유형<select className="w-full rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface)] px-3 py-2 text-sm" value={secondQuestionType} onChange={(e)=>setSecondQuestionType(e.target.value as SecondQuestionType)}><option value="auto">자동분류</option><option value="theory">이론형</option><option value="law">법규형</option><option value="practice">실무형</option></select></label>
-          </div>
-          <div className="space-y-2"><p className="text-caption font-medium text-[color:var(--muted)]">문제</p><Textarea className="min-h-[120px]" value={secondQuestionText} onChange={(e)=>setSecondQuestionText(e.target.value)} /></div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-2"><p className="text-caption font-medium text-[color:var(--muted)]">내 답안 (선택)</p><Textarea className="min-h-[140px]" value={secondUserAnswerText} onChange={(e)=>setSecondUserAnswerText(e.target.value)} /></div>
-            <div className="space-y-2"><p className="text-caption font-medium text-[color:var(--muted)]">기준답안/참고답안 (선택)</p><Textarea className="min-h-[140px]" value={secondReferenceText} onChange={(e)=>setSecondReferenceText(e.target.value)} /></div>
-          </div>
-          <button type="button" onClick={() => void runSecondGrading()} className={cn(buttonVariants({ variant: "default" }), "w-full sm:w-auto")} disabled={isSecondGrading}>{isSecondGrading ? "채점 중..." : "2차 채점 실행"}</button>
-          {secondError ? <article className="rounded-[var(--radius-sm)] border border-[#b9a98a] bg-[#f8f4ea] px-4 py-3 text-caption text-[#5a4b32]">{secondError}</article> : null}
-          {secondResult ? <div className="space-y-3">
-            <article className="rounded-[var(--radius-sm)] border border-[var(--border)] p-3"><p className="font-medium">Ⅰ. 논점 게이트 판정</p><p className="text-caption">{secondResult.issueGate?.reason}</p></article>
-            <article className="rounded-[var(--radius-sm)] border border-[var(--border)] p-3"><p className="font-medium">Ⅱ. 문제 유형 및 동적 가중치</p><p className="text-caption">{secondResult.questionType} · {secondResult.subject}</p></article>
-            <article className="rounded-[var(--radius-sm)] border border-[var(--border)] p-3"><p className="font-medium">Ⅲ. 항목별 부분점수</p><pre className="text-caption whitespace-pre-wrap">{JSON.stringify(secondResult.rubricScores, null, 2)}</pre></article>
-            <article className="rounded-[var(--radius-sm)] border border-[var(--border)] p-3"><p className="font-medium">Ⅳ. 감점 분석표</p><pre className="text-caption whitespace-pre-wrap">{JSON.stringify(secondResult.deductions, null, 2)}</pre></article>
-            {secondMode === "grade_answer" ? <article className="rounded-[var(--radius-sm)] border border-[var(--border)] p-3"><p className="font-medium">Ⅴ. 최종 점수</p><p>{secondResult.finalScore}</p></article> : null}
-            {secondMode === "grade_answer" ? <article className="rounded-[var(--radius-sm)] border border-[var(--border)] p-3"><p className="font-medium">Ⅵ. 합격 확률 시뮬레이션</p><pre className="text-caption whitespace-pre-wrap">{JSON.stringify(secondResult.passProbabilitySimulation, null, 2)}</pre></article> : null}
-            <article className="rounded-[var(--radius-sm)] border border-[var(--border)] p-3"><p className="font-medium">Ⅶ. 모범답안 구조 Skeleton</p><p className="text-caption">훈련용 구조 초안(공식 모범답안 아님)</p></article>
-            {secondMode === "grade_answer" ? <article className="rounded-[var(--radius-sm)] border border-[var(--border)] p-3"><p className="font-medium">Ⅷ. 핵심 개선 전략 Top 3</p><pre className="text-caption whitespace-pre-wrap">{JSON.stringify(secondResult.notes?.slice(0,3), null, 2)}</pre></article> : null}
-            <article className="rounded-[var(--radius-sm)] border border-[var(--border)] p-3"><p className="font-medium">Ⅸ. 약점 타격 문제</p><pre className="text-caption whitespace-pre-wrap">{JSON.stringify(secondResult.weaknessDrill, null, 2)}</pre></article>
-          </div> : null}
-        </section>
-      )}
 
       <div>
         <Link href="/exams" className={cn(buttonVariants({ variant: "outline" }), "w-full sm:w-auto")}>
