@@ -307,6 +307,7 @@ export type ReviewQueueCard = {
   recurrenceCount: number;
   confidence: ConfidenceLevel;
   timeSpentSeconds: number | null;
+  createdFromCapture: boolean;
 };
 
 export type ReviewCompletionAction =

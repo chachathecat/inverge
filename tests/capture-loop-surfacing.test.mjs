@@ -1,0 +1,41 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+
+test("first capture save shows reflected today-plan message with one gap and next action", async () => {
+  const source = await readFile(new URL("../app/app/session/page.tsx", import.meta.url), "utf8");
+  assert.ok(source.includes("방금 남긴 기록을 오늘 계획에 반영했습니다."));
+  assert.ok(source.includes("가장 큰 간극:"));
+  assert.ok(source.includes("다음 행동:"));
+});
+
+test("second capture save keeps rewrite action and review queue CTA", async () => {
+  const source = await readFile(new URL("../components/review-os/today-session-runner.tsx", import.meta.url), "utf8");
+  assert.ok(source.includes("rewrite 저장하러 이동"));
+  assert.ok(source.includes("/app/review?mode=${mode}"));
+});
+
+test("review queue marks only capture-originated items", async () => {
+  const source = await readFile(new URL("../components/review-os/review-queue-client.tsx", import.meta.url), "utf8");
+  assert.ok(source.includes("item.createdFromCapture"));
+  assert.ok(source.includes("오늘 기록에서 생성"));
+});
+
+test("item detail surfaces capture_note_engine_v1 fields without exposing raw OCR learning data", async () => {
+  const source = await readFile(new URL("../app/app/items/[itemId]/page.tsx", import.meta.url), "utf8");
+  assert.ok(source.includes("capture_note_engine_v1"));
+  assert.ok(source.includes("one_biggest_gap"));
+  assert.ok(source.includes("one_next_action"));
+  assert.ok(source.includes("topic_candidate"));
+  assert.ok(source.includes("mistake_type"));
+  assert.ok(source.includes("next_task_type"));
+  assert.ok(source.includes("원문 OCR/텍스트는 사용자 소유 입력"));
+});
+
+test("learner surfaces keep instructor routes and official grading language separated", async () => {
+  const reviewSource = await readFile(new URL("../app/app/review/page.tsx", import.meta.url), "utf8");
+  const itemSource = await readFile(new URL("../app/app/items/[itemId]/page.tsx", import.meta.url), "utf8");
+  assert.equal(reviewSource.includes("/instructor/second-grading"), false);
+  assert.equal(itemSource.includes("공식 점수"), false);
+  assert.equal(itemSource.includes("공식 모범답안"), false);
+});

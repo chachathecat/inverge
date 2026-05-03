@@ -74,6 +74,10 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
     readTaxonomyClassificationPayload(resolvedDetail.item.derivedPayload) ??
     readTaxonomyClassificationPayload(resolvedDetail.item.rawPayload);
   const taxonomyCandidate = resolveTaxonomyCandidate(payloadTaxonomy);
+  const captureNoteEngine =
+    typeof resolvedDetail.item.derivedPayload?.capture_note_engine_v1 === "object" && resolvedDetail.item.derivedPayload.capture_note_engine_v1
+      ? (resolvedDetail.item.derivedPayload.capture_note_engine_v1 as Record<string, unknown>)
+      : null;
 
   return (
     <div className="space-y-6">
@@ -103,6 +107,20 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
           <MiniArtifact label="다음 행동 1개" value={nextActionLine} />
         </div>
       </section>
+
+      {captureNoteEngine ? (
+        <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-5">
+          <p className="text-caption text-[color:var(--muted)]">capture_note_engine_v1</p>
+          <div className="mt-3 grid gap-3 md:grid-cols-2">
+            <MiniArtifact label="one_biggest_gap" value={String(captureNoteEngine.one_biggest_gap ?? "-")} />
+            <MiniArtifact label="one_next_action" value={String(captureNoteEngine.one_next_action ?? "-")} />
+            <MiniArtifact label="topic_candidate" value={String(captureNoteEngine.topic_candidate ?? "-")} />
+            <MiniArtifact label="mistake_type" value={String(captureNoteEngine.mistake_type ?? "-")} />
+            <MiniArtifact label="next_task_type" value={String(captureNoteEngine.next_task_type ?? "-")} />
+          </div>
+          <p className="mt-3 text-xs text-[color:var(--muted)]">원문 OCR/텍스트는 사용자 소유 입력으로 보관되며, 이 화면에 학습 데이터처럼 노출하지 않습니다.</p>
+        </section>
+      ) : null}
 
       {isSecond ? (
         <section className="space-y-4">
