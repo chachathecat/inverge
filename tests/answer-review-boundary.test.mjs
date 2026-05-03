@@ -27,3 +27,19 @@ test('instructor second-grading OCR UI is scoped to instructor page', async () =
   assert.ok(instructorSource.includes('accept="image/*,.pdf"'));
   assert.ok(instructorSource.includes('capture="environment"'));
 });
+
+
+test("learner capture flow keeps instructor OCR route separated and editable OCR notice", async () => {
+  const learnerCapture = await readFile(new URL("../components/review-os/capture-form.tsx", import.meta.url), "utf8");
+  assert.equal(learnerCapture.includes("/api/instructor/second-grading/ocr"), false);
+  assert.ok(learnerCapture.includes("OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요."));
+  assert.ok(learnerCapture.includes("capture=\"environment\""));
+});
+
+test("saved learner capture copy shows one biggest gap and one next action choices", async () => {
+  const itemsPage = await readFile(new URL("../app/app/items/page.tsx", import.meta.url), "utf8");
+  assert.ok(itemsPage.includes("가장 큰 간극 1개와 다음 행동 1개"));
+  assert.ok(itemsPage.includes("오늘 계획에 반영"));
+  assert.ok(itemsPage.includes("다시 풀기/다시 쓰기"));
+  assert.ok(itemsPage.includes("나중에 복습"));
+});

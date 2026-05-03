@@ -103,7 +103,12 @@ export default async function ReviewOsItemsPage({ searchParams }: PageProps) {
               {savedParam ? (
                 <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] px-4 py-3">
                   <p className="text-sm font-medium text-[color:var(--foreground-strong)]">방금 남긴 기록이 목록에 반영되었습니다.</p>
-                  <p className="mt-1 text-sm text-[color:var(--foreground-strong)]">오늘 할 일에도 반영됩니다.</p>
+                  <p className="mt-1 text-sm text-[color:var(--foreground-strong)]">가장 큰 간극 1개와 다음 행동 1개를 먼저 실행하세요.</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Link href={`/app?mode=${mode}`} className="text-xs underline-offset-4 hover:underline">오늘 계획에 반영</Link>
+                    <Link href={mode === "second" ? `/app/capture?mode=${mode}&workflow=second-write` : `/app/capture?mode=${mode}`} className="text-xs underline-offset-4 hover:underline">다시 풀기/다시 쓰기</Link>
+                    <Link href={`/app/review?mode=${mode}`} className="text-xs underline-offset-4 hover:underline">나중에 복습</Link>
+                  </div>
                 </div>
               ) : null}
               {items.map((item) => (
