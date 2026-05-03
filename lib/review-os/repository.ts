@@ -323,6 +323,7 @@ function mapReviewQueueCard(
         ? item.rawPayload.created_from_capture
         : item.derivedPayload?.created_from_capture,
     ),
+    itemCreatedAt: item.createdAt,
   };
 }
 

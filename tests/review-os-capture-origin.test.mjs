@@ -18,11 +18,23 @@ test("learner capture form explicitly marks capture-origin saves", async () => {
   assert.ok(source.includes("savedCapture=1&itemId=${result.item.id}"));
 });
 
-test("review queue adds a small boost for recent capture-origin items", async () => {
+test("review queue adds a small boost only for genuinely recent capture-origin items", async () => {
   const source = await readFile(new URL("../lib/review-os/service.ts", import.meta.url), "utf8");
-  assert.ok(source.includes("left.createdFromCapture"));
-  assert.ok(source.includes("right.createdFromCapture"));
-  assert.ok(source.includes("1000 * 60 * 60 * 24"));
+  assert.ok(source.includes("itemCreatedAt"));
+  assert.ok(source.includes("const recentCaptureWindowMs = 1000 * 60 * 60 * 24"));
+  assert.ok(source.includes("now >= parsedCreatedAt && now - parsedCreatedAt <= recentCaptureWindowMs"));
+  assert.ok(source.includes("now >= parsedDueAt && now - parsedDueAt <= recentCaptureWindowMs"));
+});
+
+test("non-capture items do not receive capture boost", async () => {
+  const source = await readFile(new URL("../lib/review-os/service.ts", import.meta.url), "utf8");
+  assert.ok(source.includes("if (!queueItem.createdFromCapture)"));
+  assert.ok(source.includes("return 0;"));
+});
+
+test("review queue ordering still sorts by base priority score", async () => {
+  const source = await readFile(new URL("../lib/review-os/service.ts", import.meta.url), "utf8");
+  assert.ok(source.includes("right.priorityScore + rightRecentCaptureBoost - (left.priorityScore + leftRecentCaptureBoost)"));
 });
 
 test("first-set solving flow does not send capture-origin flags by default", async () => {

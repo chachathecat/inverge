@@ -308,6 +308,7 @@ export type ReviewQueueCard = {
   confidence: ConfidenceLevel;
   timeSpentSeconds: number | null;
   createdFromCapture: boolean;
+  itemCreatedAt: string;
 };
 
 export type ReviewCompletionAction =
