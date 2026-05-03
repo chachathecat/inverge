@@ -719,7 +719,8 @@ export class ReviewOsService {
       const effectiveNextReviewDate = input.nextReviewDate ?? schedule.nextReviewDate;
       const queueDueAt = schedule.retryDueAt ?? resolveScheduleOverrideDate(effectiveNextReviewDate, schedule.reviewDueAt);
 
-      const captureSignals = buildCaptureNoteSignals(mode, normalizedInput);
+      const isCaptureCreated = input.createdFromCapture === true;
+      const captureSignals = isCaptureCreated ? buildCaptureNoteSignals(mode, normalizedInput) : null;
 
       let taxonomyClassification: {
         primaryNodeId: string | null;
@@ -799,15 +800,15 @@ export class ReviewOsService {
           produced_answer_before_reference: input.productionBeforeComparison ?? null,
           reference_answer_added_after_production: input.referenceAnswerAddedAfterProduction ?? null,
           biggest_gap: input.biggestGap ?? input.missingIssue ?? null,
-          created_from_capture: input.createdFromCapture ?? true,
-          capture_intent: input.captureIntent ?? "save",
+          created_from_capture: isCaptureCreated,
+          capture_intent: isCaptureCreated ? (input.captureIntent ?? "save") : null,
         },
         {
           topicTag: artifacts.tags.topicTag,
           mistakeType: artifacts.tags.mistakeType,
           recurrenceCount: recurrence?.recurrenceCount ?? 1,
           taxonomyClassification,
-          created_from_capture: input.createdFromCapture ?? true,
+          created_from_capture: isCaptureCreated,
           capture_note_engine_v1: captureSignals,
         },
       );
