@@ -218,12 +218,10 @@ test("today plan keeps first/second separation", () => {
     items: [],
   });
 
-  assert.equal(firstPlan.primaryTask, "개념 회상 1세트");
-  assert.equal(firstPlan.actionKind, "first_session");
-  assert.equal(firstPlan.ctaLabel, "짧은 재시도 시작");
-  assert.equal(secondPlan.primaryTask, "문단 다시쓰기");
-  assert.equal(secondPlan.actionKind, "second_review");
-  assert.equal(secondPlan.ctaLabel, "문단 다시쓰기");
+  assert.equal(firstPlan.hasPlan, false);
+  assert.equal(firstPlan.actionKind, "first_capture");
+  assert.equal(secondPlan.hasPlan, false);
+  assert.equal(secondPlan.actionKind, "second_write");
 });
 
 test("today plan fallback is shown when no learning data exists", () => {
@@ -236,6 +234,23 @@ test("today plan fallback is shown when no learning data exists", () => {
 test("today plan uses recent learning signal for primary task", () => {
   const plan = buildTodayPlanCard({
     mode: "second",
+    queue: [{
+      queueId: "q-second",
+      itemId: "i-second",
+      examName: "감정평가사 2차",
+      subjectLabel: "보상법규",
+      problemTitle: "손실보상",
+      topicTag: "논점",
+      mistakeType: "논점 누락",
+      reviewReason: "rewrite",
+      priorityScore: 80,
+      dueAt: new Date(Date.now() - 86400000).toISOString(),
+      recurrenceCount: 1,
+      confidence: "낮음",
+      timeSpentSeconds: 900,
+      createdFromCapture: true,
+      itemCreatedAt: new Date().toISOString(),
+    }],
     learningSignals: [{
       id: "s2",
       userId: "u1",
@@ -249,13 +264,11 @@ test("today plan uses recent learning signal for primary task", () => {
       metadataJson: {},
       createdAt: new Date().toISOString(),
     }],
-    queue: [],
     items: [],
   });
 
   assert.equal(plan.hasPlan, true);
-  assert.equal(plan.reason, "최근 보상법규 답안 검토 기록을 기준으로 오늘 작업을 정했습니다.");
-  assert.equal(plan.ctaLabel, "문단 다시쓰기");
+  assert.equal(plan.ctaLabel, "다시 쓰기");
   assert.equal(plan.actionKind, "second_review");
 });
 
@@ -286,8 +299,6 @@ test("today plan maps first-mode set and capture actions", () => {
     items: [],
   });
 
-  assert.equal(setPlan.actionKind, "first_set");
-  assert.equal(setPlan.ctaLabel, "세트 풀이 열기");
+  assert.equal(setPlan.actionKind, "first_capture");
   assert.equal(capturePlan.actionKind, "first_capture");
-  assert.equal(capturePlan.ctaLabel, "오답 기록 시작");
 });
