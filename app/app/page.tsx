@@ -11,6 +11,7 @@ import { reviewOsService } from "@/lib/review-os/service";
 import { buildNotebookPreview } from "@/lib/review-os/study-note";
 import { APPRAISAL_FIRST_SUBJECTS } from "@/lib/review-os/types";
 import { buildTodayPlanCard, type TodayPlanActionKind } from "@/lib/review-os/today-plan";
+import { buildTodayPlanTasks } from "@/lib/review-os/today-plan-engine";
 
 const FIRST_MODE_INPUT_OPTIONS = [
   {
@@ -91,6 +92,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
   const firstUse = items.length === 0 && !hasDataSignals;
   const selectedQueueItem = queue.find((item) => item.queueId === focus.sourceQueueId) ?? queue[0] ?? null;
   const todayPlan = buildTodayPlanCard({ mode, learningSignals: learningSignalEvents, queue, items });
+  const todayPlanTasks = buildTodayPlanTasks({ mode, queue });
   const nextAction = focus.nextAction ?? selectedQueueItem?.reviewReason ?? config.nextActionFallback;
   const isFirstSetStart = mode === "first" && focus.nextActionType === "capture_now";
   const selectedFirstSubject = normalizeSubjectForMode(subjectParam, "first");
@@ -230,6 +232,22 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
             </CardHeader>
             <CardContent className="space-y-3 p-4 pt-0 sm:space-y-4 sm:p-6 sm:pt-0">
               <p className="text-sm text-[color:var(--foreground-strong)]">{nextAction}</p>
+
+              <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-4 py-3">
+                <p className="text-caption text-[color:var(--muted)]">오늘의 우선순위</p>
+                <div className="mt-2 space-y-2">
+                  {todayPlanTasks.length === 0 ? (
+                    <p className="text-xs text-[color:var(--muted)]">오답 기록이나 답안 검토를 1개 남기면 오늘 할 일을 계산합니다.</p>
+                  ) : (
+                    todayPlanTasks.slice(0, 3).map((task, index) => (
+                      <p key={task.itemId} className="text-xs text-[color:var(--muted)]">
+                        {index + 1}. {task.title} · {task.reason}
+                      </p>
+                    ))
+                  )}
+                </div>
+              </div>
+
               {shouldShowFirstSubjectSelector ? (
                 <TodayFirstSubjectSelector
                   selectedSubject={selectedFirstSubject}
