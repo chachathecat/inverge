@@ -31,9 +31,24 @@ export type PastExamCandidateInput = {
   weakStructurePoint?: string | null;
 };
 
+export type PastExamReferenceMatch = {
+  reference: PastExamReferenceItem;
+  score: number;
+  matched_fields: Array<
+    | "subject"
+    | "topic_candidate"
+    | "mistake_type"
+    | "weak_structure_point"
+    | "issue_tags"
+    | "skill_tags"
+    | "skeleton"
+  >;
+  reason: string;
+};
+
 const PAST_EXAM_REFERENCES: PastExamReferenceItem[] = [
   {
-    id: "appraiser-second-2025-36-practice-1",
+    id: "appraiser-second-2025-36-practice-q1",
     exam_year: 2025,
     exam_name: "제36회 감정평가사 2차",
     stage: "second",
@@ -47,12 +62,12 @@ const PAST_EXAM_REFERENCES: PastExamReferenceItem[] = [
     scoring_checkpoint_skeleton: ["평가방법 선택 근거", "자료 적정성 점검", "수치·단위 일치"],
     common_gap_candidates: ["근거 문장 없이 계산", "결론 수치 미기재"],
     related_mistake_types: ["조건 누락", "계산 실수", "구조 약함"],
-    similar_question_refs: ["appraiser-second-2025-36-practice-2"],
-    source_status: "verified",
+    similar_question_refs: ["appraiser-second-2025-36-theory-q2"],
+    source_status: "needs_review",
     raw_text_policy: "reference_only",
   },
   {
-    id: "appraiser-second-2025-36-practice-2",
+    id: "appraiser-second-2025-36-theory-q2",
     exam_year: 2025,
     exam_name: "제36회 감정평가사 2차",
     stage: "second",
@@ -66,12 +81,12 @@ const PAST_EXAM_REFERENCES: PastExamReferenceItem[] = [
     scoring_checkpoint_skeleton: ["핵심 개념 정확성", "논거 연결", "사례 문장 존재"],
     common_gap_candidates: ["정의 나열 후 적용 누락", "결론만 반복"],
     related_mistake_types: ["개념 혼동", "판례/논점 적용 부족", "구조 약함"],
-    similar_question_refs: ["appraiser-second-2025-36-practice-3"],
-    source_status: "verified",
+    similar_question_refs: ["appraiser-second-2025-36-law-q3"],
+    source_status: "needs_review",
     raw_text_policy: "reference_only",
   },
   {
-    id: "appraiser-second-2025-36-practice-3",
+    id: "appraiser-second-2025-36-law-q3",
     exam_year: 2025,
     exam_name: "제36회 감정평가사 2차",
     stage: "second",
@@ -85,7 +100,7 @@ const PAST_EXAM_REFERENCES: PastExamReferenceItem[] = [
     scoring_checkpoint_skeleton: ["요건 식별", "조문/법리 근거", "사안 포섭의 명시성"],
     common_gap_candidates: ["조문 없는 포섭", "절차 생략"],
     related_mistake_types: ["조건 누락", "판례/논점 적용 부족", "암기 누락"],
-    similar_question_refs: ["appraiser-second-2025-36-practice-2"],
+    similar_question_refs: ["appraiser-second-2025-36-theory-q2"],
     source_status: "needs_review",
     raw_text_policy: "reference_only",
   },
@@ -110,28 +125,100 @@ export function listPastExamReferences(mode: ReferenceLookupMode = "all", subjec
 }
 
 export function findPastExamReferenceCandidates(input: PastExamCandidateInput): PastExamReferenceItem[] {
+  return findPastExamReferenceMatches(input).map((match) => match.reference);
+}
+
+export function findPastExamReferenceMatches(input: PastExamCandidateInput): PastExamReferenceMatch[] {
   const mode = input.mode ?? null;
   const subject = normalize(input.subject);
   const topicCandidate = normalize(input.topicCandidate);
   const mistakeType = normalize(input.mistakeType);
   const weakStructurePoint = normalize(input.weakStructurePoint);
 
-  const candidates = PAST_EXAM_REFERENCES.filter((item) => {
-    if (mode && item.stage !== mode) return false;
-    if (subject && normalize(item.subject) !== subject) return false;
+  const candidates = PAST_EXAM_REFERENCES.map((item): PastExamReferenceMatch | null => {
+    if (mode && item.stage !== mode) return null;
+    const matched_fields: PastExamReferenceMatch["matched_fields"] = [];
+    let score = 0;
 
-    const matchedTopic = matchAnyTag([...item.topic_tags, ...item.issue_tags, ...item.skill_tags], topicCandidate);
+    if (subject && normalize(item.subject) === subject) {
+      matched_fields.push("subject");
+      score += 4;
+    } else if (subject) {
+      return null;
+    }
+
+    const matchedTopic = matchAnyTag(item.topic_tags, topicCandidate);
     const matchedMistake = matchAnyTag(item.related_mistake_types, mistakeType);
     const matchedStructure = matchAnyTag([...item.expected_answer_skeleton, ...item.scoring_checkpoint_skeleton], weakStructurePoint);
+    const matchedIssueTag = matchAnyTag(item.issue_tags, topicCandidate);
+    const matchedSkillTag = matchAnyTag(item.skill_tags, topicCandidate);
 
-    return matchedTopic || matchedMistake || matchedStructure;
-  });
+    if (matchedTopic) {
+      matched_fields.push("topic_candidate");
+      score += 3;
+    }
 
-  return candidates.slice(0, 3);
+    if (matchedMistake) {
+      matched_fields.push("mistake_type");
+      score += 3;
+    }
+
+    if (matchedStructure) {
+      matched_fields.push("weak_structure_point", "skeleton");
+      score += 2;
+    }
+
+    if (matchedIssueTag) {
+      matched_fields.push("issue_tags");
+      score += 1;
+    }
+
+    if (matchedSkillTag) {
+      matched_fields.push("skill_tags");
+      score += 1;
+    }
+
+    if (!matchedTopic && !matchedMistake && !matchedStructure && !matchedIssueTag && !matchedSkillTag) {
+      return null;
+    }
+
+    const uniqueMatchedFields = [...new Set(matched_fields)];
+    let reason = "논점 후보와 오류 유형이 함께 연결됩니다.";
+    if (matchedTopic && matchedMistake) {
+      reason = "논점 후보와 오류 유형이 함께 연결됩니다.";
+    } else if (matchedTopic) {
+      reason = "과목과 논점 후보가 유사합니다.";
+    } else if (matchedMistake) {
+      reason = "오류 유형이 이 기출의 공통 누락 포인트와 가깝습니다.";
+    } else if (matchedStructure) {
+      reason = "구조 약점이 이 기출의 체크포인트와 연결됩니다.";
+    }
+
+    return {
+      reference: item,
+      score,
+      matched_fields: uniqueMatchedFields,
+      reason,
+    };
+  }).filter((item): item is PastExamReferenceMatch => Boolean(item));
+
+  return candidates.sort((a, b) => b.score - a.score).slice(0, 3);
 }
 
 export function mapCaptureNoteToPastExamReferences(captureNoteSignals: Record<string, unknown>): PastExamReferenceItem[] {
   return findPastExamReferenceCandidates({
+    mode: captureNoteSignals.mode === "second" || captureNoteSignals.mode === "first" ? (captureNoteSignals.mode as PastExamStage) : null,
+    subject: typeof captureNoteSignals.subject === "string" ? captureNoteSignals.subject : null,
+    topicCandidate: typeof captureNoteSignals.topic_candidate === "string" ? captureNoteSignals.topic_candidate : null,
+    mistakeType: typeof captureNoteSignals.mistake_type === "string" ? captureNoteSignals.mistake_type : null,
+    weakStructurePoint: typeof captureNoteSignals.weak_structure_point === "string" ? captureNoteSignals.weak_structure_point : null,
+  });
+}
+
+export function mapCaptureNoteToPastExamReferenceMatches(
+  captureNoteSignals: Record<string, unknown>
+): PastExamReferenceMatch[] {
+  return findPastExamReferenceMatches({
     mode: captureNoteSignals.mode === "second" || captureNoteSignals.mode === "first" ? (captureNoteSignals.mode as PastExamStage) : null,
     subject: typeof captureNoteSignals.subject === "string" ? captureNoteSignals.subject : null,
     topicCandidate: typeof captureNoteSignals.topic_candidate === "string" ? captureNoteSignals.topic_candidate : null,
