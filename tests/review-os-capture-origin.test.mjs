@@ -8,7 +8,10 @@ test("review os service marks capture-origin only when createdFromCapture is tru
   assert.ok(source.includes("created_from_capture: isCaptureCreated"));
   assert.ok(source.includes('capture_intent: isCaptureCreated ? (input.captureIntent ?? "save") : null'));
   assert.ok(source.includes("capture_note_engine_v1: captureSignals"));
+  assert.ok(source.includes("capture_note_engine_v2: captureSignalsV2 ?? captureSignals"));
   assert.ok(source.includes("const captureSignals = isCaptureCreated ? buildCaptureNoteSignals(mode, normalizedInput) : null;"));
+  assert.ok(source.includes("capture note structuring fallback"));
+  assert.ok(source.includes("userConfirmedFields: normalizedInput.extractionPayload?.user_confirmed_fields"));
 });
 
 test("learner capture form explicitly marks capture-origin saves", async () => {

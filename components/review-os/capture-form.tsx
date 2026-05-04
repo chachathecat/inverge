@@ -1039,9 +1039,7 @@ function ExtractionPreview({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-caption text-[color:var(--muted)]">Step 2. Extraction preview</p>
-          <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">
-            {mode === "second" ? "교정노트 초안" : "오답노트 초안"}
-          </h3>
+          <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">정리된 초안</h3>
         </div>
         <div className="flex gap-2">
           <Button type="button" variant="outline" onClick={onRegenerate}>
@@ -1058,6 +1056,7 @@ function ExtractionPreview({
           {missingConfirmationFields.length > 0 ? ` 확인 필요: ${missingConfirmationFields.join(", ")}` : ""}
         </p>
       ) : null}
+      <p className="mt-4 text-xs text-[color:var(--muted)]">AI 정리는 초안입니다. 저장 전 직접 확인해 주세요.</p>
       {mode === "first" ? (
         <div className="mt-5 grid gap-3 lg:grid-cols-2">
           <PreviewLine label="과목 추정" value={form.subjectLabel} />
@@ -1078,7 +1077,7 @@ function ExtractionPreview({
           <PreviewLine label="누락 논점" value={form.missingIssue} />
           <PreviewLine label="약한 문장" value={form.weakApplicationSentence} />
           <PreviewLine label="구조 약점" value={form.weakStructurePoint} />
-          <PreviewLine label="rewrite 지시" value={form.rewriteInstruction} />
+          <PreviewLine label="다시쓰기 지시" value={form.rewriteInstruction} />
         </div>
       )}
     </section>
