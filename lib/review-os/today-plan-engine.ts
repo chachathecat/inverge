@@ -17,9 +17,14 @@ type BuildInput = { mode: "first" | "second"; queue: ReviewQueueCard[]; now?: Da
 
 const DAY_MS = 86_400_000;
 
+function parseTime(value: string) {
+  const ts = Date.parse(value);
+  return Number.isFinite(ts) ? ts : null;
+}
+
 function confidenceBoost(confidence: ConfidenceLevel) {
   if (confidence === "낮음") return 18;
-  if (confidence === "보통") return 8;
+  if (confidence === "중간") return 8;
   return 0;
 }
 
@@ -45,11 +50,12 @@ function toNextAction(mode: "first" | "second", item: ReviewQueueCard, taskType:
 export function buildTodayPlanTasks({ mode, queue, now = new Date() }: BuildInput): TodayPlanTask[] {
   const ranked = queue
     .map((item) => {
-      const dueTs = Date.parse(item.dueAt);
-      const isOverdue = dueTs <= now.getTime();
-      const overdueDays = isOverdue ? Math.max(1, Math.floor((now.getTime() - dueTs) / DAY_MS) + 1) : 0;
-      const createdTs = Date.parse(item.itemCreatedAt);
-      const createdRecently = now.getTime() - createdTs <= 2 * DAY_MS;
+      const dueTs = parseTime(item.dueAt);
+      const isOverdue = dueTs !== null && dueTs <= now.getTime();
+      const overdueDays = isOverdue && dueTs !== null ? Math.max(1, Math.floor((now.getTime() - dueTs) / DAY_MS) + 1) : 0;
+      const createdTs = parseTime(item.itemCreatedAt);
+      const createdAgeMs = createdTs === null ? null : now.getTime() - createdTs;
+      const createdRecently = createdAgeMs !== null && createdAgeMs >= 0 && createdAgeMs <= 2 * DAY_MS;
       const captureRecentBoost = item.createdFromCapture && createdRecently ? 9 : 0;
       const recurrenceBoost = Math.min(item.recurrenceCount, 4) * 7;
       const rewriteBoost = resolveTaskType(mode, item) === "rewrite" ? 14 : 0;
@@ -66,7 +72,7 @@ export function buildTodayPlanTasks({ mode, queue, now = new Date() }: BuildInpu
               : "오늘 학습 흐름을 유지하기 좋은 항목입니다.";
       return { item, score, priority_reason };
     })
-    .sort((a, b) => b.score - a.score || Date.parse(a.item.dueAt) - Date.parse(b.item.dueAt));
+    .sort((a, b) => b.score - a.score || ((parseTime(a.item.dueAt) ?? Number.MAX_SAFE_INTEGER) - (parseTime(b.item.dueAt) ?? Number.MAX_SAFE_INTEGER)) || a.item.itemId.localeCompare(b.item.itemId));
 
   return ranked.slice(0, 3).map(({ item, priority_reason }) => {
     const taskType = resolveTaskType(mode, item);

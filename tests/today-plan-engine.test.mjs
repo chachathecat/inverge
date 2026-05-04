@@ -15,7 +15,7 @@ function q(overrides = {}) {
     priorityScore: 50,
     dueAt: "2026-05-03T00:00:00.000Z",
     recurrenceCount: 1,
-    confidence: "보통",
+    confidence: "중간",
     timeSpentSeconds: 600,
     createdFromCapture: false,
     itemCreatedAt: "2026-05-01T00:00:00.000Z",
@@ -40,8 +40,25 @@ test("future due capture item does not get false boost", () => {
   assert.equal(tasks[0].itemId, "plain");
 });
 
+
+
+test("future capture timestamp does not get recent boost", () => {
+  const tasks = buildTodayPlanTasks({ mode: "first", now, queue: [q({ itemId: "future-capture", createdFromCapture: true, itemCreatedAt: "2026-05-05T10:30:00.000Z", dueAt: "2026-05-04T00:00:00.000Z" }), q({ itemId: "plain", dueAt: "2026-05-04T00:00:00.000Z", priorityScore: 60 })] });
+  assert.equal(tasks[0].itemId, "plain");
+});
+
+test("invalid timestamps do not get boosts or overdue precedence", () => {
+  const tasks = buildTodayPlanTasks({ mode: "first", now, queue: [q({ itemId: "invalid", createdFromCapture: true, itemCreatedAt: "invalid", dueAt: "invalid", priorityScore: 70 }), q({ itemId: "valid", dueAt: "2026-05-04T00:00:00.000Z", priorityScore: 70 })] });
+  assert.equal(tasks[0].itemId, "valid");
+});
+
+test("ordering remains stable when due dates are invalid", () => {
+  const tasks = buildTodayPlanTasks({ mode: "first", now, queue: [q({ itemId: "b", dueAt: "invalid", priorityScore: 70 }), q({ itemId: "a", dueAt: "invalid", priorityScore: 70 })] });
+  assert.deepEqual(tasks.map((t) => t.itemId), ["a", "b"]);
+});
+
 test("low confidence and repeated mistake get boosts; rewrite task surfaced", () => {
-  const tasks = buildTodayPlanTasks({ mode: "second", now, queue: [q({ itemId: "low", confidence: "낮음", dueAt: "2026-05-04T00:00:00.000Z" }), q({ itemId: "repeat", recurrenceCount: 4, dueAt: "2026-05-04T00:00:00.000Z" }), q({ itemId: "rewrite", reviewReason: "rewrite 후속", mistakeType: "논점 누락", dueAt: "2026-05-04T00:00:00.000Z" }), q({ itemId: "base", dueAt: "2026-05-04T00:00:00.000Z" })] });
+  const tasks = buildTodayPlanTasks({ mode: "second", now, queue: [q({ itemId: "low", confidence: "낮음", dueAt: "2026-05-04T00:00:00.000Z" }), q({ itemId: "repeat", recurrenceCount: 4, dueAt: "2026-05-04T00:00:00.000Z" }), q({ itemId: "rewrite", reviewReason: "rewrite 후속", mistakeType: "논점 누락", recurrenceCount: 4, dueAt: "2026-05-04T00:00:00.000Z" }), q({ itemId: "base", dueAt: "2026-05-04T00:00:00.000Z" })] });
   assert.ok(tasks.some((t) => t.itemId === "rewrite" && t.task_type === "rewrite"));
   assert.ok(tasks.some((t) => t.itemId === "low"));
   assert.ok(tasks.some((t) => t.itemId === "repeat"));

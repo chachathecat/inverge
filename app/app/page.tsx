@@ -236,11 +236,15 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
               <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-4 py-3">
                 <p className="text-caption text-[color:var(--muted)]">오늘의 우선순위</p>
                 <div className="mt-2 space-y-2">
-                  {todayPlanTasks.slice(0, 3).map((task, index) => (
-                    <p key={task.itemId} className="text-xs text-[color:var(--muted)]">
-                      {index + 1}. {task.title} · {task.reason}
-                    </p>
-                  ))}
+                  {todayPlanTasks.length === 0 ? (
+                    <p className="text-xs text-[color:var(--muted)]">오답 기록이나 답안 검토를 1개 남기면 오늘 할 일을 계산합니다.</p>
+                  ) : (
+                    todayPlanTasks.slice(0, 3).map((task, index) => (
+                      <p key={task.itemId} className="text-xs text-[color:var(--muted)]">
+                        {index + 1}. {task.title} · {task.reason}
+                      </p>
+                    ))
+                  )}
                 </div>
               </div>
 
