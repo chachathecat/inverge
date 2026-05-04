@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { getAppraisalMode, parseAppraisalMode } from "@/lib/review-os/appraisal";
 import { getCalculatorWorkflowForSubject, hasCalculationSignal } from "@/lib/review-os/calculator-workflow";
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
-import { mapCaptureNoteToPastExamReferences } from "@/lib/review-os/past-exam-reference";
+import { mapCaptureNoteToPastExamReferenceMatches } from "@/lib/review-os/past-exam-reference";
 import { reviewOsService } from "@/lib/review-os/service";
 import { buildDetailStudyNote, buildRewriteComparisonNote } from "@/lib/review-os/study-note";
 
@@ -83,7 +83,7 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
       : null;
 
   const captureReferenceCandidates = captureNoteEngine
-    ? mapCaptureNoteToPastExamReferences({
+    ? mapCaptureNoteToPastExamReferenceMatches({
         ...captureNoteEngine,
         mode,
         subject: resolvedDetail.item.subjectLabel,
@@ -139,14 +139,19 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
         <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] p-5">
           <p className="text-caption text-[color:var(--muted)]">관련 기출 후보</p>
           <div className="mt-3 space-y-3">
-            {captureReferenceCandidates.map((reference) => (
-              <div key={reference.id} className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4">
+            {captureReferenceCandidates.map((match) => (
+              <div
+                key={match.reference.id}
+                className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4"
+              >
                 <p className="text-sm font-medium text-[color:var(--foreground-strong)]">
-                  {reference.exam_year} · {reference.subject} · {reference.question_number}번
+                  {match.reference.exam_year} · {match.reference.subject} · {match.reference.question_number}번
                 </p>
-                <p className="mt-2 text-xs text-[color:var(--muted)]">논점 후보: {reference.issue_tags.join(" · ")}</p>
-                <p className="mt-2 text-xs text-[color:var(--muted)]">학습용 skeleton: {reference.expected_answer_skeleton.join(" → ")}</p>
-                <p className="mt-2 text-xs text-[color:var(--muted)]">체크포인트: {reference.scoring_checkpoint_skeleton.join(" · ")}</p>
+                <p className="mt-2 text-xs text-[color:var(--muted)]">연결 이유: {match.reason}</p>
+                <p className="mt-2 text-xs text-[color:var(--muted)]">연결된 신호: {formatMatchedFieldLabels(match.matched_fields).join(" · ")}</p>
+                <p className="mt-2 text-xs text-[color:var(--muted)]">논점 후보: {match.reference.issue_tags.join(" · ")}</p>
+                <p className="mt-2 text-xs text-[color:var(--muted)]">학습용 skeleton: {match.reference.expected_answer_skeleton.join(" → ")}</p>
+                <p className="mt-2 text-xs text-[color:var(--muted)]">체크포인트: {match.reference.scoring_checkpoint_skeleton.join(" · ")}</p>
               </div>
             ))}
           </div>
@@ -408,6 +413,21 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
       <ReviewOsFeedbackButton route={`/app/items/${itemId}`} pageContext={{ itemId, isSecond }} />
     </div>
   );
+}
+
+function formatMatchedFieldLabels(
+  fields: Array<"subject" | "topic_candidate" | "mistake_type" | "weak_structure_point" | "issue_tags" | "skill_tags" | "skeleton">,
+) {
+  const fieldLabelMap: Record<(typeof fields)[number], string> = {
+    subject: "과목",
+    topic_candidate: "논점 후보",
+    mistake_type: "오류 유형",
+    weak_structure_point: "구조 약점",
+    issue_tags: "논점 태그",
+    skill_tags: "답안 기술",
+    skeleton: "학습용 skeleton",
+  };
+  return fields.map((field) => fieldLabelMap[field]);
 }
 
 type ItemTaxonomyCandidate = {

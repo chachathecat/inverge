@@ -37,8 +37,21 @@ test("item detail surfaces capture_note_engine_v2 fields without exposing raw OC
   assert.ok(source.includes("AI 정리는 초안입니다. 저장 전 직접 확인해 주세요."));
   assert.ok(source.includes("원문 OCR/텍스트는 사용자 소유 입력"));
   assert.ok(source.includes("관련 기출 후보"));
+  assert.ok(source.includes("mapCaptureNoteToPastExamReferenceMatches"));
+  assert.ok(source.includes("연결 이유"));
+  assert.ok(source.includes("연결된 신호"));
+  assert.ok(source.includes("formatMatchedFieldLabels"));
+  assert.ok(source.includes("subject: \"과목\""));
+  assert.ok(source.includes("topic_candidate: \"논점 후보\""));
+  assert.ok(source.includes("mistake_type: \"오류 유형\""));
+  assert.ok(source.includes("weak_structure_point: \"구조 약점\""));
+  assert.ok(source.includes("issue_tags: \"논점 태그\""));
+  assert.ok(source.includes("skill_tags: \"답안 기술\""));
+  assert.ok(source.includes("skeleton: \"학습용 skeleton\""));
   assert.ok(source.includes("학습용 skeleton"));
   assert.ok(source.includes("체크포인트"));
+  assert.equal(source.includes("score="), false);
+  assert.equal(source.includes("match.score"), false);
 });
 
 test("learner surfaces keep instructor routes and official grading language separated", async () => {
@@ -47,4 +60,7 @@ test("learner surfaces keep instructor routes and official grading language sepa
   assert.equal(reviewSource.includes("/instructor/second-grading"), false);
   assert.equal(itemSource.includes("공식 점수"), false);
   assert.equal(itemSource.includes("공식 모범답안"), false);
+  assert.equal(itemSource.includes("공식 채점"), false);
+  assert.equal(itemSource.includes("합격"), false);
+  assert.equal(itemSource.includes("불합격"), false);
 });
