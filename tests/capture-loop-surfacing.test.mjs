@@ -23,15 +23,18 @@ test("review queue marks only capture-originated items", async () => {
   assert.ok(source.includes("오늘 기록에서 생성"));
 });
 
-test("item detail surfaces capture_note_engine_v1 fields without exposing raw OCR learning data", async () => {
+test("item detail surfaces capture_note_engine_v2 fields without exposing raw OCR learning data", async () => {
   const source = await readFile(new URL("../app/app/items/[itemId]/page.tsx", import.meta.url), "utf8");
+  assert.ok(source.includes("capture_note_engine_v2"));
   assert.ok(source.includes("capture_note_engine_v1"));
-  assert.ok(source.includes("오늘 기록 요약"));
+  assert.ok(source.includes("정리된 초안"));
   assert.ok(source.includes("가장 큰 간극"));
   assert.ok(source.includes("다음 행동"));
   assert.ok(source.includes("논점 후보"));
   assert.ok(source.includes("오류 유형"));
+  assert.ok(source.includes("다시쓰기 지시"));
   assert.ok(source.includes("다음 과제 유형"));
+  assert.ok(source.includes("AI 정리는 초안입니다. 저장 전 직접 확인해 주세요."));
   assert.ok(source.includes("원문 OCR/텍스트는 사용자 소유 입력"));
 });
 

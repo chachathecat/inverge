@@ -75,8 +75,10 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
     readTaxonomyClassificationPayload(resolvedDetail.item.rawPayload);
   const taxonomyCandidate = resolveTaxonomyCandidate(payloadTaxonomy);
   const captureNoteEngine =
-    typeof resolvedDetail.item.derivedPayload?.capture_note_engine_v1 === "object" && resolvedDetail.item.derivedPayload.capture_note_engine_v1
-      ? (resolvedDetail.item.derivedPayload.capture_note_engine_v1 as Record<string, unknown>)
+    typeof resolvedDetail.item.derivedPayload?.capture_note_engine_v2 === "object" && resolvedDetail.item.derivedPayload.capture_note_engine_v2
+      ? (resolvedDetail.item.derivedPayload.capture_note_engine_v2 as Record<string, unknown>)
+      : typeof resolvedDetail.item.derivedPayload?.capture_note_engine_v1 === "object" && resolvedDetail.item.derivedPayload.capture_note_engine_v1
+        ? (resolvedDetail.item.derivedPayload.capture_note_engine_v1 as Record<string, unknown>)
       : null;
 
   return (
@@ -110,14 +112,16 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
 
       {captureNoteEngine ? (
         <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-5">
-          <p className="text-caption text-[color:var(--muted)]">오늘 기록 요약</p>
+          <p className="text-caption text-[color:var(--muted)]">정리된 초안</p>
           <div className="mt-3 grid gap-3 md:grid-cols-2">
             <MiniArtifact label="가장 큰 간극" value={String(captureNoteEngine.one_biggest_gap ?? "-")} />
             <MiniArtifact label="다음 행동" value={String(captureNoteEngine.one_next_action ?? "-")} />
             <MiniArtifact label="논점 후보" value={String(captureNoteEngine.topic_candidate ?? "-")} />
             <MiniArtifact label="오류 유형" value={String(captureNoteEngine.mistake_type ?? "-")} />
+            {isSecond ? <MiniArtifact label="다시쓰기 지시" value={String(captureNoteEngine.rewrite_instruction ?? "-")} /> : null}
             <MiniArtifact label="다음 과제 유형" value={String(captureNoteEngine.next_task_type ?? "-")} />
           </div>
+          <p className="mt-3 text-xs text-[color:var(--muted)]">AI 정리는 초안입니다. 저장 전 직접 확인해 주세요.</p>
           <p className="mt-3 text-xs text-[color:var(--muted)]">원문 OCR/텍스트는 사용자 소유 입력으로 보관되며, 이 화면에 학습 데이터처럼 노출하지 않습니다.</p>
         </section>
       ) : null}

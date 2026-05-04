@@ -31,9 +31,12 @@ export default async function ReviewOsSessionPage({ searchParams }: PageProps) {
       ? await reviewOsService.getWrongAnswerDetail(session.userId, session.email, savedCaptureItemId).catch(() => null)
       : null;
   const savedCaptureSignals =
-    typeof savedCaptureDetail?.item.derivedPayload?.capture_note_engine_v1 === "object" &&
-    savedCaptureDetail.item.derivedPayload.capture_note_engine_v1
-      ? (savedCaptureDetail.item.derivedPayload.capture_note_engine_v1 as Record<string, unknown>)
+    typeof savedCaptureDetail?.item.derivedPayload?.capture_note_engine_v2 === "object" &&
+    savedCaptureDetail.item.derivedPayload.capture_note_engine_v2
+      ? (savedCaptureDetail.item.derivedPayload.capture_note_engine_v2 as Record<string, unknown>)
+      : typeof savedCaptureDetail?.item.derivedPayload?.capture_note_engine_v1 === "object" &&
+          savedCaptureDetail.item.derivedPayload.capture_note_engine_v1
+        ? (savedCaptureDetail.item.derivedPayload.capture_note_engine_v1 as Record<string, unknown>)
       : null;
   const note = detail ? buildDetailStudyNote(detail) : null;
 

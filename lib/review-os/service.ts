@@ -11,7 +11,7 @@ import {
   resolveAppraisalMode,
 } from "@/lib/review-os/appraisal";
 import { getEntitlementLimit } from "@/lib/review-os/entitlements";
-import { buildCaptureNoteSignals } from "@/lib/review-os/capture-note-engine";
+import { buildCaptureNoteSignals, structureCaptureNote } from "@/lib/review-os/capture-note-engine";
 import { reviewOsRepository } from "@/lib/review-os/repository";
 import { resolveReviewSchedule, resolveScheduleOverrideDate } from "@/lib/review-os/scheduling";
 import {
@@ -721,6 +721,24 @@ export class ReviewOsService {
 
       const isCaptureCreated = input.createdFromCapture === true;
       const captureSignals = isCaptureCreated ? buildCaptureNoteSignals(mode, normalizedInput) : null;
+      let captureSignalsV2: Record<string, unknown> | null = null;
+      if (isCaptureCreated) {
+        try {
+          captureSignalsV2 = structureCaptureNote({
+            mode,
+            subject: normalizedInput.subjectLabel,
+            confirmedText: normalizedInput.rawQuestionText ?? normalizedInput.userAnswer,
+            problemText: normalizedInput.rawQuestionText,
+            userAnswerText: normalizedInput.userAnswer,
+            existingNormalizedDraft: normalizedInput.extractionPayload?.normalized_draft ?? null,
+            userConfirmedFields: normalizedInput.extractionPayload?.user_confirmed_fields,
+            itemInput: normalizedInput,
+          }) as Record<string, unknown>;
+        } catch (error) {
+          console.warn("[review-os] capture note structuring fallback", error);
+          captureSignalsV2 = captureSignals as Record<string, unknown> | null;
+        }
+      }
 
       let taxonomyClassification: {
         primaryNodeId: string | null;
@@ -810,6 +828,7 @@ export class ReviewOsService {
           taxonomyClassification,
           created_from_capture: isCaptureCreated,
           capture_note_engine_v1: captureSignals,
+          capture_note_engine_v2: captureSignalsV2 ?? captureSignals,
         },
       );
 
