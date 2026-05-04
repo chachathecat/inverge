@@ -31,6 +31,21 @@ export type PastExamCandidateInput = {
   weakStructurePoint?: string | null;
 };
 
+export type PastExamReferenceMatch = {
+  reference: PastExamReferenceItem;
+  score: number;
+  matched_fields: Array<
+    | "subject"
+    | "topic_candidate"
+    | "mistake_type"
+    | "weak_structure_point"
+    | "issue_tags"
+    | "skill_tags"
+    | "skeleton"
+  >;
+  reason: string;
+};
+
 const PAST_EXAM_REFERENCES: PastExamReferenceItem[] = [
   {
     id: "appraiser-second-2025-36-practice-1",
@@ -110,24 +125,75 @@ export function listPastExamReferences(mode: ReferenceLookupMode = "all", subjec
 }
 
 export function findPastExamReferenceCandidates(input: PastExamCandidateInput): PastExamReferenceItem[] {
+  return findPastExamReferenceMatches(input).map((match) => match.reference);
+}
+
+export function findPastExamReferenceMatches(input: PastExamCandidateInput): PastExamReferenceMatch[] {
   const mode = input.mode ?? null;
   const subject = normalize(input.subject);
   const topicCandidate = normalize(input.topicCandidate);
   const mistakeType = normalize(input.mistakeType);
   const weakStructurePoint = normalize(input.weakStructurePoint);
 
-  const candidates = PAST_EXAM_REFERENCES.filter((item) => {
-    if (mode && item.stage !== mode) return false;
-    if (subject && normalize(item.subject) !== subject) return false;
+  const candidates = PAST_EXAM_REFERENCES.map((item): PastExamReferenceMatch | null => {
+    if (mode && item.stage !== mode) return null;
+    const matched_fields: PastExamReferenceMatch["matched_fields"] = [];
+    let score = 0;
 
-    const matchedTopic = matchAnyTag([...item.topic_tags, ...item.issue_tags, ...item.skill_tags], topicCandidate);
+    if (subject && normalize(item.subject) === subject) {
+      matched_fields.push("subject");
+      score += 4;
+    } else if (subject) {
+      return null;
+    }
+
+    const matchedTopic = matchAnyTag(item.topic_tags, topicCandidate);
     const matchedMistake = matchAnyTag(item.related_mistake_types, mistakeType);
     const matchedStructure = matchAnyTag([...item.expected_answer_skeleton, ...item.scoring_checkpoint_skeleton], weakStructurePoint);
+    const matchedIssueTag = matchAnyTag(item.issue_tags, topicCandidate);
+    const matchedSkillTag = matchAnyTag(item.skill_tags, topicCandidate);
 
-    return matchedTopic || matchedMistake || matchedStructure;
-  });
+    if (matchedTopic) {
+      matched_fields.push("topic_candidate");
+      score += 3;
+    }
 
-  return candidates.slice(0, 3);
+    if (matchedMistake) {
+      matched_fields.push("mistake_type");
+      score += 3;
+    }
+
+    if (matchedStructure) {
+      matched_fields.push("weak_structure_point", "skeleton");
+      score += 2;
+    }
+
+    if (matchedIssueTag) {
+      matched_fields.push("issue_tags");
+      score += 1;
+    }
+
+    if (matchedSkillTag) {
+      matched_fields.push("skill_tags");
+      score += 1;
+    }
+
+    if (!matchedTopic && !matchedMistake && !matchedStructure && !matchedIssueTag && !matchedSkillTag) {
+      return null;
+    }
+
+    const uniqueMatchedFields = [...new Set(matched_fields)];
+    const reason = `matched=${uniqueMatchedFields.join(",")}; score=${score}`;
+
+    return {
+      reference: item,
+      score,
+      matched_fields: uniqueMatchedFields,
+      reason,
+    };
+  }).filter((item): item is PastExamReferenceMatch => Boolean(item));
+
+  return candidates.sort((a, b) => b.score - a.score).slice(0, 3);
 }
 
 export function mapCaptureNoteToPastExamReferences(captureNoteSignals: Record<string, unknown>): PastExamReferenceItem[] {
