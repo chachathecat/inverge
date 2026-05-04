@@ -138,6 +138,7 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
       {captureReferenceCandidates.length > 0 ? (
         <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] p-5">
           <p className="text-caption text-[color:var(--muted)]">관련 기출 후보</p>
+          <p className="mt-1 text-xs text-[color:var(--muted)]">아래 순서대로 연결 근거 → 학습 구조 → 바로 할 행동만 확인하세요.</p>
           <div className="mt-3 space-y-3">
             {captureReferenceCandidates.map((match) => (
               (() => {
@@ -150,9 +151,9 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
                 <p className="text-sm font-medium text-[color:var(--foreground-strong)]">
                   {match.reference.exam_year} · {match.reference.subject} · {match.reference.question_number}번
                 </p>
-                <p className="mt-2 text-xs text-[color:var(--muted)]">연결 이유: {match.reason}</p>
-                <p className="mt-2 text-xs text-[color:var(--muted)]">연결된 신호: {formatMatchedFieldLabels(match.matched_fields).join(" · ")}</p>
-                <p className="mt-2 text-xs text-[color:var(--muted)]">논점 후보: {match.reference.issue_tags.join(" · ")}</p>
+                <p className="mt-2 text-xs text-[color:var(--muted)]">1) 연결 이유: {match.reason}</p>
+                <p className="mt-2 text-xs text-[color:var(--muted)]">2) 연결된 신호: {formatMatchedFieldLabels(match.matched_fields).join(" · ")}</p>
+                <p className="mt-2 text-xs text-[color:var(--muted)]">3) 자주 엮이는 논점: {match.reference.issue_tags.join(" · ")}</p>
                 <div className="mt-3 rounded-[var(--radius-sm)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] p-3">
                   <p className="text-xs font-medium text-[color:var(--foreground-strong)]">{guide.title}</p>
                   <p className="mt-2 text-xs text-[color:var(--muted)]">학습용 skeleton 단계</p>
