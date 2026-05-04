@@ -46,6 +46,15 @@ export type PastExamReferenceMatch = {
   reason: string;
 };
 
+export type AnswerSkeletonGuide = {
+  referenceId: string;
+  title: string;
+  skeleton_steps: string[];
+  checkpoint_questions: string[];
+  common_gap_warnings: string[];
+  next_action: string;
+};
+
 const PAST_EXAM_REFERENCES: PastExamReferenceItem[] = [
   {
     id: "appraiser-second-2025-36-practice-q1",
@@ -225,4 +234,16 @@ export function mapCaptureNoteToPastExamReferenceMatches(
     mistakeType: typeof captureNoteSignals.mistake_type === "string" ? captureNoteSignals.mistake_type : null,
     weakStructurePoint: typeof captureNoteSignals.weak_structure_point === "string" ? captureNoteSignals.weak_structure_point : null,
   });
+}
+
+export function buildAnswerSkeletonGuide(reference: PastExamReferenceItem): AnswerSkeletonGuide {
+  const title = `${reference.exam_year} ${reference.subject} ${reference.question_number}번 학습용 답안 skeleton`;
+  return {
+    referenceId: reference.id,
+    title,
+    skeleton_steps: reference.expected_answer_skeleton.map((step, index) => `${index + 1}. ${step} 문장 1개 작성`),
+    checkpoint_questions: reference.scoring_checkpoint_skeleton.map((checkpoint) => `${checkpoint}가 내 문장에 보이는가?`),
+    common_gap_warnings: reference.common_gap_candidates.map((gap) => `주의: ${gap}`),
+    next_action: "지금 3분 동안 위 순서대로 초안을 다시 쓰고, 체크포인트 질문에 스스로 답해 보세요.",
+  };
 }

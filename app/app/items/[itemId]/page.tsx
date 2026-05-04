@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { getAppraisalMode, parseAppraisalMode } from "@/lib/review-os/appraisal";
 import { getCalculatorWorkflowForSubject, hasCalculationSignal } from "@/lib/review-os/calculator-workflow";
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
-import { mapCaptureNoteToPastExamReferenceMatches } from "@/lib/review-os/past-exam-reference";
+import { buildAnswerSkeletonGuide, mapCaptureNoteToPastExamReferenceMatches } from "@/lib/review-os/past-exam-reference";
 import { reviewOsService } from "@/lib/review-os/service";
 import { buildDetailStudyNote, buildRewriteComparisonNote } from "@/lib/review-os/study-note";
 
@@ -140,6 +140,9 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
           <p className="text-caption text-[color:var(--muted)]">관련 기출 후보</p>
           <div className="mt-3 space-y-3">
             {captureReferenceCandidates.map((match) => (
+              (() => {
+                const guide = buildAnswerSkeletonGuide(match.reference);
+                return (
               <div
                 key={match.reference.id}
                 className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4"
@@ -150,12 +153,34 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
                 <p className="mt-2 text-xs text-[color:var(--muted)]">연결 이유: {match.reason}</p>
                 <p className="mt-2 text-xs text-[color:var(--muted)]">연결된 신호: {formatMatchedFieldLabels(match.matched_fields).join(" · ")}</p>
                 <p className="mt-2 text-xs text-[color:var(--muted)]">논점 후보: {match.reference.issue_tags.join(" · ")}</p>
-                <p className="mt-2 text-xs text-[color:var(--muted)]">학습용 skeleton: {match.reference.expected_answer_skeleton.join(" → ")}</p>
-                <p className="mt-2 text-xs text-[color:var(--muted)]">체크포인트: {match.reference.scoring_checkpoint_skeleton.join(" · ")}</p>
+                <div className="mt-3 rounded-[var(--radius-sm)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] p-3">
+                  <p className="text-xs font-medium text-[color:var(--foreground-strong)]">{guide.title}</p>
+                  <p className="mt-2 text-xs text-[color:var(--muted)]">학습용 skeleton 단계</p>
+                  <ul className="mt-1 list-disc space-y-1 pl-5 text-xs text-[color:var(--muted)]">
+                    {guide.skeleton_steps.map((step) => (
+                      <li key={step}>{step}</li>
+                    ))}
+                  </ul>
+                  <p className="mt-2 text-xs text-[color:var(--muted)]">자가 점검 질문</p>
+                  <ul className="mt-1 list-disc space-y-1 pl-5 text-xs text-[color:var(--muted)]">
+                    {guide.checkpoint_questions.map((question) => (
+                      <li key={question}>{question}</li>
+                    ))}
+                  </ul>
+                  <p className="mt-2 text-xs text-[color:var(--muted)]">자주 발생하는 간극</p>
+                  <ul className="mt-1 list-disc space-y-1 pl-5 text-xs text-[color:var(--muted)]">
+                    {guide.common_gap_warnings.map((warning) => (
+                      <li key={warning}>{warning}</li>
+                    ))}
+                  </ul>
+                  <p className="mt-2 text-xs font-medium text-[color:var(--foreground-strong)]">다음 행동: {guide.next_action}</p>
+                </div>
               </div>
+                );
+              })()
             ))}
           </div>
-          <p className="mt-3 text-xs text-[color:var(--muted)]">모범답안·채점 확정이 아닌 학습용 구조 참고입니다.</p>
+          <p className="mt-3 text-xs text-[color:var(--muted)]">모범답안·공식 채점기준이 아닌 학습용 구조 참고이며, 합격/불합격 판단 용도가 아닙니다.</p>
         </section>
       ) : null}
 
