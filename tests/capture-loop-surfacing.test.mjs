@@ -36,6 +36,9 @@ test("item detail surfaces capture_note_engine_v2 fields without exposing raw OC
   assert.ok(source.includes("다음 과제 유형"));
   assert.ok(source.includes("AI 정리는 초안입니다. 저장 전 직접 확인해 주세요."));
   assert.ok(source.includes("원문 OCR/텍스트는 사용자 소유 입력"));
+  assert.ok(source.includes("관련 기출 후보"));
+  assert.ok(source.includes("학습용 skeleton"));
+  assert.ok(source.includes("체크포인트"));
 });
 
 test("learner surfaces keep instructor routes and official grading language separated", async () => {
