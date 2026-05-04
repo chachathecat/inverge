@@ -49,7 +49,7 @@ test("item detail surfaces capture_note_engine_v2 fields without exposing raw OC
   assert.ok(source.includes("skill_tags: \"답안 기술\""));
   assert.ok(source.includes("skeleton: \"학습용 skeleton\""));
   assert.ok(source.includes("학습용 skeleton"));
-  assert.ok(source.includes("체크포인트"));
+  assert.ok(source.includes("자가 점검 질문"));
   assert.equal(source.includes("score="), false);
   assert.equal(source.includes("match.score"), false);
 });
@@ -59,8 +59,15 @@ test("learner surfaces keep instructor routes and official grading language sepa
   const itemSource = await readFile(new URL("../app/app/items/[itemId]/page.tsx", import.meta.url), "utf8");
   assert.equal(reviewSource.includes("/instructor/second-grading"), false);
   assert.equal(itemSource.includes("공식 점수"), false);
+  assert.equal(itemSource.includes("공식 채점기준"), false);
   assert.equal(itemSource.includes("공식 모범답안"), false);
   assert.equal(itemSource.includes("공식 채점"), false);
   assert.equal(itemSource.includes("합격"), false);
   assert.equal(itemSource.includes("불합격"), false);
+  assert.equal(itemSource.includes("official model answer"), false);
+  assert.equal(itemSource.includes("pass/fail"), false);
+  assert.equal(itemSource.includes("학습용 skeleton 단계"), true);
+  assert.equal(itemSource.includes("자가 점검 질문"), true);
+  assert.equal(itemSource.includes("자주 발생하는 간극"), true);
+  assert.equal(itemSource.includes("다음 행동"), true);
 });

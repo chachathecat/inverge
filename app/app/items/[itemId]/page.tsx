@@ -180,7 +180,7 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
               })()
             ))}
           </div>
-          <p className="mt-3 text-xs text-[color:var(--muted)]">모범답안·공식 채점기준이 아닌 학습용 구조 참고이며, 합격/불합격 판단 용도가 아닙니다.</p>
+          <p className="mt-3 text-xs text-[color:var(--muted)]">모범답안이나 확정 평가가 아닌 학습용 구조 참고입니다.</p>
         </section>
       ) : null}
 
