@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { getAppraisalMode, parseAppraisalMode } from "@/lib/review-os/appraisal";
 import { getCalculatorWorkflowForSubject, hasCalculationSignal } from "@/lib/review-os/calculator-workflow";
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
+import { mapCaptureNoteToPastExamReferences } from "@/lib/review-os/past-exam-reference";
 import { reviewOsService } from "@/lib/review-os/service";
 import { buildDetailStudyNote, buildRewriteComparisonNote } from "@/lib/review-os/study-note";
 
@@ -81,6 +82,14 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
         ? (resolvedDetail.item.derivedPayload.capture_note_engine_v1 as Record<string, unknown>)
       : null;
 
+  const captureReferenceCandidates = captureNoteEngine
+    ? mapCaptureNoteToPastExamReferences({
+        ...captureNoteEngine,
+        mode,
+        subject: resolvedDetail.item.subjectLabel,
+      })
+    : [];
+
   return (
     <div className="space-y-6">
       <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-6 md:p-7">
@@ -123,6 +132,25 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
           </div>
           <p className="mt-3 text-xs text-[color:var(--muted)]">AI 정리는 초안입니다. 저장 전 직접 확인해 주세요.</p>
           <p className="mt-3 text-xs text-[color:var(--muted)]">원문 OCR/텍스트는 사용자 소유 입력으로 보관되며, 이 화면에 학습 데이터처럼 노출하지 않습니다.</p>
+        </section>
+      ) : null}
+
+      {captureReferenceCandidates.length > 0 ? (
+        <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] p-5">
+          <p className="text-caption text-[color:var(--muted)]">관련 기출 후보</p>
+          <div className="mt-3 space-y-3">
+            {captureReferenceCandidates.map((reference) => (
+              <div key={reference.id} className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4">
+                <p className="text-sm font-medium text-[color:var(--foreground-strong)]">
+                  {reference.exam_year} · {reference.subject} · {reference.question_number}번
+                </p>
+                <p className="mt-2 text-xs text-[color:var(--muted)]">논점 후보: {reference.issue_tags.join(" · ")}</p>
+                <p className="mt-2 text-xs text-[color:var(--muted)]">학습용 skeleton: {reference.expected_answer_skeleton.join(" → ")}</p>
+                <p className="mt-2 text-xs text-[color:var(--muted)]">체크포인트: {reference.scoring_checkpoint_skeleton.join(" · ")}</p>
+              </div>
+            ))}
+          </div>
+          <p className="mt-3 text-xs text-[color:var(--muted)]">모범답안·채점 확정이 아닌 학습용 구조 참고입니다.</p>
         </section>
       ) : null}
 
