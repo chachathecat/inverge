@@ -40,7 +40,7 @@ export default async function ReviewOsReviewPage({ searchParams }: PageProps) {
       {items.length === 0 ? (
         <Card className="border-[var(--border)] bg-[color:var(--surface)] shadow-none">
           <CardHeader>
-            <CardTitle>{mode === "second" ? "아직 교정 queue가 없습니다" : "아직 다시 볼 오답이 없습니다"}</CardTitle>
+            <CardTitle>{mode === "second" ? "아직 교정 대기 항목이 없습니다" : "아직 다시 볼 오답이 없습니다"}</CardTitle>
             <CardDescription>{config.emptyDescription}</CardDescription>
           </CardHeader>
           <CardContent>
