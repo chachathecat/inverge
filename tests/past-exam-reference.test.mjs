@@ -26,14 +26,26 @@ const subjectFixtures = [
   },
 ];
 
+const fiveYearRange = [2021, 2022, 2023, 2024, 2025];
+const requiredSubjects = ["감정평가실무", "감정평가이론", "감정평가 및 보상법규"];
+
 test("2021/2022/2023/2024/2025 second-stage reference seeds are loaded", () => {
   const refs = listPastExamReferences("second");
   const years = new Set(refs.map((item) => item.exam_year));
-  assert.ok(years.has(2021));
-  assert.ok(years.has(2022));
-  assert.ok(years.has(2025));
-  assert.ok(years.has(2024));
-  assert.ok(years.has(2023));
+  for (const year of fiveYearRange) {
+    assert.ok(years.has(year), `missing seeded year: ${year}`);
+  }
+});
+
+test("each seeded year has all three second-stage subjects", () => {
+  const refs = listPastExamReferences("second");
+  for (const year of fiveYearRange) {
+    const yearRefs = refs.filter((item) => item.exam_year === year);
+    const subjects = new Set(yearRefs.map((item) => item.subject));
+    for (const subject of requiredSubjects) {
+      assert.ok(subjects.has(subject), `${year} is missing subject: ${subject}`);
+    }
+  }
 });
 
 test("all references use learner-safe source policy fields", () => {
@@ -67,6 +79,19 @@ test("similar_question_refs resolve without dangling references", () => {
   }
 });
 
+test("all seeded refs keep non-empty taxonomy and skeleton fields", () => {
+  const refs = listPastExamReferences("second");
+  for (const ref of refs) {
+    assert.ok(ref.topic_tags.length > 0, `${ref.id} has empty topic_tags`);
+    assert.ok(ref.issue_tags.length > 0, `${ref.id} has empty issue_tags`);
+    assert.ok(ref.skill_tags.length > 0, `${ref.id} has empty skill_tags`);
+    assert.ok(ref.expected_answer_skeleton.length > 0, `${ref.id} has empty expected_answer_skeleton`);
+    assert.ok(ref.scoring_checkpoint_skeleton.length > 0, `${ref.id} has empty scoring_checkpoint_skeleton`);
+    assert.ok(ref.common_gap_candidates.length > 0, `${ref.id} has empty common_gap_candidates`);
+    assert.ok(ref.related_mistake_types.length > 0, `${ref.id} has empty related_mistake_types`);
+  }
+});
+
 test("subject-aligned signals return same-subject references near top", () => {
   for (const fixture of subjectFixtures) {
     const matches = findPastExamReferenceMatches({
@@ -82,6 +107,9 @@ test("subject-aligned signals return same-subject references near top", () => {
     for (const match of matches) {
       assert.ok(match.matched_fields.length > 0);
       assert.match(match.reason, /[가-힣]/);
+      assert.equal(match.reason.includes("score"), false);
+      assert.equal(/\b\d+(\.\d+)?\b/.test(match.reason), false);
+      assert.equal(Object.prototype.hasOwnProperty.call(match, "score"), true);
     }
   }
 });
@@ -113,12 +141,16 @@ test("buildAnswerSkeletonGuide returns actionable guidance for every seeded ref"
   }
 });
 
-test("all seeded refs keep non-empty skeleton/checkpoint/common-gap arrays", () => {
+test("skeleton guides avoid official answer/scoring/pass-fail language", () => {
   const refs = listPastExamReferences("second");
+  const forbidden = ["공식 모범답안", "공식 채점", "합격/불합격", "pass/fail", "정답 확정", "채점 확정"];
+
   for (const ref of refs) {
-    assert.ok(ref.expected_answer_skeleton.length > 0, `${ref.id} has empty expected_answer_skeleton`);
-    assert.ok(ref.scoring_checkpoint_skeleton.length > 0, `${ref.id} has empty scoring_checkpoint_skeleton`);
-    assert.ok(ref.common_gap_candidates.length > 0, `${ref.id} has empty common_gap_candidates`);
+    const guide = buildAnswerSkeletonGuide(ref);
+    const joined = JSON.stringify(guide);
+    for (const keyword of forbidden) {
+      assert.equal(joined.includes(keyword), false, `${ref.id} guide includes forbidden keyword: ${keyword}`);
+    }
   }
 });
 
