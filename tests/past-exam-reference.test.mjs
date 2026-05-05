@@ -26,9 +26,11 @@ const subjectFixtures = [
   },
 ];
 
-test("2023/2024/2025 second-stage reference seeds are loaded", () => {
+test("2021/2022/2023/2024/2025 second-stage reference seeds are loaded", () => {
   const refs = listPastExamReferences("second");
   const years = new Set(refs.map((item) => item.exam_year));
+  assert.ok(years.has(2021));
+  assert.ok(years.has(2022));
   assert.ok(years.has(2025));
   assert.ok(years.has(2024));
   assert.ok(years.has(2023));
@@ -139,6 +141,8 @@ test("reference module does not include prohibited official grading/pass-fail la
     "합격/불합격",
     "official model answer",
     "pass/fail",
+    "archive",
+    "아카이브",
   ];
 
   for (const keyword of forbidden) {
