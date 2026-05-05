@@ -50,8 +50,7 @@ test("each seeded year has all three second-stage subjects", () => {
 
 test("all references use learner-safe source policy fields", () => {
   const refs = listPastExamReferences("second");
-  const filtered = refs.filter((ref) => seededYearRange.includes(ref.exam_year));
-  for (const ref of filtered) {
+  for (const ref of refs) {
     assert.equal(ref.source_status, "needs_review");
     assert.equal(ref.raw_text_policy, "reference_only");
   }
@@ -90,6 +89,29 @@ test("all seeded refs keep non-empty taxonomy and skeleton fields", () => {
     assert.ok(ref.scoring_checkpoint_skeleton.length > 0, `${ref.id} has empty scoring_checkpoint_skeleton`);
     assert.ok(ref.common_gap_candidates.length > 0, `${ref.id} has empty common_gap_candidates`);
     assert.ok(ref.related_mistake_types.length > 0, `${ref.id} has empty related_mistake_types`);
+  }
+});
+
+
+
+test("tie scores prefer recent exam year then stable id", () => {
+  const matches = findPastExamReferenceMatches({
+    mode: "second",
+    subject: "감정평가실무",
+    topicCandidate: "평가방법",
+  });
+
+  assert.ok(matches.length >= 2);
+  for (let i = 1; i < matches.length; i += 1) {
+    const prev = matches[i - 1];
+    const curr = matches[i];
+    assert.ok(prev.score >= curr.score);
+    if (prev.score === curr.score) {
+      assert.ok(prev.reference.exam_year >= curr.reference.exam_year);
+      if (prev.reference.exam_year === curr.reference.exam_year) {
+        assert.ok(prev.reference.id.localeCompare(curr.reference.id) <= 0);
+      }
+    }
   }
 });
 

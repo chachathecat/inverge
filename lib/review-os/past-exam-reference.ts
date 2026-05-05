@@ -553,7 +553,14 @@ export function findPastExamReferenceMatches(input: PastExamCandidateInput): Pas
     };
   }).filter((item): item is PastExamReferenceMatch => Boolean(item));
 
-  return candidates.sort((a, b) => b.score - a.score).slice(0, 3);
+  return candidates
+    .sort(
+      (a, b) =>
+        b.score - a.score ||
+        b.reference.exam_year - a.reference.exam_year ||
+        a.reference.id.localeCompare(b.reference.id),
+    )
+    .slice(0, 3);
 }
 
 export function mapCaptureNoteToPastExamReferences(captureNoteSignals: Record<string, unknown>): PastExamReferenceItem[] {
