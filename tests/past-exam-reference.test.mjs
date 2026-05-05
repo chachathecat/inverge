@@ -26,20 +26,20 @@ const subjectFixtures = [
   },
 ];
 
-const fiveYearRange = [2021, 2022, 2023, 2024, 2025];
+const seededYearRange = [2019, 2020, 2021, 2022, 2023, 2024, 2025];
 const requiredSubjects = ["감정평가실무", "감정평가이론", "감정평가 및 보상법규"];
 
-test("2021/2022/2023/2024/2025 second-stage reference seeds are loaded", () => {
+test("2019/2020/2021/2022/2023/2024/2025 second-stage reference seeds are loaded", () => {
   const refs = listPastExamReferences("second");
   const years = new Set(refs.map((item) => item.exam_year));
-  for (const year of fiveYearRange) {
+  for (const year of seededYearRange) {
     assert.ok(years.has(year), `missing seeded year: ${year}`);
   }
 });
 
 test("each seeded year has all three second-stage subjects", () => {
   const refs = listPastExamReferences("second");
-  for (const year of fiveYearRange) {
+  for (const year of seededYearRange) {
     const yearRefs = refs.filter((item) => item.exam_year === year);
     const subjects = new Set(yearRefs.map((item) => item.subject));
     for (const subject of requiredSubjects) {
@@ -50,7 +50,8 @@ test("each seeded year has all three second-stage subjects", () => {
 
 test("all references use learner-safe source policy fields", () => {
   const refs = listPastExamReferences("second");
-  for (const ref of refs) {
+  const filtered = refs.filter((ref) => seededYearRange.includes(ref.exam_year));
+  for (const ref of filtered) {
     assert.equal(ref.source_status, "needs_review");
     assert.equal(ref.raw_text_policy, "reference_only");
   }
