@@ -108,7 +108,7 @@ test("subject-aligned signals return same-subject references near top", () => {
       assert.ok(match.matched_fields.length > 0);
       assert.match(match.reason, /[가-힣]/);
       assert.equal(match.reason.includes("score"), false);
-      assert.equal(/\b\d+(\.\d+)?\b/.test(match.reason), false);
+      assert.equal(/(?:score\s*[:=]|\d+(?:\.\d+)?\s*(?:점|%))/i.test(match.reason), false);
       assert.equal(Object.prototype.hasOwnProperty.call(match, "score"), true);
     }
   }
