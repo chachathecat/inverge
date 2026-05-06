@@ -7,6 +7,11 @@ import {
   listPastExamReferences,
   mapCaptureNoteToPastExamReferences,
 } from "../lib/review-os/past-exam-reference.ts";
+import {
+  findPastExamSourceDocumentsByReferenceId,
+  findPastExamSourceDocumentsByYear,
+  listPastExamSourceDocuments,
+} from "../lib/review-os/past-exam-source-seeds.ts";
 
 const subjectFixtures = [
   {
@@ -211,8 +216,6 @@ test("reference module does not include raw user OCR text keys", async () => {
   assert.equal(source.includes("user_ocr"), false);
   assert.equal(source.includes("rawQuestionText"), false);
 });
-import { listPastExamSourceDocuments } from "../lib/review-os/past-exam-source-seeds.ts";
-
 test("source metadata seeds load with safe protocol defaults", () => {
   const docs = listPastExamSourceDocuments();
   assert.ok(docs.length >= 3);
@@ -223,6 +226,31 @@ test("source metadata seeds load with safe protocol defaults", () => {
     assert.equal(doc.extraction_status, "uploaded");
     assert.equal(doc.subject.trim().length > 0, true);
   }
+});
+
+test("source metadata can be looked up by linked reference id", () => {
+  const docs = listPastExamSourceDocuments();
+  for (const doc of docs) {
+    for (const linkedRefId of doc.linked_reference_ids) {
+      const linkedDocs = findPastExamSourceDocumentsByReferenceId(linkedRefId);
+      assert.ok(
+        linkedDocs.some((linkedDoc) => linkedDoc.id === doc.id),
+        `source doc lookup missing ${doc.id} for reference ${linkedRefId}`
+      );
+    }
+  }
+
+  assert.deepEqual(findPastExamSourceDocumentsByReferenceId("non-existent-reference-id"), []);
+});
+
+test("source metadata can be looked up by exam year", () => {
+  const docs2025 = findPastExamSourceDocumentsByYear(2025);
+  assert.ok(docs2025.length >= 3);
+  for (const doc of docs2025) {
+    assert.equal(doc.exam_year, 2025);
+  }
+
+  assert.deepEqual(findPastExamSourceDocumentsByYear(1999), []);
 });
 
 test("source metadata links resolve to existing past exam reference ids", () => {

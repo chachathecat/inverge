@@ -45,3 +45,13 @@ const PAST_EXAM_SOURCE_DOCUMENTS: PastExamSourceDocument[] = [
 export function listPastExamSourceDocuments(): PastExamSourceDocument[] {
   return PAST_EXAM_SOURCE_DOCUMENTS.map((item) => ({ ...item, linked_reference_ids: [...item.linked_reference_ids] }));
 }
+
+export function findPastExamSourceDocumentsByReferenceId(
+  referenceId: string
+): PastExamSourceDocument[] {
+  return listPastExamSourceDocuments().filter((item) => item.linked_reference_ids.includes(referenceId));
+}
+
+export function findPastExamSourceDocumentsByYear(year: number): PastExamSourceDocument[] {
+  return listPastExamSourceDocuments().filter((item) => item.exam_year === year);
+}
