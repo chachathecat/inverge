@@ -7,15 +7,37 @@ export type PastExamOcrAdapterInput = {
   source_type: "pdf";
 };
 
+export type PastExamOcrProvider =
+  | "manual_stub"
+  | "gemini_vision"
+  | "google_document_ai"
+  | "future_provider";
+
+export type PastExamOcrProviderMode = "disabled" | "stub_only" | "provider_ready";
+
+export type PastExamOcrProviderConfig = {
+  provider: PastExamOcrProvider;
+  mode: PastExamOcrProviderMode;
+  internal_only: true;
+};
+
 export type PastExamOcrAdapterResult = {
   source_document_id: string;
   extraction_status: "extracted" | "failed";
   extracted_text: string;
   extracted_text_policy: "reference_only";
   review_status: "needs_review";
-  provider: "manual_stub" | "future_ocr_provider";
+  provider: PastExamOcrProvider;
   notes: string;
 };
+
+export function resolvePastExamOcrProviderConfig(): PastExamOcrProviderConfig {
+  return {
+    provider: "manual_stub",
+    mode: "stub_only",
+    internal_only: true,
+  };
+}
 
 export function buildManualOcrStubResult(input: PastExamOcrAdapterInput): PastExamOcrAdapterResult {
   const hasStoragePath = input.storage_path.trim().length > 0;
@@ -28,6 +50,26 @@ export function buildManualOcrStubResult(input: PastExamOcrAdapterInput): PastEx
     review_status: "needs_review",
     provider: "manual_stub",
     notes: "Stub only; no OCR provider called.",
+  };
+}
+
+export function buildOcrResultWithConfiguredProvider(
+  input: PastExamOcrAdapterInput,
+): PastExamOcrAdapterResult {
+  const providerConfig = resolvePastExamOcrProviderConfig();
+
+  if (providerConfig.provider === "manual_stub" || providerConfig.mode === "stub_only") {
+    return buildManualOcrStubResult(input);
+  }
+
+  return {
+    source_document_id: input.source_document_id,
+    extraction_status: "failed",
+    extracted_text: "",
+    extracted_text_policy: "reference_only",
+    review_status: "needs_review",
+    provider: providerConfig.provider,
+    notes: "Provider adapter is not enabled; review required.",
   };
 }
 
