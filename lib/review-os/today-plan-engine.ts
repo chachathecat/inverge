@@ -11,6 +11,8 @@ export type TodayPlanTask = {
   task_type: TodayPlanTaskType;
   estimated_minutes: number;
   priority_reason: string;
+  created_from_capture: boolean;
+  source_label?: string;
 };
 
 type BuildInput = { mode: "first" | "second"; queue: ReviewQueueCard[]; now?: Date };
@@ -85,6 +87,8 @@ export function buildTodayPlanTasks({ mode, queue, now = new Date() }: BuildInpu
       task_type: taskType,
       estimated_minutes: taskType === "rewrite" ? 20 : taskType === "retry" ? 15 : 12,
       priority_reason,
+      created_from_capture: item.createdFromCapture,
+      source_label: item.createdFromCapture ? "오늘 기록 기반" : "복습 큐 기반",
     };
   });
 }

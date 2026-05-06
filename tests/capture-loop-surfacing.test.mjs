@@ -29,7 +29,10 @@ test("review queue marks only capture-originated items", async () => {
 
 test("today plan surfaces capture-origin task labels and fallback copy", async () => {
   const source = await readFile(new URL("../app/app/page.tsx", import.meta.url), "utf8");
+  assert.ok(source.includes("created_from_capture"));
+  assert.ok(source.includes("one_next_action"));
   assert.ok(source.includes("오늘 기록 기반"));
+  assert.ok(source.includes("source_label ?? \"오늘 기록 기반\""));
   assert.ok(source.includes("이유:"));
   assert.ok(source.includes("다음 행동:"));
   assert.ok(source.includes("아직 오늘 기록이 없습니다."));

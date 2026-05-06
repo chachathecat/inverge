@@ -250,14 +250,17 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                   )}
                 </div>
               </div>
-              {todayPlanTasks[0]?.created_from_capture ? (
-                <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-4 py-3">
-                  <p className="text-xs text-[color:var(--foreground-strong)]">{todayPlanTasks[0].title}</p>
-                  <p className="mt-1 text-xs text-[color:var(--muted)]">이유: {todayPlanTasks[0].reason}</p>
-                  <p className="mt-1 text-xs text-[color:var(--muted)]">다음 행동: {todayPlanTasks[0].task_type === "rewrite" ? "문단 하나 다시쓰기" : "다시 보기"}</p>
-                  <p className="mt-1 text-xs text-[color:var(--muted)]">오늘 기록 기반</p>
-                </div>
-              ) : null}
+              {(() => {
+                const firstTodayPlanTask = todayPlanTasks[0] ?? null;
+                return firstTodayPlanTask?.created_from_capture ? (
+                  <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-4 py-3">
+                    <p className="text-xs text-[color:var(--foreground-strong)]">{firstTodayPlanTask.title}</p>
+                    <p className="mt-1 text-xs text-[color:var(--muted)]">이유: {firstTodayPlanTask.reason}</p>
+                    <p className="mt-1 text-xs text-[color:var(--muted)]">다음 행동: {firstTodayPlanTask.one_next_action}</p>
+                    <p className="mt-1 text-xs text-[color:var(--muted)]">{firstTodayPlanTask.source_label ?? "오늘 기록 기반"}</p>
+                  </div>
+                ) : null;
+              })()}
 
               {shouldShowFirstSubjectSelector ? (
                 <TodayFirstSubjectSelector
