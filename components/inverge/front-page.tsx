@@ -46,7 +46,7 @@ const LOOP_SUMMARY = [
 export function FrontPage() {
   return (
     <RefinedShell className="space-y-12 py-10 sm:py-14 lg:py-16">
-      <section className="grid items-center gap-8 lg:grid-cols-[minmax(0,1fr)_460px] lg:gap-10">
+      <section className="grid items-center gap-8 lg:grid-cols-[minmax(0,1fr)_500px] lg:gap-10">
         <div className="space-y-6">
           <RefinedBadge>감정평가사 합격 운영 시스템</RefinedBadge>
           <div className="space-y-5">
@@ -56,36 +56,29 @@ export function FrontPage() {
               내일의 실행 순서로 바꿉니다.
             </h1>
             <p className="max-w-3xl text-body text-[color:var(--muted)]">
-              오답 하나, 답안 하나만 남기면 인버지가 원인·쟁점·다음 복습을 정리합니다. 감정평가사 1차/2차 공부를 오늘 할 일 중심으로 굴러가게 만듭니다.
+              문제나 답안 사진을 올리면 OCR 초안 → 핵심 조건 하이라이트 → 설명 초안 → 오늘 할 일로 정리됩니다. 감정평가사 1차/2차 공부를 실행 중심으로 이어가게 만듭니다.
             </p>
           </div>
           <div className="space-y-4">
-            <Link href="/exams" className={cn(buttonVariants({ size: "lg" }), "w-full sm:w-auto")}>
-              오늘 입력 시작
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-            <p className="text-sm text-[color:var(--muted)]">감정평가사 1차/2차 입력 화면으로 바로 이동합니다.</p>
-            <p className="text-sm text-[color:var(--muted)]">문제 스냅, 답안 스냅, 텍스트 입력을 모두 오늘 할 일로 연결합니다.</p>
-          </div>
-          <QuietSection className="space-y-3 border-[color:var(--border)] bg-[color:var(--surface-soft)] p-4">
-            <p className="text-sm font-medium text-[color:var(--foreground-strong)]">답안 검토실</p>
-            <p className="text-sm leading-6 text-[color:var(--muted)]">
-              문제나 답안 사진을 올리면, OCR 초안과 핵심 조건, 다시 볼 지점을 한 화면에 정리합니다.
-            </p>
             <div className="flex flex-wrap items-center gap-3">
+              <Link href="/exams" className={cn(buttonVariants({ size: "lg" }), "w-full sm:w-auto")}>
+                오늘 입력 시작
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
               <Link
                 href="/answer-review?mode=second"
                 className={cn(
                   buttonVariants({ variant: "outline" }),
-                  "h-9 px-3 text-xs border-[color:var(--border)] bg-[color:var(--surface)]"
+                  "h-11 w-full px-4 sm:w-auto border-[color:var(--border)] bg-[color:var(--surface)]"
                 )}
               >
                 답안 검토실 보기
               </Link>
-              <p className="text-xs text-[color:var(--muted)]">검토 결과는 학습 보조 초안이며 저장 전 직접 확인해 주세요.</p>
-              <p className="text-xs text-[color:var(--muted)]">예시는 학습 흐름을 보여주기 위한 샘플입니다.</p>
             </div>
-          </QuietSection>
+            <p className="text-sm text-[color:var(--muted)]">감정평가사 1차/2차 입력 화면으로 바로 이동합니다.</p>
+            <p className="text-sm text-[color:var(--muted)]">문제 스냅, 답안 스냅, 텍스트 입력을 모두 오늘 할 일로 연결합니다.</p>
+            <p className="text-xs text-[color:var(--muted)]">검토 결과는 학습 보조 초안이며 저장 전 직접 확인해 주세요.</p>
+          </div>
         </div>
         <FrontPageHeroAnimation />
       </section>
