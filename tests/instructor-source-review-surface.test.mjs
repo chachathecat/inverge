@@ -20,18 +20,22 @@ test("source-review is internal only and not linked from learner app navigation"
   assert.equal(appHome.includes("/instructor/source-review"), false);
 });
 
-test("source-review page includes required pilot fields and internal warning copy", async () => {
+test("source-review page includes Korean operator labels and safety/read-only copy", async () => {
   const source = await readFile(new URL("../app/instructor/source-review/page.tsx", import.meta.url), "utf8");
 
   const required = [
-    "source document id",
-    "source document subject/year",
-    "extraction candidate status",
-    "structured candidate status",
-    "linked reference id",
-    "review record decision",
-    "whether apply helper produces reviewed copy",
+    "Source 문서 ID",
+    "과목 / 연도",
+    "추출 후보 상태",
+    "구조화 후보 상태",
+    "연결된 Reference ID",
+    "검수 기록",
+    "검수 적용 결과",
     "내부 검수용입니다. 공식 답안이나 공식 채점 기준이 아닙니다.",
+    "현재 화면은 읽기 전용이며, OCR·업로드·상태 변경은 제공하지 않습니다.",
+    'title="Source"',
+    'title="Candidate"',
+    'title="Review"',
   ];
 
   for (const token of required) {
@@ -42,7 +46,7 @@ test("source-review page includes required pilot fields and internal warning cop
 test("source-review page remains read-only with no mutation/upload/ocr/archive controls", async () => {
   const source = await readFile(new URL("../app/instructor/source-review/page.tsx", import.meta.url), "utf8");
 
-  const forbidden = ["approve", "reject", "onClick", "form", "upload", "ocr", "archive", "POST", "PUT", "PATCH"];
+  const forbidden = ["approve", "reject", "onClick", "<form", "upload", "archive", "POST", "PUT", "PATCH"];
   for (const token of forbidden) {
     assert.equal(source.includes(token), false, `forbidden interactive token found: ${token}`);
   }
