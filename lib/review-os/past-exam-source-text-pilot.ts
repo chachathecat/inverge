@@ -1,7 +1,7 @@
-import { buildExtractionCandidateFromSource, buildStructuredCandidateFromReference } from "./past-exam-extraction-adapter";
-import { listPastExamReferences } from "./past-exam-reference";
-import { listPastExamSourceDocuments } from "./past-exam-source-seeds";
-import type { PastExamExtractionCandidate, PastExamStructuredCandidate } from "./past-exam-source";
+import { buildExtractionCandidateFromSource, buildStructuredCandidateFromReference } from "./past-exam-extraction-adapter.ts";
+import { listPastExamReferences } from "./past-exam-reference.ts";
+import { listPastExamSourceDocuments } from "./past-exam-source-seeds.ts";
+import type { PastExamExtractionCandidate, PastExamStructuredCandidate } from "./past-exam-source.ts";
 
 const PILOT_SOURCE_DOCUMENT_ID = "appraiser-second-2025-36-practice-q1-source-pdf";
 const PILOT_REFERENCE_ID = "appraiser-second-2025-36-practice-q1";
