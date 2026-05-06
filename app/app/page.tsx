@@ -234,12 +234,15 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
               <p className="text-sm text-[color:var(--foreground-strong)]">{nextAction}</p>
 
               <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-4 py-3">
-                <p className="text-caption text-[color:var(--muted)]">오늘의 우선순위</p>
+                <p className="text-caption text-[color:var(--muted)]">오늘의 우선순위 · 복습 큐 연결</p>
                 <div className="mt-2 space-y-2">
                   {todayPlanTasks.length === 0 ? (
                     <>
+                      <p className="text-xs text-[color:var(--muted)]">아직 오늘 계획이 없습니다.</p>
                       <p className="text-xs text-[color:var(--muted)]">아직 오늘 기록이 없습니다.</p>
+                      <p className="text-xs text-[color:var(--muted)]">기록을 하나 저장하면 우선순위를 계산해 오늘 할 일을 제안합니다.</p>
                       <p className="text-xs text-[color:var(--muted)]">공부한 흔적을 하나 올리면 오늘 계획과 복습 큐가 업데이트됩니다.</p>
+                      <Link href={firstCaptureHref} className="pt-1 text-xs font-medium text-[color:var(--foreground-strong)] underline underline-offset-2">기록 추가하기</Link>
                     </>
                   ) : (
                     todayPlanTasks.slice(0, 3).map((task, index) => (
@@ -392,7 +395,11 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {notebookPreview.length === 0 ? (
-                    <p className="text-sm text-[color:var(--muted)]">{config.emptyDescription}</p>
+                    <div className="space-y-2">
+                      <p className="text-sm text-[color:var(--muted)]">아직 기록이 없습니다.</p>
+                      <p className="text-sm text-[color:var(--muted)]">오늘 푼 문제나 답안 일부를 올리면 첫 오답노트를 만들어 드립니다.</p>
+                      <Link href={firstCaptureHref} className="inline-flex text-sm font-medium text-[color:var(--foreground-strong)] underline underline-offset-2">오늘 한 것 올리기</Link>
+                    </div>
                   ) : (
                     notebookPreview.map((note, index) => (
                       <Link
