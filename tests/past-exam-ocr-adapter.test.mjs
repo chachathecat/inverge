@@ -7,6 +7,8 @@ import {
   buildManualOcrStubResult,
   buildOcrResultWithConfiguredProvider,
   convertOcrResultToExtractionCandidate,
+  invokeConfiguredOcrProvider,
+  invokeManualOcrStubProvider,
   resolvePastExamOcrProviderConfig,
 } from "../lib/review-os/past-exam-ocr-adapter.ts";
 
@@ -128,6 +130,76 @@ test("candidate remains needs_review", () => {
   const candidate = convertOcrResultToExtractionCandidate(result);
 
   assert.equal(candidate.review_status, "needs_review");
+});
+
+
+
+test("manual invoker returns reference_only", async () => {
+  const result = await invokeManualOcrStubProvider({
+    source_document_id: "source-ocr-invoke-1",
+    storage_path: "sources/2025-invoke-1.pdf",
+    source_type: "pdf",
+    provider: "manual_stub",
+  });
+
+  assert.equal(result.extracted_text_policy, "reference_only");
+});
+
+test("manual invoker returns needs_review", async () => {
+  const result = await invokeManualOcrStubProvider({
+    source_document_id: "source-ocr-invoke-2",
+    storage_path: "sources/2025-invoke-2.pdf",
+    source_type: "pdf",
+    provider: "manual_stub",
+  });
+
+  assert.equal(result.review_status, "needs_review");
+});
+
+test("dispatcher default uses manual_stub path", async () => {
+  const result = await invokeConfiguredOcrProvider({
+    source_document_id: "source-ocr-dispatch-1",
+    storage_path: "sources/2025-dispatch-1.pdf",
+    source_type: "pdf",
+  });
+
+  assert.equal(result.provider, "manual_stub");
+  assert.equal(result.extraction_status, "extracted");
+});
+
+test("dispatcher with provider_ready real provider does not call external provider", async () => {
+  const result = await invokeConfiguredOcrProvider(
+    {
+      source_document_id: "source-ocr-dispatch-2",
+      storage_path: "sources/2025-dispatch-2.pdf",
+      source_type: "pdf",
+    },
+    resolvePastExamOcrProviderConfig({
+      provider: "google_document_ai",
+      mode: "provider_ready",
+    }),
+  );
+
+  assert.equal(result.provider, "google_document_ai");
+  assert.equal(result.extraction_status, "failed");
+  assert.equal(result.notes, "Real provider invocation is not implemented yet; review required.");
+});
+
+test("dispatcher result remains reference_only and needs_review", async () => {
+  const result = await invokeConfiguredOcrProvider(
+    {
+      source_document_id: "source-ocr-dispatch-3",
+      storage_path: "sources/2025-dispatch-3.pdf",
+      source_type: "pdf",
+    },
+    resolvePastExamOcrProviderConfig({
+      provider: "future_provider",
+      mode: "provider_ready",
+    }),
+  );
+
+  assert.equal(result.extracted_text_policy, "reference_only");
+  assert.equal(result.review_status, "needs_review");
 });
 
 test("no OCR provider call", async () => {

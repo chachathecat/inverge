@@ -26,15 +26,28 @@ export type PastExamOcrProviderConfigInput = {
   mode?: string;
 };
 
-export type PastExamOcrAdapterResult = {
+export type PastExamOcrProviderInvocationInput = {
   source_document_id: string;
-  extraction_status: "extracted" | "failed";
+  storage_path: string;
+  source_type: "pdf";
+  provider: PastExamOcrProvider;
+};
+
+export type PastExamOcrProviderInvocationResult = {
+  source_document_id: string;
+  provider: PastExamOcrProvider;
   extracted_text: string;
+  extraction_status: "extracted" | "failed";
   extracted_text_policy: "reference_only";
   review_status: "needs_review";
-  provider: PastExamOcrProvider;
   notes: string;
 };
+
+export type PastExamOcrProviderInvoker = (
+  input: PastExamOcrProviderInvocationInput,
+) => Promise<PastExamOcrProviderInvocationResult>;
+
+export type PastExamOcrAdapterResult = PastExamOcrProviderInvocationResult;
 
 function normalizeProvider(provider?: string): PastExamOcrProvider {
   if (provider === "gemini_vision") {
@@ -76,17 +89,67 @@ export function resolvePastExamOcrProviderConfig(
   };
 }
 
-export function buildManualOcrStubResult(input: PastExamOcrAdapterInput): PastExamOcrAdapterResult {
+export async function invokeManualOcrStubProvider(
+  input: PastExamOcrProviderInvocationInput,
+): Promise<PastExamOcrProviderInvocationResult> {
   const hasStoragePath = input.storage_path.trim().length > 0;
 
   return {
     source_document_id: input.source_document_id,
+    provider: input.provider,
+    extracted_text: "Manual OCR provider invocation placeholder. Review required.",
     extraction_status: hasStoragePath ? "extracted" : "failed",
-    extracted_text: "Manual OCR stub placeholder. Review required.",
     extracted_text_policy: "reference_only",
     review_status: "needs_review",
+    notes: "Manual provider boundary only; no external OCR called.",
+  };
+}
+
+export async function invokeConfiguredOcrProvider(
+  input: PastExamOcrAdapterInput,
+  config?: PastExamOcrProviderConfig,
+): Promise<PastExamOcrProviderInvocationResult> {
+  const providerConfig = config ?? resolvePastExamOcrProviderConfig();
+
+  if (providerConfig.provider === "manual_stub" || providerConfig.mode === "stub_only") {
+    return invokeManualOcrStubProvider({
+      ...input,
+      provider: "manual_stub",
+    });
+  }
+
+  if (providerConfig.mode !== "provider_ready") {
+    return {
+      source_document_id: input.source_document_id,
+      provider: providerConfig.provider,
+      extracted_text: "",
+      extraction_status: "failed",
+      extracted_text_policy: "reference_only",
+      review_status: "needs_review",
+      notes: "Provider mode is not provider_ready; review required.",
+    };
+  }
+
+  return {
+    source_document_id: input.source_document_id,
+    provider: providerConfig.provider,
+    extracted_text: "",
+    extraction_status: "failed",
+    extracted_text_policy: "reference_only",
+    review_status: "needs_review",
+    notes: "Real provider invocation is not implemented yet; review required.",
+  };
+}
+
+export function buildManualOcrStubResult(input: PastExamOcrAdapterInput): PastExamOcrAdapterResult {
+  return {
+    source_document_id: input.source_document_id,
     provider: "manual_stub",
-    notes: "Stub only; no OCR provider called.",
+    extracted_text: "Manual OCR provider invocation placeholder. Review required.",
+    extraction_status: input.storage_path.trim().length > 0 ? "extracted" : "failed",
+    extracted_text_policy: "reference_only",
+    review_status: "needs_review",
+    notes: "Manual provider boundary only; no external OCR called.",
   };
 }
 
