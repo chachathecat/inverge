@@ -118,6 +118,28 @@ test("structured candidate created_from is source_pdf_extraction", () => {
   assert.equal(candidate.created_from, "source_pdf_extraction");
 });
 
+
+
+test("structured candidate arrays are defensively cloned", () => {
+  const candidate = buildStructuredCandidateFromReference({
+    sourceDocumentId: "source-2025-10",
+    reference: sampleReference,
+  });
+
+  candidate.topic_tags_candidate.push("추가-topic");
+  candidate.issue_tags_candidate.push("추가-issue");
+  candidate.skill_tags_candidate.push("추가-skill");
+  candidate.expected_answer_skeleton_candidate.push("추가-expected");
+  candidate.scoring_checkpoint_skeleton_candidate.push("추가-scoring");
+  candidate.common_gap_candidates.push("추가-gap");
+
+  assert.deepEqual(sampleReference.topic_tags, ["평가방법", "조건정리"]);
+  assert.deepEqual(sampleReference.issue_tags, ["근거 누락"]);
+  assert.deepEqual(sampleReference.skill_tags, ["근거 제시"]);
+  assert.deepEqual(sampleReference.expected_answer_skeleton, ["요구사항", "근거", "결론"]);
+  assert.deepEqual(sampleReference.scoring_checkpoint_skeleton, ["근거-결론 연결"]);
+  assert.deepEqual(sampleReference.common_gap_candidates, ["결론만 제시"]);
+});
 test("no official answer/scoring/pass-fail language", async () => {
   const source = await readFile(adapterPath, "utf8");
   const forbidden = ["official_answer", "official_scoring", "pass_fail", "final judgment", "자동 채점"];

@@ -41,12 +41,23 @@ test("both pilot candidates are needs_review", () => {
   assert.equal(structured.candidate_status, "needs_review");
 });
 
-test("pilot source_document_id resolves to an existing source doc", () => {
+test("pilot source_document_id resolves to source metadata", () => {
   const extraction = listPastExamSourceTextPilotExtractionCandidates()[0];
-  const sourceIds = new Set(listPastExamSourceDocuments().map((item) => item.id));
+  const sourceDoc = listPastExamSourceDocuments().find((item) => item.id === extraction.source_document_id);
 
-  assert.equal(sourceIds.has(extraction.source_document_id), true);
+  assert.ok(sourceDoc);
+  assert.equal(sourceDoc.id, extraction.source_document_id);
+  assert.equal(sourceDoc.raw_text_policy, "reference_only");
+  assert.equal(sourceDoc.review_status, "needs_review");
   assert.equal(isPastExamSourceTextPilotLinkedToKnownSourceDocument(), true);
+});
+
+
+test("pilot extracted_text stays placeholder/review-required", () => {
+  const extraction = listPastExamSourceTextPilotExtractionCandidates()[0];
+  const normalized = extraction.extracted_text?.toLowerCase() ?? "";
+
+  assert.equal(normalized.includes("placeholder") || normalized.includes("review required"), true);
 });
 
 test("pilot linked_reference_id resolves to an existing reference item", () => {
@@ -80,6 +91,8 @@ test("no OCR/upload/archive UI routes were added", async () => {
     new URL("../app/api/pdf-upload/route.ts", import.meta.url),
     new URL("../app/exams/archive/source/page.tsx", import.meta.url),
     new URL("../app/exams/archive/upload/page.tsx", import.meta.url),
+    new URL("../app/exams/archive/source-upload/page.tsx", import.meta.url),
+    new URL("../app/instructor/source-upload/page.tsx", import.meta.url),
   ];
 
   for (const pathUrl of shouldNotExist) {
