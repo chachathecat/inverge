@@ -39,15 +39,15 @@ test("learner capture flow keeps instructor OCR route separated and editable OCR
 test("learner capture mobile inputs and extraction states are explicit", async () => {
   const learnerCapture = await readFile(new URL("../components/review-os/capture-form.tsx", import.meta.url), "utf8");
   assert.ok(learnerCapture.includes("사진 찍기"));
-  assert.ok(learnerCapture.includes("이미지 업로드"));
+  assert.ok(learnerCapture.includes("앨범에서 선택"));
   assert.ok(learnerCapture.includes("PDF 선택"));
-  assert.ok(learnerCapture.includes("입력 상태"));
+  assert.ok(learnerCapture.includes("OCR 상태"));
   assert.ok(learnerCapture.includes("manual"));
   assert.ok(learnerCapture.includes("uploading"));
   assert.ok(learnerCapture.includes("extracting"));
   assert.ok(learnerCapture.includes("succeeded"));
   assert.ok(learnerCapture.includes("failed"));
-  assert.ok(learnerCapture.includes("PDF는 현재 파일명 보관과 수동 텍스트 입력을 지원합니다. 필요한 부분을 아래 입력창에 붙여넣어 주세요."));
+  assert.ok(learnerCapture.includes("PDF는 현재 파일명만 기록됩니다. 내용은 직접 붙여넣어 주세요."));
 });
 
 test("learner capture failure copy is calm and draft-preserving", async () => {
