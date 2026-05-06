@@ -105,10 +105,23 @@ test("candidate remains needs_review", () => {
 
 test("no OCR provider call", async () => {
   const source = await readFile(adapterPath, "utf8");
+  const normalizedSource = source.toLowerCase();
 
-  const forbidden = ["fetch(", "axios", "googleapis", "openai", "gemini api call", "document ai client"];
-  for (const token of forbidden) {
-    assert.equal(source.includes(token), false, `forbidden OCR provider token found: ${token}`);
+  const forbidden = [
+    /fetch\(/i,
+    /\baxios\b/i,
+    /\bvision\b/i,
+    /@google-cloud\/vision/i,
+    /\btesseract\b/i,
+    /\bgoogleapis\b/i,
+    /\bopenai\b/i,
+    /\bgemini\b/i,
+    /\bdocumentai\b/i,
+    /\bdocument ai\b/i,
+    /DocumentProcessorServiceClient/i,
+  ];
+  for (const pattern of forbidden) {
+    assert.equal(pattern.test(normalizedSource), false, `forbidden OCR provider token found: ${pattern}`);
   }
 });
 
