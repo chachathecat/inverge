@@ -15,11 +15,14 @@ test("past-exam source contract exists and preserves protocol fields", async () 
   const source = await readUtf8(sourcePath);
 
   const requiredTokens = [
-    "PastExamSourceStatus",
+    "PastExamExtractionStatus",
+    "PastExamSourceReviewStatus",
     "PastExamSourceDocument",
+    "subject: string",
+    'extraction_status: PastExamExtractionStatus',
     'source_type: "pdf"',
     'raw_text_policy: "reference_only"',
-    'source_status: "needs_review" | "reviewed"',
+    'source_status: PastExamSourceReviewStatus',
     "linked_reference_ids",
   ];
 

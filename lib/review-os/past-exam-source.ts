@@ -1,15 +1,17 @@
-export type PastExamSourceStatus = "uploaded" | "extracted" | "needs_review" | "reviewed";
+export type PastExamExtractionStatus = "uploaded" | "extracted" | "failed";
+
+export type PastExamSourceReviewStatus = "needs_review" | "reviewed";
 
 export type PastExamSourceDocument = {
   id: string;
   exam_year: number;
   exam_name: string;
   stage: "first" | "second";
-  subject?: string;
+  subject: string;
   source_type: "pdf";
   storage_path: string;
-  extraction_status: PastExamSourceStatus;
+  extraction_status: PastExamExtractionStatus;
   raw_text_policy: "reference_only";
-  source_status: "needs_review" | "reviewed";
+  source_status: PastExamSourceReviewStatus;
   linked_reference_ids: string[];
 };
