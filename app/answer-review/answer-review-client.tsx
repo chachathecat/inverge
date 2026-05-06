@@ -161,7 +161,7 @@ export default function AnswerReviewClientPage() {
 
   const runStructure = async () => {
     if (!hasMyAnswer) {
-      setStructureError("내 답안 파일 또는 텍스트를 먼저 입력해 주세요.");
+      setStructureError("내 답안 불러오기 또는 텍스트를 먼저 입력해 주세요.");
       return;
     }
 
@@ -283,7 +283,7 @@ export default function AnswerReviewClientPage() {
     currentStep === 1
       ? isStructuring
         ? "답안 검토 중..."
-        : "답안 검토 시작"
+        : "답안 스냅으로 시작"
       : currentStep === 2
         ? "피드백 초안 만들기"
         : "피드백 초안 복사";
@@ -324,12 +324,18 @@ export default function AnswerReviewClientPage() {
     <RefinedShell className="space-y-5 py-6 sm:space-y-8 sm:py-10">
       <section className="space-y-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] p-4 sm:p-6">
         <div className="flex flex-wrap items-center gap-2">
-          <RefinedBadge>검토 보조 초안 베타</RefinedBadge>
-          <RefinedBadge tone="amber">최종 판단은 검토자 확인이 필요합니다</RefinedBadge>
+          <RefinedBadge>답안 검토실</RefinedBadge>
+          <RefinedBadge tone="amber">검토 결과는 학습 보조 초안입니다</RefinedBadge>
         </div>
         <p className="text-caption leading-5 text-[color:var(--muted)]">
-          의미 있는 입력만 학습 기록에 반영되며, 원문 답안은 기록 요약에 직접 저장하지 않습니다.
+          이미 쓴 답안을 올리면 누락 논점, 약한 구조, 다시 쓸 문장을 정리합니다. 검토 결과는 학습 보조 초안이며 저장 전 직접 확인해 주세요.
         </p>
+
+          <div className="grid gap-2 sm:grid-cols-3">
+            <button type="button" className={cn(buttonVariants({ variant: "default" }), "w-full justify-center")}>답안 스냅으로 시작</button>
+            <button type="button" className={cn(buttonVariants({ variant: "outline" }), "w-full justify-center")}>사례 스캔</button>
+            <button type="button" className={cn(buttonVariants({ variant: "outline" }), "w-full justify-center")}>텍스트 붙여넣기</button>
+          </div>
 
         <section className="space-y-4 rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-4 sm:p-5">
           <div className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface)] p-3">
@@ -383,9 +389,9 @@ export default function AnswerReviewClientPage() {
                   transition={{ duration: 0.26, ease: "easeOut" }}
                 >
                   <article className="rounded-[var(--radius-md)] border border-[#27375f] bg-[linear-gradient(160deg,#f8f7f3_0%,#f3f1eb_100%)] p-4 sm:p-5">
-                    <p className="text-caption font-medium text-[#3f4c66]">입력 스튜디오 · 빠른 시작</p>
-                    <p className="mt-2 text-sm font-semibold text-[#1e2a46]">내 답안만 있어도 검토를 시작할 수 있습니다.</p>
-                    <p className="mt-1 text-caption leading-5 text-[#3f4c66]">문제와 기준답안을 추가하면 간극이 더 정확해집니다.</p>
+                    <p className="text-caption font-medium text-[#3f4c66]">답안 검토실 · 빠른 시작</p>
+                    <p className="mt-2 text-sm font-semibold text-[#1e2a46]">답안 스냅으로 시작</p>
+                    <p className="mt-1 text-caption leading-5 text-[#3f4c66]">사례 스캔, PDF/사진 불러오기, 텍스트 붙여넣기를 함께 사용할 수 있습니다.</p>
                   </article>
                   <div className="grid gap-3 sm:grid-cols-2">
                 <label className="space-y-2 text-caption font-medium text-[color:var(--muted)]">
@@ -436,12 +442,12 @@ export default function AnswerReviewClientPage() {
                     <p className="mt-1 text-caption leading-5 text-[color:var(--muted)]">텍스트가 가장 빠르지만, 파일 업로드도 바로 사용할 수 있습니다.</p>
                     <div className="mt-3 grid gap-3 lg:grid-cols-3">
                 <section className="space-y-2 rounded-[var(--radius-sm)] border border-[var(--border)] p-3" id="problem-upload">
-                  <p className="text-caption font-medium text-[color:var(--muted)]">문제/사례 파일</p>
+                  <p className="text-caption font-medium text-[color:var(--muted)]">문제/사례 불러오기</p>
                   <label
                     htmlFor="answer-review-problem-file-upload"
                     className={cn(buttonVariants({ variant: "outline" }), "w-full cursor-pointer justify-center sm:w-auto")}
                   >
-                    파일 선택
+                    PDF/사진 불러오기
                   </label>
                   <input
                     id="answer-review-problem-file-upload"
@@ -457,12 +463,12 @@ export default function AnswerReviewClientPage() {
                 </section>
 
                 <section className="space-y-2 rounded-[var(--radius-sm)] border border-[#b7c1dd] bg-[#f8faff] p-3" id="my-answer-upload">
-                  <p className="text-caption font-medium text-[#3f4c66]">내 답안 파일</p>
+                  <p className="text-caption font-medium text-[#3f4c66]">내 답안 불러오기</p>
                   <label
                     htmlFor="answer-review-my-answer-file-upload"
                     className={cn(buttonVariants({ variant: "outline" }), "w-full cursor-pointer justify-center sm:w-auto")}
                   >
-                    파일 선택
+                    PDF/사진 불러오기
                   </label>
                   <input
                     id="answer-review-my-answer-file-upload"
@@ -478,12 +484,12 @@ export default function AnswerReviewClientPage() {
                 </section>
 
                 <section className="space-y-2 rounded-[var(--radius-sm)] border border-[var(--border)] p-3" id="reference-upload">
-                  <p className="text-caption font-medium text-[color:var(--muted)]">기준답안 파일 (선택)</p>
+                  <p className="text-caption font-medium text-[color:var(--muted)]">기준답안 추가 (선택)</p>
                   <label
                     htmlFor="answer-review-reference-file-upload"
                     className={cn(buttonVariants({ variant: "outline" }), "w-full cursor-pointer justify-center sm:w-auto")}
                   >
-                    파일 선택
+                    PDF/사진 불러오기
                   </label>
                   <input
                     id="answer-review-reference-file-upload"

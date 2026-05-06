@@ -28,13 +28,21 @@ export default async function ReviewOsWritePage({ searchParams }: PageProps) {
         <div>
           <h2 className="text-2xl font-medium tracking-[-0.04em] text-[color:var(--foreground-strong)]">2차 답안 작성 워크스페이스</h2>
           <p className="mt-2 max-w-2xl text-sm leading-7 text-[color:var(--muted)]">
-            첫 시작이라면 이미 작성한 답안을 붙여넣어 빠르게 검토해보세요. 새로 작성하는 흐름도 그대로 사용할 수 있습니다.
+            사진/PDF 검토와 새 답안 작성을 같은 흐름에서 선택할 수 있습니다. 먼저 스냅 검토로 누락 논점을 확인하고 작성으로 이어가세요.
           </p>
-          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-            <Link href="/answer-review?mode=second">
-              <Button type="button">이미 쓴 답안 검토하기</Button>
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <Link href="/answer-review?mode=second" className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-4 py-3">
+              <p className="text-sm font-medium text-[color:var(--foreground-strong)]">답안 스냅 검토</p>
+              <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">이미 쓴 답안을 찍어 누락 논점과 다시 쓸 문장을 확인합니다.</p>
             </Link>
-            <p className="text-xs text-[color:var(--muted)]">추천 시작 경로</p>
+            <Link href="/answer-review?mode=second&intent=case" className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-4 py-3">
+              <p className="text-sm font-medium text-[color:var(--foreground-strong)]">사례 스캔</p>
+              <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">문제/사례를 찍어 조건과 요구사항을 먼저 정리합니다.</p>
+            </Link>
+            <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] px-4 py-3">
+              <p className="text-sm font-medium text-[color:var(--foreground-strong)]">새 답안 작성</p>
+              <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">쟁점 회상부터 차분히 작성합니다.</p>
+            </div>
           </div>
         </div>
       </section>
