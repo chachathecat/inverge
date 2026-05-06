@@ -27,6 +27,33 @@ test("default provider config remains internal_only", () => {
   assert.equal(config.internal_only, true);
 });
 
+test("provider_ready requires explicit provider and mode", () => {
+  const config = resolvePastExamOcrProviderConfig({
+    provider: "google_document_ai",
+    mode: "provider_ready",
+  });
+  assert.equal(config.provider, "google_document_ai");
+  assert.equal(config.mode, "provider_ready");
+});
+
+test("provider_ready falls back to stub_only when provider is manual_stub", () => {
+  const config = resolvePastExamOcrProviderConfig({
+    provider: "manual_stub",
+    mode: "provider_ready",
+  });
+  assert.equal(config.provider, "manual_stub");
+  assert.equal(config.mode, "stub_only");
+});
+
+test("unknown provider/mode stays stub_only manual_stub", () => {
+  const config = resolvePastExamOcrProviderConfig({
+    provider: "unknown_provider",
+    mode: "unknown_mode",
+  });
+  assert.equal(config.provider, "manual_stub");
+  assert.equal(config.mode, "stub_only");
+});
+
 test("configured provider output remains reference_only", () => {
   const result = buildOcrResultWithConfiguredProvider({
     source_document_id: "source-ocr-config-1",
