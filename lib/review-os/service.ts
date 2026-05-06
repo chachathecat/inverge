@@ -12,6 +12,7 @@ import {
 } from "@/lib/review-os/appraisal";
 import { getEntitlementLimit } from "@/lib/review-os/entitlements";
 import { buildCaptureNoteSignals, structureCaptureNote } from "@/lib/review-os/capture-note-engine";
+import { buildCaptureLearningSignal, buildCaptureReviewReason, computeCaptureQueuePriority } from "@/lib/review-os/capture-learning-signals";
 import { reviewOsRepository } from "@/lib/review-os/repository";
 import { resolveReviewSchedule, resolveScheduleOverrideDate } from "@/lib/review-os/scheduling";
 import {
@@ -837,18 +838,35 @@ export class ReviewOsService {
       await reviewOsRepository.insertWrongAnswerNote(userId, item.id, artifacts.note);
       await reviewOsRepository.insertWrongAnswerTag(userId, item.id, artifacts.tags);
 
-      const priorityScore = rankQueueItem({
-        recurrenceCount: recurrence?.recurrenceCount ?? 1,
-        confidence: item.confidence,
-        timeSpentSeconds: item.timeSpentSeconds ?? null,
-        createdAt: item.createdAt,
-      });
-      const reviewReason = getReviewReason({
-        recurrenceCount: recurrence?.recurrenceCount ?? 1,
-        confidence: item.confidence,
-        timeSpentSeconds: item.timeSpentSeconds ?? null,
-        mistakeType: artifacts.tags.mistakeType,
-      });
+      const priorityScore = isCaptureCreated
+        ? computeCaptureQueuePriority({
+            examName: item.examName,
+            confidence: item.confidence,
+            timeSpentSeconds: item.timeSpentSeconds ?? null,
+            mistakeOrWeakPoint: `${artifacts.tags.mistakeType} ${input.weakStructurePoint ?? ""} ${input.missingIssue ?? ""}`,
+            weakStructurePoint: input.weakStructurePoint,
+            missingIssue: input.missingIssue,
+          })
+        : rankQueueItem({
+            recurrenceCount: recurrence?.recurrenceCount ?? 1,
+            confidence: item.confidence,
+            timeSpentSeconds: item.timeSpentSeconds ?? null,
+            createdAt: item.createdAt,
+          });
+      const reviewReason = isCaptureCreated
+        ? buildCaptureReviewReason({
+            examName: item.examName,
+            confidence: item.confidence,
+            mistakeReason: artifacts.tags.mistakeType,
+            weakStructurePoint: input.weakStructurePoint,
+            missingIssue: input.missingIssue,
+          })
+        : getReviewReason({
+            recurrenceCount: recurrence?.recurrenceCount ?? 1,
+            confidence: item.confidence,
+            timeSpentSeconds: item.timeSpentSeconds ?? null,
+            mistakeType: artifacts.tags.mistakeType,
+          });
 
       await reviewOsRepository.insertReviewQueueEntry(userId, item, reviewReason, priorityScore, queueDueAt, {
         topicTag: artifacts.tags.topicTag,
@@ -859,6 +877,32 @@ export class ReviewOsService {
         followUpReviewAt: schedule.followUpReviewAt,
         nextReviewDate: effectiveNextReviewDate,
       });
+
+      if (isCaptureCreated) {
+        try {
+          await reviewOsRepository.createLearningSignalEvent(
+            userId,
+            buildCaptureLearningSignal({
+              itemId: item.id,
+              examName: item.examName,
+              subject: item.subjectLabel,
+              sourceType: input.sourceType,
+              confidence: item.confidence,
+              timeSpentSeconds: item.timeSpentSeconds ?? undefined,
+              biggestGap: input.biggestGap ?? input.missingIssue,
+              nextAction: input.comparisonPoint,
+              mistakeReason: artifacts.tags.mistakeType,
+              keyConcepts: input.keyConcepts,
+              weakStructurePoint: input.weakStructurePoint,
+              missingIssue: input.missingIssue,
+              rewriteInstruction: input.rewriteInstruction,
+              createdFromCapture: true,
+            }),
+          );
+        } catch (error) {
+          console.warn("[review-os] capture learning signal event skipped", error);
+        }
+      }
 
       await reviewOsRepository.logUsageEvent(userId, "wrong_answer_create", "wrong_answer_item", item.id, {
         examName: item.examName,
