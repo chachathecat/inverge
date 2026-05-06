@@ -30,12 +30,12 @@ export function buildStructuredCandidateFromReference(params: {
     linked_reference_id: params.reference.id,
     candidate_status: "needs_review",
     raw_text_policy: "reference_only",
-    topic_tags_candidate: params.reference.topic_tags,
-    issue_tags_candidate: params.reference.issue_tags,
-    skill_tags_candidate: params.reference.skill_tags,
-    expected_answer_skeleton_candidate: params.reference.expected_answer_skeleton,
-    scoring_checkpoint_skeleton_candidate: params.reference.scoring_checkpoint_skeleton,
-    common_gap_candidates: params.reference.common_gap_candidates,
+    topic_tags_candidate: [...params.reference.topic_tags],
+    issue_tags_candidate: [...params.reference.issue_tags],
+    skill_tags_candidate: [...params.reference.skill_tags],
+    expected_answer_skeleton_candidate: [...params.reference.expected_answer_skeleton],
+    scoring_checkpoint_skeleton_candidate: [...params.reference.scoring_checkpoint_skeleton],
+    common_gap_candidates: [...params.reference.common_gap_candidates],
     created_from: "source_pdf_extraction",
   };
 }
