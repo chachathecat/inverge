@@ -237,7 +237,10 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                 <p className="text-caption text-[color:var(--muted)]">오늘의 우선순위</p>
                 <div className="mt-2 space-y-2">
                   {todayPlanTasks.length === 0 ? (
-                    <p className="text-xs text-[color:var(--muted)]">오답 기록이나 답안 검토를 1개 남기면 오늘 할 일을 계산합니다.</p>
+                    <>
+                      <p className="text-xs text-[color:var(--muted)]">아직 오늘 기록이 없습니다.</p>
+                      <p className="text-xs text-[color:var(--muted)]">공부한 흔적을 하나 올리면 오늘 계획과 복습 큐가 업데이트됩니다.</p>
+                    </>
                   ) : (
                     todayPlanTasks.slice(0, 3).map((task, index) => (
                       <p key={task.itemId} className="text-xs text-[color:var(--muted)]">
@@ -247,6 +250,17 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                   )}
                 </div>
               </div>
+              {(() => {
+                const firstTodayPlanTask = todayPlanTasks[0] ?? null;
+                return firstTodayPlanTask?.created_from_capture ? (
+                  <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-4 py-3">
+                    <p className="text-xs text-[color:var(--foreground-strong)]">{firstTodayPlanTask.title}</p>
+                    <p className="mt-1 text-xs text-[color:var(--muted)]">이유: {firstTodayPlanTask.reason}</p>
+                    <p className="mt-1 text-xs text-[color:var(--muted)]">다음 행동: {firstTodayPlanTask.one_next_action}</p>
+                    <p className="mt-1 text-xs text-[color:var(--muted)]">{firstTodayPlanTask.source_label ?? "오늘 기록 기반"}</p>
+                  </div>
+                ) : null;
+              })()}
 
               {shouldShowFirstSubjectSelector ? (
                 <TodayFirstSubjectSelector

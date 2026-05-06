@@ -40,9 +40,8 @@ export function ReviewQueueClient({ items, mode }: { items: ReviewQueueCard[]; m
   if (items.length === 0) {
     return (
       <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] p-6 text-sm leading-7 text-[color:var(--muted)]">
-        {mode === "second"
-          ? "오늘 다시 볼 항목이 없습니다. 2차 답안 한 건을 먼저 기록해 보세요."
-          : "오늘 다시 볼 항목이 없습니다. 1차 오답 1개를 먼저 기록해 보세요."}
+        <p>아직 오늘 기록이 없습니다.</p>
+        <p className="mt-1">공부한 흔적을 하나 올리면 오늘 계획과 복습 큐가 업데이트됩니다.</p>
       </div>
     );
   }
@@ -61,10 +60,10 @@ export function ReviewQueueClient({ items, mode }: { items: ReviewQueueCard[]; m
                 {item.problemTitle}
               </h3>
               <p className="text-sm leading-7 text-[color:var(--foreground-strong)]">
-                다시 보는 이유: {item.reviewReason}
+                {item.createdFromCapture ? "반복 신호와 최근 기록 기준" : `다시 보는 이유: ${item.reviewReason}`}
               </p>
               {item.createdFromCapture ? (
-                <p className="text-xs text-[color:var(--muted)]">오늘 기록에서 생성</p>
+                <p className="text-xs text-[color:var(--muted)]">오늘 한 것</p>
               ) : null}
               <div className="flex flex-wrap gap-2">
                 {buildPrioritySignals(item).map((signal) => (
@@ -82,7 +81,7 @@ export function ReviewQueueClient({ items, mode }: { items: ReviewQueueCard[]; m
             </div>
             <div className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-52 sm:items-end">
               <Button type="button" onClick={() => router.push(`/app/items/${item.itemId}?mode=${mode}`)} className="w-full sm:w-auto">
-                항목 열고 바로 실행
+                {item.createdFromCapture ? "다시 보기" : "항목 열고 바로 실행"}
               </Button>
               <button
                 type="button"

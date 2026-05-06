@@ -87,6 +87,9 @@ test("capture save path persists item/tag/queue/signal bridge", async () => {
 test("today plan stays one primary + max 3 and language is operational", () => {
   const tasks = buildTodayPlanTasks({ mode: "second", queue: [{ queueId:"q1", itemId:"i", examName:"감정평가사 2차", subjectLabel:"이론", problemTitle:"사례", topicTag:"논점", mistakeType:"누락", reviewReason: buildCaptureReviewReason({examName:"감정평가사 2차", confidence:"중간", missingIssue:"누락"}), dueAt:"2026-05-01T00:00:00.000Z", priorityScore:70, confidence:"중간", recurrenceCount:1, status:"pending", itemCreatedAt:"2026-05-05T00:00:00.000Z", createdFromCapture:true }] });
   assert.ok(tasks.length <= 3);
+  assert.equal(tasks[0].created_from_capture, true);
+  assert.equal(tasks[0].source_label, "오늘 기록 기반");
+  assert.ok(Boolean(tasks[0].one_next_action));
   assert.ok(/다시 씁니다|회상|확인/.test(tasks[0].one_next_action));
 });
 
@@ -94,7 +97,9 @@ test("learner-facing copy includes save bridge messages", async () => {
   const source = await readFile(new URL("../app/app/session/page.tsx", import.meta.url), "utf8");
   assert.ok(source.includes("오늘 계획에 반영되었습니다."));
   assert.ok(source.includes("복습 큐에 들어갔습니다."));
-  assert.ok(source.includes("우선순위는 최근 기록과 반복 신호를 기준으로 계산됩니다."));
+  assert.ok(source.includes("오늘 기록이 저장되었습니다."));
+  assert.ok(source.includes("가장 큰 간극:"));
+  assert.ok(source.includes("다음 행동:"));
 });
 
 test("guardrails: no instructor imports, no OCR provider, no grading claims", async () => {
