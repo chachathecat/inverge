@@ -39,9 +39,10 @@ export function ReviewQueueClient({ items, mode }: { items: ReviewQueueCard[]; m
 
   if (items.length === 0) {
     return (
-      <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] p-6 text-sm leading-7 text-[color:var(--muted)]">
+      <div className="rounded-[var(--radius-lg)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)] p-6 text-sm leading-7 text-[color:var(--ink-muted)]">
         <p>아직 복습 큐가 비어 있습니다.</p>
-        <p className="mt-1">틀린 개념이나 다시 쓸 답안이 생기면 자동으로 정리됩니다.</p>
+        <p className="mt-1">오늘은 이것부터 하세요.</p>
+        <p className="mt-1">기록을 하나 저장하면 오늘 할 일이 정리됩니다.</p>
         <p className="mt-1">공부한 흔적을 하나 올리면 오늘 계획과 복습 큐가 업데이트됩니다.</p>
         <Button type="button" onClick={() => router.push(mode === "second" ? "/app/write?mode=second" : "/app/capture?mode=first")} className="mt-4 w-full sm:w-auto">오늘 기록 남기기</Button>
       </div>
@@ -53,7 +54,7 @@ export function ReviewQueueClient({ items, mode }: { items: ReviewQueueCard[]; m
       {items.map((item) => (
         <section
           key={item.queueId}
-          className="rounded-[var(--radius-lg)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 sm:p-5"
+          className="rounded-[var(--radius-lg)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-elevated)] p-4 sm:p-5"
         >
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0 space-y-3">

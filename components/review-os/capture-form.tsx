@@ -924,11 +924,11 @@ function IntakePanel({
           </h3>
           <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">
             {mode === "second"
-              ? "사진은 초안 추출용입니다. 저장 전 반드시 과목/기준 답안/내 답안/가장 큰 간극을 확인합니다. OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요."
-              : "사진은 초안 추출용입니다. 저장 전 반드시 과목/정답/내 답/오답 원인/회상 문장을 확인합니다. OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요."}
+              ? "사진은 초안 추출용입니다. OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요."
+              : "사진은 초안 추출용입니다. OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요."}
           </p>
         </div>
-        <div className="rounded-[var(--radius-md)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-elevated)] p-4 sm:p-5">
+        <div className="rounded-[var(--radius-md)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-elevated)] p-5 sm:p-6">
           <p className="text-caption text-[color:var(--ink-muted)]">오늘의 입력</p>
           <h4 className="mt-2 text-base font-semibold text-[color:var(--ink-primary)]">사진으로 시작하기</h4>
           <p className="mt-1 text-sm leading-6 text-[color:var(--ink-muted)]">답안지, 오답, 필기 일부를 찍으면 OCR 초안으로 불러옵니다.</p>
@@ -985,12 +985,12 @@ function IntakePanel({
               }}
             />
           </div>
-          <p className="mt-3 inline-flex rounded-full border border-[color:var(--border-hairline)] bg-[color:var(--surface)] px-3 py-1 text-xs text-[color:var(--ink-muted)]">
+          <p className="mt-3 inline-flex rounded-full border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)] px-3 py-1 text-xs text-[color:var(--ink-muted)]">
             OCR 결과는 초안입니다 · 저장 전 확인 필요
           </p>
         </div>
       </div>
-      <div className="mt-2 grid gap-3 sm:grid-cols-2">
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <label className="space-y-2">
           <span className="text-sm text-[color:var(--foreground-strong)]">시험 모드</span>
           <select value={mode} className="form-control" disabled>
@@ -1011,7 +1011,7 @@ function IntakePanel({
           </select>
         </label>
       </div>
-      <div className={`rounded-[var(--radius-pill)] border px-3 py-2 ${extractionState === "failed" ? "border-[color:var(--status-red)] bg-[color:var(--status-red-soft)]" : "border-[color:var(--border-hairline)] bg-[color:var(--surface-elevated)]"}`}>
+      <div className={`rounded-[var(--radius-pill)] border px-3 py-2 ${extractionState === "failed" ? "border-[color:var(--status-red)] bg-[color:var(--status-red-soft)]" : "border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)]"}`}>
         <p className="text-xs font-medium text-[color:var(--muted)]">OCR 상태 · {extractionStateLabel[extractionState]}</p>
         <p className="mt-1 text-sm text-[color:var(--foreground-strong)]">
           {{

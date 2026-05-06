@@ -233,20 +233,22 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
             <CardContent className="space-y-3 p-4 pt-0 sm:space-y-4 sm:p-6 sm:pt-0">
               <p className="text-sm text-[color:var(--foreground-strong)]">{nextAction}</p>
 
-              <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-4 py-3">
-                <p className="text-caption text-[color:var(--muted)]">오늘의 우선순위 · 복습 큐 연결</p>
+              <div className="rounded-[var(--radius-md)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)] px-4 py-3">
+                <p className="text-caption text-[color:var(--ink-muted)]">오늘의 우선순위</p>
                 <div className="mt-2 space-y-2">
                   {todayPlanTasks.length === 0 ? (
                     <>
-                      <p className="text-xs text-[color:var(--muted)]">아직 오늘 계획이 없습니다.</p>
-                      <p className="text-xs text-[color:var(--muted)]">아직 오늘 기록이 없습니다.</p>
-                      <p className="text-xs text-[color:var(--muted)]">기록을 하나 저장하면 우선순위를 계산해 오늘 할 일을 제안합니다.</p>
-                      <p className="text-xs text-[color:var(--muted)]">공부한 흔적을 하나 올리면 오늘 계획과 복습 큐가 업데이트됩니다.</p>
-                      <Link href={firstCaptureHref} className="pt-1 text-xs font-medium text-[color:var(--foreground-strong)] underline underline-offset-2">기록 추가하기</Link>
+                      <p className="text-xs text-[color:var(--ink-muted)]">오늘은 이것부터 하세요.</p>
+                      <p className="text-xs text-[color:var(--ink-muted)]">아직 오늘 계획이 없습니다.</p>
+                      <p className="text-xs text-[color:var(--ink-muted)]">아직 오늘 기록이 없습니다.</p>
+                      <p className="text-xs text-[color:var(--ink-muted)]">기록을 하나 저장하면 오늘 할 일이 정리됩니다.</p>
+                      <p className="text-xs text-[color:var(--ink-muted)]">공부한 흔적을 하나 올리면 오늘 계획과 복습 큐가 업데이트됩니다.</p>
+                      <p className="text-xs text-[color:var(--ink-muted)]">복습 큐도 함께 업데이트됩니다.</p>
+                      <Link href={firstCaptureHref} className="pt-1 text-xs font-medium text-[color:var(--ink-primary)] underline underline-offset-2">기록 추가하기</Link>
                     </>
                   ) : (
                     todayPlanTasks.slice(0, 3).map((task, index) => (
-                      <p key={task.itemId} className="text-xs text-[color:var(--muted)]">
+                      <p key={task.itemId} className="text-xs text-[color:var(--ink-muted)]">
                         {index + 1}. {task.title} · {task.reason}
                       </p>
                     ))
@@ -311,7 +313,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                   <p className="mt-1 text-xs text-[color:var(--muted)]">입력을 기준으로 다음 복습 범위를 정리했습니다.</p>
                 </div>
               ) : null}
-              <details className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
+              <details className="rounded-[var(--radius-md)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)]">
                 <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">우선순위 근거 보기</summary>
                 <div className="grid gap-3 border-t border-[color:var(--border-subtle)] p-4 lg:grid-cols-3">
                   <div>
