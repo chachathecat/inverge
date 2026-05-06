@@ -8,8 +8,8 @@ export function FrontPageHeroAnimation() {
   const reduceMotion = useReducedMotion();
 
   return (
-    <div className="relative overflow-hidden rounded-3xl border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-5 sm:p-6">
-      <div className="space-y-4">
+    <div className="relative overflow-hidden rounded-3xl border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-4 sm:p-6">
+      <div className="space-y-3.5">
         <motion.div
           className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--surface-soft)] p-4"
           initial={reduceMotion ? { opacity: 1 } : { opacity: 0, y: 8 }}
@@ -69,6 +69,7 @@ export function FrontPageHeroAnimation() {
           <p className="mt-1.5 text-sm font-medium text-[color:var(--foreground-strong)]">착오 취소 선지 2개 다시 풀기</p>
         </motion.div>
       </div>
+      <p className="mt-3 text-[11px] leading-5 text-[color:var(--muted)]">예시는 학습 흐름을 보여주기 위한 샘플입니다.</p>
     </div>
   );
 }
