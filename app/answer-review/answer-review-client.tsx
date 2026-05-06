@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
@@ -87,6 +87,11 @@ export default function AnswerReviewClientPage() {
   const [examMode, setExamMode] = useState<AppraisalMode>(initialReviewContext.examMode);
   const [subject, setSubject] = useState<string>(initialReviewContext.subject);
   const [showExampleAnswer, setShowExampleAnswer] = useState(false);
+  const answerCameraInputRef = useRef<HTMLInputElement | null>(null);
+  const problemCameraInputRef = useRef<HTMLInputElement | null>(null);
+  const generalFileInputRef = useRef<HTMLInputElement | null>(null);
+  const answerTextRef = useRef<HTMLTextAreaElement | null>(null);
+  const [generalUploadIntent, setGeneralUploadIntent] = useState<"answer" | "problem">("answer");
 
   const shouldReduceMotion = useReducedMotion();
   const subjectOptions = examMode === "second" ? APPRAISAL_SECOND_SUBJECTS : APPRAISAL_FIRST_SUBJECTS;
@@ -101,6 +106,16 @@ export default function AnswerReviewClientPage() {
 
   const handleReferenceFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     setReferenceFiles(Array.from(event.target.files ?? []));
+  };
+
+  const handleGeneralFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? []);
+    if (generalUploadIntent === "problem") {
+      setProblemFiles(files);
+    } else {
+      setMyAnswerFiles(files);
+    }
+    event.target.value = "";
   };
 
   const hasProblemInput = problemText.trim().length > 0 || problemFiles.length > 0;
@@ -320,6 +335,11 @@ export default function AnswerReviewClientPage() {
     void copyFeedbackDraft();
   };
 
+  const focusAnswerTextarea = () => {
+    answerTextRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    answerTextRef.current?.focus();
+  };
+
   return (
     <RefinedShell className="space-y-5 py-6 sm:space-y-8 sm:py-10">
       <section className="space-y-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] p-4 sm:p-6">
@@ -331,10 +351,14 @@ export default function AnswerReviewClientPage() {
           이미 쓴 답안을 올리면 누락 논점, 약한 구조, 다시 쓸 문장을 정리합니다. 검토 결과는 학습 보조 초안이며 저장 전 직접 확인해 주세요.
         </p>
 
-          <div className="grid gap-2 sm:grid-cols-3">
-            <button type="button" className={cn(buttonVariants({ variant: "default" }), "w-full justify-center")}>답안 스냅으로 시작</button>
-            <button type="button" className={cn(buttonVariants({ variant: "outline" }), "w-full justify-center")}>사례 스캔</button>
-            <button type="button" className={cn(buttonVariants({ variant: "outline" }), "w-full justify-center")}>텍스트 붙여넣기</button>
+          <input ref={answerCameraInputRef} type="file" accept="image/*" capture="environment" multiple className="hidden" onChange={handleMyAnswerFileChange} />
+          <input ref={problemCameraInputRef} type="file" accept="image/*" capture="environment" multiple className="hidden" onChange={handleProblemFileChange} />
+          <input ref={generalFileInputRef} type="file" accept="image/*,.pdf" multiple className="hidden" onChange={handleGeneralFileChange} />
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            <button type="button" onClick={() => answerCameraInputRef.current?.click()} className={cn(buttonVariants({ variant: "default" }), "w-full justify-center")}>답안 스냅으로 시작</button>
+            <button type="button" onClick={() => problemCameraInputRef.current?.click()} className={cn(buttonVariants({ variant: "outline" }), "w-full justify-center")}>사례 스캔</button>
+            <button type="button" onClick={() => { setGeneralUploadIntent("answer"); generalFileInputRef.current?.click(); }} className={cn(buttonVariants({ variant: "outline" }), "w-full justify-center")}>PDF/사진 불러오기</button>
+            <button type="button" onClick={focusAnswerTextarea} className={cn(buttonVariants({ variant: "outline" }), "w-full justify-center")}>텍스트 붙여넣기</button>
           </div>
 
         <section className="space-y-4 rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-4 sm:p-5">
@@ -426,6 +450,7 @@ export default function AnswerReviewClientPage() {
                       <span className="rounded-full bg-[#eef2fb] px-2.5 py-1 text-[11px] font-semibold text-[#1e2a46]">최소 입력</span>
                     </div>
                     <Textarea
+                      ref={answerTextRef}
                       className="min-h-[210px] border-[#c9d1e7] bg-[color:var(--surface)]"
                       placeholder="초안 텍스트가 있으면 붙여 넣고, 없으면 직접 입력해 주세요."
                       value={myAnswerText}
@@ -536,14 +561,14 @@ export default function AnswerReviewClientPage() {
                   <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
                     <p className="text-caption font-medium text-[color:var(--muted)]">입력 준비 상태</p>
                     <div className="mt-3 grid gap-2">
-                      <InputStatusCard title="문제/사례" statusText={hasProblemInput ? "입력됨" : "미입력"} helper="선택 입력" />
                       <InputStatusCard title="내 답안" statusText={hasMyAnswer ? "입력됨" : "미입력"} helper="필수 입력" />
+                      <InputStatusCard title="문제/사례" statusText={hasProblemInput ? "입력됨" : "선택"} helper="선택 입력" />
                       <InputStatusCard title="기준답안" statusText={hasReferenceAnswer ? "입력됨" : "선택"} helper="선택 입력" />
                     </div>
                   </article>
                   <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
                     <p className="text-caption leading-5 text-[color:var(--muted)]">
-                      {hasMyAnswer ? "준비가 완료되었습니다. 바로 검토를 시작하세요." : "내 답안 텍스트 또는 파일을 입력하면 검토를 시작할 수 있습니다."}
+                      내 답안만 있어도 검토를 시작할 수 있습니다.
                     </p>
                     <motion.button
                       whileTap={shouldReduceMotion ? undefined : { scale: 0.985 }}
@@ -552,7 +577,7 @@ export default function AnswerReviewClientPage() {
                       onClick={handlePrimaryAction}
                       disabled={isPrimaryActionDisabled}
                     >
-                      {primaryActionLabel}
+                      답안 검토 시작
                     </motion.button>
                   </article>
                 </motion.aside>
@@ -593,7 +618,7 @@ export default function AnswerReviewClientPage() {
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="space-y-1">
                       <p className="text-caption text-[color:var(--muted)]">{examMode === "second" ? "감정평가사 2차" : "감정평가사 1차"} · {subject}</p>
-                      <h2 className="text-base font-semibold text-[color:var(--foreground-strong)]">답안 리뷰 스튜디오</h2>
+                      <h2 className="text-base font-semibold text-[color:var(--foreground-strong)]">답안 검토실</h2>
                       <p className="text-caption leading-5 text-[color:var(--muted)]">{toShortLine(structureDraft?.nextAction || "", "가장 큰 간극 하나를 먼저 보강하면 다음 초안의 완성도가 올라갑니다.")}</p>
                     </div>
                     <div className="space-y-2 text-right">
@@ -651,12 +676,12 @@ export default function AnswerReviewClientPage() {
                     </article>
 
                     <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
-                      <p className="text-caption font-medium text-[color:var(--muted)]">전체 리뷰</p>
-                      <p className="mt-2 text-caption leading-6 text-[color:var(--foreground-strong)]">{toDetailLine(structureDraft?.caution || structureDraft?.requiredIssues || "", "입력을 보강하면 전체 리뷰가 더 구체화됩니다.")}</p>
+                      <p className="text-caption font-medium text-[color:var(--muted)]">누락 논점</p>
+                      <p className="mt-2 text-caption leading-6 text-[color:var(--foreground-strong)]">{toDetailLine(structureDraft?.requiredIssues || structureDraft?.caution || "", "입력을 보강하면 누락 논점이 더 선명해집니다.")}</p>
                     </article>
 
                     <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
-                      <p className="text-caption font-medium text-[color:var(--muted)]">문단/이슈 단위 피드백</p>
+                      <p className="text-caption font-medium text-[color:var(--muted)]">약한 구조</p>
                       <ul className="mt-2 space-y-2 text-caption leading-6 text-[color:var(--foreground-strong)]">
                         <li>• 약한 문단 포인트: {toShortLine(structureDraft?.weakParagraphPoint || "", "보강할 문단 포인트를 직접 지정해 주세요.")}</li>
                         <li>• 논리 보강 포인트: {toShortLine(structureDraft?.weakLogicPoint || "", "논리 연결 근거를 한 줄 더 추가해 보세요.")}</li>
@@ -665,7 +690,7 @@ export default function AnswerReviewClientPage() {
                     </article>
 
                     <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
-                      <p className="text-caption font-medium text-[color:var(--muted)]">추천 다시쓰기 초안</p>
+                      <p className="text-caption font-medium text-[color:var(--muted)]">다시 쓸 문장</p>
                       <p className="mt-2 text-caption leading-6 text-[color:var(--foreground-strong)]">{toDetailLine(structureDraft?.rewriteDraftSuggestion || structureDraft?.rewriteTarget || "", "추천 다시쓰기 초안이 아직 없습니다. 수동 메모를 활용해 보강하세요.")}</p>
                     </article>
                   </div>
@@ -695,7 +720,7 @@ export default function AnswerReviewClientPage() {
                       <p className="text-caption font-medium text-[color:var(--muted)]">다음 행동</p>
                       <div className="mt-2 grid gap-2">
                         <motion.button whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }} type="button" onClick={() => setCurrentStep(1)} className={cn(buttonVariants({ variant: "default" }), "h-9")}>입력 수정하기</motion.button>
-                        <motion.button whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }} type="button" onClick={() => setCurrentStep(3)} className={cn(buttonVariants({ variant: "outline" }), "h-9")}>비교/피드백 정리</motion.button>
+                        <motion.button whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }} type="button" onClick={() => setCurrentStep(3)} className={cn(buttonVariants({ variant: "outline" }), "h-9")}>피드백 초안 만들기</motion.button>
                       </div>
                     </article>
                   </motion.aside>
@@ -791,7 +816,7 @@ export default function AnswerReviewClientPage() {
                       </motion.button>
                     </div>
                     <p className="mt-3 text-caption leading-5 text-[color:var(--muted)]">
-                      이 초안은 검토 보조용입니다. 전달 전 반드시 검토자가 확인해 주세요.
+                      검토 결과는 학습 보조 초안입니다. 저장 전 직접 확인해 주세요. 최종 판단은 사용자가 확인해야 합니다.
                     </p>
                   </article>
                 </motion.aside>
