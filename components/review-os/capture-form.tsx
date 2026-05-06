@@ -618,15 +618,14 @@ export function WrongAnswerCaptureForm({
       });
       const result = (await response.json()) as { ok?: boolean; item?: { id: string }; error?: string; message?: string };
       if (!response.ok || !result.ok || !result.item) {
-        const reason = result.message || result.error;
-        setError(reason ? `항목을 저장하지 못했습니다. ${reason}` : "항목을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+        setError("정리하지 못했습니다. 내용을 조금 더 확인한 뒤 다시 시도해 주세요.");
         return;
       }
       clearReviewOsDraft(storageKey);
       router.push(`/app/session?mode=${mode}&savedCapture=1&itemId=${result.item.id}`);
       router.refresh();
     } catch {
-      setError("항목을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+      setError("정리하지 못했습니다. 내용을 조금 더 확인한 뒤 다시 시도해 주세요.");
     } finally {
       setSubmitting(false);
     }
@@ -944,6 +943,27 @@ function IntakePanel({
           </label>
         </div>
       </div>
+      <div className="mt-2 grid gap-3 sm:grid-cols-2">
+        <label className="space-y-2">
+          <span className="text-sm text-[color:var(--foreground-strong)]">시험 모드</span>
+          <select value={mode} className="form-control" disabled>
+            <option value="first">감정평가사 1차</option>
+            <option value="second">감정평가사 2차</option>
+          </select>
+        </label>
+        <label className="space-y-2">
+          <span className="text-sm text-[color:var(--foreground-strong)]">캡처 유형</span>
+          <select
+            value={form.sourceType}
+            onChange={(event) => update("sourceType", event.target.value as SourceType)}
+            className="form-control"
+          >
+            <option value="manual">텍스트 붙여넣기</option>
+            <option value="image">사진/OCR 초안</option>
+            <option value="pdf">PDF/OCR 초안</option>
+          </select>
+        </label>
+      </div>
       <p className="text-xs text-[color:var(--muted)]">입력 상태: {extractionStateLabel[extractionState]}</p>
       <div className="mt-5 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-4">
         <p className="text-xs font-medium text-[color:var(--muted)]">필수 입력</p>
@@ -957,7 +977,7 @@ function IntakePanel({
       </div>
       <label className="mt-4 block space-y-2">
         <span className="text-sm text-[color:var(--foreground-strong)]">
-          {mode === "second" ? "사례 / 기준 답안 / 내 답안 텍스트" : "문제 / 정답 / 내가 고른 답 텍스트"}
+          오늘 공부한 내용 또는 내 답안
         </span>
         <Textarea
           value={form.rawQuestionText}
@@ -975,9 +995,25 @@ function IntakePanel({
           최소 입력: 정답, 내 답, 틀린 이유를 한 줄로 남겨도 됩니다. 예: 정답: 3 / 내 답: 2 / 이유: 선지 오독
         </p>
       ) : null}
+      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <label className="space-y-2">
+          <span className="text-xs text-[color:var(--muted)]">소요 시간</span>
+          <input value={form.timeSpentSeconds} onChange={(event) => update("timeSpentSeconds", event.target.value)} className="form-control" placeholder="예: 45분" />
+        </label>
+        <label className="space-y-2">
+          <span className="text-xs text-[color:var(--muted)]">자신감</span>
+          <select value={form.confidence} onChange={(event) => update("confidence", event.target.value as ConfidenceLevel)} className="form-control">
+            {CONFIDENCE_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
+          </select>
+        </label>
+        <label className="space-y-2">
+          <span className="text-xs text-[color:var(--muted)]">메모</span>
+          <input value={form.sourceLabel} onChange={(event) => update("sourceLabel", event.target.value)} className="form-control" placeholder="선택 입력" />
+        </label>
+      </div>
       <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
         <Button type="button" onClick={onGenerate} disabled={extracting} className="w-full sm:w-auto">
-          {extracting ? "입력 내용 확인 중" : mode === "second" ? "노트 초안 만들기" : "입력 내용 확인"}
+          {extracting ? "입력 내용 확인 중" : "기록 시작하기"}
         </Button>
         <p className="text-xs text-[color:var(--muted)]">노트에 반영됩니다.</p>
       </div>
@@ -1099,7 +1135,7 @@ function ConfirmPanel({
       <p className="text-caption text-[color:var(--muted)]">Step 3. 정리 결과 확인</p>
       <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">정리되었습니다</h3>
       <div className="mt-4 grid gap-3 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-4">
-        <PreviewLine label="가장 큰 간극" value={mode === "second" ? form.biggestGap || form.missingIssue : form.userReasonText} />
+        <PreviewLine label="가장 큰 gap" value={mode === "second" ? form.biggestGap || form.missingIssue : form.userReasonText} />
         <PreviewLine label="다음 행동" value={mode === "second" ? form.rewriteInstruction : form.comparisonPoint} />
         <PreviewLine label="노트 요약" value={`${form.subjectLabel} · ${mode === "second" ? form.caseSummary : form.problemTitle || form.sourceLabel}`} />
       </div>
