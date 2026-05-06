@@ -123,3 +123,38 @@ export function canMarkStructuredCandidateReviewed(
     reviewRecord.result_status === "reviewed"
   );
 }
+
+
+export function applyExtractionReviewRecord(
+  candidate: PastExamExtractionCandidate,
+  reviewRecord: PastExamExtractionReviewRecord,
+): PastExamExtractionCandidate {
+  const nextReviewStatus = canMarkExtractionCandidateReviewed(candidate, reviewRecord)
+    ? "reviewed"
+    : candidate.review_status;
+
+  return {
+    ...candidate,
+    review_status: nextReviewStatus,
+  };
+}
+
+export function applyStructuredCandidateReviewRecord(
+  candidate: PastExamStructuredCandidate,
+  reviewRecord: PastExamStructuredCandidateReviewRecord,
+): PastExamStructuredCandidate {
+  const nextCandidateStatus = canMarkStructuredCandidateReviewed(candidate, reviewRecord)
+    ? "reviewed"
+    : candidate.candidate_status;
+
+  return {
+    ...candidate,
+    candidate_status: nextCandidateStatus,
+    topic_tags_candidate: [...candidate.topic_tags_candidate],
+    issue_tags_candidate: [...candidate.issue_tags_candidate],
+    skill_tags_candidate: [...candidate.skill_tags_candidate],
+    expected_answer_skeleton_candidate: [...candidate.expected_answer_skeleton_candidate],
+    scoring_checkpoint_skeleton_candidate: [...candidate.scoring_checkpoint_skeleton_candidate],
+    common_gap_candidates: [...candidate.common_gap_candidates],
+  };
+}
