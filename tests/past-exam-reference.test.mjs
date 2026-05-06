@@ -26,20 +26,20 @@ const subjectFixtures = [
   },
 ];
 
-const fiveYearRange = [2021, 2022, 2023, 2024, 2025];
+const seededYearRange = [2019, 2020, 2021, 2022, 2023, 2024, 2025];
 const requiredSubjects = ["감정평가실무", "감정평가이론", "감정평가 및 보상법규"];
 
-test("2021/2022/2023/2024/2025 second-stage reference seeds are loaded", () => {
+test("2019/2020/2021/2022/2023/2024/2025 second-stage reference seeds are loaded", () => {
   const refs = listPastExamReferences("second");
   const years = new Set(refs.map((item) => item.exam_year));
-  for (const year of fiveYearRange) {
+  for (const year of seededYearRange) {
     assert.ok(years.has(year), `missing seeded year: ${year}`);
   }
 });
 
 test("each seeded year has all three second-stage subjects", () => {
   const refs = listPastExamReferences("second");
-  for (const year of fiveYearRange) {
+  for (const year of seededYearRange) {
     const yearRefs = refs.filter((item) => item.exam_year === year);
     const subjects = new Set(yearRefs.map((item) => item.subject));
     for (const subject of requiredSubjects) {
@@ -89,6 +89,29 @@ test("all seeded refs keep non-empty taxonomy and skeleton fields", () => {
     assert.ok(ref.scoring_checkpoint_skeleton.length > 0, `${ref.id} has empty scoring_checkpoint_skeleton`);
     assert.ok(ref.common_gap_candidates.length > 0, `${ref.id} has empty common_gap_candidates`);
     assert.ok(ref.related_mistake_types.length > 0, `${ref.id} has empty related_mistake_types`);
+  }
+});
+
+
+
+test("tie scores prefer recent exam year then stable id", () => {
+  const matches = findPastExamReferenceMatches({
+    mode: "second",
+    subject: "감정평가실무",
+    topicCandidate: "평가방법",
+  });
+
+  assert.ok(matches.length >= 2);
+  for (let i = 1; i < matches.length; i += 1) {
+    const prev = matches[i - 1];
+    const curr = matches[i];
+    assert.ok(prev.score >= curr.score);
+    if (prev.score === curr.score) {
+      assert.ok(prev.reference.exam_year >= curr.reference.exam_year);
+      if (prev.reference.exam_year === curr.reference.exam_year) {
+        assert.ok(prev.reference.id.localeCompare(curr.reference.id) <= 0);
+      }
+    }
   }
 });
 
