@@ -21,6 +21,11 @@ export type PastExamOcrProviderConfig = {
   internal_only: true;
 };
 
+export type PastExamOcrProviderConfigInput = {
+  provider?: string;
+  mode?: string;
+};
+
 export type PastExamOcrAdapterResult = {
   source_document_id: string;
   extraction_status: "extracted" | "failed";
@@ -31,10 +36,42 @@ export type PastExamOcrAdapterResult = {
   notes: string;
 };
 
-export function resolvePastExamOcrProviderConfig(): PastExamOcrProviderConfig {
+function normalizeProvider(provider?: string): PastExamOcrProvider {
+  if (provider === "gemini_vision") {
+    return "gemini_vision";
+  }
+  if (provider === "google_document_ai") {
+    return "google_document_ai";
+  }
+  if (provider === "future_provider") {
+    return "future_provider";
+  }
+  return "manual_stub";
+}
+
+function normalizeMode(mode?: string): PastExamOcrProviderMode {
+  if (mode === "disabled") {
+    return "disabled";
+  }
+  if (mode === "provider_ready") {
+    return "provider_ready";
+  }
+  return "stub_only";
+}
+
+export function resolvePastExamOcrProviderConfig(
+  input?: PastExamOcrProviderConfigInput,
+): PastExamOcrProviderConfig {
+  const normalizedProvider = normalizeProvider(input?.provider);
+  const normalizedMode = normalizeMode(input?.mode);
+  const mode =
+    normalizedMode === "provider_ready" && normalizedProvider !== "manual_stub"
+      ? "provider_ready"
+      : "stub_only";
+
   return {
-    provider: "manual_stub",
-    mode: "stub_only",
+    provider: mode === "provider_ready" ? normalizedProvider : "manual_stub",
+    mode,
     internal_only: true,
   };
 }
