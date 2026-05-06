@@ -111,6 +111,18 @@ export async function invokeConfiguredOcrProvider(
 ): Promise<PastExamOcrProviderInvocationResult> {
   const providerConfig = config ?? resolvePastExamOcrProviderConfig();
 
+  if (providerConfig.mode === "disabled") {
+    return {
+      source_document_id: input.source_document_id,
+      provider: providerConfig.provider,
+      extracted_text: "",
+      extraction_status: "failed",
+      extracted_text_policy: "reference_only",
+      review_status: "needs_review",
+      notes: "Provider mode is disabled; review required.",
+    };
+  }
+
   if (providerConfig.provider === "manual_stub" || providerConfig.mode === "stub_only") {
     return invokeManualOcrStubProvider({
       ...input,

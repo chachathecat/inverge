@@ -191,6 +191,28 @@ test("dispatcher default uses manual_stub path", async () => {
   assert.equal(result.extraction_status, "extracted");
 });
 
+test("dispatcher with manual_stub disabled mode returns failed", async () => {
+  const result = await invokeConfiguredOcrProvider(
+    {
+      source_document_id: "source-ocr-dispatch-disabled",
+      storage_path: "sources/2025-dispatch-disabled.pdf",
+      source_type: "pdf",
+    },
+    {
+      provider: "manual_stub",
+      mode: "disabled",
+      internal_only: true,
+    },
+  );
+
+  assert.equal(result.provider, "manual_stub");
+  assert.equal(result.extraction_status, "failed");
+  assert.equal(result.extracted_text, "");
+  assert.equal(result.extracted_text_policy, "reference_only");
+  assert.equal(result.review_status, "needs_review");
+  assert.match(result.notes, /disabled/i);
+});
+
 test("dispatcher with provider_ready real provider does not call external provider", async () => {
   const result = await invokeConfiguredOcrProvider(
     {
