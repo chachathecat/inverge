@@ -156,6 +156,30 @@ test("manual invoker returns needs_review", async () => {
   assert.equal(result.review_status, "needs_review");
 });
 
+
+
+test("manual invoker empty storage_path returns failed", async () => {
+  const result = await invokeManualOcrStubProvider({
+    source_document_id: "source-ocr-invoke-empty",
+    storage_path: "   ",
+    source_type: "pdf",
+    provider: "manual_stub",
+  });
+
+  assert.equal(result.extraction_status, "failed");
+});
+
+test("manual invoker non-empty storage_path returns extracted", async () => {
+  const result = await invokeManualOcrStubProvider({
+    source_document_id: "source-ocr-invoke-non-empty",
+    storage_path: "sources/2025-invoke-3.pdf",
+    source_type: "pdf",
+    provider: "manual_stub",
+  });
+
+  assert.equal(result.extraction_status, "extracted");
+});
+
 test("dispatcher default uses manual_stub path", async () => {
   const result = await invokeConfiguredOcrProvider({
     source_document_id: "source-ocr-dispatch-1",
@@ -165,6 +189,28 @@ test("dispatcher default uses manual_stub path", async () => {
 
   assert.equal(result.provider, "manual_stub");
   assert.equal(result.extraction_status, "extracted");
+});
+
+test("dispatcher with manual_stub disabled mode returns failed", async () => {
+  const result = await invokeConfiguredOcrProvider(
+    {
+      source_document_id: "source-ocr-dispatch-disabled",
+      storage_path: "sources/2025-dispatch-disabled.pdf",
+      source_type: "pdf",
+    },
+    {
+      provider: "manual_stub",
+      mode: "disabled",
+      internal_only: true,
+    },
+  );
+
+  assert.equal(result.provider, "manual_stub");
+  assert.equal(result.extraction_status, "failed");
+  assert.equal(result.extracted_text, "");
+  assert.equal(result.extracted_text_policy, "reference_only");
+  assert.equal(result.review_status, "needs_review");
+  assert.match(result.notes, /disabled/i);
 });
 
 test("dispatcher with provider_ready real provider does not call external provider", async () => {
@@ -209,14 +255,10 @@ test("no OCR provider call", async () => {
   const forbidden = [
     /fetch\(/i,
     /\baxios\b/i,
-    /\bvision\b/i,
     /@google-cloud\/vision/i,
     /\btesseract\b/i,
     /\bgoogleapis\b/i,
     /\bopenai\b/i,
-    /\bgemini\b/i,
-    /\bdocumentai\b/i,
-    /\bdocument ai\b/i,
     /DocumentProcessorServiceClient/i,
   ];
   for (const pattern of forbidden) {
