@@ -35,7 +35,12 @@
   --background: var(--bg-canvas);
   --surface: var(--bg-surface);
   --surface-soft: var(--bg-subtle);
+  --surface-elevated: var(--bg-elevated);
   --surface-muted: var(--bg-elevated);
+  --border-hairline: var(--border-subtle);
+  --ink-primary: var(--text-primary);
+  --ink-muted: var(--text-secondary);
+  --accent-deep: var(--brand-900);
   --foreground: var(--text-primary);
   --foreground-strong: var(--text-primary);
   --muted: var(--text-secondary);

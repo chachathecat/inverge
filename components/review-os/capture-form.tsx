@@ -906,16 +906,16 @@ function IntakePanel({
 }) {
   const calculatorWorkflow = getCalculatorWorkflowForSubject(form.subjectLabel);
   const extractionStateLabel: Record<ExtractionState, string> = {
-    idle: "대기",
-    uploading: "업로드 중",
-    extracting: "텍스트 추출 중",
-    succeeded: "추출 완료",
-    failed: "추출 실패",
-    manual: "수동 텍스트 모드",
+    idle: "입력 대기",
+    uploading: "불러오는 중",
+    extracting: "OCR 초안 생성 중",
+    succeeded: "초안 준비됨",
+    failed: "확인 필요",
+    manual: "수동 입력 기록",
   };
 
   return (
-    <section className="rounded-[var(--radius-card)] border border-[color:var(--brand-700)] bg-[color:var(--brand-050)] p-4 sm:p-5">
+    <section className="rounded-[var(--radius-card)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)] p-4 sm:p-6">
       <p className="text-caption text-[color:var(--brand-700)]">Step 1. 입력 선택</p>
       <div className="mt-2 flex flex-col gap-4">
         <div className="max-w-[62ch]">
@@ -928,13 +928,17 @@ function IntakePanel({
               : "사진은 초안 추출용입니다. 저장 전 반드시 과목/정답/내 답/오답 원인/회상 문장을 확인합니다. OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요."}
           </p>
         </div>
-        <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-4">
-          <h4 className="text-sm font-semibold text-[color:var(--foreground-strong)]">사진으로 시작하기</h4>
-          <p className="mt-1 text-sm leading-6 text-[color:var(--muted)]">답안지, 오답, 필기 일부를 찍으면 OCR 초안으로 불러옵니다. 저장 전 직접 확인해 주세요.</p>
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
-            <Button type="button" className="w-full sm:w-auto" onClick={() => cameraInputRef.current?.click()}>
+        <div className="rounded-[var(--radius-md)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-elevated)] p-4 sm:p-5">
+          <p className="text-caption text-[color:var(--ink-muted)]">오늘의 입력</p>
+          <h4 className="mt-2 text-base font-semibold text-[color:var(--ink-primary)]">사진으로 시작하기</h4>
+          <p className="mt-1 text-sm leading-6 text-[color:var(--ink-muted)]">답안지, 오답, 필기 일부를 찍으면 OCR 초안으로 불러옵니다.</p>
+          <div className="mt-4">
+            <Button type="button" className="w-full sm:w-auto bg-[color:var(--accent-deep)] transition-colors hover:bg-[color:var(--primary-hover)] focus-visible:ring-2 focus-visible:ring-[color:var(--accent-deep)] focus-visible:ring-offset-2" onClick={() => cameraInputRef.current?.click()}>
               사진 찍기
             </Button>
+            <p className="mt-2 text-xs text-[color:var(--ink-muted)]">사진은 OCR 초안으로만 사용됩니다. 저장 전 직접 확인해 주세요.</p>
+          </div>
+          <div className="mt-3 grid gap-2 sm:flex sm:flex-wrap">
             <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => galleryInputRef.current?.click()}>
               앨범에서 선택
             </Button>
@@ -981,6 +985,9 @@ function IntakePanel({
               }}
             />
           </div>
+          <p className="mt-3 inline-flex rounded-full border border-[color:var(--border-hairline)] bg-[color:var(--surface)] px-3 py-1 text-xs text-[color:var(--ink-muted)]">
+            OCR 결과는 초안입니다 · 저장 전 확인 필요
+          </p>
         </div>
       </div>
       <div className="mt-2 grid gap-3 sm:grid-cols-2">
@@ -1004,7 +1011,7 @@ function IntakePanel({
           </select>
         </label>
       </div>
-      <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3">
+      <div className={`rounded-[var(--radius-pill)] border px-3 py-2 ${extractionState === "failed" ? "border-[color:var(--status-red)] bg-[color:var(--status-red-soft)]" : "border-[color:var(--border-hairline)] bg-[color:var(--surface-elevated)]"}`}>
         <p className="text-xs font-medium text-[color:var(--muted)]">OCR 상태 · {extractionStateLabel[extractionState]}</p>
         <p className="mt-1 text-sm text-[color:var(--foreground-strong)]">
           {{
@@ -1012,7 +1019,7 @@ function IntakePanel({
             uploading: "사진을 불러오는 중입니다.",
             extracting: "OCR 초안을 만드는 중입니다.",
             succeeded: "OCR 초안이 준비되었습니다. 저장 전 직접 확인해 주세요.",
-            failed: "사진을 읽지 못했습니다. 텍스트를 직접 붙여넣어 계속할 수 있습니다.",
+            failed: "사진을 읽지 못했습니다. 텍스트로 계속할 수 있습니다.",
             manual: "파일을 기록했습니다. 내용은 직접 확인해 주세요.",
           }[extractionState]}
         </p>
@@ -1040,7 +1047,7 @@ function IntakePanel({
               ? "권장: 사례, 기준 답안, 내 답안을 텍스트로 붙여넣으세요. 예: 기준 답안: ... / 내 답안: ..."
               : "권장: 문제와 정답, 내가 고른 답을 텍스트로 붙여넣으세요. 예: 정답: 3 / 내 답: 2"
           }
-          className="min-h-44 border-[var(--border)] bg-[color:var(--bg-surface)] text-[color:var(--foreground-strong)] leading-7"
+          className="min-h-56 border-[color:var(--border-hairline)] bg-[color:var(--bg-surface)] text-[color:var(--foreground-strong)] leading-7 transition-colors focus-visible:border-[color:var(--accent-deep)] focus-visible:ring-2 focus-visible:ring-[color:var(--accent-deep)]/20"
         />
       </label>
       <p className="text-xs text-[color:var(--muted)]">OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요.</p>

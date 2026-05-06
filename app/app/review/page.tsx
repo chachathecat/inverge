@@ -23,7 +23,7 @@ export default async function ReviewOsReviewPage({ searchParams }: PageProps) {
 
   return (
     <div className="space-y-6">
-      <Card className="border-[var(--border)] bg-[color:var(--surface)] shadow-none">
+      <Card className="border-[color:var(--border-hairline)] bg-[color:var(--surface-elevated)] shadow-none">
         <CardHeader>
           <CardTitle>{mode === "second" ? "다시 볼 교정 포인트" : "오늘 다시 볼 항목"}</CardTitle>
           <CardDescription>
@@ -38,7 +38,7 @@ export default async function ReviewOsReviewPage({ searchParams }: PageProps) {
       </Card>
 
       {items.length === 0 ? (
-        <Card className="border-[var(--border)] bg-[color:var(--surface)] shadow-none">
+        <Card className="border-[color:var(--border-hairline)] bg-[color:var(--surface-elevated)] shadow-none">
           <CardHeader>
             <CardTitle>{mode === "second" ? "아직 교정 대기 항목이 없습니다" : "아직 다시 볼 오답이 없습니다"}</CardTitle>
             <CardDescription>{config.emptyDescription}</CardDescription>
