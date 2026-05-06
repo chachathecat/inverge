@@ -83,6 +83,7 @@ export function FrontPage() {
                 답안 검토실 보기
               </Link>
               <p className="text-xs text-[color:var(--muted)]">검토 결과는 학습 보조 초안이며 저장 전 직접 확인해 주세요.</p>
+              <p className="text-xs text-[color:var(--muted)]">예시는 학습 흐름을 보여주기 위한 샘플입니다.</p>
             </div>
           </QuietSection>
         </div>

@@ -355,10 +355,10 @@ export default function AnswerReviewClientPage() {
           <input ref={problemCameraInputRef} type="file" accept="image/*" capture="environment" multiple className="hidden" onChange={handleProblemFileChange} />
           <input ref={generalFileInputRef} type="file" accept="image/*,.pdf" multiple className="hidden" onChange={handleGeneralFileChange} />
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-            <button type="button" onClick={() => answerCameraInputRef.current?.click()} className={cn(buttonVariants({ variant: "default" }), "w-full justify-center")}>답안 스냅으로 시작</button>
-            <button type="button" onClick={() => problemCameraInputRef.current?.click()} className={cn(buttonVariants({ variant: "outline" }), "w-full justify-center")}>사례 스캔</button>
-            <button type="button" onClick={() => { setGeneralUploadIntent("answer"); generalFileInputRef.current?.click(); }} className={cn(buttonVariants({ variant: "outline" }), "w-full justify-center")}>PDF/사진 불러오기</button>
-            <button type="button" onClick={focusAnswerTextarea} className={cn(buttonVariants({ variant: "outline" }), "w-full justify-center")}>텍스트 붙여넣기</button>
+            <button type="button" onClick={() => answerCameraInputRef.current?.click()} className={cn(buttonVariants({ variant: "default" }), "w-full justify-center h-11 text-sm font-semibold")}>답안 스냅으로 시작</button>
+            <button type="button" onClick={() => problemCameraInputRef.current?.click()} className={cn(buttonVariants({ variant: "outline" }), "w-full justify-center h-10 text-sm")}>사례 스캔</button>
+            <button type="button" onClick={() => { setGeneralUploadIntent("answer"); generalFileInputRef.current?.click(); }} className={cn(buttonVariants({ variant: "outline" }), "w-full justify-center h-10 text-sm")}>PDF/사진 불러오기</button>
+            <button type="button" onClick={focusAnswerTextarea} className={cn(buttonVariants({ variant: "outline" }), "w-full justify-center h-10 text-sm")}>텍스트 붙여넣기</button>
           </div>
 
         <section className="space-y-4 rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-4 sm:p-5">
