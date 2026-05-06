@@ -22,7 +22,7 @@ test("past-exam source contract exists and preserves protocol fields", async () 
     'extraction_status: PastExamExtractionStatus',
     'source_type: "pdf"',
     'raw_text_policy: "reference_only"',
-    'source_status: PastExamSourceReviewStatus',
+    'review_status: PastExamSourceReviewStatus',
     "linked_reference_ids",
   ];
 
