@@ -47,7 +47,7 @@ test("capture page contains capture+note framing copy", () => {
   const capturePage = read("app/app/capture/page.tsx");
   const captureForm = read("components/review-os/capture-form.tsx");
   const merged = `${capturePage}\n${captureForm}`;
-  ["오늘 한 것 올리기", "오늘 공부한 내용 또는 내 답안", "OCR 결과는 초안입니다", "기록 시작하기", "가장 큰 gap", "다음 행동"].forEach((phrase) => {
+  ["오늘 한 것 올리기", "오늘 공부한 내용 또는 내 답안", "사진 찍기", "앨범에서 선택", "OCR 결과는 초안입니다", "기록 시작하기", "가장 큰 gap", "다음 행동"].forEach((phrase) => {
     assert.ok(merged.includes(phrase), `Missing phrase: ${phrase}`);
   });
 });

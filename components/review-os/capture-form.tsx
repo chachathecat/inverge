@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -270,6 +270,10 @@ export function WrongAnswerCaptureForm({
   const [extractError, setExtractError] = useState("");
   const [extractionState, setExtractionState] = useState<ExtractionState>("idle");
   const [uploadedPages, setUploadedPages] = useState<string[]>([]);
+  const cameraInputRef = useRef<HTMLInputElement | null>(null);
+  const galleryInputRef = useRef<HTMLInputElement | null>(null);
+  const pdfInputRef = useRef<HTMLInputElement | null>(null);
+  const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
   const missingConfirmationFields = getMissingConfirmationFields(form, mode);
   const needsOcrConfirmation = Boolean(form.extractionNeedsReview || missingConfirmationFields.length > 0);
 
@@ -724,6 +728,10 @@ export function WrongAnswerCaptureForm({
             onImage={handleImageImport}
             onPdf={handlePdfImport}
             onGenerate={() => generateStructuredDraft()}
+            cameraInputRef={cameraInputRef}
+            galleryInputRef={galleryInputRef}
+            pdfInputRef={pdfInputRef}
+            textAreaRef={textAreaRef}
           />
 
           {stage !== "intake" ? (
@@ -875,6 +883,10 @@ function IntakePanel({
   onImage,
   onPdf,
   onGenerate,
+  cameraInputRef,
+  galleryInputRef,
+  pdfInputRef,
+  textAreaRef,
 }: FieldProps & {
   config: ReturnType<typeof getModeConfig>;
   extracting: boolean;
@@ -887,6 +899,10 @@ function IntakePanel({
   onImage: (fileList: FileList) => void;
   onPdf: (file: File) => void;
   onGenerate: () => void | Promise<void>;
+  cameraInputRef: React.RefObject<HTMLInputElement | null>;
+  galleryInputRef: React.RefObject<HTMLInputElement | null>;
+  pdfInputRef: React.RefObject<HTMLInputElement | null>;
+  textAreaRef: React.RefObject<HTMLTextAreaElement | null>;
 }) {
   const calculatorWorkflow = getCalculatorWorkflowForSubject(form.subjectLabel);
   const extractionStateLabel: Record<ExtractionState, string> = {
@@ -912,35 +928,59 @@ function IntakePanel({
               : "사진은 초안 추출용입니다. 저장 전 반드시 과목/정답/내 답/오답 원인/회상 문장을 확인합니다. OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요."}
           </p>
         </div>
-        <div className="grid gap-2 sm:grid-cols-2">
-          <label className="inline-flex min-h-12 w-full cursor-pointer items-center justify-center rounded-full border border-[color:var(--border-strong)] bg-[color:var(--bg-surface)] px-5 py-3 text-sm font-medium text-[color:var(--foreground-strong)]">
-            사진 찍기
+        <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-4">
+          <h4 className="text-sm font-semibold text-[color:var(--foreground-strong)]">사진으로 시작하기</h4>
+          <p className="mt-1 text-sm leading-6 text-[color:var(--muted)]">답안지, 오답, 필기 일부를 찍으면 OCR 초안으로 불러옵니다. 저장 전 직접 확인해 주세요.</p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            <Button type="button" className="w-full sm:w-auto" onClick={() => cameraInputRef.current?.click()}>
+              사진 찍기
+            </Button>
+            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => galleryInputRef.current?.click()}>
+              앨범에서 선택
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full sm:w-auto"
+              onClick={() => {
+                textAreaRef.current?.focus();
+                textAreaRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+              }}
+            >
+              텍스트로 입력
+            </Button>
+            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => pdfInputRef.current?.click()}>
+              PDF 선택
+            </Button>
             <input
+              ref={cameraInputRef}
               type="file"
               accept="image/*"
               capture="environment"
               className="sr-only"
               onChange={(event) => {
-                if (event.target.files) onImage(event.target.files);
+                if (event.currentTarget.files) onImage(event.currentTarget.files);
               }}
             />
-          </label>
-          <label className="inline-flex min-h-12 w-full cursor-pointer items-center justify-center rounded-full border border-[color:var(--border-strong)] bg-[color:var(--bg-surface)] px-5 py-3 text-sm text-[color:var(--foreground-strong)]">
-            이미지 업로드
-            <input type="file" accept="image/*" multiple className="sr-only" onChange={(event) => event.target.files && onImage(event.target.files)} />
-          </label>
-          <label className="inline-flex min-h-12 w-full cursor-pointer items-center justify-center rounded-full border border-[color:var(--border-strong)] bg-[color:var(--bg-surface)] px-5 py-3 text-sm text-[color:var(--foreground-strong)]">
-            PDF 선택
             <input
+              ref={galleryInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="sr-only"
+              onChange={(event) => event.currentTarget.files && onImage(event.currentTarget.files)}
+            />
+            <input
+              ref={pdfInputRef}
               type="file"
               accept="application/pdf"
               className="sr-only"
               onChange={(event) => {
-                const file = event.target.files?.[0];
+                const file = event.currentTarget.files?.[0];
                 if (file) onPdf(file);
               }}
             />
-          </label>
+          </div>
         </div>
       </div>
       <div className="mt-2 grid gap-3 sm:grid-cols-2">
@@ -964,7 +1004,19 @@ function IntakePanel({
           </select>
         </label>
       </div>
-      <p className="text-xs text-[color:var(--muted)]">입력 상태: {extractionStateLabel[extractionState]}</p>
+      <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3">
+        <p className="text-xs font-medium text-[color:var(--muted)]">OCR 상태 · {extractionStateLabel[extractionState]}</p>
+        <p className="mt-1 text-sm text-[color:var(--foreground-strong)]">
+          {{
+            idle: "사진을 찍거나 텍스트를 붙여넣어 시작하세요.",
+            uploading: "사진을 불러오는 중입니다.",
+            extracting: "OCR 초안을 만드는 중입니다.",
+            succeeded: "OCR 초안이 준비되었습니다. 저장 전 직접 확인해 주세요.",
+            failed: "사진을 읽지 못했습니다. 텍스트를 직접 붙여넣어 계속할 수 있습니다.",
+            manual: "파일을 기록했습니다. 내용은 직접 확인해 주세요.",
+          }[extractionState]}
+        </p>
+      </div>
       <div className="mt-5 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-4">
         <p className="text-xs font-medium text-[color:var(--muted)]">필수 입력</p>
         <SubjectSelect
@@ -980,6 +1032,7 @@ function IntakePanel({
           오늘 공부한 내용 또는 내 답안
         </span>
         <Textarea
+          ref={textAreaRef}
           value={form.rawQuestionText}
           onChange={(event) => update("rawQuestionText", event.target.value)}
           placeholder={
@@ -990,6 +1043,7 @@ function IntakePanel({
           className="min-h-44 border-[var(--border)] bg-[color:var(--bg-surface)] text-[color:var(--foreground-strong)] leading-7"
         />
       </label>
+      <p className="text-xs text-[color:var(--muted)]">OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요.</p>
       {mode === "first" ? (
         <p className="mt-2 text-xs leading-6 text-[color:var(--muted)]">
           최소 입력: 정답, 내 답, 틀린 이유를 한 줄로 남겨도 됩니다. 예: 정답: 3 / 내 답: 2 / 이유: 선지 오독
@@ -1023,7 +1077,7 @@ function IntakePanel({
           {form.sourceLabel ? <p className="text-sm text-[color:var(--muted)]">보관한 파일: {form.sourceLabel}</p> : null}
           {uploadedPages.length > 0 ? <p className="mt-2 text-sm text-[color:var(--muted)]">페이지 순서: {uploadedPages.join(" / ")}</p> : null}
           {form.sourceType === "pdf" ? (
-            <p className="mt-2 text-sm text-[color:var(--muted)]">PDF는 현재 파일명 보관과 수동 텍스트 입력을 지원합니다. 필요한 부분을 아래 입력창에 붙여넣어 주세요.</p>
+            <p className="mt-2 text-sm text-[color:var(--muted)]">PDF는 현재 파일명만 기록됩니다. 내용은 직접 붙여넣어 주세요.</p>
           ) : null}
         </div>
       </details>
