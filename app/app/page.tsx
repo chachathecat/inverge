@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { ReviewOsFeedbackButton } from "@/components/review-os/feedback-button";
+import { HomeProofAnimation } from "@/components/review-os/home-proof-animation";
 import { TodayFirstSubjectSelector } from "@/components/review-os/today-first-subject-selector";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -335,6 +336,29 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
         )}
 
 
+
+      <section className="grid gap-4 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
+        <Card className="border-[color:var(--border-hairline)] bg-[color:var(--bg-elevated)] shadow-none">
+          <CardHeader className="space-y-2 p-4 sm:p-5">
+            <CardTitle className="text-base sm:text-lg">답안 검토실</CardTitle>
+            <CardDescription className="max-w-[56ch]">
+              이미 쓴 답안이나 문제 사진을 올리면, 누락 논점과 다시 쓸 문장을 정리합니다.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-4 pt-0 sm:p-5 sm:pt-0">
+            <Link href="/answer-review?mode=second" className="w-full">
+              <Button type="button" variant="outline" className="w-full">
+                답안 검토실 열기
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+
+        <div className="space-y-2">
+          <HomeProofAnimation />
+          <p className="text-xs text-[color:var(--muted)]">문제 스냅 → OCR 초안 → 설명 초안 → 다음 행동</p>
+        </div>
+      </section>
 
         <details className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
           <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">누적 신호 보기</summary>
