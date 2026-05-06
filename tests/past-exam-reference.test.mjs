@@ -211,3 +211,43 @@ test("reference module does not include raw user OCR text keys", async () => {
   assert.equal(source.includes("user_ocr"), false);
   assert.equal(source.includes("rawQuestionText"), false);
 });
+import { listPastExamSourceDocuments } from "../lib/review-os/past-exam-source-seeds.ts";
+
+test("source metadata seeds load with safe protocol defaults", () => {
+  const docs = listPastExamSourceDocuments();
+  assert.ok(docs.length >= 3);
+
+  for (const doc of docs) {
+    assert.equal(doc.raw_text_policy, "reference_only");
+    assert.equal(doc.review_status, "needs_review");
+    assert.equal(doc.extraction_status, "uploaded");
+    assert.equal(doc.subject.trim().length > 0, true);
+  }
+});
+
+test("source metadata links resolve to existing past exam reference ids", () => {
+  const docs = listPastExamSourceDocuments();
+  const refs = listPastExamReferences("second");
+  const refIds = new Set(refs.map((ref) => ref.id));
+
+  for (const doc of docs) {
+    assert.ok(doc.linked_reference_ids.length > 0, `${doc.id} has empty linked_reference_ids`);
+    for (const linkedRefId of doc.linked_reference_ids) {
+      assert.ok(refIds.has(linkedRefId), `${doc.id} has dangling linked reference: ${linkedRefId}`);
+    }
+  }
+});
+
+test("source metadata module avoids raw user OCR and official scoring language", async () => {
+  const source = await readFile(new URL("../lib/review-os/past-exam-source-seeds.ts", import.meta.url), "utf8");
+
+  const forbiddenRawFields = ["raw_ocr", "user_ocr", "raw_user_ocr", "raw_user_answer", "user_answer_raw"];
+  for (const key of forbiddenRawFields) {
+    assert.equal(source.includes(key), false, `forbidden raw user field in source metadata seeds: ${key}`);
+  }
+
+  const forbiddenLanguage = ["공식 모범답안", "공식 채점", "합격/불합격", "pass/fail", "정답 확정", "채점 확정"];
+  for (const keyword of forbiddenLanguage) {
+    assert.equal(source.includes(keyword), false, `forbidden language found in source metadata seeds: ${keyword}`);
+  }
+});

@@ -12,6 +12,6 @@ export type PastExamSourceDocument = {
   storage_path: string;
   extraction_status: PastExamExtractionStatus;
   raw_text_policy: "reference_only";
-  source_status: PastExamSourceReviewStatus;
+  review_status: PastExamSourceReviewStatus;
   linked_reference_ids: string[];
 };
