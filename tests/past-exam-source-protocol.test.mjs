@@ -18,12 +18,21 @@ test("past-exam source contract exists and preserves protocol fields", async () 
     "PastExamExtractionStatus",
     "PastExamSourceReviewStatus",
     "PastExamSourceDocument",
+    "PastExamExtractionCandidate",
+    "PastExamStructuredCandidate",
+    "isReferenceOnlyExtractionCandidate",
+    "isReviewRequiredStructuredCandidate",
     "subject: string",
     'extraction_status: PastExamExtractionStatus',
     'source_type: "pdf"',
     'raw_text_policy: "reference_only"',
-    'review_status: PastExamSourceReviewStatus',
+    'extracted_text_policy: "reference_only"',
+    'review_status: "needs_review" | "reviewed"',
+    'candidate_status: "needs_review" | "reviewed"',
+    'created_from: "source_pdf"',
+    'created_from: "source_pdf_extraction"',
     "linked_reference_ids",
+    "linked_reference_id",
   ];
 
   for (const token of requiredTokens) {
@@ -48,12 +57,34 @@ test("source protocol doc exists and keeps review/separation guardrails", async 
   }
 });
 
+test("extraction and structured candidates stay reference-only and review-required by default state", async () => {
+  const source = await readUtf8(sourcePath);
+
+  assert.equal(source.includes('extracted_text_policy: "reference_only"'), true);
+  assert.equal(source.includes('raw_text_policy: "reference_only"'), true);
+  assert.equal(source.includes('review_status: "needs_review" | "reviewed"'), true);
+  assert.equal(source.includes('candidate_status: "needs_review" | "reviewed"'), true);
+  assert.equal(source.includes('created_from: "source_pdf"'), true);
+  assert.equal(source.includes('created_from: "source_pdf_extraction"'), true);
+});
+
 test("no implementation scope creep fields are introduced in source metadata", async () => {
   const source = await readUtf8(sourcePath);
-  const forbidden = ["raw_ocr", "user_ocr", "raw_user_ocr", "raw_user_answer", "user_answer_raw"];
+  const forbidden = [
+    "raw_ocr",
+    "user_ocr",
+    "raw_user_ocr",
+    "raw_user_answer",
+    "user_answer_raw",
+    "official_answer",
+    "official_scoring",
+    "pass_fail",
+    "ocr_api",
+    "upload_route",
+  ];
 
   for (const key of forbidden) {
-    assert.equal(source.includes(key), false, `forbidden raw user field in source metadata: ${key}`);
+    assert.equal(source.includes(key), false, `forbidden field in source metadata: ${key}`);
   }
 });
 
@@ -64,6 +95,8 @@ test("no new public archive/upload/instructor source routes are introduced", asy
     new URL("../app/exams/archive/source-upload/page.tsx", import.meta.url),
     new URL("../app/instructor/source/page.tsx", import.meta.url),
     new URL("../app/instructor/source-upload/page.tsx", import.meta.url),
+    new URL("../app/api/ocr/route.ts", import.meta.url),
+    new URL("../app/api/pdf-upload/route.ts", import.meta.url),
   ];
 
   for (const pathUrl of shouldNotExist) {
