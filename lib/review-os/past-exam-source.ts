@@ -27,6 +27,33 @@ export type PastExamExtractionCandidate = {
   created_from: "source_pdf";
 };
 
+
+
+export type PastExamReviewDecision = "approve" | "request_changes" | "reject";
+
+export type PastExamExtractionReviewRecord = {
+  id: string;
+  candidate_id: string;
+  source_document_id: string;
+  reviewer_role: "operator" | "instructor";
+  decision: PastExamReviewDecision;
+  review_notes: string;
+  reviewed_at: string;
+  result_status: "needs_review" | "reviewed";
+};
+
+export type PastExamStructuredCandidateReviewRecord = {
+  id: string;
+  candidate_id: string;
+  source_document_id: string;
+  linked_reference_id: string;
+  reviewer_role: "operator" | "instructor";
+  decision: PastExamReviewDecision;
+  review_notes: string;
+  reviewed_at: string;
+  result_status: "needs_review" | "reviewed";
+};
+
 export type PastExamStructuredCandidate = {
   id: string;
   source_document_id: string;
@@ -67,5 +94,32 @@ export function isReviewRequiredStructuredCandidate(
     candidate.raw_text_policy === "reference_only" &&
     candidate.candidate_status === "needs_review" &&
     candidate.created_from === "source_pdf_extraction"
+  );
+}
+
+
+export function canMarkExtractionCandidateReviewed(
+  candidate: PastExamExtractionCandidate,
+  reviewRecord: PastExamExtractionReviewRecord,
+): boolean {
+  return (
+    candidate.review_status === "needs_review" &&
+    reviewRecord.decision === "approve" &&
+    reviewRecord.source_document_id === candidate.source_document_id &&
+    reviewRecord.candidate_id === candidate.id &&
+    reviewRecord.result_status === "reviewed"
+  );
+}
+
+export function canMarkStructuredCandidateReviewed(
+  candidate: PastExamStructuredCandidate,
+  reviewRecord: PastExamStructuredCandidateReviewRecord,
+): boolean {
+  return (
+    candidate.candidate_status === "needs_review" &&
+    reviewRecord.decision === "approve" &&
+    reviewRecord.source_document_id === candidate.source_document_id &&
+    reviewRecord.candidate_id === candidate.id &&
+    reviewRecord.result_status === "reviewed"
   );
 }

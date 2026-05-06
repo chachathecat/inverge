@@ -1,10 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { access, readFile } from "node:fs/promises";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import { constants } from "node:fs";
 
 const sourcePath = new URL("../lib/review-os/past-exam-source.ts", import.meta.url);
 const protocolPath = new URL("../docs/source-pdf-ingestion-protocol.md", import.meta.url);
+
+const execFileAsync = promisify(execFile);
 
 async function readUtf8(url) {
   return readFile(url, "utf8");
@@ -102,4 +106,94 @@ test("no new public archive/upload/instructor source routes are introduced", asy
   for (const pathUrl of shouldNotExist) {
     await assert.rejects(() => access(pathUrl, constants.F_OK));
   }
+});
+
+
+test("review workflow types and helpers require explicit approve record to mark reviewed", async () => {
+  const source = await readUtf8(sourcePath);
+
+  const requiredTokens = [
+    "PastExamReviewDecision",
+    "PastExamExtractionReviewRecord",
+    "PastExamStructuredCandidateReviewRecord",
+    "canMarkExtractionCandidateReviewed",
+    "canMarkStructuredCandidateReviewed",
+    'export type PastExamReviewDecision = "approve" | "request_changes" | "reject";',
+    'result_status: "needs_review" | "reviewed"',
+  ];
+
+  for (const token of requiredTokens) {
+    assert.equal(source.includes(token), true, `missing review workflow token: ${token}`);
+  }
+
+  const runtimeCheckScript = `
+    import assert from "node:assert/strict";
+    import {
+      canMarkExtractionCandidateReviewed,
+      canMarkStructuredCandidateReviewed,
+    } from "./lib/review-os/past-exam-source.ts";
+
+    const extractionCandidate = {
+      id: "ext-1",
+      source_document_id: "src-1",
+      extraction_status: "extracted",
+      extracted_text_policy: "reference_only",
+      review_status: "needs_review",
+      created_from: "source_pdf",
+    };
+
+    const approveRecord = {
+      id: "review-1",
+      candidate_id: "ext-1",
+      source_document_id: "src-1",
+      reviewer_role: "operator",
+      decision: "approve",
+      review_notes: "ok",
+      reviewed_at: "2026-01-01T00:00:00.000Z",
+      result_status: "reviewed",
+    };
+
+    assert.equal(canMarkExtractionCandidateReviewed(extractionCandidate, approveRecord), true);
+    assert.equal(canMarkExtractionCandidateReviewed(extractionCandidate, { ...approveRecord, decision: "request_changes" }), false);
+    assert.equal(canMarkExtractionCandidateReviewed(extractionCandidate, { ...approveRecord, decision: "reject" }), false);
+    assert.equal(canMarkExtractionCandidateReviewed(extractionCandidate, { ...approveRecord, candidate_id: "ext-2" }), false);
+    assert.equal(canMarkExtractionCandidateReviewed(extractionCandidate, { ...approveRecord, source_document_id: "src-2" }), false);
+
+    const structuredCandidate = {
+      id: "str-1",
+      source_document_id: "src-1",
+      linked_reference_id: "ref-1",
+      candidate_status: "needs_review",
+      raw_text_policy: "reference_only",
+      topic_tags_candidate: [],
+      issue_tags_candidate: [],
+      skill_tags_candidate: [],
+      expected_answer_skeleton_candidate: [],
+      scoring_checkpoint_skeleton_candidate: [],
+      common_gap_candidates: [],
+      created_from: "source_pdf_extraction",
+    };
+
+    const structuredApprove = {
+      id: "review-2",
+      candidate_id: "str-1",
+      source_document_id: "src-1",
+      linked_reference_id: "ref-1",
+      reviewer_role: "instructor",
+      decision: "approve",
+      review_notes: "ok",
+      reviewed_at: "2026-01-01T00:00:00.000Z",
+      result_status: "reviewed",
+    };
+
+    assert.equal(canMarkStructuredCandidateReviewed(structuredCandidate, structuredApprove), true);
+    assert.equal(canMarkStructuredCandidateReviewed(structuredCandidate, { ...structuredApprove, decision: "request_changes" }), false);
+    assert.equal(canMarkStructuredCandidateReviewed(structuredCandidate, { ...structuredApprove, decision: "reject" }), false);
+    assert.equal(canMarkStructuredCandidateReviewed(structuredCandidate, { ...structuredApprove, candidate_id: "str-2" }), false);
+    assert.equal(canMarkStructuredCandidateReviewed(structuredCandidate, { ...structuredApprove, source_document_id: "src-2" }), false);
+  `;
+
+  await execFileAsync("node", ["--experimental-strip-types", "--input-type=module", "--eval", runtimeCheckScript], {
+    cwd: new URL("..", import.meta.url),
+  });
 });
