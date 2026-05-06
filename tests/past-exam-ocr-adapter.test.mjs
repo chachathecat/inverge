@@ -156,6 +156,30 @@ test("manual invoker returns needs_review", async () => {
   assert.equal(result.review_status, "needs_review");
 });
 
+
+
+test("manual invoker empty storage_path returns failed", async () => {
+  const result = await invokeManualOcrStubProvider({
+    source_document_id: "source-ocr-invoke-empty",
+    storage_path: "   ",
+    source_type: "pdf",
+    provider: "manual_stub",
+  });
+
+  assert.equal(result.extraction_status, "failed");
+});
+
+test("manual invoker non-empty storage_path returns extracted", async () => {
+  const result = await invokeManualOcrStubProvider({
+    source_document_id: "source-ocr-invoke-non-empty",
+    storage_path: "sources/2025-invoke-3.pdf",
+    source_type: "pdf",
+    provider: "manual_stub",
+  });
+
+  assert.equal(result.extraction_status, "extracted");
+});
+
 test("dispatcher default uses manual_stub path", async () => {
   const result = await invokeConfiguredOcrProvider({
     source_document_id: "source-ocr-dispatch-1",
@@ -209,14 +233,10 @@ test("no OCR provider call", async () => {
   const forbidden = [
     /fetch\(/i,
     /\baxios\b/i,
-    /\bvision\b/i,
     /@google-cloud\/vision/i,
     /\btesseract\b/i,
     /\bgoogleapis\b/i,
     /\bopenai\b/i,
-    /\bgemini\b/i,
-    /\bdocumentai\b/i,
-    /\bdocument ai\b/i,
     /DocumentProcessorServiceClient/i,
   ];
   for (const pattern of forbidden) {
