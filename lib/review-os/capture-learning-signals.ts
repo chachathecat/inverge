@@ -1,8 +1,14 @@
 import type { LearningSignalEventInput, WrongAnswerItemInput } from "@/lib/review-os/types";
 
+type CaptureExamMode = LearningSignalEventInput["examMode"];
+
+export function resolveCaptureExamMode(examName: string): CaptureExamMode {
+  return examName === "감정평가사 2차" ? "감정평가사 2차" : "감정평가사 1차";
+}
+
 type CaptureLearningSignalInput = {
   itemId: string;
-  examName: "감정평가사 1차" | "감정평가사 2차";
+  examName: string;
   subject: string;
   sourceType: string;
   confidence: WrongAnswerItemInput["confidence"];
@@ -22,7 +28,7 @@ function uniq(values: Array<string | null | undefined>) {
 }
 
 export function computeCaptureQueuePriority(input: {
-  examName: "감정평가사 1차" | "감정평가사 2차";
+  examName: string;
   confidence: string;
   timeSpentSeconds?: number | null;
   mistakeOrWeakPoint?: string;
@@ -33,19 +39,21 @@ export function computeCaptureQueuePriority(input: {
   if (input.confidence === "낮음") score += 20;
   else if (input.confidence === "중간") score += 10;
   if (/누락|구조|논점|계산|조건|개념/.test(input.mistakeOrWeakPoint ?? "")) score += 15;
-  if (input.examName === "감정평가사 2차" && (input.weakStructurePoint || input.missingIssue)) score += 15;
+  const examMode = resolveCaptureExamMode(input.examName);
+  if (examMode === "감정평가사 2차" && (input.weakStructurePoint || input.missingIssue)) score += 15;
   if ((input.timeSpentSeconds ?? 0) >= 180 && input.confidence === "낮음") score += 10;
   return Math.min(100, score);
 }
 
 export function buildCaptureReviewReason(input: {
-  examName: "감정평가사 1차" | "감정평가사 2차";
+  examName: string;
   confidence: string;
   mistakeReason?: string;
   weakStructurePoint?: string;
   missingIssue?: string;
 }) {
-  if (input.examName === "감정평가사 2차") {
+  const examMode = resolveCaptureExamMode(input.examName);
+  if (examMode === "감정평가사 2차") {
     if (input.missingIssue) return "누락 논점 후보가 있어 짧게 다시 써야 합니다.";
     if (input.weakStructurePoint) return "답안 구조 보강이 필요한 항목입니다.";
     return "문단 재작성 후 다시 확인해야 합니다.";
@@ -56,7 +64,8 @@ export function buildCaptureReviewReason(input: {
 }
 
 export function buildCaptureLearningSignal(input: CaptureLearningSignalInput): LearningSignalEventInput {
-  const isSecond = input.examName === "감정평가사 2차";
+  const examMode = resolveCaptureExamMode(input.examName);
+  const isSecond = examMode === "감정평가사 2차";
   const nextTaskType = isSecond ? "rewrite" : "retry";
   const nextTask = (isSecond ? input.rewriteInstruction : input.nextAction) ?? "한 번 더 짧게 다시 수행합니다.";
 
@@ -81,7 +90,7 @@ export function buildCaptureLearningSignal(input: CaptureLearningSignalInput): L
       ]);
 
   return {
-    examMode: input.examName,
+    examMode,
     subject: input.subject,
     sourceType: input.sourceType,
     derivedTags: tags,

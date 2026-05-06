@@ -1,7 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { buildCaptureLearningSignal, buildCaptureReviewReason, computeCaptureQueuePriority } from "../lib/review-os/capture-learning-signals.ts";
+import {
+  buildCaptureLearningSignal,
+  buildCaptureReviewReason,
+  computeCaptureQueuePriority,
+  resolveCaptureExamMode,
+} from "../lib/review-os/capture-learning-signals.ts";
 import { buildTodayPlanTasks } from "../lib/review-os/today-plan-engine.ts";
 
 test("buildCaptureLearningSignal creates first-mode signal safely", () => {
@@ -24,6 +29,44 @@ test("buildCaptureLearningSignal creates second-mode signal safely", () => {
   assert.ok(signal.derivedTags.includes("answer_structure"));
   assert.ok(signal.derivedTags.includes("rewrite_needed"));
   assert.ok(signal.derivedTags.includes("issue_missing") || signal.derivedTags.includes("structure_gap"));
+});
+
+
+
+test("resolveCaptureExamMode normalizes unknown to first mode", () => {
+  assert.equal(resolveCaptureExamMode("감정평가사 1차"), "감정평가사 1차");
+  assert.equal(resolveCaptureExamMode("감정평가사 2차"), "감정평가사 2차");
+  assert.equal(resolveCaptureExamMode("unknown"), "감정평가사 1차");
+});
+
+test("helpers accept plain string examName variables", () => {
+  const firstExamName = "감정평가사 1차";
+  const secondExamName = "감정평가사 2차";
+  const unknownExamName = "unknown";
+
+  const firstSignal = buildCaptureLearningSignal({
+    itemId: "plain-1", examName: firstExamName, subject: "민법", sourceType: "manual", confidence: "중간", createdFromCapture: true,
+  });
+  const secondSignal = buildCaptureLearningSignal({
+    itemId: "plain-2", examName: secondExamName, subject: "감정평가이론", sourceType: "manual", confidence: "중간", createdFromCapture: true,
+  });
+  const unknownSignal = buildCaptureLearningSignal({
+    itemId: "plain-3", examName: unknownExamName, subject: "민법", sourceType: "manual", confidence: "중간", createdFromCapture: true,
+  });
+
+  assert.equal(firstSignal.examMode, "감정평가사 1차");
+  assert.equal(secondSignal.examMode, "감정평가사 2차");
+  assert.equal(unknownSignal.examMode, "감정평가사 1차");
+
+  const secondPriority = computeCaptureQueuePriority({ examName: secondExamName, confidence: "낮음", mistakeOrWeakPoint: "누락", weakStructurePoint: "구조", missingIssue: "논점" });
+  const unknownPriority = computeCaptureQueuePriority({ examName: unknownExamName, confidence: "낮음", mistakeOrWeakPoint: "누락" });
+  assert.ok(secondPriority > unknownPriority);
+
+  assert.equal(buildCaptureReviewReason({ examName: secondExamName, confidence: "중간", missingIssue: "누락" }), "누락 논점 후보가 있어 짧게 다시 써야 합니다.");
+  assert.equal(buildCaptureReviewReason({ examName: unknownExamName, confidence: "낮음" }), "확신이 낮았던 항목이라 근거를 다시 고정해야 합니다.");
+
+  const metadata = JSON.stringify(unknownSignal.metadataJson);
+  assert.equal(/rawQuestionText|rawAnswerText|raw_ocr_text|raw_extraction_json/.test(metadata), false);
 });
 
 test("priority scoring deterministic and capped", () => {
