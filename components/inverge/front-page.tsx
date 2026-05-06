@@ -75,7 +75,10 @@ export function FrontPage() {
             <div className="flex flex-wrap items-center gap-3">
               <Link
                 href="/answer-review?mode=second"
-                className={cn(buttonVariants({ variant: "outline", size: "sm" }), "border-[color:var(--border)] bg-[color:var(--surface)]")}
+                className={cn(
+                  buttonVariants({ variant: "outline" }),
+                  "h-9 px-3 text-xs border-[color:var(--border)] bg-[color:var(--surface)]"
+                )}
               >
                 답안 검토실 보기
               </Link>
