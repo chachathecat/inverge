@@ -4,12 +4,20 @@ import { access, readFile } from "node:fs/promises";
 import { constants } from "node:fs";
 
 import {
+  canMarkExtractionCandidateReviewed,
+  canMarkStructuredCandidateReviewed,
+} from "../lib/review-os/past-exam-source.ts";
+import {
   isPastExamSourceTextPilotLinkedToKnownSourceDocument,
   listPastExamSourceTextPilotExtractionCandidates,
   listPastExamSourceTextPilotStructuredCandidates,
 } from "../lib/review-os/past-exam-source-text-pilot.ts";
 import { listPastExamSourceDocuments } from "../lib/review-os/past-exam-source-seeds.ts";
 import { listPastExamReferences } from "../lib/review-os/past-exam-reference.ts";
+import {
+  listPastExamExtractionReviewRecords,
+  listPastExamStructuredCandidateReviewRecords,
+} from "../lib/review-os/past-exam-review-seeds.ts";
 
 const pilotPath = new URL("../lib/review-os/past-exam-source-text-pilot.ts", import.meta.url);
 
@@ -65,6 +73,46 @@ test("pilot linked_reference_id resolves to an existing reference item", () => {
   const referenceIds = new Set(listPastExamReferences("all").map((item) => item.id));
 
   assert.equal(referenceIds.has(structured.linked_reference_id), true);
+});
+
+test("review records load", () => {
+  assert.equal(listPastExamExtractionReviewRecords().length, 1);
+  assert.equal(listPastExamStructuredCandidateReviewRecords().length, 1);
+});
+
+test("review record candidate/source/reference ids resolve", () => {
+  const extractionCandidate = listPastExamSourceTextPilotExtractionCandidates()[0];
+  const structuredCandidate = listPastExamSourceTextPilotStructuredCandidates()[0];
+  const extractionReview = listPastExamExtractionReviewRecords()[0];
+  const structuredReview = listPastExamStructuredCandidateReviewRecords()[0];
+
+  assert.equal(extractionReview.candidate_id, extractionCandidate.id);
+  assert.equal(extractionReview.source_document_id, extractionCandidate.source_document_id);
+  assert.equal(structuredReview.candidate_id, structuredCandidate.id);
+  assert.equal(structuredReview.source_document_id, structuredCandidate.source_document_id);
+  assert.equal(structuredReview.linked_reference_id, structuredCandidate.linked_reference_id);
+});
+
+test("approve review records mark candidates reviewed", () => {
+  const extractionCandidate = listPastExamSourceTextPilotExtractionCandidates()[0];
+  const structuredCandidate = listPastExamSourceTextPilotStructuredCandidates()[0];
+  const extractionReview = listPastExamExtractionReviewRecords()[0];
+  const structuredReview = listPastExamStructuredCandidateReviewRecords()[0];
+
+  assert.equal(canMarkExtractionCandidateReviewed(extractionCandidate, extractionReview), true);
+  assert.equal(canMarkStructuredCandidateReviewed(structuredCandidate, structuredReview), true);
+});
+
+test("request_changes/reject review decisions do not mark candidates reviewed", () => {
+  const extractionCandidate = listPastExamSourceTextPilotExtractionCandidates()[0];
+  const structuredCandidate = listPastExamSourceTextPilotStructuredCandidates()[0];
+  const extractionReview = listPastExamExtractionReviewRecords()[0];
+  const structuredReview = listPastExamStructuredCandidateReviewRecords()[0];
+
+  assert.equal(canMarkExtractionCandidateReviewed(extractionCandidate, { ...extractionReview, decision: "request_changes" }), false);
+  assert.equal(canMarkExtractionCandidateReviewed(extractionCandidate, { ...extractionReview, decision: "reject" }), false);
+  assert.equal(canMarkStructuredCandidateReviewed(structuredCandidate, { ...structuredReview, decision: "request_changes" }), false);
+  assert.equal(canMarkStructuredCandidateReviewed(structuredCandidate, { ...structuredReview, decision: "reject" }), false);
 });
 
 test("pilot module has no official answer/scoring/pass-fail language", async () => {
