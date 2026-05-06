@@ -40,8 +40,10 @@ export function ReviewQueueClient({ items, mode }: { items: ReviewQueueCard[]; m
   if (items.length === 0) {
     return (
       <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] p-6 text-sm leading-7 text-[color:var(--muted)]">
-        <p>아직 오늘 기록이 없습니다.</p>
+        <p>아직 복습 큐가 비어 있습니다.</p>
+        <p className="mt-1">틀린 개념이나 다시 쓸 답안이 생기면 자동으로 정리됩니다.</p>
         <p className="mt-1">공부한 흔적을 하나 올리면 오늘 계획과 복습 큐가 업데이트됩니다.</p>
+        <Button type="button" onClick={() => router.push(mode === "second" ? "/app/write?mode=second" : "/app/capture?mode=first")} className="mt-4 w-full sm:w-auto">오늘 기록 남기기</Button>
       </div>
     );
   }
