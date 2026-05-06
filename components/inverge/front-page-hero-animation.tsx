@@ -4,6 +4,25 @@ import { motion, useReducedMotion } from "framer-motion";
 
 const HIGHLIGHT_CHIPS = ["요건", "예외", "선지 판단 기준"] as const;
 
+const SKELETON_SECTIONS = [
+  {
+    title: "Ⅰ. 논점의 정리",
+    bullets: ["착오 취소 요건", "중요 부분 착오", "중대한 과실 여부"],
+  },
+  {
+    title: "Ⅱ. 기준/법리",
+    bullets: ["민법 제109조", "판례 키워드: 중요 부분, 중대한 과실", "선지 판단 기준"],
+  },
+  {
+    title: "Ⅲ. 사안의 적용",
+    bullets: ["착오 대상 구분", "중과실 예외 검토", "취소 가능성 연결"],
+  },
+  {
+    title: "Ⅳ. 결론",
+    bullets: ["취소 가능성 판단", "다시 확인할 선지 2개"],
+  },
+] as const;
+
 export function FrontPageHeroAnimation() {
   const reduceMotion = useReducedMotion();
 
@@ -70,11 +89,43 @@ export function FrontPageHeroAnimation() {
           <p className="mt-1.5 text-sm text-[color:var(--foreground-strong)]">선지 판단 전에 ‘중요 부분 착오’와 ‘중과실 예외’를 분리합니다.</p>
         </motion.div>
 
+
+
+        <motion.div
+          className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--surface-soft)] p-4"
+          initial={reduceMotion ? { opacity: 1 } : { opacity: 0, y: 8 }}
+          animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
+          transition={{ duration: 0.32, delay: reduceMotion ? 0 : 0.52, ease: "easeOut" }}
+        >
+          <p className="text-xs text-[color:var(--muted)]">2. 📝 모범답안 구조 (Skeleton Framework)</p>
+          <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">
+            학습 보조 Skeleton입니다. 문장형 답안이 아니라 목차와 필수 키워드만 보여줍니다.
+            판례·조문·산식 등 필수 키워드를 빠르게 확인합니다.
+          </p>
+          <div className="mt-3 space-y-2">
+            {SKELETON_SECTIONS.map((section, index) => (
+              <motion.div
+                key={section.title}
+                className="rounded-xl border border-[color:var(--border)] bg-[color:var(--surface)] p-2.5"
+                initial={reduceMotion ? { opacity: 1 } : { opacity: 0, y: 6 }}
+                animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
+                transition={{ duration: 0.24, delay: reduceMotion ? 0 : 0.62 + index * 0.08, ease: "easeOut" }}
+              >
+                <p className="text-xs font-medium text-[color:var(--foreground-strong)]">{section.title}</p>
+                <ul className="mt-1 space-y-0.5 text-xs text-[color:var(--muted)]">
+                  {section.bullets.map((bullet) => (
+                    <li key={bullet}>- {bullet}</li>
+                  ))}
+                </ul>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
         <motion.div
           className="rounded-2xl border border-[color:var(--primary)] bg-[color:var(--surface)] p-4"
           initial={reduceMotion ? { opacity: 1 } : { opacity: 0, y: 8 }}
           animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
-          transition={{ duration: 0.32, delay: reduceMotion ? 0 : 0.52, ease: "easeOut" }}
+          transition={{ duration: 0.32, delay: reduceMotion ? 0 : 0.98, ease: "easeOut" }}
         >
           <p className="text-xs text-[color:var(--muted)]">오늘 할 일</p>
           <p className="mt-1.5 text-sm font-medium text-[color:var(--foreground-strong)]">착오 취소 선지 2개 다시 풀기</p>
