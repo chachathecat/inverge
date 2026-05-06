@@ -5,14 +5,31 @@ import { constants } from "node:fs";
 
 import {
   buildManualOcrStubResult,
+  buildOcrResultWithConfiguredProvider,
   convertOcrResultToExtractionCandidate,
+  resolvePastExamOcrProviderConfig,
 } from "../lib/review-os/past-exam-ocr-adapter.ts";
 
 const adapterPath = new URL("../lib/review-os/past-exam-ocr-adapter.ts", import.meta.url);
 
-test("stub result is reference_only", () => {
-  const result = buildManualOcrStubResult({
-    source_document_id: "source-ocr-1",
+test("default provider config is manual_stub", () => {
+  const config = resolvePastExamOcrProviderConfig();
+  assert.equal(config.provider, "manual_stub");
+});
+
+test("default provider mode is stub_only", () => {
+  const config = resolvePastExamOcrProviderConfig();
+  assert.equal(config.mode, "stub_only");
+});
+
+test("default provider config remains internal_only", () => {
+  const config = resolvePastExamOcrProviderConfig();
+  assert.equal(config.internal_only, true);
+});
+
+test("configured provider output remains reference_only", () => {
+  const result = buildOcrResultWithConfiguredProvider({
+    source_document_id: "source-ocr-config-1",
     storage_path: "sources/2025-1.pdf",
     source_type: "pdf",
   });
@@ -20,9 +37,9 @@ test("stub result is reference_only", () => {
   assert.equal(result.extracted_text_policy, "reference_only");
 });
 
-test("stub result is needs_review", () => {
-  const result = buildManualOcrStubResult({
-    source_document_id: "source-ocr-2",
+test("configured provider output remains needs_review", () => {
+  const result = buildOcrResultWithConfiguredProvider({
+    source_document_id: "source-ocr-config-2",
     storage_path: "sources/2025-2.pdf",
     source_type: "pdf",
   });
@@ -88,10 +105,23 @@ test("candidate remains needs_review", () => {
 
 test("no OCR provider call", async () => {
   const source = await readFile(adapterPath, "utf8");
+  const normalizedSource = source.toLowerCase();
 
-  const forbidden = ["fetch(", "axios", "vision", "tesseract", "googleapis", "openai"];
-  for (const token of forbidden) {
-    assert.equal(source.includes(token), false, `forbidden OCR provider token found: ${token}`);
+  const forbidden = [
+    /fetch\(/i,
+    /\baxios\b/i,
+    /\bvision\b/i,
+    /@google-cloud\/vision/i,
+    /\btesseract\b/i,
+    /\bgoogleapis\b/i,
+    /\bopenai\b/i,
+    /\bgemini\b/i,
+    /\bdocumentai\b/i,
+    /\bdocument ai\b/i,
+    /DocumentProcessorServiceClient/i,
+  ];
+  for (const pattern of forbidden) {
+    assert.equal(pattern.test(normalizedSource), false, `forbidden OCR provider token found: ${pattern}`);
   }
 });
 
@@ -118,9 +148,7 @@ test("no learner source viewer", async () => {
 });
 
 test("no archive UI", async () => {
-  const shouldNotExist = [
-    new URL("../app/exams/archive/upload/page.tsx", import.meta.url),
-  ];
+  const shouldNotExist = [new URL("../app/exams/archive/upload/page.tsx", import.meta.url)];
 
   for (const pathUrl of shouldNotExist) {
     await assert.rejects(() => access(pathUrl, constants.F_OK));
