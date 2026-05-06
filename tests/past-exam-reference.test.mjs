@@ -13,6 +13,13 @@ import {
   listPastExamSourceDocuments,
 } from "../lib/review-os/past-exam-source-seeds.ts";
 
+import {
+  findExtractionCandidatesBySourceDocumentId,
+  findStructuredCandidatesByReferenceId,
+  listPastExamExtractionCandidates,
+  listPastExamStructuredCandidates,
+} from "../lib/review-os/past-exam-extraction-seeds.ts";
+
 const subjectFixtures = [
   {
     name: "실무",
@@ -277,5 +284,62 @@ test("source metadata module avoids raw user OCR and official scoring language",
   const forbiddenLanguage = ["공식 모범답안", "공식 채점", "합격/불합격", "pass/fail", "정답 확정", "채점 확정"];
   for (const keyword of forbiddenLanguage) {
     assert.equal(source.includes(keyword), false, `forbidden language found in source metadata seeds: ${keyword}`);
+  }
+});
+test("extraction candidates load with pilot-safe defaults", () => {
+  const extractionCandidates = listPastExamExtractionCandidates();
+  assert.equal(extractionCandidates.length, 3);
+
+  for (const candidate of extractionCandidates) {
+    assert.equal(candidate.extracted_text_policy, "reference_only");
+    assert.equal(candidate.review_status, "needs_review");
+    assert.equal(candidate.created_from, "source_pdf");
+    assert.equal(candidate.extraction_status, "extracted");
+    assert.equal(candidate.extraction_notes, "Manual pilot candidate; review required");
+  }
+});
+
+test("structured candidates load with review-required defaults", () => {
+  const structuredCandidates = listPastExamStructuredCandidates();
+  assert.equal(structuredCandidates.length, 3);
+
+  for (const candidate of structuredCandidates) {
+    assert.equal(candidate.raw_text_policy, "reference_only");
+    assert.equal(candidate.candidate_status, "needs_review");
+    assert.equal(candidate.created_from, "source_pdf_extraction");
+  }
+});
+
+test("every extraction candidate links to an existing source document", () => {
+  const sourceIds = new Set(listPastExamSourceDocuments().map((doc) => doc.id));
+
+  for (const candidate of listPastExamExtractionCandidates()) {
+    assert.ok(sourceIds.has(candidate.source_document_id), `dangling source document: ${candidate.source_document_id}`);
+    assert.ok(findExtractionCandidatesBySourceDocumentId(candidate.source_document_id).some((item) => item.id === candidate.id));
+  }
+});
+
+test("every structured candidate links to existing source document and reference item", () => {
+  const sourceIds = new Set(listPastExamSourceDocuments().map((doc) => doc.id));
+  const referenceIds = new Set(listPastExamReferences("second").map((ref) => ref.id));
+
+  for (const candidate of listPastExamStructuredCandidates()) {
+    assert.ok(sourceIds.has(candidate.source_document_id), `dangling source document: ${candidate.source_document_id}`);
+    assert.ok(referenceIds.has(candidate.linked_reference_id), `dangling linked reference: ${candidate.linked_reference_id}`);
+    assert.ok(findStructuredCandidatesByReferenceId(candidate.linked_reference_id).some((item) => item.id === candidate.id));
+  }
+});
+
+test("extraction/structured candidate seed module avoids official grading and raw user OCR fields", async () => {
+  const source = await readFile(new URL("../lib/review-os/past-exam-extraction-seeds.ts", import.meta.url), "utf8");
+
+  const forbiddenLanguage = ["공식 모범답안", "공식 채점", "합격/불합격", "pass/fail", "official answer", "official scoring"];
+  for (const keyword of forbiddenLanguage) {
+    assert.equal(source.includes(keyword), false, `forbidden language found in extraction seeds: ${keyword}`);
+  }
+
+  const forbiddenRawFields = ["raw_ocr", "user_ocr", "raw_user_ocr", "raw_user_answer", "user_answer_raw", "rawQuestionText"];
+  for (const key of forbiddenRawFields) {
+    assert.equal(source.includes(key), false, `forbidden raw field found in extraction seeds: ${key}`);
   }
 });
