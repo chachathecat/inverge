@@ -65,10 +65,23 @@ export function FrontPage() {
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
             <p className="text-sm text-[color:var(--muted)]">감정평가사 1차/2차 입력 화면으로 바로 이동합니다.</p>
+            <p className="text-sm text-[color:var(--muted)]">문제 스냅, 답안 스냅, 텍스트 입력을 모두 오늘 할 일로 연결합니다.</p>
           </div>
-          <p className="text-sm leading-7 text-[color:var(--muted)]">
-            답안 검토실은 학원과 고빈도 답안 검토 사용자를 위한 운영형 검토 공간으로 확장 예정입니다.
-          </p>
+          <QuietSection className="space-y-3 border-[color:var(--border)] bg-[color:var(--surface-soft)] p-4">
+            <p className="text-sm font-medium text-[color:var(--foreground-strong)]">답안 검토실</p>
+            <p className="text-sm leading-6 text-[color:var(--muted)]">
+              문제나 답안 사진을 올리면, OCR 초안과 핵심 조건, 다시 볼 지점을 한 화면에 정리합니다.
+            </p>
+            <div className="flex flex-wrap items-center gap-3">
+              <Link
+                href="/answer-review?mode=second"
+                className={cn(buttonVariants({ variant: "outline", size: "sm" }), "border-[color:var(--border)] bg-[color:var(--surface)]")}
+              >
+                답안 검토실 보기
+              </Link>
+              <p className="text-xs text-[color:var(--muted)]">검토 결과는 학습 보조 초안이며 저장 전 직접 확인해 주세요.</p>
+            </div>
+          </QuietSection>
         </div>
         <FrontPageHeroAnimation />
       </section>
