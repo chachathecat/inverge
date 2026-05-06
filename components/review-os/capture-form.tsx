@@ -1268,7 +1268,6 @@ function ConfirmPanel({
       <details className="mt-5 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] p-4">
         <summary className="cursor-pointer text-sm font-medium text-[color:var(--foreground-strong)]">저장될 원문 보기</summary>
         <Textarea
-          ref={textAreaRef}
           value={form.rawQuestionText}
           onChange={(event) => update("rawQuestionText", event.target.value)}
           className="mt-4 min-h-36 border-[var(--border)] bg-[color:var(--surface)] text-[color:var(--foreground-strong)] leading-7"
