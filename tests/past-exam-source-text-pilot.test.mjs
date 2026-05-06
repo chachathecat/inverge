@@ -4,6 +4,8 @@ import { access, readFile } from "node:fs/promises";
 import { constants } from "node:fs";
 
 import {
+  applyExtractionReviewRecord,
+  applyStructuredCandidateReviewRecord,
   canMarkExtractionCandidateReviewed,
   canMarkStructuredCandidateReviewed,
 } from "../lib/review-os/past-exam-source.ts";
@@ -103,6 +105,91 @@ test("approve review records mark candidates reviewed", () => {
   assert.equal(canMarkStructuredCandidateReviewed(structuredCandidate, structuredReview), true);
 });
 
+
+
+test("apply helper marks approved extraction candidate reviewed without mutating original", () => {
+  const extractionCandidate = listPastExamSourceTextPilotExtractionCandidates()[0];
+  const extractionReview = listPastExamExtractionReviewRecords()[0];
+
+  const updated = applyExtractionReviewRecord(extractionCandidate, extractionReview);
+
+  assert.notEqual(updated, extractionCandidate);
+  assert.equal(updated.review_status, "reviewed");
+  assert.equal(extractionCandidate.review_status, "needs_review");
+});
+
+test("apply helper marks approved structured candidate reviewed without mutating original", () => {
+  const structuredCandidate = listPastExamSourceTextPilotStructuredCandidates()[0];
+  const structuredReview = listPastExamStructuredCandidateReviewRecords()[0];
+
+  const updated = applyStructuredCandidateReviewRecord(structuredCandidate, structuredReview);
+
+  assert.notEqual(updated, structuredCandidate);
+  assert.equal(updated.candidate_status, "reviewed");
+  assert.equal(structuredCandidate.candidate_status, "needs_review");
+});
+
+test("apply helper does not mark request_changes/reject extraction or structured candidates reviewed", () => {
+  const extractionCandidate = listPastExamSourceTextPilotExtractionCandidates()[0];
+  const structuredCandidate = listPastExamSourceTextPilotStructuredCandidates()[0];
+  const extractionReview = listPastExamExtractionReviewRecords()[0];
+  const structuredReview = listPastExamStructuredCandidateReviewRecords()[0];
+
+  assert.equal(
+    applyExtractionReviewRecord(extractionCandidate, { ...extractionReview, decision: "request_changes" }).review_status,
+    "needs_review",
+  );
+  assert.equal(
+    applyExtractionReviewRecord(extractionCandidate, { ...extractionReview, decision: "reject" }).review_status,
+    "needs_review",
+  );
+  assert.equal(
+    applyStructuredCandidateReviewRecord(structuredCandidate, { ...structuredReview, decision: "request_changes" }).candidate_status,
+    "needs_review",
+  );
+  assert.equal(
+    applyStructuredCandidateReviewRecord(structuredCandidate, { ...structuredReview, decision: "reject" }).candidate_status,
+    "needs_review",
+  );
+});
+
+test("apply helper does not mark reviewed on mismatched candidate/source ids", () => {
+  const extractionCandidate = listPastExamSourceTextPilotExtractionCandidates()[0];
+  const structuredCandidate = listPastExamSourceTextPilotStructuredCandidates()[0];
+  const extractionReview = listPastExamExtractionReviewRecords()[0];
+  const structuredReview = listPastExamStructuredCandidateReviewRecords()[0];
+
+  assert.equal(
+    applyExtractionReviewRecord(extractionCandidate, { ...extractionReview, candidate_id: "wrong-candidate" }).review_status,
+    "needs_review",
+  );
+  assert.equal(
+    applyExtractionReviewRecord(extractionCandidate, { ...extractionReview, source_document_id: "wrong-source" }).review_status,
+    "needs_review",
+  );
+  assert.equal(
+    applyStructuredCandidateReviewRecord(structuredCandidate, { ...structuredReview, candidate_id: "wrong-candidate" }).candidate_status,
+    "needs_review",
+  );
+  assert.equal(
+    applyStructuredCandidateReviewRecord(structuredCandidate, { ...structuredReview, source_document_id: "wrong-source" }).candidate_status,
+    "needs_review",
+  );
+});
+
+test("structured apply helper clones array fields", () => {
+  const structuredCandidate = listPastExamSourceTextPilotStructuredCandidates()[0];
+  const structuredReview = listPastExamStructuredCandidateReviewRecords()[0];
+
+  const updated = applyStructuredCandidateReviewRecord(structuredCandidate, structuredReview);
+
+  assert.notEqual(updated.topic_tags_candidate, structuredCandidate.topic_tags_candidate);
+  assert.notEqual(updated.issue_tags_candidate, structuredCandidate.issue_tags_candidate);
+  assert.notEqual(updated.skill_tags_candidate, structuredCandidate.skill_tags_candidate);
+  assert.notEqual(updated.expected_answer_skeleton_candidate, structuredCandidate.expected_answer_skeleton_candidate);
+  assert.notEqual(updated.scoring_checkpoint_skeleton_candidate, structuredCandidate.scoring_checkpoint_skeleton_candidate);
+  assert.notEqual(updated.common_gap_candidates, structuredCandidate.common_gap_candidates);
+});
 test("request_changes/reject review decisions do not mark candidates reviewed", () => {
   const extractionCandidate = listPastExamSourceTextPilotExtractionCandidates()[0];
   const structuredCandidate = listPastExamSourceTextPilotStructuredCandidates()[0];
