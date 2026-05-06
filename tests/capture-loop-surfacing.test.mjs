@@ -4,10 +4,11 @@ import { readFile } from "node:fs/promises";
 
 test("first capture save shows reflected today-plan message with one gap and next action", async () => {
   const source = await readFile(new URL("../app/app/session/page.tsx", import.meta.url), "utf8");
+  assert.ok(source.includes("오늘 기록이 저장되었습니다."));
   assert.ok(source.includes("오늘 계획에 반영되었습니다."));
   assert.ok(source.includes("복습 큐에 들어갔습니다."));
+  assert.ok(source.includes("가장 큰 간극:"));
   assert.ok(source.includes("다음 행동:"));
-  assert.ok(source.includes("우선순위는 최근 기록과 반복 신호를 기준으로 계산됩니다."));
   assert.ok(source.includes("savedCaptureItemId"));
   assert.ok(source.includes("getWrongAnswerDetail(session.userId, session.email, savedCaptureItemId)"));
 });
@@ -21,7 +22,18 @@ test("second capture save keeps rewrite action and review queue CTA", async () =
 test("review queue marks only capture-originated items", async () => {
   const source = await readFile(new URL("../components/review-os/review-queue-client.tsx", import.meta.url), "utf8");
   assert.ok(source.includes("item.createdFromCapture"));
-  assert.ok(source.includes("오늘 기록에서 생성"));
+  assert.ok(source.includes("오늘 한 것"));
+  assert.ok(source.includes("반복 신호와 최근 기록 기준"));
+  assert.ok(source.includes("다시 보기"));
+});
+
+test("today plan surfaces capture-origin task labels and fallback copy", async () => {
+  const source = await readFile(new URL("../app/app/page.tsx", import.meta.url), "utf8");
+  assert.ok(source.includes("오늘 기록 기반"));
+  assert.ok(source.includes("이유:"));
+  assert.ok(source.includes("다음 행동:"));
+  assert.ok(source.includes("아직 오늘 기록이 없습니다."));
+  assert.ok(source.includes("공부한 흔적을 하나 올리면 오늘 계획과 복습 큐가 업데이트됩니다."));
 });
 
 test("item detail surfaces capture_note_engine_v2 fields without exposing raw OCR learning data", async () => {

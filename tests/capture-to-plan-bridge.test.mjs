@@ -94,7 +94,9 @@ test("learner-facing copy includes save bridge messages", async () => {
   const source = await readFile(new URL("../app/app/session/page.tsx", import.meta.url), "utf8");
   assert.ok(source.includes("오늘 계획에 반영되었습니다."));
   assert.ok(source.includes("복습 큐에 들어갔습니다."));
-  assert.ok(source.includes("우선순위는 최근 기록과 반복 신호를 기준으로 계산됩니다."));
+  assert.ok(source.includes("오늘 기록이 저장되었습니다."));
+  assert.ok(source.includes("가장 큰 간극:"));
+  assert.ok(source.includes("다음 행동:"));
 });
 
 test("guardrails: no instructor imports, no OCR provider, no grading claims", async () => {
