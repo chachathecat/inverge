@@ -43,16 +43,17 @@ export default async function ReviewOsSessionPage({ searchParams }: PageProps) {
   return (
     <div className="space-y-6">
       {savedCapture ? (
-        <section className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] px-4 py-3">
+        <section className="rounded-[var(--radius-md)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-elevated)] px-4 py-4">
           <p className="text-sm font-medium text-[color:var(--foreground-strong)]">오늘 기록이 저장되었습니다.</p>
-          <p className="mt-1 text-xs text-[color:var(--muted)]">복습 큐에 들어갔습니다.</p>
-          <p className="mt-1 text-xs text-[color:var(--muted)]">오늘 계획에 반영되었습니다.</p>
-          <p className="mt-2 text-xs text-[color:var(--muted)]">
+          <div className="mt-2 flex flex-wrap gap-2">
+            <span className="rounded-full border border-[color:var(--border-hairline)] bg-[color:var(--surface)] px-2.5 py-1 text-xs text-[color:var(--muted)]">복습 큐에 들어갔습니다.</span>
+            <span className="rounded-full border border-[color:var(--border-hairline)] bg-[color:var(--surface)] px-2.5 py-1 text-xs text-[color:var(--muted)]">오늘 계획에 반영되었습니다.</span>
+          </div>
+          <p className="mt-3 text-xs text-[color:var(--muted)]">
             가장 큰 간극: {String(savedCaptureSignals?.one_biggest_gap ?? note?.missingIssue ?? note?.weakPoint ?? "간극 1개를 먼저 고정합니다.")}
           </p>
           <p className="mt-1 text-xs text-[color:var(--muted)]">
-            다음 행동:{" "}
-            {String(savedCaptureSignals?.one_next_action ?? note?.rewriteInstruction ?? note?.coreLine ?? "한 문장 재시도/다시쓰기로 바로 이어갑니다.")}
+            다음 행동: {String(savedCaptureSignals?.one_next_action ?? note?.rewriteInstruction ?? note?.coreLine ?? "한 문장 재시도/다시쓰기로 바로 이어갑니다.")}
           </p>
           {savedCaptureSignals?.topic_candidate ? (
             <p className="mt-1 text-xs text-[color:var(--muted)]">논점 후보: {String(savedCaptureSignals.topic_candidate)}</p>
