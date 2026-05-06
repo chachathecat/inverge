@@ -56,7 +56,7 @@ export function FrontPage() {
               내일의 실행 순서로 바꿉니다.
             </h1>
             <p className="max-w-3xl text-body text-[color:var(--muted)]">
-              문제나 답안 사진을 올리면 OCR 초안 → 핵심 조건 하이라이트 → 설명 초안 → 오늘 할 일로 정리됩니다. 감정평가사 1차/2차 공부를 실행 중심으로 이어가게 만듭니다.
+              문제나 답안 사진을 올리면 OCR 초안, 핵심 조건 하이라이트, 답안 구조 Skeleton, 오늘 할 일로 정리됩니다. 감정평가사 1차/2차 공부를 실행 중심으로 이어가게 만듭니다.
             </p>
           </div>
           <div className="space-y-4">
