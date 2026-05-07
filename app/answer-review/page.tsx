@@ -1,13 +1,9 @@
-import { redirect } from "next/navigation";
-
 import { getServerSessionUser } from "@/lib/auth/session";
 import AnswerReviewClientPage from "./answer-review-client";
 
 export default async function AnswerReviewPage() {
   const session = await getServerSessionUser();
-  if (session.authEnabled && !session.isAuthenticated) {
-    redirect("/login?returnTo=%2Fanswer-review");
-  }
+  const viewerMode = session.authEnabled && !session.isAuthenticated ? "anonymous" : "authenticated";
 
-  return <AnswerReviewClientPage />;
+  return <AnswerReviewClientPage viewerMode={viewerMode} userEmail={session.email ?? null} />;
 }

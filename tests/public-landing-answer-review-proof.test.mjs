@@ -7,7 +7,7 @@ const heroAnimation = readFileSync("components/inverge/front-page-hero-animation
 const publicSources = [frontPage, heroAnimation];
 
 test("public front page surfaces answer review studio card and proof access", () => {
-  ["답안 검토실", "답안 검토실 보기", "/answer-review?mode=second", "문제나 답안 사진", "OCR 초안", "검토 결과는 학습 보조 초안"].forEach((phrase) => {
+  ["답안 검토실", "답안 검토실 무료 체험", "/answer-review?mode=second", "문제나 답안 사진", "OCR 초안", "검토 결과는 학습 보조 초안"].forEach((phrase) => {
     assert.ok(frontPage.includes(phrase), `Missing front page phrase: ${phrase}`);
   });
 

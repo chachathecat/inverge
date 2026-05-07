@@ -32,6 +32,9 @@ const STRUCTURE_SCHEMA_FALLBACK_MESSAGE =
   "구조화 형식을 안전하게 확인하지 못했습니다. 텍스트 입력으로 검토를 계속해 주세요.";
 const STRUCTURE_UNKNOWN_MESSAGE = "구조화 요청을 처리하지 못했습니다. 텍스트 입력으로 검토를 계속해 주세요.";
 const INPUT_QUALITY_MESSAGE = "검토에 필요한 정보가 부족합니다. 문제와 답안을 조금 더 입력해 주세요.";
+const ANONYMOUS_TRIAL_COOKIE = "anonymous_answer_review_trial";
+const ANONYMOUS_TRIAL_LIMIT_MESSAGE =
+  "오늘 무료 검토 1회를 사용했습니다. 계정을 만들면 기록 저장과 복습 큐 연결을 사용할 수 있습니다.";
 
 function getFiles(formData: FormData, fieldName: string) {
   return formData.getAll(fieldName).filter((item): item is File => item instanceof File && item.size > 0);
@@ -39,8 +42,26 @@ function getFiles(formData: FormData, fieldName: string) {
 
 export async function POST(request: Request) {
   const session = await getServerSessionUser();
-  if (session.authEnabled && !session.isAuthenticated) {
-    return NextResponse.json({ ok: false, error: "로그인이 필요합니다." }, { status: 401 });
+  const isAnonymous = session.authEnabled && !session.isAuthenticated;
+  const cookieStore = request.headers.get("cookie") ?? "";
+  const todayUtc = new Date().toISOString().slice(0, 10);
+  const trialCookie = cookieStore
+    .split(";")
+    .map((item) => item.trim())
+    .find((item) => item.startsWith(`${ANONYMOUS_TRIAL_COOKIE}=`))
+    ?.slice(`${ANONYMOUS_TRIAL_COOKIE}=`.length);
+  const [trialDate = "", trialCount = "0"] = (trialCookie ?? "").split(":");
+  const anonymousTrialUsedToday = isAnonymous && trialDate === todayUtc && Number(trialCount) >= 1;
+  if (anonymousTrialUsedToday) {
+    return NextResponse.json(
+      {
+        ok: false,
+        errorCode: "ANONYMOUS_TRIAL_LIMIT",
+        error: ANONYMOUS_TRIAL_LIMIT_MESSAGE,
+        trial: { mode: "anonymous", used: 1, remaining: 0 },
+      },
+      { status: 429 },
+    );
   }
 
   let formData: FormData;
@@ -131,6 +152,28 @@ export async function POST(request: Request) {
     } else if (learningSignalSkipReason) {
       console.info("[answer-review] learning signal skipped", { reason: learningSignalSkipReason });
       learningSignalStatus = "skipped";
+    }
+    if (isAnonymous) {
+      const response = NextResponse.json({
+        ok: true,
+        draft,
+        learningSignalStatus: "skipped",
+        trial: {
+          mode: "anonymous",
+          used: 1,
+          remaining: 0,
+          resetLabel: "내일 다시 1회 사용 가능",
+        },
+      });
+      // TODO: move anonymous trial limit to durable server-side store with IP/session-aware throttling.
+      response.cookies.set(ANONYMOUS_TRIAL_COOKIE, `${todayUtc}:1`, {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: true,
+        path: "/",
+        maxAge: 60 * 60 * 24 * 2,
+      });
+      return response;
     }
     return NextResponse.json({ ok: true, draft, learningSignalStatus });
   } catch (error) {
