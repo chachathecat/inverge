@@ -59,6 +59,34 @@ function InputStatusCard({ title, statusText, helper }: InputStatusCardProps) {
   );
 }
 
+
+function ResultFeedbackPrompt() {
+  const [selected, setSelected] = useState<"helpful" | "unclear" | "not_helpful" | null>(null);
+  const [note, setNote] = useState("");
+
+  return (
+    <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface)] px-4 py-3">
+      <p className="text-caption font-medium text-[color:var(--foreground-strong)]">이 결과가 도움이 되었나요?</p>
+      <div className="mt-2 flex flex-wrap gap-2">
+        {[
+          ["helpful", "도움됨"],
+          ["unclear", "애매함"],
+          ["not_helpful", "도움 안 됨"],
+        ].map(([value, label]) => (
+          <button key={value} type="button" onClick={() => setSelected(value as any)} className={cn(buttonVariants({ variant: selected === value ? "default" : "outline" }), "h-8 px-3 text-xs")}>
+            {label}
+          </button>
+        ))}
+      </div>
+      <label className="mt-2 block">
+        <span className="text-[11px] text-[color:var(--muted)]">무엇이 부족했나요?</span>
+        <Textarea value={note} onChange={(event) => setNote(event.target.value)} className="mt-1 min-h-[72px] text-xs" placeholder="선택 입력" />
+      </label>
+      <p className="mt-1 text-[11px] text-[color:var(--muted)]">TODO(v1): beta feedback API 연결 전까지 로컬 상태만 저장합니다.</p>
+    </article>
+  );
+}
+
 export default function AnswerReviewClientPage({ viewerMode = "authenticated" }: AnswerReviewClientPageProps) {
   const getInitialReviewContext = () => {
     if (typeof window === "undefined") {
@@ -684,13 +712,14 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                 {viewerMode === "anonymous" && structureDraft ? (
                   <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] px-4 py-3">
                     <p className="text-caption font-medium text-[color:var(--foreground-strong)]">검토 결과가 준비되었습니다.</p>
-                    <p className="mt-1 text-caption leading-5 text-[color:var(--muted)]">이 결과를 저장하고 오늘 계획에 반영하려면 계정을 만들어 주세요.</p>
+                    <p className="mt-1 text-caption leading-5 text-[color:var(--muted)]">베타 계정으로 저장하면 복습 큐와 오늘 계획에 연결됩니다.</p>
                     <div className="mt-2 flex flex-wrap gap-2">
                       <Link href="/login?returnTo=%2Fanswer-review%3Fmode%3Dsecond" className={cn(buttonVariants({ variant: "default" }), "h-8 px-3 text-xs")}>계정 만들고 기록 저장</Link>
                       <button type="button" className={cn(buttonVariants({ variant: "outline" }), "h-8 px-3 text-xs")} onClick={() => setCurrentStep(2)}>계속 보기</button>
                     </div>
                   </article>
                 ) : null}
+                <ResultFeedbackPrompt />
                 {viewerMode === "anonymous" && trialLimitReached ? (
                   <article className="rounded-[var(--radius-sm)] border border-[#b9a98a] bg-[#f8f4ea] px-4 py-3">
                     <p className="text-caption leading-5 text-[#5a4b32]">오늘 무료 검토 1회를 사용했습니다. 계정을 만들면 기록 저장과 복습 큐 연결을 사용할 수 있습니다.</p>

@@ -1,5 +1,6 @@
 import { WrongAnswerCaptureForm } from "@/components/review-os/capture-form";
 import { ReviewOsFeedbackButton } from "@/components/review-os/feedback-button";
+import { ClosedBetaBanner } from "@/components/shared/closed-beta-banner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getModeConfig, normalizeSubjectForMode, resolveAppraisalMode } from "@/lib/review-os/appraisal";
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
@@ -39,7 +40,10 @@ export default async function ReviewOsCapturePage({ searchParams }: PageProps) {
   const isRewriteFlow = mode === "second" && Boolean(rewriteContext);
 
   return (
-    <div className="space-y-7">
+    <div className="space-y-6">
+      <ClosedBetaBanner />
+
+      <div className="space-y-7">
       <section className="space-y-3">
         <div>
           <h2 className="text-2xl font-medium tracking-[-0.04em] text-[color:var(--foreground-strong)]">
@@ -78,6 +82,7 @@ export default async function ReviewOsCapturePage({ searchParams }: PageProps) {
       </Card>
 
       <ReviewOsFeedbackButton route="/app/capture" pageContext={{ section: "capture", mode }} />
+      </div>
     </div>
   );
 }

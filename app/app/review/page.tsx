@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { ReviewOsFeedbackButton } from "@/components/review-os/feedback-button";
+import { ClosedBetaBanner } from "@/components/shared/closed-beta-banner";
 import { ReviewQueueClient } from "@/components/review-os/review-queue-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +24,9 @@ export default async function ReviewOsReviewPage({ searchParams }: PageProps) {
 
   return (
     <div className="space-y-6">
+      <ClosedBetaBanner />
+
+      <div className="space-y-6">
       <Card className="border-[color:var(--border-hairline)] bg-[color:var(--surface-elevated)] shadow-none">
         <CardHeader>
           <CardTitle>{mode === "second" ? "다시 볼 교정 포인트" : "오늘 다시 볼 항목"}</CardTitle>
@@ -52,6 +56,7 @@ export default async function ReviewOsReviewPage({ searchParams }: PageProps) {
       ) : null}
 
       <ReviewOsFeedbackButton route="/app/review" pageContext={{ itemCount: items.length, mode }} />
+      </div>
     </div>
   );
 }
