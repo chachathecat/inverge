@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { ReviewOsFeedbackButton } from "@/components/review-os/feedback-button";
+import { ClosedBetaBanner } from "@/components/shared/closed-beta-banner";
 import { HomeProofAnimation } from "@/components/review-os/home-proof-animation";
 import { TodayFirstSubjectSelector } from "@/components/review-os/today-first-subject-selector";
 import { Button } from "@/components/ui/button";
@@ -149,6 +150,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
 
   return (
     <div className="space-y-7 md:space-y-8">
+      <ClosedBetaBanner />
       <section className="space-y-3">
         <div>
           <h2 className="text-xl font-medium tracking-[-0.04em] text-[color:var(--foreground-strong)] sm:text-2xl">{config.pageTitle}</h2>

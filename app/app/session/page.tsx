@@ -1,4 +1,6 @@
 import { ReviewOsFeedbackButton } from "@/components/review-os/feedback-button";
+import { ClosedBetaBanner } from "@/components/shared/closed-beta-banner";
+import { ResultFeedbackPrompt } from "@/components/shared/result-feedback-prompt";
 import { TodaySessionRunner } from "@/components/review-os/today-session-runner";
 import { getModeConfig, resolveAppraisalMode } from "@/lib/review-os/appraisal";
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
@@ -42,6 +44,7 @@ export default async function ReviewOsSessionPage({ searchParams }: PageProps) {
 
   return (
     <div className="space-y-6">
+      <ClosedBetaBanner />
       {savedCapture ? (
         <section className="rounded-[var(--radius-md)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-elevated)] px-4 py-4 sm:px-5">
           <p className="text-sm font-semibold text-[color:var(--ink-primary)]">오늘 기록이 저장되었습니다.</p>
@@ -63,6 +66,9 @@ export default async function ReviewOsSessionPage({ searchParams }: PageProps) {
           {savedCaptureSignals?.next_task_type ? (
             <p className="mt-1 text-xs text-[color:var(--muted)]">다음 과제 유형: {String(savedCaptureSignals.next_task_type)}</p>
           ) : null}
+          <div className="mt-3">
+            <ResultFeedbackPrompt />
+          </div>
         </section>
       ) : null}
       <TodaySessionRunner
