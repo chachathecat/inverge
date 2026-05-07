@@ -9,7 +9,7 @@ const publicSources = [frontPage, heroAnimation];
 test("front page includes required answer review hero CTA and safety copy", () => {
   [
     "오늘 입력 시작",
-    "답안 검토실 보기",
+    "답안 검토실 무료 체험",
     "/answer-review?mode=second",
     "문제 스냅, 답안 스냅, 텍스트 입력",
     "검토 결과는 학습 보조 초안",
@@ -21,7 +21,7 @@ test("front page includes required answer review hero CTA and safety copy", () =
 
 test("front page keeps primary CTA before secondary answer review CTA", () => {
   const primaryIndex = frontPage.indexOf("오늘 입력 시작");
-  const secondaryIndex = frontPage.indexOf("답안 검토실 보기");
+  const secondaryIndex = frontPage.indexOf("답안 검토실 무료 체험");
 
   assert.ok(primaryIndex >= 0, "Primary CTA is missing");
   assert.ok(secondaryIndex >= 0, "Secondary CTA is missing");

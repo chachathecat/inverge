@@ -9,11 +9,11 @@ const writePage = readFileSync("app/app/write/page.tsx", "utf8");
 const captureForm = readFileSync("components/review-os/capture-form.tsx", "utf8");
 
 test("landing keeps CTA hierarchy and required proof tokens", () => {
-  ["오늘 입력 시작", "답안 검토실 보기", "문제 스냅", "OCR 초안", "핵심 조건 하이라이트", "설명 초안", "오늘 할 일"].forEach((token) => {
+  ["오늘 입력 시작", "답안 검토실 무료 체험", "문제 스냅", "OCR 초안", "핵심 조건 하이라이트", "설명 초안", "오늘 할 일"].forEach((token) => {
     assert.ok((frontPage + hero).includes(token), `missing token: ${token}`);
   });
   assert.ok((frontPage + hero).includes("예시는 학습 흐름을 보여주기 위한 샘플입니다."));
-  assert.ok(frontPage.indexOf("오늘 입력 시작") < frontPage.indexOf("답안 검토실 보기"));
+  assert.ok(frontPage.indexOf("오늘 입력 시작") < frontPage.indexOf("답안 검토실 무료 체험"));
 });
 
 test("answer review quick actions stay prioritized and mobile clear", () => {

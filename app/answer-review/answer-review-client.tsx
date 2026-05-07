@@ -23,8 +23,12 @@ type InputStatusCardProps = {
 };
 
 type StepId = 1 | 2 | 3;
+type ViewerMode = "anonymous" | "authenticated";
 
-
+type AnswerReviewClientPageProps = {
+  viewerMode?: ViewerMode;
+  userEmail?: string | null;
+};
 
 const SECTION_FADE = {
   hidden: { opacity: 0, y: 10 },
@@ -55,7 +59,7 @@ function InputStatusCard({ title, statusText, helper }: InputStatusCardProps) {
   );
 }
 
-export default function AnswerReviewClientPage() {
+export default function AnswerReviewClientPage({ viewerMode = "authenticated" }: AnswerReviewClientPageProps) {
   const getInitialReviewContext = () => {
     if (typeof window === "undefined") {
       return { examMode: "first" as AppraisalMode, subject: getDefaultSubject("first") };
@@ -83,6 +87,7 @@ export default function AnswerReviewClientPage() {
   const [structureError, setStructureError] = useState<string | null>(null);
   const [structureDraft, setStructureDraft] = useState<AnswerReviewStructureDraft | null>(null);
   const [learningSignalStatus, setLearningSignalStatus] = useState<"saved" | "skipped" | "failed" | null>(null);
+  const [trialLimitReached, setTrialLimitReached] = useState(false);
   const [currentStep, setCurrentStep] = useState<StepId>(1);
   const [examMode, setExamMode] = useState<AppraisalMode>(initialReviewContext.examMode);
   const [subject, setSubject] = useState<string>(initialReviewContext.subject);
@@ -200,9 +205,12 @@ export default function AnswerReviewClientPage() {
       });
       const payload = (await response.json()) as
         | { ok: true; draft: unknown; learningSignalStatus?: "saved" | "skipped" | "failed" }
-        | { ok: false; error: string };
+        | { ok: false; error: string; errorCode?: string };
 
       if (!response.ok || !payload.ok) {
+        if (!payload.ok && payload.errorCode === "ANONYMOUS_TRIAL_LIMIT") {
+          setTrialLimitReached(true);
+        }
         throw new Error(payload.ok ? "검토 결과를 불러오지 못했습니다." : payload.error);
       }
 
@@ -350,6 +358,12 @@ export default function AnswerReviewClientPage() {
         <p className="text-caption leading-5 text-[color:var(--muted)]">
           이미 쓴 답안을 올리면 누락 논점, 약한 구조, 다시 쓸 문장을 정리합니다. 검토 결과는 학습 보조 초안이며 저장 전 직접 확인해 주세요.
         </p>
+        {viewerMode === "anonymous" ? (
+          <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] px-3 py-2">
+            <p className="text-caption leading-5 text-[color:var(--muted)]">로그인 없이 오늘 1회 답안 검토를 체험할 수 있습니다.</p>
+            <p className="text-caption leading-5 text-[color:var(--muted)]">결과 저장, 복습 큐, 오늘 계획 반영은 로그인 후 사용할 수 있습니다.</p>
+          </article>
+        ) : null}
 
           <input ref={answerCameraInputRef} type="file" accept="image/*" capture="environment" multiple className="hidden" onChange={handleMyAnswerFileChange} />
           <input ref={problemCameraInputRef} type="file" accept="image/*" capture="environment" multiple className="hidden" onChange={handleProblemFileChange} />
@@ -360,6 +374,11 @@ export default function AnswerReviewClientPage() {
             <button type="button" onClick={() => { setGeneralUploadIntent("answer"); generalFileInputRef.current?.click(); }} className={cn(buttonVariants({ variant: "outline" }), "w-full justify-center h-10 text-sm")}>PDF/사진 불러오기</button>
             <button type="button" onClick={focusAnswerTextarea} className={cn(buttonVariants({ variant: "outline" }), "w-full justify-center h-10 text-sm")}>텍스트 붙여넣기</button>
           </div>
+          {viewerMode === "anonymous" ? (
+            <p className="inline-flex w-fit rounded-full border border-[var(--border)] bg-[color:var(--surface)] px-2.5 py-1 text-[11px] font-medium text-[color:var(--muted)]">
+              무료 체험 1회
+            </p>
+          ) : null}
 
         <section className="space-y-4 rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-4 sm:p-5">
           <div className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface)] p-3">
@@ -660,6 +679,22 @@ export default function AnswerReviewClientPage() {
                     <p className="text-caption leading-5 text-[color:var(--muted)]">
                       입력 정보가 충분하지 않아 학습 신호 저장은 건너뛰었습니다.
                     </p>
+                  </article>
+                ) : null}
+                {viewerMode === "anonymous" && structureDraft ? (
+                  <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] px-4 py-3">
+                    <p className="text-caption font-medium text-[color:var(--foreground-strong)]">검토 결과가 준비되었습니다.</p>
+                    <p className="mt-1 text-caption leading-5 text-[color:var(--muted)]">이 결과를 저장하고 오늘 계획에 반영하려면 계정을 만들어 주세요.</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <Link href="/login?returnTo=%2Fanswer-review%3Fmode%3Dsecond" className={cn(buttonVariants({ variant: "default" }), "h-8 px-3 text-xs")}>계정 만들고 기록 저장</Link>
+                      <button type="button" className={cn(buttonVariants({ variant: "outline" }), "h-8 px-3 text-xs")} onClick={() => setCurrentStep(2)}>계속 보기</button>
+                    </div>
+                  </article>
+                ) : null}
+                {viewerMode === "anonymous" && trialLimitReached ? (
+                  <article className="rounded-[var(--radius-sm)] border border-[#b9a98a] bg-[#f8f4ea] px-4 py-3">
+                    <p className="text-caption leading-5 text-[#5a4b32]">오늘 무료 검토 1회를 사용했습니다. 계정을 만들면 기록 저장과 복습 큐 연결을 사용할 수 있습니다.</p>
+                    <Link href="/login?returnTo=%2Fanswer-review%3Fmode%3Dsecond" className={cn(buttonVariants({ variant: "default" }), "mt-2 h-8 px-3 text-xs")}>계정 만들기</Link>
                   </article>
                 ) : null}
 

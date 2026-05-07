@@ -72,10 +72,11 @@ export function FrontPage() {
                   "h-11 w-full px-4 sm:w-auto border-[color:var(--border)] bg-[color:var(--surface)]"
                 )}
               >
-                답안 검토실 보기
+                답안 검토실 무료 체험
               </Link>
             </div>
             <p className="text-sm text-[color:var(--muted)]">감정평가사 1차/2차 입력 화면으로 바로 이동합니다.</p>
+            <p className="text-sm text-[color:var(--muted)]">로그인 없이 오늘 1회 검토해볼 수 있습니다.</p>
             <p className="text-sm text-[color:var(--muted)]">문제 스냅, 답안 스냅, 텍스트 입력을 모두 오늘 할 일로 연결합니다.</p>
             <p className="text-xs text-[color:var(--muted)]">검토 결과는 학습 보조 초안이며 저장 전 직접 확인해 주세요.</p>
           </div>

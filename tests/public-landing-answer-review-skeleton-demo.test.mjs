@@ -29,14 +29,14 @@ test("hero animation includes answer review skeleton framework demo and safety f
 });
 
 test("front page keeps CTA copy and includes skeleton value proposition", () => {
-  ["오늘 입력 시작", "답안 검토실 보기", "답안 구조 Skeleton"].forEach((phrase) => {
+  ["오늘 입력 시작", "답안 검토실 무료 체험", "답안 구조 Skeleton"].forEach((phrase) => {
     assert.ok(frontPage.includes(phrase), `Missing front page phrase: ${phrase}`);
   });
 });
 
 test("front page keeps primary CTA before secondary CTA", () => {
   const primaryIndex = frontPage.indexOf("오늘 입력 시작");
-  const secondaryIndex = frontPage.indexOf("답안 검토실 보기");
+  const secondaryIndex = frontPage.indexOf("답안 검토실 무료 체험");
 
   assert.ok(primaryIndex >= 0, "Primary CTA is missing");
   assert.ok(secondaryIndex >= 0, "Secondary CTA is missing");

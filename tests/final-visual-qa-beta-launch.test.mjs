@@ -61,7 +61,7 @@ test('public landing keeps proof/demo copy anchors', () => {
     '모범답안 구조 (Skeleton Framework)',
     '학습 보조 Skeleton',
     '오늘 입력 시작',
-    '답안 검토실 보기',
+    '답안 검토실 무료 체험',
   ].forEach((phrase) => {
     assert.ok(joined.includes(phrase), `Missing public landing phrase: ${phrase}`);
   });
