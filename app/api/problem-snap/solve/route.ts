@@ -2,8 +2,11 @@ import { NextResponse } from "next/server";
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 
 import { buildAnswerReviewReferenceGrounding } from "@/lib/review-os/answer-review-reference-grounding";
+import { buildCasioFx9860GiiiGuide } from "@/lib/evaluate/casio-fx9860giii-guide";
 
 export const dynamic = "force-dynamic";
+
+const CASIO_MODES = new Set(["RUN-MAT", "EQUA", "MAT", "STAT", "TVM", "Spreadsheet", "검토 필요"]);
 
 function getFiles(formData: FormData, fieldName: string) {
   return formData.getAll(fieldName).filter((item): item is File => item instanceof File && item.size > 0);
@@ -51,6 +54,14 @@ export async function POST(request: Request) {
         "공식/산식은 왜곡하지 말 것.",
         "모르면 검토 필요라고 표기할 것.",
         "공식 채점, 점수, 합격 판정 금지.",
+        "계산이 필요한 문제라면 CASIO fx-9860GIII 입력 순서를 제시한다.",
+        "버튼 순서는 실제로 누르는 단위로 짧게 나눈다.",
+        "RUN-MAT 일반 계산을 우선한다.",
+        "검증되지 않은 특수 기능 경로는 단정하지 않는다.",
+        "모르면 추천 모드를 검토 필요로 둔다.",
+        "반올림/단위 표시를 따로 적는다.",
+        "산식과 단위를 왜곡하지 않는다.",
+        "CASIO가 공식 보증한 안내처럼 표현하지 않는다.",
         "정답 확정처럼 말하지 말 것.",
         "reference_only 맥락은 원문 복사 없이 skeleton/checkpoint/gap만 활용.",
         `problemText:\n${problemText || "[없음]"}`,
@@ -71,11 +82,39 @@ export async function POST(request: Request) {
           examStyleStructure: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
           commonMistakes: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
           nextPracticeAction: { type: SchemaType.STRING }, caution: { type: SchemaType.STRING },
+          calculatorGuide: {
+            type: SchemaType.OBJECT,
+            properties: {
+              calculatorModel: { type: SchemaType.STRING },
+              calculationPurpose: { type: SchemaType.STRING },
+              recommendedMode: { type: SchemaType.STRING },
+              keystrokeSteps: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+              expectedDisplay: { type: SchemaType.STRING },
+              answerRounding: { type: SchemaType.STRING },
+              caution: { type: SchemaType.STRING },
+            },
+          },
         },
       },
     },
   });
 
   const result = JSON.parse(response.response.text() || "{}") as Record<string, unknown>;
+  const rawGuide = (result.calculatorGuide ?? {}) as Record<string, unknown>;
+  const rawSteps = Array.isArray(rawGuide.keystrokeSteps) ? rawGuide.keystrokeSteps.filter((step): step is string => typeof step === "string") : [];
+  const hasCalculationNeed = rawSteps.length > 0;
+  result.calculatorGuide = buildCasioFx9860GiiiGuide(hasCalculationNeed
+    ? {
+      calculationPurpose: typeof rawGuide.calculationPurpose === "string" ? rawGuide.calculationPurpose : undefined,
+      recommendedMode: typeof rawGuide.recommendedMode === "string" && CASIO_MODES.has(rawGuide.recommendedMode) ? rawGuide.recommendedMode : undefined,
+      keystrokeSteps: rawSteps,
+      expectedDisplay: typeof rawGuide.expectedDisplay === "string" ? rawGuide.expectedDisplay : undefined,
+      answerRounding: typeof rawGuide.answerRounding === "string" ? rawGuide.answerRounding : undefined,
+    }
+    : {
+      recommendedMode: "검토 필요",
+      calculationPurpose: "계산기 입력이 필요한 문제인지 검토가 필요합니다.",
+      keystrokeSteps: ["계산기 입력 없음"],
+    });
   return NextResponse.json({ ok: true, result, referenceGrounding: { used: referenceGrounding.references.length > 0, displayLabel: referenceGrounding.displayLabel } });
 }
