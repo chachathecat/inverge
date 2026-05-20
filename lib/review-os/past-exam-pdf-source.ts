@@ -89,7 +89,8 @@ const EXTRACTION_CANDIDATES: PastExamPdfExtractionCandidate[] = SOURCE_DOCUMENTS
   extracted_text_policy: "reference_only",
   extraction_status: "pending",
   review_status: "needs_review",
-  extraction_notes: "Extraction candidate placeholder; operator extraction required.",
+  extracted_text_preview: "",
+  extraction_notes: "Operator review required before structured reference use",
 }));
 
 const STRUCTURED_CANDIDATES: PastExamPdfStructuredCandidate[] = SOURCE_DOCUMENTS.map((source) => ({
@@ -131,6 +132,38 @@ export function listPastExamPdfStructuredCandidates(): PastExamPdfStructuredCand
     scoring_checkpoint_skeleton: [...item.scoring_checkpoint_skeleton],
     common_gap_candidates: [...item.common_gap_candidates],
   }));
+}
+
+export function findPastExamPdfExtractionCandidatesBySourceDocumentId(
+  sourceDocumentId: string,
+): PastExamPdfExtractionCandidate[] {
+  return listPastExamPdfExtractionCandidates().filter((item) => item.source_document_id === sourceDocumentId);
+}
+
+export function findPastExamPdfStructuredCandidatesBySourceDocumentId(
+  sourceDocumentId: string,
+): PastExamPdfStructuredCandidate[] {
+  return listPastExamPdfStructuredCandidates().filter((item) => item.source_document_id === sourceDocumentId);
+}
+
+export function getPastExamPdfIntakeCoverageSummary() {
+  const sourceDocuments = listPastExamPdfSourceDocuments();
+  const extractionCandidates = listPastExamPdfExtractionCandidates();
+  const structuredCandidates = listPastExamPdfStructuredCandidates();
+  const years = Array.from(new Set(sourceDocuments.map((item) => item.exam_year))).sort((a, b) => a - b);
+  const subjects = Array.from(new Set(sourceDocuments.map((item) => item.subject))).sort((a, b) => a.localeCompare(b));
+  const verifiedCount = structuredCandidates.filter((item) => item.candidate_status === "verified").length;
+  const needsReviewCount = structuredCandidates.filter((item) => item.candidate_status === "needs_review").length;
+
+  return {
+    sourceDocumentCount: sourceDocuments.length,
+    extractionCandidateCount: extractionCandidates.length,
+    structuredCandidateCount: structuredCandidates.length,
+    years,
+    subjects,
+    verifiedCount,
+    needsReviewCount,
+  };
 }
 
 export function buildPastExamPdfIntakePlan() {
