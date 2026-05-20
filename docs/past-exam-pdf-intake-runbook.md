@@ -25,3 +25,13 @@ Use past-exam PDFs only as private/reference grounding material.
 ## Pilot scope
 - Start with 2023–2025 second-stage PDFs.
 - Expand only after extraction quality is verified.
+
+## Extraction candidate workflow
+1. Upload/store PDF privately.
+2. Register source document.
+3. Create page-range extraction candidate.
+4. Extract OCR/text.
+5. Keep extracted text reference_only.
+6. Create structured candidate.
+7. Human review before verified.
+8. Only verified references may be prioritized in Answer Review grounding.
