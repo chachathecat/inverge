@@ -6,6 +6,15 @@ import type { AppraisalMode } from "@/lib/review-os/appraisal";
 
 type ExplanationLevel = "easy" | "standard" | "exam";
 type ProblemSnapResult = {
+  calculatorGuide: {
+    calculatorModel: "CASIO fx-9860GIII";
+    calculationPurpose: string;
+    recommendedMode: "RUN-MAT" | "EQUA" | "MAT" | "STAT" | "TVM" | "Spreadsheet" | "검토 필요";
+    keystrokeSteps: string[];
+    expectedDisplay?: string;
+    answerRounding?: string;
+    caution: string;
+  };
   problemSummary: string;
   askType: string;
   requiredConcepts: string[];
@@ -96,6 +105,24 @@ export default function ProblemSnapClientPage({ initialExamMode }: { initialExam
           <div><h3 className="font-medium">3. 공식</h3><ul>{result.formulas.map((x)=><li key={x}>• {x}</li>)}</ul></div>
           <div><h3 className="font-medium">4. {resultHeading}</h3><p>{result.easyExplanation}</p></div>
           <div><h3 className="font-medium">5. 풀이 순서</h3><ol>{result.stepByStepSolution.map((x)=><li key={x}>{x}</li>)}</ol></div>
+          <div className="space-y-2"><h3 className="font-medium">CASIO fx-9860GIII로 누르는 법</h3>
+            <p><span className="text-sm text-[color:var(--muted)]">계산 목적</span><br />{result.calculatorGuide.calculationPurpose}</p>
+            <p><span className="text-sm text-[color:var(--muted)]">추천 모드</span><br />{result.calculatorGuide.recommendedMode}</p>
+            <div>
+              <p className="text-sm text-[color:var(--muted)]">버튼 순서</p>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                {result.calculatorGuide.keystrokeSteps.map((step, index) => (
+                  <div key={`${step}-${index}`} className="flex items-center gap-2">
+                    <span className="rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--surface-subtle)] px-2.5 py-1 text-xs">{step}</span>
+                    {index < result.calculatorGuide.keystrokeSteps.length - 1 ? <span className="text-xs text-[color:var(--muted)]">→</span> : null}
+                  </div>
+                ))}
+              </div>
+            </div>
+            {result.calculatorGuide.expectedDisplay ? <p><span className="text-sm text-[color:var(--muted)]">화면에 나와야 할 값</span><br />{result.calculatorGuide.expectedDisplay}</p> : null}
+            {result.calculatorGuide.answerRounding ? <p><span className="text-sm text-[color:var(--muted)]">답안에 적는 값</span><br />{result.calculatorGuide.answerRounding}</p> : null}
+            <p><span className="text-sm text-[color:var(--muted)]">주의할 점</span><br />{result.calculatorGuide.caution}</p>
+          </div>
           <div><h3 className="font-medium">6. 자주 틀리는 포인트</h3><ul>{result.commonMistakes.map((x)=><li key={x}>• {x}</li>)}</ul></div>
           <div><h3 className="font-medium">7. 다음 연습 행동</h3><p>{result.nextPracticeAction}</p></div>
           <div><h3 className="font-medium">시험답안식 구조</h3><ul>{result.examStyleStructure.map((x)=><li key={x}>• {x}</li>)}</ul></div>
