@@ -45,30 +45,41 @@ export type PastExamPdfStructuredCandidate = {
 
 const SOURCE_NOTES = "Operator-uploaded PDF intake placeholder; extraction/review required";
 
-const SOURCE_DOCUMENTS: PastExamPdfSourceDocument[] = [
-  [2023, "34회", "감정평가실무", "practice", "q1"],
-  [2023, "34회", "감정평가이론", "theory", "q2"],
-  [2023, "34회", "감정평가 및 보상법규", "law", "q3"],
-  [2024, "35회", "감정평가실무", "practice", "q1"],
-  [2024, "35회", "감정평가이론", "theory", "q2"],
-  [2024, "35회", "감정평가 및 보상법규", "law", "q3"],
-  [2025, "36회", "감정평가실무", "practice", "q1"],
-  [2025, "36회", "감정평가이론", "theory", "q2"],
-  [2025, "36회", "감정평가 및 보상법규", "law", "q3"],
-].map(([year, examName, subject, track, qno]) => ({
-  id: `appraiser-second-${year}-${track}-pdf-source`,
-  exam_year: year,
-  exam_name: `감정평가사 2차 ${examName}`,
+type PdfSourceSeed = {
+  year: number;
+  examRound: number;
+  examLabel: string;
+  subject: string;
+  track: "practice" | "theory" | "law";
+  questionKey: "q1" | "q2" | "q3";
+};
+
+const PDF_SOURCE_SEEDS: PdfSourceSeed[] = [
+  { year: 2023, examRound: 34, examLabel: "34회", subject: "감정평가실무", track: "practice", questionKey: "q1" },
+  { year: 2023, examRound: 34, examLabel: "34회", subject: "감정평가이론", track: "theory", questionKey: "q2" },
+  { year: 2023, examRound: 34, examLabel: "34회", subject: "감정평가 및 보상법규", track: "law", questionKey: "q3" },
+  { year: 2024, examRound: 35, examLabel: "35회", subject: "감정평가실무", track: "practice", questionKey: "q1" },
+  { year: 2024, examRound: 35, examLabel: "35회", subject: "감정평가이론", track: "theory", questionKey: "q2" },
+  { year: 2024, examRound: 35, examLabel: "35회", subject: "감정평가 및 보상법규", track: "law", questionKey: "q3" },
+  { year: 2025, examRound: 36, examLabel: "36회", subject: "감정평가실무", track: "practice", questionKey: "q1" },
+  { year: 2025, examRound: 36, examLabel: "36회", subject: "감정평가이론", track: "theory", questionKey: "q2" },
+  { year: 2025, examRound: 36, examLabel: "36회", subject: "감정평가 및 보상법규", track: "law", questionKey: "q3" },
+];
+
+const SOURCE_DOCUMENTS: PastExamPdfSourceDocument[] = PDF_SOURCE_SEEDS.map((seed) => ({
+  id: `appraiser-second-${seed.year}-${seed.track}-pdf-source`,
+  exam_year: seed.year,
+  exam_name: `감정평가사 2차 ${seed.examLabel}`,
   stage: "second",
-  subject,
-  source_file_name: `appraiser-second-${year}-${track}.pdf`,
-  source_file_path: `operator-only/past-exam-pdf/${year}/second/${track}/source.pdf`,
+  subject: seed.subject,
+  source_file_name: `appraiser-second-${seed.year}-${seed.track}.pdf`,
+  source_file_path: `operator-only/past-exam-pdf/${seed.year}/second/${seed.track}/source.pdf`,
   raw_text_policy: "reference_only",
   review_status: "uploaded",
   extraction_status: "pending",
-  linked_reference_ids: [`appraiser-second-${year}-${Number(examName.replace('회',''))}-${track}-${qno}`],
+  linked_reference_ids: [`appraiser-second-${seed.year}-${seed.examRound}-${seed.track}-${seed.questionKey}`],
   notes: SOURCE_NOTES,
-  created_at: `${year}-01-01T00:00:00.000Z`,
+  created_at: `${seed.year}-01-01T00:00:00.000Z`,
 }));
 
 const EXTRACTION_CANDIDATES: PastExamPdfExtractionCandidate[] = SOURCE_DOCUMENTS.map((source) => ({
@@ -111,7 +122,15 @@ export function listPastExamPdfExtractionCandidates(): PastExamPdfExtractionCand
 }
 
 export function listPastExamPdfStructuredCandidates(): PastExamPdfStructuredCandidate[] {
-  return STRUCTURED_CANDIDATES.map((item) => ({ ...item }));
+  return STRUCTURED_CANDIDATES.map((item) => ({
+    ...item,
+    topic_tags: [...item.topic_tags],
+    issue_tags: [...item.issue_tags],
+    skill_tags: [...item.skill_tags],
+    expected_answer_skeleton: [...item.expected_answer_skeleton],
+    scoring_checkpoint_skeleton: [...item.scoring_checkpoint_skeleton],
+    common_gap_candidates: [...item.common_gap_candidates],
+  }));
 }
 
 export function buildPastExamPdfIntakePlan() {
