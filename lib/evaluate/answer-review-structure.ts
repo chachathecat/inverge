@@ -1,3 +1,5 @@
+export type AnswerReviewExplanationLevel = "easy" | "standard" | "exam";
+
 export type AnswerReviewStructureDraft = {
   questionSummary: string;
   coreConcepts: string[];
@@ -13,6 +15,10 @@ export type AnswerReviewStructureDraft = {
   rewriteDraftSuggestion: string;
   nextAction: string;
   caution: string;
+  plainExplanation: string;
+  keyTermExplanations: string[];
+  stepByStepExplanation: string[];
+  examAnswerHints: string[];
 };
 
 const CARD_TEXT_MAX_LENGTH = 220;
@@ -35,6 +41,10 @@ const STRING_FALLBACKS: Record<keyof AnswerReviewStructureDraft, string> = {
   rewriteDraftSuggestion: "교정 문단을 직접 작성해 다음 답안에 반영해 주세요.",
   nextAction: "문단 하나를 다시 쓰고 검토자 확인을 진행하세요.",
   caution: "구조화 결과는 검토 보조 초안이며 검토자 확인이 필요합니다.",
+  plainExplanation: "핵심은 문제에서 묻는 조건을 먼저 나누고, 답안에서 빠진 조건 1개를 보강하는 것입니다.",
+  keyTermExplanations: "",
+  stepByStepExplanation: "",
+  examAnswerHints: "",
 };
 
 function sanitizeBannedPhrases(input: string): string {
@@ -117,5 +127,9 @@ export function normalizeAnswerReviewStructureDraft(input: unknown): AnswerRevie
     rewriteDraftSuggestion: normalizeStringField("rewriteDraftSuggestion", source.rewriteDraftSuggestion),
     nextAction: normalizeStringField("nextAction", source.nextAction),
     caution: normalizeStringField("caution", source.caution),
+    plainExplanation: normalizeStringField("plainExplanation", source.plainExplanation),
+    keyTermExplanations: normalizeArray(source.keyTermExplanations),
+    stepByStepExplanation: normalizeArray(source.stepByStepExplanation),
+    examAnswerHints: normalizeArray(source.examAnswerHints),
   };
 }
