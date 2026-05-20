@@ -12,6 +12,7 @@ import {
   normalizeAnswerReviewStructureDraft,
   type AnswerReviewStructureDraft,
 } from "@/lib/evaluate/answer-review-structure";
+import { buildAnswerReviewQualityView } from "@/lib/evaluate/answer-review-quality";
 import { getDefaultSubject, normalizeSubjectForMode, parseAppraisalMode, type AppraisalMode } from "@/lib/review-os/appraisal";
 import { APPRAISAL_FIRST_SUBJECTS, APPRAISAL_SECOND_SUBJECTS } from "@/lib/review-os/types";
 import { cn } from "@/lib/utils";
@@ -198,14 +199,6 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
     return `${shortenFileName(files[0].name)}, ${shortenFileName(files[1].name)} 외 ${files.length - 2}개`;
   };
 
-  const firstBigGap = useMemo(() => {
-    if (!structureDraft) return "";
-    const missingCandidate = structureDraft.missingIssueCandidates.find((candidate) => candidate.trim().length > 0);
-    if (missingCandidate) return missingCandidate;
-    if (structureDraft.weakLogicPoint.trim().length > 0) return structureDraft.weakLogicPoint;
-    if (structureDraft.weakParagraphPoint.trim().length > 0) return structureDraft.weakParagraphPoint;
-    return "";
-  }, [structureDraft]);
 
   const runStructure = async () => {
     if (!hasMyAnswer) {
@@ -290,6 +283,11 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
     ].join("\n");
   }, [hasMissingPointMemo, hasMyAnswer, hasProblemInput, hasReferenceAnswer, hasRevisionParagraph, missingPointMemo, revisionParagraph]);
 
+  const qualityView = useMemo(() => {
+    if (!structureDraft) return null;
+    return buildAnswerReviewQualityView(structureDraft);
+  }, [structureDraft]);
+
   useEffect(() => {
     setFeedbackCopyStatus("idle");
     setCopiedFeedbackDraftText(null);
@@ -347,7 +345,7 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
         ? "검토 완료"
         : "검토 대기";
 
-  const biggestGapFix = toShortLine(structureDraft?.rewriteTarget || structureDraft?.nextAction || "", "누락된 핵심 논점을 문단 하나로 다시 구성해 보세요.");
+  const biggestGapFix = toShortLine(structureDraft?.rewriteTarget || qualityView?.nextAction || "", "누락된 핵심 논점을 문단 하나로 다시 구성해 보세요.");
   const inputStatusSummary = `문제/사례 ${hasProblemInput ? "입력됨" : "미입력"}, 내 답안 ${hasMyAnswer ? "입력됨" : "미입력"}, 기준답안 ${
     hasReferenceAnswer ? "입력됨" : "미입력"
   }`;
@@ -666,7 +664,7 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                     <div className="space-y-1">
                       <p className="text-caption text-[color:var(--muted)]">{examMode === "second" ? "감정평가사 2차" : "감정평가사 1차"} · {subject}</p>
                       <h2 className="text-base font-semibold text-[color:var(--foreground-strong)]">답안 검토실</h2>
-                      <p className="text-caption leading-5 text-[color:var(--muted)]">{toShortLine(structureDraft?.nextAction || "", "가장 큰 간극 하나를 먼저 보강하면 다음 초안의 완성도가 올라갑니다.")}</p>
+                      <p className="text-caption leading-5 text-[color:var(--muted)]">{toShortLine(qualityView?.nextAction || "", "가장 큰 간극 하나를 먼저 보강하면 다음 초안의 완성도가 올라갑니다.")}</p>
                     </div>
                     <div className="space-y-2 text-right">
                       <p className="text-caption text-[color:var(--muted)]">상태 · {completionStatus}</p>
@@ -723,6 +721,16 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                     </div>
                   </article>
                 ) : null}
+                {qualityView && qualityView.qualityWarnings.length > 0 ? (
+                  <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] px-4 py-3">
+                    <p className="text-caption font-medium text-[color:var(--muted)]">검토 품질 확인 필요</p>
+                    <ul className="mt-1 space-y-1 text-[11px] leading-5 text-[color:var(--muted)]">
+                      {qualityView.qualityWarnings.map((warning) => (
+                        <li key={warning}>• {warning}</li>
+                      ))}
+                    </ul>
+                  </article>
+                ) : null}
                 <ResultFeedbackPrompt />
                 {viewerMode === "anonymous" && trialLimitReached ? (
                   <article className="rounded-[var(--radius-sm)] border border-[#b9a98a] bg-[#f8f4ea] px-4 py-3">
@@ -736,10 +744,10 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                     <article className="rounded-[var(--radius-md)] border border-[#27375f] bg-[linear-gradient(150deg,#f8f7f3_0%,#f3f1eb_100%)] p-5">
                       <p className="text-caption font-medium text-[#3f4c66]">가장 먼저 고칠 1가지</p>
                       <p className="mt-3 text-caption font-medium text-[#3f4c66]">가장 큰 간극</p>
-                      <p className="mt-1 text-sm font-semibold leading-6 text-[#1e2a46]">{toDetailLine(firstBigGap, "핵심 논점 입력을 보강하면 가장 큰 간극이 자동 정리됩니다.")}</p>
+                      <p className="mt-1 text-sm font-semibold leading-6 text-[#1e2a46]">{toDetailLine(qualityView?.primaryFix.gap || "", "핵심 논점 입력을 보강하면 가장 큰 간극이 자동 정리됩니다.")}</p>
                       <div className="mt-3 space-y-2 text-caption leading-5 text-[#3f4c66]">
-                        <p><span className="font-medium">왜 중요한가</span>: 채점 포인트를 놓치면 논리 전개가 맞아도 점수 회수가 어렵습니다.</p>
-                        <p><span className="font-medium">어떻게 고칠까</span>: {biggestGapFix}</p>
+                        <p><span className="font-medium">왜 중요한가</span>: {qualityView?.primaryFix.whyItMatters || "핵심 논점을 놓치면 답안의 설득력이 크게 떨어집니다."}</p>
+                        <p><span className="font-medium">어떻게 고칠까</span>: {qualityView?.primaryFix.howToFix || biggestGapFix}</p>
                       </div>
                       <motion.button whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }} type="button" onClick={() => setCurrentStep(1)} className={cn(buttonVariants({ variant: "default" }), "mt-4 h-9 px-4")}>자료 보강하기</motion.button>
                     </article>
@@ -782,17 +790,17 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                       <ul className="mt-2 space-y-1 text-caption leading-5 text-[color:var(--foreground-strong)]">
                         <li>강점 {structureDraft?.strengths.length ?? 0}개</li>
                         <li>누락 후보 {structureDraft?.missingIssueCandidates.length ?? 0}개</li>
-                        <li>다음 행동 제안 {structureDraft?.nextAction ? "있음" : "없음"}</li>
+                        <li>다음 행동 제안 {qualityView?.nextAction ? "있음" : "없음"}</li>
                       </ul>
                     </article>
                     <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
                       <p className="text-caption font-medium text-[color:var(--muted)]">답안 구조 Skeleton</p>
                       <p className="mt-1 text-caption leading-5 text-[color:var(--muted)]">문장형 답안이 아니라 목차와 필수 키워드만 정리합니다.</p>
                       <ul className="mt-2 space-y-1 text-caption leading-5 text-[color:var(--foreground-strong)]">
-                        <li>Ⅰ. 논점의 정리: {toShortLine(structureDraft?.requiredIssues || "", "핵심 논점과 기준 키워드를 1줄로 정리합니다.")}</li>
-                        <li>Ⅱ. 기준/법리: {toShortLine(structureDraft?.requiredIssues || "", "기준 문구와 법리 키워드를 빠짐없이 배치합니다.")}</li>
-                        <li>Ⅲ. 사안의 적용: {toShortLine(structureDraft?.weakParagraphPoint || structureDraft?.weakLogicPoint || "", "사안 적용 근거를 1~2문장으로 보강합니다.")}</li>
-                        <li>Ⅳ. 결론: {toShortLine(structureDraft?.rewriteTarget || structureDraft?.rewriteDraftSuggestion || "", "결론 문장을 다시 써서 마무리합니다.")}</li>
+                        <li>Ⅰ. 논점의 정리: {toShortLine(qualityView?.skeleton.issue.join(" · ") || "", "핵심 논점과 기준 키워드를 1줄로 정리합니다.")}</li>
+                        <li>Ⅱ. 기준/법리: {toShortLine(qualityView?.skeleton.rule.join(" · ") || "", "기준 문구와 법리 키워드를 빠짐없이 배치합니다.")}</li>
+                        <li>Ⅲ. 사안의 적용: {toShortLine(qualityView?.skeleton.application.join(" · ") || "", "사안 적용 근거를 1~2문장으로 보강합니다.")}</li>
+                        <li>Ⅳ. 결론: {toShortLine(qualityView?.skeleton.conclusion.join(" · ") || "", "결론 문장을 다시 써서 마무리합니다.")}</li>
                       </ul>
                     </article>
                     <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
