@@ -67,7 +67,7 @@ export default async function ReviewOsSessionPage({ searchParams }: PageProps) {
             <p className="mt-1 text-xs text-[color:var(--muted)]">다음 과제 유형: {String(savedCaptureSignals.next_task_type)}</p>
           ) : null}
           <div className="mt-3">
-            <ResultFeedbackPrompt />
+            <ResultFeedbackPrompt route="/app/session" pageContext={{ section: "saved-capture", mode }} />
           </div>
         </section>
       ) : null}
