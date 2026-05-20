@@ -1,0 +1,16 @@
+{
+  "questionSummary": "수용보상 산정 시 비교표준지 선정과 개별요인 비교를 묻는 사례형 문제",
+  "coreConcepts": ["비교표준지", "개별요인", "시점수정"],
+  "requiredIssues": "비교표준지 선정 근거와 개별요인 보정 이유를 분리해 제시",
+  "userAnswerSummary": "결론은 제시했으나 선정 근거와 적용 순서가 약함",
+  "userAnswerStructure": "결론-근거-적용 순서가 혼재",
+  "referenceStructure": "논점 정리 후 기준 제시, 사안 적용, 결론 정리",
+  "strengths": ["결론 문장 자체는 명확함"],
+  "missingIssueCandidates": ["비교표준지 선정 이유 명시"],
+  "weakParagraphPoint": "사안 적용 문단에서 개별요인 보정 근거가 빠짐",
+  "weakLogicPoint": "기준 제시 없이 결론으로 바로 이동",
+  "rewriteTarget": "사안 적용 문단",
+  "rewriteDraftSuggestion": "개별요인 보정 이유 1문장 추가 후 결론을 다시 연결",
+  "nextAction": "누락 논점 1개를 표시하고 결론 문장만 다시 쓰세요.",
+  "caution": "OCR 결과와 구조화 결과는 초안이며 검토자 확인이 필요합니다."
+}

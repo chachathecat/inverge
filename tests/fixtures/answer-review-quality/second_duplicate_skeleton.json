@@ -1,0 +1,16 @@
+{
+  "questionSummary": "비교표준지와 개별요인 적용을 묻는 사례",
+  "coreConcepts": ["비교표준지", "개별요인"],
+  "requiredIssues": "비교표준지 선정 근거와 개별요인 적용 기준 제시",
+  "userAnswerSummary": "핵심 문구 반복",
+  "userAnswerStructure": "반복",
+  "referenceStructure": "비교표준지 선정 근거와 개별요인 적용 기준 제시",
+  "strengths": [],
+  "missingIssueCandidates": ["비교표준지 선정 근거와 개별요인 적용 기준 제시"],
+  "weakParagraphPoint": "적용 문단에서 사실관계 연결 부족",
+  "weakLogicPoint": "기준 제시와 결론 연결 반복",
+  "rewriteTarget": "결론 문단",
+  "rewriteDraftSuggestion": "결론 문장 간결화",
+  "nextAction": "10분 동안 이 문단만 다시 써보세요.",
+  "caution": "초안"
+}

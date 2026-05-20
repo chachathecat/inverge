@@ -1,0 +1,16 @@
+{
+  "questionSummary": "This draft explains market approach and legal rule details in English only and keeps repeating long analytic lines.",
+  "coreConcepts": ["market approach", "adjustment matrix"],
+  "requiredIssues": "The answer should include legal standards and should provide objective evidence for each factor with expanded English discussion.",
+  "userAnswerSummary": "English analysis paragraph with multiple clauses and long references to templates.",
+  "userAnswerStructure": "Issue rule application conclusion in English prose paragraph.",
+  "referenceStructure": "Reference memo in English with broad narrative guidance.",
+  "strengths": ["Readable sentence flow"],
+  "missingIssueCandidates": ["Need to explain standard land selection with legal basis and practical constraints in detail"],
+  "weakParagraphPoint": "Application paragraph lacks concrete tie-back evidence and remains too general in narrative style.",
+  "weakLogicPoint": "Logic jumps from abstract rule to conclusion without showing intermediate analysis steps.",
+  "rewriteTarget": "Rewrite the whole body",
+  "rewriteDraftSuggestion": "Write a full model answer paragraph in polished English.",
+  "nextAction": "Review and improve overall quality after deeper study.",
+  "caution": "OCR draft only"
+}
