@@ -60,14 +60,9 @@ export async function POST(request: Request) {
         errorCode: "ANONYMOUS_TRIAL_LIMIT",
         error: ANONYMOUS_TRIAL_LIMIT_MESSAGE,
         referenceGrounding: {
-          used: referenceGrounding.references.length > 0,
-          displayLabel: referenceGrounding.displayLabel,
-          references: referenceGrounding.references.map((item) => ({
-            id: item.id,
-            exam_year: item.exam_year,
-            subject: item.subject,
-            reason: item.reason,
-          })),
+          used: false,
+          displayLabel: "",
+          references: [],
         },
         trial: { mode: "anonymous", used: 1, remaining: 0 },
       },
