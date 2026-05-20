@@ -402,6 +402,18 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
           </CardContent>
         </Card>
 
+        <Card className="border-[color:var(--border-hairline)] bg-[color:var(--bg-elevated)] shadow-none">
+          <CardHeader className="space-y-2 p-4 sm:p-5">
+            <CardTitle className="text-base sm:text-lg">문제 스냅 풀이</CardTitle>
+            <CardDescription className="max-w-[56ch]">문제 사진을 올리면 필요한 개념, 공식, 풀이 순서가 정리됩니다.</CardDescription>
+          </CardHeader>
+          <CardContent className="p-4 pt-0 sm:p-5 sm:pt-0">
+            <Link href="/problem-snap?mode=second" className="w-full">
+              <Button type="button" variant="outline" className="w-full">문제 스냅 풀이 열기</Button>
+            </Link>
+          </CardContent>
+        </Card>
+
         <div className="space-y-2">
           <HomeProofAnimation />
           <p className="text-xs text-[color:var(--muted)]">문제 스냅 → OCR 초안 → 설명 초안 → 다음 행동</p>
