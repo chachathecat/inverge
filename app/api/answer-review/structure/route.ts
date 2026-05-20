@@ -9,6 +9,7 @@ import {
   shouldSkipLearningSignalSave,
 } from "@/lib/review-os/learning-signal";
 import { reviewOsService } from "@/lib/review-os/service";
+import { buildAnswerReviewReferenceGrounding } from "@/lib/review-os/answer-review-reference-grounding";
 
 import {
   GeminiEnvError,
@@ -58,6 +59,11 @@ export async function POST(request: Request) {
         ok: false,
         errorCode: "ANONYMOUS_TRIAL_LIMIT",
         error: ANONYMOUS_TRIAL_LIMIT_MESSAGE,
+        referenceGrounding: {
+          used: false,
+          displayLabel: "",
+          references: [],
+        },
         trial: { mode: "anonymous", used: 1, remaining: 0 },
       },
       { status: 429 },
@@ -123,7 +129,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const draft = await structureAnswerReviewWithGemini({
+    const initialDraft = await structureAnswerReviewWithGemini({
       questionFiles,
       answerFiles,
       referenceFiles,
@@ -131,6 +137,27 @@ export async function POST(request: Request) {
       answerText,
       referenceText,
     });
+    const normalizedInitial = normalizeAnswerReviewStructureDraft(initialDraft);
+    const referenceGrounding = buildAnswerReviewReferenceGrounding({
+      examMode: examModeInput ?? "first",
+      subject: subjectInput,
+      questionText,
+      answerText,
+      referenceText,
+      normalizedDraft: normalizedInitial,
+    });
+    const draft =
+      referenceGrounding.references.length > 0
+        ? await structureAnswerReviewWithGemini({
+            questionFiles,
+            answerFiles,
+            referenceFiles,
+            questionText,
+            answerText,
+            referenceText,
+            referenceGroundingContext: referenceGrounding.promptContext,
+          })
+        : initialDraft;
     const normalized = normalizeAnswerReviewStructureDraft(draft);
     let learningSignalStatus: "saved" | "skipped" | "failed" = "skipped";
     const learningSignalSkipReason = shouldSkipLearningSignalSave(normalized);
@@ -158,6 +185,16 @@ export async function POST(request: Request) {
         ok: true,
         draft,
         learningSignalStatus: "skipped",
+        referenceGrounding: {
+          used: referenceGrounding.references.length > 0,
+          displayLabel: referenceGrounding.displayLabel,
+          references: referenceGrounding.references.map((item) => ({
+            id: item.id,
+            exam_year: item.exam_year,
+            subject: item.subject,
+            reason: item.reason,
+          })),
+        },
         trial: {
           mode: "anonymous",
           used: 1,
@@ -175,7 +212,21 @@ export async function POST(request: Request) {
       });
       return response;
     }
-    return NextResponse.json({ ok: true, draft, learningSignalStatus });
+    return NextResponse.json({
+      ok: true,
+      draft,
+      learningSignalStatus,
+      referenceGrounding: {
+        used: referenceGrounding.references.length > 0,
+        displayLabel: referenceGrounding.displayLabel,
+        references: referenceGrounding.references.map((item) => ({
+          id: item.id,
+          exam_year: item.exam_year,
+          subject: item.subject,
+          reason: item.reason,
+        })),
+      },
+    });
   } catch (error) {
     if (error instanceof GeminiEnvError) {
       return NextResponse.json(

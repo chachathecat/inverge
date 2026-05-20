@@ -90,6 +90,7 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
   const [structureError, setStructureError] = useState<string | null>(null);
   const [structureDraft, setStructureDraft] = useState<AnswerReviewStructureDraft | null>(null);
   const [learningSignalStatus, setLearningSignalStatus] = useState<"saved" | "skipped" | "failed" | null>(null);
+  const [referenceGrounding, setReferenceGrounding] = useState<{ used: boolean; displayLabel: string; references: Array<{ id: string; exam_year: number; subject: string; reason: string }> } | null>(null);
   const [trialLimitReached, setTrialLimitReached] = useState(false);
   const [currentStep, setCurrentStep] = useState<StepId>(1);
   const [examMode, setExamMode] = useState<AppraisalMode>(initialReviewContext.examMode);
@@ -199,7 +200,7 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
         body: formData,
       });
       const payload = (await response.json()) as
-        | { ok: true; draft: unknown; learningSignalStatus?: "saved" | "skipped" | "failed" }
+        | { ok: true; draft: unknown; learningSignalStatus?: "saved" | "skipped" | "failed"; referenceGrounding?: { used: boolean; displayLabel: string; references: Array<{ id: string; exam_year: number; subject: string; reason: string }> } }
         | { ok: false; error: string; errorCode?: string };
 
       if (!response.ok || !payload.ok) {
@@ -212,12 +213,14 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
       const normalizedDraft = normalizeAnswerReviewStructureDraft(payload.draft);
       setStructureDraft(normalizedDraft);
       setLearningSignalStatus(payload.learningSignalStatus ?? "skipped");
+      setReferenceGrounding(payload.referenceGrounding ?? null);
       setMissingPointMemo(normalizedDraft.missingIssueCandidates.join(", "));
       setRevisionParagraph(normalizedDraft.rewriteDraftSuggestion);
       setCurrentStep(2);
     } catch (error) {
       setStructureDraft(null);
       setLearningSignalStatus(null);
+      setReferenceGrounding(null);
       setStructureError(
         error instanceof Error
           ? error.message
@@ -640,6 +643,13 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                       <h2 className="text-base font-semibold text-[color:var(--foreground-strong)]">답안 검토실</h2>
                       <p className="text-caption leading-5 text-[color:var(--muted)]">{toShortLine(qualityView?.nextAction || "", "가장 큰 간극 하나를 먼저 보강하면 다음 초안의 완성도가 올라갑니다.")}</p>
                     </div>
+                {referenceGrounding?.used ? (
+                  <p className="mt-2 text-caption text-[color:var(--muted)]">
+                    유사 기출 Skeleton을 참고해 검토했습니다. {referenceGrounding.displayLabel}
+                  </p>
+                ) : qualityView ? (
+                  <p className="mt-2 text-caption text-[color:var(--muted)]">유사 기출 reference 없이 입력 자료 기준으로 검토했습니다.</p>
+                ) : null}
                     <div className="space-y-2 text-right">
                       <p className="text-caption text-[color:var(--muted)]">상태 · {completionStatus}</p>
                       <button type="button" onClick={() => setCurrentStep(1)} className={cn(buttonVariants({ variant: "default" }), "h-9 px-4")}>
