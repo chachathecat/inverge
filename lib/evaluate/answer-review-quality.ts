@@ -6,6 +6,14 @@ type PrimaryFix = {
   howToFix: string;
 };
 
+type Explanation = {
+  title: string;
+  summary: string;
+  keyTerms: string[];
+  steps: string[];
+  examHints: string[];
+};
+
 type Skeleton = {
   issue: string[];
   rule: string[];
@@ -15,6 +23,7 @@ type Skeleton = {
 
 export type AnswerReviewQualityView = {
   primaryFix: PrimaryFix;
+  explanation: Explanation;
   skeleton: Skeleton;
   nextAction: string;
   qualityWarnings: string[];
@@ -128,6 +137,18 @@ export function buildAnswerReviewQualityView(draft: AnswerReviewStructureDraft):
     "10분 동안 이 문단만 다시 써보세요.",
   );
 
+  const keyTermExplanations = draft.keyTermExplanations ?? [];
+  const stepByStepExplanation = draft.stepByStepExplanation ?? [];
+  const examAnswerHints = draft.examAnswerHints ?? [];
+
+  const explanation: Explanation = {
+    title: examAnswerHints.length > 0 ? "시험답안식 보강 포인트" : "핵심 해설",
+    summary: fallbackIfNeeded(draft.plainExplanation ?? "", "핵심 이유를 한 줄로 정리하고 적용 순서대로 보강하세요.", warnings),
+    keyTerms: uniqueBullets(keyTermExplanations, "필수 용어 1개를 쉬운 말로 다시 확인하세요."),
+    steps: uniqueBullets(stepByStepExplanation, "논점 분리 → 기준 확인 → 적용 문장 보강 순서로 정리하세요."),
+    examHints: uniqueBullets([...examAnswerHints, ...draft.missingIssueCandidates], "목차와 필수 키워드를 먼저 배치하세요."),
+  };
+
   const nextAction = fallbackIfNeeded(
     draft.nextAction,
     "10분 동안 이 문단만 다시 써보세요.",
@@ -140,6 +161,7 @@ export function buildAnswerReviewQualityView(draft: AnswerReviewStructureDraft):
       whyItMatters: trimTo(primaryFix.whyItMatters),
       howToFix: trimTo(primaryFix.howToFix),
     },
+    explanation,
     skeleton: {
       issue,
       rule: safeRule,

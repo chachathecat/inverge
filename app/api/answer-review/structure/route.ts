@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 
 import { getServerSessionUser } from "@/lib/auth/session";
-import { normalizeAnswerReviewStructureDraft } from "@/lib/evaluate/answer-review-structure";
+import {
+  normalizeAnswerReviewStructureDraft,
+  type AnswerReviewExplanationLevel,
+} from "@/lib/evaluate/answer-review-structure";
 import { parseAppraisalMode } from "@/lib/review-os/appraisal";
 import {
   buildAnswerReviewLearningSignalInput,
@@ -36,6 +39,12 @@ const INPUT_QUALITY_MESSAGE = "검토에 필요한 정보가 부족합니다. �
 const ANONYMOUS_TRIAL_COOKIE = "anonymous_answer_review_trial";
 const ANONYMOUS_TRIAL_LIMIT_MESSAGE =
   "오늘 무료 검토 1회를 사용했습니다. 계정을 만들면 기록 저장과 복습 큐 연결을 사용할 수 있습니다.";
+
+
+function normalizeExplanationLevel(value: string | null | undefined): AnswerReviewExplanationLevel {
+  if (value === "easy" || value === "exam") return value;
+  return "standard";
+}
 
 function getFiles(formData: FormData, fieldName: string) {
   return formData.getAll(fieldName).filter((item): item is File => item instanceof File && item.size > 0);
@@ -87,6 +96,7 @@ export async function POST(request: Request) {
   const referenceText = formData.get("referenceText")?.toString() ?? "";
   const examModeInput = parseAppraisalMode(formData.get("examMode")?.toString() ?? null);
   const subjectInput = formData.get("subject")?.toString() ?? "";
+  const explanationLevel = normalizeExplanationLevel(formData.get("explanationLevel")?.toString());
 
   if (answerFiles.length === 0 && !answerText.trim()) {
     return NextResponse.json(
@@ -136,6 +146,7 @@ export async function POST(request: Request) {
       questionText,
       answerText,
       referenceText,
+      explanationLevel,
     });
     const normalizedInitial = normalizeAnswerReviewStructureDraft(initialDraft);
     const referenceGrounding = buildAnswerReviewReferenceGrounding({
@@ -156,6 +167,7 @@ export async function POST(request: Request) {
             answerText,
             referenceText,
             referenceGroundingContext: referenceGrounding.promptContext,
+            explanationLevel,
           })
         : initialDraft;
     const normalized = normalizeAnswerReviewStructureDraft(draft);
@@ -185,6 +197,7 @@ export async function POST(request: Request) {
         ok: true,
         draft,
         learningSignalStatus: "skipped",
+        explanationLevel,
         referenceGrounding: {
           used: referenceGrounding.references.length > 0,
           displayLabel: referenceGrounding.displayLabel,
@@ -216,6 +229,7 @@ export async function POST(request: Request) {
       ok: true,
       draft,
       learningSignalStatus,
+      explanationLevel,
       referenceGrounding: {
         used: referenceGrounding.references.length > 0,
         displayLabel: referenceGrounding.displayLabel,

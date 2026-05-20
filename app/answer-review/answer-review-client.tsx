@@ -11,6 +11,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
   normalizeAnswerReviewStructureDraft,
+  type AnswerReviewExplanationLevel,
   type AnswerReviewStructureDraft,
 } from "@/lib/evaluate/answer-review-structure";
 import { buildAnswerReviewQualityView } from "@/lib/evaluate/answer-review-quality";
@@ -96,6 +97,7 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
   const [examMode, setExamMode] = useState<AppraisalMode>(initialReviewContext.examMode);
   const [subject, setSubject] = useState<string>(initialReviewContext.subject);
   const [showExampleAnswer, setShowExampleAnswer] = useState(false);
+  const [explanationLevel, setExplanationLevel] = useState<AnswerReviewExplanationLevel>("standard");
   const answerCameraInputRef = useRef<HTMLInputElement | null>(null);
   const problemCameraInputRef = useRef<HTMLInputElement | null>(null);
   const generalFileInputRef = useRef<HTMLInputElement | null>(null);
@@ -194,6 +196,7 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
       formData.set("referenceText", referenceAnswerText);
       formData.set("examMode", examMode);
       formData.set("subject", normalizeSubjectForMode(subject, examMode));
+      formData.set("explanationLevel", explanationLevel);
 
       const response = await fetch("/api/answer-review/structure", {
         method: "POST",
@@ -264,6 +267,8 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
     if (!structureDraft) return null;
     return buildAnswerReviewQualityView(structureDraft);
   }, [structureDraft]);
+
+  const explanationTitle = explanationLevel === "easy" ? "쉽게 풀이" : explanationLevel === "exam" ? "시험답안식 보강 포인트" : "핵심 해설";
 
   useEffect(() => {
     setFeedbackCopyStatus("idle");
@@ -589,7 +594,17 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                     </div>
                   </article>
                   <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
-                    <p className="text-caption leading-5 text-[color:var(--muted)]">
+                    <p className="text-caption font-medium text-[color:var(--muted)]">해설 난이도</p>
+                    <div className="mt-2 grid gap-2">
+                      {[{value:"easy",label:"쉽게 풀이"},{value:"standard",label:"기본 해설"},{value:"exam",label:"시험답안식"}].map((option)=>(
+                        <label key={option.value} className="flex items-center gap-2 text-caption text-[color:var(--foreground-strong)]">
+                          <input type="radio" name="explanationLevel" value={option.value} checked={explanationLevel===option.value} onChange={() => setExplanationLevel(option.value as AnswerReviewExplanationLevel)} />
+                          <span>{option.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                    <p className="mt-2 text-[11px] leading-5 text-[color:var(--muted)]">쉬운 풀이는 이해용이고, Skeleton은 답안 작성용입니다.</p>
+                    <p className="mt-2 text-caption leading-5 text-[color:var(--muted)]">
                       내 답안만 있어도 검토를 시작할 수 있습니다.
                     </p>
                     <motion.button
@@ -734,6 +749,32 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                         <p><span className="font-medium">어떻게 고칠까</span>: {qualityView?.primaryFix.howToFix || biggestGapFix}</p>
                       </div>
                       <motion.button whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }} type="button" onClick={() => setCurrentStep(1)} className={cn(buttonVariants({ variant: "default" }), "mt-4 h-9 px-4")}>자료 보강하기</motion.button>
+                    </article>
+
+
+
+                    <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
+                      <p className="text-caption font-medium text-[color:var(--muted)]">{explanationTitle}</p>
+                      {explanationLevel === "easy" ? (
+                        <div className="mt-2 space-y-2 text-caption leading-6 text-[color:var(--foreground-strong)]">
+                          <p><span className="font-medium">한 줄 요약</span>: {toDetailLine(qualityView?.explanation.summary || "", "핵심 이유를 쉬운 말로 먼저 정리해 보세요.")}</p>
+                          <details><summary>용어 쉽게 풀기</summary><ul>{(qualityView?.explanation.keyTerms ?? []).map((item)=><li key={item}>• {item}</li>)}</ul></details>
+                          <details><summary>단계별 풀이</summary><ul>{(qualityView?.explanation.steps ?? []).map((item)=><li key={item}>• {item}</li>)}</ul></details>
+                          <p><span className="font-medium">그래서 지금 고칠 것</span>: {toShortLine(qualityView?.nextAction || "", "누락 논점 1개를 먼저 보강하세요.")}</p>
+                        </div>
+                      ) : explanationLevel === "exam" ? (
+                        <ul className="mt-2 space-y-2 text-caption leading-6 text-[color:var(--foreground-strong)]">
+                          <li>• 답안 목차 보강: {toShortLine(qualityView?.skeleton.issue.join(" · ") || "", "논점 목차를 먼저 정리하세요.")}</li>
+                          <li>• 필수 키워드: {toShortLine((qualityView?.explanation.examHints ?? []).join(" · ") || "", "필수 키워드 누락 여부를 확인하세요.")}</li>
+                          <li>• 문단 보강 포인트: {toShortLine(qualityView?.primaryFix.howToFix || "", "적용 문장을 한 줄 보강하세요.")}</li>
+                        </ul>
+                      ) : (
+                        <ul className="mt-2 space-y-2 text-caption leading-6 text-[color:var(--foreground-strong)]">
+                          <li>• 핵심 이유: {toShortLine(qualityView?.explanation.summary || "", "핵심 이유를 먼저 정리하세요.")}</li>
+                          <li>• 적용 순서: {toShortLine((qualityView?.explanation.steps ?? []).join(" → ") || "", "논점 분리 후 적용 순서대로 보강하세요.")}</li>
+                          <li>• 보강 포인트: {toShortLine((qualityView?.explanation.examHints ?? []).join(" · ") || "", "보강 포인트 1개를 실행하세요.")}</li>
+                        </ul>
+                      )}
                     </article>
 
                     <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
