@@ -14,6 +14,7 @@ import { buildNotebookPreview } from "@/lib/review-os/study-note";
 import { APPRAISAL_FIRST_SUBJECTS } from "@/lib/review-os/types";
 import { buildTodayPlanCard, type TodayPlanActionKind } from "@/lib/review-os/today-plan";
 import { buildTodayPlanTasks } from "@/lib/review-os/today-plan-engine";
+import { buildWeaknessDiagnostic } from "@/lib/review-os/weakness-diagnostics";
 
 const FIRST_MODE_INPUT_OPTIONS = [
   {
@@ -116,6 +117,14 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
   const diagnosedWeakPoint = selectedQueueItem?.mistakeType ?? (items[0] ? buildNotebookPreview(items[0]).weakPoint : config.emptyTitle);
   const notebookPreview = items.slice(0, 3).map((item) => buildNotebookPreview(item));
   const shouldShowFirstSubjectSelector = mode === "first" && isFirstSetStart;
+  const weaknessDiagnostic = buildWeaknessDiagnostic({
+    learningSignalSummary: learningSignal,
+    learningSignalEvents: learningSignalEvents,
+    reviewQueue: queue,
+    wrongAnswerItems: items,
+    mode,
+  });
+  const hasWeaknessDiagnostic = weaknessDiagnostic.topWeaknesses.length > 0 || weaknessDiagnostic.repeatedSignalCount > 0;
   const recentStudyTaxonomyCandidates = recentStudyLog?.taxonomyCandidates ?? [];
   const recentStudyTaxonomyNodeId = recentStudyLog?.taxonomyNodeId ?? null;
   const recentStudyTaxonomyCandidate =
@@ -338,6 +347,43 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
         )}
 
 
+
+      <section className="space-y-3">
+        {hasWeaknessDiagnostic ? (
+          <Card className="border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] shadow-none">
+            <CardHeader className="space-y-2 p-4 sm:p-5">
+              <CardTitle className="text-base sm:text-lg">이번 주 약점 신호</CardTitle>
+              <CardDescription>{weaknessDiagnostic.primaryDiagnosticLine}</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-3 p-4 pt-0 sm:grid-cols-3 sm:p-5 sm:pt-0">
+              <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-3 py-3">
+                <p className="text-xs text-[color:var(--muted)]">가장 많이 반복된 약점</p>
+                <p className="mt-1 text-sm text-[color:var(--foreground-strong)]">{weaknessDiagnostic.topWeaknesses[0]?.reason ?? "반복 약점 신호를 수집 중입니다."}</p>
+              </div>
+              <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-3 py-3">
+                <p className="text-xs text-[color:var(--muted)]">다시 볼 과목</p>
+                <p className="mt-1 text-sm text-[color:var(--foreground-strong)]">{weaknessDiagnostic.weakestSubject ?? "기록이 더 쌓이면 표시됩니다."}</p>
+              </div>
+              <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-3 py-3">
+                <p className="text-xs text-[color:var(--muted)]">오늘 줄일 실수</p>
+                <p className="mt-1 text-sm text-[color:var(--foreground-strong)]">{weaknessDiagnostic.nextActionLine}</p>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] shadow-none">
+            <CardHeader className="space-y-2 p-4 sm:p-5">
+              <CardTitle className="text-base sm:text-lg">아직 진단할 기록이 없습니다.</CardTitle>
+              <CardDescription>기록을 하나 남기면 반복 약점과 다음 행동이 정리됩니다.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-4 pt-0 sm:p-5 sm:pt-0">
+              <Link href={firstCaptureHref} className="inline-flex text-sm font-medium text-[color:var(--foreground-strong)] underline underline-offset-2">
+                오늘 한 것 올리기
+              </Link>
+            </CardContent>
+          </Card>
+        )}
+      </section>
 
       <section className="grid gap-4 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
         <Card className="border-[color:var(--border-hairline)] bg-[color:var(--bg-elevated)] shadow-none">

@@ -120,6 +120,7 @@ export default async function ReviewOsItemsPage({ searchParams }: PageProps) {
                     {item.subjectLabel} · {item.confidence}
                   </p>
                   <p className="mt-1 text-sm text-[color:var(--muted)]">다음 행동: {formatNextAction(item)}</p>
+                  <p className="mt-1 text-xs text-[color:var(--muted)]">이 항목은 반복 약점 신호에 반영됩니다.</p>
                   <Link
                     href={`/app/items/${item.id}?mode=${mode}`}
                     className="mt-2 inline-flex text-sm font-medium text-[color:var(--foreground-strong)] underline-offset-4 hover:underline"
