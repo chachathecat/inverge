@@ -712,10 +712,14 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                 {viewerMode === "anonymous" && structureDraft ? (
                   <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] px-4 py-3">
                     <p className="text-caption font-medium text-[color:var(--foreground-strong)]">검토 결과가 준비되었습니다.</p>
-                    <p className="mt-1 text-caption leading-5 text-[color:var(--muted)]">베타 계정으로 저장하면 복습 큐와 오늘 계획에 연결됩니다.</p>
+                    <ul className="mt-1 space-y-1 text-caption leading-5 text-[color:var(--muted)]">
+                      <li>• 이 결과가 약점 신호에 누적됩니다.</li>
+                      <li>• 복습 큐에 들어갑니다.</li>
+                      <li>• 오늘 계획에 반영됩니다.</li>
+                    </ul>
                     <div className="mt-2 flex flex-wrap gap-2">
                       <Link href="/login?returnTo=%2Fanswer-review%3Fmode%3Dsecond" className={cn(buttonVariants({ variant: "default" }), "h-8 px-3 text-xs")}>계정 만들고 기록 저장</Link>
-                      <button type="button" className={cn(buttonVariants({ variant: "outline" }), "h-8 px-3 text-xs")} onClick={() => setCurrentStep(2)}>계속 보기</button>
+                      <button type="button" className={cn(buttonVariants({ variant: "outline" }), "h-8 px-3 text-xs")} onClick={() => setCurrentStep(2)}>결과만 계속 보기</button>
                     </div>
                   </article>
                 ) : null}
@@ -730,11 +734,12 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                 <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
                   <div className="space-y-4">
                     <article className="rounded-[var(--radius-md)] border border-[#27375f] bg-[linear-gradient(150deg,#f8f7f3_0%,#f3f1eb_100%)] p-5">
-                      <p className="text-caption font-medium text-[#3f4c66]">가장 큰 간극</p>
-                      <p className="mt-2 text-sm font-semibold leading-6 text-[#1e2a46]">{toDetailLine(firstBigGap, "핵심 논점 입력을 보강하면 가장 큰 간극이 자동 정리됩니다.")}</p>
-                      <div className="mt-3 space-y-1 text-caption leading-5 text-[#3f4c66]">
-                        <p>왜 중요한가: 채점 포인트를 놓치면 논리 전개가 맞아도 점수 회수가 어렵습니다.</p>
-                        <p>어떻게 고칠까: {biggestGapFix}</p>
+                      <p className="text-caption font-medium text-[#3f4c66]">가장 먼저 고칠 1가지</p>
+                      <p className="mt-3 text-caption font-medium text-[#3f4c66]">가장 큰 간극</p>
+                      <p className="mt-1 text-sm font-semibold leading-6 text-[#1e2a46]">{toDetailLine(firstBigGap, "핵심 논점 입력을 보강하면 가장 큰 간극이 자동 정리됩니다.")}</p>
+                      <div className="mt-3 space-y-2 text-caption leading-5 text-[#3f4c66]">
+                        <p><span className="font-medium">왜 중요한가</span>: 채점 포인트를 놓치면 논리 전개가 맞아도 점수 회수가 어렵습니다.</p>
+                        <p><span className="font-medium">어떻게 고칠까</span>: {biggestGapFix}</p>
                       </div>
                       <motion.button whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }} type="button" onClick={() => setCurrentStep(1)} className={cn(buttonVariants({ variant: "default" }), "mt-4 h-9 px-4")}>자료 보강하기</motion.button>
                     </article>
@@ -778,6 +783,16 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                         <li>강점 {structureDraft?.strengths.length ?? 0}개</li>
                         <li>누락 후보 {structureDraft?.missingIssueCandidates.length ?? 0}개</li>
                         <li>다음 행동 제안 {structureDraft?.nextAction ? "있음" : "없음"}</li>
+                      </ul>
+                    </article>
+                    <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
+                      <p className="text-caption font-medium text-[color:var(--muted)]">답안 구조 Skeleton</p>
+                      <p className="mt-1 text-caption leading-5 text-[color:var(--muted)]">문장형 답안이 아니라 목차와 필수 키워드만 정리합니다.</p>
+                      <ul className="mt-2 space-y-1 text-caption leading-5 text-[color:var(--foreground-strong)]">
+                        <li>Ⅰ. 논점의 정리: {toShortLine(structureDraft?.requiredIssues || "", "핵심 논점과 기준 키워드를 1줄로 정리합니다.")}</li>
+                        <li>Ⅱ. 기준/법리: {toShortLine(structureDraft?.requiredIssues || "", "기준 문구와 법리 키워드를 빠짐없이 배치합니다.")}</li>
+                        <li>Ⅲ. 사안의 적용: {toShortLine(structureDraft?.weakParagraphPoint || structureDraft?.weakLogicPoint || "", "사안 적용 근거를 1~2문장으로 보강합니다.")}</li>
+                        <li>Ⅳ. 결론: {toShortLine(structureDraft?.rewriteTarget || structureDraft?.rewriteDraftSuggestion || "", "결론 문장을 다시 써서 마무리합니다.")}</li>
                       </ul>
                     </article>
                     <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
