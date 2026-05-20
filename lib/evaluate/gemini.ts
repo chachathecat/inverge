@@ -105,6 +105,7 @@ type AnswerReviewStructureInput = {
   questionText: string;
   answerText: string;
   referenceText: string;
+  referenceGroundingContext?: string;
 };
 
 type SecondGradingInput = {
@@ -160,6 +161,7 @@ export async function structureAnswerReviewWithGemini({
   questionText,
   answerText,
   referenceText,
+  referenceGroundingContext,
 }: AnswerReviewStructureInput): Promise<AnswerReviewStructureDraft> {
   const model = createModel();
   const questionParts = await Promise.all(questionFiles.map((file) => fileToPart(file)));
@@ -192,6 +194,12 @@ export async function structureAnswerReviewWithGemini({
               `answerText:\n${answerText.trim() || "[없음]"}`,
               "",
               `referenceText:\n${referenceText.trim() || "[없음]"}`,
+              "",
+              `referenceGroundingContext:
+${referenceGroundingContext?.trim() || "유사 기출 reference 없음. 입력 자료만 기준으로 검토하세요."}`,
+              "다음은 참고용 유사 기출 Skeleton/채점 포인트 후보입니다. reference_only 자료이며 공식 답안이 아니며 입력 자료를 우선하세요.",
+              "원문 복사 금지. 누락 논점, Skeleton, common gaps, next action 보강에만 사용한다.",
+              "문맥이 부족하거나 충돌하면 ‘검토 필요’로 표시한다.",
               "",
               "이후에 questionFiles, answerFiles, referenceFiles 순서의 첨부가 이어진다.",
             ].join("\n"),
