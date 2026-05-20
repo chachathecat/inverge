@@ -74,6 +74,15 @@ export function FrontPage() {
               >
                 답안 검토실 무료 체험
               </Link>
+              <Link
+                href="/problem-snap?mode=second"
+                className={cn(
+                  buttonVariants({ variant: "ghost" }),
+                  "h-10 w-full px-4 sm:w-auto text-[color:var(--foreground-strong)]"
+                )}
+              >
+                문제 스냅 풀이
+              </Link>
             </div>
             <p className="text-sm text-[color:var(--muted)]">감정평가사 1차/2차 입력 화면으로 바로 이동합니다.</p>
             <p className="text-sm text-[color:var(--muted)]">로그인 없이 오늘 1회 검토해볼 수 있습니다.</p>

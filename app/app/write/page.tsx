@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 
 import { WrongAnswerCaptureForm } from "@/components/review-os/capture-form";
 import { ReviewOsFeedbackButton } from "@/components/review-os/feedback-button";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { resolveAppraisalMode } from "@/lib/review-os/appraisal";
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
@@ -30,7 +29,7 @@ export default async function ReviewOsWritePage({ searchParams }: PageProps) {
           <p className="mt-2 max-w-2xl text-sm leading-7 text-[color:var(--muted)]">
             사진/PDF 검토와 새 답안 작성을 같은 흐름에서 선택할 수 있습니다. 먼저 스냅 검토로 누락 논점을 확인하고 작성으로 이어가세요.
           </p>
-          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          <div className="mt-4 grid gap-3 sm:grid-cols-4">
             <Link href="/answer-review?mode=second" className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-4 py-3 transition hover:border-[color:var(--border-strong)]">
               <p className="text-sm font-medium text-[color:var(--foreground-strong)]">답안 스냅 검토</p>
               <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">이미 쓴 답안을 찍어 누락 논점과 다시 쓸 문장을 확인합니다.</p>
@@ -40,6 +39,11 @@ export default async function ReviewOsWritePage({ searchParams }: PageProps) {
               <p className="text-sm font-medium text-[color:var(--foreground-strong)]">사례 스캔</p>
               <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">문제/사례를 찍어 조건과 요구사항을 먼저 정리합니다.</p>
               <p className="mt-1 text-[11px] leading-5 text-[color:var(--muted)]">답안 검토실에서 바로 열립니다</p>
+            </Link>
+            <Link href="/problem-snap?mode=second" className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-4 py-3 transition hover:border-[color:var(--border-strong)]">
+              <p className="text-sm font-medium text-[color:var(--foreground-strong)]">문제 먼저 이해하기</p>
+              <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">문제/사례를 찍고 풀이 흐름을 확인합니다.</p>
+              <p className="mt-1 text-[11px] leading-5 text-[color:var(--muted)]">개념·공식·풀이 순서를 먼저 정리합니다</p>
             </Link>
             <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] px-4 py-3">
               <p className="text-sm font-medium text-[color:var(--foreground-strong)]">새 답안 작성</p>
