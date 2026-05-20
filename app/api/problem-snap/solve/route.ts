@@ -2,11 +2,13 @@ import { NextResponse } from "next/server";
 import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 
 import { buildAnswerReviewReferenceGrounding } from "@/lib/review-os/answer-review-reference-grounding";
-import { buildCasioFx9860GiiiGuide } from "@/lib/evaluate/casio-fx9860giii-guide";
+import {
+  buildCasioFx9860GiiiGuide,
+  BuildCasioFx9860GiiiGuideInput,
+  isCasioFx9860GiiiMode,
+} from "@/lib/evaluate/casio-fx9860giii-guide";
 
 export const dynamic = "force-dynamic";
-
-const CASIO_MODES = new Set(["RUN-MAT", "EQUA", "MAT", "STAT", "TVM", "Spreadsheet", "검토 필요"]);
 
 function getFiles(formData: FormData, fieldName: string) {
   return formData.getAll(fieldName).filter((item): item is File => item instanceof File && item.size > 0);
@@ -102,19 +104,32 @@ export async function POST(request: Request) {
   const result = JSON.parse(response.response.text() || "{}") as Record<string, unknown>;
   const rawGuide = (result.calculatorGuide ?? {}) as Record<string, unknown>;
   const rawSteps = Array.isArray(rawGuide.keystrokeSteps) ? rawGuide.keystrokeSteps.filter((step): step is string => typeof step === "string") : [];
-  const hasCalculationNeed = rawSteps.length > 0;
-  result.calculatorGuide = buildCasioFx9860GiiiGuide(hasCalculationNeed
-    ? {
-      calculationPurpose: typeof rawGuide.calculationPurpose === "string" ? rawGuide.calculationPurpose : undefined,
-      recommendedMode: typeof rawGuide.recommendedMode === "string" && CASIO_MODES.has(rawGuide.recommendedMode) ? rawGuide.recommendedMode : undefined,
+  const hasCalculationSignal = rawSteps.length > 0
+    || typeof rawGuide.calculationPurpose === "string"
+    || isCasioFx9860GiiiMode(rawGuide.recommendedMode);
+  if (hasCalculationSignal) {
+    const guideInput: BuildCasioFx9860GiiiGuideInput = {
       keystrokeSteps: rawSteps,
-      expectedDisplay: typeof rawGuide.expectedDisplay === "string" ? rawGuide.expectedDisplay : undefined,
-      answerRounding: typeof rawGuide.answerRounding === "string" ? rawGuide.answerRounding : undefined,
+    };
+    if (typeof rawGuide.calculationPurpose === "string") {
+      guideInput.calculationPurpose = rawGuide.calculationPurpose;
     }
-    : {
+    if (isCasioFx9860GiiiMode(rawGuide.recommendedMode)) {
+      guideInput.recommendedMode = rawGuide.recommendedMode;
+    }
+    if (typeof rawGuide.expectedDisplay === "string") {
+      guideInput.expectedDisplay = rawGuide.expectedDisplay;
+    }
+    if (typeof rawGuide.answerRounding === "string") {
+      guideInput.answerRounding = rawGuide.answerRounding;
+    }
+    result.calculatorGuide = buildCasioFx9860GiiiGuide(guideInput);
+  } else {
+    result.calculatorGuide = buildCasioFx9860GiiiGuide({
       recommendedMode: "검토 필요",
       calculationPurpose: "계산기 입력이 필요한 문제인지 검토가 필요합니다.",
       keystrokeSteps: ["계산기 입력 없음"],
     });
+  }
   return NextResponse.json({ ok: true, result, referenceGrounding: { used: referenceGrounding.references.length > 0, displayLabel: referenceGrounding.displayLabel } });
 }
