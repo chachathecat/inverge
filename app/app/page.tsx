@@ -352,7 +352,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
         {hasWeaknessDiagnostic ? (
           <Card className="border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] shadow-none">
             <CardHeader className="space-y-2 p-4 sm:p-5">
-              <CardTitle className="text-base sm:text-lg">이번 주 약점 신호</CardTitle>
+              <CardTitle className="text-base sm:text-lg">내 답안에서 반복되는 약점</CardTitle>
               <CardDescription>{weaknessDiagnostic.primaryDiagnosticLine}</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-3 p-4 pt-0 sm:grid-cols-3 sm:p-5 sm:pt-0">
