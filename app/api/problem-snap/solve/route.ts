@@ -76,6 +76,11 @@ export async function POST(request: Request) {
       responseSchema: {
         type: SchemaType.OBJECT,
         properties: {
+          problemSummaryDraft: { type: SchemaType.STRING },
+          askTypeDraft: { type: SchemaType.STRING },
+          extractedConditions: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+          extractedNumbersAndUnits: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+          missingOrUnclearParts: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
           problemSummary: { type: SchemaType.STRING }, askType: { type: SchemaType.STRING },
           requiredConcepts: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
           formulas: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
@@ -102,6 +107,21 @@ export async function POST(request: Request) {
   });
 
   const result = JSON.parse(response.response.text() || "{}") as Record<string, unknown>;
+  if (typeof result.problemSummaryDraft !== "string") {
+    result.problemSummaryDraft = problemText.trim() ? problemText.trim().slice(0, 120) : "확인 필요";
+  }
+  if (typeof result.askTypeDraft !== "string") {
+    result.askTypeDraft = typeof result.askType === "string" && result.askType.trim() ? result.askType : "확인 필요";
+  }
+  if (!Array.isArray(result.extractedConditions)) {
+    result.extractedConditions = [problemFiles.length > 0 ? `파일 ${problemFiles.length}개 제출` : "확인 필요"];
+  }
+  if (!Array.isArray(result.extractedNumbersAndUnits)) {
+    result.extractedNumbersAndUnits = ["확인 필요"];
+  }
+  if (!Array.isArray(result.missingOrUnclearParts)) {
+    result.missingOrUnclearParts = [problemText.trim() ? "원문 대조 확인 필요" : "문제 텍스트 확인 필요"];
+  }
   const rawGuide = (result.calculatorGuide ?? {}) as Record<string, unknown>;
   const rawSteps = Array.isArray(rawGuide.keystrokeSteps) ? rawGuide.keystrokeSteps.filter((step): step is string => typeof step === "string") : [];
   const hasCalculationSignal = rawSteps.length > 0

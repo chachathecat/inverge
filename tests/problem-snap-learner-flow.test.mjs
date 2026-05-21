@@ -25,6 +25,19 @@ test("problem snap result hero, save CTA, and grounding copy are rendered", asyn
   assert.equal(source.includes("<button disabled className"), false);
 });
 
+test("recognition confirmation, file remove/retake, and save states labels exist", async () => {
+  const source = await readFile(new URL("../app/problem-snap/problem-snap-client.tsx", import.meta.url), "utf8");
+  ["문제 인식 확인", "인식 내용 확정", "삭제", "다시 찍기", "저장 중", "저장됨", "저장 실패", "로컬 임시 저장"].forEach((label) =>
+    assert.ok(source.includes(label), `Missing ${label}`),
+  );
+});
+
+test("quality checklist is dynamic statuses instead of static only 확인 필요", async () => {
+  const source = await readFile(new URL("../app/problem-snap/problem-snap-client.tsx", import.meta.url), "utf8");
+  assert.ok(source.includes("정상"));
+  assert.ok(source.includes("해당 없음"));
+});
+
 test("problem snap learner copy avoids endorsement, grading, and payment claims", async () => {
   const source = await readFile(new URL("../app/problem-snap/problem-snap-client.tsx", import.meta.url), "utf8");
   assert.equal(source.includes("공식 보증"), false);
