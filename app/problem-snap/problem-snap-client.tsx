@@ -1,10 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
+import { RefinedShell } from "@/components/inverge/refined-primitives";
+import { ResultFeedbackPrompt } from "@/components/shared/result-feedback-prompt";
+import { buttonVariants } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 import type { AppraisalMode } from "@/lib/review-os/appraisal";
 
 type ExplanationLevel = "easy" | "standard" | "exam";
+
 type ProblemSnapResult = {
   calculatorGuide: {
     calculatorModel: "CASIO fx-9860GIII";
@@ -27,21 +33,38 @@ type ProblemSnapResult = {
   caution: string;
 };
 
+const SECOND_SUBJECTS = ["감정평가실무", "감정평가이론", "감정평가 및 보상법규"] as const;
+const FIRST_SUBJECTS = ["민법", "회계학", "경제학", "감정평가관계법규"] as const;
+
 export default function ProblemSnapClientPage({ initialExamMode }: { initialExamMode: AppraisalMode }) {
   const [examMode, setExamMode] = useState<AppraisalMode>(initialExamMode);
-  const [subject, setSubject] = useState("감정평가실무");
+  const [subject, setSubject] = useState<string>(initialExamMode === "first" ? FIRST_SUBJECTS[0] : SECOND_SUBJECTS[0]);
   const [explanationLevel, setExplanationLevel] = useState<ExplanationLevel>("standard");
   const [problemText, setProblemText] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<ProblemSnapResult | null>(null);
+  const [referenceGrounding, setReferenceGrounding] = useState<{ used: boolean; displayLabel: string } | null>(null);
+  const [savedLocal, setSavedLocal] = useState(false);
+
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const cameraInputRef = useRef<HTMLInputElement | null>(null);
+
+  const subjects = examMode === "first" ? FIRST_SUBJECTS : SECOND_SUBJECTS;
 
   const resultHeading = useMemo(() => {
     if (explanationLevel === "easy") return "쉽게 풀이";
     if (explanationLevel === "exam") return "시험답안식 풀이";
     return "기본 해설";
   }, [explanationLevel]);
+
+  const showCalculatorGuide = useMemo(() => {
+    if (!result) return false;
+    const hasSignal = result.calculatorGuide.keystrokeSteps.some((step) => step && step !== "계산기 입력 없음")
+      || result.calculatorGuide.recommendedMode !== "검토 필요";
+    return subject === "감정평가실무" || hasSignal;
+  }, [result, subject]);
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -59,6 +82,7 @@ export default function ProblemSnapClientPage({ initialExamMode }: { initialExam
       const json = await response.json();
       if (!response.ok || !json.ok) throw new Error(json.error ?? "문제 풀이를 생성하지 못했습니다.");
       setResult(json.result);
+      setReferenceGrounding(json.referenceGrounding ?? null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "문제 풀이를 생성하지 못했습니다.");
     } finally {
@@ -67,70 +91,84 @@ export default function ProblemSnapClientPage({ initialExamMode }: { initialExam
   }
 
   return (
-    <main className="mx-auto max-w-4xl space-y-5 px-4 py-8">
-      <h1 className="text-2xl font-semibold">문제 스냅 풀이</h1>
-      <p className="text-sm text-[color:var(--muted)]">사진으로 문제를 올리면 개념·공식·풀이 순서를 쉽게 정리합니다.</p>
-      <form onSubmit={onSubmit} className="space-y-4 rounded-[var(--radius-md)] border p-4">
+    <RefinedShell className="space-y-6 py-6 sm:py-10">
+      <section className="space-y-2 rounded-[var(--radius-xl)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-5">
+        <p className="text-xs text-[color:var(--muted)]">문제 스냅 튜터 · 단계 1/2</p>
+        <h1 className="text-2xl font-semibold">문제 스냅 풀이</h1>
+        <p className="text-sm text-[color:var(--muted)]">사진·PDF·텍스트를 바탕으로 핵심 논점과 다음 행동을 정리합니다.</p>
+      </section>
+      <form onSubmit={onSubmit} className="space-y-4 rounded-[var(--radius-xl)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-5">
+        <div className="rounded-[var(--radius-lg)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-subtle)] p-4 space-y-3">
+          <p className="text-sm font-medium">입력 준비</p>
+          <button type="button" onClick={() => cameraInputRef.current?.click()} className={cn(buttonVariants({ variant: "default" }), "h-11 w-full justify-center text-sm font-semibold")}>문제 사진 찍기</button>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <button type="button" onClick={() => fileInputRef.current?.click()} className={cn(buttonVariants({ variant: "outline" }), "h-10 w-full justify-center text-sm")}>PDF/사진 불러오기</button>
+            <button type="button" onClick={() => document.getElementById("problemText")?.focus()} className={cn(buttonVariants({ variant: "outline" }), "h-10 w-full justify-center text-sm")}>텍스트 붙여넣기</button>
+          </div>
+          <input ref={cameraInputRef} className="hidden" type="file" accept="image/*" capture="environment" multiple onChange={(e) => setFiles(Array.from(e.target.files ?? []))} />
+          <input ref={fileInputRef} className="hidden" type="file" accept="image/*,.pdf" multiple onChange={(e) => setFiles(Array.from(e.target.files ?? []))} />
+          <p className="text-xs text-[color:var(--muted)]">선택 파일 {files.length}개</p>
+        </div>
+
         <div className="grid gap-3 sm:grid-cols-3">
           <label className="text-sm">모드
-            <select className="mt-1 w-full rounded border p-2" value={examMode} onChange={(e)=>setExamMode((e.target.value === "first" ? "first" : "second"))}>
+            <select className="mt-1 w-full rounded border p-2" value={examMode} onChange={(e) => {
+              const nextMode = e.target.value === "first" ? "first" : "second";
+              setExamMode(nextMode);
+              setSubject(nextMode === "first" ? FIRST_SUBJECTS[0] : SECOND_SUBJECTS[0]);
+            }}>
               <option value="second">2차</option><option value="first">1차</option>
             </select>
           </label>
           <label className="text-sm">과목
-            <input className="mt-1 w-full rounded border p-2" value={subject} onChange={(e)=>setSubject(e.target.value)} />
+            <select className="mt-1 w-full rounded border p-2" value={subject} onChange={(e) => setSubject(e.target.value)}>
+              {subjects.map((item) => <option key={item} value={item}>{item}</option>)}
+            </select>
           </label>
           <label className="text-sm">해설 난이도
-            <select className="mt-1 w-full rounded border p-2" value={explanationLevel} onChange={(e)=>setExplanationLevel(e.target.value as ExplanationLevel)}>
+            <select className="mt-1 w-full rounded border p-2" value={explanationLevel} onChange={(e) => setExplanationLevel(e.target.value as ExplanationLevel)}>
               <option value="easy">쉽게 풀이</option><option value="standard">기본 해설</option><option value="exam">시험답안식</option>
             </select>
           </label>
         </div>
-        <label className="block text-sm">문제 파일 (이미지/PDF)
-          <input className="mt-1 w-full" type="file" accept="image/*,.pdf" capture="environment" multiple onChange={(e)=>setFiles(Array.from(e.target.files ?? []))} />
-        </label>
+
         <label className="block text-sm">문제 텍스트 (선택)
-          <textarea className="mt-1 w-full rounded border p-2" rows={6} value={problemText} onChange={(e)=>setProblemText(e.target.value)} />
+          <Textarea id="problemText" className="mt-1 min-h-[140px]" value={problemText} onChange={(e) => setProblemText(e.target.value)} />
         </label>
-        <button disabled={loading} className="rounded bg-black px-4 py-2 text-white disabled:opacity-60">문제 풀이 흐름 만들기</button>
-        <p className="text-xs text-[color:var(--muted)]">정답 확정이 아니라 학습 보조 풀이입니다. 필요한 경우 원문과 계산을 직접 확인해 주세요.</p>
+        <button disabled={loading} className={cn(buttonVariants({ variant: "default" }), "h-10")}>문제 풀이 흐름 만들기</button>
+        <p className="text-xs text-[color:var(--muted)]">정답 확정이 아닌 학습 보조입니다. 원문·계산·단위를 직접 확인해 주세요.</p>
         {error ? <p className="text-sm text-red-600">{error}</p> : null}
       </form>
 
       {result ? (
-        <section className="space-y-4 rounded-[var(--radius-md)] border p-4">
-          <h2 className="text-lg font-semibold">결과</h2>
-          <div><h3 className="font-medium">1. 이 문제는 무엇을 묻나요?</h3><p>{result.problemSummary}</p><p className="text-sm text-[color:var(--muted)]">요구 유형: {result.askType}</p></div>
-          <div><h3 className="font-medium">2. 필요한 개념</h3><ul>{result.requiredConcepts.map((x)=><li key={x}>• {x}</li>)}</ul></div>
-          <div><h3 className="font-medium">3. 공식</h3><ul>{result.formulas.map((x)=><li key={x}>• {x}</li>)}</ul></div>
-          <div><h3 className="font-medium">4. {resultHeading}</h3><p>{result.easyExplanation}</p></div>
-          <div><h3 className="font-medium">5. 풀이 순서</h3><ol>{result.stepByStepSolution.map((x)=><li key={x}>{x}</li>)}</ol></div>
-          <div className="space-y-2"><h3 className="font-medium">CASIO fx-9860GIII로 누르는 법</h3>
-            <p><span className="text-sm text-[color:var(--muted)]">계산 목적</span><br />{result.calculatorGuide.calculationPurpose}</p>
-            <p><span className="text-sm text-[color:var(--muted)]">추천 모드</span><br />{result.calculatorGuide.recommendedMode}</p>
-            <div>
-              <p className="text-sm text-[color:var(--muted)]">버튼 순서</p>
-              <div className="mt-1 flex flex-wrap items-center gap-2">
-                {result.calculatorGuide.keystrokeSteps.map((step, index) => (
-                  <div key={`${step}-${index}`} className="flex items-center gap-2">
-                    <span className="rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--surface-subtle)] px-2.5 py-1 text-xs">{step}</span>
-                    {index < result.calculatorGuide.keystrokeSteps.length - 1 ? <span className="text-xs text-[color:var(--muted)]">→</span> : null}
-                  </div>
-                ))}
-              </div>
-            </div>
-            {result.calculatorGuide.expectedDisplay ? <p><span className="text-sm text-[color:var(--muted)]">화면에 나와야 할 값</span><br />{result.calculatorGuide.expectedDisplay}</p> : null}
-            {result.calculatorGuide.answerRounding ? <p><span className="text-sm text-[color:var(--muted)]">답안에 적는 값</span><br />{result.calculatorGuide.answerRounding}</p> : null}
-            <p><span className="text-sm text-[color:var(--muted)]">주의할 점</span><br />{result.calculatorGuide.caution}</p>
+        <section className="space-y-4 rounded-[var(--radius-xl)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-5">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">가장 먼저 이해할 1가지</p><p className="mt-1 text-sm">{result.problemSummary}</p></div>
+            <div className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">핵심 공식/논점</p><p className="mt-1 text-sm">{result.formulas[0] ?? result.requiredConcepts[0] ?? "핵심 논점 확인 필요"}</p></div>
+            <div className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">지금 다시 풀 행동 1개</p><p className="mt-1 text-sm">{result.nextPracticeAction}</p></div>
+            <div className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">주의할 함정 1개</p><p className="mt-1 text-sm">{result.commonMistakes[0] ?? result.caution}</p></div>
           </div>
-          <div><h3 className="font-medium">6. 자주 틀리는 포인트</h3><ul>{result.commonMistakes.map((x)=><li key={x}>• {x}</li>)}</ul></div>
-          <div><h3 className="font-medium">7. 다음 연습 행동</h3><p>{result.nextPracticeAction}</p></div>
-          <div><h3 className="font-medium">시험답안식 구조</h3><ul>{result.examStyleStructure.map((x)=><li key={x}>• {x}</li>)}</ul></div>
-          <p className="text-xs text-[color:var(--muted)]">{result.caution}</p>
-          <button disabled className="rounded border px-4 py-2 text-sm text-[color:var(--muted)]">이 문제를 복습 큐에 저장</button>
-          <p className="text-xs text-[color:var(--muted)]">로그인 후 저장 기능으로 연결 예정</p>
+          <p className="text-xs text-[color:var(--muted)]">{referenceGrounding?.used ? `유사 기출 Skeleton을 참고해 정리했습니다. ${referenceGrounding.displayLabel}` : "입력 자료 기준으로 정리했습니다."}</p>
+          <div><h3 className="font-medium">{resultHeading}</h3><p>{result.easyExplanation}</p></div>
+          {showCalculatorGuide ? (
+            <div className="space-y-2 rounded-[var(--radius-md)] border bg-[color:var(--surface-subtle)] p-3"><h3 className="font-medium">CASIO fx-9860GIII 계산 가이드</h3><p className="text-sm">{result.calculatorGuide.calculationPurpose}</p></div>
+          ) : (
+            <p className="rounded-[var(--radius-md)] border border-dashed p-3 text-sm text-[color:var(--muted)]">계산기 입력보다 개념 구조가 중요한 문제입니다.</p>
+          )}
+          <div className="rounded-[var(--radius-md)] border p-3">
+            <p className="text-sm font-medium">품질 점검</p>
+            <ul className="mt-2 space-y-1 text-sm">
+              <li>• 문제 인식 확인 필요</li>
+              <li>• 공식 확인 필요</li>
+              <li>• 숫자/단위 확인 필요</li>
+              <li>• 계산기 입력 확인 필요</li>
+            </ul>
+          </div>
+          <button type="button" onClick={() => setSavedLocal(true)} className={cn(buttonVariants({ variant: "outline" }), "h-10")}>이 문제를 복습 큐에 저장</button>
+          <p className="text-xs text-[color:var(--muted)]">{savedLocal ? "복습 큐 연결 준비됨" : "저장하면 복습 연결 준비 상태로 표시됩니다."}</p>
+          <ResultFeedbackPrompt route="/problem-snap" pageContext={{ section: "problem-snap-result", examMode, subject }} />
         </section>
       ) : null}
-    </main>
+    </RefinedShell>
   );
 }
