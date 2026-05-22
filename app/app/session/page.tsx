@@ -61,6 +61,8 @@ export default async function ReviewOsSessionPage({ searchParams }: PageProps) {
               {String(savedCaptureSignals?.one_next_action ?? note?.rewriteInstruction ?? note?.coreLine ?? "한 문장 재시도/다시쓰기로 바로 이어갑니다.")}
             </p>
           </div>
+          <p className="mt-2 text-xs text-[color:var(--ink-muted)]">정답 확정이 아니라 다음 행동을 정리하는 학습 보조 결과입니다.</p>
+          <p className="mt-1 text-xs text-[color:var(--ink-muted)]">오늘은 이 작업 하나만 먼저 합니다.</p>
           {savedCaptureSignals?.topic_candidate ? (
             <p className="mt-1 text-xs text-[color:var(--muted)]">논점 후보: {String(savedCaptureSignals.topic_candidate)}</p>
           ) : null}

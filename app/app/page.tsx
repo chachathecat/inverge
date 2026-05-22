@@ -157,7 +157,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
           ...option,
           href:
             option.hrefKey === "write"
-              ? "/app/capture?mode=second"
+              ? "/app/write?mode=second"
               : option.hrefKey === "items"
                 ? "/app/items?mode=second"
                 : "/app/review?mode=second",
@@ -200,11 +200,11 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
               </div>
               <CardTitle>오늘 한 것 하나만 올리세요</CardTitle>
               <CardDescription className="max-w-[66ch]">
-                사진, PDF, 텍스트를 올리면 오답노트와 다음 복습이 자동으로 정리됩니다.
+                사진, PDF, 텍스트를 올리면 오답노트와 다음 행동으로 정리합니다.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 p-4 pt-0 sm:space-y-4 sm:p-6 sm:pt-0">
-              <Link href={inputOptions[0].href} className="w-full sm:w-auto">
+              <Link href={mode === "second" ? "/app/capture?mode=second" : inputOptions[0].href} className="w-full sm:w-auto">
                 <Button type="button" className="w-full sm:w-auto">
                   오늘 한 것 올리기
                 </Button>

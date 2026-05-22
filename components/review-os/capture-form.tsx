@@ -935,31 +935,36 @@ function IntakePanel({
         <div className="rounded-[var(--radius-md)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-elevated)] p-5 sm:p-6">
           <p className="text-caption text-[color:var(--ink-muted)]">오늘의 입력</p>
           <h4 className="mt-2 text-base font-semibold text-[color:var(--ink-primary)]">오늘 한 것 올리기</h4>
-          <p className="mt-1 text-sm leading-6 text-[color:var(--ink-muted)]">답안지, 오답, 필기 일부를 찍으면 OCR 초안으로 불러옵니다.</p>
+          <p className="mt-1 text-sm leading-6 text-[color:var(--ink-muted)]">사진, PDF, 텍스트를 올리면 오답노트와 다음 행동으로 정리합니다.</p>
           <div className="mt-4">
             <Button type="button" className="w-full sm:w-auto bg-[color:var(--accent-deep)] transition-colors hover:bg-[color:var(--primary-hover)] focus-visible:ring-2 focus-visible:ring-[color:var(--accent-deep)] focus-visible:ring-offset-2" onClick={() => cameraInputRef.current?.click()}>
               사진 찍기
             </Button>
             <p className="mt-2 text-xs text-[color:var(--ink-muted)]">사진은 OCR 초안으로만 사용됩니다. 저장 전 직접 확인해 주세요.</p>
           </div>
-          <div className="mt-3 grid gap-2 sm:flex sm:flex-wrap">
-            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => galleryInputRef.current?.click()}>
-              앨범에서 선택
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full sm:w-auto"
-              onClick={() => {
-                textAreaRef.current?.focus();
-                textAreaRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-              }}
-            >
-              텍스트로 입력
-            </Button>
-            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => pdfInputRef.current?.click()}>
-              PDF 선택
-            </Button>
+          <details className="mt-3 rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)]">
+            <summary className="cursor-pointer list-none px-3 py-2 text-xs text-[color:var(--ink-muted)]">다른 입력 방식 보기</summary>
+            <div className="grid gap-2 border-t border-[color:var(--border-hairline)] px-3 py-2 sm:flex sm:flex-wrap">
+              <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => galleryInputRef.current?.click()}>
+                앨범에서 선택
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full sm:w-auto"
+                onClick={() => {
+                  textAreaRef.current?.focus();
+                  textAreaRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+                }}
+              >
+                텍스트로 입력
+              </Button>
+              <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => pdfInputRef.current?.click()}>
+                PDF 선택
+              </Button>
+            </div>
+          </details>
+          <div className="mt-3">
             <input
               ref={cameraInputRef}
               type="file"
@@ -1004,14 +1009,10 @@ function IntakePanel({
         </label>
         <label className="space-y-2">
           <span className="text-sm text-[color:var(--foreground-strong)]">캡처 유형</span>
-          <select
-            value={form.sourceType}
-            onChange={(event) => update("sourceType", event.target.value as SourceType)}
-            className="form-control"
-          >
+          <select value={form.sourceType} onChange={(event) => update("sourceType", event.target.value as SourceType)} className="form-control">
             <option value="manual">텍스트 붙여넣기</option>
             <option value="image">사진/OCR 초안</option>
-            <option value="pdf">PDF/OCR 초안</option>
+            <option value="pdf">PDF 파일명 기록</option>
           </select>
         </label>
       </div>
@@ -1055,6 +1056,7 @@ function IntakePanel({
         />
       </label>
       <p className="text-xs text-[color:var(--muted)]">OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요.</p>
+      {form.sourceType === "pdf" ? <p className="text-xs text-[color:var(--muted)]">현재 PDF는 파일명만 기록됩니다. 내용은 직접 붙여넣어 주세요.</p> : null}
       {mode === "first" ? (
         <p className="mt-2 text-xs leading-6 text-[color:var(--muted)]">
           최소 입력: 정답, 내 답, 틀린 이유를 한 줄로 남겨도 됩니다. 예: 정답: 3 / 내 답: 2 / 이유: 선지 오독
@@ -1092,7 +1094,7 @@ function IntakePanel({
           ) : null}
         </div>
       </details>
-      <p className="mt-3 text-caption leading-5 text-[color:var(--muted)]">텍스트 붙여넣기/수기 입력이 기본 경로입니다.</p>
+      <p className="mt-3 text-caption leading-5 text-[color:var(--muted)]">오늘은 이 작업 하나만 먼저 합니다.</p>
       {calculatorWorkflow ? (
         <div className="mt-4 rounded-[var(--radius-md)] border border-[color:var(--cue-focus)] bg-[color:var(--cue-focus-bg)] px-4 py-3">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1197,7 +1199,7 @@ function ConfirmPanel({
 }) {
   return (
     <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 sm:p-5">
-      <p className="text-caption text-[color:var(--muted)]">Step 3. 정리 결과 확인</p>
+      <p className="text-caption text-[color:var(--muted)]">Step 3. 저장하고 오늘 계획에 반영</p>
       <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">정리되었습니다</h3>
       <div className="mt-4 grid gap-3 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-4">
         <PreviewLine label="가장 큰 gap" value={mode === "second" ? form.biggestGap || form.missingIssue : form.userReasonText} />
