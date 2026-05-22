@@ -89,6 +89,17 @@ export function buildCaptureLearningSignal(input: CaptureLearningSignalInput): L
         (input.timeSpentSeconds ?? 0) >= 180 ? "slow_solve" : null,
       ]);
 
+  const topicCandidate = input.keyConcepts?.[0] ?? input.missingIssue ?? input.weakStructurePoint ?? null;
+  const skeletonKeywordHint = input.keyConcepts?.[0] ?? null;
+  const reviewPriority = computeCaptureQueuePriority({
+    examName: input.examName,
+    confidence: input.confidence,
+    timeSpentSeconds: input.timeSpentSeconds ?? null,
+    mistakeOrWeakPoint: input.mistakeReason ?? input.weakStructurePoint ?? input.missingIssue,
+    weakStructurePoint: input.weakStructurePoint,
+    missingIssue: input.missingIssue,
+  });
+
   return {
     examMode,
     subject: input.subject,
@@ -106,6 +117,14 @@ export function buildCaptureLearningSignal(input: CaptureLearningSignalInput): L
       timeSpentSeconds: input.timeSpentSeconds ?? null,
       createdFromCapture: input.createdFromCapture,
       captureIntent: "save",
+      topic_candidate: topicCandidate,
+      mistake_type: input.mistakeReason ?? null,
+      weak_structure_point: input.weakStructurePoint ?? null,
+      missing_issue: input.missingIssue ?? null,
+      taxonomy_candidate: topicCandidate ? { topic: topicCandidate, subject: input.subject } : null,
+      similar_topic_suggestion: uniq([input.keyConcepts?.[1], input.keyConcepts?.[2], input.missingIssue]).slice(0, 2),
+      review_priority: reviewPriority,
+      skeleton_keyword_hint: skeletonKeywordHint,
     },
   };
 }

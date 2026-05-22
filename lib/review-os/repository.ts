@@ -58,14 +58,20 @@ function toTaxonomyCandidates(value: unknown): TaxonomyClassificationCandidate[]
       const candidate: TaxonomyClassificationCandidate = {
         taxonomyNodeId: row.taxonomyNodeId,
         mode: row.mode === "second" ? "second" : "first",
+        examYear: typeof row.examYear === "number" ? row.examYear : undefined,
+        round: typeof row.round === "string" ? row.round : undefined,
         subject: typeof row.subject === "string" ? row.subject : "",
         unit: typeof row.unit === "string" ? row.unit : "",
         topic: typeof row.topic === "string" ? row.topic : "",
         subtopic: typeof row.subtopic === "string" ? row.subtopic : undefined,
+        skill: typeof row.skill === "string" ? row.skill : (typeof row.examSkill === "string" ? row.examSkill : ""),
         examSkill: typeof row.examSkill === "string" ? row.examSkill : "",
+        skeletonKeywords: toStringArray(row.skeletonKeywords),
+        commonGaps: toStringArray(row.commonGaps),
         score: Number(row.score ?? 0),
         confidence: Number(row.confidence ?? 0),
         matchedKeywords: toStringArray(row.matchedKeywords),
+        skeletonKeywordHints: toStringArray(row.skeletonKeywordHints),
         classificationStatus: row.classificationStatus === "ai_suggested" ? "ai_suggested" : "needs_review",
       };
       return candidate;

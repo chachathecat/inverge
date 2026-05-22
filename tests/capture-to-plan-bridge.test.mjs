@@ -29,6 +29,14 @@ test("buildCaptureLearningSignal creates second-mode signal safely", () => {
   assert.ok(signal.derivedTags.includes("answer_structure"));
   assert.ok(signal.derivedTags.includes("rewrite_needed"));
   assert.ok(signal.derivedTags.includes("issue_missing") || signal.derivedTags.includes("structure_gap"));
+  assert.equal(typeof signal.metadataJson.topic_candidate === "string" || signal.metadataJson.topic_candidate === null, true);
+  assert.ok(Object.prototype.hasOwnProperty.call(signal.metadataJson, "mistake_type"));
+  assert.ok(Object.prototype.hasOwnProperty.call(signal.metadataJson, "weak_structure_point"));
+  assert.ok(Object.prototype.hasOwnProperty.call(signal.metadataJson, "missing_issue"));
+  assert.ok(Object.prototype.hasOwnProperty.call(signal.metadataJson, "taxonomy_candidate"));
+  assert.ok(Object.prototype.hasOwnProperty.call(signal.metadataJson, "similar_topic_suggestion"));
+  assert.ok(Object.prototype.hasOwnProperty.call(signal.metadataJson, "review_priority"));
+  assert.ok(Object.prototype.hasOwnProperty.call(signal.metadataJson, "skeleton_keyword_hint"));
 });
 
 

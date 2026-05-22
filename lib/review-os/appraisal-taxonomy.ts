@@ -3,11 +3,16 @@ export type AppraisalMode = "first" | "second";
 export type AppraisalTaxonomyNode = {
   id: string;
   mode: AppraisalMode;
+  examYear?: number;
+  round?: string;
   subject: string;
   unit: string;
   topic: string;
   subtopic?: string;
+  skill?: string;
   examSkill: string;
+  skeletonKeywords?: string[];
+  commonGaps?: string[];
   commonMistakeTypes: string[];
   retrievalCue: string;
   tags: string[];
@@ -23,6 +28,7 @@ export type TaxonomySearchCandidate = {
   node: AppraisalTaxonomyNode;
   score: number;
   matchedKeywords: string[];
+  skeletonKeywordHints: string[];
 };
 
 export const APPRAISAL_TAXONOMY_NODES: AppraisalTaxonomyNode[] = [
@@ -562,7 +568,10 @@ export function searchTaxonomyCandidates(
         node.unit,
         node.topic,
         node.subtopic,
+        node.skill,
         node.examSkill,
+        ...(node.skeletonKeywords ?? []),
+        ...(node.commonGaps ?? []),
         ...node.commonMistakeTypes,
         ...node.tags,
       ]
@@ -606,6 +615,7 @@ export function searchTaxonomyCandidates(
         node,
         score,
         matchedKeywords: Array.from(matched),
+        skeletonKeywordHints: (node.skeletonKeywords ?? []).slice(0, 4),
       };
     })
     .filter((candidate) => candidate.score > 0)
