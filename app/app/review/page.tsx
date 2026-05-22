@@ -4,7 +4,7 @@ import { ReviewOsFeedbackButton } from "@/components/review-os/feedback-button";
 import { ClosedBetaBanner } from "@/components/shared/closed-beta-banner";
 import { ReviewQueueClient } from "@/components/review-os/review-queue-client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { DailyCommandCard, MinimalStepPanel, QuietDetails } from "@/components/review-os/minimal-study-system";
 import { getModeConfig, resolveAppraisalMode } from "@/lib/review-os/appraisal";
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
 import { reviewOsService } from "@/lib/review-os/service";
@@ -35,32 +35,26 @@ export default async function ReviewOsReviewPage({ searchParams }: PageProps) {
       <ClosedBetaBanner />
 
       <div className="space-y-6">
-      <Card className="border-[color:var(--border-hairline)] bg-[color:var(--surface-elevated)] shadow-none">
-        <CardHeader>
-          <CardTitle>{mode === "second" ? "다시 볼 교정 포인트" : "오늘 다시 볼 항목"}</CardTitle>
-          <CardDescription>
-            {mode === "second"
-              ? "기록에서 다음 복습 신호를 정리합니다. 각 항목은 문단 하나 다시쓰기로 이어집니다."
-              : "기록에서 다음 복습 신호를 정리합니다. 각 항목은 조건 1개 재확인과 재시도로 이어집니다."}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      <DailyCommandCard
+        title={mode === "second" ? "다시 볼 교정 포인트" : "오늘 다시 볼 항목"}
+        description={mode === "second" ? "각 항목은 문단 하나 다시쓰기로 이어집니다." : "각 항목은 조건 1개 재확인과 재시도로 이어집니다."}
+      >
+        <div className="pt-2">
           <ReviewQueueClient items={items} mode={mode} captureReferenceLineByItemId={captureReferenceLineByItemId} />
-        </CardContent>
-      </Card>
+        </div>
+      </DailyCommandCard>
 
       {items.length === 0 ? (
-        <Card className="border-[color:var(--border-hairline)] bg-[color:var(--surface-elevated)] shadow-none">
-          <CardHeader>
-            <CardTitle>{mode === "second" ? "아직 교정 대기 항목이 없습니다" : "아직 다시 볼 오답이 없습니다"}</CardTitle>
-            <CardDescription>{config.emptyDescription}</CardDescription>
-          </CardHeader>
-          <CardContent>
+        <MinimalStepPanel title={mode === "second" ? "아직 교정 대기 항목이 없습니다" : "아직 다시 볼 오답이 없습니다"}>
+          <QuietDetails>
+            <p>{config.emptyDescription}</p>
+          </QuietDetails>
+          <div className="pt-2">
             <Link href={mode === "second" ? `/app/write?mode=${mode}` : `/app/capture?mode=${mode}`}>
               <Button type="button">{config.primaryCta}</Button>
             </Link>
-          </CardContent>
-        </Card>
+          </div>
+        </MinimalStepPanel>
       ) : null}
 
       <ReviewOsFeedbackButton route="/app/review" pageContext={{ itemCount: items.length, mode }} />

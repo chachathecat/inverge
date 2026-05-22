@@ -9,6 +9,7 @@ import { buildDetailStudyNote } from "@/lib/review-os/study-note";
 import { buildReferenceSupportForExecution } from "@/lib/review-os/execution-reference-support";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { DailyCommandCard, QuietDetails } from "@/components/review-os/minimal-study-system";
 
 type PageProps = {
   searchParams?: Promise<{ mode?: string; savedCapture?: string; itemId?: string }>;
@@ -57,11 +58,8 @@ export default async function ReviewOsSessionPage({ searchParams }: PageProps) {
     <div className="space-y-6">
       <ClosedBetaBanner />
       {savedCapture ? (
-        <section className="rounded-[var(--radius-md)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-elevated)] px-4 py-4 sm:px-5">
-          <p className="text-sm font-semibold text-[color:var(--ink-primary)]">오늘 기록이 저장되었습니다.</p>
-          <p className="mt-2 text-xs text-[color:var(--ink-muted)]">복습 큐에 들어갔습니다.</p>
-          <p className="mt-1 text-xs text-[color:var(--ink-muted)]">오늘 계획에 반영되었습니다.</p>
-          <div className="mt-3 grid gap-2 rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)] p-3">
+        <DailyCommandCard title="오늘 기록이 저장되었습니다." description="복습 큐와 오늘 계획에 바로 반영되었습니다.">
+          <div className="grid gap-2 bg-[color:var(--surface-soft)] p-3 rounded-[var(--radius-sm)]">
             <p className="text-xs text-[color:var(--ink-muted)]">
               <span className="font-medium text-[color:var(--ink-primary)]">가장 큰 간극:</span>{" "}
               {String(savedCaptureSignals?.one_biggest_gap ?? note?.missingIssue ?? note?.weakPoint ?? "간극 1개를 먼저 고정합니다.")}
@@ -71,8 +69,12 @@ export default async function ReviewOsSessionPage({ searchParams }: PageProps) {
               {String(savedCaptureSignals?.one_next_action ?? note?.rewriteInstruction ?? note?.coreLine ?? "한 문장 재시도/다시쓰기로 바로 이어갑니다.")}
             </p>
           </div>
-          <p className="mt-2 text-xs text-[color:var(--ink-muted)]">정답 확정이 아니라 다음 행동을 정리하는 학습 보조 결과입니다.</p>
-          <p className="mt-1 text-xs text-[color:var(--ink-muted)]">오늘은 이 작업 하나만 먼저 합니다.</p>
+          <QuietDetails>
+            <p>복습 큐에 들어갔습니다.</p>
+            <p>오늘 계획에 반영되었습니다.</p>
+            <p>정답 확정이 아니라 다음 행동을 정리하는 학습 보조 결과입니다.</p>
+            <p>오늘은 이 작업 하나만 먼저 합니다.</p>
+          </QuietDetails>
           {savedCaptureSignals?.next_task_type ? (
             <p className="mt-1 text-xs text-[color:var(--muted)]">다음 과제 유형: {String(savedCaptureSignals.next_task_type)}</p>
           ) : null}
@@ -110,7 +112,7 @@ export default async function ReviewOsSessionPage({ searchParams }: PageProps) {
               </div>
             </details>
           </div>
-        </section>
+        </DailyCommandCard>
       ) : null}
       <section id="today-session-runner">
         <TodaySessionRunner

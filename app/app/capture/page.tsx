@@ -1,8 +1,7 @@
 import { WrongAnswerCaptureForm } from "@/components/review-os/capture-form";
 import { ReviewOsFeedbackButton } from "@/components/review-os/feedback-button";
 import { ClosedBetaBanner } from "@/components/shared/closed-beta-banner";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { DailyCommandCard, QuietDetails } from "@/components/review-os/minimal-study-system";
+import { DailyCommandCard, MinimalStepPanel, QuietDetails } from "@/components/review-os/minimal-study-system";
 import { getModeConfig, normalizeSubjectForMode, resolveAppraisalMode } from "@/lib/review-os/appraisal";
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
 import { reviewOsService } from "@/lib/review-os/service";
@@ -51,20 +50,21 @@ export default async function ReviewOsCapturePage({ searchParams }: PageProps) {
         </QuietDetails>
       </DailyCommandCard>
 
-      <Card className="border-[color:var(--border-strong)] bg-[color:var(--surface)] shadow-none">
-        <CardHeader>
-          <CardTitle>
-            {isRewriteFlow ? "문단 다시쓰기 입력" : "오늘 한 것 올리기"}
-          </CardTitle>
-          <CardDescription>
+      <MinimalStepPanel title={isRewriteFlow ? "문단 다시쓰기 입력" : "오늘 한 것 올리기"}>
+        <QuietDetails>
+          <p>
             {isRewriteFlow
-              ? "한 문단 실행 기록만 남깁니다. 비교 컨텍스트는 상단 패널에 고정되어 있습니다."
+              ? "한 문단 실행 기록만 남깁니다."
               : mode === "second"
-              ? "쟁점 회상 → 목차 작성 → 답안/비교 입력 → one biggest gap 교정 순서로 기록합니다. 점수 판정은 하지 않습니다."
-              : "텍스트 원문을 기준으로 오답노트 초안을 만들고, 정답과 선택 근거는 사용자가 확인한 뒤 저장합니다."}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+                ? "쟁점 회상부터 간극 1개 교정까지 순서대로 기록합니다."
+                : "텍스트 원문을 기준으로 오답노트 초안을 만들고 확인 후 저장합니다."}
+          </p>
+          <details>
+            <summary className="cursor-pointer list-none text-xs font-medium">입력 순서 보기</summary>
+            <p className="pt-2">쟁점 회상 → 목차 작성 → 답안/비교 입력 → one biggest gap 교정</p>
+          </details>
+        </QuietDetails>
+        <div className="pt-3">
           <WrongAnswerCaptureForm
             userId={session.userId}
             mode={mode}
@@ -72,8 +72,8 @@ export default async function ReviewOsCapturePage({ searchParams }: PageProps) {
             initialSubject={initialSubject}
             rewriteContext={rewriteContext}
           />
-        </CardContent>
-      </Card>
+        </div>
+      </MinimalStepPanel>
 
       <ReviewOsFeedbackButton route="/app/capture" pageContext={{ section: "capture", mode }} />
       </div>
