@@ -11,6 +11,7 @@ test("weakness diagnostic helper exists with required fields", () => {
   const source = readFileSync(helperPath, "utf8");
   [
     "buildWeaknessDiagnostic",
+    "buildPersonalWeaknessProfile",
     "topWeaknesses",
     "weakestSubject",
     "repeatedSignalCount",
@@ -22,9 +23,10 @@ test("weakness diagnostic helper exists with required fields", () => {
 
 test("home page renders weakness diagnostic labels", () => {
   const source = readFileSync(homePath, "utf8");
-  ["내 답안에서 반복되는 약점", "가장 많이 반복된 약점", "다시 볼 과목", "오늘 줄일 실수", "아직 진단할 기록이 없습니다", "오늘 한 것 올리기"].forEach((needle) =>
+  ["우선순위 근거 보기", "반복 신호", "오늘은 이 약점 하나만 줄입니다.", "오늘 한 것 올리기"].forEach((needle) =>
     assert.equal(source.includes(needle), true, `${needle} missing`),
   );
+  assert.equal(source.includes("내 답안에서 반복되는 약점"), false, "competing weakness card should be removed");
 });
 
 test("guardrails: no score/pass-fail/official grading claims in learner files", () => {

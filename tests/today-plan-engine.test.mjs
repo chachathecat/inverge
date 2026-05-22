@@ -65,3 +65,17 @@ test("low confidence and repeated mistake get boosts; rewrite task surfaced", ()
   assert.ok(tasks.length <= 3);
   assert.ok(tasks.every((t) => !/공식 점수|모범답안|채점 확정/.test(`${t.reason} ${t.one_next_action}`)));
 });
+
+test("high risk repeated gap gets slight boost in today plan", () => {
+  const tasks = buildTodayPlanTasks({
+    mode: "first",
+    now,
+    queue: [
+      q({ itemId: "normal", subjectLabel: "민법", mistakeType: "선지 오독", priorityScore: 60, dueAt: "2026-05-04T00:00:00.000Z" }),
+      q({ itemId: "weak", subjectLabel: "민법", mistakeType: "조건 누락", priorityScore: 59, dueAt: "2026-05-04T00:00:00.000Z" }),
+    ],
+    repeatedGaps: [{ label: "민법 · 조건 누락", count: 4 }],
+    riskLevel: "high",
+  });
+  assert.equal(tasks[0].itemId, "weak");
+});

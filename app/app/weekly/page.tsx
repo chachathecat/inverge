@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { getModeConfig, resolveAppraisalMode } from "@/lib/review-os/appraisal";
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
 import { reviewOsService } from "@/lib/review-os/service";
+import { buildPersonalWeaknessProfile } from "@/lib/review-os/weakness-diagnostics";
 import type { WeeklyPlanTask } from "@/lib/review-os/types";
 
 type PageProps = {
@@ -20,6 +21,17 @@ export default async function ReviewOsWeeklyPage({ searchParams }: PageProps) {
   const mode = resolveAppraisalMode(profile, modeParam);
   const config = getModeConfig(mode);
   const plan = await reviewOsService.getWeeklyPlan(session.userId, session.email, mode);
+  const [learningSignalSummary, learningSignalEvents, focus] = await Promise.all([
+    reviewOsService.getLearningSignalSummary(session.userId, session.email, mode).catch(() => null),
+    reviewOsService.listLearningSignalEvents(session.userId, session.email, mode, 10).catch(() => []),
+    reviewOsService.getTodayFocus(session.userId, session.email, mode).catch(() => ({ queue: [] })),
+  ]);
+  const weaknessProfile = buildPersonalWeaknessProfile({
+    learningSignalSummary,
+    learningSignalEvents,
+    reviewQueue: focus.queue ?? [],
+    mode,
+  });
   const visibleTasks = plan.tasks.slice(0, 3);
   const primaryTask = plan.recovery?.task ?? plan.tasks[0] ?? null;
   const inputStartHref = mode === "second" ? `/app/write?mode=${mode}` : `/app/capture?mode=${mode}`;
@@ -97,6 +109,16 @@ export default async function ReviewOsWeeklyPage({ searchParams }: PageProps) {
           <SecondaryRecord label="최근 오답(14일)" value={`${plan.secondaryRecords.recentWrongCount}개`} />
         </div>
       </details>
+      <Card className="border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] shadow-none">
+        <CardHeader className="space-y-2 p-4 sm:p-5">
+          <CardTitle className="text-base sm:text-lg">이번 주 반복 약점</CardTitle>
+          <CardDescription>
+            {weaknessProfile.repeatedGaps[0]
+              ? `${weaknessProfile.repeatedGaps[0].label} 신호가 반복됩니다.`
+              : "반복 신호를 수집 중입니다."}
+          </CardDescription>
+        </CardHeader>
+      </Card>
 
       <ReviewOsFeedbackButton
         route="/app/weekly"
