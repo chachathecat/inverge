@@ -272,6 +272,14 @@ test("today plan uses recent learning signal for primary task", () => {
   assert.equal(plan.actionKind, "second_review");
 });
 
+test("today plan second-mode CTA mapping is task-type specific", async () => {
+  const source = await (await import("node:fs/promises")).readFile(new URL("../lib/review-os/today-plan.ts", import.meta.url), "utf8");
+  assert.ok(source.includes('if (taskType === "rewrite") return { ctaLabel: "다시 쓰기"'));
+  assert.ok(source.includes('if (taskType === "retry") return { ctaLabel: "다시보기 큐 열기"'));
+  assert.ok(source.includes('if (taskType === "review") return { ctaLabel: "핵심 논점 다시 보기"'));
+  assert.ok(source.includes('if (taskType === "recall") return { ctaLabel: "쟁점 회상"'));
+});
+
 test("today plan maps first-mode set and capture actions", () => {
   const base = {
     id: "s3",

@@ -119,6 +119,8 @@ test("problem-snap learning signal is surfaced in learner plan surfaces", async 
   assert.ok(homeSource.includes("Problem Snap 기반"));
   assert.ok(homeSource.includes("오늘 할 일"));
   assert.ok(homeSource.includes('todayPlanTasks[0]?.source_label !== "Problem Snap 기반"'));
+  assert.ok(homeSource.includes("const primaryCtaLabel = todayPlan.ctaLabel;"));
+  assert.equal(homeSource.includes('mode === "first" ? "유사 지문 다시 풀기" : "10분 다시 쓰기"'), false);
   assert.ok(itemsSource.includes('sourceType === "problem-snap"'));
   assert.ok(itemsSource.includes("Problem Snap"));
   assert.ok(itemsSource.includes("다시 풀기"));
