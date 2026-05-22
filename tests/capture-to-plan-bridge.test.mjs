@@ -116,6 +116,7 @@ test("problem-snap learning signal is surfaced in learner plan surfaces", async 
 
   assert.ok(homeSource.includes('event.sourceType === "problem-snap"'));
   assert.ok(homeSource.includes("Problem Snap"));
+  assert.ok(homeSource.includes("Problem Snap 기반"));
   assert.ok(itemsSource.includes('sourceType === "problem-snap"'));
   assert.ok(itemsSource.includes("Problem Snap"));
   assert.ok(itemsSource.includes("다시 풀기"));
@@ -136,4 +137,37 @@ test("problem-snap learner surfaces keep scope and no grading/payment claims", a
   assert.equal(merged.includes("pass/fail"), false);
   assert.equal(merged.includes("합격/불합격"), false);
   assert.equal(merged.includes("결제"), false);
+});
+
+
+test("problem-snap signal becomes primary task when queue is empty", () => {
+  const tasks = buildTodayPlanTasks({
+    mode: "second",
+    queue: [],
+    learningSignals: [{
+      id: "s1",
+      userId: "u1",
+      examMode: "감정평가사 2차",
+      subject: "감정평가이론",
+      sourceType: "problem-snap",
+      derivedTags: [],
+      relatedFormulas: [],
+      nextTaskType: "rewrite",
+      nextTask: "누락 논점 다시 쓰기",
+      createdAt: "2026-05-21T10:00:00.000Z",
+    }],
+    now: new Date("2026-05-22T00:00:00.000Z"),
+  });
+  assert.equal(tasks[0]?.source_label, "Problem Snap 기반");
+  assert.equal(tasks[0]?.reason, "문제 스냅으로 저장한 막힌 문제입니다.");
+});
+
+test("due high-priority queue task stays primary over problem-snap", () => {
+  const tasks = buildTodayPlanTasks({
+    mode: "second",
+    queue: [{ queueId:"q1", itemId:"i", examName:"감정평가사 2차", subjectLabel:"이론", problemTitle:"사례", topicTag:"논점", mistakeType:"누락", reviewReason:"재작성", dueAt:"2026-05-20T00:00:00.000Z", priorityScore:95, confidence:"낮음", recurrenceCount:3, status:"pending", itemCreatedAt:"2026-05-10T00:00:00.000Z", createdFromCapture:true }],
+    learningSignals: [{ id:"s1", userId:"u1", examMode:"감정평가사 2차", subject:"감정평가이론", sourceType:"problem-snap", derivedTags:[], relatedFormulas:[], nextTaskType:"rewrite", nextTask:"다시", createdAt:"2026-05-21T10:00:00.000Z" }],
+    now: new Date("2026-05-22T00:00:00.000Z"),
+  });
+  assert.notEqual(tasks[0]?.source_label, "Problem Snap 기반");
 });

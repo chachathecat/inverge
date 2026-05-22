@@ -1,4 +1,4 @@
-import type { ConfidenceLevel, ReviewQueueCard } from "@/lib/review-os/types";
+import type { ConfidenceLevel, LearningSignalEventRecord, ReviewQueueCard } from "@/lib/review-os/types";
 
 export type TodayPlanTaskType = "retry" | "rewrite" | "review" | "recall";
 
@@ -15,7 +15,7 @@ export type TodayPlanTask = {
   source_label?: string;
 };
 
-type BuildInput = { mode: "first" | "second"; queue: ReviewQueueCard[]; now?: Date };
+type BuildInput = { mode: "first" | "second"; queue: ReviewQueueCard[]; learningSignals?: LearningSignalEventRecord[]; now?: Date };
 
 const DAY_MS = 86_400_000;
 
@@ -49,7 +49,37 @@ function toNextAction(mode: "first" | "second", item: ReviewQueueCard, taskType:
   return `${item.problemTitle} 핵심 포인트 1개를 다시 확인합니다.`;
 }
 
-export function buildTodayPlanTasks({ mode, queue, now = new Date() }: BuildInput): TodayPlanTask[] {
+
+
+function toProblemSnapTask(mode: "first" | "second", signal: LearningSignalEventRecord): TodayPlanTask {
+  const taskType: TodayPlanTaskType = mode === "second" ? (signal.nextTaskType === "rewrite" ? "rewrite" : "retry") : "retry";
+  return {
+    itemId: `problem-snap-${signal.id}`,
+    title: `${signal.subject} Problem Snap 다음 작업`,
+    reason: "문제 스냅으로 저장한 막힌 문제입니다.",
+    one_biggest_gap: "막힌 지점 1개를 다시 해결합니다.",
+    one_next_action: signal.nextTask || (mode === "second" ? "쟁점 1개를 다시 써서 검토합니다." : "핵심 조건 1개를 회상하고 다시 풉니다."),
+    task_type: taskType,
+    estimated_minutes: mode === "second" ? 15 : 10,
+    priority_reason: "문제 스냅 최신 기록을 바로 재시도로 연결합니다.",
+    created_from_capture: true,
+    source_label: "Problem Snap 기반",
+  };
+}
+
+function pickRecentProblemSnapSignal(learningSignals: LearningSignalEventRecord[], mode: "first" | "second", now: Date) {
+  const cutoff = now.getTime() - DAY_MS * 3;
+  const expectedExamMode = mode === "second" ? "감정평가사 2차" : "감정평가사 1차";
+  return learningSignals
+    .filter((signal) => signal.sourceType === "problem-snap" && signal.examMode === expectedExamMode)
+    .filter((signal) => {
+      const createdTs = parseTime(signal.createdAt);
+      return createdTs !== null && createdTs >= cutoff && createdTs <= now.getTime();
+    })
+    .sort((a, b) => (parseTime(b.createdAt) ?? 0) - (parseTime(a.createdAt) ?? 0))[0] ?? null;
+}
+
+export function buildTodayPlanTasks({ mode, queue, learningSignals = [], now = new Date() }: BuildInput): TodayPlanTask[] {
   const ranked = queue
     .map((item) => {
       const dueTs = parseTime(item.dueAt);
@@ -76,7 +106,7 @@ export function buildTodayPlanTasks({ mode, queue, now = new Date() }: BuildInpu
     })
     .sort((a, b) => b.score - a.score || ((parseTime(a.item.dueAt) ?? Number.MAX_SAFE_INTEGER) - (parseTime(b.item.dueAt) ?? Number.MAX_SAFE_INTEGER)) || a.item.itemId.localeCompare(b.item.itemId));
 
-  return ranked.slice(0, 3).map(({ item, priority_reason }) => {
+  const queueTasks = ranked.slice(0, 3).map(({ item, priority_reason }) => {
     const taskType = resolveTaskType(mode, item);
     return {
       itemId: item.itemId,
@@ -91,4 +121,15 @@ export function buildTodayPlanTasks({ mode, queue, now = new Date() }: BuildInpu
       source_label: item.createdFromCapture ? "오늘 기록 기반" : "복습 큐 기반",
     };
   });
+
+  const topQueueScore = ranked[0]?.score ?? -1;
+  const topQueueDueTs = ranked[0] ? parseTime(ranked[0].item.dueAt) : null;
+  const queueHasStrongDueTask = topQueueScore >= 80 || (topQueueDueTs !== null && topQueueDueTs <= now.getTime());
+  if (queueHasStrongDueTask) return queueTasks;
+
+  const recentProblemSnap = pickRecentProblemSnapSignal(learningSignals, mode, now);
+  if (!recentProblemSnap) return queueTasks;
+
+  const problemSnapTask = toProblemSnapTask(mode, recentProblemSnap);
+  return [problemSnapTask, ...queueTasks].slice(0, 3);
 }
