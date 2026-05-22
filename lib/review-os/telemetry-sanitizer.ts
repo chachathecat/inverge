@@ -3,6 +3,8 @@ const FORBIDDEN_KEYS = new Set([
   "rawAnswerText",
   "raw_ocr_text",
   "raw_extraction_json",
+  "rewriteParagraph",
+  "rawRewriteParagraph",
   "full user answer",
   "full problem text",
   "full reference answer",
