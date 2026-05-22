@@ -13,6 +13,7 @@ import {
 import { getEntitlementLimit } from "@/lib/review-os/entitlements";
 import { buildCaptureNoteSignals, structureCaptureNote } from "@/lib/review-os/capture-note-engine";
 import { buildCaptureLearningSignal, buildCaptureReviewReason, computeCaptureQueuePriority } from "@/lib/review-os/capture-learning-signals";
+import { sanitizeCaptureTelemetryMetadata } from "@/lib/review-os/telemetry-sanitizer";
 import { reviewOsRepository } from "@/lib/review-os/repository";
 import { resolveReviewSchedule, resolveScheduleOverrideDate } from "@/lib/review-os/scheduling";
 import {
@@ -721,6 +722,22 @@ export class ReviewOsService {
       const queueDueAt = schedule.retryDueAt ?? resolveScheduleOverrideDate(effectiveNextReviewDate, schedule.reviewDueAt);
 
       const isCaptureCreated = input.createdFromCapture === true;
+      if (isCaptureCreated) {
+        await reviewOsRepository.logUsageEvent(
+          userId,
+          "capture_started",
+          "capture_session",
+          null,
+          sanitizeCaptureTelemetryMetadata({ mode, subject: normalizedInput.subjectLabel, createdFromCapture: true }),
+        );
+        await reviewOsRepository.logUsageEvent(
+          userId,
+          "capture_input_method_selected",
+          "capture_session",
+          null,
+          sanitizeCaptureTelemetryMetadata({ mode, sourceType: input.sourceType, createdFromCapture: true }),
+        );
+      }
       const captureSignals = isCaptureCreated ? buildCaptureNoteSignals(mode, normalizedInput) : null;
       let captureSignalsV2: Record<string, unknown> | null = null;
       if (isCaptureCreated) {
@@ -735,7 +752,21 @@ export class ReviewOsService {
             userConfirmedFields: normalizedInput.extractionPayload?.user_confirmed_fields,
             itemInput: normalizedInput,
           }) as Record<string, unknown>;
+          await reviewOsRepository.logUsageEvent(
+            userId,
+            "ocr_draft_generated",
+            "capture_session",
+            null,
+            sanitizeCaptureTelemetryMetadata({ mode, subject: normalizedInput.subjectLabel, sourceType: input.sourceType, createdFromCapture: true }),
+          );
         } catch (error) {
+          await reviewOsRepository.logUsageEvent(
+            userId,
+            "ocr_draft_failed",
+            "capture_session",
+            null,
+            sanitizeCaptureTelemetryMetadata({ mode, subject: normalizedInput.subjectLabel, sourceType: input.sourceType, createdFromCapture: true }),
+          );
           console.warn("[review-os] capture note structuring fallback", error);
           captureSignalsV2 = captureSignals as Record<string, unknown> | null;
         }
@@ -773,6 +804,23 @@ export class ReviewOsService {
         };
       } catch (error) {
         console.warn("[review-os] wrong answer taxonomy classification fallback", error);
+      }
+
+      if (isCaptureCreated) {
+        await reviewOsRepository.logUsageEvent(
+          userId,
+          "draft_field_edited",
+          "capture_session",
+          null,
+          sanitizeCaptureTelemetryMetadata({ mode, fieldName: "normalized_draft", fieldChanged: Boolean(input.extractionPayload?.user_confirmed_fields), createdFromCapture: true }),
+        );
+        await reviewOsRepository.logUsageEvent(
+          userId,
+          "draft_confirmed",
+          "capture_session",
+          null,
+          sanitizeCaptureTelemetryMetadata({ mode, subject: normalizedInput.subjectLabel, confidence: normalizedInput.confidence, createdFromCapture: true }),
+        );
       }
 
       const item = await reviewOsRepository.insertWrongAnswerItem(
@@ -868,6 +916,26 @@ export class ReviewOsService {
             mistakeType: artifacts.tags.mistakeType,
           });
 
+      await reviewOsRepository.logUsageEvent(
+        userId,
+        "capture_saved",
+        "wrong_answer_item",
+        item.id,
+        sanitizeCaptureTelemetryMetadata({
+          mode,
+          subject: item.subjectLabel,
+          sourceType: input.sourceType,
+          confidence: item.confidence,
+          nextTaskType: mode === "second" ? "rewrite" : "retry",
+          topicCandidate: artifacts.tags.topicTag,
+          mistakeType: artifacts.tags.mistakeType,
+          weakStructurePoint: input.weakStructurePoint ?? null,
+          missingIssue: input.missingIssue ?? null,
+          createdFromCapture: isCaptureCreated,
+        }),
+      );
+      await reviewOsRepository.logUsageEvent(userId, "post_save_execution_started", "wrong_answer_item", item.id, sanitizeCaptureTelemetryMetadata({ mode, nextTaskType: mode === "second" ? "rewrite" : "retry", createdFromCapture: isCaptureCreated }));
+
       await reviewOsRepository.insertReviewQueueEntry(userId, item, reviewReason, priorityScore, queueDueAt, {
         topicTag: artifacts.tags.topicTag,
         mistakeType: artifacts.tags.mistakeType,
@@ -877,6 +945,9 @@ export class ReviewOsService {
         followUpReviewAt: schedule.followUpReviewAt,
         nextReviewDate: effectiveNextReviewDate,
       });
+      await reviewOsRepository.logUsageEvent(userId, "post_save_execution_completed", "wrong_answer_item", item.id, sanitizeCaptureTelemetryMetadata({ mode, createdFromCapture: isCaptureCreated }));
+      await reviewOsRepository.logUsageEvent(userId, "review_followup_scheduled", "review_queue_item", item.id, sanitizeCaptureTelemetryMetadata({ mode, nextTaskType: mode === "second" ? "rewrite" : "retry", createdFromCapture: isCaptureCreated }));
+
 
       if (isCaptureCreated) {
         try {
