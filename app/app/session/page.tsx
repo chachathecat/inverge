@@ -27,7 +27,10 @@ export default async function ReviewOsSessionPage({ searchParams }: PageProps) {
   if (mode === "second" && focus.nextActionType === "capture_now") {
     redirect("/app/write?mode=second");
   }
-  const queueItem = focus.queue.find((item) => item.queueId === focus.sourceQueueId) ?? focus.queue[0] ?? null;
+  const savedCaptureQueueItem = savedCaptureItemId
+    ? focus.queue.find((item) => item.itemId === savedCaptureItemId) ?? null
+    : null;
+  const queueItem = savedCaptureQueueItem ?? focus.queue.find((item) => item.queueId === focus.sourceQueueId) ?? focus.queue[0] ?? null;
   const detail = queueItem ? await reviewOsService.getWrongAnswerDetail(session.userId, session.email, queueItem.itemId) : null;
   const savedCaptureDetail =
     savedCapture && savedCaptureItemId
@@ -74,7 +77,15 @@ export default async function ReviewOsSessionPage({ searchParams }: PageProps) {
           </div>
           <div className="mt-3 space-y-2">
             <Link
-              href={mode === "second" ? `/app/capture?mode=second&workflow=second-write` : "/app/capture?mode=first"}
+              href={
+                mode === "second"
+                  ? savedCaptureItemId
+                    ? `/app/capture?mode=second&rewriteFrom=${encodeURIComponent(savedCaptureItemId)}`
+                    : "/app/capture?mode=second"
+                  : savedCaptureItemId
+                    ? `/app/session?mode=first&itemId=${encodeURIComponent(savedCaptureItemId)}#today-session-runner`
+                    : "#today-session-runner"
+              }
               className="inline-flex w-full items-center justify-center rounded-full bg-[color:var(--foreground-strong)] px-4 py-2 text-sm font-medium text-white"
             >
               {mode === "second" ? "지금 10분 다시 쓰기" : "지금 5분 다시 풀기"}
@@ -90,7 +101,8 @@ export default async function ReviewOsSessionPage({ searchParams }: PageProps) {
           </div>
         </section>
       ) : null}
-      <TodaySessionRunner
+      <section id="today-session-runner">
+        <TodaySessionRunner
         mode={mode}
         modeLabel={config.label}
         focus={focus}
@@ -108,6 +120,7 @@ export default async function ReviewOsSessionPage({ searchParams }: PageProps) {
             : null
         }
       />
+      </section>
       <ReviewOsFeedbackButton route="/app/session" pageContext={{ mode, hasQueueItem: Boolean(queueItem) }} />
     </div>
   );

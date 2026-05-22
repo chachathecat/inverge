@@ -212,7 +212,9 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
               <details className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
                 <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">다른 작업 보기</summary>
                 <div className="grid gap-2.5 border-t border-[color:var(--border-subtle)] px-4 py-3">
-                {inputOptions.slice(1).map((option) => (
+                {(mode === "second" ? inputOptions : inputOptions.slice(1))
+                  .filter((option) => option.href !== (mode === "second" ? "/app/capture?mode=second" : inputOptions[0].href))
+                  .map((option) => (
                   <Link
                     key={option.title}
                     href={option.href}
