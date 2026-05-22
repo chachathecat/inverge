@@ -62,13 +62,13 @@ export default async function ReviewOsItemsPage({ searchParams }: PageProps) {
   };
   const signalFallbackTask = mode === "second" ? "한 번 더 검토하기" : "오늘 할 일에서 확인";
   const problemSnapEmptyCopy = "문제 스냅으로 막힌 문제를 저장하면 오늘 할 일에 반영됩니다.";
-  const signalCta = (sourceType: string) =>
-    sourceType === "problem-snap"
+  const signalCta = (signal: { sourceType: string; subject: string }) =>
+    signal.sourceType === "problem-snap"
       ? mode === "second"
-        ? { label: "Answer Review로 검토", href: `/answer-review?mode=${mode}` }
-        : { label: "다시 풀기", href: `/problem-snap?mode=${mode}` }
+        ? { label: "Answer Review로 검토", href: `/answer-review?mode=${mode}&subject=${encodeURIComponent(signal.subject)}` }
+        : { label: "다시 풀기", href: `/problem-snap?mode=${mode}&subject=${encodeURIComponent(signal.subject)}` }
       :
-    sourceType === "answer_review"
+    signal.sourceType === "answer_review"
       ? { label: "답안 검토하기", href: `/answer-review?mode=${mode}` }
       : { label: "오늘에서 보기", href: `/app?mode=${mode}` };
 
@@ -151,10 +151,10 @@ export default async function ReviewOsItemsPage({ searchParams }: PageProps) {
                     <p className="mt-1 text-xs text-[color:var(--muted)]">{formatCreatedDate(signal.createdAt)}</p>
                   ) : null}
                   <Link
-                    href={signalCta(signal.sourceType).href}
+                    href={signalCta(signal).href}
                     className="mt-2 inline-flex text-sm font-medium text-[color:var(--foreground-strong)] underline-offset-4 hover:underline"
                   >
-                    {signalCta(signal.sourceType).label}
+                    {signalCta(signal).label}
                   </Link>
                 </div>
               ))}
@@ -180,10 +180,10 @@ export default async function ReviewOsItemsPage({ searchParams }: PageProps) {
                   <p className="mt-1 text-xs text-[color:var(--muted)]">{formatCreatedDate(signal.createdAt)}</p>
                 ) : null}
                 <Link
-                  href={signalCta(signal.sourceType).href}
+                  href={signalCta(signal).href}
                   className="mt-2 inline-flex text-sm font-medium text-[color:var(--foreground-strong)] underline-offset-4 hover:underline"
                 >
-                  {signalCta(signal.sourceType).label}
+                  {signalCta(signal).label}
                 </Link>
               </div>
             ))}

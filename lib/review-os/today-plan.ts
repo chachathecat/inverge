@@ -17,6 +17,10 @@ export type TodayPlanCard = {
 const EMPTY_STATE_COPY = "답안 검토나 오답 기록을 1개 남기면 오늘 할 일을 제안합니다.";
 
 function resolveAction(mode: AppMode, taskType: "retry" | "rewrite" | "review" | "recall"): Pick<TodayPlanCard, "ctaLabel" | "actionKind"> {
+  if (taskType === "rewrite" || taskType === "retry") {
+    return mode === "second" ? { ctaLabel: "Answer Review로 검토", actionKind: "second_review" } : { ctaLabel: "다시 풀기", actionKind: "first_session" };
+  }
+
   if (mode === "second") {
     if (taskType === "rewrite") return { ctaLabel: "다시 쓰기", actionKind: "second_review" };
     if (taskType === "review") return { ctaLabel: "다시 보기", actionKind: "second_review" };
@@ -34,7 +38,7 @@ export function buildTodayPlanCard(input: {
   queue: ReviewQueueCard[];
   items: WrongAnswerItemRecord[];
 }): TodayPlanCard {
-  const tasks = buildTodayPlanTasks({ mode: input.mode, queue: input.queue });
+  const tasks = buildTodayPlanTasks({ mode: input.mode, queue: input.queue, learningSignals: input.learningSignals });
   if (tasks.length === 0) {
     const hasAnyLearningData = input.learningSignals.length > 0 || input.items.length > 0;
     if (!hasAnyLearningData) {

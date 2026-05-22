@@ -95,7 +95,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
   const firstUse = items.length === 0 && !hasDataSignals;
   const selectedQueueItem = queue.find((item) => item.queueId === focus.sourceQueueId) ?? queue[0] ?? null;
   const todayPlan = buildTodayPlanCard({ mode, learningSignals: learningSignalEvents, queue, items });
-  const todayPlanTasks = buildTodayPlanTasks({ mode, queue });
+  const todayPlanTasks = buildTodayPlanTasks({ mode, queue, learningSignals: learningSignalEvents });
   const nextAction = focus.nextAction ?? selectedQueueItem?.reviewReason ?? config.nextActionFallback;
   const isFirstSetStart = mode === "first" && focus.nextActionType === "capture_now";
   const selectedFirstSubject = normalizeSubjectForMode(subjectParam, "first");
@@ -241,6 +241,9 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
               <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--brand-050)] px-4 py-3">
                 <p className="text-caption text-[color:var(--muted)]">오늘 최우선 작업</p>
                 <p className="mt-1 text-body-lg text-[color:var(--foreground-strong)]">{todayPlan.primaryTask}</p>
+                {todayPlanTasks[0]?.source_label === "Problem Snap 기반" ? (
+                  <p className="mt-1 text-xs text-[color:var(--muted)]">Problem Snap 기반</p>
+                ) : null}
               </div>
               <CardTitle>지금 해야 할 한 가지에만 집중합니다.</CardTitle>
               <CardDescription className="max-w-[66ch]">
@@ -274,7 +277,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
               </div>
               {(() => {
                 const firstTodayPlanTask = todayPlanTasks[0] ?? null;
-                return firstTodayPlanTask?.created_from_capture ? (
+                return firstTodayPlanTask?.created_from_capture && firstTodayPlanTask.source_label !== "Problem Snap 기반" ? (
                   <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-4 py-3">
                     <p className="text-xs text-[color:var(--foreground-strong)]">{firstTodayPlanTask.title}</p>
                     <p className="mt-1 text-xs text-[color:var(--muted)]">이유: {firstTodayPlanTask.reason}</p>
