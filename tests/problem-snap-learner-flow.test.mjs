@@ -79,7 +79,7 @@ test("subject-specific views and retry mode labels exist", async () => {
   assert.ok(source.includes("showCalculatorGuide ? ("));
   assert.ok(source.includes(") : null}"));
   assert.ok(source.includes("renderPrimarySubjectCards"));
-  assert.ok(source.includes("const renderSubjectSpecificCards = (view: \"practice\" | \"theory\" | \"law\" | \"first\", currentResult: ProblemSnapResult): React.ReactNode[] =>"));
+  assert.ok(source.includes("const renderSubjectSpecificCards = (view: \"practice\" | \"theory\" | \"law\" | \"first\") =>"));
   assert.ok(source.includes("return cards.slice(0, 4);"));
   assert.equal(source.includes("return Array.isArray(cards) ? cards.slice(0, 4) : cards;"), false);
   assert.ok(source.includes("`/answer-review?mode=${currentExamMode}&subject=${encodeURIComponent(currentSubject)}&source=problem-snap`"));
