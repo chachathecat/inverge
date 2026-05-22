@@ -79,6 +79,7 @@ type DraftState = {
   normalizedDraft?: ExtractionDraft;
   extractionNeedsReview?: boolean;
 };
+type UploadedPage = { id: string; name: string; label: string };
 
 const FIRST_STAGE_ERROR_REASON_OPTIONS = [
   "개념 부족",
@@ -269,7 +270,7 @@ export function WrongAnswerCaptureForm({
   const [extracting, setExtracting] = useState(false);
   const [extractError, setExtractError] = useState("");
   const [extractionState, setExtractionState] = useState<ExtractionState>("idle");
-  const [uploadedPages, setUploadedPages] = useState<string[]>([]);
+  const [uploadedPages, setUploadedPages] = useState<UploadedPage[]>([]);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const galleryInputRef = useRef<HTMLInputElement | null>(null);
   const pdfInputRef = useRef<HTMLInputElement | null>(null);
@@ -443,7 +444,7 @@ export function WrongAnswerCaptureForm({
     setExtracting(true);
     setExtractError("");
     setExtractionState("uploading");
-    setUploadedPages(files.map((file, index) => `${index + 1}페이지 · ${file.name}`));
+    setUploadedPages(files.map((file, index) => ({ id: `${Date.now()}-${index}-${file.name}`, name: file.name, label: `${index + 1}페이지 · ${file.name}` })));
     try {
       const body = new FormData();
       body.append("mode", mode);
@@ -455,7 +456,7 @@ export function WrongAnswerCaptureForm({
         const fallback: DraftState = {
           ...form,
           sourceType: "image",
-          sourceLabel: files.map((file) => file.name).join(", "),
+          sourceLabel: files.map((file, index) => `${index + 1}페이지 · ${file.name}`).join(" / "),
         };
         setForm(persist(fallback));
         setStage("preview");
@@ -467,7 +468,7 @@ export function WrongAnswerCaptureForm({
       const base: DraftState = {
         ...form,
         sourceType: "image",
-        sourceLabel: files.map((file) => file.name).join(", "),
+        sourceLabel: files.map((file, index) => `${index + 1}페이지 · ${file.name}`).join(" / "),
         rawQuestionText: extractedText || form.rawQuestionText,
       };
       setForm(persist(result.normalized_draft ? applyExtraction(base, result) : buildStructuredDraft(base, extractedText || base.rawQuestionText)));
@@ -477,7 +478,7 @@ export function WrongAnswerCaptureForm({
       const fallback: DraftState = {
         ...form,
         sourceType: "image",
-        sourceLabel: files.map((file) => file.name).join(", "),
+        sourceLabel: files.map((file, index) => `${index + 1}페이지 · ${file.name}`).join(" / "),
       };
       setForm(persist(fallback));
       setStage("preview");
@@ -496,7 +497,7 @@ export function WrongAnswerCaptureForm({
         sourceLabel: file.name,
       }),
     );
-    setUploadedPages([`1페이지 · ${file.name}`]);
+    setUploadedPages([{ id: `${Date.now()}-pdf-${file.name}`, name: file.name, label: `1페이지 · ${file.name}` }]);
     setExtractionState("manual");
     setExtractError("현재 PDF는 파일명만 기록됩니다. 내용은 직접 붙여넣어 주세요.");
     setTimeout(() => {
@@ -512,6 +513,21 @@ export function WrongAnswerCaptureForm({
     setExtractError("");
     setExtractionState("idle");
     setUploadedPages([]);
+  }
+  function syncPageLabels(nextPages: UploadedPage[]) {
+    const relabeled = nextPages.map((page, index) => ({ ...page, label: `${index + 1}페이지 · ${page.name}` }));
+    setUploadedPages(relabeled);
+    update("sourceLabel", relabeled.map((page) => page.label).join(" / "));
+  }
+  function removePage(index: number) {
+    syncPageLabels(uploadedPages.filter((_, idx) => idx !== index));
+  }
+  function movePage(index: number, direction: "up" | "down") {
+    const target = direction === "up" ? index - 1 : index + 1;
+    if (target < 0 || target >= uploadedPages.length) return;
+    const next = [...uploadedPages];
+    [next[index], next[target]] = [next[target], next[index]];
+    syncPageLabels(next);
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -725,6 +741,8 @@ export function WrongAnswerCaptureForm({
             extractError={extractError}
             extractionState={extractionState}
             uploadedPages={uploadedPages}
+            onRemovePage={removePage}
+            onMovePage={movePage}
             needsOcrConfirmation={needsOcrConfirmation}
             missingConfirmationFields={missingConfirmationFields.map((field) => field.label)}
             update={update}
@@ -884,6 +902,8 @@ function IntakePanel({
   missingConfirmationFields,
   extractionState,
   uploadedPages,
+  onRemovePage,
+  onMovePage,
   onImage,
   onPdf,
   onGenerate,
@@ -899,7 +919,9 @@ function IntakePanel({
   needsOcrConfirmation: boolean;
   missingConfirmationFields: string[];
   extractionState: ExtractionState;
-  uploadedPages: string[];
+  uploadedPages: UploadedPage[];
+  onRemovePage: (index: number) => void;
+  onMovePage: (index: number, direction: "up" | "down") => void;
   onImage: (fileList: FileList) => void;
   onPdf: (file: File) => void;
   onGenerate: () => void | Promise<void>;
@@ -1057,6 +1079,23 @@ function IntakePanel({
       </label>
       <p className="text-xs text-[color:var(--muted)]">OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요.</p>
       {form.sourceType === "pdf" ? <p className="text-xs text-[color:var(--muted)]">현재 PDF는 파일명만 기록됩니다. 내용은 직접 붙여넣어 주세요.</p> : null}
+      {uploadedPages.length > 0 ? (
+        <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3">
+          <p className="text-xs font-medium text-[color:var(--muted)]">페이지 순서 확인</p>
+          <ul className="mt-2 space-y-2">
+            {uploadedPages.map((page, index) => (
+              <li key={page.id} className="flex items-center justify-between gap-2 text-sm">
+                <span>{page.label}</span>
+                <div className="flex gap-1">
+                  <Button type="button" variant="outline" className="h-7 px-2 text-xs" onClick={() => onMovePage(index, "up")} disabled={index === 0}>위로</Button>
+                  <Button type="button" variant="outline" className="h-7 px-2 text-xs" onClick={() => onMovePage(index, "down")} disabled={index === uploadedPages.length - 1}>아래로</Button>
+                  <Button type="button" variant="outline" className="h-7 px-2 text-xs" onClick={() => onRemovePage(index)}>제거</Button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
       {mode === "first" ? (
         <p className="mt-2 text-xs leading-6 text-[color:var(--muted)]">
           최소 입력: 정답, 내 답, 틀린 이유를 한 줄로 남겨도 됩니다. 예: 정답: 3 / 내 답: 2 / 이유: 선지 오독
@@ -1088,7 +1127,7 @@ function IntakePanel({
         <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">이미지/PDF로 입력하기 (선택)</summary>
         <div className="border-t border-[color:var(--border-subtle)] px-4 py-3">
           {form.sourceLabel ? <p className="text-sm text-[color:var(--muted)]">보관한 파일: {form.sourceLabel}</p> : null}
-          {uploadedPages.length > 0 ? <p className="mt-2 text-sm text-[color:var(--muted)]">페이지 순서: {uploadedPages.join(" / ")}</p> : null}
+          {uploadedPages.length > 0 ? <p className="mt-2 text-sm text-[color:var(--muted)]">페이지 순서: {uploadedPages.map((page) => page.label).join(" / ")}</p> : null}
           {form.sourceType === "pdf" ? (
             <p className="mt-2 text-sm text-[color:var(--muted)]">현재 PDF는 파일명만 기록됩니다. 내용은 직접 붙여넣어 주세요.</p>
           ) : null}
@@ -1115,9 +1154,15 @@ function IntakePanel({
         </p>
       ) : null}
       {extractError ? <p className="mt-3 text-sm leading-6 text-[color:var(--cue-risk)]">{extractError}</p> : null}
-      <ul className="mt-3 list-disc space-y-1 pl-5 text-xs text-[color:var(--muted)]">
-        <li>문제번호 확인</li><li>계산과정/답/단위 확인</li><li>페이지 순서 확인</li><li>“끝”/“이하여백” 등 형식 확인</li>
-      </ul>
+      {mode === "second" ? (
+        <ul className="mt-3 list-disc space-y-1 pl-5 text-xs text-[color:var(--muted)]">
+          <li>문제번호 확인</li>
+          <li>계산과정 확인</li>
+          <li>답/단위 확인</li>
+          <li>끝/이하여백 확인</li>
+          <li>누락 페이지 확인</li>
+        </ul>
+      ) : null}
     </section>
   );
 }
@@ -1170,6 +1215,7 @@ function ExtractionPreview({
           <PreviewLine label="실수 원인 추정" value={form.userReasonPreset || form.userReasonText} />
           <PreviewLine label="핵심 개념" value={form.keyConcepts} />
           <PreviewLine label="유사/재시도 행동" value={form.comparisonPoint} />
+          <PreviewLine label="페이지 라벨" value={form.sourceLabel || "없음"} />
         </div>
       ) : (
         <div className="mt-5 grid gap-3 lg:grid-cols-2">
@@ -1181,6 +1227,7 @@ function ExtractionPreview({
           <PreviewLine label="누락 논점 후보" value={form.missingIssue} />
           <PreviewLine label="구조 약점" value={form.weakStructurePoint} />
           <PreviewLine label="다시쓰기 지시" value={form.rewriteInstruction} />
+          <PreviewLine label="페이지 라벨" value={form.sourceLabel || "없음"} />
         </div>
       )}
     </section>
