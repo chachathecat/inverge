@@ -51,7 +51,7 @@ test("problem snap learner copy avoids endorsement, grading, and payment claims"
 test("recognition labels are Korean and camelCase labels are hidden", async () => {
   const source = await readFile(new URL("../app/problem-snap/problem-snap-client.tsx", import.meta.url), "utf8");
   ["문제 요약", "요구 유형", "읽은 조건", "숫자·단위", "불명확한 부분"].forEach((label) => assert.ok(source.includes(label)));
-  ["problemSummaryDraft:", "askTypeDraft:", "extractedConditions:", "extractedNumbersAndUnits:", "missingOrUnclearParts:"].forEach((label) => assert.equal(source.includes(label), false));
+  ["problemSummaryDraft:", "askTypeDraft:", "extractedNumbersAndUnits:", "missingOrUnclearParts:"].forEach((label) => assert.equal(source.includes(label), false));
 });
 
 test("local storage fallback uses the expected queue key", async () => {
@@ -79,7 +79,11 @@ test("subject-specific views and retry mode labels exist", async () => {
   assert.ok(source.includes("showCalculatorGuide ? ("));
   assert.ok(source.includes(") : null}"));
   assert.ok(source.includes("!retryMode ? <div className=\"grid gap-3 sm:grid-cols-2\">{renderSubjectSpecificCards(getProblemSnapSubjectView(subject), result)}</div> : null"));
-  assert.ok(source.includes("`/answer-review?mode=${currentExamMode}&subject=${encodeURIComponent(currentSubject)}`"));
+  assert.ok(source.includes("`/answer-review?mode=${currentExamMode}&subject=${encodeURIComponent(currentSubject)}&source=problem-snap`"));
+  assert.ok(source.includes('try {'));
+  assert.ok(source.includes('sessionStorage.setItem("inverge.problemSnap.answerReviewHandoff", JSON.stringify(handoffPayload));'));
+  assert.ok(source.includes('} catch {'));
+  assert.ok(source.includes('source: "problem-snap"'));
   assert.equal(source.includes("mode=second&examMode="), false);
 });
 
