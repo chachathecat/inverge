@@ -682,16 +682,21 @@ export function WrongAnswerCaptureForm({
         </>
       ) : secondWriteEnabled ? (
         <>
-          <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 sm:p-5">
-            <div className="max-w-xl space-y-2">
-              <p className="text-caption text-[color:var(--muted)]">설정</p>
-              <SubjectSelect
-                subjectLabel={config.subjectLabel}
-                subjects={config.subjects}
-                value={form.subjectLabel}
-                onChange={updateSubject}
-                className="form-control w-full"
-              />
+          <section className="rounded-[var(--radius-md)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)] p-3">
+            <div className="flex flex-wrap items-center gap-2 text-sm text-[color:var(--muted)]">
+              <span>과목: {form.subjectLabel}</span>
+              <details className="inline-block">
+                <summary className="cursor-pointer text-sm text-[color:var(--foreground-strong)] underline underline-offset-2">과목 바꾸기</summary>
+                <div className="mt-2 min-w-64">
+                  <SubjectSelect
+                    subjectLabel={config.subjectLabel}
+                    subjects={config.subjects}
+                    value={form.subjectLabel}
+                    onChange={updateSubject}
+                    className="form-control w-full"
+                  />
+                </div>
+              </details>
             </div>
           </section>
           {stage === "second-issue-recall" ? (
@@ -718,14 +723,14 @@ export function WrongAnswerCaptureForm({
                 update("userAnswer", value);
                 update("myAnswerSummary", firstLine(value, form.myAnswerSummary || "내 답안 요약"));
               }}
-              onNext={() => setStage("second-reference")}
+              onNext={() => { if (form.userAnswer.trim().length >= 8) setStage("second-reference"); }}
             />
           ) : null}
           {stage === "second-reference" ? (
             <SecondReferencePanel
               reference={form.correctAnswer}
               onChange={(value) => update("correctAnswer", value)}
-              onNext={() => setStage("second-gap")}
+              onNext={() => { if (form.correctAnswer.trim().length >= 8) setStage("second-gap"); }}
             />
           ) : null}
           {stage === "second-gap" ? (
@@ -809,11 +814,11 @@ export function WrongAnswerCaptureForm({
                 update("userAnswer", value);
                 update("myAnswerSummary", firstLine(value, form.myAnswerSummary || "내 답안 요약"));
               }}
-              onNext={() => setStage("second-reference")}
+              onNext={() => { if (form.userAnswer.trim().length >= 8) setStage("second-reference"); }}
             />
           ) : null}
           {mode === "second" && stage === "second-reference" ? (
-            <SecondReferencePanel reference={form.correctAnswer} onChange={(value) => update("correctAnswer", value)} onNext={() => setStage("second-gap")} />
+            <SecondReferencePanel reference={form.correctAnswer} onChange={(value) => update("correctAnswer", value)} onNext={() => { if (form.correctAnswer.trim().length >= 8) setStage("second-gap"); }} />
           ) : null}
           {mode === "second" && stage === "second-gap" ? (
             <SecondGapPanel
@@ -839,36 +844,43 @@ export function WrongAnswerCaptureForm({
         </p>
       ) : null}
 
-      <div className="flex flex-col gap-3 sm:flex-row">
-        {rewriteContext && mode === "second" ? (
-          <Button type="submit" disabled={submitting || !form.userAnswer.trim()} className="w-full sm:w-auto">
-            {submitting ? "저장 중" : "문단 다시쓰기 저장"}
-          </Button>
-        ) : stage === "preview" ? (
-          <Button
-            type="button"
-            onClick={() => setStage(mode === "second" ? "second-issue-recall" : "confirm")}
-            className="w-full sm:w-auto"
-          >
-            {mode === "second" ? "쟁점 회상부터 시작" : "확인하고 저장하기"}
-          </Button>
-        ) : stage === "intake" ? null : (
-          <Button
-            type="submit"
-            disabled={submitting || (mode === "second" && stage !== "second-rewrite" && stage !== "confirm")}
-            data-testid={mode === "second" && stage === "second-rewrite" && !rewriteContext ? "second-write-submit" : undefined}
-            className="w-full sm:w-auto"
-          >
-            {submitting ? "저장 중" : "저장하고 오늘 계획에 반영"}
-          </Button>
-        )}
-        <Button type="button" variant="outline" onClick={resetDraft} className="w-full sm:w-auto">
-          {mode === "second" ? "다시 쓰기" : "다시 풀기"}
-        </Button>
-        <Button type="button" variant="ghost" onClick={resetDraft} className="w-full sm:w-auto">
-          나중에 하기
-        </Button>
-      </div>
+      {!(secondWriteEnabled && stage !== "second-rewrite") ? (
+        <div className="flex flex-col gap-3 sm:flex-row">
+          {rewriteContext && mode === "second" ? (
+            <Button type="submit" disabled={submitting || !form.userAnswer.trim()} className="w-full sm:w-auto">
+              {submitting ? "저장 중" : "문단 다시쓰기 저장"}
+            </Button>
+          ) : stage === "preview" ? (
+            <Button
+              type="button"
+              onClick={() => setStage(mode === "second" ? "second-issue-recall" : "confirm")}
+              className="w-full sm:w-auto"
+            >
+              {mode === "second" ? "쟁점 회상부터 시작" : "확인하고 저장하기"}
+            </Button>
+          ) : stage === "intake" ? null : (
+            <Button
+              type="submit"
+              disabled={submitting || (mode === "second" && stage !== "second-rewrite" && stage !== "confirm")}
+              data-testid={mode === "second" && stage === "second-rewrite" && !rewriteContext ? "second-write-submit" : undefined}
+              className="w-full sm:w-auto"
+            >
+              {submitting ? "저장 중" : "저장하고 오늘 계획에 반영"}
+            </Button>
+          )}
+          <details className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-3 py-2">
+            <summary className="cursor-pointer text-xs font-medium text-[color:var(--muted)]">다른 선택</summary>
+            <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+              <Button type="button" variant="outline" onClick={resetDraft} className="w-full sm:w-auto">
+                {mode === "second" ? "다시 쓰기" : "다시 풀기"}
+              </Button>
+              <Button type="button" variant="ghost" onClick={resetDraft} className="w-full sm:w-auto">
+                나중에 하기
+              </Button>
+            </div>
+          </details>
+        </div>
+      ) : null}
     </form>
   );
 }
@@ -1522,9 +1534,8 @@ function SecondIssueRecallPanel({
   return (
     <section className="rounded-[var(--radius-card)] border border-[color:var(--cue-focus)] bg-[color:var(--cue-focus-bg)] p-4 sm:p-5">
       <p className="text-caption text-[color:var(--muted)]">Step 1. 쟁점 회상</p>
-      <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">기준 답안 보기 전에 쟁점 3개를 먼저 적습니다</h3>
-      <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">완벽히 쓰지 말고, 지금 떠오르는 문장만 적으세요.</p>
-      <p className="text-sm leading-6 text-[color:var(--muted)]">이 과목은 먼저 이 구조로 답안을 잡습니다. {template.structure}</p>
+      <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">기준답안 보기 전, 쟁점 1개만 적으세요.</h3>
+      <details className="mt-2 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3"><summary className="cursor-pointer text-xs font-medium text-[color:var(--muted)]">왜 이 순서인가요?</summary><p className="mt-2 text-xs leading-6 text-[color:var(--muted)]">완벽히 쓰지 말고, 지금 떠오르는 문장만 적으세요. 이 과목은 먼저 이 구조로 답안을 잡습니다. {template.structure}</p></details>
       <label className="mt-4 block space-y-2">
         <span className="text-sm text-[color:var(--foreground-strong)]">쟁점 회상</span>
         <Textarea
@@ -1556,9 +1567,8 @@ function SecondOutlinePanel({
   return (
     <section className="rounded-[var(--radius-card)] border border-[color:var(--cue-focus)] bg-[color:var(--cue-focus-bg)] p-4 sm:p-5">
       <p className="text-caption text-[color:var(--muted)]">Step 2. 목차 작성</p>
-      <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">전체 답안보다 목차를 먼저 잡습니다</h3>
-      <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">전체 답안보다 목차 3줄이 먼저입니다.</p>
-      <p className="text-sm leading-6 text-[color:var(--muted)]">기준 답안 보기 전에 이 체크포인트 중 3개를 떠올립니다: {template.checklist.slice(0, 3).join(", ")}</p>
+      <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">전체 답안보다 목차 3줄이 먼저입니다.</h3>
+      <details className="mt-2 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3"><summary className="cursor-pointer text-xs font-medium text-[color:var(--muted)]">왜 이 순서인가요?</summary><p className="mt-2 text-xs leading-6 text-[color:var(--muted)]">기준 답안 보기 전에 이 체크포인트 중 3개를 떠올립니다: {template.checklist.slice(0, 3).join(", ")}</p></details>
       <label className="mt-4 block space-y-2">
         <span className="text-sm text-[color:var(--foreground-strong)]">목차 초안</span>
         <Textarea
@@ -1595,7 +1605,7 @@ function SecondAnswerPanel({
     <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 sm:p-5">
       <p className="text-caption text-[color:var(--muted)]">Step 3. 내 답안 작성</p>
       <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">비교는 작성 이후에 합니다</h3>
-      <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">완벽히 쓰지 말고, 지금 떠오르는 문장만 적으세요.</p>
+      <details className="mt-2 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3"><summary className="cursor-pointer text-xs font-medium text-[color:var(--muted)]">왜 이 순서인가요?</summary><p className="mt-2 text-xs leading-6 text-[color:var(--muted)]">완벽히 쓰지 말고, 지금 떠오르는 문장만 적으세요.</p></details>
       <label className="mt-4 block space-y-2">
         <span className="text-sm text-[color:var(--foreground-strong)]">내 답안</span>
         <Textarea
@@ -1624,8 +1634,8 @@ function SecondReferencePanel({
   return (
     <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 sm:p-5">
       <p className="text-caption text-[color:var(--muted)]">Step 4. 기준답안/해설 입력</p>
-      <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">작성 이후에 기준답안을 입력합니다</h3>
-      <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">비교는 작성 이후에 합니다.</p>
+      <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">작성한 뒤에만 기준답안을 봅니다.</h3>
+      <details className="mt-2 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3"><summary className="cursor-pointer text-xs font-medium text-[color:var(--muted)]">왜 이 순서인가요?</summary><p className="mt-2 text-xs leading-6 text-[color:var(--muted)]">비교는 작성 이후에 합니다.</p></details>
       <label className="mt-4 block space-y-2">
         <span className="text-sm text-[color:var(--foreground-strong)]">기준 답안 요약</span>
         <Textarea
@@ -1656,8 +1666,8 @@ function SecondGapPanel({
   return (
     <section className="rounded-[var(--radius-card)] border border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] p-4 sm:p-5">
       <p className="text-caption text-[color:var(--muted)]">Step 5. 가장 큰 간극 1개</p>
-      <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">오늘은 간극 1개만 고칩니다</h3>
-      <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">{template.biggestGapGuidance}</p>
+      <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">오늘은 가장 큰 간극 1개만 고칩니다.</h3>
+      <details className="mt-2 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3"><summary className="cursor-pointer text-xs font-medium text-[color:var(--muted)]">왜 이 순서인가요?</summary><p className="mt-2 text-xs leading-6 text-[color:var(--muted)]">{template.biggestGapGuidance}</p></details>
       <label className="mt-4 block space-y-2">
         <span className="text-sm text-[color:var(--foreground-strong)]">보강할 논점 1개</span>
         <Textarea
@@ -1689,8 +1699,8 @@ function SecondGapRewritePanel({
   return (
     <section className="rounded-[var(--radius-card)] border border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] p-4 sm:p-5">
       <p className="text-caption text-[color:var(--muted)]">Step 6. 문단 다시쓰기</p>
-      <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">한 문단 다시쓰기로 보강을 마무리합니다</h3>
-      <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">{template.rewriteGuidance}</p>
+      <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">한 문단만 다시 씁니다.</h3>
+      <details className="mt-2 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3"><summary className="cursor-pointer text-xs font-medium text-[color:var(--muted)]">왜 이 순서인가요?</summary><p className="mt-2 text-xs leading-6 text-[color:var(--muted)]">{template.rewriteGuidance}</p></details>
       <div className="mt-4 space-y-4">
         <label className="block space-y-2">
           <span className="text-sm text-[color:var(--foreground-strong)]">다시 쓴 문단</span>
