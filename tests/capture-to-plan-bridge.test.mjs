@@ -356,7 +356,26 @@ test("daily activity derivation avoids raw text fields", async () => {
   const source = await readFile(new URL("../lib/review-os/service.ts", import.meta.url), "utf8");
   const methodStart = source.indexOf("async getDailyStudyActivity");
   const methodBody = source.slice(methodStart, source.indexOf("async hasMeaningfulLearningData"));
-  ["raw_ocr_text", "rawQuestionText", "rawAnswerText", "full answer text"].forEach((field) =>
+  ["raw_ocr_text", "rawQuestionText", "rawAnswerText", "raw_extraction_json", "full answer text"].forEach((field) =>
     assert.equal(methodBody.includes(field), false),
   );
+});
+
+test("daily activity loads recent usage events from yesterday KST day start", async () => {
+  const source = await readFile(new URL("../lib/review-os/service.ts", import.meta.url), "utf8");
+  const methodStart = source.indexOf("async getDailyStudyActivity");
+  const methodBody = source.slice(methodStart, source.indexOf("async hasMeaningfulLearningData"));
+  assert.ok(methodBody.includes("const yesterdayStartUtcIso = new Date(`${yesterdayKstDayKey}T00:00:00+09:00`).toISOString();"));
+  assert.ok(methodBody.includes("listRecentUsageEventsByNames"));
+  assert.ok(methodBody.includes("yesterdayStartUtcIso"));
+  assert.equal(methodBody.includes("dayStartUtcIso,\n        80"), false);
+});
+
+test("missed recently derives from yesterday-only review activity", async () => {
+  const source = await readFile(new URL("../lib/review-os/service.ts", import.meta.url), "utf8");
+  const methodStart = source.indexOf("async getDailyStudyActivity");
+  const methodBody = source.slice(methodStart, source.indexOf("async hasMeaningfulLearningData"));
+  assert.ok(methodBody.includes("const missedRecently = !studiedToday && studiedYesterday;"));
+  assert.ok(methodBody.includes("event.eventName === \"review_complete\""));
+  assert.ok(methodBody.includes("isSameKstDay(event.createdAt, yesterday)"));
 });
