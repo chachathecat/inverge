@@ -12,6 +12,11 @@ import type { AppraisalMode } from "@/lib/review-os/appraisal";
 type ExplanationLevel = "easy" | "standard" | "exam";
 
 type ProblemSnapResult = {
+  problemSummaryDraft?: string;
+  askTypeDraft?: string;
+  extractedConditions?: string[];
+  extractedNumbersAndUnits?: string[];
+  missingOrUnclearParts?: string[];
   calculatorGuide: {
     calculatorModel: "CASIO fx-9860GIII";
     calculationPurpose: string;
@@ -47,6 +52,10 @@ export default function ProblemSnapClientPage({ initialExamMode }: { initialExam
   const [result, setResult] = useState<ProblemSnapResult | null>(null);
   const [referenceGrounding, setReferenceGrounding] = useState<{ used: boolean; displayLabel: string } | null>(null);
   const [savedLocal, setSavedLocal] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "failed" | "local_fallback">("idle");
+  const [recognitionConfirmed, setRecognitionConfirmed] = useState(false);
+  const [recognizedTextDraft, setRecognizedTextDraft] = useState("");
+  const [lastInputSource, setLastInputSource] = useState<"camera" | "file" | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
@@ -66,11 +75,32 @@ export default function ProblemSnapClientPage({ initialExamMode }: { initialExam
     return subject === "감정평가실무" || hasSignal;
   }, [result, subject]);
 
+  const hasMeaningfulValue = (items?: string[]) =>
+    (items ?? []).some((item) => {
+      const normalized = item.trim();
+      if (!normalized) return false;
+      return !["확인 필요", "검토 필요", "없음"].some((placeholder) => normalized.includes(placeholder));
+    });
+
+  const syncRecognitionDraftFromInputs = (nextProblemText: string, nextFilesCount: number) => {
+    if (nextProblemText.trim()) {
+      setRecognizedTextDraft(nextProblemText);
+      return;
+    }
+    if (nextFilesCount > 0) {
+      setRecognizedTextDraft(`파일 ${nextFilesCount}개 제출 — 원문 확인 필요`);
+      return;
+    }
+    setRecognizedTextDraft("");
+  };
+
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
     setLoading(true);
     setError("");
     setResult(null);
+    setRecognitionConfirmed(false);
+    setSaveStatus("idle");
     try {
       const formData = new FormData();
       formData.set("examMode", examMode);
@@ -82,11 +112,54 @@ export default function ProblemSnapClientPage({ initialExamMode }: { initialExam
       const json = await response.json();
       if (!response.ok || !json.ok) throw new Error(json.error ?? "문제 풀이를 생성하지 못했습니다.");
       setResult(json.result);
+      setRecognizedTextDraft((json.result.problemSummaryDraft as string | undefined) || problemText || (files.length > 0 ? `파일 ${files.length}개 제출 — 원문 확인 필요` : "확인 필요"));
       setReferenceGrounding(json.referenceGrounding ?? null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "문제 풀이를 생성하지 못했습니다.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function onSaveToReviewQueue() {
+    if (!result) return;
+    setSaveStatus("saving");
+    try {
+      const response = await fetch("/api/problem-snap/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          source: "problem-snap",
+          examMode,
+          subject,
+          problemSummary: result.problemSummary,
+          requiredConcepts: result.requiredConcepts,
+          formulas: result.formulas,
+          commonMistakes: result.commonMistakes,
+          nextPracticeAction: result.nextPracticeAction,
+          createdAt: new Date().toISOString(),
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok || !payload.ok) throw new Error(payload.error ?? "복습 큐 저장에 실패했습니다.");
+      setSaveStatus("saved");
+      setSavedLocal(false);
+    } catch {
+      try {
+        const key = "inverge.problemSnap.localQueue";
+        const existing = localStorage.getItem(key);
+        const queue = existing ? JSON.parse(existing) : [];
+        queue.push({ examMode, subject, savedAt: new Date().toISOString(), result });
+        localStorage.setItem(key, JSON.stringify(queue));
+        const wrote = localStorage.getItem(key);
+        if (wrote) {
+          setSavedLocal(true);
+          setSaveStatus("local_fallback");
+          return;
+        }
+      } catch {}
+      setSavedLocal(false);
+      setSaveStatus("failed");
     }
   }
 
@@ -105,9 +178,25 @@ export default function ProblemSnapClientPage({ initialExamMode }: { initialExam
             <button type="button" onClick={() => fileInputRef.current?.click()} className={cn(buttonVariants({ variant: "outline" }), "h-10 w-full justify-center text-sm")}>PDF/사진 불러오기</button>
             <button type="button" onClick={() => document.getElementById("problemText")?.focus()} className={cn(buttonVariants({ variant: "outline" }), "h-10 w-full justify-center text-sm")}>텍스트 붙여넣기</button>
           </div>
-          <input ref={cameraInputRef} className="hidden" type="file" accept="image/*" capture="environment" multiple onChange={(e) => setFiles(Array.from(e.target.files ?? []))} />
-          <input ref={fileInputRef} className="hidden" type="file" accept="image/*,.pdf" multiple onChange={(e) => setFiles(Array.from(e.target.files ?? []))} />
+          <input ref={cameraInputRef} className="hidden" type="file" accept="image/*" capture="environment" multiple onChange={(e) => { const nextFiles = Array.from(e.target.files ?? []); setFiles(nextFiles); setLastInputSource("camera"); if (!recognitionConfirmed) syncRecognitionDraftFromInputs(problemText, nextFiles.length); else setRecognitionConfirmed(false); }} />
+          <input ref={fileInputRef} className="hidden" type="file" accept="image/*,.pdf" multiple onChange={(e) => { const nextFiles = Array.from(e.target.files ?? []); setFiles(nextFiles); setLastInputSource("file"); if (!recognitionConfirmed) syncRecognitionDraftFromInputs(problemText, nextFiles.length); else setRecognitionConfirmed(false); }} />
           <p className="text-xs text-[color:var(--muted)]">선택 파일 {files.length}개</p>
+          {files.length > 0 ? (
+            <div className="space-y-2">
+              {files.map((file, index) => (
+                <div key={`${file.name}-${index}`} className="flex items-center justify-between rounded border px-3 py-2 text-xs">
+                  <div>
+                    <p>{file.name}</p>
+                    <p className="text-[color:var(--muted)]">{file.type || "확인 필요"}</p>
+                  </div>
+                  <button type="button" className="underline" onClick={() => setFiles((prev) => { const nextFiles = prev.filter((_, i) => i !== index); if (!recognitionConfirmed) syncRecognitionDraftFromInputs(problemText, nextFiles.length); else setRecognitionConfirmed(false); return nextFiles; })}>삭제</button>
+                </div>
+              ))}
+              {lastInputSource === "camera" ? (
+                <button type="button" className={cn(buttonVariants({ variant: "outline" }), "h-9")} onClick={() => cameraInputRef.current?.click()}>다시 찍기</button>
+              ) : null}
+            </div>
+          ) : null}
         </div>
 
         <div className="grid gap-3 sm:grid-cols-3">
@@ -116,27 +205,36 @@ export default function ProblemSnapClientPage({ initialExamMode }: { initialExam
               const nextMode = e.target.value === "first" ? "first" : "second";
               setExamMode(nextMode);
               setSubject(nextMode === "first" ? FIRST_SUBJECTS[0] : SECOND_SUBJECTS[0]);
+              if (recognitionConfirmed) setRecognitionConfirmed(false);
             }}>
               <option value="second">2차</option><option value="first">1차</option>
             </select>
           </label>
           <label className="text-sm">과목
-            <select className="mt-1 w-full rounded border p-2" value={subject} onChange={(e) => setSubject(e.target.value)}>
+            <select className="mt-1 w-full rounded border p-2" value={subject} onChange={(e) => { setSubject(e.target.value); if (recognitionConfirmed) setRecognitionConfirmed(false); }}>
               {subjects.map((item) => <option key={item} value={item}>{item}</option>)}
             </select>
           </label>
           <label className="text-sm">해설 난이도
-            <select className="mt-1 w-full rounded border p-2" value={explanationLevel} onChange={(e) => setExplanationLevel(e.target.value as ExplanationLevel)}>
+            <select className="mt-1 w-full rounded border p-2" value={explanationLevel} onChange={(e) => { setExplanationLevel(e.target.value as ExplanationLevel); if (recognitionConfirmed) setRecognitionConfirmed(false); }}>
               <option value="easy">쉽게 풀이</option><option value="standard">기본 해설</option><option value="exam">시험답안식</option>
             </select>
           </label>
         </div>
 
         <label className="block text-sm">문제 텍스트 (선택)
-          <Textarea id="problemText" className="mt-1 min-h-[140px]" value={problemText} onChange={(e) => setProblemText(e.target.value)} />
+          <Textarea id="problemText" className="mt-1 min-h-[140px]" value={problemText} onChange={(e) => { const nextText = e.target.value; setProblemText(nextText); if (!recognitionConfirmed) syncRecognitionDraftFromInputs(nextText, files.length); else setRecognitionConfirmed(false); }} />
         </label>
-        <button disabled={loading} className={cn(buttonVariants({ variant: "default" }), "h-10")}>문제 풀이 흐름 만들기</button>
-        <p className="text-xs text-[color:var(--muted)]">정답 확정이 아닌 학습 보조입니다. 원문·계산·단위를 직접 확인해 주세요.</p>
+        <section className="rounded-[var(--radius-md)] border p-3 space-y-2">
+          <p className="text-sm font-medium">문제 인식 확인</p>
+          <p className="text-xs text-[color:var(--muted)]">인식된 내용을 확인·수정한 뒤 풀이를 생성합니다.</p>
+          <label className="block text-xs">인식 텍스트 초안
+            <Textarea className="mt-1 min-h-[84px]" value={recognizedTextDraft} onChange={(e) => setRecognizedTextDraft(e.target.value)} />
+          </label>
+          <button type="button" className={cn(buttonVariants({ variant: "outline" }), "h-8")} onClick={() => { if (recognizedTextDraft.trim()) { setProblemText(recognizedTextDraft); } setRecognitionConfirmed(true); }}>인식 내용 확정</button>
+        </section>
+        <button disabled={loading || !recognitionConfirmed} className={cn(buttonVariants({ variant: "default" }), "h-10")}>문제 풀이 흐름 만들기</button>
+        <p className="text-xs text-[color:var(--muted)]">정답 확정이 아니라 학습 보조 풀이입니다. 원문·계산·단위를 직접 확인해 주세요.</p>
         {error ? <p className="text-sm text-red-600">{error}</p> : null}
       </form>
 
@@ -148,24 +246,32 @@ export default function ProblemSnapClientPage({ initialExamMode }: { initialExam
             <div className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">지금 다시 풀 행동 1개</p><p className="mt-1 text-sm">{result.nextPracticeAction}</p></div>
             <div className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">주의할 함정 1개</p><p className="mt-1 text-sm">{result.commonMistakes[0] ?? result.caution}</p></div>
           </div>
+          <div className="rounded-[var(--radius-md)] border p-3 space-y-2">
+            <p className="text-sm font-medium">문제 인식 확인</p>
+            <p className="text-xs">문제 요약: {result.problemSummaryDraft || result.problemSummary || "확인 필요"}</p>
+            <p className="text-xs">요구 유형: {result.askTypeDraft || result.askType || "확인 필요"}</p>
+            <p className="text-xs">읽은 조건: {(result.extractedConditions ?? ["확인 필요"]).join(" · ")}</p>
+            <p className="text-xs">숫자·단위: {(result.extractedNumbersAndUnits ?? ["확인 필요"]).join(" · ")}</p>
+            <p className="text-xs">불명확한 부분: {(result.missingOrUnclearParts ?? ["확인 필요"]).join(" · ")}</p>
+          </div>
           <p className="text-xs text-[color:var(--muted)]">{referenceGrounding?.used ? `유사 기출 Skeleton을 참고해 정리했습니다. ${referenceGrounding.displayLabel}` : "입력 자료 기준으로 정리했습니다."}</p>
           <div><h3 className="font-medium">{resultHeading}</h3><p>{result.easyExplanation}</p></div>
           {showCalculatorGuide ? (
-            <div className="space-y-2 rounded-[var(--radius-md)] border bg-[color:var(--surface-subtle)] p-3"><h3 className="font-medium">CASIO fx-9860GIII 계산 가이드</h3><p className="text-sm">{result.calculatorGuide.calculationPurpose}</p></div>
+            <div className="space-y-2 rounded-[var(--radius-md)] border bg-[color:var(--surface-subtle)] p-3"><h3 className="font-medium">CASIO fx-9860GIII로 누르는 법</h3><p className="text-sm">계산 목적: {result.calculatorGuide.calculationPurpose}</p><p className="text-sm">추천 모드: {result.calculatorGuide.recommendedMode}</p><div><p className="text-sm">버튼 순서</p><div className="mt-1 flex flex-wrap gap-1">{result.calculatorGuide.keystrokeSteps.map((step, index)=><span key={`${step}-${index}`} className="rounded-full border px-2 py-0.5 text-xs">{step}</span>)}</div></div><p className="text-sm">화면에 나와야 할 값: {result.calculatorGuide.expectedDisplay || "확인 필요"}</p><p className="text-sm">답안에 적는 값: {result.calculatorGuide.answerRounding || "확인 필요"}</p><p className="text-xs text-[color:var(--muted)]">주의할 점: {result.calculatorGuide.caution}</p></div>
           ) : (
             <p className="rounded-[var(--radius-md)] border border-dashed p-3 text-sm text-[color:var(--muted)]">계산기 입력보다 개념 구조가 중요한 문제입니다.</p>
           )}
           <div className="rounded-[var(--radius-md)] border p-3">
             <p className="text-sm font-medium">품질 점검</p>
             <ul className="mt-2 space-y-1 text-sm">
-              <li>• 문제 인식 확인 필요</li>
-              <li>• 공식 확인 필요</li>
-              <li>• 숫자/단위 확인 필요</li>
-              <li>• 계산기 입력 확인 필요</li>
+              <li>• 문제 인식 <span className="font-medium">{result.problemSummary ? "정상" : "확인 필요"}</span></li>
+              <li>• 공식 <span className="font-medium">{hasMeaningfulValue(result.formulas) ? "정상" : "확인 필요"}</span></li>
+              <li>• 숫자/단위 <span className="font-medium">{hasMeaningfulValue(result.extractedNumbersAndUnits) ? "정상" : "확인 필요"}</span></li>
+              <li>• 계산기 입력 <span className="font-medium">{showCalculatorGuide ? "정상" : "해당 없음"}</span></li>
             </ul>
           </div>
-          <button type="button" onClick={() => setSavedLocal(true)} className={cn(buttonVariants({ variant: "outline" }), "h-10")}>이 문제를 복습 큐에 저장</button>
-          <p className="text-xs text-[color:var(--muted)]">{savedLocal ? "복습 큐 연결 준비됨" : "저장하면 복습 연결 준비 상태로 표시됩니다."}</p>
+          <button type="button" onClick={onSaveToReviewQueue} className={cn(buttonVariants({ variant: "outline" }), "h-10")}>이 문제를 복습 큐에 저장</button>
+          <p className="text-xs text-[color:var(--muted)]">{saveStatus === "saving" ? "저장 중" : saveStatus === "saved" ? "저장됨" : saveStatus === "failed" ? "저장 실패" : saveStatus === "local_fallback" || savedLocal ? "로컬 임시 저장" : "저장하면 복습 연결 준비 상태로 표시됩니다."}</p>
           <ResultFeedbackPrompt route="/problem-snap" pageContext={{ section: "problem-snap-result", examMode, subject }} />
         </section>
       ) : null}
