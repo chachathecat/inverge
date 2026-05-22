@@ -354,6 +354,8 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
                 <p className="mt-1">{secondRewriteComparison.remainingRisk}</p>
                 <p className="mt-3 font-medium">다음 문장 행동 1개</p>
                 <p className="mt-1">{secondRewriteComparison.nextSentenceAction}</p>
+                <p className="mt-3 font-medium">다음 보강 예약</p>
+                <p className="mt-1">{note?.nextReviewDate ?? "review queue 기본 일정"}</p>
                 <p className="mt-2 text-xs text-[color:var(--muted)]">{secondRewriteComparison.caution}</p>
               </div>
             ) : null}
