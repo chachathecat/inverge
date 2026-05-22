@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { AppraisalMode } from "@/lib/review-os/appraisal";
 import type { ExecutionReferenceSupport } from "@/lib/review-os/execution-reference-support";
+import { buildSecondRewriteComparison } from "@/lib/review-os/second-rewrite-comparison";
 import {
   FIRST_STAGE_ERROR_REASON_OPTIONS,
   getSecondSubjectTemplate,
@@ -63,6 +64,20 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
   const [issueRecall, setIssueRecall] = useState("");
   const [rewriteParagraph, setRewriteParagraph] = useState("");
   const secondTemplate = getSecondSubjectTemplate(queueItem?.subjectLabel ?? "");
+  const secondRewriteComparison = useMemo(
+    () =>
+      mode === "second"
+        ? buildSecondRewriteComparison({
+            subject: queueItem?.subjectLabel ?? "",
+            beforeWeakPoint: note?.weakPoint,
+            missingIssue: note?.missingIssue,
+            skeletonKeywordHint: referenceSupport?.skeletonKeywordHint ?? referenceSupport?.skeletonKeywordHints[0] ?? null,
+            commonGaps: referenceSupport?.commonGaps,
+            rewriteParagraph,
+          })
+        : null,
+    [mode, note?.missingIssue, note?.weakPoint, queueItem?.subjectLabel, referenceSupport?.commonGaps, referenceSupport?.skeletonKeywordHint, referenceSupport?.skeletonKeywordHints, rewriteParagraph],
+  );
   const hasQueueItem = Boolean(queueItem);
   const steps = useMemo(() => {
     if (!hasQueueItem) {
@@ -331,6 +346,17 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
               <p className="mt-1">before: {note?.missingIssue ?? note?.weakPoint ?? "보강할 약점 1개"}</p>
               <p className="mt-1">after: {rewriteParagraph.trim() || "작성한 보강 문단"}</p>
             </div>
+            {secondRewriteComparison ? (
+              <div className="rounded-[var(--radius-md)] border border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] px-4 py-3 text-sm text-[color:var(--foreground-strong)]">
+                <p className="font-medium">좋아진 점 1개</p>
+                <p className="mt-1">{secondRewriteComparison.improvedPoint}</p>
+                <p className="mt-3 font-medium">아직 위험한 점 1개</p>
+                <p className="mt-1">{secondRewriteComparison.remainingRisk}</p>
+                <p className="mt-3 font-medium">다음 문장 행동 1개</p>
+                <p className="mt-1">{secondRewriteComparison.nextSentenceAction}</p>
+                <p className="mt-2 text-xs text-[color:var(--muted)]">{secondRewriteComparison.caution}</p>
+              </div>
+            ) : null}
             <button
               type="button"
               className="text-xs text-[color:var(--muted)] underline-offset-2 hover:underline"

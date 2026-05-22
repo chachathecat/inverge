@@ -30,8 +30,10 @@ test("capture_saved metadata derives only allowed fields", () => {
     missingIssue: "쟁점",
     createdFromCapture: true,
     rawQuestionText: "forbidden",
+    rewriteParagraph: "문단 원문",
   });
   assert.equal("rawQuestionText" in metadata, false);
+  assert.equal("rewriteParagraph" in metadata, false);
   assert.equal(metadata.createdFromCapture, true);
 });
 
