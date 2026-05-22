@@ -176,6 +176,12 @@ test("today session runner separates first/second execution loop copy and keeps 
   ["함정 점검 카드", "공식 기출 문제가 아니라", "문단 보강 힌트", "점수 판정이 아니라", "힌트 보고 문단 1개 다시 쓰기"].forEach((token) =>
     assert.ok(source.includes(token), `Missing reference-support token: ${token}`),
   );
+  ["요건 누락", "원칙/예외 혼동", "선지 끝 조건 오독", "계산/단위 실수", "그래프/공식 조건 혼동", "조문/절차 순서 혼동"].forEach((token) =>
+    assert.ok(source.includes(token), `Missing first trap category: ${token}`),
+  );
+  assert.ok(source.includes('trapCardsCompleted: checkedTrapTypes.length === 3'));
+  assert.ok(source.includes("trapTypes: checkedTrapTypes"));
+  assert.ok(source.includes('disabled={firstTrapCards.length === 3 && checkedTrapTypes.length !== 3}'));
   ["공식 채점", "pass/fail", "합격/불합격", "모범답안 확정"].forEach((forbidden) =>
     assert.equal(source.includes(forbidden), false, `Forbidden claim found: ${forbidden}`),
   );
