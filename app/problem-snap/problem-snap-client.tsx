@@ -120,52 +120,44 @@ export default function ProblemSnapClientPage({ initialExamMode }: { initialExam
     );
   };
 
-  const renderSubjectSpecificCards = (view: "practice" | "theory" | "law" | "first", currentResult: ProblemSnapResult) => {
+  const renderSubjectSpecificCards = (view: "practice" | "theory" | "law" | "first", currentResult: ProblemSnapResult): React.ReactNode[] => {
     if (view === "practice") {
-      return (
-        <>
+      return [
           <div className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">조건 정리</p>{renderListOrFallback(currentResult.extractedConditions, "조건 확인 필요")}</div>
           <div className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">핵심 산식</p>{renderListOrFallback(currentResult.formulas, "산식 확인 필요")}</div>
           <div className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">계산 순서</p>{renderListOrFallback(currentResult.stepByStepSolution, "계산 순서 확인 필요")}</div>
           <div className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">CASIO 입력</p>{renderListOrFallback(currentResult.calculatorGuide.keystrokeSteps, "입력 순서 확인 필요")}</div>
           <div className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">단위/반올림</p><p className="mt-1 text-sm">{currentResult.calculatorGuide.answerRounding || currentResult.calculatorGuide.caution || "단위·반올림 확인 필요"}</p></div>
           <div className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">답안에 적을 값</p><p className="mt-1 text-sm">{currentResult.calculatorGuide.expectedDisplay || currentResult.nextPracticeAction || "답안 기재값 확인 필요"}</p></div>
-        </>
-      );
+      ];
     }
     if (view === "theory") {
-      return (
-        <>
+      return [
           <div className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">개념 정의</p>{renderListOrFallback(currentResult.requiredConcepts, "개념 정의 확인 필요")}</div>
           <div className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">비교/대립 논점</p>{renderListOrFallback(currentResult.commonMistakes, "비교 논점 확인 필요")}</div>
           <div className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">답안 목차</p>{renderListOrFallback(currentResult.examStyleStructure, "목차 확인 필요")}</div>
           <div className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">필수 키워드</p>{renderListOrFallback(currentResult.requiredConcepts, "키워드 확인 필요")}</div>
           <div className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">사례 적용 문장</p><p className="mt-1 text-sm">{currentResult.easyExplanation || currentResult.nextPracticeAction || "사례 적용 문장 확인 필요"}</p></div>
-        </>
-      );
+      ];
     }
     if (view === "law") {
-      return (
-        <>
+      return [
           <div className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">쟁점</p><p className="mt-1 text-sm">{currentResult.askType || "쟁점 확인 필요"}</p></div>
           <div className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">조문/요건</p>{renderListOrFallback(currentResult.requiredConcepts, "조문/요건 확인 필요")}</div>
           <div className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">절차</p>{renderListOrFallback(currentResult.stepByStepSolution, "절차 확인 필요")}</div>
           <div className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">사안 포섭</p>{renderListOrFallback(currentResult.examStyleStructure, "사안 포섭 확인 필요")}</div>
           <div className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">결론 문장</p><p className="mt-1 text-sm">{currentResult.nextPracticeAction || "결론 문장 확인 필요"}</p></div>
-        </>
-      );
+      ];
     }
-    return (
-      <>
+    return [
         <div className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">개념 확인</p>{renderListOrFallback(currentResult.requiredConcepts, "개념 확인 필요")}</div>
         <div className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">체크포인트</p>{renderListOrFallback(currentResult.commonMistakes, "체크포인트 확인 필요")}</div>
         <div className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">다시 풀 행동</p><p className="mt-1 text-sm">{currentResult.nextPracticeAction || "다시 풀 행동 확인 필요"}</p></div>
-      </>
-    );
+    ];
   };
   const renderPrimarySubjectCards = (view: "practice" | "theory" | "law" | "first", currentResult: ProblemSnapResult) => {
     const cards = renderSubjectSpecificCards(view, currentResult);
-    return Array.isArray(cards) ? cards.slice(0, 4) : cards;
+    return cards.slice(0, 4);
   };
 
   const getPrimaryPracticeAction = (currentSubject: string, currentResult: ProblemSnapResult) =>
