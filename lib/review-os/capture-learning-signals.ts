@@ -91,11 +91,14 @@ export function buildCaptureLearningSignal(input: CaptureLearningSignalInput): L
 
   const topicCandidate = input.keyConcepts?.[0] ?? input.missingIssue ?? input.weakStructurePoint ?? null;
   const skeletonKeywordHint = input.keyConcepts?.[0] ?? null;
+  const combinedGapSignal = [input.mistakeReason, input.weakStructurePoint, input.missingIssue, input.biggestGap]
+    .filter(Boolean)
+    .join(" ");
   const reviewPriority = computeCaptureQueuePriority({
     examName: input.examName,
     confidence: input.confidence,
     timeSpentSeconds: input.timeSpentSeconds ?? null,
-    mistakeOrWeakPoint: input.mistakeReason ?? input.weakStructurePoint ?? input.missingIssue,
+    mistakeOrWeakPoint: combinedGapSignal,
     weakStructurePoint: input.weakStructurePoint,
     missingIssue: input.missingIssue,
   });
