@@ -104,6 +104,9 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
     completedToday: dailyActivity.completedToday,
     mode,
   });
+  const dailyConsistencyCopy = dailyActivity.missedRecently
+    ? "괜찮습니다. 오늘은 복구 1개만 하면 됩니다."
+    : "최근 흐름이 이어지고 있습니다.";
   const primaryHeading =
     homeState === "first_capture"
       ? "오늘 한 것 하나만 올리세요"
@@ -286,6 +289,8 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
             </CardHeader>
             <CardContent className="space-y-3 p-4 pt-0 sm:space-y-4 sm:p-6 sm:pt-0">
               <div className="rounded-[var(--radius-md)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)] px-4 py-3 text-sm">
+                <p className="text-xs text-[color:var(--muted)]">일일 흐름</p>
+                <p className="text-[color:var(--foreground-strong)]">{dailyConsistencyCopy}</p>
                 <p className="text-xs text-[color:var(--muted)]">과목</p>
                 <p className="text-[color:var(--foreground-strong)]">{selectedQueueItem?.subjectLabel ?? config.subjects[0]}</p>
                 <p className="mt-2 text-xs text-[color:var(--muted)]">가장 큰 간극</p>

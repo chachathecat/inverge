@@ -521,6 +521,12 @@ export class ReviewOsInvalidCompletionActionError extends Error {
 }
 
 export type DailyStudyActivity = {
+  studiedToday: boolean;
+  completedTodayTask: boolean;
+  savedCaptureToday: boolean;
+  recoveredOverdueToday: boolean;
+  currentGentleStreak: number;
+  missedRecently: boolean;
   savedToday: boolean;
   completedToday: boolean;
   startedExecutionToday: boolean;
@@ -530,6 +536,12 @@ export type DailyStudyActivity = {
 };
 
 export const DEFAULT_DAILY_STUDY_ACTIVITY: DailyStudyActivity = {
+  studiedToday: false,
+  completedTodayTask: false,
+  savedCaptureToday: false,
+  recoveredOverdueToday: false,
+  currentGentleStreak: 0,
+  missedRecently: false,
   savedToday: false,
   completedToday: false,
   startedExecutionToday: false,
@@ -1312,10 +1324,9 @@ export class ReviewOsService {
     const dayStartUtcIso = new Date(`${kstDayKey}T00:00:00+09:00`).toISOString();
     const modeLabel = getModeLabel(mode);
 
-    const [items, queue, learningSignals, usageEvents] = await Promise.all([
+    const [items, queue, usageEvents] = await Promise.all([
       reviewOsRepository.listWrongAnswerItems(userId, 40),
       reviewOsRepository.listReviewQueue(userId, 40),
-      reviewOsRepository.listLearningSignalEvents(userId, mode, 40),
       reviewOsRepository.listRecentUsageEventsByNames(
         userId,
         ["capture_saved", "post_save_execution_started", "post_save_execution_completed", "review_followup_scheduled", "review_complete"],
@@ -1326,17 +1337,43 @@ export class ReviewOsService {
 
     const modeItems = items.filter((item) => item.examName === modeLabel);
     const modeQueue = queue.filter((item) => item.examName === modeLabel);
-    const savedToday =
+    const savedCaptureToday =
       modeItems.some((item) => isSameKstDay(item.createdAt, now)) ||
       usageEvents.some((event) => event.eventName === "capture_saved" && isSameKstDay(event.createdAt, now));
     const startedExecutionToday = usageEvents.some((event) => event.eventName === "post_save_execution_started" && isSameKstDay(event.createdAt, now));
-    const completedToday =
+    const completedTodayTask =
       usageEvents.some((event) => (event.eventName === "post_save_execution_completed" || event.eventName === "review_complete") && isSameKstDay(event.createdAt, now));
     const followupScheduledToday = usageEvents.some((event) => event.eventName === "review_followup_scheduled" && isSameKstDay(event.createdAt, now));
+    const recoveredOverdueToday = usageEvents.some((event) => event.eventName === "review_complete" && isSameKstDay(event.createdAt, now));
     const hasDueQueue = modeQueue.length > 0;
     const hasOverdueQueue = modeQueue.some((item) => isOverdueDueAt(item.dueAt, Date.parse(nowIso)));
+    const studiedToday = savedCaptureToday || startedExecutionToday || completedTodayTask || followupScheduledToday;
+    const currentGentleStreak = studiedToday ? 1 : 0;
+    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const studiedYesterday =
+      modeItems.some((item) => isSameKstDay(item.createdAt, yesterday)) ||
+      usageEvents.some((event) =>
+        ["capture_saved", "post_save_execution_started", "post_save_execution_completed", "review_followup_scheduled", "review_complete"].includes(event.eventName) &&
+        isSameKstDay(event.createdAt, yesterday),
+      );
+    const missedRecently = !studiedToday && studiedYesterday;
+    const savedToday = savedCaptureToday;
+    const completedToday = completedTodayTask;
 
-    return { savedToday, completedToday, startedExecutionToday, followupScheduledToday, hasDueQueue, hasOverdueQueue };
+    return {
+      studiedToday,
+      completedTodayTask,
+      savedCaptureToday,
+      recoveredOverdueToday,
+      currentGentleStreak,
+      missedRecently,
+      savedToday,
+      completedToday,
+      startedExecutionToday,
+      followupScheduledToday,
+      hasDueQueue,
+      hasOverdueQueue,
+    };
   }
 
   async hasMeaningfulLearningData(userId: string, email: string | null, mode: "first" | "second") {

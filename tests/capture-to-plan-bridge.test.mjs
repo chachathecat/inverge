@@ -332,6 +332,26 @@ test("home page derives daily activity flags and does not hardcode completion", 
   assert.equal(source.includes("completedToday: false"), false);
 });
 
+test("missed day uses recovery copy and avoids shame copy", async () => {
+  const source = await readFile(new URL("../app/app/page.tsx", import.meta.url), "utf8");
+  assert.ok(source.includes("괜찮습니다. 오늘은 복구 1개만 하면 됩니다."));
+  ["실패", "게을", "벌점", "연속 기록이 끊겼습니다"].forEach((token) => {
+    assert.equal(source.includes(token), false, `Forbidden shame copy found: ${token}`);
+  });
+});
+
+test("completed day uses calm relief copy", async () => {
+  const source = await readFile(new URL("../app/app/page.tsx", import.meta.url), "utf8");
+  assert.ok(source.includes("최근 흐름이 이어지고 있습니다."));
+});
+
+test("daily activity summary includes required gentle consistency fields", async () => {
+  const source = await readFile(new URL("../lib/review-os/service.ts", import.meta.url), "utf8");
+  ["studiedToday", "completedTodayTask", "savedCaptureToday", "recoveredOverdueToday", "currentGentleStreak", "missedRecently"].forEach((field) =>
+    assert.ok(source.includes(field), `Missing daily summary field: ${field}`),
+  );
+});
+
 test("daily activity derivation avoids raw text fields", async () => {
   const source = await readFile(new URL("../lib/review-os/service.ts", import.meta.url), "utf8");
   const methodStart = source.indexOf("async getDailyStudyActivity");
