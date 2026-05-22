@@ -16,6 +16,8 @@ export type TodayPlanTask = {
 };
 
 type BuildInput = { mode: "first" | "second"; queue: ReviewQueueCard[]; learningSignals?: LearningSignalEventRecord[]; now?: Date };
+type RepeatedGapSignal = { label: string; count: number };
+type BuildWeaknessInput = BuildInput & { repeatedGaps?: RepeatedGapSignal[]; riskLevel?: "stable" | "watch" | "high" };
 
 const DAY_MS = 86_400_000;
 
@@ -79,7 +81,8 @@ function pickRecentProblemSnapSignal(learningSignals: LearningSignalEventRecord[
     .sort((a, b) => (parseTime(b.createdAt) ?? 0) - (parseTime(a.createdAt) ?? 0))[0] ?? null;
 }
 
-export function buildTodayPlanTasks({ mode, queue, learningSignals = [], now = new Date() }: BuildInput): TodayPlanTask[] {
+export function buildTodayPlanTasks({ mode, queue, learningSignals = [], now = new Date(), repeatedGaps = [], riskLevel = "stable" }: BuildWeaknessInput): TodayPlanTask[] {
+  const topRepeatedGap = repeatedGaps[0] ?? null;
   const ranked = queue
     .map((item) => {
       const dueTs = parseTime(item.dueAt);
@@ -92,7 +95,9 @@ export function buildTodayPlanTasks({ mode, queue, learningSignals = [], now = n
       const recurrenceBoost = Math.min(item.recurrenceCount, 4) * 7;
       const rewriteBoost = resolveTaskType(mode, item) === "rewrite" ? 14 : 0;
       const overdueBoost = isOverdue ? 50 + overdueDays * 6 : 0;
-      const score = item.priorityScore * 0.2 + overdueBoost + captureRecentBoost + confidenceBoost(item.confidence) + recurrenceBoost + rewriteBoost;
+      const weaknessBoost =
+        riskLevel === "high" && topRepeatedGap && topRepeatedGap.count >= 3 && `${item.subjectLabel} · ${item.mistakeType}` === topRepeatedGap.label ? 8 : 0;
+      const score = item.priorityScore * 0.2 + overdueBoost + captureRecentBoost + confidenceBoost(item.confidence) + recurrenceBoost + rewriteBoost + weaknessBoost;
       const priority_reason = isOverdue
         ? `예정 복습 시점이 지나 ${overdueDays}일 밀린 항목입니다.`
         : captureRecentBoost > 0
