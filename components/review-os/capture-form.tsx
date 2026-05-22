@@ -712,6 +712,7 @@ export function WrongAnswerCaptureForm({
           ) : null}
           {stage === "second-answer" ? (
             <SecondAnswerPanel
+              subject={form.subjectLabel}
               answer={form.userAnswer}
               onChange={(value) => {
                 update("userAnswer", value);
@@ -802,6 +803,7 @@ export function WrongAnswerCaptureForm({
           ) : null}
           {mode === "second" && stage === "second-answer" ? (
             <SecondAnswerPanel
+              subject={form.subjectLabel}
               answer={form.userAnswer}
               onChange={(value) => {
                 update("userAnswer", value);
@@ -1521,7 +1523,8 @@ function SecondIssueRecallPanel({
     <section className="rounded-[var(--radius-card)] border border-[color:var(--cue-focus)] bg-[color:var(--cue-focus-bg)] p-4 sm:p-5">
       <p className="text-caption text-[color:var(--muted)]">Step 1. 쟁점 회상</p>
       <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">기준 답안 보기 전에 쟁점 3개를 먼저 적습니다</h3>
-      <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">이 과목은 먼저 이 구조로 답안을 잡습니다. {template.structure}</p>
+      <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">완벽히 쓰지 말고, 지금 떠오르는 문장만 적으세요.</p>
+      <p className="text-sm leading-6 text-[color:var(--muted)]">이 과목은 먼저 이 구조로 답안을 잡습니다. {template.structure}</p>
       <label className="mt-4 block space-y-2">
         <span className="text-sm text-[color:var(--foreground-strong)]">쟁점 회상</span>
         <Textarea
@@ -1554,7 +1557,8 @@ function SecondOutlinePanel({
     <section className="rounded-[var(--radius-card)] border border-[color:var(--cue-focus)] bg-[color:var(--cue-focus-bg)] p-4 sm:p-5">
       <p className="text-caption text-[color:var(--muted)]">Step 2. 목차 작성</p>
       <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">전체 답안보다 목차를 먼저 잡습니다</h3>
-      <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">기준 답안 보기 전에 이 체크포인트 중 3개를 떠올립니다: {template.checklist.slice(0, 3).join(", ")}</p>
+      <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">전체 답안보다 목차 3줄이 먼저입니다.</p>
+      <p className="text-sm leading-6 text-[color:var(--muted)]">기준 답안 보기 전에 이 체크포인트 중 3개를 떠올립니다: {template.checklist.slice(0, 3).join(", ")}</p>
       <label className="mt-4 block space-y-2">
         <span className="text-sm text-[color:var(--foreground-strong)]">목차 초안</span>
         <Textarea
@@ -1572,24 +1576,33 @@ function SecondOutlinePanel({
 }
 
 function SecondAnswerPanel({
+  subject,
   answer,
   onChange,
   onNext,
 }: {
+  subject: string;
   answer: string;
   onChange: (value: string) => void;
   onNext: () => void;
 }) {
+  const templates: Record<string, string> = {
+    감정평가실무: "문제 요구:\n계산 근거:\n결론:",
+    감정평가이론: "정의:\n논거:\n사례 적용:\n결론:",
+    "감정평가 및 보상법규": "요건:\n조문/법리:\n사안 포섭:\n결론:",
+  };
   return (
     <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 sm:p-5">
       <p className="text-caption text-[color:var(--muted)]">Step 3. 내 답안 작성</p>
       <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">비교는 작성 이후에 합니다</h3>
+      <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">완벽히 쓰지 말고, 지금 떠오르는 문장만 적으세요.</p>
       <label className="mt-4 block space-y-2">
         <span className="text-sm text-[color:var(--foreground-strong)]">내 답안</span>
         <Textarea
           value={answer}
           onChange={(event) => onChange(event.target.value)}
           className="min-h-56 border-[var(--border)] bg-[color:var(--surface)] text-[color:var(--foreground-strong)] leading-7"
+          placeholder={templates[subject] ?? "핵심 문장 1개:\n근거:\n결론:"}
         />
       </label>
       <Button type="button" className="mt-4 w-full sm:w-auto" disabled={answer.trim().length < 8} onClick={onNext}>
@@ -1612,6 +1625,7 @@ function SecondReferencePanel({
     <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 sm:p-5">
       <p className="text-caption text-[color:var(--muted)]">Step 4. 기준답안/해설 입력</p>
       <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">작성 이후에 기준답안을 입력합니다</h3>
+      <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">비교는 작성 이후에 합니다.</p>
       <label className="mt-4 block space-y-2">
         <span className="text-sm text-[color:var(--foreground-strong)]">기준 답안 요약</span>
         <Textarea
@@ -1679,17 +1693,6 @@ function SecondGapRewritePanel({
       <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">{template.rewriteGuidance}</p>
       <div className="mt-4 space-y-4">
         <label className="block space-y-2">
-          <span className="text-sm text-[color:var(--foreground-strong)]">보강할 논점 1개</span>
-          <Textarea
-            value={form.userReasonText}
-            onChange={(event) => {
-              update("userReasonText", event.target.value);
-              update("missingIssue", event.target.value);
-            }}
-            className="min-h-28 border-[var(--border)] bg-[color:var(--surface)] text-[color:var(--foreground-strong)] leading-7"
-          />
-        </label>
-        <label className="block space-y-2">
           <span className="text-sm text-[color:var(--foreground-strong)]">다시 쓴 문단</span>
           <Textarea
             value={form.userAnswer}
@@ -1702,18 +1705,34 @@ function SecondGapRewritePanel({
             placeholder="누락 논점 1개를 반영해 문단을 다시 작성하세요."
           />
         </label>
-        <label className="space-y-2">
-          <span className="text-sm text-[color:var(--foreground-strong)]">rewrite 지시</span>
-          <input
-            value={form.rewriteInstruction}
-            onChange={(event) => update("rewriteInstruction", event.target.value)}
-            className="form-control"
-          />
-        </label>
       </div>
-      <button type="button" onClick={onBack} className="mt-4 text-xs text-[color:var(--muted)] underline-offset-2 hover:underline">
-        이전 단계로 돌아가기
-      </button>
+      <details className="mt-4 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3">
+        <summary className="cursor-pointer text-xs font-medium text-[color:var(--muted)]">세부 입력 보기 (선택)</summary>
+        <div className="mt-3 space-y-3">
+          <label className="block space-y-2">
+            <span className="text-sm text-[color:var(--foreground-strong)]">보강할 논점 1개</span>
+            <Textarea
+              value={form.userReasonText}
+              onChange={(event) => {
+                update("userReasonText", event.target.value);
+                update("missingIssue", event.target.value);
+              }}
+              className="min-h-28 border-[var(--border)] bg-[color:var(--surface)] text-[color:var(--foreground-strong)] leading-7"
+            />
+          </label>
+          <label className="space-y-2">
+            <span className="text-sm text-[color:var(--foreground-strong)]">rewrite 지시</span>
+            <input
+              value={form.rewriteInstruction}
+              onChange={(event) => update("rewriteInstruction", event.target.value)}
+              className="form-control"
+            />
+          </label>
+          <button type="button" onClick={onBack} className="text-xs text-[color:var(--muted)] underline-offset-2 hover:underline">
+            이전 단계로 돌아가기
+          </button>
+        </div>
+      </details>
     </section>
   );
 }
