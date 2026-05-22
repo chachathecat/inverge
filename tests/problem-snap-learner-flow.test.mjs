@@ -16,12 +16,12 @@ test("problem snap learner flow exposes camera-first premium inputs", async () =
 test("problem snap result hero, save CTA, and grounding copy are rendered", async () => {
   const source = await readFile(new URL("../app/problem-snap/problem-snap-client.tsx", import.meta.url), "utf8");
   assert.ok(source.includes("가장 먼저 이해할 1가지"));
-  assert.ok(source.includes("핵심 공식/논점"));
   assert.ok(source.includes("지금 다시 풀 행동 1개"));
   assert.ok(source.includes("주의할 함정 1개"));
+  assert.ok(source.includes("자세히 보기"));
   assert.ok(source.includes("유사 기출 Skeleton을 참고해 정리했습니다."));
   assert.ok(source.includes("입력 자료 기준으로 정리했습니다."));
-  assert.equal(source.includes("이 문제를 복습 큐에 저장</button>"), true);
+  assert.equal(source.includes("복습 큐에 저장</button>"), true);
   assert.equal(source.includes("<button disabled className"), false);
 });
 
@@ -32,10 +32,10 @@ test("recognition confirmation, file remove/retake, and save states labels exist
   );
 });
 
-test("quality checklist is dynamic statuses instead of static only 확인 필요", async () => {
+test("quality checklist is kept inside details", async () => {
   const source = await readFile(new URL("../app/problem-snap/problem-snap-client.tsx", import.meta.url), "utf8");
   assert.ok(source.includes("정상"));
-  assert.ok(source.includes("해당 없음"));
+  assert.ok(source.includes("품질 점검"));
 });
 
 test("problem snap learner copy avoids endorsement, grading, and payment claims", async () => {
@@ -78,7 +78,12 @@ test("subject-specific views and retry mode labels exist", async () => {
   assert.ok(source.includes("!retryMode ? ("));
   assert.ok(source.includes("showCalculatorGuide ? ("));
   assert.ok(source.includes(") : null}"));
-  assert.ok(source.includes("!retryMode ? <div className=\"grid gap-3 sm:grid-cols-2\">{renderSubjectSpecificCards(getProblemSnapSubjectView(subject), result)}</div> : null"));
+  assert.ok(source.includes("renderPrimarySubjectCards"));
+  assert.ok(source.includes("const renderSubjectSpecificCards = (\n    view: \"practice\" | \"theory\" | \"law\" | \"first\",\n    currentResult: ProblemSnapResult\n  ) =>"));
+  assert.ok(source.includes("const cards = renderSubjectSpecificCards(view, currentResult);"));
+  assert.ok(source.includes("return cards.slice(0, 4);"));
+  assert.equal(source.includes("const renderSubjectSpecificCards = (view: \"practice\" | \"theory\" | \"law\" | \"first\") =>"), false);
+  assert.equal(source.includes("return Array.isArray(cards) ? cards.slice(0, 4) : cards;"), false);
   assert.ok(source.includes("`/answer-review?mode=${currentExamMode}&subject=${encodeURIComponent(currentSubject)}&source=problem-snap`"));
   assert.ok(source.includes('try {'));
   assert.ok(source.includes('sessionStorage.setItem("inverge.problemSnap.answerReviewHandoff", JSON.stringify(handoffPayload));'));

@@ -600,7 +600,7 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                 </section>
                 </div></article>
 
-              <div className="grid gap-3 lg:grid-cols-2">
+              <div className="space-y-3">
                 <div className="space-y-2" id="answer-review-problem">
                   <p className="text-caption font-medium text-[color:var(--muted)]">문제/사례 입력</p>
                   <Textarea
@@ -610,15 +610,17 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                     onChange={(event) => setProblemText(event.target.value)}
                   />
                 </div>
-                <div className="space-y-2" id="answer-review-reference">
-                  <p className="text-caption font-medium text-[color:var(--muted)]">기준답안/기준목차 입력</p>
-                  <Textarea
-                    className="min-h-[120px] bg-[color:var(--surface)]"
-                    placeholder="기준답안 또는 기준목차를 텍스트로 붙여 넣어 주세요."
-                    value={referenceAnswerText}
-                    onChange={(event) => setReferenceAnswerText(event.target.value)}
-                  />
-                </div>
+                <details className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface)] p-3" id="answer-review-reference">
+                  <summary className="cursor-pointer text-caption font-medium text-[color:var(--muted)]">기준답안/메모 입력 (선택)</summary>
+                  <div className="mt-2 space-y-2">
+                    <Textarea
+                      className="min-h-[120px] bg-[color:var(--surface)]"
+                      placeholder="기준답안 또는 기준목차를 텍스트로 붙여 넣어 주세요."
+                      value={referenceAnswerText}
+                      onChange={(event) => setReferenceAnswerText(event.target.value)}
+                    />
+                  </div>
+                </details>
               </div>
                 </motion.div>
 

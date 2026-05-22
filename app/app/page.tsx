@@ -239,7 +239,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
           <Card className="border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] shadow-none">
             <CardHeader className="space-y-3 p-4 sm:p-6">
               <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--brand-050)] px-4 py-3">
-                <p className="text-caption text-[color:var(--muted)]">오늘 최우선 작업</p>
+                <p className="text-caption text-[color:var(--muted)]">오늘 할 일</p>
                 <p className="mt-1 text-body-lg text-[color:var(--foreground-strong)]">{todayPlan.primaryTask}</p>
                 {todayPlanTasks[0]?.source_label === "Problem Snap 기반" ? (
                   <p className="mt-1 text-xs text-[color:var(--muted)]">Problem Snap 기반</p>
@@ -333,7 +333,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                   <p className="mt-1 text-xs text-[color:var(--muted)]">입력을 기준으로 다음 복습 범위를 정리했습니다.</p>
                 </div>
               ) : null}
-              {latestProblemSnapSignal ? (
+              {latestProblemSnapSignal && todayPlanTasks[0]?.source_label !== "Problem Snap 기반" ? (
                 <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-4 py-3">
                   <p className="text-xs font-medium text-[color:var(--ink-primary)]">Problem Snap</p>
                   <p className="mt-1 text-sm text-[color:var(--foreground-strong)]">{latestProblemSnapSignal.subject}</p>
