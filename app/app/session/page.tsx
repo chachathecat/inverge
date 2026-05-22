@@ -31,7 +31,7 @@ export default async function ReviewOsSessionPage({ searchParams }: PageProps) {
     ? focus.queue.find((item) => item.itemId === savedCaptureItemId) ?? null
     : null;
   const queueItem = savedCaptureQueueItem ?? focus.queue.find((item) => item.queueId === focus.sourceQueueId) ?? focus.queue[0] ?? null;
-  const detail = queueItem ? await reviewOsService.getWrongAnswerDetail(session.userId, session.email, queueItem.itemId) : null;
+  const queueItemDetail = queueItem ? await reviewOsService.getWrongAnswerDetail(session.userId, session.email, queueItem.itemId) : null;
   const savedCaptureDetail =
     savedCapture && savedCaptureItemId
       ? await reviewOsService.getWrongAnswerDetail(session.userId, session.email, savedCaptureItemId).catch(() => null)
@@ -44,7 +44,11 @@ export default async function ReviewOsSessionPage({ searchParams }: PageProps) {
           savedCaptureDetail.item.derivedPayload.capture_note_engine_v1
         ? (savedCaptureDetail.item.derivedPayload.capture_note_engine_v1 as Record<string, unknown>)
       : null;
-  const note = detail ? buildDetailStudyNote(detail) : null;
+  const activeDetail =
+    savedCaptureDetail && queueItem && savedCaptureDetail.item.id === queueItem.itemId
+      ? savedCaptureDetail
+      : queueItemDetail;
+  const note = activeDetail ? buildDetailStudyNote(activeDetail) : null;
 
   return (
     <div className="space-y-6">
@@ -82,9 +86,7 @@ export default async function ReviewOsSessionPage({ searchParams }: PageProps) {
                   ? savedCaptureItemId
                     ? `/app/capture?mode=second&rewriteFrom=${encodeURIComponent(savedCaptureItemId)}`
                     : "/app/capture?mode=second"
-                  : savedCaptureItemId
-                    ? `/app/session?mode=first&itemId=${encodeURIComponent(savedCaptureItemId)}#today-session-runner`
-                    : "#today-session-runner"
+                  : "#today-session-runner"
               }
               className="inline-flex w-full items-center justify-center rounded-full bg-[color:var(--foreground-strong)] px-4 py-2 text-sm font-medium text-white"
             >
