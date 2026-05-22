@@ -10,6 +10,7 @@
     "verify:review-os-schema": "node scripts/verify-review-os-schema.mjs",
     "smoke:review-os-auth": "node scripts/smoke-review-os-auth.mjs",
     "eval:ocr-extraction": "node scripts/eval-ocr-extraction.mjs",
+    "eval:quality": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs --test tests/ai-output-quality-eval.test.mjs",
     "test:e2e": "npx playwright test",
     "test:e2e:smoke": "npx playwright test tests/e2e/closed-beta-smoke.spec.ts",
     "test:e2e:headed": "npx playwright test --headed",
