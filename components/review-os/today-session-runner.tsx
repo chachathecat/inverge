@@ -42,6 +42,7 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note }: 
   const [retrievalSentence, setRetrievalSentence] = useState("");
 
   const [issueRecall, setIssueRecall] = useState("");
+  const [rewriteParagraph, setRewriteParagraph] = useState("");
   const secondTemplate = getSecondSubjectTemplate(queueItem?.subjectLabel ?? "");
   const hasQueueItem = Boolean(queueItem);
   const steps = useMemo(() => {
@@ -49,8 +50,8 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note }: 
       return ["intro", "capture-guide", "done"] as const;
     }
     return mode === "second"
-      ? (["intro", "issue-recall", "one-gap", "rewrite", "done"] as const)
-      : (["intro", "retry", "error-reason", "retrieval", "schedule", "done"] as const);
+      ? (["intro", "issue-recall", "one-gap", "rewrite", "schedule", "done"] as const)
+      : (["intro", "retry", "error-reason", "retrieval", "similar-practice", "schedule", "done"] as const);
   }, [hasQueueItem, mode]);
 
   const currentStep = steps[stepIndex];
@@ -129,7 +130,7 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note }: 
 
         {currentStep === "retry" ? (
           <section className="space-y-4">
-            <p className="text-sm font-medium text-[color:var(--foreground-strong)]">1) 짧은 재시도 답을 먼저 적어보세요.</p>
+            <p className="text-sm font-medium text-[color:var(--foreground-strong)]">1) 핵심 조건 회상 후 짧은 재풀이를 적습니다.</p>
             <textarea
               className="min-h-28 w-full rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] px-3 py-2 text-sm"
               value={retryDraft}
@@ -142,7 +143,7 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note }: 
               disabled={retryDraft.trim().length < 4}
               onClick={() => setStepIndex((prev) => prev + 1)}
             >
-              다음: 오답 원인 지정
+              다음: 틀린 이유 1개 선택
             </Button>
             {quietLinks}
           </section>
@@ -179,7 +180,7 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note }: 
 
         {currentStep === "retrieval" ? (
           <section className="space-y-4">
-            <p className="text-sm font-medium text-[color:var(--foreground-strong)]">3) 해설 전에 회상 문장 1개를 적습니다.</p>
+            <p className="text-sm font-medium text-[color:var(--foreground-strong)]">3) 근거 1문장을 남깁니다.</p>
             <textarea
               className="min-h-24 w-full rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] px-3 py-2 text-sm"
               value={retrievalSentence}
@@ -197,7 +198,20 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note }: 
               disabled={retrievalSentence.trim().length < 4}
               onClick={() => setStepIndex((prev) => prev + 1)}
             >
-              다음: 복습 예약
+              근거 1문장 남기기
+            </Button>
+            {quietLinks}
+          </section>
+        ) : null}
+
+        {currentStep === "similar-practice" ? (
+          <section className="space-y-4">
+            <p className="text-sm font-medium text-[color:var(--foreground-strong)]">4) 유사 지문 3개 연습은 선택입니다.</p>
+            <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] px-4 py-3 text-sm text-[color:var(--foreground-strong)]">
+              유사 지문 연습 준비
+            </div>
+            <Button type="button" className="w-full sm:w-auto" onClick={() => setStepIndex((prev) => prev + 1)}>
+              다음 복습 예약
             </Button>
             {quietLinks}
           </section>
@@ -244,22 +258,28 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note }: 
 
         {currentStep === "rewrite" ? (
           <section className="space-y-4">
-            <p className="text-sm font-medium text-[color:var(--foreground-strong)]">3) 교정 문단은 기존 입력 화면에서 남깁니다.</p>
+            <p className="text-sm font-medium text-[color:var(--foreground-strong)]">3) 문단 1개만 다시 씁니다.</p>
             <p className="text-sm leading-7 text-[color:var(--foreground-strong)]">
-              문단이 사라지지 않도록, 지금은 rewrite 연결 입력으로 이동해 저장합니다.
+              가장 큰 간극 1개를 기준으로 문단 1개만 보강합니다.
             </p>
-            <Link href={`/app/capture?mode=second&rewriteFrom=${queueItem?.itemId ?? ""}`} className="inline-flex w-full sm:w-auto">
-              <Button type="button" className="w-full sm:w-auto">
-                rewrite 저장하러 이동
-              </Button>
-            </Link>
+            <textarea
+              className="min-h-24 w-full rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] px-3 py-2 text-sm"
+              value={rewriteParagraph}
+              onChange={(event) => setRewriteParagraph(event.target.value)}
+              placeholder="보강 문단 1개를 여기에 적습니다."
+            />
+            <div className="rounded-[var(--radius-md)] border border-[color:var(--cue-focus)] bg-[color:var(--cue-focus-bg)] px-4 py-3 text-sm text-[color:var(--foreground-strong)]">
+              <p className="text-caption text-[color:var(--muted)]">전후 비교</p>
+              <p className="mt-1">before: {note?.missingIssue ?? note?.weakPoint ?? "보강할 약점 1개"}</p>
+              <p className="mt-1">after: {rewriteParagraph.trim() || "작성한 보강 문단"}</p>
+            </div>
             <button
               type="button"
               className="text-xs text-[color:var(--muted)] underline-offset-2 hover:underline"
-              disabled={pending}
-              onClick={() => void completeAndFinish("second_paragraph_rewrite", { issueRecall })}
+              disabled={pending || rewriteParagraph.trim().length < 8}
+              onClick={() => setStepIndex((prev) => prev + 1)}
             >
-              {pending ? "예약 중" : "이미 저장을 마쳤다면 완료로 표시"}
+              문단 1개만 보강
             </button>
             {errorMessage ? <p className="text-xs text-[color:var(--danger)]">{errorMessage}</p> : null}
             {quietLinks}
@@ -284,7 +304,7 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note }: 
                 })
               }
             >
-              {pending ? "예약 중" : "다음 복습 자동 예약하고 마치기"}
+              {pending ? "예약 중" : mode === "second" ? "다음 보강 예약" : "다음 복습 예약"}
             </Button>
             {errorMessage ? <p className="text-xs text-[color:var(--danger)]">{errorMessage}</p> : null}
             {quietLinks}

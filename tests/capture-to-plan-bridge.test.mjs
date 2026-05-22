@@ -111,6 +111,19 @@ test("learner-facing copy includes save bridge messages", async () => {
   assert.ok(source.includes("나중에 복습"));
 });
 
+test("today session runner separates first/second execution loop copy and keeps no scoring claims", async () => {
+  const source = await readFile(new URL("../components/review-os/today-session-runner.tsx", import.meta.url), "utf8");
+  ["핵심 조건 회상", "짧은 재풀이", "틀린 이유 1개", "근거 1문장", "유사 지문 연습 준비", "다음 복습 예약"].forEach((token) =>
+    assert.ok(source.includes(token), `Missing first-loop token: ${token}`),
+  );
+  ["쟁점 회상", "가장 큰 간극 1개", "문단 1개만 다시 씁니다.", "전후 비교", "다음 보강 예약"].forEach((token) =>
+    assert.ok(source.includes(token), `Missing second-loop token: ${token}`),
+  );
+  ["공식 채점", "pass/fail", "합격/불합격", "모범답안 확정"].forEach((forbidden) =>
+    assert.equal(source.includes(forbidden), false, `Forbidden claim found: ${forbidden}`),
+  );
+});
+
 test("home first-use capture CTA stays canonical for first/second", async () => {
   const source = await readFile(new URL("../app/app/page.tsx", import.meta.url), "utf8");
   assert.ok(source.includes("const firstCaptureHref = `/app/capture?mode=first&subject=${encodeURIComponent(selectedFirstSubject)}`;"));
