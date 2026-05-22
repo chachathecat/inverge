@@ -1470,10 +1470,79 @@ export class ReviewOsService {
 
     const toRows = (map: Map<string, number>) => [...map.entries()].map(([value, count]) => ({ key: value, value, count })).sort((a, b) => b.count - a.count).slice(0, 12);
 
+    type CohortUser = { cohortDate: string; eventDays: Set<string>; counts: Record<string, number>; studiedToday: boolean };
+    const cohortByUser = new Map<string, CohortUser>();
+    const nowDay = new Date().toISOString().slice(0, 10);
+    for (const event of events) {
+      const day = event.createdAt.slice(0, 10);
+      const existing = cohortByUser.get(event.userId);
+      const countsInit = {
+        capture_saved: 0,
+        post_save_execution_started: 0,
+        post_save_execution_completed: 0,
+        review_followup_scheduled: 0,
+        overdue_recovery_shown: 0,
+        overdue_recovery_completed: 0,
+      };
+      const row = existing ?? { cohortDate: day, eventDays: new Set<string>(), counts: countsInit, studiedToday: false };
+      if (day < row.cohortDate) row.cohortDate = day;
+      row.eventDays.add(day);
+      if (day === nowDay && (event.metadataJson.dailyState === "studiedToday" || event.eventName === "today_task_completed")) {
+        row.studiedToday = true;
+      }
+      if (event.eventName in row.counts) {
+        row.counts[event.eventName as keyof typeof countsInit] += 1;
+      }
+      cohortByUser.set(event.userId, row);
+    }
+
+    const cohortMap = new Map<string, CohortUser[]>();
+    for (const user of cohortByUser.values()) {
+      if (!cohortMap.has(user.cohortDate)) cohortMap.set(user.cohortDate, []);
+      cohortMap.get(user.cohortDate)?.push(user);
+    }
+    const dayDiff = (a: string, b: string) => Math.floor((Date.parse(b) - Date.parse(a)) / 86_400_000);
+    const pct = (num: number, den: number) => (den > 0 ? Number(((num / den) * 100).toFixed(1)) : 0);
+    const cohortAnalytics = [...cohortMap.entries()]
+      .sort(([a], [b]) => b.localeCompare(a))
+      .slice(0, 14)
+      .map(([cohortDate, users]) => {
+        const total = users.length;
+        const d1 = users.filter((u) => [...u.eventDays].some((day) => dayDiff(cohortDate, day) === 1)).length;
+        const d3 = users.filter((u) => [...u.eventDays].some((day) => dayDiff(cohortDate, day) === 3)).length;
+        const maturedForD7 = dayDiff(cohortDate, nowDay) >= 7;
+        const d7 = maturedForD7 ? users.filter((u) => [...u.eventDays].some((day) => dayDiff(cohortDate, day) === 7)).length : 0;
+        const firstCaptureSaved = users.filter((u) => u.counts.capture_saved > 0).length;
+        const firstExecutionCompleted = users.filter((u) => u.counts.post_save_execution_completed > 0).length;
+        const firstFollowupScheduled = users.filter((u) => u.counts.review_followup_scheduled > 0).length;
+        const captureUsers = users.filter((u) => u.counts.capture_saved > 0);
+        const executionStartedUsers = users.filter((u) => u.counts.post_save_execution_started > 0);
+        const executionCompletedUsers = users.filter((u) => u.counts.post_save_execution_completed > 0);
+        const overdueShownUsers = users.filter((u) => u.counts.overdue_recovery_shown > 0);
+        return {
+          cohortDate,
+          users: total,
+          activation: { firstCaptureSaved, firstExecutionCompleted, firstFollowupScheduled },
+          retention: {
+            d1ReturnRate: pct(d1, total),
+            d3ReturnRate: pct(d3, total),
+            d7ReturnRate: maturedForD7 ? pct(d7, total) : null,
+            studiedTodayRate: pct(users.filter((u) => u.studiedToday).length, total),
+          },
+          loopConversion: {
+            captureSavedToExecutionStarted: pct(executionStartedUsers.length, captureUsers.length),
+            executionStartedToExecutionCompleted: pct(executionCompletedUsers.length, executionStartedUsers.length),
+            executionCompletedToFollowupScheduled: pct(firstFollowupScheduled, executionCompletedUsers.length),
+            overdueRecoveryShownToCompleted: pct(users.filter((u) => u.counts.overdue_recovery_completed > 0).length, overdueShownUsers.length),
+          },
+        };
+      });
+
     return {
       captureFunnel: toFunnel(captureSteps),
       dailyRitualFunnel: toFunnel(ritualSteps),
       topFrictionSignals: friction.slice(0, 5),
+      cohortAnalytics,
       breakdowns: {
         mode: toRows(breakdowns.mode),
         subject: toRows(breakdowns.subject),
