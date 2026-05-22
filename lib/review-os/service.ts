@@ -25,6 +25,7 @@ import {
 import type {
   AccessState,
   AdminAlphaFeed,
+  AdminBetaFunnel,
   FeedbackItemInput,
   LearningSignalEventInput,
   LearningSignalSummary,
@@ -1354,6 +1355,97 @@ export class ReviewOsService {
 
   getAdminFeed(): Promise<AdminAlphaFeed> {
     return reviewOsRepository.getAdminAlphaFeed(80);
+  }
+
+
+  async getAdminBetaFunnel(): Promise<AdminBetaFunnel> {
+    const events = await reviewOsRepository.listRecentUsageEvents(1200);
+    const captureSteps = [
+      "capture_started",
+      "ocr_draft_generated",
+      "draft_confirmed",
+      "capture_saved",
+      "post_save_execution_started",
+      "post_save_execution_completed",
+      "review_followup_scheduled",
+    ] as const;
+    const ritualSteps = ["home_view", "today_task_started", "today_task_completed", "overdue_recovery_started", "weekly_summary_view"] as const;
+
+    const countByEvent = new Map<string, number>();
+    const breakdownKeys = ["mode", "subject", "sourceType", "confidence", "nextTaskType", "hasReferenceSupport", "hasOverdueQueue", "dailyState"] as const;
+    const breakdowns = Object.fromEntries(breakdownKeys.map((key) => [key, new Map<string, number>()])) as Record<(typeof breakdownKeys)[number], Map<string, number>>;
+
+    for (const event of events) {
+      countByEvent.set(event.eventName, (countByEvent.get(event.eventName) ?? 0) + 1);
+      for (const key of breakdownKeys) {
+        const rawValue = event.metadataJson[key];
+        if (rawValue === null || rawValue === undefined || rawValue === "") continue;
+        const value = String(rawValue);
+        const map = breakdowns[key];
+        map.set(value, (map.get(value) ?? 0) + 1);
+      }
+    }
+
+    const toFunnel = (steps: readonly string[]) =>
+      steps.map((eventName, index) => {
+        const count = countByEvent.get(eventName) ?? 0;
+        const previousCount = index > 0 ? countByEvent.get(steps[index - 1]) ?? 0 : 0;
+        const conversionFromPrevious = index === 0 ? null : previousCount > 0 ? Number(((count / previousCount) * 100).toFixed(1)) : 0;
+        return { eventName, count, conversionFromPrevious };
+      });
+
+    const safeRate = (numerator: number, denominator: number) => (denominator > 0 ? Number(((numerator / denominator) * 100).toFixed(1)) : 0);
+
+    const friction = [
+      {
+        key: "ocr_failed_rate",
+        label: "OCR 실패율",
+        count: countByEvent.get("ocr_failed") ?? 0,
+        rate: safeRate(countByEvent.get("ocr_failed") ?? 0, countByEvent.get("capture_started") ?? 0),
+      },
+      {
+        key: "pdf_manual_fallback_rate",
+        label: "PDF 수동 전환율",
+        count: countByEvent.get("pdf_manual_fallback") ?? 0,
+        rate: safeRate(countByEvent.get("pdf_manual_fallback") ?? 0, countByEvent.get("capture_started") ?? 0),
+      },
+      {
+        key: "saved_without_execution_start",
+        label: "저장 후 실행 미시작",
+        count: Math.max(0, (countByEvent.get("capture_saved") ?? 0) - (countByEvent.get("post_save_execution_started") ?? 0)),
+        rate: safeRate(Math.max(0, (countByEvent.get("capture_saved") ?? 0) - (countByEvent.get("post_save_execution_started") ?? 0)), countByEvent.get("capture_saved") ?? 0),
+      },
+      {
+        key: "execution_started_not_completed",
+        label: "실행 시작 후 미완료",
+        count: Math.max(0, (countByEvent.get("post_save_execution_started") ?? 0) - (countByEvent.get("post_save_execution_completed") ?? 0)),
+        rate: safeRate(Math.max(0, (countByEvent.get("post_save_execution_started") ?? 0) - (countByEvent.get("post_save_execution_completed") ?? 0)), countByEvent.get("post_save_execution_started") ?? 0),
+      },
+      {
+        key: "overdue_shown_not_started",
+        label: "연체 복구 미시작",
+        count: Math.max(0, (countByEvent.get("overdue_recovery_shown") ?? 0) - (countByEvent.get("overdue_recovery_started") ?? 0)),
+        rate: safeRate(Math.max(0, (countByEvent.get("overdue_recovery_shown") ?? 0) - (countByEvent.get("overdue_recovery_started") ?? 0)), countByEvent.get("overdue_recovery_shown") ?? 0),
+      },
+    ].sort((a, b) => b.count - a.count);
+
+    const toRows = (map: Map<string, number>) => [...map.entries()].map(([value, count]) => ({ key: value, value, count })).sort((a, b) => b.count - a.count).slice(0, 12);
+
+    return {
+      captureFunnel: toFunnel(captureSteps),
+      dailyRitualFunnel: toFunnel(ritualSteps),
+      topFrictionSignals: friction.slice(0, 5),
+      breakdowns: {
+        mode: toRows(breakdowns.mode),
+        subject: toRows(breakdowns.subject),
+        sourceType: toRows(breakdowns.sourceType),
+        confidence: toRows(breakdowns.confidence),
+        nextTaskType: toRows(breakdowns.nextTaskType),
+        hasReferenceSupport: toRows(breakdowns.hasReferenceSupport),
+        hasOverdueQueue: toRows(breakdowns.hasOverdueQueue),
+        dailyState: toRows(breakdowns.dailyState),
+      },
+    };
   }
 }
 
