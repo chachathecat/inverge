@@ -51,6 +51,10 @@ test("learner capture mobile inputs and extraction states are explicit", async (
   assert.ok(learnerCapture.includes("succeeded"));
   assert.ok(learnerCapture.includes("failed"));
   assert.ok(learnerCapture.includes("현재 PDF는 파일명만 기록됩니다. 내용은 직접 붙여넣어 주세요."));
+  assert.ok(learnerCapture.includes("사진 촬영 팁"));
+  assert.ok(learnerCapture.includes("그림자가 적게 찍기"));
+  assert.ok(learnerCapture.includes("한 페이지씩 정면으로 찍기"));
+  assert.ok(learnerCapture.includes("흔들리면 다시 찍기"));
 });
 
 test("learner capture failure copy is calm and draft-preserving", async () => {
@@ -65,6 +69,17 @@ test("learner capture does not auto-save or auto-grade after OCR/PDF", async () 
   assert.equal(learnerCapture.includes("/api/answer-review/grade-second"), false);
   assert.ok(learnerCapture.includes('setStage("preview")'));
   assert.ok(learnerCapture.includes("페이지 순서"));
+  assert.ok(learnerCapture.includes("저장 전 캡처 품질 체크"));
+  assert.ok(learnerCapture.includes("글자가 선명한가"));
+  assert.ok(learnerCapture.includes("페이지 순서가 맞는가"));
+  assert.ok(learnerCapture.includes("문제번호가 보이는가"));
+  assert.ok(learnerCapture.includes("계산/답/단위가 보이는가"));
+  assert.ok(learnerCapture.includes("끝/이하여백 표시가 있는가"));
+});
+
+test("first mode is not overloaded with second-only capture quality checklist", async () => {
+  const learnerCapture = await readFile(new URL("../components/review-os/capture-form.tsx", import.meta.url), "utf8");
+  assert.ok(learnerCapture.includes('{mode === "second" ? ('));
 });
 
 test("saved learner capture copy shows one biggest gap and one next action choices", async () => {

@@ -422,6 +422,9 @@ export function WrongAnswerCaptureForm({
         setStage("preview");
         setExtractionState("failed");
         setExtractError("텍스트 추출에 실패했습니다. 직접 붙여넣거나 다시 시도해 주세요.");
+        setTimeout(() => {
+          textAreaRef.current?.focus();
+        }, 0);
         return;
       }
       setForm(persist(applyExtraction(form, extraction)));
@@ -433,6 +436,9 @@ export function WrongAnswerCaptureForm({
       setStage("preview");
       setExtractionState("failed");
       setExtractError("텍스트 추출에 실패했습니다. 직접 붙여넣거나 다시 시도해 주세요.");
+      setTimeout(() => {
+        textAreaRef.current?.focus();
+      }, 0);
     } finally {
       setExtracting(false);
     }
@@ -462,6 +468,9 @@ export function WrongAnswerCaptureForm({
         setStage("preview");
         setExtractionState("failed");
         setExtractError("텍스트 추출에 실패했습니다. 직접 붙여넣거나 다시 시도해 주세요.");
+        setTimeout(() => {
+          textAreaRef.current?.focus();
+        }, 0);
         return;
       }
       const extractedText = result.text ?? result.extractedText ?? "";
@@ -484,6 +493,9 @@ export function WrongAnswerCaptureForm({
       setStage("preview");
       setExtractionState("failed");
       setExtractError("텍스트 추출에 실패했습니다. 직접 붙여넣거나 다시 시도해 주세요.");
+      setTimeout(() => {
+        textAreaRef.current?.focus();
+      }, 0);
     } finally {
       setExtracting(false);
     }
@@ -966,6 +978,14 @@ function IntakePanel({
             </Button>
             <p className="mt-2 text-xs text-[color:var(--ink-muted)]">사진은 OCR 초안으로만 사용됩니다. 저장 전 직접 확인해 주세요.</p>
           </div>
+          <div className="mt-4 rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)] p-3">
+            <p className="text-xs font-medium text-[color:var(--muted)]">사진 촬영 팁</p>
+            <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-[color:var(--muted)]">
+              <li>그림자가 적게 찍기</li>
+              <li>한 페이지씩 정면으로 찍기</li>
+              <li>흔들리면 다시 찍기</li>
+            </ul>
+          </div>
           <details className="mt-3 rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)]">
             <summary className="cursor-pointer list-none px-3 py-2 text-xs text-[color:var(--ink-muted)]">다른 입력 방식 보기</summary>
             <div className="grid gap-2 border-t border-[color:var(--border-hairline)] px-3 py-2 sm:flex sm:flex-wrap">
@@ -1157,13 +1177,16 @@ function IntakePanel({
       ) : null}
       {extractError ? <p className="mt-3 text-sm leading-6 text-[color:var(--cue-risk)]">{extractError}</p> : null}
       {mode === "second" ? (
-        <ul className="mt-3 list-disc space-y-1 pl-5 text-xs text-[color:var(--muted)]">
-          <li>문제번호 확인</li>
-          <li>계산과정 확인</li>
-          <li>답/단위 확인</li>
-          <li>끝/이하여백 확인</li>
-          <li>누락 페이지 확인</li>
-        </ul>
+        <div className="mt-3 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3">
+          <p className="text-xs font-medium text-[color:var(--muted)]">저장 전 캡처 품질 체크</p>
+          <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-[color:var(--muted)]">
+            <li>글자가 선명한가</li>
+            <li>페이지 순서가 맞는가</li>
+            <li>문제번호가 보이는가</li>
+            <li>계산/답/단위가 보이는가</li>
+            <li>끝/이하여백 표시가 있는가</li>
+          </ul>
+        </div>
       ) : null}
     </section>
   );
