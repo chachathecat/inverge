@@ -32,6 +32,19 @@
   --sub-practice: #3f679e;
   --sub-theory: #7457a8;
   --sub-law: #a35b45;
+
+  --surfaceBase: #ffffff;
+  --surfaceElevated: #fdfaf4;
+  --surfaceQuiet: #f7f4ee;
+  --borderQuiet: #ece7dc;
+  --textStrong: #1a1f2b;
+  --textBody: #3f4a5a;
+  --textMuted: #788394;
+  --actionPrimary: #132338;
+  --actionSecondaryText: #475569;
+  --cueRisk: #9f463f;
+  --cueRecovery: #8a6a22;
+  --cueSuccess: #2d6552;
   --background: var(--bg-canvas);
   --surface: var(--bg-surface);
   --surface-soft: var(--bg-subtle);
@@ -110,9 +123,7 @@ html {
 
 body {
   min-height: 100vh;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.48) 0%, rgba(250, 248, 243, 0) 240px),
-    var(--background);
+  background: var(--background);
   color: var(--foreground);
   font-family: var(--font-ui);
   letter-spacing: -0.01em;

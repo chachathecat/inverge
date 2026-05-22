@@ -7,6 +7,7 @@ import { HomeProofAnimation } from "@/components/review-os/home-proof-animation"
 import { TodayFirstSubjectSelector } from "@/components/review-os/today-first-subject-selector";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { DailyCommandCard, EvidenceLine, OneActionFooter, QuietDetails } from "@/components/review-os/minimal-study-system";
 import { getModeConfig, normalizeSubjectForMode, resolveAppraisalMode } from "@/lib/review-os/appraisal";
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
 import { DEFAULT_DAILY_STUDY_ACTIVITY, reviewOsService } from "@/lib/review-os/service";
@@ -217,22 +218,20 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
   return (
     <div className="space-y-7 md:space-y-8">
       <ClosedBetaBanner />
-      <section className="space-y-3">
-        <div>
-          <h2 className="text-xl font-medium tracking-[-0.04em] text-[color:var(--foreground-strong)] sm:text-2xl">{config.pageTitle}</h2>
-          <p className="mt-2 max-w-2xl text-sm leading-7 text-[color:var(--muted)]">오늘 공부 흔적을 올리면 약점 1개와 다음 행동 1개로 정리합니다.</p>
-          <p className="mt-1 max-w-2xl text-xs leading-6 text-[color:var(--muted)]">채점 확정이 아니라, 다음 행동을 정리하는 학습 운영 도구입니다.</p>
-        </div>
-      </section>
+      <DailyCommandCard title="오늘은 이것만 합니다." description="오늘 공부 흔적을 올리면 약점 1개와 다음 행동 1개로 정리합니다.">
+        <QuietDetails>
+          <p>채점 확정이 아니라, 다음 행동을 정리하는 학습 운영 도구입니다.</p>
+        </QuietDetails>
+      </DailyCommandCard>
 
       {savedParam ? (
-        <section className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] px-4 py-3">
-          <p className="mt-1 text-sm text-[color:var(--foreground-strong)]">방금 남긴 입력은 오늘 할 일과 노트에 반영됩니다.</p>
-          <div className="mt-2">
-            <Link href={`/app/items?mode=${mode}`} className="inline-flex rounded-full bg-[color:var(--foreground-strong)] px-4 py-2 text-xs font-medium text-white">
+        <section className="rounded-[var(--radius-md)] bg-[color:var(--surfaceQuiet)] px-4 py-4">
+          <EvidenceLine>저장 전 직접 확인해 주세요.</EvidenceLine>
+          <OneActionFooter>
+            <Link href={`/app/items?mode=${mode}`} className="inline-flex rounded-full bg-[color:var(--actionPrimary)] px-4 py-2 text-xs font-medium text-white">
               노트에서 확인
             </Link>
-          </div>
+          </OneActionFooter>
         </section>
       ) : null}
 
