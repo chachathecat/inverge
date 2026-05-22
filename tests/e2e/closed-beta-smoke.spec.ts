@@ -125,3 +125,88 @@ test.describe('closed beta auth-required route smoke', () => {
     });
   }
 });
+
+test.describe('learner core loop browser smoke', () => {
+  test.describe.configure({ timeout: 120_000 });
+
+  test.beforeEach(async ({ page }, testInfo) => {
+    skipIfMissingAuth(testInfo);
+    await loginIfNeeded(page);
+  });
+
+  test('first-mode capture → save → session completion loop', async ({ page }) => {
+    await page.goto('/app?mode=first');
+    await expect(page.getByRole('link', { name: '오늘 한 것 올리기' }).first()).toBeVisible();
+    await expect(page.getByRole('link', { name: /\/instructor/i })).toHaveCount(0);
+
+    await page.getByRole('link', { name: '오늘 한 것 올리기' }).first().click();
+    await expect(page).toHaveURL(/\/app\/capture\?mode=first/);
+
+    await page.getByLabel('오늘 공부한 과목').selectOption('회계학');
+    await page.getByRole('button', { name: '텍스트로 직접 입력' }).click();
+    await page.getByLabel('문제 / 상황').fill('정답: 3');
+    await page.getByLabel('정답').fill('3');
+    await page.getByLabel('내가 고른 답').fill('2');
+    await page.getByLabel('실수 원인 분류 (1차)').selectOption('선지 오독');
+    await page.getByLabel('회상 한 문장 (해설 전)').fill('정답: 3 / 내 답: 2 / 이유: 선지 오독');
+    await page.getByLabel('왜 틀렸는지').fill('선지 오독');
+
+    await page.getByRole('button', { name: /저장하고 오늘 계획에 반영/ }).click();
+    await expect(page).toHaveURL(/\/app\/session\?mode=first/);
+
+    await expect(page.getByText('오늘 기록이 저장되었습니다')).toBeVisible();
+    await expect(page.getByText('가장 큰 간극')).toBeVisible();
+    await expect(page.getByText('다음 행동')).toBeVisible();
+
+    await page.getByRole('button', { name: '지금 5분 다시 풀기' }).click();
+    await page.getByRole('button', { name: '시작하기' }).click();
+    await page.getByLabel('회상 입력').fill('선지 조건부터 읽고 답을 고르겠습니다.');
+    await page.getByRole('button', { name: '완료하고 홈으로' }).click();
+
+    await expect(page.getByText('오늘은 여기까지 해도 됩니다')).toBeVisible();
+    await expect(page.getByText('다음 복습')).toBeVisible();
+  });
+
+  test('second-mode rewrite loop + learner guardrails', async ({ page }) => {
+    await page.goto('/app?mode=second');
+    await expect(page.getByRole('link', { name: '오늘 한 것 올리기' }).first()).toBeVisible();
+    await expect(page.getByRole('link', { name: /\/instructor/i })).toHaveCount(0);
+
+    await page.getByRole('link', { name: '오늘 한 것 올리기' }).first().click();
+    await expect(page).toHaveURL(/\/app\/capture\?mode=second/);
+
+    await page.getByLabel('오늘 공부한 과목').selectOption('감정평가이론');
+    await page.getByRole('button', { name: '텍스트로 직접 입력' }).click();
+    await page.getByLabel('쟁점 회상').fill('쟁점1 요건, 쟁점2 사실, 쟁점3 결론');
+    await page.getByRole('button', { name: '다음: 목차 작성' }).click();
+    await page.getByLabel('목차 초안').fill('I. 요건 II. 사실 III. 결론');
+    await page.getByRole('button', { name: '다음: 내 답안 작성' }).click();
+    await page.getByLabel('내 답안').fill('요건과 사실을 연결했지만 결론 문장이 약합니다.');
+    await page.getByRole('button', { name: '다음: 기준답안/해설 입력' }).click();
+    await page.getByLabel('기준 답안 요약').fill('기준답안은 결론을 더 분명히 씁니다.');
+    await page.getByRole('button', { name: '다음: 가장 큰 간극 1개' }).click();
+    await page.getByLabel('보강할 논점 1개').fill('결론 문장에서 요건-사실 대응을 명시하지 못함');
+    await page.getByRole('button', { name: '다음: 문단 다시쓰기' }).click();
+    await page.getByTestId('second-write-final-textarea').fill('요건을 제시하고 사실을 대응해 결론을 명확히 작성합니다.');
+    await page.getByRole('button', { name: /저장하고 오늘 계획에 반영/ }).click();
+
+    await expect(page).toHaveURL(/\/app\/session\?mode=second/);
+    await expect(page.getByText('오늘 기록이 저장되었습니다')).toBeVisible();
+
+    await page.getByRole('button', { name: '지금 10분 다시 쓰기' }).click();
+    await page.getByLabel('다시 쓴 문단').fill('누락 쟁점을 반영해 요건-사실-결론 문장을 다시 작성했습니다.');
+    await page.getByRole('button', { name: '완료하고 홈으로' }).click();
+
+    await expect(page.getByText('좋아진 점 1개')).toBeVisible();
+    await expect(page.getByText('아직 위험한 점 1개')).toBeVisible();
+    await expect(page.getByText('다음 문장 행동 1개')).toBeVisible();
+    await expect(page.getByText('점수 판정이 아니라')).toBeVisible();
+
+    await page.goto('/app?mode=second');
+    await expect(page.getByText('오늘은 여기까지 해도 됩니다')).toBeVisible();
+
+    for (const banned of ['공식 채점', '합격/불합격', '점수 보장', '결제']) {
+      await expect(page.getByText(banned)).toHaveCount(0);
+    }
+  });
+});
