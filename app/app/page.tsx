@@ -107,6 +107,8 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
   const dailyConsistencyCopy = dailyActivity.missedRecently
     ? "괜찮습니다. 오늘은 복구 1개만 하면 됩니다."
     : "최근 흐름이 이어지고 있습니다.";
+  const DAILY_STATE_LINES = ["오늘은 이것만 합니다", "오늘은 복구만 합니다", "오늘은 여기까지 해도 됩니다"] as const;
+
   const primaryHeading =
     homeState === "first_capture"
       ? "오늘 한 것 하나만 올리세요"
