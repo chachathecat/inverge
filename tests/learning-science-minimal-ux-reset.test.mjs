@@ -18,6 +18,25 @@ test("first and second session order enforces retrieval/rewrite first", async ()
   ["해설 보기 전, 근거 1문장", "짧은 재풀이", "함정 카드 3개", "다음 복습 예약", "쟁점 1개 회상", "문단 1개 다시쓰기", "전후 비교", "다음 보강 예약"].forEach((t) => assert.ok(source.includes(t)));
 });
 
+test("first-mode retrieval gate keeps explanation hidden until recall input", async () => {
+  const source = await readFile(new URL("../components/review-os/today-session-runner.tsx", import.meta.url), "utf8");
+  assert.ok(source.includes("retrievalSentence.trim().length > 3"));
+  assert.ok(source.includes("설명:"));
+});
+
+test("core loop keeps no more than one primary CTA in each execution step", async () => {
+  const source = await readFile(new URL("../components/review-os/today-session-runner.tsx", import.meta.url), "utf8");
+  [
+    "추천 작업으로 시작",
+    "근거 1문장 남기기",
+    "다음: 함정 카드 3개",
+    "다음: 회상 문장 작성",
+    "다음: 틀린 이유 1개 선택",
+    "다음: 문단 1개 다시쓰기",
+  ].forEach((t) => assert.ok(source.includes(t)));
+  assert.ok(source.includes("다른 작업 보기"));
+});
+
 
 
 test("second-write flow hides global footer until step 6 and keeps defer actions under details", async () => {
