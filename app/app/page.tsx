@@ -15,6 +15,7 @@ import { APPRAISAL_FIRST_SUBJECTS } from "@/lib/review-os/types";
 import { buildTodayPlanCard, type TodayPlanActionKind } from "@/lib/review-os/today-plan";
 import { buildTodayPlanTasks } from "@/lib/review-os/today-plan-engine";
 import { buildWeaknessDiagnostic } from "@/lib/review-os/weakness-diagnostics";
+import { isOverdueDueAt, resolveDailyStudyState } from "@/lib/review-os/daily-study-state";
 
 const FIRST_MODE_INPUT_OPTIONS = [
   {
@@ -93,6 +94,42 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
   }
   const hasDataSignals = learningSignalEvents.length > 0 || queue.length > 0 || Boolean(recentStudyLog);
   const firstUse = items.length === 0 && !hasDataSignals;
+  const now = Date.now();
+  const hasOverdueQueue = queue.some((item) => isOverdueDueAt(item.dueAt, now));
+  const homeState = resolveDailyStudyState({
+    hasNoData: firstUse,
+    hasDueQueue: queue.length > 0,
+    hasOverdueQueue,
+    savedToday: Boolean(savedParam),
+    completedToday: false,
+    mode,
+  });
+  const primaryHeading =
+    homeState === "first_capture"
+      ? "오늘 한 것 하나만 올리세요"
+      : homeState === "overdue_recovery"
+        ? "오늘은 복구만 합니다"
+        : homeState === "post_completion"
+          ? "오늘은 여기까지 해도 됩니다"
+          : homeState === "evening_capture"
+            ? "오늘 공부한 흔적을 남기고 끝내세요"
+            : "오늘 합격에 제일 가까워지는 1개";
+  const primaryDescription =
+    homeState === "overdue_recovery"
+      ? "밀린 걸 전부 따라잡으려 하지 마세요. 가장 작은 작업 1개만 끝냅니다."
+      : homeState === "post_completion"
+        ? "다음 복습은 예약되었습니다. 새 범위보다 회복이 우선입니다."
+        : "지금은 전체를 다시 볼 때가 아니라, 이 약점 하나를 줄일 때입니다.";
+  const homePrimaryCta =
+    homeState === "first_capture"
+      ? "오늘 한 것 올리기"
+      : homeState === "overdue_recovery"
+        ? "15분 복구 시작"
+        : homeState === "evening_capture"
+          ? "사진/텍스트로 남기기"
+          : mode === "second"
+            ? "지금 10분 다시 쓰기"
+            : "지금 5분 다시 풀기";
   const selectedQueueItem = queue.find((item) => item.queueId === focus.sourceQueueId) ?? queue[0] ?? null;
   const todayPlan = buildTodayPlanCard({ mode, learningSignals: learningSignalEvents, queue, items });
   const todayPlanTasks = buildTodayPlanTasks({ mode, queue, learningSignals: learningSignalEvents });
@@ -244,10 +281,8 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                   <p className="mt-1 text-xs text-[color:var(--muted)]">Problem Snap 기반</p>
                 ) : null}
               </div>
-              <CardTitle>오늘 합격에 제일 가까워지는 1개</CardTitle>
-              <CardDescription className="max-w-[66ch]">
-                지금은 전체를 다시 볼 때가 아니라, 이 약점 하나를 줄일 때입니다.
-              </CardDescription>
+              <CardTitle>{primaryHeading}</CardTitle>
+              <CardDescription className="max-w-[66ch]">{primaryDescription}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 p-4 pt-0 sm:space-y-4 sm:p-6 sm:pt-0">
               <div className="rounded-[var(--radius-md)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)] px-4 py-3 text-sm">
@@ -308,7 +343,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                   <Link href={primaryHref} className="w-full sm:w-auto">
                     <Button type="button" className="w-full sm:w-auto">
-                      {primaryCtaLabel}
+                      {homeState === "start_today_task" ? primaryCtaLabel : homePrimaryCta}
                     </Button>
                   </Link>
                   <details className="w-full rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] sm:w-auto sm:min-w-[20rem]">
@@ -349,6 +384,13 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                   <Link href={problemSnapSignalCta.href} className="mt-2 inline-flex text-xs font-medium text-[color:var(--ink-primary)] underline underline-offset-2">
                     {problemSnapSignalCta.label}
                   </Link>
+                </div>
+              ) : null}
+              {homeState === "overdue_recovery" ? (
+                <div className="rounded-[var(--radius-md)] border border-[color:var(--cue-focus)] bg-[color:var(--cue-focus-bg)] px-4 py-3 text-xs text-[color:var(--foreground-strong)]">
+                  <p>밀린 걸 전부 따라잡으려 하지 마세요.</p>
+                  <p className="mt-1">오늘은 가장 작은 것 1개만 복구합니다.</p>
+                  <p className="mt-1">새 범위보다 반복 실수 하나를 줄이는 게 우선입니다.</p>
                 </div>
               ) : null}
               <details className="rounded-[var(--radius-md)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)]">
