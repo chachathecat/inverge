@@ -102,3 +102,25 @@ test("reset clears extraction state and uploaded pages", async () => {
   assert.ok(learnerCapture.includes("setExtractionState(\"idle\")"));
   assert.ok(learnerCapture.includes("setUploadedPages([])"));
 });
+
+test("second write flow includes all micro-step labels", async () => {
+  const learnerCapture = await readFile(new URL("../components/review-os/capture-form.tsx", import.meta.url), "utf8");
+  ["Step 1. 쟁점 회상", "Step 2. 목차 작성", "Step 3. 내 답안 작성", "Step 4. 기준답안/해설 입력", "Step 5. 가장 큰 간극 1개", "Step 6. 문단 다시쓰기"].forEach((label) => {
+    assert.ok(learnerCapture.includes(label), `Missing step label: ${label}`);
+  });
+});
+
+test("second write flow keeps advanced fields behind details and one-primary-step copy", async () => {
+  const learnerCapture = await readFile(new URL("../components/review-os/capture-form.tsx", import.meta.url), "utf8");
+  assert.ok(learnerCapture.includes("세부 입력 보기 (선택)"));
+  assert.ok(learnerCapture.includes("전체 답안보다 목차 3줄이 먼저입니다."));
+  assert.ok(learnerCapture.includes("완벽히 쓰지 말고, 지금 떠오르는 문장만 적으세요."));
+  assert.ok(learnerCapture.includes("비교는 작성 이후에 합니다."));
+});
+
+test("second write answer templates include all official second subjects", async () => {
+  const learnerCapture = await readFile(new URL("../components/review-os/capture-form.tsx", import.meta.url), "utf8");
+  ["감정평가실무", "문제 요구:", "계산 근거:", "감정평가이론", "정의:", "논거:", "사례 적용:", "감정평가 및 보상법규", "요건:", "조문/법리:", "사안 포섭:"].forEach((token) => {
+    assert.ok(learnerCapture.includes(token), `Missing template token: ${token}`);
+  });
+});
