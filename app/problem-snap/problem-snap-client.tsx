@@ -163,6 +163,10 @@ export default function ProblemSnapClientPage({ initialExamMode }: { initialExam
       </>
     );
   };
+  const renderPrimarySubjectCards = (view: "practice" | "theory" | "law" | "first", currentResult: ProblemSnapResult) => {
+    const cards = renderSubjectSpecificCards(view, currentResult);
+    return Array.isArray(cards) ? cards.slice(0, 4) : cards;
+  };
 
   const getPrimaryPracticeAction = (currentSubject: string, currentResult: ProblemSnapResult) =>
     getProblemSnapSubjectView(currentSubject) === "practice"
@@ -341,19 +345,10 @@ export default function ProblemSnapClientPage({ initialExamMode }: { initialExam
 
       {result ? (
         <section className="space-y-4 rounded-[var(--radius-xl)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-5">
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-3">
             <div className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">가장 먼저 이해할 1가지</p><p className="mt-1 text-sm">{result.problemSummary}</p></div>
-            <div className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">핵심 공식/논점</p><p className="mt-1 text-sm">{result.formulas[0] ?? result.requiredConcepts[0] ?? "핵심 논점 확인 필요"}</p></div>
             <div className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">지금 다시 풀 행동 1개</p><p className="mt-1 text-sm">{getPrimaryPracticeAction(subject, result)}</p></div>
             <div className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">주의할 함정 1개</p><p className="mt-1 text-sm">{getSubjectSpecificCaution(subject, result)}</p></div>
-          </div>
-          <div className="rounded-[var(--radius-md)] border p-3 space-y-2">
-            <p className="text-sm font-medium">문제 인식 확인</p>
-            <p className="text-xs">문제 요약: {result.problemSummaryDraft || result.problemSummary || "확인 필요"}</p>
-            <p className="text-xs">요구 유형: {result.askTypeDraft || result.askType || "확인 필요"}</p>
-            <p className="text-xs">읽은 조건: {(result.extractedConditions ?? ["확인 필요"]).join(" · ")}</p>
-            <p className="text-xs">숫자·단위: {(result.extractedNumbersAndUnits ?? ["확인 필요"]).join(" · ")}</p>
-            <p className="text-xs">불명확한 부분: {(result.missingOrUnclearParts ?? ["확인 필요"]).join(" · ")}</p>
           </div>
           <p className="text-xs text-[color:var(--muted)]">{referenceGrounding?.used ? `유사 기출 Skeleton을 참고해 정리했습니다. ${referenceGrounding.displayLabel}` : "입력 자료 기준으로 정리했습니다."}</p>
           {!retryMode ? <div><h3 className="font-medium">{resultHeading}</h3><p>{result.easyExplanation}</p></div> : null}
@@ -364,19 +359,29 @@ export default function ProblemSnapClientPage({ initialExamMode }: { initialExam
               <p className="rounded-[var(--radius-md)] border border-dashed p-3 text-sm text-[color:var(--muted)]">계산기 입력보다 개념 구조가 중요한 문제입니다.</p>
             )
           ) : null}
-          <div className="rounded-[var(--radius-md)] border p-3">
-            <p className="text-sm font-medium">품질 점검</p>
-            <ul className="mt-2 space-y-1 text-sm">
-              <li>• 문제 인식 <span className="font-medium">{result.problemSummary ? "정상" : "확인 필요"}</span></li>
-              <li>• 공식 <span className="font-medium">{hasMeaningfulValue(result.formulas) ? "정상" : "확인 필요"}</span></li>
-              <li>• 숫자/단위 <span className="font-medium">{hasMeaningfulValue(result.extractedNumbersAndUnits) ? "정상" : "확인 필요"}</span></li>
-              <li>• 계산기 입력 <span className="font-medium">{showCalculatorGuide ? "정상" : "해당 없음"}</span></li>
-            </ul>
+          {!retryMode ? <div className="grid gap-3 sm:grid-cols-2">{renderPrimarySubjectCards(getProblemSnapSubjectView(subject), result)}</div> : null}
+          <details className="rounded-[var(--radius-md)] border p-3">
+            <summary className="cursor-pointer text-sm font-medium">자세히 보기</summary>
+            <div className="mt-2 space-y-2">
+              <p className="text-xs font-medium">문제 인식 확인</p>
+              <p className="text-xs">문제 요약: {result.problemSummaryDraft || result.problemSummary || "확인 필요"}</p>
+              <p className="text-xs">요구 유형: {result.askTypeDraft || result.askType || "확인 필요"}</p>
+              <p className="text-xs">읽은 조건: {(result.extractedConditions ?? ["확인 필요"]).join(" · ")}</p>
+              <p className="text-xs">숫자·단위: {(result.extractedNumbersAndUnits ?? ["확인 필요"]).join(" · ")}</p>
+              <p className="text-xs">불명확한 부분: {(result.missingOrUnclearParts ?? ["확인 필요"]).join(" · ")}</p>
+              <p className="mt-3 text-xs font-medium">품질 점검</p>
+              <ul className="space-y-1 text-xs">
+                <li>• 문제 인식 <span className="font-medium">{result.problemSummary ? "정상" : "확인 필요"}</span></li>
+                <li>• 공식 <span className="font-medium">{hasMeaningfulValue(result.formulas) ? "정상" : "확인 필요"}</span></li>
+                <li>• 숫자/단위 <span className="font-medium">{hasMeaningfulValue(result.extractedNumbersAndUnits) ? "정상" : "확인 필요"}</span></li>
+              </ul>
+            </div>
+          </details>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <button type="button" onClick={() => setRetryMode((prev) => !prev)} className={cn(buttonVariants({ variant: "default" }), "h-10")}>해설 가리고 다시 풀기</button>
+            <button type="button" onClick={onSaveToReviewQueue} className={cn(buttonVariants({ variant: "outline" }), "h-10")}>복습 큐에 저장</button>
           </div>
-          {!retryMode ? <div className="grid gap-3 sm:grid-cols-2">{renderSubjectSpecificCards(getProblemSnapSubjectView(subject), result)}</div> : null}
-          <button type="button" onClick={() => setRetryMode((prev) => !prev)} className={cn(buttonVariants({ variant: "default" }), "h-10")}>해설 가리고 다시 풀기</button>
           {retryMode ? <div className="space-y-2 rounded-[var(--radius-md)] border p-3"><p className="text-sm">문제 요약</p><p className="text-sm">핵심 조건</p><label className="text-sm">빈 답안 메모<Textarea className="mt-1 min-h-[80px]" value={retryMemo} onChange={(e) => setRetryMemo(e.target.value)} /></label><button type="button" className={cn(buttonVariants({ variant: "outline" }), "h-10 inline-flex")} onClick={() => bridgeToAnswerReview(result)}>Answer Review로 내 풀이 검토하기</button><button type="button" onClick={() => setRetryMode(false)} className={cn(buttonVariants({ variant: "ghost" }), "h-9")}>해설 다시 보기</button></div> : null}
-          <button type="button" onClick={onSaveToReviewQueue} className={cn(buttonVariants({ variant: "outline" }), "h-10")}>이 문제를 복습 큐에 저장</button>
           <p className="text-xs text-[color:var(--muted)]">{saveStatus === "saving" ? "저장 중" : saveStatus === "saved" ? "저장됨" : saveStatus === "failed" ? "저장 실패" : saveStatus === "local_fallback" || savedLocal ? "로컬 임시 저장" : "저장하면 복습 연결 준비 상태로 표시됩니다."}</p>
           <ResultFeedbackPrompt route="/problem-snap" pageContext={{ section: "problem-snap-result", examMode, subject }} />
         </section>
