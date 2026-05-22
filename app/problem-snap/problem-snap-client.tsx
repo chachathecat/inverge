@@ -56,6 +56,8 @@ export default function ProblemSnapClientPage({ initialExamMode }: { initialExam
   const [recognitionConfirmed, setRecognitionConfirmed] = useState(false);
   const [recognizedTextDraft, setRecognizedTextDraft] = useState("");
   const [lastInputSource, setLastInputSource] = useState<"camera" | "file" | null>(null);
+  const [retryMode, setRetryMode] = useState(false);
+  const [retryMemo, setRetryMemo] = useState("");
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
@@ -74,6 +76,23 @@ export default function ProblemSnapClientPage({ initialExamMode }: { initialExam
       || result.calculatorGuide.recommendedMode !== "검토 필요";
     return subject === "감정평가실무" || hasSignal;
   }, [result, subject]);
+
+  const getProblemSnapSubjectView = (currentSubject: string) => {
+    if (examMode === "first") return "first";
+    if (currentSubject === "감정평가실무") return "practice";
+    if (currentSubject === "감정평가이론") return "theory";
+    return "law";
+  };
+
+  const getPrimaryPracticeAction = (currentSubject: string, currentResult: ProblemSnapResult) =>
+    getProblemSnapSubjectView(currentSubject) === "practice"
+      ? currentResult.nextPracticeAction || currentResult.calculatorGuide.answerRounding || "단위·반올림 기준을 적고 다시 계산해 보세요."
+      : currentResult.nextPracticeAction;
+
+  const getSubjectSpecificCaution = (currentSubject: string, currentResult: ProblemSnapResult) =>
+    getProblemSnapSubjectView(currentSubject) === "practice"
+      ? currentResult.calculatorGuide.caution || currentResult.caution
+      : currentResult.commonMistakes[0] ?? currentResult.caution;
 
   const hasMeaningfulValue = (items?: string[]) =>
     (items ?? []).some((item) => {
@@ -101,6 +120,8 @@ export default function ProblemSnapClientPage({ initialExamMode }: { initialExam
     setResult(null);
     setRecognitionConfirmed(false);
     setSaveStatus("idle");
+    setRetryMode(false);
+    setRetryMemo("");
     try {
       const formData = new FormData();
       formData.set("examMode", examMode);
@@ -243,8 +264,8 @@ export default function ProblemSnapClientPage({ initialExamMode }: { initialExam
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">가장 먼저 이해할 1가지</p><p className="mt-1 text-sm">{result.problemSummary}</p></div>
             <div className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">핵심 공식/논점</p><p className="mt-1 text-sm">{result.formulas[0] ?? result.requiredConcepts[0] ?? "핵심 논점 확인 필요"}</p></div>
-            <div className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">지금 다시 풀 행동 1개</p><p className="mt-1 text-sm">{result.nextPracticeAction}</p></div>
-            <div className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">주의할 함정 1개</p><p className="mt-1 text-sm">{result.commonMistakes[0] ?? result.caution}</p></div>
+            <div className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">지금 다시 풀 행동 1개</p><p className="mt-1 text-sm">{getPrimaryPracticeAction(subject, result)}</p></div>
+            <div className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">주의할 함정 1개</p><p className="mt-1 text-sm">{getSubjectSpecificCaution(subject, result)}</p></div>
           </div>
           <div className="rounded-[var(--radius-md)] border p-3 space-y-2">
             <p className="text-sm font-medium">문제 인식 확인</p>
@@ -270,6 +291,20 @@ export default function ProblemSnapClientPage({ initialExamMode }: { initialExam
               <li>• 계산기 입력 <span className="font-medium">{showCalculatorGuide ? "정상" : "해당 없음"}</span></li>
             </ul>
           </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">조건 정리</p></div>
+            <div className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">핵심 산식</p></div>
+            <div className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">계산 순서</p></div>
+            <div className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">단위/반올림</p></div>
+            <div className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">개념 정의</p></div>
+            <div className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">비교/대립 논점</p></div>
+            <div className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">답안 목차</p></div>
+            <div className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">쟁점</p></div>
+            <div className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">조문/요건</p></div>
+            <div className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">사안 포섭</p></div>
+          </div>
+          <button type="button" onClick={() => setRetryMode((prev) => !prev)} className={cn(buttonVariants({ variant: "default" }), "h-10")}>해설 가리고 다시 풀기</button>
+          {retryMode ? <div className="space-y-2 rounded-[var(--radius-md)] border p-3"><p className="text-sm">문제 요약</p><p className="text-sm">핵심 조건</p><label className="text-sm">빈 답안 메모<Textarea className="mt-1 min-h-[80px]" value={retryMemo} onChange={(e) => setRetryMemo(e.target.value)} /></label><a className={cn(buttonVariants({ variant: "outline" }), "h-10 inline-flex")} href={`/answer-review?mode=second&examMode=${examMode}&subject=${encodeURIComponent(subject)}`}>Answer Review로 내 풀이 검토하기</a></div> : null}
           <button type="button" onClick={onSaveToReviewQueue} className={cn(buttonVariants({ variant: "outline" }), "h-10")}>이 문제를 복습 큐에 저장</button>
           <p className="text-xs text-[color:var(--muted)]">{saveStatus === "saving" ? "저장 중" : saveStatus === "saved" ? "저장됨" : saveStatus === "failed" ? "저장 실패" : saveStatus === "local_fallback" || savedLocal ? "로컬 임시 저장" : "저장하면 복습 연결 준비 상태로 표시됩니다."}</p>
           <ResultFeedbackPrompt route="/problem-snap" pageContext={{ section: "problem-snap-result", examMode, subject }} />

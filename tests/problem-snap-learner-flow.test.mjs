@@ -66,3 +66,8 @@ test("placeholder extraction values do not count as normal", async () => {
   ["확인 필요", "검토 필요", "없음"].forEach((value) => assert.ok(source.includes(value)));
   assert.ok(source.includes('{hasMeaningfulValue(result.extractedNumbersAndUnits) ? "정상" : "확인 필요"}'));
 });
+
+test("subject-specific views and retry mode labels exist", async () => {
+  const source = await readFile(new URL("../app/problem-snap/problem-snap-client.tsx", import.meta.url), "utf8");
+  ["조건 정리", "핵심 산식", "계산 순서", "단위/반올림", "개념 정의", "비교/대립 논점", "답안 목차", "쟁점", "조문/요건", "사안 포섭", "해설 가리고 다시 풀기", "Answer Review로 내 풀이 검토하기"].forEach((label) => assert.ok(source.includes(label), `Missing ${label}`));
+});
