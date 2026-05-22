@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { getModeConfig, resolveAppraisalMode } from "@/lib/review-os/appraisal";
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
 import { reviewOsService } from "@/lib/review-os/service";
+import { buildReferenceSupportForExecution } from "@/lib/review-os/execution-reference-support";
 
 type PageProps = {
   searchParams?: Promise<{ mode?: string }>;
@@ -21,6 +22,13 @@ export default async function ReviewOsReviewPage({ searchParams }: PageProps) {
   const mode = resolveAppraisalMode(profile, modeParam);
   const config = getModeConfig(mode);
   const items = (await reviewOsService.getReviewQueue(session.userId, session.email)).filter((item) => item.examName === config.label);
+  const captureReferenceLineByItemId: Record<string, string> = {};
+  await Promise.all(items.filter((item) => item.createdFromCapture).map(async (item) => {
+    const detail = await reviewOsService.getWrongAnswerDetail(session.userId!, session.email!, item.itemId).catch(() => null);
+    const support = buildReferenceSupportForExecution(detail?.item?.derivedPayload?.capture_note_engine_v2 ?? detail?.item?.derivedPayload?.capture_note_engine_v1 ?? null);
+    const line = support?.topicCandidate ?? support?.skeletonKeywordHint ?? null;
+    if (line) captureReferenceLineByItemId[item.itemId] = line;
+  }));
 
   return (
     <div className="space-y-6">
@@ -37,7 +45,7 @@ export default async function ReviewOsReviewPage({ searchParams }: PageProps) {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <ReviewQueueClient items={items} mode={mode} />
+          <ReviewQueueClient items={items} mode={mode} captureReferenceLineByItemId={captureReferenceLineByItemId} />
         </CardContent>
       </Card>
 

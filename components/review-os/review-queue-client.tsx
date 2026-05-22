@@ -6,7 +6,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { ReviewQueueCard } from "@/lib/review-os/types";
 
-export function ReviewQueueClient({ items, mode }: { items: ReviewQueueCard[]; mode: "first" | "second" }) {
+export function ReviewQueueClient({ items, mode, captureReferenceLineByItemId = {} }: { items: ReviewQueueCard[]; mode: "first" | "second"; captureReferenceLineByItemId?: Record<string,string> }) {
   const router = useRouter();
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [inlineErrorByQueueId, setInlineErrorByQueueId] = useState<Record<string, string>>({});
@@ -66,7 +66,10 @@ export function ReviewQueueClient({ items, mode }: { items: ReviewQueueCard[]; m
                 {item.createdFromCapture ? "방금 남긴 기록이라 기억이 남아 있을 때 바로 연결합니다." : `다시 보는 이유: ${item.reviewReason}`}
               </p>
               {item.createdFromCapture ? (
-                <p className="text-xs text-[color:var(--muted)]">오늘 한 것</p>
+                <div className="space-y-1">
+                  <p className="text-xs text-[color:var(--muted)]">오늘 한 것</p>
+                  {captureReferenceLineByItemId[item.itemId] ? <p className="text-xs text-[color:var(--muted)]">참고 기준: {captureReferenceLineByItemId[item.itemId]}</p> : null}
+                </div>
               ) : null}
               <div className="flex flex-wrap gap-2">
                 {buildPrioritySignals(item).map((signal) => (

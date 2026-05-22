@@ -160,15 +160,20 @@ test("learner-facing copy includes save bridge messages", async () => {
   assert.ok(source.includes("오늘 화면으로"));
   assert.ok(source.includes("노트에서 보기"));
   assert.ok(source.includes("나중에 복습"));
+  assert.ok(source.includes("참고 힌트 보기"));
 });
 
 test("today session runner separates first/second execution loop copy and keeps no scoring claims", async () => {
   const source = await readFile(new URL("../components/review-os/today-session-runner.tsx", import.meta.url), "utf8");
-  ["핵심 조건 회상", "짧은 재풀이", "틀린 이유 1개", "근거 1문장", "유사 지문 연습 준비", "다음 복습 예약"].forEach((token) =>
+  ["핵심 조건 회상", "짧은 재풀이", "틀린 이유 1개", "근거 1문장"].forEach((token) =>
     assert.ok(source.includes(token), `Missing first-loop token: ${token}`),
   );
   ["쟁점 회상", "가장 큰 간극 1개", "문단 1개만 다시 씁니다.", "전후 비교", "다음 보강 예약"].forEach((token) =>
     assert.ok(source.includes(token), `Missing second-loop token: ${token}`),
+  );
+
+  ["함정 점검 카드", "공식 기출 문제가 아니라", "문단 보강 힌트", "점수 판정이 아니라", "힌트 보고 문단 1개 다시 쓰기"].forEach((token) =>
+    assert.ok(source.includes(token), `Missing reference-support token: ${token}`),
   );
   ["공식 채점", "pass/fail", "합격/불합격", "모범답안 확정"].forEach((forbidden) =>
     assert.equal(source.includes(forbidden), false, `Forbidden claim found: ${forbidden}`),
