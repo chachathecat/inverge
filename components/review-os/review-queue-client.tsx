@@ -44,7 +44,7 @@ export function ReviewQueueClient({ items, mode }: { items: ReviewQueueCard[]; m
         <p className="mt-1">오늘은 이것부터 하세요.</p>
         <p className="mt-1">기록을 하나 저장하면 오늘 할 일이 정리됩니다.</p>
         <p className="mt-1">공부한 흔적을 하나 올리면 오늘 계획과 복습 큐가 업데이트됩니다.</p>
-        <Button type="button" onClick={() => router.push(mode === "second" ? "/app/write?mode=second" : "/app/capture?mode=first")} className="mt-4 w-full sm:w-auto">오늘 기록 남기기</Button>
+        <Button type="button" onClick={() => router.push(mode === "second" ? "/app/capture?mode=second" : "/app/capture?mode=first")} className="mt-4 w-full sm:w-auto">오늘 기록 남기기</Button>
       </div>
     );
   }
@@ -63,7 +63,7 @@ export function ReviewQueueClient({ items, mode }: { items: ReviewQueueCard[]; m
                 {item.problemTitle}
               </h3>
               <p className="text-sm leading-7 text-[color:var(--foreground-strong)]">
-                {item.createdFromCapture ? "반복 신호와 최근 기록 기준" : `다시 보는 이유: ${item.reviewReason}`}
+                {item.createdFromCapture ? "방금 남긴 기록이라 기억이 남아 있을 때 바로 연결합니다." : `다시 보는 이유: ${item.reviewReason}`}
               </p>
               {item.createdFromCapture ? (
                 <p className="text-xs text-[color:var(--muted)]">오늘 한 것</p>

@@ -52,7 +52,7 @@ export default async function ReviewOsCapturePage({ searchParams }: PageProps) {
           <p className="mt-2 max-w-2xl text-sm leading-7 text-[color:var(--muted)]">
             {isRewriteFlow
               ? "기존 비교 기록에서 잡은 한 가지 간극만 보강합니다. 전체 답안이 아니라 문단 1개를 다시 쓰고 저장하세요."
-              : "오늘 공부한 흔적을 올리면 Inverge가 오답노트와 다음 행동으로 정리합니다."}
+              : "오늘 한 것 올리기 → AI 초안 확인 → 저장하고 오늘 계획에 반영 순서로 진행합니다."}
           </p>
         </div>
       </section>

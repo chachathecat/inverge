@@ -157,7 +157,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
           ...option,
           href:
             option.hrefKey === "write"
-              ? "/app/capture?mode=second"
+              ? "/app/write?mode=second"
               : option.hrefKey === "items"
                 ? "/app/items?mode=second"
                 : "/app/review?mode=second",
@@ -200,11 +200,11 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
               </div>
               <CardTitle>오늘 한 것 하나만 올리세요</CardTitle>
               <CardDescription className="max-w-[66ch]">
-                사진, PDF, 텍스트를 올리면 오답노트와 다음 복습이 자동으로 정리됩니다.
+                사진, PDF, 텍스트를 올리면 오답노트와 다음 행동으로 정리합니다.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 p-4 pt-0 sm:space-y-4 sm:p-6 sm:pt-0">
-              <Link href={inputOptions[0].href} className="w-full sm:w-auto">
+              <Link href={mode === "second" ? "/app/capture?mode=second" : inputOptions[0].href} className="w-full sm:w-auto">
                 <Button type="button" className="w-full sm:w-auto">
                   오늘 한 것 올리기
                 </Button>
@@ -212,7 +212,9 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
               <details className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
                 <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">다른 작업 보기</summary>
                 <div className="grid gap-2.5 border-t border-[color:var(--border-subtle)] px-4 py-3">
-                {inputOptions.slice(1).map((option) => (
+                {(mode === "second" ? inputOptions : inputOptions.slice(1))
+                  .filter((option) => option.href !== (mode === "second" ? "/app/capture?mode=second" : inputOptions[0].href))
+                  .map((option) => (
                   <Link
                     key={option.title}
                     href={option.href}
