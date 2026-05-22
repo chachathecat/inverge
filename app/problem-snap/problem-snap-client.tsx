@@ -120,7 +120,10 @@ export default function ProblemSnapClientPage({ initialExamMode }: { initialExam
     );
   };
 
-  const renderSubjectSpecificCards = (view: "practice" | "theory" | "law" | "first") => {
+  const renderSubjectSpecificCards = (
+    view: "practice" | "theory" | "law" | "first",
+    currentResult: ProblemSnapResult
+  ) => {
     if (view === "practice") {
       return [
         <div key="practice-conditions" className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">조건 정리</p>{renderListOrFallback(currentResult.extractedConditions, "조건 확인 필요")}</div>,
