@@ -760,10 +760,12 @@ export function WrongAnswerCaptureForm({
             <ExtractionPreview
               form={form}
               mode={mode}
+              uploadedPages={uploadedPages}
               needsOcrConfirmation={needsOcrConfirmation}
               missingConfirmationFields={missingConfirmationFields.map((field) => field.label)}
               onEdit={() => setStage(mode === "second" ? "second-answer" : "confirm")}
               onRegenerate={() => generateStructuredDraft()}
+              onRawOcrChange={(value) => update("rawQuestionText", value)}
             />
           ) : null}
 
@@ -1170,17 +1172,21 @@ function IntakePanel({
 function ExtractionPreview({
   form,
   mode,
+  uploadedPages,
   needsOcrConfirmation,
   missingConfirmationFields,
   onEdit,
   onRegenerate,
+  onRawOcrChange,
 }: {
   form: DraftState;
   mode: AppraisalMode;
+  uploadedPages: UploadedPage[];
   needsOcrConfirmation: boolean;
   missingConfirmationFields: string[];
   onEdit: () => void;
   onRegenerate: () => void;
+  onRawOcrChange: (value: string) => void;
 }) {
   return (
     <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 sm:p-5">
@@ -1205,6 +1211,20 @@ function ExtractionPreview({
         </p>
       ) : null}
       <p className="mt-4 text-xs text-[color:var(--muted)]">AI 정리는 초안입니다. 저장 전 직접 확인해 주세요.</p>
+
+      <div className="mt-5 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-4">
+        <p className="text-xs font-medium text-[color:var(--muted)]">OCR 미리보기 (편집 가능)</p>
+        {uploadedPages.length > 0 ? (
+          <p className="mt-1 text-xs text-[color:var(--muted)]">페이지 라벨: {uploadedPages.map((page) => page.label).join(" / ")}</p>
+        ) : null}
+        <Textarea
+          value={form.rawQuestionText}
+          onChange={(event) => onRawOcrChange(event.target.value)}
+          placeholder="OCR 결과를 확인하고 바로 수정하세요."
+          className="mt-3 min-h-44 border-[color:var(--border-hairline)] bg-[color:var(--bg-surface)] text-[color:var(--foreground-strong)] leading-7"
+        />
+        <p className="mt-2 text-xs text-[color:var(--muted)]">AI 초안은 참고용이며 공식 채점이 아닙니다.</p>
+      </div>
       {mode === "first" ? (
         <div className="mt-5 grid gap-3 lg:grid-cols-2">
           <PreviewLine label="과목" value={form.subjectLabel} />
