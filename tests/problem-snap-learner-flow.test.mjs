@@ -80,7 +80,9 @@ test("subject-specific views and retry mode labels exist", async () => {
   assert.ok(source.includes(") : null}"));
   assert.ok(source.includes("!retryMode ? <div className=\"grid gap-3 sm:grid-cols-2\">{renderSubjectSpecificCards(getProblemSnapSubjectView(subject), result)}</div> : null"));
   assert.ok(source.includes("`/answer-review?mode=${currentExamMode}&subject=${encodeURIComponent(currentSubject)}&source=problem-snap`"));
+  assert.ok(source.includes('try {'));
   assert.ok(source.includes('sessionStorage.setItem("inverge.problemSnap.answerReviewHandoff", JSON.stringify(handoffPayload));'));
+  assert.ok(source.includes('} catch {'));
   assert.ok(source.includes('source: "problem-snap"'));
   assert.equal(source.includes("mode=second&examMode="), false);
 });

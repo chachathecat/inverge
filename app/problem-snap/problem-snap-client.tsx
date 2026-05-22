@@ -89,20 +89,24 @@ export default function ProblemSnapClientPage({ initialExamMode }: { initialExam
     `/answer-review?mode=${currentExamMode}&subject=${encodeURIComponent(currentSubject)}&source=problem-snap`;
 
   const bridgeToAnswerReview = (currentResult: ProblemSnapResult) => {
-    const handoffPayload = {
-      source: "problem-snap",
-      examMode,
-      subject,
-      problemSummary: currentResult.problemSummary,
-      problemText: currentResult.problemSummaryDraft || currentResult.problemSummary,
-      extractedConditions: currentResult.extractedConditions,
-      retryMemo,
-      requiredConcepts: currentResult.requiredConcepts,
-      formulas: currentResult.formulas,
-      nextPracticeAction: currentResult.nextPracticeAction,
-      createdAt: new Date().toISOString(),
-    };
-    sessionStorage.setItem("inverge.problemSnap.answerReviewHandoff", JSON.stringify(handoffPayload));
+    try {
+      const handoffPayload = {
+        source: "problem-snap",
+        examMode,
+        subject,
+        problemSummary: currentResult.problemSummary,
+        problemText: currentResult.problemSummaryDraft || currentResult.problemSummary,
+        extractedConditions: currentResult.extractedConditions,
+        retryMemo,
+        requiredConcepts: currentResult.requiredConcepts,
+        formulas: currentResult.formulas,
+        nextPracticeAction: currentResult.nextPracticeAction,
+        createdAt: new Date().toISOString(),
+      };
+      sessionStorage.setItem("inverge.problemSnap.answerReviewHandoff", JSON.stringify(handoffPayload));
+    } catch {
+      // Degraded fallback: continue navigation without handoff prefill.
+    }
     router.push(getRetryLink(examMode, subject));
   };
 
