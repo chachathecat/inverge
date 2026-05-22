@@ -30,6 +30,9 @@ export default function AdminHomePage() {
           <Link href="/admin/beta-funnel" className={buttonVariants({ variant: "outline", size: "lg" })}>
             Beta funnel QA
           </Link>
+          <Link href="/admin/usability-notes" className={buttonVariants({ variant: "outline", size: "lg" })}>
+            Usability notes
+          </Link>
         </div>
       </section>
     </main>
