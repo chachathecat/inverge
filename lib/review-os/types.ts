@@ -538,6 +538,7 @@ export type AdminBetaFunnel = {
   captureFunnel: BetaFunnelMetric[];
   dailyRitualFunnel: BetaFunnelMetric[];
   topFrictionSignals: BetaFrictionSignal[];
+  cohortAnalytics: BetaCohortAnalyticsRow[];
   breakdowns: {
     mode: BetaFunnelBreakdown[];
     subject: BetaFunnelBreakdown[];
@@ -547,5 +548,27 @@ export type AdminBetaFunnel = {
     hasReferenceSupport: BetaFunnelBreakdown[];
     hasOverdueQueue: BetaFunnelBreakdown[];
     dailyState: BetaFunnelBreakdown[];
+  };
+};
+
+export type BetaCohortAnalyticsRow = {
+  cohortDate: string;
+  users: number;
+  activation: {
+    firstCaptureSaved: number;
+    firstExecutionCompleted: number;
+    firstFollowupScheduled: number;
+  };
+  retention: {
+    d1ReturnRate: number;
+    d3ReturnRate: number;
+    d7ReturnRate: number | null;
+    studiedTodayRate: number;
+  };
+  loopConversion: {
+    captureSavedToExecutionStarted: number;
+    executionStartedToExecutionCompleted: number;
+    executionCompletedToFollowupScheduled: number;
+    overdueRecoveryShownToCompleted: number;
   };
 };
