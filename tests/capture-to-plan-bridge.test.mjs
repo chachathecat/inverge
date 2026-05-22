@@ -109,3 +109,31 @@ test("guardrails: no instructor imports, no OCR provider, no grading claims", as
   assert.equal(bridge.includes("official"), false);
   assert.equal(bridge.includes("pass/fail"), false);
 });
+
+test("problem-snap learning signal is surfaced in learner plan surfaces", async () => {
+  const homeSource = await readFile(new URL("../app/app/page.tsx", import.meta.url), "utf8");
+  const itemsSource = await readFile(new URL("../app/app/items/page.tsx", import.meta.url), "utf8");
+
+  assert.ok(homeSource.includes('event.sourceType === "problem-snap"'));
+  assert.ok(homeSource.includes("Problem Snap"));
+  assert.ok(itemsSource.includes('sourceType === "problem-snap"'));
+  assert.ok(itemsSource.includes("Problem Snap"));
+  assert.ok(itemsSource.includes("다시 풀기"));
+  assert.ok(itemsSource.includes("Answer Review로 검토"));
+  assert.ok(itemsSource.includes("문제 스냅으로 막힌 문제를 저장하면 오늘 할 일에 반영됩니다."));
+});
+
+test("problem-snap learner surfaces keep scope and no grading/payment claims", async () => {
+  const merged = (
+    await Promise.all([
+      readFile(new URL("../app/app/page.tsx", import.meta.url), "utf8"),
+      readFile(new URL("../app/app/items/page.tsx", import.meta.url), "utf8"),
+    ])
+  ).join("\n");
+
+  assert.equal(merged.includes("/instructor"), false);
+  assert.equal(merged.includes("공식 채점"), false);
+  assert.equal(merged.includes("pass/fail"), false);
+  assert.equal(merged.includes("합격/불합격"), false);
+  assert.equal(merged.includes("결제"), false);
+});

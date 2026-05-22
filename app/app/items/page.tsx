@@ -27,6 +27,7 @@ export default async function ReviewOsItemsPage({ searchParams }: PageProps) {
   const hasLearningSignals = learningSignals.length > 0;
   const signalPrimaryTitle = mode === "second" ? "최근 답안 검토 기록" : "최근 검토 기록";
   const sourceTypeLabel = (sourceType: string) => {
+    if (sourceType === "problem-snap") return "Problem Snap";
     if (sourceType === "answer_review") return "답안 검토 기록";
     if (sourceType === "wrong_answer") return "오답 기록";
     if (sourceType === "review_queue") return "다시 볼 항목";
@@ -60,7 +61,13 @@ export default async function ReviewOsItemsPage({ searchParams }: PageProps) {
     return lines[0] ?? "오늘 할 일에서 확인";
   };
   const signalFallbackTask = mode === "second" ? "한 번 더 검토하기" : "오늘 할 일에서 확인";
+  const problemSnapEmptyCopy = "문제 스냅으로 막힌 문제를 저장하면 오늘 할 일에 반영됩니다.";
   const signalCta = (sourceType: string) =>
+    sourceType === "problem-snap"
+      ? mode === "second"
+        ? { label: "Answer Review로 검토", href: `/answer-review?mode=${mode}` }
+        : { label: "다시 풀기", href: `/problem-snap?mode=${mode}` }
+      :
     sourceType === "answer_review"
       ? { label: "답안 검토하기", href: `/answer-review?mode=${mode}` }
       : { label: "오늘에서 보기", href: `/app?mode=${mode}` };
@@ -82,6 +89,7 @@ export default async function ReviewOsItemsPage({ searchParams }: PageProps) {
           {!hasItems && !hasLearningSignals ? (
             <div className="space-y-4">
               <p className="text-sm text-[color:var(--muted)]">{config.emptyDescription}</p>
+              <p className="text-sm text-[color:var(--muted)]">{problemSnapEmptyCopy}</p>
               <Link href={mode === "second" ? `/app/write?mode=${mode}` : `/app/capture?mode=${mode}`} className="w-full sm:w-auto">
                 <Button type="button" className="w-full sm:w-auto">
                   {config.primaryCta}
@@ -134,9 +142,10 @@ export default async function ReviewOsItemsPage({ searchParams }: PageProps) {
             <div className="space-y-3">
               {learningSignals.slice(0, 8).map((signal) => (
                 <div key={signal.id} className="rounded-2xl border border-[var(--border)] px-4 py-4">
-                  <p className="text-sm font-medium text-[color:var(--foreground-strong)]">
-                    {signal.subject} · {sourceTypeLabel(signal.sourceType)}
-                  </p>
+                  {signal.sourceType === "problem-snap" ? (
+                    <p className="text-xs font-medium text-[color:var(--ink-primary)]">Problem Snap</p>
+                  ) : null}
+                  <p className="text-sm font-medium text-[color:var(--foreground-strong)]">{signal.subject} · {sourceTypeLabel(signal.sourceType)}</p>
                   <p className="mt-1 text-sm text-[color:var(--muted)]">다음 행동: {signal.nextTask || signalFallbackTask}</p>
                   {formatCreatedDate(signal.createdAt) ? (
                     <p className="mt-1 text-xs text-[color:var(--muted)]">{formatCreatedDate(signal.createdAt)}</p>
@@ -162,9 +171,10 @@ export default async function ReviewOsItemsPage({ searchParams }: PageProps) {
           <CardContent className="space-y-3">
             {learningSignals.slice(0, 8).map((signal) => (
               <div key={signal.id} className="rounded-2xl border border-[var(--border)] px-4 py-4">
-                <p className="text-sm font-medium text-[color:var(--foreground-strong)]">
-                  {signal.subject} · {sourceTypeLabel(signal.sourceType)}
-                </p>
+                {signal.sourceType === "problem-snap" ? (
+                  <p className="text-xs font-medium text-[color:var(--ink-primary)]">Problem Snap</p>
+                ) : null}
+                <p className="text-sm font-medium text-[color:var(--foreground-strong)]">{signal.subject} · {sourceTypeLabel(signal.sourceType)}</p>
                 <p className="mt-1 text-sm text-[color:var(--muted)]">다음 행동: {signal.nextTask || signalFallbackTask}</p>
                 {formatCreatedDate(signal.createdAt) ? (
                   <p className="mt-1 text-xs text-[color:var(--muted)]">{formatCreatedDate(signal.createdAt)}</p>
