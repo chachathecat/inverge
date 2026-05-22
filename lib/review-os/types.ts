@@ -512,3 +512,38 @@ export type AdminAlphaFeed = {
   recentEvents: UsageEventRecord[];
   recentFeedback: FeedbackItemRecord[];
 };
+
+export type BetaFunnelMetric = {
+  eventName: string;
+  count: number;
+  conversionFromPrevious: number | null;
+};
+
+export type BetaFrictionSignal = {
+  key: string;
+  label: string;
+  count: number;
+  rate: number;
+};
+
+export type BetaFunnelBreakdown = {
+  key: string;
+  value: string;
+  count: number;
+};
+
+export type AdminBetaFunnel = {
+  captureFunnel: BetaFunnelMetric[];
+  dailyRitualFunnel: BetaFunnelMetric[];
+  topFrictionSignals: BetaFrictionSignal[];
+  breakdowns: {
+    mode: BetaFunnelBreakdown[];
+    subject: BetaFunnelBreakdown[];
+    sourceType: BetaFunnelBreakdown[];
+    confidence: BetaFunnelBreakdown[];
+    nextTaskType: BetaFunnelBreakdown[];
+    hasReferenceSupport: BetaFunnelBreakdown[];
+    hasOverdueQueue: BetaFunnelBreakdown[];
+    dailyState: BetaFunnelBreakdown[];
+  };
+};
