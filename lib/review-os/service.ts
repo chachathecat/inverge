@@ -1472,9 +1472,9 @@ export class ReviewOsService {
 
     type CohortUser = { cohortDate: string; eventDays: Set<string>; counts: Record<string, number>; studiedToday: boolean };
     const cohortByUser = new Map<string, CohortUser>();
-    const nowDay = new Date().toISOString().slice(0, 10);
+    const nowDay = getKstDayKey(new Date());
     for (const event of events) {
-      const day = event.createdAt.slice(0, 10);
+      const day = getKstDayKey(new Date(event.createdAt));
       const existing = cohortByUser.get(event.userId);
       const countsInit = {
         capture_saved: 0,
@@ -1501,7 +1501,7 @@ export class ReviewOsService {
       if (!cohortMap.has(user.cohortDate)) cohortMap.set(user.cohortDate, []);
       cohortMap.get(user.cohortDate)?.push(user);
     }
-    const dayDiff = (a: string, b: string) => Math.floor((Date.parse(b) - Date.parse(a)) / 86_400_000);
+    const dayDiff = (a: string, b: string) => Math.floor((Date.parse(`${b}T00:00:00+09:00`) - Date.parse(`${a}T00:00:00+09:00`)) / 86_400_000);
     const pct = (num: number, den: number) => (den > 0 ? Number(((num / den) * 100).toFixed(1)) : 0);
     const cohortAnalytics = [...cohortMap.entries()]
       .sort(([a], [b]) => b.localeCompare(a))
@@ -1510,6 +1510,8 @@ export class ReviewOsService {
         const total = users.length;
         const d1 = users.filter((u) => [...u.eventDays].some((day) => dayDiff(cohortDate, day) === 1)).length;
         const d3 = users.filter((u) => [...u.eventDays].some((day) => dayDiff(cohortDate, day) === 3)).length;
+        const maturedForD1 = dayDiff(cohortDate, nowDay) >= 1;
+        const maturedForD3 = dayDiff(cohortDate, nowDay) >= 3;
         const maturedForD7 = dayDiff(cohortDate, nowDay) >= 7;
         const d7 = maturedForD7 ? users.filter((u) => [...u.eventDays].some((day) => dayDiff(cohortDate, day) === 7)).length : 0;
         const firstCaptureSaved = users.filter((u) => u.counts.capture_saved > 0).length;
@@ -1519,21 +1521,25 @@ export class ReviewOsService {
         const executionStartedUsers = users.filter((u) => u.counts.post_save_execution_started > 0);
         const executionCompletedUsers = users.filter((u) => u.counts.post_save_execution_completed > 0);
         const overdueShownUsers = users.filter((u) => u.counts.overdue_recovery_shown > 0);
+        const captureAndExecutionStartedUsers = captureUsers.filter((u) => u.counts.post_save_execution_started > 0);
+        const executionStartedAndCompletedUsers = executionStartedUsers.filter((u) => u.counts.post_save_execution_completed > 0);
+        const executionCompletedAndFollowupUsers = executionCompletedUsers.filter((u) => u.counts.review_followup_scheduled > 0);
+        const overdueShownAndCompletedUsers = overdueShownUsers.filter((u) => u.counts.overdue_recovery_completed > 0);
         return {
           cohortDate,
           users: total,
           activation: { firstCaptureSaved, firstExecutionCompleted, firstFollowupScheduled },
           retention: {
-            d1ReturnRate: pct(d1, total),
-            d3ReturnRate: pct(d3, total),
+            d1ReturnRate: maturedForD1 ? pct(d1, total) : null,
+            d3ReturnRate: maturedForD3 ? pct(d3, total) : null,
             d7ReturnRate: maturedForD7 ? pct(d7, total) : null,
             studiedTodayRate: pct(users.filter((u) => u.studiedToday).length, total),
           },
           loopConversion: {
-            captureSavedToExecutionStarted: pct(executionStartedUsers.length, captureUsers.length),
-            executionStartedToExecutionCompleted: pct(executionCompletedUsers.length, executionStartedUsers.length),
-            executionCompletedToFollowupScheduled: pct(firstFollowupScheduled, executionCompletedUsers.length),
-            overdueRecoveryShownToCompleted: pct(users.filter((u) => u.counts.overdue_recovery_completed > 0).length, overdueShownUsers.length),
+            captureSavedToExecutionStarted: pct(captureAndExecutionStartedUsers.length, captureUsers.length),
+            executionStartedToExecutionCompleted: pct(executionStartedAndCompletedUsers.length, executionStartedUsers.length),
+            executionCompletedToFollowupScheduled: pct(executionCompletedAndFollowupUsers.length, executionCompletedUsers.length),
+            overdueRecoveryShownToCompleted: pct(overdueShownAndCompletedUsers.length, overdueShownUsers.length),
           },
         };
       });

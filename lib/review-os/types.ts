@@ -560,8 +560,8 @@ export type BetaCohortAnalyticsRow = {
     firstFollowupScheduled: number;
   };
   retention: {
-    d1ReturnRate: number;
-    d3ReturnRate: number;
+    d1ReturnRate: number | null;
+    d3ReturnRate: number | null;
     d7ReturnRate: number | null;
     studiedTodayRate: number;
   };
