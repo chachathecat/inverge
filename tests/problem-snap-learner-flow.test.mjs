@@ -69,5 +69,26 @@ test("placeholder extraction values do not count as normal", async () => {
 
 test("subject-specific views and retry mode labels exist", async () => {
   const source = await readFile(new URL("../app/problem-snap/problem-snap-client.tsx", import.meta.url), "utf8");
-  ["조건 정리", "핵심 산식", "계산 순서", "단위/반올림", "개념 정의", "비교/대립 논점", "답안 목차", "쟁점", "조문/요건", "사안 포섭", "해설 가리고 다시 풀기", "Answer Review로 내 풀이 검토하기"].forEach((label) => assert.ok(source.includes(label), `Missing ${label}`));
+  ["view === \"practice\"", "view === \"theory\"", "view === \"law\"", "해설 가리고 다시 풀기", "해설 다시 보기", "Answer Review로 내 풀이 검토하기"].forEach((label) => assert.ok(source.includes(label), `Missing ${label}`));
+  ["조건 정리", "핵심 산식", "계산 순서", "CASIO 입력", "단위/반올림", "답안에 적을 값"].forEach((label) => assert.ok(source.includes(label), `Missing practice label ${label}`));
+  ["개념 정의", "비교/대립 논점", "답안 목차", "필수 키워드", "사례 적용 문장"].forEach((label) => assert.ok(source.includes(label), `Missing theory label ${label}`));
+  ["쟁점", "조문/요건", "절차", "사안 포섭", "결론 문장"].forEach((label) => assert.ok(source.includes(label), `Missing law label ${label}`));
+  ["개념 확인", "체크포인트", "다시 풀 행동"].forEach((label) => assert.ok(source.includes(label), `Missing first-stage label ${label}`));
+  assert.ok(source.includes("!retryMode ? <div><h3 className=\"font-medium\">{resultHeading}</h3><p>{result.easyExplanation}</p></div> : null"));
+  assert.ok(source.includes("!retryMode ? ("));
+  assert.ok(source.includes("showCalculatorGuide ? ("));
+  assert.ok(source.includes(") : null}"));
+  assert.ok(source.includes("!retryMode ? <div className=\"grid gap-3 sm:grid-cols-2\">{renderSubjectSpecificCards(getProblemSnapSubjectView(subject), result)}</div> : null"));
+  assert.ok(source.includes("`/answer-review?mode=${currentExamMode}&subject=${encodeURIComponent(currentSubject)}`"));
+  assert.equal(source.includes("mode=second&examMode="), false);
+});
+
+test("guardrails remain intact in learner flow copy", async () => {
+  const source = await readFile(new URL("../app/problem-snap/problem-snap-client.tsx", import.meta.url), "utf8");
+  assert.equal(source.includes("공식 채점"), false);
+  assert.equal(source.includes("pass/fail"), false);
+  assert.equal(source.includes("합격/불합격"), false);
+  assert.equal(source.includes("결제"), false);
+  assert.equal(source.includes("CASIO 공식"), false);
+  assert.equal(source.includes("기출 아카이브"), false);
 });
