@@ -100,6 +100,18 @@ test("learner-facing copy includes save bridge messages", async () => {
   assert.ok(source.includes("오늘 기록이 저장되었습니다."));
   assert.ok(source.includes("가장 큰 간극:"));
   assert.ok(source.includes("다음 행동:"));
+  assert.ok(source.includes("지금 5분 다시 풀기"));
+  assert.ok(source.includes("지금 10분 다시 쓰기"));
+  assert.ok(source.includes("오늘 화면으로"));
+  assert.ok(source.includes("노트에서 보기"));
+  assert.ok(source.includes("나중에 복습"));
+});
+
+test("home first-use capture CTA stays canonical for first/second", async () => {
+  const source = await readFile(new URL("../app/app/page.tsx", import.meta.url), "utf8");
+  assert.ok(source.includes("const firstCaptureHref = `/app/capture?mode=first&subject=${encodeURIComponent(selectedFirstSubject)}`;"));
+  assert.ok(source.includes('? "/app/capture?mode=second"'));
+  assert.equal(source.includes('"/app/write?mode=second"'), true);
 });
 
 test("guardrails: no instructor imports, no OCR provider, no grading claims", async () => {
