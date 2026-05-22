@@ -20,11 +20,12 @@ function resolveAction(mode: AppMode, taskType: "retry" | "rewrite" | "review" |
   if (mode === "second") {
     if (taskType === "rewrite") return { ctaLabel: "다시 쓰기", actionKind: "second_review" };
     if (taskType === "retry") return { ctaLabel: "다시보기 큐 열기", actionKind: "second_review" };
-    if (taskType === "review") return { ctaLabel: "다시 보기", actionKind: "second_review" };
+    if (taskType === "review") return { ctaLabel: "핵심 논점 다시 보기", actionKind: "second_review" };
     if (taskType === "recall") return { ctaLabel: "쟁점 회상", actionKind: "second_review" };
     return { ctaLabel: "다시 쓰기", actionKind: "second_write" };
   }
-  if (taskType === "recall" || taskType === "review") return { ctaLabel: "다시 풀기", actionKind: "first_session" };
+  if (taskType === "recall") return { ctaLabel: "근거 회상 후 다시 풀기", actionKind: "first_session" };
+  if (taskType === "review") return { ctaLabel: "다시 풀기", actionKind: "first_session" };
   return { ctaLabel: "다시 풀기", actionKind: "first_session" };
 }
 

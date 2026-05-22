@@ -114,12 +114,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
   };
 
   const primaryHref = todayPlan.hasPlan ? resolveTodayPlanHref(todayPlan.actionKind) : defaultPrimaryHref;
-  const primaryCtaLabel =
-    todayPlanTasks[0]?.source_label === "Problem Snap 기반"
-      ? todayPlan.ctaLabel
-      : mode === "first"
-        ? "유사 지문 다시 풀기"
-        : "10분 다시 쓰기";
+  const primaryCtaLabel = todayPlan.ctaLabel;
   const diagnosedWeakPoint = selectedQueueItem?.mistakeType ?? (items[0] ? buildNotebookPreview(items[0]).weakPoint : config.emptyTitle);
   const notebookPreview = items.slice(0, 3).map((item) => buildNotebookPreview(item));
   const shouldShowFirstSubjectSelector = mode === "first" && isFirstSetStart;
