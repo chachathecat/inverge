@@ -37,6 +37,49 @@ test("buildCaptureLearningSignal creates second-mode signal safely", () => {
   assert.ok(Object.prototype.hasOwnProperty.call(signal.metadataJson, "similar_topic_suggestion"));
   assert.ok(Object.prototype.hasOwnProperty.call(signal.metadataJson, "review_priority"));
   assert.ok(Object.prototype.hasOwnProperty.call(signal.metadataJson, "skeleton_keyword_hint"));
+  ["rawQuestionText", "rawAnswerText", "raw_ocr_text", "raw_extraction_json", "full user answer", "full problem text"].forEach((key) => {
+    assert.equal(Object.prototype.hasOwnProperty.call(signal.metadataJson, key), false);
+  });
+});
+
+test("second-mode combined gap signal lets missingIssue raise priority", () => {
+  const signal = buildCaptureLearningSignal({
+    itemId: "i2-priority",
+    examName: "감정평가사 2차",
+    subject: "감정평가이론",
+    sourceType: "manual",
+    confidence: "중간",
+    weakStructurePoint: "구조 점검",
+    missingIssue: "논점 누락",
+    createdFromCapture: true,
+  });
+  assert.ok(Object.prototype.hasOwnProperty.call(signal.metadataJson, "weak_structure_point"));
+  assert.ok(Object.prototype.hasOwnProperty.call(signal.metadataJson, "missing_issue"));
+  assert.ok(Object.prototype.hasOwnProperty.call(signal.metadataJson, "review_priority"));
+  assert.ok(signal.metadataJson.review_priority >= 80);
+});
+
+test("combined weakStructurePoint + missingIssue priority is not lower than weakStructurePoint only", () => {
+  const weakOnly = buildCaptureLearningSignal({
+    itemId: "i2-weak-only",
+    examName: "감정평가사 2차",
+    subject: "감정평가이론",
+    sourceType: "manual",
+    confidence: "중간",
+    weakStructurePoint: "구조 점검",
+    createdFromCapture: true,
+  });
+  const combined = buildCaptureLearningSignal({
+    itemId: "i2-combined",
+    examName: "감정평가사 2차",
+    subject: "감정평가이론",
+    sourceType: "manual",
+    confidence: "중간",
+    weakStructurePoint: "구조 점검",
+    missingIssue: "논점 누락",
+    createdFromCapture: true,
+  });
+  assert.ok(combined.metadataJson.review_priority >= weakOnly.metadataJson.review_priority);
 });
 
 
