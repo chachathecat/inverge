@@ -136,6 +136,11 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
   const recentStudyTaxonomyLine = recentStudyTaxonomyCandidate
     ? `범위 후보: ${recentStudyTaxonomyCandidate.subject} · ${recentStudyTaxonomyCandidate.unit} · ${recentStudyTaxonomyCandidate.topic}`
     : null;
+  const latestProblemSnapSignal = learningSignalEvents.find((event) => event.sourceType === "problem-snap") ?? null;
+  const problemSnapSignalCta =
+    mode === "second"
+      ? { label: "Answer Review로 검토", href: `/answer-review?mode=${mode}` }
+      : { label: "다시 풀기", href: `/problem-snap?mode=${mode}` };
   const inputOptions =
     mode === "first"
       ? FIRST_MODE_INPUT_OPTIONS.map((option) => ({
@@ -323,6 +328,16 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                   </p>
                   {recentStudyTaxonomyLine ? <p className="mt-1 text-xs text-[color:var(--muted)]">{recentStudyTaxonomyLine}</p> : null}
                   <p className="mt-1 text-xs text-[color:var(--muted)]">입력을 기준으로 다음 복습 범위를 정리했습니다.</p>
+                </div>
+              ) : null}
+              {latestProblemSnapSignal ? (
+                <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-4 py-3">
+                  <p className="text-xs font-medium text-[color:var(--ink-primary)]">Problem Snap</p>
+                  <p className="mt-1 text-sm text-[color:var(--foreground-strong)]">{latestProblemSnapSignal.subject}</p>
+                  <p className="mt-1 text-xs text-[color:var(--muted)]">다음 행동: {latestProblemSnapSignal.nextTask}</p>
+                  <Link href={problemSnapSignalCta.href} className="mt-2 inline-flex text-xs font-medium text-[color:var(--ink-primary)] underline underline-offset-2">
+                    {problemSnapSignalCta.label}
+                  </Link>
                 </div>
               ) : null}
               <details className="rounded-[var(--radius-md)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)]">
