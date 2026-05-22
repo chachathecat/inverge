@@ -498,7 +498,11 @@ export function WrongAnswerCaptureForm({
     );
     setUploadedPages([`1페이지 · ${file.name}`]);
     setExtractionState("manual");
-    setExtractError("저장 전 내용을 한 번 확인해 주세요.");
+    setExtractError("현재 PDF는 파일명만 기록됩니다. 내용은 직접 붙여넣어 주세요.");
+    setTimeout(() => {
+      textAreaRef.current?.focus();
+      textAreaRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 0);
   }
 
   function resetDraft() {
@@ -916,7 +920,7 @@ function IntakePanel({
 
   return (
     <section className="rounded-[var(--radius-card)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)] p-4 sm:p-6">
-      <p className="text-caption text-[color:var(--brand-700)]">Step 1. 입력 선택</p>
+      <p className="text-caption text-[color:var(--brand-700)]">Step 1. 오늘 한 것 올리기</p>
       <div className="mt-2 flex flex-col gap-4">
         <div className="max-w-[62ch]">
           <h3 className="text-title text-[color:var(--foreground-strong)]">
@@ -930,7 +934,7 @@ function IntakePanel({
         </div>
         <div className="rounded-[var(--radius-md)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-elevated)] p-5 sm:p-6">
           <p className="text-caption text-[color:var(--ink-muted)]">오늘의 입력</p>
-          <h4 className="mt-2 text-base font-semibold text-[color:var(--ink-primary)]">사진으로 시작하기</h4>
+          <h4 className="mt-2 text-base font-semibold text-[color:var(--ink-primary)]">오늘 한 것 올리기</h4>
           <p className="mt-1 text-sm leading-6 text-[color:var(--ink-muted)]">답안지, 오답, 필기 일부를 찍으면 OCR 초안으로 불러옵니다.</p>
           <div className="mt-4">
             <Button type="button" className="w-full sm:w-auto bg-[color:var(--accent-deep)] transition-colors hover:bg-[color:var(--primary-hover)] focus-visible:ring-2 focus-visible:ring-[color:var(--accent-deep)] focus-visible:ring-offset-2" onClick={() => cameraInputRef.current?.click()}>
@@ -986,7 +990,7 @@ function IntakePanel({
             />
           </div>
           <p className="mt-3 inline-flex rounded-full border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)] px-3 py-1 text-xs text-[color:var(--ink-muted)]">
-            OCR 결과는 초안입니다 · 저장 전 확인 필요
+            OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요.
           </p>
         </div>
       </div>
@@ -1084,7 +1088,7 @@ function IntakePanel({
           {form.sourceLabel ? <p className="text-sm text-[color:var(--muted)]">보관한 파일: {form.sourceLabel}</p> : null}
           {uploadedPages.length > 0 ? <p className="mt-2 text-sm text-[color:var(--muted)]">페이지 순서: {uploadedPages.join(" / ")}</p> : null}
           {form.sourceType === "pdf" ? (
-            <p className="mt-2 text-sm text-[color:var(--muted)]">PDF는 현재 파일명만 기록됩니다. 내용은 직접 붙여넣어 주세요.</p>
+            <p className="mt-2 text-sm text-[color:var(--muted)]">현재 PDF는 파일명만 기록됩니다. 내용은 직접 붙여넣어 주세요.</p>
           ) : null}
         </div>
       </details>
@@ -1135,7 +1139,7 @@ function ExtractionPreview({
     <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 sm:p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-caption text-[color:var(--muted)]">Step 2. Extraction preview</p>
+          <p className="text-caption text-[color:var(--muted)]">Step 2. AI 초안 확인</p>
           <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">정리된 초안</h3>
         </div>
         <div className="flex gap-2">
@@ -1156,23 +1160,23 @@ function ExtractionPreview({
       <p className="mt-4 text-xs text-[color:var(--muted)]">AI 정리는 초안입니다. 저장 전 직접 확인해 주세요.</p>
       {mode === "first" ? (
         <div className="mt-5 grid gap-3 lg:grid-cols-2">
-          <PreviewLine label="과목 추정" value={form.subjectLabel} />
-          <PreviewLine label="문제 제목" value={form.problemTitle} />
-          <PreviewLine label="정답" value={form.correctAnswer || "확인 필요"} />
-          <PreviewLine label="내 답" value={form.userAnswer || "확인 필요"} />
-          <PreviewLine label="왜 틀렸는지" value={form.userReasonText} />
+          <PreviewLine label="과목" value={form.subjectLabel} />
+          <PreviewLine label="주제/사례 요약" value={form.problemTitle || form.caseSummary} />
+          <PreviewLine label="가장 큰 간극" value={form.userReasonText || "확인 필요"} />
+          <PreviewLine label="다음 행동" value={form.comparisonPoint || "확인 필요"} />
+          <PreviewLine label="확신/복습 시점" value={`${form.confidence} · ${form.nextReviewDate}`} />
+          <PreviewLine label="실수 원인 추정" value={form.userReasonPreset || form.userReasonText} />
           <PreviewLine label="핵심 개념" value={form.keyConcepts} />
-          <PreviewLine label="핵심 공식" value={form.coreFormula} />
-          <PreviewLine label="다음 review" value={form.nextReviewDate} />
+          <PreviewLine label="유사/재시도 행동" value={form.comparisonPoint} />
         </div>
       ) : (
         <div className="mt-5 grid gap-3 lg:grid-cols-2">
-          <PreviewLine label="과목 추정" value={form.subjectLabel} />
-          <PreviewLine label="사례 요약" value={form.caseSummary} />
-          <PreviewLine label="기준 답안 구조" value={form.referenceStructure} />
-          <PreviewLine label="내 답안 요약" value={form.myAnswerSummary || "확인 필요"} />
-          <PreviewLine label="누락 논점" value={form.missingIssue} />
-          <PreviewLine label="약한 문장" value={form.weakApplicationSentence} />
+          <PreviewLine label="과목" value={form.subjectLabel} />
+          <PreviewLine label="주제/사례 요약" value={form.caseSummary || "확인 필요"} />
+          <PreviewLine label="가장 큰 간극" value={form.biggestGap || form.missingIssue} />
+          <PreviewLine label="다음 행동" value={form.rewriteInstruction || "확인 필요"} />
+          <PreviewLine label="확신/복습 시점" value={`${form.confidence} · ${form.nextReviewDate}`} />
+          <PreviewLine label="누락 논점 후보" value={form.missingIssue} />
           <PreviewLine label="구조 약점" value={form.weakStructurePoint} />
           <PreviewLine label="다시쓰기 지시" value={form.rewriteInstruction} />
         </div>

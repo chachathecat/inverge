@@ -157,7 +157,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
           ...option,
           href:
             option.hrefKey === "write"
-              ? "/app/write?mode=second"
+              ? "/app/capture?mode=second"
               : option.hrefKey === "items"
                 ? "/app/items?mode=second"
                 : "/app/review?mode=second",

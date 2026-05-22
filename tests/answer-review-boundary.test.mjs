@@ -50,13 +50,13 @@ test("learner capture mobile inputs and extraction states are explicit", async (
   assert.ok(learnerCapture.includes("extracting"));
   assert.ok(learnerCapture.includes("succeeded"));
   assert.ok(learnerCapture.includes("failed"));
-  assert.ok(learnerCapture.includes("PDF는 현재 파일명만 기록됩니다. 내용은 직접 붙여넣어 주세요."));
+  assert.ok(learnerCapture.includes("현재 PDF는 파일명만 기록됩니다. 내용은 직접 붙여넣어 주세요."));
 });
 
 test("learner capture failure copy is calm and draft-preserving", async () => {
   const learnerCapture = await readFile(new URL("../components/review-os/capture-form.tsx", import.meta.url), "utf8");
   assert.ok(learnerCapture.includes("텍스트 추출에 실패했습니다. 직접 붙여넣거나 다시 시도해 주세요."));
-  assert.ok(learnerCapture.includes("저장 전 내용을 한 번 확인해 주세요."));
+  assert.ok(learnerCapture.includes("현재 PDF는 파일명만 기록됩니다. 내용은 직접 붙여넣어 주세요."));
   assert.ok(learnerCapture.includes("rawQuestionText: extractedText || form.rawQuestionText"));
 });
 

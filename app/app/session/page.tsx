@@ -7,6 +7,7 @@ import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os
 import { reviewOsService } from "@/lib/review-os/service";
 import { buildDetailStudyNote } from "@/lib/review-os/study-note";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 
 type PageProps = {
   searchParams?: Promise<{ mode?: string; savedCapture?: string; itemId?: string }>;
@@ -68,6 +69,22 @@ export default async function ReviewOsSessionPage({ searchParams }: PageProps) {
           ) : null}
           <div className="mt-3">
             <ResultFeedbackPrompt route="/app/session" pageContext={{ section: "saved-capture", mode }} />
+          </div>
+          <div className="mt-3 space-y-2">
+            <Link
+              href={mode === "second" ? `/app/capture?mode=second&workflow=second-write` : "/app/capture?mode=first"}
+              className="inline-flex w-full items-center justify-center rounded-full bg-[color:var(--foreground-strong)] px-4 py-2 text-sm font-medium text-white"
+            >
+              {mode === "second" ? "지금 10분 다시 쓰기" : "지금 5분 다시 풀기"}
+            </Link>
+            <details className="rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)]">
+              <summary className="cursor-pointer list-none px-3 py-2 text-xs text-[color:var(--ink-muted)]">다른 선택 보기</summary>
+              <div className="grid gap-2 border-t border-[color:var(--border-hairline)] px-3 py-2 text-xs text-[color:var(--ink-muted)]">
+                <Link href={`/app?mode=${mode}`}>오늘 화면으로</Link>
+                <Link href={`/app/items?mode=${mode}`}>노트에서 보기</Link>
+                <Link href={`/app/review?mode=${mode}`}>나중에 복습</Link>
+              </div>
+            </details>
           </div>
         </section>
       ) : null}
