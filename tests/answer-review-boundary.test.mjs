@@ -113,9 +113,19 @@ test("second write flow includes all micro-step labels", async () => {
 test("second write flow keeps advanced fields behind details and one-primary-step copy", async () => {
   const learnerCapture = await readFile(new URL("../components/review-os/capture-form.tsx", import.meta.url), "utf8");
   assert.ok(learnerCapture.includes("세부 입력 보기 (선택)"));
+  assert.ok(learnerCapture.includes("<details"));
   assert.ok(learnerCapture.includes("전체 답안보다 목차 3줄이 먼저입니다."));
   assert.ok(learnerCapture.includes("완벽히 쓰지 말고, 지금 떠오르는 문장만 적으세요."));
   assert.ok(learnerCapture.includes("비교는 작성 이후에 합니다."));
+});
+
+test("second write flow stage order enforces own answer before reference comparison", async () => {
+  const learnerCapture = await readFile(new URL("../components/review-os/capture-form.tsx", import.meta.url), "utf8");
+  assert.ok(learnerCapture.includes('"second-answer"'));
+  assert.ok(learnerCapture.includes('"second-reference"'));
+  assert.ok(learnerCapture.includes('"second-gap"'));
+  assert.ok(learnerCapture.includes('if (form.userAnswer.trim().length >= 8) setStage("second-reference")'));
+  assert.ok(learnerCapture.includes('if (form.correctAnswer.trim().length >= 8) setStage("second-gap")'));
 });
 
 test("second write answer templates include all official second subjects", async () => {
