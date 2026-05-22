@@ -114,6 +114,12 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
   };
 
   const primaryHref = todayPlan.hasPlan ? resolveTodayPlanHref(todayPlan.actionKind) : defaultPrimaryHref;
+  const primaryCtaLabel =
+    todayPlanTasks[0]?.source_label === "Problem Snap 기반"
+      ? todayPlan.ctaLabel
+      : mode === "first"
+        ? "유사 지문 다시 풀기"
+        : "10분 다시 쓰기";
   const diagnosedWeakPoint = selectedQueueItem?.mistakeType ?? (items[0] ? buildNotebookPreview(items[0]).weakPoint : config.emptyTitle);
   const notebookPreview = items.slice(0, 3).map((item) => buildNotebookPreview(item));
   const shouldShowFirstSubjectSelector = mode === "first" && isFirstSetStart;
@@ -168,9 +174,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
       <section className="space-y-3">
         <div>
           <h2 className="text-xl font-medium tracking-[-0.04em] text-[color:var(--foreground-strong)] sm:text-2xl">{config.pageTitle}</h2>
-          <p className="mt-2 max-w-2xl text-sm leading-7 text-[color:var(--muted)]">
-            입력을 바탕으로 오늘 할 일을 한 가지로 줄입니다.
-          </p>
+          <p className="mt-2 max-w-2xl text-sm leading-7 text-[color:var(--muted)]">오늘 공부 흔적을 올리면 약점 1개와 다음 행동 1개로 정리합니다.</p>
           <p className="mt-1 max-w-2xl text-xs leading-6 text-[color:var(--muted)]">채점 확정이 아니라, 다음 행동을 정리하는 학습 운영 도구입니다.</p>
         </div>
       </section>
@@ -199,21 +203,19 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                 </p>
                 <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">입력 1개 남기기 → 오늘 할 일 생성 → 노트에 누적</p>
               </div>
-              <CardTitle>오늘 첫 입력을 남겨 보세요.</CardTitle>
+              <CardTitle>오늘 한 것 하나만 올리세요</CardTitle>
               <CardDescription className="max-w-[66ch]">
-                {mode === "first"
-                  ? "입력을 남기면 다음 복습 신호와 재시도 순서가 정리됩니다."
-                  : "입력을 남기면 비교와 다시쓰기로 이어질 다음 교정 작업이 정리됩니다."}
+                사진, PDF, 텍스트를 올리면 오답노트와 다음 복습이 자동으로 정리됩니다.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 p-4 pt-0 sm:space-y-4 sm:p-6 sm:pt-0">
               <Link href={inputOptions[0].href} className="w-full sm:w-auto">
                 <Button type="button" className="w-full sm:w-auto">
-                  {mode === "first" ? "오답 하나 남기기" : "답안 하나 작성하기"}
+                  오늘 한 것 올리기
                 </Button>
               </Link>
               <details className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
-                <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">다른 입력 방식 보기</summary>
+                <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">다른 작업 보기</summary>
                 <div className="grid gap-2.5 border-t border-[color:var(--border-subtle)] px-4 py-3">
                 {inputOptions.slice(1).map((option) => (
                   <Link
@@ -245,13 +247,22 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                   <p className="mt-1 text-xs text-[color:var(--muted)]">Problem Snap 기반</p>
                 ) : null}
               </div>
-              <CardTitle>지금 해야 할 한 가지에만 집중합니다.</CardTitle>
+              <CardTitle>오늘 합격에 제일 가까워지는 1개</CardTitle>
               <CardDescription className="max-w-[66ch]">
-                이미 남긴 입력에서 다음 복습 신호를 정리했습니다. 먼저 실행하고, 이후 입력·복습을 차분히 이어갑니다.
+                지금은 전체를 다시 볼 때가 아니라, 이 약점 하나를 줄일 때입니다.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 p-4 pt-0 sm:space-y-4 sm:p-6 sm:pt-0">
-              <p className="text-sm text-[color:var(--foreground-strong)]">{nextAction}</p>
+              <div className="rounded-[var(--radius-md)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)] px-4 py-3 text-sm">
+                <p className="text-xs text-[color:var(--muted)]">과목</p>
+                <p className="text-[color:var(--foreground-strong)]">{selectedQueueItem?.subjectLabel ?? config.subjects[0]}</p>
+                <p className="mt-2 text-xs text-[color:var(--muted)]">가장 큰 간극</p>
+                <p className="text-[color:var(--foreground-strong)]">{diagnosedWeakPoint}</p>
+                <p className="mt-2 text-xs text-[color:var(--muted)]">다음 행동</p>
+                <p className="text-[color:var(--foreground-strong)]">{nextAction}</p>
+                <p className="mt-2 text-xs text-[color:var(--muted)]">왜 지금 중요한가</p>
+                <p className="text-[color:var(--foreground-strong)]">{todayPlan.reason}</p>
+              </div>
 
               <div className="rounded-[var(--radius-md)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)] px-4 py-3">
                 <p className="text-caption text-[color:var(--ink-muted)]">오늘의 우선순위</p>
@@ -300,7 +311,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                   <Link href={primaryHref} className="w-full sm:w-auto">
                     <Button type="button" className="w-full sm:w-auto">
-                      {todayPlan.ctaLabel}
+                      {primaryCtaLabel}
                     </Button>
                   </Link>
                   <details className="w-full rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] sm:w-auto sm:min-w-[20rem]">
