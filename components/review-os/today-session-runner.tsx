@@ -378,13 +378,15 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
         {currentStep === "done" ? (
           <section className="space-y-4">
             <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] px-4 py-4">
-              <p className="text-sm font-medium text-[color:var(--foreground-strong)]">오늘 작업은 여기까지입니다.</p>
+              <p className="text-sm font-medium text-[color:var(--foreground-strong)]">오늘은 여기까지 해도 됩니다.</p>
               <ul className="mt-2 space-y-1 text-sm text-[color:var(--foreground-strong)]">
                 <li>오늘 한 일: {completedWorkLabel}</li>
                 <li>가장 큰 신호: {biggestSignal}</li>
                 <li>다음 복습: {note?.nextReviewDate ?? "자동 예약 완료"}</li>
               </ul>
-              <p className="mt-2 text-sm text-[color:var(--foreground-strong)]">지금은 종료해도 됩니다.</p>
+              <p className="mt-2 text-sm text-[color:var(--foreground-strong)]">밀린 걸 전부 따라잡으려 하지 마세요.</p>
+              <p className="mt-1 text-sm text-[color:var(--foreground-strong)]">오늘은 가장 작은 것 1개만 복구합니다.</p>
+              <p className="mt-1 text-sm text-[color:var(--foreground-strong)]">새 범위보다 반복 실수 하나를 줄이는 게 우선입니다.</p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <Link href={`/app?mode=${mode}`} className="w-full sm:w-auto">
@@ -392,8 +394,8 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
                   종료하고 오늘 화면으로
                 </Button>
               </Link>
-              <Link href={`/app/review?mode=${mode}`} className="text-xs text-[color:var(--muted)] underline-offset-2 hover:underline">
-                다시 볼 항목 확인
+              <Link href={`/app/weekly?mode=${mode}`} className="text-xs text-[color:var(--muted)] underline-offset-2 hover:underline">
+                주간 정리 보기
               </Link>
             </div>
           </section>
