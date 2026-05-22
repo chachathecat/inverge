@@ -373,14 +373,20 @@ export type LearningSignalSummary = {
 export type TaxonomyClassificationCandidate = {
   taxonomyNodeId: string;
   mode: "first" | "second";
+  examYear?: number;
+  round?: string;
   subject: string;
   unit: string;
   topic: string;
   subtopic?: string;
+  skill: string;
   examSkill: string;
+  skeletonKeywords: string[];
+  commonGaps: string[];
   score: number;
   confidence: number;
   matchedKeywords: string[];
+  skeletonKeywordHints: string[];
   classificationStatus: "ai_suggested" | "needs_review";
 };
 

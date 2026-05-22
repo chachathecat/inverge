@@ -10,14 +10,20 @@ export type TaxonomyClassificationStatus = "ai_suggested" | "needs_review";
 export type TaxonomyClassificationCandidate = {
   taxonomyNodeId: string;
   mode: "first" | "second";
+  examYear?: number;
+  round?: string;
   subject: string;
   unit: string;
   topic: string;
   subtopic?: string;
+  skill: string;
   examSkill: string;
+  skeletonKeywords: string[];
+  commonGaps: string[];
   score: number;
   confidence: number;
   matchedKeywords: string[];
+  skeletonKeywordHints: string[];
   classificationStatus: TaxonomyClassificationStatus;
 };
 
@@ -61,14 +67,20 @@ export function normalizeTaxonomyCandidate(candidate: TaxonomySearchCandidate): 
   return {
     taxonomyNodeId: node.id,
     mode: node.mode,
+    examYear: node.examYear,
+    round: node.round,
     subject: node.subject,
     unit: node.unit,
     topic: node.topic,
     subtopic: node.subtopic,
+    skill: node.skill ?? node.examSkill,
     examSkill: node.examSkill,
+    skeletonKeywords: node.skeletonKeywords ?? [],
+    commonGaps: node.commonGaps ?? node.commonMistakeTypes,
     score: candidate.score,
     confidence,
     matchedKeywords: candidate.matchedKeywords,
+    skeletonKeywordHints: candidate.skeletonKeywordHints,
     classificationStatus,
   };
 }
