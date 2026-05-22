@@ -8,7 +8,7 @@ import {
   resolveCaptureExamMode,
 } from "../lib/review-os/capture-learning-signals.ts";
 import { buildTodayPlanTasks } from "../lib/review-os/today-plan-engine.ts";
-import { isOverdueDueAt, resolveDailyStudyState } from "../lib/review-os/daily-study-state.ts";
+import { getKstDayKey, isOverdueDueAt, isSameKstDay, resolveDailyStudyState } from "../lib/review-os/daily-study-state.ts";
 
 test("buildCaptureLearningSignal creates first-mode signal safely", () => {
   const signal = buildCaptureLearningSignal({
@@ -304,4 +304,33 @@ test("resolveDailyStudyState prioritizes overdue/completed/first-capture and ove
     completedToday: false,
     mode: "first",
   }), "first_capture");
+});
+
+
+test("KST helper resolves same day across UTC boundary", () => {
+  const now = new Date("2026-05-22T00:30:00+09:00");
+  assert.equal(isSameKstDay("2026-05-21T15:10:00.000Z", now), true);
+  assert.equal(isSameKstDay("2026-05-21T14:50:00.000Z", now), false);
+  assert.equal(getKstDayKey(now), "2026-05-22");
+});
+
+test("daily state chooses post completion and evening capture by priority", () => {
+  assert.equal(resolveDailyStudyState({ hasNoData: false, hasDueQueue: true, hasOverdueQueue: true, savedToday: true, completedToday: true, mode: "first" }), "post_completion");
+  assert.equal(resolveDailyStudyState({ hasNoData: false, hasDueQueue: false, hasOverdueQueue: false, savedToday: true, completedToday: false, mode: "second" }), "evening_capture");
+});
+
+test("home page derives daily activity flags and does not hardcode completion", async () => {
+  const source = await readFile(new URL("../app/app/page.tsx", import.meta.url), "utf8");
+  assert.ok(source.includes("savedToday: dailyActivity.savedToday || Boolean(savedParam)"));
+  assert.ok(source.includes("completedToday: dailyActivity.completedToday"));
+  assert.equal(source.includes("completedToday: false"), false);
+});
+
+test("daily activity derivation avoids raw text fields", async () => {
+  const source = await readFile(new URL("../lib/review-os/service.ts", import.meta.url), "utf8");
+  const methodStart = source.indexOf("async getDailyStudyActivity");
+  const methodBody = source.slice(methodStart, source.indexOf("async hasMeaningfulLearningData"));
+  ["raw_ocr_text", "rawQuestionText", "rawAnswerText", "full answer text"].forEach((field) =>
+    assert.equal(methodBody.includes(field), false),
+  );
 });

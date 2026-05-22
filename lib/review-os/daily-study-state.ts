@@ -29,3 +29,17 @@ export function isOverdueDueAt(dueAt: string, now = Date.now()): boolean {
   const dueTime = Date.parse(dueAt);
   return Number.isFinite(dueTime) && dueTime < now;
 }
+
+
+const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+
+export function getKstDayKey(date = new Date()): string {
+  const kst = new Date(date.getTime() + KST_OFFSET_MS);
+  return kst.toISOString().slice(0, 10);
+}
+
+export function isSameKstDay(iso: string, now = new Date()): boolean {
+  const target = new Date(iso);
+  if (Number.isNaN(target.getTime())) return false;
+  return getKstDayKey(target) === getKstDayKey(now);
+}

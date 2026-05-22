@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getModeConfig, normalizeSubjectForMode, resolveAppraisalMode } from "@/lib/review-os/appraisal";
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
-import { reviewOsService } from "@/lib/review-os/service";
+import { DEFAULT_DAILY_STUDY_ACTIVITY, reviewOsService } from "@/lib/review-os/service";
 import { buildNotebookPreview } from "@/lib/review-os/study-note";
 import { APPRAISAL_FIRST_SUBJECTS } from "@/lib/review-os/types";
 import { buildTodayPlanCard, type TodayPlanActionKind } from "@/lib/review-os/today-plan";
@@ -74,12 +74,13 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
   if (!profile && !modeParam) redirect("/app/onboarding");
   const mode = resolveAppraisalMode(profile, modeParam);
   const config = getModeConfig(mode);
-  const [focus, weekly, allItems, learningSignal, learningSignalEvents] = await Promise.all([
+  const [focus, weekly, allItems, learningSignal, learningSignalEvents, dailyActivity] = await Promise.all([
     reviewOsService.getTodayFocus(session.userId, session.email, mode),
     reviewOsService.getWeeklySummary(session.userId, session.email),
     reviewOsService.listWrongAnswerItems(session.userId, session.email, 12),
     reviewOsService.getLearningSignalSummary(session.userId, session.email, mode).catch(() => null),
     reviewOsService.listLearningSignalEvents(session.userId, session.email, mode, 10).catch(() => []),
+    reviewOsService.getDailyStudyActivity(session.userId, session.email, mode).catch(() => DEFAULT_DAILY_STUDY_ACTIVITY),
   ]);
 
   const items = allItems.filter((item) => item.examName === config.label).slice(0, 5);
@@ -94,14 +95,13 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
   }
   const hasDataSignals = learningSignalEvents.length > 0 || queue.length > 0 || Boolean(recentStudyLog);
   const firstUse = items.length === 0 && !hasDataSignals;
-  const now = Date.now();
-  const hasOverdueQueue = queue.some((item) => isOverdueDueAt(item.dueAt, now));
+  const hasOverdueQueue = queue.some((item) => isOverdueDueAt(item.dueAt));
   const homeState = resolveDailyStudyState({
     hasNoData: firstUse,
-    hasDueQueue: queue.length > 0,
-    hasOverdueQueue,
-    savedToday: Boolean(savedParam),
-    completedToday: false,
+    hasDueQueue: dailyActivity.hasDueQueue || queue.length > 0,
+    hasOverdueQueue: dailyActivity.completedToday ? false : dailyActivity.hasOverdueQueue || hasOverdueQueue,
+    savedToday: dailyActivity.savedToday || Boolean(savedParam),
+    completedToday: dailyActivity.completedToday,
     mode,
   });
   const primaryHeading =
@@ -358,7 +358,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                         </Link>
                       ) : null}
                       <Link href={secondaryHref} className="underline-offset-2 hover:underline">
-                        {config.secondaryCta}
+                        {homeState === "post_completion" ? "주간 정리 보기" : config.secondaryCta}
                       </Link>
                       <Link href={`/app/weekly?mode=${mode}`} className="underline-offset-2 hover:underline">
                         주간 정리

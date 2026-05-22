@@ -1020,6 +1020,21 @@ export class ReviewOsRepository {
     return result.count ?? 0;
   }
 
+
+  async listRecentUsageEventsByNames(userId: string, eventNames: string[], sinceIso: string, limit = 60) {
+    const client = getUserClient(userId);
+    const result = await client
+      .from("usage_events")
+      .select("*")
+      .eq("user_id", userId)
+      .in("event_name", eventNames)
+      .gte("created_at", sinceIso)
+      .order("created_at", { ascending: false })
+      .limit(limit);
+    assertSupabaseOperation("review-os.listRecentUsageEventsByNames", result);
+    return ((result.data ?? []) as Record<string, unknown>[]).map(mapUsageEvent);
+  }
+
   async logUsageEvent(
     userId: string,
     eventName: string,
