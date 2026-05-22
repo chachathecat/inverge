@@ -34,6 +34,22 @@ type TodaySessionRunnerProps = {
   referenceSupport?: ExecutionReferenceSupport | null;
 };
 
+type TrapCard = { trapType: string; prompt: string; recallPoint: string; caution: string };
+const FIRST_TRAP_CATEGORIES = ["요건 누락", "원칙/예외 혼동", "선지 끝 조건 오독", "계산/단위 실수", "그래프/공식 조건 혼동", "조문/절차 순서 혼동"] as const;
+
+function buildFirstRoundTrapCards(subject: string, support: ExecutionReferenceSupport | null | undefined): TrapCard[] {
+  if (!support) return [];
+  const topic = support.topicCandidate ?? support.similarTopicSuggestion[0] ?? "핵심 조건";
+  const hint = support.skeletonKeywordHint ?? support.skeletonKeywords[0] ?? support.skeletonKeywordHints[0] ?? "선지 판단 전 조건 표시";
+  const gap = support.commonGaps[0] ?? "조건 문장 1개 회상";
+  return FIRST_TRAP_CATEGORIES.slice(0, 3).map((trapType, index) => ({
+    trapType,
+    prompt: `[${subject}] ${topic} · ${trapType} 함정을 1문장으로 회상하세요.`,
+    recallPoint: `${trapType} 관점으로 '${hint}'부터 확인합니다.`,
+    caution: `주의: ${index === 0 ? gap : "공식 기출이 아닌 유사 함정 회상 카드입니다."}`,
+  }));
+}
+
 export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, referenceSupport }: TodaySessionRunnerProps) {
   const [stepIndex, setStepIndex] = useState(0);
   const [pending, setPending] = useState(false);
@@ -42,6 +58,7 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
   const [retryDraft, setRetryDraft] = useState("");
   const [errorReason, setErrorReason] = useState("");
   const [retrievalSentence, setRetrievalSentence] = useState("");
+  const [checkedTrapTypes, setCheckedTrapTypes] = useState<string[]>([]);
 
   const [issueRecall, setIssueRecall] = useState("");
   const [rewriteParagraph, setRewriteParagraph] = useState("");
@@ -68,6 +85,7 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
     : mode === "second"
       ? "2차 작성 워크스페이스 시작 준비를 마쳤습니다."
       : "1차 입력 루프 시작 준비를 마쳤습니다.";
+  const firstTrapCards = useMemo(() => (mode === "first" ? buildFirstRoundTrapCards(queueItem?.subjectLabel ?? "1차", referenceSupport) : []), [mode, queueItem?.subjectLabel, referenceSupport]);
 
   async function completeAndFinish(action: ReviewCompletionAction, metadata: ReviewCompletionMetadata = {}) {
     if (!queueItem) {
@@ -212,16 +230,27 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
             {referenceSupport ? (
               <div className="space-y-3 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] px-4 py-3">
                 <p className="text-sm font-medium text-[color:var(--foreground-strong)]">함정 점검 카드</p>
-                {[
-                  referenceSupport.skeletonKeywordHint ?? referenceSupport.skeletonKeywords[0],
-                  referenceSupport.commonGaps[0] ?? referenceSupport.similarTopicSuggestion[0],
-                  referenceSupport.weakStructurePoint ?? "선지 끝 조건을 다시 읽기",
-                ]
-                  .filter((line): line is string => Boolean(line))
-                  .slice(0, 3)
-                  .map((line) => (
-                    <p key={line} className="text-sm text-[color:var(--foreground-strong)]">• {line}</p>
-                  ))}
+                {firstTrapCards.map((card) => {
+                  const checked = checkedTrapTypes.includes(card.trapType);
+                  return (
+                    <label key={card.trapType} className="block rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-3 text-sm">
+                      <p className="font-medium text-[color:var(--foreground-strong)]">{card.prompt}</p>
+                      <details className="mt-2">
+                        <summary className="cursor-pointer text-xs text-[color:var(--muted)]">기준/회상 포인트 보기</summary>
+                        <p className="mt-1 text-xs text-[color:var(--foreground-strong)]">{card.recallPoint}</p>
+                      </details>
+                      <p className="mt-2 text-xs text-[color:var(--muted)]">{card.caution}</p>
+                      <div className="mt-2 flex items-center gap-2 text-xs text-[color:var(--foreground-strong)]">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(event) => setCheckedTrapTypes((prev) => event.target.checked ? [...prev, card.trapType] : prev.filter((type) => type !== card.trapType))}
+                        />
+                        확인
+                      </div>
+                    </label>
+                  );
+                })}
                 <p className="text-xs text-[color:var(--muted)]">공식 기출 문제가 아니라, 같은 함정을 줄이기 위한 회상 카드입니다.</p>
               </div>
             ) : (
@@ -229,7 +258,7 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
                 유사 지문 연습 준비
               </div>
             )}
-            <Button type="button" className="w-full sm:w-auto" onClick={() => setStepIndex((prev) => prev + 1)}>
+            <Button type="button" className="w-full sm:w-auto" disabled={firstTrapCards.length === 3 && checkedTrapTypes.length !== 3} onClick={() => setStepIndex((prev) => prev + 1)}>
               {referenceSupport ? "3개만 확인하고 끝내기" : "다음 복습 예약"}
             </Button>
             {quietLinks}
@@ -330,6 +359,7 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
                   retryDraft,
                   errorReason,
                   retrievalSentence,
+                  ...(mode === "first" ? { trapCardsCompleted: checkedTrapTypes.length === 3, trapTypes: checkedTrapTypes } : {}),
                 })
               }
             >

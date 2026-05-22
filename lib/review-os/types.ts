@@ -323,6 +323,8 @@ export type ReviewCompletionMetadata = {
   errorReason?: string;
   retrievalSentence?: string;
   issueRecall?: string;
+  trapCardsCompleted?: boolean;
+  trapTypes?: string[];
 };
 
 export type WrongAnswerDetail = {
