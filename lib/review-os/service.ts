@@ -14,6 +14,7 @@ import { getEntitlementLimit } from "@/lib/review-os/entitlements";
 import { buildCaptureNoteSignals, structureCaptureNote } from "@/lib/review-os/capture-note-engine";
 import { buildCaptureLearningSignal, buildCaptureReviewReason, computeCaptureQueuePriority } from "@/lib/review-os/capture-learning-signals";
 import { sanitizeCaptureTelemetryMetadata } from "@/lib/review-os/telemetry-sanitizer";
+import { getKstDayKey, isSameKstDay, isOverdueDueAt } from "@/lib/review-os/daily-study-state";
 import { reviewOsRepository } from "@/lib/review-os/repository";
 import { resolveReviewSchedule, resolveScheduleOverrideDate } from "@/lib/review-os/scheduling";
 import {
@@ -517,6 +518,24 @@ export class ReviewOsInvalidCompletionActionError extends Error {
     super("review-os-invalid-completion-action");
   }
 }
+
+export type DailyStudyActivity = {
+  savedToday: boolean;
+  completedToday: boolean;
+  startedExecutionToday: boolean;
+  followupScheduledToday: boolean;
+  hasDueQueue: boolean;
+  hasOverdueQueue: boolean;
+};
+
+export const DEFAULT_DAILY_STUDY_ACTIVITY: DailyStudyActivity = {
+  savedToday: false,
+  completedToday: false,
+  startedExecutionToday: false,
+  followupScheduledToday: false,
+  hasDueQueue: false,
+  hasOverdueQueue: false,
+};
 
 export class ReviewOsService {
   async createLearningSignalEvent(userId: string, email: string | null, input: LearningSignalEventInput) {
@@ -1282,6 +1301,41 @@ export class ReviewOsService {
   async getRecentStudyLog(userId: string, email: string | null, mode: "first" | "second") {
     const logs = await this.listStudyLogs(userId, email, mode, 1);
     return logs[0] ?? null;
+  }
+
+  async getDailyStudyActivity(userId: string, email: string | null, mode: "first" | "second"): Promise<DailyStudyActivity> {
+    await this.ensureAccess(userId, email);
+    const now = new Date();
+    const kstDayKey = getKstDayKey(now);
+    const nowIso = now.toISOString();
+    const dayStartUtcIso = new Date(`${kstDayKey}T00:00:00+09:00`).toISOString();
+    const modeLabel = getModeLabel(mode);
+
+    const [items, queue, learningSignals, usageEvents] = await Promise.all([
+      reviewOsRepository.listWrongAnswerItems(userId, 40),
+      reviewOsRepository.listReviewQueue(userId, 40),
+      reviewOsRepository.listLearningSignalEvents(userId, mode, 40),
+      reviewOsRepository.listRecentUsageEventsByNames(
+        userId,
+        ["capture_saved", "post_save_execution_started", "post_save_execution_completed", "review_followup_scheduled", "review_complete"],
+        dayStartUtcIso,
+        80,
+      ),
+    ]);
+
+    const modeItems = items.filter((item) => item.examName === modeLabel);
+    const modeQueue = queue.filter((item) => item.examName === modeLabel);
+    const savedToday =
+      modeItems.some((item) => isSameKstDay(item.createdAt, now)) ||
+      usageEvents.some((event) => event.eventName === "capture_saved" && isSameKstDay(event.createdAt, now));
+    const startedExecutionToday = usageEvents.some((event) => event.eventName === "post_save_execution_started" && isSameKstDay(event.createdAt, now));
+    const completedToday =
+      usageEvents.some((event) => (event.eventName === "post_save_execution_completed" || event.eventName === "review_complete") && isSameKstDay(event.createdAt, now));
+    const followupScheduledToday = usageEvents.some((event) => event.eventName === "review_followup_scheduled" && isSameKstDay(event.createdAt, now));
+    const hasDueQueue = modeQueue.length > 0;
+    const hasOverdueQueue = modeQueue.some((item) => isOverdueDueAt(item.dueAt, Date.parse(nowIso)));
+
+    return { savedToday, completedToday, startedExecutionToday, followupScheduledToday, hasDueQueue, hasOverdueQueue };
   }
 
   async hasMeaningfulLearningData(userId: string, email: string | null, mode: "first" | "second") {
