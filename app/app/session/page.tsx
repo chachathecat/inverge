@@ -6,6 +6,7 @@ import { getModeConfig, resolveAppraisalMode } from "@/lib/review-os/appraisal";
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
 import { reviewOsService } from "@/lib/review-os/service";
 import { buildDetailStudyNote } from "@/lib/review-os/study-note";
+import { buildReferenceSupportForExecution } from "@/lib/review-os/execution-reference-support";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 
@@ -44,11 +45,13 @@ export default async function ReviewOsSessionPage({ searchParams }: PageProps) {
           savedCaptureDetail.item.derivedPayload.capture_note_engine_v1
         ? (savedCaptureDetail.item.derivedPayload.capture_note_engine_v1 as Record<string, unknown>)
       : null;
+  const savedCaptureReferenceSupport = buildReferenceSupportForExecution(savedCaptureSignals);
   const activeDetail =
     savedCaptureDetail && queueItem && savedCaptureDetail.item.id === queueItem.itemId
       ? savedCaptureDetail
       : queueItemDetail;
   const note = activeDetail ? buildDetailStudyNote(activeDetail) : null;
+  const detailReferenceSupport = buildReferenceSupportForExecution(activeDetail?.item.derivedPayload?.capture_note_engine_v2 ?? activeDetail?.item.derivedPayload?.capture_note_engine_v1 ?? null);
 
   return (
     <div className="space-y-6">
@@ -70,12 +73,18 @@ export default async function ReviewOsSessionPage({ searchParams }: PageProps) {
           </div>
           <p className="mt-2 text-xs text-[color:var(--ink-muted)]">정답 확정이 아니라 다음 행동을 정리하는 학습 보조 결과입니다.</p>
           <p className="mt-1 text-xs text-[color:var(--ink-muted)]">오늘은 이 작업 하나만 먼저 합니다.</p>
-          {savedCaptureSignals?.topic_candidate ? (
-            <p className="mt-1 text-xs text-[color:var(--muted)]">논점 후보: {String(savedCaptureSignals.topic_candidate)}</p>
-          ) : null}
           {savedCaptureSignals?.next_task_type ? (
             <p className="mt-1 text-xs text-[color:var(--muted)]">다음 과제 유형: {String(savedCaptureSignals.next_task_type)}</p>
           ) : null}
+          <details className="mt-2 rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)]">
+            <summary className="cursor-pointer list-none px-3 py-2 text-xs text-[color:var(--ink-muted)]">참고 힌트 보기</summary>
+            <div className="grid gap-1 border-t border-[color:var(--border-hairline)] px-3 py-2 text-xs text-[color:var(--ink-muted)]">
+              {savedCaptureReferenceSupport?.skeletonKeywordHint ? <p>키워드 힌트: {savedCaptureReferenceSupport.skeletonKeywordHint}</p> : null}
+              {savedCaptureReferenceSupport?.taxonomyCandidate ? <p>분류 후보: {savedCaptureReferenceSupport.taxonomyCandidate}</p> : null}
+              {savedCaptureReferenceSupport?.similarTopicSuggestion?.[0] ? <p>유사 주제: {savedCaptureReferenceSupport.similarTopicSuggestion[0]}</p> : null}
+            </div>
+          </details>
+
           <div className="mt-3">
             <ResultFeedbackPrompt route="/app/session" pageContext={{ section: "saved-capture", mode }} />
           </div>
@@ -121,6 +130,7 @@ export default async function ReviewOsSessionPage({ searchParams }: PageProps) {
               }
             : null
         }
+        referenceSupport={detailReferenceSupport}
       />
       </section>
       <ReviewOsFeedbackButton route="/app/session" pageContext={{ mode, hasQueueItem: Boolean(queueItem) }} />

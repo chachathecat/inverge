@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { AppraisalMode } from "@/lib/review-os/appraisal";
+import type { ExecutionReferenceSupport } from "@/lib/review-os/execution-reference-support";
 import {
   FIRST_STAGE_ERROR_REASON_OPTIONS,
   getSecondSubjectTemplate,
@@ -30,9 +31,10 @@ type TodaySessionRunnerProps = {
   focus: TodayFocus;
   queueItem: ReviewQueueCard | null;
   note: SessionNote | null;
+  referenceSupport?: ExecutionReferenceSupport | null;
 };
 
-export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note }: TodaySessionRunnerProps) {
+export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, referenceSupport }: TodaySessionRunnerProps) {
   const [stepIndex, setStepIndex] = useState(0);
   const [pending, setPending] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -207,11 +209,28 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note }: 
         {currentStep === "similar-practice" ? (
           <section className="space-y-4">
             <p className="text-sm font-medium text-[color:var(--foreground-strong)]">4) 유사 지문 3개 연습은 선택입니다.</p>
-            <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] px-4 py-3 text-sm text-[color:var(--foreground-strong)]">
-              유사 지문 연습 준비
-            </div>
+            {referenceSupport ? (
+              <div className="space-y-3 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] px-4 py-3">
+                <p className="text-sm font-medium text-[color:var(--foreground-strong)]">함정 점검 카드</p>
+                {[
+                  referenceSupport.skeletonKeywordHint ?? referenceSupport.skeletonKeywords[0],
+                  referenceSupport.commonGaps[0] ?? referenceSupport.similarTopicSuggestion[0],
+                  referenceSupport.weakStructurePoint ?? "선지 끝 조건을 다시 읽기",
+                ]
+                  .filter((line): line is string => Boolean(line))
+                  .slice(0, 3)
+                  .map((line) => (
+                    <p key={line} className="text-sm text-[color:var(--foreground-strong)]">• {line}</p>
+                  ))}
+                <p className="text-xs text-[color:var(--muted)]">공식 기출 문제가 아니라, 같은 함정을 줄이기 위한 회상 카드입니다.</p>
+              </div>
+            ) : (
+              <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] px-4 py-3 text-sm text-[color:var(--foreground-strong)]">
+                유사 지문 연습 준비
+              </div>
+            )}
             <Button type="button" className="w-full sm:w-auto" onClick={() => setStepIndex((prev) => prev + 1)}>
-              다음 복습 예약
+              {referenceSupport ? "3개만 확인하고 끝내기" : "다음 복습 예약"}
             </Button>
             {quietLinks}
           </section>
@@ -268,6 +287,16 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note }: 
               onChange={(event) => setRewriteParagraph(event.target.value)}
               placeholder="보강 문단 1개를 여기에 적습니다."
             />
+            {referenceSupport ? (
+              <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] px-4 py-3 text-sm text-[color:var(--foreground-strong)]">
+                <p className="text-caption text-[color:var(--muted)]">문단 보강 힌트</p>
+                <p className="mt-1">키워드 힌트: {referenceSupport.skeletonKeywordHint ?? referenceSupport.skeletonKeywordHints[0] ?? "핵심 키워드 1개 먼저 고정"}</p>
+                <p className="mt-1">누락 쟁점 후보: {referenceSupport.missingIssue ?? "누락 논점 1개"}</p>
+                <p className="mt-1">자주 빠지는 간극: {referenceSupport.commonGaps[0] ?? "적용 문장 1개 추가"}</p>
+                <p className="mt-1">시작 문장: 따라서 본 문단에서는 [요건]을 먼저 밝히고 [사실관계]에 연결한다.</p>
+                <p className="mt-2 text-xs text-[color:var(--muted)]">점수 판정이 아니라, 문단 보강을 돕는 참고 힌트입니다.</p>
+              </div>
+            ) : null}
             <div className="rounded-[var(--radius-md)] border border-[color:var(--cue-focus)] bg-[color:var(--cue-focus-bg)] px-4 py-3 text-sm text-[color:var(--foreground-strong)]">
               <p className="text-caption text-[color:var(--muted)]">전후 비교</p>
               <p className="mt-1">before: {note?.missingIssue ?? note?.weakPoint ?? "보강할 약점 1개"}</p>
@@ -279,7 +308,7 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note }: 
               disabled={pending || rewriteParagraph.trim().length < 8}
               onClick={() => setStepIndex((prev) => prev + 1)}
             >
-              문단 1개만 보강
+              {referenceSupport ? "힌트 보고 문단 1개 다시 쓰기" : "문단 1개만 보강"}
             </button>
             {errorMessage ? <p className="text-xs text-[color:var(--danger)]">{errorMessage}</p> : null}
             {quietLinks}

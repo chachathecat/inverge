@@ -45,3 +45,9 @@ test("first-set solving flow does not send capture-origin flags by default", asy
   assert.equal(source.includes("createdFromCapture"), false);
   assert.equal(source.includes("captureIntent"), false);
 });
+
+test("review queue shows at most one capture reference support line", async () => {
+  const source = await readFile(new URL("../components/review-os/review-queue-client.tsx", import.meta.url), "utf8");
+  assert.ok(source.includes("참고 기준:"));
+  assert.ok(source.includes("captureReferenceLineByItemId[item.itemId]"));
+});
