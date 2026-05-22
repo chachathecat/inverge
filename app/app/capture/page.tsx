@@ -2,6 +2,7 @@ import { WrongAnswerCaptureForm } from "@/components/review-os/capture-form";
 import { ReviewOsFeedbackButton } from "@/components/review-os/feedback-button";
 import { ClosedBetaBanner } from "@/components/shared/closed-beta-banner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { DailyCommandCard, QuietDetails } from "@/components/review-os/minimal-study-system";
 import { getModeConfig, normalizeSubjectForMode, resolveAppraisalMode } from "@/lib/review-os/appraisal";
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
 import { reviewOsService } from "@/lib/review-os/service";
@@ -44,18 +45,11 @@ export default async function ReviewOsCapturePage({ searchParams }: PageProps) {
       <ClosedBetaBanner />
 
       <div className="space-y-7">
-      <section className="space-y-3">
-        <div>
-          <h2 className="text-2xl font-medium tracking-[-0.04em] text-[color:var(--foreground-strong)]">
-            {isRewriteFlow ? "문단 다시쓰기 실행" : "오늘 한 것 올리기"}
-          </h2>
-          <p className="mt-2 max-w-2xl text-sm leading-7 text-[color:var(--muted)]">
-            {isRewriteFlow
-              ? "기존 비교 기록에서 잡은 한 가지 간극만 보강합니다. 전체 답안이 아니라 문단 1개를 다시 쓰고 저장하세요."
-              : "사진을 찍거나 텍스트를 붙여넣으면, 한 가지 약점과 다음 행동으로 정리합니다."}
-          </p>
-        </div>
-      </section>
+      <DailyCommandCard title={isRewriteFlow ? "문단 다시쓰기 실행" : "오늘 한 것 올리기"} description={isRewriteFlow ? "먼저 한 문장만 떠올립니다. 문단 1개만 다시 쓰고 저장합니다." : "사진 또는 텍스트 입력을 한 건만 남깁니다."}>
+        <QuietDetails>
+          <p>저장 전 직접 확인해 주세요.</p>
+        </QuietDetails>
+      </DailyCommandCard>
 
       <Card className="border-[color:var(--border-strong)] bg-[color:var(--surface)] shadow-none">
         <CardHeader>

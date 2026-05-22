@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { MicroPracticeCard } from "@/components/review-os/minimal-study-system";
 import type { AppraisalMode } from "@/lib/review-os/appraisal";
 import type { ExecutionReferenceSupport } from "@/lib/review-os/execution-reference-support";
 import { buildSecondRewriteComparison } from "@/lib/review-os/second-rewrite-comparison";
@@ -101,8 +102,8 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
       : errorReason || note?.weakPoint || "선지 판단 전에 조건 확인이 필요합니다.";
   const completedWorkLabel = hasQueueItem
     ? mode === "second"
-      ? "오늘 선택한 2차 보강 작업 1건을 완료 처리했습니다."
-      : "오늘 선택한 재시도 작업 1건을 완료 처리했습니다."
+      ? "오늘은 여기까지 해도 됩니다."
+      : "오늘은 여기까지 해도 됩니다."
     : mode === "second"
       ? "2차 작성 워크스페이스 시작 준비를 마쳤습니다."
       : "1차 입력 루프 시작 준비를 마쳤습니다.";
@@ -159,19 +160,16 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
     <Card className="border-[color:var(--border-strong)] bg-[color:var(--surface)] shadow-none">
       <CardHeader className="space-y-3 p-4 sm:p-6">
         <p className="text-caption text-[color:var(--muted)]">Today Session Runner · {modeLabel}</p>
-        <CardTitle>오늘 최우선 작업을 한 번에 끝냅니다.</CardTitle>
+        <CardTitle>오늘은 이것만 합니다.</CardTitle>
         <CardDescription>{focus.reason}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4 p-4 pt-0 sm:p-6 sm:pt-0">
         {currentStep === "intro" ? (
           <section className="space-y-4">
-            <div className="rounded-[var(--radius-md)] border border-[color:var(--brand-700)] bg-[color:var(--brand-050)] px-4 py-3">
-              <p className="text-caption text-[color:var(--brand-800)]">지금 시작할 작업</p>
-              <p className="mt-1 text-body-lg text-[color:var(--foreground-strong)]">
-                {focus.primaryTaskLabel}
-              </p>
-              <p className="mt-2 text-sm text-[color:var(--foreground-strong)]">예상 {focus.estimatedDurationMinutes}분</p>
-            </div>
+            <MicroPracticeCard title="지금 시작할 작업">
+              <p className="text-body-lg text-[color:var(--foreground-strong)]">{focus.primaryTaskLabel}</p>
+              <p className="mt-2 text-sm text-[color:var(--textBody)]">예상 {focus.estimatedDurationMinutes}분</p>
+            </MicroPracticeCard>
             <p className="text-sm leading-7 text-[color:var(--foreground-strong)]">{focus.nextAction}</p>
             <Button type="button" className="w-full sm:w-auto" onClick={() => setStepIndex((prev) => prev + 1)}>
               {hasQueueItem ? "추천 작업으로 시작" : mode === "second" ? "2차 작성 워크스페이스 시작" : "오늘 입력 작업 시작"}
