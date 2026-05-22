@@ -8,6 +8,7 @@ import {
   resolveCaptureExamMode,
 } from "../lib/review-os/capture-learning-signals.ts";
 import { buildTodayPlanTasks } from "../lib/review-os/today-plan-engine.ts";
+import { isOverdueDueAt, resolveDailyStudyState } from "../lib/review-os/daily-study-state.ts";
 
 test("buildCaptureLearningSignal creates first-mode signal safely", () => {
   const signal = buildCaptureLearningSignal({
@@ -261,4 +262,46 @@ test("due high-priority queue task stays primary over problem-snap", () => {
     now: new Date("2026-05-22T00:00:00.000Z"),
   });
   assert.notEqual(tasks[0]?.source_label, "Problem Snap 기반");
+});
+
+
+test("home overdue detection uses dueAt and keeps overdue recovery copy", async () => {
+  const source = await readFile(new URL("../app/app/page.tsx", import.meta.url), "utf8");
+  assert.equal(source.includes("scheduledFor"), false);
+  assert.ok(source.includes("item.dueAt"));
+  assert.ok(source.includes("오늘은 복구만 합니다"));
+  assert.ok(source.includes("15분 복구 시작"));
+  assert.ok(source.includes("밀린 걸 전부 따라잡으려 하지 마세요."));
+});
+
+test("resolveDailyStudyState prioritizes overdue/completed/first-capture and overdue uses ReviewQueueCard dueAt", () => {
+  assert.equal(isOverdueDueAt("2026-05-01T00:00:00.000Z", Date.parse("2026-05-02T00:00:00.000Z")), true);
+  assert.equal(isOverdueDueAt("not-a-date", Date.parse("2026-05-02T00:00:00.000Z")), false);
+
+  assert.equal(resolveDailyStudyState({
+    hasNoData: false,
+    hasDueQueue: true,
+    hasOverdueQueue: true,
+    savedToday: false,
+    completedToday: false,
+    mode: "first",
+  }), "overdue_recovery");
+
+  assert.equal(resolveDailyStudyState({
+    hasNoData: false,
+    hasDueQueue: true,
+    hasOverdueQueue: false,
+    savedToday: false,
+    completedToday: true,
+    mode: "second",
+  }), "post_completion");
+
+  assert.equal(resolveDailyStudyState({
+    hasNoData: true,
+    hasDueQueue: false,
+    hasOverdueQueue: false,
+    savedToday: false,
+    completedToday: false,
+    mode: "first",
+  }), "first_capture");
 });

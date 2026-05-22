@@ -23,3 +23,9 @@ export function resolveDailyStudyState(input: ResolveDailyStudyStateInput): Dail
   if (input.savedToday && !input.hasDueQueue) return "evening_capture";
   return "start_today_task";
 }
+
+
+export function isOverdueDueAt(dueAt: string, now = Date.now()): boolean {
+  const dueTime = Date.parse(dueAt);
+  return Number.isFinite(dueTime) && dueTime < now;
+}

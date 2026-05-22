@@ -15,7 +15,7 @@ import { APPRAISAL_FIRST_SUBJECTS } from "@/lib/review-os/types";
 import { buildTodayPlanCard, type TodayPlanActionKind } from "@/lib/review-os/today-plan";
 import { buildTodayPlanTasks } from "@/lib/review-os/today-plan-engine";
 import { buildWeaknessDiagnostic } from "@/lib/review-os/weakness-diagnostics";
-import { resolveDailyStudyState } from "@/lib/review-os/daily-study-state";
+import { isOverdueDueAt, resolveDailyStudyState } from "@/lib/review-os/daily-study-state";
 
 const FIRST_MODE_INPUT_OPTIONS = [
   {
@@ -94,7 +94,8 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
   }
   const hasDataSignals = learningSignalEvents.length > 0 || queue.length > 0 || Boolean(recentStudyLog);
   const firstUse = items.length === 0 && !hasDataSignals;
-  const hasOverdueQueue = queue.some((item) => new Date(item.scheduledFor).getTime() < Date.now());
+  const now = Date.now();
+  const hasOverdueQueue = queue.some((item) => isOverdueDueAt(item.dueAt, now));
   const homeState = resolveDailyStudyState({
     hasNoData: firstUse,
     hasDueQueue: queue.length > 0,
@@ -115,7 +116,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
             : "오늘 합격에 제일 가까워지는 1개";
   const primaryDescription =
     homeState === "overdue_recovery"
-      ? "밀린 것을 전부 처리하지 말고, 가장 작은 작업 1개만 끝냅니다."
+      ? "밀린 걸 전부 따라잡으려 하지 마세요. 가장 작은 작업 1개만 끝냅니다."
       : homeState === "post_completion"
         ? "다음 복습은 예약되었습니다. 새 범위보다 회복이 우선입니다."
         : "지금은 전체를 다시 볼 때가 아니라, 이 약점 하나를 줄일 때입니다.";
