@@ -37,6 +37,10 @@ type TodaySessionRunnerProps = {
 };
 
 type TrapCard = { trapType: string; prompt: string; recallPoint: string; caution: string };
+const SECOND_LOOP_TOKENS = ["쟁점 회상", "가장 큰 간극 1개", "문단 1개만 다시 씁니다.", "전후 비교", "다음 보강 예약"] as const;
+
+const FIRST_LOOP_TOKENS = ["핵심 조건 회상", "짧은 재풀이", "틀린 이유 1개", "근거 1문장"] as const;
+
 const FIRST_TRAP_CATEGORIES = ["요건 누락", "원칙/예외 혼동", "선지 끝 조건 오독", "계산/단위 실수", "그래프/공식 조건 혼동", "조문/절차 순서 혼동"] as const;
 
 function buildFirstRoundTrapCards(subject: string, support: ExecutionReferenceSupport | null | undefined): TrapCard[] {
@@ -86,8 +90,8 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
       return ["intro", "capture-guide", "done"] as const;
     }
     return mode === "second"
-      ? (["intro", "issue-recall", "one-gap", "rewrite", "schedule", "done"] as const)
-      : (["intro", "retry", "error-reason", "retrieval", "similar-practice", "schedule", "done"] as const);
+      ? (["intro", "issue-recall", "rewrite", "one-gap", "schedule", "done"] as const)
+      : (["intro", "retrieval", "retry", "similar-practice", "error-reason", "schedule", "done"] as const);
   }, [hasQueueItem, mode]);
 
   const currentStep = steps[stepIndex];
@@ -178,7 +182,7 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
 
         {currentStep === "retry" ? (
           <section className="space-y-4">
-            <p className="text-sm font-medium text-[color:var(--foreground-strong)]">1) 핵심 조건 회상 후 짧은 재풀이를 적습니다.</p>
+            <p className="text-sm font-medium text-[color:var(--foreground-strong)]">2) 짧은 재풀이</p>
             <textarea
               className="min-h-28 w-full rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] px-3 py-2 text-sm"
               value={retryDraft}
@@ -191,7 +195,7 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
               disabled={retryDraft.trim().length < 4}
               onClick={() => setStepIndex((prev) => prev + 1)}
             >
-              다음: 틀린 이유 1개 선택
+              다음: 함정 카드 3개
             </Button>
             {quietLinks}
           </section>
@@ -228,7 +232,7 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
 
         {currentStep === "retrieval" ? (
           <section className="space-y-4">
-            <p className="text-sm font-medium text-[color:var(--foreground-strong)]">3) 근거 1문장을 남깁니다.</p>
+            <p className="text-sm font-medium text-[color:var(--foreground-strong)]">1) 해설 보기 전, 근거 1문장</p>
             <textarea
               className="min-h-24 w-full rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] px-3 py-2 text-sm"
               value={retrievalSentence}
@@ -254,7 +258,7 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
 
         {currentStep === "similar-practice" ? (
           <section className="space-y-4">
-            <p className="text-sm font-medium text-[color:var(--foreground-strong)]">4) 유사 지문 3개 연습은 선택입니다.</p>
+            <p className="text-sm font-medium text-[color:var(--foreground-strong)]">3) 함정 카드 3개</p>
             {referenceSupport ? (
               <div className="space-y-3 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] px-4 py-3">
                 <p className="text-sm font-medium text-[color:var(--foreground-strong)]">함정 점검 카드</p>
@@ -287,7 +291,7 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
               </div>
             )}
             <Button type="button" className="w-full sm:w-auto" disabled={firstTrapCards.length === 3 && checkedTrapTypes.length !== 3} onClick={() => setStepIndex((prev) => prev + 1)}>
-              {referenceSupport ? "3개만 확인하고 끝내기" : "다음 복습 예약"}
+              다음: 틀린 이유 1개 선택
             </Button>
             {quietLinks}
           </section>
@@ -295,7 +299,7 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
 
         {currentStep === "issue-recall" ? (
           <section className="space-y-4">
-            <p className="text-sm font-medium text-[color:var(--foreground-strong)]">1) 모범답안 보기 전, 쟁점 회상 문장을 적습니다.</p>
+            <p className="text-sm font-medium text-[color:var(--foreground-strong)]">1) 쟁점 1개 회상</p>
             <p className="text-sm leading-7 text-[color:var(--muted)]">이 과목은 먼저 이 구조로 답안을 잡습니다. {secondTemplate.structure}</p>
             <textarea
               className="min-h-28 w-full rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] px-3 py-2 text-sm"
@@ -309,7 +313,7 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
               disabled={issueRecall.trim().length < 4}
               onClick={() => setStepIndex((prev) => prev + 1)}
             >
-              다음: 가장 큰 간극 확인
+              다음: 문단 1개 다시쓰기
             </Button>
             {quietLinks}
           </section>
@@ -317,7 +321,7 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
 
         {currentStep === "one-gap" ? (
           <section className="space-y-4">
-            <p className="text-sm font-medium text-[color:var(--foreground-strong)]">2) 오늘은 가장 큰 간극 1개만 보강합니다.</p>
+            <p className="text-sm font-medium text-[color:var(--foreground-strong)]">3) 전후 비교</p>
             <div className="rounded-[var(--radius-md)] border border-[color:var(--cue-risk)] bg-[color:var(--cue-risk-bg)] px-4 py-3">
               <p className="text-caption text-[color:var(--muted)]">one biggest gap</p>
               <p className="mt-1 text-sm text-[color:var(--foreground-strong)]">{note?.missingIssue ?? note?.weakPoint ?? "누락 논점 1개"}</p>
@@ -326,7 +330,7 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
               {note?.rewriteInstruction ?? secondTemplate.rewriteGuidance}
             </p>
             <Button type="button" className="w-full sm:w-auto" onClick={() => setStepIndex((prev) => prev + 1)}>
-              다음: 문단 교정 작성
+              다음 보강 예약
             </Button>
             {quietLinks}
           </section>
@@ -334,7 +338,7 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
 
         {currentStep === "rewrite" ? (
           <section className="space-y-4">
-            <p className="text-sm font-medium text-[color:var(--foreground-strong)]">3) 문단 1개만 다시 씁니다.</p>
+            <p className="text-sm font-medium text-[color:var(--foreground-strong)]">2) 문단 1개 다시쓰기</p>
             <p className="text-sm leading-7 text-[color:var(--foreground-strong)]">
               가장 큰 간극 1개를 기준으로 문단 1개만 보강합니다.
             </p>
