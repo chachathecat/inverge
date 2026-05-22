@@ -33,6 +33,16 @@ type AnswerReviewClientPageProps = {
   userEmail?: string | null;
 };
 
+type ProblemSnapAnswerReviewHandoff = {
+  source: "problem-snap";
+  examMode?: AppraisalMode;
+  subject?: string;
+  problemSummary?: string;
+  problemText?: string;
+  retryMemo?: string;
+  nextPracticeAction?: string;
+};
+
 const SECTION_FADE = {
   hidden: { opacity: 0, y: 10 },
   visible: { opacity: 1, y: 0 },
@@ -103,9 +113,36 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
   const generalFileInputRef = useRef<HTMLInputElement | null>(null);
   const answerTextRef = useRef<HTMLTextAreaElement | null>(null);
   const [generalUploadIntent, setGeneralUploadIntent] = useState<"answer" | "problem">("answer");
+  const [problemSnapNoticeVisible, setProblemSnapNoticeVisible] = useState(false);
 
   const shouldReduceMotion = useReducedMotion();
   const subjectOptions = examMode === "second" ? APPRAISAL_SECOND_SUBJECTS : APPRAISAL_FIRST_SUBJECTS;
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const rawHandoff = sessionStorage.getItem("inverge.problemSnap.answerReviewHandoff");
+    if (!rawHandoff) return;
+    try {
+      const handoff = JSON.parse(rawHandoff) as ProblemSnapAnswerReviewHandoff;
+      if (handoff.source !== "problem-snap") {
+        sessionStorage.removeItem("inverge.problemSnap.answerReviewHandoff");
+        return;
+      }
+      const nextExamMode = parseAppraisalMode(handoff.examMode ?? null) ?? examMode;
+      const nextSubject = normalizeSubjectForMode(handoff.subject ?? null, nextExamMode);
+      setExamMode(nextExamMode);
+      setSubject(nextSubject);
+      setProblemText((handoff.problemText || handoff.problemSummary || "").trim());
+      setMyAnswerText((handoff.retryMemo || "").trim());
+      if (!missingPointMemo.trim() && handoff.nextPracticeAction?.trim()) {
+        setMissingPointMemo(handoff.nextPracticeAction.trim());
+      }
+      setProblemSnapNoticeVisible(true);
+    } finally {
+      sessionStorage.removeItem("inverge.problemSnap.answerReviewHandoff");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleProblemFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     setProblemFiles(Array.from(event.target.files ?? []));
@@ -366,6 +403,12 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
         <p className="text-caption leading-5 text-[color:var(--muted)]">
           이미 쓴 답안을 올리면 누락 논점, 약한 구조, 다시 쓸 문장을 정리합니다. 검토 결과는 학습 보조 초안이며 저장 전 직접 확인해 주세요.
         </p>
+        {problemSnapNoticeVisible ? (
+          <article className="flex items-center justify-between gap-3 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] px-3 py-2">
+            <p className="text-caption leading-5 text-[color:var(--muted)]">Problem Snap에서 다시 푼 답안을 불러왔습니다.</p>
+            <button type="button" className={cn(buttonVariants({ variant: "ghost" }), "h-8 px-2")} onClick={() => setProblemSnapNoticeVisible(false)}>닫기</button>
+          </article>
+        ) : null}
         {viewerMode === "anonymous" ? (
           <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] px-3 py-2">
             <p className="text-caption leading-5 text-[color:var(--muted)]">로그인 없이 오늘 1회 답안 검토를 체험할 수 있습니다.</p>

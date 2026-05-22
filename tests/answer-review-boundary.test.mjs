@@ -15,6 +15,9 @@ test('instructor second grading page exists', async () => {
 test('learner answer-review does not link instructor OCR route', async () => {
   const learnerSource = await readFile(new URL('../app/answer-review/answer-review-client.tsx', import.meta.url), 'utf8');
   assert.equal(learnerSource.includes('/api/instructor/second-grading/ocr'), false);
+  assert.ok(learnerSource.includes('inverge.problemSnap.answerReviewHandoff'));
+  assert.ok(learnerSource.includes('handoff.source !== "problem-snap"'));
+  assert.ok(learnerSource.includes('Problem Snap에서 다시 푼 답안을 불러왔습니다.'));
 });
 
 test('instructor second-grading OCR UI is scoped to instructor page', async () => {
