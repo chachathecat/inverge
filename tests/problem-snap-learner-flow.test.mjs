@@ -46,3 +46,23 @@ test("problem snap learner copy avoids endorsement, grading, and payment claims"
   assert.equal(source.includes("합격 보장"), false);
   assert.equal(source.includes("공식 채점"), false);
 });
+
+
+test("recognition labels are Korean and camelCase labels are hidden", async () => {
+  const source = await readFile(new URL("../app/problem-snap/problem-snap-client.tsx", import.meta.url), "utf8");
+  ["문제 요약", "요구 유형", "읽은 조건", "숫자·단위", "불명확한 부분"].forEach((label) => assert.ok(source.includes(label)));
+  ["problemSummaryDraft:", "askTypeDraft:", "extractedConditions:", "extractedNumbersAndUnits:", "missingOrUnclearParts:"].forEach((label) => assert.equal(source.includes(label), false));
+});
+
+test("local storage fallback uses the expected queue key", async () => {
+  const source = await readFile(new URL("../app/problem-snap/problem-snap-client.tsx", import.meta.url), "utf8");
+  assert.ok(source.includes('const key = "inverge.problemSnap.localQueue"'));
+  assert.ok(source.includes('localStorage.setItem(key, JSON.stringify(queue));'));
+});
+
+test("placeholder extraction values do not count as normal", async () => {
+  const source = await readFile(new URL("../app/problem-snap/problem-snap-client.tsx", import.meta.url), "utf8");
+  assert.ok(source.includes('const hasMeaningfulValue = (items?: string[]) =>'));
+  ["확인 필요", "검토 필요", "없음"].forEach((value) => assert.ok(source.includes(value)));
+  assert.ok(source.includes('{hasMeaningfulValue(result.extractedNumbersAndUnits) ? "정상" : "확인 필요"}'));
+});
