@@ -75,7 +75,9 @@ test("subject-specific views and retry mode labels exist", async () => {
   ["쟁점", "조문/요건", "절차", "사안 포섭", "결론 문장"].forEach((label) => assert.ok(source.includes(label), `Missing law label ${label}`));
   ["개념 확인", "체크포인트", "다시 풀 행동"].forEach((label) => assert.ok(source.includes(label), `Missing first-stage label ${label}`));
   assert.ok(source.includes("!retryMode ? <div><h3 className=\"font-medium\">{resultHeading}</h3><p>{result.easyExplanation}</p></div> : null"));
-  assert.ok(source.includes("!retryMode && showCalculatorGuide"));
+  assert.ok(source.includes("!retryMode ? ("));
+  assert.ok(source.includes("showCalculatorGuide ? ("));
+  assert.ok(source.includes(") : null}"));
   assert.ok(source.includes("!retryMode ? <div className=\"grid gap-3 sm:grid-cols-2\">{renderSubjectSpecificCards(getProblemSnapSubjectView(subject), result)}</div> : null"));
   assert.ok(source.includes("`/answer-review?mode=${currentExamMode}&subject=${encodeURIComponent(currentSubject)}`"));
   assert.equal(source.includes("mode=second&examMode="), false);

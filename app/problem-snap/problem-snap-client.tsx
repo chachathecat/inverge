@@ -333,11 +333,13 @@ export default function ProblemSnapClientPage({ initialExamMode }: { initialExam
           </div>
           <p className="text-xs text-[color:var(--muted)]">{referenceGrounding?.used ? `유사 기출 Skeleton을 참고해 정리했습니다. ${referenceGrounding.displayLabel}` : "입력 자료 기준으로 정리했습니다."}</p>
           {!retryMode ? <div><h3 className="font-medium">{resultHeading}</h3><p>{result.easyExplanation}</p></div> : null}
-          {!retryMode && showCalculatorGuide ? (
-            <div className="space-y-2 rounded-[var(--radius-md)] border bg-[color:var(--surface-subtle)] p-3"><h3 className="font-medium">CASIO fx-9860GIII로 누르는 법</h3><p className="text-sm">계산 목적: {result.calculatorGuide.calculationPurpose}</p><p className="text-sm">추천 모드: {result.calculatorGuide.recommendedMode}</p><div><p className="text-sm">버튼 순서</p><div className="mt-1 flex flex-wrap gap-1">{result.calculatorGuide.keystrokeSteps.map((step, index)=><span key={`${step}-${index}`} className="rounded-full border px-2 py-0.5 text-xs">{step}</span>)}</div></div><p className="text-sm">화면에 나와야 할 값: {result.calculatorGuide.expectedDisplay || "확인 필요"}</p><p className="text-sm">답안에 적는 값: {result.calculatorGuide.answerRounding || "확인 필요"}</p><p className="text-xs text-[color:var(--muted)]">주의할 점: {result.calculatorGuide.caution}</p></div>
-          ) : (
-            <p className="rounded-[var(--radius-md)] border border-dashed p-3 text-sm text-[color:var(--muted)]">계산기 입력보다 개념 구조가 중요한 문제입니다.</p>
-          )}
+          {!retryMode ? (
+            showCalculatorGuide ? (
+              <div className="space-y-2 rounded-[var(--radius-md)] border bg-[color:var(--surface-subtle)] p-3"><h3 className="font-medium">CASIO fx-9860GIII로 누르는 법</h3><p className="text-sm">계산 목적: {result.calculatorGuide.calculationPurpose}</p><p className="text-sm">추천 모드: {result.calculatorGuide.recommendedMode}</p><div><p className="text-sm">버튼 순서</p><div className="mt-1 flex flex-wrap gap-1">{result.calculatorGuide.keystrokeSteps.map((step, index)=><span key={`${step}-${index}`} className="rounded-full border px-2 py-0.5 text-xs">{step}</span>)}</div></div><p className="text-sm">화면에 나와야 할 값: {result.calculatorGuide.expectedDisplay || "확인 필요"}</p><p className="text-sm">답안에 적는 값: {result.calculatorGuide.answerRounding || "확인 필요"}</p><p className="text-xs text-[color:var(--muted)]">주의할 점: {result.calculatorGuide.caution}</p></div>
+            ) : (
+              <p className="rounded-[var(--radius-md)] border border-dashed p-3 text-sm text-[color:var(--muted)]">계산기 입력보다 개념 구조가 중요한 문제입니다.</p>
+            )
+          ) : null}
           <div className="rounded-[var(--radius-md)] border p-3">
             <p className="text-sm font-medium">품질 점검</p>
             <ul className="mt-2 space-y-1 text-sm">
