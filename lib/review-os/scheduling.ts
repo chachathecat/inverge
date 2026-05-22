@@ -27,6 +27,24 @@ export type ReviewSchedule = {
   followUpReviewAt: string | null;
 };
 
+export type AdaptiveScheduleInput = {
+  mode: "first" | "second";
+  confidence: "낮음" | "중간" | "높음";
+  recurrenceCount: number;
+  mistakeType: string;
+  taskType: "retry" | "rewrite" | "review" | "recall";
+  completedAction?: string;
+  trapCardsCompleted?: boolean;
+  rewriteComparisonRisk?: string;
+  now?: Date;
+};
+
+export type AdaptiveScheduleResult = {
+  nextReviewDate: string;
+  policy: string;
+  explanation: string;
+};
+
 function toIsoDate(value: Date) {
   return value.toISOString().slice(0, 10);
 }
@@ -54,6 +72,39 @@ function dateOnlyToIso(dateOnly: string) {
 
 function isConfident(confidence: ConfidenceLevel) {
   return confidence === "높음";
+}
+
+function hasToken(value: string | null | undefined, tokens: string[]) {
+  if (!value) return false;
+  return tokens.some((token) => value.includes(token));
+}
+
+export function resolveAdaptiveReviewSchedule(input: AdaptiveScheduleInput): AdaptiveScheduleResult {
+  const now = input.now ?? new Date();
+  const recurrenceCount = Number.isFinite(input.recurrenceCount) ? input.recurrenceCount : 0;
+  const isRepeated = recurrenceCount >= 2;
+  const mistakeType = input.mistakeType ?? "";
+  const risk = input.rewriteComparisonRisk ?? "";
+
+  const asResult = (days: number, policy: string, explanation: string): AdaptiveScheduleResult => {
+    const due = addDays(now, days);
+    return { nextReviewDate: toIsoDate(due), policy, explanation };
+  };
+
+  if (input.mode === "first") {
+    if (hasToken(mistakeType, ["계산", "단위"])) return asResult(2, "first_calculation_or_unit_2d", "계산·단위 실수라 2일 뒤에 다시 확인합니다.");
+    if (input.confidence === "낮음" || isRepeated) return asResult(1, "first_low_confidence_or_repeated_1d", "반복/저확신 신호라 내일 짧게 다시 봅니다.");
+    if (input.trapCardsCompleted && input.confidence === "높음") return asResult(4, "first_trap_done_high_confidence_4d", "함정카드 완료와 높은 확신이 확인되어 4일 뒤로 둡니다.");
+    return asResult(2, "first_default_2d", "기억 고정을 위해 2일 뒤에 다시 점검합니다.");
+  }
+
+  if (hasToken(mistakeType, ["논점 누락", "누락", "구조"])) return asResult(2, "second_missing_issue_or_structure_2d", "누락/구조 간극이 있어 2일 뒤에 보강합니다.");
+  if (hasToken(mistakeType, ["법", "조문", "요건 누락"])) return asResult(2, "second_law_requirement_omission_2d", "법적 요건 누락 신호라 2일 뒤에 다시 씁니다.");
+  if (hasToken(input.completedAction, ["rewrite"])) {
+    if (hasToken(risk, ["남", "위험", "미흡", "불안정", "high"])) return asResult(2, "second_rewrite_remaining_risk_2d", "다시썼지만 위험 신호가 남아 2일 뒤에 점검합니다.");
+    return asResult(4, "second_rewrite_stable_4d", "다시쓰기 후 흐름이 안정되어 4일 뒤에 확인합니다.");
+  }
+  return asResult(2, "second_default_2d", "핵심 논리 유지를 위해 2일 뒤에 다시 확인합니다.");
 }
 
 /**
