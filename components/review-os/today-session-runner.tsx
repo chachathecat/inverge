@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import type { AppraisalMode } from "@/lib/review-os/appraisal";
 import type { ExecutionReferenceSupport } from "@/lib/review-os/execution-reference-support";
 import { buildSecondRewriteComparison } from "@/lib/review-os/second-rewrite-comparison";
+import { resolveAdaptiveReviewSchedule, type AdaptiveScheduleResult } from "@/lib/review-os/scheduling";
 import {
   FIRST_STAGE_ERROR_REASON_OPTIONS,
   getSecondSubjectTemplate,
@@ -55,6 +56,7 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
   const [stepIndex, setStepIndex] = useState(0);
   const [pending, setPending] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [adaptiveScheduleNote, setAdaptiveScheduleNote] = useState<AdaptiveScheduleResult | null>(null);
 
   const [retryDraft, setRetryDraft] = useState("");
   const [errorReason, setErrorReason] = useState("");
@@ -121,6 +123,17 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
         setErrorMessage(data?.message ?? "복습 예약 중 문제가 있었습니다. 잠시 후 다시 시도해 주세요.");
         return;
       }
+      const scheduleHint = resolveAdaptiveReviewSchedule({
+        mode,
+        confidence: queueItem.confidence,
+        recurrenceCount: queueItem.recurrenceCount,
+        mistakeType: queueItem.mistakeType,
+        taskType: mode === "second" ? "rewrite" : "retry",
+        completedAction: action,
+        trapCardsCompleted: metadata.trapCardsCompleted,
+        rewriteComparisonRisk: secondRewriteComparison?.remainingRisk,
+      });
+      setAdaptiveScheduleNote(scheduleHint);
       setStepIndex(steps.length - 1);
     } finally {
       setPending(false);
@@ -377,6 +390,7 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
             <p className="text-sm font-medium text-[color:var(--foreground-strong)]">다음 복습은 기본값으로 자동 예약합니다.</p>
             <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] px-4 py-3 text-sm text-[color:var(--foreground-strong)]">
               예정 시점: {note?.nextReviewDate ?? "review queue 기본 일정"}
+              <p className="mt-2 text-xs text-[color:var(--muted)]">이유: {adaptiveScheduleNote?.explanation ?? "복습 신호를 기준으로 자동 조정됩니다."}</p>
             </div>
             <Button
               type="button"
@@ -440,7 +454,8 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
               <ul className="mt-2 space-y-1 text-sm text-[color:var(--foreground-strong)]">
                 <li>오늘 한 일: {completedWorkLabel}</li>
                 <li>가장 큰 신호: {biggestSignal}</li>
-                <li>다음 복습: {note?.nextReviewDate ?? "자동 예약 완료"}</li>
+                <li>다음 복습: {adaptiveScheduleNote?.nextReviewDate ?? note?.nextReviewDate ?? "자동 예약 완료"}</li>
+                <li>이유: {adaptiveScheduleNote?.explanation ?? "복습 신호를 기준으로 자동 조정됩니다."}</li>
               </ul>
               <p className="mt-2 text-sm text-[color:var(--foreground-strong)]">밀린 걸 전부 따라잡으려 하지 마세요.</p>
               <p className="mt-1 text-sm text-[color:var(--foreground-strong)]">오늘은 가장 작은 것 1개만 복구합니다.</p>
