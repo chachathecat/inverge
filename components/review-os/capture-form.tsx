@@ -187,6 +187,11 @@ function getMissingConfirmationFields(form: DraftState, mode: AppraisalMode) {
     { key: "gap", label: "가장 큰 간극 1개", ok: hasValue(form.biggestGap) || hasValue(form.missingIssue) || hasValue(form.userReasonText) },
   ].filter((field) => !field.ok);
 }
+function inferSourceTypeFromAction(action: "camera" | "gallery" | "text" | "pdf"): SourceType {
+  if (action === "pdf") return "pdf";
+  if (action === "camera" || action === "gallery") return "image";
+  return "manual";
+}
 
 export function WrongAnswerCaptureForm({
   userId,
@@ -461,7 +466,7 @@ export function WrongAnswerCaptureForm({
       if (!response.ok || !result.ok) {
         const fallback: DraftState = {
           ...form,
-          sourceType: "image",
+          sourceType: inferSourceTypeFromAction("gallery"),
           sourceLabel: files.map((file, index) => `${index + 1}페이지 · ${file.name}`).join(" / "),
         };
         setForm(persist(fallback));
@@ -476,7 +481,7 @@ export function WrongAnswerCaptureForm({
       const extractedText = result.text ?? result.extractedText ?? "";
       const base: DraftState = {
         ...form,
-        sourceType: "image",
+        sourceType: inferSourceTypeFromAction("gallery"),
         sourceLabel: files.map((file, index) => `${index + 1}페이지 · ${file.name}`).join(" / "),
         rawQuestionText: extractedText || form.rawQuestionText,
       };
@@ -486,7 +491,7 @@ export function WrongAnswerCaptureForm({
     } catch {
       const fallback: DraftState = {
         ...form,
-        sourceType: "image",
+        sourceType: inferSourceTypeFromAction("gallery"),
         sourceLabel: files.map((file, index) => `${index + 1}페이지 · ${file.name}`).join(" / "),
       };
       setForm(persist(fallback));
@@ -505,7 +510,7 @@ export function WrongAnswerCaptureForm({
     setForm((prev) =>
       persist({
         ...prev,
-        sourceType: "pdf",
+        sourceType: inferSourceTypeFromAction("pdf"),
         sourceLabel: file.name,
       }),
     );
@@ -559,12 +564,8 @@ export function WrongAnswerCaptureForm({
         }
       }
       if (needsOcrConfirmation) {
-        const missingLabels = missingConfirmationFields.map((field) => field.label).join(", ");
-        setError(
-          missingLabels
-            ? `OCR 확인 필요: ${missingLabels} 항목을 확인해 주세요.`
-            : "OCR 확인 필요: 추출 초안을 다시 확인한 뒤 저장해 주세요.",
-        );
+        const firstMissing = missingConfirmationFields[0]?.label;
+        setError(firstMissing ? `저장 전에 ${firstMissing} 한 가지만 확인해 주세요.` : "OCR 확인 필요: 추출 초안을 다시 확인한 뒤 저장해 주세요.");
         return;
       }
       if (mode === "second" && !rewriteContext) {
@@ -987,7 +988,7 @@ function IntakePanel({
           <h4 className="mt-2 text-base font-semibold text-[color:var(--ink-primary)]">오늘 한 것 올리기</h4>
           <p className="mt-1 text-sm leading-6 text-[color:var(--ink-muted)]">사진, PDF, 텍스트를 올리면 오답노트와 다음 행동으로 정리합니다.</p>
           <div className="mt-4">
-            <Button type="button" className="w-full sm:w-auto bg-[color:var(--accent-deep)] transition-colors hover:bg-[color:var(--primary-hover)] focus-visible:ring-2 focus-visible:ring-[color:var(--accent-deep)] focus-visible:ring-offset-2" onClick={() => cameraInputRef.current?.click()}>
+            <Button type="button" className="w-full sm:w-auto bg-[color:var(--accent-deep)] transition-colors hover:bg-[color:var(--primary-hover)] focus-visible:ring-2 focus-visible:ring-[color:var(--accent-deep)] focus-visible:ring-offset-2" onClick={() => { update("sourceType", inferSourceTypeFromAction("camera")); cameraInputRef.current?.click(); }}>
               사진 찍기
             </Button>
             <p className="mt-2 text-xs text-[color:var(--ink-muted)]">사진은 OCR 초안으로만 사용됩니다. 저장 전 직접 확인해 주세요.</p>
@@ -1003,7 +1004,7 @@ function IntakePanel({
           <details className="mt-3 rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)]">
             <summary className="cursor-pointer list-none px-3 py-2 text-xs text-[color:var(--ink-muted)]">다른 입력 방식 보기</summary>
             <div className="grid gap-2 border-t border-[color:var(--border-hairline)] px-3 py-2 sm:flex sm:flex-wrap">
-              <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => galleryInputRef.current?.click()}>
+              <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => { update("sourceType", inferSourceTypeFromAction("gallery")); galleryInputRef.current?.click(); }}>
                 앨범에서 선택
               </Button>
               <Button
@@ -1011,13 +1012,14 @@ function IntakePanel({
                 variant="outline"
                 className="w-full sm:w-auto"
                 onClick={() => {
+                  update("sourceType", inferSourceTypeFromAction("text"));
                   textAreaRef.current?.focus();
                   textAreaRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
                 }}
               >
                 텍스트로 입력
               </Button>
-              <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => pdfInputRef.current?.click()}>
+              <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => { update("sourceType", inferSourceTypeFromAction("pdf")); pdfInputRef.current?.click(); }}>
                 PDF 선택
               </Button>
             </div>
@@ -1057,20 +1059,12 @@ function IntakePanel({
           </p>
         </div>
       </div>
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+      <div className="mt-4 grid gap-3 sm:grid-cols-1">
         <label className="space-y-2">
           <span className="text-sm text-[color:var(--foreground-strong)]">시험 모드</span>
           <select value={mode} className="form-control" disabled>
             <option value="first">감정평가사 1차</option>
             <option value="second">감정평가사 2차</option>
-          </select>
-        </label>
-        <label className="space-y-2">
-          <span className="text-sm text-[color:var(--foreground-strong)]">캡처 유형</span>
-          <select value={form.sourceType} onChange={(event) => update("sourceType", event.target.value as SourceType)} className="form-control">
-            <option value="manual">텍스트 붙여넣기</option>
-            <option value="image">사진/OCR 초안</option>
-            <option value="pdf">PDF 파일명 기록</option>
           </select>
         </label>
       </div>
@@ -1096,6 +1090,9 @@ function IntakePanel({
           onChange={updateSubject}
           className="form-control w-full"
         />
+        <Button type="button" variant="ghost" className="w-full sm:w-auto" onClick={() => update("subjectLabel", "")}>
+          나중에 확인
+        </Button>
       </div>
       <label className="mt-4 block space-y-2">
         <span className="text-sm text-[color:var(--foreground-strong)]">
@@ -1105,6 +1102,7 @@ function IntakePanel({
           ref={textAreaRef}
           value={form.rawQuestionText}
           onChange={(event) => update("rawQuestionText", event.target.value)}
+          onFocus={() => update("sourceType", inferSourceTypeFromAction("text"))}
           placeholder={
             mode === "second"
               ? "권장: 사례, 기준 답안, 내 답안을 텍스트로 붙여넣으세요. 예: 기준 답안: ... / 내 답안: ..."
@@ -1137,7 +1135,9 @@ function IntakePanel({
           최소 입력: 정답, 내 답, 틀린 이유를 한 줄로 남겨도 됩니다. 예: 정답: 3 / 내 답: 2 / 이유: 선지 오독
         </p>
       ) : null}
-      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+      <details className="mt-4 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
+        <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">선택 정보</summary>
+        <div className="grid gap-3 border-t border-[color:var(--border-subtle)] px-4 py-3 sm:grid-cols-3">
         <label className="space-y-2">
           <span className="text-xs text-[color:var(--muted)]">소요 시간</span>
           <input value={form.timeSpentSeconds} onChange={(event) => update("timeSpentSeconds", event.target.value)} className="form-control" placeholder="예: 45분" />
@@ -1152,7 +1152,8 @@ function IntakePanel({
           <span className="text-xs text-[color:var(--muted)]">메모</span>
           <input value={form.sourceLabel} onChange={(event) => update("sourceLabel", event.target.value)} className="form-control" placeholder="선택 입력" />
         </label>
-      </div>
+        </div>
+      </details>
       <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
         <Button type="button" onClick={onGenerate} disabled={extracting} className="w-full sm:w-auto">
           {extracting ? "입력 내용 확인 중" : "기록 시작하기"}
