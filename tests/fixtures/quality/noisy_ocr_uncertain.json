@@ -7,6 +7,14 @@
     "nextAction": "원문 숫자 1개를 먼저 확인하고 단위를 고정해 5줄로 다시 씁니다.",
     "rewriteInstruction": "불명확 숫자 확인 후 계산식 재작성",
     "missingIssue": "숫자 확인",
-    "caution": "OCR 인식이 불확실한 숫자가 있어 원문과 대조 후 진행해 주세요."
+    "caution": "OCR 인식이 불확실한 숫자가 있어 원문과 대조 후 진행해 주세요.",
+    "primaryActions": [
+      "원문 숫자 1개를 먼저 확인하고 단위를 고정해 5줄로 다시 씁니다."
+    ],
+    "advancedSection": "details",
+    "advancedFields": [
+      "metadata_note"
+    ],
+    "secondModeFlow": "내 답안 작성 -> 기준답안 비교"
   }
 }

@@ -5,6 +5,14 @@
     "biggestGap": "취소와 무효의 효과를 구분하지 못했습니다.",
     "nextAction": "취소·무효 비교표를 3줄로 작성하고 같은 유형 1문제를 즉시 다시 풉니다.",
     "conceptTag": "법개념 구분",
-    "retrievalPrompt": "취소와 무효의 공통점/차이점 2개씩 회상"
+    "retrievalPrompt": "취소와 무효의 공통점/차이점 2개씩 회상",
+    "primaryActions": [
+      "취소·무효 비교표를 3줄로 작성하고 같은 유형 1문제를 즉시 다시 풉니다."
+    ],
+    "advancedSection": "details",
+    "advancedFields": [
+      "metadata_note"
+    ],
+    "firstModeFlow": "recall -> retry -> explanation"
   }
 }

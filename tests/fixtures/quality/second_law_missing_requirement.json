@@ -5,6 +5,14 @@
     "biggestGap": "핵심 요건 1개가 빠져 결론 근거가 약합니다.",
     "nextAction": "누락 요건을 첫 단락에 보충하고 요건-사실-결론 3문장으로 다시 씁니다.",
     "rewriteInstruction": "누락 요건을 먼저 쓰고 사실관계를 바로 연결",
-    "missingIssue": "요건 누락"
+    "missingIssue": "요건 누락",
+    "primaryActions": [
+      "누락 요건을 첫 단락에 보충하고 요건-사실-결론 3문장으로 다시 씁니다."
+    ],
+    "advancedSection": "details",
+    "advancedFields": [
+      "metadata_note"
+    ],
+    "secondModeFlow": "내 답안 작성 -> 기준답안 비교"
   }
 }
