@@ -5,6 +5,14 @@
     "biggestGap": "정의 제시 후 사안 적용 문장이 약합니다.",
     "nextAction": "정의 1문장 다음에 사안 적용 1문장을 붙여 7줄로 다시 씁니다.",
     "rewriteInstruction": "정의→적용→결론 순서로 한 문단 재작성",
-    "missingIssue": "사안 적용"
+    "missingIssue": "사안 적용",
+    "primaryActions": [
+      "정의 1문장 다음에 사안 적용 1문장을 붙여 7줄로 다시 씁니다."
+    ],
+    "advancedSection": "details",
+    "advancedFields": [
+      "metadata_note"
+    ],
+    "secondModeFlow": "내 답안 작성 -> 기준답안 비교"
   }
 }

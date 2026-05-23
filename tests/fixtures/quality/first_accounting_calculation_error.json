@@ -5,6 +5,14 @@
     "biggestGap": "분개 후 잔액 검산 단계가 누락되었습니다.",
     "nextAction": "검산 체크 2단계를 먼저 적고 같은 형식 계산문제 1개를 다시 풉니다.",
     "conceptTag": "검산 루틴",
-    "retrievalPrompt": "차변·대변 합계 검산 순서 회상"
+    "retrievalPrompt": "차변·대변 합계 검산 순서 회상",
+    "primaryActions": [
+      "검산 체크 2단계를 먼저 적고 같은 형식 계산문제 1개를 다시 풉니다."
+    ],
+    "advancedSection": "details",
+    "advancedFields": [
+      "metadata_note"
+    ],
+    "firstModeFlow": "recall -> retry -> explanation"
   }
 }

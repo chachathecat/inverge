@@ -54,6 +54,24 @@ test("all outputs have one biggest gap and one next action", () => {
     assert.equal(evalResult.hasOneBiggestGap, true, `${name}: missing single biggest gap`);
     assert.equal(evalResult.hasOneNextAction, true, `${name}: missing single next action`);
     assert.equal(evalResult.nextActionIsShort, true, `${name}: next action should be short`);
+    assert.equal(evalResult.hasSinglePrimaryAction, true, `${name}: must have a single primary action`);
+    assert.equal(evalResult.advancedFieldsAreProgressive, true, `${name}: advanced fields should be in progressive disclosure`);
+  }
+});
+
+test("first mode enforces retrieval before explanation", () => {
+  for (const name of firstFixtures) {
+    const fixture = readFixture(name);
+    const evalResult = evaluateReviewOutputQuality(fixture);
+    assert.equal(evalResult.retrievalBeforeExplanation, true, `${name}: retrieval gate missing before explanation`);
+  }
+});
+
+test("second mode enforces own answer before reference", () => {
+  for (const name of secondFixtures) {
+    const fixture = readFixture(name);
+    const evalResult = evaluateReviewOutputQuality(fixture);
+    assert.equal(evalResult.secondAnswerBeforeReference, true, `${name}: own answer should come before reference`);
   }
 });
 

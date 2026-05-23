@@ -5,6 +5,14 @@
     "biggestGap": "단위(천원/원) 표기가 중간 계산에서 흔들렸습니다.",
     "nextAction": "첫 줄에 단위를 고정하고 결론까지 동일 단위로 6줄 재작성합니다.",
     "rewriteInstruction": "단위 고정 문장을 첫 문장에 넣고 계산식을 다시 전개",
-    "missingIssue": "단위 일관성"
+    "missingIssue": "단위 일관성",
+    "primaryActions": [
+      "첫 줄에 단위를 고정하고 결론까지 동일 단위로 6줄 재작성합니다."
+    ],
+    "advancedSection": "details",
+    "advancedFields": [
+      "metadata_note"
+    ],
+    "secondModeFlow": "내 답안 작성 -> 기준답안 비교"
   }
 }
