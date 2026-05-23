@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -276,6 +276,21 @@ export function WrongAnswerCaptureForm({
   const [extractError, setExtractError] = useState("");
   const [extractionState, setExtractionState] = useState<ExtractionState>("idle");
   const [uploadedPages, setUploadedPages] = useState<UploadedPage[]>([]);
+  useEffect(() => {
+    if (!secondWriteEnabled) return;
+    if (stage === "second-reference" && form.userAnswer.trim().length < 8) {
+      setStage("second-answer");
+      return;
+    }
+    if (stage === "second-gap" && form.correctAnswer.trim().length < 8) {
+      setStage("second-reference");
+      return;
+    }
+    if (stage === "second-rewrite" && form.biggestGap.trim().length < 4) {
+      setStage("second-gap");
+    }
+  }, [secondWriteEnabled, stage, form.userAnswer, form.correctAnswer, form.biggestGap]);
+
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const galleryInputRef = useRef<HTMLInputElement | null>(null);
   const pdfInputRef = useRef<HTMLInputElement | null>(null);
@@ -985,6 +1000,7 @@ function IntakePanel({
         </div>
         <div className="rounded-[var(--radius-md)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-elevated)] p-5 sm:p-6">
           <p className="text-caption text-[color:var(--ink-muted)]">오늘의 입력</p>
+          <p className="mt-1 text-xs text-[color:var(--ink-muted)]">캡처 유형</p>
           <h4 className="mt-2 text-base font-semibold text-[color:var(--ink-primary)]">오늘 한 것 올리기</h4>
           <p className="mt-1 text-sm leading-6 text-[color:var(--ink-muted)]">사진, PDF, 텍스트를 올리면 오답노트와 다음 행동으로 정리합니다.</p>
           <div className="mt-4">
@@ -1605,7 +1621,7 @@ function SecondAnswerPanel({
   return (
     <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 sm:p-5">
       <p className="text-caption text-[color:var(--muted)]">Step 3. 내 답안 작성</p>
-      <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">비교는 작성 이후에 합니다</h3>
+      <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">비교는 작성 이후에 합니다.</h3>
       <details className="mt-2 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3"><summary className="cursor-pointer text-xs font-medium text-[color:var(--muted)]">왜 이 순서인가요?</summary><p className="mt-2 text-xs leading-6 text-[color:var(--muted)]">완벽히 쓰지 말고, 지금 떠오르는 문장만 적으세요.</p></details>
       <label className="mt-4 block space-y-2">
         <span className="text-sm text-[color:var(--foreground-strong)]">내 답안</span>
