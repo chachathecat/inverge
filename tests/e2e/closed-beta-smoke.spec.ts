@@ -7,6 +7,7 @@ const authPassword = process.env.TEST_USER_PASSWORD || process.env.E2E_USER_PASS
 const hasAuthState = Boolean(authStatePath && fs.existsSync(authStatePath));
 const hasAuthCredentials = Boolean(authEmail && authPassword);
 const hasAuthSignal = Boolean(hasAuthState || authEmail);
+const canUseDevSmokeAuth = process.env.DEV_SMOKE_AUTH === "true";
 
 const forbiddenCopy = ['AI 채점', '합격 판정', '점수 보장'];
 
@@ -25,13 +26,21 @@ async function loginIfNeeded(page: Page) {
   await expect(page).toHaveURL(/\/(app|onboarding)/);
 }
 
-function skipIfMissingAuth(testInfo: TestInfo) {
+async function ensureAuth(page: Page, testInfo: TestInfo, mode: "first" | "second" = "first") {
+  if (!hasAuthSignal && canUseDevSmokeAuth) {
+    const response = await page.request.post(`/api/dev/smoke-auth?mode=${mode}`);
+    if (!response.ok()) {
+      testInfo.skip(`Skipping auth-required smoke: dev smoke auth returned ${response.status()}.`);
+    }
+    return;
+  }
+
   if (!hasAuthSignal) {
-    testInfo.skip('Skipping auth-required smoke: TEST_AUTH_STATE_PATH or TEST_USER_EMAIL is required.');
+    testInfo.skip("Skipping auth-required smoke: TEST_AUTH_STATE_PATH or TEST_USER_EMAIL is required.");
   }
 
   if (!hasAuthState && authEmail && !authPassword) {
-    testInfo.skip('Skipping auth-required smoke: TEST_USER_PASSWORD is required when TEST_USER_EMAIL is provided.');
+    testInfo.skip("Skipping auth-required smoke: TEST_USER_PASSWORD is required when TEST_USER_EMAIL is provided.");
   }
 }
 
@@ -100,7 +109,7 @@ test.describe('closed beta answer-review interaction smoke', () => {
 
 test.describe('closed beta auth-required route smoke', () => {
   test.beforeEach(async ({ page }, testInfo) => {
-    skipIfMissingAuth(testInfo);
+    await ensureAuth(page, testInfo, "first");
     await loginIfNeeded(page);
   });
 
@@ -130,7 +139,7 @@ test.describe('learner core loop browser smoke', () => {
   test.describe.configure({ timeout: 120_000 });
 
   test.beforeEach(async ({ page }, testInfo) => {
-    skipIfMissingAuth(testInfo);
+    await ensureAuth(page, testInfo, "first");
     await loginIfNeeded(page);
   });
 
@@ -167,7 +176,8 @@ test.describe('learner core loop browser smoke', () => {
     await expect(page.getByText('다음 복습')).toBeVisible();
   });
 
-  test('second-mode rewrite loop + learner guardrails', async ({ page }) => {
+  test('second-mode rewrite loop + learner guardrails', async ({ page }, testInfo) => {
+    await ensureAuth(page, testInfo, "second");
     await page.goto('/app?mode=second');
     await expect(page.getByRole('link', { name: '오늘 한 것 올리기' }).first()).toBeVisible();
     await expect(page.getByRole('link', { name: /\/instructor/i })).toHaveCount(0);
