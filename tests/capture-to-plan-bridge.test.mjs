@@ -136,6 +136,16 @@ test("capture save path persists item/tag/queue/signal bridge", async () => {
   assert.ok(source.includes("createLearningSignalEvent"));
 });
 
+test("second write submit payload preserves original answer and stores rewrite paragraph separately", async () => {
+  const source = await readFile(new URL("../components/review-os/capture-form.tsx", import.meta.url), "utf8");
+  assert.ok(source.includes('rawAnswerText: mode === "second" ? form.userAnswer : undefined'));
+  assert.ok(source.includes('userAnswer: form.userAnswer || "-"'));
+  assert.ok(source.includes('rewriteParagraph: mode === "second" ? form.rewriteParagraph || undefined : undefined'));
+  assert.ok(source.includes('rewrite_completed: mode === "second" ? form.rewriteParagraph.trim().length >= 8 : Boolean(rewriteContext)'));
+  assert.ok(source.includes('productionBeforeComparison: mode === "second" ? form.productionBeforeComparison : undefined'));
+  assert.ok(source.includes('referenceAnswerAddedAfterProduction: mode === "second" ? form.referenceAnswerAddedAfterProduction : undefined'));
+});
+
 test("today plan stays one primary + max 3 and language is operational", () => {
   const tasks = buildTodayPlanTasks({ mode: "second", queue: [{ queueId:"q1", itemId:"i", examName:"감정평가사 2차", subjectLabel:"이론", problemTitle:"사례", topicTag:"논점", mistakeType:"누락", reviewReason: buildCaptureReviewReason({examName:"감정평가사 2차", confidence:"중간", missingIssue:"누락"}), dueAt:"2026-05-01T00:00:00.000Z", priorityScore:70, confidence:"중간", recurrenceCount:1, status:"pending", itemCreatedAt:"2026-05-05T00:00:00.000Z", createdFromCapture:true }] });
   assert.ok(tasks.length <= 3);

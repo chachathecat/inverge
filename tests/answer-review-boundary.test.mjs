@@ -128,6 +128,14 @@ test("second write flow stage order enforces own answer before reference compari
   assert.ok(learnerCapture.includes('if (form.correctAnswer.trim().length >= 8) setStage("second-gap")'));
 });
 
+test("second rewrite step stores rewritten paragraph separately from original answer", async () => {
+  const learnerCapture = await readFile(new URL("../components/review-os/capture-form.tsx", import.meta.url), "utf8");
+  assert.ok(learnerCapture.includes('value={form.rewriteParagraph}'));
+  assert.ok(learnerCapture.includes('update("rewriteParagraph", event.target.value);'));
+  assert.ok(learnerCapture.includes("처음 쓴 답안 보기"));
+  assert.ok(learnerCapture.includes("한 문단만 다시 씁니다."));
+});
+
 test("second write answer templates include all official second subjects", async () => {
   const learnerCapture = await readFile(new URL("../components/review-os/capture-form.tsx", import.meta.url), "utf8");
   ["감정평가실무", "문제 요구:", "계산 근거:", "감정평가이론", "정의:", "논거:", "사례 적용:", "감정평가 및 보상법규", "요건:", "조문/법리:", "사안 포섭:"].forEach((token) => {
