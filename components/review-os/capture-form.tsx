@@ -68,6 +68,7 @@ type DraftState = {
   rewriteInstruction: string;
   referenceStructure: string;
   myAnswerSummary: string;
+  rewriteParagraph: string;
   caseSummary: string;
   issueRecall: string;
   outlineDraft: string;
@@ -241,6 +242,7 @@ export function WrongAnswerCaptureForm({
         rewriteInstruction: rewriteContext?.rewriteInstruction ?? secondDefaults(resolvedInitialSubject).rewrite,
         referenceStructure: secondDefaults(resolvedInitialSubject).structure,
         myAnswerSummary: rewriteContext?.myAnswerSummary ?? "",
+        rewriteParagraph: "",
         caseSummary: secondDefaults(resolvedInitialSubject).caseSummary,
         issueRecall: "",
         outlineDraft: "",
@@ -614,6 +616,7 @@ export function WrongAnswerCaptureForm({
           problemIdentifier: form.problemIdentifier || undefined,
           rawQuestionText: form.rawQuestionText || undefined,
           rawAnswerText: mode === "second" ? form.userAnswer : undefined,
+          rewriteParagraph: mode === "second" ? form.rewriteParagraph || undefined : undefined,
           correctAnswer: form.correctAnswer || "-",
           userAnswer: form.userAnswer || "-",
           userReasonText: form.userReasonText || undefined,
@@ -646,7 +649,8 @@ export function WrongAnswerCaptureForm({
               rewrite_source_item_id: rewriteContext?.sourceItemId ?? null,
               rewrite_source_gap: rewriteContext?.biggestGap ?? null,
               rewrite_instruction: form.rewriteInstruction || rewriteContext?.rewriteInstruction || null,
-              rewrite_completed: mode === "second" && Boolean(rewriteContext),
+              rewrite_paragraph: mode === "second" ? form.rewriteParagraph || null : null,
+              rewrite_completed: mode === "second" ? form.rewriteParagraph.trim().length >= 8 : Boolean(rewriteContext),
               issue_recall: form.issueRecall || null,
               outline_draft: form.outlineDraft || null,
               production_before_comparison: mode === "second" ? form.productionBeforeComparison : null,
@@ -663,7 +667,7 @@ export function WrongAnswerCaptureForm({
           biggestGap: mode === "second" ? form.biggestGap || form.missingIssue || undefined : undefined,
           rewriteSourceItemId: rewriteContext?.sourceItemId ?? undefined,
           rewriteSourceGap: rewriteContext?.biggestGap ?? undefined,
-          rewriteCompleted: mode === "second" && Boolean(rewriteContext),
+          rewriteCompleted: mode === "second" ? form.rewriteParagraph.trim().length >= 8 : Boolean(rewriteContext),
           captureIntent: "save",
           createdFromCapture: true,
         }),
@@ -863,7 +867,7 @@ export function WrongAnswerCaptureForm({
       {!(secondWriteEnabled && stage !== "second-rewrite") ? (
         <div className="flex flex-col gap-3 sm:flex-row">
           {rewriteContext && mode === "second" ? (
-            <Button type="submit" disabled={submitting || !form.userAnswer.trim()} className="w-full sm:w-auto">
+            <Button type="submit" disabled={submitting || !form.rewriteParagraph.trim()} className="w-full sm:w-auto">
               {submitting ? "저장 중" : "문단 다시쓰기 저장"}
             </Button>
           ) : stage === "preview" ? (
@@ -1719,13 +1723,16 @@ function SecondGapRewritePanel({
       <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">한 문단만 다시 씁니다.</h3>
       <details className="mt-2 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3"><summary className="cursor-pointer text-xs font-medium text-[color:var(--muted)]">왜 이 순서인가요?</summary><p className="mt-2 text-xs leading-6 text-[color:var(--muted)]">{template.rewriteGuidance}</p></details>
       <div className="mt-4 space-y-4">
+        <details className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3">
+          <summary className="cursor-pointer text-xs font-medium text-[color:var(--muted)]">처음 쓴 답안 보기</summary>
+          <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[color:var(--foreground-strong)]">{form.userAnswer || "아직 작성된 답안이 없습니다."}</p>
+        </details>
         <label className="block space-y-2">
           <span className="text-sm text-[color:var(--foreground-strong)]">다시 쓴 문단</span>
           <Textarea
-            value={form.userAnswer}
+            value={form.rewriteParagraph}
             onChange={(event) => {
-              update("userAnswer", event.target.value);
-              update("myAnswerSummary", firstLine(event.target.value, form.myAnswerSummary || "문단 다시쓰기"));
+              update("rewriteParagraph", event.target.value);
             }}
             data-testid="second-write-final-textarea"
             className="min-h-56 border-[var(--border)] bg-[color:var(--surface)] text-[color:var(--foreground-strong)] leading-7"
@@ -1816,10 +1823,9 @@ function RewriteParagraphPanel({
       <label className="mt-4 block space-y-2">
         <span className="text-sm text-[color:var(--foreground-strong)]">다시 쓴 문단</span>
         <Textarea
-          value={form.userAnswer}
+          value={form.rewriteParagraph}
           onChange={(event) => {
-            update("userAnswer", event.target.value);
-            update("myAnswerSummary", firstLine(event.target.value, form.myAnswerSummary || "문단 다시쓰기"));
+            update("rewriteParagraph", event.target.value);
           }}
           className="min-h-64 border-[var(--border)] bg-[color:var(--surface)] text-[color:var(--foreground-strong)] leading-7"
           placeholder="누락 논점 1개를 반영해 문단을 다시 작성하세요."

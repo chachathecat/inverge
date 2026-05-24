@@ -198,6 +198,7 @@ export type WrongAnswerItemInput = {
   problemIdentifier?: string;
   rawQuestionText?: string;
   rawAnswerText?: string;
+  rewriteParagraph?: string;
   correctAnswer: string;
   userAnswer: string;
   userReasonText?: string;
