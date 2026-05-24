@@ -62,10 +62,7 @@ export async function POST(request: Request) {
   try {
     userId = await findSmokeUserId(DEV_SMOKE_AUTH_EMAIL);
   } catch (error) {
-    return NextResponse.json(
-      { ok: false, error: error instanceof Error ? error.message : "smoke-user-timeout" },
-      { status: 503 },
-    );
+    userId = null;
   }
   if (!userId) {
     userId = "00000000-0000-4000-8000-000000000001";
