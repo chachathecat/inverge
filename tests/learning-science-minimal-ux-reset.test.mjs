@@ -41,7 +41,8 @@ test("core loop keeps no more than one primary CTA in each execution step", asyn
 
 test("second-write flow hides global footer until step 6 and keeps defer actions under details", async () => {
   const source = await readFile(new URL("../components/review-os/capture-form.tsx", import.meta.url), "utf8");
-  assert.ok(source.includes('!(secondWriteEnabled && stage !== "second-rewrite")'));
+  assert.ok(source.includes("const hideGlobalFooterActions = mode === \"second\" && secondModeHiddenFooterStages.has(stage);"));
+  assert.ok(source.includes("{!hideGlobalFooterActions ? ("));
   assert.ok(source.includes("다른 선택"));
   assert.ok(source.includes("다시 쓰기"));
   assert.ok(source.includes("나중에 하기"));

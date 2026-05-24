@@ -278,6 +278,14 @@ export function WrongAnswerCaptureForm({
   const [extractError, setExtractError] = useState("");
   const [extractionState, setExtractionState] = useState<ExtractionState>("idle");
   const [uploadedPages, setUploadedPages] = useState<UploadedPage[]>([]);
+  const secondModeHiddenFooterStages = new Set([
+    "second-issue-recall",
+    "second-outline",
+    "second-answer",
+    "second-reference",
+    "second-gap",
+  ]);
+  const hideGlobalFooterActions = mode === "second" && secondModeHiddenFooterStages.has(stage);
   useEffect(() => {
     if (!secondWriteEnabled) return;
     if (stage === "second-reference" && form.userAnswer.trim().length < 8) {
@@ -864,7 +872,7 @@ export function WrongAnswerCaptureForm({
         </p>
       ) : null}
 
-      {!(secondWriteEnabled && stage !== "second-rewrite") ? (
+      {!hideGlobalFooterActions ? (
         <div className="flex flex-col gap-3 sm:flex-row">
           {rewriteContext && mode === "second" ? (
             <Button type="submit" disabled={submitting || !form.rewriteParagraph.trim()} className="w-full sm:w-auto">
