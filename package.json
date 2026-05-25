@@ -45,7 +45,6 @@
     "eslint-config-next": "16.2.4",
     "supabase": "^2.95.0",
     "tailwindcss": "^4",
-    "typescript": "^5",
-    "@playwright/test": "1.60.0"
+    "typescript": "^5"
   }
 }
