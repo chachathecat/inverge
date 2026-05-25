@@ -36,6 +36,7 @@ test("learner capture flow keeps instructor OCR route separated and editable OCR
   const learnerCapture = await readFile(new URL("../components/review-os/capture-form.tsx", import.meta.url), "utf8");
   assert.equal(learnerCapture.includes("/api/instructor/second-grading/ocr"), false);
   assert.ok(learnerCapture.includes("OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요."));
+  assert.ok(learnerCapture.includes("노트 원문은 비공개로 보관되며, 파생 학습 신호는 개인 추천 개선에만 사용됩니다."));
   assert.ok(learnerCapture.includes("capture=\"environment\""));
 });
 
@@ -152,6 +153,8 @@ import {
   createSecondAnswerWorkspaceSignal,
   createRewriteTaskFromSecondAnswer,
   deleteLearningNoteAndDependents,
+  exportUserOwnedLearningNotes,
+  PRIVACY_DATA_CLASSES,
 } from "../lib/review-os/learning-os-data-spine.mjs";
 
 test("creating a second-mode answer can create a rewrite task", () => {
@@ -221,4 +224,43 @@ test("deleting a note removes private raw references", () => {
   assert.equal(rawRefStore.has("raw-1"), false);
   assert.equal(rawRefStore.has("raw-2"), false);
   assert.equal(rawRefStore.has("raw-3"), true);
+});
+
+test("privacy data classes are explicitly defined", () => {
+  assert.deepEqual(Object.keys(PRIVACY_DATA_CLASSES), [
+    "rawUserAnswer",
+    "uploadedImagePdf",
+    "ocrText",
+    "userEditedText",
+    "derivedLearningSignal",
+    "anonymizedAggregateInsight",
+    "productQualityMetric",
+  ]);
+});
+
+test("raw OCR-like text is not copied into derived explainable signals", () => {
+  const rawLike = "원문 답안 문장입니다. ".repeat(20);
+  const signal = createFirstRoundFastDrillSignal({
+    id: "agg-raw-filter-1",
+    examMode: "first",
+    subject: "민법",
+    sourceType: "text",
+    explainableBy: [rawLike, "mistake_type:조건 누락"],
+  });
+  assert.deepEqual(signal.explainableBy, ["mistake_type:조건 누락"]);
+});
+
+test("export includes user-owned notes", () => {
+  const note = createLearningNote({
+    id: "note-export-1",
+    examMode: "second",
+    subject: "감정평가실무",
+    sourceType: "manual",
+    topicCandidate: "원가법",
+    nextAction: "rewrite",
+  });
+  const exported = exportUserOwnedLearningNotes([note]);
+  assert.equal(exported.length, 1);
+  assert.equal(exported[0].id, "note-export-1");
+  assert.equal(exported[0].topicCandidate, "원가법");
 });

@@ -1015,6 +1015,7 @@ function IntakePanel({
           <p className="mt-1 text-xs text-[color:var(--ink-muted)]">캡처 유형</p>
           <h4 className="mt-2 text-base font-semibold text-[color:var(--ink-primary)]">오늘 한 것 올리기</h4>
           <p className="mt-1 text-sm leading-6 text-[color:var(--ink-muted)]">사진, PDF, 텍스트를 올리면 오답노트와 다음 행동으로 정리합니다.</p>
+          <p className="mt-1 text-xs leading-6 text-[color:var(--ink-muted)]">노트 원문은 비공개로 보관되며, 파생 학습 신호는 개인 추천 개선에만 사용됩니다.</p>
           <div className="mt-4">
             <Button type="button" className="w-full sm:w-auto bg-[color:var(--accent-deep)] transition-colors hover:bg-[color:var(--primary-hover)] focus-visible:ring-2 focus-visible:ring-[color:var(--accent-deep)] focus-visible:ring-offset-2" onClick={() => { update("sourceType", inferSourceTypeFromAction("camera")); cameraInputRef.current?.click(); }}>
               사진 찍기
