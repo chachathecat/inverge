@@ -247,6 +247,11 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
         if (!payload.ok && payload.errorCode === "ANONYMOUS_TRIAL_LIMIT") {
           setTrialLimitReached(true);
         }
+        if (!payload.ok && ["FREE_TRIAL_LIMIT_REACHED", "CORE_LIMIT_REACHED", "BILLING_REQUIRED"].includes(payload.errorCode ?? "")) {
+          setStructureError(`${payload.error} (업그레이드 또는 지원팀 문의)`);
+          setCurrentStep(2);
+          return;
+        }
         throw new Error(payload.ok ? "검토 결과를 불러오지 못했습니다." : payload.error);
       }
 

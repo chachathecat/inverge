@@ -680,8 +680,16 @@ export function WrongAnswerCaptureForm({
           createdFromCapture: true,
         }),
       });
-      const result = (await response.json()) as { ok?: boolean; item?: { id: string }; error?: string; message?: string };
+      const result = (await response.json()) as { ok?: boolean; item?: { id: string }; error?: string; message?: string; errorCode?: string };
       if (!response.ok || !result.ok || !result.item) {
+        if (result.error === "usage-limit") {
+          setError("무료 체험 또는 코어 한도에 도달했습니다. 업그레이드 또는 지원팀 문의를 진행해 주세요.");
+          return;
+        }
+        if (result.errorCode === "BILLING_REQUIRED") {
+          setError("유료 플랜이 아직 준비되지 않았습니다. 지원팀에 문의해 주세요.");
+          return;
+        }
         setError("정리하지 못했습니다. 내용을 조금 더 확인한 뒤 다시 시도해 주세요.");
         return;
       }

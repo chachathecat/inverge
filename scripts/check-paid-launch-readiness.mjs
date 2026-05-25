@@ -16,11 +16,15 @@ const REQUIRED_GATES = [
 
 export function evaluateReadiness(config) {
   const missing = [];
+  const providerConfigured = process.env.INVERGE_CHECKOUT_PROVIDER === "stripe" && Boolean(process.env.STRIPE_SECRET_KEY);
 
   for (const gate of REQUIRED_GATES) {
     if (config?.[gate] !== true) {
       missing.push(gate);
     }
+  }
+  if (!providerConfigured) {
+    missing.push("billingProviderNotConfigured");
   }
 
   return {

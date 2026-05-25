@@ -11,6 +11,7 @@ import {
   resolveAppraisalMode,
 } from "@/lib/review-os/appraisal";
 import { getEntitlementLimit } from "@/lib/review-os/entitlements";
+import { assertCanCreateWrongAnswer } from "@/lib/review-os/entitlement-enforcement";
 import { buildCaptureNoteSignals, structureCaptureNote } from "@/lib/review-os/capture-note-engine";
 import { buildCaptureLearningSignal, buildCaptureReviewReason, computeCaptureQueuePriority } from "@/lib/review-os/capture-learning-signals";
 import { sanitizeCaptureTelemetryMetadata } from "@/lib/review-os/telemetry-sanitizer";
@@ -725,6 +726,7 @@ export class ReviewOsService {
 
     const usage = await this.getUsageSummary(userId, email);
     if (usage.remaining <= 0) throw new ReviewOsUsageLimitError();
+    await assertCanCreateWrongAnswer(userId);
 
     const dedupeKey = reviewOsRepository.createDedupeKey(userId, normalizedInput);
     const existing = await reviewOsRepository.findExistingByDedupe(userId, dedupeKey);
@@ -1034,8 +1036,20 @@ export class ReviewOsService {
 
   listWrongAnswerItems(userId: string, email: string | null, limit = 20) {
     return this.ensureAccess(userId, email)
-      .then(() => reviewOsRepository.listWrongAnswerItems(userId, Math.max(limit + 20, limit)))
-      .then((items) => items.filter((item) => !isSmokeSeedItem(item)).slice(0, limit));
+      .then((access) =>
+        reviewOsRepository.listWrongAnswerItems(userId, Math.max(limit + 20, limit)).then((items) => {
+          const historyDays = getEntitlementLimit(access.entitlementTier).historyDays;
+          const cutoffMs = historyDays ? Date.now() - historyDays * 86_400_000 : null;
+          return items
+            .filter((item) => !isSmokeSeedItem(item))
+            .filter((item) => {
+              if (!cutoffMs) return true;
+              const ts = Date.parse(item.createdAt);
+              return Number.isFinite(ts) && ts >= cutoffMs;
+            })
+            .slice(0, limit);
+        }),
+      );
   }
 
   getWrongAnswerDetail(userId: string, email: string | null, itemId: string): Promise<WrongAnswerDetail | null> {
