@@ -102,17 +102,17 @@ test.describe('closed beta answer-review interaction smoke', () => {
 
     await page.goto('/answer-review');
 
-    await page.getByPlaceholder('문제 요구사항, 사례 조건, 논점 키워드를 입력해 주세요.').fill('문제/사례 입력 smoke');
-    await page.getByPlaceholder('초안 텍스트가 있으면 붙여 넣고, 없으면 직접 입력해 주세요.').fill('내 답안 입력 smoke');
-    const referenceDetails = page.locator('details#answer-review-reference');
+    await page.getByTestId('answer-review-problem-textarea').fill('문제/사례 입력 smoke');
+    await page.getByTestId('answer-review-my-answer-textarea').fill('내 답안 입력 smoke');
+    const referenceDetails = page.getByTestId('answer-review-reference-details');
     await expect(referenceDetails).toBeVisible();
     await referenceDetails.locator('summary').click();
-    await expect(referenceDetails).toHaveAttribute('open', '');
-    await referenceDetails
-      .getByPlaceholder('기준답안 또는 기준목차를 텍스트로 붙여 넣어 주세요.')
-      .fill('기준답안 입력 smoke');
+    await expect.poll(async () => referenceDetails.evaluate((node) => (node as HTMLDetailsElement).open)).toBe(true);
+    await page.getByTestId('answer-review-reference-textarea').fill('기준답안 입력 smoke');
 
-    await page.getByRole('button', { name: '답안 검토 시작' }).click();
+    const startButton = page.getByTestId('answer-review-start-button');
+    await expect(startButton).toBeEnabled();
+    await startButton.click();
     await expect(page.getByRole('button', { name: '피드백 초안 만들기' })).toBeVisible();
     await expect(page.getByText('가장 큰 간극')).toBeVisible();
 

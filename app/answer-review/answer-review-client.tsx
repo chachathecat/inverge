@@ -522,6 +522,7 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                     <Textarea
                       ref={answerTextRef}
                       className="min-h-[210px] border-[#c9d1e7] bg-[color:var(--surface)]"
+                      data-testid="answer-review-my-answer-textarea"
                       placeholder="초안 텍스트가 있으면 붙여 넣고, 없으면 직접 입력해 주세요."
                       value={myAnswerText}
                       onChange={(event) => setMyAnswerText(event.target.value)}
@@ -605,16 +606,22 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                   <p className="text-caption font-medium text-[color:var(--muted)]">문제/사례 입력</p>
                   <Textarea
                     className="min-h-[120px] bg-[color:var(--surface)]"
+                    data-testid="answer-review-problem-textarea"
                     placeholder="문제 요구사항, 사례 조건, 논점 키워드를 입력해 주세요."
                     value={problemText}
                     onChange={(event) => setProblemText(event.target.value)}
                   />
                 </div>
-                <details className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface)] p-3" id="answer-review-reference">
+                <details
+                  className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface)] p-3"
+                  id="answer-review-reference"
+                  data-testid="answer-review-reference-details"
+                >
                   <summary className="cursor-pointer text-caption font-medium text-[color:var(--muted)]">기준답안/메모 입력 (선택)</summary>
                   <div className="mt-2 space-y-2">
                     <Textarea
                       className="min-h-[120px] bg-[color:var(--surface)]"
+                      data-testid="answer-review-reference-textarea"
                       placeholder="기준답안 또는 기준목차를 텍스트로 붙여 넣어 주세요."
                       value={referenceAnswerText}
                       onChange={(event) => setReferenceAnswerText(event.target.value)}
@@ -656,6 +663,7 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                       whileTap={shouldReduceMotion ? undefined : { scale: 0.985 }}
                       type="button"
                       className={cn(buttonVariants({ variant: "default" }), "mt-3 w-full")}
+                      data-testid="answer-review-start-button"
                       onClick={handlePrimaryAction}
                       disabled={isPrimaryActionDisabled}
                     >
