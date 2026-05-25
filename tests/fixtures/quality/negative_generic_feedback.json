@@ -1,0 +1,11 @@
+{
+  "mode": "first",
+  "output": {
+    "biggestGap": "전반적으로 더 공부가 필요합니다.",
+    "nextAction": "복습하세요.",
+    "conceptTag": "기초",
+    "retrievalPrompt": "핵심 회상",
+    "primaryActions": ["복습하세요."],
+    "firstModeFlow": "recall -> retry -> explanation"
+  }
+}

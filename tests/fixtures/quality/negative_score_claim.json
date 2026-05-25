@@ -1,0 +1,12 @@
+{
+  "mode": "second",
+  "output": {
+    "biggestGap": "점수 손실 구간이 큽니다.",
+    "nextAction": "요건 1개를 보완해 다시 작성합니다.",
+    "rewriteInstruction": "요건 보완",
+    "missingIssue": "요건",
+    "primaryActions": ["요건 1개를 보완해 다시 작성합니다."],
+    "secondModeFlow": "내 답안 작성 -> 기준답안 비교",
+    "note": "이대로면 합격/불합격 경계이며 pass/fail 위험이 높습니다."
+  }
+}

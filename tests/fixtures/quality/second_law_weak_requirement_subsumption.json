@@ -1,0 +1,13 @@
+{
+  "mode": "second",
+  "subject": "감정평가 및 보상법규",
+  "output": {
+    "biggestGap": "요건 제시 후 사실 포섭이 빠져 결론의 법적 연결이 약합니다.",
+    "nextAction": "누락된 요건 1개와 사실 포섭 1문장을 추가해 요건-포섭-결론 3문장으로 다시 씁니다.",
+    "rewriteInstruction": "요건 다음에 사실 포섭을 바로 연결",
+    "missingIssue": "요건/포섭 약함",
+    "primaryActions": ["누락된 요건 1개와 사실 포섭 1문장을 추가해 요건-포섭-결론 3문장으로 다시 씁니다."],
+    "advancedSection": "details",
+    "secondModeFlow": "내 답안 작성 -> 기준답안 비교"
+  }
+}
