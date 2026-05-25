@@ -142,3 +142,83 @@ test("second write answer templates include all official second subjects", async
     assert.ok(learnerCapture.includes(token), `Missing template token: ${token}`);
   });
 });
+
+import {
+  buildTodayPlanItemsFromReviewTasks,
+  computeReadinessRiskFromSignals,
+  createFirstRoundFastDrillSignal,
+  createLearningNote,
+  createReviewTaskFromSignal,
+  createSecondAnswerWorkspaceSignal,
+  createRewriteTaskFromSecondAnswer,
+  deleteLearningNoteAndDependents,
+} from "../lib/review-os/learning-os-data-spine.mjs";
+
+test("creating a second-mode answer can create a rewrite task", () => {
+  const signal = createSecondAnswerWorkspaceSignal({
+    id: "s-second-1",
+    examMode: "second",
+    subject: "감정평가실무",
+    sourceType: "text",
+    confidence: "낮음",
+    dueAt: "2026-05-03T00:00:00.000Z",
+    explainableBy: ["weak_structure:논거 누락"],
+  });
+  const rewrite = createRewriteTaskFromSecondAnswer(signal);
+  assert.ok(rewrite);
+  assert.equal(rewrite?.taskType, "rewrite");
+});
+
+test("creating a first-mode low-confidence answer can create a review task", () => {
+  const signal = createFirstRoundFastDrillSignal({
+    id: "s-first-1",
+    examMode: "first",
+    subject: "민법",
+    sourceType: "manual",
+    confidence: "낮음",
+    dueAt: "2026-05-03T00:00:00.000Z",
+    explainableBy: ["confidence:low"],
+  });
+  const reviewTask = createReviewTaskFromSignal(signal);
+  assert.equal(reviewTask.examMode, "first");
+  assert.equal(reviewTask.confidence, "낮음");
+});
+
+test("today plan can pull due review tasks", () => {
+  const now = new Date("2026-05-03T12:00:00.000Z");
+  const dueTask = { ...createReviewTaskFromSignal(createFirstRoundFastDrillSignal({ id: "due", examMode: "first", subject: "민법", sourceType: "text", dueAt: "2026-05-02T00:00:00.000Z" })) };
+  const futureTask = { ...createReviewTaskFromSignal(createFirstRoundFastDrillSignal({ id: "future", examMode: "first", subject: "민법", sourceType: "text", dueAt: "2026-05-04T00:00:00.000Z" })) };
+  const plan = buildTodayPlanItemsFromReviewTasks([futureTask, dueTask], now);
+  assert.equal(plan.length, 1);
+  assert.equal(plan[0].reviewTaskId, dueTask.id);
+});
+
+test("readiness risk does not use score/pass/fail prediction", () => {
+  const fnSource = computeReadinessRiskFromSignals.toString();
+  assert.equal(/score|pass|fail|합격|불합격/.test(fnSource), false);
+  const risks = computeReadinessRiskFromSignals([
+    createSecondAnswerWorkspaceSignal({ id: "risk-1", examMode: "second", subject: "감정평가이론", sourceType: "text", confidence: "낮음", mistakeType: "논점 누락", weakStructurePoint: "근거 부족", explainableBy: ["signal:risk"] }),
+  ]);
+  assert.equal(risks[0].level, "high");
+  assert.ok(risks[0].explainableSignals.length > 0);
+});
+
+test("deleting a note removes private raw references", () => {
+  const note = createLearningNote({
+    id: "note-1",
+    examMode: "second",
+    subject: "감정평가 및 보상법규",
+    sourceType: "image",
+    rawRefIds: ["raw-1", "raw-2"],
+  });
+  const rawRefStore = new Map([
+    ["raw-1", { body: "private answer" }],
+    ["raw-2", { body: "private answer 2" }],
+    ["raw-3", { body: "keep" }],
+  ]);
+  const result = deleteLearningNoteAndDependents(note, rawRefStore);
+  assert.deepEqual(result.deletedRawRefs, ["raw-1", "raw-2"]);
+  assert.equal(rawRefStore.has("raw-1"), false);
+  assert.equal(rawRefStore.has("raw-2"), false);
+  assert.equal(rawRefStore.has("raw-3"), true);
+});
