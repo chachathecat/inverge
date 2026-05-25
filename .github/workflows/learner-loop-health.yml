@@ -1,0 +1,28 @@
+name: Learner Loop Health
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  learner-loop-health:
+    name: Learner Loop Health Gate v1
+    runs-on: ubuntu-latest
+    env:
+      CI: "true"
+      DEV_SMOKE_AUTH: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browser
+        run: npm exec playwright install -- --with-deps chromium
+
+      - name: Verify learner loop health
+        run: npm run verify:learner-loop:ci
