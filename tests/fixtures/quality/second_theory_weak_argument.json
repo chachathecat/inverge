@@ -1,0 +1,13 @@
+{
+  "mode": "second",
+  "subject": "감정평가이론",
+  "output": {
+    "biggestGap": "주장 뒤 논거 연결 문장이 없어 결론 설득력이 약합니다.",
+    "nextAction": "핵심 주장 1문장 뒤 논거 2문장을 붙여 4줄로 다시 작성합니다.",
+    "rewriteInstruction": "주장-논거-결론 구조 재작성",
+    "missingIssue": "논거 부족",
+    "primaryActions": ["핵심 주장 1문장 뒤 논거 2문장을 붙여 4줄로 다시 작성합니다."],
+    "advancedSection": "details",
+    "secondModeFlow": "내 답안 작성 -> 기준답안 비교"
+  }
+}

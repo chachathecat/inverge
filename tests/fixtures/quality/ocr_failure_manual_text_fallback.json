@@ -1,0 +1,15 @@
+{
+  "mode": "second",
+  "subject": "감정평가실무",
+  "ocrUncertain": true,
+  "output": {
+    "biggestGap": "OCR 실패로 핵심 숫자 1개가 비어 계산 근거가 끊겼습니다.",
+    "nextAction": "원문에서 누락 숫자 1개를 직접 입력하고 계산식 2줄을 다시 작성합니다.",
+    "rewriteInstruction": "수기 입력 후 계산식 복구",
+    "missingIssue": "OCR 누락",
+    "caution": "OCR 실패 구간이 있어 원문 확인 후 수기 직접 입력(manual text fallback)으로 진행해 주세요.",
+    "primaryActions": ["원문에서 누락 숫자 1개를 직접 입력하고 계산식 2줄을 다시 작성합니다."],
+    "advancedSection": "details",
+    "secondModeFlow": "내 답안 작성 -> 기준답안 비교"
+  }
+}

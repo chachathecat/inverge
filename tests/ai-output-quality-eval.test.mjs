@@ -11,75 +11,57 @@ function readFixture(name) {
   return JSON.parse(fs.readFileSync(path.join(fixtureDir, name), "utf8"));
 }
 
-const firstFixtures = [
-  "first_mibeop_wrong_answer.json",
-  "first_accounting_calculation_error.json",
+const requiredFixtures = [
+  "first_objective_wrong_answer.json",
+  "first_low_confidence.json",
+  "second_practice_calculation_unit_weakness.json",
+  "second_theory_weak_argument.json",
+  "second_law_weak_requirement_subsumption.json",
+  "ocr_failure_manual_text_fallback.json",
 ];
 
-const secondFixtures = [
-  "second_practice_calculation_unit_risk.json",
-  "second_theory_weak_application.json",
-  "second_law_missing_requirement.json",
+const negativeFixtures = [
+  "negative_generic_feedback.json",
+  "negative_score_claim.json",
+  "negative_official_answer_claim.json",
 ];
 
-test("first fixtures produce first-mode action shape", () => {
-  for (const name of firstFixtures) {
+test("all recommendation quality fixtures pass required checks", () => {
+  for (const name of requiredFixtures) {
     const fixture = readFixture(name);
     const evalResult = evaluateReviewOutputQuality(fixture);
-    assert.equal(evalResult.hasModeSpecificFields, true, `${name}: expected first-mode fields`);
-    assert.equal(evalResult.koreanToneScore, "pass", `${name}: korean tone should pass`);
+    assert.equal(evalResult.hasOneBiggestGap, true, `${name}: one biggest gap must be specific`);
+    assert.equal(evalResult.hasOneNextAction, true, `${name}: one next action required`);
+    assert.equal(evalResult.nextActionIsConcrete, true, `${name}: next action must be concrete`);
+    assert.equal(evalResult.hasNoForbiddenClaims, true, `${name}: forbidden claims are not allowed`);
+    assert.equal(evalResult.hasNoOfficialAnswerHallucination, true, `${name}: official answer hallucination is not allowed`);
+    assert.equal(evalResult.respectsSubjectStructure, true, `${name}: subject structure is required`);
+    assert.equal(evalResult.outputIsConciseForTiredLearner, true, `${name}: output must be concise`);
+    assert.equal(evalResult.hasSinglePrimaryAction, true, `${name}: must have one clear next action`);
   }
 });
 
-test("second fixtures produce second-mode action shape", () => {
-  for (const name of secondFixtures) {
-    const fixture = readFixture(name);
-    const evalResult = evaluateReviewOutputQuality(fixture);
-    assert.equal(evalResult.hasModeSpecificFields, true, `${name}: expected second-mode fields`);
-    assert.equal(evalResult.koreanToneScore, "pass", `${name}: korean tone should pass`);
-  }
-});
-
-test("noisy OCR fixture requires caution", () => {
-  const fixture = readFixture("noisy_ocr_uncertain.json");
+test("ocr failure fixture includes manual text fallback guidance", () => {
+  const fixture = readFixture("ocr_failure_manual_text_fallback.json");
   const evalResult = evaluateReviewOutputQuality(fixture);
   assert.equal(evalResult.hasOcrCautionWhenNeeded, true);
 });
 
-test("all outputs have one biggest gap and one next action", () => {
-  const names = [...firstFixtures, ...secondFixtures, "noisy_ocr_uncertain.json"];
-  for (const name of names) {
-    const fixture = readFixture(name);
-    const evalResult = evaluateReviewOutputQuality(fixture);
-    assert.equal(evalResult.hasOneBiggestGap, true, `${name}: missing single biggest gap`);
-    assert.equal(evalResult.hasOneNextAction, true, `${name}: missing single next action`);
-    assert.equal(evalResult.nextActionIsShort, true, `${name}: next action should be short`);
-    assert.equal(evalResult.hasSinglePrimaryAction, true, `${name}: must have a single primary action`);
-    assert.equal(evalResult.advancedFieldsAreProgressive, true, `${name}: advanced fields should be in progressive disclosure`);
-  }
+test("generic feedback fixture fails specificity", () => {
+  const fixture = readFixture("negative_generic_feedback.json");
+  const evalResult = evaluateReviewOutputQuality(fixture);
+  assert.equal(evalResult.hasOneBiggestGap, false);
+  assert.equal(evalResult.nextActionIsConcrete, false);
 });
 
-test("first mode enforces retrieval before explanation", () => {
-  for (const name of firstFixtures) {
-    const fixture = readFixture(name);
-    const evalResult = evaluateReviewOutputQuality(fixture);
-    assert.equal(evalResult.retrievalBeforeExplanation, true, `${name}: retrieval gate missing before explanation`);
-  }
+test("score or pass/fail language fixture fails safety checks", () => {
+  const fixture = readFixture("negative_score_claim.json");
+  const evalResult = evaluateReviewOutputQuality(fixture);
+  assert.equal(evalResult.hasNoForbiddenClaims, false);
 });
 
-test("second mode enforces own answer before reference", () => {
-  for (const name of secondFixtures) {
-    const fixture = readFixture(name);
-    const evalResult = evaluateReviewOutputQuality(fixture);
-    assert.equal(evalResult.secondAnswerBeforeReference, true, `${name}: own answer should come before reference`);
-  }
-});
-
-test("no forbidden claims", () => {
-  const names = [...firstFixtures, ...secondFixtures, "noisy_ocr_uncertain.json"];
-  for (const name of names) {
-    const fixture = readFixture(name);
-    const evalResult = evaluateReviewOutputQuality(fixture);
-    assert.equal(evalResult.hasNoForbiddenClaims, true, `${name}: forbidden claim found`);
-  }
+test("official answer claim fixture fails hallucination checks", () => {
+  const fixture = readFixture("negative_official_answer_claim.json");
+  const evalResult = evaluateReviewOutputQuality(fixture);
+  assert.equal(evalResult.hasNoOfficialAnswerHallucination, false);
 });

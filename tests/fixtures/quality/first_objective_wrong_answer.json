@@ -1,0 +1,13 @@
+{
+  "mode": "first",
+  "topic": "민법",
+  "output": {
+    "biggestGap": "취소와 무효의 법률효과를 한 문장으로 혼동했습니다.",
+    "nextAction": "취소·무효 효과를 2줄로 회상한 뒤 객관식 1문제를 즉시 다시 풉니다.",
+    "conceptTag": "효과 구분",
+    "retrievalPrompt": "취소/무효 효과를 각각 1개씩 말하기",
+    "primaryActions": ["취소·무효 효과를 2줄로 회상한 뒤 객관식 1문제를 즉시 다시 풉니다."],
+    "advancedSection": "details",
+    "firstModeFlow": "recall -> retry -> explanation"
+  }
+}

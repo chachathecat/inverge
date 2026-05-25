@@ -1,0 +1,12 @@
+{
+  "mode": "second",
+  "output": {
+    "biggestGap": "논거가 짧습니다.",
+    "nextAction": "논거 2문장을 추가해 3줄로 다시 씁니다.",
+    "rewriteInstruction": "논거 보강",
+    "missingIssue": "논거",
+    "primaryActions": ["논거 2문장을 추가해 3줄로 다시 씁니다."],
+    "secondModeFlow": "내 답안 작성 -> 기준답안 비교",
+    "reference": "공식 정답에 따르면 이 결론만 인정됩니다."
+  }
+}

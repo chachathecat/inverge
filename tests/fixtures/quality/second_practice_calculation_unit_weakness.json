@@ -1,0 +1,13 @@
+{
+  "mode": "second",
+  "subject": "감정평가실무",
+  "output": {
+    "biggestGap": "계산 중 단위(원/천원)가 바뀌어 결론 금액이 흔들렸습니다.",
+    "nextAction": "첫 줄에 단위를 1회 고정하고 계산식 3줄과 결론 1줄을 같은 단위로 다시 작성합니다.",
+    "rewriteInstruction": "단위 고정 후 계산식 재전개",
+    "missingIssue": "단위 일관성",
+    "primaryActions": ["첫 줄에 단위를 1회 고정하고 계산식 3줄과 결론 1줄을 같은 단위로 다시 작성합니다."],
+    "advancedSection": "details",
+    "secondModeFlow": "내 답안 작성 -> 기준답안 비교"
+  }
+}
