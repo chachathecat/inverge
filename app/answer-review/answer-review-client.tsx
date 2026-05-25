@@ -114,6 +114,7 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
   const answerTextRef = useRef<HTMLTextAreaElement | null>(null);
   const [generalUploadIntent, setGeneralUploadIntent] = useState<"answer" | "problem">("answer");
   const [problemSnapNoticeVisible, setProblemSnapNoticeVisible] = useState(false);
+  const [isClientReady, setIsClientReady] = useState(false);
 
   const shouldReduceMotion = useReducedMotion();
   const subjectOptions = examMode === "second" ? APPRAISAL_SECOND_SUBJECTS : APPRAISAL_FIRST_SUBJECTS;
@@ -142,6 +143,10 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
       sessionStorage.removeItem("inverge.problemSnap.answerReviewHandoff");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    setIsClientReady(true);
   }, []);
 
   const handleProblemFileChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -395,7 +400,11 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
 
   return (
     <RefinedShell className="space-y-5 py-6 sm:space-y-8 sm:py-10">
-      <section className="space-y-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] p-4 sm:p-6">
+      <section
+        className="space-y-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] p-4 sm:p-6"
+        data-testid="answer-review-client-ready"
+        data-ready={isClientReady ? "true" : "false"}
+      >
         <div className="flex flex-wrap items-center gap-2">
           <RefinedBadge>답안 검토실</RefinedBadge>
           <RefinedBadge tone="amber">검토 결과는 학습 보조 초안입니다</RefinedBadge>
@@ -522,9 +531,11 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                     <Textarea
                       ref={answerTextRef}
                       className="min-h-[210px] border-[#c9d1e7] bg-[color:var(--surface)]"
+                      data-testid="answer-review-my-answer-textarea"
                       placeholder="초안 텍스트가 있으면 붙여 넣고, 없으면 직접 입력해 주세요."
                       value={myAnswerText}
                       onChange={(event) => setMyAnswerText(event.target.value)}
+                      onInput={(event) => setMyAnswerText(event.currentTarget.value)}
                     />
                     <div className="mt-2 flex items-center justify-between text-caption text-[color:var(--muted)]">
                       <span>현재 {myAnswerLength}자</span>
@@ -605,16 +616,22 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                   <p className="text-caption font-medium text-[color:var(--muted)]">문제/사례 입력</p>
                   <Textarea
                     className="min-h-[120px] bg-[color:var(--surface)]"
+                    data-testid="answer-review-problem-textarea"
                     placeholder="문제 요구사항, 사례 조건, 논점 키워드를 입력해 주세요."
                     value={problemText}
                     onChange={(event) => setProblemText(event.target.value)}
                   />
                 </div>
-                <details className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface)] p-3" id="answer-review-reference">
+                <details
+                  className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface)] p-3"
+                  id="answer-review-reference"
+                  data-testid="answer-review-reference-details"
+                >
                   <summary className="cursor-pointer text-caption font-medium text-[color:var(--muted)]">기준답안/메모 입력 (선택)</summary>
                   <div className="mt-2 space-y-2">
                     <Textarea
                       className="min-h-[120px] bg-[color:var(--surface)]"
+                      data-testid="answer-review-reference-textarea"
                       placeholder="기준답안 또는 기준목차를 텍스트로 붙여 넣어 주세요."
                       value={referenceAnswerText}
                       onChange={(event) => setReferenceAnswerText(event.target.value)}
@@ -656,6 +673,10 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                       whileTap={shouldReduceMotion ? undefined : { scale: 0.985 }}
                       type="button"
                       className={cn(buttonVariants({ variant: "default" }), "mt-3 w-full")}
+                      data-testid="answer-review-start-button"
+                      data-current-step={String(currentStep)}
+                      data-has-my-answer={hasMyAnswer ? "true" : "false"}
+                      data-is-structuring={isStructuring ? "true" : "false"}
                       onClick={handlePrimaryAction}
                       disabled={isPrimaryActionDisabled}
                     >

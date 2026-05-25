@@ -23,7 +23,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Install Playwright browser
-        run: npm exec playwright install -- --with-deps chromium
+        run: npx --no-install playwright install --with-deps chromium
       - name: Run local deterministic E2E smoke
         run: npm run test:e2e:smoke
 
@@ -93,7 +93,7 @@ jobs:
         run: npm ci
       - name: Install Playwright browser
         if: steps.readiness.outputs.should_run == 'true'
-        run: npm exec playwright install -- --with-deps chromium
+        run: npx --no-install playwright install --with-deps chromium
       - name: Run staging/preview E2E smoke
         if: steps.readiness.outputs.should_run == 'true'
         run: npm run test:e2e:smoke

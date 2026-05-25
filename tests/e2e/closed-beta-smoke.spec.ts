@@ -9,6 +9,14 @@ const hasAuthCredentials = Boolean(authEmail && authPassword);
 const hasAuthSignal = Boolean(hasAuthState || authEmail);
 const canUseDevSmokeAuth = process.env.DEV_SMOKE_AUTH === "true";
 
+const hasSupabasePersistenceEnv = Boolean(
+  process.env.NEXT_PUBLIC_SUPABASE_URL &&
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
+  process.env.SUPABASE_SERVICE_ROLE_KEY,
+);
+const isExternalBaseUrl = Boolean(process.env.E2E_BASE_URL);
+const canRunPersistenceBackedLoop = hasSupabasePersistenceEnv || isExternalBaseUrl;
+
 const forbiddenCopy = ['AI 채점', '합격 판정', '점수 보장'];
 
 if (hasAuthState && authStatePath) {
@@ -93,12 +101,25 @@ test.describe('closed beta answer-review interaction smoke', () => {
     });
 
     await page.goto('/answer-review');
+    await expect(page.getByTestId('answer-review-client-ready')).toHaveAttribute('data-ready', 'true');
 
-    await page.getByPlaceholder('문제 요구사항, 사례 조건, 논점 키워드를 입력해 주세요.').fill('문제/사례 입력 smoke');
-    await page.getByPlaceholder('초안 텍스트가 있으면 붙여 넣고, 없으면 직접 입력해 주세요.').fill('내 답안 입력 smoke');
-    await page.getByPlaceholder('기준답안 또는 기준목차를 텍스트로 붙여 넣어 주세요.').fill('기준답안 입력 smoke');
+    await page.getByTestId('answer-review-problem-textarea').fill('문제/사례 입력 smoke');
+    const answerTextarea = page.getByTestId('answer-review-my-answer-textarea');
+    await answerTextarea.click();
+    await page.keyboard.insertText('내 답안 입력 smoke');
+    await expect(answerTextarea).toHaveValue('내 답안 입력 smoke');
+    const referenceDetails = page.getByTestId('answer-review-reference-details');
+    await expect(referenceDetails).toBeVisible();
+    await referenceDetails.locator('summary').click();
+    await expect.poll(async () => referenceDetails.evaluate((node) => (node as HTMLDetailsElement).open)).toBe(true);
+    await page.getByTestId('answer-review-reference-textarea').fill('기준답안 입력 smoke');
 
-    await page.getByRole('button', { name: '답안 검토 시작' }).click();
+    const startButton = page.getByTestId('answer-review-start-button');
+    await expect(startButton).toHaveAttribute('data-current-step', '1');
+    await expect(startButton).toHaveAttribute('data-has-my-answer', 'true');
+    await expect(startButton).toHaveAttribute('data-is-structuring', 'false');
+    await expect(startButton).toBeEnabled();
+    await startButton.click();
     await expect(page.getByRole('button', { name: '피드백 초안 만들기' })).toBeVisible();
     await expect(page.getByText('가장 큰 간극')).toBeVisible();
 
@@ -143,7 +164,10 @@ test.describe('learner core loop browser smoke', () => {
     await loginIfNeeded(page);
   });
 
-  test('first-mode capture → save → session completion loop', async ({ page }) => {
+  test('first-mode capture → save → session completion loop', async ({ page }, testInfo) => {
+    if (!canRunPersistenceBackedLoop) {
+      testInfo.skip('Skipping persistence-backed learner loop smoke: Supabase persistence env or E2E_BASE_URL is required.');
+    }
     await page.goto('/app?mode=first');
     await expect(page.getByRole('link', { name: '오늘 한 것 올리기' }).first()).toBeVisible();
     await expect(page.getByRole('link', { name: /\/instructor/i })).toHaveCount(0);
@@ -177,6 +201,10 @@ test.describe('learner core loop browser smoke', () => {
   });
 
   test('second-mode rewrite loop + learner guardrails', async ({ page }, testInfo) => {
+    if (!canRunPersistenceBackedLoop) {
+      testInfo.skip('Skipping persistence-backed learner loop smoke: Supabase persistence env or E2E_BASE_URL is required.');
+    }
+
     await ensureAuth(page, testInfo, "second");
     await page.goto('/app?mode=second');
     await expect(page.getByRole('link', { name: '오늘 한 것 올리기' }).first()).toBeVisible();
