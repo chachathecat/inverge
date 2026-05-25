@@ -523,6 +523,7 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                       ref={answerTextRef}
                       className="min-h-[210px] border-[#c9d1e7] bg-[color:var(--surface)]"
                       placeholder="초안 텍스트가 있으면 붙여 넣고, 없으면 직접 입력해 주세요."
+                      data-testid="answer-review-my-answer-input"
                       value={myAnswerText}
                       onChange={(event) => setMyAnswerText(event.target.value)}
                     />
@@ -606,6 +607,7 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                   <Textarea
                     className="min-h-[120px] bg-[color:var(--surface)]"
                     placeholder="문제 요구사항, 사례 조건, 논점 키워드를 입력해 주세요."
+                    data-testid="answer-review-problem-input"
                     value={problemText}
                     onChange={(event) => setProblemText(event.target.value)}
                   />
@@ -616,6 +618,7 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                     <Textarea
                       className="min-h-[120px] bg-[color:var(--surface)]"
                       placeholder="기준답안 또는 기준목차를 텍스트로 붙여 넣어 주세요."
+                      data-testid="answer-review-reference-input"
                       value={referenceAnswerText}
                       onChange={(event) => setReferenceAnswerText(event.target.value)}
                     />
@@ -658,6 +661,7 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                       className={cn(buttonVariants({ variant: "default" }), "mt-3 w-full")}
                       onClick={handlePrimaryAction}
                       disabled={isPrimaryActionDisabled}
+                      data-testid="answer-review-start"
                     >
                       답안 검토 시작
                     </motion.button>
@@ -877,7 +881,7 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                       <p className="text-caption font-medium text-[color:var(--muted)]">다음 행동</p>
                       <div className="mt-2 grid gap-2">
                         <motion.button whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }} type="button" onClick={() => setCurrentStep(1)} className={cn(buttonVariants({ variant: "default" }), "h-9")}>입력 수정하기</motion.button>
-                        <motion.button whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }} type="button" onClick={() => setCurrentStep(3)} className={cn(buttonVariants({ variant: "outline" }), "h-9")}>피드백 초안 만들기</motion.button>
+                        <motion.button whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }} type="button" onClick={() => setCurrentStep(3)} data-testid="answer-review-build-feedback" className={cn(buttonVariants({ variant: "outline" }), "h-9")}>피드백 초안 만들기</motion.button>
                       </div>
                     </article>
                   </motion.aside>
