@@ -20,7 +20,8 @@
     "verify:learner-loop:ci": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs --test tests/capture-to-plan-bridge.test.mjs tests/answer-review-boundary.test.mjs tests/capture-telemetry-sanitizer.test.mjs tests/learning-science-minimal-ux-reset.test.mjs && npm run eval:quality && npm run check:taxonomy && npm run build",
     "seed:exams": "node --experimental-strip-types scripts/seedExamData.ts",
     "test:e2e:staging": "playwright test tests/e2e/closed-beta-smoke.spec.ts",
-    "eval:recommendation-quality": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs --test tests/ai-output-quality-eval.test.mjs"
+    "eval:recommendation-quality": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs --test tests/ai-output-quality-eval.test.mjs",
+    "check:paid-launch-readiness": "node scripts/check-paid-launch-readiness.mjs"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

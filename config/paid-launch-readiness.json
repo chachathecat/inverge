@@ -1,0 +1,12 @@
+{
+  "billingConfigured": false,
+  "entitlementEnforced": false,
+  "privacyExportImplemented": false,
+  "privacyDeleteImplemented": false,
+  "supportContactVisible": false,
+  "refundPolicyVisible": false,
+  "aiQualityEvalPassing": false,
+  "learnerLoopHealthPassing": false,
+  "stagingSmokeConfigured": false,
+  "costGuardrailsConfigured": false
+}
