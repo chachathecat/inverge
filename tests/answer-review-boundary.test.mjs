@@ -146,6 +146,7 @@ test("second write answer templates include all official second subjects", async
 
 import {
   buildTodayPlanItemsFromReviewTasks,
+  buildReviewQueueSections,
   computeReadinessRiskFromSignals,
   createFirstRoundFastDrillSignal,
   createLearningNote,
@@ -194,6 +195,37 @@ test("today plan can pull due review tasks", () => {
   const plan = buildTodayPlanItemsFromReviewTasks([futureTask, dueTask], now);
   assert.equal(plan.length, 1);
   assert.equal(plan[0].reviewTaskId, dueTask.id);
+});
+
+test("today plan limits to 3 primary items and skips completed", () => {
+  const now = new Date("2026-05-06T12:00:00.000Z");
+  const tasks = ["a", "b", "c", "d", "e"].map((id, idx) => ({
+    ...createReviewTaskFromSignal(createFirstRoundFastDrillSignal({ id, examMode: "first", subject: "민법", sourceType: "text", dueAt: `2026-05-0${idx + 1}T00:00:00.000Z` })),
+  }));
+  tasks[0].completedAt = "2026-05-03T08:00:00.000Z";
+  const plan = buildTodayPlanItemsFromReviewTasks(tasks, now);
+  assert.equal(plan.length, 3);
+  assert.equal(plan.some((item) => item.reviewTaskId === tasks[0].id), false);
+});
+
+test("review queue sections keep rewrite/retry routing hints", () => {
+  const now = new Date("2026-05-03T12:00:00.000Z");
+  const secondSignal = createSecondAnswerWorkspaceSignal({ id: "second-rw", examMode: "second", subject: "감정평가실무", sourceType: "text", dueAt: "2026-05-02T00:00:00.000Z" });
+  const firstSignal = createFirstRoundFastDrillSignal({ id: "first-rv", examMode: "first", subject: "민법", sourceType: "text", dueAt: "2026-05-04T00:00:00.000Z" });
+  const tasks = [createRewriteTaskFromSecondAnswer(secondSignal), createReviewTaskFromSignal(firstSignal)].filter(Boolean);
+  const sections = buildReviewQueueSections(tasks, now);
+  assert.equal(sections.dueTasks[0].examMode, "second");
+  assert.equal(sections.upcomingTasks[0].examMode, "first");
+});
+
+test("home page includes today plan/review queue and no pass-fail score copy", async () => {
+  const source = await readFile(new URL("../app/app/page.tsx", import.meta.url), "utf8");
+  assert.ok(source.includes("Today Plan"));
+  assert.ok(source.includes("Review Queue"));
+  assert.ok(source.includes("완료 처리하기"));
+  assert.ok(source.includes("추천은 저장된 학습 신호 기반입니다."));
+  assert.equal(source.includes("점수 예측"), false);
+  assert.equal(source.includes("합격/불합격 예측"), false);
 });
 
 test("readiness risk does not use score/pass/fail prediction", () => {
