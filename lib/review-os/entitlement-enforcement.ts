@@ -30,13 +30,21 @@ export class EntitlementBlockedError extends Error {
   }
 }
 
+function dayStartIso(now = new Date()) {
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString();
+}
+
 function monthStartIso(now = new Date()) {
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
 }
 
-async function countMonthlyEvent(userId: string, eventName: string) {
-  const events = await reviewOsRepository.listRecentUsageEventsByNames(userId, [eventName], monthStartIso(), 500);
+async function countEventSince(userId: string, eventName: string, sinceIso: string) {
+  const events = await reviewOsRepository.listRecentUsageEventsByNames(userId, [eventName], sinceIso, 500);
   return events.length;
+}
+
+function isAdminOverrideEnabled() {
+  return process.env.AI_COST_GUARDRAIL_ADMIN_OVERRIDE === "true";
 }
 
 export async function resolveUserEntitlement(userId: string) {
@@ -53,10 +61,13 @@ export async function resolveUserEntitlement(userId: string) {
 export async function getUsageState(userId: string) {
   const entitlement = await resolveUserEntitlement(userId);
   const monthlyWrongAnswers = await reviewOsRepository.countMonthlyWrongAnswers(userId, monthStartIso());
-  const answerReviewUsed = await countMonthlyEvent(userId, "answer_review_structure_success");
-  const captureOcrUsed = await countMonthlyEvent(userId, "capture_ocr_success");
-  const problemSnapUsed = await countMonthlyEvent(userId, "problem_snap_success");
-  return { entitlement, monthlyWrongAnswers, answerReviewUsed, captureOcrUsed, problemSnapUsed };
+  const answerReviewUsed = await countEventSince(userId, "answer_review_structure_success", monthStartIso());
+  const captureOcrUsed = await countEventSince(userId, "capture_ocr_success", monthStartIso());
+  const problemSnapUsed = await countEventSince(userId, "problem_snap_success", monthStartIso());
+  const answerReviewDailyUsed = await countEventSince(userId, "answer_review_structure_success", dayStartIso());
+  const captureOcrDailyUsed = await countEventSince(userId, "capture_ocr_success", dayStartIso());
+  const problemSnapDailyUsed = await countEventSince(userId, "problem_snap_success", dayStartIso());
+  return { entitlement, monthlyWrongAnswers, answerReviewUsed, captureOcrUsed, problemSnapUsed, answerReviewDailyUsed, captureOcrDailyUsed, problemSnapDailyUsed };
 }
 
 function blockByTier(tier: AccessState["entitlementTier"], feature: EntitlementBlockedError["feature"]) {
@@ -71,12 +82,20 @@ export async function assertCanCreateWrongAnswer(userId: string) {
 }
 
 export async function assertCanRunAnswerReview(userId: string) {
+  if (isAdminOverrideEnabled()) return;
   const usage = await getUsageState(userId);
+  const dailyCap = Math.max(1, Math.ceil(usage.entitlement.answerReviewMonthlyLimit / 10));
+  if (usage.answerReviewDailyUsed >= dailyCap) throw blockByTier(usage.entitlement.tier, "answer_review");
   if (usage.answerReviewUsed >= usage.entitlement.answerReviewMonthlyLimit) throw blockByTier(usage.entitlement.tier, "answer_review");
 }
 
 export async function assertCanUploadCapture(userId: string) {
+  if (isAdminOverrideEnabled()) return;
   const usage = await getUsageState(userId);
+  const captureDailyCap = Math.max(1, Math.ceil(usage.entitlement.captureOcrMonthlyLimit / 10));
+  const snapDailyCap = Math.max(1, Math.ceil(usage.entitlement.problemSnapMonthlyLimit / 10));
+  if (usage.captureOcrDailyUsed >= captureDailyCap) throw blockByTier(usage.entitlement.tier, "capture_ocr");
+  if (usage.problemSnapDailyUsed >= snapDailyCap) throw blockByTier(usage.entitlement.tier, "problem_snap");
   if (usage.captureOcrUsed >= usage.entitlement.captureOcrMonthlyLimit) throw blockByTier(usage.entitlement.tier, "capture_ocr");
   if (usage.problemSnapUsed >= usage.entitlement.problemSnapMonthlyLimit) throw blockByTier(usage.entitlement.tier, "problem_snap");
 }
