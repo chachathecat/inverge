@@ -4,10 +4,13 @@ on:
   pull_request:
   push:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
-  e2e-smoke:
+  e2e-local-smoke:
+    name: E2E Local Smoke
     runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
     env:
       DEV_SMOKE_AUTH: "true"
       CI: "true"
@@ -21,14 +24,85 @@ jobs:
         run: npm ci
       - name: Install Playwright browser
         run: npm exec playwright install -- --with-deps chromium
-      - name: Run E2E smoke
+      - name: Run local deterministic E2E smoke
         run: npm run test:e2e:smoke
 
-      - name: Upload Playwright artifacts on failure
-        if: failure()
+      - name: Upload Playwright artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-artifacts
+          name: playwright-local-smoke-artifacts
+          path: |
+            playwright-report
+            test-results
+            **/trace.zip
+            **/*.png
+          if-no-files-found: ignore
+
+  e2e-staging-smoke:
+    name: E2E Staging Smoke
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    env:
+      CI: "true"
+      E2E_BASE_URL: ${{ secrets.E2E_BASE_URL }}
+      TEST_AUTH_STATE_PATH: ${{ secrets.TEST_AUTH_STATE_PATH }}
+      TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+      TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Determine staging smoke readiness
+        id: readiness
+        shell: bash
+        run: |
+          HAS_BASE_URL=false
+          HAS_AUTH=false
+
+          if [ -n "${E2E_BASE_URL}" ]; then
+            HAS_BASE_URL=true
+          fi
+
+          if [ -n "${TEST_AUTH_STATE_PATH}" ]; then
+            HAS_AUTH=true
+          fi
+
+          if [ -n "${TEST_USER_EMAIL}" ] && [ -n "${TEST_USER_PASSWORD}" ]; then
+            HAS_AUTH=true
+          fi
+
+          if [ "${HAS_BASE_URL}" = "true" ] && [ "${HAS_AUTH}" = "true" ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            echo "Staging smoke prerequisites found; running Playwright smoke against deployed URL."
+          else
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            echo "Skipping staging smoke: missing required secrets E2E_BASE_URL and auth (TEST_AUTH_STATE_PATH or TEST_USER_EMAIL + TEST_USER_PASSWORD)."
+          fi
+
+      - name: Skip staging smoke (missing secrets)
+        if: steps.readiness.outputs.should_run != 'true'
+        run: |
+          echo "⏭️ Staging smoke skipped because required secrets are not configured."
+          echo "Required: E2E_BASE_URL plus TEST_AUTH_STATE_PATH or TEST_USER_EMAIL/TEST_USER_PASSWORD"
+
+      - name: Install dependencies
+        if: steps.readiness.outputs.should_run == 'true'
+        run: npm ci
+      - name: Install Playwright browser
+        if: steps.readiness.outputs.should_run == 'true'
+        run: npm exec playwright install -- --with-deps chromium
+      - name: Run staging/preview E2E smoke
+        if: steps.readiness.outputs.should_run == 'true'
+        run: npm run test:e2e:smoke
+
+      - name: Upload Playwright artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-staging-smoke-artifacts
           path: |
             playwright-report
             test-results
