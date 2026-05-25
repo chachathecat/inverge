@@ -1,0 +1,16 @@
+{
+  "mode": "second",
+  "ocrUncertain": false,
+  "subject": "감정평가 및 보상법규",
+  "output": {
+    "biggestGap": "요건 검토가 빠져 법적 판단의 출발점이 비어 있습니다.",
+    "nextAction": "5분 동안 요건 2개를 조문 키워드와 함께 정리해 작성하세요.",
+    "primaryActions": [
+      "단일 보완 실행"
+    ],
+    "caution": "",
+    "rewriteInstruction": "누락 요소를 먼저 보완한 뒤 결론 재작성",
+    "missingIssue": "요건 누락",
+    "secondModeFlow": "내 답안 작성 후 기준답안과 비교"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "mode": "second",
+  "ocrUncertain": false,
+  "subject": "감정평가실무",
+  "output": {
+    "biggestGap": "계산 근거(적용식·단가 출처)가 빠져 결론의 신뢰가 약합니다.",
+    "nextAction": "5분 동안 적용식 1개와 단가 출처 1개를 본문에 다시 작성하세요.",
+    "rewriteInstruction": "근거식→수치대입→결론 순서로 3문장 재작성",
+    "missingIssue": "계산 근거 누락",
+    "secondModeFlow": "내 답안 작성 후 기준답안과 비교",
+    "primaryActions": ["근거식 1개 재작성"],
+    "caution": ""
+  }
+}

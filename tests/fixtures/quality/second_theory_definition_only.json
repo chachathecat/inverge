@@ -1,0 +1,16 @@
+{
+  "mode": "second",
+  "ocrUncertain": false,
+  "subject": "감정평가이론",
+  "output": {
+    "biggestGap": "정의만 제시되고 논증 전개가 없어 채점 포인트가 비어 있습니다.",
+    "nextAction": "6분 동안 주장-근거-반론 3문장 틀로 재작성하세요.",
+    "primaryActions": [
+      "단일 보완 실행"
+    ],
+    "caution": "",
+    "rewriteInstruction": "누락 요소를 먼저 보완한 뒤 결론 재작성",
+    "missingIssue": "논증 누락",
+    "secondModeFlow": "내 답안 작성 후 기준답안과 비교"
+  }
+}

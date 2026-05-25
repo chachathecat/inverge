@@ -21,7 +21,8 @@
     "seed:exams": "node --experimental-strip-types scripts/seedExamData.ts",
     "test:e2e:staging": "playwright test tests/e2e/closed-beta-smoke.spec.ts",
     "eval:recommendation-quality": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs --test tests/ai-output-quality-eval.test.mjs",
-    "check:paid-launch-readiness": "node scripts/check-paid-launch-readiness.mjs"
+    "check:paid-launch-readiness": "node scripts/check-paid-launch-readiness.mjs",
+    "eval:appraiser-domain-quality": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs --test tests/appraiser-domain-quality-eval.test.mjs"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

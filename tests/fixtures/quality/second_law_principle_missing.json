@@ -1,0 +1,16 @@
+{
+  "mode": "second",
+  "ocrUncertain": false,
+  "subject": "감정평가 및 보상법규",
+  "output": {
+    "biggestGap": "관련 법리·원칙 제시가 없어 포섭 근거가 약합니다.",
+    "nextAction": "6분 동안 관련 원칙 1개와 취지 1개를 정리해 본문 앞에 작성하세요.",
+    "primaryActions": [
+      "단일 보완 실행"
+    ],
+    "caution": "",
+    "rewriteInstruction": "누락 요소를 먼저 보완한 뒤 결론 재작성",
+    "missingIssue": "법리/원칙 누락",
+    "secondModeFlow": "내 답안 작성 후 기준답안과 비교"
+  }
+}

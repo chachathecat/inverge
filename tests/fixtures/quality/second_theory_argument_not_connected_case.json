@@ -1,0 +1,16 @@
+{
+  "mode": "second",
+  "ocrUncertain": false,
+  "subject": "감정평가이론",
+  "output": {
+    "biggestGap": "논거가 사안 사실과 연결되지 않아 답안 설득력이 약합니다.",
+    "nextAction": "6분 동안 사실 2개를 인용해 논거 문장을 다시 작성하세요.",
+    "primaryActions": [
+      "단일 보완 실행"
+    ],
+    "caution": "",
+    "rewriteInstruction": "누락 요소를 먼저 보완한 뒤 결론 재작성",
+    "missingIssue": "사안 연결 부족",
+    "secondModeFlow": "내 답안 작성 후 기준답안과 비교"
+  }
+}

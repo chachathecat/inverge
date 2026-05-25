@@ -1,0 +1,16 @@
+{
+  "mode": "second",
+  "ocrUncertain": false,
+  "subject": "감정평가 및 보상법규",
+  "output": {
+    "biggestGap": "최종 결론이 없어 검토 결과가 판단으로 닫히지 않았습니다.",
+    "nextAction": "4분 동안 결론 1문장과 근거요약 1문장을 다시 작성하세요.",
+    "primaryActions": [
+      "단일 보완 실행"
+    ],
+    "caution": "",
+    "rewriteInstruction": "누락 요소를 먼저 보완한 뒤 결론 재작성",
+    "missingIssue": "결론 누락",
+    "secondModeFlow": "내 답안 작성 후 기준답안과 비교"
+  }
+}
