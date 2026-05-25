@@ -17,7 +17,10 @@
     "check:e2e-env": "node scripts/check-e2e-env.mjs",
     "check:taxonomy": "node scripts/check-taxonomy-classification.mjs",
     "test:learning-signal": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs --test tests/learning-signal-answer-review.test.mjs",
-    "seed:exams": "node --experimental-strip-types scripts/seedExamData.ts"
+    "seed:exams": "node --experimental-strip-types scripts/seedExamData.ts",
+    "verify:learner-loop": "node scripts/verify-learner-loop.mjs",
+    "verify:learner-loop:ci": "node scripts/verify-learner-loop.mjs ci",
+    "verify:learner-loop:local": "node scripts/verify-learner-loop.mjs local"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
