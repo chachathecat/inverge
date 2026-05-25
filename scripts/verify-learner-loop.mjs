@@ -24,9 +24,24 @@ const stages = [
     args: [...NODE_TEST_ARGS, 'tests/learning-science-minimal-ux-reset.test.mjs'],
   },
   {
+    name: 'Quality eval',
+    command: 'npm',
+    args: ['run', 'eval:quality'],
+  },
+  {
+    name: 'Taxonomy check',
+    command: 'npm',
+    args: ['run', 'check:taxonomy'],
+  },
+  {
     name: 'E2E smoke',
     command: 'npm',
     args: ['run', 'test:e2e:smoke'],
+  },
+  {
+    name: 'Build',
+    command: 'npm',
+    args: ['run', 'build'],
   },
 ];
 
