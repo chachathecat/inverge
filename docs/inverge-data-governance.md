@@ -11,6 +11,20 @@
 ## 2) Data Layer Model
 아래 4개 계층을 구분해 운영한다.
 
+### v1 Data Classes (private vs derived)
+1. raw user answer
+2. uploaded image/PDF
+3. OCR text
+4. user-edited text
+5. derived learning signal
+6. anonymized aggregate insight
+7. product quality metric
+
+분류 원칙:
+- 1~4는 사용자 소유 원천 데이터로 service layer에만 저장/처리한다.
+- 5는 개별 추천 품질 개선 목적의 파생 신호이며, 원문 복원 가능 형태를 금지한다.
+- 6~7은 안전한 익명 집계 기준을 통과한 경우에만 생성한다.
+
 ### Layer A: Service Data
 정의:
 - 서비스 동작에 직접 필요한 원천 데이터
@@ -68,6 +82,7 @@
 3. Third-party materials (문제지, 학원 자료, 모범답안):
    - 권리 없이 글로벌 재사용 금지
    - 계약 범위를 벗어나는 학습/배포 금지
+   - 저작권 있는 문제 원문은 글로벌 학습 코퍼스로 사용 금지
 
 4. Consent and flags:
    - consent/reuse flags 저장 및 정책 집행에 사용
@@ -80,6 +95,12 @@
 6. Deletion/export:
    - applicable 법/계약 범위 내 삭제/내보내기 지원
    - 삭제 요청 시 하위 파생데이터 영향 범위 추적
+   - 삭제 시 raw answer / image / pdf / ocr text / private notes를 함께 제거
+   - export에는 사용자 소유 노트(요약, 주제, 다음 행동)를 포함
+
+7. Aggregate safety:
+   - 집계 분석 테이블에는 개인 raw answer/OCR 본문 저장 금지
+   - 집계 출력은 개인 답안을 재식별할 수 없도록 익명/최소화 기준을 강제
 
 ## 4) Instructor Console Specific Guardrails
 - instructor 콘솔은 **첨삭 운영 보조**와 **채점 초안**에 한정
