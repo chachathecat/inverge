@@ -1,10 +1,14 @@
 import type { ConfidenceLevel, LearningSignalEventRecord, ReviewQueueCard } from "@/lib/review-os/types";
 
 export type TodayPlanTaskType = "retry" | "rewrite" | "review" | "recall";
+export type TodayPlanDueBucket = "overdue" | "today" | "upcoming";
 
 export type TodayPlanTask = {
   itemId: string;
   title: string;
+  subject: string;
+  exam_mode: "first" | "second";
+  due_bucket: TodayPlanDueBucket;
   reason: string;
   one_biggest_gap: string;
   one_next_action: string;
@@ -24,6 +28,15 @@ const DAY_MS = 86_400_000;
 function parseTime(value: string) {
   const ts = Date.parse(value);
   return Number.isFinite(ts) ? ts : null;
+}
+
+function resolveDueBucket(dueAt: string | null | undefined, now: Date): TodayPlanDueBucket {
+  if (!dueAt) return "upcoming";
+  const dueTs = parseTime(dueAt);
+  if (dueTs === null) return "upcoming";
+  if (dueTs <= now.getTime()) return "overdue";
+  if (dueTs <= now.getTime() + DAY_MS) return "today";
+  return "upcoming";
 }
 
 function confidenceBoost(confidence: ConfidenceLevel) {
@@ -51,13 +64,14 @@ function toNextAction(mode: "first" | "second", item: ReviewQueueCard, taskType:
   return `${item.problemTitle} 핵심 포인트 1개를 다시 확인합니다.`;
 }
 
-
-
 function toProblemSnapTask(mode: "first" | "second", signal: LearningSignalEventRecord): TodayPlanTask {
   const taskType: TodayPlanTaskType = mode === "second" ? (signal.nextTaskType === "rewrite" ? "rewrite" : "retry") : "retry";
   return {
     itemId: `problem-snap-${signal.id}`,
     title: `${signal.subject} Problem Snap 다음 작업`,
+    subject: signal.subject,
+    exam_mode: mode,
+    due_bucket: "today",
     reason: "문제 스냅으로 저장한 막힌 문제입니다.",
     one_biggest_gap: "막힌 지점 1개를 다시 해결합니다.",
     one_next_action: signal.nextTask || (mode === "second" ? "쟁점 1개를 다시 써서 검토합니다." : "핵심 조건 1개를 회상하고 다시 풉니다."),
@@ -116,6 +130,9 @@ export function buildTodayPlanTasks({ mode, queue, learningSignals = [], now = n
     return {
       itemId: item.itemId,
       title: item.problemTitle,
+      subject: item.subjectLabel,
+      exam_mode: mode,
+      due_bucket: resolveDueBucket(item.dueAt, now),
       reason: priority_reason,
       one_biggest_gap: toGap(item),
       one_next_action: toNextAction(mode, item, taskType),
