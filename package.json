@@ -12,13 +12,14 @@
     "eval:ocr-extraction": "node scripts/eval-ocr-extraction.mjs",
     "eval:quality": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs --test tests/ai-output-quality-eval.test.mjs",
     "test:e2e": "playwright test",
-    "test:e2e:smoke": "playwright test tests/e2e/closed-beta-smoke.spec.ts",
+    "test:e2e:smoke": "playwright test tests/e2e/public-answer-review-smoke.spec.ts",
     "test:e2e:headed": "playwright test --headed",
     "check:e2e-env": "node scripts/check-e2e-env.mjs",
     "check:taxonomy": "node scripts/check-taxonomy-classification.mjs",
     "test:learning-signal": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs --test tests/learning-signal-answer-review.test.mjs",
     "verify:learner-loop:ci": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs --test tests/capture-to-plan-bridge.test.mjs tests/answer-review-boundary.test.mjs tests/capture-telemetry-sanitizer.test.mjs tests/learning-science-minimal-ux-reset.test.mjs && npm run eval:quality && npm run check:taxonomy && npm run build",
-    "seed:exams": "node --experimental-strip-types scripts/seedExamData.ts"
+    "seed:exams": "node --experimental-strip-types scripts/seedExamData.ts",
+    "test:e2e:staging": "playwright test tests/e2e/closed-beta-smoke.spec.ts"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
@@ -45,6 +46,7 @@
     "eslint-config-next": "16.2.4",
     "supabase": "^2.95.0",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "@playwright/test": "^1.51.1"
   }
 }
