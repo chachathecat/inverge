@@ -114,6 +114,7 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
   const answerTextRef = useRef<HTMLTextAreaElement | null>(null);
   const [generalUploadIntent, setGeneralUploadIntent] = useState<"answer" | "problem">("answer");
   const [problemSnapNoticeVisible, setProblemSnapNoticeVisible] = useState(false);
+  const [isClientReady, setIsClientReady] = useState(false);
 
   const shouldReduceMotion = useReducedMotion();
   const subjectOptions = examMode === "second" ? APPRAISAL_SECOND_SUBJECTS : APPRAISAL_FIRST_SUBJECTS;
@@ -142,6 +143,10 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
       sessionStorage.removeItem("inverge.problemSnap.answerReviewHandoff");
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    setIsClientReady(true);
   }, []);
 
   const handleProblemFileChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -395,7 +400,11 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
 
   return (
     <RefinedShell className="space-y-5 py-6 sm:space-y-8 sm:py-10">
-      <section className="space-y-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] p-4 sm:p-6">
+      <section
+        className="space-y-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] p-4 sm:p-6"
+        data-testid="answer-review-client-ready"
+        data-ready={isClientReady ? "true" : "false"}
+      >
         <div className="flex flex-wrap items-center gap-2">
           <RefinedBadge>답안 검토실</RefinedBadge>
           <RefinedBadge tone="amber">검토 결과는 학습 보조 초안입니다</RefinedBadge>
@@ -526,6 +535,7 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                       placeholder="초안 텍스트가 있으면 붙여 넣고, 없으면 직접 입력해 주세요."
                       value={myAnswerText}
                       onChange={(event) => setMyAnswerText(event.target.value)}
+                      onInput={(event) => setMyAnswerText(event.currentTarget.value)}
                     />
                     <div className="mt-2 flex items-center justify-between text-caption text-[color:var(--muted)]">
                       <span>현재 {myAnswerLength}자</span>
@@ -664,6 +674,9 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                       type="button"
                       className={cn(buttonVariants({ variant: "default" }), "mt-3 w-full")}
                       data-testid="answer-review-start-button"
+                      data-current-step={String(currentStep)}
+                      data-has-my-answer={hasMyAnswer ? "true" : "false"}
+                      data-is-structuring={isStructuring ? "true" : "false"}
                       onClick={handlePrimaryAction}
                       disabled={isPrimaryActionDisabled}
                     >

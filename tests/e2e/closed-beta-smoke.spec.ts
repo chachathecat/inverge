@@ -101,9 +101,13 @@ test.describe('closed beta answer-review interaction smoke', () => {
     });
 
     await page.goto('/answer-review');
+    await expect(page.getByTestId('answer-review-client-ready')).toHaveAttribute('data-ready', 'true');
 
     await page.getByTestId('answer-review-problem-textarea').fill('문제/사례 입력 smoke');
-    await page.getByTestId('answer-review-my-answer-textarea').fill('내 답안 입력 smoke');
+    const answerTextarea = page.getByTestId('answer-review-my-answer-textarea');
+    await answerTextarea.click();
+    await page.keyboard.insertText('내 답안 입력 smoke');
+    await expect(answerTextarea).toHaveValue('내 답안 입력 smoke');
     const referenceDetails = page.getByTestId('answer-review-reference-details');
     await expect(referenceDetails).toBeVisible();
     await referenceDetails.locator('summary').click();
@@ -111,6 +115,9 @@ test.describe('closed beta answer-review interaction smoke', () => {
     await page.getByTestId('answer-review-reference-textarea').fill('기준답안 입력 smoke');
 
     const startButton = page.getByTestId('answer-review-start-button');
+    await expect(startButton).toHaveAttribute('data-current-step', '1');
+    await expect(startButton).toHaveAttribute('data-has-my-answer', 'true');
+    await expect(startButton).toHaveAttribute('data-is-structuring', 'false');
     await expect(startButton).toBeEnabled();
     await startButton.click();
     await expect(page.getByRole('button', { name: '피드백 초안 만들기' })).toBeVisible();
