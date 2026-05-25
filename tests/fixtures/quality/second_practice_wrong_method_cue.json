@@ -1,0 +1,16 @@
+{
+  "mode": "second",
+  "ocrUncertain": false,
+  "subject": "감정평가실무",
+  "output": {
+    "biggestGap": "문제 단서와 다른 평가방식을 선택해 논리 축이 어긋났습니다.",
+    "nextAction": "7분 동안 방식 선택 근거 2가지를 적고 평가방식을 다시 고르세요.",
+    "primaryActions": [
+      "단일 보완 실행"
+    ],
+    "caution": "",
+    "rewriteInstruction": "누락 요소를 먼저 보완한 뒤 결론 재작성",
+    "missingIssue": "평가방식 단서 오독",
+    "secondModeFlow": "내 답안 작성 후 기준답안과 비교"
+  }
+}

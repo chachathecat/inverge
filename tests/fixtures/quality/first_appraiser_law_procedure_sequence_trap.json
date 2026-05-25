@@ -1,0 +1,14 @@
+{
+  "mode": "first",
+  "ocrUncertain": false,
+  "subject": "감정평가관계법규",
+  "output": {
+    "biggestGap": "절차 순서 함정에서 선후관계를 바꿔 적용해 오답으로 이어졌습니다.",
+    "nextAction": "6분 동안 절차 4단계를 번호로 회상해 순서대로 다시 배열하세요.",
+    "conceptTag": "절차순서",
+    "retrievalPrompt": "선행요건→통지→열람→확정 순서를 빈칸으로 회상",
+    "firstModeFlow": "회상 후 해설",
+    "primaryActions": ["절차 순서 회상"],
+    "caution": ""
+  }
+}

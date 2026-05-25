@@ -1,0 +1,16 @@
+{
+  "mode": "first",
+  "ocrUncertain": false,
+  "subject": "경제학",
+  "output": {
+    "biggestGap": "그래프 이동 함정에서 곡선 이동 방향을 반대로 적용했습니다.",
+    "nextAction": "5분 동안 수요/공급 이동 방향을 각 1회 그려보고 다시 풉니다.",
+    "primaryActions": [
+      "단일 보완 실행"
+    ],
+    "caution": "",
+    "conceptTag": "그래프이동",
+    "retrievalPrompt": "핵심 기준을 빈칸 회상",
+    "firstModeFlow": "회상 후 해설"
+  }
+}

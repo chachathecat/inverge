@@ -1,0 +1,16 @@
+{
+  "mode": "first",
+  "ocrUncertain": false,
+  "subject": "민법",
+  "output": {
+    "biggestGap": "요건사실 함정에서 핵심 요건 1개를 누락해 선택지가 뒤집혔습니다.",
+    "nextAction": "6분 동안 요건 3개를 회상하고 누락 요건을 표시해 재풀이하세요.",
+    "primaryActions": [
+      "단일 보완 실행"
+    ],
+    "caution": "",
+    "conceptTag": "요건사실",
+    "retrievalPrompt": "핵심 기준을 빈칸 회상",
+    "firstModeFlow": "회상 후 해설"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "mode": "first",
+  "ocrUncertain": false,
+  "subject": "회계학",
+  "output": {
+    "biggestGap": "인식과 측정 단계를 혼동해 분개 판단이 어긋났습니다.",
+    "nextAction": "6분 동안 인식요건 2개와 측정기준 1개를 정리하고 다시 풉니다.",
+    "primaryActions": [
+      "단일 보완 실행"
+    ],
+    "caution": "",
+    "conceptTag": "인식측정",
+    "retrievalPrompt": "핵심 기준을 빈칸 회상",
+    "firstModeFlow": "회상 후 해설"
+  }
+}

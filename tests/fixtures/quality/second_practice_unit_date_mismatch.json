@@ -1,0 +1,14 @@
+{
+  "mode": "second",
+  "ocrUncertain": false,
+  "subject": "감정평가실무",
+  "output": {
+    "biggestGap": "단위(㎡/평)와 기준시점 날짜가 섞여 계산값 해석이 흔들립니다.",
+    "nextAction": "4분 동안 단위 1개와 기준시점 1개를 표기 통일해 다시 쓰세요.",
+    "rewriteInstruction": "단위·날짜 먼저 고정 후 계산식 연결",
+    "missingIssue": "단위/날짜 불일치",
+    "secondModeFlow": "내 답안 작성 후 기준답안과 비교",
+    "primaryActions": ["단위·날짜 통일"],
+    "caution": ""
+  }
+}

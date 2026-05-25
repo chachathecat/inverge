@@ -1,0 +1,16 @@
+{
+  "mode": "second",
+  "ocrUncertain": false,
+  "subject": "감정평가이론",
+  "output": {
+    "biggestGap": "비교 기준점이 없어 대안 간 우열 판단이 불명확합니다.",
+    "nextAction": "5분 동안 비교축 2개(목적·효율)를 표로 정리 후 결론을 수정하세요.",
+    "primaryActions": [
+      "단일 보완 실행"
+    ],
+    "caution": "",
+    "rewriteInstruction": "누락 요소를 먼저 보완한 뒤 결론 재작성",
+    "missingIssue": "비교 포인트 누락",
+    "secondModeFlow": "내 답안 작성 후 기준답안과 비교"
+  }
+}

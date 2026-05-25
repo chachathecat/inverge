@@ -1,0 +1,16 @@
+{
+  "mode": "second",
+  "ocrUncertain": false,
+  "subject": "감정평가 및 보상법규",
+  "output": {
+    "biggestGap": "사실관계에 대한 포섭이 약해 결론의 정당화가 부족합니다.",
+    "nextAction": "6분 동안 사실 2개를 요건 문장에 매칭해 포섭문장을 다시 쓰세요.",
+    "primaryActions": [
+      "단일 보완 실행"
+    ],
+    "caution": "",
+    "rewriteInstruction": "누락 요소를 먼저 보완한 뒤 결론 재작성",
+    "missingIssue": "사실 포섭 약함",
+    "secondModeFlow": "내 답안 작성 후 기준답안과 비교"
+  }
+}
