@@ -13,6 +13,8 @@ import {
 } from "@/lib/review-os/learning-signal";
 import { reviewOsService } from "@/lib/review-os/service";
 import { buildAnswerReviewReferenceGrounding } from "@/lib/review-os/answer-review-reference-grounding";
+import { assertCanRunAnswerReview, EntitlementBlockedError } from "@/lib/review-os/entitlement-enforcement";
+import { reviewOsRepository } from "@/lib/review-os/repository";
 
 import {
   GeminiEnvError,
@@ -139,6 +141,7 @@ export async function POST(request: Request) {
   }
 
   try {
+    if (session.userId) await assertCanRunAnswerReview(session.userId);
     const initialDraft = await structureAnswerReviewWithGemini({
       questionFiles,
       answerFiles,
@@ -225,6 +228,12 @@ export async function POST(request: Request) {
       });
       return response;
     }
+    if (session.userId) {
+      await reviewOsRepository.logUsageEvent(session.userId, "answer_review_structure_success", "answer_review", null, {
+        examMode: examModeInput ?? "first",
+        explanationLevel,
+      });
+    }
     return NextResponse.json({
       ok: true,
       draft,
@@ -242,6 +251,9 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
+    if (error instanceof EntitlementBlockedError) {
+      return NextResponse.json({ ok: false, errorCode: error.code, error: error.messageKo, blockedFeature: error.feature }, { status: 402 });
+    }
     if (error instanceof GeminiEnvError) {
       return NextResponse.json(
         {
