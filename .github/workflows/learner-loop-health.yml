@@ -1,0 +1,22 @@
+name: Learner Loop Health
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  learner-loop-health:
+    name: Learner Loop Health
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Verify learner loop CI gate
+        run: npm run verify:learner-loop:ci
