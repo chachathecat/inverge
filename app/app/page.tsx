@@ -13,7 +13,7 @@ import { DEFAULT_DAILY_STUDY_ACTIVITY, reviewOsService } from "@/lib/review-os/s
 import { buildNotebookPreview } from "@/lib/review-os/study-note";
 import { APPRAISAL_FIRST_SUBJECTS } from "@/lib/review-os/types";
 import { buildTodayPlanCard, type TodayPlanActionKind } from "@/lib/review-os/today-plan";
-import { buildTodayPlanTasks } from "@/lib/review-os/today-plan-engine";
+import { buildTodayPlanTasks, type TodayPlanTaskType } from "@/lib/review-os/today-plan-engine";
 import { buildPersonalWeaknessProfile } from "@/lib/review-os/weakness-diagnostics";
 import { isOverdueDueAt, resolveDailyStudyState } from "@/lib/review-os/daily-study-state";
 
@@ -37,6 +37,20 @@ const FIRST_MODE_INPUT_OPTIONS = [
     hrefKey: "study-log",
   },
 ] as const;
+
+const TASK_TYPE_LABELS: Record<TodayPlanTaskType, string> = {
+  first_ox_retry: "5분 재풀이",
+  concept_review: "개념 회상",
+  cloze_review: "빈칸 회상",
+  accounting_template_retry: "계산 틀 재확인",
+  second_answer_rewrite: "문단 다시쓰기",
+  ocr_confirmation: "OCR 확인",
+  note_cleanup: "노트 정리",
+};
+
+function resolveTaskTypeLabel(taskType: TodayPlanTaskType) {
+  return TASK_TYPE_LABELS[taskType];
+}
 
 const SECOND_MODE_INPUT_OPTIONS = [
   {
@@ -344,7 +358,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                             <p><span className="font-medium text-[color:var(--foreground-strong)]">가장 큰 간극:</span> {task.one_biggest_gap}</p>
                             <p><span className="font-medium text-[color:var(--foreground-strong)]">다음 행동:</span> {task.one_next_action}</p>
                             <p><span className="font-medium text-[color:var(--foreground-strong)]">상태:</span> {task.status === "due" ? "진행 필요" : task.status === "completed" ? "완료" : "대기"}</p>
-                            <p><span className="font-medium text-[color:var(--foreground-strong)]">유형:</span> {task.task_type}</p>
+                            <p><span className="font-medium text-[color:var(--foreground-strong)]">작업:</span> {resolveTaskTypeLabel(task.task_type)}</p>
                           </div>
                         </details>
                       </article>
