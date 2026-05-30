@@ -1,13 +1,9 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 
-import { RefinedShell } from "@/components/inverge/refined-primitives";
-import { SignOutButton } from "@/components/shared/sign-out-button";
-import { getModeConfig, parseAppraisalMode, type AppraisalMode } from "@/lib/review-os/appraisal";
-import { cn } from "@/lib/utils";
+import { LearnerShell } from "@/components/learner";
+import type { AppraisalMode } from "@/lib/review-os/appraisal";
 
 type AppShellProps = {
   email: string | null;
@@ -16,73 +12,10 @@ type AppShellProps = {
   rightSlot?: ReactNode;
 };
 
-const NAV_ITEMS = [
-  { href: "/exams", label: "시험", preserveMode: false },
-  { href: { first: "/app/capture", second: "/app/write" }, label: "입력", preserveMode: true },
-  { href: "/app", label: "오늘", preserveMode: true },
-  { href: "/app/items", label: "노트", preserveMode: true },
-] as const;
-
 export function ReviewOsAppShell({ email, mode, children, rightSlot }: AppShellProps) {
-  const searchParams = useSearchParams();
-  const pathname = usePathname();
-  const currentMode = parseAppraisalMode(searchParams.get("mode")) ?? mode;
-  const config = getModeConfig(currentMode);
-  const homeHref = `/app?mode=${currentMode}`;
-
   return (
-    <RefinedShell className="space-y-8 py-7 sm:py-10">
-      <div className="flex flex-col gap-6 border-b border-[var(--border)] pb-6 sm:flex-row sm:items-end sm:justify-between">
-        <div className="space-y-3">
-          <div className="flex flex-wrap items-center gap-3">
-            <Link href={homeHref} className="flex items-center gap-3">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[color:var(--brand-900)] text-sm font-medium text-[color:var(--text-inverse)]">
-                IV
-              </span>
-              <span className="text-title text-[color:var(--foreground-strong)]">Inverge</span>
-            </Link>
-            <span className="rounded-full border border-[var(--border)] bg-[color:var(--bg-elevated)] px-3 py-1 text-xs text-[color:var(--muted)]">
-              {config.shortLabel}
-            </span>
-          </div>
-          <p className="text-xs text-[color:var(--muted)]">{config.label} 학습 루프</p>
-        </div>
-        <div className="flex flex-col items-start gap-3 sm:items-end">
-          {rightSlot}
-          <div className="flex items-center gap-3">
-            <span className="max-w-[220px] truncate text-sm text-[color:var(--muted)]">{email ?? "로그인한 사용자"}</span>
-            <SignOutButton />
-          </div>
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="text-sm text-[color:var(--muted)]">{config.label} 오늘의 학습 공간</div>
-        <nav className="overflow-x-auto">
-          <div className="flex min-w-max gap-2">
-            {NAV_ITEMS.map((item) => {
-              const href = typeof item.href === "string" ? item.href : item.href[currentMode];
-              const nextHref = item.preserveMode ? `${href}?mode=${currentMode}` : href;
-              return (
-              <Link
-                key={typeof item.href === "string" ? item.href : item.label}
-                href={nextHref}
-                className={cn(
-                  "rounded-full border px-3.5 py-1.5 text-xs transition sm:text-sm",
-                  pathname === href
-                    ? "border-[color:var(--brand-700)] bg-[color:var(--brand-050)] text-[color:var(--brand-900)]"
-                    : "border-[var(--border)] text-[color:var(--muted)] hover:bg-[color:var(--bg-elevated)] hover:text-[color:var(--foreground-strong)]",
-                )}
-              >
-                {item.label}
-              </Link>
-              );
-            })}
-          </div>
-        </nav>
-      </div>
-
+    <LearnerShell email={email} mode={mode} rightSlot={rightSlot}>
       {children}
-    </RefinedShell>
+    </LearnerShell>
   );
 }

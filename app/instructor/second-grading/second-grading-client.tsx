@@ -4,11 +4,12 @@ import { useState } from "react";
 import { RefinedBadge, RefinedShell } from "@/components/inverge/refined-primitives";
 import { buttonVariants } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import type { SecondGradingMode, SecondGradingResult } from "@/lib/evaluate/second-grading/types";
 import { cn } from "@/lib/utils";
 
 type SecondQuestionType = "auto" | "theory" | "law" | "practice";
 type GradeSecondResponse =
-  | { ok: true; mode: "problem_only" | "grade_answer"; result: any }
+  | { ok: true; mode: SecondGradingMode; result: SecondGradingResult }
   | { ok: false; error: string };
 
 type OcrFieldKey = "question" | "answer" | "reference";
@@ -21,8 +22,8 @@ export default function SecondGradingClient() {
   const [referenceText, setReferenceText] = useState("");
   const [isGrading, setIsGrading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<any | null>(null);
-  const [mode, setMode] = useState<"problem_only" | "grade_answer" | null>(null);
+  const [result, setResult] = useState<SecondGradingResult | null>(null);
+  const [gradingMode, setGradingMode] = useState<SecondGradingMode | null>(null);
   const [ocrErrors, setOcrErrors] = useState<{ question?: string; answer?: string; reference?: string }>({});
   const [isOcrLoading, setIsOcrLoading] = useState<{ question: boolean; answer: boolean; reference: boolean }>({
     question: false,
@@ -122,7 +123,7 @@ export default function SecondGradingClient() {
       if (!response.ok || !payload.ok) {
         throw new Error(payload.ok ? "2차 채점 결과를 불러오지 못했습니다." : payload.error);
       }
-      setMode(payload.mode);
+      setGradingMode(payload.mode);
       setResult(payload.result);
     } catch (e) {
       setError(e instanceof Error ? e.message : "2차 채점 요청 중 오류가 발생했습니다.");
@@ -243,6 +244,7 @@ export default function SecondGradingClient() {
         {error ? <article className="rounded-[var(--radius-sm)] border border-[#b9a98a] bg-[#f8f4ea] px-4 py-3 text-caption text-[#5a4b32]">{error}</article> : null}
         {result ? (
           <div className="space-y-3">
+            {gradingMode ? <p className="text-caption text-[color:var(--muted)]">초안 모드: {gradingMode === "grade_answer" ? "답안 채점 초안" : "문제 분석 초안"}</p> : null}
             <article className="rounded-[var(--radius-sm)] border border-[var(--border)] p-3">
               <p className="font-medium">Ⅰ. 논점 게이트 판정</p>
               <p className="text-caption">{result.issueGate?.reason}</p>

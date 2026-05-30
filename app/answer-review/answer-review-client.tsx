@@ -312,11 +312,6 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
 
   const explanationTitle = explanationLevel === "easy" ? "쉽게 풀이" : explanationLevel === "exam" ? "시험답안식 보강 포인트" : "핵심 해설";
 
-  useEffect(() => {
-    setFeedbackCopyStatus("idle");
-    setCopiedFeedbackDraftText(null);
-  }, [feedbackDraftText]);
-
   const handleExamModeChange = (nextMode: AppraisalMode) => {
     setExamMode(nextMode);
     setSubject((prev) => normalizeSubjectForMode(prev, nextMode));
@@ -346,12 +341,13 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
       setCopiedFeedbackDraftText(feedbackDraftText);
       setFeedbackCopyStatus("success");
     } catch {
-      setCopiedFeedbackDraftText(null);
+      setCopiedFeedbackDraftText(feedbackDraftText);
       setFeedbackCopyStatus("failed");
     }
   };
 
-  const didCopyCurrentDraft = feedbackCopyStatus === "success" && copiedFeedbackDraftText === feedbackDraftText;
+  const visibleFeedbackCopyStatus = copiedFeedbackDraftText === feedbackDraftText ? feedbackCopyStatus : "idle";
+  const didCopyCurrentDraft = visibleFeedbackCopyStatus === "success";
   const primaryActionLabel =
     currentStep === 1
       ? isStructuring
@@ -989,7 +985,7 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
               </div>
 
               {didCopyCurrentDraft ? <p className="text-caption leading-5 text-[color:var(--muted)]">복사 완료. 전달 전 검토해 주세요.</p> : null}
-              {feedbackCopyStatus === "failed" ? (
+              {visibleFeedbackCopyStatus === "failed" ? (
                 <p className="text-caption leading-5 text-[color:var(--muted)]">클립보드 복사에 실패했습니다. 텍스트를 수동으로 복사해 주세요.</p>
               ) : null}
             </motion.section>
