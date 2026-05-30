@@ -29,7 +29,8 @@ export function UsabilityNotesAdmin() {
   }
 
   useEffect(() => {
-    void loadNotes();
+    const timeout = window.setTimeout(() => void loadNotes(), 0);
+    return () => window.clearTimeout(timeout);
   }, []);
 
   async function onSubmit(event: React.FormEvent) {

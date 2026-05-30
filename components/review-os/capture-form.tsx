@@ -288,17 +288,20 @@ export function WrongAnswerCaptureForm({
   const hideGlobalFooterActions = mode === "second" && secondModeHiddenFooterStages.has(stage);
   useEffect(() => {
     if (!secondWriteEnabled) return;
-    if (stage === "second-reference" && form.userAnswer.trim().length < 8) {
-      setStage("second-answer");
-      return;
-    }
-    if (stage === "second-gap" && form.correctAnswer.trim().length < 8) {
-      setStage("second-reference");
-      return;
-    }
-    if (stage === "second-rewrite" && form.biggestGap.trim().length < 4) {
-      setStage("second-gap");
-    }
+
+    const nextStage =
+      stage === "second-reference" && form.userAnswer.trim().length < 8
+        ? "second-answer"
+        : stage === "second-gap" && form.correctAnswer.trim().length < 8
+          ? "second-reference"
+          : stage === "second-rewrite" && form.biggestGap.trim().length < 4
+            ? "second-gap"
+            : null;
+
+    if (!nextStage) return;
+
+    const timeout = window.setTimeout(() => setStage(nextStage), 0);
+    return () => window.clearTimeout(timeout);
   }, [secondWriteEnabled, stage, form.userAnswer, form.correctAnswer, form.biggestGap]);
 
   const cameraInputRef = useRef<HTMLInputElement | null>(null);

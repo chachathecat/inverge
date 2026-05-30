@@ -21,6 +21,14 @@ function toNumber(value: unknown, fallback = 0): number {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
 
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+}
+
+function isSecondExamQuestionType(value: unknown): value is SecondExamQuestionType {
+  return value === "theory" || value === "law" || value === "practice";
+}
+
 function normalizeRubricScores(questionType: SecondExamQuestionType, source: unknown): RubricScore[] {
   const maxByCategory = SECOND_GRADING_RUBRIC_BY_TYPE[questionType];
   const input = Array.isArray(source) ? source : [];
@@ -85,7 +93,7 @@ function normalizeDeductions(source: unknown): DeductionItem[] {
 }
 
 function normalizeSkeleton(source: unknown) {
-  const input = source && typeof source === "object" ? (source as Record<string, unknown>) : {};
+  const input = asRecord(source);
   const outline = Array.isArray(input.outline) ? input.outline : [];
 
   const normalizedOutline: SkeletonOutlineItem[] = outline.map((item) => {
@@ -115,8 +123,8 @@ function normalizeSkeleton(source: unknown) {
 }
 
 export function normalizeSecondGradingResult(input: unknown): SecondGradingResult {
-  const source = input && typeof input === "object" ? (input as Record<string, any>) : {};
-  const questionType: SecondExamQuestionType = source.questionType || "theory";
+  const source = asRecord(input);
+  const questionType: SecondExamQuestionType = isSecondExamQuestionType(source.questionType) ? source.questionType : "theory";
   const rubricScores = normalizeRubricScores(questionType, source.rubricScores);
   const rubricSubtotal = rubricScores.reduce((sum, item) => sum + item.score, 0);
   const baseScore = clampScore(toNumber(source.baseScore, rubricSubtotal));
@@ -124,18 +132,22 @@ export function normalizeSecondGradingResult(input: unknown): SecondGradingResul
   const deductions = normalizeDeductions(source.deductions);
   const deductionTotal = deductions.reduce((sum, item) => sum + item.points, 0);
 
+  const sourceIssueGate = asRecord(source.issueGate);
   const issueGate = {
-    triggered: Boolean(source.issueGate?.triggered),
-    reason: source.issueGate?.reason || "판단 불가",
-    lockScoreTo: source.issueGate?.lockScoreTo == null ? undefined : clampScore(toNumber(source.issueGate.lockScoreTo, 0)),
+    triggered: Boolean(sourceIssueGate.triggered),
+    reason: typeof sourceIssueGate.reason === "string" ? sourceIssueGate.reason : "판단 불가",
+    lockScoreTo: sourceIssueGate.lockScoreTo == null ? undefined : clampScore(toNumber(sourceIssueGate.lockScoreTo, 0)),
   };
 
   const scoreAfterDeduction = baseScore + deductionTotal;
   const lockedScore = issueGate.triggered ? issueGate.lockScoreTo ?? scoreAfterDeduction : scoreAfterDeduction;
 
   return {
-    mode: source.mode || "problem_only",
-    subject: source.subject || "감정평가이론",
+    mode: source.mode === "grade_answer" ? "grade_answer" : "problem_only",
+    subject:
+      source.subject === "감정평가실무" || source.subject === "감정평가이론" || source.subject === "감정평가및보상법규"
+        ? source.subject
+        : "감정평가이론",
     questionType,
     issueGate,
     rubricScores,
@@ -144,20 +156,26 @@ export function normalizeSecondGradingResult(input: unknown): SecondGradingResul
     deductions,
     deductionTotal,
     finalScore: clampScore(lockedScore),
-    passProbabilitySimulation: source.passProbabilitySimulation || {
-      band: "very_low",
-      estimatedRange: [0, 20],
-      rationale: "판단 불가",
-      caveat: "입력 근거 부족",
-    },
+    passProbabilitySimulation:
+      source.passProbabilitySimulation && typeof source.passProbabilitySimulation === "object"
+        ? (source.passProbabilitySimulation as SecondGradingResult["passProbabilitySimulation"])
+        : {
+            band: "very_low",
+            estimatedRange: [0, 20],
+            rationale: "판단 불가",
+            caveat: "입력 근거 부족",
+          },
     skeletonModelAnswer: normalizeSkeleton(source.skeletonModelAnswer),
-    weaknessDrill: source.weaknessDrill || {
-      targetWeakness: "핵심 쟁점 식별",
-      improvementGoalPercent: 15,
-      durationMinutes: 5,
-      prompt: "핵심 쟁점 1개를 3문장으로 재정의하세요.",
-      expectedOutputChecklist: ["쟁점 1개", "법규/기준 1개", "사안적용 1개"],
-    },
+    weaknessDrill:
+      source.weaknessDrill && typeof source.weaknessDrill === "object"
+        ? (source.weaknessDrill as SecondGradingResult["weaknessDrill"])
+        : {
+            targetWeakness: "핵심 쟁점 식별",
+            improvementGoalPercent: 15,
+            durationMinutes: 5,
+            prompt: "핵심 쟁점 1개를 3문장으로 재정의하세요.",
+            expectedOutputChecklist: ["쟁점 1개", "법규/기준 1개", "사안적용 1개"],
+          },
     notes: Array.isArray(source.notes) ? source.notes : [],
   };
 }
