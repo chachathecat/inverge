@@ -1,15 +1,13 @@
 import { ReviewOsFeedbackButton } from "@/components/review-os/feedback-button";
 import { ClosedBetaBanner } from "@/components/shared/closed-beta-banner";
-import { ResultFeedbackPrompt } from "@/components/shared/result-feedback-prompt";
 import { TodaySessionRunner } from "@/components/review-os/today-session-runner";
 import { getModeConfig, resolveAppraisalMode } from "@/lib/review-os/appraisal";
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
 import { reviewOsService } from "@/lib/review-os/service";
 import { buildDetailStudyNote } from "@/lib/review-os/study-note";
-import { buildReferenceSupportForExecution } from "@/lib/review-os/execution-reference-support";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { DailyCommandCard, QuietDetails } from "@/components/review-os/minimal-study-system";
+import { DailyCommandCard } from "@/components/review-os/minimal-study-system";
 
 type PageProps = {
   searchParams?: Promise<{ mode?: string; savedCapture?: string; itemId?: string }>;
@@ -46,51 +44,28 @@ export default async function ReviewOsSessionPage({ searchParams }: PageProps) {
           savedCaptureDetail.item.derivedPayload.capture_note_engine_v1
         ? (savedCaptureDetail.item.derivedPayload.capture_note_engine_v1 as Record<string, unknown>)
       : null;
-  const savedCaptureReferenceSupport = buildReferenceSupportForExecution(savedCaptureSignals);
   const activeDetail =
     savedCaptureDetail && queueItem && savedCaptureDetail.item.id === queueItem.itemId
       ? savedCaptureDetail
       : queueItemDetail;
   const note = activeDetail ? buildDetailStudyNote(activeDetail) : null;
-  const detailReferenceSupport = buildReferenceSupportForExecution(activeDetail?.item.derivedPayload?.capture_note_engine_v2 ?? activeDetail?.item.derivedPayload?.capture_note_engine_v1 ?? null);
 
   return (
     <div className="space-y-6">
       <ClosedBetaBanner />
       {savedCapture ? (
-        <DailyCommandCard title="오늘 기록이 저장되었습니다." description="복습 큐와 오늘 계획에 바로 반영되었습니다.">
-          <div className="grid gap-2 bg-[color:var(--surface-soft)] p-3 rounded-[var(--radius-sm)]">
-            <p className="text-xs text-[color:var(--ink-muted)]">
+        <DailyCommandCard title="오늘 기록이 저장되었습니다." description="복습 큐에 들어갔습니다. 오늘 계획에 반영되었습니다.">
+          <div className="grid gap-3 rounded-[var(--radius-sm)] bg-[color:var(--surface-soft)] p-3" aria-live="polite">
+            <p className="text-sm leading-6 text-[color:var(--ink-muted)]">
               <span className="font-medium text-[color:var(--ink-primary)]">가장 큰 간극:</span>{" "}
               {String(savedCaptureSignals?.one_biggest_gap ?? note?.missingIssue ?? note?.weakPoint ?? "간극 1개를 먼저 고정합니다.")}
             </p>
-            <p className="text-xs text-[color:var(--ink-muted)]">
+            <p className="text-sm leading-6 text-[color:var(--ink-muted)]">
               <span className="font-medium text-[color:var(--ink-primary)]">다음 행동:</span>{" "}
               {String(savedCaptureSignals?.one_next_action ?? note?.rewriteInstruction ?? note?.coreLine ?? "한 문장 재시도/다시쓰기로 바로 이어갑니다.")}
             </p>
           </div>
-          <QuietDetails>
-            <p>복습 큐에 들어갔습니다.</p>
-            <p>오늘 계획에 반영되었습니다.</p>
-            <p>정답 확정이 아니라 다음 행동을 정리하는 학습 보조 결과입니다.</p>
-            <p>오늘은 이 작업 하나만 먼저 합니다.</p>
-          </QuietDetails>
-          {savedCaptureSignals?.next_task_type ? (
-            <p className="mt-1 text-xs text-[color:var(--muted)]">다음 과제 유형: {String(savedCaptureSignals.next_task_type)}</p>
-          ) : null}
-          <details className="mt-2 rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)]">
-            <summary className="cursor-pointer list-none px-3 py-2 text-xs text-[color:var(--ink-muted)]">참고 힌트 보기</summary>
-            <div className="grid gap-1 border-t border-[color:var(--border-hairline)] px-3 py-2 text-xs text-[color:var(--ink-muted)]">
-              {savedCaptureReferenceSupport?.skeletonKeywordHint ? <p>키워드 힌트: {savedCaptureReferenceSupport.skeletonKeywordHint}</p> : null}
-              {savedCaptureReferenceSupport?.taxonomyCandidate ? <p>분류 후보: {savedCaptureReferenceSupport.taxonomyCandidate}</p> : null}
-              {savedCaptureReferenceSupport?.similarTopicSuggestion?.[0] ? <p>유사 주제: {savedCaptureReferenceSupport.similarTopicSuggestion[0]}</p> : null}
-            </div>
-          </details>
-
-          <div className="mt-3">
-            <ResultFeedbackPrompt route="/app/session" pageContext={{ section: "saved-capture", mode }} />
-          </div>
-          <div className="mt-3 space-y-2">
+          <div className="mt-4 grid gap-2">
             <Link
               href={
                 mode === "second"
@@ -99,7 +74,7 @@ export default async function ReviewOsSessionPage({ searchParams }: PageProps) {
                     : "/app/capture?mode=second"
                   : "#today-session-runner"
               }
-              className="inline-flex w-full items-center justify-center rounded-full bg-[color:var(--foreground-strong)] px-4 py-2 text-sm font-medium text-white"
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-full bg-[color:var(--foreground-strong)] px-4 py-2 text-sm font-medium text-white"
             >
               {mode === "second" ? "지금 10분 다시 쓰기" : "지금 5분 다시 풀기"}
             </Link>
@@ -109,6 +84,13 @@ export default async function ReviewOsSessionPage({ searchParams }: PageProps) {
                 <Link href={`/app?mode=${mode}`}>오늘 화면으로</Link>
                 <Link href={`/app/items?mode=${mode}`}>노트에서 보기</Link>
                 <Link href={`/app/review?mode=${mode}`}>나중에 복습</Link>
+              </div>
+            </details>
+            <details className="rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)]">
+              <summary className="cursor-pointer list-none px-3 py-2 text-xs text-[color:var(--ink-muted)]">참고 힌트 보기</summary>
+              <div className="grid gap-1 border-t border-[color:var(--border-hairline)] px-3 py-2 text-xs text-[color:var(--ink-muted)]">
+                <p>정답 확정이 아니라 다음 행동을 정리하는 학습 보조 결과입니다.</p>
+                <p>오늘은 이 작업 하나만 먼저 합니다.</p>
               </div>
             </details>
           </div>
@@ -132,7 +114,6 @@ export default async function ReviewOsSessionPage({ searchParams }: PageProps) {
               }
             : null
         }
-        referenceSupport={detailReferenceSupport}
       />
       </section>
       <ReviewOsFeedbackButton route="/app/session" pageContext={{ mode, hasQueueItem: Boolean(queueItem) }} />

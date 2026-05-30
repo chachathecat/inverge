@@ -169,7 +169,7 @@ export const MISTAKE_REASON_PRESETS = [
 
 export const CONFIDENCE_OPTIONS = ["낮음", "중간", "높음"] as const;
 export const STUDY_TYPE_OPTIONS = ["기출", "기본서", "강의", "문제풀이", "암기", "기타"] as const;
-export const SOURCE_TYPE_OPTIONS = ["text", "image", "pdf", "manual"] as const;
+export const SOURCE_TYPE_OPTIONS = ["photo", "pdf", "text", "image", "manual"] as const;
 export const ENTITLEMENT_TIERS = ["free_trial", "core", "extra_credits_ready"] as const;
 
 export type SourceType = (typeof SOURCE_TYPE_OPTIONS)[number];

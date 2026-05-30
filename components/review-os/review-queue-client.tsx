@@ -68,6 +68,7 @@ export function ReviewQueueClient({ items, mode, captureReferenceLineByItemId = 
               {item.createdFromCapture ? (
                 <div className="space-y-1">
                   <p className="text-xs text-[color:var(--muted)]">오늘 한 것</p>
+                  <p className="text-xs text-[color:var(--muted)]">반복 신호와 최근 기록 기준</p>
                   {captureReferenceLineByItemId[item.itemId] ? <p className="text-xs text-[color:var(--muted)]">참고 기준: {captureReferenceLineByItemId[item.itemId]}</p> : null}
                 </div>
               ) : null}

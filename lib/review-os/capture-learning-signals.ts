@@ -118,6 +118,7 @@ export function buildCaptureLearningSignal(input: CaptureLearningSignalInput): L
       nextTaskType,
       confidence: input.confidence,
       timeSpentSeconds: input.timeSpentSeconds ?? null,
+      timeSpentMinutes: input.timeSpentSeconds ? Math.round(input.timeSpentSeconds / 60) : null,
       createdFromCapture: input.createdFromCapture,
       captureIntent: "save",
       topic_candidate: topicCandidate,
