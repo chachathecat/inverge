@@ -8,6 +8,16 @@ test("home daily command card keeps one primary CTA and folds details", async ()
   assert.ok(source.includes("<details"));
 });
 
+test("learner home maps task types to calm labels instead of raw internals", async () => {
+  const source = await readFile(new URL("../app/app/page.tsx", import.meta.url), "utf8");
+
+  assert.ok(source.includes("resolveTaskTypeLabel(task.task_type)"));
+  assert.ok(source.includes("OCR 확인"));
+  assert.ok(source.includes("문단 다시쓰기"));
+  assert.equal(source.includes("{task.task_type}"), false);
+  assert.equal(source.includes("유형:</span> {task.task_type}"), false);
+});
+
 test("capture initial surface is one-input with photo first", async () => {
   const source = await readFile(new URL("../components/review-os/capture-form.tsx", import.meta.url), "utf8");
   ["오늘 한 것 올리기", "사진 찍기", "텍스트로 입력", "사진 촬영 팁", "OCR 상태", "캡처 유형"].forEach((t) => assert.ok(source.includes(t)));

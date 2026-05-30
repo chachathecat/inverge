@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 
 import { ReviewOsFeedbackButton } from "@/components/review-os/feedback-button";
 import { ClosedBetaBanner } from "@/components/shared/closed-beta-banner";
-import { HomeProofAnimation } from "@/components/review-os/home-proof-animation";
 import { TodayFirstSubjectSelector } from "@/components/review-os/today-first-subject-selector";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,7 +13,7 @@ import { DEFAULT_DAILY_STUDY_ACTIVITY, reviewOsService } from "@/lib/review-os/s
 import { buildNotebookPreview } from "@/lib/review-os/study-note";
 import { APPRAISAL_FIRST_SUBJECTS } from "@/lib/review-os/types";
 import { buildTodayPlanCard, type TodayPlanActionKind } from "@/lib/review-os/today-plan";
-import { buildTodayPlanTasks } from "@/lib/review-os/today-plan-engine";
+import { buildTodayPlanTasks, type TodayPlanTaskType } from "@/lib/review-os/today-plan-engine";
 import { buildPersonalWeaknessProfile } from "@/lib/review-os/weakness-diagnostics";
 import { isOverdueDueAt, resolveDailyStudyState } from "@/lib/review-os/daily-study-state";
 
@@ -38,6 +37,20 @@ const FIRST_MODE_INPUT_OPTIONS = [
     hrefKey: "study-log",
   },
 ] as const;
+
+const TASK_TYPE_LABELS: Record<TodayPlanTaskType, string> = {
+  first_ox_retry: "5분 재풀이",
+  concept_review: "개념 회상",
+  cloze_review: "빈칸 회상",
+  accounting_template_retry: "계산 틀 재확인",
+  second_answer_rewrite: "문단 다시쓰기",
+  ocr_confirmation: "OCR 확인",
+  note_cleanup: "노트 정리",
+};
+
+function resolveTaskTypeLabel(taskType: TodayPlanTaskType) {
+  return TASK_TYPE_LABELS[taskType];
+}
 
 const SECOND_MODE_INPUT_OPTIONS = [
   {
@@ -108,8 +121,6 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
   const dailyConsistencyCopy = dailyActivity.missedRecently
     ? "괜찮습니다. 오늘은 복구 1개만 하면 됩니다."
     : "최근 흐름이 이어지고 있습니다.";
-  const DAILY_STATE_LINES = ["오늘은 이것만 합니다", "오늘은 복구만 합니다", "오늘은 여기까지 해도 됩니다"] as const;
-
   const primaryHeading =
     homeState === "first_capture"
       ? "오늘 한 것 하나만 올리세요"
@@ -148,6 +159,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
   const todayPlanTasks = buildTodayPlanTasks({
     mode,
     queue,
+    items,
     learningSignals: learningSignalEvents,
     repeatedGaps: weaknessProfile.repeatedGaps,
     riskLevel: weaknessProfile.riskLevel,
@@ -167,6 +179,13 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
     if (actionKind === "second_review") return "/app/review?mode=second";
     if (actionKind === "second_items") return "/app/items?mode=second";
     return `/app/session?mode=first`;
+  };
+  const resolveTaskHref = (hrefKind: (typeof todayPlanTasks)[number]["primary_cta"]["hrefKind"]) => {
+    if (hrefKind === "capture") return mode === "second" ? "/app/capture?mode=second" : firstCaptureHref;
+    if (hrefKind === "write") return "/app/write?mode=second";
+    if (hrefKind === "items") return `/app/items?mode=${mode}`;
+    if (hrefKind === "review") return `/app/review?mode=${mode}`;
+    return `/app/session?mode=${mode}`;
   };
 
   const primaryHref = todayPlan.hasPlan ? resolveTodayPlanHref(todayPlan.actionKind) : defaultPrimaryHref;
@@ -313,22 +332,36 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
 
               <div className="rounded-[var(--radius-md)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)] px-4 py-3">
                 <p className="text-caption text-[color:var(--ink-muted)]">오늘의 우선순위</p>
-                <div className="mt-2 space-y-2">
+                <div className="mt-3 space-y-3">
                   {todayPlanTasks.length === 0 ? (
-                    <>
-                      <p className="text-xs text-[color:var(--ink-muted)]">오늘은 이것부터 하세요.</p>
-                      <p className="text-xs text-[color:var(--ink-muted)]">아직 오늘 계획이 없습니다.</p>
-                      <p className="text-xs text-[color:var(--ink-muted)]">아직 오늘 기록이 없습니다.</p>
-                      <p className="text-xs text-[color:var(--ink-muted)]">기록을 하나 저장하면 오늘 할 일이 정리됩니다.</p>
-                      <p className="text-xs text-[color:var(--ink-muted)]">공부한 흔적을 하나 올리면 오늘 계획과 복습 큐가 업데이트됩니다.</p>
-                      <p className="text-xs text-[color:var(--ink-muted)]">복습 큐도 함께 업데이트됩니다.</p>
-                      <Link href={firstCaptureHref} className="pt-1 text-xs font-medium text-[color:var(--ink-primary)] underline underline-offset-2">기록 추가하기</Link>
-                    </>
+                    <div className="space-y-1 text-xs text-[color:var(--ink-muted)]">
+                      <p>기록을 하나 저장하면 오늘 할 일이 정리됩니다.</p>
+                      <p>공부한 흔적을 하나 올리면 복습 큐도 함께 업데이트됩니다.</p>
+                      <Link href={firstCaptureHref} className="pt-1 font-medium text-[color:var(--ink-primary)] underline underline-offset-2">기록 추가하기</Link>
+                    </div>
                   ) : (
-                    todayPlanTasks.slice(0, 3).map((task, index) => (
-                      <p key={task.itemId} className="text-xs text-[color:var(--ink-muted)]">
-                        {index + 1}. {task.title} · {task.reason}
-                      </p>
+                    todayPlanTasks.map((task, index) => (
+                      <article key={task.itemId} className="rounded-[var(--radius-sm)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium leading-6 text-[color:var(--foreground-strong)]">{index + 1}. {task.title}</p>
+                            <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">{task.subject} · {task.estimated_minutes}분</p>
+                            <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">{task.reason}</p>
+                          </div>
+                          <Link href={resolveTaskHref(task.primary_cta.hrefKind)} className="inline-flex min-h-10 w-full shrink-0 items-center justify-center rounded-full bg-[color:var(--foreground-strong)] px-3 py-2 text-xs font-medium text-white sm:w-auto">
+                            {task.primary_cta.label}
+                          </Link>
+                        </div>
+                        <details className="mt-3 rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)]">
+                          <summary className="cursor-pointer list-none px-3 py-2 text-xs font-medium text-[color:var(--muted)]">세부 내용 보기</summary>
+                          <div className="grid gap-2 border-t border-[color:var(--border-hairline)] px-3 py-3 text-xs leading-5 text-[color:var(--muted)]">
+                            <p><span className="font-medium text-[color:var(--foreground-strong)]">가장 큰 간극:</span> {task.one_biggest_gap}</p>
+                            <p><span className="font-medium text-[color:var(--foreground-strong)]">다음 행동:</span> {task.one_next_action}</p>
+                            <p><span className="font-medium text-[color:var(--foreground-strong)]">상태:</span> {task.status === "due" ? "진행 필요" : task.status === "completed" ? "완료" : "대기"}</p>
+                            <p><span className="font-medium text-[color:var(--foreground-strong)]">작업:</span> {resolveTaskTypeLabel(task.task_type)}</p>
+                          </div>
+                        </details>
+                      </article>
                     ))
                   )}
                 </div>
@@ -361,7 +394,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                       {homeState === "start_today_task" ? primaryCtaLabel : homePrimaryCta}
                     </Button>
                   </Link>
-                  <details className="w-full rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] sm:w-auto sm:min-w-[20rem]">
+                  <details className="w-full rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] sm:w-auto">
                     <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">다른 작업 보기</summary>
                     <div className="flex flex-col gap-2 border-t border-[color:var(--border-subtle)] px-4 py-3 text-xs text-[color:var(--muted)]">
                       {mode === "first" ? (
@@ -434,93 +467,29 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
           </Card>
         )}
 
-      <section className="grid gap-4 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
-        <Card className="border-[color:var(--border-hairline)] bg-[color:var(--bg-elevated)] shadow-none">
-          <CardHeader className="space-y-2 p-4 sm:p-5">
-            <CardTitle className="text-base sm:text-lg">답안 검토실</CardTitle>
-            <CardDescription className="max-w-[56ch]">
-              이미 쓴 답안이나 문제 사진을 올리면, 누락 논점과 다시 쓸 문장을 정리합니다.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-4 pt-0 sm:p-5 sm:pt-0">
-            <Link href="/answer-review?mode=second" className="w-full">
-              <Button type="button" variant="outline" className="w-full">
-                답안 검토실 열기
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-
-        <Card className="border-[color:var(--border-hairline)] bg-[color:var(--bg-elevated)] shadow-none">
-          <CardHeader className="space-y-2 p-4 sm:p-5">
-            <CardTitle className="text-base sm:text-lg">문제 스냅 풀이</CardTitle>
-            <CardDescription className="max-w-[56ch]">문제 사진을 올리면 필요한 개념, 공식, 풀이 순서가 정리됩니다.</CardDescription>
-          </CardHeader>
-          <CardContent className="p-4 pt-0 sm:p-5 sm:pt-0">
-            <Link href="/problem-snap?mode=second" className="w-full">
-              <Button type="button" variant="outline" className="w-full">문제 스냅 풀이 열기</Button>
-            </Link>
-          </CardContent>
-        </Card>
-
-        <div className="space-y-2">
-          <HomeProofAnimation />
-          <p className="text-xs text-[color:var(--muted)]">문제 스냅 → OCR 초안 → 설명 초안 → 다음 행동</p>
+      <details className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
+        <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">Review Queue 보기</summary>
+        <div className="space-y-3 border-t border-[color:var(--border-subtle)] p-4 text-xs">
+          <p className="text-[color:var(--muted)]">복습 큐는 대기/진행 필요/완료 흐름으로만 관리합니다. 예측 점수나 합격 여부는 보여주지 않습니다. 추천은 저장된 학습 신호 기반입니다.</p>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-3 py-3">
+              <p className="font-medium text-[color:var(--foreground-strong)]">진행 필요</p>
+              {queue.filter((item) => isOverdueDueAt(item.dueAt)).length === 0 ? <p className="mt-1 text-[color:var(--muted)]">오늘 바로 처리할 항목이 없습니다.</p> : queue.filter((item) => isOverdueDueAt(item.dueAt)).slice(0, 3).map((item) => <p key={`due-${item.queueId}`} className="mt-1 text-[color:var(--muted)]">{item.subjectLabel} · {item.reviewReason}</p>)}
+            </div>
+            <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-3 py-3">
+              <p className="font-medium text-[color:var(--foreground-strong)]">대기</p>
+              {queue.filter((item) => !isOverdueDueAt(item.dueAt)).length === 0 ? <p className="mt-1 text-[color:var(--muted)]">예정된 복습이 없습니다.</p> : queue.filter((item) => !isOverdueDueAt(item.dueAt)).slice(0, 3).map((item) => <p key={`pending-${item.queueId}`} className="mt-1 text-[color:var(--muted)]">{item.subjectLabel} · {item.problemTitle}</p>)}
+            </div>
+            <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-3 py-3">
+              <p className="font-medium text-[color:var(--foreground-strong)]">완료</p>
+              <p className="mt-1 text-[color:var(--muted)]">완료 처리하기 후 완료한 항목은 Today Plan에서 사라지고 복습 이력에 남습니다.</p>
+            </div>
+          </div>
+          {latestProblemSnapSignal ? (
+            <p className="text-[color:var(--muted)]">Problem Snap 기반 항목도 저장 후 오늘 할 일에 반영됩니다. {problemSnapSignalCta.label}</p>
+          ) : null}
         </div>
-      </section>
-
-      <section className="grid gap-4 lg:grid-cols-2">
-        <Card className="border-[color:var(--border-hairline)] bg-[color:var(--bg-elevated)] shadow-none">
-          <CardHeader className="space-y-2 p-4 sm:p-5">
-            <CardTitle className="text-base sm:text-lg">Today Plan</CardTitle>
-            <CardDescription>저장된 학습 신호와 복습 작업을 기준으로 오늘 우선순위 3개까지만 보여줍니다.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3 p-4 pt-0 sm:p-5 sm:pt-0">
-            {todayPlanTasks.length === 0 ? (
-              <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-4 py-3 text-xs text-[color:var(--muted)]">
-                {learningSignalEvents.length === 0 ? "아직 학습 신호가 없습니다. 입력 1개를 저장하면 Today Plan이 생성됩니다." : "오늘 마감된 복습이 없습니다. 예정된 항목부터 순서대로 진행하세요."}
-              </div>
-            ) : (
-              todayPlanTasks.slice(0, 3).map((task, index) => (
-                <div key={`${task.itemId}-${index}`} className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-4 py-3 text-xs">
-                  <p className="font-medium text-[color:var(--foreground-strong)]">{index + 1}. {task.title}</p>
-                  <p className="mt-1 text-[color:var(--muted)]">과목: {task.subject}</p>
-                  <p className="text-[color:var(--muted)]">모드: {task.exam_mode === "second" ? "second" : "first"}</p>
-                  <p className="text-[color:var(--muted)]">노출 이유: {task.reason}</p>
-                  <p className="text-[color:var(--muted)]">다음 행동: {task.one_next_action}</p>
-                  <p className="text-[color:var(--muted)]">마감 상태: {task.due_bucket === "overdue" ? "기한 지남" : task.due_bucket === "today" ? "오늘" : "예정"}</p>
-                  <div className="mt-2">
-                    <Link href={task.exam_mode === "second" ? "/app/review?mode=second" : "/app/review?mode=first"} className="underline underline-offset-2">완료 처리하기</Link>
-                  </div>
-                </div>
-              ))
-            )}
-            {todayPlanTasks.length > 0 && queue.length === 0 ? <p className="text-xs text-[color:var(--muted)]">오늘 계획을 모두 마치면 여기까지 완료입니다.</p> : null}
-          </CardContent>
-        </Card>
-
-        <Card className="border-[color:var(--border-hairline)] bg-[color:var(--bg-elevated)] shadow-none">
-          <CardHeader className="space-y-2 p-4 sm:p-5">
-            <CardTitle className="text-base sm:text-lg">Review Queue</CardTitle>
-            <CardDescription>복습 큐를 기한별로 나누고 작업 유형에 따라 retry/rewrite로 바로 연결합니다.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3 p-4 pt-0 sm:p-5 sm:pt-0 text-xs">
-            <p className="text-[color:var(--muted)]">예측 점수/합격 여부를 제공하지 않습니다. 추천은 저장된 학습 신호 기반입니다.</p>
-            <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-4 py-3">
-              <p className="font-medium text-[color:var(--foreground-strong)]">Due</p>
-              {queue.filter((item) => isOverdueDueAt(item.dueAt)).length === 0 ? <p className="mt-1 text-[color:var(--muted)]">오늘 마감된 복습이 없습니다.</p> : queue.filter((item) => isOverdueDueAt(item.dueAt)).slice(0, 5).map((item) => <p key={`due-${item.queueId}`} className="mt-1 text-[color:var(--muted)]">{item.subjectLabel} · {mode === "second" ? "rewrite" : "retry"}</p>)}
-            </div>
-            <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-4 py-3">
-              <p className="font-medium text-[color:var(--foreground-strong)]">Upcoming</p>
-              {queue.filter((item) => !isOverdueDueAt(item.dueAt)).length === 0 ? <p className="mt-1 text-[color:var(--muted)]">예정된 복습이 없습니다.</p> : queue.filter((item) => !isOverdueDueAt(item.dueAt)).slice(0, 5).map((item) => <p key={`upcoming-${item.queueId}`} className="mt-1 text-[color:var(--muted)]">{item.subjectLabel} · {mode === "second" ? "rewrite" : "quick review"}</p>)}
-            </div>
-            <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-4 py-3">
-              <p className="font-medium text-[color:var(--foreground-strong)]">Completed</p>
-              <p className="mt-1 text-[color:var(--muted)]">완료 항목은 실행 화면에서 완료 처리 후 이력에 누적됩니다.</p>
-            </div>
-          </CardContent>
-        </Card>
-      </section>
+      </details>
 
         <details className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
           <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">누적 신호 보기</summary>

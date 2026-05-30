@@ -16,17 +16,15 @@ export type TodayPlanCard = {
 
 const EMPTY_STATE_COPY = "답안 검토나 오답 기록을 1개 남기면 오늘 할 일을 제안합니다.";
 
-function resolveAction(mode: AppMode, taskType: "retry" | "rewrite" | "review" | "recall"): Pick<TodayPlanCard, "ctaLabel" | "actionKind"> {
-  if (mode === "second") {
-    if (taskType === "rewrite") return { ctaLabel: "다시 쓰기", actionKind: "second_review" };
-    if (taskType === "retry") return { ctaLabel: "다시보기 큐 열기", actionKind: "second_review" };
-    if (taskType === "review") return { ctaLabel: "핵심 논점 다시 보기", actionKind: "second_review" };
-    if (taskType === "recall") return { ctaLabel: "쟁점 회상", actionKind: "second_review" };
-    return { ctaLabel: "다시 쓰기", actionKind: "second_write" };
+function resolveAction(mode: AppMode, taskType: import("./today-plan-engine").TodayPlanTaskType): Pick<TodayPlanCard, "ctaLabel" | "actionKind"> {
+  if (taskType === "ocr_confirmation" || taskType === "note_cleanup") {
+    return mode === "second" ? { ctaLabel: "확인하고 정리", actionKind: "second_items" } : { ctaLabel: "확인하고 정리", actionKind: "first_capture" };
   }
-  if (taskType === "recall") return { ctaLabel: "근거 회상 후 다시 풀기", actionKind: "first_session" };
-  if (taskType === "review") return { ctaLabel: "다시 풀기", actionKind: "first_session" };
-  return { ctaLabel: "다시 풀기", actionKind: "first_session" };
+  if (taskType === "second_answer_rewrite") return { ctaLabel: "10분 다시 쓰기", actionKind: "second_review" };
+  if (taskType === "accounting_template_retry") return { ctaLabel: "템플릿 재시도", actionKind: "first_session" };
+  if (taskType === "cloze_review") return { ctaLabel: "빈칸 회상", actionKind: "first_session" };
+  if (taskType === "concept_review") return { ctaLabel: "개념 회상", actionKind: mode === "second" ? "second_review" : "first_session" };
+  return { ctaLabel: mode === "second" ? "다시 쓰기" : "다시 풀기", actionKind: mode === "second" ? "second_review" : "first_session" };
 }
 
 export function buildTodayPlanCard(input: {
@@ -35,7 +33,7 @@ export function buildTodayPlanCard(input: {
   queue: ReviewQueueCard[];
   items: WrongAnswerItemRecord[];
 }): TodayPlanCard {
-  const tasks = buildTodayPlanTasks({ mode: input.mode, queue: input.queue, learningSignals: input.learningSignals });
+  const tasks = buildTodayPlanTasks({ mode: input.mode, queue: input.queue, items: input.items, learningSignals: input.learningSignals });
   if (tasks.length === 0) {
     const hasAnyLearningData = input.learningSignals.length > 0 || input.items.length > 0;
     if (!hasAnyLearningData) {
