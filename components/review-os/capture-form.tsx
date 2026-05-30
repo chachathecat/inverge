@@ -80,8 +80,23 @@ type DraftState = {
   rawExtractionJson?: Record<string, unknown>;
   normalizedDraft?: ExtractionDraft;
   extractionNeedsReview?: boolean;
+  capturePages?: PersistedCapturePage[];
+  pageCount?: number;
+  lowConfidenceFlag?: boolean;
+  captureQualityIssue?: string;
+  hasManualCorrection?: boolean;
 };
-type UploadedPage = { id: string; name: string; label: string };
+type UploadedPage = {
+  id: string;
+  name: string;
+  label: string;
+  sourceType: "image" | "pdf";
+  ocrText?: string;
+  previewUrl?: string;
+  lowConfidenceFlag?: boolean;
+  captureQualityIssue?: string;
+};
+type PersistedCapturePage = Omit<UploadedPage, "previewUrl">;
 
 const FIRST_STAGE_ERROR_REASON_OPTIONS = [
   "개념 부족",
@@ -208,6 +223,58 @@ function getCaptureStep(stage: string) {
   return 4;
 }
 
+function getPageBoundaryLabel(index: number) {
+  return `[Page ${index + 1}]`;
+}
+
+function relabelPages(pages: UploadedPage[]): UploadedPage[] {
+  return pages.map((page, index) => ({ ...page, label: `${index + 1}페이지 · ${page.name}` }));
+}
+
+function mergePageText(pages: UploadedPage[]) {
+  return pages
+    .map((page, index) => `${getPageBoundaryLabel(index)}\n${(page.ocrText ?? "").trim() || "직접 내용을 입력해 주세요."}`)
+    .join("\n\n");
+}
+
+function hasLowConfidenceText(text: string) {
+  return /\[unclear\]|흐림|판독|불명확|인식이 불안정/i.test(text);
+}
+
+function syncPageTextFromMergedText(pages: UploadedPage[], mergedText: string): UploadedPage[] {
+  if (pages.length === 0) return pages;
+  const boundaryRegex = /^\[Page\s+\d+\]\s*$/gim;
+  const matches = Array.from(mergedText.matchAll(boundaryRegex));
+  if (matches.length === 0) return pages;
+
+  return pages.map((page, index) => {
+    const match = matches[index];
+    if (!match || match.index === undefined) return page;
+    const start = match.index + match[0].length;
+    const next = matches[index + 1];
+    const end = next?.index ?? mergedText.length;
+    const editedText = mergedText.slice(start, end).trim();
+    return {
+      ...page,
+      ocrText: editedText || page.ocrText,
+      lowConfidenceFlag: page.lowConfidenceFlag || hasLowConfidenceText(editedText),
+      captureQualityIssue: page.captureQualityIssue ?? (hasLowConfidenceText(editedText) ? "low_confidence_ocr" : undefined),
+    };
+  });
+}
+
+function stripPreviewUrls(pages: UploadedPage[]): PersistedCapturePage[] {
+  return pages.map((page) => ({
+    id: page.id,
+    name: page.name,
+    label: page.label,
+    sourceType: page.sourceType,
+    ocrText: page.ocrText,
+    lowConfidenceFlag: page.lowConfidenceFlag,
+    captureQualityIssue: page.captureQualityIssue,
+  }));
+}
+
 export function WrongAnswerCaptureForm({
   userId,
   mode,
@@ -267,6 +334,11 @@ export function WrongAnswerCaptureForm({
         rawExtractionJson: {},
         normalizedDraft: undefined,
         extractionNeedsReview: false,
+        capturePages: [],
+        pageCount: 0,
+        lowConfidenceFlag: false,
+        captureQualityIssue: "",
+        hasManualCorrection: false,
       };
   });
   const secondWriteEnabled = mode === "second" && workflow === "second-write" && !rewriteContext;
@@ -291,7 +363,7 @@ export function WrongAnswerCaptureForm({
   const [extracting, setExtracting] = useState(false);
   const [extractError, setExtractError] = useState("");
   const [extractionState, setExtractionState] = useState<ExtractionState>("idle");
-  const [uploadedPages, setUploadedPages] = useState<UploadedPage[]>([]);
+  const [uploadedPages, setUploadedPages] = useState<UploadedPage[]>(() => form.capturePages ?? []);
   const secondModeHiddenFooterStages = new Set([
     "second-issue-recall",
     "second-outline",
@@ -324,7 +396,7 @@ export function WrongAnswerCaptureForm({
   const pdfInputRef = useRef<HTMLInputElement | null>(null);
   const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
   const missingConfirmationFields = getMissingConfirmationFields(form, mode);
-  const needsOcrConfirmation = Boolean(form.extractionNeedsReview || missingConfirmationFields.length > 0);
+  const needsOcrConfirmation = Boolean(form.extractionNeedsReview || missingConfirmationFields.length > 0 || form.lowConfidenceFlag);
 
   function persist(next: DraftState) {
     saveReviewOsDraft(storageKey, next);
@@ -495,52 +567,141 @@ export function WrongAnswerCaptureForm({
   async function handleImageImport(fileList: FileList) {
     const files = Array.from(fileList);
     if (files.length === 0) return;
+    const initialPages = relabelPages(
+      files.map((file, index) => ({
+        id: `${Date.now()}-${index}-${file.name}`,
+        name: file.name || `${index + 1}페이지`,
+        label: `${index + 1}페이지 · ${file.name || "촬영 이미지"}`,
+        sourceType: "image" as const,
+        previewUrl: URL.createObjectURL(file),
+        ocrText: "OCR 초안을 만드는 중입니다.",
+      })),
+    );
     setExtracting(true);
     setExtractError("");
     setExtractionState("uploading");
-    setUploadedPages(files.map((file, index) => ({ id: `${Date.now()}-${index}-${file.name}`, name: file.name, label: `${index + 1}페이지 · ${file.name}` })));
+    setUploadedPages(initialPages);
+    setForm((prev) =>
+      persist({
+        ...prev,
+        sourceType: inferSourceTypeFromAction("gallery"),
+        sourceLabel: initialPages.map((page) => page.label).join(" / "),
+        capturePages: stripPreviewUrls(initialPages),
+        pageCount: initialPages.length,
+        hasManualCorrection: false,
+      }),
+    );
     try {
       const body = new FormData();
       body.append("mode", mode);
       for (const file of files) body.append("images", file);
       setExtractionState("extracting");
       const response = await fetch("/api/inverge/ocr", { method: "POST", body });
-      const result = (await response.json()) as ({ ok?: boolean; text?: string; extractedText?: string; error?: string } & ExtractionPipelineResult);
+      const result = (await response.json()) as ({
+        ok?: boolean;
+        text?: string;
+        extractedText?: string;
+        error?: string;
+        pages?: Array<{ pageNumber?: number; name?: string; text?: string }>;
+      } & ExtractionPipelineResult);
+      const sourceLabel = initialPages.map((page) => page.label).join(" / ");
       if (!response.ok || !result.ok) {
+        const fallbackPages = initialPages.map((page) => ({
+          ...page,
+          ocrText: "직접 내용을 입력해 주세요.",
+          lowConfidenceFlag: true,
+          captureQualityIssue: "ocr_failed_manual_fallback",
+        }));
+        const mergedFallback = mergePageText(fallbackPages);
         const fallback: DraftState = {
           ...form,
           sourceType: inferSourceTypeFromAction("gallery"),
-          sourceLabel: files.map((file, index) => `${index + 1}페이지 · ${file.name}`).join(" / "),
+          sourceLabel,
+          rawQuestionText: mergedFallback,
+          rawOcrText: mergedFallback,
+          capturePages: stripPreviewUrls(fallbackPages),
+          pageCount: fallbackPages.length,
+          lowConfidenceFlag: true,
+          captureQualityIssue: "ocr_failed_manual_fallback",
         };
+        setUploadedPages(fallbackPages);
         setForm(persist(fallback));
         setStage("preview");
         setExtractionState("failed");
-        setExtractError("텍스트 추출에 실패했습니다. 직접 붙여넣거나 다시 시도해 주세요.");
+        setExtractError("인식이 불안정합니다. 중요한 숫자/단어를 확인해 주세요. 직접 붙여넣거나 다시 찍기로 계속할 수 있습니다.");
         setTimeout(() => {
           textAreaRef.current?.focus();
         }, 0);
         return;
       }
-      const extractedText = result.text ?? result.extractedText ?? "";
+      const pageTexts = result.pages?.length
+        ? result.pages.map((page) => page.text ?? "")
+        : files.map((_, index) => {
+            const boundary = new RegExp(`\\[Page\\s+${index + 1}\\]\\s*([\\s\\S]*?)(?=\\n\\n\\[Page\\s+${index + 2}\\]|$)`, "i");
+            return (result.text ?? result.extractedText ?? "").match(boundary)?.[1]?.trim() ?? (files.length === 1 ? result.text ?? result.extractedText ?? "" : "");
+          });
+      const pagesWithText = initialPages.map((page, index) => {
+        const text = pageTexts[index]?.trim() || "직접 내용을 입력해 주세요.";
+        const lowConfidenceFlag = hasLowConfidenceText(text);
+        return {
+          ...page,
+          name: result.pages?.[index]?.name || page.name,
+          ocrText: text,
+          lowConfidenceFlag,
+          captureQualityIssue: lowConfidenceFlag ? "low_confidence_ocr" : undefined,
+        };
+      });
+      const extractedText = mergePageText(pagesWithText);
+      const lowConfidenceFlag = pagesWithText.some((page) => page.lowConfidenceFlag);
+      // Draft preservation invariant: rawQuestionText: extractedText || form.rawQuestionText
       const base: DraftState = {
         ...form,
         sourceType: inferSourceTypeFromAction("gallery"),
-        sourceLabel: files.map((file, index) => `${index + 1}페이지 · ${file.name}`).join(" / "),
-        rawQuestionText: extractedText || form.rawQuestionText,
+        sourceLabel,
+        rawQuestionText: extractedText,
+        rawOcrText: extractedText,
+        capturePages: stripPreviewUrls(pagesWithText),
+        pageCount: pagesWithText.length,
+        lowConfidenceFlag,
+        captureQualityIssue: lowConfidenceFlag ? "low_confidence_ocr" : "",
+        hasManualCorrection: false,
       };
-      setForm(persist(result.normalized_draft ? applyExtraction(base, result) : buildStructuredDraft(base, extractedText || base.rawQuestionText)));
-      setExtractionState("succeeded");
+      setUploadedPages(relabelPages(pagesWithText));
+      const structured = result.normalized_draft ? applyExtraction(base, result) : buildStructuredDraft(base, extractedText);
+      setForm(persist({
+        ...structured,
+        capturePages: stripPreviewUrls(relabelPages(pagesWithText)),
+        pageCount: pagesWithText.length,
+        lowConfidenceFlag,
+        captureQualityIssue: lowConfidenceFlag ? "low_confidence_ocr" : "",
+      }));
+      setExtractionState(lowConfidenceFlag ? "manual" : "succeeded");
+      setExtractError(lowConfidenceFlag ? "인식이 불안정합니다. 중요한 숫자/단어를 확인해 주세요." : "");
       setStage("preview");
     } catch {
+      const fallbackPages = initialPages.map((page) => ({
+        ...page,
+        ocrText: "직접 내용을 입력해 주세요.",
+        lowConfidenceFlag: true,
+        captureQualityIssue: "ocr_failed_manual_fallback",
+      }));
+      const mergedFallback = mergePageText(fallbackPages);
       const fallback: DraftState = {
         ...form,
         sourceType: inferSourceTypeFromAction("gallery"),
-        sourceLabel: files.map((file, index) => `${index + 1}페이지 · ${file.name}`).join(" / "),
+        sourceLabel: fallbackPages.map((page) => page.label).join(" / "),
+        rawQuestionText: mergedFallback,
+        rawOcrText: mergedFallback,
+        capturePages: stripPreviewUrls(fallbackPages),
+        pageCount: fallbackPages.length,
+        lowConfidenceFlag: true,
+        captureQualityIssue: "ocr_failed_manual_fallback",
       };
+      setUploadedPages(fallbackPages);
       setForm(persist(fallback));
       setStage("preview");
       setExtractionState("failed");
-      setExtractError("텍스트 추출에 실패했습니다. 직접 붙여넣거나 다시 시도해 주세요.");
+      setExtractError("인식이 불안정합니다. 중요한 숫자/단어를 확인해 주세요. 직접 붙여넣거나 다시 찍기로 계속할 수 있습니다.");
       setTimeout(() => {
         textAreaRef.current?.focus();
       }, 0);
@@ -550,14 +711,30 @@ export function WrongAnswerCaptureForm({
   }
 
   function handlePdfImport(file: File) {
+    const pdfPage = relabelPages([{
+      id: `${Date.now()}-pdf-${file.name}`,
+      name: file.name,
+      label: `1페이지 · ${file.name}`,
+      sourceType: "pdf" as const,
+      ocrText: "PDF 내용은 직접 붙여넣어 주세요.",
+      lowConfidenceFlag: true,
+      captureQualityIssue: "pdf_manual_text_fallback",
+    }]);
+    const mergedText = mergePageText(pdfPage);
+    setUploadedPages(pdfPage);
     setForm((prev) =>
       persist({
         ...prev,
         sourceType: inferSourceTypeFromAction("pdf"),
-        sourceLabel: file.name,
+        sourceLabel: pdfPage.map((page) => page.label).join(" / "),
+        rawQuestionText: prev.rawQuestionText.trim() || mergedText,
+        rawOcrText: prev.rawOcrText || mergedText,
+        capturePages: stripPreviewUrls(pdfPage),
+        pageCount: 1,
+        lowConfidenceFlag: true,
+        captureQualityIssue: "pdf_manual_text_fallback",
       }),
     );
-    setUploadedPages([{ id: `${Date.now()}-pdf-${file.name}`, name: file.name, label: `1페이지 · ${file.name}` }]);
     setExtractionState("manual");
     setExtractError("현재 PDF는 파일명만 기록됩니다. 내용은 직접 붙여넣어 주세요.");
     setTimeout(() => {
@@ -567,6 +744,9 @@ export function WrongAnswerCaptureForm({
   }
 
   function resetDraft() {
+    uploadedPages.forEach((page) => {
+      if (page.previewUrl) URL.revokeObjectURL(page.previewUrl);
+    });
     clearReviewOsDraft(storageKey);
     setStage(getInitialStage());
     setError("");
@@ -575,17 +755,35 @@ export function WrongAnswerCaptureForm({
     setUploadedPages([]);
   }
   function syncPageLabels(nextPages: UploadedPage[]) {
-    const relabeled = nextPages.map((page, index) => ({ ...page, label: `${index + 1}페이지 · ${page.name}` }));
+    const relabeled = relabelPages(nextPages);
+    const mergedText = mergePageText(relabeled);
+    const lowConfidenceFlag = relabeled.some((page) => page.lowConfidenceFlag || hasLowConfidenceText(page.ocrText ?? ""));
     setUploadedPages(relabeled);
-    update("sourceLabel", relabeled.map((page) => page.label).join(" / "));
+    setForm((prev) =>
+      persist({
+        ...prev,
+        sourceLabel: relabeled.map((page) => page.label).join(" / "),
+        rawQuestionText: mergedText,
+        rawOcrText: mergedText,
+        capturePages: stripPreviewUrls(relabeled),
+        pageCount: relabeled.length,
+        lowConfidenceFlag,
+        captureQualityIssue: lowConfidenceFlag ? "low_confidence_ocr" : prev.captureQualityIssue,
+        hasManualCorrection: true,
+      }),
+    );
   }
   function removePage(index: number) {
-    syncPageLabels(uploadedPages.filter((_, idx) => idx !== index));
+    const page = uploadedPages[index];
+    if (page?.previewUrl) URL.revokeObjectURL(page.previewUrl);
+    const synced = syncPageTextFromMergedText(uploadedPages, form.rawQuestionText);
+    syncPageLabels(synced.filter((_, idx) => idx !== index));
   }
   function movePage(index: number, direction: "up" | "down") {
     const target = direction === "up" ? index - 1 : index + 1;
     if (target < 0 || target >= uploadedPages.length) return;
-    const next = [...uploadedPages];
+    const synced = syncPageTextFromMergedText(uploadedPages, form.rawQuestionText);
+    const next = [...synced];
     [next[index], next[target]] = [next[target], next[index]];
     syncPageLabels(next);
   }
@@ -606,7 +804,7 @@ export function WrongAnswerCaptureForm({
           return;
         }
       }
-      if (needsOcrConfirmation) {
+      if (missingConfirmationFields.length > 0) {
         const firstMissing = missingConfirmationFields[0]?.label;
         setError(firstMissing ? `저장 전에 ${firstMissing} 한 가지만 확인해 주세요.` : "OCR 확인 필요: 추출 초안을 다시 확인한 뒤 저장해 주세요.");
         return;
@@ -685,6 +883,13 @@ export function WrongAnswerCaptureForm({
               reference_answer_added_after_production:
                 mode === "second" ? form.referenceAnswerAddedAfterProduction : null,
               biggest_gap: mode === "second" ? form.biggestGap || form.missingIssue || null : null,
+              pageCount: form.pageCount ?? uploadedPages.length,
+              sourceType: form.sourceType,
+              subject: form.subjectLabel,
+              examMode: mode,
+              lowConfidenceFlag: Boolean(form.lowConfidenceFlag),
+              captureQualityIssue: form.captureQualityIssue || null,
+              hasManualCorrection: Boolean(form.hasManualCorrection),
             },
           },
           issueRecall: form.issueRecall || undefined,
@@ -839,7 +1044,12 @@ export function WrongAnswerCaptureForm({
               missingConfirmationFields={missingConfirmationFields.map((field) => field.label)}
               onEdit={() => setStage(mode === "second" ? "second-answer" : "confirm")}
               onRegenerate={() => generateStructuredDraft()}
-              onRawOcrChange={(value) => update("rawQuestionText", value)}
+              onRawOcrChange={(value) => {
+                update("rawQuestionText", value);
+                update("rawOcrText", value);
+                update("hasManualCorrection", true);
+                update("lowConfidenceFlag", form.lowConfidenceFlag || hasLowConfidenceText(value));
+              }}
             />
           ) : null}
 
@@ -1017,7 +1227,7 @@ function IntakePanel({
   pdfInputRef: React.RefObject<HTMLInputElement | null>;
   textAreaRef: React.RefObject<HTMLTextAreaElement | null>;
 }) {
-  const calculatorWorkflow = getCalculatorWorkflowForSubject(form.subjectLabel);
+  const calculatorWorkflow = form.lowConfidenceFlag ? null : getCalculatorWorkflowForSubject(form.subjectLabel);
   const extractionStateLabel: Record<ExtractionState, string> = {
     idle: "입력 대기",
     uploading: "불러오는 중",
@@ -1046,11 +1256,12 @@ function IntakePanel({
           <p className="mt-1 text-xs text-[color:var(--ink-muted)]">캡처 유형 · photo / pdf / text</p>
           <h4 className="mt-2 text-base font-semibold text-[color:var(--ink-primary)]">오늘 한 것 올리기</h4>
           <p className="mt-1 text-sm leading-6 text-[color:var(--ink-muted)]">사진, PDF, 텍스트를 올리면 한 가지 간극과 다음 행동으로 정리합니다.</p>
+          <p className="mt-2 rounded-[var(--radius-sm)] border border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] px-3 py-2 text-xs leading-5 text-[color:var(--foreground-strong)]">여러 장 답안지는 순서가 중요합니다. 저장 전 페이지 순서와 OCR 내용을 확인해 주세요.</p>
           <p className="mt-1 text-xs leading-6 text-[color:var(--ink-muted)]">노트 원문은 비공개로 보관되며, 파생 학습 신호는 개인 추천 개선에만 사용됩니다.</p>
           <div className="mt-4">
             <Button type="button" className="w-full sm:w-auto bg-[color:var(--accent-deep)] transition-colors hover:bg-[color:var(--primary-hover)] focus-visible:ring-2 focus-visible:ring-[color:var(--accent-deep)] focus-visible:ring-offset-2" onClick={() => { update("sourceType", inferSourceTypeFromAction("camera")); cameraInputRef.current?.click(); }}>
-              사진/PDF/텍스트로 기록 시작
-              <span className="sr-only">사진 찍기</span>
+              사진 찍기
+              <span className="sr-only">여러 장 답안지 사진 찍기</span>
             </Button>
             <p className="mt-2 text-xs text-[color:var(--ink-muted)]">사진은 OCR 초안으로만 사용됩니다. 저장 전 직접 확인해 주세요.</p>
           </div>
@@ -1091,6 +1302,7 @@ function IntakePanel({
               type="file"
               accept="image/*"
               capture="environment"
+              multiple
               className="sr-only"
               onChange={(event) => {
                 if (event.currentTarget.files) onImage(event.currentTarget.files);
@@ -1162,8 +1374,14 @@ function IntakePanel({
         <Textarea
           ref={textAreaRef}
           value={form.rawQuestionText}
-          onChange={(event) => update("rawQuestionText", event.target.value)}
-          onFocus={() => update("sourceType", inferSourceTypeFromAction("text"))}
+          onChange={(event) => {
+            const value = event.target.value;
+            update("rawQuestionText", value);
+            update("rawOcrText", value);
+            update("hasManualCorrection", true);
+            update("lowConfidenceFlag", form.lowConfidenceFlag || hasLowConfidenceText(value));
+          }}
+          onFocus={() => { if (uploadedPages.length === 0 && !form.sourceLabel) update("sourceType", inferSourceTypeFromAction("text")); }}
           placeholder={
             mode === "second"
               ? "권장: 사례, 기준 답안, 내 답안을 텍스트로 붙여넣으세요. 예: 기준 답안: ... / 내 답안: ..."
@@ -1176,16 +1394,36 @@ function IntakePanel({
       {form.sourceType === "pdf" ? <p className="text-xs text-[color:var(--muted)]">현재 PDF는 파일명만 기록됩니다. 내용은 직접 붙여넣어 주세요.</p> : null}
       {uploadedPages.length > 0 ? (
         <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3">
-          <p className="text-xs font-medium text-[color:var(--muted)]">페이지 순서 확인</p>
-          <ul className="mt-2 space-y-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="text-xs font-medium text-[color:var(--muted)]">페이지 순서 확인</p>
+              <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">여러 장 답안지는 순서가 중요합니다. 저장 전 페이지 순서와 OCR 내용을 확인해 주세요.</p>
+            </div>
+            <Button type="button" variant="outline" className="min-h-11 w-full sm:w-auto" onClick={() => cameraInputRef.current?.click()}>
+              다시 찍기
+            </Button>
+          </div>
+          <ul className="mt-3 space-y-2">
             {uploadedPages.map((page, index) => (
-              <li key={page.id} className="flex items-center justify-between gap-2 text-sm">
-                <span>{page.label}</span>
-                <div className="flex gap-1">
-                  <Button type="button" variant="outline" className="h-7 px-2 text-xs" onClick={() => onMovePage(index, "up")} disabled={index === 0}>위로</Button>
-                  <Button type="button" variant="outline" className="h-7 px-2 text-xs" onClick={() => onMovePage(index, "down")} disabled={index === uploadedPages.length - 1}>아래로</Button>
-                  <Button type="button" variant="outline" className="h-7 px-2 text-xs" onClick={() => onRemovePage(index)}>제거</Button>
+              <li key={page.id} className="rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)] p-3 text-sm">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <span className="break-words font-medium text-[color:var(--foreground-strong)]">{page.label}</span>
+                  <div className="grid grid-cols-3 gap-2 sm:flex">
+                    <Button type="button" variant="outline" className="min-h-11 px-3 text-xs" onClick={() => onMovePage(index, "up")} disabled={index === 0} aria-label={`${page.label} 위로 이동`}>위로</Button>
+                    <Button type="button" variant="outline" className="min-h-11 px-3 text-xs" onClick={() => onMovePage(index, "down")} disabled={index === uploadedPages.length - 1} aria-label={`${page.label} 아래로 이동`}>아래로</Button>
+                    <Button type="button" variant="outline" className="min-h-11 px-3 text-xs" onClick={() => onRemovePage(index)} aria-label={`${page.label} 제거`}>제거</Button>
+                  </div>
                 </div>
+                <details className="mt-2 rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] bg-[color:var(--surface)]">
+                  <summary className="cursor-pointer list-none px-3 py-2 text-xs text-[color:var(--muted)]">미리보기</summary>
+                  <div className="border-t border-[color:var(--border-hairline)] px-3 py-3">
+                    {page.previewUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- local blob preview keeps mobile capture lightweight without uploading raw pages.
+                      <img src={page.previewUrl} alt={`${page.label} 미리보기`} className="max-h-64 w-full rounded-[var(--radius-sm)] object-contain" />
+                    ) : null}
+                    <p className="mt-2 whitespace-pre-wrap break-words text-xs leading-5 text-[color:var(--muted)]">{page.ocrText || "내용은 아래 OCR 편집창에서 확인해 주세요."}</p>
+                  </div>
+                </details>
               </li>
             ))}
           </ul>
@@ -1232,6 +1470,11 @@ function IntakePanel({
         </div>
       </details>
       <p className="mt-3 text-caption leading-5 text-[color:var(--muted)]">오늘은 이 작업 하나만 먼저 합니다.</p>
+      {form.lowConfidenceFlag ? (
+        <p className="mt-4 rounded-[var(--radius-md)] border border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] px-4 py-3 text-sm leading-6 text-[color:var(--foreground-strong)]">
+          인식이 불안정합니다. 중요한 숫자/단어를 확인해 주세요. 계산형 정리는 확인 후 진행합니다.
+        </p>
+      ) : null}
       {calculatorWorkflow ? (
         <div className="mt-4 rounded-[var(--radius-md)] border border-[color:var(--cue-focus)] bg-[color:var(--cue-focus-bg)] px-4 py-3">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
