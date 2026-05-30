@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+import { BottomPrimaryAction, LearnerProgressBar } from "@/components/learner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -190,8 +191,21 @@ function getMissingConfirmationFields(form: DraftState, mode: AppraisalMode) {
 }
 function inferSourceTypeFromAction(action: "camera" | "gallery" | "text" | "pdf"): SourceType {
   if (action === "pdf") return "pdf";
-  if (action === "camera" || action === "gallery") return "image";
-  return "manual";
+  if (action === "camera" || action === "gallery") return "photo";
+  return "text";
+}
+
+function parseTimeSpentMinutes(value: string) {
+  const match = value.trim().match(/\d+/);
+  if (!match) return undefined;
+  return Number(match[0]);
+}
+
+function getCaptureStep(stage: string) {
+  if (stage === "intake") return 1;
+  if (stage === "preview") return 2;
+  if (stage === "confirm" || stage.startsWith("second-")) return 3;
+  return 4;
 }
 
 export function WrongAnswerCaptureForm({
@@ -219,7 +233,7 @@ export function WrongAnswerCaptureForm({
     }
     return {
         subjectLabel: resolvedInitialSubject,
-        sourceType: "manual",
+        sourceType: "text",
         sourceLabel: "",
         problemTitle: rewriteContext?.sourceTitle ?? "",
         problemIdentifier: mode === "second" ? SECOND_TASK_PRESETS[0] : "",
@@ -286,6 +300,7 @@ export function WrongAnswerCaptureForm({
     "second-gap",
   ]);
   const hideGlobalFooterActions = mode === "second" && secondModeHiddenFooterStages.has(stage);
+  const currentCaptureStep = getCaptureStep(stage);
   useEffect(() => {
     if (!secondWriteEnabled) return;
 
@@ -633,7 +648,7 @@ export function WrongAnswerCaptureForm({
           userReasonText: form.userReasonText || undefined,
           userReasonPreset: form.userReasonPreset || undefined,
           confidence: form.confidence,
-          timeSpentSeconds: form.timeSpentSeconds ? Number(form.timeSpentSeconds) : undefined,
+          timeSpentSeconds: parseTimeSpentMinutes(form.timeSpentSeconds) ? parseTimeSpentMinutes(form.timeSpentSeconds)! * 60 : undefined,
           nextReviewDate: form.nextReviewDate || undefined,
           keyConcepts: form.keyConcepts.split(",").map((item) => item.trim()).filter(Boolean),
           coreFormula: form.coreFormula || undefined,
@@ -656,6 +671,7 @@ export function WrongAnswerCaptureForm({
               userReasonText: form.userReasonText,
               userReasonPreset: form.userReasonPreset,
               nextReviewDate: form.nextReviewDate,
+              timeSpentMinutes: parseTimeSpentMinutes(form.timeSpentSeconds) ?? null,
               problemTitle: form.problemTitle,
               rewrite_source_item_id: rewriteContext?.sourceItemId ?? null,
               rewrite_source_gap: rewriteContext?.biggestGap ?? null,
@@ -707,7 +723,8 @@ export function WrongAnswerCaptureForm({
   }
 
   return (
-    <form className="space-y-6" onSubmit={handleSubmit}>
+    <form className="space-y-6 pb-28 sm:pb-0" onSubmit={handleSubmit}>
+      <LearnerProgressBar current={currentCaptureStep} total={4} label="오늘 한 것 올리기" helper="1. 입력 → 2. 확인 → 3. 정리 → 4. 저장" />
       {rewriteContext && mode === "second" ? (
         <>
           <RewriteContextPanel
@@ -884,7 +901,20 @@ export function WrongAnswerCaptureForm({
       ) : null}
 
       {!hideGlobalFooterActions ? (
-        <div className="flex flex-col gap-3 sm:flex-row">
+        <BottomPrimaryAction secondary={
+          <details className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-3 py-2">
+            <summary className="cursor-pointer text-xs font-medium text-[color:var(--muted)]">다른 선택</summary>
+            <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+              <Button type="button" variant="outline" onClick={resetDraft} className="w-full sm:w-auto">
+                {mode === "second" ? "다시 쓰기" : "다시 풀기"}
+              </Button>
+              <Button type="button" variant="ghost" onClick={resetDraft} className="w-full sm:w-auto">
+                나중에 하기
+              </Button>
+            </div>
+          </details>
+        }>
+        <div className="flex w-full flex-col gap-3 sm:flex-row">
           {rewriteContext && mode === "second" ? (
             <Button type="submit" disabled={submitting || !form.rewriteParagraph.trim()} className="w-full sm:w-auto">
               {submitting ? "저장 중" : "문단 다시쓰기 저장"}
@@ -907,18 +937,8 @@ export function WrongAnswerCaptureForm({
               {submitting ? "저장 중" : "저장하고 오늘 계획에 반영"}
             </Button>
           )}
-          <details className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-3 py-2">
-            <summary className="cursor-pointer text-xs font-medium text-[color:var(--muted)]">다른 선택</summary>
-            <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-              <Button type="button" variant="outline" onClick={resetDraft} className="w-full sm:w-auto">
-                {mode === "second" ? "다시 쓰기" : "다시 풀기"}
-              </Button>
-              <Button type="button" variant="ghost" onClick={resetDraft} className="w-full sm:w-auto">
-                나중에 하기
-              </Button>
-            </div>
-          </details>
         </div>
+        </BottomPrimaryAction>
       ) : null}
     </form>
   );
@@ -1023,13 +1043,14 @@ function IntakePanel({
         </div>
         <div className="rounded-[var(--radius-md)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-elevated)] p-5 sm:p-6">
           <p className="text-caption text-[color:var(--ink-muted)]">오늘의 입력</p>
-          <p className="mt-1 text-xs text-[color:var(--ink-muted)]">캡처 유형</p>
+          <p className="mt-1 text-xs text-[color:var(--ink-muted)]">캡처 유형 · photo / pdf / text</p>
           <h4 className="mt-2 text-base font-semibold text-[color:var(--ink-primary)]">오늘 한 것 올리기</h4>
-          <p className="mt-1 text-sm leading-6 text-[color:var(--ink-muted)]">사진, PDF, 텍스트를 올리면 오답노트와 다음 행동으로 정리합니다.</p>
+          <p className="mt-1 text-sm leading-6 text-[color:var(--ink-muted)]">사진, PDF, 텍스트를 올리면 한 가지 간극과 다음 행동으로 정리합니다.</p>
           <p className="mt-1 text-xs leading-6 text-[color:var(--ink-muted)]">노트 원문은 비공개로 보관되며, 파생 학습 신호는 개인 추천 개선에만 사용됩니다.</p>
           <div className="mt-4">
             <Button type="button" className="w-full sm:w-auto bg-[color:var(--accent-deep)] transition-colors hover:bg-[color:var(--primary-hover)] focus-visible:ring-2 focus-visible:ring-[color:var(--accent-deep)] focus-visible:ring-offset-2" onClick={() => { update("sourceType", inferSourceTypeFromAction("camera")); cameraInputRef.current?.click(); }}>
-              사진 찍기
+              사진/PDF/텍스트로 기록 시작
+              <span className="sr-only">사진 찍기</span>
             </Button>
             <p className="mt-2 text-xs text-[color:var(--ink-muted)]">사진은 OCR 초안으로만 사용됩니다. 저장 전 직접 확인해 주세요.</p>
           </div>
@@ -1270,8 +1291,8 @@ function ExtractionPreview({
     <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 sm:p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-caption text-[color:var(--muted)]">Step 2. AI 초안 확인</p>
-          <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">정리된 초안</h3>
+          <p className="text-caption text-[color:var(--muted)]">Step 2. 확인 · Step 3. 정리</p>
+          <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">텍스트를 확인한 뒤 노트로 정리합니다</h3>
         </div>
         <div className="flex gap-2">
           <Button type="button" variant="outline" onClick={onRegenerate}>
@@ -1291,7 +1312,7 @@ function ExtractionPreview({
       <p className="mt-4 text-xs text-[color:var(--muted)]">AI 정리는 초안입니다. 저장 전 직접 확인해 주세요.</p>
 
       <div className="mt-5 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-4">
-        <p className="text-xs font-medium text-[color:var(--muted)]">OCR 미리보기 (편집 가능)</p>
+        <p className="text-xs font-medium text-[color:var(--muted)]">OCR 결과 확인 (편집 가능 · 자동 저장)</p>
         {uploadedPages.length > 0 ? (
           <p className="mt-1 text-xs text-[color:var(--muted)]">페이지 라벨: {uploadedPages.map((page) => page.label).join(" / ")}</p>
         ) : null}
@@ -1301,10 +1322,10 @@ function ExtractionPreview({
           placeholder="OCR 결과를 확인하고 바로 수정하세요."
           className="mt-3 min-h-44 border-[color:var(--border-hairline)] bg-[color:var(--bg-surface)] text-[color:var(--foreground-strong)] leading-7"
         />
-        <p className="mt-2 text-xs text-[color:var(--muted)]">AI 초안은 참고용이며 공식 채점이 아닙니다.</p>
+        <p className="mt-2 text-xs text-[color:var(--muted)]">수정 내용은 이 기기 초안에 자동 저장됩니다. AI 초안은 참고용이며 공식 채점이 아닙니다.</p>
       </div>
       {mode === "first" ? (
-        <div className="mt-5 grid gap-3 lg:grid-cols-2">
+        <div className="mt-5 grid gap-3">
           <PreviewLine label="과목" value={form.subjectLabel} />
           <PreviewLine label="주제/사례 요약" value={form.problemTitle || form.caseSummary} />
           <PreviewLine label="가장 큰 간극" value={form.userReasonText || "확인 필요"} />
@@ -1316,7 +1337,7 @@ function ExtractionPreview({
           <PreviewLine label="페이지 라벨" value={form.sourceLabel || "없음"} />
         </div>
       ) : (
-        <div className="mt-5 grid gap-3 lg:grid-cols-2">
+        <div className="mt-5 grid gap-3">
           <PreviewLine label="과목" value={form.subjectLabel} />
           <PreviewLine label="주제/사례 요약" value={form.caseSummary || "확인 필요"} />
           <PreviewLine label="가장 큰 간극" value={form.biggestGap || form.missingIssue} />

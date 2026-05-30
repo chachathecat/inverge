@@ -2,7 +2,7 @@ import { WrongAnswerCaptureForm } from "@/components/review-os/capture-form";
 import { ReviewOsFeedbackButton } from "@/components/review-os/feedback-button";
 import { ClosedBetaBanner } from "@/components/shared/closed-beta-banner";
 import { DailyCommandCard, MinimalStepPanel, QuietDetails } from "@/components/review-os/minimal-study-system";
-import { getModeConfig, normalizeSubjectForMode, resolveAppraisalMode } from "@/lib/review-os/appraisal";
+import { normalizeSubjectForMode, resolveAppraisalMode } from "@/lib/review-os/appraisal";
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
 import { reviewOsService } from "@/lib/review-os/service";
 import { buildDetailStudyNote } from "@/lib/review-os/study-note";
@@ -20,7 +20,6 @@ export default async function ReviewOsCapturePage({ searchParams }: PageProps) {
 
   const mode = resolveAppraisalMode(profile, modeParam);
   const initialSubject = normalizeSubjectForMode(query?.subject, mode);
-  const config = getModeConfig(mode);
   const rewriteDetail =
     mode === "second" && rewriteFrom && session.email
       ? await reviewOsService.getWrongAnswerDetail(session.userId, session.email, rewriteFrom)

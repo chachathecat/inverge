@@ -152,6 +152,7 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
       </Link>
       <Link href={`/app/review?mode=${mode}`} className="underline-offset-2 hover:underline">
         다른 작업 보기
+        <span className="sr-only">rewrite 저장하러 이동</span>
       </Link>
     </div>
   );
