@@ -54,9 +54,8 @@ export default async function ReviewOsSessionPage({ searchParams }: PageProps) {
     <div className="space-y-6">
       <ClosedBetaBanner />
       {savedCapture ? (
-        <DailyCommandCard title="오늘 기록이 저장되었습니다." description="복습 큐와 오늘 계획에 반영되었습니다.">
+        <DailyCommandCard title="오늘 기록이 저장되었습니다." description="복습 큐에 들어갔습니다. 오늘 계획에 반영되었습니다.">
           <div className="grid gap-3 rounded-[var(--radius-sm)] bg-[color:var(--surface-soft)] p-3" aria-live="polite">
-            <span className="sr-only">복습 큐에 들어갔습니다.</span>
             <p className="text-sm leading-6 text-[color:var(--ink-muted)]">
               <span className="font-medium text-[color:var(--ink-primary)]">가장 큰 간극:</span>{" "}
               {String(savedCaptureSignals?.one_biggest_gap ?? note?.missingIssue ?? note?.weakPoint ?? "간극 1개를 먼저 고정합니다.")}
@@ -68,12 +67,6 @@ export default async function ReviewOsSessionPage({ searchParams }: PageProps) {
           </div>
           <div className="mt-4 grid gap-2">
             <Link
-              href={`/app?mode=${mode}`}
-              className="inline-flex min-h-11 w-full items-center justify-center rounded-full bg-[color:var(--foreground-strong)] px-4 py-2 text-sm font-medium text-white"
-            >
-              오늘 계획에 반영
-            </Link>
-            <Link
               href={
                 mode === "second"
                   ? savedCaptureItemId
@@ -81,16 +74,25 @@ export default async function ReviewOsSessionPage({ searchParams }: PageProps) {
                     : "/app/capture?mode=second"
                   : "#today-session-runner"
               }
-              className="inline-flex min-h-11 w-full items-center justify-center rounded-full border border-[color:var(--border-hairline)] bg-[color:var(--surface)] px-4 py-2 text-sm font-medium text-[color:var(--foreground-strong)]"
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-full bg-[color:var(--foreground-strong)] px-4 py-2 text-sm font-medium text-white"
             >
-              다시 풀기/다시 쓰기
+              {mode === "second" ? "지금 10분 다시 쓰기" : "지금 5분 다시 풀기"}
             </Link>
-            <Link
-              href={`/app/review?mode=${mode}`}
-              className="inline-flex min-h-11 w-full items-center justify-center rounded-full border border-[color:var(--border-hairline)] bg-[color:var(--surface)] px-4 py-2 text-sm font-medium text-[color:var(--foreground-strong)]"
-            >
-              나중에 복습
-            </Link>
+            <details className="rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)]">
+              <summary className="cursor-pointer list-none px-3 py-2 text-xs text-[color:var(--ink-muted)]">다른 선택 보기</summary>
+              <div className="grid gap-2 border-t border-[color:var(--border-hairline)] px-3 py-2 text-xs text-[color:var(--ink-muted)]">
+                <Link href={`/app?mode=${mode}`}>오늘 화면으로</Link>
+                <Link href={`/app/items?mode=${mode}`}>노트에서 보기</Link>
+                <Link href={`/app/review?mode=${mode}`}>나중에 복습</Link>
+              </div>
+            </details>
+            <details className="rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)]">
+              <summary className="cursor-pointer list-none px-3 py-2 text-xs text-[color:var(--ink-muted)]">참고 힌트 보기</summary>
+              <div className="grid gap-1 border-t border-[color:var(--border-hairline)] px-3 py-2 text-xs text-[color:var(--ink-muted)]">
+                <p>정답 확정이 아니라 다음 행동을 정리하는 학습 보조 결과입니다.</p>
+                <p>오늘은 이 작업 하나만 먼저 합니다.</p>
+              </div>
+            </details>
           </div>
         </DailyCommandCard>
       ) : null}
