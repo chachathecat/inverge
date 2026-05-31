@@ -16,6 +16,7 @@ import { buildCaptureNoteSignals, structureCaptureNote } from "@/lib/review-os/c
 import { buildCaptureLearningSignal, buildCaptureReviewReason, computeCaptureQueuePriority } from "@/lib/review-os/capture-learning-signals";
 import { sanitizeCaptureTelemetryMetadata } from "@/lib/review-os/telemetry-sanitizer";
 import { buildSecondAnswerRewriteSignal } from "@/lib/review-os/second-answer-rewrite";
+import { buildFirstToSecondMigrationSnapshot, buildSecondModeMigrationLearningSignal } from "@/lib/review-os/mode-migration";
 import { getKstDayKey, isSameKstDay, isOverdueDueAt } from "@/lib/review-os/daily-study-state";
 import { reviewOsRepository } from "@/lib/review-os/repository";
 import { resolveReviewSchedule, resolveScheduleOverrideDate } from "@/lib/review-os/scheduling";
@@ -1002,7 +1003,6 @@ export class ReviewOsService {
       await reviewOsRepository.logUsageEvent(userId, "post_save_execution_completed", "wrong_answer_item", item.id, sanitizeCaptureTelemetryMetadata({ mode, createdFromCapture: isCaptureCreated }));
       await reviewOsRepository.logUsageEvent(userId, "review_followup_scheduled", "review_queue_item", item.id, sanitizeCaptureTelemetryMetadata({ mode, nextTaskType: mode === "second" ? "rewrite" : "retry", createdFromCapture: isCaptureCreated }));
 
-
       if (isCaptureCreated) {
         try {
           await reviewOsRepository.createLearningSignalEvent(
@@ -1170,6 +1170,34 @@ export class ReviewOsService {
       ...safeMetadata,
       rewriteParagraphStoredSeparately: Boolean(_rewriteParagraph),
     });
+  }
+
+  async migrateFirstToSecondMode(userId: string, email: string | null) {
+    await this.ensureAccess(userId, email);
+    const [profile, rawItems, rawQueue, firstSignals] = await Promise.all([
+      reviewOsRepository.getStudyProfile(userId),
+      reviewOsRepository.listWrongAnswerItems(userId, 120),
+      reviewOsRepository.listReviewQueue(userId, 80),
+      reviewOsRepository.listLearningSignalEvents(userId, "first", 80),
+    ]);
+    const firstItems = rawItems.filter((item) => item.examName === "감정평가사 1차" && !isSmokeSeedItem(item));
+    const firstQueue = rawQueue.filter((item) => item.examName === "감정평가사 1차" && !isSmokeSeedQueueItem(item));
+    const snapshot = buildFirstToSecondMigrationSnapshot({ firstItems, firstQueue, firstLearningSignals: firstSignals });
+    await reviewOsRepository.archiveReviewQueueItemsForMode(userId, firstQueue.map((item) => item.queueId));
+    const preferredSubjects = normalizePreferredSubjectsForMode(profile?.preferredSubjects, "second");
+    const nextProfile = await reviewOsRepository.upsertStudyProfile(userId, {
+      examName: getModeLabel("second"),
+      examDate: profile?.examDate ?? null,
+      preferredSubjects,
+    });
+    await reviewOsRepository.createLearningSignalEvent(userId, buildSecondModeMigrationLearningSignal(snapshot));
+    await reviewOsRepository.logUsageEvent(userId, "first_to_second_mode_migration_confirmed", "study_profile", userId, {
+      activeMode: "second",
+      archivedMode: "first",
+      archivedTodayPlanQueueCount: snapshot.archivedTodayPlanQueueCount,
+      containsRawContent: false,
+    });
+    return { profile: nextProfile, migration: snapshot };
   }
 
   async getTodayFocus(userId: string, email: string | null, preferredMode?: "first" | "second"): Promise<TodayFocus> {
@@ -1447,7 +1475,6 @@ export class ReviewOsService {
   getAdminFeed(): Promise<AdminAlphaFeed> {
     return reviewOsRepository.getAdminAlphaFeed(80);
   }
-
 
   async getAdminBetaFunnel(): Promise<AdminBetaFunnel> {
     const events = await reviewOsRepository.listRecentUsageEvents(1200);

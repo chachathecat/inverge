@@ -852,6 +852,21 @@ export class ReviewOsRepository {
     });
   }
 
+  async archiveReviewQueueItemsForMode(userId: string, queueIds: string[]) {
+    if (queueIds.length === 0) return;
+    const client = getUserClient(userId);
+    const result = await client
+      .from("review_queue_items")
+      .update({
+        status: "skipped",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("user_id", userId)
+      .eq("exam_id", "wrong_answer_os")
+      .in("id", queueIds);
+    assertSupabaseOperation("review-os.archiveReviewQueueItemsForMode", result);
+  }
+
   async completeReviewQueueItem(userId: string, queueId: string) {
     const client = getUserClient(userId);
     const result = await client
@@ -1048,7 +1063,6 @@ export class ReviewOsRepository {
     assertSupabaseOperation("review-os.countLearningSignalEvents", result);
     return result.count ?? 0;
   }
-
 
   async listRecentUsageEventsByNames(userId: string, eventNames: string[], sinceIso: string, limit = 60) {
     const client = getUserClient(userId);
