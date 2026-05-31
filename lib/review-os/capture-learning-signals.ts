@@ -20,6 +20,9 @@ type CaptureLearningSignalInput = {
   weakStructurePoint?: string;
   missingIssue?: string;
   rewriteInstruction?: string;
+  calculationRisk?: string;
+  unitRisk?: string;
+  supportedCalculatorTemplateId?: string | null;
   createdFromCapture: boolean;
 };
 
@@ -124,7 +127,12 @@ export function buildCaptureLearningSignal(input: CaptureLearningSignalInput): L
       topic_candidate: topicCandidate,
       mistake_type: input.mistakeReason ?? null,
       weak_structure_point: input.weakStructurePoint ?? null,
+      missingIssueCandidate: input.missingIssue ?? input.biggestGap ?? null,
       missing_issue: input.missingIssue ?? null,
+      calculationRisk: input.calculationRisk ?? null,
+      unitRisk: input.unitRisk ?? null,
+      rewriteTaskType: isSecond ? "second_answer_rewrite" : nextTaskType,
+      supportedCalculatorTemplateId: input.supportedCalculatorTemplateId ?? null,
       taxonomy_candidate: topicCandidate ? { topic: topicCandidate, subject: input.subject } : null,
       similar_topic_suggestion: uniq([input.keyConcepts?.[1], input.keyConcepts?.[2], input.missingIssue]).slice(0, 2),
       review_priority: reviewPriority,
