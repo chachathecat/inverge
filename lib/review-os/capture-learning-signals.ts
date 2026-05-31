@@ -1,3 +1,4 @@
+import { sanitizeLearningSignalMetadata } from "./data-boundary";
 import type { LearningSignalEventInput, WrongAnswerItemInput } from "@/lib/review-os/types";
 
 type CaptureExamMode = LearningSignalEventInput["examMode"];
@@ -114,7 +115,7 @@ export function buildCaptureLearningSignal(input: CaptureLearningSignalInput): L
     relatedFormulas: [],
     nextTaskType,
     nextTask,
-    metadataJson: {
+    metadataJson: sanitizeLearningSignalMetadata({
       sourceItemId: input.itemId,
       biggestGap: input.biggestGap ?? null,
       nextAction: input.nextAction ?? null,
@@ -137,6 +138,6 @@ export function buildCaptureLearningSignal(input: CaptureLearningSignalInput): L
       similar_topic_suggestion: uniq([input.keyConcepts?.[1], input.keyConcepts?.[2], input.missingIssue]).slice(0, 2),
       review_priority: reviewPriority,
       skeleton_keyword_hint: skeletonKeywordHint,
-    },
+    }),
   };
 }

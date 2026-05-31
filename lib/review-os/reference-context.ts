@@ -1,3 +1,4 @@
+import { sanitizeReferenceRequest } from "./data-boundary";
 import { loadReferenceCorpus, type ReferenceCorpusConfig, type ReferenceCorpusEntry, type ReferenceExamMode, type ReferenceTaskType } from "./reference-corpus";
 
 export type ReferenceContextProvider = "none" | "local" | string;
@@ -46,23 +47,6 @@ const DEFAULT_MAX_SNIPPETS = 2;
 const DEFAULT_CACHE_TTL_MS = 15 * 60 * 1000;
 const cache = new Map<string, CacheEntry>();
 
-const USER_RAW_DATA_KEYS = new Set([
-  "rawOcrText",
-  "raw_ocr_text",
-  "ocrText",
-  "userAnswerText",
-  "rawAnswerText",
-  "uploadedText",
-  "uploadedPdfText",
-  "uploadedImageText",
-  "fullProblemText",
-  "problemText",
-  "rewriteParagraph",
-  "rawHandwrittenContent",
-  "handwrittenText",
-  "statementText",
-]);
-
 function getConfig(config: ReferenceContextConfig = {}): Required<Omit<ReferenceContextConfig, "modelName" | "corpusSourcePath">> & Pick<ReferenceContextConfig, "modelName" | "corpusSourcePath"> {
   return {
     provider: config.provider ?? process.env.INVERGE_REFERENCE_PROVIDER ?? "local",
@@ -82,20 +66,17 @@ function tokenize(...values: Array<string | null | undefined>) {
 }
 
 export function sanitizeReferenceRequestInput(input: ReferenceContextRequestInput & Record<string, unknown>): ReferenceContextRequestInput {
-  const safe: ReferenceContextRequestInput = {
-    examMode: input.examMode,
-    subject: String(input.subject ?? "").trim(),
-    topicCandidate: typeof input.topicCandidate === "string" ? input.topicCandidate.trim() : null,
-    conceptCandidate: typeof input.conceptCandidate === "string" ? input.conceptCandidate.trim() : null,
-    taskType: input.taskType,
-    maxSnippets: typeof input.maxSnippets === "number" ? input.maxSnippets : undefined,
-    derivedTags: Array.isArray(input.derivedTags) ? input.derivedTags.filter((tag): tag is string => typeof tag === "string") : undefined,
-    safeSkeletonIds: Array.isArray(input.safeSkeletonIds) ? input.safeSkeletonIds.filter((id): id is string => typeof id === "string") : undefined,
+  const safe = sanitizeReferenceRequest(input) as Partial<ReferenceContextRequestInput>;
+  return {
+    examMode: safe.examMode === "second" ? "second" : "first",
+    subject: String(safe.subject ?? "").trim(),
+    topicCandidate: typeof safe.topicCandidate === "string" ? safe.topicCandidate.trim() : null,
+    conceptCandidate: typeof safe.conceptCandidate === "string" ? safe.conceptCandidate.trim() : null,
+    taskType: safe.taskType ?? "concept_review",
+    maxSnippets: typeof safe.maxSnippets === "number" ? safe.maxSnippets : undefined,
+    derivedTags: Array.isArray(safe.derivedTags) ? safe.derivedTags.filter((tag): tag is string => typeof tag === "string") : undefined,
+    safeSkeletonIds: Array.isArray(safe.safeSkeletonIds) ? safe.safeSkeletonIds.filter((id): id is string => typeof id === "string") : undefined,
   };
-  for (const key of USER_RAW_DATA_KEYS) {
-    if (key in safe) delete (safe as Record<string, unknown>)[key];
-  }
-  return safe;
 }
 
 function cacheKey(input: ReferenceContextRequestInput) {
