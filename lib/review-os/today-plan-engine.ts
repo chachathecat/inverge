@@ -9,7 +9,7 @@ export type TodayPlanTaskType =
   | "ocr_confirmation"
   | "note_cleanup";
 export type TodayPlanDueBucket = "overdue" | "today" | "upcoming";
-export type TodayPlanPrimaryCta = { label: string; hrefKind: "session" | "review" | "capture" | "write" | "items" | "first_ox" };
+export type TodayPlanPrimaryCta = { label: string; hrefKind: "session" | "review" | "capture" | "write" | "items" | "first_ox" | "calculator_template" };
 
 export type TodayPlanTask = {
   itemId: string;
@@ -85,7 +85,7 @@ function resolveQueueTaskType(mode: "first" | "second", item: ReviewQueueCard): 
   const text = `${item.subjectLabel} ${item.reviewReason} ${item.mistakeType} ${item.topicTag}`;
   if (/OCR|ocr|확인 필요|인식/.test(text)) return "ocr_confirmation";
   if (mode === "second" && /rewrite|재작성|다시쓰기|문단|논점 누락|누락/.test(text)) return "second_answer_rewrite";
-  if (/회계|계산|산식|단위|공식|template|템플릿/.test(text)) return "accounting_template_retry";
+  if (mode === "first" && /회계|계산|산식|단위|공식|template|템플릿/.test(text)) return "accounting_template_retry";
   if (/빈칸|cloze|암기/.test(text)) return "cloze_review";
   if (/개념|정의|요건|조문/.test(text)) return "concept_review";
   return mode === "first" ? "first_ox_retry" : "second_answer_rewrite";
@@ -94,7 +94,7 @@ function resolveQueueTaskType(mode: "first" | "second", item: ReviewQueueCard): 
 function primaryCtaFor(taskType: TodayPlanTaskType, mode: "first" | "second"): TodayPlanPrimaryCta {
   if (taskType === "ocr_confirmation" || taskType === "note_cleanup") return { label: "확인하고 정리", hrefKind: "capture" };
   if (taskType === "second_answer_rewrite") return { label: "10분 다시 쓰기", hrefKind: "review" };
-  if (taskType === "accounting_template_retry") return { label: "템플릿 재시도", hrefKind: "session" };
+  if (taskType === "accounting_template_retry") return { label: "계산 틀 재확인", hrefKind: "calculator_template" };
   if (taskType === "cloze_review") return { label: "빈칸 회상", hrefKind: "session" };
   if (taskType === "concept_review") return { label: "개념 1개 회상", hrefKind: "session" };
   if (taskType === "first_ox_retry") return { label: "5분 O/X 재시도", hrefKind: "first_ox" };
@@ -212,7 +212,7 @@ function toItemTask(item: WrongAnswerItemRecord, mode: "first" | "second", now: 
     nextAction = item.rewriteInstruction ?? "누락 논점 1개를 문단으로 다시 씁니다.";
     estimated = 20;
     score += 22;
-  } else if (/회계|계산|산식|단위|공식/.test(`${item.subjectLabel} ${item.userReasonPreset ?? ""} ${item.userReasonText ?? ""}`)) {
+  } else if (mode === "first" && /회계|계산|산식|단위|공식/.test(`${item.subjectLabel} ${item.userReasonPreset ?? ""} ${item.userReasonText ?? ""}`)) {
     taskType = "accounting_template_retry";
     reason = "계산/산식 기록은 템플릿으로 다시 확인하면 좋습니다.";
     nextAction = "산식 틀을 먼저 쓰고 숫자를 대입합니다.";
