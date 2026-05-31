@@ -1,0 +1,17 @@
+[
+  {
+    "referenceId": "first-accounting-template-retry-001",
+    "title": "회계 계산형 재시도: 산식과 단위",
+    "examMode": "first",
+    "subject": "회계학",
+    "sourceType": "first_exam_topics",
+    "snippet": "계산형 오답은 숫자 재계산 전에 산식 틀, 입력 단위, 반올림 조건을 순서대로 확인한다. 재시도는 산식 1줄을 먼저 적는 방식으로 시작한다.",
+    "citationLabel": "1차 회계 템플릿 운영 기준",
+    "tags": ["회계", "계산", "산식", "단위", "템플릿"],
+    "topics": ["계산 실수", "템플릿 재시도"],
+    "concepts": ["산식", "단위"],
+    "licenseStatus": "internal_curated",
+    "usageStatus": "active",
+    "updatedAt": "2026-05-31"
+  }
+]

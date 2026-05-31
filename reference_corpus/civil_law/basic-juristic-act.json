@@ -1,0 +1,17 @@
+[
+  {
+    "referenceId": "civil-law-juristic-act-void-cancel-001",
+    "title": "법률행위 효력 판단: 무효와 취소",
+    "examMode": "first",
+    "subject": "민법",
+    "sourceType": "civil_law",
+    "snippet": "무효와 취소는 효력 발생 및 사후 확정 방식이 다르므로, 선지에서는 '추인 전', '항상', '전부' 같은 조건 표현을 먼저 확인한다.",
+    "citationLabel": "민법 1차 핵심 정리",
+    "tags": ["무효", "취소", "추인", "원칙", "예외"],
+    "topics": ["법률행위", "표현 함정"],
+    "concepts": ["요건·효과·예외", "무효와 취소"],
+    "licenseStatus": "internal_curated",
+    "usageStatus": "active",
+    "updatedAt": "2026-05-31"
+  }
+]

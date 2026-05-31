@@ -76,6 +76,22 @@ function ConceptPopup({ statement, attempt }: { statement: FirstExamStatement; a
         <summary className="cursor-pointer">세부 설명 보기</summary>
         <p className="mt-2">{concept.examTrapExplanation}</p>
       </details>
+      <details className="text-xs leading-6 text-[color:var(--muted)]">
+        <summary className="cursor-pointer">참고 근거 힌트 보기 (선택)</summary>
+        {concept.referenceSnippets?.length ? (
+          <ul className="mt-2 space-y-2">
+            {concept.referenceSnippets.slice(0, 2).map((snippet) => (
+              <li key={snippet.referenceId} className="rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] bg-[color:var(--surface)] p-2">
+                <p className="font-medium text-[color:var(--foreground-strong)]">{snippet.title}</p>
+                <p className="mt-1">{snippet.snippet}</p>
+                {snippet.citationLabel ? <p className="mt-1">{snippet.citationLabel}</p> : null}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-2">필요할 때만 신뢰 기준을 짧게 확인합니다.</p>
+        )}
+      </details>
     </aside>
   );
 }

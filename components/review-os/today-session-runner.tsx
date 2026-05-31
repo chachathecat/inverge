@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { MicroPracticeCard } from "@/components/review-os/minimal-study-system";
 import type { AppraisalMode } from "@/lib/review-os/appraisal";
 import type { ExecutionReferenceSupport } from "@/lib/review-os/execution-reference-support";
+import type { ReferenceSnippet } from "@/lib/review-os/reference-context";
 import { buildSecondRewriteComparison } from "@/lib/review-os/second-rewrite-comparison";
 import { SECOND_REWRITE_CASIO_UNSUPPORTED_MESSAGE } from "@/lib/review-os/second-answer-rewrite";
 import { resolveAdaptiveReviewSchedule, type AdaptiveScheduleResult } from "@/lib/review-os/scheduling";
@@ -34,6 +35,7 @@ type SessionNote = {
   supportedCalculatorTemplateId?: string | null;
   casioKeystrokes?: string[] | null;
   casioUnsupportedMessage?: string | null;
+  referenceSnippets?: ReferenceSnippet[];
 };
 
 type TodaySessionRunnerProps = {
@@ -197,6 +199,14 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
                     <p className="mt-1 text-sm leading-6 text-[color:var(--foreground-strong)]">{note?.rewriteInstruction ?? secondTemplate.rewriteGuidance}</p>
                   </div>
                 </div>
+                <details className="rounded-[var(--radius-md)] border border-[color:var(--border-hairline)] bg-[color:var(--bg-surface)]">
+                  <summary className="cursor-pointer px-3 py-2 text-xs text-[color:var(--muted)]">참고 근거 힌트 보기 (선택)</summary>
+                  <div className="border-t border-[color:var(--border-hairline)] px-3 py-3 text-xs leading-5 text-[color:var(--muted)]">
+                    {note?.referenceSnippets?.length ? note.referenceSnippets.slice(0, 2).map((snippet) => (
+                      <p key={snippet.referenceId} className="mb-2"><span className="font-medium text-[color:var(--foreground-strong)]">{snippet.title}</span> · {snippet.snippet}</p>
+                    )) : <p>정답 확정이 아니라, 누락 논점 1개를 확인하는 짧은 참고 힌트입니다.</p>}
+                  </div>
+                </details>
                 <details className="rounded-[var(--radius-md)] border border-[color:var(--border-hairline)] bg-[color:var(--bg-surface)]">
                   <summary className="cursor-pointer px-3 py-2 text-xs text-[color:var(--muted)]">계산/CASIO 세부 보기</summary>
                   <div className="space-y-2 border-t border-[color:var(--border-hairline)] px-3 py-3 text-xs leading-5 text-[color:var(--foreground-strong)]">

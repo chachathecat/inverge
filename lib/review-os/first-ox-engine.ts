@@ -1,4 +1,5 @@
 import type { LearningSignalEventInput, WrongAnswerItemInput } from "@/lib/review-os/types";
+import type { ReferenceSnippet } from "./reference-context";
 
 export type OxValue = "O" | "X" | "unknown";
 export type OxCertainty = "certain" | "confused" | "unknown";
@@ -52,6 +53,7 @@ export type FirstOxConceptCardPayload = {
   topic_candidate?: string | null;
   concept_candidate?: string | null;
   official_answer_authority: false;
+  referenceSnippets?: ReferenceSnippet[];
 };
 
 export const FIRST_OX_TRAP_WORD_GROUPS = [
@@ -141,7 +143,7 @@ function summarizeTrapWords(statement: FirstExamStatement) {
   return statement.conceptCandidate ? [statement.conceptCandidate] : [];
 }
 
-export function buildFirstOxConceptCardPayload(statement: FirstExamStatement, attempt: OxAttempt): FirstOxConceptCardPayload | null {
+export function buildFirstOxConceptCardPayload(statement: FirstExamStatement, attempt: OxAttempt, referenceSnippets: ReferenceSnippet[] = []): FirstOxConceptCardPayload | null {
   const kind = resolveFirstOxLearningSignalKind(attempt);
   if (kind === "none") return null;
 
@@ -179,10 +181,11 @@ export function buildFirstOxConceptCardPayload(statement: FirstExamStatement, at
     topic_candidate: statement.topicCandidate ?? null,
     concept_candidate: statement.conceptCandidate ?? null,
     official_answer_authority: false,
+    referenceSnippets: referenceSnippets.slice(0, 2),
   };
 }
 
-export function buildFirstOxLearningSignalInput(statement: FirstExamStatement, attempt: OxAttempt): LearningSignalEventInput | null {
+export function buildFirstOxLearningSignalInput(statement: FirstExamStatement, attempt: OxAttempt, referenceSnippets: ReferenceSnippet[] = []): LearningSignalEventInput | null {
   const kind = resolveFirstOxLearningSignalKind(attempt);
   if (kind === "none") return null;
   const nextTask = kind === "wrong_answer_retry"
@@ -207,12 +210,12 @@ export function buildFirstOxLearningSignalInput(statement: FirstExamStatement, a
       topic_candidate: statement.topicCandidate ?? null,
       concept_candidate: statement.conceptCandidate ?? null,
       official_answer_authority: false,
-      concept_card: buildFirstOxConceptCardPayload(statement, attempt),
+      concept_card: buildFirstOxConceptCardPayload(statement, attempt, referenceSnippets),
     },
   };
 }
 
-export function buildFirstOxWrongAnswerItemInput(statement: FirstExamStatement, attempt: OxAttempt): WrongAnswerItemInput | null {
+export function buildFirstOxWrongAnswerItemInput(statement: FirstExamStatement, attempt: OxAttempt, referenceSnippets: ReferenceSnippet[] = []): WrongAnswerItemInput | null {
   const kind = resolveFirstOxLearningSignalKind(attempt);
   if (kind === "none") return null;
   const reasonPreset = kind === "wrong_answer_retry" ? "선지 오독" : kind === "weak_confidence" ? "찍음/확신 부족" : "개념 부족";
@@ -236,9 +239,22 @@ export function buildFirstOxWrongAnswerItemInput(statement: FirstExamStatement, 
     userReasonPreset: reasonPreset,
     confidence: attempt.certainty === "certain" ? "중간" : "낮음",
     keyConcepts: [statement.conceptCandidate, ...statement.trapWords].filter((value): value is string => Boolean(value)),
-    conceptCard: buildFirstOxConceptCardPayload(statement, attempt) ?? undefined,
+    conceptCard: buildFirstOxConceptCardPayload(statement, attempt, referenceSnippets) ?? undefined,
     comparisonPoint: "근거 1줄을 먼저 회상하고 같은 선지를 다시 판단합니다.",
     biggestGap: reasonPreset,
     createdFromCapture: false,
+  };
+}
+
+export function buildFirstOxReferenceRequest(statement: FirstExamStatement) {
+  return {
+    examMode: "first" as const,
+    subject: statement.subject,
+    topicCandidate: statement.topicCandidate ?? null,
+    conceptCandidate: statement.conceptCandidate ?? null,
+    taskType: "first_ox" as const,
+    maxSnippets: 2,
+    derivedTags: ["first_ox", ...statement.trapWords],
+    safeSkeletonIds: [statement.id],
   };
 }
