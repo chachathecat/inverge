@@ -1,4 +1,5 @@
 import { getAppraisalMode, parseAppraisalMode } from "@/lib/review-os/appraisal";
+import { buildSecondAnswerRewriteSignal } from "@/lib/review-os/second-answer-rewrite";
 import { getSecondSubjectTemplate } from "@/lib/review-os/types";
 import type { WrongAnswerDetail, WrongAnswerItemRecord, WrongAnswerTagRecord } from "@/lib/review-os/types";
 
@@ -137,6 +138,19 @@ export function buildDetailStudyNote(detail: WrongAnswerDetail) {
   const weakStructurePoint = getDraftString(detail.item.rawPayload, "weakStructurePoint");
   const weakApplicationSentence = getDraftString(detail.item.rawPayload, "weakApplicationSentence");
   const comparisonPoint = getDraftString(detail.item.rawPayload, "comparisonPoint");
+  const rewriteSignal = isSecond
+    ? buildSecondAnswerRewriteSignal({
+        caseSummary: getDraftString(detail.item.rawPayload, "caseSummary") ?? undefined,
+        myAnswerSummary: getDraftString(detail.item.rawPayload, "myAnswerSummary") ?? undefined,
+        missingIssue: missingIssue ?? undefined,
+        weakStructurePoint: weakStructurePoint ?? undefined,
+        calculationRisk: typeof detail.item.derivedPayload?.calculationRisk === "string" ? detail.item.derivedPayload.calculationRisk : undefined,
+        unitRisk: typeof detail.item.derivedPayload?.unitRisk === "string" ? detail.item.derivedPayload.unitRisk : undefined,
+        rewriteInstruction: getDraftString(detail.item.rawPayload, "rewriteInstruction") ?? undefined,
+        supportedCalculatorTemplateId: typeof detail.item.derivedPayload?.supportedCalculatorTemplateId === "string" ? detail.item.derivedPayload.supportedCalculatorTemplateId : undefined,
+      })
+    : null;
+  const casioKeystrokes = rewriteSignal?.casioKeystrokes ?? null;
 
   return {
     ...preview,
@@ -146,6 +160,12 @@ export function buildDetailStudyNote(detail: WrongAnswerDetail) {
     weakStructurePoint,
     weakApplicationSentence,
     rewriteInstruction: getDraftString(detail.item.rawPayload, "rewriteInstruction"),
+    calculationRisk: rewriteSignal?.calculationRisk ?? null,
+    unitRisk: rewriteSignal?.unitRisk ?? null,
+    rewriteTaskType: rewriteSignal?.rewriteTaskType ?? null,
+    supportedCalculatorTemplateId: rewriteSignal?.supportedCalculatorTemplateId ?? null,
+    casioKeystrokes,
+    casioUnsupportedMessage: rewriteSignal?.casioUnsupportedMessage ?? null,
     comparisonPoint,
     noteCard,
     nextReviewDate: preview.nextReviewDate,

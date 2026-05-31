@@ -1,4 +1,5 @@
 import type { AppraisalMode } from "@/lib/review-os/appraisal";
+import { buildSecondAnswerRewriteSignal } from "./second-answer-rewrite";
 import type { WrongAnswerItemInput } from "@/lib/review-os/types";
 
 type CaptureStructuringInput = {
@@ -40,6 +41,12 @@ export type SecondCaptureNoteSignals = CaptureNoteBase & {
   missing_issue_candidate: string;
   rewrite_instruction: string;
   next_rewrite_action: string;
+  calculation_risk?: string | null;
+  unit_risk?: string | null;
+  rewrite_task_type?: "second_answer_rewrite";
+  supported_calculator_template_id?: string | null;
+  casio_keystrokes?: string[] | null;
+  casio_unsupported_message?: string;
 };
 
 export type CaptureNoteSignals = FirstCaptureNoteSignals | SecondCaptureNoteSignals;
@@ -72,13 +79,21 @@ export function buildCaptureNoteSignals(mode: AppraisalMode, input: WrongAnswerI
     };
   }
 
+  const rewriteSignal = buildSecondAnswerRewriteSignal(input);
   return {
     ...base,
     mode: "second",
     next_task_type: "rewrite",
-    missing_issue_candidate: input.missingIssue || input.biggestGap || "핵심 논점 누락",
-    rewrite_instruction: input.rewriteInstruction || oneNextAction,
-    next_rewrite_action: oneNextAction,
+    missing_issue_candidate: rewriteSignal.missingIssueCandidate,
+    weak_structure_point: rewriteSignal.weakStructurePoint,
+    rewrite_instruction: rewriteSignal.rewriteInstruction,
+    next_rewrite_action: rewriteSignal.nextRewriteAction,
+    calculation_risk: rewriteSignal.calculationRisk ?? null,
+    unit_risk: rewriteSignal.unitRisk ?? null,
+    rewrite_task_type: rewriteSignal.rewriteTaskType,
+    supported_calculator_template_id: rewriteSignal.supportedCalculatorTemplateId ?? null,
+    casio_keystrokes: rewriteSignal.casioKeystrokes ?? null,
+    casio_unsupported_message: rewriteSignal.casioUnsupportedMessage,
   };
 }
 

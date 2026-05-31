@@ -230,6 +230,9 @@ export type WrongAnswerItemInput = {
   weakStructurePoint?: string;
   weakApplicationSentence?: string;
   rewriteInstruction?: string;
+  calculationRisk?: string;
+  unitRisk?: string;
+  supportedCalculatorTemplateId?: string;
   referenceStructure?: string;
   myAnswerSummary?: string;
   caseSummary?: string;
@@ -347,6 +350,8 @@ export type ReviewCompletionMetadata = {
   issueRecall?: string;
   trapCardsCompleted?: boolean;
   trapTypes?: string[];
+  rewriteParagraph?: string;
+  rewriteInstruction?: string;
 };
 
 export type WrongAnswerDetail = {

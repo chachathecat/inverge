@@ -9,6 +9,7 @@ import { MicroPracticeCard } from "@/components/review-os/minimal-study-system";
 import type { AppraisalMode } from "@/lib/review-os/appraisal";
 import type { ExecutionReferenceSupport } from "@/lib/review-os/execution-reference-support";
 import { buildSecondRewriteComparison } from "@/lib/review-os/second-rewrite-comparison";
+import { SECOND_REWRITE_CASIO_UNSUPPORTED_MESSAGE } from "@/lib/review-os/second-answer-rewrite";
 import { resolveAdaptiveReviewSchedule, type AdaptiveScheduleResult } from "@/lib/review-os/scheduling";
 import {
   FIRST_STAGE_ERROR_REASON_OPTIONS,
@@ -22,10 +23,17 @@ import {
 type SessionNote = {
   summary: string;
   weakPoint: string;
+  weakStructurePoint?: string | null;
   missingIssue: string | null;
   rewriteInstruction: string | null;
   coreLine: string;
   nextReviewDate: string;
+  calculationRisk?: string | null;
+  unitRisk?: string | null;
+  rewriteTaskType?: string | null;
+  supportedCalculatorTemplateId?: string | null;
+  casioKeystrokes?: string[] | null;
+  casioUnsupportedMessage?: string | null;
 };
 
 type TodaySessionRunnerProps = {
@@ -172,8 +180,43 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
               <p className="mt-2 text-sm text-[color:var(--textBody)]">예상 {focus.estimatedDurationMinutes}분</p>
             </MicroPracticeCard>
             <p className="text-sm leading-7 text-[color:var(--foreground-strong)]">{focus.nextAction}</p>
+            {mode === "second" ? (
+              <section className="space-y-3 rounded-[var(--radius-lg)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-soft)] p-4">
+                <p className="text-caption text-[color:var(--muted)]">다시쓰기 목표 1개</p>
+                <div className="grid gap-3">
+                  <div>
+                    <p className="text-xs text-[color:var(--muted)]">가장 큰 누락/위험 1개</p>
+                    <p className="mt-1 text-sm font-medium leading-6 text-[color:var(--foreground-strong)]">{note?.missingIssue ?? note?.calculationRisk ?? "누락 논점 1개를 먼저 확인합니다."}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-[color:var(--muted)]">약한 답안 구조 1개</p>
+                    <p className="mt-1 text-sm leading-6 text-[color:var(--foreground-strong)]">{note?.weakStructurePoint ?? note?.weakPoint ?? "근거와 결론 연결을 한 문장으로 보강합니다."}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-[color:var(--muted)]">다시쓰기 지시 1개</p>
+                    <p className="mt-1 text-sm leading-6 text-[color:var(--foreground-strong)]">{note?.rewriteInstruction ?? secondTemplate.rewriteGuidance}</p>
+                  </div>
+                </div>
+                <details className="rounded-[var(--radius-md)] border border-[color:var(--border-hairline)] bg-[color:var(--bg-surface)]">
+                  <summary className="cursor-pointer px-3 py-2 text-xs text-[color:var(--muted)]">계산/CASIO 세부 보기</summary>
+                  <div className="space-y-2 border-t border-[color:var(--border-hairline)] px-3 py-3 text-xs leading-5 text-[color:var(--foreground-strong)]">
+                    {note?.unitRisk ? <p>단위 위험: {note.unitRisk}</p> : null}
+                    {note?.casioKeystrokes?.length ? (
+                      <div>
+                        <p>CASIO FX-9860GIII 타건 순서</p>
+                        <ol className="mt-1 list-decimal space-y-1 pl-5">
+                          {note.casioKeystrokes.map((step, index) => <li key={`${step}-${index}`}>{step}</li>)}
+                        </ol>
+                      </div>
+                    ) : (
+                      <p>{note?.casioUnsupportedMessage ?? SECOND_REWRITE_CASIO_UNSUPPORTED_MESSAGE}</p>
+                    )}
+                  </div>
+                </details>
+              </section>
+            ) : null}
             <Button type="button" className="w-full sm:w-auto" onClick={() => setStepIndex((prev) => prev + 1)}>
-              {hasQueueItem ? "추천 작업으로 시작" : mode === "second" ? "2차 작성 워크스페이스 시작" : "오늘 입력 작업 시작"}
+              {hasQueueItem ? (mode === "second" ? "10분 다시 쓰기" : "추천 작업으로 시작") : mode === "second" ? "2차 작성 워크스페이스 시작" : "오늘 입력 작업 시작"}
             </Button>
             {quietLinks}
           </section>
@@ -404,6 +447,7 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
                   retryDraft,
                   errorReason,
                   retrievalSentence,
+                  ...(mode === "second" ? { rewriteParagraph, rewriteInstruction: note?.rewriteInstruction ?? secondTemplate.rewriteGuidance } : {}),
                   ...(mode === "first" ? { trapCardsCompleted: checkedTrapTypes.length === 3, trapTypes: checkedTrapTypes } : {}),
                 })
               }

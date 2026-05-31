@@ -412,6 +412,7 @@ export class ReviewOsRepository {
     reviewReason: string,
     priorityScore: number,
     derivedPayload: Record<string, unknown>,
+    rawPayload: Record<string, unknown> = {},
   ) {
     const client = getUserClient(userId);
 
@@ -440,6 +441,7 @@ export class ReviewOsRepository {
       raw_payload: {
         dueAt,
         reviewReason,
+        ...rawPayload,
       },
       derived_payload: {
         ...derivedPayload,

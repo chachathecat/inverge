@@ -15,6 +15,7 @@ import { assertCanCreateWrongAnswer } from "@/lib/review-os/entitlement-enforcem
 import { buildCaptureNoteSignals, structureCaptureNote } from "@/lib/review-os/capture-note-engine";
 import { buildCaptureLearningSignal, buildCaptureReviewReason, computeCaptureQueuePriority } from "@/lib/review-os/capture-learning-signals";
 import { sanitizeCaptureTelemetryMetadata } from "@/lib/review-os/telemetry-sanitizer";
+import { buildSecondAnswerRewriteSignal } from "@/lib/review-os/second-answer-rewrite";
 import { getKstDayKey, isSameKstDay, isOverdueDueAt } from "@/lib/review-os/daily-study-state";
 import { reviewOsRepository } from "@/lib/review-os/repository";
 import { resolveReviewSchedule, resolveScheduleOverrideDate } from "@/lib/review-os/scheduling";
@@ -857,6 +858,8 @@ export class ReviewOsService {
         );
       }
 
+      const secondRewriteSignal = mode === "second" ? buildSecondAnswerRewriteSignal(normalizedInput) : null;
+
       const item = await reviewOsRepository.insertWrongAnswerItem(
         userId,
         normalizedInput,
@@ -886,6 +889,10 @@ export class ReviewOsService {
             weakStructurePoint: input.weakStructurePoint ?? null,
             weakApplicationSentence: input.weakApplicationSentence ?? null,
             rewriteInstruction: input.rewriteInstruction ?? null,
+            calculationRisk: input.calculationRisk ?? secondRewriteSignal?.calculationRisk ?? null,
+            unitRisk: input.unitRisk ?? secondRewriteSignal?.unitRisk ?? null,
+            rewriteTaskType: secondRewriteSignal?.rewriteTaskType ?? null,
+            supportedCalculatorTemplateId: secondRewriteSignal?.supportedCalculatorTemplateId ?? null,
             referenceStructure: input.referenceStructure ?? null,
             myAnswerSummary: input.myAnswerSummary ?? null,
             caseSummary: input.caseSummary ?? null,
@@ -894,6 +901,7 @@ export class ReviewOsService {
           rewrite_source_item_id: input.rewriteSourceItemId ?? null,
           rewrite_source_gap: input.rewriteSourceGap ?? null,
           rewrite_instruction: input.rewriteInstruction ?? null,
+          rewrite_paragraph: input.rewriteParagraph ?? null,
           rewrite_completed: input.rewriteCompleted ?? null,
           concept_card: input.conceptCard ?? null,
           review_stage: input.conceptCard?.reviewStage ?? null,
@@ -918,6 +926,12 @@ export class ReviewOsService {
           concept_card: input.conceptCard ?? null,
           review_stage: input.conceptCard?.reviewStage ?? null,
           cloze_candidate: input.conceptCard?.trapWords?.[0] ?? input.keyConcepts?.[0] ?? null,
+          rewriteTaskType: secondRewriteSignal?.rewriteTaskType ?? null,
+          missingIssueCandidate: secondRewriteSignal?.missingIssueCandidate ?? null,
+          weakStructurePoint: secondRewriteSignal?.weakStructurePoint ?? null,
+          calculationRisk: secondRewriteSignal?.calculationRisk ?? null,
+          unitRisk: secondRewriteSignal?.unitRisk ?? null,
+          supportedCalculatorTemplateId: secondRewriteSignal?.supportedCalculatorTemplateId ?? null,
         },
       );
 
@@ -1007,6 +1021,9 @@ export class ReviewOsService {
               weakStructurePoint: input.weakStructurePoint,
               missingIssue: input.missingIssue,
               rewriteInstruction: input.rewriteInstruction,
+              calculationRisk: secondRewriteSignal?.calculationRisk ?? undefined,
+              unitRisk: secondRewriteSignal?.unitRisk ?? undefined,
+              supportedCalculatorTemplateId: secondRewriteSignal?.supportedCalculatorTemplateId ?? undefined,
               createdFromCapture: true,
             }),
           );
@@ -1120,6 +1137,10 @@ export class ReviewOsService {
           createdAt: context.item.createdAt,
         }),
       );
+      const rawRewriteParagraph =
+        action === "second_paragraph_rewrite" && typeof metadata.rewriteParagraph === "string"
+          ? metadata.rewriteParagraph.trim()
+          : "";
       await reviewOsRepository.createFollowUpReviewQueueEntry(
         userId,
         context.item,
@@ -1131,12 +1152,23 @@ export class ReviewOsService {
           recurrenceCount,
           mistakeType: context.primaryTag?.mistakeType ?? "반복 실수",
           topicTag: context.primaryTag?.topicTag ?? context.item.subjectLabel,
+          rewriteTaskType: context.item.examName === "감정평가사 2차" ? "second_answer_rewrite" : undefined,
+          rewriteInstruction: metadata.rewriteInstruction ?? context.item.rewriteInstruction ?? null,
         },
+        rawRewriteParagraph
+          ? {
+              rewrite_paragraph: rawRewriteParagraph,
+              original_answer_item_id: context.item.id,
+              original_answer_preserved: true,
+            }
+          : {},
       );
     }
+    const { rewriteParagraph: _rewriteParagraph, ...safeMetadata } = metadata;
     await reviewOsRepository.logUsageEvent(userId, "review_complete", "review_queue_item", queueId, {
       action,
-      ...metadata,
+      ...safeMetadata,
+      rewriteParagraphStoredSeparately: Boolean(_rewriteParagraph),
     });
   }
 
