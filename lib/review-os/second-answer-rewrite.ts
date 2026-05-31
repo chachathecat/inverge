@@ -1,3 +1,4 @@
+import { sanitizeReferenceRequest } from "./data-boundary";
 import type { ReferenceSnippet } from "./reference-context";
 import type { WrongAnswerItemInput } from "./types";
 
@@ -119,7 +120,7 @@ export function buildSecondAnswerRewriteSignal(input: Pick<WrongAnswerItemInput,
 
 
 export function buildSecondAnswerRewriteReferenceRequest(input: { examName: string; subjectLabel: string; topicTag?: string | null; missingIssue?: string | null; biggestGap?: string | null; supportedCalculatorTemplateId?: string | null }) {
-  return {
+  return sanitizeReferenceRequest({
     examMode: "second" as const,
     subject: input.subjectLabel,
     topicCandidate: input.topicTag ?? input.missingIssue ?? input.biggestGap ?? null,
@@ -128,5 +129,5 @@ export function buildSecondAnswerRewriteReferenceRequest(input: { examName: stri
     maxSnippets: 2,
     derivedTags: ["second_answer_rewrite", input.supportedCalculatorTemplateId].filter((value): value is string => Boolean(value)),
     safeSkeletonIds: [input.examName, input.subjectLabel].filter(Boolean),
-  };
+  });
 }

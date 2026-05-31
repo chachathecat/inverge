@@ -1,3 +1,5 @@
+import { sanitizeDerivedMetadata } from "@/lib/review-os/data-boundary";
+
 export type InvergeEventName =
   | "first.onboarding.submitted"
   | "first.starter_diagnosis.submitted"
@@ -75,10 +77,10 @@ export function normalizeInvergeEventInput(input: InvergeEventInput): InvergeEve
     eventName: input.eventName,
     occurredAt: input.occurredAt ?? new Date().toISOString(),
     anonymousUserId: input.anonymousUserId,
-    payload: {
+    payload: sanitizeDerivedMetadata({
       source: "client",
       ...(input.payload ?? {}),
-    },
+    }) as InvergeEventPayload,
     persistence: "local",
   };
 }

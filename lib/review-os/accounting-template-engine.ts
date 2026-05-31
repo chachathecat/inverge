@@ -1,3 +1,5 @@
+import { sanitizeDerivedMetadata } from "./data-boundary";
+
 export const ACCOUNTING_TEMPLATE_IDS = [
   "accounting_ppe_depreciation",
   "accounting_impairment_loss",
@@ -398,14 +400,14 @@ export function calculateFromAccountingParseResult(parseResult: AccountingParseR
 }
 
 export function buildAccountingDerivedMetadata(parseResult: AccountingParseResult, validation: TemplateValidationResult) {
-  return {
+  return sanitizeDerivedMetadata({
     templateId: parseResult.templateId,
     confidence: parseResult.confidence,
     missingInputKeys: validation.missingInputKeys,
     lowConfidenceFlag: validation.lowConfidenceFlag,
     calculationRisk: validation.calculationRisk,
     subject: parseResult.subject,
-  };
+  });
 }
 
 export function normalizeAccountingParseResultFromAi(payload: Record<string, unknown>): AccountingParseResult {

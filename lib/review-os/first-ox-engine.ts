@@ -1,3 +1,4 @@
+import { sanitizeLearningSignalMetadata, sanitizeReferenceRequest } from "./data-boundary";
 import type { LearningSignalEventInput, WrongAnswerItemInput } from "@/lib/review-os/types";
 import type { ReferenceSnippet } from "./reference-context";
 
@@ -202,7 +203,7 @@ export function buildFirstOxLearningSignalInput(statement: FirstExamStatement, a
     relatedFormulas: statement.conceptCandidate ? [statement.conceptCandidate] : [],
     nextTaskType: kind === "weak_confidence" ? "cloze_review" : kind === "needs_concept_review" ? "concept_review" : "retry",
     nextTask,
-    metadataJson: {
+    metadataJson: sanitizeLearningSignalMetadata({
       statement_id: statement.id,
       result: attempt.result,
       certainty: attempt.certainty,
@@ -211,7 +212,7 @@ export function buildFirstOxLearningSignalInput(statement: FirstExamStatement, a
       concept_candidate: statement.conceptCandidate ?? null,
       official_answer_authority: false,
       concept_card: buildFirstOxConceptCardPayload(statement, attempt, referenceSnippets),
-    },
+    }),
   };
 }
 
@@ -247,7 +248,7 @@ export function buildFirstOxWrongAnswerItemInput(statement: FirstExamStatement, 
 }
 
 export function buildFirstOxReferenceRequest(statement: FirstExamStatement) {
-  return {
+  return sanitizeReferenceRequest({
     examMode: "first" as const,
     subject: statement.subject,
     topicCandidate: statement.topicCandidate ?? null,
@@ -256,5 +257,5 @@ export function buildFirstOxReferenceRequest(statement: FirstExamStatement) {
     maxSnippets: 2,
     derivedTags: ["first_ox", ...statement.trapWords],
     safeSkeletonIds: [statement.id],
-  };
+  });
 }

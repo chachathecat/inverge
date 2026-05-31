@@ -34,6 +34,7 @@ import type {
   TaxonomyClassificationCandidate,
 } from "@/lib/review-os/types";
 import type { AppraisalMode } from "@/lib/review-os/appraisal";
+import { sanitizeDerivedMetadata, sanitizeLearningSignalMetadata } from "@/lib/review-os/data-boundary";
 
 function createUuid() {
   return crypto.randomUUID();
@@ -443,11 +444,11 @@ export class ReviewOsRepository {
         reviewReason,
         ...rawPayload,
       },
-      derived_payload: {
+      derived_payload: sanitizeDerivedMetadata({
         ...derivedPayload,
         completionAction: action,
         followUpScheduledAt: dueAt,
-      },
+      }),
       created_at: now,
       updated_at: now,
     });
@@ -603,7 +604,7 @@ export class ReviewOsRepository {
       dedupe_key: this.createDedupeKey(userId, input),
       processing_status: "completed",
       raw_payload: rawPayload,
-      derived_payload: derivedPayload,
+      derived_payload: sanitizeDerivedMetadata(derivedPayload),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     });
@@ -790,7 +791,7 @@ export class ReviewOsRepository {
         dueAt,
         reviewReason,
       },
-      derived_payload: derivedPayload,
+      derived_payload: sanitizeDerivedMetadata(derivedPayload),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     });
@@ -1019,7 +1020,7 @@ export class ReviewOsRepository {
       related_formulas: input.relatedFormulas,
       next_task_type: input.nextTaskType,
       next_task: input.nextTask,
-      metadata_json: input.metadataJson ?? {},
+      metadata_json: sanitizeLearningSignalMetadata(input.metadataJson ?? {}),
     });
     assertSupabaseOperation("review-os.createLearningSignalEvent", result);
   }
@@ -1077,7 +1078,7 @@ export class ReviewOsRepository {
       event_name: eventName,
       entity_type: entityType,
       entity_id: entityId,
-      metadata_json: metadataJson,
+      metadata_json: sanitizeDerivedMetadata(metadataJson),
     });
     assertSupabaseOperation("review-os.logUsageEvent", result);
   }
