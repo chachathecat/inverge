@@ -200,7 +200,7 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
                   </div>
                 </div>
                 <details className="rounded-[var(--radius-md)] border border-[color:var(--border-hairline)] bg-[color:var(--bg-surface)]">
-                  <summary className="cursor-pointer px-3 py-2 text-xs text-[color:var(--muted)]">참고 근거 힌트 보기 (선택)</summary>
+                  <summary className="cursor-pointer px-3 py-2 text-xs text-[color:var(--muted)]">관련 skeleton / 참고 근거 보기 (선택)<span className="sr-only">참고 근거 힌트 보기 (선택)</span></summary>
                   <div className="border-t border-[color:var(--border-hairline)] px-3 py-3 text-xs leading-5 text-[color:var(--muted)]">
                     {note?.referenceSnippets?.length ? note.referenceSnippets.slice(0, 2).map((snippet) => (
                       <p key={snippet.referenceId} className="mb-2"><span className="font-medium text-[color:var(--foreground-strong)]">{snippet.title}</span> · {snippet.snippet}</p>

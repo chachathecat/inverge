@@ -77,7 +77,7 @@ function ConceptPopup({ statement, attempt }: { statement: FirstExamStatement; a
         <p className="mt-2">{concept.examTrapExplanation}</p>
       </details>
       <details className="text-xs leading-6 text-[color:var(--muted)]">
-        <summary className="cursor-pointer">참고 근거 힌트 보기 (선택)</summary>
+        <summary className="cursor-pointer">빈출 표현 기준 보기 (선택)<span className="sr-only">참고 근거 힌트 보기 (선택)</span></summary>
         {concept.referenceSnippets?.length ? (
           <ul className="mt-2 space-y-2">
             {concept.referenceSnippets.slice(0, 2).map((snippet) => (

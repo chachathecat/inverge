@@ -82,6 +82,10 @@ export const SAFE_DERIVED_SIGNAL_KEYS = [
   "topic_candidate",
   "conceptCandidate",
   "concept_candidate",
+  "issueTags",
+  "issue_tags",
+  "skeletonId",
+  "skeleton_id",
   "mistakeType",
   "mistake_type",
   "weakStructurePoint",
@@ -144,7 +148,7 @@ const RAW_KEY_PATTERNS = [
   /(text|content|body).*(answer|problem|question|statement|paragraph)/i,
   /extraction.*json/i,
 ];
-const SAFE_REFERENCE_REQUEST_KEYS = new Set(["examMode", "subject", "topicCandidate", "conceptCandidate", "taskType", "maxSnippets", "derivedTags", "safeSkeletonIds"]);
+const SAFE_REFERENCE_REQUEST_KEYS = new Set(["examMode", "subject", "topicCandidate", "conceptCandidate", "mistakeType", "issueTags", "skeletonId", "taskType", "maxSnippets", "derivedTags", "safeSkeletonIds"]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);

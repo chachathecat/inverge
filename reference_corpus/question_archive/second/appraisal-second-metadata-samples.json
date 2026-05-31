@@ -1,0 +1,40 @@
+[
+  {
+    "id": "qr-second-2024-practice-income-001",
+    "examYear": 2024,
+    "examRound": "2차",
+    "examMode": "second",
+    "subject": "감정평가실무",
+    "title": "2024 2차 실무 수익환원 skeleton 기준",
+    "topicTags": ["수익환원법", "평가방법 선택"],
+    "issueTags": ["환원이율 근거", "단위 결론"],
+    "conceptTags": ["순영업소득", "직접환원"],
+    "skeletonId": "appraisal_income_capitalization",
+    "difficultyBucket": "mixed",
+    "sourceRightsStatus": "internal_curated",
+    "rawTextAvailable": false,
+    "rawTextStoragePolicy": "metadata_only",
+    "citationLabel": "감정평가사 2차 실무 기출 메타데이터 샘플",
+    "createdAt": "2026-05-31T00:00:00.000Z",
+    "updatedAt": "2026-05-31T00:00:00.000Z"
+  },
+  {
+    "id": "qr-second-2023-law-requirement-001",
+    "examYear": 2023,
+    "examRound": "2차",
+    "examMode": "second",
+    "subject": "감정평가 및 보상법규",
+    "title": "2023 2차 법규 요건-포섭 skeleton 기준",
+    "topicTags": ["보상법규", "요건 판단"],
+    "issueTags": ["요건 누락", "사안 포섭"],
+    "conceptTags": ["조문", "절차"],
+    "skeletonId": "second_law_requirement_subsumption",
+    "difficultyBucket": "advanced",
+    "sourceRightsStatus": "internal_curated",
+    "rawTextAvailable": false,
+    "rawTextStoragePolicy": "metadata_only",
+    "citationLabel": "감정평가사 2차 법규 기출 메타데이터 샘플",
+    "createdAt": "2026-05-31T00:00:00.000Z",
+    "updatedAt": "2026-05-31T00:00:00.000Z"
+  }
+]

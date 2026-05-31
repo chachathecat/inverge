@@ -8,6 +8,7 @@ import { getAppraisalMode, parseAppraisalMode } from "@/lib/review-os/appraisal"
 import { getCalculatorWorkflowForSubject, hasCalculationSignal } from "@/lib/review-os/calculator-workflow";
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
 import { buildAnswerSkeletonGuide, mapCaptureNoteToPastExamReferenceMatches } from "@/lib/review-os/past-exam-reference";
+import { getSimilarQuestionReferenceCandidates } from "@/lib/review-os/question-reference";
 import { reviewOsService } from "@/lib/review-os/service";
 import { buildDetailStudyNote, buildRewriteComparisonNote } from "@/lib/review-os/study-note";
 
@@ -89,6 +90,16 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
         subject: resolvedDetail.item.subjectLabel,
       })
     : [];
+  const questionReferenceHints = await getSimilarQuestionReferenceCandidates({
+    examMode: mode,
+    subject: resolvedDetail.item.subjectLabel,
+    topicCandidate: String(captureNoteEngine?.topic_candidate ?? title),
+    conceptCandidate: biggestSignal,
+    mistakeType: String(captureNoteEngine?.mistake_type ?? resolvedDetail.item.userReasonPreset ?? ""),
+    issueTags: [biggestSignal, note.missingIssue, note.weakStructurePoint].filter((value): value is string => typeof value === "string" && value.length > 0),
+    derivedTags: resolvedDetail.tags.flatMap((tag) => [tag.topicTag, tag.mistakeType, tag.taskType]).filter(Boolean),
+    safeSkeletonIds: [String(resolvedDetail.item.supportedCalculatorTemplateId ?? ""), isSecond ? "second_law_requirement_subsumption" : ""].filter(Boolean),
+  });
 
   return (
     <div className="space-y-6">
@@ -135,12 +146,25 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
         </section>
       ) : null}
 
-      {captureReferenceCandidates.length > 0 ? (
-        <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] p-5">
-          <p className="text-caption text-[color:var(--muted)]">관련 기출 후보</p>
-          <p className="mt-1 text-xs text-[color:var(--muted)]">아래 순서대로 연결 근거 → 학습 구조 → 바로 할 행동만 확인하세요.</p>
+      {questionReferenceHints.length > 0 || captureReferenceCandidates.length > 0 ? (
+        <details className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] p-5">
+          <summary className="cursor-pointer list-none text-sm font-medium text-[color:var(--foreground-strong)]">비슷한 기출 기준</summary>
+          <p className="mt-2 text-xs text-[color:var(--muted)]">원문 탐색이 아니라 태그·skeleton·약점 단위 매핑을 위한 선택 참고입니다. 기본은 지금 항목의 retry/rewrite입니다.</p>
+          {questionReferenceHints.length > 0 ? (
+            <div className="mt-3 space-y-2">
+              {questionReferenceHints.slice(0, 2).map((hint) => (
+                <div key={hint.referenceId} className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-3">
+                  <p className="text-sm font-medium text-[color:var(--foreground-strong)]">{hint.title}</p>
+                  <p className="mt-1 text-xs text-[color:var(--muted)]">{hint.reason}</p>
+                  {hint.skeletonId ? <p className="mt-1 text-xs text-[color:var(--muted)]">관련 skeleton: {hint.skeletonId}</p> : null}
+                  <p className="mt-1 text-xs text-[color:var(--muted)]">권리 상태: {hint.sourceRightsStatus} · 원문 사용: {hint.rawTextAvailable ? "제한된 정책 확인 필요" : "사용 안 함"}</p>
+                </div>
+              ))}
+            </div>
+          ) : null}
+          {captureReferenceCandidates.length > 0 ? (
           <div className="mt-3 space-y-3">
-            {captureReferenceCandidates.map((match) => (
+            {captureReferenceCandidates.slice(0, 2).map((match) => (
               (() => {
                 const guide = buildAnswerSkeletonGuide(match.reference);
                 return (
@@ -181,8 +205,9 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
               })()
             ))}
           </div>
+          ) : null}
           <p className="mt-3 text-xs text-[color:var(--muted)]">모범답안이나 확정 평가가 아닌 학습용 구조 참고입니다.</p>
-        </section>
+        </details>
       ) : null}
 
       {isSecond ? (
