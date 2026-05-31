@@ -63,6 +63,28 @@ test("closed beta QA checklist exists and covers critical beta flows", () => {
   ].forEach((phrase) => assert.ok(doc.includes(phrase), `missing QA phrase: ${phrase}`));
 });
 
+test("closed beta QA evidence documents /exams answer-review scope exception", () => {
+  const doc = read("docs/inverge-closed-beta-qa.md");
+  const examsPage = read("app/exams/page.tsx");
+
+  if (examsPage.includes("exam-card-answer-review")) {
+    assert.ok(doc.includes("Exception documented; P2 follow-up"), "QA evidence must mark /exams scope as an exception/follow-up while answer review is visible");
+    ["감정평가사 1차", "감정평가사 2차", "답안 검토실", "운영자용 베타", "/answer-review"].forEach((phrase) => {
+      assert.ok(doc.includes(phrase), `missing /exams scope exception evidence: ${phrase}`);
+    });
+    assert.ok(
+      doc.includes("Decide whether 답안 검토실 should remain visible on `/exams` for closed beta")
+        || doc.includes("decide whether 답안 검토실 should remain visible on `/exams` for closed beta"),
+      "QA evidence must record the P2 product-scope decision needed for 답안 검토실",
+    );
+    assert.equal(
+      doc.includes("`/exams` presents 감정평가사 1차/2차 learner tracks only"),
+      false,
+      "QA evidence must not claim /exams only has two learner tracks while exam-card-answer-review exists",
+    );
+  }
+});
+
 test("access/onboarding route sources keep invite-only learner access and admin boundaries", async () => {
   const layout = read("app/app/layout.tsx");
   assert.ok(layout.includes("if (!access?.allowed)"));
