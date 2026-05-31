@@ -189,6 +189,23 @@ export type StudyProfile = {
   updatedAt: string;
 };
 
+export type ConceptReviewCardPayload = {
+  sourceType: "first_ox" | string;
+  examMode: string;
+  subject: string;
+  statement_id?: string | null;
+  trapWords: string[];
+  coreRule: string;
+  minimalExplanation: string;
+  examTrapExplanation: string;
+  nextReviewAction: string;
+  reviewStage: "O/X" | "빈칸" | "설명/수정" | string;
+  dueAt: string;
+  topic_candidate?: string | null;
+  concept_candidate?: string | null;
+  official_answer_authority?: false;
+};
+
 export type WrongAnswerItemInput = {
   examName: string;
   subjectLabel: string;
@@ -226,6 +243,7 @@ export type WrongAnswerItemInput = {
   rewriteCompleted?: boolean;
   captureIntent?: "save" | "defer";
   createdFromCapture?: boolean;
+  conceptCard?: ConceptReviewCardPayload;
   extractionPayload?: {
     raw_ocr_text?: string;
     raw_extraction_json?: Record<string, unknown>;
@@ -310,6 +328,9 @@ export type ReviewQueueCard = {
   timeSpentSeconds: number | null;
   createdFromCapture: boolean;
   itemCreatedAt: string;
+  conceptCard?: ConceptReviewCardPayload;
+  clozeCandidate?: string | null;
+  rawQuestionText?: string | null;
 };
 
 export type ReviewCompletionAction =

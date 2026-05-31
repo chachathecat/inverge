@@ -35,6 +35,24 @@ export type FiveChoiceItemInput = {
 };
 
 export type FirstOxLearningSignalKind = "none" | "wrong_answer_retry" | "weak_confidence" | "needs_concept_review";
+export type FirstOxReviewStage = "O/X" | "빈칸" | "설명/수정";
+
+export type FirstOxConceptCardPayload = {
+  sourceType: "first_ox";
+  examMode: "감정평가사 1차";
+  subject: string;
+  statement_id: string;
+  trapWords: string[];
+  coreRule: string;
+  minimalExplanation: string;
+  examTrapExplanation: string;
+  nextReviewAction: string;
+  reviewStage: FirstOxReviewStage;
+  dueAt: string;
+  topic_candidate?: string | null;
+  concept_candidate?: string | null;
+  official_answer_authority: false;
+};
 
 export const FIRST_OX_TRAP_WORD_GROUPS = [
   ["할 수 있다", "하여야 한다"],
@@ -112,6 +130,58 @@ export function resolveFirstOxLearningSignalKind(attempt: OxAttempt): FirstOxLea
   return "none";
 }
 
+function dueSoonIso(createdAt: string) {
+  const base = Date.parse(createdAt);
+  const ts = Number.isFinite(base) ? base : Date.now();
+  return new Date(ts + 86_400_000).toISOString();
+}
+
+function summarizeTrapWords(statement: FirstExamStatement) {
+  if (statement.trapWords.length > 0) return statement.trapWords;
+  return statement.conceptCandidate ? [statement.conceptCandidate] : [];
+}
+
+export function buildFirstOxConceptCardPayload(statement: FirstExamStatement, attempt: OxAttempt): FirstOxConceptCardPayload | null {
+  const kind = resolveFirstOxLearningSignalKind(attempt);
+  if (kind === "none") return null;
+
+  const trapWords = summarizeTrapWords(statement);
+  const trapText = trapWords.length > 0 ? trapWords.join(" · ") : "선지의 조건 표현";
+  const coreRule = statement.conceptCandidate
+    ? `${statement.conceptCandidate} 기준 1개를 먼저 고정합니다.`
+    : `${statement.subject} 판단 기준 1개를 먼저 고정합니다.`;
+  const minimalExplanation = kind === "wrong_answer_retry"
+    ? `${trapText} 때문에 판단 방향이 바뀌었습니다.`
+    : kind === "weak_confidence"
+      ? `${trapText}에서 확신이 흔들렸습니다.`
+      : `${trapText}를 판단할 기준이 아직 비어 있습니다.`;
+  const examTrapExplanation = trapWords.length > 0
+    ? `이 선지는 ${trapText} 같은 표현을 바꿔 O/X 판단을 흔듭니다.`
+    : "이 선지는 조건 표현 하나가 바뀌면 O/X 판단이 달라질 수 있습니다.";
+  const nextReviewAction = kind === "wrong_answer_retry"
+    ? "같은 선지를 근거 1줄로 다시 판단합니다."
+    : kind === "weak_confidence"
+      ? "핵심어 1개를 가리고 다시 회상합니다."
+      : "핵심 개념 1개를 확인한 뒤 O/X를 다시 판단합니다.";
+
+  return {
+    sourceType: "first_ox",
+    examMode: "감정평가사 1차",
+    subject: statement.subject,
+    statement_id: statement.id,
+    trapWords,
+    coreRule,
+    minimalExplanation,
+    examTrapExplanation,
+    nextReviewAction,
+    reviewStage: kind === "weak_confidence" ? "빈칸" : "O/X",
+    dueAt: dueSoonIso(attempt.createdAt),
+    topic_candidate: statement.topicCandidate ?? null,
+    concept_candidate: statement.conceptCandidate ?? null,
+    official_answer_authority: false,
+  };
+}
+
 export function buildFirstOxLearningSignalInput(statement: FirstExamStatement, attempt: OxAttempt): LearningSignalEventInput | null {
   const kind = resolveFirstOxLearningSignalKind(attempt);
   if (kind === "none") return null;
@@ -127,7 +197,7 @@ export function buildFirstOxLearningSignalInput(statement: FirstExamStatement, a
     sourceType: "first-ox",
     derivedTags: [kind, "first_ox_retry", ...(statement.trapWords.length > 0 ? ["trap_word"] : [])],
     relatedFormulas: statement.conceptCandidate ? [statement.conceptCandidate] : [],
-    nextTaskType: kind === "needs_concept_review" ? "concept_review" : "retry",
+    nextTaskType: kind === "weak_confidence" ? "cloze_review" : kind === "needs_concept_review" ? "concept_review" : "retry",
     nextTask,
     metadataJson: {
       statement_id: statement.id,
@@ -137,6 +207,7 @@ export function buildFirstOxLearningSignalInput(statement: FirstExamStatement, a
       topic_candidate: statement.topicCandidate ?? null,
       concept_candidate: statement.conceptCandidate ?? null,
       official_answer_authority: false,
+      concept_card: buildFirstOxConceptCardPayload(statement, attempt),
     },
   };
 }
@@ -165,6 +236,7 @@ export function buildFirstOxWrongAnswerItemInput(statement: FirstExamStatement, 
     userReasonPreset: reasonPreset,
     confidence: attempt.certainty === "certain" ? "중간" : "낮음",
     keyConcepts: [statement.conceptCandidate, ...statement.trapWords].filter((value): value is string => Boolean(value)),
+    conceptCard: buildFirstOxConceptCardPayload(statement, attempt) ?? undefined,
     comparisonPoint: "근거 1줄을 먼저 회상하고 같은 선지를 다시 판단합니다.",
     biggestGap: reasonPreset,
     createdFromCapture: false,

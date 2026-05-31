@@ -895,6 +895,9 @@ export class ReviewOsService {
           rewrite_source_gap: input.rewriteSourceGap ?? null,
           rewrite_instruction: input.rewriteInstruction ?? null,
           rewrite_completed: input.rewriteCompleted ?? null,
+          concept_card: input.conceptCard ?? null,
+          review_stage: input.conceptCard?.reviewStage ?? null,
+          due_at: input.conceptCard?.dueAt ?? null,
           issue_recall: input.issueRecall ?? null,
           outline_draft: input.outlineDraft ?? null,
           production_before_comparison: input.productionBeforeComparison ?? null,
@@ -912,6 +915,9 @@ export class ReviewOsService {
           created_from_capture: isCaptureCreated,
           capture_note_engine_v1: captureSignals,
           capture_note_engine_v2: captureSignalsV2 ?? captureSignals,
+          concept_card: input.conceptCard ?? null,
+          review_stage: input.conceptCard?.reviewStage ?? null,
+          cloze_candidate: input.conceptCard?.trapWords?.[0] ?? input.keyConcepts?.[0] ?? null,
         },
       );
 
