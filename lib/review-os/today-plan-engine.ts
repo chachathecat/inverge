@@ -9,7 +9,7 @@ export type TodayPlanTaskType =
   | "ocr_confirmation"
   | "note_cleanup";
 export type TodayPlanDueBucket = "overdue" | "today" | "upcoming";
-export type TodayPlanPrimaryCta = { label: string; hrefKind: "session" | "review" | "capture" | "write" | "items" };
+export type TodayPlanPrimaryCta = { label: string; hrefKind: "session" | "review" | "capture" | "write" | "items" | "first_ox" };
 
 export type TodayPlanTask = {
   itemId: string;
@@ -97,6 +97,7 @@ function primaryCtaFor(taskType: TodayPlanTaskType, mode: "first" | "second"): T
   if (taskType === "accounting_template_retry") return { label: "템플릿 재시도", hrefKind: "session" };
   if (taskType === "cloze_review") return { label: "빈칸 회상", hrefKind: "session" };
   if (taskType === "concept_review") return { label: "개념 회상", hrefKind: "session" };
+  if (taskType === "first_ox_retry") return { label: "5분 O/X 재시도", hrefKind: "first_ox" };
   return { label: mode === "first" ? "5분 다시 풀기" : "다시 쓰기", hrefKind: "session" };
 }
 
@@ -150,7 +151,7 @@ function toFirstOxSignalTask(signal: LearningSignalEventRecord): TodayPlanTask {
     task_type: taskType,
     estimated_minutes: isConcept ? 7 : 5,
     priority_reason: "1차 O/X 연습에서 만든 최신 학습 신호입니다.",
-    primary_cta: primaryCtaFor(taskType, "first"),
+    primary_cta: isConcept ? { label: "개념 확인 후 O/X", hrefKind: "first_ox" } : primaryCtaFor(taskType, "first"),
     created_from_capture: false,
     source_label: "1차 O/X 기반",
   };

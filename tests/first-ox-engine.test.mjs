@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import {
   buildFirstOxLearningSignalInput,
   buildFirstOxWrongAnswerItemInput,
@@ -85,7 +85,7 @@ test("unknown creates needs-concept-review signal", () => {
   assert.equal(signal?.nextTaskType, "concept_review");
 });
 
-test("Today Plan can surface first_ox_retry and concept_review tasks", () => {
+test("Today Plan can surface first_ox_retry and route the primary CTA to O/X practice", () => {
   const statement = statements()[1];
   const attempt = evaluateFirstOxAttempt(statement, "O", "certain", "2026-05-30T00:00:00.000Z");
   const signal = {
@@ -97,6 +97,28 @@ test("Today Plan can surface first_ox_retry and concept_review tasks", () => {
   const tasks = buildTodayPlanTasks({ mode: "first", queue: [], items: [], learningSignals: [signal], now: new Date("2026-05-30T00:10:00.000Z") });
   assert.equal(tasks[0]?.task_type, "first_ox_retry");
   assert.equal(tasks[0]?.source_label, "1차 O/X 기반");
+  assert.deepEqual(tasks[0]?.primary_cta, { label: "5분 O/X 재시도", hrefKind: "first_ox" });
+});
+
+test("first-ox concept-review signal still returns to the O/X statement surface", () => {
+  const statement = statements()[0];
+  const attempt = evaluateFirstOxAttempt(statement, "unknown", "unknown", "2026-05-30T00:00:00.000Z");
+  const signal = {
+    ...buildFirstOxLearningSignalInput(statement, attempt),
+    id: "sig-concept-1",
+    userId: "u1",
+    createdAt: "2026-05-30T00:00:00.000Z",
+  };
+  const tasks = buildTodayPlanTasks({ mode: "first", queue: [], items: [], learningSignals: [signal], now: new Date("2026-05-30T00:10:00.000Z") });
+  assert.equal(tasks[0]?.task_type, "concept_review");
+  assert.equal(tasks[0]?.source_label, "1차 O/X 기반");
+  assert.equal(tasks[0]?.primary_cta.hrefKind, "first_ox");
+});
+
+test("app resolves first O/X task CTA hrefs to the dedicated route", async () => {
+  await access("app/app/first/ox/page.tsx");
+  const homeSource = await readFile("app/app/page.tsx", "utf8");
+  assert.match(homeSource, /hrefKind === "first_ox"\) return "\/app\/first\/ox"/);
 });
 
 test("learner UI hides instructor route and raw internal fields while showing trap highlights after answer", async () => {
