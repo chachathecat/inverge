@@ -134,6 +134,40 @@ function toProblemSnapTask(mode: "first" | "second", signal: LearningSignalEvent
   };
 }
 
+function toFirstOxSignalTask(signal: LearningSignalEventRecord): TodayPlanTask {
+  const isConcept = signal.nextTaskType === "concept_review";
+  const taskType: TodayPlanTaskType = isConcept ? "concept_review" : "first_ox_retry";
+  return {
+    itemId: `first-ox-${signal.id}`,
+    title: `${signal.subject} O/X 선지 재시도`,
+    subject: signal.subject,
+    exam_mode: "first",
+    due_bucket: "today",
+    status: "due",
+    reason: isConcept ? "모름으로 남긴 1차 선지라 개념 확인이 먼저 필요합니다." : "틀림/헷갈림으로 남긴 1차 선지입니다.",
+    one_biggest_gap: isConcept ? "판단 기준 1개가 비어 있습니다." : "선지 표현과 근거 연결이 약했습니다.",
+    one_next_action: signal.nextTask || (isConcept ? "핵심 개념 1개를 확인하고 O/X를 다시 판단합니다." : "근거 1줄을 회상하고 같은 선지를 다시 판단합니다."),
+    task_type: taskType,
+    estimated_minutes: isConcept ? 7 : 5,
+    priority_reason: "1차 O/X 연습에서 만든 최신 학습 신호입니다.",
+    primary_cta: primaryCtaFor(taskType, "first"),
+    created_from_capture: false,
+    source_label: "1차 O/X 기반",
+  };
+}
+
+function pickRecentFirstOxSignal(learningSignals: LearningSignalEventRecord[], mode: "first" | "second", now: Date) {
+  if (mode !== "first") return null;
+  const cutoff = now.getTime() - DAY_MS * 3;
+  return learningSignals
+    .filter((signal) => signal.sourceType === "first-ox" && signal.examMode === "감정평가사 1차")
+    .filter((signal) => {
+      const createdTs = parseTime(signal.createdAt);
+      return createdTs !== null && createdTs >= cutoff && createdTs <= now.getTime();
+    })
+    .sort((a, b) => (parseTime(b.createdAt) ?? 0) - (parseTime(a.createdAt) ?? 0))[0] ?? null;
+}
+
 function pickRecentProblemSnapSignal(learningSignals: LearningSignalEventRecord[], mode: "first" | "second", now: Date) {
   const cutoff = now.getTime() - DAY_MS * 3;
   const expectedExamMode = mode === "second" ? "감정평가사 2차" : "감정평가사 1차";
@@ -280,9 +314,11 @@ export function buildTodayPlanTasks({ mode, queue, items = [], learningSignals =
   const queueHasStrongDueTask = topQueueScore >= 80 || (topQueueDueTs !== null && topQueueDueTs <= now.getTime());
   const recentProblemSnap = queueHasStrongDueTask ? null : pickRecentProblemSnapSignal(learningSignals, mode, now);
   const problemSnapTasks = recentProblemSnap ? [{ task: toProblemSnapTask(mode, recentProblemSnap), score: 73 }] : [];
+  const recentFirstOx = queueHasStrongDueTask ? null : pickRecentFirstOxSignal(learningSignals, mode, now);
+  const firstOxTasks = recentFirstOx ? [{ task: toFirstOxSignalTask(recentFirstOx), score: 76 }] : [];
 
   const deduped = new Map<string, { task: TodayPlanTask; score: number }>();
-  [...queueTasks, ...itemTasks, ...problemSnapTasks].forEach((entry) => {
+  [...queueTasks, ...itemTasks, ...problemSnapTasks, ...firstOxTasks].forEach((entry) => {
     const existing = deduped.get(entry.task.itemId);
     if (!existing || entry.score > existing.score) deduped.set(entry.task.itemId, entry);
   });
