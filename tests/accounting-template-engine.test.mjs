@@ -58,6 +58,63 @@ test("editable input updates deterministic result", () => {
   assert.equal(edited?.resultValue, 200000);
 });
 
+test("invalid numeric input does not throw and returns calculation null", () => {
+  let result;
+  assert.doesNotThrow(() => {
+    result = calculateFromAccountingParseResult(
+      {
+        ...baseParse,
+        extractedInputs: { cost: "not-a-number", salvageValue: 200000, usefulLifeYears: 5 },
+      },
+      true,
+    );
+  });
+  assert.equal(result?.calculation, null);
+  assert.equal(result?.validation.ok, false);
+  assert.equal(result?.validation.calculationRisk, "invalid_input");
+  assert.equal(result?.validation.message, "입력값을 다시 확인해야 계산할 수 있습니다.");
+});
+
+test("CVP contribution margin <= 0 does not throw and returns calculation null", () => {
+  let result;
+  assert.doesNotThrow(() => {
+    result = calculateFromAccountingParseResult(
+      {
+        subject: "회계학",
+        templateId: "accounting_cost_volume_profit",
+        confidence: 0.92,
+        extractedInputs: { sellingPricePerUnit: 1000, variableCostPerUnit: 1000, fixedCosts: 50000 },
+        extractedLabels: ["판매단가", "단위당 변동비", "고정비"],
+        needsHumanConfirmation: false,
+      },
+      true,
+    );
+  });
+  assert.equal(result?.calculation, null);
+  assert.equal(result?.validation.ok, false);
+  assert.equal(result?.validation.calculationRisk, "invalid_input");
+});
+
+test("economics zero price change does not throw and returns calculation null", () => {
+  let result;
+  assert.doesNotThrow(() => {
+    result = calculateFromAccountingParseResult(
+      {
+        subject: "경제학",
+        templateId: "economics_elasticity_basic",
+        confidence: 0.9,
+        extractedInputs: { quantityBefore: 100, quantityAfter: 120, priceBefore: 10, priceAfter: 10 },
+        extractedLabels: ["수요량", "가격", "가격탄력성"],
+        needsHumanConfirmation: false,
+      },
+      true,
+    );
+  });
+  assert.equal(result?.calculation, null);
+  assert.equal(result?.validation.ok, false);
+  assert.equal(result?.validation.calculationRisk, "invalid_input");
+});
+
 test("LLM final answer text is ignored as calculation source", () => {
   const normalized = normalizeAccountingParseResultFromAi({
     ...baseParse,
@@ -115,4 +172,62 @@ test("today plan accounting template retry routes to template retry flow and rem
   assert.equal(tasks.length, 3);
   assert.equal(tasks[0]?.task_type, "accounting_template_retry");
   assert.deepEqual(tasks[0]?.primary_cta, { label: "계산 틀 재확인", hrefKind: "calculator_template" });
+});
+
+test("second-mode calculation task stays in second review flow instead of calculator template", () => {
+  const now = new Date("2026-05-31T00:00:00.000Z");
+  const queue = [
+    {
+      queueId: "q-second-calc",
+      itemId: "item-second-calc",
+      examName: "감정평가사 2차",
+      subjectLabel: "감정평가실무",
+      problemTitle: "수익환원법 계산 문제",
+      topicTag: "계산",
+      mistakeType: "단위 실수",
+      reviewReason: "산식과 단위 재확인",
+      dueAt: "2026-05-30T00:00:00.000Z",
+      priorityScore: 90,
+      confidence: "중간",
+      recurrenceCount: 1,
+      status: "pending",
+      itemCreatedAt: "2026-05-30T00:00:00.000Z",
+      createdFromCapture: false,
+    },
+  ];
+  const tasks = buildTodayPlanTasks({ mode: "second", queue, items: [], learningSignals: [], now });
+  assert.equal(tasks[0]?.task_type, "second_answer_rewrite");
+  assert.notEqual(tasks[0]?.primary_cta.hrefKind, "calculator_template");
+});
+
+test("second-mode calculation task cannot produce first accounting calculator href", () => {
+  const now = new Date("2026-05-31T00:00:00.000Z");
+  const tasks = buildTodayPlanTasks({
+    mode: "second",
+    queue: [
+      {
+        queueId: "q-second-unit",
+        itemId: "item-second-unit",
+        examName: "감정평가사 2차",
+        subjectLabel: "감정평가실무",
+        problemTitle: "단위 환산 문제",
+        topicTag: "단위",
+        mistakeType: "계산 실수",
+        reviewReason: "계산 근거 재작성",
+        dueAt: "2026-05-30T00:00:00.000Z",
+        priorityScore: 95,
+        confidence: "중간",
+        recurrenceCount: 1,
+        status: "pending",
+        itemCreatedAt: "2026-05-30T00:00:00.000Z",
+        createdFromCapture: false,
+      },
+    ],
+    items: [],
+    learningSignals: [],
+    now,
+  });
+  const appSource = fs.readFileSync(new URL("../app/app/page.tsx", import.meta.url), "utf8");
+  assert.match(appSource, /hrefKind === "calculator_template"\) return "\/app\/calculator\?mode=first&context=accounting"/);
+  assert.notEqual(tasks[0]?.primary_cta.hrefKind, "calculator_template");
 });

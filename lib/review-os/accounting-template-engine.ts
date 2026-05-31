@@ -54,7 +54,7 @@ export type TemplateValidationResult = {
   missingInputKeys: string[];
   unknownLabels: string[];
   lowConfidenceFlag: boolean;
-  calculationRisk: "none" | "missing_input" | "low_confidence" | "unknown_label" | "unsupported_template";
+  calculationRisk: "none" | "missing_input" | "low_confidence" | "unknown_label" | "unsupported_template" | "invalid_input";
   message?: string;
 };
 
@@ -70,6 +70,52 @@ function optionalNumber(input: TemplateInput, key: string, fallback: number): nu
   const value = input[key];
   if (value === undefined || value === null || value === "") return fallback;
   return toNumber(value, key);
+}
+
+function isFiniteNumericInput(value: TemplateInputValue) {
+  const numberValue = typeof value === "number" ? value : typeof value === "string" && value.trim() !== "" ? Number(value) : NaN;
+  return Number.isFinite(numberValue);
+}
+
+function getFiniteNumericInput(input: TemplateInput, key: string) {
+  const value = input[key];
+  return isFiniteNumericInput(value) ? Number(value) : null;
+}
+
+function resolveInvalidInputKeys(template: AccountingTemplateDefinition, input: TemplateInput) {
+  return [...template.requiredInputs, ...template.optionalInputs].filter((key) => {
+    const value = input[key];
+    if (key === "useMidpoint") return false;
+    if (value === undefined || value === null || value === "") return false;
+    if (typeof value === "boolean") return false;
+    return !isFiniteNumericInput(value);
+  });
+}
+
+function resolveCalculationInputRisk(template: AccountingTemplateDefinition, input: TemplateInput): TemplateValidationResult["calculationRisk"] {
+  const invalidInputKeys = resolveInvalidInputKeys(template, input);
+  if (invalidInputKeys.length > 0) return "invalid_input";
+
+  if (template.templateId === "accounting_cost_volume_profit") {
+    const sellingPricePerUnit = getFiniteNumericInput(input, "sellingPricePerUnit");
+    const variableCostPerUnit = getFiniteNumericInput(input, "variableCostPerUnit");
+    if (sellingPricePerUnit === null || variableCostPerUnit === null) return "invalid_input";
+    if (sellingPricePerUnit - variableCostPerUnit <= 0) return "invalid_input";
+  }
+
+  if (template.templateId === "economics_elasticity_basic") {
+    const quantityBefore = getFiniteNumericInput(input, "quantityBefore");
+    const quantityAfter = getFiniteNumericInput(input, "quantityAfter");
+    const priceBefore = getFiniteNumericInput(input, "priceBefore");
+    const priceAfter = getFiniteNumericInput(input, "priceAfter");
+    if (quantityBefore === null || quantityAfter === null || priceBefore === null || priceAfter === null) return "invalid_input";
+    const useMidpoint = input.useMidpoint === true || input.useMidpoint === "true";
+    const quantityBase = useMidpoint ? (quantityBefore + quantityAfter) / 2 : quantityBefore;
+    const priceBase = useMidpoint ? (priceBefore + priceAfter) / 2 : priceBefore;
+    if (quantityBase === 0 || priceBase === 0 || priceAfter - priceBefore === 0) return "invalid_input";
+  }
+
+  return "none";
 }
 
 function round(value: number, digits = 2): number {
@@ -260,9 +306,13 @@ export const ACCOUNTING_TEMPLATE_REGISTRY: Record<AccountingTemplateId, Accounti
       const useMidpoint = input.useMidpoint === true || input.useMidpoint === "true";
       const quantityBase = useMidpoint ? (quantityBefore + quantityAfter) / 2 : quantityBefore;
       const priceBase = useMidpoint ? (priceBefore + priceAfter) / 2 : priceBefore;
+      if (quantityBase === 0) throw new Error("수량 변화율 기준값이 0이라 탄력성을 계산할 수 없습니다.");
+      if (priceBase === 0) throw new Error("가격 변화율 기준값이 0이라 탄력성을 계산할 수 없습니다.");
+      if (priceAfter - priceBefore === 0) throw new Error("가격 변화가 0이라 탄력성을 계산할 수 없습니다.");
       const quantityChangeRate = (quantityAfter - quantityBefore) / quantityBase;
       const priceChangeRate = (priceAfter - priceBefore) / priceBase;
       const elasticity = Math.abs(quantityChangeRate / priceChangeRate);
+      if (!Number.isFinite(elasticity)) throw new Error("탄력성 계산값을 확정할 수 없습니다.");
       return {
         templateId: "economics_elasticity_basic",
         displayName: "탄력성 기본 계산",
@@ -305,6 +355,7 @@ export function validateAccountingParseResult(parseResult: AccountingParseResult
   if (unknownLabels.length > 0) calculationRisk = "unknown_label";
   else if (missingInputKeys.length > 0) calculationRisk = "missing_input";
   else if (lowConfidenceFlag && !confirmed) calculationRisk = "low_confidence";
+  else calculationRisk = resolveCalculationInputRisk(template, parseResult.extractedInputs);
 
   return {
     ok: calculationRisk === "none",
@@ -319,7 +370,9 @@ export function validateAccountingParseResult(parseResult: AccountingParseResult
           ? "필수 숫자가 빠져 계산하지 않습니다."
           : calculationRisk === "low_confidence"
             ? "신뢰도가 낮아 숫자 확인 후 계산합니다."
-            : undefined,
+            : calculationRisk === "invalid_input"
+              ? "입력값을 다시 확인해야 계산할 수 있습니다."
+              : undefined,
   };
 }
 
@@ -328,7 +381,20 @@ export function calculateFromAccountingParseResult(parseResult: AccountingParseR
   if (!validation.ok) return { validation, calculation: null };
   const template = getAccountingTemplate(parseResult.templateId);
   if (!template) return { validation, calculation: null };
-  return { validation, calculation: template.calculate(parseResult.extractedInputs) };
+
+  try {
+    return { validation, calculation: template.calculate(parseResult.extractedInputs) };
+  } catch {
+    return {
+      validation: {
+        ...validation,
+        ok: false,
+        calculationRisk: "invalid_input" as const,
+        message: "입력값을 다시 확인해야 계산할 수 있습니다.",
+      },
+      calculation: null,
+    };
+  }
 }
 
 export function buildAccountingDerivedMetadata(parseResult: AccountingParseResult, validation: TemplateValidationResult) {
