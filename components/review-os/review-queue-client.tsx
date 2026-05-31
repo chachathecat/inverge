@@ -73,8 +73,8 @@ export function ReviewQueueClient({ items, mode, captureReferenceLineByItemId = 
                   {captureReferenceLineByItemId[item.itemId] ? <p className="text-xs text-[color:var(--muted)]">참고 기준: {captureReferenceLineByItemId[item.itemId]}</p> : null}
                 </div>
               ) : null}
-              {item.examName === "감정평가사 1차" && item.originalStatement && (item.conceptCard?.reviewStage === "빈칸" || item.clozeCandidate) ? (
-                <SmartClozeReview statement={item.originalStatement} trapWords={item.conceptCard?.trapWords ?? (item.clozeCandidate ? [item.clozeCandidate] : [])} conceptCandidate={item.clozeCandidate} />
+              {item.examName === "감정평가사 1차" && item.rawQuestionText && (item.conceptCard?.reviewStage === "빈칸" || item.clozeCandidate) ? (
+                <SmartClozeReview statement={item.rawQuestionText} trapWords={item.conceptCard?.trapWords ?? (item.clozeCandidate ? [item.clozeCandidate] : [])} conceptCandidate={item.clozeCandidate} />
               ) : null}
               <div className="flex flex-wrap gap-2">
                 {buildPrioritySignals(item).map((signal) => (

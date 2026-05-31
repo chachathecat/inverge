@@ -140,23 +140,49 @@ test("mobile surface avoids horizontal overflow and keeps one statement card", a
 });
 
 
-test("wrong/confused/unknown attempts build minimal concept popup payloads", () => {
+test("wrong/confused/unknown attempts build sanitized concept popup payloads and review signals", () => {
   const [statement] = statements();
-  const wrong = buildFirstOxConceptCardPayload(statement, evaluateFirstOxAttempt(statement, "X", "certain", "2026-05-30T00:00:00.000Z"));
-  const confused = buildFirstOxConceptCardPayload(statement, evaluateFirstOxAttempt(statement, "O", "confused", "2026-05-30T00:00:00.000Z"));
-  const unknown = buildFirstOxConceptCardPayload(statement, evaluateFirstOxAttempt(statement, "unknown", "unknown", "2026-05-30T00:00:00.000Z"));
-  for (const concept of [wrong, confused, unknown]) {
-    assert.equal(concept?.sourceType, "first_ox");
-    assert.equal(concept?.examMode, "감정평가사 1차");
-    assert.equal(concept?.subject, "민법");
-    assert.equal(concept?.originalStatement, statement.statementText);
-    assert.ok(concept?.coreRule.length);
-    assert.ok(concept?.minimalExplanation.length);
-    assert.ok(concept?.examTrapExplanation.length);
-    assert.ok(concept?.nextReviewAction.length);
-    assert.equal(concept?.dueAt, "2026-05-31T00:00:00.000Z");
+  const wrongAttempt = evaluateFirstOxAttempt(statement, "X", "certain", "2026-05-30T00:00:00.000Z");
+  const confusedAttempt = evaluateFirstOxAttempt(statement, "O", "confused", "2026-05-30T00:00:00.000Z");
+  const unknownAttempt = evaluateFirstOxAttempt(statement, "unknown", "unknown", "2026-05-30T00:00:00.000Z");
+  const wrong = buildFirstOxConceptCardPayload(statement, wrongAttempt);
+  const confused = buildFirstOxConceptCardPayload(statement, confusedAttempt);
+  const unknown = buildFirstOxConceptCardPayload(statement, unknownAttempt);
+  for (const [concept, attempt] of [[wrong, wrongAttempt], [confused, confusedAttempt], [unknown, unknownAttempt]]) {
+    assert.ok(concept);
+    assert.equal(concept.sourceType, "first_ox");
+    assert.equal(concept.examMode, "감정평가사 1차");
+    assert.equal(concept.subject, "민법");
+    assert.equal(concept.statement_id, statement.id);
+    assert.equal("originalStatement" in concept, false);
+    assert.equal("rawQuestionText" in concept, false);
+    assert.ok(concept.coreRule.length);
+    assert.ok(concept.minimalExplanation.length);
+    assert.ok(concept.examTrapExplanation.length);
+    assert.ok(concept.nextReviewAction.length);
+    assert.equal(concept.topic_candidate, "표현 함정");
+    assert.equal(concept.concept_candidate, "원칙·예외");
+    assert.equal(concept.official_answer_authority, false);
+    assert.equal(concept.dueAt, "2026-05-31T00:00:00.000Z");
+    assert.notEqual(buildFirstOxLearningSignalInput(statement, attempt), null);
   }
   assert.equal(confused?.reviewStage, "빈칸");
+});
+
+test("first-ox learning signal metadata and derived concept cards omit raw statement text", () => {
+  const statement = statements()[1];
+  const attempt = evaluateFirstOxAttempt(statement, "O", "certain", "2026-05-30T00:00:00.000Z");
+  const signal = buildFirstOxLearningSignalInput(statement, attempt);
+  const item = buildFirstOxWrongAnswerItemInput(statement, attempt);
+  assert.ok(signal?.metadataJson.concept_card);
+  assert.ok(item?.conceptCard);
+  assert.equal("originalStatement" in signal.metadataJson.concept_card, false);
+  assert.equal("rawQuestionText" in signal.metadataJson.concept_card, false);
+  assert.equal(JSON.stringify(signal.metadataJson).includes(statement.statementText), false);
+  assert.equal("originalStatement" in item.conceptCard, false);
+  assert.equal("rawQuestionText" in item.conceptCard, false);
+  assert.equal(JSON.stringify(item?.conceptCard).includes(statement.statementText), false);
+  assert.ok(item?.rawQuestionText?.includes(statement.statementText));
 });
 
 test("correct and certain attempt has no concept popup payload", () => {
@@ -195,8 +221,17 @@ test("concept popup copy exists but is gated after attempted answer", async () =
   assert.match(source, /currentAttempt && resolveFirstOxLearningSignalKind\(currentAttempt\) !== "none" \? <ConceptPopup/);
 });
 
-test("review queue exposes cloze UI without raw internal task type labels", async () => {
+test("review queue renders Smart Cloze from user-owned item raw text without raw internal task type labels", async () => {
   const source = await readFile("components/review-os/review-queue-client.tsx", "utf8");
   assert.ok(source.includes("SmartClozeReview"));
+  assert.ok(source.includes("item.rawQuestionText"));
+  assert.equal(source.includes("item.conceptCard?.originalStatement"), false);
   assert.equal(/concept_review|cloze_review|nextTaskType/.test(source), false);
+});
+
+test("wrong-answer derived payload stores sanitized concept card only", async () => {
+  const source = await readFile("lib/review-os/service.ts", "utf8");
+  assert.match(source, /concept_card: input\.conceptCard \?\? null/);
+  const conceptSource = await readFile("lib/review-os/first-ox-engine.ts", "utf8");
+  assert.equal(/originalStatement:\s*statement\.statementText/.test(conceptSource), false);
 });

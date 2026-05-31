@@ -41,7 +41,7 @@ export type FirstOxConceptCardPayload = {
   sourceType: "first_ox";
   examMode: "감정평가사 1차";
   subject: string;
-  originalStatement: string;
+  statement_id: string;
   trapWords: string[];
   coreRule: string;
   minimalExplanation: string;
@@ -49,6 +49,9 @@ export type FirstOxConceptCardPayload = {
   nextReviewAction: string;
   reviewStage: FirstOxReviewStage;
   dueAt: string;
+  topic_candidate?: string | null;
+  concept_candidate?: string | null;
+  official_answer_authority: false;
 };
 
 export const FIRST_OX_TRAP_WORD_GROUPS = [
@@ -165,7 +168,7 @@ export function buildFirstOxConceptCardPayload(statement: FirstExamStatement, at
     sourceType: "first_ox",
     examMode: "감정평가사 1차",
     subject: statement.subject,
-    originalStatement: statement.statementText,
+    statement_id: statement.id,
     trapWords,
     coreRule,
     minimalExplanation,
@@ -173,6 +176,9 @@ export function buildFirstOxConceptCardPayload(statement: FirstExamStatement, at
     nextReviewAction,
     reviewStage: kind === "weak_confidence" ? "빈칸" : "O/X",
     dueAt: dueSoonIso(attempt.createdAt),
+    topic_candidate: statement.topicCandidate ?? null,
+    concept_candidate: statement.conceptCandidate ?? null,
+    official_answer_authority: false,
   };
 }
 

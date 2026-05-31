@@ -193,7 +193,7 @@ export type ConceptReviewCardPayload = {
   sourceType: "first_ox" | string;
   examMode: string;
   subject: string;
-  originalStatement: string;
+  statement_id?: string | null;
   trapWords: string[];
   coreRule: string;
   minimalExplanation: string;
@@ -201,6 +201,9 @@ export type ConceptReviewCardPayload = {
   nextReviewAction: string;
   reviewStage: "O/X" | "빈칸" | "설명/수정" | string;
   dueAt: string;
+  topic_candidate?: string | null;
+  concept_candidate?: string | null;
+  official_answer_authority?: false;
 };
 
 export type WrongAnswerItemInput = {
@@ -327,7 +330,7 @@ export type ReviewQueueCard = {
   itemCreatedAt: string;
   conceptCard?: ConceptReviewCardPayload;
   clozeCandidate?: string | null;
-  originalStatement?: string | null;
+  rawQuestionText?: string | null;
 };
 
 export type ReviewCompletionAction =
