@@ -121,3 +121,50 @@ npm run check:closed-beta-readiness
 | Reference Context / Question Archive | Pending |  |  |
 | Mode Migration | Pending |  |  |
 | Data Boundary | Pending |  |  |
+
+## Closed Beta QA Agent Pass — 2026-05-31
+
+- Branch basis: PR #290 / latest checked-out main after merge (`1e8d99a`, `Harden closed beta learner loop readiness (#290)`).
+- Mode: source-level and script-level QA only. Browser/Vercel preview access was unavailable in this environment, so visual/mobile/auth flows remain manual-only.
+- Release-blocker result: no P0/P1 learner-facing closed-beta blockers found. No feature, payment, public archive UI, additional exam scope, or instructor grading changes were made.
+
+### Commands run
+
+| Command | Result | Evidence / notes |
+| --- | --- | --- |
+| `npm run verify:learner-loop:ci` | Pass | 147 learner-loop tests passed, 5 quality-eval tests passed, taxonomy check passed, and production build completed. Build emitted the existing Turbopack NFT tracing warning for `next.config.ts` → `lib/review-os/question-reference.ts` → `app/app/items/[itemId]/page.tsx`; no command failure. |
+| `npm run check:taxonomy` | Pass | Sample taxonomy classifications returned high-confidence 감정평가사 1차/2차 nodes: 회계학 재고자산 저가법, 민법 물권변동, 감정평가 및 보상법규 사업인정. |
+| `npm run build` | Pass | Next.js production build completed, TypeScript passed, and 46 static pages generated. Build emitted the existing Turbopack NFT tracing warning noted above; no route crash during build. |
+| `npm run check:closed-beta-readiness` | Pass | Learner-loop verification, data-boundary tests, question-reference tests, route/source guard checks, and production build passed. Final script output: `[closed-beta-readiness] PASS: closed beta learner loop, data boundary, route/source guards, question references, and build passed.` |
+
+### Evidence log
+
+| Flow | Result | Evidence / notes | Owner |
+| --- | --- | --- | --- |
+| Access / onboarding | Source/script pass; manual preview pending | `/app` layout requires a server session and learner access before rendering the learner shell; non-allowed access shows the blocked invite state. `ensureAccess` preserves existing invite/entitlement state and only inserts new profiles as active when allowlisted. Browser checks for real invited/non-invited accounts remain manual-only. | QA agent |
+| Capture-to-Note | Source/script pass; mobile device pending | Learner OCR and capture flows keep OCR drafts editable, support multi-page ordering/PDF fallback checks, avoid auto-save/auto-grade after OCR/PDF, and sanitize raw OCR/problem/answer text out of derived metadata. Real camera/gallery/PDF capture remains manual-only. | QA agent |
+| Today Plan / Review Queue | Source/script pass; visual preview pending | Tests verified Today Plan/Review Queue routing, capped primary tasks, collapsed reference hints/details, retry/rewrite/scheduled-review actions, and no score/pass/fail prediction copy. 360px visual overflow remains manual-only. | QA agent |
+| 1차 O/X | Source/script pass; visual preview pending | Tests verified one-statement practice, O/X/certainty behavior, no correct+certain signal flood, safe friction signals for wrong/confused/unknown, gated concept popup, and Smart Cloze retry/review routing. | QA agent |
+| Accounting/Economics Template | Source/script pass | Tests verified deterministic supported calculations, safe degradation for unsupported templates, invalid numeric input handling, and ignoring LLM final-answer text as a calculation source. | QA agent |
+| 2차 Rewrite / CASIO | Source/script pass; handwriting OCR pending | Tests verified one biggest gap + one rewrite action, original/rewrite separation, deterministic CASIO mapping when supported, fallback copy when unsupported, and no grading/score/pass/fail/final-judgment claims. Actual OCR quality with handwritten answers remains manual-only. | QA agent |
+| Reference Context / Question Archive | Source/script pass | Tests verified optional collapsed hints, metadata-only question reference records, no dense learner archive UI created by question-reference DB integration, no raw/copyrighted problem text requirement for hints, and stripping user raw text before reference matching. | QA agent |
+| Mode Migration | Source/script pass; visual preview pending | Tests verified manual migration, archived 1차 history, second-mode next-action emphasis, and no pass/fail or official-result claim. | QA agent |
+| Data Boundary | Source/script pass | Tests verified recursive raw-key telemetry sanitization, derived metadata exclusion for OCR/user answer/problem/rewrite paragraph fields, raw-field stripping for reference requests, and safe learning-signal metadata. | QA agent |
+| Product scope / nav boundaries | Source/script pass; preview pending | Source review verified learner navigation excludes admin/instructor/studio/payment/archive links, `/exams` presents 감정평가사 1차/2차 learner tracks only, unsupported actuarial learner routes are hard-blocked with `notFound()`, and instructor/studio placeholders/admin APIs remain protected. | QA agent |
+
+### Routes/files checked
+
+- Learner app routes: `app/app/layout.tsx`, `app/app/page.tsx`, `app/app/capture/page.tsx`, `app/app/write/page.tsx`, `app/app/review/page.tsx`, `app/app/first/ox/page.tsx`, `app/app/mode-migration/page.tsx`, `app/app/items/[itemId]/page.tsx`.
+- Public/selection routes: `app/page.tsx`, `app/exams/page.tsx`, `app/answer-review/page.tsx`, `app/problem-snap/page.tsx`.
+- Unsupported/non-learner boundaries: `app/exams/actuary/page.tsx`, `app/exams/actuary-first/layout.tsx`, `app/exams/actuary-second/layout.tsx`, `app/exams/archive/page.tsx`, `app/instructor/page.tsx`, `app/instructor/second-grading/page.tsx`, `app/studio/page.tsx`, `app/admin/page.tsx`.
+- Learner APIs: `app/api/os/items/route.ts`, `app/api/os/profile/route.ts`, `app/api/os/review-queue/route.ts`, `app/api/os/today-focus/route.ts`, `app/api/os/mode-migration/route.ts`, `app/api/os/first-ox/attempts/route.ts`, `app/api/inverge/ocr/route.ts`, `app/api/answer-review/structure/route.ts`, `app/api/problem-snap/solve/route.ts`, `app/api/problem-snap/save/route.ts`.
+- Auth/access/data-boundary core: `lib/auth/session.ts`, `lib/auth/admin.ts`, `lib/review-os/server.ts`, `lib/review-os/repository.ts`, `lib/review-os/service.ts`, `lib/review-os/data-boundary.ts`.
+- QA/readiness docs and scripts: `docs/inverge-closed-beta-qa.md`, `scripts/check-closed-beta-readiness.mjs`, `scripts/check-taxonomy-classification.mjs`.
+
+### Remaining manual checks
+
+- Real mobile camera capture.
+- Invited/non-invited account login.
+- Actual OCR quality with handwritten answer.
+- Production environment variables.
+- 360px mobile visual overflow and Vercel preview route smoke for `/app`, `/app/capture`, `/app/review`, `/app/first/ox`, `/app/write`, `/answer-review`, and `/problem-snap`.
