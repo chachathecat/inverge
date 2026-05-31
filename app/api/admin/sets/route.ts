@@ -15,7 +15,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-export function GET(request: Request) {
+export async function GET(request: Request) {
+  const adminDenied = await requireAdminRouteSession();
+  if (adminDenied) return adminDenied;
+
   const url = new URL(request.url);
   const subjectId = parseSubjectId(url.searchParams.get("subjectId"));
 

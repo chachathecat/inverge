@@ -10,6 +10,8 @@ import {
   listPastExamSourceTextPilotStructuredCandidates,
 } from "@/lib/review-os/past-exam-source-text-pilot";
 
+export const dynamic = "force-dynamic";
+
 function AccessDeniedPanel() {
   return (
     <main className="mx-auto flex min-h-[60vh] w-full max-w-2xl items-center px-6 py-14">

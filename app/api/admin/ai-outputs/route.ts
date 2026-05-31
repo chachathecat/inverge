@@ -4,6 +4,9 @@ import { requireAdminRouteSession } from "@/lib/auth/admin";
 import { listAdminAiReviewItems, saveAdminAiReviewNote } from "@/lib/inverge/admin-ai-review-repository";
 
 export async function GET(request: Request) {
+  const adminDenied = await requireAdminRouteSession();
+  if (adminDenied) return adminDenied;
+
   const { searchParams } = new URL(request.url);
   const screen = searchParams.get("screen") ?? undefined;
 

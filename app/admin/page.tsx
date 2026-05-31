@@ -2,7 +2,12 @@ import Link from "next/link";
 
 import { buttonVariants } from "@/components/ui/button";
 
-export default function AdminHomePage() {
+import { AdminAccessDeniedPanel, hasAdminPageAccess } from "./admin-access";
+
+export const dynamic = "force-dynamic";
+
+export default async function AdminHomePage() {
+  if (!(await hasAdminPageAccess())) return <AdminAccessDeniedPanel />;
   return (
     <main className="mx-auto w-full max-w-[900px] px-5 py-10 sm:px-8">
       <section className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] p-6 sm:p-10">

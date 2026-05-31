@@ -928,7 +928,7 @@ export function WrongAnswerCaptureForm({
   }
 
   return (
-    <form className="space-y-6 pb-28 sm:pb-0" onSubmit={handleSubmit}>
+    <form className="space-y-6 overflow-x-hidden pb-28 sm:pb-0" onSubmit={handleSubmit}>
       <LearnerProgressBar current={currentCaptureStep} total={4} label="오늘 한 것 올리기" helper="1. 입력 → 2. 확인 → 3. 정리 → 4. 저장" />
       {rewriteContext && mode === "second" ? (
         <>
@@ -1565,7 +1565,7 @@ function ExtractionPreview({
           placeholder="OCR 결과를 확인하고 바로 수정하세요."
           className="mt-3 min-h-44 border-[color:var(--border-hairline)] bg-[color:var(--bg-surface)] text-[color:var(--foreground-strong)] leading-7"
         />
-        <p className="mt-2 text-xs text-[color:var(--muted)]">수정 내용은 이 기기 초안에 자동 저장됩니다. AI 초안은 참고용이며 공식 채점이 아닙니다.</p>
+        <p className="mt-2 text-xs text-[color:var(--muted)]">수정 내용은 이 기기 초안에 자동 저장됩니다. AI 초안은 참고용이며 최종 판단이 아닙니다.</p>
       </div>
       {mode === "first" ? (
         <div className="mt-5 grid gap-3">
