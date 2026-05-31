@@ -1,3 +1,4 @@
+import type { ReferenceSnippet } from "./reference-context";
 import type { WrongAnswerItemInput } from "./types";
 
 export const SECOND_REWRITE_CASIO_UNSUPPORTED_MESSAGE = "타건 순서는 지원되는 계산 템플릿에 한해 제공됩니다.";
@@ -17,6 +18,7 @@ export type SecondAnswerRewriteSignal = {
   supportedCalculatorTemplateId?: SecondCasioTemplateId | null;
   casioKeystrokes?: string[] | null;
   casioUnsupportedMessage?: string;
+  referenceSnippets?: ReferenceSnippet[];
 };
 
 export type SecondCasioTemplateId = keyof typeof SECOND_CASIO_TEMPLATE_REGISTRY;
@@ -92,7 +94,7 @@ export function buildSecondAnswerRewriteSignal(input: Pick<WrongAnswerItemInput,
   | "unitRisk"
   | "rewriteInstruction"
   | "supportedCalculatorTemplateId"
->): SecondAnswerRewriteSignal {
+>, referenceSnippets: ReferenceSnippet[] = []): SecondAnswerRewriteSignal {
   const casio = getSecondCasioKeystrokeMapping(input.supportedCalculatorTemplateId);
   const missingIssueCandidate = clean(input.missingIssue ?? input.biggestGap, "핵심 논점 후보 1개를 다시 확인합니다.");
   const weakStructurePoint = clean(input.weakStructurePoint, "근거와 결론 연결이 약합니다.");
@@ -111,5 +113,20 @@ export function buildSecondAnswerRewriteSignal(input: Pick<WrongAnswerItemInput,
     supportedCalculatorTemplateId: casio.supportedCalculatorTemplateId,
     casioKeystrokes: casio.casioKeystrokes,
     casioUnsupportedMessage: casio.casioUnsupportedMessage,
+    referenceSnippets: referenceSnippets.slice(0, 2),
+  };
+}
+
+
+export function buildSecondAnswerRewriteReferenceRequest(input: { examName: string; subjectLabel: string; topicTag?: string | null; missingIssue?: string | null; biggestGap?: string | null; supportedCalculatorTemplateId?: string | null }) {
+  return {
+    examMode: "second" as const,
+    subject: input.subjectLabel,
+    topicCandidate: input.topicTag ?? input.missingIssue ?? input.biggestGap ?? null,
+    conceptCandidate: input.missingIssue ?? input.biggestGap ?? null,
+    taskType: "second_answer_rewrite" as const,
+    maxSnippets: 2,
+    derivedTags: ["second_answer_rewrite", input.supportedCalculatorTemplateId].filter((value): value is string => Boolean(value)),
+    safeSkeletonIds: [input.examName, input.subjectLabel].filter(Boolean),
   };
 }

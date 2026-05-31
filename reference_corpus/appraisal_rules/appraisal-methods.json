@@ -1,0 +1,17 @@
+[
+  {
+    "referenceId": "appraisal-rules-income-method-001",
+    "title": "감정평가 3방식: 수익방식 답안 보강",
+    "examMode": "second",
+    "subject": "감정평가이론",
+    "sourceType": "appraisal_rules",
+    "snippet": "수익방식 답안은 적용 요건, 순영업소득 산정, 환원이율 선택, 결론의 한계를 연결해 문단 구조를 만든다. 특정 사례의 공식 정답으로 제시하지 않는다.",
+    "citationLabel": "감정평가 2차 답안 구조 정리",
+    "tags": ["수익방식", "환원이율", "순영업소득", "문단 구조"],
+    "topics": ["수익환원법", "답안 재작성"],
+    "concepts": ["누락 논점", "근거와 결론"],
+    "licenseStatus": "internal_curated",
+    "usageStatus": "active",
+    "updatedAt": "2026-05-31"
+  }
+]

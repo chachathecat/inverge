@@ -1,0 +1,17 @@
+[
+  {
+    "referenceId": "second-rewrite-structure-001",
+    "title": "2차 다시쓰기: 논점-근거-결론 최소 구조",
+    "examMode": "second",
+    "subject": "감정평가실무",
+    "sourceType": "second_exam_topics",
+    "snippet": "다시쓰기는 누락 논점 1개를 먼저 놓고, 근거 문장 1개와 결론 문장 1개만 보강한다. 채점 확정이 아니라 강사 검토 전 학습용 초안이다.",
+    "citationLabel": "2차 재작성 운영 기준",
+    "tags": ["다시쓰기", "누락 논점", "근거", "결론"],
+    "topics": ["답안 재작성", "논점 보강"],
+    "concepts": ["논점-근거-결론"],
+    "licenseStatus": "internal_curated",
+    "usageStatus": "active",
+    "updatedAt": "2026-05-31"
+  }
+]
