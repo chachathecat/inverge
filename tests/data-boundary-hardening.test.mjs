@@ -59,6 +59,44 @@ test("raw OCR text is removed from derived metadata", () => {
   assertNoRawTokens(metadata);
 });
 
+test("camelCase raw upload and payload keys are removed from derived metadata", () => {
+  const uploadedPdf = sanitizeDerivedMetadata({ uploadedPdfText: "raw", safe: "ok" });
+  assert.equal("uploadedPdfText" in uploadedPdf, false);
+  assert.equal(uploadedPdf.safe, "ok");
+
+  const uploadedImage = sanitizeDerivedMetadata({ uploadedImageText: "raw" });
+  assert.equal("uploadedImageText" in uploadedImage, false);
+
+  const rawPayload = sanitizeDerivedMetadata({ rawPayload: { rawAnswerText: "raw" } });
+  assert.equal("rawPayload" in rawPayload, false);
+
+  const metadata = sanitizeDerivedMetadata({
+    subject: "감정평가실무",
+    topicCandidate: "수익방식",
+    mistakeType: "계산 실수",
+    pageCount: 3,
+    lowConfidenceFlag: true,
+    supportedCalculatorTemplateId: "appraisal_income_capitalization",
+    nested: {
+      rawOcrPayload: { rawAnswerText: "raw" },
+      uploadedImageContent: "raw",
+      originalAnswerText: "raw",
+      userAnswerBody: "raw",
+      problemContent: "raw",
+      safe: { uploadedFileContent: "raw", topicCandidate: "환원이율" },
+    },
+  });
+
+  assert.equal(metadata.subject, "감정평가실무");
+  assert.equal(metadata.topicCandidate, "수익방식");
+  assert.equal(metadata.mistakeType, "계산 실수");
+  assert.equal(metadata.pageCount, 3);
+  assert.equal(metadata.lowConfidenceFlag, true);
+  assert.equal(metadata.supportedCalculatorTemplateId, "appraisal_income_capitalization");
+  assert.deepEqual(metadata.nested, { safe: { topicCandidate: "환원이율" } });
+  assertNoRawUserDataInDerived(metadata);
+});
+
 test("user answer text is removed from learning signal metadata", () => {
   const metadata = sanitizeLearningSignalMetadata({
     examMode: "감정평가사 2차",
