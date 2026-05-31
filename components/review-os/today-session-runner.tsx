@@ -182,7 +182,7 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
             <p className="text-sm leading-7 text-[color:var(--foreground-strong)]">{focus.nextAction}</p>
             {mode === "second" ? (
               <section className="space-y-3 rounded-[var(--radius-lg)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-soft)] p-4">
-                <p className="text-caption text-[color:var(--muted)]">One rewrite goal</p>
+                <p className="text-caption text-[color:var(--muted)]">다시쓰기 목표 1개</p>
                 <div className="grid gap-3">
                   <div>
                     <p className="text-xs text-[color:var(--muted)]">가장 큰 누락/위험 1개</p>
