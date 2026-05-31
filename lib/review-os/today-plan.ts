@@ -23,7 +23,7 @@ function resolveAction(mode: AppMode, taskType: import("./today-plan-engine").To
   if (taskType === "second_answer_rewrite") return { ctaLabel: "10분 다시 쓰기", actionKind: "second_review" };
   if (taskType === "accounting_template_retry") return { ctaLabel: "템플릿 재시도", actionKind: "first_session" };
   if (taskType === "cloze_review") return { ctaLabel: "빈칸 회상", actionKind: "first_session" };
-  if (taskType === "concept_review") return { ctaLabel: "개념 회상", actionKind: mode === "second" ? "second_review" : "first_session" };
+  if (taskType === "concept_review") return { ctaLabel: "개념 1개 회상", actionKind: mode === "second" ? "second_review" : "first_session" };
   return { ctaLabel: mode === "second" ? "다시 쓰기" : "다시 풀기", actionKind: mode === "second" ? "second_review" : "first_session" };
 }
 

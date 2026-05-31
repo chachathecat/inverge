@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { access, readFile } from "node:fs/promises";
 import {
+  buildFirstOxConceptCardPayload,
   buildFirstOxLearningSignalInput,
   buildFirstOxWrongAnswerItemInput,
   evaluateFirstOxAttempt,
@@ -10,6 +11,7 @@ import {
   shuffleFirstOxStatements,
 } from "../lib/review-os/first-ox-engine.ts";
 import { buildTodayPlanTasks } from "../lib/review-os/today-plan-engine.ts";
+import { buildSmartCloze } from "../lib/review-os/smart-cloze.ts";
 
 const choices = [
   "① 할 수 있다와 하여야 한다를 구별한다.",
@@ -66,6 +68,7 @@ test("confused creates review signal even when answer is correct", () => {
   assert.equal(resolveFirstOxLearningSignalKind(attempt), "weak_confidence");
   const signal = buildFirstOxLearningSignalInput(statement, attempt);
   assert.ok(signal?.derivedTags.includes("weak_confidence"));
+  assert.equal(signal?.nextTaskType, "cloze_review");
 });
 
 test("correct/certain does not create unnecessary review item", () => {
@@ -134,4 +137,66 @@ test("mobile surface avoids horizontal overflow and keeps one statement card", a
   assert.match(source, /overflow-x-hidden/);
   assert.match(source, /w-full/);
   assert.equal((source.match(/현재 선지/g) ?? []).length, 1);
+});
+
+
+test("wrong/confused/unknown attempts build minimal concept popup payloads", () => {
+  const [statement] = statements();
+  const wrong = buildFirstOxConceptCardPayload(statement, evaluateFirstOxAttempt(statement, "X", "certain", "2026-05-30T00:00:00.000Z"));
+  const confused = buildFirstOxConceptCardPayload(statement, evaluateFirstOxAttempt(statement, "O", "confused", "2026-05-30T00:00:00.000Z"));
+  const unknown = buildFirstOxConceptCardPayload(statement, evaluateFirstOxAttempt(statement, "unknown", "unknown", "2026-05-30T00:00:00.000Z"));
+  for (const concept of [wrong, confused, unknown]) {
+    assert.equal(concept?.sourceType, "first_ox");
+    assert.equal(concept?.examMode, "감정평가사 1차");
+    assert.equal(concept?.subject, "민법");
+    assert.equal(concept?.originalStatement, statement.statementText);
+    assert.ok(concept?.coreRule.length);
+    assert.ok(concept?.minimalExplanation.length);
+    assert.ok(concept?.examTrapExplanation.length);
+    assert.ok(concept?.nextReviewAction.length);
+    assert.equal(concept?.dueAt, "2026-05-31T00:00:00.000Z");
+  }
+  assert.equal(confused?.reviewStage, "빈칸");
+});
+
+test("correct and certain attempt has no concept popup payload", () => {
+  const [statement] = statements();
+  const attempt = evaluateFirstOxAttempt(statement, "O", "certain", "2026-05-30T00:00:00.000Z");
+  assert.equal(buildFirstOxConceptCardPayload(statement, attempt), null);
+});
+
+test("smart cloze hides one safe trap keyword and falls back to O/X without safe candidate", () => {
+  const cloze = buildSmartCloze({ statement: "원칙과 예외는 항상 같은 효과이다.", trapWords: ["항상", "원칙"] });
+  assert.equal(cloze.stage, "빈칸");
+  assert.equal(cloze.answer, "항상");
+  assert.equal(cloze.prompt, "원칙과 예외는 ____ 같은 효과이다.");
+  const fallback = buildSmartCloze({ statement: "이미 아는 문장입니다.", trapWords: ["없는키워드"] });
+  assert.equal(fallback.stage, "O/X");
+  assert.equal(fallback.answer, null);
+});
+
+test("confused first-ox signal can become a cloze review task with calm CTA", () => {
+  const statement = statements()[0];
+  const attempt = evaluateFirstOxAttempt(statement, "O", "confused", "2026-05-30T00:00:00.000Z");
+  const signal = {
+    ...buildFirstOxLearningSignalInput(statement, attempt),
+    id: "sig-cloze-1",
+    userId: "u1",
+    createdAt: "2026-05-30T00:00:00.000Z",
+  };
+  const tasks = buildTodayPlanTasks({ mode: "first", queue: [], items: [], learningSignals: [signal], now: new Date("2026-05-30T00:10:00.000Z") });
+  assert.equal(tasks[0]?.task_type, "cloze_review");
+  assert.deepEqual(tasks[0]?.primary_cta, { label: "빈칸 회상", hrefKind: "session" });
+});
+
+test("concept popup copy exists but is gated after attempted answer", async () => {
+  const source = await readFile("components/review-os/first-ox/first-ox-practice-client.tsx", "utf8");
+  ["왜 틀렸는지", "핵심 개념", "주의 표현", "다음 행동"].forEach((token) => assert.ok(source.includes(token), token));
+  assert.match(source, /currentAttempt && resolveFirstOxLearningSignalKind\(currentAttempt\) !== "none" \? <ConceptPopup/);
+});
+
+test("review queue exposes cloze UI without raw internal task type labels", async () => {
+  const source = await readFile("components/review-os/review-queue-client.tsx", "utf8");
+  assert.ok(source.includes("SmartClozeReview"));
+  assert.equal(/concept_review|cloze_review|nextTaskType/.test(source), false);
 });

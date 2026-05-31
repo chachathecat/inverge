@@ -10,6 +10,7 @@ import {
 } from "@/lib/supabase/persistence";
 import type {
   AccessState,
+  ConceptReviewCardPayload,
   ActionSeedRecord,
   AdminAlphaFeed,
   FeedbackItemInput,
@@ -46,6 +47,24 @@ function toStringArray(value: unknown) {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
 }
 
+function toConceptReviewCard(value: unknown): ConceptReviewCardPayload | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const row = value as Record<string, unknown>;
+  if (typeof row.originalStatement !== "string" || typeof row.coreRule !== "string") return undefined;
+  return {
+    sourceType: typeof row.sourceType === "string" ? row.sourceType : "first_ox",
+    examMode: typeof row.examMode === "string" ? row.examMode : "감정평가사 1차",
+    subject: typeof row.subject === "string" ? row.subject : "감정평가사 1차",
+    originalStatement: row.originalStatement,
+    trapWords: toStringArray(row.trapWords),
+    coreRule: row.coreRule,
+    minimalExplanation: typeof row.minimalExplanation === "string" ? row.minimalExplanation : "헷갈린 지점 1개를 확인합니다.",
+    examTrapExplanation: typeof row.examTrapExplanation === "string" ? row.examTrapExplanation : "표현 하나가 바뀌면 판단이 달라질 수 있습니다.",
+    nextReviewAction: typeof row.nextReviewAction === "string" ? row.nextReviewAction : "근거 1줄로 다시 판단합니다.",
+    reviewStage: typeof row.reviewStage === "string" ? row.reviewStage : "O/X",
+    dueAt: typeof row.dueAt === "string" ? row.dueAt : new Date().toISOString(),
+  };
+}
 
 function toTaxonomyCandidates(value: unknown): TaxonomyClassificationCandidate[] {
   if (!Array.isArray(value)) return [];
@@ -309,6 +328,7 @@ function mapReviewQueueCard(
     typeof queueRow.derived_payload === "object" && queueRow.derived_payload
       ? (queueRow.derived_payload as Record<string, unknown>)
       : {};
+  const conceptCard = toConceptReviewCard(item.derivedPayload?.concept_card ?? item.rawPayload?.concept_card);
 
   return {
     queueId: String(queueRow.id),
@@ -330,6 +350,9 @@ function mapReviewQueueCard(
         : item.derivedPayload?.created_from_capture,
     ),
     itemCreatedAt: item.createdAt,
+    conceptCard,
+    clozeCandidate: typeof item.derivedPayload?.cloze_candidate === "string" ? item.derivedPayload.cloze_candidate : conceptCard?.trapWords[0] ?? null,
+    originalStatement: conceptCard?.originalStatement ?? item.rawQuestionText ?? null,
   };
 }
 

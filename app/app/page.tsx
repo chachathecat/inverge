@@ -40,7 +40,7 @@ const FIRST_MODE_INPUT_OPTIONS = [
 
 const TASK_TYPE_LABELS: Record<TodayPlanTaskType, string> = {
   first_ox_retry: "5분 재풀이",
-  concept_review: "개념 회상",
+  concept_review: "개념 1개 회상",
   cloze_review: "빈칸 회상",
   accounting_template_retry: "계산 틀 재확인",
   second_answer_rewrite: "문단 다시쓰기",

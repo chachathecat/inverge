@@ -96,7 +96,7 @@ function primaryCtaFor(taskType: TodayPlanTaskType, mode: "first" | "second"): T
   if (taskType === "second_answer_rewrite") return { label: "10분 다시 쓰기", hrefKind: "review" };
   if (taskType === "accounting_template_retry") return { label: "템플릿 재시도", hrefKind: "session" };
   if (taskType === "cloze_review") return { label: "빈칸 회상", hrefKind: "session" };
-  if (taskType === "concept_review") return { label: "개념 회상", hrefKind: "session" };
+  if (taskType === "concept_review") return { label: "개념 1개 회상", hrefKind: "session" };
   if (taskType === "first_ox_retry") return { label: "5분 O/X 재시도", hrefKind: "first_ox" };
   return { label: mode === "first" ? "5분 다시 풀기" : "다시 쓰기", hrefKind: "session" };
 }
@@ -137,21 +137,22 @@ function toProblemSnapTask(mode: "first" | "second", signal: LearningSignalEvent
 
 function toFirstOxSignalTask(signal: LearningSignalEventRecord): TodayPlanTask {
   const isConcept = signal.nextTaskType === "concept_review";
-  const taskType: TodayPlanTaskType = isConcept ? "concept_review" : "first_ox_retry";
+  const isCloze = signal.nextTaskType === "cloze_review";
+  const taskType: TodayPlanTaskType = isConcept ? "concept_review" : isCloze ? "cloze_review" : "first_ox_retry";
   return {
     itemId: `first-ox-${signal.id}`,
-    title: `${signal.subject} O/X 선지 재시도`,
+    title: isCloze ? `${signal.subject} 빈칸 회상` : `${signal.subject} O/X 선지 재시도`,
     subject: signal.subject,
     exam_mode: "first",
     due_bucket: "today",
     status: "due",
-    reason: isConcept ? "모름으로 남긴 1차 선지라 개념 확인이 먼저 필요합니다." : "틀림/헷갈림으로 남긴 1차 선지입니다.",
-    one_biggest_gap: isConcept ? "판단 기준 1개가 비어 있습니다." : "선지 표현과 근거 연결이 약했습니다.",
-    one_next_action: signal.nextTask || (isConcept ? "핵심 개념 1개를 확인하고 O/X를 다시 판단합니다." : "근거 1줄을 회상하고 같은 선지를 다시 판단합니다."),
+    reason: isConcept ? "모름으로 남긴 1차 선지라 개념 확인이 먼저 필요합니다." : isCloze ? "헷갈림으로 남긴 1차 선지라 핵심어 회상이 먼저 필요합니다." : "틀림으로 남긴 1차 선지입니다.",
+    one_biggest_gap: isConcept ? "판단 기준 1개가 비어 있습니다." : isCloze ? "핵심 표현 1개가 아직 불안정합니다." : "선지 표현과 근거 연결이 약했습니다.",
+    one_next_action: signal.nextTask || (isConcept ? "핵심 개념 1개를 확인하고 O/X를 다시 판단합니다." : isCloze ? "핵심어 1개를 가리고 회상합니다." : "근거 1줄을 회상하고 같은 선지를 다시 판단합니다."),
     task_type: taskType,
     estimated_minutes: isConcept ? 7 : 5,
     priority_reason: "1차 O/X 연습에서 만든 최신 학습 신호입니다.",
-    primary_cta: isConcept ? { label: "개념 확인 후 O/X", hrefKind: "first_ox" } : primaryCtaFor(taskType, "first"),
+    primary_cta: isConcept ? { label: "개념 1개 회상", hrefKind: "first_ox" } : primaryCtaFor(taskType, "first"),
     created_from_capture: false,
     source_label: "1차 O/X 기반",
   };

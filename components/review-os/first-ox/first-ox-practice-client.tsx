@@ -6,6 +6,7 @@ import { CollapsibleDetails, InlineFeedback, LearnerProgressBar, SingleFocusCard
 import { Button } from "@/components/ui/button";
 import { APPRAISAL_FIRST_SUBJECTS } from "@/lib/review-os/types";
 import {
+  buildFirstOxConceptCardPayload,
   buildFirstOxLearningSignalInput,
   evaluateFirstOxAttempt,
   normalizeFiveChoiceItemToStatements,
@@ -44,6 +45,39 @@ function highlightTrapWords(text: string, trapWords: string[]) {
       {part}
     </mark>
   ) : part);
+}
+
+function ConceptPopup({ statement, attempt }: { statement: FirstExamStatement; attempt: OxAttempt }) {
+  const concept = buildFirstOxConceptCardPayload(statement, attempt);
+  if (!concept) return null;
+
+  return (
+    <aside className="space-y-3 rounded-[var(--radius-lg)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-soft)] p-4 text-sm leading-7 text-[color:var(--foreground-strong)]">
+      <p className="text-xs font-medium text-[color:var(--muted)]">개념 1개만 확인</p>
+      <div className="grid gap-3">
+        <div>
+          <p className="text-xs text-[color:var(--muted)]">왜 틀렸는지</p>
+          <p>{concept.minimalExplanation}</p>
+        </div>
+        <div>
+          <p className="text-xs text-[color:var(--muted)]">핵심 개념</p>
+          <p>{concept.coreRule}</p>
+        </div>
+        <div>
+          <p className="text-xs text-[color:var(--muted)]">주의 표현</p>
+          <p>{concept.trapWords.length > 0 ? concept.trapWords.join(" · ") : "조건 표현 1개"}</p>
+        </div>
+        <div>
+          <p className="text-xs text-[color:var(--muted)]">다음 행동</p>
+          <p>{concept.nextReviewAction}</p>
+        </div>
+      </div>
+      <details className="text-xs leading-6 text-[color:var(--muted)]">
+        <summary className="cursor-pointer">세부 설명 보기</summary>
+        <p className="mt-2">{concept.examTrapExplanation}</p>
+      </details>
+    </aside>
+  );
 }
 
 function parseChoices(value: string) {
@@ -167,6 +201,7 @@ export function FirstOxPracticeClient() {
                   {current.trapWords.length > 0 ? <p className="mt-1">주의 표현: {current.trapWords.join(" · ")}</p> : <p className="mt-1">표시할 함정어는 없습니다.</p>}
                 </InlineFeedback>
               ) : null}
+              {currentAttempt && resolveFirstOxLearningSignalKind(currentAttempt) !== "none" ? <ConceptPopup statement={current} attempt={currentAttempt} /> : null}
               {currentAttempt ? (
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <Button type="button" onClick={goNext} disabled={index >= statements.length - 1} className="w-full sm:w-auto">

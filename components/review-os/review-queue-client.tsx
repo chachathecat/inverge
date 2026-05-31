@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { SmartClozeReview } from "@/components/review-os/smart-cloze-review";
 import { Button } from "@/components/ui/button";
 import type { ReviewQueueCard } from "@/lib/review-os/types";
 
@@ -71,6 +72,9 @@ export function ReviewQueueClient({ items, mode, captureReferenceLineByItemId = 
                   <p className="text-xs text-[color:var(--muted)]">반복 신호와 최근 기록 기준</p>
                   {captureReferenceLineByItemId[item.itemId] ? <p className="text-xs text-[color:var(--muted)]">참고 기준: {captureReferenceLineByItemId[item.itemId]}</p> : null}
                 </div>
+              ) : null}
+              {item.examName === "감정평가사 1차" && item.originalStatement && (item.conceptCard?.reviewStage === "빈칸" || item.clozeCandidate) ? (
+                <SmartClozeReview statement={item.originalStatement} trapWords={item.conceptCard?.trapWords ?? (item.clozeCandidate ? [item.clozeCandidate] : [])} conceptCandidate={item.clozeCandidate} />
               ) : null}
               <div className="flex flex-wrap gap-2">
                 {buildPrioritySignals(item).map((signal) => (
