@@ -1,0 +1,40 @@
+[
+  {
+    "id": "qr-first-2024-civil-law-juristic-act-001",
+    "examYear": 2024,
+    "examRound": "1차",
+    "examMode": "first",
+    "subject": "민법",
+    "title": "2024 1차 민법 법률행위 효력 기준",
+    "topicTags": ["법률행위", "무효와 취소"],
+    "issueTags": ["표현 함정", "요건 누락"],
+    "conceptTags": ["추인", "효력 판단"],
+    "skeletonId": "first_civil_law_juristic_act_effect",
+    "difficultyBucket": "standard",
+    "sourceRightsStatus": "internal_curated",
+    "rawTextAvailable": false,
+    "rawTextStoragePolicy": "metadata_only",
+    "citationLabel": "감정평가사 1차 민법 기출 메타데이터 샘플",
+    "createdAt": "2026-05-31T00:00:00.000Z",
+    "updatedAt": "2026-05-31T00:00:00.000Z"
+  },
+  {
+    "id": "qr-first-2023-accounting-unit-001",
+    "examYear": 2023,
+    "examRound": "1차",
+    "examMode": "first",
+    "subject": "회계학",
+    "title": "2023 1차 회계 계산 단위 기준",
+    "topicTags": ["계산형", "산식"],
+    "issueTags": ["단위 오류", "계산 실수"],
+    "conceptTags": ["반올림", "금액 단위"],
+    "skeletonId": "first_accounting_formula_unit_check",
+    "difficultyBucket": "standard",
+    "sourceRightsStatus": "internal_curated",
+    "rawTextAvailable": false,
+    "rawTextStoragePolicy": "metadata_only",
+    "citationLabel": "감정평가사 1차 회계학 기출 메타데이터 샘플",
+    "createdAt": "2026-05-31T00:00:00.000Z",
+    "updatedAt": "2026-05-31T00:00:00.000Z"
+  }
+]

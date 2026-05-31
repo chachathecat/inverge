@@ -1,0 +1,15 @@
+[
+  {
+    "id": "invalid-missing-rights",
+    "examYear": 2024,
+    "examMode": "first",
+    "subject": "민법",
+    "topicTags": ["법률행위"],
+    "issueTags": ["요건"],
+    "conceptTags": ["무효"],
+    "rawTextAvailable": false,
+    "rawTextStoragePolicy": "metadata_only",
+    "createdAt": "2026-05-31T00:00:00.000Z",
+    "updatedAt": "2026-05-31T00:00:00.000Z"
+  }
+]

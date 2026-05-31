@@ -11,6 +11,7 @@ import { getModeConfig, normalizeSubjectForMode, resolveAppraisalMode } from "@/
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
 import { DEFAULT_DAILY_STUDY_ACTIVITY, reviewOsService } from "@/lib/review-os/service";
 import { buildNotebookPreview } from "@/lib/review-os/study-note";
+import { getSimilarQuestionReferenceCandidates } from "@/lib/review-os/question-reference";
 import { APPRAISAL_FIRST_SUBJECTS } from "@/lib/review-os/types";
 import { buildTodayPlanCard, type TodayPlanActionKind } from "@/lib/review-os/today-plan";
 import { buildTodayPlanTasks, type TodayPlanTaskType } from "@/lib/review-os/today-plan-engine";
@@ -165,6 +166,21 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
     repeatedGaps: weaknessProfile.repeatedGaps,
     riskLevel: weaknessProfile.riskLevel,
   });
+  const questionReferenceHintsByTaskId = new Map(
+    await Promise.all(todayPlanTasks.map(async (task) => ([
+      task.itemId,
+      await getSimilarQuestionReferenceCandidates({
+        examMode: task.exam_mode,
+        subject: task.subject,
+        topicCandidate: task.title,
+        conceptCandidate: task.one_biggest_gap,
+        mistakeType: task.task_type,
+        issueTags: [task.one_biggest_gap],
+        derivedTags: [task.priority_reason, task.source_label].filter((value): value is string => Boolean(value)),
+        safeSkeletonIds: task.task_type === "second_answer_rewrite" ? ["appraisal_income_capitalization", "second_law_requirement_subsumption"] : [],
+      }),
+    ] as const))),
+  );
   const nextAction = focus.nextAction ?? selectedQueueItem?.reviewReason ?? config.nextActionFallback;
   const isFirstSetStart = mode === "first" && focus.nextActionType === "capture_now";
   const selectedFirstSubject = normalizeSubjectForMode(subjectParam, "first");
@@ -387,6 +403,21 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                             <p><span className="font-medium text-[color:var(--foreground-strong)]">다음 행동:</span> {task.one_next_action}</p>
                             <p><span className="font-medium text-[color:var(--foreground-strong)]">상태:</span> {task.status === "due" ? "진행 필요" : task.status === "completed" ? "완료" : "대기"}</p>
                             <p><span className="font-medium text-[color:var(--foreground-strong)]">작업:</span> {resolveTaskTypeLabel(task.task_type)}</p>
+                            {questionReferenceHintsByTaskId.get(task.itemId)?.length ? (
+                              <div className="rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] bg-[color:var(--bg-surface)] p-3">
+                                <p className="font-medium text-[color:var(--foreground-strong)]">관련 기출 기준 힌트</p>
+                                <ul className="mt-2 space-y-2">
+                                  {questionReferenceHintsByTaskId.get(task.itemId)?.slice(0, 2).map((hint) => (
+                                    <li key={hint.referenceId}>
+                                      <span className="font-medium text-[color:var(--foreground-strong)]">{hint.title}</span>
+                                      <span> · {hint.reason}</span>
+                                      {hint.skeletonId ? <span> · skeleton: {hint.skeletonId}</span> : null}
+                                    </li>
+                                  ))}
+                                </ul>
+                                <p className="mt-2">원문/공식 답안이 아니라 메타데이터 기준이며, 원문은 이 힌트에 저장하지 않습니다.</p>
+                              </div>
+                            ) : null}
                           </div>
                         </details>
                       </article>
