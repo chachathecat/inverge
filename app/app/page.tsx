@@ -186,6 +186,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
     if (hrefKind === "items") return `/app/items?mode=${mode}`;
     if (hrefKind === "review") return `/app/review?mode=${mode}`;
     if (hrefKind === "first_ox") return "/app/first/ox";
+    if (hrefKind === "calculator_template") return "/app/calculator?mode=first&context=accounting";
     return `/app/session?mode=${mode}`;
   };
 

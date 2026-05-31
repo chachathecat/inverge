@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { AccountingTemplateCard } from "@/components/review-os/accounting-template-card";
 import { DEVICE_APPENDIX_FX_9860GIII, type CalculatorWorkflow } from "@/lib/review-os/calculator-workflow";
 
 type CalculatorWorkflowPageProps = {
@@ -72,6 +73,8 @@ export function CalculatorWorkflowPage({ workflow }: CalculatorWorkflowPageProps
           </Link>
         </div>
       </section>
+
+      {workflow.context === "accounting" ? <AccountingTemplateCard /> : null}
 
       <section className="rounded-[var(--radius-card)] border border-[color:var(--brand-700)] bg-[color:var(--brand-050)] p-5 md:p-6">
         <p className="text-caption text-[color:var(--brand-700)]">오늘 계산 루틴 1개</p>
