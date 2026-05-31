@@ -74,7 +74,7 @@ const SECOND_MODE_INPUT_OPTIONS = [
 ] as const;
 
 type PageProps = {
-  searchParams?: Promise<{ mode?: string; subject?: string; saved?: string }>;
+  searchParams?: Promise<{ mode?: string; subject?: string; saved?: string; migrated?: string }>;
 };
 
 export default async function ReviewOsDashboardPage({ searchParams }: PageProps) {
@@ -82,6 +82,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
   const modeParam = query?.mode;
   const subjectParam = query?.subject;
   const savedParam = query?.saved;
+  const migratedParam = query?.migrated;
   const { session, profile } = await getReviewOsServerContext(buildReviewOsReturnTo("/app", modeParam));
   if (!session.userId || !session.email) return null;
 
@@ -253,6 +254,31 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
               노트에서 확인
             </Link>
           </OneActionFooter>
+        </section>
+      ) : null}
+
+      {migratedParam && mode === "second" ? (
+        <section className="rounded-[var(--radius-md)] bg-[color:var(--surfaceQuiet)] px-4 py-4">
+          <EvidenceLine>1차 기록은 보관되었고, 오늘 계획은 2차 중심으로 전환되었습니다.</EvidenceLine>
+          <OneActionFooter>
+            <Link href="/app/review?mode=second" className="inline-flex rounded-full bg-[color:var(--actionPrimary)] px-4 py-2 text-xs font-medium text-white">
+              2차 review queue 보기
+            </Link>
+          </OneActionFooter>
+        </section>
+      ) : null}
+
+      {mode === "first" ? (
+        <section className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-4 py-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-medium text-[color:var(--foreground-strong)]">2차 준비를 시작할 때</p>
+              <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">직접 확인 후 1차 기록을 보관하고 2차 답안 운영으로 전환합니다.</p>
+            </div>
+            <Link href="/app/mode-migration?mode=first" className="inline-flex min-h-10 items-center justify-center rounded-full border border-[color:var(--border-subtle)] px-4 text-xs font-medium text-[color:var(--foreground-strong)]">
+              2차 준비로 전환
+            </Link>
+          </div>
         </section>
       ) : null}
 

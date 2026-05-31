@@ -114,6 +114,33 @@ function toNextAction(mode: "first" | "second", item: ReviewQueueCard, taskType:
   return mode === "first" ? `${item.problemTitle}을 다시 풀고 근거 1줄을 남깁니다.` : `${item.problemTitle} 핵심 논점 1개를 회상합니다.`;
 }
 
+function toModeMigrationRewriteTask(signal: LearningSignalEventRecord): TodayPlanTask {
+  const metadata = signal.metadataJson ?? {};
+  const repeatedWeakTopics = Array.isArray(metadata.carriedForward)
+    ? []
+    : Array.isArray((metadata.carriedForward as Record<string, unknown> | undefined)?.repeatedWeakTopics)
+      ? ((metadata.carriedForward as Record<string, unknown>).repeatedWeakTopics as Array<Record<string, unknown>>)
+      : [];
+  const firstTopic = repeatedWeakTopics.find((item) => typeof item?.label === "string")?.label;
+  return {
+    itemId: `mode-migration-${signal.id}`,
+    title: "2차 전환 후 첫 문단 다시쓰기",
+    subject: signal.subject,
+    exam_mode: "second",
+    due_bucket: "today",
+    status: "due",
+    reason: "1차 기록은 보관했고, 오늘 계획은 2차 답안 보강으로 전환되었습니다.",
+    one_biggest_gap: typeof firstTopic === "string" && firstTopic ? firstTopic : "쟁점 식별과 문단 구조를 1개만 고정합니다.",
+    one_next_action: "쟁점 1개를 먼저 회상한 뒤 문단 1개를 다시 씁니다.",
+    task_type: "second_answer_rewrite",
+    estimated_minutes: 20,
+    priority_reason: "모드 전환 직후에는 2차 답안 생산 루프를 먼저 시작합니다.",
+    primary_cta: primaryCtaFor("second_answer_rewrite", "second"),
+    created_from_capture: false,
+    source_label: "2차 전환 기반",
+  };
+}
+
 function toProblemSnapTask(mode: "first" | "second", signal: LearningSignalEventRecord): TodayPlanTask {
   const taskType: TodayPlanTaskType = mode === "second" ? "second_answer_rewrite" : "first_ox_retry";
   return {
@@ -318,9 +345,15 @@ export function buildTodayPlanTasks({ mode, queue, items = [], learningSignals =
   const problemSnapTasks = recentProblemSnap ? [{ task: toProblemSnapTask(mode, recentProblemSnap), score: 73 }] : [];
   const recentFirstOx = queueHasStrongDueTask ? null : pickRecentFirstOxSignal(learningSignals, mode, now);
   const firstOxTasks = recentFirstOx ? [{ task: toFirstOxSignalTask(recentFirstOx), score: 76 }] : [];
+  const recentModeMigration = mode === "second"
+    ? learningSignals
+        .filter((signal) => signal.sourceType === "first-to-second-mode-migration" && signal.nextTaskType === "second_answer_rewrite")
+        .sort((a, b) => (parseTime(b.createdAt) ?? 0) - (parseTime(a.createdAt) ?? 0))[0] ?? null
+    : null;
+  const modeMigrationTasks = recentModeMigration ? [{ task: toModeMigrationRewriteTask(recentModeMigration), score: queueHasStrongDueTask ? 72 : 79 }] : [];
 
   const deduped = new Map<string, { task: TodayPlanTask; score: number }>();
-  [...queueTasks, ...itemTasks, ...problemSnapTasks, ...firstOxTasks].forEach((entry) => {
+  [...queueTasks, ...itemTasks, ...problemSnapTasks, ...firstOxTasks, ...modeMigrationTasks].forEach((entry) => {
     const existing = deduped.get(entry.task.itemId);
     if (!existing || entry.score > existing.score) deduped.set(entry.task.itemId, entry);
   });
