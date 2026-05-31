@@ -23,7 +23,10 @@ function parseSubjectId(value: unknown) {
   return isAdminRootCauseSubjectId(value) ? value : "civil_law";
 }
 
-export function GET(request: Request) {
+export async function GET(request: Request) {
+  const adminDenied = await requireAdminRouteSession();
+  if (adminDenied) return adminDenied;
+
   const url = new URL(request.url);
   const subjectId = parseSubjectId(url.searchParams.get("subjectId"));
 

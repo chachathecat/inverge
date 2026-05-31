@@ -9,6 +9,9 @@ import {
 import type { AdminRewriteSeedTemplateSaveInput } from "@/lib/inverge/admin-rewrite-seed-templates";
 
 export async function GET(request: Request) {
+  const adminDenied = await requireAdminRouteSession();
+  if (adminDenied) return adminDenied;
+
   const { searchParams } = new URL(request.url);
   const subjectId = searchParams.get("subjectId") ?? undefined;
   const gapType = searchParams.get("gapType") ?? undefined;

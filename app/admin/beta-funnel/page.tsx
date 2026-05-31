@@ -3,6 +3,8 @@ import { isAllowedAdminEmail } from "@/lib/auth/admin";
 import { getServerSessionUser } from "@/lib/auth/session";
 import { reviewOsService } from "@/lib/review-os/service";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminBetaFunnelPage() {
   const session = await getServerSessionUser();
   if (!session.isAuthenticated || !isAllowedAdminEmail(session.email)) {

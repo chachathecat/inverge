@@ -2,6 +2,8 @@ import { UsabilityNotesAdmin } from "@/components/admin/usability-notes-admin";
 import { isAllowedAdminEmail } from "@/lib/auth/admin";
 import { getServerSessionUser } from "@/lib/auth/session";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminUsabilityNotesPage() {
   const session = await getServerSessionUser();
   if (!session.isAuthenticated || !isAllowedAdminEmail(session.email)) {

@@ -15,6 +15,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 export async function GET(_: Request, context: RouteContext) {
+  const adminDenied = await requireAdminRouteSession();
+  if (adminDenied) return adminDenied;
+
   const { setId } = await context.params;
   const detail = getAdminSetDetail(setId);
   if (!detail) {
