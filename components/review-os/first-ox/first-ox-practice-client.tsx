@@ -112,11 +112,40 @@ function feedbackCopy(statement: FirstExamStatement, attempt: OxAttempt) {
   return { tone: "warning" as const, title: "모르는 선지는 개념 확인으로 연결합니다.", next: `${statement.conceptCandidate ?? statement.subject} 기준 1개를 확인합니다.` };
 }
 
-export function FirstOxPracticeClient() {
-  const [subject, setSubject] = useState("민법");
-  const [stem, setStem] = useState("다음 각 선지를 독립 O/X로 판단하세요.");
-  const [choiceText, setChoiceText] = useState(SAMPLE_CHOICES.join("\n"));
-  const [statements, setStatements] = useState<FirstExamStatement[]>(() => shuffleFirstOxStatements(normalizeFiveChoiceItemToStatements({ id: "sample-first-ox", subject: "민법", stem: "다음 각 선지를 독립 O/X로 판단하세요.", choices: SAMPLE_CHOICES, expectedOxByChoice: [...SAMPLE_EXPECTED], topicCandidate: "민법 선지 판단", conceptCandidate: "요건·효과·예외" })));
+type FirstOxPracticeClientProps = {
+  initialStatements?: FirstExamStatement[];
+  initialSubject?: string;
+  initialStem?: string;
+  initialChoiceText?: string;
+  retrySourceItemId?: string;
+  retryLoadStatus?: "loaded" | "fallback";
+};
+
+function buildSampleStatements() {
+  return shuffleFirstOxStatements(normalizeFiveChoiceItemToStatements({
+    id: "sample-first-ox",
+    subject: "민법",
+    stem: "다음 각 선지를 독립 O/X로 판단하세요.",
+    choices: SAMPLE_CHOICES,
+    expectedOxByChoice: [...SAMPLE_EXPECTED],
+    topicCandidate: "민법 선지 판단",
+    conceptCandidate: "요건·효과·예외",
+  }));
+}
+
+export function FirstOxPracticeClient({
+  initialStatements,
+  initialSubject,
+  initialStem,
+  initialChoiceText,
+  retrySourceItemId,
+  retryLoadStatus,
+}: FirstOxPracticeClientProps = {}) {
+  const retryStatements = initialStatements?.length ? initialStatements : null;
+  const [subject, setSubject] = useState(initialSubject ?? retryStatements?.[0]?.subject ?? "민법");
+  const [stem, setStem] = useState(initialStem ?? retryStatements?.[0]?.stem ?? "다음 각 선지를 독립 O/X로 판단하세요.");
+  const [choiceText, setChoiceText] = useState(initialChoiceText ?? retryStatements?.map((statement) => statement.statementText).join("\n") ?? SAMPLE_CHOICES.join("\n"));
+  const [statements, setStatements] = useState<FirstExamStatement[]>(() => retryStatements ?? buildSampleStatements());
   const [index, setIndex] = useState(0);
   const [attemptByStatementId, setAttemptByStatementId] = useState<Record<string, OxAttempt>>({});
   const [savedStatus, setSavedStatus] = useState<string>("");
@@ -126,7 +155,8 @@ export function FirstOxPracticeClient() {
   const answeredCount = Object.keys(attemptByStatementId).length;
   const feedback = current && currentAttempt ? feedbackCopy(current, currentAttempt) : null;
   const canNormalize = parseChoices(choiceText).length === 5;
-  const storageKey = `first-ox-${useId()}`;
+  const generatedStorageId = useId();
+  const storageKey = `first-ox-${retrySourceItemId ?? generatedStorageId}`;
 
   function normalizeManualItem() {
     const next = shuffleFirstOxStatements(normalizeFiveChoiceItemToStatements({
@@ -181,6 +211,12 @@ export function FirstOxPracticeClient() {
       <SingleFocusCard eyebrow="감정평가사 1차" title="O/X 역공학 연습" description="5지선다 위치를 외우지 않도록, 선지 하나씩만 판단합니다.">
         <div className="space-y-5">
           <LearnerProgressBar current={answeredCount} total={statements.length} label="선지 판단" helper="해설은 답한 뒤에만 열립니다." />
+
+          {retryLoadStatus === "loaded" ? (
+            <p className="rounded-[var(--radius-md)] bg-[color:var(--surfaceQuiet)] px-4 py-3 text-sm leading-6 text-[color:var(--muted-strong)]">저장된 선지를 다시 판단합니다.</p>
+          ) : retryLoadStatus === "fallback" ? (
+            <p className="rounded-[var(--radius-md)] bg-[color:var(--surfaceQuiet)] px-4 py-3 text-sm leading-6 text-[color:var(--muted-strong)]">저장된 선지를 불러오지 못해 기본 O/X 연습으로 시작합니다.</p>
+          ) : null}
 
           <CollapsibleDetails title="5지선다 직접 붙여넣기" helper="선지 번호는 저장하지 않고 5개 독립 문장으로만 다룹니다.">
             <div className="space-y-3">

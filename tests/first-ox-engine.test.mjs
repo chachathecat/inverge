@@ -270,6 +270,28 @@ test("first-ox concept card uses trap-specific copy and removes vague fallback",
   assert.equal(JSON.stringify(fallback).includes("핵심 개념 확인 기준 1개를 먼저 고정합니다."), false);
 });
 
+
+test("first O/X retry route consumes retryItemId and loads user-owned raw statement", async () => {
+  const pageSource = await readFile("app/app/first/ox/page.tsx", "utf8");
+  assert.match(pageSource, /searchParams\?: Promise<\{ retryItemId\?: string \}>/);
+  assert.ok(pageSource.includes("reviewOsService.getWrongAnswerDetail(userId, email, retryItemId)"));
+  assert.ok(pageSource.includes("isFirstOxRetryItem(detail.item)"));
+  assert.ok(pageSource.includes("splitFirstOxRawQuestionText(detail.item.rawQuestionText)"));
+  assert.equal(/derivedPayload.*statementText|metadata.*statementText|conceptCard\?.*statementText/s.test(pageSource), false);
+  assert.ok(pageSource.includes("id: detail.item.problemIdentifier ?? detail.item.id"));
+  assert.ok(pageSource.includes("expectedOx = isKnownOx(detail.item.correctAnswer)"));
+});
+
+test("FirstOxPracticeClient accepts retry statements while preserving generic practice", async () => {
+  const clientSource = await readFile("components/review-os/first-ox/first-ox-practice-client.tsx", "utf8");
+  ["initialStatements?: FirstExamStatement[]", "initialSubject?: string", "initialStem?: string", "initialChoiceText?: string", "retrySourceItemId?: string"].forEach((token) => assert.ok(clientSource.includes(token), token));
+  assert.ok(clientSource.includes("retryStatements ?? buildSampleStatements()"));
+  assert.ok(clientSource.includes("저장된 선지를 다시 판단합니다."));
+  assert.ok(clientSource.includes("저장된 선지를 불러오지 못해 기본 O/X 연습으로 시작합니다."));
+  assert.ok(clientSource.includes("<CollapsibleDetails title=\"5지선다 직접 붙여넣기\""));
+  assert.ok(clientSource.includes("buildSampleStatements()"));
+});
+
 test("first-ox source and derived metadata avoid raw statement copying and final-judgment claims", async () => {
   const statement = statements()[2];
   const attempt = evaluateFirstOxAttempt(statement, "O", "confused", "2026-05-30T00:00:00.000Z");

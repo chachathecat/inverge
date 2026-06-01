@@ -624,7 +624,7 @@ function buildFirstOxReviewDetail(item: WrongAnswerItemRecord): FirstOxReviewDet
   const raw = splitFirstOxRawQuestionText(item.rawQuestionText);
   const status = resolveFirstOxStatus(item);
   const expectedChoice = isKnownOx(item.correctAnswer) ? item.correctAnswer : null;
-  const retryItemId = item.problemIdentifier ?? item.conceptCard?.statement_id ?? item.id;
+  const retryItemId = item.id;
   return {
     ...raw,
     userChoice: item.userAnswer === "unknown" ? "모름" : item.userAnswer,
