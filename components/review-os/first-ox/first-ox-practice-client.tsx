@@ -9,6 +9,7 @@ import {
   buildFirstOxConceptCardPayload,
   buildFirstOxLearningSignalInput,
   evaluateFirstOxAttempt,
+  extractFirstExamFiveChoicesFromText,
   normalizeFiveChoiceItemToStatements,
   resolveFirstOxLearningSignalKind,
   shuffleFirstOxStatements,
@@ -137,6 +138,8 @@ function feedbackCopy(statement: FirstExamStatement, attempt: OxAttempt) {
   return { tone: "warning" as const, title: "모르는 선지는 개념 확인으로 연결합니다.", next: `${reviewFocusLabel(statement)} 기준 1개를 확인합니다.` };
 }
 
+type FirstOxPracticeSourceKind = "capture" | "manual" | "retry" | "generic";
+
 type FirstOxPracticeClientProps = {
   initialStatements?: FirstExamStatement[];
   initialSubject?: string;
@@ -144,6 +147,8 @@ type FirstOxPracticeClientProps = {
   initialChoiceText?: string;
   retrySourceItemId?: string;
   retryLoadStatus?: "loaded" | "not_found" | "generic";
+  sourceKind?: FirstOxPracticeSourceKind;
+  sourceLoadStatus?: "loaded" | "unclear" | "not_found" | "generic";
 };
 
 function buildSampleStatements() {
@@ -165,8 +170,11 @@ export function FirstOxPracticeClient({
   initialChoiceText,
   retrySourceItemId,
   retryLoadStatus,
+  sourceKind = retryLoadStatus === "loaded" ? "retry" : initialStatements?.length ? "manual" : "generic",
+  sourceLoadStatus = "generic",
 }: FirstOxPracticeClientProps = {}) {
   const retryStatements = initialStatements?.length ? initialStatements : null;
+  const initialNeedsConfirmation = sourceKind === "capture";
   const [subject, setSubject] = useState(initialSubject ?? retryStatements?.[0]?.subject ?? "민법");
   const [stem, setStem] = useState(initialStem ?? retryStatements?.[0]?.stem ?? "다음 각 선지를 독립 O/X로 판단하세요.");
   const [choiceText, setChoiceText] = useState(initialChoiceText ?? retryStatements?.map((statement) => statement.statementText).join("\n") ?? SAMPLE_CHOICES.join("\n"));
@@ -174,12 +182,15 @@ export function FirstOxPracticeClient({
   const [index, setIndex] = useState(0);
   const [attemptByStatementId, setAttemptByStatementId] = useState<Record<string, OxAttempt>>({});
   const [savedStatus, setSavedStatus] = useState<string>("");
+  const [captureConfirmed, setCaptureConfirmed] = useState(!initialNeedsConfirmation);
+  const [activeSourceKind, setActiveSourceKind] = useState<FirstOxPracticeSourceKind>(sourceKind);
 
   const current = statements[index];
   const currentAttempt = current ? attemptByStatementId[current.id] : null;
   const answeredCount = Object.keys(attemptByStatementId).length;
   const feedback = current && currentAttempt ? feedbackCopy(current, currentAttempt) : null;
-  const canNormalize = parseChoices(choiceText).length === 5;
+  const extractedChoices = extractFirstExamFiveChoicesFromText(choiceText, subject);
+  const canNormalize = extractedChoices.status === "detected" && extractedChoices.choices.length === 5;
   const generatedStorageId = useId();
   const storageKey = `first-ox-${retrySourceItemId ?? generatedStorageId}`;
 
@@ -188,13 +199,15 @@ export function FirstOxPracticeClient({
       id: storageKey,
       subject,
       stem,
-      choices: parseChoices(choiceText),
+      choices: extractedChoices.status === "detected" ? extractedChoices.choices : parseChoices(choiceText),
       topicCandidate: `${subject} O/X 선지`,
       conceptCandidate: "핵심 개념 확인",
     }));
     setStatements(next);
     setIndex(0);
     setAttemptByStatementId({});
+    setCaptureConfirmed(true);
+    setActiveSourceKind(sourceKind === "capture" ? "capture" : "manual");
     setSavedStatus("5개 선지를 독립 문장으로 나누었습니다. 기대 O/X는 직접 확인 전까지 학습 권위로 쓰지 않습니다.");
   }
 
@@ -237,10 +250,35 @@ export function FirstOxPracticeClient({
         <div className="space-y-5">
           <LearnerProgressBar current={answeredCount} total={statements.length} label="선지 판단" helper="해설은 답한 뒤에만 열립니다." />
 
-          {retryLoadStatus === "loaded" ? (
+          {activeSourceKind === "capture" && sourceLoadStatus === "loaded" ? (
+            <p className="rounded-[var(--radius-md)] bg-[color:var(--surfaceQuiet)] px-4 py-3 text-sm leading-6 text-[color:var(--muted-strong)]">오늘 올린 문제에서 선지 5개를 나누었습니다.</p>
+          ) : retryLoadStatus === "loaded" ? (
             <p className="rounded-[var(--radius-md)] bg-[color:var(--surfaceQuiet)] px-4 py-3 text-sm leading-6 text-[color:var(--muted-strong)]">저장된 선지를 다시 판단합니다.</p>
           ) : retryLoadStatus === "not_found" ? (
             <p className="rounded-[var(--radius-md)] bg-[color:var(--surfaceQuiet)] px-4 py-3 text-sm leading-6 text-[color:var(--muted-strong)]">저장된 선지를 불러오지 못해 기본 O/X 연습으로 시작합니다.</p>
+          ) : activeSourceKind === "manual" ? (
+            <p className="rounded-[var(--radius-md)] bg-[color:var(--surfaceQuiet)] px-4 py-3 text-sm leading-6 text-[color:var(--muted-strong)]">직접 붙여넣은 선지를 O/X로 판단합니다.</p>
+          ) : sourceLoadStatus === "unclear" ? (
+            <p className="rounded-[var(--radius-md)] bg-[color:var(--surfaceQuiet)] px-4 py-3 text-sm leading-6 text-[color:var(--muted-strong)]">선지 5개를 확실히 찾지 못했습니다. 직접 확인 후 O/X로 나눌 수 있습니다.</p>
+          ) : null}
+
+          {sourceKind === "capture" ? (
+            <section className="rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[color:var(--bg-elevated)] p-4 sm:p-5">
+              <p className="text-xs font-medium text-[color:var(--muted)]">Capture-to-OX 확인</p>
+              <h2 className="mt-1 text-lg font-semibold text-[color:var(--foreground-strong)]">확인하고 O/X 연습 시작</h2>
+              <div className="mt-3 grid gap-3">
+                <label className="block text-xs font-medium text-[color:var(--muted)]" htmlFor="first-ox-capture-subject">감지된 과목</label>
+                <select id="first-ox-capture-subject" value={subject} onChange={(event) => setSubject(event.target.value)} className="min-h-11 w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[color:var(--bg-surface)] px-3 text-sm">
+                  {APPRAISAL_FIRST_SUBJECTS.map((item) => <option key={item}>{item}</option>)}
+                </select>
+                <label className="block text-xs font-medium text-[color:var(--muted)]" htmlFor="first-ox-capture-stem">감지된 문제 줄기</label>
+                <textarea id="first-ox-capture-stem" value={stem} onChange={(event) => setStem(event.target.value)} className="min-h-20 w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[color:var(--bg-surface)] p-3 text-sm" />
+                <label className="block text-xs font-medium text-[color:var(--muted)]" htmlFor="first-ox-capture-choices">감지된 선지 5개</label>
+                <textarea id="first-ox-capture-choices" value={choiceText} onChange={(event) => setChoiceText(event.target.value)} className="min-h-40 w-full rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[color:var(--bg-surface)] p-3 text-sm" />
+                {!canNormalize ? <p className="text-sm text-[color:var(--muted)]">선지 5개를 확실히 찾지 못했습니다. 직접 확인 후 O/X로 나눌 수 있습니다.</p> : null}
+                <Button type="button" disabled={!canNormalize} onClick={normalizeManualItem} className="w-full sm:w-auto">확인하고 O/X 연습 시작</Button>
+              </div>
+            </section>
           ) : null}
 
           <CollapsibleDetails title="5지선다 직접 붙여넣기" helper="선지 번호는 저장하지 않고 5개 독립 문장으로만 다룹니다.">
@@ -257,7 +295,7 @@ export function FirstOxPracticeClient({
             </div>
           </CollapsibleDetails>
 
-          {current ? (
+          {current && captureConfirmed ? (
             <section className="space-y-4 rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[color:var(--bg-elevated)] p-4 sm:p-5">
               <p className="text-xs text-[color:var(--muted)]">현재 선지</p>
               <p className="break-keep text-xl font-semibold leading-9 tracking-[-0.03em] text-[color:var(--foreground-strong)]">

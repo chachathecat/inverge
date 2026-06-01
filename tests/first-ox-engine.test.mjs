@@ -5,6 +5,7 @@ import {
   buildFirstOxConceptCardPayload,
   buildFirstOxLearningSignalInput,
   buildFirstOxWrongAnswerItemInput,
+  extractFirstExamFiveChoicesFromText,
   evaluateFirstOxAttempt,
   normalizeFiveChoiceItemToStatements,
   resolveFirstOxLearningSignalKind,
@@ -346,7 +347,7 @@ test("first-ox concept card uses trap-specific copy and removes vague fallback",
 
 test("first O/X retry route consumes retryItemId and loads user-owned raw statement", async () => {
   const pageSource = await readFile("app/app/first/ox/page.tsx", "utf8");
-  assert.match(pageSource, /searchParams\?: Promise<\{ retryItemId\?: string \}>/);
+  assert.match(pageSource, /searchParams\?: Promise<\{ retryItemId\?: string; sourceItemId\?: string \}>/);
   assert.ok(pageSource.includes("reviewOsService.getWrongAnswerDetail(userId, email, retryItemId)"));
   assert.ok(pageSource.includes("detail.item.userId !== userId"));
   assert.ok(pageSource.includes("isFirstOxRetryItem(detail.item)"));
@@ -380,4 +381,63 @@ test("first-ox source and derived metadata avoid raw statement copying and final
   ["공식 답안", "공식 점수", "합격 판정", "불합격 판정", "pass/fail", "official score", "official answer"].forEach((phrase) => {
     assert.equal(source.toLowerCase().includes(phrase.toLowerCase()), false, phrase);
   });
+});
+
+test("capture-to-OX parser detects circled five choices and preserves a stem", () => {
+  const result = extractFirstExamFiveChoicesFromText("민법 옳은 것은? ① 무효이다. ② 취소할 수 있다. ③ 항상 같다. ④ 일부만 가능하다. ⑤ 승계된다.", "민법");
+  assert.equal(result.status, "detected");
+  assert.equal(result.choices.length, 5);
+  assert.equal(result.subject, "민법");
+  assert.ok(result.stem?.includes("옳은 것은"));
+  assert.equal(result.choices[0], "무효이다.");
+});
+
+test("capture-to-OX parser detects dotted five choices", () => {
+  const result = extractFirstExamFiveChoicesFromText("경제학 다음 설명\n1. 수요가 증가한다.\n2. 공급이 감소한다.\n3. 균형가격이 오른다.\n4. 거래량은 변한다.\n5. 탄력성을 확인한다.", "경제학");
+  assert.equal(result.status, "detected");
+  assert.deepEqual(result.choices.map((choice) => choice.slice(0, 2)), ["수요", "공급", "균형", "거래", "탄력"]);
+});
+
+test("capture-to-OX parser fails safely when choices are unclear", () => {
+  const result = extractFirstExamFiveChoicesFromText("문제 줄기만 있고 선지가 두 개입니다.\n1. 첫 선지\n2. 둘째 선지", "민법");
+  assert.equal(result.status, "unclear");
+  assert.equal(result.choices.length, 0);
+  assert.equal(result.message, "선지 5개를 확실히 찾지 못했습니다. 직접 확인 후 O/X로 나눌 수 있습니다.");
+});
+
+test("capture-to-OX bridge copy, source route, and source-specific O/X copy are present", async () => {
+  const captureSource = await readFile("components/review-os/capture-form.tsx", "utf8");
+  [
+    "5개 선지를 O/X 연습으로 나눌 수 있습니다.",
+    "사진/OCR 결과를 먼저 확인한 뒤, 각 선지를 하나씩 판단합니다. 정답 확정이 아니라 복습용 판단 연습입니다.",
+    "O/X 연습으로 나누기",
+    "선지 5개를 확실히 찾지 못했습니다. 직접 확인 후 O/X로 나눌 수 있습니다.",
+    "/app/first/ox?sourceItemId=",
+  ].forEach((phrase) => assert.ok(captureSource.includes(phrase), phrase));
+
+  const pageSource = await readFile("app/app/first/ox/page.tsx", "utf8");
+  assert.ok(pageSource.includes("sourceItemId"));
+  assert.ok(pageSource.includes("loadFirstOxCaptureSourceState"));
+  assert.ok(pageSource.includes("getConfirmedCaptureText"));
+  assert.equal(pageSource.includes("derivedPayload.rawQuestionText"), false);
+
+  const clientSource = await readFile("components/review-os/first-ox/first-ox-practice-client.tsx", "utf8");
+  [
+    "오늘 올린 문제에서 선지 5개를 나누었습니다.",
+    "직접 붙여넣은 선지를 O/X로 판단합니다.",
+    "저장된 선지를 다시 판단합니다.",
+    "확인하고 O/X 연습 시작",
+  ].forEach((phrase) => assert.ok(clientSource.includes(phrase), phrase));
+});
+
+test("FirstOxPracticeClient can initialize from capture-derived statements without derived raw text", () => {
+  const extracted = extractFirstExamFiveChoicesFromText("① 하나\n② 둘\n③ 셋\n④ 넷\n⑤ 다섯", "민법");
+  assert.equal(extracted.status, "detected");
+  const initialStatements = normalizeFiveChoiceItemToStatements({ id: "capture-item-1", subject: "민법", stem: extracted.stem, choices: extracted.choices });
+  assert.equal(initialStatements.length, 5);
+  const attempt = evaluateFirstOxAttempt(initialStatements[0], "unknown", "unknown", "2026-06-01T00:00:00.000Z");
+  const signal = buildFirstOxLearningSignalInput(initialStatements[0], attempt);
+  assert.ok(signal);
+  assert.equal(JSON.stringify(signal.metadataJson).includes("raw_question_text"), false);
+  assert.equal(JSON.stringify(signal.metadataJson).includes("하나"), false);
 });

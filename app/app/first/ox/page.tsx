@@ -1,5 +1,5 @@
 import { FirstOxPracticeClient } from "@/components/review-os/first-ox/first-ox-practice-client";
-import { extractFirstOxTrapWords, type FirstExamStatement } from "@/lib/review-os/first-ox-engine";
+import { extractFirstExamFiveChoicesFromText, extractFirstOxTrapWords, normalizeFiveChoiceItemToStatements, type FirstExamStatement } from "@/lib/review-os/first-ox-engine";
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
 import { reviewOsService } from "@/lib/review-os/service";
 import type { WrongAnswerItemRecord } from "@/lib/review-os/types";
@@ -7,7 +7,7 @@ import type { WrongAnswerItemRecord } from "@/lib/review-os/types";
 export const dynamic = "force-dynamic";
 
 type PageProps = {
-  searchParams?: Promise<{ retryItemId?: string }>;
+  searchParams?: Promise<{ retryItemId?: string; sourceItemId?: string }>;
 };
 
 type FirstOxRetryState = {
@@ -17,17 +17,76 @@ type FirstOxRetryState = {
   initialChoiceText?: string;
   retrySourceItemId?: string;
   retryLoadStatus?: "loaded" | "not_found" | "generic";
+  sourceKind?: "capture" | "manual" | "retry" | "generic";
+  sourceLoadStatus?: "loaded" | "unclear" | "not_found" | "generic";
 };
 
 export default async function FirstOxPracticePage({ searchParams }: PageProps) {
-  const retryItemId = (await searchParams)?.retryItemId?.trim() || undefined;
-  const returnTo = retryItemId ? `/app/first/ox?retryItemId=${encodeURIComponent(retryItemId)}` : buildReviewOsReturnTo("/app/first/ox", "first");
+  const params = await searchParams;
+  const retryItemId = params?.retryItemId?.trim() || undefined;
+  const sourceItemId = params?.sourceItemId?.trim() || undefined;
+  const returnTo = retryItemId
+    ? `/app/first/ox?retryItemId=${encodeURIComponent(retryItemId)}`
+    : sourceItemId
+      ? `/app/first/ox?sourceItemId=${encodeURIComponent(sourceItemId)}`
+      : buildReviewOsReturnTo("/app/first/ox", "first");
   const { session } = await getReviewOsServerContext(returnTo);
-  const retryState = session.userId && session.email && retryItemId
+  const initialState = session.userId && session.email && retryItemId
     ? await loadFirstOxRetryState(session.userId, session.email, retryItemId)
-    : ({ retryLoadStatus: "generic" } satisfies FirstOxRetryState);
+    : session.userId && session.email && sourceItemId
+      ? await loadFirstOxCaptureSourceState(session.userId, session.email, sourceItemId)
+      : ({ retryLoadStatus: "generic", sourceKind: "generic", sourceLoadStatus: "generic" } satisfies FirstOxRetryState);
 
-  return <FirstOxPracticeClient {...retryState} />;
+  return <FirstOxPracticeClient {...initialState} />;
+}
+
+async function loadFirstOxCaptureSourceState(userId: string, email: string, sourceItemId: string): Promise<FirstOxRetryState> {
+  const detail = await reviewOsService.getWrongAnswerDetail(userId, email, sourceItemId).catch(() => null);
+  if (!detail || detail.item.userId !== userId || detail.item.examName !== "감정평가사 1차") {
+    return { sourceKind: "capture", sourceLoadStatus: "not_found" };
+  }
+
+  const confirmedText = getConfirmedCaptureText(detail.item);
+  const extracted = extractFirstExamFiveChoicesFromText(confirmedText, detail.item.subjectLabel);
+  if (extracted.status !== "detected" || extracted.choices.length !== 5) {
+    return {
+      initialSubject: extracted.subject ?? detail.item.subjectLabel,
+      initialStem: extracted.stem ?? detail.item.problemTitle ?? "다음 각 선지를 독립 O/X로 판단하세요.",
+      initialChoiceText: confirmedText,
+      retrySourceItemId: detail.item.id,
+      sourceKind: "capture",
+      sourceLoadStatus: "unclear",
+    };
+  }
+
+  const statements = normalizeFiveChoiceItemToStatements({
+    id: detail.item.id,
+    subject: extracted.subject ?? detail.item.subjectLabel,
+    stem: extracted.stem ?? detail.item.problemTitle ?? undefined,
+    choices: extracted.choices,
+    topicCandidate: detail.item.problemTitle ?? undefined,
+    conceptCandidate: detail.item.keyConcepts?.[0],
+  });
+
+  return {
+    initialStatements: statements,
+    initialSubject: extracted.subject ?? detail.item.subjectLabel,
+    initialStem: extracted.stem ?? detail.item.problemTitle ?? "",
+    initialChoiceText: extracted.choices.join("\n"),
+    retrySourceItemId: detail.item.id,
+    sourceKind: "capture",
+    sourceLoadStatus: "loaded",
+  };
+}
+
+function getConfirmedCaptureText(item: WrongAnswerItemRecord) {
+  const rawPayload = item.rawPayload ?? {};
+  const confirmed = rawPayload.user_confirmed_fields;
+  if (typeof confirmed === "object" && confirmed && typeof (confirmed as Record<string, unknown>).rawQuestionText === "string") {
+    return String((confirmed as Record<string, unknown>).rawQuestionText);
+  }
+  if (typeof rawPayload.raw_ocr_text === "string" && rawPayload.raw_ocr_text.trim()) return rawPayload.raw_ocr_text;
+  return item.rawQuestionText ?? "";
 }
 
 async function loadFirstOxRetryState(userId: string, email: string, retryItemId: string): Promise<FirstOxRetryState> {
@@ -62,6 +121,7 @@ async function loadFirstOxRetryState(userId: string, email: string, retryItemId:
     initialChoiceText: raw.statement,
     retrySourceItemId: detail.item.id,
     retryLoadStatus: "loaded",
+    sourceKind: "retry",
   };
 }
 
