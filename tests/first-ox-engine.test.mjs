@@ -103,6 +103,40 @@ test("Today Plan can surface first_ox_retry and route the primary CTA to O/X pra
   assert.deepEqual(tasks[0]?.primary_cta, { label: "5분 O/X 재시도", hrefKind: "first_ox" });
 });
 
+
+test("incapacity and nullity statement prioritizes civil-law rule over principle expression", () => {
+  const statement = normalizeFiveChoiceItemToStatements({
+    id: "incapacity-nullity",
+    subject: "민법",
+    stem: "옳은 것은?",
+    choices: ["② 원칙적으로 의사무능력자의 법률행위는 무효이다."],
+    expectedOxByChoice: ["O"],
+    topicCandidate: "법률행위",
+    conceptCandidate: "요건·효과·예외",
+  })[0];
+  const attempt = evaluateFirstOxAttempt(statement, "unknown", "unknown", "2026-05-30T00:00:00.000Z");
+  const concept = buildFirstOxConceptCardPayload(statement, attempt);
+
+  assert.equal(concept?.coreRule, "의사능력이 없는 상태의 법률행위는 무효로 판단합니다.");
+  assert.equal(concept?.minimalExplanation, "주체가 의사무능력자인지 먼저 보고, 법률행위의 효과가 무효인지 확인합니다.");
+  assert.equal(concept?.examTrapExplanation, "원칙적으로 같은 표현보다 먼저 의사능력 유무와 무효 효과를 확인하세요.");
+  assert.ok(concept?.trapWords.includes("무효"));
+  assert.ok(concept?.trapWords.includes("원칙적으로"));
+  assert.equal(concept?.trapWords.includes("원칙"), false);
+  assert.equal(JSON.stringify(concept).includes("요건·효과·예외 기준 1개를 확인합니다."), false);
+});
+
+test("concept popup separates nullity legal concept from principle expression trap and dynamic labels", async () => {
+  const source = await readFile("components/review-os/first-ox/first-ox-practice-client.tsx", "utf8");
+  ["핵심 법률개념", "표현 함정", "왜 틀렸는지", "왜 흔들렸는지", "판단 기준 확인"].forEach((token) => assert.ok(source.includes(token), token));
+  assert.match(source, /if \(trapWords\.includes\("무효"\)\) return "무효"/);
+  assert.match(source, /if \(trapWords\.includes\("원칙적으로"\)\) return "원칙적으로"/);
+  assert.match(source, /attempt\.result === "incorrect"/);
+  assert.match(source, /attempt\.certainty === "confused"/);
+  assert.ok(source.includes("의사능력 유무와 무효 효과"));
+  assert.equal(source.includes("요건·효과·예외 기준 1개를 확인합니다."), false);
+});
+
 test("first-ox concept-review signal still returns to the O/X statement surface", () => {
   const statement = statements()[0];
   const attempt = evaluateFirstOxAttempt(statement, "unknown", "unknown", "2026-05-30T00:00:00.000Z");
@@ -217,7 +251,7 @@ test("confused first-ox signal can become a cloze review task with calm CTA", ()
 
 test("concept popup copy exists but is gated after attempted answer", async () => {
   const source = await readFile("components/review-os/first-ox/first-ox-practice-client.tsx", "utf8");
-  ["왜 틀렸는지", "핵심 개념", "주의 표현", "다음 행동"].forEach((token) => assert.ok(source.includes(token), token));
+  ["왜 틀렸는지", "왜 흔들렸는지", "판단 기준 확인", "핵심 법률개념", "표현 함정", "다음 행동"].forEach((token) => assert.ok(source.includes(token), token));
   assert.match(source, /currentAttempt && resolveFirstOxLearningSignalKind\(currentAttempt\) !== "none" \? <ConceptPopup/);
 });
 
