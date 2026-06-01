@@ -1,0 +1,44 @@
+{
+  "schemaVersion": "2026-06-01",
+  "exam": "감정평가사 2차",
+  "sourceStatus": "draft_metadata_from_internal_roadmap",
+  "needsOfficialVerification": true,
+  "lastReviewedAt": "2026-06-01",
+  "verificationNote": "Official subject/unit labels must be verified against Q-Net/current public notice verification before production use.",
+  "storagePolicy": "metadata_only_no_raw_user_or_problem_text",
+  "subjects": [
+    {
+      "id": "second_practice",
+      "name": "감정평가실무",
+      "units": [
+        { "id": "practice_three_approaches", "name": "평가 3방식", "taskTypes": ["rewrite", "CASIO", "issue spotting"] },
+        { "id": "practice_cost", "name": "원가방식", "taskTypes": ["rewrite", "CASIO"] },
+        { "id": "practice_comparison", "name": "비교방식", "taskTypes": ["rewrite", "CASIO"] },
+        { "id": "practice_income", "name": "수익방식", "taskTypes": ["rewrite", "CASIO"] },
+        { "id": "practice_compensation", "name": "보상평가", "taskTypes": ["rewrite", "CASIO", "issue spotting"] }
+      ]
+    },
+    {
+      "id": "second_theory",
+      "name": "감정평가이론",
+      "units": [
+        { "id": "theory_foundation", "name": "감정평가의 본질과 기능", "taskTypes": ["rewrite", "issue spotting", "cloze"] },
+        { "id": "theory_value", "name": "가치이론", "taskTypes": ["rewrite", "issue spotting", "cloze"] },
+        { "id": "theory_principles", "name": "가격제 원칙", "taskTypes": ["rewrite", "issue spotting", "cloze"] },
+        { "id": "theory_market", "name": "시장분석", "taskTypes": ["rewrite", "issue spotting"] },
+        { "id": "theory_highest_best_use", "name": "최유효이용", "taskTypes": ["rewrite", "issue spotting"] }
+      ]
+    },
+    {
+      "id": "second_compensation_law",
+      "name": "감정평가 및 보상법규",
+      "units": [
+        { "id": "comp_law_appraisal_act", "name": "감정평가법 체계", "taskTypes": ["rewrite", "issue spotting", "cloze"] },
+        { "id": "comp_law_appraiser_entity", "name": "감정평가사와 감정평가법인", "taskTypes": ["rewrite", "issue spotting", "cloze"] },
+        { "id": "comp_law_land_compensation", "name": "토지보상법 총칙", "taskTypes": ["rewrite", "issue spotting", "cloze"] },
+        { "id": "comp_law_project_approval", "name": "사업인정", "taskTypes": ["rewrite", "issue spotting", "cloze"] },
+        { "id": "comp_law_remedies", "name": "이의·행정쟁송", "taskTypes": ["rewrite", "issue spotting"] }
+      ]
+    }
+  ]
+}
