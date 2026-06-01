@@ -168,3 +168,43 @@ npm run check:closed-beta-readiness
 - Actual OCR quality with handwritten answer.
 - Production environment variables.
 - 360px mobile visual overflow and Vercel preview route smoke for `/app`, `/app/capture`, `/app/review`, `/app/first/ox`, `/app/write`, `/answer-review`, and `/problem-snap`.
+
+## Authenticated Closed Beta E2E QA Attempt — 2026-06-01
+
+- Scope requested: authenticated closed-beta learner QA with the secret invited and non-invited accounts, using only `E2E_BASE_URL`, `E2E_USER_EMAIL`, `E2E_USER_PASSWORD`, `E2E_NOT_INVITED_EMAIL`, and `E2E_NOT_INVITED_PASSWORD`.
+- Secret-handling result: no credential values were printed, committed, documented, or captured. No screenshots were taken. Playwright transient test artifacts from failed environment bootstrap attempts were removed before commit.
+- Environment result: all five requested E2E environment variables were missing in this runtime, so account-specific login, invite-blocking, learner-data-access, and saved-item retry verification were **not verifiable** from this environment.
+- Browser availability result: Chromium and host dependencies were installed successfully after an initial missing-browser/missing-dependency failure. The authenticated Playwright smoke command then exited cleanly with both tests skipped because `E2E_USER_EMAIL` / `E2E_USER_PASSWORD` were not set.
+- Release-blocker result: no new P0/P1 blocker was found by source-level, unit/smoke, taxonomy, readiness, or production-build gates. Authenticated browser QA remains a manual-only check until the requested secret E2E variables are present in the runner.
+
+### Requested authenticated flow evidence
+
+| Flow | Result | Route checked | Evidence / notes | Remaining manual-only checks |
+| --- | --- | --- | --- | --- |
+| 1. Non-invited account | Not verifiable | `/login`, `/app` | `E2E_NOT_INVITED_EMAIL` and `E2E_NOT_INVITED_PASSWORD` were missing. Source/readiness guards still verify invite-only learner access and blocked invite-state coverage. | Log in with the non-invited secret account, open `/app`, confirm “아직 초대 승인 전입니다.”, and confirm learner data/API responses are not accessible. |
+| 2. Invited account | Not verifiable | `/login`, `/app` | `E2E_USER_EMAIL` and `E2E_USER_PASSWORD` were missing. Authenticated Playwright smoke was available after browser setup, but skipped because credentials were absent. | Log in with the invited secret account and confirm `/app` loads the learner operating screen rather than marketing UI. |
+| 3. Capture-to-Note | Source/script pass; authenticated browser not verifiable | `/app/capture` | Learner-loop/readiness checks verify photo/PDF/text entry coverage, editable OCR draft behavior, safe save metadata, and no official grading/final score/pass-fail claims. Browser route access with the invited account was not verifiable without credentials. | With the invited account, open `/app/capture`, verify photo/PDF/text entry, editable OCR output before save, and no official grading/final-score/pass-fail copy in the live browser. |
+| 4. Today Plan | Source/script pass; authenticated browser not verifiable | `/app` | Automated learner-loop/readiness checks verify Today Plan is capped at 3 primary items and keeps details/reference hints collapsed by default. | With the invited account, confirm the live Today Plan has no more than 3 primary tasks and details are collapsed by default. |
+| 5. 1차 O/X | Source/script pass; authenticated saved-item retry not verifiable | `/app/first/ox`, `/app/first/ox?retryItemId=...` | Learner-loop/readiness checks verify one-statement practice, 모름/헷갈림 review-signal behavior, concept-popup guardrails, and retry/review routing. Account-backed saved statement replay could not be verified without credentials. | In browser, answer 모름 or 헷갈림, confirm the concept popup, confirm the review signal is saved, open the created item if possible, click “같은 선지 다시 판단하기”, and confirm `/app/first/ox?retryItemId=...` loads the saved statement with “저장된 선지를 다시 판단합니다.” |
+| 6. 2차 Rewrite / CASIO | Source/script pass; authenticated browser not verifiable | `/app/write`, `/app/calculator`, `/app/items/[itemId]` | Learner-loop/readiness checks verify one gap + one rewrite action, unsupported CASIO fallback copy, deterministic supported CASIO mappings, and no official grading/pass-fail/final-judgment claims. | With the invited account, complete the live 2차 rewrite/CASIO browser path and confirm the same copy guardrails. |
+| 7. Boundaries | Source/script pass; authenticated learner nav not verifiable | `/app`, `/exams`, `/admin`, `/instructor`, `/studio`, `/pricing`, `/checkout`, `/exams/archive` | Readiness route/source guards verify learner nav excludes admin/instructor/studio/payment/archive links and `/exams` exposes only `감정평가사 1차` and `감정평가사 2차`. Browser nav verification under an invited account was not possible without credentials. | With the invited account, confirm learner nav does not expose `/admin`, `/instructor`, `/studio`, `/pricing`, `/checkout`, or `/exams/archive`, and confirm `/exams` shows only 감정평가사 1차 and 감정평가사 2차. |
+
+### Commands run on 2026-06-01
+
+| Command | Result | Evidence / notes |
+| --- | --- | --- |
+| `npm run verify:learner-loop:ci` | Pass | 152 learner-loop tests passed, 5 quality-eval tests passed, taxonomy check passed, and production build completed. Build emitted the existing Turbopack NFT tracing warning for `next.config.ts` → `lib/review-os/question-reference.ts` → `app/app/items/[itemId]/page.tsx`; no command failure. |
+| `npm run check:closed-beta-readiness` | Pass | Learner-loop verification, data-boundary tests, question-reference tests, route/source guard checks, and production build passed. Final script output: `[closed-beta-readiness] PASS: closed beta learner loop, data boundary, route/source guards, question references, and build passed.` |
+| `npm run check:taxonomy` | Pass | Sample taxonomy classifications returned high-confidence 감정평가사 1차/2차 nodes for 회계학 재고자산 저가법, 민법 물권변동, and 감정평가 및 보상법규 사업인정. |
+| `npm run build` | Pass | Next.js production build completed, TypeScript passed, and 46 static pages generated. Existing Turbopack NFT tracing warning remained non-fatal. |
+| `npx playwright install chromium` | Pass with environment warning | Chromium downloaded successfully after the first CDN mirror returned 403 and the fallback mirror succeeded. Playwright reported missing host dependencies afterward. |
+| `npx playwright install-deps chromium` | Pass with environment warning | Browser host dependencies installed successfully. `apt-get update` warned that the `mise.jdx.dev` proxy returned 403, but Ubuntu package indexes and dependency installation succeeded. |
+| `npx playwright test tests/e2e/authenticated-smoke.spec.ts` | Not verifiable | After browser setup, the command exited 0 with 2 skipped tests because the invited-account credential variables were missing. |
+| `npm run lint` | Pass with existing warnings | ESLint exited 0 with 10 pre-existing unused-variable warnings and no errors. |
+
+### Remaining manual-only checks
+
+- Provide the requested secret E2E variables in a secure runner and rerun authenticated browser QA against the intended preview/staging `E2E_BASE_URL`.
+- Complete non-invited account access blocking and learner-data inaccessibility checks in a live browser.
+- Complete invited account `/app`, `/app/capture`, Today Plan, 1차 O/X saved retry, 2차 Rewrite/CASIO, and learner-nav boundary checks in a live browser.
+- Confirm no screenshots or browser artifacts include test account data if the manual run captures evidence.
