@@ -47,25 +47,50 @@ function highlightTrapWords(text: string, trapWords: string[]) {
   ) : part);
 }
 
+function conceptReasonLabel(attempt: OxAttempt) {
+  if (attempt.result === "incorrect") return "왜 틀렸는지";
+  if (attempt.certainty === "confused") return "왜 흔들렸는지";
+  return "판단 기준 확인";
+}
+
+function preferredExpressionTrap(trapWords: string[]) {
+  if (trapWords.includes("원칙적으로")) return "원칙적으로";
+  return trapWords.find((word) => ["원칙", "예외", "항상", "언제나", "할 수 있다", "하여야 한다", "전부", "일부"].includes(word));
+}
+
+function preferredLegalConcept(trapWords: string[]) {
+  if (trapWords.includes("무효")) return "무효";
+  if (trapWords.includes("취소")) return "취소";
+  return null;
+}
+
+function reviewFocusLabel(statement: FirstExamStatement) {
+  if (statement.statementText.includes("의사무능력자") && statement.statementText.includes("무효")) return "의사능력 유무와 무효 효과";
+  return statement.conceptCandidate ?? statement.subject;
+}
+
 function ConceptPopup({ statement, attempt }: { statement: FirstExamStatement; attempt: OxAttempt }) {
   const concept = buildFirstOxConceptCardPayload(statement, attempt);
   if (!concept) return null;
+  const legalConcept = preferredLegalConcept(concept.trapWords);
+  const expressionTrap = preferredExpressionTrap(concept.trapWords);
 
   return (
     <aside className="space-y-3 rounded-[var(--radius-lg)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-soft)] p-4 text-sm leading-7 text-[color:var(--foreground-strong)]">
       <p className="text-xs font-medium text-[color:var(--muted)]">개념 1개만 확인</p>
       <div className="grid gap-3">
         <div>
-          <p className="text-xs text-[color:var(--muted)]">왜 틀렸는지</p>
+          <p className="text-xs text-[color:var(--muted)]">{conceptReasonLabel(attempt)}</p>
           <p>{concept.minimalExplanation}</p>
         </div>
         <div>
-          <p className="text-xs text-[color:var(--muted)]">핵심 개념</p>
-          <p>{concept.coreRule}</p>
+          <p className="text-xs text-[color:var(--muted)]">핵심 법률개념</p>
+          <p>{legalConcept ?? concept.coreRule}</p>
+          {legalConcept ? <p className="mt-1 text-xs leading-6 text-[color:var(--muted)]">{concept.coreRule}</p> : null}
         </div>
         <div>
-          <p className="text-xs text-[color:var(--muted)]">주의 표현</p>
-          <p>{concept.trapWords.length > 0 ? concept.trapWords.join(" · ") : "조건 표현 1개"}</p>
+          <p className="text-xs text-[color:var(--muted)]">표현 함정</p>
+          <p>{expressionTrap ?? (concept.trapWords.length > 0 ? concept.trapWords.join(" · ") : "조건 표현 1개")}</p>
         </div>
         <div>
           <p className="text-xs text-[color:var(--muted)]">다음 행동</p>
@@ -109,7 +134,7 @@ function feedbackCopy(statement: FirstExamStatement, attempt: OxAttempt) {
   if (kind === "none") return { tone: "correct" as const, title: "알고 맞힌 선지는 큐에 넣지 않습니다.", next: "다음 선지로 넘어갑니다." };
   if (kind === "wrong_answer_retry") return { tone: "incorrect" as const, title: "판단이 달랐습니다. 근거 1줄을 다시 고정합니다.", next: "이 선지는 재시도 신호로 저장됩니다." };
   if (kind === "weak_confidence") return { tone: "warning" as const, title: "맞혔지만 헷갈린 선지입니다.", next: "약한 확신 신호로 저장됩니다." };
-  return { tone: "warning" as const, title: "모르는 선지는 개념 확인으로 연결합니다.", next: `${statement.conceptCandidate ?? statement.subject} 기준 1개를 확인합니다.` };
+  return { tone: "warning" as const, title: "모르는 선지는 개념 확인으로 연결합니다.", next: `${reviewFocusLabel(statement)} 기준 1개를 확인합니다.` };
 }
 
 type FirstOxPracticeClientProps = {

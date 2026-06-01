@@ -140,7 +140,10 @@ function dueSoonIso(createdAt: string) {
 }
 
 function summarizeTrapWords(statement: FirstExamStatement) {
-  if (statement.trapWords.length > 0) return statement.trapWords;
+  const trapWords = statement.trapWords.includes("원칙적으로")
+    ? statement.trapWords.filter((word) => word !== "원칙")
+    : statement.trapWords;
+  if (trapWords.length > 0) return trapWords;
   return statement.conceptCandidate ? [statement.conceptCandidate] : [];
 }
 
@@ -154,7 +157,22 @@ function includesAny(values: string[], candidates: string[]) {
   return candidates.some((candidate) => values.includes(candidate));
 }
 
-function buildTrapSpecificRule(statement: FirstExamStatement, trapWords: string[]): FirstOxConceptRule | null {
+function statementIncludesAll(statement: FirstExamStatement, candidates: string[]) {
+  return candidates.every((candidate) => statement.statementText.includes(candidate));
+}
+
+function buildCivilLawSpecificRule(statement: FirstExamStatement): FirstOxConceptRule | null {
+  if (statementIncludesAll(statement, ["의사무능력자", "무효"])) {
+    return {
+      coreRule: "의사능력이 없는 상태의 법률행위는 무효로 판단합니다.",
+      minimalExplanation: "주체가 의사무능력자인지 먼저 보고, 법률행위의 효과가 무효인지 확인합니다.",
+      examTrapExplanation: "원칙적으로 같은 표현보다 먼저 의사능력 유무와 무효 효과를 확인하세요.",
+    };
+  }
+  return null;
+}
+
+function buildTrapSpecificRule(trapWords: string[]): FirstOxConceptRule | null {
   if (includesAny(trapWords, ["할 수 있다", "하여야 한다"])) {
     return {
       coreRule: "재량 표현인지 의무 표현인지 먼저 가릅니다.",
@@ -201,7 +219,10 @@ function buildTrapSpecificRule(statement: FirstExamStatement, trapWords: string[
 }
 
 function buildFirstOxConceptRule(statement: FirstExamStatement, trapWords: string[]): FirstOxConceptRule {
-  const trapRule = buildTrapSpecificRule(statement, trapWords);
+  const civilLawRule = buildCivilLawSpecificRule(statement);
+  if (civilLawRule) return civilLawRule;
+
+  const trapRule = buildTrapSpecificRule(trapWords);
   if (trapRule) return trapRule;
 
   if (statement.conceptCandidate) {
