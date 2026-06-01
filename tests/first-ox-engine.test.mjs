@@ -275,6 +275,7 @@ test("first O/X retry route consumes retryItemId and loads user-owned raw statem
   const pageSource = await readFile("app/app/first/ox/page.tsx", "utf8");
   assert.match(pageSource, /searchParams\?: Promise<\{ retryItemId\?: string \}>/);
   assert.ok(pageSource.includes("reviewOsService.getWrongAnswerDetail(userId, email, retryItemId)"));
+  assert.ok(pageSource.includes("detail.item.userId !== userId"));
   assert.ok(pageSource.includes("isFirstOxRetryItem(detail.item)"));
   assert.ok(pageSource.includes("splitFirstOxRawQuestionText(detail.item.rawQuestionText)"));
   assert.equal(/derivedPayload.*statementText|metadata.*statementText|conceptCard\?.*statementText/s.test(pageSource), false);
@@ -284,10 +285,11 @@ test("first O/X retry route consumes retryItemId and loads user-owned raw statem
 
 test("FirstOxPracticeClient accepts retry statements while preserving generic practice", async () => {
   const clientSource = await readFile("components/review-os/first-ox/first-ox-practice-client.tsx", "utf8");
-  ["initialStatements?: FirstExamStatement[]", "initialSubject?: string", "initialStem?: string", "initialChoiceText?: string", "retrySourceItemId?: string"].forEach((token) => assert.ok(clientSource.includes(token), token));
+  ["initialStatements?: FirstExamStatement[]", "initialSubject?: string", "initialStem?: string", "initialChoiceText?: string", "retrySourceItemId?: string", "retryLoadStatus?: \"loaded\" | \"not_found\" | \"generic\""].forEach((token) => assert.ok(clientSource.includes(token), token));
   assert.ok(clientSource.includes("retryStatements ?? buildSampleStatements()"));
   assert.ok(clientSource.includes("저장된 선지를 다시 판단합니다."));
   assert.ok(clientSource.includes("저장된 선지를 불러오지 못해 기본 O/X 연습으로 시작합니다."));
+  assert.equal(clientSource.includes('retryLoadStatus === "fallback"'), false);
   assert.ok(clientSource.includes("<CollapsibleDetails title=\"5지선다 직접 붙여넣기\""));
   assert.ok(clientSource.includes("buildSampleStatements()"));
 });

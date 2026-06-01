@@ -118,7 +118,7 @@ type FirstOxPracticeClientProps = {
   initialStem?: string;
   initialChoiceText?: string;
   retrySourceItemId?: string;
-  retryLoadStatus?: "loaded" | "fallback";
+  retryLoadStatus?: "loaded" | "not_found" | "generic";
 };
 
 function buildSampleStatements() {
@@ -214,7 +214,7 @@ export function FirstOxPracticeClient({
 
           {retryLoadStatus === "loaded" ? (
             <p className="rounded-[var(--radius-md)] bg-[color:var(--surfaceQuiet)] px-4 py-3 text-sm leading-6 text-[color:var(--muted-strong)]">저장된 선지를 다시 판단합니다.</p>
-          ) : retryLoadStatus === "fallback" ? (
+          ) : retryLoadStatus === "not_found" ? (
             <p className="rounded-[var(--radius-md)] bg-[color:var(--surfaceQuiet)] px-4 py-3 text-sm leading-6 text-[color:var(--muted-strong)]">저장된 선지를 불러오지 못해 기본 O/X 연습으로 시작합니다.</p>
           ) : null}
 

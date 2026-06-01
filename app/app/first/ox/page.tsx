@@ -16,7 +16,7 @@ type FirstOxRetryState = {
   initialStem?: string;
   initialChoiceText?: string;
   retrySourceItemId?: string;
-  retryLoadStatus?: "loaded" | "fallback";
+  retryLoadStatus?: "loaded" | "not_found" | "generic";
 };
 
 export default async function FirstOxPracticePage({ searchParams }: PageProps) {
@@ -25,20 +25,20 @@ export default async function FirstOxPracticePage({ searchParams }: PageProps) {
   const { session } = await getReviewOsServerContext(returnTo);
   const retryState = session.userId && session.email && retryItemId
     ? await loadFirstOxRetryState(session.userId, session.email, retryItemId)
-    : {};
+    : ({ retryLoadStatus: "generic" } satisfies FirstOxRetryState);
 
   return <FirstOxPracticeClient {...retryState} />;
 }
 
 async function loadFirstOxRetryState(userId: string, email: string, retryItemId: string): Promise<FirstOxRetryState> {
   const detail = await reviewOsService.getWrongAnswerDetail(userId, email, retryItemId).catch(() => null);
-  if (!detail || !isFirstOxRetryItem(detail.item)) {
-    return { retryLoadStatus: "fallback" };
+  if (!detail || detail.item.userId !== userId || !isFirstOxRetryItem(detail.item)) {
+    return { retryLoadStatus: "not_found" };
   }
 
   const raw = splitFirstOxRawQuestionText(detail.item.rawQuestionText);
   if (!raw.statement) {
-    return { retryLoadStatus: "fallback" };
+    return { retryLoadStatus: "not_found" };
   }
 
   const conceptCard = detail.item.conceptCard;
