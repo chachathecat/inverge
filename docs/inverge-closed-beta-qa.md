@@ -124,7 +124,7 @@ npm run check:closed-beta-readiness
 
 ## Closed Beta QA Agent Pass — 2026-05-31
 
-- Branch basis: PR #290 / latest checked-out main after merge (`1e8d99a`, `Harden closed beta learner loop readiness (#290)`).
+- Branch basis: PR #291 / latest checked-out main after merge (`e9d483c`, `Document closed beta QA agent pass (#291)`).
 - Mode: source-level and script-level QA only. Browser/Vercel preview access was unavailable in this environment, so visual/mobile/auth flows remain manual-only.
 - Release-blocker result: no P0/P1 learner-facing closed-beta blockers found. No feature, payment, public archive UI, additional exam scope, or instructor grading changes were made.
 
@@ -150,7 +150,7 @@ npm run check:closed-beta-readiness
 | Reference Context / Question Archive | Source/script pass | Tests verified optional collapsed hints, metadata-only question reference records, no dense learner archive UI created by question-reference DB integration, no raw/copyrighted problem text requirement for hints, and stripping user raw text before reference matching. | QA agent |
 | Mode Migration | Source/script pass; visual preview pending | Tests verified manual migration, archived 1차 history, second-mode next-action emphasis, and no pass/fail or official-result claim. | QA agent |
 | Data Boundary | Source/script pass | Tests verified recursive raw-key telemetry sanitization, derived metadata exclusion for OCR/user answer/problem/rewrite paragraph fields, raw-field stripping for reference requests, and safe learning-signal metadata. | QA agent |
-| Product scope / nav boundaries | Exception documented; P2 follow-up | Source review verified learner navigation excludes admin/instructor/studio/payment/archive links and unsupported actuarial learner routes are hard-blocked with `notFound()`. `/exams` currently includes `감정평가사 1차` and `감정평가사 2차`, but it also renders `답안 검토실` with the `운영자용 베타` badge linking to `/answer-review`; therefore this QA pass does **not** claim `/exams` only exposes the two learner tracks. P2 product-scope follow-up: Decide whether 답안 검토실 should remain visible on `/exams` for closed beta, be hidden from learner selection, or be moved behind an operator/admin route. Instructor/studio placeholders/admin APIs remain protected. | QA agent |
+| Product scope / nav boundaries | Pass after #292 | Source review verified learner navigation excludes admin/instructor/studio/payment/archive links and unsupported actuarial learner routes are hard-blocked with `notFound()`. `/exams` now exposes only `감정평가사 1차` and `감정평가사 2차` as learner exam-selection cards. `/answer-review` remains available as a supporting/internal review flow through existing learner/review links where needed, but it is no longer exposed as the public exam selection surface. Instructor/studio placeholders/admin APIs remain protected. | QA agent |
 
 ### Routes/files checked
 

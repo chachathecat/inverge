@@ -7,7 +7,7 @@ import { reviewOsService } from "@/lib/review-os/service";
 import { cn } from "@/lib/utils";
 
 type ExamSelectionCard = {
-  testId: "exam-card-first" | "exam-card-second" | "exam-card-answer-review";
+  testId: "exam-card-first" | "exam-card-second";
   title: string;
   description: string;
   badge?: string;
@@ -25,11 +25,6 @@ function buildModeEntryHref(isAuthenticated: boolean, authEnabled: boolean, mode
 
 function buildModeInputHref(mode: "first" | "second") {
   return mode === "first" ? "/app/capture?mode=first" : "/app/write?mode=second";
-}
-
-function buildAnswerReviewHref(isAuthenticated: boolean, authEnabled: boolean) {
-  if (!authEnabled || isAuthenticated) return "/answer-review";
-  return "/login?returnTo=%2Fanswer-review";
 }
 
 function SelectionCard({ card }: { card: ExamSelectionCard }) {
@@ -87,15 +82,6 @@ export default async function ExamsPage() {
       description: "쟁점 회상, 목차, 답안 작성, 기준답안 비교, 문단 다시쓰기를 운영합니다.",
       href: modeHrefByData.second,
       cta: "이 트랙으로 시작",
-    },
-    {
-      testId: "exam-card-answer-review",
-      title: "답안 검토실",
-      description: "수기 답안 OCR로 텍스트를 추출하고, 기준답안 비교와 누락 논점 확인, 교정 문단 작성을 진행합니다.",
-      badge: "운영자용 베타",
-      helper: "최종 채점이나 합격 판정이 아니라 답안 검토와 보강을 돕는 운영자용 흐름입니다.",
-      href: buildAnswerReviewHref(session.isAuthenticated, session.authEnabled),
-      cta: "OCR 답안 검토 시작",
     },
   ];
 
