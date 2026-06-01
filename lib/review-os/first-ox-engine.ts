@@ -61,7 +61,7 @@ export const FIRST_OX_TRAP_WORD_GROUPS = [
   ["할 수 있다", "하여야 한다"],
   ["원칙", "예외"],
   ["전부", "일부"],
-  ["항상", "원칙적으로"],
+  ["항상", "언제나", "원칙적으로"],
   ["무효", "취소"],
   ["원시취득", "승계취득"],
   ["과세", "비과세"],
@@ -144,28 +144,100 @@ function summarizeTrapWords(statement: FirstExamStatement) {
   return statement.conceptCandidate ? [statement.conceptCandidate] : [];
 }
 
+type FirstOxConceptRule = {
+  coreRule: string;
+  minimalExplanation: string;
+  examTrapExplanation: string;
+};
+
+function includesAny(values: string[], candidates: string[]) {
+  return candidates.some((candidate) => values.includes(candidate));
+}
+
+function buildTrapSpecificRule(statement: FirstExamStatement, trapWords: string[]): FirstOxConceptRule | null {
+  if (includesAny(trapWords, ["할 수 있다", "하여야 한다"])) {
+    return {
+      coreRule: "재량 표현인지 의무 표현인지 먼저 가릅니다.",
+      minimalExplanation: "할 수 있다는 가능·재량, 하여야 한다는 의무·강행으로 판단 방향이 달라질 수 있습니다.",
+      examTrapExplanation: "가능 규정을 의무처럼 읽거나 의무 규정을 재량처럼 읽으면 O/X 판단이 뒤집힙니다.",
+    };
+  }
+  if (includesAny(trapWords, ["원칙", "예외", "항상", "언제나", "원칙적으로"])) {
+    return {
+      coreRule: "절대 표현인지, 예외가 붙은 원칙 표현인지 먼저 확인합니다.",
+      minimalExplanation: "원칙·예외·항상·언제나는 예외 유무 하나로 판단이 바뀌는 표현입니다.",
+      examTrapExplanation: "항상/언제나처럼 예외를 닫는 표현과 원칙적으로처럼 예외를 남기는 표현을 구별합니다.",
+    };
+  }
+  if (includesAny(trapWords, ["전부", "일부"])) {
+    return {
+      coreRule: "효과가 전부에 미치는지 일부에만 미치는지 범위를 먼저 자릅니다.",
+      minimalExplanation: "전부와 일부는 결론의 범위를 바꾸는 표현입니다.",
+      examTrapExplanation: "부분 효력을 전체 효력처럼 읽으면 범위 판단에서 O/X가 흔들립니다.",
+    };
+  }
+  if (includesAny(trapWords, ["무효", "취소"])) {
+    return {
+      coreRule: "처음부터 효력이 없는지, 취소 전까지 효력이 움직이는지 먼저 구별합니다.",
+      minimalExplanation: "무효와 취소는 효력 발생 시점과 사후 확정 가능성에서 갈립니다.",
+      examTrapExplanation: "무효를 취소처럼, 취소를 무효처럼 읽으면 추인·확정 시점 판단이 달라집니다.",
+    };
+  }
+  if (includesAny(trapWords, ["원시취득", "승계취득"])) {
+    return {
+      coreRule: "권리가 새로 생기는지, 이전 권리가 이전되는지 먼저 판단합니다.",
+      minimalExplanation: "원시취득은 새 취득, 승계취득은 기존 권리의 이전 여부가 핵심입니다.",
+      examTrapExplanation: "권리 승계 여부를 놓치면 취득 원인과 항변 승계 판단까지 함께 흔들립니다.",
+    };
+  }
+  if (includesAny(trapWords, ["인식", "측정", "평가"])) {
+    return {
+      coreRule: "회계 처리 단계가 인식·측정·평가 중 어디인지 먼저 분류합니다.",
+      minimalExplanation: "인식·측정·평가는 같은 계산 문제가 아니라 분류 단계가 다른 함정입니다.",
+      examTrapExplanation: "재무제표에 잡는 시점, 금액을 정하는 기준, 이후 평가 기준을 섞지 않습니다.",
+    };
+  }
+  return null;
+}
+
+function buildFirstOxConceptRule(statement: FirstExamStatement, trapWords: string[]): FirstOxConceptRule {
+  const trapRule = buildTrapSpecificRule(statement, trapWords);
+  if (trapRule) return trapRule;
+
+  if (statement.conceptCandidate) {
+    return {
+      coreRule: `${statement.conceptCandidate}에서 조건 표현 1개를 먼저 확인합니다.`,
+      minimalExplanation: `${statement.conceptCandidate} 판단은 요건·효과·예외 중 빠진 조건 1개를 고정해야 안정됩니다.`,
+      examTrapExplanation: "개념명을 외우는 것보다 선지의 조건 표현이 그 개념의 요건과 맞는지 먼저 대조합니다.",
+    };
+  }
+
+  if (statement.topicCandidate || statement.subject) {
+    const topic = statement.topicCandidate ?? statement.subject;
+    return {
+      coreRule: `${topic}에서 선지 조건 표현 1개를 먼저 확인합니다.`,
+      minimalExplanation: `${topic} 항목은 결론보다 조건 표현을 먼저 회상해야 합니다.`,
+      examTrapExplanation: "주제명만 보고 판단하지 말고, 선지가 바꾼 조건·범위·예외 표현을 먼저 표시합니다.",
+    };
+  }
+
+  return {
+    coreRule: "정답 확정 전 임시 개념 힌트입니다. 조건 표현 1개를 먼저 확인하세요.",
+    minimalExplanation: "정답 확정 전 임시 개념 힌트입니다. 조건 표현 1개를 먼저 확인하세요.",
+    examTrapExplanation: "조건 표현 1개를 확인한 뒤 같은 선지를 다시 판단합니다.",
+  };
+}
+
 export function buildFirstOxConceptCardPayload(statement: FirstExamStatement, attempt: OxAttempt, referenceSnippets: ReferenceSnippet[] = []): FirstOxConceptCardPayload | null {
   const kind = resolveFirstOxLearningSignalKind(attempt);
   if (kind === "none") return null;
 
   const trapWords = summarizeTrapWords(statement);
-  const trapText = trapWords.length > 0 ? trapWords.join(" · ") : "선지의 조건 표현";
-  const coreRule = statement.conceptCandidate
-    ? `${statement.conceptCandidate} 기준 1개를 먼저 고정합니다.`
-    : `${statement.subject} 판단 기준 1개를 먼저 고정합니다.`;
-  const minimalExplanation = kind === "wrong_answer_retry"
-    ? `${trapText} 때문에 판단 방향이 바뀌었습니다.`
-    : kind === "weak_confidence"
-      ? `${trapText}에서 확신이 흔들렸습니다.`
-      : `${trapText}를 판단할 기준이 아직 비어 있습니다.`;
-  const examTrapExplanation = trapWords.length > 0
-    ? `이 선지는 ${trapText} 같은 표현을 바꿔 O/X 판단을 흔듭니다.`
-    : "이 선지는 조건 표현 하나가 바뀌면 O/X 판단이 달라질 수 있습니다.";
-  const nextReviewAction = kind === "wrong_answer_retry"
-    ? "같은 선지를 근거 1줄로 다시 판단합니다."
-    : kind === "weak_confidence"
-      ? "핵심어 1개를 가리고 다시 회상합니다."
-      : "핵심 개념 1개를 확인한 뒤 O/X를 다시 판단합니다.";
+  const rule = buildFirstOxConceptRule(statement, trapWords);
+  const { coreRule, minimalExplanation, examTrapExplanation } = rule;
+  const nextReviewAction = kind === "weak_confidence"
+    ? "핵심어 1개를 가리고 같은 선지를 다시 판단합니다."
+    : "같은 선지를 근거 1줄로 다시 판단합니다.";
 
   return {
     sourceType: "first_ox",

@@ -11,6 +11,7 @@ import { buildAnswerSkeletonGuide, mapCaptureNoteToPastExamReferenceMatches } fr
 import { getSimilarQuestionReferenceCandidates } from "@/lib/review-os/question-reference";
 import { reviewOsService } from "@/lib/review-os/service";
 import { buildDetailStudyNote, buildRewriteComparisonNote } from "@/lib/review-os/study-note";
+import type { ConceptReviewCardPayload, WrongAnswerItemRecord } from "@/lib/review-os/types";
 
 type PageProps = {
   params: Promise<{ itemId: string }>;
@@ -100,6 +101,8 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
     derivedTags: resolvedDetail.tags.flatMap((tag) => [tag.topicTag, tag.mistakeType, tag.taskType]).filter(Boolean),
     safeSkeletonIds: [String(resolvedDetail.item.supportedCalculatorTemplateId ?? ""), isSecond ? "second_law_requirement_subsumption" : ""].filter(Boolean),
   });
+  const firstOxReview = !isSecond ? buildFirstOxReviewDetail(resolvedDetail.item) : null;
+  const firstOxNextActionLine = firstOxReview ? "같은 선지를 근거 1줄로 다시 판단합니다." : nextActionLine;
 
   return (
     <div className="space-y-6">
@@ -126,7 +129,7 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
         <p className="text-caption text-[color:var(--muted)]">이번 항목의 핵심</p>
         <div className="mt-3 grid gap-3 md:grid-cols-2">
           <MiniArtifact label="가장 큰 신호 1개" value={biggestSignal} />
-          <MiniArtifact label="다음 행동 1개" value={nextActionLine} />
+          <MiniArtifact label="다음 행동 1개" value={firstOxNextActionLine} />
         </div>
       </section>
 
@@ -210,7 +213,81 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
         </details>
       ) : null}
 
-      {isSecond ? (
+      {firstOxReview ? (
+        <section className="space-y-4">
+          <section className="rounded-[var(--radius-card)] border border-[color:var(--cue-focus)] bg-[color:var(--cue-focus-bg)] p-6">
+            <p className="text-caption text-[color:var(--cue-focus)]">원문 선지</p>
+            <p className="mt-3 whitespace-pre-wrap text-body-lg font-semibold leading-8 text-[color:var(--foreground-strong)]">
+              {firstOxReview.statement}
+            </p>
+            {firstOxReview.stem ? (
+              <details className="mt-4 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-3 text-sm leading-7 text-[color:var(--muted)]">
+                <summary className="cursor-pointer font-medium text-[color:var(--foreground-strong)]">문항 줄기 펼쳐보기</summary>
+                <p className="mt-2 whitespace-pre-wrap">{firstOxReview.stem}</p>
+              </details>
+            ) : null}
+            <div className="mt-4 grid gap-3 md:grid-cols-3">
+              <MiniArtifact label="내 선택" value={firstOxReview.userChoice} />
+              {firstOxReview.expectedChoice ? <MiniArtifact label="기대 판단" value={firstOxReview.expectedChoice} /> : null}
+              <MiniArtifact label="상태" value={firstOxReview.statusLabel} />
+            </div>
+            <p className="mt-3 text-sm leading-7 text-[color:var(--foreground-strong)]">{firstOxReview.statusCopy}</p>
+          </section>
+
+          <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] p-5">
+            <p className="text-caption text-[color:var(--muted)]">상태</p>
+            <div className="mt-3 grid gap-3 md:grid-cols-2">
+              <MiniArtifact label="가장 큰 신호 1개" value={firstOxReview.biggestSignal} />
+              <MiniArtifact label="다음 행동 1개" value="같은 선지를 근거 1줄로 다시 판단합니다." />
+            </div>
+          </section>
+
+          {firstOxReview.conceptCard ? (
+            <ArtifactBlock tone="focus" eyebrow="핵심 개념 카드" title={firstOxReview.conceptCard.coreRule}>
+              <div className="grid gap-3 text-sm leading-7 text-[color:var(--foreground-strong)] md:grid-cols-2">
+                <p className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4">
+                  {firstOxReview.conceptCard.minimalExplanation}
+                </p>
+                <p className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4">
+                  {firstOxReview.conceptCard.examTrapExplanation}
+                </p>
+              </div>
+              <p className="mt-3 text-sm leading-7 text-[color:var(--foreground-strong)]">다음 행동: {firstOxReview.conceptCard.nextReviewAction}</p>
+            </ArtifactBlock>
+          ) : null}
+
+          <ArtifactBlock tone="review" eyebrow="다음 행동" title="같은 선지 다시 판단하기">
+            <p className="text-sm leading-7 text-[color:var(--muted)]">같은 유형의 선지부터 다시 판단합니다.</p>
+            <div className="mt-4">
+              <Link href={firstOxReview.retryHref}>
+                <Button type="button">같은 선지 다시 판단하기</Button>
+              </Link>
+            </div>
+          </ArtifactBlock>
+
+          <details className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-5">
+            <summary className="cursor-pointer list-none text-sm font-medium text-[color:var(--foreground-strong)]">세부 기록 펼쳐보기</summary>
+            <div className="mt-4 space-y-4">
+              <ArtifactBlock tone="neutral" eyebrow="기록 요약" title={note.summary}>
+                <p className="text-sm leading-7 text-[color:var(--muted)]">판정 기록은 보조 정보입니다. 기본 작업은 같은 선지 판단 재시도입니다.</p>
+              </ArtifactBlock>
+              <ArtifactBlock tone="neutral" eyebrow="헷갈린 비교 포인트" title={note.comparisonPoint ?? note.weakPoint}>
+                <p className="text-sm leading-7 text-[color:var(--muted)]">기대 판단은 학습 기준일 뿐 확정 정답이나 최종 판정이 아닙니다.</p>
+              </ArtifactBlock>
+              <section className="grid gap-4 lg:grid-cols-2">
+                {firstOxReview.expectedChoice ? <SourceBlock label="기대 판단" value={firstOxReview.expectedChoice} /> : null}
+                <SourceBlock label="내 선택" value={firstOxReview.userChoice} />
+              </section>
+              <ArtifactBlock tone="review" eyebrow="리뷰 노트" title={note.noteCard}>
+                <div className="mt-4 grid gap-3 md:grid-cols-2">
+                  <p className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 text-sm leading-7 text-[color:var(--foreground-strong)]">{note.notebookLine}</p>
+                  <p className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 text-sm leading-7 text-[color:var(--foreground-strong)]">{note.recurrenceText}</p>
+                </div>
+              </ArtifactBlock>
+            </div>
+          </details>
+        </section>
+      ) : isSecond ? (
         <section className="space-y-4">
           <SessionCompletionSummary
             completedWork={secondCompletionWork}
@@ -450,16 +527,18 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
         </section>
       ) : null}
 
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <Link href={`/app/review?mode=${mode}`}>
-          <Button type="button">review queue 보기</Button>
-        </Link>
-        <Link href={`/app/capture?mode=${mode}`}>
-          <Button type="button" variant="outline">
-            {isSecond ? "답안 하나 더 올리기" : "문제 하나 더 올리기"}
-          </Button>
-        </Link>
-      </div>
+      {!firstOxReview ? (
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <Link href={`/app/review?mode=${mode}`}>
+            <Button type="button">review queue 보기</Button>
+          </Link>
+          <Link href={`/app/capture?mode=${mode}`}>
+            <Button type="button" variant="outline">
+              {isSecond ? "답안 하나 더 올리기" : "문제 하나 더 올리기"}
+            </Button>
+          </Link>
+        </div>
+      ) : null}
 
       <ReviewOsFeedbackButton route={`/app/items/${itemId}`} pageContext={{ itemId, isSecond }} />
     </div>
@@ -479,6 +558,81 @@ function formatMatchedFieldLabels(
     skeleton: "학습용 skeleton",
   };
   return fields.map((field) => fieldLabelMap[field]);
+}
+
+type FirstOxReviewDetail = {
+  statement: string;
+  stem: string | null;
+  userChoice: string;
+  expectedChoice: string | null;
+  statusLabel: "낮은 확신" | "확신 오답" | "오답" | "근거 확인 필요";
+  statusCopy: string;
+  biggestSignal: string;
+  retryHref: string;
+  conceptCard?: ConceptReviewCardPayload;
+};
+
+function isKnownOx(value: string | undefined | null): value is "O" | "X" {
+  return value === "O" || value === "X";
+}
+
+function splitFirstOxRawQuestionText(rawQuestionText: string | undefined | null) {
+  const lines = (rawQuestionText ?? "")
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (lines.length === 0) return { statement: "저장된 원문 선지가 없습니다. 다음 retry에서 선지를 다시 확인합니다.", stem: null };
+  if (lines.length === 1) return { statement: lines[0], stem: null };
+  return { statement: lines.at(-1) ?? lines.join("\n"), stem: lines.slice(0, -1).join("\n") };
+}
+
+function resolveFirstOxStatus(item: WrongAnswerItemRecord): Pick<FirstOxReviewDetail, "statusLabel" | "statusCopy" | "biggestSignal"> {
+  const expectedKnown = isKnownOx(item.correctAnswer);
+  const userKnown = isKnownOx(item.userAnswer);
+  const lowConfidence = item.confidence === "낮음";
+  if (!expectedKnown || !userKnown) {
+    return {
+      statusLabel: "근거 확인 필요",
+      statusCopy: "정답 확정 전, 판단 기준을 먼저 확인하는 항목입니다.",
+      biggestSignal: "기대 판단 확정 전 기준 확인",
+    };
+  }
+  if (item.userAnswer === item.correctAnswer && lowConfidence) {
+    return {
+      statusLabel: "낮은 확신",
+      statusCopy: "맞혔더라도 다시 볼 가치가 있습니다.",
+      biggestSignal: "맞혔지만 흔들린 조건 표현",
+    };
+  }
+  if (item.userAnswer !== item.correctAnswer && !lowConfidence) {
+    return {
+      statusLabel: "확신 오답",
+      statusCopy: "맞다고 믿은 기준이 실제 판단과 달랐습니다.",
+      biggestSignal: "확신한 판단 기준의 불일치",
+    };
+  }
+  return {
+    statusLabel: "오답",
+    statusCopy: "내 판단과 기대 판단이 달랐습니다.",
+    biggestSignal: "내 선택과 기대 판단의 차이",
+  };
+}
+
+function buildFirstOxReviewDetail(item: WrongAnswerItemRecord): FirstOxReviewDetail | null {
+  const isFirstOx = item.conceptCard?.sourceType === "first_ox" || item.sourceLabel === "1차 O/X 역공학";
+  if (!isFirstOx) return null;
+  const raw = splitFirstOxRawQuestionText(item.rawQuestionText);
+  const status = resolveFirstOxStatus(item);
+  const expectedChoice = isKnownOx(item.correctAnswer) ? item.correctAnswer : null;
+  const retryItemId = item.id;
+  return {
+    ...raw,
+    userChoice: item.userAnswer === "unknown" ? "모름" : item.userAnswer,
+    expectedChoice,
+    ...status,
+    retryHref: retryItemId ? `/app/first/ox?retryItemId=${encodeURIComponent(retryItemId)}` : "/app/first/ox",
+    conceptCard: item.conceptCard,
+  };
 }
 
 type ItemTaxonomyCandidate = {
