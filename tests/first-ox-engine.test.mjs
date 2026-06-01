@@ -235,3 +235,52 @@ test("wrong-answer derived payload stores sanitized concept card only", async ()
   const conceptSource = await readFile("lib/review-os/first-ox-engine.ts", "utf8");
   assert.equal(/originalStatement:\s*statement\.statementText/.test(conceptSource), false);
 });
+
+test("O/X detail source keeps original statement prominent with precise states and retry CTA", async () => {
+  const source = await readFile("app/app/items/[itemId]/page.tsx", "utf8");
+  ["원문 선지", "내 선택", "기대 판단", "상태", "세부 기록 펼쳐보기", "같은 선지 다시 판단하기"].forEach((token) => assert.ok(source.includes(token), token));
+  ["근거 확인 필요", "낮은 확신", "오답", "확신 오답"].forEach((token) => assert.ok(source.includes(token), token));
+  assert.ok(source.includes("정답 확정 전, 판단 기준을 먼저 확인하는 항목입니다."));
+  assert.ok(source.includes("맞혔더라도 다시 볼 가치가 있습니다."));
+  assert.ok(source.includes("내 판단과 기대 판단이 달랐습니다."));
+  assert.ok(source.includes("맞다고 믿은 기준이 실제 판단과 달랐습니다."));
+  assert.match(source, /\/app\/first\/ox\?retryItemId=/);
+});
+
+test("first-ox concept card uses trap-specific copy and removes vague fallback", () => {
+  const [dutyStatement] = statements();
+  const attempt = evaluateFirstOxAttempt(dutyStatement, "X", "certain", "2026-05-30T00:00:00.000Z");
+  const concept = buildFirstOxConceptCardPayload(dutyStatement, attempt);
+  assert.ok(concept?.coreRule.includes("재량 표현인지 의무 표현인지"));
+  assert.ok(concept?.minimalExplanation.includes("가능·재량"));
+
+  const scopeStatement = {
+    ...dutyStatement,
+    id: "scope-1",
+    statementText: "전부가 아니라 일부만 무효일 수 있다.",
+    trapWords: ["전부", "일부"],
+    conceptCandidate: undefined,
+  };
+  const scopeConcept = buildFirstOxConceptCardPayload(scopeStatement, { ...attempt, statementId: "scope-1" });
+  assert.ok(scopeConcept?.coreRule.includes("전부에 미치는지 일부에만"));
+
+  const fallbackStatement = { ...dutyStatement, id: "fallback-1", subject: "", topicCandidate: undefined, conceptCandidate: undefined, trapWords: [] };
+  const fallback = buildFirstOxConceptCardPayload(fallbackStatement, { ...attempt, statementId: "fallback-1" });
+  assert.equal(fallback?.coreRule, "정답 확정 전 임시 개념 힌트입니다. 조건 표현 1개를 먼저 확인하세요.");
+  assert.equal(JSON.stringify(fallback).includes("핵심 개념 확인 기준 1개를 먼저 고정합니다."), false);
+});
+
+test("first-ox source and derived metadata avoid raw statement copying and final-judgment claims", async () => {
+  const statement = statements()[2];
+  const attempt = evaluateFirstOxAttempt(statement, "O", "confused", "2026-05-30T00:00:00.000Z");
+  const signal = buildFirstOxLearningSignalInput(statement, attempt);
+  const item = buildFirstOxWrongAnswerItemInput(statement, attempt);
+  assert.equal(JSON.stringify(signal?.metadataJson).includes(statement.statementText), false);
+  assert.equal(JSON.stringify(item?.conceptCard).includes(statement.statementText), false);
+  assert.ok(item?.rawQuestionText?.includes(statement.statementText));
+
+  const source = await readFile("app/app/items/[itemId]/page.tsx", "utf8");
+  ["공식 답안", "공식 점수", "합격 판정", "불합격 판정", "pass/fail", "official score", "official answer"].forEach((phrase) => {
+    assert.equal(source.toLowerCase().includes(phrase.toLowerCase()), false, phrase);
+  });
+});
