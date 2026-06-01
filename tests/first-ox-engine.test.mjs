@@ -126,6 +126,45 @@ test("incapacity and nullity statement prioritizes civil-law rule over principle
   assert.equal(JSON.stringify(concept).includes("요건·효과·예외 기준 1개를 확인합니다."), false);
 });
 
+test("scope trap beats generic nullity unless incapacity special case is explicit", () => {
+  const statement = normalizeFiveChoiceItemToStatements({
+    id: "partial-nullity-scope",
+    subject: "민법",
+    stem: "옳은 것은?",
+    choices: ["③ 전부가 아니라 일부만 무효일 수 있다."],
+    expectedOxByChoice: ["O"],
+    topicCandidate: "법률행위",
+    conceptCandidate: "무효 범위",
+  })[0];
+  const attempt = evaluateFirstOxAttempt(statement, "unknown", "unknown", "2026-05-30T00:00:00.000Z");
+  const concept = buildFirstOxConceptCardPayload(statement, attempt);
+
+  assert.deepEqual(concept?.trapWords, ["전부", "일부", "무효"]);
+  assert.equal(concept?.coreRule, "효과가 전부에 미치는지 일부에만 미치는지 범위를 먼저 자릅니다.");
+  assert.equal(concept?.minimalExplanation, "전부와 일부는 결론의 범위를 바꾸는 표현입니다.");
+  assert.equal(concept?.examTrapExplanation, "부분 효력을 전체 효력처럼 읽으면 범위 판단에서 O/X가 흔들립니다.");
+  assert.equal(JSON.stringify(concept).includes("처음부터 효력이 없는지"), false);
+});
+
+test("principle expression trap remains prioritized over generic nullity", () => {
+  const statement = normalizeFiveChoiceItemToStatements({
+    id: "principle-generic-nullity",
+    subject: "민법",
+    stem: "옳은 것은?",
+    choices: ["④ 원칙적으로 일부 조항은 무효가 될 수 있다."],
+    expectedOxByChoice: ["O"],
+    topicCandidate: "법률행위",
+    conceptCandidate: "원칙·예외",
+  })[0];
+  const attempt = evaluateFirstOxAttempt(statement, "unknown", "unknown", "2026-05-30T00:00:00.000Z");
+  const concept = buildFirstOxConceptCardPayload(statement, attempt);
+
+  assert.ok(concept?.trapWords.includes("원칙적으로"));
+  assert.ok(concept?.trapWords.includes("무효"));
+  assert.equal(concept?.coreRule, "절대 표현인지, 예외가 붙은 원칙 표현인지 먼저 확인합니다.");
+  assert.equal(JSON.stringify(concept).includes("의사능력이 없는 상태"), false);
+});
+
 test("concept popup separates nullity legal concept from principle expression trap and dynamic labels", async () => {
   const source = await readFile("components/review-os/first-ox/first-ox-practice-client.tsx", "utf8");
   ["핵심 법률개념", "표현 함정", "왜 틀렸는지", "왜 흔들렸는지", "판단 기준 확인"].forEach((token) => assert.ok(source.includes(token), token));
@@ -292,7 +331,7 @@ test("first-ox concept card uses trap-specific copy and removes vague fallback",
     ...dutyStatement,
     id: "scope-1",
     statementText: "전부가 아니라 일부만 무효일 수 있다.",
-    trapWords: ["전부", "일부"],
+    trapWords: ["전부", "일부", "무효"],
     conceptCandidate: undefined,
   };
   const scopeConcept = buildFirstOxConceptCardPayload(scopeStatement, { ...attempt, statementId: "scope-1" });
