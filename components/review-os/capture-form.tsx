@@ -17,6 +17,7 @@ import {
 import { clearReviewOsDraft, loadReviewOsDraft, saveReviewOsDraft } from "@/lib/review-os/browser-storage";
 import { getCalculatorWorkflowForSubject } from "@/lib/review-os/calculator-workflow";
 import { applyDraftToConfirmedSubject, type ExtractionDraft, type ExtractionPipelineResult } from "@/lib/review-os/extraction";
+import { extractFirstExamFiveChoicesFromText } from "@/lib/review-os/first-ox-engine";
 import { resolveReviewSchedule } from "@/lib/review-os/scheduling";
 import {
   CONFIDENCE_OPTIONS,
@@ -788,8 +789,7 @@ export function WrongAnswerCaptureForm({
     syncPageLabels(next);
   }
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function saveCaptureAfterConfirmation(destination: "session" | "first-ox" = "session") {
     setSubmitting(true);
     setError("");
 
@@ -918,7 +918,9 @@ export function WrongAnswerCaptureForm({
         return;
       }
       clearReviewOsDraft(storageKey);
-      router.push(`/app/session?mode=${mode}&savedCapture=1&itemId=${result.item.id}`);
+      router.push(destination === "first-ox" && mode === "first"
+        ? `/app/first/ox?sourceItemId=${encodeURIComponent(result.item.id)}`
+        : `/app/session?mode=${mode}&savedCapture=1&itemId=${result.item.id}`);
       router.refresh();
     } catch {
       setError("정리하지 못했습니다. 내용을 조금 더 확인한 뒤 다시 시도해 주세요.");
@@ -927,9 +929,31 @@ export function WrongAnswerCaptureForm({
     }
   }
 
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    await saveCaptureAfterConfirmation("session");
+  }
+
+  const firstOxChoiceExtraction = mode === "first" ? extractFirstExamFiveChoicesFromText(form.rawQuestionText, form.subjectLabel) : null;
+  const canBridgeToFirstOx = firstOxChoiceExtraction?.status === "detected" && firstOxChoiceExtraction.choices.length === 5;
+
   return (
     <form className="space-y-6 overflow-x-hidden pb-28 sm:pb-0" onSubmit={handleSubmit}>
       <LearnerProgressBar current={currentCaptureStep} total={4} label="오늘 한 것 올리기" helper="1. 입력 → 2. 확인 → 3. 정리 → 4. 저장" />
+
+      {mode === "first" ? (
+        <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 sm:p-5">
+          <p className="text-xs font-medium text-[color:var(--muted)]">Capture-to-OX</p>
+          <h3 className="mt-1 text-lg font-semibold text-[color:var(--foreground-strong)]">5개 선지를 O/X 연습으로 나눌 수 있습니다.</h3>
+          <p className="mt-2 text-sm leading-6 text-[color:var(--muted-strong)]">사진/OCR 결과를 먼저 확인한 뒤, 각 선지를 하나씩 판단합니다. 정답 확정이 아니라 복습용 판단 연습입니다.</p>
+          {!canBridgeToFirstOx ? (
+            <p className="mt-3 rounded-[var(--radius-md)] bg-[color:var(--surfaceQuiet)] px-3 py-2 text-sm text-[color:var(--muted-strong)]">선지 5개를 확실히 찾지 못했습니다. 직접 확인 후 O/X로 나눌 수 있습니다.</p>
+          ) : null}
+          <Button type="button" className="mt-4 w-full sm:w-auto" disabled={submitting || !canBridgeToFirstOx} onClick={() => { void saveCaptureAfterConfirmation("first-ox"); }}>
+            O/X 연습으로 나누기
+          </Button>
+        </section>
+      ) : null}
       {rewriteContext && mode === "second" ? (
         <>
           <RewriteContextPanel

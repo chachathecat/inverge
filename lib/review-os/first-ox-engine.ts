@@ -1,5 +1,5 @@
 import { sanitizeLearningSignalMetadata, sanitizeReferenceRequest } from "./data-boundary";
-import type { LearningSignalEventInput, WrongAnswerItemInput } from "@/lib/review-os/types";
+import { APPRAISAL_FIRST_SUBJECTS, type LearningSignalEventInput, type WrongAnswerItemInput } from "./types";
 import type { ReferenceSnippet } from "./reference-context";
 
 export type OxValue = "O" | "X" | "unknown";
@@ -56,6 +56,77 @@ export type FirstOxConceptCardPayload = {
   official_answer_authority: false;
   referenceSnippets?: ReferenceSnippet[];
 };
+
+
+export type FirstExamChoiceExtractionResult = {
+  status: "detected" | "unclear";
+  subject?: string;
+  stem?: string;
+  choices: string[];
+  message?: string;
+};
+
+function normalizeChoiceBody(value: string) {
+  return value.replace(/\s+/g, " ").trim();
+}
+
+function detectFirstExamSubject(text: string) {
+  return APPRAISAL_FIRST_SUBJECTS.find((subject) => text.includes(subject));
+}
+
+function extractInlineCircledChoices(text: string) {
+  const marker = /[①②③④⑤]\s*/gu;
+  const matches = [...text.matchAll(marker)];
+  if (matches.length !== 5) return null;
+  const choices = matches.map((match, index) => {
+    const start = (match.index ?? 0) + match[0].length;
+    const end = index + 1 < matches.length ? matches[index + 1].index ?? text.length : text.length;
+    return normalizeChoiceBody(text.slice(start, end));
+  });
+  if (choices.some((choice) => choice.length === 0)) return null;
+  return { stem: text.slice(0, matches[0]?.index ?? 0).trim(), choices };
+}
+
+function extractNumberedChoices(text: string, markerPattern: string) {
+  const marker = new RegExp(`(^|\\n)\\s*(${markerPattern})\\s*`, "gu");
+  const matches = [...text.matchAll(marker)];
+  if (matches.length !== 5) return null;
+  const choices = matches.map((match, index) => {
+    const start = (match.index ?? 0) + match[0].length;
+    const end = index + 1 < matches.length ? matches[index + 1].index ?? text.length : text.length;
+    return normalizeChoiceBody(text.slice(start, end));
+  });
+  if (choices.some((choice) => choice.length === 0)) return null;
+  const firstMarkerIndex = matches[0]?.index ?? 0;
+  return { stem: text.slice(0, firstMarkerIndex).trim(), choices };
+}
+
+export function extractFirstExamFiveChoicesFromText(text: string, fallbackSubject?: string): FirstExamChoiceExtractionResult {
+  const source = text.replace(/\r\n/g, "\n").trim();
+  const subject = detectFirstExamSubject(source) ?? fallbackSubject;
+  if (!source) {
+    return { status: "unclear", subject, choices: [], message: "선지 5개를 확실히 찾지 못했습니다. 직접 확인 후 O/X로 나눌 수 있습니다." };
+  }
+
+  const circled = extractInlineCircledChoices(source) ?? extractNumberedChoices(source, "[①②③④⑤]");
+  if (circled) return { status: "detected", subject, stem: circled.stem || undefined, choices: circled.choices };
+
+  const dotted = extractNumberedChoices(source, "[1-5][\\.)]");
+  if (dotted) return { status: "detected", subject, stem: dotted.stem || undefined, choices: dotted.choices };
+
+  const lines = source.split(/\n+/).map((line) => line.trim()).filter(Boolean);
+  if (lines.length === 5) return { status: "detected", subject, choices: lines.map(normalizeChoiceBody) };
+  if (lines.length > 5) {
+    const tail = lines.slice(-5);
+    const prefix = lines.slice(0, -5).join("\n").trim();
+    const markerLikeCount = tail.filter((line) => /^(?:[①②③④⑤]|[1-5][\.)]|\([1-5]\))\s*/u.test(line)).length;
+    if (markerLikeCount === 0 && tail.every((line) => line.length >= 4)) {
+      return { status: "detected", subject, stem: prefix || undefined, choices: tail.map(normalizeChoiceBody) };
+    }
+  }
+
+  return { status: "unclear", subject, choices: [], message: "선지 5개를 확실히 찾지 못했습니다. 직접 확인 후 O/X로 나눌 수 있습니다." };
+}
 
 export const FIRST_OX_TRAP_WORD_GROUPS = [
   ["할 수 있다", "하여야 한다"],
