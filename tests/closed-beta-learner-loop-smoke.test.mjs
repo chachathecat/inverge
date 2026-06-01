@@ -63,26 +63,24 @@ test("closed beta QA checklist exists and covers critical beta flows", () => {
   ].forEach((phrase) => assert.ok(doc.includes(phrase), `missing QA phrase: ${phrase}`));
 });
 
-test("closed beta QA evidence documents /exams answer-review scope exception", () => {
+test("/exams remains a two-track learner selection surface for closed beta", () => {
   const doc = read("docs/inverge-closed-beta-qa.md");
   const examsPage = read("app/exams/page.tsx");
 
-  if (examsPage.includes("exam-card-answer-review")) {
-    assert.ok(doc.includes("Exception documented; P2 follow-up"), "QA evidence must mark /exams scope as an exception/follow-up while answer review is visible");
-    ["감정평가사 1차", "감정평가사 2차", "답안 검토실", "운영자용 베타", "/answer-review"].forEach((phrase) => {
-      assert.ok(doc.includes(phrase), `missing /exams scope exception evidence: ${phrase}`);
-    });
-    assert.ok(
-      doc.includes("Decide whether 답안 검토실 should remain visible on `/exams` for closed beta")
-        || doc.includes("decide whether 답안 검토실 should remain visible on `/exams` for closed beta"),
-      "QA evidence must record the P2 product-scope decision needed for 답안 검토실",
-    );
-    assert.equal(
-      doc.includes("`/exams` presents 감정평가사 1차/2차 learner tracks only"),
-      false,
-      "QA evidence must not claim /exams only has two learner tracks while exam-card-answer-review exists",
-    );
-  }
+  assert.ok(examsPage.includes("exam-card-first"), "/exams must keep the 1차 exam card test id");
+  assert.ok(examsPage.includes("exam-card-second"), "/exams must keep the 2차 exam card test id");
+  assert.equal(examsPage.includes("exam-card-answer-review"), false, "/exams must not expose answer review as an exam-selection card");
+  assert.equal(examsPage.includes("/answer-review"), false, "/exams must not link answer review from the public exam-selection surface");
+  assert.equal(existsSync("app/answer-review/page.tsx"), true, "/answer-review route should remain intact as a supporting/internal flow");
+
+  ["보험계리사", "계리사", "CPA", "세무사", "TOEFL", "SAT", "actuary", "universal exam"].forEach((phrase) => {
+    assert.equal(examsPage.toLowerCase().includes(phrase.toLowerCase()), false, `/exams exposes unsupported track copy: ${phrase}`);
+  });
+
+  assert.ok(doc.includes("Pass after #292"), "QA evidence must mark the product-scope follow-up as resolved after #292");
+  assert.ok(doc.includes("`/exams` now exposes only `감정평가사 1차` and `감정평가사 2차`"), "QA evidence must record the two learner tracks now exposed on /exams");
+  assert.ok(doc.includes("`/answer-review` remains available as a supporting/internal review flow"), "QA evidence must keep answer-review documented as supporting/internal, not public exam selection");
+  assert.equal(doc.includes("Exception documented; P2 follow-up"), false, "QA evidence must not leave this as an unresolved P2 follow-up");
 });
 
 test("access/onboarding route sources keep invite-only learner access and admin boundaries", async () => {
