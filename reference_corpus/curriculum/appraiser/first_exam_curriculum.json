@@ -1,0 +1,66 @@
+{
+  "schemaVersion": "2026-06-01",
+  "exam": "감정평가사 1차",
+  "sourceStatus": "draft_metadata_from_internal_roadmap",
+  "needsOfficialVerification": true,
+  "lastReviewedAt": "2026-06-01",
+  "verificationNote": "Official subject/unit labels must be verified against Q-Net/current public notice verification before production use.",
+  "storagePolicy": "metadata_only_no_raw_user_or_problem_text",
+  "subjects": [
+    {
+      "id": "first_civil_law",
+      "name": "민법",
+      "units": [
+        { "id": "civil_general", "name": "민법총칙", "taskTypes": ["O/X", "cloze"] },
+        { "id": "civil_juristic_act", "name": "법률행위", "taskTypes": ["O/X", "cloze"] },
+        { "id": "civil_expression", "name": "의사표시", "taskTypes": ["O/X", "cloze"] },
+        { "id": "civil_nullity_rescission", "name": "무효와 취소", "taskTypes": ["O/X", "cloze"] },
+        { "id": "civil_property_rights", "name": "물권법", "taskTypes": ["O/X", "cloze"] }
+      ]
+    },
+    {
+      "id": "first_economics",
+      "name": "경제학원론",
+      "units": [
+        { "id": "econ_supply_demand", "name": "수요·공급과 시장균형", "taskTypes": ["O/X", "cloze"] },
+        { "id": "econ_consumer", "name": "소비자이론", "taskTypes": ["O/X", "cloze"] },
+        { "id": "econ_producer", "name": "생산자이론", "taskTypes": ["O/X", "cloze"] },
+        { "id": "econ_macro", "name": "거시경제 기초", "taskTypes": ["O/X", "cloze"] },
+        { "id": "econ_money_policy", "name": "화폐·금융·정책", "taskTypes": ["O/X", "cloze"] }
+      ]
+    },
+    {
+      "id": "first_real_estate",
+      "name": "부동산학원론",
+      "units": [
+        { "id": "re_foundation", "name": "부동산학 기초", "taskTypes": ["O/X", "cloze"] },
+        { "id": "re_market", "name": "부동산 시장론", "taskTypes": ["O/X", "cloze"] },
+        { "id": "re_policy", "name": "부동산 정책론", "taskTypes": ["O/X", "cloze"] },
+        { "id": "re_investment_finance", "name": "부동산 투자·금융", "taskTypes": ["O/X", "cloze"] },
+        { "id": "re_appraisal_foundation", "name": "감정평가 기초", "taskTypes": ["O/X", "cloze"] }
+      ]
+    },
+    {
+      "id": "first_appraisal_law",
+      "name": "감정평가관계법규",
+      "units": [
+        { "id": "law_land_planning", "name": "국토계획 및 이용 관련 법령", "taskTypes": ["O/X", "cloze"] },
+        { "id": "law_price_disclosure", "name": "부동산 가격공시 관련 법령", "taskTypes": ["O/X", "cloze"] },
+        { "id": "law_appraiser", "name": "감정평가 및 감정평가사 관련 법령", "taskTypes": ["O/X", "cloze"] },
+        { "id": "law_compensation", "name": "공익사업 보상 관련 법령", "taskTypes": ["O/X", "cloze"] },
+        { "id": "law_registration", "name": "부동산 등기·공시 관련 법령", "taskTypes": ["O/X", "cloze"] }
+      ]
+    },
+    {
+      "id": "first_accounting",
+      "name": "회계학",
+      "units": [
+        { "id": "acct_financial_foundation", "name": "재무회계 기초", "taskTypes": ["O/X", "cloze", "accounting template"] },
+        { "id": "acct_assets", "name": "자산 회계", "taskTypes": ["O/X", "cloze", "accounting template"] },
+        { "id": "acct_inventory_lcm", "name": "재고자산과 저가법", "taskTypes": ["O/X", "cloze", "accounting template"] },
+        { "id": "acct_liability_equity", "name": "부채·자본 회계", "taskTypes": ["O/X", "cloze", "accounting template"] },
+        { "id": "acct_cost_management", "name": "원가·관리회계 기초", "taskTypes": ["O/X", "cloze", "accounting template"] }
+      ]
+    }
+  ]
+}

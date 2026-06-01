@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "2026-06-01",
+  "sourceStatus": "draft_metadata_from_internal_roadmap",
+  "needsOfficialVerification": true,
+  "lastReviewedAt": "2026-06-01",
+  "verificationNote": "Track assumptions must be checked against Q-Net/current official notice verification and learner beta evidence before production use.",
+  "storagePolicy": "metadata_only_no_raw_user_or_problem_text",
+  "todayPlanMaxPrimaryTasks": 3,
+  "prioritizationSignals": ["due review", "confidence", "wrong/unknown", "과락 위험", "exam date", "recent missed tasks"],
+  "tracks": {
+    "first_30": { "examMode": "first", "days": 30, "label": "1차 30일 압축", "dailyFocus": ["due review", "과락 위험", "O/X", "cloze"] },
+    "first_60": { "examMode": "first", "days": 60, "label": "1차 60일 재구축", "dailyFocus": ["due review", "weak subject", "O/X", "accounting template"] },
+    "first_90": { "examMode": "first", "days": 90, "label": "1차 90일 균형", "dailyFocus": ["concept node", "retrieval", "mixed review"] },
+    "first_120": { "examMode": "first", "days": 120, "label": "1차 120일 기초", "dailyFocus": ["foundation", "retrieval", "spaced review"] },
+    "second_90": { "examMode": "second", "days": 90, "label": "2차 90일 출력", "dailyFocus": ["issue spotting", "rewrite", "CASIO"] },
+    "second_180": { "examMode": "second", "days": 180, "label": "2차 180일 균형", "dailyFocus": ["subject rotation", "rewrite", "CASIO", "issue spotting"] },
+    "second_365": { "examMode": "second", "days": 365, "label": "2차 365일 장기", "dailyFocus": ["foundation", "short production", "weekly full answer"] }
+  },
+  "dailyTemplates": {
+    "30_min": ["due review", "one retrieval or production task", "retry/rewrite or scheduled review"],
+    "60_min": ["due review", "primary weak-node task", "explanation ladder and retry", "schedule setup"],
+    "90_min": ["due review", "main task block", "secondary repair task", "summary and schedule"],
+    "180_min": ["due review", "deep work block 1", "deep work block 2", "mixed retrieval/rewrite", "adaptation"]
+  }
+}
