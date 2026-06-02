@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ExecutionResultControls } from "@/components/review-os/execution-result-controls";
 import { MicroPracticeCard } from "@/components/review-os/minimal-study-system";
 import type { AppraisalMode } from "@/lib/review-os/appraisal";
 import type { ExecutionReferenceSupport } from "@/lib/review-os/execution-reference-support";
@@ -48,10 +49,8 @@ type TodaySessionRunnerProps = {
 };
 
 type TrapCard = { trapType: string; prompt: string; recallPoint: string; caution: string };
-const SECOND_LOOP_TOKENS = ["쟁점 회상", "가장 큰 간극 1개", "문단 1개만 다시 씁니다.", "전후 비교", "다음 보강 예약"] as const;
-
-const FIRST_LOOP_TOKENS = ["핵심 조건 회상", "짧은 재풀이", "틀린 이유 1개", "근거 1문장"] as const;
-
+export const SECOND_LOOP_TOKENS = ["쟁점 회상", "가장 큰 간극 1개", "문단 1개만 다시 씁니다.", "전후 비교", "다음 보강 예약"] as const;
+export const FIRST_LOOP_TOKENS = ["핵심 조건 회상", "짧은 재풀이", "틀린 이유 1개", "근거 1문장"] as const;
 const FIRST_TRAP_CATEGORIES = ["요건 누락", "원칙/예외 혼동", "선지 끝 조건 오독", "계산/단위 실수", "그래프/공식 조건 혼동", "조문/절차 순서 혼동"] as const;
 
 function buildFirstRoundTrapCards(subject: string, support: ExecutionReferenceSupport | null | undefined): TrapCard[] {
@@ -518,6 +517,13 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
               <p className="mt-1 text-sm text-[color:var(--foreground-strong)]">오늘은 가장 작은 것 1개만 복구합니다.</p>
               <p className="mt-1 text-sm text-[color:var(--foreground-strong)]">새 범위보다 반복 실수 하나를 줄이는 게 우선입니다.</p>
             </div>
+            <ExecutionResultControls
+              examMode={mode}
+              taskType={mode === "second" ? note?.rewriteTaskType ?? "rewrite" : "O/X"}
+              subjectName={queueItem?.subjectLabel}
+              unitName={queueItem?.topicTag}
+              executionSource="session"
+            />
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <Link href={`/app?mode=${mode}`} className="w-full sm:w-auto">
                 <Button type="button" className="w-full sm:w-auto">

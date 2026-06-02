@@ -1,4 +1,3 @@
-import { normalizeCurriculumTaskType } from "./curriculum-engine";
 import { type AppraiserExamMode } from "./curriculum-reference";
 
 export type ExecutionLearningSignalSource = "onboarding" | "today_plan" | "capture" | "session";
@@ -122,8 +121,23 @@ function normalizeDaysUntilExam(daysUntilExam: number | undefined) {
   return Math.max(0, Math.round(daysUntilExam));
 }
 
+const TASK_TYPE_ALIASES: Record<string, string> = {
+  ox: "O/X",
+  "o/x": "O/X",
+  cloze: "cloze",
+  accounting: "accounting template",
+  accounting_template: "accounting template",
+  "accounting template": "accounting template",
+  rewrite: "rewrite",
+  casio: "CASIO",
+  issue: "issue spotting",
+  issue_spotting: "issue spotting",
+  "issue spotting": "issue spotting",
+};
+
 function normalizeTaskType(taskType: string) {
-  return normalizeCurriculumTaskType(taskType) ?? taskType.trim();
+  const cleaned = taskType.trim();
+  return TASK_TYPE_ALIASES[cleaned.toLowerCase()] ?? cleaned;
 }
 
 function isWrongLike(result: ExecutionLearningSignalResult) {
