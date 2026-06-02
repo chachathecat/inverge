@@ -104,6 +104,15 @@ test("docs mention Today Plan max 3 and official verification requirements", asy
   assert.match(docs, /Q-Net\/current (?:public notice|official notice) verification|Q-Net\/current official notice verification/);
 });
 
+test("docs preserve metadata-only raw OCR answer and problem text prohibition", async () => {
+  const docs = await Promise.all(requiredDocs.map(read)).then((parts) => parts.join("\n"));
+
+  assert.match(docs, /raw user OCR|raw OCR/i);
+  assert.match(docs, /raw answer/i);
+  assert.match(docs, /raw problem text|copyrighted problem text/i);
+  assert.match(docs, /metadata(?:-| )only|safe metadata/i);
+});
+
 test("existing learner loop remains the roadmap benchmark", async () => {
   const roadmap = await read("docs/inverge-master-roadmap.md");
   for (const term of ["Input", "Diagnosis", "Tracking", "Prediction", "Recommendation", "Execution", "Retry/rewrite"]) {

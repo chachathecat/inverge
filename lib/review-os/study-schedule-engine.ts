@@ -59,7 +59,12 @@ export type SelectedStudyTrack = {
   selectedTrackId: StudyTrackId;
   trackLabel: string;
   trackDays: number;
+  trackPhase: string;
+  trackGoal: string;
   trackDailyFocus: string[];
+  trackWeeklyFocus: string[];
+  trackRiskHandling: string[];
+  recommendedTaskMix: string[];
   scheduleWarnings: StudyScheduleWarning[];
 };
 
@@ -250,13 +255,14 @@ function buildTodayPlanPreview(input: StudyScheduleEngineInput) {
 
 function weeklyFocusFromTrack(input: StudyScheduleEngineInput, reference: StudyTracksDocument, selectedTrackId: StudyTrackId) {
   const track = reference.tracks[selectedTrackId];
-  const focus = [...track.dailyFocus];
+  const focus = [...track.weeklyFocus, ...track.recommendedTaskMix.slice(0, 2)];
   const weakSubject = safeWeakSubjectName(input.weakSubjectName);
   if (weakSubject && (input.dailyAvailableMinutes === 60 || input.dailyAvailableMinutes === 90 || input.dailyAvailableMinutes === 180)) {
     focus.unshift(`${weakSubject} 약점 보완`);
   }
+  if (track.riskHandling[0]) focus.push(track.riskHandling[0]);
   if (input.currentLevel) focus.push(`${input.currentLevel} 단계 조정`);
-  return [...new Set(focus)].slice(0, 5);
+  return [...new Set(focus)].slice(0, 7);
 }
 
 export function buildScheduleWarnings(reference: Pick<StudyTracksDocument, "needsOfficialVerification" | "sourceStatus" | "verificationNote">): StudyScheduleWarning[] {
@@ -284,7 +290,12 @@ export function selectStudyTrack(input: Pick<StudyScheduleEngineInput, "examMode
     selectedTrackId,
     trackLabel: selectedTrack.label,
     trackDays: selectedTrack.days,
+    trackPhase: selectedTrack.phase,
+    trackGoal: selectedTrack.goal,
     trackDailyFocus: [...selectedTrack.dailyFocus],
+    trackWeeklyFocus: [...selectedTrack.weeklyFocus],
+    trackRiskHandling: [...selectedTrack.riskHandling],
+    recommendedTaskMix: [...selectedTrack.recommendedTaskMix],
     scheduleWarnings: buildScheduleWarnings(reference),
   });
 }

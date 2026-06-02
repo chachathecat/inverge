@@ -1,6 +1,7 @@
 import {
   type AppraiserCurriculumReference,
   type AppraiserExamMode,
+  type CurriculumUnitPlanningMetadata,
   type CurriculumSubject,
   type CurriculumUnit,
   type CurriculumVerificationStatus,
@@ -44,6 +45,7 @@ export type CurriculumClassification = {
   unitId: string | null;
   unitName: string | null;
   allowedTaskTypes: string[];
+  planningMetadata: CurriculumUnitPlanningMetadata | null;
   matchedBy: CurriculumMatchedBy;
   verificationStatus: CurriculumVerificationStatus;
   warnings: string[];
@@ -60,6 +62,14 @@ export type CurriculumTaskCandidate = {
   prioritySignals: string[];
   estimatedMinutes: number;
   isPrimaryCandidate: boolean;
+  metadata: {
+    defaultReviewPattern?: string;
+    coreConcepts?: string[];
+    trapWords?: string[];
+    mistakePatterns?: string[];
+    importance?: string;
+    riskLevel?: string;
+  };
 };
 
 export type CurriculumNextAction = {
@@ -130,6 +140,18 @@ function verificationWarnings(reference: AppraiserCurriculumReference) {
   return reference.verificationStatus.isOfficiallyVerified ? [] : [DRAFT_VERIFICATION_WARNING];
 }
 
+function planningMetadataForUnit(unit: CurriculumUnit): CurriculumUnitPlanningMetadata {
+  return {
+    importance: unit.importance,
+    coreConcepts: [...unit.coreConcepts],
+    ...(unit.trapWords ? { trapWords: [...unit.trapWords] } : {}),
+    ...(unit.mistakePatterns ? { mistakePatterns: [...unit.mistakePatterns] } : {}),
+    defaultReviewPattern: unit.defaultReviewPattern,
+    riskLevel: unit.riskLevel,
+    ...(unit.secondExamBridge ? { secondExamBridge: unit.secondExamBridge } : {}),
+  };
+}
+
 export function classifyLearningSignalToCurriculum(
   signal: CurriculumLearningSignal,
   reference = loadAppraiserCurriculumReference(),
@@ -150,11 +172,12 @@ export function classifyLearningSignalToCurriculum(
         ...base,
         subjectId: match.subject.id,
         subjectName: match.subject.name,
-        unitId: match.unit.id,
-        unitName: match.unit.name,
-        allowedTaskTypes: normalizeAllowedTaskTypes(match.unit.taskTypes),
-        matchedBy: "unitId",
-      };
+	        unitId: match.unit.id,
+	        unitName: match.unit.name,
+	        allowedTaskTypes: normalizeAllowedTaskTypes(match.unit.taskTypes),
+	        planningMetadata: planningMetadataForUnit(match.unit),
+	        matchedBy: "unitId",
+	      };
     }
   }
 
@@ -165,11 +188,12 @@ export function classifyLearningSignalToCurriculum(
         ...base,
         subjectId: match.subject.id,
         subjectName: match.subject.name,
-        unitId: match.unit.id,
-        unitName: match.unit.name,
-        allowedTaskTypes: normalizeAllowedTaskTypes(match.unit.taskTypes),
-        matchedBy: "unitName",
-      };
+	        unitId: match.unit.id,
+	        unitName: match.unit.name,
+	        allowedTaskTypes: normalizeAllowedTaskTypes(match.unit.taskTypes),
+	        planningMetadata: planningMetadataForUnit(match.unit),
+	        matchedBy: "unitName",
+	      };
     }
   }
 
@@ -180,11 +204,12 @@ export function classifyLearningSignalToCurriculum(
         ...base,
         subjectId: subject.id,
         subjectName: subject.name,
-        unitId: null,
-        unitName: null,
-        allowedTaskTypes: normalizeAllowedTaskTypes(subject.units.flatMap((unit) => unit.taskTypes)),
-        matchedBy: "subjectId",
-      };
+	        unitId: null,
+	        unitName: null,
+	        allowedTaskTypes: normalizeAllowedTaskTypes(subject.units.flatMap((unit) => unit.taskTypes)),
+	        planningMetadata: null,
+	        matchedBy: "subjectId",
+	      };
     }
   }
 
@@ -195,11 +220,12 @@ export function classifyLearningSignalToCurriculum(
         ...base,
         subjectId: subject.id,
         subjectName: subject.name,
-        unitId: null,
-        unitName: null,
-        allowedTaskTypes: normalizeAllowedTaskTypes(subject.units.flatMap((unit) => unit.taskTypes)),
-        matchedBy: "subjectName",
-      };
+	        unitId: null,
+	        unitName: null,
+	        allowedTaskTypes: normalizeAllowedTaskTypes(subject.units.flatMap((unit) => unit.taskTypes)),
+	        planningMetadata: null,
+	        matchedBy: "subjectName",
+	      };
     }
   }
 
@@ -210,6 +236,7 @@ export function classifyLearningSignalToCurriculum(
     unitId: null,
     unitName: null,
     allowedTaskTypes: signal.examMode === "first" ? FIRST_FALLBACK_TASK_TYPES : SECOND_FALLBACK_TASK_TYPES,
+    planningMetadata: null,
     matchedBy: "fallback",
   };
 }
@@ -245,6 +272,20 @@ function makeCandidate(
     prioritySignals: unique(prioritySignals),
     estimatedMinutes,
     isPrimaryCandidate: true,
+    metadata: candidateMetadata(classification),
+  };
+}
+
+function candidateMetadata(classification: CurriculumClassification): CurriculumTaskCandidate["metadata"] {
+  const planning = classification.planningMetadata;
+  if (!planning) return {};
+  return {
+    defaultReviewPattern: planning.defaultReviewPattern,
+    coreConcepts: planning.coreConcepts.slice(0, 3),
+    ...(planning.trapWords ? { trapWords: planning.trapWords.slice(0, 3) } : {}),
+    ...(planning.mistakePatterns ? { mistakePatterns: planning.mistakePatterns.slice(0, 3) } : {}),
+    importance: planning.importance,
+    riskLevel: planning.riskLevel,
   };
 }
 
@@ -257,7 +298,24 @@ function basePrioritySignals(classification: CurriculumClassification, signal: C
   if (typeof signal.daysUntilExam === "number" && signal.daysUntilExam <= 30) signals.push("exam date proximity");
   if (signal.recentMissCount && signal.recentMissCount > 0) signals.push("recent missed tasks");
   if (hasAllowedTaskType(classification, taskType)) signals.push("allowed task type match");
+  if (classification.planningMetadata?.importance === "high") signals.push("high importance");
+  if (classification.planningMetadata?.importance === "medium") signals.push("medium importance");
+  if (classification.planningMetadata?.riskLevel === "high") signals.push("high risk unit");
+  if (classification.planningMetadata?.riskLevel === "medium") signals.push("medium risk unit");
   return signals;
+}
+
+function planningRationaleSuffix(classification: CurriculumClassification, taskType: string) {
+  const planning = classification.planningMetadata;
+  if (!planning) return "";
+  const review = `복습 패턴: ${planning.defaultReviewPattern}.`;
+  if (classification.examMode === "first" && (taskType === "O/X" || taskType === "cloze") && planning.trapWords?.[0]) {
+    return ` ${review} 메타 함정: ${planning.trapWords[0]}.`;
+  }
+  if (classification.examMode === "second" && (taskType === "rewrite" || taskType === "issue spotting" || taskType === "CASIO") && planning.mistakePatterns?.[0]) {
+    return ` ${review} 흔한 실수 패턴: ${planning.mistakePatterns[0]}.`;
+  }
+  return ` ${review}`;
 }
 
 function recoveryRationale(signal: CurriculumLearningSignal) {
@@ -272,7 +330,15 @@ function firstExamCandidates(classification: CurriculumClassification, signal: C
   const target = classification.unitName ?? classification.subjectName ?? "확인한 단원";
   const add = (ruleKey: string, taskType: string, title: string, rationale: string, minutes: number) => {
     if (hasAllowedTaskType(classification, taskType)) {
-      candidates.push(makeCandidate(classification, ruleKey, taskType, title, rationale, minutes, basePrioritySignals(classification, signal, taskType)));
+      candidates.push(makeCandidate(
+        classification,
+        ruleKey,
+        taskType,
+        title,
+        `${rationale}${planningRationaleSuffix(classification, taskType)}`,
+        minutes,
+        basePrioritySignals(classification, signal, taskType),
+      ));
     }
   };
 
@@ -302,7 +368,15 @@ function secondExamCandidates(classification: CurriculumClassification, signal: 
   const normalizedTaskType = normalizeCurriculumTaskType(signal.taskType);
   const add = (ruleKey: string, taskType: string, title: string, rationale: string, minutes: number) => {
     if (hasAllowedTaskType(classification, taskType)) {
-      candidates.push(makeCandidate(classification, ruleKey, taskType, title, rationale, minutes, basePrioritySignals(classification, signal, taskType)));
+      candidates.push(makeCandidate(
+        classification,
+        ruleKey,
+        taskType,
+        title,
+        `${rationale}${planningRationaleSuffix(classification, taskType)}`,
+        minutes,
+        basePrioritySignals(classification, signal, taskType),
+      ));
     }
   };
 
@@ -349,6 +423,10 @@ function candidateScore(candidate: CurriculumTaskCandidate) {
     "recent missed tasks": 24,
     "due/recovery": 26,
     "allowed task type match": 12,
+    "high importance": 18,
+    "medium importance": 8,
+    "high risk unit": 22,
+    "medium risk unit": 10,
   };
   return candidate.prioritySignals.reduce((score, signal) => score + (weights[signal] ?? 0), 0);
 }
