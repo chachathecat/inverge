@@ -5,7 +5,7 @@ const nodeCommand = process.execPath;
 
 const steps = [
   {
-    label: "learner-loop verification",
+    label: "learner-loop verification (includes guardrail audit)",
     command: npmCommand,
     args: ["run", "verify:learner-loop:ci"],
   },
@@ -47,5 +47,5 @@ for (const step of steps) {
 }
 
 if (!process.exitCode) {
-  console.log("\n[closed-beta-readiness] PASS: closed beta learner loop, data boundary, route/source guards, question references, and build passed.");
+  console.log("\n[closed-beta-readiness] PASS: closed beta learner loop, guardrail audit, data boundary, route/source guards, question references, and build passed.");
 }
