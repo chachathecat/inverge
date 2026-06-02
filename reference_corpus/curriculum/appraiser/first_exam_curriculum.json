@@ -11,55 +11,585 @@
       "id": "first_civil_law",
       "name": "민법",
       "units": [
-        { "id": "civil_general", "name": "민법총칙", "taskTypes": ["O/X", "cloze"] },
-        { "id": "civil_juristic_act", "name": "법률행위", "taskTypes": ["O/X", "cloze"] },
-        { "id": "civil_expression", "name": "의사표시", "taskTypes": ["O/X", "cloze"] },
-        { "id": "civil_nullity_rescission", "name": "무효와 취소", "taskTypes": ["O/X", "cloze"] },
-        { "id": "civil_property_rights", "name": "물권법", "taskTypes": ["O/X", "cloze"] }
+        {
+          "id": "civil_general",
+          "name": "민법총칙",
+          "taskTypes": [
+            "O/X",
+            "cloze"
+          ],
+          "importance": "medium",
+          "coreConcepts": [
+            "권리능력",
+            "의사능력",
+            "대리 기본구조"
+          ],
+          "trapWords": [
+            "권리능력과 행위능력 혼동",
+            "원칙과 예외 전환",
+            "기간 기산점 누락"
+          ],
+          "defaultReviewPattern": "O/X 판단 → 빈칸 회상 → 4일 후 재확인",
+          "riskLevel": "low",
+          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다."
+        },
+        {
+          "id": "civil_juristic_act",
+          "name": "법률행위",
+          "taskTypes": [
+            "O/X",
+            "cloze"
+          ],
+          "importance": "high",
+          "coreConcepts": [
+            "법률행위 요건",
+            "조건과 기한",
+            "대리권 범위"
+          ],
+          "trapWords": [
+            "요건과 효과 혼동",
+            "무권대리와 표현대리 혼동",
+            "조건·기한 문구 반전"
+          ],
+          "defaultReviewPattern": "O/X 판단 → 빈칸 회상 → 4일 후 재확인",
+          "riskLevel": "medium",
+          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다."
+        },
+        {
+          "id": "civil_expression",
+          "name": "의사표시",
+          "taskTypes": [
+            "O/X",
+            "cloze"
+          ],
+          "importance": "medium",
+          "coreConcepts": [
+            "비진의표시",
+            "통정허위표시",
+            "착오·사기·강박"
+          ],
+          "trapWords": [
+            "선의·무과실 요건 누락",
+            "제3자 보호 범위 혼동",
+            "취소와 무효 효과 혼동"
+          ],
+          "defaultReviewPattern": "O/X 판단 → 빈칸 회상 → 2일 후 재확인",
+          "riskLevel": "high",
+          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다."
+        },
+        {
+          "id": "civil_nullity_rescission",
+          "name": "무효와 취소",
+          "taskTypes": [
+            "O/X",
+            "cloze"
+          ],
+          "importance": "high",
+          "coreConcepts": [
+            "무효 전환",
+            "취소권 행사",
+            "추인과 소멸시효"
+          ],
+          "trapWords": [
+            "추인 가능 시점 혼동",
+            "취소권자 범위 누락",
+            "소멸시효와 제척기간 혼동"
+          ],
+          "defaultReviewPattern": "O/X 판단 → 빈칸 회상 → 2일 후 재확인",
+          "riskLevel": "high",
+          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다."
+        },
+        {
+          "id": "civil_property_rights",
+          "name": "물권법",
+          "taskTypes": [
+            "O/X",
+            "cloze"
+          ],
+          "importance": "medium",
+          "coreConcepts": [
+            "물권변동",
+            "점유와 등기",
+            "소유권 제한"
+          ],
+          "trapWords": [
+            "등기 필요 여부 혼동",
+            "점유 추정 효과 과대해석",
+            "물권적 청구권 요건 누락"
+          ],
+          "defaultReviewPattern": "O/X 판단 → 빈칸 회상 → 4일 후 재확인",
+          "riskLevel": "low",
+          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다."
+        }
       ]
     },
     {
       "id": "first_economics",
       "name": "경제학원론",
       "units": [
-        { "id": "econ_supply_demand", "name": "수요·공급과 시장균형", "taskTypes": ["O/X", "cloze"] },
-        { "id": "econ_consumer", "name": "소비자이론", "taskTypes": ["O/X", "cloze"] },
-        { "id": "econ_producer", "name": "생산자이론", "taskTypes": ["O/X", "cloze"] },
-        { "id": "econ_macro", "name": "거시경제 기초", "taskTypes": ["O/X", "cloze"] },
-        { "id": "econ_money_policy", "name": "화폐·금융·정책", "taskTypes": ["O/X", "cloze"] }
+        {
+          "id": "econ_supply_demand",
+          "name": "수요·공급과 시장균형",
+          "taskTypes": [
+            "O/X",
+            "cloze"
+          ],
+          "importance": "high",
+          "coreConcepts": [
+            "수요·공급 이동",
+            "균형가격",
+            "탄력성"
+          ],
+          "trapWords": [
+            "곡선 이동과 곡선상 이동 혼동",
+            "가격탄력성 부호 혼동",
+            "균형 변화 방향 반전"
+          ],
+          "defaultReviewPattern": "O/X 판단 → 빈칸 회상 → 4일 후 재확인",
+          "riskLevel": "medium",
+          "secondExamBridge": "2차 학습에서는 개념 배경을 답안 목차의 근거로만 활용합니다."
+        },
+        {
+          "id": "econ_consumer",
+          "name": "소비자이론",
+          "taskTypes": [
+            "O/X",
+            "cloze"
+          ],
+          "importance": "medium",
+          "coreConcepts": [
+            "효용극대화",
+            "무차별곡선",
+            "소득·대체효과"
+          ],
+          "trapWords": [
+            "소득효과와 대체효과 혼동",
+            "한계효용 체감 적용 누락",
+            "예산선 이동 원인 혼동"
+          ],
+          "defaultReviewPattern": "O/X 판단 → 빈칸 회상 → 4일 후 재확인",
+          "riskLevel": "low",
+          "secondExamBridge": "2차 학습에서는 개념 배경을 답안 목차의 근거로만 활용합니다."
+        },
+        {
+          "id": "econ_producer",
+          "name": "생산자이론",
+          "taskTypes": [
+            "O/X",
+            "cloze"
+          ],
+          "importance": "medium",
+          "coreConcepts": [
+            "생산함수",
+            "비용곡선",
+            "이윤극대화"
+          ],
+          "trapWords": [
+            "평균비용과 한계비용 교차점 혼동",
+            "단기·장기 비용 구분 누락",
+            "고정비 처리 오류"
+          ],
+          "defaultReviewPattern": "O/X 판단 → 빈칸 회상 → 4일 후 재확인",
+          "riskLevel": "low",
+          "secondExamBridge": "2차 학습에서는 개념 배경을 답안 목차의 근거로만 활용합니다."
+        },
+        {
+          "id": "econ_macro",
+          "name": "거시경제 기초",
+          "taskTypes": [
+            "O/X",
+            "cloze"
+          ],
+          "importance": "high",
+          "coreConcepts": [
+            "국민소득",
+            "물가와 실업",
+            "총수요·총공급"
+          ],
+          "trapWords": [
+            "명목과 실질 혼동",
+            "저량과 유량 혼동",
+            "승수 조건 누락"
+          ],
+          "defaultReviewPattern": "O/X 판단 → 빈칸 회상 → 4일 후 재확인",
+          "riskLevel": "medium",
+          "secondExamBridge": "2차 학습에서는 개념 배경을 답안 목차의 근거로만 활용합니다."
+        },
+        {
+          "id": "econ_money_policy",
+          "name": "화폐·금융·정책",
+          "taskTypes": [
+            "O/X",
+            "cloze"
+          ],
+          "importance": "medium",
+          "coreConcepts": [
+            "화폐시장",
+            "금융정책",
+            "이자율 경로"
+          ],
+          "trapWords": [
+            "통화량과 이자율 방향 혼동",
+            "정책시차 누락",
+            "IS-LM 축 혼동"
+          ],
+          "defaultReviewPattern": "O/X 판단 → 빈칸 회상 → 2일 후 재확인",
+          "riskLevel": "high",
+          "secondExamBridge": "2차 학습에서는 개념 배경을 답안 목차의 근거로만 활용합니다."
+        }
       ]
     },
     {
       "id": "first_real_estate",
       "name": "부동산학원론",
       "units": [
-        { "id": "re_foundation", "name": "부동산학 기초", "taskTypes": ["O/X", "cloze"] },
-        { "id": "re_market", "name": "부동산 시장론", "taskTypes": ["O/X", "cloze"] },
-        { "id": "re_policy", "name": "부동산 정책론", "taskTypes": ["O/X", "cloze"] },
-        { "id": "re_investment_finance", "name": "부동산 투자·금융", "taskTypes": ["O/X", "cloze"] },
-        { "id": "re_appraisal_foundation", "name": "감정평가 기초", "taskTypes": ["O/X", "cloze"] }
+        {
+          "id": "re_foundation",
+          "name": "부동산학 기초",
+          "taskTypes": [
+            "O/X",
+            "cloze"
+          ],
+          "importance": "medium",
+          "coreConcepts": [
+            "부동산 특성",
+            "입지와 용도",
+            "권리관계 기초"
+          ],
+          "trapWords": [
+            "자연적 특성과 인문적 특성 혼동",
+            "입지와 위치 표현 혼동",
+            "권리와 물건 구분 누락"
+          ],
+          "defaultReviewPattern": "O/X 판단 → 빈칸 회상 → 4일 후 재확인",
+          "riskLevel": "low",
+          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다."
+        },
+        {
+          "id": "re_market",
+          "name": "부동산 시장론",
+          "taskTypes": [
+            "O/X",
+            "cloze"
+          ],
+          "importance": "high",
+          "coreConcepts": [
+            "시장분석",
+            "수요·공급 요인",
+            "가격형성"
+          ],
+          "trapWords": [
+            "시장범위 설정 누락",
+            "가격과 가치 혼동",
+            "수요요인과 공급요인 반전"
+          ],
+          "defaultReviewPattern": "O/X 판단 → 빈칸 회상 → 4일 후 재확인",
+          "riskLevel": "medium",
+          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다."
+        },
+        {
+          "id": "re_policy",
+          "name": "부동산 정책론",
+          "taskTypes": [
+            "O/X",
+            "cloze"
+          ],
+          "importance": "medium",
+          "coreConcepts": [
+            "토지정책",
+            "주택정책",
+            "공공개입 효과"
+          ],
+          "trapWords": [
+            "정책수단과 효과 연결 누락",
+            "공공성 근거 누락",
+            "규제와 지원 구분 혼동"
+          ],
+          "defaultReviewPattern": "O/X 판단 → 빈칸 회상 → 4일 후 재확인",
+          "riskLevel": "low",
+          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다."
+        },
+        {
+          "id": "re_investment_finance",
+          "name": "부동산 투자·금융",
+          "taskTypes": [
+            "O/X",
+            "cloze"
+          ],
+          "importance": "medium",
+          "coreConcepts": [
+            "현금흐름",
+            "수익률",
+            "금융 레버리지"
+          ],
+          "trapWords": [
+            "현재가치 할인 방향 오류",
+            "수익률 기준 혼동",
+            "레버리지 위험 누락"
+          ],
+          "defaultReviewPattern": "O/X 판단 → 빈칸 회상 → 2일 후 재확인",
+          "riskLevel": "high",
+          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다."
+        },
+        {
+          "id": "re_appraisal_foundation",
+          "name": "감정평가 기초",
+          "taskTypes": [
+            "O/X",
+            "cloze"
+          ],
+          "importance": "high",
+          "coreConcepts": [
+            "평가원리",
+            "가격 제 원칙",
+            "평가방식 개요"
+          ],
+          "trapWords": [
+            "원칙 명칭 혼동",
+            "방식 선택 기준 누락",
+            "가격시점 고려 누락"
+          ],
+          "defaultReviewPattern": "O/X 판단 → 빈칸 회상 → 4일 후 재확인",
+          "riskLevel": "medium",
+          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다."
+        }
       ]
     },
     {
       "id": "first_appraisal_law",
       "name": "감정평가관계법규",
       "units": [
-        { "id": "law_land_planning", "name": "국토계획 및 이용 관련 법령", "taskTypes": ["O/X", "cloze"] },
-        { "id": "law_price_disclosure", "name": "부동산 가격공시 관련 법령", "taskTypes": ["O/X", "cloze"] },
-        { "id": "law_appraiser", "name": "감정평가 및 감정평가사 관련 법령", "taskTypes": ["O/X", "cloze"] },
-        { "id": "law_compensation", "name": "공익사업 보상 관련 법령", "taskTypes": ["O/X", "cloze"] },
-        { "id": "law_registration", "name": "부동산 등기·공시 관련 법령", "taskTypes": ["O/X", "cloze"] }
+        {
+          "id": "law_land_planning",
+          "name": "국토계획 및 이용 관련 법령",
+          "taskTypes": [
+            "O/X",
+            "cloze"
+          ],
+          "importance": "medium",
+          "coreConcepts": [
+            "용도지역",
+            "도시계획시설",
+            "개발행위허가"
+          ],
+          "trapWords": [
+            "허가와 신고 구분 혼동",
+            "용도지역·지구·구역 혼동",
+            "처분권자 누락"
+          ],
+          "defaultReviewPattern": "O/X 판단 → 빈칸 회상 → 2일 후 재확인",
+          "riskLevel": "high",
+          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다."
+        },
+        {
+          "id": "law_price_disclosure",
+          "name": "부동산 가격공시 관련 법령",
+          "taskTypes": [
+            "O/X",
+            "cloze"
+          ],
+          "importance": "high",
+          "coreConcepts": [
+            "공시가격",
+            "표준지·개별공시",
+            "이의 절차"
+          ],
+          "trapWords": [
+            "표준지와 개별공시 비교 혼동",
+            "공시 주체 혼동",
+            "이의 절차 기간 누락"
+          ],
+          "defaultReviewPattern": "O/X 판단 → 빈칸 회상 → 4일 후 재확인",
+          "riskLevel": "medium",
+          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다."
+        },
+        {
+          "id": "law_appraiser",
+          "name": "감정평가 및 감정평가사 관련 법령",
+          "taskTypes": [
+            "O/X",
+            "cloze"
+          ],
+          "importance": "medium",
+          "coreConcepts": [
+            "감정평가업무",
+            "자격·등록",
+            "업무상 의무"
+          ],
+          "trapWords": [
+            "감정평가사와 법인 의무 혼동",
+            "징계 사유 범위 과대해석",
+            "업무 제한 예외 누락"
+          ],
+          "defaultReviewPattern": "O/X 판단 → 빈칸 회상 → 4일 후 재확인",
+          "riskLevel": "low",
+          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다."
+        },
+        {
+          "id": "law_compensation",
+          "name": "공익사업 보상 관련 법령",
+          "taskTypes": [
+            "O/X",
+            "cloze"
+          ],
+          "importance": "high",
+          "coreConcepts": [
+            "손실보상 원칙",
+            "사업인정",
+            "수용 절차"
+          ],
+          "trapWords": [
+            "사업인정 효과 혼동",
+            "보상시점 누락",
+            "잔여지 기준 혼동"
+          ],
+          "defaultReviewPattern": "O/X 판단 → 빈칸 회상 → 2일 후 재확인",
+          "riskLevel": "high",
+          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다."
+        },
+        {
+          "id": "law_registration",
+          "name": "부동산 등기·공시 관련 법령",
+          "taskTypes": [
+            "O/X",
+            "cloze"
+          ],
+          "importance": "medium",
+          "coreConcepts": [
+            "등기 원리",
+            "공부 공시",
+            "권리변동 확인"
+          ],
+          "trapWords": [
+            "등기 효력 범위 혼동",
+            "공부 간 우선관계 오해",
+            "말소와 변경 구분 혼동"
+          ],
+          "defaultReviewPattern": "O/X 판단 → 빈칸 회상 → 4일 후 재확인",
+          "riskLevel": "low",
+          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다."
+        }
       ]
     },
     {
       "id": "first_accounting",
       "name": "회계학",
       "units": [
-        { "id": "acct_financial_foundation", "name": "재무회계 기초", "taskTypes": ["O/X", "cloze", "accounting template"] },
-        { "id": "acct_assets", "name": "자산 회계", "taskTypes": ["O/X", "cloze", "accounting template"] },
-        { "id": "acct_inventory_lcm", "name": "재고자산과 저가법", "taskTypes": ["O/X", "cloze", "accounting template"] },
-        { "id": "acct_liability_equity", "name": "부채·자본 회계", "taskTypes": ["O/X", "cloze", "accounting template"] },
-        { "id": "acct_cost_management", "name": "원가·관리회계 기초", "taskTypes": ["O/X", "cloze", "accounting template"] }
+        {
+          "id": "acct_financial_foundation",
+          "name": "재무회계 기초",
+          "taskTypes": [
+            "O/X",
+            "cloze",
+            "accounting template"
+          ],
+          "importance": "medium",
+          "coreConcepts": [
+            "재무제표",
+            "발생주의",
+            "분개 구조"
+          ],
+          "trapWords": [
+            "차변·대변 방향 오류",
+            "수익·비용 인식시점 혼동",
+            "계정과목 분류 오류"
+          ],
+          "defaultReviewPattern": "회상 → 짧은 계산 틀 확인 → 4일 후 재확인",
+          "riskLevel": "low",
+          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다."
+        },
+        {
+          "id": "acct_assets",
+          "name": "자산 회계",
+          "taskTypes": [
+            "O/X",
+            "cloze",
+            "accounting template"
+          ],
+          "importance": "medium",
+          "coreConcepts": [
+            "금융자산",
+            "유형자산",
+            "손상과 감가상각"
+          ],
+          "trapWords": [
+            "취득원가 포함 범위 누락",
+            "감가상각과 손상 혼동",
+            "처분손익 계산 오류"
+          ],
+          "defaultReviewPattern": "회상 → 짧은 계산 틀 확인 → 4일 후 재확인",
+          "riskLevel": "low",
+          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다."
+        },
+        {
+          "id": "acct_inventory_lcm",
+          "name": "재고자산과 저가법",
+          "taskTypes": [
+            "O/X",
+            "cloze",
+            "accounting template"
+          ],
+          "importance": "high",
+          "coreConcepts": [
+            "재고자산 원가",
+            "저가법",
+            "순실현가능가치"
+          ],
+          "trapWords": [
+            "순실현가능가치 적용 단위 혼동",
+            "저가법 회복 처리 누락",
+            "매출원가 영향 반전"
+          ],
+          "defaultReviewPattern": "회상 → 계산 틀 재작성 → 2일 후 재확인",
+          "riskLevel": "high",
+          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다."
+        },
+        {
+          "id": "acct_liability_equity",
+          "name": "부채·자본 회계",
+          "taskTypes": [
+            "O/X",
+            "cloze",
+            "accounting template"
+          ],
+          "importance": "medium",
+          "coreConcepts": [
+            "충당부채",
+            "사채·차입금",
+            "자본거래"
+          ],
+          "trapWords": [
+            "현재가치 평가 누락",
+            "자본거래와 손익거래 혼동",
+            "충당부채 인식요건 혼동"
+          ],
+          "defaultReviewPattern": "회상 → 짧은 계산 틀 확인 → 4일 후 재확인",
+          "riskLevel": "low",
+          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다."
+        },
+        {
+          "id": "acct_cost_management",
+          "name": "원가·관리회계 기초",
+          "taskTypes": [
+            "O/X",
+            "cloze",
+            "accounting template"
+          ],
+          "importance": "high",
+          "coreConcepts": [
+            "원가흐름",
+            "CVP",
+            "예산과 차이분석"
+          ],
+          "trapWords": [
+            "변동비·고정비 분류 오류",
+            "공헌이익식 혼동",
+            "차이분석 방향 반전"
+          ],
+          "defaultReviewPattern": "회상 → 계산 틀 재작성 → 2일 후 재확인",
+          "riskLevel": "high",
+          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다."
+        }
       ]
     }
   ]

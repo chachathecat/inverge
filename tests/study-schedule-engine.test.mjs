@@ -67,6 +67,17 @@ test("selects first exam tracks by days remaining", () => {
   assert.equal(selectStudyTrack({ examMode: "first", daysUntilExam: 91 }).selectedTrackId, "first_120");
 });
 
+test("selected track includes planning metadata for weekly focus and task mix", () => {
+  const selected = selectStudyTrack({ examMode: "second", daysUntilExam: 90 });
+
+  assert.equal(selected.selectedTrackId, "second_90");
+  assert.ok(selected.trackPhase);
+  assert.ok(selected.trackGoal);
+  assert.ok(selected.trackWeeklyFocus.length > 0);
+  assert.ok(selected.trackRiskHandling.length > 0);
+  assert.ok(selected.recommendedTaskMix.includes("rewrite"));
+});
+
 test("selects second exam tracks by days remaining", () => {
   assert.equal(selectStudyTrack({ examMode: "second", daysUntilExam: 90 }).selectedTrackId, "second_90");
   assert.equal(selectStudyTrack({ examMode: "second", daysUntilExam: 180 }).selectedTrackId, "second_180");
@@ -171,6 +182,33 @@ test("schedule output does not emit raw text fields", () => {
   const serialized = textOf(schedule);
 
   for (const forbidden of forbiddenRawFields) assert.equal(serialized.includes(forbidden), false, forbidden);
+});
+
+test("schedule remains metadata-only and uses recommended track mix", () => {
+  const schedule = buildDailyStudySchedule({
+    examMode: "second",
+    daysUntilExam: 80,
+    dailyAvailableMinutes: 90,
+  });
+
+  assert.equal(schedule.suggestionType, "metadata_suggestion");
+  assert.ok(schedule.recommendedTaskMix.includes("issue spotting"));
+  assert.ok(schedule.weeklyFocus.some((focus) => schedule.trackWeeklyFocus.includes(focus) || schedule.recommendedTaskMix.includes(focus)));
+  assert.ok(schedule.dailyBlocks.every((block) => block.metadataOnly === true));
+  assert.ok(textOf(schedule).includes("metadata_suggestion"));
+});
+
+test("schedule engine exposes no notification or calendar write behavior", () => {
+  const schedule = buildWeeklyStudySchedule({
+    examMode: "first",
+    daysUntilExam: 45,
+    dailyAvailableMinutes: 60,
+  });
+  const serialized = textOf(schedule);
+
+  for (const forbidden of ["sendNotification", "pushNotification", "calendarWrite", "createCalendarEvent", "notification", "calendar"]) {
+    assert.equal(serialized.includes(forbidden), false, forbidden);
+  }
 });
 
 test("schedule output does not contain instructor/payment/archive/native-app copy", () => {

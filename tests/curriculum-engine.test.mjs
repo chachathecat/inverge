@@ -228,3 +228,63 @@ test("no raw text fields are required or emitted", () => {
   }
   assert.equal(action.topCandidate?.taskType, "rewrite");
 });
+
+test("high importance and high risk metadata outrank lower planning metadata when other signals are equal", () => {
+  const highAction = buildCurriculumNextAction({
+    examMode: "first",
+    unitId: "acct_inventory_lcm",
+    confidence: "low",
+  }, reference);
+  const lowAction = buildCurriculumNextAction({
+    examMode: "first",
+    unitId: "civil_general",
+    confidence: "low",
+  }, reference);
+
+  assert.ok(highAction.topCandidate.prioritySignals.includes("high importance"));
+  assert.ok(highAction.topCandidate.prioritySignals.includes("high risk unit"));
+  assert.equal(lowAction.topCandidate.prioritySignals.includes("high importance"), false);
+  assert.equal(lowAction.topCandidate.prioritySignals.includes("high risk unit"), false);
+});
+
+test("wrong plus unknown confidence combines metadata risk and exam proximity safely", () => {
+  const action = buildCurriculumNextAction({
+    examMode: "second",
+    unitId: "practice_income",
+    result: "wrong",
+    confidence: "unknown",
+    daysUntilExam: 10,
+    recentMissCount: 1,
+  }, reference);
+
+  assert.ok(action.topCandidate.prioritySignals.includes("wrong/unknown"));
+  assert.ok(action.topCandidate.prioritySignals.includes("high risk unit"));
+  assert.ok(action.topCandidate.prioritySignals.includes("exam date proximity"));
+  assert.ok(action.topCandidate.metadata.defaultReviewPattern);
+  assert.ok(action.topCandidate.metadata.mistakePatterns.length > 0);
+});
+
+test("planning metadata informs candidate copy without leaking raw problem or user text", () => {
+  const firstAction = buildCurriculumNextAction({ examMode: "first", unitId: "civil_expression", result: "wrong" }, reference);
+  const secondAction = buildCurriculumNextAction({ examMode: "second", unitId: "practice_income", sourceType: "casio" }, reference);
+  const serialized = JSON.stringify([firstAction, secondAction]);
+
+  assert.match(firstAction.topCandidate.rationale, /복습 패턴|메타 함정/);
+  assert.match(secondAction.topCandidate.rationale, /복습 패턴|흔한 실수 패턴/);
+  for (const rawField of [
+    "rawText",
+    "rawUserText",
+    "rawOcrText",
+    "rawAnswerText",
+    "rawProblemText",
+    "userAnswerText",
+    "problemText",
+    "questionText",
+    "copyrightedText",
+    "originalText",
+    "fullText",
+    "sourceText",
+  ]) {
+    assert.equal(serialized.includes(rawField), false, `raw field emitted: ${rawField}`);
+  }
+});

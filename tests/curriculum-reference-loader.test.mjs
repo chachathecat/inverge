@@ -121,13 +121,19 @@ test("raw text field names are rejected anywhere in curriculum reference validat
 
   for (const rawFieldName of [
     "rawText",
+    "rawUserText",
     "rawOcrText",
+    "rawAnswerText",
+    "rawProblemText",
     "ocrText",
     "userAnswerText",
     "answerText",
     "problemText",
+    "copyrightedText",
+    "originalText",
     "uploadedProblemText",
     "fullText",
+    "sourceText",
   ]) {
     const invalid = structuredClone(loadFirstExamCurriculum());
     invalid[rawFieldName] = "raw text must not be accepted";
@@ -136,6 +142,62 @@ test("raw text field names are rejected anywhere in curriculum reference validat
       new RegExp(rawFieldName),
     );
   }
+});
+
+test("curriculum units preserve planning metadata for engine ranking and review planning", () => {
+  const firstExam = loadFirstExamCurriculum();
+  const secondExam = loadSecondExamCurriculum();
+
+  for (const unit of firstExam.subjects.flatMap((subject) => subject.units)) {
+    assert.ok(["low", "medium", "high"].includes(unit.importance), `${unit.id} importance should be preserved`);
+    assert.ok(Array.isArray(unit.coreConcepts) && unit.coreConcepts.length > 0, `${unit.id} coreConcepts should be preserved`);
+    assert.ok(unit.defaultReviewPattern, `${unit.id} defaultReviewPattern should be preserved`);
+    assert.ok(["low", "medium", "high"].includes(unit.riskLevel), `${unit.id} riskLevel should be preserved`);
+    assert.ok(Array.isArray(unit.trapWords) && unit.trapWords.length > 0, `${unit.id} trapWords should be preserved`);
+    assert.ok(unit.secondExamBridge, `${unit.id} secondExamBridge should be preserved`);
+  }
+
+  for (const unit of secondExam.subjects.flatMap((subject) => subject.units)) {
+    assert.ok(["low", "medium", "high"].includes(unit.importance), `${unit.id} importance should be preserved`);
+    assert.ok(Array.isArray(unit.coreConcepts) && unit.coreConcepts.length > 0, `${unit.id} coreConcepts should be preserved`);
+    assert.ok(unit.defaultReviewPattern, `${unit.id} defaultReviewPattern should be preserved`);
+    assert.ok(["low", "medium", "high"].includes(unit.riskLevel), `${unit.id} riskLevel should be preserved`);
+    assert.ok(Array.isArray(unit.mistakePatterns) && unit.mistakePatterns.length > 0, `${unit.id} mistakePatterns should be preserved`);
+  }
+});
+
+test("study tracks preserve planning metadata for schedule generation", () => {
+  const tracks = loadStudyTracks().tracks;
+  for (const [trackId, track] of Object.entries(tracks)) {
+    assert.ok(track.phase, `${trackId} phase should be preserved`);
+    assert.ok(track.goal, `${trackId} goal should be preserved`);
+    assert.ok(Array.isArray(track.weeklyFocus) && track.weeklyFocus.length > 0, `${trackId} weeklyFocus should be preserved`);
+    assert.ok(Array.isArray(track.riskHandling) && track.riskHandling.length > 0, `${trackId} riskHandling should be preserved`);
+    assert.ok(Array.isArray(track.recommendedTaskMix) && track.recommendedTaskMix.length > 0, `${trackId} recommendedTaskMix should be preserved`);
+  }
+});
+
+test("missing required planning metadata is rejected", () => {
+  const invalidFirst = structuredClone(loadFirstExamCurriculum());
+  delete invalidFirst.subjects[0].units[0].trapWords;
+  assert.throws(
+    () => validateCurriculumDocument(invalidFirst, "감정평가사 1차", "missing_first_trap_words"),
+    /trapWords/,
+  );
+
+  const invalidSecond = structuredClone(loadSecondExamCurriculum());
+  delete invalidSecond.subjects[0].units[0].mistakePatterns;
+  assert.throws(
+    () => validateCurriculumDocument(invalidSecond, "감정평가사 2차", "missing_second_mistake_patterns"),
+    /mistakePatterns/,
+  );
+
+  const invalidTracks = structuredClone(loadStudyTracks());
+  delete invalidTracks.tracks.first_30.recommendedTaskMix;
+  assert.throws(
+    () => validateStudyTracks(invalidTracks, "missing_track_mix"),
+    /recommendedTaskMix/,
+  );
 });
 
 test("unsupported exam labels are rejected", () => {

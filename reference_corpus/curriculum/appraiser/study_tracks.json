@@ -6,20 +6,233 @@
   "verificationNote": "Track assumptions must be checked against Q-Net/current official notice verification and learner beta evidence before production use.",
   "storagePolicy": "metadata_only_no_raw_user_or_problem_text",
   "todayPlanMaxPrimaryTasks": 3,
-  "prioritizationSignals": ["due review", "confidence", "wrong/unknown", "과락 위험", "exam date", "recent missed tasks"],
+  "prioritizationSignals": [
+    "due review",
+    "confidence",
+    "wrong/unknown",
+    "과락 위험",
+    "exam date",
+    "recent missed tasks"
+  ],
   "tracks": {
-    "first_30": { "examMode": "first", "days": 30, "label": "1차 30일 압축", "dailyFocus": ["due review", "과락 위험", "O/X", "cloze"] },
-    "first_60": { "examMode": "first", "days": 60, "label": "1차 60일 재구축", "dailyFocus": ["due review", "weak subject", "O/X", "accounting template"] },
-    "first_90": { "examMode": "first", "days": 90, "label": "1차 90일 균형", "dailyFocus": ["concept node", "retrieval", "mixed review"] },
-    "first_120": { "examMode": "first", "days": 120, "label": "1차 120일 기초", "dailyFocus": ["foundation", "retrieval", "spaced review"] },
-    "second_90": { "examMode": "second", "days": 90, "label": "2차 90일 출력", "dailyFocus": ["issue spotting", "rewrite", "CASIO"] },
-    "second_180": { "examMode": "second", "days": 180, "label": "2차 180일 균형", "dailyFocus": ["subject rotation", "rewrite", "CASIO", "issue spotting"] },
-    "second_365": { "examMode": "second", "days": 365, "label": "2차 365일 장기", "dailyFocus": ["foundation", "short production", "weekly full answer"] }
+    "first_30": {
+      "examMode": "first",
+      "days": 30,
+      "label": "1차 30일 압축",
+      "dailyFocus": [
+        "due review",
+        "과락 위험",
+        "O/X",
+        "cloze"
+      ],
+      "phase": "압축",
+      "goal": "과락 위험과 예정 복습을 먼저 처리하고 매일 1개 주 과제를 완료합니다.",
+      "weeklyFocus": [
+        "과락 위험 단원",
+        "예정 복습",
+        "O/X·빈칸 회상",
+        "회계 계산 틀"
+      ],
+      "riskHandling": [
+        "고위험 단원은 2일 내 재확인하고 선택지는 최대 3개로 제한합니다."
+      ],
+      "recommendedTaskMix": [
+        "due review",
+        "O/X",
+        "cloze",
+        "accounting template"
+      ]
+    },
+    "first_60": {
+      "examMode": "first",
+      "days": 60,
+      "label": "1차 60일 재구축",
+      "dailyFocus": [
+        "due review",
+        "weak subject",
+        "O/X",
+        "accounting template"
+      ],
+      "phase": "재구축",
+      "goal": "약점 과목을 재정렬하고 회상 기반 기초를 회복합니다.",
+      "weeklyFocus": [
+        "약점 과목 순환",
+        "핵심 개념 회상",
+        "회계 템플릿",
+        "주말 혼합 점검"
+      ],
+      "riskHandling": [
+        "낮은 확신 단원은 설명 전에 회상을 먼저 배치합니다."
+      ],
+      "recommendedTaskMix": [
+        "due review",
+        "weak node",
+        "O/X",
+        "cloze",
+        "accounting template"
+      ]
+    },
+    "first_90": {
+      "examMode": "first",
+      "days": 90,
+      "label": "1차 90일 균형",
+      "dailyFocus": [
+        "concept node",
+        "retrieval",
+        "mixed review"
+      ],
+      "phase": "균형",
+      "goal": "전 과목 균형을 유지하면서 누적 복습과 혼합 회상을 고정합니다.",
+      "weeklyFocus": [
+        "과목별 균형",
+        "개념 노드",
+        "혼합 회상",
+        "오답 재시도"
+      ],
+      "riskHandling": [
+        "중위험 단원은 주간 혼합 회상에 포함합니다."
+      ],
+      "recommendedTaskMix": [
+        "concept retrieval",
+        "mixed review",
+        "O/X",
+        "cloze"
+      ]
+    },
+    "first_120": {
+      "examMode": "first",
+      "days": 120,
+      "label": "1차 120일 기초",
+      "dailyFocus": [
+        "foundation",
+        "retrieval",
+        "spaced review"
+      ],
+      "phase": "기초",
+      "goal": "기초 개념을 차분히 쌓고 복습 간격을 안정화합니다.",
+      "weeklyFocus": [
+        "기초 개념",
+        "짧은 회상",
+        "스페이싱",
+        "주간 정리"
+      ],
+      "riskHandling": [
+        "기초 단원도 미응답이 반복되면 즉시 재시도 블록으로 올립니다."
+      ],
+      "recommendedTaskMix": [
+        "foundation",
+        "retrieval",
+        "spaced review",
+        "retry"
+      ]
+    },
+    "second_90": {
+      "examMode": "second",
+      "days": 90,
+      "label": "2차 90일 출력",
+      "dailyFocus": [
+        "issue spotting",
+        "rewrite",
+        "CASIO"
+      ],
+      "phase": "출력",
+      "goal": "쟁점 표시와 다시쓰기를 매일 실행해 답안 생산성을 높입니다.",
+      "weeklyFocus": [
+        "쟁점 찾기",
+        "10분 다시쓰기",
+        "CASIO 순서",
+        "주간 답안 점검"
+      ],
+      "riskHandling": [
+        "고위험 실무·법규 단원은 2일 내 다시쓰기 또는 CASIO 재확인을 배치합니다."
+      ],
+      "recommendedTaskMix": [
+        "issue spotting",
+        "rewrite",
+        "CASIO",
+        "scheduled review"
+      ]
+    },
+    "second_180": {
+      "examMode": "second",
+      "days": 180,
+      "label": "2차 180일 균형",
+      "dailyFocus": [
+        "subject rotation",
+        "rewrite",
+        "CASIO",
+        "issue spotting"
+      ],
+      "phase": "균형",
+      "goal": "세 과목을 순환하며 짧은 출력과 구조 보정을 병행합니다.",
+      "weeklyFocus": [
+        "과목 순환",
+        "짧은 문단 출력",
+        "CASIO 검산",
+        "법규 쟁점 정리"
+      ],
+      "riskHandling": [
+        "구조가 약한 답안은 점수화보다 재작성 액션으로 연결합니다."
+      ],
+      "recommendedTaskMix": [
+        "subject rotation",
+        "rewrite",
+        "CASIO",
+        "issue spotting"
+      ]
+    },
+    "second_365": {
+      "examMode": "second",
+      "days": 365,
+      "label": "2차 365일 장기",
+      "dailyFocus": [
+        "foundation",
+        "short production",
+        "weekly full answer"
+      ],
+      "phase": "장기",
+      "goal": "기초 이론과 주간 긴 답안 생산을 안정적으로 누적합니다.",
+      "weeklyFocus": [
+        "기초 정의",
+        "짧은 생산",
+        "주간 전체 답안",
+        "오답 구조 보정"
+      ],
+      "riskHandling": [
+        "장기 트랙도 누락 쟁점은 주간 답안 전 짧은 쟁점 표시로 처리합니다."
+      ],
+      "recommendedTaskMix": [
+        "foundation",
+        "short production",
+        "weekly full answer",
+        "rewrite"
+      ]
+    }
   },
   "dailyTemplates": {
-    "30_min": ["due review", "one retrieval or production task", "retry/rewrite or scheduled review"],
-    "60_min": ["due review", "primary weak-node task", "explanation ladder and retry", "schedule setup"],
-    "90_min": ["due review", "main task block", "secondary repair task", "summary and schedule"],
-    "180_min": ["due review", "deep work block 1", "deep work block 2", "mixed retrieval/rewrite", "adaptation"]
+    "30_min": [
+      "due review",
+      "one retrieval or production task",
+      "retry/rewrite or scheduled review"
+    ],
+    "60_min": [
+      "due review",
+      "primary weak-node task",
+      "explanation ladder and retry",
+      "schedule setup"
+    ],
+    "90_min": [
+      "due review",
+      "main task block",
+      "secondary repair task",
+      "summary and schedule"
+    ],
+    "180_min": [
+      "due review",
+      "deep work block 1",
+      "deep work block 2",
+      "mixed retrieval/rewrite",
+      "adaptation"
+    ]
   }
 }

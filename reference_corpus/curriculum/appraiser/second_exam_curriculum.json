@@ -11,33 +11,342 @@
       "id": "second_practice",
       "name": "감정평가실무",
       "units": [
-        { "id": "practice_three_approaches", "name": "평가 3방식", "taskTypes": ["rewrite", "CASIO", "issue spotting"] },
-        { "id": "practice_cost", "name": "원가방식", "taskTypes": ["rewrite", "CASIO"] },
-        { "id": "practice_comparison", "name": "비교방식", "taskTypes": ["rewrite", "CASIO"] },
-        { "id": "practice_income", "name": "수익방식", "taskTypes": ["rewrite", "CASIO"] },
-        { "id": "practice_compensation", "name": "보상평가", "taskTypes": ["rewrite", "CASIO", "issue spotting"] }
+        {
+          "id": "practice_three_approaches",
+          "name": "평가 3방식",
+          "taskTypes": [
+            "rewrite",
+            "CASIO",
+            "issue spotting"
+          ],
+          "importance": "high",
+          "coreConcepts": [
+            "원가·비교·수익방식 선택",
+            "자료 적합성",
+            "검산 흐름"
+          ],
+          "mistakePatterns": [
+            "방식 선택 이유 누락",
+            "검산 순서 생략",
+            "자료 적합성 판단 부족"
+          ],
+          "defaultReviewPattern": "쟁점 표시 → 계산 순서 재현 → 5일 후 재확인",
+          "riskLevel": "medium"
+        },
+        {
+          "id": "practice_cost",
+          "name": "원가방식",
+          "taskTypes": [
+            "rewrite",
+            "CASIO"
+          ],
+          "importance": "medium",
+          "coreConcepts": [
+            "재조달원가",
+            "감가수정",
+            "내용연수 판단"
+          ],
+          "mistakePatterns": [
+            "감가수정 항목 누락",
+            "내용연수 근거 부족",
+            "원가 항목 중복"
+          ],
+          "defaultReviewPattern": "쟁점 표시 → 계산 순서 재현 → 5일 후 재확인",
+          "riskLevel": "medium"
+        },
+        {
+          "id": "practice_comparison",
+          "name": "비교방식",
+          "taskTypes": [
+            "rewrite",
+            "CASIO"
+          ],
+          "importance": "medium",
+          "coreConcepts": [
+            "사례 선정",
+            "요인비교",
+            "시점수정"
+          ],
+          "mistakePatterns": [
+            "사례 선정 근거 부족",
+            "요인비교 방향 오류",
+            "시점수정 누락"
+          ],
+          "defaultReviewPattern": "쟁점 표시 → 계산 순서 재현 → 5일 후 재확인",
+          "riskLevel": "medium"
+        },
+        {
+          "id": "practice_income",
+          "name": "수익방식",
+          "taskTypes": [
+            "rewrite",
+            "CASIO"
+          ],
+          "importance": "high",
+          "coreConcepts": [
+            "순수익 산정",
+            "환원율",
+            "DCF 흐름"
+          ],
+          "mistakePatterns": [
+            "순수익 항목 누락",
+            "환원율 근거 부족",
+            "DCF 단계 누락"
+          ],
+          "defaultReviewPattern": "쟁점 표시 → 계산 순서 재현 → 2일 후 CASIO 재확인",
+          "riskLevel": "high"
+        },
+        {
+          "id": "practice_compensation",
+          "name": "보상평가",
+          "taskTypes": [
+            "rewrite",
+            "CASIO",
+            "issue spotting"
+          ],
+          "importance": "high",
+          "coreConcepts": [
+            "보상 기준",
+            "사업인정 기준일",
+            "잔여지 판단"
+          ],
+          "mistakePatterns": [
+            "기준시점 혼동",
+            "보상 항목 누락",
+            "잔여지 판단 근거 부족"
+          ],
+          "defaultReviewPattern": "쟁점 표시 → 계산 순서 재현 → 2일 후 CASIO 재확인",
+          "riskLevel": "high"
+        }
       ]
     },
     {
       "id": "second_theory",
       "name": "감정평가이론",
       "units": [
-        { "id": "theory_foundation", "name": "감정평가의 본질과 기능", "taskTypes": ["rewrite", "issue spotting", "cloze"] },
-        { "id": "theory_value", "name": "가치이론", "taskTypes": ["rewrite", "issue spotting", "cloze"] },
-        { "id": "theory_principles", "name": "가격제 원칙", "taskTypes": ["rewrite", "issue spotting", "cloze"] },
-        { "id": "theory_market", "name": "시장분석", "taskTypes": ["rewrite", "issue spotting"] },
-        { "id": "theory_highest_best_use", "name": "최유효이용", "taskTypes": ["rewrite", "issue spotting"] }
+        {
+          "id": "theory_foundation",
+          "name": "감정평가의 본질과 기능",
+          "taskTypes": [
+            "rewrite",
+            "issue spotting",
+            "cloze"
+          ],
+          "importance": "medium",
+          "coreConcepts": [
+            "감정평가 기능",
+            "가격과 가치",
+            "공정성"
+          ],
+          "mistakePatterns": [
+            "정의만 쓰고 기능 연결 누락",
+            "개념 간 위계 불명확",
+            "결론 문장 약함"
+          ],
+          "defaultReviewPattern": "쟁점 표시 → 짧은 문단 재작성 → 5일 후 재확인",
+          "riskLevel": "medium"
+        },
+        {
+          "id": "theory_value",
+          "name": "가치이론",
+          "taskTypes": [
+            "rewrite",
+            "issue spotting",
+            "cloze"
+          ],
+          "importance": "high",
+          "coreConcepts": [
+            "가치형성요인",
+            "시장가치",
+            "가치다원성"
+          ],
+          "mistakePatterns": [
+            "가치 유형 혼동",
+            "형성요인 연결 부족",
+            "사례화 부족"
+          ],
+          "defaultReviewPattern": "쟁점 표시 → 짧은 문단 재작성 → 5일 후 재확인",
+          "riskLevel": "medium"
+        },
+        {
+          "id": "theory_principles",
+          "name": "가격제 원칙",
+          "taskTypes": [
+            "rewrite",
+            "issue spotting",
+            "cloze"
+          ],
+          "importance": "medium",
+          "coreConcepts": [
+            "가격 제 원칙",
+            "최유효이용",
+            "균형·기여 원칙"
+          ],
+          "mistakePatterns": [
+            "원칙 나열 후 적용 누락",
+            "최유효이용 판단 순서 누락",
+            "상충 원칙 조정 부족"
+          ],
+          "defaultReviewPattern": "쟁점 표시 → 10분 다시쓰기 → 3일 후 재작성",
+          "riskLevel": "high"
+        },
+        {
+          "id": "theory_market",
+          "name": "시장분석",
+          "taskTypes": [
+            "rewrite",
+            "issue spotting"
+          ],
+          "importance": "medium",
+          "coreConcepts": [
+            "시장분석 범위",
+            "수요·공급 요인",
+            "경쟁구조"
+          ],
+          "mistakePatterns": [
+            "시장범위 설정 누락",
+            "분석요인 열거에 그침",
+            "평가방식 연결 부족"
+          ],
+          "defaultReviewPattern": "쟁점 표시 → 짧은 문단 재작성 → 5일 후 재확인",
+          "riskLevel": "medium"
+        },
+        {
+          "id": "theory_highest_best_use",
+          "name": "최유효이용",
+          "taskTypes": [
+            "rewrite",
+            "issue spotting"
+          ],
+          "importance": "high",
+          "coreConcepts": [
+            "법적 가능성",
+            "물리적 가능성",
+            "최대수익성"
+          ],
+          "mistakePatterns": [
+            "판단기준 순서 누락",
+            "법적 가능성 검토 부족",
+            "결론 근거 약함"
+          ],
+          "defaultReviewPattern": "쟁점 표시 → 10분 다시쓰기 → 3일 후 재작성",
+          "riskLevel": "high"
+        }
       ]
     },
     {
       "id": "second_compensation_law",
       "name": "감정평가 및 보상법규",
       "units": [
-        { "id": "comp_law_appraisal_act", "name": "감정평가법 체계", "taskTypes": ["rewrite", "issue spotting", "cloze"] },
-        { "id": "comp_law_appraiser_entity", "name": "감정평가사와 감정평가법인", "taskTypes": ["rewrite", "issue spotting", "cloze"] },
-        { "id": "comp_law_land_compensation", "name": "토지보상법 총칙", "taskTypes": ["rewrite", "issue spotting", "cloze"] },
-        { "id": "comp_law_project_approval", "name": "사업인정", "taskTypes": ["rewrite", "issue spotting", "cloze"] },
-        { "id": "comp_law_remedies", "name": "이의·행정쟁송", "taskTypes": ["rewrite", "issue spotting"] }
+        {
+          "id": "comp_law_appraisal_act",
+          "name": "감정평가법 체계",
+          "taskTypes": [
+            "rewrite",
+            "issue spotting",
+            "cloze"
+          ],
+          "importance": "medium",
+          "coreConcepts": [
+            "법 체계",
+            "업무범위",
+            "절차적 통제"
+          ],
+          "mistakePatterns": [
+            "조문 체계만 쓰고 요건 누락",
+            "절차와 효과 분리 부족",
+            "검토 순서 불안정"
+          ],
+          "defaultReviewPattern": "쟁점 표시 → 짧은 문단 재작성 → 5일 후 재확인",
+          "riskLevel": "medium"
+        },
+        {
+          "id": "comp_law_appraiser_entity",
+          "name": "감정평가사와 감정평가법인",
+          "taskTypes": [
+            "rewrite",
+            "issue spotting",
+            "cloze"
+          ],
+          "importance": "medium",
+          "coreConcepts": [
+            "자격·등록",
+            "법인 운영",
+            "의무와 책임"
+          ],
+          "mistakePatterns": [
+            "주체별 의무 혼동",
+            "제재 효과 누락",
+            "사안 포섭 부족"
+          ],
+          "defaultReviewPattern": "쟁점 표시 → 짧은 문단 재작성 → 5일 후 재확인",
+          "riskLevel": "medium"
+        },
+        {
+          "id": "comp_law_land_compensation",
+          "name": "토지보상법 총칙",
+          "taskTypes": [
+            "rewrite",
+            "issue spotting",
+            "cloze"
+          ],
+          "importance": "high",
+          "coreConcepts": [
+            "손실보상 원칙",
+            "정당보상",
+            "협의와 수용"
+          ],
+          "mistakePatterns": [
+            "원칙과 예외 혼동",
+            "절차 단계 누락",
+            "정당보상 근거 부족"
+          ],
+          "defaultReviewPattern": "쟁점 표시 → 짧은 문단 재작성 → 5일 후 재확인",
+          "riskLevel": "medium"
+        },
+        {
+          "id": "comp_law_project_approval",
+          "name": "사업인정",
+          "taskTypes": [
+            "rewrite",
+            "issue spotting",
+            "cloze"
+          ],
+          "importance": "high",
+          "coreConcepts": [
+            "사업인정 요건",
+            "고시 효과",
+            "절차상 하자"
+          ],
+          "mistakePatterns": [
+            "사업인정 효과 누락",
+            "하자 판단 순서 오류",
+            "쟁송 연결 부족"
+          ],
+          "defaultReviewPattern": "쟁점 표시 → 10분 다시쓰기 → 3일 후 재작성",
+          "riskLevel": "high"
+        },
+        {
+          "id": "comp_law_remedies",
+          "name": "이의·행정쟁송",
+          "taskTypes": [
+            "rewrite",
+            "issue spotting"
+          ],
+          "importance": "medium",
+          "coreConcepts": [
+            "이의신청",
+            "행정심판·소송",
+            "불복 기간"
+          ],
+          "mistakePatterns": [
+            "불복 수단 선택 오류",
+            "기간·대상 누락",
+            "구제 효과 정리 부족"
+          ],
+          "defaultReviewPattern": "쟁점 표시 → 10분 다시쓰기 → 3일 후 재작성",
+          "riskLevel": "high"
+        }
       ]
     }
   ]

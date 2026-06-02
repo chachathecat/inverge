@@ -13,7 +13,21 @@ export type CurriculumReferenceMetadata = {
   storagePolicy: string;
 };
 
-export type CurriculumUnit = {
+export type CurriculumImportance = "low" | "medium" | "high";
+export type CurriculumRiskLevel = "low" | "medium" | "high";
+export type CurriculumReviewPattern = string;
+
+export type CurriculumUnitPlanningMetadata = {
+  importance: CurriculumImportance;
+  coreConcepts: string[];
+  trapWords?: string[];
+  mistakePatterns?: string[];
+  defaultReviewPattern: CurriculumReviewPattern;
+  riskLevel: CurriculumRiskLevel;
+  secondExamBridge?: string;
+};
+
+export type CurriculumUnit = CurriculumUnitPlanningMetadata & {
   id: string;
   name: string;
   taskTypes: string[];
@@ -36,7 +50,12 @@ export type StudyTrack = {
   examMode: AppraiserExamMode;
   days: number;
   label: string;
+  phase: string;
+  goal: string;
   dailyFocus: string[];
+  weeklyFocus: string[];
+  riskHandling: string[];
+  recommendedTaskMix: string[];
 };
 
 export type StudyTracksDocument = CurriculumReferenceMetadata & {
@@ -99,14 +118,20 @@ const ALLOWED_STUDY_TRACK_IDS = new Set<StudyTrackId>([
 ]);
 const RAW_TEXT_FIELD_NAMES = new Set([
   "rawText",
+  "rawUserText",
   "rawOcrText",
+  "rawAnswerText",
+  "rawProblemText",
   "ocrText",
   "userAnswerText",
   "answerText",
   "problemText",
   "questionText",
   "uploadedProblemText",
+  "copyrightedText",
+  "originalText",
   "fullText",
+  "sourceText",
 ]);
 
 function sourceDir(config: CurriculumReferenceLoaderConfig = {}) {
@@ -140,6 +165,22 @@ function assertStringArray(value: unknown, fieldName: string, sourceName: string
     throw new Error(`${sourceName} field ${fieldName} must be a non-empty string array`);
   }
   return value as string[];
+}
+
+function assertImportance(value: unknown, fieldName: string, sourceName: string): CurriculumImportance {
+  const importance = assertString(value, fieldName, sourceName);
+  if (importance !== "low" && importance !== "medium" && importance !== "high") {
+    throw new Error(`${sourceName} field ${fieldName} must be low, medium, or high`);
+  }
+  return importance;
+}
+
+function assertRiskLevel(value: unknown, fieldName: string, sourceName: string): CurriculumRiskLevel {
+  const riskLevel = assertString(value, fieldName, sourceName);
+  if (riskLevel !== "low" && riskLevel !== "medium" && riskLevel !== "high") {
+    throw new Error(`${sourceName} field ${fieldName} must be low, medium, or high`);
+  }
+  return riskLevel;
 }
 
 function assertNoRawTextFields(value: unknown, sourceName: string, trail = "root") {
@@ -201,10 +242,26 @@ export function validateCurriculumDocument(raw: unknown, expectedExam: Appraiser
       units: subject.units.map((unit, unitIndex) => {
         const unitName = `${subjectName}.units[${unitIndex}]`;
         assertRecord(unit, unitName);
+        const basePlanning = {
+          importance: assertImportance(unit.importance, "importance", unitName),
+          coreConcepts: assertStringArray(unit.coreConcepts, "coreConcepts", unitName),
+          defaultReviewPattern: assertString(unit.defaultReviewPattern, "defaultReviewPattern", unitName),
+          riskLevel: assertRiskLevel(unit.riskLevel, "riskLevel", unitName),
+        };
+        const examSpecificPlanning = expectedExam === "감정평가사 1차"
+          ? {
+              trapWords: assertStringArray(unit.trapWords, "trapWords", unitName),
+              ...(unit.secondExamBridge === undefined ? {} : { secondExamBridge: assertString(unit.secondExamBridge, "secondExamBridge", unitName) }),
+            }
+          : {
+              mistakePatterns: assertStringArray(unit.mistakePatterns, "mistakePatterns", unitName),
+            };
         return {
           id: assertString(unit.id, "id", unitName),
           name: assertString(unit.name, "name", unitName),
           taskTypes: assertStringArray(unit.taskTypes, "taskTypes", unitName),
+          ...basePlanning,
+          ...examSpecificPlanning,
         };
       }),
     };
@@ -234,7 +291,12 @@ export function validateStudyTracks(raw: unknown, sourceName = "study_tracks"): 
       examMode,
       days: typeof track.days === "number" && Number.isFinite(track.days) ? track.days : Number(assertString(track.days, "days", trackName)),
       label: assertString(track.label, "label", trackName),
+      phase: assertString(track.phase, "phase", trackName),
+      goal: assertString(track.goal, "goal", trackName),
       dailyFocus: assertStringArray(track.dailyFocus, "dailyFocus", trackName),
+      weeklyFocus: assertStringArray(track.weeklyFocus, "weeklyFocus", trackName),
+      riskHandling: assertStringArray(track.riskHandling, "riskHandling", trackName),
+      recommendedTaskMix: assertStringArray(track.recommendedTaskMix, "recommendedTaskMix", trackName),
     }];
   })) as Record<StudyTrackId, StudyTrack>;
 
