@@ -15,6 +15,16 @@ function taskTypesFor(signal) {
   return buildCurriculumNextAction(signal, reference).candidates.map((candidate) => candidate.taskType);
 }
 
+function idsFor(signal) {
+  return buildCurriculumNextAction(signal, reference).candidates.map((candidate) => candidate.id);
+}
+
+function assertUniqueCandidateIds(signal) {
+  const ids = idsFor(signal);
+  assert.equal(new Set(ids).size, ids.length, `duplicate candidate ids: ${ids.join(", ")}`);
+  return ids;
+}
+
 test("first exam unitId classification works for acct_inventory_lcm", () => {
   const classification = classifyLearningSignalToCurriculum({ examMode: "first", unitId: "acct_inventory_lcm" }, reference);
   assert.equal(classification.matchedBy, "unitId");
@@ -93,6 +103,53 @@ test("second exam law/theory signal can recommend issue spotting", () => {
   const theoryTypes = taskTypesFor({ examMode: "second", subjectName: "감정평가이론", confidence: "low" });
   assert.ok(lawTypes.includes("issue spotting"));
   assert.ok(theoryTypes.includes("issue spotting"));
+});
+
+
+test("candidate ids are unique for first exam wrong plus low confidence", () => {
+  const ids = assertUniqueCandidateIds({
+    examMode: "first",
+    unitId: "civil_general",
+    result: "wrong",
+    confidence: "low",
+  });
+  assert.ok(ids.some((id) => id.includes("wrong_cloze")));
+  assert.ok(ids.some((id) => id.includes("low_confidence_cloze")));
+});
+
+test("candidate ids are unique for first exam accounting wrong low confidence with accounting task", () => {
+  const ids = assertUniqueCandidateIds({
+    examMode: "first",
+    unitId: "acct_inventory_lcm",
+    taskType: "accounting_template",
+    result: "wrong",
+    confidence: "low",
+  });
+  assert.ok(ids.some((id) => id.includes("wrong_cloze")));
+  assert.ok(ids.some((id) => id.includes("low_confidence_cloze")));
+  assert.ok(ids.some((id) => id.includes("accounting_template")));
+});
+
+test("candidate ids are unique for second exam needs_rewrite plus low confidence", () => {
+  const ids = assertUniqueCandidateIds({
+    examMode: "second",
+    unitId: "practice_income",
+    result: "needs_rewrite",
+    confidence: "low",
+  });
+  assert.ok(ids.some((id) => id.includes("needs_rewrite")));
+  assert.ok(ids.some((id) => id.includes("structure_rewrite")));
+});
+
+test("candidate ids are unique for second exam CASIO plus weak structure point", () => {
+  const ids = assertUniqueCandidateIds({
+    examMode: "second",
+    unitId: "practice_income",
+    sourceType: "casio",
+    weakStructurePoint: "계산 순서와 결론 문장 연결",
+  });
+  assert.ok(ids.some((id) => id.includes("casio_sequence")));
+  assert.ok(ids.some((id) => id.includes("structure_rewrite")));
 });
 
 test("과락 risk raises candidate priority", () => {

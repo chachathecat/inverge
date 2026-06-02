@@ -224,6 +224,7 @@ function idPart(value: string | null) {
 
 function makeCandidate(
   classification: CurriculumClassification,
+  ruleKey: string,
   taskType: string,
   title: string,
   rationale: string,
@@ -231,7 +232,7 @@ function makeCandidate(
   prioritySignals: string[],
 ): CurriculumTaskCandidate {
   return {
-    id: [classification.examMode, idPart(classification.subjectId), idPart(classification.unitId), taskType]
+    id: [classification.examMode, idPart(classification.subjectId), idPart(classification.unitId), ruleKey, taskType]
       .join(":")
       .replace(/[^\w:/-]+/g, "_")
       .replace(/_+/g, "_"),
@@ -269,28 +270,28 @@ function recoveryRationale(signal: CurriculumLearningSignal) {
 function firstExamCandidates(classification: CurriculumClassification, signal: CurriculumLearningSignal) {
   const candidates: CurriculumTaskCandidate[] = [];
   const target = classification.unitName ?? classification.subjectName ?? "확인한 단원";
-  const add = (taskType: string, title: string, rationale: string, minutes: number) => {
+  const add = (ruleKey: string, taskType: string, title: string, rationale: string, minutes: number) => {
     if (hasAllowedTaskType(classification, taskType)) {
-      candidates.push(makeCandidate(classification, taskType, title, rationale, minutes, basePrioritySignals(classification, signal, taskType)));
+      candidates.push(makeCandidate(classification, ruleKey, taskType, title, rationale, minutes, basePrioritySignals(classification, signal, taskType)));
     }
   };
 
   if (signal.result === "wrong" || signal.result === "unknown") {
-    add("O/X", `${target} O/X 재확인`, `${recoveryRationale(signal)} 먼저 맞다/아니다 판단으로 기준을 세웁니다.`, 8);
-    add("cloze", `${target} 빈칸 회상`, `${recoveryRationale(signal)} 핵심어를 직접 꺼내며 설명보다 회상을 먼저 둡니다.`, 10);
+    add("wrong_ox", "O/X", `${target} O/X 재확인`, `${recoveryRationale(signal)} 먼저 맞다/아니다 판단으로 기준을 세웁니다.`, 8);
+    add("wrong_cloze", "cloze", `${target} 빈칸 회상`, `${recoveryRationale(signal)} 핵심어를 직접 꺼내며 설명보다 회상을 먼저 둡니다.`, 10);
   }
   if (signal.confidence === "unknown" || signal.confidence === "low") {
-    add("cloze", `${target} 개념 회상`, "확신이 낮은 부분은 짧은 빈칸 회상으로 한 가지 기준부터 복구합니다.", 10);
+    add("low_confidence_cloze", "cloze", `${target} 개념 회상`, "확신이 낮은 부분은 짧은 빈칸 회상으로 한 가지 기준부터 복구합니다.", 10);
   }
   if (
     hasAllowedTaskType(classification, "accounting template")
     && (classification.subjectId === "first_accounting" || classification.unitId?.startsWith("acct_") || normalizeCurriculumTaskType(signal.taskType) === "accounting template" || signal.sourceType === "accounting_template")
   ) {
-    add("accounting template", `${target} 계산 틀 재확인`, "회계 계산은 풀이 전문이 아니라 입력값과 산식 틀을 분리해 다시 확인합니다.", 12);
+    add("accounting_template", "accounting template", `${target} 계산 틀 재확인`, "회계 계산은 풀이 전문이 아니라 입력값과 산식 틀을 분리해 다시 확인합니다.", 12);
   }
   if (candidates.length === 0) {
-    add("O/X", `${target} O/X 확인`, `${recoveryRationale(signal)} 짧은 판단 문항으로 다음 복습 여부를 정합니다.`, 8);
-    add("cloze", `${target} 개념 회상`, "한 가지 기준을 직접 떠올린 뒤 필요한 설명만 확인합니다.", 10);
+    add("fallback_ox", "O/X", `${target} O/X 확인`, `${recoveryRationale(signal)} 짧은 판단 문항으로 다음 복습 여부를 정합니다.`, 8);
+    add("fallback_cloze", "cloze", `${target} 개념 회상`, "한 가지 기준을 직접 떠올린 뒤 필요한 설명만 확인합니다.", 10);
   }
   return candidates;
 }
@@ -299,17 +300,17 @@ function secondExamCandidates(classification: CurriculumClassification, signal: 
   const candidates: CurriculumTaskCandidate[] = [];
   const target = classification.unitName ?? classification.subjectName ?? "확인한 쟁점";
   const normalizedTaskType = normalizeCurriculumTaskType(signal.taskType);
-  const add = (taskType: string, title: string, rationale: string, minutes: number) => {
+  const add = (ruleKey: string, taskType: string, title: string, rationale: string, minutes: number) => {
     if (hasAllowedTaskType(classification, taskType)) {
-      candidates.push(makeCandidate(classification, taskType, title, rationale, minutes, basePrioritySignals(classification, signal, taskType)));
+      candidates.push(makeCandidate(classification, ruleKey, taskType, title, rationale, minutes, basePrioritySignals(classification, signal, taskType)));
     }
   };
 
   if (signal.result === "needs_rewrite") {
-    add("rewrite", `${target} 10분 다시 쓰기`, "가장 큰 빈틈 하나를 정해 문단 구조를 다시 세웁니다.", 10);
+    add("needs_rewrite", "rewrite", `${target} 10분 다시 쓰기`, "가장 큰 빈틈 하나를 정해 문단 구조를 다시 세웁니다.", 10);
   }
   if (signal.sourceType === "casio" || normalizedTaskType === "CASIO") {
-    add("CASIO", `${target} CASIO 순서 확인`, "계산 흐름은 단위와 입력 순서를 분리해 차분히 재확인합니다.", 8);
+    add("casio_sequence", "CASIO", `${target} CASIO 순서 확인`, "계산 흐름은 단위와 입력 순서를 분리해 차분히 재확인합니다.", 8);
   }
   if (
     classification.subjectId === "second_theory"
@@ -317,14 +318,14 @@ function secondExamCandidates(classification: CurriculumClassification, signal: 
     || signal.sourceType === "issue_spotting"
     || Boolean(signal.missingIssueCandidate)
   ) {
-    add("issue spotting", `${target} 쟁점 찾기`, "누락 가능성이 있는 쟁점 하나를 먼저 표시한 뒤 답안화 여부를 정합니다.", 12);
+    add("issue_spotting", "issue spotting", `${target} 쟁점 찾기`, "누락 가능성이 있는 쟁점 하나를 먼저 표시한 뒤 답안화 여부를 정합니다.", 12);
   }
   if (signal.weakStructurePoint || signal.confidence === "low" || signal.confidence === "unknown") {
-    add("rewrite", `${target} 구조 보정`, "약한 구조 지점 하나만 골라 짧게 다시 씁니다.", 10);
+    add("structure_rewrite", "rewrite", `${target} 구조 보정`, "약한 구조 지점 하나만 골라 짧게 다시 씁니다.", 10);
   }
   if (candidates.length === 0) {
-    add("issue spotting", `${target} 쟁점 찾기`, `${recoveryRationale(signal)} 답안 전에 빠진 쟁점 후보를 먼저 확인합니다.`, 12);
-    add("rewrite", `${target} 짧은 다시 쓰기`, "확인한 기준을 한 문단으로 다시 써 실행 흐름을 이어갑니다.", 10);
+    add("fallback_issue_spotting", "issue spotting", `${target} 쟁점 찾기`, `${recoveryRationale(signal)} 답안 전에 빠진 쟁점 후보를 먼저 확인합니다.`, 12);
+    add("fallback_rewrite", "rewrite", `${target} 짧은 다시 쓰기`, "확인한 기준을 한 문단으로 다시 써 실행 흐름을 이어갑니다.", 10);
   }
   return candidates;
 }
