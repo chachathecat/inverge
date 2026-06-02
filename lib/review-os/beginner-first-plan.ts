@@ -51,6 +51,8 @@ export type BeginnerFirstPlan = {
   planWarnings: string[];
 };
 
+const FIRST_WEAK_SUBJECTS = ["민법", "경제학원론", "부동산학원론", "감정평가관계법규", "회계학"] as const;
+const SECOND_WEAK_SUBJECTS = ["감정평가실무", "감정평가이론", "감정평가 및 보상법규"] as const;
 const MAX_TODAY_PLAN_TASKS = 3;
 const DRAFT_PLAN_WARNING = "커리큘럼 기준은 초안 메타데이터이므로 공식 범위 확정처럼 사용하지 않고, 오늘 실행 순서 참고용으로만 둡니다.";
 
@@ -64,6 +66,14 @@ function normalizeDailyAvailableMinutes(minutes: number): BeginnerDailyAvailable
   if (minutes <= 60) return 60;
   if (minutes <= 90) return 90;
   return 180;
+}
+
+export function normalizeWeakSubjectName(examMode: AppraiserExamMode, rawWeakSubjectName?: string) {
+  const weakSubjectName = rawWeakSubjectName?.trim();
+  if (!weakSubjectName) return undefined;
+
+  const allowedSubjects: readonly string[] = examMode === "first" ? FIRST_WEAK_SUBJECTS : SECOND_WEAK_SUBJECTS;
+  return allowedSubjects.includes(weakSubjectName) ? weakSubjectName : undefined;
 }
 
 function examModeLabel(examMode: AppraiserExamMode) {
@@ -194,7 +204,7 @@ export function buildBeginnerFirstPlan(
     ...rawInput,
     daysUntilExam: clampDaysUntilExam(rawInput.daysUntilExam),
     dailyAvailableMinutes: normalizeDailyAvailableMinutes(rawInput.dailyAvailableMinutes),
-    weakSubjectName: rawInput.weakSubjectName?.trim() || undefined,
+    weakSubjectName: normalizeWeakSubjectName(rawInput.examMode, rawInput.weakSubjectName),
     preferredStart: rawInput.preferredStart,
   };
   const inferredSignal = inferSignal(input);

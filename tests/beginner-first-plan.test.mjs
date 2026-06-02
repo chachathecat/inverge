@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
-import { buildBeginnerFirstPlan } from "../lib/review-os/beginner-first-plan.ts";
+import { buildBeginnerFirstPlan, normalizeWeakSubjectName } from "../lib/review-os/beginner-first-plan.ts";
 import { loadAppraiserCurriculumReference } from "../lib/review-os/curriculum-reference.ts";
 
 const reference = loadAppraiserCurriculumReference();
@@ -63,6 +63,33 @@ test("2차 실무 plus CASIO preferred can produce CASIO", () => {
   assert.ok(taskTypes(plan).includes("CASIO"));
 });
 
+test("weak subjects are normalized against selected exam mode", () => {
+  assert.equal(normalizeWeakSubjectName("first", " 회계학 "), "회계학");
+  assert.equal(normalizeWeakSubjectName("second", "감정평가실무"), "감정평가실무");
+  assert.equal(normalizeWeakSubjectName("second", "회계학"), undefined);
+  assert.equal(normalizeWeakSubjectName("first", "감정평가실무"), undefined);
+});
+
+test("invalid weak subject for selected exam mode is not passed into generated plan", () => {
+  const secondPlan = build({ examMode: "second", weakSubjectName: "회계학", preferredStart: "쟁점 찾기" });
+  assert.equal(secondPlan.onboardingSummary.weakSubjectName, null);
+  assert.notEqual(secondPlan.inferredSignal.subjectName, "회계학");
+
+  const firstPlan = build({ examMode: "first", weakSubjectName: "감정평가실무", preferredStart: "O/X" });
+  assert.equal(firstPlan.onboardingSummary.weakSubjectName, null);
+  assert.notEqual(firstPlan.inferredSignal.subjectName, "감정평가실무");
+});
+
+test("selected exam mode cannot produce a summary with the other exam weak subject", () => {
+  const secondPlan = build({ examMode: "second", weakSubjectName: "회계학" });
+  assert.notEqual(secondPlan.onboardingSummary.weakSubjectName, "회계학");
+  assert.equal(serialized(secondPlan).includes('"weakSubjectName":"회계학"'), false);
+
+  const firstPlan = build({ examMode: "first", weakSubjectName: "감정평가실무" });
+  assert.notEqual(firstPlan.onboardingSummary.weakSubjectName, "감정평가실무");
+  assert.equal(serialized(firstPlan).includes('"weakSubjectName":"감정평가실무"'), false);
+});
+
 test("막판 정리 does not use shame or fear copy", () => {
   const plan = build({ examMode: "first", currentLevel: "막판 정리", daysUntilExam: 14 });
   const text = serialized(plan);
@@ -108,12 +135,17 @@ test("no raw text fields are required or emitted", () => {
   }
 });
 
-test("onboarding page guardrails and primary CTA", async () => {
+test("onboarding page guardrails and mode-preserving primary CTA", async () => {
   const source = await readFile(new URL("../app/app/onboarding/page.tsx", import.meta.url), "utf8");
   assert.ok(source.includes("첫 오늘 계획 만들기"));
   assert.ok(source.includes("오늘 계획 만들기"));
   assert.ok(source.includes("오늘 할 일 {plan.todayPlan.length}개"));
   assert.ok(source.includes("plan.todayPlan.map"));
-  for (const forbidden of ["/instructor", "결제", "기출 아카이브", "native app", "네이티브 앱", "공식 채점", "공식 점수"])
+  assert.match(source, /function sessionHref\(examMode: AppraiserExamMode\) \{\n  return `\/app\/session\?mode=\$\{examMode\}`;\n\}/);
+  assert.ok(source.includes('href={sessionHref(examMode)}>오늘 계획으로 시작</Link>'));
+  assert.ok(source.includes('{ value: "first", label: "감정평가사 1차" }'));
+  assert.ok(source.includes('{ value: "second", label: "감정평가사 2차" }'));
+  assert.ok(source.includes('normalizeWeakSubjectName(examMode, firstValue(params.weakSubjectName))'));
+  for (const forbidden of ["/instructor", "instructor", "결제", "payment", "기출 아카이브", "archive", "native app", "네이티브 앱", "공식 채점", "공식 점수"])
     assert.equal(source.includes(forbidden), false, `forbidden onboarding source found: ${forbidden}`);
 });

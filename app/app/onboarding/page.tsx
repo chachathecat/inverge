@@ -4,6 +4,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   buildBeginnerFirstPlan,
+  normalizeWeakSubjectName,
   type BeginnerCurrentLevel,
   type BeginnerDailyAvailableMinutes,
   type BeginnerPreferredStart,
@@ -60,6 +61,10 @@ function optionClasses(active: boolean) {
   }`;
 }
 
+function sessionHref(examMode: AppraiserExamMode) {
+  return `/app/session?mode=${examMode}`;
+}
+
 function startHref(examMode: AppraiserExamMode, subjectName: string | null | undefined) {
   if (examMode === "second") return "/app/write?mode=second";
   const subject = subjectName || "민법";
@@ -73,7 +78,7 @@ export default async function ReviewOsOnboardingPage({ searchParams }: PageProps
   const dailyAvailableMinutes = parseDailyMinutes(firstValue(params.dailyAvailableMinutes));
   const currentLevel = parseCurrentLevel(firstValue(params.currentLevel));
   const preferredStart = parsePreferredStart(firstValue(params.preferredStart));
-  const weakSubjectName = firstValue(params.weakSubjectName)?.trim() || undefined;
+  const weakSubjectName = normalizeWeakSubjectName(examMode, firstValue(params.weakSubjectName));
   const generated = firstValue(params.plan) === "1";
   const weakSubjectOptions = examMode === "first" ? FIRST_WEAK_SUBJECTS : SECOND_WEAK_SUBJECTS;
   const plan = generated
@@ -220,7 +225,7 @@ export default async function ReviewOsOnboardingPage({ searchParams }: PageProps
             ) : null}
 
             <div className="flex flex-col gap-2 sm:flex-row">
-              <Link className={buttonVariants({ className: "w-full sm:w-auto", size: "lg" })} href="/app/session">오늘 계획으로 시작</Link>
+              <Link className={buttonVariants({ className: "w-full sm:w-auto", size: "lg" })} href={sessionHref(examMode)}>오늘 계획으로 시작</Link>
               <Link className={buttonVariants({ className: "w-full sm:w-auto", variant: "outline" })} href={startHref(examMode, plan.onboardingSummary.weakSubjectName)}>오늘 한 것 올리기</Link>
               <Link className={buttonVariants({ className: "w-full sm:w-auto", variant: "ghost" })} href="/app">나중에 조정</Link>
             </div>
