@@ -197,7 +197,7 @@ export default async function ReviewOsOnboardingPage({ searchParams }: PageProps
         <Card className="border-[var(--border)] bg-[color:var(--surface)] shadow-none">
           <CardHeader>
             <CardTitle>오늘 할 일 {plan.todayPlan.length}개</CardTitle>
-            <CardDescription>{plan.onboardingSummary.biggestFocus}</CardDescription>
+            <CardDescription>{plan.onboardingSummary.examModeLabel} · {plan.onboardingSummary.biggestFocus}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
             <ol className="grid gap-3">
@@ -216,6 +216,7 @@ export default async function ReviewOsOnboardingPage({ searchParams }: PageProps
             </ol>
 
             <div className="rounded-2xl border border-[var(--border)] bg-[color:var(--surface)] p-4 text-sm leading-7 text-[color:var(--muted-strong)]">
+              <p><span className="font-medium text-[color:var(--foreground-strong)]">시험 구분:</span> {plan.onboardingSummary.examModeLabel}</p>
               <p><span className="font-medium text-[color:var(--foreground-strong)]">가장 큰 초점:</span> {plan.onboardingSummary.biggestFocus}</p>
               <p>{plan.onboardingSummary.recoveryLine}</p>
             </div>

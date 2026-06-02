@@ -5,9 +5,11 @@ import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { AccountingTemplateCard } from "@/components/review-os/accounting-template-card";
+import { ExecutionResultControls } from "@/components/review-os/execution-result-controls";
 import { DEVICE_APPENDIX_FX_9860GIII, type CalculatorWorkflow } from "@/lib/review-os/calculator-workflow";
 
 type CalculatorWorkflowPageProps = {
+  focus?: string | null;
   workflow: CalculatorWorkflow;
 };
 
@@ -38,12 +40,14 @@ const TYPE_TO_STAGE: Record<string, number> = {
   "present-value": 2,
 };
 
-export function CalculatorWorkflowPage({ workflow }: CalculatorWorkflowPageProps) {
+export function CalculatorWorkflowPage({ focus, workflow }: CalculatorWorkflowPageProps) {
   const [selectedType, setSelectedType] = useState(workflow.problemTypes[0]?.id ?? "");
   const [activeStageIndex, setActiveStageIndex] = useState(() => TYPE_TO_STAGE[workflow.problemTypes[0]?.id ?? ""] ?? 0);
 
   const activeCard = workflow.stepCards[Math.min(activeStageIndex, workflow.stepCards.length - 1)];
   const selectedTypeMeta = workflow.problemTypes.find((type) => type.id === selectedType) ?? workflow.problemTypes[0];
+  const isCasioFocus = workflow.mode === "second" && focus === "casio";
+  const resultTaskType = isCasioFocus ? "CASIO" : workflow.context === "accounting" ? "accounting template" : "calculation routine";
 
   const deviceDraftPaths = useMemo(
     () => workflow.stepCards.map((card) => ({ title: card.title, common: card.buttonPath.common, draft: card.buttonPath.fx9860giiiDraft })),
@@ -64,7 +68,7 @@ export function CalculatorWorkflowPage({ workflow }: CalculatorWorkflowPageProps
               </span>
             </div>
             <h2 className="mt-3 text-2xl font-semibold tracking-[-0.035em] text-[color:var(--foreground-strong)]">{workflow.title}</h2>
-            <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">계산 결과를 답안 판단으로 연결합니다. 지금은 한 번에 한 루틴만 고정합니다.</p>
+            <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">{isCasioFocus ? "CASIO 계산형 연습입니다. 답안 전문 작성이 아니라 계산기 입력 순서, 단위 확인, 판단 문장 연결만 고정합니다." : "계산 결과를 답안 판단으로 연결합니다. 지금은 한 번에 한 루틴만 고정합니다."}</p>
           </div>
           <Link href={`/app?mode=${workflow.mode}`}>
             <Button type="button" variant="outline">
@@ -77,7 +81,7 @@ export function CalculatorWorkflowPage({ workflow }: CalculatorWorkflowPageProps
       {workflow.context === "accounting" ? <AccountingTemplateCard /> : null}
 
       <section className="rounded-[var(--radius-card)] border border-[color:var(--brand-700)] bg-[color:var(--brand-050)] p-5 md:p-6">
-        <p className="text-caption text-[color:var(--brand-700)]">오늘 계산 루틴 1개</p>
+        <p className="text-caption text-[color:var(--brand-700)]">{isCasioFocus ? "CASIO 계산형 루틴 1개" : "오늘 계산 루틴 1개"}</p>
         <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">계산 실수 방지 3단계</h3>
         <ol className="mt-4 space-y-2">
           {ROUTINE_STEPS.map((step, index) => (
@@ -155,6 +159,13 @@ export function CalculatorWorkflowPage({ workflow }: CalculatorWorkflowPageProps
           ))}
         </ul>
       </section>
+
+      <ExecutionResultControls
+        examMode={workflow.mode}
+        executionSource="calculator"
+        subjectName={workflow.subject}
+        taskType={resultTaskType}
+      />
 
       <details className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-5">
         <summary className="cursor-pointer text-sm font-medium text-[color:var(--foreground-strong)]">시험 전 체크 / 기본 세팅 보기</summary>

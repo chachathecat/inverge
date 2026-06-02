@@ -3,6 +3,7 @@
 import { useId, useState } from "react";
 
 import { CollapsibleDetails, InlineFeedback, LearnerProgressBar, SingleFocusCard } from "@/components/learner";
+import { ExecutionResultControls } from "@/components/review-os/execution-result-controls";
 import { Button } from "@/components/ui/button";
 import { APPRAISAL_FIRST_SUBJECTS } from "@/lib/review-os/types";
 import {
@@ -317,6 +318,15 @@ export function FirstOxPracticeClient({
                 </InlineFeedback>
               ) : null}
               {currentAttempt && resolveFirstOxLearningSignalKind(currentAttempt) !== "none" ? <ConceptPopup statement={current} attempt={currentAttempt} /> : null}
+              {currentAttempt ? (
+                <ExecutionResultControls
+                  examMode="first"
+                  executionSource="first_ox"
+                  subjectName={current.subject}
+                  taskType="O/X"
+                  unitName={reviewFocusLabel(current)}
+                />
+              ) : null}
               {currentAttempt ? (
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <Button type="button" onClick={goNext} disabled={index >= statements.length - 1} className="w-full sm:w-auto">

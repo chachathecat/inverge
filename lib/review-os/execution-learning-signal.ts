@@ -1,6 +1,6 @@
 import { type AppraiserExamMode } from "./curriculum-reference";
 
-export type ExecutionLearningSignalSource = "onboarding" | "today_plan" | "capture" | "session";
+export type ExecutionLearningSignalSource = "onboarding" | "today_plan" | "capture" | "session" | "first_ox" | "calculator";
 export type ExecutionLearningSignalResult = "done" | "wrong" | "unknown" | "needs_rewrite" | "skipped";
 export type ExecutionLearningSignalConfidence = "unknown" | "low" | "medium" | "high";
 export type ExecutionLearningDerivedStatus = "completed" | "needs_review" | "needs_rewrite" | "recovery";

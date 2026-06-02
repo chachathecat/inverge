@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 
+import { buildBeginnerFirstPlan } from "../lib/review-os/beginner-first-plan.ts";
 import { loadAppraiserCurriculumReference } from "../lib/review-os/curriculum-reference.ts";
 
 const requiredFiles = [
@@ -189,4 +190,65 @@ test("Today Plan max 3 guardrail still exists", () => {
   const source = read("lib/review-os/today-plan-prioritization.ts");
   assert.equal(source.includes("compressTodayPlanToMaxThree"), true);
   assert.equal(/compressed\.length\s*={2,3}\s*3/.test(source) || /slice\(0,\s*3\)/.test(source), true);
+});
+
+test("PR314 onboarding exam label and task links are mode-specific", () => {
+  const onboarding = read("app/app/onboarding/page.tsx");
+  assert.equal(onboarding.includes("plan.onboardingSummary.examModeLabel"), true, "onboarding preview should render selected exam label");
+  assert.equal(onboarding.includes("buildExecutionBridge"), true, "onboarding should build per-task execution links");
+  assert.equal(onboarding.includes("<Link href={href}"), true, "each preview task should navigate by its own href");
+
+  const secondPlan = buildBeginnerFirstPlan({
+    examMode: "second",
+    daysUntilExam: 90,
+    dailyAvailableMinutes: 60,
+    currentLevel: "처음 시작",
+    preferredStart: "CASIO",
+    weakSubjectName: "감정평가실무",
+  }, loadAppraiserCurriculumReference());
+  assert.equal(secondPlan.onboardingSummary.examModeLabel, "감정평가사 2차");
+
+  const bridge = read("lib/review-os/first-plan-execution-bridge.ts");
+  assert.equal(bridge.includes('/app/calculator?mode=second&context=practice&focus=casio'), true);
+  assert.equal(bridge.includes('/app/write?mode=second&focus=issue_spotting'), true);
+});
+
+test("PR314 result controls appear on completed exercise surfaces without raw text prompts", () => {
+  for (const file of [
+    "components/review-os/today-session-runner.tsx",
+    "components/review-os/first-ox/first-ox-practice-client.tsx",
+    "components/review-os/calculator-workflow-page.tsx",
+  ]) {
+    const source = read(file);
+    assert.equal(source.includes("ExecutionResultControls"), true, `${file} should render result controls`);
+  }
+
+  const controls = read("components/review-os/execution-result-controls.tsx");
+  for (const label of ["완료", "틀림", "모르겠음", "다시쓰기 필요", "나중에"]) {
+    assert.equal(controls.includes(label), true, `${label} should be available`);
+  }
+  for (const forbidden of ["rawProblem", "rawAnswer", "rawOcr", "problemText", "answerText", "ocrText"]) {
+    assert.equal(controls.includes(forbidden), false, `controls should not ask for ${forbidden}`);
+  }
+});
+
+test("PR314 Today Plan mode switching and CASIO route copy are mode-safe", () => {
+  const learnerShell = read("components/learner/learner-ui.tsx");
+  assert.equal(learnerShell.includes('parseAppraisalMode(searchParams.get("mode")) ?? mode'), true, "URL mode should drive active tab");
+  assert.equal(learnerShell.includes('href={`${pathname}?mode=${item.mode}`'), true, "tabs should switch current route mode");
+  assert.equal(learnerShell.includes('aria-current={active ? "page" : undefined}'), true, "active tab should be announced");
+
+  const appPage = read("app/app/page.tsx");
+  assert.equal(appPage.includes('reviewOsService.getTodayFocus(session.userId, session.email, mode)'), true);
+  assert.equal(appPage.includes('buildTodayPlanTasks({\n    mode,'), true);
+  assert.equal(appPage.includes('modeCaptureHref'), true, "empty Today Plan links should preserve the selected mode");
+  assert.equal(appPage.includes('/app/calculator?mode=second&context=practice&focus=casio'), true);
+
+  const calculatorRoute = read("app/app/calculator/page.tsx");
+  assert.equal(calculatorRoute.includes("focus?: string"), true);
+  assert.equal(calculatorRoute.includes("focus={params?.focus}"), true);
+
+  const calculatorPage = read("components/review-os/calculator-workflow-page.tsx");
+  assert.equal(calculatorPage.includes('focus === "casio"'), true);
+  assert.equal(calculatorPage.includes("CASIO 계산형 연습"), true);
 });
