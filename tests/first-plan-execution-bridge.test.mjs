@@ -41,12 +41,14 @@ test("rewrite task goes to second write route", () => {
   assert.equal(hrefFor("rewrite", { examMode: "second", weakSubjectName: "감정평가이론", source: "onboarding" }), "/app/write?mode=second");
 });
 
-test("CASIO task goes to second write/CASIO-safe route", () => {
+test("CASIO task goes to second calculator practice route", () => {
   const href = hrefFor("CASIO", { examMode: "second", weakSubjectName: "감정평가실무", source: "onboarding" });
   const url = new URL(`https://example.test${href}`);
-  assert.equal(url.pathname, "/app/write");
+  assert.equal(url.pathname, "/app/calculator");
   assert.equal(url.searchParams.get("mode"), "second");
+  assert.equal(url.searchParams.get("context"), "practice");
   assert.equal(url.searchParams.get("focus"), "casio");
+  assert.notEqual(href, "/app/write?mode=second&focus=casio");
 });
 
 test("issue spotting task goes to second write/issue-safe route", () => {

@@ -77,7 +77,7 @@ export function buildExecutionHrefForTask(task: FirstPlanExecutionBridgeTask, co
   }
 
   if (normalizedTaskType === "CASIO") {
-    return "/app/write?mode=second&focus=casio";
+    return "/app/calculator?mode=second&context=practice&focus=casio";
   }
 
   if (normalizedTaskType === "issue spotting") {
