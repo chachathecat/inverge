@@ -276,6 +276,7 @@ export function buildLearningSignalFromExecutionResult(input: ExecutionLearningS
 
 function titleForCandidate(signal: ExecutionLearningSignal) {
   const subjectPrefix = signal.subjectName ? `${signal.subjectName} · ` : "";
+  if (signal.examMode === "second" && signal.nextRecommendedTaskType === "rewrite") return `${subjectPrefix}짧은 다시쓰기`;
   if (signal.derivedStatus === "needs_rewrite") return `${subjectPrefix}짧은 다시쓰기`;
   if (signal.result === "skipped") return `${subjectPrefix}복구 과제`;
   if (signal.nextRecommendedTaskType === "accounting template") return `${subjectPrefix}회계 계산틀 복습`;
@@ -286,6 +287,7 @@ function titleForCandidate(signal: ExecutionLearningSignal) {
 }
 
 function actionForCandidate(signal: ExecutionLearningSignal) {
+  if (signal.examMode === "second" && signal.nextRecommendedTaskType === "rewrite") return "한 문단 다시쓰기";
   if (signal.derivedStatus === "needs_rewrite") return "한 문단 다시쓰기";
   if (signal.result === "skipped") return "짧게 다시 시작";
   if (signal.nextRecommendedTaskType === "CASIO") return "계산기 순서 확인";

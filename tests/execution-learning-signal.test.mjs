@@ -24,6 +24,14 @@ function textOf(value) {
   return JSON.stringify(value);
 }
 
+function assertSecondRewriteFollowUpCopy(candidate) {
+  assert.equal(candidate?.taskType, "rewrite");
+  assert.equal(candidate?.title.includes("O/X"), false);
+  assert.equal(candidate?.primaryAction.includes("O/X"), false);
+  assert.match(candidate?.title ?? "", /다시쓰기|답안/);
+  assert.match(candidate?.primaryAction ?? "", /다시쓰기|답안/);
+}
+
 test("wrong O/X creates needs_review signal and review candidate", () => {
   const signal = build({ taskType: "O/X", result: "wrong" });
   const candidate = buildReviewCandidateFromExecutionSignal(signal);
@@ -71,6 +79,33 @@ test("second rewrite needs_rewrite creates rewrite candidate", () => {
   assert.equal(candidate?.candidateType, "rewrite");
   assert.equal(candidate?.taskType, "rewrite");
   assert.match(candidate?.primaryAction ?? "", /다시쓰기/);
+});
+
+
+test("second rewrite wrong uses rewrite follow-up copy without O/X labels", () => {
+  const signal = build({
+    examMode: "second",
+    taskType: "rewrite",
+    subjectName: "감정평가 및 보상법규",
+    result: "wrong",
+  });
+  const candidate = buildReviewCandidateFromExecutionSignal(signal);
+
+  assert.equal(signal.nextRecommendedTaskType, "rewrite");
+  assertSecondRewriteFollowUpCopy(candidate);
+});
+
+test("second rewrite unknown uses rewrite follow-up copy without O/X labels", () => {
+  const signal = build({
+    examMode: "second",
+    taskType: "rewrite",
+    subjectName: "감정평가 및 보상법규",
+    result: "unknown",
+  });
+  const candidate = buildReviewCandidateFromExecutionSignal(signal);
+
+  assert.equal(signal.nextRecommendedTaskType, "rewrite");
+  assertSecondRewriteFollowUpCopy(candidate);
 });
 
 test("second CASIO wrong creates CASIO/calculator recovery candidate", () => {
