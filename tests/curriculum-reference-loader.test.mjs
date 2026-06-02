@@ -26,6 +26,12 @@ const requiredMetadataFields = [
   "storagePolicy",
 ];
 
+const officiallyReviewedReferenceFiles = [
+  "firstExam",
+  "secondExam",
+  "studyTracks",
+];
+
 function assertRequiredMetadata(document) {
   for (const field of requiredMetadataFields) {
     assert.ok(field in document, `${field} should be present`);
@@ -56,19 +62,49 @@ test("all curriculum reference documents expose required metadata guardrail fiel
   assertRequiredMetadata(reference.explanationLadder);
 });
 
-test("verification status remains blocked while draft metadata needs official verification", () => {
+test("verification status remains blocked while internal mappings need official verification", () => {
   const reference = loadAppraiserCurriculumReference();
   const status = reference.verificationStatus;
   assert.equal(status.isOfficiallyVerified, false);
   assert.ok(status.blockingReason.includes("official verification"));
   assert.equal(status.sourceStatuses.length, 4);
   assert.ok(status.sourceStatuses.every((entry) => entry.needsOfficialVerification === true));
+  assert.ok(status.sourceStatuses.some((entry) => entry.sourceStatus.includes("official_subjects_verified")));
+  assert.ok(status.sourceStatuses.some((entry) => entry.sourceStatus.includes("internal_planning_tracks")));
   assert.equal(status.lastReviewedAt.length, 4);
 
   assert.deepEqual(status, getCurriculumVerificationStatus(reference));
 });
 
-test("first and second exam subjects include the supported appraiser curriculum subjects", () => {
+
+test("official verification metadata records source references without overclaiming internal units", () => {
+  const reference = loadAppraiserCurriculumReference();
+
+  for (const key of officiallyReviewedReferenceFiles) {
+    const document = reference[key];
+    assert.equal(document.lastReviewedAt, "2026-06-02", `${key} should record the official verification pass date`);
+    assert.ok(Array.isArray(document.sourceReferences) && document.sourceReferences.length >= 2, `${key} should include public source references`);
+    assert.ok(document.sourceReferences.some((source) => source.url.includes("law.go.kr")), `${key} should reference the statutory subject list`);
+    assert.ok(document.sourceReferences.some((source) => source.url.includes("q-net.or.kr")), `${key} should reference Q-Net`);
+  }
+
+  for (const subject of [...reference.firstExam.subjects, ...reference.secondExam.subjects]) {
+    assert.equal(subject.sourceStatus, "official_subject_label_verified", `${subject.id} subject label should be verified`);
+    assert.equal(subject.needsOfficialVerification, false, `${subject.id} subject label should not remain blocked`);
+  }
+
+  for (const unit of [...reference.firstExam.subjects, ...reference.secondExam.subjects].flatMap((subject) => subject.units)) {
+    assert.equal(unit.sourceStatus, "internal_mapping_needs_official_review", `${unit.id} should remain an internal mapping`);
+    assert.equal(unit.needsOfficialVerification, true, `${unit.id} should not be falsely marked official`);
+  }
+
+  for (const [trackId, track] of Object.entries(reference.studyTracks.tracks)) {
+    assert.equal(track.sourceStatus, "internal_planning_needs_beta_review", `${trackId} should remain an internal schedule template`);
+    assert.equal(track.needsOfficialVerification, true, `${trackId} should not be marked as official curriculum`);
+  }
+});
+
+test("first and second exam subjects include only the supported appraiser curriculum subjects", () => {
   const firstSubjectNames = listSubjects("first").map((subject) => subject.name);
   const secondSubjectNames = listSubjects("second").map((subject) => subject.name);
 
@@ -78,6 +114,9 @@ test("first and second exam subjects include the supported appraiser curriculum 
   for (const subjectName of ["감정평가실무", "감정평가이론", "감정평가 및 보상법규"]) {
     assert.ok(secondSubjectNames.includes(subjectName), `missing second exam subject ${subjectName}`);
   }
+
+  assert.deepEqual(firstSubjectNames.sort(), ["감정평가관계법규", "경제학원론", "민법", "부동산학원론", "회계학"].sort());
+  assert.deepEqual(secondSubjectNames.sort(), ["감정평가 및 보상법규", "감정평가실무", "감정평가이론"].sort());
 });
 
 test("lookup helpers return units and allowed task types without creating UI behavior", () => {

@@ -1,10 +1,10 @@
 {
   "schemaVersion": "2026-06-01",
   "exam": "감정평가사 2차",
-  "sourceStatus": "draft_metadata_from_internal_roadmap",
+  "sourceStatus": "official_subjects_verified_internal_units_need_official_review",
   "needsOfficialVerification": true,
-  "lastReviewedAt": "2026-06-01",
-  "verificationNote": "Official subject/unit labels must be verified against Q-Net/current public notice verification before production use.",
+  "lastReviewedAt": "2026-06-02",
+  "verificationNote": "Official subject labels and statutory exam boundaries were checked against public official sources on 2026-06-02. Internal planning units remain learner-operational mappings and are not marked as official syllabus units.",
   "storagePolicy": "metadata_only_no_raw_user_or_problem_text",
   "subjects": [
     {
@@ -31,7 +31,10 @@
             "자료 적합성 판단 부족"
           ],
           "defaultReviewPattern": "쟁점 표시 → 계산 순서 재현 → 5일 후 재확인",
-          "riskLevel": "medium"
+          "riskLevel": "medium",
+          "sourceStatus": "internal_mapping_needs_official_review",
+          "needsOfficialVerification": true,
+          "verificationNote": "Internal planning unit for retrieval/rewrite scheduling; do not present as an official syllabus unit."
         },
         {
           "id": "practice_cost",
@@ -52,7 +55,10 @@
             "원가 항목 중복"
           ],
           "defaultReviewPattern": "쟁점 표시 → 계산 순서 재현 → 5일 후 재확인",
-          "riskLevel": "medium"
+          "riskLevel": "medium",
+          "sourceStatus": "internal_mapping_needs_official_review",
+          "needsOfficialVerification": true,
+          "verificationNote": "Internal planning unit for retrieval/rewrite scheduling; do not present as an official syllabus unit."
         },
         {
           "id": "practice_comparison",
@@ -73,7 +79,10 @@
             "시점수정 누락"
           ],
           "defaultReviewPattern": "쟁점 표시 → 계산 순서 재현 → 5일 후 재확인",
-          "riskLevel": "medium"
+          "riskLevel": "medium",
+          "sourceStatus": "internal_mapping_needs_official_review",
+          "needsOfficialVerification": true,
+          "verificationNote": "Internal planning unit for retrieval/rewrite scheduling; do not present as an official syllabus unit."
         },
         {
           "id": "practice_income",
@@ -94,7 +103,10 @@
             "DCF 단계 누락"
           ],
           "defaultReviewPattern": "쟁점 표시 → 계산 순서 재현 → 2일 후 CASIO 재확인",
-          "riskLevel": "high"
+          "riskLevel": "high",
+          "sourceStatus": "internal_mapping_needs_official_review",
+          "needsOfficialVerification": true,
+          "verificationNote": "Internal planning unit for retrieval/rewrite scheduling; do not present as an official syllabus unit."
         },
         {
           "id": "practice_compensation",
@@ -116,9 +128,15 @@
             "잔여지 판단 근거 부족"
           ],
           "defaultReviewPattern": "쟁점 표시 → 계산 순서 재현 → 2일 후 CASIO 재확인",
-          "riskLevel": "high"
+          "riskLevel": "high",
+          "sourceStatus": "internal_mapping_needs_official_review",
+          "needsOfficialVerification": true,
+          "verificationNote": "Internal planning unit for retrieval/rewrite scheduling; do not present as an official syllabus unit."
         }
-      ]
+      ],
+      "sourceStatus": "official_subject_label_verified",
+      "needsOfficialVerification": false,
+      "verificationNote": "Subject label is verified against the official exam subject list; nested units remain internal planning metadata unless separately marked."
     },
     {
       "id": "second_theory",
@@ -144,7 +162,10 @@
             "결론 문장 약함"
           ],
           "defaultReviewPattern": "쟁점 표시 → 짧은 문단 재작성 → 5일 후 재확인",
-          "riskLevel": "medium"
+          "riskLevel": "medium",
+          "sourceStatus": "internal_mapping_needs_official_review",
+          "needsOfficialVerification": true,
+          "verificationNote": "Internal planning unit for retrieval/rewrite scheduling; do not present as an official syllabus unit."
         },
         {
           "id": "theory_value",
@@ -166,7 +187,10 @@
             "사례화 부족"
           ],
           "defaultReviewPattern": "쟁점 표시 → 짧은 문단 재작성 → 5일 후 재확인",
-          "riskLevel": "medium"
+          "riskLevel": "medium",
+          "sourceStatus": "internal_mapping_needs_official_review",
+          "needsOfficialVerification": true,
+          "verificationNote": "Internal planning unit for retrieval/rewrite scheduling; do not present as an official syllabus unit."
         },
         {
           "id": "theory_principles",
@@ -188,7 +212,10 @@
             "상충 원칙 조정 부족"
           ],
           "defaultReviewPattern": "쟁점 표시 → 10분 다시쓰기 → 3일 후 재작성",
-          "riskLevel": "high"
+          "riskLevel": "high",
+          "sourceStatus": "internal_mapping_needs_official_review",
+          "needsOfficialVerification": true,
+          "verificationNote": "Internal planning unit for retrieval/rewrite scheduling; do not present as an official syllabus unit."
         },
         {
           "id": "theory_market",
@@ -209,7 +236,10 @@
             "평가방식 연결 부족"
           ],
           "defaultReviewPattern": "쟁점 표시 → 짧은 문단 재작성 → 5일 후 재확인",
-          "riskLevel": "medium"
+          "riskLevel": "medium",
+          "sourceStatus": "internal_mapping_needs_official_review",
+          "needsOfficialVerification": true,
+          "verificationNote": "Internal planning unit for retrieval/rewrite scheduling; do not present as an official syllabus unit."
         },
         {
           "id": "theory_highest_best_use",
@@ -230,9 +260,15 @@
             "결론 근거 약함"
           ],
           "defaultReviewPattern": "쟁점 표시 → 10분 다시쓰기 → 3일 후 재작성",
-          "riskLevel": "high"
+          "riskLevel": "high",
+          "sourceStatus": "internal_mapping_needs_official_review",
+          "needsOfficialVerification": true,
+          "verificationNote": "Internal planning unit for retrieval/rewrite scheduling; do not present as an official syllabus unit."
         }
-      ]
+      ],
+      "sourceStatus": "official_subject_label_verified",
+      "needsOfficialVerification": false,
+      "verificationNote": "Subject label is verified against the official exam subject list; nested units remain internal planning metadata unless separately marked."
     },
     {
       "id": "second_compensation_law",
@@ -258,7 +294,10 @@
             "검토 순서 불안정"
           ],
           "defaultReviewPattern": "쟁점 표시 → 짧은 문단 재작성 → 5일 후 재확인",
-          "riskLevel": "medium"
+          "riskLevel": "medium",
+          "sourceStatus": "internal_mapping_needs_official_review",
+          "needsOfficialVerification": true,
+          "verificationNote": "Internal planning unit for retrieval/rewrite scheduling; do not present as an official syllabus unit."
         },
         {
           "id": "comp_law_appraiser_entity",
@@ -280,7 +319,10 @@
             "사안 포섭 부족"
           ],
           "defaultReviewPattern": "쟁점 표시 → 짧은 문단 재작성 → 5일 후 재확인",
-          "riskLevel": "medium"
+          "riskLevel": "medium",
+          "sourceStatus": "internal_mapping_needs_official_review",
+          "needsOfficialVerification": true,
+          "verificationNote": "Internal planning unit for retrieval/rewrite scheduling; do not present as an official syllabus unit."
         },
         {
           "id": "comp_law_land_compensation",
@@ -302,7 +344,10 @@
             "정당보상 근거 부족"
           ],
           "defaultReviewPattern": "쟁점 표시 → 짧은 문단 재작성 → 5일 후 재확인",
-          "riskLevel": "medium"
+          "riskLevel": "medium",
+          "sourceStatus": "internal_mapping_needs_official_review",
+          "needsOfficialVerification": true,
+          "verificationNote": "Internal planning unit for retrieval/rewrite scheduling; do not present as an official syllabus unit."
         },
         {
           "id": "comp_law_project_approval",
@@ -324,7 +369,10 @@
             "쟁송 연결 부족"
           ],
           "defaultReviewPattern": "쟁점 표시 → 10분 다시쓰기 → 3일 후 재작성",
-          "riskLevel": "high"
+          "riskLevel": "high",
+          "sourceStatus": "internal_mapping_needs_official_review",
+          "needsOfficialVerification": true,
+          "verificationNote": "Internal planning unit for retrieval/rewrite scheduling; do not present as an official syllabus unit."
         },
         {
           "id": "comp_law_remedies",
@@ -345,9 +393,29 @@
             "구제 효과 정리 부족"
           ],
           "defaultReviewPattern": "쟁점 표시 → 10분 다시쓰기 → 3일 후 재작성",
-          "riskLevel": "high"
+          "riskLevel": "high",
+          "sourceStatus": "internal_mapping_needs_official_review",
+          "needsOfficialVerification": true,
+          "verificationNote": "Internal planning unit for retrieval/rewrite scheduling; do not present as an official syllabus unit."
         }
-      ]
+      ],
+      "sourceStatus": "official_subject_label_verified",
+      "needsOfficialVerification": false,
+      "verificationNote": "Subject label is verified against the official exam subject list; nested units remain internal planning metadata unless separately marked."
+    }
+  ],
+  "sourceReferences": [
+    {
+      "label": "국가법령정보센터 감정평가 및 감정평가사에 관한 법률 시행령 별표 1 시험과목",
+      "url": "https://www.law.go.kr/flDownload.do?bylClsCd=110201&flSeq=144249475&gubun=",
+      "reviewedAt": "2026-06-02",
+      "scope": "official_subject_labels_and_statutory_exam_boundaries"
+    },
+    {
+      "label": "Q-Net 감정평가사 자격상세정보",
+      "url": "https://www.q-net.or.kr/crf005.do?gId=60&gSite=L&gbnn=gbnSubtab4&id=crf00503",
+      "reviewedAt": "2026-06-02",
+      "scope": "official_exam_administrator_and_public_exam_information_page"
     }
   ]
 }

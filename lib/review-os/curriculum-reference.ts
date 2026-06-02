@@ -4,13 +4,24 @@ import path from "node:path";
 export type AppraiserExamMode = "first" | "second";
 export type AppraiserExamLabel = "감정평가사 1차" | "감정평가사 2차";
 
-export type CurriculumReferenceMetadata = {
-  schemaVersion: string;
+export type CurriculumSourceReference = {
+  label: string;
+  url: string;
+  reviewedAt: string;
+  scope: string;
+};
+
+export type CurriculumVerificationMetadata = {
   sourceStatus: string;
   needsOfficialVerification: boolean;
-  lastReviewedAt: string;
   verificationNote: string;
+};
+
+export type CurriculumReferenceMetadata = CurriculumVerificationMetadata & {
+  schemaVersion: string;
+  lastReviewedAt: string;
   storagePolicy: string;
+  sourceReferences?: CurriculumSourceReference[];
 };
 
 export type CurriculumImportance = "low" | "medium" | "high";
@@ -27,13 +38,13 @@ export type CurriculumUnitPlanningMetadata = {
   secondExamBridge?: string;
 };
 
-export type CurriculumUnit = CurriculumUnitPlanningMetadata & {
+export type CurriculumUnit = CurriculumUnitPlanningMetadata & Partial<CurriculumVerificationMetadata> & {
   id: string;
   name: string;
   taskTypes: string[];
 };
 
-export type CurriculumSubject = {
+export type CurriculumSubject = Partial<CurriculumVerificationMetadata> & {
   id: string;
   name: string;
   units: CurriculumUnit[];
@@ -46,7 +57,7 @@ export type CurriculumDocument = CurriculumReferenceMetadata & {
 
 export type StudyTrackId = "first_30" | "first_60" | "first_90" | "first_120" | "second_90" | "second_180" | "second_365";
 
-export type StudyTrack = {
+export type StudyTrack = Partial<CurriculumVerificationMetadata> & {
   examMode: AppraiserExamMode;
   days: number;
   label: string;
@@ -197,6 +208,36 @@ function assertNoRawTextFields(value: unknown, sourceName: string, trail = "root
   }
 }
 
+function validateSourceReferences(value: unknown, sourceName: string) {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value) || value.length === 0) {
+    throw new Error(`${sourceName} sourceReferences must be a non-empty array when present`);
+  }
+  return value.map((entry, index) => {
+    const referenceName = `${sourceName}.sourceReferences[${index}]`;
+    assertRecord(entry, referenceName);
+    return {
+      label: assertString(entry.label, "label", referenceName),
+      url: assertString(entry.url, "url", referenceName),
+      reviewedAt: assertString(entry.reviewedAt, "reviewedAt", referenceName),
+      scope: assertString(entry.scope, "scope", referenceName),
+    };
+  });
+}
+
+function optionalVerificationMetadata(raw: Record<string, unknown>, sourceName: string) {
+  const output: Partial<CurriculumVerificationMetadata> = {};
+  if (raw.sourceStatus !== undefined) output.sourceStatus = assertString(raw.sourceStatus, "sourceStatus", sourceName);
+  if (raw.needsOfficialVerification !== undefined) {
+    if (typeof raw.needsOfficialVerification !== "boolean") {
+      throw new Error(`${sourceName} field needsOfficialVerification must be boolean when present`);
+    }
+    output.needsOfficialVerification = raw.needsOfficialVerification;
+  }
+  if (raw.verificationNote !== undefined) output.verificationNote = assertString(raw.verificationNote, "verificationNote", sourceName);
+  return output;
+}
+
 function validateMetadata(raw: Record<string, unknown>, sourceName: string): CurriculumReferenceMetadata {
   assertNoRawTextFields(raw, sourceName);
   const schemaVersion = assertString(raw.schemaVersion, "schemaVersion", sourceName);
@@ -210,6 +251,7 @@ function validateMetadata(raw: Record<string, unknown>, sourceName: string): Cur
   if (!storagePolicy.includes("metadata_only")) {
     throw new Error(`${sourceName} storagePolicy must include metadata_only`);
   }
+  const sourceReferences = validateSourceReferences(raw.sourceReferences, sourceName);
   return {
     schemaVersion,
     sourceStatus,
@@ -217,6 +259,7 @@ function validateMetadata(raw: Record<string, unknown>, sourceName: string): Cur
     lastReviewedAt,
     verificationNote,
     storagePolicy,
+    ...(sourceReferences === undefined ? {} : { sourceReferences }),
   };
 }
 
@@ -239,6 +282,7 @@ export function validateCurriculumDocument(raw: unknown, expectedExam: Appraiser
     return {
       id: assertString(subject.id, "id", subjectName),
       name: assertString(subject.name, "name", subjectName),
+      ...optionalVerificationMetadata(subject, subjectName),
       units: subject.units.map((unit, unitIndex) => {
         const unitName = `${subjectName}.units[${unitIndex}]`;
         assertRecord(unit, unitName);
@@ -260,6 +304,7 @@ export function validateCurriculumDocument(raw: unknown, expectedExam: Appraiser
           id: assertString(unit.id, "id", unitName),
           name: assertString(unit.name, "name", unitName),
           taskTypes: assertStringArray(unit.taskTypes, "taskTypes", unitName),
+          ...optionalVerificationMetadata(unit, unitName),
           ...basePlanning,
           ...examSpecificPlanning,
         };
@@ -291,6 +336,7 @@ export function validateStudyTracks(raw: unknown, sourceName = "study_tracks"): 
       examMode,
       days: typeof track.days === "number" && Number.isFinite(track.days) ? track.days : Number(assertString(track.days, "days", trackName)),
       label: assertString(track.label, "label", trackName),
+      ...optionalVerificationMetadata(track, trackName),
       phase: assertString(track.phase, "phase", trackName),
       goal: assertString(track.goal, "goal", trackName),
       dailyFocus: assertStringArray(track.dailyFocus, "dailyFocus", trackName),

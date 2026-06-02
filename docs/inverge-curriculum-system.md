@@ -6,7 +6,18 @@ This document defines the metadata-only curriculum source of truth for learner-f
 
 Before production use, every official exam syllabus label, subject boundary, and unit taxonomy **must be verified against Q-Net/current public notice verification**. Until verified, reference data must keep `sourceStatus`, `needsOfficialVerification`, and `lastReviewedAt` fields.
 
+Official verification pass v1 was reviewed on 2026-06-02 against public official sources: 국가법령정보센터 `감정평가 및 감정평가사에 관한 법률 시행령` 별표 1 and the Q-Net 감정평가사 public qualification page. The pass verifies only the official subject labels and statutory exam boundaries. Inverge unit labels remain internal planning metadata unless their row explicitly says otherwise, so they keep `sourceStatus: internal_mapping_needs_official_review` and `needsOfficialVerification: true`. Study tracks are also internal beta planning templates, not official curriculum claims.
+
 No raw user OCR, raw answer, raw problem text, or copyrighted question text belongs in curriculum reference data.
+
+
+## Official verification metadata policy
+
+- Top-level curriculum files may use `sourceStatus: official_subjects_verified_internal_units_need_official_review` only when official subject labels have been checked against public official sources.
+- Subject rows may use `sourceStatus: official_subject_label_verified` when the subject label appears in the statutory/Q-Net public exam information.
+- Unit rows must stay `sourceStatus: internal_mapping_needs_official_review` unless a future pass can safely prove the unit label itself is official public curriculum language.
+- Study tracks must stay `sourceStatus: internal_planning_needs_beta_review`; durations and mixes are Inverge planning assumptions, not official exam guidance.
+- `sourceReferences` stores only metadata such as public source label, URL, review date, and verification scope. It must never store excerpts, paid materials, raw OCR, raw answer, raw problem text, or copyrighted question text.
 
 ## 1차 curriculum map
 

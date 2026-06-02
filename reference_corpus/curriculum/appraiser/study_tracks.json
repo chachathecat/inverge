@@ -1,9 +1,9 @@
 {
   "schemaVersion": "2026-06-01",
-  "sourceStatus": "draft_metadata_from_internal_roadmap",
+  "sourceStatus": "internal_planning_tracks_need_beta_and_official_calendar_review",
   "needsOfficialVerification": true,
-  "lastReviewedAt": "2026-06-01",
-  "verificationNote": "Track assumptions must be checked against Q-Net/current official notice verification and learner beta evidence before production use.",
+  "lastReviewedAt": "2026-06-02",
+  "verificationNote": "Study tracks are Inverge planning metadata. They reference only the verified 감정평가사 1차/2차 scope, but durations and task mixes remain internal beta assumptions rather than official curriculum claims.",
   "storagePolicy": "metadata_only_no_raw_user_or_problem_text",
   "todayPlanMaxPrimaryTasks": 3,
   "prioritizationSignals": [
@@ -41,7 +41,10 @@
         "O/X",
         "cloze",
         "accounting template"
-      ]
+      ],
+      "sourceStatus": "internal_planning_needs_beta_review",
+      "needsOfficialVerification": true,
+      "verificationNote": "Internal schedule template; not an official Q-Net or statutory curriculum unit."
     },
     "first_60": {
       "examMode": "first",
@@ -70,7 +73,10 @@
         "O/X",
         "cloze",
         "accounting template"
-      ]
+      ],
+      "sourceStatus": "internal_planning_needs_beta_review",
+      "needsOfficialVerification": true,
+      "verificationNote": "Internal schedule template; not an official Q-Net or statutory curriculum unit."
     },
     "first_90": {
       "examMode": "first",
@@ -97,7 +103,10 @@
         "mixed review",
         "O/X",
         "cloze"
-      ]
+      ],
+      "sourceStatus": "internal_planning_needs_beta_review",
+      "needsOfficialVerification": true,
+      "verificationNote": "Internal schedule template; not an official Q-Net or statutory curriculum unit."
     },
     "first_120": {
       "examMode": "first",
@@ -124,7 +133,10 @@
         "retrieval",
         "spaced review",
         "retry"
-      ]
+      ],
+      "sourceStatus": "internal_planning_needs_beta_review",
+      "needsOfficialVerification": true,
+      "verificationNote": "Internal schedule template; not an official Q-Net or statutory curriculum unit."
     },
     "second_90": {
       "examMode": "second",
@@ -151,7 +163,10 @@
         "rewrite",
         "CASIO",
         "scheduled review"
-      ]
+      ],
+      "sourceStatus": "internal_planning_needs_beta_review",
+      "needsOfficialVerification": true,
+      "verificationNote": "Internal schedule template; not an official Q-Net or statutory curriculum unit."
     },
     "second_180": {
       "examMode": "second",
@@ -179,7 +194,10 @@
         "rewrite",
         "CASIO",
         "issue spotting"
-      ]
+      ],
+      "sourceStatus": "internal_planning_needs_beta_review",
+      "needsOfficialVerification": true,
+      "verificationNote": "Internal schedule template; not an official Q-Net or statutory curriculum unit."
     },
     "second_365": {
       "examMode": "second",
@@ -206,7 +224,10 @@
         "short production",
         "weekly full answer",
         "rewrite"
-      ]
+      ],
+      "sourceStatus": "internal_planning_needs_beta_review",
+      "needsOfficialVerification": true,
+      "verificationNote": "Internal schedule template; not an official Q-Net or statutory curriculum unit."
     }
   },
   "dailyTemplates": {
@@ -234,5 +255,19 @@
       "mixed retrieval/rewrite",
       "adaptation"
     ]
-  }
+  },
+  "sourceReferences": [
+    {
+      "label": "국가법령정보센터 감정평가 및 감정평가사에 관한 법률 시행령 별표 1 시험과목",
+      "url": "https://www.law.go.kr/flDownload.do?bylClsCd=110201&flSeq=144249475&gubun=",
+      "reviewedAt": "2026-06-02",
+      "scope": "official_subject_labels_and_statutory_exam_boundaries"
+    },
+    {
+      "label": "Q-Net 감정평가사 자격상세정보",
+      "url": "https://www.q-net.or.kr/crf005.do?gId=60&gSite=L&gbnn=gbnSubtab4&id=crf00503",
+      "reviewedAt": "2026-06-02",
+      "scope": "official_exam_administrator_and_public_exam_information_page"
+    }
+  ]
 }

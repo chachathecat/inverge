@@ -59,6 +59,32 @@ test("curriculum reference JSON files exist and are metadata-only", async () => 
   }
 });
 
+
+test("verified curriculum references cite public sources and keep internal mappings unverified", async () => {
+  for (const path of requiredJson.filter((item) => !item.endsWith("explanation_ladder.json"))) {
+    const parsed = JSON.parse(await read(path));
+    assert.ok(Array.isArray(parsed.sourceReferences) && parsed.sourceReferences.length >= 2, `${path} must include sourceReferences`);
+    assert.ok(parsed.sourceReferences.some((source) => source.url.includes("law.go.kr")), `${path} must cite the public statutory source`);
+
+    if (path.endsWith("study_tracks.json")) {
+      for (const [trackId, track] of Object.entries(parsed.tracks)) {
+        assert.equal(track.sourceStatus, "internal_planning_needs_beta_review", `${trackId} must remain internal planning`);
+        assert.equal(track.needsOfficialVerification, true, `${trackId} must not be official curriculum`);
+      }
+      continue;
+    }
+
+    for (const subject of parsed.subjects) {
+      assert.equal(subject.sourceStatus, "official_subject_label_verified", `${subject.id} subject label must be verified`);
+      assert.equal(subject.needsOfficialVerification, false, `${subject.id} subject label verification should be explicit`);
+      for (const unit of subject.units) {
+        assert.equal(unit.sourceStatus, "internal_mapping_needs_official_review", `${unit.id} unit must remain internal mapping`);
+        assert.equal(unit.needsOfficialVerification, true, `${unit.id} unit must not be falsely marked official`);
+      }
+    }
+  }
+});
+
 test("copyrighted problem text examples are not included", async () => {
   const combined = await Promise.all([...requiredDocs, ...requiredJson].map(read)).then((parts) => parts.join("\n"));
   const forbiddenPhrases = [
@@ -101,7 +127,7 @@ test("study tracks include 1차 and 2차 track templates", async () => {
 test("docs mention Today Plan max 3 and official verification requirements", async () => {
   const docs = await Promise.all(requiredDocs.map(read)).then((parts) => parts.join("\n"));
   assert.match(docs, /Today Plan(?:[^\n]{0,80})max 3|Today Plan(?:[^\n]{0,80})최대 3|Today Plan[\s\S]{0,120}max three/i);
-  assert.match(docs, /Q-Net\/current (?:public notice|official notice) verification|Q-Net\/current official notice verification/);
+  assert.match(docs, /Q-Net\/current (?:public notice|official notice) verification|Q-Net\/current official notice verification|public official sources/);
 });
 
 test("docs preserve metadata-only raw OCR answer and problem text prohibition", async () => {
