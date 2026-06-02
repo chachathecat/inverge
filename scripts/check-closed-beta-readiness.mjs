@@ -19,6 +19,12 @@ const steps = [
     command: nodeCommand,
     args: ["--experimental-strip-types", "--loader", "./tests/ts-extension-loader.mjs", "--test", "tests/question-reference-db.test.mjs"],
   },
+
+  {
+    label: "staging learner route checks",
+    command: npmCommand,
+    args: ["run", "check:staging-learner-routes"],
+  },
   {
     label: "route/source guard checks",
     command: nodeCommand,
