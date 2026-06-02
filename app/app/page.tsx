@@ -188,6 +188,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
   const firstCaptureHref = `/app/capture?mode=first&subject=${encodeURIComponent(selectedFirstSubject)}`;
   const defaultPrimaryHref = isFirstSetStart ? firstSetHref : `/app/session?mode=${mode}`;
   const secondaryHref = mode === "second" ? `/app/items?mode=${mode}` : `/app/review?mode=${mode}`;
+  const modeCaptureHref = mode === "second" ? "/app/write?mode=second" : firstCaptureHref;
 
   const resolveTodayPlanHref = (actionKind: TodayPlanActionKind) => {
     if (actionKind === "first_capture") return firstCaptureHref;
@@ -203,7 +204,11 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
     if (hrefKind === "items") return `/app/items?mode=${mode}`;
     if (hrefKind === "review") return `/app/review?mode=${mode}`;
     if (hrefKind === "first_ox") return "/app/first/ox";
-    if (hrefKind === "calculator_template") return "/app/calculator?mode=first&context=accounting";
+    if (hrefKind === "calculator_template") {
+      return mode === "second"
+        ? "/app/calculator?mode=second&context=practice&focus=casio"
+        : "/app/calculator?mode=first&context=accounting&focus=accounting_template";
+    }
     return `/app/session?mode=${mode}`;
   };
 
@@ -381,7 +386,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                     <div className="space-y-1 text-xs text-[color:var(--ink-muted)]">
                       <p>기록을 하나 저장하면 오늘 할 일이 정리됩니다.</p>
                       <p>공부한 흔적을 하나 올리면 복습 큐도 함께 업데이트됩니다.</p>
-                      <Link href={firstCaptureHref} className="pt-1 font-medium text-[color:var(--ink-primary)] underline underline-offset-2">기록 추가하기</Link>
+                      <Link href={modeCaptureHref} className="pt-1 font-medium text-[color:var(--ink-primary)] underline underline-offset-2">기록 추가하기</Link>
                     </div>
                   ) : (
                     todayPlanTasks.map((task, index) => (
@@ -614,7 +619,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                     <div className="space-y-2">
                       <p className="text-sm text-[color:var(--muted)]">아직 기록이 없습니다.</p>
                       <p className="text-sm text-[color:var(--muted)]">오늘 푼 문제나 답안 일부를 올리면 첫 오답노트를 만들어 드립니다.</p>
-                      <Link href={firstCaptureHref} className="inline-flex text-sm font-medium text-[color:var(--foreground-strong)] underline underline-offset-2">오늘 한 것 올리기</Link>
+                      <Link href={modeCaptureHref} className="inline-flex text-sm font-medium text-[color:var(--foreground-strong)] underline underline-offset-2">오늘 한 것 올리기</Link>
                     </div>
                   ) : (
                     notebookPreview.map((note, index) => (

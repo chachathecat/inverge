@@ -4,7 +4,7 @@ import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os
 import { getCalculatorWorkflow } from "@/lib/review-os/calculator-workflow";
 
 type PageProps = {
-  searchParams?: Promise<{ context?: string; mode?: string }>;
+  searchParams?: Promise<{ context?: string; focus?: string; mode?: string }>;
 };
 
 export default async function CalculatorWorkflowRoute({ searchParams }: PageProps) {
@@ -22,5 +22,5 @@ export default async function CalculatorWorkflowRoute({ searchParams }: PageProp
   const workflow = getCalculatorWorkflow(context);
   const resolvedWorkflow = workflow.mode === mode ? workflow : getCalculatorWorkflow(fallbackContext);
 
-  return <CalculatorWorkflowPage workflow={resolvedWorkflow} />;
+  return <CalculatorWorkflowPage focus={params?.focus} workflow={resolvedWorkflow} />;
 }

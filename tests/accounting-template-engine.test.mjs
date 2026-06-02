@@ -228,6 +228,7 @@ test("second-mode calculation task cannot produce first accounting calculator hr
     now,
   });
   const appSource = fs.readFileSync(new URL("../app/app/page.tsx", import.meta.url), "utf8");
-  assert.match(appSource, /hrefKind === "calculator_template"\) return "\/app\/calculator\?mode=first&context=accounting"/);
+  assert.equal(appSource.includes("/app/calculator?mode=first&context=accounting&focus=accounting_template"), true);
+  assert.equal(appSource.includes("/app/calculator?mode=second&context=practice&focus=casio"), true);
   assert.notEqual(tasks[0]?.primary_cta.hrefKind, "calculator_template");
 });
