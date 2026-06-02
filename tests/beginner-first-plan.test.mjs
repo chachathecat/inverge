@@ -140,9 +140,10 @@ test("onboarding page guardrails and mode-preserving primary CTA", async () => {
   assert.ok(source.includes("첫 오늘 계획 만들기"));
   assert.ok(source.includes("오늘 계획 만들기"));
   assert.ok(source.includes("오늘 할 일 {plan.todayPlan.length}개"));
-  assert.ok(source.includes("plan.todayPlan.map"));
-  assert.match(source, /function sessionHref\(examMode: AppraiserExamMode\) \{\n  return `\/app\/session\?mode=\$\{examMode\}`;\n\}/);
-  assert.ok(source.includes('href={sessionHref(examMode)}>오늘 계획으로 시작</Link>'));
+  assert.ok(source.includes("executionBridge?.tasks.map"));
+  assert.ok(source.includes('buildExecutionBridge(plan.todayPlan'));
+  assert.ok(source.includes('href={executionBridge?.primaryHref ?? startHref(examMode, plan.onboardingSummary.weakSubjectName)}>오늘 계획으로 시작</Link>'));
+  assert.ok(source.includes("이 과제 시작"));
   assert.ok(source.includes('{ value: "first", label: "감정평가사 1차" }'));
   assert.ok(source.includes('{ value: "second", label: "감정평가사 2차" }'));
   assert.ok(source.includes('normalizeWeakSubjectName(examMode, firstValue(params.weakSubjectName))'));

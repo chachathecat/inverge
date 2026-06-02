@@ -10,6 +10,7 @@ import {
   type BeginnerPreferredStart,
 } from "@/lib/review-os/beginner-first-plan";
 import { type AppraiserExamMode } from "@/lib/review-os/curriculum-reference";
+import { buildExecutionBridge } from "@/lib/review-os/first-plan-execution-bridge";
 
 const EXAM_MODE_OPTIONS: Array<{ value: AppraiserExamMode; label: string }> = [
   { value: "first", label: "감정평가사 1차" },
@@ -61,10 +62,6 @@ function optionClasses(active: boolean) {
   }`;
 }
 
-function sessionHref(examMode: AppraiserExamMode) {
-  return `/app/session?mode=${examMode}`;
-}
-
 function startHref(examMode: AppraiserExamMode, subjectName: string | null | undefined) {
   if (examMode === "second") return "/app/write?mode=second";
   const subject = subjectName || "민법";
@@ -89,6 +86,13 @@ export default async function ReviewOsOnboardingPage({ searchParams }: PageProps
         currentLevel,
         weakSubjectName,
         preferredStart,
+      })
+    : null;
+  const executionBridge = plan
+    ? buildExecutionBridge(plan.todayPlan, {
+        examMode,
+        weakSubjectName: plan.onboardingSummary.weakSubjectName,
+        source: "onboarding",
       })
     : null;
 
@@ -197,13 +201,14 @@ export default async function ReviewOsOnboardingPage({ searchParams }: PageProps
           </CardHeader>
           <CardContent className="space-y-5">
             <ol className="grid gap-3">
-              {plan.todayPlan.map((task, index) => (
+              {executionBridge?.tasks.map(({ task, href }, index) => (
                 <li key={task.id} className="rounded-2xl border border-[var(--border)] bg-[color:var(--surface-soft)] p-4">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                     <div className="space-y-2">
                       <p className="text-xs font-medium text-[color:var(--muted)]">{index + 1}. {task.taskType} · {task.estimatedMinutes}분</p>
                       <p className="text-base font-semibold text-[color:var(--foreground-strong)]">{task.title}</p>
                       <p className="text-sm leading-7 text-[color:var(--muted-strong)]">{task.nextStep}</p>
+                      <Link href={href} className="inline-flex text-sm font-medium text-[color:var(--foreground-strong)] underline underline-offset-2">이 과제 시작</Link>
                     </div>
                   </div>
                 </li>
@@ -225,7 +230,7 @@ export default async function ReviewOsOnboardingPage({ searchParams }: PageProps
             ) : null}
 
             <div className="flex flex-col gap-2 sm:flex-row">
-              <Link className={buttonVariants({ className: "w-full sm:w-auto", size: "lg" })} href={sessionHref(examMode)}>오늘 계획으로 시작</Link>
+              <Link className={buttonVariants({ className: "w-full sm:w-auto", size: "lg" })} href={executionBridge?.primaryHref ?? startHref(examMode, plan.onboardingSummary.weakSubjectName)}>오늘 계획으로 시작</Link>
               <Link className={buttonVariants({ className: "w-full sm:w-auto", variant: "outline" })} href={startHref(examMode, plan.onboardingSummary.weakSubjectName)}>오늘 한 것 올리기</Link>
               <Link className={buttonVariants({ className: "w-full sm:w-auto", variant: "ghost" })} href="/app">나중에 조정</Link>
             </div>
