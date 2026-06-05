@@ -202,7 +202,8 @@ test("home first-use capture CTA stays canonical for first/second", async () => 
   assert.ok(source.includes("const firstCaptureHref = `/app/capture?mode=first&subject=${encodeURIComponent(selectedFirstSubject)}`;"));
   assert.ok(source.includes('? "/app/capture?mode=second"'));
   assert.equal(source.includes('"/app/write?mode=second"'), true);
-  assert.ok(source.includes('(mode === "second" ? inputOptions : inputOptions.slice(1))'));
+  assert.ok(source.includes('const visibleInputOptions = inputOptions.slice(0, 3);'));
+  assert.ok(source.includes('(mode === "second" ? visibleInputOptions : visibleInputOptions.slice(1))'));
   assert.ok(source.includes('option.href !== (mode === "second" ? "/app/capture?mode=second" : inputOptions[0].href)'));
 });
 

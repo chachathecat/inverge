@@ -259,6 +259,9 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                 ? "/app/items?mode=second"
                 : "/app/review?mode=second",
         }));
+  const visibleTodayPlanTasks = todayPlanTasks.slice(0, 3);
+  const additionalTodayPlanTasks = todayPlanTasks.slice(3);
+  const visibleInputOptions = inputOptions.slice(0, 3);
 
   return (
     <div className="space-y-7 md:space-y-8">
@@ -329,19 +332,20 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                   오늘 한 것 올리기
                 </Button>
               </Link>
-              <details className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
-                <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">다른 작업 보기</summary>
+              <details className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]" data-secondary-action-surface="input-options">
+                <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">오늘 입력할 수 있는 것 · 입력 방식 보기</summary>
                 <div className="grid gap-2.5 border-t border-[color:var(--border-subtle)] px-4 py-3">
-                {(mode === "second" ? inputOptions : inputOptions.slice(1))
+                {(mode === "second" ? visibleInputOptions : visibleInputOptions.slice(1))
                   .filter((option) => option.href !== (mode === "second" ? "/app/capture?mode=second" : inputOptions[0].href))
                   .map((option) => (
                   <Link
                     key={option.title}
                     href={option.href}
-                    className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-4 py-3 transition hover:bg-[color:var(--bg-subtle)]"
+                    className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-4 py-3 text-xs transition hover:bg-[color:var(--bg-subtle)]"
+                    data-input-option-card
                   >
-                    <p className="text-sm font-medium text-[color:var(--foreground-strong)]">{option.title}</p>
-                    <p className="mt-1 text-xs leading-6 text-[color:var(--muted)]">{option.description}</p>
+                    <p className="font-medium text-[color:var(--foreground-strong)]">입력 방식 · {option.title}</p>
+                    <p className="mt-1 leading-6 text-[color:var(--muted)]">{option.description}</p>
                   </Link>
                 ))}
                 </div>
@@ -381,8 +385,8 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                 <p className="text-[color:var(--foreground-strong)]">{todayPlan.reason}</p>
               </div>
 
-              <div className="rounded-[var(--radius-md)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)] px-4 py-3">
-                <p className="text-caption text-[color:var(--ink-muted)]">오늘의 우선순위</p>
+              <div className="rounded-[var(--radius-md)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)] px-4 py-3" data-today-plan-primary-surface data-visible-primary-task-cap="3">
+                <p className="text-caption text-[color:var(--ink-muted)]">오늘의 우선순위 · 최대 3개</p>
                 <div className="mt-3 space-y-3">
                   {todayPlanTasks.length === 0 ? (
                     <div className="space-y-1 text-xs text-[color:var(--ink-muted)]">
@@ -391,8 +395,8 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                       <Link href={modeCaptureHref} className="pt-1 font-medium text-[color:var(--ink-primary)] underline underline-offset-2">기록 추가하기</Link>
                     </div>
                   ) : (
-                    todayPlanTasks.map((task, index) => (
-                      <article key={task.itemId} className="rounded-[var(--radius-sm)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3">
+                    visibleTodayPlanTasks.map((task, index) => (
+                      <article key={task.itemId} className="rounded-[var(--radius-sm)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3" data-today-plan-primary-task>
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                           <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-2">
@@ -436,16 +440,31 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                     ))
                   )}
                 </div>
+                {additionalTodayPlanTasks.length > 0 ? (
+                  <details className="mt-3 rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] bg-[color:var(--surface)]" data-secondary-action-surface="additional-today-plan">
+                    <summary className="cursor-pointer list-none px-3 py-2 text-xs font-medium text-[color:var(--muted)]">다른 작업 · 추가 후보 {additionalTodayPlanTasks.length}개 보기</summary>
+                    <div className="grid gap-2 border-t border-[color:var(--border-hairline)] px-3 py-3 text-xs leading-5 text-[color:var(--muted)]">
+                      {additionalTodayPlanTasks.map((task) => (
+                        <Link key={`secondary-${task.itemId}`} href={resolveTaskHref(task.primary_cta.hrefKind)} className="underline-offset-2 hover:underline">
+                          {task.title} · {task.display_primary_cta ?? task.primary_cta.label}
+                        </Link>
+                      ))}
+                    </div>
+                  </details>
+                ) : null}
               </div>
               {(() => {
                 const firstTodayPlanTask = todayPlanTasks[0] ?? null;
                 return firstTodayPlanTask?.created_from_capture && firstTodayPlanTask.source_label !== "Problem Snap 기반" ? (
-                  <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-4 py-3">
-                    <p className="text-xs text-[color:var(--foreground-strong)]">{firstTodayPlanTask.title}</p>
-                    <p className="mt-1 text-xs text-[color:var(--muted)]">이유: {firstTodayPlanTask.reason}</p>
-                    <p className="mt-1 text-xs text-[color:var(--muted)]">다음 행동: {firstTodayPlanTask.one_next_action}</p>
-                    <p className="mt-1 text-xs text-[color:var(--muted)]">{firstTodayPlanTask.source_label ?? "오늘 기록 기반"}</p>
-                  </div>
+                  <details className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]" data-secondary-action-surface="capture-derived-context">
+                    <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">다른 작업 · 오늘 기록 근거 보기</summary>
+                    <div className="border-t border-[color:var(--border-subtle)] px-4 py-3">
+                      <p className="text-xs text-[color:var(--foreground-strong)]">{firstTodayPlanTask.title}</p>
+                      <p className="mt-1 text-xs text-[color:var(--muted)]">이유: {firstTodayPlanTask.reason}</p>
+                      <p className="mt-1 text-xs text-[color:var(--muted)]">다음 행동: {firstTodayPlanTask.one_next_action}</p>
+                      <p className="mt-1 text-xs text-[color:var(--muted)]">{firstTodayPlanTask.source_label ?? "오늘 기록 기반"}</p>
+                    </div>
+                  </details>
                 ) : null;
               })()}
 
@@ -496,14 +515,17 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                 </div>
               ) : null}
               {latestProblemSnapSignal && todayPlanTasks[0]?.source_label !== "Problem Snap 기반" ? (
-                <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-4 py-3">
-                  <p className="text-xs font-medium text-[color:var(--ink-primary)]">Problem Snap</p>
-                  <p className="mt-1 text-sm text-[color:var(--foreground-strong)]">{latestProblemSnapSignal.subject}</p>
-                  <p className="mt-1 text-xs text-[color:var(--muted)]">다음 행동: {latestProblemSnapSignal.nextTask}</p>
-                  <Link href={problemSnapSignalCta.href} className="mt-2 inline-flex text-xs font-medium text-[color:var(--ink-primary)] underline underline-offset-2">
-                    {problemSnapSignalCta.label}
-                  </Link>
-                </div>
+                <details className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]" data-secondary-action-surface="problem-snap">
+                  <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">다른 작업 · Problem Snap 신호 보기</summary>
+                  <div className="border-t border-[color:var(--border-subtle)] px-4 py-3">
+                    <p className="text-xs font-medium text-[color:var(--ink-primary)]">Problem Snap</p>
+                    <p className="mt-1 text-sm text-[color:var(--foreground-strong)]">{latestProblemSnapSignal.subject}</p>
+                    <p className="mt-1 text-xs text-[color:var(--muted)]">다음 행동: {latestProblemSnapSignal.nextTask}</p>
+                    <Link href={problemSnapSignalCta.href} className="mt-2 inline-flex text-xs font-medium text-[color:var(--ink-primary)] underline underline-offset-2">
+                      {problemSnapSignalCta.label}
+                    </Link>
+                  </div>
+                </details>
               ) : null}
               {homeState === "overdue_recovery" ? (
                 <div className="rounded-[var(--radius-md)] border border-[color:var(--cue-focus)] bg-[color:var(--cue-focus-bg)] px-4 py-3 text-xs text-[color:var(--foreground-strong)]">

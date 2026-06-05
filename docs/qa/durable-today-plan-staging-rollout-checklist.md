@@ -97,3 +97,14 @@ Staging rollout may proceed only if:
 - route smoke passes;
 - no raw text leak is observed;
 - production flags remain off.
+
+## I. Visible action cap QA
+
+- Today Plan primary task cards must be max 3.
+- The screen should not visually imply more than 3 “오늘 할 일.”
+- Input options must be clearly separated from Today Plan tasks.
+- Secondary routes must be inside collapsed details or under a “다른 작업”/“입력 방식” label.
+- The primary CTA should remain one clear next action where possible.
+- Supporting actions may exist but should not compete visually with Today Plan cards.
+- If there are zero due tasks, the empty/recovery state should still show one primary next action.
+- Engine-level max-3 is not enough by itself; the learner-facing screen must also preserve “one screen, one main job” through progressive disclosure.

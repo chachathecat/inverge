@@ -63,30 +63,29 @@ export function TodayFirstSubjectSelector({
           ))}
         </select>
       </label>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <Link href={links.primary} className="w-full sm:w-auto">
-          <Button type="button" className="w-full sm:w-auto">
-            {isFirstSetStart ? "세트 풀이 시작" : "오늘 최우선 작업 시작"}
-          </Button>
-        </Link>
-        <Link href={`/app/study-log?mode=first&subject=${encodeURIComponent(subject)}`} className="w-full sm:w-auto">
-          <Button type="button" variant="outline" className="w-full sm:w-auto">
-            오늘 공부 기록 남기기
-          </Button>
-        </Link>
-      </div>
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-[color:var(--muted)]">
-        <span>다른 작업 선택:</span>
-        <Link href={links.capture} className="underline-offset-2 hover:underline">
-          오답 1개만 빠르게 기록
-        </Link>
-        <Link href={links.set} className="underline-offset-2 hover:underline">
-          세트 풀이 바로 이동
-        </Link>
-        <Link href={secondaryHref} className="underline-offset-2 hover:underline">
-          review queue 보기
-        </Link>
-      </div>
+      <Link href={links.primary} className="block w-full sm:w-auto">
+        <Button type="button" className="w-full sm:w-auto">
+          {isFirstSetStart ? "세트 풀이 시작" : "오늘 최우선 작업 시작"}
+        </Button>
+      </Link>
+      <details className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]" data-secondary-action-surface="first-mode-input-options">
+        <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">오늘 입력할 수 있는 것 · 다른 작업 보기</summary>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-[color:var(--border-subtle)] px-4 py-3 text-xs text-[color:var(--muted)]">
+          <span>입력 방식:</span>
+          <Link href={`/app/study-log?mode=first&subject=${encodeURIComponent(subject)}`} className="underline-offset-2 hover:underline">
+            공부 기록 입력
+          </Link>
+          <Link href={links.capture} className="underline-offset-2 hover:underline">
+            오답 1개만 빠르게 기록
+          </Link>
+          <Link href={links.set} className="underline-offset-2 hover:underline">
+            세트 풀이 바로 이동
+          </Link>
+          <Link href={secondaryHref} className="underline-offset-2 hover:underline">
+            review queue 보기
+          </Link>
+        </div>
+      </details>
     </div>
   );
 }
