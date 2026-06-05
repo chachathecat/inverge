@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document defines the future durable persistence boundary for the Personal Concept Graph before any Supabase migration, row-level security policy, or production write path is added. It is a design-only guardrail for the learner-facing Inverge scope: **감정평가사 1차** and **감정평가사 2차**.
+This document defines the durable persistence boundary for the Personal Concept Graph metadata schema, row-level security policy, and future production write path. It remains a guardrail for the learner-facing Inverge scope: **감정평가사 1차** and **감정평가사 2차**.
 
 The graph should remain an operational learning-signal layer for the core loop: input → diagnosis → tracking → prediction → recommendation → execution → retry/rewrite. It must not become an AI 채점기, official grading system, broad dashboard, public archive, or unsupported-exam model.
 
@@ -55,9 +55,9 @@ The graph values are derived learning signals, not source records. Examples incl
 
 A production write path may read transient learner input upstream to derive safe metadata, but the graph table may only receive the derived metadata. Raw problem, OCR, answer, copyrighted, official answer, model answer, score prediction, and instructor-comment fields must be blocked at the data-boundary layer.
 
-## Proposed future table design
+## Implemented table design
 
-No Supabase migration is created in this PR. The following schema is a proposal for a future migration PR.
+PR #324 adds the first Supabase schema/RLS migration for this metadata table only. Production learner writes remain disabled and pending; repository integration will happen in a later PR after schema guardrail tests pass.
 
 ### `personal_concept_nodes`
 
@@ -91,11 +91,11 @@ No Supabase migration is created in this PR. The following schema is a proposal 
 - `state` check: only `unknown`, `confused`, `wrong`, `recovering`, and `stable`.
 - Count checks: `wrong_count`, `recovery_count`, and `stable_count` must be non-negative.
 - Metadata check: `metadata_only` must be `true`.
-- Recommended implementation should add an updated-at trigger in the future migration PR, not in this design PR.
+- PR #324 does not add an updated-at trigger because the existing migration style does not define a shared trigger helper; `updated_at` keeps a safe default until the repository integration PR defines update behavior.
 
 ## Row-level security assumptions
 
-Do not implement RLS in this PR. The intended future RLS model is:
+PR #324 implements the intended learner own-row RLS model in the schema migration:
 
 - User can select only own rows where `user_id = auth.uid()`.
 - User can insert only own rows where `user_id = auth.uid()`.
@@ -123,17 +123,22 @@ Do not implement RLS in this PR. The intended future RLS model is:
 - Do not place raw third-party problem text, raw OCR transcripts, learner answer text, official answer text, model-answer text, score predictions, or instructor comments in a model-improvement corpus.
 - Any future aggregate analytics must be pseudonymized, must not expose single-user rows, and must not reconstruct raw user or third-party text.
 
+## Implementation note for PR #324
+
+- PR #324 adds schema and row-level security only for `public.personal_concept_nodes`.
+- The production learner write path remains disabled and pending.
+- Repository integration will happen in a later PR after schema tests pass.
+
 ## Migration plan
 
-This PR intentionally does not add a Supabase migration or production database writes. A future implementation should proceed in small, auditable PRs:
+PR #324 intentionally adds only the Supabase migration and static migration guardrail tests, with no production database writes. Later implementation should proceed in small, auditable PRs:
 
-1. Add a migration for `personal_concept_nodes` with constraints, indexes, timestamps, and RLS disabled until policies are added in the same or immediately paired migration review.
-2. Add RLS policies for own-row select/insert/update/delete and explicitly verify no public read access.
-3. Add a guarded server repository that maps existing Personal Concept Graph node metadata into the table without accepting forbidden raw fields.
-4. Add contract tests for rejected forbidden fields and allowed `exam_mode`/`state` values.
-5. Add a read-through or adapter switch for Today Plan recommendations after the durable repository is covered by tests.
-6. Add export/delete integration for user-owned graph metadata.
-7. Run closed-beta learner-loop, taxonomy, build, and lint checks before enabling any production write path.
+1. Keep the PR #324 migration limited to `personal_concept_nodes` constraints, indexes, timestamps, and RLS policies.
+2. Add a guarded server repository that maps existing Personal Concept Graph node metadata into the table without accepting forbidden raw fields.
+3. Add contract tests for rejected forbidden fields and allowed `exam_mode`/`state` values.
+4. Add a read-through or adapter switch for Today Plan recommendations after the durable repository is covered by tests.
+5. Add export/delete integration for user-owned graph metadata.
+6. Run closed-beta learner-loop, taxonomy, build, and lint checks before enabling any production write path.
 
 ## Rollback plan
 
@@ -147,28 +152,28 @@ If a future persistence implementation causes access, data-boundary, or route st
 
 ## Test plan
 
-For this design PR:
+For PR #324:
 
 - Verify this design doc exists.
-- Verify it names the future `personal_concept_nodes` table and required columns.
+- Verify it names the implemented `personal_concept_nodes` table and required columns.
+- Verify the migration creates the metadata-only table with constraints and indexes.
+- Verify the migration enables own-row RLS and no public read access.
 - Verify it explicitly forbids raw OCR/problem/answer/source/official/model-answer/score/instructor fields.
-- Verify it documents own-row RLS and no public read access.
-- Verify it states that no Supabase migration is included in this PR.
+- Verify it states that production learner writes remain disabled/pending.
 - Verify it keeps learner-facing scope to 감정평가사 1차 and 감정평가사 2차 only.
 - Verify it does not include copied copyrighted problem text.
 
 For future implementation PRs:
 
-- Migration tests for allowed `exam_mode` and `state` values.
-- RLS tests proving users can only select, insert, update, and delete their own rows.
-- Service-function tests proving the service role can operate only through guarded server functions.
+- Runtime RLS tests proving users can only select, insert, update, and delete their own rows in a configured Supabase environment.
+- Service-function tests proving any privileged path can operate only through guarded server functions.
 - Data-boundary tests rejecting all forbidden raw fields.
 - Export/delete integration tests.
 - Today Plan adapter smoke tests using durable metadata only.
 
 ## Future production implementation PR sequence
 
-1. **Schema and RLS migration PR:** create `personal_concept_nodes`, constraints, indexes, timestamps, and RLS policies; do not wire learner writes yet.
+1. **Schema and RLS migration PR (PR #324):** create `personal_concept_nodes`, constraints, indexes, timestamps, and RLS policies; do not wire learner writes yet.
 2. **Repository contract PR:** add a Supabase-backed repository behind a feature flag with forbidden-field rejection and metadata-only DTOs.
 3. **Learner read/write integration PR:** route execution learning signals into the guarded repository and read graph metadata for Today Plan.
 4. **Lifecycle PR:** add export/delete handling and retention documentation updates.
@@ -176,7 +181,6 @@ For future implementation PRs:
 
 ## Non-goals for this PR
 
-- No Supabase migration in this PR.
 - No production database writes.
 - No payment changes.
 - No public archive UI.

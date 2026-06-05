@@ -86,11 +86,12 @@ test("design doc documents intended RLS boundaries and no public read access", a
   assert.match(content, /No global training corpus access to raw user data/i);
 });
 
-test("design doc states no Supabase migration or production write path is added in this PR", async () => {
+test("design doc states PR #324 adds schema/RLS only and keeps production writes pending", async () => {
   const content = await read(docPath);
 
-  assert.match(content, /No Supabase migration is created in this PR/i);
-  assert.match(content, /This PR intentionally does not add a Supabase migration or production database writes/i);
+  assert.match(content, /PR #324 adds schema and row-level security only/i);
+  assert.match(content, /production learner write path remains disabled and pending/i);
+  assert.match(content, /Repository integration will happen in a later PR/i);
   assert.match(content, /No production database writes/i);
 });
 
@@ -113,4 +114,5 @@ test("design doc does not include copied copyrighted problem text", async () => 
 test("learner-loop verify script includes the persistence design guardrail", async () => {
   const pkg = JSON.parse(await read(packagePath));
   assert.match(pkg.scripts["verify:learner-loop:ci"], /tests\/personal-concept-graph-persistence-design\.test\.mjs/);
+  assert.match(pkg.scripts["verify:learner-loop:ci"], /tests\/personal-concept-graph-schema-migration\.test\.mjs/);
 });
