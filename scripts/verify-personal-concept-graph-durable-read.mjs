@@ -218,6 +218,24 @@ async function cleanup(client, ids) {
   if (error) throw new Error(`cleanup_failed:${error.message}`);
 }
 
+async function cleanupBothUsers({ userA, idsA, userB, idB }) {
+  const results = await Promise.allSettled([
+    cleanup(userA, idsA),
+    cleanup(userB, [idB]),
+  ]);
+  const failures = results
+    .map((result, index) => ({ result, label: index === 0 ? "userA" : "userB" }))
+    .filter(({ result }) => result.status === "rejected")
+    .map(({ result, label }) => {
+      const reason = result.reason instanceof Error ? result.reason.message : String(result.reason);
+      return `${label}:${redact(reason)}`;
+    });
+
+  if (failures.length > 0) {
+    throw new Error(`cleanup_failed_after_attempting_both_users:${failures.join(";")}`);
+  }
+}
+
 async function runSmoke() {
   const userAId = process.env.PERSONAL_CONCEPT_GRAPH_DURABLE_READ_USER_A_ID;
   const userBId = process.env.PERSONAL_CONCEPT_GRAPH_DURABLE_READ_USER_B_ID;
@@ -237,7 +255,7 @@ async function runSmoke() {
     }),
   );
   const nodeB = nodeFor({ id: idB, userId: userBId, unitId: "durable-read-smoke-b", state: "wrong" });
-  let cleanupAttempted = false;
+  const cleanupSmokeRows = async () => cleanupBothUsers({ userA, idsA, userB, idB });
 
   try {
     await upsertNodes(userA, nodesA);
@@ -274,12 +292,9 @@ async function runSmoke() {
     if (bReadA.error) throw new Error(`cross_user_read_check_failed:${bReadA.error.message}`);
     if ((bReadA.data ?? []).length !== 0) throw new Error("cross_user_read_denied_failed");
 
-    return { result, cleanup: async () => cleanup(userA, idsA).then(() => cleanup(userB, [idB])) };
+    return { result, cleanup: cleanupSmokeRows };
   } catch (error) {
-    return { error, cleanup: async () => cleanup(userA, idsA).then(() => cleanup(userB, [idB])) };
-  } finally {
-    cleanupAttempted = true;
-    void cleanupAttempted;
+    return { error, cleanup: cleanupSmokeRows };
   }
 }
 
