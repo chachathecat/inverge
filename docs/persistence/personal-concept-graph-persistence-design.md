@@ -123,18 +123,22 @@ PR #324 implements the intended learner own-row RLS model in the schema migratio
 - Do not place raw third-party problem text, raw OCR transcripts, learner answer text, official answer text, model-answer text, score predictions, or instructor comments in a model-improvement corpus.
 - Any future aggregate analytics must be pseudonymized, must not expose single-user rows, and must not reconstruct raw user or third-party text.
 
-## Implementation note for PR #324
+## Implementation notes for PR #324 and PR #325
 
 - PR #324 adds schema and row-level security only for `public.personal_concept_nodes`.
-- The production learner write path remains disabled and pending.
-- Repository integration will happen in a later PR after schema tests pass.
+- PR #325 adds the Personal Concept Graph Supabase repository contract behind the explicit `PERSONAL_CONCEPT_GRAPH_REPOSITORY=supabase` feature flag.
+- The default repository mode remains the in-memory/test adapter when the feature flag is missing or set to any value other than `supabase`.
+- The production learner write path remains disabled and pending; the capture save route, execution result controls, and Today Plan page are not wired to durable graph reads or writes in PR #325.
+- Repository integration will happen in a later PR for learner routes after runtime checks pass.
+- Runtime RLS verification with authenticated learner sessions is still required before enabling durable writes for learners.
+- The PR #325 repository maps only metadata columns into Supabase and rejects raw OCR, problem, learner answer, copyrighted/source text, official answer/model-answer, score-prediction, and instructor-comment fields before upsert.
 
 ## Migration plan
 
 PR #324 intentionally adds only the Supabase migration and static migration guardrail tests, with no production database writes. Later implementation should proceed in small, auditable PRs:
 
 1. Keep the PR #324 migration limited to `personal_concept_nodes` constraints, indexes, timestamps, and RLS policies.
-2. Add a guarded server repository that maps existing Personal Concept Graph node metadata into the table without accepting forbidden raw fields.
+2. Add a guarded server repository contract behind `PERSONAL_CONCEPT_GRAPH_REPOSITORY=supabase` that maps existing Personal Concept Graph node metadata into the table without accepting forbidden raw fields; keep the default adapter as memory until runtime RLS checks are complete.
 3. Add contract tests for rejected forbidden fields and allowed `exam_mode`/`state` values.
 4. Add a read-through or adapter switch for Today Plan recommendations after the durable repository is covered by tests.
 5. Add export/delete integration for user-owned graph metadata.
@@ -174,7 +178,7 @@ For future implementation PRs:
 ## Future production implementation PR sequence
 
 1. **Schema and RLS migration PR (PR #324):** create `personal_concept_nodes`, constraints, indexes, timestamps, and RLS policies; do not wire learner writes yet.
-2. **Repository contract PR:** add a Supabase-backed repository behind a feature flag with forbidden-field rejection and metadata-only DTOs.
+2. **Repository contract PR (PR #325):** add a Supabase-backed repository behind `PERSONAL_CONCEPT_GRAPH_REPOSITORY=supabase` with forbidden-field rejection and metadata-only DTOs; keep memory mode as the default and do not wire production learner writes yet.
 3. **Learner read/write integration PR:** route execution learning signals into the guarded repository and read graph metadata for Today Plan.
 4. **Lifecycle PR:** add export/delete handling and retention documentation updates.
 5. **Closed-beta enablement PR:** enable durable graph persistence for a limited closed-beta cohort after learner-loop, taxonomy, build, lint, and smoke checks pass.
