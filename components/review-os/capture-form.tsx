@@ -16,6 +16,7 @@ import {
 } from "@/lib/review-os/appraisal";
 import { clearReviewOsDraft, loadReviewOsDraft, saveReviewOsDraft } from "@/lib/review-os/browser-storage";
 import { getCalculatorWorkflowForSubject } from "@/lib/review-os/calculator-workflow";
+import { buildCaptureNoteDisplayCopy, buildCaptureNoteSummary } from "@/lib/review-os/capture-note-display-copy";
 import { applyDraftToConfirmedSubject, type ExtractionDraft, type ExtractionPipelineResult } from "@/lib/review-os/extraction";
 import { extractFirstExamFiveChoicesFromText } from "@/lib/review-os/first-ox-engine";
 import { resolveReviewSchedule } from "@/lib/review-os/scheduling";
@@ -906,12 +907,8 @@ export function WrongAnswerCaptureForm({
       });
       const result = (await response.json()) as { ok?: boolean; item?: { id: string }; error?: string; message?: string; errorCode?: string };
       if (!response.ok || !result.ok || !result.item) {
-        if (result.error === "usage-limit") {
-          setError("무료 체험 또는 코어 한도에 도달했습니다. 업그레이드 또는 지원팀 문의를 진행해 주세요.");
-          return;
-        }
-        if (result.errorCode === "BILLING_REQUIRED") {
-          setError("유료 플랜이 아직 준비되지 않았습니다. 지원팀에 문의해 주세요.");
+        if (result.error === "usage-limit" || result.errorCode === "BILLING_REQUIRED") {
+          setError("현재 저장 한도에 도달했습니다. 지원팀에 문의해 주세요.");
           return;
         }
         setError("정리하지 못했습니다. 내용을 조금 더 확인한 뒤 다시 시도해 주세요.");
@@ -939,7 +936,7 @@ export function WrongAnswerCaptureForm({
 
   return (
     <form className="space-y-6 overflow-x-hidden pb-28 sm:pb-0" onSubmit={handleSubmit}>
-      <LearnerProgressBar current={currentCaptureStep} total={4} label="오늘 한 것 올리기" helper="1. 입력 → 2. 확인 → 3. 정리 → 4. 저장" />
+      <LearnerProgressBar current={currentCaptureStep} total={4} label="오늘 한 것 올리기" helper="1. 입력 → 2. 확인 → 3. 빈틈 1개 → 4. Today Plan" />
 
       {mode === "first" ? (
         <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 sm:p-5">
@@ -1279,8 +1276,8 @@ function IntakePanel({
           <p className="text-caption text-[color:var(--ink-muted)]">오늘의 입력</p>
           <p className="mt-1 text-xs text-[color:var(--ink-muted)]">캡처 유형 · photo / pdf / text</p>
           <h4 className="mt-2 text-base font-semibold text-[color:var(--ink-primary)]">오늘 한 것 올리기</h4>
-          <p className="mt-1 text-sm leading-6 text-[color:var(--ink-muted)]">사진, PDF, 텍스트를 올리면 한 가지 간극과 다음 행동으로 정리합니다.</p>
-          <p className="mt-2 rounded-[var(--radius-sm)] border border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] px-3 py-2 text-xs leading-5 text-[color:var(--foreground-strong)]">여러 장 답안지는 순서가 중요합니다. 저장 전 페이지 순서와 OCR 내용을 확인해 주세요.</p>
+          <p className="mt-1 text-sm leading-6 text-[color:var(--ink-muted)]">사진, PDF, 텍스트를 올리면 가장 큰 빈틈 1개와 다음 행동 1개로 정리합니다.</p>
+          <p className="mt-2 rounded-[var(--radius-sm)] border border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] px-3 py-2 text-xs leading-5 text-[color:var(--foreground-strong)]">OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요. 가장 큰 빈틈 1개만 먼저 고정합니다.</p>
           <p className="mt-1 text-xs leading-6 text-[color:var(--ink-muted)]">노트 원문은 비공개로 보관되며, 파생 학습 신호는 개인 추천 개선에만 사용됩니다.</p>
           <div className="mt-4">
             <Button type="button" className="w-full sm:w-auto bg-[color:var(--accent-deep)] transition-colors hover:bg-[color:var(--primary-hover)] focus-visible:ring-2 focus-visible:ring-[color:var(--accent-deep)] focus-visible:ring-offset-2" onClick={() => { update("sourceType", inferSourceTypeFromAction("camera")); cameraInputRef.current?.click(); }}>
@@ -1477,12 +1474,14 @@ function IntakePanel({
         </label>
         </div>
       </details>
-      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-        <Button type="button" onClick={onGenerate} disabled={extracting} className="w-full sm:w-auto">
-          {extracting ? "입력 내용 확인 중" : "기록 시작하기"}
-        </Button>
-        <p className="text-xs text-[color:var(--muted)]">노트에 반영됩니다.</p>
-      </div>
+      {form.rawQuestionText.trim() || uploadedPages.length > 0 ? (
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <Button type="button" onClick={onGenerate} disabled={extracting} className="w-full sm:w-auto">
+            {extracting ? "입력 내용 확인 중" : "기록 시작하기"}
+          </Button>
+          <p className="text-xs text-[color:var(--muted)]">노트에 반영됩니다.</p>
+        </div>
+      ) : null}
       <details className="mt-4 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
         <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">이미지/PDF로 입력하기 (선택)</summary>
         <div className="border-t border-[color:var(--border-subtle)] px-4 py-3">
@@ -1630,14 +1629,32 @@ function ConfirmPanel({
   config: ReturnType<typeof getModeConfig>;
   updateSubject: (value: string) => void;
 }) {
+  const captureSummary = buildCaptureNoteSummary({
+    examMode: mode,
+    subject: form.subjectLabel,
+    sourceType: form.sourceType === "image" ? "photo" : form.sourceType,
+    capturedTextStatus: form.hasManualCorrection || !form.extractionNeedsReview ? "user_confirmed" : "draft",
+    oneBiggestGap: mode === "second" ? form.biggestGap || form.missingIssue : form.userReasonText || form.userReasonPreset,
+    nextAction: mode === "second" ? form.rewriteInstruction : form.comparisonPoint,
+    nextTaskType: mode === "second" ? "rewrite" : "O/X",
+    confidence: form.confidence,
+    timeSpentMinutes: parseTimeSpentMinutes(form.timeSpentSeconds),
+    derivedSignals: ["capture_note", "review_queue_candidate", "today_plan_candidate"],
+  });
+  const captureCopy = buildCaptureNoteDisplayCopy(captureSummary);
+
   return (
     <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 sm:p-5">
       <p className="text-caption text-[color:var(--muted)]">Step 3. 저장하고 오늘 계획에 반영</p>
       <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">정리되었습니다</h3>
-      <div className="mt-4 grid gap-3 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-4">
-        <PreviewLine label="가장 큰 gap" value={mode === "second" ? form.biggestGap || form.missingIssue : form.userReasonText} />
-        <PreviewLine label="다음 행동" value={mode === "second" ? form.rewriteInstruction : form.comparisonPoint} />
-        <PreviewLine label="노트 요약" value={`${form.subjectLabel} · ${mode === "second" ? form.caseSummary : form.problemTitle || form.sourceLabel}`} />
+      <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">가장 큰 빈틈 1개만 먼저 고정하고, 다음 행동 1개를 Today Plan / Review Queue 신호로 남깁니다.</p>
+      <div className="mt-4 grid gap-3 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-4" data-testid="capture-note-summary">
+        <PreviewLine label="상태" value={`${captureSummary.capturedTextStatus === "draft" ? "OCR 초안" : "직접 확인됨"} · metadataOnly`} />
+        <PreviewLine label="과목/입력" value={`${captureSummary.subject} · ${captureSummary.sourceType}`} />
+        <PreviewLine label="가장 큰 빈틈" value={captureCopy.gapLabel.replace("가장 큰 빈틈: ", "")} />
+        <PreviewLine label="다음 행동" value={captureCopy.nextActionLabel.replace("다음 행동: ", "")} />
+        <PreviewLine label="Today Plan" value={captureCopy.todayPlanCta} />
+        <PreviewLine label="복습 선택" value={captureCopy.retryOrRewriteCta} />
       </div>
       <div className="mt-5 grid gap-4 lg:grid-cols-2">
         <SubjectSelect subjectLabel={config.subjectLabel} subjects={config.subjects} value={form.subjectLabel} onChange={updateSubject} />

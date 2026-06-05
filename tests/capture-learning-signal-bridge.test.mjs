@@ -20,6 +20,9 @@ const forbiddenRawKeys = [
   "copyrightedText",
   "modelAnswer",
   "officialAnswer",
+  "rawUserText",
+  "rawAnswerText",
+  "originalText",
 ];
 
 const forbiddenSurfaceCopy = [/public archive/i, /archive/i, /아카이브/, /instructor/i, /\/instructor/i, /결제/, /payment/i, /native app/i, /네이티브 앱/];
@@ -161,7 +164,7 @@ describe("capture learning signal bridge", () => {
   });
 
   it("rejects raw OCR/problem/answer text-like keys", () => {
-    for (const key of ["rawOcrText", "problemText", "answerText", "questionText", "officialAnswer"]) {
+    for (const key of ["rawOcrText", "rawUserText", "rawAnswerText", "problemText", "answerText", "questionText", "copyrightedText", "originalText", "fullText", "sourceText", "officialAnswer"]) {
       assert.throws(
         () => buildLearningSignalFromCaptureMetadata({ ...baseInput({ captureIntent: "wrong_answer" }), [key]: "private raw content" }),
         /Raw OCR\/problem\/answer text field is not accepted/,

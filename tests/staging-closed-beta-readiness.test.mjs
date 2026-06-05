@@ -168,6 +168,27 @@ test("learner route sources do not expose blocked surfaces, unsupported scope, o
   }
 });
 
+
+test("capture route smoke keeps capture-first copy and one primary start action", () => {
+  const captureRoute = read("app/app/capture/page.tsx");
+  const captureForm = read("components/review-os/capture-form.tsx");
+  const capture = `${captureRoute}\n${captureForm}`;
+
+  for (const required of [
+    "오늘 한 것 올리기",
+    "사진/PDF/텍스트로 기록 시작",
+    "OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요.",
+    "가장 큰 빈틈 1개만 먼저 고정합니다.",
+  ]) {
+    assert.equal(capture.includes(required), true, `${required} should render on /app/capture`);
+  }
+
+  assert.equal(capture.includes("form.rawQuestionText.trim() || uploadedPages.length > 0"), true, "empty capture start should keep one primary visible action");
+  assert.equal(/점수|채점|합격\s*판정|불합격\s*판정/.test(capture), false, "/app/capture should not become score-first");
+  assertNoPattern(capture, forbiddenLearnerPatterns, "/app/capture");
+  assertNoPattern(capture, officialClaimPatterns, "/app/capture");
+});
+
 test("morning brief is preview-only and has no notification sending code", () => {
   const source = read("lib/review-os/morning-brief.ts");
   assert.equal(source.includes("previewOnly: true"), true);

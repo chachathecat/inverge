@@ -57,8 +57,8 @@ export function buildCaptureNoteSignals(mode: AppraisalMode, input: WrongAnswerI
   const base = {
     mode,
     subject: input.subjectLabel,
-    question_or_case_summary: input.caseSummary || input.problemTitle || (input.rawQuestionText ?? "").slice(0, 120),
-    user_answer_summary: input.myAnswerSummary || input.userAnswer.slice(0, 120),
+    question_or_case_summary: input.caseSummary || input.problemTitle || `${input.subjectLabel} 캡처 확인 초안`,
+    user_answer_summary: input.myAnswerSummary || "사용자 확인 후 개인 노트에만 보관",
     one_biggest_gap: oneBiggestGap,
     one_next_action: oneNextAction,
     topic_candidate: input.problemTitle || input.subjectLabel,
