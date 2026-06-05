@@ -6,7 +6,25 @@ This document defines the metadata-only curriculum source of truth for learner-f
 
 Before production use, every official exam syllabus label, subject boundary, and unit taxonomy **must be verified against Q-Net/current public notice verification**. Until verified, reference data must keep `sourceStatus`, `needsOfficialVerification`, and `lastReviewedAt` fields.
 
+Official verification pass v1 was reviewed on 2026-06-02 against public official sources: 국가법령정보센터 `감정평가 및 감정평가사에 관한 법률 시행령` 별표 1 and the Q-Net 감정평가사 public qualification page. The pass verifies only the official subject labels and statutory exam boundaries. Inverge unit labels remain internal planning metadata unless their row explicitly says otherwise, so they keep `sourceStatus: internal_mapping_needs_official_review` and `needsOfficialVerification: true`. Study tracks are also internal beta planning templates, not official curriculum claims.
+
 No raw user OCR, raw answer, raw problem text, or copyrighted question text belongs in curriculum reference data.
+
+### 1차 영어 official-subject exclusion
+
+- Official 감정평가사 1차 includes 영어 in addition to the five study-operation subjects modeled by Inverge.
+- Inverge v1 does not model 영어 as an active learning curriculum track.
+- This is a product-scope exclusion, not a claim that 영어 is absent from the official exam.
+- Internal units remain internal planning metadata and must not be presented as official syllabus coverage.
+
+
+## Official verification metadata policy
+
+- Top-level curriculum files may use a `sourceStatus` such as `official_supported_subjects_verified_internal_units_need_official_review_english_excluded_from_active_learning_scope` only when supported active-learning subject labels have been checked against public official sources and any official-but-excluded subject is explicitly documented as outside active curriculum scope.
+- Subject rows may use `sourceStatus: official_subject_label_verified` when the subject label appears in the statutory/Q-Net public exam information.
+- Unit rows must stay `sourceStatus: internal_mapping_needs_official_review` unless a future pass can safely prove the unit label itself is official public curriculum language.
+- Study tracks must stay `sourceStatus: internal_planning_needs_beta_review`; durations and mixes are Inverge planning assumptions, not official exam guidance.
+- `sourceReferences` stores only metadata such as public source label, URL, review date, and verification scope. It must never store excerpts, paid materials, raw OCR, raw answer, raw problem text, or copyrighted question text.
 
 ## 1차 curriculum map
 

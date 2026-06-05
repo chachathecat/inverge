@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 
 const requiredDocs = [
   "docs/inverge-master-roadmap.md",
@@ -37,6 +37,16 @@ async function read(path) {
   return readFile(path, "utf8");
 }
 
+async function listFiles(root) {
+  const entries = await readdir(root, { withFileTypes: true });
+  const files = await Promise.all(entries.map(async (entry) => {
+    const path = `${root}/${entry.name}`;
+    if (entry.isDirectory()) return listFiles(path);
+    return path;
+  }));
+  return files.flat();
+}
+
 test("all roadmap and curriculum source-of-truth docs exist", async () => {
   for (const path of requiredDocs) {
     const content = await read(path);
@@ -56,6 +66,59 @@ test("curriculum reference JSON files exist and are metadata-only", async () => 
     for (const pattern of rawTextFieldPatterns) {
       assert.equal(pattern.test(content), false, `${path} must not include raw text field pattern ${pattern}`);
     }
+  }
+});
+
+
+test("verified curriculum references cite public sources and keep internal mappings unverified", async () => {
+  for (const path of requiredJson.filter((item) => !item.endsWith("explanation_ladder.json"))) {
+    const parsed = JSON.parse(await read(path));
+    assert.ok(Array.isArray(parsed.sourceReferences) && parsed.sourceReferences.length >= 2, `${path} must include sourceReferences`);
+    assert.ok(parsed.sourceReferences.some((source) => source.url.includes("law.go.kr")), `${path} must cite the public statutory source`);
+
+    if (path.endsWith("study_tracks.json")) {
+      for (const [trackId, track] of Object.entries(parsed.tracks)) {
+        assert.equal(track.sourceStatus, "internal_planning_needs_beta_review", `${trackId} must remain internal planning`);
+        assert.equal(track.needsOfficialVerification, true, `${trackId} must not be official curriculum`);
+      }
+      continue;
+    }
+
+    for (const subject of parsed.subjects) {
+      assert.equal(subject.sourceStatus, "official_subject_label_verified", `${subject.id} subject label must be verified`);
+      assert.equal(subject.needsOfficialVerification, false, `${subject.id} subject label verification should be explicit`);
+      for (const unit of subject.units) {
+        assert.equal(unit.sourceStatus, "internal_mapping_needs_official_review", `${unit.id} unit must remain internal mapping`);
+        assert.equal(unit.needsOfficialVerification, true, `${unit.id} unit must not be falsely marked official`);
+      }
+    }
+  }
+});
+
+
+test("first exam docs document English as official but excluded from active learning", async () => {
+  const doc = await read("docs/inverge-curriculum-system.md");
+  const firstExam = JSON.parse(await read("reference_corpus/curriculum/appraiser/first_exam_curriculum.json"));
+
+  assert.ok(firstExam.officialExamSubjects.includes("영어"));
+  assert.ok(firstExam.excludedOfficialSubjects.some((subject) => subject.name === "영어" && subject.reason.length > 20));
+  assert.equal(firstExam.activeLearningSubjects.includes("영어"), false);
+  assert.match(firstExam.sourceStatus, /english_excluded_from_active_learning_scope/);
+  assert.match(doc, /Official 감정평가사 1차 includes 영어/);
+  assert.match(doc, /does not model 영어 as an active learning curriculum track/);
+  assert.match(doc, /product-scope exclusion, not a claim that 영어 is absent/);
+  assert.match(doc, /Internal units remain internal planning metadata/);
+});
+
+test("English official-subject metadata does not introduce English learner route or UI scope", async () => {
+  const appAndComponentFiles = (await Promise.all([listFiles("app"), listFiles("components")])).flat();
+  const routePaths = appAndComponentFiles.filter((path) => /(^|\/)page\.tsx$|(^|\/)route\.ts$/.test(path));
+
+  assert.equal(routePaths.some((path) => /english|영어/i.test(path)), false, "must not add an English learner route");
+
+  for (const path of appAndComponentFiles.filter((filePath) => /\.(tsx|ts)$/.test(filePath))) {
+    const content = await read(path);
+    assert.equal(/영어/.test(content), false, `${path} must not expose 영어 as learner UI scope`);
   }
 });
 
@@ -101,7 +164,7 @@ test("study tracks include 1차 and 2차 track templates", async () => {
 test("docs mention Today Plan max 3 and official verification requirements", async () => {
   const docs = await Promise.all(requiredDocs.map(read)).then((parts) => parts.join("\n"));
   assert.match(docs, /Today Plan(?:[^\n]{0,80})max 3|Today Plan(?:[^\n]{0,80})최대 3|Today Plan[\s\S]{0,120}max three/i);
-  assert.match(docs, /Q-Net\/current (?:public notice|official notice) verification|Q-Net\/current official notice verification/);
+  assert.match(docs, /Q-Net\/current (?:public notice|official notice) verification|Q-Net\/current official notice verification|public official sources/);
 });
 
 test("docs preserve metadata-only raw OCR answer and problem text prohibition", async () => {

@@ -1,11 +1,34 @@
 {
   "schemaVersion": "2026-06-01",
   "exam": "감정평가사 1차",
-  "sourceStatus": "draft_metadata_from_internal_roadmap",
+  "sourceStatus": "official_supported_subjects_verified_internal_units_need_official_review_english_excluded_from_active_learning_scope",
   "needsOfficialVerification": true,
-  "lastReviewedAt": "2026-06-01",
-  "verificationNote": "Official subject/unit labels must be verified against Q-Net/current public notice verification before production use.",
+  "lastReviewedAt": "2026-06-02",
+  "verificationNote": "Official subject labels and statutory exam boundaries were checked against public official sources on 2026-06-02. Internal planning units remain learner-operational mappings and are not marked as official syllabus units.",
   "storagePolicy": "metadata_only_no_raw_user_or_problem_text",
+  "officialExamSubjects": [
+    "민법",
+    "경제학원론",
+    "부동산학원론",
+    "감정평가 관계 법규",
+    "회계학",
+    "영어"
+  ],
+  "activeLearningSubjects": [
+    "민법",
+    "경제학원론",
+    "부동산학원론",
+    "감정평가관계법규",
+    "회계학"
+  ],
+  "excludedOfficialSubjects": [
+    {
+      "name": "영어",
+      "reason": "Official first-stage subject, but not modeled as an Inverge active learning curriculum subject in v1.",
+      "sourceStatus": "official_subject_label_verified_product_scope_excluded",
+      "needsOfficialVerification": false
+    }
+  ],
   "subjects": [
     {
       "id": "first_civil_law",
@@ -31,7 +54,10 @@
           ],
           "defaultReviewPattern": "O/X 판단 → 빈칸 회상 → 4일 후 재확인",
           "riskLevel": "low",
-          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다."
+          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다.",
+          "sourceStatus": "internal_mapping_needs_official_review",
+          "needsOfficialVerification": true,
+          "verificationNote": "Internal planning unit for retrieval/rewrite scheduling; do not present as an official syllabus unit."
         },
         {
           "id": "civil_juristic_act",
@@ -53,7 +79,10 @@
           ],
           "defaultReviewPattern": "O/X 판단 → 빈칸 회상 → 4일 후 재확인",
           "riskLevel": "medium",
-          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다."
+          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다.",
+          "sourceStatus": "internal_mapping_needs_official_review",
+          "needsOfficialVerification": true,
+          "verificationNote": "Internal planning unit for retrieval/rewrite scheduling; do not present as an official syllabus unit."
         },
         {
           "id": "civil_expression",
@@ -75,7 +104,10 @@
           ],
           "defaultReviewPattern": "O/X 판단 → 빈칸 회상 → 2일 후 재확인",
           "riskLevel": "high",
-          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다."
+          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다.",
+          "sourceStatus": "internal_mapping_needs_official_review",
+          "needsOfficialVerification": true,
+          "verificationNote": "Internal planning unit for retrieval/rewrite scheduling; do not present as an official syllabus unit."
         },
         {
           "id": "civil_nullity_rescission",
@@ -97,7 +129,10 @@
           ],
           "defaultReviewPattern": "O/X 판단 → 빈칸 회상 → 2일 후 재확인",
           "riskLevel": "high",
-          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다."
+          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다.",
+          "sourceStatus": "internal_mapping_needs_official_review",
+          "needsOfficialVerification": true,
+          "verificationNote": "Internal planning unit for retrieval/rewrite scheduling; do not present as an official syllabus unit."
         },
         {
           "id": "civil_property_rights",
@@ -119,9 +154,15 @@
           ],
           "defaultReviewPattern": "O/X 판단 → 빈칸 회상 → 4일 후 재확인",
           "riskLevel": "low",
-          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다."
+          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다.",
+          "sourceStatus": "internal_mapping_needs_official_review",
+          "needsOfficialVerification": true,
+          "verificationNote": "Internal planning unit for retrieval/rewrite scheduling; do not present as an official syllabus unit."
         }
-      ]
+      ],
+      "sourceStatus": "official_subject_label_verified",
+      "needsOfficialVerification": false,
+      "verificationNote": "Subject label is verified against the official exam subject list; nested units remain internal planning metadata unless separately marked."
     },
     {
       "id": "first_economics",
@@ -147,7 +188,10 @@
           ],
           "defaultReviewPattern": "O/X 판단 → 빈칸 회상 → 4일 후 재확인",
           "riskLevel": "medium",
-          "secondExamBridge": "2차 학습에서는 개념 배경을 답안 목차의 근거로만 활용합니다."
+          "secondExamBridge": "2차 학습에서는 개념 배경을 답안 목차의 근거로만 활용합니다.",
+          "sourceStatus": "internal_mapping_needs_official_review",
+          "needsOfficialVerification": true,
+          "verificationNote": "Internal planning unit for retrieval/rewrite scheduling; do not present as an official syllabus unit."
         },
         {
           "id": "econ_consumer",
@@ -169,7 +213,10 @@
           ],
           "defaultReviewPattern": "O/X 판단 → 빈칸 회상 → 4일 후 재확인",
           "riskLevel": "low",
-          "secondExamBridge": "2차 학습에서는 개념 배경을 답안 목차의 근거로만 활용합니다."
+          "secondExamBridge": "2차 학습에서는 개념 배경을 답안 목차의 근거로만 활용합니다.",
+          "sourceStatus": "internal_mapping_needs_official_review",
+          "needsOfficialVerification": true,
+          "verificationNote": "Internal planning unit for retrieval/rewrite scheduling; do not present as an official syllabus unit."
         },
         {
           "id": "econ_producer",
@@ -191,7 +238,10 @@
           ],
           "defaultReviewPattern": "O/X 판단 → 빈칸 회상 → 4일 후 재확인",
           "riskLevel": "low",
-          "secondExamBridge": "2차 학습에서는 개념 배경을 답안 목차의 근거로만 활용합니다."
+          "secondExamBridge": "2차 학습에서는 개념 배경을 답안 목차의 근거로만 활용합니다.",
+          "sourceStatus": "internal_mapping_needs_official_review",
+          "needsOfficialVerification": true,
+          "verificationNote": "Internal planning unit for retrieval/rewrite scheduling; do not present as an official syllabus unit."
         },
         {
           "id": "econ_macro",
@@ -213,7 +263,10 @@
           ],
           "defaultReviewPattern": "O/X 판단 → 빈칸 회상 → 4일 후 재확인",
           "riskLevel": "medium",
-          "secondExamBridge": "2차 학습에서는 개념 배경을 답안 목차의 근거로만 활용합니다."
+          "secondExamBridge": "2차 학습에서는 개념 배경을 답안 목차의 근거로만 활용합니다.",
+          "sourceStatus": "internal_mapping_needs_official_review",
+          "needsOfficialVerification": true,
+          "verificationNote": "Internal planning unit for retrieval/rewrite scheduling; do not present as an official syllabus unit."
         },
         {
           "id": "econ_money_policy",
@@ -235,9 +288,15 @@
           ],
           "defaultReviewPattern": "O/X 판단 → 빈칸 회상 → 2일 후 재확인",
           "riskLevel": "high",
-          "secondExamBridge": "2차 학습에서는 개념 배경을 답안 목차의 근거로만 활용합니다."
+          "secondExamBridge": "2차 학습에서는 개념 배경을 답안 목차의 근거로만 활용합니다.",
+          "sourceStatus": "internal_mapping_needs_official_review",
+          "needsOfficialVerification": true,
+          "verificationNote": "Internal planning unit for retrieval/rewrite scheduling; do not present as an official syllabus unit."
         }
-      ]
+      ],
+      "sourceStatus": "official_subject_label_verified",
+      "needsOfficialVerification": false,
+      "verificationNote": "Subject label is verified against the official exam subject list; nested units remain internal planning metadata unless separately marked."
     },
     {
       "id": "first_real_estate",
@@ -263,7 +322,10 @@
           ],
           "defaultReviewPattern": "O/X 판단 → 빈칸 회상 → 4일 후 재확인",
           "riskLevel": "low",
-          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다."
+          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다.",
+          "sourceStatus": "internal_mapping_needs_official_review",
+          "needsOfficialVerification": true,
+          "verificationNote": "Internal planning unit for retrieval/rewrite scheduling; do not present as an official syllabus unit."
         },
         {
           "id": "re_market",
@@ -285,7 +347,10 @@
           ],
           "defaultReviewPattern": "O/X 판단 → 빈칸 회상 → 4일 후 재확인",
           "riskLevel": "medium",
-          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다."
+          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다.",
+          "sourceStatus": "internal_mapping_needs_official_review",
+          "needsOfficialVerification": true,
+          "verificationNote": "Internal planning unit for retrieval/rewrite scheduling; do not present as an official syllabus unit."
         },
         {
           "id": "re_policy",
@@ -307,7 +372,10 @@
           ],
           "defaultReviewPattern": "O/X 판단 → 빈칸 회상 → 4일 후 재확인",
           "riskLevel": "low",
-          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다."
+          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다.",
+          "sourceStatus": "internal_mapping_needs_official_review",
+          "needsOfficialVerification": true,
+          "verificationNote": "Internal planning unit for retrieval/rewrite scheduling; do not present as an official syllabus unit."
         },
         {
           "id": "re_investment_finance",
@@ -329,7 +397,10 @@
           ],
           "defaultReviewPattern": "O/X 판단 → 빈칸 회상 → 2일 후 재확인",
           "riskLevel": "high",
-          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다."
+          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다.",
+          "sourceStatus": "internal_mapping_needs_official_review",
+          "needsOfficialVerification": true,
+          "verificationNote": "Internal planning unit for retrieval/rewrite scheduling; do not present as an official syllabus unit."
         },
         {
           "id": "re_appraisal_foundation",
@@ -351,9 +422,15 @@
           ],
           "defaultReviewPattern": "O/X 판단 → 빈칸 회상 → 4일 후 재확인",
           "riskLevel": "medium",
-          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다."
+          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다.",
+          "sourceStatus": "internal_mapping_needs_official_review",
+          "needsOfficialVerification": true,
+          "verificationNote": "Internal planning unit for retrieval/rewrite scheduling; do not present as an official syllabus unit."
         }
-      ]
+      ],
+      "sourceStatus": "official_subject_label_verified",
+      "needsOfficialVerification": false,
+      "verificationNote": "Subject label is verified against the official exam subject list; nested units remain internal planning metadata unless separately marked."
     },
     {
       "id": "first_appraisal_law",
@@ -379,7 +456,10 @@
           ],
           "defaultReviewPattern": "O/X 판단 → 빈칸 회상 → 2일 후 재확인",
           "riskLevel": "high",
-          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다."
+          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다.",
+          "sourceStatus": "internal_mapping_needs_official_review",
+          "needsOfficialVerification": true,
+          "verificationNote": "Internal planning unit for retrieval/rewrite scheduling; do not present as an official syllabus unit."
         },
         {
           "id": "law_price_disclosure",
@@ -401,7 +481,10 @@
           ],
           "defaultReviewPattern": "O/X 판단 → 빈칸 회상 → 4일 후 재확인",
           "riskLevel": "medium",
-          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다."
+          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다.",
+          "sourceStatus": "internal_mapping_needs_official_review",
+          "needsOfficialVerification": true,
+          "verificationNote": "Internal planning unit for retrieval/rewrite scheduling; do not present as an official syllabus unit."
         },
         {
           "id": "law_appraiser",
@@ -423,7 +506,10 @@
           ],
           "defaultReviewPattern": "O/X 판단 → 빈칸 회상 → 4일 후 재확인",
           "riskLevel": "low",
-          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다."
+          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다.",
+          "sourceStatus": "internal_mapping_needs_official_review",
+          "needsOfficialVerification": true,
+          "verificationNote": "Internal planning unit for retrieval/rewrite scheduling; do not present as an official syllabus unit."
         },
         {
           "id": "law_compensation",
@@ -445,7 +531,10 @@
           ],
           "defaultReviewPattern": "O/X 판단 → 빈칸 회상 → 2일 후 재확인",
           "riskLevel": "high",
-          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다."
+          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다.",
+          "sourceStatus": "internal_mapping_needs_official_review",
+          "needsOfficialVerification": true,
+          "verificationNote": "Internal planning unit for retrieval/rewrite scheduling; do not present as an official syllabus unit."
         },
         {
           "id": "law_registration",
@@ -467,9 +556,15 @@
           ],
           "defaultReviewPattern": "O/X 판단 → 빈칸 회상 → 4일 후 재확인",
           "riskLevel": "low",
-          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다."
+          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다.",
+          "sourceStatus": "internal_mapping_needs_official_review",
+          "needsOfficialVerification": true,
+          "verificationNote": "Internal planning unit for retrieval/rewrite scheduling; do not present as an official syllabus unit."
         }
-      ]
+      ],
+      "sourceStatus": "official_subject_label_verified",
+      "needsOfficialVerification": false,
+      "verificationNote": "Subject label is verified against the official exam subject list; nested units remain internal planning metadata unless separately marked."
     },
     {
       "id": "first_accounting",
@@ -496,7 +591,10 @@
           ],
           "defaultReviewPattern": "회상 → 짧은 계산 틀 확인 → 4일 후 재확인",
           "riskLevel": "low",
-          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다."
+          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다.",
+          "sourceStatus": "internal_mapping_needs_official_review",
+          "needsOfficialVerification": true,
+          "verificationNote": "Internal planning unit for retrieval/rewrite scheduling; do not present as an official syllabus unit."
         },
         {
           "id": "acct_assets",
@@ -519,7 +617,10 @@
           ],
           "defaultReviewPattern": "회상 → 짧은 계산 틀 확인 → 4일 후 재확인",
           "riskLevel": "low",
-          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다."
+          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다.",
+          "sourceStatus": "internal_mapping_needs_official_review",
+          "needsOfficialVerification": true,
+          "verificationNote": "Internal planning unit for retrieval/rewrite scheduling; do not present as an official syllabus unit."
         },
         {
           "id": "acct_inventory_lcm",
@@ -542,7 +643,10 @@
           ],
           "defaultReviewPattern": "회상 → 계산 틀 재작성 → 2일 후 재확인",
           "riskLevel": "high",
-          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다."
+          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다.",
+          "sourceStatus": "internal_mapping_needs_official_review",
+          "needsOfficialVerification": true,
+          "verificationNote": "Internal planning unit for retrieval/rewrite scheduling; do not present as an official syllabus unit."
         },
         {
           "id": "acct_liability_equity",
@@ -565,7 +669,10 @@
           ],
           "defaultReviewPattern": "회상 → 짧은 계산 틀 확인 → 4일 후 재확인",
           "riskLevel": "low",
-          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다."
+          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다.",
+          "sourceStatus": "internal_mapping_needs_official_review",
+          "needsOfficialVerification": true,
+          "verificationNote": "Internal planning unit for retrieval/rewrite scheduling; do not present as an official syllabus unit."
         },
         {
           "id": "acct_cost_management",
@@ -588,9 +695,29 @@
           ],
           "defaultReviewPattern": "회상 → 계산 틀 재작성 → 2일 후 재확인",
           "riskLevel": "high",
-          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다."
+          "secondExamBridge": "2차 답안에서는 정의-요건-효과 순서로 짧게 재구성합니다.",
+          "sourceStatus": "internal_mapping_needs_official_review",
+          "needsOfficialVerification": true,
+          "verificationNote": "Internal planning unit for retrieval/rewrite scheduling; do not present as an official syllabus unit."
         }
-      ]
+      ],
+      "sourceStatus": "official_subject_label_verified",
+      "needsOfficialVerification": false,
+      "verificationNote": "Subject label is verified against the official exam subject list; nested units remain internal planning metadata unless separately marked."
+    }
+  ],
+  "sourceReferences": [
+    {
+      "label": "국가법령정보센터 감정평가 및 감정평가사에 관한 법률 시행령 별표 1 시험과목",
+      "url": "https://www.law.go.kr/flDownload.do?bylClsCd=110201&flSeq=144249475&gubun=",
+      "reviewedAt": "2026-06-02",
+      "scope": "official_subject_labels_and_statutory_exam_boundaries"
+    },
+    {
+      "label": "Q-Net 감정평가사 자격상세정보",
+      "url": "https://www.q-net.or.kr/crf005.do?gId=60&gSite=L&gbnn=gbnSubtab4&id=crf00503",
+      "reviewedAt": "2026-06-02",
+      "scope": "official_exam_administrator_and_public_exam_information_page"
     }
   ]
 }
