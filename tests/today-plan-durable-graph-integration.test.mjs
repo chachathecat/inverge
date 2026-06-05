@@ -5,7 +5,9 @@ import test from "node:test";
 import { updatePersonalConceptNode } from "../lib/review-os/personal-concept-graph.ts";
 import { buildTodayPlanFromConceptGraphNodes } from "../lib/review-os/concept-graph-today-plan-adapter.ts";
 import { compressUnifiedTodayPlanToMaxThree } from "../lib/review-os/today-plan-source-union.ts";
+import { buildTodayPlanTasks } from "../lib/review-os/today-plan-engine.ts";
 import { buildTodayPlanWithGatedDurableConceptGraph } from "../lib/review-os/today-plan-durable-graph-integration.ts";
+import { buildLearnerTodayPlanTasksWithGatedDurableConceptGraph } from "../lib/review-os/today-plan-learner-route-integration.ts";
 
 const now = "2026-06-05T00:00:00.000Z";
 
@@ -51,6 +53,28 @@ function baseAction(id, unitId, prioritySignals = ["due_review"]) {
     prioritySignals,
     isPrimaryTask: true,
     metadataOnly: true,
+  };
+}
+
+
+function routeQueueItem(overrides = {}) {
+  return {
+    queueId: "queue-base",
+    itemId: "item-base",
+    examName: "감정평가사 1차",
+    subjectLabel: "민법",
+    problemTitle: "민법 기본권리 O/X",
+    topicTag: "민법 총칙",
+    mistakeType: "개념 혼동",
+    reviewReason: "scheduled review",
+    priorityScore: 100,
+    dueAt: "2026-06-04T00:00:00.000Z",
+    recurrenceCount: 2,
+    confidence: "낮음",
+    timeSpentSeconds: null,
+    createdFromCapture: false,
+    itemCreatedAt: "2026-06-03T00:00:00.000Z",
+    ...overrides,
   };
 }
 
@@ -244,6 +268,91 @@ test("missing authenticated learner userId skips durable reads", async () => {
   assert.equal(result.durableGraph.reason, "missing_user_id");
 });
 
+
+test("learner /app Today Plan route helper preserves default output and does not call durable reads when gates are off", async () => {
+  const queue = [routeQueueItem()];
+  const expected = buildTodayPlanTasks({ mode: "first", queue, items: [], learningSignals: [], now: new Date(now) });
+  const { helper, calls } = helperReturning([durableAction("durable-route", "durable-route", ["due_review", "wrong_concept"])]);
+
+  const actual = await buildLearnerTodayPlanTasksWithGatedDurableConceptGraph({
+    userId: "learner-331",
+    mode: "first",
+    queue,
+    items: [],
+    learningSignals: [],
+    now: new Date(now),
+    env: {},
+    durableReadHelper: helper,
+  });
+
+  assert.equal(calls.count, 0);
+  assert.deepEqual(actual, expected);
+  assert.equal(actual.length <= 3, true);
+});
+
+test("learner /app Today Plan route helper calls gated durable integration only when all gates are on", async () => {
+  const { helper, calls } = helperReturning([durableAction("durable-route-priority", "durable-route-priority", ["due_review", "wrong_concept"])]);
+  const tasks = await buildLearnerTodayPlanTasksWithGatedDurableConceptGraph({
+    userId: "learner-331",
+    mode: "first",
+    queue: [],
+    items: [],
+    learningSignals: [],
+    now: new Date(now),
+    env: allGatesEnv,
+    durableReadHelper: helper,
+  });
+
+  assert.equal(calls.count, 1);
+  assert.equal(calls.context.examMode, "first");
+  assert.ok(tasks.some((task) => task.itemId === "durable-route-priority"));
+  assert.equal(tasks.length <= 3, true);
+});
+
+test("learner /app Today Plan route helper falls back to existing tasks when durable read fails", async () => {
+  const queue = [routeQueueItem()];
+  const expected = buildTodayPlanTasks({ mode: "first", queue, items: [], learningSignals: [], now: new Date(now) });
+
+  const actual = await buildLearnerTodayPlanTasksWithGatedDurableConceptGraph({
+    userId: "learner-331",
+    mode: "first",
+    queue,
+    items: [],
+    learningSignals: [],
+    now: new Date(now),
+    env: allGatesEnv,
+    durableReadHelper: async () => {
+      throw new Error("simulated route durable read outage");
+    },
+  });
+
+  assert.deepEqual(actual, expected);
+  assert.equal(actual.length <= 3, true);
+});
+
+test("learner /app Today Plan route helper does not leak raw durable fields", async () => {
+  const tasks = await buildLearnerTodayPlanTasksWithGatedDurableConceptGraph({
+    userId: "learner-331",
+    mode: "first",
+    queue: [],
+    items: [],
+    learningSignals: [],
+    now: new Date(now),
+    env: allGatesEnv,
+    durableReadHelper: async () => ({
+      ok: true,
+      skipped: false,
+      repositoryMode: "supabase",
+      actions: [{ ...durableAction("unsafe-route", "unsafe-route"), rawOcrText: "must not leak" }],
+      metadataOnly: true,
+    }),
+  });
+
+  assert.equal(textOf(tasks).includes("rawOcrText"), false);
+  assert.equal(textOf(tasks).includes("must not leak"), false);
+  assert.equal(tasks.length <= 3, true);
+});
+
 test("no instructor/payment/archive/native-app routes are touched by gated integration", async () => {
   const integrationSource = await readFile(new URL("../lib/review-os/today-plan-durable-graph-integration.ts", import.meta.url), "utf8");
   const appRouteSource = await readFile(new URL("../app/app/page.tsx", import.meta.url), "utf8");
@@ -252,5 +361,6 @@ test("no instructor/payment/archive/native-app routes are touched by gated integ
   assert.equal(integrationSource.includes("payment"), false);
   assert.equal(integrationSource.includes("archive"), false);
   assert.equal(integrationSource.includes("native app"), false);
-  assert.equal(appRouteSource.includes("PERSONAL_CONCEPT_GRAPH_TODAY_PLAN_ROLLOUT"), false);
+  assert.equal(appRouteSource.includes("buildLearnerTodayPlanTasksWithGatedDurableConceptGraph"), true);
+  assert.equal(appRouteSource.includes("today-plan-learner-route-integration"), true);
 });

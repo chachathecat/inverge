@@ -221,7 +221,7 @@ test("staging learner route source smoke checks remain helper-level when e2e is 
 
   const appPage = read("app/app/page.tsx");
   assert.equal(/href=[{"'`][^\n]*(?:\/instructor|\/studio|\/admin)/i.test(appPage), false, "/app must not link to instructor/admin surfaces");
-  assert.equal(appPage.includes("buildTodayPlanTasks"), true);
+  assert.equal(appPage.includes("buildLearnerTodayPlanTasksWithGatedDurableConceptGraph"), true);
   assert.equal(appPage.includes("todayPlanTasks.map"), true);
 
   const capturePage = read("app/app/capture/page.tsx");
