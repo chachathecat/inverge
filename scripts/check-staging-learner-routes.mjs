@@ -10,18 +10,22 @@ const routeSources = new Map([
   ["/app/review", "app/app/review/page.tsx"],
   ["/app/write", "app/app/write/page.tsx"],
   ["/app/calculator", "app/app/calculator/page.tsx"],
+  ["/answer-review", "app/answer-review/page.tsx"],
 ]);
 
 const supportingSources = {
   resultControls: "components/review-os/execution-result-controls.tsx",
   firstPlanBridge: "lib/review-os/first-plan-execution-bridge.ts",
   todayPlan: "lib/review-os/today-plan-prioritization.ts",
+  todayPlanEngine: "lib/review-os/today-plan-engine.ts",
   morningBrief: "lib/review-os/morning-brief.ts",
+  answerReviewClient: "app/answer-review/answer-review-client.tsx",
+  calculatorPage: "components/review-os/calculator-workflow-page.tsx",
 };
 
 const learnerForbiddenPatterns = [
-  { pattern: /href=[{\"'`][^\n]*(?:\/instructor|\/studio)/i, reason: "learner route links to instructor/studio" },
-  { pattern: /router\.push\([^)]*(?:\/instructor|\/studio)/i, reason: "learner route pushes to instructor/studio" },
+  { pattern: /href=[{\"'`][^\n]*(?:\/instructor|\/studio|\/admin)/i, reason: "learner route links to instructor/studio/admin" },
+  { pattern: /router\.push\([^)]*(?:\/instructor|\/studio|\/admin)/i, reason: "learner route pushes to instructor/studio/admin" },
   { pattern: /\b(?:payment|checkout|paywall)\b/i, reason: "payment/checkout/paywall copy or route" },
   { pattern: /결제|유료/, reason: "payment copy" },
   { pattern: /\barchive\b/i, reason: "public archive copy" },
@@ -73,6 +77,28 @@ for (const [route, file] of routeSources) {
   }
 }
 
+
+const capture = existsSync(sourcePath("app/app/capture/page.tsx")) ? read("app/app/capture/page.tsx") : "";
+check(capture.includes("오늘 한 것 올리기"), "/app/capture must keep calm capture-first copy");
+check(!/점수|채점|합격\s*판정|불합격\s*판정/.test(capture), "/app/capture must not become score-first");
+
+const review = existsSync(sourcePath("app/app/review/page.tsx")) ? read("app/app/review/page.tsx") : "";
+check(review.includes("재시도") || review.includes("다시"), "/app/review must remain review/retry oriented");
+
+const calculatorRoute = existsSync(sourcePath("app/app/calculator/page.tsx")) ? read("app/app/calculator/page.tsx") : "";
+const calculatorPage = existsSync(sourcePath(supportingSources.calculatorPage)) ? read(supportingSources.calculatorPage) : "";
+check(calculatorRoute.includes('requestedContext === "practice" || requestedContext === "accounting"'), "/app/calculator must keep practice/accounting context routing");
+check(calculatorRoute.includes("focus={params?.focus}"), "/app/calculator must pass focus into the CASIO/accounting workflow");
+check(calculatorPage.includes('focus === "casio"'), "calculator workflow must keep CASIO focus handling");
+
+const answerReview = ["app/answer-review/page.tsx", supportingSources.answerReviewClient]
+  .filter((file) => existsSync(sourcePath(file)))
+  .map(read)
+  .join("\n");
+check(answerReview.includes("/api/answer-review/structure"), "/answer-review must use the learner structure endpoint");
+check(!answerReview.includes("/api/answer-review/grade-second"), "/answer-review must remain separated from grading endpoint copy/calls");
+check(!/href=[{"'`][^\n]*(?:\/instructor|\/studio|\/admin)/i.test(answerReview), "/answer-review must not link to instructor/studio/admin");
+
 const onboarding = existsSync(sourcePath("app/app/onboarding/page.tsx")) ? read("app/app/onboarding/page.tsx") : "";
 check(onboarding.includes("첫 오늘 계획 만들기"), "/app/onboarding must keep first Today Plan creation copy");
 check(onboarding.includes("buildExecutionBridge"), "/app/onboarding must build the execution bridge");
@@ -91,6 +117,8 @@ check(
 const todayPlan = existsSync(sourcePath(supportingSources.todayPlan)) ? read(supportingSources.todayPlan) : "";
 check(todayPlan.includes("compressTodayPlanToMaxThree"), "Today Plan max 3 compression function must exist");
 check(/compressed\.length\s*={2,3}\s*3/.test(todayPlan) || /slice\(0,\s*3\)/.test(todayPlan), "Today Plan max 3 guardrail must be enforced");
+const todayPlanEngine = existsSync(sourcePath(supportingSources.todayPlanEngine)) ? read(supportingSources.todayPlanEngine) : "";
+check(todayPlanEngine.includes(".slice(0, 3)"), "learner /app Today Plan engine must keep max 3 primary task output");
 
 const morningBrief = existsSync(sourcePath(supportingSources.morningBrief)) ? read(supportingSources.morningBrief) : "";
 const morningBriefWithoutGuardrailRegexes = stripRegexLiteralGuardrailLines(morningBrief);

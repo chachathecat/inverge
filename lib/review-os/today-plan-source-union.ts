@@ -115,6 +115,14 @@ const FORBIDDEN_UNION_COPY_PATTERNS = [
   /\/instructor/i,
   /학원용/,
   /강사/,
+  /보험계리사/,
+  /계리사/,
+  /\bCPA\b/i,
+  /세무사/,
+  /TOEFL/i,
+  /\bSAT\b/i,
+  /universal\s+exam/i,
+  /multi-exam/i,
 ];
 
 function assertSupportedExamMode(examMode: unknown): asserts examMode is AppraiserExamMode {
@@ -306,8 +314,8 @@ function stripRank(action: RankedUnifiedAction): TodayPlanUnifiedAction {
 }
 
 export function compressUnifiedTodayPlanToMaxThree(actions: TodayPlanUnifiedAction[]): TodayPlanUnifiedAction[] {
-  validateBoundary(actions);
   actions.forEach((action) => assertSupportedExamMode(action.examMode));
+  validateBoundary(actions);
   const ranked = rankUnifiedActions(actions);
   const seenDuplicates = new Set<string>();
   const selected: RankedUnifiedAction[] = [];
