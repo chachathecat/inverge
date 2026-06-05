@@ -2,7 +2,7 @@
 
 ## Scope
 
-- PR range covered: #331, #332, #333, #334.
+- PR range covered: #331, #332, #333, #334, #335, with PR #336 as final staging sign-off documentation/static guardrail only.
 - Tested preview: https://inverge-mppzi8wwq-chachathecats-projects.vercel.app/
 - QA date: 2026-06-05 UTC.
 - Environment: Vercel Preview / closed-beta staging.
@@ -26,6 +26,13 @@ PERSONAL_CONCEPT_GRAPH_TODAY_PLAN_ROLLOUT=0
 ```
 
 Production durable Today Plan reads are still blocked until separate approval.
+
+
+## Final sign-off reference
+
+- Final staging sign-off: `docs/qa/closed-beta-staging-final-signoff.md`.
+- PR #336 is final closed-beta staging sign-off for limited invited-user QA on Preview/Staging only.
+- PR #336 is not production approval; production durable Today Plan flags remain off/unset until separate approval.
 
 ## Routes tested
 

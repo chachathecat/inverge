@@ -71,6 +71,9 @@ or unset.
 - Confirm no instructor/admin/payment/archive/native-app links appear.
 - Disable rollout flag and confirm fallback to existing Today Plan.
 
+- After manual staging QA and visible action cap pass, update/read `closed-beta-staging-final-signoff.md`.
+- Treat final sign-off as closed-beta Preview/Staging approval only, not production rollout approval.
+
 ## G. Rollback
 
 Rollback is flag-only:
