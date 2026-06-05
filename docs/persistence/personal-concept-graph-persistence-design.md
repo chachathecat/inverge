@@ -10,7 +10,7 @@ The graph should remain an operational learning-signal layer for the core loop: 
 
 The current Personal Concept Graph implementation is helper-level and uses an in-memory/test repository adapter. Durable persistence will eventually be needed so that a learner's concept-level learning state can safely survive across sessions and support:
 
-- Today Plan prioritization using stable per-user concept state.
+- Today Plan prioritization using stable per-user concept state after a separate rollout PR enables durable reads; PR #329 adds only a disabled-by-default read helper.
 - Spaced review that is opt-out rather than opt-in.
 - Recovery tracking after wrong, confused, or rewrite-needed work.
 - Calm operational recommendations that end in retry, rewrite, or scheduled review.
@@ -123,7 +123,7 @@ PR #324 implements the intended learner own-row RLS model in the schema migratio
 - Do not place raw third-party problem text, raw OCR transcripts, learner answer text, official answer text, model-answer text, score predictions, or instructor comments in a model-improvement corpus.
 - Any future aggregate analytics must be pseudonymized, must not expose single-user rows, and must not reconstruct raw user or third-party text.
 
-## Implementation notes for PR #324 through PR #327
+## Implementation notes for PR #324 through PR #329
 
 - PR #324 adds schema and row-level security only for `public.personal_concept_nodes`.
 - PR #325 adds the Personal Concept Graph Supabase repository contract behind the explicit `PERSONAL_CONCEPT_GRAPH_REPOSITORY=supabase` feature flag.
@@ -132,8 +132,9 @@ PR #324 implements the intended learner own-row RLS model in the schema migratio
 - Repository integration will happen in a later PR for learner routes after runtime checks pass.
 - PR #326 added the runtime RLS smoke harness, and the linked Supabase smoke has now passed with `passed_static_repository_contract_probe` and `passed_runtime_rls_smoke` for own-row CRUD, cross-user read denial, anonymous read denial, metadata-only, exam-mode, and state constraints.
 - PR #327 adds helper-level durable write integration from learner execution signals, but durable writes remain feature-flagged and require both `PERSONAL_CONCEPT_GRAPH_REPOSITORY=supabase` and `PERSONAL_CONCEPT_GRAPH_DURABLE_WRITES=1`.
-- Default closed-beta behavior remains unchanged: memory repository and no durable learner graph writes unless both flags are explicitly enabled.
-- Production learner enablement still requires a later closed-beta rollout PR; PR #327 is not that enablement PR.
+- PR #329 adds a helper-level durable read adapter for Today Plan source-union candidates, but durable reads remain feature-flagged and require both `PERSONAL_CONCEPT_GRAPH_REPOSITORY=supabase` and `PERSONAL_CONCEPT_GRAPH_DURABLE_READS=1`.
+- Default closed-beta behavior remains unchanged: memory repository, no durable learner graph writes unless both write flags are explicitly enabled, and no durable Today Plan reads unless both read flags are explicitly enabled.
+- Production learner enablement still requires a later closed-beta rollout PR; PR #327 and PR #329 are not that enablement PR. The live Today Plan rollout still requires a separate PR.
 - The PR #325 repository maps only metadata columns into Supabase and rejects raw OCR, problem, learner answer, copyrighted/source text, official answer/model-answer, score-prediction, and instructor-comment fields before upsert.
 
 ## Migration plan
@@ -144,15 +145,15 @@ PR #324 intentionally adds only the Supabase migration and static migration guar
 2. Add a guarded server repository contract behind `PERSONAL_CONCEPT_GRAPH_REPOSITORY=supabase` that maps existing Personal Concept Graph node metadata into the table without accepting forbidden raw fields; keep the default adapter as memory until runtime RLS checks are complete.
 3. Add contract tests for rejected forbidden fields and allowed `exam_mode`/`state` values.
 4. Add helper-level execution-signal durable writes that remain disabled unless both `PERSONAL_CONCEPT_GRAPH_REPOSITORY=supabase` and `PERSONAL_CONCEPT_GRAPH_DURABLE_WRITES=1` are set.
-5. Add a read-through or adapter switch for Today Plan recommendations after the durable repository is covered by tests and a separate closed-beta rollout PR enables it.
+5. Add the PR #329 durable read adapter helper for Today Plan candidates behind `PERSONAL_CONCEPT_GRAPH_REPOSITORY=supabase` and `PERSONAL_CONCEPT_GRAPH_DURABLE_READS=1`; do not wire it into the live Today Plan page until a separate rollout PR. Runtime RLS pass remains required before enabling durable reads in real environments.
 6. Add export/delete integration for user-owned graph metadata.
-7. Run closed-beta learner-loop, taxonomy, build, and lint checks before enabling any production write path.
+7. Run closed-beta learner-loop, taxonomy, build, and lint checks before enabling any production write or live durable read path.
 
 ## Rollback plan
 
 If a future persistence implementation causes access, data-boundary, or route stability issues:
 
-- Disable the durable repository feature flag and fall back to the existing helper-level/in-memory behavior for tests or non-production execution.
+- Disable the durable repository/read/write feature flags and fall back to the existing helper-level/in-memory behavior for tests or non-production execution.
 - Stop writes through guarded server functions before changing schema.
 - Keep existing rows intact while investigating unless a privacy boundary issue requires immediate deletion.
 - If a migration must be reverted, first remove production write usage, then drop policies/functions/table in a separate reviewed migration.
@@ -177,20 +178,22 @@ For future implementation PRs:
 - Service-function tests proving any privileged path can operate only through guarded server functions.
 - Data-boundary tests rejecting all forbidden raw fields.
 - Export/delete integration tests.
-- Today Plan adapter smoke tests using durable metadata only.
+- Today Plan adapter smoke tests using durable metadata only, including default-disabled durable reads, max-3 source-union actions, and no raw row return.
 
 ## Future production implementation PR sequence
 
 1. **Schema and RLS migration PR (PR #324):** create `personal_concept_nodes`, constraints, indexes, timestamps, and RLS policies; do not wire learner writes yet.
 2. **Repository contract PR (PR #325):** add a Supabase-backed repository behind `PERSONAL_CONCEPT_GRAPH_REPOSITORY=supabase` with forbidden-field rejection and metadata-only DTOs; keep memory mode as the default and do not wire production learner writes yet.
 3. **Durable execution-signal helper PR (PR #327):** route learner execution signals into the guarded repository only through helper-level code and only when both repository and durable-write flags are explicitly enabled; keep default closed-beta behavior unchanged.
-4. **Learner read/write rollout PR:** enable the helper for a limited closed-beta learner path and read graph metadata for Today Plan after final rollout review.
-5. **Lifecycle PR:** add export/delete handling and retention documentation updates.
-6. **Closed-beta enablement PR:** expand durable graph persistence for a limited closed-beta cohort after learner-loop, taxonomy, build, lint, and smoke checks pass.
+4. **Durable Today Plan read helper PR (PR #329):** add a helper-only read adapter behind `PERSONAL_CONCEPT_GRAPH_DURABLE_READS=1`; keep default closed-beta behavior unchanged and do not wire the live Today Plan page.
+5. **Learner read/write rollout PR:** enable the helpers for a limited closed-beta learner path and read graph metadata for Today Plan after final rollout review and runtime RLS evidence.
+6. **Lifecycle PR:** add export/delete handling and retention documentation updates.
+7. **Closed-beta enablement PR:** expand durable graph persistence for a limited closed-beta cohort after learner-loop, taxonomy, build, lint, and smoke checks pass.
 
 ## Non-goals for this PR
 
 - No production database writes.
+- No live Today Plan durable read rollout; PR #329 is helper-only and disabled by default.
 - No payment changes.
 - No public archive UI.
 - No new exams.

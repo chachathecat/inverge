@@ -10,10 +10,11 @@ This QA note covers the safe runtime verification harness for the learner Person
 - PR #325 added the Supabase-backed Personal Concept Graph repository contract, the repository adapter, memory mode as the default, and Supabase mode only when `PERSONAL_CONCEPT_GRAPH_REPOSITORY=supabase` is explicitly set. It did not add a production learner write path.
 - PR #326 added the static repository-contract probe and real Supabase runtime RLS smoke harness.
 - PR #327 adds helper-level execution-signal-to-graph durable write integration, but it remains closed by default and requires both `PERSONAL_CONCEPT_GRAPH_REPOSITORY=supabase` and `PERSONAL_CONCEPT_GRAPH_DURABLE_WRITES=1`.
+- PR #329 adds a Today Plan durable read helper only. It remains closed by default and requires both `PERSONAL_CONCEPT_GRAPH_REPOSITORY=supabase` and `PERSONAL_CONCEPT_GRAPH_DURABLE_READS=1`; the live Today Plan rollout still requires a separate PR.
 
 ## Why this runtime smoke is required
 
-The schema and repository contract are necessary but not sufficient before durable learner writes. Before any capture, execution, or Today Plan route can write or read durable graph rows, runtime checks must prove that the deployed Supabase project enforces the same safety boundaries as the code contract:
+The schema and repository contract are necessary but not sufficient before durable learner writes. Before any capture, execution, or Today Plan route can write or read durable graph rows, and before PR #329 durable reads are enabled in a real learner environment, runtime checks must prove that the deployed Supabase project enforces the same safety boundaries as the code contract:
 
 - default app behavior still uses the memory repository;
 - Supabase mode is explicit and feature-flagged;
@@ -33,7 +34,7 @@ Run the script only when intentionally performing the Personal Concept Graph RLS
 PERSONAL_CONCEPT_GRAPH_RLS_SMOKE=1 PERSONAL_CONCEPT_GRAPH_REPOSITORY=supabase npm run check:personal-concept-graph-rls
 ```
 
-The script is intentionally not a default production write path and does not modify learner capture, execution result controls, Today Plan, instructor grading, payment, entitlement, archive, notification, or dashboard routes.
+The script is intentionally not a default production write path and does not modify learner capture, execution result controls, Today Plan, instructor grading, payment, entitlement, archive, notification, or dashboard routes. PR #329 similarly adds helper-level durable reads only; it does not wire the live `/app` Today Plan page.
 
 ## Required environment variables
 
@@ -99,7 +100,18 @@ PR #327 may call the durable write helper only after the helper validates metada
 
 Default closed-beta behavior remains memory/no durable write. The helper must not persist raw OCR, problem, learner answer, copyrighted/source text, official-answer/model-answer text, score predictions, or instructor comments. Production enablement for learners still requires a later closed-beta rollout PR after the normal learner-loop, taxonomy, build, lint, and smoke checks pass.
 
-## Required verification before enabling durable writes
+## PR #329 durable read helper posture
+
+PR #329 may call the durable read helper only after the helper confirms both feature flags are explicitly enabled:
+
+- `PERSONAL_CONCEPT_GRAPH_REPOSITORY=supabase`
+- `PERSONAL_CONCEPT_GRAPH_DURABLE_READS=1`
+
+Default closed-beta behavior remains unchanged: memory/default Today Plan paths stay active, and durable graph reads are disabled. The helper reads repository metadata with `listPersonalConceptNodesForToday`, converts it through the existing Concept Graph Today Plan adapter and Today Plan source-union boundary, and returns at most 3 metadata-only source-union actions. It must not return raw database rows or raw OCR/problem/answer/source text, official answers, model answers, score predictions, or instructor comments.
+
+The linked runtime RLS pass remains required before enabling durable reads in any real learner environment, and the live Today Plan rollout still requires a separate PR.
+
+## Required verification before enabling durable writes or reads
 
 Before any production learner write path is enabled, Inverge must have documented evidence from a safe Supabase environment that:
 
@@ -108,6 +120,6 @@ Before any production learner write path is enabled, Inverge must have documente
 3. anon read denial has been verified;
 4. metadata-only, exam-mode, and state constraints have been verified against the deployed database;
 5. the live app still avoids storing raw OCR/problem/answer text, official answers, model answers, and official score predictions;
-6. capture, execution, and Today Plan durable-write changes remain behind explicit product and repository flags until separately reviewed.
+6. capture, execution, and Today Plan durable-write/read changes remain behind explicit product and repository flags until separately reviewed.
 
-Production learner writes remain disabled in this PR.
+Production learner writes and live Today Plan durable reads remain disabled in this PR.
