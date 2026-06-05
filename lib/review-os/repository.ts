@@ -35,6 +35,7 @@ import type {
 } from "@/lib/review-os/types";
 import type { AppraisalMode } from "@/lib/review-os/appraisal";
 import { sanitizeDerivedMetadata, sanitizeLearningSignalMetadata } from "@/lib/review-os/data-boundary";
+import { toStringArray, toTaxonomyCandidates } from "@/lib/review-os/taxonomy-candidates";
 
 function createUuid() {
   return crypto.randomUUID();
@@ -42,10 +43,6 @@ function createUuid() {
 
 function hashPayload(value: string) {
   return crypto.createHash("sha256").update(value).digest("hex");
-}
-
-function toStringArray(value: unknown) {
-  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
 }
 
 function toConceptReviewCard(value: unknown): ConceptReviewCardPayload | undefined {
@@ -68,38 +65,6 @@ function toConceptReviewCard(value: unknown): ConceptReviewCardPayload | undefin
     concept_candidate: typeof row.concept_candidate === "string" ? row.concept_candidate : null,
     official_answer_authority: false,
   };
-}
-
-function toTaxonomyCandidates(value: unknown): TaxonomyClassificationCandidate[] {
-  if (!Array.isArray(value)) return [];
-
-  return value
-    .map((item) => {
-      if (!item || typeof item !== "object") return null;
-      const row = item as Record<string, unknown>;
-      if (typeof row.taxonomyNodeId !== "string") return null;
-      const candidate: TaxonomyClassificationCandidate = {
-        taxonomyNodeId: row.taxonomyNodeId,
-        mode: row.mode === "second" ? "second" : "first",
-        examYear: typeof row.examYear === "number" ? row.examYear : undefined,
-        round: typeof row.round === "string" ? row.round : undefined,
-        subject: typeof row.subject === "string" ? row.subject : "",
-        unit: typeof row.unit === "string" ? row.unit : "",
-        topic: typeof row.topic === "string" ? row.topic : "",
-        subtopic: typeof row.subtopic === "string" ? row.subtopic : undefined,
-        skill: typeof row.skill === "string" ? row.skill : (typeof row.examSkill === "string" ? row.examSkill : ""),
-        examSkill: typeof row.examSkill === "string" ? row.examSkill : "",
-        skeletonKeywords: toStringArray(row.skeletonKeywords),
-        commonGaps: toStringArray(row.commonGaps),
-        score: Number(row.score ?? 0),
-        confidence: Number(row.confidence ?? 0),
-        matchedKeywords: toStringArray(row.matchedKeywords),
-        skeletonKeywordHints: toStringArray(row.skeletonKeywordHints),
-        classificationStatus: row.classificationStatus === "ai_suggested" ? "ai_suggested" : "needs_review",
-      };
-      return candidate;
-    })
-    .filter((candidate): candidate is TaxonomyClassificationCandidate => candidate !== null);
 }
 
 function toNullableNumber(value: unknown): number | null {
