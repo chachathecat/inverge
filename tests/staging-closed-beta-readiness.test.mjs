@@ -292,9 +292,12 @@ test("PR314 Today Plan mode switching and CASIO route copy are mode-safe", () =>
 
   const appPage = read("app/app/page.tsx");
   assert.equal(appPage.includes('reviewOsService.getTodayFocus(session.userId, session.email, mode)'), true);
-  assert.equal(appPage.includes('buildLearnerTodayPlanTasksWithGatedDurableConceptGraph({\n    userId: session.userId,'), true);
-  assert.equal(appPage.includes('modeCaptureHref'), true, "empty Today Plan links should preserve the selected mode");
-  assert.equal(appPage.includes('/app/calculator?mode=second&context=practice&focus=casio'), true);
+  assert.match(appPage, /buildLearnerTodayPlanTasksWithGatedDurableConceptGraph\s*\(/, "/app should use the gated learner Today Plan route helper");
+  assert.match(appPage, /userId:\s*session\.userId/, "/app should pass the authenticated learner userId into the gated helper");
+  assert.match(appPage, /\bmode\s*,/, "/app should pass the selected exam mode into the gated helper");
+  assert.doesNotMatch(appPage, /buildTodayPlanTasks\s*\(/, "/app should not restore direct Today Plan task construction");
+  assert.match(appPage, /modeCaptureHref/, "empty Today Plan links should preserve the selected mode");
+  assert.match(appPage, /\/app\/calculator\?mode=second&context=practice&focus=casio/);
 
   const calculatorRoute = read("app/app/calculator/page.tsx");
   assert.equal(calculatorRoute.includes("focus?: string"), true);

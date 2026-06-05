@@ -1,24 +1,44 @@
 import assert from "node:assert/strict";
 import { readdir, readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import test from "node:test";
 
-const scriptPath = new URL("../scripts/verify-personal-concept-graph-durable-read.mjs", import.meta.url);
-const scriptFile = scriptPath.pathname;
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const appRoot = join(repoRoot, "app");
+const scriptFile = fileURLToPath(new URL("../scripts/verify-personal-concept-graph-durable-read.mjs", import.meta.url));
+
+function smokeEnv(env = {}) {
+  return {
+    PATH: process.env.PATH,
+    HOME: process.env.HOME,
+    USERPROFILE: process.env.USERPROFILE,
+    SystemRoot: process.env.SystemRoot,
+    ComSpec: process.env.ComSpec,
+    TEMP: process.env.TEMP,
+    TMP: process.env.TMP,
+    NODE_OPTIONS: process.env.NODE_OPTIONS,
+    ...env,
+  };
+}
+
+function resultOutput(result) {
+  return `${result.stdout ?? ""}
+${result.stderr ?? ""}`;
+}
+
+function assertNoSpawnError(result) {
+  assert.equal(result.error, undefined, result.error ? `spawn failed: ${result.error.message}` : undefined);
+}
 
 function runScript(env = {}) {
   return spawnSync(
     process.execPath,
     ["--experimental-strip-types", "--loader", "./tests/ts-extension-loader.mjs", scriptFile],
     {
-      cwd: new URL("..", import.meta.url).pathname,
-      env: {
-        PATH: process.env.PATH,
-        HOME: process.env.HOME,
-        NODE_OPTIONS: process.env.NODE_OPTIONS,
-        ...env,
-      },
+      cwd: repoRoot,
+      env: smokeEnv(env),
       encoding: "utf8",
     },
   );
@@ -41,29 +61,35 @@ async function collectSourceFiles(root, base = root) {
 test("durable read runtime smoke refuses to run without explicit smoke flag", () => {
   const result = runScript({ PERSONAL_CONCEPT_GRAPH_REPOSITORY: "supabase", PERSONAL_CONCEPT_GRAPH_DURABLE_READS: "1" });
 
-  assert.notEqual(result.status, 0);
-  assert.match(result.stdout, /refused_missing_personal_concept_graph_durable_read_smoke_flag/);
-  assert.match(result.stdout, /PERSONAL_CONCEPT_GRAPH_DURABLE_READ_SMOKE=1/);
+  assertNoSpawnError(result);
+  const output = resultOutput(result);
+  assert.notEqual(result.status, 0, output);
+  assert.match(output, /refused_missing_personal_concept_graph_durable_read_smoke_flag/);
+  assert.match(output, /PERSONAL_CONCEPT_GRAPH_DURABLE_READ_SMOKE=1/);
 });
 
 test("durable read runtime smoke refuses to run unless repository mode is Supabase", () => {
   const result = runScript({ PERSONAL_CONCEPT_GRAPH_DURABLE_READ_SMOKE: "1", PERSONAL_CONCEPT_GRAPH_DURABLE_READS: "1" });
 
-  assert.notEqual(result.status, 0);
-  assert.match(result.stdout, /refused_missing_supabase_repository_mode/);
-  assert.match(result.stdout, /PERSONAL_CONCEPT_GRAPH_REPOSITORY=supabase/);
+  assertNoSpawnError(result);
+  const output = resultOutput(result);
+  assert.notEqual(result.status, 0, output);
+  assert.match(output, /refused_missing_supabase_repository_mode/);
+  assert.match(output, /PERSONAL_CONCEPT_GRAPH_REPOSITORY=supabase/);
 });
 
 test("durable read runtime smoke refuses to run unless durable reads flag is enabled", () => {
   const result = runScript({ PERSONAL_CONCEPT_GRAPH_DURABLE_READ_SMOKE: "1", PERSONAL_CONCEPT_GRAPH_REPOSITORY: "supabase" });
 
-  assert.notEqual(result.status, 0);
-  assert.match(result.stdout, /refused_missing_personal_concept_graph_durable_reads_flag/);
-  assert.match(result.stdout, /PERSONAL_CONCEPT_GRAPH_DURABLE_READS=1/);
+  assertNoSpawnError(result);
+  const output = resultOutput(result);
+  assert.notEqual(result.status, 0, output);
+  assert.match(output, /refused_missing_personal_concept_graph_durable_reads_flag/);
+  assert.match(output, /PERSONAL_CONCEPT_GRAPH_DURABLE_READS=1/);
 });
 
 test("durable read runtime smoke source contains no hardcoded token, key, or password", async () => {
-  const source = await readFile(scriptPath, "utf8");
+  const source = await readFile(scriptFile, "utf8");
 
   assert.doesNotMatch(source, /eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}/);
   assert.doesNotMatch(source, /sbp_[A-Za-z0-9_\-]{20,}/i);
@@ -73,7 +99,7 @@ test("durable read runtime smoke source contains no hardcoded token, key, or pas
 });
 
 test("durable read runtime smoke source rejects forbidden raw fields", async () => {
-  const source = await readFile(scriptPath, "utf8");
+  const source = await readFile(scriptFile, "utf8");
 
   for (const field of [
     "rawUserText",
@@ -95,7 +121,7 @@ test("durable read runtime smoke source rejects forbidden raw fields", async () 
 });
 
 test("durable read runtime smoke expected success JSON includes passed status", async () => {
-  const source = await readFile(scriptPath, "utf8");
+  const source = await readFile(scriptFile, "utf8");
 
   assert.match(source, /passed_durable_graph_read_runtime_smoke/);
   for (const verified of [
@@ -113,7 +139,7 @@ test("durable read runtime smoke expected success JSON includes passed status", 
 });
 
 test("durable read runtime smoke cleanup attempts both users independently", async () => {
-  const source = await readFile(scriptPath, "utf8");
+  const source = await readFile(scriptFile, "utf8");
 
   assert.match(source, /async function cleanupBothUsers/);
   assert.match(source, /Promise\.allSettled/);
@@ -124,12 +150,11 @@ test("durable read runtime smoke cleanup attempts both users independently", asy
 });
 
 test("no live app route imports durable read helper without explicit durable read or product gate", async () => {
-  const root = new URL("..", import.meta.url).pathname.replace(/\/$/, "");
-  const files = await collectSourceFiles(join(root, "app"), root);
+  const files = await collectSourceFiles(appRoot, repoRoot);
   const matches = [];
 
   for (const file of files) {
-    const source = await readFile(new URL(`../${file}`, import.meta.url), "utf8");
+    const source = await readFile(join(repoRoot, file), "utf8");
     if (
       /maybeBuildTodayPlanActionsFromDurableConceptGraph|listPersonalConceptNodesForTodayFromSupabase|personal_concept_nodes/.test(source) &&
       !/PERSONAL_CONCEPT_GRAPH_DURABLE_READS|explicitProductGate|durableReadProductGate/.test(source)
