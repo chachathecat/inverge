@@ -1,4 +1,5 @@
 import type { ConfidenceLevel, LearningSignalEventRecord, ReviewQueueCard, WrongAnswerItemRecord } from "@/lib/review-os/types";
+import { buildTodayPlanDisplayCopy, type TodayPlanDisplayCopy } from "./today-plan-display-copy";
 
 export type TodayPlanTaskType =
   | "first_ox_retry"
@@ -28,6 +29,9 @@ export type TodayPlanTask = {
   primary_cta: TodayPlanPrimaryCta;
   created_from_capture: boolean;
   source_label?: string;
+  display_reason?: TodayPlanDisplayCopy["displayReason"];
+  display_source_label?: TodayPlanDisplayCopy["displaySourceLabel"];
+  display_primary_cta?: TodayPlanDisplayCopy["displayPrimaryCta"];
 };
 
 type BuildInput = {
@@ -280,6 +284,35 @@ function toItemTask(item: WrongAnswerItemRecord, mode: "first" | "second", now: 
   };
 }
 
+function resolveDisplaySource(task: Pick<TodayPlanTask, "source_label" | "task_type">): Parameters<typeof buildTodayPlanDisplayCopy>[0]["source"] {
+  const label = task.source_label ?? "";
+  if (/복습\s*큐|오늘\s*기록|캡처\s*노트|오답\s*노트|Problem Snap/i.test(label)) return "review_queue";
+  if (/일정/.test(label)) return "study_schedule";
+  if (/개념|O\/X|약점|헷갈|1차 O\/X/.test(label) || task.task_type === "concept_review" || task.task_type === "cloze_review") return "personal_concept_graph";
+  return undefined;
+}
+
+function toEngineDisplayCopy(task: Pick<TodayPlanTask, "source_label" | "task_type" | "primary_cta" | "priority_reason" | "due_bucket">) {
+  const prioritySignals = [
+    task.due_bucket === "overdue" || task.due_bucket === "today" ? "due_review" : "",
+    task.priority_reason,
+  ].filter(Boolean);
+
+  const copy = buildTodayPlanDisplayCopy({
+    source: resolveDisplaySource(task),
+    sourceLabel: task.source_label,
+    prioritySignals,
+    taskType: task.task_type,
+    primaryCtaLabel: task.primary_cta.label,
+  });
+
+  return {
+    display_reason: copy.displayReason,
+    display_source_label: copy.displaySourceLabel,
+    display_primary_cta: copy.displayPrimaryCta,
+  };
+}
+
 export function buildTodayPlanTasks({ mode, queue, items = [], learningSignals = [], now = new Date(), repeatedGaps = [], riskLevel = "stable" }: BuildWeaknessInput): TodayPlanTask[] {
   const topRepeatedGap = repeatedGaps[0] ?? null;
   const rankedQueue = queue
@@ -361,5 +394,8 @@ export function buildTodayPlanTasks({ mode, queue, items = [], learningSignals =
   return [...deduped.values()]
     .sort((a, b) => b.score - a.score || a.task.itemId.localeCompare(b.task.itemId))
     .slice(0, 3)
-    .map((entry) => entry.task);
+    .map((entry) => ({
+      ...entry.task,
+      ...toEngineDisplayCopy(entry.task),
+    }));
 }

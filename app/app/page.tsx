@@ -393,12 +393,17 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                       <article key={task.itemId} className="rounded-[var(--radius-sm)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3">
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                           <div className="min-w-0">
-                            <p className="text-sm font-medium leading-6 text-[color:var(--foreground-strong)]">{index + 1}. {task.title}</p>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="text-sm font-medium leading-6 text-[color:var(--foreground-strong)]">{index + 1}. {task.title}</p>
+                              {task.display_source_label ? (
+                                <span className="rounded-full border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)] px-2 py-0.5 text-[11px] font-medium text-[color:var(--ink-muted)]">{task.display_source_label}</span>
+                              ) : null}
+                            </div>
                             <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">{task.subject} · {task.estimated_minutes}분</p>
-                            <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">{task.reason}</p>
+                            <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]"><span className="font-medium text-[color:var(--foreground-strong)]">왜 지금?</span> {task.display_reason ?? task.reason}</p>
                           </div>
                           <Link href={resolveTaskHref(task.primary_cta.hrefKind)} className="inline-flex min-h-10 w-full shrink-0 items-center justify-center rounded-full bg-[color:var(--foreground-strong)] px-3 py-2 text-xs font-medium text-white sm:w-auto">
-                            {task.primary_cta.label}
+                            {task.display_primary_cta ?? task.primary_cta.label}
                           </Link>
                         </div>
                         <details className="mt-3 rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)]">
