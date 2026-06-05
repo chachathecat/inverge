@@ -9,6 +9,7 @@ import { loadAppraiserCurriculumReference } from "../lib/review-os/curriculum-re
 const requiredFiles = [
   "docs/closed-beta-staging-qa-checklist.md",
   "docs/qa/durable-today-plan-staging-rollout-checklist.md",
+  "docs/qa/durable-today-plan-staging-qa-evidence.md",
   "scripts/check-durable-today-plan-rollout-readiness.mjs",
   "lib/review-os/today-plan-learner-route-integration.ts",
   "scripts/check-staging-learner-routes.mjs",
@@ -283,6 +284,45 @@ test("PR332 durable Today Plan rollout readiness guardrails exist and remain lea
     assert.equal(outputMapping.includes(forbidden), false, `route output mapping should not introduce ${forbidden}`);
   }
 });
+
+test("PR335 durable Today Plan staging evidence and visible action cap guardrails are documented", () => {
+  assert.equal(existsSync("docs/qa/durable-today-plan-staging-qa-evidence.md"), true);
+
+  const evidence = read("docs/qa/durable-today-plan-staging-qa-evidence.md");
+  const checklist = read("docs/qa/durable-today-plan-staging-rollout-checklist.md");
+  const appPage = read("app/app/page.tsx");
+
+  assert.equal(evidence.includes("PR range covered: #331, #332, #333, #334"), true);
+  assert.equal(evidence.includes("https://inverge-mppzi8wwq-chachathecats-projects.vercel.app/"), true);
+  assert.equal(evidence.includes("PASS WITH WARNINGS"), true);
+  assert.equal(evidence.includes("Production rollout remains blocked"), true);
+  assert.equal(evidence.includes("PERSONAL_CONCEPT_GRAPH_DURABLE_READS=1"), true);
+  assert.equal(evidence.includes("PERSONAL_CONCEPT_GRAPH_TODAY_PLAN_ROLLOUT=1"), true);
+  assert.equal(evidence.includes("Production flags remain off or unset"), true);
+
+  assert.equal(checklist.includes("## I. Visible action cap QA"), true);
+  for (const rule of [
+    "Today Plan primary task cards must be max 3",
+    "The screen should not visually imply more than 3",
+    "Input options must be clearly separated from Today Plan tasks",
+    "Secondary routes must be inside collapsed details",
+    "If there are zero due tasks, the empty/recovery state should still show one primary next action",
+  ]) {
+    assert.equal(checklist.includes(rule), true, `visible action cap rule should be documented: ${rule}`);
+  }
+
+  assert.match(appPage, /const visibleTodayPlanTasks\s*=\s*todayPlanTasks\.slice\(0,\s*3\)/, "learner home should preserve visible max-3 Today Plan cap");
+  assert.match(appPage, /data-visible-primary-task-cap="3"/);
+  assert.match(appPage, /data-secondary-action-surface="additional-today-plan"/);
+  assert.match(appPage, /오늘 입력할 수 있는 것/);
+
+  assertNoPattern(appPage, forbiddenLearnerPatterns, "/app visible action cap surface");
+  assertNoPattern(appPage, unsupportedExamPatterns, "/app visible action cap surface");
+  assertNoPattern(appPage, officialClaimPatterns, "/app visible action cap surface");
+  assert.equal(/NODE_ENV\s*[:=]\s*["']production["'][\s\S]{0,160}PERSONAL_CONCEPT_GRAPH_DURABLE_READS\s*[:=]\s*["']1["']/.test(appPage), false);
+  assert.equal(/VERCEL_ENV\s*[:=]\s*["']production["'][\s\S]{0,160}PERSONAL_CONCEPT_GRAPH_TODAY_PLAN_ROLLOUT\s*[:=]\s*["']1["']/.test(appPage), false);
+});
+
 
 test("PR314 Today Plan mode switching and CASIO route copy are mode-safe", () => {
   const learnerShell = read("components/learner/learner-ui.tsx");
