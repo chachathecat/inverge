@@ -10,6 +10,7 @@ const requiredFiles = [
   "docs/closed-beta-staging-qa-checklist.md",
   "docs/qa/durable-today-plan-staging-rollout-checklist.md",
   "docs/qa/durable-today-plan-staging-qa-evidence.md",
+  "docs/qa/closed-beta-staging-final-signoff.md",
   "scripts/check-durable-today-plan-rollout-readiness.mjs",
   "lib/review-os/today-plan-learner-route-integration.ts",
   "scripts/check-staging-learner-routes.mjs",
@@ -141,6 +142,23 @@ test("staging checklist, route checker, and required learner route sources exist
     "## H. Decision after QA",
   ]) {
     assert.equal(checklist.includes(heading), true, `${heading} should be documented`);
+  }
+});
+
+test("final closed-beta staging sign-off keeps staging ready and production blocked", () => {
+  const signoff = read("docs/qa/closed-beta-staging-final-signoff.md");
+
+  for (const required of [
+    "STAGING CLOSED-BETA READY WITH PRODUCTION BLOCKED",
+    "Production rollout remains not approved.",
+    "Today Plan visible primary tasks must be max 3",
+    "PERSONAL_CONCEPT_GRAPH_TODAY_PLAN_ROLLOUT=0",
+    "PERSONAL_CONCEPT_GRAPH_DURABLE_READS=0",
+    "No raw text leak",
+    "No raw OCR/problem/answer/source/copyright/official/model/score/instructor fields",
+    "Restricted routes must be blocked for normal learner",
+  ]) {
+    assert.equal(signoff.includes(required), true, `final sign-off should include ${required}`);
   }
 });
 
