@@ -30,6 +30,7 @@ export type ExecutionReviewQueueItem = {
   rationale: string;
   primaryAction: string;
   createdFromDerivedSignal: true;
+  metadataOnly: true;
   createdAt?: string;
   priorityScore: number;
 };
@@ -215,6 +216,7 @@ export function buildReviewQueueItemFromExecutionSignal(signal: ExecutionLearnin
     rationale: candidate.rationale,
     primaryAction: candidate.primaryAction,
     createdFromDerivedSignal: true,
+    metadataOnly: true,
     priorityScore: 0,
   };
   item.priorityScore = calculateReviewQueuePriorityScore(item);

@@ -49,6 +49,7 @@ export type TodayPlanTask = {
   sourceReviewQueueItemId: string;
   dueBucket: ReviewQueueDueBucket;
   isPrimaryTask: true;
+  metadataOnly: true;
 };
 
 export type TodayPlanSelectionExplanation = {
@@ -262,6 +263,7 @@ function toTodayPlanTask(item: ReviewQueueItem, context: TodayPlanPrioritization
     sourceReviewQueueItemId: item.id,
     dueBucket: item.dueBucket,
     isPrimaryTask: true,
+    metadataOnly: true,
   };
 
   assertNoRawTextKeys(task);
