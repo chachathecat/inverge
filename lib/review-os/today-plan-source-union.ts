@@ -23,6 +23,7 @@ import {
   type TodayPlanTask,
 } from "./today-plan-prioritization";
 import { normalizeCurriculumTaskType } from "./curriculum-engine";
+import { buildTodayPlanDisplayCopy, type TodayPlanDisplayCopy } from "./today-plan-display-copy";
 import { type AppraiserExamMode } from "./curriculum-reference";
 
 export type TodayPlanUnifiedSource = "review_queue" | "personal_concept_graph" | "study_schedule";
@@ -41,6 +42,9 @@ export type TodayPlanUnifiedAction = {
   prioritySignals: string[];
   isPrimaryTask: true;
   metadataOnly: true;
+  displayReason?: TodayPlanDisplayCopy["displayReason"];
+  displaySourceLabel?: TodayPlanDisplayCopy["displaySourceLabel"];
+  displayPrimaryCta?: TodayPlanDisplayCopy["displayPrimaryCta"];
 };
 
 export type TodayPlanSourceUnionContext = TodayPlanPrioritizationContext & PersonalConceptTodayContext;
@@ -310,7 +314,15 @@ function stripRank(action: RankedUnifiedAction): TodayPlanUnifiedAction {
   void priorityScore;
   void _sourceRank;
   void _originalIndex;
-  return unified;
+  return {
+    ...unified,
+    ...buildTodayPlanDisplayCopy({
+      source: unified.source,
+      prioritySignals: unified.prioritySignals,
+      taskType: unified.taskType,
+      primaryAction: unified.primaryAction,
+    }),
+  };
 }
 
 export function compressUnifiedTodayPlanToMaxThree(actions: TodayPlanUnifiedAction[]): TodayPlanUnifiedAction[] {
