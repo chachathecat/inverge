@@ -72,6 +72,8 @@ A full pass reports `passed_static_repository_contract_probe` and `passed_runtim
 - anonymous clients cannot read graph rows;
 - `metadata_only=true`, appraiser exam-mode, and state constraints are enforced by the database.
 
+For anonymous read denial, either outcome is acceptable: the anon query returns zero rows, or the database returns a permission-denied/insufficient-privilege error such as SQLSTATE `42501`. No anon `SELECT` table grant is required for this smoke. Do not add public or anon table grants just to satisfy the smoke script; permission denied is a stricter acceptable proof that anonymous clients cannot read learner graph rows.
+
 ### Intentional skip
 
 If Supabase URL/anon-key env vars are unavailable, the script reports `skipped_runtime_rls_due_missing_env` after the static contract probe. This is an intentional skip, not RLS success.

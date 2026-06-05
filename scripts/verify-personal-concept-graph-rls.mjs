@@ -200,10 +200,25 @@ function rowFor({ id, userId, unitId = "rls-smoke-unit", state = "wrong", examMo
   };
 }
 
+function isPermissionDeniedError(error) {
+  const code = typeof error?.code === "string" ? error.code : "";
+  const message = typeof error?.message === "string" ? error.message.toLowerCase() : "";
+  return code === "42501" || message.includes("permission denied") || message.includes("insufficient privilege");
+}
+
 async function expectNoRows(label, queryPromise) {
   const { data, error } = await queryPromise;
   if (error) throw new Error(`${label}:${error.message}`);
   if ((data ?? []).length !== 0) throw new Error(`${label}:expected_no_rows`);
+}
+
+async function expectAnonCannotReadRows(label, queryPromise) {
+  const { data, error } = await queryPromise;
+  if (error) {
+    if (isPermissionDeniedError(error)) return;
+    throw new Error(`${label}:${error.message}`);
+  }
+  if ((data ?? []).length !== 0) throw new Error(`${label}:expected_no_rows_or_permission_denied`);
 }
 
 async function expectConstraintFailure(label, queryPromise) {
@@ -238,7 +253,7 @@ async function runRuntimeRlsChecks() {
     if (insertB.error) throw new Error(`user_b_insert_failed:${insertB.error.message}`);
 
     await expectNoRows("user_a_cannot_read_user_b_row", userA.from("personal_concept_nodes").select("id").eq("id", idB));
-    await expectNoRows("anon_cannot_read_rows", anon.from("personal_concept_nodes").select("id").in("id", [idA, idB]));
+    await expectAnonCannotReadRows("anon_cannot_read_rows", anon.from("personal_concept_nodes").select("id").in("id", [idA, idB]));
     await expectConstraintFailure("metadata_only_false_rejected", userA.from("personal_concept_nodes").insert(rowFor({ id: invalidMetadataId, userId: userAId, unitId: "rls-smoke-invalid-metadata", metadataOnly: false })));
     await expectConstraintFailure("unsupported_exam_mode_rejected", userA.from("personal_concept_nodes").insert(rowFor({ id: invalidExamModeId, userId: userAId, unitId: "rls-smoke-invalid-exam", examMode: "cpa" })));
     await expectConstraintFailure("unsupported_state_rejected", userA.from("personal_concept_nodes").insert(rowFor({ id: invalidStateId, userId: userAId, unitId: "rls-smoke-invalid-state", state: "mastered" })));

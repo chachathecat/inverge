@@ -36,6 +36,22 @@ test("runtime RLS smoke script does not print or depend on service-role secrets"
   assert.doesNotMatch(source, /createSupabaseAdminClient|getSupabasePersistenceClient/);
 });
 
+
+test("runtime RLS smoke script accepts permission-denied anon read as denial", async () => {
+  const source = await readFile(scriptPath, "utf8");
+  assert.match(source, /function isPermissionDeniedError\(error\)/);
+  assert.match(source, /error\?\.code === "42501"|code === "42501"/);
+  assert.match(source, /permission denied/);
+  assert.match(source, /insufficient privilege/);
+  assert.match(source, /expectAnonCannotReadRows\("anon_cannot_read_rows"/);
+  assert.match(source, /await expectNoRows\("user_a_cannot_read_user_b_row"/);
+});
+
+test("runtime RLS smoke script does not add or recommend anon table SELECT grants", async () => {
+  const source = await readFile(scriptPath, "utf8");
+  assert.doesNotMatch(source, /grant\s+select\s+(?:on|to).*anon|grant\s+select.*anon/i);
+});
+
 test("runtime RLS smoke script does not reference service role key in browser or client path", async () => {
   const browserClientSource = await readFile(new URL("../lib/supabase/client.ts", import.meta.url), "utf8");
   const routeHandlerSource = await readFile(new URL("../lib/supabase/route-handler.ts", import.meta.url), "utf8");
@@ -61,6 +77,16 @@ test("QA doc states production learner writes remain disabled and cross-user RLS
   assert.match(doc, /cross-user RLS must be verified before enabling durable writes/);
   assert.match(doc, /skipped_runtime_rls_due_missing_env/);
   assert.match(doc, /skipped_runtime_rls_due_missing_test_auth/);
+});
+
+test("QA doc explains anon permission denied is acceptable without public grants", async () => {
+  const doc = await readFile(docPath, "utf8");
+  assert.match(doc, /anonymous read denial/);
+  assert.match(doc, /zero rows/);
+  assert.match(doc, /permission-denied|permission denied/);
+  assert.match(doc, /42501/);
+  assert.match(doc, /No anon `SELECT` table grant is required/);
+  assert.match(doc, /Do not add public or anon table grants/);
 });
 
 test("package exposes non-default RLS smoke script and includes static test in learner-loop CI", async () => {
