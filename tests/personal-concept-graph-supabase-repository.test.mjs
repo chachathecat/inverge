@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readdir, readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import test from "node:test";
 
 import {
@@ -16,6 +17,10 @@ const durableReadHelperPath = "lib/review-os/durable-graph-today-plan-read-adapt
 const durableFeatureFlagsPath = "lib/review-os/personal-concept-graph-feature-flags.ts";
 const gatedTodayPlanIntegrationPath = "lib/review-os/today-plan-durable-graph-integration.ts";
 const learnerTodayPlanRouteIntegrationPath = "lib/review-os/today-plan-learner-route-integration.ts";
+
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const appRoot = join(repoRoot, "app");
+const libRoot = join(repoRoot, "lib");
 
 function node(overrides = {}) {
   return {
@@ -107,15 +112,14 @@ async function collectSourceFiles(root, base = root) {
 }
 
 test("Supabase repository remains route-unwired except the feature-flagged helper", async () => {
-  const root = new URL("..", import.meta.url).pathname.replace(/\/$/, "");
   const files = [
-    ...(await collectSourceFiles(join(root, "app"), root)),
-    ...(await collectSourceFiles(join(root, "lib"), root)),
+    ...(await collectSourceFiles(appRoot, repoRoot)),
+    ...(await collectSourceFiles(libRoot, repoRoot)),
   ];
   const matches = [];
   for (const file of files) {
     if (file === repoPath || file === adapterPath || file === durableHelperPath || file === durableReadHelperPath || file === durableFeatureFlagsPath || file === gatedTodayPlanIntegrationPath || file === learnerTodayPlanRouteIntegrationPath) continue;
-    const source = await readFile(new URL(`../${file}`, import.meta.url), "utf8");
+    const source = await readFile(join(repoRoot, file), "utf8");
     if (/personal-concept-graph-(?:supabase-repository|repository-adapter)|upsertPersonalConceptNodeToSupabase|listPersonalConceptNodesForTodayFromSupabase/.test(source)) {
       matches.push(file);
     }

@@ -1,14 +1,17 @@
 import { spawnSync } from "node:child_process";
 
-const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
 const nodeCommand = process.execPath;
 
+function npmStep(label, scriptName) {
+  return {
+    label,
+    command: process.platform === "win32" ? "cmd.exe" : "npm",
+    args: process.platform === "win32" ? ["/d", "/s", "/c", "npm.cmd", "run", scriptName] : ["run", scriptName],
+  };
+}
+
 const steps = [
-  {
-    label: "learner-loop verification (includes guardrail audit)",
-    command: npmCommand,
-    args: ["run", "verify:learner-loop:ci"],
-  },
+  npmStep("learner-loop verification (includes guardrail audit)", "verify:learner-loop:ci"),
   {
     label: "data-boundary tests",
     command: nodeCommand,
@@ -20,26 +23,18 @@ const steps = [
     args: ["--experimental-strip-types", "--loader", "./tests/ts-extension-loader.mjs", "--test", "tests/question-reference-db.test.mjs"],
   },
 
-  {
-    label: "staging learner route checks",
-    command: npmCommand,
-    args: ["run", "check:staging-learner-routes"],
-  },
+  npmStep("staging learner route checks", "check:staging-learner-routes"),
   {
     label: "route/source guard checks",
     command: nodeCommand,
     args: ["--experimental-strip-types", "--loader", "./tests/ts-extension-loader.mjs", "--test", "tests/closed-beta-learner-loop-smoke.test.mjs"],
   },
-  {
-    label: "build",
-    command: npmCommand,
-    args: ["run", "build"],
-  },
+  npmStep("build", "build"),
 ];
 
 for (const step of steps) {
   console.log(`\n[closed-beta-readiness] ${step.label}`);
-  const result = spawnSync(step.command, step.args, { stdio: "inherit", shell: false });
+  const result = spawnSync(step.command, step.args, { stdio: "inherit", shell: false, env: process.env });
   if (result.error) {
     console.error(`[closed-beta-readiness] ERROR in ${step.label}:`, result.error);
     process.exitCode = 1;

@@ -2,11 +2,24 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import test from "node:test";
 
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const scriptPath = new URL("../scripts/verify-personal-concept-graph-rls.mjs", import.meta.url);
 const docPath = new URL("../docs/qa/personal-concept-graph-runtime-rls-smoke.md", import.meta.url);
 const packagePath = new URL("../package.json", import.meta.url);
+const scriptFile = fileURLToPath(scriptPath);
+
+function resultOutput(result) {
+  return `${result.stdout ?? ""}
+${result.stderr ?? ""}`;
+}
+
+function assertNoSpawnError(result) {
+  assert.equal(result.error, undefined, result.error ? `spawn failed: ${result.error.message}` : undefined);
+}
 
 test("runtime RLS smoke script and QA doc exist", () => {
   assert.equal(existsSync(scriptPath), true);
@@ -18,14 +31,16 @@ test("runtime RLS smoke script requires explicit PERSONAL_CONCEPT_GRAPH_RLS_SMOK
   assert.match(source, /PERSONAL_CONCEPT_GRAPH_RLS_SMOKE/);
   assert.match(source, /process\.env\[SMOKE_FLAG\]\s*!==\s*"1"/);
 
-  const result = spawnSync(process.execPath, [scriptPath.pathname], {
-    cwd: new URL("..", import.meta.url).pathname,
+  const result = spawnSync(process.execPath, [scriptFile], {
+    cwd: repoRoot,
     env: cleanSmokeEnv({}),
     encoding: "utf8",
   });
 
-  assert.notEqual(result.status, 0);
-  assert.match(result.stdout, /refused_missing_personal_concept_graph_rls_smoke_flag/);
+  assertNoSpawnError(result);
+  const output = resultOutput(result);
+  assert.notEqual(result.status, 0, output);
+  assert.match(output, /refused_missing_personal_concept_graph_rls_smoke_flag/);
 });
 
 test("runtime RLS smoke script does not print or depend on service-role secrets", async () => {
@@ -59,16 +74,18 @@ test("runtime RLS smoke script does not reference service role key in browser or
 });
 
 test("runtime RLS smoke script intentionally skips missing Supabase env after static contract checks", () => {
-  const result = spawnSync(process.execPath, [scriptPath.pathname], {
-    cwd: new URL("..", import.meta.url).pathname,
+  const result = spawnSync(process.execPath, [scriptFile], {
+    cwd: repoRoot,
     env: cleanSmokeEnv({ PERSONAL_CONCEPT_GRAPH_RLS_SMOKE: "1" }),
     encoding: "utf8",
   });
 
-  assert.equal(result.status, 0, result.stderr || result.stdout);
-  assert.match(result.stdout, /passed_static_repository_contract_probe/);
-  assert.match(result.stdout, /skipped_runtime_rls_due_missing_env/);
-  assert.doesNotMatch(result.stdout + result.stderr, /SUPABASE_SERVICE_ROLE_KEY|service_role/i);
+  assertNoSpawnError(result);
+  const output = resultOutput(result);
+  assert.equal(result.status, 0, output);
+  assert.match(output, /passed_static_repository_contract_probe/);
+  assert.match(output, /skipped_runtime_rls_due_missing_env/);
+  assert.doesNotMatch(output, /SUPABASE_SERVICE_ROLE_KEY|service_role/i);
 });
 
 test("QA doc states production learner writes remain disabled and cross-user RLS is required", async () => {

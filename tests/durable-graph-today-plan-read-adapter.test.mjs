@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readdir, readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import test from "node:test";
 
 import { maybeBuildTodayPlanActionsFromDurableConceptGraph } from "../lib/review-os/durable-graph-today-plan-read-adapter.ts";
@@ -9,6 +10,9 @@ import {
   getPersonalConceptGraphFeatureFlagState,
 } from "../lib/review-os/personal-concept-graph-feature-flags.ts";
 import { updatePersonalConceptNode } from "../lib/review-os/personal-concept-graph.ts";
+
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const appRoot = join(repoRoot, "app");
 
 const now = "2026-06-05T00:00:00.000Z";
 
@@ -235,11 +239,10 @@ test("durable read helper adds no instructor, payment, archive, or native-app pr
 });
 
 test("no live route reads durable graph unless explicit durable read flags are checked", async () => {
-  const root = new URL("..", import.meta.url).pathname.replace(/\/$/, "");
-  const files = await collectSourceFiles(join(root, "app"), root);
+  const files = await collectSourceFiles(appRoot, repoRoot);
   const matches = [];
   for (const file of files) {
-    const source = await readFile(new URL(`../${file}`, import.meta.url), "utf8");
+    const source = await readFile(join(repoRoot, file), "utf8");
     if (/maybeBuildTodayPlanActionsFromDurableConceptGraph|listPersonalConceptNodesForTodayFromSupabase|personal_concept_nodes/.test(source) && !/PERSONAL_CONCEPT_GRAPH_DURABLE_READS/.test(source)) {
       matches.push(file);
     }
