@@ -133,8 +133,9 @@ PR #324 implements the intended learner own-row RLS model in the schema migratio
 - PR #326 added the runtime RLS smoke harness, and the linked Supabase smoke has now passed with `passed_static_repository_contract_probe` and `passed_runtime_rls_smoke` for own-row CRUD, cross-user read denial, anonymous read denial, metadata-only, exam-mode, and state constraints.
 - PR #327 adds helper-level durable write integration from learner execution signals, but durable writes remain feature-flagged and require both `PERSONAL_CONCEPT_GRAPH_REPOSITORY=supabase` and `PERSONAL_CONCEPT_GRAPH_DURABLE_WRITES=1`.
 - PR #329 adds a helper-level durable read adapter for Today Plan source-union candidates, but durable reads remain feature-flagged and require both `PERSONAL_CONCEPT_GRAPH_REPOSITORY=supabase` and `PERSONAL_CONCEPT_GRAPH_DURABLE_READS=1`.
+- PR #330 verifies the real Supabase durable read helper behavior with a runtime smoke harness before any live Today Plan integration.
 - Default closed-beta behavior remains unchanged: memory repository, no durable learner graph writes unless both write flags are explicitly enabled, and no durable Today Plan reads unless both read flags are explicitly enabled.
-- Production learner enablement still requires a later closed-beta rollout PR; PR #327 and PR #329 are not that enablement PR. The live Today Plan rollout still requires a separate PR.
+- Production learner enablement still requires a later closed-beta rollout PR; PR #327, PR #329, and PR #330 are not that enablement PR. The live Today Plan rollout remains separate.
 - The PR #325 repository maps only metadata columns into Supabase and rejects raw OCR, problem, learner answer, copyrighted/source text, official answer/model-answer, score-prediction, and instructor-comment fields before upsert.
 
 ## Migration plan
@@ -146,8 +147,21 @@ PR #324 intentionally adds only the Supabase migration and static migration guar
 3. Add contract tests for rejected forbidden fields and allowed `exam_mode`/`state` values.
 4. Add helper-level execution-signal durable writes that remain disabled unless both `PERSONAL_CONCEPT_GRAPH_REPOSITORY=supabase` and `PERSONAL_CONCEPT_GRAPH_DURABLE_WRITES=1` are set.
 5. Add the PR #329 durable read adapter helper for Today Plan candidates behind `PERSONAL_CONCEPT_GRAPH_REPOSITORY=supabase` and `PERSONAL_CONCEPT_GRAPH_DURABLE_READS=1`; do not wire it into the live Today Plan page until a separate rollout PR. Runtime RLS pass remains required before enabling durable reads in real environments.
-6. Add export/delete integration for user-owned graph metadata.
-7. Run closed-beta learner-loop, taxonomy, build, and lint checks before enabling any production write or live durable read path.
+6. Add the PR #330 durable read runtime smoke to verify the helper against a real Supabase project, max-three metadata-only Today Plan actions, no raw text leakage, unsupported exam rejection, and cross-user read denial.
+7. Add export/delete integration for user-owned graph metadata.
+8. Run closed-beta learner-loop, taxonomy, build, and lint checks before enabling any production write or live durable read path.
+
+## Production durable-read enablement gates
+
+Enabling durable Personal Concept Graph reads in production requires all of the following before a live Today Plan integration can be merged or enabled:
+
+- runtime RLS smoke pass for `personal_concept_nodes`;
+- PR #330 durable read runtime smoke pass against a real Supabase project;
+- learner-loop CI pass, including static/unit durable-read smoke coverage;
+- closed-beta readiness pass;
+- explicit product gate for the learner Today Plan route.
+
+Until those gates pass in a reviewed rollout PR, `PERSONAL_CONCEPT_GRAPH_DURABLE_READS` must remain disabled in production and the live Today Plan route must continue using the existing non-durable behavior.
 
 ## Rollback plan
 
@@ -179,6 +193,7 @@ For future implementation PRs:
 - Data-boundary tests rejecting all forbidden raw fields.
 - Export/delete integration tests.
 - Today Plan adapter smoke tests using durable metadata only, including default-disabled durable reads, max-3 source-union actions, and no raw row return.
+- PR #330 durable read runtime smoke pass against a real Supabase project before any live Today Plan route integration.
 
 ## Future production implementation PR sequence
 
@@ -186,9 +201,10 @@ For future implementation PRs:
 2. **Repository contract PR (PR #325):** add a Supabase-backed repository behind `PERSONAL_CONCEPT_GRAPH_REPOSITORY=supabase` with forbidden-field rejection and metadata-only DTOs; keep memory mode as the default and do not wire production learner writes yet.
 3. **Durable execution-signal helper PR (PR #327):** route learner execution signals into the guarded repository only through helper-level code and only when both repository and durable-write flags are explicitly enabled; keep default closed-beta behavior unchanged.
 4. **Durable Today Plan read helper PR (PR #329):** add a helper-only read adapter behind `PERSONAL_CONCEPT_GRAPH_DURABLE_READS=1`; keep default closed-beta behavior unchanged and do not wire the live Today Plan page.
-5. **Learner read/write rollout PR:** enable the helpers for a limited closed-beta learner path and read graph metadata for Today Plan after final rollout review and runtime RLS evidence.
-6. **Lifecycle PR:** add export/delete handling and retention documentation updates.
-7. **Closed-beta enablement PR:** expand durable graph persistence for a limited closed-beta cohort after learner-loop, taxonomy, build, lint, and smoke checks pass.
+5. **Durable read runtime smoke PR (PR #330):** verify real Supabase read-helper behavior, metadata-only action output, max-three actions, unsupported exam rejection, and cross-user read denial; keep live Today Plan integration separate.
+6. **Learner read/write rollout PR:** enable the helpers for a limited closed-beta learner path and read graph metadata for Today Plan after final rollout review and runtime RLS evidence.
+7. **Lifecycle PR:** add export/delete handling and retention documentation updates.
+8. **Closed-beta enablement PR:** expand durable graph persistence for a limited closed-beta cohort after learner-loop, taxonomy, build, lint, and smoke checks pass.
 
 ## Non-goals for this PR
 
