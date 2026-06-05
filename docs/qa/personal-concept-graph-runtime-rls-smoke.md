@@ -234,3 +234,24 @@ PERSONAL_CONCEPT_GRAPH_DURABLE_READS=0
 ```
 
 Do not set `PERSONAL_CONCEPT_GRAPH_DURABLE_READS` in production as part of PR #331. Production enablement requires a separate approval for the explicit rollout gate after learner-loop, closed-beta readiness, taxonomy, build, lint, and relevant Supabase smoke checks pass.
+
+## PR #332 durable Today Plan staging rollout QA
+
+The staging/closed-beta rollout checklist for the gated durable Personal Concept Graph → Today Plan path lives at `docs/qa/durable-today-plan-staging-rollout-checklist.md`.
+
+Before enabling the Today Plan rollout in a new staging environment, re-run this runtime RLS smoke and the durable read runtime smoke with fresh disposable learner users. The learner route remains staging-only and requires all of these flags before durable metadata can contribute to Today Plan candidates:
+
+```bash
+PERSONAL_CONCEPT_GRAPH_REPOSITORY=supabase
+PERSONAL_CONCEPT_GRAPH_DURABLE_READS=1
+PERSONAL_CONCEPT_GRAPH_TODAY_PLAN_ROLLOUT=1
+```
+
+Production durable Today Plan reads must remain off unless a separate production approval is completed:
+
+```bash
+PERSONAL_CONCEPT_GRAPH_DURABLE_READS=0
+PERSONAL_CONCEPT_GRAPH_TODAY_PLAN_ROLLOUT=0
+```
+
+Unset production values are also acceptable. Do not use service role keys for learner runtime smoke. Rotate or delete disposable test users and tokens after every manual smoke run, and do not paste tokens, anon keys, service role keys, JWTs, database passwords, or screenshots containing secrets into GitHub, Codex, ChatGPT, or shared QA notes.

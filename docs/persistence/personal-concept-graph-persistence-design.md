@@ -241,3 +241,25 @@ PERSONAL_CONCEPT_GRAPH_DURABLE_READS=0
 ```
 
 Production must not set `PERSONAL_CONCEPT_GRAPH_DURABLE_READS=1` or `PERSONAL_CONCEPT_GRAPH_TODAY_PLAN_ROLLOUT=1` until the closed-beta rollout owner explicitly approves the limited gate. The PR #330 real-Supabase smoke result is prerequisite evidence, not broad production enablement.
+
+## PR #332 rollout QA/readiness posture
+
+PR #332 is rollout QA/readiness only. It adds staging checklists, static flag posture verification, route smoke coverage, and closed-beta readiness assertions for the gated durable Personal Concept Graph → Today Plan integration.
+
+PR #332 does not change schema, does not change default learner behavior, and does not enable production durable Today Plan reads. Enabling durable Today Plan reads is flag-only and reversible for staging/closed beta:
+
+```bash
+PERSONAL_CONCEPT_GRAPH_REPOSITORY=supabase
+PERSONAL_CONCEPT_GRAPH_DURABLE_READS=1
+PERSONAL_CONCEPT_GRAPH_TODAY_PLAN_ROLLOUT=1
+```
+
+Rollback is also flag-only and requires no schema rollback:
+
+```bash
+PERSONAL_CONCEPT_GRAPH_TODAY_PLAN_ROLLOUT=0
+# and/or
+PERSONAL_CONCEPT_GRAPH_DURABLE_READS=0
+```
+
+Production durable reads require separate approval after staging QA, including learner-loop CI, closed-beta readiness, taxonomy, build, lint, runtime RLS smoke, durable read runtime smoke, route smoke, no raw text leak observation, and confirmation that production flags remain off until approved.
