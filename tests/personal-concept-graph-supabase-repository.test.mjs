@@ -11,6 +11,8 @@ import {
 
 const repoPath = "lib/review-os/personal-concept-graph-supabase-repository.ts";
 const adapterPath = "lib/review-os/personal-concept-graph-repository-adapter.ts";
+const durableHelperPath = "lib/review-os/execution-to-concept-graph-durable-write.ts";
+const durableFeatureFlagsPath = "lib/review-os/personal-concept-graph-feature-flags.ts";
 
 function node(overrides = {}) {
   return {
@@ -101,7 +103,7 @@ async function collectSourceFiles(root, base = root) {
   return files;
 }
 
-test("Supabase repository is not wired into learner capture/execution/today-plan routes yet", async () => {
+test("Supabase repository remains route-unwired except the feature-flagged helper", async () => {
   const root = new URL("..", import.meta.url).pathname.replace(/\/$/, "");
   const files = [
     ...(await collectSourceFiles(join(root, "app"), root)),
@@ -109,7 +111,7 @@ test("Supabase repository is not wired into learner capture/execution/today-plan
   ];
   const matches = [];
   for (const file of files) {
-    if (file === repoPath || file === adapterPath) continue;
+    if (file === repoPath || file === adapterPath || file === durableHelperPath || file === durableFeatureFlagsPath) continue;
     const source = await readFile(new URL(`../${file}`, import.meta.url), "utf8");
     if (/personal-concept-graph-(?:supabase-repository|repository-adapter)|upsertPersonalConceptNodeToSupabase|listPersonalConceptNodesForTodayFromSupabase/.test(source)) {
       matches.push(file);

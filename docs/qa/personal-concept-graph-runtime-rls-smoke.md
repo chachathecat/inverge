@@ -2,12 +2,14 @@
 
 ## Scope
 
-This QA note covers the safe runtime verification harness for the learner Personal Concept Graph Supabase repository and `public.personal_concept_nodes` RLS behavior. It is a pre-write safety gate only. Production learner writes remain disabled.
+This QA note covers the safe runtime verification harness for the learner Personal Concept Graph Supabase repository and `public.personal_concept_nodes` RLS behavior. It is a pre-write safety gate only. Production learner writes remain disabled by default. The linked Supabase runtime smoke has passed for the test environment, but closed-beta production enablement still requires a later rollout PR.
 
 ## Prior PR context
 
 - PR #324 added the Supabase migration for `public.personal_concept_nodes`, including metadata-only columns, appraiser-only exam constraints, indexes, and own-row RLS policies for authenticated users.
 - PR #325 added the Supabase-backed Personal Concept Graph repository contract, the repository adapter, memory mode as the default, and Supabase mode only when `PERSONAL_CONCEPT_GRAPH_REPOSITORY=supabase` is explicitly set. It did not add a production learner write path.
+- PR #326 added the static repository-contract probe and real Supabase runtime RLS smoke harness.
+- PR #327 adds helper-level execution-signal-to-graph durable write integration, but it remains closed by default and requires both `PERSONAL_CONCEPT_GRAPH_REPOSITORY=supabase` and `PERSONAL_CONCEPT_GRAPH_DURABLE_WRITES=1`.
 
 ## Why this runtime smoke is required
 
@@ -59,7 +61,7 @@ Production-like environments (`NODE_ENV=production` or `VERCEL_ENV=production`) 
 
 ### Pass
 
-A full pass reports `passed_static_repository_contract_probe` and `passed_runtime_rls_smoke`. That means the harness verified:
+The linked Supabase smoke environment has now reported `passed_static_repository_contract_probe` and `passed_runtime_rls_smoke`. A full pass means the harness verified:
 
 - default adapter mode is memory;
 - Supabase mode activates only with `PERSONAL_CONCEPT_GRAPH_REPOSITORY=supabase`;
@@ -67,10 +69,10 @@ A full pass reports `passed_static_repository_contract_probe` and `passed_runtim
 - forbidden raw fields are rejected;
 - unknown columns are not passed through;
 - unsupported exam modes are rejected;
-- test user A can insert, select, update, and delete only an own row;
-- test user A cannot read test user B's row;
-- anonymous clients cannot read graph rows;
-- `metadata_only=true`, appraiser exam-mode, and state constraints are enforced by the database.
+- test user A can insert, select, update, and delete only an own row (`own_insert_select_update_delete`);
+- test user A cannot read test user B's row (`cross_user_read_denied`);
+- anonymous clients cannot read graph rows (`anon_read_denied`);
+- `metadata_only=true`, appraiser exam-mode, and state constraints are enforced by the database (`metadata_only_constraint`, `exam_mode_constraint`, `state_constraint`).
 
 For anonymous read denial, either outcome is acceptable: the anon query returns zero rows, or the database returns a permission-denied/insufficient-privilege error such as SQLSTATE `42501`. No anon `SELECT` table grant is required for this smoke. Do not add public or anon table grants just to satisfy the smoke script; permission denied is a stricter acceptable proof that anonymous clients cannot read learner graph rows.
 
@@ -87,6 +89,15 @@ A PR or deployment note must not claim runtime cross-user RLS success unless `pa
 - Missing `PERSONAL_CONCEPT_GRAPH_RLS_SMOKE=1` reports a refusal and exits non-zero.
 - Production-like environments without `PERSONAL_CONCEPT_GRAPH_RLS_ALLOW_PRODUCTION_SMOKE=1` report a refusal and exit non-zero.
 - Contract-probe failures or runtime RLS failures exit non-zero.
+
+## PR #327 durable write posture
+
+PR #327 may call the durable write helper only after the helper validates metadata-only execution signals and confirms both feature flags are explicitly enabled:
+
+- `PERSONAL_CONCEPT_GRAPH_REPOSITORY=supabase`
+- `PERSONAL_CONCEPT_GRAPH_DURABLE_WRITES=1`
+
+Default closed-beta behavior remains memory/no durable write. The helper must not persist raw OCR, problem, learner answer, copyrighted/source text, official-answer/model-answer text, score predictions, or instructor comments. Production enablement for learners still requires a later closed-beta rollout PR after the normal learner-loop, taxonomy, build, lint, and smoke checks pass.
 
 ## Required verification before enabling durable writes
 
