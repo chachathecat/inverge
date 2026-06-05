@@ -76,6 +76,7 @@ test("durable write feature flags require both Supabase repository mode and dura
   assert.deepEqual(getPersonalConceptGraphFeatureFlagState({}), {
     repositoryMode: "memory",
     durableWritesEnabled: false,
+    durableReadsEnabled: false,
   });
   assert.equal(arePersonalConceptGraphDurableWritesEnabled({ PERSONAL_CONCEPT_GRAPH_REPOSITORY: "supabase" }), false);
   assert.equal(arePersonalConceptGraphDurableWritesEnabled({ PERSONAL_CONCEPT_GRAPH_DURABLE_WRITES: "1" }), false);

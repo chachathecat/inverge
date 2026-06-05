@@ -12,6 +12,7 @@ import {
 const repoPath = "lib/review-os/personal-concept-graph-supabase-repository.ts";
 const adapterPath = "lib/review-os/personal-concept-graph-repository-adapter.ts";
 const durableHelperPath = "lib/review-os/execution-to-concept-graph-durable-write.ts";
+const durableReadHelperPath = "lib/review-os/durable-graph-today-plan-read-adapter.ts";
 const durableFeatureFlagsPath = "lib/review-os/personal-concept-graph-feature-flags.ts";
 
 function node(overrides = {}) {
@@ -111,7 +112,7 @@ test("Supabase repository remains route-unwired except the feature-flagged helpe
   ];
   const matches = [];
   for (const file of files) {
-    if (file === repoPath || file === adapterPath || file === durableHelperPath || file === durableFeatureFlagsPath) continue;
+    if (file === repoPath || file === adapterPath || file === durableHelperPath || file === durableReadHelperPath || file === durableFeatureFlagsPath) continue;
     const source = await readFile(new URL(`../${file}`, import.meta.url), "utf8");
     if (/personal-concept-graph-(?:supabase-repository|repository-adapter)|upsertPersonalConceptNodeToSupabase|listPersonalConceptNodesForTodayFromSupabase/.test(source)) {
       matches.push(file);
