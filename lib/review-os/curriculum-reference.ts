@@ -24,6 +24,11 @@ export type CurriculumReferenceMetadata = CurriculumVerificationMetadata & {
   sourceReferences?: CurriculumSourceReference[];
 };
 
+export type ExcludedOfficialSubject = Partial<CurriculumVerificationMetadata> & {
+  name: string;
+  reason: string;
+};
+
 export type CurriculumImportance = "low" | "medium" | "high";
 export type CurriculumRiskLevel = "low" | "medium" | "high";
 export type CurriculumReviewPattern = string;
@@ -52,6 +57,9 @@ export type CurriculumSubject = Partial<CurriculumVerificationMetadata> & {
 
 export type CurriculumDocument = CurriculumReferenceMetadata & {
   exam: AppraiserExamLabel;
+  officialExamSubjects?: string[];
+  activeLearningSubjects?: string[];
+  excludedOfficialSubjects?: ExcludedOfficialSubject[];
   subjects: CurriculumSubject[];
 };
 
@@ -238,6 +246,22 @@ function optionalVerificationMetadata(raw: Record<string, unknown>, sourceName: 
   return output;
 }
 
+function validateExcludedOfficialSubjects(value: unknown, sourceName: string) {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value)) {
+    throw new Error(`${sourceName} excludedOfficialSubjects must be an array when present`);
+  }
+  return value.map((entry, index) => {
+    const exclusionName = `${sourceName}.excludedOfficialSubjects[${index}]`;
+    assertRecord(entry, exclusionName);
+    return {
+      name: assertString(entry.name, "name", exclusionName),
+      reason: assertString(entry.reason, "reason", exclusionName),
+      ...optionalVerificationMetadata(entry, exclusionName),
+    };
+  });
+}
+
 function validateMetadata(raw: Record<string, unknown>, sourceName: string): CurriculumReferenceMetadata {
   assertNoRawTextFields(raw, sourceName);
   const schemaVersion = assertString(raw.schemaVersion, "schemaVersion", sourceName);
@@ -273,6 +297,13 @@ export function validateCurriculumDocument(raw: unknown, expectedExam: Appraiser
   if (!Array.isArray(raw.subjects) || raw.subjects.length === 0) {
     throw new Error(`${sourceName} subjects must be a non-empty array`);
   }
+  const officialExamSubjects = raw.officialExamSubjects === undefined
+    ? undefined
+    : assertStringArray(raw.officialExamSubjects, "officialExamSubjects", sourceName);
+  const activeLearningSubjects = raw.activeLearningSubjects === undefined
+    ? undefined
+    : assertStringArray(raw.activeLearningSubjects, "activeLearningSubjects", sourceName);
+  const excludedOfficialSubjects = validateExcludedOfficialSubjects(raw.excludedOfficialSubjects, sourceName);
   const subjects = raw.subjects.map((subject, subjectIndex) => {
     const subjectName = `${sourceName}.subjects[${subjectIndex}]`;
     assertRecord(subject, subjectName);
@@ -311,7 +342,14 @@ export function validateCurriculumDocument(raw: unknown, expectedExam: Appraiser
       }),
     };
   });
-  return { ...metadata, exam, subjects };
+  return {
+    ...metadata,
+    exam,
+    ...(officialExamSubjects === undefined ? {} : { officialExamSubjects }),
+    ...(activeLearningSubjects === undefined ? {} : { activeLearningSubjects }),
+    ...(excludedOfficialSubjects === undefined ? {} : { excludedOfficialSubjects }),
+    subjects,
+  };
 }
 
 export function validateStudyTracks(raw: unknown, sourceName = "study_tracks"): StudyTracksDocument {

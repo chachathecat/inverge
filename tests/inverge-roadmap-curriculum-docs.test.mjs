@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 
 const requiredDocs = [
   "docs/inverge-master-roadmap.md",
@@ -35,6 +35,16 @@ const rawTextFieldPatterns = [
 
 async function read(path) {
   return readFile(path, "utf8");
+}
+
+async function listFiles(root) {
+  const entries = await readdir(root, { withFileTypes: true });
+  const files = await Promise.all(entries.map(async (entry) => {
+    const path = `${root}/${entry.name}`;
+    if (entry.isDirectory()) return listFiles(path);
+    return path;
+  }));
+  return files.flat();
 }
 
 test("all roadmap and curriculum source-of-truth docs exist", async () => {
@@ -82,6 +92,33 @@ test("verified curriculum references cite public sources and keep internal mappi
         assert.equal(unit.needsOfficialVerification, true, `${unit.id} unit must not be falsely marked official`);
       }
     }
+  }
+});
+
+
+test("first exam docs document English as official but excluded from active learning", async () => {
+  const doc = await read("docs/inverge-curriculum-system.md");
+  const firstExam = JSON.parse(await read("reference_corpus/curriculum/appraiser/first_exam_curriculum.json"));
+
+  assert.ok(firstExam.officialExamSubjects.includes("영어"));
+  assert.ok(firstExam.excludedOfficialSubjects.some((subject) => subject.name === "영어" && subject.reason.length > 20));
+  assert.equal(firstExam.activeLearningSubjects.includes("영어"), false);
+  assert.match(firstExam.sourceStatus, /english_excluded_from_active_learning_scope/);
+  assert.match(doc, /Official 감정평가사 1차 includes 영어/);
+  assert.match(doc, /does not model 영어 as an active learning curriculum track/);
+  assert.match(doc, /product-scope exclusion, not a claim that 영어 is absent/);
+  assert.match(doc, /Internal units remain internal planning metadata/);
+});
+
+test("English official-subject metadata does not introduce English learner route or UI scope", async () => {
+  const appAndComponentFiles = (await Promise.all([listFiles("app"), listFiles("components")])).flat();
+  const routePaths = appAndComponentFiles.filter((path) => /(^|\/)page\.tsx$|(^|\/)route\.ts$/.test(path));
+
+  assert.equal(routePaths.some((path) => /english|영어/i.test(path)), false, "must not add an English learner route");
+
+  for (const path of appAndComponentFiles.filter((filePath) => /\.(tsx|ts)$/.test(filePath))) {
+    const content = await read(path);
+    assert.equal(/영어/.test(content), false, `${path} must not expose 영어 as learner UI scope`);
   }
 });
 

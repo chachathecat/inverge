@@ -10,10 +10,17 @@ Official verification pass v1 was reviewed on 2026-06-02 against public official
 
 No raw user OCR, raw answer, raw problem text, or copyrighted question text belongs in curriculum reference data.
 
+### 1차 영어 official-subject exclusion
+
+- Official 감정평가사 1차 includes 영어 in addition to the five study-operation subjects modeled by Inverge.
+- Inverge v1 does not model 영어 as an active learning curriculum track.
+- This is a product-scope exclusion, not a claim that 영어 is absent from the official exam.
+- Internal units remain internal planning metadata and must not be presented as official syllabus coverage.
+
 
 ## Official verification metadata policy
 
-- Top-level curriculum files may use `sourceStatus: official_subjects_verified_internal_units_need_official_review` only when official subject labels have been checked against public official sources.
+- Top-level curriculum files may use a `sourceStatus` such as `official_supported_subjects_verified_internal_units_need_official_review_english_excluded_from_active_learning_scope` only when supported active-learning subject labels have been checked against public official sources and any official-but-excluded subject is explicitly documented as outside active curriculum scope.
 - Subject rows may use `sourceStatus: official_subject_label_verified` when the subject label appears in the statutory/Q-Net public exam information.
 - Unit rows must stay `sourceStatus: internal_mapping_needs_official_review` unless a future pass can safely prove the unit label itself is official public curriculum language.
 - Study tracks must stay `sourceStatus: internal_planning_needs_beta_review`; durations and mixes are Inverge planning assumptions, not official exam guidance.

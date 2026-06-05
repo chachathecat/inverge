@@ -69,7 +69,7 @@ test("verification status remains blocked while internal mappings need official 
   assert.ok(status.blockingReason.includes("official verification"));
   assert.equal(status.sourceStatuses.length, 4);
   assert.ok(status.sourceStatuses.every((entry) => entry.needsOfficialVerification === true));
-  assert.ok(status.sourceStatuses.some((entry) => entry.sourceStatus.includes("official_subjects_verified")));
+  assert.ok(status.sourceStatuses.some((entry) => entry.sourceStatus.includes("official_supported_subjects_verified")));
   assert.ok(status.sourceStatuses.some((entry) => entry.sourceStatus.includes("internal_planning_tracks")));
   assert.equal(status.lastReviewedAt.length, 4);
 
@@ -102,6 +102,35 @@ test("official verification metadata records source references without overclaim
     assert.equal(track.sourceStatus, "internal_planning_needs_beta_review", `${trackId} should remain an internal schedule template`);
     assert.equal(track.needsOfficialVerification, true, `${trackId} should not be marked as official curriculum`);
   }
+});
+
+
+test("first exam records English as official but excluded from active learning scope", () => {
+  const firstExam = loadFirstExamCurriculum();
+  const activeSubjectNames = listSubjects("first").map((subject) => subject.name);
+  const englishExclusion = firstExam.excludedOfficialSubjects?.find((subject) => subject.name === "영어");
+
+  assert.ok(firstExam.officialExamSubjects?.includes("영어"), "official first-stage subject metadata must include 영어");
+  assert.ok(englishExclusion, "영어 must be explicitly recorded as an excluded official subject");
+  assert.match(englishExclusion.reason, /not modeled as an Inverge active learning curriculum subject in v1/);
+  assert.equal(englishExclusion.sourceStatus, "official_subject_label_verified_product_scope_excluded");
+  assert.equal(englishExclusion.needsOfficialVerification, false);
+  assert.equal(firstExam.activeLearningSubjects?.includes("영어"), false);
+  assert.equal(activeSubjectNames.includes("영어"), false);
+  assert.deepEqual(firstExam.activeLearningSubjects?.sort(), activeSubjectNames.sort());
+});
+
+test("first exam official subject verification does not imply every official subject is active", () => {
+  const firstExam = loadFirstExamCurriculum();
+  const officialSubjects = new Set(firstExam.officialExamSubjects);
+  const activeSubjects = new Set(firstExam.activeLearningSubjects);
+  const excludedSubjects = new Set(firstExam.excludedOfficialSubjects?.map((subject) => subject.name));
+
+  assert.ok(firstExam.sourceStatus.includes("english_excluded_from_active_learning_scope"));
+  assert.ok(officialSubjects.has("영어"));
+  assert.ok(excludedSubjects.has("영어"));
+  assert.equal(activeSubjects.has("영어"), false);
+  assert.ok(officialSubjects.size > activeSubjects.size, "official subject list should be broader than active learning scope");
 });
 
 test("first and second exam subjects include only the supported appraiser curriculum subjects", () => {

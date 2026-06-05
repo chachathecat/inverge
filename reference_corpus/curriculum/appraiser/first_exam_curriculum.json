@@ -1,11 +1,34 @@
 {
   "schemaVersion": "2026-06-01",
   "exam": "감정평가사 1차",
-  "sourceStatus": "official_subjects_verified_internal_units_need_official_review",
+  "sourceStatus": "official_supported_subjects_verified_internal_units_need_official_review_english_excluded_from_active_learning_scope",
   "needsOfficialVerification": true,
   "lastReviewedAt": "2026-06-02",
   "verificationNote": "Official subject labels and statutory exam boundaries were checked against public official sources on 2026-06-02. Internal planning units remain learner-operational mappings and are not marked as official syllabus units.",
   "storagePolicy": "metadata_only_no_raw_user_or_problem_text",
+  "officialExamSubjects": [
+    "민법",
+    "경제학원론",
+    "부동산학원론",
+    "감정평가 관계 법규",
+    "회계학",
+    "영어"
+  ],
+  "activeLearningSubjects": [
+    "민법",
+    "경제학원론",
+    "부동산학원론",
+    "감정평가관계법규",
+    "회계학"
+  ],
+  "excludedOfficialSubjects": [
+    {
+      "name": "영어",
+      "reason": "Official first-stage subject, but not modeled as an Inverge active learning curriculum subject in v1.",
+      "sourceStatus": "official_subject_label_verified_product_scope_excluded",
+      "needsOfficialVerification": false
+    }
+  ],
   "subjects": [
     {
       "id": "first_civil_law",
