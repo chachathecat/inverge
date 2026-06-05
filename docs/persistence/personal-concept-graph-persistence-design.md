@@ -216,3 +216,28 @@ For future implementation PRs:
 - No live notifications.
 - No instructor grading changes.
 - No dashboard expansion.
+
+## PR #331 gated Today Plan integration posture
+
+PR #331 is a limited closed-beta integration only. It wires durable Personal Concept Graph reads into the learner Today Plan source-union path as one optional candidate source, after the existing Review Queue, Study Schedule, and non-durable Personal Concept Graph inputs are available.
+
+Durable Today Plan reads remain disabled by default and may run only when all gates are true:
+
+- `PERSONAL_CONCEPT_GRAPH_REPOSITORY=supabase`
+- `PERSONAL_CONCEPT_GRAPH_DURABLE_READS=1`
+- `PERSONAL_CONCEPT_GRAPH_TODAY_PLAN_ROLLOUT=1`
+- an authenticated learner `userId` is present
+- the Today Plan context is 감정평가사 1차 (`first`) or 감정평가사 2차 (`second`)
+
+The integration must preserve the existing Today Plan behavior when any gate is missing. Durable graph actions are metadata-only source-union candidates, never raw database rows, and the final Today Plan output remains capped at 3 primary actions. If the durable read helper throws or returns unsafe output, the integration falls back to the existing non-durable Today Plan actions and records only a log-safe/internal skip reason.
+
+### PR #331 rollback
+
+Rollback does not require a schema migration. Disable either of these flags and the learner Today Plan returns to the existing non-durable behavior:
+
+```bash
+PERSONAL_CONCEPT_GRAPH_TODAY_PLAN_ROLLOUT=0
+PERSONAL_CONCEPT_GRAPH_DURABLE_READS=0
+```
+
+Production must not set `PERSONAL_CONCEPT_GRAPH_DURABLE_READS=1` or `PERSONAL_CONCEPT_GRAPH_TODAY_PLAN_ROLLOUT=1` until the closed-beta rollout owner explicitly approves the limited gate. The PR #330 real-Supabase smoke result is prerequisite evidence, not broad production enablement.
