@@ -123,3 +123,76 @@ Before any production learner write path is enabled, Inverge must have documente
 6. capture, execution, and Today Plan durable-write/read changes remain behind explicit product and repository flags until separately reviewed.
 
 Production learner writes and live Today Plan durable reads remain disabled in this PR.
+
+## PR #330 durable read runtime smoke
+
+PR #330 adds a separate runtime smoke harness for the PR #329 durable Today Plan read helper. This harness is verification-only: it does not wire durable reads into the live learner `/app` Today Plan route and it does not enable durable reads by default.
+
+The durable read smoke proves, against a real Supabase project and normal authenticated RLS paths, that metadata-only `personal_concept_nodes` rows can be read by the helper without leaking raw database rows or raw learner/copyrighted content into Today Plan actions.
+
+### Required environment variables
+
+The harness refuses to start unless all three explicit runtime gates are set:
+
+- `PERSONAL_CONCEPT_GRAPH_DURABLE_READ_SMOKE=1`
+- `PERSONAL_CONCEPT_GRAPH_REPOSITORY=supabase`
+- `PERSONAL_CONCEPT_GRAPH_DURABLE_READS=1`
+
+Real Supabase execution also requires the public app Supabase client configuration:
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+
+Cross-user RLS verification requires two safe, test-only authenticated users:
+
+- `PERSONAL_CONCEPT_GRAPH_DURABLE_READ_USER_A_ID`
+- `PERSONAL_CONCEPT_GRAPH_DURABLE_READ_USER_A_ACCESS_TOKEN`
+- `PERSONAL_CONCEPT_GRAPH_DURABLE_READ_USER_B_ID`
+- `PERSONAL_CONCEPT_GRAPH_DURABLE_READ_USER_B_ACCESS_TOKEN`
+
+Do not use a service role key for this smoke. The point of the harness is to exercise ordinary authenticated RLS, not to bypass RLS.
+
+### Exact command
+
+```bash
+PERSONAL_CONCEPT_GRAPH_DURABLE_READ_SMOKE=1 PERSONAL_CONCEPT_GRAPH_REPOSITORY=supabase PERSONAL_CONCEPT_GRAPH_DURABLE_READS=1 npm run check:personal-concept-graph-durable-read
+```
+
+Production-like environments (`NODE_ENV=production` or `VERCEL_ENV=production`) require the additional explicit override below because the script creates and deletes test-only metadata rows:
+
+```bash
+PERSONAL_CONCEPT_GRAPH_DURABLE_READ_ALLOW_PRODUCTION_SMOKE=1
+```
+
+### Expected success output
+
+A successful run prints JSON with this shape:
+
+```json
+{
+  "status": "passed_durable_graph_read_runtime_smoke",
+  "verified": [
+    "explicit_flags_required",
+    "supabase_repository_mode",
+    "metadata_only_rows",
+    "helper_returns_max_3_actions",
+    "no_raw_text_leak",
+    "unsupported_exam_rejection",
+    "cross_user_read_denied",
+    "cleanup_attempted"
+  ]
+}
+```
+
+This means the harness inserted/upserted metadata-only rows for test user A through an authenticated Supabase client, invoked `maybeBuildTodayPlanActionsFromDurableConceptGraph` with a Supabase-mode repository adapter, verified that returned actions are not skipped, verified `repositoryMode: "supabase"`, enforced max-three actions, required every action to be `metadataOnly` and `isPrimaryTask`, checked that raw DB-row fields are not returned, rejected unsupported exam modes, verified test user B cannot read test user A rows through the normal RLS path, and attempted cleanup.
+
+### Secret-handling warnings
+
+- Do **not** paste Supabase access tokens, anon keys, service role keys, database passwords, refresh tokens, or user JWTs into GitHub issues, pull request comments, Codex prompts, ChatGPT prompts, screenshots, or committed files.
+- Keep smoke credentials in the local shell, CI secret store, or staging secret manager only.
+- Test users should be deleted or their credentials rotated after the smoke run, especially after any shared staging run.
+- Never commit raw OCR text, problem text, learner answer text, copyrighted/source text, official-answer text, model-answer text, score predictions, or instructor comments as Personal Concept Graph smoke data.
+
+### Rollout warning
+
+Durable reads must remain disabled in production until a separate gated Today Plan integration PR. A passing PR #330 smoke is necessary evidence for rollout, but it is not itself product enablement.
