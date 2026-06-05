@@ -112,6 +112,17 @@ test("durable read runtime smoke expected success JSON includes passed status", 
   }
 });
 
+test("durable read runtime smoke cleanup attempts both users independently", async () => {
+  const source = await readFile(scriptPath, "utf8");
+
+  assert.match(source, /async function cleanupBothUsers/);
+  assert.match(source, /Promise\.allSettled/);
+  assert.match(source, /cleanup\(userA, idsA\)/);
+  assert.match(source, /cleanup\(userB, \[idB\]\)/);
+  assert.doesNotMatch(source, /cleanup\(userA, idsA\)\.then\(\(\) => cleanup\(userB, \[idB\]\)\)/);
+  assert.match(source, /cleanup_failed_after_attempting_both_users/);
+});
+
 test("no live app route imports durable read helper without explicit durable read or product gate", async () => {
   const root = new URL("..", import.meta.url).pathname.replace(/\/$/, "");
   const files = await collectSourceFiles(join(root, "app"), root);
