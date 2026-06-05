@@ -14,7 +14,8 @@ import { buildNotebookPreview } from "@/lib/review-os/study-note";
 import { getSimilarQuestionReferenceCandidates } from "@/lib/review-os/question-reference";
 import { APPRAISAL_FIRST_SUBJECTS } from "@/lib/review-os/types";
 import { buildTodayPlanCard, type TodayPlanActionKind } from "@/lib/review-os/today-plan";
-import { buildTodayPlanTasks, type TodayPlanTaskType } from "@/lib/review-os/today-plan-engine";
+import { type TodayPlanTaskType } from "@/lib/review-os/today-plan-engine";
+import { buildLearnerTodayPlanTasksWithGatedDurableConceptGraph } from "@/lib/review-os/today-plan-learner-route-integration";
 import { buildPersonalWeaknessProfile } from "@/lib/review-os/weakness-diagnostics";
 import { isOverdueDueAt, resolveDailyStudyState } from "@/lib/review-os/daily-study-state";
 
@@ -158,7 +159,8 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
     wrongAnswerItems: items,
     mode,
   });
-  const todayPlanTasks = buildTodayPlanTasks({
+  const todayPlanTasks = await buildLearnerTodayPlanTasksWithGatedDurableConceptGraph({
+    userId: session.userId,
     mode,
     queue,
     items,

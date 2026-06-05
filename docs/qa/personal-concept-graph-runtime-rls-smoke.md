@@ -196,3 +196,41 @@ This means the harness inserted/upserted metadata-only rows for test user A thro
 ### Rollout warning
 
 Durable reads must remain disabled in production until a separate gated Today Plan integration PR. A passing PR #330 smoke is necessary evidence for rollout, but it is not itself product enablement.
+
+## PR #331 gated Today Plan integration QA note
+
+PR #331 uses the passed PR #330 durable read runtime smoke as prerequisite evidence, including:
+
+- `passed_durable_graph_read_runtime_smoke`
+- max 3 metadata-only Today Plan actions
+- no raw text leak
+- unsupported exam rejection
+- cross-user read denial
+- cleanup attempted
+
+This PR is not a broad production rollout. Durable reads remain disabled by default and are eligible to contribute to learner Today Plan source union only when all explicit closed-beta gates are set:
+
+```bash
+PERSONAL_CONCEPT_GRAPH_REPOSITORY=supabase
+PERSONAL_CONCEPT_GRAPH_DURABLE_READS=1
+PERSONAL_CONCEPT_GRAPH_TODAY_PLAN_ROLLOUT=1
+```
+
+The integration also requires an authenticated learner `userId` and a supported appraiser exam mode (`first` or `second`). Repository mode, durable reads, or rollout alone are not sufficient.
+
+Expected fallback behavior:
+
+- missing or disabled gates skip the durable helper without touching Supabase;
+- durable helper errors fall back to existing Today Plan actions;
+- unsafe/raw durable output is rejected and falls back without surfacing raw OCR/problem/answer/source text, official/model-answer text, score predictions, instructor comments, or raw DB rows;
+- final learner Today Plan source-union output remains capped at 3 primary metadata-only actions.
+
+Rollback for the Today Plan integration is flag-only:
+
+```bash
+PERSONAL_CONCEPT_GRAPH_TODAY_PLAN_ROLLOUT=0
+# and/or
+PERSONAL_CONCEPT_GRAPH_DURABLE_READS=0
+```
+
+Do not set `PERSONAL_CONCEPT_GRAPH_DURABLE_READS` in production as part of PR #331. Production enablement requires a separate approval for the explicit rollout gate after learner-loop, closed-beta readiness, taxonomy, build, lint, and relevant Supabase smoke checks pass.
