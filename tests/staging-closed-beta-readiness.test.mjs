@@ -8,6 +8,9 @@ import { loadAppraiserCurriculumReference } from "../lib/review-os/curriculum-re
 
 const requiredFiles = [
   "docs/closed-beta-staging-qa-checklist.md",
+  "docs/qa/durable-today-plan-staging-rollout-checklist.md",
+  "scripts/check-durable-today-plan-rollout-readiness.mjs",
+  "lib/review-os/today-plan-learner-route-integration.ts",
   "scripts/check-staging-learner-routes.mjs",
   "app/app/page.tsx",
   "app/app/onboarding/page.tsx",
@@ -250,6 +253,34 @@ test("PR314 result controls appear on completed exercise surfaces without raw te
   }
   for (const forbidden of ["rawProblem", "rawAnswer", "rawOcr", "problemText", "answerText", "ocrText"]) {
     assert.equal(controls.includes(forbidden), false, `controls should not ask for ${forbidden}`);
+  }
+});
+
+
+test("PR332 durable Today Plan rollout readiness guardrails exist and remain learner-route safe", () => {
+  assert.equal(existsSync("docs/qa/durable-today-plan-staging-rollout-checklist.md"), true);
+  assert.equal(existsSync("scripts/check-durable-today-plan-rollout-readiness.mjs"), true);
+
+  const appPage = read("app/app/page.tsx");
+  const routeHelper = read("lib/review-os/today-plan-learner-route-integration.ts");
+  const readinessScript = read("scripts/check-durable-today-plan-rollout-readiness.mjs");
+  const combined = `${appPage}\n${routeHelper}`;
+
+  assert.equal(appPage.includes("buildLearnerTodayPlanTasksWithGatedDurableConceptGraph"), true, "learner app route should call gated route helper");
+  assert.equal(routeHelper.includes('getPersonalConceptGraphRepositoryMode(input.env) === "supabase"'), true);
+  assert.equal(routeHelper.includes('PERSONAL_CONCEPT_GRAPH_DURABLE_READS === "1"'), true);
+  assert.equal(routeHelper.includes('PERSONAL_CONCEPT_GRAPH_TODAY_PLAN_ROLLOUT === "1"'), true);
+  assert.equal(routeHelper.includes("Boolean(input.userId?.trim())"), true);
+  assert.equal(routeHelper.includes('input.examMode === "first" || input.examMode === "second"'), true);
+  assert.equal(readinessScript.includes("production_durable_today_plan_flags_enabled"), true, "production env flag guard should exist");
+
+  assert.equal(/NODE_ENV\s*[:=]\s*["']production["'][\s\S]{0,160}PERSONAL_CONCEPT_GRAPH_DURABLE_READS\s*[:=]\s*["']1["']/.test(combined), false);
+  assert.equal(/VERCEL_ENV\s*[:=]\s*["']production["'][\s\S]{0,160}PERSONAL_CONCEPT_GRAPH_TODAY_PLAN_ROLLOUT\s*[:=]\s*["']1["']/.test(combined), false);
+  assert.equal(/service[_-]?role/i.test(combined), false, "learner route integration must not use service role keys");
+
+  const outputMapping = routeHelper.slice(routeHelper.indexOf("function toDurableTask"), routeHelper.indexOf("function mergeUnifiedActionsBackToTasks"));
+  for (const forbidden of ["rawOcrText", "raw_ocr_text", "problemText", "answerText", "sourceText", "copyrightedText", "officialAnswer", "modelAnswer", "scorePrediction", "instructorComment"]) {
+    assert.equal(outputMapping.includes(forbidden), false, `route output mapping should not introduce ${forbidden}`);
   }
 });
 
