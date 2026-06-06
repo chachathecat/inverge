@@ -96,7 +96,8 @@ function resolveQueueTaskType(mode: "first" | "second", item: ReviewQueueCard): 
 }
 
 function primaryCtaFor(taskType: TodayPlanTaskType, mode: "first" | "second"): TodayPlanPrimaryCta {
-  if (taskType === "ocr_confirmation" || taskType === "note_cleanup") return { label: "확인하고 정리", hrefKind: "capture" };
+  if (taskType === "ocr_confirmation") return { label: "OCR 먼저 확인", hrefKind: "capture" };
+  if (taskType === "note_cleanup") return { label: "확인하고 정리", hrefKind: "capture" };
   if (taskType === "second_answer_rewrite") return { label: "10분 다시 쓰기", hrefKind: "review" };
   if (taskType === "accounting_template_retry") return { label: "계산 틀 재확인", hrefKind: "calculator_template" };
   if (taskType === "cloze_review") return { label: "빈칸 회상", hrefKind: "session" };
@@ -119,6 +120,7 @@ function buildDerivedActionTitle(input: { mode: "first" | "second"; subject: str
   const subject = input.subject;
   const topic = safeTopicLabel(input.topic, input.gap);
   if (input.mode === "first") {
+    if (input.taskType === "ocr_confirmation") return `${subject} OCR 숫자·용어 먼저 확인`;
     if (/무효|취소/.test(`${topic} ${input.gap} ${input.nextAction}`)) return `${subject} 무효·취소 구분 ${input.estimatedMinutes}분 O/X 재시도`;
     if (input.taskType === "cloze_review") return `${subject} ${topic} 핵심어 빈칸 회상`;
     if (input.taskType === "concept_review") return `${subject} ${topic} 개념 회상`;
@@ -134,7 +136,7 @@ function buildDerivedActionTitle(input: { mode: "first" | "second"; subject: str
 }
 
 function toNextAction(mode: "first" | "second", item: ReviewQueueCard, taskType: TodayPlanTaskType) {
-  if (taskType === "ocr_confirmation") return `${item.problemTitle}의 숫자/용어 1개를 확인하고 노트를 저장합니다.`;
+  if (taskType === "ocr_confirmation") return "OCR 숫자/용어 1개를 먼저 확인하고 노트를 저장합니다.";
   if (taskType === "second_answer_rewrite") return `${item.problemTitle}에서 누락 논점 1개를 문단으로 다시 씁니다.`;
   if (taskType === "accounting_template_retry") return `${item.problemTitle}의 산식 틀을 먼저 적고 계산을 다시 확인합니다.`;
   if (taskType === "cloze_review") return `${item.problemTitle} 핵심어 1개를 가리고 회상합니다.`;
@@ -243,7 +245,6 @@ function toItemTask(item: WrongAnswerItemRecord, mode: "first" | "second", now: 
   const lowConfidence = isLowConfidenceOcrItem(item);
   const captureNote = typeof item.derivedPayload?.capture_note_engine_v2 === "object" && item.derivedPayload.capture_note_engine_v2 ? item.derivedPayload.capture_note_engine_v2 as Record<string, unknown> : null;
   const biggestGap = String(item.biggestGap ?? item.missingIssue ?? captureNote?.one_biggest_gap ?? item.userReasonPreset ?? "가장 큰 간극 1개를 확인합니다.");
-  const title = item.problemTitle ?? item.problemIdentifier ?? (createdFromCapture ? "저장한 캡처 노트" : "오답 노트");
   const createdTs = parseTime(item.createdAt);
   const recentBoost = createdTs !== null && now.getTime() - createdTs >= 0 && now.getTime() - createdTs <= 2 * DAY_MS ? 14 : 0;
 

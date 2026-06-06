@@ -114,3 +114,58 @@ test("Today Plan primary tasks expose derived action summaries, never raw text f
     assert.doesNotMatch(task.title, /rawOcrText|rawAnswerText|problemText|questionText|sourceText/);
   }
 });
+
+test("first OCR confirmation Today Plan title does not render as normal O/X retry", () => {
+  const tasks = buildTodayPlanTasks({
+    mode: "first",
+    now: new Date("2026-06-06T00:00:00.000Z"),
+    queue: [
+      {
+        queueId: "ocr-q1",
+        itemId: "ocr-i1",
+        examName: "감정평가사 1차",
+        subjectLabel: "민법",
+        problemTitle: "rawOcrText problemText 정답 X 내 답 O",
+        topicTag: "무효 취소 OCR 확인 필요",
+        mistakeType: "OCR 인식 확인 필요",
+        reviewReason: "OCR 숫자/용어 확인 필요",
+        priorityScore: 100,
+        dueAt: "2026-06-05T00:00:00.000Z",
+        recurrenceCount: 1,
+        confidence: "낮음",
+        timeSpentSeconds: 120,
+        createdFromCapture: true,
+        itemCreatedAt: "2026-06-05T00:00:00.000Z",
+        rawQuestionText: "rawAnswerText questionText sourceText",
+      },
+      ...[0, 1, 2].map((i) => ({
+        queueId: `q-extra-${i}`,
+        itemId: `i-extra-${i}`,
+        examName: "감정평가사 1차",
+        subjectLabel: "민법",
+        problemTitle: `추가 항목 ${i}`,
+        topicTag: "개념",
+        mistakeType: "개념 혼동",
+        reviewReason: "오답 원인 기반 재시도",
+        priorityScore: 60 - i,
+        dueAt: "2026-06-05T00:00:00.000Z",
+        recurrenceCount: 1,
+        confidence: "중간",
+        timeSpentSeconds: 180,
+        createdFromCapture: false,
+        itemCreatedAt: "2026-06-05T00:00:00.000Z",
+      })),
+    ],
+  });
+
+  assert.equal(tasks.length, 3);
+  const ocrTask = tasks.find((task) => task.itemId === "ocr-i1");
+  assert.ok(ocrTask);
+  assert.equal(ocrTask.task_type, "ocr_confirmation");
+  assert.match(ocrTask.title, /OCR.*먼저 확인/);
+  assert.doesNotMatch(ocrTask.title, /O\/X 재시도/);
+  assert.doesNotMatch(ocrTask.title, /rawOcrText|rawAnswerText|problemText|questionText|sourceText|정답|내 답/);
+  assert.match(ocrTask.one_next_action, /OCR.*먼저 확인/);
+  assert.match(ocrTask.primary_cta.label, /OCR.*먼저 확인/);
+});
+
