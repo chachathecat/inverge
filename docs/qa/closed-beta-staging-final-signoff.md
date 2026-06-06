@@ -159,3 +159,28 @@ Not allowed:
 - Public archive launch.
 - New exam expansion.
 - Instructor grading changes.
+
+## PR #337 QA follow-up note — mode-aware capture quality and Today Plan semantics
+
+Date: 2026-06-06
+
+Latest closed-beta staging observation from the current Vercel deployment:
+
+- 1차 capture now works end-to-end: text input → AI draft → confirmation → save → Today Plan/session reflection.
+- 2차 capture now works end-to-end: text input → AI draft → issue recall → outline → paragraph rewrite → save → Today Plan/session reflection.
+- The earlier blocker where 2차 capture could not progress past Step 1 is mostly resolved in the latest deployment.
+
+Remaining PR #337 quality gates before broader invited-user QA:
+
+- Route query mode must be authoritative for `/app`, `/app/capture`, and `/app/session`; stale client/session mode must not override `mode=first` or `mode=second`.
+- 1차 capture gap ranking must prefer learner-provided mistake reason and answer mismatch over time metadata. A note such as “무효와 취소를 구분하지 못함 / 소요시간 5분” should produce a concept-confusion action, not “시간 부족”.
+- 2차 법규 capture must use legal issue/rewrite skeletons such as 법적 성질, 처분성, 권리구제, 요건/포섭, and 사안 해결. It must not default to calculation skeletons unless the subject is 실무 or calculation is explicit.
+- Today Plan visible primary cards should show derived action summaries from subject, topic candidate, gap label, next action, and estimated minutes. Raw OCR/problem/user-answer/source text belongs only in details or user-owned note surfaces.
+- Keep Today Plan primary task cap at max 3 and keep durable production rollout gates disabled.
+
+Guardrails retained:
+
+- No production durable reads enabled.
+- No service-role learner route usage added.
+- No instructor/admin/payment/archive/native app surfaces added.
+- No official grading, score prediction, pass/fail, or model-answer claim added.

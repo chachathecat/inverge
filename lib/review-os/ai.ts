@@ -23,12 +23,22 @@ export type GeneratedWrongAnswerArtifacts = {
 function inferMistakeType(input: WrongAnswerItemInput) {
   if (input.userReasonPreset) return input.userReasonPreset;
 
-  const text = `${input.userReasonText ?? ""} ${input.rawQuestionText ?? ""}`.toLowerCase();
+  const reasonText = input.userReasonText?.trim() ?? "";
+  const text = `${reasonText} ${input.rawQuestionText ?? ""}`.toLowerCase();
+  if (/무효|취소/.test(reasonText)) return "무효와 취소 구분 / 개념 혼동";
+  if (/함정|표현|선지|오독/.test(reasonText)) return "trap_word";
+  if (/예외|원칙/.test(reasonText)) return "rule_exception_confusion";
+  if (reasonText) {
+    if (/계산|숫자|산식|템플릿/.test(reasonText)) return "calculation_template_error";
+    if (/조건|누락/.test(reasonText)) return "조건 누락";
+    return reasonText.length <= 32 ? reasonText : "concept_confusion";
+  }
+  if (input.correctAnswer && input.userAnswer && input.correctAnswer.trim() !== input.userAnswer.trim()) return "wrong_answer";
   if (text.includes("계산") || text.includes("숫자")) return "계산 실수";
   if (text.includes("조건") || text.includes("누락")) return "조건 누락";
   if (text.includes("판례") || text.includes("논점")) return "판례/논점 적용 부족";
   if (text.includes("구조") || text.includes("목차")) return "구조 약함";
-  if (text.includes("시간")) return "시간 부족";
+  if (/시간\s*(관리|부족|압박)|시간이\s*(부족|모자)/.test(text)) return "time_management";
   if (text.includes("암기")) return "암기 누락";
   return "개념 혼동";
 }
@@ -107,7 +117,7 @@ export async function generateWrongAnswerArtifacts(
             {
               type: "input_text",
               text:
-                "You are an appraisal-exam learning operations assistant for Korean 감정평가사 candidates. Do not grade generously or motivationally. Identify the next concrete review or rewrite action. Output Korean JSON only.",
+                "You are an appraisal-exam learning operations assistant for Korean 감정평가사 candidates. Do not grade generously or motivationally. Identify the next concrete review or rewrite action. For first-mode objective notes, learner-provided mistake reason and correct/user answer mismatch outrank time spent. Treat time spent as metadata only unless the learner explicitly says time management was the problem; never infer 시간 부족 from 소요시간 alone. Output Korean JSON only.",
             },
           ],
         },
