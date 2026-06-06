@@ -109,6 +109,30 @@ function toGap(item: ReviewQueueCard) {
   return `${item.mistakeType} 관련 간극 1개`;
 }
 
+function safeTopicLabel(value: string | null | undefined, fallback: string) {
+  const normalized = value?.replace(/rawOcrText|rawAnswerText|problemText|questionText|sourceText/gi, "").replace(/\s+/g, " ").trim();
+  if (!normalized) return fallback;
+  return normalized.length > 18 ? normalized.slice(0, 18) : normalized;
+}
+
+function buildDerivedActionTitle(input: { mode: "first" | "second"; subject: string; topic?: string | null; gap: string; nextAction: string; estimatedMinutes: number; taskType: TodayPlanTaskType }) {
+  const subject = input.subject;
+  const topic = safeTopicLabel(input.topic, input.gap);
+  if (input.mode === "first") {
+    if (/무효|취소/.test(`${topic} ${input.gap} ${input.nextAction}`)) return `${subject} 무효·취소 구분 ${input.estimatedMinutes}분 O/X 재시도`;
+    if (input.taskType === "cloze_review") return `${subject} ${topic} 핵심어 빈칸 회상`;
+    if (input.taskType === "concept_review") return `${subject} ${topic} 개념 회상`;
+    return `${subject} ${topic} ${input.estimatedMinutes}분 O/X 재시도`;
+  }
+  if (/법규/.test(subject)) {
+    if (/사업인정|처분성/.test(`${topic} ${input.gap} ${input.nextAction}`)) return `${subject.replace("감정평가 및 보상", "")} 사업인정 처분성 문단 ${input.estimatedMinutes}분 다시쓰기`;
+    return `${subject} ${topic} 법적 쟁점 ${input.estimatedMinutes}분 다시쓰기`;
+  }
+  if (/실무/.test(subject) && /계산|산식|검산|수익환원/.test(`${topic} ${input.gap} ${input.nextAction}`)) return `${subject} ${topic} 산식 검산`;
+  if (/이론/.test(subject)) return `${subject} ${topic} 키워드 논리 한 문단`;
+  return `${subject} ${topic} ${input.estimatedMinutes}분 다시쓰기`;
+}
+
 function toNextAction(mode: "first" | "second", item: ReviewQueueCard, taskType: TodayPlanTaskType) {
   if (taskType === "ocr_confirmation") return `${item.problemTitle}의 숫자/용어 1개를 확인하고 노트를 저장합니다.`;
   if (taskType === "second_answer_rewrite") return `${item.problemTitle}에서 누락 논점 1개를 문단으로 다시 씁니다.`;
@@ -266,7 +290,7 @@ function toItemTask(item: WrongAnswerItemRecord, mode: "first" | "second", now: 
     score,
     task: {
       itemId: item.id,
-      title,
+      title: buildDerivedActionTitle({ mode, subject: item.subjectLabel, topic: biggestGap, gap: biggestGap, nextAction, estimatedMinutes: estimated, taskType }),
       subject: item.subjectLabel,
       exam_mode: mode,
       due_bucket: "today",
@@ -344,27 +368,32 @@ export function buildTodayPlanTasks({ mode, queue, items = [], learningSignals =
     })
     .sort((a, b) => b.score - a.score || ((parseTime(a.item.dueAt) ?? Number.MAX_SAFE_INTEGER) - (parseTime(b.item.dueAt) ?? Number.MAX_SAFE_INTEGER)) || a.item.itemId.localeCompare(b.item.itemId));
 
-  const queueTasks = rankedQueue.map(({ item, taskType, priority_reason, score }) => ({
-    score,
-    task: {
-      itemId: item.itemId,
-      queueId: item.queueId,
-      title: item.problemTitle,
-      subject: item.subjectLabel,
-      exam_mode: mode,
-      due_bucket: resolveDueBucket(item.dueAt, now),
-      status: resolveDueBucket(item.dueAt, now) === "upcoming" ? "pending" as const : "due" as const,
-      reason: priority_reason,
-      one_biggest_gap: toGap(item),
-      one_next_action: toNextAction(mode, item, taskType),
-      task_type: taskType,
-      estimated_minutes: taskType === "second_answer_rewrite" ? 20 : taskType === "ocr_confirmation" ? 5 : taskType === "first_ox_retry" ? 15 : 12,
-      priority_reason,
-      primary_cta: primaryCtaFor(taskType, mode),
-      created_from_capture: item.createdFromCapture,
-      source_label: item.createdFromCapture ? "오늘 기록 기반" : "복습 큐 기반",
-    },
-  }));
+  const queueTasks = rankedQueue.map(({ item, taskType, priority_reason, score }) => {
+    const gap = toGap(item);
+    const nextAction = toNextAction(mode, item, taskType);
+    const estimatedMinutes = taskType === "second_answer_rewrite" ? 20 : taskType === "ocr_confirmation" ? 5 : taskType === "first_ox_retry" ? 15 : 12;
+    return {
+      score,
+      task: {
+        itemId: item.itemId,
+        queueId: item.queueId,
+        title: buildDerivedActionTitle({ mode, subject: item.subjectLabel, topic: item.topicTag, gap, nextAction, estimatedMinutes, taskType }),
+        subject: item.subjectLabel,
+        exam_mode: mode,
+        due_bucket: resolveDueBucket(item.dueAt, now),
+        status: resolveDueBucket(item.dueAt, now) === "upcoming" ? "pending" as const : "due" as const,
+        reason: priority_reason,
+        one_biggest_gap: gap,
+        one_next_action: nextAction,
+        task_type: taskType,
+        estimated_minutes: estimatedMinutes,
+        priority_reason,
+        primary_cta: primaryCtaFor(taskType, mode),
+        created_from_capture: item.createdFromCapture,
+        source_label: item.createdFromCapture ? "오늘 기록 기반" : "복습 큐 기반",
+      },
+    };
+  });
 
   const itemTasks = items
     .filter((item) => item.examName === (mode === "second" ? "감정평가사 2차" : "감정평가사 1차"))

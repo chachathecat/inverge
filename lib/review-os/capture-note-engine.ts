@@ -51,9 +51,55 @@ export type SecondCaptureNoteSignals = CaptureNoteBase & {
 
 export type CaptureNoteSignals = FirstCaptureNoteSignals | SecondCaptureNoteSignals;
 
+function hasExplicitTimeManagementIssue(input: WrongAnswerItemInput) {
+  const text = `${input.userReasonText ?? ""} ${input.userReasonPreset ?? ""}`;
+  return /시간\s*(관리|부족|압박)|시간이\s*(부족|모자)/.test(text);
+}
+
+function resolveFirstCaptureGap(input: WrongAnswerItemInput) {
+  const reason = input.userReasonText?.trim() || input.userReasonPreset?.trim() || "";
+  if (/무효|취소/.test(reason)) return "무효와 취소 구분 / 개념 혼동";
+  if (reason && !/^\d+\s*분$/.test(reason)) return reason;
+  if (input.correctAnswer?.trim() && input.userAnswer?.trim() && input.correctAnswer.trim() !== input.userAnswer.trim()) return "wrong_answer";
+  if (hasExplicitTimeManagementIssue(input)) return "time_management";
+  return "concept_confusion";
+}
+
+function resolveFirstNextAction(input: WrongAnswerItemInput) {
+  const text = `${input.subjectLabel} ${input.problemTitle ?? ""} ${input.userReasonText ?? ""} ${input.keyConcepts?.join(" ") ?? ""}`;
+  if (/무효|취소/.test(text)) return "민법 무효·취소 O/X 재시도";
+  if (/함정|표현|선지|오독/.test(text)) return "함정어 1개 표시 후 O/X 재시도";
+  if (/암기|정의|개념/.test(text)) return "핵심 개념 1개 빈칸 회상";
+  return input.comparisonPoint || "근거 1줄을 떠올린 뒤 O/X 재시도";
+}
+
+function resolveSecondSubjectGap(input: WrongAnswerItemInput) {
+  const subject = input.subjectLabel;
+  const text = `${input.problemTitle ?? ""} ${input.rawQuestionText ?? ""} ${input.missingIssue ?? ""} ${input.biggestGap ?? ""} ${input.weakStructurePoint ?? ""}`;
+  if (subject === "감정평가 및 보상법규") {
+    if (/사업인정|처분성/.test(text)) return "사업인정 처분성·권리구제 관계 구분";
+    if (/항고소송|수용재결/.test(text)) return "항고소송/수용재결 관계 구분";
+    return input.biggestGap || input.missingIssue || "요건/포섭과 목차 구조 보강";
+  }
+  if (subject === "감정평가이론") return input.biggestGap || input.missingIssue || "키워드와 논리 연결 보강";
+  return input.biggestGap || input.missingIssue || "계산 근거와 결론 연결 보강";
+}
+
+function resolveSecondSubjectNextAction(input: WrongAnswerItemInput) {
+  const subject = input.subjectLabel;
+  const text = `${input.problemTitle ?? ""} ${input.rawQuestionText ?? ""} ${input.missingIssue ?? ""} ${input.biggestGap ?? ""}`;
+  if (subject === "감정평가 및 보상법규") {
+    if (/처분성|사업인정/.test(text)) return "처분성 판단 문단 보강";
+    if (/항고소송|수용재결/.test(text)) return "항고소송/수용재결 관계 구분";
+    return "목차 3줄 회상 후 10분 다시쓰기";
+  }
+  if (subject === "감정평가이론") return "키워드 3개 회상 후 한 문단 설명";
+  return input.rewriteInstruction || "산식·단위·검산 순서로 10분 다시쓰기";
+}
+
 export function buildCaptureNoteSignals(mode: AppraisalMode, input: WrongAnswerItemInput): CaptureNoteSignals {
-  const oneBiggestGap = (mode === "second" ? input.biggestGap || input.missingIssue : input.userReasonText || input.userReasonPreset || "개념 혼동") ?? "개념 혼동";
-  const oneNextAction = (mode === "second" ? input.rewriteInstruction || "핵심 논점 1개를 고정해 문단 다시쓰기" : input.comparisonPoint || "근거 한 문장을 먼저 회상하고 같은 유형 재풀이") ?? "다음 행동 실행";
+  const oneBiggestGap = (mode === "second" ? resolveSecondSubjectGap(input) : resolveFirstCaptureGap(input)) ?? "개념 혼동";
+  const oneNextAction = (mode === "second" ? resolveSecondSubjectNextAction(input) : resolveFirstNextAction(input)) ?? "다음 행동 실행";
   const base = {
     mode,
     subject: input.subjectLabel,

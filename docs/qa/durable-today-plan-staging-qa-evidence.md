@@ -85,3 +85,21 @@ Production rollout remains blocked until separate approval. Do not enable produc
 ## Visual QA note
 
 Engine-level max-3 is necessary but not sufficient. The learner-facing screen must also avoid perceived task overload: one screen should communicate one main job, with at most three Today Plan primary task cards and all secondary actions visually/semantically separated as input methods or other work.
+
+## PR #337 addendum — visible Today Plan action semantics
+
+Date: 2026-06-06
+
+The latest staging QA confirms that capture-to-plan reflection works for both modes, but the visible Today Plan semantics need tightening before broader invited-user QA:
+
+- 1차 capture works end-to-end, while gap ranking needs correction so mistake reason and answer mismatch outrank time-spent metadata.
+- 2차 capture works end-to-end, while subject-aware skeleton selection is needed so 법규 uses legal issue/rewrite fields rather than generic calculation/실무 copy.
+- Mode query authority must be fixed so `/app?mode=first`, `/app?mode=second`, `/app/capture?mode=first|second`, and `/app/session?mode=first|second` cannot render stale opposite-mode state.
+- Today Plan visible primary tasks should be derived action summaries, not raw problem-like text. Examples: “민법 무효·취소 구분 5분 O/X 재시도”, “법규 사업인정 처분성 문단 10분 다시쓰기”, “실무 수익환원법 산식 검산”.
+
+Evidence expectations for PR #337:
+
+- Primary cards remain max 3.
+- Primary card titles exclude `rawOcrText`, `rawAnswerText`, `problemText`, `questionText`, and `sourceText`-style raw fields.
+- Details may reference user-owned notes safely, but must not become a public/reference corpus.
+- Durable Today Plan production rollout remains off unless the explicit rollout flags are enabled in a later PR.

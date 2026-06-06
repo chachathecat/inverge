@@ -95,21 +95,34 @@ export function buildSecondAnswerRewriteSignal(input: Pick<WrongAnswerItemInput,
   | "unitRisk"
   | "rewriteInstruction"
   | "supportedCalculatorTemplateId"
->, referenceSnippets: ReferenceSnippet[] = []): SecondAnswerRewriteSignal {
-  const casio = getSecondCasioKeystrokeMapping(input.supportedCalculatorTemplateId);
-  const missingIssueCandidate = clean(input.missingIssue ?? input.biggestGap, "핵심 논점 후보 1개를 다시 확인합니다.");
-  const weakStructurePoint = clean(input.weakStructurePoint, "근거와 결론 연결이 약합니다.");
-  const rewriteInstruction = clean(input.rewriteInstruction, `${missingIssueCandidate}을 먼저 쓰고, ${weakStructurePoint}을 한 문장으로 보강합니다.`);
+> & Partial<Pick<WrongAnswerItemInput, "subjectLabel" | "rawQuestionText">>, referenceSnippets: ReferenceSnippet[] = []): SecondAnswerRewriteSignal {
+  const isPractice = input.subjectLabel === "감정평가실무";
+  const isTheory = input.subjectLabel === "감정평가이론";
+  const isLaw = input.subjectLabel === "감정평가 및 보상법규";
+  const explicitCalculation = /계산|산식|단위|검산|CASIO|casio/.test(`${input.rawQuestionText ?? ""} ${input.missingIssue ?? ""} ${input.biggestGap ?? ""} ${input.weakStructurePoint ?? ""}`);
+  const casio = isPractice || explicitCalculation ? getSecondCasioKeystrokeMapping(input.supportedCalculatorTemplateId) : getSecondCasioKeystrokeMapping(null);
+  const lawFallback = /사업인정|처분성/.test(`${input.rawQuestionText ?? ""} ${input.missingIssue ?? ""} ${input.biggestGap ?? ""}`)
+    ? "사업인정 처분성·권리구제 관계 구분"
+    : "법적 성질/요건/포섭 구조 보강";
+  const theoryFallback = "키워드와 논리 연결 보강";
+  const missingIssueCandidate = clean(input.missingIssue ?? input.biggestGap, isLaw ? lawFallback : isTheory ? theoryFallback : "핵심 논점 후보 1개를 다시 확인합니다.");
+  const weakStructurePoint = clean(input.weakStructurePoint, isLaw ? "법적 성질 → 처분성 → 권리구제 → 사안 해결" : isTheory ? "키워드 → 비교 → 원리 → 예시 → 평가 논리" : "근거와 결론 연결이 약합니다.");
+  const defaultRewriteInstruction = isLaw
+    ? (/처분성|사업인정/.test(missingIssueCandidate) ? "처분성 판단 문단 보강" : "목차 3줄 회상 후 10분 다시쓰기")
+    : isTheory
+      ? "키워드 3개를 회상하고 한 문단으로 설명"
+      : `${missingIssueCandidate}을 먼저 쓰고, ${weakStructurePoint}을 한 문장으로 보강합니다.`;
+  const rewriteInstruction = clean(input.rewriteInstruction, defaultRewriteInstruction);
 
   return {
     caseSummary: clean(input.caseSummary, "사례 요약은 노트 세부에서 확인합니다."),
     userAnswerSummary: clean(input.myAnswerSummary, "내 답안 요약은 노트 세부에서 확인합니다."),
     missingIssueCandidate,
     weakStructurePoint,
-    calculationRisk: input.calculationRisk ?? (casio.supportedCalculatorTemplateId ? SECOND_CASIO_TEMPLATE_REGISTRY[casio.supportedCalculatorTemplateId].calculationRisk : null),
-    unitRisk: input.unitRisk ?? (casio.supportedCalculatorTemplateId ? SECOND_CASIO_TEMPLATE_REGISTRY[casio.supportedCalculatorTemplateId].unitRisk : null),
+    calculationRisk: isLaw || (isTheory && !explicitCalculation) ? null : input.calculationRisk ?? (casio.supportedCalculatorTemplateId ? SECOND_CASIO_TEMPLATE_REGISTRY[casio.supportedCalculatorTemplateId].calculationRisk : null),
+    unitRisk: isLaw || (isTheory && !explicitCalculation) ? null : input.unitRisk ?? (casio.supportedCalculatorTemplateId ? SECOND_CASIO_TEMPLATE_REGISTRY[casio.supportedCalculatorTemplateId].unitRisk : null),
     rewriteInstruction,
-    nextRewriteAction: "10분 다시 쓰기",
+    nextRewriteAction: isLaw ? "10분 다시쓰기" : isTheory ? "한 문단 설명 다시쓰기" : "10분 다시 쓰기",
     rewriteTaskType: SECOND_REWRITE_TASK_TYPE,
     supportedCalculatorTemplateId: casio.supportedCalculatorTemplateId,
     casioKeystrokes: casio.casioKeystrokes,

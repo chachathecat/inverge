@@ -170,6 +170,18 @@ function findField(text: string, labels: string[]) {
   return "";
 }
 
+function findParsedConfidence(text: string): ConfidenceLevel | "" {
+  const value = findField(text, ["확신도", "확신", "confidence"]);
+  if (value.includes("낮")) return "낮음";
+  if (value.includes("높")) return "높음";
+  if (value.includes("중")) return "중간";
+  return "";
+}
+
+function findFirstMistakeReason(text: string) {
+  return findField(text, ["틀린 이유", "오답 원인", "실수 원인", "mistake reason", "wrong reason"]);
+}
+
 function pickSubject(text: string, subjects: readonly string[], fallback: string) {
   return subjects.find((subject) => text.includes(subject)) ?? fallback;
 }
@@ -188,11 +200,12 @@ function hasValue(value: string) {
 
 function getMissingConfirmationFields(form: DraftState, mode: AppraisalMode) {
   if (mode === "first") {
+    const savingOxReviewItem = hasValue(form.userAnswer) || hasValue(form.correctAnswer);
     return [
       { key: "subject", label: "과목", ok: hasValue(form.subjectLabel) },
       { key: "title", label: "문제 제목/출처", ok: hasValue(form.problemTitle) || hasValue(form.problemIdentifier) || hasValue(form.sourceLabel) },
-      { key: "correct", label: "정답", ok: hasValue(form.correctAnswer) },
-      { key: "user", label: "내 답", ok: hasValue(form.userAnswer) },
+      { key: "correct", label: "정답", ok: !savingOxReviewItem || hasValue(form.correctAnswer) },
+      { key: "user", label: "내 답", ok: !savingOxReviewItem || hasValue(form.userAnswer) },
       { key: "reason", label: "오답 원인", ok: hasValue(form.userReasonText) || hasValue(form.userReasonPreset) },
       { key: "retrieval", label: "회상 한 문장", ok: hasValue(form.comparisonPoint) },
     ].filter((field) => !field.ok);
@@ -439,12 +452,15 @@ export function WrongAnswerCaptureForm({
           ...base,
           subjectLabel: subject,
           problemTitle: base.problemTitle || firstLine(sourceText, `${subject} 오답 기록`),
+          sourceLabel: base.sourceLabel || findField(sourceText, ["출처", "source", "교재", "세트"]),
           correctAnswer: base.correctAnswer || findField(sourceText, ["정답", "답", "correct answer"]),
-          userAnswer: base.userAnswer || findField(sourceText, ["내 답", "선택", "my answer"]),
-          userReasonText: base.userReasonText || first.reason,
+          userAnswer: base.userAnswer || findField(sourceText, ["내 답", "내가 고른 답", "선택", "user answer", "my answer"]),
+          userReasonText: findFirstMistakeReason(sourceText) || base.userReasonText || first.reason,
+          confidence: findParsedConfidence(sourceText) || base.confidence,
+          timeSpentSeconds: base.timeSpentSeconds || findField(sourceText, ["소요시간", "풀이 시간", "time spent"]),
           keyConcepts: pickConcepts(sourceText, first.concepts),
           coreFormula: base.coreFormula || first.formula,
-          comparisonPoint: base.comparisonPoint || first.comparison,
+          comparisonPoint: base.comparisonPoint || (/무효|취소/.test(sourceText) ? "무효·취소 구분 기준 10초 확인" : first.comparison),
           nextReviewDate: base.nextReviewDate || getDefaultNextReviewDate(mode),
         }
       : {
@@ -795,9 +811,9 @@ export function WrongAnswerCaptureForm({
     setError("");
 
     try {
-      if (mode === "first" && isLikelyWrongAnswer(form.correctAnswer, form.userAnswer)) {
-        if (!form.userReasonPreset.trim()) {
-          setError("1차 오답은 실수 원인을 먼저 선택해 주세요.");
+      if (mode === "first" && form.correctAnswer.trim() && form.userAnswer.trim() && isLikelyWrongAnswer(form.correctAnswer, form.userAnswer)) {
+        if (!form.userReasonPreset.trim() && !form.userReasonText.trim()) {
+          setError("1차 오답은 오답 원인 한 가지만 확인해 주세요.");
           return;
         }
         if (!form.comparisonPoint.trim()) {
@@ -905,7 +921,7 @@ export function WrongAnswerCaptureForm({
           createdFromCapture: true,
         }),
       });
-      const result = (await response.json()) as { ok?: boolean; item?: { id: string }; error?: string; message?: string; errorCode?: string };
+      const result = (await response.json()) as { ok?: boolean; item?: { id: string; examName?: string }; error?: string; message?: string; errorCode?: string };
       if (!response.ok || !result.ok || !result.item) {
         if (result.error === "usage-limit" || result.errorCode === "BILLING_REQUIRED") {
           setError("현재 저장 한도에 도달했습니다. 지원팀에 문의해 주세요.");
@@ -916,7 +932,7 @@ export function WrongAnswerCaptureForm({
       }
       clearReviewOsDraft(storageKey);
       router.push(destination === "first-ox" && mode === "first"
-        ? `/app/first/ox?sourceItemId=${encodeURIComponent(result.item.id)}`
+        ? `/app/first/ox?sourceItemId=${encodeURIComponent(result.item.id)}&mode=first`
         : `/app/session?mode=${mode}&savedCapture=1&itemId=${result.item.id}`);
       router.refresh();
     } catch {
@@ -1646,8 +1662,8 @@ function ConfirmPanel({
   return (
     <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 sm:p-5">
       <p className="text-caption text-[color:var(--muted)]">Step 3. 저장하고 오늘 계획에 반영</p>
-      <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">정리되었습니다</h3>
-      <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">가장 큰 빈틈 1개만 먼저 고정하고, 다음 행동 1개를 Today Plan / Review Queue 신호로 남깁니다.</p>
+      <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">AI가 이렇게 읽었습니다. 틀린 부분만 고쳐 주세요.</h3>
+      <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">이미 읽은 값은 다시 입력하지 않아도 됩니다. 부족한 항목이 있으면 그 항목만 정확히 알려드립니다.</p>
       <div className="mt-4 grid gap-3 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-4" data-testid="capture-note-summary">
         <PreviewLine label="상태" value={`${captureSummary.capturedTextStatus === "draft" ? "OCR 초안" : "직접 확인됨"} · metadataOnly`} />
         <PreviewLine label="과목/입력" value={`${captureSummary.subject} · ${captureSummary.sourceType}`} />
@@ -1775,7 +1791,7 @@ function FirstConfirmFields(props: FieldProps) {
       </section>
       <div className="grid gap-4 lg:grid-cols-2">
         <label className="space-y-2">
-          <span className="text-sm text-[color:var(--foreground-strong)]">정답</span>
+          <span className="text-sm text-[color:var(--foreground-strong)]">정답 <span className="text-xs text-[color:var(--muted)]">(O/X 저장 때 필요)</span></span>
           <input
             value={form.correctAnswer}
             onChange={(event) => update("correctAnswer", event.target.value)}
@@ -1945,7 +1961,7 @@ function SecondAnswerPanel({
   const templates: Record<string, string> = {
     감정평가실무: "문제 요구:\n계산 근거:\n결론:",
     감정평가이론: "정의:\n논거:\n사례 적용:\n결론:",
-    "감정평가 및 보상법규": "요건:\n조문/법리:\n사안 포섭:\n결론:",
+    "감정평가 및 보상법규": "법적 성질:\n처분성/권리구제:\n요건:\n조문/법리:\n사안 포섭:\n사안 해결:",
   };
   return (
     <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 sm:p-5">

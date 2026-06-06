@@ -128,14 +128,14 @@ export const SECOND_SUBJECT_TEMPLATES: Record<(typeof APPRAISAL_SECOND_SUBJECTS)
     detailLine: "이 과목은 먼저 이 구조로 답안을 잡습니다.",
   },
   "감정평가 및 보상법규": {
-    structure: "요건 → 조문/법리 → 절차 → 사안 포섭 → 결론",
-    checklist: ["조문", "요건", "절차", "판례/법리", "사안 포섭", "결론"],
-    commonGaps: ["요건 누락", "절차 순서 혼동", "조문 없는 포섭", "결론 불명확"],
-    rewriteGuidance: "누락 요건 1개와 사안 포섭 문장 1개 보강",
-    issueRecallPlaceholder: "1) 요건\n2) 조문/법리\n3) 사안 포섭 쟁점",
-    outlinePlaceholder: "I. 요건\nII. 조문/법리\nIII. 절차\nIV. 사안 포섭\nV. 결론",
-    biggestGapGuidance: "오늘은 간극 1개만 문단으로 보강합니다. 누락 요건과 사안 포섭 문장을 함께 보완합니다.",
-    detailLine: "이 과목은 먼저 이 구조로 답안을 잡습니다.",
+    structure: "법적 성질 → 처분성/권리구제 → 조문·요건 → 사안 포섭 → 결론",
+    checklist: ["법적 성질", "처분성", "권리구제", "조문/요건", "판례/법리", "사안 포섭", "결론"],
+    commonGaps: ["처분성 판단 누락", "항고소송/수용재결 관계 혼동", "요건 포섭 부족", "목차 구조 흔들림"],
+    rewriteGuidance: "법적 성질과 권리구제 관계를 먼저 쓰고 사안 포섭 문장 1개 보강",
+    issueRecallPlaceholder: "1) 법적 성질/처분성\n2) 권리구제/항고소송 관계\n3) 조문·요건과 사안 포섭",
+    outlinePlaceholder: "I. 법적 성질\nII. 처분성/권리구제\nIII. 조문·요건\nIV. 사안 포섭\nV. 결론",
+    biggestGapGuidance: "오늘은 간극 1개만 문단으로 보강합니다. 처분성, 권리구제 관계, 요건 포섭 중 하나만 다시 씁니다.",
+    detailLine: "이 과목은 계산이 아니라 법적 성질, 요건, 포섭, 권리구제 순서로 답안을 잡습니다.",
   },
 };
 
