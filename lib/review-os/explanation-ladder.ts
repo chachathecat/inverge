@@ -19,7 +19,17 @@ export type ExplanationLadderV1 = {
 };
 
 const REQUIRED_LABELS = ["1타 쉬운풀이", "합격 한 줄", "출제자 함정", "10초 확인"] as const;
-const FORBIDDEN_CLAIM_PATTERNS = [/공식\s*정답/, /최종\s*정답/, /자동\s*채점/, /점수\s*보장/, /합격\s*보장/, /불합격\s*확정/, /모범답안\s*확정/];
+const FORBIDDEN_CLAIM_PATTERNS = [
+  /공식\s*정답/,
+  /최종\s*정답/,
+  /공식\s*채점/,
+  /자동\s*채점/,
+  /점수\s*(?:보장|예측|확정)/,
+  /합격\s*(?:보장|예측|확정)/,
+  /불합격\s*(?:예측|확정)/,
+  /모범\s*답안\s*확정/,
+  /모범답안\s*확정/,
+];
 
 function clean(value: string) {
   return value.trim().replace(/\s+/g, " ");
@@ -27,6 +37,23 @@ function clean(value: string) {
 
 function isSupportedMode(mode: unknown): mode is AppraiserExamMode {
   return mode === "first" || mode === "second";
+}
+
+function containsForbiddenClaim(value: string) {
+  return FORBIDDEN_CLAIM_PATTERNS.some((pattern) => pattern.test(value));
+}
+
+function safeLearnerLabel(value: string, fallback: string) {
+  const normalized = clean(value);
+  if (!normalized || containsForbiddenClaim(normalized)) return fallback;
+  return normalized;
+}
+
+function safeOptionalLearnerLabel(value: string | undefined) {
+  if (value === undefined) return undefined;
+  const normalized = clean(value);
+  if (!normalized || containsForbiddenClaim(normalized)) return undefined;
+  return normalized;
 }
 
 function findTemplate(conceptLabel: string) {
@@ -38,7 +65,7 @@ function findTemplate(conceptLabel: string) {
 }
 
 function fallbackText(label: (typeof REQUIRED_LABELS)[number], input: ExplanationLadderInput) {
-  const concept = clean(input.conceptLabel) || "확인한 개념";
+  const concept = safeLearnerLabel(input.conceptLabel, "확인할 개념");
   if (label === "1타 쉬운풀이") return `${concept}는 먼저 기준어 1개를 떠올린 뒤 짧게 설명합니다.`;
   if (label === "합격 한 줄") return `${concept}는 정의와 효과를 한 문장으로 회상합니다.`;
   if (label === "출제자 함정") return `${concept}에서 예외 표현과 반대 효과 표현을 분리합니다.`;
@@ -55,7 +82,10 @@ function normalizeTenSecondCheck(text: string, input: ExplanationLadderInput) {
 export function buildExplanationLadder(input: ExplanationLadderInput): ExplanationLadderV1 {
   if (!isSupportedMode(input.examMode)) throw new Error(`Unsupported appraiser exam mode: ${String(input.examMode)}`);
   const reference = loadExplanationLadder();
-  const template = findTemplate(input.conceptLabel);
+  const conceptLabel = safeLearnerLabel(input.conceptLabel, "확인할 개념");
+  const subject = safeLearnerLabel(input.subject, "해당 과목");
+  const learnerLevel = safeOptionalLearnerLabel(input.learnerLevel);
+  const template = findTemplate(conceptLabel);
   const entries = REQUIRED_LABELS.map((label) => {
     const templateText = template?.ladder[label];
     const text = label === "10초 확인"
@@ -65,16 +95,18 @@ export function buildExplanationLadder(input: ExplanationLadderInput): Explanati
   });
 
   const ladder: ExplanationLadderV1 = {
-    conceptLabel: clean(input.conceptLabel),
-    subject: clean(input.subject),
+    conceptLabel,
+    subject,
     examMode: input.examMode,
-    learnerLevel: input.learnerLevel,
+    learnerLevel,
     entries,
     metadataOnly: true,
     sourceStatus: reference.sourceStatus,
     needsOfficialVerification: reference.needsOfficialVerification,
   };
-  validateExplanationLadder(ladder);
+  if (!validateExplanationLadder(ladder)) {
+    throw new Error("Invalid explanation ladder generated after sanitizing learner labels");
+  }
   return ladder;
 }
 
