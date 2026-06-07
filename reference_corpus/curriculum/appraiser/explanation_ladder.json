@@ -6,15 +6,34 @@
   "verificationNote": "Examples are original metadata/style examples and must be verified against Q-Net/current official notice verification before production use.",
   "storagePolicy": "metadata_only_no_raw_user_or_problem_text",
   "labels": [
-    { "id": "easy", "label": "1타 쉬운풀이", "purpose": "plain-language explanation after retrieval" },
-    { "id": "pass_line", "label": "합격 한 줄", "purpose": "one recallable exam-ready sentence" },
-    { "id": "trap", "label": "출제자 함정", "purpose": "trap, exception, wording, or calculation warning" },
-    { "id": "ten_second", "label": "10초 확인", "purpose": "quick retrieval check ending in retry/rewrite/review" }
+    {
+      "id": "easy",
+      "label": "1타 쉬운풀이",
+      "purpose": "plain-language explanation after retrieval"
+    },
+    {
+      "id": "pass_line",
+      "label": "합격 한 줄",
+      "purpose": "one recallable exam-ready sentence"
+    },
+    {
+      "id": "trap",
+      "label": "출제자 함정",
+      "purpose": "trap, exception, wording, or calculation warning"
+    },
+    {
+      "id": "ten_second",
+      "label": "10초 확인",
+      "purpose": "quick retrieval check ending in retry/rewrite/review"
+    }
   ],
   "templates": [
     {
       "concept": "의사무능력자 법률행위 무효",
-      "taskTypes": ["O/X", "cloze"],
+      "taskTypes": [
+        "O/X",
+        "cloze"
+      ],
       "ladder": {
         "1타 쉬운풀이": "의사능력이 없으면 자기 결정으로 법률효과를 만들 수 없으므로 효력이 없습니다.",
         "합격 한 줄": "의사무능력자의 법률행위는 무효입니다.",
@@ -24,23 +43,74 @@
     },
     {
       "concept": "재고자산 저가법",
-      "taskTypes": ["O/X", "cloze", "accounting template"],
+      "taskTypes": [
+        "O/X",
+        "cloze",
+        "accounting_template"
+      ],
       "ladder": {
-        "1타 쉬운풀이": "재고자산은 원가보다 회수 가능 금액이 낮아지면 낮은 금액으로 표시합니다.",
+        "1타 쉬운풀이": "재고자산은 장부상 원가보다 회수 가능한 금액이 낮으면 낮아진 금액으로 보수적으로 표시합니다.",
         "합격 한 줄": "재고자산은 원가와 순실현가능가치 중 낮은 금액으로 평가합니다.",
-        "출제자 함정": "평가손실 방향을 반대로 처리하지 않도록 확인합니다.",
-        "10초 확인": "원가, 순실현가능가치, 손실 방향을 템플릿에 대입합니다."
+        "출제자 함정": "높은 금액 선택, 평가이익 인식, 손실 방향 반전을 조심합니다.",
+        "10초 확인": "cloze: 재고자산은 원가와 ____ 중 낮은 금액으로 평가한다."
       }
     },
     {
       "concept": "수익환원법",
-      "taskTypes": ["rewrite", "CASIO"],
+      "taskTypes": [
+        "O/X",
+        "cloze",
+        "calculation_template",
+        "casio_step"
+      ],
       "ladder": {
-        "1타 쉬운풀이": "앞으로의 순수익을 현재 가치로 바꾸어 가격을 구합니다.",
+        "1타 쉬운풀이": "앞으로 벌 순수익을 현재의 가치로 바꾸어 대상 부동산의 가격을 구하는 방식입니다.",
         "합격 한 줄": "수익가액은 순수익을 적정 환원이율로 환원해 산정합니다.",
-        "출제자 함정": "순수익, 환원이율, 기준시점, 단위를 분리해 검산합니다.",
-        "10초 확인": "CASIO 순서로 단위와 환원이율을 다시 확인합니다."
+        "출제자 함정": "순수익, 환원이율, 기준시점, 단위를 한꺼번에 섞지 말고 분리해 검산합니다.",
+        "10초 확인": "cloze: 수익가액은 ____을 적정 환원이율로 환원해 산정한다."
+      }
+    },
+    {
+      "concept": "의사무능력자의 법률행위",
+      "taskTypes": [
+        "O/X",
+        "cloze"
+      ],
+      "ladder": {
+        "1타 쉬운풀이": "의사능력이 없는 상태에서는 스스로 법률효과를 선택했다고 보기 어려워 그 행위의 효력을 인정하지 않습니다.",
+        "합격 한 줄": "의사무능력자의 법률행위는 무효로 정리합니다.",
+        "출제자 함정": "제한능력자처럼 취소할 수 있는 행위로 바꾸어 묻는 표현을 경계합니다.",
+        "10초 확인": "O/X: 의사무능력자의 법률행위는 취소할 수 있는 행위이다."
+      }
+    },
+    {
+      "concept": "무효와 취소",
+      "taskTypes": [
+        "O/X",
+        "cloze",
+        "trap_word"
+      ],
+      "ladder": {
+        "1타 쉬운풀이": "무효는 처음부터 효력이 없는 상태이고, 취소는 취소권 행사로 효력을 뒤집는 구조입니다.",
+        "합격 한 줄": "무효는 처음부터 효력 없음, 취소는 취소 전까지 유효한 상태로 구분합니다.",
+        "출제자 함정": "추인, 제3자 보호, 소급효 표현이 어느 쪽에 붙는지 확인합니다.",
+        "10초 확인": "cloze: 무효는 처음부터 효력이 없고, 취소는 취소 전까지 ____인 상태다."
+      }
+    },
+    {
+      "concept": "사업인정의 처분성",
+      "taskTypes": [
+        "O/X",
+        "cloze",
+        "legal_application"
+      ],
+      "ladder": {
+        "1타 쉬운풀이": "사업인정은 공익사업에 수용권 등 법적 효과를 연결하므로 권리구제의 출발점이 될 수 있습니다.",
+        "합격 한 줄": "사업인정은 수용절차와 권리변동 가능성을 여는 처분성 쟁점으로 검토합니다.",
+        "출제자 함정": "단순한 내부 준비행위처럼 처리하면 권리구제 논점이 빠질 수 있습니다.",
+        "10초 확인": "O/X: 사업인정은 권리구제와 무관한 단순 내부 검토에 그친다."
       }
     }
-  ]
+  ],
+  "productionVerificationNote": "Draft metadata only. Official exam syllabus and current public notices must be verified against Q-Net or official sources before production use."
 }

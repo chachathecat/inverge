@@ -99,7 +99,7 @@ test("official verification metadata records source references without overclaim
   }
 
   for (const [trackId, track] of Object.entries(reference.studyTracks.tracks)) {
-    assert.equal(track.sourceStatus, "internal_planning_needs_beta_review", `${trackId} should remain an internal schedule template`);
+    assert.equal(track.sourceStatus, "draft", `${trackId} should remain draft internal schedule metadata`);
     assert.equal(track.needsOfficialVerification, true, `${trackId} should not be marked as official curriculum`);
   }
 });

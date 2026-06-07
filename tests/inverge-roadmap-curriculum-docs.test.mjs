@@ -78,7 +78,7 @@ test("verified curriculum references cite public sources and keep internal mappi
 
     if (path.endsWith("study_tracks.json")) {
       for (const [trackId, track] of Object.entries(parsed.tracks)) {
-        assert.equal(track.sourceStatus, "internal_planning_needs_beta_review", `${trackId} must remain internal planning`);
+        assert.equal(track.sourceStatus, "draft", `${trackId} must remain draft internal planning metadata`);
         assert.equal(track.needsOfficialVerification, true, `${trackId} must not be official curriculum`);
       }
       continue;

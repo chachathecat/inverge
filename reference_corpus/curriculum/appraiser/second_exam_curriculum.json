@@ -417,5 +417,208 @@
       "reviewedAt": "2026-06-02",
       "scope": "official_exam_administrator_and_public_exam_information_page"
     }
+  ],
+  "productionVerificationNote": "Draft metadata only. Official exam syllabus and current public notices must be verified against Q-Net or official sources before production use.",
+  "nodes": [
+    {
+      "id": "second_practice_income_approach",
+      "examMode": "second",
+      "subject": "감정평가실무",
+      "unit": "평가 3방식",
+      "issue": "수익환원법 적용과 검산",
+      "importance": "critical",
+      "answerSkeleton": [
+        "문제 요구 확인",
+        "순수익 산정",
+        "환원이율 적용",
+        "수익가액 산정",
+        "검산 및 단위 확인"
+      ],
+      "keyTerms": [
+        "순수익",
+        "환원이율",
+        "수익가액",
+        "기준시점",
+        "검산"
+      ],
+      "rewriteTask": "계산 흐름을 입력값-산식-검산 한 문단으로 다시 씁니다.",
+      "taskTypes": [
+        "issue_spotting",
+        "outline_recall",
+        "paragraph_rewrite",
+        "calculation_template",
+        "casio_step"
+      ],
+      "defaultReviewPattern": "outline_recall → calculation_template → casio_step → 7일 뒤 paragraph_rewrite",
+      "sourceStatus": "draft",
+      "needsOfficialVerification": true,
+      "lastReviewedAt": "2026-06-06"
+    },
+    {
+      "id": "second_practice_compensation_amount",
+      "examMode": "second",
+      "subject": "감정평가실무",
+      "unit": "보상평가",
+      "issue": "보상액 산정 구조",
+      "importance": "high",
+      "answerSkeleton": [
+        "평가대상 특정",
+        "보상 기준 확인",
+        "적용 방식 선택",
+        "계산 및 보정",
+        "결론"
+      ],
+      "keyTerms": [
+        "보상평가",
+        "평가대상",
+        "시점수정",
+        "개별요인",
+        "보정"
+      ],
+      "rewriteTask": "누락된 보상 기준 하나를 목차에 붙이고 산정 흐름을 다시 씁니다.",
+      "taskTypes": [
+        "issue_spotting",
+        "outline_recall",
+        "paragraph_rewrite",
+        "calculation_template",
+        "casio_step"
+      ],
+      "defaultReviewPattern": "issue_spotting → outline_recall → 5일 뒤 calculation_template → 14일 뒤 rewrite",
+      "sourceStatus": "draft",
+      "needsOfficialVerification": true,
+      "lastReviewedAt": "2026-06-06"
+    },
+    {
+      "id": "second_theory_value_formation",
+      "examMode": "second",
+      "subject": "감정평가이론",
+      "unit": "가치이론",
+      "issue": "가치형성요인과 가격원칙 연결",
+      "importance": "high",
+      "answerSkeleton": [
+        "개념 정의",
+        "가치형성요인 제시",
+        "가격원칙 연결",
+        "평가상 의미",
+        "짧은 결론"
+      ],
+      "keyTerms": [
+        "가치형성요인",
+        "가격원칙",
+        "시장성",
+        "유용성",
+        "상대적 희소성"
+      ],
+      "rewriteTask": "키워드 나열을 정의-연결-의미 문단으로 다시 씁니다.",
+      "taskTypes": [
+        "issue_spotting",
+        "outline_recall",
+        "paragraph_rewrite",
+        "theory_keyword"
+      ],
+      "defaultReviewPattern": "theory_keyword → outline_recall → 6일 뒤 paragraph_rewrite → 21일 뒤 issue_spotting",
+      "sourceStatus": "draft",
+      "needsOfficialVerification": true,
+      "lastReviewedAt": "2026-06-06"
+    },
+    {
+      "id": "second_theory_appraisal_methods",
+      "examMode": "second",
+      "subject": "감정평가이론",
+      "unit": "평가방식론",
+      "issue": "평가 3방식의 선택 논리",
+      "importance": "critical",
+      "answerSkeleton": [
+        "문제상 자료 확인",
+        "방식별 적합성 비교",
+        "주된 방식 선택",
+        "보조 방식 검토",
+        "결론"
+      ],
+      "keyTerms": [
+        "원가방식",
+        "비교방식",
+        "수익방식",
+        "자료 적합성",
+        "검증"
+      ],
+      "rewriteTask": "방식 선택 이유를 한 문단으로 쓰고 보조 방식 검토를 덧붙입니다.",
+      "taskTypes": [
+        "issue_spotting",
+        "outline_recall",
+        "paragraph_rewrite",
+        "theory_keyword"
+      ],
+      "defaultReviewPattern": "outline_recall → theory_keyword → 7일 뒤 paragraph_rewrite → 28일 뒤 mixed rewrite",
+      "sourceStatus": "draft",
+      "needsOfficialVerification": true,
+      "lastReviewedAt": "2026-06-06"
+    },
+    {
+      "id": "second_law_project_approval_disposition",
+      "examMode": "second",
+      "subject": "감정평가 및 보상법규",
+      "unit": "공익사업 보상법",
+      "issue": "사업인정의 처분성과 권리구제",
+      "importance": "critical",
+      "answerSkeleton": [
+        "쟁점 제시",
+        "관련 법리",
+        "처분성 검토",
+        "사안 적용",
+        "결론 및 구제수단"
+      ],
+      "keyTerms": [
+        "사업인정",
+        "처분성",
+        "수용권 설정",
+        "권리구제",
+        "고시"
+      ],
+      "rewriteTask": "처분성 법리를 사안 적용 문장까지 포함해 8줄로 다시 씁니다.",
+      "taskTypes": [
+        "issue_spotting",
+        "outline_recall",
+        "paragraph_rewrite",
+        "legal_application"
+      ],
+      "defaultReviewPattern": "issue_spotting → legal_application → 4일 뒤 outline_recall → 14일 뒤 paragraph_rewrite",
+      "sourceStatus": "draft",
+      "needsOfficialVerification": true,
+      "lastReviewedAt": "2026-06-06"
+    },
+    {
+      "id": "second_law_loss_compensation_principle",
+      "examMode": "second",
+      "subject": "감정평가 및 보상법규",
+      "unit": "손실보상",
+      "issue": "정당보상 원칙 적용",
+      "importance": "high",
+      "answerSkeleton": [
+        "쟁점 제시",
+        "정당보상 원칙",
+        "보상대상 판단",
+        "사안 적용",
+        "결론"
+      ],
+      "keyTerms": [
+        "정당보상",
+        "손실보상",
+        "공익사업",
+        "보상대상",
+        "사안 적용"
+      ],
+      "rewriteTask": "원칙 설명 뒤 바로 사안 포섭으로 이어지는 문단으로 다시 씁니다.",
+      "taskTypes": [
+        "issue_spotting",
+        "outline_recall",
+        "paragraph_rewrite",
+        "legal_application"
+      ],
+      "defaultReviewPattern": "legal_application → outline_recall → 6일 뒤 paragraph_rewrite → 21일 뒤 issue_spotting",
+      "sourceStatus": "draft",
+      "needsOfficialVerification": true,
+      "lastReviewedAt": "2026-06-06"
+    }
   ]
 }

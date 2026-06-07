@@ -55,3 +55,11 @@ The four required labels are:
 - **합격 한 줄**: 사업인정은 수용권 발생의 전제가 되는 행정처분입니다.
 - **출제자 함정**: 사업인정의 효과와 보상금 산정 단계를 한 문장에 섞으면 논점이 흐려집니다.
 - **10초 확인**: 요건, 효과, 권리구제 순서로 issue spotting 3칸을 채우고 짧게 다시 씁니다.
+
+## Explanation ladder v1 addendum
+
+Inverge is not a question archive. The explanation ladder is a reusable metadata-only helper for converting a curriculum node into practice-ready explanation states.
+
+Required labels remain: 1타 쉬운풀이, 합격 한 줄, 출제자 함정, 10초 확인. Every ladder should be convertible into a practice task, and the 10초 확인 row must be O/X or cloze compatible so Capture, Today Plan, and Review Queue can end in retry, rewrite, or scheduled review instead of score-only feedback.
+
+20-year past papers are reference metadata, not the product front door. Capture-to-Note is the front door, and curriculum nodes are the basis for Today Plan, Review Queue, O/X, cloze, calculation, and rewrite. Raw user OCR/problem/answer text must remain user-owned service data; derived metadata/signals may drive product behavior when sanitized. Official syllabus/current public notice verification must be checked against Q-Net or official sources before production use.
