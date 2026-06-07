@@ -184,3 +184,25 @@ Guardrails retained:
 - No service-role learner route usage added.
 - No instructor/admin/payment/archive/native app surfaces added.
 - No official grading, score prediction, pass/fail, or model-answer claim added.
+
+## PR #339 QA note — curriculum-anchored Capture-to-Plan helper integration
+
+Date: 2026-06-07
+
+PR #339 wires the PR #338 appraiser curriculum kernel into the learner Capture → Note → Explanation → Review Queue → Today Plan loop at helper level.
+
+Guardrails retained:
+
+- No production durable reads/writes are enabled.
+- The integration remains metadata-only for shared outputs.
+- Raw learner OCR/problem/answer/source/copyright text remains in user-owned surfaces only and is not emitted in curriculum Today Plan or Review Queue candidates.
+- Today Plan remains capped at max 3 primary tasks.
+- No payment, public archive UI, new exams, instructor grading changes, live notifications, native app behavior, official grading, score, pass/fail, official model answer, or 합격 보장 claims are introduced.
+
+Staging verification focus:
+
+- 1차 민법 captures such as 무효와 취소 map to 1차 민법 curriculum candidates, not time metadata.
+- 2차 법규 captures such as 사업인정 map to legal issue/rewrite candidates, not 실무 calculation skeletons.
+- 2차 실무 calculation-like captures may map to calculation/CASIO candidates only when calculation cues are present.
+- 2차 이론 keyword-like captures map to keyword/logic candidates.
+- Visible Today Plan titles remain derived action summaries rather than raw problem/question text.
