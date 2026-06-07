@@ -277,7 +277,7 @@ export function buildScheduleWarnings(reference: Pick<StudyTracksDocument, "need
   return validateOutput(warnings);
 }
 
-export function selectStudyTrack(input: Pick<StudyScheduleEngineInput, "examMode" | "daysUntilExam" | "reference">): SelectedStudyTrack {
+export function selectStudyTrack(input: Pick<StudyScheduleEngineInput, "examMode" | "daysUntilExam" | "reference"> & Partial<Pick<StudyScheduleEngineInput, "dailyAvailableMinutes" | "currentLevel">> & { level?: StudyScheduleCurrentLevel }): SelectedStudyTrack {
   assertNoRawTextKeys(input);
   assertSupportedExamMode(input.examMode);
   const reference = loadedStudyTracks(input.reference);
@@ -359,4 +359,57 @@ export function buildWeeklyStudySchedule(input: StudyScheduleEngineInput): Weekl
     ...daily,
     weekDays,
   });
+}
+
+
+export type StudyScheduleRankableCandidate = {
+  id?: string;
+  dueReview?: boolean;
+  isDue?: boolean;
+  recentWrong?: boolean;
+  result?: string;
+  confidenceGap?: number;
+  confidence?: "unknown" | "low" | "medium" | "high" | string;
+  passRisk?: number;
+  passRiskContribution?: number | string;
+  examUrgency?: number;
+  daysUntilExam?: number;
+  missedRecently?: boolean;
+  recentMissCount?: number;
+  weakStructure?: boolean;
+  weakStructurePoint?: string;
+  priority?: number;
+  [key: string]: unknown;
+};
+
+function todayPlanCandidateScore(candidate: StudyScheduleRankableCandidate) {
+  let score = typeof candidate.priority === "number" ? candidate.priority : 0;
+  if (candidate.dueReview || candidate.isDue) score += 100;
+  if (candidate.recentWrong || candidate.result === "wrong" || candidate.result === "unknown") score += 80;
+  if (typeof candidate.confidenceGap === "number") score += Math.max(0, candidate.confidenceGap) * 12;
+  if (candidate.confidence === "low" || candidate.confidence === "unknown") score += 55;
+  if (typeof candidate.passRisk === "number") score += Math.max(0, candidate.passRisk) * 10;
+  if (candidate.passRiskContribution) score += 45;
+  if (typeof candidate.examUrgency === "number") score += Math.max(0, candidate.examUrgency) * 8;
+  if (typeof candidate.daysUntilExam === "number") score += Math.max(0, 30 - Math.min(30, candidate.daysUntilExam));
+  if (candidate.missedRecently) score += 35;
+  if (typeof candidate.recentMissCount === "number") score += Math.max(0, candidate.recentMissCount) * 10;
+  if (candidate.weakStructure || candidate.weakStructurePoint) score += 30;
+  return score;
+}
+
+export function rankTodayPlanCandidates<T extends StudyScheduleRankableCandidate>(input: { candidates: T[]; dueReviewCount?: number; dailyAvailableMinutes?: number }): T[] {
+  assertNoRawTextKeys(input);
+  const dueReviewBoost = Math.max(0, input.dueReviewCount ?? 0) * 5;
+  return [...input.candidates].sort((a, b) => {
+    const scoreA = todayPlanCandidateScore(a) + ((a.dueReview || a.isDue) ? dueReviewBoost : 0);
+    const scoreB = todayPlanCandidateScore(b) + ((b.dueReview || b.isDue) ? dueReviewBoost : 0);
+    if (scoreB !== scoreA) return scoreB - scoreA;
+    return String(a.id ?? "").localeCompare(String(b.id ?? ""));
+  });
+}
+
+export function capTodayPlanTasks<T>(tasks: T[], max = 3): T[] {
+  const safeMax = Math.min(3, Math.max(0, Math.floor(Number.isFinite(max) ? max : 3)));
+  return tasks.slice(0, safeMax);
 }

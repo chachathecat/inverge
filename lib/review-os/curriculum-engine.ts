@@ -453,3 +453,113 @@ export function buildCurriculumNextAction(
     todayPlanPreview,
   };
 }
+
+export type AppraiserCurriculumKernelNode = {
+  id: string;
+  examMode: AppraiserExamMode;
+  subject: string;
+  unit: string;
+  topic?: string;
+  issue?: string;
+  importance: "low" | "medium" | "high" | "critical";
+  passRiskContribution?: string;
+  firstExamTaskTypes?: string[];
+  coreConcepts?: string[];
+  trapWords?: string[];
+  defaultReviewPattern: string;
+  secondExamBridge?: string;
+  answerSkeleton?: string[];
+  keyTerms?: string[];
+  rewriteTask?: string;
+  taskTypes?: string[];
+  sourceStatus: "draft" | string;
+  needsOfficialVerification: boolean;
+  lastReviewedAt: string;
+};
+
+type CurriculumCandidateInput = {
+  examMode: AppraiserExamMode;
+  subject?: string;
+  text?: string;
+  taskType?: string;
+};
+
+function metadataNodesForMode(reference: AppraiserCurriculumReference, mode: AppraiserExamMode): AppraiserCurriculumKernelNode[] {
+  const document = mode === "first" ? reference.firstExam : reference.secondExam;
+  const explicitNodes = (document as unknown as { nodes?: AppraiserCurriculumKernelNode[] }).nodes;
+  if (Array.isArray(explicitNodes)) {
+    return explicitNodes.map((node) => ({ ...node, examMode: mode }));
+  }
+
+  return document.subjects.flatMap((subject) => subject.units.map((unit) => ({
+    id: unit.id,
+    examMode: mode,
+    subject: subject.name,
+    unit: unit.name,
+    ...(mode === "first" ? { topic: unit.name, firstExamTaskTypes: unit.taskTypes } : { issue: unit.name, taskTypes: unit.taskTypes }),
+    importance: unit.importance,
+    passRiskContribution: unit.riskLevel ? `${unit.riskLevel} risk metadata node` : undefined,
+    coreConcepts: [...unit.coreConcepts],
+    trapWords: unit.trapWords ? [...unit.trapWords] : undefined,
+    defaultReviewPattern: unit.defaultReviewPattern,
+    secondExamBridge: unit.secondExamBridge,
+    sourceStatus: unit.sourceStatus ?? "draft",
+    needsOfficialVerification: unit.needsOfficialVerification ?? true,
+    lastReviewedAt: document.lastReviewedAt,
+  } satisfies AppraiserCurriculumKernelNode)));
+}
+
+export function getAppraiserCurriculumNodes(mode?: AppraiserExamMode, reference = loadAppraiserCurriculumReference()): AppraiserCurriculumKernelNode[] {
+  const modes: AppraiserExamMode[] = mode ? [mode] : ["first", "second"];
+  return modes.flatMap((entry) => metadataNodesForMode(reference, entry)).map((node) => ({
+    ...node,
+    coreConcepts: node.coreConcepts ? [...node.coreConcepts] : undefined,
+    trapWords: node.trapWords ? [...node.trapWords] : undefined,
+    firstExamTaskTypes: node.firstExamTaskTypes ? [...node.firstExamTaskTypes] : undefined,
+    taskTypes: node.taskTypes ? [...node.taskTypes] : undefined,
+    answerSkeleton: node.answerSkeleton ? [...node.answerSkeleton] : undefined,
+    keyTerms: node.keyTerms ? [...node.keyTerms] : undefined,
+  }));
+}
+
+export function findCurriculumNodeById(id: string, reference = loadAppraiserCurriculumReference()): AppraiserCurriculumKernelNode | null {
+  if (!id.trim()) return null;
+  return getAppraiserCurriculumNodes(undefined, reference).find((node) => node.id === id) ?? null;
+}
+
+function normalizedSearchText(value: string | undefined) {
+  return (value ?? "").trim().toLowerCase();
+}
+
+function nodeTaskTypes(node: AppraiserCurriculumKernelNode) {
+  return node.examMode === "first" ? (node.firstExamTaskTypes ?? []) : (node.taskTypes ?? []);
+}
+
+export function findCurriculumCandidates(input: CurriculumCandidateInput, reference = loadAppraiserCurriculumReference()): AppraiserCurriculumKernelNode[] {
+  if (input.examMode !== "first" && input.examMode !== "second") return [];
+  const subject = normalizedSearchText(input.subject);
+  const text = normalizedSearchText(input.text);
+  const taskType = normalizedSearchText(input.taskType);
+  if (!subject && !text && !taskType) return [];
+
+  return getAppraiserCurriculumNodes(input.examMode, reference).filter((node) => {
+    const subjectMatches = !subject || node.subject.toLowerCase() === subject || node.subject.toLowerCase().includes(subject) || subject.includes(node.subject.toLowerCase());
+    if (!subjectMatches) return false;
+    const searchable = [node.subject, node.unit, node.topic, node.issue, ...(node.coreConcepts ?? []), ...(node.trapWords ?? []), ...(node.keyTerms ?? [])]
+      .filter((value): value is string => typeof value === "string")
+      .join(" ")
+      .toLowerCase();
+    const textMatches = !text || searchable.includes(text) || text.split(/\s+/).filter(Boolean).some((token) => searchable.includes(token));
+    const taskMatches = !taskType || nodeTaskTypes(node).some((entry) => entry.toLowerCase() === taskType || entry.toLowerCase().includes(taskType));
+    return textMatches && taskMatches;
+  });
+}
+
+export function getDefaultTaskTypesForNode(nodeId: string, reference = loadAppraiserCurriculumReference()): string[] {
+  const node = findCurriculumNodeById(nodeId, reference);
+  return node ? [...nodeTaskTypes(node)] : [];
+}
+
+export function getDefaultReviewPatternForNode(nodeId: string, reference = loadAppraiserCurriculumReference()): string | null {
+  return findCurriculumNodeById(nodeId, reference)?.defaultReviewPattern ?? null;
+}

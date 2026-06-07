@@ -153,3 +153,13 @@ Each concept node should be metadata-only and include:
 - One concept node should map to a clear next task, not a cluttered dashboard.
 - If more than three primary actions compete, Today Plan must reduce them to max three.
 - Curriculum data is a benchmark for future engines, not a UI change in this PR.
+
+## Appraiser curriculum kernel v1 addendum
+
+Inverge is not a question archive. The curriculum kernel is a metadata-only operating standard for turning learner traces into next actions: capture → diagnose → explain → practice → schedule → adapt.
+
+- 20-year past papers are reference metadata, not the product front door.
+- Capture-to-Note is the front door: a learner starts from their own captured note, result, or answer trace, then Inverge maps that trace to a stable curriculum node.
+- Curriculum nodes are the basis for Today Plan, Review Queue, O/X, cloze, calculation, and rewrite tasks.
+- Raw user OCR/problem/answer text must remain user-owned service data. Derived metadata/signals may drive product behavior when sanitized and detached from raw private text.
+- All nodes are draft metadata until official syllabus/current public notice verification is checked against Q-Net or other public official sources before production use.

@@ -61,6 +61,7 @@ export type CurriculumDocument = CurriculumReferenceMetadata & {
   activeLearningSubjects?: string[];
   excludedOfficialSubjects?: ExcludedOfficialSubject[];
   subjects: CurriculumSubject[];
+  nodes?: unknown[];
 };
 
 export type StudyTrackId = "first_30" | "first_60" | "first_90" | "first_120" | "second_90" | "second_180" | "second_365";
@@ -349,6 +350,7 @@ export function validateCurriculumDocument(raw: unknown, expectedExam: Appraiser
     ...(activeLearningSubjects === undefined ? {} : { activeLearningSubjects }),
     ...(excludedOfficialSubjects === undefined ? {} : { excludedOfficialSubjects }),
     subjects,
+    ...(Array.isArray(raw.nodes) ? { nodes: raw.nodes } : {}),
   };
 }
 

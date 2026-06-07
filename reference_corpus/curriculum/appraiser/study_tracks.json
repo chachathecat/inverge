@@ -42,9 +42,26 @@
         "cloze",
         "accounting template"
       ],
-      "sourceStatus": "internal_planning_needs_beta_review",
+      "sourceStatus": "draft",
       "needsOfficialVerification": true,
-      "verificationNote": "Internal schedule template; not an official Q-Net or statutory curriculum unit."
+      "verificationNote": "Internal schedule template; not an official Q-Net or statutory curriculum unit.",
+      "durationDays": 30,
+      "intendedLearner": "감정평가사 1차 수험생",
+      "dailyTemplate": [
+        "예정 복습",
+        "주 과제 1개",
+        "재시도 또는 복습 예약"
+      ],
+      "todayPlanMaxTasks": 3,
+      "prioritizationRules": [
+        "due_review",
+        "recent_wrong",
+        "confidence_gap",
+        "pass_risk",
+        "exam_urgency",
+        "missed_recently",
+        "weak_structure"
+      ]
     },
     "first_60": {
       "examMode": "first",
@@ -74,9 +91,26 @@
         "cloze",
         "accounting template"
       ],
-      "sourceStatus": "internal_planning_needs_beta_review",
+      "sourceStatus": "draft",
       "needsOfficialVerification": true,
-      "verificationNote": "Internal schedule template; not an official Q-Net or statutory curriculum unit."
+      "verificationNote": "Internal schedule template; not an official Q-Net or statutory curriculum unit.",
+      "durationDays": 60,
+      "intendedLearner": "감정평가사 1차 수험생",
+      "dailyTemplate": [
+        "예정 복습",
+        "주 과제 1개",
+        "재시도 또는 복습 예약"
+      ],
+      "todayPlanMaxTasks": 3,
+      "prioritizationRules": [
+        "due_review",
+        "recent_wrong",
+        "confidence_gap",
+        "pass_risk",
+        "exam_urgency",
+        "missed_recently",
+        "weak_structure"
+      ]
     },
     "first_90": {
       "examMode": "first",
@@ -104,9 +138,26 @@
         "O/X",
         "cloze"
       ],
-      "sourceStatus": "internal_planning_needs_beta_review",
+      "sourceStatus": "draft",
       "needsOfficialVerification": true,
-      "verificationNote": "Internal schedule template; not an official Q-Net or statutory curriculum unit."
+      "verificationNote": "Internal schedule template; not an official Q-Net or statutory curriculum unit.",
+      "durationDays": 90,
+      "intendedLearner": "감정평가사 1차 수험생",
+      "dailyTemplate": [
+        "예정 복습",
+        "주 과제 1개",
+        "재시도 또는 복습 예약"
+      ],
+      "todayPlanMaxTasks": 3,
+      "prioritizationRules": [
+        "due_review",
+        "recent_wrong",
+        "confidence_gap",
+        "pass_risk",
+        "exam_urgency",
+        "missed_recently",
+        "weak_structure"
+      ]
     },
     "first_120": {
       "examMode": "first",
@@ -134,9 +185,26 @@
         "spaced review",
         "retry"
       ],
-      "sourceStatus": "internal_planning_needs_beta_review",
+      "sourceStatus": "draft",
       "needsOfficialVerification": true,
-      "verificationNote": "Internal schedule template; not an official Q-Net or statutory curriculum unit."
+      "verificationNote": "Internal schedule template; not an official Q-Net or statutory curriculum unit.",
+      "durationDays": 120,
+      "intendedLearner": "감정평가사 1차 수험생",
+      "dailyTemplate": [
+        "예정 복습",
+        "주 과제 1개",
+        "재시도 또는 복습 예약"
+      ],
+      "todayPlanMaxTasks": 3,
+      "prioritizationRules": [
+        "due_review",
+        "recent_wrong",
+        "confidence_gap",
+        "pass_risk",
+        "exam_urgency",
+        "missed_recently",
+        "weak_structure"
+      ]
     },
     "second_90": {
       "examMode": "second",
@@ -164,9 +232,26 @@
         "CASIO",
         "scheduled review"
       ],
-      "sourceStatus": "internal_planning_needs_beta_review",
+      "sourceStatus": "draft",
       "needsOfficialVerification": true,
-      "verificationNote": "Internal schedule template; not an official Q-Net or statutory curriculum unit."
+      "verificationNote": "Internal schedule template; not an official Q-Net or statutory curriculum unit.",
+      "durationDays": 90,
+      "intendedLearner": "감정평가사 2차 수험생",
+      "dailyTemplate": [
+        "예정 복습",
+        "주 과제 1개",
+        "재시도 또는 복습 예약"
+      ],
+      "todayPlanMaxTasks": 3,
+      "prioritizationRules": [
+        "due_review",
+        "recent_wrong",
+        "confidence_gap",
+        "pass_risk",
+        "exam_urgency",
+        "missed_recently",
+        "weak_structure"
+      ]
     },
     "second_180": {
       "examMode": "second",
@@ -195,9 +280,26 @@
         "CASIO",
         "issue spotting"
       ],
-      "sourceStatus": "internal_planning_needs_beta_review",
+      "sourceStatus": "draft",
       "needsOfficialVerification": true,
-      "verificationNote": "Internal schedule template; not an official Q-Net or statutory curriculum unit."
+      "verificationNote": "Internal schedule template; not an official Q-Net or statutory curriculum unit.",
+      "durationDays": 180,
+      "intendedLearner": "감정평가사 2차 수험생",
+      "dailyTemplate": [
+        "예정 복습",
+        "주 과제 1개",
+        "재시도 또는 복습 예약"
+      ],
+      "todayPlanMaxTasks": 3,
+      "prioritizationRules": [
+        "due_review",
+        "recent_wrong",
+        "confidence_gap",
+        "pass_risk",
+        "exam_urgency",
+        "missed_recently",
+        "weak_structure"
+      ]
     },
     "second_365": {
       "examMode": "second",
@@ -225,9 +327,26 @@
         "weekly full answer",
         "rewrite"
       ],
-      "sourceStatus": "internal_planning_needs_beta_review",
+      "sourceStatus": "draft",
       "needsOfficialVerification": true,
-      "verificationNote": "Internal schedule template; not an official Q-Net or statutory curriculum unit."
+      "verificationNote": "Internal schedule template; not an official Q-Net or statutory curriculum unit.",
+      "durationDays": 365,
+      "intendedLearner": "감정평가사 2차 수험생",
+      "dailyTemplate": [
+        "예정 복습",
+        "주 과제 1개",
+        "재시도 또는 복습 예약"
+      ],
+      "todayPlanMaxTasks": 3,
+      "prioritizationRules": [
+        "due_review",
+        "recent_wrong",
+        "confidence_gap",
+        "pass_risk",
+        "exam_urgency",
+        "missed_recently",
+        "weak_structure"
+      ]
     }
   },
   "dailyTemplates": {
@@ -269,5 +388,15 @@
       "reviewedAt": "2026-06-02",
       "scope": "official_exam_administrator_and_public_exam_information_page"
     }
+  ],
+  "productionVerificationNote": "Draft metadata only. Official exam syllabus and current public notices must be verified against Q-Net or official sources before production use.",
+  "prioritizationRules": [
+    "due_review",
+    "recent_wrong",
+    "confidence_gap",
+    "pass_risk",
+    "exam_urgency",
+    "missed_recently",
+    "weak_structure"
   ]
 }

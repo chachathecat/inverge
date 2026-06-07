@@ -111,3 +111,14 @@ Morning brief behavior must avoid fake urgency, ranking pressure, casino-style g
 ## Verification policy
 
 Schedule labels and subject assumptions must be connected to curriculum metadata that has Q-Net/current official notice verification before production use.
+
+## Study schedule kernel v1 addendum
+
+Inverge is not a question archive. Study tracks convert curriculum metadata and learner signals into a calm Today Plan max 3 operating contract.
+
+- Capture-to-Note is the front door; schedule decisions should start from captured learner traces and derived metadata.
+- 20-year past papers are reference metadata, not the product front door.
+- Curriculum nodes are the basis for Today Plan, Review Queue, O/X, cloze, calculation, and rewrite.
+- The schedule kernel ranks due review, recent wrong, confidence gap, pass risk, exam urgency, missed recently, and weak structure.
+- Raw user OCR/problem/answer text must remain user-owned service data. Derived metadata/signals may drive product behavior after sanitization.
+- Official syllabus, exam calendar, and current public notices require Q-Net/current official notice verification before production use.

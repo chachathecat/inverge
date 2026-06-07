@@ -719,5 +719,193 @@
       "reviewedAt": "2026-06-02",
       "scope": "official_exam_administrator_and_public_exam_information_page"
     }
+  ],
+  "productionVerificationNote": "Draft metadata only. Official exam syllabus and current public notices must be verified against Q-Net or official sources before production use.",
+  "nodes": [
+    {
+      "id": "first_civil_incapacity_legal_act",
+      "examMode": "first",
+      "subject": "민법",
+      "unit": "민법총칙",
+      "topic": "의사무능력자의 법률행위",
+      "importance": "critical",
+      "passRiskContribution": "민법 기본효력 판단을 흔들어 O/X와 취소·무효 구분 오류로 이어지는 고위험 노드입니다.",
+      "firstExamTaskTypes": [
+        "ox",
+        "cloze",
+        "trap_word",
+        "concept_recall"
+      ],
+      "coreConcepts": [
+        "의사능력",
+        "법률행위 효력",
+        "무효"
+      ],
+      "trapWords": [
+        "취소할 수 있다",
+        "추인하면 유효",
+        "제한능력자와 동일"
+      ],
+      "defaultReviewPattern": "당일 O/X → 2일 뒤 cloze → 7일 뒤 trap_word → 21일 뒤 concept_recall",
+      "secondExamBridge": "2차 법규형 문장에서는 정의-요건-효과의 짧은 구조로 전환합니다.",
+      "sourceStatus": "draft",
+      "needsOfficialVerification": true,
+      "lastReviewedAt": "2026-06-06"
+    },
+    {
+      "id": "first_civil_nullity_rescission",
+      "examMode": "first",
+      "subject": "민법",
+      "unit": "민법총칙",
+      "topic": "무효와 취소",
+      "importance": "critical",
+      "passRiskContribution": "민법 전 범위에서 효과·추인·제3자 보호 판단을 좌우해 반복 오답 기여도가 높습니다.",
+      "firstExamTaskTypes": [
+        "ox",
+        "cloze",
+        "trap_word",
+        "concept_recall"
+      ],
+      "coreConcepts": [
+        "무효",
+        "취소",
+        "추인",
+        "제3자 보호"
+      ],
+      "trapWords": [
+        "소급하여",
+        "처음부터",
+        "선의의 제3자",
+        "추인"
+      ],
+      "defaultReviewPattern": "당일 trap_word → 3일 뒤 O/X → 10일 뒤 cloze → 30일 뒤 mixed review",
+      "secondExamBridge": "2차 쟁점 정리 시 법률효과 비교표를 문장형 답안으로 전환합니다.",
+      "sourceStatus": "draft",
+      "needsOfficialVerification": true,
+      "lastReviewedAt": "2026-06-06"
+    },
+    {
+      "id": "first_econ_elasticity_market",
+      "examMode": "first",
+      "subject": "경제학원론",
+      "unit": "미시경제",
+      "topic": "수요·공급 탄력성과 시장균형",
+      "importance": "high",
+      "passRiskContribution": "그래프 해석과 계산형 판단이 함께 출제될 수 있어 경제학 과락 위험을 줄이는 핵심 노드입니다.",
+      "firstExamTaskTypes": [
+        "ox",
+        "cloze",
+        "calculation_template",
+        "concept_recall"
+      ],
+      "coreConcepts": [
+        "가격탄력성",
+        "시장균형",
+        "초과수요",
+        "초과공급"
+      ],
+      "trapWords": [
+        "기울기와 탄력성 동일시",
+        "수요량과 수요 변화 혼동"
+      ],
+      "defaultReviewPattern": "계산틀 → O/X → 4일 뒤 그래프 cloze → 14일 뒤 재계산",
+      "secondExamBridge": "실무 수요·수익 가정 검토에서 민감도 설명으로 연결합니다.",
+      "sourceStatus": "draft",
+      "needsOfficialVerification": true,
+      "lastReviewedAt": "2026-06-06"
+    },
+    {
+      "id": "first_real_estate_income_approach",
+      "examMode": "first",
+      "subject": "부동산학원론",
+      "unit": "감정평가 기초",
+      "topic": "수익환원법",
+      "importance": "critical",
+      "passRiskContribution": "1차 부동산학과 2차 실무를 잇는 핵심 방식으로 공식·용어 혼동이 누적되기 쉽습니다.",
+      "firstExamTaskTypes": [
+        "ox",
+        "cloze",
+        "calculation_template",
+        "concept_recall"
+      ],
+      "coreConcepts": [
+        "순수익",
+        "환원이율",
+        "수익가액",
+        "직접환원"
+      ],
+      "trapWords": [
+        "할인율과 환원이율 혼동",
+        "순영업소득 누락",
+        "기준시점"
+      ],
+      "defaultReviewPattern": "cloze → calculation_template → 5일 뒤 O/X → 21일 뒤 bridge review",
+      "secondExamBridge": "2차 감정평가실무의 수익방식 계산틀과 검산 루틴으로 연결합니다.",
+      "sourceStatus": "draft",
+      "needsOfficialVerification": true,
+      "lastReviewedAt": "2026-06-06"
+    },
+    {
+      "id": "first_appraisal_law_project_approval",
+      "examMode": "first",
+      "subject": "감정평가관계법규",
+      "unit": "공익사업 보상",
+      "topic": "사업인정의 처분성",
+      "importance": "high",
+      "passRiskContribution": "법규 과목에서 행정법적 효과와 보상절차를 연결하는 함정 빈도가 높은 노드입니다.",
+      "firstExamTaskTypes": [
+        "ox",
+        "cloze",
+        "trap_word",
+        "concept_recall"
+      ],
+      "coreConcepts": [
+        "사업인정",
+        "처분성",
+        "수용절차",
+        "권리구제"
+      ],
+      "trapWords": [
+        "단순 내부행위",
+        "고시만으로 효력 없음",
+        "권리변동 없음"
+      ],
+      "defaultReviewPattern": "O/X → trap_word → 6일 뒤 cloze → 18일 뒤 concept_recall",
+      "secondExamBridge": "2차 보상법규에서 쟁점제시-법리-사안적용 문단으로 전환합니다.",
+      "sourceStatus": "draft",
+      "needsOfficialVerification": true,
+      "lastReviewedAt": "2026-06-06"
+    },
+    {
+      "id": "first_accounting_inventory_lcm",
+      "examMode": "first",
+      "subject": "회계학",
+      "unit": "재무회계",
+      "topic": "재고자산 저가법",
+      "importance": "high",
+      "passRiskContribution": "회계학 점수 방어에 필요한 회계처리 방향·손실 인식·기말평가 판단을 묶는 노드입니다.",
+      "firstExamTaskTypes": [
+        "ox",
+        "cloze",
+        "accounting_template",
+        "calculation_template"
+      ],
+      "coreConcepts": [
+        "원가",
+        "순실현가능가치",
+        "저가평가",
+        "평가손실"
+      ],
+      "trapWords": [
+        "높은 금액",
+        "평가이익",
+        "매출원가 방향"
+      ],
+      "defaultReviewPattern": "accounting_template → cloze → 3일 뒤 calculation_template → 10일 뒤 O/X",
+      "secondExamBridge": "2차 직접 연결은 낮지만 계산 서술의 입력값-공식-효과 분리 습관으로 연결합니다.",
+      "sourceStatus": "draft",
+      "needsOfficialVerification": true,
+      "lastReviewedAt": "2026-06-06"
+    }
   ]
 }
