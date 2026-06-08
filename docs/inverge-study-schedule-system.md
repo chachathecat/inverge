@@ -132,3 +132,14 @@ PR #339 adds helper-level curriculum-derived Today Plan and Review Queue candida
 - In 2차, weak structure, missing issue, or paragraph weakness raises rewrite priority; 실무 calculation/CASIO priority is used only for calculation-like captures.
 - Visible Today Plan titles are derived action summaries from subject, curriculum topic, gap label, next action, and estimated minutes, not raw problem/question text.
 - This remains metadata-only and does not enable durable production rollout, live notification, payment, public archive, or new exam behavior.
+
+## PR #340 learning state priority addendum
+
+PR #340 extends schedule and Today Plan priority with curriculum-anchored personal learning state metadata.
+
+- State update candidates are metadata-only and contain no raw learner text. They record concept node, prior/next status, reason, priority delta, confidence delta, source event type, and a next review candidate.
+- Learning state is not official grading, scoring, pass/fail prediction, official model-answer comparison, or 합격 보장. It is a deterministic operations signal for selecting the next task.
+- The learner owns raw capture/rewrite/answer text. The schedule layer may consume sanitized state metadata, but raw text must not enter Today Plan candidates, Review Queue candidates, or reference corpus storage.
+- Priority order now accounts for concept state risk: `confident_wrong` > `wrong` > `confused`; due `recovering` review beats generic new study; `stable` is lower priority unless a scheduled review is due.
+- OCR-pending captures must surface OCR confirmation before concept practice. Pending OCR cannot improve a concept to `stable`.
+- The max-three visible Today Plan rule remains non-negotiable, and durable Today Plan rollout remains gated/off by default.

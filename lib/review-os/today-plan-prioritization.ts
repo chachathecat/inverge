@@ -6,6 +6,7 @@ import {
 } from "./execution-review-queue";
 import { normalizeCurriculumTaskType } from "./curriculum-engine";
 import { type AppraiserExamMode } from "./curriculum-reference";
+import { rankLearningStateRisk, type PersonalLearningStatus, type PersonalLearningSourceEventType } from "./personal-learning-state-engine";
 
 export type TodayPlanPrioritizationContext = {
   examMode?: AppraiserExamMode | "mixed";
@@ -50,6 +51,12 @@ export type TodayPlanTask = {
   dueBucket: ReviewQueueDueBucket;
   isPrimaryTask: true;
   metadataOnly: true;
+  conceptNodeId?: string;
+  previousStatus?: PersonalLearningStatus;
+  targetStatus?: PersonalLearningStatus;
+  sourceEventType?: PersonalLearningSourceEventType;
+  reviewPattern?: string | null;
+  dueAtCandidate?: string;
 };
 
 export type TodayPlanSelectionExplanation = {
@@ -149,6 +156,13 @@ function buildPrioritySignals(item: ReviewQueueItem, context: TodayPlanPrioritiz
   const taskType = normalizeTaskType(item.taskType);
 
   if (!signals.includes("review_candidate")) signals.push("review_candidate");
+  if (item.targetStatus && !signals.includes(`learning_state:${item.targetStatus}`)) signals.push(`learning_state:${item.targetStatus}`);
+  if (item.previousStatus && !signals.includes(`previous_learning_state:${item.previousStatus}`)) signals.push(`previous_learning_state:${item.previousStatus}`);
+  if (item.targetStatus === "confident_wrong" && !signals.includes("confident_wrong_concept")) signals.push("confident_wrong_concept");
+  if (item.targetStatus === "wrong" && !signals.includes("wrong_concept")) signals.push("wrong_concept");
+  if (item.targetStatus === "confused" && !signals.includes("confused_concept")) signals.push("confused_concept");
+  if (item.previousStatus === "recovering" && !signals.includes("recovering_due_review")) signals.push("recovering_due_review");
+  if (/ocr_confirm/i.test(String(item.reviewPattern ?? item.taskType)) && !signals.includes("ocr_confirmation_pending")) signals.push("ocr_confirmation_pending");
   if (isRewriteTask(taskType, signals) && !signals.includes("rewrite_candidate")) signals.push("rewrite_candidate");
   if (matchesWeakSubject(item, context) && !signals.includes("fail_risk_subject")) signals.push("fail_risk_subject");
   if (isExamProximity(context) && !signals.includes("exam_proximity")) signals.push("exam_proximity");
@@ -264,6 +278,12 @@ function toTodayPlanTask(item: ReviewQueueItem, context: TodayPlanPrioritization
     dueBucket: item.dueBucket,
     isPrimaryTask: true,
     metadataOnly: true,
+    ...(item.conceptNodeId ? { conceptNodeId: item.conceptNodeId } : {}),
+    ...(item.previousStatus ? { previousStatus: item.previousStatus } : {}),
+    ...(item.targetStatus ? { targetStatus: item.targetStatus } : {}),
+    ...(item.sourceEventType ? { sourceEventType: item.sourceEventType } : {}),
+    ...("reviewPattern" in item ? { reviewPattern: item.reviewPattern } : {}),
+    ...(item.dueAtCandidate ? { dueAtCandidate: item.dueAtCandidate } : {}),
   };
 
   assertNoRawTextKeys(task);
@@ -276,6 +296,12 @@ function calculateCandidateScore(candidate: TodayPlanTask, context: TodayPlanPri
   let score = 100 - DUE_BUCKET_RANK[candidate.dueBucket] * 28;
   if (candidate.prioritySignals.includes("fail_risk_subject")) score += isSevereFailRisk(candidate, context) ? 95 : 36;
   if (candidate.prioritySignals.includes("exam_proximity")) score += 30;
+  if (candidate.prioritySignals.includes("ocr_confirmation_pending")) score += 130;
+  if (candidate.prioritySignals.includes("confident_wrong_concept")) score += 82;
+  if (candidate.prioritySignals.includes("wrong_concept")) score += 66;
+  if (candidate.prioritySignals.includes("confused_concept")) score += 48;
+  if (candidate.prioritySignals.includes("recovering_due_review")) score += candidate.dueBucket === "soon" || candidate.dueBucket === "tomorrow" ? 70 : 22;
+  if (candidate.targetStatus) score += rankLearningStateRisk(candidate.targetStatus) * 0.35;
   if (candidate.prioritySignals.includes("rewrite_candidate")) score += 18;
   if (candidate.prioritySignals.includes("recovery_candidate")) score += 16;
   if (candidate.prioritySignals.includes("confidence:needs_check")) score += 10;

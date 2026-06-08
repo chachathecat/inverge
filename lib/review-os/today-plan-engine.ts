@@ -1,5 +1,6 @@
 import type { ConfidenceLevel, LearningSignalEventRecord, ReviewQueueCard, WrongAnswerItemRecord } from "@/lib/review-os/types";
 import { buildTodayPlanDisplayCopy, type TodayPlanDisplayCopy } from "./today-plan-display-copy";
+import { rankLearningStateRisk } from "./personal-learning-state-engine";
 import { capTodayPlanTasks, rankTodayPlanCandidates } from "./study-schedule-engine";
 
 export type TodayPlanTaskType =
@@ -44,6 +45,10 @@ export type TodayPlanTask = {
     estimatedMinutes?: number;
     reviewPattern?: unknown;
     priority?: number;
+    conceptNodeId?: string;
+    previousStatus?: string;
+    targetStatus?: string;
+    sourceEventType?: "capture" | "review" | "session";
   };
 };
 
@@ -293,6 +298,10 @@ function toItemTask(item: WrongAnswerItemRecord, mode: "first" | "second", now: 
         ...(typeof curriculumTodayPlanCandidate.estimatedMinutes === "number" ? { estimatedMinutes: curriculumTodayPlanCandidate.estimatedMinutes } : {}),
         ...("reviewPattern" in curriculumTodayPlanCandidate ? { reviewPattern: curriculumTodayPlanCandidate.reviewPattern } : {}),
         ...(typeof curriculumTodayPlanCandidate.priority === "number" ? { priority: curriculumTodayPlanCandidate.priority } : {}),
+        ...(typeof curriculumSignal.conceptNodeId === "string" ? { conceptNodeId: curriculumSignal.conceptNodeId } : {}),
+        ...(isRecord(curriculumSignal.learningStateUpdateCandidate) && typeof curriculumSignal.learningStateUpdateCandidate.previousStatus === "string" ? { previousStatus: curriculumSignal.learningStateUpdateCandidate.previousStatus } : {}),
+        ...(isRecord(curriculumSignal.learningStateUpdateCandidate) && typeof curriculumSignal.learningStateUpdateCandidate.nextStatus === "string" ? { targetStatus: curriculumSignal.learningStateUpdateCandidate.nextStatus } : {}),
+        ...(isRecord(curriculumSignal.learningStateUpdateCandidate) && typeof curriculumSignal.learningStateUpdateCandidate.sourceEventType === "string" ? { sourceEventType: curriculumSignal.learningStateUpdateCandidate.sourceEventType as "capture" | "review" | "session" } : {}),
       }
     : undefined;
   const biggestGap = String(curriculumSignal?.gapLabel ?? item.biggestGap ?? item.missingIssue ?? captureNote?.one_biggest_gap ?? item.userReasonPreset ?? "가장 큰 간극 1개를 확인합니다.");
@@ -322,6 +331,9 @@ function toItemTask(item: WrongAnswerItemRecord, mode: "first" | "second", now: 
       estimated = typeof curriculumTodayPlanCandidate.estimatedMinutes === "number" ? curriculumTodayPlanCandidate.estimatedMinutes : estimated;
       sourceLabel = "커리큘럼 연결 캡처 기반";
       score += typeof curriculumTodayPlanCandidate.priority === "number" ? Math.round(curriculumTodayPlanCandidate.priority * 0.4) : 24;
+      if (isRecord(curriculumSignal.learningStateUpdateCandidate) && typeof curriculumSignal.learningStateUpdateCandidate.nextStatus === "string") {
+        score += Math.round(rankLearningStateRisk(curriculumSignal.learningStateUpdateCandidate.nextStatus) * 0.35);
+      }
     }
   } else if (!taskType && mode === "second" && (item.missingIssue || item.weakStructurePoint || item.rewriteInstruction || item.rewriteCompleted === false)) {
     taskType = "second_answer_rewrite";

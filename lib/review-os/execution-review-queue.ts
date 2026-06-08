@@ -9,6 +9,7 @@ import {
   type ExecutionReviewDueHint,
 } from "./execution-learning-signal";
 import { type AppraiserExamMode } from "./curriculum-reference";
+import { rankLearningStateRisk, type PersonalLearningStatus, type PersonalLearningSourceEventType } from "./personal-learning-state-engine";
 
 export type ReviewQueueDueBucket = "soon" | "tomorrow" | "three_days" | "one_week";
 
@@ -33,6 +34,12 @@ export type ExecutionReviewQueueItem = {
   metadataOnly: true;
   createdAt?: string;
   priorityScore: number;
+  conceptNodeId?: string;
+  previousStatus?: PersonalLearningStatus;
+  targetStatus?: PersonalLearningStatus;
+  sourceEventType?: PersonalLearningSourceEventType;
+  reviewPattern?: string | null;
+  dueAtCandidate?: string;
 };
 
 export type ReviewQueueItem = ExecutionReviewQueueItem;
@@ -175,7 +182,7 @@ export function buildStableReviewQueueItemId(signal: ExecutionLearningSignal) {
   ].join(":");
 }
 
-export function calculateReviewQueuePriorityScore(item: Pick<ReviewQueueItem, "dueBucket" | "prioritySignals" | "sourceResult" | "taskType">) {
+export function calculateReviewQueuePriorityScore(item: Pick<ReviewQueueItem, "dueBucket" | "prioritySignals" | "sourceResult" | "taskType"> & { previousStatus?: PersonalLearningStatus; targetStatus?: PersonalLearningStatus }) {
   let score = 100 - DUE_BUCKET_RANK[item.dueBucket] * 20;
   if (item.prioritySignals.includes("fail_risk_subject")) score += 40;
   if (item.prioritySignals.includes("exam_proximity")) score += 30;
@@ -186,6 +193,8 @@ export function calculateReviewQueuePriorityScore(item: Pick<ReviewQueueItem, "d
   if (item.prioritySignals.includes("accounting_template_review")) score += 8;
   if (item.prioritySignals.includes("review_candidate")) score += 6;
   if (item.prioritySignals.includes("confidence:needs_check")) score += 4;
+  if ("targetStatus" in item && item.targetStatus) score += rankLearningStateRisk(item.targetStatus) * 0.45;
+  if ("previousStatus" in item && item.previousStatus === "recovering" && item.dueBucket === "soon") score += 20;
   return score;
 }
 

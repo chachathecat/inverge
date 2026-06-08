@@ -173,3 +173,16 @@ PR #339 wires the appraiser curriculum kernel into the learner Capture → Note 
 - First-mode captures map only to first-mode curriculum nodes; second-mode captures map only to second-mode nodes, with subject-aware preferences for 법규 legal issue/rewrite, 실무 calculation/CASIO only when calculation-like, and 이론 keyword/logic work.
 - This is not a production durable rollout. It does not enable durable production reads/writes, public archive UI, payment, notifications, native behavior, or new exams.
 - The integration keeps official-verification language separate from learner claims: no official grading, score, pass/fail, official model answer, or 합격 보장 copy.
+
+## PR #340 personal learning state layer
+
+PR #340 adds a deterministic, curriculum-anchored personal learning state engine at helper level. The learner loop now has a metadata-only bridge from “this capture maps to a curriculum node” to “this learner’s concept state changed because of a capture, review, rewrite, or session result.”
+
+- Concept state uses only metadata: `userId`, `conceptNodeId`, `examMode`, `subject`, prior/next status, reason, priority/confidence deltas, review pattern, and a candidate next review time.
+- Supported statuses are `unknown`, `confused`, `wrong`, `confident_wrong`, `recovering`, and `stable`.
+- State transitions are not official grading, score prediction, pass/fail judgment, official model answers, or 합격 보장. They are operational learning signals for deciding the next retrieval, rewrite, OCR confirmation, or scheduled review.
+- The learner owns raw text. Raw OCR/problem/answer/source/copyright text must remain in user-owned service surfaces and must not be stored in the reference corpus or emitted in state update candidates.
+- Capture signals may include `learningStateUpdateCandidate` only as metadata. Unsupported exam modes or unmatched nodes keep `safeFallbackReason` and do not throw.
+- Today Plan and Review Queue may use concept state risk for priority: `confident_wrong` outranks `wrong`, `wrong` outranks `confused`, due `recovering` work outranks generic new study, and `stable` remains lower priority unless due.
+- OCR confirmation pending must schedule OCR confirmation before concept practice and must not mark the concept as `stable`.
+- This remains helper-level and metadata-only; it does not enable production durable reads/writes by default.
