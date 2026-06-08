@@ -1,0 +1,18 @@
+{
+  "name": "invalid raw problem/answer text leak",
+  "expectedStatus": "fail",
+  "expectedFailedChecks": ["noRawTextLeak"],
+  "context": { "examMode": "first", "subject": "민법", "conceptLabel": "무효와 취소", "rawTextLeakMarkers": ["다음 중 옳은 것은" ] },
+  "ladder": {
+    "metadataOnly": true,
+    "conceptLabel": "무효와 취소",
+    "subject": "민법",
+    "examMode": "first",
+    "entries": [
+      { "label": "1타 쉬운풀이", "text": "무효는 처음부터 효력이 없고 취소는 취소권 행사로 효과를 뒤집습니다." },
+      { "label": "합격 한 줄", "text": "문제 원문: 다음 중 옳은 것은 이라는 문장을 그대로 두면 안 됩니다." },
+      { "label": "출제자 함정", "text": "추인과 제3자 보호 표현을 구분합니다." },
+      { "label": "10초 확인", "text": "O/X: 취소는 취소 전까지 유효한 상태이다." }
+    ]
+  }
+}

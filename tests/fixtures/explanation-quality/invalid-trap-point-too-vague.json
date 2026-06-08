@@ -1,0 +1,18 @@
+{
+  "name": "invalid trap point too vague",
+  "expectedStatus": "needs_revision",
+  "expectedFailedChecks": ["trapPointSpecificity"],
+  "context": { "examMode": "second", "subject": "감정평가 및 보상법규", "conceptLabel": "사업인정의 처분성" },
+  "ladder": {
+    "metadataOnly": true,
+    "conceptLabel": "사업인정의 처분성",
+    "subject": "감정평가 및 보상법규",
+    "examMode": "second",
+    "entries": [
+      { "label": "1타 쉬운풀이", "text": "사업인정은 공익사업에 법적 효과를 연결해 권리구제 출발점이 될 수 있습니다." },
+      { "label": "합격 한 줄", "text": "사업인정은 권리변동 가능성을 여는 처분성 쟁점으로 검토합니다." },
+      { "label": "출제자 함정", "text": "중요한 부분이니 주의하세요." },
+      { "label": "10초 확인", "text": "O/X: 사업인정은 권리구제와 무관한 단순 내부 검토에 그친다." }
+    ]
+  }
+}

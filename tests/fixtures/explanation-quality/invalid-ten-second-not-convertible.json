@@ -1,0 +1,18 @@
+{
+  "name": "invalid 10초 확인 not convertible to O/X or cloze",
+  "expectedStatus": "needs_revision",
+  "expectedFailedChecks": ["tenSecondCheckConvertible"],
+  "context": { "examMode": "second", "subject": "감정평가실무", "conceptLabel": "수익환원법" },
+  "ladder": {
+    "metadataOnly": true,
+    "conceptLabel": "수익환원법",
+    "subject": "감정평가실무",
+    "examMode": "second",
+    "entries": [
+      { "label": "1타 쉬운풀이", "text": "수익환원법은 앞으로 벌 순수익을 현재 가치로 바꾸어 가격을 구하는 방식입니다." },
+      { "label": "합격 한 줄", "text": "수익가액은 순수익을 적정 환원이율로 환원해 산정합니다." },
+      { "label": "출제자 함정", "text": "순수익, 환원이율, 기준시점, 단위를 분리해 검산합니다." },
+      { "label": "10초 확인", "text": "수익환원법 내용을 다시 읽어 봅니다." }
+    ]
+  }
+}

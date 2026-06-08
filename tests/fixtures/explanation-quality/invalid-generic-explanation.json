@@ -1,0 +1,18 @@
+{
+  "name": "invalid generic explanation",
+  "expectedStatus": "needs_revision",
+  "expectedFailedChecks": ["beginnerClarity", "examUsefulness", "trapPointSpecificity"],
+  "context": { "examMode": "first", "subject": "민법", "conceptLabel": "무효와 취소" },
+  "ladder": {
+    "metadataOnly": true,
+    "conceptLabel": "무효와 취소",
+    "subject": "민법",
+    "examMode": "first",
+    "entries": [
+      { "label": "1타 쉬운풀이", "text": "중요한 개념입니다. 잘 이해해야 합니다." },
+      { "label": "합격 한 줄", "text": "내용을 정리하면 됩니다." },
+      { "label": "출제자 함정", "text": "주의하세요." },
+      { "label": "10초 확인", "text": "O/X: 이 개념은 중요하다." }
+    ]
+  }
+}

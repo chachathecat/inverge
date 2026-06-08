@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
+import { evaluateExplanationLadderQuality } from "../lib/review-os/explanation-quality-eval.ts";
 
 const path = "reference_corpus/curriculum/appraiser/explanation_ladder.json";
 const requiredLabels = ["1타 쉬운풀이", "합격 한 줄", "출제자 함정", "10초 확인"];
@@ -18,6 +19,13 @@ test("explanation ladder metadata includes required labels and original concept 
   for (const template of ladder.templates) {
     for (const label of requiredLabels) assert.equal(typeof template.ladder[label], "string");
     assert.match(template.ladder["10초 확인"], /O\/X|cloze|____|빈칸/);
+    const result = evaluateExplanationLadderQuality({
+      metadataOnly: true,
+      conceptLabel: template.concept,
+      subject: "감정평가사",
+      entries: requiredLabels.map((label) => ({ label, text: template.ladder[label] })),
+    }, { conceptLabel: template.concept });
+    assert.equal(result.status, "pass", `${template.concept} should pass quality eval: ${JSON.stringify(result)}`);
   }
 });
 
@@ -26,6 +34,7 @@ test("explanation ladder helper builds and validates O/X or cloze-compatible che
   const ladder = helper.buildExplanationLadder({ conceptLabel: "사업인정의 처분성", subject: "감정평가 및 보상법규", examMode: "second" });
   for (const label of requiredLabels) assert.equal(ladder.entries.some((entry) => entry.label === label), true);
   assert.equal(helper.validateExplanationLadder(ladder), true);
+  assert.equal(evaluateExplanationLadderQuality(ladder, { conceptLabel: ladder.conceptLabel, subject: ladder.subject, examMode: ladder.examMode }).status, "pass");
   const check = helper.toTenSecondCheck(ladder);
   assert.ok(check);
   assert.match(check.text, /O\/X|cloze|____|빈칸/);
@@ -44,6 +53,7 @@ test("fallback explanation ladder sanitizes forbidden learner-derived labels", a
   const serialized = JSON.stringify(ladder);
 
   assert.equal(helper.validateExplanationLadder(ladder), true);
+  assert.equal(evaluateExplanationLadderQuality(ladder, { conceptLabel: ladder.conceptLabel, subject: ladder.subject, examMode: ladder.examMode }).status, "pass");
   assert.equal(ladder.conceptLabel, "확인할 개념");
   assert.equal(ladder.subject, "해당 과목");
   assert.equal(ladder.learnerLevel, undefined);
@@ -58,6 +68,7 @@ test("fallback explanation ladder sanitizes unsafe subject without emitting it",
   const serialized = JSON.stringify(ladder);
 
   assert.equal(helper.validateExplanationLadder(ladder), true);
+  assert.equal(evaluateExplanationLadderQuality(ladder, { conceptLabel: ladder.conceptLabel, subject: ladder.subject, examMode: ladder.examMode }).status, "pass");
   assert.equal(ladder.conceptLabel, "처음 보는 논점");
   assert.equal(ladder.subject, "해당 과목");
   for (const label of requiredLabels) assert.equal(ladder.entries.some((entry) => entry.label === label), true);

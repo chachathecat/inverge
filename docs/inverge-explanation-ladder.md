@@ -72,3 +72,18 @@ PR #339 connects the explanation ladder to curriculum-anchored capture signals.
 - Today Plan primary cards should not show the long generated explanation by default; full explanation belongs only in learner-owned detail/review surfaces.
 - The ladder summary is metadata-only and keeps raw learner OCR/problem/answer/source text out of shared outputs.
 - Generated summaries must validate with the explanation ladder contract and must not claim official grading, official model answers, score, pass/fail, or 합격 보장.
+
+## PR #343 explanation quality harness
+
+PR #343 adds the deterministic Explanation Quality Eval Harness v1 so explanations are measurable, not just prompt-shaped. Every generated ladder must pass `evaluateExplanationLadderQuality` before it is returned by the helper.
+
+Required measurable gates:
+
+- The four ladder labels are mandatory: **1타 쉬운풀이**, **합격 한 줄**, **출제자 함정**, **10초 확인**.
+- **10초 확인** must be practice-convertible: either `O/X:` or `cloze:`/blank-compatible.
+- The explanation must be clear for a beginner, useful for 감정평가사 exam practice, specific about the 출제자 함정, concise, and action-oriented.
+- Official grading, official/model answer, score prediction, pass/fail judgment, and **합격보장** claims are forbidden.
+- Raw learner/problem/answer/OCR/source/copyright text must not leak into the reusable explanation ladder or reference corpus.
+- If a learner-derived concept or subject label contains unsafe wording, the ladder helper sanitizes it or returns a safe metadata-only fallback.
+
+The harness is static and deterministic. It does not call external APIs and does not enable any production durable rollout by default.

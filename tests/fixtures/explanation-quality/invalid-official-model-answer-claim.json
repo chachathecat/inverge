@@ -1,0 +1,18 @@
+{
+  "name": "invalid official model answer claim",
+  "expectedStatus": "fail",
+  "expectedFailedChecks": ["noForbiddenClaims", "noOfficialAnswerClaim"],
+  "context": { "examMode": "second", "subject": "감정평가 및 보상법규", "conceptLabel": "사업인정의 처분성" },
+  "ladder": {
+    "metadataOnly": true,
+    "conceptLabel": "사업인정의 처분성",
+    "subject": "감정평가 및 보상법규",
+    "examMode": "second",
+    "entries": [
+      { "label": "1타 쉬운풀이", "text": "사업인정은 법적 효과와 권리구제를 연결하는 쟁점입니다." },
+      { "label": "합격 한 줄", "text": "이 문장은 공식 모범답안으로 확정된 표현입니다." },
+      { "label": "출제자 함정", "text": "내부 준비행위와 처분성 표현을 구분합니다." },
+      { "label": "10초 확인", "text": "O/X: 사업인정은 권리구제와 무관하다." }
+    ]
+  }
+}

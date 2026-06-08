@@ -6,6 +6,7 @@ import {
   toCurriculumAnchoredTodayPlanCandidate,
 } from "../lib/review-os/curriculum-capture-integration.ts";
 import { buildExplanationLadder, validateExplanationLadder } from "../lib/review-os/explanation-ladder.ts";
+import { evaluateExplanationLadderQuality } from "../lib/review-os/explanation-quality-eval.ts";
 import { capTodayPlanTasks } from "../lib/review-os/study-schedule-engine.ts";
 import { buildTodayPlanTasks } from "../lib/review-os/today-plan-engine.ts";
 
@@ -129,6 +130,7 @@ test("output includes explanation ladder labels and validates full generated lad
   // Rebuild with the safe public labels to validate the same helper contract without exposing long text in Today Plan.
   const ladder = buildExplanationLadder({ conceptLabel: fullLadderSignal.topicLabel, subject: fullLadderSignal.subject, examMode: fullLadderSignal.examMode });
   assert.equal(validateExplanationLadder(ladder), true);
+  assert.equal(evaluateExplanationLadderQuality(ladder, { conceptLabel: ladder.conceptLabel, subject: ladder.subject, examMode: ladder.examMode }).status, "pass");
 });
 
 test("Today Plan candidate title is derived/action-style, not raw question text", () => {
