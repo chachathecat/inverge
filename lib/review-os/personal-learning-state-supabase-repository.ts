@@ -35,7 +35,7 @@ export const PERSONAL_LEARNING_STATE_SUPABASE_COLUMNS = [
   "updated_at",
 ] as const;
 
-type PersonalLearningStateRow = {
+export type PersonalLearningStateRow = {
   id: string;
   user_id: string;
   concept_node_id: string;
@@ -57,6 +57,14 @@ type PersonalLearningStateRow = {
   created_at: string;
   updated_at: string;
 };
+
+export type PersonalLearningStateSupabasePayload = Omit<PersonalLearningStateRow, "id"> & { id?: string };
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isValidUuid(value: unknown): value is string {
+  return typeof value === "string" && UUID_PATTERN.test(value.trim());
+}
 
 async function createPersonalLearningStateSupabaseClient() {
   const { createSupabaseServerClient } = await import("@/lib/supabase/server");
@@ -99,11 +107,10 @@ function fromRow(row: PersonalLearningStateRow): StoredPersonalLearningStateReco
   return state;
 }
 
-export function buildPersonalLearningStateSupabasePayload(state: PersonalLearningStateRecord): PersonalLearningStateRow {
+export function buildPersonalLearningStateSupabasePayload(state: PersonalLearningStateRecord): PersonalLearningStateSupabasePayload {
   const normalized = normalizePersonalLearningStateRecord(state);
   assertNoForbiddenPersonalLearningStateFields(normalized);
-  return {
-    id: normalized.id,
+  const payload: PersonalLearningStateSupabasePayload = {
     user_id: normalized.userId,
     concept_node_id: normalized.conceptNodeId,
     exam_mode: normalized.examMode,
@@ -124,6 +131,9 @@ export function buildPersonalLearningStateSupabasePayload(state: PersonalLearnin
     created_at: normalized.createdAt,
     updated_at: normalized.updatedAt,
   };
+
+  if (isValidUuid(state.id)) payload.id = state.id.trim();
+  return payload;
 }
 
 export async function upsertLearningStateToSupabase(state: PersonalLearningStateRecord): Promise<StoredPersonalLearningStateRecord> {

@@ -6,6 +6,7 @@ import {
   normalizePersonalLearningStateRecord,
   serializePersonalLearningStateDeterministically,
 } from "../lib/review-os/personal-learning-state-repository.ts";
+import { buildPersonalLearningStateSupabasePayload } from "../lib/review-os/personal-learning-state-supabase-repository.ts";
 import {
   getPersonalLearningStateRepository,
   getPersonalLearningStateRepositoryMode,
@@ -64,9 +65,42 @@ test("personal learning state repository rejects unsupported modes, statuses, an
   assert.throws(() => normalizePersonalLearningStateRecord({ ...baseState, metadata: { rawAnswerText: "must not store" } }), /raw-user-data|forbidden-personal-learning-state-field/);
 });
 
+test("supabase personal learning state payload omits generated or missing ids", () => {
+  const missingIdPayload = buildPersonalLearningStateSupabasePayload(baseState);
+  assert.equal(Object.hasOwn(missingIdPayload, "id"), false);
+
+  const memoryIdPayload = buildPersonalLearningStateSupabasePayload({ ...baseState, id: "memory-pls-1234abcd" });
+  assert.equal(Object.hasOwn(memoryIdPayload, "id"), false);
+
+  const uuid = "22222222-2222-4222-8222-222222222222";
+  const uuidPayload = buildPersonalLearningStateSupabasePayload({ ...baseState, id: uuid });
+  assert.equal(uuidPayload.id, uuid);
+});
+
+test("personal learning state repository rejects raw ocr/problem/answer/source/copyright/official/model/score/instructor fields", () => {
+  for (const forbiddenKey of [
+    "rawOcrText",
+    "rawProblemText",
+    "rawAnswerText",
+    "source",
+    "copyrightedText",
+    "officialAnswer",
+    "modelAnswer",
+    "score",
+    "instructorComment",
+  ]) {
+    assert.throws(
+      () => buildPersonalLearningStateSupabasePayload({ ...baseState, metadata: { [forbiddenKey]: "must not persist" } }),
+      /raw-user-data|forbidden-personal-learning-state-field/,
+      `expected ${forbiddenKey} to be rejected`,
+    );
+  }
+});
+
 test("personal learning state serialization is deterministic", () => {
-  const left = normalizePersonalLearningStateRecord({ ...baseState, metadata: { b: 2, a: { d: 4, c: 3 } } });
-  const right = normalizePersonalLearningStateRecord({ ...baseState, metadata: { a: { c: 3, d: 4 }, b: 2 } });
+  const timestamps = { createdAt: "2026-06-08T00:00:00.000Z", updatedAt: "2026-06-08T00:00:00.000Z" };
+  const left = normalizePersonalLearningStateRecord({ ...baseState, ...timestamps, metadata: { b: 2, a: { d: 4, c: 3 } } });
+  const right = normalizePersonalLearningStateRecord({ ...baseState, ...timestamps, metadata: { a: { c: 3, d: 4 }, b: 2 } });
   assert.equal(serializePersonalLearningStateDeterministically(left), serializePersonalLearningStateDeterministically(right));
 });
 
@@ -87,4 +121,51 @@ test("durable write helper skips safely when disabled", async () => {
   assert.equal(result.ok, true);
   assert.equal(result.skipped, true);
   assert.equal(result.reason, "durable_writes_disabled");
+});
+
+test("durable write helper can call a supabase repository without an explicit id", async () => {
+  let receivedState;
+  const generatedUuid = "33333333-3333-4333-8333-333333333333";
+  const repository = {
+    mode: "supabase",
+    async upsertLearningState(state) {
+      receivedState = state;
+      const payload = buildPersonalLearningStateSupabasePayload(state);
+      assert.equal(Object.hasOwn(payload, "id"), false);
+      return normalizePersonalLearningStateRecord({ ...state, id: generatedUuid });
+    },
+    getLearningState() {
+      return null;
+    },
+    listDueLearningStates() {
+      return [];
+    },
+    listLearningStatesByStatus() {
+      return [];
+    },
+  };
+
+  const result = await maybePersistPersonalLearningStateUpdate({
+    transition,
+    repository,
+    env: {
+      PERSONAL_LEARNING_STATE_REPOSITORY: "supabase",
+      PERSONAL_LEARNING_STATE_DURABLE_WRITES: "1",
+    },
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.skipped, false);
+  assert.equal(receivedState.id, undefined);
+  assert.equal(result.state.id, generatedUuid);
+});
+
+test("memory personal learning state repository can still use deterministic memory ids", () => {
+  const repository = new InMemoryPersonalLearningStateRepository();
+  const first = repository.upsertLearningState(baseState);
+  const second = repository.upsertLearningState({ ...baseState, status: "recovering", wrongCount: 0 });
+
+  assert.match(first.id, /^memory-pls-[0-9a-f]{8}$/);
+  assert.equal(second.id, first.id);
+  assert.equal(second.status, "recovering");
 });

@@ -7,7 +7,7 @@ import {
 import {
   assertNoForbiddenPersonalLearningStateFields,
   assertSupportedPersonalLearningExamMode,
-  normalizePersonalLearningStateRecord,
+  type PersonalLearningStateRecord,
   type PersonalLearningStateRepository,
   type StoredPersonalLearningStateRecord,
 } from "./personal-learning-state-repository";
@@ -58,7 +58,7 @@ export async function maybePersistPersonalLearningStateUpdate(input: PersonalLea
 
   const previousState = input.previousState ?? snapshotFromTransition({ ...input.transition, userId });
   const nextState = applyLearningStateTransition({ ...previousState, userId }, { ...input.transition, userId });
-  const record = normalizePersonalLearningStateRecord({
+  const record: PersonalLearningStateRecord = {
     userId,
     conceptNodeId: nextState.conceptNodeId,
     examMode: input.transition.examMode,
@@ -80,7 +80,8 @@ export async function maybePersistPersonalLearningStateUpdate(input: PersonalLea
       confidenceDelta: input.transition.confidenceDelta,
       priorityDelta: input.transition.priorityDelta,
     },
-  });
+  };
+  assertNoForbiddenPersonalLearningStateFields(record);
 
   const written = await repository.upsertLearningState(record);
   return { ok: true, skipped: false, repositoryMode: "supabase", state: written, metadataOnly: true };
