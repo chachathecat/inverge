@@ -1,0 +1,10 @@
+{
+  "schemaVersion": "1.0.0",
+  "generatedBy": "scripts/ingest-qnet-appraiser-materials.mjs",
+  "storagePolicy": {
+    "rawTextStored": false,
+    "copyrightedTextStored": false,
+    "metadataOnly": true
+  },
+  "topicFrequency": []
+}
