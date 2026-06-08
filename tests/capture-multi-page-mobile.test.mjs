@@ -42,7 +42,7 @@ test("low confidence OCR is saved as safe derived metadata and not deterministic
     "lowConfidenceFlag",
     "captureQualityIssue",
     "인식이 불안정합니다. 중요한 숫자/단어를 확인해 주세요.",
-    "form.lowConfidenceFlag ? null : getCalculatorWorkflowForSubject",
+    "form.lowConfidenceFlag && !form.ocrConfirmedByLearner ? null : getCalculatorWorkflowForSubject",
     "raw_ocr_text: form.rawOcrText || form.rawQuestionText || \"\"",
   ].forEach((token) => assert.ok(source.includes(token), `missing ${token}`));
 });

@@ -103,6 +103,7 @@ export const SAFE_DERIVED_SIGNAL_KEYS = [
   "pageCount",
   "lowConfidenceFlag",
   "captureQualityIssue",
+  "ocrConfirmedByLearner",
   "supportedCalculatorTemplateId",
   "safeSkeletonIds",
   "safe_skeleton_ids",

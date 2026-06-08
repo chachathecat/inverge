@@ -43,7 +43,7 @@ export default async function ReviewOsCapturePage({ searchParams }: PageProps) {
       <ClosedBetaBanner />
 
       <div className="space-y-7">
-      <DailyCommandCard title={isRewriteFlow ? "문단 다시쓰기 실행" : "오늘 한 것 올리기"} description={isRewriteFlow ? "먼저 한 문장만 떠올립니다. 문단 1개만 다시 쓰고 저장합니다." : "사진/PDF/텍스트로 기록 시작"}>
+      <DailyCommandCard title={isRewriteFlow ? "문단 다시쓰기 실행" : "오늘 한 것 올리기"} description={isRewriteFlow ? "먼저 한 문장만 떠올립니다. 문단 1개만 다시 쓰고 저장합니다." : "사진/PDF/텍스트 중 하나로 시작하세요."}>
         <QuietDetails>
           <p>OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요.</p>
           <p>가장 큰 빈틈 1개만 먼저 고정합니다.</p>
@@ -57,7 +57,7 @@ export default async function ReviewOsCapturePage({ searchParams }: PageProps) {
               ? "한 문단 실행 기록만 남깁니다."
               : mode === "second"
                 ? "쟁점 회상부터 간극 1개 교정까지 순서대로 기록합니다."
-                : "사진/PDF/텍스트로 기록을 시작하고, 확인 후 가장 큰 빈틈 1개와 다음 행동 1개만 저장합니다."}
+                : "사진/PDF/텍스트 중 하나로 시작하고, 확인 후 가장 큰 빈틈 1개와 다음 행동 1개만 저장합니다."}
           </p>
           <details>
             <summary className="cursor-pointer list-none text-xs font-medium">입력 순서 보기</summary>

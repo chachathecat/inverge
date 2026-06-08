@@ -18,9 +18,9 @@ test("learner home maps task types to calm labels instead of raw internals", asy
   assert.equal(source.includes("유형:</span> {task.task_type}"), false);
 });
 
-test("capture initial surface is one-input with photo first", async () => {
+test("capture initial surface is one-input with text first", async () => {
   const source = await readFile(new URL("../components/review-os/capture-form.tsx", import.meta.url), "utf8");
-  ["오늘 한 것 올리기", "사진 찍기", "텍스트로 입력", "사진 촬영 팁", "OCR 상태", "캡처 유형"].forEach((t) => assert.ok(source.includes(t)));
+  ["오늘 한 것 올리기", "텍스트 붙여넣기", "AI로 정리", "사진 찍기", "사진 촬영 팁", "OCR 상태", "캡처 유형"].forEach((t) => assert.ok(source.includes(t)));
 });
 
 test("first and second session order enforces retrieval/rewrite first", async () => {
@@ -68,8 +68,8 @@ test("second-write flow starts from step 1 copy and no separate setup card", asy
 
 test("second-write flow gates step 4 by step 3 answer and step 5 by step 4 reference", async () => {
   const source = await readFile(new URL("../components/review-os/capture-form.tsx", import.meta.url), "utf8");
-  assert.ok(source.includes('if (form.userAnswer.trim().length >= 8) setStage("second-reference")'));
-  assert.ok(source.includes('if (form.correctAnswer.trim().length >= 8) setStage("second-gap")'));
+  assert.ok(source.includes('if (form.userAnswer.trim().length >= 8) { update("productionBeforeComparison", true); setStage("second-reference"); }'));
+  assert.ok(source.includes('update("referenceAnswerAddedAfterProduction", true); setStage("second-gap");'));
 });
 
 test("learner writing flow copy keeps no instructor/grading/payment claims", async () => {

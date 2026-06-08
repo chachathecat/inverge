@@ -157,20 +157,20 @@ test("today plan stays one primary + max 3 and language is operational", () => {
 
 test("learner-facing copy includes save bridge messages", async () => {
   const source = await readFile(new URL("../app/app/session/page.tsx", import.meta.url), "utf8");
-  assert.ok(source.includes("오늘 계획에 반영되었습니다."));
-  assert.ok(source.includes("복습 큐에 들어갔습니다."));
-  assert.ok(source.includes("오늘 기록이 저장되었습니다."));
+  assert.ok(source.includes("오늘 계획에 반영했습니다."));
+  assert.ok(source.includes("Today Plan candidate"));
+  assert.ok(source.includes("Review Queue candidate"));
   assert.ok(source.includes("가장 큰 간극:"));
   assert.ok(source.includes("다음 행동:"));
-  assert.ok(source.includes("지금 5분 다시 풀기"));
-  assert.ok(source.includes("지금 10분 다시 쓰기"));
+  assert.ok(source.includes("오늘 계획으로 이동"));
+  assert.ok(source.includes("하나 더 올리기"));
   assert.ok(source.includes('id="today-session-runner"'));
   assert.ok(source.includes("savedCaptureQueueItem"));
   assert.ok(source.includes("/app/capture?mode=second&rewriteFrom=${encodeURIComponent(savedCaptureItemId)}"));
   assert.equal(source.includes('/app/capture?mode=first'), false);
-  assert.ok(source.includes("오늘 화면으로"));
-  assert.ok(source.includes("노트에서 보기"));
-  assert.ok(source.includes("나중에 복습"));
+  assert.ok(source.includes("노트 보기"));
+  assert.ok(source.includes("Note/details"));
+  assert.ok(source.includes("Review Queue candidate"));
   assert.ok(source.includes("참고 힌트 보기"));
 });
 
