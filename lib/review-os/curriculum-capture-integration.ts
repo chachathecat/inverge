@@ -5,6 +5,7 @@ import {
 } from "./curriculum-engine";
 import { buildExplanationLadder, validateExplanationLadder, type ExplanationLadderV1 } from "./explanation-ladder";
 import { assertNoRawUserDataInDerived } from "./data-boundary";
+import { buildLearningStateUpdateFromCaptureSignal, type PersonalLearningStateTransition } from "./personal-learning-state-engine";
 import type { AppraiserExamMode } from "./curriculum-reference";
 
 type CaptureConfidence = "낮음" | "중간" | "높음" | "unknown" | "low" | "medium" | "high" | string;
@@ -48,9 +49,11 @@ export type CurriculumAnchoredTodayPlanCandidate = {
   id: string;
   metadataOnly: true;
   source: "curriculum_capture";
+  sourceEventType: "capture";
   examMode: AppraiserExamMode;
   subject: string;
   curriculumNodeId?: string;
+  conceptNodeId?: string;
   title: string;
   topicLabel: string;
   gapLabel: string;
@@ -70,24 +73,32 @@ export type CurriculumAnchoredReviewQueueCandidate = {
   id: string;
   metadataOnly: true;
   source: "curriculum_capture";
+  sourceEventType: "capture";
   examMode: AppraiserExamMode;
   subject: string;
   curriculumNodeId?: string;
+  conceptNodeId?: string;
   topicLabel: string;
   gapLabel: string;
   nextTaskType: string;
   nextAction: string;
   reviewReason: string;
+  previousStatus?: string;
+  targetStatus?: string;
   reviewPattern: string | null;
+  dueAtCandidate?: string;
+  taskType: string;
   priority: number;
 };
 
 export type CurriculumAnchoredCaptureSignal = {
   metadataOnly: true;
+  userId: string;
   examMode?: AppraiserExamMode;
   subject: string;
   curriculumCandidates: CurriculumCandidateSummary[];
   primaryConceptNodeId?: string;
+  conceptNodeId?: string;
   safeFallbackReason?: string;
   topicLabel: string;
   gapLabel: string;
@@ -96,6 +107,8 @@ export type CurriculumAnchoredCaptureSignal = {
   estimatedMinutes: number;
   explanationLadderSummary: ExplanationLadderSummary | null;
   reviewPattern: string | null;
+  sourceEventType: "capture";
+  learningStateUpdateCandidate: PersonalLearningStateTransition | null;
   todayPlanCandidate: CurriculumAnchoredTodayPlanCandidate;
   reviewQueueCandidate: CurriculumAnchoredReviewQueueCandidate;
 };
@@ -294,6 +307,7 @@ export function buildCurriculumAnchoredCaptureSignal(input: CurriculumAnchoredCa
   if (!isSupportedExamMode(input.examMode)) {
     const fallback: CurriculumAnchoredCaptureSignal = {
       metadataOnly: true,
+      userId: input.userId,
       subject,
       curriculumCandidates: [],
       safeFallbackReason: FALLBACK_UNSUPPORTED_EXAM_MODE,
@@ -304,10 +318,13 @@ export function buildCurriculumAnchoredCaptureSignal(input: CurriculumAnchoredCa
       estimatedMinutes: 5,
       explanationLadderSummary: null,
       reviewPattern: null,
+      sourceEventType: "capture",
+      learningStateUpdateCandidate: null,
       todayPlanCandidate: {
         id: `curriculum-capture-${input.userId}-unsupported`,
         metadataOnly: true,
         source: "curriculum_capture",
+        sourceEventType: "capture",
         examMode: "first",
         subject,
         title: `${subject} 커리큘럼 연결 확인 5분`,
@@ -328,6 +345,7 @@ export function buildCurriculumAnchoredCaptureSignal(input: CurriculumAnchoredCa
         id: `curriculum-review-${input.userId}-unsupported`,
         metadataOnly: true,
         source: "curriculum_capture",
+        sourceEventType: "capture",
         examMode: "first",
         subject,
         topicLabel: subject,
@@ -336,6 +354,7 @@ export function buildCurriculumAnchoredCaptureSignal(input: CurriculumAnchoredCa
         nextAction: "과목과 모드를 확인한 뒤 다시 연결합니다.",
         reviewReason: FALLBACK_UNSUPPORTED_EXAM_MODE,
         reviewPattern: null,
+        taskType: "manual_review",
         priority: 10,
       },
     };
@@ -363,9 +382,10 @@ export function buildCurriculumAnchoredCaptureSignal(input: CurriculumAnchoredCa
     id: `curriculum-capture-${input.userId}-${idBase}`,
     metadataOnly: true,
     source: "curriculum_capture",
+    sourceEventType: "capture",
     examMode: input.examMode,
     subject,
-    ...(primaryNode ? { curriculumNodeId: primaryNode.id } : {}),
+    ...(primaryNode ? { curriculumNodeId: primaryNode.id, conceptNodeId: primaryNode.id } : {}),
     title: todayPlanTitle({ examMode: input.examMode, subject, topicLabel, gapLabel, nextAction, estimatedMinutes, nextTaskType }),
     topicLabel,
     gapLabel,
@@ -385,24 +405,44 @@ export function buildCurriculumAnchoredCaptureSignal(input: CurriculumAnchoredCa
     id: `curriculum-review-${input.userId}-${idBase}`,
     metadataOnly: true,
     source: "curriculum_capture",
+    sourceEventType: "capture",
     examMode: input.examMode,
     subject,
-    ...(primaryNode ? { curriculumNodeId: primaryNode.id } : {}),
+    ...(primaryNode ? { curriculumNodeId: primaryNode.id, conceptNodeId: primaryNode.id } : {}),
     topicLabel,
     gapLabel,
     nextTaskType,
     nextAction,
     reviewReason: primaryNode ? `${topicLabel} ${gapLabel} 재시도 예약` : FALLBACK_NO_NODE,
+    previousStatus: "unknown",
+    targetStatus: confidence === "high" ? "confused" : "confused",
     reviewPattern,
+    dueAtCandidate: primaryNode ? new Date(Date.now() + 2 * 86_400_000).toISOString() : undefined,
+    taskType: nextTaskType,
     priority,
   };
 
+  const learningStateUpdateCandidate = primaryNode
+    ? buildLearningStateUpdateFromCaptureSignal({
+        metadataOnly: true,
+        userId: input.userId,
+        examMode: input.examMode,
+        subject,
+        conceptNodeId: primaryNode.id,
+        primaryConceptNodeId: primaryNode.id,
+        nextTaskType,
+        confidence,
+        ocrConfirmationPending: confidence === "low" && /ocr/i.test(input.captureSourceType),
+      })
+    : null;
+
   const signal: CurriculumAnchoredCaptureSignal = {
     metadataOnly: true,
+    userId: input.userId,
     examMode: input.examMode,
     subject,
     curriculumCandidates: summarizeCandidates(relaxedCandidates),
-    ...(primaryNode ? { primaryConceptNodeId: primaryNode.id } : { safeFallbackReason: FALLBACK_NO_NODE }),
+    ...(primaryNode ? { primaryConceptNodeId: primaryNode.id, conceptNodeId: primaryNode.id } : { safeFallbackReason: FALLBACK_NO_NODE }),
     topicLabel,
     gapLabel,
     nextTaskType,
@@ -410,6 +450,8 @@ export function buildCurriculumAnchoredCaptureSignal(input: CurriculumAnchoredCa
     estimatedMinutes,
     explanationLadderSummary: ladderSummary,
     reviewPattern,
+    sourceEventType: "capture",
+    learningStateUpdateCandidate,
     todayPlanCandidate,
     reviewQueueCandidate,
   };

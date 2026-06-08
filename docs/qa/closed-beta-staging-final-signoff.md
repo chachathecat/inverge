@@ -206,3 +206,27 @@ Staging verification focus:
 - 2차 실무 calculation-like captures may map to calculation/CASIO candidates only when calculation cues are present.
 - 2차 이론 keyword-like captures map to keyword/logic candidates.
 - Visible Today Plan titles remain derived action summaries rather than raw problem/question text.
+
+## PR #340 QA note — Curriculum-Anchored Personal Learning State v1
+
+Date: 2026-06-08
+
+PR #340 adds a metadata-only personal learning state engine for curriculum-anchored capture/review/session signals.
+
+Guardrails retained:
+
+- No production durable rollout is enabled by default.
+- State transitions are deterministic learning operations metadata, not official grading, score prediction, pass/fail judgment, official model-answer comparison, or 합격 보장.
+- Raw learner OCR/problem/answer/source/copyright text remains learner-owned service data and is not emitted in state update candidates, Today Plan candidates, Review Queue candidates, or reference corpus storage.
+- Unsupported exam modes and unmatched curriculum nodes fail safely with fallback metadata.
+- OCR pending schedules OCR confirmation first and cannot improve a concept to stable.
+- Today Plan remains max 3 visible primary tasks.
+
+Staging verification focus:
+
+- High-confidence wrong answer produces `confident_wrong`.
+- Low-confidence wrong/captured concepts remain `wrong` or `confused`, not `stable`.
+- Correct after wrong produces `recovering`; repeated correct evidence can produce `stable`.
+- 2차 paragraph rewrite after weak structure can move the concept toward `recovering`.
+- Today Plan and Review Queue candidates carry concept node/status target metadata without raw text.
+- Priority places `confident_wrong` above generic new study and due `recovering` review above generic new study.

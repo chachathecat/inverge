@@ -25,6 +25,7 @@ import {
 import { normalizeCurriculumTaskType } from "./curriculum-engine";
 import { buildTodayPlanDisplayCopy, type TodayPlanDisplayCopy } from "./today-plan-display-copy";
 import { type AppraiserExamMode } from "./curriculum-reference";
+import { rankLearningStateRisk } from "./personal-learning-state-engine";
 
 export type TodayPlanUnifiedSource = "review_queue" | "personal_concept_graph" | "study_schedule";
 
@@ -266,8 +267,12 @@ function signalScore(action: TodayPlanUnifiedAction) {
     const dueBucket = action.prioritySignals.find((signal) => signal.startsWith("review_queue_due_bucket:"))?.split(":")[1] as ReviewQueueDueBucket | undefined;
     if (dueBucket) score += DUE_BUCKET_RANK[dueBucket] ?? 0;
   }
-  if (action.prioritySignals.includes("wrong_concept")) score += 95;
-  if (action.prioritySignals.includes("confused_concept")) score += 82;
+  if (action.prioritySignals.includes("ocr_confirmation_pending")) score += 150;
+  if (action.prioritySignals.includes("confident_wrong_concept") || action.prioritySignals.includes("learning_state:confident_wrong")) score += 130;
+  if (action.prioritySignals.includes("wrong_concept") || action.prioritySignals.includes("learning_state:wrong")) score += 95;
+  if (action.prioritySignals.includes("confused_concept") || action.prioritySignals.includes("learning_state:confused")) score += 82;
+  if (action.prioritySignals.includes("recovering_due_review") || action.prioritySignals.includes("learning_state:recovering")) score += 72;
+  if (action.prioritySignals.includes("learning_state:stable") && action.prioritySignals.includes("due_review")) score += rankLearningStateRisk("stable");
   if (action.prioritySignals.includes("recovery_needed") || action.prioritySignals.includes("recovery_candidate")) score += 62;
   if (action.prioritySignals.includes("high_risk_unit") || action.prioritySignals.includes("fail_risk_subject")) score += 54;
   if (action.prioritySignals.includes("high_importance_unit")) score += 40;
