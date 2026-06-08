@@ -26,8 +26,9 @@ import { normalizeCurriculumTaskType } from "./curriculum-engine";
 import { buildTodayPlanDisplayCopy, type TodayPlanDisplayCopy } from "./today-plan-display-copy";
 import { type AppraiserExamMode } from "./curriculum-reference";
 import { rankLearningStateRisk } from "./personal-learning-state-engine";
+import { buildAdaptiveTodayPlan, type AdaptiveStudyPlannerInput, type AdaptiveStudyPlanTask } from "./adaptive-study-plan-engine";
 
-export type TodayPlanUnifiedSource = "review_queue" | "personal_concept_graph" | "study_schedule";
+export type TodayPlanUnifiedSource = "review_queue" | "personal_concept_graph" | "study_schedule" | "adaptive_study_plan";
 
 export type TodayPlanUnifiedAction = {
   id: string;
@@ -56,6 +57,8 @@ export type BuildTodayPlanSourceUnionInput = {
   conceptGraphActions?: ConceptGraphTodayPlanAction[];
   dailySchedule?: DailyStudySchedule;
   weeklySchedule?: WeeklyStudySchedule;
+  adaptiveStudyPlanInput?: AdaptiveStudyPlannerInput;
+  adaptiveStudyPlanTasks?: AdaptiveStudyPlanTask[];
   context?: TodayPlanSourceUnionContext;
 };
 
@@ -241,6 +244,24 @@ function scheduleRationale(block: StudyScheduleBlock, schedule: DailyStudySchedu
   return focus ? "이번 주 초점과 맞는 보조 메타데이터입니다." : "일정 메타데이터를 보조 신호로만 반영합니다.";
 }
 
+function fromAdaptiveTask(task: AdaptiveStudyPlanTask): TodayPlanUnifiedAction {
+  return {
+    id: `union:${task.id}`,
+    source: "adaptive_study_plan",
+    examMode: task.examMode,
+    subjectId: task.subjectId,
+    unitId: task.unitId,
+    taskType: normalizeTaskType(task.taskType),
+    title: task.title,
+    rationale: task.rationale,
+    primaryAction: task.primaryAction,
+    estimatedMinutes: task.estimatedMinutes,
+    prioritySignals: unique(["adaptive_study_plan", ...task.prioritySignals]),
+    isPrimaryTask: true,
+    metadataOnly: true,
+  };
+}
+
 function fromSchedule(schedule: DailyStudySchedule | WeeklyStudySchedule | undefined): TodayPlanUnifiedAction[] {
   if (!schedule) return [];
   assertSupportedExamMode(schedule.examMode);
@@ -278,6 +299,7 @@ function signalScore(action: TodayPlanUnifiedAction) {
   if (action.prioritySignals.includes("high_importance_unit")) score += 40;
   if (action.prioritySignals.includes("exam_proximity")) score += 30;
   if (action.prioritySignals.includes("recent_missed_tasks") || action.prioritySignals.includes("confidence:needs_check")) score += 24;
+  if (action.prioritySignals.includes("adaptive_study_plan")) score += 28;
   if (action.prioritySignals.includes("schedule_track_focus")) score += 10;
   if (action.prioritySignals.includes("schedule_primary_block")) score += 8;
   return score;
@@ -286,7 +308,8 @@ function signalScore(action: TodayPlanUnifiedAction) {
 function sourceRank(source: TodayPlanUnifiedSource) {
   if (source === "review_queue") return 0;
   if (source === "personal_concept_graph") return 1;
-  return 2;
+  if (source === "adaptive_study_plan") return 2;
+  return 3;
 }
 
 function dedupeKey(action: TodayPlanUnifiedAction) {
@@ -377,8 +400,13 @@ export function buildTodayPlanSourceUnion(input: BuildTodayPlanSourceUnionInput)
       ? buildTodayPlanFromConceptGraphNodes(input.conceptGraphNodes, context).map(fromConceptAction)
       : [];
   const scheduleActions = [...fromSchedule(input.dailySchedule), ...fromSchedule(input.weeklySchedule)];
+  const adaptiveActions = input.adaptiveStudyPlanTasks
+    ? input.adaptiveStudyPlanTasks.map(fromAdaptiveTask)
+    : input.adaptiveStudyPlanInput
+      ? buildAdaptiveTodayPlan(input.adaptiveStudyPlanInput).todayPlanTasks.map(fromAdaptiveTask)
+      : [];
 
-  const actions = [...reviewTasks, ...graphActions, ...scheduleActions].filter(
+  const actions = [...reviewTasks, ...graphActions, ...scheduleActions, ...adaptiveActions].filter(
     (action) => context.examMode === undefined || context.examMode === "mixed" || action.examMode === context.examMode,
   );
   actions.forEach((action) => assertSupportedExamMode(action.examMode));

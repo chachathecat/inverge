@@ -186,3 +186,15 @@ PR #340 adds a deterministic, curriculum-anchored personal learning state engine
 - Today Plan and Review Queue may use concept state risk for priority: `confident_wrong` outranks `wrong`, `wrong` outranks `confused`, due `recovering` work outranks generic new study, and `stable` remains lower priority unless due.
 - OCR confirmation pending must schedule OCR confirmation before concept practice and must not mark the concept as `stable`.
 - This remains helper-level and metadata-only; it does not enable production durable reads/writes by default.
+
+## PR #342 adaptive planner curriculum usage
+
+PR #342 uses the Appraiser Curriculum Kernel as planning metadata for adaptive study scheduling.
+
+- Curriculum nodes provide safe metadata such as subject/unit identifiers, allowed task types, importance, risk level, and default review pattern.
+- Personal learning state supplies concept status (`confident_wrong`, `wrong`, `confused`, `recovering`, `stable`) and due review dates.
+- The adaptive planner combines state + curriculum metadata to produce derived Today Plan action summaries, not raw OCR/problem/answer/source/copyright text.
+- The visible Today Plan remains max 3 and keeps 1차/2차 separated.
+- Weekly preview includes max 3 focus lines plus target concepts, recovery items, and estimated minutes. It is metadata-only and sends no notifications.
+- Missed reviews create calm recovery items and never shame the learner.
+- Production durable personal learning state rollout remains gated and is not enabled by default.

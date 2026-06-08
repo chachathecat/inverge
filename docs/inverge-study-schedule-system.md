@@ -143,3 +143,17 @@ PR #340 extends schedule and Today Plan priority with curriculum-anchored person
 - Priority order now accounts for concept state risk: `confident_wrong` > `wrong` > `confused`; due `recovering` review beats generic new study; `stable` is lower priority unless a scheduled review is due.
 - OCR-pending captures must surface OCR confirmation before concept practice. Pending OCR cannot improve a concept to `stable`.
 - The max-three visible Today Plan rule remains non-negotiable, and durable Today Plan rollout remains gated/off by default.
+
+## PR #342 adaptive study planner v1 addendum
+
+PR #342 adds the adaptive study planner layer that turns personal learning state metadata into a live Today Plan and weekly study preview.
+
+- The planner uses durable personal learning state metadata when available, or in-memory/source-union candidates when durable reads are unavailable.
+- Inputs remain metadata-only: personal concept state, curriculum node importance/risk, due review signals, capture-confirmation candidates, learner availability, and missed-day count.
+- Today Plan remains capped at **max 3** visible primary tasks. When `dailyAvailableMinutes` is small, the planner shrinks task minutes instead of adding more tasks.
+- Ordering prefers due review over new study, `confident_wrong` over `wrong`, `wrong` over `confused`, and due `recovering` review over stable new study.
+- High-risk and high-importance curriculum nodes raise planning priority without making official grading, score, pass/fail, model-answer, or guarantee claims.
+- Missed-day recovery uses calm recovery copy: missed work is treated as a scheduling signal, not shame or fear pressure.
+- Weekly plan preview is helper-level metadata only: max 3 focus lines, target concepts, recovery items, and estimated total minutes.
+- The planner does **not** send push notifications and does not add native app behavior.
+- Production durable rollout remains gated/off by default.

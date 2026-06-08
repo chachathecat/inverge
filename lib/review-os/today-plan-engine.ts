@@ -515,3 +515,11 @@ export function buildTodayPlanTasks({ mode, queue, items = [], learningSignals =
       ...toEngineDisplayCopy(entry.task),
     }));
 }
+
+export {
+  buildAdaptiveTodayPlan,
+  buildAdaptiveWeeklyPlan,
+  rankAdaptiveStudyCandidates,
+  compressToDailyCapacity,
+  buildRecoveryPlanForMissedReviews,
+} from "./adaptive-study-plan-engine";
