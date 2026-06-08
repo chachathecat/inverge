@@ -3,6 +3,8 @@ import { buildReviewQueueItemFromExecutionSignal, type ReviewQueueItem } from ".
 import { buildTodayPlanFromReviewQueue, type TodayPlanTask } from "./today-plan-prioritization";
 import { normalizeCurriculumTaskType } from "./curriculum-engine";
 import { type AppraiserExamMode } from "./curriculum-reference";
+import { buildLearningMetricEvent } from "./learning-metrics";
+import { recordLearningMetricIfEnabled } from "./learning-metrics-sink";
 
 export type CaptureLearningSignalBridgeSource = "photo" | "pdf" | "text" | "manual";
 export type CaptureLearningSignalBridgeIntent = "wrong_answer" | "concept_uncertainty" | "answer_rewrite" | "calculation_check" | "issue_spotting";
@@ -193,6 +195,15 @@ function toExecutionInput(input: CaptureLearningSignalBridgeInput) {
 export function buildLearningSignalFromCaptureMetadata(input: CaptureLearningSignalBridgeInput): CaptureLearningSignalBridgeResult {
   const learningSignal = buildLearningSignalFromExecutionResult(toExecutionInput(input));
   assertNoRawTextLikeKeys(learningSignal);
+  recordLearningMetricIfEnabled(buildLearningMetricEvent({
+    eventName: "capture_saved",
+    examMode: input.examMode,
+    subject: input.subjectName ?? input.subjectId,
+    conceptNodeId: input.unitId ?? input.unitName,
+    taskType: learningSignal.nextRecommendedTaskType ?? learningSignal.taskType,
+    sourceEventType: "capture",
+    properties: { status: learningSignal.result, confidenceBand: learningSignal.confidence, estimatedMinutes: learningSignal.timeSpentMinutes },
+  }));
 
   return {
     learningSignal,
@@ -230,6 +241,14 @@ export function buildTodayPlanCandidateFromCaptureMetadata(input: CaptureLearnin
     : [];
 
   assertNoRawTextLikeKeys(todayPlanCandidates);
+  recordLearningMetricIfEnabled(buildLearningMetricEvent({
+    eventName: "adaptive_today_plan_generated",
+    examMode: input.examMode,
+    subject: input.subjectName ?? input.subjectId,
+    conceptNodeId: input.unitId ?? input.unitName,
+    sourceEventType: "capture",
+    properties: { candidateCount: reviewQueueItem ? 1 : 0, selectedCount: todayPlanCandidates.slice(0, 3).length },
+  }));
 
   return {
     learningSignal,

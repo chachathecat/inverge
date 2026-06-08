@@ -15,6 +15,8 @@ import { assertCanCreateWrongAnswer } from "@/lib/review-os/entitlement-enforcem
 import { buildCaptureNoteSignals, structureCaptureNote } from "@/lib/review-os/capture-note-engine";
 import { buildCaptureLearningSignal, buildCaptureReviewReason, computeCaptureQueuePriority } from "@/lib/review-os/capture-learning-signals";
 import { sanitizeCaptureTelemetryMetadata } from "@/lib/review-os/telemetry-sanitizer";
+import { buildLearningMetricEvent } from "@/lib/review-os/learning-metrics";
+import { recordLearningMetricIfEnabled } from "@/lib/review-os/learning-metrics-sink";
 import { buildSecondAnswerRewriteSignal } from "@/lib/review-os/second-answer-rewrite";
 import { buildFirstToSecondMigrationSnapshot, buildSecondModeMigrationLearningSignal } from "@/lib/review-os/mode-migration";
 import { getKstDayKey, isSameKstDay, isOverdueDueAt } from "@/lib/review-os/daily-study-state";
@@ -1170,6 +1172,15 @@ export class ReviewOsService {
       ...safeMetadata,
       rewriteParagraphStoredSeparately: Boolean(_rewriteParagraph),
     });
+    recordLearningMetricIfEnabled(buildLearningMetricEvent({
+      eventName: "review_queue_task_completed",
+      examMode: context?.item.examName === "감정평가사 2차" ? "second" : "first",
+      subject: context?.item.subjectLabel,
+      conceptNodeId: context?.primaryTag?.topicTag ?? context?.item.subjectLabel,
+      taskType: action,
+      sourceEventType: "review",
+      properties: { status: "completed", wasDue: true },
+    }));
   }
 
   async migrateFirstToSecondMode(userId: string, email: string | null) {
