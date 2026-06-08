@@ -167,6 +167,9 @@ export function validateVerifiedCurriculumNode(node: VerifiedCurriculumNode): Va
     if (node.needsOfficialVerification !== false) {
       errors.push("verified node must have needsOfficialVerification: false");
     }
+    if (typeof node.officialSourceName !== "string" || node.officialSourceName.trim().length === 0) {
+      errors.push("verified node officialSourceName must be a non-empty string");
+    }
     if (!OFFICIAL_SOURCE_KIND_VALUES.includes(node.officialSourceKind as (typeof OFFICIAL_SOURCE_KIND_VALUES)[number])) {
       errors.push("verified node has unknown officialSourceKind");
     }
@@ -178,6 +181,9 @@ export function validateVerifiedCurriculumNode(node: VerifiedCurriculumNode): Va
     }
     if (typeof node.officialSourceId !== "string" || !loadRegistrySourceIds().has(node.officialSourceId)) {
       errors.push("verified node officialSourceId is not present in official_sources.json");
+    }
+    if (typeof node.verifiedBy !== "string" || node.verifiedBy.trim().length === 0) {
+      errors.push("verified node verifiedBy must be a non-empty string");
     }
   }
 

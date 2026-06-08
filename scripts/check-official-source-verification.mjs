@@ -1,12 +1,14 @@
 import { existsSync, readFileSync } from "node:fs";
 
-const registryPath = "reference_corpus/curriculum/appraiser/official_sources.json";
-const curriculumPaths = [
-  "reference_corpus/curriculum/appraiser/first_exam_curriculum.json",
-  "reference_corpus/curriculum/appraiser/second_exam_curriculum.json",
-  "reference_corpus/curriculum/appraiser/study_tracks.json",
-  "reference_corpus/curriculum/appraiser/explanation_ladder.json",
-];
+const registryPath = process.env.OFFICIAL_SOURCE_REGISTRY_PATH ?? "reference_corpus/curriculum/appraiser/official_sources.json";
+const curriculumPaths = process.env.OFFICIAL_SOURCE_CURRICULUM_PATHS
+  ? process.env.OFFICIAL_SOURCE_CURRICULUM_PATHS.split(",").filter(Boolean)
+  : [
+      "reference_corpus/curriculum/appraiser/first_exam_curriculum.json",
+      "reference_corpus/curriculum/appraiser/second_exam_curriculum.json",
+      "reference_corpus/curriculum/appraiser/study_tracks.json",
+      "reference_corpus/curriculum/appraiser/explanation_ladder.json",
+    ];
 const statusValues = new Set(["draft", "verified", "needs_update", "deprecated"]);
 const sourceKindValues = new Set([
   "qualification_detail",
@@ -77,6 +79,31 @@ function requireCondition(condition, message, errors) {
   if (!condition) errors.push(message);
 }
 
+function isDateString(value) {
+  return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
+function isHttpsUrl(value) {
+  return typeof value === "string" && /^https:\/\//.test(value);
+}
+
+function isNonEmptyString(value) {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function validateVerifiedSourceMetadata(node, path, sourceIds, errors) {
+  for (const field of ["officialSourceId", "officialSourceUrl", "officialSourceName", "officialSourceKind", "lastOfficialVerifiedAt", "verifiedBy"]) {
+    requireCondition(field in node, `${path} verified node missing ${field}`, errors);
+  }
+  requireCondition(node.needsOfficialVerification === false, `${path} verified node must set needsOfficialVerification false`, errors);
+  requireCondition(typeof node.officialSourceId === "string" && sourceIds.has(node.officialSourceId), `${path} uses unknown officialSourceId ${node.officialSourceId}`, errors);
+  requireCondition(isHttpsUrl(node.officialSourceUrl), `${path} verified node officialSourceUrl must be an https URL`, errors);
+  requireCondition(isNonEmptyString(node.officialSourceName), `${path} verified node officialSourceName must be a non-empty string`, errors);
+  requireCondition(sourceKindValues.has(node.officialSourceKind), `${path} uses invalid officialSourceKind`, errors);
+  requireCondition(isDateString(node.lastOfficialVerifiedAt), `${path} verified node lastOfficialVerifiedAt must be YYYY-MM-DD`, errors);
+  requireCondition(isNonEmptyString(node.verifiedBy), `${path} verified node verifiedBy must be a non-empty string`, errors);
+}
+
 const errors = [];
 requireCondition(existsSync(registryPath), "official_sources.json is missing", errors);
 const registry = existsSync(registryPath) ? readJson(registryPath) : { sources: [] };
@@ -88,7 +115,10 @@ for (const source of sources) {
   for (const field of ["id", "sourceName", "sourceUrl", "sourceKind", "authorityLevel", "owner", "verifiedFacts", "lastCheckedAt", "needsManualRecheckBy", "allowedUse", "disallowedUse", "notes"]) {
     requireCondition(field in source, `source ${source.id ?? "unknown"} is missing ${field}`, errors);
   }
+  requireCondition(isHttpsUrl(source.sourceUrl), `source ${source.id} sourceUrl must be an https URL`, errors);
   requireCondition(sourceKindValues.has(source.sourceKind), `source ${source.id} has invalid sourceKind`, errors);
+  requireCondition(isDateString(source.lastCheckedAt), `source ${source.id} lastCheckedAt must be YYYY-MM-DD`, errors);
+  requireCondition(isDateString(source.needsManualRecheckBy), `source ${source.id} needsManualRecheckBy must be YYYY-MM-DD`, errors);
   requireCondition(Array.isArray(source.allowedUse) && source.allowedUse.includes("metadata_only") && source.allowedUse.includes("link_reference"), `source ${source.id} allowedUse is incomplete`, errors);
   requireCondition(Array.isArray(source.disallowedUse) && source.disallowedUse.includes("raw_problem_text_copy") && source.disallowedUse.includes("copyrighted_question_body_storage") && source.disallowedUse.includes("official_score_claim") && source.disallowedUse.includes("pass_fail_claim"), `source ${source.id} disallowedUse is incomplete`, errors);
 }
@@ -113,12 +143,7 @@ for (const { node, path } of sourceNodes) {
   requireCondition(statusValues.has(node.sourceStatus), `${path} has invalid sourceStatus`, errors);
   if (node.sourceStatus === "verified") {
     summary.verifiedNodes += 1;
-    for (const field of ["officialSourceId", "officialSourceUrl", "officialSourceName", "officialSourceKind", "lastOfficialVerifiedAt", "verifiedBy"]) {
-      requireCondition(Boolean(node[field]), `${path} verified node missing ${field}`, errors);
-    }
-    requireCondition(node.needsOfficialVerification === false, `${path} verified node must set needsOfficialVerification false`, errors);
-    requireCondition(sourceIds.has(node.officialSourceId), `${path} uses unknown officialSourceId ${node.officialSourceId}`, errors);
-    requireCondition(sourceKindValues.has(node.officialSourceKind), `${path} uses invalid officialSourceKind`, errors);
+    validateVerifiedSourceMetadata(node, path, sourceIds, errors);
   }
   if (node.sourceStatus === "draft") {
     summary.draftNodes += 1;

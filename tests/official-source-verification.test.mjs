@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { execFileSync, spawnSync } from "node:child_process";
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { test } from "node:test";
 
 const registryPath = "reference_corpus/curriculum/appraiser/official_sources.json";
@@ -45,6 +47,74 @@ function collectSourceNodes(value, path = "root", output = []) {
     collectSourceNodes(child, `${path}.${key}`, output);
   }
   return output;
+}
+
+
+function makeValidRegistry() {
+  return {
+    sources: [
+      {
+        id: "qnet_appraiser_qualification_detail",
+        sourceName: "Q-Net 감정평가사 자격 상세",
+        sourceUrl: "https://www.q-net.or.kr/",
+        sourceKind: "qualification_detail",
+        authorityLevel: "primary",
+        owner: "Q-Net",
+        verifiedFacts: {
+          qualificationNameKo: "감정평가사",
+          qualificationNameEn: "Certified Appraiser",
+          relatedMinistry: "국토교통부",
+          administeringAgency: "한국산업인력공단",
+        },
+        lastCheckedAt: "2026-06-08",
+        needsManualRecheckBy: "2026-12-08",
+        allowedUse: ["metadata_only", "link_reference"],
+        disallowedUse: ["raw_problem_text_copy", "copyrighted_question_body_storage", "official_score_claim", "pass_fail_claim"],
+        notes: "Test fixture keeps metadata only.",
+      },
+    ],
+  };
+}
+
+function makeValidVerifiedNode(overrides = {}) {
+  return {
+    id: "officialQualificationIdentity",
+    sourceStatus: "verified",
+    needsOfficialVerification: false,
+    officialSourceId: "qnet_appraiser_qualification_detail",
+    officialSourceUrl: "https://www.q-net.or.kr/",
+    officialSourceName: "Q-Net 감정평가사 자격 상세",
+    officialSourceKind: "qualification_detail",
+    lastOfficialVerifiedAt: "2026-06-08",
+    verifiedBy: "official-source-fixture",
+    ...overrides,
+  };
+}
+
+function makeDraftNode(overrides = {}) {
+  return {
+    id: "draftCurriculumNode",
+    sourceStatus: "draft",
+    needsOfficialVerification: true,
+    ...overrides,
+  };
+}
+
+function runOfficialSourceCheckWithFixture(nodes) {
+  const fixtureDir = mkdtempSync(join(tmpdir(), "inverge-official-source-"));
+  const registryFixturePath = join(fixtureDir, "official_sources.json");
+  const curriculumFixturePath = join(fixtureDir, "curriculum.json");
+  writeFileSync(registryFixturePath, `${JSON.stringify(makeValidRegistry(), null, 2)}\n`);
+  writeFileSync(curriculumFixturePath, `${JSON.stringify({ nodes }, null, 2)}\n`);
+  return spawnSync("npm", ["--silent", "run", "check:official-source-verification"], {
+    cwd: process.cwd(),
+    encoding: "utf8",
+    env: {
+      ...process.env,
+      OFFICIAL_SOURCE_REGISTRY_PATH: registryFixturePath,
+      OFFICIAL_SOURCE_CURRICULUM_PATHS: curriculumFixturePath,
+    },
+  });
 }
 
 function assertNoForbiddenBoundary(value, path = "root") {
@@ -103,21 +173,29 @@ test("official-source metadata does not store raw question, answer, source, scor
   }
 });
 
-test("official-source verifier rejects unknown officialSourceId and summarizes statuses", async () => {
+test("official-source verifier enforces verified and draft metadata rules", async () => {
   const verifier = await import("../lib/review-os/official-source-verification.ts");
-  const unknownSourceResult = verifier.validateVerifiedCurriculumNode({
-    id: "bad_verified_node",
-    sourceStatus: "verified",
-    needsOfficialVerification: false,
-    officialSourceId: "unknown_source",
-    officialSourceUrl: "https://example.com/source",
-    officialSourceName: "Unknown source",
-    officialSourceKind: "exam_info",
-    lastOfficialVerifiedAt: "2026-06-08",
-    verifiedBy: "test",
-  });
+  const validVerifiedResult = verifier.validateVerifiedCurriculumNode(makeValidVerifiedNode());
+  assert.equal(validVerifiedResult.valid, true, validVerifiedResult.errors.join("\n"));
+
+  const validDraftResult = verifier.validateVerifiedCurriculumNode(makeDraftNode());
+  assert.equal(validDraftResult.valid, true, validDraftResult.errors.join("\n"));
+
+  const badUrlResult = verifier.validateVerifiedCurriculumNode(makeValidVerifiedNode({ officialSourceUrl: "not-a-url" }));
+  assert.equal(badUrlResult.valid, false);
+  assert.match(badUrlResult.errors.join("\n"), /officialSourceUrl/);
+
+  const badDateResult = verifier.validateVerifiedCurriculumNode(makeValidVerifiedNode({ lastOfficialVerifiedAt: "yesterday" }));
+  assert.equal(badDateResult.valid, false);
+  assert.match(badDateResult.errors.join("\n"), /lastOfficialVerifiedAt/);
+
+  const unknownSourceResult = verifier.validateVerifiedCurriculumNode(makeValidVerifiedNode({ officialSourceId: "unknown_source" }));
   assert.equal(unknownSourceResult.valid, false);
   assert.match(unknownSourceResult.errors.join("\n"), /officialSourceId/);
+
+  const draftNeedsVerificationResult = verifier.validateVerifiedCurriculumNode(makeDraftNode({ needsOfficialVerification: false }));
+  assert.equal(draftNeedsVerificationResult.valid, false);
+  assert.match(draftNeedsVerificationResult.errors.join("\n"), /draft node must have needsOfficialVerification: true/);
 
   const sources = readJson(registryPath).sources;
   const summary = verifier.summarizeOfficialVerificationStatus(
@@ -131,6 +209,24 @@ test("official-source verifier rejects unknown officialSourceId and summarizes s
   assert.equal(summary.verifiedNodes, 1);
   assert.equal(summary.draftNodes, 1);
   assert.equal(summary.needsUpdateNodes, 1);
+});
+
+test("official-source verification script fails malformed verified metadata and passes valid metadata", () => {
+  const validResult = runOfficialSourceCheckWithFixture([makeValidVerifiedNode(), makeDraftNode()]);
+  assert.equal(validResult.status, 0, validResult.stderr);
+  assert.match(validResult.stdout, /passed_official_source_verification/);
+
+  const badUrlResult = runOfficialSourceCheckWithFixture([makeValidVerifiedNode({ officialSourceUrl: "not-a-url" })]);
+  assert.notEqual(badUrlResult.status, 0);
+  assert.match(`${badUrlResult.stdout}\n${badUrlResult.stderr}`, /officialSourceUrl must be an https URL/);
+
+  const badDateResult = runOfficialSourceCheckWithFixture([makeValidVerifiedNode({ lastOfficialVerifiedAt: "yesterday" })]);
+  assert.notEqual(badDateResult.status, 0);
+  assert.match(`${badDateResult.stdout}\n${badDateResult.stderr}`, /lastOfficialVerifiedAt must be YYYY-MM-DD/);
+
+  const unknownSourceResult = runOfficialSourceCheckWithFixture([makeValidVerifiedNode({ officialSourceId: "unknown_source" })]);
+  assert.notEqual(unknownSourceResult.status, 0);
+  assert.match(`${unknownSourceResult.stdout}\n${unknownSourceResult.stderr}`, /unknown officialSourceId/);
 });
 
 test("official-source verification script prints expected JSON contract", () => {
