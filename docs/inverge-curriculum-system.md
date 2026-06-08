@@ -163,3 +163,13 @@ Inverge is not a question archive. The curriculum kernel is a metadata-only oper
 - Curriculum nodes are the basis for Today Plan, Review Queue, O/X, cloze, calculation, and rewrite tasks.
 - Raw user OCR/problem/answer text must remain user-owned service data. Derived metadata/signals may drive product behavior when sanitized and detached from raw private text.
 - All nodes are draft metadata until official syllabus/current public notice verification is checked against Q-Net or other public official sources before production use.
+
+## PR #339 helper-level Capture-to-Plan integration
+
+PR #339 wires the appraiser curriculum kernel into the learner Capture → Note → Explanation → Review Queue → Today Plan loop at helper level.
+
+- `buildCurriculumAnchoredCaptureSignal` maps sanitized capture summaries to 1차/2차 curriculum candidates and keeps `metadataOnly: true` in shared outputs.
+- The helper may use learner-owned capture text as input for matching, but raw learner OCR/problem/answer/source/copyright text stays in user-owned service surfaces and is not emitted in Today Plan or Review Queue candidates.
+- First-mode captures map only to first-mode curriculum nodes; second-mode captures map only to second-mode nodes, with subject-aware preferences for 법규 legal issue/rewrite, 실무 calculation/CASIO only when calculation-like, and 이론 keyword/logic work.
+- This is not a production durable rollout. It does not enable durable production reads/writes, public archive UI, payment, notifications, native behavior, or new exams.
+- The integration keeps official-verification language separate from learner claims: no official grading, score, pass/fail, official model answer, or 합격 보장 copy.

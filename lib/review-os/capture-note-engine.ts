@@ -1,6 +1,7 @@
 import type { AppraisalMode } from "@/lib/review-os/appraisal";
 import { buildSecondAnswerRewriteSignal } from "./second-answer-rewrite";
 import type { WrongAnswerItemInput } from "@/lib/review-os/types";
+import { buildCurriculumAnchoredCaptureSignal, type CurriculumAnchoredCaptureSignal } from "./curriculum-capture-integration";
 
 type CaptureStructuringInput = {
   mode: AppraisalMode;
@@ -25,6 +26,7 @@ export type CaptureNoteBase = {
   weak_structure_point: string;
   next_task_type: "retry" | "rewrite";
   review_reason: string;
+  curriculum_anchored_capture_signal?: CurriculumAnchoredCaptureSignal;
 };
 
 export type FirstCaptureNoteSignals = CaptureNoteBase & {
@@ -50,6 +52,26 @@ export type SecondCaptureNoteSignals = CaptureNoteBase & {
 };
 
 export type CaptureNoteSignals = FirstCaptureNoteSignals | SecondCaptureNoteSignals;
+
+function timeSpentSecondsToMinutes(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) ? Math.max(0, Math.round(value / 60)) : null;
+}
+
+function buildCurriculumSignalForCapture(mode: AppraisalMode, input: WrongAnswerItemInput, biggestGap: string, nextAction: string) {
+  const recordInput = input as WrongAnswerItemInput & { userId?: string; timeSpentSeconds?: number };
+  return buildCurriculumAnchoredCaptureSignal({
+    userId: typeof recordInput.userId === "string" ? recordInput.userId : "capture-note",
+    examMode: mode,
+    subject: input.subjectLabel,
+    learnerText: [input.problemTitle, input.caseSummary, input.userReasonText, ...(input.keyConcepts ?? [])].filter(Boolean).join(" "),
+    derivedSummary: [biggestGap, nextAction, input.missingIssue, input.weakStructurePoint, input.rewriteInstruction].filter(Boolean).join(" "),
+    mistakeReason: input.userReasonText || input.userReasonPreset || biggestGap,
+    confidence: input.confidence,
+    timeSpent: timeSpentSecondsToMinutes(recordInput.timeSpentSeconds),
+    captureSourceType: input.sourceType,
+    taskType: mode === "first" ? "ox" : undefined,
+  });
+}
 
 function hasExplicitTimeManagementIssue(input: WrongAnswerItemInput) {
   const text = `${input.userReasonText ?? ""} ${input.userReasonPreset ?? ""}`;
@@ -100,6 +122,7 @@ function resolveSecondSubjectNextAction(input: WrongAnswerItemInput) {
 export function buildCaptureNoteSignals(mode: AppraisalMode, input: WrongAnswerItemInput): CaptureNoteSignals {
   const oneBiggestGap = (mode === "second" ? resolveSecondSubjectGap(input) : resolveFirstCaptureGap(input)) ?? "개념 혼동";
   const oneNextAction = (mode === "second" ? resolveSecondSubjectNextAction(input) : resolveFirstNextAction(input)) ?? "다음 행동 실행";
+  const curriculumSignal = buildCurriculumSignalForCapture(mode, input, oneBiggestGap, oneNextAction);
   const base = {
     mode,
     subject: input.subjectLabel,
@@ -112,6 +135,7 @@ export function buildCaptureNoteSignals(mode: AppraisalMode, input: WrongAnswerI
     weak_structure_point: input.weakStructurePoint || input.referenceStructure || "",
     next_task_type: mode === "second" ? "rewrite" : "retry",
     review_reason: oneBiggestGap,
+    curriculum_anchored_capture_signal: curriculumSignal,
   };
 
   if (mode === "first") {

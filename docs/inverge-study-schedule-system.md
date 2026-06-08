@@ -122,3 +122,13 @@ Inverge is not a question archive. Study tracks convert curriculum metadata and 
 - The schedule kernel ranks due review, recent wrong, confidence gap, pass risk, exam urgency, missed recently, and weak structure.
 - Raw user OCR/problem/answer text must remain user-owned service data. Derived metadata/signals may drive product behavior after sanitization.
 - Official syllabus, exam calendar, and current public notices require Q-Net/current official notice verification before production use.
+
+## PR #339 curriculum-anchored capture candidates
+
+PR #339 adds helper-level curriculum-derived Today Plan and Review Queue candidates from Capture-to-Note signals.
+
+- Capture-derived candidates are ranked with existing study schedule ranking before display, and Today Plan remains capped at max 3 primary tasks.
+- Due review and recent wrong/unknown work outrank generic new study. Low confidence or confident-wrong metadata raises priority without shame language.
+- In 2차, weak structure, missing issue, or paragraph weakness raises rewrite priority; 실무 calculation/CASIO priority is used only for calculation-like captures.
+- Visible Today Plan titles are derived action summaries from subject, curriculum topic, gap label, next action, and estimated minutes, not raw problem/question text.
+- This remains metadata-only and does not enable durable production rollout, live notification, payment, public archive, or new exam behavior.

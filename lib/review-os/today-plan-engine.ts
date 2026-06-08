@@ -1,5 +1,6 @@
 import type { ConfidenceLevel, LearningSignalEventRecord, ReviewQueueCard, WrongAnswerItemRecord } from "@/lib/review-os/types";
 import { buildTodayPlanDisplayCopy, type TodayPlanDisplayCopy } from "./today-plan-display-copy";
+import { capTodayPlanTasks, rankTodayPlanCandidates } from "./study-schedule-engine";
 
 export type TodayPlanTaskType =
   | "first_ox_retry"
@@ -32,6 +33,18 @@ export type TodayPlanTask = {
   display_reason?: TodayPlanDisplayCopy["displayReason"];
   display_source_label?: TodayPlanDisplayCopy["displaySourceLabel"];
   display_primary_cta?: TodayPlanDisplayCopy["displayPrimaryCta"];
+  curriculum_secondary_metadata?: {
+    metadataOnly: true;
+    source: "curriculum_capture";
+    curriculumNodeId?: string;
+    topicLabel?: string;
+    gapLabel?: string;
+    nextTaskType?: string;
+    nextAction?: string;
+    estimatedMinutes?: number;
+    reviewPattern?: unknown;
+    priority?: number;
+  };
 };
 
 type BuildInput = {
@@ -239,12 +252,50 @@ function pickRecentProblemSnapSignal(learningSignals: LearningSignalEventRecord[
     .sort((a, b) => (parseTime(b.createdAt) ?? 0) - (parseTime(a.createdAt) ?? 0))[0] ?? null;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function taskTypeFromCurriculumCandidate(value: unknown, mode: "first" | "second"): TodayPlanTaskType | null {
+  const text = String(value ?? "");
+  if (/manual_review/.test(text)) return null;
+  if (/calculation|casio|산식|검산/.test(text)) return mode === "first" ? "accounting_template_retry" : "second_answer_rewrite";
+  if (/cloze|빈칸/.test(text)) return "cloze_review";
+  if (/concept|keyword|theory|키워드/.test(text)) return mode === "first" ? "concept_review" : "second_answer_rewrite";
+  if (/rewrite|paragraph|legal|issue/.test(text)) return mode === "second" ? "second_answer_rewrite" : "first_ox_retry";
+  return mode === "first" ? "first_ox_retry" : "second_answer_rewrite";
+}
+
+function getCurriculumAnchoredSignal(item: WrongAnswerItemRecord) {
+  const direct = item.derivedPayload?.curriculum_anchored_capture_signal;
+  if (isRecord(direct)) return direct;
+  const captureNote = item.derivedPayload?.capture_note_engine_v2;
+  if (isRecord(captureNote) && isRecord(captureNote.curriculum_anchored_capture_signal)) return captureNote.curriculum_anchored_capture_signal;
+  return null;
+}
+
 function toItemTask(item: WrongAnswerItemRecord, mode: "first" | "second", now: Date): { task: TodayPlanTask; score: number } | null {
   const createdFromCapture = Boolean(item.rawPayload?.created_from_capture ?? item.derivedPayload?.created_from_capture ?? item.createdFromCapture);
   const pageCount = getPageCount(item);
   const lowConfidence = isLowConfidenceOcrItem(item);
   const captureNote = typeof item.derivedPayload?.capture_note_engine_v2 === "object" && item.derivedPayload.capture_note_engine_v2 ? item.derivedPayload.capture_note_engine_v2 as Record<string, unknown> : null;
-  const biggestGap = String(item.biggestGap ?? item.missingIssue ?? captureNote?.one_biggest_gap ?? item.userReasonPreset ?? "가장 큰 간극 1개를 확인합니다.");
+  const curriculumSignal = getCurriculumAnchoredSignal(item);
+  const curriculumTodayPlanCandidate = isRecord(curriculumSignal?.todayPlanCandidate) ? curriculumSignal.todayPlanCandidate : null;
+  const curriculumSecondaryMetadata = curriculumTodayPlanCandidate && curriculumSignal?.examMode === mode
+    ? {
+        metadataOnly: true as const,
+        source: "curriculum_capture" as const,
+        ...(typeof curriculumTodayPlanCandidate.curriculumNodeId === "string" ? { curriculumNodeId: curriculumTodayPlanCandidate.curriculumNodeId } : {}),
+        ...(typeof curriculumTodayPlanCandidate.topicLabel === "string" ? { topicLabel: curriculumTodayPlanCandidate.topicLabel } : {}),
+        ...(typeof curriculumTodayPlanCandidate.gapLabel === "string" ? { gapLabel: curriculumTodayPlanCandidate.gapLabel } : {}),
+        ...(typeof curriculumTodayPlanCandidate.nextTaskType === "string" ? { nextTaskType: curriculumTodayPlanCandidate.nextTaskType } : {}),
+        ...(typeof curriculumTodayPlanCandidate.nextAction === "string" ? { nextAction: curriculumTodayPlanCandidate.nextAction } : {}),
+        ...(typeof curriculumTodayPlanCandidate.estimatedMinutes === "number" ? { estimatedMinutes: curriculumTodayPlanCandidate.estimatedMinutes } : {}),
+        ...("reviewPattern" in curriculumTodayPlanCandidate ? { reviewPattern: curriculumTodayPlanCandidate.reviewPattern } : {}),
+        ...(typeof curriculumTodayPlanCandidate.priority === "number" ? { priority: curriculumTodayPlanCandidate.priority } : {}),
+      }
+    : undefined;
+  const biggestGap = String(curriculumSignal?.gapLabel ?? item.biggestGap ?? item.missingIssue ?? captureNote?.one_biggest_gap ?? item.userReasonPreset ?? "가장 큰 간극 1개를 확인합니다.");
   const createdTs = parseTime(item.createdAt);
   const recentBoost = createdTs !== null && now.getTime() - createdTs >= 0 && now.getTime() - createdTs <= 2 * DAY_MS ? 14 : 0;
 
@@ -262,25 +313,35 @@ function toItemTask(item: WrongAnswerItemRecord, mode: "first" | "second", now: 
     estimated = pageCount > 1 ? 8 : 5;
     sourceLabel = "확인 필요";
     score += 45;
-  } else if (mode === "second" && (item.missingIssue || item.weakStructurePoint || item.rewriteInstruction || item.rewriteCompleted === false)) {
+  } else if (curriculumTodayPlanCandidate && curriculumSignal?.examMode === mode) {
+    const curriculumTaskType = taskTypeFromCurriculumCandidate(curriculumTodayPlanCandidate.nextTaskType, mode);
+    if (curriculumTaskType) {
+      taskType = curriculumTaskType;
+      reason = "저장한 캡처를 커리큘럼 노드에 연결한 오늘 작업입니다.";
+      nextAction = String(curriculumTodayPlanCandidate.nextAction ?? curriculumSignal.nextAction ?? nextAction);
+      estimated = typeof curriculumTodayPlanCandidate.estimatedMinutes === "number" ? curriculumTodayPlanCandidate.estimatedMinutes : estimated;
+      sourceLabel = "커리큘럼 연결 캡처 기반";
+      score += typeof curriculumTodayPlanCandidate.priority === "number" ? Math.round(curriculumTodayPlanCandidate.priority * 0.4) : 24;
+    }
+  } else if (!taskType && mode === "second" && (item.missingIssue || item.weakStructurePoint || item.rewriteInstruction || item.rewriteCompleted === false)) {
     taskType = "second_answer_rewrite";
     reason = "답안에서 보강할 문단이 남아 있습니다.";
     nextAction = item.rewriteInstruction ?? "누락 논점 1개를 문단으로 다시 씁니다.";
     estimated = 20;
     score += 22;
-  } else if (mode === "first" && /회계|계산|산식|단위|공식/.test(`${item.subjectLabel} ${item.userReasonPreset ?? ""} ${item.userReasonText ?? ""}`)) {
+  } else if (!taskType && mode === "first" && /회계|계산|산식|단위|공식/.test(`${item.subjectLabel} ${item.userReasonPreset ?? ""} ${item.userReasonText ?? ""}`)) {
     taskType = "accounting_template_retry";
     reason = "계산/산식 기록은 템플릿으로 다시 확인하면 좋습니다.";
     nextAction = "산식 틀을 먼저 쓰고 숫자를 대입합니다.";
     estimated = 12;
     score += 18;
-  } else if (item.confidence === "낮음") {
+  } else if (!taskType && item.confidence === "낮음") {
     taskType = "cloze_review";
     reason = "확신이 낮았던 개념이라 회상부터 고정합니다.";
     nextAction = "핵심어 1개를 가리고 떠올린 뒤 확인합니다.";
     estimated = 7;
     score += 15;
-  } else if (createdFromCapture || item.userReasonPreset || item.userReasonText) {
+  } else if (!taskType && (createdFromCapture || item.userReasonPreset || item.userReasonText)) {
     taskType = mode === "first" ? "first_ox_retry" : "concept_review";
     reason = createdFromCapture ? "저장한 Capture-to-Note 항목입니다." : "오답 노트에서 복습할 항목입니다.";
     nextAction = mode === "first" ? "다시 풀고 근거 1줄을 남깁니다." : "핵심 논점 1개를 회상합니다.";
@@ -291,7 +352,7 @@ function toItemTask(item: WrongAnswerItemRecord, mode: "first" | "second", now: 
     score,
     task: {
       itemId: item.id,
-      title: buildDerivedActionTitle({ mode, subject: item.subjectLabel, topic: biggestGap, gap: biggestGap, nextAction, estimatedMinutes: estimated, taskType }),
+      title: taskType !== "ocr_confirmation" && typeof curriculumTodayPlanCandidate?.title === "string" ? curriculumTodayPlanCandidate.title : buildDerivedActionTitle({ mode, subject: item.subjectLabel, topic: biggestGap, gap: biggestGap, nextAction, estimatedMinutes: estimated, taskType }),
       subject: item.subjectLabel,
       exam_mode: mode,
       due_bucket: "today",
@@ -305,6 +366,7 @@ function toItemTask(item: WrongAnswerItemRecord, mode: "first" | "second", now: 
       primary_cta: primaryCtaFor(taskType, mode),
       created_from_capture: createdFromCapture,
       source_label: sourceLabel,
+      ...(curriculumSecondaryMetadata ? { curriculum_secondary_metadata: curriculumSecondaryMetadata } : {}),
     },
   };
 }
@@ -421,9 +483,21 @@ export function buildTodayPlanTasks({ mode, queue, items = [], learningSignals =
     if (!existing || entry.score > existing.score) deduped.set(entry.task.itemId, entry);
   });
 
-  return [...deduped.values()]
+  const ranked = rankTodayPlanCandidates({
+    candidates: [...deduped.values()].map((entry) => ({
+      ...entry,
+      id: entry.task.itemId,
+      priority: entry.score,
+      dueReview: entry.task.due_bucket === "overdue" || entry.task.due_bucket === "today",
+      recentWrong: /오답|틀림|저장한 Capture|캡처/.test(`${entry.task.reason} ${entry.task.priority_reason}`),
+      confidence: /확신이 낮/.test(`${entry.task.reason} ${entry.task.priority_reason}`) ? "low" : "medium",
+      weakStructure: entry.task.task_type === "second_answer_rewrite" && /구조|문단|논점|다시/.test(`${entry.task.one_biggest_gap} ${entry.task.one_next_action}`),
+    })),
+    dueReviewCount: queue.filter((item) => resolveDueBucket(item.dueAt, now) !== "upcoming").length,
+  });
+
+  return capTodayPlanTasks(ranked, 3).slice(0, 3)
     .sort((a, b) => b.score - a.score || a.task.itemId.localeCompare(b.task.itemId))
-    .slice(0, 3)
     .map((entry) => ({
       ...entry.task,
       ...toEngineDisplayCopy(entry.task),

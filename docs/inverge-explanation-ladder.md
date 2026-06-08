@@ -63,3 +63,12 @@ Inverge is not a question archive. The explanation ladder is a reusable metadata
 Required labels remain: 1타 쉬운풀이, 합격 한 줄, 출제자 함정, 10초 확인. Every ladder should be convertible into a practice task, and the 10초 확인 row must be O/X or cloze compatible so Capture, Today Plan, and Review Queue can end in retry, rewrite, or scheduled review instead of score-only feedback.
 
 20-year past papers are reference metadata, not the product front door. Capture-to-Note is the front door, and curriculum nodes are the basis for Today Plan, Review Queue, O/X, cloze, calculation, and rewrite. Raw user OCR/problem/answer text must remain user-owned service data; derived metadata/signals may drive product behavior when sanitized. Official syllabus/current public notice verification must be checked against Q-Net or official sources before production use.
+
+## PR #339 capture signal ladder summary
+
+PR #339 connects the explanation ladder to curriculum-anchored capture signals.
+
+- Capture-to-Plan signals include a compact `explanationLadderSummary` with the four required labels: 1타 쉬운풀이, 합격 한 줄, 출제자 함정, 10초 확인.
+- Today Plan primary cards should not show the long generated explanation by default; full explanation belongs only in learner-owned detail/review surfaces.
+- The ladder summary is metadata-only and keeps raw learner OCR/problem/answer/source text out of shared outputs.
+- Generated summaries must validate with the explanation ladder contract and must not claim official grading, official model answers, score, pass/fail, or 합격 보장.
