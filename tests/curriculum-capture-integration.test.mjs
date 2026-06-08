@@ -178,3 +178,65 @@ test("no official grading, score, pass-fail, model-answer, or 합격보장 claim
   const signal = secondSignal();
   assert.doesNotMatch(JSON.stringify(signal), rawOrForbiddenPattern);
 });
+
+test("low-confidence OCR confirmation takes precedence over curriculum-derived Today Plan task", () => {
+  const rawProblem = "다음 문제 원문: 무효와 취소 효과를 비교하시오";
+  const rawAnswer = "내 답안 원문: 취소는 항상 무효";
+  const signal = firstSignal({ learnerText: "무효와 취소 효과", mistakeReason: "개념 혼동" });
+  const tasks = buildTodayPlanTasks({
+    mode: "first",
+    now: new Date("2026-05-03T12:00:00.000Z"),
+    queue: [],
+    items: [
+      {
+        ...recordWithCurriculumSignal(signal),
+        rawPayload: {
+          created_from_capture: true,
+          lowConfidenceFlag: true,
+          problemText: rawProblem,
+          userAnswerText: rawAnswer,
+        },
+      },
+    ],
+  });
+
+  assert.equal(tasks.length, 1);
+  assert.equal(tasks[0].task_type, "ocr_confirmation");
+  assert.equal(tasks[0].curriculum_secondary_metadata?.metadataOnly, true);
+  assert.equal(tasks[0].curriculum_secondary_metadata?.nextTaskType, signal.todayPlanCandidate.nextTaskType);
+  assert.equal(tasks[0].curriculum_secondary_metadata?.gapLabel, signal.gapLabel);
+  assert.notEqual(tasks[0].curriculum_secondary_metadata?.nextTaskType, tasks[0].task_type);
+  assert.match(tasks[0].title, /OCR 숫자·용어 먼저 확인|OCR 확인 후 복습 시작/);
+  assert.doesNotMatch(tasks[0].title, /다음 문제 원문|내 답안 원문|무효와 취소 효과를 비교하시오|취소는 항상 무효/);
+});
+
+test("fallback gap labels use controlled metadata and do not export free-form learner text", () => {
+  const rawFreeForm = "갑은 을에게 1억원 지급";
+  const signal = buildCurriculumAnchoredCaptureSignal({
+    userId: "u8",
+    examMode: "first",
+    subject: "민법",
+    learnerText: "채점 후 오답 원인을 별도 확인",
+    mistakeReason: rawFreeForm,
+    confidence: "중간",
+    captureSourceType: "manual",
+  });
+  const tasks = buildTodayPlanTasks({
+    mode: "first",
+    now: new Date("2026-05-03T12:00:00.000Z"),
+    queue: [],
+    items: [recordWithCurriculumSignal(signal)],
+  });
+
+  assert.equal(signal.metadataOnly, true);
+  assert.equal(signal.todayPlanCandidate.metadataOnly, true);
+  assert.equal(signal.reviewQueueCandidate.metadataOnly, true);
+  assert.match(signal.gapLabel, /개념 확인 필요|구조 보강 필요|오답 원인 확인 필요|답안 구조 점검|계산\/근거 점검/);
+  assert.doesNotMatch(signal.gapLabel, /갑은 을에게 1억원 지급/);
+  assert.doesNotMatch(signal.todayPlanCandidate.title, /갑은 을에게 1억원 지급/);
+  assert.doesNotMatch(signal.reviewQueueCandidate.gapLabel, /갑은 을에게 1억원 지급/);
+  assert.match(signal.reviewQueueCandidate.gapLabel, /개념 확인 필요|구조 보강 필요|오답 원인 확인 필요|답안 구조 점검|계산\/근거 점검/);
+  assert.equal(tasks.length, 1);
+  assert.doesNotMatch(tasks[0].title, /갑은 을에게 1억원 지급/);
+  assert.doesNotMatch(JSON.stringify(signal), /rawOcrText|raw_ocr_text|ocrText|problemText|questionText|rawQuestionText|userAnswerText|answerText|rawAnswerText|sourceText|copyrightedText|copyright|model\s*answer|score|instructor|갑은 을에게 1억원 지급/i);
+});

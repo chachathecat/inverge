@@ -33,6 +33,18 @@ export type TodayPlanTask = {
   display_reason?: TodayPlanDisplayCopy["displayReason"];
   display_source_label?: TodayPlanDisplayCopy["displaySourceLabel"];
   display_primary_cta?: TodayPlanDisplayCopy["displayPrimaryCta"];
+  curriculum_secondary_metadata?: {
+    metadataOnly: true;
+    source: "curriculum_capture";
+    curriculumNodeId?: string;
+    topicLabel?: string;
+    gapLabel?: string;
+    nextTaskType?: string;
+    nextAction?: string;
+    estimatedMinutes?: number;
+    reviewPattern?: unknown;
+    priority?: number;
+  };
 };
 
 type BuildInput = {
@@ -269,6 +281,20 @@ function toItemTask(item: WrongAnswerItemRecord, mode: "first" | "second", now: 
   const captureNote = typeof item.derivedPayload?.capture_note_engine_v2 === "object" && item.derivedPayload.capture_note_engine_v2 ? item.derivedPayload.capture_note_engine_v2 as Record<string, unknown> : null;
   const curriculumSignal = getCurriculumAnchoredSignal(item);
   const curriculumTodayPlanCandidate = isRecord(curriculumSignal?.todayPlanCandidate) ? curriculumSignal.todayPlanCandidate : null;
+  const curriculumSecondaryMetadata = curriculumTodayPlanCandidate && curriculumSignal?.examMode === mode
+    ? {
+        metadataOnly: true as const,
+        source: "curriculum_capture" as const,
+        ...(typeof curriculumTodayPlanCandidate.curriculumNodeId === "string" ? { curriculumNodeId: curriculumTodayPlanCandidate.curriculumNodeId } : {}),
+        ...(typeof curriculumTodayPlanCandidate.topicLabel === "string" ? { topicLabel: curriculumTodayPlanCandidate.topicLabel } : {}),
+        ...(typeof curriculumTodayPlanCandidate.gapLabel === "string" ? { gapLabel: curriculumTodayPlanCandidate.gapLabel } : {}),
+        ...(typeof curriculumTodayPlanCandidate.nextTaskType === "string" ? { nextTaskType: curriculumTodayPlanCandidate.nextTaskType } : {}),
+        ...(typeof curriculumTodayPlanCandidate.nextAction === "string" ? { nextAction: curriculumTodayPlanCandidate.nextAction } : {}),
+        ...(typeof curriculumTodayPlanCandidate.estimatedMinutes === "number" ? { estimatedMinutes: curriculumTodayPlanCandidate.estimatedMinutes } : {}),
+        ...("reviewPattern" in curriculumTodayPlanCandidate ? { reviewPattern: curriculumTodayPlanCandidate.reviewPattern } : {}),
+        ...(typeof curriculumTodayPlanCandidate.priority === "number" ? { priority: curriculumTodayPlanCandidate.priority } : {}),
+      }
+    : undefined;
   const biggestGap = String(curriculumSignal?.gapLabel ?? item.biggestGap ?? item.missingIssue ?? captureNote?.one_biggest_gap ?? item.userReasonPreset ?? "가장 큰 간극 1개를 확인합니다.");
   const createdTs = parseTime(item.createdAt);
   const recentBoost = createdTs !== null && now.getTime() - createdTs >= 0 && now.getTime() - createdTs <= 2 * DAY_MS ? 14 : 0;
@@ -280,7 +306,14 @@ function toItemTask(item: WrongAnswerItemRecord, mode: "first" | "second", now: 
   let sourceLabel = createdFromCapture ? "저장한 캡처 노트 기반" : "오답 노트 기반";
   let score = 28 + confidenceBoost(item.confidence) + recentBoost;
 
-  if (curriculumTodayPlanCandidate && curriculumSignal?.examMode === mode) {
+  if (lowConfidence) {
+    taskType = "ocr_confirmation";
+    reason = pageCount > 1 ? "여러 페이지 OCR 중 신뢰도가 낮은 부분이 있어 확인이 필요합니다." : "OCR 인식 신뢰도가 낮아 숫자/용어 확인이 필요합니다.";
+    nextAction = "원문과 노트의 숫자/용어 1개를 확인합니다.";
+    estimated = pageCount > 1 ? 8 : 5;
+    sourceLabel = "확인 필요";
+    score += 45;
+  } else if (curriculumTodayPlanCandidate && curriculumSignal?.examMode === mode) {
     const curriculumTaskType = taskTypeFromCurriculumCandidate(curriculumTodayPlanCandidate.nextTaskType, mode);
     if (curriculumTaskType) {
       taskType = curriculumTaskType;
@@ -290,15 +323,6 @@ function toItemTask(item: WrongAnswerItemRecord, mode: "first" | "second", now: 
       sourceLabel = "커리큘럼 연결 캡처 기반";
       score += typeof curriculumTodayPlanCandidate.priority === "number" ? Math.round(curriculumTodayPlanCandidate.priority * 0.4) : 24;
     }
-  }
-
-  if (!taskType && lowConfidence) {
-    taskType = "ocr_confirmation";
-    reason = pageCount > 1 ? "여러 페이지 OCR 중 신뢰도가 낮은 부분이 있어 확인이 필요합니다." : "OCR 인식 신뢰도가 낮아 숫자/용어 확인이 필요합니다.";
-    nextAction = "원문과 노트의 숫자/용어 1개를 확인합니다.";
-    estimated = pageCount > 1 ? 8 : 5;
-    sourceLabel = "확인 필요";
-    score += 45;
   } else if (!taskType && mode === "second" && (item.missingIssue || item.weakStructurePoint || item.rewriteInstruction || item.rewriteCompleted === false)) {
     taskType = "second_answer_rewrite";
     reason = "답안에서 보강할 문단이 남아 있습니다.";
@@ -328,7 +352,7 @@ function toItemTask(item: WrongAnswerItemRecord, mode: "first" | "second", now: 
     score,
     task: {
       itemId: item.id,
-      title: typeof curriculumTodayPlanCandidate?.title === "string" ? curriculumTodayPlanCandidate.title : buildDerivedActionTitle({ mode, subject: item.subjectLabel, topic: biggestGap, gap: biggestGap, nextAction, estimatedMinutes: estimated, taskType }),
+      title: taskType !== "ocr_confirmation" && typeof curriculumTodayPlanCandidate?.title === "string" ? curriculumTodayPlanCandidate.title : buildDerivedActionTitle({ mode, subject: item.subjectLabel, topic: biggestGap, gap: biggestGap, nextAction, estimatedMinutes: estimated, taskType }),
       subject: item.subjectLabel,
       exam_mode: mode,
       due_bucket: "today",
@@ -342,6 +366,7 @@ function toItemTask(item: WrongAnswerItemRecord, mode: "first" | "second", now: 
       primary_cta: primaryCtaFor(taskType, mode),
       created_from_capture: createdFromCapture,
       source_label: sourceLabel,
+      ...(curriculumSecondaryMetadata ? { curriculum_secondary_metadata: curriculumSecondaryMetadata } : {}),
     },
   };
 }

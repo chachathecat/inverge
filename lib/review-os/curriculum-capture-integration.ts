@@ -207,12 +207,21 @@ function estimatedMinutesFor(input: { examMode: AppraiserExamMode; subject: stri
   return input.confidence === "low" || input.confidence === "unknown" ? 12 : 10;
 }
 
+function controlledFallbackGapLabel(input: { examMode: AppraiserExamMode; subject: string; mistakeReason?: string; text: string }) {
+  const classificationText = `${input.subject} ${input.mistakeReason ?? ""} ${input.text}`;
+  if (/계산|산식|검산|근거|수익환원|환원이율|CASIO|카시오/.test(classificationText)) return "계산/근거 점검";
+  if (input.examMode === "second" && /구조|목차|문단|포섭|논점|누락/.test(classificationText)) return "답안 구조 점검";
+  if (/개념|정의|요건|구분|혼동/.test(classificationText)) return "개념 확인 필요";
+  if (input.examMode === "second") return "구조 보강 필요";
+  return "오답 원인 확인 필요";
+}
+
 function gapLabelFor(input: { examMode: AppraiserExamMode; subject: string; topicLabel: string; mistakeReason?: string; text: string }) {
   if (input.examMode === "first" && /무효|취소/.test(`${input.topicLabel} ${input.text}`)) return "무효·취소 구분";
   if (/법규/.test(input.subject) && /사업인정|처분성/.test(`${input.topicLabel} ${input.text}`)) return "처분성 문단";
   if (/실무/.test(input.subject) && /계산|산식|검산|수익환원|환원이율|CASIO|카시오/.test(`${input.topicLabel} ${input.text}`)) return "산식 검산";
   if (/이론/.test(input.subject)) return "키워드 논리";
-  return shortLabel(input.mistakeReason, input.examMode === "first" ? "개념 구분" : "구조 보강", 18);
+  return controlledFallbackGapLabel(input);
 }
 
 function nextTaskTypeFor(input: { examMode: AppraiserExamMode; subject: string; taskType: string; text: string }) {
