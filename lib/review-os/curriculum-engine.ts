@@ -7,6 +7,8 @@ import {
   type CurriculumVerificationStatus,
   loadAppraiserCurriculumReference,
 } from "./curriculum-reference";
+import { buildLearningMetricEvent } from "./learning-metrics";
+import { recordLearningMetricIfEnabled } from "./learning-metrics-sink";
 
 export type CurriculumSignalConfidence = "unknown" | "low" | "medium" | "high";
 export type CurriculumSignalResult = "wrong" | "unknown" | "correct" | "needs_rewrite" | "missed";
@@ -152,6 +154,29 @@ function planningMetadataForUnit(unit: CurriculumUnit): CurriculumUnitPlanningMe
   };
 }
 
+function recordCurriculumNodeMatchedMetric(signal: CurriculumLearningSignal, classification: CurriculumClassification) {
+  if (classification.matchedBy === "fallback") return;
+  recordLearningMetricIfEnabled(buildLearningMetricEvent({
+    eventName: "curriculum_node_matched",
+    examMode: classification.examMode,
+    subject: classification.subjectName ?? classification.subjectId ?? undefined,
+    conceptNodeId: classification.unitId ?? classification.unitName ?? classification.subjectId ?? undefined,
+    taskType: signal.taskType,
+    sourceEventType: signal.sourceType,
+    properties: {
+      status: classification.matchedBy,
+      confidenceBand: signal.confidence ?? "unknown",
+      candidateCount: classification.matchedBy === "unitId" || classification.matchedBy === "unitName" ? 1 : classification.allowedTaskTypes.length,
+      selectedCount: 1,
+    },
+  }));
+}
+
+function finalizeCurriculumClassification(signal: CurriculumLearningSignal, classification: CurriculumClassification) {
+  recordCurriculumNodeMatchedMetric(signal, classification);
+  return classification;
+}
+
 export function classifyLearningSignalToCurriculum(
   signal: CurriculumLearningSignal,
   reference = loadAppraiserCurriculumReference(),
@@ -168,7 +193,7 @@ export function classifyLearningSignalToCurriculum(
   if (signal.unitId) {
     const match = findSubjectAndUnit(subjects, (_subject, unit) => unit.id === signal.unitId);
     if (match) {
-      return {
+      return finalizeCurriculumClassification(signal, {
         ...base,
         subjectId: match.subject.id,
         subjectName: match.subject.name,
@@ -177,14 +202,14 @@ export function classifyLearningSignalToCurriculum(
 	        allowedTaskTypes: normalizeAllowedTaskTypes(match.unit.taskTypes),
 	        planningMetadata: planningMetadataForUnit(match.unit),
 	        matchedBy: "unitId",
-	      };
+	      });
     }
   }
 
   if (signal.unitName) {
     const match = findSubjectAndUnit(subjects, (_subject, unit) => unit.name === signal.unitName);
     if (match) {
-      return {
+      return finalizeCurriculumClassification(signal, {
         ...base,
         subjectId: match.subject.id,
         subjectName: match.subject.name,
@@ -193,14 +218,14 @@ export function classifyLearningSignalToCurriculum(
 	        allowedTaskTypes: normalizeAllowedTaskTypes(match.unit.taskTypes),
 	        planningMetadata: planningMetadataForUnit(match.unit),
 	        matchedBy: "unitName",
-	      };
+	      });
     }
   }
 
   if (signal.subjectId) {
     const subject = findSubject(subjects, (entry) => entry.id === signal.subjectId);
     if (subject) {
-      return {
+      return finalizeCurriculumClassification(signal, {
         ...base,
         subjectId: subject.id,
         subjectName: subject.name,
@@ -209,14 +234,14 @@ export function classifyLearningSignalToCurriculum(
 	        allowedTaskTypes: normalizeAllowedTaskTypes(subject.units.flatMap((unit) => unit.taskTypes)),
 	        planningMetadata: null,
 	        matchedBy: "subjectId",
-	      };
+	      });
     }
   }
 
   if (signal.subjectName) {
     const subject = findSubject(subjects, (entry) => entry.name === signal.subjectName);
     if (subject) {
-      return {
+      return finalizeCurriculumClassification(signal, {
         ...base,
         subjectId: subject.id,
         subjectName: subject.name,
@@ -225,11 +250,11 @@ export function classifyLearningSignalToCurriculum(
 	        allowedTaskTypes: normalizeAllowedTaskTypes(subject.units.flatMap((unit) => unit.taskTypes)),
 	        planningMetadata: null,
 	        matchedBy: "subjectName",
-	      };
+	      });
     }
   }
 
-  return {
+  return finalizeCurriculumClassification(signal, {
     ...base,
     subjectId: null,
     subjectName: null,
@@ -238,7 +263,7 @@ export function classifyLearningSignalToCurriculum(
     allowedTaskTypes: signal.examMode === "first" ? FIRST_FALLBACK_TASK_TYPES : SECOND_FALLBACK_TASK_TYPES,
     planningMetadata: null,
     matchedBy: "fallback",
-  };
+  });
 }
 
 function hasAllowedTaskType(classification: CurriculumClassification, taskType: string) {

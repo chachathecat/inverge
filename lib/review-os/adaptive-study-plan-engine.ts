@@ -1,3 +1,5 @@
+import { buildLearningMetricEvent } from "./learning-metrics";
+import { recordLearningMetricIfEnabled } from "./learning-metrics-sink";
 import { assertNoRawUserDataInDerived } from "./data-boundary";
 import { normalizeCurriculumTaskType } from "./curriculum-engine";
 import type { AppraiserExamMode, CurriculumImportance, CurriculumRiskLevel } from "./curriculum-reference";
@@ -506,6 +508,11 @@ export function buildAdaptiveTodayPlan(input: AdaptiveStudyPlannerInput): Adapti
     planningReason: todayPlanTasks.length > 0 ? "개인 학습 상태, 복습 예정일, 커리큘럼 중요도, 오늘 가능 시간을 함께 반영했습니다." : weekly.planningReason,
   };
   assertSafeOutput(plan);
+  recordLearningMetricIfEnabled(buildLearningMetricEvent({
+    eventName: "adaptive_today_plan_generated",
+    examMode: input.examMode,
+    properties: { candidateCount: ranked.length, selectedCount: todayPlanTasks.length, estimatedMinutes: todayPlanTasks.reduce((sum, task) => sum + task.estimatedMinutes, 0) },
+  }));
   return plan;
 }
 

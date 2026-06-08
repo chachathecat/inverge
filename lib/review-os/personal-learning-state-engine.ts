@@ -1,5 +1,7 @@
 import { assertNoRawUserDataInDerived } from "./data-boundary";
 import type { AppraiserExamMode } from "./curriculum-reference";
+import { buildLearningMetricEvent } from "./learning-metrics";
+import { recordLearningMetricIfEnabled } from "./learning-metrics-sink";
 
 export type PersonalLearningStatus = "unknown" | "confused" | "wrong" | "confident_wrong" | "recovering" | "stable";
 export type PersonalLearningResultType = "captured" | "wrong" | "correct" | "skipped" | "reviewed" | "rewritten" | "ocr_confirmed";
@@ -191,6 +193,37 @@ export function deriveLearningStateTransition(input: PersonalLearningStateTransi
     safeSummary: `${input.subject} 개념 상태: ${previousStatus} → ${nextStatus}`,
   };
   assertNoRawUserDataInDerived(transition);
+  recordLearningMetricIfEnabled(buildLearningMetricEvent({
+    eventName: "learning_state_transitioned",
+    examMode: transition.examMode,
+    subject: transition.subject,
+    conceptNodeId: transition.conceptNodeId,
+    taskType: input.taskType,
+    sourceEventType: transition.sourceEventType,
+    properties: { previousStatus, nextStatus, confidenceBand: input.confidence ?? "unknown" },
+  }));
+  if (nextStatus === "confident_wrong") {
+    recordLearningMetricIfEnabled(buildLearningMetricEvent({
+      eventName: "confident_wrong_detected",
+      examMode: transition.examMode,
+      subject: transition.subject,
+      conceptNodeId: transition.conceptNodeId,
+      taskType: input.taskType,
+      sourceEventType: transition.sourceEventType,
+      properties: { previousStatus, nextStatus, confidenceBand: input.confidence ?? "unknown" },
+    }));
+  }
+  if (previousStatus === "confident_wrong" && (nextStatus === "recovering" || nextStatus === "stable")) {
+    recordLearningMetricIfEnabled(buildLearningMetricEvent({
+      eventName: "confident_wrong_recovered",
+      examMode: transition.examMode,
+      subject: transition.subject,
+      conceptNodeId: transition.conceptNodeId,
+      taskType: input.taskType,
+      sourceEventType: transition.sourceEventType,
+      properties: { previousStatus, nextStatus, confidenceBand: input.confidence ?? "unknown" },
+    }));
+  }
   return transition;
 }
 

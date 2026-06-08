@@ -1,3 +1,6 @@
+import { buildLearningMetricEvent } from "./learning-metrics";
+import { recordLearningMetricIfEnabled } from "./learning-metrics-sink";
+
 export type ExplanationQualityContext = {
   examMode?: "first" | "second" | string;
   subject?: string;
@@ -187,7 +190,7 @@ export function evaluateExplanationLadderQuality(ladder: LadderLike, context: Ex
   const checkEval = evaluateTenSecondCheck(tenSecond, context);
   const rawMarkers = (context.rawTextLeakMarkers ?? []).map(clean).filter((marker) => marker.length >= 6);
 
-  return finalizeChecks({
+  const result = finalizeChecks({
     hasAllFourLabels,
     beginnerClarity: clean(easy).length >= 20 && clean(easy).length <= 140 && !isVague(easy) && hasSpecificTerm(easy, context),
     examUsefulness: hasDomainSpecificTerm(`${passLine} ${trap} ${tenSecond}`, context) && ACTION_TERMS.test(`${passLine} ${trap} ${tenSecond}`),
@@ -200,6 +203,16 @@ export function evaluateExplanationLadderQuality(ladder: LadderLike, context: Ex
     conciseEnough: entries.every((entry) => entry.text.length <= 160) && bundle.length <= 760,
     actionOriented: ACTION_TERMS.test(`${trap} ${tenSecond}`),
   });
+  recordLearningMetricIfEnabled(buildLearningMetricEvent({
+    eventName: "explanation_quality_evaluated",
+    examMode: ladder.examMode ?? context.examMode,
+    subject: ladder.subject ?? context.subject,
+    properties: {
+      explanationQualityStatus: result.status,
+      explanationQualityScoreBand: result.score >= 90 ? "90_100" : result.score >= 70 ? "70_89" : result.score >= 50 ? "50_69" : "0_49",
+    },
+  }));
+  return result;
 }
 
 function containsContextLeak(value: string, context: ExplanationQualityContext) {
