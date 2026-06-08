@@ -69,8 +69,7 @@ test("verification status remains blocked while internal mappings need official 
   assert.ok(status.blockingReason.includes("official verification"));
   assert.equal(status.sourceStatuses.length, 4);
   assert.ok(status.sourceStatuses.every((entry) => entry.needsOfficialVerification === true));
-  assert.ok(status.sourceStatuses.some((entry) => entry.sourceStatus.includes("official_supported_subjects_verified")));
-  assert.ok(status.sourceStatuses.some((entry) => entry.sourceStatus.includes("internal_planning_tracks")));
+  assert.ok(status.sourceStatuses.every((entry) => entry.sourceStatus === "draft"));
   assert.equal(status.lastReviewedAt.length, 4);
 
   assert.deepEqual(status, getCurriculumVerificationStatus(reference));
@@ -89,12 +88,12 @@ test("official verification metadata records source references without overclaim
   }
 
   for (const subject of [...reference.firstExam.subjects, ...reference.secondExam.subjects]) {
-    assert.equal(subject.sourceStatus, "official_subject_label_verified", `${subject.id} subject label should be verified`);
-    assert.equal(subject.needsOfficialVerification, false, `${subject.id} subject label should not remain blocked`);
+    assert.equal(subject.sourceStatus, "draft", `${subject.id} subject label should remain draft until PR #346 official-source metadata is applied to the exact subject fact`);
+    assert.equal(subject.needsOfficialVerification, true, `${subject.id} subject label should remain blocked from production-authoritative use`);
   }
 
   for (const unit of [...reference.firstExam.subjects, ...reference.secondExam.subjects].flatMap((subject) => subject.units)) {
-    assert.equal(unit.sourceStatus, "internal_mapping_needs_official_review", `${unit.id} should remain an internal mapping`);
+    assert.equal(unit.sourceStatus, "draft", `${unit.id} should remain an internal mapping`);
     assert.equal(unit.needsOfficialVerification, true, `${unit.id} should not be falsely marked official`);
   }
 
@@ -113,8 +112,8 @@ test("first exam records English as official but excluded from active learning s
   assert.ok(firstExam.officialExamSubjects?.includes("영어"), "official first-stage subject metadata must include 영어");
   assert.ok(englishExclusion, "영어 must be explicitly recorded as an excluded official subject");
   assert.match(englishExclusion.reason, /not modeled as an Inverge active learning curriculum subject in v1/);
-  assert.equal(englishExclusion.sourceStatus, "official_subject_label_verified_product_scope_excluded");
-  assert.equal(englishExclusion.needsOfficialVerification, false);
+  assert.equal(englishExclusion.sourceStatus, "draft");
+  assert.equal(englishExclusion.needsOfficialVerification, true);
   assert.equal(firstExam.activeLearningSubjects?.includes("영어"), false);
   assert.equal(activeSubjectNames.includes("영어"), false);
   assert.deepEqual(firstExam.activeLearningSubjects?.sort(), activeSubjectNames.sort());
@@ -126,7 +125,8 @@ test("first exam official subject verification does not imply every official sub
   const activeSubjects = new Set(firstExam.activeLearningSubjects);
   const excludedSubjects = new Set(firstExam.excludedOfficialSubjects?.map((subject) => subject.name));
 
-  assert.ok(firstExam.sourceStatus.includes("english_excluded_from_active_learning_scope"));
+  assert.equal(firstExam.sourceStatus, "draft");
+  assert.ok(firstExam.verificationNote.includes("English") || firstExam.verificationNote.includes("영어"));
   assert.ok(officialSubjects.has("영어"));
   assert.ok(excludedSubjects.has("영어"));
   assert.equal(activeSubjects.has("영어"), false);

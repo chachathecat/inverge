@@ -11,6 +11,7 @@ function npmStep(label, scriptName) {
 }
 
 const steps = [
+  npmStep("official-source verification", "check:official-source-verification"),
   npmStep("learner-loop verification (includes guardrail audit)", "verify:learner-loop:ci"),
   {
     label: "data-boundary tests",
@@ -48,5 +49,5 @@ for (const step of steps) {
 }
 
 if (!process.exitCode) {
-  console.log("\n[closed-beta-readiness] PASS: closed beta learner loop, guardrail audit, data boundary, route/source guards, question references, and build passed.");
+  console.log("\n[closed-beta-readiness] PASS: official-source verification, closed beta learner loop, guardrail audit, data boundary, route/source guards, question references, and build passed.");
 }

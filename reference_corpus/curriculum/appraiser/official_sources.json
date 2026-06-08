@@ -1,0 +1,110 @@
+{
+  "schemaVersion": "2026-06-08",
+  "registryScope": "감정평가사 official-source metadata registry for curriculum/reference verification only",
+  "storagePolicy": "metadata_only_no_raw_problem_text_no_copyrighted_question_body_storage",
+  "sources": [
+    {
+      "id": "qnet_appraiser_qualification_detail",
+      "sourceName": "Q-Net 감정평가사 자격상세정보",
+      "sourceUrl": "https://www.q-net.or.kr/crf005.do?gId=60&gSite=L&gbnn=gbnSubtab2&id=crf00503",
+      "sourceKind": "qualification_detail",
+      "authorityLevel": "primary",
+      "owner": "Q-Net",
+      "verifiedFacts": {
+        "qualificationNameKo": "감정평가사",
+        "qualificationNameEn": "Certified Appraiser",
+        "relatedMinistry": "국토교통부",
+        "administeringAgency": "한국산업인력공단"
+      },
+      "lastCheckedAt": "2026-06-08",
+      "needsManualRecheckBy": "2026-09-08",
+      "allowedUse": ["metadata_only", "link_reference"],
+      "disallowedUse": ["raw_problem_text_copy", "copyrighted_question_body_storage", "official_score_claim", "pass_fail_claim"],
+      "notes": "Use only for qualification identity and administering-agency metadata. Do not treat detailed Inverge curriculum units as official syllabus units based on this source alone."
+    },
+    {
+      "id": "qnet_appraiser_exam_info",
+      "sourceName": "Q-Net 감정평가사 시험정보",
+      "sourceUrl": "https://www.q-net.or.kr/crf005.do?gId=60&gSite=L&gbnn=gbnSubtab4&id=crf00503",
+      "sourceKind": "exam_info",
+      "authorityLevel": "primary",
+      "owner": "Q-Net",
+      "verifiedFacts": {},
+      "lastCheckedAt": "2026-06-08",
+      "needsManualRecheckBy": "2026-09-08",
+      "allowedUse": ["metadata_only", "link_reference"],
+      "disallowedUse": ["raw_problem_text_copy", "copyrighted_question_body_storage", "official_score_claim", "pass_fail_claim"],
+      "notes": "Use for linking and manual exam-info verification. Do not copy question, answer, or copyrighted source bodies."
+    },
+    {
+      "id": "qnet_appraiser_public_notice",
+      "sourceName": "Q-Net 감정평가사 시행공고",
+      "sourceUrl": "https://www.q-net.or.kr/man001.do?gId=60&gSite=L",
+      "sourceKind": "public_notice",
+      "authorityLevel": "primary",
+      "owner": "Q-Net",
+      "verifiedFacts": {},
+      "lastCheckedAt": "2026-06-08",
+      "needsManualRecheckBy": "2026-07-08",
+      "allowedUse": ["metadata_only", "link_reference"],
+      "disallowedUse": ["raw_problem_text_copy", "copyrighted_question_body_storage", "official_score_claim", "pass_fail_claim"],
+      "notes": "Current notices are time-sensitive; schedule/calendar nodes must be manually rechecked before production use."
+    },
+    {
+      "id": "qnet_appraiser_past_questions",
+      "sourceName": "Q-Net 기출문제 내려받기",
+      "sourceUrl": "https://www.q-net.or.kr/cst003.do?gId=31&gSite=L&id=cst00309",
+      "sourceKind": "past_questions",
+      "authorityLevel": "primary",
+      "owner": "Q-Net",
+      "verifiedFacts": {},
+      "lastCheckedAt": "2026-06-08",
+      "needsManualRecheckBy": "2026-09-08",
+      "allowedUse": ["metadata_only", "link_reference"],
+      "disallowedUse": ["raw_problem_text_copy", "copyrighted_question_body_storage", "official_score_claim", "pass_fail_claim"],
+      "notes": "Registry may store URLs and metadata only. Do not download or commit copyrighted raw problem bodies."
+    },
+    {
+      "id": "qnet_appraiser_final_answers",
+      "sourceName": "Q-Net 최종정답 및 가답안/최종정답공개",
+      "sourceUrl": "https://www.q-net.or.kr/anc002.do?gId=60&gSite=L&id=anc00201",
+      "sourceKind": "final_answers",
+      "authorityLevel": "primary",
+      "owner": "Q-Net",
+      "verifiedFacts": {},
+      "lastCheckedAt": "2026-06-08",
+      "needsManualRecheckBy": "2026-09-08",
+      "allowedUse": ["metadata_only", "link_reference"],
+      "disallowedUse": ["raw_problem_text_copy", "copyrighted_question_body_storage", "official_score_claim", "pass_fail_claim"],
+      "notes": "Use only for source linking and metadata verification. Do not store official answer text or claim official scoring."
+    },
+    {
+      "id": "molit_appraiser_related_law_or_notice",
+      "sourceName": "국토교통부 감정평가사 관련 법령/고시 확인 경로",
+      "sourceUrl": "https://www.molit.go.kr/",
+      "sourceKind": "statute_or_regulation",
+      "authorityLevel": "secondary",
+      "owner": "국토교통부",
+      "verifiedFacts": {},
+      "lastCheckedAt": "2026-06-08",
+      "needsManualRecheckBy": "2026-09-08",
+      "allowedUse": ["metadata_only", "link_reference"],
+      "disallowedUse": ["raw_problem_text_copy", "copyrighted_question_body_storage", "official_score_claim", "pass_fail_claim"],
+      "notes": "Use where ministry statutes/notices are relevant. Prefer Q-Net/current public notice for exam operation metadata."
+    },
+    {
+      "id": "hrdkorea_qnet_operator",
+      "sourceName": "한국산업인력공단 Q-Net 운영기관",
+      "sourceUrl": "https://www.hrdkorea.or.kr/",
+      "sourceKind": "operator",
+      "authorityLevel": "primary",
+      "owner": "한국산업인력공단",
+      "verifiedFacts": {},
+      "lastCheckedAt": "2026-06-08",
+      "needsManualRecheckBy": "2026-09-08",
+      "allowedUse": ["metadata_only", "link_reference"],
+      "disallowedUse": ["raw_problem_text_copy", "copyrighted_question_body_storage", "official_score_claim", "pass_fail_claim"],
+      "notes": "Use for operator identity metadata and link reference only."
+    }
+  ]
+}

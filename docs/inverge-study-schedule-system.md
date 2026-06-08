@@ -157,3 +157,9 @@ PR #342 adds the adaptive study planner layer that turns personal learning state
 - Weekly plan preview is helper-level metadata only: max 3 focus lines, target concepts, recovery items, and estimated total minutes.
 - The planner does **not** send push notifications and does not add native app behavior.
 - Production durable rollout remains gated/off by default.
+
+## PR #346 official-source verification dependency
+
+Study schedule metadata remains Inverge learning-operation guidance unless a schedule or exam metadata node is verified against Q-Net/current public notice or another registered official source. Production use requires verified or explicitly draft-safe nodes, while closed beta can use draft schedule nodes only as guidance.
+
+The schedule system must not imply official scoring, official answer status, pass/fail outcomes, score prediction, or 합격 보장. Time-sensitive public-notice and exam-calendar facts should move to `needs_update` when the manual recheck date passes.

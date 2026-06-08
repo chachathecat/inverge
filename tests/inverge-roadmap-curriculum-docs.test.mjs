@@ -85,10 +85,10 @@ test("verified curriculum references cite public sources and keep internal mappi
     }
 
     for (const subject of parsed.subjects) {
-      assert.equal(subject.sourceStatus, "official_subject_label_verified", `${subject.id} subject label must be verified`);
-      assert.equal(subject.needsOfficialVerification, false, `${subject.id} subject label verification should be explicit`);
+      assert.equal(subject.sourceStatus, "draft", `${subject.id} subject label must remain draft until exact official-source verification is recorded`);
+      assert.equal(subject.needsOfficialVerification, true, `${subject.id} subject label must not be production authoritative`);
       for (const unit of subject.units) {
-        assert.equal(unit.sourceStatus, "internal_mapping_needs_official_review", `${unit.id} unit must remain internal mapping`);
+        assert.equal(unit.sourceStatus, "draft", `${unit.id} unit must remain internal mapping`);
         assert.equal(unit.needsOfficialVerification, true, `${unit.id} unit must not be falsely marked official`);
       }
     }
@@ -103,7 +103,8 @@ test("first exam docs document English as official but excluded from active lear
   assert.ok(firstExam.officialExamSubjects.includes("영어"));
   assert.ok(firstExam.excludedOfficialSubjects.some((subject) => subject.name === "영어" && subject.reason.length > 20));
   assert.equal(firstExam.activeLearningSubjects.includes("영어"), false);
-  assert.match(firstExam.sourceStatus, /english_excluded_from_active_learning_scope/);
+  assert.equal(firstExam.sourceStatus, "draft");
+  assert.match(firstExam.verificationNote, /English|영어/);
   assert.match(doc, /Official 감정평가사 1차 includes 영어/);
   assert.match(doc, /does not model 영어 as an active learning curriculum track/);
   assert.match(doc, /product-scope exclusion, not a claim that 영어 is absent/);

@@ -275,3 +275,9 @@ PR #345 reduces mobile capture friction for `/app/capture` without expanding lea
 - 2차 normal capture must preserve retrieval before explanation: preview routes to 쟁점 회상 → 목차 → 내 답안/다시쓰기 → 기준답안 비교 or safe acknowledgement → final confirmation/save. It must require at least one learner-produced 2차 response and must not present score, pass/fail, or official model-answer claims.
 - After save, the learner sees one biggest gap, one next action, and where it went: Today Plan candidate, Review Queue candidate, and Note/details.
 - Metrics remain metadata-only and disabled by default. No raw OCR/problem/answer/source/copyright/official/model/score/instructor fields may be emitted in shared outputs.
+
+## PR #346 official-source verification signoff addendum
+
+Closed beta staging signoff now includes `npm run check:official-source-verification`. The check confirms the official source registry exists, the Q-Net 감정평가사 identity facts are verified, curriculum/reference nodes carry source statuses, and repository data stays metadata-only.
+
+Closed beta may use draft curriculum and schedule nodes as guidance only. Production-facing use requires verified or explicitly draft-safe nodes, and staging must not claim official grading, official answer status, score prediction, pass/fail outcomes, or 합격 보장.

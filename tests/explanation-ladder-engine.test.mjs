@@ -211,7 +211,7 @@ test("warnings include draft verification metadata when reference requires verif
   const warning = output.warnings.find((item) => item.code === "reference_needs_verification");
 
   assert.ok(warning, "expected draft verification warning");
-  assert.equal(warning.sourceStatus, "draft_metadata_from_internal_roadmap");
+  assert.equal(warning.sourceStatus, "draft");
   assert.match(warning.message, /검수|점검용/);
   assert.doesNotMatch(warning.message, /공포|큰일|불합격/);
 });

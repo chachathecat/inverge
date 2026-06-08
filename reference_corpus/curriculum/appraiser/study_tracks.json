@@ -1,6 +1,6 @@
 {
   "schemaVersion": "2026-06-01",
-  "sourceStatus": "internal_planning_tracks_need_beta_and_official_calendar_review",
+  "sourceStatus": "draft",
   "needsOfficialVerification": true,
   "lastReviewedAt": "2026-06-02",
   "verificationNote": "Study tracks are Inverge planning metadata. They reference only the verified 감정평가사 1차/2차 scope, but durations and task mixes remain internal beta assumptions rather than official curriculum claims.",
@@ -380,13 +380,17 @@
       "label": "국가법령정보센터 감정평가 및 감정평가사에 관한 법률 시행령 별표 1 시험과목",
       "url": "https://www.law.go.kr/flDownload.do?bylClsCd=110201&flSeq=144249475&gubun=",
       "reviewedAt": "2026-06-02",
-      "scope": "official_subject_labels_and_statutory_exam_boundaries"
+      "scope": "official_subject_labels_and_statutory_exam_boundaries",
+      "sourceStatus": "draft",
+      "needsOfficialVerification": true
     },
     {
       "label": "Q-Net 감정평가사 자격상세정보",
       "url": "https://www.q-net.or.kr/crf005.do?gId=60&gSite=L&gbnn=gbnSubtab4&id=crf00503",
       "reviewedAt": "2026-06-02",
-      "scope": "official_exam_administrator_and_public_exam_information_page"
+      "scope": "official_exam_administrator_and_public_exam_information_page",
+      "sourceStatus": "draft",
+      "needsOfficialVerification": true
     }
   ],
   "productionVerificationNote": "Draft metadata only. Official exam syllabus and current public notices must be verified against Q-Net or official sources before production use.",
@@ -398,5 +402,21 @@
     "exam_urgency",
     "missed_recently",
     "weak_structure"
-  ]
+  ],
+  "officialQualificationIdentity": {
+    "id": "appraiser_qualification_identity",
+    "qualificationNameKo": "감정평가사",
+    "qualificationNameEn": "Certified Appraiser",
+    "relatedMinistry": "국토교통부",
+    "administeringAgency": "한국산업인력공단",
+    "sourceStatus": "verified",
+    "needsOfficialVerification": false,
+    "officialSourceId": "qnet_appraiser_qualification_detail",
+    "officialSourceUrl": "https://www.q-net.or.kr/crf005.do?gId=60&gSite=L&gbnn=gbnSubtab2&id=crf00503",
+    "officialSourceName": "Q-Net 감정평가사 자격상세정보",
+    "officialSourceKind": "qualification_detail",
+    "lastOfficialVerifiedAt": "2026-06-08",
+    "verifiedBy": "Inverge PR #346 manual official-source verification",
+    "verificationNote": "Broad qualification identity only; detailed curriculum, schedule, and explanation nodes remain draft unless separately verified."
+  }
 }
