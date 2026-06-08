@@ -223,3 +223,9 @@ PR #345 reduces learner mobile Capture friction while preserving the curriculum/
 - The saved output must be curriculum-compatible metadata: one biggest gap, one next action, Today Plan candidate, Review Queue candidate, and Note/details location.
 - Raw learner OCR/problem/answer/source/copyright text stays in learner-owned note/detail surfaces and must not be emitted in shared Today Plan, Review Queue, metrics, or curriculum outputs.
 - Metrics for the Capture path remain metadata-only and disabled by default.
+
+## PR #346 official-source verification
+
+PR #346 adds a static official-source verification layer for appraiser curriculum/reference metadata. The source registry lives in `reference_corpus/curriculum/appraiser/official_sources.json`, and curriculum nodes now distinguish `draft`, `verified`, `needs_update`, and `deprecated` source states.
+
+Production-facing curriculum use requires either verified metadata or an explicitly draft-safe guidance path. Closed beta may use draft nodes only as internal learning guidance, not as official syllabus authority. Inverge must not store raw copyrighted problem bodies, official answer text, model answers, score/pass-fail claims, or official grading claims.

@@ -80,3 +80,9 @@ PR #345 keeps the text-first Capture path measurable without adding external ana
 - `adaptive_today_plan_generated` is emitted only as metadata when the save produces a Today Plan-compatible candidate.
 - Existing curriculum and personal-learning-state helpers may emit `curriculum_node_matched` and `learning_state_transitioned` when a matched node or update candidate exists.
 - Metrics remain `metadataOnly: true`, disabled by default unless `LEARNING_METRICS_ENABLED=1`, and must not include raw OCR/problem/answer/source/copyright/official/model/score/instructor fields.
+
+## PR #346 official-source verification and metrics boundary
+
+Closed beta learning metrics remain operational learning signals, not official exam outcomes. PR #346 requires curriculum/reference data used by metrics summaries to keep source status metadata and to distinguish verified source facts from draft guidance.
+
+Metrics reports may reference verified metadata and source IDs, but must not expose raw OCR/problem/answer/source text, official answer text, model answers, instructor comments, score predictions, official scoring, pass/fail claims, or 합격 보장. Draft nodes can inform closed beta guidance only and are not production-authoritative.
