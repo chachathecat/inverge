@@ -35,7 +35,7 @@
     "needsOfficialVerification",
     "rawTextStored",
     "copyrightedTextStored",
-    "notes"
+    "safeNotes"
   ],
   "requiredFields": [
     "sourceId",
@@ -71,7 +71,8 @@
     "answerSkeletonTags": "Structural tags only; no answer body.",
     "calculationTemplateCandidates": "Template identifiers or short labels only; no problem values copied from source.",
     "rawTextStored": "Must always be false.",
-    "copyrightedTextStored": "Must always be false."
+    "copyrightedTextStored": "Must always be false.",
+    "safeNotes": "Optional short operational note after strict validation; never raw question text, answer text, explanation body, scoring, or copyrighted source text."
   },
   "forbiddenFields": [
     "problemText",

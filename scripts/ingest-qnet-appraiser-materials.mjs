@@ -9,7 +9,7 @@ const defaultOutputPath = "reference_corpus/official_materials/appraiser/qnet_ap
 const defaultFrequencyPath = "reference_corpus/official_materials/appraiser/qnet_appraiser_topic_frequency.json";
 const defaultSourceMapPath = "reference_corpus/official_materials/appraiser/qnet_appraiser_source_map.json";
 const defaultSchemaPath = "reference_corpus/official_materials/appraiser/qnet_appraiser_ingestion_schema.json";
-const officialSourceRegistryPath = "reference_corpus/curriculum/appraiser/official_sources.json";
+const defaultOfficialSourceRegistryPath = "reference_corpus/curriculum/appraiser/official_sources.json";
 
 const manifestPath = process.env.QNET_APPRAISER_MANIFEST_PATH ?? defaultManifestPath;
 const outputPath = process.env.QNET_APPRAISER_INDEX_OUTPUT_PATH ?? defaultOutputPath;
@@ -17,6 +17,7 @@ const frequencyOutputPath = process.env.QNET_APPRAISER_TOPIC_FREQUENCY_OUTPUT_PA
 const sourceMapOutputPath = process.env.QNET_APPRAISER_SOURCE_MAP_OUTPUT_PATH ?? defaultSourceMapPath;
 const schemaPath = process.env.QNET_APPRAISER_INGESTION_SCHEMA_PATH ?? defaultSchemaPath;
 const allowMissingManifest = process.env.QNET_APPRAISER_ALLOW_MISSING_MANIFEST === "1";
+const officialSourceRegistryPath = process.env.QNET_APPRAISER_OFFICIAL_SOURCE_REGISTRY_PATH ?? defaultOfficialSourceRegistryPath;
 
 const allowedSourceKinds = new Set([
   "past_questions",
@@ -32,6 +33,9 @@ const allowedSourceKinds = new Set([
 const allowedExamModes = new Set(["first", "second"]);
 const allowedSourceStatuses = new Set(["draft", "verified", "needs_update", "deprecated"]);
 const forbiddenClaimPattern = /(official\s+grading|official\s+score|score\s+prediction|pass\s*\/\s*fail|model\s+answer|합격\s*보장|공식\s*채점|공식\s*점수|점수\s*예측|합격\s*\/\s*불합격|합불|공식\s*모범\s*답안|모범\s*답안)/i;
+const answerBodyLikePattern = /(정답|해설|풀이|답안|모범\s*답안|official\s*answer|model\s*answer|answer\s*body|explanation|therefore|because|따라서|그러므로|왜냐하면|결론적으로)/i;
+const problemLikePattern = /(다음\s*중|옳은\s*것은|옳지\s*않은\s*것은|물음|약술|논하|설명하|계산하|o\s*\/\s*x|○\s*\/\s*×|맞으면\s*o|틀리면\s*x)/i;
+const partyAndCurrencyPattern = /([갑을병정][^\n]{0,40}[갑을병정][^\n]{0,40}(?:\d+\s*(?:억|만)?\s*원|\d+억원|\d+만원))|((?:\d+\s*(?:억|만)?\s*원|\d+억원|\d+만원)[^\n]{0,40}[갑을병정][^\n]{0,40}[갑을병정])/;
 
 function parseArgs(argv) {
   const args = {};
@@ -128,6 +132,40 @@ function normalizeBoolean(value, defaultValue) {
   return typeof value === "boolean" ? value : defaultValue;
 }
 
+function normalizeCanonicalUrl(value) {
+  return typeof value === "string" ? value.trim() : value;
+}
+
+function validateOfficialSourceFieldOverride(item, field, registryValue, itemPath, errors) {
+  if (item[field] === undefined) return;
+  requireCondition(
+    item[field] === registryValue,
+    `${itemPath}.${field} must match official_sources.json for ${item.officialSourceId}; manifest values cannot override registry metadata`,
+    errors,
+  );
+}
+
+function normalizeSafeNotes(value, itemPath, errors) {
+  if (value === undefined || value === null) return null;
+  requireCondition(typeof value === "string", `${itemPath}.notes must be a short operational metadata note when provided`, errors);
+  if (typeof value !== "string") return null;
+
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return null;
+
+  requireCondition(trimmed.length <= 120, `${itemPath}.notes must be 120 characters or fewer`, errors);
+  requireCondition((trimmed.match(/\n/g) ?? []).length <= 1, `${itemPath}.notes must not contain newline-heavy raw text`, errors);
+  requireCondition(!problemLikePattern.test(trimmed), `${itemPath}.notes looks like a problem excerpt and cannot be stored`, errors);
+  requireCondition(!partyAndCurrencyPattern.test(trimmed), `${itemPath}.notes contains party/currency problem-like text and cannot be stored`, errors);
+  requireCondition(!answerBodyLikePattern.test(trimmed), `${itemPath}.notes looks like an answer or explanation body and cannot be stored`, errors);
+  requireCondition(!forbiddenClaimPattern.test(trimmed), `${itemPath}.notes contains a prohibited claim`, errors);
+
+  const sentenceEndCount = (trimmed.match(/[.!?。！？]/g) ?? []).length;
+  requireCondition(sentenceEndCount <= 1 || trimmed.length <= 70, `${itemPath}.notes looks like a long sentence excerpt and cannot be stored`, errors);
+
+  return trimmed;
+}
+
 function normalizeMaterial(item, index, context, errors) {
   const itemPath = `items[${index}]`;
   requireCondition(isRecord(item), `${itemPath} must be an object`, errors);
@@ -135,9 +173,9 @@ function normalizeMaterial(item, index, context, errors) {
 
   const officialSourceId = item.officialSourceId;
   const registrySource = context.officialSources.get(officialSourceId);
-  const sourceUrl = item.sourceUrl ?? item.officialSourceUrl ?? registrySource?.sourceUrl;
-  const sourceName = item.sourceName ?? registrySource?.sourceName;
-  const sourceKind = item.sourceKind ?? registrySource?.sourceKind;
+  const sourceUrl = normalizeCanonicalUrl(registrySource?.sourceUrl);
+  const sourceName = registrySource?.sourceName;
+  const sourceKind = registrySource?.sourceKind;
   const sourceStatus = item.sourceStatus ?? "draft";
   const lastOfficialVerifiedAt = item.lastOfficialVerifiedAt ?? registrySource?.lastCheckedAt ?? null;
   const needsOfficialVerification = item.needsOfficialVerification ?? sourceStatus !== "verified";
@@ -147,9 +185,15 @@ function normalizeMaterial(item, index, context, errors) {
     requireCondition(field in item, `${itemPath} missing ${field}`, errors);
   }
   requireCondition(typeof officialSourceId === "string" && context.officialSources.has(officialSourceId), `${itemPath}.officialSourceId must match the official source registry`, errors);
-  requireCondition(typeof sourceKind === "string" && allowedSourceKinds.has(sourceKind), `${itemPath}.sourceKind has unsupported value ${sourceKind}`, errors);
-  requireCondition(typeof sourceName === "string" && sourceName.trim().length > 0, `${itemPath}.sourceName must be available from manifest or registry`, errors);
-  requireCondition(typeof sourceUrl === "string" && /^https:\/\//.test(sourceUrl), `${itemPath}.sourceUrl or officialSourceUrl must be an https URL`, errors);
+  if (registrySource) {
+    validateOfficialSourceFieldOverride(item, "sourceUrl", sourceUrl, itemPath, errors);
+    validateOfficialSourceFieldOverride(item, "officialSourceUrl", sourceUrl, itemPath, errors);
+    validateOfficialSourceFieldOverride(item, "sourceName", sourceName, itemPath, errors);
+    validateOfficialSourceFieldOverride(item, "sourceKind", sourceKind, itemPath, errors);
+  }
+  requireCondition(typeof sourceKind === "string" && allowedSourceKinds.has(sourceKind), `${itemPath}.sourceKind has unsupported registry value ${sourceKind}`, errors);
+  requireCondition(typeof sourceName === "string" && sourceName.trim().length > 0, `${itemPath}.sourceName must be available from official source registry`, errors);
+  requireCondition(typeof sourceUrl === "string" && /^https:\/\//.test(sourceUrl), `${itemPath}.sourceUrl must be an https URL in official_sources.json`, errors);
   requireCondition(Number.isInteger(item.examYear) && item.examYear >= 1989 && item.examYear <= 2100, `${itemPath}.examYear must be a plausible year`, errors);
   requireCondition(Number.isInteger(item.examRound) && item.examRound >= 1 && item.examRound <= 200, `${itemPath}.examRound must be a plausible round number`, errors);
   requireCondition(allowedExamModes.has(item.examMode), `${itemPath}.examMode must be first or second`, errors);
@@ -193,7 +237,7 @@ function normalizeMaterial(item, index, context, errors) {
     needsOfficialVerification,
     rawTextStored: false,
     copyrightedTextStored: false,
-    notes: typeof item.notes === "string" ? item.notes.trim() : null,
+    safeNotes: normalizeSafeNotes(item.notes, itemPath, errors),
   };
 
   requireCondition(material.topicCandidates.length > 0, `${itemPath}.topicCandidates must include at least one metadata label`, errors);
