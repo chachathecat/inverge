@@ -198,3 +198,17 @@ PR #342 uses the Appraiser Curriculum Kernel as planning metadata for adaptive s
 - Weekly preview includes max 3 focus lines plus target concepts, recovery items, and estimated minutes. It is metadata-only and sends no notifications.
 - Missed reviews create calm recovery items and never shame the learner.
 - Production durable personal learning state rollout remains gated and is not enabled by default.
+
+## PR #343 explanation quality measurement
+
+PR #343 adds an explanation quality harness for the curriculum-anchored explanation ladder. Curriculum concepts may drive explanations only through metadata-only labels and derived signals; explanations must be measurable before they are used in learner flows.
+
+Quality requirements:
+
+- Every curriculum-backed explanation ladder must include all four labels: **1타 쉬운풀이**, **합격 한 줄**, **출제자 함정**, **10초 확인**.
+- `10초 확인` must be convertible to O/X or cloze practice so feedback ends in retrieval, retry, rewrite, or scheduled review.
+- Official grading, official/model answer, score/pass-fail, and **합격보장** language is forbidden.
+- Raw learner text, raw problem text, raw answer text, OCR text, source text, and copyrighted text must not be stored in the reference corpus or emitted by the explanation evaluator.
+- The eval harness remains deterministic/static and does not call external APIs.
+
+This does not expand learner-facing scope beyond 감정평가사 1차 and 감정평가사 2차, does not add payment, and does not enable production durable rollout.

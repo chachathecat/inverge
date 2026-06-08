@@ -1,0 +1,17 @@
+{
+  "name": "valid 민법 무효/취소 explanation",
+  "expectedStatus": "pass",
+  "context": { "examMode": "first", "subject": "민법", "conceptLabel": "무효와 취소" },
+  "ladder": {
+    "metadataOnly": true,
+    "conceptLabel": "무효와 취소",
+    "subject": "민법",
+    "examMode": "first",
+    "entries": [
+      { "label": "1타 쉬운풀이", "text": "무효는 처음부터 효력이 없는 상태이고, 취소는 취소권 행사로 효력을 뒤집는 구조입니다." },
+      { "label": "합격 한 줄", "text": "무효는 처음부터 효력 없음, 취소는 취소 전까지 유효한 상태로 구분합니다." },
+      { "label": "출제자 함정", "text": "추인, 제3자 보호, 소급효 표현이 어느 쪽에 붙는지 확인합니다." },
+      { "label": "10초 확인", "text": "O/X: 취소는 취소 전까지 유효한 상태이다." }
+    ]
+  }
+}

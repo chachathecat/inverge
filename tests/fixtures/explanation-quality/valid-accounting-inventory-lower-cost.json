@@ -1,0 +1,17 @@
+{
+  "name": "valid 회계 재고자산 저가법 explanation",
+  "expectedStatus": "pass",
+  "context": { "examMode": "first", "subject": "회계학", "conceptLabel": "재고자산 저가법" },
+  "ladder": {
+    "metadataOnly": true,
+    "conceptLabel": "재고자산 저가법",
+    "subject": "회계학",
+    "examMode": "first",
+    "entries": [
+      { "label": "1타 쉬운풀이", "text": "재고자산은 장부 원가보다 팔아서 회수할 금액이 낮으면 낮은 금액으로 보수적으로 표시합니다." },
+      { "label": "합격 한 줄", "text": "재고자산은 원가와 순실현가능가치 중 낮은 금액으로 평가합니다." },
+      { "label": "출제자 함정", "text": "높은 금액 선택, 평가이익 인식, 손실 방향 반전을 구분합니다." },
+      { "label": "10초 확인", "text": "cloze: 재고자산은 원가와 ____ 중 낮은 금액으로 평가한다." }
+    ]
+  }
+}

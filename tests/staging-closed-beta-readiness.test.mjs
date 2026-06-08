@@ -156,6 +156,9 @@ test("final closed-beta staging sign-off keeps staging ready and production bloc
     "PERSONAL_CONCEPT_GRAPH_DURABLE_READS=0",
     "No raw text leak",
     "No raw OCR/problem/answer/source/copyright/official/model/score/instructor fields",
+    "PR #343 adds explanation quality harness",
+    "10초 확인 must remain O/X or cloze-convertible",
+    "Official grading/model answer/score/pass-fail/합격보장 claims are forbidden",
     "Restricted routes must be blocked for normal learner",
   ]) {
     assert.equal(signoff.includes(required), true, `final sign-off should include ${required}`);

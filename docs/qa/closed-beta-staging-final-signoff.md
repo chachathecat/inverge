@@ -18,6 +18,7 @@ This sign-off is documentation/static-guardrail approval for limited invited-use
 - #333 Taxonomy candidate deserialization fix
 - #334 Windows-safe learner-loop verification
 - #335 Staging QA evidence + visible action cap
+- #343 Explanation Quality Eval Harness v1
 
 ## C. Required commands and latest result
 
@@ -30,6 +31,7 @@ npm run check:closed-beta-readiness
 npm run check:taxonomy
 npm run lint
 npm run check:durable-today-plan-rollout
+npm run eval:explanation-quality
 ```
 
 Expected result:
@@ -40,11 +42,13 @@ Expected result:
 - `npm run check:taxonomy` passes.
 - `npm run lint` has no errors.
 - `npm run check:durable-today-plan-rollout` passes.
+- `npm run eval:explanation-quality` passes.
 
 Latest local evidence:
 
 - Learner loop: 521 tests / 521 pass / 0 fail.
 - Durable rollout readiness: `passed_durable_today_plan_rollout_readiness`.
+- Explanation quality eval: `passed_explanation_quality_eval`.
 
 ## D. Staging flags
 
@@ -115,12 +119,17 @@ Run manual QA with an invited learner account on Preview/Staging only.
 - Restricted routes must be blocked for normal learner.
 - No raw text leak.
 - No raw OCR/problem/answer/source/copyright/official/model/score/instructor fields are exposed.
+- PR #343 adds explanation quality harness for measurable explanation ladder checks.
+- The four explanation ladder labels are required wherever the ladder is shown.
+- 10초 확인 must remain O/X or cloze-convertible.
+- Official grading/model answer/score/pass-fail/합격보장 claims are forbidden.
 - No official grading/score/pass-fail/model-answer claims are visible.
 - No instructor/admin/payment/archive/native-app exposure is visible to learners.
 
 ## F. Data boundary
 
 - Raw OCR/problem/user answer/source text remains user-owned service data.
+- Raw learner/problem/answer text must not leak into explanation outputs or reference corpus fixtures.
 - Today Plan uses metadata-only derived signals.
 - Durable graph rows are metadata-only.
 - No raw DB rows are exposed.

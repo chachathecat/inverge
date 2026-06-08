@@ -1,0 +1,17 @@
+{
+  "name": "valid 실무 수익환원법 explanation",
+  "expectedStatus": "pass",
+  "context": { "examMode": "second", "subject": "감정평가실무", "conceptLabel": "수익환원법" },
+  "ladder": {
+    "metadataOnly": true,
+    "conceptLabel": "수익환원법",
+    "subject": "감정평가실무",
+    "examMode": "second",
+    "entries": [
+      { "label": "1타 쉬운풀이", "text": "수익환원법은 앞으로 벌 순수익을 현재 가치로 바꾸어 대상 부동산의 가격을 구하는 방식입니다." },
+      { "label": "합격 한 줄", "text": "수익가액은 순수익을 적정 환원이율로 환원해 산정합니다." },
+      { "label": "출제자 함정", "text": "순수익, 환원이율, 기준시점, 단위를 섞지 말고 분리해 검산합니다." },
+      { "label": "10초 확인", "text": "cloze: 수익가액은 ____을 적정 환원이율로 환원해 산정한다." }
+    ]
+  }
+}

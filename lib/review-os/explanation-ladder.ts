@@ -1,4 +1,5 @@
 import { loadExplanationLadder, type AppraiserExamMode } from "./curriculum-reference";
+import { assertExplanationQuality, evaluateExplanationLadderQuality } from "./explanation-quality-eval";
 
 export type ExplanationLadderInput = {
   conceptLabel: string;
@@ -20,15 +21,21 @@ export type ExplanationLadderV1 = {
 
 const REQUIRED_LABELS = ["1타 쉬운풀이", "합격 한 줄", "출제자 함정", "10초 확인"] as const;
 const FORBIDDEN_CLAIM_PATTERNS = [
-  /공식\s*정답/,
-  /최종\s*정답/,
-  /공식\s*채점/,
-  /자동\s*채점/,
-  /점수\s*(?:보장|예측|확정)/,
-  /합격\s*(?:보장|예측|확정)/,
-  /불합격\s*(?:예측|확정)/,
-  /모범\s*답안\s*확정/,
-  /모범답안\s*확정/,
+  /공식\s*(?:정답|해설|모범\s*답안|모범답안|채점|점수)/i,
+  /최종\s*정답/i,
+  /확정\s*(?:정답|점수|모범\s*답안|모범답안)/i,
+  /official\s+(?:answer|solution|grading|score|model\s+answer)/i,
+  /model\s+answer/i,
+  /자동\s*채점/i,
+  /AI\s*(?:최종\s*)?(?:판정|채점)/i,
+  /점수\s*(?:보장|예측|확정|판정|산출|채점)/i,
+  /합격\s*(?:보장|예측|확정|판정)/i,
+  /합격보장/i,
+  /불합격\s*(?:예측|확정|판정)/i,
+];
+const RAW_TEXT_LEAK_PATTERNS = [
+  /rawOcrText|raw_ocr_text|ocrText|problemText|questionText|rawQuestionText|userAnswerText|answerText|rawAnswerText|sourceText|copyrightedText|originalText/i,
+  /다음\s+(?:중|제시문|자료)|옳은\s+것은|틀린\s+것은|정답\s*[:：]|답안\s*원문|문제\s*원문|OCR\s*원문/i,
 ];
 
 function clean(value: string) {
@@ -43,16 +50,20 @@ function containsForbiddenClaim(value: string) {
   return FORBIDDEN_CLAIM_PATTERNS.some((pattern) => pattern.test(value));
 }
 
+function containsRawTextLeak(value: string) {
+  return RAW_TEXT_LEAK_PATTERNS.some((pattern) => pattern.test(value));
+}
+
 function safeLearnerLabel(value: string, fallback: string) {
   const normalized = clean(value);
-  if (!normalized || containsForbiddenClaim(normalized)) return fallback;
+  if (!normalized || containsForbiddenClaim(normalized) || containsRawTextLeak(normalized) || normalized.length > 80) return fallback;
   return normalized;
 }
 
 function safeOptionalLearnerLabel(value: string | undefined) {
   if (value === undefined) return undefined;
   const normalized = clean(value);
-  if (!normalized || containsForbiddenClaim(normalized)) return undefined;
+  if (!normalized || containsForbiddenClaim(normalized) || containsRawTextLeak(normalized) || normalized.length > 40) return undefined;
   return normalized;
 }
 
@@ -104,9 +115,25 @@ export function buildExplanationLadder(input: ExplanationLadderInput): Explanati
     sourceStatus: reference.sourceStatus,
     needsOfficialVerification: reference.needsOfficialVerification,
   };
-  if (!validateExplanationLadder(ladder)) {
-    throw new Error("Invalid explanation ladder generated after sanitizing learner labels");
+  const quality = evaluateExplanationLadderQuality(ladder, { conceptLabel, subject, examMode: input.examMode });
+  if (quality.status !== "pass") {
+    const fallbackConcept = "확인할 개념";
+    const fallbackSubject = "해당 과목";
+    const safeFallback: ExplanationLadderV1 = {
+      conceptLabel: fallbackConcept,
+      subject: fallbackSubject,
+      examMode: input.examMode,
+      learnerLevel: undefined,
+      entries: REQUIRED_LABELS.map((label) => ({ label, text: clean(fallbackText(label, { ...input, conceptLabel: fallbackConcept, subject: fallbackSubject })) })),
+      metadataOnly: true,
+      sourceStatus: reference.sourceStatus,
+      needsOfficialVerification: reference.needsOfficialVerification,
+    };
+    const fallbackQuality = evaluateExplanationLadderQuality(safeFallback, { conceptLabel: fallbackConcept, subject: fallbackSubject, examMode: input.examMode });
+    assertExplanationQuality(fallbackQuality);
+    return safeFallback;
   }
+  assertExplanationQuality(quality);
   return ladder;
 }
 
@@ -124,5 +151,6 @@ export function validateExplanationLadder(ladder: ExplanationLadderV1) {
   if (!/O\/X|cloze|____|빈칸/.test(tenSecond)) return false;
   const merged = JSON.stringify(ladder);
   if (FORBIDDEN_CLAIM_PATTERNS.some((pattern) => pattern.test(merged))) return false;
-  return true;
+  if (RAW_TEXT_LEAK_PATTERNS.some((pattern) => pattern.test(merged))) return false;
+  return evaluateExplanationLadderQuality(ladder, { conceptLabel: ladder.conceptLabel, subject: ladder.subject, examMode: ladder.examMode }).status === "pass";
 }
