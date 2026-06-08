@@ -230,3 +230,28 @@ Staging verification focus:
 - 2차 paragraph rewrite after weak structure can move the concept toward `recovering`.
 - Today Plan and Review Queue candidates carry concept node/status target metadata without raw text.
 - Priority places `confident_wrong` above generic new study and due `recovering` review above generic new study.
+
+## PR #342 QA note — Adaptive Study Schedule Live Plan v1
+
+Date: 2026-06-08
+
+PR #342 adds the adaptive study planner after durable personal learning state repository/RLS smoke coverage.
+
+Guardrails retained:
+
+- No production durable rollout is enabled by default; durable reads remain optional/gated.
+- Existing Review Queue and Capture candidates continue to work when durable state is unavailable.
+- Adaptive Today Plan outputs are metadata-only and visible tasks remain capped at max 3.
+- Weekly plan preview is metadata-only and sends no notifications.
+- Missed-day recovery copy is calm and treats missed reviews as rescheduling signals, not shame/fear pressure.
+- Raw learner OCR/problem/answer/source/copyright text is not emitted.
+- No payment, public archive UI, new exams, instructor grading changes, push notifications, native app behavior, official grading, score prediction, pass/fail judgment, official model answer, or 합격 보장 claims are introduced.
+
+Staging verification focus:
+
+- Due review outranks new study.
+- `confident_wrong` outranks `wrong`, and `wrong` outranks `confused`.
+- High-risk/high-importance curriculum nodes raise priority.
+- 30-minute availability compresses tasks rather than exceeding the Today Plan max 3 cap.
+- OCR pending confirmation remains ahead of curriculum practice.
+- Durable state unavailable falls back to in-memory/source-union candidates safely.
