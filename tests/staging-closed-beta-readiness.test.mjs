@@ -157,6 +157,9 @@ test("final closed-beta staging sign-off keeps staging ready and production bloc
     "No raw text leak",
     "No raw OCR/problem/answer/source/copyright/official/model/score/instructor fields",
     "PR #343 adds explanation quality harness",
+    "PR #345 reduces mobile capture friction",
+    "Text-first capture is the primary closed-beta path",
+    "Low-confidence OCR requires confirmation before practice",
     "10초 확인 must remain O/X or cloze-convertible",
     "Official grading/model answer/score/pass-fail/합격보장 claims are forbidden",
     "Restricted routes must be blocked for normal learner",
@@ -201,7 +204,7 @@ test("capture route smoke keeps capture-first copy and one primary start action"
 
   for (const required of [
     "오늘 한 것 올리기",
-    "사진/PDF/텍스트로 기록 시작",
+    "사진/PDF/텍스트 중 하나로 시작하세요.",
     "OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요.",
     "가장 큰 빈틈 1개만 먼저 고정합니다.",
   ]) {

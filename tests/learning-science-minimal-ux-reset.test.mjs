@@ -18,9 +18,9 @@ test("learner home maps task types to calm labels instead of raw internals", asy
   assert.equal(source.includes("유형:</span> {task.task_type}"), false);
 });
 
-test("capture initial surface is one-input with photo first", async () => {
+test("capture initial surface is one-input with text first", async () => {
   const source = await readFile(new URL("../components/review-os/capture-form.tsx", import.meta.url), "utf8");
-  ["오늘 한 것 올리기", "사진 찍기", "텍스트로 입력", "사진 촬영 팁", "OCR 상태", "캡처 유형"].forEach((t) => assert.ok(source.includes(t)));
+  ["오늘 한 것 올리기", "텍스트 붙여넣기", "AI로 정리", "사진 찍기", "사진 촬영 팁", "OCR 상태", "캡처 유형"].forEach((t) => assert.ok(source.includes(t)));
 });
 
 test("first and second session order enforces retrieval/rewrite first", async () => {

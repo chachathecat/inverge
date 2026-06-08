@@ -34,6 +34,7 @@ test("closed-beta staging final sign-off covers PRs and required command evidenc
     "#333",
     "#334",
     "#335",
+    "#345",
     "npm run build",
     "npm run verify:learner-loop:ci",
     "npm run check:closed-beta-readiness",
@@ -93,5 +94,9 @@ test("closed-beta staging final sign-off enforces visible action, data-boundary,
     "Restricted routes must be blocked for normal learner",
     "No raw text leak",
     "No service role key is used for learner runtime QA",
+    "PR #345 reduces mobile capture friction",
+    "Text-first capture is the primary closed-beta path",
+    "OCR/PDF remains draft/fallback",
+    "Low-confidence OCR requires confirmation before practice",
   ], signoffPath);
 });

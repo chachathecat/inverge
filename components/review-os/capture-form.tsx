@@ -200,23 +200,13 @@ function hasValue(value: string) {
 
 function getMissingConfirmationFields(form: DraftState, mode: AppraisalMode) {
   if (mode === "first") {
-    const savingOxReviewItem = hasValue(form.userAnswer) || hasValue(form.correctAnswer);
     return [
       { key: "subject", label: "과목", ok: hasValue(form.subjectLabel) },
-      { key: "title", label: "문제 제목/출처", ok: hasValue(form.problemTitle) || hasValue(form.problemIdentifier) || hasValue(form.sourceLabel) },
-      { key: "correct", label: "정답", ok: !savingOxReviewItem || hasValue(form.correctAnswer) },
-      { key: "user", label: "내 답", ok: !savingOxReviewItem || hasValue(form.userAnswer) },
-      { key: "reason", label: "오답 원인", ok: hasValue(form.userReasonText) || hasValue(form.userReasonPreset) },
-      { key: "retrieval", label: "회상 한 문장", ok: hasValue(form.comparisonPoint) },
     ].filter((field) => !field.ok);
   }
 
   return [
     { key: "subject", label: "과목", ok: hasValue(form.subjectLabel) },
-    { key: "recall", label: "쟁점 회상/목차", ok: hasValue(form.issueRecall) || hasValue(form.outlineDraft) },
-    { key: "reference", label: "기준 답안", ok: hasValue(form.correctAnswer) },
-    { key: "user", label: "내 답안", ok: hasValue(form.userAnswer) },
-    { key: "gap", label: "가장 큰 간극 1개", ok: hasValue(form.biggestGap) || hasValue(form.missingIssue) || hasValue(form.userReasonText) },
   ].filter((field) => !field.ok);
 }
 function inferSourceTypeFromAction(action: "camera" | "gallery" | "text" | "pdf"): SourceType {
@@ -811,13 +801,23 @@ export function WrongAnswerCaptureForm({
     setError("");
 
     try {
-      if (mode === "first" && form.correctAnswer.trim() && form.userAnswer.trim() && isLikelyWrongAnswer(form.correctAnswer, form.userAnswer)) {
+      if (destination === "first-ox") {
+        if (form.lowConfidenceFlag) {
+          setError("OCR 확인 필요: 숫자/용어를 직접 확인한 뒤 O/X 연습으로 나눌 수 있습니다.");
+          return;
+        }
+        if (!form.correctAnswer.trim() || !form.userAnswer.trim()) {
+          setError("O/X 저장에는 정답/내 답 한 가지만 확인해 주세요.");
+          return;
+        }
+      }
+      if (mode === "first" && destination === "first-ox" && isLikelyWrongAnswer(form.correctAnswer, form.userAnswer)) {
         if (!form.userReasonPreset.trim() && !form.userReasonText.trim()) {
-          setError("1차 오답은 오답 원인 한 가지만 확인해 주세요.");
+          setError("1차 O/X 저장에는 오답 원인 한 가지만 확인해 주세요.");
           return;
         }
         if (!form.comparisonPoint.trim()) {
-          setError("해설 보기 전에 근거를 한 문장으로 먼저 회상해 주세요.");
+          setError("O/X 저장에는 회상 한 문장 한 가지만 확인해 주세요.");
           return;
         }
       }
@@ -825,24 +825,6 @@ export function WrongAnswerCaptureForm({
         const firstMissing = missingConfirmationFields[0]?.label;
         setError(firstMissing ? `저장 전에 ${firstMissing} 한 가지만 확인해 주세요.` : "OCR 확인 필요: 추출 초안을 다시 확인한 뒤 저장해 주세요.");
         return;
-      }
-      if (mode === "second" && !rewriteContext) {
-        if (form.issueRecall.trim().length < 8) {
-          setError("기준 답안 보기 전에 쟁점 회상을 먼저 적어주세요.");
-          return;
-        }
-        if (form.outlineDraft.trim().length < 8) {
-          setError("전체 답안보다 목차를 먼저 잡아주세요.");
-          return;
-        }
-        if (form.userAnswer.trim().length < 8) {
-          setError("내 답안을 먼저 작성해 주세요.");
-          return;
-        }
-        if (form.correctAnswer.trim().length < 8) {
-          setError("작성 이후 기준답안/해설을 입력해 주세요.");
-          return;
-        }
       }
 
       const response = await fetch("/api/os/items", {
@@ -1169,10 +1151,10 @@ export function WrongAnswerCaptureForm({
           ) : stage === "preview" ? (
             <Button
               type="button"
-              onClick={() => setStage(mode === "second" ? "second-issue-recall" : "confirm")}
+              onClick={() => setStage("confirm")}
               className="w-full sm:w-auto"
             >
-              {mode === "second" ? "쟁점 회상부터 시작" : "확인하고 저장하기"}
+              확인하고 저장하기
             </Button>
           ) : stage === "intake" ? null : (
             <Button
@@ -1279,28 +1261,29 @@ function IntakePanel({
       <p className="text-caption text-[color:var(--brand-700)]">Step 1. 오늘 한 것 올리기</p>
       <div className="mt-2 flex flex-col gap-4">
         <div className="max-w-[62ch]">
-          <h3 className="text-title text-[color:var(--foreground-strong)]">
-            {mode === "second" ? "오늘 학습한 내용을 노트 초안으로 정리합니다" : "오늘 학습한 내용을 오답노트 초안으로 정리합니다"}
-          </h3>
-          <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">
-            {mode === "second"
-              ? "사진은 초안 추출용입니다. OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요."
-              : "사진은 초안 추출용입니다. OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요."}
-          </p>
+          <h3 className="text-title text-[color:var(--foreground-strong)]">오늘 한 것 올리기</h3>
+          <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">사진/PDF/텍스트 중 하나로 시작하세요.</p>
         </div>
         <div className="rounded-[var(--radius-md)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-elevated)] p-5 sm:p-6">
           <p className="text-caption text-[color:var(--ink-muted)]">오늘의 입력</p>
           <p className="mt-1 text-xs text-[color:var(--ink-muted)]">캡처 유형 · photo / pdf / text</p>
           <h4 className="mt-2 text-base font-semibold text-[color:var(--ink-primary)]">오늘 한 것 올리기</h4>
-          <p className="mt-1 text-sm leading-6 text-[color:var(--ink-muted)]">사진, PDF, 텍스트를 올리면 가장 큰 빈틈 1개와 다음 행동 1개로 정리합니다.</p>
+          <p className="mt-1 text-sm leading-6 text-[color:var(--ink-muted)]">먼저 텍스트를 붙여넣으면 AI가 과목, 확신도, 소요 시간, 답안 단서를 초안으로 읽습니다.</p>
           <p className="mt-2 rounded-[var(--radius-sm)] border border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] px-3 py-2 text-xs leading-5 text-[color:var(--foreground-strong)]">OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요. 가장 큰 빈틈 1개만 먼저 고정합니다.</p>
           <p className="mt-1 text-xs leading-6 text-[color:var(--ink-muted)]">노트 원문은 비공개로 보관되며, 파생 학습 신호는 개인 추천 개선에만 사용됩니다.</p>
           <div className="mt-4">
-            <Button type="button" className="w-full sm:w-auto bg-[color:var(--accent-deep)] transition-colors hover:bg-[color:var(--primary-hover)] focus-visible:ring-2 focus-visible:ring-[color:var(--accent-deep)] focus-visible:ring-offset-2" onClick={() => { update("sourceType", inferSourceTypeFromAction("camera")); cameraInputRef.current?.click(); }}>
-              사진/PDF/텍스트로 기록 시작
-              <span className="sr-only">여러 장 답안지 사진 찍기</span>
+            <Button
+              type="button"
+              className="w-full sm:w-auto bg-[color:var(--accent-deep)] transition-colors hover:bg-[color:var(--primary-hover)] focus-visible:ring-2 focus-visible:ring-[color:var(--accent-deep)] focus-visible:ring-offset-2"
+              onClick={() => {
+                update("sourceType", inferSourceTypeFromAction("text"));
+                textAreaRef.current?.focus();
+                textAreaRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+              }}
+            >
+              텍스트 붙여넣기
             </Button>
-            <p className="mt-2 text-xs text-[color:var(--ink-muted)]">사진은 OCR 초안으로만 사용됩니다. 저장 전 직접 확인해 주세요.</p>
+            <p className="mt-2 text-xs text-[color:var(--ink-muted)]">사진/PDF 인식이 불안정하면 텍스트로 붙여넣어도 됩니다.</p>
           </div>
           <div className="mt-4 rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)] p-3">
             <p className="text-xs font-medium text-[color:var(--muted)]">사진 촬영 팁</p>
@@ -1311,22 +1294,13 @@ function IntakePanel({
             </ul>
           </div>
           <details className="mt-3 rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)]">
-            <summary className="cursor-pointer list-none px-3 py-2 text-xs text-[color:var(--ink-muted)]">다른 입력 방식 보기</summary>
+            <summary className="cursor-pointer list-none px-3 py-2 text-xs text-[color:var(--ink-muted)]">사진/PDF로 시작하기 (선택)</summary>
             <div className="grid gap-2 border-t border-[color:var(--border-hairline)] px-3 py-2 sm:flex sm:flex-wrap">
+              <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => { update("sourceType", inferSourceTypeFromAction("camera")); cameraInputRef.current?.click(); }}>
+                사진 찍기
+              </Button>
               <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => { update("sourceType", inferSourceTypeFromAction("gallery")); galleryInputRef.current?.click(); }}>
                 앨범에서 선택
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full sm:w-auto"
-                onClick={() => {
-                  update("sourceType", inferSourceTypeFromAction("text"));
-                  textAreaRef.current?.focus();
-                  textAreaRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-                }}
-              >
-                텍스트로 입력
               </Button>
               <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => { update("sourceType", inferSourceTypeFromAction("pdf")); pdfInputRef.current?.click(); }}>
                 PDF 선택
@@ -1365,7 +1339,7 @@ function IntakePanel({
             />
           </div>
           <p className="mt-3 inline-flex rounded-full border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)] px-3 py-1 text-xs text-[color:var(--ink-muted)]">
-            OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요.
+            OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요. 사진/PDF 인식이 불안정하면 텍스트로 붙여넣어도 됩니다.
           </p>
         </div>
       </div>
@@ -1392,7 +1366,7 @@ function IntakePanel({
         </p>
       </div>
       <div className="mt-5 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-4">
-        <p className="text-xs font-medium text-[color:var(--muted)]">필수 입력</p>
+        <p className="text-xs font-medium text-[color:var(--muted)]">모드/과목 확인</p>
         <SubjectSelect
           subjectLabel={config.subjectLabel}
           subjects={config.subjects}
@@ -1493,9 +1467,9 @@ function IntakePanel({
       {form.rawQuestionText.trim() || uploadedPages.length > 0 ? (
         <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
           <Button type="button" onClick={onGenerate} disabled={extracting} className="w-full sm:w-auto">
-            {extracting ? "입력 내용 확인 중" : "기록 시작하기"}
+            {extracting ? "입력 내용 확인 중" : "AI로 정리"}
           </Button>
-          <p className="text-xs text-[color:var(--muted)]">노트에 반영됩니다.</p>
+          <p className="text-xs text-[color:var(--muted)]">AI가 이렇게 읽었습니다. 틀린 부분만 고쳐 주세요.</p>
         </div>
       ) : null}
       <details className="mt-4 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">

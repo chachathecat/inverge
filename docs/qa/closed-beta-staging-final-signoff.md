@@ -264,3 +264,13 @@ Staging verification focus:
 - 30-minute availability compresses tasks rather than exceeding the Today Plan max 3 cap.
 - OCR pending confirmation remains ahead of curriculum practice.
 - Durable state unavailable falls back to in-memory/source-union candidates safely.
+
+## I. PR #345 mobile Capture friction addendum
+
+PR #345 reduces mobile capture friction for `/app/capture` without expanding learner-facing scope.
+
+- Text-first capture is the primary closed-beta path: paste today's study trace, tap `AI로 정리`, confirm only incorrect parsed fields, then save.
+- OCR/PDF remains draft/fallback. OCR result copy must state that it is a draft and must be checked before save.
+- Low-confidence OCR requires confirmation before practice; it must route to an `ocr_confirmation` / confirmation candidate before normal O/X or rewrite practice.
+- After save, the learner sees one biggest gap, one next action, and where it went: Today Plan candidate, Review Queue candidate, and Note/details.
+- Metrics remain metadata-only and disabled by default. No raw OCR/problem/answer/source/copyright/official/model/score/instructor fields may be emitted in shared outputs.

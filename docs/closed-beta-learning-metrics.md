@@ -70,3 +70,13 @@ Expected output:
 - Do not add public archive UI, payment, push notifications, native app behavior, or new exams.
 - Do not use metrics to make learner-facing final judgments.
 - Keep the metric sink no-op unless explicitly enabled for closed beta test/dev operation.
+
+## PR #345 mobile Capture metrics note
+
+PR #345 keeps the text-first Capture path measurable without adding external analytics or raw learner text.
+
+- `capture_started` is emitted at helper/service level when a learner-owned Capture save request starts processing.
+- `capture_saved` is emitted after the learner-owned note is saved.
+- `adaptive_today_plan_generated` is emitted only as metadata when the save produces a Today Plan-compatible candidate.
+- Existing curriculum and personal-learning-state helpers may emit `curriculum_node_matched` and `learning_state_transitioned` when a matched node or update candidate exists.
+- Metrics remain `metadataOnly: true`, disabled by default unless `LEARNING_METRICS_ENABLED=1`, and must not include raw OCR/problem/answer/source/copyright/official/model/score/instructor fields.

@@ -54,7 +54,7 @@ export default async function ReviewOsSessionPage({ searchParams }: PageProps) {
     <div className="space-y-6">
       <ClosedBetaBanner />
       {savedCapture ? (
-        <DailyCommandCard title="오늘 기록이 저장되었습니다." description="복습 큐에 들어갔습니다. 오늘 계획에 반영되었습니다.">
+        <DailyCommandCard title="오늘 계획에 반영했습니다." description="Today Plan candidate · Review Queue candidate · Note/details에 저장했습니다.">
           <div className="grid gap-3 rounded-[var(--radius-sm)] bg-[color:var(--surface-soft)] p-3" aria-live="polite">
             <p className="text-sm leading-6 text-[color:var(--ink-muted)]">
               <span className="font-medium text-[color:var(--ink-primary)]">가장 큰 간극:</span>{" "}
@@ -76,14 +76,14 @@ export default async function ReviewOsSessionPage({ searchParams }: PageProps) {
               }
               className="inline-flex min-h-11 w-full items-center justify-center rounded-full bg-[color:var(--foreground-strong)] px-4 py-2 text-sm font-medium text-white"
             >
-              {mode === "second" ? "지금 10분 다시 쓰기" : "지금 5분 다시 풀기"}
+              오늘 계획으로 이동
             </Link>
             <details className="rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)]">
               <summary className="cursor-pointer list-none px-3 py-2 text-xs text-[color:var(--ink-muted)]">다른 선택 보기</summary>
               <div className="grid gap-2 border-t border-[color:var(--border-hairline)] px-3 py-2 text-xs text-[color:var(--ink-muted)]">
-                <Link href={`/app?mode=${mode}`}>오늘 화면으로</Link>
-                <Link href={`/app/items?mode=${mode}`}>노트에서 보기</Link>
-                <Link href={`/app/review?mode=${mode}`}>나중에 복습</Link>
+                <Link href={`/app?mode=${mode}`}>오늘 계획으로 이동</Link>
+                <Link href={`/app/capture?mode=${mode}`}>하나 더 올리기</Link>
+                <Link href={`/app/items?mode=${mode}`}>노트 보기</Link>
               </div>
             </details>
             <details className="rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)]">

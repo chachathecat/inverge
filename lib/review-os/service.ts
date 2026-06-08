@@ -761,6 +761,14 @@ export class ReviewOsService {
 
       const isCaptureCreated = input.createdFromCapture === true;
       if (isCaptureCreated) {
+        recordLearningMetricIfEnabled(buildLearningMetricEvent({
+          eventName: "capture_started",
+          examMode: mode,
+          subject: normalizedInput.subjectLabel,
+          taskType: mode === "second" ? "answer_note" : "capture_note",
+          sourceEventType: "capture",
+          properties: { status: "started" },
+        }));
         await reviewOsRepository.logUsageEvent(
           userId,
           "capture_started",
@@ -943,6 +951,8 @@ export class ReviewOsService {
       await reviewOsRepository.insertWrongAnswerNote(userId, item.id, artifacts.note);
       await reviewOsRepository.insertWrongAnswerTag(userId, item.id, artifacts.tags);
 
+      const lowConfidenceCapture = Boolean((input.extractionPayload?.user_confirmed_fields as Record<string, unknown> | undefined)?.lowConfidenceFlag)
+        || /low_confidence|ocr_failed|manual_fallback/.test(String((input.extractionPayload?.user_confirmed_fields as Record<string, unknown> | undefined)?.captureQualityIssue ?? ""));
       const priorityScore = isCaptureCreated
         ? computeCaptureQueuePriority({
             examName: item.examName,
@@ -959,13 +969,15 @@ export class ReviewOsService {
             createdAt: item.createdAt,
           });
       const reviewReason = isCaptureCreated
-        ? buildCaptureReviewReason({
-            examName: item.examName,
-            confidence: item.confidence,
-            mistakeReason: artifacts.tags.mistakeType,
-            weakStructurePoint: input.weakStructurePoint,
-            missingIssue: input.missingIssue,
-          })
+        ? lowConfidenceCapture
+          ? "OCR 숫자/용어 확인 필요"
+          : buildCaptureReviewReason({
+              examName: item.examName,
+              confidence: item.confidence,
+              mistakeReason: artifacts.tags.mistakeType,
+              weakStructurePoint: input.weakStructurePoint,
+              missingIssue: input.missingIssue,
+            })
         : getReviewReason({
             recurrenceCount: recurrence?.recurrenceCount ?? 1,
             confidence: item.confidence,
@@ -991,6 +1003,17 @@ export class ReviewOsService {
           createdFromCapture: isCaptureCreated,
         }),
       );
+      if (isCaptureCreated) {
+        recordLearningMetricIfEnabled(buildLearningMetricEvent({
+          eventName: "capture_saved",
+          examMode: mode,
+          subject: item.subjectLabel,
+          conceptNodeId: artifacts.tags.topicTag,
+          taskType: mode === "second" ? "rewrite" : "review_candidate",
+          sourceEventType: "capture",
+          properties: { status: "saved", confidenceBand: item.confidence },
+        }));
+      }
       await reviewOsRepository.logUsageEvent(userId, "post_save_execution_started", "wrong_answer_item", item.id, sanitizeCaptureTelemetryMetadata({ mode, nextTaskType: mode === "second" ? "rewrite" : "retry", createdFromCapture: isCaptureCreated }));
 
       await reviewOsRepository.insertReviewQueueEntry(userId, item, reviewReason, priorityScore, queueDueAt, {
@@ -1002,6 +1025,17 @@ export class ReviewOsService {
         followUpReviewAt: schedule.followUpReviewAt,
         nextReviewDate: effectiveNextReviewDate,
       });
+      if (isCaptureCreated) {
+        recordLearningMetricIfEnabled(buildLearningMetricEvent({
+          eventName: "adaptive_today_plan_generated",
+          examMode: mode,
+          subject: item.subjectLabel,
+          conceptNodeId: artifacts.tags.topicTag,
+          taskType: mode === "second" ? "rewrite" : "review_candidate",
+          sourceEventType: "capture",
+          properties: { candidateCount: 1, selectedCount: 1 },
+        }));
+      }
       await reviewOsRepository.logUsageEvent(userId, "post_save_execution_completed", "wrong_answer_item", item.id, sanitizeCaptureTelemetryMetadata({ mode, createdFromCapture: isCaptureCreated }));
       await reviewOsRepository.logUsageEvent(userId, "review_followup_scheduled", "review_queue_item", item.id, sanitizeCaptureTelemetryMetadata({ mode, nextTaskType: mode === "second" ? "rewrite" : "retry", createdFromCapture: isCaptureCreated }));
 
