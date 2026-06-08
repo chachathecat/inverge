@@ -106,9 +106,12 @@ function runOfficialSourceCheckWithFixture(nodes) {
   const curriculumFixturePath = join(fixtureDir, "curriculum.json");
   writeFileSync(registryFixturePath, `${JSON.stringify(makeValidRegistry(), null, 2)}\n`);
   writeFileSync(curriculumFixturePath, `${JSON.stringify({ nodes }, null, 2)}\n`);
-  return spawnSync("npm", ["--silent", "run", "check:official-source-verification"], {
+  const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
+
+  return spawnSync(npmCommand, ["--silent", "run", "check:official-source-verification"], {
     cwd: process.cwd(),
     encoding: "utf8",
+    shell: process.platform === "win32",
     env: {
       ...process.env,
       OFFICIAL_SOURCE_REGISTRY_PATH: registryFixturePath,
