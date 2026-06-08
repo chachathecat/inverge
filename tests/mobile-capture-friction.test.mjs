@@ -38,10 +38,30 @@ test("quick text-first path keeps optional fields optional for basic save", () =
   assert.match(form, /function getMissingConfirmationFields[\s\S]*key: "subject"/);
   assert.doesNotMatch(form.match(/function getMissingConfirmationFields[\s\S]*?function inferSourceTypeFromAction/)?.[0] ?? "", /correct|user|recall|reference|title|retrieval/);
   assert.match(form, /O\/X 저장에는 정답\/내 답 한 가지만 확인해 주세요\./);
-  assert.doesNotMatch(form, /if \(mode === "second" && !rewriteContext\)[\s\S]*내 답안을 먼저 작성해 주세요/);
   assert.match(form, /선택 정보/);
   assert.match(form, /소요 시간/);
   assert.match(form, /메모/);
+});
+
+test("second-mode normal capture routes preview through retrieval before final save", () => {
+  const form = captureForm();
+  assert.match(form, /onClick=\{\(\) => setStage\(mode === "second" \? "second-issue-recall" : "confirm"\)\}/);
+  assert.match(form, /쟁점 회상부터 진행/);
+  assert.match(form, /function hasSecondModeLearnerProducedResponse/);
+  assert.match(form, /function hasSecondModeReferenceStep/);
+  assert.match(form, /2차 저장 전에는 쟁점·목차·답안 중 하나를 직접 적어 주세요/);
+  assert.match(form, /기준답안 비교 또는 확인 보류를 선택한 뒤 저장해 주세요/);
+  assert.match(form, /마지막 확인으로 이동/);
+  assert.match(form, /기준답안은 나중에 확인/);
+  assert.doesNotMatch(form, /공식\s*모범답안|공식\s*기준답안|합격\s*판정|점수\s*예측/);
+});
+
+test("second-mode retrieval-before-explanation guard remains documented in the flow copy", () => {
+  const form = captureForm();
+  assert.match(form, /기준답안 보기 전, 쟁점 1개만 적으세요/);
+  assert.match(form, /기준 답안 보기 전에 이 체크포인트 중 3개를 떠올립니다/);
+  assert.match(form, /비교는 작성 이후에 합니다/);
+  assert.match(form, /작성한 뒤에만 기준답안을 봅니다/);
 });
 
 test("after-save acknowledgement names Today Plan, Review Queue, note location, and safe CTAs", () => {
@@ -67,10 +87,16 @@ test("low-confidence OCR remains an ocr_confirmation candidate before practice",
   const form = captureForm();
   const svc = service();
   assert.match(form, /lowConfidenceFlag/);
-  assert.match(form, /OCR 확인 필요: 숫자\/용어를 직접 확인한 뒤 O\/X 연습으로 나눌 수 있습니다\./);
-  assert.match(svc, /lowConfidenceCapture/);
+  assert.match(form, /ocrConfirmedByLearner/);
+  assert.match(form, /form\.lowConfidenceFlag && !form\.ocrConfirmedByLearner/);
+  assert.match(form, /OCR 확인 필요: 숫자\/용어를 직접 확인하거나 수정한 뒤 O\/X 연습으로 나눌 수 있습니다\./);
+  assert.match(form, /lowConfidenceFlag && !form\.ocrConfirmedByLearner \? null : getCalculatorWorkflowForSubject/);
+  assert.match(svc, /rawLowConfidenceCapture/);
+  assert.match(svc, /lowConfidenceCapture = rawLowConfidenceCapture && confirmedFields\?\.ocrConfirmedByLearner !== true/);
   assert.match(svc, /OCR 숫자\/용어 확인 필요/);
-  assert.match(read("lib/review-os/today-plan-engine.ts"), /taskType = "ocr_confirmation"/);
+  const todayPlanEngine = read("lib/review-os/today-plan-engine.ts");
+  assert.match(todayPlanEngine, /taskType = "ocr_confirmation"/);
+  assert.match(todayPlanEngine, /getRecordPayloadValue\(item, "ocrConfirmedByLearner"\) !== true/);
 });
 
 test("learning metrics remain metadata-only and disabled by default", () => {

@@ -87,6 +87,7 @@ type DraftState = {
   lowConfidenceFlag?: boolean;
   captureQualityIssue?: string;
   hasManualCorrection?: boolean;
+  ocrConfirmedByLearner?: boolean;
 };
 type UploadedPage = {
   id: string;
@@ -196,6 +197,14 @@ function pickConcepts(text: string, fallback: string) {
 
 function hasValue(value: string) {
   return value.trim().length > 0;
+}
+
+function hasSecondModeLearnerProducedResponse(form: DraftState) {
+  return [form.issueRecall, form.outlineDraft, form.userAnswer, form.rewriteParagraph].some((value) => value.trim().length >= 4);
+}
+
+function hasSecondModeReferenceStep(form: DraftState) {
+  return form.referenceAnswerAddedAfterProduction || form.correctAnswer.trim().length >= 4;
 }
 
 function getMissingConfirmationFields(form: DraftState, mode: AppraisalMode) {
@@ -332,8 +341,8 @@ export function WrongAnswerCaptureForm({
         caseSummary: secondDefaults(resolvedInitialSubject).caseSummary,
         issueRecall: "",
         outlineDraft: "",
-        productionBeforeComparison: mode === "second",
-        referenceAnswerAddedAfterProduction: mode === "second",
+        productionBeforeComparison: Boolean(rewriteContext),
+        referenceAnswerAddedAfterProduction: Boolean(rewriteContext),
         biggestGap: rewriteContext?.biggestGap ?? secondDefaults(resolvedInitialSubject).issue,
         rawOcrText: "",
         rawExtractionJson: {},
@@ -344,6 +353,7 @@ export function WrongAnswerCaptureForm({
         lowConfidenceFlag: false,
         captureQualityIssue: "",
         hasManualCorrection: false,
+        ocrConfirmedByLearner: false,
       };
   });
   const secondWriteEnabled = mode === "second" && workflow === "second-write" && !rewriteContext;
@@ -401,7 +411,8 @@ export function WrongAnswerCaptureForm({
   const pdfInputRef = useRef<HTMLInputElement | null>(null);
   const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
   const missingConfirmationFields = getMissingConfirmationFields(form, mode);
-  const needsOcrConfirmation = Boolean(form.extractionNeedsReview || missingConfirmationFields.length > 0 || form.lowConfidenceFlag);
+  const ocrConfirmationPending = Boolean(form.lowConfidenceFlag && !form.ocrConfirmedByLearner);
+  const needsOcrConfirmation = Boolean(form.extractionNeedsReview || missingConfirmationFields.length > 0 || ocrConfirmationPending);
 
   function persist(next: DraftState) {
     saveReviewOsDraft(storageKey, next);
@@ -409,7 +420,21 @@ export function WrongAnswerCaptureForm({
   }
 
   function update<K extends keyof DraftState>(key: K, value: DraftState[K]) {
-    setForm((prev) => persist({ ...prev, [key]: value }));
+    setForm((prev) => {
+      const learnerEditedField = ![
+        "lowConfidenceFlag",
+        "captureQualityIssue",
+        "rawExtractionJson",
+        "normalizedDraft",
+        "capturePages",
+        "pageCount",
+      ].includes(String(key));
+      return persist({
+        ...prev,
+        [key]: value,
+        ocrConfirmedByLearner: mode === "first" && prev.lowConfidenceFlag && learnerEditedField ? true : prev.ocrConfirmedByLearner,
+      });
+    });
   }
 
   function updateSubject(value: string) {
@@ -597,6 +622,7 @@ export function WrongAnswerCaptureForm({
         capturePages: stripPreviewUrls(initialPages),
         pageCount: initialPages.length,
         hasManualCorrection: false,
+        ocrConfirmedByLearner: false,
       }),
     );
     try {
@@ -619,6 +645,7 @@ export function WrongAnswerCaptureForm({
           ocrText: "직접 내용을 입력해 주세요.",
           lowConfidenceFlag: true,
           captureQualityIssue: "ocr_failed_manual_fallback",
+          ocrConfirmedByLearner: false,
         }));
         const mergedFallback = mergePageText(fallbackPages);
         const fallback: DraftState = {
@@ -631,6 +658,7 @@ export function WrongAnswerCaptureForm({
           pageCount: fallbackPages.length,
           lowConfidenceFlag: true,
           captureQualityIssue: "ocr_failed_manual_fallback",
+          ocrConfirmedByLearner: false,
         };
         setUploadedPages(fallbackPages);
         setForm(persist(fallback));
@@ -673,6 +701,7 @@ export function WrongAnswerCaptureForm({
         lowConfidenceFlag,
         captureQualityIssue: lowConfidenceFlag ? "low_confidence_ocr" : "",
         hasManualCorrection: false,
+        ocrConfirmedByLearner: false,
       };
       setUploadedPages(relabelPages(pagesWithText));
       const structured = result.normalized_draft ? applyExtraction(base, result) : buildStructuredDraft(base, extractedText);
@@ -778,6 +807,7 @@ export function WrongAnswerCaptureForm({
         lowConfidenceFlag,
         captureQualityIssue: lowConfidenceFlag ? "low_confidence_ocr" : prev.captureQualityIssue,
         hasManualCorrection: true,
+        ocrConfirmedByLearner: true,
       }),
     );
   }
@@ -802,8 +832,8 @@ export function WrongAnswerCaptureForm({
 
     try {
       if (destination === "first-ox") {
-        if (form.lowConfidenceFlag) {
-          setError("OCR 확인 필요: 숫자/용어를 직접 확인한 뒤 O/X 연습으로 나눌 수 있습니다.");
+        if (form.lowConfidenceFlag && !form.ocrConfirmedByLearner) {
+          setError("OCR 확인 필요: 숫자/용어를 직접 확인하거나 수정한 뒤 O/X 연습으로 나눌 수 있습니다.");
           return;
         }
         if (!form.correctAnswer.trim() || !form.userAnswer.trim()) {
@@ -821,6 +851,26 @@ export function WrongAnswerCaptureForm({
           return;
         }
       }
+      if (mode === "second" && !rewriteContext) {
+        if (!hasSecondModeLearnerProducedResponse(form)) {
+          setError("2차 저장 전에는 쟁점·목차·답안 중 하나를 직접 적어 주세요.");
+          return;
+        }
+        if (!form.productionBeforeComparison) {
+          setError("기준답안 확인 전, 내 답안 또는 회상 내용을 먼저 남겨 주세요.");
+          return;
+        }
+        if (!hasSecondModeReferenceStep(form)) {
+          setError("기준답안 비교 또는 확인 보류를 선택한 뒤 저장해 주세요.");
+          return;
+        }
+        if (stage !== "confirm") {
+          setStage("confirm");
+          setError("마지막 확인 화면에서 저장해 주세요.");
+          return;
+        }
+      }
+
       if (missingConfirmationFields.length > 0) {
         const firstMissing = missingConfirmationFields[0]?.label;
         setError(firstMissing ? `저장 전에 ${firstMissing} 한 가지만 확인해 주세요.` : "OCR 확인 필요: 추출 초안을 다시 확인한 뒤 저장해 주세요.");
@@ -889,6 +939,7 @@ export function WrongAnswerCaptureForm({
               lowConfidenceFlag: Boolean(form.lowConfidenceFlag),
               captureQualityIssue: form.captureQualityIssue || null,
               hasManualCorrection: Boolean(form.hasManualCorrection),
+              ocrConfirmedByLearner: Boolean(form.ocrConfirmedByLearner),
             },
           },
           issueRecall: form.issueRecall || undefined,
@@ -1003,14 +1054,14 @@ export function WrongAnswerCaptureForm({
                 update("userAnswer", value);
                 update("myAnswerSummary", firstLine(value, form.myAnswerSummary || "내 답안 요약"));
               }}
-              onNext={() => { if (form.userAnswer.trim().length >= 8) setStage("second-reference"); }}
+              onNext={() => { if (form.userAnswer.trim().length >= 8) { update("productionBeforeComparison", true); setStage("second-reference"); } }}
             />
           ) : null}
           {stage === "second-reference" ? (
             <SecondReferencePanel
               reference={form.correctAnswer}
               onChange={(value) => update("correctAnswer", value)}
-              onNext={() => { if (form.correctAnswer.trim().length >= 8) setStage("second-gap"); }}
+              onNext={() => { update("referenceAnswerAddedAfterProduction", true); setStage("second-gap"); }}
             />
           ) : null}
           {stage === "second-gap" ? (
@@ -1061,12 +1112,13 @@ export function WrongAnswerCaptureForm({
               uploadedPages={uploadedPages}
               needsOcrConfirmation={needsOcrConfirmation}
               missingConfirmationFields={missingConfirmationFields.map((field) => field.label)}
-              onEdit={() => setStage(mode === "second" ? "second-answer" : "confirm")}
+              onEdit={() => setStage(mode === "second" ? "second-issue-recall" : "confirm")}
               onRegenerate={() => generateStructuredDraft()}
               onRawOcrChange={(value) => {
                 update("rawQuestionText", value);
                 update("rawOcrText", value);
                 update("hasManualCorrection", true);
+                update("ocrConfirmedByLearner", true);
                 update("lowConfidenceFlag", form.lowConfidenceFlag || hasLowConfidenceText(value));
               }}
             />
@@ -1099,11 +1151,11 @@ export function WrongAnswerCaptureForm({
                 update("userAnswer", value);
                 update("myAnswerSummary", firstLine(value, form.myAnswerSummary || "내 답안 요약"));
               }}
-              onNext={() => { if (form.userAnswer.trim().length >= 8) setStage("second-reference"); }}
+              onNext={() => { if (form.userAnswer.trim().length >= 8) { update("productionBeforeComparison", true); setStage("second-reference"); } }}
             />
           ) : null}
           {mode === "second" && stage === "second-reference" ? (
-            <SecondReferencePanel reference={form.correctAnswer} onChange={(value) => update("correctAnswer", value)} onNext={() => { if (form.correctAnswer.trim().length >= 8) setStage("second-gap"); }} />
+            <SecondReferencePanel reference={form.correctAnswer} onChange={(value) => update("correctAnswer", value)} onNext={() => { update("referenceAnswerAddedAfterProduction", true); setStage("second-gap"); }} />
           ) : null}
           {mode === "second" && stage === "second-gap" ? (
             <SecondGapPanel
@@ -1151,12 +1203,21 @@ export function WrongAnswerCaptureForm({
           ) : stage === "preview" ? (
             <Button
               type="button"
+              onClick={() => setStage(mode === "second" ? "second-issue-recall" : "confirm")}
+              className="w-full sm:w-auto"
+            >
+              {mode === "second" ? "쟁점 회상부터 진행" : "확인하고 저장하기"}
+            </Button>
+          ) : stage === "intake" ? null : mode === "second" && stage === "second-rewrite" && !rewriteContext ? (
+            <Button
+              type="button"
+              disabled={submitting}
               onClick={() => setStage("confirm")}
               className="w-full sm:w-auto"
             >
-              확인하고 저장하기
+              마지막 확인으로 이동
             </Button>
-          ) : stage === "intake" ? null : (
+          ) : (
             <Button
               type="submit"
               disabled={submitting || (mode === "second" && stage !== "second-rewrite" && stage !== "confirm")}
@@ -1246,7 +1307,7 @@ function IntakePanel({
   pdfInputRef: React.RefObject<HTMLInputElement | null>;
   textAreaRef: React.RefObject<HTMLTextAreaElement | null>;
 }) {
-  const calculatorWorkflow = form.lowConfidenceFlag ? null : getCalculatorWorkflowForSubject(form.subjectLabel);
+  const calculatorWorkflow = form.lowConfidenceFlag && !form.ocrConfirmedByLearner ? null : getCalculatorWorkflowForSubject(form.subjectLabel);
   const extractionStateLabel: Record<ExtractionState, string> = {
     idle: "입력 대기",
     uploading: "불러오는 중",
@@ -1390,6 +1451,7 @@ function IntakePanel({
             update("rawQuestionText", value);
             update("rawOcrText", value);
             update("hasManualCorrection", true);
+            update("ocrConfirmedByLearner", true);
             update("lowConfidenceFlag", form.lowConfidenceFlag || hasLowConfidenceText(value));
           }}
           onFocus={() => { if (uploadedPages.length === 0 && !form.sourceLabel) update("sourceType", inferSourceTypeFromAction("text")); }}
@@ -1485,7 +1547,7 @@ function IntakePanel({
       <p className="mt-3 text-caption leading-5 text-[color:var(--muted)]">오늘은 이 작업 하나만 먼저 합니다.</p>
       {form.lowConfidenceFlag ? (
         <p className="mt-4 rounded-[var(--radius-md)] border border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] px-4 py-3 text-sm leading-6 text-[color:var(--foreground-strong)]">
-          인식이 불안정합니다. 중요한 숫자/단어를 확인해 주세요. 계산형 정리는 확인 후 진행합니다.
+          인식이 불안정합니다. 중요한 숫자/단어를 확인해 주세요. 확인 또는 수정 후 O/X·계산형 정리를 진행할 수 있습니다.
         </p>
       ) : null}
       {calculatorWorkflow ? (
@@ -1980,9 +2042,14 @@ function SecondReferencePanel({
           className="min-h-56 border-[var(--border)] bg-[color:var(--surface)] text-[color:var(--foreground-strong)] leading-7"
         />
       </label>
-      <Button type="button" className="mt-4 w-full sm:w-auto" disabled={reference.trim().length < 8} onClick={onNext}>
-        다음: 가장 큰 간극 1개
-      </Button>
+      <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+        <Button type="button" className="w-full sm:w-auto" disabled={reference.trim().length < 4} onClick={onNext}>
+          다음: 가장 큰 간극 1개
+        </Button>
+        <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={onNext}>
+          기준답안은 나중에 확인
+        </Button>
+      </div>
     </section>
   );
 }

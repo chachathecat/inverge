@@ -271,6 +271,7 @@ PR #345 reduces mobile capture friction for `/app/capture` without expanding lea
 
 - Text-first capture is the primary closed-beta path: paste today's study trace, tap `AI로 정리`, confirm only incorrect parsed fields, then save.
 - OCR/PDF remains draft/fallback. OCR result copy must state that it is a draft and must be checked before save.
-- Low-confidence OCR requires confirmation before practice; it must route to an `ocr_confirmation` / confirmation candidate before normal O/X or rewrite practice.
+- Low-confidence OCR requires confirmation before practice; it must route to an `ocr_confirmation` / confirmation candidate before normal O/X or rewrite practice. After explicit learner edit/confirmation, O/X/cloze/review generation may proceed while raw OCR text remains private.
+- 2차 normal capture must preserve retrieval before explanation: preview routes to 쟁점 회상 → 목차 → 내 답안/다시쓰기 → 기준답안 비교 or safe acknowledgement → final confirmation/save. It must require at least one learner-produced 2차 response and must not present score, pass/fail, or official model-answer claims.
 - After save, the learner sees one biggest gap, one next action, and where it went: Today Plan candidate, Review Queue candidate, and Note/details.
 - Metrics remain metadata-only and disabled by default. No raw OCR/problem/answer/source/copyright/official/model/score/instructor fields may be emitted in shared outputs.

@@ -95,7 +95,9 @@ function getRecordPayloadValue(item: WrongAnswerItemRecord, key: string) {
 }
 
 function isLowConfidenceOcrItem(item: WrongAnswerItemRecord) {
-  return getRecordPayloadValue(item, "lowConfidenceFlag") === true || /low_confidence|ocr_failed|manual_fallback/.test(String(getRecordPayloadValue(item, "captureQualityIssue") ?? ""));
+  const lowConfidenceDetected = getRecordPayloadValue(item, "lowConfidenceFlag") === true
+    || /low_confidence|ocr_failed|manual_fallback/.test(String(getRecordPayloadValue(item, "captureQualityIssue") ?? ""));
+  return lowConfidenceDetected && getRecordPayloadValue(item, "ocrConfirmedByLearner") !== true;
 }
 
 function getPageCount(item: WrongAnswerItemRecord) {

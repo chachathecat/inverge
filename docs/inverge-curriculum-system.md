@@ -218,7 +218,8 @@ This does not expand learner-facing scope beyond 감정평가사 1차 and 감정
 PR #345 reduces learner mobile Capture friction while preserving the curriculum/data-boundary contract.
 
 - Text-first capture is the primary closed-beta path for `/app/capture`: a learner can paste today's problem/answer/study note, ask AI to organize it, correct only wrong parsed fields, and save a Today Plan-compatible note.
-- OCR/PDF remains a draft/fallback path. OCR copy must say the result is a draft, and low-confidence OCR must become an `ocr_confirmation` candidate before O/X or rewrite practice.
+- OCR/PDF remains a draft/fallback path. OCR copy must say the result is a draft, and low-confidence OCR must become an `ocr_confirmation` candidate before O/X or rewrite practice. Once the learner explicitly edits or confirms OCR text, the item may proceed to normal first-mode O/X/cloze/review generation without exposing raw OCR in shared metadata.
+- For `/app/capture?mode=second`, the mobile text-first path still routes through retrieval before explanation: issue recall, outline, learner answer or rewrite attempt, reference comparison or safe acknowledgement, then final confirmation/save. At least one learner-produced second-mode response is required before saving a learning item.
 - The saved output must be curriculum-compatible metadata: one biggest gap, one next action, Today Plan candidate, Review Queue candidate, and Note/details location.
 - Raw learner OCR/problem/answer/source/copyright text stays in learner-owned note/detail surfaces and must not be emitted in shared Today Plan, Review Queue, metrics, or curriculum outputs.
 - Metrics for the Capture path remain metadata-only and disabled by default.

@@ -70,6 +70,30 @@ test("multi-page low-confidence OCR item appears as confirmation task", () => {
   assert.match(tasks[0]?.reason ?? "", /여러 페이지 OCR/);
 });
 
+test("confirmed low-confidence OCR item proceeds to normal practice task", () => {
+  const tasks = buildTodayPlanTasks({
+    mode: "first",
+    now,
+    queue: [],
+    items: [item({
+      id: "ocr-confirmed",
+      problemTitle: "확인한 민법 O/X",
+      rawPayload: {
+        created_from_capture: true,
+        user_confirmed_fields: {
+          pageCount: 1,
+          lowConfidenceFlag: true,
+          captureQualityIssue: "low_confidence_ocr",
+          ocrConfirmedByLearner: true,
+        },
+      },
+    })],
+  });
+  assert.equal(tasks[0]?.task_type, "first_ox_retry");
+  assert.notEqual(tasks[0]?.task_type, "ocr_confirmation");
+  assert.doesNotMatch(JSON.stringify(tasks[0]), /rawOcrText|raw_ocr_text|ocrText|rawQuestionText/);
+});
+
 test("Today Plan defaults to max 3 tasks and highest priority due item first", () => {
   const tasks = buildTodayPlanTasks({
     mode: "first",

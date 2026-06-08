@@ -951,8 +951,10 @@ export class ReviewOsService {
       await reviewOsRepository.insertWrongAnswerNote(userId, item.id, artifacts.note);
       await reviewOsRepository.insertWrongAnswerTag(userId, item.id, artifacts.tags);
 
-      const lowConfidenceCapture = Boolean((input.extractionPayload?.user_confirmed_fields as Record<string, unknown> | undefined)?.lowConfidenceFlag)
-        || /low_confidence|ocr_failed|manual_fallback/.test(String((input.extractionPayload?.user_confirmed_fields as Record<string, unknown> | undefined)?.captureQualityIssue ?? ""));
+      const confirmedFields = input.extractionPayload?.user_confirmed_fields as Record<string, unknown> | undefined;
+      const rawLowConfidenceCapture = Boolean(confirmedFields?.lowConfidenceFlag)
+        || /low_confidence|ocr_failed|manual_fallback/.test(String(confirmedFields?.captureQualityIssue ?? ""));
+      const lowConfidenceCapture = rawLowConfidenceCapture && confirmedFields?.ocrConfirmedByLearner !== true;
       const priorityScore = isCaptureCreated
         ? computeCaptureQueuePriority({
             examName: item.examName,

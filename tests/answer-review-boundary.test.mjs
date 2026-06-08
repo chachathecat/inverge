@@ -125,8 +125,8 @@ test("second write flow stage order enforces own answer before reference compari
   assert.ok(learnerCapture.includes('"second-answer"'));
   assert.ok(learnerCapture.includes('"second-reference"'));
   assert.ok(learnerCapture.includes('"second-gap"'));
-  assert.ok(learnerCapture.includes('if (form.userAnswer.trim().length >= 8) setStage("second-reference")'));
-  assert.ok(learnerCapture.includes('if (form.correctAnswer.trim().length >= 8) setStage("second-gap")'));
+  assert.ok(learnerCapture.includes('if (form.userAnswer.trim().length >= 8) { update("productionBeforeComparison", true); setStage("second-reference"); }'));
+  assert.ok(learnerCapture.includes('update("referenceAnswerAddedAfterProduction", true); setStage("second-gap");'));
 });
 
 test("second rewrite step stores rewritten paragraph separately from original answer", async () => {
