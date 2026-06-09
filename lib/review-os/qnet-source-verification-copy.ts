@@ -12,7 +12,7 @@ export type QnetSourceVerificationCopy = {
 type QnetReferenceLike = Partial<QnetTodayPlanReference> | null | undefined;
 
 const BADGE_COPY = "공식자료 metadata 참고";
-const TITLE_COPY = "공식자료 기반 출제영역 정보";
+const TITLE_COPY = "공식자료 기반 출제영역 후보";
 const BODY_COPY =
   "Q-Net 공식자료의 metadata만 참고해 과목, 출제영역, 복습 우선순위 정보를 보강했습니다. 표시되는 내용은 분류 보조 신호이며, 원문이나 풀이 내용을 보여주거나 결과를 판정하는 기능이 아닙니다.";
 const SHORT_NOTE_COPY = "분류 보조 신호입니다. 애매하면 원 자료와 내 기록을 직접 확인해 주세요.";

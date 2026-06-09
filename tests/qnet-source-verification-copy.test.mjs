@@ -97,7 +97,7 @@ test("Q-Net source verification copy appears only for metadata-only qnetReferenc
   assert.equal(copy.metadataOnly, true);
   assert.equal(copy.safeUse, "qnet_source_verification_copy_only");
   assert.equal(copy.badge, "공식자료 metadata 참고");
-  assert.equal(copy.title, "공식자료 기반 출제영역 정보");
+  assert.equal(copy.title, "공식자료 기반 출제영역 후보");
   assertSafeCopy(copy);
 });
 
