@@ -1,12 +1,283 @@
 {
   "schemaVersion": "1.0.0",
   "generatedBy": "scripts/ingest-qnet-appraiser-materials.mjs",
-  "generatedAt": null,
+  "generatedAt": "2026-06-09T02:07:48.959Z",
   "inputManifestPath": "local_official_materials/appraiser/qnet_manifest.json",
+  "manifestName": "Q-Net Appraiser Materials Metadata Batch 1",
   "storagePolicy": {
     "rawTextStored": false,
     "copyrightedTextStored": false,
     "metadataOnly": true
   },
-  "materials": []
+  "materials": [
+    {
+      "sourceId": "qnet-appraiser-2025-36-first-1-source-2f2925842cb7",
+      "officialSourceId": "qnet_appraiser_past_questions",
+      "sourceKind": "past_questions",
+      "sourceName": "Q-Net 기출문제 내려받기",
+      "sourceUrl": "https://www.q-net.or.kr/cst003.do?gId=31&gSite=L&id=cst00309",
+      "localRawFileNameHash": "6249f677dc6ac788fdb1bf759151a0d231b04ca9adf3ca2eae09734ef428e2f1",
+      "examYear": 2025,
+      "examRound": 36,
+      "examMode": "first",
+      "subject": "감정평가사 1차",
+      "paper": "1교시",
+      "questionNumber": "source",
+      "itemType": "source_paper",
+      "topicCandidates": [
+        "1차 객관식",
+        "1차 1교시",
+        "민법",
+        "경제학원론",
+        "부동산학원론"
+      ],
+      "curriculumNodeCandidates": [
+        "first_exam_paper_1",
+        "first_civil_law",
+        "first_economics",
+        "first_real_estate_studies"
+      ],
+      "issueCandidates": [
+        "1차 1교시 과목별 기출 출제영역"
+      ],
+      "trapWordCandidates": [
+        "객관식 함정어",
+        "개념 구분",
+        "계산 조건 확인"
+      ],
+      "answerSkeletonTags": [],
+      "calculationTemplateCandidates": [
+        "economics_graph_or_formula_check"
+      ],
+      "casioRelevant": false,
+      "estimatedMinutes": 120,
+      "difficultyBand": "mixed",
+      "sourceStatus": "verified",
+      "lastOfficialVerifiedAt": "2026-06-08",
+      "needsOfficialVerification": false,
+      "rawTextStored": false,
+      "copyrightedTextStored": false,
+      "safeNotes": null
+    },
+    {
+      "sourceId": "qnet-appraiser-2025-36-first-2-source-31e9b5a15f32",
+      "officialSourceId": "qnet_appraiser_past_questions",
+      "sourceKind": "past_questions",
+      "sourceName": "Q-Net 기출문제 내려받기",
+      "sourceUrl": "https://www.q-net.or.kr/cst003.do?gId=31&gSite=L&id=cst00309",
+      "localRawFileNameHash": "169b35220b83f95376169f5a6d74942497a22d1bd48f595d18d9e71b648f9490",
+      "examYear": 2025,
+      "examRound": 36,
+      "examMode": "first",
+      "subject": "감정평가사 1차",
+      "paper": "2교시",
+      "questionNumber": "source",
+      "itemType": "source_paper",
+      "topicCandidates": [
+        "1차 객관식",
+        "1차 2교시",
+        "감정평가관계법규",
+        "회계학"
+      ],
+      "curriculumNodeCandidates": [
+        "first_exam_paper_2",
+        "first_appraisal_related_law",
+        "first_accounting"
+      ],
+      "issueCandidates": [
+        "1차 2교시 과목별 기출 출제영역"
+      ],
+      "trapWordCandidates": [
+        "조문 요건 함정",
+        "회계 말문제 함정",
+        "계산 조건 확인"
+      ],
+      "answerSkeletonTags": [],
+      "calculationTemplateCandidates": [
+        "accounting_template_check"
+      ],
+      "casioRelevant": true,
+      "estimatedMinutes": 80,
+      "difficultyBand": "mixed",
+      "sourceStatus": "verified",
+      "lastOfficialVerifiedAt": "2026-06-08",
+      "needsOfficialVerification": false,
+      "rawTextStored": false,
+      "copyrightedTextStored": false,
+      "safeNotes": null
+    },
+    {
+      "sourceId": "qnet-appraiser-2025-36-second-2-source-bcaf19723c1d",
+      "officialSourceId": "qnet_appraiser_past_questions",
+      "sourceKind": "past_questions",
+      "sourceName": "Q-Net 기출문제 내려받기",
+      "sourceUrl": "https://www.q-net.or.kr/cst003.do?gId=31&gSite=L&id=cst00309",
+      "localRawFileNameHash": "6ae95cd236a974387fb09716049e32b935591ded167eec8408910fc7bda955ab",
+      "examYear": 2025,
+      "examRound": 36,
+      "examMode": "second",
+      "subject": "감정평가실무",
+      "paper": "2차",
+      "questionNumber": "source",
+      "itemType": "source_paper",
+      "topicCandidates": [
+        "감정평가실무",
+        "3방식",
+        "보상평가",
+        "수익방식",
+        "비교방식",
+        "원가방식"
+      ],
+      "curriculumNodeCandidates": [
+        "second_practice",
+        "second_practice_three_approaches",
+        "second_practice_compensation",
+        "second_practice_calculation_process"
+      ],
+      "issueCandidates": [
+        "실무 계산 프로세스",
+        "평가방식 선택",
+        "계산과정 검토"
+      ],
+      "trapWordCandidates": [
+        "단위 누락",
+        "계산 조건 누락",
+        "검산 누락",
+        "방식 선택 오류"
+      ],
+      "answerSkeletonTags": [
+        "자료정리",
+        "방식선택",
+        "계산과정",
+        "검토",
+        "결론"
+      ],
+      "calculationTemplateCandidates": [
+        "three_approaches_template",
+        "compensation_valuation_template",
+        "income_approach_template"
+      ],
+      "casioRelevant": true,
+      "estimatedMinutes": 100,
+      "difficultyBand": "mixed",
+      "sourceStatus": "verified",
+      "lastOfficialVerifiedAt": "2026-06-08",
+      "needsOfficialVerification": false,
+      "rawTextStored": false,
+      "copyrightedTextStored": false,
+      "safeNotes": null
+    },
+    {
+      "sourceId": "qnet-appraiser-2025-36-second-2-source-5e365143ea1b",
+      "officialSourceId": "qnet_appraiser_past_questions",
+      "sourceKind": "past_questions",
+      "sourceName": "Q-Net 기출문제 내려받기",
+      "sourceUrl": "https://www.q-net.or.kr/cst003.do?gId=31&gSite=L&id=cst00309",
+      "localRawFileNameHash": "426e7d5f0a09ca4cebfc2f53df592f2b8499842904f946a89271b254ec727fed",
+      "examYear": 2025,
+      "examRound": 36,
+      "examMode": "second",
+      "subject": "감정평가이론",
+      "paper": "2차",
+      "questionNumber": "source",
+      "itemType": "source_paper",
+      "topicCandidates": [
+        "감정평가이론",
+        "가치이론",
+        "시장분석",
+        "감정평가 3방식",
+        "최고최선이용"
+      ],
+      "curriculumNodeCandidates": [
+        "second_theory",
+        "second_theory_value_theory",
+        "second_theory_market_analysis",
+        "second_theory_three_approaches"
+      ],
+      "issueCandidates": [
+        "이론 목차화",
+        "핵심 키워드 연결",
+        "비교 및 적용"
+      ],
+      "trapWordCandidates": [
+        "개념 정의 누락",
+        "비교 기준 누락",
+        "사례 적용 부족"
+      ],
+      "answerSkeletonTags": [
+        "의의",
+        "근거",
+        "비교",
+        "적용",
+        "결론"
+      ],
+      "calculationTemplateCandidates": [],
+      "casioRelevant": false,
+      "estimatedMinutes": 100,
+      "difficultyBand": "mixed",
+      "sourceStatus": "verified",
+      "lastOfficialVerifiedAt": "2026-06-08",
+      "needsOfficialVerification": false,
+      "rawTextStored": false,
+      "copyrightedTextStored": false,
+      "safeNotes": null
+    },
+    {
+      "sourceId": "qnet-appraiser-2025-36-second-2-source-c7d7a2d7ef75",
+      "officialSourceId": "qnet_appraiser_past_questions",
+      "sourceKind": "past_questions",
+      "sourceName": "Q-Net 기출문제 내려받기",
+      "sourceUrl": "https://www.q-net.or.kr/cst003.do?gId=31&gSite=L&id=cst00309",
+      "localRawFileNameHash": "a32695f4e1178effdacee31d03872e6aa09f206e806e50118b06aea84f7b376e",
+      "examYear": 2025,
+      "examRound": 36,
+      "examMode": "second",
+      "subject": "감정평가 및 보상법규",
+      "paper": "2차",
+      "questionNumber": "source",
+      "itemType": "source_paper",
+      "topicCandidates": [
+        "감정평가 및 보상법규",
+        "토지보상법",
+        "사업인정",
+        "수용재결",
+        "손실보상"
+      ],
+      "curriculumNodeCandidates": [
+        "second_law",
+        "second_law_land_compensation",
+        "second_law_project_approval",
+        "second_law_administrative_remedy"
+      ],
+      "issueCandidates": [
+        "쟁점 포착",
+        "조문 요건",
+        "사안 포섭",
+        "권리구제"
+      ],
+      "trapWordCandidates": [
+        "요건 누락",
+        "절차 누락",
+        "처분성 판단 누락",
+        "사안 포섭 부족"
+      ],
+      "answerSkeletonTags": [
+        "문제점",
+        "관련 법리",
+        "요건 검토",
+        "사안 포섭",
+        "결론"
+      ],
+      "calculationTemplateCandidates": [],
+      "casioRelevant": false,
+      "estimatedMinutes": 100,
+      "difficultyBand": "mixed",
+      "sourceStatus": "verified",
+      "lastOfficialVerifiedAt": "2026-06-08",
+      "needsOfficialVerification": false,
+      "rawTextStored": false,
+      "copyrightedTextStored": false,
+      "safeNotes": null
+    }
+  ]
 }
