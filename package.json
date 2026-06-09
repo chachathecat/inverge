@@ -34,7 +34,7 @@
     "test:official-source-verification": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs --test tests/official-source-verification.test.mjs",
     "check:official-source-verification": "node scripts/check-official-source-verification.mjs",
     "ingest:qnet-appraiser-materials": "node scripts/ingest-qnet-appraiser-materials.mjs",
-    "test:qnet-official-materials": "node --test tests/qnet-official-materials-ingestion.test.mjs"
+    "test:qnet-official-materials": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs --test tests/qnet-official-materials-ingestion.test.mjs tests/qnet-official-materials-reference.test.mjs"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
