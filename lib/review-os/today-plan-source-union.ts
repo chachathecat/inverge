@@ -27,6 +27,7 @@ import { buildTodayPlanDisplayCopy, type TodayPlanDisplayCopy } from "./today-pl
 import { type AppraiserExamMode } from "./curriculum-reference";
 import { rankLearningStateRisk } from "./personal-learning-state-engine";
 import { buildAdaptiveTodayPlan, type AdaptiveStudyPlannerInput, type AdaptiveStudyPlanTask } from "./adaptive-study-plan-engine";
+import { enrichTodayPlanActionsWithQnetReference, type QnetTodayPlanReference } from "./qnet-reference-today-plan-adapter";
 
 export type TodayPlanUnifiedSource = "review_queue" | "personal_concept_graph" | "study_schedule" | "adaptive_study_plan";
 
@@ -44,6 +45,7 @@ export type TodayPlanUnifiedAction = {
   prioritySignals: string[];
   isPrimaryTask: true;
   metadataOnly: true;
+  qnetReference?: QnetTodayPlanReference;
   displayReason?: TodayPlanDisplayCopy["displayReason"];
   displaySourceLabel?: TodayPlanDisplayCopy["displaySourceLabel"];
   displayPrimaryCta?: TodayPlanDisplayCopy["displayPrimaryCta"];
@@ -302,6 +304,12 @@ function signalScore(action: TodayPlanUnifiedAction) {
   if (action.prioritySignals.includes("adaptive_study_plan")) score += 28;
   if (action.prioritySignals.includes("schedule_track_focus")) score += 10;
   if (action.prioritySignals.includes("schedule_primary_block")) score += 8;
+  if (action.prioritySignals.includes("official_reference_topic_match")) score += 9;
+  if (action.prioritySignals.includes("official_reference_trap_pattern_candidate")) score += 4;
+  if (action.prioritySignals.includes("official_reference_answer_skeleton_candidate")) score += 4;
+  if (action.prioritySignals.includes("official_reference_calculation_template_candidate")) score += 3;
+  if (action.prioritySignals.includes("official_reference_casio_relevant")) score += 2;
+  if (action.prioritySignals.includes("official_reference_source_verified")) score += 2;
   return score;
 }
 
@@ -409,6 +417,7 @@ export function buildTodayPlanSourceUnion(input: BuildTodayPlanSourceUnionInput)
   const actions = [...reviewTasks, ...graphActions, ...scheduleActions, ...adaptiveActions].filter(
     (action) => context.examMode === undefined || context.examMode === "mixed" || action.examMode === context.examMode,
   );
-  actions.forEach((action) => assertSupportedExamMode(action.examMode));
-  return compressUnifiedTodayPlanToMaxThree(actions);
+  const qnetEnrichedActions = enrichTodayPlanActionsWithQnetReference(actions);
+  qnetEnrichedActions.forEach((action) => assertSupportedExamMode(action.examMode));
+  return compressUnifiedTodayPlanToMaxThree(qnetEnrichedActions);
 }
