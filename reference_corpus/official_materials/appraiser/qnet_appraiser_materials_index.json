@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
   "generatedBy": "scripts/ingest-qnet-appraiser-materials.mjs",
-  "generatedAt": "2026-06-10T01:51:09.874Z",
+  "generatedAt": "2026-06-10T04:00:19.074Z",
   "inputManifestPath": "local_official_materials/appraiser/qnet_manifest.json",
   "manifestName": "Q-Net Appraiser Materials Metadata Batch 1",
   "storagePolicy": {
@@ -462,7 +462,7 @@
         "감가수정",
         "가치이론",
         "감정평가 원칙",
-        "박상원본",
+        "탁상자문",
         "ESG"
       ],
       "curriculumNodeCandidates": [

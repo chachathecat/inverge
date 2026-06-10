@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
   "generatedBy": "scripts/ingest-qnet-appraiser-materials.mjs",
-  "generatedAt": "2026-06-10T01:51:09.874Z",
+  "generatedAt": "2026-06-10T04:00:19.074Z",
   "inputManifestPath": "local_official_materials/appraiser/qnet_manifest.json",
   "storagePolicy": {
     "rawTextStored": false,
@@ -343,17 +343,6 @@
     {
       "examMode": "second",
       "subject": "감정평가이론",
-      "topic": "박상원본",
-      "count": 1,
-      "sourceIds": [
-        "qnet-appraiser-2024-35-second-2-source-cdacf02c52f1"
-      ],
-      "rawTextStored": false,
-      "copyrightedTextStored": false
-    },
-    {
-      "examMode": "second",
-      "subject": "감정평가이론",
       "topic": "시장분석",
       "count": 1,
       "sourceIds": [
@@ -380,6 +369,17 @@
       "count": 1,
       "sourceIds": [
         "qnet-appraiser-2025-36-second-2-source-5e365143ea1b"
+      ],
+      "rawTextStored": false,
+      "copyrightedTextStored": false
+    },
+    {
+      "examMode": "second",
+      "subject": "감정평가이론",
+      "topic": "탁상자문",
+      "count": 1,
+      "sourceIds": [
+        "qnet-appraiser-2024-35-second-2-source-cdacf02c52f1"
       ],
       "rawTextStored": false,
       "copyrightedTextStored": false
