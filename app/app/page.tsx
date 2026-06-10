@@ -12,12 +12,32 @@ import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os
 import { DEFAULT_DAILY_STUDY_ACTIVITY, reviewOsService } from "@/lib/review-os/service";
 import { buildNotebookPreview } from "@/lib/review-os/study-note";
 import { getSimilarQuestionReferenceCandidates } from "@/lib/review-os/question-reference";
-import { APPRAISAL_FIRST_SUBJECTS } from "@/lib/review-os/types";
+import { APPRAISAL_FIRST_SUBJECTS, type TodayFocus } from "@/lib/review-os/types";
 import { buildTodayPlanCard, type TodayPlanActionKind } from "@/lib/review-os/today-plan";
 import { type TodayPlanTaskType } from "@/lib/review-os/today-plan-engine";
 import { buildLearnerTodayPlanTasksWithGatedDurableConceptGraph } from "@/lib/review-os/today-plan-learner-route-integration";
 import { buildPersonalWeaknessProfile } from "@/lib/review-os/weakness-diagnostics";
 import { isOverdueDueAt, resolveDailyStudyState } from "@/lib/review-os/daily-study-state";
+
+
+function buildFallbackTodayFocus(mode: "first" | "second"): TodayFocus {
+  return {
+    lines: [
+      "오늘은 이 작업 하나만 먼저 합니다.",
+      "아직 저장된 학습 기록이 없어 입력부터 시작합니다.",
+      mode === "second" ? "쟁점 회상 1개를 남기고 다음 행동을 정합니다." : "오답 1개를 남기고 다음 행동을 정합니다.",
+    ],
+    nextAction: mode === "second" ? "2차 답안 흐름을 사진/PDF/텍스트 중 하나로 남기세요." : "1차 오답 1개를 사진/PDF/텍스트 중 하나로 남기세요.",
+    nextActionType: "capture_now",
+    primaryTaskLabel: mode === "second" ? "2차 답안 1건 입력" : "1차 오답 1건 기록",
+    reason: "첫 기록을 만들면 Today Plan과 Review Queue가 이어집니다.",
+    estimatedDurationMinutes: mode === "second" ? 18 : 12,
+    priorityScore: 0,
+    sourceQueueId: null,
+    sourceItemId: null,
+    queue: [],
+  };
+}
 
 const FIRST_MODE_INPUT_OPTIONS = [
   {
@@ -92,9 +112,9 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
   const mode = resolveAppraisalMode(profile, modeParam);
   const config = getModeConfig(mode);
   const [focus, weekly, allItems, learningSignal, learningSignalEvents, dailyActivity] = await Promise.all([
-    reviewOsService.getTodayFocus(session.userId, session.email, mode),
-    reviewOsService.getWeeklySummary(session.userId, session.email),
-    reviewOsService.listWrongAnswerItems(session.userId, session.email, 12),
+    reviewOsService.getTodayFocus(session.userId, session.email, mode).catch(() => buildFallbackTodayFocus(mode)),
+    reviewOsService.getWeeklySummary(session.userId, session.email).catch(() => null),
+    reviewOsService.listWrongAnswerItems(session.userId, session.email, 12).catch(() => []),
     reviewOsService.getLearningSignalSummary(session.userId, session.email, mode).catch(() => null),
     reviewOsService.listLearningSignalEvents(session.userId, session.email, mode, 10).catch(() => []),
     reviewOsService.getDailyStudyActivity(session.userId, session.email, mode).catch(() => DEFAULT_DAILY_STUDY_ACTIVITY),
@@ -167,7 +187,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
     learningSignals: learningSignalEvents,
     repeatedGaps: weaknessProfile.repeatedGaps,
     riskLevel: weaknessProfile.riskLevel,
-  });
+  }).catch(() => []);
   const questionReferenceHintsByTaskId = new Map(
     await Promise.all(todayPlanTasks.map(async (task) => ([
       task.itemId,

@@ -19,7 +19,7 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
 
   const mode = resolveAppraisalMode(profile, modeParam);
   const config = getModeConfig(mode);
-  const items = (await reviewOsService.listWrongAnswerItems(session.userId, session.email, 60)).filter(
+  const items = (await reviewOsService.listWrongAnswerItems(session.userId, session.email, 60).catch(() => [])).filter(
     (item) => item.examName === config.label,
   );
   const learningSignals = await reviewOsService.listLearningSignalEvents(session.userId, session.email, mode, 20).catch(() => []);

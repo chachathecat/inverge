@@ -80,6 +80,28 @@ for (const [route, file] of routeSources) {
   }
 }
 
+const examsPage = existsSync(sourcePath("app/exams/page.tsx")) ? read("app/exams/page.tsx") : "";
+check(examsPage.includes('const appHref = `/app?mode=${mode}`'), "/exams authenticated CTA must use absolute /app mode route");
+check(examsPage.includes('return mode === "first" ? "/app/capture?mode=first" : "/app/capture?mode=second";'), "/exams second-track CTA must start at /app/capture?mode=second");
+check(!examsPage.includes('"/app/write?mode=second"'), "/exams second-track CTA must not target specialized /app/write route");
+
+const learnerRouteConstructionSources = [
+  "app/exams/page.tsx",
+  "components/learner/learner-ui.tsx",
+  "app/app/page.tsx",
+  "app/app/capture/page.tsx",
+  "app/app/input/page.tsx",
+  "app/app/entry/page.tsx",
+  "app/app/review/page.tsx",
+  "app/app/notes/page.tsx",
+];
+for (const file of learnerRouteConstructionSources) {
+  if (!existsSync(sourcePath(file))) continue;
+  const source = read(file);
+  check(!source.includes("/app/app"), `${file} must not construct duplicated /app/app routes`);
+  check(!/(?:href|router\.push|redirect)\s*=*\(?[`'"]app\//.test(source), `${file} must use root-absolute /app links`);
+}
+
 
 const captureRoute = existsSync(sourcePath("app/app/capture/page.tsx")) ? read("app/app/capture/page.tsx") : "";
 const captureForm = existsSync(sourcePath("components/review-os/capture-form.tsx")) ? read("components/review-os/capture-form.tsx") : "";

@@ -38,6 +38,35 @@ test("/app/input and /app/entry resolve to capture instead of not-found and keep
   }
 });
 
+
+test("/exams CTAs use absolute learner app routes and second track starts at capture", () => {
+  const examsPage = read("app/exams/page.tsx");
+
+  assert.equal(examsPage.includes('const appHref = `/app?mode=${mode}`'), true, "authenticated track entry should use an absolute /app route");
+  assert.equal(examsPage.includes('return mode === "first" ? "/app/capture?mode=first" : "/app/capture?mode=second";'), true, "empty second-track entry should route to capture, not write");
+  assert.equal(examsPage.includes('"/app/write?mode=second"'), false, "public second-track CTA should not send learners to the specialized write route");
+  assert.equal(/href:\s*[`'"]app\//.test(examsPage), false, "CTA hrefs should not be relative app/* paths");
+});
+
+test("learner route sources never construct duplicated /app/app paths", () => {
+  const files = [
+    "app/exams/page.tsx",
+    "components/learner/learner-ui.tsx",
+    "app/app/page.tsx",
+    "app/app/capture/page.tsx",
+    "app/app/input/page.tsx",
+    "app/app/entry/page.tsx",
+    "app/app/review/page.tsx",
+    "app/app/notes/page.tsx",
+  ];
+
+  for (const file of files) {
+    const source = read(file);
+    assert.equal(source.includes("/app/app"), false, `${file} must not contain a duplicated /app/app route`);
+    assert.equal(/(?:href|router\.push|redirect)\s*=*\(?[`'"]app\//.test(source), false, `${file} must use root-absolute /app links`);
+  }
+});
+
 test("/app/capture provides editable text-first capture and existing safe save path", () => {
   assertExists("app/app/capture/page.tsx");
   const capturePage = read("app/app/capture/page.tsx");

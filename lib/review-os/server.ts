@@ -3,18 +3,45 @@ import "server-only";
 import { headers } from "next/headers";
 
 import { requireServerSession } from "@/lib/auth/session";
+import { isSupabasePersistenceOperationError, isSupabasePersistenceUnavailableError } from "@/lib/supabase/persistence";
+import type { AccessState } from "@/lib/review-os/types";
 import { reviewOsRepository } from "@/lib/review-os/repository";
 import { reviewOsService } from "@/lib/review-os/service";
 
 export async function getReviewOsServerContext(returnTo = "/app") {
   const session = await requireServerSession(await resolveReviewOsReturnTo(returnTo));
-  const access = session.userId ? await reviewOsRepository.ensureAccess(session.userId, session.email) : null;
-  const profile = session.userId ? await reviewOsRepository.getStudyProfile(session.userId) : null;
-  const usage =
-    session.userId && session.email && access?.allowed
-      ? await reviewOsService.getUsageSummary(session.userId, session.email)
-      : null;
-  return { session, access, profile, usage };
+
+  if (!session.authEnabled) {
+    const demoSession = { ...session, email: session.email ?? "demo@inverge.local" };
+    return {
+      session: demoSession,
+      access: buildFallbackAccess(demoSession.email, true),
+      profile: null,
+      usage: null,
+    };
+  }
+
+  try {
+    const access = session.userId ? await reviewOsRepository.ensureAccess(session.userId, session.email) : null;
+    const profile = session.userId ? await reviewOsRepository.getStudyProfile(session.userId) : null;
+    const usage =
+      session.userId && session.email && access?.allowed
+        ? await reviewOsService.getUsageSummary(session.userId, session.email)
+        : null;
+    return { session, access, profile, usage };
+  } catch (error) {
+    if (isSafeAccessFallbackError(error)) {
+      console.warn("[review-os] closed beta access fallback", error);
+      return {
+        session,
+        access: buildFallbackAccess(session.email, false),
+        profile: null,
+        usage: null,
+      };
+    }
+
+    throw error;
+  }
 }
 
 export function buildReviewOsReturnTo(path: string, modeParam?: string | null) {
@@ -52,4 +79,17 @@ async function resolveReviewOsReturnTo(returnTo: string) {
   }
 
   return returnTo;
+}
+
+function buildFallbackAccess(email: string | null, allowed: boolean): AccessState {
+  return {
+    allowed,
+    inviteStatus: allowed ? "active" : "pending",
+    entitlementTier: "free_trial",
+    email,
+  };
+}
+
+function isSafeAccessFallbackError(error: unknown) {
+  return isSupabasePersistenceUnavailableError(error) || isSupabasePersistenceOperationError(error);
 }
