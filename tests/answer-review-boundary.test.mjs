@@ -36,7 +36,7 @@ test("learner capture flow keeps instructor OCR route separated and editable OCR
   const learnerCapture = await readFile(new URL("../components/review-os/capture-form.tsx", import.meta.url), "utf8");
   assert.equal(learnerCapture.includes("/api/instructor/second-grading/ocr"), false);
   assert.ok(learnerCapture.includes("OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요."));
-  assert.ok(learnerCapture.includes("노트 원문은 비공개로 보관되며, 파생 학습 신호는 개인 추천 개선에만 사용됩니다."));
+  assert.match(learnerCapture, /노트 원문은 비공개로 보관되며,\s*파생 학습 신호는 개인 추천 개선에만\s*사용됩니다\./);
   assert.ok(learnerCapture.includes("capture=\"environment\""));
 });
 
@@ -125,8 +125,8 @@ test("second write flow stage order enforces own answer before reference compari
   assert.ok(learnerCapture.includes('"second-answer"'));
   assert.ok(learnerCapture.includes('"second-reference"'));
   assert.ok(learnerCapture.includes('"second-gap"'));
-  assert.ok(learnerCapture.includes('if (form.userAnswer.trim().length >= 8) { update("productionBeforeComparison", true); setStage("second-reference"); }'));
-  assert.ok(learnerCapture.includes('update("referenceAnswerAddedAfterProduction", true); setStage("second-gap");'));
+  assert.match(learnerCapture, /if \(form\.userAnswer\.trim\(\)\.length >= 8\) \{\s*update\("productionBeforeComparison", true\);\s*setStage\("second-reference"\);\s*\}/);
+  assert.match(learnerCapture, /update\("referenceAnswerAddedAfterProduction", true\);\s*setStage\("second-gap"\);/);
 });
 
 test("second rewrite step stores rewritten paragraph separately from original answer", async () => {

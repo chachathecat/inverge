@@ -51,7 +51,7 @@ test("core loop keeps no more than one primary CTA in each execution step", asyn
 
 test("second-write flow hides global footer until step 6 and keeps defer actions under details", async () => {
   const source = await readFile(new URL("../components/review-os/capture-form.tsx", import.meta.url), "utf8");
-  assert.ok(source.includes("const hideGlobalFooterActions = mode === \"second\" && secondModeHiddenFooterStages.has(stage);"));
+  assert.match(source, /const hideGlobalFooterActions =\s*mode === "second" && secondModeHiddenFooterStages\.has\(stage\);/);
   assert.ok(source.includes("{!hideGlobalFooterActions ? ("));
   assert.ok(source.includes("다른 선택"));
   assert.ok(source.includes("다시 쓰기"));
@@ -68,8 +68,8 @@ test("second-write flow starts from step 1 copy and no separate setup card", asy
 
 test("second-write flow gates step 4 by step 3 answer and step 5 by step 4 reference", async () => {
   const source = await readFile(new URL("../components/review-os/capture-form.tsx", import.meta.url), "utf8");
-  assert.ok(source.includes('if (form.userAnswer.trim().length >= 8) { update("productionBeforeComparison", true); setStage("second-reference"); }'));
-  assert.ok(source.includes('update("referenceAnswerAddedAfterProduction", true); setStage("second-gap");'));
+  assert.match(source, /if \(form\.userAnswer\.trim\(\)\.length >= 8\) \{\s*update\("productionBeforeComparison", true\);\s*setStage\("second-reference"\);\s*\}/);
+  assert.match(source, /update\("referenceAnswerAddedAfterProduction", true\);\s*setStage\("second-gap"\);/);
 });
 
 test("learner writing flow copy keeps no instructor/grading/payment claims", async () => {

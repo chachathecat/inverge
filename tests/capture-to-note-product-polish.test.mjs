@@ -67,7 +67,7 @@ test("capture page and form keep capture-first learner copy with one primary sta
     assert.equal(combined.includes(required), true, `${required} copy should exist`);
   }
 
-  assert.equal(form.includes("form.rawQuestionText.trim() || uploadedPages.length > 0"), true, "secondary generate action should be hidden at the empty starting point");
+  assert.equal(form.includes("canQuickSave"), true, "secondary generate action should be hidden at the empty starting point");
   assert.equal(form.includes("data-testid=\"capture-note-summary\""), true, "capture result summary should be rendered after structure/confirmation");
   for (const forbidden of [...forbiddenClaims, ...forbiddenTone, ...forbiddenSurfaces, ...unsupportedExamCopy]) {
     assert.equal(combined.includes(forbidden), false, `${forbidden} must not appear on the learner capture surface`);

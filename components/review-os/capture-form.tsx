@@ -872,23 +872,34 @@ export function WrongAnswerCaptureForm({
     });
   }
 
+  function getLearnerCaptureContent(source: DraftState) {
+    return [source.rawQuestionText, source.userAnswer, source.issueRecall, source.outlineDraft, source.rewriteParagraph, source.myAnswerSummary, source.userReasonText, source.biggestGap, source.missingIssue, source.comparisonPoint]
+      .map((value) => value.trim())
+      .find(Boolean) ?? "";
+  }
+
+  function hasLearnerCaptureContent(source: DraftState) {
+    return Boolean(getLearnerCaptureContent(source) || uploadedPages.length > 0);
+  }
+
   async function saveQuickCaptureFromIntake() {
-    const rawText = form.rawQuestionText.trim();
-    if (!rawText && uploadedPages.length === 0) return;
+    const learnerText = getLearnerCaptureContent(form);
+    if (!learnerText && uploadedPages.length === 0) return;
     setSubmitting(true);
     setError("");
+    const sourceText = form.rawQuestionText.trim() || learnerText;
     const structured = buildStructuredDraft(
       {
         ...form,
-        rawQuestionText: rawText || form.rawQuestionText,
-        rawOcrText: form.rawOcrText || rawText || form.rawQuestionText,
-        userAnswer: form.userAnswer || (mode === "second" ? rawText : form.userAnswer),
-        issueRecall: form.issueRecall || (mode === "second" ? firstLine(rawText, "오늘 입력 회상") : form.issueRecall),
+        rawQuestionText: sourceText || form.rawQuestionText,
+        rawOcrText: form.rawOcrText || sourceText || form.rawQuestionText,
+        userAnswer: form.userAnswer || (mode === "second" ? learnerText : form.userAnswer),
+        issueRecall: form.issueRecall || (mode === "second" ? firstLine(learnerText, "오늘 입력 회상") : form.issueRecall),
         productionBeforeComparison: mode === "second" ? true : form.productionBeforeComparison,
         referenceAnswerAddedAfterProduction: mode === "second" ? form.referenceAnswerAddedAfterProduction : form.referenceAnswerAddedAfterProduction,
         correctAnswer: form.correctAnswer || "-",
       },
-      rawText || form.rawQuestionText,
+      sourceText || form.rawQuestionText,
     );
     const copy = getCaptureConfirmationCopy(structured);
     setForm(persist(structured));
@@ -1144,6 +1155,7 @@ export function WrongAnswerCaptureForm({
 
   const firstOxChoiceExtraction = mode === "first" ? extractFirstExamFiveChoicesFromText(form.rawQuestionText, form.subjectLabel) : null;
   const canBridgeToFirstOx = firstOxChoiceExtraction?.status === "detected" && firstOxChoiceExtraction.choices.length === 5;
+  const canQuickSaveCapture = hasLearnerCaptureContent(form);
 
   if (savedConfirmation) {
     return (
@@ -1275,6 +1287,7 @@ export function WrongAnswerCaptureForm({
             onPdf={handlePdfImport}
             onGenerate={() => generateStructuredDraft()}
             onQuickSave={saveQuickCaptureFromIntake}
+            canQuickSave={canQuickSaveCapture}
             saving={submitting}
             cameraInputRef={cameraInputRef}
             galleryInputRef={galleryInputRef}
@@ -1513,6 +1526,7 @@ function IntakePanel({
   onPdf,
   onGenerate,
   onQuickSave,
+  canQuickSave,
   saving,
   cameraInputRef,
   galleryInputRef,
@@ -1533,6 +1547,7 @@ function IntakePanel({
   onPdf: (file: File) => void;
   onGenerate: () => void | Promise<void>;
   onQuickSave: () => void | Promise<void>;
+  canQuickSave: boolean;
   saving: boolean;
   cameraInputRef: React.RefObject<HTMLInputElement | null>;
   galleryInputRef: React.RefObject<HTMLInputElement | null>;
@@ -1696,6 +1711,17 @@ function IntakePanel({
         />
       </label>
       <p className="text-xs text-[color:var(--muted)]">OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요.</p>
+      <div className="sticky bottom-3 z-30 mt-3 rounded-[var(--radius-lg)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)]/95 p-3 shadow-lg backdrop-blur sm:bottom-5 sm:p-4" data-testid="capture-save-action-bar">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-medium text-[color:var(--foreground-strong)]">오늘 입력을 저장하고 다음 행동으로 연결합니다.</p>
+            <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">AI가 찾은 약점 후보입니다. 저장 전 직접 확인해 주세요. 다음 행동 후보입니다.</p>
+          </div>
+          <Button type="button" onClick={onQuickSave} disabled={!canQuickSave || saving || extracting} className="min-h-12 w-full shrink-0 sm:w-auto bg-[color:var(--foreground-strong)] text-white disabled:cursor-not-allowed disabled:opacity-60" data-testid="capture-save-primary">
+            {saving ? "저장 중" : "저장하고 오늘 계획에 반영"}
+          </Button>
+        </div>
+      </div>
       {form.sourceType === "pdf" ? <p className="text-xs text-[color:var(--muted)]">현재 PDF는 파일명만 기록됩니다. 내용은 직접 붙여넣어 주세요.</p> : null}
       {uploadedPages.length > 0 ? (
         <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3">
@@ -1758,25 +1784,11 @@ function IntakePanel({
         </label>
         </div>
       </details>
-      {form.rawQuestionText.trim() || uploadedPages.length > 0 ? (
-        <div className="mt-4 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-elevated)] p-3">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <Button
-              type="button"
-              onClick={onQuickSave}
-              disabled={saving || extracting}
-              className="w-full sm:w-auto bg-[color:var(--foreground-strong)] text-white"
-              data-testid="capture-save-primary"
-            >
-              {saving ? "저장 중" : "저장하고 오늘 계획에 반영"}
-            </Button>
-            <Button type="button" variant="outline" onClick={onGenerate} disabled={extracting || saving} className="w-full sm:w-auto">
-              {extracting ? "입력 내용 확인 중" : "AI로 정리 후 확인"}
-            </Button>
-          </div>
-          <p className="mt-2 text-xs leading-5 text-[color:var(--muted)]">AI가 찾은 약점 후보입니다. 저장 전 직접 확인해 주세요. 다음 행동 후보입니다.</p>
-        </div>
-      ) : null}
+      <div className="mt-4 flex justify-end">
+        <Button type="button" variant="outline" onClick={onGenerate} disabled={extracting || saving || !canQuickSave} className="w-full sm:w-auto">
+          {extracting ? "입력 내용 확인 중" : "AI로 정리 후 확인"}
+        </Button>
+      </div>
       <details className="mt-4 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
         <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">이미지/PDF로 입력하기 (선택)</summary>
         <div className="border-t border-[color:var(--border-subtle)] px-4 py-3">

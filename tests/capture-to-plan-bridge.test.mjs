@@ -140,10 +140,10 @@ test("second write submit payload preserves original answer and stores rewrite p
   const source = await readFile(new URL("../components/review-os/capture-form.tsx", import.meta.url), "utf8");
   assert.ok(source.includes('rawAnswerText: mode === "second" ? form.userAnswer : undefined'));
   assert.ok(source.includes('userAnswer: form.userAnswer || "-"'));
-  assert.ok(source.includes('rewriteParagraph: mode === "second" ? form.rewriteParagraph || undefined : undefined'));
-  assert.ok(source.includes('rewrite_completed: mode === "second" ? form.rewriteParagraph.trim().length >= 8 : Boolean(rewriteContext)'));
-  assert.ok(source.includes('productionBeforeComparison: mode === "second" ? form.productionBeforeComparison : undefined'));
-  assert.ok(source.includes('referenceAnswerAddedAfterProduction: mode === "second" ? form.referenceAnswerAddedAfterProduction : undefined'));
+  assert.match(source, /rewriteParagraph:\s*mode === \"second\" \? form\.rewriteParagraph \|\| undefined : undefined/);
+  assert.match(source, /rewrite_completed:\s*mode === \"second\"\s*\? form\.rewriteParagraph\.trim\(\)\.length >= 8\s*: Boolean\(rewriteContext\)/);
+  assert.match(source, /productionBeforeComparison:\s*mode === \"second\"\s*\? form\.productionBeforeComparison\s*: undefined/);
+  assert.match(source, /referenceAnswerAddedAfterProduction:\s*mode === \"second\"\s*\? form\.referenceAnswerAddedAfterProduction\s*: undefined/);
 });
 
 test("today plan stays one primary + max 3 and language is operational", () => {

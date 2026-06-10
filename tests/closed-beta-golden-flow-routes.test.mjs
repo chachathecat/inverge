@@ -83,12 +83,27 @@ test("/app/capture provides editable text-first capture and existing safe save p
   assert.equal(captureForm.includes('update("rawQuestionText", value)'), true, "textarea edits should update the draft");
   assert.equal(captureForm.includes('fetch("/api/os/items"'), true, "save should use the existing user-owned note persistence endpoint");
   assert.equal(captureForm.includes("createdFromCapture: true"), true, "save should create capture-derived learning signal metadata");
-  assert.equal(captureForm.includes('data-testid="capture-save-primary"'), true, "visible primary save CTA should be present after text entry");
+  assert.equal(captureForm.includes('data-testid="capture-save-primary"'), true, "visible primary save CTA should be present in the capture form");
+  assert.equal(captureForm.includes('data-testid="capture-save-action-bar"'), true, "save CTA should live in the same visible section as learner input");
   assert.equal(captureForm.includes("저장하고 오늘 계획에 반영"), true, "save CTA copy should match closed-beta QA expectation");
+  assert.equal(captureForm.includes("disabled={!canQuickSave || saving || extracting}"), true, "save CTA should render before input and stay disabled until content exists");
+  assert.equal(captureForm.includes("getLearnerCaptureContent"), true, "save readiness should account for learner text beyond raw OCR text");
+  assert.equal(captureForm.includes("source.userAnswer"), true, "save CTA should enable from userAnswer/study note text");
+  assert.equal(captureForm.includes("uploadedPages.length > 0"), true, "save CTA should enable from uploaded pages");
   assert.equal(captureForm.includes("saveQuickCaptureFromIntake"), true, "text-first intake should have a direct save path");
   assert.equal(captureForm.includes("saveReviewOsLocalBetaNote"), true, "save should fall back to the safe local beta note path when durable persistence is unavailable");
   assert.equal(captureForm.includes('data-testid="capture-note-summary"'), true, "save confirmation summary should exist");
   assert.equal(captureForm.includes("buildCaptureNoteSummary"), true, "summary should include derived capture-note signals");
+});
+
+test("capture save CTA is not hidden inside collapsed details-only path", () => {
+  const captureForm = read("components/review-os/capture-form.tsx");
+  const ctaIndex = captureForm.indexOf('data-testid="capture-save-primary"');
+  assert.notEqual(ctaIndex, -1, "save CTA should exist");
+  const actionBarIndex = captureForm.lastIndexOf('data-testid="capture-save-action-bar"', ctaIndex);
+  const detailsIndex = captureForm.lastIndexOf("<details", ctaIndex);
+  assert.notEqual(actionBarIndex, -1, "save CTA should be inside the visible action bar");
+  assert.ok(actionBarIndex > detailsIndex, "nearest visible action wrapper should come after any preceding collapsed details block");
 });
 
 test("capture save confirmation includes biggest gap, next action, and Review/Notes/Today links", () => {

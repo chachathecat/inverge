@@ -45,7 +45,7 @@ test("quick text-first path keeps optional fields optional for basic save", () =
 
 test("second-mode normal capture routes preview through retrieval before final save", () => {
   const form = captureForm();
-  assert.match(form, /onClick=\{\(\) => setStage\(mode === "second" \? "second-issue-recall" : "confirm"\)\}/);
+  assert.match(form, /onClick=\{\(\) =>\s*setStage\(\s*mode === "second" \? "second-issue-recall" : "confirm",?\s*\)\s*\}/);
   assert.match(form, /쟁점 회상부터 진행/);
   assert.match(form, /function hasSecondModeLearnerProducedResponse/);
   assert.match(form, /function hasSecondModeReferenceStep/);
@@ -90,7 +90,7 @@ test("low-confidence OCR remains an ocr_confirmation candidate before practice",
   assert.match(form, /ocrConfirmedByLearner/);
   assert.match(form, /form\.lowConfidenceFlag && !form\.ocrConfirmedByLearner/);
   assert.match(form, /OCR 확인 필요: 숫자\/용어를 직접 확인하거나 수정한 뒤 O\/X 연습으로 나눌 수 있습니다\./);
-  assert.match(form, /lowConfidenceFlag && !form\.ocrConfirmedByLearner \? null : getCalculatorWorkflowForSubject/);
+  assert.match(form, /lowConfidenceFlag && !form\.ocrConfirmedByLearner\s*\? null\s*: getCalculatorWorkflowForSubject/);
   assert.match(svc, /rawLowConfidenceCapture/);
   assert.match(svc, /lowConfidenceCapture = rawLowConfidenceCapture && confirmedFields\?\.ocrConfirmedByLearner !== true/);
   assert.match(svc, /OCR 숫자\/용어 확인 필요/);

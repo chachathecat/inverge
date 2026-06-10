@@ -8,7 +8,7 @@ const ocrRouteUrl = new URL("../app/api/inverge/ocr/route.ts", import.meta.url);
 test("learner capture supports multi-page mobile page ordering without instructor routes", async () => {
   const source = await readFile(captureSourceUrl, "utf8");
   [
-    "여러 장 답안지는 순서가 중요합니다. 저장 전 페이지 순서와 OCR 내용을 확인해 주세요.",
+    /여러 장 답안지는 순서가 중요합니다\.\s*저장 전 페이지 순서와 OCR\s*내용을 확인해 주세요\./,
     "movePage",
     "removePage",
     "위로 이동",
@@ -16,7 +16,7 @@ test("learner capture supports multi-page mobile page ordering without instructo
     "미리보기",
     "다시 찍기",
     "multiple",
-  ].forEach((token) => assert.ok(source.includes(token), `missing ${token}`));
+  ].forEach((token) => token instanceof RegExp ? assert.match(source, token, `missing ${token}`) : assert.ok(source.includes(token), `missing ${token}`));
   assert.equal(source.includes("/api/instructor/second-grading/ocr"), false);
   assert.equal(source.includes("/instructor"), false);
 });
@@ -33,7 +33,7 @@ test("merged OCR text preserves page boundaries and remains editable with draft 
     "capturePages",
     "pageCount",
     "sourceType",
-  ].forEach((token) => assert.ok(source.includes(token), `missing ${token}`));
+  ].forEach((token) => token instanceof RegExp ? assert.match(source, token, `missing ${token}`) : assert.ok(source.includes(token), `missing ${token}`));
 });
 
 test("low confidence OCR is saved as safe derived metadata and not deterministic calculation input", async () => {
@@ -42,9 +42,9 @@ test("low confidence OCR is saved as safe derived metadata and not deterministic
     "lowConfidenceFlag",
     "captureQualityIssue",
     "인식이 불안정합니다. 중요한 숫자/단어를 확인해 주세요.",
-    "form.lowConfidenceFlag && !form.ocrConfirmedByLearner ? null : getCalculatorWorkflowForSubject",
+    /form\.lowConfidenceFlag && !form\.ocrConfirmedByLearner\s*\? null\s*: getCalculatorWorkflowForSubject/,
     "raw_ocr_text: form.rawOcrText || form.rawQuestionText || \"\"",
-  ].forEach((token) => assert.ok(source.includes(token), `missing ${token}`));
+  ].forEach((token) => token instanceof RegExp ? assert.match(source, token, `missing ${token}`) : assert.ok(source.includes(token), `missing ${token}`));
 });
 
 test("learner OCR API returns page-aware draft text without PDF extraction dependency", async () => {
