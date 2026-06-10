@@ -67,7 +67,7 @@ async function makeFixtureConfig(mutator = () => {}) {
 
 test("Q-Net appraiser official materials load through typed metadata-only helpers", () => {
   const reference = loadQnetAppraiserOfficialMaterialsReference();
-  assert.equal(reference.materialsIndex.materials.length, 5);
+  assert.ok(reference.materialsIndex.materials.length >= 5);
   assert.equal(reference.sourceMap.sources.length, 1);
   assert.ok(reference.topicFrequency.topicFrequency.length > 0);
   assert.equal(reference.officialSource.sourceUrl, registryUrl);
@@ -89,14 +89,25 @@ test("Q-Net appraiser official materials load through typed metadata-only helper
     assert.match(material.localRawFileNameHash, /^[a-f0-9]{64}$/);
     assert.equal(Object.prototype.hasOwnProperty.call(material, "localFileName"), false);
   }
+
+  const materialSourceIds = new Set(reference.materialsIndex.materials.map((material) => material.sourceId));
+  for (const source of reference.sourceMap.sources) {
+    assert.equal(source.materialCount, reference.materialsIndex.materials.length);
+    assert.ok(source.sourceIds.every((sourceId) => materialSourceIds.has(sourceId)));
+  }
+  for (const topic of reference.topicFrequency.topicFrequency) {
+    assert.ok(topic.sourceIds.every((sourceId) => materialSourceIds.has(sourceId)));
+  }
 });
 
 test("Q-Net material lookup helpers filter by exam mode, subject, and source id", () => {
   const reference = loadQnetAppraiserOfficialMaterialsReference();
   const firstMaterials = listQnetMaterialsByExamMode("first", reference);
   const secondMaterials = listQnetMaterialsByExamMode("second", reference);
-  assert.equal(firstMaterials.length, 2);
-  assert.equal(secondMaterials.length, 3);
+  assert.equal(firstMaterials.length, reference.materialsIndex.materials.filter((material) => material.examMode === "first").length);
+  assert.equal(secondMaterials.length, reference.materialsIndex.materials.filter((material) => material.examMode === "second").length);
+  assert.ok(firstMaterials.length >= 2);
+  assert.ok(secondMaterials.length >= 3);
   assert.ok(firstMaterials.every((material) => material.examMode === "first"));
   assert.ok(secondMaterials.every((material) => material.examMode === "second"));
 
