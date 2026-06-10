@@ -10,16 +10,16 @@ type PageProps = {
   searchParams?: Promise<{ mode?: string; saved?: string }>;
 };
 
-export default async function ReviewOsItemsPage({ searchParams }: PageProps) {
+export async function renderReviewOsItemsPage(searchParams: PageProps["searchParams"], routePath = "/app/items") {
   const query = await searchParams;
   const modeParam = query?.mode;
   const savedParam = query?.saved;
-  const { session, profile } = await getReviewOsServerContext(buildReviewOsReturnTo("/app/items", modeParam));
+  const { session, profile } = await getReviewOsServerContext(buildReviewOsReturnTo(routePath, modeParam));
   if (!session.userId || !session.email) return null;
 
   const mode = resolveAppraisalMode(profile, modeParam);
   const config = getModeConfig(mode);
-  const items = (await reviewOsService.listWrongAnswerItems(session.userId, session.email, 60)).filter(
+  const items = (await reviewOsService.listWrongAnswerItems(session.userId, session.email, 60).catch(() => [])).filter(
     (item) => item.examName === config.label,
   );
   const learningSignals = await reviewOsService.listLearningSignalEvents(session.userId, session.email, mode, 20).catch(() => []);
@@ -90,7 +90,7 @@ export default async function ReviewOsItemsPage({ searchParams }: PageProps) {
             <div className="space-y-4">
               <p className="text-sm text-[color:var(--muted)]">{config.emptyDescription}</p>
               <p className="text-sm text-[color:var(--muted)]">{problemSnapEmptyCopy}</p>
-              <Link href={mode === "second" ? `/app/write?mode=${mode}` : `/app/capture?mode=${mode}`} className="w-full sm:w-auto">
+              <Link href={`/app/capture?mode=${mode}`} className="w-full sm:w-auto">
                 <Button type="button" className="w-full sm:w-auto">
                   {config.primaryCta}
                 </Button>
@@ -192,4 +192,8 @@ export default async function ReviewOsItemsPage({ searchParams }: PageProps) {
       ) : null}
     </div>
   );
+}
+
+export default async function ReviewOsItemsPage({ searchParams }: PageProps) {
+  return renderReviewOsItemsPage(searchParams);
 }

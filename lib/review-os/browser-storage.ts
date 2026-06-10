@@ -41,6 +41,40 @@ export function clearReviewOsDraft(input: DraftKeyInput) {
   }
 }
 
+export type LocalBetaLearnerNote = {
+  id: string;
+  mode: string;
+  subjectLabel: string;
+  problemTitle?: string;
+  biggestGap: string;
+  nextAction: string;
+  createdAt: string;
+  metadataOnly: true;
+  safeUse: "closed_beta_local_note";
+};
+
+const LOCAL_BETA_NOTES_KEY = `${PREFIX}:local-beta-notes`;
+
+export function saveReviewOsLocalBetaNote(note: Omit<LocalBetaLearnerNote, "id" | "createdAt" | "metadataOnly" | "safeUse">) {
+  const createdAt = new Date().toISOString();
+  const localNote: LocalBetaLearnerNote = {
+    ...note,
+    id: `local-beta-${Date.now()}`,
+    createdAt,
+    metadataOnly: true,
+    safeUse: "closed_beta_local_note",
+  };
+  if (typeof window === "undefined") return localNote;
+  try {
+    const raw = window.localStorage.getItem(LOCAL_BETA_NOTES_KEY);
+    const notes = raw ? (JSON.parse(raw) as LocalBetaLearnerNote[]) : [];
+    window.localStorage.setItem(LOCAL_BETA_NOTES_KEY, JSON.stringify([localNote, ...notes].slice(0, 20)));
+  } catch {
+    // ignore browser storage failures
+  }
+  return localNote;
+}
+
 export function clearReviewOsBrowserState() {
   if (typeof window === "undefined") return;
   try {

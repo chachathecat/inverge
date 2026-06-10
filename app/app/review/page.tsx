@@ -21,7 +21,7 @@ export default async function ReviewOsReviewPage({ searchParams }: PageProps) {
 
   const mode = resolveAppraisalMode(profile, modeParam);
   const config = getModeConfig(mode);
-  const items = (await reviewOsService.getReviewQueue(session.userId, session.email)).filter((item) => item.examName === config.label);
+  const items = (await reviewOsService.getReviewQueue(session.userId, session.email).catch(() => [])).filter((item) => item.examName === config.label);
   const captureReferenceLineByItemId: Record<string, string> = {};
   await Promise.all(items.filter((item) => item.createdFromCapture).map(async (item) => {
     const detail = await reviewOsService.getWrongAnswerDetail(session.userId!, session.email!, item.itemId).catch(() => null);
@@ -50,7 +50,7 @@ export default async function ReviewOsReviewPage({ searchParams }: PageProps) {
             <p>{config.emptyDescription}</p>
           </QuietDetails>
           <div className="pt-2">
-            <Link href={mode === "second" ? `/app/write?mode=${mode}` : `/app/capture?mode=${mode}`}>
+            <Link href={`/app/capture?mode=${mode}`}>
               <Button type="button">{config.primaryCta}</Button>
             </Link>
           </div>

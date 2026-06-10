@@ -211,7 +211,7 @@ test("capture route smoke keeps capture-first copy and one primary start action"
     assert.equal(capture.includes(required), true, `${required} should render on /app/capture`);
   }
 
-  assert.equal(capture.includes("form.rawQuestionText.trim() || uploadedPages.length > 0"), true, "empty capture start should keep one primary visible action");
+  assert.equal(capture.includes("canQuickSave"), true, "empty capture start should keep one primary visible action");
   assert.equal(/점수|채점|합격\s*판정|불합격\s*판정/.test(capture), false, "/app/capture should not become score-first");
   assertNoPattern(capture, forbiddenLearnerPatterns, "/app/capture");
   assertNoPattern(capture, officialClaimPatterns, "/app/capture");

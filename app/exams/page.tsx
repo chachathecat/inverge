@@ -24,7 +24,7 @@ function buildModeEntryHref(isAuthenticated: boolean, authEnabled: boolean, mode
 }
 
 function buildModeInputHref(mode: "first" | "second") {
-  return mode === "first" ? "/app/capture?mode=first" : "/app/write?mode=second";
+  return mode === "first" ? "/app/capture?mode=first" : "/app/capture?mode=second";
 }
 
 function SelectionCard({ card }: { card: ExamSelectionCard }) {

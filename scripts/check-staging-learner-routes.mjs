@@ -6,8 +6,11 @@ const routeSources = new Map([
   ["/app", "app/app/page.tsx"],
   ["/app/onboarding", "app/app/onboarding/page.tsx"],
   ["/app/capture", "app/app/capture/page.tsx"],
+  ["/app/input", "app/app/input/page.tsx"],
+  ["/app/entry", "app/app/entry/page.tsx"],
   ["/app/session", "app/app/session/page.tsx"],
   ["/app/review", "app/app/review/page.tsx"],
+  ["/app/notes", "app/app/notes/page.tsx"],
   ["/app/write", "app/app/write/page.tsx"],
   ["/app/calculator", "app/app/calculator/page.tsx"],
   ["/answer-review", "app/answer-review/page.tsx"],
@@ -77,6 +80,28 @@ for (const [route, file] of routeSources) {
   }
 }
 
+const examsPage = existsSync(sourcePath("app/exams/page.tsx")) ? read("app/exams/page.tsx") : "";
+check(examsPage.includes('const appHref = `/app?mode=${mode}`'), "/exams authenticated CTA must use absolute /app mode route");
+check(examsPage.includes('return mode === "first" ? "/app/capture?mode=first" : "/app/capture?mode=second";'), "/exams second-track CTA must start at /app/capture?mode=second");
+check(!examsPage.includes('"/app/write?mode=second"'), "/exams second-track CTA must not target specialized /app/write route");
+
+const learnerRouteConstructionSources = [
+  "app/exams/page.tsx",
+  "components/learner/learner-ui.tsx",
+  "app/app/page.tsx",
+  "app/app/capture/page.tsx",
+  "app/app/input/page.tsx",
+  "app/app/entry/page.tsx",
+  "app/app/review/page.tsx",
+  "app/app/notes/page.tsx",
+];
+for (const file of learnerRouteConstructionSources) {
+  if (!existsSync(sourcePath(file))) continue;
+  const source = read(file);
+  check(!source.includes("/app/app"), `${file} must not construct duplicated /app/app routes`);
+  check(!/(?:href|router\.push|redirect)\s*=*\(?[`'"]app\//.test(source), `${file} must use root-absolute /app links`);
+}
+
 
 const captureRoute = existsSync(sourcePath("app/app/capture/page.tsx")) ? read("app/app/capture/page.tsx") : "";
 const captureForm = existsSync(sourcePath("components/review-os/capture-form.tsx")) ? read("components/review-os/capture-form.tsx") : "";
@@ -85,9 +110,25 @@ check(capture.includes("오늘 한 것 올리기"), "/app/capture must keep calm
 check(capture.includes("사진/PDF/텍스트 중 하나로 시작하세요."), "/app/capture must render capture start copy");
 check(capture.includes("OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요."), "/app/capture must show OCR draft warning");
 check(capture.includes("가장 큰 빈틈 1개만 먼저 고정합니다."), "/app/capture must keep one-biggest-gap focus");
-check(capture.includes("form.rawQuestionText.trim() || uploadedPages.length > 0"), "/app/capture starting point must not show more than one primary action");
+check(capture.includes("canQuickSave"), "/app/capture starting point must not show more than one primary action");
 check(!/점수|채점|합격\s*판정|불합격\s*판정/.test(capture), "/app/capture must not become score-first");
 check(!/href=[{\"'`][^\n]*(?:\/instructor|\/studio|\/admin)/i.test(capture), "/app/capture must not expose instructor/admin links");
+
+const learnerShell = existsSync(sourcePath("components/learner/learner-ui.tsx")) ? read("components/learner/learner-ui.tsx") : "";
+check(learnerShell.includes('href: "/app/capture"'), "learner Input tab must target /app/capture");
+check(learnerShell.includes('href: "/app/notes"'), "learner Notes tab must target /app/notes");
+check(learnerShell.includes('activeHrefs: ["/app/capture", "/app/input", "/app/entry", "/app/write"]'), "learner Input tab must mark input aliases active");
+check(learnerShell.includes('activeHrefs: ["/app/notes", "/app/items"]'), "learner Notes tab must mark notes/items active");
+check(learnerShell.includes('`${href}?mode=${currentMode}`'), "learner nav must preserve selected exam mode");
+
+for (const file of ["app/app/input/page.tsx", "app/app/entry/page.tsx"]) {
+  const source = existsSync(sourcePath(file)) ? read(file) : "";
+  check(source.includes("redirect(`/app/capture"), `${file} must resolve to /app/capture`);
+  check(source.includes('params.set("mode", mode)'), `${file} must preserve mode query param`);
+}
+
+const notesRoute = existsSync(sourcePath("app/app/notes/page.tsx")) ? read("app/app/notes/page.tsx") : "";
+check(notesRoute.includes("renderReviewOsItemsPage"), "/app/notes must render the existing learner-owned notes list");
 
 const review = existsSync(sourcePath("app/app/review/page.tsx")) ? read("app/app/review/page.tsx") : "";
 check(review.includes("재시도") || review.includes("다시"), "/app/review must remain review/retry oriented");
