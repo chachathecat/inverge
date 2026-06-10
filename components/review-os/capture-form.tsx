@@ -19,6 +19,7 @@ import { getCalculatorWorkflowForSubject } from "@/lib/review-os/calculator-work
 import { buildCaptureNoteDisplayCopy, buildCaptureNoteSummary } from "@/lib/review-os/capture-note-display-copy";
 import { applyDraftToConfirmedSubject, type ExtractionDraft, type ExtractionPipelineResult } from "@/lib/review-os/extraction";
 import { extractFirstExamFiveChoicesFromText } from "@/lib/review-os/first-ox-engine";
+import { pushLocalLearnerAnalyticsEvent } from "@/lib/review-os/local-analytics";
 import { resolveReviewSchedule } from "@/lib/review-os/scheduling";
 import {
   CONFIDENCE_OPTIONS,
@@ -964,6 +965,17 @@ export function WrongAnswerCaptureForm({
         return;
       }
       clearReviewOsDraft(storageKey);
+      pushLocalLearnerAnalyticsEvent({
+        event: "capture_saved",
+        surface: "capture",
+        route: "/app/capture",
+        mode,
+        subject: form.subjectLabel || getDefaultSubject(mode),
+        sourceType: form.sourceType === "image" ? "photo" : form.sourceType,
+        status: "saved",
+        createdFromCapture: true,
+        nextTaskType: destination === "first-ox" && mode === "first" ? "first_ox" : mode === "second" ? "rewrite" : "retry",
+      });
       router.push(destination === "first-ox" && mode === "first"
         ? `/app/first/ox?sourceItemId=${encodeURIComponent(result.item.id)}&mode=first`
         : `/app/session?mode=${mode}&savedCapture=1&itemId=${result.item.id}`);

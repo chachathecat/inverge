@@ -7,6 +7,7 @@ import type { ComponentPropsWithoutRef, ReactNode } from "react";
 import { SignOutButton } from "@/components/shared/sign-out-button";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { getModeConfig, parseAppraisalMode, type AppraisalMode } from "@/lib/review-os/appraisal";
+import { pushLocalLearnerAnalyticsEvent } from "@/lib/review-os/local-analytics";
 import { cn } from "@/lib/utils";
 
 type LearnerShellProps = {
@@ -16,17 +17,42 @@ type LearnerShellProps = {
   rightSlot?: ReactNode;
 };
 
-const LEARNER_NAV_ITEMS = [
-  { href: "/app", label: "오늘", preserveMode: true },
-  { href: { first: "/app/capture", second: "/app/write" }, label: "입력", preserveMode: true },
-  { href: "/app/review", label: "복습", preserveMode: true },
-  { href: "/app/items", label: "노트", preserveMode: true },
+type LearnerNavItem = {
+  href: string;
+  label: string;
+  preserveMode: true;
+  activeHrefs?: readonly string[];
+  analyticsAction: string;
+};
+
+const LEARNER_NAV_ITEMS: readonly LearnerNavItem[] = [
+  { href: "/app", label: "오늘", preserveMode: true, analyticsAction: "today" },
+  {
+    href: "/app/capture",
+    label: "입력",
+    preserveMode: true,
+    activeHrefs: ["/app/capture", "/app/input", "/app/entry", "/app/write"],
+    analyticsAction: "input",
+  },
+  { href: "/app/review", label: "복습", preserveMode: true, analyticsAction: "review" },
+  {
+    href: "/app/notes",
+    label: "노트",
+    preserveMode: true,
+    activeHrefs: ["/app/notes", "/app/items"],
+    analyticsAction: "notes",
+  },
 ] as const;
 
 const MODE_ITEMS: Array<{ mode: AppraisalMode; label: string; description: string }> = [
   { mode: "first", label: "1차", description: "오답·재시도" },
   { mode: "second", label: "2차", description: "작성·다시쓰기" },
 ];
+
+function matchesLearnerNavPath(pathname: string, item: LearnerNavItem) {
+  const activeHrefs = item.activeHrefs ?? [item.href];
+  return activeHrefs.some((activeHref) => pathname === activeHref || (activeHref !== "/app" && pathname.startsWith(`${activeHref}/`)));
+}
 
 export function LearnerShell({ email, mode, children, rightSlot }: LearnerShellProps) {
   const searchParams = useSearchParams();
@@ -79,13 +105,23 @@ export function LearnerShell({ email, mode, children, rightSlot }: LearnerShellP
 
           <nav aria-label="학습 메뉴" className="flex flex-wrap gap-2">
             {LEARNER_NAV_ITEMS.map((item) => {
-              const href = typeof item.href === "string" ? item.href : item.href[currentMode];
+              const href = item.href;
               const nextHref = item.preserveMode ? `${href}?mode=${currentMode}` : href;
-              const active = pathname === href;
+              const active = matchesLearnerNavPath(pathname, item);
               return (
                 <Link
-                  key={typeof item.href === "string" ? item.href : item.label}
+                  key={item.href}
                   href={nextHref}
+                  onClick={() => {
+                    pushLocalLearnerAnalyticsEvent({
+                      event: "learner_navigation",
+                      surface: "learner_shell",
+                      route: href,
+                      mode: currentMode,
+                      action: item.analyticsAction,
+                      status: "clicked",
+                    });
+                  }}
                   aria-current={active ? "page" : undefined}
                   className={cn(
                     "inline-flex min-h-11 items-center justify-center rounded-full border px-4 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:rgba(16,35,63,0.16)]",

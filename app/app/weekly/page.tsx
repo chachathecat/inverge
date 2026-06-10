@@ -34,7 +34,7 @@ export default async function ReviewOsWeeklyPage({ searchParams }: PageProps) {
   });
   const visibleTasks = plan.tasks.slice(0, 3);
   const primaryTask = plan.recovery?.task ?? plan.tasks[0] ?? null;
-  const inputStartHref = mode === "second" ? `/app/write?mode=${mode}` : `/app/capture?mode=${mode}`;
+  const inputStartHref = `/app/capture?mode=${mode}`;
   const primaryHref = primaryTask ? `/app/review?mode=${mode}` : inputStartHref;
 
   return (

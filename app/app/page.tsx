@@ -59,7 +59,7 @@ const SECOND_MODE_INPUT_OPTIONS = [
     title: "2차 답안 작성",
     description: "내 답안을 먼저 작성하면 비교할 기준이 선명해집니다.",
     hrefLabel: "답안 작성 시작",
-    hrefKey: "write",
+    hrefKey: "capture",
   },
   {
     title: "기준 답안과 비교",
@@ -189,21 +189,21 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
   const firstSetHref = `/app/sets?mode=first&subject=${encodeURIComponent(selectedFirstSubject)}`;
   const firstCaptureHref = `/app/capture?mode=first&subject=${encodeURIComponent(selectedFirstSubject)}`;
   const defaultPrimaryHref = isFirstSetStart ? firstSetHref : `/app/session?mode=${mode}`;
-  const secondaryHref = mode === "second" ? `/app/items?mode=${mode}` : `/app/review?mode=${mode}`;
-  const modeCaptureHref = mode === "second" ? "/app/write?mode=second" : firstCaptureHref;
+  const secondaryHref = mode === "second" ? `/app/notes?mode=${mode}` : `/app/review?mode=${mode}`;
+  const modeCaptureHref = mode === "second" ? "/app/capture?mode=second" : firstCaptureHref;
 
   const resolveTodayPlanHref = (actionKind: TodayPlanActionKind) => {
     if (actionKind === "first_capture") return firstCaptureHref;
     if (actionKind === "first_set") return firstSetHref;
     if (actionKind === "second_write") return "/app/write?mode=second";
     if (actionKind === "second_review") return "/app/review?mode=second";
-    if (actionKind === "second_items") return "/app/items?mode=second";
+    if (actionKind === "second_items") return "/app/notes?mode=second";
     return `/app/session?mode=first`;
   };
   const resolveTaskHref = (hrefKind: (typeof todayPlanTasks)[number]["primary_cta"]["hrefKind"]) => {
     if (hrefKind === "capture") return mode === "second" ? "/app/capture?mode=second" : firstCaptureHref;
     if (hrefKind === "write") return "/app/write?mode=second";
-    if (hrefKind === "items") return `/app/items?mode=${mode}`;
+    if (hrefKind === "items") return `/app/notes?mode=${mode}`;
     if (hrefKind === "review") return `/app/review?mode=${mode}`;
     if (hrefKind === "first_ox") return "/app/first/ox";
     if (hrefKind === "calculator_template") {
@@ -253,10 +253,10 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
       : SECOND_MODE_INPUT_OPTIONS.map((option) => ({
           ...option,
           href:
-            option.hrefKey === "write"
-              ? "/app/write?mode=second"
+            option.hrefKey === "capture"
+              ? "/app/capture?mode=second"
               : option.hrefKey === "items"
-                ? "/app/items?mode=second"
+                ? "/app/notes?mode=second"
                 : "/app/review?mode=second",
         }));
   const visibleTodayPlanTasks = todayPlanTasks.slice(0, 3);
@@ -276,7 +276,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
         <section className="rounded-[var(--radius-md)] bg-[color:var(--surfaceQuiet)] px-4 py-4">
           <EvidenceLine>저장 전 직접 확인해 주세요.</EvidenceLine>
           <OneActionFooter>
-            <Link href={`/app/items?mode=${mode}`} className="inline-flex rounded-full bg-[color:var(--actionPrimary)] px-4 py-2 text-xs font-medium text-white">
+            <Link href={`/app/notes?mode=${mode}`} className="inline-flex rounded-full bg-[color:var(--actionPrimary)] px-4 py-2 text-xs font-medium text-white">
               노트에서 확인
             </Link>
           </OneActionFooter>

@@ -50,7 +50,7 @@ export default async function ReviewOsReviewPage({ searchParams }: PageProps) {
             <p>{config.emptyDescription}</p>
           </QuietDetails>
           <div className="pt-2">
-            <Link href={mode === "second" ? `/app/write?mode=${mode}` : `/app/capture?mode=${mode}`}>
+            <Link href={`/app/capture?mode=${mode}`}>
               <Button type="button">{config.primaryCta}</Button>
             </Link>
           </div>

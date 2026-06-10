@@ -83,7 +83,8 @@ export default async function ReviewOsSessionPage({ searchParams }: PageProps) {
               <div className="grid gap-2 border-t border-[color:var(--border-hairline)] px-3 py-2 text-xs text-[color:var(--ink-muted)]">
                 <Link href={`/app?mode=${mode}`}>오늘 계획으로 이동</Link>
                 <Link href={`/app/capture?mode=${mode}`}>하나 더 올리기</Link>
-                <Link href={`/app/items?mode=${mode}`}>노트 보기</Link>
+                <Link href={`/app/review?mode=${mode}`}>복습 큐 보기</Link>
+                <Link href={`/app/notes?mode=${mode}`}>노트 보기</Link>
               </div>
             </details>
             <details className="rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)]">
