@@ -83,8 +83,28 @@ test("/app/capture provides editable text-first capture and existing safe save p
   assert.equal(captureForm.includes('update("rawQuestionText", value)'), true, "textarea edits should update the draft");
   assert.equal(captureForm.includes('fetch("/api/os/items"'), true, "save should use the existing user-owned note persistence endpoint");
   assert.equal(captureForm.includes("createdFromCapture: true"), true, "save should create capture-derived learning signal metadata");
+  assert.equal(captureForm.includes('data-testid="capture-save-primary"'), true, "visible primary save CTA should be present after text entry");
+  assert.equal(captureForm.includes("저장하고 오늘 계획에 반영"), true, "save CTA copy should match closed-beta QA expectation");
+  assert.equal(captureForm.includes("saveQuickCaptureFromIntake"), true, "text-first intake should have a direct save path");
+  assert.equal(captureForm.includes("saveReviewOsLocalBetaNote"), true, "save should fall back to the safe local beta note path when durable persistence is unavailable");
   assert.equal(captureForm.includes('data-testid="capture-note-summary"'), true, "save confirmation summary should exist");
   assert.equal(captureForm.includes("buildCaptureNoteSummary"), true, "summary should include derived capture-note signals");
+});
+
+test("capture save confirmation includes biggest gap, next action, and Review/Notes/Today links", () => {
+  const captureForm = read("components/review-os/capture-form.tsx");
+  const browserStorage = read("lib/review-os/browser-storage.ts");
+
+  assert.equal(captureForm.includes('data-testid="capture-save-confirmation"'), true, "save confirmation panel should render in capture");
+  assert.equal(captureForm.includes("저장되었습니다"), true, "confirmation should say the save completed");
+  assert.equal(captureForm.includes("가장 큰 약점 1개"), true, "confirmation should identify one biggest gap candidate");
+  assert.equal(captureForm.includes("다음 행동 1개"), true, "confirmation should identify one next action candidate");
+  assert.equal(captureForm.includes("AI가 찾은 약점 후보입니다. 저장 전 직접 확인해 주세요."), true, "confirmation should use beta-safe candidate copy");
+  assert.equal(captureForm.includes("다음 행동 후보입니다."), true, "confirmation should frame next action as a candidate");
+  assert.equal(captureForm.includes('href={`/app/review?mode=${mode}`}'), true, "confirmation should link to Review with mode");
+  assert.equal(captureForm.includes('href={`/app/notes?mode=${mode}`}'), true, "confirmation should link to Notes with mode");
+  assert.equal(captureForm.includes('href={`/app?mode=${mode}`}'), true, "confirmation should link back to Today with mode");
+  assert.equal(browserStorage.includes('safeUse: "closed_beta_local_note"'), true, "local note fallback should be explicitly closed-beta safe");
 });
 
 test("capture save local analytics emits only safe derived fields", () => {

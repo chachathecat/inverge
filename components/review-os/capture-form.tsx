@@ -14,7 +14,7 @@ import {
   normalizeSubjectForMode,
   type AppraisalMode,
 } from "@/lib/review-os/appraisal";
-import { clearReviewOsDraft, loadReviewOsDraft, saveReviewOsDraft } from "@/lib/review-os/browser-storage";
+import { clearReviewOsDraft, loadReviewOsDraft, saveReviewOsDraft, saveReviewOsLocalBetaNote } from "@/lib/review-os/browser-storage";
 import { getCalculatorWorkflowForSubject } from "@/lib/review-os/calculator-workflow";
 import { buildCaptureNoteDisplayCopy, buildCaptureNoteSummary } from "@/lib/review-os/capture-note-display-copy";
 import { applyDraftToConfirmedSubject, type ExtractionDraft, type ExtractionPipelineResult } from "@/lib/review-os/extraction";
@@ -32,6 +32,13 @@ import {
 } from "@/lib/review-os/types";
 
 type ExtractionState = "idle" | "uploading" | "extracting" | "succeeded" | "failed" | "manual";
+
+type SavedCaptureConfirmation = {
+  itemId: string;
+  persistence: "durable" | "local-beta";
+  biggestGap: string;
+  nextAction: string;
+};
 
 type CaptureFormProps = {
   userId: string;
@@ -378,6 +385,7 @@ export function WrongAnswerCaptureForm({
   const [error, setError] = useState("");
   const [extracting, setExtracting] = useState(false);
   const [extractError, setExtractError] = useState("");
+  const [savedConfirmation, setSavedConfirmation] = useState<SavedCaptureConfirmation | null>(null);
   const [extractionState, setExtractionState] = useState<ExtractionState>("idle");
   const [uploadedPages, setUploadedPages] = useState<UploadedPage[]>(() => form.capturePages ?? []);
   const secondModeHiddenFooterStages = new Set([
@@ -421,6 +429,7 @@ export function WrongAnswerCaptureForm({
   }
 
   function update<K extends keyof DraftState>(key: K, value: DraftState[K]) {
+    setSavedConfirmation(null);
     setForm((prev) => {
       const learnerEditedField = ![
         "lowConfidenceFlag",
@@ -827,6 +836,141 @@ export function WrongAnswerCaptureForm({
     syncPageLabels(next);
   }
 
+  function getCaptureConfirmationCopy(source: DraftState) {
+    const biggestGap =
+      mode === "second"
+        ? source.biggestGap || source.missingIssue || source.userReasonText || "오늘 입력에서 가장 큰 약점 후보 1개를 확인해 주세요."
+        : source.userReasonText || source.userReasonPreset || source.comparisonPoint || "오늘 입력에서 가장 큰 약점 후보 1개를 확인해 주세요.";
+    const nextAction =
+      mode === "second"
+        ? source.rewriteInstruction || "가장 큰 약점 후보를 반영해 한 문단만 다시 써 보세요."
+        : source.comparisonPoint || "헷갈린 개념을 O/X로 한 번 더 회상해 보세요.";
+    return { biggestGap, nextAction };
+  }
+
+  function saveLocalCaptureConfirmation(source: DraftState) {
+    const copy = getCaptureConfirmationCopy(source);
+    const localNote = saveReviewOsLocalBetaNote({
+      mode,
+      subjectLabel: source.subjectLabel || getDefaultSubject(mode),
+      problemTitle: source.problemTitle || firstLine(source.rawQuestionText, `${source.subjectLabel || getDefaultSubject(mode)} 입력 기록`),
+      biggestGap: copy.biggestGap,
+      nextAction: copy.nextAction,
+    });
+    setSavedConfirmation({ itemId: localNote.id, persistence: "local-beta", ...copy });
+    clearReviewOsDraft(storageKey);
+    pushLocalLearnerAnalyticsEvent({
+      event: "capture_saved",
+      surface: "capture",
+      route: "/app/capture",
+      mode,
+      subject: source.subjectLabel || getDefaultSubject(mode),
+      sourceType: source.sourceType === "image" ? "photo" : source.sourceType,
+      status: "saved",
+      createdFromCapture: true,
+      nextTaskType: mode === "second" ? "rewrite" : "retry",
+    });
+  }
+
+  async function saveQuickCaptureFromIntake() {
+    const rawText = form.rawQuestionText.trim();
+    if (!rawText && uploadedPages.length === 0) return;
+    setSubmitting(true);
+    setError("");
+    const structured = buildStructuredDraft(
+      {
+        ...form,
+        rawQuestionText: rawText || form.rawQuestionText,
+        rawOcrText: form.rawOcrText || rawText || form.rawQuestionText,
+        userAnswer: form.userAnswer || (mode === "second" ? rawText : form.userAnswer),
+        issueRecall: form.issueRecall || (mode === "second" ? firstLine(rawText, "오늘 입력 회상") : form.issueRecall),
+        productionBeforeComparison: mode === "second" ? true : form.productionBeforeComparison,
+        referenceAnswerAddedAfterProduction: mode === "second" ? form.referenceAnswerAddedAfterProduction : form.referenceAnswerAddedAfterProduction,
+        correctAnswer: form.correctAnswer || "-",
+      },
+      rawText || form.rawQuestionText,
+    );
+    const copy = getCaptureConfirmationCopy(structured);
+    setForm(persist(structured));
+    try {
+      const response = await fetch("/api/os/items", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          examName: getModeLabel(mode),
+          subjectLabel: structured.subjectLabel || getDefaultSubject(mode),
+          sourceType: structured.sourceType,
+          sourceLabel: structured.sourceLabel || undefined,
+          problemTitle: structured.problemTitle || firstLine(structured.rawQuestionText, `${structured.subjectLabel || getDefaultSubject(mode)} 입력 기록`),
+          problemIdentifier: structured.problemIdentifier || undefined,
+          rawQuestionText: structured.rawQuestionText || undefined,
+          rawAnswerText: mode === "second" ? structured.userAnswer || structured.rawQuestionText : undefined,
+          correctAnswer: structured.correctAnswer || "-",
+          userAnswer: structured.userAnswer || structured.rawQuestionText || "-",
+          userReasonText: copy.biggestGap,
+          userReasonPreset: structured.userReasonPreset || undefined,
+          confidence: structured.confidence,
+          timeSpentSeconds: parseTimeSpentMinutes(structured.timeSpentSeconds) ? parseTimeSpentMinutes(structured.timeSpentSeconds)! * 60 : undefined,
+          nextReviewDate: structured.nextReviewDate || undefined,
+          keyConcepts: structured.keyConcepts.split(",").map((item) => item.trim()).filter(Boolean),
+          coreFormula: structured.coreFormula || undefined,
+          comparisonPoint: mode === "first" ? copy.nextAction : undefined,
+          missingIssue: mode === "second" ? copy.biggestGap : undefined,
+          weakStructurePoint: structured.weakStructurePoint || undefined,
+          weakApplicationSentence: structured.weakApplicationSentence || undefined,
+          rewriteInstruction: mode === "second" ? copy.nextAction : structured.rewriteInstruction || undefined,
+          referenceStructure: structured.referenceStructure || undefined,
+          myAnswerSummary: structured.myAnswerSummary || firstLine(structured.userAnswer || structured.rawQuestionText, "내 답안 요약"),
+          caseSummary: structured.caseSummary || undefined,
+          issueRecall: structured.issueRecall || undefined,
+          outlineDraft: structured.outlineDraft || undefined,
+          productionBeforeComparison: mode === "second" ? true : undefined,
+          referenceAnswerAddedAfterProduction: mode === "second" ? structured.referenceAnswerAddedAfterProduction : undefined,
+          biggestGap: mode === "second" ? copy.biggestGap : undefined,
+          rewriteCompleted: false,
+          captureIntent: "save",
+          createdFromCapture: true,
+          extractionPayload: {
+            raw_ocr_text: structured.rawOcrText || structured.rawQuestionText || "",
+            raw_extraction_json: structured.rawExtractionJson ?? {},
+            normalized_draft: structured.normalizedDraft ?? null,
+            user_confirmed_fields: {
+              sourceType: structured.sourceType,
+              subject: structured.subjectLabel,
+              examMode: mode,
+              biggest_gap: mode === "second" ? copy.biggestGap : null,
+              issue_recall: structured.issueRecall || null,
+              production_before_comparison: mode === "second" ? true : null,
+              local_beta_confirmation_available: true,
+            },
+          },
+        }),
+      });
+      const result = (await response.json()) as { ok?: boolean; item?: { id: string }; error?: string };
+      if (!response.ok || !result.ok || !result.item) {
+        saveLocalCaptureConfirmation(structured);
+        return;
+      }
+      clearReviewOsDraft(storageKey);
+      pushLocalLearnerAnalyticsEvent({
+        event: "capture_saved",
+        surface: "capture",
+        route: "/app/capture",
+        mode,
+        subject: structured.subjectLabel || getDefaultSubject(mode),
+        sourceType: structured.sourceType === "image" ? "photo" : structured.sourceType,
+        status: "saved",
+        createdFromCapture: true,
+        nextTaskType: mode === "second" ? "rewrite" : "retry",
+      });
+      setSavedConfirmation({ itemId: result.item.id, persistence: "durable", ...copy });
+    } catch {
+      saveLocalCaptureConfirmation(structured);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   async function saveCaptureAfterConfirmation(destination: "session" | "first-ox" = "session") {
     setSubmitting(true);
     setError("");
@@ -957,8 +1101,8 @@ export function WrongAnswerCaptureForm({
       });
       const result = (await response.json()) as { ok?: boolean; item?: { id: string; examName?: string }; error?: string; message?: string; errorCode?: string };
       if (!response.ok || !result.ok || !result.item) {
-        if (result.error === "usage-limit" || result.errorCode === "BILLING_REQUIRED") {
-          setError("현재 저장 한도에 도달했습니다. 지원팀에 문의해 주세요.");
+        if (destination === "session") {
+          saveLocalCaptureConfirmation(form);
           return;
         }
         setError("정리하지 못했습니다. 내용을 조금 더 확인한 뒤 다시 시도해 주세요.");
@@ -976,11 +1120,17 @@ export function WrongAnswerCaptureForm({
         createdFromCapture: true,
         nextTaskType: destination === "first-ox" && mode === "first" ? "first_ox" : mode === "second" ? "rewrite" : "retry",
       });
-      router.push(destination === "first-ox" && mode === "first"
-        ? `/app/first/ox?sourceItemId=${encodeURIComponent(result.item.id)}&mode=first`
-        : `/app/session?mode=${mode}&savedCapture=1&itemId=${result.item.id}`);
-      router.refresh();
+      if (destination === "first-ox" && mode === "first") {
+        router.push(`/app/first/ox?sourceItemId=${encodeURIComponent(result.item.id)}&mode=first`);
+        router.refresh();
+        return;
+      }
+      setSavedConfirmation({ itemId: result.item.id, persistence: "durable", ...getCaptureConfirmationCopy(form) });
     } catch {
+      if (destination === "session") {
+        saveLocalCaptureConfirmation(form);
+        return;
+      }
       setError("정리하지 못했습니다. 내용을 조금 더 확인한 뒤 다시 시도해 주세요.");
     } finally {
       setSubmitting(false);
@@ -994,6 +1144,19 @@ export function WrongAnswerCaptureForm({
 
   const firstOxChoiceExtraction = mode === "first" ? extractFirstExamFiveChoicesFromText(form.rawQuestionText, form.subjectLabel) : null;
   const canBridgeToFirstOx = firstOxChoiceExtraction?.status === "detected" && firstOxChoiceExtraction.choices.length === 5;
+
+  if (savedConfirmation) {
+    return (
+      <SavedCaptureConfirmationPanel
+        mode={mode}
+        confirmation={savedConfirmation}
+        onReset={() => {
+          setSavedConfirmation(null);
+          resetDraft();
+        }}
+      />
+    );
+  }
 
   return (
     <form className="space-y-6 overflow-x-hidden pb-28 sm:pb-0" onSubmit={handleSubmit}>
@@ -1111,6 +1274,8 @@ export function WrongAnswerCaptureForm({
             onImage={handleImageImport}
             onPdf={handlePdfImport}
             onGenerate={() => generateStructuredDraft()}
+            onQuickSave={saveQuickCaptureFromIntake}
+            saving={submitting}
             cameraInputRef={cameraInputRef}
             galleryInputRef={galleryInputRef}
             pdfInputRef={pdfInputRef}
@@ -1252,6 +1417,57 @@ type FieldProps = {
   update: <K extends keyof DraftState>(key: K, value: DraftState[K]) => void;
 };
 
+function SavedCaptureConfirmationPanel({
+  mode,
+  confirmation,
+  onReset,
+}: {
+  mode: AppraisalMode;
+  confirmation: SavedCaptureConfirmation;
+  onReset: () => void;
+}) {
+  return (
+    <section
+      className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-5 sm:p-6"
+      aria-live="polite"
+      data-testid="capture-save-confirmation"
+    >
+      <p className="text-caption text-[color:var(--brand-700)]">저장되었습니다</p>
+      <h3 className="mt-2 text-title text-[color:var(--foreground-strong)]">오늘 계획에 반영할 후보를 만들었습니다.</h3>
+      <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">AI가 찾은 약점 후보입니다. 저장 전 직접 확인해 주세요.</p>
+      <div className="mt-5 grid gap-3 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-4">
+        <PreviewLine label="가장 큰 약점 1개" value={confirmation.biggestGap} />
+        <PreviewLine label="다음 행동 1개" value={confirmation.nextAction} />
+        <PreviewLine label="저장 경로" value={confirmation.persistence === "durable" ? "Review OS note" : "local beta note"} />
+      </div>
+      <p className="mt-3 text-xs leading-5 text-[color:var(--muted)]">다음 행동 후보입니다. 정답 확정이나 최종 판단이 아니라, 바로 이어갈 학습 행동을 정리한 내용입니다.</p>
+      <div className="mt-5 grid gap-2 sm:grid-cols-3">
+        <Link
+          href={`/app/review?mode=${mode}`}
+          className="inline-flex min-h-11 items-center justify-center rounded-full bg-[color:var(--foreground-strong)] px-4 py-2 text-sm font-medium text-white"
+        >
+          Review
+        </Link>
+        <Link
+          href={`/app/notes?mode=${mode}`}
+          className="inline-flex min-h-11 items-center justify-center rounded-full border border-[color:var(--border-subtle)] px-4 py-2 text-sm font-medium text-[color:var(--foreground-strong)]"
+        >
+          Notes
+        </Link>
+        <Link
+          href={`/app?mode=${mode}`}
+          className="inline-flex min-h-11 items-center justify-center rounded-full border border-[color:var(--border-subtle)] px-4 py-2 text-sm font-medium text-[color:var(--foreground-strong)]"
+        >
+          Today
+        </Link>
+      </div>
+      <Button type="button" variant="ghost" className="mt-4 w-full sm:w-auto" onClick={onReset}>
+        하나 더 올리기
+      </Button>
+    </section>
+  );
+}
+
 function SubjectSelect({
   subjectLabel,
   subjects,
@@ -1296,6 +1512,8 @@ function IntakePanel({
   onImage,
   onPdf,
   onGenerate,
+  onQuickSave,
+  saving,
   cameraInputRef,
   galleryInputRef,
   pdfInputRef,
@@ -1314,6 +1532,8 @@ function IntakePanel({
   onImage: (fileList: FileList) => void;
   onPdf: (file: File) => void;
   onGenerate: () => void | Promise<void>;
+  onQuickSave: () => void | Promise<void>;
+  saving: boolean;
   cameraInputRef: React.RefObject<HTMLInputElement | null>;
   galleryInputRef: React.RefObject<HTMLInputElement | null>;
   pdfInputRef: React.RefObject<HTMLInputElement | null>;
@@ -1539,11 +1759,22 @@ function IntakePanel({
         </div>
       </details>
       {form.rawQuestionText.trim() || uploadedPages.length > 0 ? (
-        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-          <Button type="button" onClick={onGenerate} disabled={extracting} className="w-full sm:w-auto">
-            {extracting ? "입력 내용 확인 중" : "AI로 정리"}
-          </Button>
-          <p className="text-xs text-[color:var(--muted)]">AI가 이렇게 읽었습니다. 틀린 부분만 고쳐 주세요.</p>
+        <div className="mt-4 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-elevated)] p-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <Button
+              type="button"
+              onClick={onQuickSave}
+              disabled={saving || extracting}
+              className="w-full sm:w-auto bg-[color:var(--foreground-strong)] text-white"
+              data-testid="capture-save-primary"
+            >
+              {saving ? "저장 중" : "저장하고 오늘 계획에 반영"}
+            </Button>
+            <Button type="button" variant="outline" onClick={onGenerate} disabled={extracting || saving} className="w-full sm:w-auto">
+              {extracting ? "입력 내용 확인 중" : "AI로 정리 후 확인"}
+            </Button>
+          </div>
+          <p className="mt-2 text-xs leading-5 text-[color:var(--muted)]">AI가 찾은 약점 후보입니다. 저장 전 직접 확인해 주세요. 다음 행동 후보입니다.</p>
         </div>
       ) : null}
       <details className="mt-4 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
