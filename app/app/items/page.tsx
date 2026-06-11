@@ -26,7 +26,8 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
   const learningSignals = await reviewOsService.listLearningSignalEvents(session.userId, session.email, mode, 20).catch(() => []);
   const hasItems = items.length > 0;
   const hasLearningSignals = learningSignals.length > 0;
-  const signalPrimaryTitle = mode === "second" ? "최근 답안 검토 기록" : "최근 검토 기록";
+  const isNotesRoute = routePath === "/app/notes";
+  const signalPrimaryTitle = isNotesRoute ? `${mode === "second" ? "2차" : "1차"} 학습 노트` : mode === "second" ? "최근 답안 검토 기록" : "최근 검토 기록";
   const sourceTypeLabel = (sourceType: string) => {
     if (sourceType === "problem-snap") return "Problem Snap";
     if (sourceType === "answer_review") return "답안 검토 기록";
@@ -62,7 +63,8 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
     return lines[0] ?? "오늘 할 일에서 확인";
   };
   const signalFallbackTask = mode === "second" ? "한 번 더 검토하기" : "오늘 할 일에서 확인";
-  const problemSnapEmptyCopy = "문제 스냅으로 막힌 문제를 저장하면 오늘 할 일에 반영됩니다.";
+  const notesEmptyCopy = "아직 계정 저장 노트가 없습니다. closed beta 브라우저 임시 기록은 아래에서 이어서 확인할 수 있습니다.";
+  const problemSnapEmptyCopy = "계정 저장 기록이 비어 있을 때는 오늘 학습 1개를 저장하는 것부터 시작하세요.";
   const signalCta = (signal: { sourceType: string; subject: string }) =>
     signal.sourceType === "problem-snap"
       ? mode === "second"
@@ -81,7 +83,9 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
           <CardDescription>
             {hasItems
               ? config.recentDescription
-              : mode === "second"
+              : isNotesRoute
+                ? "저장한 학습 기록이 약점 후보와 다음 행동으로 정리되는 곳입니다."
+                : mode === "second"
                 ? "검토 기록을 기준으로 오늘 할 일이 정리됩니다."
                 : "답안 검토 기록이 노트에 쌓였습니다."}
           </CardDescription>
@@ -89,11 +93,11 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
         <CardContent className="space-y-4">
           {!hasItems && !hasLearningSignals ? (
             <div className="space-y-4">
-              <p className="text-sm text-[color:var(--muted)]">{config.emptyDescription}</p>
+              <p className="text-sm text-[color:var(--muted)]">{isNotesRoute ? notesEmptyCopy : config.emptyDescription}</p>
               <p className="text-sm text-[color:var(--muted)]">{problemSnapEmptyCopy}</p>
               <Link href={`/app/capture?mode=${mode}`} className="w-full sm:w-auto">
                 <Button type="button" className="w-full sm:w-auto">
-                  {config.primaryCta}
+                  오늘 학습 정리하기
                 </Button>
               </Link>
             </div>

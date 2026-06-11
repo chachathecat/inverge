@@ -58,16 +58,20 @@ function useClientLocalBetaNotes(mode: AppraisalMode) {
 
 function LocalBetaCaptureNoteList({
   notes,
+  mode,
   title,
   subtitle,
   showAction,
   emptyMessage,
+  emptyActionLabel,
 }: {
   notes: LocalBetaLearnerNote[];
+  mode: AppraisalMode;
   title: string;
   subtitle?: string;
   showAction: boolean;
   emptyMessage?: string | null;
+  emptyActionLabel?: string;
 }) {
   if (notes.length === 0) {
     if (!emptyMessage) return null;
@@ -76,6 +80,12 @@ function LocalBetaCaptureNoteList({
         <CardHeader>
           <CardTitle>{title}</CardTitle>
           <CardDescription>{emptyMessage}</CardDescription>
+          <Link
+            href={`/app/capture?mode=${mode}`}
+            className="mt-3 inline-flex text-xs font-medium text-[color:var(--foreground-strong)] underline-offset-4 hover:underline"
+          >
+            {emptyActionLabel ?? "오늘 학습 정리하기"}
+          </Link>
         </CardHeader>
       </Card>
     );
@@ -126,9 +136,11 @@ export function LocalBetaNotesSection({ mode }: { mode: AppraisalMode }) {
   return (
     <LocalBetaCaptureNoteList
       notes={notes}
+      mode={mode}
       title={modeNoteTitle(mode)}
+      subtitle="저장한 학습 기록이 약점 후보와 다음 행동으로 정리되는 곳입니다."
       showAction
-      emptyMessage="최근 로컬 저장 기록이 없습니다."
+      emptyMessage="아직 이 브라우저에 저장된 closed beta 노트가 없습니다. Capture에서 오늘 학습을 저장하면 Notes, Review, Today에 이어서 표시됩니다."
     />
   );
 }
@@ -145,10 +157,11 @@ export function LocalBetaReviewCandidateSection({
   return (
     <LocalBetaCaptureNoteList
       notes={notes}
+      mode={mode}
       title="복습 후보"
-      subtitle="AI가 찾은 약점 후보입니다. 직접 확인해 주세요."
+      subtitle="저장한 기록에서 다시 풀기·다시쓰기 후보를 모아 둡니다."
       showAction
-      emptyMessage={hasDurableQueue ? undefined : "복습 후보가 아직 없습니다. Review Queue에 항목이 생기면 우선순위를 반영해 표시됩니다."}
+      emptyMessage={hasDurableQueue ? undefined : "아직 복습 후보가 없습니다. Capture에서 기록 1개를 저장하면 약점 후보와 다음 행동이 Review에 이어집니다."}
     />
   );
 }
@@ -161,10 +174,11 @@ export function LocalBetaTodayReflection({ mode, hasDurableSummary }: { mode: Ap
   return (
     <LocalBetaCaptureNoteList
       notes={notes}
+      mode={mode}
       title="오늘 반영 후보"
       subtitle="오늘 계획에 반영할 최근 기록입니다."
       showAction={false}
-      emptyMessage={null}
+      emptyMessage="아직 Today에 반영할 브라우저 임시 기록이 없습니다. Capture에서 오늘 학습을 정리하면 이 브라우저의 Today, Notes, Review에 이어집니다."
     />
   );
 }

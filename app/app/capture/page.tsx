@@ -43,14 +43,21 @@ export default async function ReviewOsCapturePage({ searchParams }: PageProps) {
       <ClosedBetaBanner />
 
       <div className="space-y-7">
-      <DailyCommandCard title={isRewriteFlow ? "문단 다시쓰기 실행" : "오늘 한 것 올리기"} description={isRewriteFlow ? "먼저 한 문장만 떠올립니다. 문단 1개만 다시 쓰고 저장합니다." : "사진/PDF/텍스트 중 하나로 시작하세요."}>
+      <DailyCommandCard
+        title={isRewriteFlow ? "문단 다시쓰기 실행" : "오늘 학습 정리하기"}
+        description={
+          isRewriteFlow
+            ? "먼저 한 문장만 떠올립니다. 문단 1개만 다시 쓰고 저장합니다."
+            : "저장하면 Notes, Review, Today에 이어질 약점 후보와 다음 행동 1개를 만듭니다."
+        }
+      >
         <QuietDetails>
           <p>OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요.</p>
           <p>가장 큰 빈틈 1개만 먼저 고정합니다.</p>
         </QuietDetails>
       </DailyCommandCard>
 
-      <MinimalStepPanel title={isRewriteFlow ? "문단 다시쓰기 입력" : "오늘 한 것 올리기"}>
+      <MinimalStepPanel title={isRewriteFlow ? "문단 다시쓰기 입력" : "오늘 학습 정리하기"}>
         <QuietDetails>
           <p>
             {isRewriteFlow
@@ -61,7 +68,7 @@ export default async function ReviewOsCapturePage({ searchParams }: PageProps) {
           </p>
           <details>
             <summary className="cursor-pointer list-none text-xs font-medium">입력 순서 보기</summary>
-            <p className="pt-2">오늘 한 것 올리기 → 가장 큰 빈틈 1개 → 다음 행동 1개 → Today Plan / Review Queue 반영</p>
+            <p className="pt-2">오늘 학습 정리하기 → 저장 → Notes / Review / Today 반영</p>
           </details>
         </QuietDetails>
         <div className="pt-3">

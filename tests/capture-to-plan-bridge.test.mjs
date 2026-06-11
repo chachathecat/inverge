@@ -230,7 +230,7 @@ test("problem-snap learning signal is surfaced in learner plan surfaces", async 
   assert.ok(itemsSource.includes("Problem Snap"));
   assert.ok(itemsSource.includes("다시 풀기"));
   assert.ok(itemsSource.includes("Answer Review로 검토"));
-  assert.ok(itemsSource.includes("문제 스냅으로 막힌 문제를 저장하면 오늘 할 일에 반영됩니다."));
+  assert.ok(itemsSource.includes("기록이 비어 있을 때는 오늘 학습 1개를 저장하는 것부터 시작하세요."));
 });
 
 test("problem-snap learner surfaces keep scope and no grading/payment claims", async () => {

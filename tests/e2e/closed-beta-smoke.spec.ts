@@ -145,10 +145,10 @@ test.describe('learner core loop browser smoke', () => {
 
   test('first-mode capture → save → session completion loop', async ({ page }) => {
     await page.goto('/app?mode=first');
-    await expect(page.getByRole('link', { name: '오늘 한 것 올리기' }).first()).toBeVisible();
+    await expect(page.getByRole('link', { name: '오늘 학습 정리하기' }).first()).toBeVisible();
     await expect(page.getByRole('link', { name: /\/instructor/i })).toHaveCount(0);
 
-    await page.getByRole('link', { name: '오늘 한 것 올리기' }).first().click();
+    await page.getByRole('link', { name: '오늘 학습 정리하기' }).first().click();
     await expect(page).toHaveURL(/\/app\/capture\?mode=first/);
 
     await page.getByLabel('오늘 공부한 과목').selectOption('회계학');
@@ -179,10 +179,10 @@ test.describe('learner core loop browser smoke', () => {
   test('second-mode rewrite loop + learner guardrails', async ({ page }, testInfo) => {
     await ensureAuth(page, testInfo, "second");
     await page.goto('/app?mode=second');
-    await expect(page.getByRole('link', { name: '오늘 한 것 올리기' }).first()).toBeVisible();
+    await expect(page.getByRole('link', { name: '오늘 학습 정리하기' }).first()).toBeVisible();
     await expect(page.getByRole('link', { name: /\/instructor/i })).toHaveCount(0);
 
-    await page.getByRole('link', { name: '오늘 한 것 올리기' }).first().click();
+    await page.getByRole('link', { name: '오늘 학습 정리하기' }).first().click();
     await expect(page).toHaveURL(/\/app\/capture\?mode=second/);
 
     await page.getByLabel('오늘 공부한 과목').selectOption('감정평가이론');

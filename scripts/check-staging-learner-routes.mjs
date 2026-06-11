@@ -106,8 +106,8 @@ for (const file of learnerRouteConstructionSources) {
 const captureRoute = existsSync(sourcePath("app/app/capture/page.tsx")) ? read("app/app/capture/page.tsx") : "";
 const captureForm = existsSync(sourcePath("components/review-os/capture-form.tsx")) ? read("components/review-os/capture-form.tsx") : "";
 const capture = `${captureRoute}\n${captureForm}`;
-check(capture.includes("오늘 한 것 올리기"), "/app/capture must keep calm capture-first copy");
-check(capture.includes("사진/PDF/텍스트 중 하나로 시작하세요."), "/app/capture must render capture start copy");
+check(capture.includes("오늘 학습 정리하기"), "/app/capture must keep calm capture-first copy");
+check(capture.includes("사진/PDF/텍스트 중 하나로 시작하고, 저장 후 Notes, Review, Today에서 이어서 확인하세요."), "/app/capture must render capture start copy");
 check(capture.includes("OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요."), "/app/capture must show OCR draft warning");
 check(capture.includes("가장 큰 빈틈 1개만 먼저 고정합니다."), "/app/capture must keep one-biggest-gap focus");
 check(capture.includes("canQuickSave"), "/app/capture starting point must not show more than one primary action");

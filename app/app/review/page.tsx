@@ -38,7 +38,7 @@ export default async function ReviewOsReviewPage({ searchParams }: PageProps) {
       <div className="space-y-6">
       <DailyCommandCard
         title={mode === "second" ? "다시 볼 교정 포인트" : "오늘 다시 볼 항목"}
-        description={mode === "second" ? "각 항목은 문단 하나 다시쓰기로 이어집니다." : "각 항목은 조건 1개 재확인과 재시도로 이어집니다."}
+        description={mode === "second" ? "저장한 기록에서 문단 다시쓰기 후보를 골라 이어갑니다." : "저장한 오답에서 조건 1개 재확인과 재시도 후보를 골라 이어갑니다."}
       >
         <div className="pt-2">
           <ReviewQueueClient items={items} mode={mode} captureReferenceLineByItemId={captureReferenceLineByItemId} />
@@ -46,13 +46,16 @@ export default async function ReviewOsReviewPage({ searchParams }: PageProps) {
       </DailyCommandCard>
 
       {items.length === 0 ? (
-        <MinimalStepPanel title={mode === "second" ? "아직 교정 대기 항목이 없습니다" : "아직 다시 볼 오답이 없습니다"}>
+        <MinimalStepPanel title={mode === "second" ? "아직 계정 저장 교정 대기 항목이 없습니다" : "아직 계정 저장 기준으로 다시 볼 오답이 없습니다"}>
           <QuietDetails>
+            <p>Review는 계정 저장 기록에서 다시 풀기·다시쓰기 후보를 모아 두는 곳입니다.</p>
             <p>{config.emptyDescription}</p>
+            <p>closed beta 브라우저 임시 기록은 아래에서 이어서 확인할 수 있습니다.</p>
+            <p>지금은 Capture에서 오늘 학습 기록 1개를 먼저 저장하세요.</p>
           </QuietDetails>
           <div className="pt-2">
             <Link href={`/app/capture?mode=${mode}`}>
-              <Button type="button">{config.primaryCta}</Button>
+              <Button type="button">오늘 학습 정리하기</Button>
             </Link>
           </div>
         </MinimalStepPanel>

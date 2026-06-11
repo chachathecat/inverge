@@ -111,7 +111,7 @@ test("first and second modes do not visually expose more than three primary Toda
 
 test("empty state still has one primary next action", () => {
   const appPage = read("app/app/page.tsx");
-  assert.match(appPage, /todayPlanTasks\.length === 0[\s\S]{0,500}기록 추가하기/);
+  assert.match(appPage, /todayPlanTasks\.length === 0[\s\S]{0,500}오늘 학습 정리하기/);
   assert.match(appPage, /modeCaptureHref/);
 });
 
