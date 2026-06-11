@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { ReviewOsFeedbackButton } from "@/components/review-os/feedback-button";
 import { ClosedBetaBanner } from "@/components/shared/closed-beta-banner";
+import { LocalBetaReviewCandidateSection } from "@/components/review-os/local-beta-note-reflection";
 import { ReviewQueueClient } from "@/components/review-os/review-queue-client";
 import { Button } from "@/components/ui/button";
 import { DailyCommandCard, MinimalStepPanel, QuietDetails } from "@/components/review-os/minimal-study-system";
@@ -57,6 +58,7 @@ export default async function ReviewOsReviewPage({ searchParams }: PageProps) {
         </MinimalStepPanel>
       ) : null}
 
+      <LocalBetaReviewCandidateSection mode={mode} hasDurableQueue={items.length > 0} />
       <ReviewOsFeedbackButton route="/app/review" pageContext={{ itemCount: items.length, mode }} />
       </div>
     </div>

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { ReviewOsFeedbackButton } from "@/components/review-os/feedback-button";
 import { ClosedBetaBanner } from "@/components/shared/closed-beta-banner";
+import { LocalBetaTodayReflection } from "@/components/review-os/local-beta-note-reflection";
 import { TodayFirstSubjectSelector } from "@/components/review-os/today-first-subject-selector";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -132,6 +133,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
   }
   const hasDataSignals = learningSignalEvents.length > 0 || queue.length > 0 || Boolean(recentStudyLog);
   const firstUse = items.length === 0 && !hasDataSignals;
+  const hasDurableSummary = items.length > 0 || queue.length > 0 || learningSignalEvents.length > 0 || Boolean(recentStudyLog);
   const hasOverdueQueue = queue.some((item) => isOverdueDueAt(item.dueAt));
   const homeState = resolveDailyStudyState({
     hasNoData: firstUse,
@@ -313,6 +315,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
           </OneActionFooter>
         </section>
       ) : null}
+      <LocalBetaTodayReflection mode={mode} hasDurableSummary={hasDurableSummary} />
 
       {mode === "first" ? (
         <section className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-4 py-4">

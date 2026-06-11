@@ -850,10 +850,12 @@ export function WrongAnswerCaptureForm({
 
   function saveLocalCaptureConfirmation(source: DraftState) {
     const copy = getCaptureConfirmationCopy(source);
+    const sourceType = source.sourceType === "image" ? "photo" : source.sourceType === "manual" ? "text" : source.sourceType;
     const localNote = saveReviewOsLocalBetaNote({
       mode,
       subjectLabel: source.subjectLabel || getDefaultSubject(mode),
-      problemTitle: source.problemTitle || firstLine(source.rawQuestionText, `${source.subjectLabel || getDefaultSubject(mode)} 입력 기록`),
+      sourceType,
+      problemTitle: source.problemTitle || `${source.subjectLabel || getDefaultSubject(mode)} 입력 캡처`,
       biggestGap: copy.biggestGap,
       nextAction: copy.nextAction,
     });

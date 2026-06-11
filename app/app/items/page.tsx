@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { LocalBetaNotesSection } from "@/components/review-os/local-beta-note-reflection";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getModeConfig, resolveAppraisalMode } from "@/lib/review-os/appraisal";
@@ -190,6 +191,7 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
           </CardContent>
         </Card>
       ) : null}
+      <LocalBetaNotesSection mode={mode} />
     </div>
   );
 }

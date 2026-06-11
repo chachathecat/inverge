@@ -45,6 +45,7 @@ export type LocalBetaLearnerNote = {
   id: string;
   mode: string;
   subjectLabel: string;
+  sourceType?: "text" | "photo" | "pdf";
   problemTitle?: string;
   biggestGap: string;
   nextAction: string;
@@ -55,6 +56,35 @@ export type LocalBetaLearnerNote = {
 
 const LOCAL_BETA_NOTES_KEY = `${PREFIX}:local-beta-notes`;
 
+function readLocalBetaNotes() {
+  if (typeof window === "undefined") return [] as LocalBetaLearnerNote[];
+  try {
+    const raw = window.localStorage.getItem(LOCAL_BETA_NOTES_KEY);
+    return raw ? (JSON.parse(raw) as LocalBetaLearnerNote[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function listReviewOsLocalBetaNotes(mode?: string) {
+  const notes = readLocalBetaNotes();
+  if (!mode) return notes;
+  return notes.filter((note) => note.mode === mode);
+}
+
+export function getReviewOsLocalBetaNote(id: string) {
+  return readLocalBetaNotes().find((note) => note.id === id) ?? null;
+}
+
+export function clearReviewOsLocalBetaNotes() {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(LOCAL_BETA_NOTES_KEY);
+  } catch {
+    // ignore browser storage failures
+  }
+}
+
 export function saveReviewOsLocalBetaNote(note: Omit<LocalBetaLearnerNote, "id" | "createdAt" | "metadataOnly" | "safeUse">) {
   const createdAt = new Date().toISOString();
   const localNote: LocalBetaLearnerNote = {
@@ -64,13 +94,13 @@ export function saveReviewOsLocalBetaNote(note: Omit<LocalBetaLearnerNote, "id" 
     metadataOnly: true,
     safeUse: "closed_beta_local_note",
   };
-  if (typeof window === "undefined") return localNote;
-  try {
-    const raw = window.localStorage.getItem(LOCAL_BETA_NOTES_KEY);
-    const notes = raw ? (JSON.parse(raw) as LocalBetaLearnerNote[]) : [];
-    window.localStorage.setItem(LOCAL_BETA_NOTES_KEY, JSON.stringify([localNote, ...notes].slice(0, 20)));
-  } catch {
-    // ignore browser storage failures
+  if (typeof window !== "undefined") {
+    try {
+      const notes = readLocalBetaNotes();
+      window.localStorage.setItem(LOCAL_BETA_NOTES_KEY, JSON.stringify([localNote, ...notes].slice(0, 20)));
+    } catch {
+      // ignore browser storage failures
+    }
   }
   return localNote;
 }
