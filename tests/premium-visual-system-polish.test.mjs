@@ -36,7 +36,7 @@ test("capture excludes grading/final judgment claims", () => {
 
 test("learner home contains priority and queue framing", () => {
   assert.ok(home.includes("오늘의 우선순위") || home.includes("오늘은 이것부터 하세요"));
-  assert.ok(home.includes("오늘 학습 정리하기"));
+  assert.ok(home.includes("오늘 한 것 올리기"));
   ["오늘 기록 기반", "복습 큐"].forEach((phrase) => assert.ok(home.includes(phrase), `Missing phrase: ${phrase}`));
 });
 
@@ -47,7 +47,7 @@ test("session saved state contains confirmation lines", () => {
 });
 
 test("review queue includes empty-state and capture continuity copy", () => {
-  ["아직 계정 저장 기준으로 Review에 이어갈 후보가 없습니다.", "오늘 학습 정리하기", "오늘 한 것", "반복 신호와 최근 기록 기준", "다시 보기"].forEach((phrase) => {
+  ["아직 계정 저장 기준으로 Review에 이어갈 후보가 없습니다.", "오늘 한 것 올리기", "오늘 한 것", "반복 신호와 최근 기록 기준", "다시 보기"].forEach((phrase) => {
     assert.ok(queue.includes(phrase), `Missing phrase: ${phrase}`);
   });
 });

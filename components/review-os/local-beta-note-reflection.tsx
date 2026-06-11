@@ -84,7 +84,7 @@ function LocalBetaCaptureNoteList({
             href={`/app/capture?mode=${mode}`}
             className="mt-3 inline-flex text-xs font-medium text-[color:var(--foreground-strong)] underline-offset-4 hover:underline"
           >
-            {emptyActionLabel ?? "오늘 학습 정리하기"}
+            {emptyActionLabel ?? "오늘 한 것 올리기"}
           </Link>
         </CardHeader>
       </Card>

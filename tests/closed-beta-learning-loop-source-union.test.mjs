@@ -225,7 +225,7 @@ test("staging learner route source smoke checks remain helper-level when e2e is 
   assert.equal(appPage.includes("todayPlanTasks.map"), true);
 
   const capturePage = read("app/app/capture/page.tsx");
-  assert.equal(capturePage.includes("오늘 학습 정리하기"), true);
+  assert.equal(capturePage.includes("오늘 한 것 올리기"), true);
   assert.equal(/점수|채점|합격\s*판정|불합격\s*판정/.test(capturePage), false, "/app/capture should not become score-first");
 
   const reviewPage = read("app/app/review/page.tsx");

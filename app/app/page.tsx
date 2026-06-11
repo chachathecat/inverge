@@ -148,7 +148,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
     : "최근 흐름이 이어지고 있습니다.";
   const primaryHeading =
     homeState === "first_capture"
-      ? "오늘 학습 1개만 정리하세요"
+      ? "오늘 한 것 올리기"
       : homeState === "overdue_recovery"
         ? "오늘은 복구만 합니다"
         : homeState === "post_completion"
@@ -164,7 +164,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
         : "지금은 전체를 다시 볼 때가 아니라, 이 약점 하나를 줄일 때입니다.";
   const homePrimaryCta =
     homeState === "first_capture"
-      ? "오늘 학습 정리하기"
+      ? "오늘 한 것 올리기"
       : homeState === "overdue_recovery"
         ? "15분 복구 시작"
         : homeState === "evening_capture"
@@ -342,9 +342,9 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                     ? "오답 하나만 저장하면 Today, Review, Notes가 이어집니다."
                     : "답안 하나만 저장하면 보강할 문단과 Today, Review, Notes가 이어집니다."}
                 </p>
-                <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">오늘 학습 정리하기 → 저장 → Notes / Review / Today 반영</p>
+                <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">오늘 한 것 올리기 → 저장 → Notes / Review / Today 반영</p>
               </div>
-              <CardTitle>오늘 학습 1개만 정리하세요</CardTitle>
+              <CardTitle>오늘 한 것 올리기</CardTitle>
               <CardDescription className="max-w-[66ch]">
                 사진, PDF, 텍스트 중 하나로 남기면 오답노트와 다음 행동으로 정리합니다.
               </CardDescription>
@@ -352,7 +352,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
             <CardContent className="space-y-3 p-4 pt-0 sm:space-y-4 sm:p-6 sm:pt-0">
               <Link href={mode === "second" ? "/app/capture?mode=second" : inputOptions[0].href} className="w-full sm:w-auto">
                 <Button type="button" className="w-full sm:w-auto">
-                  오늘 학습 정리하기
+                  오늘 한 것 올리기
                 </Button>
               </Link>
               <details className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]" data-secondary-action-surface="input-options">
@@ -415,7 +415,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                     <div className="space-y-1 text-xs text-[color:var(--ink-muted)]">
                       <p>아직 Today Plan 신호가 없습니다.</p>
                       <p>Capture에서 기록 1개를 저장하면 가장 큰 빈틈과 다음 행동이 여기로 올라옵니다.</p>
-                      <Link href={modeCaptureHref} className="pt-1 font-medium text-[color:var(--ink-primary)] underline underline-offset-2">오늘 학습 정리하기</Link>
+                      <Link href={modeCaptureHref} className="pt-1 font-medium text-[color:var(--ink-primary)] underline underline-offset-2">오늘 한 것 올리기</Link>
                     </div>
                   ) : (
                     visibleTodayPlanTasks.map((task, index) => (
@@ -671,7 +671,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                     <div className="space-y-2">
                       <p className="text-sm text-[color:var(--muted)]">아직 기록이 없습니다.</p>
                       <p className="text-sm text-[color:var(--muted)]">오늘 푼 문제나 답안 일부를 정리하면 첫 오답노트가 만들어집니다.</p>
-                      <Link href={modeCaptureHref} className="inline-flex text-sm font-medium text-[color:var(--foreground-strong)] underline underline-offset-2">오늘 학습 정리하기</Link>
+                      <Link href={modeCaptureHref} className="inline-flex text-sm font-medium text-[color:var(--foreground-strong)] underline underline-offset-2">오늘 한 것 올리기</Link>
                     </div>
                   ) : (
                     notebookPreview.map((note, index) => (

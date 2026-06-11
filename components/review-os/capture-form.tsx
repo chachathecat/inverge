@@ -1529,7 +1529,7 @@ function SavedCaptureConfirmationPanel({
               </Link>
             </div>
             <Button type="button" variant="ghost" className="mt-4 w-full sm:w-auto" onClick={onReset}>
-              하나 더 정리하기
+              하나 더 올리기
             </Button>
           </>
         )}
@@ -1664,16 +1664,16 @@ function IntakePanel({
 
   return (
     <section className="rounded-[var(--radius-card)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)] p-4 sm:p-6">
-      <p className="text-caption text-[color:var(--brand-700)]">Step 1. 오늘 학습 정리하기</p>
+      <p className="text-caption text-[color:var(--brand-700)]">Step 1. 오늘 한 것 올리기</p>
       <div className="mt-2 flex flex-col gap-4">
         <div className="max-w-[62ch]">
-          <h3 className="text-title text-[color:var(--foreground-strong)]">오늘 학습 정리하기</h3>
+          <h3 className="text-title text-[color:var(--foreground-strong)]">오늘 한 것 올리기</h3>
           <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">사진/PDF/텍스트 중 하나로 시작하고, 저장 후 Notes, Review, Today에서 이어서 확인하세요.</p>
         </div>
         <div className="rounded-[var(--radius-md)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-elevated)] p-5 sm:p-6">
           <p className="text-caption text-[color:var(--ink-muted)]">오늘의 입력</p>
           <p className="mt-1 text-xs text-[color:var(--ink-muted)]">캡처 유형 · photo / pdf / text</p>
-          <h4 className="mt-2 text-base font-semibold text-[color:var(--ink-primary)]">오늘 학습 정리하기</h4>
+          <h4 className="mt-2 text-base font-semibold text-[color:var(--ink-primary)]">오늘 한 것 올리기</h4>
           <p className="mt-1 text-sm leading-6 text-[color:var(--ink-muted)]">먼저 텍스트를 붙여넣으면 AI가 과목, 확신도, 소요 시간, 답안 단서를 초안으로 읽습니다.</p>
           <p className="mt-2 rounded-[var(--radius-sm)] border border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] px-3 py-2 text-xs leading-5 text-[color:var(--foreground-strong)]">OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요. 가장 큰 빈틈 1개만 먼저 고정합니다.</p>
           <p className="mt-1 text-xs leading-6 text-[color:var(--ink-muted)]">노트 원문은 비공개로 보관되며, 파생 학습 신호는 개인 추천 개선에만 사용됩니다.</p>

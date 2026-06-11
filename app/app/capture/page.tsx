@@ -44,7 +44,7 @@ export default async function ReviewOsCapturePage({ searchParams }: PageProps) {
 
       <div className="space-y-7">
       <DailyCommandCard
-        title={isRewriteFlow ? "문단 다시쓰기 실행" : "오늘 학습 정리하기"}
+        title={isRewriteFlow ? "문단 다시쓰기 실행" : "오늘 한 것 올리기"}
         description={
           isRewriteFlow
             ? "먼저 한 문장만 떠올립니다. 문단 1개만 다시 쓰고 저장합니다."
@@ -68,7 +68,7 @@ export default async function ReviewOsCapturePage({ searchParams }: PageProps) {
           </p>
           <details>
             <summary className="cursor-pointer list-none text-xs font-medium">입력 순서 보기</summary>
-            <p className="pt-2">오늘 학습 정리하기 → 저장 → Notes / Review / Today 반영</p>
+            <p className="pt-2">오늘 한 것 올리기 → 저장 → Notes / Review / Today 반영</p>
           </details>
         </QuietDetails>
         <div className="pt-3">

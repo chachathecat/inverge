@@ -64,7 +64,7 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
   };
   const signalFallbackTask = mode === "second" ? "한 번 더 검토하기" : "오늘 할 일에서 확인";
   const notesEmptyCopy = "아직 계정 저장 노트가 없습니다. closed beta 브라우저 임시 기록은 아래에서 이어서 확인할 수 있습니다.";
-  const problemSnapEmptyCopy = "계정 저장 기록이 비어 있을 때는 오늘 학습 1개를 저장하는 것부터 시작하세요.";
+  const problemSnapEmptyCopy = "계정 저장 기록이 비어 있을 때는 오늘 학습 1개를 정리하면 다음 행동이 이어집니다.";
   const signalCta = (signal: { sourceType: string; subject: string }) =>
     signal.sourceType === "problem-snap"
       ? mode === "second"
@@ -97,7 +97,7 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
               <p className="text-sm text-[color:var(--muted)]">{problemSnapEmptyCopy}</p>
               <Link href={`/app/capture?mode=${mode}`} className="w-full sm:w-auto">
                 <Button type="button" className="w-full sm:w-auto">
-                  오늘 학습 정리하기
+                  오늘 한 것 올리기
                 </Button>
               </Link>
             </div>

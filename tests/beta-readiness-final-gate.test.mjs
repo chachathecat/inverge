@@ -40,7 +40,7 @@ const CORE_FILES = [
 ];
 
 const LEARNER_LOOP_COPY = [
-  '오늘 학습 정리하기',
+  '오늘 한 것 올리기',
   'OCR 결과는 초안입니다',
   '저장 전 직접 확인해 주세요',
   '오늘 기록 기반',
