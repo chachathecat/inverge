@@ -2,6 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 
+import { saveReviewOsLocalBetaNote } from "../lib/review-os/browser-storage.ts";
+import { resolveCaptureConfirmationCopy } from "../lib/review-os/capture-confirmation-copy.ts";
 import { sanitizeLocalLearnerAnalyticsEvent } from "../lib/review-os/local-analytics.ts";
 
 function read(file) {
@@ -120,6 +122,71 @@ test("capture save confirmation includes biggest gap, next action, and Review/No
   assert.equal(captureForm.includes('href={`/app/notes?mode=${mode}`}'), true, "confirmation should link to Notes with mode");
   assert.equal(captureForm.includes('href={`/app?mode=${mode}`}'), true, "confirmation should link back to Today with mode");
   assert.equal(browserStorage.includes('safeUse: "closed_beta_local_note"'), true, "local note fallback should be explicitly closed-beta safe");
+});
+
+test("second law local beta confirmation preserves disposition context instead of calculation fallback", () => {
+  const safeText =
+    "오늘 감정평가 및 보상법규 사업인정 처분성 부분을 복습했다. 처분성 판단 기준이 헷갈렸다. 다음에는 처분성 판단 기준을 한 문단으로 다시 써보고 싶다.";
+
+  const copy = resolveCaptureConfirmationCopy({
+    mode: "second",
+    subjectLabel: "감정평가 및 보상법규",
+    rawQuestionText: safeText,
+    userAnswer: safeText,
+    biggestGap: "계산 근거 누락",
+    missingIssue: "계산 근거 누락",
+    rewriteInstruction: "산식과 계산 근거를 먼저 쓰고 결론 문장까지 다시 연결하기",
+  });
+
+  assert.doesNotMatch(copy.biggestGap, /계산|산식|단위|검산/);
+  assert.doesNotMatch(copy.nextAction, /계산|산식|단위|검산/);
+  assert.match(copy.biggestGap, /사업인정|처분성|판단 기준/);
+  assert.match(copy.nextAction, /사업인정|처분성|문단|판단 기준/);
+});
+
+test("second theory fallback is keyword or outline oriented, while practice can keep calculation copy", () => {
+  const theory = resolveCaptureConfirmationCopy({
+    mode: "second",
+    subjectLabel: "감정평가이론",
+    rawQuestionText: "이론 키워드와 목차 연결이 약해서 문단 전개가 흔들렸다.",
+    biggestGap: "계산 근거 누락",
+    rewriteInstruction: "산식과 계산 근거를 먼저 쓰기",
+  });
+
+  assert.doesNotMatch(theory.biggestGap, /계산|산식|단위|검산/);
+  assert.match(`${theory.biggestGap} ${theory.nextAction}`, /키워드|논거|목차|문단/);
+
+  const practice = resolveCaptureConfirmationCopy({
+    mode: "second",
+    subjectLabel: "감정평가실무",
+    rawQuestionText: "수익환원법 계산 산식과 단위가 헷갈렸다.",
+    biggestGap: "계산 근거 누락",
+  });
+
+  assert.match(`${practice.biggestGap} ${practice.nextAction}`, /계산|산식|단위|검산/);
+});
+
+test("local beta note fallback remains metadata-only and client reflection stays hydration-safe", () => {
+  const copy = resolveCaptureConfirmationCopy({
+    mode: "second",
+    subjectLabel: "감정평가 및 보상법규",
+    rawQuestionText: "사업인정 처분성 판단 기준을 다시 확인했다.",
+  });
+  const note = saveReviewOsLocalBetaNote({
+    mode: "second",
+    subjectLabel: "감정평가 및 보상법규",
+    sourceType: "text",
+    problemTitle: "사업인정 처분성 학습 메모",
+    biggestGap: copy.biggestGap,
+    nextAction: copy.nextAction,
+  });
+  const reflection = read("components/review-os/local-beta-note-reflection.tsx");
+
+  assert.equal(note.metadataOnly, true);
+  assert.equal(note.safeUse, "closed_beta_local_note");
+  assert.equal(reflection.startsWith('"use client";'), true, "local beta reflection must remain client-only");
+  assert.equal(reflection.includes("useEffect"), true, "localStorage reads should stay inside client effects");
+  assert.equal(reflection.includes("window.setTimeout"), true, "client state should settle after hydration");
 });
 
 test("capture save local analytics emits only safe derived fields", () => {
