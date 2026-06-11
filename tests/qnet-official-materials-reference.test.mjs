@@ -126,6 +126,9 @@ test("Q-Net appraiser 2022 round 33 batch includes five metadata-only source pap
   const materials2022 = reference.materialsIndex.materials.filter((material) => (
     material.examYear === 2022 && material.examRound === 33
   ));
+  const sourceSecondPractice = materials2022.find((material) => material.paper.includes("2차 1교시"));
+  const sourceSecondTheory = materials2022.find((material) => material.paper.includes("2차 2교시"));
+  const sourceSecondLaw = materials2022.find((material) => material.paper.includes("2차 3교시"));
   const materials2023 = reference.materialsIndex.materials.filter((material) => (
     material.examYear === 2023 && material.examRound === 34
   ));
@@ -160,6 +163,32 @@ test("Q-Net appraiser 2022 round 33 batch includes five metadata-only source pap
   ]) {
     assert.equal(topicLabels.has(label), true, `2022 batch should include ${label}`);
   }
+
+  assert.ok(sourceSecondPractice);
+  assert.ok(sourceSecondTheory);
+  assert.ok(sourceSecondLaw);
+
+  assert.equal(sourceSecondPractice.subject, "감정평가실무");
+  assert.equal(sourceSecondTheory.subject, "감정평가이론");
+  assert.equal(sourceSecondLaw.subject, "감정평가 및 보상법규");
+
+  assert.equal(sourceSecondPractice.topicCandidates.includes("intellectual property appraisal"), false);
+  assert.equal(sourceSecondPractice.topicCandidates.includes("capitalization rate"), false);
+  assert.equal(sourceSecondPractice.topicCandidates.includes("market data damage analysis"), false);
+  assert.equal(sourceSecondPractice.topicCandidates.includes("goodwill / right premium appraisal"), true);
+  assert.equal(sourceSecondPractice.topicCandidates.includes("building / tree / livestock loss compensation"), true);
+  assert.equal(sourceSecondPractice.topicCandidates.includes("market data adjustment"), true);
+
+  assert.equal(sourceSecondTheory.topicCandidates.includes("intellectual property appraisal"), true);
+  assert.equal(sourceSecondTheory.topicCandidates.includes("capitalization rate"), true);
+  assert.equal(sourceSecondTheory.topicCandidates.includes("excess land / surplus land"), true);
+  assert.equal(sourceSecondTheory.topicCandidates.includes("goodwill appraisal"), false);
+  assert.equal(sourceSecondTheory.topicCandidates.includes("long-term leasehold"), false);
+
+  assert.equal(sourceSecondLaw.topicCandidates.includes("appraiser qualification cancellation"), true);
+  assert.equal(sourceSecondLaw.topicCandidates.includes("residential relocation expense"), true);
+  assert.equal(sourceSecondLaw.topicCandidates.includes("excess land / surplus land"), false);
+  assert.equal(sourceSecondLaw.topicCandidates.includes("factual private road"), true);
 
   const serialized = JSON.stringify(materials2022);
   assert.doesNotMatch(serialized, /\.pdf\b|\.hwp\b|\.hwpx\b|\.docx\b|\.zip\b|\.png\b|\.jpe?g\b|\.webp\b/i);

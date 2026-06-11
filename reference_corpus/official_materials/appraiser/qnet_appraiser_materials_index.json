@@ -978,13 +978,18 @@
       "topicCandidates": [
         "compensation appraisal",
         "relocation / residential moving compensation",
-        "livestock loss compensation",
+        "building / tree / livestock loss compensation",
         "transaction adjustment",
+        "mortgage / auction adjustment",
         "long-term leasehold",
-        "goodwill appraisal",
-        "intellectual property appraisal",
-        "capitalization rate",
-        "market data damage analysis"
+        "goodwill / right premium appraisal",
+        "market data adjustment",
+        "practice valuation method selection",
+        "compensation calculation process",
+        "calculation basis",
+        "unit",
+        "adjustment timing",
+        "method selection risks"
       ],
       "curriculumNodeCandidates": [
         "second_practice",
@@ -1043,13 +1048,16 @@
       "questionNumber": "source",
       "itemType": "source_paper",
       "topicCandidates": [
-        "transaction adjustment",
-        "long-term leasehold",
-        "goodwill appraisal",
         "intellectual property appraisal",
+        "appraisal three approaches",
         "capitalization rate",
+        "band of investment method",
+        "Ellwood method",
         "market data damage analysis",
-        "valuation theory keyword structure"
+        "damages appraisal method",
+        "excess land / surplus land",
+        "valuation theory keyword structure",
+        "definition / comparison / application / conclusion risks"
       ],
       "curriculumNodeCandidates": [
         "second_theory",
@@ -1102,14 +1110,18 @@
       "questionNumber": "source",
       "itemType": "source_paper",
       "topicCandidates": [
-        "excess land / surplus land",
         "redevelopment compensation",
+        "expropriation decision",
         "factual private road",
         "residential relocation expense",
+        "litigation / remedy selection",
         "standard land price legal nature",
+        "individual land price objection / administrative appeal",
         "appraiser qualification cancellation",
-        "damages liability",
-        "project approval"
+        "hearing requirement",
+        "name/license lending",
+        "damages liability requirements",
+        "statutory requirement / procedure / disposition / case-application risks"
       ],
       "curriculumNodeCandidates": [
         "second_law",

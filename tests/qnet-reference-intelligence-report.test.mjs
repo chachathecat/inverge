@@ -27,7 +27,7 @@ test("Q-Net reference intelligence report summarizes committed metadata only", a
   assert.equal(report.materialCount, 20);
   assert.equal(report.sourceMapSourceCount, 1);
   assert.equal(report.sourceMapMaterialCount, 20);
-  assert.equal(report.topicFrequencyEntryCount, 88);
+  assert.equal(report.topicFrequencyEntryCount, 100);
   assert.deepEqual(report.officialSourceIds, ["qnet_appraiser_past_questions"]);
   assert.deepEqual(report.years, [2022, 2023, 2024, 2025]);
   assert.deepEqual(report.rounds, [33, 34, 35, 36]);
@@ -157,7 +157,7 @@ test("Q-Net reference intelligence CLI prints the same safe aggregate report", (
   assert.equal(report.reportType, "qnet_reference_intelligence_qa");
   assert.equal(report.materialCount, 20);
   assert.equal(report.sourceMapMaterialCount, 20);
-  assert.equal(report.topicFrequencyEntryCount, 88);
+  assert.equal(report.topicFrequencyEntryCount, 100);
   assert.deepEqual(report.warnings, []);
   assert.deepEqual(Object.values(report.safety), Object.values(report.safety).map(() => true));
 });
