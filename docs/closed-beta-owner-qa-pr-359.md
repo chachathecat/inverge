@@ -65,6 +65,7 @@ The prohibited learner copy scan covered official grading/model-answer/score/pas
 
 - `/api/os/items` returned `503` in local no-Supabase mode.
 - This was expected for the local no-Supabase QA setup and was not a blocker for local beta reflection QA because the safe local beta note fallback and reflection durability were the validated surfaces.
+- Follow-up hardening keeps this local fallback as a closed-beta safety net. Learner copy should distinguish durable account saves from browser-local temporary fallback records.
 
 ## Release Decision
 
