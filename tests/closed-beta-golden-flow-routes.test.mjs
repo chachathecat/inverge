@@ -324,3 +324,52 @@ test("PR359 owner QA evidence preserves closed-beta golden flow release decision
   assert.equal(doc.includes("사업인정 처분성 판단 기준 혼동"), true);
   assert.equal(doc.includes("사업인정 처분성 판단 기준을 한 문단으로 다시 써보기"), true);
 });
+
+test("closed beta readiness gate command documents and enforces PR363 guardrails", () => {
+  assertExists("scripts/check-closed-beta-readiness.mjs");
+  assertExists("docs/closed-beta-readiness-gate.md");
+
+  const packageJson = JSON.parse(read("package.json"));
+  const script = read("scripts/check-closed-beta-readiness.mjs");
+  const doc = read("docs/closed-beta-readiness-gate.md");
+
+  assert.equal(packageJson.scripts["check:closed-beta-readiness"], "node scripts/check-closed-beta-readiness.mjs");
+
+  [
+    "goldenRouteSources",
+    "learnerRuntimeFiles",
+    "prohibitedLearnerCopyPatterns",
+    "unsafeTrackedOfficialMaterialPathPatterns",
+    "/app/capture",
+    "/app/input",
+    "/app/entry",
+    "/app/notes",
+    "/app/review",
+    "오늘 한 것 올리기",
+    "Notes",
+    "Review",
+    "Today",
+    "브라우저",
+    "다음\\s*행동",
+    "metadataOnly: true",
+    'safeUse: "closed_beta_local_note"',
+    "durable_saved",
+    "local_fallback_saved",
+    "save_failed",
+    "qnet_manifest",
+    "local[-_]official[-_]materials",
+    "node_modules",
+    ".next",
+  ].forEach((phrase) => assert.equal(script.includes(phrase), true, `readiness script should include ${phrase}`));
+
+  [
+    "Capture -> Save -> Notes -> Review -> Today",
+    "`/app/input` and `/app/entry` aliases redirecting to `/app/capture`",
+    "official grading/model-answer/score/pass-fail copy",
+    "metadata-safe local beta note storage",
+    "closed_beta_local_note",
+    "browser-local fallback save",
+    "qnet_manifest.json",
+    "It is not a replacement for manual browser QA when runtime product behavior changes.",
+  ].forEach((phrase) => assert.equal(doc.includes(phrase), true, `readiness doc should include ${phrase}`));
+});
