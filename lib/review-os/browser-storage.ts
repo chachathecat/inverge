@@ -85,7 +85,7 @@ export function clearReviewOsLocalBetaNotes() {
   }
 }
 
-export function saveReviewOsLocalBetaNote(note: Omit<LocalBetaLearnerNote, "id" | "createdAt" | "metadataOnly" | "safeUse">) {
+export function saveReviewOsLocalBetaNoteWithStatus(note: Omit<LocalBetaLearnerNote, "id" | "createdAt" | "metadataOnly" | "safeUse">) {
   const createdAt = new Date().toISOString();
   const localNote: LocalBetaLearnerNote = {
     ...note,
@@ -94,15 +94,21 @@ export function saveReviewOsLocalBetaNote(note: Omit<LocalBetaLearnerNote, "id" 
     metadataOnly: true,
     safeUse: "closed_beta_local_note",
   };
+  let savedToBrowser = false;
   if (typeof window !== "undefined") {
     try {
       const notes = readLocalBetaNotes();
       window.localStorage.setItem(LOCAL_BETA_NOTES_KEY, JSON.stringify([localNote, ...notes].slice(0, 20)));
+      savedToBrowser = true;
     } catch {
       // ignore browser storage failures
     }
   }
-  return localNote;
+  return { note: localNote, savedToBrowser };
+}
+
+export function saveReviewOsLocalBetaNote(note: Omit<LocalBetaLearnerNote, "id" | "createdAt" | "metadataOnly" | "safeUse">) {
+  return saveReviewOsLocalBetaNoteWithStatus(note).note;
 }
 
 export function clearReviewOsBrowserState() {

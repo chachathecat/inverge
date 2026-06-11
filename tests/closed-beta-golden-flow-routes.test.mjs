@@ -4,6 +4,7 @@ import { existsSync, readFileSync } from "node:fs";
 
 import { saveReviewOsLocalBetaNote } from "../lib/review-os/browser-storage.ts";
 import { resolveCaptureConfirmationCopy } from "../lib/review-os/capture-confirmation-copy.ts";
+import { getCaptureSavePersistenceCopy } from "../lib/review-os/capture-save-persistence.ts";
 import { sanitizeLocalLearnerAnalyticsEvent } from "../lib/review-os/local-analytics.ts";
 
 function read(file) {
@@ -124,6 +125,22 @@ test("capture save confirmation includes biggest gap, next action, and Review/No
   assert.equal(browserStorage.includes('safeUse: "closed_beta_local_note"'), true, "local note fallback should be explicitly closed-beta safe");
 });
 
+test("capture save persistence copy separates durable account save from browser-local fallback", () => {
+  const durable = getCaptureSavePersistenceCopy("durable_saved");
+  const localFallback = getCaptureSavePersistenceCopy("local_fallback_saved");
+  const failed = getCaptureSavePersistenceCopy("save_failed");
+  const captureForm = read("components/review-os/capture-form.tsx");
+
+  assert.match(durable.eyebrow, /저장되었습니다/);
+  assert.doesNotMatch(`${durable.title} ${durable.description} ${durable.statusLabel}`, /브라우저|임시/);
+  assert.match(`${localFallback.eyebrow} ${localFallback.title} ${localFallback.description} ${localFallback.statusLabel}`, /브라우저/);
+  assert.match(`${localFallback.eyebrow} ${localFallback.title} ${localFallback.description} ${localFallback.statusLabel}`, /임시/);
+  assert.match(`${failed.title} ${failed.description} ${failed.statusLabel}`, /다시 저장|재시도/);
+  assert.equal(captureForm.includes("durable_saved"), true);
+  assert.equal(captureForm.includes("local_fallback_saved"), true);
+  assert.equal(captureForm.includes("save_failed"), true);
+});
+
 test("second law local beta confirmation preserves disposition context instead of calculation fallback", () => {
   const safeText =
     "오늘 감정평가 및 보상법규 사업인정 처분성 부분을 복습했다. 처분성 판단 기준이 헷갈렸다. 다음에는 처분성 판단 기준을 한 문단으로 다시 써보고 싶다.";
@@ -187,6 +204,7 @@ test("local beta note fallback remains metadata-only and client reflection stays
   assert.equal(reflection.startsWith('"use client";'), true, "local beta reflection must remain client-only");
   assert.equal(reflection.includes("useEffect"), true, "localStorage reads should stay inside client effects");
   assert.equal(reflection.includes("window.setTimeout"), true, "client state should settle after hydration");
+  assert.equal(reflection.includes("closed beta 브라우저 임시 기록"), true, "local beta reflection should identify browser-local temporary records");
 });
 
 test("capture save local analytics emits only safe derived fields", () => {
