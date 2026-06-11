@@ -25,13 +25,13 @@ function buildFallbackTodayFocus(mode: "first" | "second"): TodayFocus {
   return {
     lines: [
       "오늘은 이 작업 하나만 먼저 합니다.",
-      "아직 저장된 학습 기록이 없어 입력부터 시작합니다.",
-      mode === "second" ? "쟁점 회상 1개를 남기고 다음 행동을 정합니다." : "오답 1개를 남기고 다음 행동을 정합니다.",
+      "아직 Today Plan 신호가 없어 Capture에서 시작합니다.",
+      mode === "second" ? "쟁점 회상 1개를 남기면 Review와 Notes로 이어집니다." : "오답 1개를 남기면 Review와 Notes로 이어집니다.",
     ],
-    nextAction: mode === "second" ? "2차 답안 흐름을 사진/PDF/텍스트 중 하나로 남기세요." : "1차 오답 1개를 사진/PDF/텍스트 중 하나로 남기세요.",
+    nextAction: mode === "second" ? "2차 답안 흐름을 사진/PDF/텍스트 중 하나로 정리하세요." : "1차 오답 1개를 사진/PDF/텍스트 중 하나로 정리하세요.",
     nextActionType: "capture_now",
-    primaryTaskLabel: mode === "second" ? "2차 답안 1건 입력" : "1차 오답 1건 기록",
-    reason: "첫 기록을 만들면 Today Plan과 Review Queue가 이어집니다.",
+    primaryTaskLabel: mode === "second" ? "2차 답안 1건 정리" : "1차 오답 1건 정리",
+    reason: "첫 기록을 저장하면 Today, Review, Notes가 이어집니다.",
     estimatedDurationMinutes: mode === "second" ? 18 : 12,
     priorityScore: 0,
     sourceQueueId: null,
@@ -148,7 +148,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
     : "최근 흐름이 이어지고 있습니다.";
   const primaryHeading =
     homeState === "first_capture"
-      ? "오늘 한 것 하나만 올리세요"
+      ? "오늘 한 것 올리기"
       : homeState === "overdue_recovery"
         ? "오늘은 복구만 합니다"
         : homeState === "post_completion"
@@ -288,7 +288,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
   return (
     <div className="space-y-7 md:space-y-8">
       <ClosedBetaBanner />
-      <DailyCommandCard title="오늘은 이것만 합니다." description="오늘 공부 흔적을 올리면 약점 1개와 다음 행동 1개로 정리합니다.">
+      <DailyCommandCard title="오늘은 이것만 합니다." description="오늘 학습 1개를 정리하면 약점 후보 1개와 다음 행동 1개로 이어집니다.">
         <QuietDetails>
           <p>채점 확정이 아니라, 다음 행동을 정리하는 학습 운영 도구입니다.</p>
         </QuietDetails>
@@ -339,14 +339,14 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                 <p className="text-caption text-[color:var(--muted)]">처음이라면</p>
                 <p className="mt-1 text-body-lg text-[color:var(--foreground-strong)]">
                   {mode === "first"
-                    ? "오답 하나만 남기면 오늘 할 일과 노트가 만들어집니다."
-                    : "답안 하나를 남기면 보강할 문단과 오늘 할 일이 정리됩니다."}
+                    ? "오답 하나만 저장하면 Today, Review, Notes가 이어집니다."
+                    : "답안 하나만 저장하면 보강할 문단과 Today, Review, Notes가 이어집니다."}
                 </p>
-                <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">입력 1개 남기기 → 오늘 할 일 생성 → 노트에 누적</p>
+                <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">오늘 한 것 올리기 → 저장 → Notes / Review / Today 반영</p>
               </div>
-              <CardTitle>오늘 한 것 하나만 올리세요</CardTitle>
+              <CardTitle>오늘 한 것 올리기</CardTitle>
               <CardDescription className="max-w-[66ch]">
-                사진, PDF, 텍스트를 올리면 오답노트와 다음 행동으로 정리합니다.
+                사진, PDF, 텍스트 중 하나로 남기면 오답노트와 다음 행동으로 정리합니다.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 p-4 pt-0 sm:space-y-4 sm:p-6 sm:pt-0">
@@ -376,7 +376,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
               <details className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
                 <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">왜 입력부터 시작하나요?</summary>
                 <div className="border-t border-[color:var(--border-subtle)] px-4 py-3 text-xs leading-6 text-[color:var(--muted)]">
-                  입력이 아직 없으면 우선순위가 흐려질 수 있습니다. 오늘 입력 하나만 남겨 두면 다음 복습과 재시도 순서를 더 편하게 이어갈 수 있습니다.
+                  입력이 아직 없으면 우선순위가 흐려질 수 있습니다. 오늘 학습 1개만 저장하면 Notes, Review, Today가 같은 흐름으로 이어집니다.
                 </div>
               </details>
             </CardContent>
@@ -413,9 +413,9 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                 <div className="mt-3 space-y-3">
                   {todayPlanTasks.length === 0 ? (
                     <div className="space-y-1 text-xs text-[color:var(--ink-muted)]">
-                      <p>기록을 하나 저장하면 오늘 할 일이 정리됩니다.</p>
-                      <p>공부한 흔적을 하나 올리면 복습 큐도 함께 업데이트됩니다.</p>
-                      <Link href={modeCaptureHref} className="pt-1 font-medium text-[color:var(--ink-primary)] underline underline-offset-2">기록 추가하기</Link>
+                      <p>아직 Today Plan 신호가 없습니다.</p>
+                      <p>Capture에서 기록 1개를 저장하면 가장 큰 빈틈과 다음 행동이 여기로 올라옵니다.</p>
+                      <Link href={modeCaptureHref} className="pt-1 font-medium text-[color:var(--ink-primary)] underline underline-offset-2">오늘 한 것 올리기</Link>
                     </div>
                   ) : (
                     visibleTodayPlanTasks.map((task, index) => (
@@ -670,7 +670,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                   {notebookPreview.length === 0 ? (
                     <div className="space-y-2">
                       <p className="text-sm text-[color:var(--muted)]">아직 기록이 없습니다.</p>
-                      <p className="text-sm text-[color:var(--muted)]">오늘 푼 문제나 답안 일부를 올리면 첫 오답노트를 만들어 드립니다.</p>
+                      <p className="text-sm text-[color:var(--muted)]">오늘 푼 문제나 답안 일부를 정리하면 첫 오답노트가 만들어집니다.</p>
                       <Link href={modeCaptureHref} className="inline-flex text-sm font-medium text-[color:var(--foreground-strong)] underline underline-offset-2">오늘 한 것 올리기</Link>
                     </div>
                   ) : (

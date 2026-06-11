@@ -76,7 +76,8 @@ test("/app/capture provides editable text-first capture and existing safe save p
   const captureForm = read("components/review-os/capture-form.tsx");
   const combined = `${capturePage}\n${captureForm}`;
 
-  assert.equal(combined.includes("오늘 한 것 올리기"), true);
+  assert.equal(combined.includes("오늘 한 것 올리기"), true, "primary capture entry should keep the warm low-friction CTA");
+  assert.equal(combined.includes("오늘 학습 정리하기"), true, "capture section label can keep operational wording");
   assert.equal(combined.includes("ClosedBetaBanner"), true);
   assert.equal(combined.includes("OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요."), true);
   assert.equal(combined.includes('sourceType: "text"'), true, "text should be the default capture source");
@@ -122,6 +123,9 @@ test("capture save confirmation includes biggest gap, next action, and Review/No
   assert.equal(captureForm.includes('href={`/app/review?mode=${mode}`}'), true, "confirmation should link to Review with mode");
   assert.equal(captureForm.includes('href={`/app/notes?mode=${mode}`}'), true, "confirmation should link to Notes with mode");
   assert.equal(captureForm.includes('href={`/app?mode=${mode}`}'), true, "confirmation should link back to Today with mode");
+  assert.equal(captureForm.includes("Review로 이어가기"), true, "confirmation should offer a clear Review next action");
+  assert.equal(captureForm.includes("Notes에서 보기"), true, "confirmation should offer a clear Notes link");
+  assert.equal(captureForm.includes("Today로 돌아가기"), true, "confirmation should offer a clear Today link");
   assert.equal(browserStorage.includes('safeUse: "closed_beta_local_note"'), true, "local note fallback should be explicitly closed-beta safe");
 });
 
@@ -265,14 +269,22 @@ test("Today and empty states use capture for generic input while preserving spec
   const todayPage = read("app/app/page.tsx");
   const reviewPage = read("app/app/review/page.tsx");
   const itemsPage = read("app/app/items/page.tsx");
+  const localBetaReflection = read("components/review-os/local-beta-note-reflection.tsx");
   const weeklyPage = read("app/app/weekly/page.tsx");
 
   assert.equal(todayPage.includes('const modeCaptureHref = mode === "second" ? "/app/capture?mode=second" : firstCaptureHref'), true);
   assert.equal(todayPage.includes('option.hrefKey === "capture"'), true, "second-mode input option should use capture");
   assert.equal(todayPage.includes('"/app/notes?mode=second"'), true, "second-mode notes list should be routed through /app/notes");
+  assert.equal(todayPage.includes("오늘 한 것 올리기 → 저장 → Notes / Review / Today 반영"), true, "Today first-use copy should explain the closed-beta learner loop");
+  assert.equal(todayPage.includes("아직 Today Plan 신호가 없습니다."), true, "Today empty state should explain why it may be empty");
+  assert.equal(todayPage.includes('data-visible-primary-task-cap="3"'), true, "Today should keep max 3 primary plan tasks");
   assert.equal(todayPage.includes('if (hrefKind === "write") return "/app/write?mode=second";'), true, "specialized write tasks should remain available");
   assert.equal(reviewPage.includes('<Link href={`/app/capture?mode=${mode}`}>'), true, "empty review state should not send learners to a missing input route");
+  assert.equal(reviewPage.includes("Review는 계정 저장 기록에서 다시 풀기·다시쓰기 후보를 모아 두는 곳입니다."), true, "Review empty state should explain the page purpose");
   assert.equal(itemsPage.includes('<Link href={`/app/capture?mode=${mode}`'), true, "empty notes state should send learners to capture");
+  assert.equal(itemsPage.includes("저장한 학습 기록이 약점 후보와 다음 행동으로 정리되는 곳입니다."), true, "Notes empty state should explain saved-note reflection");
+  assert.equal(localBetaReflection.includes('href={`/app/capture?mode=${mode}`}'), true, "local beta empty states should preserve mode when returning to capture");
+  assert.equal(localBetaReflection.includes("closed beta 노트"), true, "local beta Notes copy should remain closed-beta scoped");
   assert.equal(weeklyPage.includes('const inputStartHref = `/app/capture?mode=${mode}`;'), true, "weekly input CTA should use capture");
 });
 

@@ -35,8 +35,8 @@ test("today plan surfaces capture-origin task labels and fallback copy", async (
   assert.ok(source.includes("source_label ?? \"오늘 기록 기반\""));
   assert.ok(source.includes("이유:"));
   assert.ok(source.includes("다음 행동:"));
-  assert.ok(source.includes("아직 오늘 기록이 없습니다."));
-  assert.ok(source.includes("공부한 흔적을 하나 올리면 오늘 계획과 복습 큐가 업데이트됩니다."));
+  assert.ok(source.includes("아직 Today Plan 신호가 없습니다."));
+  assert.ok(source.includes("Capture에서 기록 1개를 저장하면 가장 큰 빈틈과 다음 행동이 여기로 올라옵니다."));
 });
 
 test("item detail surfaces capture_note_engine_v2 fields without exposing raw OCR learning data", async () => {

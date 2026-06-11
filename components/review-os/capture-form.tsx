@@ -1204,7 +1204,7 @@ export function WrongAnswerCaptureForm({
 
   return (
     <form className="space-y-6 overflow-x-hidden pb-28 sm:pb-0" onSubmit={handleSubmit}>
-      <LearnerProgressBar current={currentCaptureStep} total={4} label="오늘 한 것 올리기" helper="1. 입력 → 2. 확인 → 3. 빈틈 1개 → 4. Today Plan" />
+      <LearnerProgressBar current={currentCaptureStep} total={4} label="오늘 학습 정리하기" helper="1. 입력 → 2. 확인 → 3. 빈틈 1개 → 4. Today Plan" />
 
       {mode === "first" ? (
         <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 sm:p-5">
@@ -1496,7 +1496,7 @@ function SavedCaptureConfirmationPanel({
           <PreviewLine label="다음 행동 1개" value={confirmation.nextAction} />
           <PreviewLine label="저장 상태" value={persistenceCopy.statusLabel} />
         </div>
-        <p className="mt-3 text-xs leading-5 text-[color:var(--muted)]">다음 행동 후보입니다. 정답 확정이나 최종 판단이 아닙니다. 바로 이어갈 학습 행동을 정리한 내용입니다.</p>
+        <p className="mt-3 text-xs leading-5 text-[color:var(--muted)]">다음 행동 후보입니다. 정답 확정이나 최종 판단이 아닙니다. Review에서 바로 다시 쓰거나 Notes에서 기록을 확인하고 Today로 돌아갈 수 있습니다.</p>
         {saveFailed ? (
           <div className="mt-5 flex flex-col gap-2 sm:flex-row">
             <Button type="button" className="w-full sm:w-auto" onClick={onRetry} disabled={saving}>
@@ -1513,23 +1513,23 @@ function SavedCaptureConfirmationPanel({
                 href={`/app/review?mode=${mode}`}
                 className="inline-flex min-h-11 items-center justify-center rounded-full bg-[color:var(--foreground-strong)] px-4 py-2 text-sm font-medium text-white"
               >
-                Review
+                Review로 이어가기
               </Link>
               <Link
                 href={`/app/notes?mode=${mode}`}
                 className="inline-flex min-h-11 items-center justify-center rounded-full border border-[color:var(--border-subtle)] px-4 py-2 text-sm font-medium text-[color:var(--foreground-strong)]"
               >
-                Notes
+                Notes에서 보기
               </Link>
               <Link
                 href={`/app?mode=${mode}`}
                 className="inline-flex min-h-11 items-center justify-center rounded-full border border-[color:var(--border-subtle)] px-4 py-2 text-sm font-medium text-[color:var(--foreground-strong)]"
               >
-                Today
+                Today로 돌아가기
               </Link>
             </div>
             <Button type="button" variant="ghost" className="mt-4 w-full sm:w-auto" onClick={onReset}>
-              하나 더 정리하기
+              하나 더 올리기
             </Button>
           </>
         )}
@@ -1551,25 +1551,25 @@ function SavedCaptureConfirmationPanel({
         <PreviewLine label="다음 행동 1개" value={confirmation.nextAction} />
         <PreviewLine label="저장 경로" value={confirmation.persistence === "durable" ? "Review OS note" : "local beta note"} />
       </div>
-      <p className="mt-3 text-xs leading-5 text-[color:var(--muted)]">다음 행동 후보입니다. 정답 확정이나 최종 판단이 아니라, 바로 이어갈 학습 행동을 정리한 내용입니다.</p>
+      <p className="mt-3 text-xs leading-5 text-[color:var(--muted)]">다음 행동 후보입니다. 정답 확정이나 최종 판단이 아닙니다. Review에서 바로 다시 쓰거나 Notes에서 기록을 확인하고 Today로 돌아갈 수 있습니다.</p>
       <div className="mt-5 grid gap-2 sm:grid-cols-3">
         <Link
           href={`/app/review?mode=${mode}`}
           className="inline-flex min-h-11 items-center justify-center rounded-full bg-[color:var(--foreground-strong)] px-4 py-2 text-sm font-medium text-white"
         >
-          Review
+          Review로 이어가기
         </Link>
         <Link
           href={`/app/notes?mode=${mode}`}
           className="inline-flex min-h-11 items-center justify-center rounded-full border border-[color:var(--border-subtle)] px-4 py-2 text-sm font-medium text-[color:var(--foreground-strong)]"
         >
-          Notes
+          Notes에서 보기
         </Link>
         <Link
           href={`/app?mode=${mode}`}
           className="inline-flex min-h-11 items-center justify-center rounded-full border border-[color:var(--border-subtle)] px-4 py-2 text-sm font-medium text-[color:var(--foreground-strong)]"
         >
-          Today
+          Today로 돌아가기
         </Link>
       </div>
       <Button type="button" variant="ghost" className="mt-4 w-full sm:w-auto" onClick={onReset}>
@@ -1668,7 +1668,7 @@ function IntakePanel({
       <div className="mt-2 flex flex-col gap-4">
         <div className="max-w-[62ch]">
           <h3 className="text-title text-[color:var(--foreground-strong)]">오늘 한 것 올리기</h3>
-          <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">사진/PDF/텍스트 중 하나로 시작하세요.</p>
+          <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">사진/PDF/텍스트 중 하나로 시작하고, 저장 후 Notes, Review, Today에서 이어서 확인하세요.</p>
         </div>
         <div className="rounded-[var(--radius-md)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-elevated)] p-5 sm:p-6">
           <p className="text-caption text-[color:var(--ink-muted)]">오늘의 입력</p>
@@ -1812,8 +1812,8 @@ function IntakePanel({
       <div className="sticky bottom-3 z-30 mt-3 rounded-[var(--radius-lg)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)]/95 p-3 shadow-lg backdrop-blur sm:bottom-5 sm:p-4" data-testid="capture-save-action-bar">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm font-medium text-[color:var(--foreground-strong)]">오늘 입력을 저장하고 다음 행동으로 연결합니다.</p>
-            <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">AI가 찾은 약점 후보입니다. 저장 전 직접 확인해 주세요. 다음 행동 후보입니다.</p>
+            <p className="text-sm font-medium text-[color:var(--foreground-strong)]">오늘 학습을 저장하고 다음 행동으로 연결합니다.</p>
+            <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">저장하면 Notes, Review, Today에 이어질 약점 후보와 다음 행동 후보가 만들어집니다.</p>
           </div>
           <Button type="button" onClick={onQuickSave} disabled={!canQuickSave || saving || extracting} className="min-h-12 w-full shrink-0 sm:w-auto bg-[color:var(--foreground-strong)] text-white disabled:cursor-not-allowed disabled:opacity-60" data-testid="capture-save-primary">
             {saving ? "저장 중" : "저장하고 오늘 계획에 반영"}

@@ -18,8 +18,8 @@ const CAPTURE_SAVE_PERSISTENCE_COPY: Record<CaptureSavePersistenceStatus, Captur
   },
   local_fallback_saved: {
     eyebrow: "이 브라우저에 임시 저장되었습니다",
-    title: "closed beta 안전망으로 Notes, Review, Today에 반영됩니다.",
-    description: "계정 저장을 사용할 수 없어 이 브라우저에만 보관했습니다. 같은 브라우저에서는 새로고침 후에도 확인할 수 있습니다.",
+    title: "closed beta 임시 저장으로 Notes, Review, Today에서 이어서 볼 수 있습니다.",
+    description: "계정 저장을 사용할 수 없어 이 브라우저에만 보관했습니다. 같은 브라우저에서는 새로고침 후에도 이어서 확인할 수 있습니다.",
     statusLabel: "브라우저 임시 저장",
   },
   save_failed: {

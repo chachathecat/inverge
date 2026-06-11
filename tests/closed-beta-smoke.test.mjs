@@ -47,7 +47,7 @@ test("capture page contains capture+note framing copy", () => {
   const capturePage = read("app/app/capture/page.tsx");
   const captureForm = read("components/review-os/capture-form.tsx");
   const merged = `${capturePage}\n${captureForm}`;
-  ["오늘 한 것 올리기", "오늘 공부한 내용 또는 내 답안", "사진 찍기", "앨범에서 선택", "OCR 결과는 초안입니다", "기록 시작하기", "가장 큰 gap", "다음 행동"].forEach((phrase) => {
+  ["오늘 한 것 올리기", "오늘 공부한 내용 또는 내 답안", "사진 찍기", "앨범에서 선택", "OCR 결과는 초안입니다", "저장하고 오늘 계획에 반영", "가장 큰 빈틈", "다음 행동"].forEach((phrase) => {
     assert.ok(merged.includes(phrase), `Missing phrase: ${phrase}`);
   });
 });
@@ -102,7 +102,7 @@ test("capture learning signal for 2차 is safe and rewrite oriented", () => {
 
 test("review queue keeps learner-visible capture loop proof copy", () => {
   const source = read("components/review-os/review-queue-client.tsx");
-  ["오늘 한 것", "반복 신호와 최근 기록 기준", "다시 보기", "공부한 흔적을 하나 올리면 오늘 계획과 복습 큐가 업데이트됩니다."].forEach((phrase) => {
+  ["오늘 한 것", "반복 신호와 최근 기록 기준", "다시 보기", "Capture에서 오늘 학습 1개를 정리하면 약점 후보와 다음 행동이 이곳에 이어집니다."].forEach((phrase) => {
     assert.ok(source.includes(phrase), `Missing phrase: ${phrase}`);
   });
 });
