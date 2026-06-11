@@ -6,6 +6,7 @@
 - Current status: pending manual verification
 - Vercel preview: must be success before launch
 - Launch decision: not approved until all required checks are marked pass
+- Owner QA evidence baseline: `docs/closed-beta-owner-qa-pr-359.md` records the PR #359 closed-beta learner golden-flow PASS for Capture -> Save -> Notes -> Review -> Today -> Refresh durability, including the AUTH_BLOCKED preview note and local no-Supabase QA result.
 
 ## B. Required manual checks
 
