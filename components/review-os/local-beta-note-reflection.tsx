@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useEffect, useState } from "react";
 
 import { type AppraisalMode } from "@/lib/review-os/appraisal";
 import { listReviewOsLocalBetaNotes, type LocalBetaLearnerNote } from "@/lib/review-os/browser-storage";
@@ -36,7 +36,24 @@ function buildModeText(mode: AppraisalMode): string {
 }
 
 function modeNoteTitle(mode: AppraisalMode) {
-  return `${buildModeText(mode)} 학습 메모`;
+  return `${buildModeText(mode)} 학습 노트`;
+}
+
+function useClientLocalBetaNotes(mode: AppraisalMode) {
+  const [notes, setNotes] = useState<LocalBetaLearnerNote[]>([]);
+
+  useEffect(() => {
+    const nextNotes = listReviewOsLocalBetaNotes(mode).slice(0, 3);
+    const timeoutId = window.setTimeout(() => {
+      setNotes(nextNotes);
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [mode]);
+
+  return notes;
 }
 
 function LocalBetaCaptureNoteList({
@@ -104,7 +121,7 @@ function LocalBetaCaptureNoteList({
 }
 
 export function LocalBetaNotesSection({ mode }: { mode: AppraisalMode }) {
-  const notes = useMemo(() => listReviewOsLocalBetaNotes(mode).slice(0, 3), [mode]);
+  const notes = useClientLocalBetaNotes(mode);
 
   return (
     <LocalBetaCaptureNoteList
@@ -123,7 +140,8 @@ export function LocalBetaReviewCandidateSection({
   mode: AppraisalMode;
   hasDurableQueue: boolean;
 }) {
-  const notes = useMemo(() => listReviewOsLocalBetaNotes(mode).slice(0, 3), [mode]);
+  const notes = useClientLocalBetaNotes(mode);
+
   return (
     <LocalBetaCaptureNoteList
       notes={notes}
@@ -136,14 +154,14 @@ export function LocalBetaReviewCandidateSection({
 }
 
 export function LocalBetaTodayReflection({ mode, hasDurableSummary }: { mode: AppraisalMode; hasDurableSummary: boolean }) {
-  const notes = useMemo(() => listReviewOsLocalBetaNotes(mode).slice(0, 3), [mode]);
+  const notes = useClientLocalBetaNotes(mode);
 
   if (hasDurableSummary) return null;
 
   return (
     <LocalBetaCaptureNoteList
       notes={notes}
-      title="오늘 계획 반영 후보"
+      title="오늘 반영 후보"
       subtitle="오늘 계획에 반영할 최근 기록입니다."
       showAction={false}
       emptyMessage={null}
