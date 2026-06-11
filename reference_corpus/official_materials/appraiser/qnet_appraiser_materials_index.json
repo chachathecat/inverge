@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
   "generatedBy": "scripts/ingest-qnet-appraiser-materials.mjs",
-  "generatedAt": "2026-06-10T04:00:19.074Z",
+  "generatedAt": "2026-06-10T05:50:35.885Z",
   "inputManifestPath": "local_official_materials/appraiser/qnet_manifest.json",
   "manifestName": "Q-Net Appraiser Materials Metadata Batch 1",
   "storagePolicy": {
@@ -560,6 +560,306 @@
       "difficultyBand": "mixed",
       "sourceStatus": "verified",
       "lastOfficialVerifiedAt": "2026-06-09",
+      "needsOfficialVerification": false,
+      "rawTextStored": false,
+      "copyrightedTextStored": false,
+      "safeNotes": null
+    },
+    {
+      "sourceId": "qnet-appraiser-2023-34-first-1-source-746f3e0fe32d",
+      "officialSourceId": "qnet_appraiser_past_questions",
+      "sourceKind": "past_questions",
+      "sourceName": "Q-Net 기출문제 내려받기",
+      "sourceUrl": "https://www.q-net.or.kr/cst003.do?gId=31&gSite=L&id=cst00309",
+      "localRawFileNameHash": "15e2f46f67bb11804d8a8a507d66100ce8d8a862eecd2140890316eba8859cf2",
+      "examYear": 2023,
+      "examRound": 34,
+      "examMode": "first",
+      "subject": "감정평가사 1차",
+      "paper": "1교시",
+      "questionNumber": "source",
+      "itemType": "source_paper",
+      "topicCandidates": [
+        "1차 객관식",
+        "1차 1교시",
+        "민법",
+        "경제학원론",
+        "부동산학원론"
+      ],
+      "curriculumNodeCandidates": [
+        "first_exam_paper_1",
+        "first_civil_law",
+        "first_economics",
+        "first_real_estate_studies"
+      ],
+      "issueCandidates": [
+        "1차 1교시 과목별 기출 출제영역"
+      ],
+      "trapWordCandidates": [
+        "객관식 함정어",
+        "개념 구분",
+        "계산 조건 확인"
+      ],
+      "answerSkeletonTags": [],
+      "calculationTemplateCandidates": [
+        "economics_graph_or_formula_check"
+      ],
+      "casioRelevant": false,
+      "estimatedMinutes": 120,
+      "difficultyBand": "mixed",
+      "sourceStatus": "verified",
+      "lastOfficialVerifiedAt": "2026-06-10",
+      "needsOfficialVerification": false,
+      "rawTextStored": false,
+      "copyrightedTextStored": false,
+      "safeNotes": null
+    },
+    {
+      "sourceId": "qnet-appraiser-2023-34-first-2-source-aee9dbacb50a",
+      "officialSourceId": "qnet_appraiser_past_questions",
+      "sourceKind": "past_questions",
+      "sourceName": "Q-Net 기출문제 내려받기",
+      "sourceUrl": "https://www.q-net.or.kr/cst003.do?gId=31&gSite=L&id=cst00309",
+      "localRawFileNameHash": "e6a81848d9b0d7b93560d3049342a052f4f1a89290afe3d37955f7e01b905856",
+      "examYear": 2023,
+      "examRound": 34,
+      "examMode": "first",
+      "subject": "감정평가사 1차",
+      "paper": "2교시",
+      "questionNumber": "source",
+      "itemType": "source_paper",
+      "topicCandidates": [
+        "1차 객관식",
+        "1차 2교시",
+        "감정평가관계법규",
+        "회계학"
+      ],
+      "curriculumNodeCandidates": [
+        "first_exam_paper_2",
+        "first_appraisal_related_law",
+        "first_accounting"
+      ],
+      "issueCandidates": [
+        "1차 2교시 과목별 기출 출제영역"
+      ],
+      "trapWordCandidates": [
+        "조문 요건 함정",
+        "회계 말문제 함정",
+        "계산 조건 확인"
+      ],
+      "answerSkeletonTags": [],
+      "calculationTemplateCandidates": [
+        "accounting_template_check"
+      ],
+      "casioRelevant": true,
+      "estimatedMinutes": 80,
+      "difficultyBand": "mixed",
+      "sourceStatus": "verified",
+      "lastOfficialVerifiedAt": "2026-06-10",
+      "needsOfficialVerification": false,
+      "rawTextStored": false,
+      "copyrightedTextStored": false,
+      "safeNotes": null
+    },
+    {
+      "sourceId": "qnet-appraiser-2023-34-second-2-1-source-45cafa75489e",
+      "officialSourceId": "qnet_appraiser_past_questions",
+      "sourceKind": "past_questions",
+      "sourceName": "Q-Net 기출문제 내려받기",
+      "sourceUrl": "https://www.q-net.or.kr/cst003.do?gId=31&gSite=L&id=cst00309",
+      "localRawFileNameHash": "b4d8a1124f950c59c872d558ff44bbbfed96da6a0e0dfb91330b1f93f2ec3efc",
+      "examYear": 2023,
+      "examRound": 34,
+      "examMode": "second",
+      "subject": "감정평가실무",
+      "paper": "2차 1교시: 감정평가실무",
+      "questionNumber": "source",
+      "itemType": "source_paper",
+      "topicCandidates": [
+        "감정평가실무",
+        "공시지가기준법",
+        "원가법",
+        "거래사례비교법",
+        "수익환원법",
+        "할인현금흐름분석법",
+        "최유효이용",
+        "관리처분계획",
+        "개발가능성",
+        "잔여지 보상"
+      ],
+      "curriculumNodeCandidates": [
+        "second_practice",
+        "second_practice_three_approaches",
+        "second_practice_cost_approach",
+        "second_practice_comparison_approach",
+        "second_practice_income_approach",
+        "second_practice_compensation",
+        "second_practice_calculation_process"
+      ],
+      "issueCandidates": [
+        "실무 계산 프로세스",
+        "평가방식 선택",
+        "시산가액 조정",
+        "개발가능성 검토",
+        "보상평가 검토"
+      ],
+      "trapWordCandidates": [
+        "단위 누락",
+        "계산 조건 누락",
+        "검산 누락",
+        "방식 선택 오류",
+        "시점수정 누락"
+      ],
+      "answerSkeletonTags": [
+        "자료정리",
+        "방식선택",
+        "계산과정",
+        "검토",
+        "결론"
+      ],
+      "calculationTemplateCandidates": [
+        "three_approaches_template",
+        "income_approach_template",
+        "dcf_template",
+        "compensation_valuation_template"
+      ],
+      "casioRelevant": true,
+      "estimatedMinutes": 100,
+      "difficultyBand": "mixed",
+      "sourceStatus": "verified",
+      "lastOfficialVerifiedAt": "2026-06-10",
+      "needsOfficialVerification": false,
+      "rawTextStored": false,
+      "copyrightedTextStored": false,
+      "safeNotes": null
+    },
+    {
+      "sourceId": "qnet-appraiser-2023-34-second-2-2-source-a166effa9409",
+      "officialSourceId": "qnet_appraiser_past_questions",
+      "sourceKind": "past_questions",
+      "sourceName": "Q-Net 기출문제 내려받기",
+      "sourceUrl": "https://www.q-net.or.kr/cst003.do?gId=31&gSite=L&id=cst00309",
+      "localRawFileNameHash": "cf02a8a329b857475db3441c10395811943f3f9450cbb04418919d0a613e9231",
+      "examYear": 2023,
+      "examRound": 34,
+      "examMode": "second",
+      "subject": "감정평가이론",
+      "paper": "2차 2교시: 감정평가이론",
+      "questionNumber": "source",
+      "itemType": "source_paper",
+      "topicCandidates": [
+        "감정평가이론",
+        "수익환원법",
+        "직접환원법",
+        "할인현금흐름분석법",
+        "기준가치",
+        "생산비 감정평가",
+        "감정평가 재조사",
+        "담보평가",
+        "거래사례 요건"
+      ],
+      "curriculumNodeCandidates": [
+        "second_theory",
+        "second_theory_income_approach",
+        "second_theory_value_theory",
+        "second_theory_market_analysis",
+        "second_theory_three_approaches"
+      ],
+      "issueCandidates": [
+        "이론 목차화",
+        "핵심 키워드 연결",
+        "비교 및 적용",
+        "사례의견 구성",
+        "평가 원칙 설명"
+      ],
+      "trapWordCandidates": [
+        "개념 정의 누락",
+        "비교 기준 누락",
+        "사례 적용 부족",
+        "결론 추상화",
+        "사례 쟁점 누락"
+      ],
+      "answerSkeletonTags": [
+        "의의",
+        "근거",
+        "비교",
+        "적용",
+        "결론"
+      ],
+      "calculationTemplateCandidates": [],
+      "casioRelevant": false,
+      "estimatedMinutes": 100,
+      "difficultyBand": "mixed",
+      "sourceStatus": "verified",
+      "lastOfficialVerifiedAt": "2026-06-10",
+      "needsOfficialVerification": false,
+      "rawTextStored": false,
+      "copyrightedTextStored": false,
+      "safeNotes": null
+    },
+    {
+      "sourceId": "qnet-appraiser-2023-34-second-2-3-source-aa2fcb58c0ab",
+      "officialSourceId": "qnet_appraiser_past_questions",
+      "sourceKind": "past_questions",
+      "sourceName": "Q-Net 기출문제 내려받기",
+      "sourceUrl": "https://www.q-net.or.kr/cst003.do?gId=31&gSite=L&id=cst00309",
+      "localRawFileNameHash": "b9f8eb9157f86345bb4e2306450641936272900030cb7f66a553b2d0551f7226",
+      "examYear": 2023,
+      "examRound": 34,
+      "examMode": "second",
+      "subject": "감정평가 및 보상법규",
+      "paper": "2차 3교시: 감정평가 및 보상법규",
+      "questionNumber": "source",
+      "itemType": "source_paper",
+      "topicCandidates": [
+        "감정평가 및 보상법규",
+        "토지보상법",
+        "사업인정",
+        "사업인정고시",
+        "수용재결",
+        "이의재결",
+        "보상금증감소송",
+        "개별공시지가",
+        "징계",
+        "의무 위반"
+      ],
+      "curriculumNodeCandidates": [
+        "second_law",
+        "second_law_land_compensation",
+        "second_law_project_approval",
+        "second_law_expropriation_decision",
+        "second_law_administrative_remedy",
+        "second_law_appraiser_act"
+      ],
+      "issueCandidates": [
+        "쟁점 포착",
+        "조문 요건",
+        "사안 포섭",
+        "권리구제",
+        "소송 형태 검토",
+        "징계 효력 검토"
+      ],
+      "trapWordCandidates": [
+        "요건 누락",
+        "절차 누락",
+        "처분성 판단 누락",
+        "원고적격 누락",
+        "제소기간 누락",
+        "사안 포섭 부족"
+      ],
+      "answerSkeletonTags": [
+        "문제점",
+        "관련 법리",
+        "요건 검토",
+        "사안 포섭",
+        "결론"
+      ],
+      "calculationTemplateCandidates": [],
+      "casioRelevant": false,
+      "estimatedMinutes": 100,
+      "difficultyBand": "mixed",
+      "sourceStatus": "verified",
+      "lastOfficialVerifiedAt": "2026-06-10",
       "needsOfficialVerification": false,
       "rawTextStored": false,
       "copyrightedTextStored": false,
