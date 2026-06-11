@@ -34,6 +34,12 @@ The report includes:
 
 For the 2024 제35회 second exam, the report confirms that the three subject-level logical sections share the same physical source hash without printing the hash.
 
+## Metadata Batch Progress
+
+- 2022 제33회 appraiser materials were added as metadata-only reference intelligence in Batch 4.
+- The five source-level records cover 1차 1교시, 1차 2교시, 2차 1교시 감정평가실무, 2차 2교시 감정평가이론, and 2차 3교시 감정평가 및 보상법규.
+- Source files remained local-only under `local_official_materials/appraiser`; no raw official materials, raw problem text, answer text, OCR full text, official answer body, or local manifest was committed.
+
 ## Safety
 
 The report must keep all of these true:

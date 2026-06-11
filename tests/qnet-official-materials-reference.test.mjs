@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -120,6 +121,82 @@ test("Q-Net material lookup helpers filter by exam mode, subject, and source id"
   assert.equal(getQnetMaterialBySourceId("missing-source-id", reference), null);
 });
 
+test("Q-Net appraiser 2022 round 33 batch includes five metadata-only source papers", () => {
+  const reference = loadQnetAppraiserOfficialMaterialsReference();
+  const materials2022 = reference.materialsIndex.materials.filter((material) => (
+    material.examYear === 2022 && material.examRound === 33
+  ));
+  const sourceSecondPractice = materials2022.find((material) => material.paper.includes("2차 1교시"));
+  const sourceSecondTheory = materials2022.find((material) => material.paper.includes("2차 2교시"));
+  const sourceSecondLaw = materials2022.find((material) => material.paper.includes("2차 3교시"));
+  const materials2023 = reference.materialsIndex.materials.filter((material) => (
+    material.examYear === 2023 && material.examRound === 34
+  ));
+  const expectedSubjects = [...new Set(materials2023.map((material) => material.subject))].sort();
+  const batchSubjects = [...new Set(materials2022.map((material) => material.subject))].sort();
+  const topicLabels = new Set(materials2022.flatMap((material) => material.topicCandidates));
+
+  assert.equal(materials2022.length, 5);
+  assert.deepEqual(batchSubjects, expectedSubjects);
+  assert.equal(materials2022.filter((material) => material.examMode === "first").length, 2);
+  assert.equal(materials2022.filter((material) => material.examMode === "second").length, 3);
+  assert.equal(new Set(materials2022.map((material) => material.localRawFileNameHash)).size, 5);
+
+  for (const material of materials2022) {
+    assert.equal(material.itemType, "source_paper");
+    assert.equal(material.sourceStatus, "verified");
+    assert.equal(material.needsOfficialVerification, false);
+    assert.equal(material.rawTextStored, false);
+    assert.equal(material.copyrightedTextStored, false);
+    assert.match(material.localRawFileNameHash, /^[a-f0-9]{64}$/);
+    assert.equal(Object.prototype.hasOwnProperty.call(material, "localFileName"), false);
+    assert.equal(Object.prototype.hasOwnProperty.call(material, "sourceFileName"), false);
+  }
+
+  for (const label of [
+    "compensation appraisal",
+    "capitalization rate",
+    "standard land price legal nature",
+    "appraiser qualification cancellation",
+    "first exam paper 1",
+    "first exam paper 2",
+  ]) {
+    assert.equal(topicLabels.has(label), true, `2022 batch should include ${label}`);
+  }
+
+  assert.ok(sourceSecondPractice);
+  assert.ok(sourceSecondTheory);
+  assert.ok(sourceSecondLaw);
+
+  assert.equal(sourceSecondPractice.subject, "감정평가실무");
+  assert.equal(sourceSecondTheory.subject, "감정평가이론");
+  assert.equal(sourceSecondLaw.subject, "감정평가 및 보상법규");
+
+  assert.equal(sourceSecondPractice.topicCandidates.includes("intellectual property appraisal"), false);
+  assert.equal(sourceSecondPractice.topicCandidates.includes("capitalization rate"), false);
+  assert.equal(sourceSecondPractice.topicCandidates.includes("market data damage analysis"), false);
+  assert.equal(sourceSecondPractice.topicCandidates.includes("goodwill / right premium appraisal"), true);
+  assert.equal(sourceSecondPractice.topicCandidates.includes("building / tree / livestock loss compensation"), true);
+  assert.equal(sourceSecondPractice.topicCandidates.includes("market data adjustment"), true);
+
+  assert.equal(sourceSecondTheory.topicCandidates.includes("intellectual property appraisal"), true);
+  assert.equal(sourceSecondTheory.topicCandidates.includes("capitalization rate"), true);
+  assert.equal(sourceSecondTheory.topicCandidates.includes("excess land / surplus land"), true);
+  assert.equal(sourceSecondTheory.topicCandidates.includes("goodwill appraisal"), false);
+  assert.equal(sourceSecondTheory.topicCandidates.includes("long-term leasehold"), false);
+
+  assert.equal(sourceSecondLaw.topicCandidates.includes("appraiser qualification cancellation"), true);
+  assert.equal(sourceSecondLaw.topicCandidates.includes("residential relocation expense"), true);
+  assert.equal(sourceSecondLaw.topicCandidates.includes("excess land / surplus land"), false);
+  assert.equal(sourceSecondLaw.topicCandidates.includes("factual private road"), true);
+
+  const serialized = JSON.stringify(materials2022);
+  assert.doesNotMatch(serialized, /\.pdf\b|\.hwp\b|\.hwpx\b|\.docx\b|\.zip\b|\.png\b|\.jpe?g\b|\.webp\b/i);
+  for (const field of forbiddenSerializedFields) {
+    assert.equal(serialized.includes(`"${field}"`), false, `${field} must not be emitted`);
+  }
+});
+
 test("Q-Net reference signals expose only safe metadata for future ranking integrations", () => {
   const reference = loadQnetAppraiserOfficialMaterialsReference();
   const fixture = reference.materialsIndex.materials.find((material) => material.answerSkeletonTags.length > 0);
@@ -217,4 +294,19 @@ test("Q-Net reference loader source avoids raw material readers and learner-faci
   for (const term of forbiddenImplementationTerms) {
     assert.equal(source.includes(term), false, `loader must not include ${term}`);
   }
+});
+
+test("Q-Net metadata batch does not track local official materials or raw official binaries", () => {
+  const result = spawnSync("git", ["ls-files"], { cwd: process.cwd(), encoding: "utf8" });
+  assert.equal(result.status, 0, result.stderr);
+  const trackedFiles = result.stdout.split(/\r?\n/).filter(Boolean).map((file) => file.replace(/\\/g, "/"));
+
+  assert.equal(trackedFiles.some((file) => file.startsWith("local_official_materials/")), false);
+  assert.equal(trackedFiles.some((file) => /(^|\/)qnet_manifest\.json$/i.test(file)), false);
+  assert.equal(
+    trackedFiles.some((file) => (
+      /(?:^|\/)(?:qnet|official|raw[-_]official|official[-_]raw|local[-_]official)[^/]*\.(?:pdf|zip|hwp|hwpx|docx?|png|jpe?g|webp)$/i.test(file)
+    )),
+    false,
+  );
 });

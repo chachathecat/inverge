@@ -24,21 +24,37 @@ test("Q-Net reference intelligence report summarizes committed metadata only", a
 
   assert.equal(report.schemaVersion, "1.0.0");
   assert.equal(report.reportType, "qnet_reference_intelligence_qa");
-  assert.equal(report.materialCount, 10);
+  assert.equal(report.materialCount, 20);
   assert.equal(report.sourceMapSourceCount, 1);
-  assert.equal(report.sourceMapMaterialCount, 10);
-  assert.equal(report.topicFrequencyEntryCount, 33);
+  assert.equal(report.sourceMapMaterialCount, 20);
+  assert.equal(report.topicFrequencyEntryCount, 100);
   assert.deepEqual(report.officialSourceIds, ["qnet_appraiser_past_questions"]);
-  assert.deepEqual(report.years, [2024, 2025]);
-  assert.deepEqual(report.rounds, [35, 36]);
-  assert.deepEqual(report.examModeCounts, { first: 4, second: 6 });
+  assert.deepEqual(report.years, [2022, 2023, 2024, 2025]);
+  assert.deepEqual(report.rounds, [33, 34, 35, 36]);
+  assert.deepEqual(report.examModeCounts, { first: 8, second: 12 });
   assert.deepEqual(report.subjectCounts, {
-    "감정평가사 1차": 4,
-    "감정평가실무": 2,
-    "감정평가이론": 2,
-    "감정평가 및 보상법규": 2,
+    "감정평가사 1차": 8,
+    "감정평가실무": 4,
+    "감정평가이론": 4,
+    "감정평가 및 보상법규": 4,
   });
   assert.deepEqual(report.yearRoundCoverage, [
+    {
+      examYear: 2022,
+      examRound: 33,
+      materialCount: 5,
+      firstCount: 2,
+      secondCount: 3,
+      subjects: expectedSubjects,
+    },
+    {
+      examYear: 2023,
+      examRound: 34,
+      materialCount: 5,
+      firstCount: 2,
+      secondCount: 3,
+      subjects: expectedSubjects,
+    },
     {
       examYear: 2024,
       examRound: 35,
@@ -139,9 +155,9 @@ test("Q-Net reference intelligence CLI prints the same safe aggregate report", (
 
   const report = JSON.parse(result.stdout);
   assert.equal(report.reportType, "qnet_reference_intelligence_qa");
-  assert.equal(report.materialCount, 10);
-  assert.equal(report.sourceMapMaterialCount, 10);
-  assert.equal(report.topicFrequencyEntryCount, 33);
+  assert.equal(report.materialCount, 20);
+  assert.equal(report.sourceMapMaterialCount, 20);
+  assert.equal(report.topicFrequencyEntryCount, 100);
   assert.deepEqual(report.warnings, []);
   assert.deepEqual(Object.values(report.safety), Object.values(report.safety).map(() => true));
 });
