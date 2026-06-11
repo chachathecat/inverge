@@ -1,9 +1,9 @@
 {
   "schemaVersion": "1.0.0",
   "generatedBy": "scripts/ingest-qnet-appraiser-materials.mjs",
-  "generatedAt": "2026-06-10T05:50:35.885Z",
+  "generatedAt": "2026-06-11T00:00:00.000Z",
   "inputManifestPath": "local_official_materials/appraiser/qnet_manifest.json",
-  "manifestName": "Q-Net Appraiser Materials Metadata Batch 1",
+  "manifestName": "Q-Net Appraiser Materials Metadata Batches 1-4",
   "storagePolicy": {
     "rawTextStored": false,
     "copyrightedTextStored": false,
@@ -107,6 +107,61 @@
       "safeNotes": null
     },
     {
+      "sourceId": "qnet-appraiser-2025-36-second-2-source-5e365143ea1b",
+      "officialSourceId": "qnet_appraiser_past_questions",
+      "sourceKind": "past_questions",
+      "sourceName": "Q-Net 기출문제 내려받기",
+      "sourceUrl": "https://www.q-net.or.kr/cst003.do?gId=31&gSite=L&id=cst00309",
+      "localRawFileNameHash": "426e7d5f0a09ca4cebfc2f53df592f2b8499842904f946a89271b254ec727fed",
+      "examYear": 2025,
+      "examRound": 36,
+      "examMode": "second",
+      "subject": "감정평가이론",
+      "paper": "2차",
+      "questionNumber": "source",
+      "itemType": "source_paper",
+      "topicCandidates": [
+        "감정평가이론",
+        "가치이론",
+        "시장분석",
+        "감정평가 3방식",
+        "최고최선이용"
+      ],
+      "curriculumNodeCandidates": [
+        "second_theory",
+        "second_theory_value_theory",
+        "second_theory_market_analysis",
+        "second_theory_three_approaches"
+      ],
+      "issueCandidates": [
+        "이론 목차화",
+        "핵심 키워드 연결",
+        "비교 및 적용"
+      ],
+      "trapWordCandidates": [
+        "개념 정의 누락",
+        "비교 기준 누락",
+        "사례 적용 부족"
+      ],
+      "answerSkeletonTags": [
+        "의의",
+        "근거",
+        "비교",
+        "적용",
+        "결론"
+      ],
+      "calculationTemplateCandidates": [],
+      "casioRelevant": false,
+      "estimatedMinutes": 100,
+      "difficultyBand": "mixed",
+      "sourceStatus": "verified",
+      "lastOfficialVerifiedAt": "2026-06-08",
+      "needsOfficialVerification": false,
+      "rawTextStored": false,
+      "copyrightedTextStored": false,
+      "safeNotes": null
+    },
+    {
       "sourceId": "qnet-appraiser-2025-36-second-2-source-bcaf19723c1d",
       "officialSourceId": "qnet_appraiser_past_questions",
       "sourceKind": "past_questions",
@@ -158,61 +213,6 @@
         "income_approach_template"
       ],
       "casioRelevant": true,
-      "estimatedMinutes": 100,
-      "difficultyBand": "mixed",
-      "sourceStatus": "verified",
-      "lastOfficialVerifiedAt": "2026-06-08",
-      "needsOfficialVerification": false,
-      "rawTextStored": false,
-      "copyrightedTextStored": false,
-      "safeNotes": null
-    },
-    {
-      "sourceId": "qnet-appraiser-2025-36-second-2-source-5e365143ea1b",
-      "officialSourceId": "qnet_appraiser_past_questions",
-      "sourceKind": "past_questions",
-      "sourceName": "Q-Net 기출문제 내려받기",
-      "sourceUrl": "https://www.q-net.or.kr/cst003.do?gId=31&gSite=L&id=cst00309",
-      "localRawFileNameHash": "426e7d5f0a09ca4cebfc2f53df592f2b8499842904f946a89271b254ec727fed",
-      "examYear": 2025,
-      "examRound": 36,
-      "examMode": "second",
-      "subject": "감정평가이론",
-      "paper": "2차",
-      "questionNumber": "source",
-      "itemType": "source_paper",
-      "topicCandidates": [
-        "감정평가이론",
-        "가치이론",
-        "시장분석",
-        "감정평가 3방식",
-        "최고최선이용"
-      ],
-      "curriculumNodeCandidates": [
-        "second_theory",
-        "second_theory_value_theory",
-        "second_theory_market_analysis",
-        "second_theory_three_approaches"
-      ],
-      "issueCandidates": [
-        "이론 목차화",
-        "핵심 키워드 연결",
-        "비교 및 적용"
-      ],
-      "trapWordCandidates": [
-        "개념 정의 누락",
-        "비교 기준 누락",
-        "사례 적용 부족"
-      ],
-      "answerSkeletonTags": [
-        "의의",
-        "근거",
-        "비교",
-        "적용",
-        "결론"
-      ],
-      "calculationTemplateCandidates": [],
-      "casioRelevant": false,
       "estimatedMinutes": 100,
       "difficultyBand": "mixed",
       "sourceStatus": "verified",
@@ -443,66 +443,6 @@
       "safeNotes": null
     },
     {
-      "sourceId": "qnet-appraiser-2024-35-second-2-source-cdacf02c52f1",
-      "officialSourceId": "qnet_appraiser_past_questions",
-      "sourceKind": "past_questions",
-      "sourceName": "Q-Net 기출문제 내려받기",
-      "sourceUrl": "https://www.q-net.or.kr/cst003.do?gId=31&gSite=L&id=cst00309",
-      "localRawFileNameHash": "48eb5157f494e3798c7cd61efae91b67a4e0fa7eacff5d70dd6d98adc4f09fe8",
-      "examYear": 2024,
-      "examRound": 35,
-      "examMode": "second",
-      "subject": "감정평가이론",
-      "paper": "2차 통합: 감정평가이론",
-      "questionNumber": "source",
-      "itemType": "source_paper",
-      "topicCandidates": [
-        "감정평가이론",
-        "원가법",
-        "감가수정",
-        "가치이론",
-        "감정평가 원칙",
-        "탁상자문",
-        "ESG"
-      ],
-      "curriculumNodeCandidates": [
-        "second_theory",
-        "second_theory_cost_approach",
-        "second_theory_depreciation",
-        "second_theory_value_theory",
-        "second_theory_three_approaches"
-      ],
-      "issueCandidates": [
-        "이론 목차화",
-        "핵심 키워드 연결",
-        "비교 및 적용",
-        "평가원칙 설명"
-      ],
-      "trapWordCandidates": [
-        "개념 정의 누락",
-        "비교 기준 누락",
-        "사례 적용 부족",
-        "결론 추상화"
-      ],
-      "answerSkeletonTags": [
-        "의의",
-        "근거",
-        "비교",
-        "적용",
-        "결론"
-      ],
-      "calculationTemplateCandidates": [],
-      "casioRelevant": false,
-      "estimatedMinutes": 100,
-      "difficultyBand": "mixed",
-      "sourceStatus": "verified",
-      "lastOfficialVerifiedAt": "2026-06-09",
-      "needsOfficialVerification": false,
-      "rawTextStored": false,
-      "copyrightedTextStored": false,
-      "safeNotes": null
-    },
-    {
       "sourceId": "qnet-appraiser-2024-35-second-2-source-917a9393c990",
       "officialSourceId": "qnet_appraiser_past_questions",
       "sourceKind": "past_questions",
@@ -552,6 +492,66 @@
         "관련 법리",
         "요건 검토",
         "사안 포섭",
+        "결론"
+      ],
+      "calculationTemplateCandidates": [],
+      "casioRelevant": false,
+      "estimatedMinutes": 100,
+      "difficultyBand": "mixed",
+      "sourceStatus": "verified",
+      "lastOfficialVerifiedAt": "2026-06-09",
+      "needsOfficialVerification": false,
+      "rawTextStored": false,
+      "copyrightedTextStored": false,
+      "safeNotes": null
+    },
+    {
+      "sourceId": "qnet-appraiser-2024-35-second-2-source-cdacf02c52f1",
+      "officialSourceId": "qnet_appraiser_past_questions",
+      "sourceKind": "past_questions",
+      "sourceName": "Q-Net 기출문제 내려받기",
+      "sourceUrl": "https://www.q-net.or.kr/cst003.do?gId=31&gSite=L&id=cst00309",
+      "localRawFileNameHash": "48eb5157f494e3798c7cd61efae91b67a4e0fa7eacff5d70dd6d98adc4f09fe8",
+      "examYear": 2024,
+      "examRound": 35,
+      "examMode": "second",
+      "subject": "감정평가이론",
+      "paper": "2차 통합: 감정평가이론",
+      "questionNumber": "source",
+      "itemType": "source_paper",
+      "topicCandidates": [
+        "감정평가이론",
+        "원가법",
+        "감가수정",
+        "가치이론",
+        "감정평가 원칙",
+        "탁상자문",
+        "ESG"
+      ],
+      "curriculumNodeCandidates": [
+        "second_theory",
+        "second_theory_cost_approach",
+        "second_theory_depreciation",
+        "second_theory_value_theory",
+        "second_theory_three_approaches"
+      ],
+      "issueCandidates": [
+        "이론 목차화",
+        "핵심 키워드 연결",
+        "비교 및 적용",
+        "평가원칙 설명"
+      ],
+      "trapWordCandidates": [
+        "개념 정의 누락",
+        "비교 기준 누락",
+        "사례 적용 부족",
+        "결론 추상화"
+      ],
+      "answerSkeletonTags": [
+        "의의",
+        "근거",
+        "비교",
+        "적용",
         "결론"
       ],
       "calculationTemplateCandidates": [],
@@ -860,6 +860,290 @@
       "difficultyBand": "mixed",
       "sourceStatus": "verified",
       "lastOfficialVerifiedAt": "2026-06-10",
+      "needsOfficialVerification": false,
+      "rawTextStored": false,
+      "copyrightedTextStored": false,
+      "safeNotes": null
+    },
+    {
+      "sourceId": "qnet-appraiser-2022-33-first-1-source-114fea9c4cba",
+      "officialSourceId": "qnet_appraiser_past_questions",
+      "sourceKind": "past_questions",
+      "sourceName": "Q-Net 기출문제 내려받기",
+      "sourceUrl": "https://www.q-net.or.kr/cst003.do?gId=31&gSite=L&id=cst00309",
+      "localRawFileNameHash": "e08a5a2ae6296339c50fb11b113b1831f43b58a0512d3729dcf940b6770579ca",
+      "examYear": 2022,
+      "examRound": 33,
+      "examMode": "first",
+      "subject": "감정평가사 1차",
+      "paper": "1교시",
+      "questionNumber": "source",
+      "itemType": "source_paper",
+      "topicCandidates": [
+        "first exam",
+        "first exam paper 1",
+        "civil law",
+        "economics",
+        "real estate studies"
+      ],
+      "curriculumNodeCandidates": [
+        "first_exam_paper_1",
+        "first_civil_law",
+        "first_economics",
+        "first_real_estate_studies"
+      ],
+      "issueCandidates": [
+        "first exam paper 1 subject-level source coverage"
+      ],
+      "trapWordCandidates": [
+        "concept distinction",
+        "condition check",
+        "calculation condition check"
+      ],
+      "answerSkeletonTags": [],
+      "calculationTemplateCandidates": [
+        "economics_graph_or_formula_check"
+      ],
+      "casioRelevant": false,
+      "estimatedMinutes": 120,
+      "difficultyBand": "mixed",
+      "sourceStatus": "verified",
+      "lastOfficialVerifiedAt": "2026-06-11",
+      "needsOfficialVerification": false,
+      "rawTextStored": false,
+      "copyrightedTextStored": false,
+      "safeNotes": null
+    },
+    {
+      "sourceId": "qnet-appraiser-2022-33-first-2-source-a02c5cc144a1",
+      "officialSourceId": "qnet_appraiser_past_questions",
+      "sourceKind": "past_questions",
+      "sourceName": "Q-Net 기출문제 내려받기",
+      "sourceUrl": "https://www.q-net.or.kr/cst003.do?gId=31&gSite=L&id=cst00309",
+      "localRawFileNameHash": "f8aa3177ba2577f15be4ecd8f27e367f3edf74bf15a3792b2b12dd059afd23f1",
+      "examYear": 2022,
+      "examRound": 33,
+      "examMode": "first",
+      "subject": "감정평가사 1차",
+      "paper": "2교시",
+      "questionNumber": "source",
+      "itemType": "source_paper",
+      "topicCandidates": [
+        "first exam",
+        "first exam paper 2",
+        "appraisal related law",
+        "accounting"
+      ],
+      "curriculumNodeCandidates": [
+        "first_exam_paper_2",
+        "first_appraisal_related_law",
+        "first_accounting"
+      ],
+      "issueCandidates": [
+        "first exam paper 2 subject-level source coverage"
+      ],
+      "trapWordCandidates": [
+        "statute requirement check",
+        "accounting wording check",
+        "calculation condition check"
+      ],
+      "answerSkeletonTags": [],
+      "calculationTemplateCandidates": [
+        "accounting_template_check"
+      ],
+      "casioRelevant": true,
+      "estimatedMinutes": 80,
+      "difficultyBand": "mixed",
+      "sourceStatus": "verified",
+      "lastOfficialVerifiedAt": "2026-06-11",
+      "needsOfficialVerification": false,
+      "rawTextStored": false,
+      "copyrightedTextStored": false,
+      "safeNotes": null
+    },
+    {
+      "sourceId": "qnet-appraiser-2022-33-second-2-1-source-59a35ceaa518",
+      "officialSourceId": "qnet_appraiser_past_questions",
+      "sourceKind": "past_questions",
+      "sourceName": "Q-Net 기출문제 내려받기",
+      "sourceUrl": "https://www.q-net.or.kr/cst003.do?gId=31&gSite=L&id=cst00309",
+      "localRawFileNameHash": "ff9e236f3371b5dff5983fb2bd40afa16a85d1c830a76b1c07fd24696ccbc00e",
+      "examYear": 2022,
+      "examRound": 33,
+      "examMode": "second",
+      "subject": "감정평가실무",
+      "paper": "2차 1교시: 감정평가실무",
+      "questionNumber": "source",
+      "itemType": "source_paper",
+      "topicCandidates": [
+        "compensation appraisal",
+        "relocation / residential moving compensation",
+        "livestock loss compensation",
+        "transaction adjustment",
+        "long-term leasehold",
+        "goodwill appraisal",
+        "intellectual property appraisal",
+        "capitalization rate",
+        "market data damage analysis"
+      ],
+      "curriculumNodeCandidates": [
+        "second_practice",
+        "second_practice_compensation",
+        "second_practice_income_approach",
+        "second_practice_comparison_approach",
+        "second_practice_calculation_process"
+      ],
+      "issueCandidates": [
+        "practice valuation method selection",
+        "compensation calculation process",
+        "market data adjustment check",
+        "income capitalization structure"
+      ],
+      "trapWordCandidates": [
+        "unit omission",
+        "calculation basis omission",
+        "adjustment timing omission",
+        "method selection error"
+      ],
+      "answerSkeletonTags": [
+        "data organization",
+        "method selection",
+        "calculation process",
+        "review",
+        "conclusion"
+      ],
+      "calculationTemplateCandidates": [
+        "compensation_valuation_template",
+        "income_approach_template",
+        "market_data_adjustment_template",
+        "intangible_asset_valuation_template"
+      ],
+      "casioRelevant": true,
+      "estimatedMinutes": 100,
+      "difficultyBand": "mixed",
+      "sourceStatus": "verified",
+      "lastOfficialVerifiedAt": "2026-06-11",
+      "needsOfficialVerification": false,
+      "rawTextStored": false,
+      "copyrightedTextStored": false,
+      "safeNotes": null
+    },
+    {
+      "sourceId": "qnet-appraiser-2022-33-second-2-2-source-c11b8f5f883a",
+      "officialSourceId": "qnet_appraiser_past_questions",
+      "sourceKind": "past_questions",
+      "sourceName": "Q-Net 기출문제 내려받기",
+      "sourceUrl": "https://www.q-net.or.kr/cst003.do?gId=31&gSite=L&id=cst00309",
+      "localRawFileNameHash": "ecf3a57a70e35981ff8cb6b0999b88023d5ac4112cb850d3789fbac03851a512",
+      "examYear": 2022,
+      "examRound": 33,
+      "examMode": "second",
+      "subject": "감정평가이론",
+      "paper": "2차 2교시: 감정평가이론",
+      "questionNumber": "source",
+      "itemType": "source_paper",
+      "topicCandidates": [
+        "transaction adjustment",
+        "long-term leasehold",
+        "goodwill appraisal",
+        "intellectual property appraisal",
+        "capitalization rate",
+        "market data damage analysis",
+        "valuation theory keyword structure"
+      ],
+      "curriculumNodeCandidates": [
+        "second_theory",
+        "second_theory_value_theory",
+        "second_theory_market_analysis",
+        "second_theory_income_approach",
+        "second_theory_three_approaches"
+      ],
+      "issueCandidates": [
+        "theory keyword definition",
+        "comparison criteria structure",
+        "application paragraph structure"
+      ],
+      "trapWordCandidates": [
+        "definition omission",
+        "comparison basis omission",
+        "application scope omission",
+        "abstract conclusion risk"
+      ],
+      "answerSkeletonTags": [
+        "definition",
+        "basis",
+        "comparison",
+        "application",
+        "conclusion"
+      ],
+      "calculationTemplateCandidates": [],
+      "casioRelevant": false,
+      "estimatedMinutes": 100,
+      "difficultyBand": "mixed",
+      "sourceStatus": "verified",
+      "lastOfficialVerifiedAt": "2026-06-11",
+      "needsOfficialVerification": false,
+      "rawTextStored": false,
+      "copyrightedTextStored": false,
+      "safeNotes": null
+    },
+    {
+      "sourceId": "qnet-appraiser-2022-33-second-2-3-source-4170ede66222",
+      "officialSourceId": "qnet_appraiser_past_questions",
+      "sourceKind": "past_questions",
+      "sourceName": "Q-Net 기출문제 내려받기",
+      "sourceUrl": "https://www.q-net.or.kr/cst003.do?gId=31&gSite=L&id=cst00309",
+      "localRawFileNameHash": "616b0df05b590f0a4c7fa7ac54c2a1bf1355445e05e56554828ac925eb000037",
+      "examYear": 2022,
+      "examRound": 33,
+      "examMode": "second",
+      "subject": "감정평가 및 보상법규",
+      "paper": "2차 3교시: 감정평가 및 보상법규",
+      "questionNumber": "source",
+      "itemType": "source_paper",
+      "topicCandidates": [
+        "excess land / surplus land",
+        "redevelopment compensation",
+        "factual private road",
+        "residential relocation expense",
+        "standard land price legal nature",
+        "appraiser qualification cancellation",
+        "damages liability",
+        "project approval"
+      ],
+      "curriculumNodeCandidates": [
+        "second_law",
+        "second_law_land_compensation",
+        "second_law_project_approval",
+        "second_law_expropriation_decision",
+        "second_law_administrative_remedy",
+        "second_law_appraiser_act"
+      ],
+      "issueCandidates": [
+        "law issue spotting",
+        "statutory requirement structure",
+        "case application structure",
+        "remedy selection"
+      ],
+      "trapWordCandidates": [
+        "requirement omission",
+        "procedure omission",
+        "disposition judgment omission",
+        "case application omission"
+      ],
+      "answerSkeletonTags": [
+        "issue spotting",
+        "legal rule",
+        "requirement check",
+        "case application",
+        "conclusion"
+      ],
+      "calculationTemplateCandidates": [],
+      "casioRelevant": false,
+      "estimatedMinutes": 100,
+      "difficultyBand": "mixed",
+      "sourceStatus": "verified",
+      "lastOfficialVerifiedAt": "2026-06-11",
       "needsOfficialVerification": false,
       "rawTextStored": false,
       "copyrightedTextStored": false,

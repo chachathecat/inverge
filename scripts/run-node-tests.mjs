@@ -1,7 +1,11 @@
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 
-const defaultTestFiles = ["tests/closed-beta-golden-flow-routes.test.mjs"];
+const defaultTestFiles = [
+  "tests/closed-beta-golden-flow-routes.test.mjs",
+  "tests/qnet-official-materials-reference.test.mjs",
+  "tests/qnet-reference-intelligence-report.test.mjs",
+];
 const rawArgs = process.argv.slice(2);
 const nodeTestArgs = [];
 const requestedFiles = [];
