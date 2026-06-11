@@ -1,8 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { createHash } from "node:crypto";
-import { mkdir, mkdtemp, readdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -37,10 +36,6 @@ const forbiddenSerializedFields = [
   "passFail",
   "instructorComment",
 ];
-
-function localFilenameHash(localFileName) {
-  return createHash("sha256").update(localFileName).digest("hex");
-}
 
 async function readJson(filePath) {
   return JSON.parse(await readFile(filePath, "utf8"));
@@ -202,55 +197,46 @@ test("Q-Net appraiser 2022 round 33 batch includes five metadata-only source pap
   }
 });
 
-test("Q-Net appraiser 2021 round 32 batch adds metadata-only source papers with partial second-day coverage", async () => {
+test("Q-Net appraiser 2021 round 32 batch adds metadata-only source papers with partial second-day coverage", () => {
   const reference = loadQnetAppraiserOfficialMaterialsReference();
-  const localFiles = await readdir("local_official_materials/appraiser");
-  const has2021SecondPaper = localFiles.includes("감평 2차 시험지(2021).pdf");
-  const expectedLocalFileNames = [
-    "2021년도 제32회 감정평가사 1차 1교시 A형.pdf",
-    "2021년도 제32회 감정평가사 1차 1교시 B형.pdf",
-    "2021년도 제32회 감정평가사 1차 2교시 A형.pdf",
-    "2021년도 제32회 감정평가사 1차 2교시 B형.pdf",
-    ...(has2021SecondPaper ? ["감평 2차 시험지(2021).pdf"] : []),
-  ];
-  const expectedHashes = new Set(expectedLocalFileNames.map(localFilenameHash));
 
   const materials2021 = reference.materialsIndex.materials.filter((material) => (
     material.examYear === 2021 && material.examRound === 32
   ));
-  const materials2021Hashs = new Set(materials2021.map((material) => material.localRawFileNameHash));
   const firstMode2021 = materials2021.filter((material) => material.examMode === "first");
   const secondMode2021 = materials2021.filter((material) => material.examMode === "second");
+  const secondPractice2021 = secondMode2021.find((material) => material.paper === "2차 1교시: 감정평가실무");
 
-  assert.equal(materials2021.length, expectedLocalFileNames.length);
+  assert.equal(materials2021.length, 5);
   assert.equal(materials2021.filter((material) => material.paper === "1교시").length, 2);
   assert.equal(materials2021.filter((material) => material.paper === "2교시").length, 2);
   assert.equal(firstMode2021.length, 4);
-  assert.equal(secondMode2021.length, has2021SecondPaper ? 1 : 0);
+  assert.equal(secondMode2021.length, 1);
+  assert.ok(secondPractice2021);
+  assert.equal(secondPractice2021.subject, "감정평가실무");
   assert.equal(materials2021.every((material) => material.itemType === "source_paper"), true);
   assert.equal(materials2021.every((material) => material.sourceStatus === "verified"), true);
   assert.equal(materials2021.every((material) => material.needsOfficialVerification === false), true);
   assert.equal(materials2021.every((material) => material.sourceId.includes("qnet-appraiser-2021-32")), true);
-  assert.equal(new Set(materials2021.map((material) => material.subject)).has("감정평가사 1차"), true);
+  assert.equal(new Set(firstMode2021.map((material) => material.subject)).has("감정평가사 1차"), true);
   assert.equal(new Set(materials2021.map((material) => material.sourceUrl)).size, 1);
   assert.equal(new Set(materials2021.map((material) => material.sourceUrl)).has("https://www.q-net.or.kr/cst003.do?gId=31&gSite=L&id=cst00309"), true);
-  for (const expectedHash of expectedHashes) {
-    assert.equal(materials2021Hashs.has(expectedHash), true);
-  }
 
   assert.equal(firstMode2021.every((material) => material.subject === "감정평가사 1차"), true);
-  if (has2021SecondPaper) {
-    const secondPaper2021 = secondMode2021.find((material) => material.paper.includes("2차 1교시"));
-    assert.ok(secondPaper2021);
-    assert.equal(secondPaper2021.subject, "감정평가실무");
-  }
-
-  assert.equal(materials2021.filter((material) => material.paper.includes("2차 2교시")).length, 0);
-  assert.equal(materials2021.filter((material) => material.paper.includes("2차 3교시")).length, 0);
+  assert.equal(materials2021.some((material) => material.paper.includes("2차 2교시")), false);
+  assert.equal(materials2021.some((material) => material.paper.includes("2차 3교시")), false);
   assert.equal(materials2021.some((material) => material.topicCandidates.includes("office building appraisal")), true);
   assert.equal(materials2021.some((material) => material.topicCandidates.includes("unit / basis / adjustment timing risks")), true);
+  assert.equal(materials2021.every((material) => /^[0-9a-f]{64}$/.test(material.localRawFileNameHash)), true);
   assert.equal(materials2021.every((material) => material.rawTextStored === false), true);
   assert.equal(materials2021.every((material) => material.copyrightedTextStored === false), true);
+  for (const material of materials2021) {
+    assert.equal(Object.prototype.hasOwnProperty.call(material, "localFileName"), false);
+    assert.equal(Object.prototype.hasOwnProperty.call(material, "sourceFileName"), false);
+    assert.equal(Object.prototype.hasOwnProperty.call(material, "localFilePath"), false);
+    assert.equal(Object.prototype.hasOwnProperty.call(material, "sourceFilePath"), false);
+    assert.equal(Object.prototype.hasOwnProperty.call(material, "rawFilePath"), false);
+  }
 });
 
 test("Q-Net reference signals expose only safe metadata for future ranking integrations", () => {
