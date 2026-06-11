@@ -89,7 +89,6 @@ function LocalBetaCaptureNoteList({
       </CardHeader>
       <CardContent className="space-y-3">
         <p className="text-xs text-[color:var(--muted)]">closed beta 브라우저 임시 기록입니다. 이 브라우저의 Notes, Review, Today에서 이어서 확인할 수 있습니다.</p>
-        <p className="text-xs text-[color:var(--muted)]">이 브라우저에 임시 저장된 closed beta 기록입니다.</p>
         {notes.map((note) => {
           const createdAt = formatNoteDate(note.createdAt);
           return (
