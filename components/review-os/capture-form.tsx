@@ -16,6 +16,7 @@ import {
 } from "@/lib/review-os/appraisal";
 import { clearReviewOsDraft, loadReviewOsDraft, saveReviewOsDraft, saveReviewOsLocalBetaNote } from "@/lib/review-os/browser-storage";
 import { getCalculatorWorkflowForSubject } from "@/lib/review-os/calculator-workflow";
+import { resolveCaptureConfirmationCopy } from "@/lib/review-os/capture-confirmation-copy";
 import { buildCaptureNoteDisplayCopy, buildCaptureNoteSummary } from "@/lib/review-os/capture-note-display-copy";
 import { applyDraftToConfirmedSubject, type ExtractionDraft, type ExtractionPipelineResult } from "@/lib/review-os/extraction";
 import { extractFirstExamFiveChoicesFromText } from "@/lib/review-os/first-ox-engine";
@@ -837,23 +838,35 @@ export function WrongAnswerCaptureForm({
   }
 
   function getCaptureConfirmationCopy(source: DraftState) {
-    const biggestGap =
-      mode === "second"
-        ? source.biggestGap || source.missingIssue || source.userReasonText || "오늘 입력에서 가장 큰 약점 후보 1개를 확인해 주세요."
-        : source.userReasonText || source.userReasonPreset || source.comparisonPoint || "오늘 입력에서 가장 큰 약점 후보 1개를 확인해 주세요.";
-    const nextAction =
-      mode === "second"
-        ? source.rewriteInstruction || "가장 큰 약점 후보를 반영해 한 문단만 다시 써 보세요."
-        : source.comparisonPoint || "헷갈린 개념을 O/X로 한 번 더 회상해 보세요.";
-    return { biggestGap, nextAction };
+    return resolveCaptureConfirmationCopy({
+      mode,
+      subjectLabel: source.subjectLabel,
+      rawQuestionText: source.rawQuestionText,
+      rawAnswerText: source.rawOcrText,
+      userAnswer: source.userAnswer,
+      issueRecall: source.issueRecall,
+      outlineDraft: source.outlineDraft,
+      rewriteParagraph: source.rewriteParagraph,
+      myAnswerSummary: source.myAnswerSummary,
+      userReasonText: source.userReasonText,
+      userReasonPreset: source.userReasonPreset,
+      biggestGap: source.biggestGap,
+      missingIssue: source.missingIssue,
+      comparisonPoint: source.comparisonPoint,
+      rewriteInstruction: source.rewriteInstruction,
+      problemTitle: source.problemTitle,
+      caseSummary: source.caseSummary,
+    });
   }
 
   function saveLocalCaptureConfirmation(source: DraftState) {
     const copy = getCaptureConfirmationCopy(source);
+    const sourceType = source.sourceType === "image" ? "photo" : source.sourceType === "manual" ? "text" : source.sourceType;
     const localNote = saveReviewOsLocalBetaNote({
       mode,
       subjectLabel: source.subjectLabel || getDefaultSubject(mode),
-      problemTitle: source.problemTitle || firstLine(source.rawQuestionText, `${source.subjectLabel || getDefaultSubject(mode)} 입력 기록`),
+      sourceType,
+      problemTitle: source.problemTitle || `${source.subjectLabel || getDefaultSubject(mode)} 입력 캡처`,
       biggestGap: copy.biggestGap,
       nextAction: copy.nextAction,
     });
