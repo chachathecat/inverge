@@ -277,3 +277,20 @@ test("golden flow learner surfaces do not expose instructor, payment, public arc
     assert.equal(/official\s+grading|official\s+score|model\s+answer|pass\/fail|score\s+prediction/i.test(source), false, `${file} must not add official grading/model answer/pass-fail claims`);
   }
 });
+
+test("PR359 owner QA evidence preserves closed-beta golden flow release decision", () => {
+  const docPath = "docs/closed-beta-owner-qa-pr-359.md";
+  assertExists(docPath);
+
+  const doc = read(docPath);
+
+  assert.equal(doc.includes("PR: #359 Capture Save Durability & Notes Reflection v1"), true);
+  assert.equal(doc.includes("Capture -> Save -> Notes -> Review -> Today"), true);
+  assert.equal(doc.includes("AUTH_BLOCKED"), true);
+  assert.equal(doc.includes("official grading/model-answer/score/pass-fail copy"), true);
+  assert.equal(doc.includes("metadata-safe"), true);
+  assert.equal(doc.includes("local beta note reflection"), true);
+  assert.equal(doc.includes("계산 근거 누락"), true);
+  assert.equal(doc.includes("사업인정 처분성 판단 기준 혼동"), true);
+  assert.equal(doc.includes("사업인정 처분성 판단 기준을 한 문단으로 다시 써보기"), true);
+});
