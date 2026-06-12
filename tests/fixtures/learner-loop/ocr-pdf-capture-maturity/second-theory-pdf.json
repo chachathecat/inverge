@@ -1,0 +1,16 @@
+{
+  "fixtureId": "second-theory-pdf",
+  "examMode": "second",
+  "subject": "감정평가이론",
+  "sourceType": "pdf",
+  "syntheticInputSummary": "내 이론 목차 연습 노트를 PDF draft로 확인했고 정의, 비교, 적용 문단의 연결이 약하다고 정리했다.",
+  "ocrDraftStatus": "draft",
+  "editableBeforeSave": true,
+  "learnerOwned": true,
+  "metadataOnly": true,
+  "biggestGap": "정의와 적용 문단 연결 부족",
+  "nextAction": "목차 3줄을 먼저 쓰고 적용 문단 한 개를 다시 써보기",
+  "expectedTaskType": "rewrite",
+  "forbiddenFieldsAbsent": true,
+  "safeUse": "closed_beta_ocr_pdf_capture_maturity"
+}

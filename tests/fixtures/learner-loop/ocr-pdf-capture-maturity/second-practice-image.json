@@ -1,0 +1,16 @@
+{
+  "fixtureId": "second-practice-image",
+  "examMode": "second",
+  "subject": "감정평가실무",
+  "sourceType": "image",
+  "syntheticInputSummary": "손으로 적은 실무 계산 복습 메모를 이미지 draft로 확인했고 보정 시점과 단위 표시가 흔들린다고 정리했다.",
+  "ocrDraftStatus": "draft",
+  "editableBeforeSave": true,
+  "learnerOwned": true,
+  "metadataOnly": true,
+  "biggestGap": "보정 시점과 단위 표시 연결 부족",
+  "nextAction": "산식-단위-보정 시점 순서로 계산 과정을 다시 써보기",
+  "expectedTaskType": "calculation_template",
+  "forbiddenFieldsAbsent": true,
+  "safeUse": "closed_beta_ocr_pdf_capture_maturity"
+}

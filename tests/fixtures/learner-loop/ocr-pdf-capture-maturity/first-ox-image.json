@@ -1,0 +1,16 @@
+{
+  "fixtureId": "first-ox-image",
+  "examMode": "first",
+  "subject": "민법",
+  "sourceType": "image",
+  "syntheticInputSummary": "사진으로 찍은 내 오답 메모를 보고 무효와 취소의 효과 구분을 다시 정리했다.",
+  "ocrDraftStatus": "draft",
+  "editableBeforeSave": true,
+  "learnerOwned": true,
+  "metadataOnly": true,
+  "biggestGap": "무효와 취소 효과 구분 혼동",
+  "nextAction": "무효와 취소 O/X 5문장을 직접 판단하고 근거 한 줄 쓰기",
+  "expectedTaskType": "ox",
+  "forbiddenFieldsAbsent": true,
+  "safeUse": "closed_beta_ocr_pdf_capture_maturity"
+}

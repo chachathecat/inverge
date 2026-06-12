@@ -1,0 +1,16 @@
+{
+  "fixtureId": "second-law-text",
+  "examMode": "second",
+  "subject": "감정평가 및 보상법규",
+  "sourceType": "text",
+  "syntheticInputSummary": "오늘 사업인정과 처분성 판단 기준을 내 말로 정리했고 요건, 절차, 사안 포섭 순서가 헷갈렸다고 기록했다.",
+  "ocrDraftStatus": "draft",
+  "editableBeforeSave": true,
+  "learnerOwned": true,
+  "metadataOnly": true,
+  "biggestGap": "사업인정 처분성 판단 기준 혼동",
+  "nextAction": "처분성 판단 기준을 요건-절차-포섭 순서로 한 문단 다시 쓰기",
+  "expectedTaskType": "issue_recall",
+  "forbiddenFieldsAbsent": true,
+  "safeUse": "closed_beta_ocr_pdf_capture_maturity"
+}
