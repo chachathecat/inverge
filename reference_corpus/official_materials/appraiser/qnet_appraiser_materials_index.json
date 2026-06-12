@@ -1160,6 +1160,267 @@
       "rawTextStored": false,
       "copyrightedTextStored": false,
       "safeNotes": null
+    },
+    {
+      "sourceId": "qnet-appraiser-2021-32-first-1-source-9dff4453da64",
+      "officialSourceId": "qnet_appraiser_past_questions",
+      "sourceKind": "past_questions",
+      "sourceName": "Q-Net 기출문제 내려받기",
+      "sourceUrl": "https://www.q-net.or.kr/cst003.do?gId=31&gSite=L&id=cst00309",
+      "localRawFileNameHash": "97bc6d57333f93293022efbd3d389a20917a508e3370c916c278593087f39f1c",
+      "examYear": 2021,
+      "examRound": 32,
+      "examMode": "first",
+      "subject": "감정평가사 1차",
+      "paper": "1교시",
+      "questionNumber": "source",
+      "itemType": "source_paper",
+      "topicCandidates": [
+        "first exam",
+        "first exam paper 1",
+        "civil law",
+        "economics",
+        "real estate studies"
+      ],
+      "curriculumNodeCandidates": [
+        "first_exam_paper_1",
+        "first_civil_law",
+        "first_economics",
+        "first_real_estate_studies"
+      ],
+      "issueCandidates": [
+        "first exam paper 1",
+        "1st paper source coverage"
+      ],
+      "trapWordCandidates": [
+        "definition gap",
+        "norm trap",
+        "calculation condition check"
+      ],
+      "answerSkeletonTags": [],
+      "calculationTemplateCandidates": [
+        "economics_graph_or_formula_check"
+      ],
+      "casioRelevant": false,
+      "estimatedMinutes": 120,
+      "difficultyBand": "mixed",
+      "sourceStatus": "verified",
+      "lastOfficialVerifiedAt": "2026-06-11",
+      "needsOfficialVerification": false,
+      "rawTextStored": false,
+      "copyrightedTextStored": false,
+      "safeNotes": null
+    },
+    {
+      "sourceId": "qnet-appraiser-2021-32-first-1-source-d27818baa00b",
+      "officialSourceId": "qnet_appraiser_past_questions",
+      "sourceKind": "past_questions",
+      "sourceName": "Q-Net 기출문제 내려받기",
+      "sourceUrl": "https://www.q-net.or.kr/cst003.do?gId=31&gSite=L&id=cst00309",
+      "localRawFileNameHash": "4e68e2436bb2e2dd1d47d2e6693918ff7f4606833d63f59ab298165272626005",
+      "examYear": 2021,
+      "examRound": 32,
+      "examMode": "first",
+      "subject": "감정평가사 1차",
+      "paper": "1교시",
+      "questionNumber": "source",
+      "itemType": "source_paper",
+      "topicCandidates": [
+        "first exam",
+        "first exam paper 1",
+        "civil law",
+        "economics",
+        "real estate studies"
+      ],
+      "curriculumNodeCandidates": [
+        "first_exam_paper_1",
+        "first_civil_law",
+        "first_economics",
+        "first_real_estate_studies"
+      ],
+      "issueCandidates": [
+        "first exam paper 1",
+        "1st paper source coverage"
+      ],
+      "trapWordCandidates": [
+        "definition gap",
+        "norm trap",
+        "calculation condition check"
+      ],
+      "answerSkeletonTags": [],
+      "calculationTemplateCandidates": [
+        "economics_graph_or_formula_check"
+      ],
+      "casioRelevant": false,
+      "estimatedMinutes": 120,
+      "difficultyBand": "mixed",
+      "sourceStatus": "verified",
+      "lastOfficialVerifiedAt": "2026-06-11",
+      "needsOfficialVerification": false,
+      "rawTextStored": false,
+      "copyrightedTextStored": false,
+      "safeNotes": null
+    },
+    {
+      "sourceId": "qnet-appraiser-2021-32-first-2-source-99dd81a28253",
+      "officialSourceId": "qnet_appraiser_past_questions",
+      "sourceKind": "past_questions",
+      "sourceName": "Q-Net 기출문제 내려받기",
+      "sourceUrl": "https://www.q-net.or.kr/cst003.do?gId=31&gSite=L&id=cst00309",
+      "localRawFileNameHash": "bcbda02c34042d93576b5fe1d4971fa6a2965eb913452a1bf364f8b048d150a4",
+      "examYear": 2021,
+      "examRound": 32,
+      "examMode": "first",
+      "subject": "감정평가사 1차",
+      "paper": "2교시",
+      "questionNumber": "source",
+      "itemType": "source_paper",
+      "topicCandidates": [
+        "first exam",
+        "first exam paper 2",
+        "appraisal related law",
+        "accounting"
+      ],
+      "curriculumNodeCandidates": [
+        "first_exam_paper_2",
+        "first_appraisal_related_law",
+        "first_accounting"
+      ],
+      "issueCandidates": [
+        "first exam paper 2",
+        "2nd paper source coverage"
+      ],
+      "trapWordCandidates": [
+        "term distinction",
+        "application miss",
+        "calculation condition check"
+      ],
+      "answerSkeletonTags": [],
+      "calculationTemplateCandidates": [
+        "accounting_template_check"
+      ],
+      "casioRelevant": true,
+      "estimatedMinutes": 80,
+      "difficultyBand": "mixed",
+      "sourceStatus": "verified",
+      "lastOfficialVerifiedAt": "2026-06-11",
+      "needsOfficialVerification": false,
+      "rawTextStored": false,
+      "copyrightedTextStored": false,
+      "safeNotes": null
+    },
+    {
+      "sourceId": "qnet-appraiser-2021-32-first-2-source-d029716cbdd7",
+      "officialSourceId": "qnet_appraiser_past_questions",
+      "sourceKind": "past_questions",
+      "sourceName": "Q-Net 기출문제 내려받기",
+      "sourceUrl": "https://www.q-net.or.kr/cst003.do?gId=31&gSite=L&id=cst00309",
+      "localRawFileNameHash": "2267dbcbf72272dc9029015e933a21a0d49cf08ea9c7dbe609233686e7999e87",
+      "examYear": 2021,
+      "examRound": 32,
+      "examMode": "first",
+      "subject": "감정평가사 1차",
+      "paper": "2교시",
+      "questionNumber": "source",
+      "itemType": "source_paper",
+      "topicCandidates": [
+        "first exam",
+        "first exam paper 2",
+        "appraisal related law",
+        "accounting"
+      ],
+      "curriculumNodeCandidates": [
+        "first_exam_paper_2",
+        "first_appraisal_related_law",
+        "first_accounting"
+      ],
+      "issueCandidates": [
+        "first exam paper 2",
+        "2nd paper source coverage"
+      ],
+      "trapWordCandidates": [
+        "term distinction",
+        "application miss",
+        "calculation condition check"
+      ],
+      "answerSkeletonTags": [],
+      "calculationTemplateCandidates": [
+        "accounting_template_check"
+      ],
+      "casioRelevant": true,
+      "estimatedMinutes": 80,
+      "difficultyBand": "mixed",
+      "sourceStatus": "verified",
+      "lastOfficialVerifiedAt": "2026-06-11",
+      "needsOfficialVerification": false,
+      "rawTextStored": false,
+      "copyrightedTextStored": false,
+      "safeNotes": null
+    },
+    {
+      "sourceId": "qnet-appraiser-2021-32-second-2-source-9b107fbeee1d",
+      "officialSourceId": "qnet_appraiser_past_questions",
+      "sourceKind": "past_questions",
+      "sourceName": "Q-Net 기출문제 내려받기",
+      "sourceUrl": "https://www.q-net.or.kr/cst003.do?gId=31&gSite=L&id=cst00309",
+      "localRawFileNameHash": "6aa23139bb5de265fe8d0526c7070d374f6dd52846b9ff42716bb77740aeb0b7",
+      "examYear": 2021,
+      "examRound": 32,
+      "examMode": "second",
+      "subject": "감정평가실무",
+      "paper": "2차 1교시: 감정평가실무",
+      "questionNumber": "source",
+      "itemType": "source_paper",
+      "topicCandidates": [
+        "second practice",
+        "office building appraisal",
+        "cost approach",
+        "transaction comparison approach",
+        "income approach",
+        "market value",
+        "trial value adjustment",
+        "rent appraisal",
+        "expected profit / rent free adjustment",
+        "land compensation",
+        "acquisition price / incidental expense",
+        "compensation precedent comparison",
+        "practice calculation process",
+        "unit / basis / adjustment timing risks"
+      ],
+      "curriculumNodeCandidates": [
+        "second_practice",
+        "second_practice_three_approaches",
+        "second_practice_cost_approach",
+        "second_practice_comparison_approach",
+        "second_practice_income_approach",
+        "second_practice_compensation",
+        "second_practice_calculation_process"
+      ],
+      "issueCandidates": [
+        "practical calculation checkpoint",
+        "rental-income comparison check",
+        "adjustment timing check"
+      ],
+      "trapWordCandidates": [
+        "unit-basis confusion",
+        "base-line omission",
+        "comparison application mismatch"
+      ],
+      "answerSkeletonTags": [],
+      "calculationTemplateCandidates": [
+        "three_approaches_template",
+        "income_approach_template",
+        "compensation_valuation_template"
+      ],
+      "casioRelevant": true,
+      "estimatedMinutes": 100,
+      "difficultyBand": "mixed",
+      "sourceStatus": "verified",
+      "lastOfficialVerifiedAt": "2026-06-11",
+      "needsOfficialVerification": false,
+      "rawTextStored": false,
+      "copyrightedTextStored": false,
+      "safeNotes": null
     }
   ]
 }

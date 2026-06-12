@@ -15,9 +15,9 @@
       "sourceName": "Q-Net 기출문제 내려받기",
       "sourceUrl": "https://www.q-net.or.kr/cst003.do?gId=31&gSite=L&id=cst00309",
       "sourceStatusCounts": {
-        "verified": 20
+        "verified": 25
       },
-      "materialCount": 20,
+      "materialCount": 25,
       "sourceIds": [
         "qnet-appraiser-2025-36-first-1-source-2f2925842cb7",
         "qnet-appraiser-2025-36-first-2-source-31e9b5a15f32",
@@ -38,7 +38,12 @@
         "qnet-appraiser-2022-33-first-2-source-a02c5cc144a1",
         "qnet-appraiser-2022-33-second-2-1-source-59a35ceaa518",
         "qnet-appraiser-2022-33-second-2-2-source-c11b8f5f883a",
-        "qnet-appraiser-2022-33-second-2-3-source-4170ede66222"
+        "qnet-appraiser-2022-33-second-2-3-source-4170ede66222",
+        "qnet-appraiser-2021-32-first-1-source-9dff4453da64",
+        "qnet-appraiser-2021-32-first-1-source-d27818baa00b",
+        "qnet-appraiser-2021-32-first-2-source-99dd81a28253",
+        "qnet-appraiser-2021-32-first-2-source-d029716cbdd7",
+        "qnet-appraiser-2021-32-second-2-source-9b107fbeee1d"
       ],
       "rawTextStored": false,
       "copyrightedTextStored": false

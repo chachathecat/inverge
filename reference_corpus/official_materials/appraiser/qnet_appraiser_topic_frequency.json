@@ -26,6 +26,22 @@
       "copyrightedTextStored": false
     },
     {
+      "examMode": "first",
+      "subject": "감정평가사 1차",
+      "topic": "first exam",
+      "count": 6,
+      "sourceIds": [
+        "qnet-appraiser-2022-33-first-1-source-114fea9c4cba",
+        "qnet-appraiser-2022-33-first-2-source-a02c5cc144a1",
+        "qnet-appraiser-2021-32-first-1-source-9dff4453da64",
+        "qnet-appraiser-2021-32-first-1-source-d27818baa00b",
+        "qnet-appraiser-2021-32-first-2-source-99dd81a28253",
+        "qnet-appraiser-2021-32-first-2-source-d029716cbdd7"
+      ],
+      "rawTextStored": false,
+      "copyrightedTextStored": false
+    },
+    {
       "examMode": "second",
       "subject": "감정평가 및 보상법규",
       "topic": "감정평가 및 보상법규",
@@ -169,6 +185,97 @@
       "copyrightedTextStored": false
     },
     {
+      "examMode": "first",
+      "subject": "감정평가사 1차",
+      "topic": "accounting",
+      "count": 3,
+      "sourceIds": [
+        "qnet-appraiser-2022-33-first-2-source-a02c5cc144a1",
+        "qnet-appraiser-2021-32-first-2-source-99dd81a28253",
+        "qnet-appraiser-2021-32-first-2-source-d029716cbdd7"
+      ],
+      "rawTextStored": false,
+      "copyrightedTextStored": false
+    },
+    {
+      "examMode": "first",
+      "subject": "감정평가사 1차",
+      "topic": "appraisal related law",
+      "count": 3,
+      "sourceIds": [
+        "qnet-appraiser-2022-33-first-2-source-a02c5cc144a1",
+        "qnet-appraiser-2021-32-first-2-source-99dd81a28253",
+        "qnet-appraiser-2021-32-first-2-source-d029716cbdd7"
+      ],
+      "rawTextStored": false,
+      "copyrightedTextStored": false
+    },
+    {
+      "examMode": "first",
+      "subject": "감정평가사 1차",
+      "topic": "civil law",
+      "count": 3,
+      "sourceIds": [
+        "qnet-appraiser-2022-33-first-1-source-114fea9c4cba",
+        "qnet-appraiser-2021-32-first-1-source-9dff4453da64",
+        "qnet-appraiser-2021-32-first-1-source-d27818baa00b"
+      ],
+      "rawTextStored": false,
+      "copyrightedTextStored": false
+    },
+    {
+      "examMode": "first",
+      "subject": "감정평가사 1차",
+      "topic": "economics",
+      "count": 3,
+      "sourceIds": [
+        "qnet-appraiser-2022-33-first-1-source-114fea9c4cba",
+        "qnet-appraiser-2021-32-first-1-source-9dff4453da64",
+        "qnet-appraiser-2021-32-first-1-source-d27818baa00b"
+      ],
+      "rawTextStored": false,
+      "copyrightedTextStored": false
+    },
+    {
+      "examMode": "first",
+      "subject": "감정평가사 1차",
+      "topic": "first exam paper 1",
+      "count": 3,
+      "sourceIds": [
+        "qnet-appraiser-2022-33-first-1-source-114fea9c4cba",
+        "qnet-appraiser-2021-32-first-1-source-9dff4453da64",
+        "qnet-appraiser-2021-32-first-1-source-d27818baa00b"
+      ],
+      "rawTextStored": false,
+      "copyrightedTextStored": false
+    },
+    {
+      "examMode": "first",
+      "subject": "감정평가사 1차",
+      "topic": "first exam paper 2",
+      "count": 3,
+      "sourceIds": [
+        "qnet-appraiser-2022-33-first-2-source-a02c5cc144a1",
+        "qnet-appraiser-2021-32-first-2-source-99dd81a28253",
+        "qnet-appraiser-2021-32-first-2-source-d029716cbdd7"
+      ],
+      "rawTextStored": false,
+      "copyrightedTextStored": false
+    },
+    {
+      "examMode": "first",
+      "subject": "감정평가사 1차",
+      "topic": "real estate studies",
+      "count": 3,
+      "sourceIds": [
+        "qnet-appraiser-2022-33-first-1-source-114fea9c4cba",
+        "qnet-appraiser-2021-32-first-1-source-9dff4453da64",
+        "qnet-appraiser-2021-32-first-1-source-d27818baa00b"
+      ],
+      "rawTextStored": false,
+      "copyrightedTextStored": false
+    },
+    {
       "examMode": "second",
       "subject": "감정평가실무",
       "topic": "감정평가실무",
@@ -202,18 +309,6 @@
       "sourceIds": [
         "qnet-appraiser-2025-36-second-2-source-c7d7a2d7ef75",
         "qnet-appraiser-2024-35-second-2-source-917a9393c990"
-      ],
-      "rawTextStored": false,
-      "copyrightedTextStored": false
-    },
-    {
-      "examMode": "first",
-      "subject": "감정평가사 1차",
-      "topic": "first exam",
-      "count": 2,
-      "sourceIds": [
-        "qnet-appraiser-2022-33-first-1-source-114fea9c4cba",
-        "qnet-appraiser-2022-33-first-2-source-a02c5cc144a1"
       ],
       "rawTextStored": false,
       "copyrightedTextStored": false
@@ -286,6 +381,94 @@
       "sourceIds": [
         "qnet-appraiser-2025-36-second-2-source-5e365143ea1b",
         "qnet-appraiser-2024-35-second-2-source-cdacf02c52f1"
+      ],
+      "rawTextStored": false,
+      "copyrightedTextStored": false
+    },
+    {
+      "examMode": "second",
+      "subject": "감정평가 및 보상법규",
+      "topic": "개별공시지가",
+      "count": 1,
+      "sourceIds": [
+        "qnet-appraiser-2023-34-second-2-3-source-aa2fcb58c0ab"
+      ],
+      "rawTextStored": false,
+      "copyrightedTextStored": false
+    },
+    {
+      "examMode": "second",
+      "subject": "감정평가 및 보상법규",
+      "topic": "보상금증감소송",
+      "count": 1,
+      "sourceIds": [
+        "qnet-appraiser-2023-34-second-2-3-source-aa2fcb58c0ab"
+      ],
+      "rawTextStored": false,
+      "copyrightedTextStored": false
+    },
+    {
+      "examMode": "second",
+      "subject": "감정평가 및 보상법규",
+      "topic": "사업인정고시",
+      "count": 1,
+      "sourceIds": [
+        "qnet-appraiser-2023-34-second-2-3-source-aa2fcb58c0ab"
+      ],
+      "rawTextStored": false,
+      "copyrightedTextStored": false
+    },
+    {
+      "examMode": "second",
+      "subject": "감정평가 및 보상법규",
+      "topic": "의무 위반",
+      "count": 1,
+      "sourceIds": [
+        "qnet-appraiser-2023-34-second-2-3-source-aa2fcb58c0ab"
+      ],
+      "rawTextStored": false,
+      "copyrightedTextStored": false
+    },
+    {
+      "examMode": "second",
+      "subject": "감정평가 및 보상법규",
+      "topic": "이의재결",
+      "count": 1,
+      "sourceIds": [
+        "qnet-appraiser-2023-34-second-2-3-source-aa2fcb58c0ab"
+      ],
+      "rawTextStored": false,
+      "copyrightedTextStored": false
+    },
+    {
+      "examMode": "second",
+      "subject": "감정평가 및 보상법규",
+      "topic": "주거이전비",
+      "count": 1,
+      "sourceIds": [
+        "qnet-appraiser-2024-35-second-2-source-917a9393c990"
+      ],
+      "rawTextStored": false,
+      "copyrightedTextStored": false
+    },
+    {
+      "examMode": "second",
+      "subject": "감정평가 및 보상법규",
+      "topic": "징계",
+      "count": 1,
+      "sourceIds": [
+        "qnet-appraiser-2023-34-second-2-3-source-aa2fcb58c0ab"
+      ],
+      "rawTextStored": false,
+      "copyrightedTextStored": false
+    },
+    {
+      "examMode": "second",
+      "subject": "감정평가 및 보상법규",
+      "topic": "환매권",
+      "count": 1,
+      "sourceIds": [
+        "qnet-appraiser-2024-35-second-2-source-917a9393c990"
       ],
       "rawTextStored": false,
       "copyrightedTextStored": false
@@ -424,325 +607,6 @@
     },
     {
       "examMode": "second",
-      "subject": "감정평가 및 보상법규",
-      "topic": "개별공시지가",
-      "count": 1,
-      "sourceIds": [
-        "qnet-appraiser-2023-34-second-2-3-source-aa2fcb58c0ab"
-      ],
-      "rawTextStored": false,
-      "copyrightedTextStored": false
-    },
-    {
-      "examMode": "second",
-      "subject": "감정평가 및 보상법규",
-      "topic": "보상금증감소송",
-      "count": 1,
-      "sourceIds": [
-        "qnet-appraiser-2023-34-second-2-3-source-aa2fcb58c0ab"
-      ],
-      "rawTextStored": false,
-      "copyrightedTextStored": false
-    },
-    {
-      "examMode": "second",
-      "subject": "감정평가 및 보상법규",
-      "topic": "사업인정고시",
-      "count": 1,
-      "sourceIds": [
-        "qnet-appraiser-2023-34-second-2-3-source-aa2fcb58c0ab"
-      ],
-      "rawTextStored": false,
-      "copyrightedTextStored": false
-    },
-    {
-      "examMode": "second",
-      "subject": "감정평가 및 보상법규",
-      "topic": "의무 위반",
-      "count": 1,
-      "sourceIds": [
-        "qnet-appraiser-2023-34-second-2-3-source-aa2fcb58c0ab"
-      ],
-      "rawTextStored": false,
-      "copyrightedTextStored": false
-    },
-    {
-      "examMode": "second",
-      "subject": "감정평가 및 보상법규",
-      "topic": "이의재결",
-      "count": 1,
-      "sourceIds": [
-        "qnet-appraiser-2023-34-second-2-3-source-aa2fcb58c0ab"
-      ],
-      "rawTextStored": false,
-      "copyrightedTextStored": false
-    },
-    {
-      "examMode": "second",
-      "subject": "감정평가 및 보상법규",
-      "topic": "주거이전비",
-      "count": 1,
-      "sourceIds": [
-        "qnet-appraiser-2024-35-second-2-source-917a9393c990"
-      ],
-      "rawTextStored": false,
-      "copyrightedTextStored": false
-    },
-    {
-      "examMode": "second",
-      "subject": "감정평가 및 보상법규",
-      "topic": "징계",
-      "count": 1,
-      "sourceIds": [
-        "qnet-appraiser-2023-34-second-2-3-source-aa2fcb58c0ab"
-      ],
-      "rawTextStored": false,
-      "copyrightedTextStored": false
-    },
-    {
-      "examMode": "second",
-      "subject": "감정평가 및 보상법규",
-      "topic": "환매권",
-      "count": 1,
-      "sourceIds": [
-        "qnet-appraiser-2024-35-second-2-source-917a9393c990"
-      ],
-      "rawTextStored": false,
-      "copyrightedTextStored": false
-    },
-    {
-      "examMode": "first",
-      "subject": "감정평가사 1차",
-      "topic": "accounting",
-      "count": 1,
-      "sourceIds": [
-        "qnet-appraiser-2022-33-first-2-source-a02c5cc144a1"
-      ],
-      "rawTextStored": false,
-      "copyrightedTextStored": false
-    },
-    {
-      "examMode": "first",
-      "subject": "감정평가사 1차",
-      "topic": "appraisal related law",
-      "count": 1,
-      "sourceIds": [
-        "qnet-appraiser-2022-33-first-2-source-a02c5cc144a1"
-      ],
-      "rawTextStored": false,
-      "copyrightedTextStored": false
-    },
-    {
-      "examMode": "first",
-      "subject": "감정평가사 1차",
-      "topic": "civil law",
-      "count": 1,
-      "sourceIds": [
-        "qnet-appraiser-2022-33-first-1-source-114fea9c4cba"
-      ],
-      "rawTextStored": false,
-      "copyrightedTextStored": false
-    },
-    {
-      "examMode": "first",
-      "subject": "감정평가사 1차",
-      "topic": "economics",
-      "count": 1,
-      "sourceIds": [
-        "qnet-appraiser-2022-33-first-1-source-114fea9c4cba"
-      ],
-      "rawTextStored": false,
-      "copyrightedTextStored": false
-    },
-    {
-      "examMode": "first",
-      "subject": "감정평가사 1차",
-      "topic": "first exam paper 1",
-      "count": 1,
-      "sourceIds": [
-        "qnet-appraiser-2022-33-first-1-source-114fea9c4cba"
-      ],
-      "rawTextStored": false,
-      "copyrightedTextStored": false
-    },
-    {
-      "examMode": "first",
-      "subject": "감정평가사 1차",
-      "topic": "first exam paper 2",
-      "count": 1,
-      "sourceIds": [
-        "qnet-appraiser-2022-33-first-2-source-a02c5cc144a1"
-      ],
-      "rawTextStored": false,
-      "copyrightedTextStored": false
-    },
-    {
-      "examMode": "first",
-      "subject": "감정평가사 1차",
-      "topic": "real estate studies",
-      "count": 1,
-      "sourceIds": [
-        "qnet-appraiser-2022-33-first-1-source-114fea9c4cba"
-      ],
-      "rawTextStored": false,
-      "copyrightedTextStored": false
-    },
-    {
-      "examMode": "second",
-      "subject": "감정평가실무",
-      "topic": "adjustment timing",
-      "count": 1,
-      "sourceIds": [
-        "qnet-appraiser-2022-33-second-2-1-source-59a35ceaa518"
-      ],
-      "rawTextStored": false,
-      "copyrightedTextStored": false
-    },
-    {
-      "examMode": "second",
-      "subject": "감정평가실무",
-      "topic": "building / tree / livestock loss compensation",
-      "count": 1,
-      "sourceIds": [
-        "qnet-appraiser-2022-33-second-2-1-source-59a35ceaa518"
-      ],
-      "rawTextStored": false,
-      "copyrightedTextStored": false
-    },
-    {
-      "examMode": "second",
-      "subject": "감정평가실무",
-      "topic": "calculation basis",
-      "count": 1,
-      "sourceIds": [
-        "qnet-appraiser-2022-33-second-2-1-source-59a35ceaa518"
-      ],
-      "rawTextStored": false,
-      "copyrightedTextStored": false
-    },
-    {
-      "examMode": "second",
-      "subject": "감정평가실무",
-      "topic": "compensation appraisal",
-      "count": 1,
-      "sourceIds": [
-        "qnet-appraiser-2022-33-second-2-1-source-59a35ceaa518"
-      ],
-      "rawTextStored": false,
-      "copyrightedTextStored": false
-    },
-    {
-      "examMode": "second",
-      "subject": "감정평가실무",
-      "topic": "compensation calculation process",
-      "count": 1,
-      "sourceIds": [
-        "qnet-appraiser-2022-33-second-2-1-source-59a35ceaa518"
-      ],
-      "rawTextStored": false,
-      "copyrightedTextStored": false
-    },
-    {
-      "examMode": "second",
-      "subject": "감정평가실무",
-      "topic": "goodwill / right premium appraisal",
-      "count": 1,
-      "sourceIds": [
-        "qnet-appraiser-2022-33-second-2-1-source-59a35ceaa518"
-      ],
-      "rawTextStored": false,
-      "copyrightedTextStored": false
-    },
-    {
-      "examMode": "second",
-      "subject": "감정평가실무",
-      "topic": "long-term leasehold",
-      "count": 1,
-      "sourceIds": [
-        "qnet-appraiser-2022-33-second-2-1-source-59a35ceaa518"
-      ],
-      "rawTextStored": false,
-      "copyrightedTextStored": false
-    },
-    {
-      "examMode": "second",
-      "subject": "감정평가실무",
-      "topic": "market data adjustment",
-      "count": 1,
-      "sourceIds": [
-        "qnet-appraiser-2022-33-second-2-1-source-59a35ceaa518"
-      ],
-      "rawTextStored": false,
-      "copyrightedTextStored": false
-    },
-    {
-      "examMode": "second",
-      "subject": "감정평가실무",
-      "topic": "method selection risks",
-      "count": 1,
-      "sourceIds": [
-        "qnet-appraiser-2022-33-second-2-1-source-59a35ceaa518"
-      ],
-      "rawTextStored": false,
-      "copyrightedTextStored": false
-    },
-    {
-      "examMode": "second",
-      "subject": "감정평가실무",
-      "topic": "mortgage / auction adjustment",
-      "count": 1,
-      "sourceIds": [
-        "qnet-appraiser-2022-33-second-2-1-source-59a35ceaa518"
-      ],
-      "rawTextStored": false,
-      "copyrightedTextStored": false
-    },
-    {
-      "examMode": "second",
-      "subject": "감정평가실무",
-      "topic": "practice valuation method selection",
-      "count": 1,
-      "sourceIds": [
-        "qnet-appraiser-2022-33-second-2-1-source-59a35ceaa518"
-      ],
-      "rawTextStored": false,
-      "copyrightedTextStored": false
-    },
-    {
-      "examMode": "second",
-      "subject": "감정평가실무",
-      "topic": "relocation / residential moving compensation",
-      "count": 1,
-      "sourceIds": [
-        "qnet-appraiser-2022-33-second-2-1-source-59a35ceaa518"
-      ],
-      "rawTextStored": false,
-      "copyrightedTextStored": false
-    },
-    {
-      "examMode": "second",
-      "subject": "감정평가실무",
-      "topic": "transaction adjustment",
-      "count": 1,
-      "sourceIds": [
-        "qnet-appraiser-2022-33-second-2-1-source-59a35ceaa518"
-      ],
-      "rawTextStored": false,
-      "copyrightedTextStored": false
-    },
-    {
-      "examMode": "second",
-      "subject": "감정평가실무",
-      "topic": "unit",
-      "count": 1,
-      "sourceIds": [
-        "qnet-appraiser-2022-33-second-2-1-source-59a35ceaa518"
-      ],
-      "rawTextStored": false,
-      "copyrightedTextStored": false
-    },
-    {
-      "examMode": "second",
       "subject": "감정평가실무",
       "topic": "개발가능성",
       "count": 1,
@@ -864,121 +728,308 @@
     },
     {
       "examMode": "second",
-      "subject": "감정평가이론",
-      "topic": "appraisal three approaches",
+      "subject": "감정평가실무",
+      "topic": "acquisition price / incidental expense",
       "count": 1,
       "sourceIds": [
-        "qnet-appraiser-2022-33-second-2-2-source-c11b8f5f883a"
+        "qnet-appraiser-2021-32-second-2-source-9b107fbeee1d"
       ],
       "rawTextStored": false,
       "copyrightedTextStored": false
     },
     {
       "examMode": "second",
-      "subject": "감정평가이론",
-      "topic": "band of investment method",
+      "subject": "감정평가실무",
+      "topic": "adjustment timing",
       "count": 1,
       "sourceIds": [
-        "qnet-appraiser-2022-33-second-2-2-source-c11b8f5f883a"
+        "qnet-appraiser-2022-33-second-2-1-source-59a35ceaa518"
       ],
       "rawTextStored": false,
       "copyrightedTextStored": false
     },
     {
       "examMode": "second",
-      "subject": "감정평가이론",
-      "topic": "capitalization rate",
+      "subject": "감정평가실무",
+      "topic": "building / tree / livestock loss compensation",
       "count": 1,
       "sourceIds": [
-        "qnet-appraiser-2022-33-second-2-2-source-c11b8f5f883a"
+        "qnet-appraiser-2022-33-second-2-1-source-59a35ceaa518"
       ],
       "rawTextStored": false,
       "copyrightedTextStored": false
     },
     {
       "examMode": "second",
-      "subject": "감정평가이론",
-      "topic": "damages appraisal method",
+      "subject": "감정평가실무",
+      "topic": "calculation basis",
       "count": 1,
       "sourceIds": [
-        "qnet-appraiser-2022-33-second-2-2-source-c11b8f5f883a"
+        "qnet-appraiser-2022-33-second-2-1-source-59a35ceaa518"
       ],
       "rawTextStored": false,
       "copyrightedTextStored": false
     },
     {
       "examMode": "second",
-      "subject": "감정평가이론",
-      "topic": "definition / comparison / application / conclusion risks",
+      "subject": "감정평가실무",
+      "topic": "compensation appraisal",
       "count": 1,
       "sourceIds": [
-        "qnet-appraiser-2022-33-second-2-2-source-c11b8f5f883a"
+        "qnet-appraiser-2022-33-second-2-1-source-59a35ceaa518"
       ],
       "rawTextStored": false,
       "copyrightedTextStored": false
     },
     {
       "examMode": "second",
-      "subject": "감정평가이론",
-      "topic": "Ellwood method",
+      "subject": "감정평가실무",
+      "topic": "compensation calculation process",
       "count": 1,
       "sourceIds": [
-        "qnet-appraiser-2022-33-second-2-2-source-c11b8f5f883a"
+        "qnet-appraiser-2022-33-second-2-1-source-59a35ceaa518"
       ],
       "rawTextStored": false,
       "copyrightedTextStored": false
     },
     {
       "examMode": "second",
-      "subject": "감정평가이론",
-      "topic": "ESG",
+      "subject": "감정평가실무",
+      "topic": "compensation precedent comparison",
       "count": 1,
       "sourceIds": [
-        "qnet-appraiser-2024-35-second-2-source-cdacf02c52f1"
+        "qnet-appraiser-2021-32-second-2-source-9b107fbeee1d"
       ],
       "rawTextStored": false,
       "copyrightedTextStored": false
     },
     {
       "examMode": "second",
-      "subject": "감정평가이론",
-      "topic": "excess land / surplus land",
+      "subject": "감정평가실무",
+      "topic": "cost approach",
       "count": 1,
       "sourceIds": [
-        "qnet-appraiser-2022-33-second-2-2-source-c11b8f5f883a"
+        "qnet-appraiser-2021-32-second-2-source-9b107fbeee1d"
       ],
       "rawTextStored": false,
       "copyrightedTextStored": false
     },
     {
       "examMode": "second",
-      "subject": "감정평가이론",
-      "topic": "intellectual property appraisal",
+      "subject": "감정평가실무",
+      "topic": "expected profit / rent free adjustment",
       "count": 1,
       "sourceIds": [
-        "qnet-appraiser-2022-33-second-2-2-source-c11b8f5f883a"
+        "qnet-appraiser-2021-32-second-2-source-9b107fbeee1d"
       ],
       "rawTextStored": false,
       "copyrightedTextStored": false
     },
     {
       "examMode": "second",
-      "subject": "감정평가이론",
-      "topic": "market data damage analysis",
+      "subject": "감정평가실무",
+      "topic": "goodwill / right premium appraisal",
       "count": 1,
       "sourceIds": [
-        "qnet-appraiser-2022-33-second-2-2-source-c11b8f5f883a"
+        "qnet-appraiser-2022-33-second-2-1-source-59a35ceaa518"
       ],
       "rawTextStored": false,
       "copyrightedTextStored": false
     },
     {
       "examMode": "second",
-      "subject": "감정평가이론",
-      "topic": "valuation theory keyword structure",
+      "subject": "감정평가실무",
+      "topic": "income approach",
       "count": 1,
       "sourceIds": [
-        "qnet-appraiser-2022-33-second-2-2-source-c11b8f5f883a"
+        "qnet-appraiser-2021-32-second-2-source-9b107fbeee1d"
+      ],
+      "rawTextStored": false,
+      "copyrightedTextStored": false
+    },
+    {
+      "examMode": "second",
+      "subject": "감정평가실무",
+      "topic": "land compensation",
+      "count": 1,
+      "sourceIds": [
+        "qnet-appraiser-2021-32-second-2-source-9b107fbeee1d"
+      ],
+      "rawTextStored": false,
+      "copyrightedTextStored": false
+    },
+    {
+      "examMode": "second",
+      "subject": "감정평가실무",
+      "topic": "long-term leasehold",
+      "count": 1,
+      "sourceIds": [
+        "qnet-appraiser-2022-33-second-2-1-source-59a35ceaa518"
+      ],
+      "rawTextStored": false,
+      "copyrightedTextStored": false
+    },
+    {
+      "examMode": "second",
+      "subject": "감정평가실무",
+      "topic": "market data adjustment",
+      "count": 1,
+      "sourceIds": [
+        "qnet-appraiser-2022-33-second-2-1-source-59a35ceaa518"
+      ],
+      "rawTextStored": false,
+      "copyrightedTextStored": false
+    },
+    {
+      "examMode": "second",
+      "subject": "감정평가실무",
+      "topic": "market value",
+      "count": 1,
+      "sourceIds": [
+        "qnet-appraiser-2021-32-second-2-source-9b107fbeee1d"
+      ],
+      "rawTextStored": false,
+      "copyrightedTextStored": false
+    },
+    {
+      "examMode": "second",
+      "subject": "감정평가실무",
+      "topic": "method selection risks",
+      "count": 1,
+      "sourceIds": [
+        "qnet-appraiser-2022-33-second-2-1-source-59a35ceaa518"
+      ],
+      "rawTextStored": false,
+      "copyrightedTextStored": false
+    },
+    {
+      "examMode": "second",
+      "subject": "감정평가실무",
+      "topic": "mortgage / auction adjustment",
+      "count": 1,
+      "sourceIds": [
+        "qnet-appraiser-2022-33-second-2-1-source-59a35ceaa518"
+      ],
+      "rawTextStored": false,
+      "copyrightedTextStored": false
+    },
+    {
+      "examMode": "second",
+      "subject": "감정평가실무",
+      "topic": "office building appraisal",
+      "count": 1,
+      "sourceIds": [
+        "qnet-appraiser-2021-32-second-2-source-9b107fbeee1d"
+      ],
+      "rawTextStored": false,
+      "copyrightedTextStored": false
+    },
+    {
+      "examMode": "second",
+      "subject": "감정평가실무",
+      "topic": "practice calculation process",
+      "count": 1,
+      "sourceIds": [
+        "qnet-appraiser-2021-32-second-2-source-9b107fbeee1d"
+      ],
+      "rawTextStored": false,
+      "copyrightedTextStored": false
+    },
+    {
+      "examMode": "second",
+      "subject": "감정평가실무",
+      "topic": "practice valuation method selection",
+      "count": 1,
+      "sourceIds": [
+        "qnet-appraiser-2022-33-second-2-1-source-59a35ceaa518"
+      ],
+      "rawTextStored": false,
+      "copyrightedTextStored": false
+    },
+    {
+      "examMode": "second",
+      "subject": "감정평가실무",
+      "topic": "relocation / residential moving compensation",
+      "count": 1,
+      "sourceIds": [
+        "qnet-appraiser-2022-33-second-2-1-source-59a35ceaa518"
+      ],
+      "rawTextStored": false,
+      "copyrightedTextStored": false
+    },
+    {
+      "examMode": "second",
+      "subject": "감정평가실무",
+      "topic": "rent appraisal",
+      "count": 1,
+      "sourceIds": [
+        "qnet-appraiser-2021-32-second-2-source-9b107fbeee1d"
+      ],
+      "rawTextStored": false,
+      "copyrightedTextStored": false
+    },
+    {
+      "examMode": "second",
+      "subject": "감정평가실무",
+      "topic": "second practice",
+      "count": 1,
+      "sourceIds": [
+        "qnet-appraiser-2021-32-second-2-source-9b107fbeee1d"
+      ],
+      "rawTextStored": false,
+      "copyrightedTextStored": false
+    },
+    {
+      "examMode": "second",
+      "subject": "감정평가실무",
+      "topic": "transaction adjustment",
+      "count": 1,
+      "sourceIds": [
+        "qnet-appraiser-2022-33-second-2-1-source-59a35ceaa518"
+      ],
+      "rawTextStored": false,
+      "copyrightedTextStored": false
+    },
+    {
+      "examMode": "second",
+      "subject": "감정평가실무",
+      "topic": "transaction comparison approach",
+      "count": 1,
+      "sourceIds": [
+        "qnet-appraiser-2021-32-second-2-source-9b107fbeee1d"
+      ],
+      "rawTextStored": false,
+      "copyrightedTextStored": false
+    },
+    {
+      "examMode": "second",
+      "subject": "감정평가실무",
+      "topic": "trial value adjustment",
+      "count": 1,
+      "sourceIds": [
+        "qnet-appraiser-2021-32-second-2-source-9b107fbeee1d"
+      ],
+      "rawTextStored": false,
+      "copyrightedTextStored": false
+    },
+    {
+      "examMode": "second",
+      "subject": "감정평가실무",
+      "topic": "unit",
+      "count": 1,
+      "sourceIds": [
+        "qnet-appraiser-2022-33-second-2-1-source-59a35ceaa518"
+      ],
+      "rawTextStored": false,
+      "copyrightedTextStored": false
+    },
+    {
+      "examMode": "second",
+      "subject": "감정평가실무",
+      "topic": "unit / basis / adjustment timing risks",
+      "count": 1,
+      "sourceIds": [
+        "qnet-appraiser-2021-32-second-2-source-9b107fbeee1d"
       ],
       "rawTextStored": false,
       "copyrightedTextStored": false
@@ -1144,6 +1195,127 @@
       "count": 1,
       "sourceIds": [
         "qnet-appraiser-2023-34-second-2-2-source-a166effa9409"
+      ],
+      "rawTextStored": false,
+      "copyrightedTextStored": false
+    },
+    {
+      "examMode": "second",
+      "subject": "감정평가이론",
+      "topic": "appraisal three approaches",
+      "count": 1,
+      "sourceIds": [
+        "qnet-appraiser-2022-33-second-2-2-source-c11b8f5f883a"
+      ],
+      "rawTextStored": false,
+      "copyrightedTextStored": false
+    },
+    {
+      "examMode": "second",
+      "subject": "감정평가이론",
+      "topic": "band of investment method",
+      "count": 1,
+      "sourceIds": [
+        "qnet-appraiser-2022-33-second-2-2-source-c11b8f5f883a"
+      ],
+      "rawTextStored": false,
+      "copyrightedTextStored": false
+    },
+    {
+      "examMode": "second",
+      "subject": "감정평가이론",
+      "topic": "capitalization rate",
+      "count": 1,
+      "sourceIds": [
+        "qnet-appraiser-2022-33-second-2-2-source-c11b8f5f883a"
+      ],
+      "rawTextStored": false,
+      "copyrightedTextStored": false
+    },
+    {
+      "examMode": "second",
+      "subject": "감정평가이론",
+      "topic": "damages appraisal method",
+      "count": 1,
+      "sourceIds": [
+        "qnet-appraiser-2022-33-second-2-2-source-c11b8f5f883a"
+      ],
+      "rawTextStored": false,
+      "copyrightedTextStored": false
+    },
+    {
+      "examMode": "second",
+      "subject": "감정평가이론",
+      "topic": "definition / comparison / application / conclusion risks",
+      "count": 1,
+      "sourceIds": [
+        "qnet-appraiser-2022-33-second-2-2-source-c11b8f5f883a"
+      ],
+      "rawTextStored": false,
+      "copyrightedTextStored": false
+    },
+    {
+      "examMode": "second",
+      "subject": "감정평가이론",
+      "topic": "Ellwood method",
+      "count": 1,
+      "sourceIds": [
+        "qnet-appraiser-2022-33-second-2-2-source-c11b8f5f883a"
+      ],
+      "rawTextStored": false,
+      "copyrightedTextStored": false
+    },
+    {
+      "examMode": "second",
+      "subject": "감정평가이론",
+      "topic": "ESG",
+      "count": 1,
+      "sourceIds": [
+        "qnet-appraiser-2024-35-second-2-source-cdacf02c52f1"
+      ],
+      "rawTextStored": false,
+      "copyrightedTextStored": false
+    },
+    {
+      "examMode": "second",
+      "subject": "감정평가이론",
+      "topic": "excess land / surplus land",
+      "count": 1,
+      "sourceIds": [
+        "qnet-appraiser-2022-33-second-2-2-source-c11b8f5f883a"
+      ],
+      "rawTextStored": false,
+      "copyrightedTextStored": false
+    },
+    {
+      "examMode": "second",
+      "subject": "감정평가이론",
+      "topic": "intellectual property appraisal",
+      "count": 1,
+      "sourceIds": [
+        "qnet-appraiser-2022-33-second-2-2-source-c11b8f5f883a"
+      ],
+      "rawTextStored": false,
+      "copyrightedTextStored": false
+    },
+    {
+      "examMode": "second",
+      "subject": "감정평가이론",
+      "topic": "market data damage analysis",
+      "count": 1,
+      "sourceIds": [
+        "qnet-appraiser-2022-33-second-2-2-source-c11b8f5f883a"
+      ],
+      "rawTextStored": false,
+      "copyrightedTextStored": false
+    },
+    {
+      "examMode": "second",
+      "subject": "감정평가이론",
+      "topic": "valuation theory keyword structure",
+      "count": 1,
+      "sourceIds": [
+        "qnet-appraiser-2022-33-second-2-2-source-c11b8f5f883a"
       ],
       "rawTextStored": false,
       "copyrightedTextStored": false
