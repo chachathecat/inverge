@@ -3,6 +3,7 @@ import { existsSync } from "node:fs";
 
 const defaultTestFiles = [
   "tests/closed-beta-golden-flow-routes.test.mjs",
+  "tests/qnet-historical-materials-batch-plan.test.mjs",
   "tests/qnet-official-materials-reference.test.mjs",
   "tests/qnet-reference-intelligence-report.test.mjs",
 ];
