@@ -1,0 +1,16 @@
+{
+  "fixtureId": "first-accounting-pdf",
+  "examMode": "first",
+  "subject": "회계학",
+  "sourceType": "pdf",
+  "syntheticInputSummary": "내가 만든 계산 연습 요약을 PDF draft로 옮겨 보고 인식된 숫자와 조건을 저장 전에 확인했다.",
+  "ocrDraftStatus": "draft",
+  "editableBeforeSave": true,
+  "learnerOwned": true,
+  "metadataOnly": true,
+  "biggestGap": "계산 조건 확인 순서 누락",
+  "nextAction": "조건 표를 먼저 쓰고 같은 유형 계산을 한 번 다시 풀기",
+  "expectedTaskType": "calculation_template",
+  "forbiddenFieldsAbsent": true,
+  "safeUse": "closed_beta_ocr_pdf_capture_maturity"
+}
