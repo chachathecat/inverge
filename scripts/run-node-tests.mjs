@@ -5,6 +5,7 @@ const defaultTestFiles = [
   "tests/closed-beta-golden-flow-routes.test.mjs",
   "tests/learner-loop-production-gap-audit.test.mjs",
   "tests/closed-beta-production-readiness-scorecard.test.mjs",
+  "tests/closed-beta-manual-qa-runbook.test.mjs",
   "tests/capture-to-note-quality-hardening.test.mjs",
   "tests/today-plan-source-reasoning.test.mjs",
   "tests/review-queue-reflection-hardening.test.mjs",
