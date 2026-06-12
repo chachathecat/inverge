@@ -24,21 +24,29 @@ test("Q-Net reference intelligence report summarizes committed metadata only", a
 
   assert.equal(report.schemaVersion, "1.0.0");
   assert.equal(report.reportType, "qnet_reference_intelligence_qa");
-  assert.equal(report.materialCount, 25);
+  assert.equal(report.materialCount, 32);
   assert.equal(report.sourceMapSourceCount, 1);
-  assert.equal(report.sourceMapMaterialCount, 25);
-  assert.equal(report.topicFrequencyEntryCount, 114);
+  assert.equal(report.sourceMapMaterialCount, 32);
+  assert.equal(report.topicFrequencyEntryCount, 140);
   assert.deepEqual(report.officialSourceIds, ["qnet_appraiser_past_questions"]);
-  assert.deepEqual(report.years, [2021, 2022, 2023, 2024, 2025]);
-  assert.deepEqual(report.rounds, [32, 33, 34, 35, 36]);
-  assert.deepEqual(report.examModeCounts, { first: 12, second: 13 });
+  assert.deepEqual(report.years, [2020, 2021, 2022, 2023, 2024, 2025]);
+  assert.deepEqual(report.rounds, [31, 32, 33, 34, 35, 36]);
+  assert.deepEqual(report.examModeCounts, { first: 16, second: 16 });
   assert.deepEqual(report.subjectCounts, {
-    "감정평가사 1차": 12,
-    "감정평가실무": 5,
-    "감정평가이론": 4,
-    "감정평가 및 보상법규": 4,
+    "감정평가사 1차": 16,
+    "감정평가실무": 6,
+    "감정평가이론": 5,
+    "감정평가 및 보상법규": 5,
   });
   assert.deepEqual(report.yearRoundCoverage, [
+    {
+      examYear: 2020,
+      examRound: 31,
+      materialCount: 7,
+      firstCount: 4,
+      secondCount: 3,
+      subjects: expectedSubjects,
+    },
     {
       examYear: 2021,
       examRound: 32,
@@ -91,6 +99,28 @@ test("Q-Net reference intelligence report summarizes committed metadata only", a
   assert.equal(report.safeUse, "qnet_reference_intelligence_qa_only");
 
   assertQnetReferenceIntelligenceReportIsSafe(report);
+});
+
+test("Q-Net reference intelligence report reflects full 2020 source coverage", async () => {
+  const reference = await loadQnetReferenceForReport();
+  const report = buildQnetReferenceIntelligenceReport(reference, {
+    generatedAt: "2026-06-12T00:00:00.000Z",
+  });
+
+  const report2020 = report.yearRoundCoverage.find((entry) => entry.examYear === 2020 && entry.examRound === 31);
+  assert.ok(report2020);
+  assert.deepEqual(report2020.subjects, expectedSubjects);
+  assert.equal(report2020.firstCount, 4);
+  assert.equal(report2020.secondCount, 3);
+  assert.equal(report2020.materialCount, 7);
+
+  const sourcePapers2020Second = reference.materialsIndex.materials
+    .filter((material) => material.examYear === 2020 && material.examMode === "second")
+    .map((material) => material.paper);
+  assert.equal(sourcePapers2020Second.includes("2차 1교시: 감정평가실무"), true);
+  assert.equal(sourcePapers2020Second.includes("2차 2교시: 감정평가이론"), true);
+  assert.equal(sourcePapers2020Second.includes("2차 3교시: 감정평가 및 보상법규"), true);
+  assert.equal(sourcePapers2020Second.includes("2차 4교시"), false);
 });
 
 test("Q-Net reference intelligence report reflects partial 2021 second-day coverage", async () => {
@@ -189,9 +219,9 @@ test("Q-Net reference intelligence CLI prints the same safe aggregate report", (
 
   const report = JSON.parse(result.stdout);
   assert.equal(report.reportType, "qnet_reference_intelligence_qa");
-  assert.equal(report.materialCount, 25);
-  assert.equal(report.sourceMapMaterialCount, 25);
-  assert.equal(report.topicFrequencyEntryCount, 114);
+  assert.equal(report.materialCount, 32);
+  assert.equal(report.sourceMapMaterialCount, 32);
+  assert.equal(report.topicFrequencyEntryCount, 140);
   assert.deepEqual(report.warnings, []);
   assert.deepEqual(Object.values(report.safety), Object.values(report.safety).map(() => true));
 });
