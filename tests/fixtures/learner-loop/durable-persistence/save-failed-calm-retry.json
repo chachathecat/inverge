@@ -1,0 +1,14 @@
+{
+  "fixtureId": "save-failed-calm-retry",
+  "scenario": "save_failed retry path with calm recovery copy",
+  "persistenceStatus": "save_failed",
+  "learnerOwned": true,
+  "metadataOnly": true,
+  "shouldAppearInReadyQueue": false,
+  "shouldCountAsDurableClosedLoop": false,
+  "learnerFacingCopy": "아직 저장되지 않았습니다. 내용을 확인한 뒤 다시 저장해 주세요.",
+  "expectedRecoveryAction": "다시 저장하기",
+  "forbiddenFieldsAbsent": true,
+  "safeUse": "closed_beta_durable_persistence_evidence",
+  "evidenceSurfaces": ["retry_path"]
+}

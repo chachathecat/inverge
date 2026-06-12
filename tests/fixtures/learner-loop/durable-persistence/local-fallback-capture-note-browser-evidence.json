@@ -1,0 +1,14 @@
+{
+  "fixtureId": "local-fallback-capture-note-browser-evidence",
+  "scenario": "local_fallback_saved capture note reflected only as browser-local beta evidence",
+  "persistenceStatus": "local_fallback_saved",
+  "learnerOwned": true,
+  "metadataOnly": true,
+  "shouldAppearInReadyQueue": true,
+  "shouldCountAsDurableClosedLoop": false,
+  "learnerFacingCopy": "이 브라우저에 임시 저장되었습니다. closed beta 브라우저 기록은 이 브라우저의 Notes, Review, Today에서 이어서 확인할 수 있습니다.",
+  "expectedRecoveryAction": "같은 브라우저에서 이어서 확인하기",
+  "forbiddenFieldsAbsent": true,
+  "safeUse": "closed_beta_durable_persistence_evidence",
+  "evidenceSurfaces": ["browser_local_today", "browser_local_review", "browser_local_notes"]
+}

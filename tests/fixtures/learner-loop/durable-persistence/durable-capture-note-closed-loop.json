@@ -1,0 +1,14 @@
+{
+  "fixtureId": "durable-capture-note-closed-loop",
+  "scenario": "durable_saved capture note reflected into Today Plan, Review Queue, and Notes",
+  "persistenceStatus": "durable_saved",
+  "learnerOwned": true,
+  "metadataOnly": true,
+  "shouldAppearInReadyQueue": true,
+  "shouldCountAsDurableClosedLoop": true,
+  "learnerFacingCopy": "저장되었습니다. Today, Notes, Review에서 이어서 확인할 수 있습니다.",
+  "expectedRecoveryAction": "Today, Notes, Review에서 이어서 확인하기",
+  "forbiddenFieldsAbsent": true,
+  "safeUse": "closed_beta_durable_persistence_evidence",
+  "evidenceSurfaces": ["today_plan", "review_queue", "notes"]
+}

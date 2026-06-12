@@ -1,0 +1,14 @@
+{
+  "fixtureId": "durable-review-completion-closed-loop",
+  "scenario": "durable_saved review completion reflected as a closed loop",
+  "persistenceStatus": "durable_saved",
+  "learnerOwned": true,
+  "metadataOnly": true,
+  "shouldAppearInReadyQueue": false,
+  "shouldCountAsDurableClosedLoop": true,
+  "learnerFacingCopy": "복습 완료가 저장되었습니다. 다음 복습 판단에 반영됩니다.",
+  "expectedRecoveryAction": "다음 복습 판단 확인하기",
+  "forbiddenFieldsAbsent": true,
+  "safeUse": "closed_beta_durable_persistence_evidence",
+  "evidenceSurfaces": ["review_completion", "closed_loop"]
+}
