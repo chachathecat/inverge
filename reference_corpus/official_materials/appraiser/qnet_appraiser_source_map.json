@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
   "generatedBy": "scripts/ingest-qnet-appraiser-materials.mjs",
-  "generatedAt": "2026-06-11T00:00:00.000Z",
+  "generatedAt": "2026-06-12T00:00:00.000Z",
   "inputManifestPath": "local_official_materials/appraiser/qnet_manifest.json",
   "storagePolicy": {
     "rawTextStored": false,
@@ -15,9 +15,9 @@
       "sourceName": "Q-Net 기출문제 내려받기",
       "sourceUrl": "https://www.q-net.or.kr/cst003.do?gId=31&gSite=L&id=cst00309",
       "sourceStatusCounts": {
-        "verified": 25
+        "verified": 32
       },
-      "materialCount": 25,
+      "materialCount": 32,
       "sourceIds": [
         "qnet-appraiser-2025-36-first-1-source-2f2925842cb7",
         "qnet-appraiser-2025-36-first-2-source-31e9b5a15f32",
@@ -43,7 +43,14 @@
         "qnet-appraiser-2021-32-first-1-source-d27818baa00b",
         "qnet-appraiser-2021-32-first-2-source-99dd81a28253",
         "qnet-appraiser-2021-32-first-2-source-d029716cbdd7",
-        "qnet-appraiser-2021-32-second-2-source-9b107fbeee1d"
+        "qnet-appraiser-2021-32-second-2-source-9b107fbeee1d",
+        "qnet-appraiser-2020-31-first-1-source-027ecf1276da",
+        "qnet-appraiser-2020-31-first-1-source-fd13d898dd46",
+        "qnet-appraiser-2020-31-first-2-source-55da08672c8a",
+        "qnet-appraiser-2020-31-first-2-source-b92e84762a54",
+        "qnet-appraiser-2020-31-second-2-1-source-90182b487fb7",
+        "qnet-appraiser-2020-31-second-2-2-source-84bad0cc9bd2",
+        "qnet-appraiser-2020-31-second-2-3-source-bc618fa032f4"
       ],
       "rawTextStored": false,
       "copyrightedTextStored": false

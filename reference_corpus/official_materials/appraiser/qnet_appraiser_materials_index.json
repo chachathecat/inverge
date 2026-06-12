@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.0.0",
   "generatedBy": "scripts/ingest-qnet-appraiser-materials.mjs",
-  "generatedAt": "2026-06-11T00:00:00.000Z",
+  "generatedAt": "2026-06-12T00:00:00.000Z",
   "inputManifestPath": "local_official_materials/appraiser/qnet_manifest.json",
   "manifestName": "Q-Net Appraiser Materials Metadata Batches 1-4",
   "storagePolicy": {
@@ -1417,6 +1417,407 @@
       "difficultyBand": "mixed",
       "sourceStatus": "verified",
       "lastOfficialVerifiedAt": "2026-06-11",
+      "needsOfficialVerification": false,
+      "rawTextStored": false,
+      "copyrightedTextStored": false,
+      "safeNotes": null
+    },
+    {
+      "sourceId": "qnet-appraiser-2020-31-first-1-source-027ecf1276da",
+      "officialSourceId": "qnet_appraiser_past_questions",
+      "sourceKind": "past_questions",
+      "sourceName": "Q-Net 기출문제 내려받기",
+      "sourceUrl": "https://www.q-net.or.kr/cst003.do?gId=31&gSite=L&id=cst00309",
+      "localRawFileNameHash": "3fc3defb3d5c7c334b878401d930581549475d7b76fb24b9572f9fac84e3f916",
+      "examYear": 2020,
+      "examRound": 31,
+      "examMode": "first",
+      "subject": "감정평가사 1차",
+      "paper": "1교시",
+      "questionNumber": "source",
+      "itemType": "source_paper",
+      "topicCandidates": [
+        "first exam",
+        "first exam paper 1",
+        "civil law",
+        "economics",
+        "real estate studies"
+      ],
+      "curriculumNodeCandidates": [
+        "first_exam_paper_1",
+        "first_civil_law",
+        "first_economics",
+        "first_real_estate_studies"
+      ],
+      "issueCandidates": [
+        "first exam paper 1 subject-level source coverage"
+      ],
+      "trapWordCandidates": [
+        "concept distinction",
+        "condition check",
+        "calculation condition check"
+      ],
+      "answerSkeletonTags": [],
+      "calculationTemplateCandidates": [
+        "economics_graph_or_formula_check"
+      ],
+      "casioRelevant": false,
+      "estimatedMinutes": 120,
+      "difficultyBand": "mixed",
+      "sourceStatus": "verified",
+      "lastOfficialVerifiedAt": "2026-06-12",
+      "needsOfficialVerification": false,
+      "rawTextStored": false,
+      "copyrightedTextStored": false,
+      "safeNotes": null
+    },
+    {
+      "sourceId": "qnet-appraiser-2020-31-first-1-source-fd13d898dd46",
+      "officialSourceId": "qnet_appraiser_past_questions",
+      "sourceKind": "past_questions",
+      "sourceName": "Q-Net 기출문제 내려받기",
+      "sourceUrl": "https://www.q-net.or.kr/cst003.do?gId=31&gSite=L&id=cst00309",
+      "localRawFileNameHash": "964d69718f43360a3b8d807c28980643c172fab26688e3f243215702397deef6",
+      "examYear": 2020,
+      "examRound": 31,
+      "examMode": "first",
+      "subject": "감정평가사 1차",
+      "paper": "1교시",
+      "questionNumber": "source",
+      "itemType": "source_paper",
+      "topicCandidates": [
+        "first exam",
+        "first exam paper 1",
+        "civil law",
+        "economics",
+        "real estate studies"
+      ],
+      "curriculumNodeCandidates": [
+        "first_exam_paper_1",
+        "first_civil_law",
+        "first_economics",
+        "first_real_estate_studies"
+      ],
+      "issueCandidates": [
+        "first exam paper 1 subject-level source coverage"
+      ],
+      "trapWordCandidates": [
+        "concept distinction",
+        "condition check",
+        "calculation condition check"
+      ],
+      "answerSkeletonTags": [],
+      "calculationTemplateCandidates": [
+        "economics_graph_or_formula_check"
+      ],
+      "casioRelevant": false,
+      "estimatedMinutes": 120,
+      "difficultyBand": "mixed",
+      "sourceStatus": "verified",
+      "lastOfficialVerifiedAt": "2026-06-12",
+      "needsOfficialVerification": false,
+      "rawTextStored": false,
+      "copyrightedTextStored": false,
+      "safeNotes": null
+    },
+    {
+      "sourceId": "qnet-appraiser-2020-31-first-2-source-55da08672c8a",
+      "officialSourceId": "qnet_appraiser_past_questions",
+      "sourceKind": "past_questions",
+      "sourceName": "Q-Net 기출문제 내려받기",
+      "sourceUrl": "https://www.q-net.or.kr/cst003.do?gId=31&gSite=L&id=cst00309",
+      "localRawFileNameHash": "1bf2d9f36384ef70b51a179d696b81bf4d3bdfedba602bb688b9a16183411f03",
+      "examYear": 2020,
+      "examRound": 31,
+      "examMode": "first",
+      "subject": "감정평가사 1차",
+      "paper": "2교시",
+      "questionNumber": "source",
+      "itemType": "source_paper",
+      "topicCandidates": [
+        "first exam",
+        "first exam paper 2",
+        "appraisal related law",
+        "accounting"
+      ],
+      "curriculumNodeCandidates": [
+        "first_exam_paper_2",
+        "first_appraisal_related_law",
+        "first_accounting"
+      ],
+      "issueCandidates": [
+        "first exam paper 2 subject-level source coverage"
+      ],
+      "trapWordCandidates": [
+        "statute requirement check",
+        "accounting wording check",
+        "calculation condition check"
+      ],
+      "answerSkeletonTags": [],
+      "calculationTemplateCandidates": [
+        "accounting_template_check"
+      ],
+      "casioRelevant": true,
+      "estimatedMinutes": 80,
+      "difficultyBand": "mixed",
+      "sourceStatus": "verified",
+      "lastOfficialVerifiedAt": "2026-06-12",
+      "needsOfficialVerification": false,
+      "rawTextStored": false,
+      "copyrightedTextStored": false,
+      "safeNotes": null
+    },
+    {
+      "sourceId": "qnet-appraiser-2020-31-first-2-source-b92e84762a54",
+      "officialSourceId": "qnet_appraiser_past_questions",
+      "sourceKind": "past_questions",
+      "sourceName": "Q-Net 기출문제 내려받기",
+      "sourceUrl": "https://www.q-net.or.kr/cst003.do?gId=31&gSite=L&id=cst00309",
+      "localRawFileNameHash": "a194cbf5ee5f1335ea17e3b3af2168cb6b6006a879c74e22fcff369035cd0b2e",
+      "examYear": 2020,
+      "examRound": 31,
+      "examMode": "first",
+      "subject": "감정평가사 1차",
+      "paper": "2교시",
+      "questionNumber": "source",
+      "itemType": "source_paper",
+      "topicCandidates": [
+        "first exam",
+        "first exam paper 2",
+        "appraisal related law",
+        "accounting"
+      ],
+      "curriculumNodeCandidates": [
+        "first_exam_paper_2",
+        "first_appraisal_related_law",
+        "first_accounting"
+      ],
+      "issueCandidates": [
+        "first exam paper 2 subject-level source coverage"
+      ],
+      "trapWordCandidates": [
+        "statute requirement check",
+        "accounting wording check",
+        "calculation condition check"
+      ],
+      "answerSkeletonTags": [],
+      "calculationTemplateCandidates": [
+        "accounting_template_check"
+      ],
+      "casioRelevant": true,
+      "estimatedMinutes": 80,
+      "difficultyBand": "mixed",
+      "sourceStatus": "verified",
+      "lastOfficialVerifiedAt": "2026-06-12",
+      "needsOfficialVerification": false,
+      "rawTextStored": false,
+      "copyrightedTextStored": false,
+      "safeNotes": null
+    },
+    {
+      "sourceId": "qnet-appraiser-2020-31-second-2-1-source-90182b487fb7",
+      "officialSourceId": "qnet_appraiser_past_questions",
+      "sourceKind": "past_questions",
+      "sourceName": "Q-Net 기출문제 내려받기",
+      "sourceUrl": "https://www.q-net.or.kr/cst003.do?gId=31&gSite=L&id=cst00309",
+      "localRawFileNameHash": "87c1b295c4169548d199c1856417e23e39b6471aad01f487ee53d3cceea6a8f8",
+      "examYear": 2020,
+      "examRound": 31,
+      "examMode": "second",
+      "subject": "감정평가실무",
+      "paper": "2차 1교시: 감정평가실무",
+      "questionNumber": "source",
+      "itemType": "source_paper",
+      "topicCandidates": [
+        "second practice",
+        "three approaches",
+        "cost approach",
+        "transaction comparison approach",
+        "income approach",
+        "goodwill valuation",
+        "DCF",
+        "discount rate",
+        "terminal capitalization rate",
+        "leaseback valuation",
+        "practice calculation process",
+        "unit / basis / timing risks"
+      ],
+      "curriculumNodeCandidates": [
+        "second_practice",
+        "second_practice_three_approaches",
+        "second_practice_cost_approach",
+        "second_practice_comparison_approach",
+        "second_practice_income_approach",
+        "second_practice_goodwill",
+        "second_practice_dcf",
+        "second_practice_calculation_process"
+      ],
+      "issueCandidates": [
+        "practice valuation method selection",
+        "practice calculation process",
+        "income approach structure",
+        "leaseback valuation structure"
+      ],
+      "trapWordCandidates": [
+        "unit omission",
+        "calculation basis omission",
+        "timing omission",
+        "discount rate mismatch",
+        "terminal cap rate omission"
+      ],
+      "answerSkeletonTags": [
+        "data organization",
+        "method selection",
+        "calculation process",
+        "review",
+        "conclusion"
+      ],
+      "calculationTemplateCandidates": [
+        "three_approaches_template",
+        "income_approach_template",
+        "dcf_template",
+        "goodwill_valuation_template"
+      ],
+      "casioRelevant": true,
+      "estimatedMinutes": 100,
+      "difficultyBand": "mixed",
+      "sourceStatus": "verified",
+      "lastOfficialVerifiedAt": "2026-06-12",
+      "needsOfficialVerification": false,
+      "rawTextStored": false,
+      "copyrightedTextStored": false,
+      "safeNotes": null
+    },
+    {
+      "sourceId": "qnet-appraiser-2020-31-second-2-2-source-84bad0cc9bd2",
+      "officialSourceId": "qnet_appraiser_past_questions",
+      "sourceKind": "past_questions",
+      "sourceName": "Q-Net 기출문제 내려받기",
+      "sourceUrl": "https://www.q-net.or.kr/cst003.do?gId=31&gSite=L&id=cst00309",
+      "localRawFileNameHash": "849fc0471dcbbdcbf68448f7124468c15efcd39c1cee57eedbd81f96bbac92a4",
+      "examYear": 2020,
+      "examRound": 31,
+      "examMode": "second",
+      "subject": "감정평가이론",
+      "paper": "2차 2교시: 감정평가이론",
+      "questionNumber": "source",
+      "itemType": "source_paper",
+      "topicCandidates": [
+        "appraisal concept",
+        "standard value",
+        "multiple appraisal",
+        "market value",
+        "market price",
+        "public land price method",
+        "transaction comparison method",
+        "redevelopment appraisal",
+        "current condition principle",
+        "valuation theory keyword structure"
+      ],
+      "curriculumNodeCandidates": [
+        "second_theory",
+        "second_theory_appraisal_concept",
+        "second_theory_value_basis",
+        "second_theory_market_value",
+        "second_theory_public_land_price_method",
+        "second_theory_transaction_comparison",
+        "second_theory_redevelopment",
+        "second_theory_current_condition_principle"
+      ],
+      "issueCandidates": [
+        "theory keyword definition",
+        "comparison criteria structure",
+        "application paragraph structure",
+        "conclusion structure"
+      ],
+      "trapWordCandidates": [
+        "definition omission",
+        "comparison basis omission",
+        "application scope omission",
+        "abstract conclusion risk"
+      ],
+      "answerSkeletonTags": [
+        "definition",
+        "basis",
+        "comparison",
+        "application",
+        "conclusion"
+      ],
+      "calculationTemplateCandidates": [],
+      "casioRelevant": false,
+      "estimatedMinutes": 100,
+      "difficultyBand": "mixed",
+      "sourceStatus": "verified",
+      "lastOfficialVerifiedAt": "2026-06-12",
+      "needsOfficialVerification": false,
+      "rawTextStored": false,
+      "copyrightedTextStored": false,
+      "safeNotes": null
+    },
+    {
+      "sourceId": "qnet-appraiser-2020-31-second-2-3-source-bc618fa032f4",
+      "officialSourceId": "qnet_appraiser_past_questions",
+      "sourceKind": "past_questions",
+      "sourceName": "Q-Net 기출문제 내려받기",
+      "sourceUrl": "https://www.q-net.or.kr/cst003.do?gId=31&gSite=L&id=cst00309",
+      "localRawFileNameHash": "33792eeb7604aacdf6220620918d2aa533c35d5db84eba2b5cee9ffde3ce1c8e",
+      "examYear": 2020,
+      "examRound": 31,
+      "examMode": "second",
+      "subject": "감정평가 및 보상법규",
+      "paper": "2차 3교시: 감정평가 및 보상법규",
+      "questionNumber": "source",
+      "itemType": "source_paper",
+      "topicCandidates": [
+        "compensation litigation",
+        "administrative litigation",
+        "public law restriction appraisal",
+        "public property expropriation",
+        "individual land price correction",
+        "administrative appeal",
+        "state compensation causation",
+        "unauthorized appraisal business",
+        "appraisal standards",
+        "appraisal validity investigation",
+        "statutory requirement / procedure / disposition / case-application risks"
+      ],
+      "curriculumNodeCandidates": [
+        "second_law",
+        "second_law_compensation_litigation",
+        "second_law_public_law_restriction",
+        "second_law_public_property_expropriation",
+        "second_law_individual_land_price",
+        "second_law_administrative_appeal",
+        "second_law_state_compensation",
+        "second_law_appraiser_act",
+        "second_law_appraisal_standard"
+      ],
+      "issueCandidates": [
+        "law issue spotting",
+        "statutory requirement structure",
+        "procedure and disposition structure",
+        "case application structure",
+        "remedy selection"
+      ],
+      "trapWordCandidates": [
+        "requirement omission",
+        "procedure omission",
+        "disposition judgment omission",
+        "case application omission"
+      ],
+      "answerSkeletonTags": [
+        "issue spotting",
+        "legal rule",
+        "requirement check",
+        "case application",
+        "conclusion"
+      ],
+      "calculationTemplateCandidates": [],
+      "casioRelevant": false,
+      "estimatedMinutes": 100,
+      "difficultyBand": "mixed",
+      "sourceStatus": "verified",
+      "lastOfficialVerifiedAt": "2026-06-12",
       "needsOfficialVerification": false,
       "rawTextStored": false,
       "copyrightedTextStored": false,

@@ -121,6 +121,51 @@ test("Q-Net material lookup helpers filter by exam mode, subject, and source id"
   assert.equal(getQnetMaterialBySourceId("missing-source-id", reference), null);
 });
 
+test("Q-Net appraiser 2020 round 31 batch includes seven metadata-only source papers with full source coverage", () => {
+  const reference = loadQnetAppraiserOfficialMaterialsReference();
+  const materials2020 = reference.materialsIndex.materials.filter((material) => (
+    material.examYear === 2020 && material.examRound === 31
+  ));
+  const firstMode2020 = materials2020.filter((material) => material.examMode === "first");
+  const secondMode2020 = materials2020.filter((material) => material.examMode === "second");
+  const expectedSecondPapers = [
+    "2차 1교시: 감정평가실무",
+    "2차 2교시: 감정평가이론",
+    "2차 3교시: 감정평가 및 보상법규",
+  ];
+
+  assert.equal(materials2020.length, 7);
+  assert.equal(firstMode2020.length, 4);
+  assert.equal(secondMode2020.length, 3);
+  assert.equal(firstMode2020.filter((material) => material.paper === "1교시").length, 2);
+  assert.equal(firstMode2020.filter((material) => material.paper === "2교시").length, 2);
+  for (const paper of expectedSecondPapers) {
+    assert.equal(secondMode2020.filter((material) => material.paper === paper).length, 1);
+  }
+  assert.equal(materials2020.every((material) => material.itemType === "source_paper"), true);
+  assert.equal(materials2020.every((material) => material.sourceStatus === "verified"), true);
+  assert.equal(materials2020.every((material) => material.needsOfficialVerification === false), true);
+  assert.equal(materials2020.every((material) => material.sourceId.includes("qnet-appraiser-2020-31")), true);
+  assert.equal(materials2020.every((material) => /^[0-9a-f]{64}$/.test(material.localRawFileNameHash)), true);
+  assert.equal(new Set(materials2020.map((material) => material.localRawFileNameHash)).size, 7);
+  assert.equal(materials2020.every((material) => material.rawTextStored === false), true);
+  assert.equal(materials2020.every((material) => material.copyrightedTextStored === false), true);
+
+  for (const material of materials2020) {
+    assert.equal(Object.prototype.hasOwnProperty.call(material, "localFileName"), false);
+    assert.equal(Object.prototype.hasOwnProperty.call(material, "sourceFileName"), false);
+    assert.equal(Object.prototype.hasOwnProperty.call(material, "localFilePath"), false);
+    assert.equal(Object.prototype.hasOwnProperty.call(material, "sourceFilePath"), false);
+    assert.equal(Object.prototype.hasOwnProperty.call(material, "rawFilePath"), false);
+  }
+
+  const serialized = JSON.stringify(materials2020);
+  for (const field of forbiddenSerializedFields) {
+    assert.equal(serialized.includes(`"${field}"`), false, `${field} must not be emitted`);
+  }
+  assert.doesNotMatch(serialized, /\.pdf\b|\.hwp\b|\.hwpx\b|\.docx\b|\.zip\b|\.png\b|\.jpe?g\b|\.webp\b/i);
+});
+
 test("Q-Net appraiser 2022 round 33 batch includes five metadata-only source papers", () => {
   const reference = loadQnetAppraiserOfficialMaterialsReference();
   const materials2022 = reference.materialsIndex.materials.filter((material) => (
