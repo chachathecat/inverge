@@ -1,0 +1,14 @@
+{
+  "fixtureId": "save-failed-capture-note-excluded",
+  "scenario": "save_failed capture note excluded from ready Review Queue selector",
+  "persistenceStatus": "save_failed",
+  "learnerOwned": true,
+  "metadataOnly": true,
+  "shouldAppearInReadyQueue": false,
+  "shouldCountAsDurableClosedLoop": false,
+  "learnerFacingCopy": "저장이 완료되지 않았습니다. 입력 내용은 화면에 남아 있으니 확인 후 다시 저장해 주세요.",
+  "expectedRecoveryAction": "입력 내용 확인 후 다시 저장하기",
+  "forbiddenFieldsAbsent": true,
+  "safeUse": "closed_beta_durable_persistence_evidence",
+  "evidenceSurfaces": ["recovery_only"]
+}
