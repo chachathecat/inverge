@@ -23,6 +23,7 @@ export const LEARNER_LOOP_TELEMETRY_EVENT_NAMES = [
   "review_queue_item_due",
   "review_completed",
   "notes_reflected",
+  "loop_closed",
 ] as const;
 
 export const LEARNER_LOOP_TELEMETRY_LOOP_STAGES = [
@@ -34,6 +35,7 @@ export const LEARNER_LOOP_TELEMETRY_LOOP_STAGES = [
   "review_queue",
   "review",
   "notes",
+  "loop",
 ] as const;
 
 export const LEARNER_LOOP_TELEMETRY_SOURCE_TYPES = [
@@ -52,6 +54,20 @@ export const LEARNER_LOOP_TELEMETRY_PERSISTENCE_STATUSES = [
   "not_applicable",
 ] as const;
 
+export const LEARNER_LOOP_TELEMETRY_USER_SCOPES = [
+  "anonymous_local",
+  "invited_beta_account",
+] as const;
+
+export const REQUIRED_LEARNER_LOOP_TELEMETRY_EVENT_NAMES = [
+  "capture_note_created",
+  "biggest_gap_identified",
+  "next_action_created",
+  "today_plan_task_selected",
+  "review_queue_item_created",
+  "notes_reflected",
+] as const;
+
 export const LEARNER_LOOP_TELEMETRY_TASK_TYPES = [
   ...CAPTURE_NOTE_ALLOWED_TASK_TYPES,
   "not_applicable",
@@ -61,12 +77,15 @@ export type LearnerLoopTelemetryEventName = (typeof LEARNER_LOOP_TELEMETRY_EVENT
 export type LearnerLoopTelemetryLoopStage = (typeof LEARNER_LOOP_TELEMETRY_LOOP_STAGES)[number];
 export type LearnerLoopTelemetrySourceType = (typeof LEARNER_LOOP_TELEMETRY_SOURCE_TYPES)[number];
 export type LearnerLoopTelemetryPersistenceStatus = (typeof LEARNER_LOOP_TELEMETRY_PERSISTENCE_STATUSES)[number];
+export type LearnerLoopTelemetryUserScope = (typeof LEARNER_LOOP_TELEMETRY_USER_SCOPES)[number];
 export type LearnerLoopTelemetryTaskType = (typeof LEARNER_LOOP_TELEMETRY_TASK_TYPES)[number];
 export type LearnerLoopTelemetryReasonCode = TodayPlanReasonCode | ReviewQueueReflectionReasonCode;
 
 export type LearnerLoopTelemetryEventInput = {
   eventName: string;
   occurredAt?: string | Date;
+  userScope?: LearnerLoopTelemetryUserScope | string;
+  loopId?: string;
   loopStage: string;
   sourceType: string;
   examMode?: CaptureNoteQualityExamMode | string;
@@ -91,6 +110,8 @@ export type LearnerLoopTelemetryEvent = {
   eventName: LearnerLoopTelemetryEventName;
   eventId: string;
   occurredAt: string;
+  userScope: LearnerLoopTelemetryUserScope;
+  loopId: string;
   loopStage: LearnerLoopTelemetryLoopStage;
   sourceType: LearnerLoopTelemetrySourceType;
   examMode?: CaptureNoteQualityExamMode;
@@ -104,6 +125,7 @@ export type LearnerLoopTelemetryEvent = {
   safeUse: "closed_beta_learner_loop_telemetry";
   sourceTrace: {
     sourceId?: string;
+    loopId: string;
     sourceType: LearnerLoopTelemetrySourceType;
     loopStage: LearnerLoopTelemetryLoopStage;
     taskType: LearnerLoopTelemetryTaskType;
@@ -136,18 +158,57 @@ export type LearnerLoopTelemetrySummary = {
   notesReflectedCount: number;
   loopClosureCount: number;
   hasClosedLoop: boolean;
+  durableLoopClosureCount: number;
+  localBetaLoopEvidenceCount: number;
+  saveFailedEventCount: number;
+  readyReviewQueueEventCount: number;
+  hasDurableClosedLoop: boolean;
+  hasLocalBetaLoopEvidence: boolean;
+};
+
+export type LearnerLoopTelemetryClosureEvidence = {
+  metadataOnly: true;
+  safeUse: "closed_beta_learner_loop_runtime_telemetry";
+  requiredEventNames: readonly (typeof REQUIRED_LEARNER_LOOP_TELEMETRY_EVENT_NAMES)[number][];
+  loopCount: number;
+  loopClosureCount: number;
+  durableLoopClosureCount: number;
+  localBetaLoopEvidenceCount: number;
+  saveFailedLoopCount: number;
+  readyReviewQueueEventCount: number;
+  hasClosedLoop: boolean;
+  hasDurableClosedLoop: boolean;
+  hasLocalBetaLoopEvidence: boolean;
+  durableLoopIds: string[];
+  localBetaLoopIds: string[];
+  saveFailedLoopIds: string[];
+  incompleteLoopIds: string[];
+};
+
+export type LearnerLoopRuntimeTelemetryCollector = {
+  record(input: LearnerLoopTelemetryEventInput, now?: Date): LearnerLoopTelemetryEvent;
+  recordMany(inputs: LearnerLoopTelemetryEventInput[], now?: Date): LearnerLoopTelemetryEvent[];
+  list(): LearnerLoopTelemetryEvent[];
+  clear(): void;
+  summarize(): LearnerLoopTelemetrySummary;
+  evaluateClosure(): LearnerLoopTelemetryClosureEvidence;
+  readyReviewQueueEvents(): LearnerLoopTelemetryEvent[];
 };
 
 const EVENT_NAME_SET = new Set<string>(LEARNER_LOOP_TELEMETRY_EVENT_NAMES);
 const LOOP_STAGE_SET = new Set<string>(LEARNER_LOOP_TELEMETRY_LOOP_STAGES);
 const SOURCE_TYPE_SET = new Set<string>(LEARNER_LOOP_TELEMETRY_SOURCE_TYPES);
 const PERSISTENCE_STATUS_SET = new Set<string>(LEARNER_LOOP_TELEMETRY_PERSISTENCE_STATUSES);
+const USER_SCOPE_SET = new Set<string>(LEARNER_LOOP_TELEMETRY_USER_SCOPES);
 const TASK_TYPE_SET = new Set<string>(LEARNER_LOOP_TELEMETRY_TASK_TYPES);
 const TODAY_PLAN_REASON_CODE_SET = new Set<string>(TODAY_PLAN_REASON_CODES);
 const REVIEW_REASON_CODE_SET = new Set<string>(REVIEW_QUEUE_REFLECTION_REASON_CODES);
+const REQUIRED_EVENT_NAME_SET = new Set<string>(REQUIRED_LEARNER_LOOP_TELEMETRY_EVENT_NAMES);
 
 const FORBIDDEN_FIELD_NAMES = new Set([
   "rawText",
+  "copiedProblemText",
+  "copiedAnswerText",
   "rawAnswerText",
   "rawProblemText",
   "rawOcrText",
@@ -159,6 +220,8 @@ const FORBIDDEN_FIELD_NAMES = new Set([
   "passFail",
   "officialGrade",
   "instructorComment",
+  "qnetRawPath",
+  "localOfficialMaterialsPath",
   "localFileName",
   "sourceFileName",
   "localFilePath",
@@ -174,7 +237,10 @@ const FORBIDDEN_FIELD_NAMES = new Set([
 ]);
 
 const FORBIDDEN_FIELD_PATTERN =
-  /(^score$|pass.*fail|official.*(answer|grade)|model.*answer|instructor.*comment|local.*file|source.*file|raw.*(text|answer|problem|ocr|file|question)|ocr.*full|qnet.*raw|archive|user.*answer.*body|source.*text|qnet.*manifest)/i;
+  /(^score$|pass.*fail|official.*(answer|grade)|model.*answer|instructor.*comment|local.*(file|official|materials)|source.*file|copied.*(problem|answer)|raw.*(text|answer|problem|ocr|file|question)|ocr.*full|qnet.*raw|archive|user.*answer.*body|source.*text|qnet.*manifest)/i;
+
+const LOCAL_MATERIAL_BOUNDARY_PATTERN = new RegExp(["local", "official", "materials"].join("[_\\\\/-]"), "i");
+const MANIFEST_FILE_BOUNDARY_PATTERN = new RegExp(["qnet", "manifest"].join("[_.-]") + "\\.json", "i");
 
 const FORBIDDEN_TEXT_PATTERNS = [
   /official\s+(grading|grade|answer|model answer|score)/i,
@@ -184,10 +250,10 @@ const FORBIDDEN_TEXT_PATTERNS = [
   /public\s+archive/i,
   /problem\s+bank/i,
   /instructor\s+comment/i,
-  /local_official_materials/i,
-  /qnet_manifest\.json/i,
+  LOCAL_MATERIAL_BOUNDARY_PATTERN,
+  MANIFEST_FILE_BOUNDARY_PATTERN,
   /\bq-net\s+raw\b/i,
-  /(?:^|[A-Za-z]:\\|\\\\|\/)(?:Users|local_official_materials|tmp|temp|downloads|desktop)[\\/]/i,
+  /(?:^|[A-Za-z]:\\|\\\\|\/)(?:Users|tmp|temp|downloads|desktop)[\\/]/i,
   /\.(?:pdf|hwp|hwpx|doc|docx|zip|png|jpe?g|gif|webp|bmp|tiff?)\b/i,
   /공식\s*(채점|점수|모범답안|답안|해설|문제)/,
   /합격\s*판정|불합격\s*판정|점수\s*예측/,
@@ -256,6 +322,10 @@ function normalizePersistenceStatus(value: string | undefined): LearnerLoopTelem
   return normalizeRequired("persistenceStatus", value ?? "not_applicable", LEARNER_LOOP_TELEMETRY_PERSISTENCE_STATUSES);
 }
 
+function normalizeUserScope(value: string | undefined): LearnerLoopTelemetryUserScope {
+  return normalizeRequired("userScope", value ?? "anonymous_local", LEARNER_LOOP_TELEMETRY_USER_SCOPES);
+}
+
 function normalizeTaskType(value: string | undefined): LearnerLoopTelemetryTaskType {
   if (!value) return "not_applicable";
   const normalized = clean(value).toLowerCase().replace(/[\s-]+/g, "_");
@@ -299,6 +369,15 @@ function normalizeOccurredAt(value: string | Date | undefined, now: Date): strin
   return now.toISOString();
 }
 
+function resolveLoopId(input: LearnerLoopTelemetryEventInput, sourceId: string | undefined): string {
+  return (
+    safeSingleLine("loopId", input.loopId, 96) ??
+    safeSingleLine("sourceTrace.loopId", input.sourceTrace?.loopId, 96) ??
+    sourceId ??
+    "anonymous-local-loop"
+  );
+}
+
 function safeBoolean(value: unknown): boolean | undefined {
   return typeof value === "boolean" ? value : undefined;
 }
@@ -323,6 +402,8 @@ function stableHash(value: string): string {
 function buildEventId(input: {
   eventName: LearnerLoopTelemetryEventName;
   occurredAt: string;
+  userScope: LearnerLoopTelemetryUserScope;
+  loopId: string;
   loopStage: LearnerLoopTelemetryLoopStage;
   sourceType: LearnerLoopTelemetrySourceType;
   examMode?: CaptureNoteQualityExamMode;
@@ -340,6 +421,8 @@ function buildEventId(input: {
     [
       input.eventName,
       input.occurredAt,
+      input.userScope,
+      input.loopId,
       input.loopStage,
       input.sourceType,
       input.examMode ?? "",
@@ -358,6 +441,7 @@ function buildEventId(input: {
 
 function buildSourceTrace(input: {
   sourceTrace: Record<string, unknown> | undefined;
+  loopId: string;
   sourceType: LearnerLoopTelemetrySourceType;
   loopStage: LearnerLoopTelemetryLoopStage;
   taskType: LearnerLoopTelemetryTaskType;
@@ -368,6 +452,7 @@ function buildSourceTrace(input: {
   const sourceId = safeSingleLine("sourceTrace.sourceId", input.sourceTrace?.sourceId, 96);
   return {
     ...(sourceId ? { sourceId } : {}),
+    loopId: input.loopId,
     sourceType: input.sourceType,
     loopStage: input.loopStage,
     taskType: input.taskType,
@@ -391,6 +476,7 @@ export function buildLearnerLoopTelemetryEvent(input: LearnerLoopTelemetryEventI
   if (input.learnerOwned === false) throw new Error("Learner loop telemetry contract requires learner-owned telemetry");
 
   const eventName = normalizeEventName(input.eventName);
+  const userScope = normalizeUserScope(input.userScope);
   const loopStage = normalizeLoopStage(input.loopStage);
   const sourceType = normalizeSourceType(input.sourceType);
   const examMode = normalizeExamMode(input.examMode);
@@ -402,9 +488,12 @@ export function buildLearnerLoopTelemetryEvent(input: LearnerLoopTelemetryEventI
   const occurredAt = normalizeOccurredAt(input.occurredAt, now);
   const todayPlanTaskCount = safeCounter("todayPlanTaskCount", input.todayPlanTaskCount);
   assertTodayPlanMaxThree(eventName, loopStage, todayPlanTaskCount);
+  const sourceId = safeSingleLine("sourceTrace.sourceId", input.sourceTrace?.sourceId, 96);
+  const loopId = resolveLoopId(input, sourceId);
 
   const sourceTrace = buildSourceTrace({
     sourceTrace: input.sourceTrace,
+    loopId,
     sourceType,
     loopStage,
     taskType,
@@ -418,6 +507,8 @@ export function buildLearnerLoopTelemetryEvent(input: LearnerLoopTelemetryEventI
     eventId: buildEventId({
       eventName,
       occurredAt,
+      userScope,
+      loopId,
       loopStage,
       sourceType,
       examMode,
@@ -432,6 +523,8 @@ export function buildLearnerLoopTelemetryEvent(input: LearnerLoopTelemetryEventI
       completed: safeBoolean(input.completed),
     }),
     occurredAt,
+    userScope,
+    loopId,
     loopStage,
     sourceType,
     ...(examMode ? { examMode } : {}),
@@ -467,10 +560,13 @@ export function assertLearnerLoopTelemetryEventSafe(event: LearnerLoopTelemetryE
   if (!EVENT_NAME_SET.has(event.eventName)) throw new Error(`Learner loop telemetry event rejects eventName: ${event.eventName}`);
   if (!LOOP_STAGE_SET.has(event.loopStage)) throw new Error(`Learner loop telemetry event rejects loopStage: ${event.loopStage}`);
   if (!SOURCE_TYPE_SET.has(event.sourceType)) throw new Error(`Learner loop telemetry event rejects sourceType: ${event.sourceType}`);
+  if (!USER_SCOPE_SET.has(event.userScope)) throw new Error(`Learner loop telemetry event rejects userScope: ${event.userScope}`);
   if (!TASK_TYPE_SET.has(event.taskType)) throw new Error(`Learner loop telemetry event rejects taskType: ${event.taskType}`);
   if (!PERSISTENCE_STATUS_SET.has(event.persistenceStatus)) {
     throw new Error(`Learner loop telemetry event rejects persistenceStatus: ${event.persistenceStatus}`);
   }
+  if (!safeSingleLine("loopId", event.loopId, 96)) throw new Error("Learner loop telemetry event requires loopId");
+  if (event.sourceTrace.loopId !== event.loopId) throw new Error("Learner loop telemetry event sourceTrace loopId mismatch");
   if (!Number.isFinite(Date.parse(event.occurredAt))) throw new Error("Learner loop telemetry event requires valid occurredAt");
   if (event.todayPlanTaskCount !== undefined) assertTodayPlanMaxThree(event.eventName, event.loopStage, event.todayPlanTaskCount);
 
@@ -482,18 +578,88 @@ function countEvents(events: LearnerLoopTelemetryEvent[], eventName: LearnerLoop
   return events.filter((event) => event.eventName === eventName && (!closureEligibleOnly || event.persistenceStatus !== "save_failed")).length;
 }
 
-export function summarizeLearnerLoopTelemetry(events: LearnerLoopTelemetryEvent[]): LearnerLoopTelemetrySummary {
+function groupEventsByLoopId(events: LearnerLoopTelemetryEvent[]): Map<string, LearnerLoopTelemetryEvent[]> {
+  const groups = new Map<string, LearnerLoopTelemetryEvent[]>();
+  for (const event of events) {
+    const existing = groups.get(event.loopId) ?? [];
+    existing.push(event);
+    groups.set(event.loopId, existing);
+  }
+  return groups;
+}
+
+function hasRequiredEvent(events: LearnerLoopTelemetryEvent[], eventName: string, persistenceStatus?: LearnerLoopTelemetryPersistenceStatus): boolean {
+  return events.some((event) => {
+    if (event.eventName !== eventName) return false;
+    if (persistenceStatus) return event.persistenceStatus === persistenceStatus;
+    return event.persistenceStatus !== "save_failed";
+  });
+}
+
+function hasCompleteRequiredLoop(events: LearnerLoopTelemetryEvent[]): boolean {
+  return REQUIRED_LEARNER_LOOP_TELEMETRY_EVENT_NAMES.every((eventName) => hasRequiredEvent(events, eventName));
+}
+
+function hasDurableRequiredLoop(events: LearnerLoopTelemetryEvent[]): boolean {
+  return REQUIRED_LEARNER_LOOP_TELEMETRY_EVENT_NAMES.every((eventName) => hasRequiredEvent(events, eventName, "durable_saved"));
+}
+
+function hasLocalFallbackSignal(events: LearnerLoopTelemetryEvent[]): boolean {
+  return events.some((event) => REQUIRED_EVENT_NAME_SET.has(event.eventName) && event.persistenceStatus === "local_fallback_saved");
+}
+
+export function selectReadyLearnerLoopTelemetryReviewQueueEvents(events: LearnerLoopTelemetryEvent[]): LearnerLoopTelemetryEvent[] {
+  for (const event of events) assertLearnerLoopTelemetryEventSafe(event);
+  return events.filter((event) => event.eventName === "review_queue_item_created" && event.persistenceStatus !== "save_failed");
+}
+
+export function evaluateLearnerLoopTelemetryClosure(events: LearnerLoopTelemetryEvent[]): LearnerLoopTelemetryClosureEvidence {
   for (const event of events) assertLearnerLoopTelemetryEventSafe(event);
 
-  const closureCounts = [
-    countEvents(events, "capture_note_created", true),
-    countEvents(events, "biggest_gap_identified", true),
-    countEvents(events, "next_action_created", true),
-    countEvents(events, "today_plan_task_selected", true),
-    countEvents(events, "review_queue_item_created", true),
-    countEvents(events, "notes_reflected", true),
-  ];
-  const loopClosureCount = Math.min(...closureCounts);
+  const durableLoopIds: string[] = [];
+  const localBetaLoopIds: string[] = [];
+  const saveFailedLoopIds: string[] = [];
+  const incompleteLoopIds: string[] = [];
+
+  for (const [loopId, loopEvents] of groupEventsByLoopId(events)) {
+    const hasCompleteLoop = hasCompleteRequiredLoop(loopEvents);
+    const hasDurableLoop = hasDurableRequiredLoop(loopEvents);
+    const hasSaveFailed = loopEvents.some((event) => event.persistenceStatus === "save_failed");
+
+    if (hasDurableLoop) {
+      durableLoopIds.push(loopId);
+    } else if (hasCompleteLoop && hasLocalFallbackSignal(loopEvents)) {
+      localBetaLoopIds.push(loopId);
+    } else if (hasSaveFailed) {
+      saveFailedLoopIds.push(loopId);
+    } else {
+      incompleteLoopIds.push(loopId);
+    }
+  }
+
+  return {
+    metadataOnly: true,
+    safeUse: "closed_beta_learner_loop_runtime_telemetry",
+    requiredEventNames: REQUIRED_LEARNER_LOOP_TELEMETRY_EVENT_NAMES,
+    loopCount: durableLoopIds.length + localBetaLoopIds.length + saveFailedLoopIds.length + incompleteLoopIds.length,
+    loopClosureCount: durableLoopIds.length + localBetaLoopIds.length,
+    durableLoopClosureCount: durableLoopIds.length,
+    localBetaLoopEvidenceCount: localBetaLoopIds.length,
+    saveFailedLoopCount: saveFailedLoopIds.length,
+    readyReviewQueueEventCount: selectReadyLearnerLoopTelemetryReviewQueueEvents(events).length,
+    hasClosedLoop: durableLoopIds.length + localBetaLoopIds.length > 0,
+    hasDurableClosedLoop: durableLoopIds.length > 0,
+    hasLocalBetaLoopEvidence: localBetaLoopIds.length > 0,
+    durableLoopIds,
+    localBetaLoopIds,
+    saveFailedLoopIds,
+    incompleteLoopIds,
+  };
+}
+
+export function summarizeLearnerLoopTelemetry(events: LearnerLoopTelemetryEvent[]): LearnerLoopTelemetrySummary {
+  for (const event of events) assertLearnerLoopTelemetryEventSafe(event);
+  const closureEvidence = evaluateLearnerLoopTelemetryClosure(events);
 
   return {
     metadataOnly: true,
@@ -507,7 +673,45 @@ export function summarizeLearnerLoopTelemetry(events: LearnerLoopTelemetryEvent[
     reviewQueueItemCreatedCount: countEvents(events, "review_queue_item_created"),
     reviewCompletedCount: countEvents(events, "review_completed"),
     notesReflectedCount: countEvents(events, "notes_reflected"),
-    loopClosureCount,
-    hasClosedLoop: loopClosureCount > 0,
+    loopClosureCount: closureEvidence.loopClosureCount,
+    hasClosedLoop: closureEvidence.hasClosedLoop,
+    durableLoopClosureCount: closureEvidence.durableLoopClosureCount,
+    localBetaLoopEvidenceCount: closureEvidence.localBetaLoopEvidenceCount,
+    saveFailedEventCount: events.filter((event) => event.persistenceStatus === "save_failed").length,
+    readyReviewQueueEventCount: closureEvidence.readyReviewQueueEventCount,
+    hasDurableClosedLoop: closureEvidence.hasDurableClosedLoop,
+    hasLocalBetaLoopEvidence: closureEvidence.hasLocalBetaLoopEvidence,
+  };
+}
+
+export function createLearnerLoopRuntimeTelemetryCollector(): LearnerLoopRuntimeTelemetryCollector {
+  const recordedEvents: LearnerLoopTelemetryEvent[] = [];
+
+  const record = (input: LearnerLoopTelemetryEventInput, now = new Date()): LearnerLoopTelemetryEvent => {
+    const event = buildLearnerLoopTelemetryEvent(input, now);
+    recordedEvents.push(event);
+    return event;
+  };
+
+  return {
+    record,
+    recordMany(inputs, now = new Date()) {
+      return inputs.map((input) => record(input, now));
+    },
+    list() {
+      return [...recordedEvents];
+    },
+    clear() {
+      recordedEvents.length = 0;
+    },
+    summarize() {
+      return summarizeLearnerLoopTelemetry(recordedEvents);
+    },
+    evaluateClosure() {
+      return evaluateLearnerLoopTelemetryClosure(recordedEvents);
+    },
+    readyReviewQueueEvents() {
+      return selectReadyLearnerLoopTelemetryReviewQueueEvents(recordedEvents);
+    },
   };
 }
