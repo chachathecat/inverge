@@ -5,6 +5,7 @@ const defaultTestFiles = [
   "tests/closed-beta-golden-flow-routes.test.mjs",
   "tests/learner-loop-production-gap-audit.test.mjs",
   "tests/capture-to-note-quality-hardening.test.mjs",
+  "tests/today-plan-source-reasoning.test.mjs",
   "tests/qnet-historical-materials-batch-plan.test.mjs",
   "tests/qnet-official-materials-reference.test.mjs",
   "tests/qnet-reference-intelligence-report.test.mjs",
