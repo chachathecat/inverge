@@ -10,6 +10,7 @@ const defaultTestFiles = [
   "tests/closed-beta-invite-gate.test.mjs",
   "tests/ocr-pdf-capture-maturity-hardening.test.mjs",
   "tests/durable-persistence-evidence.test.mjs",
+  "tests/durable-invited-account-persistence-runtime-proof.test.mjs",
   "tests/learner-loop-runtime-telemetry-wiring.test.mjs",
   "tests/capture-to-note-quality-hardening.test.mjs",
   "tests/today-plan-source-reasoning.test.mjs",
