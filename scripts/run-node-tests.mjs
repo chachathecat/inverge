@@ -8,6 +8,7 @@ const defaultTestFiles = [
   "tests/closed-beta-manual-qa-runbook.test.mjs",
   "tests/closed-beta-manual-qa-evidence-run.test.mjs",
   "tests/closed-beta-invite-gate.test.mjs",
+  "tests/review-completion-runtime-proof.test.mjs",
   "tests/ocr-pdf-capture-maturity-hardening.test.mjs",
   "tests/ocr-pdf-upload-runtime-smoke-proof.test.mjs",
   "tests/durable-persistence-evidence.test.mjs",
