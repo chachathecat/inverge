@@ -12,6 +12,7 @@ const defaultTestFiles = [
   "tests/closed-beta-first-cohort-operating-report-template.test.mjs",
   "tests/beta-account-durable-target-setup-runbook.test.mjs",
   "tests/provider-disabled-synthetic-image-ocr-smoke-runbook.test.mjs",
+  "tests/account-backed-review-completion-setup-runbook.test.mjs",
   "tests/review-completion-runtime-proof.test.mjs",
   "tests/ocr-pdf-capture-maturity-hardening.test.mjs",
   "tests/ocr-pdf-upload-runtime-smoke-proof.test.mjs",
