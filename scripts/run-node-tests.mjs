@@ -10,6 +10,7 @@ const defaultTestFiles = [
   "tests/closed-beta-invite-gate.test.mjs",
   "tests/closed-beta-metrics-monitoring-contract.test.mjs",
   "tests/closed-beta-first-cohort-day-0-readiness.test.mjs",
+  "tests/closed-beta-first-cohort-day-0-readiness-evidence.test.mjs",
   "tests/closed-beta-first-cohort-operating-report-template.test.mjs",
   "tests/beta-account-durable-target-setup-runbook.test.mjs",
   "tests/provider-disabled-synthetic-image-ocr-smoke-runbook.test.mjs",
