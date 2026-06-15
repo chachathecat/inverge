@@ -25,6 +25,7 @@ const defaultTestFiles = [
   "tests/today-plan-source-reasoning.test.mjs",
   "tests/review-queue-reflection-hardening.test.mjs",
   "tests/learner-loop-telemetry.test.mjs",
+  "tests/legal-source-ingest.test.mjs",
   "tests/qnet-historical-materials-batch-plan.test.mjs",
   "tests/qnet-official-materials-reference.test.mjs",
   "tests/qnet-reference-intelligence-report.test.mjs",

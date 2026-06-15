@@ -1,0 +1,137 @@
+[
+  {
+    "sourceKey": "civil-act",
+    "title": "민법",
+    "sourceType": "current_law",
+    "provider": "moleg_law_open_api",
+    "priority": 100,
+    "examSubjects": ["민법"],
+    "needsOfficialVerification": true
+  },
+  {
+    "sourceKey": "appraisal-act",
+    "title": "감정평가 및 감정평가사에 관한 법률",
+    "sourceType": "current_law",
+    "provider": "moleg_law_open_api",
+    "priority": 100,
+    "examSubjects": ["감정평가관계법규", "감정평가 및 보상법규"],
+    "needsOfficialVerification": true
+  },
+  {
+    "sourceKey": "appraisal-act-enforcement-decree",
+    "title": "감정평가 및 감정평가사에 관한 법률 시행령",
+    "sourceType": "current_law",
+    "provider": "moleg_law_open_api",
+    "priority": 95,
+    "examSubjects": ["감정평가관계법규", "감정평가 및 보상법규"],
+    "needsOfficialVerification": true
+  },
+  {
+    "sourceKey": "appraisal-act-enforcement-rule",
+    "title": "감정평가 및 감정평가사에 관한 법률 시행규칙",
+    "sourceType": "current_law",
+    "provider": "moleg_law_open_api",
+    "priority": 90,
+    "examSubjects": ["감정평가관계법규", "감정평가 및 보상법규"],
+    "needsOfficialVerification": true
+  },
+  {
+    "sourceKey": "land-compensation-act",
+    "title": "공익사업을 위한 토지 등의 취득 및 보상에 관한 법률",
+    "sourceType": "current_law",
+    "provider": "moleg_law_open_api",
+    "priority": 100,
+    "examSubjects": ["감정평가관계법규", "감정평가 및 보상법규"],
+    "needsOfficialVerification": true
+  },
+  {
+    "sourceKey": "land-compensation-act-enforcement-decree",
+    "title": "공익사업을 위한 토지 등의 취득 및 보상에 관한 법률 시행령",
+    "sourceType": "current_law",
+    "provider": "moleg_law_open_api",
+    "priority": 95,
+    "examSubjects": ["감정평가관계법규", "감정평가 및 보상법규"],
+    "needsOfficialVerification": true
+  },
+  {
+    "sourceKey": "land-compensation-act-enforcement-rule",
+    "title": "공익사업을 위한 토지 등의 취득 및 보상에 관한 법률 시행규칙",
+    "sourceType": "current_law",
+    "provider": "moleg_law_open_api",
+    "priority": 90,
+    "examSubjects": ["감정평가관계법규", "감정평가 및 보상법규"],
+    "needsOfficialVerification": true
+  },
+  {
+    "sourceKey": "real-estate-price-disclosure-act",
+    "title": "부동산 가격공시에 관한 법률",
+    "sourceType": "current_law",
+    "provider": "moleg_law_open_api",
+    "priority": 90,
+    "examSubjects": ["감정평가관계법규", "감정평가 및 보상법규", "부동산 관련 법령"],
+    "needsOfficialVerification": true
+  },
+  {
+    "sourceKey": "real-estate-price-disclosure-act-enforcement-decree",
+    "title": "부동산 가격공시에 관한 법률 시행령",
+    "sourceType": "current_law",
+    "provider": "moleg_law_open_api",
+    "priority": 85,
+    "examSubjects": ["감정평가관계법규", "감정평가 및 보상법규", "부동산 관련 법령"],
+    "needsOfficialVerification": true
+  },
+  {
+    "sourceKey": "national-land-planning-act",
+    "title": "국토의 계획 및 이용에 관한 법률",
+    "sourceType": "current_law",
+    "provider": "moleg_law_open_api",
+    "priority": 85,
+    "examSubjects": ["감정평가관계법규", "부동산 관련 법령"],
+    "needsOfficialVerification": true
+  },
+  {
+    "sourceKey": "building-act",
+    "title": "건축법",
+    "sourceType": "current_law",
+    "provider": "moleg_law_open_api",
+    "priority": 80,
+    "examSubjects": ["감정평가관계법규", "부동산 관련 법령"],
+    "needsOfficialVerification": true
+  },
+  {
+    "sourceKey": "urban-residential-environment-renewal-act",
+    "title": "도시 및 주거환경정비법",
+    "sourceType": "current_law",
+    "provider": "moleg_law_open_api",
+    "priority": 85,
+    "examSubjects": ["감정평가관계법규", "감정평가 및 보상법규", "부동산 관련 법령"],
+    "needsOfficialVerification": true
+  },
+  {
+    "sourceKey": "administrative-procedures-act",
+    "title": "행정절차법",
+    "sourceType": "current_law",
+    "provider": "moleg_law_open_api",
+    "priority": 80,
+    "examSubjects": ["감정평가 및 보상법규"],
+    "needsOfficialVerification": true
+  },
+  {
+    "sourceKey": "administrative-litigation-act",
+    "title": "행정소송법",
+    "sourceType": "current_law",
+    "provider": "moleg_law_open_api",
+    "priority": 80,
+    "examSubjects": ["감정평가 및 보상법규"],
+    "needsOfficialVerification": true
+  },
+  {
+    "sourceKey": "administrative-appeals-act",
+    "title": "행정심판법",
+    "sourceType": "current_law",
+    "provider": "moleg_law_open_api",
+    "priority": 75,
+    "examSubjects": ["감정평가 및 보상법규"],
+    "needsOfficialVerification": true
+  }
+]
