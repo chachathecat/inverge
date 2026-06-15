@@ -106,18 +106,19 @@ test("legal source seed exists with required appraiser legal sources only as met
   assertNoForbiddenFields(seed);
 });
 
-test("legal grounding migration creates corpus tables with authenticated read and no client writes", async () => {
+test("legal grounding migration creates corpus tables with authenticated read and service-only sync runs", async () => {
   assert.equal(existsSync(migrationPath), true);
   const migration = await readFile(migrationPath, "utf8");
-
-  for (const table of [
+  const clientReadableCorpusTables = [
     "legal_sources",
     "legal_versions",
     "legal_article_chunks",
     "legal_concept_nodes",
     "legal_concept_anchors",
-    "legal_sync_runs",
-  ]) {
+  ];
+  const serviceOnlyOperationalTables = ["legal_sync_runs"];
+
+  for (const table of clientReadableCorpusTables) {
     assert.match(migration, new RegExp(`create table if not exists public\\.${table}`));
     assert.match(migration, new RegExp(`alter table public\\.${table} enable row level security`));
     assert.match(migration, new RegExp(`grant select on table public\\.${table} to authenticated`));
@@ -130,6 +131,28 @@ test("legal grounding migration creates corpus tables with authenticated read an
       migration,
       new RegExp(`on public\\.${table}[\\s\\S]{0,160}for (insert|update|delete)[\\s\\S]{0,80}to authenticated`, "i"),
       `${table} must not define authenticated write policies`,
+    );
+  }
+
+  for (const table of serviceOnlyOperationalTables) {
+    assert.match(migration, new RegExp(`create table if not exists public\\.${table}`));
+    assert.match(migration, new RegExp(`alter table public\\.${table} enable row level security`));
+    assert.match(migration, new RegExp(`grant select, insert, update, delete on table public\\.${table} to service_role`));
+    assert.match(migration, new RegExp(`revoke all on table public\\.${table} from authenticated`));
+    assert.doesNotMatch(
+      migration,
+      new RegExp(`grant select on table public\\.${table} to authenticated`),
+      `${table} must not be client-readable`,
+    );
+    assert.doesNotMatch(
+      migration,
+      new RegExp(`${table}_authenticated_read`),
+      `${table} must not define authenticated read policy`,
+    );
+    assert.doesNotMatch(
+      migration,
+      new RegExp(`on public\\.${table}[\\s\\S]{0,160}for (select|insert|update|delete)[\\s\\S]{0,80}to authenticated`, "i"),
+      `${table} must not define authenticated policies`,
     );
   }
 

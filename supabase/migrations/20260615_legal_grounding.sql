@@ -201,6 +201,7 @@ revoke all on table public.legal_article_chunks from anon;
 revoke all on table public.legal_concept_nodes from anon;
 revoke all on table public.legal_concept_anchors from anon;
 revoke all on table public.legal_sync_runs from anon;
+revoke all on table public.legal_sync_runs from authenticated;
 
 grant usage on schema public to authenticated, service_role;
 
@@ -209,7 +210,6 @@ grant select on table public.legal_versions to authenticated;
 grant select on table public.legal_article_chunks to authenticated;
 grant select on table public.legal_concept_nodes to authenticated;
 grant select on table public.legal_concept_anchors to authenticated;
-grant select on table public.legal_sync_runs to authenticated;
 
 grant select, insert, update, delete on table public.legal_sources to service_role;
 grant select, insert, update, delete on table public.legal_versions to service_role;
@@ -253,14 +253,6 @@ create policy "legal_concept_nodes_authenticated_read"
 drop policy if exists "legal_concept_anchors_authenticated_read" on public.legal_concept_anchors;
 create policy "legal_concept_anchors_authenticated_read"
   on public.legal_concept_anchors
-  as permissive
-  for select
-  to authenticated
-  using (auth.uid() is not null);
-
-drop policy if exists "legal_sync_runs_authenticated_read" on public.legal_sync_runs;
-create policy "legal_sync_runs_authenticated_read"
-  on public.legal_sync_runs
   as permissive
   for select
   to authenticated
