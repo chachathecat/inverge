@@ -15,6 +15,7 @@
 
 # local runtime data
 /.data/
+/.data/legal-anchor-verification/
 
 # next.js
 /.next/
