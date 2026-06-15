@@ -8,6 +8,7 @@ import {
   searchCurrentLawByTitle,
 } from "../../lib/legal/law-open-api";
 import { extractLawSearchHits, pickExactLaw } from "../../lib/legal/legal-normalizer";
+import { formatUnknownLegalIngestError } from "../../lib/legal/legal-error-serialization";
 import { extractArticleChunks } from "../../lib/legal/parse-law-xml";
 
 type LegalSourceSeed = {
@@ -258,6 +259,7 @@ async function ingestSource(
       provider_law_id: exactLaw.lawId,
       law_title: chunk.lawTitle,
       article_no: chunk.articleNo,
+      article_key: chunk.articleKey,
       article_title: chunk.articleTitle,
       body_text: chunk.bodyText,
       normalized_text: chunk.normalizedText,
@@ -272,7 +274,7 @@ async function ingestSource(
 
     const { error: chunkError } = await supabase
       .from("legal_article_chunks")
-      .upsert(chunkRows, { onConflict: "version_id,article_no" });
+      .upsert(chunkRows, { onConflict: "version_id,article_key" });
 
     if (chunkError) {
       throw chunkError;
@@ -292,7 +294,7 @@ async function ingestSource(
 
     console.info(`[legal-ingest] ${seed.sourceKey}: ${articleChunks.length} article chunks`);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown legal ingest error.";
+    const message = formatUnknownLegalIngestError(error);
 
     await recordSyncRun(supabase, {
       sourceId,
@@ -325,7 +327,7 @@ async function main(): Promise<void> {
 }
 
 main().catch((error: unknown) => {
-  const message = error instanceof Error ? error.message : "Unknown legal ingest error.";
+  const message = formatUnknownLegalIngestError(error);
   console.error(`[legal-ingest] failed: ${message}`);
   process.exitCode = 1;
 });
