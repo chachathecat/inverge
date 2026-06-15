@@ -15,10 +15,12 @@ import {
   normalizeLawDate,
   pickExactLaw,
 } from "../lib/legal/legal-normalizer.ts";
+import { serializeUnknownLegalIngestError } from "../lib/legal/legal-error-serialization.ts";
 import { extractArticleChunks } from "../lib/legal/parse-law-xml.ts";
 
 const seedPath = "reference_corpus/legal/appraiser/legal_sources.seed.json";
 const migrationPath = "supabase/migrations/20260615_legal_grounding.sql";
+const articleIdentityMigrationPath = "supabase/migrations/20260615_legal_article_chunk_identity.sql";
 const docsPath = "docs/inverge-legal-source-ingest.md";
 const testRunnerPath = "scripts/run-node-tests.mjs";
 const packagePath = "package.json";
@@ -162,6 +164,21 @@ test("legal grounding migration creates corpus tables with authenticated read an
   assert.match(migration, /raw_xml_sha256 text not null/);
 });
 
+
+
+test("legal article identity migration adds stable keys without changing service-only sync boundaries", async () => {
+  assert.equal(existsSync(articleIdentityMigrationPath), true);
+  const migration = await readFile(articleIdentityMigrationPath, "utf8");
+
+  assert.match(migration, /add column if not exists article_key text/);
+  assert.match(migration, /metadata ->> 'joKey'/);
+  assert.match(migration, /digest\(normalized_text, 'sha256'\)/);
+  assert.match(migration, /drop constraint if exists legal_article_chunks_version_article_unique/);
+  assert.match(migration, /unique \(version_id, article_key\)/);
+  assert.doesNotMatch(migration, /grant .*authenticated/i);
+  assert.doesNotMatch(migration, /legal_sync_runs_authenticated/i);
+});
+
 test("law Open API helpers request XML only and never require HTML scraping", async () => {
   const requests = [];
   const fetchImpl = async (url) => {
@@ -260,6 +277,58 @@ test("legal parser extracts article-like chunks from synthetic XML fixture", () 
   assert.equal(chunks[0].metadata.sourceKind, "current_law_article");
 });
 
+
+
+test("legal parser keeps duplicate display article numbers when stable article keys differ", () => {
+  const parser = new XMLParser({ ignoreAttributes: false, trimValues: true, parseTagValue: false });
+  const parsed = parser.parse(`
+    <법령>
+      <법령명_한글>학습용 합성법</법령명_한글>
+      <조문>
+        <조문단위>
+          <조문번호>1</조문번호>
+          <조문가지번호>0</조문가지번호>
+          <조문키>main-000100</조문키>
+          <조문내용>제1조 본문 조문입니다.</조문내용>
+        </조문단위>
+        <조문단위>
+          <조문번호>1</조문번호>
+          <조문가지번호>0</조문가지번호>
+          <조문키>addenda-000100</조문키>
+          <조문내용>제1조 부칙 조문입니다.</조문내용>
+        </조문단위>
+      </조문>
+    </법령>
+  `);
+
+  const chunks = extractArticleChunks(parsed);
+
+  assert.equal(chunks.length, 2);
+  assert.deepEqual(chunks.map((chunk) => chunk.articleNo), ["제1조", "제1조"]);
+  assert.deepEqual(chunks.map((chunk) => chunk.articleKey), ["main-000100", "addenda-000100"]);
+});
+
+test("safe legal ingest error serialization preserves Supabase fields and redacts secrets and XML", () => {
+  process.env.LAW_OPEN_API_OC = "secret-oc";
+  process.env.SUPABASE_SERVICE_ROLE_KEY = "secret-service-role";
+
+  const serialized = serializeUnknownLegalIngestError({
+    message: "duplicate key violates constraint secret-service-role",
+    code: "23505",
+    details: "Key already exists",
+    hint: "Retry without secret-oc",
+    name: "PostgrestError",
+    payload: "<법령><조문>raw xml</조문></법령>",
+  });
+
+  const json = JSON.stringify(serialized);
+  assert.equal(serialized.code, "23505");
+  assert.equal(serialized.details, "Key already exists");
+  assert.equal(serialized.name, "PostgrestError");
+  assert.doesNotMatch(json, /secret-oc|secret-service-role|raw xml/);
+  assert.match(json, /redacted/);
+});
+
 test("legal source ingest docs preserve Open API and source-grounded boundaries", async () => {
   assert.equal(existsSync(docsPath), true);
   const docs = await readFile(docsPath, "utf8");
@@ -288,4 +357,6 @@ test("ingest script and test runner are wired without exposing provider secrets"
   assert.match(ingestScript, /rawXmlSha256/);
   assert.doesNotMatch(ingestScript, /console\.(log|info|error)\([^)]*LAW_OPEN_API_OC/);
   assert.doesNotMatch(ingestScript, /console\.(log|info|error)\([^)]*SUPABASE_SERVICE_ROLE_KEY/);
+  assert.match(ingestScript, /article_key: chunk\.articleKey/);
+  assert.match(ingestScript, /onConflict: "version_id,article_key"/);
 });

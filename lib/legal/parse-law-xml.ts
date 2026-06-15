@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { isRecord, normalizeWhitespace } from "./legal-normalizer";
 
 type UnknownRecord = Record<string, unknown>;
@@ -5,6 +6,7 @@ type UnknownRecord = Record<string, unknown>;
 export type LegalArticleChunk = {
   lawTitle: string;
   articleNo: string;
+  articleKey: string;
   articleTitle?: string;
   bodyText: string;
   normalizedText: string;
@@ -153,6 +155,16 @@ function formatArticleNo(record: UnknownRecord): string {
   return `제${base}조`;
 }
 
+function createArticleKey(articleNo: string, normalizedText: string, joKey?: string): string {
+  if (joKey) {
+    return joKey;
+  }
+
+  const digest = createHash("sha256").update(normalizedText, "utf8").digest("hex").slice(0, 12);
+
+  return `${articleNo}:${digest}`;
+}
+
 function dedupeLines(lines: string[]): string[] {
   const seen = new Set<string>();
   const deduped: string[] = [];
@@ -192,11 +204,13 @@ export function extractArticleChunks(parsed: unknown): LegalArticleChunk[] {
 
     seen.add(identity);
 
+    const joKey = readString(articleNode, ["조문키", "joKey"]) || undefined;
     const heading = [lawTitle, articleNo, articleTitle].filter(Boolean).join(" ");
 
     chunks.push({
       lawTitle,
       articleNo,
+      articleKey: createArticleKey(articleNo, normalizedText, joKey),
       articleTitle,
       bodyText,
       normalizedText,
@@ -206,7 +220,7 @@ export function extractArticleChunks(parsed: unknown): LegalArticleChunk[] {
         sourceKind: "current_law_article",
         joNumber: readString(articleNode, ["조문번호", "articleNo"]) || undefined,
         joBranchNumber: readString(articleNode, ["조문가지번호", "articleBranchNo"]) || undefined,
-        joKey: readString(articleNode, ["조문키", "joKey"]) || undefined,
+        joKey,
       },
     });
   }
