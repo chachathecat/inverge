@@ -36,6 +36,7 @@
     "test:official-source-verification": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs --test tests/official-source-verification.test.mjs",
     "check:official-source-verification": "node scripts/check-official-source-verification.mjs",
     "ingest:qnet-appraiser-materials": "node scripts/ingest-qnet-appraiser-materials.mjs",
+    "ingest:legal": "tsx scripts/legal/ingest-legal-sources.ts",
     "test:qnet-official-materials": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs --test tests/qnet-official-materials-ingestion.test.mjs tests/qnet-official-materials-reference.test.mjs tests/qnet-reference-today-plan-adapter.test.mjs",
     "check:qnet-reference-intelligence": "node --experimental-strip-types scripts/summarize-qnet-reference-intelligence.mjs"
   },
@@ -45,6 +46,7 @@
     "@supabase/supabase-js": "^2.103.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "fast-xml-parser": "^5.8.0",
     "framer-motion": "^12.38.0",
     "lucide-react": "^1.8.0",
     "next": "16.2.4",
@@ -56,6 +58,7 @@
     "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.51.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
@@ -64,7 +67,7 @@
     "eslint-config-next": "16.2.4",
     "supabase": "^2.95.0",
     "tailwindcss": "^4",
-    "typescript": "^5",
-    "@playwright/test": "^1.51.1"
+    "tsx": "^4.22.4",
+    "typescript": "^5"
   }
 }
