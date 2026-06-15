@@ -1,0 +1,1002 @@
+[
+  {
+    "conceptKey": "civil_invalid_cancel",
+    "examMode": "both",
+    "examSubject": "민법",
+    "unit": "법률행위",
+    "label": "무효와 취소",
+    "description": "법률행위 효력 부정 사유와 취소 가능성을 구분하기 위한 개념 노드입니다.",
+    "anchorHints": [
+      {
+        "lawTitle": "민법",
+        "articleNo": "제103조",
+        "anchorType": "primary_source",
+        "anchorRole": "반사회질서 법률행위의 무효 기준"
+      }
+    ],
+    "sourceStatus": "draft",
+    "needsOfficialVerification": true,
+    "lastReviewedAt": null,
+    "safeUse": "legal_concept_anchor_seed"
+  },
+  {
+    "conceptKey": "civil_agency",
+    "examMode": "both",
+    "examSubject": "민법",
+    "unit": "대리",
+    "label": "대리행위",
+    "description": "대리인이 본인을 위하여 하는 의사표시의 효과 귀속 구조를 다루는 개념 노드입니다.",
+    "anchorHints": [
+      {
+        "lawTitle": "민법",
+        "articleNo": "제114조",
+        "anchorType": "primary_source",
+        "anchorRole": "대리행위의 효과 귀속 기준"
+      }
+    ],
+    "sourceStatus": "draft",
+    "needsOfficialVerification": true,
+    "lastReviewedAt": null,
+    "safeUse": "legal_concept_anchor_seed"
+  },
+  {
+    "conceptKey": "civil_unauthorized_agency",
+    "examMode": "both",
+    "examSubject": "민법",
+    "unit": "대리",
+    "label": "무권대리",
+    "description": "대리권 없는 행위의 효력과 본인 추인 전 상태를 구분하기 위한 개념 노드입니다.",
+    "anchorHints": [
+      {
+        "lawTitle": "민법",
+        "articleNo": "제130조",
+        "anchorType": "primary_source",
+        "anchorRole": "무권대리 행위의 본인 추인 전 효력"
+      }
+    ],
+    "sourceStatus": "draft",
+    "needsOfficialVerification": true,
+    "lastReviewedAt": null,
+    "safeUse": "legal_concept_anchor_seed"
+  },
+  {
+    "conceptKey": "civil_apparent_agency",
+    "examMode": "both",
+    "examSubject": "민법",
+    "unit": "대리",
+    "label": "표현대리",
+    "description": "대리권 외관이 있는 경우 본인 책임 성립 가능성을 판단하기 위한 개념 노드입니다.",
+    "anchorHints": [
+      {
+        "lawTitle": "민법",
+        "articleNo": "제125조",
+        "anchorType": "primary_source",
+        "anchorRole": "대리권 수여 표시에 의한 표현대리 기준"
+      }
+    ],
+    "sourceStatus": "draft",
+    "needsOfficialVerification": true,
+    "lastReviewedAt": null,
+    "safeUse": "legal_concept_anchor_seed"
+  },
+  {
+    "conceptKey": "civil_registration",
+    "examMode": "both",
+    "examSubject": "민법",
+    "unit": "물권변동",
+    "label": "부동산 물권변동과 등기",
+    "description": "부동산 물권 변동에서 등기의 필요성을 확인하기 위한 개념 노드입니다.",
+    "anchorHints": [
+      {
+        "lawTitle": "민법",
+        "articleNo": "제186조",
+        "anchorType": "primary_source",
+        "anchorRole": "법률행위에 의한 부동산 물권변동의 등기 요건"
+      }
+    ],
+    "sourceStatus": "draft",
+    "needsOfficialVerification": true,
+    "lastReviewedAt": null,
+    "safeUse": "legal_concept_anchor_seed"
+  },
+  {
+    "conceptKey": "civil_ownership",
+    "examMode": "both",
+    "examSubject": "민법",
+    "unit": "소유권",
+    "label": "소유권 내용",
+    "description": "소유자가 가지는 사용, 수익, 처분 권능을 확인하기 위한 개념 노드입니다.",
+    "anchorHints": [
+      {
+        "lawTitle": "민법",
+        "articleNo": "제211조",
+        "anchorType": "definition_source",
+        "anchorRole": "소유권 권능의 기본 정의"
+      }
+    ],
+    "sourceStatus": "draft",
+    "needsOfficialVerification": true,
+    "lastReviewedAt": null,
+    "safeUse": "legal_concept_anchor_seed"
+  },
+  {
+    "conceptKey": "civil_mortgage",
+    "examMode": "both",
+    "examSubject": "민법",
+    "unit": "담보물권",
+    "label": "저당권",
+    "description": "채권담보를 위한 저당권의 목적과 효력을 정리하기 위한 개념 노드입니다.",
+    "anchorHints": [
+      {
+        "lawTitle": "민법",
+        "articleNo": "제356조",
+        "anchorType": "definition_source",
+        "anchorRole": "저당권의 기본 정의"
+      }
+    ],
+    "sourceStatus": "draft",
+    "needsOfficialVerification": true,
+    "lastReviewedAt": null,
+    "safeUse": "legal_concept_anchor_seed"
+  },
+  {
+    "conceptKey": "civil_condition",
+    "examMode": "both",
+    "examSubject": "민법",
+    "unit": "법률행위",
+    "label": "조건",
+    "description": "법률행위 효력 발생 또는 소멸을 장래 사실에 연결하는 구조를 다루는 개념 노드입니다.",
+    "anchorHints": [
+      {
+        "lawTitle": "민법",
+        "articleNo": "제147조",
+        "anchorType": "primary_source",
+        "anchorRole": "조건 성취와 법률행위 효력의 연결"
+      }
+    ],
+    "sourceStatus": "draft",
+    "needsOfficialVerification": true,
+    "lastReviewedAt": null,
+    "safeUse": "legal_concept_anchor_seed"
+  },
+  {
+    "conceptKey": "civil_term",
+    "examMode": "both",
+    "examSubject": "민법",
+    "unit": "법률행위",
+    "label": "기한",
+    "description": "기한 도래에 따른 법률행위 효력 변화를 확인하기 위한 개념 노드입니다.",
+    "anchorHints": [
+      {
+        "lawTitle": "민법",
+        "articleNo": "제152조",
+        "anchorType": "primary_source",
+        "anchorRole": "기한 도래와 법률행위 효력"
+      }
+    ],
+    "sourceStatus": "draft",
+    "needsOfficialVerification": true,
+    "lastReviewedAt": null,
+    "safeUse": "legal_concept_anchor_seed"
+  },
+  {
+    "conceptKey": "civil_mistake",
+    "examMode": "both",
+    "examSubject": "민법",
+    "unit": "의사표시",
+    "label": "착오",
+    "description": "착오에 의한 의사표시 취소 가능성을 구분하기 위한 개념 노드입니다.",
+    "anchorHints": [
+      {
+        "lawTitle": "민법",
+        "articleNo": "제109조",
+        "anchorType": "primary_source",
+        "anchorRole": "착오에 의한 의사표시 취소 기준"
+      }
+    ],
+    "sourceStatus": "draft",
+    "needsOfficialVerification": true,
+    "lastReviewedAt": null,
+    "safeUse": "legal_concept_anchor_seed"
+  },
+  {
+    "conceptKey": "civil_fraud_duress",
+    "examMode": "both",
+    "examSubject": "민법",
+    "unit": "의사표시",
+    "label": "사기와 강박",
+    "description": "사기 또는 강박에 의한 의사표시의 취소 구조를 다루는 개념 노드입니다.",
+    "anchorHints": [
+      {
+        "lawTitle": "민법",
+        "articleNo": "제110조",
+        "anchorType": "primary_source",
+        "anchorRole": "사기와 강박에 의한 의사표시 취소"
+      }
+    ],
+    "sourceStatus": "draft",
+    "needsOfficialVerification": true,
+    "lastReviewedAt": null,
+    "safeUse": "legal_concept_anchor_seed"
+  },
+  {
+    "conceptKey": "civil_limitations",
+    "examMode": "both",
+    "examSubject": "민법",
+    "unit": "소멸시효",
+    "label": "채권 소멸시효",
+    "description": "채권의 일반 소멸시효 기간을 확인하기 위한 개념 노드입니다.",
+    "anchorHints": [
+      {
+        "lawTitle": "민법",
+        "articleNo": "제162조",
+        "anchorType": "primary_source",
+        "anchorRole": "채권 일반 소멸시효 기간"
+      }
+    ],
+    "sourceStatus": "draft",
+    "needsOfficialVerification": true,
+    "lastReviewedAt": null,
+    "safeUse": "legal_concept_anchor_seed"
+  },
+  {
+    "conceptKey": "civil_possession",
+    "examMode": "both",
+    "examSubject": "민법",
+    "unit": "점유권",
+    "label": "점유",
+    "description": "물건에 대한 사실상 지배와 점유 개념을 연결하기 위한 개념 노드입니다.",
+    "anchorHints": [
+      {
+        "lawTitle": "민법",
+        "articleNo": "제192조",
+        "anchorType": "definition_source",
+        "anchorRole": "점유권의 기본 정의"
+      }
+    ],
+    "sourceStatus": "draft",
+    "needsOfficialVerification": true,
+    "lastReviewedAt": null,
+    "safeUse": "legal_concept_anchor_seed"
+  },
+  {
+    "conceptKey": "civil_surface_right",
+    "examMode": "both",
+    "examSubject": "민법",
+    "unit": "용익물권",
+    "label": "지상권",
+    "description": "타인 토지 위 공작물 또는 수목 소유 목적의 권리를 정리하기 위한 개념 노드입니다.",
+    "anchorHints": [
+      {
+        "lawTitle": "민법",
+        "articleNo": "제279조",
+        "anchorType": "definition_source",
+        "anchorRole": "지상권의 기본 정의"
+      }
+    ],
+    "sourceStatus": "draft",
+    "needsOfficialVerification": true,
+    "lastReviewedAt": null,
+    "safeUse": "legal_concept_anchor_seed"
+  },
+  {
+    "conceptKey": "civil_easement",
+    "examMode": "both",
+    "examSubject": "민법",
+    "unit": "용익물권",
+    "label": "지역권",
+    "description": "요역지 편익을 위하여 승역지를 이용하는 권리를 정리하기 위한 개념 노드입니다.",
+    "anchorHints": [
+      {
+        "lawTitle": "민법",
+        "articleNo": "제291조",
+        "anchorType": "definition_source",
+        "anchorRole": "지역권의 기본 정의"
+      }
+    ],
+    "sourceStatus": "draft",
+    "needsOfficialVerification": true,
+    "lastReviewedAt": null,
+    "safeUse": "legal_concept_anchor_seed"
+  },
+  {
+    "conceptKey": "civil_lease",
+    "examMode": "both",
+    "examSubject": "민법",
+    "unit": "계약",
+    "label": "임대차",
+    "description": "목적물 사용수익과 차임 지급의 교환 관계를 확인하기 위한 개념 노드입니다.",
+    "anchorHints": [
+      {
+        "lawTitle": "민법",
+        "articleNo": "제618조",
+        "anchorType": "definition_source",
+        "anchorRole": "임대차의 기본 정의"
+      }
+    ],
+    "sourceStatus": "draft",
+    "needsOfficialVerification": true,
+    "lastReviewedAt": null,
+    "safeUse": "legal_concept_anchor_seed"
+  },
+  {
+    "conceptKey": "civil_contract_cancellation",
+    "examMode": "both",
+    "examSubject": "민법",
+    "unit": "계약",
+    "label": "계약 해제",
+    "description": "채무불이행 등으로 계약관계를 소급 정리하는 구조를 다루는 개념 노드입니다.",
+    "anchorHints": [
+      {
+        "lawTitle": "민법",
+        "articleNo": "제543조",
+        "anchorType": "primary_source",
+        "anchorRole": "해제권의 행사 구조"
+      }
+    ],
+    "sourceStatus": "draft",
+    "needsOfficialVerification": true,
+    "lastReviewedAt": null,
+    "safeUse": "legal_concept_anchor_seed"
+  },
+  {
+    "conceptKey": "civil_simultaneous_performance",
+    "examMode": "both",
+    "examSubject": "민법",
+    "unit": "계약",
+    "label": "동시이행항변",
+    "description": "쌍무계약에서 상대방 이행 전 이행 거절 가능성을 확인하기 위한 개념 노드입니다.",
+    "anchorHints": [
+      {
+        "lawTitle": "민법",
+        "articleNo": "제536조",
+        "anchorType": "primary_source",
+        "anchorRole": "동시이행항변권의 요건"
+      }
+    ],
+    "sourceStatus": "draft",
+    "needsOfficialVerification": true,
+    "lastReviewedAt": null,
+    "safeUse": "legal_concept_anchor_seed"
+  },
+  {
+    "conceptKey": "civil_unjust_enrichment",
+    "examMode": "both",
+    "examSubject": "민법",
+    "unit": "법정채권",
+    "label": "부당이득",
+    "description": "법률상 원인 없는 이익 반환 구조를 확인하기 위한 개념 노드입니다.",
+    "anchorHints": [
+      {
+        "lawTitle": "민법",
+        "articleNo": "제741조",
+        "anchorType": "primary_source",
+        "anchorRole": "부당이득 반환의 기본 요건"
+      }
+    ],
+    "sourceStatus": "draft",
+    "needsOfficialVerification": true,
+    "lastReviewedAt": null,
+    "safeUse": "legal_concept_anchor_seed"
+  },
+  {
+    "conceptKey": "civil_tort",
+    "examMode": "both",
+    "examSubject": "민법",
+    "unit": "법정채권",
+    "label": "불법행위",
+    "description": "고의 또는 과실에 의한 위법한 손해 발생과 배상책임을 연결하는 개념 노드입니다.",
+    "anchorHints": [
+      {
+        "lawTitle": "민법",
+        "articleNo": "제750조",
+        "anchorType": "primary_source",
+        "anchorRole": "불법행위 손해배상책임의 기본 요건"
+      }
+    ],
+    "sourceStatus": "draft",
+    "needsOfficialVerification": true,
+    "lastReviewedAt": null,
+    "safeUse": "legal_concept_anchor_seed"
+  },
+  {
+    "conceptKey": "appraisal_business_scope",
+    "examMode": "first",
+    "examSubject": "감정평가 관계법규",
+    "unit": "감정평가 제도",
+    "label": "감정평가 업무 범위",
+    "description": "감정평가 업무의 법정 범위를 확인하기 위한 개념 노드입니다.",
+    "anchorHints": [
+      {
+        "lawTitle": "감정평가 및 감정평가사에 관한 법률",
+        "articleNo": "제3조",
+        "anchorType": "definition_source",
+        "anchorRole": "감정평가 업무 범위의 기본 정의"
+      }
+    ],
+    "sourceStatus": "draft",
+    "needsOfficialVerification": true,
+    "lastReviewedAt": null,
+    "safeUse": "legal_concept_anchor_seed"
+  },
+  {
+    "conceptKey": "appraisal_appraiser_qualification",
+    "examMode": "first",
+    "examSubject": "감정평가 관계법규",
+    "unit": "감정평가사",
+    "label": "감정평가사 자격",
+    "description": "감정평가사 자격 취득과 등록 관련 기준을 연결하기 위한 개념 노드입니다.",
+    "anchorHints": [
+      {
+        "lawTitle": "감정평가 및 감정평가사에 관한 법률",
+        "articleNo": "제11조",
+        "anchorType": "primary_source",
+        "anchorRole": "감정평가사 자격 기준"
+      }
+    ],
+    "sourceStatus": "draft",
+    "needsOfficialVerification": true,
+    "lastReviewedAt": null,
+    "safeUse": "legal_concept_anchor_seed"
+  },
+  {
+    "conceptKey": "appraisal_corporation",
+    "examMode": "first",
+    "examSubject": "감정평가 관계법규",
+    "unit": "감정평가법인",
+    "label": "감정평가법인",
+    "description": "감정평가법인의 설립과 운영 요건을 확인하기 위한 개념 노드입니다.",
+    "anchorHints": [
+      {
+        "lawTitle": "감정평가 및 감정평가사에 관한 법률",
+        "articleNo": "제29조",
+        "anchorType": "primary_source",
+        "anchorRole": "감정평가법인 제도 기준"
+      }
+    ],
+    "sourceStatus": "draft",
+    "needsOfficialVerification": true,
+    "lastReviewedAt": null,
+    "safeUse": "legal_concept_anchor_seed"
+  },
+  {
+    "conceptKey": "appraisal_duty_good_faith",
+    "examMode": "first",
+    "examSubject": "감정평가 관계법규",
+    "unit": "직무윤리",
+    "label": "성실의무",
+    "description": "감정평가 업무 수행 시 요구되는 직무상 의무를 확인하기 위한 개념 노드입니다.",
+    "anchorHints": [
+      {
+        "lawTitle": "감정평가 및 감정평가사에 관한 법률",
+        "articleNo": "제25조",
+        "anchorType": "primary_source",
+        "anchorRole": "감정평가사의 직무상 의무"
+      }
+    ],
+    "sourceStatus": "draft",
+    "needsOfficialVerification": true,
+    "lastReviewedAt": null,
+    "safeUse": "legal_concept_anchor_seed"
+  },
+  {
+    "conceptKey": "appraisal_report",
+    "examMode": "first",
+    "examSubject": "감정평가 관계법규",
+    "unit": "감정평가 절차",
+    "label": "감정평가서",
+    "description": "감정평가 결과 문서화와 관련된 법정 기준을 연결하기 위한 개념 노드입니다.",
+    "anchorHints": [
+      {
+        "lawTitle": "감정평가 및 감정평가사에 관한 법률",
+        "articleNo": "제6조",
+        "anchorType": "primary_source",
+        "anchorRole": "감정평가서 작성 관련 기준"
+      }
+    ],
+    "sourceStatus": "draft",
+    "needsOfficialVerification": true,
+    "lastReviewedAt": null,
+    "safeUse": "legal_concept_anchor_seed"
+  },
+  {
+    "conceptKey": "appraisal_request_basis",
+    "examMode": "first",
+    "examSubject": "감정평가 관계법규",
+    "unit": "감정평가 절차",
+    "label": "감정평가 의뢰",
+    "description": "감정평가 의뢰와 수행 근거를 확인하기 위한 개념 노드입니다.",
+    "anchorHints": [
+      {
+        "lawTitle": "감정평가 및 감정평가사에 관한 법률",
+        "articleNo": "제5조",
+        "anchorType": "procedure_source",
+        "anchorRole": "감정평가 의뢰와 수행 근거"
+      }
+    ],
+    "sourceStatus": "draft",
+    "needsOfficialVerification": true,
+    "lastReviewedAt": null,
+    "safeUse": "legal_concept_anchor_seed"
+  },
+  {
+    "conceptKey": "appraisal_independence",
+    "examMode": "first",
+    "examSubject": "감정평가 관계법규",
+    "unit": "직무윤리",
+    "label": "독립성과 공정성",
+    "description": "감정평가 업무의 독립적 수행과 공정성 기준을 확인하기 위한 개념 노드입니다.",
+    "anchorHints": [
+      {
+        "lawTitle": "감정평가 및 감정평가사에 관한 법률",
+        "articleNo": "제24조",
+        "anchorType": "primary_source",
+        "anchorRole": "감정평가 업무의 독립성과 공정성 기준"
+      }
+    ],
+    "sourceStatus": "draft",
+    "needsOfficialVerification": true,
+    "lastReviewedAt": null,
+    "safeUse": "legal_concept_anchor_seed"
+  },
+  {
+    "conceptKey": "appraisal_association",
+    "examMode": "first",
+    "examSubject": "감정평가 관계법규",
+    "unit": "감정평가 제도",
+    "label": "감정평가사 협회",
+    "description": "감정평가사 단체와 관련된 제도적 근거를 연결하기 위한 개념 노드입니다.",
+    "anchorHints": [
+      {
+        "lawTitle": "감정평가 및 감정평가사에 관한 법률",
+        "articleNo": "제33조",
+        "anchorType": "supporting_source",
+        "anchorRole": "감정평가사 협회 관련 근거"
+      }
+    ],
+    "sourceStatus": "draft",
+    "needsOfficialVerification": true,
+    "lastReviewedAt": null,
+    "safeUse": "legal_concept_anchor_seed"
+  },
+  {
+    "conceptKey": "appraisal_disciplinary_action",
+    "examMode": "first",
+    "examSubject": "감정평가 관계법규",
+    "unit": "제재",
+    "label": "징계",
+    "description": "감정평가사 관련 제재와 징계 체계를 확인하기 위한 개념 노드입니다.",
+    "anchorHints": [
+      {
+        "lawTitle": "감정평가 및 감정평가사에 관한 법률",
+        "articleNo": "제39조",
+        "anchorType": "procedure_source",
+        "anchorRole": "감정평가사 징계 절차 관련 근거"
+      }
+    ],
+    "sourceStatus": "draft",
+    "needsOfficialVerification": true,
+    "lastReviewedAt": null,
+    "safeUse": "legal_concept_anchor_seed"
+  },
+  {
+    "conceptKey": "appraisal_fee",
+    "examMode": "first",
+    "examSubject": "감정평가 관계법규",
+    "unit": "감정평가 절차",
+    "label": "감정평가 수수료",
+    "description": "감정평가 보수와 수수료 관련 근거를 확인하기 위한 개념 노드입니다.",
+    "anchorHints": [
+      {
+        "lawTitle": "감정평가 및 감정평가사에 관한 법률",
+        "articleNo": "제23조",
+        "anchorType": "supporting_source",
+        "anchorRole": "감정평가 보수와 수수료 관련 기준"
+      }
+    ],
+    "sourceStatus": "draft",
+    "needsOfficialVerification": true,
+    "lastReviewedAt": null,
+    "safeUse": "legal_concept_anchor_seed"
+  },
+  {
+    "conceptKey": "price_disclosure_standard_land",
+    "examMode": "first",
+    "examSubject": "감정평가 관계법규",
+    "unit": "부동산 가격공시",
+    "label": "표준지공시지가",
+    "description": "표준지공시지가의 조사와 공시 근거를 연결하기 위한 개념 노드입니다.",
+    "anchorHints": [
+      {
+        "lawTitle": "부동산 가격공시에 관한 법률",
+        "articleNo": "제3조",
+        "anchorType": "primary_source",
+        "anchorRole": "표준지공시지가 조사와 공시 근거"
+      }
+    ],
+    "sourceStatus": "draft",
+    "needsOfficialVerification": true,
+    "lastReviewedAt": null,
+    "safeUse": "legal_concept_anchor_seed"
+  },
+  {
+    "conceptKey": "price_disclosure_individual_land",
+    "examMode": "first",
+    "examSubject": "감정평가 관계법규",
+    "unit": "부동산 가격공시",
+    "label": "개별공시지가",
+    "description": "개별공시지가 산정과 공시 근거를 확인하기 위한 개념 노드입니다.",
+    "anchorHints": [
+      {
+        "lawTitle": "부동산 가격공시에 관한 법률",
+        "articleNo": "제10조",
+        "anchorType": "primary_source",
+        "anchorRole": "개별공시지가 산정과 공시 근거"
+      }
+    ],
+    "sourceStatus": "draft",
+    "needsOfficialVerification": true,
+    "lastReviewedAt": null,
+    "safeUse": "legal_concept_anchor_seed"
+  },
+  {
+    "conceptKey": "price_disclosure_housing_price",
+    "examMode": "first",
+    "examSubject": "감정평가 관계법규",
+    "unit": "부동산 가격공시",
+    "label": "주택가격 공시",
+    "description": "주택가격 조사와 공시 체계를 연결하기 위한 개념 노드입니다.",
+    "anchorHints": [
+      {
+        "lawTitle": "부동산 가격공시에 관한 법률",
+        "articleNo": "제17조",
+        "anchorType": "supporting_source",
+        "anchorRole": "주택가격 공시 관련 근거"
+      }
+    ],
+    "sourceStatus": "draft",
+    "needsOfficialVerification": true,
+    "lastReviewedAt": null,
+    "safeUse": "legal_concept_anchor_seed"
+  },
+  {
+    "conceptKey": "land_planning_use_area",
+    "examMode": "first",
+    "examSubject": "감정평가 관계법규",
+    "unit": "국토계획",
+    "label": "용도지역",
+    "description": "용도지역 지정과 토지이용 규제 체계를 확인하기 위한 개념 노드입니다.",
+    "anchorHints": [
+      {
+        "lawTitle": "국토의 계획 및 이용에 관한 법률",
+        "articleNo": "제36조",
+        "anchorType": "primary_source",
+        "anchorRole": "용도지역 지정 근거"
+      }
+    ],
+    "sourceStatus": "draft",
+    "needsOfficialVerification": true,
+    "lastReviewedAt": null,
+    "safeUse": "legal_concept_anchor_seed"
+  },
+  {
+    "conceptKey": "building_permit",
+    "examMode": "first",
+    "examSubject": "감정평가 관계법규",
+    "unit": "건축법",
+    "label": "건축허가",
+    "description": "건축허가 대상과 절차의 법적 근거를 확인하기 위한 개념 노드입니다.",
+    "anchorHints": [
+      {
+        "lawTitle": "건축법",
+        "articleNo": "제11조",
+        "anchorType": "procedure_source",
+        "anchorRole": "건축허가 절차와 대상"
+      }
+    ],
+    "sourceStatus": "draft",
+    "needsOfficialVerification": true,
+    "lastReviewedAt": null,
+    "safeUse": "legal_concept_anchor_seed"
+  },
+  {
+    "conceptKey": "compensation_project_approval",
+    "examMode": "second",
+    "examSubject": "감정평가 및 보상법규",
+    "unit": "사업인정",
+    "label": "사업인정",
+    "description": "공익사업 수행을 위한 사업인정 절차의 기본 구조를 다루는 개념 노드입니다.",
+    "anchorHints": [
+      {
+        "lawTitle": "공익사업을 위한 토지 등의 취득 및 보상에 관한 법률",
+        "articleNo": "제20조",
+        "anchorType": "procedure_source",
+        "anchorRole": "사업인정 절차의 기본 근거"
+      }
+    ],
+    "sourceStatus": "draft",
+    "needsOfficialVerification": true,
+    "lastReviewedAt": null,
+    "safeUse": "legal_concept_anchor_seed"
+  },
+  {
+    "conceptKey": "compensation_project_approval_effect",
+    "examMode": "second",
+    "examSubject": "감정평가 및 보상법규",
+    "unit": "사업인정",
+    "label": "사업인정의 효력",
+    "description": "사업인정 이후 발생하는 법적 효과를 연결하기 위한 개념 노드입니다.",
+    "anchorHints": [
+      {
+        "lawTitle": "공익사업을 위한 토지 등의 취득 및 보상에 관한 법률",
+        "articleNo": "제22조",
+        "anchorType": "primary_source",
+        "anchorRole": "사업인정 고시와 효력 발생 기준"
+      }
+    ],
+    "sourceStatus": "draft",
+    "needsOfficialVerification": true,
+    "lastReviewedAt": null,
+    "safeUse": "legal_concept_anchor_seed"
+  },
+  {
+    "conceptKey": "compensation_expropriation_ruling",
+    "examMode": "second",
+    "examSubject": "감정평가 및 보상법규",
+    "unit": "수용재결",
+    "label": "수용재결",
+    "description": "협의 불성립 이후 재결 신청과 수용 절차를 확인하기 위한 개념 노드입니다.",
+    "anchorHints": [
+      {
+        "lawTitle": "공익사업을 위한 토지 등의 취득 및 보상에 관한 법률",
+        "articleNo": "제28조",
+        "anchorType": "procedure_source",
+        "anchorRole": "재결 신청의 절차 근거"
+      }
+    ],
+    "sourceStatus": "draft",
+    "needsOfficialVerification": true,
+    "lastReviewedAt": null,
+    "safeUse": "legal_concept_anchor_seed"
+  },
+  {
+    "conceptKey": "compensation_objection_ruling",
+    "examMode": "second",
+    "examSubject": "감정평가 및 보상법규",
+    "unit": "불복절차",
+    "label": "이의재결",
+    "description": "수용재결에 대한 이의신청과 후속 절차를 연결하기 위한 개념 노드입니다.",
+    "anchorHints": [
+      {
+        "lawTitle": "공익사업을 위한 토지 등의 취득 및 보상에 관한 법률",
+        "articleNo": "제83조",
+        "anchorType": "procedure_source",
+        "anchorRole": "이의신청과 이의재결 절차"
+      }
+    ],
+    "sourceStatus": "draft",
+    "needsOfficialVerification": true,
+    "lastReviewedAt": null,
+    "safeUse": "legal_concept_anchor_seed"
+  },
+  {
+    "conceptKey": "compensation_loss_compensation_principle",
+    "examMode": "second",
+    "examSubject": "감정평가 및 보상법규",
+    "unit": "손실보상",
+    "label": "손실보상 원칙",
+    "description": "공익사업으로 인한 손실보상 책임과 원칙을 확인하기 위한 개념 노드입니다.",
+    "anchorHints": [
+      {
+        "lawTitle": "공익사업을 위한 토지 등의 취득 및 보상에 관한 법률",
+        "articleNo": "제61조",
+        "anchorType": "primary_source",
+        "anchorRole": "사업시행자의 손실보상 책임"
+      }
+    ],
+    "sourceStatus": "draft",
+    "needsOfficialVerification": true,
+    "lastReviewedAt": null,
+    "safeUse": "legal_concept_anchor_seed"
+  },
+  {
+    "conceptKey": "compensation_residual_land",
+    "examMode": "second",
+    "examSubject": "감정평가 및 보상법규",
+    "unit": "잔여지",
+    "label": "잔여지 보상",
+    "description": "공익사업 후 남는 토지의 가치 하락 또는 사용 곤란을 다루는 개념 노드입니다.",
+    "anchorHints": [
+      {
+        "lawTitle": "공익사업을 위한 토지 등의 취득 및 보상에 관한 법률",
+        "articleNo": "제73조",
+        "anchorType": "primary_source",
+        "anchorRole": "잔여지 손실 보상 근거"
+      }
+    ],
+    "sourceStatus": "draft",
+    "needsOfficialVerification": true,
+    "lastReviewedAt": null,
+    "safeUse": "legal_concept_anchor_seed"
+  },
+  {
+    "conceptKey": "compensation_business_loss",
+    "examMode": "second",
+    "examSubject": "감정평가 및 보상법규",
+    "unit": "영업보상",
+    "label": "영업손실 보상",
+    "description": "공익사업으로 인한 영업 손실 보상 범위를 확인하기 위한 개념 노드입니다.",
+    "anchorHints": [
+      {
+        "lawTitle": "공익사업을 위한 토지 등의 취득 및 보상에 관한 법률",
+        "articleNo": "제77조",
+        "anchorType": "primary_source",
+        "anchorRole": "영업손실 보상 근거"
+      }
+    ],
+    "sourceStatus": "draft",
+    "needsOfficialVerification": true,
+    "lastReviewedAt": null,
+    "safeUse": "legal_concept_anchor_seed"
+  },
+  {
+    "conceptKey": "compensation_relocation",
+    "examMode": "second",
+    "examSubject": "감정평가 및 보상법규",
+    "unit": "이주대책",
+    "label": "이주대책",
+    "description": "공익사업으로 생활 근거를 이전해야 하는 경우의 이주대책을 확인하기 위한 개념 노드입니다.",
+    "anchorHints": [
+      {
+        "lawTitle": "공익사업을 위한 토지 등의 취득 및 보상에 관한 법률",
+        "articleNo": "제78조",
+        "anchorType": "procedure_source",
+        "anchorRole": "이주대책 수립 관련 근거"
+      }
+    ],
+    "sourceStatus": "draft",
+    "needsOfficialVerification": true,
+    "lastReviewedAt": null,
+    "safeUse": "legal_concept_anchor_seed"
+  },
+  {
+    "conceptKey": "compensation_agreement_acquisition",
+    "examMode": "second",
+    "examSubject": "감정평가 및 보상법규",
+    "unit": "협의취득",
+    "label": "협의취득",
+    "description": "공익사업 토지 취득에서 협의 절차를 확인하기 위한 개념 노드입니다.",
+    "anchorHints": [
+      {
+        "lawTitle": "공익사업을 위한 토지 등의 취득 및 보상에 관한 법률",
+        "articleNo": "제16조",
+        "anchorType": "procedure_source",
+        "anchorRole": "협의 절차의 기본 근거"
+      }
+    ],
+    "sourceStatus": "draft",
+    "needsOfficialVerification": true,
+    "lastReviewedAt": null,
+    "safeUse": "legal_concept_anchor_seed"
+  },
+  {
+    "conceptKey": "compensation_landowner_relation",
+    "examMode": "second",
+    "examSubject": "감정평가 및 보상법규",
+    "unit": "보상법 총칙",
+    "label": "토지소유자와 관계인",
+    "description": "보상법상 이해관계자 범위를 확인하기 위한 개념 노드입니다.",
+    "anchorHints": [
+      {
+        "lawTitle": "공익사업을 위한 토지 등의 취득 및 보상에 관한 법률",
+        "articleNo": "제2조",
+        "anchorType": "definition_source",
+        "anchorRole": "토지소유자와 관계인 정의"
+      }
+    ],
+    "sourceStatus": "draft",
+    "needsOfficialVerification": true,
+    "lastReviewedAt": null,
+    "safeUse": "legal_concept_anchor_seed"
+  },
+  {
+    "conceptKey": "compensation_amount_standard",
+    "examMode": "second",
+    "examSubject": "감정평가 및 보상법규",
+    "unit": "토지보상",
+    "label": "토지보상액 산정",
+    "description": "취득 토지 보상액 산정 기준을 확인하기 위한 개념 노드입니다.",
+    "anchorHints": [
+      {
+        "lawTitle": "공익사업을 위한 토지 등의 취득 및 보상에 관한 법률",
+        "articleNo": "제70조",
+        "anchorType": "primary_source",
+        "anchorRole": "취득 토지 보상액 산정 기준"
+      }
+    ],
+    "sourceStatus": "draft",
+    "needsOfficialVerification": true,
+    "lastReviewedAt": null,
+    "safeUse": "legal_concept_anchor_seed"
+  },
+  {
+    "conceptKey": "compensation_payment",
+    "examMode": "second",
+    "examSubject": "감정평가 및 보상법규",
+    "unit": "보상 지급",
+    "label": "사전보상",
+    "description": "토지 등 취득 또는 사용 전 보상 지급 원칙을 확인하기 위한 개념 노드입니다.",
+    "anchorHints": [
+      {
+        "lawTitle": "공익사업을 위한 토지 등의 취득 및 보상에 관한 법률",
+        "articleNo": "제62조",
+        "anchorType": "primary_source",
+        "anchorRole": "사전보상 원칙"
+      }
+    ],
+    "sourceStatus": "draft",
+    "needsOfficialVerification": true,
+    "lastReviewedAt": null,
+    "safeUse": "legal_concept_anchor_seed"
+  },
+  {
+    "conceptKey": "admin_procedure_disposition",
+    "examMode": "second",
+    "examSubject": "감정평가 및 보상법규",
+    "unit": "행정절차",
+    "label": "처분",
+    "description": "행정절차상 처분 개념을 보상법규 쟁점과 연결하기 위한 개념 노드입니다.",
+    "anchorHints": [
+      {
+        "lawTitle": "행정절차법",
+        "articleNo": "제2조",
+        "anchorType": "definition_source",
+        "anchorRole": "처분 개념의 기본 정의"
+      }
+    ],
+    "sourceStatus": "draft",
+    "needsOfficialVerification": true,
+    "lastReviewedAt": null,
+    "safeUse": "legal_concept_anchor_seed"
+  },
+  {
+    "conceptKey": "admin_litigation_cancel",
+    "examMode": "second",
+    "examSubject": "감정평가 및 보상법규",
+    "unit": "행정소송",
+    "label": "취소소송",
+    "description": "처분 취소를 구하는 행정소송 유형을 확인하기 위한 개념 노드입니다.",
+    "anchorHints": [
+      {
+        "lawTitle": "행정소송법",
+        "articleNo": "제19조",
+        "anchorType": "procedure_source",
+        "anchorRole": "취소소송 대상과 구조"
+      }
+    ],
+    "sourceStatus": "draft",
+    "needsOfficialVerification": true,
+    "lastReviewedAt": null,
+    "safeUse": "legal_concept_anchor_seed"
+  },
+  {
+    "conceptKey": "admin_appeal_adjudication",
+    "examMode": "second",
+    "examSubject": "감정평가 및 보상법규",
+    "unit": "행정심판",
+    "label": "행정심판 재결",
+    "description": "행정심판에서 재결의 종류와 효력을 확인하기 위한 개념 노드입니다.",
+    "anchorHints": [
+      {
+        "lawTitle": "행정심판법",
+        "articleNo": "제43조",
+        "anchorType": "procedure_source",
+        "anchorRole": "행정심판 재결 관련 근거"
+      }
+    ],
+    "sourceStatus": "draft",
+    "needsOfficialVerification": true,
+    "lastReviewedAt": null,
+    "safeUse": "legal_concept_anchor_seed"
+  }
+]
