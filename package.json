@@ -39,6 +39,7 @@
     "ingest:legal": "tsx scripts/legal/ingest-legal-sources.ts",
     "seed:legal-concept-anchors": "tsx scripts/legal/seed-legal-concept-anchors.ts",
     "export:legal-anchor-verification-report": "tsx scripts/legal/export-legal-anchor-verification-report.ts",
+    "apply:legal-anchor-verification": "tsx scripts/legal/apply-legal-anchor-verification.ts",
     "test:qnet-official-materials": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs --test tests/qnet-official-materials-ingestion.test.mjs tests/qnet-official-materials-reference.test.mjs tests/qnet-reference-today-plan-adapter.test.mjs",
     "check:qnet-reference-intelligence": "node --experimental-strip-types scripts/summarize-qnet-reference-intelligence.mjs"
   },

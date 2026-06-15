@@ -30,6 +30,7 @@ const defaultTestFiles = [
   "tests/legal-concept-anchor-seed.test.mjs",
   "tests/legal-grounding-guard.test.mjs",
   "tests/legal-anchor-verification-report.test.mjs",
+  "tests/legal-anchor-verification-apply.test.mjs",
   "tests/qnet-historical-materials-batch-plan.test.mjs",
   "tests/qnet-official-materials-reference.test.mjs",
   "tests/qnet-reference-intelligence-report.test.mjs",

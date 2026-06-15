@@ -1,0 +1,38 @@
+[
+  {
+    "conceptKey": "compensation_project_approval",
+    "articleKey": "example-article-key-compensation-approval-01",
+    "decision": "verified",
+    "reviewer": "human_required",
+    "reviewedAt": "2026-06-15T00:00:00Z",
+    "notes": "Example only. Do not use as verified production data.",
+    "safeUse": "legal_anchor_verification_decision_example"
+  },
+  {
+    "conceptKey": "compensation_loss_compensation_principle",
+    "articleKey": "example-article-key-compensation-loss-01",
+    "decision": "needs_update",
+    "reviewer": "human_required",
+    "reviewedAt": null,
+    "notes": "Example only. Candidate looks relevant but requires additional supporting source.",
+    "safeUse": "legal_anchor_verification_decision_example"
+  },
+  {
+    "conceptKey": "civil_invalid_cancel",
+    "articleKey": "example-article-key-civil-invalid-cancel-01",
+    "decision": "rejected",
+    "reviewer": "human_required",
+    "reviewedAt": null,
+    "notes": "Example only. Candidate not linked to this concept.",
+    "safeUse": "legal_anchor_verification_decision_example"
+  },
+  {
+    "conceptKey": "civil_agency",
+    "articleKey": "example-article-key-civil-agency-01",
+    "decision": "keep_draft",
+    "reviewer": null,
+    "reviewedAt": null,
+    "notes": "Example only. Continue treating this anchor as draft.",
+    "safeUse": "legal_anchor_verification_decision_example"
+  }
+]
