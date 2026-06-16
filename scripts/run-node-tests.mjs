@@ -22,6 +22,7 @@ const defaultTestFiles = [
   "tests/durable-invited-account-persistence-runtime-proof.test.mjs",
   "tests/learner-loop-runtime-telemetry-wiring.test.mjs",
   "tests/capture-to-note-quality-hardening.test.mjs",
+  "tests/capture-to-note-v1.test.mjs",
   "tests/today-plan-source-reasoning.test.mjs",
   "tests/review-queue-reflection-hardening.test.mjs",
   "tests/learner-loop-telemetry.test.mjs",

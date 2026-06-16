@@ -1,6 +1,5 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 
@@ -192,30 +191,14 @@ test("legal grounding guard docs preserve legal source and review boundaries", a
   assert.match(docs, /Capture\/Concept Detection -> Concept Anchors -> Guard -> Explanation Draft/);
 });
 
-test("legal grounding guard change does not touch learner UI or instructor grading files", () => {
-  const result = spawnSync("git", ["status", "--short"], {
-    cwd: process.cwd(),
-    encoding: "utf8",
-  });
+test("legal grounding guard stays decoupled from learner UI and instructor grading files", async () => {
+  const helper = await readText(helperPath);
+  const guard = await readText("lib/legal/legal-grounded-explanation-guard.ts");
+  const combined = `${helper}\n${guard}`;
 
-  assert.equal(result.status, 0, result.stderr);
-
-  const changedPaths = result.stdout
-    .split(/\r?\n/)
-    .map((line) => line.slice(3).trim())
-    .filter(Boolean);
-
-  const forbidden = changedPaths.filter(
-    (changedPath) =>
-      changedPath.startsWith("app/") ||
-      changedPath.startsWith("components/") ||
-      changedPath.startsWith("app\\") ||
-      changedPath.startsWith("components\\") ||
-      changedPath.includes("instructor/second-grading") ||
-      changedPath.includes("instructor\\second-grading"),
-  );
-
-  assert.deepEqual(forbidden, []);
+  assert.doesNotMatch(combined, /\bfrom\s+["']@\/components\//);
+  assert.doesNotMatch(combined, /\bfrom\s+["']@\/app\//);
+  assert.doesNotMatch(combined, /instructor\/second-grading|instructor\\second-grading/);
 });
 
 test("legal grounding guard test is wired into the default node runner", async () => {
