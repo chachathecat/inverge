@@ -139,7 +139,8 @@ function parseDecisionItem(value: unknown, index: number): LegalAnchorVerificati
 }
 
 function parseDecisions(contents: string): LegalAnchorVerificationDecisionItem[] {
-  const parsed = JSON.parse(contents) as unknown;
+  const normalizedContents = contents.replace(/^\uFEFF/, "");
+  const parsed = JSON.parse(normalizedContents) as unknown;
 
   if (!Array.isArray(parsed)) {
     throw new Error("legal anchor verification decisions must be a JSON array.");

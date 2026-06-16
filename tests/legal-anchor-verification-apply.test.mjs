@@ -97,6 +97,13 @@ test("legal anchor verification apply script refuses verified decision without r
   );
 });
 
+test("legal anchor verification apply script strips a leading UTF-8 BOM before parsing decisions", async () => {
+  const script = await readText(scriptPath);
+
+  assert.equal(script.includes('contents.replace(/^\\uFEFF/, "")'), true);
+  assert.match(script, /JSON\.parse\(normalizedContents\)/);
+});
+
 test("legal anchor verification apply script is dry-run safe and does not delete anchors", async () => {
   const script = await readText(scriptPath);
 
