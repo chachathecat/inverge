@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-import { BottomPrimaryAction, LearnerProgressBar } from "@/components/learner";
+import { BottomPrimaryAction } from "@/components/learner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { buildCaptureToNoteDraft } from "@/lib/capture/capture-to-note";
@@ -1246,23 +1246,25 @@ export function WrongAnswerCaptureForm({
     );
   }
 
+  const footerSecondary =
+    stage === "intake" ? null : (
+      <details className="max-w-full rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-3 py-2">
+        <summary className="cursor-pointer whitespace-nowrap text-xs font-medium text-[color:var(--muted)]">다른 선택</summary>
+        <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+          <Button type="button" variant="outline" onClick={resetDraft} className="w-full sm:w-auto">
+            {mode === "second" ? "다시 쓰기" : "다시 풀기"}
+          </Button>
+          <Button type="button" variant="ghost" onClick={resetDraft} className="w-full sm:w-auto">
+            나중에 하기
+          </Button>
+        </div>
+      </details>
+    );
+
   return (
     <form className="space-y-6 overflow-x-hidden pb-28 sm:pb-0" onSubmit={handleSubmit}>
-      <LearnerProgressBar current={currentCaptureStep} total={4} label="학습 노트 초안" helper="입력 → 확인 → 빈틈 1개 → Today Plan" />
+      <CaptureProgressPill current={currentCaptureStep} total={4} mode={mode} />
 
-      {mode === "first" ? (
-        <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 sm:p-5">
-          <p className="text-xs font-medium text-[color:var(--muted)]">Capture-to-OX</p>
-          <h3 className="mt-1 text-lg font-semibold text-[color:var(--foreground-strong)]">5개 선지를 O/X 연습으로 나눌 수 있습니다.</h3>
-          <p className="mt-2 text-sm leading-6 text-[color:var(--muted-strong)]">사진/OCR 결과를 먼저 확인한 뒤, 각 선지를 하나씩 판단합니다. 복습용 판단 연습입니다.</p>
-          {!canBridgeToFirstOx ? (
-            <p className="mt-3 rounded-[var(--radius-md)] bg-[color:var(--surfaceQuiet)] px-3 py-2 text-sm text-[color:var(--muted-strong)]">선지 5개를 확실히 찾지 못했습니다. 직접 확인 후 O/X로 나눌 수 있습니다.</p>
-          ) : null}
-          <Button type="button" className="mt-4 w-full sm:w-auto" disabled={submitting || !canBridgeToFirstOx} onClick={() => { void saveCaptureAfterConfirmation("first-ox"); }}>
-            O/X 연습으로 나누기
-          </Button>
-        </section>
-      ) : null}
       {rewriteContext && mode === "second" ? (
         <>
           <RewriteContextPanel
@@ -1371,6 +1373,20 @@ export function WrongAnswerCaptureForm({
             textAreaRef={textAreaRef}
           />
 
+          {mode === "first" ? (
+            <section className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4">
+              <p className="text-xs font-medium text-[color:var(--muted)]">선택 연습</p>
+              <h3 className="mt-1 text-base font-semibold text-[color:var(--foreground-strong)]">5개 선지를 O/X로 나눌 수 있습니다.</h3>
+              <p className="mt-2 text-sm leading-6 text-[color:var(--muted-strong)]">입력 내용을 먼저 확인한 뒤 선택하면 됩니다.</p>
+              {!canBridgeToFirstOx ? (
+                <p className="mt-3 rounded-[var(--radius-md)] bg-[color:var(--surfaceQuiet)] px-3 py-2 text-sm text-[color:var(--muted-strong)]">선지 5개를 확실히 찾지 못했습니다. 직접 확인 후 O/X로 나눌 수 있습니다.</p>
+              ) : null}
+              <Button type="button" variant="outline" className="mt-4 w-full sm:w-auto" disabled={submitting || !canBridgeToFirstOx} onClick={() => { void saveCaptureAfterConfirmation("first-ox"); }}>
+                O/X 연습으로 나누기
+              </Button>
+            </section>
+          ) : null}
+
           {stage !== "intake" ? (
             <ExtractionPreview
               form={form}
@@ -1448,19 +1464,7 @@ export function WrongAnswerCaptureForm({
       ) : null}
 
       {!hideGlobalFooterActions ? (
-        <BottomPrimaryAction secondary={
-          <details className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-3 py-2">
-            <summary className="cursor-pointer whitespace-nowrap text-xs font-medium text-[color:var(--muted)]">다른 선택</summary>
-            <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-              <Button type="button" variant="outline" onClick={resetDraft} className="w-full sm:w-auto">
-                {mode === "second" ? "다시 쓰기" : "다시 풀기"}
-              </Button>
-              <Button type="button" variant="ghost" onClick={resetDraft} className="w-full sm:w-auto">
-                나중에 하기
-              </Button>
-            </div>
-          </details>
-        }>
+        <BottomPrimaryAction secondary={footerSecondary}>
         <div className="flex w-full flex-col gap-3 sm:flex-row">
           {rewriteContext && mode === "second" ? (
             <Button type="submit" disabled={submitting || !form.rewriteParagraph.trim()} className="w-full sm:w-auto">
@@ -1497,6 +1501,24 @@ export function WrongAnswerCaptureForm({
         </BottomPrimaryAction>
       ) : null}
     </form>
+  );
+}
+
+function CaptureProgressPill({ current, total, mode }: { current: number; total: number; mode: AppraisalMode }) {
+  const safeTotal = Math.max(total, 1);
+  const safeCurrent = Math.min(Math.max(current, 0), safeTotal);
+  return (
+    <div
+      className="flex max-w-full flex-wrap items-center justify-between gap-2 rounded-full border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)] px-3 py-2 text-[11px] text-[color:var(--muted)] sm:max-w-md"
+      role="progressbar"
+      aria-valuemin={0}
+      aria-valuemax={safeTotal}
+      aria-valuenow={safeCurrent}
+      aria-label="Capture 진행"
+    >
+      <span>{mode === "second" ? "2차 캡처" : "1차 캡처"}</span>
+      <span className="tabular-nums">단계 {safeCurrent}/{safeTotal}</span>
+    </div>
   );
 }
 
@@ -1711,96 +1733,79 @@ function IntakePanel({
   };
 
   return (
-    <section className="rounded-[var(--radius-card)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)] p-4 sm:p-6">
-      <p className="text-caption text-[color:var(--brand-700)]">Step 1. 입력</p>
-      <div className="mt-2 flex flex-col gap-4">
-        <div className="max-w-[62ch]">
-          <h3 className="text-title text-[color:var(--foreground-strong)]">텍스트 입력</h3>
-          <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">아래 입력칸에 바로 붙여넣으세요.</p>
+    <section className="rounded-[var(--radius-card)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)] p-4 sm:p-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="max-w-[60ch]">
+          <p className="text-caption text-[color:var(--brand-700)]">빠른 입력</p>
+          <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">텍스트로 시작</h3>
+          <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">오늘 공부한 내용이나 내 답안을 바로 붙여넣으세요.</p>
         </div>
-        <div className="rounded-[var(--radius-md)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-elevated)] p-5 sm:p-6">
-          <p className="text-caption text-[color:var(--ink-muted)]">텍스트</p>
-          <h4 className="mt-2 text-base font-semibold text-[color:var(--ink-primary)]">바로 붙여넣기</h4>
-          <p className="mt-1 text-sm leading-6 text-[color:var(--ink-muted)]">오늘 공부한 내용 또는 내 답안을 그대로 붙여넣으세요.</p>
-          <div className="mt-4">
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full sm:w-auto"
-              onClick={() => {
-                update("sourceType", inferSourceTypeFromAction("text"));
-                textAreaRef.current?.focus();
-                textAreaRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-              }}
-            >
-              텍스트 입력으로 이동
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full sm:w-auto"
+          onClick={() => {
+            update("sourceType", inferSourceTypeFromAction("text"));
+            textAreaRef.current?.focus();
+            textAreaRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+          }}
+        >
+          텍스트 입력으로 이동
+        </Button>
+      </div>
+      <details className="mt-3 rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] bg-[color:var(--surface)]">
+        <summary className="cursor-pointer list-none px-3 py-2 text-xs font-medium text-[color:var(--ink-muted)]">사진/PDF로 시작하기</summary>
+        <div className="border-t border-[color:var(--border-hairline)] px-3 py-3">
+          <p className="text-xs leading-5 text-[color:var(--muted)]">촬영하거나 업로드한 뒤 OCR 초안을 직접 확인합니다.</p>
+          <div className="mt-3 grid gap-2 sm:flex sm:flex-wrap">
+            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => { update("sourceType", inferSourceTypeFromAction("camera")); cameraInputRef.current?.click(); }}>
+              사진 찍기
             </Button>
-            <p className="mt-2 text-xs text-[color:var(--ink-muted)]">사진/PDF 인식이 불안정하면 텍스트로 붙여넣어도 됩니다.</p>
+            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => { update("sourceType", inferSourceTypeFromAction("gallery")); galleryInputRef.current?.click(); }}>
+              앨범에서 선택
+            </Button>
+            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => { update("sourceType", inferSourceTypeFromAction("pdf")); pdfInputRef.current?.click(); }}>
+              PDF 선택
+            </Button>
           </div>
-          <details className="mt-3 rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)]">
-            <summary className="cursor-pointer list-none px-3 py-2 text-xs font-medium text-[color:var(--ink-muted)]">사진/PDF로 시작하기</summary>
-            <div className="border-t border-[color:var(--border-hairline)] px-3 py-3">
-              <p className="text-xs leading-5 text-[color:var(--muted)]">촬영하거나 업로드한 뒤 OCR 초안을 직접 확인합니다.</p>
-              <div className="mt-3 grid gap-2 sm:flex sm:flex-wrap">
-                <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => { update("sourceType", inferSourceTypeFromAction("camera")); cameraInputRef.current?.click(); }}>
-                  사진 찍기
-                </Button>
-                <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => { update("sourceType", inferSourceTypeFromAction("gallery")); galleryInputRef.current?.click(); }}>
-                  앨범에서 선택
-                </Button>
-                <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => { update("sourceType", inferSourceTypeFromAction("pdf")); pdfInputRef.current?.click(); }}>
-                  PDF 선택
-                </Button>
-              </div>
-              <ul className="mt-3 list-disc space-y-1 pl-5 text-xs text-[color:var(--muted)]">
-                <li>한 페이지씩 정면으로 찍기</li>
-                <li>흔들리면 다시 찍기</li>
-              </ul>
-            </div>
-          </details>
-          <div className="mt-3">
-            <input
-              ref={cameraInputRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              multiple
-              className="sr-only"
-              onChange={(event) => {
-                if (event.currentTarget.files) onImage(event.currentTarget.files);
-              }}
-            />
-            <input
-              ref={galleryInputRef}
-              type="file"
-              accept="image/*"
-              multiple
-              className="sr-only"
-              onChange={(event) => event.currentTarget.files && onImage(event.currentTarget.files)}
-            />
-            <input
-              ref={pdfInputRef}
-              type="file"
-              accept="application/pdf"
-              className="sr-only"
-              onChange={(event) => {
-                const file = event.currentTarget.files?.[0];
-                if (file) onPdf(file);
-              }}
-            />
-          </div>
+          <ul className="mt-3 list-disc space-y-1 pl-5 text-xs text-[color:var(--muted)]">
+            <li>한 페이지씩 정면으로 찍기</li>
+            <li>흔들리면 다시 찍기</li>
+          </ul>
         </div>
+      </details>
+      <div className="mt-3">
+        <input
+          ref={cameraInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          multiple
+          className="sr-only"
+          onChange={(event) => {
+            if (event.currentTarget.files) onImage(event.currentTarget.files);
+          }}
+        />
+        <input
+          ref={galleryInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          className="sr-only"
+          onChange={(event) => event.currentTarget.files && onImage(event.currentTarget.files)}
+        />
+        <input
+          ref={pdfInputRef}
+          type="file"
+          accept="application/pdf"
+          className="sr-only"
+          onChange={(event) => {
+            const file = event.currentTarget.files?.[0];
+            if (file) onPdf(file);
+          }}
+        />
       </div>
-      <div className="mt-4 grid gap-3 sm:grid-cols-1">
-        <label className="space-y-2">
-          <span className="text-sm text-[color:var(--foreground-strong)]">시험 모드</span>
-          <select value={mode} className="form-control" disabled>
-            <option value="first">감정평가사 1차</option>
-            <option value="second">감정평가사 2차</option>
-          </select>
-        </label>
-      </div>
-      <div className={`rounded-[var(--radius-pill)] border px-3 py-2 ${extractionState === "failed" ? "border-[color:var(--status-red)] bg-[color:var(--status-red-soft)]" : "border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)]"}`}>
+      <div className={`mt-3 rounded-[var(--radius-pill)] border px-3 py-2 ${extractionState === "failed" ? "border-[color:var(--status-red)] bg-[color:var(--status-red-soft)]" : "border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)]"}`}>
         <p className="text-xs font-medium text-[color:var(--muted)]">OCR 상태 · {extractionStateLabel[extractionState]}</p>
         <p className="mt-1 text-sm text-[color:var(--foreground-strong)]">
           {{
@@ -1813,8 +1818,11 @@ function IntakePanel({
           }[extractionState]}
         </p>
       </div>
-      <div className="mt-5 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-4">
-        <p className="text-xs font-medium text-[color:var(--muted)]">모드/과목 확인</p>
+      <details className="mt-4 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
+        <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">
+          {mode === "second" ? "2차" : "1차"} · {form.subjectLabel || "과목 선택"}
+        </summary>
+        <div className="space-y-3 border-t border-[color:var(--border-subtle)] px-4 py-3">
         <SubjectSelect
           subjectLabel={config.subjectLabel}
           subjects={config.subjects}
@@ -1825,7 +1833,8 @@ function IntakePanel({
         <Button type="button" variant="ghost" className="w-full sm:w-auto" onClick={() => update("subjectLabel", "")}>
           나중에 확인
         </Button>
-      </div>
+        </div>
+      </details>
       <label className="mt-4 block space-y-2">
         <span className="text-sm text-[color:var(--foreground-strong)]">
           오늘 공부한 내용 또는 내 답안

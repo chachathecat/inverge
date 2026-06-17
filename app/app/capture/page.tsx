@@ -1,7 +1,6 @@
 import { WrongAnswerCaptureForm } from "@/components/review-os/capture-form";
 import { ReviewOsFeedbackButton } from "@/components/review-os/feedback-button";
 import { ClosedBetaBanner } from "@/components/shared/closed-beta-banner";
-import { DailyCommandCard, MinimalStepPanel, QuietDetails } from "@/components/review-os/minimal-study-system";
 import { normalizeSubjectForMode, resolveAppraisalMode } from "@/lib/review-os/appraisal";
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
 import { reviewOsService } from "@/lib/review-os/service";
@@ -39,49 +38,39 @@ export default async function ReviewOsCapturePage({ searchParams }: PageProps) {
   const isRewriteFlow = mode === "second" && Boolean(rewriteContext);
 
   return (
-    <div className="space-y-6">
-      <ClosedBetaBanner />
-
-      <div className="space-y-7">
-      <DailyCommandCard
-        title={isRewriteFlow ? "문단 다시쓰기 실행" : "오늘 한 것 올리기"}
-        description={
-          isRewriteFlow
-            ? "먼저 한 문장만 떠올립니다. 문단 1개만 다시 쓰고 저장합니다."
-            : "텍스트로 빠르게 붙여넣거나 사진/PDF로 시작하세요."
-        }
-      >
-        <QuietDetails>
-          <p>저장하면 가장 큰 빈틈 1개와 다음 행동 1개가 Notes, Review, Today로 이어집니다.</p>
-        </QuietDetails>
-      </DailyCommandCard>
-
-      <MinimalStepPanel title={isRewriteFlow ? "문단 다시쓰기 입력" : "빠른 입력"}>
-        <QuietDetails>
-          <p>
-            {isRewriteFlow
-              ? "한 문단 실행 기록만 남깁니다."
-              : mode === "second"
-                ? "쟁점 회상부터 간극 1개 교정까지 순서대로 기록합니다."
-                : "확인 후 가장 큰 빈틈 1개와 다음 행동 1개만 저장합니다."}
+    <div className="space-y-5">
+      <section className="rounded-[var(--radius-lg)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-elevated)] px-4 py-4 sm:px-6 sm:py-5" data-testid="capture-page-shell">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="max-w-[58ch]">
+            <p className="inline-flex rounded-full border border-[color:var(--border-hairline)] px-2.5 py-1 text-[11px] font-medium text-[color:var(--muted)]">
+              {mode === "second" ? "감정평가사 2차" : "감정평가사 1차"}
+            </p>
+            <h1 className="mt-3 text-2xl font-semibold leading-tight text-[color:var(--textStrong)]">
+              {isRewriteFlow ? "문단 다시쓰기 실행" : "오늘 한 것 올리기"}
+            </h1>
+            <p className="mt-2 text-sm leading-6 text-[color:var(--textBody)]">
+              {isRewriteFlow
+                ? "문단 1개만 다시 쓰고 저장합니다."
+                : "텍스트로 바로 시작하고, 사진/PDF는 필요할 때만 추가하세요."}
+            </p>
+          </div>
+          <p className="text-xs leading-5 text-[color:var(--textMuted)] sm:max-w-[18rem]">
+            OCR/AI 정리는 초안입니다. 저장 전 직접 확인해 주세요.
           </p>
-          <details>
-            <summary className="cursor-pointer list-none text-xs font-medium">입력 순서 보기</summary>
-            <p className="pt-2">텍스트 입력 → 학습 노트 초안 만들기 → Notes / Review / Today 반영</p>
-          </details>
-        </QuietDetails>
-        <div className="pt-3">
-          <WrongAnswerCaptureForm
-            userId={session.userId}
-            mode={mode}
-            initialPreferredSubjects={profile?.preferredSubjects}
-            initialSubject={initialSubject}
-            rewriteContext={rewriteContext}
-          />
         </div>
-      </MinimalStepPanel>
+      </section>
 
-      <ReviewOsFeedbackButton route="/app/capture" pageContext={{ section: "capture", mode }} />
+      <WrongAnswerCaptureForm
+        userId={session.userId}
+        mode={mode}
+        initialPreferredSubjects={profile?.preferredSubjects}
+        initialSubject={initialSubject}
+        rewriteContext={rewriteContext}
+      />
+
+      <div className="space-y-3">
+        <ClosedBetaBanner />
+        <ReviewOsFeedbackButton route="/app/capture" pageContext={{ section: "capture", mode }} />
       </div>
     </div>
   );

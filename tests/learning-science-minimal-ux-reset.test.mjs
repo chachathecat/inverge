@@ -21,9 +21,10 @@ test("learner home maps task types to calm labels instead of raw internals", asy
 test("capture initial surface is one-input with text first", async () => {
   const source = await readFile(new URL("../components/review-os/capture-form.tsx", import.meta.url), "utf8");
   [
-    "Step 1. 입력",
+    "빠른 입력",
+    "텍스트로 시작",
     "텍스트 입력으로 이동",
-    "아래 입력칸에 바로 붙여넣으세요.",
+    "오늘 공부한 내용이나 내 답안을 바로 붙여넣으세요.",
     "학습 노트 초안 만들기",
     "AI로 정리",
     "사진 찍기",

@@ -204,7 +204,7 @@ test("capture route smoke keeps capture-first copy and one primary start action"
 
   for (const required of [
     "오늘 한 것 올리기",
-    "텍스트로 빠르게 붙여넣거나 사진/PDF로 시작하세요.",
+    "텍스트로 바로 시작하고, 사진/PDF는 필요할 때만 추가하세요.",
     "OCR/AI 정리는 초안입니다. 저장 전 직접 확인해 주세요.",
     "Notes / Review / Today로 이어질 빈틈 1개와 다음 행동 1개가 만들어집니다.",
   ]) {
