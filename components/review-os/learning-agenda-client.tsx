@@ -67,9 +67,9 @@ function EventLine({ event }: { event: LearningAgendaEvent }) {
       </div>
       <div className="mt-1 flex flex-wrap gap-2 text-xs text-[color:var(--muted)]">
         {event.subject ? <span>{event.subject}</span> : null}
-        {event.noteId ? <span>Notes</span> : null}
-        {event.reviewItemId ? <span>Review</span> : null}
-        {event.todayTaskId ? <span>Today</span> : null}
+        {event.noteId ? <span>학습 노트</span> : null}
+        {event.reviewItemId ? <span>복습</span> : null}
+        {event.todayTaskId ? <span>오늘 할 일</span> : null}
       </div>
     </li>
   );

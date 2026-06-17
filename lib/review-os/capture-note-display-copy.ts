@@ -40,7 +40,7 @@ export type CaptureNoteDisplayCopy = {
   retryOrRewriteCta: string;
 };
 
-const FALLBACK_GAP = "아직 확인할 빈틈을 고르는 중입니다.";
+const FALLBACK_GAP = "아직 확인할 약점을 고르는 중입니다.";
 const FALLBACK_ACTION = "짧은 재시도로 기준을 다시 고정합니다.";
 const SUPPORTED_EXAM_MODES = new Set(["first", "second"]);
 const SUPPORTED_SOURCE_TYPES = new Set(["photo", "pdf", "text", "manual"]);
@@ -123,10 +123,10 @@ export function buildCaptureNoteDisplayCopy(summary: Pick<CaptureNoteSummary, "o
   const taskType = normalizeText(summary.nextTaskType, "retry");
 
   return {
-    gapLabel: `가장 큰 빈틈: ${gap}`,
+    gapLabel: `가장 큰 약점: ${gap}`,
     nextActionLabel: `다음 행동: ${action}`,
-    saveCta: "저장하고 오늘 계획에 반영",
-    todayPlanCta: "오늘 계획에 반영",
+    saveCta: "저장하고 오늘 할 일에 반영",
+    todayPlanCta: "오늘 할 일에 반영",
     retryOrRewriteCta: taskType === "rewrite" ? "다시 쓰기" : "다시 풀기",
   };
 }

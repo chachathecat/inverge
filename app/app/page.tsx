@@ -25,13 +25,13 @@ function buildFallbackTodayFocus(mode: "first" | "second"): TodayFocus {
   return {
     lines: [
       "오늘은 이 작업 하나만 먼저 합니다.",
-      "아직 Today Plan 신호가 없어 Capture에서 시작합니다.",
-      mode === "second" ? "쟁점 회상 1개를 남기면 Review와 Notes로 이어집니다." : "오답 1개를 남기면 Review와 Notes로 이어집니다.",
+      "아직 오늘 할 일 신호가 없어 오늘 한 것부터 시작합니다.",
+      mode === "second" ? "쟁점 회상 1개를 남기면 복습과 학습 노트로 이어집니다." : "오답 1개를 남기면 복습과 학습 노트로 이어집니다.",
     ],
     nextAction: mode === "second" ? "2차 답안 흐름을 사진/PDF/텍스트 중 하나로 정리하세요." : "1차 오답 1개를 사진/PDF/텍스트 중 하나로 정리하세요.",
     nextActionType: "capture_now",
     primaryTaskLabel: mode === "second" ? "2차 답안 1건 정리" : "1차 오답 1건 정리",
-    reason: "첫 기록을 저장하면 Today, Review, Notes가 이어집니다.",
+    reason: "첫 기록을 저장하면 오늘 할 일, 복습, 학습 노트가 이어집니다.",
     estimatedDurationMinutes: mode === "second" ? 18 : 12,
     priorityScore: 0,
     sourceQueueId: null,
@@ -83,14 +83,14 @@ const SECOND_MODE_INPUT_OPTIONS = [
     hrefKey: "capture",
   },
   {
-    title: "기준 답안과 비교",
-    description: "답안 작성 후 비교로 이어집니다. 보강할 간극을 정리합니다.",
+    title: "강의/교재 정리와 비교",
+    description: "답안 작성 후 비교로 이어집니다. 보강할 약점을 정리합니다.",
     hrefLabel: "비교 기록 보기",
     hrefKey: "items",
   },
   {
     title: "문단 다시쓰기",
-    description: "비교 이후 진행됩니다. 간극 하나를 골라 문단을 다시 씁니다.",
+    description: "비교 이후 진행됩니다. 약점 하나를 골라 문단을 다시 씁니다.",
     hrefLabel: "다시쓰기 큐 열기",
     hrefKey: "review",
   },
@@ -259,7 +259,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
   const latestProblemSnapSignal = learningSignalEvents.find((event) => event.sourceType === "problem-snap") ?? null;
   const problemSnapSignalCta =
     mode === "second"
-      ? { label: "Answer Review로 검토", href: `/answer-review?mode=${mode}` }
+      ? { label: "답안 검토로 보기", href: `/answer-review?mode=${mode}` }
       : { label: "다시 풀기", href: `/problem-snap?mode=${mode}` };
   const inputOptions =
     mode === "first"
@@ -288,7 +288,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
   return (
     <div className="space-y-7 md:space-y-8">
       <ClosedBetaBanner />
-      <DailyCommandCard title="오늘은 이것만 합니다." description="오늘 학습 1개를 정리하면 약점 후보 1개와 다음 행동 1개로 이어집니다.">
+      <DailyCommandCard title="오늘 할 일" description="오늘 한 것 1개를 정리하면 가장 큰 약점 1개와 다음 행동 1개로 이어집니다.">
         <QuietDetails>
           <p>채점 확정이 아니라, 다음 행동을 정리하는 학습 운영 도구입니다.</p>
         </QuietDetails>
@@ -299,7 +299,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
           <EvidenceLine>저장 전 직접 확인해 주세요.</EvidenceLine>
           <OneActionFooter>
             <Link href={`/app/notes?mode=${mode}`} className="inline-flex rounded-full bg-[color:var(--actionPrimary)] px-4 py-2 text-xs font-medium text-white">
-              노트에서 확인
+              학습 노트에서 확인
             </Link>
           </OneActionFooter>
         </section>
@@ -307,10 +307,10 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
 
       {migratedParam && mode === "second" ? (
         <section className="rounded-[var(--radius-md)] bg-[color:var(--surfaceQuiet)] px-4 py-4">
-          <EvidenceLine>1차 기록은 보관되었고, 오늘 계획은 2차 중심으로 전환되었습니다.</EvidenceLine>
+          <EvidenceLine>1차 기록은 보관되었고, 오늘 할 일은 2차 중심으로 전환되었습니다.</EvidenceLine>
           <OneActionFooter>
             <Link href="/app/review?mode=second" className="inline-flex rounded-full bg-[color:var(--actionPrimary)] px-4 py-2 text-xs font-medium text-white">
-              2차 review queue 보기
+              2차 복습 보기
             </Link>
           </OneActionFooter>
         </section>
@@ -339,14 +339,14 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                 <p className="text-caption text-[color:var(--muted)]">처음이라면</p>
                 <p className="mt-1 text-body-lg text-[color:var(--foreground-strong)]">
                   {mode === "first"
-                    ? "오답 하나만 저장하면 Today, Review, Notes가 이어집니다."
-                    : "답안 하나만 저장하면 보강할 문단과 Today, Review, Notes가 이어집니다."}
+                    ? "오답 하나만 저장하면 오늘 할 일, 복습, 학습 노트가 이어집니다."
+                    : "답안 하나만 저장하면 보강할 문단과 오늘 할 일, 복습, 학습 노트가 이어집니다."}
                 </p>
-                <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">오늘 한 것 올리기 → 저장 → Notes / Review / Today 반영</p>
+                <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">오늘 한 것 올리기 → 학습 노트 → 오늘 할 일 → 복습 → 학습 기록</p>
               </div>
               <CardTitle>오늘 한 것 올리기</CardTitle>
               <CardDescription className="max-w-[66ch]">
-                사진, PDF, 텍스트 중 하나로 남기면 오답노트와 다음 행동으로 정리합니다.
+                사진, PDF, 텍스트 중 하나로 남기면 학습 노트와 다음 행동으로 정리합니다.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 p-4 pt-0 sm:space-y-4 sm:p-6 sm:pt-0">
@@ -376,7 +376,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
               <details className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
                 <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">왜 입력부터 시작하나요?</summary>
                 <div className="border-t border-[color:var(--border-subtle)] px-4 py-3 text-xs leading-6 text-[color:var(--muted)]">
-                  입력이 아직 없으면 우선순위가 흐려질 수 있습니다. 오늘 학습 1개만 저장하면 Notes, Review, Today가 같은 흐름으로 이어집니다.
+                  입력이 아직 없으면 우선순위가 흐려질 수 있습니다. 오늘 한 것 1개만 저장하면 학습 노트, 복습, 오늘 할 일이 같은 흐름으로 이어집니다.
                 </div>
               </details>
             </CardContent>
@@ -400,7 +400,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                 <p className="text-[color:var(--foreground-strong)]">{dailyConsistencyCopy}</p>
                 <p className="text-xs text-[color:var(--muted)]">과목</p>
                 <p className="text-[color:var(--foreground-strong)]">{selectedQueueItem?.subjectLabel ?? config.subjects[0]}</p>
-                <p className="mt-2 text-xs text-[color:var(--muted)]">가장 큰 간극</p>
+                <p className="mt-2 text-xs text-[color:var(--muted)]">가장 큰 약점</p>
                 <p className="text-[color:var(--foreground-strong)]">{diagnosedWeakPoint}</p>
                 <p className="mt-2 text-xs text-[color:var(--muted)]">다음 행동</p>
                 <p className="text-[color:var(--foreground-strong)]">{nextAction}</p>
@@ -413,8 +413,8 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                 <div className="mt-3 space-y-3">
                   {todayPlanTasks.length === 0 ? (
                     <div className="space-y-1 text-xs text-[color:var(--ink-muted)]">
-                      <p>아직 Today Plan 신호가 없습니다.</p>
-                      <p>Capture에서 기록 1개를 저장하면 가장 큰 빈틈과 다음 행동이 여기로 올라옵니다.</p>
+                      <p>아직 오늘 할 일 신호가 없습니다.</p>
+                      <p>오늘 한 것 1개를 저장하면 가장 큰 약점과 다음 행동이 여기로 올라옵니다.</p>
                       <Link href={modeCaptureHref} className="pt-1 font-medium text-[color:var(--ink-primary)] underline underline-offset-2">오늘 한 것 올리기</Link>
                     </div>
                   ) : (
@@ -438,7 +438,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                         <details className="mt-3 rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)]">
                           <summary className="cursor-pointer list-none px-3 py-2 text-xs font-medium text-[color:var(--muted)]">세부 내용 보기</summary>
                           <div className="grid gap-2 border-t border-[color:var(--border-hairline)] px-3 py-3 text-xs leading-5 text-[color:var(--muted)]">
-                            <p><span className="font-medium text-[color:var(--foreground-strong)]">가장 큰 간극:</span> {task.one_biggest_gap}</p>
+                            <p><span className="font-medium text-[color:var(--foreground-strong)]">가장 큰 약점:</span> {task.one_biggest_gap}</p>
                             <p><span className="font-medium text-[color:var(--foreground-strong)]">다음 행동:</span> {task.one_next_action}</p>
                             <p><span className="font-medium text-[color:var(--foreground-strong)]">상태:</span> {task.status === "due" ? "진행 필요" : task.status === "completed" ? "완료" : "대기"}</p>
                             <p><span className="font-medium text-[color:var(--foreground-strong)]">작업:</span> {resolveTaskTypeLabel(task.task_type)}</p>
@@ -584,9 +584,9 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
         )}
 
       <details className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
-        <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">Review Queue 보기</summary>
+        <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">복습 보기</summary>
         <div className="space-y-3 border-t border-[color:var(--border-subtle)] p-4 text-xs">
-          <p className="text-[color:var(--muted)]">복습 큐는 대기/진행 필요/완료 흐름으로만 관리합니다. 예측 점수나 합격 여부는 보여주지 않습니다. 추천은 저장된 학습 신호 기반입니다.</p>
+          <p className="text-[color:var(--muted)]">복습은 대기/진행 필요/완료 흐름으로만 관리합니다. 예측 점수나 합격 여부는 보여주지 않습니다. 추천은 저장된 학습 신호 기반입니다.</p>
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-3 py-3">
               <p className="font-medium text-[color:var(--foreground-strong)]">진행 필요</p>
@@ -598,7 +598,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
             </div>
             <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-3 py-3">
               <p className="font-medium text-[color:var(--foreground-strong)]">완료</p>
-              <p className="mt-1 text-[color:var(--muted)]">완료 처리하기 후 완료한 항목은 Today Plan에서 사라지고 복습 이력에 남습니다.</p>
+              <p className="mt-1 text-[color:var(--muted)]">완료 처리하기 후 완료한 항목은 오늘 할 일에서 사라지고 복습 이력에 남습니다.</p>
             </div>
           </div>
           {latestProblemSnapSignal ? (
@@ -619,7 +619,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
         <section className="space-y-3">
           <details className="group rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
             <summary className="cursor-pointer list-none px-4 py-4 text-sm font-medium text-[color:var(--foreground-strong)] sm:px-5">
-              노트와 주간 흐름 보기
+              학습 노트와 주간 흐름 보기
             </summary>
             <div className="space-y-5 border-t border-[color:var(--border-subtle)] px-4 py-5 sm:px-5">
               <div className="grid gap-3 text-sm lg:grid-cols-3">
@@ -670,7 +670,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                   {notebookPreview.length === 0 ? (
                     <div className="space-y-2">
                       <p className="text-sm text-[color:var(--muted)]">아직 기록이 없습니다.</p>
-                      <p className="text-sm text-[color:var(--muted)]">오늘 푼 문제나 답안 일부를 정리하면 첫 오답노트가 만들어집니다.</p>
+                      <p className="text-sm text-[color:var(--muted)]">오늘 푼 문제나 답안 일부를 정리하면 첫 학습 노트가 만들어집니다.</p>
                       <Link href={modeCaptureHref} className="inline-flex text-sm font-medium text-[color:var(--foreground-strong)] underline underline-offset-2">오늘 한 것 올리기</Link>
                     </div>
                   ) : (

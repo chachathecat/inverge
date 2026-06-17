@@ -1494,7 +1494,7 @@ export function WrongAnswerCaptureForm({
               data-testid={mode === "second" && stage === "second-rewrite" && !rewriteContext ? "second-write-submit" : undefined}
               className="w-full sm:w-auto"
             >
-              {submitting ? "저장 중" : "저장하고 오늘 계획에 반영"}
+              {submitting ? "저장 중" : "저장하고 오늘 할 일에 반영"}
             </Button>
           )}
         </div>
@@ -1558,9 +1558,9 @@ function SavedCaptureConfirmationPanel({
         <h3 className="mt-2 text-title text-[color:var(--foreground-strong)]">{persistenceCopy.title}</h3>
         <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">{persistenceCopy.description}</p>
         <div className="mt-5 grid gap-3 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-4">
-          <PreviewLine label="가장 큰 빈틈 1개" value={confirmation.biggestGap} />
+          <PreviewLine label="가장 큰 약점 1개" value={confirmation.biggestGap} />
           <PreviewLine label="다음 행동 1개" value={confirmation.nextAction} />
-          <PreviewLine label="이어서 할 곳" value="Notes / Review / Today" />
+          <PreviewLine label="이어서 할 곳" value="학습 노트 / 복습 / 오늘 할 일" />
           {confirmation.legalGroundingMessage ? <PreviewLine label="법령 근거 상태" value={confirmation.legalGroundingMessage} /> : null}
           <PreviewLine label="저장 상태" value={persistenceCopy.statusLabel} />
         </div>
@@ -1579,23 +1579,23 @@ function SavedCaptureConfirmationPanel({
             <div className="mt-5 grid gap-2 sm:grid-cols-3">
               <Link
                 href={`/app/review?mode=${mode}`}
-                aria-label="Review로 이어가기"
+                aria-label="복습으로 이어가기"
                 className="inline-flex min-h-11 items-center justify-center rounded-full bg-[color:var(--foreground-strong)] px-4 py-2 text-sm font-medium text-white"
               >
-                Review로 이어가기
+                복습으로 이어가기
               </Link>
               <Link
                 href={`/app/notes?mode=${mode}`}
                 className="inline-flex min-h-11 items-center justify-center rounded-full border border-[color:var(--border-subtle)] px-4 py-2 text-sm font-medium text-[color:var(--foreground-strong)]"
               >
-                Notes에서 보기
+                학습 노트에서 보기
               </Link>
               <Link
                 href={`/app?mode=${mode}`}
-                aria-label="Today로 돌아가기"
+                aria-label="오늘 할 일로 돌아가기"
                 className="inline-flex min-h-11 items-center justify-center rounded-full border border-[color:var(--border-subtle)] px-4 py-2 text-sm font-medium text-[color:var(--foreground-strong)]"
               >
-                Today로 돌아가기
+                오늘 할 일로 돌아가기
               </Link>
             </div>
             <Button type="button" variant="ghost" className="mt-4 w-full sm:w-auto" onClick={onReset}>
@@ -1614,12 +1614,12 @@ function SavedCaptureConfirmationPanel({
       data-testid="capture-save-confirmation"
     >
       <p className="text-caption text-[color:var(--brand-700)]">저장되었습니다</p>
-      <h3 className="mt-2 text-title text-[color:var(--foreground-strong)]">오늘 계획에 반영할 후보를 만들었습니다.</h3>
-      <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">AI가 찾은 약점 후보입니다. 저장 전 직접 확인해 주세요.</p>
+      <h3 className="mt-2 text-title text-[color:var(--foreground-strong)]">오늘 할 일에 반영할 후보를 만들었습니다.</h3>
+      <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">AI가 찾은 가장 큰 약점 후보입니다. 저장 전 직접 확인해 주세요.</p>
       <div className="mt-5 grid gap-3 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-4">
-        <PreviewLine label="가장 큰 빈틈 1개" value={confirmation.biggestGap} />
+        <PreviewLine label="가장 큰 약점 1개" value={confirmation.biggestGap} />
         <PreviewLine label="다음 행동 1개" value={confirmation.nextAction} />
-        <PreviewLine label="이어서 할 곳" value="Notes / Review / Today" />
+        <PreviewLine label="이어서 할 곳" value="학습 노트 / 복습 / 오늘 할 일" />
       </div>
       <p className="mt-3 text-xs leading-5 text-[color:var(--muted)]">다음 행동 후보입니다. 학습 정리 초안입니다. 저장 전 직접 확인해 주세요.</p>
       <div className="mt-5 grid gap-2 sm:grid-cols-3">
@@ -1627,19 +1627,19 @@ function SavedCaptureConfirmationPanel({
           href={`/app/review?mode=${mode}`}
           className="inline-flex min-h-11 items-center justify-center rounded-full bg-[color:var(--foreground-strong)] px-4 py-2 text-sm font-medium text-white"
         >
-          Review로 이어가기
+          복습으로 이어가기
         </Link>
         <Link
           href={`/app/notes?mode=${mode}`}
           className="inline-flex min-h-11 items-center justify-center rounded-full border border-[color:var(--border-subtle)] px-4 py-2 text-sm font-medium text-[color:var(--foreground-strong)]"
         >
-          Notes에서 보기
+          학습 노트에서 보기
         </Link>
         <Link
           href={`/app?mode=${mode}`}
           className="inline-flex min-h-11 items-center justify-center rounded-full border border-[color:var(--border-subtle)] px-4 py-2 text-sm font-medium text-[color:var(--foreground-strong)]"
         >
-          Today로 돌아가기
+          오늘 할 일로 돌아가기
         </Link>
       </div>
       <Button type="button" variant="ghost" className="mt-4 w-full sm:w-auto" onClick={onReset}>
@@ -1860,18 +1860,18 @@ function IntakePanel({
         />
       </label>
       <p className="text-xs text-[color:var(--muted)]">OCR/AI 정리는 초안입니다. 저장 전 직접 확인해 주세요.</p>
-      <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">노트 원문은 비공개로 보관되며, 파생 학습 신호는 개인 추천 개선에만 사용됩니다.</p>
+      <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">학습 노트 원문은 비공개로 보관되며, 파생 학습 신호는 개인 추천 개선에만 사용됩니다.</p>
       <div className="sticky bottom-3 z-30 mt-3 rounded-[var(--radius-lg)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)]/95 p-3 shadow-lg backdrop-blur sm:bottom-5 sm:p-4" data-testid="capture-save-action-bar">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm font-medium text-[color:var(--foreground-strong)]">확인한 내용으로 노트 초안을 만듭니다.</p>
-            <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">Notes / Review / Today로 이어질 빈틈 1개와 다음 행동 1개가 만들어집니다.</p>
+            <p className="text-sm font-medium text-[color:var(--foreground-strong)]">확인한 내용으로 학습 노트 초안을 만듭니다.</p>
+            <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">학습 노트 / 복습 / 오늘 할 일로 이어질 가장 큰 약점 1개와 다음 행동 1개가 만들어집니다.</p>
           </div>
           <Button type="button" onClick={onQuickSave} disabled={!canQuickSave || saving || extracting} className="min-h-12 w-full shrink-0 sm:w-auto bg-[color:var(--foreground-strong)] text-white disabled:cursor-not-allowed disabled:opacity-60" data-testid="capture-save-primary">
             {saving ? "저장 중" : (
               <>
                 <span>학습 노트 초안 만들기</span>
-                <span className="sr-only">저장하고 오늘 계획에 반영</span>
+                <span className="sr-only">저장하고 오늘 할 일에 반영</span>
               </>
             )}
           </Button>
@@ -2056,7 +2056,7 @@ function ExtractionPreview({
         <div className="mt-5 grid gap-3">
           <PreviewLine label="과목" value={form.subjectLabel} />
           <PreviewLine label="주제/사례 요약" value={form.problemTitle || form.caseSummary} />
-          <PreviewLine label="가장 큰 간극" value={form.userReasonText || "확인 필요"} />
+          <PreviewLine label="가장 큰 약점" value={form.userReasonText || "확인 필요"} />
           <PreviewLine label="다음 행동" value={form.comparisonPoint || "확인 필요"} />
           <PreviewLine label="확신/복습 시점" value={`${form.confidence} · ${form.nextReviewDate}`} />
           <PreviewLine label="실수 원인 추정" value={form.userReasonPreset || form.userReasonText} />
@@ -2068,7 +2068,7 @@ function ExtractionPreview({
         <div className="mt-5 grid gap-3">
           <PreviewLine label="과목" value={form.subjectLabel} />
           <PreviewLine label="주제/사례 요약" value={form.caseSummary || "확인 필요"} />
-          <PreviewLine label="가장 큰 간극" value={form.biggestGap || form.missingIssue} />
+          <PreviewLine label="가장 큰 약점" value={form.biggestGap || form.missingIssue} />
           <PreviewLine label="다음 행동" value={form.rewriteInstruction || "확인 필요"} />
           <PreviewLine label="확신/복습 시점" value={`${form.confidence} · ${form.nextReviewDate}`} />
           <PreviewLine label="누락 논점 후보" value={form.missingIssue} />
@@ -2107,15 +2107,15 @@ function ConfirmPanel({
 
   return (
     <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 sm:p-5">
-      <p className="text-caption text-[color:var(--muted)]">Step 3. 저장하고 오늘 계획에 반영</p>
+      <p className="text-caption text-[color:var(--muted)]">Step 3. 저장하고 오늘 할 일에 반영</p>
       <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">AI가 이렇게 읽었습니다. 틀린 부분만 고쳐 주세요.</h3>
       <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">이미 읽은 값은 다시 입력하지 않아도 됩니다. 부족한 항목이 있으면 그 항목만 정확히 알려드립니다.</p>
       <div className="mt-4 grid gap-3 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-4" data-testid="capture-note-summary">
         <PreviewLine label="상태" value={`${captureSummary.capturedTextStatus === "draft" ? "OCR 초안" : "직접 확인됨"} · metadataOnly`} />
         <PreviewLine label="과목/입력" value={`${captureSummary.subject} · ${captureSummary.sourceType}`} />
-        <PreviewLine label="가장 큰 빈틈" value={captureCopy.gapLabel.replace("가장 큰 빈틈: ", "")} />
+        <PreviewLine label="가장 큰 약점" value={captureCopy.gapLabel.replace("가장 큰 약점: ", "")} />
         <PreviewLine label="다음 행동" value={captureCopy.nextActionLabel.replace("다음 행동: ", "")} />
-        <PreviewLine label="Today Plan" value={captureCopy.todayPlanCta} />
+        <PreviewLine label="오늘 할 일" value={captureCopy.todayPlanCta} />
         <PreviewLine label="복습 선택" value={captureCopy.retryOrRewriteCta} />
       </div>
       <div className="mt-5 grid gap-4 lg:grid-cols-2">
@@ -2180,7 +2180,7 @@ function ConfirmPanel({
           </select>
         </label>
         <label className="space-y-2">
-          <span className="text-sm text-[color:var(--foreground-strong)]">다음 review 시점</span>
+          <span className="text-sm text-[color:var(--foreground-strong)]">다음 복습 시점</span>
           <input
             type="date"
             value={form.nextReviewDate}
@@ -2223,7 +2223,7 @@ function FirstConfirmFields(props: FieldProps) {
             value={form.sourceLabel}
             onChange={(event) => update("sourceLabel", event.target.value)}
             className="form-control"
-            placeholder="예: 기출, 모의, 오답노트"
+            placeholder="예: 기출, 모의, 학습 노트"
           />
         </label>
       </div>
@@ -2454,7 +2454,7 @@ function SecondReferencePanel({
       </label>
       <div className="mt-4 flex flex-col gap-2 sm:flex-row">
         <Button type="button" className="w-full sm:w-auto" disabled={reference.trim().length < 4} onClick={onNext}>
-          다음: 가장 큰 간극 1개
+          다음: 가장 큰 약점 1개
         </Button>
         <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={onNext}>
           강의/교재 정리는 나중에 확인
@@ -2478,8 +2478,8 @@ function SecondGapPanel({
   const template = getSecondSubjectTemplate(subject);
   return (
     <section className="rounded-[var(--radius-card)] border border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] p-4 sm:p-5">
-      <p className="text-caption text-[color:var(--muted)]">Step 5. 가장 큰 간극 1개</p>
-      <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">오늘은 가장 큰 간극 1개만 고칩니다.</h3>
+      <p className="text-caption text-[color:var(--muted)]">Step 5. 가장 큰 약점 1개</p>
+      <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">오늘은 가장 큰 약점 1개만 고칩니다.</h3>
       <details className="mt-2 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3"><summary className="cursor-pointer text-xs font-medium text-[color:var(--muted)]">왜 이 순서인가요?</summary><p className="mt-2 text-xs leading-6 text-[color:var(--muted)]">{template.biggestGapGuidance}</p></details>
       <label className="mt-4 block space-y-2">
         <span className="text-sm text-[color:var(--foreground-strong)]">보강할 논점 1개</span>
@@ -2581,7 +2581,7 @@ function RewriteContextPanel({
       <p className="text-caption text-[color:var(--cue-review)]">문단 다시쓰기 컨텍스트</p>
       <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">{title}</h3>
       <div className="mt-4 grid gap-3">
-        <PreviewLine label="가장 큰 간극" value={biggestGap} />
+        <PreviewLine label="가장 큰 약점" value={biggestGap} />
         <PreviewLine label="다시쓰기 지시" value={rewriteInstruction} />
       </div>
       <details className="mt-3 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)]">
@@ -2594,7 +2594,7 @@ function RewriteContextPanel({
         </div>
       </details>
       <p className="mt-4 text-sm leading-6 text-[color:var(--muted)]">
-        전체 답안이 아니라 한 문단만 다시 씁니다. 위 간극 1개만 반영해 짧고 정확하게 작성하세요.
+        전체 답안이 아니라 한 문단만 다시 씁니다. 위 약점 1개만 반영해 짧고 정확하게 작성하세요.
       </p>
     </section>
   );
@@ -2611,7 +2611,7 @@ function RewriteParagraphPanel({
     <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 sm:p-5">
       <p className="text-caption text-[color:var(--muted)]">실행 입력</p>
       <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">보강 문단을 바로 작성합니다</h3>
-      <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">하나의 간극만 보강한 문단으로 저장하면 다음 review 일정이 자동 연결됩니다.</p>
+      <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">하나의 약점만 보강한 문단으로 저장하면 다음 복습 일정이 자동 연결됩니다.</p>
       <label className="mt-4 block space-y-2">
         <span className="text-sm text-[color:var(--foreground-strong)]">다시 쓴 문단</span>
         <Textarea

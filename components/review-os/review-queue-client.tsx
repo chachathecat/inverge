@@ -41,10 +41,10 @@ export function ReviewQueueClient({ items, mode, captureReferenceLineByItemId = 
   if (items.length === 0) {
     return (
       <div className="rounded-[var(--radius-lg)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)] p-6 text-sm leading-7 text-[color:var(--ink-muted)]">
-        <p>아직 계정 저장 기준으로 Review에 이어갈 후보가 없습니다.</p>
+        <p>아직 계정 저장 기준으로 복습할 항목이 없습니다.</p>
         <p className="mt-1">계정 저장 기록이 없거나 오늘 다시 볼 항목이 모두 정리된 상태입니다.</p>
         <p className="mt-1">closed beta 브라우저 임시 기록은 아래에서 이어서 확인할 수 있습니다.</p>
-        <p className="mt-1">Capture에서 오늘 학습 1개를 정리하면 약점 후보와 다음 행동이 이곳에 이어집니다.</p>
+        <p className="mt-1">오늘 한 것 1개를 정리하면 가장 큰 약점과 다음 행동이 복습으로 이어집니다.</p>
         <Button type="button" onClick={() => router.push(mode === "second" ? "/app/capture?mode=second" : "/app/capture?mode=first")} className="mt-4 w-full sm:w-auto">오늘 한 것 올리기</Button>
       </div>
     );

@@ -26,10 +26,10 @@ type LearnerNavItem = {
 };
 
 const LEARNER_NAV_ITEMS: readonly LearnerNavItem[] = [
-  { href: "/app", label: "오늘", preserveMode: true, analyticsAction: "today" },
+  { href: "/app", label: "오늘 할 일", preserveMode: true, analyticsAction: "today" },
   {
     href: "/app/capture",
-    label: "입력",
+    label: "오늘 한 것",
     preserveMode: true,
     activeHrefs: ["/app/capture", "/app/input", "/app/entry", "/app/write"],
     analyticsAction: "input",
@@ -37,7 +37,7 @@ const LEARNER_NAV_ITEMS: readonly LearnerNavItem[] = [
   { href: "/app/review", label: "복습", preserveMode: true, analyticsAction: "review" },
   {
     href: "/app/notes",
-    label: "노트",
+    label: "학습 노트",
     preserveMode: true,
     activeHrefs: ["/app/notes", "/app/items"],
     analyticsAction: "notes",
@@ -138,7 +138,7 @@ export function LearnerShell({ email, mode, children, rightSlot }: LearnerShellP
           </nav>
 
           <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[color:var(--muted)]">
-            <span>{config.label} 오늘의 학습 공간</span>
+            <span>{config.label} 오늘 할 일</span>
             <span className="max-w-full truncate">{email ?? "로그인한 사용자"}</span>
           </div>
         </header>

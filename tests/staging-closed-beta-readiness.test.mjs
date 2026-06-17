@@ -206,7 +206,7 @@ test("capture route smoke keeps capture-first copy and one primary start action"
     "오늘 한 것 올리기",
     "텍스트로 바로 시작하고, 사진/PDF는 필요할 때만 추가하세요.",
     "OCR/AI 정리는 초안입니다. 저장 전 직접 확인해 주세요.",
-    "Notes / Review / Today로 이어질 빈틈 1개와 다음 행동 1개가 만들어집니다.",
+    "학습 노트 / 복습 / 오늘 할 일로 이어질 가장 큰 약점 1개와 다음 행동 1개가 만들어집니다.",
   ]) {
     assert.equal(capture.includes(required), true, `${required} should render on /app/capture`);
   }

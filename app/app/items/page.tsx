@@ -27,12 +27,12 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
   const hasItems = items.length > 0;
   const hasLearningSignals = learningSignals.length > 0;
   const isNotesRoute = routePath === "/app/notes";
-  const signalPrimaryTitle = isNotesRoute ? `${mode === "second" ? "2차" : "1차"} 학습 노트` : mode === "second" ? "최근 답안 검토 기록" : "최근 검토 기록";
+  const signalPrimaryTitle = isNotesRoute ? `${mode === "second" ? "2차" : "1차"} 학습 노트` : mode === "second" ? "최근 답안 검토 기록" : "최근 학습 기록";
   const sourceTypeLabel = (sourceType: string) => {
     if (sourceType === "problem-snap") return "Problem Snap";
     if (sourceType === "answer_review") return "답안 검토 기록";
-    if (sourceType === "wrong_answer") return "오답 기록";
-    if (sourceType === "review_queue") return "다시 볼 항목";
+    if (sourceType === "wrong_answer") return "학습 기록";
+    if (sourceType === "review_queue") return "복습 항목";
     return "학습 기록";
   };
   const formatCreatedDate = (value?: string | null) => {
@@ -68,7 +68,7 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
   const signalCta = (signal: { sourceType: string; subject: string }) =>
     signal.sourceType === "problem-snap"
       ? mode === "second"
-        ? { label: "Answer Review로 검토", href: `/answer-review?mode=${mode}&subject=${encodeURIComponent(signal.subject)}` }
+        ? { label: "답안 검토로 보기", href: `/answer-review?mode=${mode}&subject=${encodeURIComponent(signal.subject)}` }
         : { label: "다시 풀기", href: `/problem-snap?mode=${mode}&subject=${encodeURIComponent(signal.subject)}` }
       :
     signal.sourceType === "answer_review"
@@ -79,7 +79,7 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
     <div className="space-y-6">
       <Card className="border-[var(--border)] bg-[color:var(--surface)] shadow-none">
         <CardHeader>
-          <CardTitle>{hasItems ? (mode === "second" ? "2차 답안노트" : "1차 오답노트") : signalPrimaryTitle}</CardTitle>
+          <CardTitle>{hasItems ? (mode === "second" ? "2차 학습 노트" : "1차 학습 노트") : signalPrimaryTitle}</CardTitle>
           <CardDescription>
             {hasItems
               ? config.recentDescription
@@ -116,9 +116,9 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
               {savedParam ? (
                 <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] px-4 py-3">
                   <p className="text-sm font-medium text-[color:var(--foreground-strong)]">방금 남긴 기록이 목록에 반영되었습니다.</p>
-                  <p className="mt-1 text-sm text-[color:var(--foreground-strong)]">가장 큰 간극 1개와 다음 행동 1개를 먼저 실행하세요.</p>
+                  <p className="mt-1 text-sm text-[color:var(--foreground-strong)]">가장 큰 약점 1개와 다음 행동 1개를 먼저 실행하세요.</p>
                   <div className="mt-3 flex flex-wrap gap-2">
-                    <Link href={`/app?mode=${mode}`} className="text-xs underline-offset-4 hover:underline">오늘 계획에 반영</Link>
+                    <Link href={`/app?mode=${mode}`} className="text-xs underline-offset-4 hover:underline">오늘 할 일에 반영</Link>
                     <Link href={mode === "second" ? `/app/capture?mode=${mode}&workflow=second-write` : `/app/capture?mode=${mode}`} className="text-xs underline-offset-4 hover:underline">다시 풀기/다시 쓰기</Link>
                     <Link href={`/app/review?mode=${mode}`} className="text-xs underline-offset-4 hover:underline">나중에 복습</Link>
                   </div>

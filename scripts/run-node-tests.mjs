@@ -24,6 +24,7 @@ const defaultTestFiles = [
   "tests/capture-to-note-quality-hardening.test.mjs",
   "tests/capture-to-note-v1.test.mjs",
   "tests/learning-agenda-v0.test.mjs",
+  "tests/learner-ui-grammar-consolidation.test.mjs",
   "tests/today-plan-source-reasoning.test.mjs",
   "tests/review-queue-reflection-hardening.test.mjs",
   "tests/learner-loop-telemetry.test.mjs",

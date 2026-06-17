@@ -4,7 +4,9 @@ import { readFile } from "node:fs/promises";
 
 test("home daily command card keeps one primary CTA and folds details", async () => {
   const source = await readFile(new URL("../app/app/page.tsx", import.meta.url), "utf8");
-  ["오늘은 이것만 합니다", "오늘은 복구만 합니다", "오늘은 여기까지 해도 됩니다"].forEach((t) => assert.ok(source.includes(t)));
+  ["오늘 할 일", "오늘 한 것 1개를 정리하면 가장 큰 약점 1개와 다음 행동 1개로 이어집니다.", "채점 확정이 아니라, 다음 행동을 정리하는 학습 운영 도구입니다."].forEach((t) =>
+    assert.ok(source.includes(t)),
+  );
   assert.ok(source.includes("<details"));
 });
 

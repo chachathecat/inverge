@@ -84,8 +84,8 @@ test("first mode is not overloaded with second-only capture quality checklist", 
 
 test("saved learner capture copy shows one biggest gap and one next action choices", async () => {
   const itemsPage = await readFile(new URL("../app/app/items/page.tsx", import.meta.url), "utf8");
-  assert.ok(itemsPage.includes("가장 큰 간극 1개와 다음 행동 1개"));
-  assert.ok(itemsPage.includes("오늘 계획에 반영"));
+  assert.ok(itemsPage.includes("가장 큰 약점 1개와 다음 행동 1개"));
+  assert.ok(itemsPage.includes("오늘 할 일에 반영"));
   assert.ok(itemsPage.includes("다시 풀기/다시 쓰기"));
   assert.ok(itemsPage.includes("나중에 하기") || itemsPage.includes("나중에 복습"));
 });
@@ -105,7 +105,7 @@ test("reset clears extraction state and uploaded pages", async () => {
 
 test("second write flow includes all micro-step labels", async () => {
   const learnerCapture = await readFile(new URL("../components/review-os/capture-form.tsx", import.meta.url), "utf8");
-  ["Step 1. 쟁점 회상", "Step 2. 목차 작성", "Step 3. 내 답안 작성", "Step 4. 강의/교재 정리 입력", "Step 5. 가장 큰 간극 1개", "Step 6. 문단 다시쓰기"].forEach((label) => {
+  ["Step 1. 쟁점 회상", "Step 2. 목차 작성", "Step 3. 내 답안 작성", "Step 4. 강의/교재 정리 입력", "Step 5. 가장 큰 약점 1개", "Step 6. 문단 다시쓰기"].forEach((label) => {
     assert.ok(learnerCapture.includes(label), `Missing step label: ${label}`);
   });
 });
@@ -219,8 +219,8 @@ test("review queue sections keep rewrite/retry routing hints", () => {
 
 test("home page includes today plan/review queue and no pass-fail score copy", async () => {
   const source = await readFile(new URL("../app/app/page.tsx", import.meta.url), "utf8");
-  assert.ok(source.includes("Today Plan"));
-  assert.ok(source.includes("Review Queue"));
+  assert.ok(source.includes("오늘 할 일"));
+  assert.ok(source.includes("복습"));
   assert.ok(source.includes("완료 처리하기"));
   assert.ok(source.includes("추천은 저장된 학습 신호 기반입니다."));
   assert.equal(source.includes("점수 예측"), false);
