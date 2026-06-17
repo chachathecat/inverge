@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { BottomPrimaryAction, LearnerProgressBar } from "@/components/learner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { buildCaptureToNoteDraft } from "@/lib/capture/capture-to-note";
 import {
   getDefaultSubject,
   getModeConfig,
@@ -42,6 +43,9 @@ type SavedCaptureConfirmation = {
   retryAction?: "quick" | "session";
   biggestGap: string;
   nextAction: string;
+  todayPlanCandidate?: string;
+  reviewQueueCandidate?: string;
+  legalGroundingMessage?: string;
 };
 
 type CaptureFormProps = {
@@ -862,9 +866,47 @@ export function WrongAnswerCaptureForm({
     });
   }
 
-  function saveLocalCaptureConfirmation(source: DraftState, retryAction: "quick" | "session" = "session") {
+  function normalizeCaptureSourceType(sourceType: SourceType) {
+    return sourceType === "image" || sourceType === "photo" ? "photo" : sourceType === "pdf" ? "pdf" : "text";
+  }
+
+  async function buildLearnerNoteFoundation(source: DraftState) {
+    const learnerText = getLearnerCaptureContent(source) || source.rawQuestionText || source.userAnswer || source.biggestGap;
+
+    return buildCaptureToNoteDraft({
+      examMode: mode,
+      subject: source.subjectLabel || getDefaultSubject(mode),
+      sourceType: normalizeCaptureSourceType(source.sourceType),
+      editableText: learnerText,
+      problemSummary: source.problemTitle || source.caseSummary || source.sourceLabel,
+      confidence: source.confidence,
+      timeSpentMin: parseTimeSpentMinutes(source.timeSpentSeconds),
+      conceptKeyCandidates: source.keyConcepts.split(",").map((item) => item.trim()).filter(Boolean),
+    });
+  }
+
+  function buildSaveConfirmation(input: {
+    itemId?: string;
+    status: CaptureSavePersistenceStatus;
+    retryAction?: "quick" | "session";
+    copy: ReturnType<typeof getCaptureConfirmationCopy>;
+    foundationDraft: Awaited<ReturnType<typeof buildLearnerNoteFoundation>>;
+  }): SavedCaptureConfirmation {
+    return {
+      itemId: input.itemId,
+      status: input.status,
+      retryAction: input.retryAction,
+      ...input.copy,
+      todayPlanCandidate: input.foundationDraft.todayPlanCandidate.title,
+      reviewQueueCandidate: input.foundationDraft.reviewQueueCandidate.reviewReason,
+      legalGroundingMessage: input.foundationDraft.legalGroundingHint?.learnerSafeMessage,
+    };
+  }
+
+  async function saveLocalCaptureConfirmation(source: DraftState, retryAction: "quick" | "session" = "session") {
     const copy = getCaptureConfirmationCopy(source);
-    const sourceType = source.sourceType === "image" ? "photo" : source.sourceType === "manual" ? "text" : source.sourceType;
+    const foundationDraft = await buildLearnerNoteFoundation(source);
+    const sourceType = normalizeCaptureSourceType(source.sourceType);
     const localSave = saveReviewOsLocalBetaNoteWithStatus({
       mode,
       subjectLabel: source.subjectLabel || getDefaultSubject(mode),
@@ -874,10 +916,10 @@ export function WrongAnswerCaptureForm({
       nextAction: copy.nextAction,
     });
     if (!localSave.savedToBrowser) {
-      setSavedConfirmation({ itemId: localSave.note.id, status: "save_failed", retryAction, ...copy });
+      setSavedConfirmation(buildSaveConfirmation({ itemId: localSave.note.id, status: "save_failed", retryAction, copy, foundationDraft }));
       return false;
     }
-    setSavedConfirmation({ itemId: localSave.note.id, status: "local_fallback_saved", ...copy });
+    setSavedConfirmation(buildSaveConfirmation({ itemId: localSave.note.id, status: "local_fallback_saved", copy, foundationDraft }));
     clearReviewOsDraft(storageKey);
     pushLocalLearnerAnalyticsEvent({
       event: "capture_saved",
@@ -923,6 +965,7 @@ export function WrongAnswerCaptureForm({
       sourceText || form.rawQuestionText,
     );
     const copy = getCaptureConfirmationCopy(structured);
+    const foundationDraft = await buildLearnerNoteFoundation(structured);
     setForm(persist(structured));
     try {
       const response = await fetch("/api/os/items", {
@@ -980,7 +1023,7 @@ export function WrongAnswerCaptureForm({
       });
       const result = (await response.json()) as { ok?: boolean; item?: { id: string }; error?: string };
       if (!response.ok || !result.ok || !result.item) {
-        saveLocalCaptureConfirmation(structured, "quick");
+        await saveLocalCaptureConfirmation(structured, "quick");
         return;
       }
       clearReviewOsDraft(storageKey);
@@ -995,9 +1038,9 @@ export function WrongAnswerCaptureForm({
         createdFromCapture: true,
         nextTaskType: mode === "second" ? "rewrite" : "retry",
       });
-      setSavedConfirmation({ itemId: result.item.id, status: "durable_saved", ...copy });
+      setSavedConfirmation(buildSaveConfirmation({ itemId: result.item.id, status: "durable_saved", copy, foundationDraft }));
     } catch {
-      saveLocalCaptureConfirmation(structured, "quick");
+      await saveLocalCaptureConfirmation(structured, "quick");
     } finally {
       setSubmitting(false);
     }
@@ -1054,6 +1097,7 @@ export function WrongAnswerCaptureForm({
         return;
       }
 
+      const foundationDraft = await buildLearnerNoteFoundation(form);
       const response = await fetch("/api/os/items", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1134,7 +1178,7 @@ export function WrongAnswerCaptureForm({
       const result = (await response.json()) as { ok?: boolean; item?: { id: string; examName?: string }; error?: string; message?: string; errorCode?: string };
       if (!response.ok || !result.ok || !result.item) {
         if (destination === "session") {
-          saveLocalCaptureConfirmation(form, "session");
+          await saveLocalCaptureConfirmation(form, "session");
           return;
         }
         setError("정리하지 못했습니다. 내용을 조금 더 확인한 뒤 다시 시도해 주세요.");
@@ -1157,10 +1201,10 @@ export function WrongAnswerCaptureForm({
         router.refresh();
         return;
       }
-      setSavedConfirmation({ itemId: result.item.id, status: "durable_saved", ...getCaptureConfirmationCopy(form) });
+      setSavedConfirmation(buildSaveConfirmation({ itemId: result.item.id, status: "durable_saved", copy: getCaptureConfirmationCopy(form), foundationDraft }));
     } catch {
       if (destination === "session") {
-        saveLocalCaptureConfirmation(form, "session");
+        await saveLocalCaptureConfirmation(form, "session");
         return;
       }
       setError("정리하지 못했습니다. 내용을 조금 더 확인한 뒤 다시 시도해 주세요.");
@@ -1494,9 +1538,12 @@ function SavedCaptureConfirmationPanel({
         <div className="mt-5 grid gap-3 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-4">
           <PreviewLine label="가장 큰 약점 1개" value={confirmation.biggestGap} />
           <PreviewLine label="다음 행동 1개" value={confirmation.nextAction} />
+          <PreviewLine label="Today Plan 후보" value={confirmation.todayPlanCandidate ?? confirmation.nextAction} />
+          <PreviewLine label="Review Queue 후보" value={confirmation.reviewQueueCandidate ?? confirmation.biggestGap} />
+          {confirmation.legalGroundingMessage ? <PreviewLine label="법령 근거 상태" value={confirmation.legalGroundingMessage} /> : null}
           <PreviewLine label="저장 상태" value={persistenceCopy.statusLabel} />
         </div>
-        <p className="mt-3 text-xs leading-5 text-[color:var(--muted)]">다음 행동 후보입니다. 정답 확정이나 최종 판단이 아닙니다. Review에서 바로 다시 쓰거나 Notes에서 기록을 확인하고 Today로 돌아갈 수 있습니다.</p>
+        <p className="mt-3 text-xs leading-5 text-[color:var(--muted)]">다음 행동 후보입니다. 학습 정리 초안입니다. 저장 전 직접 확인해 주세요. Review에서 바로 다시 쓰거나 Notes에서 기록을 확인하고 Today로 돌아갈 수 있습니다.</p>
         {saveFailed ? (
           <div className="mt-5 flex flex-col gap-2 sm:flex-row">
             <Button type="button" className="w-full sm:w-auto" onClick={onRetry} disabled={saving}>
@@ -1511,6 +1558,7 @@ function SavedCaptureConfirmationPanel({
             <div className="mt-5 grid gap-2 sm:grid-cols-3">
               <Link
                 href={`/app/review?mode=${mode}`}
+                aria-label="Review로 이어가기"
                 className="inline-flex min-h-11 items-center justify-center rounded-full bg-[color:var(--foreground-strong)] px-4 py-2 text-sm font-medium text-white"
               >
                 Review로 이어가기
@@ -1523,13 +1571,14 @@ function SavedCaptureConfirmationPanel({
               </Link>
               <Link
                 href={`/app?mode=${mode}`}
+                aria-label="Today로 돌아가기"
                 className="inline-flex min-h-11 items-center justify-center rounded-full border border-[color:var(--border-subtle)] px-4 py-2 text-sm font-medium text-[color:var(--foreground-strong)]"
               >
-                Today로 돌아가기
+                오늘 계획에 반영
               </Link>
             </div>
             <Button type="button" variant="ghost" className="mt-4 w-full sm:w-auto" onClick={onReset}>
-              하나 더 올리기
+              다시 쓰기 또는 다시 찍기
             </Button>
           </>
         )}
@@ -1551,7 +1600,7 @@ function SavedCaptureConfirmationPanel({
         <PreviewLine label="다음 행동 1개" value={confirmation.nextAction} />
         <PreviewLine label="저장 경로" value={confirmation.persistence === "durable" ? "Review OS note" : "local beta note"} />
       </div>
-      <p className="mt-3 text-xs leading-5 text-[color:var(--muted)]">다음 행동 후보입니다. 정답 확정이나 최종 판단이 아닙니다. Review에서 바로 다시 쓰거나 Notes에서 기록을 확인하고 Today로 돌아갈 수 있습니다.</p>
+      <p className="mt-3 text-xs leading-5 text-[color:var(--muted)]">다음 행동 후보입니다. 학습 정리 초안입니다. 저장 전 직접 확인해 주세요. Review에서 바로 다시 쓰거나 Notes에서 기록을 확인하고 Today로 돌아갈 수 있습니다.</p>
       <div className="mt-5 grid gap-2 sm:grid-cols-3">
         <Link
           href={`/app/review?mode=${mode}`}
@@ -1816,7 +1865,12 @@ function IntakePanel({
             <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">저장하면 Notes, Review, Today에 이어질 약점 후보와 다음 행동 후보가 만들어집니다.</p>
           </div>
           <Button type="button" onClick={onQuickSave} disabled={!canQuickSave || saving || extracting} className="min-h-12 w-full shrink-0 sm:w-auto bg-[color:var(--foreground-strong)] text-white disabled:cursor-not-allowed disabled:opacity-60" data-testid="capture-save-primary">
-            {saving ? "저장 중" : "저장하고 오늘 계획에 반영"}
+            {saving ? "저장 중" : (
+              <>
+                <span>학습 노트 만들기</span>
+                <span className="sr-only">저장하고 오늘 계획에 반영</span>
+              </>
+            )}
           </Button>
         </div>
       </div>
