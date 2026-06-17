@@ -1,7 +1,7 @@
 import { getPersonalConceptGraphRepositoryMode } from "./personal-concept-graph-repository-adapter";
 import { buildTodayPlanWithGatedDurableConceptGraph, type TodayPlanDurableGraphIntegrationInput } from "./today-plan-durable-graph-integration";
 import { type TodayPlanUnifiedAction } from "./today-plan-source-union";
-import { buildTodayPlanTasks, type TodayPlanPrimaryCta, type TodayPlanTask, type TodayPlanTaskType } from "./today-plan-engine";
+import { buildTodayPlanTasks, selectActiveTodayPlanTasks, TODAY_PLAN_MAX_PRIMARY_TASKS, type TodayPlanPrimaryCta, type TodayPlanTask, type TodayPlanTaskType } from "./today-plan-engine";
 import type { LearningSignalEventRecord, ReviewQueueCard, WrongAnswerItemRecord } from "./types";
 
 type RepeatedGapSignal = { label: string; count: number };
@@ -99,20 +99,26 @@ function toDurableTask(action: TodayPlanUnifiedAction, mode: "first" | "second")
 
 function mergeUnifiedActionsBackToTasks(actions: TodayPlanUnifiedAction[], baseTasks: TodayPlanTask[], mode: "first" | "second"): TodayPlanTask[] {
   const baseByUnifiedId = new Map<string, TodayPlanTask>(baseTasks.map((task) => [`learner-today-plan:${task.itemId}`, task]));
-  return actions.slice(0, 3).map((action) => baseByUnifiedId.get(action.id) ?? toDurableTask(action, mode));
+  return selectActiveTodayPlanTasks(
+    actions.slice(0, TODAY_PLAN_MAX_PRIMARY_TASKS).map((action) => baseByUnifiedId.get(action.id) ?? toDurableTask(action, mode)),
+    TODAY_PLAN_MAX_PRIMARY_TASKS,
+  );
 }
 
 export async function buildLearnerTodayPlanTasksWithGatedDurableConceptGraph(input: BuildLearnerTodayPlanTasksInput): Promise<TodayPlanTask[]> {
   const now = input.now ?? new Date();
-  const baseTasks = buildTodayPlanTasks({
-    mode: input.mode,
-    queue: input.queue,
-    items: input.items,
-    learningSignals: input.learningSignals,
-    now,
-    repeatedGaps: input.repeatedGaps,
-    riskLevel: input.riskLevel,
-  });
+  const baseTasks = selectActiveTodayPlanTasks(
+    buildTodayPlanTasks({
+      mode: input.mode,
+      queue: input.queue,
+      items: input.items,
+      learningSignals: input.learningSignals,
+      now,
+      repeatedGaps: input.repeatedGaps,
+      riskLevel: input.riskLevel,
+    }),
+    TODAY_PLAN_MAX_PRIMARY_TASKS,
+  );
   const env = input.env ?? process.env;
 
   if (!areTodayPlanDurableGraphRouteGatesEnabled({ env, userId: input.userId, examMode: input.mode })) {

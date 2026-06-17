@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 import { buildLearnerTodayPlanTasksWithGatedDurableConceptGraph } from "../lib/review-os/today-plan-learner-route-integration.ts";
+import { selectActiveTodayPlanTasks, TODAY_PLAN_MAX_PRIMARY_TASKS } from "../lib/review-os/today-plan-engine.ts";
 
 function read(file) {
   return readFileSync(file, "utf8");
@@ -65,16 +66,43 @@ test("Today Plan engine/source output remains max 3 after durable merge", async 
   assert.equal(tasks.length, 3, "durable Today Plan merge should return max 3 primary tasks");
 });
 
+test("active Today Plan selector filters completed tasks and caps primary actions", () => {
+  const active = selectActiveTodayPlanTasks(
+    Array.from({ length: 5 }, (_, index) => ({
+      itemId: `task-${index}`,
+      title: `작업 ${index}`,
+      subject: "민법",
+      exam_mode: "first",
+      due_bucket: "today",
+      status: index === 0 ? "completed" : "due",
+      reason: "저장된 학습 신호 기반입니다.",
+      one_biggest_gap: "가장 큰 약점 1개",
+      one_next_action: "다음 행동 1개",
+      task_type: "concept_review",
+      estimated_minutes: 10,
+      priority_reason: "복습 예정입니다.",
+      primary_cta: { label: "시작하기", hrefKind: "session" },
+      created_from_capture: false,
+      source_label: "복습 예정",
+    })),
+  );
+
+  assert.equal(TODAY_PLAN_MAX_PRIMARY_TASKS, 3);
+  assert.equal(active.length, 3);
+  assert.equal(active.some((task) => task.status === "completed"), false);
+});
+
 test("learner home visibly caps Today Plan primary task cards at three", () => {
   const appPage = read("app/app/page.tsx");
-  assert.match(appPage, /const visibleTodayPlanTasks\s*=\s*todayPlanTasks\.slice\(0,\s*3\)/);
-  assert.match(appPage, /const additionalTodayPlanTasks\s*=\s*todayPlanTasks\.slice\(3\)/);
+  assert.match(appPage, /selectActiveTodayPlanTasks\(/);
+  assert.match(appPage, /const visibleTodayPlanTasks\s*=\s*todayPlanTasks/);
   assert.match(appPage, /visibleTodayPlanTasks\.map/);
   assert.match(appPage, /data-today-plan-primary-surface/);
-  assert.match(appPage, /data-visible-primary-task-cap="3"/);
+  assert.match(appPage, /data-visible-primary-task-cap=\{TODAY_PLAN_MAX_PRIMARY_TASKS\}/);
   assert.match(appPage, /data-today-plan-primary-task/);
-  assert.match(appPage, /추가 후보/);
-  assert.match(appPage, /data-secondary-action-surface="additional-today-plan"/);
+  assert.doesNotMatch(appPage, /additionalTodayPlanTasks/);
+  assert.doesNotMatch(appPage, /추가 후보/);
+  assert.doesNotMatch(appPage, /data-secondary-action-surface="additional-today-plan"/);
 });
 
 test("input cards are labeled as input options, not Today Plan tasks", () => {
@@ -111,6 +139,8 @@ test("first and second modes do not visually expose more than three primary Toda
 
 test("empty state still has one primary next action", () => {
   const appPage = read("app/app/page.tsx");
+  assert.match(appPage, /오늘 할 일이 아직 없습니다\./);
+  assert.match(appPage, /오늘 한 것을 하나 올리면 다음 행동이 만들어집니다\./);
   assert.match(appPage, /todayPlanTasks\.length === 0[\s\S]{0,500}오늘 한 것 올리기/);
   assert.match(appPage, /modeCaptureHref/);
 });

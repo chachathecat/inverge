@@ -166,7 +166,10 @@ const todayPlan = existsSync(sourcePath(supportingSources.todayPlan)) ? read(sup
 check(todayPlan.includes("compressTodayPlanToMaxThree"), "Today Plan max 3 compression function must exist");
 check(/compressed\.length\s*={2,3}\s*3/.test(todayPlan) || /slice\(0,\s*3\)/.test(todayPlan), "Today Plan max 3 guardrail must be enforced");
 const todayPlanEngine = existsSync(sourcePath(supportingSources.todayPlanEngine)) ? read(supportingSources.todayPlanEngine) : "";
-check(todayPlanEngine.includes(".slice(0, 3)"), "learner /app Today Plan engine must keep max 3 primary task output");
+check(
+  todayPlanEngine.includes("TODAY_PLAN_MAX_PRIMARY_TASKS") && todayPlanEngine.includes("selectActiveTodayPlanTasks"),
+  "learner /app Today Plan engine must keep max 3 active primary task output",
+);
 
 const morningBrief = existsSync(sourcePath(supportingSources.morningBrief)) ? read(supportingSources.morningBrief) : "";
 const morningBriefWithoutGuardrailRegexes = stripRegexLiteralGuardrailLines(morningBrief);

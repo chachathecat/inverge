@@ -46,6 +46,7 @@ const forbiddenCopy = [
 const forbiddenRawText = ["rawOcrText", "rawAnswerText", "rawUserText", "problemText", "questionText", "answerText", "copyrightedText", "official model answer", "공식 모범 답안"];
 const forbiddenSurfaces = ["결제", "payment", "archive", "아카이브", "native app", "네이티브 앱", "instructor", "/instructor", "학원용", "강사"];
 const officialClaims = ["공식 채점", "공식 점수 예측", "official grading", "official score prediction"];
+const allowedTodaySourceLabels = ["학습 노트에서 생성됨", "복습 예정", "미완료 항목", "약점 개념", "오늘 일정"];
 
 function serialized(value) {
   return JSON.stringify(value);
@@ -65,7 +66,7 @@ test("Today Plan task cards include calm recommendation explanation and subtle K
 
   assert.equal(tasks.length, 3);
   assert.ok(tasks.every((task) => typeof task.display_reason === "string" && task.display_reason.length > 0));
-  assert.ok(tasks.every((task) => ["복습 큐", "약점 개념", "오늘 일정"].includes(task.display_source_label)));
+  assert.ok(tasks.every((task) => allowedTodaySourceLabels.includes(task.display_source_label)));
   assert.ok(tasks.every((task) => typeof task.display_primary_cta === "string" && task.display_primary_cta.length > 0));
 
   const text = serialized(tasks);
@@ -80,7 +81,7 @@ test("display helper maps source union signals to learner-facing reason, label, 
     buildTodayPlanDisplayCopy({ source: "study_schedule", prioritySignals: ["schedule_track_focus"], taskType: "execution", primaryAction: "시작하기" }),
   ];
 
-  assert.deepEqual(copies.map((copy) => copy.displaySourceLabel), ["복습 큐", "약점 개념", "오늘 일정"]);
+  assert.deepEqual(copies.map((copy) => copy.displaySourceLabel), ["복습 예정", "약점 개념", "오늘 일정"]);
   assert.ok(copies.every((copy) => copy.displayReason.endsWith("합니다.")));
   assert.ok(copies.every((copy) => copy.displayPrimaryCta.length > 0));
   for (const copy of copies) {
@@ -112,7 +113,7 @@ test("source union output exposes UX display copy while staying max 3 and metada
   assert.equal(plan.length, 3);
   assert.ok(plan.every((task) => task.isPrimaryTask === true && task.metadataOnly === true));
   assert.ok(plan.every((task) => task.displayReason && task.displayPrimaryCta));
-  assert.ok(plan.every((task) => ["복습 큐", "약점 개념", "오늘 일정"].includes(task.displaySourceLabel)));
+  assert.ok(plan.every((task) => allowedTodaySourceLabels.includes(task.displaySourceLabel)));
 
   const text = serialized(plan.map(({ displayReason, displaySourceLabel, displayPrimaryCta }) => ({ displayReason, displaySourceLabel, displayPrimaryCta })));
   for (const internal of ["review_queue", "personal_concept_graph", "study_schedule"]) assert.equal(text.includes(internal), false, internal);

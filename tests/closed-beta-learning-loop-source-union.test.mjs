@@ -243,5 +243,14 @@ test("staging learner route source smoke checks remain helper-level when e2e is 
   assert.equal(answerReviewPage.includes("/api/answer-review/grade-second"), false);
 
   const todayPlanEngine = read("lib/review-os/today-plan-engine.ts");
-  assert.equal(todayPlanEngine.includes(".slice(0, 3)"), true, "Today Plan task output should remain capped at 3");
+  assert.equal(
+    todayPlanEngine.includes("TODAY_PLAN_MAX_PRIMARY_TASKS"),
+    true,
+    "Today Plan task output should use the shared max-primary-task constant",
+  );
+  assert.equal(
+    todayPlanEngine.includes("selectActiveTodayPlanTasks"),
+    true,
+    "Today Plan task output should filter completed tasks and remain capped",
+  );
 });

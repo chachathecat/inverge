@@ -335,9 +335,9 @@ test("PR335 durable Today Plan staging evidence and visible action cap guardrail
     assert.equal(checklist.includes(rule), true, `visible action cap rule should be documented: ${rule}`);
   }
 
-  assert.match(appPage, /const visibleTodayPlanTasks\s*=\s*todayPlanTasks\.slice\(0,\s*3\)/, "learner home should preserve visible max-3 Today Plan cap");
-  assert.match(appPage, /data-visible-primary-task-cap="3"/);
-  assert.match(appPage, /data-secondary-action-surface="additional-today-plan"/);
+  assert.match(appPage, /selectActiveTodayPlanTasks\(/, "learner home should preserve visible max-3 active Today Plan cap");
+  assert.match(appPage, /data-visible-primary-task-cap=\{TODAY_PLAN_MAX_PRIMARY_TASKS\}/);
+  assert.equal(appPage.includes('data-secondary-action-surface="additional-today-plan"'), false);
   assert.match(appPage, /오늘 입력할 수 있는 것/);
 
   assertNoPattern(appPage, forbiddenLearnerPatterns, "/app visible action cap surface");

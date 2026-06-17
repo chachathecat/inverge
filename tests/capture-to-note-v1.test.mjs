@@ -112,8 +112,9 @@ test("Today Plan candidates are capped at max 3", async () => {
 test("Today dashboard keeps visible Today Plan task cap at max 3", () => {
   const source = read(todayDashboardPath);
 
-  assert.match(source, /visibleTodayPlanTasks\s*=\s*todayPlanTasks\.slice\(0,\s*3\)/);
-  assert.match(source, /data-visible-primary-task-cap="3"/);
+  assert.match(source, /selectActiveTodayPlanTasks\(/);
+  assert.match(source, /visibleTodayPlanTasks\s*=\s*todayPlanTasks/);
+  assert.match(source, /data-visible-primary-task-cap=\{TODAY_PLAN_MAX_PRIMARY_TASKS\}/);
 });
 
 test("/app/today alias redirects to the learner dashboard route with mode preserved", () => {
