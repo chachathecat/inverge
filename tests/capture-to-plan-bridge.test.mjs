@@ -229,7 +229,7 @@ test("problem-snap learning signal is surfaced in learner plan surfaces", async 
   assert.ok(itemsSource.includes('sourceType === "problem-snap"'));
   assert.ok(itemsSource.includes("Problem Snap"));
   assert.ok(itemsSource.includes("다시 풀기"));
-  assert.ok(itemsSource.includes("Answer Review로 검토"));
+  assert.ok(itemsSource.includes("답안 검토로 보기"));
   assert.ok(itemsSource.includes("계정 저장 기록이 비어 있을 때는 오늘 학습 1개를 정리하면 다음 행동이 이어집니다."));
 });
 

@@ -48,10 +48,10 @@ export default async function ReviewOsReviewPage({ searchParams }: PageProps) {
       {items.length === 0 ? (
         <MinimalStepPanel title={mode === "second" ? "아직 계정 저장 교정 대기 항목이 없습니다" : "아직 계정 저장 기준으로 다시 볼 오답이 없습니다"}>
           <QuietDetails>
-            <p>Review는 계정 저장 기록에서 다시 풀기·다시쓰기 후보를 모아 두는 곳입니다.</p>
+            <p>복습은 계정 저장 기록에서 다시 풀기·다시쓰기 후보를 모아 두는 곳입니다.</p>
             <p>{config.emptyDescription}</p>
             <p>closed beta 브라우저 임시 기록은 아래에서 이어서 확인할 수 있습니다.</p>
-            <p>지금은 Capture에서 오늘 학습 기록 1개를 먼저 정리하세요.</p>
+            <p>지금은 오늘 한 것 1개를 먼저 정리하세요.</p>
           </QuietDetails>
           <div className="pt-2">
             <Link href={`/app/capture?mode=${mode}`}>

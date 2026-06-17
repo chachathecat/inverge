@@ -65,7 +65,7 @@ test("capture page and form keep capture-first learner copy with one primary sta
     "학습 노트 초안 만들기",
     "촬영하거나 업로드한 뒤 OCR 초안을 직접 확인합니다.",
     "OCR/AI 정리는 초안입니다. 저장 전 직접 확인해 주세요.",
-    "Notes / Review / Today로 이어질 빈틈 1개와 다음 행동 1개가 만들어집니다.",
+    "학습 노트 / 복습 / 오늘 할 일로 이어질 가장 큰 약점 1개와 다음 행동 1개가 만들어집니다.",
   ]) {
     assert.equal(combined.includes(required), true, `${required} copy should exist`);
   }
@@ -99,10 +99,10 @@ test("capture display copy is calm, learner-facing, and action-oriented", () => 
   const summary = buildCaptureNoteSummary(baseSummary({ capturedTextStatus: "user_confirmed" }));
   const copy = buildCaptureNoteDisplayCopy(summary);
 
-  assert.equal(copy.gapLabel, "가장 큰 빈틈: 법률행위 요건을 헷갈렸습니다.");
+  assert.equal(copy.gapLabel, "가장 큰 약점: 법률행위 요건을 헷갈렸습니다.");
   assert.equal(copy.nextActionLabel, "다음 행동: O/X 5문항으로 기준을 다시 고정합니다.");
-  assert.equal(copy.saveCta, "저장하고 오늘 계획에 반영");
-  assert.equal(copy.todayPlanCta, "오늘 계획에 반영");
+  assert.equal(copy.saveCta, "저장하고 오늘 할 일에 반영");
+  assert.equal(copy.todayPlanCta, "오늘 할 일에 반영");
   assert.equal(copy.retryOrRewriteCta, "다시 풀기");
   assertCleanOutput(copy);
 });
