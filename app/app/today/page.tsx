@@ -1,7 +1,20 @@
 import { redirect } from "next/navigation";
 
-export default function TodayPage({ searchParams }: { searchParams?: { mode?: string } }) {
-  const mode = searchParams?.mode;
-  const target = mode === "second" ? "/app/session?mode=second" : mode === "first" ? "/app/session?mode=first" : "/app/session";
-  redirect(target);
+type PageProps = {
+  searchParams?: Promise<{ mode?: string }>;
+};
+
+export default async function TodayPage({ searchParams }: PageProps) {
+  const query = await searchParams;
+  const mode = query?.mode;
+
+  if (mode === "second") {
+    redirect("/app?mode=second");
+  }
+
+  if (mode === "first") {
+    redirect("/app?mode=first");
+  }
+
+  redirect("/app");
 }
