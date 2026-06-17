@@ -20,7 +20,15 @@ test("learner home maps task types to calm labels instead of raw internals", asy
 
 test("capture initial surface is one-input with text first", async () => {
   const source = await readFile(new URL("../components/review-os/capture-form.tsx", import.meta.url), "utf8");
-  ["오늘 학습 정리하기", "텍스트 붙여넣기", "AI로 정리", "사진 찍기", "사진 촬영 팁", "OCR 상태", "캡처 유형"].forEach((t) => assert.ok(source.includes(t)));
+  [
+    "오늘 한 것 올리기",
+    "텍스트 입력으로 시작",
+    "텍스트로 빠르게 붙여넣거나 사진/PDF로 시작하세요. 저장 전 직접 확인합니다.",
+    "AI로 정리",
+    "사진 찍기",
+    "사진 촬영 팁",
+    "OCR 상태",
+  ].forEach((t) => assert.ok(source.includes(t)));
 });
 
 test("first and second session order enforces retrieval/rewrite first", async () => {

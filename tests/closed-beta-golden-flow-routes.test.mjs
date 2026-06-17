@@ -116,8 +116,10 @@ test("capture save confirmation includes biggest gap, next action, and Review/No
 
   assert.equal(captureForm.includes('data-testid="capture-save-confirmation"'), true, "save confirmation panel should render in capture");
   assert.equal(captureForm.includes("저장되었습니다"), true, "confirmation should say the save completed");
-  assert.equal(captureForm.includes("가장 큰 약점 1개"), true, "confirmation should identify one biggest gap candidate");
+  assert.equal(captureForm.includes("가장 큰 빈틈 1개"), true, "confirmation should identify one biggest gap candidate");
   assert.equal(captureForm.includes("다음 행동 1개"), true, "confirmation should identify one next action candidate");
+  assert.equal(captureForm.includes("이어서 할 곳"), true, "confirmation should identify where the note continues");
+  assert.equal(captureForm.includes("Notes / Review / Today"), true, "confirmation should keep Notes, Review, and Today continuation copy");
   assert.equal(captureForm.includes("AI가 찾은 약점 후보입니다. 저장 전 직접 확인해 주세요."), true, "confirmation should use beta-safe candidate copy");
   assert.equal(captureForm.includes("다음 행동 후보입니다."), true, "confirmation should frame next action as a candidate");
   assert.equal(captureForm.includes('href={`/app/review?mode=${mode}`}'), true, "confirmation should link to Review with mode");

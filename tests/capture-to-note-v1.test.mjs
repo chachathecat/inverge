@@ -130,9 +130,11 @@ test("capture confirmation copy points to Notes, Review, and Today without forbi
   const source = read(captureFormPath);
   const confirmationBlock = source.match(/function SavedCaptureConfirmationPanel[\s\S]*?function SubjectSelect/)?.[0] ?? "";
 
-  assert.match(confirmationBlock, /Notes 반영/);
-  assert.match(confirmationBlock, /Review Queue 후보/);
-  assert.match(confirmationBlock, /Today Plan 후보/);
+  assert.match(confirmationBlock, /가장 큰 빈틈 1개/);
+  assert.match(confirmationBlock, /다음 행동 1개/);
+  assert.match(confirmationBlock, /이어서 할 곳/);
+  assert.match(confirmationBlock, /Notes \/ Review \/ Today/);
+  assert.match(confirmationBlock, /Today로 돌아가기/);
   assert.match(confirmationBlock, /다음 행동 후보입니다\. 학습 정리 초안입니다\. 저장 전 직접 확인해 주세요\./);
   assert.doesNotMatch(confirmationBlock, /정답 확정|최종 판단|공식 채점|모범답안|합격 가능성|pass-fail|score prediction/i);
 });

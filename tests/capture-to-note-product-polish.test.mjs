@@ -60,7 +60,8 @@ test("capture page and form keep capture-first learner copy with one primary sta
 
   for (const required of [
     "오늘 한 것 올리기",
-    "사진/PDF/텍스트 중 하나로 시작하고, 저장 후 Notes, Review, Today에서 이어서 확인하세요.",
+    "텍스트로 빠르게 붙여넣거나 사진/PDF로 시작하세요. 저장 전 직접 확인합니다.",
+    "사진/PDF도 선택할 수 있지만 텍스트 입력이 가장 빠릅니다.",
     "OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요.",
     "가장 큰 빈틈 1개만 먼저 고정합니다.",
   ]) {

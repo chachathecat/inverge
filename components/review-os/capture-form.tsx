@@ -1254,7 +1254,7 @@ export function WrongAnswerCaptureForm({
         <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 sm:p-5">
           <p className="text-xs font-medium text-[color:var(--muted)]">Capture-to-OX</p>
           <h3 className="mt-1 text-lg font-semibold text-[color:var(--foreground-strong)]">5개 선지를 O/X 연습으로 나눌 수 있습니다.</h3>
-          <p className="mt-2 text-sm leading-6 text-[color:var(--muted-strong)]">사진/OCR 결과를 먼저 확인한 뒤, 각 선지를 하나씩 판단합니다. 정답 확정이 아니라 복습용 판단 연습입니다.</p>
+          <p className="mt-2 text-sm leading-6 text-[color:var(--muted-strong)]">사진/OCR 결과를 먼저 확인한 뒤, 각 선지를 하나씩 판단합니다. 복습용 판단 연습입니다.</p>
           {!canBridgeToFirstOx ? (
             <p className="mt-3 rounded-[var(--radius-md)] bg-[color:var(--surfaceQuiet)] px-3 py-2 text-sm text-[color:var(--muted-strong)]">선지 5개를 확실히 찾지 못했습니다. 직접 확인 후 O/X로 나눌 수 있습니다.</p>
           ) : null}
@@ -1536,15 +1536,13 @@ function SavedCaptureConfirmationPanel({
         <h3 className="mt-2 text-title text-[color:var(--foreground-strong)]">{persistenceCopy.title}</h3>
         <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">{persistenceCopy.description}</p>
         <div className="mt-5 grid gap-3 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-4">
-          <PreviewLine label="가장 큰 약점 1개" value={confirmation.biggestGap} />
+          <PreviewLine label="가장 큰 빈틈 1개" value={confirmation.biggestGap} />
           <PreviewLine label="다음 행동 1개" value={confirmation.nextAction} />
-          <PreviewLine label="Notes 반영" value="저장한 Capture note로 확인합니다." />
-          <PreviewLine label="Today Plan 후보" value={confirmation.todayPlanCandidate ?? confirmation.nextAction} />
-          <PreviewLine label="Review Queue 후보" value={confirmation.reviewQueueCandidate ?? confirmation.biggestGap} />
+          <PreviewLine label="이어서 할 곳" value="Notes / Review / Today" />
           {confirmation.legalGroundingMessage ? <PreviewLine label="법령 근거 상태" value={confirmation.legalGroundingMessage} /> : null}
           <PreviewLine label="저장 상태" value={persistenceCopy.statusLabel} />
         </div>
-        <p className="mt-3 text-xs leading-5 text-[color:var(--muted)]">다음 행동 후보입니다. 학습 정리 초안입니다. 저장 전 직접 확인해 주세요. Notes에서 기록을 확인하고, Review에서 다시 쓰거나 다시 풀 수 있으며, Today Plan 후보로 이어집니다.</p>
+        <p className="mt-3 text-xs leading-5 text-[color:var(--muted)]">다음 행동 후보입니다. 학습 정리 초안입니다. 저장 전 직접 확인해 주세요.</p>
         {saveFailed ? (
           <div className="mt-5 flex flex-col gap-2 sm:flex-row">
             <Button type="button" className="w-full sm:w-auto" onClick={onRetry} disabled={saving}>
@@ -1575,7 +1573,7 @@ function SavedCaptureConfirmationPanel({
                 aria-label="Today로 돌아가기"
                 className="inline-flex min-h-11 items-center justify-center rounded-full border border-[color:var(--border-subtle)] px-4 py-2 text-sm font-medium text-[color:var(--foreground-strong)]"
               >
-                오늘 계획에 반영
+                Today로 돌아가기
               </Link>
             </div>
             <Button type="button" variant="ghost" className="mt-4 w-full sm:w-auto" onClick={onReset}>
@@ -1597,12 +1595,11 @@ function SavedCaptureConfirmationPanel({
       <h3 className="mt-2 text-title text-[color:var(--foreground-strong)]">오늘 계획에 반영할 후보를 만들었습니다.</h3>
       <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">AI가 찾은 약점 후보입니다. 저장 전 직접 확인해 주세요.</p>
       <div className="mt-5 grid gap-3 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-4">
-        <PreviewLine label="가장 큰 약점 1개" value={confirmation.biggestGap} />
+        <PreviewLine label="가장 큰 빈틈 1개" value={confirmation.biggestGap} />
         <PreviewLine label="다음 행동 1개" value={confirmation.nextAction} />
-        <PreviewLine label="저장 경로" value={confirmation.persistence === "durable" ? "Review OS note" : "local beta note"} />
-        <PreviewLine label="Notes / Review / Today" value="Notes에서 확인하고 Review Queue 후보와 Today Plan 후보로 이어집니다." />
+        <PreviewLine label="이어서 할 곳" value="Notes / Review / Today" />
       </div>
-      <p className="mt-3 text-xs leading-5 text-[color:var(--muted)]">다음 행동 후보입니다. 학습 정리 초안입니다. 저장 전 직접 확인해 주세요. Notes에서 기록을 확인하고, Review에서 다시 쓰거나 다시 풀 수 있으며, Today Plan 후보로 이어집니다.</p>
+      <p className="mt-3 text-xs leading-5 text-[color:var(--muted)]">다음 행동 후보입니다. 학습 정리 초안입니다. 저장 전 직접 확인해 주세요.</p>
       <div className="mt-5 grid gap-2 sm:grid-cols-3">
         <Link
           href={`/app/review?mode=${mode}`}
@@ -1719,26 +1716,27 @@ function IntakePanel({
       <div className="mt-2 flex flex-col gap-4">
         <div className="max-w-[62ch]">
           <h3 className="text-title text-[color:var(--foreground-strong)]">오늘 한 것 올리기</h3>
-          <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">사진/PDF/텍스트 중 하나로 시작하고, 저장 후 Notes, Review, Today에서 이어서 확인하세요.</p>
+          <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">텍스트로 빠르게 붙여넣거나 사진/PDF로 시작하세요. 저장 전 직접 확인합니다.</p>
         </div>
         <div className="rounded-[var(--radius-md)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-elevated)] p-5 sm:p-6">
-          <p className="text-caption text-[color:var(--ink-muted)]">오늘의 입력</p>
-          <p className="mt-1 text-xs text-[color:var(--ink-muted)]">캡처 유형 · photo / pdf / text</p>
+          <p className="text-caption text-[color:var(--ink-muted)]">빠른 입력</p>
           <h4 className="mt-2 text-base font-semibold text-[color:var(--ink-primary)]">오늘 한 것 올리기</h4>
-          <p className="mt-1 text-sm leading-6 text-[color:var(--ink-muted)]">먼저 텍스트를 붙여넣으면 AI가 과목, 확신도, 소요 시간, 답안 단서를 초안으로 읽습니다.</p>
+          <p className="mt-1 text-sm leading-6 text-[color:var(--ink-muted)]">오늘 공부한 내용 또는 내 답안을 그대로 붙여넣으세요.</p>
           <p className="mt-2 rounded-[var(--radius-sm)] border border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] px-3 py-2 text-xs leading-5 text-[color:var(--foreground-strong)]">OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요. 가장 큰 빈틈 1개만 먼저 고정합니다.</p>
+          <p className="mt-1 text-xs leading-6 text-[color:var(--ink-muted)]">사진/PDF도 선택할 수 있지만 텍스트 입력이 가장 빠릅니다.</p>
           <p className="mt-1 text-xs leading-6 text-[color:var(--ink-muted)]">노트 원문은 비공개로 보관되며, 파생 학습 신호는 개인 추천 개선에만 사용됩니다.</p>
           <div className="mt-4">
             <Button
               type="button"
-              className="w-full sm:w-auto bg-[color:var(--accent-deep)] transition-colors hover:bg-[color:var(--primary-hover)] focus-visible:ring-2 focus-visible:ring-[color:var(--accent-deep)] focus-visible:ring-offset-2"
+              variant="outline"
+              className="w-full sm:w-auto"
               onClick={() => {
                 update("sourceType", inferSourceTypeFromAction("text"));
                 textAreaRef.current?.focus();
                 textAreaRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
               }}
             >
-              텍스트 붙여넣기
+              텍스트 입력으로 시작
             </Button>
             <p className="mt-2 text-xs text-[color:var(--ink-muted)]">사진/PDF 인식이 불안정하면 텍스트로 붙여넣어도 됩니다.</p>
           </div>
@@ -1795,9 +1793,6 @@ function IntakePanel({
               }}
             />
           </div>
-          <p className="mt-3 inline-flex rounded-full border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)] px-3 py-1 text-xs text-[color:var(--ink-muted)]">
-            OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요. 사진/PDF 인식이 불안정하면 텍스트로 붙여넣어도 됩니다.
-          </p>
         </div>
       </div>
       <div className="mt-4 grid gap-3 sm:grid-cols-1">
@@ -1863,13 +1858,13 @@ function IntakePanel({
       <div className="sticky bottom-3 z-30 mt-3 rounded-[var(--radius-lg)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)]/95 p-3 shadow-lg backdrop-blur sm:bottom-5 sm:p-4" data-testid="capture-save-action-bar">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm font-medium text-[color:var(--foreground-strong)]">오늘 학습을 저장하고 다음 행동으로 연결합니다.</p>
-            <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">저장하면 Notes, Review, Today에 이어질 약점 후보와 다음 행동 후보가 만들어집니다.</p>
+            <p className="text-sm font-medium text-[color:var(--foreground-strong)]">텍스트를 확인한 뒤 오늘 한 것 올리기를 누르세요.</p>
+            <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">Notes / Review / Today로 이어질 빈틈 1개와 다음 행동 1개가 만들어집니다.</p>
           </div>
           <Button type="button" onClick={onQuickSave} disabled={!canQuickSave || saving || extracting} className="min-h-12 w-full shrink-0 sm:w-auto bg-[color:var(--foreground-strong)] text-white disabled:cursor-not-allowed disabled:opacity-60" data-testid="capture-save-primary">
             {saving ? "저장 중" : (
               <>
-                <span>학습 노트 만들기</span>
+                <span>오늘 한 것 올리기</span>
                 <span className="sr-only">저장하고 오늘 계획에 반영</span>
               </>
             )}
@@ -2049,7 +2044,7 @@ function ExtractionPreview({
           placeholder="OCR 결과를 확인하고 바로 수정하세요."
           className="mt-3 min-h-44 border-[color:var(--border-hairline)] bg-[color:var(--bg-surface)] text-[color:var(--foreground-strong)] leading-7"
         />
-        <p className="mt-2 text-xs text-[color:var(--muted)]">수정 내용은 이 기기 초안에 자동 저장됩니다. AI 초안은 참고용이며 최종 판단이 아닙니다.</p>
+        <p className="mt-2 text-xs text-[color:var(--muted)]">수정 내용은 이 기기 초안에 자동 저장됩니다. AI 초안은 참고용이며 저장 전 직접 확인해 주세요.</p>
       </div>
       {mode === "first" ? (
         <div className="mt-5 grid gap-3">
