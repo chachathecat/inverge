@@ -26,7 +26,7 @@ test("/app/capture exposes mobile-first text-first copy", () => {
   const combined = `${page}\n${form}`;
 
   assert.match(combined, /오늘 한 것 올리기/);
-  assert.match(combined, /텍스트로 빠르게 붙여넣거나 사진\/PDF로 시작하세요\./);
+  assert.match(combined, /텍스트로 바로 시작하고, 사진\/PDF는 필요할 때만 추가하세요\./);
   assert.match(combined, /촬영하거나 업로드한 뒤 OCR 초안을 직접 확인합니다\./);
   assert.match(combined, /OCR\/AI 정리는 초안/);
   assert.match(form, /텍스트 입력으로 이동/);

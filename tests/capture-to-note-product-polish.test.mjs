@@ -60,7 +60,8 @@ test("capture page and form keep capture-first learner copy with one primary sta
 
   for (const required of [
     "오늘 한 것 올리기",
-    "텍스트로 빠르게 붙여넣거나 사진/PDF로 시작하세요.",
+    "텍스트로 바로 시작하고, 사진/PDF는 필요할 때만 추가하세요.",
+    "텍스트로 시작",
     "학습 노트 초안 만들기",
     "촬영하거나 업로드한 뒤 OCR 초안을 직접 확인합니다.",
     "OCR/AI 정리는 초안입니다. 저장 전 직접 확인해 주세요.",

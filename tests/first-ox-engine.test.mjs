@@ -408,8 +408,8 @@ test("capture-to-OX parser fails safely when choices are unclear", () => {
 test("capture-to-OX bridge copy, source route, and source-specific O/X copy are present", async () => {
   const captureSource = await readFile("components/review-os/capture-form.tsx", "utf8");
   [
-    "5개 선지를 O/X 연습으로 나눌 수 있습니다.",
-    /사진\/OCR 결과를 먼저 확인한 뒤,\s*각 선지를 하나씩 판단합니다\.\s*복습용 판단 연습입니다\./,
+    "5개 선지를 O/X로 나눌 수 있습니다.",
+    "입력 내용을 먼저 확인한 뒤 선택하면 됩니다.",
     "O/X 연습으로 나누기",
     /선지 5개를 확실히 찾지 못했습니다\.\s*직접 확인 후 O\/X로 나눌 수\s*있습니다\./,
     "/app/first/ox?sourceItemId=",
