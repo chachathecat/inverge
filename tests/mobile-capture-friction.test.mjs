@@ -26,9 +26,10 @@ test("/app/capture exposes mobile-first text-first copy", () => {
   const combined = `${page}\n${form}`;
 
   assert.match(combined, /오늘 한 것 올리기/);
-  assert.match(combined, /사진\/PDF\/텍스트 중 하나로 시작하고, 저장 후 Notes, Review, Today에서 이어서 확인하세요\./);
-  assert.match(combined, /OCR 결과는 초안/);
-  assert.match(form, /텍스트 붙여넣기/);
+  assert.match(combined, /텍스트로 빠르게 붙여넣거나 사진\/PDF로 시작하세요\./);
+  assert.match(combined, /촬영하거나 업로드한 뒤 OCR 초안을 직접 확인합니다\./);
+  assert.match(combined, /OCR\/AI 정리는 초안/);
+  assert.match(form, /텍스트 입력으로 이동/);
   assert.match(form, /AI로 정리/);
   assert.match(form, /AI가 이렇게 읽었습니다\. 틀린 부분만 고쳐 주세요\./);
 });
@@ -50,18 +51,18 @@ test("second-mode normal capture routes preview through retrieval before final s
   assert.match(form, /function hasSecondModeLearnerProducedResponse/);
   assert.match(form, /function hasSecondModeReferenceStep/);
   assert.match(form, /2차 저장 전에는 쟁점·목차·답안 중 하나를 직접 적어 주세요/);
-  assert.match(form, /기준답안 비교 또는 확인 보류를 선택한 뒤 저장해 주세요/);
+  assert.match(form, /강의\/교재 정리 비교 또는 확인 보류를 선택한 뒤 저장해 주세요/);
   assert.match(form, /마지막 확인으로 이동/);
-  assert.match(form, /기준답안은 나중에 확인/);
-  assert.doesNotMatch(form, /공식\s*모범답안|공식\s*기준답안|합격\s*판정|점수\s*예측/);
+  assert.match(form, /강의\/교재 정리는 나중에 확인/);
+  assert.doesNotMatch(form, /기준\s*답안|기준답안|모범답안|공식답안|공식\s*모범답안|공식\s*기준답안|합격\s*판정|점수\s*예측/);
 });
 
 test("second-mode retrieval-before-explanation guard remains documented in the flow copy", () => {
   const form = captureForm();
-  assert.match(form, /기준답안 보기 전, 쟁점 1개만 적으세요/);
-  assert.match(form, /기준 답안 보기 전에 이 체크포인트 중 3개를 떠올립니다/);
+  assert.match(form, /강의\/교재 정리 보기 전, 쟁점 1개만 적으세요/);
+  assert.match(form, /강의\/교재 정리를 보기 전에 이 체크포인트 중 3개를 떠올립니다/);
   assert.match(form, /비교는 작성 이후에 합니다/);
-  assert.match(form, /작성한 뒤에만 기준답안을 봅니다/);
+  assert.match(form, /작성한 뒤에만 강의\/교재 정리를 봅니다/);
 });
 
 test("after-save acknowledgement names Today Plan, Review Queue, note location, and safe CTAs", () => {

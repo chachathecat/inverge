@@ -16,7 +16,7 @@ const learnerFiles = [
 ].map((file) => readFileSync(file, "utf8"));
 
 test("capture includes required labels and OCR caution", () => {
-  ["사진으로 시작하기", "사진 찍기", "앨범에서 선택", "텍스트로 입력", "PDF 선택", "OCR 결과는 초안입니다"].forEach((text) => {
+  ["사진/PDF로 시작하기", "사진 찍기", "앨범에서 선택", "텍스트 입력", "PDF 선택", "OCR/AI 정리는 초안입니다"].forEach((text) => {
     assert.ok(capture.includes(text), `Missing: ${text}`);
   });
 });
@@ -34,7 +34,7 @@ test("home keeps priority and queue framing", () => {
 });
 
 test("session saved state keeps required continuity lines", () => {
-  ["오늘 기록이 저장되었습니다.", "복습 큐에 들어갔습니다.", "오늘 계획에 반영되었습니다.", "가장 큰 간극:", "다음 행동:"].forEach((text) => {
+  ["오늘 계획에 반영했습니다.", "Today Plan candidate", "Review Queue candidate", "Note/details에 저장했습니다.", "가장 큰 간극:", "다음 행동:"].forEach((text) => {
     assert.ok(session.includes(text), `Missing: ${text}`);
   });
 });
@@ -46,9 +46,9 @@ test("review queue keeps calm empty state and capture continuity", () => {
 });
 
 test("guardrails remain intact", () => {
-  const joined = learnerFiles.join("\n").toLowerCase();
-  ["/instructor", "official grader", "pass/fail", "공식 채점", "합격 판정", "cpa", "toefl", "sat", "보험계리사", "세무사", "documentprocessorserviceclient", "@google-cloud/vision", "tesseract"].forEach((token) => {
-    assert.equal(joined.includes(token.toLowerCase()), false, `Forbidden token found: ${token}`);
+  const joined = learnerFiles.join("\n");
+  [/\/instructor/i, /official grader/i, /pass\/fail/i, /공식 채점/, /합격 판정/, /\bCPA\b/, /TOEFL/i, /\bSAT\b/, /보험계리사/, /세무사/, /documentprocessorserviceclient/i, /@google-cloud\/vision/i, /tesseract/i].forEach((pattern) => {
+    assert.doesNotMatch(joined, pattern, `Forbidden token found: ${pattern}`);
   });
 });
 

@@ -20,7 +20,16 @@ test("learner home maps task types to calm labels instead of raw internals", asy
 
 test("capture initial surface is one-input with text first", async () => {
   const source = await readFile(new URL("../components/review-os/capture-form.tsx", import.meta.url), "utf8");
-  ["오늘 학습 정리하기", "텍스트 붙여넣기", "AI로 정리", "사진 찍기", "사진 촬영 팁", "OCR 상태", "캡처 유형"].forEach((t) => assert.ok(source.includes(t)));
+  [
+    "Step 1. 입력",
+    "텍스트 입력으로 이동",
+    "아래 입력칸에 바로 붙여넣으세요.",
+    "학습 노트 초안 만들기",
+    "AI로 정리",
+    "사진 찍기",
+    "촬영하거나 업로드한 뒤 OCR 초안을 직접 확인합니다.",
+    "OCR 상태",
+  ].forEach((t) => assert.ok(source.includes(t)));
 });
 
 test("first and second session order enforces retrieval/rewrite first", async () => {
@@ -60,7 +69,7 @@ test("second-write flow hides global footer until step 6 and keeps defer actions
 
 test("second-write flow starts from step 1 copy and no separate setup card", async () => {
   const source = await readFile(new URL("../components/review-os/capture-form.tsx", import.meta.url), "utf8");
-  assert.ok(source.includes("기준답안 보기 전, 쟁점 1개만 적으세요."));
+  assert.ok(source.includes("강의/교재 정리 보기 전, 쟁점 1개만 적으세요."));
   assert.ok(source.includes("과목:"));
   assert.ok(source.includes("과목 바꾸기"));
   assert.equal(source.includes("설정"), false);

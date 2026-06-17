@@ -130,9 +130,11 @@ test("capture confirmation copy points to Notes, Review, and Today without forbi
   const source = read(captureFormPath);
   const confirmationBlock = source.match(/function SavedCaptureConfirmationPanel[\s\S]*?function SubjectSelect/)?.[0] ?? "";
 
-  assert.match(confirmationBlock, /Notes 반영/);
-  assert.match(confirmationBlock, /Review Queue 후보/);
-  assert.match(confirmationBlock, /Today Plan 후보/);
+  assert.match(confirmationBlock, /가장 큰 빈틈 1개/);
+  assert.match(confirmationBlock, /다음 행동 1개/);
+  assert.match(confirmationBlock, /이어서 할 곳/);
+  assert.match(confirmationBlock, /Notes \/ Review \/ Today/);
+  assert.match(confirmationBlock, /Today로 돌아가기/);
   assert.match(confirmationBlock, /다음 행동 후보입니다\. 학습 정리 초안입니다\. 저장 전 직접 확인해 주세요\./);
   assert.doesNotMatch(confirmationBlock, /정답 확정|최종 판단|공식 채점|모범답안|합격 가능성|pass-fail|score prediction/i);
 });
@@ -177,9 +179,10 @@ test("learner capture route stays separated from instructor second grading", () 
   const combined = `${read(captureRoutePath)}\n${read(captureFormPath)}\n${read(localBetaReflectionPath)}\n${read(todayDashboardPath)}`;
 
   assert.doesNotMatch(combined, /\/instructor\/second-grading|second-grading|grade-second/);
-  assert.match(combined, /오늘 한 것 정리하기/);
-  assert.match(combined, /학습 노트 만들기/);
-  assert.match(combined, /OCR 결과는 초안입니다\. 저장 전 직접 확인해 주세요\./);
+  assert.match(combined, /오늘 한 것 올리기/);
+  assert.match(combined, /학습 노트 초안 만들기/);
+  assert.match(combined, /OCR\/AI 정리는 초안입니다\. 저장 전 직접 확인해 주세요\./);
+  assert.doesNotMatch(read(captureFormPath), /기준\s*답안|기준답안|모범답안|공식답안|정답 확정|최종 판단/);
 });
 
 test("docs cover claims, raw text boundary, OCR editability, legal grounding, Today max 3, and Review Queue", () => {

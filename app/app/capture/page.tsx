@@ -44,31 +44,30 @@ export default async function ReviewOsCapturePage({ searchParams }: PageProps) {
 
       <div className="space-y-7">
       <DailyCommandCard
-        title={isRewriteFlow ? "문단 다시쓰기 실행" : "오늘 한 것 정리하기"}
+        title={isRewriteFlow ? "문단 다시쓰기 실행" : "오늘 한 것 올리기"}
         description={
           isRewriteFlow
             ? "먼저 한 문장만 떠올립니다. 문단 1개만 다시 쓰고 저장합니다."
-            : "학습 노트 만들기로 Notes, Review, Today에 이어질 약점 후보와 다음 행동 1개를 만듭니다."
+            : "텍스트로 빠르게 붙여넣거나 사진/PDF로 시작하세요."
         }
       >
         <QuietDetails>
-          <p>OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요.</p>
-          <p>가장 큰 빈틈 1개만 먼저 고정합니다.</p>
+          <p>저장하면 가장 큰 빈틈 1개와 다음 행동 1개가 Notes, Review, Today로 이어집니다.</p>
         </QuietDetails>
       </DailyCommandCard>
 
-      <MinimalStepPanel title={isRewriteFlow ? "문단 다시쓰기 입력" : "오늘 학습 정리하기"}>
+      <MinimalStepPanel title={isRewriteFlow ? "문단 다시쓰기 입력" : "빠른 입력"}>
         <QuietDetails>
           <p>
             {isRewriteFlow
               ? "한 문단 실행 기록만 남깁니다."
               : mode === "second"
                 ? "쟁점 회상부터 간극 1개 교정까지 순서대로 기록합니다."
-                : "사진/PDF/텍스트 중 하나로 시작하고, 확인 후 가장 큰 빈틈 1개와 다음 행동 1개만 저장합니다."}
+                : "확인 후 가장 큰 빈틈 1개와 다음 행동 1개만 저장합니다."}
           </p>
           <details>
             <summary className="cursor-pointer list-none text-xs font-medium">입력 순서 보기</summary>
-            <p className="pt-2">오늘 한 것 올리기 / 오늘 한 것 정리하기 → 학습 노트 만들기 → Notes / Review / Today 반영</p>
+            <p className="pt-2">텍스트 입력 → 학습 노트 초안 만들기 → Notes / Review / Today 반영</p>
           </details>
         </QuietDetails>
         <div className="pt-3">
