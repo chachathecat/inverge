@@ -52,6 +52,12 @@ export type TodayPlanTask = {
   };
 };
 
+export const TODAY_PLAN_MAX_PRIMARY_TASKS = 3;
+
+export function selectActiveTodayPlanTasks(tasks: TodayPlanTask[], max = TODAY_PLAN_MAX_PRIMARY_TASKS): TodayPlanTask[] {
+  return capTodayPlanTasks(tasks.filter((task) => task.status !== "completed"), max);
+}
+
 type BuildInput = {
   mode: "first" | "second";
   queue: ReviewQueueCard[];
@@ -286,6 +292,7 @@ function toItemTask(item: WrongAnswerItemRecord, mode: "first" | "second", now: 
   const pageCount = getPageCount(item);
   const lowConfidence = isLowConfidenceOcrItem(item);
   const captureNote = typeof item.derivedPayload?.capture_note_engine_v2 === "object" && item.derivedPayload.capture_note_engine_v2 ? item.derivedPayload.capture_note_engine_v2 as Record<string, unknown> : null;
+  const captureNoteNextAction = typeof captureNote?.one_next_action === "string" && captureNote.one_next_action.trim() ? captureNote.one_next_action : null;
   const curriculumSignal = getCurriculumAnchoredSignal(item);
   const curriculumTodayPlanCandidate = isRecord(curriculumSignal?.todayPlanCandidate) ? curriculumSignal.todayPlanCandidate : null;
   const curriculumSecondaryMetadata = curriculumTodayPlanCandidate && curriculumSignal?.examMode === mode
@@ -312,7 +319,7 @@ function toItemTask(item: WrongAnswerItemRecord, mode: "first" | "second", now: 
 
   let taskType: TodayPlanTaskType | null = null;
   let reason = "저장된 노트에서 오늘 이어갈 작업입니다.";
-  let nextAction = String(captureNote?.one_next_action ?? "핵심 조건 1개를 회상하고 다시 시도합니다.");
+  let nextAction = String(captureNoteNextAction ?? "핵심 조건 1개를 회상하고 다시 시도합니다.");
   let estimated = mode === "second" ? 15 : 10;
   let sourceLabel = createdFromCapture ? "저장한 캡처 노트 기반" : "오답 노트 기반";
   let score = 28 + confidenceBoost(item.confidence) + recentBoost;
@@ -358,7 +365,7 @@ function toItemTask(item: WrongAnswerItemRecord, mode: "first" | "second", now: 
   } else if (!taskType && (createdFromCapture || item.userReasonPreset || item.userReasonText)) {
     taskType = mode === "first" ? "first_ox_retry" : "concept_review";
     reason = createdFromCapture ? "저장한 Capture-to-Note 항목입니다." : "오답 노트에서 복습할 항목입니다.";
-    nextAction = mode === "first" ? "다시 풀고 근거 1줄을 남깁니다." : "핵심 논점 1개를 회상합니다.";
+    nextAction = captureNoteNextAction ?? (mode === "first" ? "다시 풀고 근거 1줄을 남깁니다." : "핵심 논점 1개를 회상합니다.");
   }
 
   if (!taskType) return null;
@@ -510,12 +517,13 @@ export function buildTodayPlanTasks({ mode, queue, items = [], learningSignals =
     dueReviewCount: queue.filter((item) => resolveDueBucket(item.dueAt, now) !== "upcoming").length,
   });
 
-  return capTodayPlanTasks(ranked, 3).slice(0, 3)
+  const selected = capTodayPlanTasks(ranked, TODAY_PLAN_MAX_PRIMARY_TASKS)
     .sort((a, b) => b.score - a.score || a.task.itemId.localeCompare(b.task.itemId))
     .map((entry) => ({
       ...entry.task,
       ...toEngineDisplayCopy(entry.task),
     }));
+  return selectActiveTodayPlanTasks(selected, TODAY_PLAN_MAX_PRIMARY_TASKS);
 }
 
 export {

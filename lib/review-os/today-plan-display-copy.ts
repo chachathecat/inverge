@@ -11,7 +11,7 @@ export type TodayPlanDisplayCopyInput = {
 
 export type TodayPlanDisplayCopy = {
   displayReason: string;
-  displaySourceLabel?: "복습 큐" | "약점 개념" | "오늘 일정";
+  displaySourceLabel?: "학습 노트에서 생성됨" | "복습 예정" | "미완료 항목" | "약점 개념" | "오늘 일정";
   displayPrimaryCta: string;
 };
 
@@ -26,14 +26,17 @@ function hasSignal(signals: string[], pattern: RegExp) {
 }
 
 function resolveDisplaySourceLabel(input: TodayPlanDisplayCopyInput): TodayPlanDisplayCopy["displaySourceLabel"] {
-  if (input.source === "review_queue") return "복습 큐";
-  if (input.source === "personal_concept_graph") return "약점 개념";
-  if (input.source === "study_schedule") return "오늘 일정";
-
   const label = input.sourceLabel ?? "";
-  if (/복습\s*큐|오늘\s*기록|캡처\s*노트|오답\s*노트|Problem Snap/i.test(label)) return "복습 큐";
+  if (/미완료|unfinished|incomplete|pending/i.test(label)) return "미완료 항목";
+  if (/오늘\s*기록|캡처\s*노트|저장한\s*캡처|Capture-to-Note|Problem Snap/i.test(label)) return "학습 노트에서 생성됨";
+  if (/복습\s*큐|review\s*queue|복습\s*예정/i.test(label)) return "복습 예정";
+  if (/오답\s*노트|학습\s*노트/i.test(label)) return "미완료 항목";
   if (/개념|O\/X|약점|헷갈/.test(label)) return "약점 개념";
   if (/일정/.test(label)) return "오늘 일정";
+
+  if (input.source === "review_queue") return "복습 예정";
+  if (input.source === "personal_concept_graph") return "약점 개념";
+  if (input.source === "study_schedule") return "오늘 일정";
   return undefined;
 }
 
@@ -46,7 +49,7 @@ function resolveDisplayReason(input: TodayPlanDisplayCopyInput) {
     return "오늘 일정의 주 과제와 맞아 먼저 실행합니다.";
   }
 
-  if (hasSignal(signals, /review_queue_due_bucket|due_review|overdue|missed_due/) || input.source === "review_queue" || sourceLabel === "복습 큐") {
+  if (hasSignal(signals, /review_queue_due_bucket|due_review|overdue|missed_due/) || input.source === "review_queue" || sourceLabel === "복습 예정" || sourceLabel === "학습 노트에서 생성됨") {
     if (taskType.includes("rewrite") || taskType.includes("second answer")) return "답안 구조가 흔들린 항목이라 한 문단만 다시 씁니다.";
     if (taskType.includes("accounting") || taskType.includes("calculator") || taskType.includes("casio")) return "계산 흐름이 끊긴 항목이라 틀만 짧게 다시 확인합니다.";
     return "예정 복습이 도착해 먼저 회상합니다.";

@@ -15,7 +15,7 @@ import { buildNotebookPreview } from "@/lib/review-os/study-note";
 import { getSimilarQuestionReferenceCandidates } from "@/lib/review-os/question-reference";
 import { APPRAISAL_FIRST_SUBJECTS, type TodayFocus } from "@/lib/review-os/types";
 import { buildTodayPlanCard, type TodayPlanActionKind } from "@/lib/review-os/today-plan";
-import { type TodayPlanTaskType } from "@/lib/review-os/today-plan-engine";
+import { selectActiveTodayPlanTasks, TODAY_PLAN_MAX_PRIMARY_TASKS, type TodayPlanTaskType } from "@/lib/review-os/today-plan-engine";
 import { buildLearnerTodayPlanTasksWithGatedDurableConceptGraph } from "@/lib/review-os/today-plan-learner-route-integration";
 import { buildPersonalWeaknessProfile } from "@/lib/review-os/weakness-diagnostics";
 import { isOverdueDueAt, resolveDailyStudyState } from "@/lib/review-os/daily-study-state";
@@ -181,15 +181,18 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
     wrongAnswerItems: items,
     mode,
   });
-  const todayPlanTasks = await buildLearnerTodayPlanTasksWithGatedDurableConceptGraph({
-    userId: session.userId,
-    mode,
-    queue,
-    items,
-    learningSignals: learningSignalEvents,
-    repeatedGaps: weaknessProfile.repeatedGaps,
-    riskLevel: weaknessProfile.riskLevel,
-  }).catch(() => []);
+  const todayPlanTasks = selectActiveTodayPlanTasks(
+    await buildLearnerTodayPlanTasksWithGatedDurableConceptGraph({
+      userId: session.userId,
+      mode,
+      queue,
+      items,
+      learningSignals: learningSignalEvents,
+      repeatedGaps: weaknessProfile.repeatedGaps,
+      riskLevel: weaknessProfile.riskLevel,
+    }).catch(() => []),
+    TODAY_PLAN_MAX_PRIMARY_TASKS,
+  );
   const questionReferenceHintsByTaskId = new Map(
     await Promise.all(todayPlanTasks.map(async (task) => ([
       task.itemId,
@@ -281,8 +284,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                 ? "/app/notes?mode=second"
                 : "/app/review?mode=second",
         }));
-  const visibleTodayPlanTasks = todayPlanTasks.slice(0, 3);
-  const additionalTodayPlanTasks = todayPlanTasks.slice(3);
+  const visibleTodayPlanTasks = todayPlanTasks;
   const visibleInputOptions = inputOptions.slice(0, 3);
 
   return (
@@ -408,13 +410,13 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                 <p className="text-[color:var(--foreground-strong)]">{todayPlan.reason}</p>
               </div>
 
-              <div className="rounded-[var(--radius-md)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)] px-4 py-3" data-today-plan-primary-surface data-visible-primary-task-cap="3">
+              <div className="rounded-[var(--radius-md)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)] px-4 py-3" data-today-plan-primary-surface data-visible-primary-task-cap={TODAY_PLAN_MAX_PRIMARY_TASKS}>
                 <p className="text-caption text-[color:var(--ink-muted)]">오늘의 우선순위 · 최대 3개</p>
                 <div className="mt-3 space-y-3">
                   {todayPlanTasks.length === 0 ? (
-                    <div className="space-y-1 text-xs text-[color:var(--ink-muted)]">
-                      <p>아직 오늘 할 일 신호가 없습니다.</p>
-                      <p>오늘 한 것 1개를 저장하면 가장 큰 약점과 다음 행동이 여기로 올라옵니다.</p>
+                    <div className="space-y-1 text-xs text-[color:var(--ink-muted)]" data-today-plan-empty-state>
+                      <p className="font-medium text-[color:var(--foreground-strong)]">오늘 할 일이 아직 없습니다.</p>
+                      <p>오늘 한 것을 하나 올리면 다음 행동이 만들어집니다.</p>
                       <Link href={modeCaptureHref} className="pt-1 font-medium text-[color:var(--ink-primary)] underline underline-offset-2">오늘 한 것 올리기</Link>
                     </div>
                   ) : (
@@ -463,18 +465,6 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                     ))
                   )}
                 </div>
-                {additionalTodayPlanTasks.length > 0 ? (
-                  <details className="mt-3 rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] bg-[color:var(--surface)]" data-secondary-action-surface="additional-today-plan">
-                    <summary className="cursor-pointer list-none px-3 py-2 text-xs font-medium text-[color:var(--muted)]">다른 작업 · 추가 후보 {additionalTodayPlanTasks.length}개 보기</summary>
-                    <div className="grid gap-2 border-t border-[color:var(--border-hairline)] px-3 py-3 text-xs leading-5 text-[color:var(--muted)]">
-                      {additionalTodayPlanTasks.map((task) => (
-                        <Link key={`secondary-${task.itemId}`} href={resolveTaskHref(task.primary_cta.hrefKind)} className="underline-offset-2 hover:underline">
-                          {task.title} · {task.display_primary_cta ?? task.primary_cta.label}
-                        </Link>
-                      ))}
-                    </div>
-                  </details>
-                ) : null}
               </div>
               {(() => {
                 const firstTodayPlanTask = todayPlanTasks[0] ?? null;
@@ -485,7 +475,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                       <p className="text-xs text-[color:var(--foreground-strong)]">{firstTodayPlanTask.title}</p>
                       <p className="mt-1 text-xs text-[color:var(--muted)]">이유: {firstTodayPlanTask.reason}</p>
                       <p className="mt-1 text-xs text-[color:var(--muted)]">다음 행동: {firstTodayPlanTask.one_next_action}</p>
-                      <p className="mt-1 text-xs text-[color:var(--muted)]">{firstTodayPlanTask.source_label ?? "오늘 기록 기반"}</p>
+                      <p className="mt-1 text-xs text-[color:var(--muted)]">{firstTodayPlanTask.display_source_label ?? firstTodayPlanTask.source_label ?? "학습 노트에서 생성됨"}</p>
                     </div>
                   </details>
                 ) : null;

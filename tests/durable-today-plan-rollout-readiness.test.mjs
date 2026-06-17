@@ -156,6 +156,7 @@ test("app route imports durable Today Plan route helper and route helper keeps a
   assert.equal(helper.includes('input.env.PERSONAL_CONCEPT_GRAPH_TODAY_PLAN_ROLLOUT === "1"'), true);
   assert.equal(helper.includes("Boolean(input.userId?.trim())"), true);
   assert.equal(helper.includes('input.examMode === "first" || input.examMode === "second"'), true);
-  assert.equal(helper.includes("actions.slice(0, 3)"), true);
+  assert.equal(helper.includes("TODAY_PLAN_MAX_PRIMARY_TASKS"), true);
+  assert.equal(helper.includes("selectActiveTodayPlanTasks"), true);
   assert.equal(integration.includes("compressUnifiedTodayPlanToMaxThree"), true);
 });
