@@ -9,6 +9,10 @@ const typesPath = "lib/capture/capture-to-note-types.ts";
 const docsPath = "docs/inverge-capture-to-note-v1.md";
 const captureRoutePath = "app/app/capture/page.tsx";
 const captureFormPath = "components/review-os/capture-form.tsx";
+const todayAliasPath = "app/app/today/page.tsx";
+const todayDashboardPath = "app/app/page.tsx";
+const localBetaReflectionPath = "components/review-os/local-beta-note-reflection.tsx";
+const browserStoragePath = "lib/review-os/browser-storage.ts";
 
 function read(path) {
   return readFileSync(path, "utf8");
@@ -105,6 +109,48 @@ test("Today Plan candidates are capped at max 3", async () => {
   assert.equal(result.todayPlanCandidates.every((candidate) => candidate.metadataOnly), true);
 });
 
+test("Today dashboard keeps visible Today Plan task cap at max 3", () => {
+  const source = read(todayDashboardPath);
+
+  assert.match(source, /visibleTodayPlanTasks\s*=\s*todayPlanTasks\.slice\(0,\s*3\)/);
+  assert.match(source, /data-visible-primary-task-cap="3"/);
+});
+
+test("/app/today alias redirects to the learner dashboard route with mode preserved", () => {
+  const source = read(todayAliasPath);
+
+  assert.match(source, /searchParams\?: Promise<\{ mode\?: string \}>/);
+  assert.match(source, /redirect\("\/app\?mode=second"\)/);
+  assert.match(source, /redirect\("\/app\?mode=first"\)/);
+  assert.match(source, /redirect\("\/app"\)/);
+  assert.doesNotMatch(source, /\/app\/session|\/app\/app/);
+});
+
+test("capture confirmation copy points to Notes, Review, and Today without forbidden wording", () => {
+  const source = read(captureFormPath);
+  const confirmationBlock = source.match(/function SavedCaptureConfirmationPanel[\s\S]*?function SubjectSelect/)?.[0] ?? "";
+
+  assert.match(confirmationBlock, /Notes 반영/);
+  assert.match(confirmationBlock, /Review Queue 후보/);
+  assert.match(confirmationBlock, /Today Plan 후보/);
+  assert.match(confirmationBlock, /다음 행동 후보입니다\. 학습 정리 초안입니다\. 저장 전 직접 확인해 주세요\./);
+  assert.doesNotMatch(confirmationBlock, /정답 확정|최종 판단|공식 채점|모범답안|합격 가능성|pass-fail|score prediction/i);
+});
+
+test("saved Capture note exposes biggest gap and next action across local beta learner loop surfaces", () => {
+  const storage = read(browserStoragePath);
+  const reflection = read(localBetaReflectionPath);
+
+  assert.match(storage, /biggestGap: string/);
+  assert.match(storage, /nextAction: string/);
+  assert.match(storage, /metadataOnly: true/);
+  assert.match(storage, /safeUse: "closed_beta_local_note"/);
+  assert.match(reflection, /note\.biggestGap/);
+  assert.match(reflection, /note\.nextAction/);
+  assert.match(reflection, /Notes \/ Review Queue \/ Today Plan/);
+  assert.match(reflection, /오늘 한 것 1개를 올리면 Today Plan에 반영됩니다\./);
+});
+
 test("draft legal grounding does not allow legal explanation claim", async () => {
   const result = await buildCaptureToNoteDraft({
     examMode: "second",
@@ -128,7 +174,7 @@ test("capture builder does not use service role keys, mutations, OpenAI, externa
 });
 
 test("learner capture route stays separated from instructor second grading", () => {
-  const combined = `${read(captureRoutePath)}\n${read(captureFormPath)}`;
+  const combined = `${read(captureRoutePath)}\n${read(captureFormPath)}\n${read(localBetaReflectionPath)}\n${read(todayDashboardPath)}`;
 
   assert.doesNotMatch(combined, /\/instructor\/second-grading|second-grading|grade-second/);
   assert.match(combined, /오늘 한 것 정리하기/);

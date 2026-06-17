@@ -99,6 +99,7 @@ function LocalBetaCaptureNoteList({
       </CardHeader>
       <CardContent className="space-y-3">
         <p className="text-xs text-[color:var(--muted)]">closed beta 브라우저 임시 기록입니다. 이 브라우저의 Notes, Review, Today에서 이어서 확인할 수 있습니다.</p>
+        <p className="text-xs text-[color:var(--muted)]">저장한 Capture note는 Notes에서 찾고, Review Queue 후보와 Today Plan 후보로 이어집니다.</p>
         {notes.map((note) => {
           const createdAt = formatNoteDate(note.createdAt);
           return (
@@ -113,6 +114,7 @@ function LocalBetaCaptureNoteList({
               <p className="mt-1 text-sm text-[color:var(--muted)]">AI가 찾은 약점 후보입니다. 직접 확인해 주세요.</p>
               <p className="mt-1 text-sm text-[color:var(--muted)]">약점 후보: {note.biggestGap}</p>
               <p className="mt-1 text-sm text-[color:var(--muted)]">다음 행동: {note.nextAction}</p>
+              <p className="mt-1 text-xs text-[color:var(--muted)]">이어지는 위치: Notes / Review Queue / Today Plan</p>
               {createdAt ? <p className="mt-1 text-xs text-[color:var(--muted)]">저장 시각: {createdAt}</p> : null}
               {showAction ? (
                 <Link
@@ -138,9 +140,9 @@ export function LocalBetaNotesSection({ mode }: { mode: AppraisalMode }) {
       notes={notes}
       mode={mode}
       title={modeNoteTitle(mode)}
-      subtitle="저장한 학습 기록이 약점 후보와 다음 행동으로 정리되는 곳입니다."
+      subtitle="저장한 Capture note의 약점 후보와 다음 행동을 확인하는 곳입니다."
       showAction
-      emptyMessage="아직 이 브라우저에 저장된 closed beta 노트가 없습니다. Capture에서 오늘 학습을 저장하면 Notes, Review, Today에 이어서 표시됩니다."
+      emptyMessage="아직 이 브라우저에 저장된 closed beta 노트가 없습니다. Capture에서 오늘 학습을 저장하면 Notes에서 찾고 Review Queue와 Today Plan 후보로 이어집니다."
     />
   );
 }
@@ -158,10 +160,10 @@ export function LocalBetaReviewCandidateSection({
     <LocalBetaCaptureNoteList
       notes={notes}
       mode={mode}
-      title="복습 후보"
-      subtitle="저장한 기록에서 다시 풀기·다시쓰기 후보를 모아 둡니다."
+      title="Capture에서 만든 Review 후보"
+      subtitle="저장한 Capture note에서 다시 풀기·다시쓰기 후보를 모아 둡니다."
       showAction
-      emptyMessage={hasDurableQueue ? undefined : "아직 복습 후보가 없습니다. Capture에서 기록 1개를 저장하면 약점 후보와 다음 행동이 Review에 이어집니다."}
+      emptyMessage={hasDurableQueue ? undefined : "아직 복습 후보가 없습니다. Capture에서 기록 1개를 저장하면 약점 후보와 다음 행동이 Review Queue 후보로 이어집니다."}
     />
   );
 }
@@ -178,7 +180,7 @@ export function LocalBetaTodayReflection({ mode, hasDurableSummary }: { mode: Ap
       title="오늘 반영 후보"
       subtitle="오늘 계획에 반영할 최근 기록입니다."
       showAction={false}
-      emptyMessage="아직 Today에 반영할 브라우저 임시 기록이 없습니다. Capture에서 오늘 학습을 정리하면 이 브라우저의 Today, Notes, Review에 이어집니다."
+      emptyMessage="오늘 한 것 1개를 올리면 Today Plan에 반영됩니다."
     />
   );
 }

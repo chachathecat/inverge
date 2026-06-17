@@ -1538,12 +1538,13 @@ function SavedCaptureConfirmationPanel({
         <div className="mt-5 grid gap-3 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-4">
           <PreviewLine label="가장 큰 약점 1개" value={confirmation.biggestGap} />
           <PreviewLine label="다음 행동 1개" value={confirmation.nextAction} />
+          <PreviewLine label="Notes 반영" value="저장한 Capture note로 확인합니다." />
           <PreviewLine label="Today Plan 후보" value={confirmation.todayPlanCandidate ?? confirmation.nextAction} />
           <PreviewLine label="Review Queue 후보" value={confirmation.reviewQueueCandidate ?? confirmation.biggestGap} />
           {confirmation.legalGroundingMessage ? <PreviewLine label="법령 근거 상태" value={confirmation.legalGroundingMessage} /> : null}
           <PreviewLine label="저장 상태" value={persistenceCopy.statusLabel} />
         </div>
-        <p className="mt-3 text-xs leading-5 text-[color:var(--muted)]">다음 행동 후보입니다. 학습 정리 초안입니다. 저장 전 직접 확인해 주세요. Review에서 바로 다시 쓰거나 Notes에서 기록을 확인하고 Today로 돌아갈 수 있습니다.</p>
+        <p className="mt-3 text-xs leading-5 text-[color:var(--muted)]">다음 행동 후보입니다. 학습 정리 초안입니다. 저장 전 직접 확인해 주세요. Notes에서 기록을 확인하고, Review에서 다시 쓰거나 다시 풀 수 있으며, Today Plan 후보로 이어집니다.</p>
         {saveFailed ? (
           <div className="mt-5 flex flex-col gap-2 sm:flex-row">
             <Button type="button" className="w-full sm:w-auto" onClick={onRetry} disabled={saving}>
@@ -1599,8 +1600,9 @@ function SavedCaptureConfirmationPanel({
         <PreviewLine label="가장 큰 약점 1개" value={confirmation.biggestGap} />
         <PreviewLine label="다음 행동 1개" value={confirmation.nextAction} />
         <PreviewLine label="저장 경로" value={confirmation.persistence === "durable" ? "Review OS note" : "local beta note"} />
+        <PreviewLine label="Notes / Review / Today" value="Notes에서 확인하고 Review Queue 후보와 Today Plan 후보로 이어집니다." />
       </div>
-      <p className="mt-3 text-xs leading-5 text-[color:var(--muted)]">다음 행동 후보입니다. 학습 정리 초안입니다. 저장 전 직접 확인해 주세요. Review에서 바로 다시 쓰거나 Notes에서 기록을 확인하고 Today로 돌아갈 수 있습니다.</p>
+      <p className="mt-3 text-xs leading-5 text-[color:var(--muted)]">다음 행동 후보입니다. 학습 정리 초안입니다. 저장 전 직접 확인해 주세요. Notes에서 기록을 확인하고, Review에서 다시 쓰거나 다시 풀 수 있으며, Today Plan 후보로 이어집니다.</p>
       <div className="mt-5 grid gap-2 sm:grid-cols-3">
         <Link
           href={`/app/review?mode=${mode}`}
