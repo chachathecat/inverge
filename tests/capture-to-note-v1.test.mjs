@@ -179,9 +179,10 @@ test("learner capture route stays separated from instructor second grading", () 
   const combined = `${read(captureRoutePath)}\n${read(captureFormPath)}\n${read(localBetaReflectionPath)}\n${read(todayDashboardPath)}`;
 
   assert.doesNotMatch(combined, /\/instructor\/second-grading|second-grading|grade-second/);
-  assert.match(combined, /오늘 한 것 정리하기/);
-  assert.match(combined, /학습 노트 만들기/);
-  assert.match(combined, /OCR 결과는 초안입니다\. 저장 전 직접 확인해 주세요\./);
+  assert.match(combined, /오늘 한 것 올리기/);
+  assert.match(combined, /학습 노트 초안 만들기/);
+  assert.match(combined, /OCR\/AI 정리는 초안입니다\. 저장 전 직접 확인해 주세요\./);
+  assert.doesNotMatch(read(captureFormPath), /기준\s*답안|기준답안|모범답안|공식답안|정답 확정|최종 판단/);
 });
 
 test("docs cover claims, raw text boundary, OCR editability, legal grounding, Today max 3, and Review Queue", () => {

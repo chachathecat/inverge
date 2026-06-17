@@ -47,7 +47,7 @@ test("capture page contains capture+note framing copy", () => {
   const capturePage = read("app/app/capture/page.tsx");
   const captureForm = read("components/review-os/capture-form.tsx");
   const merged = `${capturePage}\n${captureForm}`;
-  ["오늘 한 것 올리기", "오늘 공부한 내용 또는 내 답안", "사진 찍기", "앨범에서 선택", "OCR 결과는 초안입니다", "저장하고 오늘 계획에 반영", "가장 큰 빈틈", "다음 행동"].forEach((phrase) => {
+  ["오늘 한 것 올리기", "오늘 공부한 내용 또는 내 답안", "사진 찍기", "앨범에서 선택", "OCR/AI 정리는 초안입니다", "저장하고 오늘 계획에 반영", "가장 큰 빈틈", "다음 행동"].forEach((phrase) => {
     assert.ok(merged.includes(phrase), `Missing phrase: ${phrase}`);
   });
 });
@@ -141,7 +141,7 @@ test("today plan tasks from capture origin are bounded and action-oriented", () 
 
 test("saved capture confirmation copy exists", () => {
   const source = read("app/app/session/page.tsx");
-  ["오늘 기록이 저장되었습니다.", "복습 큐에 들어갔습니다.", "오늘 계획에 반영되었습니다.", "가장 큰 간극:", "다음 행동:"].forEach((phrase) => {
+  ["오늘 계획에 반영했습니다.", "Today Plan candidate", "Review Queue candidate", "Note/details에 저장했습니다.", "가장 큰 간극:", "다음 행동:"].forEach((phrase) => {
     assert.ok(source.includes(phrase), `Missing phrase: ${phrase}`);
   });
 });

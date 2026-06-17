@@ -35,7 +35,7 @@ test('instructor second-grading OCR UI is scoped to instructor page', async () =
 test("learner capture flow keeps instructor OCR route separated and editable OCR notice", async () => {
   const learnerCapture = await readFile(new URL("../components/review-os/capture-form.tsx", import.meta.url), "utf8");
   assert.equal(learnerCapture.includes("/api/instructor/second-grading/ocr"), false);
-  assert.ok(learnerCapture.includes("OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요."));
+  assert.ok(learnerCapture.includes("OCR/AI 정리는 초안입니다. 저장 전 직접 확인해 주세요."));
   assert.match(learnerCapture, /노트 원문은 비공개로 보관되며,\s*파생 학습 신호는 개인 추천 개선에만\s*사용됩니다\./);
   assert.ok(learnerCapture.includes("capture=\"environment\""));
 });
@@ -52,8 +52,7 @@ test("learner capture mobile inputs and extraction states are explicit", async (
   assert.ok(learnerCapture.includes("succeeded"));
   assert.ok(learnerCapture.includes("failed"));
   assert.ok(learnerCapture.includes("현재 PDF는 파일명만 기록됩니다. 내용은 직접 붙여넣어 주세요."));
-  assert.ok(learnerCapture.includes("사진 촬영 팁"));
-  assert.ok(learnerCapture.includes("그림자가 적게 찍기"));
+  assert.ok(learnerCapture.includes("촬영하거나 업로드한 뒤 OCR 초안을 직접 확인합니다."));
   assert.ok(learnerCapture.includes("한 페이지씩 정면으로 찍기"));
   assert.ok(learnerCapture.includes("흔들리면 다시 찍기"));
 });
@@ -106,7 +105,7 @@ test("reset clears extraction state and uploaded pages", async () => {
 
 test("second write flow includes all micro-step labels", async () => {
   const learnerCapture = await readFile(new URL("../components/review-os/capture-form.tsx", import.meta.url), "utf8");
-  ["Step 1. 쟁점 회상", "Step 2. 목차 작성", "Step 3. 내 답안 작성", "Step 4. 기준답안/해설 입력", "Step 5. 가장 큰 간극 1개", "Step 6. 문단 다시쓰기"].forEach((label) => {
+  ["Step 1. 쟁점 회상", "Step 2. 목차 작성", "Step 3. 내 답안 작성", "Step 4. 강의/교재 정리 입력", "Step 5. 가장 큰 간극 1개", "Step 6. 문단 다시쓰기"].forEach((label) => {
     assert.ok(learnerCapture.includes(label), `Missing step label: ${label}`);
   });
 });

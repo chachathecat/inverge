@@ -501,7 +501,7 @@ export function WrongAnswerCaptureForm({
           subjectLabel: subject,
           problemTitle: base.problemTitle || firstLine(sourceText, `${subject} 답안 비교`),
           rawQuestionText: sourceText || base.rawQuestionText,
-          correctAnswer: base.correctAnswer || findField(sourceText, ["기준 답안", "모범답안", "해설", "reference"]),
+          correctAnswer: base.correctAnswer || findField(sourceText, ["강의/교재 정리", "해설", "reference"]),
           userAnswer: base.userAnswer || findField(sourceText, ["내 답안", "답안", "my answer"]),
           caseSummary: base.caseSummary || firstLine(sourceText, second.caseSummary),
           referenceStructure: base.referenceStructure || second.structure,
@@ -1077,11 +1077,11 @@ export function WrongAnswerCaptureForm({
           return;
         }
         if (!form.productionBeforeComparison) {
-          setError("기준답안 확인 전, 내 답안 또는 회상 내용을 먼저 남겨 주세요.");
+          setError("강의/교재 정리 확인 전, 내 답안 또는 회상 내용을 먼저 남겨 주세요.");
           return;
         }
         if (!hasSecondModeReferenceStep(form)) {
-          setError("기준답안 비교 또는 확인 보류를 선택한 뒤 저장해 주세요.");
+          setError("강의/교재 정리 비교 또는 확인 보류를 선택한 뒤 저장해 주세요.");
           return;
         }
         if (stage !== "confirm") {
@@ -1248,7 +1248,7 @@ export function WrongAnswerCaptureForm({
 
   return (
     <form className="space-y-6 overflow-x-hidden pb-28 sm:pb-0" onSubmit={handleSubmit}>
-      <LearnerProgressBar current={currentCaptureStep} total={4} label="오늘 학습 정리하기" helper="1. 입력 → 2. 확인 → 3. 빈틈 1개 → 4. Today Plan" />
+      <LearnerProgressBar current={currentCaptureStep} total={4} label="학습 노트 초안" helper="입력 → 확인 → 빈틈 1개 → Today Plan" />
 
       {mode === "first" ? (
         <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 sm:p-5">
@@ -1450,7 +1450,7 @@ export function WrongAnswerCaptureForm({
       {!hideGlobalFooterActions ? (
         <BottomPrimaryAction secondary={
           <details className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-3 py-2">
-            <summary className="cursor-pointer text-xs font-medium text-[color:var(--muted)]">다른 선택</summary>
+            <summary className="cursor-pointer whitespace-nowrap text-xs font-medium text-[color:var(--muted)]">다른 선택</summary>
             <div className="mt-2 flex flex-col gap-2 sm:flex-row">
               <Button type="button" variant="outline" onClick={resetDraft} className="w-full sm:w-auto">
                 {mode === "second" ? "다시 쓰기" : "다시 풀기"}
@@ -1712,19 +1712,16 @@ function IntakePanel({
 
   return (
     <section className="rounded-[var(--radius-card)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)] p-4 sm:p-6">
-      <p className="text-caption text-[color:var(--brand-700)]">Step 1. 오늘 한 것 올리기</p>
+      <p className="text-caption text-[color:var(--brand-700)]">Step 1. 입력</p>
       <div className="mt-2 flex flex-col gap-4">
         <div className="max-w-[62ch]">
-          <h3 className="text-title text-[color:var(--foreground-strong)]">오늘 한 것 올리기</h3>
-          <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">텍스트로 빠르게 붙여넣거나 사진/PDF로 시작하세요. 저장 전 직접 확인합니다.</p>
+          <h3 className="text-title text-[color:var(--foreground-strong)]">텍스트 입력</h3>
+          <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">아래 입력칸에 바로 붙여넣으세요.</p>
         </div>
         <div className="rounded-[var(--radius-md)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-elevated)] p-5 sm:p-6">
-          <p className="text-caption text-[color:var(--ink-muted)]">빠른 입력</p>
-          <h4 className="mt-2 text-base font-semibold text-[color:var(--ink-primary)]">오늘 한 것 올리기</h4>
+          <p className="text-caption text-[color:var(--ink-muted)]">텍스트</p>
+          <h4 className="mt-2 text-base font-semibold text-[color:var(--ink-primary)]">바로 붙여넣기</h4>
           <p className="mt-1 text-sm leading-6 text-[color:var(--ink-muted)]">오늘 공부한 내용 또는 내 답안을 그대로 붙여넣으세요.</p>
-          <p className="mt-2 rounded-[var(--radius-sm)] border border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] px-3 py-2 text-xs leading-5 text-[color:var(--foreground-strong)]">OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요. 가장 큰 빈틈 1개만 먼저 고정합니다.</p>
-          <p className="mt-1 text-xs leading-6 text-[color:var(--ink-muted)]">사진/PDF도 선택할 수 있지만 텍스트 입력이 가장 빠릅니다.</p>
-          <p className="mt-1 text-xs leading-6 text-[color:var(--ink-muted)]">노트 원문은 비공개로 보관되며, 파생 학습 신호는 개인 추천 개선에만 사용됩니다.</p>
           <div className="mt-4">
             <Button
               type="button"
@@ -1736,30 +1733,29 @@ function IntakePanel({
                 textAreaRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
               }}
             >
-              텍스트 입력으로 시작
+              텍스트 입력으로 이동
             </Button>
             <p className="mt-2 text-xs text-[color:var(--ink-muted)]">사진/PDF 인식이 불안정하면 텍스트로 붙여넣어도 됩니다.</p>
           </div>
-          <div className="mt-4 rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)] p-3">
-            <p className="text-xs font-medium text-[color:var(--muted)]">사진 촬영 팁</p>
-            <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-[color:var(--muted)]">
-              <li>그림자가 적게 찍기</li>
-              <li>한 페이지씩 정면으로 찍기</li>
-              <li>흔들리면 다시 찍기</li>
-            </ul>
-          </div>
           <details className="mt-3 rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)]">
-            <summary className="cursor-pointer list-none px-3 py-2 text-xs text-[color:var(--ink-muted)]">사진/PDF로 시작하기 (선택)</summary>
-            <div className="grid gap-2 border-t border-[color:var(--border-hairline)] px-3 py-2 sm:flex sm:flex-wrap">
-              <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => { update("sourceType", inferSourceTypeFromAction("camera")); cameraInputRef.current?.click(); }}>
-                사진 찍기
-              </Button>
-              <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => { update("sourceType", inferSourceTypeFromAction("gallery")); galleryInputRef.current?.click(); }}>
-                앨범에서 선택
-              </Button>
-              <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => { update("sourceType", inferSourceTypeFromAction("pdf")); pdfInputRef.current?.click(); }}>
-                PDF 선택
-              </Button>
+            <summary className="cursor-pointer list-none px-3 py-2 text-xs font-medium text-[color:var(--ink-muted)]">사진/PDF로 시작하기</summary>
+            <div className="border-t border-[color:var(--border-hairline)] px-3 py-3">
+              <p className="text-xs leading-5 text-[color:var(--muted)]">촬영하거나 업로드한 뒤 OCR 초안을 직접 확인합니다.</p>
+              <div className="mt-3 grid gap-2 sm:flex sm:flex-wrap">
+                <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => { update("sourceType", inferSourceTypeFromAction("camera")); cameraInputRef.current?.click(); }}>
+                  사진 찍기
+                </Button>
+                <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => { update("sourceType", inferSourceTypeFromAction("gallery")); galleryInputRef.current?.click(); }}>
+                  앨범에서 선택
+                </Button>
+                <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => { update("sourceType", inferSourceTypeFromAction("pdf")); pdfInputRef.current?.click(); }}>
+                  PDF 선택
+                </Button>
+              </div>
+              <ul className="mt-3 list-disc space-y-1 pl-5 text-xs text-[color:var(--muted)]">
+                <li>한 페이지씩 정면으로 찍기</li>
+                <li>흔들리면 다시 찍기</li>
+              </ul>
             </div>
           </details>
           <div className="mt-3">
@@ -1811,7 +1807,7 @@ function IntakePanel({
             idle: "사진을 찍거나 텍스트를 붙여넣어 시작하세요.",
             uploading: "사진을 불러오는 중입니다.",
             extracting: "OCR 초안을 만드는 중입니다.",
-            succeeded: "OCR 초안이 준비되었습니다. 저장 전 직접 확인해 주세요.",
+            succeeded: "초안이 준비되었습니다. 아래 입력을 확인해 주세요.",
             failed: "사진을 읽지 못했습니다. 텍스트로 계속할 수 있습니다.",
             manual: "파일을 기록했습니다. 내용은 직접 확인해 주세요.",
           }[extractionState]}
@@ -1848,23 +1844,24 @@ function IntakePanel({
           onFocus={() => { if (uploadedPages.length === 0 && !form.sourceLabel) update("sourceType", inferSourceTypeFromAction("text")); }}
           placeholder={
             mode === "second"
-              ? "권장: 사례, 기준 답안, 내 답안을 텍스트로 붙여넣으세요. 예: 기준 답안: ... / 내 답안: ..."
+              ? "권장: 사례 메모, 강의/교재 정리, 내 답안을 텍스트로 붙여넣으세요. 예: 강의/교재 정리: ... / 내 답안: ..."
               : "권장: 문제와 정답, 내가 고른 답을 텍스트로 붙여넣으세요. 예: 정답: 3 / 내 답: 2"
           }
           className="min-h-56 border-[color:var(--border-hairline)] bg-[color:var(--bg-surface)] text-[color:var(--foreground-strong)] leading-7 transition-colors focus-visible:border-[color:var(--accent-deep)] focus-visible:ring-2 focus-visible:ring-[color:var(--accent-deep)]/20"
         />
       </label>
-      <p className="text-xs text-[color:var(--muted)]">OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요.</p>
+      <p className="text-xs text-[color:var(--muted)]">OCR/AI 정리는 초안입니다. 저장 전 직접 확인해 주세요.</p>
+      <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">노트 원문은 비공개로 보관되며, 파생 학습 신호는 개인 추천 개선에만 사용됩니다.</p>
       <div className="sticky bottom-3 z-30 mt-3 rounded-[var(--radius-lg)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)]/95 p-3 shadow-lg backdrop-blur sm:bottom-5 sm:p-4" data-testid="capture-save-action-bar">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm font-medium text-[color:var(--foreground-strong)]">텍스트를 확인한 뒤 오늘 한 것 올리기를 누르세요.</p>
+            <p className="text-sm font-medium text-[color:var(--foreground-strong)]">확인한 내용으로 노트 초안을 만듭니다.</p>
             <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">Notes / Review / Today로 이어질 빈틈 1개와 다음 행동 1개가 만들어집니다.</p>
           </div>
           <Button type="button" onClick={onQuickSave} disabled={!canQuickSave || saving || extracting} className="min-h-12 w-full shrink-0 sm:w-auto bg-[color:var(--foreground-strong)] text-white disabled:cursor-not-allowed disabled:opacity-60" data-testid="capture-save-primary">
             {saving ? "저장 중" : (
               <>
-                <span>오늘 한 것 올리기</span>
+                <span>학습 노트 초안 만들기</span>
                 <span className="sr-only">저장하고 오늘 계획에 반영</span>
               </>
             )}
@@ -1939,7 +1936,7 @@ function IntakePanel({
         </Button>
       </div>
       <details className="mt-4 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
-        <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">이미지/PDF로 입력하기 (선택)</summary>
+        <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">첨부 상태</summary>
         <div className="border-t border-[color:var(--border-subtle)] px-4 py-3">
           {form.sourceLabel ? <p className="text-sm text-[color:var(--muted)]">보관한 파일: {form.sourceLabel}</p> : null}
           {uploadedPages.length > 0 ? <p className="mt-2 text-sm text-[color:var(--muted)]">페이지 순서: {uploadedPages.map((page) => page.label).join(" / ")}</p> : null}
@@ -1975,16 +1972,16 @@ function IntakePanel({
       ) : null}
       {extractError ? <p className="mt-3 text-sm leading-6 text-[color:var(--cue-risk)]">{extractError}</p> : null}
       {mode === "second" ? (
-        <div className="mt-3 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3">
-          <p className="text-xs font-medium text-[color:var(--muted)]">저장 전 캡처 품질 체크</p>
-          <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-[color:var(--muted)]">
+        <details className="mt-3 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
+          <summary className="cursor-pointer list-none px-3 py-2 text-xs font-medium text-[color:var(--muted)]">저장 전 캡처 품질 체크</summary>
+          <ul className="border-t border-[color:var(--border-subtle)] px-3 py-3 list-disc space-y-1 pl-8 text-xs text-[color:var(--muted)]">
             <li>글자가 선명한가</li>
             <li>페이지 순서가 맞는가</li>
             <li>문제번호가 보이는가</li>
             <li>계산/답/단위가 보이는가</li>
             <li>끝/이하여백 표시가 있는가</li>
           </ul>
-        </div>
+        </details>
       ) : null}
     </section>
   );
@@ -2027,11 +2024,11 @@ function ExtractionPreview({
       </div>
       {needsOcrConfirmation ? (
         <p className="mt-4 rounded-[var(--radius-md)] border border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] px-4 py-3 text-sm leading-6 text-[color:var(--foreground-strong)]">
-          OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요.
+          확인이 필요한 초안입니다.
           {missingConfirmationFields.length > 0 ? ` 확인 필요: ${missingConfirmationFields.join(", ")}` : ""}
         </p>
       ) : null}
-      <p className="mt-4 text-xs text-[color:var(--muted)]">AI 정리는 초안입니다. 저장 전 직접 확인해 주세요.</p>
+      <p className="mt-4 text-xs text-[color:var(--muted)]">초안 내용을 확인한 뒤 저장합니다.</p>
 
       <div className="mt-5 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-4">
         <p className="text-xs font-medium text-[color:var(--muted)]">OCR 결과 확인 (편집 가능 · 자동 저장)</p>
@@ -2044,7 +2041,7 @@ function ExtractionPreview({
           placeholder="OCR 결과를 확인하고 바로 수정하세요."
           className="mt-3 min-h-44 border-[color:var(--border-hairline)] bg-[color:var(--bg-surface)] text-[color:var(--foreground-strong)] leading-7"
         />
-        <p className="mt-2 text-xs text-[color:var(--muted)]">수정 내용은 이 기기 초안에 자동 저장됩니다. AI 초안은 참고용이며 저장 전 직접 확인해 주세요.</p>
+        <p className="mt-2 text-xs text-[color:var(--muted)]">수정 내용은 이 기기 초안에 자동 저장됩니다.</p>
       </div>
       {mode === "first" ? (
         <div className="mt-5 grid gap-3">
@@ -2336,7 +2333,7 @@ function SecondIssueRecallPanel({
   return (
     <section className="rounded-[var(--radius-card)] border border-[color:var(--cue-focus)] bg-[color:var(--cue-focus-bg)] p-4 sm:p-5">
       <p className="text-caption text-[color:var(--muted)]">Step 1. 쟁점 회상</p>
-      <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">기준답안 보기 전, 쟁점 1개만 적으세요.</h3>
+      <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">강의/교재 정리 보기 전, 쟁점 1개만 적으세요.</h3>
       <details className="mt-2 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3"><summary className="cursor-pointer text-xs font-medium text-[color:var(--muted)]">왜 이 순서인가요?</summary><p className="mt-2 text-xs leading-6 text-[color:var(--muted)]">완벽히 쓰지 말고, 지금 떠오르는 문장만 적으세요. 이 과목은 먼저 이 구조로 답안을 잡습니다. {template.structure}</p></details>
       <label className="mt-4 block space-y-2">
         <span className="text-sm text-[color:var(--foreground-strong)]">쟁점 회상</span>
@@ -2370,7 +2367,7 @@ function SecondOutlinePanel({
     <section className="rounded-[var(--radius-card)] border border-[color:var(--cue-focus)] bg-[color:var(--cue-focus-bg)] p-4 sm:p-5">
       <p className="text-caption text-[color:var(--muted)]">Step 2. 목차 작성</p>
       <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">전체 답안보다 목차 3줄이 먼저입니다.</h3>
-      <details className="mt-2 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3"><summary className="cursor-pointer text-xs font-medium text-[color:var(--muted)]">왜 이 순서인가요?</summary><p className="mt-2 text-xs leading-6 text-[color:var(--muted)]">기준 답안 보기 전에 이 체크포인트 중 3개를 떠올립니다: {template.checklist.slice(0, 3).join(", ")}</p></details>
+      <details className="mt-2 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3"><summary className="cursor-pointer text-xs font-medium text-[color:var(--muted)]">왜 이 순서인가요?</summary><p className="mt-2 text-xs leading-6 text-[color:var(--muted)]">강의/교재 정리를 보기 전에 이 체크포인트 중 3개를 떠올립니다: {template.checklist.slice(0, 3).join(", ")}</p></details>
       <label className="mt-4 block space-y-2">
         <span className="text-sm text-[color:var(--foreground-strong)]">목차 초안</span>
         <Textarea
@@ -2418,7 +2415,7 @@ function SecondAnswerPanel({
         />
       </label>
       <Button type="button" className="mt-4 w-full sm:w-auto" disabled={answer.trim().length < 8} onClick={onNext}>
-        다음: 기준답안/해설 입력
+        다음: 강의/교재 정리 입력
       </Button>
     </section>
   );
@@ -2435,11 +2432,11 @@ function SecondReferencePanel({
 }) {
   return (
     <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 sm:p-5">
-      <p className="text-caption text-[color:var(--muted)]">Step 4. 기준답안/해설 입력</p>
-      <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">작성한 뒤에만 기준답안을 봅니다.</h3>
+      <p className="text-caption text-[color:var(--muted)]">Step 4. 강의/교재 정리 입력</p>
+      <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">작성한 뒤에만 강의/교재 정리를 봅니다.</h3>
       <details className="mt-2 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3"><summary className="cursor-pointer text-xs font-medium text-[color:var(--muted)]">왜 이 순서인가요?</summary><p className="mt-2 text-xs leading-6 text-[color:var(--muted)]">비교는 작성 이후에 합니다.</p></details>
       <label className="mt-4 block space-y-2">
-        <span className="text-sm text-[color:var(--foreground-strong)]">기준 답안 요약</span>
+        <span className="text-sm text-[color:var(--foreground-strong)]">강의/교재 정리 요약</span>
         <Textarea
           value={reference}
           onChange={(event) => onChange(event.target.value)}
@@ -2451,7 +2448,7 @@ function SecondReferencePanel({
           다음: 가장 큰 간극 1개
         </Button>
         <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={onNext}>
-          기준답안은 나중에 확인
+          강의/교재 정리는 나중에 확인
         </Button>
       </div>
     </section>
@@ -2583,7 +2580,7 @@ function RewriteContextPanel({
           비교 요약 펼쳐서 보기
         </summary>
         <div className="grid gap-3 border-t border-[color:var(--border-subtle)] p-4 lg:grid-cols-2">
-          <PreviewLine label="기준 답안 요약" value={referenceSummary} />
+          <PreviewLine label="강의/교재 정리 요약" value={referenceSummary} />
           <PreviewLine label="내 답안 요약" value={myAnswerSummary} />
         </div>
       </details>

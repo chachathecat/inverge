@@ -14,14 +14,14 @@ test("/app includes empty today-plan, review queue framing, and capture-origin p
 
 test("/app/capture and capture-form include OCR draft guidance, editable capture, CTA, and calm error copy", () => {
   const merged = `${read("app/app/capture/page.tsx")}\n${read("components/review-os/capture-form.tsx")}`;
-  ["오늘 한 것 올리기", "오늘 공부한 내용 또는 내 답안", "OCR 결과는 초안입니다", "저장 전 직접 확인해 주세요", "저장하고 오늘 계획에 반영", "정리하지 못했습니다"].forEach((phrase) => {
+  ["오늘 한 것 올리기", "오늘 공부한 내용 또는 내 답안", "OCR/AI 정리는 초안입니다", "저장 전 직접 확인해 주세요", "저장하고 오늘 계획에 반영", "정리하지 못했습니다"].forEach((phrase) => {
     assert.ok(merged.includes(phrase), `Missing phrase: ${phrase}`);
   });
 });
 
 test("/app/session includes saved-state proof copy", () => {
   const source = read("app/app/session/page.tsx");
-  ["오늘 기록이 저장되었습니다.", "복습 큐에 들어갔습니다.", "오늘 계획에 반영되었습니다.", "가장 큰 간극:", "다음 행동:"].forEach((phrase) => {
+  ["오늘 계획에 반영했습니다.", "Today Plan candidate", "Review Queue candidate", "Note/details에 저장했습니다.", "가장 큰 간극:", "다음 행동:"].forEach((phrase) => {
     assert.ok(source.includes(phrase), `Missing phrase: ${phrase}`);
   });
 });
@@ -58,7 +58,7 @@ test("guardrails: no instructor leakage, no official grading/pass-fail claims, n
     read("components/review-os/review-queue-client.tsx"),
   ].join("\n").toLowerCase();
 
-  ["/instructor", "공식 채점", "합격", "불합격", "pass/fail", "official model answer", "@google-cloud/vision", "documentprocessorserviceclient"].forEach((token) => {
+  ["/instructor", "공식 채점", "합격 판정", "불합격 판정", "pass/fail", "official model answer", "@google-cloud/vision", "documentprocessorserviceclient"].forEach((token) => {
     assert.equal(learner.includes(token.toLowerCase()), false, `Forbidden token found: ${token}`);
   });
 });

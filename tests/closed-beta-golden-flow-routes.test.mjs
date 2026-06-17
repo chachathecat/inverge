@@ -77,9 +77,9 @@ test("/app/capture provides editable text-first capture and existing safe save p
   const combined = `${capturePage}\n${captureForm}`;
 
   assert.equal(combined.includes("오늘 한 것 올리기"), true, "primary capture entry should keep the warm low-friction CTA");
-  assert.equal(combined.includes("오늘 학습 정리하기"), true, "capture section label can keep operational wording");
+  assert.equal(combined.includes("빠른 입력"), true, "capture section label should keep the compressed input framing");
   assert.equal(combined.includes("ClosedBetaBanner"), true);
-  assert.equal(combined.includes("OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요."), true);
+  assert.equal(combined.includes("OCR/AI 정리는 초안입니다. 저장 전 직접 확인해 주세요."), true);
   assert.equal(combined.includes('sourceType: "text"'), true, "text should be the default capture source");
   assert.equal(combined.includes("inferSourceTypeFromAction(\"pdf\")"), true, "PDF source selection should exist");
   assert.equal(combined.includes("inferSourceTypeFromAction(\"camera\")"), true, "photo source selection should exist");

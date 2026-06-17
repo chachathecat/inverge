@@ -60,13 +60,16 @@ test("capture page and form keep capture-first learner copy with one primary sta
 
   for (const required of [
     "오늘 한 것 올리기",
-    "텍스트로 빠르게 붙여넣거나 사진/PDF로 시작하세요. 저장 전 직접 확인합니다.",
-    "사진/PDF도 선택할 수 있지만 텍스트 입력이 가장 빠릅니다.",
-    "OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요.",
-    "가장 큰 빈틈 1개만 먼저 고정합니다.",
+    "텍스트로 빠르게 붙여넣거나 사진/PDF로 시작하세요.",
+    "학습 노트 초안 만들기",
+    "촬영하거나 업로드한 뒤 OCR 초안을 직접 확인합니다.",
+    "OCR/AI 정리는 초안입니다. 저장 전 직접 확인해 주세요.",
+    "Notes / Review / Today로 이어질 빈틈 1개와 다음 행동 1개가 만들어집니다.",
   ]) {
     assert.equal(combined.includes(required), true, `${required} copy should exist`);
   }
+  assert.equal(form.includes("이미지/PDF로 입력하기"), false, "photo/PDF input copy should not be duplicated");
+  assert.doesNotMatch(form, /기준\s*답안|기준답안|모범답안|공식답안|정답 확정|최종 판단/);
 
   assert.equal(form.includes("canQuickSave"), true, "secondary generate action should be hidden at the empty starting point");
   assert.equal(form.includes("data-testid=\"capture-note-summary\""), true, "capture result summary should be rendered after structure/confirmation");

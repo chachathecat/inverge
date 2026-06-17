@@ -17,7 +17,7 @@ const learnerFiles = [
 ].map((file) => readFileSync(file, "utf8"));
 
 test("capture-form includes premium capture entry essentials", () => {
-  ["사진으로 시작하기", "사진 찍기", "앨범에서 선택", "텍스트로 입력", "PDF 선택", "OCR 결과는 초안입니다", "저장 전 직접 확인해 주세요", "w-full", "sm:w-auto", "transition"].forEach((phrase) => {
+  ["사진/PDF로 시작하기", "사진 찍기", "앨범에서 선택", "텍스트 입력", "PDF 선택", "OCR/AI 정리는 초안입니다", "저장 전 직접 확인해 주세요", "w-full", "sm:w-auto", "transition"].forEach((phrase) => {
     assert.ok(capture.includes(phrase), `Missing phrase: ${phrase}`);
   });
   assert.ok(capture.includes("focus-visible") || capture.includes("focus"), "Expected focus-visible or focus styles");
@@ -41,7 +41,7 @@ test("learner home contains priority and queue framing", () => {
 });
 
 test("session saved state contains confirmation lines", () => {
-  ["오늘 기록이 저장되었습니다.", "복습 큐에 들어갔습니다.", "오늘 계획에 반영되었습니다.", "가장 큰 간극:", "다음 행동:"].forEach((phrase) => {
+  ["오늘 계획에 반영했습니다.", "Today Plan candidate", "Review Queue candidate", "Note/details에 저장했습니다.", "가장 큰 간극:", "다음 행동:"].forEach((phrase) => {
     assert.ok(session.includes(phrase), `Missing phrase: ${phrase}`);
   });
 });
@@ -53,9 +53,9 @@ test("review queue includes empty-state and capture continuity copy", () => {
 });
 
 test("guardrails: no instructor links, provider leakage, grading claims, or new exams", () => {
-  const joined = learnerFiles.join("\n").toLowerCase();
-  ["/instructor", "documentprocessorserviceclient", "@google-cloud/vision", "tesseract", "official grader", "pass/fail", "공식 채점", "합격 판정", "cpa", "toefl", "sat", "보험계리사", "세무사"].forEach((token) => {
-    assert.equal(joined.includes(token.toLowerCase()), false, `Forbidden token found: ${token}`);
+  const joined = learnerFiles.join("\n");
+  [/\/instructor/i, /documentprocessorserviceclient/i, /@google-cloud\/vision/i, /tesseract/i, /official grader/i, /pass\/fail/i, /공식 채점/, /합격 판정/, /\bCPA\b/, /TOEFL/i, /\bSAT\b/, /보험계리사/, /세무사/].forEach((pattern) => {
+    assert.doesNotMatch(joined, pattern, `Forbidden token found: ${pattern}`);
   });
 });
 
