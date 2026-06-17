@@ -42,6 +42,7 @@ const LEARNER_NAV_ITEMS: readonly LearnerNavItem[] = [
     activeHrefs: ["/app/notes", "/app/items"],
     analyticsAction: "notes",
   },
+  { href: "/app/agenda", label: "학습 기록", preserveMode: true, analyticsAction: "agenda" },
 ] as const;
 
 const MODE_ITEMS: Array<{ mode: AppraisalMode; label: string; description: string }> = [

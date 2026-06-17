@@ -37,6 +37,7 @@ import type {
   ReviewQueueCard,
   StudyProfile,
   TodayFocus,
+  UsageEventRecord,
   UsageSummary,
   WeeklyPlan,
   WeeklyPlanTask,
@@ -569,6 +570,32 @@ export class ReviewOsService {
   async listLearningSignalEvents(userId: string, email: string | null, mode: AppraisalMode, limit = 30) {
     await this.ensureAccess(userId, email);
     return reviewOsRepository.listLearningSignalEvents(userId, mode, limit);
+  }
+
+  async listReviewQueueForAgenda(userId: string, email: string | null, limit = 30): Promise<ReviewQueueCard[]> {
+    await this.ensureAccess(userId, email);
+    const queue = await reviewOsRepository.listReviewQueue(userId, limit);
+    return queue.filter((item) => !isSmokeSeedQueueItem(item));
+  }
+
+  async listLearningAgendaUsageEvents(userId: string, email: string | null, sinceIso: string, limit = 120): Promise<UsageEventRecord[]> {
+    await this.ensureAccess(userId, email);
+    return reviewOsRepository.listRecentUsageEventsByNames(
+      userId,
+      [
+        "capture_saved",
+        "post_save_execution_completed",
+        "today_task_completed",
+        "today_plan_task_completed",
+        "review_complete",
+        "review_completed",
+        "review_queue_task_completed",
+        "overdue_recovery_completed",
+        "weakness_recovered",
+      ],
+      sinceIso,
+      limit,
+    );
   }
 
   async getLearningSignalSummary(userId: string, email: string | null, mode: AppraisalMode): Promise<LearningSignalSummary> {
