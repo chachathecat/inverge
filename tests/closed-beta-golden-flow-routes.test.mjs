@@ -210,7 +210,7 @@ test("local beta note fallback remains metadata-only and client reflection stays
   assert.equal(reflection.startsWith('"use client";'), true, "local beta reflection must remain client-only");
   assert.equal(reflection.includes("useEffect"), true, "localStorage reads should stay inside client effects");
   assert.equal(reflection.includes("window.setTimeout"), true, "client state should settle after hydration");
-  assert.equal(reflection.includes("closed beta 브라우저 임시 기록"), true, "local beta reflection should identify browser-local temporary records");
+  assert.equal(reflection.includes("closed beta 학습 노트입니다."), true, "local beta reflection should identify browser-local temporary records");
 });
 
 test("capture save local analytics emits only safe derived fields", () => {
@@ -270,6 +270,7 @@ test("Notes tab has a real learner route and review action does not point to a m
 test("Today and empty states use capture for generic input while preserving specialized write tasks", () => {
   const todayPage = read("app/app/page.tsx");
   const reviewPage = read("app/app/review/page.tsx");
+  const reviewQueue = read("components/review-os/review-queue-client.tsx");
   const itemsPage = read("app/app/items/page.tsx");
   const localBetaReflection = read("components/review-os/local-beta-note-reflection.tsx");
   const weeklyPage = read("app/app/weekly/page.tsx");
@@ -282,10 +283,10 @@ test("Today and empty states use capture for generic input while preserving spec
   assert.equal(todayPage.includes("오늘 한 것을 하나 올리면 다음 행동이 만들어집니다."), true, "Today empty state should guide learners back to capture");
   assert.equal(todayPage.includes("data-visible-primary-task-cap={TODAY_PLAN_MAX_PRIMARY_TASKS}"), true, "Today should keep max 3 primary plan tasks");
   assert.equal(todayPage.includes('if (hrefKind === "write") return "/app/write?mode=second";'), true, "specialized write tasks should remain available");
-  assert.equal(reviewPage.includes('<Link href={`/app/capture?mode=${mode}`}>'), true, "empty review state should not send learners to a missing input route");
-  assert.equal(reviewPage.includes("복습은 계정 저장 기록에서 다시 풀기·다시쓰기 후보를 모아 두는 곳입니다."), true, "Review empty state should explain the page purpose");
+  assert.equal(reviewQueue.includes('router.push(mode === "second" ? "/app/capture?mode=second" : "/app/capture?mode=first")'), true, "empty review state should not send learners to a missing input route");
+  assert.equal(reviewPage.includes("학습 노트에서 만든 다시쓰기 후보를 오늘 복습으로 이어갑니다."), true, "Review page should explain the page purpose");
   assert.equal(itemsPage.includes('<Link href={`/app/capture?mode=${mode}`'), true, "empty notes state should send learners to capture");
-  assert.equal(itemsPage.includes("저장한 학습 기록이 약점 후보와 다음 행동으로 정리되는 곳입니다."), true, "Notes empty state should explain saved-note reflection");
+  assert.equal(itemsPage.includes("오늘 한 것을 하나 올리면 가장 큰 약점과 다음 행동이 만들어집니다."), true, "Notes empty state should explain saved-note reflection");
   assert.equal(localBetaReflection.includes('href={`/app/capture?mode=${mode}`}'), true, "local beta empty states should preserve mode when returning to capture");
   assert.equal(localBetaReflection.includes("closed beta 학습 노트"), true, "local beta Notes copy should remain closed-beta scoped");
   assert.equal(weeklyPage.includes('const inputStartHref = `/app/capture?mode=${mode}`;'), true, "weekly input CTA should use capture");

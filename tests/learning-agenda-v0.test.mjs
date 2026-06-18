@@ -87,7 +87,7 @@ test("agenda supports exactly the six allowed event types with calm copy", () =>
 
   const types = new Set(events.map((event) => event.type));
   for (const type of LEARNING_AGENDA_EVENT_TYPES) assert.ok(types.has(type), type);
-  ["오늘 한 것 기록", "학습 노트 저장", "복습 예정", "복습 완료", "오늘 할 일 완료", "약점 회복"].forEach((title) =>
+  ["오늘 한 것 기록", "학습 노트 저장", "복습 예정", "복습 완료", "오늘 할 일 완료", "약점 회복 후보"].forEach((title) =>
     assert.ok(events.some((event) => event.title === title), title),
   );
 });

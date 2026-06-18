@@ -102,7 +102,16 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
     safeSkeletonIds: [String(resolvedDetail.item.supportedCalculatorTemplateId ?? ""), isSecond ? "second_law_requirement_subsumption" : ""].filter(Boolean),
   });
   const firstOxReview = !isSecond ? buildFirstOxReviewDetail(resolvedDetail.item) : null;
+  const noteTopicCandidate =
+    typeof captureNoteEngine?.topic_candidate === "string" && captureNoteEngine.topic_candidate.trim()
+      ? captureNoteEngine.topic_candidate.trim()
+      : taxonomyCandidate?.topic ?? resolvedDetail.tags[0]?.topicTag ?? "아직 논점 후보가 없습니다.";
+  const reviewConnection = resolvedDetail.reviewQueue.length > 0 ? "복습 예정" : "복습 후보";
+  const todayConnection = "오늘 할 일 후보";
+  const agendaConnection = "학습 기록에 반영";
   const firstOxNextActionLine = firstOxReview ? "같은 선지를 근거 1줄로 다시 판단합니다." : nextActionLine;
+
+  const polishedNextActionLine = firstOxReview ? "같은 선택지를 근거 1줄로 다시 판단합니다." : firstOxNextActionLine;
 
   return (
     <div className="space-y-6">
@@ -131,6 +140,28 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
           <MiniArtifact label="가장 큰 신호 1개" value={biggestSignal} />
           <MiniArtifact label="다음 행동 1개" value={firstOxNextActionLine} />
         </div>
+      </section>
+
+      <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] p-5" data-note-loop-bridge>
+        <div className="space-y-1">
+          <p className="text-caption text-[color:var(--muted)]">학습 노트 연결</p>
+          <h3 className="text-lg font-semibold text-[color:var(--foreground-strong)]">가장 큰 약점과 다음 행동</h3>
+          <p className="text-sm leading-6 text-[color:var(--muted)]">
+            이 노트는 오늘 할 일, 복습, 학습 기록으로 이어지는 derived metadata입니다.
+          </p>
+        </div>
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          <MiniArtifact label="과목" value={resolvedDetail.item.subjectLabel} />
+          <MiniArtifact label="논점 후보" value={noteTopicCandidate} />
+          <MiniArtifact label="가장 큰 약점" value={biggestSignal} />
+          <MiniArtifact label="다음 행동" value={polishedNextActionLine} />
+          <MiniArtifact label="Today 연결" value={todayConnection} />
+          <MiniArtifact label="Review 연결" value={reviewConnection} />
+          <MiniArtifact label="Agenda 연결" value={agendaConnection} />
+        </div>
+        <p className="mt-3 text-xs text-[color:var(--muted)]">
+          원문 OCR/답안/문제 전문은 학습 기록 이벤트로 복사하지 않습니다.
+        </p>
       </section>
 
       {captureNoteEngine ? (
@@ -209,7 +240,7 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
             ))}
           </div>
           ) : null}
-          <p className="mt-3 text-xs text-[color:var(--muted)]">모범답안이나 확정 평가가 아닌 학습용 구조 참고입니다.</p>
+          <p className="mt-3 text-xs text-[color:var(--muted)]">학습용 구조 참고입니다. 저장 전 직접 확인해 주세요.</p>
         </details>
       ) : null}
 
@@ -318,7 +349,7 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
                 <MiniArtifact label="source gap" value={rewriteComparison.sourceGap} />
                 <details className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4">
                   <summary className="cursor-pointer list-none text-sm font-medium text-[color:var(--foreground-strong)]">
-                    이전 문단 / 기준 답안 요약 펼쳐서 보기
+                    이전 문단 / 참고 요약 펼쳐서 보기
                   </summary>
                   <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-[color:var(--foreground-strong)]">
                     {rewriteComparison.previousParagraph}
@@ -355,7 +386,7 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
                 <Button type="button">문단 다시쓰기 시작</Button>
               </Link>
               <p className="text-xs text-[color:var(--muted)]">
-                기준 답안과 내 답안을 옆에 두고, 누락 논점 1개를 먼저 넣어 작성합니다.
+                참고 요약과 내 문단을 옆에 두고, 누락 논점 1개를 먼저 넣어 작성합니다.
               </p>
             </div>
           </ArtifactBlock>
@@ -411,7 +442,7 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
               </section>
 
               <section className="grid gap-4 lg:grid-cols-2">
-                <SourceBlock label="기준 답안 / 강평" value={resolvedDetail.item.correctAnswer} />
+                <SourceBlock label="참고 요약" value={resolvedDetail.item.correctAnswer} />
                 <SourceBlock label="내 답안" value={resolvedDetail.item.userAnswer} />
               </section>
 

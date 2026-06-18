@@ -37,7 +37,9 @@ function formatEventTime(value: string) {
 
 function eventTone(type: LearningAgendaEvent["type"]) {
   if (type === "review_due") return "border-[color:var(--cue-focus)] bg-[color:var(--cue-focus-bg)]";
-  if (type === "review_completed" || type === "today_task_completed" || type === "weakness_recovered") return "border-[color:var(--status-green)] bg-[color:var(--status-green-soft)]";
+  if (type === "review_completed" || type === "today_task_completed" || type === "weakness_recovered") {
+    return "border-[color:var(--status-green)] bg-[color:var(--status-green-soft)]";
+  }
   return "border-[color:var(--border-subtle)] bg-[color:var(--surface)]";
 }
 
@@ -68,8 +70,9 @@ function EventLine({ event }: { event: LearningAgendaEvent }) {
       <div className="mt-1 flex flex-wrap gap-2 text-xs text-[color:var(--muted)]">
         {event.subject ? <span>{event.subject}</span> : null}
         {event.noteId ? <span>학습 노트</span> : null}
-        {event.reviewItemId ? <span>복습</span> : null}
+        {event.reviewItemId ? <span>{event.type === "review_completed" ? "복습 완료" : "복습 예정"}</span> : null}
         {event.todayTaskId ? <span>오늘 할 일</span> : null}
+        {event.type === "weakness_recovered" ? <span>약점 회복 후보</span> : null}
       </div>
     </li>
   );
@@ -132,7 +135,7 @@ export function LearningAgendaClient({ mode, initialEvents }: LearningAgendaClie
       <Card className="border-[color:var(--border-subtle)] bg-[color:var(--surface)] shadow-none">
         <CardHeader className="space-y-1">
           <CardTitle>주간 agenda</CardTitle>
-          <CardDescription>이번 주 기록과 예정된 복습만 모읍니다.</CardDescription>
+          <CardDescription>이번 주 기록과 복습 예정만 모읍니다.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {weekGroups.map((group, index) => (

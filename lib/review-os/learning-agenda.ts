@@ -41,7 +41,7 @@ const EVENT_TITLE_BY_TYPE: Record<LearningAgendaEventType, string> = {
   review_due: "복습 예정",
   review_completed: "복습 완료",
   today_task_completed: "오늘 할 일 완료",
-  weakness_recovered: "약점 회복",
+  weakness_recovered: "약점 회복 후보",
 };
 
 const FORBIDDEN_AGENDA_FIELD_NAMES = [

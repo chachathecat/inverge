@@ -40,12 +40,20 @@ export function ReviewQueueClient({ items, mode, captureReferenceLineByItemId = 
 
   if (items.length === 0) {
     return (
-      <div className="rounded-[var(--radius-lg)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)] p-6 text-sm leading-7 text-[color:var(--ink-muted)]">
-        <p>아직 계정 저장 기준으로 복습할 항목이 없습니다.</p>
-        <p className="mt-1">계정 저장 기록이 없거나 오늘 다시 볼 항목이 모두 정리된 상태입니다.</p>
-        <p className="mt-1">closed beta 브라우저 임시 기록은 아래에서 이어서 확인할 수 있습니다.</p>
-        <p className="mt-1">오늘 한 것 1개를 정리하면 가장 큰 약점과 다음 행동이 복습으로 이어집니다.</p>
-        <Button type="button" onClick={() => router.push(mode === "second" ? "/app/capture?mode=second" : "/app/capture?mode=first")} className="mt-4 w-full sm:w-auto">오늘 한 것 올리기</Button>
+      <div
+        className="rounded-[var(--radius-lg)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)] p-6 text-sm leading-7 text-[color:var(--ink-muted)]"
+        data-review-empty-state
+      >
+        <h2 className="text-base font-semibold text-[color:var(--foreground-strong)]">지금 복습할 항목이 없습니다.</h2>
+        <p className="mt-2">오늘 한 것을 올리면 복습할 항목이 만들어집니다.</p>
+        <p className="mt-1">저장된 학습 노트의 가장 큰 약점과 다음 행동이 복습 예정으로 이어집니다.</p>
+        <Button
+          type="button"
+          onClick={() => router.push(mode === "second" ? "/app/capture?mode=second" : "/app/capture?mode=first")}
+          className="mt-4 w-full sm:w-auto"
+        >
+          오늘 한 것 올리기
+        </Button>
       </div>
     );
   }
@@ -59,6 +67,14 @@ export function ReviewQueueClient({ items, mode, captureReferenceLineByItemId = 
         >
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="min-w-0 space-y-3">
+              <div className="flex flex-wrap gap-2">
+                <span className="rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--bg-subtle)] px-3 py-1 text-xs text-[color:var(--muted)]">
+                  복습 예정
+                </span>
+                <span className="rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--bg-subtle)] px-3 py-1 text-xs text-[color:var(--muted)]">
+                  {item.createdFromCapture ? "학습 노트에서 생성됨" : "미완료 항목"}
+                </span>
+              </div>
               <p className="text-xs text-[color:var(--muted)]">{item.subjectLabel}</p>
               <h3 className="text-base font-medium leading-7 text-[color:var(--foreground-strong)] sm:text-lg">
                 {item.problemTitle}
@@ -89,6 +105,7 @@ export function ReviewQueueClient({ items, mode, captureReferenceLineByItemId = 
               <p className="text-xs text-[color:var(--muted)]">
                 다음 행동: {item.examName === "감정평가사 2차" ? "문단 하나 다시쓰기" : "놓친 조건 1개 회상 후 짧은 재시도"}
               </p>
+              <p className="text-xs text-[color:var(--muted)]">복습 완료를 누르면 이 항목은 active 복습에서 빠집니다.</p>
             </div>
             <div className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-52 sm:items-end">
               <Button type="button" onClick={() => router.push(`/app/items/${item.itemId}?mode=${mode}`)} className="w-full sm:w-auto">
@@ -100,7 +117,7 @@ export function ReviewQueueClient({ items, mode, captureReferenceLineByItemId = 
                 disabled={pendingId === item.queueId}
                 className="text-xs text-[color:var(--muted)] underline-offset-2 hover:underline disabled:cursor-not-allowed"
               >
-                {pendingId === item.queueId ? "처리 중" : "이미 수행했다면 조용히 완료 처리"}
+                {pendingId === item.queueId ? "완료 처리 중" : "복습 완료"}
               </button>
               {inlineErrorByQueueId[item.queueId] ? (
                 <p className="max-w-full text-left text-xs text-[color:var(--danger)] sm:max-w-52 sm:text-right">

@@ -3,13 +3,140 @@ import Link from "next/link";
 import { LocalBetaNotesSection } from "@/components/review-os/local-beta-note-reflection";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { getModeConfig, resolveAppraisalMode } from "@/lib/review-os/appraisal";
+import { getModeConfig, resolveAppraisalMode, type AppraisalMode } from "@/lib/review-os/appraisal";
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
 import { reviewOsService } from "@/lib/review-os/service";
+import type { LearningSignalEventRecord, WrongAnswerItemRecord } from "@/lib/review-os/types";
 
 type PageProps = {
   searchParams?: Promise<{ mode?: string; saved?: string }>;
 };
+
+type CaptureNoteSummary = {
+  biggestGap?: string;
+  nextAction?: string;
+  topicCandidate?: string;
+  mistakeType?: string;
+};
+
+const EMPTY_GAP_COPY = "아직 정리된 약점 후보가 없습니다. 오늘 한 것을 다시 올리면 더 선명해집니다.";
+const EMPTY_ACTION_COPY = "오늘 한 것 1개를 올리고 다음 행동을 다시 정리합니다.";
+const EMPTY_TOPIC_COPY = "아직 논점 후보가 없습니다.";
+
+function readString(value: unknown) {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function readCaptureNoteSummary(item: WrongAnswerItemRecord): CaptureNoteSummary {
+  const payload =
+    typeof item.derivedPayload?.capture_note_engine_v2 === "object" && item.derivedPayload.capture_note_engine_v2
+      ? (item.derivedPayload.capture_note_engine_v2 as Record<string, unknown>)
+      : typeof item.derivedPayload?.capture_note_engine_v1 === "object" && item.derivedPayload.capture_note_engine_v1
+        ? (item.derivedPayload.capture_note_engine_v1 as Record<string, unknown>)
+        : null;
+
+  return {
+    biggestGap: readString(payload?.one_biggest_gap) ?? undefined,
+    nextAction: readString(payload?.one_next_action) ?? undefined,
+    topicCandidate: readString(payload?.topic_candidate) ?? undefined,
+    mistakeType: readString(payload?.mistake_type) ?? undefined,
+  };
+}
+
+function resolveBiggestGap(item: WrongAnswerItemRecord) {
+  const capture = readCaptureNoteSummary(item);
+  return (
+    capture.biggestGap ??
+    readString(item.derivedPayload?.biggestGap) ??
+    readString(item.derivedPayload?.comparisonPoint) ??
+    readString(item.derivedPayload?.mistakeType) ??
+    readString(item.userReasonPreset) ??
+    EMPTY_GAP_COPY
+  );
+}
+
+function resolveNextAction(item: WrongAnswerItemRecord, mode: AppraisalMode) {
+  const capture = readCaptureNoteSummary(item);
+  return (
+    capture.nextAction ??
+    readString(item.derivedPayload?.nextAction) ??
+    readString(item.derivedPayload?.nextTask) ??
+    (mode === "second" ? "문단 하나를 다시 쓰고 약점 1개만 줄입니다." : "놓친 조건 1개를 회상하고 짧게 다시 풉니다.")
+  );
+}
+
+function resolveTopicCandidate(item: WrongAnswerItemRecord) {
+  const capture = readCaptureNoteSummary(item);
+  return (
+    capture.topicCandidate ??
+    readString(item.derivedPayload?.topicCandidate) ??
+    readString(item.derivedPayload?.topicTag) ??
+    readString(item.problemTitle) ??
+    EMPTY_TOPIC_COPY
+  );
+}
+
+function formatCreatedDate(value?: string | null) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return new Intl.DateTimeFormat("ko-KR", { month: "numeric", day: "numeric" }).format(date);
+}
+
+function sourceTypeLabel(sourceType: string) {
+  if (sourceType === "problem-snap") return "Problem Snap";
+  if (sourceType === "answer_review") return "답안 검토 기록";
+  if (sourceType === "review_queue") return "복습 예정";
+  if (sourceType === "wrong_answer") return "학습 노트";
+  return "학습 기록";
+}
+
+function signalCta(signal: Pick<LearningSignalEventRecord, "sourceType" | "subject">, mode: AppraisalMode) {
+  if (signal.sourceType === "problem-snap") {
+    return mode === "second"
+      ? { label: "답안 검토로 보기", href: `/answer-review?mode=${mode}&subject=${encodeURIComponent(signal.subject)}` }
+      : { label: "다시 풀기", href: `/problem-snap?mode=${mode}&subject=${encodeURIComponent(signal.subject)}` };
+  }
+
+  if (signal.sourceType === "answer_review") {
+    return { label: "답안 검토하기", href: `/answer-review?mode=${mode}` };
+  }
+
+  return { label: "오늘 할 일에서 보기", href: `/app?mode=${mode}` };
+}
+
+function NoteBridgeFields({
+  subject,
+  topic,
+  biggestGap,
+  nextAction,
+}: {
+  subject: string;
+  topic: string;
+  biggestGap: string;
+  nextAction: string;
+}) {
+  return (
+    <dl className="grid gap-3 text-sm md:grid-cols-2">
+      <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-3">
+        <dt className="text-xs text-[color:var(--muted)]">과목</dt>
+        <dd className="mt-1 text-[color:var(--foreground-strong)]">{subject}</dd>
+      </div>
+      <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-3">
+        <dt className="text-xs text-[color:var(--muted)]">논점 후보</dt>
+        <dd className="mt-1 text-[color:var(--foreground-strong)]">{topic}</dd>
+      </div>
+      <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-3">
+        <dt className="text-xs text-[color:var(--muted)]">가장 큰 약점</dt>
+        <dd className="mt-1 text-[color:var(--foreground-strong)]">{biggestGap}</dd>
+      </div>
+      <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-3">
+        <dt className="text-xs text-[color:var(--muted)]">다음 행동</dt>
+        <dd className="mt-1 text-[color:var(--foreground-strong)]">{nextAction || EMPTY_ACTION_COPY}</dd>
+      </div>
+    </dl>
+  );
+}
 
 export async function renderReviewOsItemsPage(searchParams: PageProps["searchParams"], routePath = "/app/items") {
   const query = await searchParams;
@@ -27,174 +154,122 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
   const hasItems = items.length > 0;
   const hasLearningSignals = learningSignals.length > 0;
   const isNotesRoute = routePath === "/app/notes";
-  const signalPrimaryTitle = isNotesRoute ? `${mode === "second" ? "2차" : "1차"} 학습 노트` : mode === "second" ? "최근 답안 검토 기록" : "최근 학습 기록";
-  const sourceTypeLabel = (sourceType: string) => {
-    if (sourceType === "problem-snap") return "Problem Snap";
-    if (sourceType === "answer_review") return "답안 검토 기록";
-    if (sourceType === "wrong_answer") return "학습 기록";
-    if (sourceType === "review_queue") return "복습 항목";
-    return "학습 기록";
-  };
-  const formatCreatedDate = (value?: string | null) => {
-    if (!value) return null;
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return null;
-    return new Intl.DateTimeFormat("ko-KR", { month: "numeric", day: "numeric" }).format(date);
-  };
-  const formatNextAction = (item: (typeof items)[number]) => {
-    const reviewReason =
-      typeof item.rawPayload?.reviewReason === "string"
-        ? item.rawPayload.reviewReason
-        : typeof item.derivedPayload?.reviewReason === "string"
-          ? item.derivedPayload.reviewReason
-          : null;
-    const mistakeType =
-      typeof item.rawPayload?.mistakeType === "string"
-        ? item.rawPayload.mistakeType
-        : typeof item.derivedPayload?.mistakeType === "string"
-          ? item.derivedPayload.mistakeType
-          : null;
-    const lines = [
-      item.nextReviewDate ? `복습 예정 ${item.nextReviewDate}` : null,
-      item.comparisonPoint ? `비교 포인트 ${item.comparisonPoint}` : null,
-      mistakeType ? `실수 유형 ${mistakeType}` : null,
-      reviewReason ? `검토 이유 ${reviewReason}` : null,
-    ].filter(Boolean);
-    return lines[0] ?? "오늘 할 일에서 확인";
-  };
-  const signalFallbackTask = mode === "second" ? "한 번 더 검토하기" : "오늘 할 일에서 확인";
-  const notesEmptyCopy = "아직 계정 저장 노트가 없습니다. closed beta 브라우저 임시 기록은 아래에서 이어서 확인할 수 있습니다.";
-  const problemSnapEmptyCopy = "계정 저장 기록이 비어 있을 때는 오늘 학습 1개를 정리하면 다음 행동이 이어집니다.";
-  const signalCta = (signal: { sourceType: string; subject: string }) =>
-    signal.sourceType === "problem-snap"
-      ? mode === "second"
-        ? { label: "답안 검토로 보기", href: `/answer-review?mode=${mode}&subject=${encodeURIComponent(signal.subject)}` }
-        : { label: "다시 풀기", href: `/problem-snap?mode=${mode}&subject=${encodeURIComponent(signal.subject)}` }
-      :
-    signal.sourceType === "answer_review"
-      ? { label: "답안 검토하기", href: `/answer-review?mode=${mode}` }
-      : { label: "오늘에서 보기", href: `/app?mode=${mode}` };
+  const pageTitle = isNotesRoute ? "학습 노트" : "학습 기록";
+  const helperCopy = isNotesRoute
+    ? "오늘 한 것에서 만든 가장 큰 약점과 다음 행동을 모아봅니다."
+    : "학습 노트와 복습 흐름을 기록으로 확인합니다.";
 
   return (
     <div className="space-y-6">
       <Card className="border-[var(--border)] bg-[color:var(--surface)] shadow-none">
-        <CardHeader>
-          <CardTitle>{hasItems ? (mode === "second" ? "2차 학습 노트" : "1차 학습 노트") : signalPrimaryTitle}</CardTitle>
-          <CardDescription>
-            {hasItems
-              ? config.recentDescription
-              : isNotesRoute
-                ? "저장한 학습 기록이 약점 후보와 다음 행동으로 정리되는 곳입니다."
-                : mode === "second"
-                ? "검토 기록을 기준으로 오늘 할 일이 정리됩니다."
-                : "답안 검토 기록이 노트에 쌓였습니다."}
-          </CardDescription>
+        <CardHeader className="space-y-2">
+          <CardTitle>{pageTitle}</CardTitle>
+          <CardDescription>{helperCopy}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {!hasItems && !hasLearningSignals ? (
-            <div className="space-y-4">
-              <p className="text-sm text-[color:var(--muted)]">{isNotesRoute ? notesEmptyCopy : config.emptyDescription}</p>
-              <p className="text-sm text-[color:var(--muted)]">{problemSnapEmptyCopy}</p>
-              <Link href={`/app/capture?mode=${mode}`} className="w-full sm:w-auto">
+            <div className="space-y-4 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-[color:var(--foreground-strong)]">아직 쌓인 학습 노트가 없습니다.</p>
+                <p className="text-sm text-[color:var(--muted)]">오늘 한 것을 하나 올리면 가장 큰 약점과 다음 행동이 만들어집니다.</p>
+              </div>
+              <Link href={`/app/capture?mode=${mode}`} className="inline-flex w-full sm:w-auto">
                 <Button type="button" className="w-full sm:w-auto">
                   오늘 한 것 올리기
                 </Button>
               </Link>
             </div>
-          ) : hasItems ? (
+          ) : null}
+
+          {savedParam ? (
+            <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] px-4 py-3">
+              <p className="text-sm font-medium text-[color:var(--foreground-strong)]">방금 저장한 학습 노트가 반영되었습니다.</p>
+              <p className="mt-1 text-sm text-[color:var(--muted)]">
+                가장 큰 약점 1개와 다음 행동 1개를 먼저 확인하고, 오늘 할 일에 반영할 후보로 이어갑니다.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-3 text-xs text-[color:var(--muted)]">
+                <Link href={`/app?mode=${mode}`} className="underline-offset-4 hover:underline">오늘 할 일</Link>
+                <Link href={`/app/review?mode=${mode}`} className="underline-offset-4 hover:underline">복습</Link>
+                <Link href={`/app/agenda?mode=${mode}`} className="underline-offset-4 hover:underline">학습 기록</Link>
+              </div>
+            </div>
+          ) : null}
+
+          {hasItems ? (
             <div className="space-y-4">
-              {items.length === 1 ? (
-                <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] px-4 py-3">
-                  <p className="text-sm text-[color:var(--foreground-strong)]">첫 기록이 쌓였습니다.</p>
-                </div>
-              ) : null}
-              {items.length >= 2 && items.length <= 3 ? (
-                <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] px-4 py-3">
-                  <p className="text-sm text-[color:var(--foreground-strong)]">반복 패턴이 조금씩 보이기 시작합니다.</p>
-                </div>
-              ) : null}
-              {savedParam ? (
-                <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] px-4 py-3">
-                  <p className="text-sm font-medium text-[color:var(--foreground-strong)]">방금 남긴 기록이 목록에 반영되었습니다.</p>
-                  <p className="mt-1 text-sm text-[color:var(--foreground-strong)]">가장 큰 약점 1개와 다음 행동 1개를 먼저 실행하세요.</p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <Link href={`/app?mode=${mode}`} className="text-xs underline-offset-4 hover:underline">오늘 할 일에 반영</Link>
-                    <Link href={mode === "second" ? `/app/capture?mode=${mode}&workflow=second-write` : `/app/capture?mode=${mode}`} className="text-xs underline-offset-4 hover:underline">다시 풀기/다시 쓰기</Link>
-                    <Link href={`/app/review?mode=${mode}`} className="text-xs underline-offset-4 hover:underline">나중에 복습</Link>
-                  </div>
-                </div>
-              ) : null}
-              {items.map((item) => (
-                <div key={item.id} className="rounded-2xl border border-[var(--border)] px-4 py-4">
-                  <p className="text-sm font-medium text-[color:var(--foreground-strong)]">
-                    {item.problemTitle ?? item.problemIdentifier ?? "감평 기록 항목"}
-                  </p>
-                  <p className="mt-1 text-sm text-[color:var(--muted)]">
-                    {item.subjectLabel} · {item.confidence}
-                  </p>
-                  <p className="mt-1 text-sm text-[color:var(--muted)]">다음 행동: {formatNextAction(item)}</p>
-                  <p className="mt-1 text-xs text-[color:var(--muted)]">이 항목은 반복 약점 신호에 반영됩니다.</p>
-                  <Link
-                    href={`/app/items/${item.id}?mode=${mode}`}
-                    className="mt-2 inline-flex text-sm font-medium text-[color:var(--foreground-strong)] underline-offset-4 hover:underline"
-                  >
-                    다시 보기
-                  </Link>
-                </div>
-              ))}
+              {items.map((item) => {
+                const topic = resolveTopicCandidate(item);
+                const biggestGap = resolveBiggestGap(item);
+                const nextAction = resolveNextAction(item, mode);
+                const createdAt = formatCreatedDate(item.createdAt);
+
+                return (
+                  <section key={item.id} className="rounded-[var(--radius-lg)] border border-[var(--border)] px-4 py-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="min-w-0 space-y-2">
+                        <div className="flex flex-wrap gap-2">
+                          <span className="rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--bg-subtle)] px-3 py-1 text-xs text-[color:var(--muted)]">
+                            학습 노트
+                          </span>
+                          <span className="rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--bg-subtle)] px-3 py-1 text-xs text-[color:var(--muted)]">
+                            Review 연결: 복습 예정
+                          </span>
+                        </div>
+                        <h2 className="text-sm font-medium text-[color:var(--foreground-strong)]">
+                          {item.problemTitle ?? item.problemIdentifier ?? `${item.subjectLabel} 학습 노트`}
+                        </h2>
+                        {createdAt ? <p className="text-xs text-[color:var(--muted)]">{createdAt}</p> : null}
+                      </div>
+                      <Link
+                        href={`/app/items/${item.id}?mode=${mode}`}
+                        className="inline-flex text-sm font-medium text-[color:var(--foreground-strong)] underline-offset-4 hover:underline"
+                      >
+                        노트 자세히 보기
+                      </Link>
+                    </div>
+
+                    <div className="mt-4">
+                      <NoteBridgeFields subject={item.subjectLabel} topic={topic} biggestGap={biggestGap} nextAction={nextAction} />
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap gap-2 text-xs text-[color:var(--muted)]">
+                      <span>Today 연결: 오늘 할 일에 반영할 후보</span>
+                      <span>Review 연결: 다시 풀기/다시 쓰기 복습 예정</span>
+                      <span>Agenda 연결: 학습 기록</span>
+                    </div>
+                  </section>
+                );
+              })}
             </div>
-          ) : (
+          ) : null}
+
+          {!hasItems && hasLearningSignals ? (
             <div className="space-y-3">
-              {learningSignals.slice(0, 8).map((signal) => (
-                <div key={signal.id} className="rounded-2xl border border-[var(--border)] px-4 py-4">
-                  {signal.sourceType === "problem-snap" ? (
-                    <p className="text-xs font-medium text-[color:var(--ink-primary)]">Problem Snap</p>
-                  ) : null}
-                  <p className="text-sm font-medium text-[color:var(--foreground-strong)]">{signal.subject} · {sourceTypeLabel(signal.sourceType)}</p>
-                  <p className="mt-1 text-sm text-[color:var(--muted)]">다음 행동: {signal.nextTask || signalFallbackTask}</p>
-                  {formatCreatedDate(signal.createdAt) ? (
-                    <p className="mt-1 text-xs text-[color:var(--muted)]">{formatCreatedDate(signal.createdAt)}</p>
-                  ) : null}
-                  <Link
-                    href={signalCta(signal).href}
-                    className="mt-2 inline-flex text-sm font-medium text-[color:var(--foreground-strong)] underline-offset-4 hover:underline"
-                  >
-                    {signalCta(signal).label}
-                  </Link>
-                </div>
-              ))}
+              {learningSignals.slice(0, 8).map((signal) => {
+                const createdAt = formatCreatedDate(signal.createdAt);
+                const biggestGap = signal.derivedTags[0] ?? "최근 학습 신호";
+                const nextAction = signal.nextTask || (mode === "second" ? "문단 하나를 다시 씁니다." : "놓친 조건 1개를 회상합니다.");
+                const cta = signalCta(signal, mode);
+
+                return (
+                  <section key={signal.id} className="rounded-[var(--radius-lg)] border border-[var(--border)] px-4 py-4">
+                    <p className="text-xs font-medium text-[color:var(--muted)]">{sourceTypeLabel(signal.sourceType)}</p>
+                    <h2 className="mt-1 text-sm font-medium text-[color:var(--foreground-strong)]">{signal.subject}</h2>
+                    <div className="mt-3">
+                      <NoteBridgeFields subject={signal.subject} topic={signal.derivedTags[1] ?? EMPTY_TOPIC_COPY} biggestGap={biggestGap} nextAction={nextAction} />
+                    </div>
+                    {createdAt ? <p className="mt-2 text-xs text-[color:var(--muted)]">{createdAt}</p> : null}
+                    <Link href={cta.href} className="mt-3 inline-flex text-sm font-medium text-[color:var(--foreground-strong)] underline-offset-4 hover:underline">
+                      {cta.label}
+                    </Link>
+                  </section>
+                );
+              })}
             </div>
-          )}
+          ) : null}
         </CardContent>
       </Card>
-      {hasItems && hasLearningSignals ? (
-        <Card className="border-[var(--border)] bg-[color:var(--surface)] shadow-none">
-          <CardHeader>
-            <CardTitle>{signalPrimaryTitle}</CardTitle>
-            <CardDescription>최근 검토 기록에서 이어질 다음 행동을 확인합니다.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {learningSignals.slice(0, 8).map((signal) => (
-              <div key={signal.id} className="rounded-2xl border border-[var(--border)] px-4 py-4">
-                {signal.sourceType === "problem-snap" ? (
-                  <p className="text-xs font-medium text-[color:var(--ink-primary)]">Problem Snap</p>
-                ) : null}
-                <p className="text-sm font-medium text-[color:var(--foreground-strong)]">{signal.subject} · {sourceTypeLabel(signal.sourceType)}</p>
-                <p className="mt-1 text-sm text-[color:var(--muted)]">다음 행동: {signal.nextTask || signalFallbackTask}</p>
-                {formatCreatedDate(signal.createdAt) ? (
-                  <p className="mt-1 text-xs text-[color:var(--muted)]">{formatCreatedDate(signal.createdAt)}</p>
-                ) : null}
-                <Link
-                  href={signalCta(signal).href}
-                  className="mt-2 inline-flex text-sm font-medium text-[color:var(--foreground-strong)] underline-offset-4 hover:underline"
-                >
-                  {signalCta(signal).label}
-                </Link>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      ) : null}
+
       <LocalBetaNotesSection mode={mode} />
     </div>
   );
