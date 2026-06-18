@@ -303,7 +303,7 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
                 <p className="text-sm leading-7 text-[color:var(--muted)]">판정 기록은 보조 정보입니다. 기본 작업은 같은 선지 판단 재시도입니다.</p>
               </ArtifactBlock>
               <ArtifactBlock tone="neutral" eyebrow="헷갈린 비교 포인트" title={note.comparisonPoint ?? note.weakPoint}>
-                <p className="text-sm leading-7 text-[color:var(--muted)]">기대 판단은 학습 기준일 뿐 확정 정답이나 최종 판정이 아닙니다.</p>
+                <p className="text-sm leading-7 text-[color:var(--muted)]">기대 판단은 학습용 비교 기준입니다. 저장 전 직접 확인해 주세요.</p>
               </ArtifactBlock>
               <section className="grid gap-4 lg:grid-cols-2">
                 {firstOxReview.expectedChoice ? <SourceBlock label="기대 판단" value={firstOxReview.expectedChoice} /> : null}
@@ -403,7 +403,7 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
               <section className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
                 <ArtifactBlock tone="brand" eyebrow="기록 요약" title={note.summary}>
                   <p className="text-sm leading-7 text-[color:var(--muted)]">
-                    기록에서 다음 review/rewrite에 필요한 신호만 정리합니다. 최종 판정이나 자동 채점 결과는 제공하지 않습니다.
+                    기록에서 다음 review/rewrite에 필요한 학습 신호만 정리합니다.
                   </p>
                 </ArtifactBlock>
                 <ArtifactBlock tone="review" eyebrow="다시쓰기 지시" title={note.rewriteInstruction ?? note.nextAction}>
@@ -624,8 +624,8 @@ function resolveFirstOxStatus(item: WrongAnswerItemRecord): Pick<FirstOxReviewDe
   if (!expectedKnown || !userKnown) {
     return {
       statusLabel: "근거 확인 필요",
-      statusCopy: "정답 확정 전, 판단 기준을 먼저 확인하는 항목입니다.",
-      biggestSignal: "기대 판단 확정 전 기준 확인",
+      statusCopy: "학습 판단 근거를 먼저 확인하는 항목입니다.",
+      biggestSignal: "기대 판단 근거 확인",
     };
   }
   if (item.userAnswer === item.correctAnswer && lowConfidence) {

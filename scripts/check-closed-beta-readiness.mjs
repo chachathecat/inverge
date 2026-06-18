@@ -200,7 +200,14 @@ const steps = [
   {
     label: "route/source guard checks",
     command: nodeCommand,
-    args: ["--experimental-strip-types", "--loader", "./tests/ts-extension-loader.mjs", "--test", "tests/closed-beta-learner-loop-smoke.test.mjs"],
+    args: [
+      "--experimental-strip-types",
+      "--loader",
+      "./tests/ts-extension-loader.mjs",
+      "--test",
+      "tests/closed-beta-learner-loop-smoke.test.mjs",
+      "tests/closed-beta-final-pass.test.mjs",
+    ],
   },
   npmStep("build", "build"),
 ];
