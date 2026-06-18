@@ -27,6 +27,7 @@ const defaultTestFiles = [
   "tests/learner-ui-grammar-consolidation.test.mjs",
   "tests/today-plan-hardening.test.mjs",
   "tests/review-notes-loop-polish.test.mjs",
+  "tests/closed-beta-final-pass.test.mjs",
   "tests/today-plan-source-reasoning.test.mjs",
   "tests/review-queue-reflection-hardening.test.mjs",
   "tests/learner-loop-telemetry.test.mjs",

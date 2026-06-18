@@ -314,7 +314,7 @@ test("O/X detail source keeps original statement prominent with precise states a
   const source = await readFile("app/app/items/[itemId]/page.tsx", "utf8");
   ["원문 선지", "내 선택", "기대 판단", "상태", "세부 기록 펼쳐보기", "같은 선지 다시 판단하기"].forEach((token) => assert.ok(source.includes(token), token));
   ["근거 확인 필요", "낮은 확신", "오답", "확신 오답"].forEach((token) => assert.ok(source.includes(token), token));
-  assert.ok(source.includes("정답 확정 전, 판단 기준을 먼저 확인하는 항목입니다."));
+  assert.ok(source.includes("학습 판단 근거를 먼저 확인하는 항목입니다."));
   assert.ok(source.includes("맞혔더라도 다시 볼 가치가 있습니다."));
   assert.ok(source.includes("내 판단과 기대 판단이 달랐습니다."));
   assert.ok(source.includes("맞다고 믿은 기준이 실제 판단과 달랐습니다."));
