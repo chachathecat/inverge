@@ -45,7 +45,7 @@ test("Notes and item detail expose biggest gap, next action, and loop connection
 
   assert.ok(notesPage.includes("renderReviewOsItemsPage"));
   for (const source of [itemsPage, detailPage, localBeta]) {
-    for (const phrase of ["학습 노트", "가장 큰 약점", "다음 행동", "Today 연결", "Review 연결", "Agenda 연결"]) {
+    for (const phrase of ["학습 노트", "가장 큰 약점", "다음 행동", "오늘 할 일 연결", "복습 연결", "학습 기록 연결"]) {
       assert.ok(source.includes(phrase), phrase);
     }
   }

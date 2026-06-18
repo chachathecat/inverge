@@ -67,8 +67,8 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
     : "2차 작성 기록을 저장하고 비교 노트를 만들었습니다.";
   const secondCompletionSignal = note.missingIssue ?? note.weakPoint;
   const secondCompletionNext = rewriteComparison
-    ? `다음 review는 ${note.nextReviewDate}로 자동 예약됩니다.`
-    : `다음 cue: ${note.rewriteInstruction ?? "가장 큰 간극 1개를 문단 다시쓰기로 보강합니다."}`;
+    ? `다음 복습은 ${note.nextReviewDate}로 자동 예약됩니다.`
+    : `다음 행동: ${note.rewriteInstruction ?? "가장 큰 간극 1개를 문단 다시쓰기로 보강합니다."}`;
   const biggestSignal = isSecond ? note.missingIssue ?? note.weakPoint : note.weakPoint;
   const nextActionLine = isSecond
     ? note.rewriteInstruction ?? "문단 하나를 다시 쓰고 오늘 작업을 끝냅니다."
@@ -147,7 +147,7 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
           <p className="text-caption text-[color:var(--muted)]">학습 노트 연결</p>
           <h3 className="text-lg font-semibold text-[color:var(--foreground-strong)]">가장 큰 약점과 다음 행동</h3>
           <p className="text-sm leading-6 text-[color:var(--muted)]">
-            이 노트는 오늘 할 일, 복습, 학습 기록으로 이어지는 derived metadata입니다.
+            이 노트는 오늘 할 일, 복습, 학습 기록으로 이어지는 파생 학습 신호입니다.
           </p>
         </div>
         <div className="mt-4 grid gap-3 md:grid-cols-2">
@@ -155,9 +155,9 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
           <MiniArtifact label="논점 후보" value={noteTopicCandidate} />
           <MiniArtifact label="가장 큰 약점" value={biggestSignal} />
           <MiniArtifact label="다음 행동" value={polishedNextActionLine} />
-          <MiniArtifact label="Today 연결" value={todayConnection} />
-          <MiniArtifact label="Review 연결" value={reviewConnection} />
-          <MiniArtifact label="Agenda 연결" value={agendaConnection} />
+          <MiniArtifact label="오늘 할 일 연결" value={todayConnection} />
+          <MiniArtifact label="복습 연결" value={reviewConnection} />
+          <MiniArtifact label="학습 기록 연결" value={agendaConnection} />
         </div>
         <p className="mt-3 text-xs text-[color:var(--muted)]">
           원문 OCR/답안/문제 전문은 학습 기록 이벤트로 복사하지 않습니다.
@@ -183,14 +183,14 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
       {questionReferenceHints.length > 0 || captureReferenceCandidates.length > 0 ? (
         <details className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] p-5">
           <summary className="cursor-pointer list-none text-sm font-medium text-[color:var(--foreground-strong)]">비슷한 기출 기준</summary>
-          <p className="mt-2 text-xs text-[color:var(--muted)]">원문 탐색이 아니라 태그·skeleton·약점 단위 매핑을 위한 선택 참고입니다. 기본은 지금 항목의 retry/rewrite입니다.</p>
+          <p className="mt-2 text-xs text-[color:var(--muted)]">원문 탐색이 아니라 태그·학습 구조·약점 단위 매핑을 위한 선택 참고입니다. 기본은 지금 항목의 재시도/다시쓰기입니다.</p>
           {questionReferenceHints.length > 0 ? (
             <div className="mt-3 space-y-2">
               {questionReferenceHints.slice(0, 2).map((hint) => (
                 <div key={hint.referenceId} className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-3">
                   <p className="text-sm font-medium text-[color:var(--foreground-strong)]">{hint.title}</p>
                   <p className="mt-1 text-xs text-[color:var(--muted)]">{hint.reason}</p>
-                  {hint.skeletonId ? <p className="mt-1 text-xs text-[color:var(--muted)]">관련 skeleton: {hint.skeletonId}</p> : null}
+                  {hint.skeletonId ? <p className="mt-1 text-xs text-[color:var(--muted)]">관련 학습 구조: {hint.skeletonId}</p> : null}
                   <p className="mt-1 text-xs text-[color:var(--muted)]">권리 상태: {hint.sourceRightsStatus} · 원문 사용: {hint.rawTextAvailable ? "제한된 정책 확인 필요" : "사용 안 함"}</p>
                 </div>
               ))}
@@ -214,7 +214,7 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
                 <p className="mt-2 text-xs text-[color:var(--muted)]">3) 자주 엮이는 논점: {match.reference.issue_tags.join(" · ")}</p>
                 <div className="mt-3 rounded-[var(--radius-sm)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] p-3">
                   <p className="text-xs font-medium text-[color:var(--foreground-strong)]">{guide.title}</p>
-                  <p className="mt-2 text-xs text-[color:var(--muted)]">학습용 skeleton 단계</p>
+                  <p className="mt-2 text-xs text-[color:var(--muted)]">학습 구조 단계</p>
                   <ul className="mt-1 list-disc space-y-1 pl-5 text-xs text-[color:var(--muted)]">
                     {guide.skeleton_steps.map((step) => (
                       <li key={step}>{step}</li>
@@ -309,7 +309,7 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
                 {firstOxReview.expectedChoice ? <SourceBlock label="기대 판단" value={firstOxReview.expectedChoice} /> : null}
                 <SourceBlock label="내 선택" value={firstOxReview.userChoice} />
               </section>
-              <ArtifactBlock tone="review" eyebrow="리뷰 노트" title={note.noteCard}>
+              <ArtifactBlock tone="review" eyebrow="복습 노트" title={note.noteCard}>
                 <div className="mt-4 grid gap-3 md:grid-cols-2">
                   <p className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 text-sm leading-7 text-[color:var(--foreground-strong)]">{note.notebookLine}</p>
                   <p className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 text-sm leading-7 text-[color:var(--foreground-strong)]">{note.recurrenceText}</p>
@@ -340,13 +340,13 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
           <section className="grid gap-4 md:grid-cols-3">
             <MiniArtifact label="누락 논점" value={note.missingIssue ?? note.weakPoint} />
             <MiniArtifact label="문단 다시쓰기" value={note.rewriteInstruction ?? "문단 하나를 다시 쓰고 근거 문장을 보강합니다."} />
-            <MiniArtifact label="다음 review" value={note.nextReviewDate} />
+            <MiniArtifact label="다음 복습" value={note.nextReviewDate} />
           </section>
           {rewriteComparison ? (
             <section className="rounded-[var(--radius-card)] border border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] p-5">
-              <p className="text-caption text-[color:var(--cue-review)]">2차 rewrite 전/후 비교</p>
+              <p className="text-caption text-[color:var(--cue-review)]">2차 다시쓰기 전/후 비교</p>
               <div className="mt-3 space-y-3">
-                <MiniArtifact label="source gap" value={rewriteComparison.sourceGap} />
+                <MiniArtifact label="이전 간극" value={rewriteComparison.sourceGap} />
                 <details className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4">
                   <summary className="cursor-pointer list-none text-sm font-medium text-[color:var(--foreground-strong)]">
                     이전 문단 / 참고 요약 펼쳐서 보기
@@ -403,7 +403,7 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
               <section className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
                 <ArtifactBlock tone="brand" eyebrow="기록 요약" title={note.summary}>
                   <p className="text-sm leading-7 text-[color:var(--muted)]">
-                    기록에서 다음 review/rewrite에 필요한 학습 신호만 정리합니다.
+                    기록에서 다음 복습/다시쓰기에 필요한 학습 신호만 정리합니다.
                   </p>
                 </ArtifactBlock>
                 <ArtifactBlock tone="review" eyebrow="다시쓰기 지시" title={note.rewriteInstruction ?? note.nextAction}>
@@ -423,7 +423,7 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
               <section className="grid gap-4 md:grid-cols-3">
                 <MiniArtifact label="누락 논점" value={note.missingIssue ?? note.weakPoint} />
                 <MiniArtifact label="사례 적용 문장" value={note.weakApplicationSentence ?? note.coreLine} />
-                <MiniArtifact label="다음 review 시점" value={note.nextReviewDate} />
+                <MiniArtifact label="다음 복습 시점" value={note.nextReviewDate} />
               </section>
 
               <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-6">
@@ -468,7 +468,7 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
           </section>
 
           <ArtifactBlock tone="review" eyebrow="실행 안내" title="이번 항목에서는 이 조건 하나만 다시 확인합니다.">
-            <p className="text-sm leading-7 text-[color:var(--muted)]">조건 확인 후 1문항만 짧게 재시도하고 오늘 review를 마칩니다.</p>
+            <p className="text-sm leading-7 text-[color:var(--muted)]">조건 확인 후 1문항만 짧게 재시도하고 오늘 복습을 마칩니다.</p>
             <div className="mt-4">
               <Link href={`/app/capture?mode=${mode}`}>
                 <Button type="button">짧은 재시도 시작</Button>
@@ -504,7 +504,7 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
                     </div>
                   </div>
                   <div className="rounded-[var(--radius-md)] border border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] px-4 py-3">
-                    <p className="text-caption text-[color:var(--cue-review)]">다음 review 시점</p>
+                    <p className="text-caption text-[color:var(--cue-review)]">다음 복습 시점</p>
                     <p className="mt-1 text-sm font-medium text-[color:var(--foreground-strong)]">{note.nextReviewDate}</p>
                   </div>
                 </div>
@@ -534,7 +534,7 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
         <ArtifactBlock tone="focus" eyebrow="계산 실수 연결" title={`${calculatorWorkflow.subject} 관련 계산기 스텝 보기`}>
           <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm leading-7 text-[color:var(--muted)]">
-              자동 풀이가 아니라, 다음 계산형 문제에서 적을 값과 검산 순서를 고정하는 실행 aid입니다.
+              자동 풀이가 아니라, 다음 계산형 문제에서 적을 값과 검산 순서를 고정하는 실행 보조입니다.
             </p>
             <Link href={`/app/calculator?context=${calculatorWorkflow.context}&mode=${calculatorWorkflow.mode}`}>
               <Button type="button" variant="outline">
@@ -561,7 +561,7 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
       {!firstOxReview ? (
         <div className="flex flex-col gap-3 sm:flex-row">
           <Link href={`/app/review?mode=${mode}`}>
-            <Button type="button">review queue 보기</Button>
+            <Button type="button">복습 큐 보기</Button>
           </Link>
           <Link href={`/app/capture?mode=${mode}`}>
             <Button type="button" variant="outline">
@@ -586,7 +586,7 @@ function formatMatchedFieldLabels(
     weak_structure_point: "구조 약점",
     issue_tags: "논점 태그",
     skill_tags: "답안 기술",
-    skeleton: "학습용 skeleton",
+    skeleton: "학습 구조",
   };
   return fields.map((field) => fieldLabelMap[field]);
 }

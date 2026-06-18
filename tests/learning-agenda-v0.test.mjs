@@ -30,9 +30,10 @@ test("/app/agenda route renders learner agenda shell and sections", () => {
   [
     "학습 기록",
     "오늘 한 것과 복습 흐름을 날짜별로 모아봅니다.",
-    "월간 heatmap",
-    "주간 agenda",
-    "일별 detail",
+    "월간 기록",
+    "주간 기록",
+    "일별 상세",
+    "진한 칸은 학습 기록이 있는 날입니다.",
   ].forEach((text) => assert.ok(client.includes(text), text));
 
   assert.ok(shell.includes('href: "/app/agenda"'));
@@ -130,7 +131,7 @@ test("agenda event data is derived metadata only", () => {
   localEvents.forEach((event) => assertLearningAgendaEventMetadataOnly(event));
 });
 
-test("agenda grouping helpers support heatmap, week, and daily detail", () => {
+test("agenda grouping helpers support monthly, weekly, and daily records", () => {
   const events = buildLearningAgendaEvents({
     mode: "first",
     items: [

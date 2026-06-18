@@ -105,20 +105,22 @@ export function ReviewQueueClient({ items, mode, captureReferenceLineByItemId = 
               <p className="text-xs text-[color:var(--muted)]">
                 다음 행동: {item.examName === "감정평가사 2차" ? "문단 하나 다시쓰기" : "놓친 조건 1개 회상 후 짧은 재시도"}
               </p>
-              <p className="text-xs text-[color:var(--muted)]">복습 완료를 누르면 이 항목은 active 복습에서 빠집니다.</p>
+              <p className="text-xs text-[color:var(--muted)]">복습 완료를 누르면 이 항목은 현재 복습 목록에서 빠집니다.</p>
             </div>
             <div className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-52 sm:items-end">
               <Button type="button" onClick={() => router.push(`/app/items/${item.itemId}?mode=${mode}`)} className="w-full sm:w-auto">
                 {item.createdFromCapture ? "다시 보기" : "항목 열고 바로 실행"}
               </Button>
-              <button
+              <Button
                 type="button"
                 onClick={() => void complete(item.queueId)}
                 disabled={pendingId === item.queueId}
-                className="text-xs text-[color:var(--muted)] underline-offset-2 hover:underline disabled:cursor-not-allowed"
+                variant="outline"
+                className="h-9 w-full px-4 text-xs sm:w-auto"
+                aria-label={`복습 완료: ${item.problemTitle}`}
               >
-                {pendingId === item.queueId ? "완료 처리 중" : "복습 완료"}
-              </button>
+                {pendingId === item.queueId ? "완료 처리 중" : "복습 완료하기"}
+              </Button>
               {inlineErrorByQueueId[item.queueId] ? (
                 <p className="max-w-full text-left text-xs text-[color:var(--danger)] sm:max-w-52 sm:text-right">
                   {inlineErrorByQueueId[item.queueId]}

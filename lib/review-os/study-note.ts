@@ -64,7 +64,7 @@ function truncateLine(value: string, max = 220) {
 export function getNextReviewDate(rawPayload?: Record<string, unknown>) {
   return typeof rawPayload?.nextReviewDate === "string" && rawPayload.nextReviewDate
     ? rawPayload.nextReviewDate
-    : "오늘 review queue 기준";
+    : "오늘 복습 큐 기준";
 }
 
 export function buildNotebookPreview(item: WrongAnswerItemRecord, tag?: WrongAnswerTagRecord | null) {
@@ -112,10 +112,10 @@ export function buildNotebookPreview(item: WrongAnswerItemRecord, tag?: WrongAns
     noteLabel: isSecond ? "교정노트" : "오답노트",
     summaryLine: isSecond
       ? "답안에서 빠진 논점과 다음 rewrite 지시를 한 장으로 정리했습니다."
-      : "오답 원인과 다음 review 기준을 한 장으로 정리했습니다.",
+      : "오답 원인과 다음 복습 기준을 한 장으로 정리했습니다.",
     notebookLine: isSecond
       ? `다음 답안에서는 ${weakPoint}을 먼저 고정합니다.`
-      : `다음 review에서는 ${weakPoint}을 먼저 확인합니다.`,
+      : `다음 복습에서는 ${weakPoint}을 먼저 확인합니다.`,
   };
 }
 
@@ -127,7 +127,7 @@ export function buildDetailStudyNote(detail: WrongAnswerDetail) {
     detail.note?.aiSummary ??
       (isSecond
         ? "답안 비교 결과를 누락 논점, 구조, rewrite 지시로 정리했습니다."
-        : "오답 원인을 핵심 키워드, 공식, 다음 review 행동으로 정리했습니다.")
+        : "오답 원인을 핵심 키워드, 공식, 다음 복습 행동으로 정리했습니다.")
   );
   const noteCard = compact(
     isSecond
@@ -172,7 +172,7 @@ export function buildDetailStudyNote(detail: WrongAnswerDetail) {
     recurrenceText:
       detail.recurrence && detail.recurrence.recurrenceCount > 1
         ? `${detail.recurrence.recurrenceCount}회 반복된 신호입니다.`
-        : "첫 기록입니다. 다음 review에서 반복 여부를 확인합니다.",
+        : "첫 기록입니다. 다음 복습에서 반복 여부를 확인합니다.",
   };
 }
 

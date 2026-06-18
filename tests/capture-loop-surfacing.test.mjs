@@ -4,9 +4,9 @@ import { readFile } from "node:fs/promises";
 
 test("first capture save shows reflected today-plan message with one gap and next action", async () => {
   const source = await readFile(new URL("../app/app/session/page.tsx", import.meta.url), "utf8");
-  assert.ok(source.includes("오늘 기록이 저장되었습니다."));
-  assert.ok(source.includes("오늘 계획에 반영되었습니다."));
-  assert.ok(source.includes("복습 큐에 들어갔습니다."));
+  assert.ok(source.includes("오늘 계획에 반영했습니다."));
+  assert.ok(source.includes("학습 보조 결과입니다."));
+  assert.ok(source.includes("복습 큐 보기"));
   assert.ok(source.includes("가장 큰 간극:"));
   assert.ok(source.includes("다음 행동:"));
   assert.ok(source.includes("savedCaptureItemId"));
@@ -31,12 +31,12 @@ test("today plan surfaces capture-origin task labels and fallback copy", async (
   const source = await readFile(new URL("../app/app/page.tsx", import.meta.url), "utf8");
   assert.ok(source.includes("created_from_capture"));
   assert.ok(source.includes("one_next_action"));
-  assert.ok(source.includes("오늘 기록 기반"));
-  assert.ok(source.includes("source_label ?? \"오늘 기록 기반\""));
+  assert.ok(source.includes("오늘 기록 근거 보기"));
+  assert.ok(source.includes("source_label ?? \"학습 노트에서 생성됨\""));
   assert.ok(source.includes("이유:"));
   assert.ok(source.includes("다음 행동:"));
-  assert.ok(source.includes("아직 Today Plan 신호가 없습니다."));
-  assert.ok(source.includes("Capture에서 기록 1개를 저장하면 가장 큰 빈틈과 다음 행동이 여기로 올라옵니다."));
+  assert.ok(source.includes("오늘 할 일이 아직 없습니다."));
+  assert.ok(source.includes("오늘 한 것을 하나 올리면 다음 행동이 만들어집니다."));
 });
 
 test("item detail surfaces capture_note_engine_v2 fields without exposing raw OCR learning data", async () => {
@@ -52,7 +52,7 @@ test("item detail surfaces capture_note_engine_v2 fields without exposing raw OC
   assert.ok(source.includes("다음 과제 유형"));
   assert.ok(source.includes("AI 정리는 초안입니다. 저장 전 직접 확인해 주세요."));
   assert.ok(source.includes("원문 OCR/텍스트는 사용자 소유 입력"));
-  assert.ok(source.includes("관련 기출 후보"));
+  assert.ok(source.includes("비슷한 기출 기준"));
   assert.ok(source.includes("mapCaptureNoteToPastExamReferenceMatches"));
   assert.ok(source.includes("연결 이유"));
   assert.ok(source.includes("연결된 신호"));
@@ -63,8 +63,8 @@ test("item detail surfaces capture_note_engine_v2 fields without exposing raw OC
   assert.ok(source.includes("weak_structure_point: \"구조 약점\""));
   assert.ok(source.includes("issue_tags: \"논점 태그\""));
   assert.ok(source.includes("skill_tags: \"답안 기술\""));
-  assert.ok(source.includes("skeleton: \"학습용 skeleton\""));
-  assert.ok(source.includes("학습용 skeleton"));
+  assert.ok(source.includes("skeleton: \"학습 구조\""));
+  assert.ok(source.includes("학습 구조"));
   assert.ok(source.includes("자가 점검 질문"));
   assert.equal(source.includes("score="), false);
   assert.equal(source.includes("match.score"), false);
@@ -82,7 +82,7 @@ test("learner surfaces keep instructor routes and official grading language sepa
   assert.equal(itemSource.includes("불합격"), false);
   assert.equal(itemSource.includes("official model answer"), false);
   assert.equal(itemSource.includes("pass/fail"), false);
-  assert.equal(itemSource.includes("학습용 skeleton 단계"), true);
+  assert.equal(itemSource.includes("학습 구조 단계"), true);
   assert.equal(itemSource.includes("자가 점검 질문"), true);
   assert.equal(itemSource.includes("자주 발생하는 간극"), true);
   assert.equal(itemSource.includes("다음 행동"), true);

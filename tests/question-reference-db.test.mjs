@@ -125,7 +125,7 @@ test("Today Plan/detail integration is collapsed and optional", async () => {
   assert.ok(detail.includes("<details"));
   assert.ok(detail.includes("questionReferenceHints.slice(0, 2)"));
 
-  assert.ok(secondRewrite.includes("관련 skeleton / 참고 근거 보기 (선택)"));
+  assert.ok(secondRewrite.includes("관련 학습 구조 / 참고 근거 보기 (선택)"));
   assert.ok(firstOx.includes("빈출 표현 기준 보기 (선택)"));
 });
 

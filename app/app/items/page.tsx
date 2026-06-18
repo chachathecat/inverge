@@ -212,7 +212,7 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
                             학습 노트
                           </span>
                           <span className="rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--bg-subtle)] px-3 py-1 text-xs text-[color:var(--muted)]">
-                            Review 연결: 복습 예정
+                            복습 연결: 복습 예정
                           </span>
                         </div>
                         <h2 className="text-sm font-medium text-[color:var(--foreground-strong)]">
@@ -233,9 +233,9 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
                     </div>
 
                     <div className="mt-3 flex flex-wrap gap-2 text-xs text-[color:var(--muted)]">
-                      <span>Today 연결: 오늘 할 일에 반영할 후보</span>
-                      <span>Review 연결: 다시 풀기/다시 쓰기 복습 예정</span>
-                      <span>Agenda 연결: 학습 기록</span>
+                      <span>오늘 할 일 연결: 오늘 할 일에 반영할 후보</span>
+                      <span>복습 연결: 다시 풀기/다시 쓰기 복습 예정</span>
+                      <span>학습 기록 연결: 학습 기록</span>
                     </div>
                   </section>
                 );
