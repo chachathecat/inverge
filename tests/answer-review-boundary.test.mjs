@@ -87,7 +87,7 @@ test("saved learner capture copy shows one biggest gap and one next action choic
   assert.ok(itemsPage.includes("가장 큰 약점 1개와 다음 행동 1개"));
   assert.ok(itemsPage.includes("오늘 할 일에 반영"));
   assert.ok(itemsPage.includes("다시 풀기/다시 쓰기"));
-  assert.ok(itemsPage.includes("나중에 하기") || itemsPage.includes("나중에 복습"));
+  assert.ok(itemsPage.includes("Review 연결"));
 });
 
 test("capture defer action label does not imply persistence", async () => {

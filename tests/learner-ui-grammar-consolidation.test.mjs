@@ -44,7 +44,7 @@ test("Capture, Today, Review, Notes, and Agenda expose the connected learner loo
     "가장 큰 약점",
     "다음 행동",
     "오늘 한 것 올리기 → 학습 노트 → 오늘 할 일 → 복습 → 학습 기록",
-    "학습 노트 / 복습 / 오늘 할 일",
+    "학습 노트 / 복습 / 오늘 할 일 / 학습 기록",
   ].forEach((term) => assert.ok(combined.includes(term), term));
 });
 
@@ -53,7 +53,7 @@ test("empty states keep one clear next action back to Capture", () => {
   const agenda = read("components/review-os/learning-agenda-client.tsx");
   const localBeta = read("components/review-os/local-beta-note-reflection.tsx");
 
-  assert.ok(reviewQueue.includes("아직 계정 저장 기준으로 복습할 항목이 없습니다."));
+  assert.ok(reviewQueue.includes("지금 복습할 항목이 없습니다."));
   assert.ok(reviewQueue.includes("오늘 한 것 올리기"));
   assert.ok(agenda.includes("아직 쌓인 학습 기록이 없습니다."));
   assert.ok(agenda.includes("오늘 한 것 올리기"));
@@ -74,7 +74,10 @@ test("learner routes remain present without adding product behavior", () => {
 test("learner grammar cleanup does not reintroduce forbidden wording or instructor links", () => {
   const combined = joinedLearnerSurfaces();
 
-  assert.doesNotMatch(combined, /기준\s*답안|기준답안|모범답안|공식답안|공식 채점|점수예측|합격예측|합격 가능성 확정|정답 확정|최종 판단|pass\/fail/i);
+  assert.doesNotMatch(
+    combined,
+    /기준\s*답안|기준답안|모범답안|공식답안|공식 채점|점수예측|합격예측|합격 가능성 확정|정답 확정|최종 판단|pass\/fail/i,
+  );
   assert.doesNotMatch(combined, /\/instructor\/second-grading|grade-second|second-grading/);
   assert.doesNotMatch(combined, /Notes \/ Review \/ Today|Review Queue|Today Plan/);
   assert.doesNotMatch(combined, /\.insert\(|\.update\(|\.upsert\(|\.delete\(/);
