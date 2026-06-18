@@ -172,7 +172,7 @@ export function normalizeExtractionDraft(
     const referenceOutline =
       getString(rawJson.reference_outline) !== UNKNOWN
         ? getString(rawJson.reference_outline)
-        : extractField(text, ["기준 답안", "모범답안", "reference"]);
+        : extractField(text, ["강의/교재 정리", "참고 정리", "내가 확인한 참고 내용", "reference"]);
     const userAnswerSummary =
       getString(rawJson.user_answer_summary) !== UNKNOWN ? getString(rawJson.user_answer_summary) : inferSecondUserAnswerSummary(text);
     const weakStructurePoint =

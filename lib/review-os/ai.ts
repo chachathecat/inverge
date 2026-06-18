@@ -66,7 +66,7 @@ function buildFallback(input: WrongAnswerItemInput): GeneratedWrongAnswerArtifac
         ? `${input.subjectLabel} 답안에서 먼저 보강할 지점은 ${mistakeType}입니다. 전체를 다시 쓰기보다 핵심 논점 하나를 고정해 다시 작성하세요.`
         : `${input.subjectLabel}에서 ${mistakeType}이 확인되었습니다. 같은 유형을 다시 틀리지 않도록 조건과 근거를 짧게 고정하세요.`,
       keyDistinction: second
-        ? `기준 답안과 내 답안의 차이는 점수보다 누락된 논점과 답안 구조에서 먼저 봐야 합니다.`
+        ? `참고 정리와 내 답안의 차이는 점수보다 누락된 논점과 답안 구조에서 먼저 봐야 합니다.`
         : `정답 자체보다 왜 그 선택지가 배제되거나 선택되는지 한 줄 근거를 남기는 것이 우선입니다.`,
       reviewCheckpoint: second
         ? `${topicTag}를 다시 볼 때 목차, 핵심 논점, 사례 적용 문장을 각각 한 번씩 확인하세요.`

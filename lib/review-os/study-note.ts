@@ -215,7 +215,7 @@ export function buildRewriteComparisonNote(
     sourceDetail?.item.correctAnswer?.trim() ||
     getDraftString(sourceDetail?.item.rawPayload, "caseSummary") ||
     getDraftString(detail.item.rawPayload, "caseSummary") ||
-    "기준 답안 요약 기록이 없습니다.";
+    "참고 정리 기록이 없습니다.";
   const rewrittenParagraph = detail.item.userAnswer?.trim() || "다시 쓴 문단이 아직 기록되지 않았습니다.";
 
   const remainingNextGap = detailNote.weakStructurePoint ?? detailNote.weakApplicationSentence ?? detailNote.weakPoint;

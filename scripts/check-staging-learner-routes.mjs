@@ -107,7 +107,7 @@ const captureRoute = existsSync(sourcePath("app/app/capture/page.tsx")) ? read("
 const captureForm = existsSync(sourcePath("components/review-os/capture-form.tsx")) ? read("components/review-os/capture-form.tsx") : "";
 const capture = `${captureRoute}\n${captureForm}`;
 check(capture.includes("오늘 한 것 올리기"), "/app/capture must keep warm capture-first CTA copy");
-check(capture.includes("텍스트로 바로 시작하고, 사진/PDF는 필요할 때만 추가하세요."), "/app/capture must render slim text-first start copy");
+check(capture.includes("사진/PDF/텍스트 중 하나로 시작하고, OCR/AI 초안은 직접 확인합니다."), "/app/capture must render visible photo/PDF/text start copy");
 check(capture.includes("OCR/AI 정리는 초안입니다. 저장 전 직접 확인해 주세요."), "/app/capture must show one OCR/AI draft warning");
 check(capture.includes("학습 노트 / 복습 / 오늘 할 일로 이어질 가장 큰 약점 1개와 다음 행동 1개가 만들어집니다."), "/app/capture must keep one-biggest-gap focus");
 check(capture.includes("canQuickSave"), "/app/capture starting point must not show more than one primary action");

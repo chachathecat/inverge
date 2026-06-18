@@ -204,7 +204,10 @@ test("capture route smoke keeps capture-first copy and one primary start action"
 
   for (const required of [
     "오늘 한 것 올리기",
-    "텍스트로 바로 시작하고, 사진/PDF는 필요할 때만 추가하세요.",
+    "사진/PDF/텍스트 중 하나로 시작하고, OCR/AI 초안은 직접 확인합니다.",
+    "사진 찍기",
+    "PDF 선택",
+    "텍스트 붙여넣기",
     "OCR/AI 정리는 초안입니다. 저장 전 직접 확인해 주세요.",
     "학습 노트 / 복습 / 오늘 할 일로 이어질 가장 큰 약점 1개와 다음 행동 1개가 만들어집니다.",
   ]) {
@@ -338,7 +341,9 @@ test("PR335 durable Today Plan staging evidence and visible action cap guardrail
   assert.match(appPage, /selectActiveTodayPlanTasks\(/, "learner home should preserve visible max-3 active Today Plan cap");
   assert.match(appPage, /data-visible-primary-task-cap=\{TODAY_PLAN_MAX_PRIMARY_TASKS\}/);
   assert.equal(appPage.includes('data-secondary-action-surface="additional-today-plan"'), false);
-  assert.match(appPage, /오늘 입력할 수 있는 것/);
+  assert.match(appPage, /TodaySubjectSelector/);
+  assert.match(appPage, /primaryLabel="오늘 한 것 올리기"/);
+  assert.match(appPage, /captureHref=\{modeCaptureHref\}/);
 
   assertNoPattern(appPage, forbiddenLearnerPatterns, "/app visible action cap surface");
   assertNoPattern(appPage, unsupportedExamPatterns, "/app visible action cap surface");
