@@ -110,11 +110,11 @@ export function LearningAgendaClient({ mode, initialEvents }: LearningAgendaClie
 
       <Card className="border-[color:var(--border-subtle)] bg-[color:var(--surface)] shadow-none">
         <CardHeader className="space-y-1">
-          <CardTitle>월간 heatmap</CardTitle>
-          <CardDescription>기록이 있는 날만 조용히 표시합니다.</CardDescription>
+          <CardTitle>월간 기록</CardTitle>
+          <CardDescription>진한 칸은 학습 기록이 있는 날입니다.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-7 gap-1.5" aria-label="월간 학습 기록 heatmap">
+          <div className="grid grid-cols-7 gap-1.5" aria-label="월간 학습 기록">
             {monthCells.map((cell) => (
               <div
                 key={cell.date}
@@ -134,7 +134,7 @@ export function LearningAgendaClient({ mode, initialEvents }: LearningAgendaClie
 
       <Card className="border-[color:var(--border-subtle)] bg-[color:var(--surface)] shadow-none">
         <CardHeader className="space-y-1">
-          <CardTitle>주간 agenda</CardTitle>
+          <CardTitle>주간 기록</CardTitle>
           <CardDescription>이번 주 기록과 복습 예정만 모읍니다.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -158,7 +158,7 @@ export function LearningAgendaClient({ mode, initialEvents }: LearningAgendaClie
 
       <Card className="border-[color:var(--border-subtle)] bg-[color:var(--surface)] shadow-none">
         <CardHeader className="space-y-1">
-          <CardTitle>일별 detail</CardTitle>
+          <CardTitle>일별 상세</CardTitle>
           <CardDescription>최근 날짜부터 학습 흔적을 확인합니다.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

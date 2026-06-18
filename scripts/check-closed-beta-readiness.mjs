@@ -132,7 +132,7 @@ function runStaticReadinessGate() {
   check(has(localReflection, '"use client";'), "local beta reflection must remain client-only", failures);
   check(has(localReflection, "useEffect"), "local beta reflection must load localStorage from client effects", failures);
   check(has(localReflection, "window.setTimeout"), "local beta reflection must settle after hydration", failures);
-  check(has(localReflection, "closed beta 브라우저 임시 기록"), "local beta reflection cards must disclose browser-local temporary records", failures);
+  check(has(localReflection, "닫힌 베타 브라우저 임시 기록"), "local beta reflection cards must disclose browser-local temporary records", failures);
   check(has(notesPage, "renderReviewOsItemsPage"), "Notes must render the shared notes page", failures);
   check(has(itemsPage, "LocalBetaNotesSection"), "Notes must include local beta reflection surface through the shared items route", failures);
   check(has(reviewPage, "LocalBetaReviewCandidateSection"), "Review must include local beta reflection surface", failures);

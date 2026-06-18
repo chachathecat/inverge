@@ -99,7 +99,7 @@ function LocalBetaCaptureNoteList({
       </CardHeader>
       <CardContent className="space-y-3">
         <p className="text-xs text-[color:var(--muted)]">
-          closed beta 학습 노트입니다. closed beta 브라우저 임시 기록으로 같은 브라우저에서 Notes, Review, Today, Agenda 연결 상태를 확인할 수 있습니다.
+          닫힌 베타 브라우저 임시 기록입니다. 같은 브라우저에서 학습 노트, 복습, 오늘 할 일, 학습 기록 연결 상태를 확인할 수 있습니다.
         </p>
         {notes.map((note) => {
           const createdAt = formatNoteDate(note.createdAt);
@@ -115,9 +115,9 @@ function LocalBetaCaptureNoteList({
               <p className="mt-1 text-sm text-[color:var(--muted)]">가장 큰 약점: {note.biggestGap}</p>
               <p className="mt-1 text-sm text-[color:var(--muted)]">다음 행동: {note.nextAction}</p>
               <p className="mt-1 text-xs text-[color:var(--muted)]">이어지는 곳: 학습 노트 / 복습 / 오늘 할 일 / 학습 기록</p>
-              <p className="mt-1 text-xs text-[color:var(--muted)]">Today 연결: 오늘 할 일 후보</p>
-              <p className="mt-1 text-xs text-[color:var(--muted)]">Review 연결: 복습 예정 후보</p>
-              <p className="mt-1 text-xs text-[color:var(--muted)]">Agenda 연결: 학습 기록 후보</p>
+              <p className="mt-1 text-xs text-[color:var(--muted)]">오늘 할 일 연결: 오늘 할 일 후보</p>
+              <p className="mt-1 text-xs text-[color:var(--muted)]">복습 연결: 복습 예정 후보</p>
+              <p className="mt-1 text-xs text-[color:var(--muted)]">학습 기록 연결: 학습 기록 후보</p>
               {createdAt ? <p className="mt-1 text-xs text-[color:var(--muted)]">저장 시각: {createdAt}</p> : null}
               {showAction ? (
                 <Link
@@ -145,7 +145,7 @@ export function LocalBetaNotesSection({ mode }: { mode: AppraisalMode }) {
       title={modeNoteTitle(mode)}
       subtitle="저장한 오늘 한 것의 가장 큰 약점과 다음 행동을 확인합니다."
       showAction
-      emptyMessage="아직 이 브라우저에 저장된 closed beta 학습 노트가 없습니다. 오늘 한 것을 저장하면 학습 노트에서 찾고 복습, 오늘 할 일, 학습 기록 후보로 이어집니다."
+      emptyMessage="아직 이 브라우저에 저장된 닫힌 베타 학습 노트가 없습니다. 오늘 한 것을 저장하면 학습 노트에서 찾고 복습, 오늘 할 일, 학습 기록 후보로 이어집니다."
     />
   );
 }

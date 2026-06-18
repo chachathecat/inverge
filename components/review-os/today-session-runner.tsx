@@ -199,7 +199,7 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
                   </div>
                 </div>
                 <details className="rounded-[var(--radius-md)] border border-[color:var(--border-hairline)] bg-[color:var(--bg-surface)]">
-                  <summary className="cursor-pointer px-3 py-2 text-xs text-[color:var(--muted)]">관련 skeleton / 참고 근거 보기 (선택)<span className="sr-only">참고 근거 힌트 보기 (선택)</span></summary>
+                  <summary className="cursor-pointer px-3 py-2 text-xs text-[color:var(--muted)]">관련 학습 구조 / 참고 근거 보기 (선택)<span className="sr-only">참고 근거 힌트 보기 (선택)</span></summary>
                   <div className="border-t border-[color:var(--border-hairline)] px-3 py-3 text-xs leading-5 text-[color:var(--muted)]">
                     {note?.referenceSnippets?.length ? note.referenceSnippets.slice(0, 2).map((snippet) => (
                       <p key={snippet.referenceId} className="mb-2"><span className="font-medium text-[color:var(--foreground-strong)]">{snippet.title}</span> · {snippet.snippet}</p>
@@ -423,7 +423,7 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
                 <p className="mt-3 font-medium">다음 문장 행동 1개</p>
                 <p className="mt-1">{secondRewriteComparison.nextSentenceAction}</p>
                 <p className="mt-3 font-medium">다음 보강 예약</p>
-                <p className="mt-1">{note?.nextReviewDate ?? "review queue 기본 일정"}</p>
+                <p className="mt-1">{note?.nextReviewDate ?? "복습 큐 기본 일정"}</p>
                 <p className="mt-2 text-xs text-[color:var(--muted)]">{secondRewriteComparison.caution}</p>
               </div>
             ) : null}
@@ -444,7 +444,7 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
           <section className="space-y-4">
             <p className="text-sm font-medium text-[color:var(--foreground-strong)]">다음 복습은 기본값으로 자동 예약합니다.</p>
             <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] px-4 py-3 text-sm text-[color:var(--foreground-strong)]">
-              예정 시점: {note?.nextReviewDate ?? "review queue 기본 일정"}
+              예정 시점: {note?.nextReviewDate ?? "복습 큐 기본 일정"}
               <p className="mt-2 text-xs text-[color:var(--muted)]">이유: {adaptiveScheduleNote?.explanation ?? "복습 신호를 기준으로 자동 조정됩니다."}</p>
             </div>
             <Button

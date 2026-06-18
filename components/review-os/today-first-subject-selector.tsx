@@ -82,7 +82,7 @@ export function TodayFirstSubjectSelector({
             세트 풀이 바로 이동
           </Link>
           <Link href={secondaryHref} className="underline-offset-2 hover:underline">
-            review queue 보기
+            복습 큐 보기
           </Link>
         </div>
       </details>
