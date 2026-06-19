@@ -140,7 +140,7 @@ test("OCR/PDF capture route keeps draft and editable-before-save framing", () =>
   assert.equal(combined.includes("OCR/AI 정리는 초안입니다. 저장 전 직접 확인해 주세요."), true);
   assert.equal(combined.includes("촬영하거나 업로드한 뒤 OCR 초안을 직접 확인합니다."), true);
   assert.equal(captureForm.includes("OCR 결과 확인 (편집 가능 · 자동 저장)"), true);
-  assert.equal(captureForm.includes("현재 PDF는 파일명만 기록됩니다. 내용은 직접 붙여넣어 주세요."), true);
+  assert.equal(captureForm.includes("현재 PDF는 내용 확인 후 직접 붙여넣을 수 있습니다."), true);
   assert.equal(captureForm.includes("value={form.rawQuestionText}"), true);
   assert.equal(captureForm.includes('update("rawQuestionText", value)'), true);
   assert.equal(captureForm.includes("inferSourceTypeFromAction(\"pdf\")"), true);

@@ -791,7 +791,7 @@ export function WrongAnswerCaptureForm({
       }),
     );
     setExtractionState("manual");
-    setExtractError("현재 PDF는 파일명만 기록됩니다. 내용은 직접 붙여넣어 주세요.");
+    setExtractError("현재 PDF는 내용 확인 후 직접 붙여넣을 수 있습니다.");
     setTimeout(() => {
       textAreaRef.current?.focus();
       textAreaRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -1226,6 +1226,7 @@ export function WrongAnswerCaptureForm({
     return (
       <SavedCaptureConfirmationPanel
         mode={mode}
+        subject={form.subjectLabel}
         confirmation={savedConfirmation}
         saving={submitting}
         onBack={() => setSavedConfirmation(null)}
@@ -1249,7 +1250,7 @@ export function WrongAnswerCaptureForm({
   const footerSecondary =
     stage === "intake" ? null : (
       <details className="max-w-full rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-3 py-2">
-        <summary className="cursor-pointer whitespace-nowrap text-xs font-medium text-[color:var(--muted)]">다른 선택</summary>
+        <summary className="cursor-pointer whitespace-nowrap text-xs font-medium text-[color:var(--muted)]">다른 작업</summary>
         <div className="mt-2 flex flex-col gap-2 sm:flex-row">
           <Button type="button" variant="outline" onClick={resetDraft} className="w-full sm:w-auto">
             {mode === "second" ? "다시 쓰기" : "다시 풀기"}
@@ -1289,7 +1290,6 @@ export function WrongAnswerCaptureForm({
                     subjects={config.subjects}
                     value={form.subjectLabel}
                     onChange={updateSubject}
-                    className="form-control w-full"
                   />
                 </div>
               </details>
@@ -1530,6 +1530,7 @@ type FieldProps = {
 
 function SavedCaptureConfirmationPanel({
   mode,
+  subject,
   confirmation,
   saving,
   onBack,
@@ -1537,12 +1538,14 @@ function SavedCaptureConfirmationPanel({
   onReset,
 }: {
   mode: AppraisalMode;
+  subject: string;
   confirmation: SavedCaptureConfirmation;
   saving: boolean;
   onBack: () => void;
   onRetry: () => void;
   onReset: () => void;
 }) {
+  const encodedSubject = encodeURIComponent(normalizeSubjectForMode(subject, mode));
   const persistenceStatus = confirmation.status ?? (confirmation.persistence === "durable" ? "durable_saved" : "local_fallback_saved");
   const persistenceCopy = getCaptureSavePersistenceCopy(persistenceStatus);
   const saveFailed = persistenceStatus === "save_failed";
@@ -1578,20 +1581,20 @@ function SavedCaptureConfirmationPanel({
           <>
             <div className="mt-5 grid gap-2 sm:grid-cols-3">
               <Link
-                href={`/app/review?mode=${mode}`}
+                href={`/app/review?mode=${mode}&subject=${encodedSubject}`}
                 aria-label="복습으로 이어가기"
                 className="inline-flex min-h-11 items-center justify-center rounded-full bg-[color:var(--foreground-strong)] px-4 py-2 text-sm font-medium text-white"
               >
                 복습으로 이어가기
               </Link>
               <Link
-                href={`/app/notes?mode=${mode}`}
+                href={`/app/notes?mode=${mode}&subject=${encodedSubject}`}
                 className="inline-flex min-h-11 items-center justify-center rounded-full border border-[color:var(--border-subtle)] px-4 py-2 text-sm font-medium text-[color:var(--foreground-strong)]"
               >
                 학습 노트에서 보기
               </Link>
               <Link
-                href={`/app?mode=${mode}`}
+                href={`/app?mode=${mode}&subject=${encodedSubject}`}
                 aria-label="오늘 할 일로 돌아가기"
                 className="inline-flex min-h-11 items-center justify-center rounded-full border border-[color:var(--border-subtle)] px-4 py-2 text-sm font-medium text-[color:var(--foreground-strong)]"
               >
@@ -1624,19 +1627,19 @@ function SavedCaptureConfirmationPanel({
       <p className="mt-3 text-xs leading-5 text-[color:var(--muted)]">다음 행동 후보입니다. 학습 정리 초안입니다. 저장 전 직접 확인해 주세요.</p>
       <div className="mt-5 grid gap-2 sm:grid-cols-3">
         <Link
-          href={`/app/review?mode=${mode}`}
+          href={`/app/review?mode=${mode}&subject=${encodedSubject}`}
           className="inline-flex min-h-11 items-center justify-center rounded-full bg-[color:var(--foreground-strong)] px-4 py-2 text-sm font-medium text-white"
         >
           복습으로 이어가기
         </Link>
         <Link
-          href={`/app/notes?mode=${mode}`}
+          href={`/app/notes?mode=${mode}&subject=${encodedSubject}`}
           className="inline-flex min-h-11 items-center justify-center rounded-full border border-[color:var(--border-subtle)] px-4 py-2 text-sm font-medium text-[color:var(--foreground-strong)]"
         >
           학습 노트에서 보기
         </Link>
         <Link
-          href={`/app?mode=${mode}`}
+          href={`/app?mode=${mode}&subject=${encodedSubject}`}
           className="inline-flex min-h-11 items-center justify-center rounded-full border border-[color:var(--border-subtle)] px-4 py-2 text-sm font-medium text-[color:var(--foreground-strong)]"
         >
           오늘 할 일로 돌아가기
@@ -1654,25 +1657,33 @@ function SubjectSelect({
   subjects,
   value,
   onChange,
-  className = "form-control",
 }: {
   subjectLabel: string;
   subjects: readonly string[];
   value: string;
   onChange: (value: string) => void;
-  className?: string;
 }) {
   return (
-    <label className="space-y-2">
+    <div className="space-y-2">
       <span className="text-sm text-[color:var(--foreground-strong)]">{subjectLabel}</span>
-      <select value={value} onChange={(event) => onChange(event.target.value)} className={className}>
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3" role="group" aria-label={subjectLabel}>
         {subjects.map((option) => (
-          <option key={option} value={option}>
+          <button
+            key={option}
+            type="button"
+            onClick={() => onChange(option)}
+            className={`min-h-10 rounded-[var(--radius-md)] border px-3 py-2 text-left text-xs font-medium transition ${
+              option === value
+                ? "border-[color:var(--foreground-strong)] bg-[color:var(--foreground-strong)] text-white"
+                : "border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] text-[color:var(--foreground-strong)] hover:bg-[color:var(--surface-soft)]"
+            }`}
+            aria-pressed={option === value}
+          >
             {option}
-          </option>
+          </button>
         ))}
-      </select>
-    </label>
+      </div>
+    </div>
   );
 }
 
@@ -1734,40 +1745,56 @@ function IntakePanel({
 
   return (
     <section className="rounded-[var(--radius-card)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)] p-4 sm:p-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div className="space-y-3" data-capture-subject-selector={mode}>
+        <SubjectSelect
+          subjectLabel={config.subjectLabel}
+          subjects={config.subjects}
+          value={form.subjectLabel}
+          onChange={updateSubject}
+        />
+        <p className="text-xs leading-5 text-[color:var(--muted)]">
+          {mode === "first"
+            ? "오늘 본 과목을 선택하고 오답 1개를 기록하세요. 과목을 고르면 오늘 할 일과 복습 큐에 반영됩니다."
+            : "오늘 본 과목을 선택하고 답안/강의 정리/필기 중 하나를 올리세요. 과목을 고르면 보강할 논점과 다음 복습에 반영됩니다."}
+        </p>
+      </div>
+
+      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="max-w-[60ch]">
           <p className="text-caption text-[color:var(--brand-700)]">빠른 입력</p>
-          <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">텍스트로 시작</h3>
-          <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">오늘 공부한 내용이나 내 답안을 바로 붙여넣으세요.</p>
+          <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">사진/PDF/텍스트로 시작</h3>
+          <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">사진/PDF로 시작하기도 가능하고, 텍스트 입력은 가장 빠른 길입니다.</p>
         </div>
+      </div>
+      <div className="mt-3 grid gap-2 sm:grid-cols-3" data-capture-input-options>
+        <Button type="button" variant="outline" className="w-full justify-center" onClick={() => { update("sourceType", inferSourceTypeFromAction("camera")); cameraInputRef.current?.click(); }}>
+          사진 찍기
+        </Button>
+        <Button type="button" variant="outline" className="w-full justify-center" onClick={() => { update("sourceType", inferSourceTypeFromAction("pdf")); pdfInputRef.current?.click(); }}>
+          PDF 선택
+        </Button>
         <Button
           type="button"
           variant="outline"
-          className="w-full sm:w-auto"
+          className="w-full justify-center"
           onClick={() => {
             update("sourceType", inferSourceTypeFromAction("text"));
             textAreaRef.current?.focus();
             textAreaRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
           }}
         >
-          텍스트 입력으로 이동
+          텍스트 붙여넣기
         </Button>
       </div>
+      <p className="mt-2 text-xs leading-5 text-[color:var(--muted)]">OCR/AI 정리는 초안입니다. 저장 전 직접 확인해 주세요.</p>
+      <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">현재 PDF는 내용 확인 후 직접 붙여넣을 수 있습니다.</p>
       <details className="mt-3 rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] bg-[color:var(--surface)]">
-        <summary className="cursor-pointer list-none px-3 py-2 text-xs font-medium text-[color:var(--ink-muted)]">사진/PDF로 시작하기</summary>
+        <summary className="cursor-pointer list-none px-3 py-2 text-xs font-medium text-[color:var(--ink-muted)]">촬영 품질과 앨범 업로드</summary>
         <div className="border-t border-[color:var(--border-hairline)] px-3 py-3">
           <p className="text-xs leading-5 text-[color:var(--muted)]">촬영하거나 업로드한 뒤 OCR 초안을 직접 확인합니다.</p>
-          <div className="mt-3 grid gap-2 sm:flex sm:flex-wrap">
-            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => { update("sourceType", inferSourceTypeFromAction("camera")); cameraInputRef.current?.click(); }}>
-              사진 찍기
-            </Button>
-            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => { update("sourceType", inferSourceTypeFromAction("gallery")); galleryInputRef.current?.click(); }}>
-              앨범에서 선택
-            </Button>
-            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => { update("sourceType", inferSourceTypeFromAction("pdf")); pdfInputRef.current?.click(); }}>
-              PDF 선택
-            </Button>
-          </div>
+          <Button type="button" variant="outline" className="mt-3 w-full sm:w-auto" onClick={() => { update("sourceType", inferSourceTypeFromAction("gallery")); galleryInputRef.current?.click(); }}>
+            앨범에서 선택
+          </Button>
           <ul className="mt-3 list-disc space-y-1 pl-5 text-xs text-[color:var(--muted)]">
             <li>한 페이지씩 정면으로 찍기</li>
             <li>흔들리면 다시 찍기</li>
@@ -1818,23 +1845,6 @@ function IntakePanel({
           }[extractionState]}
         </p>
       </div>
-      <details className="mt-4 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
-        <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">
-          {mode === "second" ? "2차" : "1차"} · {form.subjectLabel || "과목 선택"}
-        </summary>
-        <div className="space-y-3 border-t border-[color:var(--border-subtle)] px-4 py-3">
-        <SubjectSelect
-          subjectLabel={config.subjectLabel}
-          subjects={config.subjects}
-          value={form.subjectLabel}
-          onChange={updateSubject}
-          className="form-control w-full"
-        />
-        <Button type="button" variant="ghost" className="w-full sm:w-auto" onClick={() => update("subjectLabel", "")}>
-          나중에 확인
-        </Button>
-        </div>
-      </details>
       <label className="mt-4 block space-y-2">
         <span className="text-sm text-[color:var(--foreground-strong)]">
           오늘 공부한 내용 또는 내 답안
@@ -1859,7 +1869,6 @@ function IntakePanel({
           className="min-h-56 border-[color:var(--border-hairline)] bg-[color:var(--bg-surface)] text-[color:var(--foreground-strong)] leading-7 transition-colors focus-visible:border-[color:var(--accent-deep)] focus-visible:ring-2 focus-visible:ring-[color:var(--accent-deep)]/20"
         />
       </label>
-      <p className="text-xs text-[color:var(--muted)]">OCR/AI 정리는 초안입니다. 저장 전 직접 확인해 주세요.</p>
       <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">학습 노트 원문은 비공개로 보관되며, 파생 학습 신호는 개인 추천 개선에만 사용됩니다.</p>
       <div className="sticky bottom-3 z-30 mt-3 rounded-[var(--radius-lg)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)]/95 p-3 shadow-lg backdrop-blur sm:bottom-5 sm:p-4" data-testid="capture-save-action-bar">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1877,7 +1886,7 @@ function IntakePanel({
           </Button>
         </div>
       </div>
-      {form.sourceType === "pdf" ? <p className="text-xs text-[color:var(--muted)]">현재 PDF는 파일명만 기록됩니다. 내용은 직접 붙여넣어 주세요.</p> : null}
+      {form.sourceType === "pdf" ? <p className="text-xs text-[color:var(--muted)]">선택한 PDF의 내용은 아래 텍스트 입력에서 직접 확인해 주세요.</p> : null}
       {uploadedPages.length > 0 ? (
         <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -1950,7 +1959,7 @@ function IntakePanel({
           {form.sourceLabel ? <p className="text-sm text-[color:var(--muted)]">보관한 파일: {form.sourceLabel}</p> : null}
           {uploadedPages.length > 0 ? <p className="mt-2 text-sm text-[color:var(--muted)]">페이지 순서: {uploadedPages.map((page) => page.label).join(" / ")}</p> : null}
           {form.sourceType === "pdf" ? (
-            <p className="mt-2 text-sm text-[color:var(--muted)]">현재 PDF는 파일명만 기록됩니다. 내용은 직접 붙여넣어 주세요.</p>
+                <p className="mt-2 text-sm text-[color:var(--muted)]">현재 PDF는 내용 확인 후 직접 붙여넣을 수 있습니다.</p>
           ) : null}
         </div>
       </details>

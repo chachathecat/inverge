@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { ReviewOsFeedbackButton } from "@/components/review-os/feedback-button";
 import { ClosedBetaBanner } from "@/components/shared/closed-beta-banner";
 import { LocalBetaTodayReflection } from "@/components/review-os/local-beta-note-reflection";
-import { TodayFirstSubjectSelector } from "@/components/review-os/today-first-subject-selector";
+import { TodaySubjectSelector } from "@/components/review-os/today-first-subject-selector";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DailyCommandCard, EvidenceLine, OneActionFooter, QuietDetails } from "@/components/review-os/minimal-study-system";
@@ -40,27 +40,6 @@ function buildFallbackTodayFocus(mode: "first" | "second"): TodayFocus {
   };
 }
 
-const FIRST_MODE_INPUT_OPTIONS = [
-  {
-    title: "1차 오답 기록",
-    description: "틀린 문제, 내가 고른 답, 틀린 이유를 남기면 다시 볼 목록이 만들어집니다.",
-    hrefLabel: "오답 기록 시작",
-    hrefKey: "capture",
-  },
-  {
-    title: "세트 풀이 시작",
-    description: "과목과 문항 수를 정하고 정답/내 답을 입력하면 다음 재시도 순서가 정리됩니다.",
-    hrefLabel: "세트 풀이 열기",
-    hrefKey: "set",
-  },
-  {
-    title: "오늘 공부 기록",
-    description: "본 범위와 어려웠던 점을 남기면 다음 복습 신호가 정리됩니다.",
-    hrefLabel: "공부 기록 남기기",
-    hrefKey: "study-log",
-  },
-] as const;
-
 const TASK_TYPE_LABELS: Record<TodayPlanTaskType, string> = {
   first_ox_retry: "5분 재풀이",
   concept_review: "개념 1개 회상",
@@ -74,27 +53,6 @@ const TASK_TYPE_LABELS: Record<TodayPlanTaskType, string> = {
 function resolveTaskTypeLabel(taskType: TodayPlanTaskType) {
   return TASK_TYPE_LABELS[taskType];
 }
-
-const SECOND_MODE_INPUT_OPTIONS = [
-  {
-    title: "2차 답안 작성",
-    description: "내 답안을 먼저 작성하면 비교할 기준이 선명해집니다.",
-    hrefLabel: "답안 작성 시작",
-    hrefKey: "capture",
-  },
-  {
-    title: "강의/교재 정리와 비교",
-    description: "답안 작성 후 비교로 이어집니다. 보강할 약점을 정리합니다.",
-    hrefLabel: "비교 기록 보기",
-    hrefKey: "items",
-  },
-  {
-    title: "문단 다시쓰기",
-    description: "비교 이후 진행됩니다. 약점 하나를 골라 문단을 다시 씁니다.",
-    hrefLabel: "다시쓰기 큐 열기",
-    hrefKey: "review",
-  },
-] as const;
 
 type PageProps = {
   searchParams?: Promise<{ mode?: string; subject?: string; saved?: string; migrated?: string }>;
@@ -210,40 +168,46 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
   );
   const nextAction = focus.nextAction ?? selectedQueueItem?.reviewReason ?? config.nextActionFallback;
   const isFirstSetStart = mode === "first" && focus.nextActionType === "capture_now";
-  const selectedFirstSubject = normalizeSubjectForMode(subjectParam, "first");
+  const selectedSubject = normalizeSubjectForMode(subjectParam, mode);
+  const selectedFirstSubject = mode === "first" ? selectedSubject : normalizeSubjectForMode(null, "first");
+  const selectedSubjectQuery = encodeURIComponent(selectedSubject);
   const firstSetHref = `/app/sets?mode=first&subject=${encodeURIComponent(selectedFirstSubject)}`;
   const firstCaptureHref = `/app/capture?mode=first&subject=${encodeURIComponent(selectedFirstSubject)}`;
-  const defaultPrimaryHref = isFirstSetStart ? firstSetHref : `/app/session?mode=${mode}`;
-  const secondaryHref = mode === "second" ? `/app/notes?mode=${mode}` : `/app/review?mode=${mode}`;
-  const modeCaptureHref = mode === "second" ? "/app/capture?mode=second" : firstCaptureHref;
+  const firstReviewHref = `/app/review?mode=first&subject=${encodeURIComponent(selectedFirstSubject)}`;
+  const firstNotesHref = `/app/notes?mode=first&subject=${encodeURIComponent(selectedFirstSubject)}`;
+  const firstStudyLogHref = `/app/study-log?mode=first&subject=${encodeURIComponent(selectedFirstSubject)}`;
+  const secondCaptureHref = `/app/capture?mode=second&subject=${selectedSubjectQuery}`;
+  const secondReviewHref = `/app/review?mode=second&subject=${selectedSubjectQuery}`;
+  const secondNotesHref = `/app/notes?mode=second&subject=${selectedSubjectQuery}`;
+  const defaultPrimaryHref = isFirstSetStart ? firstSetHref : `/app/session?mode=${mode}&subject=${selectedSubjectQuery}`;
+  const modeCaptureHref = mode === "second" ? secondCaptureHref : firstCaptureHref;
 
   const resolveTodayPlanHref = (actionKind: TodayPlanActionKind) => {
     if (actionKind === "first_capture") return firstCaptureHref;
     if (actionKind === "first_set") return firstSetHref;
-    if (actionKind === "second_write") return "/app/write?mode=second";
-    if (actionKind === "second_review") return "/app/review?mode=second";
-    if (actionKind === "second_items") return "/app/notes?mode=second";
-    return `/app/session?mode=first`;
+    if (actionKind === "second_write") return `/app/write?mode=second&subject=${selectedSubjectQuery}`;
+    if (actionKind === "second_review") return secondReviewHref;
+    if (actionKind === "second_items") return secondNotesHref;
+    return `/app/session?mode=first&subject=${encodeURIComponent(selectedFirstSubject)}`;
   };
   const resolveTaskHref = (hrefKind: (typeof todayPlanTasks)[number]["primary_cta"]["hrefKind"]) => {
-    if (hrefKind === "capture") return mode === "second" ? "/app/capture?mode=second" : firstCaptureHref;
-    if (hrefKind === "write") return "/app/write?mode=second";
-    if (hrefKind === "items") return `/app/notes?mode=${mode}`;
-    if (hrefKind === "review") return `/app/review?mode=${mode}`;
+    if (hrefKind === "capture") return mode === "second" ? secondCaptureHref : firstCaptureHref;
+    if (hrefKind === "write") return `/app/write?mode=second&subject=${selectedSubjectQuery}`;
+    if (hrefKind === "items") return mode === "second" ? secondNotesHref : firstNotesHref;
+    if (hrefKind === "review") return mode === "second" ? secondReviewHref : firstReviewHref;
     if (hrefKind === "first_ox") return "/app/first/ox";
     if (hrefKind === "calculator_template") {
       return mode === "second"
         ? "/app/calculator?mode=second&context=practice&focus=casio"
         : "/app/calculator?mode=first&context=accounting&focus=accounting_template";
     }
-    return `/app/session?mode=${mode}`;
+    return `/app/session?mode=${mode}&subject=${selectedSubjectQuery}`;
   };
 
   const primaryHref = todayPlan.hasPlan ? resolveTodayPlanHref(todayPlan.actionKind) : defaultPrimaryHref;
   const primaryCtaLabel = todayPlan.ctaLabel;
   const diagnosedWeakPoint = selectedQueueItem?.mistakeType ?? (items[0] ? buildNotebookPreview(items[0]).weakPoint : config.emptyTitle);
   const notebookPreview = items.slice(0, 3).map((item) => buildNotebookPreview(item));
-  const shouldShowFirstSubjectSelector = mode === "first" && isFirstSetStart;
   const repeatedSignalLine =
     weaknessProfile.topSubjects[0] && weaknessProfile.topMistakeTypes[0]
       ? `${weaknessProfile.topSubjects[0].subject}에서 ${weaknessProfile.topMistakeTypes[0].mistakeType}이 반복됩니다.`
@@ -264,28 +228,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
     mode === "second"
       ? { label: "답안 검토로 보기", href: `/answer-review?mode=${mode}` }
       : { label: "다시 풀기", href: `/problem-snap?mode=${mode}` };
-  const inputOptions =
-    mode === "first"
-      ? FIRST_MODE_INPUT_OPTIONS.map((option) => ({
-          ...option,
-          href:
-            option.hrefKey === "set"
-              ? firstSetHref
-              : option.hrefKey === "capture"
-                ? firstCaptureHref
-                : `/app/study-log?mode=first&subject=${encodeURIComponent(selectedFirstSubject)}`,
-        }))
-      : SECOND_MODE_INPUT_OPTIONS.map((option) => ({
-          ...option,
-          href:
-            option.hrefKey === "capture"
-              ? "/app/capture?mode=second"
-              : option.hrefKey === "items"
-                ? "/app/notes?mode=second"
-                : "/app/review?mode=second",
-        }));
   const visibleTodayPlanTasks = todayPlanTasks;
-  const visibleInputOptions = inputOptions.slice(0, 3);
 
   return (
     <div className="space-y-7 md:space-y-8">
@@ -352,29 +295,17 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 p-4 pt-0 sm:space-y-4 sm:p-6 sm:pt-0">
-              <Link href={mode === "second" ? "/app/capture?mode=second" : inputOptions[0].href} className="w-full sm:w-auto">
-                <Button type="button" className="w-full sm:w-auto">
-                  오늘 한 것 올리기
-                </Button>
-              </Link>
-              <details className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]" data-secondary-action-surface="input-options">
-                <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">오늘 입력할 수 있는 것 · 입력 방식 보기</summary>
-                <div className="grid gap-2.5 border-t border-[color:var(--border-subtle)] px-4 py-3">
-                {(mode === "second" ? visibleInputOptions : visibleInputOptions.slice(1))
-                  .filter((option) => option.href !== (mode === "second" ? "/app/capture?mode=second" : inputOptions[0].href))
-                  .map((option) => (
-                  <Link
-                    key={option.title}
-                    href={option.href}
-                    className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-4 py-3 text-xs transition hover:bg-[color:var(--bg-subtle)]"
-                    data-input-option-card
-                  >
-                    <p className="font-medium text-[color:var(--foreground-strong)]">입력 방식 · {option.title}</p>
-                    <p className="mt-1 leading-6 text-[color:var(--muted)]">{option.description}</p>
-                  </Link>
-                ))}
-                </div>
-              </details>
+              <TodaySubjectSelector
+                mode={mode}
+                selectedSubject={selectedSubject}
+                primaryHref={modeCaptureHref}
+                primaryLabel="오늘 한 것 올리기"
+                captureHref={modeCaptureHref}
+                reviewHref={mode === "second" ? secondReviewHref : firstReviewHref}
+                notesHref={mode === "second" ? secondNotesHref : firstNotesHref}
+                setHref={mode === "first" ? firstSetHref : undefined}
+                studyLogHref={mode === "first" ? firstStudyLogHref : undefined}
+              />
               <details className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
                 <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">왜 입력부터 시작하나요?</summary>
                 <div className="border-t border-[color:var(--border-subtle)] px-4 py-3 text-xs leading-6 text-[color:var(--muted)]">
@@ -401,7 +332,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                 <p className="text-xs text-[color:var(--muted)]">일일 흐름</p>
                 <p className="text-[color:var(--foreground-strong)]">{dailyConsistencyCopy}</p>
                 <p className="text-xs text-[color:var(--muted)]">과목</p>
-                <p className="text-[color:var(--foreground-strong)]">{selectedQueueItem?.subjectLabel ?? config.subjects[0]}</p>
+                <p className="text-[color:var(--foreground-strong)]">{selectedQueueItem?.subjectLabel ?? selectedSubject}</p>
                 <p className="mt-2 text-xs text-[color:var(--muted)]">가장 큰 약점</p>
                 <p className="text-[color:var(--foreground-strong)]">{diagnosedWeakPoint}</p>
                 <p className="mt-2 text-xs text-[color:var(--muted)]">다음 행동</p>
@@ -452,11 +383,11 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                                     <li key={hint.referenceId}>
                                       <span className="font-medium text-[color:var(--foreground-strong)]">{hint.title}</span>
                                       <span> · {hint.reason}</span>
-                                      {hint.skeletonId ? <span> · skeleton: {hint.skeletonId}</span> : null}
+                                      {hint.skeletonId ? <span> · 학습 구조: {hint.skeletonId}</span> : null}
                                     </li>
                                   ))}
                                 </ul>
-                                <p className="mt-2">원문/공식 답안이 아니라 메타데이터 기준이며, 원문은 이 힌트에 저장하지 않습니다.</p>
+                                <p className="mt-2">원문 자료가 아니라 메타데이터 기준이며, 원문은 이 힌트에 저장하지 않습니다.</p>
                               </div>
                             ) : null}
                           </div>
@@ -481,43 +412,18 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                 ) : null;
               })()}
 
-              {shouldShowFirstSubjectSelector ? (
-                <TodayFirstSubjectSelector
-                  selectedSubject={selectedFirstSubject}
-                  primaryHref={primaryHref}
-                  isFirstSetStart={isFirstSetStart}
-                  secondaryHref={secondaryHref}
-                  captureHref={firstCaptureHref}
-                  setHref={firstSetHref}
-                />
-              ) : (
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                  <Link href={primaryHref} className="w-full sm:w-auto">
-                    <Button type="button" className="w-full sm:w-auto">
-                      {homeState === "start_today_task" ? primaryCtaLabel : homePrimaryCta}
-                    </Button>
-                  </Link>
-                  <details className="w-full rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] sm:w-auto">
-                    <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">다른 작업 보기</summary>
-                    <div className="flex flex-col gap-2 border-t border-[color:var(--border-subtle)] px-4 py-3 text-xs text-[color:var(--muted)]">
-                      {mode === "first" ? (
-                        <Link
-                          href={`/app/study-log?mode=first&subject=${encodeURIComponent(normalizeSubjectForMode(selectedQueueItem?.subjectLabel, "first"))}`}
-                          className="underline-offset-2 hover:underline"
-                        >
-                          공부 기록 입력
-                        </Link>
-                      ) : null}
-                      <Link href={secondaryHref} className="underline-offset-2 hover:underline">
-                        {homeState === "post_completion" ? "주간 정리 보기" : config.secondaryCta}
-                      </Link>
-                      <Link href={`/app/weekly?mode=${mode}`} className="underline-offset-2 hover:underline">
-                        주간 정리
-                      </Link>
-                    </div>
-                  </details>
-                </div>
-              )}
+              <TodaySubjectSelector
+                mode={mode}
+                selectedSubject={selectedSubject}
+                primaryHref={primaryHref}
+                primaryLabel={homeState === "start_today_task" ? primaryCtaLabel : homePrimaryCta}
+                isFirstSetStart={isFirstSetStart}
+                captureHref={modeCaptureHref}
+                reviewHref={mode === "second" ? secondReviewHref : firstReviewHref}
+                notesHref={mode === "second" ? secondNotesHref : firstNotesHref}
+                setHref={mode === "first" ? firstSetHref : undefined}
+                studyLogHref={mode === "first" ? firstStudyLogHref : undefined}
+              />
               {mode === "first" && recentStudyLog ? (
                 <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-4 py-3 text-sm">
                   <p className="text-[color:var(--foreground-strong)]">
@@ -623,7 +529,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                     {mode === "first"
                       ? APPRAISAL_FIRST_SUBJECTS.join(", ")
                       : profile?.preferredSubjects.filter((subject) => (config.subjects as readonly string[]).includes(subject)).join(", ") ||
-                        config.subjects[0]}
+                        selectedSubject}
                   </p>
                 </div>
                 <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] p-4">

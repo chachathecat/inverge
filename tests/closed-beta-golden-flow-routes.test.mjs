@@ -122,9 +122,9 @@ test("capture save confirmation includes biggest gap, next action, and learner l
   assert.equal(captureForm.includes("학습 노트 / 복습 / 오늘 할 일"), true, "confirmation should keep learner-loop continuation copy");
   assert.equal(captureForm.includes("AI가 찾은 가장 큰 약점 후보입니다. 저장 전 직접 확인해 주세요."), true, "confirmation should use beta-safe candidate copy");
   assert.equal(captureForm.includes("다음 행동 후보입니다."), true, "confirmation should frame next action as a candidate");
-  assert.equal(captureForm.includes('href={`/app/review?mode=${mode}`}'), true, "confirmation should link to Review with mode");
-  assert.equal(captureForm.includes('href={`/app/notes?mode=${mode}`}'), true, "confirmation should link to Notes with mode");
-  assert.equal(captureForm.includes('href={`/app?mode=${mode}`}'), true, "confirmation should link back to Today with mode");
+  assert.equal(captureForm.includes('href={`/app/review?mode=${mode}&subject=${encodedSubject}`}'), true, "confirmation should link to Review with mode and subject");
+  assert.equal(captureForm.includes('href={`/app/notes?mode=${mode}&subject=${encodedSubject}`}'), true, "confirmation should link to Notes with mode and subject");
+  assert.equal(captureForm.includes('href={`/app?mode=${mode}&subject=${encodedSubject}`}'), true, "confirmation should link back to Today with mode and subject");
   assert.equal(captureForm.includes("복습으로 이어가기"), true, "confirmation should offer a clear review next action");
   assert.equal(captureForm.includes("학습 노트에서 보기"), true, "confirmation should offer a clear notes link");
   assert.equal(captureForm.includes("오늘 할 일로 돌아가기"), true, "confirmation should offer a clear Today link");
@@ -275,14 +275,14 @@ test("Today and empty states use capture for generic input while preserving spec
   const localBetaReflection = read("components/review-os/local-beta-note-reflection.tsx");
   const weeklyPage = read("app/app/weekly/page.tsx");
 
-  assert.equal(todayPage.includes('const modeCaptureHref = mode === "second" ? "/app/capture?mode=second" : firstCaptureHref'), true);
-  assert.equal(todayPage.includes('option.hrefKey === "capture"'), true, "second-mode input option should use capture");
-  assert.equal(todayPage.includes('"/app/notes?mode=second"'), true, "second-mode notes list should be routed through /app/notes");
+  assert.equal(todayPage.includes('const modeCaptureHref = mode === "second" ? secondCaptureHref : firstCaptureHref'), true);
+  assert.equal(todayPage.includes('const secondCaptureHref = `/app/capture?mode=second&subject=${selectedSubjectQuery}`'), true, "second-mode input should use capture with subject");
+  assert.equal(todayPage.includes('const secondNotesHref = `/app/notes?mode=second&subject=${selectedSubjectQuery}`'), true, "second-mode notes list should be routed through /app/notes with subject");
   assert.equal(todayPage.includes("오늘 한 것 올리기 → 학습 노트 → 오늘 할 일 → 복습 → 학습 기록"), true, "Today first-use copy should explain the closed-beta learner loop");
   assert.equal(todayPage.includes("오늘 할 일이 아직 없습니다."), true, "Today empty state should explain why it may be empty");
   assert.equal(todayPage.includes("오늘 한 것을 하나 올리면 다음 행동이 만들어집니다."), true, "Today empty state should guide learners back to capture");
   assert.equal(todayPage.includes("data-visible-primary-task-cap={TODAY_PLAN_MAX_PRIMARY_TASKS}"), true, "Today should keep max 3 primary plan tasks");
-  assert.equal(todayPage.includes('if (hrefKind === "write") return "/app/write?mode=second";'), true, "specialized write tasks should remain available");
+  assert.equal(todayPage.includes('if (hrefKind === "write") return `/app/write?mode=second&subject=${selectedSubjectQuery}`;'), true, "specialized write tasks should remain available");
   assert.equal(reviewQueue.includes('router.push(mode === "second" ? "/app/capture?mode=second" : "/app/capture?mode=first")'), true, "empty review state should not send learners to a missing input route");
   assert.equal(reviewPage.includes("학습 노트에서 만든 다시쓰기 후보를 오늘 복습으로 이어갑니다."), true, "Review page should explain the page purpose");
   assert.equal(itemsPage.includes('<Link href={`/app/capture?mode=${mode}`'), true, "empty notes state should send learners to capture");

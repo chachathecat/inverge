@@ -20,16 +20,17 @@ test("learner home maps task types to calm labels instead of raw internals", asy
   assert.equal(source.includes("유형:</span> {task.task_type}"), false);
 });
 
-test("capture initial surface is one-input with text first", async () => {
+test("capture initial surface shows subject plus photo, PDF, and text options", async () => {
   const source = await readFile(new URL("../components/review-os/capture-form.tsx", import.meta.url), "utf8");
   [
     "빠른 입력",
-    "텍스트로 시작",
-    "텍스트 입력으로 이동",
-    "오늘 공부한 내용이나 내 답안을 바로 붙여넣으세요.",
+    "사진/PDF/텍스트로 시작",
+    "텍스트 붙여넣기",
+    "오늘 본 과목을 선택하고 오답 1개를 기록하세요.",
     "학습 노트 초안 만들기",
     "AI로 정리",
     "사진 찍기",
+    "PDF 선택",
     "촬영하거나 업로드한 뒤 OCR 초안을 직접 확인합니다.",
     "OCR 상태",
   ].forEach((t) => assert.ok(source.includes(t)));
@@ -65,7 +66,7 @@ test("second-write flow hides global footer until step 6 and keeps defer actions
   const source = await readFile(new URL("../components/review-os/capture-form.tsx", import.meta.url), "utf8");
   assert.match(source, /const hideGlobalFooterActions =\s*mode === "second" && secondModeHiddenFooterStages\.has\(stage\);/);
   assert.ok(source.includes("{!hideGlobalFooterActions ? ("));
-  assert.ok(source.includes("다른 선택"));
+  assert.ok(source.includes("다른 작업"));
   assert.ok(source.includes("다시 쓰기"));
   assert.ok(source.includes("나중에 하기"));
 });

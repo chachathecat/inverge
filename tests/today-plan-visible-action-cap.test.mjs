@@ -110,11 +110,11 @@ test("input cards are labeled as input options, not Today Plan tasks", () => {
   const firstSubjectSelector = read("components/review-os/today-first-subject-selector.tsx");
   const combined = `${appPage}\n${firstSubjectSelector}`;
 
-  assert.match(combined, /오늘 입력할 수 있는 것/);
-  assert.match(combined, /입력 방식/);
-  assert.match(appPage, /data-input-option-card/);
-  assert.match(appPage, /const visibleInputOptions\s*=\s*inputOptions\.slice\(0,\s*3\)/);
-  assert.doesNotMatch(combined, /data-input-option-card[\s\S]{0,240}data-today-plan-primary-task/);
+  assert.match(combined, /data-today-subject-selector=\{mode\}/);
+  assert.match(combined, /config\.subjectLabel/);
+  assert.match(combined, /오늘 본 과목을 선택하고/);
+  assert.match(appPage, /<TodaySubjectSelector/);
+  assert.doesNotMatch(combined, /data-today-subject-selector[\s\S]{0,240}data-today-plan-primary-task/);
 });
 
 test("secondary/supporting CTAs are under other-work or collapsed details surfaces", () => {
@@ -126,13 +126,14 @@ test("secondary/supporting CTAs are under other-work or collapsed details surfac
     assert.equal(combined.includes(label), true, `${label} should be present`);
   }
   assert.match(combined, /<details[\s\S]{0,220}data-secondary-action-surface/);
-  assert.match(firstSubjectSelector, /data-secondary-action-surface="first-mode-input-options"/);
+  assert.match(firstSubjectSelector, /data-secondary-action-surface=\{`\$\{mode\}-mode-input-options`\}/);
 });
 
 test("first and second modes do not visually expose more than three primary Today Plan actions", () => {
   const appPage = read("app/app/page.tsx");
-  assert.match(appPage, /mode === "first"[\s\S]*FIRST_MODE_INPUT_OPTIONS/);
-  assert.match(appPage, /mode === "first"[\s\S]*SECOND_MODE_INPUT_OPTIONS/);
+  assert.match(appPage, /TodaySubjectSelector/);
+  assert.match(appPage, /selectedSubject=\{selectedSubject\}/);
+  assert.match(appPage, /captureHref=\{modeCaptureHref\}/);
   assert.match(appPage, /visibleTodayPlanTasks\.map/);
   assert.doesNotMatch(appPage, /todayPlanTasks\.map\(\(task, index\)/, "raw Today Plan tasks should not map directly to visible primary cards");
 });

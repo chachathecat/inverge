@@ -51,7 +51,7 @@ export default async function ReviewOsCapturePage({ searchParams }: PageProps) {
             <p className="mt-2 text-sm leading-6 text-[color:var(--textBody)]">
               {isRewriteFlow
                 ? "문단 1개만 다시 쓰고 저장합니다."
-                : "텍스트로 바로 시작하고, 사진/PDF는 필요할 때만 추가하세요."}
+                : "사진/PDF/텍스트 중 하나로 시작하고, OCR/AI 초안은 직접 확인합니다."}
             </p>
           </div>
           <p className="text-xs leading-5 text-[color:var(--textMuted)] sm:max-w-[18rem]">
