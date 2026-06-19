@@ -33,6 +33,15 @@ test("/app/agenda route renders learner agenda shell and sections", () => {
     "월간 기록",
     "주간 기록",
     "일별 상세",
+    "이번 주 기록 수",
+    "완료한 복습 수",
+    "예정된 복습 수",
+    "가장 많이 나온 과목",
+    "기록 있음",
+    "복습 예정",
+    "복습 완료",
+    "오늘 한 것",
+    "완료한 것",
     "진한 칸은 학습 기록이 있는 날입니다.",
   ].forEach((text) => assert.ok(client.includes(text), text));
 
@@ -44,7 +53,7 @@ test("agenda empty state links learner back to capture", () => {
   const client = read("components/review-os/learning-agenda-client.tsx");
 
   assert.ok(client.includes("아직 쌓인 학습 기록이 없습니다."));
-  assert.ok(client.includes("오늘 한 것을 하나 올리면 기록이 시작됩니다."));
+  assert.ok(client.includes("오늘 한 것 하나만 남기면 여기에 공부 흐름이 쌓입니다."));
   assert.ok(client.includes("오늘 한 것 올리기"));
   assert.ok(client.includes("/app/capture?mode="));
 });

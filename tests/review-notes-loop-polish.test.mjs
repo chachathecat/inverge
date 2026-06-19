@@ -37,6 +37,20 @@ test("Review due and completion states use learner loop copy", () => {
   assert.doesNotMatch(client, /\/instructor|grade-second|second-grading/);
 });
 
+test("Review queue keeps one primary review surface and collapses extra signals", () => {
+  const client = read("components/review-os/review-queue-client.tsx");
+
+  assert.ok(client.includes("data-review-primary-surface"));
+  assert.ok(client.includes("지금 복습할 1개"));
+  assert.ok(client.includes("지금 복습하기"));
+  assert.ok(client.includes("문단 다시쓰기"));
+  assert.ok(client.includes("완료 처리"));
+  assert.ok(client.includes("data-review-extra-signals"));
+  assert.ok(client.includes("상세 신호 보기"));
+  assert.ok(client.includes("data-review-secondary-list"));
+  assert.ok(client.includes("다음 복습 후보"));
+});
+
 test("Notes and item detail expose biggest gap, next action, and loop connections", () => {
   const itemsPage = read("app/app/items/page.tsx");
   const notesPage = read("app/app/notes/page.tsx");

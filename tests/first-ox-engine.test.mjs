@@ -298,7 +298,7 @@ test("concept popup copy exists but is gated after attempted answer", async () =
 test("review queue renders Smart Cloze from user-owned item raw text without raw internal task type labels", async () => {
   const source = await readFile("components/review-os/review-queue-client.tsx", "utf8");
   assert.ok(source.includes("SmartClozeReview"));
-  assert.ok(source.includes("item.rawQuestionText"));
+  assert.ok(source.includes("primaryItem.rawQuestionText"));
   assert.equal(source.includes("item.conceptCard?.originalStatement"), false);
   assert.equal(/concept_review|cloze_review|nextTaskType/.test(source), false);
 });
