@@ -55,7 +55,7 @@ test("Review Queue has one primary review card and collapses extra signals", () 
   assert.ok(reviewQueue.includes("상세 신호 보기"));
   assert.ok(reviewQueue.includes("data-review-secondary-list"));
   assert.ok(reviewQueue.includes("다음 복습 후보"));
-  assert.ok(reviewQueue.includes("완료 처리"));
+  assert.ok(reviewQueue.includes("복습 완료"));
 });
 
 test("Agenda keeps required labels and adds derived summary plus daily grouping", () => {

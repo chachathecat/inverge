@@ -42,9 +42,9 @@ test("Review queue keeps one primary review surface and collapses extra signals"
 
   assert.ok(client.includes("data-review-primary-surface"));
   assert.ok(client.includes("지금 복습할 1개"));
-  assert.ok(client.includes("지금 복습하기"));
-  assert.ok(client.includes("문단 다시쓰기"));
-  assert.ok(client.includes("완료 처리"));
+  assert.ok(client.includes("먼저 떠올리기"));
+  assert.ok(client.includes("문단/기준 먼저 떠올리기"));
+  assert.ok(client.includes("복습 완료"));
   assert.ok(client.includes("data-review-extra-signals"));
   assert.ok(client.includes("상세 신호 보기"));
   assert.ok(client.includes("data-review-secondary-list"));

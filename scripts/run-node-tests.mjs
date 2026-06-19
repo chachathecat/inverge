@@ -29,6 +29,7 @@ const defaultTestFiles = [
   "tests/review-notes-loop-polish.test.mjs",
   "tests/closed-beta-final-pass.test.mjs",
   "tests/closed-beta-dogfood-ux-repair-pass-1.test.mjs",
+  "tests/retrieval-review-v1.test.mjs",
   "tests/today-plan-source-reasoning.test.mjs",
   "tests/review-queue-reflection-hardening.test.mjs",
   "tests/learner-loop-telemetry.test.mjs",
