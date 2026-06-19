@@ -26,7 +26,7 @@ const ko = {
   noteDraftCta: "\ud559\uc2b5 \ub178\ud2b8 \ucd08\uc548 \ub9cc\ub4e4\uae30",
   photoPdf: "\uc0ac\uc9c4/PDF",
   review: "\ubcf5\uc2b5",
-  reviewCompleteAction: "완료 처리",
+  reviewCompleteAction: "복습 완료",
   reviewCompleted: "\ubcf5\uc2b5 \uc644\ub8cc",
   reviewDue: "\ubcf5\uc2b5 \uc608\uc815",
   text: "\ud14d\uc2a4\ud2b8",

@@ -343,10 +343,15 @@ export type ReviewCompletionAction =
   | "second_paragraph_rewrite"
   | "second_keep_scheduled_rewrite";
 
+export type RecallOutcome = "remembered" | "fuzzy" | "wrong" | "confident_wrong";
+
 export type ReviewCompletionMetadata = {
   retryDraft?: string;
   errorReason?: string;
   retrievalSentence?: string;
+  recallOutcome?: RecallOutcome;
+  suggestedReviewInterval?: string;
+  retrievalReviewVersion?: "v1";
   issueRecall?: string;
   trapCardsCompleted?: boolean;
   trapTypes?: string[];
