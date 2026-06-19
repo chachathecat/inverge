@@ -122,7 +122,7 @@ export function ReviewQueueClient({
                 }))
               }
               rows={3}
-              className="mt-3 w-full rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-elevated)] px-3 py-2 text-sm leading-6 text-[color:var(--foreground-strong)] outline-none focus:border-[color:var(--accent)]"
+              className="mt-3 w-full rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-elevated)] px-3 py-2 text-sm leading-6 text-[color:var(--foreground-strong)] outline-none focus:border-[color:var(--brand-700)]"
               placeholder="답을 보기 전, 기억나는 기준을 먼저 적어보세요."
               aria-label="복습 전 먼저 떠올린 내용"
               data-review-recall-input

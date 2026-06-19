@@ -1,3 +1,5 @@
+import type { ConceptNodeCandidate } from "./concept-node-mapping";
+
 export const REVIEW_OS_EXAM_ID = "wrong_answer_os";
 export const REVIEW_OS_STAGE = "alpha";
 
@@ -332,6 +334,7 @@ export type ReviewQueueCard = {
   createdFromCapture: boolean;
   itemCreatedAt: string;
   conceptCard?: ConceptReviewCardPayload;
+  conceptNodeCandidate?: ConceptNodeCandidate | null;
   clozeCandidate?: string | null;
   rawQuestionText?: string | null;
 };

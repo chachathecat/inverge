@@ -14,6 +14,7 @@ import { getEntitlementLimit } from "@/lib/review-os/entitlements";
 import { assertCanCreateWrongAnswer } from "@/lib/review-os/entitlement-enforcement";
 import { buildCaptureNoteSignals, structureCaptureNote } from "@/lib/review-os/capture-note-engine";
 import { buildCaptureLearningSignal, buildCaptureReviewReason, computeCaptureQueuePriority } from "@/lib/review-os/capture-learning-signals";
+import { buildConceptNodeCandidate, isConceptNodeCandidate } from "@/lib/review-os/concept-node-mapping";
 import { sanitizeCaptureTelemetryMetadata } from "@/lib/review-os/telemetry-sanitizer";
 import { buildLearningMetricEvent } from "@/lib/review-os/learning-metrics";
 import { recordLearningMetricIfEnabled } from "@/lib/review-os/learning-metrics-sink";
@@ -104,6 +105,14 @@ function isSmokeSeedWeeklySummary(summary: WeeklyLearningSummaryRecord | null) {
   if (!summary) return false;
   if (containsSmokeSeedText(summary.summaryText)) return true;
   return [...summary.topMistakeTypes, ...summary.topTopics, ...summary.nextWeekFocus].some((value) => containsSmokeSeedText(value));
+}
+
+function readConceptNodeCandidateFromPayload(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const payload = value as Record<string, unknown>;
+  if (isConceptNodeCandidate(payload.concept_node_candidate)) return payload.concept_node_candidate;
+  if (isConceptNodeCandidate(payload.conceptNodeCandidate)) return payload.conceptNodeCandidate;
+  return null;
 }
 
 function rankQueueItem(item: {
@@ -897,6 +906,25 @@ export class ReviewOsService {
       }
 
       const secondRewriteSignal = mode === "second" ? buildSecondAnswerRewriteSignal(normalizedInput) : null;
+      const taxonomyNodeLabel = taxonomyClassification?.candidates[0]?.topic ?? taxonomyClassification?.primaryNodeId ?? null;
+      const conceptNodeCandidate = buildConceptNodeCandidate({
+        mode,
+        subject: normalizedInput.subjectLabel,
+        mistakeType: artifacts.tags.mistakeType,
+        metadata: {
+          topic_candidate: artifacts.tags.topicTag,
+          mistake_type: artifacts.tags.mistakeType,
+          weak_structure_point: input.weakStructurePoint,
+          missing_issue: input.missingIssue,
+          missingIssueCandidate: secondRewriteSignal?.missingIssueCandidate,
+          keyConcepts: input.keyConcepts,
+          nextAction: input.comparisonPoint ?? input.rewriteInstruction ?? input.biggestGap,
+          calculationRisk: input.calculationRisk ?? secondRewriteSignal?.calculationRisk,
+          unitRisk: input.unitRisk ?? secondRewriteSignal?.unitRisk,
+          supportedCalculatorTemplateId: input.supportedCalculatorTemplateId ?? secondRewriteSignal?.supportedCalculatorTemplateId,
+          taxonomy_node_label: taxonomyNodeLabel,
+        },
+      });
 
       const item = await reviewOsRepository.insertWrongAnswerItem(
         userId,
@@ -961,6 +989,11 @@ export class ReviewOsService {
           created_from_capture: isCaptureCreated,
           capture_note_engine_v1: captureSignals,
           capture_note_engine_v2: captureSignalsV2 ?? captureSignals,
+          concept_node_candidate: conceptNodeCandidate,
+          conceptNodeId: conceptNodeCandidate.conceptNodeId,
+          conceptFamily: conceptNodeCandidate.conceptFamily,
+          retrievalPrompt: conceptNodeCandidate.retrievalPrompt,
+          conceptNextTaskType: conceptNodeCandidate.nextTaskType,
           concept_card: input.conceptCard ?? null,
           review_stage: input.conceptCard?.reviewStage ?? null,
           cloze_candidate: input.conceptCard?.trapWords?.[0] ?? input.keyConcepts?.[0] ?? null,
@@ -1037,7 +1070,7 @@ export class ReviewOsService {
           eventName: "capture_saved",
           examMode: mode,
           subject: item.subjectLabel,
-          conceptNodeId: artifacts.tags.topicTag,
+          conceptNodeId: conceptNodeCandidate.conceptNodeId,
           taskType: mode === "second" ? "rewrite" : "review_candidate",
           sourceEventType: "capture",
           properties: { status: "saved", confidenceBand: item.confidence },
@@ -1049,6 +1082,11 @@ export class ReviewOsService {
         topicTag: artifacts.tags.topicTag,
         mistakeType: artifacts.tags.mistakeType,
         recurrenceCount: recurrence?.recurrenceCount ?? 1,
+        concept_node_candidate: conceptNodeCandidate,
+        conceptNodeId: conceptNodeCandidate.conceptNodeId,
+        conceptFamily: conceptNodeCandidate.conceptFamily,
+        retrievalPrompt: conceptNodeCandidate.retrievalPrompt,
+        conceptNextTaskType: conceptNodeCandidate.nextTaskType,
         schedulingPolicy: schedule.policy,
         retryDueAt: schedule.retryDueAt,
         followUpReviewAt: schedule.followUpReviewAt,
@@ -1059,7 +1097,7 @@ export class ReviewOsService {
           eventName: "adaptive_today_plan_generated",
           examMode: mode,
           subject: item.subjectLabel,
-          conceptNodeId: artifacts.tags.topicTag,
+          conceptNodeId: conceptNodeCandidate.conceptNodeId,
           taskType: mode === "second" ? "rewrite" : "review_candidate",
           sourceEventType: "capture",
           properties: { candidateCount: 1, selectedCount: 1 },
@@ -1206,6 +1244,7 @@ export class ReviewOsService {
         action === "second_paragraph_rewrite" && typeof metadata.rewriteParagraph === "string"
           ? metadata.rewriteParagraph.trim()
           : "";
+      const conceptNodeCandidate = readConceptNodeCandidateFromPayload(derivedPayload);
       await reviewOsRepository.createFollowUpReviewQueueEntry(
         userId,
         context.item,
@@ -1217,6 +1256,15 @@ export class ReviewOsService {
           recurrenceCount,
           mistakeType: context.primaryTag?.mistakeType ?? "반복 실수",
           topicTag: context.primaryTag?.topicTag ?? context.item.subjectLabel,
+          ...(conceptNodeCandidate
+            ? {
+                concept_node_candidate: conceptNodeCandidate,
+                conceptNodeId: conceptNodeCandidate.conceptNodeId,
+                conceptFamily: conceptNodeCandidate.conceptFamily,
+                retrievalPrompt: conceptNodeCandidate.retrievalPrompt,
+                conceptNextTaskType: conceptNodeCandidate.nextTaskType,
+              }
+            : {}),
           rewriteTaskType: context.item.examName === "감정평가사 2차" ? "second_answer_rewrite" : undefined,
           rewriteInstruction: metadata.rewriteInstruction ?? context.item.rewriteInstruction ?? null,
         },
@@ -1235,11 +1283,12 @@ export class ReviewOsService {
       ...safeMetadata,
       rewriteParagraphStoredSeparately: Boolean(_rewriteParagraph),
     });
+    const metricConceptNodeCandidate = context ? readConceptNodeCandidateFromPayload(context.queueRow.derived_payload) : null;
     recordLearningMetricIfEnabled(buildLearningMetricEvent({
       eventName: "review_queue_task_completed",
       examMode: context?.item.examName === "감정평가사 2차" ? "second" : "first",
       subject: context?.item.subjectLabel,
-      conceptNodeId: context?.primaryTag?.topicTag ?? context?.item.subjectLabel,
+      conceptNodeId: metricConceptNodeCandidate?.conceptNodeId ?? context?.primaryTag?.topicTag ?? context?.item.subjectLabel,
       taskType: action,
       sourceEventType: "review",
       properties: { status: "completed", wasDue: true },

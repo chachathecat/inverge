@@ -1,5 +1,6 @@
 import type { AppraisalMode } from "@/lib/review-os/appraisal";
 import { buildSecondAnswerRewriteSignal } from "./second-answer-rewrite";
+import { buildConceptNodeCandidate, type ConceptNodeCandidate } from "./concept-node-mapping";
 import type { WrongAnswerItemInput } from "@/lib/review-os/types";
 import { buildCurriculumAnchoredCaptureSignal, type CurriculumAnchoredCaptureSignal } from "./curriculum-capture-integration";
 
@@ -26,6 +27,7 @@ export type CaptureNoteBase = {
   weak_structure_point: string;
   next_task_type: "retry" | "rewrite";
   review_reason: string;
+  concept_node_candidate: ConceptNodeCandidate;
   curriculum_anchored_capture_signal?: CurriculumAnchoredCaptureSignal;
 };
 
@@ -123,6 +125,23 @@ export function buildCaptureNoteSignals(mode: AppraisalMode, input: WrongAnswerI
   const oneBiggestGap = (mode === "second" ? resolveSecondSubjectGap(input) : resolveFirstCaptureGap(input)) ?? "개념 혼동";
   const oneNextAction = (mode === "second" ? resolveSecondSubjectNextAction(input) : resolveFirstNextAction(input)) ?? "다음 행동 실행";
   const curriculumSignal = buildCurriculumSignalForCapture(mode, input, oneBiggestGap, oneNextAction);
+  const rewriteSignal = mode === "second" ? buildSecondAnswerRewriteSignal(input) : null;
+  const conceptNodeCandidate = buildConceptNodeCandidate({
+    mode,
+    subject: input.subjectLabel,
+    mistakeType: input.userReasonPreset || input.userReasonText || oneBiggestGap,
+    metadata: {
+      topic_candidate: input.problemTitle || input.keyConcepts?.[0] || input.missingIssue || input.weakStructurePoint,
+      mistake_type: input.userReasonPreset || input.userReasonText || oneBiggestGap,
+      weak_structure_point: input.weakStructurePoint || input.referenceStructure,
+      missing_issue: input.missingIssue,
+      keyConcepts: input.keyConcepts,
+      nextAction: oneNextAction,
+      calculationRisk: input.calculationRisk ?? rewriteSignal?.calculationRisk,
+      unitRisk: input.unitRisk ?? rewriteSignal?.unitRisk,
+      supportedCalculatorTemplateId: input.supportedCalculatorTemplateId ?? rewriteSignal?.supportedCalculatorTemplateId,
+    },
+  });
   const base = {
     mode,
     subject: input.subjectLabel,
@@ -135,6 +154,7 @@ export function buildCaptureNoteSignals(mode: AppraisalMode, input: WrongAnswerI
     weak_structure_point: input.weakStructurePoint || input.referenceStructure || "",
     next_task_type: mode === "second" ? "rewrite" : "retry",
     review_reason: oneBiggestGap,
+    concept_node_candidate: conceptNodeCandidate,
     curriculum_anchored_capture_signal: curriculumSignal,
   };
 
@@ -149,21 +169,21 @@ export function buildCaptureNoteSignals(mode: AppraisalMode, input: WrongAnswerI
     };
   }
 
-  const rewriteSignal = buildSecondAnswerRewriteSignal(input);
+  const secondRewriteSignal = rewriteSignal ?? buildSecondAnswerRewriteSignal(input);
   return {
     ...base,
     mode: "second",
     next_task_type: "rewrite",
-    missing_issue_candidate: rewriteSignal.missingIssueCandidate,
-    weak_structure_point: rewriteSignal.weakStructurePoint,
-    rewrite_instruction: rewriteSignal.rewriteInstruction,
-    next_rewrite_action: rewriteSignal.nextRewriteAction,
-    calculation_risk: rewriteSignal.calculationRisk ?? null,
-    unit_risk: rewriteSignal.unitRisk ?? null,
-    rewrite_task_type: rewriteSignal.rewriteTaskType,
-    supported_calculator_template_id: rewriteSignal.supportedCalculatorTemplateId ?? null,
-    casio_keystrokes: rewriteSignal.casioKeystrokes ?? null,
-    casio_unsupported_message: rewriteSignal.casioUnsupportedMessage,
+    missing_issue_candidate: secondRewriteSignal.missingIssueCandidate,
+    weak_structure_point: secondRewriteSignal.weakStructurePoint,
+    rewrite_instruction: secondRewriteSignal.rewriteInstruction,
+    next_rewrite_action: secondRewriteSignal.nextRewriteAction,
+    calculation_risk: secondRewriteSignal.calculationRisk ?? null,
+    unit_risk: secondRewriteSignal.unitRisk ?? null,
+    rewrite_task_type: secondRewriteSignal.rewriteTaskType,
+    supported_calculator_template_id: secondRewriteSignal.supportedCalculatorTemplateId ?? null,
+    casio_keystrokes: secondRewriteSignal.casioKeystrokes ?? null,
+    casio_unsupported_message: secondRewriteSignal.casioUnsupportedMessage,
   };
 }
 

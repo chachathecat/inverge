@@ -2,6 +2,7 @@ import type { ConfidenceLevel, LearningSignalEventRecord, ReviewQueueCard, Wrong
 import { buildTodayPlanDisplayCopy, type TodayPlanDisplayCopy } from "./today-plan-display-copy";
 import { rankLearningStateRisk } from "./personal-learning-state-engine";
 import { capTodayPlanTasks, rankTodayPlanCandidates } from "./study-schedule-engine";
+import { isConceptNodeCandidate, type ConceptNodeCandidate } from "./concept-node-mapping";
 
 export type TodayPlanTaskType =
   | "first_ox_retry"
@@ -111,7 +112,31 @@ function getPageCount(item: WrongAnswerItemRecord) {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
+function taskTypeFromConceptNodeCandidate(
+  candidate: ConceptNodeCandidate | null | undefined,
+  mode: "first" | "second",
+  subject: string,
+): TodayPlanTaskType | null {
+  if (!candidate || candidate.examMode !== mode) return null;
+  const text = `${candidate.nextTaskType} ${candidate.conceptFamily} ${candidate.mistakeType ?? ""} ${subject}`;
+  if (/calculator_routine|accounting_template|formula_check|계산|산식|검산|CASIO|분개/.test(text)) {
+    return mode === "first" ? "accounting_template_retry" : "second_answer_rewrite";
+  }
+  if (/cloze|빈칸|암기/.test(text)) return "cloze_review";
+  if (/trap_word|ox_retrieval|O\/X|선지/.test(text)) return mode === "first" ? "first_ox_retry" : "second_answer_rewrite";
+  if (/paragraph_rewrite|outline_recall|legal_issue_recall|requirement_subsumption|문단|논점|포섭/.test(text)) {
+    return mode === "second" ? "second_answer_rewrite" : "concept_review";
+  }
+  if (/graph_recall|concept_recall|keyword_recall|legal_requirement_recall|개념|키워드|조문|요건|그래프/.test(text)) {
+    return "concept_review";
+  }
+  return mode === "first" ? "first_ox_retry" : "second_answer_rewrite";
+}
+
 function resolveQueueTaskType(mode: "first" | "second", item: ReviewQueueCard): TodayPlanTaskType {
+  const conceptTaskType = taskTypeFromConceptNodeCandidate(item.conceptNodeCandidate, mode, item.subjectLabel);
+  if (conceptTaskType) return conceptTaskType;
+
   const text = `${item.subjectLabel} ${item.reviewReason} ${item.mistakeType} ${item.topicTag}`;
   if (/OCR|ocr|확인 필요|인식/.test(text)) return "ocr_confirmation";
   if (mode === "second" && /rewrite|재작성|다시쓰기|문단|논점 누락|누락/.test(text)) return "second_answer_rewrite";
@@ -287,6 +312,14 @@ function getCurriculumAnchoredSignal(item: WrongAnswerItemRecord) {
   return null;
 }
 
+function getConceptNodeCandidateFromItem(item: WrongAnswerItemRecord) {
+  if (isConceptNodeCandidate(item.derivedPayload?.concept_node_candidate)) return item.derivedPayload.concept_node_candidate;
+  if (isConceptNodeCandidate(item.derivedPayload?.conceptNodeCandidate)) return item.derivedPayload.conceptNodeCandidate;
+  const captureNote = item.derivedPayload?.capture_note_engine_v2;
+  if (isRecord(captureNote) && isConceptNodeCandidate(captureNote.concept_node_candidate)) return captureNote.concept_node_candidate;
+  return null;
+}
+
 function toItemTask(item: WrongAnswerItemRecord, mode: "first" | "second", now: Date): { task: TodayPlanTask; score: number } | null {
   const createdFromCapture = Boolean(item.rawPayload?.created_from_capture ?? item.derivedPayload?.created_from_capture ?? item.createdFromCapture);
   const pageCount = getPageCount(item);
@@ -294,6 +327,7 @@ function toItemTask(item: WrongAnswerItemRecord, mode: "first" | "second", now: 
   const captureNote = typeof item.derivedPayload?.capture_note_engine_v2 === "object" && item.derivedPayload.capture_note_engine_v2 ? item.derivedPayload.capture_note_engine_v2 as Record<string, unknown> : null;
   const captureNoteNextAction = typeof captureNote?.one_next_action === "string" && captureNote.one_next_action.trim() ? captureNote.one_next_action : null;
   const curriculumSignal = getCurriculumAnchoredSignal(item);
+  const conceptNodeCandidate = getConceptNodeCandidateFromItem(item);
   const curriculumTodayPlanCandidate = isRecord(curriculumSignal?.todayPlanCandidate) ? curriculumSignal.todayPlanCandidate : null;
   const curriculumSecondaryMetadata = curriculumTodayPlanCandidate && curriculumSignal?.examMode === mode
     ? {
@@ -313,7 +347,15 @@ function toItemTask(item: WrongAnswerItemRecord, mode: "first" | "second", now: 
         ...(isRecord(curriculumSignal.learningStateUpdateCandidate) && typeof curriculumSignal.learningStateUpdateCandidate.sourceEventType === "string" ? { sourceEventType: curriculumSignal.learningStateUpdateCandidate.sourceEventType as "capture" | "review" | "session" } : {}),
       }
     : undefined;
-  const biggestGap = String(curriculumSignal?.gapLabel ?? item.biggestGap ?? item.missingIssue ?? captureNote?.one_biggest_gap ?? item.userReasonPreset ?? "가장 큰 간극 1개를 확인합니다.");
+  const biggestGap = String(
+    curriculumSignal?.gapLabel
+      ?? (conceptNodeCandidate ? `${conceptNodeCandidate.conceptFamily} 회상 기준` : null)
+      ?? item.biggestGap
+      ?? item.missingIssue
+      ?? captureNote?.one_biggest_gap
+      ?? item.userReasonPreset
+      ?? "가장 큰 간극 1개를 확인합니다.",
+  );
   const createdTs = parseTime(item.createdAt);
   const recentBoost = createdTs !== null && now.getTime() - createdTs >= 0 && now.getTime() - createdTs <= 2 * DAY_MS ? 14 : 0;
 
@@ -343,6 +385,16 @@ function toItemTask(item: WrongAnswerItemRecord, mode: "first" | "second", now: 
       if (isRecord(curriculumSignal.learningStateUpdateCandidate) && typeof curriculumSignal.learningStateUpdateCandidate.nextStatus === "string") {
         score += Math.round(rankLearningStateRisk(curriculumSignal.learningStateUpdateCandidate.nextStatus) * 0.35);
       }
+    }
+  } else if (conceptNodeCandidate && conceptNodeCandidate.examMode === mode) {
+    const conceptTaskType = taskTypeFromConceptNodeCandidate(conceptNodeCandidate, mode, item.subjectLabel);
+    if (conceptTaskType) {
+      taskType = conceptTaskType;
+      reason = createdFromCapture ? "저장한 캡처를 개념 후보에 연결한 오늘 작업입니다." : "저장한 노트를 개념 후보에 연결한 오늘 작업입니다.";
+      nextAction = conceptNodeCandidate.retrievalPrompt;
+      estimated = mode === "second" ? 15 : conceptTaskType === "first_ox_retry" ? 5 : 10;
+      sourceLabel = createdFromCapture ? "개념 후보 연결 캡처 기반" : "개념 후보 연결 노트 기반";
+      score += 22;
     }
   } else if (!taskType && mode === "second" && (item.missingIssue || item.weakStructurePoint || item.rewriteInstruction || item.rewriteCompleted === false)) {
     taskType = "second_answer_rewrite";
@@ -453,15 +505,16 @@ export function buildTodayPlanTasks({ mode, queue, items = [], learningSignals =
     .sort((a, b) => b.score - a.score || ((parseTime(a.item.dueAt) ?? Number.MAX_SAFE_INTEGER) - (parseTime(b.item.dueAt) ?? Number.MAX_SAFE_INTEGER)) || a.item.itemId.localeCompare(b.item.itemId));
 
   const queueTasks = rankedQueue.map(({ item, taskType, priority_reason, score }) => {
-    const gap = toGap(item);
-    const nextAction = toNextAction(mode, item, taskType);
+    const conceptNodeCandidate = item.conceptNodeCandidate?.examMode === mode ? item.conceptNodeCandidate : null;
+    const gap = conceptNodeCandidate ? `${conceptNodeCandidate.conceptFamily} 회상 기준` : toGap(item);
+    const nextAction = conceptNodeCandidate?.retrievalPrompt ?? toNextAction(mode, item, taskType);
     const estimatedMinutes = taskType === "second_answer_rewrite" ? 20 : taskType === "ocr_confirmation" ? 5 : taskType === "first_ox_retry" ? 15 : 12;
     return {
       score,
       task: {
         itemId: item.itemId,
         queueId: item.queueId,
-        title: buildDerivedActionTitle({ mode, subject: item.subjectLabel, topic: item.topicTag, gap, nextAction, estimatedMinutes, taskType }),
+        title: buildDerivedActionTitle({ mode, subject: item.subjectLabel, topic: conceptNodeCandidate?.conceptFamily ?? item.topicTag, gap, nextAction, estimatedMinutes, taskType }),
         subject: item.subjectLabel,
         exam_mode: mode,
         due_bucket: resolveDueBucket(item.dueAt, now),

@@ -28,9 +28,13 @@ export const RECALL_OUTCOME_OPTIONS: Array<{ value: RecallOutcome; label: string
   { value: "confident_wrong", label: "확신하고 틀림" },
 ];
 
-type RetrievalPromptItem = Pick<ReviewQueueCard, "subjectLabel" | "topicTag" | "mistakeType">;
+type RetrievalPromptItem = Pick<ReviewQueueCard, "subjectLabel" | "topicTag" | "mistakeType"> &
+  Partial<Pick<ReviewQueueCard, "conceptNodeCandidate">>;
 
 export function getRetrievalPrompt(item: RetrievalPromptItem, mode: "first" | "second"): string {
+  const conceptPrompt = item.conceptNodeCandidate?.examMode === mode ? item.conceptNodeCandidate.retrievalPrompt.trim() : "";
+  if (conceptPrompt) return conceptPrompt;
+
   if (mode === "first") {
     if (APPRAISAL_FIRST_SUBJECTS.includes(item.subjectLabel as (typeof APPRAISAL_FIRST_SUBJECTS)[number])) {
       return FIRST_RETRIEVAL_PROMPTS[item.subjectLabel as (typeof APPRAISAL_FIRST_SUBJECTS)[number]];
