@@ -23,7 +23,8 @@ test("API/result contains calculator guide fields", () => {
 });
 
 test("UI contains CASIO section labels", () => {
-  ["CASIO fx-9860GIII로 누르는 법", "계산 목적", "추천 모드", "버튼 순서", "화면에 나와야 할 값", "답안에 적는 값", "주의할 점"].forEach((t) => assert.ok(ui.includes(t), `Missing ${t}`));
+  ["계산/CASIO 스텝", "계산 목적", "추천 모드", "계산 순서", "CASIO 입력", "화면에 보여야 할 값", "답안에 적을 값", "단위/반올림 주의"].forEach((t) => assert.ok(ui.includes(t), `Missing ${t}`));
+  assert.ok(ui.includes("계산/CASIO 스텝은 확인이 필요합니다. 원문 숫자와 단위를 직접 확인해 주세요."));
 });
 
 test("Gemini prompt contains calculator guide policy lines", () => {

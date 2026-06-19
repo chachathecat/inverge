@@ -42,7 +42,7 @@ test.describe('public answer-review smoke', () => {
     await page.goto('/answer-review');
     await page.getByTestId('answer-review-problem-input').fill('문제/사례 입력 smoke');
     await page.getByTestId('answer-review-my-answer-input').fill('내 답안 입력 smoke');
-    await page.getByTestId('answer-review-reference-input').fill('기준답안 입력 smoke');
+    await page.getByTestId('answer-review-reference-input').fill('참고 정리 입력 smoke');
 
     await page.getByTestId('answer-review-start').click();
     await expect(page.getByTestId('answer-review-build-feedback')).toBeVisible();

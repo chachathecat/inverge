@@ -11,6 +11,8 @@ test("problem snap learner flow exposes camera-first premium inputs", async () =
   assert.ok(source.includes("감정평가실무"));
   assert.ok(source.includes("감정평가이론"));
   assert.ok(source.includes("감정평가 및 보상법규"));
+  assert.ok(source.includes("APPRAISAL_FIRST_SUBJECTS"));
+  assert.ok(source.includes("StandaloneLearnerToolNav"));
 });
 
 test("problem snap result hero, save CTA, and grounding copy are rendered", async () => {
@@ -90,6 +92,20 @@ test("subject-specific views and retry mode labels exist", async () => {
   assert.ok(source.includes('} catch {'));
   assert.ok(source.includes('source: "problem-snap"'));
   assert.equal(source.includes("mode=second&examMode="), false);
+});
+
+test("calculation guide is primary before generic explanation when present", async () => {
+  const source = await readFile(new URL("../app/problem-snap/problem-snap-client.tsx", import.meta.url), "utf8");
+  const calculatorIndex = source.indexOf("data-problem-snap-calculator-step");
+  const genericIndex = source.indexOf('<div><h3 className="font-medium">{resultHeading}</h3><p>{result.easyExplanation}</p></div>');
+
+  assert.ok(calculatorIndex >= 0, "calculator step panel should exist");
+  assert.ok(genericIndex >= 0, "generic explanation should exist");
+  assert.ok(source.indexOf("renderCalculatorStepPanel(result)") < genericIndex);
+  ["계산/CASIO 스텝", "계산 목적", "추천 모드", "계산 순서", "CASIO 입력", "화면에 보여야 할 값", "답안에 적을 값", "단위/반올림 주의"].forEach((label) =>
+    assert.ok(source.includes(label), label),
+  );
+  assert.ok(source.includes("계산/CASIO 스텝은 확인이 필요합니다. 원문 숫자와 단위를 직접 확인해 주세요."));
 });
 
 test("guardrails remain intact in learner flow copy", async () => {

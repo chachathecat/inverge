@@ -4,11 +4,13 @@ import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { RefinedShell } from "@/components/inverge/refined-primitives";
+import { StandaloneLearnerToolNav } from "@/components/review-os/standalone-learner-tool-nav";
 import { ResultFeedbackPrompt } from "@/components/shared/result-feedback-prompt";
 import { buttonVariants } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { normalizeSubjectForMode, type AppraisalMode } from "@/lib/review-os/appraisal";
+import { APPRAISAL_FIRST_SUBJECTS, APPRAISAL_SECOND_SUBJECTS } from "@/lib/review-os/types";
 import { cn } from "@/lib/utils";
-import type { AppraisalMode } from "@/lib/review-os/appraisal";
 
 type ExplanationLevel = "easy" | "standard" | "exam";
 
@@ -39,13 +41,34 @@ type ProblemSnapResult = {
   caution: string;
 };
 
-const SECOND_SUBJECTS = ["감정평가실무", "감정평가이론", "감정평가 및 보상법규"] as const;
-const FIRST_SUBJECTS = ["민법", "회계학", "경제학", "감정평가관계법규"] as const;
+const CALCULATOR_STEP_FALLBACK = "계산/CASIO 스텝은 확인이 필요합니다. 원문 숫자와 단위를 직접 확인해 주세요.";
 
-export default function ProblemSnapClientPage({ initialExamMode }: { initialExamMode: AppraisalMode }) {
+const isMeaningfulCalculatorValue = (value?: string | null) => {
+  const normalized = value?.trim();
+  if (!normalized) return false;
+  return !["확인 필요", "검토 필요", "없음", "계산기 입력 없음", "입력 없음", "해당 없음"].some((placeholder) =>
+    normalized.includes(placeholder),
+  );
+};
+
+const hasCalculatorGuideData = (guide: ProblemSnapResult["calculatorGuide"]) =>
+  isMeaningfulCalculatorValue(guide.calculationPurpose) ||
+  isMeaningfulCalculatorValue(guide.expectedDisplay) ||
+  isMeaningfulCalculatorValue(guide.answerRounding) ||
+  isMeaningfulCalculatorValue(guide.caution) ||
+  guide.recommendedMode !== "검토 필요" ||
+  guide.keystrokeSteps.some(isMeaningfulCalculatorValue);
+
+export default function ProblemSnapClientPage({
+  initialExamMode,
+  initialSubject,
+}: {
+  initialExamMode: AppraisalMode;
+  initialSubject?: string;
+}) {
   const router = useRouter();
   const [examMode, setExamMode] = useState<AppraisalMode>(initialExamMode);
-  const [subject, setSubject] = useState<string>(initialExamMode === "first" ? FIRST_SUBJECTS[0] : SECOND_SUBJECTS[0]);
+  const [subject, setSubject] = useState<string>(normalizeSubjectForMode(initialSubject, initialExamMode));
   const [explanationLevel, setExplanationLevel] = useState<ExplanationLevel>("standard");
   const [problemText, setProblemText] = useState("");
   const [files, setFiles] = useState<File[]>([]);
@@ -64,7 +87,7 @@ export default function ProblemSnapClientPage({ initialExamMode }: { initialExam
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
 
-  const subjects = examMode === "first" ? FIRST_SUBJECTS : SECOND_SUBJECTS;
+  const subjects = examMode === "first" ? APPRAISAL_FIRST_SUBJECTS : APPRAISAL_SECOND_SUBJECTS;
 
   const resultHeading = useMemo(() => {
     if (explanationLevel === "easy") return "쉽게 풀이";
@@ -74,9 +97,7 @@ export default function ProblemSnapClientPage({ initialExamMode }: { initialExam
 
   const showCalculatorGuide = useMemo(() => {
     if (!result) return false;
-    const hasSignal = result.calculatorGuide.keystrokeSteps.some((step) => step && step !== "계산기 입력 없음")
-      || result.calculatorGuide.recommendedMode !== "검토 필요";
-    return subject === "감정평가실무" || hasSignal;
+    return subject === "감정평가실무" || hasCalculatorGuideData(result.calculatorGuide);
   }, [result, subject]);
 
   const getProblemSnapSubjectView = (currentSubject: string) => {
@@ -117,6 +138,53 @@ export default function ProblemSnapClientPage({ initialExamMode }: { initialExam
       <ul className="mt-1 space-y-1 text-sm">
         {validItems.map((item, index) => <li key={`${item}-${index}`}>• {item}</li>)}
       </ul>
+    );
+  };
+
+  const renderCalculatorStepPanel = (currentResult: ProblemSnapResult) => {
+    const guide = currentResult.calculatorGuide;
+    const hasGuideData = hasCalculatorGuideData(guide);
+    const calculationSteps = currentResult.stepByStepSolution.filter(isMeaningfulCalculatorValue);
+    const keystrokeSteps = guide.keystrokeSteps.filter(isMeaningfulCalculatorValue);
+    const caution = isMeaningfulCalculatorValue(guide.caution) ? guide.caution : "단위와 반올림 기준 확인 필요";
+
+    return (
+      <div
+        className="space-y-3 rounded-[var(--radius-md)] border bg-[color:var(--surface-subtle)] p-3"
+        data-problem-snap-calculator-step
+      >
+        <div className="space-y-1">
+          <h3 className="font-medium">계산/CASIO 스텝</h3>
+          {!hasGuideData ? <p className="text-sm text-[color:var(--muted)]">{CALCULATOR_STEP_FALLBACK}</p> : null}
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <div className="rounded-[var(--radius-sm)] border bg-[color:var(--surface)] p-3">
+            <p className="text-xs text-[color:var(--muted)]">계산 목적</p>
+            <p className="mt-1 text-sm">{isMeaningfulCalculatorValue(guide.calculationPurpose) ? guide.calculationPurpose : "확인 필요"}</p>
+          </div>
+          <div className="rounded-[var(--radius-sm)] border bg-[color:var(--surface)] p-3">
+            <p className="text-xs text-[color:var(--muted)]">추천 모드</p>
+            <p className="mt-1 text-sm">{guide.recommendedMode}</p>
+          </div>
+          <div className="rounded-[var(--radius-sm)] border bg-[color:var(--surface)] p-3">
+            <p className="text-xs text-[color:var(--muted)]">계산 순서</p>
+            {renderListOrFallback(calculationSteps, "계산 순서 확인 필요")}
+          </div>
+          <div className="rounded-[var(--radius-sm)] border bg-[color:var(--surface)] p-3">
+            <p className="text-xs text-[color:var(--muted)]">CASIO 입력</p>
+            {renderListOrFallback(keystrokeSteps, "입력 순서 확인 필요")}
+          </div>
+          <div className="rounded-[var(--radius-sm)] border bg-[color:var(--surface)] p-3">
+            <p className="text-xs text-[color:var(--muted)]">화면에 보여야 할 값</p>
+            <p className="mt-1 text-sm">{isMeaningfulCalculatorValue(guide.expectedDisplay) ? guide.expectedDisplay : "확인 필요"}</p>
+          </div>
+          <div className="rounded-[var(--radius-sm)] border bg-[color:var(--surface)] p-3">
+            <p className="text-xs text-[color:var(--muted)]">답안에 적을 값</p>
+            <p className="mt-1 text-sm">{isMeaningfulCalculatorValue(guide.answerRounding) ? guide.answerRounding : "확인 필요"}</p>
+          </div>
+        </div>
+        <p className="text-xs text-[color:var(--muted)]">단위/반올림 주의: {caution}</p>
+      </div>
     );
   };
 
@@ -265,6 +333,7 @@ export default function ProblemSnapClientPage({ initialExamMode }: { initialExam
 
   return (
     <RefinedShell className="space-y-6 py-6 sm:py-10">
+      <StandaloneLearnerToolNav mode={examMode} subject={subject} />
       <section className="space-y-2 rounded-[var(--radius-xl)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-5">
         <p className="text-xs text-[color:var(--muted)]">문제 스냅 튜터 · 단계 1/2</p>
         <h1 className="text-2xl font-semibold">문제 스냅 풀이</h1>
@@ -304,7 +373,7 @@ export default function ProblemSnapClientPage({ initialExamMode }: { initialExam
             <select className="mt-1 w-full rounded border p-2" value={examMode} onChange={(e) => {
               const nextMode = e.target.value === "first" ? "first" : "second";
               setExamMode(nextMode);
-              setSubject(nextMode === "first" ? FIRST_SUBJECTS[0] : SECOND_SUBJECTS[0]);
+              setSubject(normalizeSubjectForMode(subject, nextMode));
               if (recognitionConfirmed) setRecognitionConfirmed(false);
             }}>
               <option value="second">2차</option><option value="first">1차</option>
@@ -346,14 +415,14 @@ export default function ProblemSnapClientPage({ initialExamMode }: { initialExam
             <div className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">주의할 함정 1개</p><p className="mt-1 text-sm">{getSubjectSpecificCaution(subject, result)}</p></div>
           </div>
           <p className="text-xs text-[color:var(--muted)]">{referenceGrounding?.used ? `유사 기출 Skeleton을 참고해 정리했습니다. ${referenceGrounding.displayLabel}` : "입력 자료 기준으로 정리했습니다."}</p>
-          {!retryMode ? <div><h3 className="font-medium">{resultHeading}</h3><p>{result.easyExplanation}</p></div> : null}
           {!retryMode ? (
             showCalculatorGuide ? (
-              <div className="space-y-2 rounded-[var(--radius-md)] border bg-[color:var(--surface-subtle)] p-3"><h3 className="font-medium">CASIO fx-9860GIII로 누르는 법</h3><p className="text-sm">계산 목적: {result.calculatorGuide.calculationPurpose}</p><p className="text-sm">추천 모드: {result.calculatorGuide.recommendedMode}</p><div><p className="text-sm">버튼 순서</p><div className="mt-1 flex flex-wrap gap-1">{result.calculatorGuide.keystrokeSteps.map((step, index)=><span key={`${step}-${index}`} className="rounded-full border px-2 py-0.5 text-xs">{step}</span>)}</div></div><p className="text-sm">화면에 나와야 할 값: {result.calculatorGuide.expectedDisplay || "확인 필요"}</p><p className="text-sm">답안에 적는 값: {result.calculatorGuide.answerRounding || "확인 필요"}</p><p className="text-xs text-[color:var(--muted)]">주의할 점: {result.calculatorGuide.caution}</p></div>
+              renderCalculatorStepPanel(result)
             ) : (
               <p className="rounded-[var(--radius-md)] border border-dashed p-3 text-sm text-[color:var(--muted)]">계산기 입력보다 개념 구조가 중요한 문제입니다.</p>
             )
           ) : null}
+          {!retryMode ? <div><h3 className="font-medium">{resultHeading}</h3><p>{result.easyExplanation}</p></div> : null}
           {!retryMode ? <div className="grid gap-3 sm:grid-cols-2">{renderPrimarySubjectCards(getProblemSnapSubjectView(subject), result)}</div> : null}
           <details className="rounded-[var(--radius-md)] border p-3">
             <summary className="cursor-pointer text-sm font-medium">자세히 보기</summary>

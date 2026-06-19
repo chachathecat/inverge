@@ -6,6 +6,7 @@ import type { ChangeEvent } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
 import { RefinedBadge, RefinedShell } from "@/components/inverge/refined-primitives";
+import { StandaloneLearnerToolNav } from "@/components/review-os/standalone-learner-tool-nav";
 import { ResultFeedbackPrompt } from "@/components/shared/result-feedback-prompt";
 import { buttonVariants } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -72,6 +73,34 @@ function InputStatusCard({ title, statusText, helper }: InputStatusCardProps) {
   );
 }
 
+const CALCULATION_CONTEXT_PATTERN = /계산|산식|숫자|단위|환원|수익|원가|비교방식|공시지가|보상|CASIO|반올림|㎡|원\/㎡/i;
+const CALCULATION_CHECKLIST = [
+  "숫자/단위 확인",
+  "산식 확인",
+  "계산 과정 확인",
+  "반올림/단위 표시 확인",
+  "답안 기재값 확인",
+];
+
+function CalculationCheckPanel() {
+  return (
+    <article
+      className="rounded-[var(--radius-md)] border border-[#27375f] bg-[color:var(--surface)] p-4"
+      data-answer-review-calculation-check
+    >
+      <p className="text-caption font-medium text-[#3f4c66]">계산/CASIO 확인</p>
+      <p className="mt-1 text-caption leading-5 text-[color:var(--muted)]">
+        결과 판정이 아니라 계산 근거와 답안 기재값을 다시 확인하는 학습 체크입니다.
+      </p>
+      <ul className="mt-3 space-y-1 text-caption leading-5 text-[color:var(--foreground-strong)]">
+        {CALCULATION_CHECKLIST.map((item) => (
+          <li key={item}>• {item}</li>
+        ))}
+      </ul>
+    </article>
+  );
+}
+
 
 export default function AnswerReviewClientPage({ viewerMode = "authenticated" }: AnswerReviewClientPageProps) {
   const getInitialReviewContext = () => {
@@ -117,6 +146,18 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
 
   const shouldReduceMotion = useReducedMotion();
   const subjectOptions = examMode === "second" ? APPRAISAL_SECOND_SUBJECTS : APPRAISAL_FIRST_SUBJECTS;
+  const calculationContextText = [
+    subject,
+    problemText,
+    myAnswerText,
+    referenceAnswerText,
+    structureDraft?.questionSummary,
+    structureDraft?.coreConcepts.join(" "),
+    structureDraft?.requiredIssues,
+    structureDraft?.weakLogicPoint,
+  ].join(" ");
+  const showCalculationCheck =
+    examMode === "second" && (subject === "감정평가실무" || CALCULATION_CONTEXT_PATTERN.test(calculationContextText));
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -278,7 +319,7 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
   };
 
   const feedbackDraftText = useMemo(() => {
-    const inputStatusSummary = `문제/사례 ${hasProblemInput ? "입력됨" : "미입력"}, 내 답안 ${hasMyAnswer ? "입력됨" : "미입력"}, 기준답안 ${
+    const inputStatusSummary = `문제/사례 ${hasProblemInput ? "입력됨" : "미입력"}, 내 답안 ${hasMyAnswer ? "입력됨" : "미입력"}, 검토 참고자료 ${
       hasReferenceAnswer ? "입력됨" : "미입력"
     }`;
     const missingPointSummary = hasMissingPointMemo
@@ -322,7 +363,7 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
       "입력 상태",
       `- 문제/사례: ${hasProblemInput ? "입력됨" : "미입력"}`,
       `- 내 답안: ${hasMyAnswer ? "입력됨" : "미입력"}`,
-      `- 기준답안: ${hasReferenceAnswer ? "입력됨" : "미입력"}`,
+      `- 검토 참고자료: ${hasReferenceAnswer ? "입력됨" : "미입력"}`,
       "",
       "누락 후보",
       `- ${hasMissingPointMemo ? missingPointMemo.trim() : "누락 논점 후보 메모 필요"}`,
@@ -366,7 +407,7 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
         : "검토 대기";
 
   const biggestGapFix = toShortLine(structureDraft?.rewriteTarget || qualityView?.nextAction || "", "누락된 핵심 논점을 문단 하나로 다시 구성해 보세요.");
-  const inputStatusSummary = `문제/사례 ${hasProblemInput ? "입력됨" : "미입력"}, 내 답안 ${hasMyAnswer ? "입력됨" : "미입력"}, 기준답안 ${
+  const inputStatusSummary = `문제/사례 ${hasProblemInput ? "입력됨" : "미입력"}, 내 답안 ${hasMyAnswer ? "입력됨" : "미입력"}, 검토 참고자료 ${
     hasReferenceAnswer ? "입력됨" : "미입력"
   }`;
   const missingPointSummary = hasMissingPointMemo
@@ -396,6 +437,7 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
 
   return (
     <RefinedShell className="space-y-5 py-6 sm:space-y-8 sm:py-10">
+      <StandaloneLearnerToolNav mode={examMode} subject={subject} />
       <section className="space-y-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] p-4 sm:p-6">
         <div className="flex flex-wrap items-center gap-2">
           <RefinedBadge>답안 검토실</RefinedBadge>
@@ -488,6 +530,7 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                     <p className="mt-2 text-sm font-semibold text-[#1e2a46]">답안 스냅으로 시작</p>
                     <p className="mt-1 text-caption leading-5 text-[#3f4c66]">사례 스캔, PDF/사진 불러오기, 텍스트 붙여넣기를 함께 사용할 수 있습니다.</p>
                   </article>
+                  {showCalculationCheck ? <CalculationCheckPanel /> : null}
                   <div className="grid gap-3 sm:grid-cols-2">
                 <label className="space-y-2 text-caption font-medium text-[color:var(--muted)]">
                   시험 모드
@@ -581,7 +624,7 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                 </section>
 
                 <section className="space-y-2 rounded-[var(--radius-sm)] border border-[var(--border)] p-3" id="reference-upload">
-                  <p className="text-caption font-medium text-[color:var(--muted)]">기준답안 추가 (선택)</p>
+                  <p className="text-caption font-medium text-[color:var(--muted)]">검토 참고자료 추가 (선택)</p>
                   <label
                     htmlFor="answer-review-reference-file-upload"
                     className={cn(buttonVariants({ variant: "outline" }), "w-full cursor-pointer justify-center sm:w-auto")}
@@ -614,11 +657,11 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                   />
                 </div>
                 <details className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface)] p-3" id="answer-review-reference">
-                  <summary className="cursor-pointer text-caption font-medium text-[color:var(--muted)]">기준답안/메모 입력 (선택)</summary>
+                  <summary className="cursor-pointer text-caption font-medium text-[color:var(--muted)]">참고 정리/메모 입력 (선택)</summary>
                   <div className="mt-2 space-y-2">
                     <Textarea
                       className="min-h-[120px] bg-[color:var(--surface)]"
-                      placeholder="기준답안 또는 기준목차를 텍스트로 붙여 넣어 주세요."
+                      placeholder="강의/교재 정리 또는 참고 목차를 텍스트로 붙여 넣어 주세요."
                       data-testid="answer-review-reference-input"
                       value={referenceAnswerText}
                       onChange={(event) => setReferenceAnswerText(event.target.value)}
@@ -639,7 +682,7 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                     <div className="mt-3 grid gap-2">
                       <InputStatusCard title="내 답안" statusText={hasMyAnswer ? "입력됨" : "미입력"} helper="필수 입력" />
                       <InputStatusCard title="문제/사례" statusText={hasProblemInput ? "입력됨" : "선택"} helper="선택 입력" />
-                      <InputStatusCard title="기준답안" statusText={hasReferenceAnswer ? "입력됨" : "선택"} helper="선택 입력" />
+                      <InputStatusCard title="검토 참고자료" statusText={hasReferenceAnswer ? "입력됨" : "선택"} helper="선택 입력" />
                     </div>
                   </article>
                   <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
@@ -671,7 +714,7 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
               </div>
 
               <section className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
-                <button type="button" onClick={() => setShowExampleAnswer((prev) => !prev)} className="text-caption font-medium text-[color:var(--foreground-strong)]">예시 답안 보기</button>
+                <button type="button" onClick={() => setShowExampleAnswer((prev) => !prev)} className="text-caption font-medium text-[color:var(--foreground-strong)]">예시 구조 보기</button>
                 <AnimatePresence>
                   {showExampleAnswer ? (
                     <motion.div initial={shouldReduceMotion ? false : { opacity: 0, height: 0 }} animate={shouldReduceMotion ? undefined : { opacity: 1, height: "auto" }} exit={shouldReduceMotion ? undefined : { opacity: 0, height: 0 }} className="mt-3 overflow-hidden rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3 text-caption leading-6 text-[color:var(--foreground-strong)]">
@@ -802,6 +845,7 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                     </article>
 
 
+                    {showCalculationCheck ? <CalculationCheckPanel /> : null}
 
                     <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
                       <p className="text-caption font-medium text-[color:var(--muted)]">{explanationTitle}</p>
@@ -858,7 +902,7 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                       <p className="mt-1 text-sm font-semibold leading-6 text-[color:var(--foreground-strong)]">
                         간극 1개 우선 보강
                       </p>
-                      <p className="mt-2 text-caption leading-5 text-[color:var(--muted)]">공식 점수 대신 다음 보강 행동을 먼저 실행해 주세요.</p>
+                      <p className="mt-2 text-caption leading-5 text-[color:var(--muted)]">점수보다 다음 보강 행동을 먼저 실행해 주세요.</p>
                     </article>
                     <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
                       <p className="text-caption font-medium text-[color:var(--muted)]">보조 지표</p>
@@ -957,7 +1001,7 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                     <ul className="mt-2 space-y-1 text-caption leading-5 text-[color:var(--foreground-strong)]">
                       <li>문제/사례: {hasProblemInput ? "입력됨" : "미입력"}</li>
                       <li>내 답안: {hasMyAnswer ? "입력됨" : "미입력"}</li>
-                      <li>기준답안: {hasReferenceAnswer ? "입력됨" : "미입력"}</li>
+                      <li>검토 참고자료: {hasReferenceAnswer ? "입력됨" : "미입력"}</li>
                     </ul>
                   </article>
                   <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
@@ -999,13 +1043,13 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                 <ul className="space-y-1 text-caption leading-5 text-[color:var(--muted)]">
                   <li>1) 문제/사례 입력</li>
                   <li>2) 내 답안 입력</li>
-                  <li>3) 기준답안 입력</li>
+                  <li>3) 참고 정리 입력</li>
                   <li>4) 피드백 전달 전 검수</li>
                 </ul>
-                <p className="text-caption leading-5 text-[color:var(--muted)]">긴 PDF는 필요한 문제/답안/기준답안 페이지만 나눠 넣는 것이 좋습니다.</p>
+                <p className="text-caption leading-5 text-[color:var(--muted)]">긴 PDF는 필요한 문제/답안/참고 정리 페이지만 나눠 넣는 것이 좋습니다.</p>
                 {hasMyAnswer ? (
                   <p className="text-caption leading-5 text-[color:var(--muted)]">
-                    입력 요약: 내 답안 {myAnswerText.trim().length}자/{getParagraphCount(myAnswerText)}문단, 기준답안 {referenceAnswerText.trim().length}자/
+                    입력 요약: 내 답안 {myAnswerText.trim().length}자/{getParagraphCount(myAnswerText)}문단, 참고 정리 {referenceAnswerText.trim().length}자/
                     {getParagraphCount(referenceAnswerText)}문단.
                   </p>
                 ) : null}
@@ -1056,15 +1100,15 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                     </article>
                     <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3">
                       <p className="text-caption font-medium text-[color:var(--muted)]">필수 논점</p>
-                      <p className="mt-1 text-caption leading-5 text-[color:var(--foreground-strong)]">{toDetailLine(structureDraft.requiredIssues, "기준답안과 문제 요구를 더 입력하면 보강할 간극이 선명해집니다.")}</p>
+                      <p className="mt-1 text-caption leading-5 text-[color:var(--foreground-strong)]">{toDetailLine(structureDraft.requiredIssues, "참고 정리와 문제 요구를 더 입력하면 보강할 간극이 선명해집니다.")}</p>
                     </article>
                     <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3">
                       <p className="text-caption font-medium text-[color:var(--muted)]">내 답안 구조</p>
                       <p className="mt-1 text-caption leading-5 text-[color:var(--foreground-strong)]">{toDetailLine(structureDraft.userAnswerStructure, "문단별 주장과 근거를 정리하면 구조 분석이 선명해집니다.")}</p>
                     </article>
                     <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3">
-                      <p className="text-caption font-medium text-[color:var(--muted)]">기준답안 구조</p>
-                      <p className="mt-1 text-caption leading-5 text-[color:var(--foreground-strong)]">{toDetailLine(structureDraft.referenceStructure, "기준답안의 목차를 입력하면 비교가 정확해집니다.")}</p>
+                      <p className="text-caption font-medium text-[color:var(--muted)]">참고 정리 구조</p>
+                      <p className="mt-1 text-caption leading-5 text-[color:var(--foreground-strong)]">{toDetailLine(structureDraft.referenceStructure, "참고 정리의 목차를 입력하면 비교가 정확해집니다.")}</p>
                     </article>
                     <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3">
                       <p className="text-caption font-medium text-[color:var(--muted)]">보강 문단 포인트</p>

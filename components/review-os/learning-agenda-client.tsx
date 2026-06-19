@@ -48,7 +48,7 @@ function EmptyAgendaState({ mode }: { mode: AppraisalMode }) {
     <Card className="border-[color:var(--border-subtle)] bg-[color:var(--surface)] shadow-none">
       <CardHeader className="space-y-2">
         <CardTitle>아직 쌓인 학습 기록이 없습니다.</CardTitle>
-        <CardDescription>오늘 한 것을 하나 올리면 기록이 시작됩니다.</CardDescription>
+        <CardDescription>오늘 한 것 하나만 남기면 여기에 공부 흐름이 쌓입니다.</CardDescription>
       </CardHeader>
       <CardContent>
         <Link href={`/app/capture?mode=${mode}`} className="inline-flex w-full sm:w-auto">
@@ -78,6 +78,50 @@ function EventLine({ event }: { event: LearningAgendaEvent }) {
   );
 }
 
+function getMostFrequentSubject(events: LearningAgendaEvent[]) {
+  const counts = new Map<string, number>();
+  for (const event of events) {
+    if (!event.subject) continue;
+    counts.set(event.subject, (counts.get(event.subject) ?? 0) + 1);
+  }
+  let topSubject = "아직 없음";
+  let topCount = 0;
+  for (const [subject, count] of counts) {
+    if (count > topCount) {
+      topSubject = subject;
+      topCount = count;
+    }
+  }
+  return topSubject;
+}
+
+function splitDailyEvents(events: LearningAgendaEvent[]) {
+  return {
+    todayWork: events.filter((event) => event.type === "capture_saved" || event.type === "note_created"),
+    dueReviews: events.filter((event) => event.type === "review_due"),
+    completed: events.filter(
+      (event) =>
+        event.type === "review_completed" ||
+        event.type === "today_task_completed" ||
+        event.type === "weakness_recovered",
+    ),
+  };
+}
+
+function DailyEventGroup({ title, events }: { title: string; events: LearningAgendaEvent[] }) {
+  if (events.length === 0) return null;
+  return (
+    <div className="space-y-2">
+      <p className="text-xs font-medium text-[color:var(--muted)]">{title}</p>
+      <ul className="space-y-2">
+        {events.map((event) => (
+          <EventLine key={event.id} event={event} />
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export function LearningAgendaClient({ mode, initialEvents }: LearningAgendaClientProps) {
   const [localNotes, setLocalNotes] = useState<LocalBetaLearnerNote[]>([]);
 
@@ -97,6 +141,15 @@ export function LearningAgendaClient({ mode, initialEvents }: LearningAgendaClie
   const monthCells = useMemo(() => buildLearningAgendaMonthCells(events), [events]);
   const weekGroups = useMemo(() => buildLearningAgendaWeekGroups(events), [events]);
   const dayGroups = useMemo(() => groupLearningAgendaEventsByDay(events).slice(0, 6), [events]);
+  const agendaSummary = useMemo(
+    () => ({
+      weekRecordCount: weekGroups.reduce((sum, group) => sum + group.events.length, 0),
+      completedReviewCount: events.filter((event) => event.type === "review_completed").length,
+      dueReviewCount: events.filter((event) => event.type === "review_due").length,
+      topSubject: getMostFrequentSubject(events),
+    }),
+    [events, weekGroups],
+  );
   const hasEvents = events.length > 0;
 
   return (
@@ -108,12 +161,44 @@ export function LearningAgendaClient({ mode, initialEvents }: LearningAgendaClie
 
       {!hasEvents ? <EmptyAgendaState mode={mode} /> : null}
 
+      <Card className="border-[color:var(--border-subtle)] bg-[color:var(--surface)] shadow-none" data-agenda-summary-card>
+        <CardHeader className="space-y-1">
+          <CardTitle>이번 주 요약</CardTitle>
+          <CardDescription>저장된 학습 기록과 복습 상태만 집계합니다.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-2 sm:grid-cols-4">
+            <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] p-3">
+              <p className="text-xs text-[color:var(--muted)]">이번 주 기록 수</p>
+              <p className="mt-1 text-lg font-semibold text-[color:var(--foreground-strong)]">{agendaSummary.weekRecordCount}</p>
+            </div>
+            <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] p-3">
+              <p className="text-xs text-[color:var(--muted)]">완료한 복습 수</p>
+              <p className="mt-1 text-lg font-semibold text-[color:var(--foreground-strong)]">{agendaSummary.completedReviewCount}</p>
+            </div>
+            <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] p-3">
+              <p className="text-xs text-[color:var(--muted)]">예정된 복습 수</p>
+              <p className="mt-1 text-lg font-semibold text-[color:var(--foreground-strong)]">{agendaSummary.dueReviewCount}</p>
+            </div>
+            <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] p-3">
+              <p className="text-xs text-[color:var(--muted)]">가장 많이 나온 과목</p>
+              <p className="mt-1 text-sm font-semibold leading-6 text-[color:var(--foreground-strong)]">{agendaSummary.topSubject}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card className="border-[color:var(--border-subtle)] bg-[color:var(--surface)] shadow-none">
         <CardHeader className="space-y-1">
           <CardTitle>월간 기록</CardTitle>
           <CardDescription>진한 칸은 학습 기록이 있는 날입니다.</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-3">
+          <div className="flex flex-wrap gap-3 text-xs text-[color:var(--muted)]" aria-label="월간 기록 범례">
+            <span className="inline-flex items-center gap-1"><span className="size-3 rounded-[3px] border border-[color:var(--brand-700)] bg-[color:var(--brand-900)]" />기록 있음</span>
+            <span className="inline-flex items-center gap-1"><span className="size-3 rounded-[3px] border border-[color:var(--cue-focus)] bg-[color:var(--cue-focus-bg)]" />복습 예정</span>
+            <span className="inline-flex items-center gap-1"><span className="size-3 rounded-[3px] border border-[color:var(--status-green)] bg-[color:var(--status-green-soft)]" />복습 완료</span>
+          </div>
           <div className="grid grid-cols-7 gap-1.5" aria-label="월간 학습 기록">
             {monthCells.map((cell) => (
               <div
@@ -163,14 +248,17 @@ export function LearningAgendaClient({ mode, initialEvents }: LearningAgendaClie
         </CardHeader>
         <CardContent className="space-y-4">
           {dayGroups.length > 0 ? (
-            dayGroups.map((group) => (
-              <section key={group.date} className="space-y-2">
-                <h2 className="text-sm font-semibold text-[color:var(--foreground-strong)]">{formatDayLabel(group.date)}</h2>
-                <ul className="space-y-2">
-                  {group.events.map((event) => <EventLine key={event.id} event={event} />)}
-                </ul>
-              </section>
-            ))
+            dayGroups.map((group) => {
+              const grouped = splitDailyEvents(group.events);
+              return (
+                <section key={group.date} className="space-y-3">
+                  <h2 className="text-sm font-semibold text-[color:var(--foreground-strong)]">{formatDayLabel(group.date)}</h2>
+                  <DailyEventGroup title="오늘 한 것" events={grouped.todayWork} />
+                  <DailyEventGroup title="복습 예정" events={grouped.dueReviews} />
+                  <DailyEventGroup title="완료한 것" events={grouped.completed} />
+                </section>
+              );
+            })
           ) : (
             <p className="text-sm text-[color:var(--muted)]">기록이 생기면 날짜별로 보여줍니다.</p>
           )}

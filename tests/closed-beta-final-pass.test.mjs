@@ -15,7 +15,7 @@ import {
 
 const ko = {
   agenda: "\ud559\uc2b5 \uae30\ub85d",
-  agendaEmptyBody: "\uc624\ub298 \ud55c \uac83\uc744 \ud558\ub098 \uc62c\ub9ac\uba74 \uae30\ub85d\uc774 \uc2dc\uc791\ub429\ub2c8\ub2e4.",
+  agendaEmptyBody: "오늘 한 것 하나만 남기면 여기에 공부 흐름이 쌓입니다.",
   agendaEmptyTitle: "\uc544\uc9c1 \uc313\uc778 \ud559\uc2b5 \uae30\ub85d\uc774 \uc5c6\uc2b5\ub2c8\ub2e4.",
   biggestGap: "\uac00\uc7a5 \ud070 \uc57d\uc810",
   capture: "\uc624\ub298 \ud55c \uac83 \uc62c\ub9ac\uae30",
@@ -26,7 +26,7 @@ const ko = {
   noteDraftCta: "\ud559\uc2b5 \ub178\ud2b8 \ucd08\uc548 \ub9cc\ub4e4\uae30",
   photoPdf: "\uc0ac\uc9c4/PDF",
   review: "\ubcf5\uc2b5",
-  reviewCompleteAction: "\ubcf5\uc2b5 \uc644\ub8cc\ud558\uae30",
+  reviewCompleteAction: "완료 처리",
   reviewCompleted: "\ubcf5\uc2b5 \uc644\ub8cc",
   reviewDue: "\ubcf5\uc2b5 \uc608\uc815",
   text: "\ud14d\uc2a4\ud2b8",
