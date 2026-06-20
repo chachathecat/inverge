@@ -114,6 +114,9 @@ test("calculation routine is primary before collapsed calculator reference and g
   assert.ok(source.indexOf("renderCalculatorStepPanel(result,") < genericIndex);
   assert.ok(source.includes("data-problem-snap-calculator-reference-locked"));
   assert.ok(source.includes("referenceUnlocked: calculatorRoutineReferenceUnlocked"));
+  assert.ok(source.includes("hasStrongProblemSnapCalculatorSignal(result)"));
+  assert.equal(source.includes("hasCalculatorGuideData"), false);
+  assert.equal(source.includes("isMeaningfulCalculatorValue"), false);
   assert.ok(source.includes("먼저 계산·검산 루틴에서 한 단계 입력하거나 막힘을 선택하면 전체 참고 신호를 열 수 있습니다."));
   assert.ok(source.includes("setCalculatorRoutineDraftReference(null);"));
   assert.ok(source.includes("setCalculatorRoutineRunId(null);"));

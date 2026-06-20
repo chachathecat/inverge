@@ -27,7 +27,8 @@ test("Problem Snap prioritizes the active calculation routine before collapsed c
   const trainer = read("components/review-os/calculator-routine-trainer.tsx");
   const combined = `${problemSnap}\n${trainer}`;
 
-  assert.ok(problemSnap.includes("hasCalculatorGuideData(result.calculatorGuide)"));
+  assert.ok(problemSnap.includes("hasStrongProblemSnapCalculatorSignal(result)"));
+  assert.equal(problemSnap.includes("hasCalculatorGuideData"), false);
   assert.ok(problemSnap.includes("CalculatorRoutineTrainer"));
   assert.ok(problemSnap.includes("getCalculatorRoutineEligibility"));
   assert.ok(problemSnap.includes('getProblemSnapSubjectView(subject) === "practice"'));

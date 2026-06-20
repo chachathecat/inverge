@@ -93,6 +93,7 @@ export type CalculatorRoutineCompletionSignalV1 = {
   routineConceptCandidate: ConceptNodeCandidate;
   relatedConceptNodeId?: string;
   completedStepIds: CalculatorRoutineStepId[];
+  stuckStepIds: CalculatorRoutineStepId[];
   mistakeTypes: CalculatorRoutineMistakeType[];
   primaryMistakeType: CalculatorRoutineMistakeType;
   verificationMethods: CalculatorRoutineVerificationMethod[];
@@ -163,6 +164,36 @@ export function isMeaningfulCalculatorSignal(value?: string | null) {
   return !CALCULATOR_PLACEHOLDER_PATTERN.test(normalized);
 }
 
+export function isCalculationContextSignal(value?: string | null) {
+  const normalized = value?.trim();
+  return Boolean(normalized && isMeaningfulCalculatorSignal(normalized) && CALCULATION_CONTEXT_PATTERN.test(normalized));
+}
+
+export function hasStrongCalculatorGuideSignal(guide?: CalculatorRoutineEligibilityInput["calculatorGuide"] | null) {
+  if (!guide) return false;
+  return [
+    ...(guide.keystrokeSteps ?? []),
+    guide.calculationPurpose ?? "",
+    guide.expectedDisplay ?? "",
+    guide.answerRounding ?? "",
+    guide.recommendedMode && guide.recommendedMode !== "검토 필요" ? guide.recommendedMode : "",
+  ].some(isMeaningfulCalculatorSignal);
+}
+
+export function hasStrongCalculatorRoutineSignal(input: Pick<
+  CalculatorRoutineEligibilityInput,
+  "formulas" | "extractedNumbersAndUnits" | "stepByStepSolution" | "calculatorGuide" | "calculationContextText"
+>) {
+  return [
+    ...(input.formulas ?? []),
+    ...(input.extractedNumbersAndUnits ?? []).filter(isCalculationContextSignal),
+    ...(input.stepByStepSolution ?? []).filter(isCalculationContextSignal),
+    input.calculationContextText && CALCULATION_CONTEXT_PATTERN.test(input.calculationContextText)
+      ? input.calculationContextText
+      : "",
+  ].some(isMeaningfulCalculatorSignal) || hasStrongCalculatorGuideSignal(input.calculatorGuide);
+}
+
 export function normalizeCalculatorRoutineMistakeTypes(values: unknown): CalculatorRoutineMistakeType[] {
   const normalized = uniqueKnownValues<CalculatorRoutineMistakeType>(values, mistakeIds);
   if (normalized.includes("none")) return ["none"];
@@ -206,9 +237,13 @@ export function updateCalculatorRoutineDraftStep(
   now = new Date().toISOString(),
 ): CalculatorRoutineDraftV1 {
   if (!textStepIds.has(stepId)) return { ...draft, updatedAt: now };
+  const stuckStepIds = value.trim()
+    ? draft.stuckStepIds.filter((item) => item !== stepId)
+    : draft.stuckStepIds;
   return {
     ...draft,
     entries: { ...draft.entries, [stepId]: value },
+    stuckStepIds,
     updatedAt: now,
   };
 }
@@ -222,10 +257,9 @@ export function updateCalculatorRoutineDraftCurrentStep(
 }
 
 export function isCalculatorRoutineStepComplete(draft: CalculatorRoutineDraftV1, stepId: CalculatorRoutineStepId) {
-  if (draft.stuckStepIds.includes(stepId)) return true;
   if (textStepIds.has(stepId)) {
     const value = draft.entries[stepId as CalculatorRoutineTextStepId]?.trim();
-    return Boolean(value);
+    return Boolean(value) || draft.stuckStepIds.includes(stepId);
   }
   if (stepId === "verification") return normalizeCalculatorRoutineVerificationMethods(draft.verificationMethods).length > 0;
   if (stepId === "mistake_type") return normalizeCalculatorRoutineMistakeTypes(draft.mistakeTypes).length > 0;
@@ -259,21 +293,11 @@ export function buildCalculatorRoutineCompletionSignal(
     throw new Error("calculator-routine-unsupported-context");
   }
 
-  const normalizedMistakeTypes = normalizeCalculatorRoutineMistakeTypes(draft.mistakeTypes);
-  const mistakeTypes: CalculatorRoutineMistakeType[] = normalizedMistakeTypes.length > 0
-    ? normalizedMistakeTypes
-    : draft.stuckStepIds.includes("mistake_type")
-      ? ["other"]
-      : [];
+  const mistakeTypes = normalizeCalculatorRoutineMistakeTypes(draft.mistakeTypes);
   const primaryMistakeType = mistakeTypes[0];
   if (!primaryMistakeType) throw new Error("calculator-routine-missing-mistake-type");
 
-  const normalizedVerificationMethods = normalizeCalculatorRoutineVerificationMethods(draft.verificationMethods);
-  const verificationMethods: CalculatorRoutineVerificationMethod[] = normalizedVerificationMethods.length > 0
-    ? normalizedVerificationMethods
-    : draft.stuckStepIds.includes("verification")
-      ? ["other"]
-      : [];
+  const verificationMethods = normalizeCalculatorRoutineVerificationMethods(draft.verificationMethods);
   if (verificationMethods.length === 0) throw new Error("calculator-routine-missing-verification-method");
 
   const routineConceptCandidate = buildConceptNodeCandidate({
@@ -293,6 +317,7 @@ export function buildCalculatorRoutineCompletionSignal(
     routineId: draft.routineId,
     routineConceptCandidate,
     completedStepIds: progress.completedStepIds,
+    stuckStepIds: normalizeStepIds(draft.stuckStepIds),
     mistakeTypes,
     primaryMistakeType,
     verificationMethods,
@@ -330,6 +355,7 @@ export function sanitizeCalculatorRoutineCompletionSignal(
     routineConceptCandidate,
     relatedConceptNodeId: typeof signal.relatedConceptNodeId === "string" ? signal.relatedConceptNodeId : undefined,
     completedStepIds: normalizeStepIds(signal.completedStepIds),
+    stuckStepIds: normalizeStepIds(signal.stuckStepIds),
     mistakeTypes,
     primaryMistakeType,
     verificationMethods,
@@ -429,18 +455,7 @@ export function getCalculatorRoutineEligibility(input: CalculatorRoutineEligibil
     return { eligible: false, manualEligible: false, hasStrongSignal: false, reason: "unsupported_context" };
   }
 
-  const guide = input.calculatorGuide;
-  const hasStrongSignal = [
-    ...(input.formulas ?? []),
-    ...(input.extractedNumbersAndUnits ?? []),
-    ...(input.stepByStepSolution ?? []),
-    ...(guide?.keystrokeSteps ?? []),
-    guide?.calculationPurpose ?? "",
-    guide?.expectedDisplay ?? "",
-    guide?.answerRounding ?? "",
-    guide?.recommendedMode && guide.recommendedMode !== "검토 필요" ? guide.recommendedMode : "",
-    input.calculationContextText && CALCULATION_CONTEXT_PATTERN.test(input.calculationContextText) ? input.calculationContextText : "",
-  ].some(isMeaningfulCalculatorSignal);
+  const hasStrongSignal = hasStrongCalculatorRoutineSignal(input);
 
   if (hasStrongSignal) return { eligible: true, manualEligible: true, hasStrongSignal: true, reason: "eligible" };
   return { eligible: false, manualEligible: true, hasStrongSignal: false, reason: "manual_practice" };

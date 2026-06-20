@@ -206,7 +206,10 @@ export function CalculatorRoutineTrainer({
       const verificationMethods = hasMethod
         ? current.verificationMethods.filter((item) => item !== method)
         : [...current.verificationMethods, method];
-      return { ...current, verificationMethods, updatedAt: new Date().toISOString() };
+      const stuckStepIds = verificationMethods.length > 0
+        ? current.stuckStepIds.filter((item) => item !== "verification")
+        : current.stuckStepIds;
+      return { ...current, verificationMethods, stuckStepIds, updatedAt: new Date().toISOString() };
     });
   };
 
@@ -222,7 +225,10 @@ export function CalculatorRoutineTrainer({
           ? withoutNone.filter((item) => item !== mistakeType)
           : [...withoutNone, mistakeType];
       }
-      return { ...current, mistakeTypes, updatedAt: new Date().toISOString() };
+      const stuckStepIds = mistakeTypes.length > 0
+        ? current.stuckStepIds.filter((item) => item !== "mistake_type")
+        : current.stuckStepIds;
+      return { ...current, mistakeTypes, stuckStepIds, updatedAt: new Date().toISOString() };
     });
   };
 
@@ -235,14 +241,6 @@ export function CalculatorRoutineTrainer({
       hintUsedStepIds: current.hintUsedStepIds.includes(currentStep.id)
         ? current.hintUsedStepIds
         : [...current.hintUsedStepIds, currentStep.id],
-      verificationMethods:
-        currentStep.id === "verification" && current.verificationMethods.length === 0
-          ? ["other"]
-          : current.verificationMethods,
-      mistakeTypes:
-        currentStep.id === "mistake_type" && current.mistakeTypes.length === 0
-          ? ["other"]
-          : current.mistakeTypes,
       updatedAt: new Date().toISOString(),
     }));
     setRevealedHintStepIds((current) => current.includes(currentStep.id) ? current : [...current, currentStep.id]);
@@ -380,6 +378,11 @@ export function CalculatorRoutineTrainer({
                   ))}
                 </div>
               </fieldset>
+              {isCurrentStepStuck && draft.verificationMethods.length === 0 ? (
+                <p className="text-caption leading-5 text-[color:var(--muted)]">
+                  참고 신호를 확인한 뒤 실제로 수행한 검산 방법을 하나 이상 선택해 주세요.
+                </p>
+              ) : null}
               <label className="block text-caption font-medium text-[color:var(--muted)]">
                 검산 메모 (선택)
                 <Textarea
@@ -412,6 +415,11 @@ export function CalculatorRoutineTrainer({
                   ))}
                 </div>
               </fieldset>
+              {isCurrentStepStuck && draft.mistakeTypes.length === 0 ? (
+                <p className="text-caption leading-5 text-[color:var(--muted)]">
+                  확인된 실수 유형을 고르거나, 실수가 없었다면 ‘실수 없음’을 선택해 주세요.
+                </p>
+              ) : null}
               <label className="block text-caption font-medium text-[color:var(--muted)]">
                 기타 메모 (선택)
                 <Textarea

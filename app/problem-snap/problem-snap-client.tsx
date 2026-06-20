@@ -15,7 +15,11 @@ import { ResultFeedbackPrompt } from "@/components/shared/result-feedback-prompt
 import { buttonVariants } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { normalizeSubjectForMode, type AppraisalMode } from "@/lib/review-os/appraisal";
-import { getCalculatorRoutineEligibility } from "@/lib/review-os/calculator-routine";
+import {
+  getCalculatorRoutineEligibility,
+  hasStrongCalculatorRoutineSignal,
+  isMeaningfulCalculatorSignal,
+} from "@/lib/review-os/calculator-routine";
 import { APPRAISAL_FIRST_SUBJECTS, APPRAISAL_SECOND_SUBJECTS } from "@/lib/review-os/types";
 import { cn } from "@/lib/utils";
 
@@ -50,24 +54,16 @@ type ProblemSnapResult = {
 
 const CALCULATOR_STEP_FALLBACK = "계산/CASIO 스텝은 확인이 필요합니다. 원문 숫자와 단위를 직접 확인해 주세요.";
 
-const isMeaningfulCalculatorValue = (value?: string | null) => {
-  const normalized = value?.trim();
-  if (!normalized) return false;
-  return !["확인 필요", "검토 필요", "없음", "계산기 입력 없음", "입력 없음", "해당 없음"].some((placeholder) =>
-    normalized.includes(placeholder),
-  );
-};
-
-const hasCalculatorGuideData = (guide: ProblemSnapResult["calculatorGuide"]) =>
-  isMeaningfulCalculatorValue(guide.calculationPurpose) ||
-  isMeaningfulCalculatorValue(guide.expectedDisplay) ||
-  isMeaningfulCalculatorValue(guide.answerRounding) ||
-  isMeaningfulCalculatorValue(guide.caution) ||
-  guide.recommendedMode !== "검토 필요" ||
-  guide.keystrokeSteps.some(isMeaningfulCalculatorValue);
+const hasStrongProblemSnapCalculatorSignal = (currentResult: ProblemSnapResult) =>
+  hasStrongCalculatorRoutineSignal({
+    formulas: currentResult.formulas,
+    extractedNumbersAndUnits: currentResult.extractedNumbersAndUnits,
+    stepByStepSolution: currentResult.stepByStepSolution,
+    calculatorGuide: currentResult.calculatorGuide,
+  });
 
 const compactCalculatorHints = (items: Array<string | undefined | null>) =>
-  items.filter((item): item is string => isMeaningfulCalculatorValue(item));
+  items.filter((item): item is string => isMeaningfulCalculatorSignal(item));
 
 const createCalculatorRoutineRunId = (source: "problem-snap" | "answer-review") => {
   const randomPart =
@@ -143,7 +139,7 @@ export default function ProblemSnapClientPage({
 
   const showCalculatorGuide = useMemo(() => {
     if (!result) return false;
-    return subject === "감정평가실무" || hasCalculatorGuideData(result.calculatorGuide);
+    return subject === "감정평가실무" || hasStrongProblemSnapCalculatorSignal(result);
   }, [result, subject]);
 
   const calculatorRoutineEligibility = useMemo(() => {
@@ -222,10 +218,10 @@ export default function ProblemSnapClientPage({
     options: { routineAvailable: boolean; referenceUnlocked: boolean },
   ) => {
     const guide = currentResult.calculatorGuide;
-    const hasGuideData = hasCalculatorGuideData(guide);
-    const calculationSteps = currentResult.stepByStepSolution.filter(isMeaningfulCalculatorValue);
-    const keystrokeSteps = guide.keystrokeSteps.filter(isMeaningfulCalculatorValue);
-    const caution = isMeaningfulCalculatorValue(guide.caution) ? guide.caution : "단위와 반올림 기준 확인 필요";
+    const hasGuideData = hasStrongProblemSnapCalculatorSignal(currentResult);
+    const calculationSteps = currentResult.stepByStepSolution.filter(isMeaningfulCalculatorSignal);
+    const keystrokeSteps = guide.keystrokeSteps.filter(isMeaningfulCalculatorSignal);
+    const caution = isMeaningfulCalculatorSignal(guide.caution) ? guide.caution : "단위와 반올림 기준 확인 필요";
 
     if (options.routineAvailable && !options.referenceUnlocked) {
       return (
@@ -260,7 +256,7 @@ export default function ProblemSnapClientPage({
           <div className="grid gap-2 sm:grid-cols-2">
             <div className="rounded-[var(--radius-sm)] border bg-[color:var(--surface)] p-3">
               <p className="text-xs text-[color:var(--muted)]">계산 목적</p>
-              <p className="mt-1 text-sm">{isMeaningfulCalculatorValue(guide.calculationPurpose) ? guide.calculationPurpose : "확인 필요"}</p>
+              <p className="mt-1 text-sm">{isMeaningfulCalculatorSignal(guide.calculationPurpose) ? guide.calculationPurpose : "확인 필요"}</p>
             </div>
             <div className="rounded-[var(--radius-sm)] border bg-[color:var(--surface)] p-3">
               <p className="text-xs text-[color:var(--muted)]">추천 모드</p>
@@ -276,11 +272,11 @@ export default function ProblemSnapClientPage({
             </div>
             <div className="rounded-[var(--radius-sm)] border bg-[color:var(--surface)] p-3">
               <p className="text-xs text-[color:var(--muted)]">화면에 보여야 할 값</p>
-              <p className="mt-1 text-sm">{isMeaningfulCalculatorValue(guide.expectedDisplay) ? guide.expectedDisplay : "확인 필요"}</p>
+              <p className="mt-1 text-sm">{isMeaningfulCalculatorSignal(guide.expectedDisplay) ? guide.expectedDisplay : "확인 필요"}</p>
             </div>
             <div className="rounded-[var(--radius-sm)] border bg-[color:var(--surface)] p-3">
               <p className="text-xs text-[color:var(--muted)]">답안에 적을 값</p>
-              <p className="mt-1 text-sm">{isMeaningfulCalculatorValue(guide.answerRounding) ? guide.answerRounding : "확인 필요"}</p>
+              <p className="mt-1 text-sm">{isMeaningfulCalculatorSignal(guide.answerRounding) ? guide.answerRounding : "확인 필요"}</p>
             </div>
           </div>
           <p className="text-xs text-[color:var(--muted)]">단위/반올림 주의: {caution}</p>

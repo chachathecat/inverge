@@ -14,6 +14,9 @@ import {
   getCalculatorRoutineDraftStorageKey,
   getCalculatorRoutineEligibility,
   getCalculatorRoutineProgress,
+  hasStrongCalculatorGuideSignal,
+  hasStrongCalculatorRoutineSignal,
+  isCalculatorRoutineStepComplete,
   normalizeCalculatorRoutineMistakeTypes,
   parseCalculatorRoutineCompletionHistory,
   parseCalculatorRoutineDraftFromSession,
@@ -111,15 +114,45 @@ test("verification and mistake type requirements are enforced", () => {
   assert.deepEqual(normalizeCalculatorRoutineMistakeTypes(["none", "rounding", "casio_input"]), ["none"]);
   assert.deepEqual(normalizeCalculatorRoutineMistakeTypes(["rounding", "rounding", "other"]), ["rounding", "other"]);
 
-  const stuckCompletion = buildCalculatorRoutineCompletionSignal({
+  const allStuck = {
+    ...createCalculatorRoutineDraft({
+      source: "problem-snap",
+      examMode: "second",
+      subject: "감정평가실무",
+      routineId: "routine-all-stuck",
+      now: "2026-06-20T00:00:00.000Z",
+    }),
+    stuckStepIds: CALCULATOR_ROUTINE_STEPS.map((step) => step.id),
+  };
+  assert.equal(getCalculatorRoutineProgress(allStuck).isComplete, false);
+  assert.throws(() => buildCalculatorRoutineCompletionSignal(allStuck), /calculator-routine-incomplete/);
+
+  const stuckVerification = {
     ...completeDraft(),
     verificationMethods: [],
+    stuckStepIds: ["verification"],
+  };
+  assert.equal(isCalculatorRoutineStepComplete(stuckVerification, "verification"), false);
+  assert.throws(() => buildCalculatorRoutineCompletionSignal(stuckVerification), /calculator-routine-incomplete|missing-verification/);
+
+  const stuckMistake = {
+    ...completeDraft(),
     mistakeTypes: [],
-    stuckStepIds: ["verification", "mistake_type"],
-  });
-  assert.deepEqual(stuckCompletion.verificationMethods, ["other"]);
-  assert.deepEqual(stuckCompletion.mistakeTypes, ["other"]);
-  assert.equal(stuckCompletion.primaryMistakeType, "other");
+    stuckStepIds: ["mistake_type"],
+  };
+  assert.equal(isCalculatorRoutineStepComplete(stuckMistake, "mistake_type"), false);
+  assert.throws(() => buildCalculatorRoutineCompletionSignal(stuckMistake), /calculator-routine-incomplete|missing-mistake/);
+
+  const stuckText = {
+    ...completeDraft(),
+    entries: { ...completeDraft().entries, casio_input: "" },
+    stuckStepIds: ["casio_input"],
+  };
+  assert.equal(isCalculatorRoutineStepComplete(stuckText, "casio_input"), true);
+  assert.equal(getCalculatorRoutineProgress(stuckText).isComplete, true);
+
+  const typedAfterStuck = updateCalculatorRoutineDraftStep(stuckText, "casio_input", "MENU 1 EXE");
+  assert.equal(typedAfterStuck.stuckStepIds.includes("casio_input"), false);
 });
 
 test("completion signal is metadata-only and reuses the concept-node calculator routine candidate", () => {
@@ -136,6 +169,18 @@ test("completion signal is metadata-only and reuses the concept-node calculator 
   assert.equal(signal.routineConceptCandidate.nextTaskType, "calculator_routine");
   assert.equal(signal.routineConceptCandidate.sourceStatus, "draft");
   assert.equal(signal.routineConceptCandidate.needsOfficialVerification, true);
+  assert.deepEqual(signal.stuckStepIds, []);
+
+  const stuckTextSignal = buildCalculatorRoutineCompletionSignal(
+    {
+      ...completeDraft(),
+      entries: { ...completeDraft().entries, casio_input: "" },
+      stuckStepIds: ["casio_input"],
+    },
+    "2026-06-20T00:31:00.000Z",
+  );
+  assert.deepEqual(stuckTextSignal.stuckStepIds, ["casio_input"]);
+  assert.ok(stuckTextSignal.completedStepIds.includes("casio_input"));
 
   const serialized = JSON.stringify(signal);
   [
@@ -153,7 +198,22 @@ test("completion signal is metadata-only and reuses the concept-node calculator 
     "userAnswer",
     "officialAnswer",
     "raw",
+    "막힘",
+    "RAW_STUCK_SENTINEL",
   ].forEach((token) => assert.equal(serialized.includes(token), false, `raw token leaked: ${token}`));
+  assert.equal(JSON.stringify(stuckTextSignal).includes("RAW_CASIO_SENTINEL"), false);
+});
+
+test("stuck verification and mistake steps do not synthesize fallback selections", () => {
+  const combined = [
+    "lib/review-os/calculator-routine.ts",
+    "components/review-os/calculator-routine-trainer.tsx",
+  ].map(read).join("\n");
+
+  assert.equal(/verificationMethods:\s*\[\s*"other"\s*\]/.test(combined), false);
+  assert.equal(/mistakeTypes:\s*\[\s*"other"\s*\]/.test(combined), false);
+  assert.equal(/stuckStepIds\.includes\("verification"\)[\s\S]{0,120}\["other"\]/.test(combined), false);
+  assert.equal(/stuckStepIds\.includes\("mistake_type"\)[\s\S]{0,120}\["other"\]/.test(combined), false);
 });
 
 test("draft and completion storage helpers keep raw and metadata scopes separate", () => {
@@ -165,17 +225,65 @@ test("draft and completion storage helpers keep raw and metadata scopes separate
   assert.equal(parseCalculatorRoutineDraftFromSession(rawSessionDraft)?.entries.casio_input, textStepEntries.casio_input);
 
   const signal = buildCalculatorRoutineCompletionSignal(draft, "2026-06-20T00:30:00.000Z");
+  const stuckSignal = buildCalculatorRoutineCompletionSignal(
+    {
+      ...draft,
+      entries: { ...draft.entries, formula: "" },
+      stuckStepIds: ["formula"],
+    },
+    "2026-06-20T00:31:00.000Z",
+  );
   const oversized = Array.from({ length: 55 }, (_, index) => ({ ...signal, routineId: `routine-${index}` }));
-  const capped = appendCalculatorRoutineCompletionSignal(oversized, signal);
+  const capped = appendCalculatorRoutineCompletionSignal(oversized, stuckSignal);
   assert.equal(capped.length, 50);
+  assert.deepEqual(capped[0].stuckStepIds, ["formula"]);
   assert.equal(CALCULATOR_ROUTINE_COMPLETION_STORAGE_KEY, "inverge.calculatorRoutine.completions.v1");
   assert.deepEqual(parseCalculatorRoutineCompletionHistory("{bad json"), []);
-  assert.equal(serializeCalculatorRoutineCompletionHistoryForLocalStorage(capped).includes("RAW_CASIO_SENTINEL"), false);
+  const serializedHistory = serializeCalculatorRoutineCompletionHistoryForLocalStorage(capped);
+  assert.ok(serializedHistory.includes("stuckStepIds"));
+  assert.equal(serializedHistory.includes("RAW_CASIO_SENTINEL"), false);
+  assert.equal(serializedHistory.includes("RAW_FORMULA_SENTINEL"), false);
 });
 
 test("eligibility is limited to second exam practice and ignores placeholder calculator fallbacks", () => {
   assert.equal(getCalculatorRoutineEligibility({ examMode: "first", subject: "감정평가실무" }).eligible, false);
   assert.equal(getCalculatorRoutineEligibility({ examMode: "second", subject: "감정평가이론" }).manualEligible, false);
+  assert.equal(
+    hasStrongCalculatorGuideSignal({
+      calculationPurpose: "검토 필요",
+      recommendedMode: "검토 필요",
+      keystrokeSteps: ["계산기 입력 없음"],
+      expectedDisplay: "확인 필요",
+      answerRounding: "해당 없음",
+      caution: "AI 생성 초안입니다. 원문·숫자·단위를 직접 대조해 주세요.",
+    }),
+    false,
+    "generic caution alone must not surface calculator UI",
+  );
+  assert.equal(
+    hasStrongCalculatorRoutineSignal({
+      formulas: [],
+      extractedNumbersAndUnits: ["공익사업법 제20조", "30일"],
+      stepByStepSolution: ["사업인정 절차를 순서대로 정리"],
+      calculatorGuide: {
+        calculationPurpose: "검토 필요",
+        recommendedMode: "검토 필요",
+        keystrokeSteps: [],
+        expectedDisplay: "확인 필요",
+        answerRounding: "해당 없음",
+      },
+    }),
+    false,
+    "law/theory explanation steps and article numbers are not calculator signals",
+  );
+  assert.equal(
+    hasStrongCalculatorRoutineSignal({
+      formulas: [],
+      extractedNumbersAndUnits: ["직접환원 수익 12,000,000원/㎡"],
+      stepByStepSolution: ["환원율로 계산 후 단위 반올림"],
+    }),
+    true,
+  );
 
   const placeholderOnly = getCalculatorRoutineEligibility({
     examMode: "second",
@@ -217,12 +325,18 @@ test("trainer component enforces attempt-before-reveal without prefilling entrie
   assert.ok(component.includes("이 기기의 학습 기록에 저장됨"));
   assert.ok(component.includes("루틴 완료, 기기 학습 기록 저장 실패"));
   assert.ok(component.includes("제공할 참고 신호가 없습니다. 원문 조건과 숫자·단위를 직접 대조해 주세요."));
+  assert.ok(component.includes("참고 신호를 확인한 뒤 실제로 수행한 검산 방법을 하나 이상 선택해 주세요."));
+  assert.ok(component.includes("확인된 실수 유형을 고르거나, 실수가 없었다면 ‘실수 없음’을 선택해 주세요."));
   assert.ok(component.includes("disabled={!hasAttemptForReveal}"));
   assert.ok(component.includes("markStuckAndReveal"));
   assert.ok(component.includes("!currentStepComplete ? ("));
   assert.ok(component.includes("visibleHints = hasActiveHints ? activeHints : [noReferenceHintFallback]"));
   assert.ok(component.includes("hintUsedStepIds"));
+  assert.ok(component.includes('current.stuckStepIds.filter((item) => item !== "verification")'));
+  assert.ok(component.includes('current.stuckStepIds.filter((item) => item !== "mistake_type")'));
   assert.equal(component.includes("activeHints[0]"), false, "reference hints must not prefill learner entries");
+  assert.equal(/verificationMethods:\s*\[\s*"other"\s*\]/.test(component), false);
+  assert.equal(/mistakeTypes:\s*\[\s*"other"\s*\]/.test(component), false);
   assert.equal(component.includes("focus:border-[color:var(--accent)]"), false);
 });
 
@@ -250,6 +364,14 @@ test("Problem Snap and Answer Review integrate the reusable trainer without pass
 
   assert.ok(problemSnap.includes("CalculatorRoutineTrainer"));
   assert.ok(problemSnap.includes("getCalculatorRoutineEligibility"));
+  assert.ok(problemSnap.includes("hasStrongProblemSnapCalculatorSignal(result)"));
+  assert.ok(problemSnap.includes('subject === "감정평가실무" || hasStrongProblemSnapCalculatorSignal(result)'));
+  assert.equal(problemSnap.includes("hasCalculatorGuideData"), false);
+  const strongSignalHelper = problemSnap.slice(
+    problemSnap.indexOf("const hasStrongProblemSnapCalculatorSignal"),
+    problemSnap.indexOf("const compactCalculatorHints"),
+  );
+  assert.equal(strongSignalHelper.includes("guide.caution"), false);
   assert.ok(problemSnap.includes('getProblemSnapSubjectView(subject) === "practice"'));
   assert.ok(problemSnap.includes("calculatorRoutineDraftKey"));
   assert.ok(problemSnap.includes("calculatorRoutineRunId"));
