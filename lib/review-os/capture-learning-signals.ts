@@ -1,4 +1,5 @@
 import { sanitizeLearningSignalMetadata } from "./data-boundary";
+import { buildConceptNodeCandidate } from "./concept-node-mapping";
 import type { LearningSignalEventInput, WrongAnswerItemInput } from "@/lib/review-os/types";
 
 type CaptureExamMode = LearningSignalEventInput["examMode"];
@@ -106,12 +107,29 @@ export function buildCaptureLearningSignal(input: CaptureLearningSignalInput): L
     weakStructurePoint: input.weakStructurePoint,
     missingIssue: input.missingIssue,
   });
+  const conceptNodeCandidate = buildConceptNodeCandidate({
+    mode: isSecond ? "second" : "first",
+    subject: input.subject,
+    mistakeType: input.mistakeReason ?? input.biggestGap,
+    metadata: {
+      topic_candidate: topicCandidate,
+      mistake_type: input.mistakeReason,
+      weak_structure_point: input.weakStructurePoint,
+      missing_issue: input.missingIssue,
+      keyConcepts: input.keyConcepts,
+      nextAction: input.nextAction ?? input.rewriteInstruction ?? nextTask,
+      calculationRisk: input.calculationRisk,
+      unitRisk: input.unitRisk,
+      supportedCalculatorTemplateId: input.supportedCalculatorTemplateId,
+    },
+  });
+  const enrichedTags = uniq([...tags, conceptNodeCandidate.conceptFamily, conceptNodeCandidate.nextTaskType]);
 
   return {
     examMode,
     subject: input.subject,
     sourceType: input.sourceType,
-    derivedTags: tags,
+    derivedTags: enrichedTags,
     relatedFormulas: [],
     nextTaskType,
     nextTask,
@@ -132,6 +150,11 @@ export function buildCaptureLearningSignal(input: CaptureLearningSignalInput): L
       missing_issue: input.missingIssue ?? null,
       calculationRisk: input.calculationRisk ?? null,
       unitRisk: input.unitRisk ?? null,
+      concept_node_candidate: conceptNodeCandidate,
+      conceptNodeId: conceptNodeCandidate.conceptNodeId,
+      conceptFamily: conceptNodeCandidate.conceptFamily,
+      retrievalPrompt: conceptNodeCandidate.retrievalPrompt,
+      conceptNextTaskType: conceptNodeCandidate.nextTaskType,
       rewriteTaskType: isSecond ? "second_answer_rewrite" : nextTaskType,
       supportedCalculatorTemplateId: input.supportedCalculatorTemplateId ?? null,
       taxonomy_candidate: topicCandidate ? { topic: topicCandidate, subject: input.subject } : null,

@@ -35,6 +35,7 @@ import type {
 } from "@/lib/review-os/types";
 import type { AppraisalMode } from "@/lib/review-os/appraisal";
 import { sanitizeDerivedMetadata, sanitizeLearningSignalMetadata } from "@/lib/review-os/data-boundary";
+import { isConceptNodeCandidate } from "@/lib/review-os/concept-node-mapping";
 import { toStringArray, toTaxonomyCandidates } from "@/lib/review-os/taxonomy-candidates";
 
 function createUuid() {
@@ -65,6 +66,28 @@ function toConceptReviewCard(value: unknown): ConceptReviewCardPayload | undefin
     concept_candidate: typeof row.concept_candidate === "string" ? row.concept_candidate : null,
     official_answer_authority: false,
   };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function toConceptNodeCandidateFromPayload(...payloads: unknown[]) {
+  for (const payload of payloads) {
+    if (isConceptNodeCandidate(payload)) return payload;
+    if (!isRecord(payload)) continue;
+    if (isConceptNodeCandidate(payload.concept_node_candidate)) return payload.concept_node_candidate;
+    if (isConceptNodeCandidate(payload.conceptNodeCandidate)) return payload.conceptNodeCandidate;
+    const captureNoteV2 = payload.capture_note_engine_v2;
+    if (isRecord(captureNoteV2) && isConceptNodeCandidate(captureNoteV2.concept_node_candidate)) {
+      return captureNoteV2.concept_node_candidate;
+    }
+    const captureNoteV1 = payload.capture_note_engine_v1;
+    if (isRecord(captureNoteV1) && isConceptNodeCandidate(captureNoteV1.concept_node_candidate)) {
+      return captureNoteV1.concept_node_candidate;
+    }
+  }
+  return null;
 }
 
 function toNullableNumber(value: unknown): number | null {
@@ -298,6 +321,11 @@ function mapReviewQueueCard(
       ? (queueRow.derived_payload as Record<string, unknown>)
       : {};
   const conceptCard = toConceptReviewCard(item.derivedPayload?.concept_card ?? item.rawPayload?.concept_card);
+  const conceptNodeCandidate = toConceptNodeCandidateFromPayload(
+    derivedPayload,
+    item.derivedPayload,
+    item.rawPayload,
+  );
 
   return {
     queueId: String(queueRow.id),
@@ -320,6 +348,7 @@ function mapReviewQueueCard(
     ),
     itemCreatedAt: item.createdAt,
     conceptCard,
+    conceptNodeCandidate,
     clozeCandidate: typeof item.derivedPayload?.cloze_candidate === "string" ? item.derivedPayload.cloze_candidate : conceptCard?.trapWords[0] ?? null,
     rawQuestionText: item.rawQuestionText ?? null,
   };
