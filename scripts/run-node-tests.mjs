@@ -31,6 +31,7 @@ const defaultTestFiles = [
   "tests/closed-beta-dogfood-ux-repair-pass-1.test.mjs",
   "tests/retrieval-review-v1.test.mjs",
   "tests/capture-concept-node-mapping-v1.test.mjs",
+  "tests/calculator-routine-trainer-v1.test.mjs",
   "tests/today-plan-source-reasoning.test.mjs",
   "tests/review-queue-reflection-hardening.test.mjs",
   "tests/learner-loop-telemetry.test.mjs",

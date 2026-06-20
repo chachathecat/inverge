@@ -6,6 +6,11 @@ import type { ChangeEvent } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
 import { RefinedBadge, RefinedShell } from "@/components/inverge/refined-primitives";
+import {
+  CalculatorRoutineTrainer,
+  type CalculatorRoutineDraftReference,
+  type CalculatorRoutineReferenceHints,
+} from "@/components/review-os/calculator-routine-trainer";
 import { StandaloneLearnerToolNav } from "@/components/review-os/standalone-learner-tool-nav";
 import { ResultFeedbackPrompt } from "@/components/shared/result-feedback-prompt";
 import { buttonVariants } from "@/components/ui/button";
@@ -17,6 +22,7 @@ import {
 } from "@/lib/evaluate/answer-review-structure";
 import { buildAnswerReviewQualityView } from "@/lib/evaluate/answer-review-quality";
 import { getDefaultSubject, normalizeSubjectForMode, parseAppraisalMode, type AppraisalMode } from "@/lib/review-os/appraisal";
+import { getCalculatorRoutineEligibility } from "@/lib/review-os/calculator-routine";
 import { APPRAISAL_FIRST_SUBJECTS, APPRAISAL_SECOND_SUBJECTS } from "@/lib/review-os/types";
 import { cn } from "@/lib/utils";
 
@@ -42,6 +48,8 @@ type ProblemSnapAnswerReviewHandoff = {
   problemText?: string;
   retryMemo?: string;
   nextPracticeAction?: string;
+  calculatorRoutineId?: string;
+  calculatorRoutineDraftKey?: string;
 };
 
 const SECTION_FADE = {
@@ -72,35 +80,6 @@ function InputStatusCard({ title, statusText, helper }: InputStatusCardProps) {
     </motion.article>
   );
 }
-
-const CALCULATION_CONTEXT_PATTERN = /계산|산식|숫자|단위|환원|수익|원가|비교방식|공시지가|보상|CASIO|반올림|㎡|원\/㎡/i;
-const CALCULATION_CHECKLIST = [
-  "숫자/단위 확인",
-  "산식 확인",
-  "계산 과정 확인",
-  "반올림/단위 표시 확인",
-  "답안 기재값 확인",
-];
-
-function CalculationCheckPanel() {
-  return (
-    <article
-      className="rounded-[var(--radius-md)] border border-[#27375f] bg-[color:var(--surface)] p-4"
-      data-answer-review-calculation-check
-    >
-      <p className="text-caption font-medium text-[#3f4c66]">계산/CASIO 확인</p>
-      <p className="mt-1 text-caption leading-5 text-[color:var(--muted)]">
-        결과 판정이 아니라 계산 근거와 답안 기재값을 다시 확인하는 학습 체크입니다.
-      </p>
-      <ul className="mt-3 space-y-1 text-caption leading-5 text-[color:var(--foreground-strong)]">
-        {CALCULATION_CHECKLIST.map((item) => (
-          <li key={item}>• {item}</li>
-        ))}
-      </ul>
-    </article>
-  );
-}
-
 
 export default function AnswerReviewClientPage({ viewerMode = "authenticated" }: AnswerReviewClientPageProps) {
   const getInitialReviewContext = () => {
@@ -137,6 +116,7 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
   const [subject, setSubject] = useState<string>(initialReviewContext.subject);
   const [showExampleAnswer, setShowExampleAnswer] = useState(false);
   const [explanationLevel, setExplanationLevel] = useState<AnswerReviewExplanationLevel>("standard");
+  const [problemSnapRoutineReference, setProblemSnapRoutineReference] = useState<CalculatorRoutineDraftReference | null>(null);
   const answerCameraInputRef = useRef<HTMLInputElement | null>(null);
   const problemCameraInputRef = useRef<HTMLInputElement | null>(null);
   const generalFileInputRef = useRef<HTMLInputElement | null>(null);
@@ -156,8 +136,35 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
     structureDraft?.requiredIssues,
     structureDraft?.weakLogicPoint,
   ].join(" ");
-  const showCalculationCheck =
-    examMode === "second" && (subject === "감정평가실무" || CALCULATION_CONTEXT_PATTERN.test(calculationContextText));
+  const calculatorRoutineEligibility = useMemo(() => getCalculatorRoutineEligibility({
+    examMode,
+    subject,
+    calculationContextText,
+  }), [calculationContextText, examMode, subject]);
+
+  const calculatorRoutineReferenceHints = useMemo<CalculatorRoutineReferenceHints>(() => ({
+    conditions: [
+      structureDraft?.questionSummary,
+      problemText.trim() ? "문제/사례 입력을 원문 조건과 다시 대조해 주세요." : "",
+    ].filter(Boolean) as string[],
+    formula: structureDraft?.coreConcepts ?? [],
+    numbers_units: [
+      structureDraft?.requiredIssues,
+      structureDraft?.weakLogicPoint,
+    ].filter(Boolean) as string[],
+    casio_input: ["CASIO 입력은 본인 계산기에서 RUN-MAT 기준으로 직접 확인해 주세요."],
+    display_value: ["화면값은 원문 숫자·단위와 대조해 직접 확인해 주세요."],
+    answer_value: [
+      structureDraft?.rewriteTarget,
+      "답안 기재값은 계산 결과와 반올림 기준을 분리해 확인해 주세요.",
+    ].filter(Boolean) as string[],
+    unit_rounding: [
+      structureDraft?.caution,
+      "단위와 반올림 기준을 답안에 남겨 주세요.",
+    ].filter(Boolean) as string[],
+    verification: ["역산·단위 검산·크기 검산 중 하나 이상을 직접 수행해 주세요."],
+    mistake_type: structureDraft?.missingIssueCandidates ?? [],
+  }), [problemText, structureDraft]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -177,6 +184,12 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
       setMyAnswerText((handoff.retryMemo || "").trim());
       if (!missingPointMemo.trim() && handoff.nextPracticeAction?.trim()) {
         setMissingPointMemo(handoff.nextPracticeAction.trim());
+      }
+      if (handoff.calculatorRoutineId || handoff.calculatorRoutineDraftKey) {
+        setProblemSnapRoutineReference({
+          routineId: handoff.calculatorRoutineId ?? "",
+          draftKey: handoff.calculatorRoutineDraftKey ?? "",
+        });
       }
       setProblemSnapNoticeVisible(true);
     } finally {
@@ -530,7 +543,6 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                     <p className="mt-2 text-sm font-semibold text-[#1e2a46]">답안 스냅으로 시작</p>
                     <p className="mt-1 text-caption leading-5 text-[#3f4c66]">사례 스캔, PDF/사진 불러오기, 텍스트 붙여넣기를 함께 사용할 수 있습니다.</p>
                   </article>
-                  {showCalculationCheck ? <CalculationCheckPanel /> : null}
                   <div className="grid gap-3 sm:grid-cols-2">
                 <label className="space-y-2 text-caption font-medium text-[color:var(--muted)]">
                   시험 모드
@@ -845,7 +857,16 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                     </article>
 
 
-                    {showCalculationCheck ? <CalculationCheckPanel /> : null}
+                    <CalculatorRoutineTrainer
+                      source="answer-review"
+                      examMode={examMode}
+                      subject={subject}
+                      eligibility={calculatorRoutineEligibility}
+                      referenceHints={calculatorRoutineReferenceHints}
+                      routineId={problemSnapRoutineReference?.routineId || undefined}
+                      resumeDraftKey={problemSnapRoutineReference?.draftKey || undefined}
+                      onDraftReferenceChange={setProblemSnapRoutineReference}
+                    />
 
                     <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
                       <p className="text-caption font-medium text-[color:var(--muted)]">{explanationTitle}</p>
