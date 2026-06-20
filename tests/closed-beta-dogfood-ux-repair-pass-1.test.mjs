@@ -31,13 +31,18 @@ test("Problem Snap prioritizes the active calculation routine before collapsed c
   assert.ok(problemSnap.includes("CalculatorRoutineTrainer"));
   assert.ok(problemSnap.includes("getCalculatorRoutineEligibility"));
   assert.ok(problemSnap.includes('getProblemSnapSubjectView(subject) === "practice"'));
-  assert.ok(problemSnap.includes("renderCalculatorStepPanel(result)"));
+  assert.ok(problemSnap.includes("renderCalculatorStepPanel(result,"));
   assert.ok(problemSnap.includes("data-problem-snap-calculator-reference"));
+  assert.ok(problemSnap.includes("data-problem-snap-calculator-reference-locked"));
+  assert.ok(problemSnap.includes("referenceUnlocked: calculatorRoutineReferenceUnlocked"));
+  assert.ok(problemSnap.includes("먼저 계산·검산 루틴에서 한 단계 입력하거나 막힘을 선택하면 전체 참고 신호를 열 수 있습니다."));
+  assert.ok(problemSnap.includes("setCalculatorRoutineDraftReference(null);"));
+  assert.ok(problemSnap.includes('setCalculatorRoutineRunId(createCalculatorRoutineRunId("problem-snap"));'));
   assert.ok(combined.includes("계산·검산 루틴 시작"));
   assert.ok(combined.includes("정답 판정이 아니라 내 계산 과정을 점검하는 훈련입니다."));
   assert.ok(combined.includes("AI 생성 초안입니다. 원문·숫자·단위를 직접 대조해 주세요."));
-  assert.ok(problemSnap.indexOf("<CalculatorRoutineTrainer") < problemSnap.indexOf("renderCalculatorStepPanel(result)"));
-  assert.ok(problemSnap.indexOf("renderCalculatorStepPanel(result)") < problemSnap.indexOf('<div><h3 className="font-medium">{resultHeading}'));
+  assert.ok(problemSnap.indexOf("<CalculatorRoutineTrainer") < problemSnap.indexOf("renderCalculatorStepPanel(result,"));
+  assert.ok(problemSnap.indexOf("renderCalculatorStepPanel(result,") < problemSnap.indexOf('<div><h3 className="font-medium">{resultHeading}'));
   ["계산/CASIO 참고 신호", "계산 목적", "추천 모드", "계산 순서", "CASIO 입력", "화면에 보여야 할 값", "답안에 적을 값", "단위/반올림 주의"].forEach((label) =>
     assert.ok(problemSnap.includes(label), label),
   );
@@ -52,6 +57,9 @@ test("Answer Review reuses the calculation routine and avoids duplicate passive 
   assert.equal(answerReview.includes("data-answer-review-calculation-check"), false);
   assert.equal(answerReview.includes("CalculationCheckPanel"), false);
   assert.ok(answerReview.includes("problemSnapRoutineReference"));
+  assert.ok(answerReview.includes("hasProblemSnapRoutineHandoff"));
+  assert.ok(answerReview.includes("getCalculatorRoutineIdFromDraftStorageKey"));
+  assert.ok(answerReview.includes('setAnswerReviewRoutineRunId(createCalculatorRoutineRunId("answer-review"));'));
   assert.ok(answerReview.includes("calculatorRoutineReferenceHints"));
   assert.ok(answerReview.includes("getCalculatorRoutineEligibility"));
   assert.doesNotMatch(answerReview, /기준\s*답안|기준답안|모범답안|공식\s*채점/);

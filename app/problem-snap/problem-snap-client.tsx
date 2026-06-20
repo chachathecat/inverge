@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { RefinedShell } from "@/components/inverge/refined-primitives";
 import {
   CalculatorRoutineTrainer,
   type CalculatorRoutineDraftReference,
+  type CalculatorRoutineReferenceAccess,
   type CalculatorRoutineReferenceHints,
 } from "@/components/review-os/calculator-routine-trainer";
 import { StandaloneLearnerToolNav } from "@/components/review-os/standalone-learner-tool-nav";
@@ -68,6 +69,14 @@ const hasCalculatorGuideData = (guide: ProblemSnapResult["calculatorGuide"]) =>
 const compactCalculatorHints = (items: Array<string | undefined | null>) =>
   items.filter((item): item is string => isMeaningfulCalculatorValue(item));
 
+const createCalculatorRoutineRunId = (source: "problem-snap" | "answer-review") => {
+  const randomPart =
+    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  return `${source}-${randomPart}`;
+};
+
 const buildProblemSnapCalculatorRoutineHints = (currentResult: ProblemSnapResult): CalculatorRoutineReferenceHints => ({
   conditions: compactCalculatorHints(currentResult.extractedConditions ?? []),
   formula: compactCalculatorHints(currentResult.formulas ?? []),
@@ -118,6 +127,8 @@ export default function ProblemSnapClientPage({
   const [retryMemo, setRetryMemo] = useState("");
   const [calculatorRoutineDraftReference, setCalculatorRoutineDraftReference] =
     useState<CalculatorRoutineDraftReference | null>(null);
+  const [calculatorRoutineRunId, setCalculatorRoutineRunId] = useState<string | null>(null);
+  const [calculatorRoutineReferenceUnlocked, setCalculatorRoutineReferenceUnlocked] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
@@ -202,12 +213,36 @@ export default function ProblemSnapClientPage({
     );
   };
 
-  const renderCalculatorStepPanel = (currentResult: ProblemSnapResult) => {
+  const updateCalculatorReferenceAccess = useCallback((access: CalculatorRoutineReferenceAccess) => {
+    setCalculatorRoutineReferenceUnlocked(access.unlocked);
+  }, []);
+
+  const renderCalculatorStepPanel = (
+    currentResult: ProblemSnapResult,
+    options: { routineAvailable: boolean; referenceUnlocked: boolean },
+  ) => {
     const guide = currentResult.calculatorGuide;
     const hasGuideData = hasCalculatorGuideData(guide);
     const calculationSteps = currentResult.stepByStepSolution.filter(isMeaningfulCalculatorValue);
     const keystrokeSteps = guide.keystrokeSteps.filter(isMeaningfulCalculatorValue);
     const caution = isMeaningfulCalculatorValue(guide.caution) ? guide.caution : "단위와 반올림 기준 확인 필요";
+
+    if (options.routineAvailable && !options.referenceUnlocked) {
+      return (
+        <section
+          className="rounded-[var(--radius-md)] border bg-[color:var(--surface-subtle)] p-3"
+          data-problem-snap-calculator-step
+          data-problem-snap-calculator-reference
+          data-problem-snap-calculator-reference-locked
+        >
+          <p className="text-sm font-medium">참고 신호 보기</p>
+          <p className="mt-2 text-xs text-[color:var(--muted)]">AI 생성 초안입니다. 원문·숫자·단위를 직접 대조해 주세요.</p>
+          <p className="mt-2 text-sm text-[color:var(--muted)]">
+            먼저 계산·검산 루틴에서 한 단계 입력하거나 막힘을 선택하면 전체 참고 신호를 열 수 있습니다.
+          </p>
+        </section>
+      );
+    }
 
     return (
       <details
@@ -336,6 +371,9 @@ export default function ProblemSnapClientPage({
     setSaveStatus("idle");
     setRetryMode(false);
     setRetryMemo("");
+    setCalculatorRoutineDraftReference(null);
+    setCalculatorRoutineRunId(null);
+    setCalculatorRoutineReferenceUnlocked(false);
     try {
       const formData = new FormData();
       formData.set("examMode", examMode);
@@ -346,6 +384,7 @@ export default function ProblemSnapClientPage({
       const response = await fetch("/api/problem-snap/solve", { method: "POST", body: formData });
       const json = await response.json();
       if (!response.ok || !json.ok) throw new Error(json.error ?? "문제 풀이를 생성하지 못했습니다.");
+      setCalculatorRoutineRunId(createCalculatorRoutineRunId("problem-snap"));
       setResult(json.result);
       setRecognizedTextDraft((json.result.problemSummaryDraft as string | undefined) || problemText || (files.length > 0 ? `파일 ${files.length}개 제출 — 원문 확인 필요` : "확인 필요"));
       setReferenceGrounding(json.referenceGrounding ?? null);
@@ -484,17 +523,23 @@ export default function ProblemSnapClientPage({
           <p className="text-xs text-[color:var(--muted)]">{referenceGrounding?.used ? `유사 기출 Skeleton을 참고해 정리했습니다. ${referenceGrounding.displayLabel}` : "입력 자료 기준으로 정리했습니다."}</p>
           {!retryMode && getProblemSnapSubjectView(subject) === "practice" && calculatorRoutineEligibility ? (
             <CalculatorRoutineTrainer
+              key={calculatorRoutineRunId ?? "problem-snap-calculator-routine"}
               source="problem-snap"
               examMode={examMode}
               subject={subject}
               eligibility={calculatorRoutineEligibility}
               referenceHints={calculatorRoutineReferenceHints}
+              routineId={calculatorRoutineRunId}
               onDraftReferenceChange={setCalculatorRoutineDraftReference}
+              onReferenceAccessChange={updateCalculatorReferenceAccess}
             />
           ) : null}
           {!retryMode ? (
             showCalculatorGuide ? (
-              renderCalculatorStepPanel(result)
+              renderCalculatorStepPanel(result, {
+                routineAvailable: getProblemSnapSubjectView(subject) === "practice" && Boolean(calculatorRoutineEligibility),
+                referenceUnlocked: calculatorRoutineReferenceUnlocked,
+              })
             ) : (
               <p className="rounded-[var(--radius-md)] border border-dashed p-3 text-sm text-[color:var(--muted)]">계산기 입력보다 개념 구조가 중요한 문제입니다.</p>
             )

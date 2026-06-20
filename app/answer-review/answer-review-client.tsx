@@ -22,7 +22,7 @@ import {
 } from "@/lib/evaluate/answer-review-structure";
 import { buildAnswerReviewQualityView } from "@/lib/evaluate/answer-review-quality";
 import { getDefaultSubject, normalizeSubjectForMode, parseAppraisalMode, type AppraisalMode } from "@/lib/review-os/appraisal";
-import { getCalculatorRoutineEligibility } from "@/lib/review-os/calculator-routine";
+import { getCalculatorRoutineEligibility, getCalculatorRoutineIdFromDraftStorageKey } from "@/lib/review-os/calculator-routine";
 import { APPRAISAL_FIRST_SUBJECTS, APPRAISAL_SECOND_SUBJECTS } from "@/lib/review-os/types";
 import { cn } from "@/lib/utils";
 
@@ -66,6 +66,14 @@ const STEP_ITEMS: Array<{ id: StepId; label: string }> = [
   { id: 2, label: "검토 결과 확인" },
   { id: 3, label: "피드백 초안 정리" },
 ];
+
+const createCalculatorRoutineRunId = (source: "problem-snap" | "answer-review") => {
+  const randomPart =
+    typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  return `${source}-${randomPart}`;
+};
 
 function InputStatusCard({ title, statusText, helper }: InputStatusCardProps) {
   return (
@@ -117,6 +125,8 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
   const [showExampleAnswer, setShowExampleAnswer] = useState(false);
   const [explanationLevel, setExplanationLevel] = useState<AnswerReviewExplanationLevel>("standard");
   const [problemSnapRoutineReference, setProblemSnapRoutineReference] = useState<CalculatorRoutineDraftReference | null>(null);
+  const [hasProblemSnapRoutineHandoff, setHasProblemSnapRoutineHandoff] = useState(false);
+  const [answerReviewRoutineRunId, setAnswerReviewRoutineRunId] = useState<string | null>(null);
   const answerCameraInputRef = useRef<HTMLInputElement | null>(null);
   const problemCameraInputRef = useRef<HTMLInputElement | null>(null);
   const generalFileInputRef = useRef<HTMLInputElement | null>(null);
@@ -166,6 +176,11 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
     mistake_type: structureDraft?.missingIssueCandidates ?? [],
   }), [problemText, structureDraft]);
 
+  const clearProblemSnapRoutineResume = () => {
+    setProblemSnapRoutineReference(null);
+    setHasProblemSnapRoutineHandoff(false);
+  };
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     const rawHandoff = sessionStorage.getItem("inverge.problemSnap.answerReviewHandoff");
@@ -185,11 +200,18 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
       if (!missingPointMemo.trim() && handoff.nextPracticeAction?.trim()) {
         setMissingPointMemo(handoff.nextPracticeAction.trim());
       }
-      if (handoff.calculatorRoutineId || handoff.calculatorRoutineDraftKey) {
+      const routineIdFromDraftKey = getCalculatorRoutineIdFromDraftStorageKey(handoff.calculatorRoutineDraftKey);
+      const handoffRoutineId = handoff.calculatorRoutineId ?? routineIdFromDraftKey;
+      if (
+        handoffRoutineId &&
+        handoff.calculatorRoutineDraftKey &&
+        routineIdFromDraftKey === handoffRoutineId
+      ) {
         setProblemSnapRoutineReference({
-          routineId: handoff.calculatorRoutineId ?? "",
-          draftKey: handoff.calculatorRoutineDraftKey ?? "",
+          routineId: handoffRoutineId,
+          draftKey: handoff.calculatorRoutineDraftKey,
         });
+        setHasProblemSnapRoutineHandoff(true);
       }
       setProblemSnapNoticeVisible(true);
     } finally {
@@ -199,19 +221,23 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
   }, []);
 
   const handleProblemFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    clearProblemSnapRoutineResume();
     setProblemFiles(Array.from(event.target.files ?? []));
   };
 
   const handleMyAnswerFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    clearProblemSnapRoutineResume();
     setMyAnswerFiles(Array.from(event.target.files ?? []));
   };
 
   const handleReferenceFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    clearProblemSnapRoutineResume();
     setReferenceFiles(Array.from(event.target.files ?? []));
   };
 
   const handleGeneralFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files ?? []);
+    clearProblemSnapRoutineResume();
     if (generalUploadIntent === "problem") {
       setProblemFiles(files);
     } else {
@@ -276,6 +302,12 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
 
     setIsStructuring(true);
     setStructureError(null);
+    if (hasProblemSnapRoutineHandoff && problemSnapRoutineReference?.routineId && problemSnapRoutineReference.draftKey) {
+      setAnswerReviewRoutineRunId(null);
+    } else {
+      clearProblemSnapRoutineResume();
+      setAnswerReviewRoutineRunId(createCalculatorRoutineRunId("answer-review"));
+    }
 
     try {
       const formData = new FormData();
@@ -367,6 +399,7 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
   const explanationTitle = explanationLevel === "easy" ? "쉽게 풀이" : explanationLevel === "exam" ? "시험답안식 보강 포인트" : "핵심 해설";
 
   const handleExamModeChange = (nextMode: AppraisalMode) => {
+    clearProblemSnapRoutineResume();
     setExamMode(nextMode);
     setSubject((prev) => normalizeSubjectForMode(prev, nextMode));
   };
@@ -560,7 +593,10 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                   <select
                     className="w-full rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface)] px-3 py-2 text-sm text-[color:var(--foreground-strong)]"
                     value={subject}
-                    onChange={(event) => setSubject(event.target.value)}
+                    onChange={(event) => {
+                      clearProblemSnapRoutineResume();
+                      setSubject(event.target.value);
+                    }}
                   >
                     {subjectOptions.map((option) => (
                       <option key={option} value={option}>
@@ -581,7 +617,10 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                       placeholder="초안 텍스트가 있으면 붙여 넣고, 없으면 직접 입력해 주세요."
                       data-testid="answer-review-my-answer-input"
                       value={myAnswerText}
-                      onChange={(event) => setMyAnswerText(event.target.value)}
+                      onChange={(event) => {
+                        clearProblemSnapRoutineResume();
+                        setMyAnswerText(event.target.value);
+                      }}
                     />
                     <div className="mt-2 flex items-center justify-between text-caption text-[color:var(--muted)]">
                       <span>현재 {myAnswerLength}자</span>
@@ -665,7 +704,10 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                     placeholder="문제 요구사항, 사례 조건, 논점 키워드를 입력해 주세요."
                     data-testid="answer-review-problem-input"
                     value={problemText}
-                    onChange={(event) => setProblemText(event.target.value)}
+                    onChange={(event) => {
+                      clearProblemSnapRoutineResume();
+                      setProblemText(event.target.value);
+                    }}
                   />
                 </div>
                 <details className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface)] p-3" id="answer-review-reference">
@@ -676,7 +718,10 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                       placeholder="강의/교재 정리 또는 참고 목차를 텍스트로 붙여 넣어 주세요."
                       data-testid="answer-review-reference-input"
                       value={referenceAnswerText}
-                      onChange={(event) => setReferenceAnswerText(event.target.value)}
+                      onChange={(event) => {
+                        clearProblemSnapRoutineResume();
+                        setReferenceAnswerText(event.target.value);
+                      }}
                     />
                   </div>
                 </details>
@@ -858,14 +903,23 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
 
 
                     <CalculatorRoutineTrainer
+                      key={
+                        hasProblemSnapRoutineHandoff
+                          ? problemSnapRoutineReference?.draftKey || "problem-snap-calculator-routine"
+                          : answerReviewRoutineRunId || "answer-review-calculator-routine"
+                      }
                       source="answer-review"
                       examMode={examMode}
                       subject={subject}
                       eligibility={calculatorRoutineEligibility}
                       referenceHints={calculatorRoutineReferenceHints}
-                      routineId={problemSnapRoutineReference?.routineId || undefined}
-                      resumeDraftKey={problemSnapRoutineReference?.draftKey || undefined}
-                      onDraftReferenceChange={setProblemSnapRoutineReference}
+                      routineId={
+                        hasProblemSnapRoutineHandoff
+                          ? problemSnapRoutineReference?.routineId || undefined
+                          : answerReviewRoutineRunId || undefined
+                      }
+                      resumeDraftKey={hasProblemSnapRoutineHandoff ? problemSnapRoutineReference?.draftKey || undefined : undefined}
+                      onDraftReferenceChange={hasProblemSnapRoutineHandoff ? setProblemSnapRoutineReference : undefined}
                     />
 
                     <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">

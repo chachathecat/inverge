@@ -110,6 +110,16 @@ test("verification and mistake type requirements are enforced", () => {
 
   assert.deepEqual(normalizeCalculatorRoutineMistakeTypes(["none", "rounding", "casio_input"]), ["none"]);
   assert.deepEqual(normalizeCalculatorRoutineMistakeTypes(["rounding", "rounding", "other"]), ["rounding", "other"]);
+
+  const stuckCompletion = buildCalculatorRoutineCompletionSignal({
+    ...completeDraft(),
+    verificationMethods: [],
+    mistakeTypes: [],
+    stuckStepIds: ["verification", "mistake_type"],
+  });
+  assert.deepEqual(stuckCompletion.verificationMethods, ["other"]);
+  assert.deepEqual(stuckCompletion.mistakeTypes, ["other"]);
+  assert.equal(stuckCompletion.primaryMistakeType, "other");
 });
 
 test("completion signal is metadata-only and reuses the concept-node calculator routine candidate", () => {
@@ -205,11 +215,33 @@ test("trainer component enforces attempt-before-reveal without prefilling entrie
   assert.ok(component.includes("AI 생성 초안입니다. 원문·숫자·단위를 직접 대조해 주세요."));
   assert.ok(component.includes("계산·검산 루틴 완료"));
   assert.ok(component.includes("이 기기의 학습 기록에 저장됨"));
+  assert.ok(component.includes("루틴 완료, 기기 학습 기록 저장 실패"));
+  assert.ok(component.includes("제공할 참고 신호가 없습니다. 원문 조건과 숫자·단위를 직접 대조해 주세요."));
   assert.ok(component.includes("disabled={!hasAttemptForReveal}"));
   assert.ok(component.includes("markStuckAndReveal"));
+  assert.ok(component.includes("!currentStepComplete ? ("));
+  assert.ok(component.includes("visibleHints = hasActiveHints ? activeHints : [noReferenceHintFallback]"));
   assert.ok(component.includes("hintUsedStepIds"));
   assert.equal(component.includes("activeHints[0]"), false, "reference hints must not prefill learner entries");
   assert.equal(component.includes("focus:border-[color:var(--accent)]"), false);
+});
+
+test("trainer completion is not blocked by localStorage persistence failure", () => {
+  const component = read("components/review-os/calculator-routine-trainer.tsx");
+  const buildSignalIndex = component.indexOf("signal = buildCalculatorRoutineCompletionSignal(draft);");
+  const completedIndex = component.indexOf('setTrainerState("completed");');
+  const onCompleteIndex = component.indexOf("onComplete?.(signal);");
+  const storageWriteIndex = component.indexOf("window.localStorage.setItem(");
+  const storageFailureIndex = component.indexOf("루틴 완료, 기기 학습 기록 저장 실패");
+
+  assert.ok(buildSignalIndex >= 0, "completion signal should be built before persistence");
+  assert.ok(completedIndex > buildSignalIndex, "completed state should follow successful validation");
+  assert.ok(onCompleteIndex > completedIndex, "completion callback should run after completed state transition");
+  assert.ok(storageWriteIndex > onCompleteIndex, "localStorage write must not gate completion callback");
+  assert.ok(storageFailureIndex > storageWriteIndex, "storage failure should be handled after the write attempt");
+  assert.ok(component.includes('setLiveMessage("루틴 완료 조건을 먼저 확인해 주세요.");'));
+  assert.equal(component.includes("completionSignal.routineConceptCandidate.nextTaskType"), false);
+  assert.ok(component.includes("복습 신호로 사용할 수 있습니다."));
 });
 
 test("Problem Snap and Answer Review integrate the reusable trainer without passive duplicate panels", () => {
@@ -220,10 +252,17 @@ test("Problem Snap and Answer Review integrate the reusable trainer without pass
   assert.ok(problemSnap.includes("getCalculatorRoutineEligibility"));
   assert.ok(problemSnap.includes('getProblemSnapSubjectView(subject) === "practice"'));
   assert.ok(problemSnap.includes("calculatorRoutineDraftKey"));
+  assert.ok(problemSnap.includes("calculatorRoutineRunId"));
+  assert.ok(problemSnap.includes('key={calculatorRoutineRunId ?? "problem-snap-calculator-routine"}'));
+  assert.ok(problemSnap.includes("setCalculatorRoutineDraftReference(null);"));
+  assert.ok(problemSnap.includes("setCalculatorRoutineReferenceUnlocked(false);"));
+  assert.ok(problemSnap.includes('setCalculatorRoutineRunId(createCalculatorRoutineRunId("problem-snap"));'));
   assert.ok(problemSnap.includes("data-problem-snap-calculator-reference"));
+  assert.ok(problemSnap.includes("data-problem-snap-calculator-reference-locked"));
+  assert.ok(problemSnap.includes("onReferenceAccessChange={updateCalculatorReferenceAccess}"));
   assert.ok(problemSnap.includes("참고 신호 보기"));
-  assert.ok(problemSnap.indexOf("<CalculatorRoutineTrainer") < problemSnap.indexOf("renderCalculatorStepPanel(result)"));
-  assert.ok(problemSnap.indexOf("renderCalculatorStepPanel(result)") < problemSnap.indexOf('<div><h3 className="font-medium">{resultHeading}'));
+  assert.ok(problemSnap.indexOf("<CalculatorRoutineTrainer") < problemSnap.indexOf("renderCalculatorStepPanel(result,"));
+  assert.ok(problemSnap.indexOf("renderCalculatorStepPanel(result,") < problemSnap.indexOf('<div><h3 className="font-medium">{resultHeading}'));
   assert.ok(problemSnap.includes("복습 큐에 저장"));
   assert.ok(problemSnap.includes("Answer Review로 내 풀이 검토하기"));
 
@@ -232,6 +271,11 @@ test("Problem Snap and Answer Review integrate the reusable trainer without pass
   assert.equal(answerReview.includes("CalculationCheckPanel"), false);
   assert.equal(answerReview.includes("data-answer-review-calculation-check"), false);
   assert.ok(answerReview.includes("problemSnapRoutineReference"));
+  assert.ok(answerReview.includes("hasProblemSnapRoutineHandoff"));
+  assert.ok(answerReview.includes('answerReviewRoutineRunId || "answer-review-calculator-routine"'));
+  assert.ok(answerReview.includes("getCalculatorRoutineIdFromDraftStorageKey"));
+  assert.ok(answerReview.includes('setAnswerReviewRoutineRunId(createCalculatorRoutineRunId("answer-review"));'));
+  assert.ok(answerReview.includes("resumeDraftKey={hasProblemSnapRoutineHandoff ? problemSnapRoutineReference?.draftKey || undefined : undefined}"));
   assert.ok(answerReview.includes("setRevisionParagraph(normalizedDraft.rewriteDraftSuggestion)"));
   assert.equal(answerReview.includes("/instructor"), false);
 });

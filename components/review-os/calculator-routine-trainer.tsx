@@ -42,6 +42,12 @@ export type CalculatorRoutineDraftReference = {
   draftKey: string;
 };
 
+export type CalculatorRoutineReferenceAccess = {
+  routineId: string;
+  unlocked: boolean;
+  completed: boolean;
+};
+
 type CalculatorRoutineTrainerProps = {
   source: CalculatorRoutineSource;
   examMode: CalculatorRoutineExamMode;
@@ -52,6 +58,7 @@ type CalculatorRoutineTrainerProps = {
   resumeDraftKey?: string | null;
   className?: string;
   onDraftReferenceChange?: (reference: CalculatorRoutineDraftReference) => void;
+  onReferenceAccessChange?: (access: CalculatorRoutineReferenceAccess) => void;
   onComplete?: (signal: CalculatorRoutineCompletionSignalV1) => void;
 };
 
@@ -86,6 +93,8 @@ const fallbackReferenceHints: Partial<Record<CalculatorRoutineStepId, string>> =
   mistake_type: "실수가 없으면 ‘실수 없음’을 단독으로 선택할 수 있습니다.",
 };
 
+const noReferenceHintFallback = "제공할 참고 신호가 없습니다. 원문 조건과 숫자·단위를 직접 대조해 주세요.";
+
 const safeHintsForStep = (referenceHints: CalculatorRoutineReferenceHints | undefined, stepId: CalculatorRoutineStepId) => {
   const values = (referenceHints?.[stepId] ?? []).map((item) => item.trim()).filter(Boolean);
   const fallback = fallbackReferenceHints[stepId];
@@ -110,6 +119,7 @@ export function CalculatorRoutineTrainer({
   resumeDraftKey,
   className,
   onDraftReferenceChange,
+  onReferenceAccessChange,
   onComplete,
 }: CalculatorRoutineTrainerProps) {
   const generatedId = useId().replace(/[^a-zA-Z0-9_-]/g, "");
@@ -118,6 +128,7 @@ export function CalculatorRoutineTrainer({
     [examMode, generatedId, resumeDraftKey, routineId, source],
   );
   const draftStorageKey = getCalculatorRoutineDraftStorageKey(storageRoutineId);
+  const draftLoadKey = resumeDraftKey ?? draftStorageKey;
   const [trainerState, setTrainerState] = useState<TrainerState>("collapsed");
   const [storageStatus, setStorageStatus] = useState<StorageStatus>("idle");
   const [liveMessage, setLiveMessage] = useState("계산·검산 루틴을 시작할 수 있습니다.");
@@ -129,8 +140,7 @@ export function CalculatorRoutineTrainer({
       subject,
       routineId: storageRoutineId,
     });
-    const loadKey = resumeDraftKey ?? draftStorageKey;
-    return readDraftFromStorage(loadKey, fallbackDraft);
+    return readDraftFromStorage(draftLoadKey, fallbackDraft);
   });
   const [completionSignal, setCompletionSignal] = useState<CalculatorRoutineCompletionSignalV1 | null>(null);
 
@@ -142,6 +152,7 @@ export function CalculatorRoutineTrainer({
   const currentTextStepId = isTextStepId(currentStep.id) ? currentStep.id : null;
   const activeHints = safeHintsForStep(referenceHints, currentStep.id);
   const hasActiveHints = activeHints.length > 0;
+  const visibleHints = hasActiveHints ? activeHints : [noReferenceHintFallback];
   const currentTextValue = currentTextStepId ? draft.entries[currentTextStepId] ?? "" : draft.entries[currentStep.id] ?? "";
   const isCurrentStepStuck = draft.stuckStepIds.includes(currentStep.id);
   const hasAttemptForReveal =
@@ -151,6 +162,12 @@ export function CalculatorRoutineTrainer({
     (currentStep.id === "mistake_type" && draft.mistakeTypes.length > 0);
   const isHintRevealed = revealedHintStepIds.includes(currentStep.id);
   const entryButtonLabel = eligibility.eligible ? "계산·검산 루틴 시작" : "계산형 문제라면 루틴 시작";
+  const hasAnyRoutineAttempt =
+    Object.values(draft.entries).some((value) => value?.trim()) ||
+    draft.verificationMethods.length > 0 ||
+    draft.mistakeTypes.length > 0 ||
+    draft.stuckStepIds.length > 0;
+  const isReferenceUnlocked = trainerState === "completed" || hasAnyRoutineAttempt;
 
   useEffect(() => {
     if (!canRender || typeof window === "undefined") return;
@@ -161,6 +178,15 @@ export function CalculatorRoutineTrainer({
     }
     onDraftReferenceChange?.({ routineId: draft.routineId, draftKey: draftStorageKey });
   }, [canRender, draft, draftStorageKey, onDraftReferenceChange]);
+
+  useEffect(() => {
+    if (!canRender) return;
+    onReferenceAccessChange?.({
+      routineId: draft.routineId,
+      unlocked: isReferenceUnlocked,
+      completed: trainerState === "completed",
+    });
+  }, [canRender, draft.routineId, isReferenceUnlocked, onReferenceAccessChange, trainerState]);
 
   if (!canRender) return null;
 
@@ -209,6 +235,14 @@ export function CalculatorRoutineTrainer({
       hintUsedStepIds: current.hintUsedStepIds.includes(currentStep.id)
         ? current.hintUsedStepIds
         : [...current.hintUsedStepIds, currentStep.id],
+      verificationMethods:
+        currentStep.id === "verification" && current.verificationMethods.length === 0
+          ? ["other"]
+          : current.verificationMethods,
+      mistakeTypes:
+        currentStep.id === "mistake_type" && current.mistakeTypes.length === 0
+          ? ["other"]
+          : current.mistakeTypes,
       updatedAt: new Date().toISOString(),
     }));
     setRevealedHintStepIds((current) => current.includes(currentStep.id) ? current : [...current, currentStep.id]);
@@ -240,8 +274,19 @@ export function CalculatorRoutineTrainer({
       moveToStep(nextStep.id);
       return;
     }
+    let signal: CalculatorRoutineCompletionSignalV1;
     try {
-      const signal = buildCalculatorRoutineCompletionSignal(draft);
+      signal = buildCalculatorRoutineCompletionSignal(draft);
+    } catch {
+      setLiveMessage("루틴 완료 조건을 먼저 확인해 주세요.");
+      return;
+    }
+
+    setCompletionSignal(signal);
+    setTrainerState("completed");
+    onComplete?.(signal);
+
+    try {
       if (typeof window !== "undefined") {
         const history = parseCalculatorRoutineCompletionHistory(window.localStorage.getItem(CALCULATOR_ROUTINE_COMPLETION_STORAGE_KEY));
         const nextHistory = appendCalculatorRoutineCompletionSignal(history, signal);
@@ -251,13 +296,10 @@ export function CalculatorRoutineTrainer({
         );
         setStorageStatus("saved");
       }
-      setCompletionSignal(signal);
-      setTrainerState("completed");
       setLiveMessage("계산·검산 루틴 완료 상태입니다.");
-      onComplete?.(signal);
     } catch {
       setStorageStatus("failed");
-      setLiveMessage("저장에 실패했지만 루틴 입력은 이 화면에서 계속 확인할 수 있습니다.");
+      setLiveMessage("루틴 완료, 기기 학습 기록 저장 실패");
     }
   };
 
@@ -385,39 +427,37 @@ export function CalculatorRoutineTrainer({
             </div>
           ) : null}
 
-          {hasActiveHints ? (
-            <div className="space-y-2" data-calculator-routine-reference-hints>
-              <div className="flex flex-wrap gap-2">
-                {!hasAttemptForReveal ? (
-                  <button
-                    type="button"
-                    className={cn(buttonVariants({ variant: "ghost" }), "h-9 px-3")}
-                    onClick={markStuckAndReveal}
-                  >
-                    막힘
-                  </button>
-                ) : null}
+          <div className="space-y-2" data-calculator-routine-reference-hints>
+            <div className="flex flex-wrap gap-2">
+              {!currentStepComplete ? (
                 <button
                   type="button"
-                  className={cn(buttonVariants({ variant: "outline" }), "h-9 px-3")}
-                  onClick={revealReferenceHint}
-                  disabled={!hasAttemptForReveal}
+                  className={cn(buttonVariants({ variant: "ghost" }), "h-9 px-3")}
+                  onClick={markStuckAndReveal}
                 >
-                  참고 신호 보기
+                  막힘
                 </button>
-              </div>
-              {isHintRevealed ? (
-                <div className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface)] p-3">
-                  <p className="text-caption font-medium text-[color:var(--muted)]">
-                    AI 생성 초안입니다. 원문·숫자·단위를 직접 대조해 주세요.
-                  </p>
-                  <ul className="mt-2 space-y-1 text-caption leading-5 text-[color:var(--foreground-strong)]">
-                    {activeHints.map((hint, index) => <li key={`${hint}-${index}`}>• {hint}</li>)}
-                  </ul>
-                </div>
               ) : null}
+              <button
+                type="button"
+                className={cn(buttonVariants({ variant: "outline" }), "h-9 px-3")}
+                onClick={revealReferenceHint}
+                disabled={!hasAttemptForReveal}
+              >
+                참고 신호 보기
+              </button>
             </div>
-          ) : null}
+            {isHintRevealed ? (
+              <div className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface)] p-3">
+                <p className="text-caption font-medium text-[color:var(--muted)]">
+                  AI 생성 초안입니다. 원문·숫자·단위를 직접 대조해 주세요.
+                </p>
+                <ul className="mt-2 space-y-1 text-caption leading-5 text-[color:var(--foreground-strong)]">
+                  {visibleHints.map((hint, index) => <li key={`${hint}-${index}`}>• {hint}</li>)}
+                </ul>
+              </div>
+            ) : null}
+          </div>
 
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <button
@@ -450,7 +490,7 @@ export function CalculatorRoutineTrainer({
             완료는 계산 과정 점검을 수행했다는 뜻이며, 정답 판정이나 결과 확정이 아닙니다.
           </p>
           <p className="text-caption leading-5 text-[color:var(--muted)]">
-            {storageStatus === "saved" ? "이 기기의 학습 기록에 저장됨" : "저장 실패"}
+            {storageStatus === "saved" ? "이 기기의 학습 기록에 저장됨" : "루틴 완료, 기기 학습 기록 저장 실패"}
           </p>
           <div className="flex flex-col gap-2 sm:flex-row">
             <button
@@ -463,11 +503,7 @@ export function CalculatorRoutineTrainer({
             >
               수정
             </button>
-            {completionSignal ? (
-              <p className="self-center text-caption text-[color:var(--muted)]">
-                {completionSignal.routineConceptCandidate.nextTaskType}
-              </p>
-            ) : null}
+            {completionSignal ? <p className="self-center text-caption text-[color:var(--muted)]">복습 신호로 사용할 수 있습니다.</p> : null}
           </div>
         </div>
       ) : null}

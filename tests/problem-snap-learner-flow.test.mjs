@@ -94,6 +94,8 @@ test("subject-specific views and retry mode labels exist", async () => {
   assert.ok(source.includes('sessionStorage.setItem("inverge.problemSnap.answerReviewHandoff", JSON.stringify(handoffPayload));'));
   assert.ok(source.includes('} catch {'));
   assert.ok(source.includes('source: "problem-snap"'));
+  assert.ok(source.includes("calculatorRoutineId: calculatorRoutineDraftReference?.routineId"));
+  assert.ok(source.includes("calculatorRoutineDraftKey: calculatorRoutineDraftReference?.draftKey"));
   assert.equal(source.includes("mode=second&examMode="), false);
 });
 
@@ -108,8 +110,14 @@ test("calculation routine is primary before collapsed calculator reference and g
   assert.ok(routineIndex >= 0, "calculator routine trainer should exist");
   assert.ok(calculatorIndex >= 0, "calculator step panel should exist");
   assert.ok(genericIndex >= 0, "generic explanation should exist");
-  assert.ok(source.indexOf("<CalculatorRoutineTrainer") < source.indexOf("renderCalculatorStepPanel(result)"));
-  assert.ok(source.indexOf("renderCalculatorStepPanel(result)") < genericIndex);
+  assert.ok(source.indexOf("<CalculatorRoutineTrainer") < source.indexOf("renderCalculatorStepPanel(result,"));
+  assert.ok(source.indexOf("renderCalculatorStepPanel(result,") < genericIndex);
+  assert.ok(source.includes("data-problem-snap-calculator-reference-locked"));
+  assert.ok(source.includes("referenceUnlocked: calculatorRoutineReferenceUnlocked"));
+  assert.ok(source.includes("먼저 계산·검산 루틴에서 한 단계 입력하거나 막힘을 선택하면 전체 참고 신호를 열 수 있습니다."));
+  assert.ok(source.includes("setCalculatorRoutineDraftReference(null);"));
+  assert.ok(source.includes("setCalculatorRoutineRunId(null);"));
+  assert.ok(source.includes('setCalculatorRoutineRunId(createCalculatorRoutineRunId("problem-snap"));'));
   ["계산·검산 루틴", "계산·검산 루틴 시작", "정답 판정이 아니라 내 계산 과정을 점검하는 훈련입니다.", "참고 신호 보기", "AI 생성 초안입니다. 원문·숫자·단위를 직접 대조해 주세요.", "계산/CASIO 참고 신호", "계산 목적", "추천 모드", "계산 순서", "CASIO 입력", "화면에 보여야 할 값", "답안에 적을 값", "단위/반올림 주의"].forEach((label) =>
     assert.ok(combined.includes(label), label),
   );

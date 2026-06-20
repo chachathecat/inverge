@@ -222,9 +222,10 @@ export function updateCalculatorRoutineDraftCurrentStep(
 }
 
 export function isCalculatorRoutineStepComplete(draft: CalculatorRoutineDraftV1, stepId: CalculatorRoutineStepId) {
+  if (draft.stuckStepIds.includes(stepId)) return true;
   if (textStepIds.has(stepId)) {
     const value = draft.entries[stepId as CalculatorRoutineTextStepId]?.trim();
-    return Boolean(value) || draft.stuckStepIds.includes(stepId);
+    return Boolean(value);
   }
   if (stepId === "verification") return normalizeCalculatorRoutineVerificationMethods(draft.verificationMethods).length > 0;
   if (stepId === "mistake_type") return normalizeCalculatorRoutineMistakeTypes(draft.mistakeTypes).length > 0;
@@ -258,11 +259,21 @@ export function buildCalculatorRoutineCompletionSignal(
     throw new Error("calculator-routine-unsupported-context");
   }
 
-  const mistakeTypes = normalizeCalculatorRoutineMistakeTypes(draft.mistakeTypes);
+  const normalizedMistakeTypes = normalizeCalculatorRoutineMistakeTypes(draft.mistakeTypes);
+  const mistakeTypes: CalculatorRoutineMistakeType[] = normalizedMistakeTypes.length > 0
+    ? normalizedMistakeTypes
+    : draft.stuckStepIds.includes("mistake_type")
+      ? ["other"]
+      : [];
   const primaryMistakeType = mistakeTypes[0];
   if (!primaryMistakeType) throw new Error("calculator-routine-missing-mistake-type");
 
-  const verificationMethods = normalizeCalculatorRoutineVerificationMethods(draft.verificationMethods);
+  const normalizedVerificationMethods = normalizeCalculatorRoutineVerificationMethods(draft.verificationMethods);
+  const verificationMethods: CalculatorRoutineVerificationMethod[] = normalizedVerificationMethods.length > 0
+    ? normalizedVerificationMethods
+    : draft.stuckStepIds.includes("verification")
+      ? ["other"]
+      : [];
   if (verificationMethods.length === 0) throw new Error("calculator-routine-missing-verification-method");
 
   const routineConceptCandidate = buildConceptNodeCandidate({
