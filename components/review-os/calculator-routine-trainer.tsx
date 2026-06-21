@@ -88,7 +88,7 @@ const stepInputPrompts: Record<CalculatorRoutineStepId, string> = {
 };
 
 const fallbackReferenceHints: Partial<Record<CalculatorRoutineStepId, string>> = {
-  casio_input: "RUN-MAT을 기본으로 두고, 특수 모드가 필요하다고 단정하지 않습니다.",
+  casio_input: "특수 모드가 필요하다고 단정하지 않습니다. 원문 숫자와 단위를 기준으로 직접 확인해 주세요.",
   verification: "역산, 단위 검산, 크기 검산 중 하나 이상을 직접 수행해 보세요.",
   mistake_type: "실수가 없으면 ‘실수 없음’을 단독으로 선택할 수 있습니다.",
 };

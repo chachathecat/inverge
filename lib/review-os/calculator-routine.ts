@@ -49,10 +49,16 @@ const TEXT_STEP_IDS = [
   "unit_rounding",
 ] as const;
 
-const CALCULATOR_PLACEHOLDER_PATTERN = /확인(?:이)?\s*필요|검토(?:가)?\s*필요|계산기\s*입력\s*없음|입력\s*없음|해당\s*없음|없음/;
-const CALCULATION_CONTEXT_PATTERN = /계산|산식|숫자|단위|환원|수익|원가|비교방식|공시지가|보상|CASIO|반올림|㎡|원\/㎡/i;
+const CALCULATOR_PLACEHOLDER_PATTERN = /확인(?:이)?\s*필요|검토(?:가)?\s*필요|계산기\s*입력\s*없음|입력\s*없음|해당\s*없음|없음/i;
+const ARITHMETIC_OPERATOR_PATTERN = /[+\-−×*÷/=^]/;
+const CALCULATOR_FORMULA_RELATION_PATTERN = /환원율|할인율|현가|복리|단가|평가액|시산가액|보정률|적용률|수익환원|직접환원|DCF/i;
+const CALCULATOR_NUMBER_UNIT_PATTERN = /원|천원|만원|억원|%|㎡|m²|m2|평|배|년|개월/i;
+const CALCULATOR_STEP_ACTION_PATTERN =
+  /곱한다|곱하기|나눈다|나누|합산한다|합산|더한다|차감한다|차감|뺀다|환원한다|환원|할인한다|할인|보정률을?\s*적용|적용한다|단가를?\s*산정|산정한다|반올림한다|반올림|검산한다|검산|계산한다|계산합니다|계산해|계산 후|계산하여|대입한다|대입/i;
 const GENERIC_CALCULATOR_FALLBACK_STEPS = ["MENU", "RUN-MAT", "계산식 입력", "EXE"] as const;
-const GENERIC_CALCULATOR_KEYSTROKE_VALUES = new Set<string>(GENERIC_CALCULATOR_FALLBACK_STEPS);
+const GENERIC_CALCULATOR_KEYSTROKE_VALUES = new Set<string>(
+  GENERIC_CALCULATOR_FALLBACK_STEPS.map((value) => value.normalize("NFKC").toUpperCase().replace(/\s+/g, "")),
+);
 
 export type CalculatorRoutineStepId = (typeof CALCULATOR_ROUTINE_STEPS)[number]["id"];
 export type CalculatorRoutineStepDefinition = (typeof CALCULATOR_ROUTINE_STEPS)[number];
@@ -123,6 +129,34 @@ export type CalculatorRoutineEligibilityInput = {
   calculationContextText?: string;
 };
 
+export type CalculatorEvidenceSource =
+  | "formula"
+  | "number_unit"
+  | "calculation_step"
+  | "custom_keystroke"
+  | "expected_display"
+  | "answer_rounding";
+
+export type CalculatorEvidenceAnalysis = {
+  hasStrongSignal: boolean;
+  evidenceSources: CalculatorEvidenceSource[];
+  display: {
+    calculationPurpose: string | null;
+    recommendedMode: string | null;
+    keystrokeSteps: string[];
+    expectedDisplay: string | null;
+    answerRounding: string | null;
+    caution: string | null;
+    formulas: string[];
+    numberUnits: string[];
+    calculationSteps: string[];
+  };
+  diagnostics: {
+    purposeIsPlaceholderOrNegative: boolean;
+    keystrokesAreGenericFallback: boolean;
+  };
+};
+
 export type CalculatorRoutineEligibility = {
   eligible: boolean;
   manualEligible: boolean;
@@ -160,14 +194,30 @@ export function getCalculatorRoutineMistakeLabel(mistakeType: CalculatorRoutineM
   return CALCULATOR_ROUTINE_MISTAKE_OPTIONS.find((option) => option.id === mistakeType)?.label ?? "기타";
 }
 
-export function isNegativeCalculatorSignal(value?: string | null) {
-  const compact = (value?.replace(/\s+/g, "") ?? "").toUpperCase();
-  if (!compact.includes("계산기") && !compact.includes("CASIO")) return false;
-  const normalized = compact
-    .replace(/CASIO[는은이가을를]?/g, "계산기")
+function normalizeCalculatorCopyKey(value?: string | null) {
+  return (value ?? "")
+    .normalize("NFKC")
+    .toLowerCase()
+    .replace(/\s+/g, "")
+    .replace(/casio|카시오/g, "계산기")
     .replace(/계산기[는은이가을를]?/g, "계산기")
     .replace(/사용[은이가을를]?/g, "사용")
-    .replace(/입력[은이가을를]?/g, "입력");
+    .replace(/입력[은이가을를]?/g, "입력")
+    .replace(/타건[은이가을를]?/g, "타건");
+}
+
+function normalizeDisplayText(value?: string | null) {
+  const normalized = value?.normalize("NFKC").replace(/\s+/g, " ").trim();
+  return normalized || null;
+}
+
+function normalizeKeystrokeToken(value: string) {
+  return value.normalize("NFKC").toUpperCase().replace(/\s+/g, "");
+}
+
+export function isNegativeCalculatorSignal(value?: string | null) {
+  const normalized = normalizeCalculatorCopyKey(value);
+  if (!normalized.includes("계산기")) return false;
 
   return [
     "계산기불필요",
@@ -180,44 +230,159 @@ export function isNegativeCalculatorSignal(value?: string | null) {
     "계산기필요하지않",
     "계산기사용필요하지않",
     "계산기입력필요하지않",
+    "계산기사용하지않",
+    "계산기사용안함",
+    "계산기안씀",
+    "계산기안씁",
+    "계산기쓰지않",
+    "계산기입력하지않",
+    "계산기입력안함",
+    "계산기타건하지않",
+    "계산기타건안함",
+    "계산기없이",
   ].some((marker) => normalized.includes(marker));
 }
 
 export function isMeaningfulCalculatorSignal(value?: string | null) {
-  const normalized = value?.trim();
+  const normalized = normalizeDisplayText(value);
   if (!normalized) return false;
   if (isNegativeCalculatorSignal(normalized)) return false;
   return !CALCULATOR_PLACEHOLDER_PATTERN.test(normalized);
 }
 
+export function getDisplayCalculatorText(value?: string | null) {
+  const normalized = normalizeDisplayText(value);
+  if (!normalized || !isMeaningfulCalculatorSignal(normalized)) return null;
+  return normalized;
+}
+
+export function getDisplayCalculatorHintValues(values?: Array<string | null | undefined> | null) {
+  return (values ?? [])
+    .map((value) => getDisplayCalculatorText(value))
+    .filter((value): value is string => Boolean(value));
+}
+
 export function isGenericCalculatorFallbackStepSequence(values?: string[] | null) {
   if (!values || values.length !== GENERIC_CALCULATOR_FALLBACK_STEPS.length) return false;
-  return values.every((value, index) => value.trim() === GENERIC_CALCULATOR_FALLBACK_STEPS[index]);
+  return values.every((value, index) => normalizeKeystrokeToken(value) === normalizeKeystrokeToken(GENERIC_CALCULATOR_FALLBACK_STEPS[index]));
+}
+
+export function getDisplayCalculatorKeystrokes(values?: string[] | null) {
+  if (!values || isGenericCalculatorFallbackStepSequence(values)) return [];
+  return values
+    .map((value) => normalizeDisplayText(value))
+    .filter((value): value is string => Boolean(value))
+    .filter((value) => isMeaningfulCalculatorSignal(value) && !GENERIC_CALCULATOR_KEYSTROKE_VALUES.has(normalizeKeystrokeToken(value)));
 }
 
 export function getMeaningfulCalculatorKeystrokeSteps(values?: string[] | null) {
-  if (!values || isGenericCalculatorFallbackStepSequence(values)) return [];
-  return values.filter(
-    (value) => isMeaningfulCalculatorSignal(value) && !GENERIC_CALCULATOR_KEYSTROKE_VALUES.has(value.trim()),
-  );
+  return getDisplayCalculatorKeystrokes(values);
 }
 
 export function hasMeaningfulCalculatorKeystrokeSignal(values?: string[] | null) {
-  return getMeaningfulCalculatorKeystrokeSteps(values).length > 0;
+  return getDisplayCalculatorKeystrokes(values).length > 0;
 }
 
-export function isCalculationContextSignal(value?: string | null) {
-  const normalized = value?.trim();
-  return Boolean(normalized && isMeaningfulCalculatorSignal(normalized) && CALCULATION_CONTEXT_PATTERN.test(normalized));
+function hasDigit(value: string) {
+  return /\d/.test(value.normalize("NFKC"));
+}
+
+function hasArithmeticOperator(value: string) {
+  return ARITHMETIC_OPERATOR_PATTERN.test(value.normalize("NFKC"));
+}
+
+function hasCalculationUnit(value: string) {
+  return CALCULATOR_NUMBER_UNIT_PATTERN.test(value.normalize("NFKC"));
+}
+
+function cleanEvidenceValues(values: string[] | undefined, predicate: (value: string) => boolean) {
+  return (values ?? [])
+    .map((value) => normalizeDisplayText(value))
+    .filter((value): value is string => Boolean(value))
+    .filter(predicate);
+}
+
+function isConcreteFormulaEvidence(value: string) {
+  if (!isMeaningfulCalculatorSignal(value)) return false;
+  return (
+    hasArithmeticOperator(value) ||
+    CALCULATOR_FORMULA_RELATION_PATTERN.test(value) ||
+    (hasDigit(value) && hasCalculationUnit(value))
+  );
+}
+
+function isConcreteNumberUnitEvidence(value: string) {
+  if (!isMeaningfulCalculatorSignal(value) || !hasDigit(value)) return false;
+  return hasArithmeticOperator(value) || hasCalculationUnit(value);
+}
+
+function isConcreteCalculationStepEvidence(value: string) {
+  if (!isMeaningfulCalculatorSignal(value)) return false;
+  return CALCULATOR_STEP_ACTION_PATTERN.test(value);
+}
+
+function uniqueEvidenceSources(sources: CalculatorEvidenceSource[]) {
+  return sources.filter((source, index) => sources.indexOf(source) === index);
+}
+
+export function analyzeCalculatorEvidence(input: {
+  formulas?: string[];
+  extractedNumbersAndUnits?: string[];
+  stepByStepSolution?: string[];
+  calculatorGuide?: CalculatorRoutineEligibilityInput["calculatorGuide"];
+  calculationContextText?: string;
+}): CalculatorEvidenceAnalysis {
+  const formulaValues = cleanEvidenceValues(input.formulas, isConcreteFormulaEvidence);
+  const numberUnitValues = cleanEvidenceValues(input.extractedNumbersAndUnits, isConcreteNumberUnitEvidence);
+  const calculationStepValues = cleanEvidenceValues(input.stepByStepSolution, isConcreteCalculationStepEvidence);
+  const context = normalizeDisplayText(input.calculationContextText);
+
+  if (context) {
+    if (isConcreteFormulaEvidence(context)) formulaValues.push(context);
+    if (isConcreteNumberUnitEvidence(context)) numberUnitValues.push(context);
+    if (isConcreteCalculationStepEvidence(context)) calculationStepValues.push(context);
+  }
+
+  const guide = input.calculatorGuide;
+  const calculationPurpose = getDisplayCalculatorText(guide?.calculationPurpose);
+  const expectedDisplay = getDisplayCalculatorText(guide?.expectedDisplay);
+  const answerRounding = getDisplayCalculatorText(guide?.answerRounding);
+  const caution = normalizeDisplayText(guide?.caution);
+  const keystrokeSteps = getDisplayCalculatorKeystrokes(guide?.keystrokeSteps);
+  const evidenceSources = uniqueEvidenceSources([
+    ...(formulaValues.length > 0 ? ["formula" as const] : []),
+    ...(numberUnitValues.length > 0 ? ["number_unit" as const] : []),
+    ...(calculationStepValues.length > 0 ? ["calculation_step" as const] : []),
+    ...(keystrokeSteps.length > 0 ? ["custom_keystroke" as const] : []),
+    ...(expectedDisplay ? ["expected_display" as const] : []),
+    ...(answerRounding ? ["answer_rounding" as const] : []),
+  ]);
+  const hasStrongSignal = evidenceSources.length > 0;
+  const recommendedMode = hasStrongSignal ? getDisplayCalculatorText(guide?.recommendedMode) : null;
+
+  return {
+    hasStrongSignal,
+    evidenceSources,
+    display: {
+      calculationPurpose,
+      recommendedMode,
+      keystrokeSteps,
+      expectedDisplay,
+      answerRounding,
+      caution,
+      formulas: formulaValues,
+      numberUnits: numberUnitValues,
+      calculationSteps: calculationStepValues,
+    },
+    diagnostics: {
+      purposeIsPlaceholderOrNegative: Boolean(guide?.calculationPurpose) && !calculationPurpose,
+      keystrokesAreGenericFallback: isGenericCalculatorFallbackStepSequence(guide?.keystrokeSteps),
+    },
+  };
 }
 
 export function hasStrongCalculatorGuideSignal(guide?: CalculatorRoutineEligibilityInput["calculatorGuide"] | null) {
-  if (!guide) return false;
-  return [
-    guide.calculationPurpose ?? "",
-    guide.expectedDisplay ?? "",
-    guide.answerRounding ?? "",
-  ].some(isMeaningfulCalculatorSignal) || hasMeaningfulCalculatorKeystrokeSignal(guide.keystrokeSteps);
+  return analyzeCalculatorEvidence({ calculatorGuide: guide }).hasStrongSignal;
 }
 
 export function shouldUnlockProblemSnapCalculatorReference(input: {
@@ -233,14 +398,7 @@ export function hasStrongCalculatorRoutineSignal(input: Pick<
   CalculatorRoutineEligibilityInput,
   "formulas" | "extractedNumbersAndUnits" | "stepByStepSolution" | "calculatorGuide" | "calculationContextText"
 >) {
-  return [
-    ...(input.formulas ?? []),
-    ...(input.extractedNumbersAndUnits ?? []).filter(isCalculationContextSignal),
-    ...(input.stepByStepSolution ?? []).filter(isCalculationContextSignal),
-    input.calculationContextText && CALCULATION_CONTEXT_PATTERN.test(input.calculationContextText)
-      ? input.calculationContextText
-      : "",
-  ].some(isMeaningfulCalculatorSignal) || hasStrongCalculatorGuideSignal(input.calculatorGuide);
+  return analyzeCalculatorEvidence(input).hasStrongSignal;
 }
 
 export function normalizeCalculatorRoutineMistakeTypes(values: unknown): CalculatorRoutineMistakeType[] {

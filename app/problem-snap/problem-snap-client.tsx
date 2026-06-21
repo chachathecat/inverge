@@ -16,11 +16,11 @@ import { buttonVariants } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { normalizeSubjectForMode, type AppraisalMode } from "@/lib/review-os/appraisal";
 import {
-  getMeaningfulCalculatorKeystrokeSteps,
+  analyzeCalculatorEvidence,
+  getDisplayCalculatorHintValues,
   getCalculatorRoutineEligibility,
-  hasStrongCalculatorRoutineSignal,
-  isMeaningfulCalculatorSignal,
   shouldUnlockProblemSnapCalculatorReference,
+  type CalculatorEvidenceAnalysis,
 } from "@/lib/review-os/calculator-routine";
 import { APPRAISAL_FIRST_SUBJECTS, APPRAISAL_SECOND_SUBJECTS } from "@/lib/review-os/types";
 import { cn } from "@/lib/utils";
@@ -56,16 +56,13 @@ type ProblemSnapResult = {
 
 const CALCULATOR_STEP_FALLBACK = "계산/CASIO 스텝은 확인이 필요합니다. 원문 숫자와 단위를 직접 확인해 주세요.";
 
-const hasStrongProblemSnapCalculatorSignal = (currentResult: ProblemSnapResult) =>
-  hasStrongCalculatorRoutineSignal({
+const getProblemSnapCalculatorEvidenceAnalysis = (currentResult: ProblemSnapResult) =>
+  analyzeCalculatorEvidence({
     formulas: currentResult.formulas,
     extractedNumbersAndUnits: currentResult.extractedNumbersAndUnits,
     stepByStepSolution: currentResult.stepByStepSolution,
     calculatorGuide: currentResult.calculatorGuide,
   });
-
-const compactCalculatorHints = (items: Array<string | undefined | null>) =>
-  items.filter((item): item is string => isMeaningfulCalculatorSignal(item));
 
 const createCalculatorRoutineRunId = (source: "problem-snap" | "answer-review") => {
   const randomPart =
@@ -75,25 +72,27 @@ const createCalculatorRoutineRunId = (source: "problem-snap" | "answer-review") 
   return `${source}-${randomPart}`;
 };
 
-const buildProblemSnapCalculatorRoutineHints = (currentResult: ProblemSnapResult): CalculatorRoutineReferenceHints => ({
-  conditions: compactCalculatorHints(currentResult.extractedConditions ?? []),
-  formula: compactCalculatorHints(currentResult.formulas ?? []),
-  numbers_units: compactCalculatorHints(currentResult.extractedNumbersAndUnits ?? []),
-  casio_input: getMeaningfulCalculatorKeystrokeSteps(currentResult.calculatorGuide.keystrokeSteps),
-  display_value: compactCalculatorHints([currentResult.calculatorGuide.expectedDisplay]),
-  answer_value: compactCalculatorHints([
-    currentResult.calculatorGuide.answerRounding,
-    currentResult.nextPracticeAction,
+const buildProblemSnapCalculatorRoutineHints = (
+  currentResult: ProblemSnapResult,
+  analysis: CalculatorEvidenceAnalysis,
+): CalculatorRoutineReferenceHints => ({
+  conditions: getDisplayCalculatorHintValues(currentResult.extractedConditions ?? []),
+  formula: analysis.display.formulas,
+  numbers_units: analysis.display.numberUnits,
+  casio_input: analysis.display.keystrokeSteps,
+  display_value: getDisplayCalculatorHintValues([analysis.display.expectedDisplay]),
+  answer_value: getDisplayCalculatorHintValues([
+    analysis.display.answerRounding,
   ]),
-  unit_rounding: compactCalculatorHints([
-    currentResult.calculatorGuide.answerRounding,
-    currentResult.calculatorGuide.caution,
+  unit_rounding: getDisplayCalculatorHintValues([
+    analysis.display.answerRounding,
+    analysis.display.caution,
   ]),
-  verification: compactCalculatorHints([
-    currentResult.calculatorGuide.caution,
+  verification: getDisplayCalculatorHintValues([
+    analysis.display.caution,
     "계산기 설정과 OS 버전에 따라 메뉴명이나 표시가 다를 수 있습니다. 시험 전 본인 계산기에서 같은 방식으로 확인해 주세요.",
   ]),
-  mistake_type: compactCalculatorHints(currentResult.commonMistakes ?? []),
+  mistake_type: getDisplayCalculatorHintValues(currentResult.commonMistakes ?? []),
 });
 
 export default function ProblemSnapClientPage({
@@ -136,10 +135,15 @@ export default function ProblemSnapClientPage({
     return "기본 해설";
   }, [explanationLevel]);
 
+  const calculatorEvidenceAnalysis = useMemo(
+    () => (result ? getProblemSnapCalculatorEvidenceAnalysis(result) : null),
+    [result],
+  );
+
   const showCalculatorGuide = useMemo(() => {
-    if (!result) return false;
-    return subject === "감정평가실무" || hasStrongProblemSnapCalculatorSignal(result);
-  }, [result, subject]);
+    if (!result || !calculatorEvidenceAnalysis) return false;
+    return subject === "감정평가실무" || calculatorEvidenceAnalysis.hasStrongSignal;
+  }, [calculatorEvidenceAnalysis, result, subject]);
 
   const calculatorRoutineEligibility = useMemo(() => {
     if (!result) return null;
@@ -161,8 +165,11 @@ export default function ProblemSnapClientPage({
   }, [examMode, result, subject]);
 
   const calculatorRoutineReferenceHints = useMemo(
-    () => (result ? buildProblemSnapCalculatorRoutineHints(result) : undefined),
-    [result],
+    () =>
+      result && calculatorEvidenceAnalysis
+        ? buildProblemSnapCalculatorRoutineHints(result, calculatorEvidenceAnalysis)
+        : undefined,
+    [calculatorEvidenceAnalysis, result],
   );
 
   const getProblemSnapSubjectView = (currentSubject: string) => {
@@ -221,14 +228,13 @@ export default function ProblemSnapClientPage({
   }, []);
 
   const renderCalculatorStepPanel = (
-    currentResult: ProblemSnapResult,
+    analysis: CalculatorEvidenceAnalysis,
     options: { routineAvailable: boolean; referenceUnlocked: boolean },
   ) => {
-    const guide = currentResult.calculatorGuide;
-    const hasGuideData = hasStrongProblemSnapCalculatorSignal(currentResult);
-    const calculationSteps = currentResult.stepByStepSolution.filter(isMeaningfulCalculatorSignal);
-    const keystrokeSteps = getMeaningfulCalculatorKeystrokeSteps(guide.keystrokeSteps);
-    const caution = isMeaningfulCalculatorSignal(guide.caution) ? guide.caution : "단위와 반올림 기준 확인 필요";
+    const hasGuideData = analysis.hasStrongSignal;
+    const calculationSteps = analysis.display.calculationSteps;
+    const keystrokeSteps = analysis.display.keystrokeSteps;
+    const caution = analysis.display.caution ?? "단위와 반올림 기준 확인 필요";
 
     if (!options.referenceUnlocked) {
       const lockedCopy = options.routineAvailable
@@ -264,11 +270,11 @@ export default function ProblemSnapClientPage({
           <div className="grid gap-2 sm:grid-cols-2">
             <div className="rounded-[var(--radius-sm)] border bg-[color:var(--surface)] p-3">
               <p className="text-xs text-[color:var(--muted)]">계산 목적</p>
-              <p className="mt-1 text-sm">{isMeaningfulCalculatorSignal(guide.calculationPurpose) ? guide.calculationPurpose : "확인 필요"}</p>
+              <p className="mt-1 text-sm">{analysis.display.calculationPurpose ?? "확인 필요"}</p>
             </div>
             <div className="rounded-[var(--radius-sm)] border bg-[color:var(--surface)] p-3">
               <p className="text-xs text-[color:var(--muted)]">추천 모드</p>
-              <p className="mt-1 text-sm">{guide.recommendedMode}</p>
+              <p className="mt-1 text-sm">{analysis.display.recommendedMode ?? "확인 필요"}</p>
             </div>
             <div className="rounded-[var(--radius-sm)] border bg-[color:var(--surface)] p-3">
               <p className="text-xs text-[color:var(--muted)]">계산 순서</p>
@@ -280,11 +286,11 @@ export default function ProblemSnapClientPage({
             </div>
             <div className="rounded-[var(--radius-sm)] border bg-[color:var(--surface)] p-3">
               <p className="text-xs text-[color:var(--muted)]">화면에 보여야 할 값</p>
-              <p className="mt-1 text-sm">{isMeaningfulCalculatorSignal(guide.expectedDisplay) ? guide.expectedDisplay : "확인 필요"}</p>
+              <p className="mt-1 text-sm">{analysis.display.expectedDisplay ?? "확인 필요"}</p>
             </div>
             <div className="rounded-[var(--radius-sm)] border bg-[color:var(--surface)] p-3">
               <p className="text-xs text-[color:var(--muted)]">답안에 적을 값</p>
-              <p className="mt-1 text-sm">{isMeaningfulCalculatorSignal(guide.answerRounding) ? guide.answerRounding : "확인 필요"}</p>
+              <p className="mt-1 text-sm">{analysis.display.answerRounding ?? "확인 필요"}</p>
             </div>
           </div>
           <p className="text-xs text-[color:var(--muted)]">단위/반올림 주의: {caution}</p>
@@ -295,17 +301,17 @@ export default function ProblemSnapClientPage({
 
   const renderSubjectSpecificCards = (
     view: "practice" | "theory" | "law" | "first",
-    currentResult: ProblemSnapResult
+    currentResult: ProblemSnapResult,
+    analysis: CalculatorEvidenceAnalysis,
   ) => {
     if (view === "practice") {
-      const practiceKeystrokeSteps = getMeaningfulCalculatorKeystrokeSteps(currentResult.calculatorGuide.keystrokeSteps);
       return [
         <div key="practice-conditions" className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">조건 정리</p>{renderListOrFallback(currentResult.extractedConditions, "조건 확인 필요")}</div>,
-        <div key="practice-formulas" className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">핵심 산식</p>{renderListOrFallback(currentResult.formulas, "산식 확인 필요")}</div>,
-        <div key="practice-steps" className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">계산 순서</p>{renderListOrFallback(currentResult.stepByStepSolution, "계산 순서 확인 필요")}</div>,
-        <div key="practice-casio" className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">CASIO 입력</p>{renderListOrFallback(practiceKeystrokeSteps, "입력 순서 확인 필요")}</div>,
-        <div key="practice-rounding" className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">단위/반올림</p><p className="mt-1 text-sm">{currentResult.calculatorGuide.answerRounding || currentResult.calculatorGuide.caution || "단위·반올림 확인 필요"}</p></div>,
-        <div key="practice-answer" className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">답안에 적을 값</p><p className="mt-1 text-sm">{currentResult.calculatorGuide.expectedDisplay || currentResult.nextPracticeAction || "답안 기재값 확인 필요"}</p></div>,
+        <div key="practice-formulas" className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">핵심 산식</p>{renderListOrFallback(analysis.display.formulas, "산식 확인 필요")}</div>,
+        <div key="practice-steps" className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">계산 순서</p>{renderListOrFallback(analysis.display.calculationSteps, "계산 순서 확인 필요")}</div>,
+        <div key="practice-casio" className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">CASIO 입력</p>{renderListOrFallback(analysis.display.keystrokeSteps, "입력 순서 확인 필요")}</div>,
+        <div key="practice-rounding" className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">단위/반올림</p><p className="mt-1 text-sm">{analysis.display.answerRounding || analysis.display.caution || "단위·반올림 확인 필요"}</p></div>,
+        <div key="practice-answer" className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">답안에 적을 값</p><p className="mt-1 text-sm">{analysis.display.expectedDisplay || currentResult.nextPracticeAction || "답안 기재값 확인 필요"}</p></div>,
       ];
     }
     if (view === "theory") {
@@ -332,20 +338,32 @@ export default function ProblemSnapClientPage({
       <div key="first-retry" className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">다시 풀 행동</p><p className="mt-1 text-sm">{currentResult.nextPracticeAction || "다시 풀 행동 확인 필요"}</p></div>,
     ];
   };
-  const renderPrimarySubjectCards = (view: "practice" | "theory" | "law" | "first", currentResult: ProblemSnapResult) => {
-    const cards = renderSubjectSpecificCards(view, currentResult);
+  const renderPrimarySubjectCards = (
+    view: "practice" | "theory" | "law" | "first",
+    currentResult: ProblemSnapResult,
+    analysis: CalculatorEvidenceAnalysis,
+  ) => {
+    const cards = renderSubjectSpecificCards(view, currentResult, analysis);
     if (view === "practice") return [];
     return cards.slice(0, 4);
   };
 
-  const getPrimaryPracticeAction = (currentSubject: string, currentResult: ProblemSnapResult) =>
+  const getPrimaryPracticeAction = (
+    currentSubject: string,
+    currentResult: ProblemSnapResult,
+    analysis: CalculatorEvidenceAnalysis | null,
+  ) =>
     getProblemSnapSubjectView(currentSubject) === "practice"
-      ? currentResult.nextPracticeAction || currentResult.calculatorGuide.answerRounding || "단위·반올림 기준을 적고 다시 계산해 보세요."
+      ? currentResult.nextPracticeAction || analysis?.display.answerRounding || "단위·반올림 기준을 적고 다시 계산해 보세요."
       : currentResult.nextPracticeAction;
 
-  const getSubjectSpecificCaution = (currentSubject: string, currentResult: ProblemSnapResult) =>
+  const getSubjectSpecificCaution = (
+    currentSubject: string,
+    currentResult: ProblemSnapResult,
+    analysis: CalculatorEvidenceAnalysis | null,
+  ) =>
     getProblemSnapSubjectView(currentSubject) === "practice"
-      ? currentResult.calculatorGuide.caution || currentResult.caution
+      ? analysis?.display.caution || currentResult.caution
       : currentResult.commonMistakes[0] ?? currentResult.caution;
 
   const hasMeaningfulValue = (items?: string[]) =>
@@ -522,8 +540,8 @@ export default function ProblemSnapClientPage({
         <section className="space-y-4 rounded-[var(--radius-xl)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-5">
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">가장 먼저 이해할 1가지</p><p className="mt-1 text-sm">{result.problemSummary}</p></div>
-            <div className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">지금 다시 풀 행동 1개</p><p className="mt-1 text-sm">{getPrimaryPracticeAction(subject, result)}</p></div>
-            <div className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">주의할 함정 1개</p><p className="mt-1 text-sm">{getSubjectSpecificCaution(subject, result)}</p></div>
+            <div className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">지금 다시 풀 행동 1개</p><p className="mt-1 text-sm">{getPrimaryPracticeAction(subject, result, calculatorEvidenceAnalysis)}</p></div>
+            <div className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">주의할 함정 1개</p><p className="mt-1 text-sm">{getSubjectSpecificCaution(subject, result, calculatorEvidenceAnalysis)}</p></div>
           </div>
           <p className="text-xs text-[color:var(--muted)]">{referenceGrounding?.used ? `유사 기출 Skeleton을 참고해 정리했습니다. ${referenceGrounding.displayLabel}` : "입력 자료 기준으로 정리했습니다."}</p>
           {!retryMode && problemSnapSubjectView === "practice" && calculatorRoutineEligibility ? (
@@ -540,8 +558,8 @@ export default function ProblemSnapClientPage({
             />
           ) : null}
           {!retryMode ? (
-            showCalculatorGuide ? (
-              renderCalculatorStepPanel(result, {
+            showCalculatorGuide && calculatorEvidenceAnalysis ? (
+              renderCalculatorStepPanel(calculatorEvidenceAnalysis, {
                 routineAvailable: problemSnapCalculatorRoutineAvailable,
                 referenceUnlocked: problemSnapCalculatorReferenceUnlocked,
               })
@@ -550,8 +568,8 @@ export default function ProblemSnapClientPage({
             )
           ) : null}
           {!retryMode ? <div><h3 className="font-medium">{resultHeading}</h3><p>{result.easyExplanation}</p></div> : null}
-          {!retryMode && renderPrimarySubjectCards(problemSnapSubjectView, result).length > 0 ? (
-            <div className="grid gap-3 sm:grid-cols-2">{renderPrimarySubjectCards(problemSnapSubjectView, result)}</div>
+          {!retryMode && calculatorEvidenceAnalysis && renderPrimarySubjectCards(problemSnapSubjectView, result, calculatorEvidenceAnalysis).length > 0 ? (
+            <div className="grid gap-3 sm:grid-cols-2">{renderPrimarySubjectCards(problemSnapSubjectView, result, calculatorEvidenceAnalysis)}</div>
           ) : null}
           <details className="rounded-[var(--radius-md)] border p-3">
             <summary className="cursor-pointer text-sm font-medium">자세히 보기</summary>

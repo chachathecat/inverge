@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 
 import {
   appendCalculatorRoutineCompletionSignal,
+  analyzeCalculatorEvidence,
   buildCalculatorRoutineCompletionSignal,
   CALCULATOR_ROUTINE_COMPLETION_STORAGE_KEY,
   CALCULATOR_ROUTINE_MISTAKE_OPTIONS,
@@ -13,6 +14,7 @@ import {
   createCalculatorRoutineDraft,
   getCalculatorRoutineDraftStorageKey,
   getCalculatorRoutineEligibility,
+  getDisplayCalculatorKeystrokes,
   getMeaningfulCalculatorKeystrokeSteps,
   getCalculatorRoutineProgress,
   hasMeaningfulCalculatorKeystrokeSignal,
@@ -405,8 +407,8 @@ test("eligibility is limited to second exam practice and ignores placeholder cal
       recommendedMode: "검토 필요",
       keystrokeSteps: [],
     })),
-    true,
-    "meaningful purpose may count even when builder defaults are present",
+    false,
+    "display-only purpose must not count when builder defaults are present",
   );
   assert.equal(hasStrongCalculatorGuideSignal({ recommendedMode: "RUN-MAT", keystrokeSteps: ["100 × 0.05 EXE"] }), true);
   assert.deepEqual(getMeaningfulCalculatorKeystrokeSteps(["100 × 0.05 EXE"]), ["100 × 0.05 EXE"]);
@@ -439,6 +441,194 @@ test("eligibility is limited to second exam practice and ignores placeholder cal
     },
   });
   assert.equal(strongSignal.eligible, true);
+});
+
+test("calculator evidence analyzer rejects production fallbacks and generic modes", () => {
+  const productionFallbackGuide = buildCasioFx9860GiiiGuide({
+    calculationPurpose: "계산기 입력이 필요한 문제인지 검토가 필요합니다.",
+    recommendedMode: "검토 필요",
+    keystrokeSteps: ["계산기 입력 없음"],
+    expectedDisplay: undefined,
+    answerRounding: undefined,
+  });
+
+  assert.equal(hasStrongCalculatorGuideSignal(productionFallbackGuide), false);
+  assert.equal(
+    hasStrongCalculatorRoutineSignal({
+      formulas: [],
+      extractedNumbersAndUnits: [],
+      stepByStepSolution: [],
+      calculatorGuide: productionFallbackGuide,
+    }),
+    false,
+  );
+
+  const productionFallbackAnalysis = analyzeCalculatorEvidence({ calculatorGuide: productionFallbackGuide });
+  assert.equal(productionFallbackAnalysis.hasStrongSignal, false);
+  assert.deepEqual(productionFallbackAnalysis.evidenceSources, []);
+  assert.deepEqual(productionFallbackAnalysis.display.keystrokeSteps, []);
+  assert.equal(productionFallbackAnalysis.display.recommendedMode, null);
+  assert.equal(productionFallbackAnalysis.diagnostics.keystrokesAreGenericFallback, false);
+
+  [
+    {
+      name: "placeholder purpose plus RUN-MAT plus generic builder steps",
+      guide: buildCasioFx9860GiiiGuide({
+        calculationPurpose: "계산기 입력이 필요한 문제인지 검토가 필요합니다.",
+        recommendedMode: "RUN-MAT",
+        keystrokeSteps: [],
+      }),
+      expected: false,
+    },
+    {
+      name: "placeholder purpose plus RUN-MAT plus empty steps",
+      guide: {
+        calculationPurpose: "계산기 입력이 필요한 문제인지 검토가 필요합니다.",
+        recommendedMode: "RUN-MAT",
+        keystrokeSteps: [],
+      },
+      expected: false,
+    },
+    {
+      name: "RUN-MAT alone",
+      guide: { recommendedMode: "RUN-MAT" },
+      expected: false,
+    },
+    {
+      name: "RUN-MAT with custom keystrokes",
+      guide: { recommendedMode: "RUN-MAT", keystrokeSteps: ["100 × 0.05 EXE"] },
+      expected: true,
+      sources: ["custom_keystroke"],
+    },
+    {
+      name: "meaningful purpose plus generic steps only",
+      guide: buildCasioFx9860GiiiGuide({
+        calculationPurpose: "직접환원가치 계산",
+        recommendedMode: "RUN-MAT",
+        keystrokeSteps: [],
+      }),
+      expected: false,
+    },
+    {
+      name: "meaningful expected display",
+      guide: { recommendedMode: "검토 필요", expectedDisplay: "240000000" },
+      expected: true,
+      sources: ["expected_display"],
+    },
+    {
+      name: "meaningful answer rounding",
+      guide: { recommendedMode: "검토 필요", answerRounding: "240,000,000원" },
+      expected: true,
+      sources: ["answer_rounding"],
+    },
+  ].forEach(({ name, guide, expected, sources }) => {
+    const analysis = analyzeCalculatorEvidence({ calculatorGuide: guide });
+    assert.equal(analysis.hasStrongSignal, expected, name);
+    if (sources) assert.deepEqual(analysis.evidenceSources, sources, name);
+    assert.equal(hasStrongCalculatorGuideSignal(guide), expected, name);
+  });
+
+  [
+    {
+      name: "formula",
+      input: { formulas: ["순영업소득 ÷ 환원율 = 직접환원가치"] },
+      sources: ["formula"],
+    },
+    {
+      name: "number and unit",
+      input: { extractedNumbersAndUnits: ["순영업소득 120,000,000원"] },
+      sources: ["number_unit"],
+    },
+    {
+      name: "calculation step",
+      input: { stepByStepSolution: ["순영업소득을 환원율로 나눈다"] },
+      sources: ["calculation_step"],
+    },
+    {
+      name: "calculation context",
+      input: { calculationContextText: "CASIO로 숫자를 계산합니다" },
+      sources: ["calculation_step"],
+    },
+  ].forEach(({ name, input, sources }) => {
+    const analysis = analyzeCalculatorEvidence(input);
+    assert.equal(analysis.hasStrongSignal, true, name);
+    assert.deepEqual(analysis.evidenceSources, sources, name);
+  });
+
+  [
+    { formulas: ["수익방식의 이론적 근거"] },
+    { extractedNumbersAndUnits: ["공익사업법 제0조", "30일"] },
+    { stepByStepSolution: ["사업인정 절차를 순서대로 정리"] },
+    { calculationContextText: "보상 절차와 공시지가 개념" },
+  ].forEach((input) => {
+    assert.equal(analyzeCalculatorEvidence(input).hasStrongSignal, false, JSON.stringify(input));
+  });
+});
+
+test("calculator negative grammar normalizes calculator and CASIO aliases", () => {
+  const deviceAliases = ["계산기", "CASIO", "Casio", "casio", "카시오"];
+  const negativeForms = [
+    "불필요합니다",
+    "사용이 불필요합니다",
+    "사용은 불필요합니다",
+    "입력이 필요하지 않습니다",
+    "필요하지 않습니다",
+    "사용 불필요",
+    "미사용",
+    "필요 없음",
+    "사용하지 않습니다",
+    "사용 안 함",
+    "안 씁니다",
+    "쓰지 않습니다",
+    "입력하지 않습니다",
+    "입력 안 함",
+    "없이 풉니다",
+  ];
+
+  deviceAliases.flatMap((device) => negativeForms.map((form) => `${device} ${form}`)).forEach((value) => {
+    assert.equal(isNegativeCalculatorSignal(value), true, value);
+    assert.equal(isMeaningfulCalculatorSignal(value), false, value);
+    assert.equal(hasStrongCalculatorGuideSignal({ calculationPurpose: value, recommendedMode: "RUN-MAT" }), false, value);
+  });
+
+  [
+    "계산기 사용이 필요합니다",
+    "계산기 입력이 필요합니다",
+    "CASIO 입력이 필요합니다",
+    "RUN-MAT에서 계산합니다",
+    "CASIO로 직접환원가치를 계산합니다",
+    "카시오로 환원가치를 계산합니다",
+  ].forEach((value) => {
+    assert.equal(isNegativeCalculatorSignal(value), false, value);
+    assert.equal(isMeaningfulCalculatorSignal(value), true, value);
+  });
+});
+
+test("calculator reference display strips generic fallback keystrokes", () => {
+  assert.deepEqual(getDisplayCalculatorKeystrokes(["MENU", "RUN-MAT", "계산식 입력", "EXE"]), []);
+  assert.deepEqual(getDisplayCalculatorKeystrokes([" menu ", " run-mat ", "계산식   입력", " exe "]), []);
+  assert.deepEqual(getDisplayCalculatorKeystrokes(["MENU", "100 × 0.05 EXE", "EXE"]), ["100 × 0.05 EXE"]);
+  assert.deepEqual(getMeaningfulCalculatorKeystrokeSteps(["MENU", "100 × 0.05 EXE", "EXE"]), ["100 × 0.05 EXE"]);
+
+  const fallbackGuide = buildCasioFx9860GiiiGuide({
+    calculationPurpose: "계산기 입력이 필요한 문제인지 검토가 필요합니다.",
+    recommendedMode: "검토 필요",
+    keystrokeSteps: [],
+  });
+  const fallbackAnalysis = analyzeCalculatorEvidence({ calculatorGuide: fallbackGuide });
+  assert.deepEqual(fallbackGuide.keystrokeSteps, ["MENU", "RUN-MAT", "계산식 입력", "EXE"]);
+  assert.deepEqual(fallbackAnalysis.display.keystrokeSteps, []);
+  assert.equal(fallbackAnalysis.hasStrongSignal, false);
+  assert.equal(fallbackAnalysis.display.recommendedMode, null);
+
+  const source = read("app/problem-snap/problem-snap-client.tsx");
+  const answerReview = read("app/answer-review/answer-review-client.tsx");
+  const trainer = read("components/review-os/calculator-routine-trainer.tsx");
+  assert.ok(source.includes("analysis.display.keystrokeSteps"));
+  assert.equal(source.includes("guide.keystrokeSteps.filter"), false);
+  assert.equal(source.includes("currentResult.calculatorGuide.keystrokeSteps"), false);
+  assert.equal(answerReview.includes("RUN-MAT 기준"), false);
+  assert.equal(trainer.includes("RUN-MAT을 기본"), false);
 });
 
 test("Problem Snap calculator reference unlocks only after routine access or retry memo", () => {
@@ -532,20 +722,20 @@ test("Problem Snap and Answer Review integrate the reusable trainer without pass
 
   assert.ok(problemSnap.includes("CalculatorRoutineTrainer"));
   assert.ok(problemSnap.includes("getCalculatorRoutineEligibility"));
-  assert.ok(problemSnap.includes("getMeaningfulCalculatorKeystrokeSteps"));
-  assert.ok(problemSnap.includes("hasStrongProblemSnapCalculatorSignal(result)"));
-  assert.ok(problemSnap.includes('subject === "감정평가실무" || hasStrongProblemSnapCalculatorSignal(result)'));
+  assert.ok(problemSnap.includes("analyzeCalculatorEvidence"));
+  assert.ok(problemSnap.includes("getProblemSnapCalculatorEvidenceAnalysis(result)"));
+  assert.ok(problemSnap.includes('subject === "감정평가실무" || calculatorEvidenceAnalysis.hasStrongSignal'));
   assert.ok(problemSnap.includes("shouldUnlockProblemSnapCalculatorReference"));
-  assert.ok(problemSnap.includes("casio_input: getMeaningfulCalculatorKeystrokeSteps(currentResult.calculatorGuide.keystrokeSteps),"));
-  assert.ok(problemSnap.includes("const keystrokeSteps = getMeaningfulCalculatorKeystrokeSteps(guide.keystrokeSteps);"));
-  assert.ok(problemSnap.includes("const practiceKeystrokeSteps = getMeaningfulCalculatorKeystrokeSteps(currentResult.calculatorGuide.keystrokeSteps);"));
-  assert.ok(problemSnap.includes('renderListOrFallback(practiceKeystrokeSteps, "입력 순서 확인 필요")'));
+  assert.ok(problemSnap.includes("casio_input: analysis.display.keystrokeSteps,"));
+  assert.ok(problemSnap.includes("const keystrokeSteps = analysis.display.keystrokeSteps;"));
+  assert.ok(problemSnap.includes('renderListOrFallback(analysis.display.keystrokeSteps, "입력 순서 확인 필요")'));
   assert.equal(problemSnap.includes("const keystrokeSteps = guide.keystrokeSteps.filter(isMeaningfulCalculatorSignal);"), false);
   assert.equal(problemSnap.includes("renderListOrFallback(currentResult.calculatorGuide.keystrokeSteps"), false);
+  assert.equal(problemSnap.includes("currentResult.calculatorGuide.keystrokeSteps"), false);
   assert.equal(problemSnap.includes("hasCalculatorGuideData"), false);
   const strongSignalHelper = problemSnap.slice(
-    problemSnap.indexOf("const hasStrongProblemSnapCalculatorSignal"),
-    problemSnap.indexOf("const compactCalculatorHints"),
+    problemSnap.indexOf("const getProblemSnapCalculatorEvidenceAnalysis"),
+    problemSnap.indexOf("const createCalculatorRoutineRunId"),
   );
   assert.equal(strongSignalHelper.includes("guide.caution"), false);
   assert.ok(problemSnap.includes('problemSnapSubjectView === "practice"'));
@@ -564,8 +754,8 @@ test("Problem Snap and Answer Review integrate the reusable trainer without pass
   assert.ok(problemSnap.includes("onReferenceAccessChange={updateCalculatorReferenceAccess}"));
   assert.ok(problemSnap.includes("참고 신호 보기"));
   assert.ok(problemSnap.includes("먼저 해설 가리고 다시 풀기에서 내 풀이 메모를 남긴 뒤 전체 참고 신호를 열 수 있습니다."));
-  assert.ok(problemSnap.indexOf("<CalculatorRoutineTrainer") < problemSnap.indexOf("renderCalculatorStepPanel(result,"));
-  assert.ok(problemSnap.indexOf("renderCalculatorStepPanel(result,") < problemSnap.indexOf('<div><h3 className="font-medium">{resultHeading}'));
+  assert.ok(problemSnap.indexOf("<CalculatorRoutineTrainer") < problemSnap.indexOf("renderCalculatorStepPanel(calculatorEvidenceAnalysis,"));
+  assert.ok(problemSnap.indexOf("renderCalculatorStepPanel(calculatorEvidenceAnalysis,") < problemSnap.indexOf('<div><h3 className="font-medium">{resultHeading}'));
   assert.ok(problemSnap.includes("복습 큐에 저장"));
   assert.ok(problemSnap.includes("Answer Review로 내 풀이 검토하기"));
 

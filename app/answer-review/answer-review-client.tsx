@@ -162,7 +162,7 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
       structureDraft?.requiredIssues,
       structureDraft?.weakLogicPoint,
     ].filter(Boolean) as string[],
-    casio_input: ["CASIO 입력은 본인 계산기에서 RUN-MAT 기준으로 직접 확인해 주세요."],
+    casio_input: ["계산기 입력은 원문 숫자와 단위를 기준으로 본인 계산기에서 직접 확인해 주세요."],
     display_value: ["화면값은 원문 숫자·단위와 대조해 직접 확인해 주세요."],
     answer_value: [
       structureDraft?.rewriteTarget,

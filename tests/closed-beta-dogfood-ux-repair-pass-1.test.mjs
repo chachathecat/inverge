@@ -27,13 +27,13 @@ test("Problem Snap prioritizes the active calculation routine before collapsed c
   const trainer = read("components/review-os/calculator-routine-trainer.tsx");
   const combined = `${problemSnap}\n${trainer}`;
 
-  assert.ok(problemSnap.includes("hasStrongProblemSnapCalculatorSignal(result)"));
+  assert.ok(problemSnap.includes("getProblemSnapCalculatorEvidenceAnalysis(result)"));
   assert.equal(problemSnap.includes("hasCalculatorGuideData"), false);
   assert.ok(problemSnap.includes("CalculatorRoutineTrainer"));
   assert.ok(problemSnap.includes("getCalculatorRoutineEligibility"));
   assert.ok(problemSnap.includes('problemSnapSubjectView === "practice"'));
   assert.ok(problemSnap.includes("problemSnapCalculatorRoutineAvailable"));
-  assert.ok(problemSnap.includes("renderCalculatorStepPanel(result,"));
+  assert.ok(problemSnap.includes("renderCalculatorStepPanel(calculatorEvidenceAnalysis,"));
   assert.ok(problemSnap.includes("data-problem-snap-calculator-reference"));
   assert.ok(problemSnap.includes("data-problem-snap-calculator-reference-locked"));
   assert.ok(problemSnap.includes("shouldUnlockProblemSnapCalculatorReference"));
@@ -46,8 +46,8 @@ test("Problem Snap prioritizes the active calculation routine before collapsed c
   assert.ok(combined.includes("계산·검산 루틴 시작"));
   assert.ok(combined.includes("정답 판정이 아니라 내 계산 과정을 점검하는 훈련입니다."));
   assert.ok(combined.includes("AI 생성 초안입니다. 원문·숫자·단위를 직접 대조해 주세요."));
-  assert.ok(problemSnap.indexOf("<CalculatorRoutineTrainer") < problemSnap.indexOf("renderCalculatorStepPanel(result,"));
-  assert.ok(problemSnap.indexOf("renderCalculatorStepPanel(result,") < problemSnap.indexOf('<div><h3 className="font-medium">{resultHeading}'));
+  assert.ok(problemSnap.indexOf("<CalculatorRoutineTrainer") < problemSnap.indexOf("renderCalculatorStepPanel(calculatorEvidenceAnalysis,"));
+  assert.ok(problemSnap.indexOf("renderCalculatorStepPanel(calculatorEvidenceAnalysis,") < problemSnap.indexOf('<div><h3 className="font-medium">{resultHeading}'));
   ["계산/CASIO 참고 신호", "계산 목적", "추천 모드", "계산 순서", "CASIO 입력", "화면에 보여야 할 값", "답안에 적을 값", "단위/반올림 주의"].forEach((label) =>
     assert.ok(problemSnap.includes(label), label),
   );
