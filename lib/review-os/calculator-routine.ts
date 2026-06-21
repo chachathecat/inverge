@@ -50,7 +50,9 @@ const TEXT_STEP_IDS = [
 ] as const;
 
 const CALCULATOR_PLACEHOLDER_PATTERN = /확인(?:이)?\s*필요|검토(?:가)?\s*필요|계산기\s*입력\s*없음|입력\s*없음|해당\s*없음|없음/;
+const CALCULATOR_NEGATIVE_PATTERN = /계산기(?:\s*입력|\s*사용)?(?:이|가)?\s*필요하지\s*않|계산기\s*(?:입력|사용)?\s*불필요|계산기\s*미사용/;
 const CALCULATION_CONTEXT_PATTERN = /계산|산식|숫자|단위|환원|수익|원가|비교방식|공시지가|보상|CASIO|반올림|㎡|원\/㎡/i;
+const GENERIC_CALCULATOR_FALLBACK_STEPS = ["MENU", "RUN-MAT", "계산식 입력", "EXE"] as const;
 
 export type CalculatorRoutineStepId = (typeof CALCULATOR_ROUTINE_STEPS)[number]["id"];
 export type CalculatorRoutineStepDefinition = (typeof CALCULATOR_ROUTINE_STEPS)[number];
@@ -161,7 +163,18 @@ export function getCalculatorRoutineMistakeLabel(mistakeType: CalculatorRoutineM
 export function isMeaningfulCalculatorSignal(value?: string | null) {
   const normalized = value?.trim();
   if (!normalized) return false;
+  if (CALCULATOR_NEGATIVE_PATTERN.test(normalized)) return false;
   return !CALCULATOR_PLACEHOLDER_PATTERN.test(normalized);
+}
+
+export function isGenericCalculatorFallbackStepSequence(values?: string[] | null) {
+  if (!values || values.length !== GENERIC_CALCULATOR_FALLBACK_STEPS.length) return false;
+  return values.every((value, index) => value.trim() === GENERIC_CALCULATOR_FALLBACK_STEPS[index]);
+}
+
+export function hasMeaningfulCalculatorKeystrokeSignal(values?: string[] | null) {
+  if (!values || isGenericCalculatorFallbackStepSequence(values)) return false;
+  return values.some(isMeaningfulCalculatorSignal);
 }
 
 export function isCalculationContextSignal(value?: string | null) {
@@ -172,12 +185,11 @@ export function isCalculationContextSignal(value?: string | null) {
 export function hasStrongCalculatorGuideSignal(guide?: CalculatorRoutineEligibilityInput["calculatorGuide"] | null) {
   if (!guide) return false;
   return [
-    ...(guide.keystrokeSteps ?? []),
     guide.calculationPurpose ?? "",
     guide.expectedDisplay ?? "",
     guide.answerRounding ?? "",
     guide.recommendedMode ?? "",
-  ].some(isMeaningfulCalculatorSignal);
+  ].some(isMeaningfulCalculatorSignal) || hasMeaningfulCalculatorKeystrokeSignal(guide.keystrokeSteps);
 }
 
 export function hasStrongCalculatorRoutineSignal(input: Pick<

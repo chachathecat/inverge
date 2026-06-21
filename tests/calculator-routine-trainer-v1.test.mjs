@@ -14,9 +14,11 @@ import {
   getCalculatorRoutineDraftStorageKey,
   getCalculatorRoutineEligibility,
   getCalculatorRoutineProgress,
+  hasMeaningfulCalculatorKeystrokeSignal,
   hasStrongCalculatorGuideSignal,
   hasStrongCalculatorRoutineSignal,
   isCalculatorRoutineStepComplete,
+  isGenericCalculatorFallbackStepSequence,
   normalizeCalculatorRoutineMistakeTypes,
   parseCalculatorRoutineCompletionHistory,
   parseCalculatorRoutineDraftFromSession,
@@ -281,6 +283,40 @@ test("eligibility is limited to second exam practice and ignores placeholder cal
     false,
     "production CASIO fallback guide must not surface calculator UI by itself",
   );
+  const builderDefaultFallbackGuide = buildCasioFx9860GiiiGuide({
+    calculationPurpose: "계산기 입력이 필요한 문제인지 검토가 필요합니다.",
+    recommendedMode: "검토 필요",
+    keystrokeSteps: [],
+  });
+  assert.deepEqual(builderDefaultFallbackGuide.keystrokeSteps, ["MENU", "RUN-MAT", "계산식 입력", "EXE"]);
+  assert.equal(isGenericCalculatorFallbackStepSequence(builderDefaultFallbackGuide.keystrokeSteps), true);
+  assert.equal(hasMeaningfulCalculatorKeystrokeSignal(builderDefaultFallbackGuide.keystrokeSteps), false);
+  assert.equal(hasStrongCalculatorGuideSignal(builderDefaultFallbackGuide), false);
+  assert.equal(
+    hasStrongCalculatorRoutineSignal({ calculatorGuide: builderDefaultFallbackGuide }),
+    false,
+    "builder-injected default steps must not become a strong signal by themselves",
+  );
+  assert.equal(
+    hasStrongCalculatorGuideSignal({
+      calculationPurpose: "계산기 입력이 필요한 문제인지 검토가 필요합니다.",
+      recommendedMode: "검토 필요",
+    }),
+    false,
+    "omitted keystrokes with placeholder purpose and review mode must stay weak",
+  );
+  [
+    "계산기가 필요하지 않습니다",
+    "계산기 입력이 필요하지 않습니다",
+    "계산기 사용 불필요",
+    "계산기 미사용",
+  ].forEach((calculationPurpose) => {
+    assert.equal(
+      hasStrongCalculatorGuideSignal({ calculationPurpose, recommendedMode: "검토 필요" }),
+      false,
+      `${calculationPurpose} must not count as a calculator signal`,
+    );
+  });
   assert.equal(
     hasStrongCalculatorRoutineSignal({
       formulas: [],
@@ -305,7 +341,17 @@ test("eligibility is limited to second exam practice and ignores placeholder cal
     }),
     true,
   );
+  assert.equal(
+    hasStrongCalculatorGuideSignal(buildCasioFx9860GiiiGuide({
+      calculationPurpose: "직접환원가치 계산",
+      recommendedMode: "검토 필요",
+      keystrokeSteps: [],
+    })),
+    true,
+    "meaningful purpose may count even when builder defaults are present",
+  );
   assert.equal(hasStrongCalculatorGuideSignal({ recommendedMode: "RUN-MAT", keystrokeSteps: ["100 × 0.05 EXE"] }), true);
+  assert.equal(hasMeaningfulCalculatorKeystrokeSignal(["100 × 0.05 EXE"]), true);
   assert.equal(hasStrongCalculatorGuideSignal({ recommendedMode: "검토 필요", expectedDisplay: "240000000" }), true);
   assert.equal(hasStrongCalculatorGuideSignal({ recommendedMode: "검토 필요", answerRounding: "240,000,000원" }), true);
 
