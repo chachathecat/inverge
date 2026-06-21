@@ -19,11 +19,13 @@ import {
   hasStrongCalculatorRoutineSignal,
   isCalculatorRoutineStepComplete,
   isGenericCalculatorFallbackStepSequence,
+  isNegativeCalculatorSignal,
   normalizeCalculatorRoutineMistakeTypes,
   parseCalculatorRoutineCompletionHistory,
   parseCalculatorRoutineDraftFromSession,
   serializeCalculatorRoutineCompletionHistoryForLocalStorage,
   serializeCalculatorRoutineDraftForSession,
+  shouldUnlockProblemSnapCalculatorReference,
   updateCalculatorRoutineDraftCurrentStep,
   updateCalculatorRoutineDraftStep,
 } from "../lib/review-os/calculator-routine.ts";
@@ -283,6 +285,24 @@ test("eligibility is limited to second exam practice and ignores placeholder cal
     false,
     "production CASIO fallback guide must not surface calculator UI by itself",
   );
+  assert.equal(
+    hasStrongCalculatorGuideSignal(buildCasioFx9860GiiiGuide({
+      calculationPurpose: "계산기 입력이 필요한 문제인지 검토가 필요합니다.",
+      recommendedMode: "RUN-MAT",
+      keystrokeSteps: [],
+    })),
+    false,
+    "placeholder purpose plus RUN-MAT plus generic builder steps must stay weak",
+  );
+  assert.equal(
+    hasStrongCalculatorGuideSignal({
+      calculationPurpose: "계산기 입력이 필요한 문제인지 검토가 필요합니다.",
+      recommendedMode: "RUN-MAT",
+      keystrokeSteps: [],
+    }),
+    false,
+    "RUN-MAT with empty steps must not create calculation evidence",
+  );
   const builderDefaultFallbackGuide = buildCasioFx9860GiiiGuide({
     calculationPurpose: "계산기 입력이 필요한 문제인지 검토가 필요합니다.",
     recommendedMode: "검토 필요",
@@ -291,6 +311,7 @@ test("eligibility is limited to second exam practice and ignores placeholder cal
   assert.deepEqual(builderDefaultFallbackGuide.keystrokeSteps, ["MENU", "RUN-MAT", "계산식 입력", "EXE"]);
   assert.equal(isGenericCalculatorFallbackStepSequence(builderDefaultFallbackGuide.keystrokeSteps), true);
   assert.equal(hasMeaningfulCalculatorKeystrokeSignal(builderDefaultFallbackGuide.keystrokeSteps), false);
+  assert.equal(hasMeaningfulCalculatorKeystrokeSignal(["RUN-MAT"]), false);
   assert.equal(hasStrongCalculatorGuideSignal(builderDefaultFallbackGuide), false);
   assert.equal(
     hasStrongCalculatorRoutineSignal({ calculatorGuide: builderDefaultFallbackGuide }),
@@ -306,16 +327,25 @@ test("eligibility is limited to second exam practice and ignores placeholder cal
     "omitted keystrokes with placeholder purpose and review mode must stay weak",
   );
   [
-    "계산기가 필요하지 않습니다",
+    "계산기는 불필요합니다",
+    "계산기가 불필요합니다",
+    "계산기 사용이 불필요합니다",
+    "계산기 사용은 불필요합니다",
     "계산기 입력이 필요하지 않습니다",
+    "계산기가 필요하지 않습니다",
     "계산기 사용 불필요",
     "계산기 미사용",
+    "계산기 필요 없음",
   ].forEach((calculationPurpose) => {
+    assert.equal(isNegativeCalculatorSignal(calculationPurpose), true, `${calculationPurpose} should be negative`);
     assert.equal(
       hasStrongCalculatorGuideSignal({ calculationPurpose, recommendedMode: "검토 필요" }),
       false,
       `${calculationPurpose} must not count as a calculator signal`,
     );
+  });
+  ["계산기 사용이 필요합니다", "RUN-MAT에서 계산합니다"].forEach((calculationPurpose) => {
+    assert.equal(isNegativeCalculatorSignal(calculationPurpose), false, `${calculationPurpose} should not be negative`);
   });
   assert.equal(
     hasStrongCalculatorRoutineSignal({
@@ -382,6 +412,45 @@ test("eligibility is limited to second exam practice and ignores placeholder cal
   assert.equal(strongSignal.eligible, true);
 });
 
+test("Problem Snap calculator reference unlocks only after routine access or retry memo", () => {
+  assert.equal(
+    shouldUnlockProblemSnapCalculatorReference({
+      routineAvailable: true,
+      routineReferenceUnlocked: false,
+      retryMemo: "풀이 메모",
+    }),
+    false,
+    "practice routine reference should stay locked before routine attempt",
+  );
+  assert.equal(
+    shouldUnlockProblemSnapCalculatorReference({
+      routineAvailable: true,
+      routineReferenceUnlocked: true,
+      retryMemo: "",
+    }),
+    true,
+    "practice routine attempt or 막힘 should unlock through routine access",
+  );
+  assert.equal(
+    shouldUnlockProblemSnapCalculatorReference({
+      routineAvailable: false,
+      routineReferenceUnlocked: false,
+      retryMemo: "",
+    }),
+    false,
+    "non-practice genuine signal should stay locked before retry memo",
+  );
+  assert.equal(
+    shouldUnlockProblemSnapCalculatorReference({
+      routineAvailable: false,
+      routineReferenceUnlocked: false,
+      retryMemo: "내 풀이를 먼저 한 줄로 적음",
+    }),
+    true,
+    "non-practice reference should unlock after a retry memo",
+  );
+});
+
 test("trainer component enforces attempt-before-reveal without prefilling entries", () => {
   const component = read("components/review-os/calculator-routine-trainer.tsx");
 
@@ -436,23 +505,29 @@ test("Problem Snap and Answer Review integrate the reusable trainer without pass
   assert.ok(problemSnap.includes("getCalculatorRoutineEligibility"));
   assert.ok(problemSnap.includes("hasStrongProblemSnapCalculatorSignal(result)"));
   assert.ok(problemSnap.includes('subject === "감정평가실무" || hasStrongProblemSnapCalculatorSignal(result)'));
+  assert.ok(problemSnap.includes("shouldUnlockProblemSnapCalculatorReference"));
   assert.equal(problemSnap.includes("hasCalculatorGuideData"), false);
   const strongSignalHelper = problemSnap.slice(
     problemSnap.indexOf("const hasStrongProblemSnapCalculatorSignal"),
     problemSnap.indexOf("const compactCalculatorHints"),
   );
   assert.equal(strongSignalHelper.includes("guide.caution"), false);
-  assert.ok(problemSnap.includes('getProblemSnapSubjectView(subject) === "practice"'));
+  assert.ok(problemSnap.includes('problemSnapSubjectView === "practice"'));
+  assert.ok(problemSnap.includes("problemSnapCalculatorRoutineAvailable"));
   assert.ok(problemSnap.includes("calculatorRoutineDraftKey"));
   assert.ok(problemSnap.includes("calculatorRoutineRunId"));
   assert.ok(problemSnap.includes('key={calculatorRoutineRunId ?? "problem-snap-calculator-routine"}'));
   assert.ok(problemSnap.includes("setCalculatorRoutineDraftReference(null);"));
   assert.ok(problemSnap.includes("setCalculatorRoutineReferenceUnlocked(false);"));
   assert.ok(problemSnap.includes('setCalculatorRoutineRunId(createCalculatorRoutineRunId("problem-snap"));'));
+  assert.ok(problemSnap.includes("problemSnapCalculatorReferenceUnlocked"));
+  assert.ok(problemSnap.includes("routineReferenceUnlocked: calculatorRoutineReferenceUnlocked"));
+  assert.ok(problemSnap.includes("retryMemo,"));
   assert.ok(problemSnap.includes("data-problem-snap-calculator-reference"));
   assert.ok(problemSnap.includes("data-problem-snap-calculator-reference-locked"));
   assert.ok(problemSnap.includes("onReferenceAccessChange={updateCalculatorReferenceAccess}"));
   assert.ok(problemSnap.includes("참고 신호 보기"));
+  assert.ok(problemSnap.includes("먼저 해설 가리고 다시 풀기에서 내 풀이 메모를 남긴 뒤 전체 참고 신호를 열 수 있습니다."));
   assert.ok(problemSnap.indexOf("<CalculatorRoutineTrainer") < problemSnap.indexOf("renderCalculatorStepPanel(result,"));
   assert.ok(problemSnap.indexOf("renderCalculatorStepPanel(result,") < problemSnap.indexOf('<div><h3 className="font-medium">{resultHeading}'));
   assert.ok(problemSnap.includes("복습 큐에 저장"));

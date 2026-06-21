@@ -31,12 +31,16 @@ test("Problem Snap prioritizes the active calculation routine before collapsed c
   assert.equal(problemSnap.includes("hasCalculatorGuideData"), false);
   assert.ok(problemSnap.includes("CalculatorRoutineTrainer"));
   assert.ok(problemSnap.includes("getCalculatorRoutineEligibility"));
-  assert.ok(problemSnap.includes('getProblemSnapSubjectView(subject) === "practice"'));
+  assert.ok(problemSnap.includes('problemSnapSubjectView === "practice"'));
+  assert.ok(problemSnap.includes("problemSnapCalculatorRoutineAvailable"));
   assert.ok(problemSnap.includes("renderCalculatorStepPanel(result,"));
   assert.ok(problemSnap.includes("data-problem-snap-calculator-reference"));
   assert.ok(problemSnap.includes("data-problem-snap-calculator-reference-locked"));
-  assert.ok(problemSnap.includes("referenceUnlocked: calculatorRoutineReferenceUnlocked"));
+  assert.ok(problemSnap.includes("shouldUnlockProblemSnapCalculatorReference"));
+  assert.ok(problemSnap.includes("routineReferenceUnlocked: calculatorRoutineReferenceUnlocked"));
+  assert.ok(problemSnap.includes("retryMemo,"));
   assert.ok(problemSnap.includes("먼저 계산·검산 루틴에서 한 단계 입력하거나 막힘을 선택하면 전체 참고 신호를 열 수 있습니다."));
+  assert.ok(problemSnap.includes("먼저 해설 가리고 다시 풀기에서 내 풀이 메모를 남긴 뒤 전체 참고 신호를 열 수 있습니다."));
   assert.ok(problemSnap.includes("setCalculatorRoutineDraftReference(null);"));
   assert.ok(problemSnap.includes('setCalculatorRoutineRunId(createCalculatorRoutineRunId("problem-snap"));'));
   assert.ok(combined.includes("계산·검산 루틴 시작"));

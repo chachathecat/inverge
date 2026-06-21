@@ -50,9 +50,9 @@ const TEXT_STEP_IDS = [
 ] as const;
 
 const CALCULATOR_PLACEHOLDER_PATTERN = /확인(?:이)?\s*필요|검토(?:가)?\s*필요|계산기\s*입력\s*없음|입력\s*없음|해당\s*없음|없음/;
-const CALCULATOR_NEGATIVE_PATTERN = /계산기(?:\s*입력|\s*사용)?(?:이|가)?\s*필요하지\s*않|계산기\s*(?:입력|사용)?\s*불필요|계산기\s*미사용/;
 const CALCULATION_CONTEXT_PATTERN = /계산|산식|숫자|단위|환원|수익|원가|비교방식|공시지가|보상|CASIO|반올림|㎡|원\/㎡/i;
 const GENERIC_CALCULATOR_FALLBACK_STEPS = ["MENU", "RUN-MAT", "계산식 입력", "EXE"] as const;
+const GENERIC_CALCULATOR_KEYSTROKE_VALUES = new Set<string>(GENERIC_CALCULATOR_FALLBACK_STEPS);
 
 export type CalculatorRoutineStepId = (typeof CALCULATOR_ROUTINE_STEPS)[number]["id"];
 export type CalculatorRoutineStepDefinition = (typeof CALCULATOR_ROUTINE_STEPS)[number];
@@ -160,10 +160,32 @@ export function getCalculatorRoutineMistakeLabel(mistakeType: CalculatorRoutineM
   return CALCULATOR_ROUTINE_MISTAKE_OPTIONS.find((option) => option.id === mistakeType)?.label ?? "기타";
 }
 
+export function isNegativeCalculatorSignal(value?: string | null) {
+  const compact = value?.replace(/\s+/g, "") ?? "";
+  if (!compact.includes("계산기")) return false;
+  const normalized = compact
+    .replace(/계산기[는은이가을를]?/g, "계산기")
+    .replace(/사용[은이가을를]?/g, "사용")
+    .replace(/입력[은이가을를]?/g, "입력");
+
+  return [
+    "계산기불필요",
+    "계산기사용불필요",
+    "계산기입력불필요",
+    "계산기미사용",
+    "계산기필요없음",
+    "계산기사용필요없음",
+    "계산기입력필요없음",
+    "계산기필요하지않",
+    "계산기사용필요하지않",
+    "계산기입력필요하지않",
+  ].some((marker) => normalized.includes(marker));
+}
+
 export function isMeaningfulCalculatorSignal(value?: string | null) {
   const normalized = value?.trim();
   if (!normalized) return false;
-  if (CALCULATOR_NEGATIVE_PATTERN.test(normalized)) return false;
+  if (isNegativeCalculatorSignal(normalized)) return false;
   return !CALCULATOR_PLACEHOLDER_PATTERN.test(normalized);
 }
 
@@ -174,7 +196,7 @@ export function isGenericCalculatorFallbackStepSequence(values?: string[] | null
 
 export function hasMeaningfulCalculatorKeystrokeSignal(values?: string[] | null) {
   if (!values || isGenericCalculatorFallbackStepSequence(values)) return false;
-  return values.some(isMeaningfulCalculatorSignal);
+  return values.some((value) => isMeaningfulCalculatorSignal(value) && !GENERIC_CALCULATOR_KEYSTROKE_VALUES.has(value.trim()));
 }
 
 export function isCalculationContextSignal(value?: string | null) {
@@ -188,8 +210,16 @@ export function hasStrongCalculatorGuideSignal(guide?: CalculatorRoutineEligibil
     guide.calculationPurpose ?? "",
     guide.expectedDisplay ?? "",
     guide.answerRounding ?? "",
-    guide.recommendedMode ?? "",
   ].some(isMeaningfulCalculatorSignal) || hasMeaningfulCalculatorKeystrokeSignal(guide.keystrokeSteps);
+}
+
+export function shouldUnlockProblemSnapCalculatorReference(input: {
+  routineAvailable: boolean;
+  routineReferenceUnlocked?: boolean;
+  retryMemo?: string | null;
+}) {
+  if (input.routineAvailable) return Boolean(input.routineReferenceUnlocked);
+  return Boolean(input.retryMemo?.trim());
 }
 
 export function hasStrongCalculatorRoutineSignal(input: Pick<

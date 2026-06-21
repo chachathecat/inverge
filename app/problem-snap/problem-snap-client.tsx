@@ -19,6 +19,7 @@ import {
   getCalculatorRoutineEligibility,
   hasStrongCalculatorRoutineSignal,
   isMeaningfulCalculatorSignal,
+  shouldUnlockProblemSnapCalculatorReference,
 } from "@/lib/review-os/calculator-routine";
 import { APPRAISAL_FIRST_SUBJECTS, APPRAISAL_SECOND_SUBJECTS } from "@/lib/review-os/types";
 import { cn } from "@/lib/utils";
@@ -172,6 +173,14 @@ export default function ProblemSnapClientPage({
     if (currentSubject === "감정평가이론") return "theory";
     return "law";
   };
+  const problemSnapSubjectView = getProblemSnapSubjectView(subject);
+  const problemSnapCalculatorRoutineAvailable =
+    problemSnapSubjectView === "practice" && Boolean(calculatorRoutineEligibility);
+  const problemSnapCalculatorReferenceUnlocked = shouldUnlockProblemSnapCalculatorReference({
+    routineAvailable: problemSnapCalculatorRoutineAvailable,
+    routineReferenceUnlocked: calculatorRoutineReferenceUnlocked,
+    retryMemo,
+  });
   const getRetryLink = (currentExamMode: AppraisalMode, currentSubject: string) =>
     `/answer-review?mode=${currentExamMode}&subject=${encodeURIComponent(currentSubject)}&source=problem-snap`;
 
@@ -223,7 +232,10 @@ export default function ProblemSnapClientPage({
     const keystrokeSteps = guide.keystrokeSteps.filter(isMeaningfulCalculatorSignal);
     const caution = isMeaningfulCalculatorSignal(guide.caution) ? guide.caution : "단위와 반올림 기준 확인 필요";
 
-    if (options.routineAvailable && !options.referenceUnlocked) {
+    if (!options.referenceUnlocked) {
+      const lockedCopy = options.routineAvailable
+        ? "먼저 계산·검산 루틴에서 한 단계 입력하거나 막힘을 선택하면 전체 참고 신호를 열 수 있습니다."
+        : "먼저 해설 가리고 다시 풀기에서 내 풀이 메모를 남긴 뒤 전체 참고 신호를 열 수 있습니다.";
       return (
         <section
           className="rounded-[var(--radius-md)] border bg-[color:var(--surface-subtle)] p-3"
@@ -233,9 +245,7 @@ export default function ProblemSnapClientPage({
         >
           <p className="text-sm font-medium">참고 신호 보기</p>
           <p className="mt-2 text-xs text-[color:var(--muted)]">AI 생성 초안입니다. 원문·숫자·단위를 직접 대조해 주세요.</p>
-          <p className="mt-2 text-sm text-[color:var(--muted)]">
-            먼저 계산·검산 루틴에서 한 단계 입력하거나 막힘을 선택하면 전체 참고 신호를 열 수 있습니다.
-          </p>
+          <p className="mt-2 text-sm text-[color:var(--muted)]">{lockedCopy}</p>
         </section>
       );
     }
@@ -517,7 +527,7 @@ export default function ProblemSnapClientPage({
             <div className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">주의할 함정 1개</p><p className="mt-1 text-sm">{getSubjectSpecificCaution(subject, result)}</p></div>
           </div>
           <p className="text-xs text-[color:var(--muted)]">{referenceGrounding?.used ? `유사 기출 Skeleton을 참고해 정리했습니다. ${referenceGrounding.displayLabel}` : "입력 자료 기준으로 정리했습니다."}</p>
-          {!retryMode && getProblemSnapSubjectView(subject) === "practice" && calculatorRoutineEligibility ? (
+          {!retryMode && problemSnapSubjectView === "practice" && calculatorRoutineEligibility ? (
             <CalculatorRoutineTrainer
               key={calculatorRoutineRunId ?? "problem-snap-calculator-routine"}
               source="problem-snap"
@@ -533,16 +543,16 @@ export default function ProblemSnapClientPage({
           {!retryMode ? (
             showCalculatorGuide ? (
               renderCalculatorStepPanel(result, {
-                routineAvailable: getProblemSnapSubjectView(subject) === "practice" && Boolean(calculatorRoutineEligibility),
-                referenceUnlocked: calculatorRoutineReferenceUnlocked,
+                routineAvailable: problemSnapCalculatorRoutineAvailable,
+                referenceUnlocked: problemSnapCalculatorReferenceUnlocked,
               })
             ) : (
               <p className="rounded-[var(--radius-md)] border border-dashed p-3 text-sm text-[color:var(--muted)]">계산기 입력보다 개념 구조가 중요한 문제입니다.</p>
             )
           ) : null}
           {!retryMode ? <div><h3 className="font-medium">{resultHeading}</h3><p>{result.easyExplanation}</p></div> : null}
-          {!retryMode && renderPrimarySubjectCards(getProblemSnapSubjectView(subject), result).length > 0 ? (
-            <div className="grid gap-3 sm:grid-cols-2">{renderPrimarySubjectCards(getProblemSnapSubjectView(subject), result)}</div>
+          {!retryMode && renderPrimarySubjectCards(problemSnapSubjectView, result).length > 0 ? (
+            <div className="grid gap-3 sm:grid-cols-2">{renderPrimarySubjectCards(problemSnapSubjectView, result)}</div>
           ) : null}
           <details className="rounded-[var(--radius-md)] border p-3">
             <summary className="cursor-pointer text-sm font-medium">자세히 보기</summary>
