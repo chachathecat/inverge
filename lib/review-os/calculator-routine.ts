@@ -161,9 +161,10 @@ export function getCalculatorRoutineMistakeLabel(mistakeType: CalculatorRoutineM
 }
 
 export function isNegativeCalculatorSignal(value?: string | null) {
-  const compact = value?.replace(/\s+/g, "") ?? "";
-  if (!compact.includes("계산기")) return false;
+  const compact = (value?.replace(/\s+/g, "") ?? "").toUpperCase();
+  if (!compact.includes("계산기") && !compact.includes("CASIO")) return false;
   const normalized = compact
+    .replace(/CASIO[는은이가을를]?/g, "계산기")
     .replace(/계산기[는은이가을를]?/g, "계산기")
     .replace(/사용[은이가을를]?/g, "사용")
     .replace(/입력[은이가을를]?/g, "입력");
@@ -194,9 +195,15 @@ export function isGenericCalculatorFallbackStepSequence(values?: string[] | null
   return values.every((value, index) => value.trim() === GENERIC_CALCULATOR_FALLBACK_STEPS[index]);
 }
 
+export function getMeaningfulCalculatorKeystrokeSteps(values?: string[] | null) {
+  if (!values || isGenericCalculatorFallbackStepSequence(values)) return [];
+  return values.filter(
+    (value) => isMeaningfulCalculatorSignal(value) && !GENERIC_CALCULATOR_KEYSTROKE_VALUES.has(value.trim()),
+  );
+}
+
 export function hasMeaningfulCalculatorKeystrokeSignal(values?: string[] | null) {
-  if (!values || isGenericCalculatorFallbackStepSequence(values)) return false;
-  return values.some((value) => isMeaningfulCalculatorSignal(value) && !GENERIC_CALCULATOR_KEYSTROKE_VALUES.has(value.trim()));
+  return getMeaningfulCalculatorKeystrokeSteps(values).length > 0;
 }
 
 export function isCalculationContextSignal(value?: string | null) {

@@ -16,6 +16,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { normalizeSubjectForMode, type AppraisalMode } from "@/lib/review-os/appraisal";
 import {
+  getMeaningfulCalculatorKeystrokeSteps,
   getCalculatorRoutineEligibility,
   hasStrongCalculatorRoutineSignal,
   isMeaningfulCalculatorSignal,
@@ -78,10 +79,7 @@ const buildProblemSnapCalculatorRoutineHints = (currentResult: ProblemSnapResult
   conditions: compactCalculatorHints(currentResult.extractedConditions ?? []),
   formula: compactCalculatorHints(currentResult.formulas ?? []),
   numbers_units: compactCalculatorHints(currentResult.extractedNumbersAndUnits ?? []),
-  casio_input: compactCalculatorHints([
-    currentResult.calculatorGuide.recommendedMode,
-    ...currentResult.calculatorGuide.keystrokeSteps,
-  ]),
+  casio_input: getMeaningfulCalculatorKeystrokeSteps(currentResult.calculatorGuide.keystrokeSteps),
   display_value: compactCalculatorHints([currentResult.calculatorGuide.expectedDisplay]),
   answer_value: compactCalculatorHints([
     currentResult.calculatorGuide.answerRounding,
@@ -229,7 +227,7 @@ export default function ProblemSnapClientPage({
     const guide = currentResult.calculatorGuide;
     const hasGuideData = hasStrongProblemSnapCalculatorSignal(currentResult);
     const calculationSteps = currentResult.stepByStepSolution.filter(isMeaningfulCalculatorSignal);
-    const keystrokeSteps = guide.keystrokeSteps.filter(isMeaningfulCalculatorSignal);
+    const keystrokeSteps = getMeaningfulCalculatorKeystrokeSteps(guide.keystrokeSteps);
     const caution = isMeaningfulCalculatorSignal(guide.caution) ? guide.caution : "단위와 반올림 기준 확인 필요";
 
     if (!options.referenceUnlocked) {
@@ -300,11 +298,12 @@ export default function ProblemSnapClientPage({
     currentResult: ProblemSnapResult
   ) => {
     if (view === "practice") {
+      const practiceKeystrokeSteps = getMeaningfulCalculatorKeystrokeSteps(currentResult.calculatorGuide.keystrokeSteps);
       return [
         <div key="practice-conditions" className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">조건 정리</p>{renderListOrFallback(currentResult.extractedConditions, "조건 확인 필요")}</div>,
         <div key="practice-formulas" className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">핵심 산식</p>{renderListOrFallback(currentResult.formulas, "산식 확인 필요")}</div>,
         <div key="practice-steps" className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">계산 순서</p>{renderListOrFallback(currentResult.stepByStepSolution, "계산 순서 확인 필요")}</div>,
-        <div key="practice-casio" className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">CASIO 입력</p>{renderListOrFallback(currentResult.calculatorGuide.keystrokeSteps, "입력 순서 확인 필요")}</div>,
+        <div key="practice-casio" className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">CASIO 입력</p>{renderListOrFallback(practiceKeystrokeSteps, "입력 순서 확인 필요")}</div>,
         <div key="practice-rounding" className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">단위/반올림</p><p className="mt-1 text-sm">{currentResult.calculatorGuide.answerRounding || currentResult.calculatorGuide.caution || "단위·반올림 확인 필요"}</p></div>,
         <div key="practice-answer" className="rounded-[var(--radius-md)] border p-3"><p className="text-xs text-[color:var(--muted)]">답안에 적을 값</p><p className="mt-1 text-sm">{currentResult.calculatorGuide.expectedDisplay || currentResult.nextPracticeAction || "답안 기재값 확인 필요"}</p></div>,
       ];

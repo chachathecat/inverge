@@ -13,12 +13,14 @@ import {
   createCalculatorRoutineDraft,
   getCalculatorRoutineDraftStorageKey,
   getCalculatorRoutineEligibility,
+  getMeaningfulCalculatorKeystrokeSteps,
   getCalculatorRoutineProgress,
   hasMeaningfulCalculatorKeystrokeSignal,
   hasStrongCalculatorGuideSignal,
   hasStrongCalculatorRoutineSignal,
   isCalculatorRoutineStepComplete,
   isGenericCalculatorFallbackStepSequence,
+  isMeaningfulCalculatorSignal,
   isNegativeCalculatorSignal,
   normalizeCalculatorRoutineMistakeTypes,
   parseCalculatorRoutineCompletionHistory,
@@ -303,6 +305,19 @@ test("eligibility is limited to second exam practice and ignores placeholder cal
     false,
     "RUN-MAT with empty steps must not create calculation evidence",
   );
+  assert.equal(
+    hasStrongCalculatorGuideSignal({
+      calculationPurpose: "계산기 입력이 필요한 문제인지 검토가 필요합니다.",
+      recommendedMode: "RUN-MAT",
+    }),
+    false,
+    "RUN-MAT alone with placeholder purpose must not create calculation evidence",
+  );
+  assert.equal(
+    hasStrongCalculatorGuideSignal({ recommendedMode: "RUN-MAT" }),
+    false,
+    "RUN-MAT alone must not create calculation evidence",
+  );
   const builderDefaultFallbackGuide = buildCasioFx9860GiiiGuide({
     calculationPurpose: "계산기 입력이 필요한 문제인지 검토가 필요합니다.",
     recommendedMode: "검토 필요",
@@ -310,7 +325,9 @@ test("eligibility is limited to second exam practice and ignores placeholder cal
   });
   assert.deepEqual(builderDefaultFallbackGuide.keystrokeSteps, ["MENU", "RUN-MAT", "계산식 입력", "EXE"]);
   assert.equal(isGenericCalculatorFallbackStepSequence(builderDefaultFallbackGuide.keystrokeSteps), true);
+  assert.deepEqual(getMeaningfulCalculatorKeystrokeSteps(builderDefaultFallbackGuide.keystrokeSteps), []);
   assert.equal(hasMeaningfulCalculatorKeystrokeSignal(builderDefaultFallbackGuide.keystrokeSteps), false);
+  assert.deepEqual(getMeaningfulCalculatorKeystrokeSteps(["MENU", "RUN-MAT", "계산식 입력", "EXE"]), []);
   assert.equal(hasMeaningfulCalculatorKeystrokeSignal(["RUN-MAT"]), false);
   assert.equal(hasStrongCalculatorGuideSignal(builderDefaultFallbackGuide), false);
   assert.equal(
@@ -336,15 +353,26 @@ test("eligibility is limited to second exam practice and ignores placeholder cal
     "계산기 사용 불필요",
     "계산기 미사용",
     "계산기 필요 없음",
+    "CASIO 입력이 필요하지 않습니다",
+    "CASIO 사용이 불필요합니다",
+    "CASIO는 불필요합니다",
+    "CASIO 미사용",
+    "CASIO 필요 없음",
   ].forEach((calculationPurpose) => {
     assert.equal(isNegativeCalculatorSignal(calculationPurpose), true, `${calculationPurpose} should be negative`);
+    assert.equal(isMeaningfulCalculatorSignal(calculationPurpose), false, `${calculationPurpose} should not be meaningful`);
     assert.equal(
       hasStrongCalculatorGuideSignal({ calculationPurpose, recommendedMode: "검토 필요" }),
       false,
       `${calculationPurpose} must not count as a calculator signal`,
     );
   });
-  ["계산기 사용이 필요합니다", "RUN-MAT에서 계산합니다"].forEach((calculationPurpose) => {
+  [
+    "계산기 사용이 필요합니다",
+    "CASIO 입력이 필요합니다",
+    "RUN-MAT에서 계산합니다",
+    "CASIO로 직접환원가치를 계산합니다",
+  ].forEach((calculationPurpose) => {
     assert.equal(isNegativeCalculatorSignal(calculationPurpose), false, `${calculationPurpose} should not be negative`);
   });
   assert.equal(
@@ -381,6 +409,7 @@ test("eligibility is limited to second exam practice and ignores placeholder cal
     "meaningful purpose may count even when builder defaults are present",
   );
   assert.equal(hasStrongCalculatorGuideSignal({ recommendedMode: "RUN-MAT", keystrokeSteps: ["100 × 0.05 EXE"] }), true);
+  assert.deepEqual(getMeaningfulCalculatorKeystrokeSteps(["100 × 0.05 EXE"]), ["100 × 0.05 EXE"]);
   assert.equal(hasMeaningfulCalculatorKeystrokeSignal(["100 × 0.05 EXE"]), true);
   assert.equal(hasStrongCalculatorGuideSignal({ recommendedMode: "검토 필요", expectedDisplay: "240000000" }), true);
   assert.equal(hasStrongCalculatorGuideSignal({ recommendedMode: "검토 필요", answerRounding: "240,000,000원" }), true);
@@ -503,9 +532,16 @@ test("Problem Snap and Answer Review integrate the reusable trainer without pass
 
   assert.ok(problemSnap.includes("CalculatorRoutineTrainer"));
   assert.ok(problemSnap.includes("getCalculatorRoutineEligibility"));
+  assert.ok(problemSnap.includes("getMeaningfulCalculatorKeystrokeSteps"));
   assert.ok(problemSnap.includes("hasStrongProblemSnapCalculatorSignal(result)"));
   assert.ok(problemSnap.includes('subject === "감정평가실무" || hasStrongProblemSnapCalculatorSignal(result)'));
   assert.ok(problemSnap.includes("shouldUnlockProblemSnapCalculatorReference"));
+  assert.ok(problemSnap.includes("casio_input: getMeaningfulCalculatorKeystrokeSteps(currentResult.calculatorGuide.keystrokeSteps),"));
+  assert.ok(problemSnap.includes("const keystrokeSteps = getMeaningfulCalculatorKeystrokeSteps(guide.keystrokeSteps);"));
+  assert.ok(problemSnap.includes("const practiceKeystrokeSteps = getMeaningfulCalculatorKeystrokeSteps(currentResult.calculatorGuide.keystrokeSteps);"));
+  assert.ok(problemSnap.includes('renderListOrFallback(practiceKeystrokeSteps, "입력 순서 확인 필요")'));
+  assert.equal(problemSnap.includes("const keystrokeSteps = guide.keystrokeSteps.filter(isMeaningfulCalculatorSignal);"), false);
+  assert.equal(problemSnap.includes("renderListOrFallback(currentResult.calculatorGuide.keystrokeSteps"), false);
   assert.equal(problemSnap.includes("hasCalculatorGuideData"), false);
   const strongSignalHelper = problemSnap.slice(
     problemSnap.indexOf("const hasStrongProblemSnapCalculatorSignal"),
