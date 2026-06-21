@@ -25,6 +25,7 @@ import {
   updateCalculatorRoutineDraftCurrentStep,
   updateCalculatorRoutineDraftStep,
 } from "../lib/review-os/calculator-routine.ts";
+import { buildCasioFx9860GiiiGuide } from "../lib/evaluate/casio-fx9860giii-guide.ts";
 
 const read = (path) => readFileSync(path, "utf8");
 
@@ -260,6 +261,26 @@ test("eligibility is limited to second exam practice and ignores placeholder cal
     false,
     "generic caution alone must not surface calculator UI",
   );
+  const productionFallbackGuide = buildCasioFx9860GiiiGuide({
+    calculationPurpose: "계산기 입력이 필요한 문제인지 검토가 필요합니다.",
+    recommendedMode: "검토 필요",
+    keystrokeSteps: ["계산기 입력 없음"],
+  });
+  assert.equal(
+    hasStrongCalculatorGuideSignal(productionFallbackGuide),
+    false,
+    "production CASIO fallback purpose must not count as a calculator signal",
+  );
+  assert.equal(
+    hasStrongCalculatorRoutineSignal({
+      formulas: [],
+      extractedNumbersAndUnits: [],
+      stepByStepSolution: [],
+      calculatorGuide: productionFallbackGuide,
+    }),
+    false,
+    "production CASIO fallback guide must not surface calculator UI by itself",
+  );
   assert.equal(
     hasStrongCalculatorRoutineSignal({
       formulas: [],
@@ -284,6 +305,9 @@ test("eligibility is limited to second exam practice and ignores placeholder cal
     }),
     true,
   );
+  assert.equal(hasStrongCalculatorGuideSignal({ recommendedMode: "RUN-MAT", keystrokeSteps: ["100 × 0.05 EXE"] }), true);
+  assert.equal(hasStrongCalculatorGuideSignal({ recommendedMode: "검토 필요", expectedDisplay: "240000000" }), true);
+  assert.equal(hasStrongCalculatorGuideSignal({ recommendedMode: "검토 필요", answerRounding: "240,000,000원" }), true);
 
   const placeholderOnly = getCalculatorRoutineEligibility({
     examMode: "second",

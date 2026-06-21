@@ -49,7 +49,7 @@ const TEXT_STEP_IDS = [
   "unit_rounding",
 ] as const;
 
-const CALCULATOR_PLACEHOLDER_PATTERN = /확인 필요|검토 필요|없음|계산기 입력 없음|입력 없음|해당 없음/;
+const CALCULATOR_PLACEHOLDER_PATTERN = /확인(?:이)?\s*필요|검토(?:가)?\s*필요|계산기\s*입력\s*없음|입력\s*없음|해당\s*없음|없음/;
 const CALCULATION_CONTEXT_PATTERN = /계산|산식|숫자|단위|환원|수익|원가|비교방식|공시지가|보상|CASIO|반올림|㎡|원\/㎡/i;
 
 export type CalculatorRoutineStepId = (typeof CALCULATOR_ROUTINE_STEPS)[number]["id"];
@@ -176,7 +176,7 @@ export function hasStrongCalculatorGuideSignal(guide?: CalculatorRoutineEligibil
     guide.calculationPurpose ?? "",
     guide.expectedDisplay ?? "",
     guide.answerRounding ?? "",
-    guide.recommendedMode && guide.recommendedMode !== "검토 필요" ? guide.recommendedMode : "",
+    guide.recommendedMode ?? "",
   ].some(isMeaningfulCalculatorSignal);
 }
 
