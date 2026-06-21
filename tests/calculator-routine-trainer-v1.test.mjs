@@ -604,6 +604,68 @@ test("calculator negative grammar normalizes calculator and CASIO aliases", () =
   });
 });
 
+test("calculator bare no-use values stay weak without device context", () => {
+  const bareNegativeValues = [
+    "사용 안 함",
+    "사용안함",
+    "사용하지 않음",
+    "사용하지 않습니다",
+    "미사용",
+    "필요 없음",
+    "필요없음",
+    "필요하지 않음",
+    "필요하지 않습니다",
+    "불필요",
+    "입력 안 함",
+    "입력안함",
+    "입력하지 않음",
+    "입력하지 않습니다",
+    "타건 안 함",
+    "타건안함",
+    "타건하지 않음",
+    "타건하지 않습니다",
+    "쓰지 않음",
+    "쓰지 않습니다",
+    "안 씀",
+    "안씁니다",
+    "안 씁니다",
+    "없이 풉니다",
+  ];
+
+  bareNegativeValues.forEach((value) => {
+    assert.equal(isNegativeCalculatorSignal(value), true, value);
+    assert.equal(isMeaningfulCalculatorSignal(value), false, value);
+  });
+
+  [
+    { calculatorGuide: { expectedDisplay: "사용 안 함" } },
+    { calculatorGuide: { answerRounding: "미사용" } },
+    { calculatorGuide: { keystrokeSteps: ["사용 안 함"] } },
+    { calculatorGuide: { keystrokeSteps: ["미사용"] } },
+    { calculatorGuide: { calculationPurpose: "필요 없음" } },
+  ].forEach((input) => {
+    const analysis = analyzeCalculatorEvidence(input);
+    assert.equal(analysis.hasStrongSignal, false, JSON.stringify(input));
+    assert.deepEqual(analysis.evidenceSources, [], JSON.stringify(input));
+  });
+
+  [
+    "사용이 필요합니다",
+    "입력이 필요합니다",
+    "RUN-MAT에서 계산합니다",
+    "직접환원가치를 계산합니다",
+    "100 × 0.05 EXE",
+    "240,000,000원",
+  ].forEach((value) => {
+    assert.equal(isNegativeCalculatorSignal(value), false, value);
+    assert.equal(isMeaningfulCalculatorSignal(value), true, value);
+  });
+
+  assert.equal(analyzeCalculatorEvidence({ calculatorGuide: { expectedDisplay: "240,000,000원" } }).hasStrongSignal, true);
+  assert.equal(analyzeCalculatorEvidence({ calculatorGuide: { answerRounding: "천원 단위 반올림" } }).hasStrongSignal, true);
+  assert.equal(analyzeCalculatorEvidence({ calculatorGuide: { keystrokeSteps: ["100 × 0.05 EXE"] } }).hasStrongSignal, true);
+});
+
 test("calculator reference display strips generic fallback keystrokes", () => {
   assert.deepEqual(getDisplayCalculatorKeystrokes(["MENU", "RUN-MAT", "계산식 입력", "EXE"]), []);
   assert.deepEqual(getDisplayCalculatorKeystrokes([" menu ", " run-mat ", "계산식   입력", " exe "]), []);
@@ -724,7 +786,10 @@ test("Problem Snap and Answer Review integrate the reusable trainer without pass
   assert.ok(problemSnap.includes("getCalculatorRoutineEligibility"));
   assert.ok(problemSnap.includes("analyzeCalculatorEvidence"));
   assert.ok(problemSnap.includes("getProblemSnapCalculatorEvidenceAnalysis(result)"));
-  assert.ok(problemSnap.includes('subject === "감정평가실무" || calculatorEvidenceAnalysis.hasStrongSignal'));
+  assert.ok(problemSnap.includes("return calculatorEvidenceAnalysis.hasStrongSignal;"));
+  assert.equal(problemSnap.includes('subject === "감정평가실무" || calculatorEvidenceAnalysis.hasStrongSignal'), false);
+  assert.ok(problemSnap.includes("const problemSnapCalculatorRoutineEligible = Boolean("));
+  assert.ok(problemSnap.includes("calculatorRoutineEligibility?.eligible || calculatorRoutineEligibility?.manualEligible"));
   assert.ok(problemSnap.includes("shouldUnlockProblemSnapCalculatorReference"));
   assert.ok(problemSnap.includes("casio_input: analysis.display.keystrokeSteps,"));
   assert.ok(problemSnap.includes("const keystrokeSteps = analysis.display.keystrokeSteps;"));

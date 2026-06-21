@@ -80,6 +80,10 @@ test("subject-specific views and retry mode labels exist", async () => {
   assert.ok(source.includes("!retryMode ? <div><h3 className=\"font-medium\">{resultHeading}</h3><p>{result.easyExplanation}</p></div> : null"));
   assert.ok(source.includes("!retryMode ? ("));
   assert.ok(source.includes("showCalculatorGuide && calculatorEvidenceAnalysis ? ("));
+  assert.ok(source.includes("return calculatorEvidenceAnalysis.hasStrongSignal;"));
+  assert.equal(source.includes('subject === "감정평가실무" || calculatorEvidenceAnalysis.hasStrongSignal'), false);
+  assert.ok(source.includes("const problemSnapCalculatorRoutineEligible = Boolean("));
+  assert.ok(source.includes("calculatorRoutineEligibility?.eligible || calculatorRoutineEligibility?.manualEligible"));
   assert.ok(source.includes(") : null}"));
   assert.ok(source.includes("renderPrimarySubjectCards"));
   assert.ok(source.includes("const renderSubjectSpecificCards = ("));
@@ -114,6 +118,10 @@ test("calculation routine is primary before collapsed calculator reference and g
   assert.ok(source.indexOf("renderCalculatorStepPanel(calculatorEvidenceAnalysis,") < genericIndex);
   assert.ok(source.includes("data-problem-snap-calculator-reference-locked"));
   assert.ok(source.includes("shouldUnlockProblemSnapCalculatorReference"));
+  assert.ok(source.includes("showCalculatorGuide && calculatorEvidenceAnalysis ? ("));
+  assert.ok(source.includes("return calculatorEvidenceAnalysis.hasStrongSignal;"));
+  assert.equal(source.includes('subject === "감정평가실무" || calculatorEvidenceAnalysis.hasStrongSignal'), false);
+  assert.ok(source.includes("problemSnapCalculatorRoutineEligible"));
   assert.ok(source.includes("routineReferenceUnlocked: calculatorRoutineReferenceUnlocked"));
   assert.ok(source.includes("retryMemo,"));
   assert.ok(source.includes("getProblemSnapCalculatorEvidenceAnalysis(result)"));

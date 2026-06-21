@@ -142,8 +142,8 @@ export default function ProblemSnapClientPage({
 
   const showCalculatorGuide = useMemo(() => {
     if (!result || !calculatorEvidenceAnalysis) return false;
-    return subject === "감정평가실무" || calculatorEvidenceAnalysis.hasStrongSignal;
-  }, [calculatorEvidenceAnalysis, result, subject]);
+    return calculatorEvidenceAnalysis.hasStrongSignal;
+  }, [calculatorEvidenceAnalysis, result]);
 
   const calculatorRoutineEligibility = useMemo(() => {
     if (!result) return null;
@@ -179,8 +179,11 @@ export default function ProblemSnapClientPage({
     return "law";
   };
   const problemSnapSubjectView = getProblemSnapSubjectView(subject);
+  const problemSnapCalculatorRoutineEligible = Boolean(
+    calculatorRoutineEligibility?.eligible || calculatorRoutineEligibility?.manualEligible,
+  );
   const problemSnapCalculatorRoutineAvailable =
-    problemSnapSubjectView === "practice" && Boolean(calculatorRoutineEligibility);
+    problemSnapSubjectView === "practice" && problemSnapCalculatorRoutineEligible;
   const problemSnapCalculatorReferenceUnlocked = shouldUnlockProblemSnapCalculatorReference({
     routineAvailable: problemSnapCalculatorRoutineAvailable,
     routineReferenceUnlocked: calculatorRoutineReferenceUnlocked,

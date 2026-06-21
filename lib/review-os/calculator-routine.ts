@@ -217,7 +217,24 @@ function normalizeKeystrokeToken(value: string) {
 
 export function isNegativeCalculatorSignal(value?: string | null) {
   const normalized = normalizeCalculatorCopyKey(value);
-  if (!normalized.includes("계산기")) return false;
+
+  const bareNoUseMarkers = [
+    "불필요",
+    "미사용",
+    "필요없음",
+    "필요하지않",
+    "사용하지않",
+    "사용안함",
+    "안씀",
+    "안씁",
+    "쓰지않",
+    "입력하지않",
+    "입력안함",
+    "타건하지않",
+    "타건안함",
+    "없이풉",
+  ];
+  if (bareNoUseMarkers.some((marker) => normalized.includes(marker))) return true;
 
   return [
     "계산기불필요",
