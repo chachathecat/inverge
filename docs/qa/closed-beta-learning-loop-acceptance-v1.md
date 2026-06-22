@@ -13,7 +13,7 @@ Closed-beta acceptance is not production rollout approval. This document accepts
 | Audit date | 2026-06-22 KST |
 | Branch | `codex/closed-beta-learning-loop-acceptance-v1` |
 | Base merge commit | `008c5ac7bd580809ba5bab4d0393741c396d7cd6` |
-| Tested commit | `TBD after final validation commit` |
+| Tested commit | `53c8bb15b61df8578de613f765def8053431245d` |
 | Environment | Windows PowerShell, local Codex, Node with `NODE_OPTIONS=--max-old-space-size=8192` |
 | Browser/device widths | 360 x 800, 390 x 844, 1280 x 800 required; authenticated browser smoke not verified in this local environment unless noted below |
 
