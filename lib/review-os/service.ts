@@ -16,6 +16,11 @@ import { buildCaptureNoteSignals, structureCaptureNote } from "@/lib/review-os/c
 import { buildCaptureLearningSignal, buildCaptureReviewReason, computeCaptureQueuePriority } from "@/lib/review-os/capture-learning-signals";
 import { buildConceptNodeCandidate, isConceptNodeCandidate } from "@/lib/review-os/concept-node-mapping";
 import { sanitizeCaptureTelemetryMetadata } from "@/lib/review-os/telemetry-sanitizer";
+import {
+  buildActiveCalculatorRoutineReviewCandidates,
+  buildCalculatorRoutineBridge,
+  buildCalculatorRoutineNextPlanSignal,
+} from "@/lib/review-os/calculator-routine-learning-signal";
 import { buildLearningMetricEvent } from "@/lib/review-os/learning-metrics";
 import { recordLearningMetricIfEnabled } from "@/lib/review-os/learning-metrics-sink";
 import { buildSecondAnswerRewriteSignal } from "@/lib/review-os/second-answer-rewrite";
@@ -569,6 +574,45 @@ export class ReviewOsService {
   async createLearningSignalEvent(userId: string, email: string | null, input: LearningSignalEventInput) {
     await this.ensureAccess(userId, email);
     return reviewOsRepository.createLearningSignalEvent(userId, input);
+  }
+
+  async completeCalculatorRoutine(userId: string, email: string | null, input: unknown) {
+    await this.ensureAccess(userId, email);
+    const bridge = buildCalculatorRoutineBridge(userId, input);
+    const { status, record } = await reviewOsRepository.createLearningSignalEventWithId(
+      userId,
+      bridge.learningEventId,
+      bridge.learningEventInput,
+    );
+    const nextPlanSignal = buildCalculatorRoutineNextPlanSignal(bridge);
+    await reviewOsRepository.logUsageEvent(userId, "calculator_routine_completed", "learning_signal_events", record.id, {
+      metadataOnly: true,
+      routineType: "calculator_routine",
+      routineId: bridge.sanitizedSignal.routineId,
+      completionFingerprint: bridge.completionFingerprint,
+      persistenceStatus: status,
+      result: bridge.executionSignal.result,
+      reviewCandidateCreated: bridge.reviewCandidateCreated,
+      todayPlanCandidateCreated: bridge.todayPlanCandidateCreated,
+      nextPlanCandidateTypes: nextPlanSignal.candidates.map((candidate) => candidate.taskType),
+    });
+    return {
+      ok: true as const,
+      status,
+      learningRecordId: record.id,
+      learningRecordSaved: true,
+      deduped: status === "deduped",
+      reviewCandidateCreated: bridge.reviewCandidateCreated,
+      todayPlanCandidateCreated: bridge.todayPlanCandidateCreated,
+      cleanCompletion: bridge.cleanCompletion,
+      nextTaskType: bridge.learningEventInput.nextTaskType,
+    };
+  }
+
+  async listCalculatorRoutineReviewCandidates(userId: string, email: string | null, limit = 3) {
+    await this.ensureAccess(userId, email);
+    const events = await reviewOsRepository.listLearningSignalEvents(userId, "second", 80);
+    return buildActiveCalculatorRoutineReviewCandidates(events, new Date(), limit);
   }
 
   async countLearningSignalEvents(userId: string, email: string | null, mode: AppraisalMode) {

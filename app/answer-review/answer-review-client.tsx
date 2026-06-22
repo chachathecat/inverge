@@ -11,6 +11,10 @@ import {
   type CalculatorRoutineDraftReference,
   type CalculatorRoutineReferenceHints,
 } from "@/components/review-os/calculator-routine-trainer";
+import {
+  CalculatorRoutineSyncStatusLine,
+  useCalculatorRoutineLearningSignalSync,
+} from "@/components/review-os/calculator-routine-sync-status";
 import { StandaloneLearnerToolNav } from "@/components/review-os/standalone-learner-tool-nav";
 import { ResultFeedbackPrompt } from "@/components/shared/result-feedback-prompt";
 import { buttonVariants } from "@/components/ui/button";
@@ -127,6 +131,7 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
   const [problemSnapRoutineReference, setProblemSnapRoutineReference] = useState<CalculatorRoutineDraftReference | null>(null);
   const [hasProblemSnapRoutineHandoff, setHasProblemSnapRoutineHandoff] = useState(false);
   const [answerReviewRoutineRunId, setAnswerReviewRoutineRunId] = useState<string | null>(null);
+  const calculatorRoutineSync = useCalculatorRoutineLearningSignalSync();
   const answerCameraInputRef = useRef<HTMLInputElement | null>(null);
   const problemCameraInputRef = useRef<HTMLInputElement | null>(null);
   const generalFileInputRef = useRef<HTMLInputElement | null>(null);
@@ -302,6 +307,7 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
 
     setIsStructuring(true);
     setStructureError(null);
+    calculatorRoutineSync.reset();
     if (hasProblemSnapRoutineHandoff && problemSnapRoutineReference?.routineId && problemSnapRoutineReference.draftKey) {
       setAnswerReviewRoutineRunId(null);
     } else {
@@ -920,6 +926,12 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                       }
                       resumeDraftKey={hasProblemSnapRoutineHandoff ? problemSnapRoutineReference?.draftKey || undefined : undefined}
                       onDraftReferenceChange={hasProblemSnapRoutineHandoff ? setProblemSnapRoutineReference : undefined}
+                      onComplete={calculatorRoutineSync.syncCompletion}
+                    />
+                    <CalculatorRoutineSyncStatusLine
+                      status={calculatorRoutineSync.status}
+                      retryAvailable={calculatorRoutineSync.retryAvailable}
+                      onRetry={calculatorRoutineSync.retry}
                     />
 
                     <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">

@@ -11,7 +11,7 @@ export type TodayPlanDisplayCopyInput = {
 
 export type TodayPlanDisplayCopy = {
   displayReason: string;
-  displaySourceLabel?: "학습 노트에서 생성됨" | "복습 예정" | "미완료 항목" | "약점 개념" | "오늘 일정";
+  displaySourceLabel?: "학습 노트에서 생성됨" | "복습 예정" | "미완료 항목" | "약점 개념" | "오늘 일정" | "계산·검산 루틴 기반";
   displayPrimaryCta: string;
 };
 
@@ -31,6 +31,7 @@ function resolveDisplaySourceLabel(input: TodayPlanDisplayCopyInput): TodayPlanD
   if (/오늘\s*기록|캡처\s*노트|저장한\s*캡처|Capture-to-Note|Problem Snap/i.test(label)) return "학습 노트에서 생성됨";
   if (/복습\s*큐|review\s*queue|복습\s*예정/i.test(label)) return "복습 예정";
   if (/오답\s*노트|학습\s*노트/i.test(label)) return "미완료 항목";
+  if (/계산·검산\s*루틴|calculator[-_ ]routine/i.test(label)) return "계산·검산 루틴 기반";
   if (/개념|O\/X|약점|헷갈/.test(label)) return "약점 개념";
   if (/일정/.test(label)) return "오늘 일정";
 
@@ -53,6 +54,10 @@ function resolveDisplayReason(input: TodayPlanDisplayCopyInput) {
     if (taskType.includes("rewrite") || taskType.includes("second answer")) return "답안 구조가 흔들린 항목이라 한 문단만 다시 씁니다.";
     if (taskType.includes("accounting") || taskType.includes("calculator") || taskType.includes("casio")) return "계산 흐름이 끊긴 항목이라 틀만 짧게 다시 확인합니다.";
     return "예정 복습이 도착해 먼저 회상합니다.";
+  }
+
+  if (sourceLabel === "계산·검산 루틴 기반" || taskType.includes("calculator routine")) {
+    return "계산·검산 루틴에서 남은 복구 신호라 입력 순서와 단위를 짧게 다시 확인합니다.";
   }
 
   if (hasSignal(signals, /wrong_concept|confused_concept|high_risk_unit|recent_missed_tasks|confidence:needs_check/) || input.source === "personal_concept_graph" || sourceLabel === "약점 개념") {

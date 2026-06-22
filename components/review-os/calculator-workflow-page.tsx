@@ -6,11 +6,18 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AccountingTemplateCard } from "@/components/review-os/accounting-template-card";
 import { ExecutionResultControls } from "@/components/review-os/execution-result-controls";
+import { CalculatorRoutineTrainer } from "@/components/review-os/calculator-routine-trainer";
+import {
+  CalculatorRoutineSyncStatusLine,
+  useCalculatorRoutineLearningSignalSync,
+} from "@/components/review-os/calculator-routine-sync-status";
 import { DEVICE_APPENDIX_FX_9860GIII, type CalculatorWorkflow } from "@/lib/review-os/calculator-workflow";
+import type { CalculatorRoutineRecoveryReference } from "@/lib/review-os/calculator-routine-learning-signal";
 
 type CalculatorWorkflowPageProps = {
   focus?: string | null;
   workflow: CalculatorWorkflow;
+  recoveryReference?: CalculatorRoutineRecoveryReference | null;
 };
 
 const ROUTINE_STEPS = [
@@ -40,13 +47,15 @@ const TYPE_TO_STAGE: Record<string, number> = {
   "present-value": 2,
 };
 
-export function CalculatorWorkflowPage({ focus, workflow }: CalculatorWorkflowPageProps) {
+export function CalculatorWorkflowPage({ focus, workflow, recoveryReference = null }: CalculatorWorkflowPageProps) {
   const [selectedType, setSelectedType] = useState(workflow.problemTypes[0]?.id ?? "");
   const [activeStageIndex, setActiveStageIndex] = useState(() => TYPE_TO_STAGE[workflow.problemTypes[0]?.id ?? ""] ?? 0);
+  const calculatorRoutineSync = useCalculatorRoutineLearningSignalSync();
 
   const activeCard = workflow.stepCards[Math.min(activeStageIndex, workflow.stepCards.length - 1)];
   const selectedTypeMeta = workflow.problemTypes.find((type) => type.id === selectedType) ?? workflow.problemTypes[0];
   const isCasioFocus = workflow.mode === "second" && focus === "casio";
+  const isRecoveryMode = Boolean(recoveryReference);
   const resultTaskType = isCasioFocus ? "CASIO" : workflow.context === "accounting" ? "accounting template" : "calculation routine";
 
   const deviceDraftPaths = useMemo(
@@ -77,6 +86,39 @@ export function CalculatorWorkflowPage({ focus, workflow }: CalculatorWorkflowPa
           </Link>
         </div>
       </section>
+
+      {recoveryReference ? (
+        <section
+          className="rounded-[var(--radius-card)] border border-[color:var(--brand-700)] bg-[color:var(--brand-050)] p-5 md:p-6"
+          data-calculator-routine-recovery-section
+        >
+          <p className="text-caption text-[color:var(--brand-700)]">계산·검산 복구</p>
+          <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">계산·검산 다시 하기</h3>
+          <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">
+            이전 계산·검산 기록에서 남은 신호를 다시 확인합니다.
+          </p>
+          <div className="mt-4 space-y-3">
+            <CalculatorRoutineTrainer
+              source={recoveryReference.source}
+              examMode="second"
+              subject={workflow.subject}
+              routineId={recoveryReference.routineId}
+              eligibility={{
+                eligible: true,
+                manualEligible: false,
+                hasStrongSignal: true,
+                reason: "eligible",
+              }}
+              onComplete={calculatorRoutineSync.syncCompletion}
+            />
+            <CalculatorRoutineSyncStatusLine
+              status={calculatorRoutineSync.status}
+              retryAvailable={calculatorRoutineSync.retryAvailable}
+              onRetry={calculatorRoutineSync.retry}
+            />
+          </div>
+        </section>
+      ) : null}
 
       {workflow.context === "accounting" ? <AccountingTemplateCard /> : null}
 
@@ -160,12 +202,14 @@ export function CalculatorWorkflowPage({ focus, workflow }: CalculatorWorkflowPa
         </ul>
       </section>
 
-      <ExecutionResultControls
-        examMode={workflow.mode}
-        executionSource="calculator"
-        subjectName={workflow.subject}
-        taskType={resultTaskType}
-      />
+      {!isRecoveryMode ? (
+        <ExecutionResultControls
+          examMode={workflow.mode}
+          executionSource="calculator"
+          subjectName={workflow.subject}
+          taskType={resultTaskType}
+        />
+      ) : null}
 
       <details className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-5">
         <summary className="cursor-pointer text-sm font-medium text-[color:var(--foreground-strong)]">시험 전 체크 / 기본 세팅 보기</summary>

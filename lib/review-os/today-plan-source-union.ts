@@ -28,6 +28,7 @@ import { type AppraiserExamMode } from "./curriculum-reference";
 import { rankLearningStateRisk } from "./personal-learning-state-engine";
 import { buildAdaptiveTodayPlan, type AdaptiveStudyPlannerInput, type AdaptiveStudyPlanTask } from "./adaptive-study-plan-engine";
 import { enrichTodayPlanActionsWithQnetReference, type QnetTodayPlanReference } from "./qnet-reference-today-plan-adapter";
+import type { CalculatorRoutineRecoveryReference } from "./calculator-routine-learning-signal";
 
 export type TodayPlanUnifiedSource = "review_queue" | "personal_concept_graph" | "study_schedule" | "adaptive_study_plan";
 
@@ -49,6 +50,7 @@ export type TodayPlanUnifiedAction = {
   displayReason?: TodayPlanDisplayCopy["displayReason"];
   displaySourceLabel?: TodayPlanDisplayCopy["displaySourceLabel"];
   displayPrimaryCta?: TodayPlanDisplayCopy["displayPrimaryCta"];
+  calculatorRoutineRecovery?: CalculatorRoutineRecoveryReference;
 };
 
 export type TodayPlanSourceUnionContext = TodayPlanPrioritizationContext & PersonalConceptTodayContext;
@@ -297,6 +299,7 @@ function signalScore(action: TodayPlanUnifiedAction) {
   if (action.prioritySignals.includes("recovering_due_review") || action.prioritySignals.includes("learning_state:recovering")) score += 72;
   if (action.prioritySignals.includes("learning_state:stable") && action.prioritySignals.includes("due_review")) score += rankLearningStateRisk("stable");
   if (action.prioritySignals.includes("recovery_needed") || action.prioritySignals.includes("recovery_candidate")) score += 62;
+  if (action.prioritySignals.includes("calculator_recovery") || action.prioritySignals.includes("calculator_routine")) score += 42;
   if (action.prioritySignals.includes("high_risk_unit") || action.prioritySignals.includes("fail_risk_subject")) score += 54;
   if (action.prioritySignals.includes("high_importance_unit")) score += 40;
   if (action.prioritySignals.includes("exam_proximity")) score += 30;

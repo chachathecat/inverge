@@ -3,6 +3,11 @@ import { buildTodayPlanDisplayCopy, type TodayPlanDisplayCopy } from "./today-pl
 import { rankLearningStateRisk } from "./personal-learning-state-engine";
 import { capTodayPlanTasks, rankTodayPlanCandidates } from "./study-schedule-engine";
 import { isConceptNodeCandidate, type ConceptNodeCandidate } from "./concept-node-mapping";
+import {
+  buildActiveCalculatorRoutineReviewCandidates,
+  type CalculatorRoutineRecoveryReference,
+  type CalculatorRoutineReviewCandidate,
+} from "./calculator-routine-learning-signal";
 
 export type TodayPlanTaskType =
   | "first_ox_retry"
@@ -11,7 +16,10 @@ export type TodayPlanTaskType =
   | "accounting_template_retry"
   | "second_answer_rewrite"
   | "ocr_confirmation"
-  | "note_cleanup";
+  | "note_cleanup"
+  | "calculator_routine"
+  | string;
+export type TodayPlanTaskKind = TodayPlanTaskType;
 export type TodayPlanDueBucket = "overdue" | "today" | "upcoming";
 export type TodayPlanPrimaryCta = { label: string; hrefKind: "session" | "review" | "capture" | "write" | "items" | "first_ox" | "calculator_template" };
 
@@ -26,7 +34,7 @@ export type TodayPlanTask = {
   reason: string;
   one_biggest_gap: string;
   one_next_action: string;
-  task_type: TodayPlanTaskType;
+  task_type: TodayPlanTaskKind;
   estimated_minutes: number;
   priority_reason: string;
   primary_cta: TodayPlanPrimaryCta;
@@ -51,6 +59,7 @@ export type TodayPlanTask = {
     targetStatus?: string;
     sourceEventType?: "capture" | "review" | "session";
   };
+  calculator_routine_recovery?: CalculatorRoutineRecoveryReference;
 };
 
 export const TODAY_PLAN_MAX_PRIMARY_TASKS = 3;
@@ -116,8 +125,11 @@ function taskTypeFromConceptNodeCandidate(
   candidate: ConceptNodeCandidate | null | undefined,
   mode: "first" | "second",
   subject: string,
-): TodayPlanTaskType | null {
+): TodayPlanTaskKind | null {
   if (!candidate || candidate.examMode !== mode) return null;
+  if (candidate.nextTaskType === "calculator_routine" && mode === "second" && subject === "감정평가실무") {
+    return "calculator_routine";
+  }
   const text = `${candidate.nextTaskType} ${candidate.conceptFamily} ${candidate.mistakeType ?? ""} ${subject}`;
   if (/calculator_routine|accounting_template|formula_check|계산|산식|검산|CASIO|분개/.test(text)) {
     return mode === "first" ? "accounting_template_retry" : "second_answer_rewrite";
@@ -133,7 +145,7 @@ function taskTypeFromConceptNodeCandidate(
   return mode === "first" ? "first_ox_retry" : "second_answer_rewrite";
 }
 
-function resolveQueueTaskType(mode: "first" | "second", item: ReviewQueueCard): TodayPlanTaskType {
+function resolveQueueTaskType(mode: "first" | "second", item: ReviewQueueCard): TodayPlanTaskKind {
   const conceptTaskType = taskTypeFromConceptNodeCandidate(item.conceptNodeCandidate, mode, item.subjectLabel);
   if (conceptTaskType) return conceptTaskType;
 
@@ -146,10 +158,11 @@ function resolveQueueTaskType(mode: "first" | "second", item: ReviewQueueCard): 
   return mode === "first" ? "first_ox_retry" : "second_answer_rewrite";
 }
 
-function primaryCtaFor(taskType: TodayPlanTaskType, mode: "first" | "second"): TodayPlanPrimaryCta {
+function primaryCtaFor(taskType: TodayPlanTaskKind, mode: "first" | "second"): TodayPlanPrimaryCta {
   if (taskType === "ocr_confirmation") return { label: "OCR 먼저 확인", hrefKind: "capture" };
   if (taskType === "note_cleanup") return { label: "확인하고 정리", hrefKind: "capture" };
   if (taskType === "second_answer_rewrite") return { label: "10분 다시 쓰기", hrefKind: "review" };
+  if (taskType === "calculator_routine") return { label: "계산·검산 다시 하기", hrefKind: "calculator_template" };
   if (taskType === "accounting_template_retry") return { label: "계산 틀 재확인", hrefKind: "calculator_template" };
   if (taskType === "cloze_review") return { label: "빈칸 회상", hrefKind: "session" };
   if (taskType === "concept_review") return { label: "개념 1개 회상", hrefKind: "session" };
@@ -167,7 +180,7 @@ function safeTopicLabel(value: string | null | undefined, fallback: string) {
   return normalized.length > 18 ? normalized.slice(0, 18) : normalized;
 }
 
-function buildDerivedActionTitle(input: { mode: "first" | "second"; subject: string; topic?: string | null; gap: string; nextAction: string; estimatedMinutes: number; taskType: TodayPlanTaskType }) {
+function buildDerivedActionTitle(input: { mode: "first" | "second"; subject: string; topic?: string | null; gap: string; nextAction: string; estimatedMinutes: number; taskType: TodayPlanTaskKind }) {
   const subject = input.subject;
   const topic = safeTopicLabel(input.topic, input.gap);
   if (input.mode === "first") {
@@ -177,6 +190,7 @@ function buildDerivedActionTitle(input: { mode: "first" | "second"; subject: str
     if (input.taskType === "concept_review") return `${subject} ${topic} 개념 회상`;
     return `${subject} ${topic} ${input.estimatedMinutes}분 O/X 재시도`;
   }
+  if (input.taskType === "calculator_routine") return "감정평가실무 계산·검산 복구";
   if (/법규/.test(subject)) {
     if (/사업인정|처분성/.test(`${topic} ${input.gap} ${input.nextAction}`)) return `${subject.replace("감정평가 및 보상", "")} 사업인정 처분성 문단 ${input.estimatedMinutes}분 다시쓰기`;
     return `${subject} ${topic} 법적 쟁점 ${input.estimatedMinutes}분 다시쓰기`;
@@ -186,9 +200,10 @@ function buildDerivedActionTitle(input: { mode: "first" | "second"; subject: str
   return `${subject} ${topic} ${input.estimatedMinutes}분 다시쓰기`;
 }
 
-function toNextAction(mode: "first" | "second", item: ReviewQueueCard, taskType: TodayPlanTaskType) {
+function toNextAction(mode: "first" | "second", item: ReviewQueueCard, taskType: TodayPlanTaskKind) {
   if (taskType === "ocr_confirmation") return "OCR 숫자/용어 1개를 먼저 확인하고 노트를 저장합니다.";
   if (taskType === "second_answer_rewrite") return `${item.problemTitle}에서 누락 논점 1개를 문단으로 다시 씁니다.`;
+  if (taskType === "calculator_routine") return "입력 순서와 단위·반올림 기준을 다시 확인합니다.";
   if (taskType === "accounting_template_retry") return `${item.problemTitle}의 산식 틀을 먼저 적고 계산을 다시 확인합니다.`;
   if (taskType === "cloze_review") return `${item.problemTitle} 핵심어 1개를 가리고 회상합니다.`;
   if (taskType === "concept_review") return `${item.problemTitle} 핵심 조건 1개를 회상 후 확인합니다.`;
@@ -223,7 +238,7 @@ function toModeMigrationRewriteTask(signal: LearningSignalEventRecord): TodayPla
 }
 
 function toProblemSnapTask(mode: "first" | "second", signal: LearningSignalEventRecord): TodayPlanTask {
-  const taskType: TodayPlanTaskType = mode === "second" ? "second_answer_rewrite" : "first_ox_retry";
+  const taskType: TodayPlanTaskKind = mode === "second" ? "second_answer_rewrite" : "first_ox_retry";
   return {
     itemId: `problem-snap-${signal.id}`,
     title: `${signal.subject} Problem Snap 다음 작업`,
@@ -246,7 +261,7 @@ function toProblemSnapTask(mode: "first" | "second", signal: LearningSignalEvent
 function toFirstOxSignalTask(signal: LearningSignalEventRecord): TodayPlanTask {
   const isConcept = signal.nextTaskType === "concept_review";
   const isCloze = signal.nextTaskType === "cloze_review";
-  const taskType: TodayPlanTaskType = isConcept ? "concept_review" : isCloze ? "cloze_review" : "first_ox_retry";
+  const taskType: TodayPlanTaskKind = isConcept ? "concept_review" : isCloze ? "cloze_review" : "first_ox_retry";
   return {
     itemId: `first-ox-${signal.id}`,
     title: isCloze ? `${signal.subject} 빈칸 회상` : `${signal.subject} O/X 선지 재시도`,
@@ -263,6 +278,27 @@ function toFirstOxSignalTask(signal: LearningSignalEventRecord): TodayPlanTask {
     primary_cta: isConcept ? { label: "개념 1개 회상", hrefKind: "first_ox" } : primaryCtaFor(taskType, "first"),
     created_from_capture: false,
     source_label: "1차 O/X 기반",
+  };
+}
+
+function toCalculatorRoutineTask(candidate: CalculatorRoutineReviewCandidate): TodayPlanTask {
+  return {
+    itemId: candidate.id,
+    title: "감정평가실무 계산·검산 복구",
+    subject: "감정평가실무",
+    exam_mode: "second",
+    due_bucket: "today",
+    status: "due",
+    reason: "계산·검산 루틴에서 복구할 신호가 남았습니다.",
+    one_biggest_gap: candidate.stuckStepIds.length > 0 ? "막힌 계산·검산 단계가 남아 있습니다." : "계산·검산 실수 유형을 다시 확인합니다.",
+    one_next_action: "입력 순서와 단위·반올림 기준을 다시 확인합니다.",
+    task_type: "calculator_routine",
+    estimated_minutes: 10,
+    priority_reason: "계산·검산 루틴 기반 복습 후보입니다.",
+    primary_cta: primaryCtaFor("calculator_routine", "second"),
+    created_from_capture: false,
+    source_label: "계산·검산 루틴 기반",
+    calculator_routine_recovery: candidate.recoveryReference,
   };
 }
 
@@ -294,7 +330,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function taskTypeFromCurriculumCandidate(value: unknown, mode: "first" | "second"): TodayPlanTaskType | null {
+function taskTypeFromCurriculumCandidate(value: unknown, mode: "first" | "second"): TodayPlanTaskKind | null {
   const text = String(value ?? "");
   if (/manual_review/.test(text)) return null;
   if (/calculation|casio|산식|검산/.test(text)) return mode === "first" ? "accounting_template_retry" : "second_answer_rewrite";
@@ -359,7 +395,7 @@ function toItemTask(item: WrongAnswerItemRecord, mode: "first" | "second", now: 
   const createdTs = parseTime(item.createdAt);
   const recentBoost = createdTs !== null && now.getTime() - createdTs >= 0 && now.getTime() - createdTs <= 2 * DAY_MS ? 14 : 0;
 
-  let taskType: TodayPlanTaskType | null = null;
+  let taskType: TodayPlanTaskKind | null = null;
   let reason = "저장된 노트에서 오늘 이어갈 작업입니다.";
   let nextAction = String(captureNoteNextAction ?? "핵심 조건 1개를 회상하고 다시 시도합니다.");
   let estimated = mode === "second" ? 15 : 10;
@@ -542,6 +578,12 @@ export function buildTodayPlanTasks({ mode, queue, items = [], learningSignals =
   const queueHasStrongDueTask = topQueueScore >= 80 || (topQueueDueTs !== null && topQueueDueTs <= now.getTime());
   const recentProblemSnap = queueHasStrongDueTask ? null : pickRecentProblemSnapSignal(learningSignals, mode, now);
   const problemSnapTasks = recentProblemSnap ? [{ task: toProblemSnapTask(mode, recentProblemSnap), score: 73 }] : [];
+  const calculatorRoutineTasks = mode === "second"
+    ? buildActiveCalculatorRoutineReviewCandidates(learningSignals, now, 1).map((candidate) => ({
+        task: toCalculatorRoutineTask(candidate),
+        score: queueHasStrongDueTask ? 74 : 84,
+      }))
+    : [];
   const recentFirstOx = queueHasStrongDueTask ? null : pickRecentFirstOxSignal(learningSignals, mode, now);
   const firstOxTasks = recentFirstOx ? [{ task: toFirstOxSignalTask(recentFirstOx), score: 76 }] : [];
   const recentModeMigration = mode === "second"
@@ -552,7 +594,7 @@ export function buildTodayPlanTasks({ mode, queue, items = [], learningSignals =
   const modeMigrationTasks = recentModeMigration ? [{ task: toModeMigrationRewriteTask(recentModeMigration), score: queueHasStrongDueTask ? 72 : 79 }] : [];
 
   const deduped = new Map<string, { task: TodayPlanTask; score: number }>();
-  [...queueTasks, ...itemTasks, ...problemSnapTasks, ...firstOxTasks, ...modeMigrationTasks].forEach((entry) => {
+  [...queueTasks, ...itemTasks, ...calculatorRoutineTasks, ...problemSnapTasks, ...firstOxTasks, ...modeMigrationTasks].forEach((entry) => {
     const existing = deduped.get(entry.task.itemId);
     if (!existing || entry.score > existing.score) deduped.set(entry.task.itemId, entry);
   });
