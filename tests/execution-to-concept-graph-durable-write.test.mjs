@@ -132,6 +132,65 @@ test("both flags are required to attempt a durable metadata write", async () => 
   assert.equal(result.node.metadataOnly, true);
   assert.equal(result.node.examMode, "first");
   assert.equal(result.node.state, "confused");
+  assert.equal(result.previousNode, null);
+});
+
+test("monotonic durable write policy skips equal and older revisions", async () => {
+  const existing = {
+    id: "node-1",
+    userId: "learner-327",
+    examMode: "first",
+    subjectId: "civil-law",
+    unitId: "unit-1",
+    state: "wrong",
+    confidence: "medium",
+    lastResult: "wrong",
+    lastTaskType: "O/X",
+    wrongCount: 1,
+    recoveryCount: 0,
+    stableCount: 0,
+    nextRecommendedTaskType: "O/X",
+    nextDueAt: "2026-06-06T00:00:00.000Z",
+    updatedAt: now,
+    metadataOnly: true,
+  };
+  const calls = { get: 0, upsert: 0 };
+  const repository = {
+    mode: "supabase",
+    async getPersonalConceptNode() {
+      calls.get += 1;
+      return { ...existing };
+    },
+    async upsertPersonalConceptNode(node) {
+      calls.upsert += 1;
+      return { ...node };
+    },
+  };
+
+  const equal = await maybeWriteExecutionSignalToConceptGraph(signal({ updatedAt: now }), {
+    env: {
+      PERSONAL_CONCEPT_GRAPH_REPOSITORY: "supabase",
+      PERSONAL_CONCEPT_GRAPH_DURABLE_WRITES: "1",
+    },
+    repositoryAdapter: repository,
+    revisionPolicy: "monotonic_updated_at",
+  });
+  assert.equal(equal.skipped, true);
+  assert.equal(equal.reason, "already_applied");
+  assert.equal(equal.node.wrongCount, 1);
+  assert.equal(calls.upsert, 0);
+
+  const older = await maybeWriteExecutionSignalToConceptGraph(signal({ updatedAt: "2026-06-04T23:59:00.000Z" }), {
+    env: {
+      PERSONAL_CONCEPT_GRAPH_REPOSITORY: "supabase",
+      PERSONAL_CONCEPT_GRAPH_DURABLE_WRITES: "1",
+    },
+    repositoryAdapter: repository,
+    revisionPolicy: "monotonic_updated_at",
+  });
+  assert.equal(older.skipped, true);
+  assert.equal(older.reason, "stale_signal");
+  assert.equal(calls.upsert, 0);
 });
 
 test("raw, copyrighted, official-answer, score, and instructor fields are rejected", async () => {

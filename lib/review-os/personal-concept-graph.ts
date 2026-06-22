@@ -184,6 +184,7 @@ function buildNodeId(userId: string, examMode: AppraiserExamMode, subjectId: str
 function preferredTaskType(examMode: AppraiserExamMode, taskType: string, result: PersonalConceptGraphResult, state: PersonalConceptState) {
   const normalized = normalizeTaskType(taskType);
   if (examMode === "second") {
+    if (normalized === "calculator_routine") return "calculator_routine";
     if (result === "needs_rewrite" || normalized === "rewrite") return "rewrite";
     if (normalized === "CASIO") return "CASIO";
     if (normalized === "issue spotting") return "issue spotting";
@@ -286,6 +287,7 @@ function isDue(node: PersonalConceptNode, now: Date) {
 
 function prioritySignalsForNode(node: PersonalConceptNode, context: PersonalConceptTodayContext, now: Date) {
   const signals: string[] = [];
+  if (node.nextRecommendedTaskType === "calculator_routine") signals.push("calculator_routine");
   if (isDue(node, now)) signals.push("due_review");
   if (node.state === "wrong") signals.push("wrong_concept");
   if (node.state === "confused") signals.push("confused_concept");
@@ -313,6 +315,20 @@ function scoreNode(node: PersonalConceptNode, signals: string[]) {
 
 function recommendationCopy(node: PersonalConceptNode, signals: string[]) {
   const recoveryPrefix = signals.includes("recovery_needed") || signals.includes("recent_missed_tasks") ? "놓친 항목은 복구 신호로 보고, " : "";
+  if (node.examMode === "second" && node.nextRecommendedTaskType === "calculator_routine") {
+    const rationaleByState: Record<PersonalConceptState, string> = {
+      unknown: "계산·검산 상태를 확인할 신호가 남아 있어 입력 순서와 단위를 다시 확인합니다.",
+      wrong: "계산·검산 실수 신호가 남아 있어 입력 순서와 단위를 다시 확인합니다.",
+      confused: "막힌 계산·검산 단계를 짧게 다시 수행합니다.",
+      recovering: "회복 중인 계산·검산 루틴을 한 번 더 수행합니다.",
+      stable: "안정화된 계산·검산 루틴을 예정 시점에 짧게 확인합니다.",
+    };
+    return {
+      title: `${node.subjectId} · 검산/CASIO 계산·검산 복구`,
+      rationale: rationaleByState[node.state],
+      primaryAction: "계산·검산 다시 하기",
+    };
+  }
   if (node.examMode === "second" && node.nextRecommendedTaskType === "rewrite") {
     return {
       title: `${node.subjectId} · ${node.unitId} 답안 다시쓰기`,

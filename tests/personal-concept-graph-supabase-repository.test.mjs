@@ -6,6 +6,8 @@ import test from "node:test";
 
 import {
   buildPersonalConceptNodeSupabasePayload,
+  buildPersonalConceptNodeSupabaseWritePayload,
+  isUuid,
   PERSONAL_CONCEPT_GRAPH_SOURCE_STATUS,
   PERSONAL_CONCEPT_GRAPH_SUPABASE_COLUMNS,
 } from "../lib/review-os/personal-concept-graph-supabase-repository.ts";
@@ -54,6 +56,24 @@ test("Supabase payload maps explicitly to metadata-only table columns", () => {
   assert.equal(payload.source_status, PERSONAL_CONCEPT_GRAPH_SOURCE_STATUS);
   assert.equal(Object.hasOwn(payload, "safeExtra"), false);
   assert.equal(Object.hasOwn(payload, "unknownColumn"), false);
+});
+
+test("Supabase write payload omits non-UUID helper IDs and preserves real UUIDs", async () => {
+  const generatedHelperId = "personal-concept:learner:first:civil-law:unit-1";
+  const nonUuidPayload = buildPersonalConceptNodeSupabaseWritePayload(node({ id: generatedHelperId }));
+  assert.equal(isUuid(generatedHelperId), false);
+  assert.equal(Object.hasOwn(nonUuidPayload, "id"), false);
+  assert.deepEqual(Object.keys(nonUuidPayload), PERSONAL_CONCEPT_GRAPH_SUPABASE_COLUMNS.filter((column) => column !== "id"));
+
+  const uuid = "11111111-1111-4111-8111-111111111111";
+  const uuidPayload = buildPersonalConceptNodeSupabaseWritePayload(node({ id: uuid }));
+  assert.equal(isUuid(uuid), true);
+  assert.equal(uuidPayload.id, uuid);
+  assert.deepEqual(Object.keys(uuidPayload), [...PERSONAL_CONCEPT_GRAPH_SUPABASE_COLUMNS]);
+
+  const source = await readFile(new URL(`../${repoPath}`, import.meta.url), "utf8");
+  assert.match(source, /onConflict: "user_id,exam_mode,subject_id,unit_id"/);
+  assert.match(source, /return fromRow\(data as unknown as PersonalConceptNodeRow\)/);
 });
 
 test("Supabase upsert boundary rejects forbidden raw/copyrighted learner fields", () => {

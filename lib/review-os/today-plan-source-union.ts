@@ -287,6 +287,12 @@ function fromSchedule(schedule: DailyStudySchedule | WeeklyStudySchedule | undef
 
 function signalScore(action: TodayPlanUnifiedAction) {
   let score = 0;
+  if (
+    action.source === "review_queue" &&
+    (action.prioritySignals.includes("due_review") || action.prioritySignals.some((signal) => signal.startsWith("review_queue_due_bucket:")))
+  ) {
+    score += 80;
+  }
   if (action.prioritySignals.includes("due_review")) score += 120;
   if (action.prioritySignals.some((signal) => signal.startsWith("review_queue_due_bucket:"))) {
     const dueBucket = action.prioritySignals.find((signal) => signal.startsWith("review_queue_due_bucket:"))?.split(":")[1] as ReviewQueueDueBucket | undefined;

@@ -75,6 +75,36 @@ test("needs_rewrite creates rewrite-oriented recommendation", () => {
   assert.doesNotMatch(textOf(recommendation), /O\/X/);
 });
 
+test("calculator routine concept keeps calculator recovery task type and copy", () => {
+  const wrong = updatePersonalConceptNode(null, signal({
+    examMode: "second",
+    subjectId: "감정평가실무",
+    unitId: "concept:second:감정평가실무:검산-CASIO",
+    taskType: "calculator_routine",
+    result: "wrong",
+    confidence: "medium",
+  }));
+  const stable = updatePersonalConceptNode(wrong, signal({
+    examMode: "second",
+    subjectId: "감정평가실무",
+    unitId: "concept:second:감정평가실무:검산-CASIO",
+    taskType: "calculator_routine",
+    result: "done",
+    confidence: "medium",
+    updatedAt: "2026-06-06T00:00:00.000Z",
+  }));
+  const [recommendation] = rankConceptGraphNodesForToday([stable], { now: "2026-06-07T00:00:00.000Z" });
+
+  assert.equal(wrong.nextRecommendedTaskType, "calculator_routine");
+  assert.equal(stable.nextRecommendedTaskType, "calculator_routine");
+  assert.equal(recommendation.taskType, "calculator_routine");
+  assert.match(recommendation.title, /계산·검산|검산\/CASIO/);
+  assert.equal(recommendation.primaryAction, "계산·검산 다시 하기");
+  assert.ok(recommendation.prioritySignals.includes("calculator_routine"));
+  assert.equal(textOf(recommendation).includes("second_answer_rewrite"), false);
+  assert.equal(textOf(recommendation).includes("O/X"), false);
+});
+
 test("due and missed items become recovery copy, not shame copy", () => {
   const node = updatePersonalConceptNode(null, signal({ result: "missed_due", dueBucket: "missed", recentMissCount: 2 }));
   const [recommendation] = rankConceptGraphNodesForToday([node], {

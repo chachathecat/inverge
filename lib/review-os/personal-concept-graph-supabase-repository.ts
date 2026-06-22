@@ -31,6 +31,10 @@ type PersonalConceptNodeRow = {
   source_status: "repository_contract_feature_flagged_no_production_write";
 };
 
+export type PersonalConceptNodeSupabaseWritePayload = Omit<PersonalConceptNodeRow, "id"> & {
+  id?: string;
+};
+
 export const PERSONAL_CONCEPT_NODES_TABLE = "personal_concept_nodes";
 export const PERSONAL_CONCEPT_GRAPH_SOURCE_STATUS = "repository_contract_feature_flagged_no_production_write";
 export const PERSONAL_CONCEPT_GRAPH_REPOSITORY_VERSION = 1;
@@ -138,11 +142,14 @@ function fromRow(row: PersonalConceptNodeRow): PersonalConceptNode {
   };
 }
 
-export function buildPersonalConceptNodeSupabasePayload(node: PersonalConceptNode): PersonalConceptNodeRow {
+export function isUuid(value: unknown): value is string {
+  return typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
+export function buildPersonalConceptNodeSupabaseWritePayload(node: PersonalConceptNode): PersonalConceptNodeSupabaseWritePayload {
   assertMetadataOnlyNode(node);
 
-  return {
-    id: cleanRequiredText(node.id, "id"),
+  const payloadBase: Omit<PersonalConceptNodeRow, "id"> = {
     user_id: cleanRequiredText(node.userId, "userId"),
     exam_mode: node.examMode,
     subject_id: cleanRequiredText(node.subjectId, "subjectId"),
@@ -161,6 +168,11 @@ export function buildPersonalConceptNodeSupabasePayload(node: PersonalConceptNod
     version: PERSONAL_CONCEPT_GRAPH_REPOSITORY_VERSION,
     source_status: PERSONAL_CONCEPT_GRAPH_SOURCE_STATUS,
   };
+  return isUuid(node.id) ? { id: node.id, ...payloadBase } : payloadBase;
+}
+
+export function buildPersonalConceptNodeSupabasePayload(node: PersonalConceptNode): PersonalConceptNodeSupabaseWritePayload {
+  return buildPersonalConceptNodeSupabaseWritePayload(node);
 }
 
 export async function getPersonalConceptNodeFromSupabase(userId: string, examMode: AppraiserExamMode, subjectId: string, unitId: string): Promise<PersonalConceptNode | null> {
@@ -181,7 +193,7 @@ export async function getPersonalConceptNodeFromSupabase(userId: string, examMod
 }
 
 export async function upsertPersonalConceptNodeToSupabase(node: PersonalConceptNode): Promise<PersonalConceptNode> {
-  const payload = buildPersonalConceptNodeSupabasePayload(node);
+  const payload = buildPersonalConceptNodeSupabaseWritePayload(node);
   const client = await createPersonalConceptGraphSupabaseClient();
   const { data, error } = await client
     .from(PERSONAL_CONCEPT_NODES_TABLE)

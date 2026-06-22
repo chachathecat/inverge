@@ -76,6 +76,14 @@ function toUnifiedAction(task: TodayPlanTask): TodayPlanUnifiedAction {
   };
 }
 
+function isCalculatorRoutineAction(action: TodayPlanUnifiedAction) {
+  return action.taskType === "calculator_routine" || action.prioritySignals.includes("calculator_routine");
+}
+
+function hasCalculatorRoutineRecovery(action: TodayPlanUnifiedAction) {
+  return Boolean(action.calculatorRoutineRecovery);
+}
+
 function toDurableTask(action: TodayPlanUnifiedAction, mode: "first" | "second"): TodayPlanTask {
   const taskType = taskTypeFromDurableAction(action);
   return {
@@ -103,8 +111,14 @@ function toDurableTask(action: TodayPlanUnifiedAction, mode: "first" | "second")
 
 function mergeUnifiedActionsBackToTasks(actions: TodayPlanUnifiedAction[], baseTasks: TodayPlanTask[], mode: "first" | "second"): TodayPlanTask[] {
   const baseByUnifiedId = new Map<string, TodayPlanTask>(baseTasks.map((task) => [`learner-today-plan:${task.itemId}`, task]));
+  const hasClosableCalculatorRoutine = actions.some((action) => isCalculatorRoutineAction(action) && hasCalculatorRoutineRecovery(action));
+  const safeActions = actions.filter((action) => {
+    if (!isCalculatorRoutineAction(action)) return true;
+    if (hasCalculatorRoutineRecovery(action)) return true;
+    return !hasClosableCalculatorRoutine && action.source !== "personal_concept_graph";
+  });
   return selectActiveTodayPlanTasks(
-    actions.slice(0, TODAY_PLAN_MAX_PRIMARY_TASKS).map((action) => baseByUnifiedId.get(action.id) ?? toDurableTask(action, mode)),
+    safeActions.slice(0, TODAY_PLAN_MAX_PRIMARY_TASKS).map((action) => baseByUnifiedId.get(action.id) ?? toDurableTask(action, mode)),
     TODAY_PLAN_MAX_PRIMARY_TASKS,
   );
 }
