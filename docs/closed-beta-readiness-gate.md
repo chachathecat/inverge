@@ -25,7 +25,7 @@ M418 extends the gate with mobile PWA and Web Push reminder source checks:
 - cron delivery uses a unique delivery key for dedupe.
 - focused M418 tests run through `npm.cmd run check:mobile-pwa-web-push-reminder`.
 
-Passing the local gate does not verify real mobile OS delivery. Android/iPhone runtime acceptance is deferred to M419 after M418 is deployed with HTTPS, VAPID keys, Supabase migration, and scheduler configuration.
+Passing the local gate does not verify real mobile OS delivery or scheduler activation. Android/iPhone runtime acceptance is deferred to M419 after M418 is deployed with HTTPS, matching VAPID keys, Supabase migration history, an approved scheduler for the Vercel plan, and device-level evidence.
 
 | Step | Durable path | Local fallback | Feature-flagged | Auth required | Metadata-only boundary | Draft / verification status |
 | --- | --- | --- | --- | --- | --- | --- |

@@ -33,7 +33,11 @@ Generate local VAPID values without committing secrets:
 npm.cmd run generate:vapid
 ```
 
-`NEXT_PUBLIC_VAPID_PUBLIC_KEY` is intentionally public. `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `CRON_SECRET`, and `SUPABASE_SERVICE_ROLE_KEY` are server-only.
+`NEXT_PUBLIC_VAPID_PUBLIC_KEY` is intentionally public. `VAPID_PRIVATE_KEY`, `CRON_SECRET`, and `SUPABASE_SERVICE_ROLE_KEY` are server-only. Treat `VAPID_SUBJECT` as deployment configuration, not learner data.
+
+The VAPID public and private keys must remain a matching pair. Changing VAPID keys invalidates or requires replacing old browser push subscriptions, so rotate keys only with a subscription replacement plan.
+
+Runtime verification must use an approved non-production Supabase project. Apply the migration through normal migration history, configure the non-production service-role key, and run ownership/RLS checks there before any production rollout.
 
 ## Migration
 
@@ -109,13 +113,19 @@ Missing or wrong authorization returns `401`. Missing VAPID/admin environment re
 
 ## Scheduler
 
-No existing `vercel.json` cron convention was present. This PR implements the protected route and documents scheduler activation as a deployment step.
+No existing `vercel.json` cron convention was present. This PR implements the protected route and documents scheduler activation as a deployment step. Scheduled reminders must not be described as active until a scheduler is configured and verified in the target environment.
 
-Suggested schedule:
+Vercel Pro/Enterprise:
 
-```text
-GET /api/cron/notifications every 15 or 60 minutes
-```
+- hourly invocation of `GET /api/cron/notifications` is acceptable for closed-beta reminder windows.
+- configure the request with `Authorization: Bearer ${CRON_SECRET}`.
+- verify correct-secret success, wrong-secret `401`, delivery-key dedupe, and click routing before marking runtime acceptance pass.
+
+Vercel Hobby:
+
+- schedules more frequent than once daily are not supported.
+- arbitrary learner-selected reminder times cannot be honestly guaranteed by a Vercel hourly cron on Hobby.
+- use an approved external scheduler, upgrade the plan, or document scheduled Web Push as a closed-beta blocker before inviting learners to rely on reminder timing.
 
 The route checks each user preference in that user timezone and time window. Duplicate sends are prevented by the database-level `notification_deliveries.delivery_key` unique constraint.
 

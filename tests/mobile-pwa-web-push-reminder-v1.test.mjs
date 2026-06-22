@@ -8,6 +8,15 @@ function read(path) {
   return readFileSync(path, "utf8");
 }
 
+function pngDimensions(path) {
+  const buffer = readFileSync(path);
+  assert.equal(buffer.toString("ascii", 1, 4), "PNG");
+  return {
+    width: buffer.readUInt32BE(16),
+    height: buffer.readUInt32BE(20),
+  };
+}
+
 test("PWA manifest exists with installable Inverge metadata and icons", () => {
   assert.equal(existsSync("app/manifest.ts"), true);
   const data = manifest();
@@ -20,9 +29,10 @@ test("PWA manifest exists with installable Inverge metadata and icons", () => {
   assert.equal(data.lang, "ko");
   assert.ok(data.background_color);
   assert.ok(data.theme_color);
-  assert.ok(data.icons.some((icon) => icon.sizes === "192x192"));
-  assert.ok(data.icons.some((icon) => icon.sizes === "512x512"));
-  assert.ok(data.icons.some((icon) => icon.purpose === "maskable"));
+  assert.ok(data.icons.some((icon) => icon.src === "/icons/inverge-icon-192.png" && icon.sizes === "192x192" && icon.type === "image/png"));
+  assert.ok(data.icons.some((icon) => icon.src === "/icons/inverge-icon-512.png" && icon.sizes === "512x512" && icon.type === "image/png"));
+  assert.ok(data.icons.some((icon) => icon.src === "/icons/inverge-maskable-512.png" && icon.sizes === "512x512" && icon.type === "image/png" && icon.purpose === "maskable"));
+  assert.ok(data.icons.some((icon) => icon.type === "image/svg+xml"));
 });
 
 test("root layout exposes manifest, mobile metadata, viewport, and service worker registration", () => {
@@ -31,9 +41,35 @@ test("root layout exposes manifest, mobile metadata, viewport, and service worke
   assert.match(source, /manifest:\s*"\/manifest\.webmanifest"/);
   assert.match(source, /applicationName:\s*"Inverge"/);
   assert.match(source, /appleWebApp/);
+  assert.match(source, /apple:\s*\[\{\s*url:\s*"\/icons\/inverge-apple-touch-180\.png",\s*sizes:\s*"180x180",\s*type:\s*"image\/png"/);
   assert.match(source, /export const viewport/);
   assert.match(source, /themeColor:\s*"#10233f"/);
   assert.match(source, /<ServiceWorkerRegistration \/>/);
+});
+
+test("PWA PNG icon fallbacks exist with expected dimensions", () => {
+  assert.deepEqual(pngDimensions("public/icons/inverge-apple-touch-180.png"), { width: 180, height: 180 });
+  assert.deepEqual(pngDimensions("public/icons/inverge-icon-192.png"), { width: 192, height: 192 });
+  assert.deepEqual(pngDimensions("public/icons/inverge-icon-512.png"), { width: 512, height: 512 });
+  assert.deepEqual(pngDimensions("public/icons/inverge-maskable-512.png"), { width: 512, height: 512 });
+});
+
+test("environment example documents placeholder-only Web Push setup", () => {
+  const source = read(".env.example");
+  const requiredBlankKeys = [
+    "NEXT_PUBLIC_VAPID_PUBLIC_KEY",
+    "VAPID_PRIVATE_KEY",
+    "VAPID_SUBJECT",
+    "CRON_SECRET",
+    "SUPABASE_SERVICE_ROLE_KEY",
+  ];
+
+  for (const key of requiredBlankKeys) {
+    assert.match(source, new RegExp(`^${key}=$`, "m"), key);
+  }
+  assert.match(source, /matching pair/);
+  assert.match(source, /server-only/);
+  assert.match(source, /Changing VAPID keys invalidates/);
 });
 
 test("service worker handles push and notificationclick with a strict app route allowlist", () => {

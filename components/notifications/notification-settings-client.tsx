@@ -3,6 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import {
+  resolveNotificationStatusCopy,
+  resolveSubscribeCompletionState,
+  type NotificationSupportState,
+  type NotificationUiStatus,
+} from "@/lib/notifications/subscription-ui-state";
 
 type NotificationSettings = {
   enabled: boolean;
@@ -22,6 +28,12 @@ type SettingsResponse = {
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
+};
+
+type SaveSettingsOptions = {
+  successStatus?: NotificationUiStatus;
+  failureStatus?: NotificationUiStatus;
+  failureMessage?: string;
 };
 
 const WEEKDAYS = [
@@ -65,7 +77,7 @@ function urlBase64ToUint8Array(base64String: string) {
   return Uint8Array.from([...rawData].map((char) => char.charCodeAt(0)));
 }
 
-function supportState() {
+function supportState(): NotificationSupportState {
   if (typeof window === "undefined") return "loading";
   if (!("serviceWorker" in navigator)) return "service-worker-unsupported";
   if (!("PushManager" in window)) return "push-unsupported";
@@ -88,16 +100,15 @@ export function NotificationSettingsClient() {
   const subscribed = activeSubscriptionCount > 0;
   const canSubscribe = support === "supported" && permission !== "denied" && Boolean(vapidPublicKey);
   const statusCopy = useMemo(() => {
-    if (status === "loading") return "알림 설정을 불러오는 중입니다.";
-    if (support === "service-worker-unsupported") return "이 브라우저는 서비스 워커를 지원하지 않습니다.";
-    if (support === "push-unsupported") return "이 브라우저는 Web Push를 지원하지 않습니다.";
-    if (support === "notification-unsupported") return "이 브라우저는 알림 권한을 지원하지 않습니다.";
-    if (support === "ios-not-standalone") return "iPhone은 홈 화면에 추가한 앱에서만 알림을 받을 수 있습니다.";
-    if (!vapidConfigured) return "알림 서버 키가 아직 설정되지 않았습니다.";
-    if (permission === "denied") return "권한을 거절한 경우 브라우저 설정에서 다시 허용해야 할 수 있습니다.";
-    if (subscribed) return "알림 구독이 연결되어 있습니다.";
-    return "알림은 사용자가 허용한 경우에만 전송합니다.";
-  }, [permission, status, subscribed, support, vapidConfigured]);
+    return resolveNotificationStatusCopy({
+      status,
+      support,
+      permission,
+      vapidConfigured,
+      activeSubscriptionCount,
+      settingsEnabled: settings.enabled,
+    });
+  }, [activeSubscriptionCount, permission, settings.enabled, status, support, vapidConfigured]);
 
   useEffect(() => {
     fetch("/api/notifications/settings", { cache: "no-store" })
@@ -139,23 +150,29 @@ export function NotificationSettingsClient() {
     });
   }
 
-  async function saveSettings(nextSettings = settings) {
+  async function saveSettings(nextSettings = settings, options: SaveSettingsOptions = {}) {
     setError(null);
     setStatus("saving");
-    const response = await fetch("/api/notifications/settings", {
-      method: "PUT",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(nextSettings),
-    });
-    const data = await response.json().catch(() => null) as SettingsResponse | null;
-    if (!response.ok || !data?.ok) {
-      setStatus("save-error");
-      setError("알림 설정을 저장하지 못했습니다.");
+    try {
+      const response = await fetch("/api/notifications/settings", {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(nextSettings),
+      });
+      const data = await response.json().catch(() => null) as SettingsResponse | null;
+      if (!response.ok || !data?.ok) {
+        setStatus(options.failureStatus ?? "save-error");
+        setError(options.failureMessage ?? "알림 설정을 저장하지 못했습니다.");
+        return false;
+      }
+      setSettings(data.settings ?? nextSettings);
+      setStatus(options.successStatus ?? "saved");
+      return true;
+    } catch {
+      setStatus(options.failureStatus ?? "save-error");
+      setError(options.failureMessage ?? "알림 설정을 저장하지 못했습니다.");
       return false;
     }
-    setSettings(data.settings ?? nextSettings);
-    setStatus("saved");
-    return true;
   }
 
   async function subscribe() {
@@ -173,6 +190,7 @@ export function NotificationSettingsClient() {
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
       });
+      const createdSubscription = existing ? null : subscription;
       const response = await fetch("/api/notifications/subscribe", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -182,16 +200,49 @@ export function NotificationSettingsClient() {
           platform: navigator.platform,
         }),
       });
-      if (!response.ok) throw new Error("subscribe-failed");
+      if (!response.ok) {
+        await createdSubscription?.unsubscribe().catch(() => false);
+        throw new Error("subscribe-failed");
+      }
       const nextSettings = { ...settings, enabled: true };
       setActiveSubscriptionCount(1);
       setSettings(nextSettings);
-      await saveSettings(nextSettings);
-      setStatus("subscribed");
+      const settingsSaved = await saveSettings(nextSettings, {
+        successStatus: "subscribed",
+        failureStatus: "subscription_saved_schedule_failed",
+        failureMessage: "알림 구독은 연결됐지만 일정 저장에 실패했습니다. 일정 저장을 다시 시도해 주세요.",
+      });
+      const outcome = resolveSubscribeCompletionState({
+        subscriptionSaved: true,
+        preferenceSaved: settingsSaved,
+      });
+      setActiveSubscriptionCount(outcome.activeSubscriptionCount);
+      setStatus(outcome.status);
     } catch {
-      setStatus("save-error");
+      const outcome = resolveSubscribeCompletionState({
+        subscriptionSaved: false,
+        preferenceSaved: false,
+      });
+      setActiveSubscriptionCount(outcome.activeSubscriptionCount);
+      setStatus(outcome.status);
       setError("알림 구독을 저장하지 못했습니다.");
     }
+  }
+
+  async function retryScheduleSave() {
+    const nextSettings = { ...settings, enabled: true };
+    setSettings(nextSettings);
+    const settingsSaved = await saveSettings(nextSettings, {
+      successStatus: "subscribed",
+      failureStatus: "subscription_saved_schedule_failed",
+      failureMessage: "알림 구독은 연결됐지만 일정 저장에 실패했습니다. 일정 저장을 다시 시도해 주세요.",
+    });
+    const outcome = resolveSubscribeCompletionState({
+      subscriptionSaved: true,
+      preferenceSaved: settingsSaved,
+    });
+    setActiveSubscriptionCount(outcome.activeSubscriptionCount);
+    setStatus(outcome.status);
   }
 
   async function unsubscribe() {
@@ -323,6 +374,11 @@ export function NotificationSettingsClient() {
         <Button type="button" variant="outline" onClick={subscribe} disabled={!canSubscribe || status === "subscribing"}>
           알림 허용하고 구독
         </Button>
+        {status === "subscription_saved_schedule_failed" ? (
+          <Button type="button" variant="outline" onClick={retryScheduleSave}>
+            일정 저장 다시 시도
+          </Button>
+        ) : null}
         <Button type="button" variant="outline" onClick={sendTest} disabled={!subscribed || status === "testing"}>
           테스트 알림 보내기
         </Button>

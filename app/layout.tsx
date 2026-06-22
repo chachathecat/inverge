@@ -18,10 +18,12 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
+      { url: "/icons/inverge-icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/inverge-icon-512.png", sizes: "512x512", type: "image/png" },
       { url: "/icons/inverge-icon-192.svg", sizes: "192x192", type: "image/svg+xml" },
       { url: "/icons/inverge-icon-512.svg", sizes: "512x512", type: "image/svg+xml" },
     ],
-    apple: [{ url: "/icons/inverge-icon-192.svg", sizes: "192x192", type: "image/svg+xml" }],
+    apple: [{ url: "/icons/inverge-apple-touch-180.png", sizes: "180x180", type: "image/png" }],
   },
 };
 
