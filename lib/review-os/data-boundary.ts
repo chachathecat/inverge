@@ -125,6 +125,7 @@ export const SAFE_DERIVED_SIGNAL_KEYS = [
   "bridgeVersion",
   "routineType",
   "routineId",
+  "completionFingerprint",
   "completedStepIds",
   "stuckStepIds",
   "hintUsedStepIds",

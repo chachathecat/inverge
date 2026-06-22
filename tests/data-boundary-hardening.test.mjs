@@ -43,6 +43,7 @@ test("data boundary key lists are explicit and exported", () => {
   assert.ok(RAW_USER_DATA_KEYS.includes("rewriteParagraph"));
   assert.ok(SAFE_DERIVED_SIGNAL_KEYS.includes("examMode"));
   assert.ok(SAFE_DERIVED_SIGNAL_KEYS.includes("templateId"));
+  assert.ok(SAFE_DERIVED_SIGNAL_KEYS.includes("completionFingerprint"));
   assert.ok(REFERENCE_CORPUS_KEYS.includes("citationLabel"));
 });
 

@@ -10,14 +10,21 @@ import {
 import {
   buildActiveCalculatorRoutineReviewCandidates,
   buildCalculatorRoutineBridge,
+  buildCalculatorRoutineCompletionFingerprint,
   buildCalculatorRoutineLearningEventId,
   getCalculatorRoutineCompletionOutcome,
+  isValidCalculatorRoutineId,
+  normalizeCalculatorRoutineId,
   parseCalculatorRoutineCompletionSignalForServer,
 } from "../lib/review-os/calculator-routine-learning-signal.ts";
 import { buildTodayPlanTasks, TODAY_PLAN_MAX_PRIMARY_TASKS } from "../lib/review-os/today-plan-engine.ts";
 
 const USER_ID = "00000000-0000-4000-8000-000000000416";
 const NOW = new Date("2026-06-22T09:00:00.000Z");
+const RAW_PROBLEM_SENTINEL = "RAW_PROBLEM_SENTINEL";
+const RAW_ANSWER_SENTINEL = "RAW_ANSWER_SENTINEL";
+const RAW_FORMULA_SENTINEL = "RAW_FORMULA_SENTINEL";
+const RAW_CASIO_SENTINEL = "RAW_CASIO_SENTINEL";
 
 const textStepEntries = {
   conditions: "조건 확인",
@@ -30,7 +37,7 @@ const textStepEntries = {
 };
 
 function completeDraft({
-  routineId = "routine-bridge-1",
+  routineId = "problem-snap-bridge-1",
   source = "problem-snap",
   mistakeTypes = ["none"],
   verificationMethods = ["unit_check"],
@@ -70,9 +77,13 @@ function signalFromDraft(options) {
   return buildCalculatorRoutineCompletionSignal(completeDraft(options), "2026-06-22T08:30:00.000Z");
 }
 
-function eventFromBridge(bridge, createdAt = "2026-06-22T08:31:00.000Z") {
+function eventFromBridge(bridge, createdAt = "2026-06-22T08:31:00.000Z", completedAt) {
   return {
     ...bridge.learningEventInput,
+    metadataJson: {
+      ...bridge.learningEventInput.metadataJson,
+      ...(completedAt ? { completedAt } : {}),
+    },
     id: bridge.learningEventId,
     userId: USER_ID,
     createdAt,
@@ -103,16 +114,89 @@ test("server parser accepts only metadata-only calculator routine completion sig
   );
 });
 
+test("routine id parser accepts only production-compatible opaque identifiers", () => {
+  assert.equal(normalizeCalculatorRoutineId("problem-snap-550e8400-e29b-41d4-a716-446655440000", "problem-snap"), "problem-snap-550e8400-e29b-41d4-a716-446655440000");
+  assert.equal(normalizeCalculatorRoutineId("answer-review-550e8400-e29b-41d4-a716-446655440000", "answer-review"), "answer-review-550e8400-e29b-41d4-a716-446655440000");
+  assert.equal(isValidCalculatorRoutineId("problem-snap-1719040000000-ab12cd34", "problem-snap"), true);
+  assert.equal(isValidCalculatorRoutineId("answer-review-second-r0", "answer-review"), true);
+
+  const invalidIds = [
+    "raw 문제 원문입니다",
+    "problem-snap-답안 원문",
+    "problem-snap/foo",
+    "problem-snap:https://example.com",
+    "problem-snap-<script>",
+    "answer-review id with spaces",
+    "problem-snap-\u0000bad",
+    `problem-snap-${"a".repeat(129)}`,
+  ];
+  for (const value of invalidIds) {
+    assert.equal(isValidCalculatorRoutineId(value, "problem-snap"), false);
+    assert.throws(() => normalizeCalculatorRoutineId(value, "problem-snap"), /calculator-routine-invalid-routine-id/);
+  }
+
+  const signal = signalFromDraft({ routineId: "problem-snap-prefix-check" });
+  assert.throws(
+    () => parseCalculatorRoutineCompletionSignalForServer({ ...signal, source: "answer-review" }),
+    /calculator-routine-invalid-routine-id/,
+  );
+  assert.throws(
+    () => parseCalculatorRoutineCompletionSignalForServer({ ...signal, routineId: "raw 문제 원문입니다" }),
+    /calculator-routine-invalid-routine-id/,
+  );
+  try {
+    parseCalculatorRoutineCompletionSignalForServer({ ...signal, routineId: "raw 문제 원문입니다" });
+  } catch (error) {
+    assert.equal(String(error).includes("raw 문제 원문입니다"), false);
+  }
+});
+
+test("parser canonicalizes timestamps and rebuilds concept metadata from safe inputs", () => {
+  const signal = signalFromDraft({ routineId: "problem-snap-timestamps" });
+  const parsed = parseCalculatorRoutineCompletionSignalForServer({
+    ...signal,
+    startedAt: "2026-06-22T08:00:00Z",
+    completedAt: "2026-06-22T08:30:00Z",
+    relatedConceptNodeId: RAW_PROBLEM_SENTINEL,
+    routineConceptCandidate: {
+      metadataOnly: true,
+      conceptNodeId: RAW_ANSWER_SENTINEL,
+      conceptFamily: RAW_FORMULA_SENTINEL,
+      nextTaskType: RAW_CASIO_SENTINEL,
+    },
+  });
+
+  assert.equal(parsed.startedAt, "2026-06-22T08:00:00.000Z");
+  assert.equal(parsed.completedAt, "2026-06-22T08:30:00.000Z");
+  assert.notEqual(parsed.relatedConceptNodeId, RAW_PROBLEM_SENTINEL);
+  assert.equal(JSON.stringify(parsed).includes(RAW_ANSWER_SENTINEL), false);
+  assert.equal(JSON.stringify(parsed).includes(RAW_FORMULA_SENTINEL), false);
+  assert.equal(JSON.stringify(parsed).includes(RAW_CASIO_SENTINEL), false);
+
+  assert.throws(
+    () => parseCalculatorRoutineCompletionSignalForServer({
+      ...signal,
+      startedAt: "2026-06-22T08:30:00.000Z",
+      completedAt: "2026-06-22T08:00:00.000Z",
+    }),
+    /calculator-routine-invalid-completed-at/,
+  );
+  assert.throws(
+    () => parseCalculatorRoutineCompletionSignalForServer({ ...signal, completedAt: "2099-01-01T00:00:00.000Z" }),
+    /calculator-routine-invalid-completed-at/,
+  );
+});
+
 test("completion mapping follows mistake over stuck over clean precedence", () => {
-  const clean = signalFromDraft({ routineId: "routine-clean", mistakeTypes: ["none"] });
+  const clean = signalFromDraft({ routineId: "problem-snap-clean", mistakeTypes: ["none"] });
   const stuck = signalFromDraft({
-    routineId: "routine-stuck",
+    routineId: "problem-snap-stuck",
     mistakeTypes: ["none"],
     stuckStepIds: ["casio_input"],
     blankStepId: "casio_input",
   });
   const mistakenAndStuck = signalFromDraft({
-    routineId: "routine-wrong",
+    routineId: "problem-snap-wrong",
     mistakeTypes: ["rounding"],
     stuckStepIds: ["casio_input"],
     blankStepId: "casio_input",
@@ -142,11 +226,11 @@ test("completion mapping follows mistake over stuck over clean precedence", () =
 
 test("verification and unit rounding gaps produce metadata-only due signals", () => {
   const verificationSignal = signalFromDraft({
-    routineId: "routine-verification",
+    routineId: "problem-snap-verification",
     mistakeTypes: ["verification_skipped"],
   });
   const unitSignal = signalFromDraft({
-    routineId: "routine-unit",
+    routineId: "problem-snap-unit",
     mistakeTypes: ["unit_conversion", "rounding"],
   });
 
@@ -161,40 +245,97 @@ test("verification and unit rounding gaps produce metadata-only due signals", ()
   assert.deepEqual(unitBridge.learningEventInput.relatedFormulas, []);
 });
 
-test("learning signal event id is deterministic for user and routine id", () => {
-  assert.equal(
-    buildCalculatorRoutineLearningEventId(USER_ID, "routine-bridge-1"),
-    buildCalculatorRoutineLearningEventId(USER_ID, "routine-bridge-1"),
-  );
-  assert.notEqual(
-    buildCalculatorRoutineLearningEventId(USER_ID, "routine-bridge-1"),
-    buildCalculatorRoutineLearningEventId(USER_ID, "routine-bridge-2"),
-  );
+test("completion fingerprint creates immutable idempotent revisions for one routine", () => {
+  const wrong = buildCalculatorRoutineBridge(USER_ID, signalFromDraft({
+    routineId: "problem-snap-revision",
+    mistakeTypes: ["casio_input"],
+  }));
+  const wrongRetry = buildCalculatorRoutineBridge(USER_ID, signalFromDraft({
+    routineId: "problem-snap-revision",
+    mistakeTypes: ["casio_input"],
+  }));
+  const clean = buildCalculatorRoutineBridge(USER_ID, signalFromDraft({
+    routineId: "problem-snap-revision",
+    mistakeTypes: ["none"],
+  }));
+  const wrongAfterClean = buildCalculatorRoutineBridge(USER_ID, signalFromDraft({
+    routineId: "problem-snap-revision",
+    mistakeTypes: ["rounding"],
+  }));
+  const laterSameState = buildCalculatorRoutineBridge(USER_ID, {
+    ...signalFromDraft({ routineId: "problem-snap-revision", mistakeTypes: ["casio_input"] }),
+    completedAt: "2026-06-22T08:45:00.000Z",
+  });
+  const orderedSignal = signalFromDraft({
+    routineId: "problem-snap-fingerprint-order",
+    mistakeTypes: ["casio_input"],
+    verificationMethods: ["unit_check", "source_recheck"],
+  });
+  const reordered = buildCalculatorRoutineBridge(USER_ID, {
+    ...orderedSignal,
+    completedStepIds: [...orderedSignal.completedStepIds].reverse(),
+    verificationMethods: [...orderedSignal.verificationMethods].reverse(),
+  });
+
+  assert.equal(buildCalculatorRoutineCompletionFingerprint(wrong.sanitizedSignal), wrong.completionFingerprint);
+  assert.equal(wrong.completionFingerprint, wrongRetry.completionFingerprint);
+  assert.equal(wrong.learningEventId, wrongRetry.learningEventId);
+  assert.equal(buildCalculatorRoutineBridge(USER_ID, orderedSignal).completionFingerprint, reordered.completionFingerprint);
+  assert.notEqual(wrong.learningEventId, buildCalculatorRoutineLearningEventId(USER_ID, "problem-snap-revision-2", wrong.completionFingerprint));
+  assert.notEqual(wrong.completionFingerprint, clean.completionFingerprint);
+  assert.notEqual(wrong.learningEventId, clean.learningEventId);
+  assert.notEqual(clean.completionFingerprint, wrongAfterClean.completionFingerprint);
+  assert.notEqual(clean.learningEventId, wrongAfterClean.learningEventId);
+  assert.notEqual(wrong.completionFingerprint, laterSameState.completionFingerprint);
+  assert.notEqual(wrong.learningEventId, laterSameState.learningEventId);
+
+  const serialized = JSON.stringify([
+    wrong.completionFingerprint,
+    wrong.learningEventInput,
+    wrong.reviewQueueItem,
+  ]);
+  for (const sentinel of [RAW_PROBLEM_SENTINEL, RAW_ANSWER_SENTINEL, RAW_FORMULA_SENTINEL, RAW_CASIO_SENTINEL]) {
+    assert.equal(serialized.includes(sentinel), false);
+  }
 });
 
-test("active calculator routine review candidates are metadata-only and clean completion closes older recovery", () => {
-  const wrongBridge = buildCalculatorRoutineBridge(USER_ID, signalFromDraft({ routineId: "routine-candidate", mistakeTypes: ["casio_input"] }));
-  const cleanBridge = buildCalculatorRoutineBridge(USER_ID, signalFromDraft({ routineId: "routine-cleaner", mistakeTypes: ["none"] }));
+test("active calculator routine review candidates use completedAt lifecycle per routine", () => {
+  const wrongBridge = buildCalculatorRoutineBridge(USER_ID, signalFromDraft({ routineId: "problem-snap-candidate", mistakeTypes: ["casio_input"] }));
+  const cleanBridge = buildCalculatorRoutineBridge(USER_ID, signalFromDraft({ routineId: "problem-snap-candidate", mistakeTypes: ["none"] }));
 
   const staleCandidates = buildActiveCalculatorRoutineReviewCandidates([
-    eventFromBridge(wrongBridge, "2026-06-22T08:10:00.000Z"),
-    eventFromBridge(cleanBridge, "2026-06-22T08:20:00.000Z"),
+    eventFromBridge(wrongBridge, "2026-06-22T08:10:00.000Z", "2026-06-22T08:10:00.000Z"),
+    eventFromBridge(cleanBridge, "2026-06-22T08:20:00.000Z", "2026-06-22T08:20:00.000Z"),
   ], NOW);
   assert.equal(staleCandidates.length, 0);
 
   const freshCandidates = buildActiveCalculatorRoutineReviewCandidates([
-    eventFromBridge(cleanBridge, "2026-06-22T08:10:00.000Z"),
-    eventFromBridge(wrongBridge, "2026-06-22T08:20:00.000Z"),
+    eventFromBridge(cleanBridge, "2026-06-22T08:10:00.000Z", "2026-06-22T08:10:00.000Z"),
+    eventFromBridge(wrongBridge, "2026-06-22T08:20:00.000Z", "2026-06-22T08:20:00.000Z"),
   ], NOW);
   assert.equal(freshCandidates.length, 1);
   assert.equal(freshCandidates[0].metadataOnly, true);
   assert.equal(freshCandidates[0].sourceLabel, "계산·검산 루틴 기반");
   assert.equal(freshCandidates[0].nextAction, "계산·검산 다시 하기");
   assert.equal(JSON.stringify(freshCandidates[0]).includes("answerText"), false);
+
+  const delayedOldClean = buildActiveCalculatorRoutineReviewCandidates([
+    eventFromBridge(cleanBridge, "2026-06-22T08:40:00.000Z", "2026-06-22T08:05:00.000Z"),
+    eventFromBridge(wrongBridge, "2026-06-22T08:20:00.000Z", "2026-06-22T08:20:00.000Z"),
+  ], NOW);
+  assert.equal(delayedOldClean.length, 1);
+  assert.equal(delayedOldClean[0].createdAt, "2026-06-22T08:20:00.000Z");
+
+  const unrelatedClean = buildCalculatorRoutineBridge(USER_ID, signalFromDraft({ routineId: "problem-snap-unrelated-clean", mistakeTypes: ["none"] }));
+  const unrelatedCleanDoesNotSuppress = buildActiveCalculatorRoutineReviewCandidates([
+    eventFromBridge(wrongBridge, "2026-06-22T08:10:00.000Z", "2026-06-22T08:10:00.000Z"),
+    eventFromBridge(unrelatedClean, "2026-06-22T08:30:00.000Z", "2026-06-22T08:30:00.000Z"),
+  ], NOW);
+  assert.equal(unrelatedCleanDoesNotSuppress.length, 1);
 });
 
 test("Today Plan surfaces the dedicated calculator routine task without exceeding max three", () => {
-  const bridge = buildCalculatorRoutineBridge(USER_ID, signalFromDraft({ routineId: "routine-today", mistakeTypes: ["display_reading"] }));
+  const bridge = buildCalculatorRoutineBridge(USER_ID, signalFromDraft({ routineId: "problem-snap-today", mistakeTypes: ["display_reading"] }));
   const tasks = buildTodayPlanTasks({
     mode: "second",
     queue: [],

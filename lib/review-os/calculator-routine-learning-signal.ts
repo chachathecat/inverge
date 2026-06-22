@@ -28,6 +28,7 @@ export type CalculatorRoutineLearningBridge = {
   sanitizedSignal: CalculatorRoutineCompletionSignalV1;
   executionSignal: ExecutionLearningSignal;
   learningEventId: string;
+  completionFingerprint: string;
   learningEventInput: LearningSignalEventInput;
   reviewQueueItem: ReviewQueueItem | null;
   todayPlanCandidateCreated: boolean;
@@ -55,8 +56,16 @@ const EXPECTED_COMPLETED_STEP_IDS = CALCULATOR_ROUTINE_STEPS.map((step) => step.
 const STEP_ID_SET = new Set<string>(EXPECTED_COMPLETED_STEP_IDS);
 const MISTAKE_TYPE_SET = new Set<string>(CALCULATOR_ROUTINE_MISTAKE_OPTIONS.map((option) => option.id));
 const VERIFICATION_METHOD_SET = new Set<string>(CALCULATOR_ROUTINE_VERIFICATION_OPTIONS.map((option) => option.id));
+const MISTAKE_TYPE_ORDER = CALCULATOR_ROUTINE_MISTAKE_OPTIONS.map((option) => option.id);
+const VERIFICATION_METHOD_ORDER = CALCULATOR_ROUTINE_VERIFICATION_OPTIONS.map((option) => option.id);
 const MAX_SAFE_ARRAY_LENGTH = 16;
+const MAX_ROUTINE_ID_LENGTH = 128;
+const MAX_FUTURE_TIMESTAMP_MS = 24 * 60 * 60 * 1000;
 const SOURCE_TYPES = new Set(["problem-snap", "answer-review"]);
+const ROUTINE_ID_PREFIX_BY_SOURCE = {
+  "problem-snap": "problem-snap-",
+  "answer-review": "answer-review-",
+} as const;
 const STRICT_RAW_FIELD_PATTERN =
   /^(entries|draft|raw.*|.*raw.*|ocr.*|.*ocr.*|problem.*text|question.*text|answer.*text|user.*answer|official.*answer|reference.*answer|formula|formulas|numbers|units|casio|display|verificationMemo|mistakeMemo|sourceText|original.*|full.*)$/i;
 
@@ -86,10 +95,14 @@ function requireString(value: unknown, field: string) {
   return value.trim();
 }
 
-function requireIsoString(value: unknown, field: string) {
+function requireCanonicalIsoString(value: unknown, field: string) {
   const cleaned = requireString(value, field);
-  if (!Number.isFinite(Date.parse(cleaned))) throw new Error(`calculator-routine-invalid-${field}`);
-  return cleaned;
+  const timestamp = Date.parse(cleaned);
+  if (!Number.isFinite(timestamp)) throw new Error(`calculator-routine-invalid-${field}`);
+  if (timestamp > Date.now() + MAX_FUTURE_TIMESTAMP_MS) {
+    throw new Error(`calculator-routine-invalid-${field}`);
+  }
+  return new Date(timestamp).toISOString();
 }
 
 function normalizeStringArray<T extends string>(values: unknown, allowed: Set<string>, field: string): T[] {
@@ -136,6 +149,41 @@ function metadataValue(value: unknown, key: string) {
   return isRecord(value) ? value[key] : undefined;
 }
 
+export function normalizeCalculatorRoutineId(value: unknown, source: "problem-snap" | "answer-review") {
+  if (typeof value !== "string" || value.length === 0 || value !== value.trim()) {
+    throw new Error("calculator-routine-invalid-routine-id");
+  }
+  if (value.length > MAX_ROUTINE_ID_LENGTH) throw new Error("calculator-routine-invalid-routine-id");
+  const expectedPrefix = ROUTINE_ID_PREFIX_BY_SOURCE[source];
+  if (!value.startsWith(expectedPrefix)) throw new Error("calculator-routine-invalid-routine-id");
+  const suffix = value.slice(expectedPrefix.length);
+  if (!/^[A-Za-z0-9_-]+$/.test(suffix)) throw new Error("calculator-routine-invalid-routine-id");
+  return value;
+}
+
+export function isValidCalculatorRoutineId(value: unknown, source: "problem-snap" | "answer-review") {
+  try {
+    normalizeCalculatorRoutineId(value, source);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function sortByKnownOrder<T extends string>(values: T[], order: readonly string[]) {
+  return [...values].sort((left, right) => order.indexOf(left) - order.indexOf(right));
+}
+
+function digestToUuid(digest: string) {
+  return [
+    digest.slice(0, 8),
+    digest.slice(8, 12),
+    `5${digest.slice(13, 16)}`,
+    ((parseInt(digest.slice(16, 18), 16) & 0x3f) | 0x80).toString(16).padStart(2, "0") + digest.slice(18, 20),
+    digest.slice(20, 32),
+  ].join("-");
+}
+
 export function parseCalculatorRoutineCompletionSignalForServer(input: unknown): CalculatorRoutineCompletionSignalV1 {
   rejectRawFields(input);
   if (!isRecord(input)) throw new Error("calculator-routine-invalid-payload");
@@ -143,6 +191,7 @@ export function parseCalculatorRoutineCompletionSignalForServer(input: unknown):
   if (input.version !== 1) throw new Error("calculator-routine-invalid-version");
   if (input.routineType !== "calculator_routine") throw new Error("calculator-routine-invalid-type");
   if (!SOURCE_TYPES.has(String(input.source))) throw new Error("calculator-routine-invalid-source");
+  const source = input.source === "answer-review" ? "answer-review" : "problem-snap";
   if (input.examMode !== "second" || input.subject !== "감정평가실무") {
     throw new Error("calculator-routine-unsupported-context");
   }
@@ -150,8 +199,7 @@ export function parseCalculatorRoutineCompletionSignalForServer(input: unknown):
     throw new Error("calculator-routine-invalid-source-status");
   }
 
-  const routineId = requireString(input.routineId, "routine-id");
-  if (routineId.length > 160) throw new Error("calculator-routine-invalid-routine-id");
+  const routineId = normalizeCalculatorRoutineId(input.routineId, source);
   const completedStepIds = requireCompletedStepIds(input.completedStepIds);
   const stuckStepIds = normalizeOptionalStepIds(input.stuckStepIds, "stuck-step-ids");
   const hintUsedStepIds = normalizeOptionalStepIds(input.hintUsedStepIds, "hint-used-step-ids");
@@ -159,23 +207,25 @@ export function parseCalculatorRoutineCompletionSignalForServer(input: unknown):
   const primaryMistakeType = requireString(input.primaryMistakeType, "primary-mistake-type") as CalculatorRoutineMistakeType;
   if (!mistakeTypes.includes(primaryMistakeType)) throw new Error("calculator-routine-invalid-primary-mistake-type");
   const verificationMethods = normalizeVerificationMethods(input.verificationMethods);
-  const startedAt = requireIsoString(input.startedAt, "started-at");
-  const completedAt = requireIsoString(input.completedAt, "completed-at");
+  const startedAt = requireCanonicalIsoString(input.startedAt, "started-at");
+  const completedAt = requireCanonicalIsoString(input.completedAt, "completed-at");
+  if (Date.parse(completedAt) < Date.parse(startedAt)) {
+    throw new Error("calculator-routine-invalid-completed-at");
+  }
 
   const routineConceptCandidate = metadataValue(input.routineConceptCandidate, "metadataOnly") === true
     ? input.routineConceptCandidate
     : {};
 
-  return sanitizeCalculatorRoutineCompletionSignal({
+  const sanitized = sanitizeCalculatorRoutineCompletionSignal({
     metadataOnly: true,
     version: 1,
     routineType: "calculator_routine",
-    source: input.source === "answer-review" ? "answer-review" : "problem-snap",
+    source,
     examMode: "second",
     subject: "감정평가실무",
     routineId,
     routineConceptCandidate: routineConceptCandidate as CalculatorRoutineCompletionSignalV1["routineConceptCandidate"],
-    relatedConceptNodeId: typeof input.relatedConceptNodeId === "string" ? input.relatedConceptNodeId : undefined,
     completedStepIds,
     stuckStepIds,
     mistakeTypes,
@@ -187,19 +237,37 @@ export function parseCalculatorRoutineCompletionSignalForServer(input: unknown):
     sourceStatus: "draft",
     needsOfficialVerification: true,
   });
+
+  return {
+    ...sanitized,
+    routineId,
+    startedAt,
+    completedAt,
+    relatedConceptNodeId: sanitized.routineConceptCandidate.conceptNodeId,
+  };
 }
 
-export function buildCalculatorRoutineLearningEventId(userId: string, routineId: string) {
+export function buildCalculatorRoutineCompletionFingerprint(signal: CalculatorRoutineCompletionSignalV1) {
+  const canonical = {
+    version: signal.version,
+    routineId: signal.routineId,
+    source: signal.source,
+    completedAt: signal.completedAt,
+    completedStepIds: sortByKnownOrder(signal.completedStepIds, EXPECTED_COMPLETED_STEP_IDS),
+    stuckStepIds: sortByKnownOrder(signal.stuckStepIds, EXPECTED_COMPLETED_STEP_IDS),
+    mistakeTypes: sortByKnownOrder(signal.mistakeTypes, MISTAKE_TYPE_ORDER),
+    primaryMistakeType: signal.primaryMistakeType,
+    verificationMethods: sortByKnownOrder(signal.verificationMethods, VERIFICATION_METHOD_ORDER),
+    hintUsedStepIds: sortByKnownOrder(signal.hintUsedStepIds, EXPECTED_COMPLETED_STEP_IDS),
+  };
+  return createHash("sha256").update(JSON.stringify(canonical)).digest("hex");
+}
+
+export function buildCalculatorRoutineLearningEventId(userId: string, routineId: string, completionFingerprint: string) {
   const digest = createHash("sha256")
-    .update(`${userId}:calculator-routine:${routineId}`)
+    .update(`${userId}:calculator-routine:${routineId}:${completionFingerprint}`)
     .digest("hex");
-  return [
-    digest.slice(0, 8),
-    digest.slice(8, 12),
-    `5${digest.slice(13, 16)}`,
-    ((parseInt(digest.slice(16, 18), 16) & 0x3f) | 0x80).toString(16).padStart(2, "0") + digest.slice(18, 20),
-    digest.slice(20, 32),
-  ].join("-");
+  return digestToUuid(digest);
 }
 
 export function getCalculatorRoutineCompletionOutcome(signal: Pick<CalculatorRoutineCompletionSignalV1, "mistakeTypes" | "stuckStepIds">): CalculatorRoutineCompletionOutcome {
@@ -273,7 +341,8 @@ export function buildCalculatorRoutineBridge(userId: string, input: unknown): Ca
       : "계산·검산 루틴에서 복구할 신호를 남겼습니다. 다음에는 입력 순서와 단위를 짧게 다시 확인합니다.",
   };
   const reviewQueueItem = outcome === "done" ? null : buildReviewQueueItemFromExecutionSignal(bridgedExecutionSignal);
-  const learningEventId = buildCalculatorRoutineLearningEventId(userId, sanitizedSignal.routineId);
+  const completionFingerprint = buildCalculatorRoutineCompletionFingerprint(sanitizedSignal);
+  const learningEventId = buildCalculatorRoutineLearningEventId(userId, sanitizedSignal.routineId, completionFingerprint);
   const nextTaskType = outcome === "done" ? "calculator_routine_complete" : "calculator_routine";
   const learningEventInput: LearningSignalEventInput = {
     examMode: "감정평가사 2차",
@@ -288,6 +357,7 @@ export function buildCalculatorRoutineBridge(userId: string, input: unknown): Ca
       bridgeVersion: "calculator_routine_learning_signal_v1",
       routineType: "calculator_routine",
       routineId: sanitizedSignal.routineId,
+      completionFingerprint,
       source: sanitizedSignal.source,
       result: outcome,
       executionResult: bridgedExecutionSignal.result,
@@ -315,6 +385,7 @@ export function buildCalculatorRoutineBridge(userId: string, input: unknown): Ca
     sanitizedSignal,
     executionSignal: bridgedExecutionSignal,
     learningEventId,
+    completionFingerprint,
     learningEventInput,
     reviewQueueItem,
     todayPlanCandidateCreated: outcome !== "done",
@@ -340,6 +411,19 @@ function isCalculatorRoutineSignalEvent(event: LearningSignalEventRecord) {
     && getMetadataString(event.metadataJson ?? {}, "bridgeVersion") === "calculator_routine_learning_signal_v1";
 }
 
+function getEventOccurrence(event: LearningSignalEventRecord) {
+  const completedAt = getMetadataString(event.metadataJson ?? {}, "completedAt");
+  const completedTs = Date.parse(completedAt);
+  if (Number.isFinite(completedTs)) {
+    return { timestamp: completedTs, iso: new Date(completedTs).toISOString() };
+  }
+  const createdTs = Date.parse(event.createdAt);
+  return {
+    timestamp: Number.isFinite(createdTs) ? createdTs : 0,
+    iso: Number.isFinite(createdTs) ? new Date(createdTs).toISOString() : event.createdAt,
+  };
+}
+
 export function buildActiveCalculatorRoutineReviewCandidates(
   events: LearningSignalEventRecord[],
   now = new Date(),
@@ -348,29 +432,27 @@ export function buildActiveCalculatorRoutineReviewCandidates(
   const cutoff = now.getTime() - 7 * 86_400_000;
   const calculatorEvents = events
     .filter(isCalculatorRoutineSignalEvent)
-    .filter((event) => {
-      const createdTs = Date.parse(event.createdAt);
-      return Number.isFinite(createdTs) && createdTs >= cutoff && createdTs <= now.getTime();
+    .map((event) => ({ event, occurrence: getEventOccurrence(event) }))
+    .filter(({ occurrence }) => {
+      return Number.isFinite(occurrence.timestamp) && occurrence.timestamp >= cutoff && occurrence.timestamp <= now.getTime();
     })
-    .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt));
+    .sort((left, right) =>
+      right.occurrence.timestamp - left.occurrence.timestamp ||
+      Date.parse(right.event.createdAt) - Date.parse(left.event.createdAt)
+    );
 
-  const newestCleanTs = calculatorEvents
-    .filter((event) => getMetadataString(event.metadataJson ?? {}, "result") === "done")
-    .map((event) => Date.parse(event.createdAt))
-    .filter(Number.isFinite)
-    .sort((left, right) => right - left)[0] ?? null;
+  const latestByRoutineId = new Map<string, (typeof calculatorEvents)[number]>();
+  for (const item of calculatorEvents) {
+    const routineId = getMetadataString(item.event.metadataJson ?? {}, "routineId") || item.event.id;
+    if (!latestByRoutineId.has(routineId)) latestByRoutineId.set(routineId, item);
+  }
 
-  const seenRoutineIds = new Set<string>();
   const candidates: CalculatorRoutineReviewCandidate[] = [];
-  for (const event of calculatorEvents) {
+  for (const { event, occurrence } of latestByRoutineId.values()) {
     const metadata = event.metadataJson ?? {};
     const result = getMetadataString(metadata, "result");
     if (result === "done") continue;
-    const createdTs = Date.parse(event.createdAt);
-    if (newestCleanTs !== null && createdTs < newestCleanTs) continue;
     const routineId = getMetadataString(metadata, "routineId") || event.id;
-    if (seenRoutineIds.has(routineId)) continue;
-    seenRoutineIds.add(routineId);
     candidates.push({
       metadataOnly: true,
       id: `calculator-routine-review-${event.id}`,
@@ -381,7 +463,7 @@ export function buildActiveCalculatorRoutineReviewCandidates(
       nextAction: "계산·검산 다시 하기",
       sourceLabel: "계산·검산 루틴 기반",
       dueHint: getMetadataString(metadata, "reviewDueHint") as ExecutionReviewDueHint || "tomorrow",
-      createdAt: event.createdAt,
+      createdAt: occurrence.iso,
       prioritySignals: event.derivedTags,
       primaryMistakeType: getMetadataString(metadata, "primaryMistakeType") as CalculatorRoutineMistakeType || undefined,
       stuckStepIds: getMetadataStringArray(metadata, "stuckStepIds") as CalculatorRoutineStepId[],

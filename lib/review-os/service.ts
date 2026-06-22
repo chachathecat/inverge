@@ -589,6 +589,7 @@ export class ReviewOsService {
       metadataOnly: true,
       routineType: "calculator_routine",
       routineId: bridge.sanitizedSignal.routineId,
+      completionFingerprint: bridge.completionFingerprint,
       persistenceStatus: status,
       result: bridge.executionSignal.result,
       reviewCandidateCreated: bridge.reviewCandidateCreated,
