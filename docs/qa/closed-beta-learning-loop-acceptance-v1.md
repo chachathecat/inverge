@@ -6,6 +6,8 @@
 
 Closed-beta acceptance is not production rollout approval. This document accepts the default/local learner loop for closed-beta dogfood only, while keeping optional durable Personal Concept Graph rollout paths blocked or not verified where runtime evidence is missing.
 
+This was a pre-M418 core-loop baseline. It did not implement or verify mobile PWA installation, Web Push subscription, scheduled push reminders, or mobile OS notification delivery.
+
 ## Run Metadata
 
 | Item | Value |

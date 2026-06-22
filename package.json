@@ -27,6 +27,8 @@
     "eval:appraiser-domain-quality": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs --test tests/appraiser-domain-quality-eval.test.mjs",
     "check:closed-beta-readiness": "node scripts/check-closed-beta-readiness.mjs",
     "check:closed-beta-learning-loop-acceptance": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs --test tests/closed-beta-learning-loop-acceptance-v1.test.mjs",
+    "check:mobile-pwa-web-push-reminder": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs --test tests/mobile-pwa-web-push-reminder-v1.test.mjs tests/web-push-data-boundary.test.mjs tests/push-subscription-persistence.test.mjs tests/scheduled-reminder-idempotency.test.mjs tests/notification-settings-ui.test.mjs",
+    "generate:vapid": "node scripts/generate-vapid.mjs",
     "check:staging-learner-routes": "node scripts/check-staging-learner-routes.mjs",
     "check:personal-concept-graph-rls": "node scripts/verify-personal-concept-graph-rls.mjs",
     "check:personal-concept-graph-durable-read": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs scripts/verify-personal-concept-graph-durable-read.mjs",
@@ -48,6 +50,7 @@
     "@google/generative-ai": "^0.24.1",
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.103.3",
+    "@types/web-push": "^3.6.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "fast-xml-parser": "^5.8.0",
@@ -59,7 +62,8 @@
     "react-dom": "19.2.4",
     "react-dropzone": "^15.0.0",
     "recharts": "^3.8.1",
-    "tailwind-merge": "^3.5.0"
+    "tailwind-merge": "^3.5.0",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@playwright/test": "^1.51.1",

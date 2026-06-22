@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { ProfileSetupForm } from "@/components/review-os/profile-setup-form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getEntitlementLimit } from "@/lib/review-os/entitlements";
@@ -57,6 +59,17 @@ export default async function ReviewOsSettingsPage({ searchParams }: PageProps) 
             <p>월간 처리 한도: {limits.monthlyWrongAnswers}개</p>
             <p>이번 달 사용량: {usage?.monthlyUsed ?? 0}개</p>
             <p>남은 처리량: {usage?.remaining ?? limits.monthlyWrongAnswers}개</p>
+          </CardContent>
+        </Card>
+        <Card className="border-[var(--border)] bg-[color:var(--surface)] shadow-none">
+          <CardHeader>
+            <CardTitle>알림 설정</CardTitle>
+            <CardDescription>문제·답안·계산 내용 없이 오늘 할 일과 복습 알림만 설정합니다.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link href={`/app/settings/notifications?mode=${modeState.mode}`} className="inline-flex min-h-10 items-center rounded-full border border-[color:var(--border-subtle)] px-4 text-sm font-medium text-[color:var(--foreground-strong)]">
+              알림 설정 열기
+            </Link>
           </CardContent>
         </Card>
       </div>

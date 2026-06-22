@@ -12,6 +12,21 @@ The historical baseline above remains in force. After PR #417, closed-beta accep
 
 Capture -> Study Note -> Concept Candidate -> Today Plan -> Review Queue -> Retrieval Review -> Calculator Routine -> Learning Record -> Personal Concept State -> Recovery
 
+## M418 Mobile Reminder Gate
+
+M418 extends the gate with mobile PWA and Web Push reminder source checks:
+
+- PWA manifest and service worker exist.
+- service worker only handles push and notification clicks, without broad offline caching.
+- notification click destinations are restricted to `/app` and `/app/review`.
+- notification settings, subscribe, unsubscribe, test, and protected cron routes exist.
+- push payloads use an exact metadata-only allowlist.
+- notification persistence tables use RLS and do not add raw learner-content columns.
+- cron delivery uses a unique delivery key for dedupe.
+- focused M418 tests run through `npm.cmd run check:mobile-pwa-web-push-reminder`.
+
+Passing the local gate does not verify real mobile OS delivery. Android/iPhone runtime acceptance is deferred to M419 after M418 is deployed with HTTPS, VAPID keys, Supabase migration, and scheduler configuration.
+
 | Step | Durable path | Local fallback | Feature-flagged | Auth required | Metadata-only boundary | Draft / verification status |
 | --- | --- | --- | --- | --- | --- | --- |
 | Capture | Existing account-backed save when available | Browser-local closed-beta note fallback | No new flag | Required for account save | Shared capture signals are metadata-only; learner note may hold user-owned raw text | OCR/AI output remains an editable draft |
