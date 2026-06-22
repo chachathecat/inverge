@@ -45,6 +45,7 @@ function assertNoOfficialClaims(value: unknown): void {
 }
 
 function estimateMinutes(taskType: string) {
+  if (taskType === "calculator_routine") return 10;
   if (taskType === "rewrite") return 15;
   if (taskType === "CASIO" || taskType === "accounting template") return 12;
   return 10;

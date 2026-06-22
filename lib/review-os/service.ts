@@ -21,6 +21,7 @@ import {
   buildCalculatorRoutineBridge,
   buildCalculatorRoutineNextPlanSignal,
 } from "@/lib/review-os/calculator-routine-learning-signal";
+import { maybeUpdateCalculatorRoutineConceptState } from "@/lib/review-os/calculator-routine-concept-state";
 import { buildLearningMetricEvent } from "@/lib/review-os/learning-metrics";
 import { recordLearningMetricIfEnabled } from "@/lib/review-os/learning-metrics-sink";
 import { buildSecondAnswerRewriteSignal } from "@/lib/review-os/second-answer-rewrite";
@@ -584,7 +585,24 @@ export class ReviewOsService {
       bridge.learningEventId,
       bridge.learningEventInput,
     );
+    const conceptStateResult = await maybeUpdateCalculatorRoutineConceptState({
+      userId,
+      bridge,
+      persistedEvent: record,
+    });
     const nextPlanSignal = buildCalculatorRoutineNextPlanSignal(bridge);
+    if (conceptStateResult.status === "updated") {
+      await reviewOsRepository.logUsageEvent(userId, "calculator_routine_concept_state_updated", "learning_signal_events", record.id, {
+        metadataOnly: true,
+        conceptNodeId: conceptStateResult.conceptNodeId,
+        conceptFamily: "검산/CASIO",
+        conceptStateStatus: conceptStateResult.status,
+        previousState: conceptStateResult.previousState,
+        nextState: conceptStateResult.nextState,
+        taskType: "calculator_routine",
+        containsRawContent: false,
+      });
+    }
     await reviewOsRepository.logUsageEvent(userId, "calculator_routine_completed", "learning_signal_events", record.id, {
       metadataOnly: true,
       routineType: "calculator_routine",
@@ -592,6 +610,13 @@ export class ReviewOsService {
       completionFingerprint: bridge.completionFingerprint,
       persistenceStatus: status,
       result: bridge.executionSignal.result,
+      conceptNodeId: conceptStateResult.conceptNodeId,
+      conceptFamily: "검산/CASIO",
+      conceptStateStatus: conceptStateResult.status,
+      previousState: conceptStateResult.previousState,
+      nextState: conceptStateResult.nextState,
+      taskType: "calculator_routine",
+      containsRawContent: false,
       reviewCandidateCreated: bridge.reviewCandidateCreated,
       todayPlanCandidateCreated: bridge.todayPlanCandidateCreated,
       nextPlanCandidateTypes: nextPlanSignal.candidates.map((candidate) => candidate.taskType),
@@ -606,6 +631,10 @@ export class ReviewOsService {
       todayPlanCandidateCreated: bridge.todayPlanCandidateCreated,
       cleanCompletion: bridge.cleanCompletion,
       nextTaskType: bridge.learningEventInput.nextTaskType,
+      conceptStateStatus: conceptStateResult.status,
+      conceptNodeId: conceptStateResult.conceptNodeId,
+      previousState: conceptStateResult.previousState,
+      nextState: conceptStateResult.nextState,
     };
   }
 

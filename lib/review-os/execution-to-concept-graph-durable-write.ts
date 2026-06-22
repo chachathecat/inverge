@@ -11,6 +11,7 @@ import {
 export type ExecutionToConceptGraphDurableWriteContext = {
   env?: NodeJS.ProcessEnv;
   repositoryAdapter?: Pick<PersonalConceptGraphRepositoryAdapter, "mode" | "getPersonalConceptNode" | "upsertPersonalConceptNode">;
+  revisionPolicy?: "default" | "monotonic_updated_at";
 };
 
 export type ExecutionToConceptGraphDurableWriteSkipped = {
@@ -19,10 +20,38 @@ export type ExecutionToConceptGraphDurableWriteSkipped = {
   reason: "durable_writes_disabled";
 };
 
+export type ExecutionToConceptGraphDurableWriteMonotonicSkipped = {
+  ok: true;
+  skipped: true;
+  reason: "already_applied" | "stale_signal";
+  repositoryMode: "supabase";
+  node: Pick<
+    PersonalConceptNode,
+    | "id"
+    | "userId"
+    | "examMode"
+    | "subjectId"
+    | "unitId"
+    | "state"
+    | "confidence"
+    | "lastResult"
+    | "lastTaskType"
+    | "wrongCount"
+    | "recoveryCount"
+    | "stableCount"
+    | "nextRecommendedTaskType"
+    | "nextDueAt"
+    | "updatedAt"
+    | "metadataOnly"
+  >;
+  metadataOnly: true;
+};
+
 export type ExecutionToConceptGraphDurableWriteWritten = {
   ok: true;
   skipped: false;
   repositoryMode: "supabase";
+  previousNode: Pick<PersonalConceptNode, "state" | "updatedAt" | "metadataOnly"> | null;
   node: Pick<
     PersonalConceptNode,
     | "id"
@@ -47,6 +76,7 @@ export type ExecutionToConceptGraphDurableWriteWritten = {
 
 export type ExecutionToConceptGraphDurableWriteResult =
   | ExecutionToConceptGraphDurableWriteSkipped
+  | ExecutionToConceptGraphDurableWriteMonotonicSkipped
   | ExecutionToConceptGraphDurableWriteWritten;
 
 const FORBIDDEN_DURABLE_SIGNAL_FIELD_NAMES = new Set([
@@ -147,36 +177,73 @@ function sanitizeUpdate(update: PersonalConceptSignalInput): PersonalConceptSign
   };
 }
 
-function metadataOnlyResult(node: PersonalConceptNode): ExecutionToConceptGraphDurableWriteWritten {
+function metadataOnlyNode(node: PersonalConceptNode): ExecutionToConceptGraphDurableWriteWritten["node"] {
   assertNoForbiddenDurableFields(node);
   assertSupportedExamMode(node.examMode);
   assertSupportedNodeState(node.state);
   if (node.metadataOnly !== true) throw new Error("Durable Personal Concept Graph write returned a non-metadataOnly node.");
 
   return {
+    id: node.id,
+    userId: node.userId,
+    examMode: node.examMode,
+    subjectId: node.subjectId,
+    unitId: node.unitId,
+    state: node.state,
+    confidence: node.confidence,
+    lastResult: node.lastResult,
+    lastTaskType: node.lastTaskType,
+    wrongCount: node.wrongCount,
+    recoveryCount: node.recoveryCount,
+    stableCount: node.stableCount,
+    nextRecommendedTaskType: node.nextRecommendedTaskType,
+    nextDueAt: node.nextDueAt,
+    updatedAt: node.updatedAt,
+    metadataOnly: true,
+  };
+}
+
+function metadataOnlyResult(
+  node: PersonalConceptNode,
+  previousNode: PersonalConceptNode | null,
+): ExecutionToConceptGraphDurableWriteWritten {
+  return {
     ok: true,
     skipped: false,
     repositoryMode: "supabase",
-    node: {
-      id: node.id,
-      userId: node.userId,
-      examMode: node.examMode,
-      subjectId: node.subjectId,
-      unitId: node.unitId,
-      state: node.state,
-      confidence: node.confidence,
-      lastResult: node.lastResult,
-      lastTaskType: node.lastTaskType,
-      wrongCount: node.wrongCount,
-      recoveryCount: node.recoveryCount,
-      stableCount: node.stableCount,
-      nextRecommendedTaskType: node.nextRecommendedTaskType,
-      nextDueAt: node.nextDueAt,
-      updatedAt: node.updatedAt,
+    previousNode: previousNode ? {
+      state: previousNode.state,
+      updatedAt: previousNode.updatedAt,
       metadataOnly: true,
-    },
+    } : null,
+    node: metadataOnlyNode(node),
     metadataOnly: true,
   };
+}
+
+function metadataOnlyMonotonicSkipped(
+  reason: ExecutionToConceptGraphDurableWriteMonotonicSkipped["reason"],
+  node: PersonalConceptNode,
+): ExecutionToConceptGraphDurableWriteMonotonicSkipped {
+  return {
+    ok: true,
+    skipped: true,
+    reason,
+    repositoryMode: "supabase",
+    node: metadataOnlyNode(node),
+    metadataOnly: true,
+  };
+}
+
+function compareRevision(previous: PersonalConceptNode | null, update: PersonalConceptSignalInput & { userId: string }) {
+  if (!previous) return "newer";
+  const incomingTs = Date.parse(update.updatedAt);
+  const previousTs = Date.parse(previous.updatedAt);
+  if (!Number.isFinite(incomingTs)) throw new Error(`Invalid updatedAt for durable Personal Concept Graph write: ${update.updatedAt}`);
+  if (!Number.isFinite(previousTs)) return "newer";
+  if (incomingTs < previousTs) return "older";
+  if (incomingTs === previousTs) return "equal";
+  return "newer";
 }
 
 export async function maybeWriteExecutionSignalToConceptGraph(
@@ -197,8 +264,13 @@ export async function maybeWriteExecutionSignalToConceptGraph(
 
   const update = sanitizeUpdate(buildConceptGraphUpdateFromExecutionSignal(safeSignal));
   const previous = await repository.getPersonalConceptNode(update.userId, update.examMode, update.subjectId, update.unitId);
+  if (context.revisionPolicy === "monotonic_updated_at") {
+    const revision = compareRevision(previous, update);
+    if (previous && revision === "older") return metadataOnlyMonotonicSkipped("stale_signal", previous);
+    if (previous && revision === "equal") return metadataOnlyMonotonicSkipped("already_applied", previous);
+  }
   const nextNode = updatePersonalConceptNode(previous, update);
   const written = await repository.upsertPersonalConceptNode(nextNode);
 
-  return metadataOnlyResult(written);
+  return metadataOnlyResult(written, previous);
 }
