@@ -12,12 +12,16 @@ import {
   buildCalculatorRoutineBridge,
   buildCalculatorRoutineCompletionFingerprint,
   buildCalculatorRoutineLearningEventId,
+  buildCalculatorRoutineRecoveryHref,
+  getCalculatorRoutineEventOccurrence,
   getCalculatorRoutineCompletionOutcome,
   isValidCalculatorRoutineId,
   normalizeCalculatorRoutineId,
+  parseCalculatorRoutineRecoveryReference,
   parseCalculatorRoutineCompletionSignalForServer,
 } from "../lib/review-os/calculator-routine-learning-signal.ts";
 import { buildTodayPlanTasks, TODAY_PLAN_MAX_PRIMARY_TASKS } from "../lib/review-os/today-plan-engine.ts";
+import { buildLearnerTodayPlanTasksWithGatedDurableConceptGraph } from "../lib/review-os/today-plan-learner-route-integration.ts";
 
 const USER_ID = "00000000-0000-4000-8000-000000000416";
 const NOW = new Date("2026-06-22T09:00:00.000Z");
@@ -148,6 +152,64 @@ test("routine id parser accepts only production-compatible opaque identifiers", 
     parseCalculatorRoutineCompletionSignalForServer({ ...signal, routineId: "raw 문제 원문입니다" });
   } catch (error) {
     assert.equal(String(error).includes("raw 문제 원문입니다"), false);
+  }
+});
+
+test("calculator routine recovery reference is typed metadata and builds safe hrefs", () => {
+  const problemSnapReference = parseCalculatorRoutineRecoveryReference({
+    metadataOnly: true,
+    routineId: "problem-snap-550e8400-e29b-41d4-a716-446655440000",
+    source: "problem-snap",
+  });
+  const answerReviewReference = parseCalculatorRoutineRecoveryReference({
+    metadataOnly: true,
+    routineId: "answer-review-550e8400-e29b-41d4-a716-446655440000",
+    source: "answer-review",
+  });
+
+  assert.deepEqual(problemSnapReference, {
+    metadataOnly: true,
+    routineId: "problem-snap-550e8400-e29b-41d4-a716-446655440000",
+    source: "problem-snap",
+  });
+  assert.equal(
+    buildCalculatorRoutineRecoveryHref(problemSnapReference),
+    "/app/calculator?mode=second&context=practice&focus=casio&recoveryRoutineId=problem-snap-550e8400-e29b-41d4-a716-446655440000&recoverySource=problem-snap",
+  );
+  assert.equal(
+    buildCalculatorRoutineRecoveryHref(answerReviewReference),
+    "/app/calculator?mode=second&context=practice&focus=casio&recoveryRoutineId=answer-review-550e8400-e29b-41d4-a716-446655440000&recoverySource=answer-review",
+  );
+
+  assert.throws(
+    () => parseCalculatorRoutineRecoveryReference({
+      metadataOnly: true,
+      routineId: "problem-snap-550e8400-e29b-41d4-a716-446655440000",
+      source: "answer-review",
+    }),
+    /calculator-routine-invalid-routine-id/,
+  );
+  assert.throws(
+    () => parseCalculatorRoutineRecoveryReference({
+      metadataOnly: true,
+      routineId: RAW_PROBLEM_SENTINEL,
+      source: "problem-snap",
+    }),
+    /calculator-routine-invalid-routine-id/,
+  );
+  try {
+    parseCalculatorRoutineRecoveryReference({
+      metadataOnly: true,
+      routineId: RAW_PROBLEM_SENTINEL,
+      source: "problem-snap",
+    });
+  } catch (error) {
+    assert.equal(String(error).includes(RAW_PROBLEM_SENTINEL), false);
+  }
+
+  const href = buildCalculatorRoutineRecoveryHref(problemSnapReference);
+  for (const sentinel of [RAW_PROBLEM_SENTINEL, RAW_ANSWER_SENTINEL, RAW_FORMULA_SENTINEL, RAW_CASIO_SENTINEL]) {
+    assert.equal(href.includes(sentinel), false);
   }
 });
 
@@ -315,6 +377,16 @@ test("active calculator routine review candidates use completedAt lifecycle per 
   ], NOW);
   assert.equal(freshCandidates.length, 1);
   assert.equal(freshCandidates[0].metadataOnly, true);
+  assert.equal(freshCandidates[0].source, "problem-snap");
+  assert.deepEqual(freshCandidates[0].recoveryReference, {
+    metadataOnly: true,
+    routineId: "problem-snap-candidate",
+    source: "problem-snap",
+  });
+  assert.equal(
+    buildCalculatorRoutineRecoveryHref(freshCandidates[0].recoveryReference),
+    "/app/calculator?mode=second&context=practice&focus=casio&recoveryRoutineId=problem-snap-candidate&recoverySource=problem-snap",
+  );
   assert.equal(freshCandidates[0].sourceLabel, "계산·검산 루틴 기반");
   assert.equal(freshCandidates[0].nextAction, "계산·검산 다시 하기");
   assert.equal(JSON.stringify(freshCandidates[0]).includes("answerText"), false);
@@ -332,6 +404,35 @@ test("active calculator routine review candidates use completedAt lifecycle per 
     eventFromBridge(unrelatedClean, "2026-06-22T08:30:00.000Z", "2026-06-22T08:30:00.000Z"),
   ], NOW);
   assert.equal(unrelatedCleanDoesNotSuppress.length, 1);
+
+  const malformedSourceMismatch = buildActiveCalculatorRoutineReviewCandidates([
+    {
+      ...eventFromBridge(wrongBridge, "2026-06-22T08:10:00.000Z", "2026-06-22T08:10:00.000Z"),
+      metadataJson: {
+        ...wrongBridge.learningEventInput.metadataJson,
+        routineId: "problem-snap-candidate",
+        source: "answer-review",
+      },
+    },
+  ], NOW);
+  assert.equal(malformedSourceMismatch.length, 0);
+
+  const futureWrongEvent = eventFromBridge(wrongBridge, NOW.toISOString(), "2026-06-22T09:10:00.000Z");
+  const futureOccurrence = getCalculatorRoutineEventOccurrence(futureWrongEvent, NOW);
+  assert.equal(futureOccurrence.iso, NOW.toISOString());
+  assert.ok(futureOccurrence.timestamp <= NOW.getTime());
+  const futureWrongVisible = buildActiveCalculatorRoutineReviewCandidates([futureWrongEvent], NOW);
+  assert.equal(futureWrongVisible.length, 1);
+  assert.equal(futureWrongVisible[0].createdAt, NOW.toISOString());
+
+  const oldWrong = eventFromBridge(wrongBridge, "2026-06-22T12:00:00.000Z", "2026-06-22T10:00:00.000Z");
+  const delayedClean = eventFromBridge(cleanBridge, "2026-06-22T12:00:00.000Z", "2026-06-22T09:00:00.000Z");
+  const delayedCleanDoesNotCloseNewerWrong = buildActiveCalculatorRoutineReviewCandidates([delayedClean, oldWrong], new Date("2026-06-22T12:00:00.000Z"));
+  assert.equal(delayedCleanDoesNotCloseNewerWrong.length, 1);
+
+  const laterClean = eventFromBridge(cleanBridge, "2026-06-22T12:00:00.000Z", "2026-06-22T11:00:00.000Z");
+  const laterCleanClosesEarlierWrong = buildActiveCalculatorRoutineReviewCandidates([oldWrong, laterClean], new Date("2026-06-22T12:00:00.000Z"));
+  assert.equal(laterCleanClosesEarlierWrong.length, 0);
 });
 
 test("Today Plan surfaces the dedicated calculator routine task without exceeding max three", () => {
@@ -351,6 +452,57 @@ test("Today Plan surfaces the dedicated calculator routine task without exceedin
   assert.equal(tasks[0].primary_cta.hrefKind, "calculator_template");
   assert.equal(tasks[0].source_label, "계산·검산 루틴 기반");
   assert.equal(tasks[0].estimated_minutes, 10);
+  assert.deepEqual(tasks[0].calculator_routine_recovery, {
+    metadataOnly: true,
+    routineId: "problem-snap-today",
+    source: "problem-snap",
+  });
+  assert.equal(
+    buildCalculatorRoutineRecoveryHref(tasks[0].calculator_routine_recovery),
+    "/app/calculator?mode=second&context=practice&focus=casio&recoveryRoutineId=problem-snap-today&recoverySource=problem-snap",
+  );
+
+  const secondBridge = buildCalculatorRoutineBridge(USER_ID, signalFromDraft({ routineId: "problem-snap-today-second", mistakeTypes: ["rounding"] }));
+  const cappedTasks = buildTodayPlanTasks({
+    mode: "second",
+    queue: [],
+    items: [],
+    learningSignals: [eventFromBridge(bridge), eventFromBridge(secondBridge)],
+    now: NOW,
+  });
+  assert.equal(cappedTasks.filter((task) => task.task_type === "calculator_routine").length, 1);
+  assert.ok(cappedTasks.length <= TODAY_PLAN_MAX_PRIMARY_TASKS);
+});
+
+test("Today Plan durable integration preserves calculator routine recovery references", async () => {
+  const bridge = buildCalculatorRoutineBridge(USER_ID, signalFromDraft({ routineId: "problem-snap-durable-today", mistakeTypes: ["display_reading"] }));
+  const tasks = await buildLearnerTodayPlanTasksWithGatedDurableConceptGraph({
+    userId: USER_ID,
+    mode: "second",
+    queue: [],
+    items: [],
+    learningSignals: [eventFromBridge(bridge)],
+    now: NOW,
+    env: {
+      PERSONAL_CONCEPT_GRAPH_REPOSITORY: "supabase",
+      PERSONAL_CONCEPT_GRAPH_DURABLE_READS: "1",
+      PERSONAL_CONCEPT_GRAPH_TODAY_PLAN_ROLLOUT: "1",
+    },
+    durableReadHelper: async () => ({
+      ok: true,
+      skipped: false,
+      repositoryMode: "supabase",
+      actions: [],
+      metadataOnly: true,
+    }),
+  });
+
+  assert.equal(tasks[0].task_type, "calculator_routine");
+  assert.deepEqual(tasks[0].calculator_routine_recovery, {
+    metadataOnly: true,
+    routineId: "problem-snap-durable-today",
+    source: "problem-snap",
+  });
 });
 
 test("UI integration uses the existing onComplete path and the single completion route", () => {
@@ -358,12 +510,24 @@ test("UI integration uses the existing onComplete path and the single completion
   const answerReview = readFileSync("app/answer-review/answer-review-client.tsx", "utf8");
   const sync = readFileSync("components/review-os/calculator-routine-sync-status.tsx", "utf8");
   const route = readFileSync("app/api/os/calculator-routine/complete/route.ts", "utf8");
+  const calculatorRoute = readFileSync("app/app/calculator/page.tsx", "utf8");
+  const workflowPage = readFileSync("components/review-os/calculator-workflow-page.tsx", "utf8");
 
   assert.ok(problemSnap.includes("onComplete={calculatorRoutineSync.syncCompletion}"));
   assert.ok(answerReview.includes("onComplete={calculatorRoutineSync.syncCompletion}"));
   assert.ok(sync.includes('fetch("/api/os/calculator-routine/complete"'));
   assert.ok(sync.includes('response.status === 401'));
   assert.ok(route.includes("completeCalculatorRoutine"));
+  assert.ok(calculatorRoute.includes("recoveryRoutineId"));
+  assert.ok(calculatorRoute.includes("recoverySource"));
+  assert.ok(calculatorRoute.includes("parseCalculatorRoutineRecoveryReference"));
+  assert.ok(workflowPage.includes("data-calculator-routine-recovery-section"));
+  assert.ok(workflowPage.includes("routineId={recoveryReference.routineId}"));
+  assert.ok(workflowPage.includes("source={recoveryReference.source}"));
+  assert.ok(workflowPage.includes("onComplete={calculatorRoutineSync.syncCompletion}"));
+  assert.ok(workflowPage.includes("CalculatorRoutineSyncStatusLine"));
+  assert.ok(workflowPage.includes("{!isRecoveryMode ? ("));
+  assert.ok(workflowPage.includes("<ExecutionResultControls"));
   assert.equal(problemSnap.includes("learning_signal_events"), false);
   assert.equal(answerReview.includes("learning_signal_events"), false);
 });
@@ -371,11 +535,16 @@ test("UI integration uses the existing onComplete path and the single completion
 test("review page exposes calculator candidates separately from review queue completion", () => {
   const reviewPage = readFileSync("app/app/review/page.tsx", "utf8");
   const reviewCandidates = readFileSync("components/review-os/calculator-routine-review-candidates.tsx", "utf8");
+  const appPage = readFileSync("app/app/page.tsx", "utf8");
 
   assert.ok(reviewPage.includes("listCalculatorRoutineReviewCandidates"));
   assert.ok(reviewPage.includes("CalculatorRoutineReviewCandidates"));
   assert.ok(reviewCandidates.includes("data-calculator-routine-review-candidates"));
   assert.ok(reviewCandidates.includes("계산·검산 복습 후보"));
-  assert.ok(reviewCandidates.includes("/app/calculator?mode=second&context=practice&focus=casio"));
+  assert.ok(reviewCandidates.includes("buildCalculatorRoutineRecoveryHref(candidate.recoveryReference)"));
+  assert.equal(reviewCandidates.includes('href="/app/calculator?mode=second&context=practice&focus=casio"'), false);
+  assert.ok(appPage.includes("buildCalculatorRoutineRecoveryHref(task.calculator_routine_recovery)"));
+  assert.ok(appPage.includes("const resolveTaskHref = (task:"));
+  assert.ok(appPage.includes("<Link href={resolveTaskHref(task)}"));
   assert.equal(reviewCandidates.includes("/api/os/review-queue"), false);
 });

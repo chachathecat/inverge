@@ -72,6 +72,7 @@ function toUnifiedAction(task: TodayPlanTask): TodayPlanUnifiedAction {
     displayReason: task.display_reason,
     displaySourceLabel: task.display_source_label,
     displayPrimaryCta: task.display_primary_cta,
+    calculatorRoutineRecovery: task.calculator_routine_recovery,
   };
 }
 
@@ -96,6 +97,7 @@ function toDurableTask(action: TodayPlanUnifiedAction, mode: "first" | "second")
     display_reason: action.displayReason,
     display_source_label: action.displaySourceLabel,
     display_primary_cta: action.displayPrimaryCta,
+    calculator_routine_recovery: action.calculatorRoutineRecovery,
   };
 }
 

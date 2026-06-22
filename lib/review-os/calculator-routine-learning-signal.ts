@@ -6,6 +6,7 @@ import {
   CALCULATOR_ROUTINE_VERIFICATION_OPTIONS,
   sanitizeCalculatorRoutineCompletionSignal,
   type CalculatorRoutineCompletionSignalV1,
+  type CalculatorRoutineSource,
   type CalculatorRoutineMistakeType,
   type CalculatorRoutineStepId,
   type CalculatorRoutineVerificationMethod,
@@ -23,6 +24,11 @@ import type { LearningSignalEventInput, LearningSignalEventRecord } from "./type
 export type CalculatorRoutineLearningRecordStatus = "saved" | "deduped";
 export type CalculatorRoutineSyncStatus = CalculatorRoutineLearningRecordStatus | "local_only" | "failed";
 export type CalculatorRoutineCompletionOutcome = "done" | "wrong" | "unknown";
+export type CalculatorRoutineRecoveryReference = {
+  metadataOnly: true;
+  routineId: string;
+  source: CalculatorRoutineSource;
+};
 
 export type CalculatorRoutineLearningBridge = {
   sanitizedSignal: CalculatorRoutineCompletionSignalV1;
@@ -40,6 +46,8 @@ export type CalculatorRoutineReviewCandidate = {
   metadataOnly: true;
   id: string;
   routineId: string;
+  source: CalculatorRoutineSource;
+  recoveryReference: CalculatorRoutineRecoveryReference;
   sourceEventId: string;
   subject: "감정평가실무";
   title: "계산·검산 복습 후보";
@@ -149,6 +157,11 @@ function metadataValue(value: unknown, key: string) {
   return isRecord(value) ? value[key] : undefined;
 }
 
+function normalizeCalculatorRoutineSource(value: unknown): CalculatorRoutineSource {
+  if (value === "problem-snap" || value === "answer-review") return value;
+  throw new Error("calculator-routine-invalid-source");
+}
+
 export function normalizeCalculatorRoutineId(value: unknown, source: "problem-snap" | "answer-review") {
   if (typeof value !== "string" || value.length === 0 || value !== value.trim()) {
     throw new Error("calculator-routine-invalid-routine-id");
@@ -168,6 +181,31 @@ export function isValidCalculatorRoutineId(value: unknown, source: "problem-snap
   } catch {
     return false;
   }
+}
+
+export function parseCalculatorRoutineRecoveryReference(input: unknown): CalculatorRoutineRecoveryReference {
+  if (!isRecord(input) || input.metadataOnly !== true) {
+    throw new Error("calculator-routine-invalid-recovery-reference");
+  }
+  const source = normalizeCalculatorRoutineSource(input.source);
+  const routineId = normalizeCalculatorRoutineId(input.routineId, source);
+  return {
+    metadataOnly: true,
+    routineId,
+    source,
+  };
+}
+
+export function buildCalculatorRoutineRecoveryHref(input: CalculatorRoutineRecoveryReference) {
+  const reference = parseCalculatorRoutineRecoveryReference(input);
+  const params = new URLSearchParams({
+    mode: "second",
+    context: "practice",
+    focus: "casio",
+    recoveryRoutineId: reference.routineId,
+    recoverySource: reference.source,
+  });
+  return `/app/calculator?${params.toString()}`;
 }
 
 function sortByKnownOrder<T extends string>(values: T[], order: readonly string[]) {
@@ -411,17 +449,22 @@ function isCalculatorRoutineSignalEvent(event: LearningSignalEventRecord) {
     && getMetadataString(event.metadataJson ?? {}, "bridgeVersion") === "calculator_routine_learning_signal_v1";
 }
 
-function getEventOccurrence(event: LearningSignalEventRecord) {
+export function getCalculatorRoutineEventOccurrence(event: LearningSignalEventRecord, now = new Date()) {
+  const nowTs = Number.isFinite(now.getTime()) ? now.getTime() : Date.now();
   const completedAt = getMetadataString(event.metadataJson ?? {}, "completedAt");
   const completedTs = Date.parse(completedAt);
-  if (Number.isFinite(completedTs)) {
-    return { timestamp: completedTs, iso: new Date(completedTs).toISOString() };
-  }
   const createdTs = Date.parse(event.createdAt);
-  return {
-    timestamp: Number.isFinite(createdTs) ? createdTs : 0,
-    iso: Number.isFinite(createdTs) ? new Date(createdTs).toISOString() : event.createdAt,
-  };
+  const safeCreatedTs = Number.isFinite(createdTs) ? Math.min(createdTs, nowTs) : nowTs;
+  let occurrenceTs = safeCreatedTs;
+
+  if (Number.isFinite(completedTs)) {
+    occurrenceTs = completedTs <= nowTs && (!Number.isFinite(createdTs) || completedTs <= createdTs)
+      ? completedTs
+      : safeCreatedTs;
+  }
+
+  const boundedTs = Math.min(occurrenceTs, nowTs);
+  return { timestamp: boundedTs, iso: new Date(boundedTs).toISOString() };
 }
 
 export function buildActiveCalculatorRoutineReviewCandidates(
@@ -432,7 +475,24 @@ export function buildActiveCalculatorRoutineReviewCandidates(
   const cutoff = now.getTime() - 7 * 86_400_000;
   const calculatorEvents = events
     .filter(isCalculatorRoutineSignalEvent)
-    .map((event) => ({ event, occurrence: getEventOccurrence(event) }))
+    .map((event) => {
+      try {
+        const metadata = event.metadataJson ?? {};
+        const recoveryReference = parseCalculatorRoutineRecoveryReference({
+          metadataOnly: true,
+          routineId: getMetadataString(metadata, "routineId"),
+          source: getMetadataString(metadata, "source"),
+        });
+        return {
+          event,
+          occurrence: getCalculatorRoutineEventOccurrence(event, now),
+          recoveryReference,
+        };
+      } catch {
+        return null;
+      }
+    })
+    .filter((value): value is NonNullable<typeof value> => Boolean(value))
     .filter(({ occurrence }) => {
       return Number.isFinite(occurrence.timestamp) && occurrence.timestamp >= cutoff && occurrence.timestamp <= now.getTime();
     })
@@ -443,20 +503,22 @@ export function buildActiveCalculatorRoutineReviewCandidates(
 
   const latestByRoutineId = new Map<string, (typeof calculatorEvents)[number]>();
   for (const item of calculatorEvents) {
-    const routineId = getMetadataString(item.event.metadataJson ?? {}, "routineId") || item.event.id;
-    if (!latestByRoutineId.has(routineId)) latestByRoutineId.set(routineId, item);
+    if (!latestByRoutineId.has(item.recoveryReference.routineId)) {
+      latestByRoutineId.set(item.recoveryReference.routineId, item);
+    }
   }
 
   const candidates: CalculatorRoutineReviewCandidate[] = [];
-  for (const { event, occurrence } of latestByRoutineId.values()) {
+  for (const { event, occurrence, recoveryReference } of latestByRoutineId.values()) {
     const metadata = event.metadataJson ?? {};
     const result = getMetadataString(metadata, "result");
     if (result === "done") continue;
-    const routineId = getMetadataString(metadata, "routineId") || event.id;
     candidates.push({
       metadataOnly: true,
       id: `calculator-routine-review-${event.id}`,
-      routineId,
+      routineId: recoveryReference.routineId,
+      source: recoveryReference.source,
+      recoveryReference,
       sourceEventId: event.id,
       subject: "감정평가실무",
       title: "계산·검산 복습 후보",

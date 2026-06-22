@@ -1,6 +1,9 @@
 import Link from "next/link";
 
-import type { CalculatorRoutineReviewCandidate } from "@/lib/review-os/calculator-routine-learning-signal";
+import {
+  buildCalculatorRoutineRecoveryHref,
+  type CalculatorRoutineReviewCandidate,
+} from "@/lib/review-os/calculator-routine-learning-signal";
 
 export function CalculatorRoutineReviewCandidates({
   candidates,
@@ -24,7 +27,7 @@ export function CalculatorRoutineReviewCandidates({
               <p className="mt-1 text-xs text-[color:var(--muted)]">다음 행동: {candidate.nextAction}</p>
             </div>
             <Link
-              href="/app/calculator?mode=second&context=practice&focus=casio"
+              href={buildCalculatorRoutineRecoveryHref(candidate.recoveryReference)}
               className="inline-flex h-9 items-center justify-center rounded-full border border-[color:var(--border-subtle)] px-3 text-xs font-medium text-[color:var(--foreground-strong)]"
             >
               계산·검산 다시 하기

@@ -28,6 +28,7 @@ import { type AppraiserExamMode } from "./curriculum-reference";
 import { rankLearningStateRisk } from "./personal-learning-state-engine";
 import { buildAdaptiveTodayPlan, type AdaptiveStudyPlannerInput, type AdaptiveStudyPlanTask } from "./adaptive-study-plan-engine";
 import { enrichTodayPlanActionsWithQnetReference, type QnetTodayPlanReference } from "./qnet-reference-today-plan-adapter";
+import type { CalculatorRoutineRecoveryReference } from "./calculator-routine-learning-signal";
 
 export type TodayPlanUnifiedSource = "review_queue" | "personal_concept_graph" | "study_schedule" | "adaptive_study_plan";
 
@@ -49,6 +50,7 @@ export type TodayPlanUnifiedAction = {
   displayReason?: TodayPlanDisplayCopy["displayReason"];
   displaySourceLabel?: TodayPlanDisplayCopy["displaySourceLabel"];
   displayPrimaryCta?: TodayPlanDisplayCopy["displayPrimaryCta"];
+  calculatorRoutineRecovery?: CalculatorRoutineRecoveryReference;
 };
 
 export type TodayPlanSourceUnionContext = TodayPlanPrioritizationContext & PersonalConceptTodayContext;

@@ -3,7 +3,11 @@ import { buildTodayPlanDisplayCopy, type TodayPlanDisplayCopy } from "./today-pl
 import { rankLearningStateRisk } from "./personal-learning-state-engine";
 import { capTodayPlanTasks, rankTodayPlanCandidates } from "./study-schedule-engine";
 import { isConceptNodeCandidate, type ConceptNodeCandidate } from "./concept-node-mapping";
-import { buildActiveCalculatorRoutineReviewCandidates, type CalculatorRoutineReviewCandidate } from "./calculator-routine-learning-signal";
+import {
+  buildActiveCalculatorRoutineReviewCandidates,
+  type CalculatorRoutineRecoveryReference,
+  type CalculatorRoutineReviewCandidate,
+} from "./calculator-routine-learning-signal";
 
 export type TodayPlanTaskType =
   | "first_ox_retry"
@@ -55,6 +59,7 @@ export type TodayPlanTask = {
     targetStatus?: string;
     sourceEventType?: "capture" | "review" | "session";
   };
+  calculator_routine_recovery?: CalculatorRoutineRecoveryReference;
 };
 
 export const TODAY_PLAN_MAX_PRIMARY_TASKS = 3;
@@ -293,6 +298,7 @@ function toCalculatorRoutineTask(candidate: CalculatorRoutineReviewCandidate): T
     primary_cta: primaryCtaFor("calculator_routine", "second"),
     created_from_capture: false,
     source_label: "계산·검산 루틴 기반",
+    calculator_routine_recovery: candidate.recoveryReference,
   };
 }
 

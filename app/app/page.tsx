@@ -17,6 +17,7 @@ import { APPRAISAL_FIRST_SUBJECTS, type TodayFocus } from "@/lib/review-os/types
 import { buildTodayPlanCard, type TodayPlanActionKind } from "@/lib/review-os/today-plan";
 import { selectActiveTodayPlanTasks, TODAY_PLAN_MAX_PRIMARY_TASKS, type TodayPlanTaskKind } from "@/lib/review-os/today-plan-engine";
 import { buildLearnerTodayPlanTasksWithGatedDurableConceptGraph } from "@/lib/review-os/today-plan-learner-route-integration";
+import { buildCalculatorRoutineRecoveryHref } from "@/lib/review-os/calculator-routine-learning-signal";
 import { buildPersonalWeaknessProfile } from "@/lib/review-os/weakness-diagnostics";
 import { isOverdueDueAt, resolveDailyStudyState } from "@/lib/review-os/daily-study-state";
 
@@ -191,13 +192,21 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
     if (actionKind === "second_items") return secondNotesHref;
     return `/app/session?mode=first&subject=${encodeURIComponent(selectedFirstSubject)}`;
   };
-  const resolveTaskHref = (hrefKind: (typeof todayPlanTasks)[number]["primary_cta"]["hrefKind"]) => {
+  const resolveTaskHref = (task: (typeof todayPlanTasks)[number]) => {
+    const hrefKind = task.primary_cta.hrefKind;
     if (hrefKind === "capture") return mode === "second" ? secondCaptureHref : firstCaptureHref;
     if (hrefKind === "write") return `/app/write?mode=second&subject=${selectedSubjectQuery}`;
     if (hrefKind === "items") return mode === "second" ? secondNotesHref : firstNotesHref;
     if (hrefKind === "review") return mode === "second" ? secondReviewHref : firstReviewHref;
     if (hrefKind === "first_ox") return "/app/first/ox";
     if (hrefKind === "calculator_template") {
+      if (task.task_type === "calculator_routine" && task.calculator_routine_recovery) {
+        try {
+          return buildCalculatorRoutineRecoveryHref(task.calculator_routine_recovery);
+        } catch {
+          // Recovery metadata is optional; invalid metadata falls back to the ordinary calculator workflow.
+        }
+      }
       return mode === "second"
         ? "/app/calculator?mode=second&context=practice&focus=casio"
         : "/app/calculator?mode=first&context=accounting&focus=accounting_template";
@@ -365,7 +374,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                             <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">{task.subject} · {task.estimated_minutes}분</p>
                             <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]"><span className="font-medium text-[color:var(--foreground-strong)]">왜 지금?</span> {task.display_reason ?? task.reason}</p>
                           </div>
-                          <Link href={resolveTaskHref(task.primary_cta.hrefKind)} className="inline-flex min-h-10 w-full shrink-0 items-center justify-center rounded-full bg-[color:var(--foreground-strong)] px-3 py-2 text-xs font-medium text-white sm:w-auto">
+                          <Link href={resolveTaskHref(task)} className="inline-flex min-h-10 w-full shrink-0 items-center justify-center rounded-full bg-[color:var(--foreground-strong)] px-3 py-2 text-xs font-medium text-white sm:w-auto">
                             {task.display_primary_cta ?? task.primary_cta.label}
                           </Link>
                         </div>
