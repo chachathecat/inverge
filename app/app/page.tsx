@@ -15,7 +15,7 @@ import { buildNotebookPreview } from "@/lib/review-os/study-note";
 import { getSimilarQuestionReferenceCandidates } from "@/lib/review-os/question-reference";
 import { APPRAISAL_FIRST_SUBJECTS, type TodayFocus } from "@/lib/review-os/types";
 import { buildTodayPlanCard, type TodayPlanActionKind } from "@/lib/review-os/today-plan";
-import { selectActiveTodayPlanTasks, TODAY_PLAN_MAX_PRIMARY_TASKS, type TodayPlanTaskType } from "@/lib/review-os/today-plan-engine";
+import { selectActiveTodayPlanTasks, TODAY_PLAN_MAX_PRIMARY_TASKS, type TodayPlanTaskKind } from "@/lib/review-os/today-plan-engine";
 import { buildLearnerTodayPlanTasksWithGatedDurableConceptGraph } from "@/lib/review-os/today-plan-learner-route-integration";
 import { buildPersonalWeaknessProfile } from "@/lib/review-os/weakness-diagnostics";
 import { isOverdueDueAt, resolveDailyStudyState } from "@/lib/review-os/daily-study-state";
@@ -40,17 +40,18 @@ function buildFallbackTodayFocus(mode: "first" | "second"): TodayFocus {
   };
 }
 
-const TASK_TYPE_LABELS: Record<TodayPlanTaskType, string> = {
+const TASK_TYPE_LABELS: Record<TodayPlanTaskKind, string> = {
   first_ox_retry: "5분 재풀이",
   concept_review: "개념 1개 회상",
   cloze_review: "빈칸 회상",
   accounting_template_retry: "계산 틀 재확인",
+  calculator_routine: "계산·검산",
   second_answer_rewrite: "문단 다시쓰기",
   ocr_confirmation: "OCR 확인",
   note_cleanup: "노트 정리",
 };
 
-function resolveTaskTypeLabel(taskType: TodayPlanTaskType) {
+function resolveTaskTypeLabel(taskType: TodayPlanTaskKind) {
   return TASK_TYPE_LABELS[taskType];
 }
 

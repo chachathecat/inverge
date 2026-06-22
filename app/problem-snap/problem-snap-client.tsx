@@ -10,6 +10,10 @@ import {
   type CalculatorRoutineReferenceAccess,
   type CalculatorRoutineReferenceHints,
 } from "@/components/review-os/calculator-routine-trainer";
+import {
+  CalculatorRoutineSyncStatusLine,
+  useCalculatorRoutineLearningSignalSync,
+} from "@/components/review-os/calculator-routine-sync-status";
 import { StandaloneLearnerToolNav } from "@/components/review-os/standalone-learner-tool-nav";
 import { ResultFeedbackPrompt } from "@/components/shared/result-feedback-prompt";
 import { buttonVariants } from "@/components/ui/button";
@@ -123,6 +127,7 @@ export default function ProblemSnapClientPage({
     useState<CalculatorRoutineDraftReference | null>(null);
   const [calculatorRoutineRunId, setCalculatorRoutineRunId] = useState<string | null>(null);
   const [calculatorRoutineReferenceUnlocked, setCalculatorRoutineReferenceUnlocked] = useState(false);
+  const calculatorRoutineSync = useCalculatorRoutineLearningSignalSync();
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
@@ -400,6 +405,7 @@ export default function ProblemSnapClientPage({
     setCalculatorRoutineDraftReference(null);
     setCalculatorRoutineRunId(null);
     setCalculatorRoutineReferenceUnlocked(false);
+    calculatorRoutineSync.reset();
     try {
       const formData = new FormData();
       formData.set("examMode", examMode);
@@ -548,17 +554,25 @@ export default function ProblemSnapClientPage({
           </div>
           <p className="text-xs text-[color:var(--muted)]">{referenceGrounding?.used ? `유사 기출 Skeleton을 참고해 정리했습니다. ${referenceGrounding.displayLabel}` : "입력 자료 기준으로 정리했습니다."}</p>
           {!retryMode && problemSnapSubjectView === "practice" && calculatorRoutineEligibility ? (
-            <CalculatorRoutineTrainer
-              key={calculatorRoutineRunId ?? "problem-snap-calculator-routine"}
-              source="problem-snap"
-              examMode={examMode}
-              subject={subject}
-              eligibility={calculatorRoutineEligibility}
-              referenceHints={calculatorRoutineReferenceHints}
-              routineId={calculatorRoutineRunId}
-              onDraftReferenceChange={setCalculatorRoutineDraftReference}
-              onReferenceAccessChange={updateCalculatorReferenceAccess}
-            />
+            <>
+              <CalculatorRoutineTrainer
+                key={calculatorRoutineRunId ?? "problem-snap-calculator-routine"}
+                source="problem-snap"
+                examMode={examMode}
+                subject={subject}
+                eligibility={calculatorRoutineEligibility}
+                referenceHints={calculatorRoutineReferenceHints}
+                routineId={calculatorRoutineRunId}
+                onDraftReferenceChange={setCalculatorRoutineDraftReference}
+                onReferenceAccessChange={updateCalculatorReferenceAccess}
+                onComplete={calculatorRoutineSync.syncCompletion}
+              />
+              <CalculatorRoutineSyncStatusLine
+                status={calculatorRoutineSync.status}
+                retryAvailable={calculatorRoutineSync.retryAvailable}
+                onRetry={calculatorRoutineSync.retry}
+              />
+            </>
           ) : null}
           {!retryMode ? (
             showCalculatorGuide && calculatorEvidenceAnalysis ? (

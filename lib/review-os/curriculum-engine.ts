@@ -94,6 +94,7 @@ const TASK_TYPE_ALIASES: Record<string, string> = {
   accounting_template: "accounting template",
   "accounting template": "accounting template",
   rewrite: "rewrite",
+  calculator_routine: "calculator_routine",
   casio: "CASIO",
   issue: "issue spotting",
   issue_spotting: "issue spotting",

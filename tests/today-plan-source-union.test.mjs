@@ -93,6 +93,46 @@ test("due review outranks generic schedule focus", () => {
   assert.ok(plan[0].prioritySignals.some((signal) => signal.startsWith("review_queue_due_bucket:soon")));
 });
 
+test("calculator routine recovery keeps its dedicated task type in source union ranking", () => {
+  const plan = compressUnifiedTodayPlanToMaxThree([
+    {
+      id: "calculator-routine",
+      source: "review_queue",
+      examMode: "second",
+      subjectId: "감정평가실무",
+      unitId: "calculator-routine",
+      taskType: "calculator_routine",
+      title: "감정평가실무 계산·검산 복구",
+      rationale: "계산·검산 루틴에서 남은 복구 신호입니다.",
+      primaryAction: "계산·검산 다시 하기",
+      estimatedMinutes: 10,
+      prioritySignals: ["calculator_routine", "calculator_recovery", "review_candidate"],
+      isPrimaryTask: true,
+      metadataOnly: true,
+    },
+    {
+      id: "schedule",
+      source: "study_schedule",
+      examMode: "second",
+      subjectId: "감정평가이론",
+      unitId: "theory",
+      taskType: "rewrite",
+      title: "감정평가이론 문단 정리",
+      rationale: "일정 메타데이터입니다.",
+      primaryAction: "한 문단 다시쓰기",
+      estimatedMinutes: 15,
+      prioritySignals: ["schedule_track_focus"],
+      isPrimaryTask: true,
+      metadataOnly: true,
+    },
+  ]);
+
+  assert.equal(plan[0].taskType, "calculator_routine");
+  assert.equal(plan[0].title, "감정평가실무 계산·검산 복구");
+  assert.equal(plan[0].primaryAction, "계산·검산 다시 하기");
+  assert.equal(plan[0].metadataOnly, true);
+});
+
 test("wrong/confused concept outranks stable concept", () => {
   const stable = conceptNode("stable-unit", { result: "done", confidence: "high" });
   const confused = conceptNode("confused-unit", { result: "unknown", confidence: "low" });

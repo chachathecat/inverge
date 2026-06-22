@@ -129,6 +129,7 @@ const TASK_TYPE_ALIASES: Record<string, string> = {
   accounting_template: "accounting template",
   "accounting template": "accounting template",
   rewrite: "rewrite",
+  calculator_routine: "calculator_routine",
   casio: "CASIO",
   issue: "issue spotting",
   issue_spotting: "issue spotting",
@@ -150,6 +151,10 @@ function isNearExam(daysUntilExam: number | undefined) {
 
 function isCasioTask(taskType: string) {
   return normalizeTaskType(taskType) === "CASIO" || /casio|calculator|계산기/i.test(taskType);
+}
+
+function isCalculatorRoutineTask(taskType: string) {
+  return normalizeTaskType(taskType) === "calculator_routine";
 }
 
 function isAccountingTask(taskType: string) {
@@ -178,6 +183,7 @@ function preferredFollowUpTaskType(input: {
   }
 
   if (input.examMode === "second" && isWrongLike(input.result)) {
+    if (isCalculatorRoutineTask(taskType)) return "calculator_routine";
     if (isCasioTask(taskType)) return "CASIO";
     if (isIssueSpottingTask(taskType) && input.result === "unknown") return "issue spotting";
     return "rewrite";
@@ -218,6 +224,7 @@ function prioritySignalsFor(input: ExecutionLearningSignalInput, derivedStatus: 
   if (input.result === "wrong" || input.result === "unknown") signals.add("review_candidate");
   if (input.result === "needs_rewrite") signals.add("rewrite_candidate");
   if (input.result === "skipped") signals.add("recovery_candidate");
+  if (input.examMode === "second" && isCalculatorRoutineTask(input.taskType) && isWrongLike(input.result)) signals.add("calculator_recovery");
   if (input.examMode === "second" && isCasioTask(input.taskType) && input.result === "wrong") signals.add("calculator_recovery");
   if (input.examMode === "second" && isIssueSpottingTask(input.taskType) && input.result === "unknown") signals.add("issue_spotting_gap");
   if (input.examMode === "first" && isAccountingTask(input.taskType) && isWrongLike(input.result)) signals.add("accounting_template_review");
@@ -248,6 +255,7 @@ export function buildExecutionResultFeedback(input: ExecutionResultFeedbackInput
     return "O/X 복습 신호로 남겼어요. 해설을 길게 보기 전에 같은 판단을 한 번 더 확인할게요.";
   }
 
+  if (nextTaskType === "calculator_routine") return "계산·검산 복구 신호로 남겼어요. 입력 순서와 단위만 짧게 다시 확인할게요.";
   if (nextTaskType === "CASIO") return "계산기 복구 신호로 남겼어요. 입력 순서와 단위만 짧게 다시 확인할게요.";
   if (nextTaskType === "issue spotting") return "쟁점 확인 신호로 남겼어요. 기준답안 전체보다 빠진 쟁점 1개를 먼저 다시 찾아볼게요.";
   return "답안 복습 신호로 남겼어요. 가장 큰 간극 1개만 잡고 짧게 다시 써볼게요.";
@@ -293,6 +301,7 @@ function titleForCandidate(signal: ExecutionLearningSignal) {
   if (signal.examMode === "second" && signal.nextRecommendedTaskType === "rewrite") return `${subjectPrefix}짧은 다시쓰기`;
   if (signal.derivedStatus === "needs_rewrite") return `${subjectPrefix}짧은 다시쓰기`;
   if (signal.result === "skipped") return `${subjectPrefix}복구 과제`;
+  if (signal.nextRecommendedTaskType === "calculator_routine") return `${subjectPrefix}계산·검산 복구`;
   if (signal.nextRecommendedTaskType === "accounting template") return `${subjectPrefix}회계 계산틀 복습`;
   if (signal.nextRecommendedTaskType === "CASIO") return `${subjectPrefix}CASIO 입력 복구`;
   if (signal.nextRecommendedTaskType === "issue spotting") return `${subjectPrefix}쟁점 찾기 복습`;
@@ -304,6 +313,7 @@ function actionForCandidate(signal: ExecutionLearningSignal) {
   if (signal.examMode === "second" && signal.nextRecommendedTaskType === "rewrite") return "한 문단 다시쓰기";
   if (signal.derivedStatus === "needs_rewrite") return "한 문단 다시쓰기";
   if (signal.result === "skipped") return "짧게 다시 시작";
+  if (signal.nextRecommendedTaskType === "calculator_routine") return "계산·검산 다시 하기";
   if (signal.nextRecommendedTaskType === "CASIO") return "계산기 순서 확인";
   if (signal.nextRecommendedTaskType === "accounting template") return "계산틀 다시 풀기";
   if (signal.nextRecommendedTaskType === "issue spotting") return "쟁점 1개 다시 찾기";
@@ -353,7 +363,7 @@ export function buildNextPlanSignalFromExecution(signal: ExecutionLearningSignal
       add(buildCandidate("O/X", "짧은 O/X 확인", "같은 단원의 판단을 짧게 확인해 복습 부담을 낮춥니다.", signal.prioritySignals));
     }
 
-    if (signal.examMode === "second" && primaryTaskType !== "rewrite") {
+    if (signal.examMode === "second" && primaryTaskType !== "rewrite" && primaryTaskType !== "calculator_routine") {
       add(buildCandidate("rewrite", "한 문단 다시쓰기", "가장 큰 간극 1개를 문단으로 다시 연결합니다.", signal.prioritySignals));
     }
   }

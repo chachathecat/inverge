@@ -297,6 +297,7 @@ function signalScore(action: TodayPlanUnifiedAction) {
   if (action.prioritySignals.includes("recovering_due_review") || action.prioritySignals.includes("learning_state:recovering")) score += 72;
   if (action.prioritySignals.includes("learning_state:stable") && action.prioritySignals.includes("due_review")) score += rankLearningStateRisk("stable");
   if (action.prioritySignals.includes("recovery_needed") || action.prioritySignals.includes("recovery_candidate")) score += 62;
+  if (action.prioritySignals.includes("calculator_recovery") || action.prioritySignals.includes("calculator_routine")) score += 42;
   if (action.prioritySignals.includes("high_risk_unit") || action.prioritySignals.includes("fail_risk_subject")) score += 54;
   if (action.prioritySignals.includes("high_importance_unit")) score += 40;
   if (action.prioritySignals.includes("exam_proximity")) score += 30;

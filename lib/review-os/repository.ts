@@ -1034,6 +1034,39 @@ export class ReviewOsRepository {
     assertSupabaseOperation("review-os.createLearningSignalEvent", result);
   }
 
+  async createLearningSignalEventWithId(userId: string, id: string, input: LearningSignalEventInput) {
+    const client = getUserClient(userId);
+    const payload = {
+      id,
+      user_id: userId,
+      exam_mode: input.examMode,
+      subject: input.subject,
+      source_type: input.sourceType,
+      derived_tags: input.derivedTags,
+      related_formulas: input.relatedFormulas,
+      next_task_type: input.nextTaskType,
+      next_task: input.nextTask,
+      metadata_json: sanitizeLearningSignalMetadata(input.metadataJson ?? {}),
+    };
+    const result = await client.from("learning_signal_events").insert(payload).select("*").maybeSingle();
+    if (result.error?.code === "23505") {
+      const existingResult = await client
+        .from("learning_signal_events")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("id", id)
+        .maybeSingle();
+      assertSupabaseOperation("review-os.createLearningSignalEventWithId.selectExisting", existingResult);
+      const existing = existingResult.data as Record<string, unknown> | null;
+      if (!existing) throw new Error("calculator-routine-learning-event-dedupe-missing");
+      return { status: "deduped" as const, record: mapLearningSignalEvent(existing) };
+    }
+    assertSupabaseOperation("review-os.createLearningSignalEventWithId", result);
+    const record = result.data as Record<string, unknown> | null;
+    if (!record) throw new Error("calculator-routine-learning-event-insert-missing");
+    return { status: "saved" as const, record: mapLearningSignalEvent(record) };
+  }
+
   async listLearningSignalEvents(userId: string, mode: AppraisalMode, limit = 30) {
     const client = getUserClient(userId);
     const result = await client

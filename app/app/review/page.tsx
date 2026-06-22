@@ -1,6 +1,7 @@
 import { ReviewOsFeedbackButton } from "@/components/review-os/feedback-button";
 import { ClosedBetaBanner } from "@/components/shared/closed-beta-banner";
 import { LocalBetaReviewCandidateSection } from "@/components/review-os/local-beta-note-reflection";
+import { CalculatorRoutineReviewCandidates } from "@/components/review-os/calculator-routine-review-candidates";
 import { ReviewQueueClient } from "@/components/review-os/review-queue-client";
 import { DailyCommandCard } from "@/components/review-os/minimal-study-system";
 import { getModeConfig, resolveAppraisalMode } from "@/lib/review-os/appraisal";
@@ -22,6 +23,10 @@ export default async function ReviewOsReviewPage({ searchParams }: PageProps) {
   const items = (await reviewOsService.getReviewQueue(session.userId, session.email).catch(() => [])).filter(
     (item) => item.examName === config.label,
   );
+  const calculatorRoutineCandidates =
+    mode === "second"
+      ? await reviewOsService.listCalculatorRoutineReviewCandidates(session.userId, session.email, 3).catch(() => [])
+      : [];
   const captureReferenceLineByItemId: Record<string, string> = {};
   await Promise.all(
     items
@@ -53,6 +58,7 @@ export default async function ReviewOsReviewPage({ searchParams }: PageProps) {
         </div>
       </DailyCommandCard>
 
+      <CalculatorRoutineReviewCandidates candidates={calculatorRoutineCandidates} />
       <LocalBetaReviewCandidateSection mode={mode} hasDurableQueue={items.length > 0} />
       <ReviewOsFeedbackButton route="/app/review" pageContext={{ itemCount: items.length, mode }} />
     </div>

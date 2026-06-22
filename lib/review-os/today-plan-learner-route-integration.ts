@@ -1,7 +1,7 @@
 import { getPersonalConceptGraphRepositoryMode } from "./personal-concept-graph-repository-adapter";
 import { buildTodayPlanWithGatedDurableConceptGraph, type TodayPlanDurableGraphIntegrationInput } from "./today-plan-durable-graph-integration";
 import { type TodayPlanUnifiedAction } from "./today-plan-source-union";
-import { buildTodayPlanTasks, selectActiveTodayPlanTasks, TODAY_PLAN_MAX_PRIMARY_TASKS, type TodayPlanPrimaryCta, type TodayPlanTask, type TodayPlanTaskType } from "./today-plan-engine";
+import { buildTodayPlanTasks, selectActiveTodayPlanTasks, TODAY_PLAN_MAX_PRIMARY_TASKS, type TodayPlanPrimaryCta, type TodayPlanTask, type TodayPlanTaskKind } from "./today-plan-engine";
 import type { LearningSignalEventRecord, ReviewQueueCard, WrongAnswerItemRecord } from "./types";
 
 type RepeatedGapSignal = { label: string; count: number };
@@ -33,8 +33,9 @@ function areTodayPlanDurableGraphRouteGatesEnabled(input: {
   );
 }
 
-function taskTypeFromDurableAction(action: TodayPlanUnifiedAction): TodayPlanTaskType {
+function taskTypeFromDurableAction(action: TodayPlanUnifiedAction): TodayPlanTaskKind {
   const taskType = action.taskType.toLowerCase();
+  if (taskType === "calculator_routine") return "calculator_routine";
   if (/rewrite|다시쓰기|문단/.test(taskType)) return "second_answer_rewrite";
   if (/ocr|확인/.test(taskType)) return "ocr_confirmation";
   if (/계산|산식|template|casio/.test(taskType)) return "accounting_template_retry";
@@ -43,9 +44,10 @@ function taskTypeFromDurableAction(action: TodayPlanUnifiedAction): TodayPlanTas
   return action.examMode === "first" ? "first_ox_retry" : "second_answer_rewrite";
 }
 
-function primaryCtaForDurableAction(taskType: TodayPlanTaskType, mode: "first" | "second"): TodayPlanPrimaryCta {
+function primaryCtaForDurableAction(taskType: TodayPlanTaskKind, mode: "first" | "second"): TodayPlanPrimaryCta {
   if (taskType === "second_answer_rewrite") return { label: "10분 다시 쓰기", hrefKind: "review" };
   if (taskType === "ocr_confirmation" || taskType === "note_cleanup") return { label: "확인하고 정리", hrefKind: "capture" };
+  if (taskType === "calculator_routine") return { label: "계산·검산 다시 하기", hrefKind: "calculator_template" };
   if (taskType === "accounting_template_retry") return { label: "계산 틀 재확인", hrefKind: "calculator_template" };
   if (taskType === "cloze_review") return { label: "빈칸 회상", hrefKind: "session" };
   if (taskType === "concept_review") return { label: "개념 1개 회상", hrefKind: "session" };
