@@ -26,6 +26,7 @@
     "check:paid-launch-readiness": "node scripts/check-paid-launch-readiness.mjs",
     "eval:appraiser-domain-quality": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs --test tests/appraiser-domain-quality-eval.test.mjs",
     "check:closed-beta-readiness": "node scripts/check-closed-beta-readiness.mjs",
+    "check:closed-beta-learning-loop-acceptance": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs --test tests/closed-beta-learning-loop-acceptance-v1.test.mjs",
     "check:staging-learner-routes": "node scripts/check-staging-learner-routes.mjs",
     "check:personal-concept-graph-rls": "node scripts/verify-personal-concept-graph-rls.mjs",
     "check:personal-concept-graph-durable-read": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs scripts/verify-personal-concept-graph-durable-read.mjs",

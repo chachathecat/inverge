@@ -6,6 +6,25 @@ Golden flow protected by this gate:
 
 Capture -> Save -> Notes -> Review -> Today -> refresh durability
 
+## Extended Golden Flow after PR #417
+
+The historical baseline above remains in force. After PR #417, closed-beta acceptance also tracks this extended learner operating loop:
+
+Capture -> Study Note -> Concept Candidate -> Today Plan -> Review Queue -> Retrieval Review -> Calculator Routine -> Learning Record -> Personal Concept State -> Recovery
+
+| Step | Durable path | Local fallback | Feature-flagged | Auth required | Metadata-only boundary | Draft / verification status |
+| --- | --- | --- | --- | --- | --- | --- |
+| Capture | Existing account-backed save when available | Browser-local closed-beta note fallback | No new flag | Required for account save | Shared capture signals are metadata-only; learner note may hold user-owned raw text | OCR/AI output remains an editable draft |
+| Study Note | Account note/detail records when available | Browser-local note reflection | No new flag | Required for account records | Derived summaries and reflection metadata only | Learner-owned note, not official evaluation |
+| Concept Candidate | Derived helper output | Rebuilt from safe local note metadata | No new flag | Inherits source flow | Yes | Candidate only |
+| Today Plan | Existing Review Queue/learning-signal sources; optional graph read source | Existing non-durable/default plan | Durable graph reads require existing flags | Required for account Today state | Yes; max 3 primary tasks | Recommendation only |
+| Review Queue | Existing account queue where available | Local reflection evidence only | No new flag | Required for queue completion | Completion metadata only | Ends in retry/rewrite/scheduled review |
+| Retrieval Review | Existing review completion route | No durable completion claim for local-only reflections | No new flag | Required | Recall sentence/outcome metadata only | Recall before reveal; outcome required |
+| Calculator Routine | Server Learning Record through existing completion API | Session/local completion history | No new flag for routine; graph write optional | Required for server Learning Record | Completion signal metadata-only; raw entries session-only | AI/generated guidance remains draft and official-verification-required |
+| Learning Record | Existing `learning_signal_events` path | `local_only` sync state when unauthenticated | No new flag | Required for server save | Yes | Identical retry dedupes; changed completion creates a new revision |
+| Personal Concept State | Optional Supabase graph write | Default path skips repository | `PERSONAL_CONCEPT_GRAPH_REPOSITORY=supabase` and `PERSONAL_CONCEPT_GRAPH_DURABLE_WRITES=1` | Required when enabled | Yes | Disabled by default; sequential monotonic only |
+| Recovery | Review candidate / Today recovery CTA reopens original routine | Local recovery status remains honest | Durable graph read/write optional | Required for account candidate persistence | Yes | Clean same-routine completion closes candidate; does not certify numerical correctness |
+
 ## Scope
 
 This gate is docs/scripts/tests only. It does not change runtime learner behavior, persistence logic, instructor grading, Supabase requirements, or Q-Net/local official material handling.
