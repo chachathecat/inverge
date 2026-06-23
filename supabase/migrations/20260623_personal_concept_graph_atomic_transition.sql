@@ -1,6 +1,8 @@
 -- Personal Concept Graph atomic transition RPC v1
 -- Forward-only migration. Depends on public.personal_concept_nodes.
 
+create extension if not exists pgcrypto with schema extensions;
+
 create table if not exists public.personal_concept_transition_events (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -9,6 +11,7 @@ create table if not exists public.personal_concept_transition_events (
   subject_id text not null,
   unit_id text not null,
   occurrence_at timestamptz not null,
+  input_fingerprint text not null,
   status text not null,
   applied_node_id uuid,
   created_at timestamptz not null default now(),
@@ -19,6 +22,8 @@ create table if not exists public.personal_concept_transition_events (
     check (length(trim(event_id)) > 0 and length(trim(event_id)) <= 200),
   constraint personal_concept_transition_events_exam_mode_check
     check (exam_mode in ('first', 'second')),
+  constraint personal_concept_transition_events_input_fingerprint_check
+    check (input_fingerprint ~ '^[0-9a-f]{64}$'),
   constraint personal_concept_transition_events_status_check
     check (status in ('applied', 'stale_signal', 'rejected')),
   constraint personal_concept_transition_events_subject_id_not_empty_check
@@ -86,7 +91,7 @@ returns table (
 )
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = public, extensions, pg_temp
 as $$
 declare
   v_user_id uuid := auth.uid();
@@ -102,6 +107,7 @@ declare
   v_previous public.personal_concept_nodes%rowtype;
   v_node public.personal_concept_nodes%rowtype;
   v_seen public.personal_concept_transition_events%rowtype;
+  v_input_fingerprint text;
   v_previous_state text;
   v_next_state text;
   v_normalized_task_type text;
@@ -171,6 +177,41 @@ begin
     return;
   end if;
 
+  v_normalized_task_type := case lower(v_task_type)
+    when 'ox' then 'O/X'
+    when 'o/x' then 'O/X'
+    when 'accounting' then 'accounting template'
+    when 'accounting_template' then 'accounting template'
+    when 'accounting template' then 'accounting template'
+    when 'casio' then 'CASIO'
+    when 'calculator_routine' then 'calculator_routine'
+    when 'rewrite' then 'rewrite'
+    when 'cloze' then 'cloze'
+    when 'issue' then 'issue spotting'
+    when 'issue_spotting' then 'issue spotting'
+    when 'issue spotting' then 'issue spotting'
+    else v_task_type
+  end;
+
+  v_input_fingerprint := encode(
+    extensions.digest(
+      concat_ws(
+        '|',
+        v_exam_mode,
+        v_subject_id,
+        v_unit_id,
+        v_normalized_task_type,
+        v_result,
+        v_confidence,
+        coalesce(v_due_bucket, ''),
+        v_recent_miss_count::text,
+        p_occurred_at::text
+      ),
+      'sha256'
+    ),
+    'hex'
+  );
+
   v_event_lock := hashtextextended('personal-concept-event|' || v_user_id::text || '|' || v_event_id, 420);
   v_concept_lock := hashtextextended('personal-concept-node|' || v_user_id::text || '|' || v_exam_mode || '|' || v_subject_id || '|' || v_unit_id, 420);
   perform pg_advisory_xact_lock(v_event_lock);
@@ -192,6 +233,31 @@ begin
         and personal_concept_nodes.subject_id = v_seen.subject_id
         and personal_concept_nodes.unit_id = v_seen.unit_id
       for update;
+
+    if v_seen.input_fingerprint <> v_input_fingerprint then
+      return query select
+        'rejected'::text,
+        'event_id_payload_mismatch'::text,
+        v_node.id,
+        v_user_id,
+        coalesce(v_node.exam_mode, v_seen.exam_mode),
+        coalesce(v_node.subject_id, v_seen.subject_id),
+        coalesce(v_node.unit_id, v_seen.unit_id),
+        v_node.state,
+        v_node.confidence,
+        v_node.last_result,
+        v_node.last_task_type,
+        v_node.wrong_count,
+        v_node.recovery_count,
+        v_node.stable_count,
+        v_node.next_recommended_task_type,
+        v_node.next_due_at,
+        v_node.updated_at,
+        null::text,
+        null::timestamptz,
+        true::boolean;
+      return;
+    end if;
 
     return query select
       'already_applied'::text,
@@ -229,9 +295,9 @@ begin
 
   if v_had_previous and p_occurred_at < v_previous.updated_at then
     insert into public.personal_concept_transition_events (
-      user_id, event_id, exam_mode, subject_id, unit_id, occurrence_at, status, applied_node_id
+      user_id, event_id, exam_mode, subject_id, unit_id, occurrence_at, input_fingerprint, status, applied_node_id
     )
-    values (v_user_id, v_event_id, v_exam_mode, v_subject_id, v_unit_id, p_occurred_at, 'stale_signal', v_previous.id);
+    values (v_user_id, v_event_id, v_exam_mode, v_subject_id, v_unit_id, p_occurred_at, v_input_fingerprint, 'stale_signal', v_previous.id);
 
     return query select
       'stale_signal'::text,
@@ -259,9 +325,9 @@ begin
 
   if v_had_previous and p_occurred_at = v_previous.updated_at then
     insert into public.personal_concept_transition_events (
-      user_id, event_id, exam_mode, subject_id, unit_id, occurrence_at, status, applied_node_id
+      user_id, event_id, exam_mode, subject_id, unit_id, occurrence_at, input_fingerprint, status, applied_node_id
     )
-    values (v_user_id, v_event_id, v_exam_mode, v_subject_id, v_unit_id, p_occurred_at, 'rejected', v_previous.id);
+    values (v_user_id, v_event_id, v_exam_mode, v_subject_id, v_unit_id, p_occurred_at, v_input_fingerprint, 'rejected', v_previous.id);
 
     return query select
       'rejected'::text,
@@ -310,21 +376,6 @@ begin
   else
     v_next_state := v_previous_state;
   end if;
-
-  v_normalized_task_type := case lower(v_task_type)
-    when 'ox' then 'O/X'
-    when 'o/x' then 'O/X'
-    when 'accounting' then 'accounting template'
-    when 'accounting_template' then 'accounting template'
-    when 'accounting template' then 'accounting template'
-    when 'casio' then 'CASIO'
-    when 'calculator_routine' then 'calculator_routine'
-    when 'rewrite' then 'rewrite'
-    when 'cloze' then 'cloze'
-    when 'issue_spotting' then 'issue spotting'
-    when 'issue spotting' then 'issue spotting'
-    else v_task_type
-  end;
 
   v_next_task_type := case
     when v_exam_mode = 'second' and v_normalized_task_type = 'calculator_routine' then 'calculator_routine'
@@ -410,9 +461,9 @@ begin
   end if;
 
   insert into public.personal_concept_transition_events (
-    user_id, event_id, exam_mode, subject_id, unit_id, occurrence_at, status, applied_node_id
+    user_id, event_id, exam_mode, subject_id, unit_id, occurrence_at, input_fingerprint, status, applied_node_id
   )
-  values (v_user_id, v_event_id, v_exam_mode, v_subject_id, v_unit_id, p_occurred_at, 'applied', v_node.id);
+  values (v_user_id, v_event_id, v_exam_mode, v_subject_id, v_unit_id, p_occurred_at, v_input_fingerprint, 'applied', v_node.id);
 
   return query select
     'applied'::text,

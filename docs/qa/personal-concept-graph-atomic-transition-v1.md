@@ -34,6 +34,7 @@ It adds:
 - `public.personal_concept_transition_events`
 - RPC `public.transition_personal_concept_node_v1`
 - unique event dedupe on `(user_id, event_id)`
+- SHA-256 `input_fingerprint` storage for replay mismatch detection
 - own-row select RLS for transition event audit rows
 - authenticated-only execute grant for the RPC
 
@@ -55,6 +56,14 @@ The idempotency identity is:
 authenticated user + event_id
 ```
 
+The replay fingerprint is calculated inside the RPC from normalized metadata-only inputs:
+
+```text
+exam mode + subject ID + unit ID + normalized task type + result + confidence + due bucket + recent miss count + occurrence timestamp
+```
+
+If the same authenticated user reuses an `event_id` with a different fingerprint, the RPC returns `rejected` with `event_id_payload_mismatch`. The existing concept row is returned for inspection, and counters are not incremented.
+
 ## Status Contract
 
 | Status | Meaning |
@@ -65,6 +74,8 @@ authenticated user + event_id
 | `rejected` | The request is malformed, unsupported, unauthenticated, or has the same timestamp as a different event. |
 
 Same timestamp behavior is deterministic: the same event returns `already_applied`; a different event with the same timestamp returns `rejected` with `same_timestamp_different_event`.
+
+Replay behavior is deterministic: the same event ID with the same fingerprint returns `already_applied`; the same event ID with different transition metadata returns `rejected` with `event_id_payload_mismatch`.
 
 ## Metadata Boundary
 
@@ -112,7 +123,34 @@ npm.cmd run check:personal-concept-graph-atomic-transition-smoke
 
 It fails closed unless `PERSONAL_CONCEPT_GRAPH_ATOMIC_TRANSITION_SMOKE=1` is intentionally set. It prints aggregate status classifications only and must not print endpoints, push keys, private keys, access tokens, service-role credentials, or row payloads.
 
+When the smoke flag is set, missing runtime environment names are a nonzero failure, not a skip. The output may list missing environment variable names only; it must not print values.
+
+Runtime smoke evidence must include:
+
+- `applied`
+- `already_applied`
+- duplicate old event replay returning `already_applied`
+- `stale_signal`
+- same-timestamp different event returning `rejected`
+- event ID replay mismatch returning `rejected` with `event_id_payload_mismatch`
+- first-row concurrent invocation with the final database row proving the newer `updated_at` and newer `last_result`
+- final counter evidence for `wrong_count`, `recovery_count`, and `stable_count`
+- cross-user read denial for `personal_concept_nodes`
+- cross-user read denial for `personal_concept_transition_events`
+- anonymous read denial for both tables
+- node cleanup completion for synthetic test units
+
+The smoke deletes synthetic `personal_concept_nodes` rows after verification. The transition event audit rows are retained by design because they are the idempotency/audit ledger; deleting them would weaken replay evidence.
+
 Do not use `npx.cmd supabase db push --linked --include-all` for this work. Apply the forward migration only through an approved owner workflow.
+
+## Direct Table Mutation Scope
+
+The atomic transition guarantee applies only to callers that use `transition_personal_concept_node_v1` or the repository transition method that calls it.
+
+The repository still contains legacy direct table mutation paths and existing authenticated `personal_concept_nodes` insert/update grants for earlier durable-read and RLS verification work. Do not treat those direct authenticated insert/update grants as production authorization for durable writes.
+
+Production durable-write enablement remains blocked until a follow-up PR either removes/revokes direct authenticated insert/update grants and migrates callers to the RPC, or constrains those grants behind an explicitly reviewed server-only path. Until then, direct table mutation is a rollout blocker, not a live authorization boundary.
 
 ## Validation Plan
 
@@ -149,4 +187,5 @@ Schema rollback, if ever required, must be a separate reviewed migration after c
 
 - Live Supabase behavior still requires applying the migration in an approved environment and running the gated smoke script.
 - Export/delete lifecycle for `personal_concept_transition_events` remains a later lifecycle PR.
+- Direct authenticated insert/update grants on `personal_concept_nodes` must be removed, revoked, or constrained before production durable-write enablement.
 - Production durable-write enablement remains blocked until owner-approved runtime evidence exists and flags are intentionally configured.

@@ -9,6 +9,7 @@ import {
   updateCalculatorRoutineDraftStep,
 } from "../lib/review-os/calculator-routine.ts";
 import { buildCalculatorRoutineBridge } from "../lib/review-os/calculator-routine-learning-signal.ts";
+import { normalizeCurriculumTaskType } from "../lib/review-os/curriculum-engine.ts";
 import { maybeWriteExecutionSignalToConceptGraph } from "../lib/review-os/execution-to-concept-graph-durable-write.ts";
 import {
   getPersonalConceptNode,
@@ -62,15 +63,39 @@ function transitionInput(overrides = {}) {
   };
 }
 
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function transitionFingerprint(input) {
+  return [
+    input.examMode,
+    input.subjectId?.trim(),
+    input.unitId?.trim(),
+    normalizeCurriculumTaskType(input.taskType) ?? input.taskType?.trim(),
+    input.result,
+    input.confidence ?? "unknown",
+    input.dueBucket ?? "",
+    String(typeof input.recentMissCount === "number" && Number.isFinite(input.recentMissCount) ? Math.max(0, Math.round(input.recentMissCount)) : 0),
+    input.updatedAt,
+  ].join("|");
+}
+
 function createAtomicMockRepository(initialNode = null) {
   let stored = initialNode ? { ...initialNode } : null;
-  const seenEvents = new Set();
+  const seenEvents = new Map();
   const calls = { transition: 0 };
   let queue = Promise.resolve();
 
   async function runLocked(input) {
     calls.transition += 1;
-    if (seenEvents.has(`${input.userId}:${input.eventId}`)) {
+    const eventKey = `${input.userId}:${input.eventId}`;
+    const fingerprint = transitionFingerprint(input);
+    const seen = seenEvents.get(eventKey);
+    if (seen) {
+      if (seen.fingerprint !== fingerprint) {
+        return { status: "rejected", reason: "event_id_payload_mismatch", node: stored ? { ...stored } : undefined, metadataOnly: true };
+      }
       return { status: "already_applied", node: stored ? { ...stored } : undefined, metadataOnly: true };
     }
     const previous = stored ? { ...stored } : null;
@@ -78,17 +103,17 @@ function createAtomicMockRepository(initialNode = null) {
       const incomingTs = Date.parse(input.updatedAt);
       const previousTs = Date.parse(previous.updatedAt);
       if (incomingTs < previousTs) {
-        seenEvents.add(`${input.userId}:${input.eventId}`);
+        seenEvents.set(eventKey, { status: "stale_signal", fingerprint });
         return { status: "stale_signal", node: previous, previousState: previous.state, previousUpdatedAt: previous.updatedAt, metadataOnly: true };
       }
       if (incomingTs === previousTs) {
-        seenEvents.add(`${input.userId}:${input.eventId}`);
+        seenEvents.set(eventKey, { status: "rejected", fingerprint });
         return { status: "rejected", reason: "same_timestamp_different_event", node: previous, previousState: previous.state, previousUpdatedAt: previous.updatedAt, metadataOnly: true };
       }
     }
     const next = updatePersonalConceptNode(previous, input);
     stored = { ...next };
-    seenEvents.add(`${input.userId}:${input.eventId}`);
+    seenEvents.set(eventKey, { status: "applied", fingerprint });
     return { status: "applied", node: { ...next }, previousState: previous?.state, previousUpdatedAt: previous?.updatedAt, metadataOnly: true };
   }
 
@@ -145,11 +170,17 @@ test("atomic migration adds transition-event dedupe table and RPC without rewrit
 
   assert.match(migration, /create table if not exists public\.personal_concept_transition_events/);
   assert.match(migration, /unique \(user_id, event_id\)/);
+  assert.match(migration, /input_fingerprint text not null/);
+  assert.match(migration, /input_fingerprint ~ '\^\[0-9a-f\]\{64\}\$'/);
+  assert.match(migration, /extensions\.digest\(/);
+  assert.match(migration, /'sha256'/);
+  assert.match(migration, /event_id_payload_mismatch/);
   assert.match(migration, /create or replace function public\.transition_personal_concept_node_v1/);
   assert.match(migration, /auth\.uid\(\)/);
   assert.match(migration, /pg_advisory_xact_lock/);
   assert.match(migration, /for update/);
   assert.match(migration, /same_timestamp_different_event/);
+  assert.match(migration, /when 'issue' then 'issue spotting'/);
   assert.match(migration, /grant execute .* to authenticated/s);
   assert.match(baseMigration, /create table if not exists public\.personal_concept_nodes/);
 });
@@ -164,6 +195,10 @@ test("atomic transition QA doc and package scripts document the gated workflow",
   assert.match(doc, /PERSONAL_CONCEPT_GRAPH_DURABLE_WRITES=1/);
   assert.match(doc, /PERSONAL_CONCEPT_GRAPH_ATOMIC_TRANSITION_SMOKE=1/);
   assert.match(doc, /Do not use `npx\.cmd supabase db push --linked --include-all`/);
+  assert.match(doc, /event_id_payload_mismatch/);
+  assert.match(doc, /transition event audit rows are retained by design/i);
+  assert.match(doc, /direct authenticated insert\/update grants/i);
+  assert.match(doc, /production durable-write enablement remains blocked/i);
   assert.equal(
     pkg.scripts["check:personal-concept-graph-atomic-transition"],
     "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs --test tests/personal-concept-graph-atomic-transition.test.mjs",
@@ -183,6 +218,18 @@ test("identical event retry is already_applied and counters do not increment twi
   assert.equal(first.status, "applied");
   assert.equal(retry.status, "already_applied");
   assert.equal(retry.node?.wrongCount, 1);
+});
+
+test("same event id with a different transition payload is rejected", () => {
+  resetPersonalConceptGraphRepositoryForTests();
+  const first = transitionPersonalConceptNode(transitionInput({ eventId: "event-replay", result: "wrong" }));
+  const mismatch = transitionPersonalConceptNode(transitionInput({ eventId: "event-replay", result: "done", confidence: "medium" }));
+
+  assert.equal(first.status, "applied");
+  assert.equal(mismatch.status, "rejected");
+  assert.equal(mismatch.reason, "event_id_payload_mismatch");
+  assert.equal(mismatch.node?.lastResult, "wrong");
+  assert.equal(mismatch.node?.wrongCount, 1);
 });
 
 test("duplicate older event after a newer event is already_applied and not a second transition", () => {
@@ -290,6 +337,31 @@ test("unsupported and malformed transitions are rejected by SQL contract", async
   assert.match(migration, /'unsupported_confidence'/);
 });
 
+test("SQL task alias matrix matches TypeScript concept transition normalization", async () => {
+  const migration = await readFile(migrationPath, "utf8");
+  const aliases = [
+    ["ox", "O/X"],
+    ["o/x", "O/X"],
+    ["cloze", "cloze"],
+    ["accounting", "accounting template"],
+    ["accounting_template", "accounting template"],
+    ["accounting template", "accounting template"],
+    ["rewrite", "rewrite"],
+    ["calculator_routine", "calculator_routine"],
+    ["casio", "CASIO"],
+    ["issue", "issue spotting"],
+    ["issue_spotting", "issue spotting"],
+    ["issue spotting", "issue spotting"],
+  ];
+
+  for (const [input, expected] of aliases) {
+    assert.match(migration, new RegExp(`when '${escapeRegExp(input)}' then '${escapeRegExp(expected)}'`));
+    assert.equal(normalizeCurriculumTaskType(input), expected);
+    const node = updatePersonalConceptNode(null, transitionInput({ taskType: input, result: "done", confidence: "medium" }));
+    assert.equal(node.lastTaskType, expected);
+  }
+});
+
 test("feature flags disabled means repository RPC is not touched", async () => {
   const repo = createAtomicMockRepository();
   const result = await maybeWriteExecutionSignalToConceptGraph(signal(), {
@@ -379,7 +451,24 @@ test("runtime smoke source fails closed and prints only aggregate statuses", asy
   const script = await readFile(scriptPath, "utf8");
   assert.match(script, /PERSONAL_CONCEPT_GRAPH_ATOMIC_TRANSITION_SMOKE/);
   assert.match(script, /refused_missing_personal_concept_graph_atomic_transition_smoke_flag/);
+  assert.match(script, /failed_atomic_transition_runtime_missing_public_env/);
+  assert.match(script, /failed_atomic_transition_runtime_missing_test_auth/);
+  assert.doesNotMatch(script, /skipped_atomic_transition_runtime_due_missing_env/);
+  assert.doesNotMatch(script, /process\.exit\(0\)/);
   assert.match(script, /transition_personal_concept_node_v1/);
   assert.match(script, /passed_atomic_transition_runtime_smoke/);
+  assert.match(script, /assertFinalConcurrentNode/);
+  assert.match(script, /concurrent_final_db_row/);
+  assert.match(script, /updated_at/);
+  assert.match(script, /last_result/);
+  assert.match(script, /wrong_count/);
+  assert.match(script, /recovery_count/);
+  assert.match(script, /stable_count/);
+  assert.match(script, /same_timestamp_different_event/);
+  assert.match(script, /event_id_payload_mismatch/);
+  assert.match(script, /personal_concept_transition_events/);
+  assert.match(script, /transition_event_audit_rows_retained_by_design/);
+  assert.match(script, /anonymous_transition_event_read_denied/);
+  assert.match(script, /cleanupStatus/);
   assert.doesNotMatch(script, /console\.log\([^)]*accessToken|console\.log\([^)]*userAId|console\.log\([^)]*row/s);
 });

@@ -1,4 +1,5 @@
 import { type AppraiserExamMode } from "./curriculum-reference";
+import { normalizeCurriculumTaskType } from "./curriculum-engine";
 import {
   buildConceptGraphUpdateFromExecutionSignal,
   rankConceptGraphNodesForToday,
@@ -56,6 +57,7 @@ const store = new Map<string, StoredPersonalConceptNode>();
 const transitionEvents = new Map<string, {
   status: "applied" | "stale_signal" | "rejected";
   nodeKey: string;
+  fingerprint: string;
 }>();
 
 function assertSupportedExamMode(examMode: unknown): asserts examMode is AppraiserExamMode {
@@ -104,6 +106,24 @@ function eventKey(userId: string, eventId: string) {
   return [userId, eventId].join("|");
 }
 
+function normalizeTransitionCount(value: number | undefined) {
+  return typeof value === "number" && Number.isFinite(value) ? Math.max(0, Math.round(value)) : 0;
+}
+
+function transitionFingerprint(input: PersonalConceptAtomicTransitionInput, examMode: AppraiserExamMode, subjectId: string, unitId: string) {
+  return [
+    examMode,
+    subjectId,
+    unitId,
+    normalizeCurriculumTaskType(input.taskType) ?? input.taskType.trim(),
+    input.result,
+    input.confidence ?? "unknown",
+    input.dueBucket ?? "",
+    String(normalizeTransitionCount(input.recentMissCount)),
+    input.updatedAt,
+  ].join("|");
+}
+
 function cloneNode(node: StoredPersonalConceptNode): PersonalConceptNode {
   return { ...node };
 }
@@ -145,9 +165,18 @@ export function transitionPersonalConceptNode(input: PersonalConceptAtomicTransi
   const subjectId = cleanRequiredText(input.subjectId, "subjectId");
   const unitId = cleanRequiredText(input.unitId, "unitId");
   const key = nodeKey(userId, input.examMode, subjectId, unitId);
+  const fingerprint = transitionFingerprint(input, input.examMode, subjectId, unitId);
   const seen = transitionEvents.get(eventKey(userId, eventId));
   if (seen) {
     const currentNode = store.get(seen.nodeKey) ?? store.get(key);
+    if (seen.fingerprint !== fingerprint) {
+      return {
+        status: "rejected",
+        reason: "event_id_payload_mismatch",
+        node: currentNode ? cloneNode(currentNode) : undefined,
+        metadataOnly: true,
+      };
+    }
     return {
       status: "already_applied",
       node: currentNode ? cloneNode(currentNode) : undefined,
@@ -163,7 +192,7 @@ export function transitionPersonalConceptNode(input: PersonalConceptAtomicTransi
   }
 
   if (previous && Number.isFinite(previousTs) && incomingTs < previousTs) {
-    transitionEvents.set(eventKey(userId, eventId), { status: "stale_signal", nodeKey: key });
+    transitionEvents.set(eventKey(userId, eventId), { status: "stale_signal", nodeKey: key, fingerprint });
     return {
       status: "stale_signal",
       node: cloneNode(previous),
@@ -174,7 +203,7 @@ export function transitionPersonalConceptNode(input: PersonalConceptAtomicTransi
   }
 
   if (previous && Number.isFinite(previousTs) && incomingTs === previousTs) {
-    transitionEvents.set(eventKey(userId, eventId), { status: "rejected", nodeKey: key });
+    transitionEvents.set(eventKey(userId, eventId), { status: "rejected", nodeKey: key, fingerprint });
     return {
       status: "rejected",
       reason: "same_timestamp_different_event",
@@ -188,7 +217,7 @@ export function transitionPersonalConceptNode(input: PersonalConceptAtomicTransi
   const next = updatePersonalConceptNode(previous, { ...input, userId, subjectId, unitId });
   assertMetadataOnlyNode(next);
   store.set(key, next);
-  transitionEvents.set(eventKey(userId, eventId), { status: "applied", nodeKey: key });
+  transitionEvents.set(eventKey(userId, eventId), { status: "applied", nodeKey: key, fingerprint });
   return {
     status: "applied",
     node: cloneNode(next),
