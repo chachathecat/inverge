@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { randomUUID } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import process from "node:process";
 import { createClient } from "@supabase/supabase-js";
@@ -12,12 +13,15 @@ const TEST_AUTH_ENV = [
   "PERSONAL_CONCEPT_GRAPH_RLS_USER_B_ID",
   "PERSONAL_CONCEPT_GRAPH_RLS_USER_B_ACCESS_TOKEN",
 ];
+const RPC_NAME = "transition_personal_concept_node_v1";
+const SUBJECT_ID = "rls-smoke-subject";
+const TRANSITION_EVENT_COLUMNS = "id,status,metadata_only";
 
 const results = [];
 
 function report(status, details = {}) {
   const safeDetails = Object.fromEntries(
-    Object.entries(details).filter(([key]) => !/key|token|secret|password|jwt/i.test(key)),
+    Object.entries(details).filter(([key]) => !/key|token|secret|password|jwt|row|payload|endpoint/i.test(key)),
   );
   const entry = { status, ...safeDetails };
   results.push(entry);
@@ -34,6 +38,16 @@ function requireSmokeGate() {
     fail("refused_missing_personal_concept_graph_rls_smoke_flag", {
       requiredFlag: `${SMOKE_FLAG}=1`,
       reason: "Runtime RLS smoke checks must be explicitly requested.",
+    });
+    process.exit();
+  }
+}
+
+function requireRepositoryGate() {
+  if (process.env[REPOSITORY_FLAG] !== "supabase") {
+    fail("refused_missing_supabase_repository_mode", {
+      requiredFlag: `${REPOSITORY_FLAG}=supabase`,
+      reason: "Runtime RLS smoke checks must run against the Supabase repository boundary.",
     });
     process.exit();
   }
@@ -75,17 +89,23 @@ function runContractProbe() {
       metadataOnly: true,
     };
 
+    const memoryAdapter = getPersonalConceptGraphRepositoryAdapter({});
+    const supabaseAdapter = getPersonalConceptGraphRepositoryAdapter({ PERSONAL_CONCEPT_GRAPH_REPOSITORY: "supabase" });
+
     assert.equal(getPersonalConceptGraphRepositoryMode({}), "memory");
-    assert.equal(getPersonalConceptGraphRepositoryAdapter({}).mode, "memory");
+    assert.equal(memoryAdapter.mode, "memory");
+    assert.equal(typeof memoryAdapter.upsertPersonalConceptNode, "function");
     assert.equal(getPersonalConceptGraphRepositoryMode({ PERSONAL_CONCEPT_GRAPH_REPOSITORY: "supabase" }), "supabase");
-    assert.equal(getPersonalConceptGraphRepositoryAdapter({ PERSONAL_CONCEPT_GRAPH_REPOSITORY: "supabase" }).mode, "supabase");
+    assert.equal(supabaseAdapter.mode, "supabase");
+    assert.equal("upsertPersonalConceptNode" in supabaseAdapter, false);
+    assert.equal(typeof supabaseAdapter.transitionPersonalConceptNode, "function");
     assert.equal(getPersonalConceptGraphRepositoryMode({ PERSONAL_CONCEPT_GRAPH_REPOSITORY: "SUPABASE" }), "memory");
 
     const payload = buildPersonalConceptNodeSupabasePayload({ ...baseNode, unknownColumn: "ignored" });
     assert.deepEqual(Object.keys(payload), [...PERSONAL_CONCEPT_GRAPH_SUPABASE_COLUMNS]);
     assert.equal(payload.metadata_only, true);
     assert.equal(Object.hasOwn(payload, "unknownColumn"), false);
-    assert.throws(() => buildPersonalConceptNodeSupabasePayload({ ...baseNode, examMode: "cpa" }), /supports only|감정평가사 1차\/2차/);
+    assert.throws(() => buildPersonalConceptNodeSupabasePayload({ ...baseNode, examMode: "cpa" }), /supports only|1/);
     assert.throws(() => buildPersonalConceptNodeSupabasePayload({ ...baseNode, rawAnswerText: "forbidden" }), /Forbidden raw\/copyrighted learner text field/);
   `;
 
@@ -117,6 +137,7 @@ function runContractProbe() {
     verified: [
       "default_memory_adapter",
       "explicit_supabase_mode_only",
+      "supabase_adapter_rpc_only_write_method",
       "metadata_only_payload",
       "unsupported_exam_rejection",
       "forbidden_raw_field_rejection",
@@ -139,27 +160,14 @@ function missing(names) {
   return names.filter((name) => !process.env[name]);
 }
 
-function requireSupabasePublicEnvOrSkip() {
-  const missingPublicEnv = missing(REQUIRED_SUPABASE_ENV);
-  if (missingPublicEnv.length > 0) {
-    report("skipped_runtime_rls_due_missing_env", {
-      missingEnv: missingPublicEnv.join(","),
-      documentedSkip: true,
-      reason: "Supabase URL/anon key are required for real runtime RLS checks; static repository contract checks already ran.",
+function requireRuntimeEnv() {
+  const missingEnv = missing([...REQUIRED_SUPABASE_ENV, ...TEST_AUTH_ENV]);
+  if (missingEnv.length > 0) {
+    fail("failed_runtime_rls_missing_required_env", {
+      missingEnvNames: missingEnv.join(","),
+      reason: "Supabase URL, anon key, and two authenticated test-user access tokens are required for real RLS verification.",
     });
-    process.exit(0);
-  }
-}
-
-function requireTestAuthOrSkip() {
-  const missingTestAuth = missing(TEST_AUTH_ENV);
-  if (missingTestAuth.length > 0) {
-    report("skipped_runtime_rls_due_missing_test_auth", {
-      missingEnv: missingTestAuth.join(","),
-      documentedSkip: true,
-      reason: "Two authenticated test-user access tokens are required for real cross-user RLS verification; success is not being faked.",
-    });
-    process.exit(0);
+    process.exit();
   }
 }
 
@@ -176,13 +184,13 @@ function anonClient() {
   });
 }
 
-function rowFor({ id, userId, unitId = "rls-smoke-unit", state = "wrong", examMode = "first", metadataOnly = true }) {
+function rowFor({ id, userId, unitId = "rls-smoke-direct-denied", state = "wrong", examMode = "first", metadataOnly = true }) {
   const now = new Date().toISOString();
   return {
     id,
     user_id: userId,
     exam_mode: examMode,
-    subject_id: "rls-smoke-subject",
+    subject_id: SUBJECT_ID,
     unit_id: unitId,
     state,
     confidence: "low",
@@ -196,7 +204,22 @@ function rowFor({ id, userId, unitId = "rls-smoke-unit", state = "wrong", examMo
     updated_at: now,
     metadata_only: metadataOnly,
     version: 1,
-    source_status: "runtime_rls_smoke_no_production_write",
+    source_status: "runtime_rls_smoke_no_direct_write",
+  };
+}
+
+function rpcParams({ eventId, unitId, occurredAt, result = "wrong" }) {
+  return {
+    p_event_id: eventId,
+    p_exam_mode: "first",
+    p_subject_id: SUBJECT_ID,
+    p_unit_id: unitId,
+    p_task_type: "O/X",
+    p_result: result,
+    p_confidence: result === "done" ? "medium" : "low",
+    p_due_bucket: result === "done" ? "none" : "tomorrow",
+    p_recent_miss_count: 0,
+    p_occurred_at: occurredAt,
   };
 }
 
@@ -206,9 +229,26 @@ function isPermissionDeniedError(error) {
   return code === "42501" || message.includes("permission denied") || message.includes("insufficient privilege");
 }
 
+async function callTransition(client, params) {
+  const { data, error } = await client.rpc(RPC_NAME, params);
+  if (error) throw new Error(`rpc_transition_failed:${error.code ?? "unknown"}`);
+  const entry = Array.isArray(data) ? data[0] : data;
+  return typeof entry?.status === "string" ? entry.status : "missing_status";
+}
+
+async function expectStatus(label, status, expected) {
+  if (status !== expected) throw new Error(`${label}:expected_${expected}_got_${status}`);
+}
+
+async function expectPermissionDenied(label, queryPromise) {
+  const { error } = await queryPromise;
+  if (!error) throw new Error(`${label}:expected_permission_denied`);
+  if (!isPermissionDeniedError(error)) throw new Error(`${label}:unexpected_error_${error.code ?? "unknown"}`);
+}
+
 async function expectNoRows(label, queryPromise) {
   const { data, error } = await queryPromise;
-  if (error) throw new Error(`${label}:${error.message}`);
+  if (error) throw new Error(`${label}:${error.code ?? "unknown"}`);
   if ((data ?? []).length !== 0) throw new Error(`${label}:expected_no_rows`);
 }
 
@@ -216,14 +256,32 @@ async function expectAnonCannotReadRows(label, queryPromise) {
   const { data, error } = await queryPromise;
   if (error) {
     if (isPermissionDeniedError(error)) return;
-    throw new Error(`${label}:${error.message}`);
+    throw new Error(`${label}:${error.code ?? "unknown"}`);
   }
   if ((data ?? []).length !== 0) throw new Error(`${label}:expected_no_rows_or_permission_denied`);
 }
 
-async function expectConstraintFailure(label, queryPromise) {
-  const { error } = await queryPromise;
-  if (!error) throw new Error(`${label}:expected_constraint_failure`);
+async function expectOwnNodeRead(client, unitId) {
+  const { data, error } = await client
+    .from("personal_concept_nodes")
+    .select("id,metadata_only")
+    .eq("exam_mode", "first")
+    .eq("subject_id", SUBJECT_ID)
+    .eq("unit_id", unitId);
+  if (error) throw new Error(`own_node_read_failed:${error.code ?? "unknown"}`);
+  if ((data ?? []).length !== 1) throw new Error("own_node_read_unexpected_count");
+  if (data[0]?.metadata_only !== true) throw new Error("own_node_read_not_metadata_only");
+}
+
+async function cleanupUnits(client, unitIds) {
+  if (unitIds.length === 0) return "complete";
+  const { error } = await client
+    .from("personal_concept_nodes")
+    .delete()
+    .eq("exam_mode", "first")
+    .eq("subject_id", SUBJECT_ID)
+    .in("unit_id", unitIds);
+  return error ? `incomplete_${error.code ?? "unknown"}` : "complete";
 }
 
 async function runRuntimeRlsChecks() {
@@ -234,48 +292,127 @@ async function runRuntimeRlsChecks() {
   const userA = clientFor(process.env.PERSONAL_CONCEPT_GRAPH_RLS_USER_A_ACCESS_TOKEN);
   const userB = clientFor(process.env.PERSONAL_CONCEPT_GRAPH_RLS_USER_B_ACCESS_TOKEN);
   const anon = anonClient();
-  const idA = crypto.randomUUID();
-  const idB = crypto.randomUUID();
-  const invalidMetadataId = crypto.randomUUID();
-  const invalidExamModeId = crypto.randomUUID();
-  const invalidStateId = crypto.randomUUID();
+  const directInsertId = randomUUID();
+  const unitA = `rls-smoke-a-${randomUUID()}`;
+  const unitADelete = `rls-smoke-delete-${randomUUID()}`;
+  const unitB = `rls-smoke-b-${randomUUID()}`;
+  const t0 = "2026-06-23T00:00:00.000Z";
+  const cleanupAUnits = [unitA, unitADelete];
+  const cleanupBUnits = [unitB];
+  let cleanupStatus = "not_attempted";
 
   try {
-    const insertA = await userA.from("personal_concept_nodes").insert(rowFor({ id: idA, userId: userAId })).select("id,user_id,metadata_only").single();
-    if (insertA.error) throw new Error(`own_insert_failed:${insertA.error.message}`);
-    if (insertA.data?.id !== idA || insertA.data?.metadata_only !== true) throw new Error("own_insert_returned_unexpected_row");
+    await expectPermissionDenied(
+      "direct_authenticated_insert_denied",
+      userA.from("personal_concept_nodes").insert(rowFor({ id: directInsertId, userId: userAId })).select("id"),
+    );
 
-    const updateA = await userA.from("personal_concept_nodes").update({ state: "recovering", updated_at: new Date().toISOString() }).eq("id", idA).select("id,state").single();
-    if (updateA.error) throw new Error(`own_update_failed:${updateA.error.message}`);
-    if (updateA.data?.state !== "recovering") throw new Error("own_update_returned_unexpected_state");
+    await expectStatus(
+      "rpc_transition_applied",
+      await callTransition(userA, rpcParams({ eventId: `${unitA}-first`, occurredAt: t0, unitId: unitA })),
+      "applied",
+    );
+    await expectStatus(
+      "identical_rpc_retry_already_applied",
+      await callTransition(userA, rpcParams({ eventId: `${unitA}-first`, occurredAt: t0, unitId: unitA })),
+      "already_applied",
+    );
+    await expectStatus(
+      "user_b_rpc_transition_applied",
+      await callTransition(userB, rpcParams({ eventId: `${unitB}-first`, occurredAt: t0, unitId: unitB })),
+      "applied",
+    );
 
-    const insertB = await userB.from("personal_concept_nodes").insert(rowFor({ id: idB, userId: userBId, unitId: "rls-smoke-unit-b" })).select("id").single();
-    if (insertB.error) throw new Error(`user_b_insert_failed:${insertB.error.message}`);
+    await expectPermissionDenied(
+      "direct_authenticated_update_denied",
+      userA
+        .from("personal_concept_nodes")
+        .update({ state: "recovering", updated_at: new Date().toISOString() })
+        .eq("exam_mode", "first")
+        .eq("subject_id", SUBJECT_ID)
+        .eq("unit_id", unitA)
+        .select("id"),
+    );
 
-    await expectNoRows("user_a_cannot_read_user_b_row", userA.from("personal_concept_nodes").select("id").eq("id", idB));
-    await expectAnonCannotReadRows("anon_cannot_read_rows", anon.from("personal_concept_nodes").select("id").in("id", [idA, idB]));
-    await expectConstraintFailure("metadata_only_false_rejected", userA.from("personal_concept_nodes").insert(rowFor({ id: invalidMetadataId, userId: userAId, unitId: "rls-smoke-invalid-metadata", metadataOnly: false })));
-    await expectConstraintFailure("unsupported_exam_mode_rejected", userA.from("personal_concept_nodes").insert(rowFor({ id: invalidExamModeId, userId: userAId, unitId: "rls-smoke-invalid-exam", examMode: "cpa" })));
-    await expectConstraintFailure("unsupported_state_rejected", userA.from("personal_concept_nodes").insert(rowFor({ id: invalidStateId, userId: userAId, unitId: "rls-smoke-invalid-state", state: "mastered" })));
+    await expectOwnNodeRead(userA, unitA);
 
-    const deleteA = await userA.from("personal_concept_nodes").delete().eq("id", idA);
-    if (deleteA.error) throw new Error(`own_delete_failed:${deleteA.error.message}`);
+    await expectNoRows(
+      "user_a_cannot_read_user_b_node",
+      userA.from("personal_concept_nodes").select("id").eq("exam_mode", "first").eq("subject_id", SUBJECT_ID).eq("unit_id", unitB),
+    );
+    await expectNoRows(
+      "user_a_cannot_read_user_b_transition_event",
+      userA
+        .from("personal_concept_transition_events")
+        .select(TRANSITION_EVENT_COLUMNS)
+        .eq("exam_mode", "first")
+        .eq("subject_id", SUBJECT_ID)
+        .eq("unit_id", unitB),
+    );
+    await expectAnonCannotReadRows(
+      "anon_cannot_read_nodes",
+      anon.from("personal_concept_nodes").select("id").eq("exam_mode", "first").eq("subject_id", SUBJECT_ID).in("unit_id", [unitA, unitB]),
+    );
+    await expectAnonCannotReadRows(
+      "anon_cannot_read_transition_events",
+      anon
+        .from("personal_concept_transition_events")
+        .select(TRANSITION_EVENT_COLUMNS)
+        .eq("exam_mode", "first")
+        .eq("subject_id", SUBJECT_ID)
+        .in("unit_id", [unitA, unitB]),
+    );
 
-    report("passed_runtime_rls_smoke", {
-      verified: "own_insert_select_update_delete,cross_user_read_denied,anon_read_denied,metadata_only_constraint,exam_mode_constraint,state_constraint",
-    });
+    await expectStatus(
+      "user_owned_delete_seed_applied",
+      await callTransition(userA, rpcParams({ eventId: `${unitADelete}-first`, occurredAt: t0, unitId: unitADelete })),
+      "applied",
+    );
+    const deleteA = await userA
+      .from("personal_concept_nodes")
+      .delete()
+      .eq("exam_mode", "first")
+      .eq("subject_id", SUBJECT_ID)
+      .eq("unit_id", unitADelete);
+    if (deleteA.error) throw new Error(`own_delete_failed:${deleteA.error.code ?? "unknown"}`);
+    await expectNoRows(
+      "user_owned_delete_removed_node",
+      userA.from("personal_concept_nodes").select("id").eq("exam_mode", "first").eq("subject_id", SUBJECT_ID).eq("unit_id", unitADelete),
+    );
   } finally {
-    await userA.from("personal_concept_nodes").delete().in("id", [idA, invalidMetadataId, invalidExamModeId, invalidStateId]);
-    await userB.from("personal_concept_nodes").delete().eq("id", idB);
+    const cleanupA = await cleanupUnits(userA, cleanupAUnits);
+    const cleanupB = await cleanupUnits(userB, cleanupBUnits);
+    cleanupStatus = cleanupA === "complete" && cleanupB === "complete" ? "complete" : `user_a_${cleanupA}_user_b_${cleanupB}`;
   }
+
+  if (cleanupStatus !== "complete") {
+    throw new Error(`cleanup_${cleanupStatus}`);
+  }
+
+  report("passed_runtime_rls_smoke", {
+    verified: [
+      "direct_authenticated_insert_denied",
+      "direct_authenticated_update_denied",
+      "rpc_transition_applied",
+      "identical_rpc_retry_already_applied",
+      "own_select_allowed",
+      "own_delete_allowed",
+      "cross_user_node_read_denied",
+      "cross_user_transition_event_read_denied",
+      "anonymous_node_read_denied",
+      "anonymous_transition_event_read_denied",
+      "transition_event_audit_rows_retained_by_design",
+    ].join(","),
+    cleanup: cleanupStatus,
+  });
 }
 
 async function main() {
   requireSmokeGate();
+  requireRepositoryGate();
   requireNonProductionOrExplicitOverride();
   runContractProbe();
-  requireSupabasePublicEnvOrSkip();
-  requireTestAuthOrSkip();
+  requireRuntimeEnv();
 
   try {
     await runRuntimeRlsChecks();

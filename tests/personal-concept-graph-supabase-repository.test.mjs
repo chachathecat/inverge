@@ -74,11 +74,11 @@ test("Supabase write payload omits non-UUID helper IDs and preserves real UUIDs"
   assert.deepEqual(Object.keys(uuidPayload), [...PERSONAL_CONCEPT_GRAPH_SUPABASE_COLUMNS]);
 
   const source = await readFile(new URL(`../${repoPath}`, import.meta.url), "utf8");
-  assert.match(source, /onConflict: "user_id,exam_mode,subject_id,unit_id"/);
-  assert.match(source, /return fromRow\(data as unknown as PersonalConceptNodeRow\)/);
+  assert.doesNotMatch(source, /\.upsert\(/);
+  assert.doesNotMatch(source, /upsertPersonalConceptNodeToSupabase/);
 });
 
-test("Supabase upsert boundary rejects forbidden raw/copyrighted learner fields", () => {
+test("Supabase metadata payload boundary rejects forbidden raw/copyrighted learner fields", () => {
   for (const field of [
     "rawUserText",
     "rawOcrText",
@@ -138,7 +138,7 @@ test("Supabase atomic transition RPC params are metadata-only and never accept c
   assert.doesNotMatch(source, /p_user_id|client-selected user/i);
 });
 
-test("Supabase upsert boundary rejects unsupported exam modes, unsupported states, and non-metadata nodes", () => {
+test("Supabase metadata payload boundary rejects unsupported exam modes, unsupported states, and non-metadata nodes", () => {
   assert.throws(() => buildPersonalConceptNodeSupabasePayload(node({ examMode: "cpa" })), /감정평가사 1차\/2차|supports only/);
   assert.throws(() => buildPersonalConceptNodeSupabasePayload(node({ state: "mastered" })), /state is not supported/);
   assert.throws(() => buildPersonalConceptNodeSupabasePayload(node({ metadataOnly: false })), /metadataOnly/);
@@ -148,9 +148,10 @@ test("Supabase repository uses existing authenticated server-client pattern with
   const source = await readFile(new URL(`../${repoPath}`, import.meta.url), "utf8");
   assert.match(source, /createSupabaseServerClient/);
   assert.doesNotMatch(source, /createSupabaseAdminClient|getSupabasePersistenceClient|SUPABASE_SERVICE_ROLE_KEY|service_role/i);
-  assert.match(source, /PERSONAL_CONCEPT_NODES_TABLE\)\s*\.upsert\(payload, \{ onConflict: "user_id,exam_mode,subject_id,unit_id" \}/s);
+  assert.doesNotMatch(source, /\.upsert\(/);
   assert.match(source, /transitionPersonalConceptNodeInSupabase/);
   assert.match(source, /PERSONAL_CONCEPT_ATOMIC_TRANSITION_RPC/);
+  assert.match(source, /\.rpc\(PERSONAL_CONCEPT_ATOMIC_TRANSITION_RPC, params\)/);
   assert.match(source, /\.delete\(\)\s*\.eq\("user_id"/s);
 });
 
@@ -183,7 +184,7 @@ test("Supabase repository remains route-unwired except the feature-flagged helpe
   for (const file of files) {
     if (file === repoPath || file === adapterPath || file === durableHelperPath || file === durableReadHelperPath || file === durableFeatureFlagsPath || file === gatedTodayPlanIntegrationPath || file === learnerTodayPlanRouteIntegrationPath) continue;
     const source = await readFile(join(repoRoot, file), "utf8");
-    if (/personal-concept-graph-(?:supabase-repository|repository-adapter)|upsertPersonalConceptNodeToSupabase|listPersonalConceptNodesForTodayFromSupabase/.test(source)) {
+    if (/personal-concept-graph-(?:supabase-repository|repository-adapter)|listPersonalConceptNodesForTodayFromSupabase/.test(source)) {
       matches.push(file);
     }
   }

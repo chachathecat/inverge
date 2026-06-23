@@ -58,8 +58,10 @@ test("runtime RLS smoke script accepts permission-denied anon read as denial", a
   assert.match(source, /error\?\.code === "42501"|code === "42501"/);
   assert.match(source, /permission denied/);
   assert.match(source, /insufficient privilege/);
-  assert.match(source, /expectAnonCannotReadRows\("anon_cannot_read_rows"/);
-  assert.match(source, /await expectNoRows\("user_a_cannot_read_user_b_row"/);
+  assert.match(source, /expectAnonCannotReadRows\(\s*"anon_cannot_read_nodes"/);
+  assert.match(source, /expectAnonCannotReadRows\(\s*"anon_cannot_read_transition_events"/);
+  assert.match(source, /await expectNoRows\(\s*"user_a_cannot_read_user_b_node"/);
+  assert.match(source, /await expectNoRows\(\s*"user_a_cannot_read_user_b_transition_event"/);
 });
 
 test("runtime RLS smoke script does not add or recommend anon table SELECT grants", async () => {
@@ -73,27 +75,41 @@ test("runtime RLS smoke script does not reference service role key in browser or
   assert.doesNotMatch(`${browserClientSource}\n${routeHandlerSource}`, /SUPABASE_SERVICE_ROLE_KEY|service_role/i);
 });
 
-test("runtime RLS smoke script intentionally skips missing Supabase env after static contract checks", () => {
+test("runtime RLS smoke script fails closed when required runtime env is missing", () => {
   const result = spawnSync(process.execPath, [scriptFile], {
     cwd: repoRoot,
-    env: cleanSmokeEnv({ PERSONAL_CONCEPT_GRAPH_RLS_SMOKE: "1" }),
+    env: cleanSmokeEnv({ PERSONAL_CONCEPT_GRAPH_RLS_SMOKE: "1", PERSONAL_CONCEPT_GRAPH_REPOSITORY: "supabase" }),
     encoding: "utf8",
   });
 
   assertNoSpawnError(result);
   const output = resultOutput(result);
-  assert.equal(result.status, 0, output);
+  assert.notEqual(result.status, 0, output);
   assert.match(output, /passed_static_repository_contract_probe/);
-  assert.match(output, /skipped_runtime_rls_due_missing_env/);
+  assert.match(output, /failed_runtime_rls_missing_required_env/);
   assert.doesNotMatch(output, /SUPABASE_SERVICE_ROLE_KEY|service_role/i);
+});
+
+test("runtime RLS smoke script proves RPC-only write boundary", async () => {
+  const source = await readFile(scriptPath, "utf8");
+
+  assert.match(source, /refused_missing_supabase_repository_mode/);
+  assert.match(source, /direct_authenticated_insert_denied/);
+  assert.match(source, /direct_authenticated_update_denied/);
+  assert.match(source, /transition_personal_concept_node_v1/);
+  assert.match(source, /rpc_transition_applied/);
+  assert.match(source, /identical_rpc_retry_already_applied/);
+  assert.match(source, /transition_event_audit_rows_retained_by_design/);
+  assert.doesNotMatch(source, /skipped_runtime_rls_due_missing_env/);
+  assert.doesNotMatch(source, /skipped_runtime_rls_due_missing_test_auth/);
 });
 
 test("QA doc states production learner writes remain disabled and cross-user RLS is required", async () => {
   const doc = await readFile(docPath, "utf8");
   assert.match(doc, /Production learner writes remain disabled/);
   assert.match(doc, /cross-user RLS must be verified before enabling durable writes/);
-  assert.match(doc, /skipped_runtime_rls_due_missing_env/);
-  assert.match(doc, /skipped_runtime_rls_due_missing_test_auth/);
+  assert.match(doc, /failed_runtime_rls_missing_required_env/);
+  assert.match(doc, /direct authenticated insert and update are denied/i);
 });
 
 test("QA doc explains anon permission denied is acceptable without public grants", async () => {

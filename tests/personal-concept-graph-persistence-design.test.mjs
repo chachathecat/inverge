@@ -78,8 +78,9 @@ test("design doc documents intended RLS boundaries and no public read access", a
 
   assert.match(content, /Row-level security assumptions/);
   assert.match(content, /User can select only own rows/i);
-  assert.match(content, /User can insert only own rows/i);
-  assert.match(content, /User can update only own rows/i);
+  assert.match(content, /User direct insert is revoked/i);
+  assert.match(content, /User direct update is revoked/i);
+  assert.match(content, /transition_personal_concept_node_v1/);
   assert.match(content, /User can delete only own rows/i);
   assert.match(content, /No public read access/i);
   assert.match(content, /No instructor cross-tenant access/i);
