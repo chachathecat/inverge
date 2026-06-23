@@ -97,6 +97,56 @@ For anonymous read denial, either outcome is acceptable: the anon query returns 
 - Production-like environments without `PERSONAL_CONCEPT_GRAPH_RLS_ALLOW_PRODUCTION_SMOKE=1` report a refusal and exit non-zero.
 - Contract-probe failures or runtime RLS failures exit non-zero.
 
+## Runtime Evidence - 2026-06-23
+
+Owner-run non-production verification passed after the RPC-only write-boundary migration was applied through the approved owner workflow. This repository records only safe aggregate evidence. No secret values, tokens, user IDs, row bodies, endpoints, or raw learner data are recorded.
+
+Initial runtime attempts that returned `PGRST303` were classified as authentication-token failures. Fresh authenticated sessions were obtained, and the runtime smokes were rerun successfully. The Node experimental-loader and module-type warnings observed during the runs were pre-existing, non-blocking warnings.
+
+Migration and privilege evidence:
+
+| Check | Result | Evidence |
+| --- | --- | --- |
+| RPC-only forward migration application | PASS | `202606232130_personal_concept_graph_rpc_only_write_boundary.sql` was applied in the non-production Supabase project by the owner. |
+| Migration history alignment | PASS | The non-production history aligned on the prerequisite `20260605`, M420 `20260623`, and M421A `202606232130` migration timestamps. |
+| Authenticated `SELECT` | PASS | Authenticated test users could read their own metadata-only concept node rows. |
+| Authenticated `DELETE` | PASS | Authenticated test users could delete their own synthetic concept node rows for cleanup. |
+| Direct authenticated `INSERT` denial | PASS | Direct table insert into `personal_concept_nodes` was denied for authenticated users. |
+| Direct authenticated `UPDATE` denial | PASS | Direct table update on `personal_concept_nodes` was denied for authenticated users. |
+| Authenticated RPC `EXECUTE` | PASS | Authenticated test users could execute `transition_personal_concept_node_v1`. |
+| Anon/public RPC execution denial | PASS | Unauthenticated/public execution was denied; no public RPC write path was available. |
+| Static repository contract probe | PASS | Supabase adapter exposed the RPC transition write method and no direct upsert write method. |
+
+Runtime smoke evidence:
+
+| Check | Result |
+| --- | --- |
+| RPC transition `applied` | PASS |
+| Identical retry `already_applied` | PASS |
+| Account A/B node RLS | PASS |
+| Account A/B transition-event RLS | PASS |
+| Anonymous node read denial | PASS |
+| Anonymous transition-event read denial | PASS |
+| Atomic transition runtime smoke | PASS |
+| Concurrent final database row newer-wins | PASS |
+| Durable graph read runtime smoke | PASS |
+| RPC-seeded durable rows | PASS |
+| Today Plan maximum three actions | PASS |
+| Metadata-only boundary | PASS |
+| Cross-user durable read denial | PASS |
+| Synthetic node cleanup | PASS |
+| Transition-event audit rows retained by design | PASS |
+| Production durable read/write flags remain off | PASS |
+| No secrets, tokens, user IDs, or row bodies printed | PASS |
+
+All three runtime smokes passed after fresh authenticated sessions were obtained:
+
+- RPC-only runtime RLS smoke;
+- atomic transition runtime smoke;
+- durable graph read runtime smoke.
+
+Codex did not apply SQL remotely, did not run the live Supabase smokes, and did not handle secrets. This section records owner-supplied non-production evidence for PR #422 review.
+
 ## PR #327 durable write posture
 
 PR #327 may call the durable write helper only after the helper validates metadata-only execution signals and confirms both feature flags are explicitly enabled:
