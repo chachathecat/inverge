@@ -37,7 +37,7 @@ Passing the local gate does not verify real mobile OS delivery or scheduler acti
 | Retrieval Review | Existing review completion route | No durable completion claim for local-only reflections | No new flag | Required | Recall sentence/outcome metadata only | Recall before reveal; outcome required |
 | Calculator Routine | Server Learning Record through existing completion API | Session/local completion history | No new flag for routine; graph write optional | Required for server Learning Record | Completion signal metadata-only; raw entries session-only | AI/generated guidance remains draft and official-verification-required |
 | Learning Record | Existing `learning_signal_events` path | `local_only` sync state when unauthenticated | No new flag | Required for server save | Yes | Identical retry dedupes; changed completion creates a new revision |
-| Personal Concept State | Optional Supabase graph write | Default path skips repository | `PERSONAL_CONCEPT_GRAPH_REPOSITORY=supabase` and `PERSONAL_CONCEPT_GRAPH_DURABLE_WRITES=1` | Required when enabled | Yes | Disabled by default; sequential monotonic only |
+| Personal Concept State | Optional Supabase graph write through M420 atomic RPC | Default path skips repository | `PERSONAL_CONCEPT_GRAPH_REPOSITORY=supabase` and `PERSONAL_CONCEPT_GRAPH_DURABLE_WRITES=1` | Required when enabled | Yes | Disabled by default; runtime Supabase smoke required before rollout |
 | Recovery | Review candidate / Today recovery CTA reopens original routine | Local recovery status remains honest | Durable graph read/write optional | Required for account candidate persistence | Yes | Clean same-routine completion closes candidate; does not certify numerical correctness |
 
 ## Scope

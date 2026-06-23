@@ -1,6 +1,7 @@
 import {
   getPersonalConceptNode,
   listPersonalConceptNodesForToday,
+  transitionPersonalConceptNode,
   upsertPersonalConceptNode,
 } from "./personal-concept-graph-repository";
 
@@ -16,6 +17,7 @@ export type PersonalConceptGraphRepositoryAdapter = {
   mode: PersonalConceptGraphRepositoryMode;
   getPersonalConceptNode: typeof getPersonalConceptNode | PersonalConceptGraphSupabaseRepository["getPersonalConceptNodeFromSupabase"];
   upsertPersonalConceptNode: typeof upsertPersonalConceptNode | PersonalConceptGraphSupabaseRepository["upsertPersonalConceptNodeToSupabase"];
+  transitionPersonalConceptNode: typeof transitionPersonalConceptNode | PersonalConceptGraphSupabaseRepository["transitionPersonalConceptNodeInSupabase"];
   listPersonalConceptNodesForToday: typeof listPersonalConceptNodesForToday | PersonalConceptGraphSupabaseRepository["listPersonalConceptNodesForTodayFromSupabase"];
   deletePersonalConceptNode?: PersonalConceptGraphSupabaseRepository["deletePersonalConceptNodeFromSupabase"];
 };
@@ -32,6 +34,7 @@ export function getPersonalConceptGraphRepositoryAdapter(env: NodeJS.ProcessEnv 
       mode,
       getPersonalConceptNode: async (...args) => (await getSupabaseRepository()).getPersonalConceptNodeFromSupabase(...args),
       upsertPersonalConceptNode: async (...args) => (await getSupabaseRepository()).upsertPersonalConceptNodeToSupabase(...args),
+      transitionPersonalConceptNode: async (...args) => (await getSupabaseRepository()).transitionPersonalConceptNodeInSupabase(...args),
       listPersonalConceptNodesForToday: async (...args) => (await getSupabaseRepository()).listPersonalConceptNodesForTodayFromSupabase(...args),
       deletePersonalConceptNode: async (...args) => (await getSupabaseRepository()).deletePersonalConceptNodeFromSupabase(...args),
     };
@@ -41,6 +44,7 @@ export function getPersonalConceptGraphRepositoryAdapter(env: NodeJS.ProcessEnv 
     mode: "memory",
     getPersonalConceptNode,
     upsertPersonalConceptNode,
+    transitionPersonalConceptNode,
     listPersonalConceptNodesForToday,
   };
 }

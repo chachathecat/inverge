@@ -178,7 +178,8 @@ function nodeFromBridge(bridge, previous = null, event = eventFromBridge(bridge)
 
 function createMockSupabaseRepository(initialNode = null) {
   let stored = initialNode ? { ...initialNode } : null;
-  const calls = { get: 0, upsert: 0, upsertedNodes: [] };
+  const seenEvents = new Set();
+  const calls = { transition: 0, transitionedInputs: [] };
   return {
     calls,
     get stored() {
@@ -186,15 +187,29 @@ function createMockSupabaseRepository(initialNode = null) {
     },
     repository: {
       mode: "supabase",
-      async getPersonalConceptNode() {
-        calls.get += 1;
-        return stored ? { ...stored } : null;
-      },
-      async upsertPersonalConceptNode(node) {
-        calls.upsert += 1;
-        stored = { ...node };
-        calls.upsertedNodes.push({ ...node });
-        return { ...node };
+      async transitionPersonalConceptNode(input) {
+        calls.transition += 1;
+        calls.transitionedInputs.push({ ...input });
+        if (seenEvents.has(input.eventId)) {
+          return { status: "already_applied", node: stored ? { ...stored } : undefined, metadataOnly: true };
+        }
+        const previous = stored ? { ...stored } : null;
+        if (previous) {
+          const incomingTs = Date.parse(input.updatedAt);
+          const previousTs = Date.parse(previous.updatedAt);
+          if (incomingTs < previousTs) {
+            seenEvents.add(input.eventId);
+            return { status: "stale_signal", node: previous, previousState: previous.state, previousUpdatedAt: previous.updatedAt, metadataOnly: true };
+          }
+          if (incomingTs === previousTs) {
+            seenEvents.add(input.eventId);
+            return { status: "rejected", reason: "same_timestamp_different_event", node: previous, previousState: previous.state, previousUpdatedAt: previous.updatedAt, metadataOnly: true };
+          }
+        }
+        const next = updatePersonalConceptNode(previous, input);
+        stored = { ...next };
+        seenEvents.add(input.eventId);
+        return { status: "applied", node: { ...next }, previousState: previous?.state, previousUpdatedAt: previous?.updatedAt, metadataOnly: true };
       },
     },
   };
@@ -203,6 +218,7 @@ function createMockSupabaseRepository(initialNode = null) {
 function conceptWriteSignal(result, updatedAt) {
   return {
     userId: USER_ID,
+    eventId: `event-${result}-${updatedAt}`,
     examMode: "second",
     subjectId: "감정평가실무",
     unitId: "concept:second:감정평가실무:검산-CASIO",
@@ -459,8 +475,7 @@ test("Personal Concept State acceptance covers sequential transitions, idempoten
     context: { env: {}, repositoryAdapter: disabledRepo.repository },
   });
   assert.equal(disabled.status, "durable_writes_disabled");
-  assert.equal(disabledRepo.calls.get, 0);
-  assert.equal(disabledRepo.calls.upsert, 0);
+  assert.equal(disabledRepo.calls.transition, 0);
 
   const repo = createMockSupabaseRepository();
   const firstWrite = await maybeUpdateCalculatorRoutineConceptState({
@@ -489,7 +504,7 @@ test("Personal Concept State acceptance covers sequential transitions, idempoten
   assert.equal(firstWrite.status, "updated");
   assert.equal(identicalRetry.status, "already_applied");
   assert.equal(stale.status, "stale_signal");
-  assert.equal(repo.calls.upsert, 1);
+  assert.equal(repo.calls.transition, 3);
 
   const projection = projectionFromBridge(wrongBridge);
   const graphSignal = buildCalculatorRoutineConceptGraphSignal(projection);
@@ -571,28 +586,33 @@ test("Data boundary rejects forbidden metadata fields and runtime copy stays ins
   }
 });
 
-test("#417 durable-write audit documents the non-atomic cross-instance revision limitation", async () => {
+test("M420 durable-write audit uses atomic repository transition so newer final state wins", async () => {
   const initial = updatePersonalConceptNode(null, conceptWriteSignal("wrong", "2026-06-22T08:00:00.000Z"));
   let stored = { ...initial };
-  let getCount = 0;
-  const releaseBothGets = createDeferred();
+  const seenEvents = new Set();
+  let transitionCount = 0;
+  const releaseBothTransitions = createDeferred();
   const newerUpserted = createDeferred();
   const olderAt = "2026-06-22T08:30:00.000Z";
   const newerAt = "2026-06-22T08:45:00.000Z";
 
   const repository = {
     mode: "supabase",
-    async getPersonalConceptNode() {
-      getCount += 1;
-      if (getCount === 2) releaseBothGets.resolve();
-      await releaseBothGets.promise;
-      return { ...initial };
-    },
-    async upsertPersonalConceptNode(node) {
-      if (node.updatedAt === olderAt) await newerUpserted.promise;
-      stored = { ...node };
-      if (node.updatedAt === newerAt) newerUpserted.resolve();
-      return { ...node };
+    async transitionPersonalConceptNode(input) {
+      transitionCount += 1;
+      if (transitionCount === 2) releaseBothTransitions.resolve();
+      await releaseBothTransitions.promise;
+      if (input.updatedAt === olderAt) await newerUpserted.promise;
+      if (seenEvents.has(input.eventId)) return { status: "already_applied", node: { ...stored }, metadataOnly: true };
+      if (Date.parse(input.updatedAt) < Date.parse(stored.updatedAt)) {
+        seenEvents.add(input.eventId);
+        return { status: "stale_signal", node: { ...stored }, previousState: stored.state, previousUpdatedAt: stored.updatedAt, metadataOnly: true };
+      }
+      const previous = { ...stored };
+      stored = updatePersonalConceptNode(stored, input);
+      seenEvents.add(input.eventId);
+      if (input.updatedAt === newerAt) newerUpserted.resolve();
+      return { status: "applied", node: { ...stored }, previousState: previous.state, previousUpdatedAt: previous.updatedAt, metadataOnly: true };
     },
   };
 
@@ -609,9 +629,10 @@ test("#417 durable-write audit documents the non-atomic cross-instance revision 
 
   const [older, newer] = await Promise.all([olderPromise, newerPromise]);
 
-  assert.equal(older.skipped, false);
+  assert.equal(older.skipped, true);
+  assert.equal(older.reason, "stale_signal");
   assert.equal(newer.skipped, false);
-  assert.equal(stored.updatedAt, olderAt);
-  assert.equal(stored.lastResult, "wrong");
-  assert.equal(getCount, 2);
+  assert.equal(stored.updatedAt, newerAt);
+  assert.equal(stored.lastResult, "done");
+  assert.equal(transitionCount, 2);
 });

@@ -2,15 +2,15 @@ import { arePersonalConceptGraphDurableWritesEnabled } from "./personal-concept-
 import { getPersonalConceptGraphRepositoryAdapter, type PersonalConceptGraphRepositoryAdapter } from "./personal-concept-graph-repository-adapter";
 import {
   buildConceptGraphUpdateFromExecutionSignal,
-  updatePersonalConceptNode,
   type ConceptGraphExecutionSignalLike,
+  type PersonalConceptAtomicTransitionInput,
+  type PersonalConceptAtomicTransitionResult,
   type PersonalConceptNode,
-  type PersonalConceptSignalInput,
 } from "./personal-concept-graph";
 
 export type ExecutionToConceptGraphDurableWriteContext = {
   env?: NodeJS.ProcessEnv;
-  repositoryAdapter?: Pick<PersonalConceptGraphRepositoryAdapter, "mode" | "getPersonalConceptNode" | "upsertPersonalConceptNode">;
+  repositoryAdapter?: Pick<PersonalConceptGraphRepositoryAdapter, "mode" | "transitionPersonalConceptNode">;
   revisionPolicy?: "default" | "monotonic_updated_at";
 };
 
@@ -23,9 +23,9 @@ export type ExecutionToConceptGraphDurableWriteSkipped = {
 export type ExecutionToConceptGraphDurableWriteMonotonicSkipped = {
   ok: true;
   skipped: true;
-  reason: "already_applied" | "stale_signal";
+  reason: "already_applied" | "stale_signal" | "rejected";
   repositoryMode: "supabase";
-  node: Pick<
+  node?: Pick<
     PersonalConceptNode,
     | "id"
     | "userId"
@@ -141,6 +141,8 @@ function sanitizeExecutionSignal(signal: ConceptGraphExecutionSignalLike): Conce
   return {
     learnerId: signal.learnerId,
     userId: signal.userId,
+    eventId: signal.eventId ?? signal.sourceEventId,
+    sourceEventId: signal.sourceEventId,
     examMode: signal.examMode,
     subjectId: signal.subjectId,
     unitId: signal.unitId,
@@ -159,12 +161,13 @@ function sanitizeExecutionSignal(signal: ConceptGraphExecutionSignalLike): Conce
   };
 }
 
-function sanitizeUpdate(update: PersonalConceptSignalInput): PersonalConceptSignalInput & { userId: string } {
+function sanitizeUpdate(update: ReturnType<typeof buildConceptGraphUpdateFromExecutionSignal>): PersonalConceptAtomicTransitionInput {
   assertNoForbiddenDurableFields(update);
   assertSupportedExamMode(update.examMode);
   return {
     learnerId: update.learnerId,
     userId: cleanRequiredText(update.userId ?? update.learnerId, "userId or learnerId"),
+    eventId: cleanRequiredText(update.eventId, "eventId"),
     examMode: update.examMode,
     subjectId: cleanRequiredText(update.subjectId, "subjectId"),
     unitId: cleanRequiredText(update.unitId, "unitId"),
@@ -204,46 +207,37 @@ function metadataOnlyNode(node: PersonalConceptNode): ExecutionToConceptGraphDur
 }
 
 function metadataOnlyResult(
-  node: PersonalConceptNode,
-  previousNode: PersonalConceptNode | null,
+  transition: PersonalConceptAtomicTransitionResult,
 ): ExecutionToConceptGraphDurableWriteWritten {
+  if (!transition.node) {
+    throw new Error("Durable Personal Concept Graph atomic write did not return a node for applied transition.");
+  }
   return {
     ok: true,
     skipped: false,
     repositoryMode: "supabase",
-    previousNode: previousNode ? {
-      state: previousNode.state,
-      updatedAt: previousNode.updatedAt,
+    previousNode: transition.previousState || transition.previousUpdatedAt ? {
+      state: transition.previousState ?? transition.node.state,
+      updatedAt: transition.previousUpdatedAt ?? transition.node.updatedAt,
       metadataOnly: true,
     } : null,
-    node: metadataOnlyNode(node),
+    node: metadataOnlyNode(transition.node),
     metadataOnly: true,
   };
 }
 
 function metadataOnlyMonotonicSkipped(
   reason: ExecutionToConceptGraphDurableWriteMonotonicSkipped["reason"],
-  node: PersonalConceptNode,
+  node?: PersonalConceptNode,
 ): ExecutionToConceptGraphDurableWriteMonotonicSkipped {
   return {
     ok: true,
     skipped: true,
     reason,
     repositoryMode: "supabase",
-    node: metadataOnlyNode(node),
+    node: node ? metadataOnlyNode(node) : undefined,
     metadataOnly: true,
   };
-}
-
-function compareRevision(previous: PersonalConceptNode | null, update: PersonalConceptSignalInput & { userId: string }) {
-  if (!previous) return "newer";
-  const incomingTs = Date.parse(update.updatedAt);
-  const previousTs = Date.parse(previous.updatedAt);
-  if (!Number.isFinite(incomingTs)) throw new Error(`Invalid updatedAt for durable Personal Concept Graph write: ${update.updatedAt}`);
-  if (!Number.isFinite(previousTs)) return "newer";
-  if (incomingTs < previousTs) return "older";
-  if (incomingTs === previousTs) return "equal";
-  return "newer";
 }
 
 export async function maybeWriteExecutionSignalToConceptGraph(
@@ -263,14 +257,7 @@ export async function maybeWriteExecutionSignalToConceptGraph(
   }
 
   const update = sanitizeUpdate(buildConceptGraphUpdateFromExecutionSignal(safeSignal));
-  const previous = await repository.getPersonalConceptNode(update.userId, update.examMode, update.subjectId, update.unitId);
-  if (context.revisionPolicy === "monotonic_updated_at") {
-    const revision = compareRevision(previous, update);
-    if (previous && revision === "older") return metadataOnlyMonotonicSkipped("stale_signal", previous);
-    if (previous && revision === "equal") return metadataOnlyMonotonicSkipped("already_applied", previous);
-  }
-  const nextNode = updatePersonalConceptNode(previous, update);
-  const written = await repository.upsertPersonalConceptNode(nextNode);
-
-  return metadataOnlyResult(written, previous);
+  const transition = await repository.transitionPersonalConceptNode(update);
+  if (transition.status === "applied") return metadataOnlyResult(transition);
+  return metadataOnlyMonotonicSkipped(transition.status, transition.node);
 }

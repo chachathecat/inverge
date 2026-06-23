@@ -23,6 +23,7 @@ const now = "2026-06-05T00:00:00.000Z";
 function signal(overrides = {}) {
   return {
     userId: "learner-327",
+    eventId: "event-327",
     examMode: "first",
     subjectId: "civil-law",
     unitId: "unit-1",
@@ -41,17 +42,34 @@ function signal(overrides = {}) {
 }
 
 function createMockSupabaseRepository() {
-  const calls = { get: 0, upsert: 0, upsertedNode: null };
+  const calls = { transition: 0, transitionedInput: null };
   const repository = {
     mode: "supabase",
-    async getPersonalConceptNode() {
-      calls.get += 1;
-      return null;
-    },
-    async upsertPersonalConceptNode(node) {
-      calls.upsert += 1;
-      calls.upsertedNode = node;
-      return { ...node };
+    async transitionPersonalConceptNode(input) {
+      calls.transition += 1;
+      calls.transitionedInput = input;
+      return {
+        status: "applied",
+        node: {
+          id: "node-1",
+          userId: input.userId,
+          examMode: input.examMode,
+          subjectId: input.subjectId,
+          unitId: input.unitId,
+          state: input.confidence === "low" ? "confused" : "wrong",
+          confidence: input.confidence ?? "unknown",
+          lastResult: input.result,
+          lastTaskType: input.taskType,
+          wrongCount: input.result === "wrong" ? 1 : 0,
+          recoveryCount: 0,
+          stableCount: 0,
+          nextRecommendedTaskType: input.taskType,
+          nextDueAt: "2026-06-06T00:00:00.000Z",
+          updatedAt: input.updatedAt,
+          metadataOnly: true,
+        },
+        metadataOnly: true,
+      };
     },
   };
   return { calls, repository };
@@ -98,7 +116,7 @@ test("default flags skip durable write without touching the repository", async (
   const result = await maybeWriteExecutionSignalToConceptGraph(signal(), { env: {}, repositoryAdapter: repository });
 
   assert.deepEqual(result, { ok: true, skipped: true, reason: "durable_writes_disabled" });
-  assert.deepEqual(calls, { get: 0, upsert: 0, upsertedNode: null });
+  assert.deepEqual(calls, { transition: 0, transitionedInput: null });
 });
 
 test("Supabase repository flag without durable write flag still skips", async () => {
@@ -109,8 +127,7 @@ test("Supabase repository flag without durable write flag still skips", async ()
   });
 
   assert.deepEqual(result, { ok: true, skipped: true, reason: "durable_writes_disabled" });
-  assert.equal(calls.get, 0);
-  assert.equal(calls.upsert, 0);
+  assert.equal(calls.transition, 0);
 });
 
 test("both flags are required to attempt a durable metadata write", async () => {
@@ -123,8 +140,8 @@ test("both flags are required to attempt a durable metadata write", async () => 
     repositoryAdapter: repository,
   });
 
-  assert.equal(calls.get, 1);
-  assert.equal(calls.upsert, 1);
+  assert.equal(calls.transition, 1);
+  assert.equal(calls.transitionedInput.eventId, "event-327");
   assert.equal(result.ok, true);
   assert.equal(result.skipped, false);
   assert.equal(result.repositoryMode, "supabase");
@@ -154,16 +171,16 @@ test("monotonic durable write policy skips equal and older revisions", async () 
     updatedAt: now,
     metadataOnly: true,
   };
-  const calls = { get: 0, upsert: 0 };
+  const calls = { transition: 0 };
   const repository = {
     mode: "supabase",
-    async getPersonalConceptNode() {
-      calls.get += 1;
-      return { ...existing };
-    },
-    async upsertPersonalConceptNode(node) {
-      calls.upsert += 1;
-      return { ...node };
+    async transitionPersonalConceptNode(input) {
+      calls.transition += 1;
+      const incoming = Date.parse(input.updatedAt);
+      const current = Date.parse(existing.updatedAt);
+      if (incoming < current) return { status: "stale_signal", node: { ...existing }, metadataOnly: true };
+      if (incoming === current) return { status: "already_applied", node: { ...existing }, metadataOnly: true };
+      return { status: "applied", node: { ...existing, updatedAt: input.updatedAt }, previousState: existing.state, previousUpdatedAt: existing.updatedAt, metadataOnly: true };
     },
   };
 
@@ -178,7 +195,7 @@ test("monotonic durable write policy skips equal and older revisions", async () 
   assert.equal(equal.skipped, true);
   assert.equal(equal.reason, "already_applied");
   assert.equal(equal.node.wrongCount, 1);
-  assert.equal(calls.upsert, 0);
+  assert.equal(calls.transition, 1);
 
   const older = await maybeWriteExecutionSignalToConceptGraph(signal({ updatedAt: "2026-06-04T23:59:00.000Z" }), {
     env: {
@@ -190,7 +207,7 @@ test("monotonic durable write policy skips equal and older revisions", async () 
   });
   assert.equal(older.skipped, true);
   assert.equal(older.reason, "stale_signal");
-  assert.equal(calls.upsert, 0);
+  assert.equal(calls.transition, 2);
 });
 
 test("raw, copyrighted, official-answer, score, and instructor fields are rejected", async () => {
@@ -238,8 +255,7 @@ test("unsupported exam modes are rejected before durable writes", async () => {
       }),
     /감정평가사 1차\/2차|support only/,
   );
-  assert.equal(calls.get, 0);
-  assert.equal(calls.upsert, 0);
+  assert.equal(calls.transition, 0);
 });
 
 test("write result is metadataOnly and does not expose unknown safe input fields", async () => {
@@ -254,7 +270,7 @@ test("write result is metadataOnly and does not expose unknown safe input fields
 
   assert.equal(result.skipped, false);
   assert.equal(Object.hasOwn(result.node, "harmlessExtra"), false);
-  assert.equal(Object.hasOwn(calls.upsertedNode ?? {}, "harmlessExtra"), false);
+  assert.equal(Object.hasOwn(calls.transitionedInput ?? {}, "harmlessExtra"), false);
   assert.deepEqual(
     Object.keys(result.node),
     [

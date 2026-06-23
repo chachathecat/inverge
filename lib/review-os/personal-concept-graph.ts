@@ -14,10 +14,12 @@ export type PersonalConceptGraphResult =
   | "missed_due";
 export type PersonalConceptGraphConfidence = "unknown" | "low" | "medium" | "high";
 export type PersonalConceptDueBucket = "due" | "overdue" | "missed" | "soon" | "tomorrow" | "three_days" | "one_week" | "none";
+export type PersonalConceptAtomicTransitionStatus = "applied" | "already_applied" | "stale_signal" | "rejected";
 
 export type PersonalConceptSignalInput = {
   learnerId?: string;
   userId?: string;
+  eventId?: string;
   examMode: AppraiserExamMode;
   subjectId: string;
   unitId: string;
@@ -51,9 +53,25 @@ export type PersonalConceptNode = {
 export type ConceptGraphExecutionSignalLike = ExecutionLearningSignal & {
   learnerId?: string;
   userId?: string;
+  eventId?: string;
+  sourceEventId?: string;
   dueBucket?: PersonalConceptDueBucket;
   recentMissCount?: number;
   updatedAt?: string;
+};
+
+export type PersonalConceptAtomicTransitionInput = PersonalConceptSignalInput & {
+  userId: string;
+  eventId: string;
+};
+
+export type PersonalConceptAtomicTransitionResult = {
+  status: PersonalConceptAtomicTransitionStatus;
+  reason?: string;
+  node?: PersonalConceptNode;
+  previousState?: PersonalConceptState;
+  previousUpdatedAt?: string;
+  metadataOnly: true;
 };
 
 export type PersonalConceptTodayContext = {
@@ -267,6 +285,7 @@ export function buildConceptGraphUpdateFromExecutionSignal(signal: ConceptGraphE
   return {
     learnerId: signal.learnerId,
     userId: signal.userId,
+    eventId: signal.eventId ?? signal.sourceEventId,
     examMode: signal.examMode,
     subjectId: cleanRequiredText(signal.subjectId, "subjectId"),
     unitId: cleanRequiredText(signal.unitId, "unitId"),
