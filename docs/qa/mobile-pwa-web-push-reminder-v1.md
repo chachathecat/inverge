@@ -220,6 +220,39 @@ npm.cmd run build
 git diff --check
 ```
 
+## Runtime Evidence - 2026-06-23
+
+M418 is parked as code complete and runtime blocked. This evidence records the
+current non-production Preview state without exposing secrets or push
+subscription credentials.
+
+| Check | Result | Evidence |
+| --- | --- | --- |
+| Automated M418 checks | PASS | Source, static, and migration checks were completed for the PR branch. |
+| Supabase migration | PASS | `20260622_mobile_pwa_web_push_reminder.sql` was applied to the non-production Supabase project. |
+| Remote migration history | PASS | Remote migration history records the 20260622 migration. |
+| Preview Supabase configuration | PASS | Preview settings API returned an authenticated, successful response. |
+| Preview VAPID presence | PASS | Preview settings API reported the public VAPID configuration present. |
+| Authenticated settings API | PASS | `GET /api/notifications/settings` returned `ok=true`. |
+| Durable browser subscription | PASS | Browser subscription was persisted with `enabled=true` and `revoked=false`. |
+| Live test send | BLOCKED | `POST /api/notifications/test` returned HTTP 500. |
+| `last_test_sent_at` | BLOCKED | The field remains unset after the failed test send. |
+| Android delivery | NOT VERIFIED | Physical Android PWA delivery was not completed. |
+| iPhone delivery | NOT VERIFIED | iPhone Home Screen web app delivery was not completed. |
+| `/app` click routing | NOT VERIFIED | Test notification click routing was not verified. |
+| `/app/review` click routing | NOT VERIFIED | Review notification deep link routing was not verified. |
+| Unsubscribe runtime | NOT VERIFIED | No completed runtime unsubscribe evidence was recorded for this hold. |
+| RLS A/B | NOT VERIFIED | Account isolation runtime smoke was not completed. |
+| Cron auth | NOT VERIFIED | Wrong-secret and correct-secret runtime checks were not completed. |
+| Cron dedupe runtime | NOT VERIFIED | Duplicate invocation runtime evidence was not completed. |
+| Expired endpoint | NOT VERIFIED | Expired endpoint behavior was not completed. |
+| Scheduler | BLOCKED | Scheduler blocked by Vercel Hobby plan; do not add hourly `vercel.json` cron for M418. |
+
+Existing 20260608, 20260615, and 20260616 migrations remain unapplied for M418.
+Do not use `db push --include-all` for M418. This evidence includes no push
+endpoint, `p256dh`, `auth`, VAPID private key, Supabase service-role key,
+`CRON_SECRET`, or other subscription credential.
+
 ## Not Verified Locally
 
 These require deployed HTTPS, real VAPID keys, migrated Supabase tables, active authenticated accounts, and physical/OS browser testing:
