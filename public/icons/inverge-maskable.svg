@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Inverge">
+  <rect width="512" height="512" fill="#10233f"/>
+  <circle cx="256" cy="256" r="220" fill="#f7f1e8"/>
+  <path d="M158 142h46v228h-46z" fill="#10233f"/>
+  <path d="M236 142h44l76 116V142h46v228h-44l-76-116v116h-46z" fill="#10233f"/>
+  <circle cx="370" cy="344" r="26" fill="#d6a75c"/>
+</svg>

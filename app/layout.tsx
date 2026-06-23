@@ -1,13 +1,38 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 
+import { ServiceWorkerRegistration } from "@/components/pwa/service-worker-registration";
 import { ThemeProvider } from "@/components/shared/theme-provider";
 
 import "./globals.css";
 
 export const metadata: Metadata = {
+  applicationName: "Inverge",
   title: "Inverge | 감정평가사 Pass Management OS",
   description: "감정평가사 1차 오답과 2차 답안 보강을 오늘의 다음 행동으로 정리하는 Pass Management OS입니다.",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "Inverge",
+    statusBarStyle: "default",
+  },
+  icons: {
+    icon: [
+      { url: "/icons/inverge-icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/inverge-icon-512.png", sizes: "512x512", type: "image/png" },
+      { url: "/icons/inverge-icon-192.svg", sizes: "192x192", type: "image/svg+xml" },
+      { url: "/icons/inverge-icon-512.svg", sizes: "512x512", type: "image/svg+xml" },
+    ],
+    apple: [{ url: "/icons/inverge-apple-touch-180.png", sizes: "180x180", type: "image/png" }],
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#10233f",
+  colorScheme: "light dark",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 const themeScript = `
@@ -31,6 +56,7 @@ export default function RootLayout({
           {themeScript}
         </Script>
         <ThemeProvider>
+          <ServiceWorkerRegistration />
           {children}
         </ThemeProvider>
       </body>

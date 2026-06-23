@@ -28,6 +28,32 @@ const learnerRuntimeFiles = [
   "app/app/review/page.tsx",
 ];
 
+const m418RequiredFiles = [
+  "app/manifest.ts",
+  "public/sw.js",
+  "components/pwa/service-worker-registration.tsx",
+  "components/notifications/notification-settings-client.tsx",
+  "app/app/settings/notifications/page.tsx",
+  "public/icons/inverge-apple-touch-180.png",
+  "public/icons/inverge-icon-192.png",
+  "public/icons/inverge-icon-512.png",
+  "public/icons/inverge-maskable-512.png",
+  "app/api/notifications/settings/route.ts",
+  "app/api/notifications/subscribe/route.ts",
+  "app/api/notifications/unsubscribe/route.ts",
+  "app/api/notifications/test/route.ts",
+  "app/api/cron/notifications/route.ts",
+  "lib/notifications/push-payload.ts",
+  "lib/notifications/notification-plan.ts",
+  "lib/notifications/web-push-server.ts",
+  "supabase/migrations/20260622_mobile_pwa_web_push_reminder.sql",
+  "tests/mobile-pwa-web-push-reminder-v1.test.mjs",
+  "tests/web-push-data-boundary.test.mjs",
+  "tests/push-subscription-persistence.test.mjs",
+  "tests/scheduled-reminder-idempotency.test.mjs",
+  "tests/notification-settings-ui.test.mjs",
+];
+
 const prohibitedLearnerCopyPatterns = [
   { label: "official grading", pattern: /공식\s*채점|official\s+grading/i },
   { label: "official model answer", pattern: /공식\s*모범\s*답안|공식\s*모범답안|모범답안|official\s+model\s+answer/i },
@@ -110,6 +136,9 @@ function runStaticReadinessGate() {
   const notesPage = getSource("app/app/notes/page.tsx");
   const itemsPage = getSource("app/app/items/page.tsx");
   const reviewPage = getSource("app/app/review/page.tsx");
+  const notificationPayload = getSource("lib/notifications/push-payload.ts");
+  const notificationCron = getSource("app/api/cron/notifications/route.ts");
+  const notificationMigration = getSource("supabase/migrations/20260622_mobile_pwa_web_push_reminder.sql");
 
   const goldenFlowSource = `${capturePage}\n${captureForm}\n${localReflection}\n${todayPage}\n${notesPage}\n${reviewPage}`;
   check(has(goldenFlowSource, "오늘 한 것 올리기"), "golden flow must keep warm capture CTA copy", failures);
@@ -138,6 +167,17 @@ function runStaticReadinessGate() {
   check(has(reviewPage, "LocalBetaReviewCandidateSection"), "Review must include local beta reflection surface", failures);
   check(has(todayPage, "LocalBetaTodayReflection"), "Today must include local beta reflection surface", failures);
   check(!/(raw\s*OCR|rawOcrText|rawAnswerText|official\s+corpus|global\s+corpus|공식\s*원문|원문\s*저장)/i.test(`${localStorage}\n${localReflection}`), "local beta browser fallback must not store or expose raw official/OCR corpus text", failures);
+
+  for (const file of m418RequiredFiles) {
+    check(existsSync(file), `M418 required file must exist: ${file}`, failures);
+  }
+  check(has(getSource("app/app/settings/page.tsx"), "/app/settings/notifications?mode="), "M418 Settings surface must link to notification settings as a secondary action", failures);
+  check(has(notificationPayload, "NOTIFICATION_ALLOWED_KEYS"), "M418 notification payload must use an exact allowlist", failures);
+  check(has(notificationPayload, "NOTIFICATION_ALLOWED_URLS"), "M418 notification payload must restrict click URLs", failures);
+  check(has(notificationCron, "CRON_SECRET"), "M418 cron route must require CRON_SECRET", failures);
+  check(has(notificationCron, "delivery_key"), "M418 cron route must use delivery-key dedupe", failures);
+  check(has(notificationMigration, "enable row level security"), "M418 notification tables must enable RLS", failures);
+  check(!/raw_ocr|problem_text|question_text|answer_text|official_answer|formula|casio|score|pass_fail/i.test(notificationMigration), "M418 notification persistence must not add raw learner content columns", failures);
 
   for (const file of learnerRuntimeFiles) {
     const source = learnerVisibleSource(file, getSource(file));
@@ -184,6 +224,7 @@ runStaticReadinessGate();
 
 const steps = [
   npmStep("official-source verification", "check:official-source-verification"),
+  npmStep("M418 mobile PWA Web Push reminder checks", "check:mobile-pwa-web-push-reminder"),
   npmStep("learner-loop verification (includes guardrail audit)", "verify:learner-loop:ci"),
   {
     label: "data-boundary tests",
