@@ -144,6 +144,42 @@ The smoke deletes synthetic `personal_concept_nodes` rows after verification. Th
 
 Do not use `npx.cmd supabase db push --linked --include-all` for this work. Apply the forward migration only through an approved owner workflow.
 
+## Runtime Evidence - 2026-06-23
+
+Owner-run non-production Supabase runtime verification passed after the M420 migration was applied through the approved owner workflow. This repository records only safe aggregate evidence; no secret values, test-user identifiers, access tokens, raw learner data, row payloads, endpoints, or project identifiers are recorded here.
+
+Migration history alignment:
+
+| Check | Result | Evidence |
+| --- | --- | --- |
+| Prerequisite `personal_concept_nodes` | PASS | The prerequisite migration timestamp `20260605` was present before the M420 smoke. |
+| M420 migration application | PASS | The M420 migration timestamp `20260623` was applied in the non-production Supabase project. |
+| Migration history alignment | PASS | The non-production migration history was verified to include the expected `20260605` prerequisite timestamp and `20260623` M420 timestamp. |
+
+Atomic live smoke:
+
+| Check | Result |
+| --- | --- |
+| Atomic live smoke completed after migration application | PASS |
+| `applied` status | PASS |
+| Identical retry returned `already_applied` | PASS |
+| Duplicate old retry returned `already_applied` | PASS |
+| Unique older event returned `stale_signal` | PASS |
+| Same-timestamp different event rejection | PASS |
+| Event-ID payload mismatch rejection | PASS |
+| Concurrent final database row newer-wins | PASS |
+| Final counter evidence | PASS |
+| Transition-event own-row RLS | PASS |
+| Cross-user node RLS | PASS |
+| Cross-user transition-event RLS | PASS |
+| Anonymous read denial | PASS |
+| Synthetic node cleanup | PASS |
+| Transition-event audit rows retained by design | PASS |
+| No secrets, IDs, tokens, or raw learner data printed | PASS |
+| Production durable-read/write flags remain off | PASS |
+
+The first owner-run smoke surfaced `concurrent_final_db_row_not_newer_updated_at`. Root cause was the smoke assertion comparing `updated_at` as an exact string even though Postgres/PostgREST may serialize the same `timestamptz` instant with equivalent UTC offset formatting. Commit `f58a336` changed the smoke to compare parsed epoch milliseconds as instants. The rerun passed. This was a smoke assertion correction only; it was not an RPC or migration correction.
+
 ## Direct Table Mutation Scope
 
 The atomic transition guarantee applies only to callers that use `transition_personal_concept_node_v1` or the repository transition method that calls it.
@@ -185,7 +221,7 @@ Schema rollback, if ever required, must be a separate reviewed migration after c
 
 ## Residual Risks
 
-- Live Supabase behavior still requires applying the migration in an approved environment and running the gated smoke script.
+- Non-production Supabase behavior passed the owner-run gated smoke on 2026-06-23, but production durable-read/write flags remain off.
 - Export/delete lifecycle for `personal_concept_transition_events` remains a later lifecycle PR.
 - Direct authenticated insert/update grants on `personal_concept_nodes` must be removed, revoked, or constrained before production durable-write enablement.
-- Production durable-write enablement remains blocked until owner-approved runtime evidence exists and flags are intentionally configured.
+- Production durable-write enablement remains blocked until direct grants are hardened and flags are intentionally configured.
