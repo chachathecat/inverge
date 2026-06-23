@@ -18,6 +18,7 @@ import {
 } from "../lib/review-os/personal-concept-graph-repository.ts";
 import { updatePersonalConceptNode } from "../lib/review-os/personal-concept-graph.ts";
 import { buildTodayPlanSourceUnion } from "../lib/review-os/today-plan-source-union.ts";
+import { assertSameTimestampInstant } from "../scripts/verify-personal-concept-graph-atomic-transition.mjs";
 
 const migrationPath = "supabase/migrations/20260623_personal_concept_graph_atomic_transition.sql";
 const scriptPath = "scripts/verify-personal-concept-graph-atomic-transition.mjs";
@@ -471,4 +472,23 @@ test("runtime smoke source fails closed and prints only aggregate statuses", asy
   assert.match(script, /anonymous_transition_event_read_denied/);
   assert.match(script, /cleanupStatus/);
   assert.doesNotMatch(script, /console\.log\([^)]*accessToken|console\.log\([^)]*userAId|console\.log\([^)]*row/s);
+});
+
+test("runtime smoke timestamp comparison accepts equivalent UTC instant formats", () => {
+  const expected = "2026-06-23T00:20:00.000Z";
+
+  assert.doesNotThrow(() => assertSameTimestampInstant("2026-06-23T00:20:00.000Z", expected, "same_zulu_instant"));
+  assert.doesNotThrow(() => assertSameTimestampInstant("2026-06-23T00:20:00+00:00", expected, "same_offset_instant"));
+  assert.doesNotThrow(() => assertSameTimestampInstant("2026-06-23 00:20:00.000000+00", expected, "same_postgres_offset_instant"));
+});
+
+test("runtime smoke timestamp comparison rejects malformed or different instants", () => {
+  assert.throws(
+    () => assertSameTimestampInstant("2026-06-23T00:20:01.000Z", "2026-06-23T00:20:00.000Z", "different_timestamp"),
+    /different_timestamp:different_instant/,
+  );
+  assert.throws(
+    () => assertSameTimestampInstant("not-a-timestamp", "2026-06-23T00:20:00.000Z", "malformed_timestamp"),
+    /malformed_timestamp:invalid_timestamp/,
+  );
 });

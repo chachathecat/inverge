@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import process from "node:process";
 import { randomUUID } from "node:crypto";
+import { pathToFileURL } from "node:url";
 import { createClient } from "@supabase/supabase-js";
 
 const SMOKE_FLAG = "PERSONAL_CONCEPT_GRAPH_ATOMIC_TRANSITION_SMOKE";
@@ -134,6 +135,17 @@ function expectReason(label, result, expected) {
   if (result.reason !== expected) throw new Error(`${label}:expected_${expected}_got_${result.reason ?? "none"}`);
 }
 
+export function assertSameTimestampInstant(actualTimestamp, expectedTimestamp, label) {
+  const actualMs = Date.parse(actualTimestamp);
+  const expectedMs = Date.parse(expectedTimestamp);
+  if (!Number.isFinite(actualMs) || !Number.isFinite(expectedMs)) {
+    throw new Error(`${label}:invalid_timestamp`);
+  }
+  if (actualMs !== expectedMs) {
+    throw new Error(`${label}:different_instant`);
+  }
+}
+
 async function fetchNodes(client, unitId) {
   const { data, error } = await client
     .from("personal_concept_nodes")
@@ -165,7 +177,7 @@ async function expectSingleNode(client, unitId, label) {
 
 async function assertFinalConcurrentNode(client, unitId, expectedUpdatedAt, olderStatus) {
   const node = await expectSingleNode(client, unitId, "concurrent_final_db_row");
-  if (node.updated_at !== expectedUpdatedAt) throw new Error("concurrent_final_db_row_not_newer_updated_at");
+  assertSameTimestampInstant(node.updated_at, expectedUpdatedAt, "concurrent_final_db_row_not_newer_updated_at");
   if (node.last_result !== "done") throw new Error("concurrent_final_db_row_not_newer_last_result");
   if (node.recovery_count !== 1) throw new Error("concurrent_final_recovery_count_unexpected");
   if (node.stable_count !== 0) throw new Error("concurrent_final_stable_count_unexpected");
@@ -332,4 +344,6 @@ async function main() {
   });
 }
 
-main();
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main();
+}
