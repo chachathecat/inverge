@@ -142,16 +142,20 @@ export function validateNotificationPayload(input: unknown): NotificationPayload
   };
 }
 
-export function buildNotificationPayload(type: NotificationPayloadType, notificationId: string): NotificationPayload {
+export function buildNotificationPayloadCandidate(type: NotificationPayloadType, notificationId: string): unknown {
   const base = DEFAULT_COPY[type];
-  return validateNotificationPayload({
+  return {
     type,
     title: base.title,
     body: base.body,
     url: base.url,
     notificationId,
     tag: base.tag,
-  });
+  };
+}
+
+export function buildNotificationPayload(type: NotificationPayloadType, notificationId: string): NotificationPayload {
+  return validateNotificationPayload(buildNotificationPayloadCandidate(type, notificationId));
 }
 
 export function sanitizeNotificationClickUrl(url: unknown): NotificationUrl {

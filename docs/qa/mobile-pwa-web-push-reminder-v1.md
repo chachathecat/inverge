@@ -253,6 +253,54 @@ Do not use `db push --include-all` for M418. This evidence includes no push
 endpoint, `p256dh`, `auth`, VAPID private key, Supabase service-role key,
 `CRON_SECRET`, or other subscription credential.
 
+## M421B Source-Level Recovery - 2026-06-24
+
+M421B adds bounded, secret-safe source-level classification around the Web Push
+test-send path. It does not claim live delivery has passed yet. Owner-run
+Preview verification is still required after deployment, using only safe HTTP
+status and bounded aggregate categories.
+
+Bounded send categories:
+
+- `sent`
+- `expired`
+- `vapid_configuration_error`
+- `subscription_format_error`
+- `push_provider_rejected`
+- `push_transport_failure`
+- `payload_validation_error`
+
+Test-send aggregate responses include only:
+
+- `ok`
+- safe top-level `status`
+- `sent`
+- `expired`
+- `failed`
+- bounded `failureCategoryCounts`
+
+The route must not return subscription IDs, push endpoints, `p256dh`, `auth`,
+user identifiers, VAPID values, raw provider response bodies, raw error
+messages, stack traces, or learner data. Provider `404` and `410` remain
+`expired`; other provider `4xx` responses are `push_provider_rejected`; provider
+`5xx`, timeout, and network failures are `push_transport_failure`.
+
+Successful test sends must update both `last_test_sent_at` and `updated_at`.
+If an OS push is sent but persistence fails, the response reports
+`sent_persistence_failed` instead of full success. Expired endpoint revocation
+persistence is likewise checked and reported as `expired_persistence_failed`
+when needed.
+
+Notification payloads remain metadata-only. No raw OCR text, problem text,
+answer text, formulas, numbers, units, CASIO values, scores, pass/fail
+predictions, or instructor content may enter payloads.
+
+Scheduler status is unchanged: arbitrary reminder-time scheduling remains
+blocked on the current Vercel Hobby plan, and this PR must not add an hourly
+`vercel.json` cron. VAPID rotation remains prohibited unless later evidence
+specifically proves the key pair itself must be replaced and a subscription
+replacement plan is approved.
+
 ## Not Verified Locally
 
 These require deployed HTTPS, real VAPID keys, migrated Supabase tables, active authenticated accounts, and physical/OS browser testing:
