@@ -51,7 +51,7 @@ No new learner feature, route, database migration, table, environment variable, 
 | Calculator Routine | Nine steps, explicit verification, explicit mistake type, metadata-only completion | PASS |
 | Learning Record | Existing completion API, idempotent retry identity, changed fingerprint revision | PASS |
 | Personal Concept State | Wrong/stuck/clean transitions, disabled-write no repository touch | PASS |
-| #417 concurrency audit | Barrier/mock repository documents non-atomic cross-instance read-compare-upsert limitation | PASS |
+| M420 concurrency audit | Atomic repository transition replaces app-memory read-compare-upsert for feature-flagged durable writes | PASS |
 | Data boundary | Sentinels and forbidden fields rejected or absent from metadata | PASS |
 | Copy/product boundary | Runtime learner sources scanned for forbidden official/score/pass/payment/instructor/archive claims | PASS |
 
@@ -138,7 +138,7 @@ HTTP 200 or source inspection alone is not counted as full e2e browser evidence.
 | --- | --- | --- | --- |
 | Default/local | Repository memory/default; durable writes off; durable reads off unless explicitly configured | PASS for source/helper default loop when validation passes | Learning Record, Review, Today, and calculator recovery can operate without claiming durable graph persistence. |
 | Configured staging | `PERSONAL_CONCEPT_GRAPH_REPOSITORY=supabase`, `PERSONAL_CONCEPT_GRAPH_DURABLE_WRITES=1`, `PERSONAL_CONCEPT_GRAPH_DURABLE_READS=1`, `PERSONAL_CONCEPT_GRAPH_TODAY_PLAN_ROLLOUT=1` | NOT VERIFIED unless runtime credentials/env are available | Do not claim configured staging pass without runtime RLS/read/write smoke evidence. |
-| Production | Actual production flags not changed by this PR | BLOCKED / NOT RELEASED | No Vercel or production configuration was modified. Durable graph writes remain blocked by the cross-instance atomicity limitation. |
+| Production | Actual production flags not changed by this PR | BLOCKED / NOT RELEASED | No Vercel or production configuration was modified. Durable graph writes remain blocked until M420 migration and runtime smoke evidence exist. |
 
 ## Extended Golden Flow Evidence
 
@@ -152,7 +152,7 @@ HTTP 200 or source inspection alone is not counted as full e2e browser evidence.
 | Retrieval Review | Queue completion persists through existing route | No durable completion claim for local reflection-only items | Yes | Recall sentence/outcome metadata only | Rereading-only completion is not accepted. |
 | Calculator Routine | Learning Record persisted through existing completion API when authenticated | Browser/session routine draft and local completion history | Auth for server Learning Record | Completion signal is metadata-only | Clean completion does not certify numerical correctness. |
 | Learning Record | Existing `learning_signal_events` path | Local-only sync status when unauthenticated | Yes for server save | Yes | Identical retry dedupes; changed completion fingerprints a new revision. |
-| Personal Concept State | Feature-flagged durable graph write only | Default path skips repository | Auth and flags required | Yes | Disabled by default; sequential monotonic only. |
+| Personal Concept State | Feature-flagged durable graph write only | Default path skips repository | Auth and flags required | Yes | Disabled by default; Supabase write helper calls the atomic RPC when both write flags are enabled. |
 | Recovery | Review candidate and Today recovery point back to original logical routine | Local recovery status remains honest | Auth for account candidate persistence | Yes | Same-routine clean recovery closes the candidate. |
 
 ## #417 Post-Merge Audit
@@ -167,15 +167,17 @@ Audit findings:
 - Supabase write payloads omit non-UUID helper ids on first write and keep metadata-only fields.
 - Raw routine entries, formulas, numbers/units, CASIO input, display value, answer value, verification memo, and mistake memo are not persisted in Learning Record metadata, telemetry, graph signals, or graph payloads.
 
-Concurrency limitation:
+Concurrency update:
 
-The current durable write helper is sequentially monotonic, not atomically monotonic across separate server instances. It reads the previous node, compares timestamps in application code, builds a new node, then upserts. Two concurrent revisions can both read the same previous node; if the newer write lands first and the older write lands second, the older write can overwrite the newer state. This does not affect default closed-beta behavior because durable writes are disabled unless feature flags are explicitly enabled.
+#417 identified that the durable write helper was sequentially monotonic, not atomically monotonic across separate server instances. It read the previous node, compared timestamps in application code, built a new node, then upserted. Two concurrent revisions could both read the same previous node; if the newer write landed first and the older write landed second, the older write could overwrite the newer state.
+
+M420 changes the feature-flagged Supabase durable-write path to call `transition_personal_concept_node_v1`. The RPC derives the user from `auth.uid()`, locks event and concept identity inside the database transaction, computes counters from the locked row, and records event idempotency through `personal_concept_transition_events`. Default closed-beta behavior remains unchanged because durable writes are disabled unless feature flags are explicitly enabled.
 
 Rollout impact:
 
-- Durable graph writes remain a blocked optional path for production rollout.
-- An atomic database/RPC update or equivalent compare-and-write persistence PR is required before enabling production durable graph writes.
-- This PR does not add an in-process lock, DB migration, or new API route.
+- Durable graph writes remain a blocked optional path for production rollout until the M420 migration is applied through an approved workflow and runtime smoke passes.
+- The source-level atomic database/RPC path now exists; it still requires non-production Supabase runtime evidence before cohort enablement.
+- This document does not approve production flags or linked migration push.
 
 ## Data Boundary Result
 
@@ -204,7 +206,7 @@ No raw learner routine values are persisted in metadata. Raw learner-owned value
 | --- | --- | --- |
 | Authenticated browser smoke not available in this local environment | NOT VERIFIED | Does not block source/helper acceptance, but must be run before broader cohort expansion. |
 | Configured Supabase durable graph write/read runtime not verified here | BLOCKED OPTIONAL PATH | Default closed-beta loop does not rely on it. |
-| Cross-instance durable graph write atomicity is not guaranteed | BLOCKED OPTIONAL PATH | Keep durable writes disabled for rollout until a separate persistence PR adds atomic compare-and-write behavior. |
+| Cross-instance durable graph write atomicity source path | SOURCE IMPLEMENTED / RUNTIME NOT VERIFIED | Keep durable writes disabled for rollout until M420 migration and gated Supabase smoke evidence exist. |
 | Production deployment flags were not inspected or changed | NOT VERIFIED | This PR is not production rollout approval. |
 
 ## Rollback
@@ -224,7 +226,7 @@ or unset the flags. No schema rollback is introduced by this PR.
 ## Post-Beta Backlog
 
 1. Run authenticated browser smoke at 360 x 800, 390 x 844, and 1280 x 800 with synthetic learner data.
-2. Add atomic durable graph compare-and-write behavior in a separately reviewed persistence PR.
+2. Apply M420's forward migration only through an approved owner workflow and run the gated atomic transition smoke in non-production.
 3. Record configured staging Supabase durable read/write evidence with approved non-production credentials.
 4. Add export/delete lifecycle evidence for Personal Concept Graph metadata.
 5. Re-run manual dogfood after the first closed-beta cohort creates real local and durable learner records.

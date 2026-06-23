@@ -127,7 +127,8 @@ function nodeFromBridge(bridge, previous = null, event = eventFromBridge(bridge)
 
 function createMockSupabaseRepository(initialNode = null) {
   let stored = initialNode ? { ...initialNode } : null;
-  const calls = { get: 0, upsert: 0, upsertedNodes: [] };
+  const seenEvents = new Set();
+  const calls = { transition: 0, transitionedInputs: [] };
   return {
     calls,
     get stored() {
@@ -135,15 +136,29 @@ function createMockSupabaseRepository(initialNode = null) {
     },
     repository: {
       mode: "supabase",
-      async getPersonalConceptNode() {
-        calls.get += 1;
-        return stored ? { ...stored } : null;
-      },
-      async upsertPersonalConceptNode(node) {
-        calls.upsert += 1;
-        stored = { ...node };
-        calls.upsertedNodes.push({ ...node });
-        return { ...node };
+      async transitionPersonalConceptNode(input) {
+        calls.transition += 1;
+        calls.transitionedInputs.push({ ...input });
+        if (seenEvents.has(input.eventId)) {
+          return { status: "already_applied", node: stored ? { ...stored } : undefined, metadataOnly: true };
+        }
+        const previous = stored ? { ...stored } : null;
+        if (previous) {
+          const incomingTs = Date.parse(input.updatedAt);
+          const previousTs = Date.parse(previous.updatedAt);
+          if (incomingTs < previousTs) {
+            seenEvents.add(input.eventId);
+            return { status: "stale_signal", node: previous, previousState: previous.state, previousUpdatedAt: previous.updatedAt, metadataOnly: true };
+          }
+          if (incomingTs === previousTs) {
+            seenEvents.add(input.eventId);
+            return { status: "rejected", reason: "same_timestamp_different_event", node: previous, previousState: previous.state, previousUpdatedAt: previous.updatedAt, metadataOnly: true };
+          }
+        }
+        const next = updatePersonalConceptNode(previous, input);
+        stored = { ...next };
+        seenEvents.add(input.eventId);
+        return { status: "applied", node: { ...next }, previousState: previous?.state, previousUpdatedAt: previous?.updatedAt, metadataOnly: true };
       },
     },
   };
@@ -301,8 +316,7 @@ test("monotonic durable writes are idempotent and stale-safe", async () => {
     context: { env: {}, repositoryAdapter: disabledRepo.repository },
   });
   assert.equal(disabled.status, "durable_writes_disabled");
-  assert.equal(disabledRepo.calls.get, 0);
-  assert.equal(disabledRepo.calls.upsert, 0);
+  assert.equal(disabledRepo.calls.transition, 0);
 
   const repo = createMockSupabaseRepository();
   const first = await maybeUpdateCalculatorRoutineConceptState({
@@ -315,8 +329,8 @@ test("monotonic durable writes are idempotent and stale-safe", async () => {
   assert.equal(first.status, "updated");
   assert.equal(first.previousState, undefined);
   assert.equal(first.nextState, "wrong");
-  assert.equal(repo.calls.get, 1);
-  assert.equal(repo.calls.upsert, 1);
+  assert.equal(repo.calls.transition, 1);
+  assert.equal(repo.calls.transitionedInputs[0].eventId, wrongEvent.id);
   assert.equal(repo.stored.wrongCount, 1);
 
   const identicalRetry = await maybeUpdateCalculatorRoutineConceptState({
@@ -327,7 +341,7 @@ test("monotonic durable writes are idempotent and stale-safe", async () => {
     context: { env: ENABLED_WRITE_ENV, repositoryAdapter: repo.repository },
   });
   assert.equal(identicalRetry.status, "already_applied");
-  assert.equal(repo.calls.upsert, 1);
+  assert.equal(repo.calls.transition, 2);
   assert.equal(repo.stored.wrongCount, 1);
 
   const olderBridge = bridgeFromDraft({ routineId: "problem-snap-monotonic", mistakeTypes: ["casio_input"] }, "2026-06-22T08:00:00.000Z");
@@ -339,7 +353,7 @@ test("monotonic durable writes are idempotent and stale-safe", async () => {
     context: { env: ENABLED_WRITE_ENV, repositoryAdapter: repo.repository },
   });
   assert.equal(older.status, "stale_signal");
-  assert.equal(repo.calls.upsert, 1);
+  assert.equal(repo.calls.transition, 3);
   assert.equal(repo.stored.wrongCount, 1);
 
   const cleanBridge = bridgeFromDraft({ routineId: "problem-snap-monotonic", mistakeTypes: ["none"] }, "2026-06-22T08:45:00.000Z");
@@ -353,7 +367,7 @@ test("monotonic durable writes are idempotent and stale-safe", async () => {
   assert.equal(clean.status, "updated");
   assert.equal(clean.previousState, "wrong");
   assert.equal(clean.nextState, "recovering");
-  assert.equal(repo.calls.upsert, 2);
+  assert.equal(repo.calls.transition, 4);
   assert.equal(repo.stored.recoveryCount, 1);
 
   const repairRepo = createMockSupabaseRepository();
@@ -365,7 +379,7 @@ test("monotonic durable writes are idempotent and stale-safe", async () => {
     context: { env: ENABLED_WRITE_ENV, repositoryAdapter: repairRepo.repository },
   });
   assert.equal(dedupedRepair.status, "updated");
-  assert.equal(repairRepo.calls.upsert, 1);
+  assert.equal(repairRepo.calls.transition, 1);
 });
 
 test("Supabase write payload is compatible with UUID primary keys", () => {

@@ -123,7 +123,7 @@ PR #324 implements the intended learner own-row RLS model in the schema migratio
 - Do not place raw third-party problem text, raw OCR transcripts, learner answer text, official answer text, model-answer text, score predictions, or instructor comments in a model-improvement corpus.
 - Any future aggregate analytics must be pseudonymized, must not expose single-user rows, and must not reconstruct raw user or third-party text.
 
-## Implementation notes for PR #324 through PR #329
+## Implementation notes for PR #324 through PR #420
 
 - PR #324 adds schema and row-level security only for `public.personal_concept_nodes`.
 - PR #325 adds the Personal Concept Graph Supabase repository contract behind the explicit `PERSONAL_CONCEPT_GRAPH_REPOSITORY=supabase` feature flag.
@@ -138,8 +138,11 @@ PR #324 implements the intended learner own-row RLS model in the schema migratio
 - Production learner enablement still requires a later closed-beta rollout PR; PR #327, PR #329, and PR #330 are not that enablement PR. The live Today Plan rollout remains separate.
 - The PR #325 repository maps only metadata columns into Supabase and rejects raw OCR, problem, learner answer, copyrighted/source text, official answer/model-answer, score-prediction, and instructor-comment fields before upsert.
 - PR #417 wires Calculator Routine completion into the durable write helper as a guarded, disabled-by-default integration. The service first persists or dedupes the `learning_signal_events` row, then projects only metadata into the canonical `감정평가실무 · 검산/CASIO` concept node when `PERSONAL_CONCEPT_GRAPH_REPOSITORY=supabase` and `PERSONAL_CONCEPT_GRAPH_DURABLE_WRITES=1` are both enabled. The default remains disabled, no migration is added, and no raw routine entries, formulas, numbers, CASIO inputs, display values, answer values, verification memos, or mistake memos are written to graph storage or telemetry.
-- PR #417 calculator writes use a monotonic `updatedAt` revision policy. Equal timestamps return `already_applied`, older timestamps return `stale_signal`, and newer timestamps derive and upsert the full metadata node. This lets a deduped Learning Record retry repair a previously failed graph write without double-incrementing counters or rolling back newer state.
+- PR #417 calculator writes use a monotonic `updatedAt` revision policy in the helper layer. That policy documents the desired status contract but is not sufficient across separate server instances because read/compare/upsert happens outside a database transaction.
 - PR #417 also keeps rollback flag-only. Disabling either `PERSONAL_CONCEPT_GRAPH_DURABLE_WRITES` or `PERSONAL_CONCEPT_GRAPH_REPOSITORY=supabase` returns calculator completion to Learning Record persistence only, with `conceptStateStatus=durable_writes_disabled` and no repository write attempt.
+- PR #420 adds `public.personal_concept_transition_events` and `public.transition_personal_concept_node_v1` in `supabase/migrations/20260623_personal_concept_graph_atomic_transition.sql`. The RPC derives `user_id` from `auth.uid()`, locks the event and concept identity inside one transaction, reads the node with `FOR UPDATE`, computes counters/state from the locked database row, and records event idempotency before returning metadata-only status.
+- PR #420 changes the feature-flagged Supabase durable-write path to call the RPC instead of app-memory `get -> compare -> update -> upsert`. Statuses are `applied`, `already_applied`, `stale_signal`, and `rejected`; same event retries do not increment counters, older unique events return `stale_signal`, and same-timestamp different events return deterministic `rejected`.
+- PR #420 is still disabled by default. It does not apply migrations to a linked project, does not enable production flags, and requires gated runtime smoke evidence before any production durable-write rollout.
 
 ## Migration plan
 
@@ -151,8 +154,10 @@ PR #324 intentionally adds only the Supabase migration and static migration guar
 4. Add helper-level execution-signal durable writes that remain disabled unless both `PERSONAL_CONCEPT_GRAPH_REPOSITORY=supabase` and `PERSONAL_CONCEPT_GRAPH_DURABLE_WRITES=1` are set.
 5. Add the PR #329 durable read adapter helper for Today Plan candidates behind `PERSONAL_CONCEPT_GRAPH_REPOSITORY=supabase` and `PERSONAL_CONCEPT_GRAPH_DURABLE_READS=1`; do not wire it into the live Today Plan page until a separate rollout PR. Runtime RLS pass remains required before enabling durable reads in real environments.
 6. Add the PR #330 durable read runtime smoke to verify the helper against a real Supabase project, max-three metadata-only Today Plan actions, no raw text leakage, unsupported exam rejection, and cross-user read denial.
-7. Add export/delete integration for user-owned graph metadata.
-8. Run closed-beta learner-loop, taxonomy, build, and lint checks before enabling any production write or live durable read path.
+7. Add the M420 atomic transition RPC and durable-write repository call path behind existing write flags; do not use linked `db push --include-all`.
+8. Run the gated atomic transition smoke in an approved non-production Supabase environment before enabling durable writes for any cohort.
+9. Add export/delete integration for user-owned graph metadata and transition-event audit rows.
+10. Run closed-beta learner-loop, taxonomy, build, and lint checks before enabling any production write or live durable read path.
 
 ## Production durable-read enablement gates
 
@@ -160,6 +165,7 @@ Enabling durable Personal Concept Graph reads in production requires all of the 
 
 - runtime RLS smoke pass for `personal_concept_nodes`;
 - PR #330 durable read runtime smoke pass against a real Supabase project;
+- M420 atomic transition runtime smoke pass against a real Supabase project after the forward migration is applied through an approved workflow;
 - learner-loop CI pass, including static/unit durable-read smoke coverage;
 - closed-beta readiness pass;
 - explicit product gate for the learner Today Plan route.
@@ -205,9 +211,10 @@ For future implementation PRs:
 3. **Durable execution-signal helper PR (PR #327):** route learner execution signals into the guarded repository only through helper-level code and only when both repository and durable-write flags are explicitly enabled; keep default closed-beta behavior unchanged.
 4. **Durable Today Plan read helper PR (PR #329):** add a helper-only read adapter behind `PERSONAL_CONCEPT_GRAPH_DURABLE_READS=1`; keep default closed-beta behavior unchanged and do not wire the live Today Plan page.
 5. **Durable read runtime smoke PR (PR #330):** verify real Supabase read-helper behavior, metadata-only action output, max-three actions, unsupported exam rejection, and cross-user read denial; keep live Today Plan integration separate.
-6. **Learner read/write rollout PR:** enable the helpers for a limited closed-beta learner path and read graph metadata for Today Plan after final rollout review and runtime RLS evidence.
-7. **Lifecycle PR:** add export/delete handling and retention documentation updates.
-8. **Closed-beta enablement PR:** expand durable graph persistence for a limited closed-beta cohort after learner-loop, taxonomy, build, lint, and smoke checks pass.
+6. **Atomic transition RPC PR (M420):** add event dedupe and metadata-only RPC transition writes; route the Supabase write helper through the RPC while flags remain off by default.
+7. **Learner read/write rollout PR:** enable the helpers for a limited closed-beta learner path and read graph metadata for Today Plan after final rollout review, runtime RLS evidence, durable-read smoke, and atomic-transition smoke.
+8. **Lifecycle PR:** add export/delete handling and retention documentation updates.
+9. **Closed-beta enablement PR:** expand durable graph persistence for a limited closed-beta cohort after learner-loop, taxonomy, build, lint, and smoke checks pass.
 
 ## Non-goals for this PR
 

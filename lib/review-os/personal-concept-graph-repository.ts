@@ -4,6 +4,8 @@ import {
   rankConceptGraphNodesForToday,
   updatePersonalConceptNode,
   type ConceptGraphExecutionSignalLike,
+  type PersonalConceptAtomicTransitionInput,
+  type PersonalConceptAtomicTransitionResult,
   type PersonalConceptNode,
   type PersonalConceptTodayContext,
 } from "./personal-concept-graph";
@@ -51,6 +53,10 @@ const FORBIDDEN_RAW_FIELD_NAMES = new Set([
 ]);
 
 const store = new Map<string, StoredPersonalConceptNode>();
+const transitionEvents = new Map<string, {
+  status: "applied" | "stale_signal" | "rejected";
+  nodeKey: string;
+}>();
 
 function assertSupportedExamMode(examMode: unknown): asserts examMode is AppraiserExamMode {
   if (examMode !== "first" && examMode !== "second") {
@@ -94,6 +100,10 @@ function nodeKey(userId: string, examMode: AppraiserExamMode, subjectId: string,
   return [userId, examMode, subjectId, unitId].join("|");
 }
 
+function eventKey(userId: string, eventId: string) {
+  return [userId, eventId].join("|");
+}
+
 function cloneNode(node: StoredPersonalConceptNode): PersonalConceptNode {
   return { ...node };
 }
@@ -104,6 +114,7 @@ export function getPersonalConceptGraphPersistenceNote() {
 
 export function resetPersonalConceptGraphRepositoryForTests() {
   store.clear();
+  transitionEvents.clear();
 }
 
 export function getPersonalConceptNode(userId: string, examMode: AppraiserExamMode, subjectId: string, unitId: string): PersonalConceptNode | null {
@@ -123,6 +134,68 @@ export function upsertPersonalConceptNode(node: PersonalConceptNode): PersonalCo
   const stored: StoredPersonalConceptNode = { ...node, userId, subjectId, unitId, metadataOnly: true };
   store.set(key, stored);
   return cloneNode(stored);
+}
+
+export function transitionPersonalConceptNode(input: PersonalConceptAtomicTransitionInput): PersonalConceptAtomicTransitionResult {
+  assertNoRawFields(input);
+  assertSupportedExamMode(input.examMode);
+
+  const userId = cleanRequiredText(input.userId ?? input.learnerId, "userId or learnerId");
+  const eventId = cleanRequiredText(input.eventId, "eventId");
+  const subjectId = cleanRequiredText(input.subjectId, "subjectId");
+  const unitId = cleanRequiredText(input.unitId, "unitId");
+  const key = nodeKey(userId, input.examMode, subjectId, unitId);
+  const seen = transitionEvents.get(eventKey(userId, eventId));
+  if (seen) {
+    const currentNode = store.get(seen.nodeKey) ?? store.get(key);
+    return {
+      status: "already_applied",
+      node: currentNode ? cloneNode(currentNode) : undefined,
+      metadataOnly: true,
+    };
+  }
+
+  const previous = store.get(key) ?? null;
+  const incomingTs = Date.parse(input.updatedAt);
+  const previousTs = previous ? Date.parse(previous.updatedAt) : Number.NaN;
+  if (!Number.isFinite(incomingTs)) {
+    return { status: "rejected", reason: "invalid_occurrence", metadataOnly: true };
+  }
+
+  if (previous && Number.isFinite(previousTs) && incomingTs < previousTs) {
+    transitionEvents.set(eventKey(userId, eventId), { status: "stale_signal", nodeKey: key });
+    return {
+      status: "stale_signal",
+      node: cloneNode(previous),
+      previousState: previous.state,
+      previousUpdatedAt: previous.updatedAt,
+      metadataOnly: true,
+    };
+  }
+
+  if (previous && Number.isFinite(previousTs) && incomingTs === previousTs) {
+    transitionEvents.set(eventKey(userId, eventId), { status: "rejected", nodeKey: key });
+    return {
+      status: "rejected",
+      reason: "same_timestamp_different_event",
+      node: cloneNode(previous),
+      previousState: previous.state,
+      previousUpdatedAt: previous.updatedAt,
+      metadataOnly: true,
+    };
+  }
+
+  const next = updatePersonalConceptNode(previous, { ...input, userId, subjectId, unitId });
+  assertMetadataOnlyNode(next);
+  store.set(key, next);
+  transitionEvents.set(eventKey(userId, eventId), { status: "applied", nodeKey: key });
+  return {
+    status: "applied",
+    node: cloneNode(next),
+    previousState: previous?.state,
+    previousUpdatedAt: previous?.updatedAt,
+    metadataOnly: true,
+  };
 }
 
 export function listPersonalConceptNodesForToday(userId: string, context: PersonalConceptGraphRepositoryContext = {}): PersonalConceptNode[] {

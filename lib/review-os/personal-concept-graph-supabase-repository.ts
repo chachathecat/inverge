@@ -1,4 +1,12 @@
-import { rankConceptGraphNodesForToday, type PersonalConceptNode, type PersonalConceptState, type PersonalConceptTodayContext } from "./personal-concept-graph";
+import {
+  rankConceptGraphNodesForToday,
+  type PersonalConceptAtomicTransitionInput,
+  type PersonalConceptAtomicTransitionResult,
+  type PersonalConceptAtomicTransitionStatus,
+  type PersonalConceptNode,
+  type PersonalConceptState,
+  type PersonalConceptTodayContext,
+} from "./personal-concept-graph";
 import { type AppraiserExamMode } from "./curriculum-reference";
 
 export type PersonalConceptGraphSupabaseContext = PersonalConceptTodayContext & {
@@ -36,6 +44,8 @@ export type PersonalConceptNodeSupabaseWritePayload = Omit<PersonalConceptNodeRo
 };
 
 export const PERSONAL_CONCEPT_NODES_TABLE = "personal_concept_nodes";
+export const PERSONAL_CONCEPT_TRANSITION_EVENTS_TABLE = "personal_concept_transition_events";
+export const PERSONAL_CONCEPT_ATOMIC_TRANSITION_RPC = "transition_personal_concept_node_v1";
 export const PERSONAL_CONCEPT_GRAPH_SOURCE_STATUS = "repository_contract_feature_flagged_no_production_write";
 export const PERSONAL_CONCEPT_GRAPH_REPOSITORY_VERSION = 1;
 
@@ -61,6 +71,7 @@ export const PERSONAL_CONCEPT_GRAPH_SUPABASE_COLUMNS = [
 ] as const;
 
 const ALLOWED_STATES = new Set<PersonalConceptState>(["unknown", "confused", "wrong", "recovering", "stable"]);
+const ALLOWED_TRANSITION_STATUSES = new Set<PersonalConceptAtomicTransitionStatus>(["applied", "already_applied", "stale_signal", "rejected"]);
 const FORBIDDEN_FIELD_NAMES = new Set([
   "rawUserText",
   "rawOcrText",
@@ -142,6 +153,109 @@ function fromRow(row: PersonalConceptNodeRow): PersonalConceptNode {
   };
 }
 
+type PersonalConceptAtomicTransitionRpcParams = {
+  p_event_id: string;
+  p_exam_mode: PersonalConceptAtomicTransitionInput["examMode"];
+  p_subject_id: string;
+  p_unit_id: string;
+  p_task_type: string;
+  p_result: PersonalConceptAtomicTransitionInput["result"];
+  p_confidence: PersonalConceptAtomicTransitionInput["confidence"];
+  p_due_bucket: PersonalConceptAtomicTransitionInput["dueBucket"] | null;
+  p_recent_miss_count: number;
+  p_occurred_at: string;
+};
+
+type PersonalConceptAtomicTransitionRpcRow = {
+  status: PersonalConceptAtomicTransitionStatus;
+  reason: string | null;
+  id: string | null;
+  user_id: string | null;
+  exam_mode: PersonalConceptAtomicTransitionInput["examMode"] | null;
+  subject_id: string | null;
+  unit_id: string | null;
+  state: PersonalConceptState | null;
+  confidence: PersonalConceptNode["confidence"] | null;
+  last_result: PersonalConceptNode["lastResult"] | null;
+  last_task_type: string | null;
+  wrong_count: number | null;
+  recovery_count: number | null;
+  stable_count: number | null;
+  next_recommended_task_type: string | null;
+  next_due_at: string | null;
+  updated_at: string | null;
+  previous_state: PersonalConceptState | null;
+  previous_updated_at: string | null;
+  metadata_only: true;
+};
+
+export function buildPersonalConceptAtomicTransitionRpcParams(input: PersonalConceptAtomicTransitionInput): PersonalConceptAtomicTransitionRpcParams {
+  assertNoForbiddenFields(input);
+  assertSupportedExamMode(input.examMode);
+  const eventId = cleanRequiredText(input.eventId, "eventId");
+  if (eventId.length > 200) {
+    throw new Error("Personal Concept Graph atomic transition eventId is too long.");
+  }
+  return {
+    p_event_id: eventId,
+    p_exam_mode: input.examMode,
+    p_subject_id: cleanRequiredText(input.subjectId, "subjectId"),
+    p_unit_id: cleanRequiredText(input.unitId, "unitId"),
+    p_task_type: cleanRequiredText(input.taskType, "taskType"),
+    p_result: input.result,
+    p_confidence: input.confidence ?? "unknown",
+    p_due_bucket: input.dueBucket ?? null,
+    p_recent_miss_count: typeof input.recentMissCount === "number" && Number.isFinite(input.recentMissCount)
+      ? Math.max(0, Math.round(input.recentMissCount))
+      : 0,
+    p_occurred_at: cleanRequiredText(input.updatedAt, "updatedAt"),
+  };
+}
+
+function atomicNodeFromRow(row: PersonalConceptAtomicTransitionRpcRow, fallbackUserId: string): PersonalConceptNode | undefined {
+  if (!row.id || !row.user_id || !row.exam_mode || !row.subject_id || !row.unit_id || !row.state || !row.confidence || !row.last_result || !row.last_task_type || !row.next_recommended_task_type || !row.next_due_at || !row.updated_at) {
+    return undefined;
+  }
+  assertSupportedExamMode(row.exam_mode);
+  assertSupportedState(row.state);
+  return {
+    id: row.id,
+    userId: row.user_id || fallbackUserId,
+    examMode: row.exam_mode,
+    subjectId: row.subject_id,
+    unitId: row.unit_id,
+    state: row.state,
+    confidence: row.confidence,
+    lastResult: row.last_result,
+    lastTaskType: row.last_task_type,
+    wrongCount: row.wrong_count ?? 0,
+    recoveryCount: row.recovery_count ?? 0,
+    stableCount: row.stable_count ?? 0,
+    nextRecommendedTaskType: row.next_recommended_task_type,
+    nextDueAt: row.next_due_at,
+    updatedAt: row.updated_at,
+    metadataOnly: true,
+  };
+}
+
+function atomicResultFromRow(row: PersonalConceptAtomicTransitionRpcRow, fallbackUserId: string): PersonalConceptAtomicTransitionResult {
+  if (!ALLOWED_TRANSITION_STATUSES.has(row.status)) {
+    throw new Error(`Personal Concept Graph atomic transition returned unsupported status: ${String(row.status)}`);
+  }
+  if (row.metadata_only !== true) {
+    throw new Error("Personal Concept Graph atomic transition returned non-metadata result.");
+  }
+  const node = atomicNodeFromRow(row, fallbackUserId);
+  return {
+    status: row.status,
+    reason: row.reason ?? undefined,
+    node,
+    previousState: row.previous_state ?? undefined,
+    previousUpdatedAt: row.previous_updated_at ?? undefined,
+    metadataOnly: true,
+  };
+}
+
 export function isUuid(value: unknown): value is string {
   return typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
@@ -203,6 +317,17 @@ export async function upsertPersonalConceptNodeToSupabase(node: PersonalConceptN
 
   if (error) throw new Error(`personal-concept-node-upsert-failed:${error.message}`);
   return fromRow(data as unknown as PersonalConceptNodeRow);
+}
+
+export async function transitionPersonalConceptNodeInSupabase(input: PersonalConceptAtomicTransitionInput): Promise<PersonalConceptAtomicTransitionResult> {
+  const params = buildPersonalConceptAtomicTransitionRpcParams(input);
+  const client = await createPersonalConceptGraphSupabaseClient();
+  const { data, error } = await client.rpc(PERSONAL_CONCEPT_ATOMIC_TRANSITION_RPC, params);
+
+  if (error) throw new Error(`personal-concept-node-atomic-transition-failed:${error.message}`);
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) throw new Error("personal-concept-node-atomic-transition-failed:empty-result");
+  return atomicResultFromRow(row as unknown as PersonalConceptAtomicTransitionRpcRow, input.userId);
 }
 
 export async function listPersonalConceptNodesForTodayFromSupabase(userId: string, context: PersonalConceptGraphSupabaseContext = {}): Promise<PersonalConceptNode[]> {

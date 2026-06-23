@@ -41,6 +41,7 @@ export type CalculatorRoutineConceptStateWriteStatus =
   | "updated"
   | "already_applied"
   | "stale_signal"
+  | "rejected"
   | "durable_writes_disabled";
 
 export type CalculatorRoutineConceptStateWriteResult = {
@@ -140,6 +141,8 @@ export async function maybeUpdateCalculatorRoutineConceptState(input: {
   const writeResult = await maybeWriteExecutionSignalToConceptGraph(
     {
       ...buildCalculatorRoutineConceptGraphSignal(projection),
+      eventId: projection.sourceEventId,
+      sourceEventId: projection.sourceEventId,
       executionSource: "calculator",
       derivedStatus: "needs_review",
       reviewDueHint: projection.dueBucket === "none" ? "none" : "tomorrow",

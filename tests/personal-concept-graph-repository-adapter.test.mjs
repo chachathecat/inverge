@@ -23,6 +23,7 @@ test("memory adapter keeps existing in-memory repository as the default implemen
   const adapter = getPersonalConceptGraphRepositoryAdapter({});
   assert.equal(adapter.mode, "memory");
   assert.equal(adapter.upsertPersonalConceptNode.constructor.name, "Function");
+  assert.equal(adapter.transitionPersonalConceptNode.constructor.name, "Function");
   assert.equal(adapter.deletePersonalConceptNode, undefined);
 });
 
@@ -30,5 +31,6 @@ test("adapter source documents the explicit feature flag and lazy Supabase selec
   const source = await readFile(new URL("../lib/review-os/personal-concept-graph-repository-adapter.ts", import.meta.url), "utf8");
   assert.match(source, /PERSONAL_CONCEPT_GRAPH_REPOSITORY\s*===\s*"supabase"/);
   assert.match(source, /return import\("\.\/personal-concept-graph-supabase-repository"\)/);
+  assert.match(source, /transitionPersonalConceptNodeInSupabase/);
   assert.doesNotMatch(source, /process\.env\.PERSONAL_CONCEPT_GRAPH_REPOSITORY\s*!==\s*"memory"/);
 });

@@ -5,9 +5,11 @@ import { fileURLToPath } from "node:url";
 import test from "node:test";
 
 import {
+  buildPersonalConceptAtomicTransitionRpcParams,
   buildPersonalConceptNodeSupabasePayload,
   buildPersonalConceptNodeSupabaseWritePayload,
   isUuid,
+  PERSONAL_CONCEPT_ATOMIC_TRANSITION_RPC,
   PERSONAL_CONCEPT_GRAPH_SOURCE_STATUS,
   PERSONAL_CONCEPT_GRAPH_SUPABASE_COLUMNS,
 } from "../lib/review-os/personal-concept-graph-supabase-repository.ts";
@@ -97,6 +99,45 @@ test("Supabase upsert boundary rejects forbidden raw/copyrighted learner fields"
   }
 });
 
+test("Supabase atomic transition RPC params are metadata-only and never accept client-selected user id", async () => {
+  const params = buildPersonalConceptAtomicTransitionRpcParams({
+    userId: "22222222-2222-4222-8222-222222222222",
+    eventId: "learning-event-1",
+    examMode: "first",
+    subjectId: "civil-law",
+    unitId: "unit-1",
+    taskType: "O/X",
+    result: "wrong",
+    confidence: "low",
+    dueBucket: "tomorrow",
+    recentMissCount: 1,
+    updatedAt: "2026-06-05T00:00:00.000Z",
+  });
+
+  assert.equal(params.p_event_id, "learning-event-1");
+  assert.equal(params.p_exam_mode, "first");
+  assert.equal(params.p_confidence, "low");
+  assert.equal(Object.hasOwn(params, "p_user_id"), false);
+  assert.equal(Object.hasOwn(params, "user_id"), false);
+  assert.deepEqual(Object.keys(params), [
+    "p_event_id",
+    "p_exam_mode",
+    "p_subject_id",
+    "p_unit_id",
+    "p_task_type",
+    "p_result",
+    "p_confidence",
+    "p_due_bucket",
+    "p_recent_miss_count",
+    "p_occurred_at",
+  ]);
+
+  const source = await readFile(new URL(`../${repoPath}`, import.meta.url), "utf8");
+  assert.equal(PERSONAL_CONCEPT_ATOMIC_TRANSITION_RPC, "transition_personal_concept_node_v1");
+  assert.match(source, /rpc\(PERSONAL_CONCEPT_ATOMIC_TRANSITION_RPC, params\)/);
+  assert.doesNotMatch(source, /p_user_id|client-selected user/i);
+});
+
 test("Supabase upsert boundary rejects unsupported exam modes, unsupported states, and non-metadata nodes", () => {
   assert.throws(() => buildPersonalConceptNodeSupabasePayload(node({ examMode: "cpa" })), /감정평가사 1차\/2차|supports only/);
   assert.throws(() => buildPersonalConceptNodeSupabasePayload(node({ state: "mastered" })), /state is not supported/);
@@ -108,6 +149,8 @@ test("Supabase repository uses existing authenticated server-client pattern with
   assert.match(source, /createSupabaseServerClient/);
   assert.doesNotMatch(source, /createSupabaseAdminClient|getSupabasePersistenceClient|SUPABASE_SERVICE_ROLE_KEY|service_role/i);
   assert.match(source, /PERSONAL_CONCEPT_NODES_TABLE\)\s*\.upsert\(payload, \{ onConflict: "user_id,exam_mode,subject_id,unit_id" \}/s);
+  assert.match(source, /transitionPersonalConceptNodeInSupabase/);
+  assert.match(source, /PERSONAL_CONCEPT_ATOMIC_TRANSITION_RPC/);
   assert.match(source, /\.delete\(\)\s*\.eq\("user_id"/s);
 });
 
