@@ -5,7 +5,6 @@ import { createClient } from "@supabase/supabase-js";
 
 import { maybeBuildTodayPlanActionsFromDurableConceptGraph } from "../lib/review-os/durable-graph-today-plan-read-adapter.ts";
 import {
-  buildPersonalConceptNodeSupabasePayload,
   PERSONAL_CONCEPT_GRAPH_SUPABASE_COLUMNS,
   PERSONAL_CONCEPT_NODES_TABLE,
 } from "../lib/review-os/personal-concept-graph-supabase-repository.ts";
@@ -13,6 +12,8 @@ import {
 const SMOKE_FLAG = "PERSONAL_CONCEPT_GRAPH_DURABLE_READ_SMOKE";
 const REPOSITORY_FLAG = "PERSONAL_CONCEPT_GRAPH_REPOSITORY";
 const READ_FLAG = "PERSONAL_CONCEPT_GRAPH_DURABLE_READS";
+const RPC_NAME = "transition_personal_concept_node_v1";
+const SUBJECT_ID = "durable-read-smoke-subject";
 const REQUIRED_SUPABASE_ENV = ["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY"];
 const TEST_AUTH_ENV = [
   "PERSONAL_CONCEPT_GRAPH_DURABLE_READ_USER_A_ID",
@@ -25,6 +26,7 @@ const VERIFIED = [
   "explicit_flags_required",
   "supabase_repository_mode",
   "metadata_only_rows",
+  "rpc_seeded_rows",
   "helper_returns_max_3_actions",
   "no_raw_text_leak",
   "unsupported_exam_rejection",
@@ -121,13 +123,11 @@ function clientFor(accessToken) {
   });
 }
 
-function nodeFor({ id, userId, unitId, state = "wrong", examMode = "first", wrongCount = 1, confidence = "low" }) {
+function nodeFor({ unitId, state = "wrong", examMode = "first", wrongCount = 1, confidence = "low" }) {
   const now = new Date().toISOString();
   return {
-    id,
-    userId,
     examMode,
-    subjectId: "durable-read-smoke-subject",
+    subjectId: SUBJECT_ID,
     unitId,
     state,
     confidence,
@@ -185,15 +185,39 @@ function assertActions(result) {
   assertNoForbiddenLeak(result.actions, "actions");
 }
 
-async function upsertNodes(client, nodes) {
-  const payloads = nodes.map((node) => buildPersonalConceptNodeSupabasePayload(node));
+function rpcParams(node, index) {
+  return {
+    p_event_id: `durable-read-smoke-${node.unitId}-${index}`,
+    p_exam_mode: node.examMode,
+    p_subject_id: node.subjectId,
+    p_unit_id: node.unitId,
+    p_task_type: node.lastTaskType,
+    p_result: node.lastResult,
+    p_confidence: node.confidence,
+    p_due_bucket: node.state === "stable" ? "none" : "tomorrow",
+    p_recent_miss_count: node.wrongCount,
+    p_occurred_at: node.updatedAt,
+  };
+}
+
+async function seedNodesThroughRpc(client, nodes) {
+  for (const [index, node] of nodes.entries()) {
+    const { data, error } = await client.rpc(RPC_NAME, rpcParams(node, index));
+    if (error) throw new Error(`metadata_only_rpc_seed_failed:${error.code ?? "unknown"}`);
+    const entry = Array.isArray(data) ? data[0] : data;
+    if (entry?.status !== "applied") throw new Error(`metadata_only_rpc_seed_unexpected_status:${entry?.status ?? "missing"}`);
+    if (entry?.metadata_only !== true) throw new Error("metadata_only_rpc_seed_returned_non_metadata_result");
+  }
+
   const { data, error } = await client
     .from(PERSONAL_CONCEPT_NODES_TABLE)
-    .upsert(payloads, { onConflict: "user_id,exam_mode,subject_id,unit_id" })
-    .select(PERSONAL_CONCEPT_GRAPH_SUPABASE_COLUMNS.join(","));
-  if (error) throw new Error(`metadata_only_upsert_failed:${error.message}`);
-  if ((data ?? []).length !== nodes.length) throw new Error("metadata_only_upsert_returned_unexpected_row_count");
-  if (!(data ?? []).every((row) => row.metadata_only === true)) throw new Error("metadata_only_upsert_returned_non_metadata_row");
+    .select("id,metadata_only")
+    .eq("exam_mode", "first")
+    .eq("subject_id", SUBJECT_ID)
+    .in("unit_id", nodes.map((node) => node.unitId));
+  if (error) throw new Error(`metadata_only_rpc_seed_probe_failed:${error.code ?? "unknown"}`);
+  if ((data ?? []).length !== nodes.length) throw new Error("metadata_only_rpc_seed_returned_unexpected_row_count");
+  if (!(data ?? []).every((row) => row.metadata_only === true)) throw new Error("metadata_only_rpc_seed_returned_non_metadata_row");
 }
 
 function repositoryFor(client) {
@@ -212,16 +236,21 @@ function repositoryFor(client) {
   };
 }
 
-async function cleanup(client, ids) {
-  if (ids.length === 0) return;
-  const { error } = await client.from(PERSONAL_CONCEPT_NODES_TABLE).delete().in("id", ids);
-  if (error) throw new Error(`cleanup_failed:${error.message}`);
+async function cleanupUnits(client, unitIds) {
+  if (unitIds.length === 0) return;
+  const { error } = await client
+    .from(PERSONAL_CONCEPT_NODES_TABLE)
+    .delete()
+    .eq("exam_mode", "first")
+    .eq("subject_id", SUBJECT_ID)
+    .in("unit_id", unitIds);
+  if (error) throw new Error(`cleanup_failed:${error.code ?? "unknown"}`);
 }
 
-async function cleanupBothUsers({ userA, idsA, userB, idB }) {
+async function cleanupBothUsers({ userA, unitsA, userB, unitsB }) {
   const results = await Promise.allSettled([
-    cleanup(userA, idsA),
-    cleanup(userB, [idB]),
+    cleanupUnits(userA, unitsA),
+    cleanupUnits(userB, unitsB),
   ]);
   const failures = results
     .map((result, index) => ({ result, label: index === 0 ? "userA" : "userB" }))
@@ -243,23 +272,21 @@ async function runSmoke() {
 
   const userA = clientFor(process.env.PERSONAL_CONCEPT_GRAPH_DURABLE_READ_USER_A_ACCESS_TOKEN);
   const userB = clientFor(process.env.PERSONAL_CONCEPT_GRAPH_DURABLE_READ_USER_B_ACCESS_TOKEN);
-  const idsA = [crypto.randomUUID(), crypto.randomUUID(), crypto.randomUUID(), crypto.randomUUID()];
-  const idB = crypto.randomUUID();
-  const nodesA = idsA.map((id, index) =>
+  const unitsA = Array.from({ length: 4 }, (_, index) => `durable-read-smoke-a-${crypto.randomUUID()}-${index}`);
+  const unitsB = [`durable-read-smoke-b-${crypto.randomUUID()}`];
+  const nodesA = unitsA.map((unitId, index) =>
     nodeFor({
-      id,
-      userId: userAId,
-      unitId: `durable-read-smoke-a-${index}`,
+      unitId,
       state: index === 1 ? "confused" : index === 2 ? "recovering" : "wrong",
       wrongCount: index + 1,
     }),
   );
-  const nodeB = nodeFor({ id: idB, userId: userBId, unitId: "durable-read-smoke-b", state: "wrong" });
-  const cleanupSmokeRows = async () => cleanupBothUsers({ userA, idsA, userB, idB });
+  const nodeB = nodeFor({ unitId: unitsB[0], state: "wrong" });
+  const cleanupSmokeRows = async () => cleanupBothUsers({ userA, unitsA, userB, unitsB });
 
   try {
-    await upsertNodes(userA, nodesA);
-    await upsertNodes(userB, [nodeB]);
+    await seedNodesThroughRpc(userA, nodesA);
+    await seedNodesThroughRpc(userB, [nodeB]);
 
     const result = await maybeBuildTodayPlanActionsFromDurableConceptGraph(userAId, {
       env: {
@@ -288,7 +315,12 @@ async function runSmoke() {
       },
     );
 
-    const bReadA = await userB.from(PERSONAL_CONCEPT_NODES_TABLE).select("id").in("id", idsA);
+    const bReadA = await userB
+      .from(PERSONAL_CONCEPT_NODES_TABLE)
+      .select("id")
+      .eq("exam_mode", "first")
+      .eq("subject_id", SUBJECT_ID)
+      .in("unit_id", unitsA);
     if (bReadA.error) throw new Error(`cross_user_read_check_failed:${bReadA.error.message}`);
     if ((bReadA.data ?? []).length !== 0) throw new Error("cross_user_read_denied_failed");
 

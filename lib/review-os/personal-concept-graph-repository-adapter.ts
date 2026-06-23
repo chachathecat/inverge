@@ -13,14 +13,26 @@ async function getSupabaseRepository(): Promise<PersonalConceptGraphSupabaseRepo
   return import("./personal-concept-graph-supabase-repository");
 }
 
-export type PersonalConceptGraphRepositoryAdapter = {
-  mode: PersonalConceptGraphRepositoryMode;
+export type PersonalConceptGraphMemoryRepositoryAdapter = {
+  mode: "memory";
   getPersonalConceptNode: typeof getPersonalConceptNode | PersonalConceptGraphSupabaseRepository["getPersonalConceptNodeFromSupabase"];
-  upsertPersonalConceptNode: typeof upsertPersonalConceptNode | PersonalConceptGraphSupabaseRepository["upsertPersonalConceptNodeToSupabase"];
+  upsertPersonalConceptNode: typeof upsertPersonalConceptNode;
   transitionPersonalConceptNode: typeof transitionPersonalConceptNode | PersonalConceptGraphSupabaseRepository["transitionPersonalConceptNodeInSupabase"];
   listPersonalConceptNodesForToday: typeof listPersonalConceptNodesForToday | PersonalConceptGraphSupabaseRepository["listPersonalConceptNodesForTodayFromSupabase"];
+  deletePersonalConceptNode?: undefined;
+};
+
+export type PersonalConceptGraphSupabaseRepositoryAdapter = {
+  mode: "supabase";
+  getPersonalConceptNode: PersonalConceptGraphSupabaseRepository["getPersonalConceptNodeFromSupabase"];
+  transitionPersonalConceptNode: PersonalConceptGraphSupabaseRepository["transitionPersonalConceptNodeInSupabase"];
+  listPersonalConceptNodesForToday: PersonalConceptGraphSupabaseRepository["listPersonalConceptNodesForTodayFromSupabase"];
   deletePersonalConceptNode?: PersonalConceptGraphSupabaseRepository["deletePersonalConceptNodeFromSupabase"];
 };
+
+export type PersonalConceptGraphRepositoryAdapter =
+  | PersonalConceptGraphMemoryRepositoryAdapter
+  | PersonalConceptGraphSupabaseRepositoryAdapter;
 
 export function getPersonalConceptGraphRepositoryMode(env: NodeJS.ProcessEnv = process.env): PersonalConceptGraphRepositoryMode {
   return env.PERSONAL_CONCEPT_GRAPH_REPOSITORY === "supabase" ? "supabase" : "memory";
@@ -33,7 +45,6 @@ export function getPersonalConceptGraphRepositoryAdapter(env: NodeJS.ProcessEnv 
     return {
       mode,
       getPersonalConceptNode: async (...args) => (await getSupabaseRepository()).getPersonalConceptNodeFromSupabase(...args),
-      upsertPersonalConceptNode: async (...args) => (await getSupabaseRepository()).upsertPersonalConceptNodeToSupabase(...args),
       transitionPersonalConceptNode: async (...args) => (await getSupabaseRepository()).transitionPersonalConceptNodeInSupabase(...args),
       listPersonalConceptNodesForToday: async (...args) => (await getSupabaseRepository()).listPersonalConceptNodesForTodayFromSupabase(...args),
       deletePersonalConceptNode: async (...args) => (await getSupabaseRepository()).deletePersonalConceptNodeFromSupabase(...args),

@@ -95,11 +95,12 @@ PR #324 adds the first Supabase schema/RLS migration for this metadata table onl
 
 ## Row-level security assumptions
 
-PR #324 implements the intended learner own-row RLS model in the schema migration:
+PR #324 implemented the initial learner own-row RLS model in the schema migration. M421A narrows the final durable-write contract so authenticated learners can no longer bypass the atomic transition RPC:
 
 - User can select only own rows where `user_id = auth.uid()`.
-- User can insert only own rows where `user_id = auth.uid()`.
-- User can update only own rows where `user_id = auth.uid()`.
+- User direct insert is revoked on `public.personal_concept_nodes`.
+- User direct update is revoked on `public.personal_concept_nodes`.
+- User concept-state writes must use `public.transition_personal_concept_node_v1`, which derives ownership from `auth.uid()`.
 - User can delete only own rows where `user_id = auth.uid()`.
 - Service role may operate only through guarded server functions that validate authenticated user intent, exam scope, metadata-only payloads, and tenant boundaries.
 - No public read access.
@@ -143,6 +144,8 @@ PR #324 implements the intended learner own-row RLS model in the schema migratio
 - PR #420 adds `public.personal_concept_transition_events` and `public.transition_personal_concept_node_v1` in `supabase/migrations/20260623_personal_concept_graph_atomic_transition.sql`. The RPC derives `user_id` from `auth.uid()`, locks the event and concept identity inside one transaction, reads the node with `FOR UPDATE`, computes counters/state from the locked database row, and records event idempotency before returning metadata-only status.
 - PR #420 changes the feature-flagged Supabase durable-write path to call the RPC instead of app-memory `get -> compare -> update -> upsert`. Statuses are `applied`, `already_applied`, `stale_signal`, and `rejected`; same event retries do not increment counters, older unique events return `stale_signal`, and same-timestamp different events return deterministic `rejected`.
 - PR #420 is still disabled by default. It does not apply migrations to a linked project, does not enable production flags, and requires gated runtime smoke evidence before any production durable-write rollout.
+- M421A adds `supabase/migrations/202606232130_personal_concept_graph_rpc_only_write_boundary.sql`, a forward-only migration that revokes authenticated direct `INSERT` and `UPDATE` on `public.personal_concept_nodes`, drops the older insert/update own-row policies, preserves authenticated `SELECT` and user-owned `DELETE`, and keeps authenticated `EXECUTE` on `transition_personal_concept_node_v1` while revoking `anon`/`public` execute.
+- M421A removes the Supabase direct upsert method from the runtime repository adapter. Memory-mode tests keep their deterministic in-memory upsert, but Supabase durable writes must use the RPC transition method.
 
 ## Migration plan
 
@@ -155,9 +158,10 @@ PR #324 intentionally adds only the Supabase migration and static migration guar
 5. Add the PR #329 durable read adapter helper for Today Plan candidates behind `PERSONAL_CONCEPT_GRAPH_REPOSITORY=supabase` and `PERSONAL_CONCEPT_GRAPH_DURABLE_READS=1`; do not wire it into the live Today Plan page until a separate rollout PR. Runtime RLS pass remains required before enabling durable reads in real environments.
 6. Add the PR #330 durable read runtime smoke to verify the helper against a real Supabase project, max-three metadata-only Today Plan actions, no raw text leakage, unsupported exam rejection, and cross-user read denial.
 7. Add the M420 atomic transition RPC and durable-write repository call path behind existing write flags; do not use linked `db push --include-all`.
-8. Run the gated atomic transition smoke in an approved non-production Supabase environment before enabling durable writes for any cohort.
-9. Add export/delete integration for user-owned graph metadata and transition-event audit rows.
-10. Run closed-beta learner-loop, taxonomy, build, and lint checks before enabling any production write or live durable read path.
+8. Add the M421A RPC-only write-boundary migration to revoke direct authenticated insert/update and remove the Supabase runtime upsert adapter path.
+9. Run the gated atomic transition and RPC-only RLS smokes in an approved non-production Supabase environment before enabling durable writes for any cohort.
+10. Add export/delete integration for user-owned graph metadata and transition-event audit rows.
+11. Run closed-beta learner-loop, taxonomy, build, and lint checks before enabling any production write or live durable read path.
 
 ## Production durable-read enablement gates
 
@@ -166,6 +170,7 @@ Enabling durable Personal Concept Graph reads in production requires all of the 
 - runtime RLS smoke pass for `personal_concept_nodes`;
 - PR #330 durable read runtime smoke pass against a real Supabase project;
 - M420 atomic transition runtime smoke pass against a real Supabase project after the forward migration is applied through an approved workflow;
+- M421A RPC-only write-boundary migration applied through an approved workflow and runtime RLS smoke proving direct insert/update denial plus RPC write success;
 - learner-loop CI pass, including static/unit durable-read smoke coverage;
 - closed-beta readiness pass;
 - explicit product gate for the learner Today Plan route.
@@ -197,8 +202,8 @@ For PR #324:
 
 For future implementation PRs:
 
-- Runtime RLS tests proving users can only select, insert, update, and delete their own rows in a configured Supabase environment.
-- Service-function tests proving any privileged path can operate only through guarded server functions.
+- Runtime RLS tests proving users can select/delete only their own rows, direct insert/update are denied, RPC writes still work, and transition-event rows remain own-row readable only.
+- Service-function or RPC tests proving any durable write path can operate only through guarded functions that derive the authenticated owner.
 - Data-boundary tests rejecting all forbidden raw fields.
 - Export/delete integration tests.
 - Today Plan adapter smoke tests using durable metadata only, including default-disabled durable reads, max-3 source-union actions, and no raw row return.
@@ -212,9 +217,10 @@ For future implementation PRs:
 4. **Durable Today Plan read helper PR (PR #329):** add a helper-only read adapter behind `PERSONAL_CONCEPT_GRAPH_DURABLE_READS=1`; keep default closed-beta behavior unchanged and do not wire the live Today Plan page.
 5. **Durable read runtime smoke PR (PR #330):** verify real Supabase read-helper behavior, metadata-only action output, max-three actions, unsupported exam rejection, and cross-user read denial; keep live Today Plan integration separate.
 6. **Atomic transition RPC PR (M420):** add event dedupe and metadata-only RPC transition writes; route the Supabase write helper through the RPC while flags remain off by default.
-7. **Learner read/write rollout PR:** enable the helpers for a limited closed-beta learner path and read graph metadata for Today Plan after final rollout review, runtime RLS evidence, durable-read smoke, and atomic-transition smoke.
-8. **Lifecycle PR:** add export/delete handling and retention documentation updates.
-9. **Closed-beta enablement PR:** expand durable graph persistence for a limited closed-beta cohort after learner-loop, taxonomy, build, lint, and smoke checks pass.
+7. **RPC-only write-boundary PR (M421A):** revoke direct authenticated insert/update, remove the Supabase runtime upsert adapter path, and prove RPC writes still work through focused static and runtime smoke coverage.
+8. **Learner read/write rollout PR:** enable the helpers for a limited closed-beta learner path and read graph metadata for Today Plan after final rollout review, runtime RLS evidence, durable-read smoke, atomic-transition smoke, and RPC-only write-boundary smoke.
+9. **Lifecycle PR:** add export/delete handling and retention documentation updates.
+10. **Closed-beta enablement PR:** expand durable graph persistence for a limited closed-beta cohort after learner-loop, taxonomy, build, lint, and smoke checks pass.
 
 ## Non-goals for this PR
 

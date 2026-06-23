@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const migrationPath = "supabase/migrations/20260605_create_personal_concept_nodes.sql";
+const rpcOnlyBoundaryMigrationPath = "supabase/migrations/202606232130_personal_concept_graph_rpc_only_write_boundary.sql";
 
 const requiredColumns = [
   "id uuid primary key",
@@ -51,6 +52,10 @@ async function readMigration() {
   return readFile(migrationPath, "utf8");
 }
 
+async function readRpcOnlyBoundaryMigration() {
+  return readFile(rpcOnlyBoundaryMigrationPath, "utf8");
+}
+
 test("migration creates personal_concept_nodes with required metadata columns", async () => {
   const sql = await readMigration();
   const normalized = normalize(sql);
@@ -87,7 +92,7 @@ test("migration includes required indexes", async () => {
   assert.match(normalized, /on public\.personal_concept_nodes \(user_id, exam_mode, next_due_at\)/);
 });
 
-test("migration enables RLS and includes own-row policies for all learner operations", async () => {
+test("base migration enables RLS and originally includes own-row policies for learner operations", async () => {
   const normalized = normalize(await readMigration());
 
   assert.match(normalized, /alter table public\.personal_concept_nodes enable row level security/);
@@ -99,6 +104,24 @@ test("migration enables RLS and includes own-row policies for all learner operat
 
   assert.match(normalized, /using \(auth\.uid\(\) is not null and user_id = auth\.uid\(\)\)/);
   assert.match(normalized, /with check \(auth\.uid\(\) is not null and user_id = auth\.uid\(\)\)/);
+});
+
+test("RPC-only boundary migration revokes direct authenticated insert and update", async () => {
+  const normalized = normalize(await readRpcOnlyBoundaryMigration());
+
+  assert.match(normalized, /revoke insert, update on table public\.personal_concept_nodes from authenticated/);
+  assert.match(normalized, /grant select, delete on table public\.personal_concept_nodes to authenticated/);
+  assert.match(normalized, /drop policy if exists "personal_concept_nodes_insert_own"/);
+  assert.match(normalized, /drop policy if exists "personal_concept_nodes_update_own"/);
+  assert.doesNotMatch(normalized, /grant[^;]*(insert|update)[^;]*on table public\.personal_concept_nodes[^;]*to authenticated/);
+});
+
+test("RPC-only boundary migration preserves authenticated RPC execute and revokes anon/public execute", async () => {
+  const normalized = normalize(await readRpcOnlyBoundaryMigration());
+
+  assert.match(normalized, /revoke execute on function public\.transition_personal_concept_node_v1\([^)]*timestamptz[^)]*\) from public/);
+  assert.match(normalized, /revoke execute on function public\.transition_personal_concept_node_v1\([^)]*timestamptz[^)]*\) from anon/);
+  assert.match(normalized, /grant execute on function public\.transition_personal_concept_node_v1\([^)]*timestamptz[^)]*\) to authenticated/);
 });
 
 test("migration does not introduce broad tenant or public access policies", async () => {

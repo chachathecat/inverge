@@ -184,9 +184,31 @@ The first owner-run smoke surfaced `concurrent_final_db_row_not_newer_updated_at
 
 The atomic transition guarantee applies only to callers that use `transition_personal_concept_node_v1` or the repository transition method that calls it.
 
-The repository still contains legacy direct table mutation paths and existing authenticated `personal_concept_nodes` insert/update grants for earlier durable-read and RLS verification work. Do not treat those direct authenticated insert/update grants as production authorization for durable writes.
+## RPC-Only Write Boundary
 
-Production durable-write enablement remains blocked until a follow-up PR either removes/revokes direct authenticated insert/update grants and migrates callers to the RPC, or constrains those grants behind an explicitly reviewed server-only path. Until then, direct table mutation is a rollout blocker, not a live authorization boundary.
+M421A adds the RPC-only write boundary follow-up migration:
+
+```text
+supabase/migrations/202606232130_personal_concept_graph_rpc_only_write_boundary.sql
+```
+
+This forward-only migration revokes direct authenticated `INSERT` and `UPDATE` privileges on `public.personal_concept_nodes`, drops the older direct insert/update own-row policies, preserves authenticated `SELECT` for durable reads, preserves authenticated `DELETE` for user-owned lifecycle cleanup, and keeps authenticated `EXECUTE` on `transition_personal_concept_node_v1`.
+
+`anon` and `public` do not receive RPC execute privilege. Direct authenticated insert/update grants were revoked; concept-state writes must go through the RPC/repository transition method. The Supabase runtime adapter no longer exposes direct upsert as a write method.
+
+Runtime smoke still remains required in each non-production Supabase environment before rollout evidence can be claimed. The M421A RLS smoke must prove:
+
+- direct authenticated insert is denied;
+- direct authenticated update is denied;
+- RPC transition returns `applied`;
+- identical RPC retry returns `already_applied`;
+- user A cannot read user B node rows;
+- user A cannot read user B transition-event rows;
+- anonymous clients cannot read either table;
+- user-owned select/delete still works for lifecycle cleanup;
+- transition-event audit rows are retained by design.
+
+Production durable-write enablement remains blocked until the new forward migration is applied through an approved owner workflow and the gated runtime smoke passes in the target non-production environment. Production durable-read/write flags remain off.
 
 ## Validation Plan
 
@@ -217,11 +239,11 @@ PERSONAL_CONCEPT_GRAPH_DURABLE_WRITES=0
 
 or unset `PERSONAL_CONCEPT_GRAPH_REPOSITORY=supabase`.
 
-Schema rollback, if ever required, must be a separate reviewed migration after callers stop using the RPC. Existing rows should not be deleted as part of routine rollback.
+Schema rollback, if ever required, must be a separate reviewed forward migration. Do not automatically restore broad direct authenticated `INSERT` or `UPDATE` grants. Existing rows should not be deleted as part of routine rollback.
 
 ## Residual Risks
 
 - Non-production Supabase behavior passed the owner-run gated smoke on 2026-06-23, but production durable-read/write flags remain off.
 - Export/delete lifecycle for `personal_concept_transition_events` remains a later lifecycle PR.
-- Direct authenticated insert/update grants on `personal_concept_nodes` must be removed, revoked, or constrained before production durable-write enablement.
-- Production durable-write enablement remains blocked until direct grants are hardened and flags are intentionally configured.
+- M421A adds the forward-only migration that revokes direct authenticated insert/update grants on `personal_concept_nodes`; it has not been applied remotely by Codex.
+- Production durable-write enablement remains blocked until the new migration is applied through an approved workflow, the RPC-only RLS smoke passes, and flags are intentionally configured.

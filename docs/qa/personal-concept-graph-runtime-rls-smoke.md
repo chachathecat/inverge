@@ -2,7 +2,7 @@
 
 ## Scope
 
-This QA note covers the safe runtime verification harness for the learner Personal Concept Graph Supabase repository and `public.personal_concept_nodes` RLS behavior. It is a pre-write safety gate only. Production learner writes remain disabled by default. The linked Supabase runtime smoke has passed for the test environment, but closed-beta production enablement still requires a later rollout PR.
+This QA note covers the safe runtime verification harness for the learner Personal Concept Graph Supabase repository and `public.personal_concept_nodes` RLS behavior. It is a pre-write safety gate only. Production learner writes remain disabled by default. The linked Supabase runtime smoke must prove the current RPC-only write boundary before any closed-beta production enablement.
 
 ## Prior PR context
 
@@ -11,6 +11,8 @@ This QA note covers the safe runtime verification harness for the learner Person
 - PR #326 added the static repository-contract probe and real Supabase runtime RLS smoke harness.
 - PR #327 adds helper-level execution-signal-to-graph durable write integration, but it remains closed by default and requires both `PERSONAL_CONCEPT_GRAPH_REPOSITORY=supabase` and `PERSONAL_CONCEPT_GRAPH_DURABLE_WRITES=1`.
 - PR #329 adds a Today Plan durable read helper only. It remains closed by default and requires both `PERSONAL_CONCEPT_GRAPH_REPOSITORY=supabase` and `PERSONAL_CONCEPT_GRAPH_DURABLE_READS=1`; the live Today Plan rollout still requires a separate PR.
+- M420 adds `public.transition_personal_concept_node_v1`, the atomic metadata-only transition RPC and transition-event audit table.
+- M421A adds a forward-only RPC-only write-boundary migration. Direct authenticated insert and update are denied on `public.personal_concept_nodes`; durable concept-state writes must use the RPC.
 
 ## Why this runtime smoke is required
 
@@ -20,7 +22,10 @@ The schema and repository contract are necessary but not sufficient before durab
 - Supabase mode is explicit and feature-flagged;
 - persisted graph payloads are metadata-only and omit raw OCR, problem, answer, official-answer, model-answer, and score-prediction text;
 - unsupported exam modes and unsupported states are rejected;
-- authenticated users can operate only on their own rows;
+- authenticated users can select and delete only their own node rows;
+- direct authenticated insert and update are denied;
+- RPC transition writes still return `applied`, and identical RPC retries return `already_applied`;
+- transition-event audit rows remain retained by design;
 - cross-user RLS must be verified before enabling durable writes;
 - anonymous clients cannot read learner graph rows.
 
@@ -38,9 +43,10 @@ The script is intentionally not a default production write path and does not mod
 
 ## Required environment variables
 
-The static repository-contract probe requires only the explicit smoke flag:
+The static repository-contract probe requires the explicit smoke flag and Supabase repository mode:
 
 - `PERSONAL_CONCEPT_GRAPH_RLS_SMOKE=1`
+- `PERSONAL_CONCEPT_GRAPH_REPOSITORY=supabase`
 
 Real Supabase runtime RLS checks require the public Supabase client environment already used by the app:
 
@@ -62,32 +68,32 @@ Production-like environments (`NODE_ENV=production` or `VERCEL_ENV=production`) 
 
 ### Pass
 
-The linked Supabase smoke environment has now reported `passed_static_repository_contract_probe` and `passed_runtime_rls_smoke`. A full pass means the harness verified:
+A full pass reports `passed_static_repository_contract_probe` and `passed_runtime_rls_smoke`. A full pass means the harness verified:
 
 - default adapter mode is memory;
 - Supabase mode activates only with `PERSONAL_CONCEPT_GRAPH_REPOSITORY=supabase`;
+- the Supabase adapter exposes the RPC write method and no direct upsert method;
 - the Supabase repository builds metadata-only payloads;
 - forbidden raw fields are rejected;
 - unknown columns are not passed through;
 - unsupported exam modes are rejected;
-- test user A can insert, select, update, and delete only an own row (`own_insert_select_update_delete`);
-- test user A cannot read test user B's row (`cross_user_read_denied`);
-- anonymous clients cannot read graph rows (`anon_read_denied`);
-- `metadata_only=true`, appraiser exam-mode, and state constraints are enforced by the database (`metadata_only_constraint`, `exam_mode_constraint`, `state_constraint`).
+- direct authenticated insert is denied (`direct_authenticated_insert_denied`);
+- direct authenticated update is denied (`direct_authenticated_update_denied`);
+- test user A can write concept state through `transition_personal_concept_node_v1` (`rpc_transition_applied`);
+- identical RPC retry returns `already_applied`;
+- test user A can select and delete only own node rows;
+- test user A cannot read test user B's node row (`cross_user_node_read_denied`);
+- test user A cannot read test user B's transition-event audit row (`cross_user_transition_event_read_denied`);
+- anonymous clients cannot read graph rows or transition-event rows (`anonymous_node_read_denied`, `anonymous_transition_event_read_denied`);
+- transition-event audit rows are retained by design.
 
 For anonymous read denial, either outcome is acceptable: the anon query returns zero rows, or the database returns a permission-denied/insufficient-privilege error such as SQLSTATE `42501`. No anon `SELECT` table grant is required for this smoke. Do not add public or anon table grants just to satisfy the smoke script; permission denied is a stricter acceptable proof that anonymous clients cannot read learner graph rows.
-
-### Intentional skip
-
-If Supabase URL/anon-key env vars are unavailable, the script reports `skipped_runtime_rls_due_missing_env` after the static contract probe. This is an intentional skip, not RLS success.
-
-If public Supabase env vars exist but two test-auth users are not configured, the script reports `skipped_runtime_rls_due_missing_test_auth`. This is also an intentional skip, not RLS success.
-
-A PR or deployment note must not claim runtime cross-user RLS success unless `passed_runtime_rls_smoke` appears in the script output.
 
 ### Refusal / failure
 
 - Missing `PERSONAL_CONCEPT_GRAPH_RLS_SMOKE=1` reports a refusal and exits non-zero.
+- Missing `PERSONAL_CONCEPT_GRAPH_REPOSITORY=supabase` reports a refusal and exits non-zero.
+- Missing Supabase URL, anon key, or test-auth env names reports `failed_runtime_rls_missing_required_env` and exits non-zero. This is fail-closed, not an intentional skip.
 - Production-like environments without `PERSONAL_CONCEPT_GRAPH_RLS_ALLOW_PRODUCTION_SMOKE=1` report a refusal and exit non-zero.
 - Contract-probe failures or runtime RLS failures exit non-zero.
 
@@ -117,10 +123,12 @@ Before any production learner write path is enabled, Inverge must have documente
 
 1. the full runtime smoke reports `passed_runtime_rls_smoke`;
 2. cross-user RLS must be verified before enabling durable writes and has been verified with two distinct authenticated test users;
-3. anon read denial has been verified;
-4. metadata-only, exam-mode, and state constraints have been verified against the deployed database;
-5. the live app still avoids storing raw OCR/problem/answer text, official answers, model answers, and official score predictions;
-6. capture, execution, and Today Plan durable-write/read changes remain behind explicit product and repository flags until separately reviewed.
+3. direct authenticated insert and update have been denied;
+4. RPC transition write and identical retry have been verified;
+5. anon read denial has been verified for node and transition-event tables;
+6. metadata-only, exam-mode, and state constraints have been verified against the deployed database through static checks and RPC runtime behavior;
+7. the live app still avoids storing raw OCR/problem/answer text, official answers, model answers, and official score predictions;
+8. capture, execution, and Today Plan durable-write/read changes remain behind explicit product and repository flags until separately reviewed.
 
 Production learner writes and live Today Plan durable reads remain disabled in this PR.
 
@@ -184,7 +192,9 @@ A successful run prints JSON with this shape:
 }
 ```
 
-This means the harness inserted/upserted metadata-only rows for test user A through an authenticated Supabase client, invoked `maybeBuildTodayPlanActionsFromDurableConceptGraph` with a Supabase-mode repository adapter, verified that returned actions are not skipped, verified `repositoryMode: "supabase"`, enforced max-three actions, required every action to be `metadataOnly` and `isPrimaryTask`, checked that raw DB-row fields are not returned, rejected unsupported exam modes, verified test user B cannot read test user A rows through the normal RLS path, and attempted cleanup.
+This means the harness seeded metadata-only rows for test user A through `transition_personal_concept_node_v1`, invoked `maybeBuildTodayPlanActionsFromDurableConceptGraph` with a Supabase-mode repository adapter, verified that returned actions are not skipped, verified `repositoryMode: "supabase"`, enforced max-three actions, required every action to be `metadataOnly` and `isPrimaryTask`, checked that raw DB-row fields are not returned, rejected unsupported exam modes, verified test user B cannot read test user A rows through the normal RLS path, and attempted cleanup.
+
+After M421A, this harness seeds synthetic metadata-only nodes through `transition_personal_concept_node_v1` rather than direct table insert/upsert. It still deletes synthetic node rows through the user-owned lifecycle path after verification. Transition-event audit rows are retained by design.
 
 ### Secret-handling warnings
 

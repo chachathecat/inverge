@@ -21,6 +21,7 @@ import { buildTodayPlanSourceUnion } from "../lib/review-os/today-plan-source-un
 import { assertSameTimestampInstant } from "../scripts/verify-personal-concept-graph-atomic-transition.mjs";
 
 const migrationPath = "supabase/migrations/20260623_personal_concept_graph_atomic_transition.sql";
+const rpcOnlyBoundaryMigrationPath = "supabase/migrations/202606232130_personal_concept_graph_rpc_only_write_boundary.sql";
 const scriptPath = "scripts/verify-personal-concept-graph-atomic-transition.mjs";
 const docPath = "docs/qa/personal-concept-graph-atomic-transition-v1.md";
 const enabledWriteEnv = {
@@ -186,6 +187,20 @@ test("atomic migration adds transition-event dedupe table and RPC without rewrit
   assert.match(baseMigration, /create table if not exists public\.personal_concept_nodes/);
 });
 
+test("RPC-only boundary migration closes direct authenticated concept-node writes", async () => {
+  const migration = await readFile(rpcOnlyBoundaryMigrationPath, "utf8");
+  const normalized = migration.replace(/\s+/g, " ").trim().toLowerCase();
+
+  assert.match(normalized, /revoke insert, update on table public\.personal_concept_nodes from authenticated/);
+  assert.match(normalized, /grant select, delete on table public\.personal_concept_nodes to authenticated/);
+  assert.match(normalized, /drop policy if exists "personal_concept_nodes_insert_own"/);
+  assert.match(normalized, /drop policy if exists "personal_concept_nodes_update_own"/);
+  assert.match(normalized, /revoke execute on function public\.transition_personal_concept_node_v1\([^)]*timestamptz[^)]*\) from public/);
+  assert.match(normalized, /revoke execute on function public\.transition_personal_concept_node_v1\([^)]*timestamptz[^)]*\) from anon/);
+  assert.match(normalized, /grant execute on function public\.transition_personal_concept_node_v1\([^)]*timestamptz[^)]*\) to authenticated/);
+  assert.doesNotMatch(normalized, /grant[^;]*(insert|update)[^;]*personal_concept_nodes[^;]*authenticated/);
+});
+
 test("atomic transition QA doc and package scripts document the gated workflow", async () => {
   const doc = await readFile(docPath, "utf8");
   const pkg = JSON.parse(await readFile("package.json", "utf8"));
@@ -198,7 +213,8 @@ test("atomic transition QA doc and package scripts document the gated workflow",
   assert.match(doc, /Do not use `npx\.cmd supabase db push --linked --include-all`/);
   assert.match(doc, /event_id_payload_mismatch/);
   assert.match(doc, /transition event audit rows are retained by design/i);
-  assert.match(doc, /direct authenticated insert\/update grants/i);
+  assert.match(doc, /RPC-only write boundary/i);
+  assert.match(doc, /direct authenticated insert\/update grants were revoked/i);
   assert.match(doc, /production durable-write enablement remains blocked/i);
   assert.equal(
     pkg.scripts["check:personal-concept-graph-atomic-transition"],

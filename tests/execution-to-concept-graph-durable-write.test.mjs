@@ -152,6 +152,13 @@ test("both flags are required to attempt a durable metadata write", async () => 
   assert.equal(result.previousNode, null);
 });
 
+test("durable write helper depends only on the atomic transition repository method", async () => {
+  const source = await readFile(new URL("../lib/review-os/execution-to-concept-graph-durable-write.ts", import.meta.url), "utf8");
+
+  assert.match(source, /transitionPersonalConceptNode\(update\)/);
+  assert.doesNotMatch(source, /upsertPersonalConceptNode|upsertPersonalConceptNodeToSupabase|\.upsert\(/);
+});
+
 test("monotonic durable write policy skips equal and older revisions", async () => {
   const existing = {
     id: "node-1",
@@ -319,7 +326,7 @@ test("no route writes durable graph rows unless explicit durable flags are check
   const matches = [];
   for (const file of files) {
     const source = await readFile(join(repoRoot, file), "utf8");
-    if (/maybeWriteExecutionSignalToConceptGraph|upsertPersonalConceptNodeToSupabase|personal_concept_nodes/.test(source) && !/PERSONAL_CONCEPT_GRAPH_DURABLE_WRITES/.test(source)) {
+    if (/maybeWriteExecutionSignalToConceptGraph|personal_concept_nodes/.test(source) && !/PERSONAL_CONCEPT_GRAPH_DURABLE_WRITES/.test(source)) {
       matches.push(file);
     }
   }

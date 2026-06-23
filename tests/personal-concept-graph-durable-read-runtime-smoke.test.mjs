@@ -124,10 +124,14 @@ test("durable read runtime smoke expected success JSON includes passed status", 
   const source = await readFile(scriptFile, "utf8");
 
   assert.match(source, /passed_durable_graph_read_runtime_smoke/);
+  assert.match(source, /transition_personal_concept_node_v1/);
+  assert.match(source, /seedNodesThroughRpc/);
+  assert.doesNotMatch(source, /\.upsert\(/);
   for (const verified of [
     "explicit_flags_required",
     "supabase_repository_mode",
     "metadata_only_rows",
+    "rpc_seeded_rows",
     "helper_returns_max_3_actions",
     "no_raw_text_leak",
     "unsupported_exam_rejection",
@@ -143,9 +147,9 @@ test("durable read runtime smoke cleanup attempts both users independently", asy
 
   assert.match(source, /async function cleanupBothUsers/);
   assert.match(source, /Promise\.allSettled/);
-  assert.match(source, /cleanup\(userA, idsA\)/);
-  assert.match(source, /cleanup\(userB, \[idB\]\)/);
-  assert.doesNotMatch(source, /cleanup\(userA, idsA\)\.then\(\(\) => cleanup\(userB, \[idB\]\)\)/);
+  assert.match(source, /cleanupUnits\(userA, unitsA\)/);
+  assert.match(source, /cleanupUnits\(userB, unitsB\)/);
+  assert.doesNotMatch(source, /cleanupUnits\(userA, unitsA\)\.then\(\(\) => cleanupUnits\(userB, unitsB\)\)/);
   assert.match(source, /cleanup_failed_after_attempting_both_users/);
 });
 

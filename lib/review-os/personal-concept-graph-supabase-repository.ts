@@ -306,19 +306,6 @@ export async function getPersonalConceptNodeFromSupabase(userId: string, examMod
   return data ? fromRow(data as unknown as PersonalConceptNodeRow) : null;
 }
 
-export async function upsertPersonalConceptNodeToSupabase(node: PersonalConceptNode): Promise<PersonalConceptNode> {
-  const payload = buildPersonalConceptNodeSupabaseWritePayload(node);
-  const client = await createPersonalConceptGraphSupabaseClient();
-  const { data, error } = await client
-    .from(PERSONAL_CONCEPT_NODES_TABLE)
-    .upsert(payload, { onConflict: "user_id,exam_mode,subject_id,unit_id" })
-    .select(PERSONAL_CONCEPT_GRAPH_SUPABASE_COLUMNS.join(","))
-    .single();
-
-  if (error) throw new Error(`personal-concept-node-upsert-failed:${error.message}`);
-  return fromRow(data as unknown as PersonalConceptNodeRow);
-}
-
 export async function transitionPersonalConceptNodeInSupabase(input: PersonalConceptAtomicTransitionInput): Promise<PersonalConceptAtomicTransitionResult> {
   const params = buildPersonalConceptAtomicTransitionRpcParams(input);
   const client = await createPersonalConceptGraphSupabaseClient();
