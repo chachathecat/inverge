@@ -9,9 +9,12 @@ jobs:
     concurrency:
       group: risk-${{ github.event.pull_request.number }}
       cancel-in-progress: true
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
       - name: Classify risk
-        run: |
-          echo "Risk classification"
-          node scripts/automation/classify-risk.mjs
+        run: node scripts/automation/classify-risk.mjs
