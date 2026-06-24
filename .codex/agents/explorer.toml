@@ -1,0 +1,3 @@
+role = "explorer"
+description = "Investigates existing implementation paths, call graphs, and dependencies. Does not modify code."
+permissions = "read-only"
