@@ -1,0 +1,105 @@
+version: 1
+
+program:
+  id: founding-paid-beta-v1
+  completionItem: M437
+  wipLimit: 2
+  maxRepairAttempts: 3
+
+items:
+  - id: M422
+    title: Constitution reconciliation
+    status: queued
+    dependencies: []
+    lockGroup: constitution
+    risk: medium
+  - id: M423
+    title: Official Syllabus & Exam Rule Registry v2
+    status: queued
+    dependencies: [M422]
+    lockGroup: official-curriculum
+    risk: high
+  - id: M424
+    title: Commercial Catalog Domain v2
+    status: queued
+    dependencies: [M422]
+    lockGroup: commercial-catalog
+    risk: high
+  - id: M425
+    title: Curriculum Node Schema & Mapping Migration v2
+    status: queued
+    dependencies: [M423]
+    lockGroup: curriculum-schema
+    risk: high
+  - id: M426
+    title: Usage Ledger and Billing Schema v1
+    status: queued
+    dependencies: [M424]
+    lockGroup: usage-ledger
+    risk: high
+  - id: M427
+    title: Learner Track Foundation v2
+    status: queued
+    dependencies: [M425, M426]
+    lockGroup: learner-track
+    risk: high
+  - id: M428
+    title: Corpus Platform v1
+    status: queued
+    dependencies: [M425]
+    lockGroup: corpus-platform
+    risk: high
+  - id: M429
+    title: First Corpus Ingestion v1
+    status: queued
+    dependencies: [M428]
+    lockGroup: first-corpus
+    risk: high
+  - id: M430
+    title: Validity Engine v1
+    status: queued
+    dependencies: [M429]
+    lockGroup: validity-engine
+    risk: high
+  - id: M432
+    title: Second Corpus Ingestion v1
+    status: queued
+    dependencies: [M428]
+    lockGroup: second-corpus
+    risk: high
+  - id: M433
+    title: Second Answer Quality Module v1
+    status: queued
+    dependencies: [M432, M430]
+    lockGroup: second-answer-quality
+    risk: high
+  - id: M431
+    title: Quick Solve Engine v1
+    status: queued
+    dependencies: [M427, M430]
+    lockGroup: quick-solve
+    risk: high
+  - id: M434
+    title: Pricing UI and Settings v1
+    status: queued
+    dependencies: [M424, M426, M431, M433]
+    lockGroup: pricing-ui
+    risk: high
+  - id: M435
+    title: Billing Integration v1
+    status: queued
+    dependencies: [M434, M426]
+    lockGroup: billing
+    risk: high
+  - id: M436
+    title: Paid Trust and Privacy Guardrails v1
+    status: queued
+    dependencies: [M435, M431, M433]
+    lockGroup: paid-trust
+    risk: high
+  - id: M437
+    title: Founding Paid Beta Acceptance v1
+    status: queued
+    dependencies: [M436]
+    lockGroup: release
+    risk: high
