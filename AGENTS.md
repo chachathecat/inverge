@@ -155,3 +155,30 @@ A source-level green check does not guarantee real behavior. For operations requ
 ## Issue/PR linking rule
 
 Every implementation PR must link exactly one GitHub issue using `Closes #<issue>` or `Fixes #<issue>`. The issue must clearly state goals, non-goals, risk classification, acceptance criteria, runtime evidence requirements, and remaining risks.
+
+## Autonomous delivery contract
+
+- Each issue must define its goal, non-goals, acceptance criteria, and linked roadmap item.
+- Do not ask the human about file names, styling details, test placement, or routine implementation choices.
+- Changes affecting visual golden sets or screenshot regression baselines are high risk.
+- Never update golden images without visual diffs and explicit review evidence.
+- Review existing unit, integration, accessibility, and visual tests before implementation.
+- Never weaken or delete tests merely to make CI pass.
+- Every issue must produce one focused PR linked with `Closes #<issue_number>`.
+- Schema or data changes must include rollout and rollback instructions.
+- Stop for human decision only for scope changes, new external services, secrets, destructive changes, or repeated CI failure after three repair attempts.
+
+## Risk and roadmap sources of truth
+
+- Risk paths, signals, blocking labels, and auto-merge eligibility are defined only in `config/agent-risk-policy.yml`.
+- Roadmap items, dependencies, lock groups, status, and WIP limits are defined only in `roadmap/active-program.yml`.
+- Do not duplicate or independently redefine those values inside `AGENTS.md`.
+
+## Review focus
+
+- Security and access-control boundaries.
+- Accessibility and keyboard/screen-reader behavior.
+- Visual consistency and responsive behavior.
+- Golden-image provenance and screenshot diff evidence.
+- Performance regressions.
+- Test weakening or hidden skipped checks.
