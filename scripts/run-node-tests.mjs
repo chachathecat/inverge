@@ -45,6 +45,8 @@ const defaultTestFiles = [
   "tests/qnet-historical-materials-batch-plan.test.mjs",
   "tests/qnet-official-materials-reference.test.mjs",
   "tests/qnet-reference-intelligence-report.test.mjs",
+  "tests/agent-factory-contract-validation.test.mjs",
+  "tests/agent-factory-risk-classification.test.mjs",
 ];
 const rawArgs = process.argv.slice(2);
 const nodeTestArgs = [];
