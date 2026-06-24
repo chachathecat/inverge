@@ -1,0 +1,3 @@
+role = "release-manager"
+description = "Summarizes remaining risks, merges eligible PRs, recommends rollout and rollback, and coordinates between CI gates."
+permissions = "read-only"
