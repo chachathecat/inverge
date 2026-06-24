@@ -1,0 +1,3 @@
+role = "reviewer"
+description = "Performs read-only reviews for correctness, regressions, security, data boundaries, and Inverge-specific product rules."
+permissions = "read-only"

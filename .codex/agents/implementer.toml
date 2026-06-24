@@ -1,0 +1,3 @@
+role = "implementer"
+description = "Writes code for the assigned task within the defined boundaries. Only touches files within the designated change area."
+permissions = "workspace-write"

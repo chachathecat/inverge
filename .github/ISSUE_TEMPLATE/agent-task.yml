@@ -1,0 +1,56 @@
+name: Agent Task
+description: Provide the necessary information to start an autonomous agent task.
+title: "[Agent] "
+labels: ["agent-task"]
+body:
+  - type: input
+    id: goal
+    attributes:
+      label: Goal
+      description: Describe what this task aims to accomplish.
+      placeholder: e.g. Implement feature X
+    validations:
+      required: true
+  - type: input
+    id: non_goals
+    attributes:
+      label: Non-goals
+      description: What should not be addressed in this task?
+      placeholder: e.g. Do not modify Y
+    validations:
+      required: false
+  - type: dropdown
+    id: risk
+    attributes:
+      label: Risk classification
+      description: Select the highest risk category for this task.
+      options:
+        - low
+        - medium
+        - high
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: What must be true for this task to be considered complete?
+      placeholder: e.g. All tests pass, E2E evidence provided
+    validations:
+      required: true
+  - type: textarea
+    id: runtime
+    attributes:
+      label: Runtime evidence
+      description: Describe any runtime or staging evidence required (e.g. E2E, staging smoke).
+      placeholder: e.g. Provide staging URL, log screenshot
+    validations:
+      required: false
+  - type: textarea
+    id: remaining_risks
+    attributes:
+      label: Remaining risks
+      description: Known risks that remain after task completion.
+      placeholder: e.g. None
+    validations:
+      required: false

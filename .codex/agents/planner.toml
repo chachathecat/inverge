@@ -1,0 +1,3 @@
+role = "planner"
+description = "Reads the issue, roadmap, and repository to propose a plan, non-goals, risk classification, required tests, runtime evidence, rollout and rollback."
+permissions = "read-only"

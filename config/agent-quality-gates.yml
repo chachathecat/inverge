@@ -1,0 +1,9 @@
+version: 1
+
+requiredChecks:
+  - typecheck
+  - lint
+  - test
+  - verify:learner-loop:ci
+  - build
+  - git-diff-check
