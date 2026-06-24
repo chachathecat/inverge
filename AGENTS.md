@@ -102,3 +102,56 @@ A task is done only when:
 - build passes
 - relevant smoke tests are run
 - changed files and remaining risks are reported
+
+## Autonomous delivery contract
+
+- One issue produces one reviewable pull request.
+- Do not ask the human about implementation details, file selection, naming, test placement, or routine refactoring choices.
+- Make reasonable implementation decisions independently.
+- Never weaken or delete an existing test merely to make CI green.
+- Never conceal skipped runtime verification.
+- Link every PR with `Closes #<issue>`.
+- Keep implementation PRs focused. Split work when unrelated concerns or conflicting lock groups appear.
+- Use feature flags for incomplete or operationally risky behavior.
+- A task is not complete merely because source-level tests pass.
+
+## Mandatory human-decision conditions
+
+Stop implementation and create a `human-decision` record only when:
+
+- Product scope or learner promise must change.
+- Official-source interpretation is ambiguous.
+- Authentication, entitlement, billing, privacy, destructive data transformation, or production secrets require a policy choice.
+- A new production dependency or provider is required.
+- The proposed work exceeds the stated cost or operational budget.
+- The same CI/review failure remains after three repair attempts.
+- Rollback cannot be made safe.
+
+Do not stop for ordinary implementation choices.
+
+## Review guidelines
+
+Treat the following as blocking P1 findings:
+
+- Auth or RLS bypass.
+- Raw learner content crossing the documented data boundary.
+- Official grading/model-answer claims.
+- Migrations without idempotency and rollback/disable instructions.
+- Payment activation based on client input.
+- Workflow changes that grant broader token permissions.
+- Skipped required runtime evidence.
+- Weakened regression tests.
+- Today Plan showing more than three primary tasks.
+- Learner and instructor surfaces becoming mixed.
+
+## No-test-weakening rule
+
+Never weaken, delete, or modify an existing test solely to satisfy CI. If a test fails due to new implementation, either fix the underlying bug or justify a test update via a human-decision.
+
+## Source-only vs runtime evidence rule
+
+A source-level green check does not guarantee real behavior. For operations requiring runtime evidence (e.g., database migrations, push notifications, payments), tests must be accompanied by runtime validation artifacts such as logs or manual session outcomes. A test that only inspects source-level behavior cannot declare runtime success.
+
+## Issue/PR linking rule
+
+Every implementation PR must link exactly one GitHub issue using `Closes #<issue>` or `Fixes #<issue>`. The issue must clearly state goals, non-goals, risk classification, acceptance criteria, runtime evidence requirements, and remaining risks.
