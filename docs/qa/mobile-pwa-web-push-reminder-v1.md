@@ -301,6 +301,45 @@ blocked on the current Vercel Hobby plan, and this PR must not add an hourly
 specifically proves the key pair itself must be replaced and a subscription
 replacement plan is approved.
 
+## 2026-06-24 M421B Owner Runtime Evidence
+
+This owner runtime pass replaced the previous unclassified HTTP 500 with a
+bounded, secret-safe runtime classification. Presence-only VAPID checks pass,
+but runtime VAPID initialization fails before Push provider delivery.
+Subscription persistence is not the current blocker.
+
+| Check | Result |
+| --- | --- |
+| Preview deployment | PASS |
+| Authenticated notification settings page | PASS |
+| Active durable Push subscriptions | PASS |
+| Safe error classification path | PASS |
+| `POST /api/notifications/test` | HTTP 503 |
+| Top-level status | `vapid_configuration_error` |
+| Sent | 0 |
+| Expired | 0 |
+| Failed | 2 |
+| `failureCategoryCounts.vapid_configuration_error` | 2 |
+| `failureCategoryCounts.subscription_format_error` | 0 |
+| `failureCategoryCounts.push_provider_rejected` | 0 |
+| `failureCategoryCounts.push_transport_failure` | 0 |
+| `failureCategoryCounts.payload_validation_error` | 0 |
+| `failureCategoryCounts.sent_persistence_failed` | 0 |
+| `failureCategoryCounts.expired_persistence_failed` | 0 |
+| OS notification received | BLOCKED |
+| `last_test_sent_at` | BLOCKED |
+| Test notification click to `/app` | NOT VERIFIED |
+| Review click to `/app/review` | NOT VERIFIED |
+| Unsubscribe after successful delivery | NOT VERIFIED |
+
+Do not re-subscribe repeatedly. Do not rotate VAPID keys. Do not add a debug
+endpoint. Do not claim live delivery. PR #423 must remain Draft. Web Push
+returns to HOLD.
+
+**WEB PUSH HOLD — VAPID CONFIGURATION ERROR SAFELY CLASSIFIED**
+
+**SCHEDULER BLOCKED BY VERCEL HOBBY PLAN**
+
 ## Not Verified Locally
 
 These require deployed HTTPS, real VAPID keys, migrated Supabase tables, active authenticated accounts, and physical/OS browser testing:
