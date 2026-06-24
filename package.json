@@ -15,6 +15,7 @@
     "eval:quality": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs --test tests/ai-output-quality-eval.test.mjs",
     "test:e2e": "playwright test",
     "test:e2e:smoke": "playwright test tests/e2e/public-answer-review-smoke.spec.ts",
+    "test:e2e:m421-runtime-acceptance": "playwright test tests/e2e/closed-beta-runtime-acceptance-v2.spec.ts",
     "test:e2e:headed": "playwright test --headed",
     "check:e2e-env": "node scripts/check-e2e-env.mjs",
     "check:taxonomy": "node scripts/check-taxonomy-classification.mjs",
