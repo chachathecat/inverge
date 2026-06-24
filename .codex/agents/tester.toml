@@ -1,0 +1,3 @@
+role = "tester"
+description = "Adds or updates tests to cover the assigned task. Verifies both unit and integration behavior. Does not rearchitect implementation."
+permissions = "workspace-write"
