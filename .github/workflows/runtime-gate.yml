@@ -10,20 +10,14 @@ jobs:
     concurrency:
       group: runtime-${{ github.event.pull_request.number }}
       cancel-in-progress: true
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
-      - name: Determine if runtime evidence is required
-        id: check
-        run: |
-          echo "Check E2E secrets"
-          if [ -z "${E2E_BASE_URL}" ]; then
-            echo "not_applicable=true" >> "$GITHUB_OUTPUT"
-          fi
-      - name: Runtime gate result
-        run: |
-          if [ "${{ steps.check.outputs.not_applicable }}" = "true" ]; then
-            echo "Runtime gate not applicable"
-          else
-            echo "Runtime evidence required but missing"
-            exit 1
-          fi
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Classify risk
+        run: node scripts/automation/classify-risk.mjs > .agent-factory/risk.json
+      - name: Runtime gate
+        run: node scripts/automation/runtime-gate.mjs --risk-file .agent-factory/risk.json
