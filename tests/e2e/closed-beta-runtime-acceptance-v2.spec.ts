@@ -3,6 +3,9 @@ import { randomUUID } from "node:crypto";
 
 const runtimeGateEnabled = process.env.M421_RUNTIME_ACCEPTANCE === "1";
 const productionOverrideEnabled = process.env.M421_RUNTIME_ACCEPTANCE_ALLOW_PRODUCTION === "1";
+const runtimeBaseURL = process.env.E2E_BASE_URL || "http://127.0.0.1:3000";
+const vercelAutomationBypassSecret = process.env.VERCEL_AUTOMATION_BYPASS_SECRET?.trim();
+const loginPreflightTimeoutMs = 10_000;
 
 const requiredEnvNames = [
   "E2E_BASE_URL",
@@ -35,6 +38,10 @@ function requireRuntimeEnvironment() {
   if (baseUrl && isObviousProductionBaseUrl(baseUrl) && !productionOverrideEnabled) {
     throw new Error("M421 runtime acceptance refused an obvious production base URL. Set M421_RUNTIME_ACCEPTANCE_ALLOW_PRODUCTION=1 only for an intentional owner-approved production smoke.");
   }
+
+  if (baseUrl && isVercelPreviewBaseUrl(baseUrl) && !vercelAutomationBypassSecret) {
+    throw new Error("M421 runtime acceptance missing required env: VERCEL_AUTOMATION_BYPASS_SECRET for protected Vercel Preview.");
+  }
 }
 
 function isObviousProductionBaseUrl(rawValue: string) {
@@ -48,6 +55,23 @@ function isObviousProductionBaseUrl(rawValue: string) {
   if (host === "localhost" || host === "127.0.0.1" || host === "::1") return false;
   if (host.includes("-git-") || host.includes("--") || host.includes("preview") || host.includes("staging")) return false;
   return host === "inverge.vercel.app" || host === "inverge.ai" || host === "www.inverge.ai" || host === "inverge.app" || host === "www.inverge.app";
+}
+
+function isVercelPreviewBaseUrl(rawValue: string) {
+  try {
+    const host = new URL(rawValue).hostname.toLowerCase();
+    return host.endsWith(".vercel.app");
+  } catch {
+    return false;
+  }
+}
+
+function vercelProtectionHeaders() {
+  if (!vercelAutomationBypassSecret) return undefined;
+  return {
+    "x-vercel-protection-bypass": vercelAutomationBypassSecret,
+    "x-vercel-set-bypass-cookie": "true",
+  };
 }
 
 function credentialFrom(prefix: "E2E_USER" | "E2E_USER_A" | "E2E_USER_B"): RuntimeCredential {
@@ -69,15 +93,38 @@ function syntheticText(label: string, suffix: string) {
 }
 
 async function login(page: Page, credential: RuntimeCredential, mode: "first" | "second" = "first") {
-  await page.goto(`/login?mode=${mode}`);
-  await page.locator('input[type="email"]').first().fill(credential.email);
-  await page.locator('input[type="password"]').first().fill(credential.password);
+  try {
+    await page.goto(`/login?mode=${mode}`, { timeout: loginPreflightTimeoutMs, waitUntil: "domcontentloaded" });
+  } catch {
+    throw new Error("m421_app_login_surface_unavailable_possible_deployment_protection");
+  }
+
+  const emailInput = page.getByLabel("이메일");
+  const passwordInput = page.getByLabel("비밀번호");
+  try {
+    await expect(emailInput).toBeVisible({ timeout: loginPreflightTimeoutMs });
+    await expect(passwordInput).toBeVisible({ timeout: loginPreflightTimeoutMs });
+  } catch {
+    throw new Error("m421_app_login_surface_unavailable_possible_deployment_protection");
+  }
+
+  await emailInput.fill(credential.email);
+  await passwordInput.fill(credential.password);
   await page.getByTestId("login-submit").click();
-  await expect(page).toHaveURL(/\/(app|onboarding)/);
+  try {
+    await expect(page).toHaveURL(/\/(app|onboarding)/, { timeout: loginPreflightTimeoutMs });
+  } catch {
+    await emailInput.fill("").catch(() => undefined);
+    await passwordInput.fill("").catch(() => undefined);
+    throw new Error("m421_app_login_surface_unavailable_possible_deployment_protection");
+  }
 }
 
 async function openFreshContext(browser: Browser, credential: RuntimeCredential, mode: "first" | "second" = "first") {
-  const context = await browser.newContext();
+  const context = await browser.newContext({
+    baseURL: runtimeBaseURL,
+    extraHTTPHeaders: vercelProtectionHeaders(),
+  });
   const page = await context.newPage();
   await login(page, credential, mode);
   return { context, page };
@@ -254,7 +301,14 @@ async function assertSyntheticRecordVisibleOrLocalHonest(page: Page, suffix: str
   }
 }
 
+test.use({
+  extraHTTPHeaders: vercelProtectionHeaders(),
+  screenshot: "only-on-failure",
+  trace: vercelAutomationBypassSecret ? "off" : "retain-on-failure",
+});
+
 test.describe("M421 closed beta runtime acceptance v2", () => {
+  test.describe.configure({ timeout: 180_000 });
   test.skip(!runtimeGateEnabled, "M421 runtime acceptance requires M421_RUNTIME_ACCEPTANCE=1 and owner-provided runtime credentials.");
 
   test.beforeAll(() => {

@@ -45,6 +45,11 @@ test("Playwright runtime suite is explicitly gated and fail-closed", async () =>
   assert.ok(spec.includes('process.env.M421_RUNTIME_ACCEPTANCE === "1"'));
   assert.ok(spec.includes("M421_RUNTIME_ACCEPTANCE=1"));
   assert.ok(spec.includes("M421_RUNTIME_ACCEPTANCE_ALLOW_PRODUCTION"));
+  assert.ok(spec.includes("VERCEL_AUTOMATION_BYPASS_SECRET"));
+  assert.ok(spec.includes("isVercelPreviewBaseUrl"));
+  assert.ok(spec.includes("x-vercel-protection-bypass"));
+  assert.ok(spec.includes("x-vercel-set-bypass-cookie"));
+  assert.ok(spec.includes("extraHTTPHeaders: vercelProtectionHeaders()"));
   for (const envName of [
     "E2E_BASE_URL",
     "E2E_USER_EMAIL",
@@ -60,6 +65,22 @@ test("Playwright runtime suite is explicitly gated and fail-closed", async () =>
   assert.ok(spec.includes("requiredEnvNames.filter"));
   assert.ok(spec.includes("isObviousProductionBaseUrl"));
   assert.ok(spec.includes("test.skip(!runtimeGateEnabled"));
+});
+
+test("protected Preview login preflight is bounded and trace-safe", async () => {
+  const spec = await read("tests/e2e/closed-beta-runtime-acceptance-v2.spec.ts");
+  const doc = await read("docs/qa/closed-beta-runtime-acceptance-v2.md");
+
+  assert.ok(spec.includes("loginPreflightTimeoutMs = 10_000"));
+  assert.ok(spec.includes('page.getByLabel("이메일")'));
+  assert.ok(spec.includes('page.getByLabel("비밀번호")'));
+  assert.ok(spec.includes("m421_app_login_surface_unavailable_possible_deployment_protection"));
+  assert.ok(spec.includes("trace: vercelAutomationBypassSecret ? \"off\" : \"retain-on-failure\""));
+  assert.ok(spec.includes("screenshot: \"only-on-failure\""));
+  assert.ok(spec.includes("test.describe.configure({ timeout: 180_000 })"));
+  assert.ok(doc.includes("failed 8/8 before reaching the Inverge app login form"));
+  assert.ok(doc.includes("not learner-loop runtime evidence"));
+  assert.ok(doc.includes("owner rerun remains required"));
 });
 
 test("required acceptance journeys and widths are represented", async () => {
@@ -92,7 +113,7 @@ test("new acceptance artifacts do not commit raw fixture content or secret-beari
 
   assert.match(spec, /syntheticText/);
   assert.match(spec, /safeEvidenceSuffix/);
-  assert.doesNotMatch(combined, /p256dh|SUPABASE_SERVICE_ROLE_KEY|VAPID_PRIVATE_KEY|CRON_SECRET|storageState|access token|refresh token/i);
+  assert.doesNotMatch(combined, /p256dh|SUPABASE_SERVICE_ROLE_KEY|VAPID_PRIVATE_KEY|CRON_SECRET|storageState|access token|refresh token|bypass secret value/i);
   assert.doesNotMatch(combined, /official problem fixture|raw learner fixture|actual formula fixture|calculator keystroke fixture|display reading fixture/i);
   assert.doesNotMatch(combined, /provider body|database row body|user id:/i);
 });

@@ -56,6 +56,8 @@ $env:E2E_USER_A_EMAIL="<owner-provided account A>"
 $env:E2E_USER_A_PASSWORD="<owner-provided password>"
 $env:E2E_USER_B_EMAIL="<owner-provided account B>"
 $env:E2E_USER_B_PASSWORD="<owner-provided password>"
+# For protected Vercel Preview deployments only:
+$env:VERCEL_AUTOMATION_BYPASS_SECRET="<local-only automation bypass secret>"
 
 npm.cmd run test:e2e:m421-runtime-acceptance
 ```
@@ -64,11 +66,32 @@ The suite is intentionally fail-closed:
 
 - without `M421_RUNTIME_ACCEPTANCE=1`, it skips with an explicit reason;
 - with the gate set, missing required environment variable names fail the run;
+- when `E2E_BASE_URL` targets a `*.vercel.app` Preview, `VERCEL_AUTOMATION_BYPASS_SECRET` is required so isolated Playwright contexts can reach the Inverge app behind Vercel Deployment Protection;
 - obvious production base URLs are rejected unless `M421_RUNTIME_ACCEPTANCE_ALLOW_PRODUCTION=1` is explicitly supplied;
 - the test data is synthetic and non-copyrighted;
-- screenshots and traces are retained only on failure through the existing Playwright config.
+- default Playwright contexts and manually created browser contexts send the same Vercel Protection Bypass for Automation headers when the local bypass secret is set;
+- protected-runtime traces are disabled when `VERCEL_AUTOMATION_BYPASS_SECRET` is present to prevent credential capture in Playwright trace artifacts;
+- failure screenshots remain `only-on-failure`.
 
-Do not paste runtime credentials, cookies, storage state, account IDs, provider responses, or screenshots containing private data into this document or PR comments.
+Do not paste runtime credentials, Vercel bypass values, cookies, storage state, account IDs, provider responses, headers, or screenshots containing private data into this document or PR comments. Do not put the bypass secret in a URL or commit a storage-state file.
+
+## 2026-06-24 Protected Preview Harness Follow-Up
+
+The first owner-run attempt of the M421 suite failed 8/8 before reaching the Inverge app login form. The common observation was that an email input was visible, but the app password input was never found; each test timed out in `login()`.
+
+This was blocked before application authentication by Vercel Deployment Protection on the approved Preview. A normal owner Chrome session could access the Preview, but isolated Playwright contexts did not carry the Deployment Protection bypass. This is an E2E environment/harness defect, not learner-loop runtime evidence.
+
+Follow-up harness behavior:
+
+- `VERCEL_AUTOMATION_BYPASS_SECRET` is supported as a local-only environment variable;
+- default Playwright contexts send `x-vercel-protection-bypass` and `x-vercel-set-bypass-cookie` when that local secret is set;
+- manual contexts created for two-context durability and Account A/B isolation receive the same protection headers;
+- `*.vercel.app` M421 runtime runs fail immediately with a bounded missing-env message if the bypass secret is absent;
+- login preflight requires the app `이메일` and `비밀번호` fields to become visible within 10 seconds;
+- if the app login form is absent, the suite fails with `m421_app_login_surface_unavailable_possible_deployment_protection`;
+- protected-runtime traces are disabled, and only safe failure screenshots are retained through Playwright's failure screenshot mode.
+
+The owner rerun remains required. The 8/8 blocked attempt does not count as failed learner-loop runtime evidence.
 
 ## Journeys Covered By The Harness
 
@@ -105,6 +128,7 @@ M421 may accept the non-Push learner loop only while keeping Web Push explicitly
 The harness must use only synthetic learner content. It must not commit or print:
 
 - secrets, tokens, cookies, storage state, provider bodies, or service credentials;
+- Vercel Protection Bypass for Automation secret values or request headers;
 - account identifiers, email values, database row bodies, or Push subscription details;
 - raw learner/private content from real accounts;
 - raw official/Q-Net materials;
