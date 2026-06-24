@@ -1,0 +1,45 @@
+version: 1
+
+highRiskPaths:
+  - "supabase/migrations/**"
+  - "app/api/auth/**"
+  - "lib/auth/**"
+  - ".github/workflows/**"
+  - "middleware.ts"
+  - "vercel.json"
+  - "next.config.*"
+  - "config/paid-launch-readiness.json"
+
+highRiskSignals:
+  - new_dependency
+  - new_environment_variable
+  - schema_change
+  - destructive_data_operation
+  - production_flag_change
+  - payment_or_entitlement_change
+  - official_answer_semantics
+  - personal_data_policy_change
+
+mediumRiskPaths:
+  - "app/api/**"
+  - "lib/review-os/**"
+  - "lib/capture/**"
+  - "reference_corpus/**"
+  - "scripts/ingest-**"
+
+lowRiskPaths:
+  - "docs/**"
+  - "tests/**"
+  - "**/*.md"
+  - "app/**/*.css"
+
+autoMerge:
+  low: true
+  medium: true
+  high: false
+
+blockingLabels:
+  - blocked
+  - human-decision
+  - do-not-merge
+  - needs-live-runtime
