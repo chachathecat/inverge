@@ -93,6 +93,31 @@ Follow-up harness behavior:
 
 The owner rerun remains required. The 8/8 blocked attempt does not count as failed learner-loop runtime evidence.
 
+## 2026-06-24 Auth Classification Follow-Up
+
+The Vercel Protection Bypass for Automation reached the real Inverge application login surface: PASS.
+
+The next owner one-test rerun reached the app login form, showed both `이메일` and `비밀번호`, filled the owner-provided credentials, and clicked the login button. It then failed while waiting for the post-login app route. That result is no longer deployment-protection login-surface evidence.
+
+The harness now classifies the `/api/auth/sign-in` POST result using bounded fields only:
+
+- HTTP status;
+- `ok`;
+- `error`;
+- `redirectTo` presence/path category.
+
+It must not print or record email, password, cookies, request headers, Vercel bypass values, full response bodies, HTML, tokens, or user identifiers.
+
+Bounded classifications:
+
+- `m421_auth_credentials_rejected` for HTTP 400 or `error=auth-failed`;
+- `m421_preview_supabase_auth_unavailable` for HTTP 503 or `error=supabase-not-configured`;
+- `m421_auth_endpoint_unavailable_possible_deployment_protection` for non-JSON or protected HTML responses;
+- `m421_auth_session_redirect_failed` for HTTP 200 and `ok=true` when the browser does not reach `/app` or onboarding;
+- `m421_app_login_surface_unavailable_possible_deployment_protection` remains reserved for the pre-submit login-form-missing case.
+
+Exact auth/session classification remains pending owner rerun. The post-submit blocked run is not learner-loop journey failure evidence.
+
 ## Journeys Covered By The Harness
 
 | Journey | Owner-run target | Status before owner run |
