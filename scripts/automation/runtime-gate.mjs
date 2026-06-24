@@ -9,6 +9,42 @@ function fail(msg) {
   process.exit(1);
 }
 
+function matchPattern(pattern, filePath) {
+  const escaped = pattern
+    .replace(/[-\/\\^$+?.()|[\]{}]/g, '\\$&')
+    .replace(/\\*\\*/g, '.*')
+    .replace(/\\*/g, '[^/]*');
+  const regex = new RegExp('^' + escaped + '$');
+  return regex.test(filePath);
+}
+
+function runtimeEvidenceRequired(files) {
+  // Patterns requiring runtime evidence
+  const patterns = [
+    'supabase/**',
+    '**/migrations/**',
+    'auth/**',
+    '**/auth/**',
+    '**/RLS/**',
+    '**/billing/**',
+    '**/payments/**',
+    '**/entitlement/**',
+    '**/workflow-permission/**',
+    '**/production-flags/**',
+    '**/flags/**',
+    '**/.env',
+    '**/secrets/**'
+  ];
+  for (const file of files) {
+    for (const p of patterns) {
+      if (matchPattern(p, file)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 function main() {
   const args = process.argv.slice(2);
   let riskFile = null;
@@ -20,16 +56,20 @@ function main() {
   }
   const filePath = riskFile || process.env.RISK_FILE || '.agent-factory/risk.json';
   let risk = 'low';
+  let changedFiles = [];
   try {
     const data = fs.readFileSync(filePath, 'utf8');
     const json = JSON.parse(data);
     risk = json.risk || 'low';
+    changedFiles = json.changedFiles || [];
   } catch {
-    // missing risk file, assume low
+    // no file; assume low risk and no changed files
   }
 
-  const runtimeRequired = risk !== 'low';
-  if (!runtimeRequired) {
+  // Determine if runtime evidence required based on changed files
+  const requiresEvidence = risk !== 'low' && runtimeEvidenceRequired(changedFiles);
+
+  if (!requiresEvidence) {
     console.log(JSON.stringify({ result: 'not_required' }));
     return;
   }
