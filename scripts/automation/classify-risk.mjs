@@ -45,7 +45,7 @@ function parsePolicy(filePath) {
       continue;
     }
     if (current && trimmed.startsWith('-')) {
-      const value = trimmed.replace(/^-\\s*/, '').replace(/^["']|["']$/g, '');
+      const value = trimmed.replace(/^-\s*/, '').replace(/^['"]|['"]$/g, '');
       if (Array.isArray(policy[current])) {
         policy[current].push(value);
       }
@@ -56,12 +56,15 @@ function parsePolicy(filePath) {
 }
 
 function matchPattern(pattern, filePath) {
-  const escaped = pattern
-    .replace(/[-\/\\^$+?.()|[\\]{}]/g, '\\$&')
-    .replace(/\\\\\\*\\\\\\*/g, '.*')       // replace ** with .*
-    .replace(/\\\\\\*/g, '[^/]*')           // replace * with anything but slash
-    .replace(/\\\\\//g, '\\/');           // ensure slash is slash
-  const regex = new RegExp('^' + escaped + '$');
+  // Convert glob pattern (with * and **) to a RegExp
+  const segments = pattern.split('/');
+  const regexSegments = segments.map((seg) => {
+    if (seg === '**') return '.*';
+    // escape regex special chars except *
+    const escaped = seg.replace(/[.+^${}()|[\]\\]/g, '\\$&');
+    return escaped.replace(/\*/g, '[^/]*');
+  });
+  const regex = new RegExp('^' + regexSegments.join('\\/') + '$');
   return regex.test(filePath);
 }
 
@@ -147,6 +150,6 @@ function main() {
 try {
   main();
 } catch (err) {
-    console.error(err);
-    process.exit(1);
+  console.error(err);
+  process.exit(1);
 }
