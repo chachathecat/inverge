@@ -1,0 +1,28 @@
+name: Full CI
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  full-ci:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: full-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Run full test suite
+        run: npm run test -- --workers=1
+      - name: Verify learner loop
+        run: npm run verify:learner-loop:ci
+      - name: Build
+        run: npm run build
+      - name: Check closed-beta readiness
+        run: npm run check:closed-beta-readiness || true

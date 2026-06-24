@@ -1,0 +1,17 @@
+name: Risk Gate
+
+on:
+  pull_request:
+
+jobs:
+  risk-classifier:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: risk-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Classify risk
+        run: |
+          echo "Risk classification"
+          node scripts/automation/classify-risk.mjs

@@ -1,0 +1,29 @@
+name: Runtime Gate
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  runtime-gate:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: runtime-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Determine if runtime evidence is required
+        id: check
+        run: |
+          echo "Check E2E secrets"
+          if [ -z "${E2E_BASE_URL}" ]; then
+            echo "not_applicable=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Runtime gate result
+        run: |
+          if [ "${{ steps.check.outputs.not_applicable }}" = "true" ]; then
+            echo "Runtime gate not applicable"
+          else
+            echo "Runtime evidence required but missing"
+            exit 1
+          fi
