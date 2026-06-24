@@ -25,4 +25,4 @@ jobs:
       - name: Build
         run: npm run build
       - name: Check closed-beta readiness
-        run: npm run check:closed-beta-readiness || true
+        run: npm run check:closed-beta-readiness
