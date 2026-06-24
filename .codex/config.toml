@@ -1,0 +1,9 @@
+# Codex agent configuration
+
+[agents]
+# Maximum number of parallel subagent threads
+max_threads = 6
+# Maximum allowed recursion depth for subagents
+max_depth = 1
+# Maximum runtime for a single job in seconds
+job_max_runtime_seconds = 1800
