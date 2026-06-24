@@ -6,13 +6,15 @@ on:
 jobs:
   pr-contract:
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
     concurrency:
       group: pr-contract-${{ github.event.pull_request.number }}
       cancel-in-progress: true
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
       - name: Validate PR contract
-        run: |
-          echo "Validate PR contract fields"
-          node scripts/automation/validate-pr-contract.mjs
+        run: node scripts/automation/validate-pr-contract.mjs
