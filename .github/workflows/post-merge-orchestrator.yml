@@ -1,0 +1,32 @@
+name: Post-Merge Orchestrator
+
+on:
+  # Run after changes land on the default branch.  This triggers when a PR is merged into main.
+  push:
+    branches:
+      - main
+
+jobs:
+  orchestrate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Use Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+      # Install dependencies required to run automation scripts
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+      # Determine the next tasks to start based on the roadmap and current state
+      - name: Determine next task
+        run: node scripts/automation/determine-next-task.mjs
+      # Optionally generate a release digest for the merged work
+      - name: Generate release digest
+        run: node scripts/automation/summarize-release.mjs

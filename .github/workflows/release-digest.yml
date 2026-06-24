@@ -1,0 +1,28 @@
+name: Release Digest
+
+on:
+  # Run this workflow on a schedule to summarize recently merged work.  Adjust the cron as needed.
+  schedule:
+    - cron: '0 0 * * 1' # Every Monday at 00:00 UTC
+  # Allow manual dispatch of the workflow as well
+  workflow_dispatch:
+
+jobs:
+  summarize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Use Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+      - name: Summarize release
+        run: node scripts/automation/summarize-release.mjs
