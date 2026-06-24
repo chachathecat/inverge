@@ -83,6 +83,37 @@ test("protected Preview login preflight is bounded and trace-safe", async () => 
   assert.ok(doc.includes("owner rerun remains required"));
 });
 
+test("login helper classifies bounded auth POST outcomes without recording secrets", async () => {
+  const spec = await read("tests/e2e/closed-beta-runtime-acceptance-v2.spec.ts");
+  const doc = await read("docs/qa/closed-beta-runtime-acceptance-v2.md");
+  const combined = textOf([spec, doc]);
+
+  assert.ok(spec.includes("page.waitForResponse"));
+  assert.ok(spec.includes("/api/auth/sign-in"));
+  assert.ok(spec.includes("readBoundedAuthResponse"));
+  assert.ok(spec.includes("classifyBoundedAuthResponse"));
+  assert.ok(spec.includes("classifyKnownAuthUiMessage"));
+  assert.ok(spec.includes("response.status()"));
+  assert.ok(spec.includes("record.ok"));
+  assert.ok(spec.includes("record.error"));
+  assert.ok(spec.includes("categorizeRedirectTo(record.redirectTo)"));
+
+  for (const classification of [
+    "m421_auth_credentials_rejected",
+    "m421_preview_supabase_auth_unavailable",
+    "m421_auth_endpoint_unavailable_possible_deployment_protection",
+    "m421_auth_session_redirect_failed",
+    "m421_app_login_surface_unavailable_possible_deployment_protection",
+  ]) {
+    assert.ok(combined.includes(classification), classification);
+  }
+
+  assert.ok(doc.includes("reached the real Inverge application login surface: PASS"));
+  assert.ok(doc.includes("Exact auth/session classification remains pending owner rerun"));
+  assert.ok(doc.includes("not learner-loop journey failure evidence"));
+  assert.doesNotMatch(combined, /response\.text\(|innerHTML|outerHTML|\.(?:headers|allHeaders|cookies)\(|storageState/i);
+});
+
 test("required acceptance journeys and widths are represented", async () => {
   const spec = await read("tests/e2e/closed-beta-runtime-acceptance-v2.spec.ts");
   const combined = textOf([spec, await read("docs/qa/closed-beta-runtime-acceptance-v2.md")]);

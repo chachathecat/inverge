@@ -1,4 +1,4 @@
-import { expect, test, type Browser, type Locator, type Page } from "@playwright/test";
+import { expect, test, type Browser, type Locator, type Page, type Response } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 
 const runtimeGateEnabled = process.env.M421_RUNTIME_ACCEPTANCE === "1";
@@ -26,6 +26,16 @@ const responsiveWidths = [
 type RuntimeCredential = {
   email: string;
   password: string;
+};
+
+type AuthRedirectCategory = "app" | "onboarding" | "other" | "missing";
+
+type BoundedAuthResponse = {
+  status: number;
+  ok: boolean | null;
+  error: string | null;
+  redirectCategory: AuthRedirectCategory;
+  json: boolean;
 };
 
 function requireRuntimeEnvironment() {
@@ -92,6 +102,60 @@ function syntheticText(label: string, suffix: string) {
   return `synthetic ${label} placeholder ${suffix}`;
 }
 
+function categorizeRedirectTo(value: unknown): AuthRedirectCategory {
+  if (typeof value !== "string" || !value.trim()) return "missing";
+  try {
+    const parsed = new URL(value, "http://inverge.local");
+    if (parsed.pathname === "/app") return "app";
+    if (parsed.pathname === "/onboarding" || parsed.pathname === "/app/onboarding") return "onboarding";
+    return "other";
+  } catch {
+    return "other";
+  }
+}
+
+async function readBoundedAuthResponse(response: Response): Promise<BoundedAuthResponse> {
+  const status = response.status();
+  let body: unknown;
+  try {
+    body = await response.json();
+  } catch {
+    return { status, ok: null, error: null, redirectCategory: "missing", json: false };
+  }
+
+  const record = body && typeof body === "object" ? (body as Record<string, unknown>) : {};
+  const ok = typeof record.ok === "boolean" ? record.ok : null;
+  const error = typeof record.error === "string" ? record.error : null;
+  const redirectCategory = categorizeRedirectTo(record.redirectTo);
+  return { status, ok, error, redirectCategory, json: true };
+}
+
+function classifyBoundedAuthResponse(result: BoundedAuthResponse) {
+  if (!result.json) return "m421_auth_endpoint_unavailable_possible_deployment_protection";
+  if (result.status === 400 || result.error === "auth-failed") return "m421_auth_credentials_rejected";
+  if (result.status === 503 || result.error === "supabase-not-configured") return "m421_preview_supabase_auth_unavailable";
+  if (result.status === 200 && result.ok === true) return null;
+  return "m421_auth_endpoint_unavailable_possible_deployment_protection";
+}
+
+async function classifyKnownAuthUiMessage(page: Page) {
+  const hasCredentialsError =
+    (await page.getByText("로그인에 실패했습니다", { exact: false }).first().isVisible({ timeout: 500 }).catch(() => false)) ||
+    (await page.getByText("입력 정보를 다시 확인", { exact: false }).first().isVisible({ timeout: 500 }).catch(() => false));
+  if (hasCredentialsError) {
+    return "m421_auth_credentials_rejected";
+  }
+
+  const hasSupabaseError =
+    (await page.getByText("로그인이 아직 연결되지 않았습니다", { exact: false }).first().isVisible({ timeout: 500 }).catch(() => false)) ||
+    (await page.getByText("현재 환경에서 로그인이", { exact: false }).first().isVisible({ timeout: 500 }).catch(() => false));
+  if (hasSupabaseError) {
+    return "m421_preview_supabase_auth_unavailable";
+  }
+
+  return null;
+}
+
 async function login(page: Page, credential: RuntimeCredential, mode: "first" | "second" = "first") {
   try {
     await page.goto(`/login?mode=${mode}`, { timeout: loginPreflightTimeoutMs, waitUntil: "domcontentloaded" });
@@ -110,13 +174,57 @@ async function login(page: Page, credential: RuntimeCredential, mode: "first" | 
 
   await emailInput.fill(credential.email);
   await passwordInput.fill(credential.password);
-  await page.getByTestId("login-submit").click();
+
+  let authResponse: Response;
+  try {
+    [authResponse] = await Promise.all([
+      page.waitForResponse(
+        (response) => {
+          const request = response.request();
+          try {
+            return request.method() === "POST" && new URL(response.url()).pathname === "/api/auth/sign-in";
+          } catch {
+            return false;
+          }
+        },
+        { timeout: loginPreflightTimeoutMs },
+      ),
+      page.getByTestId("login-submit").click({ timeout: loginPreflightTimeoutMs }),
+    ]);
+  } catch {
+    const uiClassification = await classifyKnownAuthUiMessage(page);
+    await emailInput.fill("").catch(() => undefined);
+    await passwordInput.fill("").catch(() => undefined);
+    throw new Error(uiClassification ?? "m421_auth_endpoint_unavailable_possible_deployment_protection");
+  }
+
+  const boundedAuth = await readBoundedAuthResponse(authResponse);
+  const responseClassification = classifyBoundedAuthResponse(boundedAuth);
+  if (responseClassification) {
+    await emailInput.fill("").catch(() => undefined);
+    await passwordInput.fill("").catch(() => undefined);
+    throw new Error(responseClassification);
+  }
+
+  const uiClassification = await classifyKnownAuthUiMessage(page);
+  if (uiClassification) {
+    await emailInput.fill("").catch(() => undefined);
+    await passwordInput.fill("").catch(() => undefined);
+    throw new Error(uiClassification);
+  }
+
+  if (boundedAuth.redirectCategory !== "app" && boundedAuth.redirectCategory !== "onboarding") {
+    await emailInput.fill("").catch(() => undefined);
+    await passwordInput.fill("").catch(() => undefined);
+    throw new Error("m421_auth_session_redirect_failed");
+  }
+
   try {
     await expect(page).toHaveURL(/\/(app|onboarding)/, { timeout: loginPreflightTimeoutMs });
   } catch {
     await emailInput.fill("").catch(() => undefined);
     await passwordInput.fill("").catch(() => undefined);
-    throw new Error("m421_app_login_surface_unavailable_possible_deployment_protection");
+    throw new Error("m421_auth_session_redirect_failed");
   }
 }
 
