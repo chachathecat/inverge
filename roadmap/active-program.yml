@@ -1,105 +1,191 @@
 version: 1
 
 program:
-  id: founding-paid-beta-v1
-  completionItem: M437
+  id: second-round-complete-paid-launch-v1
+  completionItem: S225
   wipLimit: 2
   maxRepairAttempts: 3
 
 items:
-  - id: M422
-    title: Constitution reconciliation
-    status: queued
+  - id: S200
+    title: Second-Round Product Constitution and Final Spec
+    status: completed
     dependencies: []
     lockGroup: constitution
     risk: medium
-  - id: M423
-    title: Official Syllabus & Exam Rule Registry v2
+    priority: 1
+  - id: S201
+    title: Official Second-Round Syllabus and Exam Rule Registry
     status: queued
-    dependencies: [M422]
+    dependencies: [S200]
     lockGroup: official-curriculum
     risk: high
-  - id: M424
-    title: Commercial Catalog Domain v2
+    priority: 2
+  - id: S202
+    title: Historical Question Source and Rights Registry
     status: queued
-    dependencies: [M422]
+    dependencies: [S200]
+    lockGroup: question-rights
+    risk: high
+    priority: 3
+  - id: S203
+    title: Canonical Second-Round Question Schema and Ingestion
+    status: queued
+    dependencies: [S201, S202]
+    lockGroup: question-ingestion
+    risk: high
+    priority: 4
+  - id: S204
+    title: Answer Submission OCR Confirmation and Durable Save
+    status: queued
+    dependencies: [S200]
+    lockGroup: answer-capture
+    risk: high
+    priority: 5
+  - id: S205
+    title: Common Rubric Evidence and Practice Score Range Contract
+    status: queued
+    dependencies: [S201, S204]
+    lockGroup: grading-contract
+    risk: high
+    priority: 6
+  - id: S206
+    title: Rewrite Regrade and Answer History Foundation
+    status: queued
+    dependencies: [S204, S205]
+    lockGroup: rewrite-history
+    risk: high
+    priority: 7
+  - id: S207
+    title: Verified Reference Answer Package Schema
+    status: queued
+    dependencies: [S201, S203]
+    lockGroup: reference-answer-schema
+    risk: high
+    priority: 8
+  - id: S208
+    title: Law Source Corpus and Exam-Date Version Validator
+    status: queued
+    dependencies: [S201, S203]
+    lockGroup: law-grounding
+    risk: high
+    priority: 9
+  - id: S209
+    title: Theory Concept Corpus and Validator
+    status: queued
+    dependencies: [S201, S203]
+    lockGroup: theory-grounding
+    risk: high
+    priority: 10
+  - id: S210
+    title: Practice Calculation Unit OCR and Supported-Type Validator
+    status: queued
+    dependencies: [S201, S203]
+    lockGroup: practice-validation
+    risk: high
+    priority: 11
+  - id: S211
+    title: Law Answer Review and Grading Engine
+    status: queued
+    dependencies: [S205, S207, S208]
+    lockGroup: law-answer-engine
+    risk: high
+    priority: 12
+  - id: S212
+    title: Theory Answer Review and Grading Engine
+    status: queued
+    dependencies: [S205, S207, S209]
+    lockGroup: theory-answer-engine
+    risk: high
+    priority: 13
+  - id: S213
+    title: Practice Answer Review Calculation and Grading Engine
+    status: queued
+    dependencies: [S205, S207, S210]
+    lockGroup: practice-answer-engine
+    risk: high
+    priority: 14
+  - id: S214
+    title: Multi-Candidate Historical Reference Answer Pipeline
+    status: queued
+    dependencies: [S207, S208, S209, S210]
+    lockGroup: reference-answer-generation
+    risk: high
+    priority: 15
+  - id: S215
+    title: Reference Answer Critic Consensus and Release Gate
+    status: queued
+    dependencies: [S211, S212, S213, S214]
+    lockGroup: reference-answer-release
+    risk: high
+    priority: 16
+  - id: S216
+    title: Automatic Error Notebook and Gap Taxonomy
+    status: queued
+    dependencies: [S206, S211, S212, S213]
+    lockGroup: error-notebook
+    risk: high
+    priority: 17
+  - id: S217
+    title: Personal Core Concept Graph and Recovery State
+    status: queued
+    dependencies: [S216]
+    lockGroup: concept-graph
+    risk: high
+    priority: 18
+  - id: S218
+    title: Similar Past Question Review and Rewrite Scheduler
+    status: queued
+    dependencies: [S203, S217]
+    lockGroup: review-scheduler
+    risk: high
+    priority: 19
+  - id: S219
+    title: Learner and Academy Commercial Catalog and Usage Ledger
+    status: queued
+    dependencies: [S200]
     lockGroup: commercial-catalog
     risk: high
-  - id: M425
-    title: Curriculum Node Schema & Mapping Migration v2
+    priority: 20
+  - id: S220
+    title: Billing Entitlement Credit Packs and Idempotent Usage
     status: queued
-    dependencies: [M423]
-    lockGroup: curriculum-schema
-    risk: high
-  - id: M426
-    title: Usage Ledger and Billing Schema v1
-    status: queued
-    dependencies: [M424]
-    lockGroup: usage-ledger
-    risk: high
-  - id: M427
-    title: Learner Track Foundation v2
-    status: queued
-    dependencies: [M425, M426]
-    lockGroup: learner-track
-    risk: high
-  - id: M428
-    title: Corpus Platform v1
-    status: queued
-    dependencies: [M425]
-    lockGroup: corpus-platform
-    risk: high
-  - id: M429
-    title: First Corpus Ingestion v1
-    status: queued
-    dependencies: [M428]
-    lockGroup: first-corpus
-    risk: high
-  - id: M430
-    title: Validity Engine v1
-    status: queued
-    dependencies: [M429]
-    lockGroup: validity-engine
-    risk: high
-  - id: M432
-    title: Second Corpus Ingestion v1
-    status: queued
-    dependencies: [M428]
-    lockGroup: second-corpus
-    risk: high
-  - id: M433
-    title: Second Answer Quality Module v1
-    status: queued
-    dependencies: [M432, M430]
-    lockGroup: second-answer-quality
-    risk: high
-  - id: M431
-    title: Quick Solve Engine v1
-    status: queued
-    dependencies: [M427, M430]
-    lockGroup: quick-solve
-    risk: high
-  - id: M434
-    title: Pricing UI and Settings v1
-    status: queued
-    dependencies: [M424, M426, M431, M433]
-    lockGroup: pricing-ui
-    risk: high
-  - id: M435
-    title: Billing Integration v1
-    status: queued
-    dependencies: [M434, M426]
+    dependencies: [S219]
     lockGroup: billing
     risk: high
-  - id: M436
-    title: Paid Trust and Privacy Guardrails v1
+    priority: 21
+  - id: S221
+    title: Paid Trust Privacy Export Delete and Cost Guardrails
     status: queued
-    dependencies: [M435, M431, M433]
+    dependencies: [S204, S220]
     lockGroup: paid-trust
     risk: high
-  - id: M437
-    title: Founding Paid Beta Acceptance v1
+    priority: 22
+  - id: S222
+    title: Academy Answer Operations Console and Tenant Boundary
     status: queued
-    dependencies: [M436]
+    dependencies: [S211, S212, S213, S220, S221]
+    lockGroup: academy-console
+    risk: high
+    priority: 23
+  - id: S223
+    title: Three-Subject Corpus Reference Answer and Quality Acceptance
+    status: queued
+    dependencies: [S203, S208, S209, S210, S215]
+    lockGroup: content-acceptance
+    risk: high
+    priority: 24
+  - id: S224
+    title: Three-Subject Learner Free Core Intensive Runtime Acceptance
+    status: queued
+    dependencies: [S206, S215, S217, S218, S220, S221]
+    lockGroup: learner-acceptance
+    risk: high
+    priority: 25
+  - id: S225
+    title: Full Second-Round Public Paid Launch Acceptance
+    status: queued
+    dependencies: [S222, S223, S224]
     lockGroup: release
     risk: high
+    priority: 26
