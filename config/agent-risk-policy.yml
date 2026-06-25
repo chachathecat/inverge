@@ -1,5 +1,4 @@
 version: 1
-
 highRiskPaths:
   - "supabase/migrations/**"
   - "app/api/auth/**"
@@ -9,7 +8,6 @@ highRiskPaths:
   - "vercel.json"
   - "next.config.*"
   - "config/paid-launch-readiness.json"
-
 highRiskSignals:
   - new_dependency
   - new_environment_variable
@@ -19,25 +17,17 @@ highRiskSignals:
   - payment_or_entitlement_change
   - official_answer_semantics
   - personal_data_policy_change
-
 mediumRiskPaths:
   - "app/api/**"
   - "lib/review-os/**"
   - "lib/capture/**"
   - "reference_corpus/**"
   - "scripts/ingest-**"
-
 lowRiskPaths:
   - "docs/**"
   - "tests/**"
   - "**/*.md"
   - "app/**/*.css"
-
-autoMerge:
-  low: true
-  medium: true
-  high: false
-
 blockingLabels:
   - blocked
   - human-decision

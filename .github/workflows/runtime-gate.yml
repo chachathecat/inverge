@@ -4,20 +4,27 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: runtime-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   runtime-gate:
+    name: runtime-gate
     runs-on: ubuntu-latest
-    concurrency:
-      group: runtime-${{ github.event.pull_request.number }}
-      cancel-in-progress: true
-    permissions:
-      contents: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 20
       - name: Classify risk
-        run: node scripts/automation/classify-risk.mjs > .agent-factory/risk.json
+        env:
+          RISK_OUTPUT_PATH: .agent-factory/risk.json
+        run: node scripts/automation/classify-risk.mjs
       - name: Runtime gate
         run: node scripts/automation/runtime-gate.mjs --risk-file .agent-factory/risk.json

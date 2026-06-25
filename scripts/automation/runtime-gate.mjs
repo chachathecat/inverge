@@ -1,88 +1,110 @@
 #!/usr/bin/env node
 
-import fs from 'node:fs';
-import process from 'node:process';
-import path from 'node:path';
+import fs from "node:fs";
+import path from "node:path";
+import process from "node:process";
+import { firstMatchingGlob } from "./glob-match.mjs";
 
-function fail(msg) {
-  console.error(msg);
-  process.exit(1);
+const RUNTIME_REQUIRED_PATTERNS = [
+  "supabase/migrations/**",
+  "app/api/auth/**",
+  "lib/auth/**",
+  "middleware.ts",
+  "app/api/notifications/**",
+  "lib/notifications/**",
+  "app/api/billing/**",
+  "lib/billing/**",
+  "app/api/payments/**",
+  "lib/payments/**",
+  "app/api/entitlements/**",
+  "lib/entitlements/**",
+  "config/paid-launch-readiness.json",
+  "vercel.json",
+];
+
+function fail(message) {
+  console.error(`runtime-gate: ${message}`);
+  process.exitCode = 1;
 }
 
-function matchPattern(pattern, filePath) {
-  const escaped = pattern
-    .replace(/[-\/\\^$+?.()|[\]{}]/g, '\\$&')
-    .replace(/\\*\\*/g, '.*')
-    .replace(/\\*/g, '[^/]*');
-  const regex = new RegExp('^' + escaped + '$');
-  return regex.test(filePath);
+function readJson(filePath, label) {
+  if (!fs.existsSync(filePath)) {
+    throw new Error(`${label} file is missing: ${filePath}`);
+  }
+
+  try {
+    return JSON.parse(fs.readFileSync(filePath, "utf8"));
+  } catch {
+    throw new Error(`${label} file is not valid JSON: ${filePath}`);
+  }
 }
 
-function runtimeEvidenceRequired(files) {
-  // Patterns requiring runtime evidence
-  const patterns = [
-    'supabase/**',
-    '**/migrations/**',
-    'auth/**',
-    '**/auth/**',
-    '**/RLS/**',
-    '**/billing/**',
-    '**/payments/**',
-    '**/entitlement/**',
-    '**/workflow-permission/**',
-    '**/production-flags/**',
-    '**/flags/**',
-    '**/.env',
-    '**/secrets/**'
-  ];
-  for (const file of files) {
-    for (const p of patterns) {
-      if (matchPattern(p, file)) {
-        return true;
-      }
+function parseArguments() {
+  const args = process.argv.slice(2);
+  let riskFile = process.env.RISK_FILE ?? ".agent-factory/risk.json";
+
+  for (let index = 0; index < args.length; index += 1) {
+    if (args[index] === "--risk-file" && args[index + 1]) {
+      riskFile = args[index + 1];
+      index += 1;
     }
   }
-  return false;
+
+  return { riskFile: path.resolve(riskFile) };
+}
+
+function inferRuntimeRequirement(riskResult) {
+  if (typeof riskResult.runtimeEvidenceRequired === "boolean") {
+    return riskResult.runtimeEvidenceRequired;
+  }
+
+  const changedFiles = Array.isArray(riskResult.changedFiles) ? riskResult.changedFiles : [];
+  return changedFiles.some((file) => firstMatchingGlob(RUNTIME_REQUIRED_PATTERNS, file));
+}
+
+function validateEvidence(evidence) {
+  if (evidence?.status !== "verified") {
+    throw new Error("runtime evidence status must be `verified`.");
+  }
+
+  if (evidence?.sourceLevelOnly === true) {
+    throw new Error("source-level evidence cannot satisfy the runtime gate.");
+  }
+
+  if (typeof evidence?.verifiedAt !== "string" || !Number.isFinite(Date.parse(evidence.verifiedAt))) {
+    throw new Error("runtime evidence must contain a valid `verifiedAt` timestamp.");
+  }
+}
+
+function writeStatus(status) {
+  if (process.env.GITHUB_OUTPUT) {
+    fs.appendFileSync(process.env.GITHUB_OUTPUT, `status=${status}\n`, "utf8");
+  }
+  console.log(JSON.stringify({ status }));
 }
 
 function main() {
-  const args = process.argv.slice(2);
-  let riskFile = null;
-  for (let i = 0; i < args.length; i += 1) {
-    if (args[i] === '--risk-file' && args[i + 1]) {
-      riskFile = args[i + 1];
-      i += 1;
-    }
-  }
-  const filePath = riskFile || process.env.RISK_FILE || '.agent-factory/risk.json';
-  let risk = 'low';
-  let changedFiles = [];
-  try {
-    const data = fs.readFileSync(filePath, 'utf8');
-    const json = JSON.parse(data);
-    risk = json.risk || 'low';
-    changedFiles = json.changedFiles || [];
-  } catch {
-    // no file; assume low risk and no changed files
-  }
+  const { riskFile } = parseArguments();
+  const riskResult = readJson(riskFile, "risk classification");
+  const runtimeRequired = inferRuntimeRequirement(riskResult);
 
-  // Determine if runtime evidence required based on changed files
-  const requiresEvidence = risk !== 'low' && runtimeEvidenceRequired(changedFiles);
-
-  if (!requiresEvidence) {
-    console.log(JSON.stringify({ result: 'not_required' }));
+  if (!runtimeRequired) {
+    writeStatus("not_required");
     return;
   }
-  const hasEvidence = !!process.env.E2E_BASE_URL;
-  if (!hasEvidence) {
-    fail('Runtime evidence required but missing. Provide E2E_BASE_URL and other required environment variables.');
+
+  const evidencePath = process.env.RUNTIME_EVIDENCE_PATH;
+  if (!evidencePath) {
+    throw new Error("runtime evidence is required, but RUNTIME_EVIDENCE_PATH is not set.");
   }
-  console.log(JSON.stringify({ result: 'required_and_present' }));
+
+  const evidence = readJson(path.resolve(evidencePath), "runtime evidence");
+  validateEvidence(evidence);
+  writeStatus("verified");
 }
 
 try {
   main();
-} catch (err) {
-  console.error(err);
-  process.exit(1);
+} catch (error) {
+  fail(error instanceof Error ? error.message : String(error));
 }

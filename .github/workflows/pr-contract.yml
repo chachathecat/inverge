@@ -3,14 +3,17 @@ name: PR Contract
 on:
   pull_request:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-contract-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   pr-contract:
+    name: pr-contract
     runs-on: ubuntu-latest
-    concurrency:
-      group: pr-contract-${{ github.event.pull_request.number }}
-      cancel-in-progress: true
-    permissions:
-      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

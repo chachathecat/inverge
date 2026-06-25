@@ -3,18 +3,32 @@ name: Risk Gate
 on:
   pull_request:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: risk-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   risk-classifier:
+    name: risk-classifier
     runs-on: ubuntu-latest
-    concurrency:
-      group: risk-${{ github.event.pull_request.number }}
-      cancel-in-progress: true
-    permissions:
-      contents: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 20
       - name: Classify risk
+        env:
+          RISK_OUTPUT_PATH: .agent-factory/risk.json
         run: node scripts/automation/classify-risk.mjs
+      - name: Upload bounded risk artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-risk-${{ github.event.pull_request.number }}
+          path: .agent-factory/risk.json
+          if-no-files-found: error
+          retention-days: 7

@@ -1,25 +1,38 @@
-import assert from 'node:assert';
-import { spawnSync } from 'node:child_process';
-
-// These tests rely on the risk policy configured in config/agent-risk-policy.yml.
+import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import { test } from "node:test";
 
 function runClassifier(changedFiles) {
-  const env = { ...process.env, CHANGED_FILES: changedFiles };
-  const result = spawnSync(process.execPath, ['scripts/automation/classify-risk.mjs'], { env, encoding: 'utf8' });
+  const result = spawnSync(process.execPath, ["scripts/automation/classify-risk.mjs"], {
+    encoding: "utf8",
+    env: { ...process.env, CHANGED_FILES: changedFiles, PR_SIGNALS: "" },
+  });
+
+  assert.equal(result.status, 0, result.stderr);
   return JSON.parse(result.stdout);
 }
 
-test('classify-risk high risk detection', () => {
-  const data = runClassifier('.github/workflows/test.yml');
-  assert.strictEqual(data.risk, 'high');
+test("docs-only change is low risk", () => {
+  assert.equal(runClassifier("docs/readme.md").risk, "low");
 });
 
-test('classify-risk medium risk detection', () => {
-  const data = runClassifier('app/api/test.js');
-  assert.strictEqual(data.risk, 'medium');
+test("learner API change is at least medium risk", () => {
+  assert.equal(runClassifier("app/api/learner/route.ts").risk, "medium");
 });
 
-test('classify-risk low risk detection', () => {
-  const data = runClassifier('docs/readme.md');
-  assert.strictEqual(data.risk, 'low');
+test("Supabase migration is high risk and runtime-required", () => {
+  const result = runClassifier("supabase/migrations/20260624_example.sql");
+  assert.equal(result.risk, "high");
+  assert.equal(result.runtimeEvidenceRequired, true);
+});
+
+test("workflow change is high risk but not live-runtime-required", () => {
+  const result = runClassifier(".github/workflows/ci-fast.yml");
+  assert.equal(result.risk, "high");
+  assert.equal(result.runtimeEvidenceRequired, false);
+});
+
+test("mixed paths take the highest risk", () => {
+  const result = runClassifier("docs/readme.md\nsupabase/migrations/20260624_example.sql");
+  assert.equal(result.risk, "high");
 });

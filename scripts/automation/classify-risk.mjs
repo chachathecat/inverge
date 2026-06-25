@@ -1,155 +1,204 @@
 #!/usr/bin/env node
 
-import fs from 'node:fs';
-import process from 'node:process';
-import { execSync } from 'node:child_process';
-import path from 'node:path';
+import fs from "node:fs";
+import path from "node:path";
+import process from "node:process";
+import { execFileSync } from "node:child_process";
+import { firstMatchingGlob } from "./glob-match.mjs";
+
+const RISK_ORDER = { low: 0, medium: 1, high: 2 };
+
+const RUNTIME_REQUIRED_PATTERNS = [
+  "supabase/migrations/**",
+  "app/api/auth/**",
+  "lib/auth/**",
+  "middleware.ts",
+  "app/api/notifications/**",
+  "lib/notifications/**",
+  "app/api/billing/**",
+  "lib/billing/**",
+  "app/api/payments/**",
+  "lib/payments/**",
+  "app/api/entitlements/**",
+  "lib/entitlements/**",
+  "config/paid-launch-readiness.json",
+  "vercel.json",
+];
 
 function parsePolicy(filePath) {
-  const text = fs.readFileSync(filePath, 'utf8');
-  const lines = text.split(/\r?\n/);
+  const text = fs.readFileSync(filePath, "utf8");
   const policy = {
     highRiskPaths: [],
     highRiskSignals: [],
     mediumRiskPaths: [],
     lowRiskPaths: [],
-    autoMerge: {},
     blockingLabels: [],
   };
-  let current = null;
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) continue;
-    if (/^highRiskPaths:/i.test(trimmed)) {
-      current = 'highRiskPaths';
+  let currentList = null;
+
+  for (const originalLine of text.split(/\r?\n/)) {
+    const line = originalLine.replace(/\s+#.*$/, "").trim();
+    if (!line) continue;
+
+    const section = line.match(/^(highRiskPaths|highRiskSignals|mediumRiskPaths|lowRiskPaths|blockingLabels):\s*$/);
+    if (section) {
+      currentList = section[1];
       continue;
     }
-    if (/^highRiskSignals:/i.test(trimmed)) {
-      current = 'highRiskSignals';
+
+    if (/^[A-Za-z][\w-]*:\s*$/.test(line)) {
+      currentList = null;
       continue;
     }
-    if (/^mediumRiskPaths:/i.test(trimmed)) {
-      current = 'mediumRiskPaths';
-      continue;
-    }
-    if (/^lowRiskPaths:/i.test(trimmed)) {
-      current = 'lowRiskPaths';
-      continue;
-    }
-    if (/^autoMerge:/i.test(trimmed)) {
-      current = 'autoMerge';
-      continue;
-    }
-    if (/^blockingLabels:/i.test(trimmed)) {
-      current = 'blockingLabels';
-      continue;
-    }
-    if (current && trimmed.startsWith('-')) {
-      const value = trimmed.replace(/^-\s*/, '').replace(/^['"]|['"]$/g, '');
-      if (Array.isArray(policy[current])) {
-        policy[current].push(value);
-      }
-      continue;
+
+    if (currentList && line.startsWith("-")) {
+      const rawValue = line.slice(1).trim();
+      const value = rawValue.replace(/^(?:"([\s\S]*)"|'([\s\S]*)')$/, (_, doubleQuoted, singleQuoted) => doubleQuoted ?? singleQuoted);
+      policy[currentList].push(value);
     }
   }
+
   return policy;
 }
 
-function matchPattern(pattern, filePath) {
-  // Convert glob pattern (with * and **) to a RegExp
-  const segments = pattern.split('/');
-  const regexSegments = segments.map((seg) => {
-    if (seg === '**') return '.*';
-    // escape regex special chars except *
-    const escaped = seg.replace(/[.+^${}()|[\]\\]/g, '\\$&');
-    return escaped.replace(/\*/g, '[^/]*');
-  });
-  const regex = new RegExp('^' + regexSegments.join('\\/') + '$');
-  return regex.test(filePath);
+function readEvent() {
+  const eventPath = process.env.GITHUB_EVENT_PATH;
+  if (!eventPath || !fs.existsSync(eventPath)) return null;
+  return JSON.parse(fs.readFileSync(eventPath, "utf8"));
 }
 
-function classify(files, policy) {
-  let risk = 'low';
-  const reasons = [];
-  for (const file of files) {
-    let matched = false;
-    for (const pattern of policy.highRiskPaths) {
-      if (matchPattern(pattern, file)) {
-        risk = 'high';
-        reasons.push(`File ${file} matches highRiskPath ${pattern}`);
-        matched = true;
-        break;
-      }
-    }
-    if (matched) continue;
-    for (const pattern of policy.mediumRiskPaths) {
-      if (matchPattern(pattern, file)) {
-        if (risk !== 'high') risk = 'medium';
-        reasons.push(`File ${file} matches mediumRiskPath ${pattern}`);
-        matched = true;
-        break;
-      }
-    }
-  }
-  return { risk, reasons };
+function validateSha(value) {
+  return typeof value === "string" && /^[0-9a-f]{7,40}$/i.test(value);
 }
 
 function getChangedFiles() {
-  const envChanged = process.env.CHANGED_FILES;
-  if (envChanged) {
-    return envChanged.split(/\r?\n/).filter((s) => s && s.trim() !== '');
+  if (process.env.CHANGED_FILES) {
+    return process.env.CHANGED_FILES.split(/\r?\n/).map((value) => value.trim()).filter(Boolean);
   }
-  const eventPath = process.env.GITHUB_EVENT_PATH;
-  let baseSha = null;
-  let headSha = null;
-  if (eventPath && fs.existsSync(eventPath)) {
-    try {
-      const event = JSON.parse(fs.readFileSync(eventPath, 'utf8'));
-      if (event.pull_request && event.pull_request.base && event.pull_request.head) {
-        baseSha = event.pull_request.base.sha;
-        headSha = event.pull_request.head.sha;
-      }
-    } catch {
-      // ignore
+
+  const event = readEvent();
+  const baseSha = event?.pull_request?.base?.sha;
+  const headSha = event?.pull_request?.head?.sha;
+
+  if (!validateSha(baseSha) || !validateSha(headSha)) {
+    throw new Error("Unable to determine pull-request base/head SHAs. Set CHANGED_FILES for a manual run.");
+  }
+
+  const output = execFileSync(
+    "git",
+    ["diff", "--name-only", `${baseSha}...${headSha}`, "--"],
+    { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
+  );
+
+  return output.split(/\r?\n/).map((value) => value.trim()).filter(Boolean);
+}
+
+function getSignals() {
+  return (process.env.PR_SIGNALS ?? "")
+    .split(/[\s,]+/)
+    .map((value) => value.trim())
+    .filter(Boolean);
+}
+
+function raiseRisk(currentRisk, candidateRisk) {
+  return RISK_ORDER[candidateRisk] > RISK_ORDER[currentRisk] ? candidateRisk : currentRisk;
+}
+
+function classify(files, signals, policy) {
+  let risk = "low";
+  const reasons = [];
+  let allFilesExplicitlyLow = files.length > 0;
+
+  for (const file of files) {
+    const highPattern = firstMatchingGlob(policy.highRiskPaths, file);
+    if (highPattern) {
+      risk = "high";
+      reasons.push({ kind: "path", level: "high", path: file, pattern: highPattern });
+      allFilesExplicitlyLow = false;
+      continue;
+    }
+
+    const mediumPattern = firstMatchingGlob(policy.mediumRiskPaths, file);
+    if (mediumPattern) {
+      risk = raiseRisk(risk, "medium");
+      reasons.push({ kind: "path", level: "medium", path: file, pattern: mediumPattern });
+      allFilesExplicitlyLow = false;
+      continue;
+    }
+
+    const lowPattern = firstMatchingGlob(policy.lowRiskPaths, file);
+    if (!lowPattern) {
+      risk = raiseRisk(risk, "medium");
+      reasons.push({ kind: "path", level: "medium", path: file, pattern: "unclassified_path" });
+      allFilesExplicitlyLow = false;
     }
   }
-  let diffOutput = '';
-  try {
-    if (baseSha && headSha) {
-      diffOutput = execSync(`git diff --name-only ${baseSha} ${headSha}`, { encoding: 'utf8' });
-    } else {
-      diffOutput = execSync('git diff --name-only HEAD~1', { encoding: 'utf8' });
+
+  for (const signal of signals) {
+    if (policy.highRiskSignals.includes(signal)) {
+      risk = "high";
+      reasons.push({ kind: "signal", level: "high", signal });
     }
-  } catch (err) {
-    console.error('[classify-risk] Failed to compute changed files', err);
   }
-  return diffOutput.split(/\r?\n/).filter(Boolean);
+
+  if (risk === "low" && !allFilesExplicitlyLow) {
+    risk = "medium";
+  }
+
+  const runtimeReasons = [];
+  for (const file of files) {
+    const pattern = firstMatchingGlob(RUNTIME_REQUIRED_PATTERNS, file);
+    if (pattern) runtimeReasons.push({ path: file, pattern });
+  }
+
+  return {
+    risk,
+    reasons,
+    runtimeEvidenceRequired: runtimeReasons.length > 0,
+    runtimeReasons,
+  };
+}
+
+function writeOutput(result) {
+  const outputPath = process.env.RISK_OUTPUT_PATH;
+  if (outputPath) {
+    const resolvedPath = path.resolve(outputPath);
+    fs.mkdirSync(path.dirname(resolvedPath), { recursive: true });
+    fs.writeFileSync(resolvedPath, `${JSON.stringify(result, null, 2)}\n`, "utf8");
+  }
+
+  if (process.env.GITHUB_OUTPUT) {
+    fs.appendFileSync(
+      process.env.GITHUB_OUTPUT,
+      [
+        `risk=${result.risk}`,
+        `runtime_evidence_required=${result.runtimeEvidenceRequired}`,
+        `changed_files_count=${result.changedFiles.length}`,
+      ].join("\n") + "\n",
+      "utf8",
+    );
+  }
 }
 
 function main() {
-  const policyPath = path.resolve('config/agent-risk-policy.yml');
-  const policy = parsePolicy(policyPath);
-  const files = getChangedFiles();
-  const { risk, reasons } = classify(files, policy);
-  const result = { risk, reasons, changedFiles: files };
-  const outputPath = process.env.RISK_OUTPUT_PATH;
-  if (outputPath) {
-    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
-    fs.writeFileSync(outputPath, JSON.stringify(result, null, 2));
-  }
-  if (process.env.GITHUB_OUTPUT) {
-    const lines = [
-      `risk=${risk}`,
-      `changed_files_count=${files.length}`,
-    ];
-    fs.appendFileSync(process.env.GITHUB_OUTPUT, lines.join('\n') + '\n');
-  }
+  const policy = parsePolicy(path.resolve("config/agent-risk-policy.yml"));
+  const changedFiles = getChangedFiles();
+  const signals = getSignals();
+  const classification = classify(changedFiles, signals, policy);
+  const result = {
+    version: 1,
+    ...classification,
+    changedFiles: changedFiles.slice(0, 200),
+    changedFilesTruncated: changedFiles.length > 200,
+  };
+
+  writeOutput(result);
   console.log(JSON.stringify(result, null, 2));
 }
 
 try {
   main();
-} catch (err) {
-  console.error(err);
-  process.exit(1);
+} catch (error) {
+  console.error(error instanceof Error ? error.message : error);
+  process.exitCode = 1;
 }

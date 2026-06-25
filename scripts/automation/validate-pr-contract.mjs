@@ -1,83 +1,132 @@
 #!/usr/bin/env node
 
-import fs from 'node:fs';
-import process from 'node:process';
+import fs from "node:fs";
+import process from "node:process";
 
-function fail(msg) {
-  console.error(msg);
-  process.exit(1);
+const REQUIRED_HEADINGS = [
+  "## Goal",
+  "## Non-goals",
+  "## Risk classification",
+  "## Data boundary",
+  "## Schema / API / environment changes",
+  "## Tests and evidence",
+  "## Runtime evidence",
+  "## Rollout and rollback",
+  "## Remaining risks",
+  "## Merge recommendation",
+];
+
+const MERGE_RECOMMENDATIONS = [
+  "Auto-merge candidate",
+  "Human approval required",
+  "Blocked",
+];
+
+function fail(message) {
+  console.error(`validate-pr-contract: ${message}`);
+  process.exitCode = 1;
 }
 
-function getEventBody() {
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function readPullRequestBody() {
   const eventPath = process.env.GITHUB_EVENT_PATH;
+
   if (eventPath && fs.existsSync(eventPath)) {
     try {
-      const event = JSON.parse(fs.readFileSync(eventPath, 'utf8'));
-      const pr = event.pull_request;
-      if (pr && typeof pr.body === 'string') {
-        return pr.body;
+      const event = JSON.parse(fs.readFileSync(eventPath, "utf8"));
+      if (typeof event?.pull_request?.body === "string") {
+        return event.pull_request.body;
       }
     } catch {
-      // ignore parse errors
+      fail("GITHUB_EVENT_PATH could not be parsed as a pull-request event.");
+      return null;
     }
   }
+
+  if (typeof process.env.PR_BODY === "string") {
+    return process.env.PR_BODY;
+  }
+
   return null;
 }
 
-function main() {
-  const body = getEventBody() ?? process.env.PR_BODY ?? '';
-  if (!body || body.trim() === '') {
-    fail('PR body is missing');
+function validateHeadings(body, errors) {
+  for (const heading of REQUIRED_HEADINGS) {
+    const headingPattern = new RegExp(`^${escapeRegExp(heading)}\\s*$`, "im");
+    if (!headingPattern.test(body)) {
+      errors.push(`missing required section: ${heading}`);
+    }
+  }
+}
+
+function validateIssueLink(body, errors) {
+  const issueLinks = [...body.matchAll(/\b(?:Closes|Fixes)\s+#(\d+)\b/gi)];
+
+  if (issueLinks.length !== 1) {
+    errors.push(
+      'PR must contain exactly one issue-closing reference using "Closes #<issue>" or "Fixes #<issue>".',
+    );
+  }
+}
+
+function validateRisk(body, errors) {
+  if (!/^\s*-\s*Risk:\s*\[(low|medium|high)\]\s*$/im.test(body)) {
+    errors.push("risk classification must contain exactly one `- Risk: [low|medium|high]` line.");
+  }
+}
+
+function validateMergeRecommendation(body, errors) {
+  const recommendationPattern = /^\s*-\s*\[([ xX])\]\s*(Auto-merge candidate|Human approval required|Blocked)\s*$/gim;
+  const matches = [...body.matchAll(recommendationPattern)];
+  const byLabel = new Map();
+
+  for (const match of matches) {
+    const label = match[2];
+    if (byLabel.has(label)) {
+      errors.push(`duplicate merge recommendation: ${label}`);
+      continue;
+    }
+    byLabel.set(label, match[1].toLowerCase() === "x");
   }
 
-  const issueRefs = [...body.matchAll(/\b(?:Closes|Fixes)\s+#(\d+)/gi)];
-  if (issueRefs.length !== 1) {
-    fail('PR must reference exactly one issue using "Closes #<issue>" or "Fixes #<issue>".');
-  }
-
-  const requiredHeadings = [
-    '## Goal',
-    '## Non-goals',
-    '## Risk classification',
-    '## Data boundary',
-    '## Schema / API / environment changes',
-    '## Tests and evidence',
-    '## Runtime evidence',
-    '## Rollout and rollback',
-    '## Remaining risks',
-    '## Merge recommendation',
-  ];
-
-  const missing = [];
-  for (const heading of requiredHeadings) {
-    const regex = new RegExp(`^\\s*${heading}\\b`, 'im');
-    if (!regex.test(body)) {
-      missing.push(heading);
+  for (const label of MERGE_RECOMMENDATIONS) {
+    if (!byLabel.has(label)) {
+      errors.push(`missing merge recommendation checkbox: ${label}`);
     }
   }
 
-  if (missing.length > 0) {
-    fail('Missing required sections: ' + missing.join(', '));
+  const checkedCount = [...byLabel.values()].filter(Boolean).length;
+  if (checkedCount !== 1) {
+    errors.push("exactly one merge recommendation checkbox must be checked.");
   }
-
-  const riskMatch = body.match(/Risk:\\s*\\[\\s*(low|medium|high)\\s*\\]/i);
-  if (!riskMatch) {
-    fail('Risk classification section must include a risk level [low|medium|high].');
-  }
-
-  const mergeMatch = body.match(/- \\[([ xX])\\] Auto-merge candidate/);
-  const humanMatch = body.match(/- \\[([ xX])\\] Human approval required/);
-  const blockedMatch = body.match(/- \\[([ xX])\\] Blocked/);
-  if (!mergeMatch && !humanMatch && !blockedMatch) {
-    fail('Merge recommendation section must contain one of the checklist items.');
-  }
-
-  console.log('validate-pr-contract: pass');
 }
 
-try {
-  main();
-} catch (err) {
-  console.error(err);
-  process.exit(1);
+function main() {
+  const body = readPullRequestBody();
+
+  if (process.exitCode) return;
+
+  if (!body?.trim()) {
+    fail("PR body is missing.");
+    return;
+  }
+
+  const errors = [];
+  validateIssueLink(body, errors);
+  validateHeadings(body, errors);
+  validateRisk(body, errors);
+  validateMergeRecommendation(body, errors);
+
+  if (errors.length > 0) {
+    for (const error of errors) console.error(`- ${error}`);
+    process.exitCode = 1;
+    return;
+  }
+
+  console.log("validate-pr-contract: pass");
 }
+
+main();
