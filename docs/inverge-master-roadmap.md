@@ -377,3 +377,21 @@ human decision이 필요한 항목:
 - mobile E2E
 - rollout/rollback
 - remaining risks
+
+## 17. Foundational Operating-Loop Compatibility
+
+The internal learning engine keeps the established vocabulary as a compatibility layer:
+
+1. **Input**: 기출, 문제, 답안, OCR 확인본, 재작성 결과를 받는다.
+2. **Diagnosis**: 가장 큰 간극, 감점 근거, 오류 유형을 찾는다.
+3. **Tracking**: 오답노트와 개인 핵심개념 상태를 누적한다.
+4. **Prediction**: 반복 오류, 망각 위험, 시험 영향도를 추정한다.
+5. **Recommendation**: 다음 재작성, 복습 또는 유사 기출을 고른다.
+6. **Execution**: 사용자가 실제 답안·문단·계산을 다시 수행한다.
+7. **Retry/rewrite**: 재채점과 지연 복습으로 루프를 닫는다.
+
+Canonical compatibility string:
+
+`input → diagnosis → tracking → prediction → recommendation → execution → retry/rewrite`
+
+이 호환 계층은 감정평가사 1차 신규 개발을 다시 활성화하지 않는다. 감정평가사 1차는 동결 상태이며, 활성 learner product는 감정평가사 2차 전과목이다.
