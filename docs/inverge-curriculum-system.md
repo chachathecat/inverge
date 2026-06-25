@@ -229,3 +229,13 @@ PR #345 reduces learner mobile Capture friction while preserving the curriculum/
 PR #346 adds a static official-source verification layer for appraiser curriculum/reference metadata. The source registry lives in `reference_corpus/curriculum/appraiser/official_sources.json`, and curriculum nodes now distinguish `draft`, `verified`, `needs_update`, and `deprecated` source states.
 
 Production-facing curriculum use requires either verified metadata or an explicitly draft-safe guidance path. Closed beta may use draft nodes only as internal learning guidance, not as official syllabus authority. Inverge must not store raw copyrighted problem bodies, official answer text, model answers, score/pass-fail claims, or official grading claims.
+
+## S201 official second-round syllabus registry
+
+S201 adds a separate official metadata registry for 감정평가사 2차 facts:
+
+- `reference_corpus/curriculum/appraiser/official_syllabus.json`
+- `reference_corpus/curriculum/appraiser/exam_rules.json`
+- `reference_corpus/curriculum/appraiser/annual_notices/2026.json`
+
+These files represent official subject and exam-rule facts only. The existing `second_exam_curriculum.json` units remain Inverge editorial learning metadata and must not be surfaced as official syllabus units. See `docs/second-round-official-syllabus-registry.md` for the refresh, validation, and downstream consumption contract.
