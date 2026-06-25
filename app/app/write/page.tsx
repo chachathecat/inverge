@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { WrongAnswerCaptureForm } from "@/components/review-os/capture-form";
+import { SecondWriteCaptureForm } from "@/components/review-os/second-write-capture-form";
 import { ReviewOsFeedbackButton } from "@/components/review-os/feedback-button";
 import { DailyCommandCard, MinimalStepPanel, QuietDetails } from "@/components/review-os/minimal-study-system";
 import { resolveAppraisalMode } from "@/lib/review-os/appraisal";
@@ -36,10 +36,8 @@ export default async function ReviewOsWritePage({ searchParams }: PageProps) {
           <p>쟁점 회상에서 문단 다시쓰기까지 한 흐름으로 진행합니다.</p>
         </QuietDetails>
         <div className="pt-3">
-          <WrongAnswerCaptureForm
+          <SecondWriteCaptureForm
             userId={session.userId}
-            mode={mode}
-            workflow="second-write"
             initialPreferredSubjects={profile?.preferredSubjects}
           />
         </div>
