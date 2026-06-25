@@ -130,11 +130,50 @@ test("required acceptance journeys and widths are represented", async () => {
     "1280 x 800",
     "data-visible-primary-task-cap",
     "data-calculator-routine-trainer",
+    "data-calculator-routine-recovery-section",
     "capture-save-primary",
     "capture-save-confirmation",
   ]) {
     assert.ok(combined.includes(token), token);
   }
+});
+
+test("runtime harness follows actual second-write and calculator recovery surfaces", async () => {
+  const spec = await read("tests/e2e/closed-beta-runtime-acceptance-v2.spec.ts");
+  const doc = await read("docs/qa/closed-beta-runtime-acceptance-v2.md");
+
+  for (const token of [
+    "/app/write?mode=second",
+    "completeSecondWriteJourney",
+    "Step 1. 쟁점 회상",
+    "Step 2. 목차 작성",
+    "Step 3. 내 답안 작성",
+    "Step 4. 강의/교재 정리 입력",
+    "Step 5. 가장 큰 약점 1개",
+    "Step 6. 문단 다시쓰기",
+    "second-write-final-textarea",
+    "마지막 확인으로 이동",
+    "저장하고 오늘 할 일에 반영",
+    "completeCalculatorRecoveryRoutine",
+    "recoveryRoutineId=",
+    "recoverySource=problem-snap",
+    "readBoundedCalculatorRoutineCompletionResponse",
+    "reviewCandidateCreated",
+  ]) {
+    assert.ok(spec.includes(token), token);
+  }
+
+  assert.equal(spec.includes('input:visible:not([type="hidden"])'), false);
+  assert.equal(spec.includes("textContent()"), false);
+  assert.ok(spec.includes("localizedHonestLocalFallbackPattern"));
+  assert.ok(spec.includes("닫힌 베타"));
+  assert.ok(spec.includes("브라우저 임시 기록"));
+  assert.ok(spec.includes("같은 브라우저"));
+  assert.ok(spec.includes("local_fallback_saved"));
+  assert.ok(spec.includes("save_failed"));
+  assert.ok(spec.includes("durableStorageSuccessPattern"));
+  assert.ok(doc.includes("npm.cmd run test:e2e:m421-runtime-acceptance -- --workers=1"));
+  assert.ok(doc.includes("--workers=1"));
 });
 
 test("new acceptance artifacts do not commit raw fixture content or secret-bearing evidence", async () => {

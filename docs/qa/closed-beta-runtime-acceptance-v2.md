@@ -59,7 +59,7 @@ $env:E2E_USER_B_PASSWORD="<owner-provided password>"
 # For protected Vercel Preview deployments only:
 $env:VERCEL_AUTOMATION_BYPASS_SECRET="<local-only automation bypass secret>"
 
-npm.cmd run test:e2e:m421-runtime-acceptance
+npm.cmd run test:e2e:m421-runtime-acceptance -- --workers=1
 ```
 
 The suite is intentionally fail-closed:
@@ -72,6 +72,7 @@ The suite is intentionally fail-closed:
 - default Playwright contexts and manually created browser contexts send the same Vercel Protection Bypass for Automation headers when the local bypass secret is set;
 - protected-runtime traces are disabled when `VERCEL_AUTOMATION_BYPASS_SECRET` is present to prevent credential capture in Playwright trace artifacts;
 - failure screenshots remain `only-on-failure`.
+- the owner acceptance command uses `--workers=1` so the gated browser run does not concurrently reuse owner runtime credentials across contexts.
 
 Do not paste runtime credentials, Vercel bypass values, cookies, storage state, account IDs, provider responses, headers, or screenshots containing private data into this document or PR comments. Do not put the bypass secret in a URL or commit a storage-state file.
 
@@ -91,7 +92,7 @@ Follow-up harness behavior:
 - if the app login form is absent, the suite fails with `m421_app_login_surface_unavailable_possible_deployment_protection`;
 - protected-runtime traces are disabled, and only safe failure screenshots are retained through Playwright's failure screenshot mode.
 
-The owner rerun remains required. The 8/8 blocked attempt does not count as failed learner-loop runtime evidence.
+The owner rerun remains required with `npm.cmd run test:e2e:m421-runtime-acceptance -- --workers=1`. The 8/8 blocked attempt does not count as failed learner-loop runtime evidence.
 
 ## 2026-06-24 Auth Classification Follow-Up
 
@@ -199,6 +200,6 @@ The authenticated live E2E is not run by Codex unless the owner intentionally su
 
 ## Final Acceptance Rule
 
-M421 remains pending until the owner runs the gated browser suite against an approved non-production Preview with the required accounts and records aggregate evidence here or in the PR without secrets, account identifiers, raw learner content, provider bodies, or row payloads.
+M421 remains pending until the owner runs the gated browser suite against an approved non-production Preview with the required accounts using `npm.cmd run test:e2e:m421-runtime-acceptance -- --workers=1` and records aggregate evidence here or in the PR without secrets, account identifiers, raw learner content, provider bodies, or row payloads.
 
 Passing M421 non-Push runtime acceptance still leaves Web Push on hold and does not approve production rollout.

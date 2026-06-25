@@ -38,6 +38,24 @@ type BoundedAuthResponse = {
   json: boolean;
 };
 
+type BoundedCalculatorRoutineCompletionResponse = {
+  httpStatus: number;
+  ok: boolean | null;
+  persistenceStatus: string | null;
+  learningRecordSaved: boolean | null;
+  reviewCandidateCreated: boolean | null;
+  cleanCompletion: boolean | null;
+  nextTaskType: string | null;
+  json: boolean;
+};
+
+const localizedHonestLocalFallbackPattern =
+  /닫힌 베타|브라우저 임시 기록|브라우저 임시 저장|이 브라우저에 임시 저장|같은 브라우저|closed beta|local|browser|temporary/i;
+const honestSaveFailureOrFallbackPattern =
+  /브라우저 임시 저장|이 브라우저에 임시 저장|closed beta 임시 저장|같은 브라우저|저장이 완료되지 않았습니다|저장 재시도 필요|local_fallback_saved|save_failed|browser|temporary|failed save|save failed/i;
+const durableStorageSuccessPattern =
+  /계정 기록에 저장|같은 계정|durable saved|account storage|account-backed|saved successfully/i;
+
 function requireRuntimeEnvironment() {
   const missing = requiredEnvNames.filter((name) => !process.env[name]?.trim());
   if (missing.length > 0) {
@@ -102,6 +120,10 @@ function syntheticText(label: string, suffix: string) {
   return `synthetic ${label} placeholder ${suffix}`;
 }
 
+function calculatorRecoveryRoutineId(suffix: string) {
+  return `problem-snap-${suffix.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32)}`;
+}
+
 function categorizeRedirectTo(value: unknown): AuthRedirectCategory {
   if (typeof value !== "string" || !value.trim()) return "missing";
   try {
@@ -128,6 +150,37 @@ async function readBoundedAuthResponse(response: Response): Promise<BoundedAuthR
   const error = typeof record.error === "string" ? record.error : null;
   const redirectCategory = categorizeRedirectTo(record.redirectTo);
   return { status, ok, error, redirectCategory, json: true };
+}
+
+async function readBoundedCalculatorRoutineCompletionResponse(response: Response): Promise<BoundedCalculatorRoutineCompletionResponse> {
+  const httpStatus = response.status();
+  let body: unknown;
+  try {
+    body = await response.json();
+  } catch {
+    return {
+      httpStatus,
+      ok: null,
+      persistenceStatus: null,
+      learningRecordSaved: null,
+      reviewCandidateCreated: null,
+      cleanCompletion: null,
+      nextTaskType: null,
+      json: false,
+    };
+  }
+
+  const record = body && typeof body === "object" ? (body as Record<string, unknown>) : {};
+  return {
+    httpStatus,
+    ok: typeof record.ok === "boolean" ? record.ok : null,
+    persistenceStatus: typeof record.status === "string" ? record.status : null,
+    learningRecordSaved: typeof record.learningRecordSaved === "boolean" ? record.learningRecordSaved : null,
+    reviewCandidateCreated: typeof record.reviewCandidateCreated === "boolean" ? record.reviewCandidateCreated : null,
+    cleanCompletion: typeof record.cleanCompletion === "boolean" ? record.cleanCompletion : null,
+    nextTaskType: typeof record.nextTaskType === "string" ? record.nextTaskType : null,
+    json: true,
+  };
 }
 
 function classifyBoundedAuthResponse(result: BoundedAuthResponse) {
@@ -262,6 +315,20 @@ async function clickFirstVisible(locator: Locator) {
   await locator.first().click();
 }
 
+async function fillByLabel(root: Page | Locator, label: string | RegExp, value: string) {
+  const field = root.getByLabel(label).first();
+  await expect(field).toBeVisible();
+  await field.fill(value);
+}
+
+async function clickButton(root: Page | Locator, name: string | RegExp) {
+  const button = root.getByRole("button", { name }).first();
+  await expect(button).toBeVisible();
+  await button.scrollIntoViewIfNeeded();
+  await expect(button).toBeEnabled();
+  await button.click();
+}
+
 async function openCapture(page: Page, mode: "first" | "second") {
   await page.goto(`/app?mode=${mode}`);
   await expectNoUnsafeLearnerClaims(page);
@@ -361,52 +428,134 @@ async function completeSessionLoop(page: Page, mode: "first" | "second", suffix:
   }
 }
 
-async function completeCalculatorRoutine(page: Page, suffix: string) {
+async function completeSecondWriteJourney(page: Page, suffix: string) {
+  await page.goto("/app/write?mode=second");
+  await expect(page).toHaveURL(/\/app\/write\?mode=second/);
+  await expectNoUnsafeLearnerClaims(page);
+
+  await expect(page.getByText("Step 1. 쟁점 회상")).toBeVisible();
+  await expect(page.getByText("Step 4. 강의/교재 정리 입력")).toHaveCount(0);
+  await fillByLabel(page, "쟁점 회상", syntheticText("issue recall", suffix));
+  await clickButton(page, "다음: 목차 작성");
+
+  await expect(page.getByText("Step 2. 목차 작성")).toBeVisible();
+  await expect(page.getByText("Step 4. 강의/교재 정리 입력")).toHaveCount(0);
+  await fillByLabel(page, "목차 초안", syntheticText("outline", suffix));
+  await clickButton(page, "다음: 내 답안 작성");
+
+  await expect(page.getByText("Step 3. 내 답안 작성")).toBeVisible();
+  await expect(page.getByText("Step 4. 강의/교재 정리 입력")).toHaveCount(0);
+  await fillByLabel(page, "내 답안", syntheticText("learner answer", suffix));
+  await clickButton(page, "다음: 강의/교재 정리 입력");
+
+  await expect(page.getByText("Step 4. 강의/교재 정리 입력")).toBeVisible();
+  await fillByLabel(page, "강의/교재 정리 요약", syntheticText("reference", suffix));
+  await clickButton(page, "다음: 가장 큰 약점 1개");
+
+  await expect(page.getByText("Step 5. 가장 큰 약점 1개")).toBeVisible();
+  await fillByLabel(page, "보강할 논점 1개", syntheticText("one biggest gap", suffix));
+  await clickButton(page, "다음: 문단 다시쓰기");
+
+  await expect(page.getByText("Step 6. 문단 다시쓰기")).toBeVisible();
+  await page.getByTestId("second-write-final-textarea").fill(syntheticText("paragraph rewrite", suffix));
+  await clickButton(page, "마지막 확인으로 이동");
+  await clickButton(page, "저장하고 오늘 할 일에 반영");
+
+  const confirmation = page.getByTestId("capture-save-confirmation");
+  await expect(confirmation).toBeVisible();
+  await expect(confirmation).toContainText(/가장 큰 약점 1개|다음 행동 1개/);
+}
+
+async function completeCalculatorRecoveryRoutine(page: Page, suffix: string) {
+  const recoveryRoutineId = calculatorRecoveryRoutineId(suffix);
+  const recoveryHref = `/app/calculator?mode=second&context=practice&focus=casio&recoveryRoutineId=${recoveryRoutineId}&recoverySource=problem-snap`;
+
   await page.goto("/app/calculator?mode=second&context=practice&focus=casio");
+  await expect(page.locator("[data-calculator-routine-trainer]")).toHaveCount(0);
+
+  await page.goto(recoveryHref);
+  await expect(page.locator("[data-calculator-routine-recovery-section]").first()).toBeVisible();
   await expect(page.locator("[data-calculator-routine-trainer]").first()).toBeVisible();
   await expectNoUnsafeLearnerClaims(page);
 
-  const trainer = page.locator("[data-calculator-routine-trainer]").first();
-  await trainer.locator("button:visible").first().click();
+  const trainer = page.locator("[data-calculator-routine-recovery-section] [data-calculator-routine-trainer]").first();
+  await expect(trainer).toHaveAttribute("data-calculator-routine-source", "problem-snap");
+  await clickButton(trainer, /계산·검산 루틴 시작/);
 
-  for (let step = 0; step < 14; step += 1) {
-    const state = await trainer.getAttribute("data-calculator-routine-state");
-    if (state === "completed") break;
-
-    const textareas = trainer.locator("textarea:visible");
-    const textareaCount = await textareas.count();
-    for (let index = 0; index < textareaCount; index += 1) {
-      const textarea = textareas.nth(index);
-      const value = await textarea.inputValue().catch(() => "");
-      if (!value.trim()) {
-        await textarea.fill(syntheticText("routine step", suffix));
-      }
-    }
-
-    const disabledBeforeChecks = await trainer.locator("button:visible:disabled").count();
-    const checkboxes = trainer.locator('input[type="checkbox"]:visible');
-    if ((await checkboxes.count()) > 0) {
-      await checkboxes.first().check();
-    }
-    if (step > 0) {
-      expect(disabledBeforeChecks).toBeGreaterThanOrEqual(0);
-    }
-
-    await clickEnabledProgressButton(trainer);
-    await page.waitForTimeout(250);
+  for (const label of [
+    "조건 정리 입력",
+    "산식 선택 입력",
+    "숫자/단위 확인 입력",
+    "CASIO 입력 입력",
+    "화면값 확인 입력",
+    "답안 기재값 확인 입력",
+    "단위/반올림 확인 입력",
+  ]) {
+    await fillByLabel(trainer, label, syntheticText("metadata routine entry", suffix));
+    await clickButton(trainer, "다음 단계");
   }
 
+  await trainer.getByLabel("역산").check();
+  await clickButton(trainer, "다음 단계");
+
+  await trainer.getByLabel("조건 누락").check();
+  const [completionResponse] = await Promise.all([
+    page.waitForResponse(
+      (response) => {
+        try {
+          return response.request().method() === "POST" && new URL(response.url()).pathname === "/api/os/calculator-routine/complete";
+        } catch {
+          return false;
+        }
+      },
+      { timeout: 15_000 },
+    ),
+    clickButton(trainer, "계산·검산 루틴 완료"),
+  ]);
+  const completion = await readBoundedCalculatorRoutineCompletionResponse(completionResponse);
+  expect(completion).toMatchObject({
+    httpStatus: 200,
+    ok: true,
+    persistenceStatus: "saved",
+    learningRecordSaved: true,
+    reviewCandidateCreated: true,
+    cleanCompletion: false,
+    nextTaskType: "calculator_routine",
+    json: true,
+  });
   await expect(trainer).toHaveAttribute("data-calculator-routine-state", "completed");
+  await expect(page.locator("[data-calculator-routine-trainer][data-calculator-routine-state='completed']")).toHaveCount(1);
   await expect(page.locator("body")).not.toContainText(/certified numerically|numerical correctness certified|official score/i);
 }
 
-async function assertSyntheticRecordVisibleOrLocalHonest(page: Page, suffix: string) {
-  await page.goto("/app/notes?mode=first");
-  const body = page.locator("body");
-  const hasRecord = (await body.textContent())?.includes(suffix) ?? false;
-  if (!hasRecord) {
-    await expect(body).toContainText(/local|browser|temporary|closed beta|beta/i);
-  }
+async function assertCurrentSyntheticRecordAbsent(page: Page, suffix: string, mode: "first" | "second") {
+  await page.goto(`/app/notes?mode=${mode}`);
+  await expect(page.locator("body")).not.toContainText(suffix);
+}
+
+async function assertSyntheticRecordVisibleOrLocalHonest(page: Page, suffix: string, mode: "first" | "second") {
+  await page.goto(`/app/notes?mode=${mode}`);
+  await expect
+    .poll(
+      async () => {
+        const text = await page.locator("body").innerText().catch(() => "");
+        if (text.includes(suffix)) return "current-record";
+        if (localizedHonestLocalFallbackPattern.test(text)) return "honest-local-fallback";
+        return "missing";
+      },
+      {
+        message: `expected current synthetic record ${suffix} or localized honest fallback copy`,
+        timeout: 10_000,
+      },
+    )
+    .not.toBe("missing");
+}
+
+async function expectTemporaryOrFailedSaveConfirmation(page: Page) {
+  const confirmation = page.getByTestId("capture-save-confirmation");
+  await expect(confirmation).toBeVisible();
+  await expect(confirmation).toContainText(honestSaveFailureOrFallbackPattern);
+  await expect(confirmation).not.toContainText(durableStorageSuccessPattern);
 }
 
 test.use({
@@ -455,34 +604,7 @@ test.describe("M421 closed beta runtime acceptance v2", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await login(page, credentialFrom("E2E_USER"), "second");
 
-    await openCapture(page, "second");
-    await fillCaptureTextMode(page, syntheticText("second exam issue recall", suffix));
-
-    const stageInputs = [
-      "issue recall",
-      "outline",
-      "learner answer",
-      "reference summary",
-      "one biggest gap",
-      "paragraph rewrite",
-    ];
-    for (const stage of stageInputs) {
-      const visibleTextareas = page.locator("textarea:visible");
-      if ((await visibleTextareas.count()) > 0) {
-        await visibleTextareas.last().fill(syntheticText(stage, suffix));
-      }
-      const visibleInputs = page.locator('input:visible:not([type="hidden"])');
-      if ((await visibleInputs.count()) > 0) {
-        await visibleInputs.last().fill(syntheticText(stage, suffix));
-      }
-      const enabledButtons = page.locator("button:visible:not([disabled])");
-      if ((await enabledButtons.count()) > 0) {
-        await enabledButtons.last().click();
-        await page.waitForTimeout(250);
-      }
-    }
-
-    await saveCapture(page);
+    await completeSecondWriteJourney(page, suffix);
     await ensureSession(page, "second");
     await completeSessionLoop(page, "second", suffix);
     await page.reload();
@@ -494,16 +616,12 @@ test.describe("M421 closed beta runtime acceptance v2", () => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await login(page, credentialFrom("E2E_USER"), "second");
 
-    await completeCalculatorRoutine(page, suffix);
-    const completedCount = await page.locator("[data-calculator-routine-trainer][data-calculator-routine-state='completed']").count();
-    expect(completedCount).toBe(1);
+    await completeCalculatorRecoveryRoutine(page, suffix);
 
-    const recoveryHref = page.locator('a[href*="recoveryRoutineId"], a[href*="/app/calculator?mode=second"]').first();
-    if ((await recoveryHref.count()) > 0) {
-      await recoveryHref.click();
-      await completeCalculatorRoutine(page, suffix);
-      expect(await page.locator("[data-calculator-routine-trainer][data-calculator-routine-state='completed']").count()).toBe(1);
-    }
+    await page.goto("/app/review?mode=second");
+    const candidates = page.locator("[data-calculator-routine-review-candidates]");
+    await expect(candidates).toHaveCount(1);
+    await expect(candidates.getByRole("link", { name: "계산·검산 다시 하기" }).first()).toBeVisible();
   });
 
   test("refresh and two-context durability stay honest", async ({ browser }) => {
@@ -513,12 +631,14 @@ test.describe("M421 closed beta runtime acceptance v2", () => {
     const second = await openFreshContext(browser, credential, "first");
 
     try {
+      await assertCurrentSyntheticRecordAbsent(first.page, suffix, "first");
+      await assertCurrentSyntheticRecordAbsent(second.page, suffix, "first");
       await openCapture(first.page, "first");
       await fillCaptureTextMode(first.page, syntheticText("two context durability", suffix));
       await saveCapture(first.page);
       await first.page.reload();
-      await assertSyntheticRecordVisibleOrLocalHonest(first.page, suffix);
-      await assertSyntheticRecordVisibleOrLocalHonest(second.page, suffix);
+      await assertSyntheticRecordVisibleOrLocalHonest(first.page, suffix, "first");
+      await assertSyntheticRecordVisibleOrLocalHonest(second.page, suffix, "first");
     } finally {
       await first.context.close();
       await second.context.close();
@@ -561,8 +681,8 @@ test.describe("M421 closed beta runtime acceptance v2", () => {
     await openCapture(page, "first");
     await fillCaptureTextMode(page, syntheticText("save failure", suffix));
     await saveCapture(page);
-    await expect(page.getByTestId("capture-save-confirmation")).toHaveCount(0);
-    await expect(page.locator("body")).not.toContainText(/durable saved|saved successfully|https?:\/\//i);
+    await expectTemporaryOrFailedSaveConfirmation(page);
+    await expect(page.locator("body")).not.toContainText(/durable saved|saved successfully|계정 기록에 저장|https?:\/\//i);
 
     await page.unroute("**/api/os/items");
     await page.route("**/api/answer-review/structure", async (route) => {
