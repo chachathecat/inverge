@@ -1,116 +1,210 @@
-# Inverge Product Brief
+# Inverge Product Brief — 감정평가사 2차 전과목
 
-## 1) Core Definition
-Inverge는 **AI 채점 서비스가 아니라**, 감정평가사 수험을 위한 **프리미엄 합격 운영 시스템**이다.
+- 결정일: 2026-06-25
+- 상세 Source of Truth: `docs/inverge-second-round-final-product-spec.md`
 
-- 목적: 학습자에 대한 최종 판정이 아니라, 합격 확률을 높이는 반복 가능한 고가치 학습 행동을 낮은 인지부하로 실행하게 만드는 것
-- 운영 루프: **input → diagnosis → tracking → prediction → recommendation → execution → retry/rewrite**
-- 고정 범위(학습자 서비스): **감정평가사 1차, 감정평가사 2차만 지원**
-- 비원칙: **AI 최종 판정 없음**, 자동 합격 판정 없음
+## 1. Core Definition
 
-## 2) Product Positioning (Korean-first)
-### Must-use framing (learner-facing)
-- 감정평가사 합격 운영 시스템
-- 오늘 해야 할 학습 행동을 정리하는 학습 운영 시스템
-- 점수보다 다음 행동을 정리하는 시스템
+Inverge는 **감정평가사 2차 전과목 답안 완성 OS**다.
 
-### Must-not-use framing (learner-facing)
-- AI 채점기
-- 자동 채점 서비스
-- 공부 기록장
-- 동기부여 앱
-- 대시보드 SaaS
-- 시험 범용 플랫폼
+지원 범위:
 
-## 3) Dual-Surface Policy (Learner vs Instructor)
-### A. Learner-facing Inverge (primary)
-In scope:
-- 감정평가사 1차
-- 감정평가사 2차
-- learning operations system
-- retry/rewrite 중심 학습 실행
+- 감정평가실무
+- 감정평가이론
+- 감정평가 및 보상법규
 
-Out of scope:
-- 보험계리사/계리사, CPA, 세무사, TOEFL, SAT
-- universal exam track
-- payment-first flow
-- control-room dashboard
-- AI final judgment framing
-- streak addiction, rankings, shame-based motivation
+감정평가사 1차는 신규 개발·노출·유료 범위에서 동결한다.
 
-### B. Instructor-facing B2B (separate documentation scope)
-별도 콘솔은 **학원용 답안 운영 콘솔**로 정의하며, 학습자 앱과 분리된 B2B 운영 표면으로 다룬다.
+세 과목을 내부적으로 순차 개발할 수 있으나, 세 과목 전체와 통합 품질 게이트가 완료되기 전에는 공개 유료 출시하지 않는다.
 
-Allowed scope:
-- academy staff / instructors / graders only
-- OCR answer upload
-- **첨삭 운영 보조**
-- **채점 초안**(rubric-based scoring draft)
-- feedback/comment draft
-- reference answer draft
-- **강사 검수** 후 확정 (human final approval required)
+## 2. Primary Job
 
-Not allowed wording:
-- AI가 최종 채점
-- 자동 합격 판정
-- 무검수 채점
-- 학생 답안 무단 학습
+사용자가 모든 공식 기출을 풀고 다음 루프를 반복하도록 만든다.
 
-## 4) Routing and Permission Direction (Future)
-- Instructor console route candidate: `/instructor` or `/studio`
-- Access role: instructor/admin only
-- Learner navigation에는 instructor 도구를 절대 노출하지 않음
-- 인증/권한/테넌트 경계는 learner 앱과 별도 정책으로 설계
+```text
+기출 선택
+→ 답안 작성·촬영
+→ OCR 확인
+→ 연습채점·정밀첨삭
+→ 가장 큰 간극 확인
+→ Inverge 검증형 기준답안 전체 보기
+→ 답안 비교
+→ 재작성·재채점
+→ 자동 오답노트·핵심개념 추적
+→ 다음 복습·유사 기출
+```
 
-## 5) Product Tone
-- calm
-- precise
-- operational
-- premium
-- Korean-first
-- low-hype
+점수 표시만으로 끝내지 않는다. 모든 결과는 재작성, 재채점 또는 복습으로 연결한다.
 
-## 6) Inverge Triad (Operating Governance)
-모든 제품 결정은 아래 3층 통합 거버넌스로 판단한다.
+## 3. Learner Promise
 
-1. **Cognitive science**: 어떤 학습 행동이 실제 성과를 높이는가
-2. **Ethical nudge / choice architecture**: 효과적인 행동을 기본값으로 두되, 사용자 주도권 보장
-3. **Learning-focused design**: 인지부하를 줄이고 차분한 실행 환경 제공
+Inverge는 다음을 제공한다.
 
-모든 기능/화면은 아래 질문 7개에 답해야 한다.
-1. 어떤 학습 행동을 만들었는가?
-2. 왜 근거 기반인가?
-3. 어떤 좋은 기본값을 주는가?
-4. 사용자는 어떻게 override 가능한가?
-5. 어떤 인지부하를 제거했는가?
-6. 어떤 데이터를 남기는가?
-7. 다음 행동은 무엇인가?
+- 세 과목 전체 기출 아카이브
+- 사진·PDF·텍스트 답안 입력
+- OCR 확인·수정
+- 예상 점수 범위와 신뢰도
+- 루브릭별 감점 근거
+- 가장 큰 간극 1개
+- 누락 논점·약한 문단·계산 오류
+- 시험시간형 전체 기준답안
+- 학습용 확장 기준답안
+- 답안 전후 비교
+- 재작성 후 재채점
+- 자동 오답노트
+- 개인 핵심개념 그래프
+- 반복 약점과 유사 기출 추천
 
-## 7) Execution Priorities
-- 점수 표시보다 **다음 행동 제시**를 우선
-- 피드백은 요약 종결이 아니라 **retry/rewrite로 연결**
-- 홈/실행 화면은 **하나의 주행동(Primary Action)** 중심
-- 1차와 2차 학습 루프를 분리하되 동일 운영원칙 적용
-- instructor-facing 채점 관련 산출물은 **초안 + 강사 검수** 원칙 유지
+## 4. Reference Answer Policy
 
-## 8) Documentation Map
-- 학습 근거 원칙: `docs/inverge-learning-science.md`
-- 넛지/선택설계: `docs/inverge-nudge-system.md`
-- 디자인 운영체계: `docs/inverge-design-system.md`
-- 화면 패턴: `docs/inverge-screen-patterns.md`
-- 품질 점검: `docs/inverge-audit-rubric.md`
-- 우선순위/데이터 모델: `docs/inverge-learning-engine-spec.md`
-- instructor scope: `docs/inverge-instructor-console.md`
-- data governance: `docs/inverge-data-governance.md`
+공식 답안이 없는 기출에는 **Inverge 검증형 기준답안**을 제공한다.
 
-## 9) Short References (non-quoted)
-- Roediger & Karpicke (2006), retrieval practice / test-enhanced learning
-- Cepeda et al., distributed practice / spacing effect
-- Sweller, van Merriënboer & Paas, cognitive load theory
-- Hattie & Timperley, feedback
-- Gollwitzer, implementation intentions
-- Thaler & Sunstein, nudge / choice architecture
-- Behavioural Insights Team, EAST framework
-- Apple Human Interface Guidelines
-- Nielsen Norman usability heuristics
-- GOV.UK Design Principles
+이는 공식 모범답안이나 공식 채점기준이 아니다. 다음 절차를 통과해야 공개할 수 있다.
+
+- 문제 요구사항·배점 분해
+- 공식/public source pack 구성
+- 최소 3개 독립 후보 답안
+- 법규·이론·실무별 validator
+- critic 반대검토
+- consensus 및 충돌 처리
+- source·계산·루브릭 검증
+- release gate
+
+실무 계산 불일치, 법규 source 불일치, unresolved blocker가 있으면 공개하지 않는다.
+
+## 5. Subject Engines
+
+### 법규
+
+쟁점 → 법령·법리·판례 → 요건 → 포섭 → 결론
+
+핵심 품질:
+
+- 시험일 기준 법령 버전
+- 조문·판례 검증
+- 포섭 근거
+- 결론 일치
+
+### 이론
+
+쟁점·의의 → 정의 → 이론적 근거 → 구성·비교 → 적용 → 결론
+
+핵심 품질:
+
+- 정의·개념 관계
+- 이론적 근거
+- 비교축
+- 문제 요구 적합성
+- 답안 압축
+
+### 실무
+
+전제·자료 선택 → 방식·산식 → 계산 → 단위·시점·반올림 → 검산 → 결론
+
+핵심 품질:
+
+- deterministic recalculation
+- 단위·차원 검사
+- 역산 검산
+- 표 OCR confidence
+- fail-closed unsupported type handling
+
+## 6. Learning Memory
+
+모든 첨삭과 재작성에서 자동으로 학습 신호를 남긴다.
+
+- 과목·기출·개념 노드
+- 오류 유형
+- 실제 답안 evidence
+- 왜 틀렸는지
+- 올바른 원리
+- 즉시 고칠 행동
+- 반복 횟수
+- 개선·회복·재발 상태
+- 다음 복습일
+
+사용자가 별도 오답노트를 작성하지 않아도 핵심개념 카드와 개인 개념 그래프가 누적되어야 한다.
+
+## 7. Product Surfaces
+
+### Learner app
+
+- 기출 아카이브
+- 답안 작성·촬영
+- 연습채점·첨삭
+- 검증형 기준답안
+- 비교·재작성
+- 오답노트
+- 핵심개념 그래프
+- Today Plan·복습 큐
+
+### Academy console
+
+학원용 별도 tenant 표면이다.
+
+- 과제·기출 배포
+- 답안 일괄 수집
+- AI 채점·첨삭 초안
+- 강사 수정·승인
+- 학생·반 약점 분석
+- 재작성 관리
+- export·retention·usage
+
+Inverge는 전문가 검수 소비자 상품을 판매하지 않는다.
+
+## 8. Commercial Shape
+
+- Free: 평생 full review 1회
+- Core: 월 79,000원 가설, 월 30회
+- Intensive: 월 149,000원 가설, 월 80회
+- Academy Team: 월 1,490,000원 가설
+- Academy Pro: 월 3,900,000원 가설
+- Enterprise: 월 7,000,000원부터 가설
+
+무제한 요금제, 전문가 첨삭 중개, 합격 보장 상품은 만들지 않는다.
+
+가격은 paid beta 데이터로 검증하되 구현 구조는 credit, entitlement, overage, refund, privacy, cost guardrail을 지원해야 한다.
+
+## 9. Required Framing
+
+사용 권장:
+
+- 감정평가사 2차 전과목 답안 완성 OS
+- 연습점수 범위
+- 정밀첨삭
+- Inverge 검증형 기준답안
+- 가장 큰 간극
+- 다시쓰기·재채점
+- 자동 오답노트·핵심개념
+
+사용 금지:
+
+- 공식 채점
+- 확정 점수
+- 공식 모범답안
+- 합격 가능성·합격 확률
+- 합격 보장
+- AI 최종 판정
+
+## 10. Execution Principles
+
+- 한 화면, 한 주행동
+- attempt before reveal 기본값
+- 사용자 override 허용
+- 결과마다 다음 행동
+- Today Plan 최대 3개
+- source·rights·verification 상태 명시
+- raw learner content와 reference corpus 분리
+- learner와 academy tenant 분리
+- 세 과목 통합 출시 게이트 우회 금지
+
+## 11. Documentation Map
+
+- 최종 제품 명세: `docs/inverge-second-round-final-product-spec.md`
+- 공장 실행 순서: `roadmap/active-program.yml`
+- 에이전트 헌법: `AGENTS.md`
+- 사업모델: `docs/inverge-business-model.md`
+- 통합 로드맵: `docs/inverge-master-roadmap.md`
+- 데이터 거버넌스: `docs/inverge-data-governance.md`
+- 법령 source ingest: `docs/inverge-legal-source-ingest.md`
+- 디자인 시스템: `docs/inverge-design-system.md`
