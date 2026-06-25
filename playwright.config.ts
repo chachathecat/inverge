@@ -13,6 +13,7 @@ export default defineConfig({
   reporter: [['list']],
   use: {
     baseURL,
+    navigationTimeout: 20_000,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
   },
