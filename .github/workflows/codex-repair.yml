@@ -1,36 +1,10 @@
 name: Codex Self-Repair
 
 on:
-  workflow_run:
-    workflows:
-      - Full CI
-    types:
-      - completed
+  workflow_dispatch:
 
 jobs:
   self-repair:
-    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout failing PR
-        uses: actions/checkout@v3
-        with:
-          repository: ${{ github.event.workflow_run.repository.full_name }}
-          ref: ${{ github.event.workflow_run.head_branch }}
-      - name: Run Codex Repair
-        uses: openai/codex-action@v1
-        with:
-          openai_api_key: ${{ secrets.OPENAI_API_KEY }}
-          mode: repair
-          instructions_path: .codex/prompts/repair.md
-      - name: Commit and push repair
-        run: |
-          git config --global user.name "codex-repair-bot"
-          git config --global user.email "codex-repair@example.com"
-          if [ -n "$(git status --porcelain)" ]; then
-            git add .
-            git commit -m "codex: automatic repair for CI failure"
-            git push origin HEAD
-          else
-            echo "No changes to commit."
-          fi
+      - run: echo "Codex self-repair is disabled by default. Use workflow_dispatch to run repairs manually."
