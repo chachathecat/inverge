@@ -122,7 +122,7 @@ const DOMAIN_PATTERNS: readonly [FailureDomain, readonly RegExp[]][] = [
   [
     "unit_test_failure",
     [
-      /\bunit[-_: ]?test\b/i,
+      /\bunit[-_: ]?tests?\b/i,
       /\brun[-_: ]?node[-_: ]?tests\b/i,
       /\bnpm(?:\.cmd)? run test\b/i,
       /\bnode --test\b/i,
