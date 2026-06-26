@@ -1,0 +1,166 @@
+{
+  "schemaVersion": "2026-06-25",
+  "registryScope": "appraiser_second_round_exam_rules_metadata_only",
+  "storagePolicy": {
+    "metadataOnly": true,
+    "rawTextStored": false,
+    "copyrightedTextStored": false,
+    "rawNoticeTextStored": false,
+    "rawQuestionTextStored": false,
+    "rawAnswerTextStored": false,
+    "rawLearnerTextStored": false
+  },
+  "lastReviewedAt": "2026-06-25",
+  "currentAsOf": "2026-06-25",
+  "generatedBy": "S201 manual official-source verification",
+  "sourceIds": [
+    "qnet_appraiser_exam_info",
+    "law_appraiser_enforcement_decree_exam_subjects"
+  ],
+  "stableAnnualBoundary": {
+    "annualNoticeDirectory": "reference_corpus/curriculum/appraiser/annual_notices",
+    "stableRecordsExcludeAnnualDates": true,
+    "boundaryNote": "Application windows, exam date, result windows, and annual notice metadata belong in annual_notices/*.json."
+  },
+  "rules": [
+    {
+      "id": "second_round_rule_answer_method_essay_current_2026_06_25",
+      "scope": "second_round",
+      "ruleKey": "answer_method",
+      "value": {
+        "method": "written_essay",
+        "officialLabelKo": "논문형"
+      },
+      "sourceIds": [
+        "law_appraiser_enforcement_decree_exam_subjects"
+      ],
+      "effectiveFrom": "2026-06-25",
+      "effectiveDateBasis": "verified_current_as_of_date",
+      "status": "verified",
+      "lastOfficialVerifiedAt": "2026-06-25",
+      "needsManualRecheckBy": "2026-09-25",
+      "productionFacing": false
+    },
+    {
+      "id": "second_round_rule_session_structure_current_2026_06_25",
+      "scope": "second_round",
+      "ruleKey": "session_structure",
+      "value": {
+        "sessions": [
+          {
+            "sessionNo": 1,
+            "subjectKey": "practice",
+            "subjectLabelKo": "감정평가실무",
+            "entryCompleteTime": "09:00",
+            "startTime": "09:30",
+            "endTime": "11:10",
+            "durationMinutes": 100
+          },
+          {
+            "sessionNo": 2,
+            "subjectKey": "theory",
+            "subjectLabelKo": "감정평가이론",
+            "entryCompleteTime": "12:10",
+            "startTime": "12:30",
+            "endTime": "14:10",
+            "durationMinutes": 100
+          },
+          {
+            "sessionNo": 3,
+            "subjectKey": "law",
+            "subjectLabelKo": "감정평가 및 보상법규",
+            "entryCompleteTime": "14:30",
+            "startTime": "14:40",
+            "endTime": "16:20",
+            "durationMinutes": 100
+          }
+        ]
+      },
+      "sourceIds": [
+        "qnet_appraiser_exam_info"
+      ],
+      "effectiveFrom": "2026-06-25",
+      "effectiveDateBasis": "verified_current_as_of_date",
+      "status": "verified",
+      "lastOfficialVerifiedAt": "2026-06-25",
+      "needsManualRecheckBy": "2026-09-25",
+      "productionFacing": false
+    },
+    {
+      "id": "second_round_rule_question_count_current_2026_06_25",
+      "scope": "second_round",
+      "ruleKey": "question_count_per_subject",
+      "value": {
+        "defaultQuestionsPerSubject": 4,
+        "mayVaryWhenNecessary": true
+      },
+      "sourceIds": [
+        "qnet_appraiser_exam_info"
+      ],
+      "effectiveFrom": "2026-06-25",
+      "effectiveDateBasis": "verified_current_as_of_date",
+      "status": "verified",
+      "lastOfficialVerifiedAt": "2026-06-25",
+      "needsManualRecheckBy": "2026-09-25",
+      "productionFacing": false
+    },
+    {
+      "id": "second_round_rule_points_current_2026_06_25",
+      "scope": "second_round",
+      "ruleKey": "subject_points",
+      "value": {
+        "pointsPerSubject": 100,
+        "totalSubjectCount": 3,
+        "totalNominalPoints": 300
+      },
+      "sourceIds": [
+        "qnet_appraiser_exam_info"
+      ],
+      "effectiveFrom": "2026-06-25",
+      "effectiveDateBasis": "verified_current_as_of_date",
+      "status": "verified",
+      "lastOfficialVerifiedAt": "2026-06-25",
+      "needsManualRecheckBy": "2026-09-25",
+      "productionFacing": false
+    },
+    {
+      "id": "second_round_rule_pass_threshold_current_2026_06_25",
+      "scope": "second_round",
+      "ruleKey": "pass_threshold",
+      "value": {
+        "subjectMinimumPoints": 40,
+        "averageMinimumPoints": 60,
+        "minimumQuotaFallback": "When qualifying examinees are below the minimum passing number, candidates with at least 40 points in every subject are selected by descending average score within the minimum passing number."
+      },
+      "sourceIds": [
+        "qnet_appraiser_exam_info"
+      ],
+      "effectiveFrom": "2026-06-25",
+      "effectiveDateBasis": "verified_current_as_of_date",
+      "status": "verified",
+      "lastOfficialVerifiedAt": "2026-06-25",
+      "needsManualRecheckBy": "2026-09-25",
+      "productionFacing": false
+    },
+    {
+      "id": "second_round_rule_exam_date_law_accounting_current_2026_06_25",
+      "scope": "second_round",
+      "ruleKey": "exam_date_applicable_law_and_accounting",
+      "value": {
+        "lawAndAccountingRuleDate": "exam_day_current_effective_rules",
+        "accountingStandardWhenRequired": "K-IFRS"
+      },
+      "sourceIds": [
+        "qnet_appraiser_exam_info"
+      ],
+      "effectiveFrom": "2026-06-25",
+      "effectiveDateBasis": "verified_current_as_of_date",
+      "status": "verified",
+      "lastOfficialVerifiedAt": "2026-06-25",
+      "needsManualRecheckBy": "2026-09-25",
+      "productionFacing": false
+    }
+  ],
+  "deprecatedRecords": [],
+  "unresolvedOfficialSourceConflicts": []
+}

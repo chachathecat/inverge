@@ -72,6 +72,48 @@ function makeValidRegistry() {
         disallowedUse: ["raw_problem_text_copy", "copyrighted_question_body_storage", "official_score_claim", "pass_fail_claim"],
         notes: "Test fixture keeps metadata only.",
       },
+      {
+        id: "qnet_appraiser_exam_info",
+        sourceName: "Q-Net 감정평가사 시험정보",
+        sourceUrl: "https://www.q-net.or.kr/crf005.do?gId=60&gSite=L&gbnn=gbnSubtab4&id=crf00503",
+        sourceKind: "exam_info",
+        authorityLevel: "primary",
+        owner: "Q-Net",
+        verifiedFacts: {},
+        lastCheckedAt: "2026-06-25",
+        needsManualRecheckBy: "2026-12-25",
+        allowedUse: ["metadata_only", "link_reference"],
+        disallowedUse: ["raw_problem_text_copy", "copyrighted_question_body_storage", "official_score_claim", "pass_fail_claim"],
+        notes: "Test fixture keeps metadata only.",
+      },
+      {
+        id: "law_appraiser_enforcement_decree_exam_subjects",
+        sourceName: "국가법령정보센터 감정평가사 시행령 시험과목",
+        sourceUrl: "https://www.law.go.kr/LSW/lsInfoP.do?lsId=012651&efYd=20260625",
+        sourceKind: "statute_or_regulation",
+        authorityLevel: "primary",
+        owner: "국토교통부",
+        verifiedFacts: {},
+        lastCheckedAt: "2026-06-25",
+        needsManualRecheckBy: "2026-12-25",
+        allowedUse: ["metadata_only", "link_reference"],
+        disallowedUse: ["raw_problem_text_copy", "copyrighted_question_body_storage", "official_score_claim", "pass_fail_claim"],
+        notes: "Test fixture keeps metadata only.",
+      },
+      {
+        id: "qnet_appraiser_2026_public_notice",
+        sourceName: "Q-Net 2026년도 감정평가사 시행공고",
+        sourceUrl: "https://www.q-net.or.kr/crf002.do?gId=60&gSite=L&id=crf00201",
+        sourceKind: "public_notice",
+        authorityLevel: "primary",
+        owner: "Q-Net",
+        verifiedFacts: {},
+        lastCheckedAt: "2026-06-25",
+        needsManualRecheckBy: "2026-12-25",
+        allowedUse: ["metadata_only", "link_reference"],
+        disallowedUse: ["raw_problem_text_copy", "copyrighted_question_body_storage", "official_score_claim", "pass_fail_claim"],
+        notes: "Test fixture keeps metadata only.",
+      },
     ],
   };
 }
@@ -100,12 +142,139 @@ function makeDraftNode(overrides = {}) {
   };
 }
 
+function makeStoragePolicy() {
+  return {
+    metadataOnly: true,
+    rawTextStored: false,
+    copyrightedTextStored: false,
+    rawNoticeTextStored: false,
+    rawQuestionTextStored: false,
+    rawAnswerTextStored: false,
+    rawLearnerTextStored: false,
+  };
+}
+
+function makeValidOfficialSyllabus() {
+  const baseRecord = {
+    scope: "second_round",
+    effectiveFrom: "2026-06-25",
+    status: "verified",
+    lastOfficialVerifiedAt: "2026-06-25",
+    needsManualRecheckBy: "2026-12-25",
+    productionFacing: false,
+  };
+  return {
+    schemaVersion: "fixture",
+    registryScope: "fixture",
+    storagePolicy: makeStoragePolicy(),
+    lastReviewedAt: "2026-06-25",
+    currentAsOf: "2026-06-25",
+    sourceIds: ["qnet_appraiser_qualification_detail", "qnet_appraiser_exam_info", "law_appraiser_enforcement_decree_exam_subjects"],
+    qualificationStageRecords: [
+      {
+        ...baseRecord,
+        id: "fixture_stage",
+        recordType: "qualification_stage_identity",
+        sourceIds: ["qnet_appraiser_qualification_detail", "law_appraiser_enforcement_decree_exam_subjects"],
+      },
+    ],
+    subjectRecords: [
+      ["practice", "감정평가실무", "second_practice", 1],
+      ["theory", "감정평가이론", "second_theory", 2],
+      ["law", "감정평가 및 보상법규", "second_compensation_law", 3],
+    ].map(([subjectKey, officialSubjectLabelKo, editorialSubjectId, officialSubjectOrder]) => ({
+      ...baseRecord,
+      id: `fixture_subject_${subjectKey}`,
+      recordType: "official_subject",
+      subjectKey,
+      officialSubjectLabelKo,
+      officialSubjectOrder,
+      editorialSubjectId,
+      sourceIds: ["qnet_appraiser_exam_info", "law_appraiser_enforcement_decree_exam_subjects"],
+    })),
+    deprecatedRecords: [],
+    unresolvedOfficialSourceConflicts: [],
+  };
+}
+
+function makeValidExamRules() {
+  return {
+    schemaVersion: "fixture",
+    registryScope: "fixture",
+    storagePolicy: makeStoragePolicy(),
+    lastReviewedAt: "2026-06-25",
+    currentAsOf: "2026-06-25",
+    sourceIds: ["qnet_appraiser_exam_info"],
+    rules: [
+      {
+        id: "fixture_rule",
+        scope: "second_round",
+        ruleKey: "answer_method",
+        value: { method: "written_essay" },
+        sourceIds: ["qnet_appraiser_exam_info"],
+        effectiveFrom: "2026-06-25",
+        status: "verified",
+        lastOfficialVerifiedAt: "2026-06-25",
+        needsManualRecheckBy: "2026-12-25",
+        productionFacing: false,
+      },
+    ],
+    deprecatedRecords: [],
+    unresolvedOfficialSourceConflicts: [],
+  };
+}
+
+function makeValidAnnualNotice() {
+  return {
+    schemaVersion: "fixture",
+    registryScope: "fixture",
+    noticeYear: 2026,
+    examRound: 37,
+    qualificationNameKo: "감정평가사",
+    storagePolicy: makeStoragePolicy(),
+    lastReviewedAt: "2026-06-25",
+    currentAsOf: "2026-06-25",
+    sourceIds: ["qnet_appraiser_2026_public_notice", "qnet_appraiser_exam_info"],
+    noticeMetadata: {
+      noticeTitleKo: "2026년도 제37회 감정평가사 국가자격시험 시행계획 공고",
+      noticePublishedAt: null,
+      officialNoticeUrl: "https://www.q-net.or.kr/crf002.do?gId=60&gSite=L&id=crf00201",
+      noticeBodyStored: false,
+      attachmentBodyStored: false,
+      sourceNote: "Fixture metadata only.",
+    },
+    annualValues: [
+      {
+        id: "fixture_annual_exam_date",
+        scope: "second_round",
+        valueKey: "exam_date",
+        value: { date: "2026-07-04" },
+        sourceIds: ["qnet_appraiser_2026_public_notice", "qnet_appraiser_exam_info"],
+        effectiveFrom: "2026-01-01",
+        effectiveTo: "2026-12-31",
+        status: "verified",
+        lastOfficialVerifiedAt: "2026-06-25",
+        needsManualRecheckBy: "2026-12-25",
+        productionFacing: false,
+      },
+    ],
+    annualOverrides: [],
+    unresolvedOfficialSourceConflicts: [],
+  };
+}
+
 function runOfficialSourceCheckWithFixture(nodes) {
   const fixtureDir = mkdtempSync(join(tmpdir(), "inverge-official-source-"));
   const registryFixturePath = join(fixtureDir, "official_sources.json");
   const curriculumFixturePath = join(fixtureDir, "curriculum.json");
+  const officialSyllabusFixturePath = join(fixtureDir, "official_syllabus.json");
+  const examRulesFixturePath = join(fixtureDir, "exam_rules.json");
+  const annualNoticeFixturePath = join(fixtureDir, "annual_notice_2026.json");
   writeFileSync(registryFixturePath, `${JSON.stringify(makeValidRegistry(), null, 2)}\n`);
   writeFileSync(curriculumFixturePath, `${JSON.stringify({ nodes }, null, 2)}\n`);
+  writeFileSync(officialSyllabusFixturePath, `${JSON.stringify(makeValidOfficialSyllabus(), null, 2)}\n`);
+  writeFileSync(examRulesFixturePath, `${JSON.stringify(makeValidExamRules(), null, 2)}\n`);
+  writeFileSync(annualNoticeFixturePath, `${JSON.stringify(makeValidAnnualNotice(), null, 2)}\n`);
   const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
 
   return spawnSync(npmCommand, ["--silent", "run", "check:official-source-verification"], {
@@ -116,6 +285,9 @@ function runOfficialSourceCheckWithFixture(nodes) {
       ...process.env,
       OFFICIAL_SOURCE_REGISTRY_PATH: registryFixturePath,
       OFFICIAL_SOURCE_CURRICULUM_PATHS: curriculumFixturePath,
+      OFFICIAL_SYLLABUS_REGISTRY_PATH: officialSyllabusFixturePath,
+      OFFICIAL_EXAM_RULES_REGISTRY_PATH: examRulesFixturePath,
+      OFFICIAL_ANNUAL_NOTICE_PATHS: annualNoticeFixturePath,
     },
   });
 }
@@ -244,8 +416,16 @@ test("official-source verification script prints expected JSON contract", () => 
     "draft_nodes_marked_needs_verification",
     "no_raw_problem_text",
     "no_official_grading_claims",
+    "s201_official_syllabus_registry_valid",
+    "s201_exam_rule_registry_valid",
+    "s201_annual_notice_registry_valid",
   ]);
   assert.ok(parsed.summary.verifiedNodes >= 1);
   assert.ok(parsed.summary.draftNodes >= 1);
   assert.equal(typeof parsed.summary.needsUpdateNodes, "number");
+  assert.deepEqual(parsed.summary.s201.currentOfficialSubjects, [
+    "감정평가실무",
+    "감정평가이론",
+    "감정평가 및 보상법규",
+  ]);
 });

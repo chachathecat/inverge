@@ -1,0 +1,112 @@
+{
+  "schemaVersion": "2026-06-25",
+  "registryScope": "appraiser_second_round_official_syllabus_metadata_only",
+  "storagePolicy": {
+    "metadataOnly": true,
+    "rawTextStored": false,
+    "copyrightedTextStored": false,
+    "rawNoticeTextStored": false,
+    "rawQuestionTextStored": false,
+    "rawAnswerTextStored": false,
+    "rawLearnerTextStored": false
+  },
+  "lastReviewedAt": "2026-06-25",
+  "currentAsOf": "2026-06-25",
+  "generatedBy": "S201 manual official-source verification",
+  "sourceIds": [
+    "qnet_appraiser_qualification_detail",
+    "qnet_appraiser_exam_info",
+    "law_appraiser_enforcement_decree_exam_subjects"
+  ],
+  "officialEditorialBoundary": {
+    "officialFactsOnly": true,
+    "editorialCurriculumFile": "reference_corpus/curriculum/appraiser/second_exam_curriculum.json",
+    "editorialUnitsRemainInternal": true,
+    "boundaryNote": "Official subject records below do not turn Inverge unit labels into official syllabus units."
+  },
+  "qualificationStageRecords": [
+    {
+      "id": "appraiser_second_round_stage_identity_current_2026_06_25",
+      "scope": "second_round",
+      "recordType": "qualification_stage_identity",
+      "qualificationNameKo": "감정평가사",
+      "qualificationNameEn": "Certified Appraiser",
+      "stageLabelKo": "제2차 시험",
+      "sourceIds": [
+        "qnet_appraiser_qualification_detail",
+        "law_appraiser_enforcement_decree_exam_subjects"
+      ],
+      "effectiveFrom": "2026-06-25",
+      "effectiveDateBasis": "verified_current_as_of_date",
+      "status": "verified",
+      "lastOfficialVerifiedAt": "2026-06-25",
+      "needsManualRecheckBy": "2026-09-25",
+      "productionFacing": false,
+      "supersedes": []
+    }
+  ],
+  "subjectRecords": [
+    {
+      "id": "appraiser_second_round_subject_practice_current_2026_06_25",
+      "scope": "second_round",
+      "recordType": "official_subject",
+      "subjectKey": "practice",
+      "officialSubjectLabelKo": "감정평가실무",
+      "officialSubjectOrder": 1,
+      "editorialSubjectId": "second_practice",
+      "sourceIds": [
+        "law_appraiser_enforcement_decree_exam_subjects",
+        "qnet_appraiser_exam_info"
+      ],
+      "effectiveFrom": "2026-06-25",
+      "effectiveDateBasis": "verified_current_as_of_date",
+      "status": "verified",
+      "lastOfficialVerifiedAt": "2026-06-25",
+      "needsManualRecheckBy": "2026-09-25",
+      "productionFacing": false,
+      "supersedes": []
+    },
+    {
+      "id": "appraiser_second_round_subject_theory_current_2026_06_25",
+      "scope": "second_round",
+      "recordType": "official_subject",
+      "subjectKey": "theory",
+      "officialSubjectLabelKo": "감정평가이론",
+      "officialSubjectOrder": 2,
+      "editorialSubjectId": "second_theory",
+      "sourceIds": [
+        "law_appraiser_enforcement_decree_exam_subjects",
+        "qnet_appraiser_exam_info"
+      ],
+      "effectiveFrom": "2026-06-25",
+      "effectiveDateBasis": "verified_current_as_of_date",
+      "status": "verified",
+      "lastOfficialVerifiedAt": "2026-06-25",
+      "needsManualRecheckBy": "2026-09-25",
+      "productionFacing": false,
+      "supersedes": []
+    },
+    {
+      "id": "appraiser_second_round_subject_law_current_2026_06_25",
+      "scope": "second_round",
+      "recordType": "official_subject",
+      "subjectKey": "law",
+      "officialSubjectLabelKo": "감정평가 및 보상법규",
+      "officialSubjectOrder": 3,
+      "editorialSubjectId": "second_compensation_law",
+      "sourceIds": [
+        "law_appraiser_enforcement_decree_exam_subjects",
+        "qnet_appraiser_exam_info"
+      ],
+      "effectiveFrom": "2026-06-25",
+      "effectiveDateBasis": "verified_current_as_of_date",
+      "status": "verified",
+      "lastOfficialVerifiedAt": "2026-06-25",
+      "needsManualRecheckBy": "2026-09-25",
+      "productionFacing": false,
+      "supersedes": []
+    }
+  ],
+  "deprecatedRecords": [],
+  "unresolvedOfficialSourceConflicts": []
+}

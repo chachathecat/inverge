@@ -51,6 +51,41 @@
       "notes": "Current notices are time-sensitive; schedule/calendar nodes must be manually rechecked before production use."
     },
     {
+      "id": "qnet_appraiser_2026_public_notice",
+      "sourceName": "Q-Net 2026년도 제37회 감정평가사 국가자격시험 시행계획 공고",
+      "sourceUrl": "https://www.q-net.or.kr/crf002.do?gId=60&gSite=L&id=crf00201",
+      "sourceKind": "public_notice",
+      "authorityLevel": "primary",
+      "owner": "Q-Net",
+      "verifiedFacts": {
+        "qualificationNameKo": "감정평가사",
+        "examYear": 2026,
+        "examRound": 37
+      },
+      "lastCheckedAt": "2026-06-25",
+      "needsManualRecheckBy": "2026-07-25",
+      "allowedUse": ["metadata_only", "link_reference"],
+      "disallowedUse": ["raw_problem_text_copy", "copyrighted_question_body_storage", "official_score_claim", "pass_fail_claim"],
+      "notes": "Use only for annual notice metadata such as dates and links. Do not commit notice body or attached official file contents."
+    },
+    {
+      "id": "law_appraiser_enforcement_decree_exam_subjects",
+      "sourceName": "국가법령정보센터 감정평가 및 감정평가사에 관한 법률 시행령 시험과목",
+      "sourceUrl": "https://www.law.go.kr/LSW/lsInfoP.do?lsId=012651&efYd=20260625",
+      "sourceKind": "statute_or_regulation",
+      "authorityLevel": "primary",
+      "owner": "국토교통부",
+      "verifiedFacts": {
+        "lawNameKo": "감정평가 및 감정평가사에 관한 법률 시행령",
+        "verificationScope": "감정평가사 제2차 시험 과목 및 논문형 시험방식 current as of 2026-06-25"
+      },
+      "lastCheckedAt": "2026-06-25",
+      "needsManualRecheckBy": "2026-09-25",
+      "allowedUse": ["metadata_only", "link_reference"],
+      "disallowedUse": ["raw_problem_text_copy", "copyrighted_question_body_storage", "official_score_claim", "pass_fail_claim"],
+      "notes": "Use for statutory second-round subject and exam-method metadata only. Verify law-effective dates again before legal-version validation work."
+    },
+    {
       "id": "qnet_appraiser_past_questions",
       "sourceName": "Q-Net 기출문제 내려받기",
       "sourceUrl": "https://www.q-net.or.kr/cst003.do?gId=31&gSite=L&id=cst00309",

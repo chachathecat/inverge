@@ -1,0 +1,110 @@
+{
+  "schemaVersion": "2026-06-25",
+  "registryScope": "appraiser_second_round_annual_notice_metadata_only",
+  "noticeYear": 2026,
+  "examRound": 37,
+  "qualificationNameKo": "감정평가사",
+  "storagePolicy": {
+    "metadataOnly": true,
+    "rawTextStored": false,
+    "copyrightedTextStored": false,
+    "rawNoticeTextStored": false,
+    "rawQuestionTextStored": false,
+    "rawAnswerTextStored": false,
+    "rawLearnerTextStored": false
+  },
+  "lastReviewedAt": "2026-06-25",
+  "currentAsOf": "2026-06-25",
+  "generatedBy": "S201 manual Q-Net notice metadata verification",
+  "sourceIds": [
+    "qnet_appraiser_2026_public_notice",
+    "qnet_appraiser_exam_info"
+  ],
+  "noticeMetadata": {
+    "noticeTitleKo": "2026년도 제37회 감정평가사 국가자격시험 시행계획 공고",
+    "noticePublishedAt": null,
+    "officialNoticeUrl": "https://www.q-net.or.kr/crf002.do?gId=60&gSite=L&id=crf00201",
+    "noticeBodyStored": false,
+    "attachmentBodyStored": false,
+    "sourceNote": "Q-Net 시행공고 목록 and exam-info schedule metadata checked on 2026-06-25. Notice body and attached HWPX contents are not stored."
+  },
+  "annualValues": [
+    {
+      "id": "appraiser_2026_second_round_application_window",
+      "scope": "second_round",
+      "valueKey": "application_window",
+      "value": {
+        "startDate": "2026-05-18",
+        "endDate": "2026-05-22"
+      },
+      "sourceIds": [
+        "qnet_appraiser_exam_info",
+        "qnet_appraiser_2026_public_notice"
+      ],
+      "effectiveFrom": "2026-01-01",
+      "effectiveTo": "2026-12-31",
+      "status": "verified",
+      "lastOfficialVerifiedAt": "2026-06-25",
+      "needsManualRecheckBy": "2026-07-25",
+      "productionFacing": false
+    },
+    {
+      "id": "appraiser_2026_second_round_document_submission_window",
+      "scope": "second_round",
+      "valueKey": "document_submission_window",
+      "value": {
+        "startDate": "2026-05-13",
+        "endDate": "2026-05-22"
+      },
+      "sourceIds": [
+        "qnet_appraiser_exam_info",
+        "qnet_appraiser_2026_public_notice"
+      ],
+      "effectiveFrom": "2026-01-01",
+      "effectiveTo": "2026-12-31",
+      "status": "verified",
+      "lastOfficialVerifiedAt": "2026-06-25",
+      "needsManualRecheckBy": "2026-07-25",
+      "productionFacing": false
+    },
+    {
+      "id": "appraiser_2026_second_round_exam_date",
+      "scope": "second_round",
+      "valueKey": "exam_date",
+      "value": {
+        "date": "2026-07-04"
+      },
+      "sourceIds": [
+        "qnet_appraiser_exam_info",
+        "qnet_appraiser_2026_public_notice"
+      ],
+      "effectiveFrom": "2026-01-01",
+      "effectiveTo": "2026-12-31",
+      "status": "verified",
+      "lastOfficialVerifiedAt": "2026-06-25",
+      "needsManualRecheckBy": "2026-07-25",
+      "productionFacing": false
+    },
+    {
+      "id": "appraiser_2026_second_round_result_announcement_window",
+      "scope": "second_round",
+      "valueKey": "result_announcement_window",
+      "value": {
+        "startDate": "2026-10-21",
+        "endDate": "2026-12-19"
+      },
+      "sourceIds": [
+        "qnet_appraiser_exam_info",
+        "qnet_appraiser_2026_public_notice"
+      ],
+      "effectiveFrom": "2026-01-01",
+      "effectiveTo": "2026-12-31",
+      "status": "verified",
+      "lastOfficialVerifiedAt": "2026-06-25",
+      "needsManualRecheckBy": "2026-07-25",
+      "productionFacing": false
+    }
+  ],
+  "annualOverrides": [],
+  "unresolvedOfficialSourceConflicts": []
+}
