@@ -51,7 +51,7 @@ items:
     priority: 6
   - id: S205
     title: Common Rubric Evidence and Practice Score Range Contract
-    status: queued
+    status: completed
     dependencies: [S200R, S201, S204]
     lockGroup: grading-contract
     risk: high
