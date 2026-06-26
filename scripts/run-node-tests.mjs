@@ -57,6 +57,7 @@ const defaultTestFiles = [
   "tests/agent-factory-glob-match.test.mjs",
   "tests/agent-factory-runtime-gate.test.mjs",
   "tests/agent-factory-roadmap-runner.test.mjs",
+  "tests/agent-factory-ci-watcher.test.mjs",
 ];
 const rawArgs = process.argv.slice(2);
 const nodeTestArgs = [];
