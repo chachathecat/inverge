@@ -58,7 +58,7 @@ items:
     priority: 7
   - id: S206
     title: Rewrite Regrade and Answer History Foundation
-    status: queued
+    status: completed
     dependencies: [S204, S205]
     lockGroup: rewrite-history
     risk: high
