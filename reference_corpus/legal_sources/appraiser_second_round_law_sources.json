@@ -1,0 +1,893 @@
+{
+  "schemaVersion": "2026-06-26.s208.v1",
+  "registryType": "appraiser_second_round_law_source_version_registry",
+  "registryScope": "appraiser_second_round_law_only",
+  "generatedBy": "s208_law_source_corpus_version_validator",
+  "generatedAt": "2026-06-26T00:00:00.000Z",
+  "canonicalQuestionRegistryPath": "reference_corpus/question_archive/second/appraiser_second_round_canonical_questions.json",
+  "referenceAnswerPackageRegistryPath": "reference_corpus/reference_answers/second/appraiser_second_round_reference_answer_packages.json",
+  "rubricEvidenceContractVersion": "s205.common_rubric_evidence.v1",
+  "storagePolicy": {
+    "metadataOnly": true,
+    "rawStatuteTextStored": false,
+    "rawCaseTextStored": false,
+    "rawOfficialQuestionTextStored": false,
+    "rawOfficialAnswerTextStored": false,
+    "rawReferenceAnswerTextStored": false,
+    "rawLearnerAnswerStored": false,
+    "rawOcrTextStored": false,
+    "rawSourceExcerptStored": false,
+    "rawAssetBytesStored": false,
+    "thirdPartyAcademyContentStored": false
+  },
+  "boundaryPolicy": {
+    "syntheticFixturesOnly": false,
+    "statuteBodiesStored": false,
+    "caseBodiesStored": false,
+    "officialQuestionBodiesStored": false,
+    "officialAnswerBodiesStored": false,
+    "referenceAnswerBodiesStored": false,
+    "learnerAnswerBodiesStored": false,
+    "lawAnswerReviewEngineImplemented": false,
+    "referenceAnswerGenerationImplemented": false,
+    "billingOrLedgerImplemented": false,
+    "publicArchiveUiImplemented": false,
+    "instructorRuntimeRoutesChanged": false
+  },
+  "lawSources": [
+    {
+      "sourceId": "law-source-admin-appeals-act",
+      "sourceKind": "statute",
+      "officialTitleKo": "행정심판법",
+      "jurisdiction": "KR",
+      "subjectScope": ["law"],
+      "sourceStatus": "needs_official_verification",
+      "provenance": {
+        "provider": "national_law_information_center",
+        "officialUrl": "https://www.law.go.kr/LSW/main.html",
+        "status": "needs_official_verification",
+        "verificationNote": "Candidate metadata only. Verify the official law page, law ID, and exam-date effective version before S211/S214/S215 use."
+      },
+      "aliases": [
+        {
+          "aliasId": "law-alias-admin-appeals-act-current-title",
+          "labelKo": "행정심판법",
+          "aliasKind": "current_title",
+          "status": "needs_official_verification",
+          "sourceStatus": "needs_official_verification"
+        }
+      ],
+      "versionMetadata": {
+        "versionStatus": "needs_official_verification",
+        "effectiveDateStatus": "needs_official_verification",
+        "amendmentStatus": "needs_official_verification",
+        "repealStatus": "needs_official_verification",
+        "renameStatus": "needs_official_verification",
+        "currentLawStatus": "current_law_unresolved"
+      },
+      "contentPolicy": {
+        "metadataOnly": true,
+        "rawStatuteTextStored": false,
+        "rawCaseTextStored": false,
+        "rawOfficialQuestionTextStored": false,
+        "rawOfficialAnswerTextStored": false,
+        "rawReferenceAnswerTextStored": false,
+        "rawLearnerAnswerStored": false,
+        "rawOcrTextStored": false,
+        "rawSourceExcerptStored": false,
+        "rawAssetBytesStored": false,
+        "thirdPartyAcademyContentStored": false
+      },
+      "downstreamUse": {
+        "s211LawReviewInputAllowed": false,
+        "s214ReferenceGenerationInputAllowed": false,
+        "s215ReleaseGateInputAllowed": false,
+        "s207PackageReleaseAnchorAllowed": false,
+        "s205RubricEvidenceSourceAllowed": false,
+        "highConfidenceLegalReviewAllowed": false,
+        "blockUntilResolved": true
+      },
+      "blockerIds": ["law-blocker-admin-appeals-act-official-version"]
+    },
+    {
+      "sourceId": "law-source-admin-litigation-act",
+      "sourceKind": "statute",
+      "officialTitleKo": "행정소송법",
+      "jurisdiction": "KR",
+      "subjectScope": ["law"],
+      "sourceStatus": "needs_official_verification",
+      "provenance": {
+        "provider": "national_law_information_center",
+        "officialUrl": "https://www.law.go.kr/LSW/main.html",
+        "status": "needs_official_verification",
+        "verificationNote": "Candidate metadata only. Verify the official law page, law ID, and exam-date effective version before S211/S214/S215 use."
+      },
+      "aliases": [
+        {
+          "aliasId": "law-alias-admin-litigation-act-current-title",
+          "labelKo": "행정소송법",
+          "aliasKind": "current_title",
+          "status": "needs_official_verification",
+          "sourceStatus": "needs_official_verification"
+        }
+      ],
+      "versionMetadata": {
+        "versionStatus": "needs_official_verification",
+        "effectiveDateStatus": "needs_official_verification",
+        "amendmentStatus": "needs_official_verification",
+        "repealStatus": "needs_official_verification",
+        "renameStatus": "needs_official_verification",
+        "currentLawStatus": "current_law_unresolved"
+      },
+      "contentPolicy": {
+        "metadataOnly": true,
+        "rawStatuteTextStored": false,
+        "rawCaseTextStored": false,
+        "rawOfficialQuestionTextStored": false,
+        "rawOfficialAnswerTextStored": false,
+        "rawReferenceAnswerTextStored": false,
+        "rawLearnerAnswerStored": false,
+        "rawOcrTextStored": false,
+        "rawSourceExcerptStored": false,
+        "rawAssetBytesStored": false,
+        "thirdPartyAcademyContentStored": false
+      },
+      "downstreamUse": {
+        "s211LawReviewInputAllowed": false,
+        "s214ReferenceGenerationInputAllowed": false,
+        "s215ReleaseGateInputAllowed": false,
+        "s207PackageReleaseAnchorAllowed": false,
+        "s205RubricEvidenceSourceAllowed": false,
+        "highConfidenceLegalReviewAllowed": false,
+        "blockUntilResolved": true
+      },
+      "blockerIds": ["law-blocker-admin-litigation-act-official-version"]
+    },
+    {
+      "sourceId": "law-source-admin-procedure-act",
+      "sourceKind": "statute",
+      "officialTitleKo": "행정절차법",
+      "jurisdiction": "KR",
+      "subjectScope": ["law"],
+      "sourceStatus": "needs_official_verification",
+      "provenance": {
+        "provider": "national_law_information_center",
+        "officialUrl": "https://www.law.go.kr/LSW/main.html",
+        "status": "needs_official_verification",
+        "verificationNote": "Candidate metadata only. Verify the official law page, law ID, and exam-date effective version before S211/S214/S215 use."
+      },
+      "aliases": [
+        {
+          "aliasId": "law-alias-admin-procedure-act-current-title",
+          "labelKo": "행정절차법",
+          "aliasKind": "current_title",
+          "status": "needs_official_verification",
+          "sourceStatus": "needs_official_verification"
+        }
+      ],
+      "versionMetadata": {
+        "versionStatus": "needs_official_verification",
+        "effectiveDateStatus": "needs_official_verification",
+        "amendmentStatus": "needs_official_verification",
+        "repealStatus": "needs_official_verification",
+        "renameStatus": "needs_official_verification",
+        "currentLawStatus": "current_law_unresolved"
+      },
+      "contentPolicy": {
+        "metadataOnly": true,
+        "rawStatuteTextStored": false,
+        "rawCaseTextStored": false,
+        "rawOfficialQuestionTextStored": false,
+        "rawOfficialAnswerTextStored": false,
+        "rawReferenceAnswerTextStored": false,
+        "rawLearnerAnswerStored": false,
+        "rawOcrTextStored": false,
+        "rawSourceExcerptStored": false,
+        "rawAssetBytesStored": false,
+        "thirdPartyAcademyContentStored": false
+      },
+      "downstreamUse": {
+        "s211LawReviewInputAllowed": false,
+        "s214ReferenceGenerationInputAllowed": false,
+        "s215ReleaseGateInputAllowed": false,
+        "s207PackageReleaseAnchorAllowed": false,
+        "s205RubricEvidenceSourceAllowed": false,
+        "highConfidenceLegalReviewAllowed": false,
+        "blockUntilResolved": true
+      },
+      "blockerIds": ["law-blocker-admin-procedure-act-official-version"]
+    },
+    {
+      "sourceId": "law-source-appraiser-act",
+      "sourceKind": "statute",
+      "officialTitleKo": "감정평가 및 감정평가사에 관한 법률",
+      "jurisdiction": "KR",
+      "subjectScope": ["law"],
+      "sourceStatus": "needs_official_verification",
+      "provenance": {
+        "provider": "national_law_information_center",
+        "officialUrl": "https://www.law.go.kr/LSW/main.html",
+        "status": "needs_official_verification",
+        "verificationNote": "Candidate metadata only. Verify the official law page, law ID, and exam-date effective version before S211/S214/S215 use."
+      },
+      "aliases": [
+        {
+          "aliasId": "law-alias-appraiser-act-current-title",
+          "labelKo": "감정평가 및 감정평가사에 관한 법률",
+          "aliasKind": "current_title",
+          "status": "needs_official_verification",
+          "sourceStatus": "needs_official_verification"
+        }
+      ],
+      "versionMetadata": {
+        "versionStatus": "needs_official_verification",
+        "effectiveDateStatus": "needs_official_verification",
+        "amendmentStatus": "needs_official_verification",
+        "repealStatus": "needs_official_verification",
+        "renameStatus": "needs_official_verification",
+        "currentLawStatus": "current_law_unresolved"
+      },
+      "contentPolicy": {
+        "metadataOnly": true,
+        "rawStatuteTextStored": false,
+        "rawCaseTextStored": false,
+        "rawOfficialQuestionTextStored": false,
+        "rawOfficialAnswerTextStored": false,
+        "rawReferenceAnswerTextStored": false,
+        "rawLearnerAnswerStored": false,
+        "rawOcrTextStored": false,
+        "rawSourceExcerptStored": false,
+        "rawAssetBytesStored": false,
+        "thirdPartyAcademyContentStored": false
+      },
+      "downstreamUse": {
+        "s211LawReviewInputAllowed": false,
+        "s214ReferenceGenerationInputAllowed": false,
+        "s215ReleaseGateInputAllowed": false,
+        "s207PackageReleaseAnchorAllowed": false,
+        "s205RubricEvidenceSourceAllowed": false,
+        "highConfidenceLegalReviewAllowed": false,
+        "blockUntilResolved": true
+      },
+      "blockerIds": ["law-blocker-appraiser-act-official-version"]
+    },
+    {
+      "sourceId": "law-source-appraiser-act-enforcement-decree",
+      "sourceKind": "enforcement_decree",
+      "officialTitleKo": "감정평가 및 감정평가사에 관한 법률 시행령",
+      "jurisdiction": "KR",
+      "subjectScope": ["law"],
+      "sourceStatus": "needs_official_verification",
+      "provenance": {
+        "provider": "national_law_information_center",
+        "officialUrl": "https://www.law.go.kr/LSW/main.html",
+        "status": "needs_official_verification",
+        "verificationNote": "Candidate metadata only. Verify the official law page, law ID, and exam-date effective version before S211/S214/S215 use."
+      },
+      "aliases": [
+        {
+          "aliasId": "law-alias-appraiser-act-enforcement-decree-current-title",
+          "labelKo": "감정평가 및 감정평가사에 관한 법률 시행령",
+          "aliasKind": "current_title",
+          "status": "needs_official_verification",
+          "sourceStatus": "needs_official_verification"
+        }
+      ],
+      "versionMetadata": {
+        "versionStatus": "needs_official_verification",
+        "effectiveDateStatus": "needs_official_verification",
+        "amendmentStatus": "needs_official_verification",
+        "repealStatus": "needs_official_verification",
+        "renameStatus": "needs_official_verification",
+        "currentLawStatus": "current_law_unresolved"
+      },
+      "contentPolicy": {
+        "metadataOnly": true,
+        "rawStatuteTextStored": false,
+        "rawCaseTextStored": false,
+        "rawOfficialQuestionTextStored": false,
+        "rawOfficialAnswerTextStored": false,
+        "rawReferenceAnswerTextStored": false,
+        "rawLearnerAnswerStored": false,
+        "rawOcrTextStored": false,
+        "rawSourceExcerptStored": false,
+        "rawAssetBytesStored": false,
+        "thirdPartyAcademyContentStored": false
+      },
+      "downstreamUse": {
+        "s211LawReviewInputAllowed": false,
+        "s214ReferenceGenerationInputAllowed": false,
+        "s215ReleaseGateInputAllowed": false,
+        "s207PackageReleaseAnchorAllowed": false,
+        "s205RubricEvidenceSourceAllowed": false,
+        "highConfidenceLegalReviewAllowed": false,
+        "blockUntilResolved": true
+      },
+      "blockerIds": ["law-blocker-appraiser-act-enforcement-decree-official-version"]
+    },
+    {
+      "sourceId": "law-source-appraiser-act-enforcement-rule",
+      "sourceKind": "enforcement_rule",
+      "officialTitleKo": "감정평가 및 감정평가사에 관한 법률 시행규칙",
+      "jurisdiction": "KR",
+      "subjectScope": ["law"],
+      "sourceStatus": "needs_official_verification",
+      "provenance": {
+        "provider": "national_law_information_center",
+        "officialUrl": "https://www.law.go.kr/LSW/main.html",
+        "status": "needs_official_verification",
+        "verificationNote": "Candidate metadata only. Verify the official law page, law ID, and exam-date effective version before S211/S214/S215 use."
+      },
+      "aliases": [
+        {
+          "aliasId": "law-alias-appraiser-act-enforcement-rule-current-title",
+          "labelKo": "감정평가 및 감정평가사에 관한 법률 시행규칙",
+          "aliasKind": "current_title",
+          "status": "needs_official_verification",
+          "sourceStatus": "needs_official_verification"
+        }
+      ],
+      "versionMetadata": {
+        "versionStatus": "needs_official_verification",
+        "effectiveDateStatus": "needs_official_verification",
+        "amendmentStatus": "needs_official_verification",
+        "repealStatus": "needs_official_verification",
+        "renameStatus": "needs_official_verification",
+        "currentLawStatus": "current_law_unresolved"
+      },
+      "contentPolicy": {
+        "metadataOnly": true,
+        "rawStatuteTextStored": false,
+        "rawCaseTextStored": false,
+        "rawOfficialQuestionTextStored": false,
+        "rawOfficialAnswerTextStored": false,
+        "rawReferenceAnswerTextStored": false,
+        "rawLearnerAnswerStored": false,
+        "rawOcrTextStored": false,
+        "rawSourceExcerptStored": false,
+        "rawAssetBytesStored": false,
+        "thirdPartyAcademyContentStored": false
+      },
+      "downstreamUse": {
+        "s211LawReviewInputAllowed": false,
+        "s214ReferenceGenerationInputAllowed": false,
+        "s215ReleaseGateInputAllowed": false,
+        "s207PackageReleaseAnchorAllowed": false,
+        "s205RubricEvidenceSourceAllowed": false,
+        "highConfidenceLegalReviewAllowed": false,
+        "blockUntilResolved": true
+      },
+      "blockerIds": ["law-blocker-appraiser-act-enforcement-rule-official-version"]
+    },
+    {
+      "sourceId": "law-source-land-compensation-act",
+      "sourceKind": "statute",
+      "officialTitleKo": "공익사업을 위한 토지 등의 취득 및 보상에 관한 법률",
+      "jurisdiction": "KR",
+      "subjectScope": ["law"],
+      "sourceStatus": "needs_official_verification",
+      "provenance": {
+        "provider": "national_law_information_center",
+        "officialUrl": "https://www.law.go.kr/LSW/main.html",
+        "status": "needs_official_verification",
+        "verificationNote": "Candidate metadata only. Verify the official law page, law ID, and exam-date effective version before S211/S214/S215 use."
+      },
+      "aliases": [
+        {
+          "aliasId": "law-alias-land-compensation-act-current-title",
+          "labelKo": "공익사업을 위한 토지 등의 취득 및 보상에 관한 법률",
+          "aliasKind": "current_title",
+          "status": "needs_official_verification",
+          "sourceStatus": "needs_official_verification"
+        },
+        {
+          "aliasId": "law-alias-land-compensation-act-short-title",
+          "labelKo": "토지보상법",
+          "aliasKind": "short_title",
+          "status": "needs_official_verification",
+          "sourceStatus": "needs_official_verification"
+        }
+      ],
+      "versionMetadata": {
+        "versionStatus": "needs_official_verification",
+        "effectiveDateStatus": "needs_official_verification",
+        "amendmentStatus": "needs_official_verification",
+        "repealStatus": "needs_official_verification",
+        "renameStatus": "needs_official_verification",
+        "currentLawStatus": "current_law_unresolved"
+      },
+      "contentPolicy": {
+        "metadataOnly": true,
+        "rawStatuteTextStored": false,
+        "rawCaseTextStored": false,
+        "rawOfficialQuestionTextStored": false,
+        "rawOfficialAnswerTextStored": false,
+        "rawReferenceAnswerTextStored": false,
+        "rawLearnerAnswerStored": false,
+        "rawOcrTextStored": false,
+        "rawSourceExcerptStored": false,
+        "rawAssetBytesStored": false,
+        "thirdPartyAcademyContentStored": false
+      },
+      "downstreamUse": {
+        "s211LawReviewInputAllowed": false,
+        "s214ReferenceGenerationInputAllowed": false,
+        "s215ReleaseGateInputAllowed": false,
+        "s207PackageReleaseAnchorAllowed": false,
+        "s205RubricEvidenceSourceAllowed": false,
+        "highConfidenceLegalReviewAllowed": false,
+        "blockUntilResolved": true
+      },
+      "blockerIds": ["law-blocker-land-compensation-act-official-version"]
+    },
+    {
+      "sourceId": "law-source-land-compensation-act-enforcement-decree",
+      "sourceKind": "enforcement_decree",
+      "officialTitleKo": "공익사업을 위한 토지 등의 취득 및 보상에 관한 법률 시행령",
+      "jurisdiction": "KR",
+      "subjectScope": ["law"],
+      "sourceStatus": "needs_official_verification",
+      "provenance": {
+        "provider": "national_law_information_center",
+        "officialUrl": "https://www.law.go.kr/LSW/main.html",
+        "status": "needs_official_verification",
+        "verificationNote": "Candidate metadata only. Verify the official law page, law ID, and exam-date effective version before S211/S214/S215 use."
+      },
+      "aliases": [
+        {
+          "aliasId": "law-alias-land-compensation-act-enforcement-decree-current-title",
+          "labelKo": "공익사업을 위한 토지 등의 취득 및 보상에 관한 법률 시행령",
+          "aliasKind": "current_title",
+          "status": "needs_official_verification",
+          "sourceStatus": "needs_official_verification"
+        }
+      ],
+      "versionMetadata": {
+        "versionStatus": "needs_official_verification",
+        "effectiveDateStatus": "needs_official_verification",
+        "amendmentStatus": "needs_official_verification",
+        "repealStatus": "needs_official_verification",
+        "renameStatus": "needs_official_verification",
+        "currentLawStatus": "current_law_unresolved"
+      },
+      "contentPolicy": {
+        "metadataOnly": true,
+        "rawStatuteTextStored": false,
+        "rawCaseTextStored": false,
+        "rawOfficialQuestionTextStored": false,
+        "rawOfficialAnswerTextStored": false,
+        "rawReferenceAnswerTextStored": false,
+        "rawLearnerAnswerStored": false,
+        "rawOcrTextStored": false,
+        "rawSourceExcerptStored": false,
+        "rawAssetBytesStored": false,
+        "thirdPartyAcademyContentStored": false
+      },
+      "downstreamUse": {
+        "s211LawReviewInputAllowed": false,
+        "s214ReferenceGenerationInputAllowed": false,
+        "s215ReleaseGateInputAllowed": false,
+        "s207PackageReleaseAnchorAllowed": false,
+        "s205RubricEvidenceSourceAllowed": false,
+        "highConfidenceLegalReviewAllowed": false,
+        "blockUntilResolved": true
+      },
+      "blockerIds": ["law-blocker-land-compensation-act-enforcement-decree-official-version"]
+    },
+    {
+      "sourceId": "law-source-land-compensation-act-enforcement-rule",
+      "sourceKind": "enforcement_rule",
+      "officialTitleKo": "공익사업을 위한 토지 등의 취득 및 보상에 관한 법률 시행규칙",
+      "jurisdiction": "KR",
+      "subjectScope": ["law"],
+      "sourceStatus": "needs_official_verification",
+      "provenance": {
+        "provider": "national_law_information_center",
+        "officialUrl": "https://www.law.go.kr/LSW/main.html",
+        "status": "needs_official_verification",
+        "verificationNote": "Candidate metadata only. Verify the official law page, law ID, and exam-date effective version before S211/S214/S215 use."
+      },
+      "aliases": [
+        {
+          "aliasId": "law-alias-land-compensation-act-enforcement-rule-current-title",
+          "labelKo": "공익사업을 위한 토지 등의 취득 및 보상에 관한 법률 시행규칙",
+          "aliasKind": "current_title",
+          "status": "needs_official_verification",
+          "sourceStatus": "needs_official_verification"
+        }
+      ],
+      "versionMetadata": {
+        "versionStatus": "needs_official_verification",
+        "effectiveDateStatus": "needs_official_verification",
+        "amendmentStatus": "needs_official_verification",
+        "repealStatus": "needs_official_verification",
+        "renameStatus": "needs_official_verification",
+        "currentLawStatus": "current_law_unresolved"
+      },
+      "contentPolicy": {
+        "metadataOnly": true,
+        "rawStatuteTextStored": false,
+        "rawCaseTextStored": false,
+        "rawOfficialQuestionTextStored": false,
+        "rawOfficialAnswerTextStored": false,
+        "rawReferenceAnswerTextStored": false,
+        "rawLearnerAnswerStored": false,
+        "rawOcrTextStored": false,
+        "rawSourceExcerptStored": false,
+        "rawAssetBytesStored": false,
+        "thirdPartyAcademyContentStored": false
+      },
+      "downstreamUse": {
+        "s211LawReviewInputAllowed": false,
+        "s214ReferenceGenerationInputAllowed": false,
+        "s215ReleaseGateInputAllowed": false,
+        "s207PackageReleaseAnchorAllowed": false,
+        "s205RubricEvidenceSourceAllowed": false,
+        "highConfidenceLegalReviewAllowed": false,
+        "blockUntilResolved": true
+      },
+      "blockerIds": ["law-blocker-land-compensation-act-enforcement-rule-official-version"]
+    },
+    {
+      "sourceId": "law-source-real-estate-price-disclosure-act",
+      "sourceKind": "statute",
+      "officialTitleKo": "부동산 가격공시에 관한 법률",
+      "jurisdiction": "KR",
+      "subjectScope": ["law"],
+      "sourceStatus": "needs_official_verification",
+      "provenance": {
+        "provider": "national_law_information_center",
+        "officialUrl": "https://www.law.go.kr/LSW/main.html",
+        "status": "needs_official_verification",
+        "verificationNote": "Candidate metadata only. Verify the official law page, law ID, and exam-date effective version before S211/S214/S215 use."
+      },
+      "aliases": [
+        {
+          "aliasId": "law-alias-real-estate-price-disclosure-act-current-title",
+          "labelKo": "부동산 가격공시에 관한 법률",
+          "aliasKind": "current_title",
+          "status": "needs_official_verification",
+          "sourceStatus": "needs_official_verification"
+        }
+      ],
+      "versionMetadata": {
+        "versionStatus": "needs_official_verification",
+        "effectiveDateStatus": "needs_official_verification",
+        "amendmentStatus": "needs_official_verification",
+        "repealStatus": "needs_official_verification",
+        "renameStatus": "needs_official_verification",
+        "currentLawStatus": "current_law_unresolved"
+      },
+      "contentPolicy": {
+        "metadataOnly": true,
+        "rawStatuteTextStored": false,
+        "rawCaseTextStored": false,
+        "rawOfficialQuestionTextStored": false,
+        "rawOfficialAnswerTextStored": false,
+        "rawReferenceAnswerTextStored": false,
+        "rawLearnerAnswerStored": false,
+        "rawOcrTextStored": false,
+        "rawSourceExcerptStored": false,
+        "rawAssetBytesStored": false,
+        "thirdPartyAcademyContentStored": false
+      },
+      "downstreamUse": {
+        "s211LawReviewInputAllowed": false,
+        "s214ReferenceGenerationInputAllowed": false,
+        "s215ReleaseGateInputAllowed": false,
+        "s207PackageReleaseAnchorAllowed": false,
+        "s205RubricEvidenceSourceAllowed": false,
+        "highConfidenceLegalReviewAllowed": false,
+        "blockUntilResolved": true
+      },
+      "blockerIds": ["law-blocker-real-estate-price-disclosure-act-official-version"]
+    }
+  ],
+  "sourceAnchors": [
+    {
+      "anchorId": "law-anchor-admin-appeals-act-current-candidate",
+      "sourceId": "law-source-admin-appeals-act",
+      "anchorKind": "law_source_identity",
+      "locator": {
+        "kind": "law_source_id",
+        "ref": "law-source-admin-appeals-act",
+        "rawTextStored": false,
+        "excerptStored": false,
+        "bodyTextStored": false
+      },
+      "legalSourceStatus": "needs_official_verification",
+      "versionStatus": "needs_official_verification",
+      "blockerIds": ["law-blocker-admin-appeals-act-official-version"],
+      "s207SourceAnchorKind": "law_source_version",
+      "s205SourceReferenceKind": "subject_validator",
+      "containsRawContent": false
+    },
+    {
+      "anchorId": "law-anchor-admin-litigation-act-current-candidate",
+      "sourceId": "law-source-admin-litigation-act",
+      "anchorKind": "law_source_identity",
+      "locator": {
+        "kind": "law_source_id",
+        "ref": "law-source-admin-litigation-act",
+        "rawTextStored": false,
+        "excerptStored": false,
+        "bodyTextStored": false
+      },
+      "legalSourceStatus": "needs_official_verification",
+      "versionStatus": "needs_official_verification",
+      "blockerIds": ["law-blocker-admin-litigation-act-official-version"],
+      "s207SourceAnchorKind": "law_source_version",
+      "s205SourceReferenceKind": "subject_validator",
+      "containsRawContent": false
+    },
+    {
+      "anchorId": "law-anchor-admin-procedure-act-current-candidate",
+      "sourceId": "law-source-admin-procedure-act",
+      "anchorKind": "law_source_identity",
+      "locator": {
+        "kind": "law_source_id",
+        "ref": "law-source-admin-procedure-act",
+        "rawTextStored": false,
+        "excerptStored": false,
+        "bodyTextStored": false
+      },
+      "legalSourceStatus": "needs_official_verification",
+      "versionStatus": "needs_official_verification",
+      "blockerIds": ["law-blocker-admin-procedure-act-official-version"],
+      "s207SourceAnchorKind": "law_source_version",
+      "s205SourceReferenceKind": "subject_validator",
+      "containsRawContent": false
+    },
+    {
+      "anchorId": "law-anchor-appraiser-act-current-candidate",
+      "sourceId": "law-source-appraiser-act",
+      "anchorKind": "law_source_identity",
+      "locator": {
+        "kind": "law_source_id",
+        "ref": "law-source-appraiser-act",
+        "rawTextStored": false,
+        "excerptStored": false,
+        "bodyTextStored": false
+      },
+      "legalSourceStatus": "needs_official_verification",
+      "versionStatus": "needs_official_verification",
+      "blockerIds": ["law-blocker-appraiser-act-official-version"],
+      "s207SourceAnchorKind": "law_source_version",
+      "s205SourceReferenceKind": "subject_validator",
+      "containsRawContent": false
+    },
+    {
+      "anchorId": "law-anchor-appraiser-act-enforcement-decree-current-candidate",
+      "sourceId": "law-source-appraiser-act-enforcement-decree",
+      "anchorKind": "law_source_identity",
+      "locator": {
+        "kind": "law_source_id",
+        "ref": "law-source-appraiser-act-enforcement-decree",
+        "rawTextStored": false,
+        "excerptStored": false,
+        "bodyTextStored": false
+      },
+      "legalSourceStatus": "needs_official_verification",
+      "versionStatus": "needs_official_verification",
+      "blockerIds": ["law-blocker-appraiser-act-enforcement-decree-official-version"],
+      "s207SourceAnchorKind": "law_source_version",
+      "s205SourceReferenceKind": "subject_validator",
+      "containsRawContent": false
+    },
+    {
+      "anchorId": "law-anchor-appraiser-act-enforcement-rule-current-candidate",
+      "sourceId": "law-source-appraiser-act-enforcement-rule",
+      "anchorKind": "law_source_identity",
+      "locator": {
+        "kind": "law_source_id",
+        "ref": "law-source-appraiser-act-enforcement-rule",
+        "rawTextStored": false,
+        "excerptStored": false,
+        "bodyTextStored": false
+      },
+      "legalSourceStatus": "needs_official_verification",
+      "versionStatus": "needs_official_verification",
+      "blockerIds": ["law-blocker-appraiser-act-enforcement-rule-official-version"],
+      "s207SourceAnchorKind": "law_source_version",
+      "s205SourceReferenceKind": "subject_validator",
+      "containsRawContent": false
+    },
+    {
+      "anchorId": "law-anchor-land-compensation-act-current-candidate",
+      "sourceId": "law-source-land-compensation-act",
+      "anchorKind": "law_source_identity",
+      "locator": {
+        "kind": "law_source_id",
+        "ref": "law-source-land-compensation-act",
+        "rawTextStored": false,
+        "excerptStored": false,
+        "bodyTextStored": false
+      },
+      "legalSourceStatus": "needs_official_verification",
+      "versionStatus": "needs_official_verification",
+      "blockerIds": ["law-blocker-land-compensation-act-official-version"],
+      "s207SourceAnchorKind": "law_source_version",
+      "s205SourceReferenceKind": "subject_validator",
+      "containsRawContent": false
+    },
+    {
+      "anchorId": "law-anchor-land-compensation-act-enforcement-decree-current-candidate",
+      "sourceId": "law-source-land-compensation-act-enforcement-decree",
+      "anchorKind": "law_source_identity",
+      "locator": {
+        "kind": "law_source_id",
+        "ref": "law-source-land-compensation-act-enforcement-decree",
+        "rawTextStored": false,
+        "excerptStored": false,
+        "bodyTextStored": false
+      },
+      "legalSourceStatus": "needs_official_verification",
+      "versionStatus": "needs_official_verification",
+      "blockerIds": ["law-blocker-land-compensation-act-enforcement-decree-official-version"],
+      "s207SourceAnchorKind": "law_source_version",
+      "s205SourceReferenceKind": "subject_validator",
+      "containsRawContent": false
+    },
+    {
+      "anchorId": "law-anchor-land-compensation-act-enforcement-rule-current-candidate",
+      "sourceId": "law-source-land-compensation-act-enforcement-rule",
+      "anchorKind": "law_source_identity",
+      "locator": {
+        "kind": "law_source_id",
+        "ref": "law-source-land-compensation-act-enforcement-rule",
+        "rawTextStored": false,
+        "excerptStored": false,
+        "bodyTextStored": false
+      },
+      "legalSourceStatus": "needs_official_verification",
+      "versionStatus": "needs_official_verification",
+      "blockerIds": ["law-blocker-land-compensation-act-enforcement-rule-official-version"],
+      "s207SourceAnchorKind": "law_source_version",
+      "s205SourceReferenceKind": "subject_validator",
+      "containsRawContent": false
+    },
+    {
+      "anchorId": "law-anchor-real-estate-price-disclosure-act-current-candidate",
+      "sourceId": "law-source-real-estate-price-disclosure-act",
+      "anchorKind": "law_source_identity",
+      "locator": {
+        "kind": "law_source_id",
+        "ref": "law-source-real-estate-price-disclosure-act",
+        "rawTextStored": false,
+        "excerptStored": false,
+        "bodyTextStored": false
+      },
+      "legalSourceStatus": "needs_official_verification",
+      "versionStatus": "needs_official_verification",
+      "blockerIds": ["law-blocker-real-estate-price-disclosure-act-official-version"],
+      "s207SourceAnchorKind": "law_source_version",
+      "s205SourceReferenceKind": "subject_validator",
+      "containsRawContent": false
+    }
+  ],
+  "examDateVersionChecks": [],
+  "referencePackageLinks": [],
+  "evidenceReviewLinks": [],
+  "blockers": [
+    {
+      "blockerId": "law-blocker-admin-appeals-act-official-version",
+      "kind": "exam_date_version_unresolved",
+      "status": "open",
+      "severity": "blocking",
+      "summary": "행정심판법 source identity and exam-date effective version require official verification before legal review confidence or release use.",
+      "requiredResolver": "s208",
+      "sourceIds": ["law-source-admin-appeals-act"],
+      "sourceAnchorIds": ["law-anchor-admin-appeals-act-current-candidate"],
+      "referencePackageLinkIds": [],
+      "evidenceReviewLinkIds": []
+    },
+    {
+      "blockerId": "law-blocker-admin-litigation-act-official-version",
+      "kind": "exam_date_version_unresolved",
+      "status": "open",
+      "severity": "blocking",
+      "summary": "행정소송법 source identity and exam-date effective version require official verification before legal review confidence or release use.",
+      "requiredResolver": "s208",
+      "sourceIds": ["law-source-admin-litigation-act"],
+      "sourceAnchorIds": ["law-anchor-admin-litigation-act-current-candidate"],
+      "referencePackageLinkIds": [],
+      "evidenceReviewLinkIds": []
+    },
+    {
+      "blockerId": "law-blocker-admin-procedure-act-official-version",
+      "kind": "exam_date_version_unresolved",
+      "status": "open",
+      "severity": "blocking",
+      "summary": "행정절차법 source identity and exam-date effective version require official verification before legal review confidence or release use.",
+      "requiredResolver": "s208",
+      "sourceIds": ["law-source-admin-procedure-act"],
+      "sourceAnchorIds": ["law-anchor-admin-procedure-act-current-candidate"],
+      "referencePackageLinkIds": [],
+      "evidenceReviewLinkIds": []
+    },
+    {
+      "blockerId": "law-blocker-appraiser-act-official-version",
+      "kind": "exam_date_version_unresolved",
+      "status": "open",
+      "severity": "blocking",
+      "summary": "감정평가 및 감정평가사에 관한 법률 source identity and exam-date effective version require official verification before legal review confidence or release use.",
+      "requiredResolver": "s208",
+      "sourceIds": ["law-source-appraiser-act"],
+      "sourceAnchorIds": ["law-anchor-appraiser-act-current-candidate"],
+      "referencePackageLinkIds": [],
+      "evidenceReviewLinkIds": []
+    },
+    {
+      "blockerId": "law-blocker-appraiser-act-enforcement-decree-official-version",
+      "kind": "exam_date_version_unresolved",
+      "status": "open",
+      "severity": "blocking",
+      "summary": "감정평가 및 감정평가사에 관한 법률 시행령 source identity and exam-date effective version require official verification before legal review confidence or release use.",
+      "requiredResolver": "s208",
+      "sourceIds": ["law-source-appraiser-act-enforcement-decree"],
+      "sourceAnchorIds": ["law-anchor-appraiser-act-enforcement-decree-current-candidate"],
+      "referencePackageLinkIds": [],
+      "evidenceReviewLinkIds": []
+    },
+    {
+      "blockerId": "law-blocker-appraiser-act-enforcement-rule-official-version",
+      "kind": "exam_date_version_unresolved",
+      "status": "open",
+      "severity": "blocking",
+      "summary": "감정평가 및 감정평가사에 관한 법률 시행규칙 source identity and exam-date effective version require official verification before legal review confidence or release use.",
+      "requiredResolver": "s208",
+      "sourceIds": ["law-source-appraiser-act-enforcement-rule"],
+      "sourceAnchorIds": ["law-anchor-appraiser-act-enforcement-rule-current-candidate"],
+      "referencePackageLinkIds": [],
+      "evidenceReviewLinkIds": []
+    },
+    {
+      "blockerId": "law-blocker-land-compensation-act-official-version",
+      "kind": "exam_date_version_unresolved",
+      "status": "open",
+      "severity": "blocking",
+      "summary": "공익사업을 위한 토지 등의 취득 및 보상에 관한 법률 source identity and exam-date effective version require official verification before legal review confidence or release use.",
+      "requiredResolver": "s208",
+      "sourceIds": ["law-source-land-compensation-act"],
+      "sourceAnchorIds": ["law-anchor-land-compensation-act-current-candidate"],
+      "referencePackageLinkIds": [],
+      "evidenceReviewLinkIds": []
+    },
+    {
+      "blockerId": "law-blocker-land-compensation-act-enforcement-decree-official-version",
+      "kind": "exam_date_version_unresolved",
+      "status": "open",
+      "severity": "blocking",
+      "summary": "공익사업을 위한 토지 등의 취득 및 보상에 관한 법률 시행령 source identity and exam-date effective version require official verification before legal review confidence or release use.",
+      "requiredResolver": "s208",
+      "sourceIds": ["law-source-land-compensation-act-enforcement-decree"],
+      "sourceAnchorIds": ["law-anchor-land-compensation-act-enforcement-decree-current-candidate"],
+      "referencePackageLinkIds": [],
+      "evidenceReviewLinkIds": []
+    },
+    {
+      "blockerId": "law-blocker-land-compensation-act-enforcement-rule-official-version",
+      "kind": "exam_date_version_unresolved",
+      "status": "open",
+      "severity": "blocking",
+      "summary": "공익사업을 위한 토지 등의 취득 및 보상에 관한 법률 시행규칙 source identity and exam-date effective version require official verification before legal review confidence or release use.",
+      "requiredResolver": "s208",
+      "sourceIds": ["law-source-land-compensation-act-enforcement-rule"],
+      "sourceAnchorIds": ["law-anchor-land-compensation-act-enforcement-rule-current-candidate"],
+      "referencePackageLinkIds": [],
+      "evidenceReviewLinkIds": []
+    },
+    {
+      "blockerId": "law-blocker-real-estate-price-disclosure-act-official-version",
+      "kind": "exam_date_version_unresolved",
+      "status": "open",
+      "severity": "blocking",
+      "summary": "부동산 가격공시에 관한 법률 source identity and exam-date effective version require official verification before legal review confidence or release use.",
+      "requiredResolver": "s208",
+      "sourceIds": ["law-source-real-estate-price-disclosure-act"],
+      "sourceAnchorIds": ["law-anchor-real-estate-price-disclosure-act-current-candidate"],
+      "referencePackageLinkIds": [],
+      "evidenceReviewLinkIds": []
+    }
+  ]
+}
