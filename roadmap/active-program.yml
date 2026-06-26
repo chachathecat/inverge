@@ -72,7 +72,7 @@ items:
     priority: 9
   - id: S208
     title: Law Source Corpus and Exam-Date Version Validator
-    status: queued
+    status: completed
     dependencies: [S201, S203]
     lockGroup: law-grounding
     risk: high

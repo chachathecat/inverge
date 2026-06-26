@@ -1,0 +1,116 @@
+{
+  "schemaVersion": "2026-06-26.s208.v1",
+  "reportType": "appraiser_second_round_law_source_version_report",
+  "generatedBy": "scripts/validate-law-source-version-registry.mjs",
+  "generatedAt": "2026-06-26T00:00:00.000Z",
+  "lawSourceRegistryPath": "reference_corpus/legal_sources/appraiser_second_round_law_sources.json",
+  "canonicalQuestionRegistryPath": "reference_corpus/question_archive/second/appraiser_second_round_canonical_questions.json",
+  "referenceAnswerPackageRegistryPath": "reference_corpus/reference_answers/second/appraiser_second_round_reference_answer_packages.json",
+  "rubricEvidenceContractVersion": "s205.common_rubric_evidence.v1",
+  "storagePolicy": {
+    "metadataOnly": true,
+    "rawStatuteTextStored": false,
+    "rawCaseTextStored": false,
+    "rawOfficialQuestionTextStored": false,
+    "rawOfficialAnswerTextStored": false,
+    "rawReferenceAnswerTextStored": false,
+    "rawLearnerAnswerStored": false,
+    "rawOcrTextStored": false,
+    "rawSourceExcerptStored": false,
+    "rawAssetBytesStored": false,
+    "thirdPartyAcademyContentStored": false
+  },
+  "totals": {
+    "lawSourceCount": 10,
+    "sourceAnchorCount": 10,
+    "examDateVersionCheckCount": 0,
+    "referencePackageLinkCount": 0,
+    "evidenceReviewLinkCount": 0,
+    "verifiedLawSourceCount": 0,
+    "needsOfficialVerificationCount": 10,
+    "unresolvedConflictCount": 0,
+    "openBlockingBlockerCount": 10,
+    "blockedReleasePackageLinkCount": 0,
+    "highConfidenceReviewAllowedCheckCount": 0,
+    "sourceStatusCounts": {
+      "verified": 0,
+      "needs_official_verification": 10,
+      "unresolved_conflict": 0,
+      "blocked": 0,
+      "synthetic_fixture": 0
+    },
+    "versionStatusCounts": {
+      "verified": 0,
+      "needs_official_verification": 10,
+      "unresolved_conflict": 0,
+      "blocked": 0,
+      "synthetic_fixture": 0
+    },
+    "examDateVersionStatusCounts": {
+      "applicable_to_exam_date": 0,
+      "needs_official_verification": 0,
+      "unresolved_conflict": 0,
+      "blocked": 0,
+      "synthetic_fixture": 0
+    },
+    "currentLawDivergenceStatusCounts": {
+      "same_as_exam_date": 0,
+      "diverges_from_exam_date": 0,
+      "current_law_unresolved": 0,
+      "exam_date_version_unresolved": 0,
+      "not_applicable": 0,
+      "synthetic_fixture": 0
+    }
+  },
+  "sourceIds": [
+    "law-source-admin-appeals-act",
+    "law-source-admin-litigation-act",
+    "law-source-admin-procedure-act",
+    "law-source-appraiser-act",
+    "law-source-appraiser-act-enforcement-decree",
+    "law-source-appraiser-act-enforcement-rule",
+    "law-source-land-compensation-act",
+    "law-source-land-compensation-act-enforcement-decree",
+    "law-source-land-compensation-act-enforcement-rule",
+    "law-source-real-estate-price-disclosure-act"
+  ],
+  "sourceAnchorIds": [
+    "law-anchor-admin-appeals-act-current-candidate",
+    "law-anchor-admin-litigation-act-current-candidate",
+    "law-anchor-admin-procedure-act-current-candidate",
+    "law-anchor-appraiser-act-current-candidate",
+    "law-anchor-appraiser-act-enforcement-decree-current-candidate",
+    "law-anchor-appraiser-act-enforcement-rule-current-candidate",
+    "law-anchor-land-compensation-act-current-candidate",
+    "law-anchor-land-compensation-act-enforcement-decree-current-candidate",
+    "law-anchor-land-compensation-act-enforcement-rule-current-candidate",
+    "law-anchor-real-estate-price-disclosure-act-current-candidate"
+  ],
+  "lawSourcesNeedingOfficialVerification": [
+    "law-source-admin-appeals-act",
+    "law-source-admin-litigation-act",
+    "law-source-admin-procedure-act",
+    "law-source-appraiser-act",
+    "law-source-appraiser-act-enforcement-decree",
+    "law-source-appraiser-act-enforcement-rule",
+    "law-source-land-compensation-act",
+    "law-source-land-compensation-act-enforcement-decree",
+    "law-source-land-compensation-act-enforcement-rule",
+    "law-source-real-estate-price-disclosure-act"
+  ],
+  "lawSourcesWithOpenBlockers": [
+    "law-source-admin-appeals-act",
+    "law-source-admin-litigation-act",
+    "law-source-admin-procedure-act",
+    "law-source-appraiser-act",
+    "law-source-appraiser-act-enforcement-decree",
+    "law-source-appraiser-act-enforcement-rule",
+    "law-source-land-compensation-act",
+    "law-source-land-compensation-act-enforcement-decree",
+    "law-source-land-compensation-act-enforcement-rule",
+    "law-source-real-estate-price-disclosure-act"
+  ],
+  "blockedReleasePackageLinkIds": [],
+  "metadataOnly": true,
+  "safeUse": "s208_law_source_version_validation_only"
+}
