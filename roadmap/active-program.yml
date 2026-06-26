@@ -16,176 +16,183 @@ items:
     priority: 1
   - id: S201
     title: Official Second-Round Syllabus and Exam Rule Registry
-    status: queued
+    status: completed
     dependencies: [S200]
     lockGroup: official-curriculum
     risk: high
     priority: 2
   - id: S202
     title: Historical Question Source and Rights Registry
-    status: queued
+    status: completed
     dependencies: [S200]
     lockGroup: question-rights
     risk: high
     priority: 3
+  - id: S200R
+    title: Dabangil Premium Second-Round Control OS Alignment
+    status: completed
+    dependencies: [S201, S202]
+    lockGroup: constitution
+    risk: medium
+    priority: 4
   - id: S203
     title: Canonical Second-Round Question Schema and Ingestion
     status: queued
-    dependencies: [S201, S202]
+    dependencies: [S200R, S201, S202]
     lockGroup: question-ingestion
     risk: high
-    priority: 4
+    priority: 5
   - id: S204
     title: Answer Submission OCR Confirmation and Durable Save
     status: queued
-    dependencies: [S200]
+    dependencies: [S200R]
     lockGroup: answer-capture
     risk: high
-    priority: 5
+    priority: 6
   - id: S205
     title: Common Rubric Evidence and Practice Score Range Contract
     status: queued
-    dependencies: [S201, S204]
+    dependencies: [S200R, S201, S204]
     lockGroup: grading-contract
     risk: high
-    priority: 6
+    priority: 7
   - id: S206
     title: Rewrite Regrade and Answer History Foundation
     status: queued
     dependencies: [S204, S205]
     lockGroup: rewrite-history
     risk: high
-    priority: 7
+    priority: 8
   - id: S207
     title: Verified Reference Answer Package Schema
     status: queued
     dependencies: [S201, S203]
     lockGroup: reference-answer-schema
     risk: high
-    priority: 8
+    priority: 9
   - id: S208
     title: Law Source Corpus and Exam-Date Version Validator
     status: queued
     dependencies: [S201, S203]
     lockGroup: law-grounding
     risk: high
-    priority: 9
+    priority: 10
   - id: S209
     title: Theory Concept Corpus and Validator
     status: queued
     dependencies: [S201, S203]
     lockGroup: theory-grounding
     risk: high
-    priority: 10
+    priority: 11
   - id: S210
     title: Practice Calculation Unit OCR and Supported-Type Validator
     status: queued
-    dependencies: [S201, S203]
+    dependencies: [S200R, S201, S203]
     lockGroup: practice-validation
     risk: high
-    priority: 11
+    priority: 12
   - id: S211
     title: Law Answer Review and Grading Engine
     status: queued
     dependencies: [S205, S207, S208]
     lockGroup: law-answer-engine
     risk: high
-    priority: 12
+    priority: 13
   - id: S212
     title: Theory Answer Review and Grading Engine
     status: queued
     dependencies: [S205, S207, S209]
     lockGroup: theory-answer-engine
     risk: high
-    priority: 13
+    priority: 14
   - id: S213
     title: Practice Answer Review Calculation and Grading Engine
     status: queued
     dependencies: [S205, S207, S210]
     lockGroup: practice-answer-engine
     risk: high
-    priority: 14
+    priority: 15
   - id: S214
     title: Multi-Candidate Historical Reference Answer Pipeline
     status: queued
     dependencies: [S207, S208, S209, S210]
     lockGroup: reference-answer-generation
     risk: high
-    priority: 15
+    priority: 16
   - id: S215
     title: Reference Answer Critic Consensus and Release Gate
     status: queued
     dependencies: [S211, S212, S213, S214]
     lockGroup: reference-answer-release
     risk: high
-    priority: 16
+    priority: 17
   - id: S216
     title: Automatic Error Notebook and Gap Taxonomy
     status: queued
     dependencies: [S206, S211, S212, S213]
     lockGroup: error-notebook
     risk: high
-    priority: 17
+    priority: 18
   - id: S217
     title: Personal Core Concept Graph and Recovery State
     status: queued
     dependencies: [S216]
     lockGroup: concept-graph
     risk: high
-    priority: 18
+    priority: 19
   - id: S218
     title: Similar Past Question Review and Rewrite Scheduler
     status: queued
     dependencies: [S203, S217]
     lockGroup: review-scheduler
     risk: high
-    priority: 19
+    priority: 20
   - id: S219
-    title: Learner and Academy Commercial Catalog and Usage Ledger
+    title: Dabangil Learner Catalog and Future Usage Ledger
     status: queued
-    dependencies: [S200]
+    dependencies: [S200R]
     lockGroup: commercial-catalog
     risk: high
-    priority: 20
+    priority: 21
   - id: S220
     title: Billing Entitlement Credit Packs and Idempotent Usage
     status: queued
     dependencies: [S219]
     lockGroup: billing
     risk: high
-    priority: 21
+    priority: 22
   - id: S221
     title: Paid Trust Privacy Export Delete and Cost Guardrails
     status: queued
     dependencies: [S204, S220]
     lockGroup: paid-trust
     risk: high
-    priority: 22
+    priority: 23
   - id: S222
     title: Academy Answer Operations Console and Tenant Boundary
     status: queued
     dependencies: [S211, S212, S213, S220, S221]
     lockGroup: academy-console
     risk: high
-    priority: 23
+    priority: 24
   - id: S223
     title: Three-Subject Corpus Reference Answer and Quality Acceptance
     status: queued
     dependencies: [S203, S208, S209, S210, S215]
     lockGroup: content-acceptance
     risk: high
-    priority: 24
+    priority: 25
   - id: S224
-    title: Three-Subject Learner Free Core Intensive Runtime Acceptance
+    title: Three-Subject Learner Dabangil Runtime Acceptance
     status: queued
     dependencies: [S206, S215, S217, S218, S220, S221]
     lockGroup: learner-acceptance
     risk: high
-    priority: 25
+    priority: 26
   - id: S225
     title: Full Second-Round Public Paid Launch Acceptance
     status: queued
     dependencies: [S222, S223, S224]
     lockGroup: release
     risk: high
-    priority: 26
+    priority: 27

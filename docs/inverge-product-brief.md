@@ -1,11 +1,21 @@
-# Inverge Product Brief — 감정평가사 2차 전과목
+# Inverge / 답안길 Product Brief — 감정평가사 2차 Premium OS
 
 - 결정일: 2026-06-25
+- S200R 정렬일: 2026-06-26
 - 상세 Source of Truth: `docs/inverge-second-round-final-product-spec.md`
+- Premium OS brief: `docs/dabangil-second-exam-premium-os.md`
 
 ## 1. Core Definition
 
-Inverge는 **감정평가사 2차 전과목 답안 완성 OS**다.
+Inverge는 내부 codename 및 repository name이다.
+
+Learner-facing brand는 **답안길**이다.
+
+Premium product는 **답안길 2차 합격관제 OS**다.
+
+사용자에게 보이는 핵심 포지셔닝:
+
+> 감평 2차 실무·이론·법규 답안을 시험일까지 운영해주는 합격관제 OS
 
 지원 범위:
 
@@ -25,11 +35,12 @@ Inverge는 **감정평가사 2차 전과목 답안 완성 OS**다.
 기출 선택
 → 답안 작성·촬영
 → OCR 확인
-→ 연습채점·정밀첨삭
+→ Evidence Review / 답안 검토 리포트
 → 가장 큰 간극 확인
-→ Inverge 검증형 기준답안 전체 보기
+→ 다음 행동 1개
+→ 검증형 학습 기준답안 보기
 → 답안 비교
-→ 재작성·재채점
+→ 재작성·다시 계산
 → 자동 오답노트·핵심개념 추적
 → 다음 복습·유사 기출
 ```
@@ -38,26 +49,30 @@ Inverge는 **감정평가사 2차 전과목 답안 완성 OS**다.
 
 ## 3. Learner Promise
 
-Inverge는 다음을 제공한다.
+답안길은 다음을 제공한다.
 
-- 세 과목 전체 기출 아카이브
+- 세 과목 source/rights metadata 기반 기출 운영
 - 사진·PDF·텍스트 답안 입력
 - OCR 확인·수정
+- Evidence Review / 답안 검토 리포트
+- 가장 큰 간극 1개
+- 다음 행동 1개
 - 예상 점수 범위와 신뢰도
 - 루브릭별 감점 근거
-- 가장 큰 간극 1개
 - 누락 논점·약한 문단·계산 오류
+- GIII 실무 루틴
 - 시험시간형 전체 기준답안
 - 학습용 확장 기준답안
 - 답안 전후 비교
-- 재작성 후 재채점
+- 재작성·다시 계산 후 재검토
 - 자동 오답노트
 - 개인 핵심개념 그래프
 - 반복 약점과 유사 기출 추천
+- Today Plan max three
 
 ## 4. Reference Answer Policy
 
-공식 답안이 없는 기출에는 **Inverge 검증형 기준답안**을 제공한다.
+공식 답안이 없는 기출에는 **답안길 검증형 학습 기준답안**을 제공한다.
 
 이는 공식 모범답안이나 공식 채점기준이 아니다. 다음 절차를 통과해야 공개할 수 있다.
 
@@ -103,6 +118,9 @@ Inverge는 다음을 제공한다.
 
 핵심 품질:
 
+- fixed calculator model: `casio_fx_9860giii`
+- reset-safe hand-keyed GIII routine
+- no stored-program dependency
 - deterministic recalculation
 - 단위·차원 검사
 - 역산 검산
@@ -129,7 +147,7 @@ Inverge는 다음을 제공한다.
 
 ### Learner app
 
-- 기출 아카이브
+- source/rights metadata 기반 기출 운영
 - 답안 작성·촬영
 - 연습채점·첨삭
 - 검증형 기준답안
@@ -154,27 +172,38 @@ Inverge는 전문가 검수 소비자 상품을 판매하지 않는다.
 
 ## 8. Commercial Shape
 
-- Free: 평생 full review 1회
-- Core: 월 79,000원 가설, 월 30회
-- Intensive: 월 149,000원 가설, 월 80회
+- `free`: 0 KRW, 평생 full-value review 1회
+- `second_os_basic`: 월 59,000~69,000원 가설
+- `second_os_pro`: 월 119,000~149,000원 가설
+- `second_control_premium`: 월 249,000~299,000원 가설
+- `deep_review_5`: 49,000원 가설
+- `deep_review_15`: 129,000원 가설
+- `deep_review_40`: 299,000원 가설
+- `managed_cohort`: 690,000~990,000원 / 8 weeks, later only disabled
+- `season_pass`: later only disabled
 - Academy Team: 월 1,490,000원 가설
 - Academy Pro: 월 3,900,000원 가설
 - Enterprise: 월 7,000,000원부터 가설
 
-무제한 요금제, 전문가 첨삭 중개, 합격 보장 상품은 만들지 않는다.
+No unlimited second-exam precision review, 전문가 첨삭 중개, 합격 보장 상품은 만들지 않는다.
 
-가격은 paid beta 데이터로 검증하되 구현 구조는 credit, entitlement, overage, refund, privacy, cost guardrail을 지원해야 한다.
+가격은 paid beta 데이터로 검증하되 구현 구조는 configurable catalog, entitlement, usage ledger, refund, privacy, cost guardrail을 지원해야 한다.
 
 ## 9. Required Framing
 
 사용 권장:
 
-- 감정평가사 2차 전과목 답안 완성 OS
+- 답안길
+- 답안길 2차 합격관제 OS
+- 감평 2차 실무·이론·법규 답안을 시험일까지 운영해주는 합격관제 OS
+- Evidence Review
+- 답안 검토 리포트
+- 합격관제 리포트
 - 연습점수 범위
-- 정밀첨삭
-- Inverge 검증형 기준답안
 - 가장 큰 간극
-- 다시쓰기·재채점
+- 다음 행동
+- 재작성·다시 계산
+- GIII 실무 루틴
 - 자동 오답노트·핵심개념
 
 사용 금지:
@@ -201,6 +230,9 @@ Inverge는 전문가 검수 소비자 상품을 판매하지 않는다.
 ## 11. Documentation Map
 
 - 최종 제품 명세: `docs/inverge-second-round-final-product-spec.md`
+- S200R premium OS brief: `docs/dabangil-second-exam-premium-os.md`
+- GIII 실무 루틴 정책: `docs/dabangil-giii-practical-routine.md`
+- Deep Review Unit 정책: `docs/dabangil-deep-review-unit-policy.md`
 - 공장 실행 순서: `roadmap/active-program.yml`
 - 에이전트 헌법: `AGENTS.md`
 - 사업모델: `docs/inverge-business-model.md`

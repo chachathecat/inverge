@@ -43,6 +43,7 @@ const defaultTestFiles = [
   "tests/legal-anchor-verification-apply.test.mjs",
   "tests/capture-legal-grounding-hook.test.mjs",
   "tests/official-syllabus-registry.test.mjs",
+  "tests/dabangil-premium-alignment.test.mjs",
   "tests/qnet-historical-materials-batch-plan.test.mjs",
   "tests/qnet-official-materials-reference.test.mjs",
   "tests/qnet-reference-intelligence-report.test.mjs",
