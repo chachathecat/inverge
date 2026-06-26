@@ -8,6 +8,7 @@
     "typecheck": "tsc --noEmit --pretty false",
     "agent-factory:plan": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs scripts/agent-factory-plan.mjs",
     "agent-factory:watch": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs scripts/agent-factory-watch.mjs",
+    "agent-factory:doctor-pr-body": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs scripts/agent-factory-doctor-pr-body.mjs",
     "start": "next start",
     "lint": "eslint",
     "test": "node scripts/run-node-tests.mjs",
