@@ -1,0 +1,805 @@
+{
+  "schemaVersion": "2026-06-25.s202.v1",
+  "reportType": "appraiser_second_round_source_rights_coverage",
+  "generatedBy": "scripts/validate-second-round-source-rights-registry.mjs",
+  "generatedAt": "2026-06-25T00:00:00.000Z",
+  "coverageBasis": "committed_qnet_metadata_2020_2025",
+  "sourceRegistryPath": "reference_corpus/official_materials/appraiser/second_round_source_registry.json",
+  "rightsRegistryPath": "reference_corpus/official_materials/appraiser/second_round_rights_registry.json",
+  "storagePolicy": {
+    "metadataOnly": true,
+    "rawOfficialFileStored": false,
+    "rawQuestionTextStored": false,
+    "rawAnswerTextStored": false,
+    "rawOcrTextStored": false,
+    "learnerDataStored": false,
+    "thirdPartyAcademyContentStored": false
+  },
+  "totals": {
+    "expectedSourceSlots": 18,
+    "registeredSourceCount": 16,
+    "gapCount": 18,
+    "missingSourceCount": 2,
+    "rightsBlockedCount": 16,
+    "metadataEligibleForS203Count": 16,
+    "problemTextEligibleForS203Count": 0,
+    "learnerPublicationEligibleCount": 0,
+    "rightsStatusCounts": {
+      "needs_legal_review": 18
+    },
+    "displayModeCounts": {
+      "metadata_and_link": 18
+    },
+    "hashStatusCounts": {
+      "not_applicable": 2,
+      "not_fetched": 16
+    },
+    "extractionStatusCounts": {
+      "metadata_only": 16,
+      "not_started": 2
+    }
+  },
+  "matrix": [
+    {
+      "coverageId": "appraiser-second-2020-31-practice",
+      "examYear": 2020,
+      "examRound": 31,
+      "subject": "practice",
+      "paperOrSession": "2차 1교시: 감정평가실무",
+      "sourceDiscoveryStatus": "verified",
+      "sourceId": "qnet-appraiser-2020-31-second-2-1-source-90182b487fb7",
+      "artifactKind": "pdf",
+      "hashStatus": "not_fetched",
+      "rightsStatus": "needs_legal_review",
+      "displayMode": "metadata_and_link",
+      "extractionStatus": "metadata_only",
+      "gapStatus": "rights_blocked",
+      "operationalNote": "Registered source is metadata-only and rights-blocked for raw display until legal review clears broader use.",
+      "s203Consumption": {
+        "metadataEligible": true,
+        "problemTextEligible": false,
+        "learnerPublicationEligible": false
+      }
+    },
+    {
+      "coverageId": "appraiser-second-2020-31-theory",
+      "examYear": 2020,
+      "examRound": 31,
+      "subject": "theory",
+      "paperOrSession": "2차 2교시: 감정평가이론",
+      "sourceDiscoveryStatus": "verified",
+      "sourceId": "qnet-appraiser-2020-31-second-2-2-source-84bad0cc9bd2",
+      "artifactKind": "pdf",
+      "hashStatus": "not_fetched",
+      "rightsStatus": "needs_legal_review",
+      "displayMode": "metadata_and_link",
+      "extractionStatus": "metadata_only",
+      "gapStatus": "rights_blocked",
+      "operationalNote": "Registered source is metadata-only and rights-blocked for raw display until legal review clears broader use.",
+      "s203Consumption": {
+        "metadataEligible": true,
+        "problemTextEligible": false,
+        "learnerPublicationEligible": false
+      }
+    },
+    {
+      "coverageId": "appraiser-second-2020-31-law",
+      "examYear": 2020,
+      "examRound": 31,
+      "subject": "law",
+      "paperOrSession": "2차 3교시: 감정평가 및 보상법규",
+      "sourceDiscoveryStatus": "verified",
+      "sourceId": "qnet-appraiser-2020-31-second-2-3-source-bc618fa032f4",
+      "artifactKind": "pdf",
+      "hashStatus": "not_fetched",
+      "rightsStatus": "needs_legal_review",
+      "displayMode": "metadata_and_link",
+      "extractionStatus": "metadata_only",
+      "gapStatus": "rights_blocked",
+      "operationalNote": "Registered source is metadata-only and rights-blocked for raw display until legal review clears broader use.",
+      "s203Consumption": {
+        "metadataEligible": true,
+        "problemTextEligible": false,
+        "learnerPublicationEligible": false
+      }
+    },
+    {
+      "coverageId": "appraiser-second-2021-32-practice",
+      "examYear": 2021,
+      "examRound": 32,
+      "subject": "practice",
+      "paperOrSession": "2차 1교시: 감정평가실무",
+      "sourceDiscoveryStatus": "verified",
+      "sourceId": "qnet-appraiser-2021-32-second-2-source-9b107fbeee1d",
+      "artifactKind": "pdf",
+      "hashStatus": "not_fetched",
+      "rightsStatus": "needs_legal_review",
+      "displayMode": "metadata_and_link",
+      "extractionStatus": "metadata_only",
+      "gapStatus": "rights_blocked",
+      "operationalNote": "Registered source is metadata-only and rights-blocked for raw display until legal review clears broader use.",
+      "s203Consumption": {
+        "metadataEligible": true,
+        "problemTextEligible": false,
+        "learnerPublicationEligible": false
+      }
+    },
+    {
+      "coverageId": "appraiser-second-2021-32-theory",
+      "examYear": 2021,
+      "examRound": 32,
+      "subject": "theory",
+      "paperOrSession": "2차 2교시: 감정평가이론",
+      "sourceDiscoveryStatus": "not_found",
+      "sourceId": null,
+      "artifactKind": null,
+      "hashStatus": "not_applicable",
+      "rightsStatus": "needs_legal_review",
+      "displayMode": "metadata_and_link",
+      "extractionStatus": "not_started",
+      "gapStatus": "not_found",
+      "operationalNote": "Expected 2차 subject slot is absent from committed Q-Net metadata; manual source review required.",
+      "s203Consumption": {
+        "metadataEligible": false,
+        "problemTextEligible": false,
+        "learnerPublicationEligible": false
+      }
+    },
+    {
+      "coverageId": "appraiser-second-2021-32-law",
+      "examYear": 2021,
+      "examRound": 32,
+      "subject": "law",
+      "paperOrSession": "2차 3교시: 감정평가 및 보상법규",
+      "sourceDiscoveryStatus": "not_found",
+      "sourceId": null,
+      "artifactKind": null,
+      "hashStatus": "not_applicable",
+      "rightsStatus": "needs_legal_review",
+      "displayMode": "metadata_and_link",
+      "extractionStatus": "not_started",
+      "gapStatus": "not_found",
+      "operationalNote": "Expected 2차 subject slot is absent from committed Q-Net metadata; manual source review required.",
+      "s203Consumption": {
+        "metadataEligible": false,
+        "problemTextEligible": false,
+        "learnerPublicationEligible": false
+      }
+    },
+    {
+      "coverageId": "appraiser-second-2022-33-practice",
+      "examYear": 2022,
+      "examRound": 33,
+      "subject": "practice",
+      "paperOrSession": "2차 1교시: 감정평가실무",
+      "sourceDiscoveryStatus": "verified",
+      "sourceId": "qnet-appraiser-2022-33-second-2-1-source-59a35ceaa518",
+      "artifactKind": "pdf",
+      "hashStatus": "not_fetched",
+      "rightsStatus": "needs_legal_review",
+      "displayMode": "metadata_and_link",
+      "extractionStatus": "metadata_only",
+      "gapStatus": "rights_blocked",
+      "operationalNote": "Registered source is metadata-only and rights-blocked for raw display until legal review clears broader use.",
+      "s203Consumption": {
+        "metadataEligible": true,
+        "problemTextEligible": false,
+        "learnerPublicationEligible": false
+      }
+    },
+    {
+      "coverageId": "appraiser-second-2022-33-theory",
+      "examYear": 2022,
+      "examRound": 33,
+      "subject": "theory",
+      "paperOrSession": "2차 2교시: 감정평가이론",
+      "sourceDiscoveryStatus": "verified",
+      "sourceId": "qnet-appraiser-2022-33-second-2-2-source-c11b8f5f883a",
+      "artifactKind": "pdf",
+      "hashStatus": "not_fetched",
+      "rightsStatus": "needs_legal_review",
+      "displayMode": "metadata_and_link",
+      "extractionStatus": "metadata_only",
+      "gapStatus": "rights_blocked",
+      "operationalNote": "Registered source is metadata-only and rights-blocked for raw display until legal review clears broader use.",
+      "s203Consumption": {
+        "metadataEligible": true,
+        "problemTextEligible": false,
+        "learnerPublicationEligible": false
+      }
+    },
+    {
+      "coverageId": "appraiser-second-2022-33-law",
+      "examYear": 2022,
+      "examRound": 33,
+      "subject": "law",
+      "paperOrSession": "2차 3교시: 감정평가 및 보상법규",
+      "sourceDiscoveryStatus": "verified",
+      "sourceId": "qnet-appraiser-2022-33-second-2-3-source-4170ede66222",
+      "artifactKind": "pdf",
+      "hashStatus": "not_fetched",
+      "rightsStatus": "needs_legal_review",
+      "displayMode": "metadata_and_link",
+      "extractionStatus": "metadata_only",
+      "gapStatus": "rights_blocked",
+      "operationalNote": "Registered source is metadata-only and rights-blocked for raw display until legal review clears broader use.",
+      "s203Consumption": {
+        "metadataEligible": true,
+        "problemTextEligible": false,
+        "learnerPublicationEligible": false
+      }
+    },
+    {
+      "coverageId": "appraiser-second-2023-34-practice",
+      "examYear": 2023,
+      "examRound": 34,
+      "subject": "practice",
+      "paperOrSession": "2차 1교시: 감정평가실무",
+      "sourceDiscoveryStatus": "verified",
+      "sourceId": "qnet-appraiser-2023-34-second-2-1-source-45cafa75489e",
+      "artifactKind": "pdf",
+      "hashStatus": "not_fetched",
+      "rightsStatus": "needs_legal_review",
+      "displayMode": "metadata_and_link",
+      "extractionStatus": "metadata_only",
+      "gapStatus": "rights_blocked",
+      "operationalNote": "Registered source is metadata-only and rights-blocked for raw display until legal review clears broader use.",
+      "s203Consumption": {
+        "metadataEligible": true,
+        "problemTextEligible": false,
+        "learnerPublicationEligible": false
+      }
+    },
+    {
+      "coverageId": "appraiser-second-2023-34-theory",
+      "examYear": 2023,
+      "examRound": 34,
+      "subject": "theory",
+      "paperOrSession": "2차 2교시: 감정평가이론",
+      "sourceDiscoveryStatus": "verified",
+      "sourceId": "qnet-appraiser-2023-34-second-2-2-source-a166effa9409",
+      "artifactKind": "pdf",
+      "hashStatus": "not_fetched",
+      "rightsStatus": "needs_legal_review",
+      "displayMode": "metadata_and_link",
+      "extractionStatus": "metadata_only",
+      "gapStatus": "rights_blocked",
+      "operationalNote": "Registered source is metadata-only and rights-blocked for raw display until legal review clears broader use.",
+      "s203Consumption": {
+        "metadataEligible": true,
+        "problemTextEligible": false,
+        "learnerPublicationEligible": false
+      }
+    },
+    {
+      "coverageId": "appraiser-second-2023-34-law",
+      "examYear": 2023,
+      "examRound": 34,
+      "subject": "law",
+      "paperOrSession": "2차 3교시: 감정평가 및 보상법규",
+      "sourceDiscoveryStatus": "verified",
+      "sourceId": "qnet-appraiser-2023-34-second-2-3-source-aa2fcb58c0ab",
+      "artifactKind": "pdf",
+      "hashStatus": "not_fetched",
+      "rightsStatus": "needs_legal_review",
+      "displayMode": "metadata_and_link",
+      "extractionStatus": "metadata_only",
+      "gapStatus": "rights_blocked",
+      "operationalNote": "Registered source is metadata-only and rights-blocked for raw display until legal review clears broader use.",
+      "s203Consumption": {
+        "metadataEligible": true,
+        "problemTextEligible": false,
+        "learnerPublicationEligible": false
+      }
+    },
+    {
+      "coverageId": "appraiser-second-2024-35-practice",
+      "examYear": 2024,
+      "examRound": 35,
+      "subject": "practice",
+      "paperOrSession": "2차 1교시: 감정평가실무",
+      "sourceDiscoveryStatus": "verified",
+      "sourceId": "qnet-appraiser-2024-35-second-2-source-0861c2c08e60",
+      "artifactKind": "pdf",
+      "hashStatus": "not_fetched",
+      "rightsStatus": "needs_legal_review",
+      "displayMode": "metadata_and_link",
+      "extractionStatus": "metadata_only",
+      "gapStatus": "rights_blocked",
+      "operationalNote": "Registered source is metadata-only and rights-blocked for raw display until legal review clears broader use.",
+      "s203Consumption": {
+        "metadataEligible": true,
+        "problemTextEligible": false,
+        "learnerPublicationEligible": false
+      }
+    },
+    {
+      "coverageId": "appraiser-second-2024-35-theory",
+      "examYear": 2024,
+      "examRound": 35,
+      "subject": "theory",
+      "paperOrSession": "2차 2교시: 감정평가이론",
+      "sourceDiscoveryStatus": "verified",
+      "sourceId": "qnet-appraiser-2024-35-second-2-source-cdacf02c52f1",
+      "artifactKind": "pdf",
+      "hashStatus": "not_fetched",
+      "rightsStatus": "needs_legal_review",
+      "displayMode": "metadata_and_link",
+      "extractionStatus": "metadata_only",
+      "gapStatus": "rights_blocked",
+      "operationalNote": "Registered source is metadata-only and rights-blocked for raw display until legal review clears broader use.",
+      "s203Consumption": {
+        "metadataEligible": true,
+        "problemTextEligible": false,
+        "learnerPublicationEligible": false
+      }
+    },
+    {
+      "coverageId": "appraiser-second-2024-35-law",
+      "examYear": 2024,
+      "examRound": 35,
+      "subject": "law",
+      "paperOrSession": "2차 3교시: 감정평가 및 보상법규",
+      "sourceDiscoveryStatus": "verified",
+      "sourceId": "qnet-appraiser-2024-35-second-2-source-917a9393c990",
+      "artifactKind": "pdf",
+      "hashStatus": "not_fetched",
+      "rightsStatus": "needs_legal_review",
+      "displayMode": "metadata_and_link",
+      "extractionStatus": "metadata_only",
+      "gapStatus": "rights_blocked",
+      "operationalNote": "Registered source is metadata-only and rights-blocked for raw display until legal review clears broader use.",
+      "s203Consumption": {
+        "metadataEligible": true,
+        "problemTextEligible": false,
+        "learnerPublicationEligible": false
+      }
+    },
+    {
+      "coverageId": "appraiser-second-2025-36-practice",
+      "examYear": 2025,
+      "examRound": 36,
+      "subject": "practice",
+      "paperOrSession": "2차 1교시: 감정평가실무",
+      "sourceDiscoveryStatus": "verified",
+      "sourceId": "qnet-appraiser-2025-36-second-2-source-bcaf19723c1d",
+      "artifactKind": "pdf",
+      "hashStatus": "not_fetched",
+      "rightsStatus": "needs_legal_review",
+      "displayMode": "metadata_and_link",
+      "extractionStatus": "metadata_only",
+      "gapStatus": "rights_blocked",
+      "operationalNote": "Registered source is metadata-only and rights-blocked for raw display until legal review clears broader use.",
+      "s203Consumption": {
+        "metadataEligible": true,
+        "problemTextEligible": false,
+        "learnerPublicationEligible": false
+      }
+    },
+    {
+      "coverageId": "appraiser-second-2025-36-theory",
+      "examYear": 2025,
+      "examRound": 36,
+      "subject": "theory",
+      "paperOrSession": "2차 2교시: 감정평가이론",
+      "sourceDiscoveryStatus": "verified",
+      "sourceId": "qnet-appraiser-2025-36-second-2-source-5e365143ea1b",
+      "artifactKind": "pdf",
+      "hashStatus": "not_fetched",
+      "rightsStatus": "needs_legal_review",
+      "displayMode": "metadata_and_link",
+      "extractionStatus": "metadata_only",
+      "gapStatus": "rights_blocked",
+      "operationalNote": "Registered source is metadata-only and rights-blocked for raw display until legal review clears broader use.",
+      "s203Consumption": {
+        "metadataEligible": true,
+        "problemTextEligible": false,
+        "learnerPublicationEligible": false
+      }
+    },
+    {
+      "coverageId": "appraiser-second-2025-36-law",
+      "examYear": 2025,
+      "examRound": 36,
+      "subject": "law",
+      "paperOrSession": "2차 3교시: 감정평가 및 보상법규",
+      "sourceDiscoveryStatus": "verified",
+      "sourceId": "qnet-appraiser-2025-36-second-2-source-c7d7a2d7ef75",
+      "artifactKind": "pdf",
+      "hashStatus": "not_fetched",
+      "rightsStatus": "needs_legal_review",
+      "displayMode": "metadata_and_link",
+      "extractionStatus": "metadata_only",
+      "gapStatus": "rights_blocked",
+      "operationalNote": "Registered source is metadata-only and rights-blocked for raw display until legal review clears broader use.",
+      "s203Consumption": {
+        "metadataEligible": true,
+        "problemTextEligible": false,
+        "learnerPublicationEligible": false
+      }
+    }
+  ],
+  "coverageGaps": [
+    {
+      "coverageId": "appraiser-second-2020-31-practice",
+      "examYear": 2020,
+      "examRound": 31,
+      "subject": "practice",
+      "paperOrSession": "2차 1교시: 감정평가실무",
+      "sourceDiscoveryStatus": "verified",
+      "sourceId": "qnet-appraiser-2020-31-second-2-1-source-90182b487fb7",
+      "artifactKind": "pdf",
+      "hashStatus": "not_fetched",
+      "rightsStatus": "needs_legal_review",
+      "displayMode": "metadata_and_link",
+      "extractionStatus": "metadata_only",
+      "gapStatus": "rights_blocked",
+      "operationalNote": "Registered source is metadata-only and rights-blocked for raw display until legal review clears broader use.",
+      "s203Consumption": {
+        "metadataEligible": true,
+        "problemTextEligible": false,
+        "learnerPublicationEligible": false
+      }
+    },
+    {
+      "coverageId": "appraiser-second-2020-31-theory",
+      "examYear": 2020,
+      "examRound": 31,
+      "subject": "theory",
+      "paperOrSession": "2차 2교시: 감정평가이론",
+      "sourceDiscoveryStatus": "verified",
+      "sourceId": "qnet-appraiser-2020-31-second-2-2-source-84bad0cc9bd2",
+      "artifactKind": "pdf",
+      "hashStatus": "not_fetched",
+      "rightsStatus": "needs_legal_review",
+      "displayMode": "metadata_and_link",
+      "extractionStatus": "metadata_only",
+      "gapStatus": "rights_blocked",
+      "operationalNote": "Registered source is metadata-only and rights-blocked for raw display until legal review clears broader use.",
+      "s203Consumption": {
+        "metadataEligible": true,
+        "problemTextEligible": false,
+        "learnerPublicationEligible": false
+      }
+    },
+    {
+      "coverageId": "appraiser-second-2020-31-law",
+      "examYear": 2020,
+      "examRound": 31,
+      "subject": "law",
+      "paperOrSession": "2차 3교시: 감정평가 및 보상법규",
+      "sourceDiscoveryStatus": "verified",
+      "sourceId": "qnet-appraiser-2020-31-second-2-3-source-bc618fa032f4",
+      "artifactKind": "pdf",
+      "hashStatus": "not_fetched",
+      "rightsStatus": "needs_legal_review",
+      "displayMode": "metadata_and_link",
+      "extractionStatus": "metadata_only",
+      "gapStatus": "rights_blocked",
+      "operationalNote": "Registered source is metadata-only and rights-blocked for raw display until legal review clears broader use.",
+      "s203Consumption": {
+        "metadataEligible": true,
+        "problemTextEligible": false,
+        "learnerPublicationEligible": false
+      }
+    },
+    {
+      "coverageId": "appraiser-second-2021-32-practice",
+      "examYear": 2021,
+      "examRound": 32,
+      "subject": "practice",
+      "paperOrSession": "2차 1교시: 감정평가실무",
+      "sourceDiscoveryStatus": "verified",
+      "sourceId": "qnet-appraiser-2021-32-second-2-source-9b107fbeee1d",
+      "artifactKind": "pdf",
+      "hashStatus": "not_fetched",
+      "rightsStatus": "needs_legal_review",
+      "displayMode": "metadata_and_link",
+      "extractionStatus": "metadata_only",
+      "gapStatus": "rights_blocked",
+      "operationalNote": "Registered source is metadata-only and rights-blocked for raw display until legal review clears broader use.",
+      "s203Consumption": {
+        "metadataEligible": true,
+        "problemTextEligible": false,
+        "learnerPublicationEligible": false
+      }
+    },
+    {
+      "coverageId": "appraiser-second-2021-32-theory",
+      "examYear": 2021,
+      "examRound": 32,
+      "subject": "theory",
+      "paperOrSession": "2차 2교시: 감정평가이론",
+      "sourceDiscoveryStatus": "not_found",
+      "sourceId": null,
+      "artifactKind": null,
+      "hashStatus": "not_applicable",
+      "rightsStatus": "needs_legal_review",
+      "displayMode": "metadata_and_link",
+      "extractionStatus": "not_started",
+      "gapStatus": "not_found",
+      "operationalNote": "Expected 2차 subject slot is absent from committed Q-Net metadata; manual source review required.",
+      "s203Consumption": {
+        "metadataEligible": false,
+        "problemTextEligible": false,
+        "learnerPublicationEligible": false
+      }
+    },
+    {
+      "coverageId": "appraiser-second-2021-32-law",
+      "examYear": 2021,
+      "examRound": 32,
+      "subject": "law",
+      "paperOrSession": "2차 3교시: 감정평가 및 보상법규",
+      "sourceDiscoveryStatus": "not_found",
+      "sourceId": null,
+      "artifactKind": null,
+      "hashStatus": "not_applicable",
+      "rightsStatus": "needs_legal_review",
+      "displayMode": "metadata_and_link",
+      "extractionStatus": "not_started",
+      "gapStatus": "not_found",
+      "operationalNote": "Expected 2차 subject slot is absent from committed Q-Net metadata; manual source review required.",
+      "s203Consumption": {
+        "metadataEligible": false,
+        "problemTextEligible": false,
+        "learnerPublicationEligible": false
+      }
+    },
+    {
+      "coverageId": "appraiser-second-2022-33-practice",
+      "examYear": 2022,
+      "examRound": 33,
+      "subject": "practice",
+      "paperOrSession": "2차 1교시: 감정평가실무",
+      "sourceDiscoveryStatus": "verified",
+      "sourceId": "qnet-appraiser-2022-33-second-2-1-source-59a35ceaa518",
+      "artifactKind": "pdf",
+      "hashStatus": "not_fetched",
+      "rightsStatus": "needs_legal_review",
+      "displayMode": "metadata_and_link",
+      "extractionStatus": "metadata_only",
+      "gapStatus": "rights_blocked",
+      "operationalNote": "Registered source is metadata-only and rights-blocked for raw display until legal review clears broader use.",
+      "s203Consumption": {
+        "metadataEligible": true,
+        "problemTextEligible": false,
+        "learnerPublicationEligible": false
+      }
+    },
+    {
+      "coverageId": "appraiser-second-2022-33-theory",
+      "examYear": 2022,
+      "examRound": 33,
+      "subject": "theory",
+      "paperOrSession": "2차 2교시: 감정평가이론",
+      "sourceDiscoveryStatus": "verified",
+      "sourceId": "qnet-appraiser-2022-33-second-2-2-source-c11b8f5f883a",
+      "artifactKind": "pdf",
+      "hashStatus": "not_fetched",
+      "rightsStatus": "needs_legal_review",
+      "displayMode": "metadata_and_link",
+      "extractionStatus": "metadata_only",
+      "gapStatus": "rights_blocked",
+      "operationalNote": "Registered source is metadata-only and rights-blocked for raw display until legal review clears broader use.",
+      "s203Consumption": {
+        "metadataEligible": true,
+        "problemTextEligible": false,
+        "learnerPublicationEligible": false
+      }
+    },
+    {
+      "coverageId": "appraiser-second-2022-33-law",
+      "examYear": 2022,
+      "examRound": 33,
+      "subject": "law",
+      "paperOrSession": "2차 3교시: 감정평가 및 보상법규",
+      "sourceDiscoveryStatus": "verified",
+      "sourceId": "qnet-appraiser-2022-33-second-2-3-source-4170ede66222",
+      "artifactKind": "pdf",
+      "hashStatus": "not_fetched",
+      "rightsStatus": "needs_legal_review",
+      "displayMode": "metadata_and_link",
+      "extractionStatus": "metadata_only",
+      "gapStatus": "rights_blocked",
+      "operationalNote": "Registered source is metadata-only and rights-blocked for raw display until legal review clears broader use.",
+      "s203Consumption": {
+        "metadataEligible": true,
+        "problemTextEligible": false,
+        "learnerPublicationEligible": false
+      }
+    },
+    {
+      "coverageId": "appraiser-second-2023-34-practice",
+      "examYear": 2023,
+      "examRound": 34,
+      "subject": "practice",
+      "paperOrSession": "2차 1교시: 감정평가실무",
+      "sourceDiscoveryStatus": "verified",
+      "sourceId": "qnet-appraiser-2023-34-second-2-1-source-45cafa75489e",
+      "artifactKind": "pdf",
+      "hashStatus": "not_fetched",
+      "rightsStatus": "needs_legal_review",
+      "displayMode": "metadata_and_link",
+      "extractionStatus": "metadata_only",
+      "gapStatus": "rights_blocked",
+      "operationalNote": "Registered source is metadata-only and rights-blocked for raw display until legal review clears broader use.",
+      "s203Consumption": {
+        "metadataEligible": true,
+        "problemTextEligible": false,
+        "learnerPublicationEligible": false
+      }
+    },
+    {
+      "coverageId": "appraiser-second-2023-34-theory",
+      "examYear": 2023,
+      "examRound": 34,
+      "subject": "theory",
+      "paperOrSession": "2차 2교시: 감정평가이론",
+      "sourceDiscoveryStatus": "verified",
+      "sourceId": "qnet-appraiser-2023-34-second-2-2-source-a166effa9409",
+      "artifactKind": "pdf",
+      "hashStatus": "not_fetched",
+      "rightsStatus": "needs_legal_review",
+      "displayMode": "metadata_and_link",
+      "extractionStatus": "metadata_only",
+      "gapStatus": "rights_blocked",
+      "operationalNote": "Registered source is metadata-only and rights-blocked for raw display until legal review clears broader use.",
+      "s203Consumption": {
+        "metadataEligible": true,
+        "problemTextEligible": false,
+        "learnerPublicationEligible": false
+      }
+    },
+    {
+      "coverageId": "appraiser-second-2023-34-law",
+      "examYear": 2023,
+      "examRound": 34,
+      "subject": "law",
+      "paperOrSession": "2차 3교시: 감정평가 및 보상법규",
+      "sourceDiscoveryStatus": "verified",
+      "sourceId": "qnet-appraiser-2023-34-second-2-3-source-aa2fcb58c0ab",
+      "artifactKind": "pdf",
+      "hashStatus": "not_fetched",
+      "rightsStatus": "needs_legal_review",
+      "displayMode": "metadata_and_link",
+      "extractionStatus": "metadata_only",
+      "gapStatus": "rights_blocked",
+      "operationalNote": "Registered source is metadata-only and rights-blocked for raw display until legal review clears broader use.",
+      "s203Consumption": {
+        "metadataEligible": true,
+        "problemTextEligible": false,
+        "learnerPublicationEligible": false
+      }
+    },
+    {
+      "coverageId": "appraiser-second-2024-35-practice",
+      "examYear": 2024,
+      "examRound": 35,
+      "subject": "practice",
+      "paperOrSession": "2차 1교시: 감정평가실무",
+      "sourceDiscoveryStatus": "verified",
+      "sourceId": "qnet-appraiser-2024-35-second-2-source-0861c2c08e60",
+      "artifactKind": "pdf",
+      "hashStatus": "not_fetched",
+      "rightsStatus": "needs_legal_review",
+      "displayMode": "metadata_and_link",
+      "extractionStatus": "metadata_only",
+      "gapStatus": "rights_blocked",
+      "operationalNote": "Registered source is metadata-only and rights-blocked for raw display until legal review clears broader use.",
+      "s203Consumption": {
+        "metadataEligible": true,
+        "problemTextEligible": false,
+        "learnerPublicationEligible": false
+      }
+    },
+    {
+      "coverageId": "appraiser-second-2024-35-theory",
+      "examYear": 2024,
+      "examRound": 35,
+      "subject": "theory",
+      "paperOrSession": "2차 2교시: 감정평가이론",
+      "sourceDiscoveryStatus": "verified",
+      "sourceId": "qnet-appraiser-2024-35-second-2-source-cdacf02c52f1",
+      "artifactKind": "pdf",
+      "hashStatus": "not_fetched",
+      "rightsStatus": "needs_legal_review",
+      "displayMode": "metadata_and_link",
+      "extractionStatus": "metadata_only",
+      "gapStatus": "rights_blocked",
+      "operationalNote": "Registered source is metadata-only and rights-blocked for raw display until legal review clears broader use.",
+      "s203Consumption": {
+        "metadataEligible": true,
+        "problemTextEligible": false,
+        "learnerPublicationEligible": false
+      }
+    },
+    {
+      "coverageId": "appraiser-second-2024-35-law",
+      "examYear": 2024,
+      "examRound": 35,
+      "subject": "law",
+      "paperOrSession": "2차 3교시: 감정평가 및 보상법규",
+      "sourceDiscoveryStatus": "verified",
+      "sourceId": "qnet-appraiser-2024-35-second-2-source-917a9393c990",
+      "artifactKind": "pdf",
+      "hashStatus": "not_fetched",
+      "rightsStatus": "needs_legal_review",
+      "displayMode": "metadata_and_link",
+      "extractionStatus": "metadata_only",
+      "gapStatus": "rights_blocked",
+      "operationalNote": "Registered source is metadata-only and rights-blocked for raw display until legal review clears broader use.",
+      "s203Consumption": {
+        "metadataEligible": true,
+        "problemTextEligible": false,
+        "learnerPublicationEligible": false
+      }
+    },
+    {
+      "coverageId": "appraiser-second-2025-36-practice",
+      "examYear": 2025,
+      "examRound": 36,
+      "subject": "practice",
+      "paperOrSession": "2차 1교시: 감정평가실무",
+      "sourceDiscoveryStatus": "verified",
+      "sourceId": "qnet-appraiser-2025-36-second-2-source-bcaf19723c1d",
+      "artifactKind": "pdf",
+      "hashStatus": "not_fetched",
+      "rightsStatus": "needs_legal_review",
+      "displayMode": "metadata_and_link",
+      "extractionStatus": "metadata_only",
+      "gapStatus": "rights_blocked",
+      "operationalNote": "Registered source is metadata-only and rights-blocked for raw display until legal review clears broader use.",
+      "s203Consumption": {
+        "metadataEligible": true,
+        "problemTextEligible": false,
+        "learnerPublicationEligible": false
+      }
+    },
+    {
+      "coverageId": "appraiser-second-2025-36-theory",
+      "examYear": 2025,
+      "examRound": 36,
+      "subject": "theory",
+      "paperOrSession": "2차 2교시: 감정평가이론",
+      "sourceDiscoveryStatus": "verified",
+      "sourceId": "qnet-appraiser-2025-36-second-2-source-5e365143ea1b",
+      "artifactKind": "pdf",
+      "hashStatus": "not_fetched",
+      "rightsStatus": "needs_legal_review",
+      "displayMode": "metadata_and_link",
+      "extractionStatus": "metadata_only",
+      "gapStatus": "rights_blocked",
+      "operationalNote": "Registered source is metadata-only and rights-blocked for raw display until legal review clears broader use.",
+      "s203Consumption": {
+        "metadataEligible": true,
+        "problemTextEligible": false,
+        "learnerPublicationEligible": false
+      }
+    },
+    {
+      "coverageId": "appraiser-second-2025-36-law",
+      "examYear": 2025,
+      "examRound": 36,
+      "subject": "law",
+      "paperOrSession": "2차 3교시: 감정평가 및 보상법규",
+      "sourceDiscoveryStatus": "verified",
+      "sourceId": "qnet-appraiser-2025-36-second-2-source-c7d7a2d7ef75",
+      "artifactKind": "pdf",
+      "hashStatus": "not_fetched",
+      "rightsStatus": "needs_legal_review",
+      "displayMode": "metadata_and_link",
+      "extractionStatus": "metadata_only",
+      "gapStatus": "rights_blocked",
+      "operationalNote": "Registered source is metadata-only and rights-blocked for raw display until legal review clears broader use.",
+      "s203Consumption": {
+        "metadataEligible": true,
+        "problemTextEligible": false,
+        "learnerPublicationEligible": false
+      }
+    }
+  ],
+  "metadataOnly": true,
+  "safeUse": "s202_source_rights_coverage_only",
+  "historicalBacklogNote": "The committed S202 coverage basis is 2020-2025 Q-Net metadata. Older official years must remain explicit future discovery work until locally confirmed; no complete historical-coverage claim is made here."
+}
