@@ -37,7 +37,7 @@ items:
     priority: 4
   - id: S203
     title: Canonical Second-Round Question Schema and Ingestion
-    status: queued
+    status: completed
     dependencies: [S200R, S201, S202]
     lockGroup: question-ingestion
     risk: high
