@@ -48,6 +48,7 @@ const defaultTestFiles = [
   "tests/qnet-official-materials-reference.test.mjs",
   "tests/qnet-reference-intelligence-report.test.mjs",
   "tests/second-round-source-rights-registry.test.mjs",
+  "tests/second-round-question-registry.test.mjs",
   "tests/agent-factory-contract-validation.test.mjs",
   "tests/agent-factory-risk-classification.test.mjs",
   "tests/agent-factory-glob-match.test.mjs",

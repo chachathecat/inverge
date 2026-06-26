@@ -1,0 +1,30 @@
+{
+  "schemaVersion": "2026-06-26.s203.v1",
+  "registryType": "appraiser_second_round_canonical_question_registry",
+  "registryScope": "appraiser_second_round_only",
+  "generatedBy": "s203_canonical_second_round_question_schema",
+  "generatedAt": "2026-06-26T00:00:00.000Z",
+  "sourceRegistryPath": "reference_corpus/official_materials/appraiser/second_round_source_registry.json",
+  "rightsRegistryPath": "reference_corpus/official_materials/appraiser/second_round_rights_registry.json",
+  "storagePolicy": {
+    "metadataOnly": true,
+    "rawOfficialFileStored": false,
+    "rawQuestionTextStored": false,
+    "rawAnswerTextStored": false,
+    "rawOcrTextStored": false,
+    "rawTableTextStored": false,
+    "rawAssetBytesStored": false,
+    "learnerDataStored": false,
+    "thirdPartyAcademyContentStored": false
+  },
+  "boundaryPolicy": {
+    "syntheticFixturesOnly": true,
+    "officialQuestionBodiesStored": false,
+    "officialAnswerBodiesStored": false,
+    "referenceAnswersGenerated": false,
+    "ocrImplemented": false,
+    "billingOrLedgerImplemented": false,
+    "learnerAnswerSavingImplemented": false
+  },
+  "questions": []
+}

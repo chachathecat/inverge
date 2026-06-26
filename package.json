@@ -49,7 +49,8 @@
     "test:qnet-official-materials": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs --test tests/qnet-official-materials-ingestion.test.mjs tests/qnet-official-materials-reference.test.mjs tests/qnet-reference-today-plan-adapter.test.mjs tests/second-round-source-rights-registry.test.mjs",
     "check:qnet-reference-intelligence": "node --experimental-strip-types scripts/summarize-qnet-reference-intelligence.mjs",
     "test:second-round-source-rights": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs --test tests/second-round-source-rights-registry.test.mjs",
-    "check:second-round-source-rights": "node --experimental-strip-types scripts/validate-second-round-source-rights-registry.mjs"
+    "check:second-round-source-rights": "node --experimental-strip-types scripts/validate-second-round-source-rights-registry.mjs",
+    "check:second-round-question-registry": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs scripts/validate-second-round-question-registry.mjs"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
