@@ -44,7 +44,7 @@ items:
     priority: 5
   - id: S204
     title: Answer Submission OCR Confirmation and Durable Save
-    status: queued
+    status: completed
     dependencies: [S200R]
     lockGroup: answer-capture
     risk: high

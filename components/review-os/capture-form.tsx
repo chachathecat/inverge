@@ -16,6 +16,7 @@ import {
   type AppraisalMode,
 } from "@/lib/review-os/appraisal";
 import { clearReviewOsDraft, loadReviewOsDraft, saveReviewOsDraft, saveReviewOsLocalBetaNoteWithStatus } from "@/lib/review-os/browser-storage";
+import { ANSWER_SUBMISSION_OCR_TRUST_COPY } from "@/lib/review-os/answer-submission-contract";
 import { getCalculatorWorkflowForSubject } from "@/lib/review-os/calculator-workflow";
 import { resolveCaptureConfirmationCopy } from "@/lib/review-os/capture-confirmation-copy";
 import { getCaptureSavePersistenceCopy, type CaptureSavePersistenceStatus } from "@/lib/review-os/capture-save-persistence";
@@ -1786,7 +1787,8 @@ function IntakePanel({
           텍스트 붙여넣기
         </Button>
       </div>
-      <p className="mt-2 text-xs leading-5 text-[color:var(--muted)]">OCR/AI 정리는 초안입니다. 저장 전 직접 확인해 주세요.</p>
+      <p className="mt-2 text-xs leading-5 text-[color:var(--muted)]">{ANSWER_SUBMISSION_OCR_TRUST_COPY}</p>
+      <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">OCR/AI 정리는 초안입니다. 저장 전 직접 확인해 주세요.</p>
       <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">현재 PDF는 내용 확인 후 직접 붙여넣을 수 있습니다.</p>
       <details className="mt-3 rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] bg-[color:var(--surface)]">
         <summary className="cursor-pointer list-none px-3 py-2 text-xs font-medium text-[color:var(--ink-muted)]">촬영 품질과 앨범 업로드</summary>
@@ -2046,7 +2048,8 @@ function ExtractionPreview({
           {missingConfirmationFields.length > 0 ? ` 확인 필요: ${missingConfirmationFields.join(", ")}` : ""}
         </p>
       ) : null}
-      <p className="mt-4 text-xs text-[color:var(--muted)]">초안 내용을 확인한 뒤 저장합니다.</p>
+      <p className="mt-4 text-xs text-[color:var(--muted)]">{ANSWER_SUBMISSION_OCR_TRUST_COPY}</p>
+      <p className="mt-1 text-xs text-[color:var(--muted)]">초안 내용을 확인한 뒤 저장합니다.</p>
 
       <div className="mt-5 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-4">
         <p className="text-xs font-medium text-[color:var(--muted)]">OCR 결과 확인 (편집 가능 · 자동 저장)</p>

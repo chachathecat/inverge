@@ -12,6 +12,10 @@ import {
 } from "@/lib/review-os/appraisal";
 import { getEntitlementLimit } from "@/lib/review-os/entitlements";
 import { assertCanCreateWrongAnswer } from "@/lib/review-os/entitlement-enforcement";
+import {
+  buildLearnerAnswerSubmissionDerivedMetadata,
+  buildLearnerAnswerSubmissionPersistenceContract,
+} from "@/lib/review-os/answer-submission-contract";
 import { buildCaptureNoteSignals, structureCaptureNote } from "@/lib/review-os/capture-note-engine";
 import { buildCaptureLearningSignal, buildCaptureReviewReason, computeCaptureQueuePriority } from "@/lib/review-os/capture-learning-signals";
 import { buildConceptNodeCandidate, isConceptNodeCandidate } from "@/lib/review-os/concept-node-mapping";
@@ -998,6 +1002,30 @@ export class ReviewOsService {
           taxonomy_node_label: taxonomyNodeLabel,
         },
       });
+      const answerSubmissionConfirmedFields: Record<string, unknown> =
+        input.extractionPayload?.user_confirmed_fields && typeof input.extractionPayload.user_confirmed_fields === "object"
+          ? input.extractionPayload.user_confirmed_fields
+          : {};
+      const confirmedPageCount =
+        typeof answerSubmissionConfirmedFields.pageCount === "number" && Number.isFinite(answerSubmissionConfirmedFields.pageCount)
+          ? answerSubmissionConfirmedFields.pageCount
+          : null;
+      const answerSubmissionContract = isCaptureCreated
+        ? buildLearnerAnswerSubmissionPersistenceContract({
+            userId,
+            mode,
+            subject: normalizedInput.subjectLabel,
+            sourceType: normalizedInput.sourceType,
+            pageCount: confirmedPageCount,
+            lowConfidenceFlag: answerSubmissionConfirmedFields.lowConfidenceFlag === true,
+            captureQualityIssue:
+              typeof answerSubmissionConfirmedFields.captureQualityIssue === "string" ? answerSubmissionConfirmedFields.captureQualityIssue : null,
+            hasManualCorrection: answerSubmissionConfirmedFields.hasManualCorrection === true,
+            ocrConfirmedByLearner: answerSubmissionConfirmedFields.ocrConfirmedByLearner === true,
+            confirmedText: normalizedInput.rawQuestionText ?? normalizedInput.userAnswer,
+          })
+        : null;
+      const answerSubmissionDerivedMetadata = buildLearnerAnswerSubmissionDerivedMetadata(answerSubmissionContract);
 
       const item = await reviewOsRepository.insertWrongAnswerItem(
         userId,
@@ -1053,6 +1081,7 @@ export class ReviewOsService {
           biggest_gap: input.biggestGap ?? input.missingIssue ?? null,
           created_from_capture: isCaptureCreated,
           capture_intent: isCaptureCreated ? (input.captureIntent ?? "save") : null,
+          learner_answer_submission: answerSubmissionContract,
         },
         {
           topicTag: artifacts.tags.topicTag,
@@ -1076,6 +1105,7 @@ export class ReviewOsService {
           calculationRisk: secondRewriteSignal?.calculationRisk ?? null,
           unitRisk: secondRewriteSignal?.unitRisk ?? null,
           supportedCalculatorTemplateId: secondRewriteSignal?.supportedCalculatorTemplateId ?? null,
+          learner_answer_submission: answerSubmissionDerivedMetadata,
         },
       );
 
@@ -1138,6 +1168,15 @@ export class ReviewOsService {
           createdFromCapture: isCaptureCreated,
         }),
       );
+      if (answerSubmissionDerivedMetadata) {
+        await reviewOsRepository.logUsageEvent(
+          userId,
+          "answer_submission_saved",
+          "wrong_answer_item",
+          item.id,
+          sanitizeCaptureTelemetryMetadata(answerSubmissionDerivedMetadata),
+        );
+      }
       if (isCaptureCreated) {
         recordLearningMetricIfEnabled(buildLearningMetricEvent({
           eventName: "capture_saved",

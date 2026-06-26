@@ -2,6 +2,7 @@ import { WrongAnswerCaptureForm } from "@/components/review-os/capture-form";
 import { ReviewOsFeedbackButton } from "@/components/review-os/feedback-button";
 import { ClosedBetaBanner } from "@/components/shared/closed-beta-banner";
 import { normalizeSubjectForMode, resolveAppraisalMode } from "@/lib/review-os/appraisal";
+import { ANSWER_SUBMISSION_OCR_TRUST_COPY } from "@/lib/review-os/answer-submission-contract";
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
 import { reviewOsService } from "@/lib/review-os/service";
 import { buildDetailStudyNote } from "@/lib/review-os/study-note";
@@ -55,6 +56,8 @@ export default async function ReviewOsCapturePage({ searchParams }: PageProps) {
             </p>
           </div>
           <p className="text-xs leading-5 text-[color:var(--textMuted)] sm:max-w-[18rem]">
+            {ANSWER_SUBMISSION_OCR_TRUST_COPY}
+            <br />
             OCR/AI 정리는 초안입니다. 저장 전 직접 확인해 주세요.
           </p>
         </div>
