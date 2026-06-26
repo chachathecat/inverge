@@ -5,10 +5,11 @@
 The implementation source of truth is:
 
 1. `docs/inverge-second-round-final-product-spec.md`
-2. `roadmap/active-program.yml`
-3. this `AGENTS.md`
+2. `docs/dabangil-second-exam-premium-os.md`
+3. `roadmap/active-program.yml`
+4. this `AGENTS.md`
 
-If older product, business-model, roadmap, or closed-beta documents conflict with the final second-round specification, follow the final specification and the latest active program.
+If older product, business-model, roadmap, or closed-beta documents conflict with the final second-round specification or the S200R Dabangil premium OS brief, follow the final specification, the S200R brief, and the latest active program.
 
 ## Product scope (fixed by human decision on 2026-06-25)
 
@@ -41,30 +42,48 @@ If unrelated exam code exists internally, treat it as out of current learner pro
 
 ## Product identity and positioning
 
-Inverge is:
+Inverge is the internal codename and repository name.
 
-- 감정평가사 2차 전과목 답안 완성 OS
-- a premium AI-based answer-writing, review, rewrite, and learning-operations system
-- a system for all historical-question practice, practice score ranges, detailed feedback, verified reference answers, automatic error notes, and core-concept tracking
+The learner-facing brand is **답안길**.
 
-Inverge is NOT:
+The premium learner-facing product is **답안길 2차 합격관제 OS**.
+
+Preferred learner-facing positioning:
+
+> 감평 2차 실무·이론·법규 답안을 시험일까지 운영해주는 합격관제 OS
+
+답안길 is:
+
+- a premium 감정평가사 2차 answer operating system
+- an Evidence Review and rewrite/recalculation system
+- a CASIO fx-9860GIII practical-routine system
+- a theory paragraph-production system
+- a law issue/application-production system
+- a learning-record, weakness-map, Review Queue, and Today Plan system
+
+답안길 is NOT:
 
 - an official grader
 - an official model-answer service
 - a pass-probability or pass/fail prediction product
 - a guaranteed-score product
+- a human expert-review B2C service
+- a public historical-question archive
 - generic dashboard SaaS
 - a motivation/streak app
 - a broad multi-exam platform
 
 Allowed learner-facing result framing:
 
+- Evidence Review
+- 답안 검토 리포트
+- 합격관제 리포트
+- 가장 큰 간극 1개
+- 다음 행동 1개
 - 연습점수 범위 with confidence and evidence
 - 루브릭별 점수 범위 and deduction candidates
-- 정밀첨삭
-- 가장 큰 간극 1개
-- Inverge 검증형 기준답안
-- 재작성 and regrade
+- 재작성 and regrade/recalculation
+- GIII 실무 루틴
 - 자동 오답노트 and 핵심개념 추적
 
 Required reference-answer caveat:
@@ -85,7 +104,9 @@ Prohibited learner-facing claims:
 
 Core operating loop:
 
-- historical question → attempt → OCR confirmation → practice grading → detailed feedback → verified reference answer → compare → rewrite → regrade → error note/concept graph → scheduled review
+- historical question → attempt → OCR confirmation → Evidence Review → one biggest gap → one next action → compare with verified learning reference → rewrite or recalculate → error note/concept graph → scheduled review
+
+When practice calculation is relevant, the loop must prefer a reset-safe CASIO fx-9860GIII hand-keyed routine and must not teach stored-program dependency as an exam strategy.
 
 ## Historical-question and reference-answer rules
 
@@ -112,6 +133,20 @@ Core operating loop:
 - Every completed review must emit safe learning-gap and concept-state signals.
 - Automatic error notes must explain why the learner was wrong, the correct principle, the immediate fix, recurrence, and next review.
 - Score display must never be the final endpoint.
+- Today Plan must show at most three primary tasks.
+- Every learner-facing review or note should prioritize one biggest gap, one next action, Evidence Review / 답안 검토 리포트, rewrite or recalculation, automatic error note, core concept tracking, weekly weakness report for paid tiers, GIII practical routine when relevant, and Deep Review Unit only where paid high-cost review is intentionally requested.
+
+## CASIO fx-9860GIII practical routine rules
+
+The practical calculator model is fixed as `casio_fx_9860giii`.
+
+Required principle:
+
+> 시험장 리셋 후에도 손으로 재현 가능한 fx-9860GIII 타건 루틴만 훈련한다.
+
+Every GIII routine specification should support formula, extracted values, hand-keyed sequence, expected display, unit check, rounding check, answer-sheet transfer template, common mistake warnings, reset-safe reproduction, and no stored-program dependency.
+
+Do not teach calculator program storage as an exam strategy.
 
 ## Separate B2B Academy Console scope
 
@@ -145,13 +180,23 @@ Guardrails:
 
 ## Pricing and commercial product rules
 
-Learner tiers:
+Final target learner plan taxonomy:
 
-- Free: one lifetime full review with full value experience
-- Core: list-price hypothesis 79,000 KRW/month, 30 full review credits
-- Intensive: list-price hypothesis 149,000 KRW/month, 80 full review credits
-- no unlimited plan
-- no expert-human-review add-on
+- `free`: 0 KRW, one lifetime full-value review experience
+- `second_os_basic`: 59,000~69,000 KRW/month hypothesis
+- `second_os_pro`: 119,000~149,000 KRW/month hypothesis
+- `second_control_premium`: 249,000~299,000 KRW/month hypothesis
+
+One-off Deep Review SKUs:
+
+- `deep_review_5`: 49,000 KRW hypothesis
+- `deep_review_15`: 129,000 KRW hypothesis
+- `deep_review_40`: 299,000 KRW hypothesis
+
+Optional/later SKUs remain disabled until explicit future implementation and operational capacity exist:
+
+- `managed_cohort`: 690,000~990,000 KRW / 8 weeks hypothesis, later only
+- `season_pass`: later only
 
 Academy list-price hypotheses:
 
@@ -159,7 +204,9 @@ Academy list-price hypotheses:
 - Academy Pro: 3,900,000 KRW/month
 - Enterprise: from 7,000,000 KRW/month
 
-Pricing remains a hypothesis until paid-beta evidence. Never hard-code a launch-ready claim without billing, refund, privacy, cost, entitlement, and runtime gates.
+Pricing remains configurable, versioned, and a hypothesis until paid-beta evidence. Never hard-code scattered UI/API literals or a launch-ready claim without billing, refund, privacy, cost, entitlement, and runtime gates.
+
+No unlimited second-exam precision review is allowed. Deep Review Units must be consumed only through a future usage ledger; failed generation must not consume units; expensive provider work should reserve first and commit only after a usable result in a later implementation PR.
 
 ## Data and privacy boundaries
 
