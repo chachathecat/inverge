@@ -65,7 +65,7 @@ items:
     priority: 8
   - id: S207
     title: Verified Reference Answer Package Schema
-    status: queued
+    status: completed
     dependencies: [S201, S203]
     lockGroup: reference-answer-schema
     risk: high
