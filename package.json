@@ -6,6 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "typecheck": "tsc --noEmit --pretty false",
+    "agent-factory:plan": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs scripts/agent-factory-plan.mjs",
     "start": "next start",
     "lint": "eslint",
     "test": "node scripts/run-node-tests.mjs",
