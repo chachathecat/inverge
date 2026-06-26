@@ -18,6 +18,7 @@ const defaultTestFiles = [
   "tests/review-completion-runtime-proof.test.mjs",
   "tests/ocr-pdf-capture-maturity-hardening.test.mjs",
   "tests/ocr-pdf-upload-runtime-smoke-proof.test.mjs",
+  "tests/answer-submission-ocr-save-contract.test.mjs",
   "tests/durable-persistence-evidence.test.mjs",
   "tests/durable-invited-account-persistence-runtime-proof.test.mjs",
   "tests/learner-loop-runtime-telemetry-wiring.test.mjs",
