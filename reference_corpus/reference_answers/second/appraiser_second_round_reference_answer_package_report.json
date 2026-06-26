@@ -1,0 +1,57 @@
+{
+  "schemaVersion": "2026-06-26.s207.v1",
+  "reportType": "appraiser_second_round_reference_answer_package_report",
+  "generatedBy": "scripts/validate-second-round-reference-answer-packages.mjs",
+  "generatedAt": "2026-06-26T00:00:00.000Z",
+  "referencePackageRegistryPath": "reference_corpus/reference_answers/second/appraiser_second_round_reference_answer_packages.json",
+  "canonicalQuestionRegistryPath": "reference_corpus/question_archive/second/appraiser_second_round_canonical_questions.json",
+  "storagePolicy": {
+    "metadataOnly": true,
+    "rawOfficialFileStored": false,
+    "rawOfficialQuestionTextStored": false,
+    "rawOfficialAnswerTextStored": false,
+    "rawReferenceAnswerTextStored": false,
+    "rawLearnerAnswerStored": false,
+    "rawOcrTextStored": false,
+    "rawSourceExcerptStored": false,
+    "rawAssetBytesStored": false,
+    "thirdPartyAcademyContentStored": false
+  },
+  "totals": {
+    "packageCount": 0,
+    "syntheticFixturePackageCount": 0,
+    "releasedPackageCount": 0,
+    "blockedPackageCount": 0,
+    "releasablePackageCount": 0,
+    "openBlockingReleaseBlockerCount": 0,
+    "unresolvedBlockingUncertaintyCount": 0,
+    "sourceAnchorCount": 0,
+    "evidenceAnchorCount": 0,
+    "subjectPackageCounts": {
+      "practice": 0,
+      "theory": 0,
+      "law": 0
+    },
+    "releaseStatusCounts": {
+      "draft": 0,
+      "blocked": 0,
+      "cross_checked": 0,
+      "source_verified": 0,
+      "subject_validated": 0,
+      "ready_for_s215": 0,
+      "released": 0
+    },
+    "learningReferenceStatusCounts": {
+      "not_generated": 0,
+      "candidate_draft": 0,
+      "multi_candidate_cross_checked": 0,
+      "critic_reviewed": 0,
+      "consensus_resolved": 0,
+      "released_learning_reference": 0,
+      "blocked": 0
+    }
+  },
+  "packageIds": [],
+  "metadataOnly": true,
+  "safeUse": "s207_reference_answer_package_contract_only"
+}
