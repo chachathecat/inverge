@@ -12,6 +12,7 @@
 
 # testing
 /coverage
+/.agent-factory/
 
 # local runtime data
 /.data/
