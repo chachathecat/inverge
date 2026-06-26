@@ -51,6 +51,7 @@ const defaultTestFiles = [
   "tests/second-round-source-rights-registry.test.mjs",
   "tests/second-round-question-registry.test.mjs",
   "tests/second-round-reference-answer-package-registry.test.mjs",
+  "tests/rewrite-regrade-history-contract.test.mjs",
   "tests/agent-factory-contract-validation.test.mjs",
   "tests/agent-factory-risk-classification.test.mjs",
   "tests/agent-factory-glob-match.test.mjs",
