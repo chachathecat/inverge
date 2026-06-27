@@ -11,13 +11,21 @@ on:
         options:
           - plan_only
           - watch_snapshot
+          - watch_live
           - doctor_pr_body
+          - doctor_pr_body_live
           - repair_plan
+          - repair_plan_live
           - merge_plan
+          - merge_plan_live
       target:
         description: auto, a roadmap item id, a PR number, or a sanitized fixture path.
         required: true
         default: auto
+      pr_number:
+        description: Pull request number for live read-only GitHub modes.
+        required: false
+        default: ""
       max_tasks:
         description: Maximum task packages for plan_only.
         required: true
@@ -45,9 +53,12 @@ on:
 
 permissions:
   contents: read
+  actions: read
+  pull-requests: read
+  checks: read
 
 concurrency:
-  group: agent-factory-run-${{ github.ref }}-${{ inputs.mode }}-${{ inputs.target }}
+  group: agent-factory-run-${{ github.ref }}-${{ inputs.mode }}-${{ inputs.target }}-${{ inputs.pr_number }}
   cancel-in-progress: false
 
 jobs:
@@ -65,10 +76,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Run Agent Factory report
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: >
           npm run agent-factory:run --
           --mode "${{ inputs.mode }}"
           --target "${{ inputs.target }}"
+          --pr-number "${{ inputs.pr_number }}"
           --max-tasks "${{ inputs.max_tasks }}"
           --stdout "${{ inputs.stdout }}"
           --allow-mutation "${{ inputs.allow_mutation }}"
@@ -97,6 +111,8 @@ jobs:
           path: |
             .agent-factory/codex-task-packages.json
             .agent-factory/codex-task-packages.md
+            .agent-factory/github-live-snapshot.json
+            .agent-factory/github-live-snapshot.md
             .agent-factory/ci-watcher-report.json
             .agent-factory/ci-watcher-report.md
             .agent-factory/pr-contract-doctor-report.json
