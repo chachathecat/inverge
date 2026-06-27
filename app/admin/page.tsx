@@ -17,7 +17,10 @@ export default async function AdminHomePage() {
           Minimal beta operations for curriculum mapping, root-cause tags, and rewrite seed templates.
         </p>
         <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-          <Link href="/admin/curriculum" className={buttonVariants({ size: "lg" })}>
+          <Link href="/admin/factory" className={buttonVariants({ size: "lg" })}>
+            Agent Factory
+          </Link>
+          <Link href="/admin/curriculum" className={buttonVariants({ variant: "outline", size: "lg" })}>
             Curriculum mapping
           </Link>
           <Link href="/admin/root-cause-tags" className={buttonVariants({ variant: "outline", size: "lg" })}>
