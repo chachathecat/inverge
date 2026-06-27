@@ -455,6 +455,25 @@ test("pr_number is required for live modes", () => {
   assert.match(readSummary(outputDir), /pr_number is required/);
 });
 
+test("empty pr_number is rejected for live modes", () => {
+  const outputDir = tempDir("af007-empty-live-pr");
+  const result = runDispatcherSync([
+    "--mode",
+    "watch_live",
+    "--pr-number",
+    "",
+    "--output-dir",
+    outputDir,
+    "--stdout",
+    "none",
+  ]);
+
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /pr_number is required/);
+  assert.doesNotMatch(result.stderr, /Unknown argument: --pr-number/);
+  assert.match(readSummary(outputDir), /pr_number is required/);
+});
+
 test("allow_mutation true fails closed for live modes before GitHub fetch", () => {
   const outputDir = tempDir("af007-allow-mutation");
   const result = runDispatcherSync([

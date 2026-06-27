@@ -138,6 +138,35 @@ test("allow_mutation true fails closed and writes the run summary", () => {
   assert.match(summary, /read-only\/report-only/);
 });
 
+test("plan_only accepts workflow-passed empty pr_number argument", () => {
+  const outputDir = tempDir("af007-empty-pr-plan");
+  const result = runDispatcher([
+    "--mode",
+    "plan_only",
+    "--target",
+    "auto",
+    "--pr-number",
+    "",
+    "--max-tasks",
+    "1",
+    "--stdout",
+    "markdown",
+    "--allow-mutation",
+    "false",
+    "--output-dir",
+    outputDir,
+  ]);
+
+  assert.equal(result.status, 0, result.stderr);
+  const summary = readSummary(outputDir);
+
+  assert.match(result.stdout, /AF006 v1: read-only\/report-only/);
+  assert.match(summary, /AF001 planner task packages generated/);
+  assert.match(summary, /PR number: none/);
+  assert.match(summary, /No branches, commits, pushes, PR updates/);
+  assert.match(summary, /No GitHub mutation APIs/);
+});
+
 test("plan_only dispatcher path uses the AF001 planner and writes task package artifacts", () => {
   const outputDir = tempDir("af006-plan");
   const result = runDispatcher([
@@ -161,7 +190,9 @@ test("plan_only dispatcher path uses the AF001 planner and writes task package a
   assert.ok(json.selectedTaskCount <= 2);
   assert.ok(Array.isArray(json.readyItemIds));
   assert.match(markdown, /Codex Task Factory Plan/);
-  assert.match(readSummary(outputDir), /AF001 planner task packages generated/);
+  const summary = readSummary(outputDir);
+  assert.match(summary, /AF001 planner task packages generated/);
+  assert.match(summary, /PR number: none/);
 });
 
 test("missing snapshot modes fail safely with actionable fixture instructions", () => {
@@ -182,6 +213,37 @@ test("missing snapshot modes fail safely with actionable fixture instructions", 
   assert.match(summary, /CI snapshot file not found/);
   assert.match(summary, /sanitized fixture path/);
   assert.match(summary, /Snapshot modes do not live-fetch GitHub data/);
+});
+
+test("non-live report modes do not require pr_number", () => {
+  const fixtureDir = tempDir("af007-non-live-no-pr");
+  const missingTarget = path.join(fixtureDir, "missing.json");
+  const cases = [
+    ["watch_snapshot", /CI snapshot file not found/],
+    ["doctor_pr_body", /PR body file not found/],
+    ["repair_plan", /AF002 report or PR\/check snapshot file not found/],
+    ["merge_plan", /AF002\/AF004 report or PR\/check snapshot file not found/],
+  ];
+
+  for (const [mode, expectedFailure] of cases) {
+    const outputDir = tempDir(`af007-${mode}-no-pr`);
+    const result = runDispatcher([
+      "--mode",
+      mode,
+      "--target",
+      missingTarget,
+      "--output-dir",
+      outputDir,
+      "--stdout",
+      "none",
+    ]);
+    const summary = readSummary(outputDir);
+
+    assert.notEqual(result.status, 0);
+    assert.match(summary, expectedFailure);
+    assert.doesNotMatch(result.stderr, /pr_number is required/);
+    assert.doesNotMatch(summary, /pr_number is required/);
+  }
 });
 
 test("watch_snapshot writes safe generated artifacts even when ignored input has unsafe fields", () => {
