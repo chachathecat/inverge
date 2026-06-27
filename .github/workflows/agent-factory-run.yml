@@ -1,0 +1,109 @@
+name: Agent Factory Run
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Read-only Agent Factory mode to run.
+        required: true
+        type: choice
+        default: plan_only
+        options:
+          - plan_only
+          - watch_snapshot
+          - doctor_pr_body
+          - repair_plan
+          - merge_plan
+      target:
+        description: auto, a roadmap item id, a PR number, or a sanitized fixture path.
+        required: true
+        default: auto
+      max_tasks:
+        description: Maximum task packages for plan_only.
+        required: true
+        type: choice
+        default: "1"
+        options:
+          - "1"
+          - "2"
+      stdout:
+        description: Dispatcher stdout format.
+        required: true
+        type: choice
+        default: markdown
+        options:
+          - markdown
+          - json
+          - none
+      allow_mutation:
+        description: Must remain false in AF006 v1.
+        required: true
+        type: choice
+        default: "false"
+        options:
+          - "false"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: agent-factory-run-${{ github.ref }}-${{ inputs.mode }}-${{ inputs.target }}
+  cancel-in-progress: false
+
+jobs:
+  agent-factory-run:
+    name: agent-factory-run
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Run Agent Factory report
+        run: >
+          npm run agent-factory:run --
+          --mode "${{ inputs.mode }}"
+          --target "${{ inputs.target }}"
+          --max-tasks "${{ inputs.max_tasks }}"
+          --stdout "${{ inputs.stdout }}"
+          --allow-mutation "${{ inputs.allow_mutation }}"
+      - name: Write job summary
+        if: always()
+        run: |
+          if [ -f .agent-factory/agent-factory-run-summary.md ]; then
+            cat .agent-factory/agent-factory-run-summary.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            {
+              echo "# AF006 Agent Factory Run"
+              echo
+              echo "Status: failed"
+              echo "AF006 v1: read-only/report-only"
+              echo
+              echo "Dispatcher did not create a summary artifact."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Upload Agent Factory artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-factory-${{ inputs.mode }}-${{ github.run_id }}
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            .agent-factory/codex-task-packages.json
+            .agent-factory/codex-task-packages.md
+            .agent-factory/ci-watcher-report.json
+            .agent-factory/ci-watcher-report.md
+            .agent-factory/pr-contract-doctor-report.json
+            .agent-factory/pr-contract-doctor-report.md
+            .agent-factory/repaired-pr-body.md
+            .agent-factory/safe-repair-plan.json
+            .agent-factory/safe-repair-plan.md
+            .agent-factory/merge-plan.json
+            .agent-factory/merge-plan.md
+            .agent-factory/agent-factory-run-summary.md
