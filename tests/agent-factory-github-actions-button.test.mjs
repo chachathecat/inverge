@@ -181,7 +181,7 @@ test("missing snapshot modes fail safely with actionable fixture instructions", 
   const summary = readSummary(outputDir);
   assert.match(summary, /CI snapshot file not found/);
   assert.match(summary, /sanitized fixture path/);
-  assert.match(summary, /does not live-fetch GitHub data/);
+  assert.match(summary, /Snapshot modes do not live-fetch GitHub data/);
 });
 
 test("watch_snapshot writes safe generated artifacts even when ignored input has unsafe fields", () => {

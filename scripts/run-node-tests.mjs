@@ -62,6 +62,7 @@ const defaultTestFiles = [
   "tests/agent-factory-safe-repair-loop.test.mjs",
   "tests/agent-factory-rebase-merge-orchestrator.test.mjs",
   "tests/agent-factory-github-actions-button.test.mjs",
+  "tests/agent-factory-live-github-readonly.test.mjs",
 ];
 const rawArgs = process.argv.slice(2);
 const nodeTestArgs = [];

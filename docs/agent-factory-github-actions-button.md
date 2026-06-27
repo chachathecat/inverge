@@ -8,12 +8,13 @@ Operator path:
 GitHub -> Actions -> Agent Factory Run -> Run workflow
 ```
 
-AF006 v1 is read-only/report-only. It writes local `.agent-factory/` report artifacts in the Actions workspace and uploads those generated artifacts for human review. It does not create branches, push commits, open or update PRs, mark PRs ready, rerun workflows, rebase branches, merge PRs, invoke Codex, call provider APIs, or mutate learner/runtime/billing/auth state.
+AF006 v1 is read-only/report-only. AF007 adds live read-only GitHub metadata modes for PR/CI inspection. The workflow writes local `.agent-factory/` report artifacts in the Actions workspace and uploads those generated artifacts for human review. It does not create branches, push commits, open or update PRs, mark PRs ready, rerun workflows, rebase branches, merge PRs, invoke Codex, call provider APIs, or mutate learner/runtime/billing/auth state.
 
 ## Inputs
 
-- `mode`: `plan_only`, `watch_snapshot`, `doctor_pr_body`, `repair_plan`, or `merge_plan`.
+- `mode`: `plan_only`, `watch_snapshot`, `watch_live`, `doctor_pr_body`, `doctor_pr_body_live`, `repair_plan`, `repair_plan_live`, `merge_plan`, or `merge_plan_live`.
 - `target`: `auto`, a roadmap item id such as `S209`, a PR number such as `461`, or a sanitized fixture path.
+- `pr_number`: required for `watch_live`, `doctor_pr_body_live`, `repair_plan_live`, and `merge_plan_live`.
 - `max_tasks`: `1` or `2`; applies to `plan_only`.
 - `stdout`: `markdown`, `json`, or `none`.
 - `allow_mutation`: `false` only. Any true value fails closed in the dispatcher.
@@ -42,6 +43,19 @@ Default local input:
 
 For a PR-number target such as `461`, the dispatcher also checks `.agent-factory/pr-461-ci-snapshot.json`.
 
+`watch_live` fetches live read-only GitHub PR, changed-file, workflow-run, job, step, artifact, compare, and closing-reference metadata, normalizes it into the AF002 snapshot contract, and runs the CI watcher.
+
+Required input:
+
+- `pr_number`
+
+Outputs:
+
+- `.agent-factory/github-live-snapshot.json`
+- `.agent-factory/github-live-snapshot.md`
+- `.agent-factory/ci-watcher-report.json`
+- `.agent-factory/ci-watcher-report.md`
+
 `doctor_pr_body` runs AF003 against a saved PR body fixture.
 
 Outputs:
@@ -56,6 +70,12 @@ Default local input:
 
 For a PR-number target such as `461`, the dispatcher also checks `.agent-factory/pr-461-body.md`.
 
+`doctor_pr_body_live` fetches the live PR body in memory and runs the AF003 doctor in report-only mode. The raw PR body is not written to the live snapshot artifact. The repaired output is still local review material only; AF007 does not update the PR body.
+
+Required input:
+
+- `pr_number`
+
 `repair_plan` runs AF004 against an AF002 report or equivalent PR/check snapshot.
 
 Outputs:
@@ -68,6 +88,8 @@ Default local inputs:
 - `.agent-factory/ci-watcher-report.json`
 - fallback: `.agent-factory/pr-ci-snapshot.json`
 
+`repair_plan_live` fetches live PR/CI metadata, emits the AF002 watcher report, runs AF003 against the live PR body in memory for context, and emits an AF004 safe repair plan. It remains report-only and does not invoke Codex.
+
 `merge_plan` runs AF005 against AF002/AF004-style report fixtures and forces report-only context.
 
 Outputs:
@@ -77,9 +99,13 @@ Outputs:
 
 AF006 v1 never recommends auto-merge from the workflow output. Any real merge, branch update, PR mutation, or workflow rerun remains a separate human-approved action.
 
+`merge_plan_live` fetches live PR/CI metadata, emits AF002 and AF004 context, then emits an AF005 merge-readiness report. The workflow output never performs or recommends automatic merge execution; any real merge remains human-approved outside AF006/AF007.
+
+See `docs/agent-factory-live-github-readonly.md` for live-mode details.
+
 ## Fixture Guidance
 
-Live GitHub fetching is out of scope for AF006 v1. Snapshot modes require sanitized local fixtures or fail safely with instructions.
+Snapshot modes require sanitized local fixtures or fail safely with instructions. Use the explicit `*_live` modes when the operator wants AF007 to fetch live GitHub metadata in read-only mode.
 
 Useful AF002 metadata fixture command for local operator preparation:
 
@@ -97,7 +123,7 @@ Every dispatcher run writes:
 
 - `.agent-factory/agent-factory-run-summary.md`
 
-The workflow always appends that Markdown summary to the GitHub job summary. Failure summaries state that AF006 v1 is report-only and explain the missing or invalid input.
+The workflow always appends that Markdown summary to the GitHub job summary. Failure summaries state that AF006/AF007 is report-only and explain the missing or invalid input.
 
 ## Local Command
 
@@ -109,4 +135,10 @@ Snapshot example:
 
 ```powershell
 npm.cmd run agent-factory:run -- --mode watch_snapshot --target .agent-factory/pr-ci-snapshot.json --stdout markdown --allow-mutation false
+```
+
+Live example:
+
+```powershell
+npm.cmd run agent-factory:run -- --mode watch_live --pr-number 462 --stdout markdown --allow-mutation false
 ```
