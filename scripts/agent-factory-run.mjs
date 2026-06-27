@@ -91,6 +91,23 @@ const SENSITIVE_LINE_PATTERNS = [
   /^\s*["']?(source[_-]?excerpt|provider[_-]?payload|billing[_-]?data|private[_-]?user[_-]?content)["']?\s*[:=]/i,
 ];
 
+function looksLikeFlag(value) {
+  return typeof value === "string" && value.startsWith("--") && value.length > 2;
+}
+
+function optionalArgumentValue(argv, index) {
+  if (index + 1 >= argv.length) {
+    return { value: "", consumed: false };
+  }
+
+  const value = argv[index + 1];
+  if (looksLikeFlag(value)) {
+    return { value: "", consumed: false };
+  }
+
+  return { value, consumed: true };
+}
+
 function parseArguments(argv) {
   const options = {
     mode: process.env.AGENT_FACTORY_MODE ?? "plan_only",
@@ -120,9 +137,10 @@ function parseArguments(argv) {
       continue;
     }
 
-    if ((arg === "--pr-number" || arg === "--pr_number") && next) {
-      options.prNumber = next;
-      index += 1;
+    if (arg === "--pr-number" || arg === "--pr_number") {
+      const parsed = optionalArgumentValue(argv, index);
+      options.prNumber = parsed.value;
+      if (parsed.consumed) index += 1;
       continue;
     }
 
@@ -891,8 +909,8 @@ function stdoutResult(options, status, result, summaryPath, error) {
 
 function rawOption(argv, flags, fallback) {
   for (let index = 0; index < argv.length; index += 1) {
-    if (flags.includes(argv[index]) && argv[index + 1]) {
-      return argv[index + 1];
+    if (flags.includes(argv[index])) {
+      return optionalArgumentValue(argv, index).value;
     }
   }
 

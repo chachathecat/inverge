@@ -14,7 +14,7 @@ AF006 v1 is read-only/report-only. AF007 adds live read-only GitHub metadata mod
 
 - `mode`: `plan_only`, `watch_snapshot`, `watch_live`, `doctor_pr_body`, `doctor_pr_body_live`, `repair_plan`, `repair_plan_live`, `merge_plan`, or `merge_plan_live`.
 - `target`: `auto`, a roadmap item id such as `S209`, a PR number such as `461`, or a sanitized fixture path.
-- `pr_number`: required for `watch_live`, `doctor_pr_body_live`, `repair_plan_live`, and `merge_plan_live`.
+- `pr_number`: required for `watch_live`, `doctor_pr_body_live`, `repair_plan_live`, and `merge_plan_live`; leave empty for non-live modes.
 - `max_tasks`: `1` or `2`; applies to `plan_only`.
 - `stdout`: `markdown`, `json`, or `none`.
 - `allow_mutation`: `false` only. Any true value fails closed in the dispatcher.
