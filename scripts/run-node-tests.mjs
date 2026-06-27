@@ -60,6 +60,8 @@ const defaultTestFiles = [
   "tests/agent-factory-ci-watcher.test.mjs",
   "tests/agent-factory-pr-contract-doctor.test.mjs",
   "tests/agent-factory-safe-repair-loop.test.mjs",
+  "tests/agent-factory-rebase-merge-orchestrator.test.mjs",
+  "tests/agent-factory-github-actions-button.test.mjs",
 ];
 const rawArgs = process.argv.slice(2);
 const nodeTestArgs = [];
