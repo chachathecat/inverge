@@ -12,6 +12,7 @@
     "agent-factory:repair-plan": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs scripts/agent-factory-repair-plan.mjs",
     "agent-factory:merge-plan": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs scripts/agent-factory-merge-plan.mjs",
     "agent-factory:run": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs scripts/agent-factory-run.mjs",
+    "agent-factory:mutate": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs scripts/agent-factory-mutate.mjs",
     "agent-factory:github-snapshot": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs scripts/agent-factory-run.mjs --mode watch_live",
     "start": "next start",
     "lint": "eslint",

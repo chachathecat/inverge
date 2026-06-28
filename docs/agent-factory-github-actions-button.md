@@ -10,6 +10,8 @@ GitHub -> Actions -> Agent Factory Run -> Run workflow
 
 AF006 v1 is read-only/report-only. AF007 adds live read-only GitHub metadata modes for PR/CI inspection. The workflow writes local `.agent-factory/` report artifacts in the Actions workspace and uploads those generated artifacts for human review. It does not create branches, push commits, open or update PRs, mark PRs ready, rerun workflows, rebase branches, merge PRs, invoke Codex, call provider APIs, or mutate learner/runtime/billing/auth state.
 
+AF009 metadata mutation is intentionally separate in `Agent Factory Mutate` and documented in `docs/agent-factory-safe-mutation-gate.md`. This AF006/AF007 workflow still requires `allow_mutation=false`.
+
 ## Inputs
 
 - `mode`: `plan_only`, `watch_snapshot`, `watch_live`, `doctor_pr_body`, `doctor_pr_body_live`, `repair_plan`, `repair_plan_live`, `merge_plan`, or `merge_plan_live`.

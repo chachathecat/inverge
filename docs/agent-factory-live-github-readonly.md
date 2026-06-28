@@ -2,6 +2,8 @@
 
 AF007 lets the manual Agent Factory workflow inspect live GitHub repository, PR, workflow-run, job, step, artifact, compare, and PR-body metadata in read-only/report-only mode.
 
+AF009's Safe PR Metadata Gate is a separate manual workflow. AF007 live modes remain read-only/report-only and do not inherit AF009 write permissions.
+
 Operator path:
 
 ```text
