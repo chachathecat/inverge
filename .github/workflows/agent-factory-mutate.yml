@@ -1,0 +1,70 @@
+name: Agent Factory Mutate
+
+on:
+  workflow_dispatch:
+    inputs:
+      mutation_intent:
+        description: Approval-gated metadata action registered by the real AF009 workflow.
+        required: true
+        type: choice
+        options:
+          - update_pr_runtime_evidence
+          - add_safe_pr_comment
+          - mark_ready_for_review
+      pr_number:
+        description: Pull request number for the real AF009 workflow.
+        required: true
+      dry_run:
+        description: Dry-run selector for the real AF009 workflow.
+        required: true
+        type: choice
+        default: "true"
+        options:
+          - "true"
+          - "false"
+      approval_phrase:
+        description: Approval phrase for the real AF009 workflow.
+        required: false
+        default: ""
+      evidence_text:
+        description: Metadata-only evidence text for the real AF009 workflow.
+        required: false
+        default: ""
+      evidence_source_path:
+        description: Optional committed evidence source path for the real AF009 workflow.
+        required: false
+        default: ""
+      stdout:
+        description: Dispatcher stdout format for the real AF009 workflow.
+        required: true
+        type: choice
+        default: markdown
+        options:
+          - markdown
+          - json
+          - none
+
+permissions:
+  contents: read
+
+concurrency:
+  group: agent-factory-mutate-bootstrap-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  bootstrap-summary:
+    name: bootstrap-summary
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write bootstrap summary
+        run: |
+          {
+            echo "# Agent Factory Mutate"
+            echo
+            echo "This workflow is a bootstrap scaffold only."
+            echo
+            echo "- No mutation is performed."
+            echo "- No GitHub mutation APIs are called."
+            echo "- The real AF009 implementation is in PR #472."
+            echo "- After this PR is merged, use branch \`feat/af009-safe-metadata-gate\` when running the real AF009 workflow for PR #472."
+          } >> "$GITHUB_STEP_SUMMARY"
