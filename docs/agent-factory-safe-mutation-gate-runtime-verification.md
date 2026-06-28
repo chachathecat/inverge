@@ -2,6 +2,8 @@
 
 Status: post-merge dogfood verification note.
 
+This note was refreshed after the PR body was expanded to the full PR Contract, so GitHub Actions can validate the current contract state on a new commit.
+
 ## Goal
 
 Verify that the real main-branch AF009 Agent Factory Mutate workflow can be used on an open pull request after PR #472 merged AF009 into `main`.
