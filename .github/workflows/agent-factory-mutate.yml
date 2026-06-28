@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       mutation_intent:
-        description: Approval-gated metadata action registered by the real AF009 workflow.
+        description: Approval-gated metadata action.
         required: true
         type: choice
         options:
@@ -12,10 +12,10 @@ on:
           - add_safe_pr_comment
           - mark_ready_for_review
       pr_number:
-        description: Pull request number for the real AF009 workflow.
+        description: Pull request number to inspect or mutate.
         required: true
       dry_run:
-        description: Dry-run selector for the real AF009 workflow.
+        description: Must be false for a real metadata action.
         required: true
         type: choice
         default: "true"
@@ -23,19 +23,19 @@ on:
           - "true"
           - "false"
       approval_phrase:
-        description: Approval phrase for the real AF009 workflow.
+        description: Required exact phrase for dry_run=false.
         required: false
         default: ""
       evidence_text:
-        description: Metadata-only evidence text for the real AF009 workflow.
+        description: Metadata-only text for Runtime evidence or the safe summary comment.
         required: false
         default: ""
       evidence_source_path:
-        description: Optional committed evidence source path for the real AF009 workflow.
+        description: Optional committed metadata-only text file path.
         required: false
         default: ""
       stdout:
-        description: Dispatcher stdout format for the real AF009 workflow.
+        description: Dispatcher stdout format.
         required: true
         type: choice
         default: markdown
@@ -46,25 +46,64 @@ on:
 
 permissions:
   contents: read
+  actions: read
+  checks: read
+  pull-requests: write
+  issues: write
 
 concurrency:
-  group: agent-factory-mutate-bootstrap-${{ github.ref }}
+  group: agent-factory-mutate-${{ github.ref }}-${{ inputs.mutation_intent }}-${{ inputs.pr_number }}
   cancel-in-progress: false
 
 jobs:
-  bootstrap-summary:
-    name: bootstrap-summary
+  agent-factory-mutate:
+    name: agent-factory-mutate
     runs-on: ubuntu-latest
     steps:
-      - name: Write bootstrap summary
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Run Agent Factory metadata mutation gate
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          AGENT_FACTORY_MUTATION_INTENT: ${{ inputs.mutation_intent }}
+          AGENT_FACTORY_PR_NUMBER: ${{ inputs.pr_number }}
+          AGENT_FACTORY_DRY_RUN: ${{ inputs.dry_run }}
+          AGENT_FACTORY_APPROVAL_PHRASE: ${{ inputs.approval_phrase }}
+          AGENT_FACTORY_EVIDENCE_TEXT: ${{ inputs.evidence_text }}
+          AGENT_FACTORY_EVIDENCE_SOURCE_PATH: ${{ inputs.evidence_source_path }}
+          AGENT_FACTORY_STDOUT: ${{ inputs.stdout }}
+        run: npm run agent-factory:mutate
+      - name: Write job summary
+        if: always()
         run: |
-          {
-            echo "# Agent Factory Mutate"
-            echo
-            echo "This workflow is a bootstrap scaffold only."
-            echo
-            echo "- No mutation is performed."
-            echo "- No GitHub mutation APIs are called."
-            echo "- The real AF009 implementation is in PR #472."
-            echo "- After this PR is merged, use branch \`feat/af009-safe-metadata-gate\` when running the real AF009 workflow for PR #472."
-          } >> "$GITHUB_STEP_SUMMARY"
+          if [ -f .agent-factory/agent-factory-mutation-summary.md ]; then
+            cat .agent-factory/agent-factory-mutation-summary.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            {
+              echo "# AF009 Safe PR Metadata Mutation"
+              echo
+              echo "Status: failed"
+              echo "No mutation summary artifact was created."
+              echo
+              echo "AF009 permits only approval-gated PR metadata actions."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Upload Agent Factory mutation artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-factory-mutate-${{ inputs.mutation_intent }}-${{ github.run_id }}
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            .agent-factory/mutation-plan.json
+            .agent-factory/mutation-plan.md
+            .agent-factory/mutation-result.json
+            .agent-factory/agent-factory-mutation-summary.md
