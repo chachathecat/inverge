@@ -1,0 +1,117 @@
+{
+  "schemaVersion": "2026-06-28.s209.v1",
+  "reportType": "appraiser_second_round_theory_concept_corpus_report",
+  "generatedBy": "scripts/validate-theory-concept-corpus.mjs",
+  "generatedAt": "2026-06-28T00:00:00.000Z",
+  "theoryConceptRegistryPath": "reference_corpus/theory_sources/appraiser_second_round_theory_concepts.json",
+  "canonicalQuestionRegistryPath": "reference_corpus/question_archive/second/appraiser_second_round_canonical_questions.json",
+  "referenceAnswerPackageRegistryPath": "reference_corpus/reference_answers/second/appraiser_second_round_reference_answer_packages.json",
+  "rubricEvidenceContractVersion": "s205.common_rubric_evidence.v1",
+  "storagePolicy": {
+    "metadataOnly": true,
+    "rawDefinitionTextStored": false,
+    "rawOfficialQuestionTextStored": false,
+    "rawOfficialAnswerTextStored": false,
+    "rawReferenceAnswerTextStored": false,
+    "rawLearnerAnswerStored": false,
+    "rawOcrTextStored": false,
+    "rawSourceExcerptStored": false,
+    "rawTextbookOrAcademyExplanationStored": false,
+    "rawAssetBytesStored": false,
+    "providerPayloadStored": false
+  },
+  "totals": {
+    "conceptCount": 10,
+    "conceptAnchorCount": 10,
+    "conceptRelationCount": 7,
+    "alternativeViewCount": 2,
+    "theoryConceptCheckCount": 0,
+    "referencePackageLinkCount": 0,
+    "evidenceReviewLinkCount": 0,
+    "verifiedConceptCount": 0,
+    "needsOfficialVerificationCount": 10,
+    "unresolvedConflictCount": 0,
+    "openBlockingBlockerCount": 19,
+    "blockedReleasePackageLinkCount": 0,
+    "highConfidenceReviewAllowedCheckCount": 0,
+    "conceptStatusCounts": {
+      "verified": 0,
+      "needs_official_verification": 10,
+      "unresolved_conflict": 0,
+      "blocked": 0,
+      "synthetic_fixture": 0
+    },
+    "definitionStatusCounts": {
+      "verified": 0,
+      "needs_official_verification": 10,
+      "unresolved_conflict": 0,
+      "blocked": 0,
+      "synthetic_fixture": 0
+    },
+    "relationStatusCounts": {
+      "verified": 0,
+      "needs_official_verification": 7,
+      "unresolved_conflict": 0,
+      "blocked": 0,
+      "synthetic_fixture": 0
+    },
+    "sourceCoverageStatusCounts": {
+      "verified": 0,
+      "needs_official_verification": 0,
+      "unresolved_conflict": 0,
+      "blocked": 0,
+      "synthetic_fixture": 0
+    }
+  },
+  "conceptIds": [
+    "theory-concept-appraisal-procedure",
+    "theory-concept-comparison-approach",
+    "theory-concept-cost-approach",
+    "theory-concept-highest-best-use",
+    "theory-concept-income-approach",
+    "theory-concept-market-value",
+    "theory-concept-normal-price",
+    "theory-concept-price-principles",
+    "theory-concept-three-approaches",
+    "theory-concept-value-formation-factors"
+  ],
+  "conceptAnchorIds": [
+    "theory-anchor-appraisal-procedure-candidate",
+    "theory-anchor-comparison-approach-candidate",
+    "theory-anchor-cost-approach-candidate",
+    "theory-anchor-highest-best-use-candidate",
+    "theory-anchor-income-approach-candidate",
+    "theory-anchor-market-value-candidate",
+    "theory-anchor-normal-price-candidate",
+    "theory-anchor-price-principles-candidate",
+    "theory-anchor-three-approaches-candidate",
+    "theory-anchor-value-formation-factors-candidate"
+  ],
+  "conceptsNeedingOfficialVerification": [
+    "theory-concept-appraisal-procedure",
+    "theory-concept-comparison-approach",
+    "theory-concept-cost-approach",
+    "theory-concept-highest-best-use",
+    "theory-concept-income-approach",
+    "theory-concept-market-value",
+    "theory-concept-normal-price",
+    "theory-concept-price-principles",
+    "theory-concept-three-approaches",
+    "theory-concept-value-formation-factors"
+  ],
+  "conceptsWithOpenBlockers": [
+    "theory-concept-appraisal-procedure",
+    "theory-concept-comparison-approach",
+    "theory-concept-cost-approach",
+    "theory-concept-highest-best-use",
+    "theory-concept-income-approach",
+    "theory-concept-market-value",
+    "theory-concept-normal-price",
+    "theory-concept-price-principles",
+    "theory-concept-three-approaches",
+    "theory-concept-value-formation-factors"
+  ],
+  "blockedReleasePackageLinkIds": [],
+  "metadataOnly": true,
+  "safeUse": "s209_theory_concept_corpus_validation_only"
+}
