@@ -1,0 +1,1235 @@
+{
+  "schemaVersion": "2026-06-28.s209.v1",
+  "registryType": "appraiser_second_round_theory_concept_corpus_registry",
+  "registryScope": "appraiser_second_round_theory_only",
+  "generatedBy": "s209_theory_concept_corpus_validator",
+  "generatedAt": "2026-06-28T00:00:00.000Z",
+  "canonicalQuestionRegistryPath": "reference_corpus/question_archive/second/appraiser_second_round_canonical_questions.json",
+  "referenceAnswerPackageRegistryPath": "reference_corpus/reference_answers/second/appraiser_second_round_reference_answer_packages.json",
+  "rubricEvidenceContractVersion": "s205.common_rubric_evidence.v1",
+  "storagePolicy": {
+    "metadataOnly": true,
+    "rawDefinitionTextStored": false,
+    "rawOfficialQuestionTextStored": false,
+    "rawOfficialAnswerTextStored": false,
+    "rawReferenceAnswerTextStored": false,
+    "rawLearnerAnswerStored": false,
+    "rawOcrTextStored": false,
+    "rawSourceExcerptStored": false,
+    "rawTextbookOrAcademyExplanationStored": false,
+    "rawAssetBytesStored": false,
+    "providerPayloadStored": false
+  },
+  "boundaryPolicy": {
+    "syntheticFixturesOnly": false,
+    "officialQuestionBodiesStored": false,
+    "officialAnswerBodiesStored": false,
+    "referenceAnswerBodiesStored": false,
+    "learnerAnswerBodiesStored": false,
+    "theoryAnswerReviewEngineImplemented": false,
+    "referenceAnswerGenerationImplemented": false,
+    "billingOrLedgerImplemented": false,
+    "publicArchiveUiImplemented": false,
+    "instructorRuntimeRoutesChanged": false,
+    "providerCallsImplemented": false,
+    "authOrEntitlementChanged": false,
+    "ocrRuntimeImplemented": false
+  },
+  "concepts": [
+    {
+      "conceptId": "theory-concept-appraisal-procedure",
+      "subjectScope": ["theory"],
+      "unit": "appraisal_process",
+      "conceptTitleKo": "감정평가 절차",
+      "conceptKind": "procedure",
+      "definitionStatus": "needs_official_verification",
+      "sourceStatus": "needs_official_verification",
+      "provenance": [
+        {
+          "provenanceId": "prov-theory-appraisal-procedure-molit",
+          "provider": "molit",
+          "sourceLabel": "MOLIT public appraisal standards metadata candidate",
+          "officialUrl": "https://www.molit.go.kr",
+          "officialSourceId": "molit-appraisal-standards-candidate",
+          "status": "needs_official_verification",
+          "verificationNote": "Candidate metadata only. Verify source identity, public status, and theory use before S212/S214/S215 consumption.",
+          "sourceExcerptStored": false
+        }
+      ],
+      "aliases": [
+        {
+          "aliasId": "alias-theory-appraisal-procedure-canonical",
+          "labelKo": "감정평가 절차",
+          "aliasKind": "canonical_title",
+          "status": "needs_official_verification",
+          "sourceStatus": "needs_official_verification"
+        }
+      ],
+      "relationIds": ["relation-appraisal-procedure-applies-three-approaches"],
+      "alternativeViewIds": [],
+      "uncertaintyNotes": [],
+      "downstreamUse": {
+        "s212TheoryReviewInputAllowed": false,
+        "s214ReferenceGenerationInputAllowed": false,
+        "s215ReleaseGateInputAllowed": false,
+        "s207PackageReleaseAnchorAllowed": false,
+        "s205RubricEvidenceSourceAllowed": false,
+        "highConfidenceTheoryClaimAllowed": false,
+        "blockUntilResolved": true
+      },
+      "blockerIds": ["theory-blocker-appraisal-procedure-official-verification"],
+      "contentPolicy": {
+        "metadataOnly": true,
+        "rawDefinitionTextStored": false,
+        "rawOfficialQuestionTextStored": false,
+        "rawOfficialAnswerTextStored": false,
+        "rawReferenceAnswerTextStored": false,
+        "rawLearnerAnswerStored": false,
+        "rawOcrTextStored": false,
+        "rawSourceExcerptStored": false,
+        "rawTextbookOrAcademyExplanationStored": false,
+        "rawAssetBytesStored": false,
+        "providerPayloadStored": false
+      }
+    },
+    {
+      "conceptId": "theory-concept-comparison-approach",
+      "subjectScope": ["theory"],
+      "unit": "valuation_approaches",
+      "conceptTitleKo": "비교방식",
+      "conceptKind": "valuation_approach",
+      "definitionStatus": "needs_official_verification",
+      "sourceStatus": "needs_official_verification",
+      "provenance": [
+        {
+          "provenanceId": "prov-theory-comparison-approach-molit",
+          "provider": "molit",
+          "sourceLabel": "MOLIT public appraisal standards metadata candidate",
+          "officialUrl": "https://www.molit.go.kr",
+          "officialSourceId": "molit-appraisal-standards-candidate",
+          "status": "needs_official_verification",
+          "verificationNote": "Candidate metadata only. Verify source identity, public status, and theory use before S212/S214/S215 consumption.",
+          "sourceExcerptStored": false
+        }
+      ],
+      "aliases": [
+        {
+          "aliasId": "alias-theory-comparison-approach-canonical",
+          "labelKo": "비교방식",
+          "aliasKind": "canonical_title",
+          "status": "needs_official_verification",
+          "sourceStatus": "needs_official_verification"
+        }
+      ],
+      "relationIds": ["relation-three-approaches-parent-comparison"],
+      "alternativeViewIds": [],
+      "uncertaintyNotes": [],
+      "downstreamUse": {
+        "s212TheoryReviewInputAllowed": false,
+        "s214ReferenceGenerationInputAllowed": false,
+        "s215ReleaseGateInputAllowed": false,
+        "s207PackageReleaseAnchorAllowed": false,
+        "s205RubricEvidenceSourceAllowed": false,
+        "highConfidenceTheoryClaimAllowed": false,
+        "blockUntilResolved": true
+      },
+      "blockerIds": ["theory-blocker-comparison-approach-official-verification"],
+      "contentPolicy": {
+        "metadataOnly": true,
+        "rawDefinitionTextStored": false,
+        "rawOfficialQuestionTextStored": false,
+        "rawOfficialAnswerTextStored": false,
+        "rawReferenceAnswerTextStored": false,
+        "rawLearnerAnswerStored": false,
+        "rawOcrTextStored": false,
+        "rawSourceExcerptStored": false,
+        "rawTextbookOrAcademyExplanationStored": false,
+        "rawAssetBytesStored": false,
+        "providerPayloadStored": false
+      }
+    },
+    {
+      "conceptId": "theory-concept-cost-approach",
+      "subjectScope": ["theory"],
+      "unit": "valuation_approaches",
+      "conceptTitleKo": "원가방식",
+      "conceptKind": "valuation_approach",
+      "definitionStatus": "needs_official_verification",
+      "sourceStatus": "needs_official_verification",
+      "provenance": [
+        {
+          "provenanceId": "prov-theory-cost-approach-molit",
+          "provider": "molit",
+          "sourceLabel": "MOLIT public appraisal standards metadata candidate",
+          "officialUrl": "https://www.molit.go.kr",
+          "officialSourceId": "molit-appraisal-standards-candidate",
+          "status": "needs_official_verification",
+          "verificationNote": "Candidate metadata only. Verify source identity, public status, and theory use before S212/S214/S215 consumption.",
+          "sourceExcerptStored": false
+        }
+      ],
+      "aliases": [
+        {
+          "aliasId": "alias-theory-cost-approach-canonical",
+          "labelKo": "원가방식",
+          "aliasKind": "canonical_title",
+          "status": "needs_official_verification",
+          "sourceStatus": "needs_official_verification"
+        }
+      ],
+      "relationIds": ["relation-three-approaches-parent-cost"],
+      "alternativeViewIds": [],
+      "uncertaintyNotes": [],
+      "downstreamUse": {
+        "s212TheoryReviewInputAllowed": false,
+        "s214ReferenceGenerationInputAllowed": false,
+        "s215ReleaseGateInputAllowed": false,
+        "s207PackageReleaseAnchorAllowed": false,
+        "s205RubricEvidenceSourceAllowed": false,
+        "highConfidenceTheoryClaimAllowed": false,
+        "blockUntilResolved": true
+      },
+      "blockerIds": ["theory-blocker-cost-approach-official-verification"],
+      "contentPolicy": {
+        "metadataOnly": true,
+        "rawDefinitionTextStored": false,
+        "rawOfficialQuestionTextStored": false,
+        "rawOfficialAnswerTextStored": false,
+        "rawReferenceAnswerTextStored": false,
+        "rawLearnerAnswerStored": false,
+        "rawOcrTextStored": false,
+        "rawSourceExcerptStored": false,
+        "rawTextbookOrAcademyExplanationStored": false,
+        "rawAssetBytesStored": false,
+        "providerPayloadStored": false
+      }
+    },
+    {
+      "conceptId": "theory-concept-highest-best-use",
+      "subjectScope": ["theory"],
+      "unit": "value_basis",
+      "conceptTitleKo": "최고최선이용",
+      "conceptKind": "valuation_principle",
+      "definitionStatus": "needs_official_verification",
+      "sourceStatus": "needs_official_verification",
+      "provenance": [
+        {
+          "provenanceId": "prov-theory-highest-best-use-molit",
+          "provider": "molit",
+          "sourceLabel": "MOLIT public appraisal standards metadata candidate",
+          "officialUrl": "https://www.molit.go.kr",
+          "officialSourceId": "molit-appraisal-standards-candidate",
+          "status": "needs_official_verification",
+          "verificationNote": "Candidate metadata only. Verify source identity, public status, and theory use before S212/S214/S215 consumption.",
+          "sourceExcerptStored": false
+        }
+      ],
+      "aliases": [
+        {
+          "aliasId": "alias-theory-highest-best-use-canonical",
+          "labelKo": "최고최선이용",
+          "aliasKind": "canonical_title",
+          "status": "needs_official_verification",
+          "sourceStatus": "needs_official_verification"
+        }
+      ],
+      "relationIds": ["relation-highest-best-use-evaluated-by-market-value"],
+      "alternativeViewIds": ["alternative-view-highest-best-use-legal-use-scope"],
+      "uncertaintyNotes": [
+        {
+          "uncertaintyId": "uncertainty-theory-highest-best-use-source-scope",
+          "kind": "definition_scope",
+          "severity": "blocking",
+          "status": "open",
+          "summary": "Metadata-only uncertainty: source scope and alternative public-theory framing need review before high-confidence use.",
+          "releaseBlocking": true,
+          "officialClaimAllowed": false,
+          "blockerIds": ["theory-blocker-highest-best-use-alternative-view"]
+        }
+      ],
+      "downstreamUse": {
+        "s212TheoryReviewInputAllowed": false,
+        "s214ReferenceGenerationInputAllowed": false,
+        "s215ReleaseGateInputAllowed": false,
+        "s207PackageReleaseAnchorAllowed": false,
+        "s205RubricEvidenceSourceAllowed": false,
+        "highConfidenceTheoryClaimAllowed": false,
+        "blockUntilResolved": true
+      },
+      "blockerIds": [
+        "theory-blocker-highest-best-use-official-verification",
+        "theory-blocker-highest-best-use-alternative-view"
+      ],
+      "contentPolicy": {
+        "metadataOnly": true,
+        "rawDefinitionTextStored": false,
+        "rawOfficialQuestionTextStored": false,
+        "rawOfficialAnswerTextStored": false,
+        "rawReferenceAnswerTextStored": false,
+        "rawLearnerAnswerStored": false,
+        "rawOcrTextStored": false,
+        "rawSourceExcerptStored": false,
+        "rawTextbookOrAcademyExplanationStored": false,
+        "rawAssetBytesStored": false,
+        "providerPayloadStored": false
+      }
+    },
+    {
+      "conceptId": "theory-concept-income-approach",
+      "subjectScope": ["theory"],
+      "unit": "valuation_approaches",
+      "conceptTitleKo": "수익방식",
+      "conceptKind": "valuation_approach",
+      "definitionStatus": "needs_official_verification",
+      "sourceStatus": "needs_official_verification",
+      "provenance": [
+        {
+          "provenanceId": "prov-theory-income-approach-molit",
+          "provider": "molit",
+          "sourceLabel": "MOLIT public appraisal standards metadata candidate",
+          "officialUrl": "https://www.molit.go.kr",
+          "officialSourceId": "molit-appraisal-standards-candidate",
+          "status": "needs_official_verification",
+          "verificationNote": "Candidate metadata only. Verify source identity, public status, and theory use before S212/S214/S215 consumption.",
+          "sourceExcerptStored": false
+        }
+      ],
+      "aliases": [
+        {
+          "aliasId": "alias-theory-income-approach-canonical",
+          "labelKo": "수익방식",
+          "aliasKind": "canonical_title",
+          "status": "needs_official_verification",
+          "sourceStatus": "needs_official_verification"
+        }
+      ],
+      "relationIds": ["relation-three-approaches-parent-income"],
+      "alternativeViewIds": [],
+      "uncertaintyNotes": [],
+      "downstreamUse": {
+        "s212TheoryReviewInputAllowed": false,
+        "s214ReferenceGenerationInputAllowed": false,
+        "s215ReleaseGateInputAllowed": false,
+        "s207PackageReleaseAnchorAllowed": false,
+        "s205RubricEvidenceSourceAllowed": false,
+        "highConfidenceTheoryClaimAllowed": false,
+        "blockUntilResolved": true
+      },
+      "blockerIds": ["theory-blocker-income-approach-official-verification"],
+      "contentPolicy": {
+        "metadataOnly": true,
+        "rawDefinitionTextStored": false,
+        "rawOfficialQuestionTextStored": false,
+        "rawOfficialAnswerTextStored": false,
+        "rawReferenceAnswerTextStored": false,
+        "rawLearnerAnswerStored": false,
+        "rawOcrTextStored": false,
+        "rawSourceExcerptStored": false,
+        "rawTextbookOrAcademyExplanationStored": false,
+        "rawAssetBytesStored": false,
+        "providerPayloadStored": false
+      }
+    },
+    {
+      "conceptId": "theory-concept-market-value",
+      "subjectScope": ["theory"],
+      "unit": "value_basis",
+      "conceptTitleKo": "시장가치",
+      "conceptKind": "valuation_standard",
+      "definitionStatus": "needs_official_verification",
+      "sourceStatus": "needs_official_verification",
+      "provenance": [
+        {
+          "provenanceId": "prov-theory-market-value-molit",
+          "provider": "molit",
+          "sourceLabel": "MOLIT public appraisal standards metadata candidate",
+          "officialUrl": "https://www.molit.go.kr",
+          "officialSourceId": "molit-appraisal-standards-candidate",
+          "status": "needs_official_verification",
+          "verificationNote": "Candidate metadata only. Verify source identity, public status, and theory use before S212/S214/S215 consumption.",
+          "sourceExcerptStored": false
+        },
+        {
+          "provenanceId": "prov-theory-market-value-qnet",
+          "provider": "qnet",
+          "sourceLabel": "Q-Net appraiser second-round theory subject metadata candidate",
+          "officialUrl": "https://www.q-net.or.kr",
+          "officialSourceId": "qnet-appraiser-second-round-theory-candidate",
+          "status": "needs_official_verification",
+          "verificationNote": "Candidate metadata only. Verify source identity and curriculum fit before high-confidence theory review use.",
+          "sourceExcerptStored": false
+        }
+      ],
+      "aliases": [
+        {
+          "aliasId": "alias-theory-market-value-canonical",
+          "labelKo": "시장가치",
+          "aliasKind": "canonical_title",
+          "status": "needs_official_verification",
+          "sourceStatus": "needs_official_verification"
+        }
+      ],
+      "relationIds": [
+        "relation-highest-best-use-evaluated-by-market-value",
+        "relation-market-value-contrast-normal-price"
+      ],
+      "alternativeViewIds": ["alternative-view-market-value-fair-value"],
+      "uncertaintyNotes": [
+        {
+          "uncertaintyId": "uncertainty-theory-market-value-source-scope",
+          "kind": "source_coverage",
+          "severity": "blocking",
+          "status": "open",
+          "summary": "Metadata-only uncertainty: public source identity and fair-value relationship need review before high-confidence use.",
+          "releaseBlocking": true,
+          "officialClaimAllowed": false,
+          "blockerIds": ["theory-blocker-market-value-alternative-view"]
+        }
+      ],
+      "downstreamUse": {
+        "s212TheoryReviewInputAllowed": false,
+        "s214ReferenceGenerationInputAllowed": false,
+        "s215ReleaseGateInputAllowed": false,
+        "s207PackageReleaseAnchorAllowed": false,
+        "s205RubricEvidenceSourceAllowed": false,
+        "highConfidenceTheoryClaimAllowed": false,
+        "blockUntilResolved": true
+      },
+      "blockerIds": [
+        "theory-blocker-market-value-official-verification",
+        "theory-blocker-market-value-alternative-view"
+      ],
+      "contentPolicy": {
+        "metadataOnly": true,
+        "rawDefinitionTextStored": false,
+        "rawOfficialQuestionTextStored": false,
+        "rawOfficialAnswerTextStored": false,
+        "rawReferenceAnswerTextStored": false,
+        "rawLearnerAnswerStored": false,
+        "rawOcrTextStored": false,
+        "rawSourceExcerptStored": false,
+        "rawTextbookOrAcademyExplanationStored": false,
+        "rawAssetBytesStored": false,
+        "providerPayloadStored": false
+      }
+    },
+    {
+      "conceptId": "theory-concept-normal-price",
+      "subjectScope": ["theory"],
+      "unit": "value_basis",
+      "conceptTitleKo": "정상가격",
+      "conceptKind": "valuation_standard",
+      "definitionStatus": "needs_official_verification",
+      "sourceStatus": "needs_official_verification",
+      "provenance": [
+        {
+          "provenanceId": "prov-theory-normal-price-public",
+          "provider": "public_academic_metadata",
+          "sourceLabel": "Public theory metadata candidate for terminology review",
+          "officialUrl": "https://www.q-net.or.kr",
+          "officialSourceId": "qnet-appraiser-second-round-theory-candidate",
+          "status": "needs_official_verification",
+          "verificationNote": "Candidate metadata only. Verify whether this term is valid for the selected exam-date concept graph before downstream use.",
+          "sourceExcerptStored": false
+        }
+      ],
+      "aliases": [
+        {
+          "aliasId": "alias-theory-normal-price-canonical",
+          "labelKo": "정상가격",
+          "aliasKind": "canonical_title",
+          "status": "needs_official_verification",
+          "sourceStatus": "needs_official_verification"
+        }
+      ],
+      "relationIds": ["relation-market-value-contrast-normal-price"],
+      "alternativeViewIds": [],
+      "uncertaintyNotes": [],
+      "downstreamUse": {
+        "s212TheoryReviewInputAllowed": false,
+        "s214ReferenceGenerationInputAllowed": false,
+        "s215ReleaseGateInputAllowed": false,
+        "s207PackageReleaseAnchorAllowed": false,
+        "s205RubricEvidenceSourceAllowed": false,
+        "highConfidenceTheoryClaimAllowed": false,
+        "blockUntilResolved": true
+      },
+      "blockerIds": ["theory-blocker-normal-price-official-verification"],
+      "contentPolicy": {
+        "metadataOnly": true,
+        "rawDefinitionTextStored": false,
+        "rawOfficialQuestionTextStored": false,
+        "rawOfficialAnswerTextStored": false,
+        "rawReferenceAnswerTextStored": false,
+        "rawLearnerAnswerStored": false,
+        "rawOcrTextStored": false,
+        "rawSourceExcerptStored": false,
+        "rawTextbookOrAcademyExplanationStored": false,
+        "rawAssetBytesStored": false,
+        "providerPayloadStored": false
+      }
+    },
+    {
+      "conceptId": "theory-concept-price-principles",
+      "subjectScope": ["theory"],
+      "unit": "valuation_principles",
+      "conceptTitleKo": "가격제원칙",
+      "conceptKind": "valuation_principle",
+      "definitionStatus": "needs_official_verification",
+      "sourceStatus": "needs_official_verification",
+      "provenance": [
+        {
+          "provenanceId": "prov-theory-price-principles-qnet",
+          "provider": "qnet",
+          "sourceLabel": "Q-Net appraiser second-round theory subject metadata candidate",
+          "officialUrl": "https://www.q-net.or.kr",
+          "officialSourceId": "qnet-appraiser-second-round-theory-candidate",
+          "status": "needs_official_verification",
+          "verificationNote": "Candidate metadata only. Verify source identity and curriculum fit before high-confidence theory review use.",
+          "sourceExcerptStored": false
+        }
+      ],
+      "aliases": [
+        {
+          "aliasId": "alias-theory-price-principles-canonical",
+          "labelKo": "가격제원칙",
+          "aliasKind": "canonical_title",
+          "status": "needs_official_verification",
+          "sourceStatus": "needs_official_verification"
+        }
+      ],
+      "relationIds": ["relation-price-principles-applied-by-value-factors"],
+      "alternativeViewIds": [],
+      "uncertaintyNotes": [],
+      "downstreamUse": {
+        "s212TheoryReviewInputAllowed": false,
+        "s214ReferenceGenerationInputAllowed": false,
+        "s215ReleaseGateInputAllowed": false,
+        "s207PackageReleaseAnchorAllowed": false,
+        "s205RubricEvidenceSourceAllowed": false,
+        "highConfidenceTheoryClaimAllowed": false,
+        "blockUntilResolved": true
+      },
+      "blockerIds": ["theory-blocker-price-principles-official-verification"],
+      "contentPolicy": {
+        "metadataOnly": true,
+        "rawDefinitionTextStored": false,
+        "rawOfficialQuestionTextStored": false,
+        "rawOfficialAnswerTextStored": false,
+        "rawReferenceAnswerTextStored": false,
+        "rawLearnerAnswerStored": false,
+        "rawOcrTextStored": false,
+        "rawSourceExcerptStored": false,
+        "rawTextbookOrAcademyExplanationStored": false,
+        "rawAssetBytesStored": false,
+        "providerPayloadStored": false
+      }
+    },
+    {
+      "conceptId": "theory-concept-three-approaches",
+      "subjectScope": ["theory"],
+      "unit": "valuation_approaches",
+      "conceptTitleKo": "감정평가 3방식",
+      "conceptKind": "valuation_approach",
+      "definitionStatus": "needs_official_verification",
+      "sourceStatus": "needs_official_verification",
+      "provenance": [
+        {
+          "provenanceId": "prov-theory-three-approaches-molit",
+          "provider": "molit",
+          "sourceLabel": "MOLIT public appraisal standards metadata candidate",
+          "officialUrl": "https://www.molit.go.kr",
+          "officialSourceId": "molit-appraisal-standards-candidate",
+          "status": "needs_official_verification",
+          "verificationNote": "Candidate metadata only. Verify source identity, public status, and theory use before S212/S214/S215 consumption.",
+          "sourceExcerptStored": false
+        }
+      ],
+      "aliases": [
+        {
+          "aliasId": "alias-theory-three-approaches-canonical",
+          "labelKo": "감정평가 3방식",
+          "aliasKind": "canonical_title",
+          "status": "needs_official_verification",
+          "sourceStatus": "needs_official_verification"
+        }
+      ],
+      "relationIds": [
+        "relation-appraisal-procedure-applies-three-approaches",
+        "relation-three-approaches-parent-comparison",
+        "relation-three-approaches-parent-cost",
+        "relation-three-approaches-parent-income"
+      ],
+      "alternativeViewIds": [],
+      "uncertaintyNotes": [],
+      "downstreamUse": {
+        "s212TheoryReviewInputAllowed": false,
+        "s214ReferenceGenerationInputAllowed": false,
+        "s215ReleaseGateInputAllowed": false,
+        "s207PackageReleaseAnchorAllowed": false,
+        "s205RubricEvidenceSourceAllowed": false,
+        "highConfidenceTheoryClaimAllowed": false,
+        "blockUntilResolved": true
+      },
+      "blockerIds": ["theory-blocker-three-approaches-official-verification"],
+      "contentPolicy": {
+        "metadataOnly": true,
+        "rawDefinitionTextStored": false,
+        "rawOfficialQuestionTextStored": false,
+        "rawOfficialAnswerTextStored": false,
+        "rawReferenceAnswerTextStored": false,
+        "rawLearnerAnswerStored": false,
+        "rawOcrTextStored": false,
+        "rawSourceExcerptStored": false,
+        "rawTextbookOrAcademyExplanationStored": false,
+        "rawAssetBytesStored": false,
+        "providerPayloadStored": false
+      }
+    },
+    {
+      "conceptId": "theory-concept-value-formation-factors",
+      "subjectScope": ["theory"],
+      "unit": "valuation_principles",
+      "conceptTitleKo": "가치형성요인",
+      "conceptKind": "valuation_principle",
+      "definitionStatus": "needs_official_verification",
+      "sourceStatus": "needs_official_verification",
+      "provenance": [
+        {
+          "provenanceId": "prov-theory-value-formation-factors-qnet",
+          "provider": "qnet",
+          "sourceLabel": "Q-Net appraiser second-round theory subject metadata candidate",
+          "officialUrl": "https://www.q-net.or.kr",
+          "officialSourceId": "qnet-appraiser-second-round-theory-candidate",
+          "status": "needs_official_verification",
+          "verificationNote": "Candidate metadata only. Verify source identity and curriculum fit before high-confidence theory review use.",
+          "sourceExcerptStored": false
+        }
+      ],
+      "aliases": [
+        {
+          "aliasId": "alias-theory-value-formation-factors-canonical",
+          "labelKo": "가치형성요인",
+          "aliasKind": "canonical_title",
+          "status": "needs_official_verification",
+          "sourceStatus": "needs_official_verification"
+        }
+      ],
+      "relationIds": ["relation-price-principles-applied-by-value-factors"],
+      "alternativeViewIds": [],
+      "uncertaintyNotes": [],
+      "downstreamUse": {
+        "s212TheoryReviewInputAllowed": false,
+        "s214ReferenceGenerationInputAllowed": false,
+        "s215ReleaseGateInputAllowed": false,
+        "s207PackageReleaseAnchorAllowed": false,
+        "s205RubricEvidenceSourceAllowed": false,
+        "highConfidenceTheoryClaimAllowed": false,
+        "blockUntilResolved": true
+      },
+      "blockerIds": ["theory-blocker-value-formation-factors-official-verification"],
+      "contentPolicy": {
+        "metadataOnly": true,
+        "rawDefinitionTextStored": false,
+        "rawOfficialQuestionTextStored": false,
+        "rawOfficialAnswerTextStored": false,
+        "rawReferenceAnswerTextStored": false,
+        "rawLearnerAnswerStored": false,
+        "rawOcrTextStored": false,
+        "rawSourceExcerptStored": false,
+        "rawTextbookOrAcademyExplanationStored": false,
+        "rawAssetBytesStored": false,
+        "providerPayloadStored": false
+      }
+    }
+  ],
+  "conceptAnchors": [
+    {
+      "anchorId": "theory-anchor-appraisal-procedure-candidate",
+      "conceptId": "theory-concept-appraisal-procedure",
+      "anchorKind": "concept_identity",
+      "locator": {
+        "kind": "concept_id",
+        "ref": "theory-concept-appraisal-procedure",
+        "rawTextStored": false,
+        "excerptStored": false,
+        "bodyTextStored": false
+      },
+      "sourceStatus": "needs_official_verification",
+      "definitionStatus": "needs_official_verification",
+      "blockerIds": ["theory-blocker-appraisal-procedure-official-verification"],
+      "s207SourceAnchorKind": "theory_concept_source",
+      "s205SourceReferenceKind": "subject_validator",
+      "containsRawContent": false
+    },
+    {
+      "anchorId": "theory-anchor-comparison-approach-candidate",
+      "conceptId": "theory-concept-comparison-approach",
+      "anchorKind": "concept_identity",
+      "locator": {
+        "kind": "concept_id",
+        "ref": "theory-concept-comparison-approach",
+        "rawTextStored": false,
+        "excerptStored": false,
+        "bodyTextStored": false
+      },
+      "sourceStatus": "needs_official_verification",
+      "definitionStatus": "needs_official_verification",
+      "blockerIds": ["theory-blocker-comparison-approach-official-verification"],
+      "s207SourceAnchorKind": "theory_concept_source",
+      "s205SourceReferenceKind": "subject_validator",
+      "containsRawContent": false
+    },
+    {
+      "anchorId": "theory-anchor-cost-approach-candidate",
+      "conceptId": "theory-concept-cost-approach",
+      "anchorKind": "concept_identity",
+      "locator": {
+        "kind": "concept_id",
+        "ref": "theory-concept-cost-approach",
+        "rawTextStored": false,
+        "excerptStored": false,
+        "bodyTextStored": false
+      },
+      "sourceStatus": "needs_official_verification",
+      "definitionStatus": "needs_official_verification",
+      "blockerIds": ["theory-blocker-cost-approach-official-verification"],
+      "s207SourceAnchorKind": "theory_concept_source",
+      "s205SourceReferenceKind": "subject_validator",
+      "containsRawContent": false
+    },
+    {
+      "anchorId": "theory-anchor-highest-best-use-candidate",
+      "conceptId": "theory-concept-highest-best-use",
+      "anchorKind": "concept_identity",
+      "locator": {
+        "kind": "concept_id",
+        "ref": "theory-concept-highest-best-use",
+        "rawTextStored": false,
+        "excerptStored": false,
+        "bodyTextStored": false
+      },
+      "sourceStatus": "needs_official_verification",
+      "definitionStatus": "needs_official_verification",
+      "blockerIds": [
+        "theory-blocker-highest-best-use-official-verification",
+        "theory-blocker-highest-best-use-alternative-view"
+      ],
+      "s207SourceAnchorKind": "theory_concept_source",
+      "s205SourceReferenceKind": "subject_validator",
+      "containsRawContent": false
+    },
+    {
+      "anchorId": "theory-anchor-income-approach-candidate",
+      "conceptId": "theory-concept-income-approach",
+      "anchorKind": "concept_identity",
+      "locator": {
+        "kind": "concept_id",
+        "ref": "theory-concept-income-approach",
+        "rawTextStored": false,
+        "excerptStored": false,
+        "bodyTextStored": false
+      },
+      "sourceStatus": "needs_official_verification",
+      "definitionStatus": "needs_official_verification",
+      "blockerIds": ["theory-blocker-income-approach-official-verification"],
+      "s207SourceAnchorKind": "theory_concept_source",
+      "s205SourceReferenceKind": "subject_validator",
+      "containsRawContent": false
+    },
+    {
+      "anchorId": "theory-anchor-market-value-candidate",
+      "conceptId": "theory-concept-market-value",
+      "anchorKind": "concept_identity",
+      "locator": {
+        "kind": "concept_id",
+        "ref": "theory-concept-market-value",
+        "rawTextStored": false,
+        "excerptStored": false,
+        "bodyTextStored": false
+      },
+      "sourceStatus": "needs_official_verification",
+      "definitionStatus": "needs_official_verification",
+      "blockerIds": [
+        "theory-blocker-market-value-official-verification",
+        "theory-blocker-market-value-alternative-view"
+      ],
+      "s207SourceAnchorKind": "theory_concept_source",
+      "s205SourceReferenceKind": "subject_validator",
+      "containsRawContent": false
+    },
+    {
+      "anchorId": "theory-anchor-normal-price-candidate",
+      "conceptId": "theory-concept-normal-price",
+      "anchorKind": "concept_identity",
+      "locator": {
+        "kind": "concept_id",
+        "ref": "theory-concept-normal-price",
+        "rawTextStored": false,
+        "excerptStored": false,
+        "bodyTextStored": false
+      },
+      "sourceStatus": "needs_official_verification",
+      "definitionStatus": "needs_official_verification",
+      "blockerIds": ["theory-blocker-normal-price-official-verification"],
+      "s207SourceAnchorKind": "theory_concept_source",
+      "s205SourceReferenceKind": "subject_validator",
+      "containsRawContent": false
+    },
+    {
+      "anchorId": "theory-anchor-price-principles-candidate",
+      "conceptId": "theory-concept-price-principles",
+      "anchorKind": "concept_identity",
+      "locator": {
+        "kind": "concept_id",
+        "ref": "theory-concept-price-principles",
+        "rawTextStored": false,
+        "excerptStored": false,
+        "bodyTextStored": false
+      },
+      "sourceStatus": "needs_official_verification",
+      "definitionStatus": "needs_official_verification",
+      "blockerIds": ["theory-blocker-price-principles-official-verification"],
+      "s207SourceAnchorKind": "theory_concept_source",
+      "s205SourceReferenceKind": "subject_validator",
+      "containsRawContent": false
+    },
+    {
+      "anchorId": "theory-anchor-three-approaches-candidate",
+      "conceptId": "theory-concept-three-approaches",
+      "anchorKind": "concept_identity",
+      "locator": {
+        "kind": "concept_id",
+        "ref": "theory-concept-three-approaches",
+        "rawTextStored": false,
+        "excerptStored": false,
+        "bodyTextStored": false
+      },
+      "sourceStatus": "needs_official_verification",
+      "definitionStatus": "needs_official_verification",
+      "blockerIds": ["theory-blocker-three-approaches-official-verification"],
+      "s207SourceAnchorKind": "theory_concept_source",
+      "s205SourceReferenceKind": "subject_validator",
+      "containsRawContent": false
+    },
+    {
+      "anchorId": "theory-anchor-value-formation-factors-candidate",
+      "conceptId": "theory-concept-value-formation-factors",
+      "anchorKind": "concept_identity",
+      "locator": {
+        "kind": "concept_id",
+        "ref": "theory-concept-value-formation-factors",
+        "rawTextStored": false,
+        "excerptStored": false,
+        "bodyTextStored": false
+      },
+      "sourceStatus": "needs_official_verification",
+      "definitionStatus": "needs_official_verification",
+      "blockerIds": ["theory-blocker-value-formation-factors-official-verification"],
+      "s207SourceAnchorKind": "theory_concept_source",
+      "s205SourceReferenceKind": "subject_validator",
+      "containsRawContent": false
+    }
+  ],
+  "conceptRelations": [
+    {
+      "relationId": "relation-appraisal-procedure-applies-three-approaches",
+      "fromConceptId": "theory-concept-appraisal-procedure",
+      "toConceptId": "theory-concept-three-approaches",
+      "relationKind": "applied_by",
+      "relationStatus": "needs_official_verification",
+      "sourceStatus": "needs_official_verification",
+      "blockerIds": ["theory-blocker-relation-procedure-three-approaches"],
+      "metadataOnly": true,
+      "containsRawContent": false
+    },
+    {
+      "relationId": "relation-highest-best-use-evaluated-by-market-value",
+      "fromConceptId": "theory-concept-highest-best-use",
+      "toConceptId": "theory-concept-market-value",
+      "relationKind": "evaluated_by",
+      "relationStatus": "needs_official_verification",
+      "sourceStatus": "needs_official_verification",
+      "blockerIds": ["theory-blocker-relation-highest-best-use-market-value"],
+      "metadataOnly": true,
+      "containsRawContent": false
+    },
+    {
+      "relationId": "relation-market-value-contrast-normal-price",
+      "fromConceptId": "theory-concept-market-value",
+      "toConceptId": "theory-concept-normal-price",
+      "relationKind": "contrast",
+      "relationStatus": "needs_official_verification",
+      "sourceStatus": "needs_official_verification",
+      "blockerIds": ["theory-blocker-relation-market-value-normal-price"],
+      "metadataOnly": true,
+      "containsRawContent": false
+    },
+    {
+      "relationId": "relation-price-principles-applied-by-value-factors",
+      "fromConceptId": "theory-concept-price-principles",
+      "toConceptId": "theory-concept-value-formation-factors",
+      "relationKind": "applied_by",
+      "relationStatus": "needs_official_verification",
+      "sourceStatus": "needs_official_verification",
+      "blockerIds": ["theory-blocker-relation-price-principles-value-factors"],
+      "metadataOnly": true,
+      "containsRawContent": false
+    },
+    {
+      "relationId": "relation-three-approaches-parent-comparison",
+      "fromConceptId": "theory-concept-three-approaches",
+      "toConceptId": "theory-concept-comparison-approach",
+      "relationKind": "parent",
+      "relationStatus": "needs_official_verification",
+      "sourceStatus": "needs_official_verification",
+      "blockerIds": ["theory-blocker-relation-three-approaches-comparison"],
+      "metadataOnly": true,
+      "containsRawContent": false
+    },
+    {
+      "relationId": "relation-three-approaches-parent-cost",
+      "fromConceptId": "theory-concept-three-approaches",
+      "toConceptId": "theory-concept-cost-approach",
+      "relationKind": "parent",
+      "relationStatus": "needs_official_verification",
+      "sourceStatus": "needs_official_verification",
+      "blockerIds": ["theory-blocker-relation-three-approaches-cost"],
+      "metadataOnly": true,
+      "containsRawContent": false
+    },
+    {
+      "relationId": "relation-three-approaches-parent-income",
+      "fromConceptId": "theory-concept-three-approaches",
+      "toConceptId": "theory-concept-income-approach",
+      "relationKind": "parent",
+      "relationStatus": "needs_official_verification",
+      "sourceStatus": "needs_official_verification",
+      "blockerIds": ["theory-blocker-relation-three-approaches-income"],
+      "metadataOnly": true,
+      "containsRawContent": false
+    }
+  ],
+  "alternativeViews": [
+    {
+      "alternativeViewId": "alternative-view-highest-best-use-legal-use-scope",
+      "conceptId": "theory-concept-highest-best-use",
+      "status": "needs_review",
+      "sourceStatus": "needs_official_verification",
+      "viewpointLabel": "Legal-use and economic-use scope candidate; metadata only.",
+      "provenanceIds": ["prov-theory-highest-best-use-molit"],
+      "uncertaintyIds": ["uncertainty-theory-highest-best-use-source-scope"],
+      "releaseImplication": "blocks_high_confidence",
+      "officialClaimAllowed": false,
+      "blockerIds": ["theory-blocker-highest-best-use-alternative-view"],
+      "metadataOnly": true,
+      "containsRawContent": false
+    },
+    {
+      "alternativeViewId": "alternative-view-market-value-fair-value",
+      "conceptId": "theory-concept-market-value",
+      "status": "needs_review",
+      "sourceStatus": "needs_official_verification",
+      "viewpointLabel": "Fair-value comparison candidate; metadata only.",
+      "provenanceIds": ["prov-theory-market-value-molit"],
+      "uncertaintyIds": ["uncertainty-theory-market-value-source-scope"],
+      "releaseImplication": "blocks_high_confidence",
+      "officialClaimAllowed": false,
+      "blockerIds": ["theory-blocker-market-value-alternative-view"],
+      "metadataOnly": true,
+      "containsRawContent": false
+    }
+  ],
+  "theoryConceptChecks": [],
+  "referencePackageLinks": [],
+  "evidenceReviewLinks": [],
+  "blockers": [
+    {
+      "blockerId": "theory-blocker-appraisal-procedure-official-verification",
+      "kind": "missing_source_provenance",
+      "status": "open",
+      "severity": "blocking",
+      "summary": "감정평가 절차 source identity and definition status require official/public-source verification before high-confidence theory use.",
+      "requiredResolver": "s209",
+      "conceptIds": ["theory-concept-appraisal-procedure"],
+      "conceptAnchorIds": ["theory-anchor-appraisal-procedure-candidate"],
+      "relationIds": [],
+      "alternativeViewIds": [],
+      "referencePackageLinkIds": [],
+      "evidenceReviewLinkIds": []
+    },
+    {
+      "blockerId": "theory-blocker-comparison-approach-official-verification",
+      "kind": "missing_source_provenance",
+      "status": "open",
+      "severity": "blocking",
+      "summary": "비교방식 source identity and definition status require official/public-source verification before high-confidence theory use.",
+      "requiredResolver": "s209",
+      "conceptIds": ["theory-concept-comparison-approach"],
+      "conceptAnchorIds": ["theory-anchor-comparison-approach-candidate"],
+      "relationIds": [],
+      "alternativeViewIds": [],
+      "referencePackageLinkIds": [],
+      "evidenceReviewLinkIds": []
+    },
+    {
+      "blockerId": "theory-blocker-cost-approach-official-verification",
+      "kind": "missing_source_provenance",
+      "status": "open",
+      "severity": "blocking",
+      "summary": "원가방식 source identity and definition status require official/public-source verification before high-confidence theory use.",
+      "requiredResolver": "s209",
+      "conceptIds": ["theory-concept-cost-approach"],
+      "conceptAnchorIds": ["theory-anchor-cost-approach-candidate"],
+      "relationIds": [],
+      "alternativeViewIds": [],
+      "referencePackageLinkIds": [],
+      "evidenceReviewLinkIds": []
+    },
+    {
+      "blockerId": "theory-blocker-highest-best-use-alternative-view",
+      "kind": "alternative_view_unreviewed",
+      "status": "open",
+      "severity": "blocking",
+      "summary": "최고최선이용 alternative view metadata must be reviewed before it can support high-confidence theory claims.",
+      "requiredResolver": "s209",
+      "conceptIds": ["theory-concept-highest-best-use"],
+      "conceptAnchorIds": ["theory-anchor-highest-best-use-candidate"],
+      "relationIds": [],
+      "alternativeViewIds": ["alternative-view-highest-best-use-legal-use-scope"],
+      "referencePackageLinkIds": [],
+      "evidenceReviewLinkIds": []
+    },
+    {
+      "blockerId": "theory-blocker-highest-best-use-official-verification",
+      "kind": "missing_source_provenance",
+      "status": "open",
+      "severity": "blocking",
+      "summary": "최고최선이용 source identity and definition status require official/public-source verification before high-confidence theory use.",
+      "requiredResolver": "s209",
+      "conceptIds": ["theory-concept-highest-best-use"],
+      "conceptAnchorIds": ["theory-anchor-highest-best-use-candidate"],
+      "relationIds": [],
+      "alternativeViewIds": [],
+      "referencePackageLinkIds": [],
+      "evidenceReviewLinkIds": []
+    },
+    {
+      "blockerId": "theory-blocker-income-approach-official-verification",
+      "kind": "missing_source_provenance",
+      "status": "open",
+      "severity": "blocking",
+      "summary": "수익방식 source identity and definition status require official/public-source verification before high-confidence theory use.",
+      "requiredResolver": "s209",
+      "conceptIds": ["theory-concept-income-approach"],
+      "conceptAnchorIds": ["theory-anchor-income-approach-candidate"],
+      "relationIds": [],
+      "alternativeViewIds": [],
+      "referencePackageLinkIds": [],
+      "evidenceReviewLinkIds": []
+    },
+    {
+      "blockerId": "theory-blocker-market-value-alternative-view",
+      "kind": "alternative_view_unreviewed",
+      "status": "open",
+      "severity": "blocking",
+      "summary": "시장가치 alternative view metadata must be reviewed before it can support high-confidence theory claims.",
+      "requiredResolver": "s209",
+      "conceptIds": ["theory-concept-market-value"],
+      "conceptAnchorIds": ["theory-anchor-market-value-candidate"],
+      "relationIds": [],
+      "alternativeViewIds": ["alternative-view-market-value-fair-value"],
+      "referencePackageLinkIds": [],
+      "evidenceReviewLinkIds": []
+    },
+    {
+      "blockerId": "theory-blocker-market-value-official-verification",
+      "kind": "missing_source_provenance",
+      "status": "open",
+      "severity": "blocking",
+      "summary": "시장가치 source identity and definition status require official/public-source verification before high-confidence theory use.",
+      "requiredResolver": "s209",
+      "conceptIds": ["theory-concept-market-value"],
+      "conceptAnchorIds": ["theory-anchor-market-value-candidate"],
+      "relationIds": [],
+      "alternativeViewIds": [],
+      "referencePackageLinkIds": [],
+      "evidenceReviewLinkIds": []
+    },
+    {
+      "blockerId": "theory-blocker-normal-price-official-verification",
+      "kind": "missing_source_provenance",
+      "status": "open",
+      "severity": "blocking",
+      "summary": "정상가격 source identity and definition status require official/public-source verification before high-confidence theory use.",
+      "requiredResolver": "s209",
+      "conceptIds": ["theory-concept-normal-price"],
+      "conceptAnchorIds": ["theory-anchor-normal-price-candidate"],
+      "relationIds": [],
+      "alternativeViewIds": [],
+      "referencePackageLinkIds": [],
+      "evidenceReviewLinkIds": []
+    },
+    {
+      "blockerId": "theory-blocker-price-principles-official-verification",
+      "kind": "missing_source_provenance",
+      "status": "open",
+      "severity": "blocking",
+      "summary": "가격제원칙 source identity and definition status require official/public-source verification before high-confidence theory use.",
+      "requiredResolver": "s209",
+      "conceptIds": ["theory-concept-price-principles"],
+      "conceptAnchorIds": ["theory-anchor-price-principles-candidate"],
+      "relationIds": [],
+      "alternativeViewIds": [],
+      "referencePackageLinkIds": [],
+      "evidenceReviewLinkIds": []
+    },
+    {
+      "blockerId": "theory-blocker-relation-highest-best-use-market-value",
+      "kind": "ambiguous_concept_relation",
+      "status": "open",
+      "severity": "blocking",
+      "summary": "최고최선이용 and 시장가치 concept relation requires source-backed review before high-confidence theory use.",
+      "requiredResolver": "s209",
+      "conceptIds": [
+        "theory-concept-highest-best-use",
+        "theory-concept-market-value"
+      ],
+      "conceptAnchorIds": [],
+      "relationIds": ["relation-highest-best-use-evaluated-by-market-value"],
+      "alternativeViewIds": [],
+      "referencePackageLinkIds": [],
+      "evidenceReviewLinkIds": []
+    },
+    {
+      "blockerId": "theory-blocker-relation-market-value-normal-price",
+      "kind": "ambiguous_concept_relation",
+      "status": "open",
+      "severity": "blocking",
+      "summary": "시장가치 and 정상가격 contrast relation requires source-backed review before high-confidence theory use.",
+      "requiredResolver": "s209",
+      "conceptIds": [
+        "theory-concept-market-value",
+        "theory-concept-normal-price"
+      ],
+      "conceptAnchorIds": [],
+      "relationIds": ["relation-market-value-contrast-normal-price"],
+      "alternativeViewIds": [],
+      "referencePackageLinkIds": [],
+      "evidenceReviewLinkIds": []
+    },
+    {
+      "blockerId": "theory-blocker-relation-price-principles-value-factors",
+      "kind": "ambiguous_concept_relation",
+      "status": "open",
+      "severity": "blocking",
+      "summary": "가격제원칙 and 가치형성요인 concept relation requires source-backed review before high-confidence theory use.",
+      "requiredResolver": "s209",
+      "conceptIds": [
+        "theory-concept-price-principles",
+        "theory-concept-value-formation-factors"
+      ],
+      "conceptAnchorIds": [],
+      "relationIds": ["relation-price-principles-applied-by-value-factors"],
+      "alternativeViewIds": [],
+      "referencePackageLinkIds": [],
+      "evidenceReviewLinkIds": []
+    },
+    {
+      "blockerId": "theory-blocker-relation-procedure-three-approaches",
+      "kind": "ambiguous_concept_relation",
+      "status": "open",
+      "severity": "blocking",
+      "summary": "감정평가 절차 and 감정평가 3방식 concept relation requires source-backed review before high-confidence theory use.",
+      "requiredResolver": "s209",
+      "conceptIds": [
+        "theory-concept-appraisal-procedure",
+        "theory-concept-three-approaches"
+      ],
+      "conceptAnchorIds": [],
+      "relationIds": ["relation-appraisal-procedure-applies-three-approaches"],
+      "alternativeViewIds": [],
+      "referencePackageLinkIds": [],
+      "evidenceReviewLinkIds": []
+    },
+    {
+      "blockerId": "theory-blocker-relation-three-approaches-comparison",
+      "kind": "ambiguous_concept_relation",
+      "status": "open",
+      "severity": "blocking",
+      "summary": "감정평가 3방식 and 비교방식 concept relation requires source-backed review before high-confidence theory use.",
+      "requiredResolver": "s209",
+      "conceptIds": [
+        "theory-concept-three-approaches",
+        "theory-concept-comparison-approach"
+      ],
+      "conceptAnchorIds": [],
+      "relationIds": ["relation-three-approaches-parent-comparison"],
+      "alternativeViewIds": [],
+      "referencePackageLinkIds": [],
+      "evidenceReviewLinkIds": []
+    },
+    {
+      "blockerId": "theory-blocker-relation-three-approaches-cost",
+      "kind": "ambiguous_concept_relation",
+      "status": "open",
+      "severity": "blocking",
+      "summary": "감정평가 3방식 and 원가방식 concept relation requires source-backed review before high-confidence theory use.",
+      "requiredResolver": "s209",
+      "conceptIds": [
+        "theory-concept-three-approaches",
+        "theory-concept-cost-approach"
+      ],
+      "conceptAnchorIds": [],
+      "relationIds": ["relation-three-approaches-parent-cost"],
+      "alternativeViewIds": [],
+      "referencePackageLinkIds": [],
+      "evidenceReviewLinkIds": []
+    },
+    {
+      "blockerId": "theory-blocker-relation-three-approaches-income",
+      "kind": "ambiguous_concept_relation",
+      "status": "open",
+      "severity": "blocking",
+      "summary": "감정평가 3방식 and 수익방식 concept relation requires source-backed review before high-confidence theory use.",
+      "requiredResolver": "s209",
+      "conceptIds": [
+        "theory-concept-three-approaches",
+        "theory-concept-income-approach"
+      ],
+      "conceptAnchorIds": [],
+      "relationIds": ["relation-three-approaches-parent-income"],
+      "alternativeViewIds": [],
+      "referencePackageLinkIds": [],
+      "evidenceReviewLinkIds": []
+    },
+    {
+      "blockerId": "theory-blocker-three-approaches-official-verification",
+      "kind": "missing_source_provenance",
+      "status": "open",
+      "severity": "blocking",
+      "summary": "감정평가 3방식 source identity and definition status require official/public-source verification before high-confidence theory use.",
+      "requiredResolver": "s209",
+      "conceptIds": ["theory-concept-three-approaches"],
+      "conceptAnchorIds": ["theory-anchor-three-approaches-candidate"],
+      "relationIds": [],
+      "alternativeViewIds": [],
+      "referencePackageLinkIds": [],
+      "evidenceReviewLinkIds": []
+    },
+    {
+      "blockerId": "theory-blocker-value-formation-factors-official-verification",
+      "kind": "missing_source_provenance",
+      "status": "open",
+      "severity": "blocking",
+      "summary": "가치형성요인 source identity and definition status require official/public-source verification before high-confidence theory use.",
+      "requiredResolver": "s209",
+      "conceptIds": ["theory-concept-value-formation-factors"],
+      "conceptAnchorIds": ["theory-anchor-value-formation-factors-candidate"],
+      "relationIds": [],
+      "alternativeViewIds": [],
+      "referencePackageLinkIds": [],
+      "evidenceReviewLinkIds": []
+    }
+  ]
+}
