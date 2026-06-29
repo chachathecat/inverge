@@ -9,6 +9,11 @@ import {
   buildCodexInvocationSummary,
   createCodexInvocationPlan,
 } from "../lib/agent-factory/codex-invocation-adapter.ts";
+import {
+  appendAgentFactoryRunHistory,
+  blockedReasonCodesFromReasons,
+  createAgentFactoryPayloadDigest,
+} from "../lib/agent-factory/run-history.ts";
 
 const STDOUT_MODES = ["markdown", "json", "none"];
 
@@ -191,6 +196,107 @@ function writeFile(filePath, content) {
   fs.writeFileSync(filePath, `${String(content).replace(/\s*$/, "")}\n`, "utf8");
 }
 
+function relativePath(filePath) {
+  return path.relative(process.cwd(), filePath).replaceAll("\\", "/");
+}
+
+function githubActor() {
+  return process.env.GITHUB_ACTOR ?? process.env.USERNAME ?? process.env.USER ?? "local";
+}
+
+function workflowRunId() {
+  return process.env.GITHUB_RUN_ID ?? null;
+}
+
+function workflowName() {
+  return process.env.GITHUB_WORKFLOW ?? "Agent Factory Codex Invocation";
+}
+
+function defaultHistoryPath() {
+  return process.env.AGENT_FACTORY_RUN_HISTORY_JSONL ?? ".agent-factory/run-history.jsonl";
+}
+
+function defaultHistoryMarkdownPath() {
+  return process.env.AGENT_FACTORY_RUN_HISTORY_MARKDOWN ?? ".agent-factory/run-history.md";
+}
+
+function approvalGateOutcome(plan, options) {
+  if (plan?.dryRun === true || String(options?.dryRun ?? "true").toLowerCase() !== "false") {
+    return "dry_run_not_required";
+  }
+  if (plan?.approvedForInvocation === true) return "approved_but_blocked";
+  return "missing_or_invalid";
+}
+
+function targetTaskId(plan) {
+  return plan?.taskPackage?.packageSummary?.itemId ?? plan?.taskPackage?.requestedItemId ?? null;
+}
+
+function appendInvocationHistory(options, status, input, plan, artifactPaths, error) {
+  const blockedReasons = [
+    ...(Array.isArray(plan?.blockedReasons) ? plan.blockedReasons : []),
+    ...(error ? [error instanceof Error ? error.message : String(error)] : []),
+  ];
+  const explicitCodes = Array.isArray(plan?.blockedReasonCodes) ? plan.blockedReasonCodes : [];
+  const payloadDigests = [
+    createAgentFactoryPayloadDigest("invocation_options", {
+      dryRun: options?.dryRun,
+      itemId: options?.itemId,
+      packageIndex: options?.packageIndex,
+    }),
+  ];
+
+  if (input !== undefined) {
+    payloadDigests.push(createAgentFactoryPayloadDigest("task_package_input", input));
+  }
+  if (plan) payloadDigests.push(createAgentFactoryPayloadDigest("codex_invocation_plan", plan));
+
+  return appendAgentFactoryRunHistory({
+    source: "agent-factory-codex-invocation",
+    actorName: githubActor(),
+    repository: process.env.GITHUB_REPOSITORY ?? null,
+    workflowName: workflowName(),
+    workflowRunId: workflowRunId(),
+    mode: plan?.invocation?.mode ?? "dry_run_plan_only",
+    mutationIntent: null,
+    targetPrNumber: null,
+    targetTaskId: targetTaskId(plan),
+    status,
+    dryRun: plan?.dryRun ?? String(options?.dryRun ?? "true").toLowerCase() !== "false",
+    approvalGateOutcome: approvalGateOutcome(plan, options),
+    artifactPaths: artifactPaths.map(relativePath),
+    payloadDigests,
+    blockedReasons,
+    blockedReasonCodes: blockedReasonCodesFromReasons(blockedReasons, explicitCodes),
+    guardrailSummary: {
+      codexExecuted: false,
+    },
+  }, {
+    historyPath: defaultHistoryPath(),
+    markdownPath: defaultHistoryMarkdownPath(),
+  });
+}
+
+function rawOption(argv, flags, fallback) {
+  for (let index = 0; index < argv.length; index += 1) {
+    if (flags.includes(argv[index])) {
+      return argv[index + 1] && !String(argv[index + 1]).startsWith("--") ? argv[index + 1] : "";
+    }
+  }
+
+  return fallback;
+}
+
+function safeOptionsFromArgv(argv) {
+  if (argv.includes("--help")) return null;
+
+  return {
+    dryRun: rawOption(argv, ["--dry-run", "--dry_run"], process.env.AGENT_FACTORY_CODEX_INVOCATION_DRY_RUN ?? "true"),
+    itemId: rawOption(argv, ["--item-id", "--item_id"], process.env.AGENT_FACTORY_CODEX_INVOCATION_ITEM_ID ?? ""),
+    packageIndex: rawOption(argv, ["--package-index", "--package_index"], process.env.AGENT_FACTORY_CODEX_INVOCATION_PACKAGE_INDEX ?? ""),
+  };
+}
+
 function main() {
   const options = parseArguments(process.argv.slice(2));
 
@@ -199,7 +305,8 @@ function main() {
     return;
   }
 
-  const plan = createCodexInvocationPlan(readInput(options), {
+  const input = readInput(options);
+  const plan = createCodexInvocationPlan(input, {
     dryRun: options.dryRun,
     approvalPhrase: options.approvalPhrase,
     itemId: options.itemId || null,
@@ -212,6 +319,18 @@ function main() {
   writeFile(path.resolve(process.cwd(), options.jsonPath), json);
   writeFile(path.resolve(process.cwd(), options.markdownPath), markdown);
   writeFile(path.resolve(process.cwd(), options.summaryPath), summary);
+  appendInvocationHistory(
+    options,
+    plan.status === "rejected" ? "rejected" : "success",
+    input,
+    plan,
+    [
+      path.resolve(process.cwd(), options.jsonPath),
+      path.resolve(process.cwd(), options.markdownPath),
+      path.resolve(process.cwd(), options.summaryPath),
+    ],
+    null,
+  );
 
   if (options.stdout === "json") {
     console.log(json);
@@ -227,6 +346,14 @@ function main() {
 try {
   main();
 } catch (error) {
+  const options = safeOptionsFromArgv(process.argv.slice(2));
+  if (options) {
+    try {
+      appendInvocationHistory(options, "failed", undefined, null, [], error);
+    } catch (historyError) {
+      console.error(`agent-factory-run-history: ${historyError instanceof Error ? historyError.message : String(historyError)}`);
+    }
+  }
   console.error(
     `agent-factory-codex-invocation: ${error instanceof Error ? error.message : String(error)}`,
   );

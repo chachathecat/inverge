@@ -123,3 +123,5 @@ jobs:
             .agent-factory/merge-plan.json
             .agent-factory/merge-plan.md
             .agent-factory/agent-factory-run-summary.md
+            .agent-factory/run-history.jsonl
+            .agent-factory/run-history.md

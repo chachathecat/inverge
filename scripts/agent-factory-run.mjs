@@ -34,6 +34,11 @@ import {
   buildGithubLiveSnapshotMarkdown,
   normalizeGithubSnapshotForAgentFactory,
 } from "../lib/agent-factory/github-snapshot-normalizer.ts";
+import {
+  appendAgentFactoryRunHistory,
+  blockedReasonCodesFromReasons,
+  createAgentFactoryPayloadDigest,
+} from "../lib/agent-factory/run-history.ts";
 
 const MODES = [
   "plan_only",
@@ -887,6 +892,87 @@ function writeSummary(options, summary) {
   return summaryPath;
 }
 
+function githubActor() {
+  return process.env.GITHUB_ACTOR ?? process.env.USERNAME ?? process.env.USER ?? "local";
+}
+
+function workflowRunId() {
+  return process.env.GITHUB_RUN_ID ?? null;
+}
+
+function workflowName() {
+  return process.env.GITHUB_WORKFLOW ?? "Agent Factory Run";
+}
+
+function targetTaskId(options, result) {
+  if (options?.target && options.target !== "auto" && !isPrNumber(options.target) && !looksLikePath(options.target)) {
+    return options.target;
+  }
+
+  const payload = result?.stdoutPayload;
+  if (payload && typeof payload === "object" && Array.isArray(payload.selectedItemIds)) {
+    return typeof payload.selectedItemIds[0] === "string" ? payload.selectedItemIds[0] : null;
+  }
+
+  return null;
+}
+
+function blockedReasonsFromResult(result) {
+  const payload = result?.stdoutPayload;
+  if (!payload || typeof payload !== "object") return [];
+  if (Array.isArray(payload.blockedReasons)) return payload.blockedReasons;
+  return [];
+}
+
+function approvalGateForRun() {
+  return "not_required";
+}
+
+function appendRunHistory(options, status, result, summaryPath, error) {
+  const artifactPaths = [
+    ...(result?.artifacts ?? []).map(relativePath),
+    summaryPath ? relativePath(summaryPath) : null,
+  ].filter(Boolean);
+  const blockedReasons = status === "failed"
+    ? [error instanceof Error ? error.message : String(error)]
+    : blockedReasonsFromResult(result);
+  const payloadDigests = [
+    createAgentFactoryPayloadDigest("run_options", {
+      mode: options?.mode,
+      target: options?.target,
+      prNumber: options?.prNumber,
+      maxTasks: options?.maxTasks,
+      allowMutation: options?.allowMutation,
+    }),
+  ];
+
+  if (result?.stdoutPayload !== undefined) {
+    payloadDigests.push(createAgentFactoryPayloadDigest("run_output", result.stdoutPayload));
+  }
+
+  return appendAgentFactoryRunHistory({
+    source: "agent-factory-run",
+    actorName: githubActor(),
+    repository: options?.repo ?? process.env.GITHUB_REPOSITORY ?? null,
+    workflowName: workflowName(),
+    workflowRunId: workflowRunId(),
+    mode: options?.mode ?? null,
+    mutationIntent: null,
+    targetPrNumber: options?.prNumber ?? (isPrNumber(options?.target ?? "") ? options.target : null),
+    targetTaskId: targetTaskId(options, result),
+    status,
+    dryRun: true,
+    approvalGateOutcome: approvalGateForRun(),
+    artifactPaths,
+    payloadDigests,
+    blockedReasons,
+    blockedReasonCodes: blockedReasonCodesFromReasons(blockedReasons),
+  }, {
+    historyPath: resolveOutputPath(options ?? { outputDir: DEFAULT_OUTPUT_DIR }, "run-history.jsonl"),
+    markdownPath: resolveOutputPath(options ?? { outputDir: DEFAULT_OUTPUT_DIR }, "run-history.md"),
+  });
+}
+
 function stdoutResult(options, status, result, summaryPath, error) {
   if (!options || options.stdout === "none") return;
 
@@ -944,8 +1030,9 @@ async function main() {
   }
 
   const result = await runMode(options);
-  assertUploadDirectorySafe(options.outputDir);
   const summaryPath = writeSummary(options, buildSummary({ options, status: "success", result }));
+  appendRunHistory(options, "success", result, summaryPath);
+  assertUploadDirectorySafe(options.outputDir);
   stdoutResult(options, "success", result, summaryPath);
 }
 
@@ -953,6 +1040,11 @@ main().catch((error) => {
   const options = safeOptionsFromArgv(process.argv.slice(2));
   if (options) {
     const summaryPath = writeSummary(options, buildSummary({ options, status: "failed", error }));
+    try {
+      appendRunHistory(options, "failed", null, summaryPath, error);
+    } catch (historyError) {
+      console.error(`agent-factory-run-history: ${historyError instanceof Error ? historyError.message : String(historyError)}`);
+    }
     stdoutResult(options, "failed", null, summaryPath, error);
   }
   console.error(`agent-factory-run: ${error instanceof Error ? error.message : String(error)}`);
