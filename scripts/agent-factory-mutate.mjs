@@ -14,6 +14,11 @@ import {
   createSafeMutationPlan,
   executeSafeMutation,
 } from "../lib/agent-factory/safe-mutation-gate.ts";
+import {
+  appendAgentFactoryRunHistory,
+  blockedReasonCodesFromReasons,
+  createAgentFactoryPayloadDigest,
+} from "../lib/agent-factory/run-history.ts";
 
 const DEFAULT_OUTPUT_DIR = ".agent-factory";
 const SUMMARY_FILE = "agent-factory-mutation-summary.md";
@@ -279,6 +284,72 @@ function writeSummary(options, summary) {
   return summaryPath;
 }
 
+function githubActor() {
+  return process.env.GITHUB_ACTOR ?? process.env.USERNAME ?? process.env.USER ?? "local";
+}
+
+function workflowRunId() {
+  return process.env.GITHUB_RUN_ID ?? null;
+}
+
+function workflowName() {
+  return process.env.GITHUB_WORKFLOW ?? "Agent Factory Mutate";
+}
+
+function approvalGateOutcome(options, plan) {
+  const dryRun = normalizeDryRun(options?.dryRun ?? "true");
+  if (dryRun) return "dry_run_not_required";
+  if (options?.approvalPhrase === AF009_APPROVAL_PHRASE || plan?.approvedForMutation === true) {
+    return "approved";
+  }
+  return "missing_or_invalid";
+}
+
+function appendMutationHistory(options, status, artifacts, evidenceText, plan, result, error) {
+  const blockedReasons = [
+    ...(Array.isArray(plan?.blockedReasons) ? plan.blockedReasons : []),
+    ...(error ? [error instanceof Error ? error.message : String(error)] : []),
+  ];
+  const payloadDigests = [
+    createAgentFactoryPayloadDigest("mutation_options", {
+      mutationIntent: options?.mutationIntent,
+      prNumber: options?.prNumber,
+      dryRun: options?.dryRun,
+    }),
+  ];
+
+  if (typeof evidenceText === "string" && evidenceText.length > 0) {
+    payloadDigests.push(createAgentFactoryPayloadDigest("operator_text_input", evidenceText));
+  }
+  if (plan) payloadDigests.push(createAgentFactoryPayloadDigest("mutation_plan", plan));
+  if (result) payloadDigests.push(createAgentFactoryPayloadDigest("mutation_result", result));
+
+  return appendAgentFactoryRunHistory({
+    source: "agent-factory-mutate",
+    actorName: githubActor(),
+    repository: options?.repo ?? process.env.GITHUB_REPOSITORY ?? null,
+    workflowName: workflowName(),
+    workflowRunId: workflowRunId(),
+    mode: null,
+    mutationIntent: options?.mutationIntent ?? plan?.intent ?? null,
+    targetPrNumber: options?.prNumber ?? plan?.prNumber ?? null,
+    targetTaskId: null,
+    status,
+    dryRun: normalizeDryRun(options?.dryRun ?? plan?.dryRun ?? "true"),
+    approvalGateOutcome: approvalGateOutcome(options, plan),
+    artifactPaths: artifacts.map(relativePath),
+    payloadDigests,
+    blockedReasons,
+    blockedReasonCodes: blockedReasonCodesFromReasons(blockedReasons),
+    guardrailSummary: {
+      prMetadataMutationAttempted: result?.mutationAttempted === true,
+    },
+  }, {
+    historyPath: resolveOutputPath(options ?? { outputDir: DEFAULT_OUTPUT_DIR }, "run-history.jsonl"),
+    markdownPath: resolveOutputPath(options ?? { outputDir: DEFAULT_OUTPUT_DIR }, "run-history.md"),
+  });
+}
+
 function stdoutResult(options, payload) {
   if (!options || options.stdout === "none") return;
 
@@ -533,7 +604,16 @@ async function main() {
       plan: preliminary.plan,
       status: "failed",
     }));
-    assertArtifactsSafe([...planArtifacts, summaryPath]);
+    const history = appendMutationHistory(
+      options,
+      "rejected",
+      [...planArtifacts, summaryPath],
+      evidenceText,
+      preliminary.plan,
+      null,
+      null,
+    );
+    assertArtifactsSafe([...planArtifacts, summaryPath, history.historyPath, history.markdownPath]);
     stdoutResult(options, {
       version: 1,
       status: "failed",
@@ -575,7 +655,16 @@ async function main() {
       plan: prepared.plan,
       status: "failed",
     }));
-    assertArtifactsSafe([...planArtifacts, summaryPath]);
+    const history = appendMutationHistory(
+      options,
+      "rejected",
+      [...planArtifacts, summaryPath],
+      evidenceText,
+      prepared.plan,
+      null,
+      null,
+    );
+    assertArtifactsSafe([...planArtifacts, summaryPath, history.historyPath, history.markdownPath]);
     stdoutResult(options, {
       version: 1,
       status: "failed",
@@ -623,7 +712,16 @@ async function main() {
     status: runStatus,
     error: executionError,
   }));
-  assertArtifactsSafe([...planArtifacts, ...(resultPath ? [resultPath] : []), summaryPath]);
+  const history = appendMutationHistory(
+    options,
+    runStatus === "failed" ? "failed" : "success",
+    [...planArtifacts, ...(resultPath ? [resultPath] : []), summaryPath],
+    evidenceText,
+    prepared.plan,
+    result,
+    executionError,
+  );
+  assertArtifactsSafe([...planArtifacts, ...(resultPath ? [resultPath] : []), summaryPath, history.historyPath, history.markdownPath]);
   stdoutResult(options, {
     version: 1,
     status: runStatus,
@@ -643,6 +741,11 @@ main().catch((error) => {
       status: "failed",
       error,
     }));
+    try {
+      appendMutationHistory(options, "failed", [summaryPath], "", null, null, error);
+    } catch (historyError) {
+      console.error(`agent-factory-run-history: ${historyError instanceof Error ? historyError.message : String(historyError)}`);
+    }
     stdoutResult(options, {
       version: 1,
       status: "failed",

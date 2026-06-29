@@ -107,3 +107,5 @@ jobs:
             .agent-factory/mutation-plan.md
             .agent-factory/mutation-result.json
             .agent-factory/agent-factory-mutation-summary.md
+            .agent-factory/run-history.jsonl
+            .agent-factory/run-history.md
