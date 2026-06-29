@@ -65,6 +65,7 @@ const defaultTestFiles = [
   "tests/agent-factory-live-github-readonly.test.mjs",
   "tests/agent-factory-admin-dashboard.test.mjs",
   "tests/agent-factory-safe-mutation-gate.test.mjs",
+  "tests/agent-factory-codex-invocation-adapter.test.mjs",
 ];
 const rawArgs = process.argv.slice(2);
 const nodeTestArgs = [];
