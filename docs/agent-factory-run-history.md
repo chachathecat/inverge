@@ -10,13 +10,20 @@ AF011 v1 records metadata for:
 - AF009 Safe PR Metadata Gate runs from `agent-factory:mutate`;
 - AF010 Codex Invocation Adapter dry-run plans from `agent-factory:codex-invocation`;
 - AF013A Factory Planner Notes from `agent-factory:planner-notes`;
-- AF013B Patch Artifact Adapter plans from `agent-factory:patch-artifact`.
+- AF013B Patch Artifact Adapter plans from `agent-factory:patch-artifact`;
+- AF013C Branch Commit PR Adapter plans from `agent-factory:branch-commit-pr`.
 
 ## AF013B-V Runtime Verification Evidence
 
 `docs/agent-factory-patch-artifact-runtime-verification.md` records docs-only dogfood evidence that AF013B appends an AF011 `agent-factory-patch-artifact` run-history record while remaining metadata-only and report-only.
 
 This evidence does not change the AF011 schema or behavior. It confirms that the AF013B run-history append stores artifact paths, status labels, guardrail flags, hashes, and counts only, without raw patch text, raw diff text, raw prompt text, raw PR bodies, learner answers, OCR payloads, provider payloads, or secrets.
+
+## AF013C Run-History Append
+
+AF013C appends an `agent-factory-branch-commit-pr` record while remaining metadata-only and report-only.
+
+The AF013C record stores artifact paths, status labels, approval-gate outcome, requested mutation class, guardrail flags, hashes, and counts only. It does not store raw PR bodies, raw comments, raw patch text, raw diff text, raw task-package prompts, learner answers, OCR payloads, provider payloads, billing/auth/payment records, credentials, or secrets.
 
 Each record captures:
 
