@@ -68,6 +68,7 @@ const defaultTestFiles = [
   "tests/agent-factory-codex-invocation-adapter.test.mjs",
   "tests/agent-factory-run-history.test.mjs",
   "tests/agent-factory-orchestrator.test.mjs",
+  "tests/agent-factory-planner-notes.test.mjs",
 ];
 const rawArgs = process.argv.slice(2);
 const nodeTestArgs = [];

@@ -8,7 +8,8 @@ AF011 v1 records metadata for:
 
 - AF006/AF007 read-only/report-only runs from `agent-factory:run`;
 - AF009 Safe PR Metadata Gate runs from `agent-factory:mutate`;
-- AF010 Codex Invocation Adapter dry-run plans from `agent-factory:codex-invocation`.
+- AF010 Codex Invocation Adapter dry-run plans from `agent-factory:codex-invocation`;
+- AF013A Factory Planner Notes from `agent-factory:planner-notes`.
 
 Each record captures:
 
