@@ -11,7 +11,8 @@ AF011 v1 records metadata for:
 - AF010 Codex Invocation Adapter dry-run plans from `agent-factory:codex-invocation`;
 - AF013A Factory Planner Notes from `agent-factory:planner-notes`;
 - AF013B Patch Artifact Adapter plans from `agent-factory:patch-artifact`;
-- AF013C Branch Commit PR Adapter plans from `agent-factory:branch-commit-pr`.
+- AF013C Branch Commit PR Adapter plans from `agent-factory:branch-commit-pr`;
+- AF014 CI Repair Loop plans from `agent-factory:ci-repair`.
 
 ## AF013B-V Runtime Verification Evidence
 
@@ -39,6 +40,14 @@ Each record captures:
 - blocked reason codes;
 - guardrail summary;
 - payload hashes and counts.
+
+## AF014 Run-History Append
+
+AF014 appends an `agent-factory-ci-repair` record while remaining metadata-only and report-only.
+
+The AF014 record stores artifact paths, status labels, CI failure classes, reason-code counts, approval-gate outcome, guardrail flags, hashes, and counts only. It does not store raw CI logs, raw PR bodies, raw comments, raw patch text, raw diff text, raw task-package prompts, learner answers, OCR payloads, provider payloads, billing/auth/payment records, credentials, or secrets.
+
+AF014 run-history records do not indicate that a repair was executed. They only show that a local CI repair plan artifact was generated for human review.
 
 ## Non-goals
 
