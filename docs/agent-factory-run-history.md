@@ -49,6 +49,12 @@ The AF014 record stores artifact paths, status labels, CI failure classes, reaso
 
 AF014 run-history records do not indicate that a repair was executed. They only show that a local CI repair plan artifact was generated for human review.
 
+## AF014-V Runtime Verification Evidence
+
+`docs/agent-factory-ci-repair-runtime-verification.md` records docs-only/runtime verification evidence that AF014 classifies a PR Contract failure, writes metadata-only repair-plan artifacts, and appends an AF011 `agent-factory-ci-repair` run-history record without exposing raw CI logs or raw PR body text.
+
+This evidence does not change the AF011 schema or behavior. It confirms that the AF014 run-history append stores artifact paths, status labels, failure-class and reason-code metadata, guardrail flags, hashes, and counts only.
+
 ## Non-goals
 
 AF011 v1 does not:
