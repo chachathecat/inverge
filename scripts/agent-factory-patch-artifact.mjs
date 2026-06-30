@@ -22,10 +22,10 @@ function parseArguments(argv) {
     artifactDir: process.env.AGENT_FACTORY_PATCH_ARTIFACT_DIR ?? DEFAULT_ARTIFACT_DIR,
     jsonPath:
       process.env.AGENT_FACTORY_PATCH_ARTIFACT_JSON ??
-      ".agent-factory/patch-artifact-plan.json",
+      ".agent-factory/factory-patch-artifact-plan.json",
     markdownPath:
       process.env.AGENT_FACTORY_PATCH_ARTIFACT_MARKDOWN ??
-      ".agent-factory/patch-artifact-plan.md",
+      ".agent-factory/factory-patch-artifact-plan.md",
     summaryPath:
       process.env.AGENT_FACTORY_PATCH_ARTIFACT_SUMMARY ??
       ".agent-factory/agent-factory-patch-artifact-summary.md",
@@ -224,8 +224,8 @@ function helpText() {
     "",
     "Options:",
     "  --artifact-dir <path>             Local generated Agent Factory artifact directory. Default: .agent-factory",
-    "  --json <path>                     JSON plan artifact path. Default: .agent-factory/patch-artifact-plan.json",
-    "  --markdown <path>                 Markdown plan artifact path. Default: .agent-factory/patch-artifact-plan.md",
+    "  --json <path>                     JSON plan artifact path. Default: .agent-factory/factory-patch-artifact-plan.json",
+    "  --markdown <path>                 Markdown plan artifact path. Default: .agent-factory/factory-patch-artifact-plan.md",
     "  --summary <path>                  Markdown summary path. Default: .agent-factory/agent-factory-patch-artifact-summary.md",
     "  --stdout <mode>                   markdown, json, or none. Default: markdown",
     "  --task-id <id>                    Optional task id to record in metadata.",

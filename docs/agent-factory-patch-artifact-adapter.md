@@ -17,8 +17,8 @@ AF013B v1 can inspect:
 
 AF013B v1 writes:
 
-- `.agent-factory/patch-artifact-plan.json`
-- `.agent-factory/patch-artifact-plan.md`
+- `.agent-factory/factory-patch-artifact-plan.json`
+- `.agent-factory/factory-patch-artifact-plan.md`
 - `.agent-factory/agent-factory-patch-artifact-summary.md`
 
 It also appends a metadata-only AF011 run-history record.
@@ -64,6 +64,15 @@ Not allowed output:
 
 If an inspected local artifact is unparsable, not a file, outside the artifact boundary, or fails the metadata-only safety scan, AF013B fails closed without surfacing raw artifact content.
 
+AF013B also fails closed when required upstream artifacts are not ready:
+
+- missing AF001 task packages emit `missing_task_package`;
+- missing AF010 Codex invocation plan emits `missing_codex_invocation_plan`;
+- missing AF013A planner note emits `missing_planner_note`;
+- blocked AF013A planner note emits `planner_note_blocked`.
+
+AF012 orchestrator plans and AF011 run history remain optional context artifacts.
+
 ## Boundary Defaults
 
 AF013B defaults to a narrow future-work boundary:
@@ -96,7 +105,7 @@ AF013B only writes local `.agent-factory/` artifacts and appends AF011 history.
 Rollback is a focused revert of the AF013B library, CLI, npm script, docs, and tests. To clean generated local output:
 
 ```powershell
-Remove-Item .agent-factory/patch-artifact-plan.json, .agent-factory/patch-artifact-plan.md, .agent-factory/agent-factory-patch-artifact-summary.md -ErrorAction SilentlyContinue
+Remove-Item .agent-factory/factory-patch-artifact-plan.json, .agent-factory/factory-patch-artifact-plan.md, .agent-factory/agent-factory-patch-artifact-summary.md -ErrorAction SilentlyContinue
 ```
 
 No external-state rollback is required.

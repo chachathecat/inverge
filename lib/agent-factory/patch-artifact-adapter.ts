@@ -169,8 +169,8 @@ const DEFAULT_PROPOSED_PATCH_ARTIFACT_FILE_NAMES = [
 ] as const;
 
 const OUTPUT_ARTIFACTS = [
-  ".agent-factory/patch-artifact-plan.json",
-  ".agent-factory/patch-artifact-plan.md",
+  ".agent-factory/factory-patch-artifact-plan.json",
+  ".agent-factory/factory-patch-artifact-plan.md",
   ".agent-factory/agent-factory-patch-artifact-summary.md",
 ] as const;
 
@@ -526,6 +526,13 @@ function metadataValue(
   return artifact?.metadata[key] ?? null;
 }
 
+function artifactByLabel(
+  artifacts: readonly AgentFactoryPatchArtifactPlan["inputArtifacts"][number][],
+  label: string,
+): AgentFactoryPatchArtifactPlan["inputArtifacts"][number] | null {
+  return artifacts.find((entry) => entry.label === label) ?? null;
+}
+
 function firstMeaningfulString(values: readonly unknown[], ignored: readonly string[] = []): string | null {
   for (const value of values) {
     if (typeof value !== "string") continue;
@@ -673,8 +680,39 @@ function proposedPatchArtifactBlockedReasons(input: {
   return reasons;
 }
 
+function requiredInputArtifactBlockedReasons(
+  artifacts: readonly AgentFactoryPatchArtifactPlan["inputArtifacts"][number][],
+): string[] {
+  const reasons: string[] = [];
+  const taskPackages = artifactByLabel(artifacts, "AF001 task packages");
+  const codexInvocation = artifactByLabel(artifacts, "AF010 Codex invocation plan");
+  const plannerNote = artifactByLabel(artifacts, "AF013A planner note");
+
+  if (taskPackages?.status === "missing") {
+    reasons.push("Required AF001 task package artifact is missing.");
+  }
+
+  if (codexInvocation?.status === "missing") {
+    reasons.push("Required AF010 invocation plan is missing.");
+  }
+
+  if (plannerNote?.status === "missing") {
+    reasons.push("Required AF013A planner note is missing.");
+  }
+
+  if (plannerNote?.metadata.status === "blocked") {
+    reasons.push("AF013A planner note is blocked.");
+  }
+
+  return reasons;
+}
+
 function blockedCodesForReasons(reasons: readonly string[]): string[] {
   const codes = reasons.map((reason) => {
+    if (/AF001 task package artifact is missing/i.test(reason)) return "missing_task_package";
+    if (/AF010 invocation plan is missing/i.test(reason)) return "missing_codex_invocation_plan";
+    if (/AF013A planner note is missing/i.test(reason)) return "missing_planner_note";
+    if (/AF013A planner note is blocked/i.test(reason)) return "planner_note_blocked";
     if (/invalid local artifact|could not be parsed|not a file/i.test(reason)) return "invalid_artifact";
     if (/approval gate is missing/i.test(reason)) return "missing_human_approval";
     if (/failed closed/i.test(reason)) return "approval_failed_closed";
@@ -743,6 +781,7 @@ export function createAgentFactoryPatchArtifactPlan(
     ...inputArtifacts
       .filter((artifact) => artifact.status === "invalid")
       .map((artifact) => `Invalid local artifact: ${artifact.label} at ${artifact.path}.`),
+    ...requiredInputArtifactBlockedReasons(inputArtifacts),
   ];
 
   for (const proposedPath of proposedPatchArtifactPaths) {

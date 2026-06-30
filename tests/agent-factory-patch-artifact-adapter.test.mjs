@@ -147,6 +147,19 @@ function runCli(args) {
   );
 }
 
+function writeRequiredUpstreamArtifacts(
+  dir,
+  {
+    taskPackages = safeTaskPackages(),
+    codexInvocationPlan = safeCodexInvocationPlan(),
+    plannerNote = safePlannerNote(),
+  } = {},
+) {
+  if (taskPackages !== null) writeJson(dir, "codex-task-packages.json", taskPackages);
+  if (codexInvocationPlan !== null) writeJson(dir, "codex-invocation-plan.json", codexInvocationPlan);
+  if (plannerNote !== null) writeJson(dir, "factory-planner-note.json", plannerNote);
+}
+
 test("AF013B docs, npm script, and CLI exist with report-only patch scope", () => {
   const docs = readNormalized(DOC_PATH);
   const runHistoryDocs = readNormalized(RUN_HISTORY_DOC_PATH);
@@ -157,20 +170,22 @@ test("AF013B docs, npm script, and CLI exist with report-only patch scope", () =
   assert.match(script, /AF013B v1 is report-only/);
   assert.match(docs, /AF013B v1 does not:/);
   assert.match(docs, /apply patches/);
+  assert.match(docs, /factory-patch-artifact-plan\.json/);
+  assert.match(script, /factory-patch-artifact-plan\.json/);
   assert.match(docs, /Data Boundary/);
   assert.match(docs, /Rollback/);
   assert.match(runHistoryDocs, /agent-factory:patch-artifact/);
   assert.doesNotMatch(packageJson, /"type":\s*"module"/);
 });
 
-test("missing local artifacts still creates a safe planned metadata-only patch artifact plan", () => {
+test("missing required upstream artifacts fail closed with metadata-only safety flags", () => {
   const dir = tempDir("af013b-empty");
   const plan = createAgentFactoryPatchArtifactPlan({
     artifactDir: dir,
     now: new Date("2026-06-30T00:00:00.000Z"),
   });
 
-  assert.equal(plan.status, "planned");
+  assert.equal(plan.status, "blocked");
   assert.equal(plan.reportOnly, true);
   assert.equal(plan.dryRun, true);
   assert.equal(plan.actions.willRunCodex, false);
@@ -190,7 +205,62 @@ test("missing local artifacts still creates a safe planned metadata-only patch a
   assert.equal(plan.patchBoundary.approvalGate, "not_requested");
   assert.equal(plan.inputArtifacts.every((artifact) => artifact.status === "missing"), true);
   assert.equal(plan.proposedPatchArtifacts.every((artifact) => artifact.status === "not_created"), true);
+  assert.ok(plan.blockedReasonCodes.includes("missing_task_package"));
+  assert.ok(plan.blockedReasonCodes.includes("missing_codex_invocation_plan"));
+  assert.ok(plan.blockedReasonCodes.includes("missing_planner_note"));
   assert.doesNotThrow(() => assertAgentFactoryPatchArtifactPlanSafe(plan));
+});
+
+test("missing AF013A planner note fails closed", () => {
+  const dir = tempDir("af013b-missing-planner");
+  writeRequiredUpstreamArtifacts(dir, { plannerNote: null });
+
+  const plan = createAgentFactoryPatchArtifactPlan({ artifactDir: dir });
+
+  assert.equal(plan.status, "blocked");
+  assert.ok(plan.blockedReasonCodes.includes("missing_planner_note"));
+  assert.equal(plan.blockedReasonCodes.includes("missing_task_package"), false);
+  assert.equal(plan.blockedReasonCodes.includes("missing_codex_invocation_plan"), false);
+});
+
+test("blocked AF013A planner note fails closed", () => {
+  const dir = tempDir("af013b-blocked-planner");
+  writeRequiredUpstreamArtifacts(dir, {
+    plannerNote: safePlannerNote({
+      status: "blocked",
+      blockedReasonCodes: ["approval_failed_closed"],
+    }),
+  });
+
+  const plan = createAgentFactoryPatchArtifactPlan({ artifactDir: dir });
+
+  assert.equal(plan.status, "blocked");
+  assert.ok(plan.blockedReasonCodes.includes("planner_note_blocked"));
+  assert.equal(plan.blockedReasonCodes.includes("missing_planner_note"), false);
+});
+
+test("missing AF010 invocation plan fails closed", () => {
+  const dir = tempDir("af013b-missing-codex");
+  writeRequiredUpstreamArtifacts(dir, { codexInvocationPlan: null });
+
+  const plan = createAgentFactoryPatchArtifactPlan({ artifactDir: dir });
+
+  assert.equal(plan.status, "blocked");
+  assert.ok(plan.blockedReasonCodes.includes("missing_codex_invocation_plan"));
+  assert.equal(plan.blockedReasonCodes.includes("missing_task_package"), false);
+  assert.equal(plan.blockedReasonCodes.includes("missing_planner_note"), false);
+});
+
+test("missing task package artifact fails closed", () => {
+  const dir = tempDir("af013b-missing-task");
+  writeRequiredUpstreamArtifacts(dir, { taskPackages: null });
+
+  const plan = createAgentFactoryPatchArtifactPlan({ artifactDir: dir });
+
+  assert.equal(plan.status, "blocked");
+  assert.ok(plan.blockedReasonCodes.includes("missing_task_package"));
+  assert.equal(plan.blockedReasonCodes.includes("missing_codex_invocation_plan"), false);
+  assert.equal(plan.blockedReasonCodes.includes("missing_planner_note"), false);
 });
 
 test("available artifacts derive target metadata without leaking prompts, PR bodies, or patch text", () => {
@@ -205,10 +275,8 @@ test("available artifacts derive target metadata without leaking prompts, PR bod
     "+new internal patch text must not be rendered by AF013B",
   ].join("\n");
 
-  writeJson(dir, "codex-task-packages.json", safeTaskPackages());
-  writeJson(dir, "codex-invocation-plan.json", safeCodexInvocationPlan());
+  writeRequiredUpstreamArtifacts(dir);
   writeJson(dir, "factory-orchestrator-plan.json", safeOrchestratorPlan());
-  writeJson(dir, "factory-planner-note.json", safePlannerNote());
   fs.writeFileSync(
     path.join(dir, "run-history.jsonl"),
     `${JSON.stringify({
@@ -254,7 +322,7 @@ test("available artifacts derive target metadata without leaking prompts, PR bod
 
 test("invalid local artifact fails closed without surfacing raw artifact text", () => {
   const dir = tempDir("af013b-invalid");
-  fs.mkdirSync(dir, { recursive: true });
+  writeRequiredUpstreamArtifacts(dir, { plannerNote: null });
   fs.writeFileSync(
     path.join(dir, "factory-planner-note.json"),
     "{ this is not valid json and raw prompt text must not appear",
@@ -271,6 +339,7 @@ test("invalid local artifact fails closed without surfacing raw artifact text", 
 
 test("missing and failed-closed approval gates block future patch artifact boundary", () => {
   const dir = tempDir("af013b-approval");
+  writeRequiredUpstreamArtifacts(dir);
   const missing = createAgentFactoryPatchArtifactPlan({
     artifactDir: dir,
     approvalGate: "missing",
@@ -288,6 +357,7 @@ test("missing and failed-closed approval gates block future patch artifact bound
 
 test("invalid patch limits and outside patch artifact paths fail closed", () => {
   const dir = tempDir("af013b-invalid-limits");
+  writeRequiredUpstreamArtifacts(dir);
   const outsideDir = tempDir("af013b-outside");
   const outside = path.join(outsideDir, "outside.patch");
   fs.writeFileSync(outside, "rawPatch: outside content must not be read", "utf8");
@@ -308,7 +378,7 @@ test("invalid patch limits and outside patch artifact paths fail closed", () => 
 test("unsafe proposed patch artifact fails closed without leaking raw content", () => {
   const dir = tempDir("af013b-unsafe-patch");
   const patchPath = path.join(dir, "unsafe.patch");
-  fs.mkdirSync(dir, { recursive: true });
+  writeRequiredUpstreamArtifacts(dir);
   fs.writeFileSync(patchPath, "rawPatch: unsafe patch body must not escape", "utf8");
 
   const plan = createAgentFactoryPatchArtifactPlan({
@@ -336,13 +406,11 @@ test("patch artifact text safety rejects secrets and raw-content labels", () => 
 
 test("CLI writes patch artifact plan artifacts and appends AF011 history", () => {
   const dir = tempDir("af013b-cli");
-  const jsonPath = path.join(dir, "patch-artifact-plan.json");
-  const markdownPath = path.join(dir, "patch-artifact-plan.md");
+  const jsonPath = path.join(dir, "factory-patch-artifact-plan.json");
+  const markdownPath = path.join(dir, "factory-patch-artifact-plan.md");
   const summaryPath = path.join(dir, "summary.md");
   const patchPath = path.join(dir, "candidate.diff");
-  writeJson(dir, "codex-task-packages.json", safeTaskPackages());
-  writeJson(dir, "codex-invocation-plan.json", safeCodexInvocationPlan());
-  writeJson(dir, "factory-planner-note.json", safePlannerNote());
+  writeRequiredUpstreamArtifacts(dir);
   fs.writeFileSync(patchPath, "diff --git a/package.json b/package.json\n", "utf8");
 
   const result = runCli([
