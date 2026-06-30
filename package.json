@@ -14,6 +14,7 @@
     "agent-factory:run": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs scripts/agent-factory-run.mjs",
     "agent-factory:mutate": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs scripts/agent-factory-mutate.mjs",
     "agent-factory:codex-invocation": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs scripts/agent-factory-codex-invocation.mjs",
+    "agent-factory:orchestrate": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs scripts/agent-factory-orchestrate.mjs",
     "agent-factory:github-snapshot": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs scripts/agent-factory-run.mjs --mode watch_live",
     "start": "next start",
     "lint": "eslint",

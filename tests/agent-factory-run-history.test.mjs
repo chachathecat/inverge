@@ -30,6 +30,10 @@ function tempDir(label) {
   return fs.mkdtempSync(path.join(os.tmpdir(), `inverge-${label}-`));
 }
 
+function readNormalized(filePath) {
+  return fs.readFileSync(filePath, "utf8").replace(/\r\n?/g, "\n");
+}
+
 function validAf009PrBody() {
   return [
     "## Goal",
@@ -99,9 +103,9 @@ function safeTaskPackage() {
 }
 
 test("AF011 docs and workflow artifact upload paths exist", () => {
-  const docs = fs.readFileSync(DOC_PATH, "utf8");
-  const runWorkflow = fs.readFileSync(RUN_WORKFLOW, "utf8");
-  const mutateWorkflow = fs.readFileSync(MUTATE_WORKFLOW, "utf8");
+  const docs = readNormalized(DOC_PATH);
+  const runWorkflow = readNormalized(RUN_WORKFLOW);
+  const mutateWorkflow = readNormalized(MUTATE_WORKFLOW);
 
   assert.match(docs, /metadata-only audit layer/);
   assert.match(docs, /run-history\.jsonl/);
@@ -331,6 +335,6 @@ test("AF010 dry-run behavior remains unchanged", () => {
 });
 
 test("AF011 focused test is wired into default node test run", () => {
-  const runner = fs.readFileSync(TEST_RUNNER_PATH, "utf8");
+  const runner = readNormalized(TEST_RUNNER_PATH);
   assert.match(runner, /tests\/agent-factory-run-history\.test\.mjs/);
 });
