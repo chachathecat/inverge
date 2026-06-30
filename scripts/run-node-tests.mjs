@@ -69,6 +69,7 @@ const defaultTestFiles = [
   "tests/agent-factory-run-history.test.mjs",
   "tests/agent-factory-orchestrator.test.mjs",
   "tests/agent-factory-planner-notes.test.mjs",
+  "tests/agent-factory-patch-artifact-adapter.test.mjs",
 ];
 const rawArgs = process.argv.slice(2);
 const nodeTestArgs = [];
