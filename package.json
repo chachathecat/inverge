@@ -17,6 +17,7 @@
     "agent-factory:orchestrate": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs scripts/agent-factory-orchestrate.mjs",
     "agent-factory:planner-notes": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs scripts/agent-factory-planner-notes.mjs",
     "agent-factory:patch-artifact": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs scripts/agent-factory-patch-artifact.mjs",
+    "agent-factory:branch-commit-pr": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs scripts/agent-factory-branch-commit-pr.mjs",
     "agent-factory:github-snapshot": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs scripts/agent-factory-run.mjs --mode watch_live",
     "start": "next start",
     "lint": "eslint",
