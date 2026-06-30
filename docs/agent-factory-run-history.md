@@ -12,6 +12,12 @@ AF011 v1 records metadata for:
 - AF013A Factory Planner Notes from `agent-factory:planner-notes`;
 - AF013B Patch Artifact Adapter plans from `agent-factory:patch-artifact`.
 
+## AF013B-V Runtime Verification Evidence
+
+`docs/agent-factory-patch-artifact-runtime-verification.md` records docs-only dogfood evidence that AF013B appends an AF011 `agent-factory-patch-artifact` run-history record while remaining metadata-only and report-only.
+
+This evidence does not change the AF011 schema or behavior. It confirms that the AF013B run-history append stores artifact paths, status labels, guardrail flags, hashes, and counts only, without raw patch text, raw diff text, raw prompt text, raw PR bodies, learner answers, OCR payloads, provider payloads, or secrets.
+
 Each record captures:
 
 - run id;
