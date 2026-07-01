@@ -75,19 +75,30 @@ const defaultTestFiles = [
   "tests/agent-factory-ci-repair-loop.test.mjs",
   "tests/agent-factory-ci-repair-runtime-verification.test.mjs",
   "tests/agent-factory-roadmap-autopilot.test.mjs",
+  "tests/agent-factory-end-to-end-dogfood.test.mjs",
 ];
 const rawArgs = process.argv.slice(2);
 const nodeTestArgs = [];
 const requestedFiles = [];
+let hasExplicitConcurrency = false;
 
 for (let index = 0; index < rawArgs.length; index += 1) {
   const arg = rawArgs[index];
   if (arg === "--workers") {
     const value = rawArgs[index + 1] ?? "1";
     nodeTestArgs.push(`--test-concurrency=${value}`);
+    hasExplicitConcurrency = true;
     index += 1;
   } else if (arg.startsWith("--workers=")) {
     nodeTestArgs.push(`--test-concurrency=${arg.slice("--workers=".length)}`);
+    hasExplicitConcurrency = true;
+  } else if (arg === "--test-concurrency" || arg.startsWith("--test-concurrency=")) {
+    nodeTestArgs.push(arg);
+    hasExplicitConcurrency = true;
+    if (arg === "--test-concurrency" && rawArgs[index + 1]) {
+      nodeTestArgs.push(rawArgs[index + 1]);
+      index += 1;
+    }
   } else if (arg.startsWith("tests/") || arg.endsWith(".test.mjs")) {
     requestedFiles.push(arg);
   } else {
@@ -110,6 +121,7 @@ const result = spawnSync(
     "--loader",
     "./tests/ts-extension-loader.mjs",
     "--test",
+    ...(hasExplicitConcurrency ? [] : ["--test-concurrency=1"]),
     ...nodeTestArgs,
     ...testFiles,
   ],

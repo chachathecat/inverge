@@ -13,7 +13,8 @@ AF011 v1 records metadata for:
 - AF013B Patch Artifact Adapter plans from `agent-factory:patch-artifact`;
 - AF013C Branch Commit PR Adapter plans from `agent-factory:branch-commit-pr`;
 - AF014 CI Repair Loop plans from `agent-factory:ci-repair`;
-- AF015 Roadmap Autopilot plans from `agent-factory:roadmap-autopilot`.
+- AF015 Roadmap Autopilot plans from `agent-factory:roadmap-autopilot`;
+- AF016 End-to-End Factory Dogfood plans from `agent-factory:end-to-end-dogfood`.
 
 ## AF013B-V Runtime Verification Evidence
 
@@ -63,6 +64,14 @@ AF015 appends an `agent-factory-roadmap-autopilot` record while remaining metada
 The AF015 record stores artifact paths, status labels, candidate and reason-code metadata, approval-gate outcome, guardrail flags, hashes, and counts only. It does not store raw issue bodies, raw PR bodies, raw comments, raw prompts, raw patch text, raw diff text, learner answers, OCR payloads, provider payloads, billing/auth/payment records, credentials, or secrets.
 
 AF015 run-history records do not indicate that roadmap work was executed. They only show that a local roadmap autopilot plan artifact was generated for human review.
+
+## AF016 Run-History Append
+
+AF016 appends an `agent-factory-end-to-end-dogfood` record while remaining metadata-only and report-only.
+
+The AF016 record stores artifact paths, status labels, chain readiness metadata, selected next-work metadata, guardrail flags, hashes, and counts only. It does not store raw issue bodies, raw PR bodies, raw comments, raw prompts, raw task-package prompts, raw patch text, raw diff text, learner answers, OCR payloads, provider payloads, billing/auth/payment records, credentials, or secrets.
+
+AF016 run-history records do not indicate that future work was executed. They only show that a local end-to-end dogfood evidence plan was generated and that the AF010 through AF015 metadata chain was either planned or blocked.
 
 ## Non-goals
 
