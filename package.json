@@ -19,6 +19,7 @@
     "agent-factory:patch-artifact": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs scripts/agent-factory-patch-artifact.mjs",
     "agent-factory:branch-commit-pr": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs scripts/agent-factory-branch-commit-pr.mjs",
     "agent-factory:ci-repair": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs scripts/agent-factory-ci-repair.mjs",
+    "agent-factory:roadmap-autopilot": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs scripts/agent-factory-roadmap-autopilot.mjs",
     "agent-factory:github-snapshot": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs scripts/agent-factory-run.mjs --mode watch_live",
     "start": "next start",
     "lint": "eslint",

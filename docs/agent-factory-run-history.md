@@ -12,7 +12,8 @@ AF011 v1 records metadata for:
 - AF013A Factory Planner Notes from `agent-factory:planner-notes`;
 - AF013B Patch Artifact Adapter plans from `agent-factory:patch-artifact`;
 - AF013C Branch Commit PR Adapter plans from `agent-factory:branch-commit-pr`;
-- AF014 CI Repair Loop plans from `agent-factory:ci-repair`.
+- AF014 CI Repair Loop plans from `agent-factory:ci-repair`;
+- AF015 Roadmap Autopilot plans from `agent-factory:roadmap-autopilot`.
 
 ## AF013B-V Runtime Verification Evidence
 
@@ -54,6 +55,14 @@ AF014 run-history records do not indicate that a repair was executed. They only 
 `docs/agent-factory-ci-repair-runtime-verification.md` records docs-only/runtime verification evidence that AF014 classifies a PR Contract failure, writes metadata-only repair-plan artifacts, and appends an AF011 `agent-factory-ci-repair` run-history record without exposing raw CI logs or raw PR body text.
 
 This evidence does not change the AF011 schema or behavior. It confirms that the AF014 run-history append stores artifact paths, status labels, failure-class and reason-code metadata, guardrail flags, hashes, and counts only.
+
+## AF015 Run-History Append
+
+AF015 appends an `agent-factory-roadmap-autopilot` record while remaining metadata-only and report-only.
+
+The AF015 record stores artifact paths, status labels, candidate and reason-code metadata, approval-gate outcome, guardrail flags, hashes, and counts only. It does not store raw issue bodies, raw PR bodies, raw comments, raw prompts, raw patch text, raw diff text, learner answers, OCR payloads, provider payloads, billing/auth/payment records, credentials, or secrets.
+
+AF015 run-history records do not indicate that roadmap work was executed. They only show that a local roadmap autopilot plan artifact was generated for human review.
 
 ## Non-goals
 

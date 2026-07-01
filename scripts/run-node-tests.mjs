@@ -74,6 +74,7 @@ const defaultTestFiles = [
   "tests/agent-factory-branch-commit-pr-adapter.test.mjs",
   "tests/agent-factory-ci-repair-loop.test.mjs",
   "tests/agent-factory-ci-repair-runtime-verification.test.mjs",
+  "tests/agent-factory-roadmap-autopilot.test.mjs",
 ];
 const rawArgs = process.argv.slice(2);
 const nodeTestArgs = [];
