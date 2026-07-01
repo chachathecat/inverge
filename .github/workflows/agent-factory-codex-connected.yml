@@ -1,0 +1,196 @@
+name: Agent Factory Codex Connected
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Safe GitHub-Codex connected factory mode.
+        required: true
+        type: choice
+        default: package_issue
+        options:
+          - package_issue
+          - codex_review_pr
+      target_issue:
+        description: Issue number to package or discuss.
+        required: true
+        default: "505"
+      target_roadmap_item:
+        description: Roadmap item id for package_issue mode.
+        required: true
+        default: S210
+      pr_number:
+        description: Pull request number for codex_review_pr mode.
+        required: false
+        default: ""
+      dry_run:
+        description: Must remain true unless the exact AF017 approval phrase is supplied.
+        required: true
+        type: choice
+        default: "true"
+        options:
+          - "true"
+          - "false"
+      approval_phrase:
+        description: Exact phrase required when dry_run=false.
+        required: false
+        default: ""
+      stdout:
+        description: Agent Factory stdout format.
+        required: true
+        type: choice
+        default: markdown
+        options:
+          - markdown
+          - json
+          - none
+
+permissions:
+  contents: read
+  actions: read
+  checks: read
+  pull-requests: read
+  issues: read
+
+concurrency:
+  group: agent-factory-codex-connected-${{ github.ref }}-${{ inputs.mode }}-${{ inputs.target_issue }}-${{ inputs.pr_number }}
+  cancel-in-progress: false
+
+jobs:
+  guardrails:
+    name: guardrails
+    runs-on: ubuntu-latest
+    outputs:
+      run_codex: ${{ steps.guard.outputs.run_codex }}
+    steps:
+      - name: Validate trusted operator and approval gate
+        id: guard
+        env:
+          ACTOR: ${{ github.actor }}
+          MODE: ${{ inputs.mode }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          APPROVAL_PHRASE: ${{ inputs.approval_phrase }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+        run: |
+          set -euo pipefail
+          if [ "$ACTOR" != "chachathecat" ]; then
+            echo "Only the repository owner may run AF017 connected factory workflows." >&2
+            exit 1
+          fi
+          if [ "$MODE" = "codex_review_pr" ] && [ -z "$PR_NUMBER" ]; then
+            echo "codex_review_pr mode requires pr_number." >&2
+            exit 1
+          fi
+          if [ "$DRY_RUN" = "false" ] && [ "$APPROVAL_PHRASE" != "I approve AF017 Codex connected run" ]; then
+            echo "dry_run=false requires the exact AF017 approval phrase." >&2
+            exit 1
+          fi
+          if [ "$MODE" = "codex_review_pr" ] && [ "$DRY_RUN" = "false" ]; then
+            echo "run_codex=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run_codex=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  package_issue:
+    name: package-issue
+    runs-on: ubuntu-latest
+    needs: guardrails
+    if: inputs.mode == 'package_issue'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Generate read-only Agent Factory task package
+        run: >
+          npm run agent-factory:run --
+          --mode plan_only
+          --target "${{ inputs.target_roadmap_item }}"
+          --max-tasks "1"
+          --stdout "${{ inputs.stdout }}"
+          --allow-mutation "false"
+      - name: Write job summary
+        if: always()
+        run: |
+          {
+            echo "# AF017 GitHub-Codex Connected Factory"
+            echo
+            echo "Mode: package_issue"
+            echo "Target issue: #${{ inputs.target_issue }}"
+            echo "Target roadmap item: ${{ inputs.target_roadmap_item }}"
+            echo "Mutation: disabled"
+            echo "Codex execution: disabled in package_issue mode"
+            echo
+            if [ -f .agent-factory/agent-factory-run-summary.md ]; then
+              cat .agent-factory/agent-factory-run-summary.md
+            else
+              echo "No Agent Factory summary artifact was created."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload Agent Factory package artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: af017-package-issue-${{ inputs.target_issue }}-${{ github.run_id }}
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            .agent-factory/codex-task-packages.json
+            .agent-factory/codex-task-packages.md
+            .agent-factory/agent-factory-run-summary.md
+            .agent-factory/run-history.jsonl
+            .agent-factory/run-history.md
+
+  codex_review_pr:
+    name: codex-review-pr
+    runs-on: ubuntu-latest
+    needs: guardrails
+    if: inputs.mode == 'codex_review_pr' && needs.guardrails.outputs.run_codex == 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refs/pull/${{ inputs.pr_number }}/merge
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Run Codex read-only review
+        id: run_codex
+        uses: openai/codex-action@v1
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          prompt-file: .github/codex/prompts/agent-factory-connected.md
+          sandbox: read-only
+          safety-strategy: drop-sudo
+          codex-args: '["--ephemeral"]'
+          output-file: codex-output.md
+      - name: Write job summary
+        if: always()
+        run: |
+          {
+            echo "# AF017 Codex review"
+            echo
+            echo "Mode: codex_review_pr"
+            echo "Target issue: #${{ inputs.target_issue }}"
+            echo "PR: #${{ inputs.pr_number }}"
+            echo "Mutation: disabled"
+            echo "Sandbox: read-only"
+            echo
+            if [ -f codex-output.md ]; then
+              cat codex-output.md
+            else
+              echo "Codex output file was not created."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload Codex review artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: af017-codex-review-pr-${{ inputs.pr_number }}-${{ github.run_id }}
+          if-no-files-found: warn
+          retention-days: 14
+          path: codex-output.md
