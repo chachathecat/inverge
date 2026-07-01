@@ -18,6 +18,7 @@
     "agent-factory:planner-notes": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs scripts/agent-factory-planner-notes.mjs",
     "agent-factory:patch-artifact": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs scripts/agent-factory-patch-artifact.mjs",
     "agent-factory:branch-commit-pr": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs scripts/agent-factory-branch-commit-pr.mjs",
+    "agent-factory:approved-draft-pr": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs scripts/agent-factory-approved-draft-pr.mjs",
     "agent-factory:ci-repair": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs scripts/agent-factory-ci-repair.mjs",
     "agent-factory:roadmap-autopilot": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs scripts/agent-factory-roadmap-autopilot.mjs",
     "agent-factory:end-to-end-dogfood": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs scripts/agent-factory-end-to-end-dogfood.mjs",
