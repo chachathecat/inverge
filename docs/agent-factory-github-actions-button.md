@@ -21,6 +21,8 @@ AF009 metadata mutation is intentionally separate in `Agent Factory Mutate` and 
 - `stdout`: `markdown`, `json`, or `none`.
 - `allow_mutation`: `false` only. Any true value fails closed in the dispatcher.
 
+S209 completion makes S210 the next ready example target for plan-only dispatch examples until the active roadmap advances again.
+
 ## Modes
 
 `plan_only` runs the AF001 roadmap planner against `roadmap/active-program.yml`.
