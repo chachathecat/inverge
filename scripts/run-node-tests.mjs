@@ -73,6 +73,7 @@ const defaultTestFiles = [
   "tests/agent-factory-patch-artifact-adapter.test.mjs",
   "tests/agent-factory-patch-artifact-runtime-verification.test.mjs",
   "tests/agent-factory-branch-commit-pr-adapter.test.mjs",
+  "tests/agent-factory-approved-draft-pr-creator.test.mjs",
   "tests/agent-factory-ci-repair-loop.test.mjs",
   "tests/agent-factory-ci-repair-runtime-verification.test.mjs",
   "tests/agent-factory-roadmap-autopilot.test.mjs",

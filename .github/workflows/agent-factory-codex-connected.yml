@@ -11,12 +11,13 @@ on:
         options:
           - package_issue
           - codex_review_pr
+          - approved_draft_pr
       target_issue:
-        description: Issue number to package or discuss.
+        description: GitHub issue number for package metadata or the AF018 PR closing reference.
         required: true
-        default: "505"
+        default: "507"
       target_roadmap_item:
-        description: Roadmap item id for package_issue mode.
+        description: Roadmap item id used to select the task package.
         required: true
         default: S210
       pr_number:
@@ -24,7 +25,7 @@ on:
         required: false
         default: ""
       dry_run:
-        description: Must remain true unless the exact AF017 approval phrase is supplied.
+        description: Must remain true unless the exact mode-specific approval phrase is supplied.
         required: true
         type: choice
         default: "true"
@@ -35,6 +36,10 @@ on:
         description: Exact phrase required when dry_run=false.
         required: false
         default: ""
+      max_changed_files:
+        description: AF018 maximum changed file count.
+        required: true
+        default: "12"
       stdout:
         description: Agent Factory stdout format.
         required: true
@@ -45,6 +50,11 @@ on:
           - json
           - none
 
+env:
+  AF018_ALLOWED_ACTORS: chachathecat
+  AF018_APPROVAL_PHRASE: I approve AF018 draft PR creation
+  AF017_APPROVAL_PHRASE: I approve AF017 Codex connected run
+
 permissions:
   contents: read
   actions: read
@@ -53,7 +63,7 @@ permissions:
   issues: read
 
 concurrency:
-  group: agent-factory-codex-connected-${{ github.ref }}-${{ inputs.mode }}-${{ inputs.target_issue }}-${{ inputs.pr_number }}
+  group: agent-factory-codex-connected-${{ github.ref }}-${{ inputs.mode }}-${{ inputs.target_issue }}-${{ inputs.target_roadmap_item }}-${{ inputs.pr_number }}
   cancel-in-progress: false
 
 jobs:
@@ -61,7 +71,9 @@ jobs:
     name: guardrails
     runs-on: ubuntu-latest
     outputs:
-      run_codex: ${{ steps.guard.outputs.run_codex }}
+      run_codex_review: ${{ steps.guard.outputs.run_codex_review }}
+      run_af018_dry_run: ${{ steps.guard.outputs.run_af018_dry_run }}
+      run_af018_approved: ${{ steps.guard.outputs.run_af018_approved }}
     steps:
       - name: Validate trusted operator and approval gate
         id: guard
@@ -71,24 +83,55 @@ jobs:
           DRY_RUN: ${{ inputs.dry_run }}
           APPROVAL_PHRASE: ${{ inputs.approval_phrase }}
           PR_NUMBER: ${{ inputs.pr_number }}
+          TARGET_ISSUE: ${{ inputs.target_issue }}
+          TARGET_ROADMAP_ITEM: ${{ inputs.target_roadmap_item }}
         run: |
           set -euo pipefail
-          if [ "$ACTOR" != "chachathecat" ]; then
-            echo "Only the repository owner may run AF017 connected factory workflows." >&2
+          echo "run_codex_review=false" >> "$GITHUB_OUTPUT"
+          echo "run_af018_dry_run=false" >> "$GITHUB_OUTPUT"
+          echo "run_af018_approved=false" >> "$GITHUB_OUTPUT"
+
+          case ",${AF018_ALLOWED_ACTORS}," in
+            *,"${ACTOR}",*) ;;
+            *)
+              echo "Actor is not in the AF018 allowlist." >&2
+              exit 1
+              ;;
+          esac
+
+          if ! [[ "$TARGET_ISSUE" =~ ^[0-9]+$ ]]; then
+            echo "target_issue must be a positive integer." >&2
             exit 1
           fi
+
+          if ! [[ "$TARGET_ROADMAP_ITEM" =~ ^[A-Z][A-Z0-9-]*$ ]]; then
+            echo "target_roadmap_item must be an explicit roadmap item id." >&2
+            exit 1
+          fi
+
           if [ "$MODE" = "codex_review_pr" ] && [ -z "$PR_NUMBER" ]; then
             echo "codex_review_pr mode requires pr_number." >&2
             exit 1
           fi
-          if [ "$DRY_RUN" = "false" ] && [ "$APPROVAL_PHRASE" != "I approve AF017 Codex connected run" ]; then
-            echo "dry_run=false requires the exact AF017 approval phrase." >&2
-            exit 1
-          fi
+
           if [ "$MODE" = "codex_review_pr" ] && [ "$DRY_RUN" = "false" ]; then
-            echo "run_codex=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "run_codex=false" >> "$GITHUB_OUTPUT"
+            if [ "$APPROVAL_PHRASE" != "$AF017_APPROVAL_PHRASE" ]; then
+              echo "codex_review_pr dry_run=false requires the exact AF017 approval phrase." >&2
+              exit 1
+            fi
+            echo "run_codex_review=true" >> "$GITHUB_OUTPUT"
+          fi
+
+          if [ "$MODE" = "approved_draft_pr" ] && [ "$DRY_RUN" = "true" ]; then
+            echo "run_af018_dry_run=true" >> "$GITHUB_OUTPUT"
+          fi
+
+          if [ "$MODE" = "approved_draft_pr" ] && [ "$DRY_RUN" = "false" ]; then
+            if [ "$APPROVAL_PHRASE" != "$AF018_APPROVAL_PHRASE" ]; then
+              echo "approved_draft_pr dry_run=false requires the exact AF018 approval phrase." >&2
+              exit 1
+            fi
+            echo "run_af018_approved=true" >> "$GITHUB_OUTPUT"
           fi
 
   package_issue:
@@ -137,7 +180,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: af017-package-issue-${{ inputs.target_issue }}-${{ github.run_id }}
+          name: af017-package-issue-${{ inputs.target_issue }}-${{ inputs.target_roadmap_item }}-${{ github.run_id }}
           if-no-files-found: warn
           retention-days: 14
           path: |
@@ -151,7 +194,7 @@ jobs:
     name: codex-review-pr
     runs-on: ubuntu-latest
     needs: guardrails
-    if: inputs.mode == 'codex_review_pr' && needs.guardrails.outputs.run_codex == 'true'
+    if: inputs.mode == 'codex_review_pr' && needs.guardrails.outputs.run_codex_review == 'true'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -194,3 +237,259 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
           path: codex-output.md
+
+  af018_dry_run:
+    name: af018-dry-run
+    runs-on: ubuntu-latest
+    needs: guardrails
+    if: inputs.mode == 'approved_draft_pr' && needs.guardrails.outputs.run_af018_dry_run == 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Generate task package for dry-run plan
+        run: >
+          npm run agent-factory:run --
+          --mode plan_only
+          --target "${{ inputs.target_roadmap_item }}"
+          --max-tasks "1"
+          --stdout none
+          --allow-mutation "false"
+      - name: Write AF018 dry-run plan
+        run: >
+          npm run agent-factory:approved-draft-pr --
+          --target-issue "${{ inputs.target_issue }}"
+          --target-roadmap-item "${{ inputs.target_roadmap_item }}"
+          --actor "${{ github.actor }}"
+          --allowed-actor "chachathecat"
+          --dry-run "true"
+          --max-changed-files "${{ inputs.max_changed_files }}"
+          --stdout "${{ inputs.stdout }}"
+      - name: Write job summary
+        if: always()
+        run: |
+          {
+            echo "# AF018 dry-run"
+            echo
+            echo "Mode: approved_draft_pr"
+            echo "Target issue: #${{ inputs.target_issue }}"
+            echo "Target roadmap item: ${{ inputs.target_roadmap_item }}"
+            echo "Mutation: disabled"
+            echo "Codex execution: disabled in dry-run"
+            echo
+            if [ -f .agent-factory/af018-validation-summary.md ]; then
+              cat .agent-factory/af018-validation-summary.md
+            else
+              echo "No AF018 validation summary artifact was created."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload AF018 dry-run artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: af018-dry-run-${{ inputs.target_issue }}-${{ inputs.target_roadmap_item }}-${{ github.run_id }}
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            .agent-factory/codex-task-packages.json
+            .agent-factory/codex-task-packages.md
+            .agent-factory/af018-draft-pr-plan.json
+            .agent-factory/af018-draft-pr-plan.md
+            .agent-factory/af018-pr-body.md
+            .agent-factory/af018-validation-summary.md
+
+  af018_approved_draft_pr:
+    name: af018-approved-draft-pr
+    runs-on: ubuntu-latest
+    needs: guardrails
+    if: inputs.mode == 'approved_draft_pr' && needs.guardrails.outputs.run_af018_approved == 'true'
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: read
+      actions: read
+      checks: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Generate approved task package
+        run: >
+          npm run agent-factory:run --
+          --mode plan_only
+          --target "${{ inputs.target_roadmap_item }}"
+          --max-tasks "1"
+          --stdout none
+          --allow-mutation "false"
+      - name: Run Codex in workspace-write mode
+        id: run_codex
+        uses: openai/codex-action@v1
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          prompt-file: .github/codex/prompts/agent-factory-approved-draft-pr.md
+          sandbox: workspace-write
+          safety-strategy: drop-sudo
+          model: gpt-5.5
+          effort: medium
+          codex-args: '["--ephemeral"]'
+          output-file: codex-output.md
+      - name: Collect changed files
+        run: |
+          set -euo pipefail
+          mkdir -p .agent-factory
+          {
+            git diff --name-only --diff-filter=ACMRTUXB
+            git ls-files --others --exclude-standard
+          } | sort -u > .agent-factory/af018-changed-files.txt
+          if [ ! -s .agent-factory/af018-changed-files.txt ]; then
+            echo "Codex produced no changed files." >&2
+            exit 1
+          fi
+      - name: Validate AF018 changed files and generated PR body
+        run: >
+          npm run agent-factory:approved-draft-pr --
+          --target-issue "${{ inputs.target_issue }}"
+          --target-roadmap-item "${{ inputs.target_roadmap_item }}"
+          --actor "${{ github.actor }}"
+          --allowed-actor "chachathecat"
+          --dry-run "false"
+          --approval-phrase "${{ inputs.approval_phrase }}"
+          --branch "codex/af018-${{ inputs.target_roadmap_item }}-issue-${{ inputs.target_issue }}-${{ github.run_id }}"
+          --max-changed-files "${{ inputs.max_changed_files }}"
+          --stdout none
+      - name: Run validation commands without uploading logs
+        run: |
+          set -uo pipefail
+          summary=".agent-factory/af018-validation-summary.md"
+          failed=0
+          {
+            echo "# AF018 Validation Summary"
+            echo
+            echo "Target issue: #${{ inputs.target_issue }}"
+            echo "Roadmap item: ${{ inputs.target_roadmap_item }}"
+            echo "Changed files: $(wc -l < .agent-factory/af018-changed-files.txt)"
+            echo "Draft PR only: yes"
+            echo "Auto-merge: no"
+            echo "Model: gpt-5.5"
+            echo "Effort: medium"
+            echo
+            echo "## Command Results"
+            echo
+          } > "$summary"
+
+          run_check() {
+            local label="$1"
+            shift
+            if "$@" > /tmp/af018-command.log 2>&1; then
+              echo "- pass: $label" >> "$summary"
+            else
+              echo "- fail: $label" >> "$summary"
+              failed=1
+            fi
+            rm -f /tmp/af018-command.log
+          }
+
+          run_check "npm run typecheck" npm run typecheck
+          run_check "npm run lint" npm run lint
+          run_check "npm test -- tests/agent-factory-approved-draft-pr-creator.test.mjs" npm test -- tests/agent-factory-approved-draft-pr-creator.test.mjs
+          run_check "git diff --check" git diff --check
+
+          {
+            echo
+            echo "## Data Boundary"
+            echo
+            echo "- Command logs are not uploaded."
+            echo "- Codex transcript, diffs, prompts, comments, and raw payloads are omitted."
+          } >> "$summary"
+
+          exit "$failed"
+      - name: Finalize AF018 plan with validation summary
+        run: >
+          npm run agent-factory:approved-draft-pr --
+          --target-issue "${{ inputs.target_issue }}"
+          --target-roadmap-item "${{ inputs.target_roadmap_item }}"
+          --actor "${{ github.actor }}"
+          --allowed-actor "chachathecat"
+          --dry-run "false"
+          --approval-phrase "${{ inputs.approval_phrase }}"
+          --branch "codex/af018-${{ inputs.target_roadmap_item }}-issue-${{ inputs.target_issue }}-${{ github.run_id }}"
+          --max-changed-files "${{ inputs.max_changed_files }}"
+          --validation-summary-input ".agent-factory/af018-validation-summary.md"
+          --stdout none
+      - name: Create branch, commit, push, and open draft PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          branch_name="$(node -e "const p=require('./.agent-factory/af018-draft-pr-plan.json'); console.log(p.target.branchName)")"
+          commit_title="$(node -e "const p=require('./.agent-factory/af018-draft-pr-plan.json'); console.log(p.target.commitTitle)")"
+          pr_title="$(node -e "const p=require('./.agent-factory/af018-draft-pr-plan.json'); console.log(p.target.prTitle)")"
+
+          if [ -z "$branch_name" ] || [ -z "$commit_title" ] || [ -z "$pr_title" ]; then
+            echo "AF018 generated branch, commit title, and PR title are required." >&2
+            exit 1
+          fi
+
+          mapfile -t changed_files < .agent-factory/af018-changed-files.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch_name"
+          git add -- "${changed_files[@]}"
+          git diff --cached --quiet && {
+            echo "No staged changes after AF018 path validation." >&2
+            exit 1
+          }
+          git commit -m "$commit_title"
+          git push -u origin "$branch_name"
+          pr_url="$(gh pr create --draft --base main --head "$branch_name" --title "$pr_title" --body-file .agent-factory/af018-pr-body.md --no-maintainer-edit)"
+          echo "Draft PR: $pr_url" >> "$GITHUB_STEP_SUMMARY"
+      - name: Write job summary
+        if: always()
+        run: |
+          {
+            echo "# AF018 approved draft PR"
+            echo
+            echo "Mode: approved_draft_pr"
+            echo "Target issue: #${{ inputs.target_issue }}"
+            echo "Target roadmap item: ${{ inputs.target_roadmap_item }}"
+            echo "Draft PR only: yes"
+            echo "Auto-merge: no"
+            echo "Merge/rebase/workflow rerun: disabled"
+            echo
+            if [ -f .agent-factory/af018-validation-summary.md ]; then
+              cat .agent-factory/af018-validation-summary.md
+            else
+              echo "No AF018 validation summary artifact was created."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload AF018 validation artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: af018-approved-draft-pr-${{ inputs.target_issue }}-${{ inputs.target_roadmap_item }}-${{ github.run_id }}
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            .agent-factory/codex-task-packages.json
+            .agent-factory/codex-task-packages.md
+            .agent-factory/af018-changed-files.txt
+            .agent-factory/af018-draft-pr-plan.json
+            .agent-factory/af018-draft-pr-plan.md
+            .agent-factory/af018-pr-body.md
+            .agent-factory/af018-validation-summary.md
