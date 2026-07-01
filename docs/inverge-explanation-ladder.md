@@ -1,5 +1,13 @@
 # Inverge Explanation Ladder
 
+## 2026-07-01 Product Constitution Transition
+
+The explanation ladder supports Dabangil's 감정평가사 2차 learner loop. It is not an official answer, official grading rule, score prediction, pass/fail judgment, or model-answer claim.
+
+Every ladder must preserve the four labels: 1타 쉬운풀이, 합격 한 줄, 출제자 함정, and 10초 확인. The final check must become retrieval, retry, rewrite, recalculation, or scheduled review. It must not end at a score.
+
+Examples such as 무효와 취소, 의사무능력자의 법률행위, 재고자산 저가법, 수익환원법, and 사업인정처분 are learning examples only. They must not be presented as official answers or official grading criteria.
+
 ## Purpose
 
 The explanation ladder defines how Inverge explains mistakes after retrieval or production. It keeps explanations short, operational, and connected to immediate retry/rewrite.

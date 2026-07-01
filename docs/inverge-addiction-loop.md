@@ -1,5 +1,11 @@
 # Inverge Ethical Retention Loop
 
+## 2026-07-01 Product Constitution Transition
+
+Retention for Dabangil must be ethical retention only: anxiety relief, morning brief, due review, recovery nudge, and capture reminder. The product must not use shame copy, ranking pressure, fake urgency, intentionally degraded free output, casino-style gamification, addictive streak mechanics, or hidden answer access designed only to force payment.
+
+Every nudge should reduce the learner's next decision to one useful action, preserve easy override, and keep Today Plan max 3.
+
 ## Ethical retention principles
 
 Inverge should be useful enough to return to, not addictive enough to trap learners. Retention should come from anxiety relief, visible progress, and reduced decision load.

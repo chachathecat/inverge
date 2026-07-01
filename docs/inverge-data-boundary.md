@@ -1,5 +1,22 @@
 # Inverge Data Boundary / Privacy Hardening v1
 
+## 2026-07-01 Product Constitution Transition
+
+The product data boundary has three layers:
+
+1. **Private raw layer**: learner-owned uploads, OCR, answer text, rewrite text, note text, and raw problem text needed for that learner's own service.
+2. **Derived learning signal layer**: sanitized concept, gap, confidence, task, review, and scheduling metadata.
+3. **Aggregated product intelligence layer**: aggregate metrics and product-health signals that contain no raw learner text, no OCR payload, no answer payload, no raw problem text, no provider payload, and no secrets.
+
+Forbidden raw global corpus behavior:
+
+- no raw learner answer in global reference data;
+- no raw OCR text in global reference data;
+- no raw problem or copyrighted question text in global reference data;
+- no raw learner text in analytics, commercial metrics, telemetry, issue bodies, screenshots, test fixtures, provider logs, or model-training material without explicit future consent and policy.
+
+Official-source records must use manifest, source URL, hash, provenance, rights status, verification status, law-effective date when relevant, and last verification metadata. Official-source manifests are not learner artifacts, and learner artifacts must never be merged into historical-question or reference-answer records.
+
 ## Core rule
 
 Inverge keeps three data classes separate:
