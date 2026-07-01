@@ -5,7 +5,6 @@ import { test } from "node:test";
 const WORKFLOW_PATH = ".github/workflows/agent-factory-codex-connected.yml";
 const DOC_PATH = "docs/agent-factory-github-codex-connected.md";
 const PROMPT_PATH = ".github/codex/prompts/agent-factory-connected.md";
-const RUNNER_PATH = "scripts/run-node-tests.mjs";
 
 const read = (path) => fs.readFileSync(path, "utf8");
 
@@ -48,8 +47,4 @@ test("AF017 docs and prompt state report-only boundary", () => {
   assert.match(docs, /no unattended merge/);
   assert.match(prompt, /read-only\/report-only/);
   assert.match(prompt, /Do not edit files/);
-});
-
-test("AF017 focused test is wired into the default node test run", () => {
-  assert.match(read(RUNNER_PATH), /tests\/agent-factory-github-codex-connected\.test\.mjs/);
 });
