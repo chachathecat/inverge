@@ -29,3 +29,7 @@ Future execution automation remains approval-gated. A later issue must separatel
 ## Product Work Resumes
 
 After AF016, product work resumes from docs/reference-data source-of-truth and the active second-round roadmap. This transition PR records the product constitution and roadmap alignment only. It does not implement runtime product behavior, official corpus ingestion, billing, usage ledger, OCR provider changes, instructor grading, auth/session, database, workflow, or learner UI changes.
+
+## PR Contract Alignment
+
+Future Agent Factory prompts should require exactly one issue-closing reference, such as `Closes #<issue>`, while still requiring the full repository PR Contract body. The closing reference must not be interpreted as the entire PR body.
