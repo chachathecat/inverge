@@ -79,7 +79,7 @@ items:
     priority: 10
   - id: S209
     title: Theory Concept Corpus and Validator
-    status: queued
+    status: completed
     dependencies: [S201, S203]
     lockGroup: theory-grounding
     risk: high
