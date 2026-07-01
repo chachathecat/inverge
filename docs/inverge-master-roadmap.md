@@ -424,3 +424,23 @@ Canonical compatibility string:
 `input → diagnosis → tracking → prediction → recommendation → execution → retry/rewrite`
 
 이 호환 계층은 감정평가사 1차 신규 개발을 다시 활성화하지 않는다. 감정평가사 1차는 동결 상태이며, 활성 learner product는 감정평가사 2차 전과목이다.
+
+## 2026-07-01 Product Constitution Transition
+
+AF010 through AF016 are complete as the first Agent Factory automation evidence chain. AF016 proves a report-only, metadata-only planning chain; it does not authorize execution automation, source mutation, GitHub mutation, workflow reruns, or learner/runtime/provider/billing/auth/payment/OCR/instructor/production changes.
+
+Product roadmap work now resumes from the current 감정평가사 2차 source of truth:
+
+1. `docs/inverge-product-constitution.md`;
+2. `docs/inverge-second-round-final-product-spec.md`;
+3. `docs/dabangil-second-exam-premium-os.md`;
+4. `roadmap/active-program.yml`;
+5. `AGENTS.md`.
+
+Dabangil (답안길) is the learner-facing premium 감정평가사 2차 합격관제 OS. The active learner-facing scope is only 감정평가실무, 감정평가이론, and 감정평가 및 보상법규. First-round references remain frozen compatibility metadata and must not re-enter landing, onboarding, navigation, pricing, active-program scheduling, public launch framing, or commercial product copy.
+
+Capture-to-Note and Capture-to-Plan remain the learner-loop quality standard: learner-owned capture or answer review becomes a note, safe concept candidate, one biggest gap, one next action, Today Plan max 3, Review Queue, Learning Record, and Personal Concept State. Capture-to-Note is prioritized before any public historical archive or passive question-bank front door.
+
+The near roadmap follows `roadmap/active-program.yml`: S209 theory concept corpus, S210 practice validation, S211-S213 subject answer engines, S214-S215 reference-answer pipeline and release gate, S216-S218 error notebook/concept graph/review scheduler, then S219-S225 commercial, trust, academy, acceptance, and launch gates.
+
+Raw historical corpus expansion, public archive UX, Quick Solve acquisition experiments, billing, usage ledger, official-source ingestion, and execution automation are deferred until explicit source, rights, private-storage, data-boundary, runtime, and cost gates exist.

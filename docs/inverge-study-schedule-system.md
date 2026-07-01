@@ -1,5 +1,17 @@
 # Inverge Study Schedule System
 
+## 2026-07-01 Product Constitution Transition
+
+The active learner product is 감정평가사 2차 Dabangil only. Existing 1차 schedule templates are frozen compatibility metadata and do not reopen first-round learner-facing work, first-round commercial products, or first-round active-program scheduling.
+
+Planning distinction:
+
+- 1차: frozen compatibility metadata only;
+- 2차: active Dabangil learner operating scope for 실무, 이론, 법규;
+- 동차: not a current learner-facing product or commercial catalog; any future treatment requires a separate source, rights, billing, privacy, and roadmap decision.
+
+Today Plan max 3 remains non-negotiable. The prioritization order is due review, recent wrong, confidence gap, pass risk, exam urgency, missed recently, and weak structure. Capture-to-Note is the learner-loop entry before any public historical archive or passive question-bank front door.
+
 ## Purpose
 
 The study schedule system defines how Inverge should translate curriculum metadata and learner signals into calm daily execution. This document is a roadmap/reference standard only and does not implement notifications or new product behavior.

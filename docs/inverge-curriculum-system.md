@@ -1,5 +1,43 @@
 # Inverge Curriculum System
 
+## 2026-07-01 Product Constitution Transition
+
+The learner-facing product scope is 감정평가사 2차 only: 감정평가실무, 감정평가이론, and 감정평가 및 보상법규. First-round curriculum data may remain for regression, rollback, and historical compatibility, but it is frozen compatibility metadata and is not active learner-facing product scope.
+
+Frozen first-round compatibility subject labels include:
+
+- 민법
+- 경제학원론
+- 부동산학원론
+- 감정평가관계법규
+- 회계학
+
+Second-round active product subject labels include:
+
+- 감정평가실무
+- 감정평가이론
+- 감정평가 및 보상법규
+
+Curriculum nodes are metadata and editorial scaffolding until officially verified. Official syllabus and current notice verification are required before production claims. Do not treat internal curriculum units, examples, or study tracks as official syllabus authority.
+
+Concept node records should support these policy fields, even when older reference files use compatibility field names:
+
+- `id`
+- `stage`
+- `subjectId`
+- `parentId`
+- `title`
+- `official.sourceIds`
+- `official.status`
+- `official.effectiveFrom`
+- `official.lastVerifiedAt`
+- `editorial.importance`
+- `editorial.taskTypes`
+- `editorial.defaultReviewPattern`
+- `editorial.secondExamBridge`
+
+No raw learner answer, raw OCR, raw problem text, copyrighted question text, provider payload, or secret belongs in curriculum reference data.
+
 ## Scope and verification policy
 
 This document defines the metadata-only curriculum source of truth for learner-facing Inverge. It covers only 감정평가사 1차 and 감정평가사 2차.

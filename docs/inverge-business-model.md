@@ -251,3 +251,19 @@ Founding/beta prices may be lower but must not replace the final target taxonomy
 이 문서의 가격은 구현과 시장 검증을 위한 가설이다. 실제 정가는 결제 전환, 해지율, 사용량, AI 원가, Evidence Review 유용성, 반복 학습 성과, 학원 pilot 운영시간 절감으로 조정한다.
 
 가격 검증을 이유로 제품 범위나 품질 게이트를 낮추지 않는다.
+
+## 2026-07-01 Product Constitution Transition
+
+Commercial execution remains deferred in this PR. This document records product and catalog policy only; it does not add a payment provider, checkout, billing enforcement, entitlement enforcement, usage ledger, subscriptions, invoices, provider settings, or runtime pricing behavior.
+
+The current learner catalog source of truth is:
+
+- `free`
+- `second_os_basic`
+- `second_os_pro`
+- `second_control_premium`
+- `deep_review_5`
+- `deep_review_15`
+- `deep_review_40`
+
+First-round OS, 동차 OS, generic multi-exam OS, and Quick packs are not active learner-facing catalog items in this repository. If legacy or exploratory labels exist in older documents, they are frozen or deferred and must not replace the second-round Dabangil taxonomy. Any future commercial expansion requires explicit source, billing, refund, privacy, retention, cost, entitlement, data-boundary, and runtime gates.
