@@ -1,0 +1,159 @@
+{
+  "schemaVersion": "1.0.0",
+  "registryType": "appraiser_second_round_practice_calculation_unit_registry",
+  "registryScope": "appraiser_second_round_practice_only",
+  "generatedBy": "S210 metadata-only practice calculation unit validator",
+  "generatedAt": "2026-06-27T00:00:00.000Z",
+  "coordination": {
+    "targetIssueNumber": 509,
+    "roadmapItemId": "S210",
+    "roadmapItemTitle": "Practice Calculation Unit OCR and Supported-Type Validator",
+    "prBodyClosingReference": "Closes #509",
+    "generatedBranchMetadataStored": false
+  },
+  "storagePolicy": {
+    "metadataOnly": true,
+    "rawLearnerAnswerStored": false,
+    "rawOcrTextStored": false,
+    "rawProblemTextStored": false,
+    "rawAnswerTextStored": false,
+    "rawOfficialQuestionBodyStored": false,
+    "rawOfficialAnswerBodyStored": false,
+    "providerPayloadStored": false,
+    "privateContentStored": false,
+    "credentialsStored": false,
+    "rawFormulaExpressionStored": false,
+    "rawExtractedValuesStored": false,
+    "rawCalculationTraceStored": false
+  },
+  "boundaryPolicy": {
+    "sourceLevelValidatorOnly": true,
+    "runtimeOcrCalled": false,
+    "providerApiCalled": false,
+    "learnerRuntimeChanged": false,
+    "referenceAnswerGenerated": false,
+    "officialGradingClaimAllowed": false,
+    "officialModelAnswerClaimAllowed": false,
+    "passProbabilityClaimAllowed": false,
+    "passGuaranteeClaimAllowed": false
+  },
+  "units": [
+    {
+      "id": "s210_synthetic_income_capitalization_unit",
+      "subject": "practice",
+      "calculationType": "income_capitalization",
+      "questionLinkage": {
+        "canonicalQuestionId": "s210_synthetic_practice_question",
+        "sourceId": "s210_synthetic_practice_source",
+        "subject": "practice",
+        "sourceRightsStatus": "metadata_only_pending",
+        "officialProblemBodyStored": false,
+        "officialAnswerBodyStored": false,
+        "learnerAnswerStored": false
+      },
+      "support": {
+        "status": "supported_metadata_only",
+        "unsupportedReasonCodes": []
+      },
+      "formulaMetadata": {
+        "formulaId": "s210_income_capitalization_formula_metadata",
+        "formulaKind": "valuation_formula",
+        "formulaExpressionStored": false,
+        "rawFormulaStored": false,
+        "unitCheckRequired": true,
+        "roundingCheckRequired": true,
+        "sourceAnchorIds": [
+          "s210_synthetic_formula_anchor"
+        ]
+      },
+      "ocrPolicy": {
+        "confidenceGateRequired": true,
+        "minimumOverallConfidence": 0.98,
+        "minimumFieldConfidence": 0.95,
+        "lowConfidenceFailsClosed": true,
+        "runtimeOcrCalled": false,
+        "rawOcrTextStored": false,
+        "providerPayloadStored": false,
+        "fieldSchema": [
+          {
+            "fieldId": "s210_noi_field_metadata",
+            "expectedUnit": "krw",
+            "normalizedUnit": "krw",
+            "required": true,
+            "rawValueStored": false
+          },
+          {
+            "fieldId": "s210_cap_rate_field_metadata",
+            "expectedUnit": "percent",
+            "normalizedUnit": "decimal_rate",
+            "required": true,
+            "rawValueStored": false
+          }
+        ]
+      },
+      "unitCheck": {
+        "required": true,
+        "status": "metadata_ready",
+        "dimensions": [
+          {
+            "dimensionId": "s210_currency_dimension",
+            "expectedUnit": "krw",
+            "normalizedUnit": "krw",
+            "rawValueStored": false
+          },
+          {
+            "dimensionId": "s210_rate_dimension",
+            "expectedUnit": "percent",
+            "normalizedUnit": "decimal_rate",
+            "rawValueStored": false
+          }
+        ],
+        "rawValuesStored": false
+      },
+      "roundingCheck": {
+        "required": true,
+        "status": "metadata_ready",
+        "ruleId": "s210_appraisal_practice_rounding_policy_metadata",
+        "rawExpectedOutputStored": false
+      },
+      "independentRecalculation": {
+        "required": true,
+        "status": "metadata_ready",
+        "reviewerCountRequired": 2,
+        "rawTraceStored": false
+      },
+      "giiiRoutine": {
+        "calculatorModel": "casio_fx_9860giii",
+        "resetSafeHandKeyedRoutineRequired": true,
+        "storedProgramDependencyAllowed": false,
+        "routineMetadataStatus": "metadata_ready",
+        "handKeyedSequenceMetadata": {
+          "status": "metadata_ready",
+          "stepCount": 5,
+          "sequenceStored": false
+        },
+        "expectedDisplayStored": false,
+        "answerSheetTransferTemplateStored": false
+      },
+      "releaseGate": {
+        "releaseAllowed": false,
+        "status": "metadata_only_not_released",
+        "referenceAnswerReleaseAllowed": false,
+        "officialGradingClaimAllowed": false,
+        "requiredRuntimeEvidence": "human_reviewed_runtime_ocr_and_recalculation_evidence",
+        "reasonCodes": [
+          "source_level_validator_only",
+          "runtime_ocr_not_run"
+        ]
+      },
+      "conceptNodeIds": [
+        "s210_practice_income_approach_metadata"
+      ],
+      "sourceAnchorIds": [
+        "s210_synthetic_question_anchor",
+        "s210_synthetic_formula_anchor",
+        "s210_synthetic_unit_anchor"
+      ]
+    }
+  ]
+}

@@ -86,7 +86,7 @@ items:
     priority: 11
   - id: S210
     title: Practice Calculation Unit OCR and Supported-Type Validator
-    status: queued
+    status: completed
     dependencies: [S200R, S201, S203]
     lockGroup: practice-validation
     risk: high

@@ -69,6 +69,7 @@
     "check:second-round-source-rights": "node --experimental-strip-types scripts/validate-second-round-source-rights-registry.mjs",
     "check:second-round-question-registry": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs scripts/validate-second-round-question-registry.mjs",
     "check:second-round-reference-answer-packages": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs scripts/validate-second-round-reference-answer-packages.mjs",
+    "check:practice-calculation-units": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs scripts/validate-practice-calculation-units.mjs",
     "check:law-source-version-registry": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs scripts/validate-law-source-version-registry.mjs",
     "check:theory-concept-corpus": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs scripts/validate-theory-concept-corpus.mjs"
   },

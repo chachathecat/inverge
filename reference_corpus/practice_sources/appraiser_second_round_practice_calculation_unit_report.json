@@ -1,0 +1,52 @@
+{
+  "schemaVersion": "1.0.0",
+  "reportType": "appraiser_second_round_practice_calculation_unit_report",
+  "generatedBy": "scripts/validate-practice-calculation-units.mjs",
+  "generatedAt": "2026-06-27T00:00:00.000Z",
+  "registryPath": "reference_corpus/practice_sources/appraiser_second_round_practice_calculation_units.json",
+  "storagePolicy": {
+    "metadataOnly": true,
+    "rawLearnerAnswerStored": false,
+    "rawOcrTextStored": false,
+    "rawProblemTextStored": false,
+    "rawAnswerTextStored": false,
+    "rawOfficialQuestionBodyStored": false,
+    "rawOfficialAnswerBodyStored": false,
+    "providerPayloadStored": false,
+    "privateContentStored": false,
+    "credentialsStored": false,
+    "rawFormulaExpressionStored": false,
+    "rawExtractedValuesStored": false,
+    "rawCalculationTraceStored": false
+  },
+  "coordination": {
+    "targetIssueNumber": 509,
+    "roadmapItemId": "S210",
+    "roadmapItemTitle": "Practice Calculation Unit OCR and Supported-Type Validator",
+    "prBodyClosingReference": "Closes #509",
+    "generatedBranchMetadataStored": false
+  },
+  "totals": {
+    "unitCount": 1,
+    "supportedMetadataUnitCount": 1,
+    "releaseAllowedUnitCount": 0,
+    "blockedReleaseUnitCount": 1,
+    "ocrConfidenceGateCount": 1,
+    "giiiRoutineCount": 1,
+    "sourceLevelOnlyUnitCount": 1,
+    "calculationTypeCounts": {
+      "income_capitalization": 1,
+      "cost_approach_depreciation": 0,
+      "land_residual": 0,
+      "unit_conversion": 0,
+      "time_adjustment": 0,
+      "rounding_only": 0,
+      "rate_conversion": 0
+    }
+  },
+  "unitIds": [
+    "s210_synthetic_income_capitalization_unit"
+  ],
+  "metadataOnly": true,
+  "safeUse": "s210_practice_calculation_unit_contract_only"
+}
