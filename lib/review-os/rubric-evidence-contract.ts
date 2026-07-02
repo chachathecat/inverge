@@ -22,6 +22,7 @@ export type RubricEvidenceBlockingReason =
   | "learner_evidence_unlinked"
   | "ocr_unconfirmed"
   | "rubric_unverified"
+  | "theory_concept_unverified"
   | "reference_package_unverified"
   | "official_rule_unverified"
   | "calculation_unverified"

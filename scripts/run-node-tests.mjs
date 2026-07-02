@@ -53,6 +53,7 @@ const defaultTestFiles = [
   "tests/second-round-question-registry.test.mjs",
   "tests/second-round-reference-answer-package-registry.test.mjs",
   "tests/s211-law-answer-review-engine.test.mjs",
+  "tests/theory-answer-review-engine.test.mjs",
   "tests/practice-calculation-unit-registry.test.mjs",
   "tests/rewrite-regrade-history-contract.test.mjs",
   "tests/agent-factory-contract-validation.test.mjs",

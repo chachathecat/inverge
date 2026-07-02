@@ -188,5 +188,6 @@ test("S211 docs and roadmap wiring are present", async () => {
   }
 
   assert.match(roadmap, /id: S211[\s\S]*?status: completed/);
-  assert.match(roadmap, /id: S212[\s\S]*?status: ready/);
+  assert.match(roadmap, /id: S212[\s\S]*?status: completed/);
+  assert.match(roadmap, /id: S213[\s\S]*?status: queued/);
 });
