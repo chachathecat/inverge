@@ -1,0 +1,350 @@
+{
+  "reviewRequestId": "s211-fixture-review-1",
+  "consumer": "learner",
+  "actorRole": "learner",
+  "question": {
+    "questionId": "synthetic-s211-law-q1",
+    "subject": "law",
+    "subjectLabel": "appraiser_second_round_law",
+    "totalPoints": 100,
+    "examDate": "2090-07-01",
+    "lawEffectiveDate": "2090-07-01",
+    "problemMaterialStatus": "verified",
+    "canonicalVerificationStatus": "verified",
+    "conceptNodeIds": [
+      "synthetic-s211-law-concept"
+    ]
+  },
+  "learnerAnswerEvidenceRefs": [
+    {
+      "id": "s211-ev-issue",
+      "kind": "learner_confirmed_ocr_segment",
+      "dataClass": "user_owned_service_data",
+      "ownerBinding": "authenticated_request_user",
+      "answerSubmissionId": "s211-submission-1",
+      "segmentId": "s211-segment-issue",
+      "ocrState": "confirmed_by_learner",
+      "verifiedByLearner": true,
+      "confidence": "high",
+      "containsRawContent": false
+    },
+    {
+      "id": "s211-ev-rule",
+      "kind": "learner_confirmed_ocr_segment",
+      "dataClass": "user_owned_service_data",
+      "ownerBinding": "authenticated_request_user",
+      "answerSubmissionId": "s211-submission-1",
+      "segmentId": "s211-segment-rule",
+      "ocrState": "confirmed_by_learner",
+      "verifiedByLearner": true,
+      "confidence": "high",
+      "containsRawContent": false
+    },
+    {
+      "id": "s211-ev-application",
+      "kind": "learner_confirmed_ocr_segment",
+      "dataClass": "user_owned_service_data",
+      "ownerBinding": "authenticated_request_user",
+      "answerSubmissionId": "s211-submission-1",
+      "segmentId": "s211-segment-application",
+      "ocrState": "confirmed_by_learner",
+      "verifiedByLearner": true,
+      "confidence": "high",
+      "containsRawContent": false
+    }
+  ],
+  "referencePackage": {
+    "id": "synthetic-s211-law-package",
+    "mode": "synthetic_fixture",
+    "questionId": "synthetic-s211-law-q1",
+    "subject": "law",
+    "officialSource": {
+      "officialAnswerUsed": false,
+      "officialGradingCriteriaUsed": false
+    },
+    "learningReference": {
+      "status": "released_learning_reference",
+      "officialClaimAllowed": false,
+      "scorePredictionAllowed": false,
+      "passProbabilityAllowed": false
+    },
+    "lawValidation": {
+      "examDate": "2090-07-01",
+      "lawEffectiveDate": "2090-07-01",
+      "lawVersionAnchorIds": [
+        "synthetic-s211-law-version-anchor"
+      ],
+      "checks": [
+        {
+          "checkId": "s211-law-check-effective-date",
+          "kind": "effective_date",
+          "status": "synthetic_fixture",
+          "releaseBlocking": true,
+          "sourceAnchorIds": [
+            "synthetic-s211-law-version-anchor"
+          ],
+          "evidenceAnchorIds": [
+            "synthetic-s211-law-evidence-anchor"
+          ]
+        },
+        {
+          "checkId": "s211-law-check-rule-source",
+          "kind": "rule_source",
+          "status": "synthetic_fixture",
+          "releaseBlocking": true,
+          "sourceAnchorIds": [
+            "synthetic-s211-law-version-anchor"
+          ],
+          "evidenceAnchorIds": [
+            "synthetic-s211-law-evidence-anchor"
+          ]
+        },
+        {
+          "checkId": "s211-law-check-article-citation",
+          "kind": "article_citation",
+          "status": "synthetic_fixture",
+          "releaseBlocking": true,
+          "sourceAnchorIds": [
+            "synthetic-s211-law-version-anchor"
+          ],
+          "evidenceAnchorIds": [
+            "synthetic-s211-law-evidence-anchor"
+          ]
+        },
+        {
+          "checkId": "s211-law-check-issue-identification",
+          "kind": "issue_identification",
+          "status": "synthetic_fixture",
+          "releaseBlocking": true,
+          "sourceAnchorIds": [
+            "synthetic-s211-law-version-anchor"
+          ],
+          "evidenceAnchorIds": [
+            "synthetic-s211-law-evidence-anchor"
+          ]
+        },
+        {
+          "checkId": "s211-law-check-application",
+          "kind": "application",
+          "status": "synthetic_fixture",
+          "releaseBlocking": true,
+          "sourceAnchorIds": [
+            "synthetic-s211-law-version-anchor"
+          ],
+          "evidenceAnchorIds": [
+            "synthetic-s211-law-evidence-anchor"
+          ]
+        },
+        {
+          "checkId": "s211-law-check-case-anchor",
+          "kind": "case_or_administrative_anchor",
+          "status": "synthetic_fixture",
+          "releaseBlocking": true,
+          "sourceAnchorIds": [
+            "synthetic-s211-law-version-anchor"
+          ],
+          "evidenceAnchorIds": [
+            "synthetic-s211-law-evidence-anchor"
+          ]
+        },
+        {
+          "checkId": "s211-law-check-conclusion",
+          "kind": "conclusion",
+          "status": "synthetic_fixture",
+          "releaseBlocking": true,
+          "sourceAnchorIds": [
+            "synthetic-s211-law-version-anchor"
+          ],
+          "evidenceAnchorIds": [
+            "synthetic-s211-law-evidence-anchor"
+          ]
+        },
+        {
+          "checkId": "s211-law-check-unsupported-claim",
+          "kind": "unsupported_legal_claim",
+          "status": "synthetic_fixture",
+          "releaseBlocking": true,
+          "sourceAnchorIds": [
+            "synthetic-s211-law-version-anchor"
+          ],
+          "evidenceAnchorIds": [
+            "synthetic-s211-law-evidence-anchor"
+          ]
+        }
+      ]
+    },
+    "verificationReport": {
+      "sourceStatus": "source_verified",
+      "evidenceStatus": "subject_validated",
+      "subjectValidationStatus": "subject_validated",
+      "criticConsensusStatus": "critic_consensus_passed",
+      "releaseGateStatus": "released",
+      "independentCandidateCount": 3,
+      "criticPassCount": 1,
+      "unresolvedConflictCount": 0
+    },
+    "releaseBlockers": [],
+    "release": {
+      "status": "released",
+      "noOfficialAnswerGuardrail": true,
+      "learnerFacingOfficialClaimAllowed": false,
+      "releaseRequiresNoOpenBlockers": true
+    },
+    "downstreamUsage": {
+      "s211LawReviewInput": true,
+      "s215ReleaseGateInput": true
+    }
+  },
+  "lawSourceGate": {
+    "examDateVersionCheckId": "synthetic-s211-exam-date-check",
+    "referencePackageLinkId": "synthetic-s211-reference-package-link",
+    "evidenceReviewLinkId": "synthetic-s211-evidence-review-link",
+    "registry": {
+      "examDateVersionChecks": [
+        {
+          "checkId": "synthetic-s211-exam-date-check",
+          "questionId": "synthetic-s211-law-q1",
+          "examDate": "2090-07-01",
+          "lawEffectiveDate": "2090-07-01",
+          "sourceAnchorIds": [
+            "synthetic-s211-law-version-anchor"
+          ],
+          "legalSourceStatus": "verified",
+          "examDateVersionStatus": "applicable_to_exam_date",
+          "currentLawComparison": {
+            "status": "same_as_exam_date",
+            "currentLawAnchorIds": [
+              "synthetic-s211-law-version-anchor"
+            ],
+            "divergenceDisclosureRequired": false,
+            "currentLawClaimAllowed": true,
+            "examDateLawClaimAllowed": true
+          },
+          "releaseConfidence": {
+            "status": "high_allowed",
+            "s211HighConfidenceAllowed": true,
+            "s211ReviewAllowed": true,
+            "s214GenerationAllowed": true,
+            "s215ReleaseGateAllowed": true
+          },
+          "blockerIds": [],
+          "s207ReferencePackageIds": [
+            "synthetic-s211-law-package"
+          ],
+          "s205SourceReferenceIds": [
+            "synthetic-s211-s205-law-source-ref"
+          ],
+          "metadataOnly": true
+        }
+      ],
+      "referencePackageLinks": [
+        {
+          "linkId": "synthetic-s211-reference-package-link",
+          "referencePackageId": "synthetic-s211-law-package",
+          "questionId": "synthetic-s211-law-q1",
+          "packageReleaseStatus": "released",
+          "lawVersionAnchorIds": [
+            "synthetic-s211-law-version-anchor"
+          ],
+          "legalSourceStatus": "verified",
+          "releaseGateStatus": "eligible_for_s215",
+          "releaseReady": true,
+          "blockerIds": [],
+          "containsRawContent": false
+        }
+      ],
+      "evidenceReviewLinks": [
+        {
+          "linkId": "synthetic-s211-evidence-review-link",
+          "reviewContractVersion": "s205.common_rubric_evidence.v1",
+          "sourceVerificationRefId": "synthetic-s211-s205-law-source-ref",
+          "lawVersionAnchorId": "synthetic-s211-law-version-anchor",
+          "s205SourceStatus": "verified",
+          "s205WithholdReasons": [],
+          "reviewConfidence": "high",
+          "blockerIds": [],
+          "containsRawContent": false
+        }
+      ],
+      "blockers": []
+    }
+  },
+  "findings": [
+    {
+      "dimensionId": "law_issue_spotting",
+      "quality": "partial",
+      "evidenceRefIds": [
+        "s211-ev-issue"
+      ],
+      "sourceAnchorIds": [
+        "synthetic-s211-law-version-anchor"
+      ],
+      "rootCauseId": "s211-root-issue-spotting",
+      "conceptNodeIds": [
+        "synthetic-s211-law-concept"
+      ],
+      "learnerFacingSummary": "issue_spotting_missing_one_material_issue",
+      "immediateFix": "rewrite_one_issue_sentence_before_rule_mapping"
+    },
+    {
+      "dimensionId": "law_requirement_decomposition",
+      "quality": "missing",
+      "evidenceRefIds": [
+        "s211-ev-issue"
+      ],
+      "sourceAnchorIds": [
+        "synthetic-s211-law-version-anchor"
+      ],
+      "rootCauseId": "s211-root-requirement-decomposition",
+      "conceptNodeIds": [
+        "synthetic-s211-law-concept"
+      ],
+      "learnerFacingSummary": "requirement_decomposition_missing_before_application",
+      "immediateFix": "write_rule_requirements_as_separate_application_targets"
+    },
+    {
+      "dimensionId": "law_rule_mapping",
+      "quality": "strong",
+      "evidenceRefIds": [
+        "s211-ev-rule"
+      ],
+      "sourceAnchorIds": [
+        "synthetic-s211-law-version-anchor"
+      ],
+      "rootCauseId": "s211-root-rule-mapping",
+      "conceptNodeIds": [
+        "synthetic-s211-law-concept"
+      ]
+    },
+    {
+      "dimensionId": "law_subsumption_application",
+      "quality": "partial",
+      "evidenceRefIds": [
+        "s211-ev-application"
+      ],
+      "sourceAnchorIds": [
+        "synthetic-s211-law-version-anchor"
+      ],
+      "rootCauseId": "s211-root-subsumption-application",
+      "conceptNodeIds": [
+        "synthetic-s211-law-concept"
+      ],
+      "learnerFacingSummary": "subsumption_fact_link_is_too_thin",
+      "immediateFix": "attach_one_material_fact_to_each_rule_requirement"
+    },
+    {
+      "dimensionId": "law_conclusion_quality",
+      "quality": "strong",
+      "evidenceRefIds": [
+        "s211-ev-application"
+      ],
+      "sourceAnchorIds": [
+        "synthetic-s211-law-version-anchor"
+      ],
+      "rootCauseId": "s211-root-conclusion-quality",
+      "conceptNodeIds": [
+        "synthetic-s211-law-concept"
+      ]
+    }
+  ]
+}

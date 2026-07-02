@@ -93,14 +93,14 @@ items:
     priority: 12
   - id: S211
     title: Law Answer Review and Grading Engine
-    status: queued
+    status: completed
     dependencies: [S205, S207, S208]
     lockGroup: law-answer-engine
     risk: high
     priority: 13
   - id: S212
     title: Theory Answer Review and Grading Engine
-    status: queued
+    status: ready
     dependencies: [S205, S207, S209]
     lockGroup: theory-answer-engine
     risk: high
