@@ -100,7 +100,7 @@ items:
     priority: 13
   - id: S212
     title: Theory Answer Review and Grading Engine
-    status: ready
+    status: completed
     dependencies: [S205, S207, S209]
     lockGroup: theory-answer-engine
     risk: high
