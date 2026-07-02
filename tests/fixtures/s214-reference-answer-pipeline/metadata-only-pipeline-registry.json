@@ -1,0 +1,652 @@
+{
+  "schemaVersion": "s214.reference_answer_candidate_pipeline.v1",
+  "registryType": "appraiser_second_round_s214_reference_answer_pipeline_registry",
+  "generatedBy": "tests/s214-reference-answer-pipeline.test.mjs",
+  "generatedAt": "2026-07-02T00:00:00.000Z",
+  "storagePolicy": {
+    "metadataOnly": true,
+    "rawOfficialQuestionTextStored": false,
+    "rawOfficialAnswerTextStored": false,
+    "rawGeneratedReferenceAnswerStored": false,
+    "rawLearnerAnswerStored": false,
+    "rawOcrTextStored": false,
+    "rawSourceExcerptStored": false,
+    "providerPayloadStored": false,
+    "privateContentStored": false,
+    "credentialsStored": false,
+    "assetBytesStored": false
+  },
+  "boundaryPolicy": {
+    "sourceLevelPipelineOnly": true,
+    "providerRuntimeCallsImplemented": false,
+    "ocrRuntimeCallsImplemented": false,
+    "learnerUiImplemented": false,
+    "publicArchiveUiImplemented": false,
+    "billingOrLedgerImplemented": false,
+    "authOrEntitlementChanged": false,
+    "supabaseChanged": false,
+    "migrationsChanged": false,
+    "workflowsChanged": false,
+    "instructorRuntimeRoutesChanged": false,
+    "academyRoutesChanged": false,
+    "officialGradingClaimAllowed": false,
+    "officialModelAnswerClaimAllowed": false,
+    "confirmedScoreClaimAllowed": false,
+    "passProbabilityClaimAllowed": false,
+    "passGuaranteeClaimAllowed": false
+  },
+  "pipelines": [
+    {
+      "pipelineId": "s214_law_pipeline",
+      "version": "s214.reference_answer_candidate_pipeline.v1",
+      "subject": "law",
+      "questionId": "s214_law_question",
+      "sourcePack": {
+        "sourcePackId": "s214_law_source_pack",
+        "questionId": "s214_law_question",
+        "subject": "law",
+        "status": "ready",
+        "referencePackageId": "s214_law_reference_package",
+        "officialSource": {
+          "questionId": "s214_law_question",
+          "sourceId": "s214_law_official_source",
+          "rightsStatus": "metadata_only_synthetic_fixture",
+          "displayMode": "metadata_and_link",
+          "extractionStatus": "metadata_only",
+          "problemTextStatus": "synthetic_fixture",
+          "canonicalVerificationStatus": "synthetic_fixture",
+          "officialAnswerUsed": false,
+          "officialGradingCriteriaUsed": false,
+          "rawOfficialQuestionTextStored": false,
+          "rawOfficialAnswerTextStored": false
+        },
+        "requirementDecomposition": {
+          "decompositionId": "s214_law_requirement_decomposition",
+          "questionId": "s214_law_question",
+          "subject": "law",
+          "source": "synthetic_fixture",
+          "totalPoints": 50,
+          "requirementSlots": [
+            {
+              "requirementId": "s214_law_requirement_a",
+              "subQuestionId": "s214_law_subquestion_a",
+              "requirementKind": "issue",
+              "points": 25,
+              "descriptorKey": "s214_law_issue_requirement",
+              "rawRequirementTextStored": false,
+              "sourceAnchorIds": ["s214_law_question_anchor"],
+              "evidenceAnchorIds": ["s214_law_requirement_evidence"],
+              "candidateStrategyIds": [
+                "law_issue_rule_application_candidate",
+                "exam_date_law_version_candidate"
+              ]
+            },
+            {
+              "requirementId": "s214_law_requirement_b",
+              "subQuestionId": "s214_law_subquestion_b",
+              "requirementKind": "issue",
+              "points": 25,
+              "descriptorKey": "s214_law_application_requirement",
+              "rawRequirementTextStored": false,
+              "sourceAnchorIds": ["s214_law_version_anchor"],
+              "evidenceAnchorIds": ["s214_law_grounding_evidence"],
+              "candidateStrategyIds": [
+                "law_issue_rule_application_candidate",
+                "deduction_risk_counterexample_candidate"
+              ]
+            }
+          ],
+          "rawProblemTextStored": false,
+          "sourceAnchorIds": [
+            "s214_law_question_anchor",
+            "s214_law_version_anchor"
+          ],
+          "evidenceAnchorIds": [
+            "s214_law_requirement_evidence",
+            "s214_law_grounding_evidence"
+          ]
+        },
+        "sourceAnchorIds": [
+          "s214_law_question_anchor",
+          "s214_law_version_anchor"
+        ],
+        "evidenceAnchorIds": [
+          "s214_law_requirement_evidence",
+          "s214_law_grounding_evidence"
+        ],
+        "containsRawContent": false,
+        "rawSourceExcerptStored": false
+      },
+      "candidateSlots": [
+        {
+          "candidateSlotId": "s214_law_candidate_issue",
+          "subject": "law",
+          "strategy": "law_issue_rule_application_candidate",
+          "independenceGroupId": "s214_law_independent_group_a",
+          "generationMethod": "metadata_strategy_only",
+          "providerRuntimeCalled": false,
+          "generatedAnswerProseStored": false,
+          "sourcePackId": "s214_law_source_pack",
+          "requirementSlotIds": ["s214_law_requirement_a"],
+          "sourceAnchorIds": ["s214_law_question_anchor"],
+          "evidenceAnchorIds": ["s214_law_requirement_evidence"],
+          "candidateEvidence": {
+            "status": "metadata_ready",
+            "supportsS215": true,
+            "sourceAnchorIds": ["s214_law_question_anchor"],
+            "evidenceAnchorIds": ["s214_law_requirement_evidence"],
+            "rawEvidenceStored": false
+          },
+          "validationState": {
+            "status": "passed",
+            "validatorRefIds": ["s208_law_grounding"],
+            "blockerIds": []
+          }
+        },
+        {
+          "candidateSlotId": "s214_law_candidate_version",
+          "subject": "law",
+          "strategy": "exam_date_law_version_candidate",
+          "independenceGroupId": "s214_law_independent_group_b",
+          "generationMethod": "metadata_strategy_only",
+          "providerRuntimeCalled": false,
+          "generatedAnswerProseStored": false,
+          "sourcePackId": "s214_law_source_pack",
+          "requirementSlotIds": ["s214_law_requirement_b"],
+          "sourceAnchorIds": ["s214_law_version_anchor"],
+          "evidenceAnchorIds": ["s214_law_grounding_evidence"],
+          "candidateEvidence": {
+            "status": "metadata_ready",
+            "supportsS215": true,
+            "sourceAnchorIds": ["s214_law_version_anchor"],
+            "evidenceAnchorIds": ["s214_law_grounding_evidence"],
+            "rawEvidenceStored": false
+          },
+          "validationState": {
+            "status": "passed",
+            "validatorRefIds": ["s208_law_grounding"],
+            "blockerIds": []
+          }
+        },
+        {
+          "candidateSlotId": "s214_law_candidate_counter",
+          "subject": "law",
+          "strategy": "deduction_risk_counterexample_candidate",
+          "independenceGroupId": "s214_law_independent_group_c",
+          "generationMethod": "metadata_strategy_only",
+          "providerRuntimeCalled": false,
+          "generatedAnswerProseStored": false,
+          "sourcePackId": "s214_law_source_pack",
+          "requirementSlotIds": ["s214_law_requirement_a", "s214_law_requirement_b"],
+          "sourceAnchorIds": ["s214_law_question_anchor", "s214_law_version_anchor"],
+          "evidenceAnchorIds": ["s214_law_requirement_evidence", "s214_law_grounding_evidence"],
+          "candidateEvidence": {
+            "status": "metadata_ready",
+            "supportsS215": true,
+            "sourceAnchorIds": ["s214_law_question_anchor", "s214_law_version_anchor"],
+            "evidenceAnchorIds": ["s214_law_requirement_evidence", "s214_law_grounding_evidence"],
+            "rawEvidenceStored": false
+          },
+          "validationState": {
+            "status": "passed",
+            "validatorRefIds": ["s208_law_grounding"],
+            "blockerIds": []
+          }
+        }
+      ],
+      "releasePrerequisites": {
+        "s207Package": {
+          "prerequisiteId": "s214_law_s207_prerequisite",
+          "kind": "s207_reference_package",
+          "status": "passed",
+          "referencePackageId": "s214_law_reference_package",
+          "s214GenerationInputAllowed": true,
+          "s215ReleaseGateInputAllowed": true,
+          "officialClaimAllowed": false,
+          "blockerIds": []
+        },
+        "subjectGate": {
+          "prerequisiteId": "s214_law_s208_prerequisite",
+          "kind": "s208_law_grounding",
+          "status": "passed",
+          "examDateVersionStatus": "synthetic_fixture",
+          "legalSourceStatus": "synthetic_fixture",
+          "s214GenerationAllowed": true,
+          "s215ReleaseGateAllowed": true,
+          "sourceAnchorIds": ["s214_law_version_anchor"],
+          "blockerIds": []
+        }
+      },
+      "unresolvedConflictState": {
+        "status": "unresolved_for_s215",
+        "unresolvedConflictCount": 1,
+        "conflictIds": ["s214_law_consensus_conflict"],
+        "preservedForS215": true,
+        "rawConflictTextStored": false
+      },
+      "learningReference": {
+        "status": "candidate_metadata_only",
+        "learnerFacingLabelKey": "verified_learning_reference",
+        "requiredCaveatKey": "learning_reference_not_official_answer",
+        "learningReferenceOnly": true,
+        "officialClaimAllowed": false,
+        "officialGradingClaimAllowed": false,
+        "officialModelAnswerClaimAllowed": false,
+        "scorePredictionAllowed": false,
+        "passProbabilityAllowed": false,
+        "passGuaranteeAllowed": false,
+        "generatedAnswerProseStored": false
+      }
+    },
+    {
+      "pipelineId": "s214_theory_pipeline",
+      "version": "s214.reference_answer_candidate_pipeline.v1",
+      "subject": "theory",
+      "questionId": "s214_theory_question",
+      "sourcePack": {
+        "sourcePackId": "s214_theory_source_pack",
+        "questionId": "s214_theory_question",
+        "subject": "theory",
+        "status": "ready",
+        "referencePackageId": "s214_theory_reference_package",
+        "officialSource": {
+          "questionId": "s214_theory_question",
+          "sourceId": "s214_theory_official_source",
+          "rightsStatus": "metadata_only_synthetic_fixture",
+          "displayMode": "metadata_and_link",
+          "extractionStatus": "metadata_only",
+          "problemTextStatus": "synthetic_fixture",
+          "canonicalVerificationStatus": "synthetic_fixture",
+          "officialAnswerUsed": false,
+          "officialGradingCriteriaUsed": false,
+          "rawOfficialQuestionTextStored": false,
+          "rawOfficialAnswerTextStored": false
+        },
+        "requirementDecomposition": {
+          "decompositionId": "s214_theory_requirement_decomposition",
+          "questionId": "s214_theory_question",
+          "subject": "theory",
+          "source": "synthetic_fixture",
+          "totalPoints": 50,
+          "requirementSlots": [
+            {
+              "requirementId": "s214_theory_requirement_a",
+              "subQuestionId": "s214_theory_subquestion_a",
+              "requirementKind": "concept",
+              "points": 25,
+              "descriptorKey": "s214_theory_concept_requirement",
+              "rawRequirementTextStored": false,
+              "sourceAnchorIds": ["s214_theory_question_anchor"],
+              "evidenceAnchorIds": ["s214_theory_requirement_evidence"],
+              "candidateStrategyIds": [
+                "concept_definition_logic_chain_candidate",
+                "application_paragraph_candidate"
+              ]
+            },
+            {
+              "requirementId": "s214_theory_requirement_b",
+              "subQuestionId": "s214_theory_subquestion_b",
+              "requirementKind": "concept",
+              "points": 25,
+              "descriptorKey": "s214_theory_comparison_requirement",
+              "rawRequirementTextStored": false,
+              "sourceAnchorIds": ["s214_theory_concept_anchor"],
+              "evidenceAnchorIds": ["s214_theory_grounding_evidence"],
+              "candidateStrategyIds": [
+                "comparison_alternative_view_candidate",
+                "application_paragraph_candidate"
+              ]
+            }
+          ],
+          "rawProblemTextStored": false,
+          "sourceAnchorIds": [
+            "s214_theory_question_anchor",
+            "s214_theory_concept_anchor"
+          ],
+          "evidenceAnchorIds": [
+            "s214_theory_requirement_evidence",
+            "s214_theory_grounding_evidence"
+          ]
+        },
+        "sourceAnchorIds": [
+          "s214_theory_question_anchor",
+          "s214_theory_concept_anchor"
+        ],
+        "evidenceAnchorIds": [
+          "s214_theory_requirement_evidence",
+          "s214_theory_grounding_evidence"
+        ],
+        "containsRawContent": false,
+        "rawSourceExcerptStored": false
+      },
+      "candidateSlots": [
+        {
+          "candidateSlotId": "s214_theory_candidate_definition",
+          "subject": "theory",
+          "strategy": "concept_definition_logic_chain_candidate",
+          "independenceGroupId": "s214_theory_independent_group_a",
+          "generationMethod": "metadata_strategy_only",
+          "providerRuntimeCalled": false,
+          "generatedAnswerProseStored": false,
+          "sourcePackId": "s214_theory_source_pack",
+          "requirementSlotIds": ["s214_theory_requirement_a"],
+          "sourceAnchorIds": ["s214_theory_question_anchor"],
+          "evidenceAnchorIds": ["s214_theory_requirement_evidence"],
+          "candidateEvidence": {
+            "status": "metadata_ready",
+            "supportsS215": true,
+            "sourceAnchorIds": ["s214_theory_question_anchor"],
+            "evidenceAnchorIds": ["s214_theory_requirement_evidence"],
+            "rawEvidenceStored": false
+          },
+          "validationState": {
+            "status": "passed",
+            "validatorRefIds": ["s209_theory_grounding"],
+            "blockerIds": []
+          }
+        },
+        {
+          "candidateSlotId": "s214_theory_candidate_alternative",
+          "subject": "theory",
+          "strategy": "comparison_alternative_view_candidate",
+          "independenceGroupId": "s214_theory_independent_group_b",
+          "generationMethod": "metadata_strategy_only",
+          "providerRuntimeCalled": false,
+          "generatedAnswerProseStored": false,
+          "sourcePackId": "s214_theory_source_pack",
+          "requirementSlotIds": ["s214_theory_requirement_b"],
+          "sourceAnchorIds": ["s214_theory_concept_anchor"],
+          "evidenceAnchorIds": ["s214_theory_grounding_evidence"],
+          "candidateEvidence": {
+            "status": "metadata_ready",
+            "supportsS215": true,
+            "sourceAnchorIds": ["s214_theory_concept_anchor"],
+            "evidenceAnchorIds": ["s214_theory_grounding_evidence"],
+            "rawEvidenceStored": false
+          },
+          "validationState": {
+            "status": "passed",
+            "validatorRefIds": ["s209_theory_grounding"],
+            "blockerIds": []
+          }
+        },
+        {
+          "candidateSlotId": "s214_theory_candidate_application",
+          "subject": "theory",
+          "strategy": "application_paragraph_candidate",
+          "independenceGroupId": "s214_theory_independent_group_c",
+          "generationMethod": "metadata_strategy_only",
+          "providerRuntimeCalled": false,
+          "generatedAnswerProseStored": false,
+          "sourcePackId": "s214_theory_source_pack",
+          "requirementSlotIds": ["s214_theory_requirement_a", "s214_theory_requirement_b"],
+          "sourceAnchorIds": ["s214_theory_question_anchor", "s214_theory_concept_anchor"],
+          "evidenceAnchorIds": ["s214_theory_requirement_evidence", "s214_theory_grounding_evidence"],
+          "candidateEvidence": {
+            "status": "metadata_ready",
+            "supportsS215": true,
+            "sourceAnchorIds": ["s214_theory_question_anchor", "s214_theory_concept_anchor"],
+            "evidenceAnchorIds": ["s214_theory_requirement_evidence", "s214_theory_grounding_evidence"],
+            "rawEvidenceStored": false
+          },
+          "validationState": {
+            "status": "passed",
+            "validatorRefIds": ["s209_theory_grounding"],
+            "blockerIds": []
+          }
+        }
+      ],
+      "releasePrerequisites": {
+        "s207Package": {
+          "prerequisiteId": "s214_theory_s207_prerequisite",
+          "kind": "s207_reference_package",
+          "status": "passed",
+          "referencePackageId": "s214_theory_reference_package",
+          "s214GenerationInputAllowed": true,
+          "s215ReleaseGateInputAllowed": true,
+          "officialClaimAllowed": false,
+          "blockerIds": []
+        },
+        "subjectGate": {
+          "prerequisiteId": "s214_theory_s209_prerequisite",
+          "kind": "s209_theory_grounding",
+          "status": "passed",
+          "conceptStatus": "synthetic_fixture",
+          "definitionStatus": "synthetic_fixture",
+          "sourceCoverageStatus": "synthetic_fixture",
+          "s214GenerationAllowed": true,
+          "s215ReleaseGateAllowed": true,
+          "conceptAnchorIds": ["s214_theory_concept_anchor"],
+          "blockerIds": []
+        }
+      },
+      "unresolvedConflictState": {
+        "status": "none",
+        "unresolvedConflictCount": 0,
+        "conflictIds": [],
+        "preservedForS215": true,
+        "rawConflictTextStored": false
+      },
+      "learningReference": {
+        "status": "candidate_metadata_only",
+        "learnerFacingLabelKey": "verified_learning_reference",
+        "requiredCaveatKey": "learning_reference_not_official_answer",
+        "learningReferenceOnly": true,
+        "officialClaimAllowed": false,
+        "officialGradingClaimAllowed": false,
+        "officialModelAnswerClaimAllowed": false,
+        "scorePredictionAllowed": false,
+        "passProbabilityAllowed": false,
+        "passGuaranteeAllowed": false,
+        "generatedAnswerProseStored": false
+      }
+    },
+    {
+      "pipelineId": "s214_practice_pipeline",
+      "version": "s214.reference_answer_candidate_pipeline.v1",
+      "subject": "practice",
+      "questionId": "s214_practice_question",
+      "sourcePack": {
+        "sourcePackId": "s214_practice_source_pack",
+        "questionId": "s214_practice_question",
+        "subject": "practice",
+        "status": "ready",
+        "referencePackageId": "s214_practice_reference_package",
+        "officialSource": {
+          "questionId": "s214_practice_question",
+          "sourceId": "s214_practice_official_source",
+          "rightsStatus": "metadata_only_synthetic_fixture",
+          "displayMode": "metadata_and_link",
+          "extractionStatus": "metadata_only",
+          "problemTextStatus": "synthetic_fixture",
+          "canonicalVerificationStatus": "synthetic_fixture",
+          "officialAnswerUsed": false,
+          "officialGradingCriteriaUsed": false,
+          "rawOfficialQuestionTextStored": false,
+          "rawOfficialAnswerTextStored": false
+        },
+        "requirementDecomposition": {
+          "decompositionId": "s214_practice_requirement_decomposition",
+          "questionId": "s214_practice_question",
+          "subject": "practice",
+          "source": "synthetic_fixture",
+          "totalPoints": 50,
+          "requirementSlots": [
+            {
+              "requirementId": "s214_practice_requirement_a",
+              "subQuestionId": "s214_practice_subquestion_a",
+              "requirementKind": "calculation",
+              "points": 30,
+              "descriptorKey": "s214_practice_formula_requirement",
+              "rawRequirementTextStored": false,
+              "sourceAnchorIds": ["s214_practice_question_anchor"],
+              "evidenceAnchorIds": ["s214_practice_requirement_evidence"],
+              "candidateStrategyIds": [
+                "calculation_formula_unit_candidate",
+                "independent_recalculation_candidate"
+              ]
+            },
+            {
+              "requirementId": "s214_practice_requirement_b",
+              "subQuestionId": "s214_practice_subquestion_b",
+              "requirementKind": "calculation",
+              "points": 20,
+              "descriptorKey": "s214_practice_giii_requirement",
+              "rawRequirementTextStored": false,
+              "sourceAnchorIds": ["s214_practice_unit_anchor"],
+              "evidenceAnchorIds": ["s214_practice_validation_evidence"],
+              "candidateStrategyIds": [
+                "giii_hand_keyed_routine_candidate",
+                "independent_recalculation_candidate"
+              ]
+            }
+          ],
+          "rawProblemTextStored": false,
+          "sourceAnchorIds": [
+            "s214_practice_question_anchor",
+            "s214_practice_unit_anchor"
+          ],
+          "evidenceAnchorIds": [
+            "s214_practice_requirement_evidence",
+            "s214_practice_validation_evidence"
+          ]
+        },
+        "sourceAnchorIds": [
+          "s214_practice_question_anchor",
+          "s214_practice_unit_anchor"
+        ],
+        "evidenceAnchorIds": [
+          "s214_practice_requirement_evidence",
+          "s214_practice_validation_evidence"
+        ],
+        "containsRawContent": false,
+        "rawSourceExcerptStored": false
+      },
+      "candidateSlots": [
+        {
+          "candidateSlotId": "s214_practice_candidate_formula",
+          "subject": "practice",
+          "strategy": "calculation_formula_unit_candidate",
+          "independenceGroupId": "s214_practice_independent_group_a",
+          "generationMethod": "metadata_strategy_only",
+          "providerRuntimeCalled": false,
+          "generatedAnswerProseStored": false,
+          "sourcePackId": "s214_practice_source_pack",
+          "requirementSlotIds": ["s214_practice_requirement_a"],
+          "sourceAnchorIds": ["s214_practice_question_anchor"],
+          "evidenceAnchorIds": ["s214_practice_requirement_evidence"],
+          "candidateEvidence": {
+            "status": "metadata_ready",
+            "supportsS215": true,
+            "sourceAnchorIds": ["s214_practice_question_anchor"],
+            "evidenceAnchorIds": ["s214_practice_requirement_evidence"],
+            "rawEvidenceStored": false
+          },
+          "validationState": {
+            "status": "passed",
+            "validatorRefIds": ["s210_practice_validation"],
+            "blockerIds": []
+          }
+        },
+        {
+          "candidateSlotId": "s214_practice_candidate_recalc",
+          "subject": "practice",
+          "strategy": "independent_recalculation_candidate",
+          "independenceGroupId": "s214_practice_independent_group_b",
+          "generationMethod": "metadata_strategy_only",
+          "providerRuntimeCalled": false,
+          "generatedAnswerProseStored": false,
+          "sourcePackId": "s214_practice_source_pack",
+          "requirementSlotIds": ["s214_practice_requirement_a", "s214_practice_requirement_b"],
+          "sourceAnchorIds": ["s214_practice_question_anchor", "s214_practice_unit_anchor"],
+          "evidenceAnchorIds": ["s214_practice_requirement_evidence", "s214_practice_validation_evidence"],
+          "candidateEvidence": {
+            "status": "metadata_ready",
+            "supportsS215": true,
+            "sourceAnchorIds": ["s214_practice_question_anchor", "s214_practice_unit_anchor"],
+            "evidenceAnchorIds": ["s214_practice_requirement_evidence", "s214_practice_validation_evidence"],
+            "rawEvidenceStored": false
+          },
+          "validationState": {
+            "status": "passed",
+            "validatorRefIds": ["s210_practice_validation"],
+            "blockerIds": []
+          }
+        },
+        {
+          "candidateSlotId": "s214_practice_candidate_giii",
+          "subject": "practice",
+          "strategy": "giii_hand_keyed_routine_candidate",
+          "independenceGroupId": "s214_practice_independent_group_c",
+          "generationMethod": "metadata_strategy_only",
+          "providerRuntimeCalled": false,
+          "generatedAnswerProseStored": false,
+          "sourcePackId": "s214_practice_source_pack",
+          "requirementSlotIds": ["s214_practice_requirement_b"],
+          "sourceAnchorIds": ["s214_practice_unit_anchor"],
+          "evidenceAnchorIds": ["s214_practice_validation_evidence"],
+          "candidateEvidence": {
+            "status": "metadata_ready",
+            "supportsS215": true,
+            "sourceAnchorIds": ["s214_practice_unit_anchor"],
+            "evidenceAnchorIds": ["s214_practice_validation_evidence"],
+            "rawEvidenceStored": false
+          },
+          "validationState": {
+            "status": "passed",
+            "validatorRefIds": ["s210_practice_validation"],
+            "blockerIds": []
+          }
+        }
+      ],
+      "releasePrerequisites": {
+        "s207Package": {
+          "prerequisiteId": "s214_practice_s207_prerequisite",
+          "kind": "s207_reference_package",
+          "status": "passed",
+          "referencePackageId": "s214_practice_reference_package",
+          "s214GenerationInputAllowed": true,
+          "s215ReleaseGateInputAllowed": true,
+          "officialClaimAllowed": false,
+          "blockerIds": []
+        },
+        "subjectGate": {
+          "prerequisiteId": "s214_practice_s210_prerequisite",
+          "kind": "s210_practice_validation",
+          "status": "blocked",
+          "unitStatus": "metadata_ready",
+          "unitCheckStatus": "metadata_ready",
+          "roundingCheckStatus": "metadata_ready",
+          "independentRecalculationStatus": "metadata_ready",
+          "runtimeEvidenceStatus": "not_run",
+          "calculatorModel": "casio_fx_9860giii",
+          "resetSafeHandKeyedRoutineRequired": true,
+          "storedProgramDependencyAllowed": false,
+          "referenceAnswerReleaseAllowed": false,
+          "sourceAnchorIds": ["s214_practice_unit_anchor"],
+          "blockerIds": ["s214_practice_s210_runtime_evidence_blocker"]
+        }
+      },
+      "unresolvedConflictState": {
+        "status": "none",
+        "unresolvedConflictCount": 0,
+        "conflictIds": [],
+        "preservedForS215": true,
+        "rawConflictTextStored": false
+      },
+      "learningReference": {
+        "status": "candidate_metadata_only",
+        "learnerFacingLabelKey": "verified_learning_reference",
+        "requiredCaveatKey": "learning_reference_not_official_answer",
+        "learningReferenceOnly": true,
+        "officialClaimAllowed": false,
+        "officialGradingClaimAllowed": false,
+        "officialModelAnswerClaimAllowed": false,
+        "scorePredictionAllowed": false,
+        "passProbabilityAllowed": false,
+        "passGuaranteeAllowed": false,
+        "generatedAnswerProseStored": false
+      }
+    }
+  ]
+}
