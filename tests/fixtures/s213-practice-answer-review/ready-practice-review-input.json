@@ -1,0 +1,247 @@
+{
+  "reviewRequestId": "review-s213-practice-verified-1",
+  "consumer": "learner",
+  "actorRole": "learner",
+  "question": {
+    "questionId": "s213_verified_practice_question",
+    "subject": "practice",
+    "subjectLabel": "appraiser_second_round_practice",
+    "totalPoints": 100,
+    "problemMaterialStatus": "verified",
+    "canonicalVerificationStatus": "verified",
+    "conceptNodeIds": [
+      "s213_practice_income_approach_metadata"
+    ]
+  },
+  "answerSubmissionId": "submission-s213-practice-verified-1",
+  "learnerEvidenceRefs": [
+    {
+      "id": "ev-s213-step-1",
+      "kind": "learner_calculation_step",
+      "answerSubmissionId": "submission-s213-practice-verified-1",
+      "calculationStepId": "calc-step-s213-1",
+      "ocrState": "confirmed_by_learner",
+      "verifiedByLearner": true,
+      "confidence": "medium"
+    },
+    {
+      "id": "ev-s213-step-2",
+      "kind": "learner_calculation_step",
+      "answerSubmissionId": "submission-s213-practice-verified-1",
+      "calculationStepId": "calc-step-s213-2",
+      "ocrState": "confirmed_by_learner",
+      "verifiedByLearner": true,
+      "confidence": "medium"
+    }
+  ],
+  "referencePackageId": "s213_verified_practice_reference_package",
+  "calculationUnitId": "s213_verified_income_capitalization_unit",
+  "calculationReview": {
+    "calculationUnitId": "s213_verified_income_capitalization_unit",
+    "calculationType": "income_capitalization",
+    "assumptions": {
+      "status": "verified",
+      "evidenceRefIds": [
+        "ev-s213-step-1"
+      ],
+      "sourceAnchorIds": [
+        "s213-assumption-anchor"
+      ],
+      "confidence": "medium"
+    },
+    "dataSelection": {
+      "status": "verified",
+      "evidenceRefIds": [
+        "ev-s213-step-1"
+      ],
+      "sourceAnchorIds": [
+        "s213-data-selection-anchor"
+      ],
+      "confidence": "medium"
+    },
+    "formulaMetadata": {
+      "status": "verified",
+      "evidenceRefIds": [
+        "ev-s213-step-1"
+      ],
+      "sourceAnchorIds": [
+        "s213-formula-anchor"
+      ],
+      "confidence": "medium",
+      "formulaId": "s213_income_capitalization_formula_metadata",
+      "formulaKind": "valuation_formula"
+    },
+    "calculationTrace": {
+      "status": "verified",
+      "evidenceRefIds": [
+        "ev-s213-step-2"
+      ],
+      "sourceAnchorIds": [
+        "s213-calculation-trace-anchor"
+      ],
+      "confidence": "medium"
+    },
+    "unitCheck": {
+      "status": "verified",
+      "evidenceRefIds": [
+        "ev-s213-step-2"
+      ],
+      "sourceAnchorIds": [
+        "s213-unit-anchor"
+      ],
+      "confidence": "medium"
+    },
+    "roundingCheck": {
+      "status": "verified",
+      "evidenceRefIds": [
+        "ev-s213-step-2"
+      ],
+      "sourceAnchorIds": [
+        "s213-rounding-anchor"
+      ],
+      "confidence": "medium"
+    },
+    "timeAdjustment": {
+      "status": "verified",
+      "evidenceRefIds": [
+        "ev-s213-step-2"
+      ],
+      "sourceAnchorIds": [
+        "s213-time-adjustment-anchor"
+      ],
+      "confidence": "medium"
+    },
+    "crossCheck": {
+      "status": "verified",
+      "evidenceRefIds": [
+        "ev-s213-step-2"
+      ],
+      "sourceAnchorIds": [
+        "s213-cross-check-anchor"
+      ],
+      "confidence": "medium"
+    },
+    "conclusionWriting": {
+      "status": "verified",
+      "evidenceRefIds": [
+        "ev-s213-step-2"
+      ],
+      "sourceAnchorIds": [
+        "s213-conclusion-anchor"
+      ],
+      "confidence": "medium"
+    },
+    "independentRecalculation": {
+      "status": "verified",
+      "evidenceRefIds": [
+        "ev-s213-step-2"
+      ],
+      "sourceAnchorIds": [
+        "s213-cross-check-anchor"
+      ],
+      "confidence": "medium",
+      "reviewerCount": 2
+    }
+  },
+  "primaryGapDimensionId": "practice_unit_rounding_time_adjustment",
+  "dimensionSignals": [
+    {
+      "dimensionId": "practice_assumptions",
+      "observedQuality": "strong",
+      "evidenceRefIds": [
+        "ev-s213-step-1"
+      ],
+      "calculationEvidenceRefIds": [
+        "ev-s213-step-1"
+      ],
+      "confidence": "medium",
+      "conceptNodeIds": [
+        "s213_practice_income_approach_metadata"
+      ]
+    },
+    {
+      "dimensionId": "practice_data_selection",
+      "observedQuality": "partial",
+      "evidenceRefIds": [
+        "ev-s213-step-1"
+      ],
+      "calculationEvidenceRefIds": [
+        "ev-s213-step-1"
+      ],
+      "confidence": "medium",
+      "conceptNodeIds": [
+        "s213_practice_income_approach_metadata"
+      ]
+    },
+    {
+      "dimensionId": "practice_formula_metadata",
+      "observedQuality": "strong",
+      "evidenceRefIds": [
+        "ev-s213-step-1"
+      ],
+      "calculationEvidenceRefIds": [
+        "ev-s213-step-1"
+      ],
+      "confidence": "medium",
+      "conceptNodeIds": [
+        "s213_practice_income_approach_metadata"
+      ]
+    },
+    {
+      "dimensionId": "practice_calculation_trace",
+      "observedQuality": "partial",
+      "evidenceRefIds": [
+        "ev-s213-step-2"
+      ],
+      "calculationEvidenceRefIds": [
+        "ev-s213-step-2"
+      ],
+      "confidence": "medium",
+      "conceptNodeIds": [
+        "s213_practice_income_approach_metadata"
+      ]
+    },
+    {
+      "dimensionId": "practice_unit_rounding_time_adjustment",
+      "observedQuality": "missing",
+      "evidenceRefIds": [
+        "ev-s213-step-2"
+      ],
+      "calculationEvidenceRefIds": [
+        "ev-s213-step-2"
+      ],
+      "confidence": "medium",
+      "conceptNodeIds": [
+        "s213_practice_income_approach_metadata"
+      ]
+    },
+    {
+      "dimensionId": "practice_cross_check",
+      "observedQuality": "partial",
+      "evidenceRefIds": [
+        "ev-s213-step-2"
+      ],
+      "calculationEvidenceRefIds": [
+        "ev-s213-step-2"
+      ],
+      "confidence": "medium",
+      "conceptNodeIds": [
+        "s213_practice_income_approach_metadata"
+      ]
+    },
+    {
+      "dimensionId": "practice_conclusion_writing",
+      "observedQuality": "strong",
+      "evidenceRefIds": [
+        "ev-s213-step-2"
+      ],
+      "calculationEvidenceRefIds": [
+        "ev-s213-step-2"
+      ],
+      "confidence": "medium",
+      "conceptNodeIds": [
+        "s213_practice_income_approach_metadata"
+      ]
+    }
+  ]
+}

@@ -66,5 +66,5 @@ Rollback is a focused revert of the S212 engine, tests, docs, and roadmap status
 ## Remaining Risks
 
 - Real high-confidence theory review still depends on official verification of S209 concept sources.
-- S211 and S213 remain required before S215/S216 can move forward.
+- S214/S215 reference-answer pipeline and release gates remain required before public release.
 - Runtime evidence is still required before any learner-facing production claim.
