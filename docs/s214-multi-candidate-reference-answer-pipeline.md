@@ -87,4 +87,4 @@ Learner and instructor surfaces remain separated. The S214 result records that n
 
 Focused validation is covered by `tests/s214-reference-answer-pipeline.test.mjs` and the metadata-only fixture at `tests/fixtures/s214-reference-answer-pipeline/metadata-only-pipeline-registry.json`.
 
-S214 completion does not imply S215 completion. S215 still owns critic consensus and release gating, and S213 remains a dependency risk until the practice answer review engine is merged.
+S214 completion did not imply S215 completion. S215 owns critic consensus and release gating, and S214 remains a candidate handoff layer rather than a reference-answer release decision.
