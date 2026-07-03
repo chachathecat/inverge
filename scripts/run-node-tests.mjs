@@ -57,6 +57,7 @@ const defaultTestFiles = [
   "tests/practice-answer-review-engine.test.mjs",
   "tests/s214-reference-answer-pipeline.test.mjs",
   "tests/s215-reference-answer-release-gate.test.mjs",
+  "tests/s216-error-notebook-gap-taxonomy.test.mjs",
   "tests/practice-calculation-unit-registry.test.mjs",
   "tests/rewrite-regrade-history-contract.test.mjs",
   "tests/agent-factory-contract-validation.test.mjs",

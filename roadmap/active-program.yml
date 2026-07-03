@@ -128,7 +128,7 @@ items:
     priority: 17
   - id: S216
     title: Automatic Error Notebook and Gap Taxonomy
-    status: queued
+    status: completed
     dependencies: [S206, S211, S212, S213]
     lockGroup: error-notebook
     risk: high
