@@ -135,7 +135,7 @@ items:
     priority: 18
   - id: S217
     title: Personal Core Concept Graph and Recovery State
-    status: queued
+    status: completed
     dependencies: [S216]
     lockGroup: concept-graph
     risk: high

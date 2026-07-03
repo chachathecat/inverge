@@ -193,6 +193,7 @@ test("S215 docs, source, roadmap, and Agent Factory target remain source-level a
   const s215 = plan.analyses.find((item) => item.itemId === "S215");
   const s216 = plan.analyses.find((item) => item.itemId === "S216");
   const s217 = plan.analyses.find((item) => item.itemId === "S217");
+  const s218 = plan.analyses.find((item) => item.itemId === "S218");
   const s219 = plan.analyses.find((item) => item.itemId === "S219");
 
   for (const token of [
@@ -212,7 +213,8 @@ test("S215 docs, source, roadmap, and Agent Factory target remain source-level a
   assert.doesNotMatch(source, /fetch\(|\/api\/|OPENAI_API_KEY|GEMINI|createClient|from\(["']@supabase|new OpenAI|GoogleGenerativeAI|checkout/i);
   assert.equal(s215?.statusCategory, "completed");
   assert.equal(s216?.statusCategory, "completed");
-  assert.equal(s217?.readinessStatus, "ready");
+  assert.equal(s217?.statusCategory, "completed");
+  assert.equal(s218?.readinessStatus, "ready");
   assert.equal(s219?.readinessStatus, "ready");
-  assert.deepEqual(plan.selectedItemIds, ["S217", "S219"]);
+  assert.deepEqual(plan.selectedItemIds, ["S218", "S219"]);
 });

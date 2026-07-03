@@ -790,6 +790,7 @@ test("S216 docs, roadmap, source, and safe derived keys are wired", async () => 
   const plan = createRoadmapRunnerPlanFromYaml(roadmapSource);
   const s216 = plan.analyses.find((item) => item.itemId === "S216");
   const s217 = plan.analyses.find((item) => item.itemId === "S217");
+  const s218 = plan.analyses.find((item) => item.itemId === "S218");
   const s219 = plan.analyses.find((item) => item.itemId === "S219");
 
   for (const token of [
@@ -822,7 +823,8 @@ test("S216 docs, roadmap, source, and safe derived keys are wired", async () => 
 
   assert.doesNotMatch(source, /fetch\(|\/api\/|OPENAI_API_KEY|GEMINI|createClient|from\(["']@supabase|new OpenAI|GoogleGenerativeAI|checkout/i);
   assert.equal(s216?.statusCategory, "completed");
-  assert.equal(s217?.readinessStatus, "ready");
+  assert.equal(s217?.statusCategory, "completed");
+  assert.equal(s218?.readinessStatus, "ready");
   assert.equal(s219?.readinessStatus, "ready");
-  assert.deepEqual(plan.selectedItemIds, ["S217", "S219"]);
+  assert.deepEqual(plan.selectedItemIds, ["S218", "S219"]);
 });
