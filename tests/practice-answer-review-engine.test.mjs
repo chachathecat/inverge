@@ -495,6 +495,7 @@ test("S213 fixture, docs, roadmap, and Agent Factory ready target remain metadat
   const s214 = plan.analyses.find((item) => item.itemId === "S214");
   const s215 = plan.analyses.find((item) => item.itemId === "S215");
   const s216 = plan.analyses.find((item) => item.itemId === "S216");
+  const s219 = plan.analyses.find((item) => item.itemId === "S219");
 
   for (const field of [
     "rawLearnerAnswer",
@@ -532,9 +533,10 @@ test("S213 fixture, docs, roadmap, and Agent Factory ready target remain metadat
 
   assert.equal(s213?.statusCategory, "completed");
   assert.equal(s214?.statusCategory, "completed");
-  assert.equal(s215?.readinessStatus, "ready");
+  assert.equal(s215?.statusCategory, "completed");
   assert.equal(s216?.readinessStatus, "ready");
-  assert.deepEqual(plan.selectedItemIds, ["S215", "S216"]);
+  assert.equal(s219?.readinessStatus, "ready");
+  assert.deepEqual(plan.selectedItemIds, ["S216", "S219"]);
   assert.equal(s215?.missingDependencies.includes("S213"), false);
   assert.equal(s215?.missingDependencies.includes("S214"), false);
 });

@@ -283,7 +283,7 @@ test("dispatcher writes summary and docs state report-only v1", () => {
     "--mode",
     "plan_only",
     "--target",
-    "S215",
+    "S216",
     "--output-dir",
     outputDir,
     "--stdout",

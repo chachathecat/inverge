@@ -156,14 +156,19 @@ test("S214 docs and source stay source-level only with no runtime provider, OCR,
   assert.doesNotMatch(fixture, /"answerText"\s*:|"questionText"\s*:|official model answer|pass probability|"providerPayload"\s*:|"ocrText"\s*:/);
 });
 
-test("active roadmap marks S214 completed while preserving S213 dependency risk for S215", async () => {
+test("active roadmap marks S214 and S215 completed while advancing the next ready targets", async () => {
   const roadmapSource = await readFile("roadmap/active-program.yml", "utf8");
   const plan = createRoadmapRunnerPlanFromYaml(roadmapSource);
   const s214 = plan.analyses.find((item) => item.itemId === "S214");
   const s215 = plan.analyses.find((item) => item.itemId === "S215");
+  const s216 = plan.analyses.find((item) => item.itemId === "S216");
+  const s219 = plan.analyses.find((item) => item.itemId === "S219");
 
   assert.equal(s214?.statusCategory, "completed");
-  assert.deepEqual(plan.selectedItemIds, ["S213", "S219"]);
-  assert.ok(s215?.missingDependencies.includes("S213"));
+  assert.equal(s215?.statusCategory, "completed");
+  assert.equal(s216?.readinessStatus, "ready");
+  assert.equal(s219?.readinessStatus, "ready");
+  assert.deepEqual(plan.selectedItemIds, ["S216", "S219"]);
+  assert.equal(s215?.missingDependencies.includes("S213"), false);
   assert.equal(s215?.missingDependencies.includes("S214"), false);
 });

@@ -121,7 +121,7 @@ items:
     priority: 16
   - id: S215
     title: Reference Answer Critic Consensus and Release Gate
-    status: queued
+    status: completed
     dependencies: [S211, S212, S213, S214]
     lockGroup: reference-answer-release
     risk: high
