@@ -114,7 +114,7 @@ items:
     priority: 15
   - id: S214
     title: Multi-Candidate Historical Reference Answer Pipeline
-    status: queued
+    status: completed
     dependencies: [S207, S208, S209, S210]
     lockGroup: reference-answer-generation
     risk: high

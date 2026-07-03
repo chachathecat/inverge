@@ -396,16 +396,19 @@ test("S212 fixtures and output preserve metadata-only and learner/instructor sep
   assert.doesNotMatch(engineSource, /fetch\(|\/api\/|supabase|OPENAI_API_KEY|GEMINI|\/instructor/i);
 });
 
-test("active roadmap marks S212 completed and advances selected ready targets", async () => {
+test("active roadmap marks S212 completed and preserves current ready targets", async () => {
   const roadmapSource = await readFile("roadmap/active-program.yml", "utf8");
   const plan = createRoadmapRunnerPlanFromYaml(roadmapSource);
   const s212 = plan.analyses.find((item) => item.itemId === "S212");
+  const s214 = plan.analyses.find((item) => item.itemId === "S214");
   const s215 = plan.analyses.find((item) => item.itemId === "S215");
   const s216 = plan.analyses.find((item) => item.itemId === "S216");
 
   assert.equal(s212?.statusCategory, "completed");
-  assert.deepEqual(plan.selectedItemIds, ["S214", "S216"]);
-  assert.ok(s215?.missingDependencies.includes("S214"));
+  assert.equal(s214?.statusCategory, "completed");
+  assert.deepEqual(plan.selectedItemIds, ["S215", "S216"]);
+  assert.equal(s215?.readinessStatus, "ready");
   assert.equal(s215?.missingDependencies.includes("S213"), false);
+  assert.equal(s215?.missingDependencies.includes("S214"), false);
   assert.equal(s216?.readinessStatus, "ready");
 });

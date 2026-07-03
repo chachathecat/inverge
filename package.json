@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "typecheck": "tsc --noEmit --pretty false",
+    "typecheck": "node --max-old-space-size=4096 ./node_modules/typescript/bin/tsc --noEmit --pretty false",
     "agent-factory:plan": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs scripts/agent-factory-plan.mjs",
     "agent-factory:watch": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs scripts/agent-factory-watch.mjs",
     "agent-factory:doctor-pr-body": "node --experimental-strip-types --loader ./tests/ts-extension-loader.mjs scripts/agent-factory-doctor-pr-body.mjs",
