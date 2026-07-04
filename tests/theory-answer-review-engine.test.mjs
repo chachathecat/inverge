@@ -406,6 +406,7 @@ test("active roadmap marks S212 completed and preserves current ready targets", 
   const s217 = plan.analyses.find((item) => item.itemId === "S217");
   const s218 = plan.analyses.find((item) => item.itemId === "S218");
   const s219 = plan.analyses.find((item) => item.itemId === "S219");
+  const s220 = plan.analyses.find((item) => item.itemId === "S220");
 
   assert.equal(s212?.statusCategory, "completed");
   assert.equal(s214?.statusCategory, "completed");
@@ -415,6 +416,7 @@ test("active roadmap marks S212 completed and preserves current ready targets", 
   assert.equal(s216?.statusCategory, "completed");
   assert.equal(s217?.statusCategory, "completed");
   assert.equal(s218?.statusCategory, "completed");
-  assert.equal(s219?.readinessStatus, "ready");
-  assert.deepEqual(plan.selectedItemIds, ["S219", "S223"]);
+  assert.equal(s219?.statusCategory, "completed");
+  assert.equal(s220?.readinessStatus, "ready");
+  assert.deepEqual(plan.selectedItemIds, ["S220", "S223"]);
 });

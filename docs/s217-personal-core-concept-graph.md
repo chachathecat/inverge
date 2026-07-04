@@ -137,7 +137,7 @@ S217 is additive:
 - documentation;
 - safe derived key additions;
 - roadmap completion wiring;
-- Agent Factory ready/example target has moved through S218 and now points to S219 where the active roadmap requires it.
+- Agent Factory ready/example target has moved through S219 and now points to S220 where the active roadmap requires it.
 
 No runtime, provider, OCR, billing, auth, Supabase, migration, workflow, production route, instructor, academy, environment, Next config, or Vercel change is part of this item.
 

@@ -282,10 +282,10 @@ test("S218 docs, runner, safe keys, roadmap, and Agent Factory example target ar
 
   assert.doesNotMatch(source, /fetch\(|\/api\/|OPENAI_API_KEY|GEMINI|createClient|from\(["']@supabase|new OpenAI|GoogleGenerativeAI|checkout/i);
   assert.match(runner, /tests\/s218-similar-question-review-scheduler\.test\.mjs/);
-  assert.match(agentFactoryDocs, /roadmap item id such as `S219`/);
+  assert.match(agentFactoryDocs, /roadmap item id such as `S220`/);
   assert.equal(s218?.statusCategory, "completed");
-  assert.equal(s219?.readinessStatus, "ready");
-  assert.equal(s220?.readinessStatus, "blocked");
+  assert.equal(s219?.statusCategory, "completed");
+  assert.equal(s220?.readinessStatus, "ready");
   assert.equal(s223?.readinessStatus, "ready");
-  assert.deepEqual(plan.selectedItemIds, ["S219", "S223"]);
+  assert.deepEqual(plan.selectedItemIds, ["S220", "S223"]);
 });
