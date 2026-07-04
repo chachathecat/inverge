@@ -114,7 +114,7 @@ S216 is additive:
 - focused tests;
 - documentation;
 - roadmap completion wiring;
-- Agent Factory ready/example target moves to S217 where the active roadmap now requires it.
+- Agent Factory ready/example target originally moved to S217; S217 completion moves the active example target forward to S218.
 
 No runtime, provider, OCR, billing, auth, Supabase, migration, workflow, production route, instructor, academy, environment, Next config, or Vercel change is part of this item.
 
@@ -125,5 +125,5 @@ Rollback is a focused revert of the S216 module, fixture, tests, docs, safe-key 
 ## Remaining Risks
 
 - Durable persistence of error notebook entries remains later work.
-- S217 still needs to convert safe S216 concept and recurrence metadata into personal concept graph recovery state.
+- S217 now converts safe S216 concept and recurrence metadata into personal concept graph recovery state.
 - Real public release remains blocked until all three subjects pass source, reference, runtime, and quality gates.
