@@ -1,0 +1,96 @@
+{
+  "schemaVersion": "s219.dabangil_learner_catalog.v1",
+  "priceVersion": "s200r.price_hypothesis.2026-06-25",
+  "ledgerContractVersion": "s219.future_usage_ledger.v1",
+  "storagePolicy": {
+    "metadataOnly": true,
+    "learnerMaterialIncluded": false,
+    "ocrMaterialIncluded": false,
+    "officialQuestionMaterialIncluded": false,
+    "officialAnswerMaterialIncluded": false,
+    "generatedAnswerProseIncluded": false,
+    "sourceExcerptIncluded": false,
+    "providerPayloadIncluded": false,
+    "billingRecordIncluded": false,
+    "assetBytesIncluded": false,
+    "containsRawContent": false
+  },
+  "expectedLearnerPlanIds": [
+    "free",
+    "second_os_basic",
+    "second_os_pro",
+    "second_control_premium"
+  ],
+  "expectedDeepReviewSkuIds": [
+    "deep_review_5",
+    "deep_review_15",
+    "deep_review_40"
+  ],
+  "expectedLaterDisabledSkuIds": [
+    "managed_cohort",
+    "season_pass"
+  ],
+  "requiredFeatureKeys": [
+    "learner.second_round_only",
+    "learner.evidence_review",
+    "learner.one_biggest_gap",
+    "learner.one_next_action",
+    "learner.rewrite_or_recalculate",
+    "learner.today_plan.max_three",
+    "ledger.reserve_before_expensive_work",
+    "ledger.commit_after_usable_result",
+    "ledger.failed_generation_no_consume"
+  ],
+  "sampleReservationInput": {
+    "reservationId": "s219_reservation_deep_review_5_001",
+    "catalogEntryId": "deep_review_5",
+    "learnerId": "learner_s219_metadata_only",
+    "actorRole": "learner",
+    "ownerBinding": "authenticated_request_user",
+    "unitType": "deep_review_unit",
+    "quantity": 2,
+    "reservedAt": "2026-07-04T00:00:00.000Z",
+    "expiresAt": "2026-07-04T00:30:00.000Z",
+    "reasonCode": "deep_review_unit"
+  },
+  "freeReservationInput": {
+    "reservationId": "s219_reservation_free_review_001",
+    "catalogEntryId": "free",
+    "learnerId": "learner_s219_metadata_only",
+    "actorRole": "learner",
+    "ownerBinding": "authenticated_request_user",
+    "unitType": "full_value_review_experience",
+    "quantity": 1,
+    "reservedAt": "2026-07-04T00:00:00.000Z",
+    "expiresAt": "2026-07-04T00:20:00.000Z",
+    "reasonCode": "free_full_value_review"
+  },
+  "failClosedExamples": {
+    "unknownCatalogEntryId": "unknown_future_sku",
+    "disabledCatalogEntryId": "managed_cohort",
+    "expiredCatalogEntryId": "deep_review_5",
+    "ambiguousCatalogEntryId": "deep_review_5",
+    "unlimitedCatalogEntryId": "deep_review_5",
+    "instructorActorRole": "instructor"
+  },
+  "runtimeBoundary": {
+    "billingProviderCallsAdded": false,
+    "paymentFlowAdded": false,
+    "entitlementEnforcementActivated": false,
+    "productionPricingUiAdded": false,
+    "learnerUiAdded": false,
+    "publicArchiveUiAdded": false,
+    "providerRuntimeCalled": false,
+    "ocrRuntimeCalled": false,
+    "productionRouteAdded": false,
+    "authChanged": false,
+    "supabaseMigrationAdded": false,
+    "workflowChanged": false
+  },
+  "academyBoundary": {
+    "learnerCatalogOnly": true,
+    "instructorRouteAdded": false,
+    "academyTenantDataAccessed": false,
+    "learnerInstructorDataMerged": false
+  }
+}

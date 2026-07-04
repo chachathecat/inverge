@@ -141,7 +141,7 @@ S218 is additive:
 - safe derived key additions;
 - default runner wiring;
 - roadmap completion wiring;
-- Agent Factory ready/example target moves to S219 where the active roadmap now requires it.
+- Agent Factory ready/example target moves to S220 where the active roadmap now requires it.
 
 No runtime, provider, OCR, billing, auth, Supabase, migration, workflow, production route, instructor, academy, environment, Next config, or Vercel change is part of this item.
 
