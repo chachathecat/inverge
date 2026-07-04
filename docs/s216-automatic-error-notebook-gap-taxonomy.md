@@ -114,7 +114,7 @@ S216 is additive:
 - focused tests;
 - documentation;
 - roadmap completion wiring;
-- Agent Factory ready/example target originally moved to S217; S219 completion moves the active example target forward to S220.
+- Agent Factory ready/example target originally moved to S217; S220 completion moves the active example target forward to S221.
 
 No runtime, provider, OCR, billing, auth, Supabase, migration, workflow, production route, instructor, academy, environment, Next config, or Vercel change is part of this item.
 

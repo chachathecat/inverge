@@ -63,7 +63,7 @@ S219 is learner-catalog scope only. It does not add academy routes, instructor t
 
 ## Rollout
 
-Rollout is source contract only. S220 is responsible for any later billing, entitlement, credit-pack, and idempotent usage implementation. S219 can be rolled back by reverting the source module, fixture, docs, tests, and roadmap status change.
+Rollout is source contract only. S220 builds on this catalog with source-level billing, entitlement, credit-pack, and idempotent usage semantics. S219 can be rolled back by reverting the source module, fixture, docs, tests, and roadmap status change.
 
 ## Validation
 

@@ -285,6 +285,7 @@ test("S219 docs, runner, safe keys, roadmap, and Agent Factory example target ar
   const plan = createRoadmapRunnerPlanFromYaml(roadmapSource);
   const s219 = plan.analyses.find((item) => item.itemId === "S219");
   const s220 = plan.analyses.find((item) => item.itemId === "S220");
+  const s221 = plan.analyses.find((item) => item.itemId === "S221");
   const s223 = plan.analyses.find((item) => item.itemId === "S223");
 
   for (const token of [
@@ -318,10 +319,11 @@ test("S219 docs, runner, safe keys, roadmap, and Agent Factory example target ar
 
   assert.doesNotMatch(source, /fetch\(|\/api\/|OPENAI_API_KEY|GEMINI|createClient|from\(["']@supabase|new OpenAI|GoogleGenerativeAI|STRIPE_SECRET_KEY/i);
   assert.match(runner, /tests\/s219-learner-catalog-usage-ledger\.test\.mjs/);
-  assert.match(agentFactoryDocs, /roadmap item id such as `S220`/);
-  assert.match(agentFactoryButtonTest, /--target[\s\S]{0,80}S220/);
+  assert.match(agentFactoryDocs, /roadmap item id such as `S221`/);
+  assert.match(agentFactoryButtonTest, /--target[\s\S]{0,80}S221/);
   assert.equal(s219?.statusCategory, "completed");
-  assert.equal(s220?.readinessStatus, "ready");
+  assert.equal(s220?.statusCategory, "completed");
+  assert.equal(s221?.readinessStatus, "ready");
   assert.equal(s223?.readinessStatus, "ready");
-  assert.deepEqual(plan.selectedItemIds, ["S220", "S223"]);
+  assert.deepEqual(plan.selectedItemIds, ["S221", "S223"]);
 });
