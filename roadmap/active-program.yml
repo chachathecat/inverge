@@ -142,7 +142,7 @@ items:
     priority: 19
   - id: S218
     title: Similar Past Question Review and Rewrite Scheduler
-    status: queued
+    status: completed
     dependencies: [S203, S217]
     lockGroup: review-scheduler
     risk: high

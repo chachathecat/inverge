@@ -137,7 +137,7 @@ S217 is additive:
 - documentation;
 - safe derived key additions;
 - roadmap completion wiring;
-- Agent Factory ready/example target moves to S218 where the active roadmap now requires it.
+- Agent Factory ready/example target has moved through S218 and now points to S219 where the active roadmap requires it.
 
 No runtime, provider, OCR, billing, auth, Supabase, migration, workflow, production route, instructor, academy, environment, Next config, or Vercel change is part of this item.
 
@@ -148,6 +148,6 @@ Rollback is a focused revert of the S217 module, fixture, tests, docs, safe-key 
 ## Remaining Risks
 
 - Durable persistence of the S217 graph remains later work.
-- Similar past question scheduling remains S218.
+- Durable S218 scheduler persistence and runtime integration remain later work.
 - Paid runtime privacy, export/delete, billing, and cost guardrails remain later roadmap items.
 - Public launch remains blocked until all three subjects pass source, reference, runtime, and quality gates.
