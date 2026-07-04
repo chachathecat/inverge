@@ -239,8 +239,8 @@ test("S217 docs, source, roadmap, runner, and safe derived keys are wired", asyn
   assert.doesNotMatch(source, /fetch\(|\/api\/|OPENAI_API_KEY|GEMINI|createClient|from\(["']@supabase|new OpenAI|GoogleGenerativeAI|checkout/i);
   assert.match(runner, /tests\/s217-personal-core-concept-graph\.test\.mjs/);
   assert.equal(s217?.statusCategory, "completed");
-  assert.equal(s218?.readinessStatus, "ready");
+  assert.equal(s218?.statusCategory, "completed");
   assert.equal(s219?.readinessStatus, "ready");
-  assert.deepEqual(plan.selectedItemIds, ["S218", "S219"]);
+  assert.deepEqual(plan.selectedItemIds, ["S219", "S223"]);
 });
 

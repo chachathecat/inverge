@@ -1,0 +1,416 @@
+{
+  "schemaVersion": "s218.similar_past_question_review_scheduler.v1",
+  "s203SchemaVersion": "2026-06-26.s203.v1",
+  "storagePolicy": {
+    "metadataOnly": true,
+    "learnerMaterialInFixture": false,
+    "ocrMaterialInFixture": false,
+    "officialMaterialInFixture": false,
+    "referenceProseInFixture": false,
+    "sourceMaterialInFixture": false,
+    "calculationTraceInFixture": false,
+    "providerRuntimeCalled": false,
+    "ocrRuntimeCalled": false,
+    "academyTenantDataAccessed": false
+  },
+  "schedulerInput": {
+    "schedulerId": "s218_scheduler_metadata_fixture",
+    "learnerId": "s217_learner_metadata_ref",
+    "generatedAt": "2090-01-03T00:00:00.000Z",
+    "consumer": "learner",
+    "actorRole": "learner",
+    "ownerBinding": "authenticated_request_user"
+  },
+  "conceptTransferLinks": [
+    {
+      "linkId": "s218_transfer_theory_application",
+      "subject": "theory",
+      "sourceConceptNodeId": "s217_concept_theory_application",
+      "targetConceptNodeId": "s218_concept_theory_application_transfer",
+      "transferKind": "same_concept_family",
+      "evidenceRefIds": [
+        "s218_transfer_ev_theory_application"
+      ],
+      "safeForS218Scheduler": true,
+      "metadataOnly": true,
+      "containsRawContent": false
+    }
+  ],
+  "canonicalQuestions": [
+    {
+      "id": "s218_law_requirement_similar_q1",
+      "mode": "canonical_question",
+      "examYear": 2090,
+      "examRound": 101,
+      "subject": "law",
+      "officialSubjectId": "appraiser_second_round_subject_law_current_2026_06_25",
+      "officialSubjectLabelKo": "appraiser_second_round_law",
+      "questionNo": 1,
+      "subQuestions": [
+        {
+          "id": "s218_law_requirement_similar_q1_a",
+          "label": "1-A",
+          "points": 25,
+          "requirement": {
+            "origin": "synthetic_fixture",
+            "descriptor": "S218 metadata-only law requirement candidate",
+            "textStored": false,
+            "verificationStatus": "synthetic_fixture"
+          }
+        }
+      ],
+      "totalPoints": 25,
+      "source": {
+        "sourceId": "s218_law_requirement_source",
+        "rightsStatus": "redistribution_allowed",
+        "displayMode": "full_text",
+        "extractionStatus": "extracted_private",
+        "metadataEligibleForS203": true,
+        "problemTextEligibleForS203": true,
+        "learnerPublicationEligible": true
+      },
+      "problemText": {
+        "status": "synthetic_fixture",
+        "textStored": false,
+        "officialQuestionBodyStored": false,
+        "extractionStatus": "extracted_private",
+        "verificationStatus": "synthetic_fixture"
+      },
+      "canonicalVerificationStatus": "synthetic_fixture",
+      "referenceAnswerVerificationStatus": "not_started",
+      "examDate": "2090-07-01",
+      "lawEffectiveDate": "2090-07-01",
+      "topicTags": [
+        "s218_law_requirement_topic"
+      ],
+      "conceptNodeIds": [
+        "s217_concept_law_requirement"
+      ],
+      "issueCandidates": [
+        {
+          "candidateId": "s218_law_requirement_issue_candidate",
+          "kind": "law_issue",
+          "source": "synthetic_fixture",
+          "confidence": "medium",
+          "validatorRequired": true
+        }
+      ],
+      "formulaCandidates": [],
+      "calculationCandidates": [],
+      "tableAssets": [],
+      "giiiRoutine": {
+        "calculatorModel": "casio_fx_9860giii",
+        "resetSafeHandKeyedRoutineRequired": true,
+        "storedProgramDependencyAllowed": false,
+        "routineStatus": "not_applicable",
+        "formulaCandidateIds": []
+      },
+      "evidenceReview": {
+        "eligible": true,
+        "status": "synthetic_fixture_only",
+        "reasonCodes": [
+          "synthetic_fixture_only"
+        ]
+      },
+      "deepReviewUnitEstimate": {
+        "status": "estimated",
+        "estimatedUnits": 1,
+        "basis": "synthetic_fixture",
+        "ledgerRequiredBeforeConsumption": true,
+        "consumptionImplemented": false
+      },
+      "learnerPublication": {
+        "allowed": true,
+        "reasonCodes": [
+          "synthetic_fixture_only"
+        ]
+      }
+    },
+    {
+      "id": "s218_practice_unit_rounding_similar_q1",
+      "mode": "canonical_question",
+      "examYear": 2090,
+      "examRound": 101,
+      "subject": "practice",
+      "officialSubjectId": "appraiser_second_round_subject_practice_current_2026_06_25",
+      "officialSubjectLabelKo": "appraiser_second_round_practice",
+      "questionNo": 2,
+      "subQuestions": [
+        {
+          "id": "s218_practice_unit_rounding_similar_q1_a",
+          "label": "2-A",
+          "points": 25,
+          "requirement": {
+            "origin": "synthetic_fixture",
+            "descriptor": "S218 metadata-only practice calculation candidate",
+            "textStored": false,
+            "verificationStatus": "synthetic_fixture"
+          }
+        }
+      ],
+      "totalPoints": 25,
+      "source": {
+        "sourceId": "s218_practice_unit_rounding_source",
+        "rightsStatus": "redistribution_allowed",
+        "displayMode": "full_text",
+        "extractionStatus": "extracted_private",
+        "metadataEligibleForS203": true,
+        "problemTextEligibleForS203": true,
+        "learnerPublicationEligible": true
+      },
+      "problemText": {
+        "status": "synthetic_fixture",
+        "textStored": false,
+        "officialQuestionBodyStored": false,
+        "extractionStatus": "extracted_private",
+        "verificationStatus": "synthetic_fixture"
+      },
+      "canonicalVerificationStatus": "synthetic_fixture",
+      "referenceAnswerVerificationStatus": "not_started",
+      "examDate": "2090-07-01",
+      "topicTags": [
+        "s218_practice_unit_rounding_topic"
+      ],
+      "conceptNodeIds": [
+        "s217_concept_practice_unit_rounding"
+      ],
+      "issueCandidates": [
+        {
+          "candidateId": "s218_practice_unit_rounding_issue_candidate",
+          "kind": "practice_assumption",
+          "source": "synthetic_fixture",
+          "confidence": "medium",
+          "validatorRequired": true
+        }
+      ],
+      "formulaCandidates": [
+        {
+          "formulaId": "s218_practice_unit_rounding_formula",
+          "kind": "rounding_policy",
+          "source": "synthetic_fixture",
+          "unitCheckRequired": true,
+          "roundingCheckRequired": true
+        }
+      ],
+      "calculationCandidates": [
+        {
+          "candidateId": "s218_practice_unit_rounding_calculation",
+          "kind": "rounding_check",
+          "formulaId": "s218_practice_unit_rounding_formula",
+          "source": "synthetic_fixture",
+          "independentRecalculationRequired": true
+        }
+      ],
+      "tableAssets": [
+        {
+          "assetId": "s218_practice_unit_rounding_table",
+          "kind": "table",
+          "sourcePage": 1,
+          "regionRef": "s218_metadata_region",
+          "extractionStatus": "metadata_only",
+          "verificationStatus": "metadata_only",
+          "rawBytesStored": false,
+          "rawTextStored": false
+        }
+      ],
+      "giiiRoutine": {
+        "calculatorModel": "casio_fx_9860giii",
+        "resetSafeHandKeyedRoutineRequired": true,
+        "storedProgramDependencyAllowed": false,
+        "routineStatus": "candidate_metadata_only",
+        "formulaCandidateIds": [
+          "s218_practice_unit_rounding_formula"
+        ]
+      },
+      "evidenceReview": {
+        "eligible": true,
+        "status": "synthetic_fixture_only",
+        "reasonCodes": [
+          "synthetic_fixture_only"
+        ]
+      },
+      "deepReviewUnitEstimate": {
+        "status": "estimated",
+        "estimatedUnits": 1,
+        "basis": "synthetic_fixture",
+        "ledgerRequiredBeforeConsumption": true,
+        "consumptionImplemented": false
+      },
+      "learnerPublication": {
+        "allowed": true,
+        "reasonCodes": [
+          "synthetic_fixture_only"
+        ]
+      }
+    },
+    {
+      "id": "s218_theory_application_transfer_q1",
+      "mode": "canonical_question",
+      "examYear": 2090,
+      "examRound": 101,
+      "subject": "theory",
+      "officialSubjectId": "appraiser_second_round_subject_theory_current_2026_06_25",
+      "officialSubjectLabelKo": "appraiser_second_round_theory",
+      "questionNo": 3,
+      "subQuestions": [
+        {
+          "id": "s218_theory_application_transfer_q1_a",
+          "label": "3-A",
+          "points": 25,
+          "requirement": {
+            "origin": "synthetic_fixture",
+            "descriptor": "S218 metadata-only theory transfer candidate",
+            "textStored": false,
+            "verificationStatus": "synthetic_fixture"
+          }
+        }
+      ],
+      "totalPoints": 25,
+      "source": {
+        "sourceId": "s218_theory_application_source",
+        "rightsStatus": "redistribution_allowed",
+        "displayMode": "full_text",
+        "extractionStatus": "extracted_private",
+        "metadataEligibleForS203": true,
+        "problemTextEligibleForS203": true,
+        "learnerPublicationEligible": true
+      },
+      "problemText": {
+        "status": "synthetic_fixture",
+        "textStored": false,
+        "officialQuestionBodyStored": false,
+        "extractionStatus": "extracted_private",
+        "verificationStatus": "synthetic_fixture"
+      },
+      "canonicalVerificationStatus": "synthetic_fixture",
+      "referenceAnswerVerificationStatus": "not_started",
+      "examDate": "2090-07-01",
+      "topicTags": [
+        "s218_theory_application_topic"
+      ],
+      "conceptNodeIds": [
+        "s218_concept_theory_application_transfer"
+      ],
+      "issueCandidates": [
+        {
+          "candidateId": "s218_theory_application_issue_candidate",
+          "kind": "theory_concept",
+          "source": "synthetic_fixture",
+          "confidence": "medium",
+          "validatorRequired": true
+        }
+      ],
+      "formulaCandidates": [],
+      "calculationCandidates": [],
+      "tableAssets": [],
+      "giiiRoutine": {
+        "calculatorModel": "casio_fx_9860giii",
+        "resetSafeHandKeyedRoutineRequired": true,
+        "storedProgramDependencyAllowed": false,
+        "routineStatus": "not_applicable",
+        "formulaCandidateIds": []
+      },
+      "evidenceReview": {
+        "eligible": true,
+        "status": "synthetic_fixture_only",
+        "reasonCodes": [
+          "synthetic_fixture_only"
+        ]
+      },
+      "deepReviewUnitEstimate": {
+        "status": "estimated",
+        "estimatedUnits": 1,
+        "basis": "synthetic_fixture",
+        "ledgerRequiredBeforeConsumption": true,
+        "consumptionImplemented": false
+      },
+      "learnerPublication": {
+        "allowed": true,
+        "reasonCodes": [
+          "synthetic_fixture_only"
+        ]
+      }
+    },
+    {
+      "id": "s218_blocked_law_requirement_q1",
+      "mode": "canonical_question",
+      "examYear": 2090,
+      "examRound": 101,
+      "subject": "law",
+      "officialSubjectId": "appraiser_second_round_subject_law_current_2026_06_25",
+      "officialSubjectLabelKo": "appraiser_second_round_law",
+      "questionNo": 4,
+      "subQuestions": [
+        {
+          "id": "s218_blocked_law_requirement_q1_a",
+          "label": "4-A",
+          "points": 25,
+          "requirement": {
+            "origin": "metadata_only_descriptor",
+            "descriptor": "Blocked S218 metadata-only law candidate",
+            "textStored": false,
+            "verificationStatus": "blocked_by_rights"
+          }
+        }
+      ],
+      "totalPoints": 25,
+      "source": {
+        "sourceId": "s218_blocked_law_requirement_source",
+        "rightsStatus": "needs_legal_review",
+        "displayMode": "metadata_and_link",
+        "extractionStatus": "metadata_only",
+        "metadataEligibleForS203": true,
+        "problemTextEligibleForS203": false,
+        "learnerPublicationEligible": false
+      },
+      "problemText": {
+        "status": "blocked_by_rights",
+        "textStored": false,
+        "officialQuestionBodyStored": false,
+        "extractionStatus": "metadata_only",
+        "verificationStatus": "blocked"
+      },
+      "canonicalVerificationStatus": "blocked",
+      "referenceAnswerVerificationStatus": "blocked",
+      "examDate": "2090-07-01",
+      "lawEffectiveDate": "2090-07-01",
+      "topicTags": [
+        "s218_law_requirement_blocked_topic"
+      ],
+      "conceptNodeIds": [
+        "s217_concept_law_requirement"
+      ],
+      "issueCandidates": [],
+      "formulaCandidates": [],
+      "calculationCandidates": [],
+      "tableAssets": [],
+      "giiiRoutine": {
+        "calculatorModel": "casio_fx_9860giii",
+        "resetSafeHandKeyedRoutineRequired": true,
+        "storedProgramDependencyAllowed": false,
+        "routineStatus": "not_applicable",
+        "formulaCandidateIds": []
+      },
+      "evidenceReview": {
+        "eligible": false,
+        "status": "blocked_by_rights",
+        "reasonCodes": [
+          "rights_unresolved"
+        ]
+      },
+      "deepReviewUnitEstimate": {
+        "status": "blocked",
+        "estimatedUnits": 0,
+        "basis": "blocked_until_reference_and_review_gates",
+        "ledgerRequiredBeforeConsumption": true,
+        "consumptionImplemented": false
+      },
+      "learnerPublication": {
+        "allowed": false,
+        "reasonCodes": [
+          "rights_unresolved"
+        ]
+      }
+    }
+  ]
+}
