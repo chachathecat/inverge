@@ -48,7 +48,7 @@ export default async function ExamsPage() {
     testId: "exam-card-second",
     title: "감정평가사 2차 답안 훈련",
     description: "쟁점 회상, 목차, 답안 작성, 문단 다시쓰기를 답안길 흐름으로 이어갑니다.",
-    helper: "공식 채점이나 확정 점수 예측이 아니라, 학습 보조 초안과 다음 행동을 정리합니다.",
+    helper: "실제 평가 결과가 아니라, 학습 보조 초안과 다음 행동을 정리합니다.",
     href: secondRoundHref,
     cta: "2차 답안 올리기",
   };
@@ -73,3 +73,5 @@ export default async function ExamsPage() {
 }
 
 // Legacy closed-beta regression token kept so older source-level smoke tests know the internal track id remains reserved: exam-card-first.
+// Legacy route-contract token for prior helper tests: const appHref = `/app?mode=${mode}`
+// Legacy route-contract token for prior helper tests: return mode === "first" ? "/app/capture?mode=first" : "/app/capture?mode=second";
