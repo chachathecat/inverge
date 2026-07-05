@@ -7,39 +7,39 @@ import { cn } from "@/lib/utils";
 
 import { FrontPageHeroAnimation } from "@/components/inverge/front-page-hero-animation";
 
-const INPUT_EXAMPLES = [
+const ANSWER_REVIEW_EXAMPLES = [
   {
-    title: "1차 오답 기록",
-    fields: "틀린 문제 / 내가 고른 답 / 틀린 이유",
-    outcome: "문제 1개면 다음 복습이 잡힙니다.",
+    title: "답안 스냅",
+    fields: "답안 사진 / 텍스트 / 문제 조건",
+    outcome: "답안 1개에서 가장 큰 감점 위험 1개를 찾습니다.",
   },
   {
-    title: "1차 세트 풀이",
-    fields: "과목 / 문항 수 / 정답 / 내 답",
-    outcome: "세트 입력 후 재시도 순서가 정리됩니다.",
+    title: "문단 다시쓰기",
+    fields: "보강할 논점 / 약한 구조 / 다시 쓸 문장",
+    outcome: "오늘 다시 쓸 문단 1개로 바로 이어집니다.",
   },
   {
-    title: "오늘 공부 기록",
-    fields: "본 범위 / 어려웠던 점 / 다시 볼 범위",
-    outcome: "학습 기록 후 다음 복습 신호를 정리합니다.",
-  },
-  {
-    title: "2차 답안",
-    fields: "내 답안 / 기준 답안 / 보강할 문단",
-    outcome: "답안 1개로 보강 간극 1개를 찾습니다.",
+    title: "복습 연결",
+    fields: "쟁점 후보 / 다음 행동 / 복습 메모",
+    outcome: "내일 확인할 10초 복습으로 남깁니다.",
   },
 ] as const;
 
 const LOOP_SUMMARY = [
   {
-    title: "감정평가사 1차",
-    description: "세트 풀이 → 오답 이유 → 회상 → 재시도 큐",
-    detail: "객관식 세트에서 틀린 이유를 남기고, 회상 후 재시도 항목만 정리합니다.",
+    title: "1. 답안 올리기",
+    description: "사진이나 텍스트로 오늘 쓴 2차 답안을 넣습니다.",
+    detail: "OCR과 AI 결과는 학습 보조 초안이며 저장 전 직접 확인합니다.",
   },
   {
-    title: "감정평가사 2차",
-    description: "쟁점 회상 → 답안 비교 → 가장 큰 간극 → 문단 다시쓰기",
-    detail: "한 번에 하나의 간극만 고쳐 문단 재작성으로 바로 이어갑니다.",
+    title: "2. 감점 위험 찾기",
+    description: "누락 쟁점, 약한 구조, 다시 쓸 문단을 하나로 압축합니다.",
+    detail: "점수보다 오늘 고칠 행동을 먼저 보여줍니다.",
+  },
+  {
+    title: "3. 다시쓰기 연결",
+    description: "가장 큰 간극을 문단 다시쓰기와 복습 후보로 이어갑니다.",
+    detail: "공식 채점이나 합격 판정이 아니라 답안 훈련 초안입니다.",
   },
 ] as const;
 
@@ -48,46 +48,27 @@ export function FrontPage() {
     <RefinedShell className="space-y-12 py-10 sm:py-14 lg:py-16">
       <section className="grid items-center gap-8 lg:grid-cols-[minmax(0,1fr)_500px] lg:gap-10">
         <div className="space-y-6">
-          <RefinedBadge>감정평가사 합격 운영 시스템</RefinedBadge>
+          <RefinedBadge>답안길 · 감정평가사 2차 답안 훈련 OS</RefinedBadge>
           <div className="space-y-5">
             <h1 className="max-w-4xl text-[42px] font-medium leading-[1.08] tracking-[-0.055em] text-[color:var(--foreground-strong)] sm:text-[58px]">
-              오늘의 오답과 답안을
+              오늘 쓴 답안을
               <br className="hidden sm:block" />
-              내일의 실행 순서로 바꿉니다.
+              다시 쓸 문단으로 바꿉니다.
             </h1>
             <p className="max-w-3xl text-body text-[color:var(--muted)]">
-              문제나 답안 사진을 올리면 OCR 초안, 핵심 조건 하이라이트, 답안 구조 Skeleton, 오늘 할 일로 정리됩니다. 감정평가사 1차/2차 공부를 실행 중심으로 이어가게 만듭니다.
+              답안 사진이나 텍스트를 올리면 OCR 초안과 답안 구조를 확인하고, 가장 큰 감점 위험 1개와 다시 쓸 문단 1개로 정리합니다.
             </p>
           </div>
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-3">
-              <Link href="/exams" className={cn(buttonVariants({ size: "lg" }), "w-full sm:w-auto")}>
-                오늘 입력 시작
+              <Link href="/answer-review?mode=second" className={cn(buttonVariants({ size: "lg" }), "w-full sm:w-auto")}>
+                답안 올리고 감점 위험 찾기
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
-              <Link
-                href="/answer-review?mode=second"
-                className={cn(
-                  buttonVariants({ variant: "outline" }),
-                  "h-11 w-full px-4 sm:w-auto border-[color:var(--border)] bg-[color:var(--surface)]"
-                )}
-              >
-                답안 검토실 무료 체험
-              </Link>
-              <Link
-                href="/problem-snap?mode=second"
-                className={cn(
-                  buttonVariants({ variant: "ghost" }),
-                  "h-10 w-full px-4 sm:w-auto text-[color:var(--foreground-strong)]"
-                )}
-              >
-                문제 스냅 풀이
-              </Link>
             </div>
-            <p className="text-sm text-[color:var(--muted)]">감정평가사 1차/2차 입력 화면으로 바로 이동합니다.</p>
-            <p className="text-sm text-[color:var(--muted)]">로그인 없이 오늘 1회 검토해볼 수 있습니다.</p>
-            <p className="text-sm text-[color:var(--muted)]">문제 스냅, 답안 스냅, 텍스트 입력을 모두 오늘 할 일로 연결합니다.</p>
-            <p className="text-xs text-[color:var(--muted)]">검토 결과는 학습 보조 초안이며 저장 전 직접 확인해 주세요.</p>
+            <p className="text-sm text-[color:var(--muted)]">감정평가사 2차 답안 검토 흐름으로 바로 시작합니다.</p>
+            <p className="text-sm text-[color:var(--muted)]">로그인 없이 오늘 1회 답안 검토를 체험해볼 수 있습니다.</p>
+            <p className="text-xs text-[color:var(--muted)]">검토 결과는 학습 보조 초안이며 공식 채점, 확정 점수, 합격 가능성 예측이 아닙니다.</p>
           </div>
         </div>
         <FrontPageHeroAnimation />
@@ -95,12 +76,12 @@ export function FrontPage() {
 
       <section className="space-y-6">
         <SectionHeading
-          eyebrow="오늘 입력할 수 있는 것"
-          title="입력 1개에서 다음 실행 1개를 만듭니다"
-          description="입력을 먼저 남기면 복습·비교·다시쓰기 순서를 차분히 이어갑니다."
+          eyebrow="2차 답안 입력"
+          title="답안 1개에서 다음 실행 1개를 만듭니다"
+          description="입력을 먼저 남기면 비교·다시쓰기·복습 순서를 차분히 이어갑니다."
         />
-        <div className="grid gap-4 md:grid-cols-2">
-          {INPUT_EXAMPLES.map((example) => (
+        <div className="grid gap-4 md:grid-cols-3">
+          {ANSWER_REVIEW_EXAMPLES.map((example) => (
             <QuietSection key={example.title} className="space-y-2.5 p-4 sm:p-5">
               <h2 className="text-title text-[color:var(--foreground-strong)]">{example.title}</h2>
               <p className="text-sm leading-6 text-[color:var(--foreground-strong)]">{example.fields}</p>
@@ -112,11 +93,11 @@ export function FrontPage() {
 
       <section className="space-y-6">
         <SectionHeading
-          eyebrow="학습 운영 루프"
-          title="점수보다 다음 행동을 정리합니다"
-          description="입력 이후 흐름이 궁금할 때만 하단에서 확인하세요."
+          eyebrow="답안 훈련 루프"
+          title="점수보다 다시 쓸 행동을 정리합니다"
+          description="답안 검토 이후 흐름이 궁금할 때만 하단에서 확인하세요."
         />
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-3">
           {LOOP_SUMMARY.map((step) => (
             <QuietSection key={step.title} className="p-4 sm:p-5">
               <h2 className="text-title text-[color:var(--foreground-strong)]">{step.title}</h2>
