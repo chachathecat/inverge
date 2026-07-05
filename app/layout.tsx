@@ -7,13 +7,13 @@ import { ThemeProvider } from "@/components/shared/theme-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  applicationName: "Inverge",
-  title: "Inverge | 감정평가사 Pass Management OS",
-  description: "감정평가사 1차 오답과 2차 답안 보강을 오늘의 다음 행동으로 정리하는 Pass Management OS입니다.",
+  applicationName: "답안길",
+  title: "답안길 | 감정평가사 2차 답안 훈련 OS",
+  description: "감정평가사 2차 답안을 가장 큰 감점 위험 1개와 다시 쓸 문단 1개로 정리하는 답안 훈련 OS입니다.",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
-    title: "Inverge",
+    title: "답안길",
     statusBarStyle: "default",
   },
   icons: {
