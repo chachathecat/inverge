@@ -17,13 +17,14 @@ function pngDimensions(path) {
   };
 }
 
-test("PWA manifest exists with installable Inverge metadata and icons", () => {
+test("PWA manifest exists with installable Dabangil metadata and icons", () => {
   assert.equal(existsSync("app/manifest.ts"), true);
   const data = manifest();
 
-  assert.equal(data.name, "Inverge");
-  assert.equal(data.short_name, "Inverge");
-  assert.equal(data.start_url, "/app");
+  assert.equal(data.name, "답안길");
+  assert.equal(data.short_name, "답안길");
+  assert.match(data.description ?? "", /감정평가사 2차 답안/);
+  assert.equal(data.start_url, "/answer-review?mode=second");
   assert.equal(data.scope, "/");
   assert.equal(data.display, "standalone");
   assert.equal(data.lang, "ko");
@@ -39,8 +40,10 @@ test("root layout exposes manifest, mobile metadata, viewport, and service worke
   const source = read("app/layout.tsx");
 
   assert.match(source, /manifest:\s*"\/manifest\.webmanifest"/);
-  assert.match(source, /applicationName:\s*"Inverge"/);
+  assert.match(source, /applicationName:\s*"답안길"/);
+  assert.match(source, /title:\s*"답안길 \| 감정평가사 2차 답안 훈련 OS"/);
   assert.match(source, /appleWebApp/);
+  assert.match(source, /title:\s*"답안길"/);
   assert.match(source, /apple:\s*\[\{\s*url:\s*"\/icons\/inverge-apple-touch-180\.png",\s*sizes:\s*"180x180",\s*type:\s*"image\/png"/);
   assert.match(source, /export const viewport/);
   assert.match(source, /themeColor:\s*"#10233f"/);

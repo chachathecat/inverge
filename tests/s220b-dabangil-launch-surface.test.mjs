@@ -12,6 +12,7 @@ test("S220B launch surface smoke", () => {
 
   assert.equal(layout.includes("답안길"), true);
   assert.equal(manifest.includes("답안길"), true);
+  assert.equal(manifest.includes('start_url: "/answer-review?mode=second"'), true);
   assert.equal(home.includes("/answer-review?mode=second"), true);
   assert.equal(exams.includes("/app/capture?mode=second"), true);
   assert.equal(home.includes("1차 오답"), false);
