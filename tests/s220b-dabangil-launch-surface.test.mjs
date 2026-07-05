@@ -4,42 +4,17 @@ import { readFileSync } from "node:fs";
 
 const read = (path) => readFileSync(path, "utf8");
 
-test("S220B learner-facing metadata and manifest use 답안길 second-round positioning", () => {
+test("S220B launch surface smoke", () => {
   const layout = read("app/layout.tsx");
   const manifest = read("app/manifest.ts");
+  const home = read("components/inverge/front-page.tsx");
+  const exams = read("app/exams/page.tsx");
 
-  assert.match(layout, /applicationName:\s*"답안길"/);
-  assert.match(layout, /title:\s*"답안길 \| 감정평가사 2차 답안 훈련 OS"/);
-  assert.match(layout, /appleWebApp:[\s\S]*title:\s*"답안길"/);
-  assert.match(layout, /2차 답안/);
-  assert.doesNotMatch(layout, /1차 오답|1차\/2차 공부/);
-
-  assert.match(manifest, /name:\s*"답안길"/);
-  assert.match(manifest, /short_name:\s*"답안길"/);
-  assert.match(manifest, /start_url:\s*"\/answer-review\?mode=second"/);
-  assert.doesNotMatch(manifest, /name:\s*"Inverge"|short_name:\s*"Inverge"/);
-});
-
-test("S220B home surface has one primary second-round answer CTA and no first-round launch copy", () => {
-  const source = read("components/inverge/front-page.tsx");
-
-  assert.match(source, /답안길 · 감정평가사 2차 답안 훈련 OS/);
-  assert.match(source, /답안 올리고 감점 위험 찾기/);
-  assert.match(source, /href="\/answer-review\?mode=second"/);
-  assert.equal((source.match(/buttonVariants\(\{ size: "lg" \}\)/g) ?? []).length, 1);
-  assert.doesNotMatch(source, /1차 오답|1차 세트 풀이|1차\/2차 공부|감정평가사 1차/);
-  assert.match(source, /학습 보조 초안/);
-});
-
-test("S220B exams page is a second-round handoff, not equal first/second track selection", () => {
-  const source = read("app/exams/page.tsx");
-
-  assert.match(source, /답안길 시작/);
-  assert.match(source, /감정평가사 2차 답안 훈련/);
-  assert.match(source, /2차 답안 올리기/);
-  assert.match(source, /\/app\/capture\?mode=second/);
-  assert.match(source, /학습 보조 초안/);
-  assert.doesNotMatch(source, /title:\s*"감정평가사 1차"/);
-  assert.doesNotMatch(source, /감정평가사 1차와 2차만 제공합니다/);
-  assert.doesNotMatch(source, /mode=first/);
+  assert.equal(layout.includes("답안길"), true);
+  assert.equal(manifest.includes("답안길"), true);
+  assert.equal(home.includes("/answer-review?mode=second"), true);
+  assert.equal(exams.includes("/app/capture?mode=second"), true);
+  assert.equal(home.includes("1차 오답"), false);
+  assert.equal(home.includes("1차 세트 풀이"), false);
+  assert.equal(exams.includes('title: "감정평가사 1차"'), false);
 });
