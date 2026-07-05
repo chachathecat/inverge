@@ -156,7 +156,7 @@ items:
     priority: 21
   - id: S220
     title: Billing Entitlement Credit Packs and Idempotent Usage
-    status: queued
+    status: completed
     dependencies: [S219]
     lockGroup: billing
     risk: high

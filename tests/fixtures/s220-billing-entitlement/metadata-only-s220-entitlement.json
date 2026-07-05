@@ -1,0 +1,137 @@
+{
+  "schemaVersion": "s220.billing_entitlement_credit_usage.v1",
+  "idempotentUsageVersion": "s220.idempotent_usage.v1",
+  "upstreamCatalogVersion": "s219.dabangil_learner_catalog.v1",
+  "upstreamPriceVersion": "s200r.price_hypothesis.2026-06-25",
+  "upstreamLedgerContractVersion": "s219.future_usage_ledger.v1",
+  "storagePolicy": {
+    "metadataOnly": true,
+    "learnerMaterialIncluded": false,
+    "ocrMaterialIncluded": false,
+    "officialQuestionMaterialIncluded": false,
+    "officialAnswerMaterialIncluded": false,
+    "generatedAnswerProseIncluded": false,
+    "sourceExcerptIncluded": false,
+    "providerPayloadIncluded": false,
+    "credentialIncluded": false,
+    "assetBytesIncluded": false,
+    "containsRawContent": false
+  },
+  "expectedLearnerPlanIds": [
+    "free",
+    "second_os_basic",
+    "second_os_pro",
+    "second_control_premium"
+  ],
+  "expectedCreditPackSkuIds": [
+    "deep_review_5",
+    "deep_review_15",
+    "deep_review_40"
+  ],
+  "sampleStateInput": {
+    "learnerId": "learner_s220_metadata_only",
+    "ownerBinding": "authenticated_request_user",
+    "actorRole": "learner"
+  },
+  "sampleSubscriptionGrantInput": {
+    "grantId": "s220_grant_subscription_premium_001",
+    "idempotencyKey": "s220_idem_grant_subscription_001",
+    "learnerId": "learner_s220_metadata_only",
+    "ownerBinding": "authenticated_request_user",
+    "actorRole": "learner",
+    "catalogEntryId": "second_control_premium",
+    "entitlementEvidenceSource": "server_side_catalog_contract",
+    "sourceEventId": "s220_source_subscription_001",
+    "effectiveFrom": "2026-07-04T00:00:00.000Z",
+    "expiresAt": "2026-08-04T00:00:00.000Z"
+  },
+  "sampleCreditPackGrantInput": {
+    "grantId": "s220_grant_deep_review_5_001",
+    "idempotencyKey": "s220_idem_grant_credit_pack_001",
+    "learnerId": "learner_s220_metadata_only",
+    "ownerBinding": "authenticated_request_user",
+    "actorRole": "learner",
+    "catalogEntryId": "deep_review_5",
+    "entitlementEvidenceSource": "server_side_catalog_contract",
+    "sourceEventId": "s220_source_credit_pack_001",
+    "effectiveFrom": "2026-07-04T00:00:00.000Z",
+    "expiresAt": "2026-10-04T00:00:00.000Z"
+  },
+  "sampleReservationInput": {
+    "reservationId": "s220_reservation_deep_review_001",
+    "idempotencyKey": "s220_idem_reserve_001",
+    "learnerId": "learner_s220_metadata_only",
+    "ownerBinding": "authenticated_request_user",
+    "actorRole": "learner",
+    "grantId": "s220_grant_deep_review_5_001",
+    "unitType": "deep_review_unit",
+    "quantity": 2,
+    "usageReasonCode": "deep_review_unit",
+    "reservedAt": "2026-07-04T00:05:00.000Z",
+    "expiresAt": "2026-07-04T00:35:00.000Z"
+  },
+  "sampleCommitInput": {
+    "reservationId": "s220_reservation_deep_review_001",
+    "idempotencyKey": "s220_idem_commit_001",
+    "learnerId": "learner_s220_metadata_only",
+    "committedAt": "2026-07-04T00:20:00.000Z",
+    "resultStatus": "usable_result",
+    "usableResultAvailable": true
+  },
+  "sampleReleaseInput": {
+    "reservationId": "s220_reservation_deep_review_failed_001",
+    "idempotencyKey": "s220_idem_release_001",
+    "learnerId": "learner_s220_metadata_only",
+    "releasedAt": "2026-07-04T00:20:00.000Z",
+    "releaseReason": "failed_generation_no_consume"
+  },
+  "sampleReversalInput": {
+    "grantId": "s220_grant_deep_review_5_001",
+    "idempotencyKey": "s220_idem_reverse_001",
+    "learnerId": "learner_s220_metadata_only",
+    "reversedAt": "2026-07-04T01:00:00.000Z",
+    "reversalReason": "refund",
+    "entitlementEvidenceSource": "operator_approved_future_record"
+  },
+  "failClosedExamples": {
+    "unknownSku": "unknown_future_sku",
+    "disabledSku": "managed_cohort",
+    "ambiguousCatalogEntryId": "deep_review_5",
+    "expiredGrantId": "s220_grant_deep_review_5_expired",
+    "duplicateCommitReservationId": "s220_reservation_deep_review_001",
+    "staleReservationId": "s220_reservation_deep_review_stale",
+    "insufficientCreditQuantity": 6,
+    "unsupportedUsageUnit": "unbounded_precision_review",
+    "clientAssertedSource": "client_asserted",
+    "instructorActorRole": "instructor"
+  },
+  "requiredSafeDerivedKeys": [
+    "entitlementGrantId",
+    "entitlementGrantStatus",
+    "creditPackGrantId",
+    "creditPackUnitsGranted",
+    "creditPackUnitsAvailable",
+    "usageIdempotencyKey",
+    "usageReservationStatus",
+    "usageReleaseStatus",
+    "usageReversalStatus"
+  ],
+  "runtimeBoundary": {
+    "billingProviderCalled": false,
+    "checkoutAdded": false,
+    "paymentWebhookAdded": false,
+    "entitlementEnforcementActivated": false,
+    "productionPricingUiAdded": false,
+    "learnerUiAdded": false,
+    "productionRouteAdded": false,
+    "authChanged": false,
+    "supabaseMigrationAdded": false,
+    "workflowChanged": false,
+    "providerRuntimeCalled": false,
+    "ocrRuntimeCalled": false
+  },
+  "academyBoundary": {
+    "academyTenantDataAccessed": false,
+    "learnerInstructorDataMerged": false
+  }
+}
