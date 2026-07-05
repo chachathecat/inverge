@@ -2,10 +2,10 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Inverge",
-    short_name: "Inverge",
-    description: "감정평가사 학습 루프를 오늘 할 일과 복습으로 이어주는 Inverge.",
-    start_url: "/app",
+    name: "답안길",
+    short_name: "답안길",
+    description: "감정평가사 2차 답안을 감점 위험과 다시 쓸 문단으로 정리하는 답안 훈련 OS.",
+    start_url: "/answer-review?mode=second",
     scope: "/",
     display: "standalone",
     background_color: "#f7f1e8",
