@@ -1,4 +1,5 @@
 import { buildCaptureLegalGroundingHint } from "./legal-grounding-hook";
+import { buildCognitiveLearningActionUnit } from "../review-os/cognitive-learning-actions";
 import type {
   CaptureToNoteDraft,
   CaptureToNoteInput,
@@ -274,6 +275,13 @@ export async function buildCaptureToNoteDraft(input: CaptureToNoteInput): Promis
     nextTaskType,
     confidence,
   });
+  const cognitiveLearningAction = buildCognitiveLearningActionUnit({
+    mode: examMode,
+    subjectLabel: subject,
+    biggestGap,
+    nextAction,
+    nextTaskType,
+  });
 
   return {
     examMode,
@@ -294,6 +302,7 @@ export async function buildCaptureToNoteDraft(input: CaptureToNoteInput): Promis
     todayPlanCandidate,
     todayPlanCandidates: [todayPlanCandidate].slice(0, 3),
     reviewQueueCandidate,
+    cognitiveLearningAction,
     ...(legalGroundingHint ? { legalGroundingHint } : {}),
     dataBoundary: {
       learnerOwnedRawText: true,

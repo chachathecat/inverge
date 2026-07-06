@@ -1,4 +1,5 @@
 import type { CaptureLegalGroundingHint, LegalConceptSourceAnchorClient } from "./legal-grounding-hook";
+import type { CognitiveLearningActionUnit } from "../review-os/cognitive-learning-actions";
 
 export type CaptureToNoteExamMode = "first" | "second";
 export type CaptureToNoteSourceMode = "learner_capture";
@@ -88,6 +89,7 @@ export type CaptureToNoteDraft = {
   todayPlanCandidate: CaptureToNoteTodayPlanCandidate;
   todayPlanCandidates: CaptureToNoteTodayPlanCandidate[];
   reviewQueueCandidate: CaptureToNoteReviewQueueCandidate;
+  cognitiveLearningAction: CognitiveLearningActionUnit;
   legalGroundingHint?: CaptureToNoteLegalGroundingSummary;
   dataBoundary: {
     learnerOwnedRawText: true;
