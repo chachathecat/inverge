@@ -543,8 +543,8 @@ test("S213 fixture, docs, roadmap, and Agent Factory ready target remain metadat
   assert.equal(s218?.statusCategory, "completed");
   assert.equal(s219?.statusCategory, "completed");
   assert.equal(s220?.statusCategory, "completed");
-  assert.equal(s221?.readinessStatus, "ready");
-  assert.deepEqual(plan.selectedItemIds, ["S221", "S223"]);
+  assert.equal(s221?.statusCategory, "completed");
+  assert.deepEqual(plan.selectedItemIds, ["S222", "S223"]);
   assert.equal(s215?.missingDependencies.includes("S213"), false);
   assert.equal(s215?.missingDependencies.includes("S214"), false);
 });

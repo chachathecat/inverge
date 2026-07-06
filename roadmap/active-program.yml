@@ -163,7 +163,7 @@ items:
     priority: 22
   - id: S221
     title: Paid Trust Privacy Export Delete and Cost Guardrails
-    status: queued
+    status: completed
     dependencies: [S204, S220]
     lockGroup: paid-trust
     risk: high
