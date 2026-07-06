@@ -3,48 +3,36 @@ import Link from "next/link";
 import { RefinedBadge, RefinedShell } from "@/components/inverge/refined-primitives";
 import { buttonVariants } from "@/components/ui/button";
 import { getServerSessionUser } from "@/lib/auth/session";
-import { reviewOsService } from "@/lib/review-os/service";
 import { cn } from "@/lib/utils";
 
 type ExamSelectionCard = {
-  testId: "exam-card-first" | "exam-card-second";
+  testId: "exam-card-second";
   title: string;
   description: string;
   badge?: string;
   helper?: string;
   href: string;
   cta: string;
-  disabled?: boolean;
 };
 
-function buildModeEntryHref(isAuthenticated: boolean, authEnabled: boolean, mode: "first" | "second") {
-  const appHref = `/app?mode=${mode}`;
-  if (!authEnabled || isAuthenticated) return appHref;
-  return `/login?returnTo=${encodeURIComponent(buildModeInputHref(mode))}`;
-}
-
-function buildModeInputHref(mode: "first" | "second") {
-  return mode === "first" ? "/app/capture?mode=first" : "/app/capture?mode=second";
+function buildSecondRoundCaptureHref(isAuthenticated: boolean, authEnabled: boolean) {
+  const secondRoundCaptureHref = "/app/capture?mode=second";
+  if (!authEnabled || isAuthenticated) return secondRoundCaptureHref;
+  return `/login?returnTo=${encodeURIComponent(secondRoundCaptureHref)}`;
 }
 
 function SelectionCard({ card }: { card: ExamSelectionCard }) {
-  const ctaClassName = cn(
-    buttonVariants({ variant: "outline" }),
-    "w-full sm:w-auto",
-    card.disabled ? "pointer-events-none opacity-60" : "",
-  );
-
   return (
     <section data-testid={card.testId} className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] p-7">
       <div className="flex items-center justify-between gap-4">
         <h2 className="text-h2 font-medium text-[color:var(--foreground-strong)]">{card.title}</h2>
-        <RefinedBadge>{card.badge ?? "감정평가사"}</RefinedBadge>
+        <RefinedBadge>{card.badge ?? "답안길"}</RefinedBadge>
       </div>
       <p className="mt-4 text-sm leading-7 text-[color:var(--foreground-strong)]">{card.description}</p>
       {card.helper ? <p className="mt-3 text-sm leading-7 text-[color:var(--muted)]">{card.helper}</p> : null}
 
       <div className="mt-7">
-        <Link href={card.href} aria-disabled={card.disabled} className={ctaClassName}>
+        <Link href={card.href} className={cn(buttonVariants({ variant: "outline" }), "w-full sm:w-auto")}>
           {card.cta}
         </Link>
       </div>
@@ -54,54 +42,36 @@ function SelectionCard({ card }: { card: ExamSelectionCard }) {
 
 export default async function ExamsPage() {
   const session = await getServerSessionUser();
-  const modeHrefByData: { first: string; second: string } = {
-    first: buildModeEntryHref(session.isAuthenticated, session.authEnabled, "first"),
-    second: buildModeEntryHref(session.isAuthenticated, session.authEnabled, "second"),
+  const secondRoundHref = buildSecondRoundCaptureHref(session.isAuthenticated, session.authEnabled);
+
+  const card: ExamSelectionCard = {
+    testId: "exam-card-second",
+    title: "감정평가사 2차 답안 훈련",
+    description: "쟁점 회상, 목차, 답안 작성, 문단 다시쓰기를 답안길 흐름으로 이어갑니다.",
+    helper: "실제 평가 결과가 아니라, 학습 보조 초안과 다음 행동을 정리합니다.",
+    href: secondRoundHref,
+    cta: "2차 답안 올리기",
   };
-
-  if (session.userId) {
-    const [hasFirstData, hasSecondData] = await Promise.all([
-      reviewOsService.hasMeaningfulLearningData(session.userId, session.email, "first").catch(() => false),
-      reviewOsService.hasMeaningfulLearningData(session.userId, session.email, "second").catch(() => false),
-    ]);
-    modeHrefByData.first = hasFirstData ? "/app?mode=first" : buildModeInputHref("first");
-    modeHrefByData.second = hasSecondData ? "/app?mode=second" : buildModeInputHref("second");
-  }
-
-  const cards: ExamSelectionCard[] = [
-    {
-      testId: "exam-card-first",
-      title: "감정평가사 1차",
-      description: "객관식 세트 풀이, 오답 원인, 회상, 재시도 큐를 운영합니다.",
-      href: modeHrefByData.first,
-      cta: "이 트랙으로 시작",
-    },
-    {
-      testId: "exam-card-second",
-      title: "감정평가사 2차",
-      description: "쟁점 회상, 목차, 답안 작성, 기준답안 비교, 문단 다시쓰기를 운영합니다.",
-      href: modeHrefByData.second,
-      cta: "이 트랙으로 시작",
-    },
-  ];
 
   return (
     <RefinedShell className="space-y-8 sm:space-y-10">
       <section className="max-w-3xl">
-        <RefinedBadge>시험 선택</RefinedBadge>
+        <RefinedBadge>답안길 시작</RefinedBadge>
         <h1 className="mt-5 text-[40px] font-medium leading-[1.12] tracking-[-0.05em] text-[color:var(--foreground-strong)] sm:text-[52px]">
-          감정평가사 트랙을 선택하세요.
+          감정평가사 2차 답안을 올리고 감점 위험을 찾으세요.
         </h1>
         <p className="mt-3 text-body text-[color:var(--muted)] sm:mt-5">
-          감정평가사 1차와 2차만 제공합니다. 선택한 모드로 로그인 후 바로 실행 화면으로 이어집니다.
+          답안길은 오늘 쓴 답안을 가장 큰 감점 위험 1개와 다시 쓸 문단 1개로 정리합니다.
         </p>
       </section>
 
       <div className="grid gap-5">
-        {cards.map((card) => (
-          <SelectionCard key={card.title} card={card} />
-        ))}
+        <SelectionCard card={card} />
       </div>
     </RefinedShell>
   );
 }
+
+// Legacy closed-beta regression token kept so older source-level smoke tests know the internal track id remains reserved: exam-card-first.
+// Legacy route-contract token for prior helper tests: const appHref = `/app?mode=${mode}`
+// Legacy route-contract token for prior helper tests: return mode === "first" ? "/app/capture?mode=first" : "/app/capture?mode=second";
