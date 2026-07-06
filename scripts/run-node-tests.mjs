@@ -63,6 +63,7 @@ const defaultTestFiles = [
   "tests/s219-learner-catalog-usage-ledger.test.mjs",
   "tests/s220-billing-entitlement-credit-usage.test.mjs",
   "tests/s221-paid-trust-privacy-cost-guardrails.test.mjs",
+  "tests/s222-academy-answer-operations-tenant-boundary.test.mjs",
   "tests/s220b-dabangil-launch-surface.test.mjs",
   "tests/practice-calculation-unit-registry.test.mjs",
   "tests/rewrite-regrade-history-contract.test.mjs",

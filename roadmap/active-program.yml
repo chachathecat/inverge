@@ -170,7 +170,7 @@ items:
     priority: 23
   - id: S222
     title: Academy Answer Operations Console and Tenant Boundary
-    status: queued
+    status: completed
     dependencies: [S211, S212, S213, S220, S221]
     lockGroup: academy-console
     risk: high
