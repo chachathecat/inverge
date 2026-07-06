@@ -215,6 +215,7 @@ test("S223 safe keys, docs, runner, roadmap, and Agent Factory example target ar
   const plan = createRoadmapRunnerPlanFromYaml(roadmapSource);
   const s223 = plan.analyses.find((item) => item.itemId === "S223");
   const s224 = plan.analyses.find((item) => item.itemId === "S224");
+  const s225 = plan.analyses.find((item) => item.itemId === "S225");
 
   for (const token of [
     "S223",
@@ -258,9 +259,10 @@ test("S223 safe keys, docs, runner, roadmap, and Agent Factory example target ar
   }
 
   assert.match(runner, /tests\/s223-three-subject-corpus-reference-quality-acceptance\.test\.mjs/);
-  assert.match(agentFactoryDocs, /roadmap item id such as `S224`/);
-  assert.match(agentFactoryButtonTest, /--target[\s\S]{0,80}S224/);
+  assert.match(agentFactoryDocs, /roadmap item id such as `S225`/);
+  assert.match(agentFactoryButtonTest, /--target[\s\S]{0,80}S225/);
   assert.equal(s223?.statusCategory, "completed");
-  assert.equal(s224?.readinessStatus, "ready");
-  assert.deepEqual(plan.selectedItemIds, ["S224"]);
+  assert.equal(s224?.statusCategory, "completed");
+  assert.equal(s225?.readinessStatus, "ready");
+  assert.deepEqual(plan.selectedItemIds, ["S225"]);
 });
