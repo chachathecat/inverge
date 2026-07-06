@@ -419,6 +419,6 @@ test("active roadmap marks S212 completed and preserves current ready targets", 
   assert.equal(s218?.statusCategory, "completed");
   assert.equal(s219?.statusCategory, "completed");
   assert.equal(s220?.statusCategory, "completed");
-  assert.equal(s221?.readinessStatus, "ready");
-  assert.deepEqual(plan.selectedItemIds, ["S221", "S223"]);
+  assert.equal(s221?.statusCategory, "completed");
+  assert.deepEqual(plan.selectedItemIds, ["S222", "S223"]);
 });
