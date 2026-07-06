@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { RefinedBadge } from "@/components/inverge/refined-primitives";
+import { TrustStatusCard } from "@/components/review-os/trust-status-card";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -56,6 +57,8 @@ export function S220CFirstFiveMinuteMagic() {
           <Link href="#answer-review-start" className={cn(buttonVariants({ size: "lg" }), "mt-4 w-full")}>답안 입력으로 이동</Link>
         </div>
       </div>
+
+      <TrustStatusCard />
 
       <ol className="grid gap-3 md:grid-cols-4">
         {S220C_STEPS.map((step) => (
