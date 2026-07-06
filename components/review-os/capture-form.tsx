@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { BottomPrimaryAction } from "@/components/learner";
+import { CognitiveLearningActionCard } from "@/components/review-os/cognitive-learning-action-card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { buildCaptureToNoteDraft } from "@/lib/capture/capture-to-note";
@@ -21,6 +22,7 @@ import { getCalculatorWorkflowForSubject } from "@/lib/review-os/calculator-work
 import { resolveCaptureConfirmationCopy } from "@/lib/review-os/capture-confirmation-copy";
 import { getCaptureSavePersistenceCopy, type CaptureSavePersistenceStatus } from "@/lib/review-os/capture-save-persistence";
 import { buildCaptureNoteDisplayCopy, buildCaptureNoteSummary } from "@/lib/review-os/capture-note-display-copy";
+import { buildCognitiveLearningActionUnit, type CognitiveLearningActionUnit } from "@/lib/review-os/cognitive-learning-actions";
 import { applyDraftToConfirmedSubject, type ExtractionDraft, type ExtractionPipelineResult } from "@/lib/review-os/extraction";
 import { extractFirstExamFiveChoicesFromText } from "@/lib/review-os/first-ox-engine";
 import { pushLocalLearnerAnalyticsEvent } from "@/lib/review-os/local-analytics";
@@ -47,6 +49,7 @@ type SavedCaptureConfirmation = {
   todayPlanCandidate?: string;
   reviewQueueCandidate?: string;
   legalGroundingMessage?: string;
+  learningAction: CognitiveLearningActionUnit;
 };
 
 type CaptureFormProps = {
@@ -901,6 +904,7 @@ export function WrongAnswerCaptureForm({
       todayPlanCandidate: input.foundationDraft.todayPlanCandidate.title,
       reviewQueueCandidate: input.foundationDraft.reviewQueueCandidate.reviewReason,
       legalGroundingMessage: input.foundationDraft.legalGroundingHint?.learnerSafeMessage,
+      learningAction: input.foundationDraft.cognitiveLearningAction,
     };
   }
 
@@ -1568,6 +1572,9 @@ function SavedCaptureConfirmationPanel({
           {confirmation.legalGroundingMessage ? <PreviewLine label="법령 근거 상태" value={confirmation.legalGroundingMessage} /> : null}
           <PreviewLine label="저장 상태" value={persistenceCopy.statusLabel} />
         </div>
+        <div className="mt-3">
+          <CognitiveLearningActionCard unit={confirmation.learningAction} compact />
+        </div>
         <p className="mt-3 text-xs leading-5 text-[color:var(--muted)]">다음 행동 후보입니다. 학습 정리 초안입니다. 저장 전 직접 확인해 주세요.</p>
         {saveFailed ? (
           <div className="mt-5 flex flex-col gap-2 sm:flex-row">
@@ -1624,6 +1631,9 @@ function SavedCaptureConfirmationPanel({
         <PreviewLine label="가장 큰 약점 1개" value={confirmation.biggestGap} />
         <PreviewLine label="다음 행동 1개" value={confirmation.nextAction} />
         <PreviewLine label="이어서 할 곳" value="학습 노트 / 복습 / 오늘 할 일" />
+      </div>
+      <div className="mt-3">
+        <CognitiveLearningActionCard unit={confirmation.learningAction} compact />
       </div>
       <p className="mt-3 text-xs leading-5 text-[color:var(--muted)]">다음 행동 후보입니다. 학습 정리 초안입니다. 저장 전 직접 확인해 주세요.</p>
       <div className="mt-5 grid gap-2 sm:grid-cols-3">
@@ -2116,6 +2126,13 @@ function ConfirmPanel({
     derivedSignals: ["capture_note", "review_queue_candidate", "today_plan_candidate"],
   });
   const captureCopy = buildCaptureNoteDisplayCopy(captureSummary);
+  const cognitiveLearningPreview = buildCognitiveLearningActionUnit({
+    mode,
+    subjectLabel: captureSummary.subject,
+    biggestGap: captureSummary.oneBiggestGap,
+    nextAction: captureSummary.nextAction,
+    nextTaskType: captureSummary.nextTaskType,
+  });
 
   return (
     <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 sm:p-5">
@@ -2129,6 +2146,9 @@ function ConfirmPanel({
         <PreviewLine label="다음 행동" value={captureCopy.nextActionLabel.replace("다음 행동: ", "")} />
         <PreviewLine label="오늘 할 일" value={captureCopy.todayPlanCta} />
         <PreviewLine label="복습 선택" value={captureCopy.retryOrRewriteCta} />
+      </div>
+      <div className="mt-3">
+        <CognitiveLearningActionCard unit={cognitiveLearningPreview} compact />
       </div>
       <div className="mt-5 grid gap-4 lg:grid-cols-2">
         <SubjectSelect subjectLabel={config.subjectLabel} subjects={config.subjects} value={form.subjectLabel} onChange={updateSubject} />

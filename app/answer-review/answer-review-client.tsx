@@ -6,6 +6,7 @@ import type { ChangeEvent } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
 import { RefinedBadge, RefinedShell } from "@/components/inverge/refined-primitives";
+import { CognitiveLearningActionCard } from "@/components/review-os/cognitive-learning-action-card";
 import {
   CalculatorRoutineTrainer,
   type CalculatorRoutineDraftReference,
@@ -27,6 +28,7 @@ import {
 import { buildAnswerReviewQualityView } from "@/lib/evaluate/answer-review-quality";
 import { getDefaultSubject, normalizeSubjectForMode, parseAppraisalMode, type AppraisalMode } from "@/lib/review-os/appraisal";
 import { getCalculatorRoutineEligibility, getCalculatorRoutineIdFromDraftStorageKey } from "@/lib/review-os/calculator-routine";
+import { buildCognitiveLearningActionUnit } from "@/lib/review-os/cognitive-learning-actions";
 import { APPRAISAL_FIRST_SUBJECTS, APPRAISAL_SECOND_SUBJECTS } from "@/lib/review-os/types";
 import { cn } from "@/lib/utils";
 
@@ -401,6 +403,27 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
     if (!structureDraft) return null;
     return buildAnswerReviewQualityView(structureDraft);
   }, [structureDraft]);
+
+  const cognitiveLearningActions = useMemo(() => buildCognitiveLearningActionUnit({
+    mode: examMode,
+    subjectLabel: subject,
+    biggestGap: qualityView?.primaryFix.gap ?? structureDraft?.requiredIssues ?? missingPointMemo,
+    nextAction: qualityView?.nextAction ?? structureDraft?.nextAction ?? revisionParagraph,
+    nextTaskType:
+      examMode === "second"
+        ? calculatorRoutineEligibility.eligible
+          ? "calculation_process_check"
+          : "paragraph_rewrite"
+        : "ox",
+  }), [
+    calculatorRoutineEligibility.eligible,
+    examMode,
+    missingPointMemo,
+    qualityView,
+    revisionParagraph,
+    structureDraft,
+    subject,
+  ]);
 
   const explanationTitle = explanationLevel === "easy" ? "쉽게 풀이" : explanationLevel === "exam" ? "시험답안식 보강 포인트" : "핵심 해설";
 
@@ -907,6 +930,7 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                       <motion.button whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }} type="button" onClick={() => setCurrentStep(1)} className={cn(buttonVariants({ variant: "default" }), "mt-4 h-9 px-4")}>자료 보강하기</motion.button>
                     </article>
 
+                    <CognitiveLearningActionCard unit={cognitiveLearningActions} />
 
                     <CalculatorRoutineTrainer
                       key={
@@ -1075,6 +1099,7 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                       <p className="mt-2 text-caption leading-6 text-[color:var(--foreground-strong)]">{toDetailLine(section.body, "검토 보강 내용을 입력해 주세요.")}</p>
                     </motion.article>
                   ))}
+                  <CognitiveLearningActionCard unit={cognitiveLearningActions} compact />
                 </div>
 
                 <motion.aside

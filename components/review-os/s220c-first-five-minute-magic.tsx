@@ -1,8 +1,10 @@
 import Link from "next/link";
 
 import { RefinedBadge } from "@/components/inverge/refined-primitives";
+import { CognitiveLearningActionCard } from "@/components/review-os/cognitive-learning-action-card";
 import { TrustStatusCard } from "@/components/review-os/trust-status-card";
 import { buttonVariants } from "@/components/ui/button";
+import { buildCognitiveLearningActionUnit } from "@/lib/review-os/cognitive-learning-actions";
 import { cn } from "@/lib/utils";
 
 const S220C_STEPS = [
@@ -25,6 +27,14 @@ const S220C_STEPS = [
 ] as const;
 
 const S220C_INPUTS = ["답안 사진", "PDF/파일", "텍스트 붙여넣기"] as const;
+
+const S220E_PREVIEW_ACTIONS = buildCognitiveLearningActionUnit({
+  mode: "second",
+  subjectLabel: "감정평가이론",
+  biggestGap: "답안에서 가장 크게 빠진 간극 1개",
+  nextAction: "오늘 다시 쓸 문단 1개를 정하고 근거 문장을 보강합니다.",
+  nextTaskType: "paragraph_rewrite",
+});
 
 export function S220CFirstFiveMinuteMagic() {
   return (
@@ -59,6 +69,7 @@ export function S220CFirstFiveMinuteMagic() {
       </div>
 
       <TrustStatusCard />
+      <CognitiveLearningActionCard unit={S220E_PREVIEW_ACTIONS} compact />
 
       <ol className="grid gap-3 md:grid-cols-4">
         {S220C_STEPS.map((step) => (
