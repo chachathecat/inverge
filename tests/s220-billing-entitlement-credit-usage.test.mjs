@@ -379,10 +379,10 @@ test("S220 docs, runner, safe keys, roadmap, and Agent Factory example target ar
 
   assert.doesNotMatch(source, /fetch\(|\/api\/|OPENAI_API_KEY|GEMINI|createClient|from\(["']@supabase|new OpenAI|GoogleGenerativeAI|STRIPE_SECRET_KEY|SUPABASE_SERVICE_ROLE/i);
   assert.match(runner, /tests\/s220-billing-entitlement-credit-usage\.test\.mjs/);
-  assert.match(agentFactoryDocs, /roadmap item id such as `S223`/);
-  assert.match(agentFactoryButtonTest, /--target[\s\S]{0,80}S223/);
+  assert.match(agentFactoryDocs, /roadmap item id such as `S224`/);
+  assert.match(agentFactoryButtonTest, /--target[\s\S]{0,80}S224/);
   assert.equal(s220?.statusCategory, "completed");
   assert.equal(s221?.statusCategory, "completed");
-  assert.equal(s223?.readinessStatus, "ready");
-  assert.deepEqual(plan.selectedItemIds, ["S223", "S224"]);
+  assert.equal(s223?.statusCategory, "completed");
+  assert.deepEqual(plan.selectedItemIds, ["S224"]);
 });
