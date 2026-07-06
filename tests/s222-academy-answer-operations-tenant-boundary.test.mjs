@@ -363,10 +363,10 @@ test("S222 safe keys, docs, runner, roadmap, and Agent Factory example target ar
   }
 
   assert.match(runner, /tests\/s222-academy-answer-operations-tenant-boundary\.test\.mjs/);
-  assert.match(agentFactoryDocs, /roadmap item id such as `S223`/);
-  assert.match(agentFactoryButtonTest, /--target[\s\S]{0,80}S223/);
+  assert.match(agentFactoryDocs, /roadmap item id such as `S224`/);
+  assert.match(agentFactoryButtonTest, /--target[\s\S]{0,80}S224/);
   assert.equal(s222?.statusCategory, "completed");
-  assert.equal(s223?.readinessStatus, "ready");
+  assert.equal(s223?.statusCategory, "completed");
   assert.equal(s224?.readinessStatus, "ready");
-  assert.deepEqual(plan.selectedItemIds, ["S223", "S224"]);
+  assert.deepEqual(plan.selectedItemIds, ["S224"]);
 });

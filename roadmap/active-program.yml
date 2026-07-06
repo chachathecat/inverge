@@ -177,7 +177,7 @@ items:
     priority: 24
   - id: S223
     title: Three-Subject Corpus Reference Answer and Quality Acceptance
-    status: queued
+    status: completed
     dependencies: [S203, S208, S209, S210, S215]
     lockGroup: content-acceptance
     risk: high

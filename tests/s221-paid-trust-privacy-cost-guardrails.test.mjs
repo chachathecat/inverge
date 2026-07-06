@@ -254,12 +254,12 @@ test("S221 safe keys, docs, runner, roadmap, and Agent Factory example target ar
   }
 
   assert.match(runner, /tests\/s221-paid-trust-privacy-cost-guardrails\.test\.mjs/);
-  assert.match(agentFactoryDocs, /roadmap item id such as `S223`/);
-  assert.match(agentFactoryButtonTest, /--target[\s\S]{0,80}S223/);
+  assert.match(agentFactoryDocs, /roadmap item id such as `S224`/);
+  assert.match(agentFactoryButtonTest, /--target[\s\S]{0,80}S224/);
   assert.equal(s221?.statusCategory, "completed");
   assert.equal(s222?.statusCategory, "completed");
-  assert.equal(s223?.readinessStatus, "ready");
-  assert.deepEqual(plan.selectedItemIds, ["S223", "S224"]);
+  assert.equal(s223?.statusCategory, "completed");
+  assert.deepEqual(plan.selectedItemIds, ["S224"]);
 });
 
 test("S221 commercial fixtures and docs stay metadata-only without raw content fields or authority claims", async () => {

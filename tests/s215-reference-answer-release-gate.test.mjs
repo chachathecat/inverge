@@ -220,5 +220,5 @@ test("S215 docs, source, roadmap, and Agent Factory target remain source-level a
   assert.equal(s219?.statusCategory, "completed");
   assert.equal(s220?.statusCategory, "completed");
   assert.equal(s221?.statusCategory, "completed");
-  assert.deepEqual(plan.selectedItemIds, ["S223", "S224"]);
+  assert.deepEqual(plan.selectedItemIds, ["S224"]);
 });
