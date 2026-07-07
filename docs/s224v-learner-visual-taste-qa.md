@@ -106,3 +106,7 @@ The PR adds `data-s224v-*` markers for:
 - The visual QA is local runtime evidence plus source-level density checks, not a paid-launch gate.
 - S225 must not resume solely from this PR. S225 may resume only after its own release acceptance issue confirms all launch gates.
 - Real invited-account screenshots may still reveal data-density issues not present in auth-disabled local demo mode.
+
+## PR Contract Refresh
+
+The PR body was updated to match the repository PR Contract risk line and merge recommendation format before final review.
