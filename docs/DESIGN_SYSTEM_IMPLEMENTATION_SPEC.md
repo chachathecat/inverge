@@ -527,6 +527,27 @@ STRICT ACCEPTANCE CRITERIA
 10. Production surfaces hide dev diagnostics.
 11. lint and build pass.
 
+S224U LEARNER UI/UX GATE
+- Learner home must answer “What should I do now?” with one dominant primary action or Today Plan max-3 focus.
+- Capture must read as a staged flow: input method → editable OCR/text confirmation → biggest gap + next action → save to Today Plan / Review Queue / Notes.
+- Answer Review results must lead with biggest gap, next action, 10초 확인, and continuation before diagnostic details.
+- Review Queue must state why each item is present and what action comes next.
+- Secondary learner routes must be visually quiet and usually collapsed under “다른 작업 보기.”
+- Trust copy must be centralized as a visible trust layer per stage; do not stack repeated warnings.
+- CTA, status, focus, spacing, typography, and mobile target rules are implemented through `app/globals.css` primitives:
+  - `--cta-primary-*`
+  - `--cta-secondary-*`
+  - `--trust-layer-*`
+  - `--touch-target-min`
+  - `.primary-action`
+  - `.secondary-action`
+  - `.trust-layer`
+  - `.status-focus`
+  - `.status-review`
+  - `.status-stable`
+  - `.status-failure`
+- Do not add saturated colors or decorative gradients without a documented product reason.
+
 DELIVERY FORMAT
 After implementation, output exactly:
 1. Summary of what changed

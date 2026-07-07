@@ -491,6 +491,8 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
   const revisionSummary = hasRevisionParagraph
     ? revisionParagraph.trim()
     : "교정 문단을 작성하면 학생에게 줄 다음 행동이 더 선명해집니다.";
+  const tenSecondCheckSummary = cognitiveLearningActions.retrievalCheck.prompt;
+  const continuationSummary = `${cognitiveLearningActions.continuation.reviewQueueCandidate} / Today Plan 최대 ${cognitiveLearningActions.continuation.todayPlanMaxPrimaryTasks}개 / Notes`;
 
 
   const handlePrimaryAction = () => {
@@ -600,7 +602,7 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                   animate={shouldReduceMotion ? undefined : { opacity: 1, y: 0 }}
                   transition={{ duration: 0.26, ease: "easeOut" }}
                 >
-                  <article className="rounded-[var(--radius-md)] border border-[#27375f] bg-[linear-gradient(160deg,#f8f7f3_0%,#f3f1eb_100%)] p-4 sm:p-5">
+                  <article className="rounded-[var(--radius-md)] border border-[color:var(--brand-700)] bg-[color:var(--brand-050)] p-4 sm:p-5">
                     <p className="text-caption font-medium text-[#3f4c66]">답안 검토실 · 빠른 시작</p>
                     <p className="mt-2 text-sm font-semibold text-[#1e2a46]">답안 스냅으로 시작</p>
                     <p className="mt-1 text-caption leading-5 text-[#3f4c66]">사례 스캔, PDF/사진 불러오기, 텍스트 붙여넣기를 함께 사용할 수 있습니다.</p>
@@ -826,15 +828,16 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                 transition={{ duration: 0.32, ease: "easeOut" }}
               >
                 <motion.div
-                  className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4 sm:p-5"
+                  className="space-y-4 rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4 sm:p-5"
                   initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
                   animate={shouldReduceMotion ? undefined : { opacity: 1, y: 0 }}
                   transition={{ duration: 0.28, ease: "easeOut" }}
+                  data-answer-review-result-shell
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="space-y-1">
                       <p className="text-caption text-[color:var(--muted)]">{examMode === "second" ? "감정평가사 2차" : "감정평가사 1차"} · {subject}</p>
-                      <h2 className="text-base font-semibold text-[color:var(--foreground-strong)]">답안 검토실</h2>
+                      <h2 className="text-base font-semibold text-[color:var(--foreground-strong)]">가장 큰 간극부터 확인</h2>
                       <p className="text-caption leading-5 text-[color:var(--muted)]">{toShortLine(qualityView?.nextAction || "", "가장 큰 간극 하나를 먼저 보강하면 다음 초안의 완성도가 올라갑니다.")}</p>
                     </div>
                 {referenceGrounding?.used ? (
@@ -851,6 +854,31 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                       </button>
                     </div>
                   </div>
+                  <section className="grid gap-3 md:grid-cols-2" data-answer-review-result-loop>
+                    {[
+                      {
+                        label: "가장 큰 간극",
+                        body: toDetailLine(qualityView?.primaryFix.gap || "", "핵심 논점 입력을 보강하면 가장 큰 간극이 자동 정리됩니다."),
+                      },
+                      {
+                        label: "다음 행동",
+                        body: toDetailLine(qualityView?.nextAction || biggestGapFix, "누락 논점 1개를 먼저 보강하세요."),
+                      },
+                      {
+                        label: "10초 확인",
+                        body: toDetailLine(tenSecondCheckSummary, "쟁점, 기준, 적용 순서를 10초 안에 떠올려 보세요."),
+                      },
+                      {
+                        label: "계속할 곳",
+                        body: continuationSummary,
+                      },
+                    ].map((item) => (
+                      <article key={item.label} className="rounded-[var(--radius-sm)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-soft)] p-3">
+                        <p className="text-caption font-medium text-[color:var(--muted)]">{item.label}</p>
+                        <p className="mt-1 text-sm leading-6 text-[color:var(--foreground-strong)]">{item.body}</p>
+                      </article>
+                    ))}
+                  </section>
                 </motion.div>
                 {structureError ? (
                   <article className="rounded-[var(--radius-sm)] border border-[#b9a98a] bg-[#f8f4ea] px-4 py-3">
@@ -919,7 +947,7 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
 
                 <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
                   <div className="space-y-4">
-                    <article className="rounded-[var(--radius-md)] border border-[#27375f] bg-[linear-gradient(150deg,#f8f7f3_0%,#f3f1eb_100%)] p-5">
+                    <article className="rounded-[var(--radius-md)] border border-[color:var(--brand-700)] bg-[color:var(--brand-050)] p-5">
                       <p className="text-caption font-medium text-[#3f4c66]">가장 먼저 고칠 1가지</p>
                       <p className="mt-3 text-caption font-medium text-[#3f4c66]">가장 큰 간극</p>
                       <p className="mt-1 text-sm font-semibold leading-6 text-[#1e2a46]">{toDetailLine(qualityView?.primaryFix.gap || "", "핵심 논점 입력을 보강하면 가장 큰 간극이 자동 정리됩니다.")}</p>
@@ -929,8 +957,6 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                       </div>
                       <motion.button whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }} type="button" onClick={() => setCurrentStep(1)} className={cn(buttonVariants({ variant: "default" }), "mt-4 h-9 px-4")}>자료 보강하기</motion.button>
                     </article>
-
-                    <CognitiveLearningActionCard unit={cognitiveLearningActions} />
 
                     <CalculatorRoutineTrainer
                       key={
@@ -958,48 +984,53 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                       onRetry={calculatorRoutineSync.retry}
                     />
 
-                    <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
-                      <p className="text-caption font-medium text-[color:var(--muted)]">{explanationTitle}</p>
-                      {explanationLevel === "easy" ? (
-                        <div className="mt-2 space-y-2 text-caption leading-6 text-[color:var(--foreground-strong)]">
-                          <p><span className="font-medium">한 줄 요약</span>: {toDetailLine(qualityView?.explanation.summary || "", "핵심 이유를 쉬운 말로 먼저 정리해 보세요.")}</p>
-                          <details><summary>용어 쉽게 풀기</summary><ul>{(qualityView?.explanation.keyTerms ?? []).map((item)=><li key={item}>• {item}</li>)}</ul></details>
-                          <details><summary>단계별 풀이</summary><ul>{(qualityView?.explanation.steps ?? []).map((item)=><li key={item}>• {item}</li>)}</ul></details>
-                          <p><span className="font-medium">그래서 지금 고칠 것</span>: {toShortLine(qualityView?.nextAction || "", "누락 논점 1개를 먼저 보강하세요.")}</p>
-                        </div>
-                      ) : explanationLevel === "exam" ? (
-                        <ul className="mt-2 space-y-2 text-caption leading-6 text-[color:var(--foreground-strong)]">
-                          <li>• 답안 목차 보강: {toShortLine(qualityView?.skeleton.issue.join(" · ") || "", "논점 목차를 먼저 정리하세요.")}</li>
-                          <li>• 필수 키워드: {toShortLine((qualityView?.explanation.examHints ?? []).join(" · ") || "", "필수 키워드 누락 여부를 확인하세요.")}</li>
-                          <li>• 문단 보강 포인트: {toShortLine(qualityView?.primaryFix.howToFix || "", "적용 문장을 한 줄 보강하세요.")}</li>
-                        </ul>
-                      ) : (
-                        <ul className="mt-2 space-y-2 text-caption leading-6 text-[color:var(--foreground-strong)]">
-                          <li>• 핵심 이유: {toShortLine(qualityView?.explanation.summary || "", "핵심 이유를 먼저 정리하세요.")}</li>
-                          <li>• 적용 순서: {toShortLine((qualityView?.explanation.steps ?? []).join(" → ") || "", "논점 분리 후 적용 순서대로 보강하세요.")}</li>
-                          <li>• 보강 포인트: {toShortLine((qualityView?.explanation.examHints ?? []).join(" · ") || "", "보강 포인트 1개를 실행하세요.")}</li>
-                        </ul>
-                      )}
-                    </article>
+                    <details className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4" data-answer-review-secondary-details>
+                      <summary className="cursor-pointer text-caption font-medium text-[color:var(--muted)]">진단 세부 보기</summary>
+                      <div className="mt-4 space-y-4">
+                        <article>
+                          <p className="text-caption font-medium text-[color:var(--muted)]">{explanationTitle}</p>
+                          {explanationLevel === "easy" ? (
+                            <div className="mt-2 space-y-2 text-caption leading-6 text-[color:var(--foreground-strong)]">
+                              <p><span className="font-medium">한 줄 요약</span>: {toDetailLine(qualityView?.explanation.summary || "", "핵심 이유를 쉬운 말로 먼저 정리해 보세요.")}</p>
+                              <details><summary>용어 쉽게 풀기</summary><ul>{(qualityView?.explanation.keyTerms ?? []).map((item)=><li key={item}>• {item}</li>)}</ul></details>
+                              <details><summary>단계별 풀이</summary><ul>{(qualityView?.explanation.steps ?? []).map((item)=><li key={item}>• {item}</li>)}</ul></details>
+                              <p><span className="font-medium">그래서 지금 고칠 것</span>: {toShortLine(qualityView?.nextAction || "", "누락 논점 1개를 먼저 보강하세요.")}</p>
+                            </div>
+                          ) : explanationLevel === "exam" ? (
+                            <ul className="mt-2 space-y-2 text-caption leading-6 text-[color:var(--foreground-strong)]">
+                              <li>• 답안 목차 보강: {toShortLine(qualityView?.skeleton.issue.join(" · ") || "", "논점 목차를 먼저 정리하세요.")}</li>
+                              <li>• 필수 키워드: {toShortLine((qualityView?.explanation.examHints ?? []).join(" · ") || "", "필수 키워드 누락 여부를 확인하세요.")}</li>
+                              <li>• 문단 보강 포인트: {toShortLine(qualityView?.primaryFix.howToFix || "", "적용 문장을 한 줄 보강하세요.")}</li>
+                            </ul>
+                          ) : (
+                            <ul className="mt-2 space-y-2 text-caption leading-6 text-[color:var(--foreground-strong)]">
+                              <li>• 핵심 이유: {toShortLine(qualityView?.explanation.summary || "", "핵심 이유를 먼저 정리하세요.")}</li>
+                              <li>• 적용 순서: {toShortLine((qualityView?.explanation.steps ?? []).join(" → ") || "", "논점 분리 후 적용 순서대로 보강하세요.")}</li>
+                              <li>• 보강 포인트: {toShortLine((qualityView?.explanation.examHints ?? []).join(" · ") || "", "보강 포인트 1개를 실행하세요.")}</li>
+                            </ul>
+                          )}
+                        </article>
 
-                    <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
-                      <p className="text-caption font-medium text-[color:var(--muted)]">누락 논점</p>
-                      <p className="mt-2 text-caption leading-6 text-[color:var(--foreground-strong)]">{toDetailLine(structureDraft?.requiredIssues || structureDraft?.caution || "", "입력을 보강하면 누락 논점이 더 선명해집니다.")}</p>
-                    </article>
+                        <article>
+                          <p className="text-caption font-medium text-[color:var(--muted)]">누락 논점</p>
+                          <p className="mt-2 text-caption leading-6 text-[color:var(--foreground-strong)]">{toDetailLine(structureDraft?.requiredIssues || structureDraft?.caution || "", "입력을 보강하면 누락 논점이 더 선명해집니다.")}</p>
+                        </article>
 
-                    <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
-                      <p className="text-caption font-medium text-[color:var(--muted)]">약한 구조</p>
-                      <ul className="mt-2 space-y-2 text-caption leading-6 text-[color:var(--foreground-strong)]">
-                        <li>• 약한 문단 포인트: {toShortLine(structureDraft?.weakParagraphPoint || "", "보강할 문단 포인트를 직접 지정해 주세요.")}</li>
-                        <li>• 논리 보강 포인트: {toShortLine(structureDraft?.weakLogicPoint || "", "논리 연결 근거를 한 줄 더 추가해 보세요.")}</li>
-                        <li>• 잘한 부분: {toShortLine(structureDraft?.strengths[0] || "", "강점은 유지하고 간극 하나만 우선 보강하세요.")}</li>
-                      </ul>
-                    </article>
+                        <article>
+                          <p className="text-caption font-medium text-[color:var(--muted)]">약한 구조</p>
+                          <ul className="mt-2 space-y-2 text-caption leading-6 text-[color:var(--foreground-strong)]">
+                            <li>• 약한 문단 포인트: {toShortLine(structureDraft?.weakParagraphPoint || "", "보강할 문단 포인트를 직접 지정해 주세요.")}</li>
+                            <li>• 논리 보강 포인트: {toShortLine(structureDraft?.weakLogicPoint || "", "논리 연결 근거를 한 줄 더 추가해 보세요.")}</li>
+                            <li>• 잘한 부분: {toShortLine(structureDraft?.strengths[0] || "", "강점은 유지하고 간극 하나만 우선 보강하세요.")}</li>
+                          </ul>
+                        </article>
 
-                    <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
-                      <p className="text-caption font-medium text-[color:var(--muted)]">다시 쓸 문장</p>
-                      <p className="mt-2 text-caption leading-6 text-[color:var(--foreground-strong)]">{toDetailLine(structureDraft?.rewriteDraftSuggestion || structureDraft?.rewriteTarget || "", "추천 다시쓰기 초안이 아직 없습니다. 수동 메모를 활용해 보강하세요.")}</p>
-                    </article>
+                        <article>
+                          <p className="text-caption font-medium text-[color:var(--muted)]">다시 쓸 문장</p>
+                          <p className="mt-2 text-caption leading-6 text-[color:var(--foreground-strong)]">{toDetailLine(structureDraft?.rewriteDraftSuggestion || structureDraft?.rewriteTarget || "", "추천 다시쓰기 초안이 아직 없습니다. 수동 메모를 활용해 보강하세요.")}</p>
+                        </article>
+                      </div>
+                    </details>
                   </div>
 
                   <motion.aside

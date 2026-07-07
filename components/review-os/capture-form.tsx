@@ -39,6 +39,8 @@ import {
 
 type ExtractionState = "idle" | "uploading" | "extracting" | "succeeded" | "failed" | "manual";
 
+const CAPTURE_TRUST_LAYER_COPY = "OCR/AI 정리는 초안입니다. 저장 전 직접 확인해 주세요.";
+
 type SavedCaptureConfirmation = {
   itemId?: string;
   status?: CaptureSavePersistenceStatus;
@@ -1270,6 +1272,33 @@ export function WrongAnswerCaptureForm({
   return (
     <form className="space-y-6 overflow-x-hidden pb-28 sm:pb-0" onSubmit={handleSubmit}>
       <CaptureProgressPill current={currentCaptureStep} total={4} mode={mode} />
+      <ol
+        className="grid gap-2 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3 text-xs text-[color:var(--muted)] sm:grid-cols-4"
+        data-capture-stage-flow
+      >
+        {[
+          "입력 방법",
+          "OCR/텍스트 확인",
+          "가장 큰 약점 + 다음 행동",
+          "오늘 계획 / 복습 / 학습 노트 저장",
+        ].map((label, index) => {
+          const step = index + 1;
+          return (
+            <li
+              key={label}
+              className={`rounded-[var(--radius-sm)] px-3 py-2 ${
+                currentCaptureStep === step
+                  ? "bg-[color:var(--brand-050)] text-[color:var(--foreground-strong)]"
+                  : "bg-[color:var(--surface-soft)]"
+              }`}
+              aria-current={currentCaptureStep === step ? "step" : undefined}
+            >
+              <span className="font-medium">{step}. </span>
+              {label}
+            </li>
+          );
+        })}
+      </ol>
 
       {rewriteContext && mode === "second" ? (
         <>
@@ -1551,6 +1580,7 @@ function SavedCaptureConfirmationPanel({
   onReset: () => void;
 }) {
   const encodedSubject = encodeURIComponent(normalizeSubjectForMode(subject, mode));
+  const learningDraftCopy = "다음 행동 후보입니다. 학습 정리 초안입니다. 저장 전 직접 확인해 주세요.";
   const persistenceStatus = confirmation.status ?? (confirmation.persistence === "durable" ? "durable_saved" : "local_fallback_saved");
   const persistenceCopy = getCaptureSavePersistenceCopy(persistenceStatus);
   const saveFailed = persistenceStatus === "save_failed";
@@ -1575,7 +1605,7 @@ function SavedCaptureConfirmationPanel({
         <div className="mt-3">
           <CognitiveLearningActionCard unit={confirmation.learningAction} compact />
         </div>
-        <p className="mt-3 text-xs leading-5 text-[color:var(--muted)]">다음 행동 후보입니다. 학습 정리 초안입니다. 저장 전 직접 확인해 주세요.</p>
+        <p className="mt-3 text-xs leading-5 text-[color:var(--muted)]">{learningDraftCopy}</p>
         {saveFailed ? (
           <div className="mt-5 flex flex-col gap-2 sm:flex-row">
             <Button type="button" className="w-full sm:w-auto" onClick={onRetry} disabled={saving}>
@@ -1635,7 +1665,7 @@ function SavedCaptureConfirmationPanel({
       <div className="mt-3">
         <CognitiveLearningActionCard unit={confirmation.learningAction} compact />
       </div>
-      <p className="mt-3 text-xs leading-5 text-[color:var(--muted)]">다음 행동 후보입니다. 학습 정리 초안입니다. 저장 전 직접 확인해 주세요.</p>
+      <p className="mt-3 text-xs leading-5 text-[color:var(--muted)]">{learningDraftCopy}</p>
       <div className="mt-5 grid gap-2 sm:grid-cols-3">
         <Link
           href={`/app/review?mode=${mode}&subject=${encodedSubject}`}
@@ -1797,9 +1827,15 @@ function IntakePanel({
           텍스트 붙여넣기
         </Button>
       </div>
-      <p className="mt-2 text-xs leading-5 text-[color:var(--muted)]">{ANSWER_SUBMISSION_OCR_TRUST_COPY}</p>
-      <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">OCR/AI 정리는 초안입니다. 저장 전 직접 확인해 주세요.</p>
-      <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">현재 PDF는 내용 확인 후 직접 붙여넣을 수 있습니다.</p>
+      <div
+        className="mt-3 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-3 py-3 text-xs leading-5 text-[color:var(--muted)]"
+        data-trust-layer="capture-intake"
+      >
+        <p className="font-medium text-[color:var(--foreground-strong)]">신뢰 상태</p>
+        <p className="mt-1">{CAPTURE_TRUST_LAYER_COPY}</p>
+        <p className="mt-1">{ANSWER_SUBMISSION_OCR_TRUST_COPY}</p>
+        <p className="mt-1">현재 PDF는 내용 확인 후 직접 붙여넣을 수 있습니다.</p>
+      </div>
       <details className="mt-3 rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] bg-[color:var(--surface)]">
         <summary className="cursor-pointer list-none px-3 py-2 text-xs font-medium text-[color:var(--ink-muted)]">촬영 품질과 앨범 업로드</summary>
         <div className="border-t border-[color:var(--border-hairline)] px-3 py-3">
@@ -2058,8 +2094,15 @@ function ExtractionPreview({
           {missingConfirmationFields.length > 0 ? ` 확인 필요: ${missingConfirmationFields.join(", ")}` : ""}
         </p>
       ) : null}
-      <p className="mt-4 text-xs text-[color:var(--muted)]">{ANSWER_SUBMISSION_OCR_TRUST_COPY}</p>
-      <p className="mt-1 text-xs text-[color:var(--muted)]">초안 내용을 확인한 뒤 저장합니다.</p>
+      <div
+        className="mt-4 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-soft)] px-3 py-3 text-xs leading-5 text-[color:var(--muted)]"
+        data-trust-layer="capture-preview"
+      >
+        <p className="font-medium text-[color:var(--foreground-strong)]">신뢰 상태</p>
+        <p className="mt-1">{CAPTURE_TRUST_LAYER_COPY}</p>
+        <p className="mt-1">{ANSWER_SUBMISSION_OCR_TRUST_COPY}</p>
+        <p className="mt-1">초안 내용을 확인한 뒤 저장합니다.</p>
+      </div>
 
       <div className="mt-5 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-4">
         <p className="text-xs font-medium text-[color:var(--muted)]">OCR 결과 확인 (편집 가능 · 자동 저장)</p>

@@ -58,6 +58,7 @@ export function TodaySubjectSelector({
     }),
     [primaryHref, captureHref, reviewHref, notesHref, setHref, studyLogHref, subject],
   );
+  const showCaptureLink = links.capture !== links.primary;
 
   return (
     <div className="space-y-3" data-today-subject-selector={mode}>
@@ -84,20 +85,19 @@ export function TodaySubjectSelector({
       </div>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <Link href={links.primary} className="block w-full sm:w-auto">
-          <Button type="button" className="w-full sm:w-auto">
+          <Button type="button" className="w-full sm:w-auto" data-primary-learner-action>
             {resolvedPrimaryLabel}
           </Button>
-        </Link>
-        <Link
-          href={links.capture}
-          className="inline-flex min-h-10 w-full items-center justify-center rounded-full border border-[color:var(--border-subtle)] px-4 text-xs font-medium text-[color:var(--foreground-strong)] sm:w-auto"
-        >
-          오늘 한 것 올리기
         </Link>
       </div>
       <details className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]" data-secondary-action-surface={`${mode}-mode-input-options`}>
         <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">다른 작업 보기</summary>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-[color:var(--border-subtle)] px-4 py-3 text-xs text-[color:var(--muted)]">
+          {showCaptureLink ? (
+            <Link href={links.capture} className="underline-offset-2 hover:underline">
+              오늘 한 것 올리기
+            </Link>
+          ) : null}
           {mode === "first" && links.studyLog ? (
             <Link href={links.studyLog} className="underline-offset-2 hover:underline">
               공부 기록 입력
