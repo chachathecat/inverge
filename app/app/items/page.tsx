@@ -158,23 +158,40 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
   const helperCopy = isNotesRoute
     ? "오늘 한 것에서 만든 가장 큰 약점과 다음 행동을 모아봅니다."
     : "학습 노트와 복습 흐름을 기록으로 확인합니다.";
+  const visibleItems = isNotesRoute ? items.slice(0, 3) : items;
+  const foldedItems = isNotesRoute ? items.slice(3) : [];
+  const visibleLearningSignals = isNotesRoute ? learningSignals.slice(0, 3) : learningSignals.slice(0, 8);
 
   return (
-    <div className="space-y-6">
+    <div
+      className="space-y-6"
+      data-s224v-surface={isNotesRoute ? "/app/notes" : "/app/items"}
+      data-s224v-primary-cta-count-above-fold="1"
+      data-s224v-visible-trust-layer-count="0"
+      data-s224v-visible-primary-work-items-max={isNotesRoute ? 3 : 8}
+      data-s224v-secondary-diagnostics="quiet-disclosure"
+      data-s224v-equal-weight-card-grid="absent"
+      data-s224v-repeated-warning-copy="absent"
+    >
       <Card className="border-[var(--border)] bg-[color:var(--surface)] shadow-none">
         <CardHeader className="space-y-2">
           <CardTitle>{pageTitle}</CardTitle>
           <CardDescription>{helperCopy}</CardDescription>
+          {isNotesRoute ? (
+            <p className="text-xs leading-5 text-[color:var(--muted)]" data-notes-record-context>
+              최근 3개 기록만 먼저 봅니다. 오래된 기록은 접어 두고, 가장 큰 약점과 다음 행동을 우선 확인합니다.
+            </p>
+          ) : null}
         </CardHeader>
         <CardContent className="space-y-4">
           {!hasItems && !hasLearningSignals ? (
-            <div className="space-y-4 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4">
+            <div className="quiet-empty-state space-y-4 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4">
               <div className="space-y-1">
                 <p className="text-sm font-medium text-[color:var(--foreground-strong)]">아직 쌓인 학습 노트가 없습니다.</p>
                 <p className="text-sm text-[color:var(--muted)]">오늘 한 것을 하나 올리면 가장 큰 약점과 다음 행동이 만들어집니다.</p>
               </div>
               <Link href={`/app/capture?mode=${mode}`} className="inline-flex w-full sm:w-auto">
-                <Button type="button" className="w-full sm:w-auto">
+                <Button type="button" className="primary-action w-full sm:w-auto" data-s224v-dominant-primary-action>
                   오늘 한 것 올리기
                 </Button>
               </Link>
@@ -197,14 +214,14 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
 
           {hasItems ? (
             <div className="space-y-4">
-              {items.map((item) => {
+              {visibleItems.map((item) => {
                 const topic = resolveTopicCandidate(item);
                 const biggestGap = resolveBiggestGap(item);
                 const nextAction = resolveNextAction(item, mode);
                 const createdAt = formatCreatedDate(item.createdAt);
 
                 return (
-                  <section key={item.id} className="rounded-[var(--radius-lg)] border border-[var(--border)] px-4 py-4">
+                  <section key={item.id} className="review-reason-card rounded-[var(--radius-lg)] border border-[var(--border)] px-4 py-4" data-notes-record-context>
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div className="min-w-0 space-y-2">
                         <div className="flex flex-wrap gap-2">
@@ -243,16 +260,35 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
             </div>
           ) : null}
 
+          {foldedItems.length > 0 ? (
+            <details className="quiet-disclosure rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--bg-surface)] p-4" data-s224v-secondary-diagnostics>
+              <summary className="cursor-pointer list-none text-sm font-medium text-[color:var(--foreground-strong)]">
+                이전 학습 노트 {foldedItems.length}개 보기
+              </summary>
+              <div className="mt-3 divide-y divide-[color:var(--border-subtle)]">
+                {foldedItems.map((item) => (
+                  <Link
+                    key={item.id}
+                    href={`/app/items/${item.id}?mode=${mode}`}
+                    className="block py-3 text-sm text-[color:var(--foreground-strong)] underline-offset-4 hover:underline"
+                  >
+                    {item.problemTitle ?? item.problemIdentifier ?? `${item.subjectLabel} 학습 노트`}
+                  </Link>
+                ))}
+              </div>
+            </details>
+          ) : null}
+
           {!hasItems && hasLearningSignals ? (
             <div className="space-y-3">
-              {learningSignals.slice(0, 8).map((signal) => {
+              {visibleLearningSignals.map((signal) => {
                 const createdAt = formatCreatedDate(signal.createdAt);
                 const biggestGap = signal.derivedTags[0] ?? "최근 학습 신호";
                 const nextAction = signal.nextTask || (mode === "second" ? "문단 하나를 다시 씁니다." : "놓친 조건 1개를 회상합니다.");
                 const cta = signalCta(signal, mode);
 
                 return (
-                  <section key={signal.id} className="rounded-[var(--radius-lg)] border border-[var(--border)] px-4 py-4">
+                  <section key={signal.id} className="review-reason-card rounded-[var(--radius-lg)] border border-[var(--border)] px-4 py-4" data-notes-record-context>
                     <p className="text-xs font-medium text-[color:var(--muted)]">{sourceTypeLabel(signal.sourceType)}</p>
                     <h2 className="mt-1 text-sm font-medium text-[color:var(--foreground-strong)]">{signal.subject}</h2>
                     <div className="mt-3">

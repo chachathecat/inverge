@@ -1270,11 +1270,18 @@ export function WrongAnswerCaptureForm({
     );
 
   return (
-    <form className="space-y-6 overflow-x-hidden pb-28 sm:pb-0" onSubmit={handleSubmit}>
+    <form
+      className="space-y-6 overflow-x-hidden pb-28 sm:pb-0"
+      onSubmit={handleSubmit}
+      data-s224v-surface-fragment="capture-form"
+      data-s224v-secondary-diagnostics="quiet-disclosure"
+      data-s224v-primary-cta-count-above-fold="1"
+    >
       <CaptureProgressPill current={currentCaptureStep} total={4} mode={mode} />
       <ol
         className="grid gap-2 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3 text-xs text-[color:var(--muted)] sm:grid-cols-4"
         data-capture-stage-flow
+        data-s224v-stage-indicator="compact"
       >
         {[
           "입력 방법",
@@ -1316,7 +1323,7 @@ export function WrongAnswerCaptureForm({
           <section className="rounded-[var(--radius-md)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)] p-3">
             <div className="flex flex-wrap items-center gap-2 text-sm text-[color:var(--muted)]">
               <span>과목: {form.subjectLabel}</span>
-              <details className="inline-block">
+              <details className="quiet-disclosure inline-block" data-s224v-secondary-diagnostics>
                 <summary className="cursor-pointer text-sm text-[color:var(--foreground-strong)] underline underline-offset-2">과목 바꾸기</summary>
                 <div className="mt-2 min-w-64">
                   <SubjectSelect
@@ -1807,7 +1814,7 @@ function IntakePanel({
           <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">사진/PDF로 시작하기도 가능하고, 텍스트 입력은 가장 빠른 길입니다.</p>
         </div>
       </div>
-      <div className="mt-3 grid gap-2 sm:grid-cols-3" data-capture-input-options>
+      <div className="mt-3 grid gap-2 sm:grid-cols-3" data-capture-input-options data-s224v-secondary-input-options="quiet">
         <Button type="button" variant="outline" className="w-full justify-center" onClick={() => { update("sourceType", inferSourceTypeFromAction("camera")); cameraInputRef.current?.click(); }}>
           사진 찍기
         </Button>
@@ -1828,15 +1835,13 @@ function IntakePanel({
         </Button>
       </div>
       <div
-        className="mt-3 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-3 py-3 text-xs leading-5 text-[color:var(--muted)]"
+        className="trust-layer mt-3 px-3 py-3 text-xs leading-5 text-[color:var(--muted)]"
         data-trust-layer="capture-intake"
       >
         <p className="font-medium text-[color:var(--foreground-strong)]">신뢰 상태</p>
-        <p className="mt-1">{CAPTURE_TRUST_LAYER_COPY}</p>
-        <p className="mt-1">{ANSWER_SUBMISSION_OCR_TRUST_COPY}</p>
-        <p className="mt-1">현재 PDF는 내용 확인 후 직접 붙여넣을 수 있습니다.</p>
+        <p className="mt-1">{CAPTURE_TRUST_LAYER_COPY} {ANSWER_SUBMISSION_OCR_TRUST_COPY} PDF는 내용 확인 후 직접 붙여넣을 수 있습니다.</p>
       </div>
-      <details className="mt-3 rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] bg-[color:var(--surface)]">
+      <details className="quiet-disclosure mt-3 rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] bg-[color:var(--surface)]" data-s224v-secondary-diagnostics>
         <summary className="cursor-pointer list-none px-3 py-2 text-xs font-medium text-[color:var(--ink-muted)]">촬영 품질과 앨범 업로드</summary>
         <div className="border-t border-[color:var(--border-hairline)] px-3 py-3">
           <p className="text-xs leading-5 text-[color:var(--muted)]">촬영하거나 업로드한 뒤 OCR 초안을 직접 확인합니다.</p>
@@ -1924,7 +1929,14 @@ function IntakePanel({
             <p className="text-sm font-medium text-[color:var(--foreground-strong)]">확인한 내용으로 학습 노트 초안을 만듭니다.</p>
             <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">학습 노트 / 복습 / 오늘 할 일로 이어질 가장 큰 약점 1개와 다음 행동 1개가 만들어집니다.</p>
           </div>
-          <Button type="button" onClick={onQuickSave} disabled={!canQuickSave || saving || extracting} className="min-h-12 w-full shrink-0 sm:w-auto bg-[color:var(--foreground-strong)] text-white disabled:cursor-not-allowed disabled:opacity-60" data-testid="capture-save-primary">
+          <Button
+            type="button"
+            onClick={onQuickSave}
+            disabled={!canQuickSave || saving || extracting}
+            className="primary-action min-h-12 w-full shrink-0 sm:w-auto disabled:cursor-not-allowed disabled:opacity-60"
+            data-testid="capture-save-primary"
+            data-s224v-dominant-primary-action
+          >
             {saving ? "저장 중" : (
               <>
                 <span>학습 노트 초안 만들기</span>
@@ -1957,7 +1969,7 @@ function IntakePanel({
                     <Button type="button" variant="outline" className="min-h-11 px-3 text-xs" onClick={() => onRemovePage(index)} aria-label={`${page.label} 제거`}>제거</Button>
                   </div>
                 </div>
-                <details className="mt-2 rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] bg-[color:var(--surface)]">
+                <details className="quiet-disclosure mt-2 rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] bg-[color:var(--surface)]" data-s224v-secondary-diagnostics>
                   <summary className="cursor-pointer list-none px-3 py-2 text-xs text-[color:var(--muted)]">미리보기</summary>
                   <div className="border-t border-[color:var(--border-hairline)] px-3 py-3">
                     {page.previewUrl ? (
@@ -1977,7 +1989,7 @@ function IntakePanel({
           최소 입력: 정답, 내 답, 틀린 이유를 한 줄로 남겨도 됩니다. 예: 정답: 3 / 내 답: 2 / 이유: 선지 오독
         </p>
       ) : null}
-      <details className="mt-4 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
+      <details className="quiet-disclosure mt-4 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]" data-s224v-secondary-diagnostics>
         <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">선택 정보</summary>
         <div className="grid gap-3 border-t border-[color:var(--border-subtle)] px-4 py-3 sm:grid-cols-3">
         <label className="space-y-2">
@@ -2001,7 +2013,7 @@ function IntakePanel({
           {extracting ? "입력 내용 확인 중" : "AI로 정리 후 확인"}
         </Button>
       </div>
-      <details className="mt-4 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
+      <details className="quiet-disclosure mt-4 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]" data-s224v-secondary-diagnostics>
         <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">첨부 상태</summary>
         <div className="border-t border-[color:var(--border-subtle)] px-4 py-3">
           {form.sourceLabel ? <p className="text-sm text-[color:var(--muted)]">보관한 파일: {form.sourceLabel}</p> : null}
@@ -2038,7 +2050,7 @@ function IntakePanel({
       ) : null}
       {extractError ? <p className="mt-3 text-sm leading-6 text-[color:var(--cue-risk)]">{extractError}</p> : null}
       {mode === "second" ? (
-        <details className="mt-3 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
+        <details className="quiet-disclosure mt-3 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]" data-s224v-secondary-diagnostics>
           <summary className="cursor-pointer list-none px-3 py-2 text-xs font-medium text-[color:var(--muted)]">저장 전 캡처 품질 체크</summary>
           <ul className="border-t border-[color:var(--border-subtle)] px-3 py-3 list-disc space-y-1 pl-8 text-xs text-[color:var(--muted)]">
             <li>글자가 선명한가</li>
@@ -2095,13 +2107,11 @@ function ExtractionPreview({
         </p>
       ) : null}
       <div
-        className="mt-4 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-soft)] px-3 py-3 text-xs leading-5 text-[color:var(--muted)]"
+        className="trust-layer mt-4 px-3 py-3 text-xs leading-5 text-[color:var(--muted)]"
         data-trust-layer="capture-preview"
       >
         <p className="font-medium text-[color:var(--foreground-strong)]">신뢰 상태</p>
-        <p className="mt-1">{CAPTURE_TRUST_LAYER_COPY}</p>
-        <p className="mt-1">{ANSWER_SUBMISSION_OCR_TRUST_COPY}</p>
-        <p className="mt-1">초안 내용을 확인한 뒤 저장합니다.</p>
+        <p className="mt-1">{CAPTURE_TRUST_LAYER_COPY} {ANSWER_SUBMISSION_OCR_TRUST_COPY} 초안 내용을 확인한 뒤 저장합니다.</p>
       </div>
 
       <div className="mt-5 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-4">
@@ -2265,7 +2275,7 @@ function ConfirmPanel({
         </label>
       </div>
 
-      <details className="mt-5 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] p-4">
+      <details className="quiet-disclosure mt-5 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] p-4" data-s224v-secondary-diagnostics>
         <summary className="cursor-pointer text-sm font-medium text-[color:var(--foreground-strong)]">저장될 원문 보기</summary>
         <Textarea
           value={form.rawQuestionText}
@@ -2418,7 +2428,7 @@ function SecondIssueRecallPanel({
     <section className="rounded-[var(--radius-card)] border border-[color:var(--cue-focus)] bg-[color:var(--cue-focus-bg)] p-4 sm:p-5">
       <p className="text-caption text-[color:var(--muted)]">Step 1. 쟁점 회상</p>
       <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">강의/교재 정리 보기 전, 쟁점 1개만 적으세요.</h3>
-      <details className="mt-2 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3"><summary className="cursor-pointer text-xs font-medium text-[color:var(--muted)]">왜 이 순서인가요?</summary><p className="mt-2 text-xs leading-6 text-[color:var(--muted)]">완벽히 쓰지 말고, 지금 떠오르는 문장만 적으세요. 이 과목은 먼저 이 구조로 답안을 잡습니다. {template.structure}</p></details>
+      <details className="quiet-disclosure mt-2 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3" data-s224v-secondary-diagnostics><summary className="cursor-pointer text-xs font-medium text-[color:var(--muted)]">왜 이 순서인가요?</summary><p className="mt-2 text-xs leading-6 text-[color:var(--muted)]">완벽히 쓰지 말고, 지금 떠오르는 문장만 적으세요. 이 과목은 먼저 이 구조로 답안을 잡습니다. {template.structure}</p></details>
       <label className="mt-4 block space-y-2">
         <span className="text-sm text-[color:var(--foreground-strong)]">쟁점 회상</span>
         <Textarea
@@ -2451,7 +2461,7 @@ function SecondOutlinePanel({
     <section className="rounded-[var(--radius-card)] border border-[color:var(--cue-focus)] bg-[color:var(--cue-focus-bg)] p-4 sm:p-5">
       <p className="text-caption text-[color:var(--muted)]">Step 2. 목차 작성</p>
       <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">전체 답안보다 목차 3줄이 먼저입니다.</h3>
-      <details className="mt-2 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3"><summary className="cursor-pointer text-xs font-medium text-[color:var(--muted)]">왜 이 순서인가요?</summary><p className="mt-2 text-xs leading-6 text-[color:var(--muted)]">강의/교재 정리를 보기 전에 이 체크포인트 중 3개를 떠올립니다: {template.checklist.slice(0, 3).join(", ")}</p></details>
+      <details className="quiet-disclosure mt-2 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3" data-s224v-secondary-diagnostics><summary className="cursor-pointer text-xs font-medium text-[color:var(--muted)]">왜 이 순서인가요?</summary><p className="mt-2 text-xs leading-6 text-[color:var(--muted)]">강의/교재 정리를 보기 전에 이 체크포인트 중 3개를 떠올립니다: {template.checklist.slice(0, 3).join(", ")}</p></details>
       <label className="mt-4 block space-y-2">
         <span className="text-sm text-[color:var(--foreground-strong)]">목차 초안</span>
         <Textarea
@@ -2488,7 +2498,7 @@ function SecondAnswerPanel({
     <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 sm:p-5">
       <p className="text-caption text-[color:var(--muted)]">Step 3. 내 답안 작성</p>
       <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">비교는 작성 이후에 합니다.</h3>
-      <details className="mt-2 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3"><summary className="cursor-pointer text-xs font-medium text-[color:var(--muted)]">왜 이 순서인가요?</summary><p className="mt-2 text-xs leading-6 text-[color:var(--muted)]">완벽히 쓰지 말고, 지금 떠오르는 문장만 적으세요.</p></details>
+      <details className="quiet-disclosure mt-2 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3" data-s224v-secondary-diagnostics><summary className="cursor-pointer text-xs font-medium text-[color:var(--muted)]">왜 이 순서인가요?</summary><p className="mt-2 text-xs leading-6 text-[color:var(--muted)]">완벽히 쓰지 말고, 지금 떠오르는 문장만 적으세요.</p></details>
       <label className="mt-4 block space-y-2">
         <span className="text-sm text-[color:var(--foreground-strong)]">내 답안</span>
         <Textarea
@@ -2518,7 +2528,7 @@ function SecondReferencePanel({
     <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 sm:p-5">
       <p className="text-caption text-[color:var(--muted)]">Step 4. 강의/교재 정리 입력</p>
       <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">작성한 뒤에만 강의/교재 정리를 봅니다.</h3>
-      <details className="mt-2 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3"><summary className="cursor-pointer text-xs font-medium text-[color:var(--muted)]">왜 이 순서인가요?</summary><p className="mt-2 text-xs leading-6 text-[color:var(--muted)]">비교는 작성 이후에 합니다.</p></details>
+      <details className="quiet-disclosure mt-2 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3" data-s224v-secondary-diagnostics><summary className="cursor-pointer text-xs font-medium text-[color:var(--muted)]">왜 이 순서인가요?</summary><p className="mt-2 text-xs leading-6 text-[color:var(--muted)]">비교는 작성 이후에 합니다.</p></details>
       <label className="mt-4 block space-y-2">
         <span className="text-sm text-[color:var(--foreground-strong)]">강의/교재 정리 요약</span>
         <Textarea
@@ -2555,7 +2565,7 @@ function SecondGapPanel({
     <section className="rounded-[var(--radius-card)] border border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] p-4 sm:p-5">
       <p className="text-caption text-[color:var(--muted)]">Step 5. 가장 큰 약점 1개</p>
       <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">오늘은 가장 큰 약점 1개만 고칩니다.</h3>
-      <details className="mt-2 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3"><summary className="cursor-pointer text-xs font-medium text-[color:var(--muted)]">왜 이 순서인가요?</summary><p className="mt-2 text-xs leading-6 text-[color:var(--muted)]">{template.biggestGapGuidance}</p></details>
+      <details className="quiet-disclosure mt-2 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3" data-s224v-secondary-diagnostics><summary className="cursor-pointer text-xs font-medium text-[color:var(--muted)]">왜 이 순서인가요?</summary><p className="mt-2 text-xs leading-6 text-[color:var(--muted)]">{template.biggestGapGuidance}</p></details>
       <label className="mt-4 block space-y-2">
         <span className="text-sm text-[color:var(--foreground-strong)]">보강할 논점 1개</span>
         <Textarea
@@ -2588,9 +2598,9 @@ function SecondGapRewritePanel({
     <section className="rounded-[var(--radius-card)] border border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] p-4 sm:p-5">
       <p className="text-caption text-[color:var(--muted)]">Step 6. 문단 다시쓰기</p>
       <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">한 문단만 다시 씁니다.</h3>
-      <details className="mt-2 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3"><summary className="cursor-pointer text-xs font-medium text-[color:var(--muted)]">왜 이 순서인가요?</summary><p className="mt-2 text-xs leading-6 text-[color:var(--muted)]">{template.rewriteGuidance}</p></details>
+      <details className="quiet-disclosure mt-2 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3" data-s224v-secondary-diagnostics><summary className="cursor-pointer text-xs font-medium text-[color:var(--muted)]">왜 이 순서인가요?</summary><p className="mt-2 text-xs leading-6 text-[color:var(--muted)]">{template.rewriteGuidance}</p></details>
       <div className="mt-4 space-y-4">
-        <details className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3">
+        <details className="quiet-disclosure rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3" data-s224v-secondary-diagnostics>
           <summary className="cursor-pointer text-xs font-medium text-[color:var(--muted)]">처음 쓴 답안 보기</summary>
           <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[color:var(--foreground-strong)]">{form.userAnswer || "아직 작성된 답안이 없습니다."}</p>
         </details>
@@ -2607,7 +2617,7 @@ function SecondGapRewritePanel({
           />
         </label>
       </div>
-      <details className="mt-4 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3">
+      <details className="quiet-disclosure mt-4 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3" data-s224v-secondary-diagnostics>
         <summary className="cursor-pointer text-xs font-medium text-[color:var(--muted)]">세부 입력 보기 (선택)</summary>
         <div className="mt-3 space-y-3">
           <label className="block space-y-2">
@@ -2659,7 +2669,7 @@ function RewriteContextPanel({
         <PreviewLine label="가장 큰 약점" value={biggestGap} />
         <PreviewLine label="다시쓰기 지시" value={rewriteInstruction} />
       </div>
-      <details className="mt-3 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)]">
+      <details className="quiet-disclosure mt-3 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)]" data-s224v-secondary-diagnostics>
         <summary className="cursor-pointer list-none px-4 py-3 text-sm font-medium text-[color:var(--foreground-strong)]">
           비교 요약 펼쳐서 보기
         </summary>

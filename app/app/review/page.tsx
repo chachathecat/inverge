@@ -42,7 +42,16 @@ export default async function ReviewOsReviewPage({ searchParams }: PageProps) {
   );
 
   return (
-    <div className="space-y-6">
+    <div
+      className="space-y-6"
+      data-s224v-surface="/app/review"
+      data-s224v-primary-cta-count-above-fold="1"
+      data-s224v-visible-trust-layer-count="0"
+      data-s224v-visible-primary-work-items-max="1"
+      data-s224v-secondary-diagnostics="quiet-disclosure"
+      data-s224v-equal-weight-card-grid="absent"
+      data-s224v-repeated-warning-copy="absent"
+    >
       <ClosedBetaBanner />
 
       <DailyCommandCard

@@ -44,6 +44,8 @@ type ViewerMode = "anonymous" | "authenticated";
 type AnswerReviewClientPageProps = {
   viewerMode?: ViewerMode;
   userEmail?: string | null;
+  initialExamMode?: AppraisalMode;
+  initialSubject?: string | null;
 };
 
 type ProblemSnapAnswerReviewHandoff = {
@@ -95,20 +97,15 @@ function InputStatusCard({ title, statusText, helper }: InputStatusCardProps) {
   );
 }
 
-export default function AnswerReviewClientPage({ viewerMode = "authenticated" }: AnswerReviewClientPageProps) {
-  const getInitialReviewContext = () => {
-    if (typeof window === "undefined") {
-      return { examMode: "first" as AppraisalMode, subject: getDefaultSubject("first") };
-    }
-    const params = new URLSearchParams(window.location.search);
-    const parsedMode = parseAppraisalMode(params.get("mode")) ?? "first";
-    return {
-      examMode: parsedMode,
-      subject: normalizeSubjectForMode(params.get("subject"), parsedMode),
-    };
+export default function AnswerReviewClientPage({
+  viewerMode = "authenticated",
+  initialExamMode = "second",
+  initialSubject = null,
+}: AnswerReviewClientPageProps) {
+  const initialReviewContext = {
+    examMode: initialExamMode,
+    subject: normalizeSubjectForMode(initialSubject ?? getDefaultSubject(initialExamMode), initialExamMode),
   };
-
-  const initialReviewContext = getInitialReviewContext();
   const [problemFiles, setProblemFiles] = useState<File[]>([]);
   const [myAnswerFiles, setMyAnswerFiles] = useState<File[]>([]);
   const [referenceFiles, setReferenceFiles] = useState<File[]>([]);
@@ -427,12 +424,6 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
 
   const explanationTitle = explanationLevel === "easy" ? "쉽게 풀이" : explanationLevel === "exam" ? "시험답안식 보강 포인트" : "핵심 해설";
 
-  const handleExamModeChange = (nextMode: AppraisalMode) => {
-    clearProblemSnapRoutineResume();
-    setExamMode(nextMode);
-    setSubject((prev) => normalizeSubjectForMode(prev, nextMode));
-  };
-
   const reviewerNoteText = useMemo(() => {
     return [
       "입력 상태",
@@ -492,7 +483,7 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
     ? revisionParagraph.trim()
     : "교정 문단을 작성하면 학생에게 줄 다음 행동이 더 선명해집니다.";
   const tenSecondCheckSummary = cognitiveLearningActions.retrievalCheck.prompt;
-  const continuationSummary = `${cognitiveLearningActions.continuation.reviewQueueCandidate} / Today Plan 최대 ${cognitiveLearningActions.continuation.todayPlanMaxPrimaryTasks}개 / Notes`;
+  const continuationSummary = `${cognitiveLearningActions.continuation.reviewQueueCandidate} / 오늘 할 일 최대 ${cognitiveLearningActions.continuation.todayPlanMaxPrimaryTasks}개 / 학습 노트`;
 
 
   const handlePrimaryAction = () => {
@@ -513,9 +504,18 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
   };
 
   return (
-    <RefinedShell className="space-y-5 py-6 sm:space-y-8 sm:py-10">
+    <RefinedShell
+      className="space-y-5 py-6 sm:space-y-8 sm:py-10"
+      data-s224v-surface="/answer-review?mode=second"
+      data-s224v-primary-cta-count-above-fold="1"
+      data-s224v-visible-trust-layer-count="1"
+      data-s224v-visible-primary-work-items-max="1"
+      data-s224v-secondary-diagnostics="quiet-disclosure"
+      data-s224v-equal-weight-card-grid="absent"
+      data-s224v-repeated-warning-copy="absent"
+    >
       <StandaloneLearnerToolNav mode={examMode} subject={subject} />
-      <section className="space-y-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] p-4 sm:p-6">
+      <section className="space-y-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] p-4 sm:p-6" data-trust-layer="answer-review-shell">
         <div className="flex flex-wrap items-center gap-2">
           <RefinedBadge>답안 검토실</RefinedBadge>
           <RefinedBadge tone="amber">검토 결과는 학습 보조 초안입니다</RefinedBadge>
@@ -539,11 +539,11 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
           <input ref={answerCameraInputRef} type="file" accept="image/*" capture="environment" multiple className="hidden" onChange={handleMyAnswerFileChange} />
           <input ref={problemCameraInputRef} type="file" accept="image/*" capture="environment" multiple className="hidden" onChange={handleProblemFileChange} />
           <input ref={generalFileInputRef} type="file" accept="image/*,.pdf" multiple className="hidden" onChange={handleGeneralFileChange} />
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-            <button type="button" onClick={() => answerCameraInputRef.current?.click()} className={cn(buttonVariants({ variant: "default" }), "w-full justify-center h-11 text-sm font-semibold")}>답안 스냅으로 시작</button>
-            <button type="button" onClick={() => problemCameraInputRef.current?.click()} className={cn(buttonVariants({ variant: "outline" }), "w-full justify-center h-10 text-sm")}>사례 스캔</button>
-            <button type="button" onClick={() => { setGeneralUploadIntent("answer"); generalFileInputRef.current?.click(); }} className={cn(buttonVariants({ variant: "outline" }), "w-full justify-center h-10 text-sm")}>PDF/사진 불러오기</button>
-            <button type="button" onClick={focusAnswerTextarea} className={cn(buttonVariants({ variant: "outline" }), "w-full justify-center h-10 text-sm")}>텍스트 붙여넣기</button>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4" data-s224v-secondary-input-options="quiet">
+            <button type="button" onClick={() => answerCameraInputRef.current?.click()} className={cn(buttonVariants({ variant: "outline" }), "w-full justify-center h-11 text-sm font-semibold")}>답안 스냅</button>
+            <button type="button" onClick={() => problemCameraInputRef.current?.click()} className={cn(buttonVariants({ variant: "outline" }), "w-full justify-center h-11 text-sm")}>사례 스캔</button>
+            <button type="button" onClick={() => { setGeneralUploadIntent("answer"); generalFileInputRef.current?.click(); }} className={cn(buttonVariants({ variant: "outline" }), "w-full justify-center h-11 text-sm")}>PDF/사진</button>
+            <button type="button" onClick={focusAnswerTextarea} className={cn(buttonVariants({ variant: "outline" }), "w-full justify-center h-11 text-sm")}>텍스트 입력</button>
           </div>
           {viewerMode === "anonymous" ? (
             <p className="inline-flex w-fit rounded-full border border-[var(--border)] bg-[color:var(--surface)] px-2.5 py-1 text-[11px] font-medium text-[color:var(--muted)]">
@@ -608,17 +608,12 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                     <p className="mt-1 text-caption leading-5 text-[#3f4c66]">사례 스캔, PDF/사진 불러오기, 텍스트 붙여넣기를 함께 사용할 수 있습니다.</p>
                   </article>
                   <div className="grid gap-3 sm:grid-cols-2">
-                <label className="space-y-2 text-caption font-medium text-[color:var(--muted)]">
-                  시험 모드
-                  <select
-                    className="w-full rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface)] px-3 py-2 text-sm text-[color:var(--foreground-strong)]"
-                    value={examMode}
-                    onChange={(event) => handleExamModeChange(event.target.value === "second" ? "second" : "first")}
-                  >
-                    <option value="first">감정평가사 1차</option>
-                    <option value="second">감정평가사 2차</option>
-                  </select>
-                </label>
+                <div className="space-y-2 text-caption font-medium text-[color:var(--muted)]" data-s224v-answer-review-scope="second-only">
+                  <span className="block">훈련 범위</span>
+                  <span className="block rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface)] px-3 py-2 text-sm text-[color:var(--foreground-strong)]">
+                    감정평가사 2차 답안
+                  </span>
+                </div>
                 <label className="space-y-2 text-caption font-medium text-[color:var(--muted)]">
                   과목
                   <select
@@ -790,10 +785,11 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                     <motion.button
                       whileTap={shouldReduceMotion ? undefined : { scale: 0.985 }}
                       type="button"
-                      className={cn(buttonVariants({ variant: "default" }), "mt-3 w-full")}
+                      className={cn(buttonVariants({ variant: "default" }), "primary-action mt-3 w-full")}
                       onClick={handlePrimaryAction}
                       disabled={isPrimaryActionDisabled}
                       data-testid="answer-review-start"
+                      data-s224v-dominant-primary-action
                     >
                       답안 검토 시작
                     </motion.button>
@@ -801,7 +797,7 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                 </motion.aside>
               </div>
 
-              <section className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
+              <section className="quiet-disclosure rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4" data-s224v-secondary-diagnostics>
                 <button type="button" onClick={() => setShowExampleAnswer((prev) => !prev)} className="text-caption font-medium text-[color:var(--foreground-strong)]">예시 구조 보기</button>
                 <AnimatePresence>
                   {showExampleAnswer ? (
@@ -849,12 +845,12 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                 ) : null}
                     <div className="space-y-2 text-right">
                       <p className="text-caption text-[color:var(--muted)]">상태 · {completionStatus}</p>
-                      <button type="button" onClick={() => setCurrentStep(1)} className={cn(buttonVariants({ variant: "default" }), "h-9 px-4")}>
+                      <button type="button" onClick={() => setCurrentStep(1)} className={cn(buttonVariants({ variant: "outline" }), "h-9 px-4")}>
                         입력 수정하기
                       </button>
                     </div>
                   </div>
-                  <section className="grid gap-3 md:grid-cols-2" data-answer-review-result-loop>
+                  <section className="one-gap-feedback-card grid gap-3 md:grid-cols-2" data-answer-review-result-loop data-s224v-one-gap-feedback-card>
                     {[
                       {
                         label: "가장 큰 간극",
@@ -947,7 +943,7 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
 
                 <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
                   <div className="space-y-4">
-                    <article className="rounded-[var(--radius-md)] border border-[color:var(--brand-700)] bg-[color:var(--brand-050)] p-5">
+                    <article className="one-gap-feedback-card rounded-[var(--radius-md)] border border-[color:var(--brand-700)] bg-[color:var(--brand-050)] p-5">
                       <p className="text-caption font-medium text-[#3f4c66]">가장 먼저 고칠 1가지</p>
                       <p className="mt-3 text-caption font-medium text-[#3f4c66]">가장 큰 간극</p>
                       <p className="mt-1 text-sm font-semibold leading-6 text-[#1e2a46]">{toDetailLine(qualityView?.primaryFix.gap || "", "핵심 논점 입력을 보강하면 가장 큰 간극이 자동 정리됩니다.")}</p>
@@ -955,7 +951,15 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                         <p><span className="font-medium">왜 중요한가</span>: {qualityView?.primaryFix.whyItMatters || "핵심 논점을 놓치면 답안의 설득력이 크게 떨어집니다."}</p>
                         <p><span className="font-medium">어떻게 고칠까</span>: {qualityView?.primaryFix.howToFix || biggestGapFix}</p>
                       </div>
-                      <motion.button whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }} type="button" onClick={() => setCurrentStep(1)} className={cn(buttonVariants({ variant: "default" }), "mt-4 h-9 px-4")}>자료 보강하기</motion.button>
+                      <motion.button
+                        whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
+                        type="button"
+                        onClick={() => setCurrentStep(3)}
+                        className={cn(buttonVariants({ variant: "default" }), "primary-action mt-4 h-10 px-4")}
+                        data-s224v-dominant-primary-action
+                      >
+                        보강 문단 초안 만들기
+                      </motion.button>
                     </article>
 
                     <CalculatorRoutineTrainer
@@ -984,7 +988,7 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                       onRetry={calculatorRoutineSync.retry}
                     />
 
-                    <details className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4" data-answer-review-secondary-details>
+                    <details className="quiet-disclosure rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4" data-answer-review-secondary-details data-s224v-secondary-diagnostics>
                       <summary className="cursor-pointer text-caption font-medium text-[color:var(--muted)]">진단 세부 보기</summary>
                       <div className="mt-4 space-y-4">
                         <article>
@@ -1067,7 +1071,7 @@ export default function AnswerReviewClientPage({ viewerMode = "authenticated" }:
                     <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
                       <p className="text-caption font-medium text-[color:var(--muted)]">다음 행동</p>
                       <div className="mt-2 grid gap-2">
-                        <motion.button whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }} type="button" onClick={() => setCurrentStep(1)} className={cn(buttonVariants({ variant: "default" }), "h-9")}>입력 수정하기</motion.button>
+                        <motion.button whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }} type="button" onClick={() => setCurrentStep(1)} className={cn(buttonVariants({ variant: "outline" }), "h-9")}>입력 수정하기</motion.button>
                         <motion.button whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }} type="button" onClick={() => setCurrentStep(3)} data-testid="answer-review-build-feedback" className={cn(buttonVariants({ variant: "outline" }), "h-9")}>피드백 초안 만들기</motion.button>
                       </div>
                     </article>

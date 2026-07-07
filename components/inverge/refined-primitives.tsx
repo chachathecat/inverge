@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ComponentPropsWithoutRef, ReactNode } from "react";
 
 import type { RiskLevel } from "@/lib/inverge/types";
 import { getRiskLabel, riskTone } from "@/lib/inverge/utils";
@@ -7,12 +7,13 @@ import { cn } from "@/lib/utils";
 export function RefinedShell({
   children,
   className,
+  ...props
 }: {
   children: ReactNode;
   className?: string;
-}) {
+} & ComponentPropsWithoutRef<"div">) {
   return (
-    <div className={cn("mx-auto w-full max-w-[1120px] px-4 py-8 sm:px-6 lg:px-8 lg:py-10", className)}>
+    <div className={cn("mx-auto w-full max-w-[1120px] px-4 py-8 sm:px-6 lg:px-8 lg:py-10", className)} {...props}>
       {children}
     </div>
   );

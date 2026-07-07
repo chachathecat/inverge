@@ -85,12 +85,21 @@ export function TodaySubjectSelector({
       </div>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <Link href={links.primary} className="block w-full sm:w-auto">
-          <Button type="button" className="w-full sm:w-auto" data-primary-learner-action>
+          <Button
+            type="button"
+            className="primary-action w-full sm:w-auto"
+            data-primary-learner-action
+            data-s224v-dominant-primary-action
+          >
             {resolvedPrimaryLabel}
           </Button>
         </Link>
       </div>
-      <details className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]" data-secondary-action-surface={`${mode}-mode-input-options`}>
+      <details
+        className="quiet-disclosure rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]"
+        data-secondary-action-surface={`${mode}-mode-input-options`}
+        data-s224v-secondary-diagnostics
+      >
         <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">다른 작업 보기</summary>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-[color:var(--border-subtle)] px-4 py-3 text-xs text-[color:var(--muted)]">
           {showCaptureLink ? (

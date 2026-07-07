@@ -241,7 +241,16 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
   const visibleTodayPlanTasks = todayPlanTasks;
 
   return (
-    <div className="space-y-7 md:space-y-8">
+    <div
+      className="space-y-7 md:space-y-8"
+      data-s224v-surface="/app"
+      data-s224v-primary-cta-count-above-fold="1"
+      data-s224v-visible-trust-layer-count="0"
+      data-s224v-visible-primary-work-items-max={TODAY_PLAN_MAX_PRIMARY_TASKS}
+      data-s224v-secondary-diagnostics="quiet-disclosure"
+      data-s224v-equal-weight-card-grid="absent"
+      data-s224v-repeated-warning-copy="absent"
+    >
       <ClosedBetaBanner />
       <DailyCommandCard title="오늘 할 일" description="오늘 한 것 1개를 정리하면 가장 큰 약점 1개와 다음 행동 1개로 이어집니다.">
         <QuietDetails>
@@ -288,7 +297,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
 
       <section className="space-y-4">
         {firstUse ? (
-          <Card className="border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] shadow-none">
+          <Card className="border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] shadow-none" data-s224v-today-priority-card>
             <CardHeader className="space-y-3 p-4 sm:p-6">
               <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--brand-050)] px-4 py-3">
                 <p className="text-caption text-[color:var(--muted)]">처음이라면</p>
@@ -298,6 +307,11 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                     : "답안 하나만 저장하면 보강할 문단과 오늘 할 일, 복습, 학습 노트가 이어집니다."}
                 </p>
                 <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">오늘 한 것 올리기 → 학습 노트 → 오늘 할 일 → 복습 → 학습 기록</p>
+                <div className="mt-3 grid gap-2 text-xs text-[color:var(--muted)] sm:grid-cols-3">
+                  <p><span className="font-medium text-[color:var(--foreground-strong)]">왜</span> 첫 기록이 우선순위를 만듭니다.</p>
+                  <p><span className="font-medium text-[color:var(--foreground-strong)]">시간</span> {mode === "second" ? "18분 안팎" : "12분 안팎"}</p>
+                  <p><span className="font-medium text-[color:var(--foreground-strong)]">다음</span> 학습 노트 · 복습으로 이어집니다.</p>
+                </div>
               </div>
               <CardTitle>오늘 한 것 올리기</CardTitle>
               <CardDescription className="max-w-[66ch]">
@@ -316,7 +330,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                 setHref={mode === "first" ? firstSetHref : undefined}
                 studyLogHref={mode === "first" ? firstStudyLogHref : undefined}
               />
-              <details className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
+              <details className="quiet-disclosure rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]" data-s224v-secondary-diagnostics>
                 <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">왜 입력부터 시작하나요?</summary>
                 <div className="border-t border-[color:var(--border-subtle)] px-4 py-3 text-xs leading-6 text-[color:var(--muted)]">
                   입력이 아직 없으면 우선순위가 흐려질 수 있습니다. 오늘 한 것 1개만 저장하면 학습 노트, 복습, 오늘 할 일이 같은 흐름으로 이어집니다.
@@ -325,7 +339,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
             </CardContent>
           </Card>
         ) : (
-          <Card className="border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] shadow-none">
+          <Card className="border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] shadow-none" data-s224v-today-priority-card>
             <CardHeader className="space-y-3 p-4 sm:p-6">
               <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--brand-050)] px-4 py-3">
                 <p className="text-caption text-[color:var(--muted)]">오늘 할 일</p>
@@ -349,9 +363,19 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                 <p className="text-[color:var(--foreground-strong)]">{nextAction}</p>
                 <p className="mt-2 text-xs text-[color:var(--muted)]">왜 지금 중요한가</p>
                 <p className="text-[color:var(--foreground-strong)]">{todayPlan.reason}</p>
+                <div className="mt-3 grid gap-2 border-t border-[color:var(--border-hairline)] pt-3 text-xs sm:grid-cols-2">
+                  <div>
+                    <p className="text-[color:var(--muted)]">예상 소요 시간</p>
+                    <p className="mt-1 text-sm text-[color:var(--foreground-strong)]">{todayPlan.estimatedDuration}</p>
+                  </div>
+                  <div>
+                    <p className="text-[color:var(--muted)]">끝나면 이어갈 곳</p>
+                    <p className="mt-1 text-sm text-[color:var(--foreground-strong)]">학습 노트 · 복습 · 오늘 할 일</p>
+                  </div>
+                </div>
               </div>
 
-              <div className="rounded-[var(--radius-md)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)] px-4 py-3" data-today-plan-primary-surface data-visible-primary-task-cap={TODAY_PLAN_MAX_PRIMARY_TASKS}>
+              <div className="today-priority-card rounded-[var(--radius-md)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)] px-4 py-3" data-today-plan-primary-surface data-visible-primary-task-cap={TODAY_PLAN_MAX_PRIMARY_TASKS}>
                 <p className="text-caption text-[color:var(--ink-muted)]">오늘의 우선순위 · 최대 3개</p>
                 <div className="mt-3 space-y-3">
                   {todayPlanTasks.length === 0 ? (
@@ -378,7 +402,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                             {task.display_primary_cta ?? task.primary_cta.label}
                           </Link>
                         </div>
-                        <details className="mt-3 rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)]">
+                        <details className="quiet-disclosure mt-3 rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)]" data-s224v-secondary-diagnostics>
                           <summary className="cursor-pointer list-none px-3 py-2 text-xs font-medium text-[color:var(--muted)]">세부 내용 보기</summary>
                           <div className="grid gap-2 border-t border-[color:var(--border-hairline)] px-3 py-3 text-xs leading-5 text-[color:var(--muted)]">
                             <p><span className="font-medium text-[color:var(--foreground-strong)]">가장 큰 약점:</span> {task.one_biggest_gap}</p>
@@ -410,7 +434,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
               {(() => {
                 const firstTodayPlanTask = todayPlanTasks[0] ?? null;
                 return firstTodayPlanTask?.created_from_capture && firstTodayPlanTask.source_label !== "Problem Snap 기반" ? (
-                  <details className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]" data-secondary-action-surface="capture-derived-context">
+                  <details className="quiet-disclosure rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]" data-secondary-action-surface="capture-derived-context" data-s224v-secondary-diagnostics>
                     <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">다른 작업 · 오늘 기록 근거 보기</summary>
                     <div className="border-t border-[color:var(--border-subtle)] px-4 py-3">
                       <p className="text-xs text-[color:var(--foreground-strong)]">{firstTodayPlanTask.title}</p>
@@ -444,7 +468,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                 </div>
               ) : null}
               {latestProblemSnapSignal && todayPlanTasks[0]?.source_label !== "Problem Snap 기반" ? (
-                <details className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]" data-secondary-action-surface="problem-snap">
+                <details className="quiet-disclosure rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]" data-secondary-action-surface="problem-snap" data-s224v-secondary-diagnostics>
                   <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">다른 작업 · Problem Snap 신호 보기</summary>
                   <div className="border-t border-[color:var(--border-subtle)] px-4 py-3">
                     <p className="text-xs font-medium text-[color:var(--ink-primary)]">Problem Snap</p>
@@ -463,7 +487,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                   <p className="mt-1">새 범위보다 반복 실수 하나를 줄이는 게 우선입니다.</p>
                 </div>
               ) : null}
-              <details className="rounded-[var(--radius-md)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)]">
+              <details className="quiet-disclosure rounded-[var(--radius-md)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)]" data-s224v-secondary-diagnostics>
                 <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">우선순위 근거 보기</summary>
                 <div className="grid gap-3 border-t border-[color:var(--border-subtle)] p-4 lg:grid-cols-3">
                   <div>
@@ -492,6 +516,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
         <details
           className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]"
           data-learning-loop-summary
+          data-s224v-secondary-diagnostics
         >
           <summary className="cursor-pointer list-none px-4 py-4 text-sm font-medium text-[color:var(--foreground-strong)] sm:px-5">
             학습 루프 요약 보기

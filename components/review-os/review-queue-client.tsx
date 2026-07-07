@@ -81,6 +81,8 @@ export function ReviewQueueClient({
 
   const primaryItem = items[0]!;
   const candidateItems = items.slice(1);
+  const visibleCandidateItems = candidateItems.slice(0, 3);
+  const hiddenCandidateCount = Math.max(candidateItems.length - visibleCandidateItems.length, 0);
   const primaryNextAction = getReviewNextAction(primaryItem);
   const primaryRecallText = recallAttemptTextByQueueId[primaryItem.queueId] ?? "";
   const primaryOutcome = recallOutcomeByQueueId[primaryItem.queueId] ?? null;
@@ -88,7 +90,12 @@ export function ReviewQueueClient({
   const retrievalPrompt = getRetrievalPrompt(primaryItem, mode);
 
   return (
-    <div className="space-y-4">
+    <div
+      className="space-y-4"
+      data-s224v-surface-fragment="review-queue"
+      data-s224v-primary-cta-count-above-fold="1"
+      data-s224v-visible-primary-work-items-max="1"
+    >
       <section
         className="rounded-[var(--radius-lg)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-elevated)] p-4 sm:p-5"
         data-review-primary-surface
@@ -135,6 +142,7 @@ export function ReviewQueueClient({
               type="button"
               onClick={() => setRevealedHintByQueueId((prev) => ({ ...prev, [primaryItem.queueId]: true }))}
               className="mt-3 w-full sm:w-auto"
+              data-s224v-dominant-primary-action
             >
               확인하기
             </Button>
@@ -172,8 +180,9 @@ export function ReviewQueueClient({
                 </Button>
               </div>
               <details
-                className="mt-3 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3"
+                className="quiet-disclosure mt-3 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3"
                 data-review-extra-signals
+                data-s224v-secondary-diagnostics
               >
                 <summary className="cursor-pointer text-xs font-medium text-[color:var(--muted)]">상세 신호 보기</summary>
                 <ul className="mt-2 space-y-1 text-xs leading-5 text-[color:var(--muted)]">
@@ -245,13 +254,17 @@ export function ReviewQueueClient({
       </section>
 
       {candidateItems.length > 0 ? (
-        <section
-          className="rounded-[var(--radius-lg)] border border-[color:var(--border-hairline)] bg-[color:var(--surface)] p-4"
+        <details
+          className="quiet-disclosure rounded-[var(--radius-lg)] border border-[color:var(--border-hairline)] bg-[color:var(--surface)] p-4"
           data-review-secondary-list
+          data-s224v-secondary-diagnostics
         >
-          <h3 className="text-sm font-semibold text-[color:var(--foreground-strong)]">다음 복습 후보</h3>
+          <summary className="cursor-pointer list-none text-sm font-semibold text-[color:var(--foreground-strong)]">
+            다음 복습 후보 보기
+            {hiddenCandidateCount > 0 ? <span className="ml-2 text-xs font-medium text-[color:var(--muted)]">외 {hiddenCandidateCount}개 접힘</span> : null}
+          </summary>
           <ul className="mt-3 divide-y divide-[color:var(--border-hairline)]">
-            {candidateItems.map((item) => (
+            {visibleCandidateItems.map((item) => (
               <li key={item.queueId} className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
                   <p className="text-xs text-[color:var(--muted)]">
@@ -280,7 +293,7 @@ export function ReviewQueueClient({
               </li>
             ))}
           </ul>
-        </section>
+        </details>
       ) : null}
     </div>
   );
