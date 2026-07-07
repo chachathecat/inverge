@@ -19,6 +19,11 @@ const learnerSurfaceFiles = [
 
 const joinedLearnerSurfaces = () => learnerSurfaceFiles.map(read).join("\n");
 
+const withoutAllowedNegatedOfficialClaims = (source) =>
+  source
+    .replace(/공식\s*채점\s*아님/g, "")
+    .replace(/공식\s*채점이나\s*합격\s*판정이\s*아니라/g, "");
+
 test("learner nav uses the consolidated Korean loop terms", () => {
   const shell = read("components/learner/learner-ui.tsx");
 
@@ -75,7 +80,7 @@ test("learner grammar cleanup does not reintroduce forbidden wording or instruct
   const combined = joinedLearnerSurfaces();
 
   assert.doesNotMatch(
-    combined,
+    withoutAllowedNegatedOfficialClaims(combined),
     /기준\s*답안|기준답안|모범답안|공식답안|공식 채점|점수예측|합격예측|합격 가능성 확정|정답 확정|최종 판단|pass\/fail/i,
   );
   assert.doesNotMatch(combined, /\/instructor\/second-grading|grade-second|second-grading/);

@@ -1,12 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { parseAppraisalMode } from "@/lib/review-os/appraisal";
-
-type Mode = "sign-in" | "sign-up";
 
 type AuthResponse = {
   ok: boolean;
@@ -53,13 +51,10 @@ export function AuthForm() {
   const returnTo = sanitizeInternalReturnTo(searchParams.get("returnTo"));
   const returnToUrl = new URL(returnTo, "http://inverge.local");
   const explicitMode = parseAppraisalMode(searchParams.get("mode")) ?? parseAppraisalMode(returnToUrl.searchParams.get("mode"));
-  const [mode, setMode] = useState<Mode>("sign-in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState<"idle" | "submitting" | "error" | "success">("idle");
   const [message, setMessage] = useState<string>("");
-
-  const endpoint = useMemo(() => (mode === "sign-in" ? "/api/auth/sign-in" : "/api/auth/sign-up"), [mode]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -67,7 +62,7 @@ export function AuthForm() {
     setMessage("");
 
     try {
-      const response = await fetch(endpoint, {
+      const response = await fetch("/api/auth/sign-in", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password, mode: explicitMode }),
@@ -97,26 +92,7 @@ export function AuthForm() {
 
   return (
     <form className="space-y-4" onSubmit={handleSubmit}>
-      <p className="text-sm leading-6 text-[color:var(--muted)]">
-        감정평가사 1차·2차 학습 운영은 초대 계정으로 이용할 수 있습니다. 초대 전에도 같은 계정을 그대로 사용하게 됩니다.
-      </p>
-
-      <div className="flex gap-2 rounded-full border border-[var(--border)] p-1">
-        <button
-          type="button"
-          className={`flex-1 rounded-full px-3 py-2 text-sm ${mode === "sign-in" ? "bg-[color:var(--primary)] text-white" : "text-[color:var(--muted)]"}`}
-          onClick={() => setMode("sign-in")}
-        >
-          로그인
-        </button>
-        <button
-          type="button"
-          className={`flex-1 rounded-full px-3 py-2 text-sm ${mode === "sign-up" ? "bg-[color:var(--primary)] text-white" : "text-[color:var(--muted)]"}`}
-          onClick={() => setMode("sign-up")}
-        >
-          계정 만들기
-        </button>
-      </div>
+      <p className="text-sm leading-6 text-[color:var(--muted)]">초대받은 계정으로만 이용할 수 있습니다.</p>
 
       <label className="block space-y-2 text-sm">
         <span className="text-[color:var(--foreground-strong)]">이메일</span>
@@ -136,7 +112,7 @@ export function AuthForm() {
           className="w-full rounded-xl border border-[var(--border)] bg-[color:var(--surface)] px-4 py-3 outline-none"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
-          autoComplete={mode === "sign-in" ? "current-password" : "new-password"}
+          autoComplete="current-password"
         />
       </label>
 
@@ -145,7 +121,7 @@ export function AuthForm() {
       ) : null}
 
       <Button type="submit" data-testid="login-submit" className="w-full" disabled={status === "submitting"}>
-        {status === "submitting" ? "처리 중" : mode === "sign-in" ? "로그인" : "계정 만들기"}
+        {status === "submitting" ? "처리 중" : "로그인"}
       </Button>
     </form>
   );

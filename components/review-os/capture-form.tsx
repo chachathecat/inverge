@@ -17,7 +17,6 @@ import {
   type AppraisalMode,
 } from "@/lib/review-os/appraisal";
 import { clearReviewOsDraft, loadReviewOsDraft, saveReviewOsDraft, saveReviewOsLocalBetaNoteWithStatus } from "@/lib/review-os/browser-storage";
-import { ANSWER_SUBMISSION_OCR_TRUST_COPY } from "@/lib/review-os/answer-submission-contract";
 import { getCalculatorWorkflowForSubject } from "@/lib/review-os/calculator-workflow";
 import { resolveCaptureConfirmationCopy } from "@/lib/review-os/capture-confirmation-copy";
 import { getCaptureSavePersistenceCopy, type CaptureSavePersistenceStatus } from "@/lib/review-os/capture-save-persistence";
@@ -39,7 +38,7 @@ import {
 
 type ExtractionState = "idle" | "uploading" | "extracting" | "succeeded" | "failed" | "manual";
 
-const CAPTURE_TRUST_LAYER_COPY = "OCR/AI 정리는 초안입니다. 저장 전 직접 확인해 주세요.";
+const CAPTURE_TRUST_LAYER_COPY = "OCR과 AI 정리는 학습 보조 초안입니다. 저장 전 직접 수정할 수 있습니다.";
 
 type SavedCaptureConfirmation = {
   itemId?: string;
@@ -1279,21 +1278,21 @@ export function WrongAnswerCaptureForm({
     >
       <CaptureProgressPill current={currentCaptureStep} total={4} mode={mode} />
       <ol
-        className="grid gap-2 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3 text-xs text-[color:var(--muted)] sm:grid-cols-4"
+        className="grid grid-cols-2 gap-2 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-2 text-[11px] text-[color:var(--muted)] sm:grid-cols-4 sm:p-3 sm:text-xs"
         data-capture-stage-flow
         data-s224v-stage-indicator="compact"
       >
         {[
-          "입력 방법",
+          "입력",
           "OCR/텍스트 확인",
-          "가장 큰 약점 + 다음 행동",
-          "오늘 계획 / 복습 / 학습 노트 저장",
+          "가장 큰 약점",
+          "오늘 계획 반영",
         ].map((label, index) => {
           const step = index + 1;
           return (
             <li
               key={label}
-              className={`rounded-[var(--radius-sm)] px-3 py-2 ${
+              className={`flex min-h-12 flex-col justify-center rounded-[var(--radius-sm)] px-2 py-2 text-center leading-tight sm:min-h-0 sm:px-3 ${
                 currentCaptureStep === step
                   ? "bg-[color:var(--brand-050)] text-[color:var(--foreground-strong)]"
                   : "bg-[color:var(--surface-soft)]"
@@ -1504,7 +1503,7 @@ export function WrongAnswerCaptureForm({
         </p>
       ) : null}
 
-      {!hideGlobalFooterActions ? (
+      {!hideGlobalFooterActions && currentCaptureStep !== 1 ? (
         <BottomPrimaryAction secondary={footerSecondary}>
         <div className="flex w-full flex-col gap-3 sm:flex-row">
           {rewriteContext && mode === "second" ? (
@@ -1782,6 +1781,15 @@ function IntakePanel({
   textAreaRef: React.RefObject<HTMLTextAreaElement | null>;
 }) {
   const calculatorWorkflow = form.lowConfidenceFlag && !form.ocrConfirmedByLearner ? null : getCalculatorWorkflowForSubject(form.subjectLabel);
+  const [selectedInputMethod, setSelectedInputMethod] = useState<SourceType | null>(() => {
+    if (form.rawQuestionText.trim() || uploadedPages.length > 0 || form.sourceLabel.trim()) return form.sourceType;
+    return null;
+  });
+  const hasActiveInput =
+    Boolean(selectedInputMethod) ||
+    form.rawQuestionText.trim().length > 0 ||
+    uploadedPages.length > 0 ||
+    extractionState !== "idle";
   const extractionStateLabel: Record<ExtractionState, string> = {
     idle: "입력 대기",
     uploading: "불러오는 중",
@@ -1792,60 +1800,71 @@ function IntakePanel({
   };
 
   return (
-    <section className="rounded-[var(--radius-card)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)] p-4 sm:p-5">
-      <div className="space-y-3" data-capture-subject-selector={mode}>
+    <section className="rounded-[var(--radius-card)] border border-[color:var(--border-hairline)] bg-[color:var(--surface)] p-4 shadow-[var(--shadow-soft)] sm:p-6">
+      <div className="space-y-2">
+        <p className="text-caption font-medium text-[color:var(--muted)]">1. 입력</p>
+        <h2 className="text-[28px] font-semibold leading-tight text-[color:var(--foreground-strong)]">오늘 한 것 올리기</h2>
+        <p className="text-body text-[color:var(--muted)]">사진, PDF, 텍스트 중 하나로 시작하세요.</p>
+      </div>
+
+      <div className="mt-6 space-y-3" data-capture-subject-selector={mode}>
         <SubjectSelect
           subjectLabel={config.subjectLabel}
           subjects={config.subjects}
           value={form.subjectLabel}
           onChange={updateSubject}
         />
-        <p className="text-xs leading-5 text-[color:var(--muted)]">
-          {mode === "first"
-            ? "오늘 본 과목을 선택하고 오답 1개를 기록하세요. 과목을 고르면 오늘 할 일과 복습 큐에 반영됩니다."
-            : "오늘 본 과목을 선택하고 답안/강의 정리/필기 중 하나를 올리세요. 과목을 고르면 보강할 논점과 다음 복습에 반영됩니다."}
-        </p>
       </div>
 
-      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="max-w-[60ch]">
-          <p className="text-caption text-[color:var(--brand-700)]">빠른 입력</p>
-          <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">사진/PDF/텍스트로 시작</h3>
-          <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">사진/PDF로 시작하기도 가능하고, 텍스트 입력은 가장 빠른 길입니다.</p>
-        </div>
-      </div>
-      <div className="mt-3 grid gap-2 sm:grid-cols-3" data-capture-input-options data-s224v-secondary-input-options="quiet">
-        <Button type="button" variant="outline" className="w-full justify-center" onClick={() => { update("sourceType", inferSourceTypeFromAction("camera")); cameraInputRef.current?.click(); }}>
+      <div className="mt-5 grid gap-3 sm:grid-cols-3" data-capture-input-options data-s224v-secondary-input-options="quiet">
+        <Button
+          type="button"
+          variant="outline"
+          className="min-h-24 w-full flex-col items-start justify-center gap-2 px-5 text-left"
+          onClick={() => {
+            const sourceType = inferSourceTypeFromAction("camera");
+            setSelectedInputMethod(sourceType);
+            update("sourceType", sourceType);
+            cameraInputRef.current?.click();
+          }}
+        >
           사진 찍기
-        </Button>
-        <Button type="button" variant="outline" className="w-full justify-center" onClick={() => { update("sourceType", inferSourceTypeFromAction("pdf")); pdfInputRef.current?.click(); }}>
-          PDF 선택
         </Button>
         <Button
           type="button"
           variant="outline"
-          className="w-full justify-center"
+          className="min-h-24 w-full flex-col items-start justify-center gap-2 px-5 text-left"
           onClick={() => {
-            update("sourceType", inferSourceTypeFromAction("text"));
-            textAreaRef.current?.focus();
-            textAreaRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+            const sourceType = inferSourceTypeFromAction("pdf");
+            setSelectedInputMethod(sourceType);
+            update("sourceType", sourceType);
+            pdfInputRef.current?.click();
+          }}
+        >
+          PDF 선택
+        </Button>
+        <Button
+          type="button"
+          variant={hasActiveInput ? "outline" : undefined}
+          className={hasActiveInput ? "min-h-24 w-full flex-col items-start justify-center gap-2 px-5 text-left" : "primary-action min-h-24 w-full flex-col items-start justify-center gap-2 px-5 text-left"}
+          onClick={() => {
+            const sourceType = inferSourceTypeFromAction("text");
+            setSelectedInputMethod(sourceType);
+            update("sourceType", sourceType);
+            window.setTimeout(() => {
+              textAreaRef.current?.focus();
+              textAreaRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+            }, 0);
           }}
         >
           텍스트 붙여넣기
         </Button>
       </div>
-      <div
-        className="trust-layer mt-3 px-3 py-3 text-xs leading-5 text-[color:var(--muted)]"
-        data-trust-layer="capture-intake"
-      >
-        <p className="font-medium text-[color:var(--foreground-strong)]">신뢰 상태</p>
-        <p className="mt-1">{CAPTURE_TRUST_LAYER_COPY} {ANSWER_SUBMISSION_OCR_TRUST_COPY} PDF는 내용 확인 후 직접 붙여넣을 수 있습니다.</p>
-      </div>
       <details className="quiet-disclosure mt-3 rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] bg-[color:var(--surface)]" data-s224v-secondary-diagnostics>
         <summary className="cursor-pointer list-none px-3 py-2 text-xs font-medium text-[color:var(--ink-muted)]">촬영 품질과 앨범 업로드</summary>
         <div className="border-t border-[color:var(--border-hairline)] px-3 py-3">
           <p className="text-xs leading-5 text-[color:var(--muted)]">촬영하거나 업로드한 뒤 OCR 초안을 직접 확인합니다.</p>
-          <Button type="button" variant="outline" className="mt-3 w-full sm:w-auto" onClick={() => { update("sourceType", inferSourceTypeFromAction("gallery")); galleryInputRef.current?.click(); }}>
+          <Button type="button" variant="outline" className="mt-3 w-full sm:w-auto" onClick={() => { const sourceType = inferSourceTypeFromAction("gallery"); setSelectedInputMethod(sourceType); update("sourceType", sourceType); galleryInputRef.current?.click(); }}>
             앨범에서 선택
           </Button>
           <ul className="mt-3 list-disc space-y-1 pl-5 text-xs text-[color:var(--muted)]">
@@ -1884,6 +1903,20 @@ function IntakePanel({
             if (file) onPdf(file);
           }}
         />
+      </div>
+      {hasActiveInput ? (
+        <>
+      <div
+        className="trust-layer mt-4 px-4 py-4 text-xs leading-5 text-[color:var(--muted)]"
+        data-trust-layer="capture-intake"
+      >
+        <p className="font-semibold text-[color:var(--foreground-strong)]">AI 초안</p>
+        <p className="mt-1">{CAPTURE_TRUST_LAYER_COPY}</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <span className="rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-2.5 py-1 text-[11px] font-medium text-[color:var(--muted)]">OCR 초안</span>
+          <span className="rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-2.5 py-1 text-[11px] font-medium text-[color:var(--muted)]">직접 수정 가능</span>
+          <span className="rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-2.5 py-1 text-[11px] font-medium text-[color:var(--muted)]">공식 채점 아님</span>
+        </div>
       </div>
       <div className={`mt-3 rounded-[var(--radius-pill)] border px-3 py-2 ${extractionState === "failed" ? "border-[color:var(--status-red)] bg-[color:var(--status-red-soft)]" : "border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)]"}`}>
         <p className="text-xs font-medium text-[color:var(--muted)]">OCR 상태 · {extractionStateLabel[extractionState]}</p>
@@ -2030,18 +2063,19 @@ function IntakePanel({
         </p>
       ) : null}
       {calculatorWorkflow ? (
-        <div className="mt-4 rounded-[var(--radius-md)] border border-[color:var(--cue-focus)] bg-[color:var(--cue-focus-bg)] px-4 py-3">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <details className="quiet-disclosure mt-4 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]" data-s224v-secondary-diagnostics>
+          <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">계산기 루틴 선택</summary>
+          <div className="flex flex-col gap-3 border-t border-[color:var(--border-subtle)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm leading-6 text-[color:var(--foreground-strong)]">
-              {calculatorWorkflow.subject} 계산형 기록이면 계산기 스텝을 먼저 고정할 수 있습니다.
+              {calculatorWorkflow.subject} 계산형 기록이면 fx-9860GIII 손타건 루틴을 함께 확인할 수 있습니다.
             </p>
             <Link href={`/app/calculator?context=${calculatorWorkflow.context}&mode=${calculatorWorkflow.mode}`}>
               <Button type="button" variant="outline">
-                계산기 스텝
+                루틴 보기
               </Button>
             </Link>
           </div>
-        </div>
+        </details>
       ) : null}
       {needsOcrConfirmation ? (
         <p className="mt-3 rounded-[var(--radius-md)] border border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] px-4 py-3 text-sm leading-6 text-[color:var(--foreground-strong)]">
@@ -2060,6 +2094,8 @@ function IntakePanel({
             <li>끝/이하여백 표시가 있는가</li>
           </ul>
         </details>
+      ) : null}
+        </>
       ) : null}
     </section>
   );
@@ -2106,14 +2142,6 @@ function ExtractionPreview({
           {missingConfirmationFields.length > 0 ? ` 확인 필요: ${missingConfirmationFields.join(", ")}` : ""}
         </p>
       ) : null}
-      <div
-        className="trust-layer mt-4 px-3 py-3 text-xs leading-5 text-[color:var(--muted)]"
-        data-trust-layer="capture-preview"
-      >
-        <p className="font-medium text-[color:var(--foreground-strong)]">신뢰 상태</p>
-        <p className="mt-1">{CAPTURE_TRUST_LAYER_COPY} {ANSWER_SUBMISSION_OCR_TRUST_COPY} 초안 내용을 확인한 뒤 저장합니다.</p>
-      </div>
-
       <div className="mt-5 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-4">
         <p className="text-xs font-medium text-[color:var(--muted)]">OCR 결과 확인 (편집 가능 · 자동 저장)</p>
         {uploadedPages.length > 0 ? (

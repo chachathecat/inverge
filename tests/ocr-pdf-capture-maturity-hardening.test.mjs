@@ -137,7 +137,7 @@ test("OCR/PDF capture route keeps draft and editable-before-save framing", () =>
   const captureForm = read("components/review-os/capture-form.tsx");
   const combined = `${capturePage}\n${captureForm}`;
 
-  assert.equal(combined.includes("OCR/AI 정리는 초안입니다. 저장 전 직접 확인해 주세요."), true);
+  assert.equal(combined.includes("OCR과 AI 정리는 학습 보조 초안입니다. 저장 전 직접 수정할 수 있습니다."), true);
   assert.equal(combined.includes("촬영하거나 업로드한 뒤 OCR 초안을 직접 확인합니다."), true);
   assert.equal(captureForm.includes("OCR 결과 확인 (편집 가능 · 자동 저장)"), true);
   assert.equal(captureForm.includes("현재 PDF는 내용 확인 후 직접 붙여넣을 수 있습니다."), true);

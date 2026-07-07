@@ -182,7 +182,7 @@ test("learner capture route stays separated from instructor second grading", () 
   assert.doesNotMatch(combined, /\/instructor\/second-grading|second-grading|grade-second/);
   assert.match(combined, /오늘 한 것 올리기/);
   assert.match(combined, /학습 노트 초안 만들기/);
-  assert.match(combined, /OCR\/AI 정리는 초안입니다\. 저장 전 직접 확인해 주세요\./);
+  assert.match(combined, /OCR과 AI 정리는 학습 보조 초안입니다\. 저장 전 직접 수정할 수 있습니다\./);
   assert.doesNotMatch(read(captureFormPath), /기준\s*답안|기준답안|모범답안|공식답안|정답 확정|최종 판단/);
 });
 

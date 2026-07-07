@@ -1,8 +1,6 @@
 import { WrongAnswerCaptureForm } from "@/components/review-os/capture-form";
 import { ReviewOsFeedbackButton } from "@/components/review-os/feedback-button";
-import { ClosedBetaBanner } from "@/components/shared/closed-beta-banner";
 import { normalizeSubjectForMode, resolveAppraisalMode } from "@/lib/review-os/appraisal";
-import { ANSWER_SUBMISSION_OCR_TRUST_COPY } from "@/lib/review-os/answer-submission-contract";
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
 import { reviewOsService } from "@/lib/review-os/service";
 import { buildDetailStudyNote } from "@/lib/review-os/study-note";
@@ -36,8 +34,6 @@ export default async function ReviewOsCapturePage({ searchParams }: PageProps) {
           myAnswerSummary: rewriteDetail.item.userAnswer || "",
         }
       : null;
-  const isRewriteFlow = mode === "second" && Boolean(rewriteContext);
-
   return (
     <div
       className="space-y-5"
@@ -49,27 +45,6 @@ export default async function ReviewOsCapturePage({ searchParams }: PageProps) {
       data-s224v-equal-weight-card-grid="absent"
       data-s224v-repeated-warning-copy="absent"
     >
-      <section className="rounded-[var(--radius-lg)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-elevated)] px-4 py-4 sm:px-6 sm:py-5" data-testid="capture-page-shell">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="max-w-[58ch]">
-            <p className="inline-flex rounded-full border border-[color:var(--border-hairline)] px-2.5 py-1 text-[11px] font-medium text-[color:var(--muted)]">
-              {mode === "second" ? "감정평가사 2차" : "감정평가사 1차"}
-            </p>
-            <h1 className="mt-3 text-2xl font-semibold leading-tight text-[color:var(--textStrong)]">
-              {isRewriteFlow ? "문단 다시쓰기 실행" : "오늘 한 것 올리기"}
-            </h1>
-            <p className="mt-2 text-sm leading-6 text-[color:var(--textBody)]">
-              {isRewriteFlow
-                ? "문단 1개만 다시 쓰고 저장합니다."
-                : "사진/PDF/텍스트 중 하나로 시작하고, OCR/AI 초안은 직접 확인합니다."}
-            </p>
-          </div>
-          <p className="trust-layer px-3 py-2 text-xs leading-5 text-[color:var(--textMuted)] sm:max-w-[18rem]" data-trust-layer="capture-page-shell">
-            {ANSWER_SUBMISSION_OCR_TRUST_COPY} 저장 위치는 학습 노트 / 복습 / 오늘 할 일입니다.
-          </p>
-        </div>
-      </section>
-
       <WrongAnswerCaptureForm
         userId={session.userId}
         mode={mode}
@@ -79,7 +54,6 @@ export default async function ReviewOsCapturePage({ searchParams }: PageProps) {
       />
 
       <div className="space-y-3">
-        <ClosedBetaBanner />
         <ReviewOsFeedbackButton route="/app/capture" pageContext={{ section: "capture", mode }} />
       </div>
     </div>

@@ -20,11 +20,11 @@ const ko = {
   biggestGap: "\uac00\uc7a5 \ud070 \uc57d\uc810",
   capture: "\uc624\ub298 \ud55c \uac83 \uc62c\ub9ac\uae30",
   dailyDetail: "\uc77c\ubcc4 \uc0c1\uc138",
-  draftTrust: "OCR/AI \uc815\ub9ac\ub294 \ucd08\uc548\uc785\ub2c8\ub2e4",
+  draftTrust: "OCR과 AI 정리는 학습 보조 초안입니다",
   nextAction: "\ub2e4\uc74c \ud589\ub3d9",
   note: "\ud559\uc2b5 \ub178\ud2b8",
   noteDraftCta: "\ud559\uc2b5 \ub178\ud2b8 \ucd08\uc548 \ub9cc\ub4e4\uae30",
-  photoPdf: "\uc0ac\uc9c4/PDF",
+  photoPdf: "PDF 선택",
   review: "\ubcf5\uc2b5",
   reviewCompleteAction: "복습 완료",
   reviewCompleted: "\ubcf5\uc2b5 \uc644\ub8cc",
@@ -75,6 +75,12 @@ function assertIncludesAll(source, phrases) {
   for (const phrase of phrases) {
     assert.ok(source.includes(phrase), `missing phrase: ${phrase}`);
   }
+}
+
+function withoutAllowedNegatedOfficialClaims(source) {
+  return source
+    .replace(/공식\s*채점\s*아님/g, "")
+    .replace(/공식\s*채점이나\s*합격\s*판정이\s*아니라/g, "");
 }
 
 function todayPlanTask(overrides = {}) {
@@ -159,7 +165,7 @@ test("Capture keeps the fast text path, secondary photo/PDF path, and draft trus
     ko.noteDraftCta,
     ko.draftTrust,
   ]);
-  assert.doesNotMatch(captureSource, forbiddenLearnerWording);
+  assert.doesNotMatch(withoutAllowedNegatedOfficialClaims(captureSource), forbiddenLearnerWording);
 });
 
 test("Notes and detail expose learner note loop fields without raw data fields", () => {
@@ -289,7 +295,7 @@ test("learner surfaces keep instructor separation and forbidden wording absent",
   const oldMixedLabels =
     /월간 heatmap|주간 agenda|일별 detail|Today 연결|Review 연결|Agenda 연결|다음 review|review queue 보기|source gap|관련 skeleton|학습용 skeleton|derived metadata|실행 aid|오늘 review|다음 cue|리뷰 노트/;
 
-  assert.doesNotMatch(source, forbiddenLearnerWording);
+  assert.doesNotMatch(withoutAllowedNegatedOfficialClaims(source), forbiddenLearnerWording);
   assert.doesNotMatch(source, oldMixedLabels);
   assert.doesNotMatch(source, /\/(?:instructor|studio)(?:\/|["'`?])|grade-second|second-grading/i);
   assert.doesNotMatch(source, /SUPABASE_SERVICE_ROLE_KEY|service_role|OPENAI_API_KEY|embedding|Google Calendar|Outlook|notification|checkout|paywall/i);

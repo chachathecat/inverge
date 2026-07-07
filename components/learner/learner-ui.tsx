@@ -58,31 +58,25 @@ export function LearnerShell({ email, children, rightSlot }: LearnerShellProps) 
 
   return (
     <div className="min-h-dvh overflow-x-hidden bg-[color:var(--bg-canvas)]">
-      <div className="mx-auto flex w-full max-w-[760px] flex-col px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-4 sm:px-6 sm:pb-12 sm:pt-8 lg:max-w-[820px]">
+      <div className="mx-auto flex w-full max-w-[860px] flex-col px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-4 sm:px-6 sm:pb-12 sm:pt-8">
         <header className="space-y-4 border-b border-[var(--border-subtle)] pb-4 sm:pb-5" aria-label="학습 공간 헤더">
           <div className="flex items-start justify-between gap-3">
             <Link href={homeHref} className="flex min-h-11 min-w-0 items-center gap-3 rounded-[var(--radius-md)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:rgba(16,35,63,0.16)]" aria-label="답안길 오늘 학습으로 이동">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[color:var(--brand-900)] text-sm font-semibold text-[color:var(--text-inverse)]">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[color:var(--brand-900)] text-sm font-semibold text-[color:var(--text-inverse)]">
                 답
               </span>
               <span className="min-w-0">
-                <span className="block text-base font-semibold tracking-[-0.02em] text-[color:var(--foreground-strong)]">답안길</span>
-                <span className="block truncate text-xs text-[color:var(--muted)]">2차 합격관제 OS</span>
+                <span className="flex items-baseline gap-2">
+                  <span className="text-base font-semibold tracking-normal text-[color:var(--foreground-strong)]">답안길</span>
+                  <span className="text-[11px] font-medium text-[color:var(--muted)]">by Inverge</span>
+                </span>
+                <span className="block truncate text-xs text-[color:var(--muted)]">감정평가사 2차 답안 훈련 OS</span>
               </span>
             </Link>
             <div className="flex shrink-0 items-center gap-2">
               {rightSlot ? <div className="hidden sm:block">{rightSlot}</div> : null}
               <SignOutButton />
             </div>
-          </div>
-
-          <div
-            className="rounded-[var(--radius-md)] border border-[color:var(--brand-100)] bg-[color:var(--brand-050)] px-3 py-2 text-[color:var(--brand-900)]"
-            aria-label="감정평가사 2차 학습 모드"
-            data-s224v-learner-mode-entry="second-only"
-          >
-            <span className="block text-sm font-semibold">감정평가사 2차</span>
-            <span className="block text-[11px] leading-5">실무·이론·법규 답안 운영</span>
           </div>
 
           <nav aria-label="학습 메뉴" className="flex flex-wrap gap-2">
@@ -106,10 +100,10 @@ export function LearnerShell({ email, children, rightSlot }: LearnerShellProps) 
                   }}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "inline-flex min-h-11 items-center justify-center rounded-full border px-4 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:rgba(16,35,63,0.16)]",
+                    "inline-flex min-h-10 items-center justify-center rounded-full border px-4 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:rgba(16,35,63,0.16)]",
                     active
                       ? "border-[color:var(--brand-700)] bg-[color:var(--brand-900)] text-[color:var(--text-inverse)]"
-                      : "border-[var(--border-subtle)] bg-[color:var(--bg-surface)] text-[color:var(--muted)]",
+                      : "border-transparent bg-transparent text-[color:var(--muted)] hover:bg-[color:var(--surface)] hover:text-[color:var(--foreground-strong)]",
                   )}
                 >
                   {item.label}
@@ -118,8 +112,8 @@ export function LearnerShell({ email, children, rightSlot }: LearnerShellProps) 
             })}
           </nav>
 
-          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[color:var(--muted)]">
-            <span>{config.label} 오늘 할 일</span>
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[color:var(--muted)]" data-s224v-learner-mode-entry="second-only">
+            <span>{config.label} · 실무·이론·법규</span>
             <span className="max-w-full truncate">{email ?? "로그인한 사용자"}</span>
           </div>
         </header>

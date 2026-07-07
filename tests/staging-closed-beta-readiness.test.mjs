@@ -45,7 +45,7 @@ const forbiddenLearnerPatterns = [
 ];
 
 const officialClaimPatterns = [
-  /공식\s*채점/,
+  /공식\s*채점(?!\s*아님)/,
   /공식\s*점수/,
   /확정\s*점수/,
   /합격\s*판정/,
@@ -204,18 +204,18 @@ test("capture route smoke keeps capture-first copy and one primary start action"
 
   for (const required of [
     "오늘 한 것 올리기",
-    "사진/PDF/텍스트 중 하나로 시작하고, OCR/AI 초안은 직접 확인합니다.",
+    "사진, PDF, 텍스트 중 하나로 시작하세요.",
     "사진 찍기",
     "PDF 선택",
     "텍스트 붙여넣기",
-    "OCR/AI 정리는 초안입니다. 저장 전 직접 확인해 주세요.",
+    "OCR과 AI 정리는 학습 보조 초안입니다. 저장 전 직접 수정할 수 있습니다.",
     "학습 노트 / 복습 / 오늘 할 일로 이어질 가장 큰 약점 1개와 다음 행동 1개가 만들어집니다.",
   ]) {
     assert.equal(capture.includes(required), true, `${required} should render on /app/capture`);
   }
 
   assert.equal(capture.includes("canQuickSave"), true, "empty capture start should keep one primary visible action");
-  assert.equal(/점수|채점|합격\s*판정|불합격\s*판정/.test(capture), false, "/app/capture should not become score-first");
+  assert.equal(/점수|공식\s*채점(?!\s*아님)|채점\s*(?:결과|완료|확정)|합격\s*판정|불합격\s*판정/.test(capture), false, "/app/capture should not become score-first");
   assertNoPattern(capture, forbiddenLearnerPatterns, "/app/capture");
   assertNoPattern(capture, officialClaimPatterns, "/app/capture");
 });

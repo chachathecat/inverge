@@ -35,7 +35,7 @@ test('instructor second-grading OCR UI is scoped to instructor page', async () =
 test("learner capture flow keeps instructor OCR route separated and editable OCR notice", async () => {
   const learnerCapture = await readFile(new URL("../components/review-os/capture-form.tsx", import.meta.url), "utf8");
   assert.equal(learnerCapture.includes("/api/instructor/second-grading/ocr"), false);
-  assert.ok(learnerCapture.includes("OCR/AI 정리는 초안입니다. 저장 전 직접 확인해 주세요."));
+  assert.ok(learnerCapture.includes("OCR과 AI 정리는 학습 보조 초안입니다. 저장 전 직접 수정할 수 있습니다."));
   assert.match(learnerCapture, /노트 원문은 비공개로 보관되며,\s*파생 학습 신호는 개인 추천 개선에만\s*사용됩니다\./);
   assert.ok(learnerCapture.includes("capture=\"environment\""));
 });

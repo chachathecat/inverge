@@ -36,18 +36,18 @@ const LEARNER_FILES = [
 
 test("learner home contains operational copy", () => {
   const source = read("app/app/page.tsx");
-  assert.ok(source.includes("오늘은 이것부터 하세요") || source.includes("오늘의 우선순위"));
+  assert.ok(source.includes("오늘은 이것만 하면 됩니다") || source.includes("오늘의 우선순위"));
+  assert.ok(source.includes("오늘 공부 시작"));
   assert.ok(source.includes("오늘 기록 기반"));
-  assert.ok(source.includes("공부한 흔적"));
-  assert.ok(source.includes("복습 큐"));
-  assert.ok(source.includes("오늘 계획"));
+  assert.ok(source.includes("복습"));
+  assert.ok(source.includes("오늘 할 일"));
 });
 
 test("capture page contains capture+note framing copy", () => {
   const capturePage = read("app/app/capture/page.tsx");
   const captureForm = read("components/review-os/capture-form.tsx");
   const merged = `${capturePage}\n${captureForm}`;
-  ["오늘 한 것 올리기", "오늘 공부한 내용 또는 내 답안", "사진 찍기", "앨범에서 선택", "OCR/AI 정리는 초안입니다", "저장하고 오늘 계획에 반영", "가장 큰 빈틈", "다음 행동"].forEach((phrase) => {
+  ["오늘 한 것 올리기", "오늘 공부한 내용 또는 내 답안", "사진 찍기", "앨범에서 선택", "OCR과 AI 정리는 학습 보조 초안입니다", "학습 노트 초안 만들기", "가장 큰 약점", "다음 행동"].forEach((phrase) => {
     assert.ok(merged.includes(phrase), `Missing phrase: ${phrase}`);
   });
 });
@@ -102,7 +102,7 @@ test("capture learning signal for 2차 is safe and rewrite oriented", () => {
 
 test("review queue keeps learner-visible capture loop proof copy", () => {
   const source = read("components/review-os/review-queue-client.tsx");
-  ["오늘 한 것", "반복 신호와 최근 기록 기준", "다시 보기", "Capture에서 오늘 학습 1개를 정리하면 약점 후보와 다음 행동이 이곳에 이어집니다."].forEach((phrase) => {
+  ["오늘 한 것", "지금 복습할 항목이 없습니다.", "오늘 한 것을 올리면 복습할 항목이 만들어집니다.", "다음 행동"].forEach((phrase) => {
     assert.ok(source.includes(phrase), `Missing phrase: ${phrase}`);
   });
 });
@@ -151,7 +151,13 @@ test("safety guardrails prevent instructor leakage, provider tokens, and officia
   assert.equal(learnerJoined.includes("/instructor/source-review"), false);
   assert.equal(learnerJoined.includes("/instructor/second-grading"), false);
   FORBIDDEN_PROVIDER_TOKENS.forEach((token) => assert.equal(learnerJoined.toLowerCase().includes(token.toLowerCase()), false, `Forbidden provider token found: ${token}`));
-  FORBIDDEN_GRADING_CLAIMS.forEach((claim) => assert.equal(learnerJoined.toLowerCase().includes(claim.toLowerCase()), false, `Forbidden grading claim found: ${claim}`));
+  FORBIDDEN_GRADING_CLAIMS.forEach((claim) => {
+    if (claim === "공식 채점") {
+      assert.doesNotMatch(learnerJoined, /공식\s*채점(?!\s*아님)/, `Forbidden grading claim found: ${claim}`);
+      return;
+    }
+    assert.equal(learnerJoined.toLowerCase().includes(claim.toLowerCase()), false, `Forbidden grading claim found: ${claim}`);
+  });
 });
 
 test("beta readiness docs exist and keep closed-beta anchors", () => {

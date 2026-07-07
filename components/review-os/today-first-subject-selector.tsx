@@ -17,6 +17,7 @@ type Props = {
   studyLogHref?: string;
   primaryLabel?: string;
   isFirstSetStart?: boolean;
+  quietPrimary?: boolean;
 };
 
 function setSubjectInHref(href: string, subject: string) {
@@ -37,6 +38,7 @@ export function TodaySubjectSelector({
   studyLogHref,
   primaryLabel,
   isFirstSetStart = false,
+  quietPrimary = false,
 }: Props) {
   const config = getModeConfig(mode);
   const [subject, setSubject] = useState(() => normalizeSubjectForMode(selectedSubject, mode));
@@ -87,9 +89,10 @@ export function TodaySubjectSelector({
         <Link href={links.primary} className="block w-full sm:w-auto">
           <Button
             type="button"
-            className="primary-action w-full sm:w-auto"
+            variant={quietPrimary ? "outline" : undefined}
+            className={quietPrimary ? "w-full sm:w-auto" : "primary-action w-full sm:w-auto"}
             data-primary-learner-action
-            data-s224v-dominant-primary-action
+            data-s224v-dominant-primary-action={quietPrimary ? undefined : true}
           >
             {resolvedPrimaryLabel}
           </Button>

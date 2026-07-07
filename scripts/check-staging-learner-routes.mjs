@@ -35,7 +35,7 @@ const learnerForbiddenPatterns = [
   { pattern: /아카이브/, reason: "public archive copy" },
   { pattern: /native app|mobile app/i, reason: "native app copy" },
   { pattern: /네이티브 앱|모바일 앱/, reason: "native app copy" },
-  { pattern: /공식\s*채점|공식\s*점수|확정\s*점수|합격\s*판정|불합격\s*판정|official\s+grading|official\s+score|final\s+judg/i, reason: "official grading/score claim" },
+  { pattern: /공식\s*채점(?!\s*아님)|공식\s*점수|확정\s*점수|합격\s*판정|불합격\s*판정|official\s+grading|official\s+score|final\s+judg/i, reason: "official grading/score claim" },
   { pattern: /보험계리사|계리사|\bactuary\b|\bCPA\b|세무사|TOEFL|\bSAT\b|universal exam|multi-exam/i, reason: "unsupported exam scope" },
 ];
 
@@ -107,11 +107,11 @@ const captureRoute = existsSync(sourcePath("app/app/capture/page.tsx")) ? read("
 const captureForm = existsSync(sourcePath("components/review-os/capture-form.tsx")) ? read("components/review-os/capture-form.tsx") : "";
 const capture = `${captureRoute}\n${captureForm}`;
 check(capture.includes("오늘 한 것 올리기"), "/app/capture must keep warm capture-first CTA copy");
-check(capture.includes("사진/PDF/텍스트 중 하나로 시작하고, OCR/AI 초안은 직접 확인합니다."), "/app/capture must render visible photo/PDF/text start copy");
-check(capture.includes("OCR/AI 정리는 초안입니다. 저장 전 직접 확인해 주세요."), "/app/capture must show one OCR/AI draft warning");
+check(capture.includes("사진, PDF, 텍스트 중 하나로 시작하세요."), "/app/capture must render visible photo/PDF/text start copy");
+check(capture.includes("OCR과 AI 정리는 학습 보조 초안입니다. 저장 전 직접 수정할 수 있습니다."), "/app/capture must show one OCR/AI draft warning");
 check(capture.includes("학습 노트 / 복습 / 오늘 할 일로 이어질 가장 큰 약점 1개와 다음 행동 1개가 만들어집니다."), "/app/capture must keep one-biggest-gap focus");
 check(capture.includes("canQuickSave"), "/app/capture starting point must not show more than one primary action");
-check(!/점수|채점|합격\s*판정|불합격\s*판정/.test(capture), "/app/capture must not become score-first");
+check(!/점수|공식\s*채점(?!\s*아님)|채점\s*(?:결과|완료|확정)|합격\s*판정|불합격\s*판정/.test(capture), "/app/capture must not become score-first");
 check(!/href=[{\"'`][^\n]*(?:\/instructor|\/studio|\/admin)/i.test(capture), "/app/capture must not expose instructor/admin links");
 
 const learnerShell = existsSync(sourcePath("components/learner/learner-ui.tsx")) ? read("components/learner/learner-ui.tsx") : "";
