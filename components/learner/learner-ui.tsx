@@ -12,7 +12,6 @@ import { cn } from "@/lib/utils";
 
 type LearnerShellProps = {
   email: string | null;
-  mode: AppraisalMode;
   children: ReactNode;
   rightSlot?: ReactNode;
 };
@@ -52,6 +51,8 @@ function matchesLearnerNavPath(pathname: string, item: LearnerNavItem) {
 
 export function LearnerShell({ email, children, rightSlot }: LearnerShellProps) {
   const pathname = usePathname();
+  // The authenticated learner shell intentionally exposes only the second-round Answer Road OS.
+  // First-round code remains compatibility-only and is not surfaced in learner navigation.
   const currentMode: AppraisalMode = "second";
   const config = getModeConfig(currentMode);
   const homeHref = `/app?mode=${currentMode}`;

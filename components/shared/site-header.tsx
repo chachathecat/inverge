@@ -3,8 +3,12 @@ import Link from "next/link";
 import { SignOutButton } from "@/components/shared/sign-out-button";
 import { getServerSessionUser } from "@/lib/auth/session";
 
+const DEMO_CAPTURE_HREF = "/app/capture?mode=second";
+const AUTH_CAPTURE_HREF = "/login?returnTo=/app/capture?mode=second";
+
 export async function SiteHeader() {
   const session = await getServerSessionUser();
+  const publicCaptureHref = session.authEnabled ? AUTH_CAPTURE_HREF : DEMO_CAPTURE_HREF;
 
   return (
     <header className="sticky top-0 z-50 border-b border-[var(--border)] bg-[color:color-mix(in_srgb,var(--surface)_92%,transparent)] backdrop-blur">
@@ -42,7 +46,10 @@ export async function SiteHeader() {
               >
                 소개
               </Link>
-              <Link href="/answer-review?mode=second" className="rounded-full bg-[color:var(--primary)] px-4 py-2 text-sm font-medium text-white">
+              <Link
+                href={publicCaptureHref}
+                className="rounded-full border border-[var(--border)] bg-[color:var(--surface)]/60 px-4 py-2 text-sm font-medium text-[color:var(--foreground-strong)] hover:bg-[color:var(--surface-soft)]"
+              >
                 오늘 답안 올리기
               </Link>
               {session.authEnabled ? (

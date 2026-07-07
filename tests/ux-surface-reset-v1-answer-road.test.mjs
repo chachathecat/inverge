@@ -42,6 +42,8 @@ test("public brand hierarchy and landing first screen match Answer Road reset", 
     "답안길",
     "by Inverge",
     "감정평가사 2차 답안 훈련 OS",
+    "/login?returnTo=/app/capture?mode=second",
+    "/app/capture?mode=second",
     "오늘 쓴 답안에서",
     "가장 먼저 고칠 문단을 찾습니다.",
     "오늘 답안 올리기",
@@ -56,11 +58,16 @@ test("public brand hierarchy and landing first screen match Answer Road reset", 
   }
 
   assert.doesNotMatch(`${header}\n${landing}`, /IV|감정평가사 합격 운영 시스템|2차 합격관제 OS/);
+  assert.equal(landing.includes('href="/answer-review?mode=second"'), false);
+  assert.equal(header.includes('href="/answer-review?mode=second"'), false);
+  assert.equal(header.includes('className="rounded-full bg-[color:var(--primary)] px-4 py-2'), false);
 });
 
-test("authenticated Today shell opens with one calm primary task card", () => {
+test("authenticated Today shell opens with one calm primary task card backed by real Today Plan data", () => {
   const shell = read("components/learner/learner-ui.tsx");
   const home = read("app/app/page.tsx");
+  const appShell = read("components/review-os/app-shell.tsx");
+  const layout = read("app/app/layout.tsx");
   const selector = read("components/review-os/today-first-subject-selector.tsx");
 
   for (const phrase of [
@@ -68,17 +75,21 @@ test("authenticated Today shell opens with one calm primary task card", () => {
     "by Inverge",
     "감정평가사 2차 답안 훈련 OS",
     "오늘은 이것만 하면 됩니다",
-    "어제 쓴 법규 문단 1개 다시쓰기",
-    "실무 계산형 답안 1개 올리기",
-    "민법 착오 취소 쟁점 10초 복습",
+    "todayPlanTasks.slice(0, TODAY_PLAN_MAX_PRIMARY_TASKS)",
+    "오늘 한 것 1개를 올리면 첫 계획을 만들 수 있습니다.",
     "예상 시간",
-    "28분",
+    "계획 생성 후 표시",
     "오늘 공부 시작",
   ]) {
     assert.ok(`${shell}\n${home}`.includes(phrase), `missing Today reset phrase: ${phrase}`);
   }
 
+  assert.doesNotMatch(home, /어제 쓴 법규 문단 1개 다시쓰기|실무 계산형 답안 1개 올리기|민법 착오 취소 쟁점 10초 복습|28분/);
   assert.ok(shell.includes("bg-[color:var(--brand-900)]"));
+  assert.equal(shell.includes("mode: AppraisalMode;"), false);
+  assert.equal(appShell.includes("mode: AppraisalMode;"), false);
+  assert.equal(layout.includes("mode={mode}"), false);
+  assert.ok(shell.includes("intentionally exposes only the second-round Answer Road OS"));
   assert.ok(home.includes("data-ux-surface-reset-primary-card"));
   assert.ok(selector.includes("quietPrimary"));
   assert.doesNotMatch(shell, /2차 합격관제 OS|mode=first|1차/);
@@ -102,17 +113,28 @@ test("capture flow starts as a four-step wizard with one Trust Card", () => {
     "사진 찍기",
     "PDF 선택",
     "텍스트 붙여넣기",
+    "입력 내용 확인하기",
     "AI 초안",
     "OCR 초안",
     "직접 수정 가능",
     "공식 채점 아님",
+    "saved-plan",
+    "data-capture-plan-reflection-stage",
+    "학습 노트 저장 상태",
+    "Today Plan candidate",
+    "Review Queue candidate",
+    "오늘 할 일로 이동",
   ]) {
     assert.ok(combined.includes(phrase), `missing capture phrase: ${phrase}`);
   }
 
   assert.equal(count(capture, "OCR과 AI 정리는 학습 보조 초안입니다. 저장 전 직접 수정할 수 있습니다."), 1);
+  assert.ok(capture.includes('if (stage === "saved-plan") return 4;'));
+  assert.ok(capture.includes('setStage("saved-plan")'));
+  assert.equal(capture.includes("if (savedConfirmation) {\n    return"), false);
   assert.equal(capturePage.includes("ClosedBetaBanner"), false);
   assert.doesNotMatch(capture, /OCR 결과는 초안입니다|OCR\/AI 정리는 초안입니다|학습 보조 초안입니다\. 저장 전 직접 확인/);
+  assert.equal(capture.includes("학습 노트 초안 만들기"), false);
   assert.ok(capture.indexOf("사진 찍기") < capture.indexOf("선택 정보"));
   assert.ok(capture.indexOf("사진 찍기") < capture.indexOf("첨부 상태"));
   assert.ok(capture.indexOf("사진 찍기") < capture.indexOf("저장 전 캡처 품질 체크"));

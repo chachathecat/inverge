@@ -24,7 +24,7 @@ test("PWA manifest exists with installable Dabangil metadata and icons", () => {
   assert.equal(data.name, "답안길");
   assert.equal(data.short_name, "답안길");
   assert.match(data.description ?? "", /감정평가사 2차 답안/);
-  assert.equal(data.start_url, "/answer-review?mode=second");
+  assert.equal(data.start_url, "/app/capture?mode=second");
   assert.equal(data.scope, "/");
   assert.equal(data.display, "standalone");
   assert.equal(data.lang, "ko");

@@ -41,7 +41,7 @@ test("Capture, Today, Review, Notes, and Agenda expose the connected learner loo
 
   [
     "오늘 한 것 올리기",
-    "학습 노트 초안 만들기",
+    "입력 내용 확인하기",
     "오늘 할 일",
     "복습",
     "학습 노트",
@@ -49,7 +49,7 @@ test("Capture, Today, Review, Notes, and Agenda expose the connected learner loo
     "가장 큰 약점",
     "다음 행동",
     "오늘 한 것 올리기 → 학습 노트 → 오늘 할 일 → 복습 → 학습 기록",
-    "학습 노트 / 복습 / 오늘 할 일 / 학습 기록",
+    "학습 노트 저장 상태",
   ].forEach((term) => assert.ok(combined.includes(term), term));
 });
 
@@ -84,6 +84,6 @@ test("learner grammar cleanup does not reintroduce forbidden wording or instruct
     /기준\s*답안|기준답안|모범답안|공식답안|공식 채점|점수예측|합격예측|합격 가능성 확정|정답 확정|최종 판단|pass\/fail/i,
   );
   assert.doesNotMatch(combined, /\/instructor\/second-grading|grade-second|second-grading/);
-  assert.doesNotMatch(combined, /Notes \/ Review \/ Today|Review Queue|Today Plan/);
+  assert.doesNotMatch(combined, /Notes \/ Review \/ Today|Review Queue(?! candidate)|Today Plan(?! candidate)/);
   assert.doesNotMatch(combined, /\.insert\(|\.update\(|\.upsert\(|\.delete\(/);
 });

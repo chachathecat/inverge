@@ -16,7 +16,7 @@ test("capture page shell is slim and capture-first for both modes", () => {
     "감정평가이론",
     "감정평가 및 보상법규",
     "텍스트 붙여넣기",
-    "학습 노트 초안 만들기",
+    "입력 내용 확인하기",
     "OCR과 AI 정리는 학습 보조 초안입니다. 저장 전 직접 수정할 수 있습니다.",
     "공식 채점 아님",
   ].forEach((phrase) => assert.ok(combined.includes(phrase), `Missing shell phrase: ${phrase}`));

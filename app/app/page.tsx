@@ -238,6 +238,9 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
       ? { label: "답안 검토로 보기", href: `/answer-review?mode=${mode}` }
       : { label: "다시 풀기", href: `/problem-snap?mode=${mode}` };
   const visibleTodayPlanTasks = todayPlanTasks;
+  const heroTodayPlanTasks = todayPlanTasks.slice(0, TODAY_PLAN_MAX_PRIMARY_TASKS);
+  const heroTodayPlanEstimatedMinutes = heroTodayPlanTasks.reduce((sum, task) => sum + task.estimated_minutes, 0);
+  const heroPrimaryHref = heroTodayPlanTasks[0] ? resolveTaskHref(heroTodayPlanTasks[0]) : modeCaptureHref;
 
   return (
     <div
@@ -258,17 +261,28 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
         <h1 className="mt-2 text-[28px] font-semibold leading-tight text-[color:var(--foreground-strong)]">
           오늘은 이것만 하면 됩니다
         </h1>
-        <ol className="mt-5 space-y-3 text-[15px] leading-7 text-[color:var(--foreground-strong)]">
-          <li>1. 어제 쓴 법규 문단 1개 다시쓰기</li>
-          <li>2. 실무 계산형 답안 1개 올리기</li>
-          <li>3. 민법 착오 취소 쟁점 10초 복습</li>
-        </ol>
+        {heroTodayPlanTasks.length > 0 ? (
+          <ol className="mt-5 space-y-3 text-[15px] leading-7 text-[color:var(--foreground-strong)]">
+            {heroTodayPlanTasks.map((task, index) => (
+              <li key={task.itemId}>
+                {index + 1}. {task.title}
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <p className="mt-5 rounded-[var(--radius-md)] bg-[color:var(--surface-soft)] px-4 py-4 text-[15px] leading-7 text-[color:var(--foreground-strong)]">
+            오늘 한 것 1개를 올리면 첫 계획을 만들 수 있습니다.
+          </p>
+        )}
         <div className="mt-6 flex flex-col gap-3 border-t border-[color:var(--border-subtle)] pt-5 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-[color:var(--muted)]">
-            예상 시간 <span className="font-semibold text-[color:var(--foreground-strong)]">28분</span>
+            예상 시간{" "}
+            <span className="font-semibold text-[color:var(--foreground-strong)]">
+              {heroTodayPlanTasks.length > 0 ? `${heroTodayPlanEstimatedMinutes}분` : "계획 생성 후 표시"}
+            </span>
           </p>
           <Link
-            href={modeCaptureHref}
+            href={heroPrimaryHref}
             className="inline-flex min-h-12 w-full items-center justify-center rounded-[var(--radius-pill)] bg-[color:var(--brand-900)] px-6 text-sm font-semibold text-white transition hover:bg-[color:var(--brand-800)] sm:w-auto"
           >
             오늘 공부 시작

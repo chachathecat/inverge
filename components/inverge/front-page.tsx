@@ -3,6 +3,7 @@ import { ArrowRight } from "lucide-react";
 
 import { QuietSection, RefinedBadge, RefinedShell, SectionHeading } from "@/components/inverge/refined-primitives";
 import { buttonVariants } from "@/components/ui/button";
+import { getServerSessionUser } from "@/lib/auth/session";
 import { cn } from "@/lib/utils";
 
 import { FrontPageHeroAnimation } from "@/components/inverge/front-page-hero-animation";
@@ -24,6 +25,9 @@ const LOOP_SUMMARY = [
     detail: "공식 채점이나 합격 판정이 아니라 학습 보조 초안입니다.",
   },
 ] as const;
+
+const DEMO_CAPTURE_HREF = "/app/capture?mode=second";
+const AUTH_CAPTURE_HREF = "/login?returnTo=/app/capture?mode=second";
 
 function ResultPreviewCard() {
   return (
@@ -56,7 +60,10 @@ function ResultPreviewCard() {
   );
 }
 
-export function FrontPage() {
+export async function FrontPage() {
+  const session = await getServerSessionUser();
+  const primaryCaptureHref = session.authEnabled ? AUTH_CAPTURE_HREF : DEMO_CAPTURE_HREF;
+
   return (
     <RefinedShell className="space-y-14 py-10 sm:py-14 lg:py-16">
       <section className="grid min-h-[calc(100vh-180px)] items-center gap-8 lg:grid-cols-[minmax(0,1fr)_440px] lg:gap-12">
@@ -78,7 +85,7 @@ export function FrontPage() {
           </div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <Link
-              href="/answer-review?mode=second"
+              href={primaryCaptureHref}
               className={cn(buttonVariants({ size: "lg" }), "w-full sm:w-auto")}
             >
               오늘 답안 올리기

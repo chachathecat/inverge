@@ -3,12 +3,10 @@ import Link from "next/link";
 
 import { ReviewOsAppShell } from "@/components/review-os/app-shell";
 import { Button } from "@/components/ui/button";
-import { getProfileMode } from "@/lib/review-os/appraisal";
 import { getReviewOsServerContext } from "@/lib/review-os/server";
 
 export default async function ReviewOsLayout({ children }: { children: ReactNode }) {
-  const { session, access, profile, usage } = await getReviewOsServerContext("/app");
-  const mode = getProfileMode(profile);
+  const { session, access, usage } = await getReviewOsServerContext("/app");
 
   if (!access?.allowed) {
     return (
@@ -35,7 +33,6 @@ export default async function ReviewOsLayout({ children }: { children: ReactNode
   return (
     <ReviewOsAppShell
       email={session.email}
-      mode={mode}
       rightSlot={
         usage ? (
           <div className="rounded-full border border-[var(--border)] px-4 py-2 text-sm text-[color:var(--muted)]">

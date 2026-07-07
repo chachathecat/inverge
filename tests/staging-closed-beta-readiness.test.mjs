@@ -208,8 +208,9 @@ test("capture route smoke keeps capture-first copy and one primary start action"
     "사진 찍기",
     "PDF 선택",
     "텍스트 붙여넣기",
+    "입력 내용 확인하기",
     "OCR과 AI 정리는 학습 보조 초안입니다. 저장 전 직접 수정할 수 있습니다.",
-    "학습 노트 / 복습 / 오늘 할 일로 이어질 가장 큰 약점 1개와 다음 행동 1개가 만들어집니다.",
+    "다음 단계에서 OCR/텍스트 초안을 보고 수정한 뒤 가장 큰 약점 1개를 정리합니다.",
   ]) {
     assert.equal(capture.includes(required), true, `${required} should render on /app/capture`);
   }

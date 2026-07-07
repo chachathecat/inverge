@@ -23,7 +23,7 @@ const ko = {
   draftTrust: "OCR과 AI 정리는 학습 보조 초안입니다",
   nextAction: "\ub2e4\uc74c \ud589\ub3d9",
   note: "\ud559\uc2b5 \ub178\ud2b8",
-  noteDraftCta: "\ud559\uc2b5 \ub178\ud2b8 \ucd08\uc548 \ub9cc\ub4e4\uae30",
+  noteDraftCta: "입력 내용 확인하기",
   photoPdf: "PDF 선택",
   review: "\ubcf5\uc2b5",
   reviewCompleteAction: "복습 완료",

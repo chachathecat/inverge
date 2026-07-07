@@ -4,9 +4,10 @@ import { readFile } from "node:fs/promises";
 
 test("home daily command card keeps one primary CTA and folds details", async () => {
   const source = await readFile(new URL("../app/app/page.tsx", import.meta.url), "utf8");
-  ["오늘은 이것만 하면 됩니다", "어제 쓴 법규 문단 1개 다시쓰기", "실무 계산형 답안 1개 올리기", "오늘 공부 시작"].forEach((t) =>
+  ["오늘은 이것만 하면 됩니다", "todayPlanTasks.slice(0, TODAY_PLAN_MAX_PRIMARY_TASKS)", "오늘 한 것 1개를 올리면 첫 계획을 만들 수 있습니다.", "오늘 공부 시작"].forEach((t) =>
     assert.ok(source.includes(t)),
   );
+  assert.equal(/어제 쓴 법규 문단|실무 계산형 답안|민법 착오/.test(source), false);
   assert.ok(source.includes("<details"));
 });
 
@@ -29,8 +30,7 @@ test("capture initial surface shows subject plus photo, PDF, and text options", 
     "감정평가실무",
     "감정평가이론",
     "감정평가 및 보상법규",
-    "학습 노트 초안 만들기",
-    "AI로 정리",
+    "입력 내용 확인하기",
     "사진 찍기",
     "PDF 선택",
     "촬영하거나 업로드한 뒤 OCR 초안을 직접 확인합니다.",
@@ -67,7 +67,7 @@ test("core loop keeps no more than one primary CTA in each execution step", asyn
 test("second-write flow hides global footer until step 6 and keeps defer actions under details", async () => {
   const source = await readFile(new URL("../components/review-os/capture-form.tsx", import.meta.url), "utf8");
   assert.match(source, /const hideGlobalFooterActions =\s*mode === "second" && secondModeHiddenFooterStages\.has\(stage\);/);
-  assert.ok(source.includes("{!hideGlobalFooterActions && currentCaptureStep !== 1 ? ("));
+  assert.ok(source.includes("{!savedConfirmation && !hideGlobalFooterActions && currentCaptureStep !== 1 ? ("));
   assert.ok(source.includes("다른 작업"));
   assert.ok(source.includes("다시 쓰기"));
   assert.ok(source.includes("나중에 하기"));

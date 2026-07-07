@@ -62,10 +62,11 @@ test("capture page and form keep capture-first learner copy with one primary sta
     "오늘 한 것 올리기",
     "사진, PDF, 텍스트 중 하나로 시작하세요.",
     "텍스트 붙여넣기",
-    "학습 노트 초안 만들기",
+    "입력 내용 확인하기",
+    "빠르게 저장",
     "촬영하거나 업로드한 뒤 OCR 초안을 직접 확인합니다.",
     "OCR과 AI 정리는 학습 보조 초안입니다. 저장 전 직접 수정할 수 있습니다.",
-    "학습 노트 / 복습 / 오늘 할 일로 이어질 가장 큰 약점 1개와 다음 행동 1개가 만들어집니다.",
+    "다음 단계에서 OCR/텍스트 초안을 보고 수정한 뒤 가장 큰 약점 1개를 정리합니다.",
   ]) {
     assert.equal(combined.includes(required), true, `${required} copy should exist`);
   }

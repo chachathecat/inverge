@@ -133,10 +133,11 @@ test("capture confirmation copy points to Notes, Review, and Today without forbi
 
   assert.match(confirmationBlock, /가장 큰 약점 1개/);
   assert.match(confirmationBlock, /다음 행동 1개/);
-  assert.match(confirmationBlock, /이어서 할 곳/);
-  assert.match(confirmationBlock, /학습 노트 \/ 복습 \/ 오늘 할 일/);
-  assert.match(confirmationBlock, /오늘 할 일로 돌아가기/);
-  assert.match(confirmationBlock, /다음 행동 후보입니다\. 학습 정리 초안입니다\. 저장 전 직접 확인해 주세요\./);
+  assert.match(confirmationBlock, /학습 노트 저장 상태/);
+  assert.match(confirmationBlock, /Today Plan candidate/);
+  assert.match(confirmationBlock, /Review Queue candidate/);
+  assert.match(confirmationBlock, /오늘 할 일로 이동/);
+  assert.match(confirmationBlock, /학습 노트와 오늘 할 일에 반영할 후보입니다\./);
   assert.doesNotMatch(confirmationBlock, /정답 확정|최종 판단|공식 채점|모범답안|합격 가능성|pass-fail|score prediction/i);
 });
 
@@ -181,7 +182,7 @@ test("learner capture route stays separated from instructor second grading", () 
 
   assert.doesNotMatch(combined, /\/instructor\/second-grading|second-grading|grade-second/);
   assert.match(combined, /오늘 한 것 올리기/);
-  assert.match(combined, /학습 노트 초안 만들기/);
+  assert.match(combined, /입력 내용 확인하기/);
   assert.match(combined, /OCR과 AI 정리는 학습 보조 초안입니다\. 저장 전 직접 수정할 수 있습니다\./);
   assert.doesNotMatch(read(captureFormPath), /기준\s*답안|기준답안|모범답안|공식답안|정답 확정|최종 판단/);
 });

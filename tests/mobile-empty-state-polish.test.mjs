@@ -14,7 +14,7 @@ test("/app includes empty today-plan, review queue framing, and capture-origin p
 
 test("/app/capture and capture-form include OCR draft guidance, editable capture, CTA, and calm error copy", () => {
   const merged = `${read("app/app/capture/page.tsx")}\n${read("components/review-os/capture-form.tsx")}`;
-  ["오늘 한 것 올리기", "오늘 공부한 내용 또는 내 답안", "OCR과 AI 정리는 학습 보조 초안입니다", "저장 전 직접 수정할 수 있습니다", "학습 노트 초안 만들기", "정리하지 못했습니다"].forEach((phrase) => {
+  ["오늘 한 것 올리기", "오늘 공부한 내용 또는 내 답안", "OCR과 AI 정리는 학습 보조 초안입니다", "저장 전 직접 수정할 수 있습니다", "입력 내용 확인하기", "정리하지 못했습니다"].forEach((phrase) => {
     assert.ok(merged.includes(phrase), `Missing phrase: ${phrase}`);
   });
 });

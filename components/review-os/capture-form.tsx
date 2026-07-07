@@ -110,6 +110,19 @@ type DraftState = {
   hasManualCorrection?: boolean;
   ocrConfirmedByLearner?: boolean;
 };
+
+type CaptureStage =
+  | "intake"
+  | "preview"
+  | "confirm"
+  | "second-issue-recall"
+  | "second-outline"
+  | "second-answer"
+  | "second-reference"
+  | "second-gap"
+  | "second-rewrite"
+  | "saved-plan";
+
 type UploadedPage = {
   id: string;
   name: string;
@@ -251,9 +264,10 @@ function parseTimeSpentMinutes(value: string) {
   return Number(match[0]);
 }
 
-function getCaptureStep(stage: string) {
+function getCaptureStep(stage: CaptureStage) {
   if (stage === "intake") return 1;
   if (stage === "preview") return 2;
+  if (stage === "saved-plan") return 4;
   if (stage === "confirm" || stage.startsWith("second-")) return 3;
   return 4;
 }
@@ -383,17 +397,7 @@ export function WrongAnswerCaptureForm({
     if (secondWriteEnabled) return "second-issue-recall" as const;
     return "intake" as const;
   };
-  const [stage, setStage] = useState<
-    | "intake"
-    | "preview"
-    | "confirm"
-    | "second-issue-recall"
-    | "second-outline"
-    | "second-answer"
-    | "second-reference"
-    | "second-gap"
-    | "second-rewrite"
-  >(getInitialStage());
+  const [stage, setStage] = useState<CaptureStage>(getInitialStage());
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [extracting, setExtracting] = useState(false);
@@ -401,6 +405,10 @@ export function WrongAnswerCaptureForm({
   const [savedConfirmation, setSavedConfirmation] = useState<SavedCaptureConfirmation | null>(null);
   const [extractionState, setExtractionState] = useState<ExtractionState>("idle");
   const [uploadedPages, setUploadedPages] = useState<UploadedPage[]>(() => form.capturePages ?? []);
+  function openSavedPlanStage(confirmation: SavedCaptureConfirmation) {
+    setSavedConfirmation(confirmation);
+    setStage("saved-plan");
+  }
   const secondModeHiddenFooterStages = new Set([
     "second-issue-recall",
     "second-outline",
@@ -922,10 +930,10 @@ export function WrongAnswerCaptureForm({
       nextAction: copy.nextAction,
     });
     if (!localSave.savedToBrowser) {
-      setSavedConfirmation(buildSaveConfirmation({ itemId: localSave.note.id, status: "save_failed", retryAction, copy, foundationDraft }));
+      openSavedPlanStage(buildSaveConfirmation({ itemId: localSave.note.id, status: "save_failed", retryAction, copy, foundationDraft }));
       return false;
     }
-    setSavedConfirmation(buildSaveConfirmation({ itemId: localSave.note.id, status: "local_fallback_saved", copy, foundationDraft }));
+    openSavedPlanStage(buildSaveConfirmation({ itemId: localSave.note.id, status: "local_fallback_saved", copy, foundationDraft }));
     clearReviewOsDraft(storageKey);
     pushLocalLearnerAnalyticsEvent({
       event: "capture_saved",
@@ -1044,7 +1052,7 @@ export function WrongAnswerCaptureForm({
         createdFromCapture: true,
         nextTaskType: mode === "second" ? "rewrite" : "retry",
       });
-      setSavedConfirmation(buildSaveConfirmation({ itemId: result.item.id, status: "durable_saved", copy, foundationDraft }));
+      openSavedPlanStage(buildSaveConfirmation({ itemId: result.item.id, status: "durable_saved", copy, foundationDraft }));
     } catch {
       await saveLocalCaptureConfirmation(structured, "quick");
     } finally {
@@ -1207,7 +1215,7 @@ export function WrongAnswerCaptureForm({
         router.refresh();
         return;
       }
-      setSavedConfirmation(buildSaveConfirmation({ itemId: result.item.id, status: "durable_saved", copy: getCaptureConfirmationCopy(form), foundationDraft }));
+      openSavedPlanStage(buildSaveConfirmation({ itemId: result.item.id, status: "durable_saved", copy: getCaptureConfirmationCopy(form), foundationDraft }));
     } catch {
       if (destination === "session") {
         await saveLocalCaptureConfirmation(form, "session");
@@ -1227,31 +1235,6 @@ export function WrongAnswerCaptureForm({
   const firstOxChoiceExtraction = mode === "first" ? extractFirstExamFiveChoicesFromText(form.rawQuestionText, form.subjectLabel) : null;
   const canBridgeToFirstOx = firstOxChoiceExtraction?.status === "detected" && firstOxChoiceExtraction.choices.length === 5;
   const canQuickSaveCapture = hasLearnerCaptureContent(form);
-
-  if (savedConfirmation) {
-    return (
-      <SavedCaptureConfirmationPanel
-        mode={mode}
-        subject={form.subjectLabel}
-        confirmation={savedConfirmation}
-        saving={submitting}
-        onBack={() => setSavedConfirmation(null)}
-        onRetry={() => {
-          const retryAction = savedConfirmation.retryAction ?? "session";
-          setSavedConfirmation(null);
-          if (retryAction === "quick") {
-            void saveQuickCaptureFromIntake();
-            return;
-          }
-          void saveCaptureAfterConfirmation("session");
-        }}
-        onReset={() => {
-          setSavedConfirmation(null);
-          resetDraft();
-        }}
-      />
-    );
-  }
 
   const footerSecondary =
     stage === "intake" ? null : (
@@ -1306,7 +1289,31 @@ export function WrongAnswerCaptureForm({
         })}
       </ol>
 
-      {rewriteContext && mode === "second" ? (
+      {savedConfirmation ? (
+        <SavedCaptureConfirmationPanel
+          mode={mode}
+          subject={form.subjectLabel}
+          confirmation={savedConfirmation}
+          saving={submitting}
+          onBack={() => {
+            setSavedConfirmation(null);
+            setStage(savedConfirmation.retryAction === "quick" ? "intake" : "confirm");
+          }}
+          onRetry={() => {
+            const retryAction = savedConfirmation.retryAction ?? "session";
+            setSavedConfirmation(null);
+            if (retryAction === "quick") {
+              void saveQuickCaptureFromIntake();
+              return;
+            }
+            void saveCaptureAfterConfirmation("session");
+          }}
+          onReset={() => {
+            setSavedConfirmation(null);
+            resetDraft();
+          }}
+        />
+      ) : rewriteContext && mode === "second" ? (
         <>
           <RewriteContextPanel
             title={rewriteContext.sourceTitle}
@@ -1503,7 +1510,7 @@ export function WrongAnswerCaptureForm({
         </p>
       ) : null}
 
-      {!hideGlobalFooterActions && currentCaptureStep !== 1 ? (
+      {!savedConfirmation && !hideGlobalFooterActions && currentCaptureStep !== 1 ? (
         <BottomPrimaryAction secondary={footerSecondary}>
         <div className="flex w-full flex-col gap-3 sm:flex-row">
           {rewriteContext && mode === "second" ? (
@@ -1586,7 +1593,7 @@ function SavedCaptureConfirmationPanel({
   onReset: () => void;
 }) {
   const encodedSubject = encodeURIComponent(normalizeSubjectForMode(subject, mode));
-  const learningDraftCopy = "다음 행동 후보입니다. 학습 정리 초안입니다. 저장 전 직접 확인해 주세요.";
+  const learningDraftCopy = "학습 노트와 오늘 할 일에 반영할 후보입니다.";
   const persistenceStatus = confirmation.status ?? (confirmation.persistence === "durable" ? "durable_saved" : "local_fallback_saved");
   const persistenceCopy = getCaptureSavePersistenceCopy(persistenceStatus);
   const saveFailed = persistenceStatus === "save_failed";
@@ -1597,16 +1604,18 @@ function SavedCaptureConfirmationPanel({
         className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-5 sm:p-6"
         aria-live="polite"
         data-testid="capture-save-confirmation"
+        data-capture-plan-reflection-stage
       >
-        <p className="text-caption text-[color:var(--brand-700)]">{persistenceCopy.eyebrow}</p>
-        <h3 className="mt-2 text-title text-[color:var(--foreground-strong)]">{persistenceCopy.title}</h3>
+        <p className="text-caption text-[color:var(--brand-700)]">4. 오늘 계획 반영 · {persistenceCopy.eyebrow}</p>
+        <h3 className="mt-2 text-title text-[color:var(--foreground-strong)]">오늘 할 일에 반영할 준비가 되었습니다.</h3>
         <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">{persistenceCopy.description}</p>
         <div className="mt-5 grid gap-3 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-4">
           <PreviewLine label="가장 큰 약점 1개" value={confirmation.biggestGap} />
           <PreviewLine label="다음 행동 1개" value={confirmation.nextAction} />
-          <PreviewLine label="이어서 할 곳" value="학습 노트 / 복습 / 오늘 할 일" />
+          <PreviewLine label="학습 노트 저장 상태" value={persistenceCopy.statusLabel} />
+          <PreviewLine label="Today Plan candidate" value={confirmation.todayPlanCandidate ?? confirmation.nextAction} />
+          <PreviewLine label="Review Queue candidate" value={confirmation.reviewQueueCandidate ?? confirmation.biggestGap} />
           {confirmation.legalGroundingMessage ? <PreviewLine label="법령 근거 상태" value={confirmation.legalGroundingMessage} /> : null}
-          <PreviewLine label="저장 상태" value={persistenceCopy.statusLabel} />
         </div>
         <div className="mt-3">
           <CognitiveLearningActionCard unit={confirmation.learningAction} compact />
@@ -1625,11 +1634,11 @@ function SavedCaptureConfirmationPanel({
           <>
             <div className="mt-5 grid gap-2 sm:grid-cols-3">
               <Link
-                href={`/app/review?mode=${mode}&subject=${encodedSubject}`}
-                aria-label="복습으로 이어가기"
-                className="inline-flex min-h-11 items-center justify-center rounded-full bg-[color:var(--foreground-strong)] px-4 py-2 text-sm font-medium text-white"
+                href={`/app?mode=${mode}&subject=${encodedSubject}`}
+                aria-label="오늘 할 일로 이동"
+                className="inline-flex min-h-11 items-center justify-center rounded-full bg-[color:var(--brand-900)] px-4 py-2 text-sm font-medium text-white"
               >
-                복습으로 이어가기
+                오늘 할 일로 이동
               </Link>
               <Link
                 href={`/app/notes?mode=${mode}&subject=${encodedSubject}`}
@@ -1638,11 +1647,11 @@ function SavedCaptureConfirmationPanel({
                 학습 노트에서 보기
               </Link>
               <Link
-                href={`/app?mode=${mode}&subject=${encodedSubject}`}
-                aria-label="오늘 할 일로 돌아가기"
+                href={`/app/review?mode=${mode}&subject=${encodedSubject}`}
+                aria-label="복습으로 이어가기"
                 className="inline-flex min-h-11 items-center justify-center rounded-full border border-[color:var(--border-subtle)] px-4 py-2 text-sm font-medium text-[color:var(--foreground-strong)]"
               >
-                오늘 할 일로 돌아가기
+                복습으로 이어가기
               </Link>
             </div>
             <Button type="button" variant="ghost" className="mt-4 w-full sm:w-auto" onClick={onReset}>
@@ -1659,38 +1668,41 @@ function SavedCaptureConfirmationPanel({
       className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-5 sm:p-6"
       aria-live="polite"
       data-testid="capture-save-confirmation"
+      data-capture-plan-reflection-stage
     >
-      <p className="text-caption text-[color:var(--brand-700)]">저장되었습니다</p>
+      <p className="text-caption text-[color:var(--brand-700)]">4. 오늘 계획 반영 · 저장되었습니다</p>
       <h3 className="mt-2 text-title text-[color:var(--foreground-strong)]">오늘 할 일에 반영할 후보를 만들었습니다.</h3>
-      <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">AI가 찾은 가장 큰 약점 후보입니다. 저장 전 직접 확인해 주세요.</p>
+      <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">학습 노트와 복습 후보를 같은 흐름에 연결했습니다.</p>
       <div className="mt-5 grid gap-3 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-4">
         <PreviewLine label="가장 큰 약점 1개" value={confirmation.biggestGap} />
         <PreviewLine label="다음 행동 1개" value={confirmation.nextAction} />
-        <PreviewLine label="이어서 할 곳" value="학습 노트 / 복습 / 오늘 할 일" />
+        <PreviewLine label="학습 노트 저장 상태" value={persistenceCopy.statusLabel} />
+        <PreviewLine label="Today Plan candidate" value={confirmation.todayPlanCandidate ?? confirmation.nextAction} />
+        <PreviewLine label="Review Queue candidate" value={confirmation.reviewQueueCandidate ?? confirmation.biggestGap} />
       </div>
       <div className="mt-3">
         <CognitiveLearningActionCard unit={confirmation.learningAction} compact />
       </div>
       <p className="mt-3 text-xs leading-5 text-[color:var(--muted)]">{learningDraftCopy}</p>
-      <div className="mt-5 grid gap-2 sm:grid-cols-3">
-        <Link
-          href={`/app/review?mode=${mode}&subject=${encodedSubject}`}
-          className="inline-flex min-h-11 items-center justify-center rounded-full bg-[color:var(--foreground-strong)] px-4 py-2 text-sm font-medium text-white"
-        >
-          복습으로 이어가기
-        </Link>
-        <Link
-          href={`/app/notes?mode=${mode}&subject=${encodedSubject}`}
+    <div className="mt-5 grid gap-2 sm:grid-cols-3">
+      <Link
+        href={`/app?mode=${mode}&subject=${encodedSubject}`}
+        className="inline-flex min-h-11 items-center justify-center rounded-full bg-[color:var(--brand-900)] px-4 py-2 text-sm font-medium text-white"
+      >
+        오늘 할 일로 이동
+      </Link>
+      <Link
+        href={`/app/notes?mode=${mode}&subject=${encodedSubject}`}
           className="inline-flex min-h-11 items-center justify-center rounded-full border border-[color:var(--border-subtle)] px-4 py-2 text-sm font-medium text-[color:var(--foreground-strong)]"
         >
           학습 노트에서 보기
-        </Link>
-        <Link
-          href={`/app?mode=${mode}&subject=${encodedSubject}`}
-          className="inline-flex min-h-11 items-center justify-center rounded-full border border-[color:var(--border-subtle)] px-4 py-2 text-sm font-medium text-[color:var(--foreground-strong)]"
-        >
-          오늘 할 일로 돌아가기
-        </Link>
+      </Link>
+      <Link
+        href={`/app/review?mode=${mode}&subject=${encodedSubject}`}
+        className="inline-flex min-h-11 items-center justify-center rounded-full border border-[color:var(--border-subtle)] px-4 py-2 text-sm font-medium text-[color:var(--foreground-strong)]"
+      >
+        복습으로 이어가기
+      </Link>
       </div>
       <Button type="button" variant="ghost" className="mt-4 w-full sm:w-auto" onClick={onReset}>
         하나 더 올리기
@@ -1959,24 +1971,30 @@ function IntakePanel({
       <div className="sticky bottom-3 z-30 mt-3 rounded-[var(--radius-lg)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)]/95 p-3 shadow-lg backdrop-blur sm:bottom-5 sm:p-4" data-testid="capture-save-action-bar">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm font-medium text-[color:var(--foreground-strong)]">확인한 내용으로 학습 노트 초안을 만듭니다.</p>
-            <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">학습 노트 / 복습 / 오늘 할 일로 이어질 가장 큰 약점 1개와 다음 행동 1개가 만들어집니다.</p>
+            <p className="text-sm font-medium text-[color:var(--foreground-strong)]">입력 내용을 먼저 확인합니다.</p>
+            <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">다음 단계에서 OCR/텍스트 초안을 보고 수정한 뒤 가장 큰 약점 1개를 정리합니다.</p>
           </div>
-          <Button
-            type="button"
-            onClick={onQuickSave}
-            disabled={!canQuickSave || saving || extracting}
-            className="primary-action min-h-12 w-full shrink-0 sm:w-auto disabled:cursor-not-allowed disabled:opacity-60"
-            data-testid="capture-save-primary"
-            data-s224v-dominant-primary-action
-          >
-            {saving ? "저장 중" : (
-              <>
-                <span>학습 노트 초안 만들기</span>
-                <span className="sr-only">저장하고 오늘 할 일에 반영</span>
-              </>
-            )}
-          </Button>
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onQuickSave}
+              disabled={!canQuickSave || saving || extracting}
+              className="min-h-12 w-full shrink-0 sm:w-auto disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {saving ? "저장 중" : "빠르게 저장"}
+            </Button>
+            <Button
+              type="button"
+              onClick={onGenerate}
+              disabled={!canQuickSave || saving || extracting}
+              className="primary-action min-h-12 w-full shrink-0 sm:w-auto disabled:cursor-not-allowed disabled:opacity-60"
+              data-testid="capture-save-primary"
+              data-s224v-dominant-primary-action
+            >
+              {extracting ? "입력 내용 확인 중" : "입력 내용 확인하기"}
+            </Button>
+          </div>
         </div>
       </div>
       {form.sourceType === "pdf" ? <p className="text-xs text-[color:var(--muted)]">선택한 PDF의 내용은 아래 텍스트 입력에서 직접 확인해 주세요.</p> : null}
@@ -2041,11 +2059,6 @@ function IntakePanel({
         </label>
         </div>
       </details>
-      <div className="mt-4 flex justify-end">
-        <Button type="button" variant="outline" onClick={onGenerate} disabled={extracting || saving || !canQuickSave} className="w-full sm:w-auto">
-          {extracting ? "입력 내용 확인 중" : "AI로 정리 후 확인"}
-        </Button>
-      </div>
       <details className="quiet-disclosure mt-4 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]" data-s224v-secondary-diagnostics>
         <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">첨부 상태</summary>
         <div className="border-t border-[color:var(--border-subtle)] px-4 py-3">
