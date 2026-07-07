@@ -158,8 +158,10 @@ test("today plan stays one primary + max 3 and language is operational", () => {
 test("learner-facing copy includes save bridge messages", async () => {
   const source = await readFile(new URL("../app/app/session/page.tsx", import.meta.url), "utf8");
   assert.ok(source.includes("오늘 계획에 반영했습니다."));
-  assert.ok(source.includes("Today Plan candidate"));
-  assert.ok(source.includes("Review Queue candidate"));
+  assert.ok(source.includes("오늘 할 일 후보"));
+  assert.ok(source.includes("복습 후보"));
+  assert.equal(source.includes("Today Plan candidate"), false);
+  assert.equal(source.includes("Review Queue candidate"), false);
   assert.ok(source.includes("가장 큰 간극:"));
   assert.ok(source.includes("다음 행동:"));
   assert.ok(source.includes("오늘 계획으로 이동"));
@@ -169,8 +171,8 @@ test("learner-facing copy includes save bridge messages", async () => {
   assert.ok(source.includes("/app/capture?mode=second&rewriteFrom=${encodeURIComponent(savedCaptureItemId)}"));
   assert.equal(source.includes('/app/capture?mode=first'), false);
   assert.ok(source.includes("노트 보기"));
-  assert.ok(source.includes("Note/details"));
-  assert.ok(source.includes("Review Queue candidate"));
+  assert.ok(source.includes("학습 노트 상세"));
+  assert.ok(source.includes("복습 후보"));
   assert.ok(source.includes("참고 힌트 보기"));
 });
 

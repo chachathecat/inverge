@@ -34,7 +34,7 @@ test("home keeps priority and queue framing", () => {
 });
 
 test("session saved state keeps required continuity lines", () => {
-  ["오늘 계획에 반영했습니다.", "Today Plan candidate", "Review Queue candidate", "Note/details에 저장했습니다.", "가장 큰 간극:", "다음 행동:"].forEach((text) => {
+  ["오늘 계획에 반영했습니다.", "오늘 할 일 후보", "복습 후보", "학습 노트 상세에 저장했습니다.", "가장 큰 간극:", "다음 행동:"].forEach((text) => {
     assert.ok(session.includes(text), `Missing: ${text}`);
   });
 });

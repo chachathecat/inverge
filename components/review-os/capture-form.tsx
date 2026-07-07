@@ -1613,8 +1613,8 @@ function SavedCaptureConfirmationPanel({
           <PreviewLine label="가장 큰 약점 1개" value={confirmation.biggestGap} />
           <PreviewLine label="다음 행동 1개" value={confirmation.nextAction} />
           <PreviewLine label="학습 노트 저장 상태" value={persistenceCopy.statusLabel} />
-          <PreviewLine label="Today Plan candidate" value={confirmation.todayPlanCandidate ?? confirmation.nextAction} />
-          <PreviewLine label="Review Queue candidate" value={confirmation.reviewQueueCandidate ?? confirmation.biggestGap} />
+          <PreviewLine label="오늘 할 일 후보" value={confirmation.todayPlanCandidate ?? confirmation.nextAction} />
+          <PreviewLine label="복습 후보" value={confirmation.reviewQueueCandidate ?? confirmation.biggestGap} />
           {confirmation.legalGroundingMessage ? <PreviewLine label="법령 근거 상태" value={confirmation.legalGroundingMessage} /> : null}
         </div>
         <div className="mt-3">
@@ -1677,8 +1677,8 @@ function SavedCaptureConfirmationPanel({
         <PreviewLine label="가장 큰 약점 1개" value={confirmation.biggestGap} />
         <PreviewLine label="다음 행동 1개" value={confirmation.nextAction} />
         <PreviewLine label="학습 노트 저장 상태" value={persistenceCopy.statusLabel} />
-        <PreviewLine label="Today Plan candidate" value={confirmation.todayPlanCandidate ?? confirmation.nextAction} />
-        <PreviewLine label="Review Queue candidate" value={confirmation.reviewQueueCandidate ?? confirmation.biggestGap} />
+        <PreviewLine label="오늘 할 일 후보" value={confirmation.todayPlanCandidate ?? confirmation.nextAction} />
+        <PreviewLine label="복습 후보" value={confirmation.reviewQueueCandidate ?? confirmation.biggestGap} />
       </div>
       <div className="mt-3">
         <CognitiveLearningActionCard unit={confirmation.learningAction} compact />
@@ -1973,17 +1973,16 @@ function IntakePanel({
           <div>
             <p className="text-sm font-medium text-[color:var(--foreground-strong)]">입력 내용을 먼저 확인합니다.</p>
             <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">다음 단계에서 OCR/텍스트 초안을 보고 수정한 뒤 가장 큰 약점 1개를 정리합니다.</p>
-          </div>
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-            <Button
+            <button
               type="button"
-              variant="outline"
               onClick={onQuickSave}
               disabled={!canQuickSave || saving || extracting}
-              className="min-h-12 w-full shrink-0 sm:w-auto disabled:cursor-not-allowed disabled:opacity-60"
+              className="mt-2 text-xs font-medium text-[color:var(--muted)] underline underline-offset-4 transition hover:text-[color:var(--foreground-strong)] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {saving ? "저장 중" : "빠르게 저장"}
-            </Button>
+            </button>
+          </div>
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
             <Button
               type="button"
               onClick={onGenerate}

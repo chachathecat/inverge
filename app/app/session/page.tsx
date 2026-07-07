@@ -54,7 +54,7 @@ export default async function ReviewOsSessionPage({ searchParams }: PageProps) {
     <div className="space-y-6">
       <ClosedBetaBanner />
       {savedCapture ? (
-        <DailyCommandCard title="오늘 계획에 반영했습니다." description="Today Plan candidate · Review Queue candidate · Note/details에 저장했습니다.">
+        <DailyCommandCard title="오늘 계획에 반영했습니다." description="오늘 할 일 후보 · 복습 후보 · 학습 노트 상세에 저장했습니다.">
           <div className="grid gap-3 rounded-[var(--radius-sm)] bg-[color:var(--surface-soft)] p-3" aria-live="polite">
             <p className="text-sm leading-6 text-[color:var(--ink-muted)]">
               <span className="font-medium text-[color:var(--ink-primary)]">가장 큰 간극:</span>{" "}

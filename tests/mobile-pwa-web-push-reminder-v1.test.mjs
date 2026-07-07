@@ -24,10 +24,27 @@ test("PWA manifest exists with installable Dabangil metadata and icons", () => {
   assert.equal(data.name, "답안길");
   assert.equal(data.short_name, "답안길");
   assert.match(data.description ?? "", /감정평가사 2차 답안/);
-  assert.equal(data.start_url, "/app/capture?mode=second");
+  assert.equal(data.start_url, "/app?mode=second");
   assert.equal(data.scope, "/");
   assert.equal(data.display, "standalone");
   assert.equal(data.lang, "ko");
+  assert.deepEqual(
+    data.shortcuts?.map(({ name, short_name, description, url }) => ({ name, short_name, description, url })),
+    [
+      {
+        name: "오늘 한 것 올리기",
+        short_name: "입력",
+        description: "오늘 공부한 답안이나 기록을 올립니다.",
+        url: "/app/capture?mode=second",
+      },
+      {
+        name: "복습하기",
+        short_name: "복습",
+        description: "오늘 복습할 항목을 확인합니다.",
+        url: "/app/review?mode=second",
+      },
+    ],
+  );
   assert.ok(data.background_color);
   assert.ok(data.theme_color);
   assert.ok(data.icons.some((icon) => icon.src === "/icons/inverge-icon-192.png" && icon.sizes === "192x192" && icon.type === "image/png"));

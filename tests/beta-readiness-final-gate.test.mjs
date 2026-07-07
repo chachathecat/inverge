@@ -45,9 +45,9 @@ const LEARNER_LOOP_COPY = [
   '저장 전 직접 수정할 수 있습니다',
   '오늘 기록 기반',
   '오늘 계획에 반영했습니다.',
-  'Today Plan candidate',
-  'Review Queue candidate',
-  'Note/details에 저장했습니다.',
+  '오늘 할 일 후보',
+  '복습 후보',
+  '학습 노트 상세에 저장했습니다.',
 ];
 
 const PROHIBITED_LANGUAGE = [

@@ -121,14 +121,22 @@ test("capture flow starts as a four-step wizard with one Trust Card", () => {
     "saved-plan",
     "data-capture-plan-reflection-stage",
     "학습 노트 저장 상태",
-    "Today Plan candidate",
-    "Review Queue candidate",
+    "오늘 할 일 후보",
+    "복습 후보",
     "오늘 할 일로 이동",
   ]) {
     assert.ok(combined.includes(phrase), `missing capture phrase: ${phrase}`);
   }
 
   assert.equal(count(capture, "OCR과 AI 정리는 학습 보조 초안입니다. 저장 전 직접 수정할 수 있습니다."), 1);
+  const actionBarBlock = capture.match(/data-testid="capture-save-action-bar"[\s\S]*?\{form\.sourceType === "pdf"/)?.[0] ?? "";
+  assert.ok(actionBarBlock.includes("입력 내용 확인하기"));
+  assert.ok(actionBarBlock.includes("빠르게 저장"));
+  assert.equal(count(actionBarBlock, "data-s224v-dominant-primary-action"), 1);
+  assert.ok(actionBarBlock.includes("text-xs font-medium text-[color:var(--muted)] underline underline-offset-4"));
+  assert.equal(actionBarBlock.slice(actionBarBlock.indexOf("빠르게 저장") - 300, actionBarBlock.indexOf("빠르게 저장") + 300).includes("data-s224v-dominant-primary-action"), false);
+  assert.equal(capture.includes("Today Plan candidate"), false);
+  assert.equal(capture.includes("Review Queue candidate"), false);
   assert.ok(capture.includes('if (stage === "saved-plan") return 4;'));
   assert.ok(capture.includes('setStage("saved-plan")'));
   assert.equal(capture.includes("if (savedConfirmation) {\n    return"), false);

@@ -68,9 +68,9 @@ test("second-mode retrieval-before-explanation guard remains documented in the f
 test("after-save acknowledgement names Today Plan, Review Queue, note location, and safe CTAs", () => {
   const session = sessionPage();
   assert.match(session, /오늘 계획에 반영했습니다\./);
-  assert.match(session, /Today Plan candidate/);
-  assert.match(session, /Review Queue candidate/);
-  assert.match(session, /Note\/details/);
+  assert.match(session, /오늘 할 일 후보/);
+  assert.match(session, /복습 후보/);
+  assert.match(session, /학습 노트 상세/);
   assert.match(session, /가장 큰 간극/);
   assert.match(session, /다음 행동/);
   assert.match(session, /오늘 계획으로 이동/);

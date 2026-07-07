@@ -120,8 +120,10 @@ test("capture save confirmation includes biggest gap, next action, and learner l
   assert.equal(captureForm.includes("다음 행동 1개"), true, "confirmation should identify one next action candidate");
   assert.equal(captureForm.includes("saved-plan"), true, "confirmation should be a real fourth wizard stage");
   assert.equal(captureForm.includes("학습 노트 저장 상태"), true, "confirmation should show note persistence status");
-  assert.equal(captureForm.includes("Today Plan candidate"), true, "confirmation should show the Today Plan candidate");
-  assert.equal(captureForm.includes("Review Queue candidate"), true, "confirmation should show the Review Queue candidate");
+  assert.equal(captureForm.includes("오늘 할 일 후보"), true, "confirmation should show the Today Plan candidate in learner-facing Korean");
+  assert.equal(captureForm.includes("복습 후보"), true, "confirmation should show the Review Queue candidate in learner-facing Korean");
+  assert.equal(captureForm.includes("Today Plan candidate"), false, "confirmation should not show the English Today Plan candidate label");
+  assert.equal(captureForm.includes("Review Queue candidate"), false, "confirmation should not show the English Review Queue candidate label");
   assert.equal(captureForm.includes("학습 노트와 오늘 할 일에 반영할 후보입니다."), true, "confirmation should frame the plan handoff as a candidate");
   assert.equal(captureForm.includes('href={`/app/review?mode=${mode}&subject=${encodedSubject}`}'), true, "confirmation should link to Review with mode and subject");
   assert.equal(captureForm.includes('href={`/app/notes?mode=${mode}&subject=${encodedSubject}`}'), true, "confirmation should link to Notes with mode and subject");

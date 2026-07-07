@@ -134,8 +134,9 @@ test("capture confirmation copy points to Notes, Review, and Today without forbi
   assert.match(confirmationBlock, /가장 큰 약점 1개/);
   assert.match(confirmationBlock, /다음 행동 1개/);
   assert.match(confirmationBlock, /학습 노트 저장 상태/);
-  assert.match(confirmationBlock, /Today Plan candidate/);
-  assert.match(confirmationBlock, /Review Queue candidate/);
+  assert.match(confirmationBlock, /오늘 할 일 후보/);
+  assert.match(confirmationBlock, /복습 후보/);
+  assert.doesNotMatch(confirmationBlock, /Today Plan candidate|Review Queue candidate/);
   assert.match(confirmationBlock, /오늘 할 일로 이동/);
   assert.match(confirmationBlock, /학습 노트와 오늘 할 일에 반영할 후보입니다\./);
   assert.doesNotMatch(confirmationBlock, /정답 확정|최종 판단|공식 채점|모범답안|합격 가능성|pass-fail|score prediction/i);
