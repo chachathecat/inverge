@@ -353,10 +353,12 @@ test("PR335 durable Today Plan staging evidence and visible action cap guardrail
 });
 
 
-test("PR314 Today Plan mode switching and CASIO route copy are mode-safe", () => {
+test("PR314 Today Plan second-only learner shell and CASIO route copy are mode-safe", () => {
   const learnerShell = read("components/learner/learner-ui.tsx");
-  assert.equal(learnerShell.includes('parseAppraisalMode(searchParams.get("mode")) ?? mode'), true, "URL mode should drive active tab");
-  assert.equal(learnerShell.includes('href={`${pathname}?mode=${item.mode}`'), true, "tabs should switch current route mode");
+  assert.equal(learnerShell.includes('data-s224v-learner-mode-entry="second-only"'), true, "learner shell should expose the second-only mode marker");
+  assert.equal(learnerShell.includes('parseAppraisalMode(searchParams.get("mode")) ?? mode'), false, "URL mode should not drive learner chrome");
+  assert.equal(learnerShell.includes('href={`${pathname}?mode=${item.mode}`'), false, "learner shell should not expose first/second mode tabs");
+  assert.equal(learnerShell.includes("mode=first"), false, "learner shell should not link to first-round mode");
   assert.equal(learnerShell.includes('aria-current={active ? "page" : undefined}'), true, "active tab should be announced");
 
   const appPage = read("app/app/page.tsx");

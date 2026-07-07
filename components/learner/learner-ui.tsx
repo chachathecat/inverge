@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
 
 import { SignOutButton } from "@/components/shared/sign-out-button";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { getModeConfig, parseAppraisalMode, type AppraisalMode } from "@/lib/review-os/appraisal";
+import { getModeConfig, type AppraisalMode } from "@/lib/review-os/appraisal";
 import { pushLocalLearnerAnalyticsEvent } from "@/lib/review-os/local-analytics";
 import { cn } from "@/lib/utils";
 
@@ -45,20 +45,14 @@ const LEARNER_NAV_ITEMS: readonly LearnerNavItem[] = [
   { href: "/app/agenda", label: "학습 기록", preserveMode: true, analyticsAction: "agenda" },
 ] as const;
 
-const MODE_ITEMS: Array<{ mode: AppraisalMode; label: string; description: string }> = [
-  { mode: "first", label: "1차", description: "오답·재시도" },
-  { mode: "second", label: "2차", description: "작성·다시쓰기" },
-];
-
 function matchesLearnerNavPath(pathname: string, item: LearnerNavItem) {
   const activeHrefs = item.activeHrefs ?? [item.href];
   return activeHrefs.some((activeHref) => pathname === activeHref || (activeHref !== "/app" && pathname.startsWith(`${activeHref}/`)));
 }
 
-export function LearnerShell({ email, mode, children, rightSlot }: LearnerShellProps) {
-  const searchParams = useSearchParams();
+export function LearnerShell({ email, children, rightSlot }: LearnerShellProps) {
   const pathname = usePathname();
-  const currentMode = parseAppraisalMode(searchParams.get("mode")) ?? mode;
+  const currentMode: AppraisalMode = "second";
   const config = getModeConfig(currentMode);
   const homeHref = `/app?mode=${currentMode}`;
 
@@ -67,13 +61,13 @@ export function LearnerShell({ email, mode, children, rightSlot }: LearnerShellP
       <div className="mx-auto flex w-full max-w-[760px] flex-col px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-4 sm:px-6 sm:pb-12 sm:pt-8 lg:max-w-[820px]">
         <header className="space-y-4 border-b border-[var(--border-subtle)] pb-4 sm:pb-5" aria-label="학습 공간 헤더">
           <div className="flex items-start justify-between gap-3">
-            <Link href={homeHref} className="flex min-h-11 min-w-0 items-center gap-3 rounded-[var(--radius-md)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:rgba(16,35,63,0.16)]" aria-label="Inverge 오늘 학습으로 이동">
+            <Link href={homeHref} className="flex min-h-11 min-w-0 items-center gap-3 rounded-[var(--radius-md)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:rgba(16,35,63,0.16)]" aria-label="답안길 오늘 학습으로 이동">
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[color:var(--brand-900)] text-sm font-semibold text-[color:var(--text-inverse)]">
-                IV
+                답
               </span>
               <span className="min-w-0">
-                <span className="block text-base font-semibold tracking-[-0.02em] text-[color:var(--foreground-strong)]">Inverge</span>
-                <span className="block truncate text-xs text-[color:var(--muted)]">{config.label}</span>
+                <span className="block text-base font-semibold tracking-[-0.02em] text-[color:var(--foreground-strong)]">답안길</span>
+                <span className="block truncate text-xs text-[color:var(--muted)]">2차 합격관제 OS</span>
               </span>
             </Link>
             <div className="flex shrink-0 items-center gap-2">
@@ -82,26 +76,13 @@ export function LearnerShell({ email, mode, children, rightSlot }: LearnerShellP
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2" aria-label="감정평가사 학습 모드 선택">
-            {MODE_ITEMS.map((item) => {
-              const active = item.mode === currentMode;
-              return (
-                <Link
-                  key={item.mode}
-                  href={`${pathname}?mode=${item.mode}`}
-                  aria-current={active ? "page" : undefined}
-                  className={cn(
-                    "min-h-11 rounded-[var(--radius-md)] border px-3 py-2 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:rgba(16,35,63,0.16)]",
-                    active
-                      ? "border-[color:var(--brand-700)] bg-[color:var(--brand-050)] text-[color:var(--brand-900)]"
-                      : "border-[var(--border-subtle)] bg-[color:var(--bg-surface)] text-[color:var(--muted)]",
-                  )}
-                >
-                  <span className="block text-sm font-semibold">{item.label}</span>
-                  <span className="block text-[11px] leading-5">{item.description}</span>
-                </Link>
-              );
-            })}
+          <div
+            className="rounded-[var(--radius-md)] border border-[color:var(--brand-100)] bg-[color:var(--brand-050)] px-3 py-2 text-[color:var(--brand-900)]"
+            aria-label="감정평가사 2차 학습 모드"
+            data-s224v-learner-mode-entry="second-only"
+          >
+            <span className="block text-sm font-semibold">감정평가사 2차</span>
+            <span className="block text-[11px] leading-5">실무·이론·법규 답안 운영</span>
           </div>
 
           <nav aria-label="학습 메뉴" className="flex flex-wrap gap-2">

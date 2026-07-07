@@ -39,7 +39,16 @@ export default async function ReviewOsCapturePage({ searchParams }: PageProps) {
   const isRewriteFlow = mode === "second" && Boolean(rewriteContext);
 
   return (
-    <div className="space-y-5">
+    <div
+      className="space-y-5"
+      data-s224v-surface="/app/capture"
+      data-s224v-primary-cta-count-above-fold="1"
+      data-s224v-visible-trust-layer-count="1"
+      data-s224v-visible-primary-work-items-max="1"
+      data-s224v-secondary-diagnostics="quiet-disclosure"
+      data-s224v-equal-weight-card-grid="absent"
+      data-s224v-repeated-warning-copy="absent"
+    >
       <section className="rounded-[var(--radius-lg)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-elevated)] px-4 py-4 sm:px-6 sm:py-5" data-testid="capture-page-shell">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="max-w-[58ch]">
@@ -55,10 +64,8 @@ export default async function ReviewOsCapturePage({ searchParams }: PageProps) {
                 : "사진/PDF/텍스트 중 하나로 시작하고, OCR/AI 초안은 직접 확인합니다."}
             </p>
           </div>
-          <p className="text-xs leading-5 text-[color:var(--textMuted)] sm:max-w-[18rem]" data-trust-layer="capture-page-shell">
-            {ANSWER_SUBMISSION_OCR_TRUST_COPY}
-            <br />
-            OCR/AI 정리는 초안입니다. 저장 전 직접 확인해 주세요.
+          <p className="trust-layer px-3 py-2 text-xs leading-5 text-[color:var(--textMuted)] sm:max-w-[18rem]" data-trust-layer="capture-page-shell">
+            {ANSWER_SUBMISSION_OCR_TRUST_COPY} 저장 위치는 학습 노트 / 복습 / 오늘 할 일입니다.
           </p>
         </div>
       </section>

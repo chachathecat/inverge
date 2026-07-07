@@ -248,6 +248,27 @@ body {
   background: var(--trust-layer-bg);
 }
 
+.quiet-disclosure {
+  color: var(--text-secondary);
+}
+
+.quiet-disclosure > summary {
+  min-height: var(--touch-target-min);
+  outline: none;
+}
+
+.quiet-disclosure > summary:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.today-priority-card,
+.one-gap-feedback-card,
+.review-reason-card,
+.quiet-empty-state {
+  border-radius: var(--radius-md);
+}
+
 .status-focus {
   border-color: var(--cue-focus);
   background: var(--cue-focus-bg);

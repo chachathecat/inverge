@@ -6,7 +6,8 @@ const read = (p) => readFileSync(p, "utf8");
 
 test("beta banner copy exists", () => {
   const merged = ["app/page.tsx", "app/answer-review/page.tsx", "app/app/page.tsx", "app/app/capture/page.tsx", "app/app/review/page.tsx", "components/shared/closed-beta-banner.tsx"].map(read).join("\n");
-  ["closed beta", "감정평가사 1차/2차 학습 운영 흐름", "학습 보조 초안"].forEach((phrase) => assert.ok(merged.includes(phrase)));
+  ["closed beta", "답안길은 감정평가사 2차 답안 운영 흐름", "학습 보조 초안"].forEach((phrase) => assert.ok(merged.includes(phrase)));
+  assert.equal(merged.includes("감정평가사 1차/2차 학습 운영 흐름"), false);
 });
 
 test("feedback prompt exists", () => {
