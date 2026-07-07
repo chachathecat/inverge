@@ -117,7 +117,7 @@ test("capture flow starts as a four-step wizard with one Trust Card", () => {
     "AI 초안",
     "OCR 초안",
     "직접 수정 가능",
-    "공식 채점 아님",
+    "학습 보조용",
     "saved-plan",
     "data-capture-plan-reflection-stage",
     "학습 노트 저장 상태",

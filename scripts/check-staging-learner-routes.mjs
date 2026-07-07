@@ -109,7 +109,13 @@ const capture = `${captureRoute}\n${captureForm}`;
 check(capture.includes("오늘 한 것 올리기"), "/app/capture must keep warm capture-first CTA copy");
 check(capture.includes("사진, PDF, 텍스트 중 하나로 시작하세요."), "/app/capture must render visible photo/PDF/text start copy");
 check(capture.includes("OCR과 AI 정리는 학습 보조 초안입니다. 저장 전 직접 수정할 수 있습니다."), "/app/capture must show one OCR/AI draft warning");
-check(capture.includes("학습 노트 / 복습 / 오늘 할 일로 이어질 가장 큰 약점 1개와 다음 행동 1개가 만들어집니다."), "/app/capture must keep one-biggest-gap focus");
+check(
+  capture.includes("가장 큰 약점 1개") &&
+    capture.includes("다음 행동 1개") &&
+    capture.includes("오늘 할 일 후보") &&
+    capture.includes("복습 후보"),
+  "/app/capture must keep one-biggest-gap focus",
+);
 check(capture.includes("canQuickSave"), "/app/capture starting point must not show more than one primary action");
 check(!/점수|공식\s*채점(?!\s*아님)|채점\s*(?:결과|완료|확정)|합격\s*판정|불합격\s*판정/.test(capture), "/app/capture must not become score-first");
 check(!/href=[{\"'`][^\n]*(?:\/instructor|\/studio|\/admin)/i.test(capture), "/app/capture must not expose instructor/admin links");

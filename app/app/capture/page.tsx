@@ -37,6 +37,7 @@ export default async function ReviewOsCapturePage({ searchParams }: PageProps) {
   return (
     <div
       className="space-y-5"
+      aria-label="오늘 한 것 올리기"
       data-s224v-surface="/app/capture"
       data-s224v-primary-cta-count-above-fold="1"
       data-s224v-visible-trust-layer-count="1"
