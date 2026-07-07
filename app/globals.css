@@ -1,12 +1,12 @@
 @import "tailwindcss";
 
 :root {
-  --bg-canvas: #faf8f3;
+  --bg-canvas: #f7f6f3;
   --bg-surface: #ffffff;
-  --bg-subtle: #f3f6f8;
+  --bg-subtle: #f2f0ea;
   --bg-elevated: #fffdf8;
-  --border-subtle: #e3e8ef;
-  --border-strong: #cfd8e3;
+  --border-subtle: #e6e1d7;
+  --border-strong: #d7d1c4;
   --text-primary: #101828;
   --text-secondary: #5f6b7a;
   --text-tertiary: #8b95a5;
@@ -79,6 +79,15 @@
   --space-page: 40px;
   --chart-grid: rgba(17, 20, 24, 0.1);
   --font-ui: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --cta-primary-bg: var(--brand-900);
+  --cta-primary-hover: var(--brand-800);
+  --cta-primary-fg: var(--text-inverse);
+  --cta-secondary-bg: var(--bg-surface);
+  --cta-secondary-fg: var(--text-primary);
+  --trust-layer-bg: var(--brand-050);
+  --trust-layer-border: #d7e2ef;
+  --focus-ring: rgba(16, 35, 63, 0.16);
+  --touch-target-min: 44px;
 }
 
 [data-theme="dark"] {
@@ -126,7 +135,7 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-ui);
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
 }
 
 ::selection {
@@ -137,21 +146,21 @@ body {
 .text-h1 {
   font-size: clamp(34px, 4vw, 44px);
   line-height: 1.12;
-  letter-spacing: -0.035em;
+  letter-spacing: 0;
   font-weight: 700;
 }
 
 .text-h2 {
   font-size: clamp(26px, 3vw, 32px);
   line-height: 1.18;
-  letter-spacing: -0.025em;
+  letter-spacing: 0;
   font-weight: 700;
 }
 
 .text-h3 {
   font-size: 24px;
   line-height: 1.24;
-  letter-spacing: -0.018em;
+  letter-spacing: 0;
   font-weight: 650;
 }
 
@@ -159,7 +168,7 @@ body {
   font-size: 20px;
   line-height: 1.32;
   font-weight: 600;
-  letter-spacing: -0.018em;
+  letter-spacing: 0;
 }
 
 .text-body {
@@ -207,6 +216,56 @@ body {
 .form-control:focus-visible {
   border-color: var(--border-strong);
   box-shadow: 0 0 0 3px rgba(16, 35, 63, 0.08);
+}
+
+:where(button, [role="button"], input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
+  min-height: var(--touch-target-min);
+}
+
+:where(button, a, input, select, textarea, summary):focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.primary-action {
+  min-height: var(--touch-target-min);
+  border-radius: var(--radius-pill);
+  background: var(--cta-primary-bg);
+  color: var(--cta-primary-fg);
+}
+
+.secondary-action {
+  min-height: var(--touch-target-min);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-subtle);
+  background: var(--cta-secondary-bg);
+  color: var(--cta-secondary-fg);
+}
+
+.trust-layer {
+  border: 1px solid var(--trust-layer-border);
+  border-radius: var(--radius-md);
+  background: var(--trust-layer-bg);
+}
+
+.status-focus {
+  border-color: var(--cue-focus);
+  background: var(--cue-focus-bg);
+}
+
+.status-review {
+  border-color: var(--cue-review);
+  background: var(--cue-review-bg);
+}
+
+.status-stable {
+  border-color: var(--cue-stable);
+  background: var(--cue-stable-bg);
+}
+
+.status-failure {
+  border-color: var(--cue-risk);
+  background: var(--cue-risk-bg);
 }
 
 @keyframes inverge-rise {

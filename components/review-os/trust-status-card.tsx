@@ -21,12 +21,12 @@ const DEFAULT_TRUST_ITEMS: TrustStatusItem[] = [
   {
     label: "OCR/가져온 텍스트 초안",
     status: "확인 필요",
-    helper: "OCR/imported draft는 원문이 아니라 확인용 초안입니다.",
+    helper: "OCR 또는 가져온 텍스트는 원문이 아니라 확인용 초안입니다.",
   },
   {
     label: "AI 분석 초안",
     status: "학습 보조",
-    helper: "AI suggested draft는 공식 채점이나 확정 점수가 아닙니다.",
+    helper: "AI 분석 초안은 공식 채점이나 확정 점수가 아닙니다.",
   },
   {
     label: "계속할 곳",
@@ -41,9 +41,9 @@ export function TrustStatusCard({
   items = DEFAULT_TRUST_ITEMS,
 }: TrustStatusCardProps) {
   return (
-    <section data-testid="trust-status-card" className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-4 sm:p-5">
+    <section data-testid="trust-status-card" className="trust-layer p-4 sm:p-5">
       <div className="flex flex-wrap items-center gap-2">
-        <RefinedBadge>Trust layer</RefinedBadge>
+        <RefinedBadge>신뢰 상태</RefinedBadge>
         <RefinedBadge tone="amber">저장 전 확인</RefinedBadge>
       </div>
       <h2 className="mt-3 text-base font-semibold text-[color:var(--foreground-strong)]">{title}</h2>

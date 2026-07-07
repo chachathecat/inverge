@@ -489,121 +489,109 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
           </Card>
         )}
 
-      <details className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
-        <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">복습 보기</summary>
-        <div className="space-y-3 border-t border-[color:var(--border-subtle)] p-4 text-xs">
-          <p className="text-[color:var(--muted)]">복습은 대기/진행 필요/완료 흐름으로만 관리합니다. 예측 점수나 합격 여부는 보여주지 않습니다. 추천은 저장된 학습 신호 기반입니다.</p>
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-3 py-3">
-              <p className="font-medium text-[color:var(--foreground-strong)]">진행 필요</p>
-              {queue.filter((item) => isOverdueDueAt(item.dueAt)).length === 0 ? <p className="mt-1 text-[color:var(--muted)]">오늘 바로 처리할 항목이 없습니다.</p> : queue.filter((item) => isOverdueDueAt(item.dueAt)).slice(0, 3).map((item) => <p key={`due-${item.queueId}`} className="mt-1 text-[color:var(--muted)]">{item.subjectLabel} · {item.reviewReason}</p>)}
-            </div>
-            <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-3 py-3">
-              <p className="font-medium text-[color:var(--foreground-strong)]">대기</p>
-              {queue.filter((item) => !isOverdueDueAt(item.dueAt)).length === 0 ? <p className="mt-1 text-[color:var(--muted)]">예정된 복습이 없습니다.</p> : queue.filter((item) => !isOverdueDueAt(item.dueAt)).slice(0, 3).map((item) => <p key={`pending-${item.queueId}`} className="mt-1 text-[color:var(--muted)]">{item.subjectLabel} · {item.problemTitle}</p>)}
-            </div>
-            <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-3 py-3">
-              <p className="font-medium text-[color:var(--foreground-strong)]">완료</p>
-              <p className="mt-1 text-[color:var(--muted)]">완료 처리하기 후 완료한 항목은 오늘 할 일에서 사라지고 복습 이력에 남습니다.</p>
-            </div>
-          </div>
-          {latestProblemSnapSignal ? (
-            <p className="text-[color:var(--muted)]">Problem Snap 기반 항목도 저장 후 오늘 할 일에 반영됩니다. {problemSnapSignalCta.label}</p>
-          ) : null}
-        </div>
-      </details>
-
-        <details className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
-          <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">누적 신호 보기</summary>
-          <div className="space-y-2 border-t border-[color:var(--border-subtle)] p-4 text-sm">
-            <p>누적 {learningSignal?.totalCount ?? 0}건 · 최근 {learningSignal?.latestEventAt ? new Date(learningSignal.latestEventAt).toLocaleDateString("ko-KR") : "-"}</p>
-            <p>주요 과목: {(learningSignal?.topSubjects ?? []).join(", ") || "-"}</p>
-            <p>주요 태그: {(learningSignal?.topTags ?? []).join(", ") || "-"}</p>
-          </div>
-        </details>
-
-        <section className="space-y-3">
-          <details className="group rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
-            <summary className="cursor-pointer list-none px-4 py-4 text-sm font-medium text-[color:var(--foreground-strong)] sm:px-5">
-              학습 노트와 주간 흐름 보기
-            </summary>
-            <div className="space-y-5 border-t border-[color:var(--border-subtle)] px-4 py-5 sm:px-5">
-              <div className="grid gap-3 text-sm lg:grid-cols-3">
-                <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] p-4">
-                  <p className="text-[color:var(--muted)]">현재 모드</p>
-                  <p className="mt-1 text-[color:var(--foreground-strong)]">{config.label}</p>
+        <details
+          className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]"
+          data-learning-loop-summary
+        >
+          <summary className="cursor-pointer list-none px-4 py-4 text-sm font-medium text-[color:var(--foreground-strong)] sm:px-5">
+            학습 루프 요약 보기
+          </summary>
+          <div className="space-y-5 border-t border-[color:var(--border-subtle)] px-4 py-5 sm:px-5">
+            <section className="space-y-3 text-xs" data-loop-review-summary>
+              <p className="text-[color:var(--muted)]">복습은 대기/진행 필요/완료 흐름으로만 관리합니다. 예측 점수나 합격 여부는 보여주지 않습니다. 추천은 저장된 학습 신호 기반입니다.</p>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-3 py-3">
+                  <p className="font-medium text-[color:var(--foreground-strong)]">진행 필요</p>
+                  {queue.filter((item) => isOverdueDueAt(item.dueAt)).length === 0 ? <p className="mt-1 text-[color:var(--muted)]">오늘 바로 처리할 항목이 없습니다.</p> : queue.filter((item) => isOverdueDueAt(item.dueAt)).slice(0, 3).map((item) => <p key={`due-${item.queueId}`} className="mt-1 text-[color:var(--muted)]">{item.subjectLabel} · {item.reviewReason}</p>)}
                 </div>
-                <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] p-4">
-                  <p className="text-[color:var(--muted)]">우선 과목</p>
-                  <p className="mt-1 text-[color:var(--foreground-strong)]">
-                    {mode === "first"
-                      ? APPRAISAL_FIRST_SUBJECTS.join(", ")
-                      : profile?.preferredSubjects.filter((subject) => (config.subjects as readonly string[]).includes(subject)).join(", ") ||
-                        selectedSubject}
-                  </p>
+                <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-3 py-3">
+                  <p className="font-medium text-[color:var(--foreground-strong)]">대기</p>
+                  {queue.filter((item) => !isOverdueDueAt(item.dueAt)).length === 0 ? <p className="mt-1 text-[color:var(--muted)]">예정된 복습이 없습니다.</p> : queue.filter((item) => !isOverdueDueAt(item.dueAt)).slice(0, 3).map((item) => <p key={`pending-${item.queueId}`} className="mt-1 text-[color:var(--muted)]">{item.subjectLabel} · {item.problemTitle}</p>)}
                 </div>
-                <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] p-4">
-                  <p className="text-[color:var(--muted)]">오늘 다시 볼 항목</p>
-                  <p className="mt-1 tabular-nums text-[color:var(--foreground-strong)]">{queue.length}개</p>
+                <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-3 py-3">
+                  <p className="font-medium text-[color:var(--foreground-strong)]">완료</p>
+                  <p className="mt-1 text-[color:var(--muted)]">완료 처리하기 후 완료한 항목은 오늘 할 일에서 사라지고 복습 이력에 남습니다.</p>
                 </div>
               </div>
+              {latestProblemSnapSignal ? (
+                <p className="text-[color:var(--muted)]">Problem Snap 기반 항목도 저장 후 오늘 할 일에 반영됩니다. {problemSnapSignalCta.label}</p>
+              ) : null}
+            </section>
 
-              <Card className="border-[color:var(--border-subtle)] shadow-none">
-                <CardHeader>
-                  <CardTitle>이번 주 학습 정리</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {weekly ? (
-                    <>
-                      <p className="text-sm leading-7 text-[color:var(--foreground-strong)]">{weekly.summaryText}</p>
-                      <Link href={`/app/weekly?mode=${mode}`}>
-                        <Button type="button" variant="outline">
-                          주간 정리 보기
-                        </Button>
-                      </Link>
-                    </>
-                  ) : (
-                    <p className="text-sm text-[color:var(--muted)]">아직 주간 정리가 없습니다. 입력이 쌓이면 우선순위가 만들어집니다.</p>
-                  )}
-                </CardContent>
-              </Card>
+            <section className="grid gap-3 text-sm lg:grid-cols-3" data-loop-status-summary>
+              <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] p-4">
+                <p className="text-[color:var(--muted)]">현재 모드</p>
+                <p className="mt-1 text-[color:var(--foreground-strong)]">{config.label}</p>
+              </div>
+              <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] p-4">
+                <p className="text-[color:var(--muted)]">우선 과목</p>
+                <p className="mt-1 text-[color:var(--foreground-strong)]">
+                  {mode === "first"
+                    ? APPRAISAL_FIRST_SUBJECTS.join(", ")
+                    : profile?.preferredSubjects.filter((subject) => (config.subjects as readonly string[]).includes(subject)).join(", ") ||
+                      selectedSubject}
+                </p>
+              </div>
+              <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] p-4">
+                <p className="text-[color:var(--muted)]">오늘 다시 볼 항목</p>
+                <p className="mt-1 tabular-nums text-[color:var(--foreground-strong)]">{queue.length}개</p>
+              </div>
+            </section>
 
-              <Card className="border-[color:var(--border-subtle)] shadow-none">
-                <CardHeader>
-                  <CardTitle>정리된 기록</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {notebookPreview.length === 0 ? (
-                    <div className="space-y-2">
-                      <p className="text-sm text-[color:var(--muted)]">아직 기록이 없습니다.</p>
-                      <p className="text-sm text-[color:var(--muted)]">오늘 푼 문제나 답안 일부를 정리하면 첫 학습 노트가 만들어집니다.</p>
-                      <Link href={modeCaptureHref} className="inline-flex text-sm font-medium text-[color:var(--foreground-strong)] underline underline-offset-2">오늘 한 것 올리기</Link>
+            <section className="space-y-2 text-sm" data-loop-signal-summary>
+              <p className="font-medium text-[color:var(--foreground-strong)]">누적 신호</p>
+              <p className="text-[color:var(--muted)]">누적 {learningSignal?.totalCount ?? 0}건 · 최근 {learningSignal?.latestEventAt ? new Date(learningSignal.latestEventAt).toLocaleDateString("ko-KR") : "-"}</p>
+              <p className="text-[color:var(--muted)]">주요 과목: {(learningSignal?.topSubjects ?? []).join(", ") || "-"}</p>
+              <p className="text-[color:var(--muted)]">주요 태그: {(learningSignal?.topTags ?? []).join(", ") || "-"}</p>
+            </section>
+
+            <section className="space-y-3" data-loop-weekly-summary>
+              <h3 className="text-sm font-medium text-[color:var(--foreground-strong)]">이번 주 학습 정리</h3>
+              {weekly ? (
+                <>
+                  <p className="text-sm leading-7 text-[color:var(--foreground-strong)]">{weekly.summaryText}</p>
+                  <Link href={`/app/weekly?mode=${mode}`}>
+                    <Button type="button" variant="outline">
+                      주간 정리 보기
+                    </Button>
+                  </Link>
+                </>
+              ) : (
+                <p className="text-sm text-[color:var(--muted)]">아직 주간 정리가 없습니다. 입력이 쌓이면 우선순위가 만들어집니다.</p>
+              )}
+            </section>
+
+            <section className="space-y-4" data-loop-notes-summary>
+              <h3 className="text-sm font-medium text-[color:var(--foreground-strong)]">정리된 기록</h3>
+              {notebookPreview.length === 0 ? (
+                <div className="space-y-2">
+                  <p className="text-sm text-[color:var(--muted)]">아직 기록이 없습니다.</p>
+                  <p className="text-sm text-[color:var(--muted)]">오늘 푼 문제나 답안 일부를 정리하면 첫 학습 노트가 만들어집니다.</p>
+                  <Link href={modeCaptureHref} className="inline-flex text-sm font-medium text-[color:var(--foreground-strong)] underline underline-offset-2">오늘 한 것 올리기</Link>
+                </div>
+              ) : (
+                notebookPreview.map((note, index) => (
+                  <Link
+                    key={`${note.title}-${index}`}
+                    href={`/app/items/${items[index].id}?mode=${mode}`}
+                    className="block rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] px-4 py-4 text-sm transition duration-150 hover:bg-[color:var(--bg-subtle)]"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-medium text-[color:var(--foreground-strong)]">{note.title}</p>
+                        <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">{note.summaryLine}</p>
+                      </div>
+                      <span className="rounded-full border border-[color:var(--border-subtle)] px-2 py-1 text-[11px] text-[color:var(--muted)]">
+                        {note.noteLabel}
+                      </span>
                     </div>
-                  ) : (
-                    notebookPreview.map((note, index) => (
-                      <Link
-                        key={`${note.title}-${index}`}
-                        href={`/app/items/${items[index].id}?mode=${mode}`}
-                        className="block rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] px-4 py-4 text-sm transition duration-150 hover:bg-[color:var(--bg-subtle)]"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="font-medium text-[color:var(--foreground-strong)]">{note.title}</p>
-                            <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">{note.summaryLine}</p>
-                          </div>
-                          <span className="rounded-full border border-[color:var(--border-subtle)] px-2 py-1 text-[11px] text-[color:var(--muted)]">
-                            {note.noteLabel}
-                          </span>
-                        </div>
-                        <p className="mt-3 text-xs leading-5 text-[color:var(--muted)]">다음 확인: {note.nextReviewDate}</p>
-                      </Link>
-                    ))
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-          </details>
-        </section>
+                    <p className="mt-3 text-xs leading-5 text-[color:var(--muted)]">다음 확인: {note.nextReviewDate}</p>
+                  </Link>
+                ))
+              )}
+            </section>
+          </div>
+        </details>
       </section>
 
       <ReviewOsFeedbackButton route="/app" pageContext={{ section: "today", firstUse, mode }} />

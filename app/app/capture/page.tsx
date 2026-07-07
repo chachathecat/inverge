@@ -55,7 +55,7 @@ export default async function ReviewOsCapturePage({ searchParams }: PageProps) {
                 : "사진/PDF/텍스트 중 하나로 시작하고, OCR/AI 초안은 직접 확인합니다."}
             </p>
           </div>
-          <p className="text-xs leading-5 text-[color:var(--textMuted)] sm:max-w-[18rem]">
+          <p className="text-xs leading-5 text-[color:var(--textMuted)] sm:max-w-[18rem]" data-trust-layer="capture-page-shell">
             {ANSWER_SUBMISSION_OCR_TRUST_COPY}
             <br />
             OCR/AI 정리는 초안입니다. 저장 전 직접 확인해 주세요.

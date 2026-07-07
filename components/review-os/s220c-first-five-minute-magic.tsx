@@ -48,7 +48,7 @@ export function S220CFirstFiveMinuteMagic() {
       </div>
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
         <div className="space-y-3">
-          <h1 className="text-[32px] font-medium leading-tight tracking-[-0.04em] text-[color:var(--foreground-strong)] sm:text-[40px]">
+          <h1 className="text-[32px] font-medium leading-tight tracking-normal text-[color:var(--foreground-strong)] sm:text-[40px]">
             오늘 쓴 답안 하나만 올리세요.
           </h1>
           <p className="max-w-3xl text-sm leading-7 text-[color:var(--muted)] sm:text-base">

@@ -102,6 +102,10 @@ export function ReviewQueueClient({
             <h3 className="text-base font-medium leading-7 text-[color:var(--foreground-strong)] sm:text-lg">
               {primaryItem.problemTitle}
             </h3>
+            <div className="grid gap-2 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3 text-xs leading-5 text-[color:var(--muted)] sm:grid-cols-2" data-review-why-next>
+              <p><span className="font-medium text-[color:var(--foreground-strong)]">왜 여기 있나</span>: {getReviewReason(primaryItem)}</p>
+              <p><span className="font-medium text-[color:var(--foreground-strong)]">다음 행동</span>: {primaryNextAction}</p>
+            </div>
           </div>
 
           <section
@@ -254,6 +258,7 @@ export function ReviewQueueClient({
                     복습 예정 · {item.createdFromCapture ? "학습 노트에서 생성됨" : "미완료 항목"} · {item.subjectLabel}
                   </p>
                   <p className="mt-1 truncate text-sm font-medium text-[color:var(--foreground-strong)]">{item.problemTitle}</p>
+                  <p className="mt-1 text-xs text-[color:var(--muted)]">왜 여기 있나: {getReviewReason(item)}</p>
                   <p className="mt-1 text-xs text-[color:var(--muted)]">다음 행동: {getReviewNextAction(item)}</p>
                 </div>
                 <div className="flex gap-2 sm:shrink-0">

@@ -79,6 +79,36 @@ Inverge experience should feel like:
 - 보험/계리 관련 제품 메시지 노출 금지
 - 결제 우선 흐름/복잡 대시보드 유도 금지
 
+## 9) S224U Learner Gate Rules
+
+### CTA Hierarchy
+- One major learner surface exposes one dominant primary action.
+- Secondary routes such as capture, review, notes, weekly, or study log live in quiet outline buttons or collapsed `다른 작업 보기` disclosures.
+- Primary action uses deep navy only; no saturated CTA gradients.
+
+### Trust Layer
+- OCR, imported text, and AI analysis are always presented as editable learning-support drafts.
+- Trust copy should appear as one visible trust layer per stage, not as repeated warnings across adjacent cards.
+- The trust layer must distinguish user-confirmed text, OCR/import draft, AI analysis draft, and continuation to Today Plan / Review Queue / Notes.
+
+### Status Colors
+- Muted blue: focus, trust, active mode, primary attention.
+- Amber: review, due, needs learner confirmation.
+- Green: saved, stable, recovered.
+- Red: true failure only.
+- New saturated colors require explicit product justification.
+
+### Spacing, Radius, Typography
+- Authenticated learner pages use warm canvas, white surfaces, thin borders, and no decorative gradients.
+- Letter spacing is `0`; do not add negative tracking.
+- Keep body copy to two or three short lines on work surfaces.
+- Use stable dimensions for buttons, pills, progress rows, and primary task cards.
+
+### Mobile and Focus
+- Interactive controls should meet a 44px minimum target.
+- Keyboard focus uses a visible navy focus ring.
+- Mobile layouts keep the primary action available before secondary diagnostics.
+
 ## Short References (non-quoted)
 - Apple Human Interface Guidelines
 - Nielsen Norman usability heuristics
