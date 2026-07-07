@@ -184,7 +184,7 @@ items:
     priority: 25
   - id: S224
     title: Three-Subject Learner Dabangil Runtime Acceptance
-    status: queued
+    status: completed
     dependencies: [S206, S215, S217, S218, S220, S221]
     lockGroup: learner-acceptance
     risk: high

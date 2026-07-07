@@ -197,6 +197,8 @@ test("S215 docs, source, roadmap, and Agent Factory target remain source-level a
   const s219 = plan.analyses.find((item) => item.itemId === "S219");
   const s220 = plan.analyses.find((item) => item.itemId === "S220");
   const s221 = plan.analyses.find((item) => item.itemId === "S221");
+  const s224 = plan.analyses.find((item) => item.itemId === "S224");
+  const s225 = plan.analyses.find((item) => item.itemId === "S225");
 
   for (const token of [
     "S211",
@@ -220,5 +222,7 @@ test("S215 docs, source, roadmap, and Agent Factory target remain source-level a
   assert.equal(s219?.statusCategory, "completed");
   assert.equal(s220?.statusCategory, "completed");
   assert.equal(s221?.statusCategory, "completed");
-  assert.deepEqual(plan.selectedItemIds, ["S224"]);
+  assert.equal(s224?.statusCategory, "completed");
+  assert.equal(s225?.readinessStatus, "ready");
+  assert.deepEqual(plan.selectedItemIds, ["S225"]);
 });
