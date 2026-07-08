@@ -51,10 +51,10 @@ test("S220E builds gap to rewrite to retrieval to continuation action unit", () 
   assert.equal(unit.retrievalCheck.label, "10초 확인");
   assert.equal(unit.retrievalCheck.pattern, "issue_recall");
   assert.match(unit.retrievalCheck.prompt, /쟁점|조문|요건|사안 포섭/);
-  assert.equal(unit.continuation.label, "내일 복습 후보");
-  assert.match(unit.continuation.reviewQueueCandidate, /Review Queue/);
-  assert.match(unit.continuation.todayPlanCandidate, /Today Plan/);
-  assert.match(unit.continuation.notesCandidate, /Notes/);
+  assert.equal(unit.continuation.label, "내일 복습에 남길 내용");
+  assert.match(unit.continuation.reviewQueueCandidate, /복습/);
+  assert.match(unit.continuation.todayPlanCandidate, /오늘 할 일/);
+  assert.match(unit.continuation.notesCandidate, /학습 노트/);
   assert.equal(unit.continuation.todayPlanMaxPrimaryTasks, 3);
   assert.equal(unit.dataBoundary.metadataOnly, true);
   assert.equal(unit.dataBoundary.globalReferenceWrite, false);
@@ -103,10 +103,10 @@ test("S220E learner surfaces show the cognitive action card without adding persi
     "가장 큰 간극 1개",
     "오늘 다시 쓸 문단 1개",
     "10초 확인",
-    "내일 복습 후보",
-    "Review Queue",
-    "Today Plan",
-    "Notes",
+    "내일 복습에 남길 내용",
+    "복습",
+    "오늘 할 일",
+    "학습 노트",
   ]) {
     assert.ok(combined.includes(phrase), `missing S220E surface phrase: ${phrase}`);
   }

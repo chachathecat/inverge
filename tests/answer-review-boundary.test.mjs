@@ -85,8 +85,8 @@ test("first mode is not overloaded with second-only capture quality checklist", 
 test("saved learner capture copy shows one biggest gap and one next action choices", async () => {
   const itemsPage = await readFile(new URL("../app/app/items/page.tsx", import.meta.url), "utf8");
   assert.ok(itemsPage.includes("가장 큰 약점 1개와 다음 행동 1개"));
-  assert.ok(itemsPage.includes("오늘 할 일에 반영"));
-  assert.ok(itemsPage.includes("다시 풀기/다시 쓰기"));
+  assert.ok(itemsPage.includes("오늘 계획에 반영"));
+  assert.ok(itemsPage.includes("답안 훈련으로 보기"));
   assert.ok(itemsPage.includes("복습 연결"));
 });
 

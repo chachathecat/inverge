@@ -260,7 +260,7 @@ export function ReviewQueueClient({
           data-s224v-secondary-diagnostics
         >
           <summary className="cursor-pointer list-none text-sm font-semibold text-[color:var(--foreground-strong)]">
-            다음 복습 후보 보기
+            다음 복습 보기
             {hiddenCandidateCount > 0 ? <span className="ml-2 text-xs font-medium text-[color:var(--muted)]">외 {hiddenCandidateCount}개 접힘</span> : null}
           </summary>
           <ul className="mt-3 divide-y divide-[color:var(--border-hairline)]">

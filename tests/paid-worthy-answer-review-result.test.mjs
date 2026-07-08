@@ -22,8 +22,7 @@ test('answer review result hierarchy copy is present', () => {
     '가장 큰 간극',
     '왜 중요한가',
     '어떻게 고칠까',
-    '답안 구조 Skeleton',
-    '문장형 답안이 아니라 목차와 필수 키워드',
+    '답안 구조',
     'Ⅰ. 논점의 정리',
     'Ⅱ. 기준/법리',
     'Ⅲ. 사안의 적용',
@@ -34,9 +33,9 @@ test('answer review result hierarchy copy is present', () => {
 
 test('anonymous signup value card copy is present', () => {
   [
-    '계정 만들고 기록 저장',
+    '로그인하고 기록 저장',
     '약점 신호에 누적됩니다',
-    '복습 큐에 들어갑니다',
+    '복습에 남습니다',
     '오늘 계획에 반영됩니다',
     '결과만 계속 보기',
   ].forEach((copy) => assert.ok(answerReviewClient.includes(copy), `missing copy: ${copy}`));
@@ -44,17 +43,15 @@ test('anonymous signup value card copy is present', () => {
 
 test('learner home weakness diagnostic copy is present', () => {
   [
-    '내 답안에서 반복되는 약점',
-    '가장 많이 반복된 약점',
-    '다시 볼 과목',
-    '오늘 줄일 실수',
+    '반복 약점 신호를 수집 중입니다.',
+    '가장 큰 약점',
+    '오늘은 이 약점 하나만 줄입니다.',
+    '오늘 다시 볼 항목',
   ].forEach((copy) => assert.ok(appHome.includes(copy), `missing copy: ${copy}`));
 });
 
 test('guardrails: no official grading or pass-fail claims in learner/public files', () => {
   [
-    '공식 채점',
-    '합격 판정',
     '확정 점수',
     '모범답안 확정',
     'official grader',
@@ -63,6 +60,8 @@ test('guardrails: no official grading or pass-fail claims in learner/public file
     '합격 보장',
     '합격 확률',
   ].forEach((forbidden) => assert.ok(!learnerPublicText.includes(forbidden), `forbidden guardrail copy found: ${forbidden}`));
+  assert.doesNotMatch(learnerPublicText, /공식 채점(?!\s*아님|이나)/);
+  assert.doesNotMatch(learnerPublicText, /합격 판정(?!이 아닙니다|이 아니라|이 아님| 아님)/);
 });
 
 test('no payment keywords added', () => {

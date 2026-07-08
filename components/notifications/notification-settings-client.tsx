@@ -315,7 +315,7 @@ export function NotificationSettingsClient() {
         <label className="flex items-center justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--border-subtle)] px-4 py-3">
           <span>
             <span className="block text-sm font-medium text-[color:var(--foreground-strong)]">알림 사용</span>
-            <span className="block text-xs leading-5 text-[color:var(--muted)]">Today Plan, 복습, 계산 회복이 있을 때만 보냅니다.</span>
+            <span className="block text-xs leading-5 text-[color:var(--muted)]">오늘 할 일, 복습, 계산 회복이 있을 때만 보냅니다.</span>
           </span>
           <input
             type="checkbox"

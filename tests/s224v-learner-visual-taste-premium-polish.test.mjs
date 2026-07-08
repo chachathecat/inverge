@@ -95,8 +95,9 @@ test("learner chrome uses the 답안길 second-round identity without a first-ro
   assert.match(learnerShell, /답안길/);
   assert.match(learnerShell, /data-s224v-learner-mode-entry="second-only"/);
   assert.match(answerReview, /data-s224v-answer-review-scope="second-only"/);
-  assert.match(betaBanner, /답안길은 감정평가사 2차 답안 운영 흐름/);
-  assert.doesNotMatch(`${learnerShell}\n${betaBanner}`, /Inverge/);
+  assert.match(betaBanner, /초대 베타/);
+  assert.match(betaBanner, /학습 보조 초안/);
+  assert.doesNotMatch(`${learnerShell}\n${betaBanner}`, /IV Inverge/);
   assert.doesNotMatch(learnerShell, /mode:\s*"first"|mode=first|1차/);
   assert.doesNotMatch(answerReview, /<option value="first"|시험 모드/);
   assert.doesNotMatch(betaBanner, /1차\/2차|1차·2차/);

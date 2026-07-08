@@ -141,7 +141,7 @@ test("today plan tasks from capture origin are bounded and action-oriented", () 
 
 test("saved capture confirmation copy exists", () => {
   const source = read("app/app/session/page.tsx");
-  ["오늘 계획에 반영했습니다.", "오늘 할 일 후보", "복습 후보", "학습 노트 상세에 저장했습니다.", "가장 큰 간극:", "다음 행동:"].forEach((phrase) => {
+  ["오늘 계획에 반영했습니다.", "오늘 계획에 반영", "복습에 남길 내용", "학습 노트 상세에 저장했습니다.", "가장 큰 간극:", "다음 행동:"].forEach((phrase) => {
     assert.ok(source.includes(phrase), `Missing phrase: ${phrase}`);
   });
 });

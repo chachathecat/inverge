@@ -50,7 +50,7 @@ export type CalculatorRoutineReviewCandidate = {
   recoveryReference: CalculatorRoutineRecoveryReference;
   sourceEventId: string;
   subject: "감정평가실무";
-  title: "계산·검산 복습 후보";
+  title: "계산·검산 복습";
   nextAction: "계산·검산 다시 하기";
   sourceLabel: "계산·검산 루틴 기반";
   dueHint: ExecutionReviewDueHint;
@@ -521,7 +521,7 @@ export function buildActiveCalculatorRoutineReviewCandidates(
       recoveryReference,
       sourceEventId: event.id,
       subject: "감정평가실무",
-      title: "계산·검산 복습 후보",
+      title: "계산·검산 복습",
       nextAction: "계산·검산 다시 하기",
       sourceLabel: "계산·검산 루틴 기반",
       dueHint: getMetadataString(metadata, "reviewDueHint") as ExecutionReviewDueHint || "tomorrow",

@@ -41,10 +41,10 @@ test('final visual qa doc has required sections and launch gate lines', () => {
 test('global focus color tokens remain coherent', () => {
   const css = read('app/globals.css');
   [
-    '--bg-canvas: #faf8f3',
-    '--bg-subtle: #f3f6f8',
-    '--text-primary: #101828',
-    '--brand-900: #10233f',
+    '--bg-canvas: #f7f4ee',
+    '--bg-subtle: #eff6ff',
+    '--text-primary: #111827',
+    '--brand-900: #0b1b34',
   ].forEach((token) => {
     assert.ok(css.includes(token), `Missing token: ${token}`);
   });
@@ -57,11 +57,11 @@ test('public landing keeps proof/demo copy anchors', () => {
   ].map(read).join('\n');
 
   [
-    '답안 검토실 데모',
-    '모범답안 구조 (Skeleton Framework)',
-    '학습 보조 Skeleton',
-    '오늘 입력 시작',
-    '답안 검토실 무료 체험',
+    '답안길 미리보기',
+    '데모 결과',
+    '공식 채점 아님',
+    '오늘 답안 올리기',
+    '데모 결과 보기',
   ].forEach((phrase) => {
     assert.ok(joined.includes(phrase), `Missing public landing phrase: ${phrase}`);
   });
@@ -87,8 +87,6 @@ test('answer review studio keeps key interaction and result anchors', () => {
 test('guardrails remain enforced on learner/public surfaces', () => {
   const joined = LEARNER_PUBLIC_FILES.map(read).join('\n').toLowerCase();
   [
-    '공식 채점',
-    '합격 판정',
     '확정 점수',
     '모범답안 확정',
     'official grader',
@@ -104,4 +102,6 @@ test('guardrails remain enforced on learner/public surfaces', () => {
   ].forEach((token) => {
     assert.equal(joined.includes(token.toLowerCase()), false, `Prohibited token found: ${token}`);
   });
+  assert.doesNotMatch(joined, /공식 채점(?!\s*아님|이나)/);
+  assert.doesNotMatch(joined, /합격 판정(?!이 아닙니다|이 아님| 아님|이 아니라)/);
 });

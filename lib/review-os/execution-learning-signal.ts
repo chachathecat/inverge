@@ -246,7 +246,7 @@ export function buildExecutionResultFeedback(input: ExecutionResultFeedbackInput
   }
 
   if (input.result === "needs_rewrite") {
-    return "다시쓰기 신호로 남겼어요. 오늘은 한 문단만 고쳐 쓰고, 이후 복습 후보로 연결할게요.";
+    return "다시쓰기 신호로 남겼어요. 오늘은 한 문단만 고쳐 쓰고, 이후 복습으로 연결할게요.";
   }
 
   if (input.examMode === "first") {

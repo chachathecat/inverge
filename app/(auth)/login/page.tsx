@@ -40,18 +40,18 @@ export default async function LoginPage({ searchParams }: PageProps) {
         <section className="max-w-xl">
           <p className="text-caption font-medium text-[color:var(--muted)]">by Inverge</p>
           <h1 className="mt-3 text-h1 font-semibold text-[color:var(--foreground-strong)]">답안길</h1>
-          <p className="mt-5 text-[28px] font-semibold leading-tight text-[color:var(--foreground-strong)]">
+          <p className="hero-balance ko-keep mt-5 text-[28px] font-semibold leading-tight text-[color:var(--foreground-strong)]">
             오늘 쓴 답안을 내일 다시 쓸 문단으로.
           </p>
-          <p className="mt-4 max-w-lg text-body text-[color:var(--muted)]">
+          <p className="ko-keep mt-4 max-w-lg text-body text-[color:var(--muted)]">
             초대받은 감정평가사 수험생을 위한 2차 답안 훈련 OS
           </p>
         </section>
 
         <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-5 shadow-[var(--shadow-focus)] sm:p-7">
           <div className="space-y-2">
-            <h2 className="text-title text-[color:var(--foreground-strong)]">초대 계정으로 시작하기</h2>
-            <p className="text-sm leading-6 text-[color:var(--muted)]">
+            <h2 className="ko-keep text-title text-[color:var(--foreground-strong)]">초대 계정으로 시작하기</h2>
+            <p className="ko-keep text-sm leading-6 text-[color:var(--muted)]">
               {authEnabled ? "로그인하면 오늘 할 일로 이어집니다." : "현재 환경에서는 demo mode만 확인할 수 있습니다."}
             </p>
             {modeLabel ? (

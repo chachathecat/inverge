@@ -89,7 +89,7 @@ test("/app/capture provides editable text-first capture and existing safe save p
   assert.equal(captureForm.includes("createdFromCapture: true"), true, "save should create capture-derived learning signal metadata");
   assert.equal(captureForm.includes('data-testid="capture-save-primary"'), true, "visible primary save CTA should be present in the capture form");
   assert.equal(captureForm.includes('data-testid="capture-save-action-bar"'), true, "save CTA should live in the same visible section as learner input");
-  assert.equal(captureForm.includes("저장하고 오늘 할 일에 반영"), true, "save CTA copy should match the consolidated learner grammar");
+  assert.equal(captureForm.includes("저장하고 오늘 계획에 반영"), true, "save CTA copy should match the consolidated learner grammar");
   assert.equal(captureForm.includes("disabled={!canQuickSave || saving || extracting}"), true, "save CTA should render before input and stay disabled until content exists");
   assert.equal(captureForm.includes("getLearnerCaptureContent"), true, "save readiness should account for learner text beyond raw OCR text");
   assert.equal(captureForm.includes("source.userAnswer"), true, "save CTA should enable from userAnswer/study note text");
@@ -120,11 +120,11 @@ test("capture save confirmation includes biggest gap, next action, and learner l
   assert.equal(captureForm.includes("다음 행동 1개"), true, "confirmation should identify one next action candidate");
   assert.equal(captureForm.includes("saved-plan"), true, "confirmation should be a real fourth wizard stage");
   assert.equal(captureForm.includes("학습 노트 저장 상태"), true, "confirmation should show note persistence status");
-  assert.equal(captureForm.includes("오늘 할 일 후보"), true, "confirmation should show the Today Plan candidate in learner-facing Korean");
-  assert.equal(captureForm.includes("복습 후보"), true, "confirmation should show the Review Queue candidate in learner-facing Korean");
+  assert.equal(captureForm.includes("오늘 계획에 반영"), true, "confirmation should show the Today Plan handoff in learner-facing Korean");
+  assert.equal(captureForm.includes("복습에 남길 내용"), true, "confirmation should show the Review Queue handoff in learner-facing Korean");
   assert.equal(captureForm.includes("Today Plan candidate"), false, "confirmation should not show the English Today Plan candidate label");
   assert.equal(captureForm.includes("Review Queue candidate"), false, "confirmation should not show the English Review Queue candidate label");
-  assert.equal(captureForm.includes("학습 노트와 오늘 할 일에 반영할 후보입니다."), true, "confirmation should frame the plan handoff as a candidate");
+  assert.equal(captureForm.includes("학습 노트에 저장되고 오늘 계획과 복습으로 이어집니다."), true, "confirmation should frame the plan handoff as saved learner flow");
   assert.equal(captureForm.includes('href={`/app/review?mode=${mode}&subject=${encodedSubject}`}'), true, "confirmation should link to Review with mode and subject");
   assert.equal(captureForm.includes('href={`/app/notes?mode=${mode}&subject=${encodedSubject}`}'), true, "confirmation should link to Notes with mode and subject");
   assert.equal(captureForm.includes('href={`/app?mode=${mode}&subject=${encodedSubject}`}'), true, "confirmation should link back to Today with mode and subject");
@@ -213,7 +213,7 @@ test("local beta note fallback remains metadata-only and client reflection stays
   assert.equal(reflection.startsWith('"use client";'), true, "local beta reflection must remain client-only");
   assert.equal(reflection.includes("useEffect"), true, "localStorage reads should stay inside client effects");
   assert.equal(reflection.includes("window.setTimeout"), true, "client state should settle after hydration");
-  assert.equal(reflection.includes("닫힌 베타 브라우저 임시 기록입니다."), true, "local beta reflection should identify browser-local temporary records");
+  assert.equal(reflection.includes("이 브라우저에 임시 저장된 학습 기록입니다."), true, "local beta reflection should identify browser-local temporary records");
 });
 
 test("capture save local analytics emits only safe derived fields", () => {
@@ -291,7 +291,7 @@ test("Today and empty states use capture for generic input while preserving spec
   assert.equal(itemsPage.includes('<Link href={`/app/capture?mode=${mode}`'), true, "empty notes state should send learners to capture");
   assert.equal(itemsPage.includes("오늘 한 것을 하나 올리면 가장 큰 약점과 다음 행동이 만들어집니다."), true, "Notes empty state should explain saved-note reflection");
   assert.equal(localBetaReflection.includes('href={`/app/capture?mode=${mode}`}'), true, "local beta empty states should preserve mode when returning to capture");
-  assert.equal(localBetaReflection.includes("닫힌 베타 학습 노트"), true, "local beta Notes copy should remain closed-beta scoped");
+  assert.equal(localBetaReflection.includes("이 브라우저에 저장된 학습 노트"), true, "local beta Notes copy should remain browser-local scoped");
   assert.equal(weeklyPage.includes('const inputStartHref = `/app/capture?mode=${mode}`;'), true, "weekly input CTA should use capture");
 });
 

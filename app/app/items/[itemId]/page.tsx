@@ -106,8 +106,8 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
     typeof captureNoteEngine?.topic_candidate === "string" && captureNoteEngine.topic_candidate.trim()
       ? captureNoteEngine.topic_candidate.trim()
       : taxonomyCandidate?.topic ?? resolvedDetail.tags[0]?.topicTag ?? "아직 논점 후보가 없습니다.";
-  const reviewConnection = resolvedDetail.reviewQueue.length > 0 ? "복습 예정" : "복습 후보";
-  const todayConnection = "오늘 할 일 후보";
+  const reviewConnection = resolvedDetail.reviewQueue.length > 0 ? "복습 예정" : "복습에 남길 내용";
+  const todayConnection = "오늘 계획에 반영";
   const agendaConnection = "학습 기록에 반영";
   const firstOxNextActionLine = firstOxReview ? "같은 선지를 근거 1줄로 다시 판단합니다." : nextActionLine;
 
@@ -155,7 +155,7 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
           <MiniArtifact label="논점 후보" value={noteTopicCandidate} />
           <MiniArtifact label="가장 큰 약점" value={biggestSignal} />
           <MiniArtifact label="다음 행동" value={polishedNextActionLine} />
-          <MiniArtifact label="오늘 할 일 연결" value={todayConnection} />
+          <MiniArtifact label="오늘 계획 연결" value={todayConnection} />
           <MiniArtifact label="복습 연결" value={reviewConnection} />
           <MiniArtifact label="학습 기록 연결" value={agendaConnection} />
         </div>
@@ -561,7 +561,7 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
       {!firstOxReview ? (
         <div className="flex flex-col gap-3 sm:flex-row">
           <Link href={`/app/review?mode=${mode}`}>
-            <Button type="button">복습 큐 보기</Button>
+            <Button type="button">복습 보기</Button>
           </Link>
           <Link href={`/app/capture?mode=${mode}`}>
             <Button type="button" variant="outline">

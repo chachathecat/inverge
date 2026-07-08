@@ -63,7 +63,7 @@ export function FrontPage() {
     <RefinedShell className="space-y-16 py-12 sm:py-16 lg:py-20">
       <section className="grid items-center gap-10 lg:grid-cols-[1.08fr_0.92fr]">
         <div className="animate-in-up">
-          <RefinedBadge>감정평가사 합격 운영 시스템</RefinedBadge>
+          <RefinedBadge>답안길</RefinedBadge>
           <h1 className="mt-6 max-w-3xl text-[44px] font-medium leading-[1.08] tracking-[-0.055em] text-[color:var(--foreground-strong)] sm:text-[58px]">
             오늘 해야 할 학습 행동을 정리합니다.
           </h1>
@@ -87,7 +87,7 @@ export function FrontPage() {
               </div>
             ))}
           </div>
-          <p className="mt-6 text-sm text-[color:var(--muted)]">현재 초대 기반 closed beta로 차분하게 운영 중입니다.</p>
+          <p className="mt-6 text-sm text-[color:var(--muted)]">현재 초대 계정으로 차분하게 운영 중입니다.</p>
         </div>
 
         <FocusSurface className="animate-in-up overflow-hidden [animation-delay:120ms]">

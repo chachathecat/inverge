@@ -101,7 +101,7 @@ test("learner capture UI keeps OCR editable before save and uses required trust 
   const captureForm = await read("components/review-os/capture-form.tsx");
   const combined = `${capturePage}\n${captureForm}`;
 
-  assert.equal(ANSWER_SUBMISSION_OCR_TRUST_COPY, "OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요.");
+  assert.equal(ANSWER_SUBMISSION_OCR_TRUST_COPY, "OCR 결과는 학습 보조 초안입니다. 저장 전 직접 수정할 수 있습니다.");
   assert.ok(combined.includes("AI 초안"));
   assert.ok(combined.includes("OCR과 AI 정리는 학습 보조 초안입니다. 저장 전 직접 수정할 수 있습니다."));
   assert.equal(combined.includes("OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요."), false);
@@ -135,7 +135,7 @@ test("S204 data-boundary and rollback doc exists without raw examples", async ()
   for (const phrase of [
     "S204",
     "user-owned service data",
-    "OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요.",
+    "OCR 결과는 학습 보조 초안입니다. 저장 전 직접 수정할 수 있습니다.",
     "No database migration",
     "Rollback",
   ]) {

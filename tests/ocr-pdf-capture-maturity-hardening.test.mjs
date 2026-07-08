@@ -65,7 +65,7 @@ test("OCR/PDF capture maturity checklist doc exists and records safety contract"
   [
     "OCR/PDF Capture Maturity Hardening v1",
     "OCR/PDF/text capture -> editable draft -> learner-owned note",
-    "OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요.",
+    "OCR 결과는 학습 보조 초안입니다. 저장 전 직접 수정할 수 있습니다.",
     "editable before save",
     "learner-owned note",
     "one `biggestGap`",

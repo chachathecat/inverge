@@ -18,11 +18,11 @@ test("capture page shell is slim and capture-first for both modes", () => {
     "텍스트 붙여넣기",
     "입력 내용 확인하기",
     "OCR과 AI 정리는 학습 보조 초안입니다. 저장 전 직접 수정할 수 있습니다.",
-    "학습 보조용",
+    "공식 채점 아님",
     "가장 큰 약점 1개",
     "다음 행동 1개",
-    "오늘 할 일 후보",
-    "복습 후보",
+    "오늘 계획에 반영",
+    "복습에 남길 내용",
   ].forEach((phrase) => assert.ok(combined.includes(phrase), `Missing shell phrase: ${phrase}`));
 
   ["data-testid=\"capture-page-shell\"", "ClosedBetaBanner", "DailyCommandCard", "MinimalStepPanel", "QuietDetails", "LearnerProgressBar", "오늘 명령", "입력 순서 보기", "오늘 학습 정리하기", "오늘 한 것 정리하기"].forEach((phrase) => {
@@ -45,7 +45,7 @@ test("capture shell keeps learner safety boundaries", () => {
   const combined = `${read("app/app/capture/page.tsx")}\n${read("components/review-os/capture-form.tsx")}`;
 
   assert.doesNotMatch(combined, /기준\s*답안|기준답안|모범답안|공식답안|정답 확정|최종 판단/);
-  assert.doesNotMatch(combined, /공식\s*채점|공식\s*점수|점수\s*예측|합격\s*판정|합격\s*가능성|pass\/?fail|official\s+model\s+answer/i);
+  assert.doesNotMatch(combined, /공식\s*채점(?!\s*아님)|공식\s*점수|점수\s*예측|합격\s*판정|합격\s*가능성|pass\/?fail|official\s+model\s+answer/i);
   assert.doesNotMatch(combined, /\/instructor|\/admin|\/studio|checkout|payment|billing|subscription/i);
   assert.doesNotMatch(combined, /route\.ts|middleware|process\.env|service_role|OPENAI|embedding/i);
 });

@@ -14,7 +14,7 @@ The learner loop is:
 - The page title is `오늘 한 것 정리하기`.
 - The primary action is `학습 노트 만들기`.
 - Image and PDF inputs may use the existing safe capture path, but text input remains the stable path.
-- The OCR notice must remain visible: `OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요.`
+- The OCR notice must remain visible: `OCR 결과는 학습 보조 초안입니다. 저장 전 직접 수정할 수 있습니다.`
 - OCR result text is editable before save.
 
 ## Data Boundary

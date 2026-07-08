@@ -95,7 +95,7 @@ test("Today Plan remains max 3", () => {
     unitId: `unit-${index}`,
     taskType: "first_ox_retry",
     title: `민법 항목 ${index}`,
-    rationale: "예정된 복습 후보입니다.",
+    rationale: "예정된 복습 항목입니다.",
     primaryAction: "O/X 5문항 다시 풀기",
     estimatedMinutes: 10,
     prioritySignals: index === 0 ? ["learning_state:confident_wrong"] : ["learning_state:wrong"],

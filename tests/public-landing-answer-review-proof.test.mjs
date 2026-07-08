@@ -16,7 +16,7 @@ test("public front page surfaces Answer Road capture-first hero and proof access
 });
 
 test("public hero animation includes concrete answer-review proof sequence", () => {
-  ["민법 예시", "착오 취소", "문제 스냅", "OCR 초안", "핵심 조건", "설명 초안", "오늘 할 일", "착오 취소 선지 2개 다시 풀기", "useReducedMotion"].forEach((phrase) => {
+  ["답안길 미리보기", "공식 채점 아님", "가장 큰 약점", "오늘 다시 쓸 문단", "민법 제109조", "useReducedMotion"].forEach((phrase) => {
     assert.ok(heroAnimation.includes(phrase), `Missing hero proof phrase: ${phrase}`);
   });
 });
@@ -30,11 +30,13 @@ test("public landing no longer contains weak expansion-only copy", () => {
 });
 
 test("public landing guardrails block official grading claims", () => {
-  ["공식 채점", "합격 판정", "확정 점수", "모범답안 확정", "official grader", "pass/fail judge", "정답 보장", "합격 보장"].forEach((phrase) => {
+  ["확정 점수", "모범답안 확정", "official grader", "pass/fail judge", "정답 보장", "합격 보장"].forEach((phrase) => {
     publicSources.forEach((source, index) => {
       assert.equal(source.toLowerCase().includes(phrase.toLowerCase()), false, `Forbidden grading claim found [${index}]: ${phrase}`);
     });
   });
+  publicSources.forEach((source) => assert.doesNotMatch(source, /공식 채점(?!\s*아님|이나)/));
+  publicSources.forEach((source) => assert.doesNotMatch(source, /합격 판정(?!이 아닙니다|이 아니라|이 아님| 아님)/));
 });
 
 test("public landing introduces no new OCR provider scope tokens", () => {

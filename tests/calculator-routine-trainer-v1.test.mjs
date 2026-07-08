@@ -847,7 +847,6 @@ test("calculator routine learner surfaces avoid grading, score, pass, and endors
   ].map(read).join("\n");
 
   [
-    "공식 채점",
     "공식 답안",
     "모범답안",
     "기준답안",
@@ -857,4 +856,5 @@ test("calculator routine learner surfaces avoid grading, score, pass, and endors
     "CASIO 공식 보증",
     "정답 확인 완료",
   ].forEach((phrase) => assert.equal(combined.includes(phrase), false, phrase));
+  assert.doesNotMatch(combined, /공식\s*채점(?!\s*아님|이나)/);
 });

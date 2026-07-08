@@ -21,7 +21,7 @@ The contract covers:
 
 Required learner trust copy:
 
-> OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요.
+> OCR 결과는 학습 보조 초안입니다. 저장 전 직접 수정할 수 있습니다.
 
 The copy treats OCR and AI output as learning-support draft material. It does not introduce grading, reference answers, billing, or question ingestion.
 

@@ -30,16 +30,20 @@ test("second-stage write page includes photo-first entries", () => {
 });
 
 test("answer review entry copy is premium and clear", () => {
-  ["답안 검토실", "답안 스냅으로 시작", "사례 스캔", "PDF/사진 불러오기", "텍스트 붙여넣기", "누락 논점", "다시 쓸 문장"].forEach((phrase) => {
+  ["답안 훈련", "답안 스냅으로 시작", "사례 스캔", "PDF/사진 불러오기", "텍스트 입력", "누락 논점", "다시 쓸 문장"].forEach((phrase) => {
     assert.ok((answerReviewPage + answerReviewClient).includes(phrase), `Missing answer-review phrase: ${phrase}`);
   });
 });
 
 test("learner-facing guardrails block official grading claims", () => {
-  ["공식 채점", "합격 판정", "확정 점수", "모범답안 확정", "official grader", "pass/fail judge"].forEach((phrase) => {
+  ["확정 점수", "모범답안 확정", "official grader", "pass/fail judge"].forEach((phrase) => {
     learnerFacingSources.forEach((source, index) => {
       assert.equal(source.toLowerCase().includes(phrase.toLowerCase()), false, `Forbidden grading claim found [${index}]: ${phrase}`);
     });
+  });
+  learnerFacingSources.forEach((source) => {
+    assert.doesNotMatch(source, /공식 채점(?!\s*아님|이나)/);
+    assert.doesNotMatch(source, /합격 판정(?!이 아닙니다|이 아님| 아님)/);
   });
 });
 

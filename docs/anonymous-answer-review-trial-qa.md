@@ -2,29 +2,30 @@
 
 ## 목적
 - 비로그인 사용자 답안 검토 체험 흐름이 명확하게 동작하는지 수동 QA로 확인합니다.
-- 전환 메시지(가입 후 저장/복습 큐/오늘 계획 연결)가 결과 화면에서 분명하게 전달되는지 확인합니다.
+- 전환 메시지(로그인 후 저장/복습/오늘 계획 연결)가 결과 화면에서 분명하게 전달되는지 확인합니다.
 - 감정평가사 학습 보조 초안 제품 가드레일(공식 채점/합격 판정 금지)을 유지하는지 확인합니다.
 
 ## 대상 흐름
 Public landing
-→ 답안 검토실 무료 체험
+→ 오늘 답안 올리기 / 데모 결과 보기
 → /answer-review?mode=second
 → answer/photo/text input
 → result shown
-→ signup CTA for saving result and linking to Today Plan / Review Queue
+→ login CTA for saving result and linking to Today Plan / Review Queue
 → daily trial limit if repeated
 
 ---
 
 ## 1) Public landing
-- [ ] `답안 검토실 무료 체험` CTA가 노출된다.
-- [ ] `오늘 입력 시작` CTA가 계속 primary 위치를 유지한다.
-- [ ] 체험 카피에 로그인 없이 1회 검토가 명시된다.
+- [ ] `오늘 답안 올리기` CTA가 primary 위치를 유지한다.
+- [ ] `데모 결과 보기` CTA는 secondary로 노출된다.
+- [ ] 랜딩에 오래된 review-room 무료 체험 카피가 없다.
 - [ ] 공식 채점/합격 판정/확정 점수 등 최종 판정성 문구가 없다.
 
 ## 2) Anonymous page access
 - [ ] Incognito 상태에서 `/answer-review?mode=second` 접속이 가능하다.
 - [ ] 로그인 화면으로 리다이렉트되지 않는다.
+- [ ] `빠른 답안 정리` 프레이밍이 표시된다.
 - [ ] `무료 체험 1회` 배지가 표시된다.
 
 ## 3) Anonymous input
@@ -38,15 +39,15 @@ Public landing
 - [ ] 결과가 화면에 표시된다.
 - [ ] learningSignalStatus is skipped.
 - [ ] No Review Queue / Today Plan save occurs.
-- [ ] 가입 CTA `계정 만들고 기록 저장`이 표시된다.
+- [ ] 로그인 CTA `로그인하고 기록 저장`이 표시된다.
 - [ ] 안내 문구에 아래 의미가 명시된다.
-  - 결과 저장, 복습 큐, 오늘 계획 반영은 로그인 후 사용 가능.
+  - 기록 저장, 복습, 오늘 계획 반영은 로그인 후 사용 가능.
 
 ## 5) Anonymous limit
 - [ ] 같은 날 2번째 성공 요청 시 제한 메시지가 반환된다.
 - [ ] 제한 메시지에 아래 문구가 포함된다.
-  - 오늘 무료 검토 1회를 사용했습니다.
-  - 계정을 만들면 기록 저장과 복습 큐 연결을 사용할 수 있습니다.
+  - 오늘 무료 정리 1회를 사용했습니다.
+  - 로그인하면 기록 저장과 복습 연결을 사용할 수 있습니다.
 
 ## 6) Authenticated behavior
 - [ ] 로그인 사용자는 기존처럼 답안 검토를 계속 사용할 수 있다.

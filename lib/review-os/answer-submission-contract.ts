@@ -2,7 +2,7 @@ import type { AppraisalMode } from "./appraisal";
 import { assertNoRawUserDataInDerived, sanitizeDerivedMetadata } from "./data-boundary";
 import type { SourceType } from "./types";
 
-export const ANSWER_SUBMISSION_OCR_TRUST_COPY = "OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요.";
+export const ANSWER_SUBMISSION_OCR_TRUST_COPY = "OCR 결과는 학습 보조 초안입니다. 저장 전 직접 수정할 수 있습니다.";
 
 export type LearnerAnswerSubmissionInputKind = "image" | "pdf" | "text";
 
