@@ -41,17 +41,16 @@ const CORE_FILES = [
 
 const LEARNER_LOOP_COPY = [
   '오늘 한 것 올리기',
-  'OCR/AI 정리는 초안입니다',
-  '저장 전 직접 확인해 주세요',
+  'OCR과 AI 정리는 학습 보조 초안입니다',
+  '저장 전 직접 수정할 수 있습니다',
   '오늘 기록 기반',
   '오늘 계획에 반영했습니다.',
-  'Today Plan candidate',
-  'Review Queue candidate',
-  'Note/details에 저장했습니다.',
+  '오늘 할 일 후보',
+  '복습 후보',
+  '학습 노트 상세에 저장했습니다.',
 ];
 
 const PROHIBITED_LANGUAGE = [
-  '공식 채점',
   '합격 판정',
   '확정 점수',
   '모범답안 확정',
@@ -104,6 +103,7 @@ test('learner surfaces include required core loop copy', () => {
 
 test('learner surfaces exclude prohibited grading/pass-fail language', () => {
   const joined = LEARNER_SURFACE_FILES.map((filePath) => read(filePath)).join('\n').toLowerCase();
+  assert.doesNotMatch(joined, /공식\s*채점(?!\s*아님)/, 'positive official grading claim found');
   PROHIBITED_LANGUAGE.forEach((token) => {
     assert.equal(joined.includes(token.toLowerCase()), false, `Prohibited language found: ${token}`);
   });

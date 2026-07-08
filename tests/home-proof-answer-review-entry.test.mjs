@@ -10,10 +10,11 @@ const answerReviewClient = readFileSync("app/answer-review/answer-review-client.
 
 const learnerFacingSources = [homePage, homeProof, writePage, answerReviewPage, answerReviewClient];
 
-test("home includes answer review studio surfacing and proof lines", () => {
-  ["답안 검토실", "답안 검토실 열기", "/answer-review?mode=second", "문제 스냅", "OCR 초안", "설명 초안", "다음 행동"].forEach((phrase) => {
+test("home keeps Today Plan as primary and does not route the main CTA to legacy answer review", () => {
+  ["오늘은 이것만 하면 됩니다", "오늘 한 것 1개를 올리면 첫 계획을 만들 수 있습니다.", "오늘 공부 시작"].forEach((phrase) => {
     assert.ok(homePage.includes(phrase), `Missing home phrase: ${phrase}`);
   });
+  assert.equal(homePage.includes('href="/answer-review?mode=second"'), false);
 });
 
 test("home proof animation component includes required sequence and reduced motion guard", () => {

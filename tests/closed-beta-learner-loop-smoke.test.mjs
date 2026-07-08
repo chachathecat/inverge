@@ -87,8 +87,9 @@ test("access/onboarding route sources keep invite-only learner access and admin 
   const layout = read("app/app/layout.tsx");
   assert.ok(layout.includes("if (!access?.allowed)"));
   assert.ok(layout.includes("아직 초대 승인 전입니다."));
-  assert.ok(layout.includes("감정평가사 closed beta"));
-  assert.ok(layout.includes("/app에서 바로 이어서 사용할 수 있습니다."));
+  assert.ok(layout.includes("답안길"));
+  assert.ok(layout.includes("감정평가사 2차"));
+  assert.ok(layout.includes("오늘 할 일에서 바로 이어서 사용할 수 있습니다."));
 
   const repository = read("lib/review-os/repository.ts");
   assert.ok(repository.includes('allowed: inviteStatus === "invited" || inviteStatus === "active"'));
@@ -179,7 +180,8 @@ test("today plan and review queue are capped, collapsed, action-oriented, and sc
   assert.ok(tasks.every((task) => task.one_next_action && task.primary_cta?.label));
 
   const appPage = read("app/app/page.tsx");
-  assert.ok(appPage.includes("<QuietDetails"));
+  assert.ok(appPage.includes("quiet-disclosure"));
+  assert.ok(appPage.includes("data-s224v-secondary-diagnostics"));
   assert.ok(appPage.includes("questionReferenceHintsByTaskId"));
   assert.ok(appPage.includes("slice(0, 3)"));
   FORBIDDEN_LEARNER_COPY.forEach((phrase) => assert.equal(appPage.includes(phrase), false, `forbidden Today Plan copy: ${phrase}`));
@@ -303,7 +305,8 @@ test("reference context and question archive are optional metadata-only hints", 
   assertNoRawLeak(request);
 
   const appPage = read("app/app/page.tsx");
-  assert.ok(appPage.includes("<QuietDetails"));
+  assert.ok(appPage.includes("quiet-disclosure"));
+  assert.ok(appPage.includes("data-s224v-secondary-diagnostics"));
   assert.equal(appPage.includes("/exams/archive"), false);
   const references = await collectFiles("reference_corpus/question_archive", (file) => file.endsWith(".json"));
   for (const file of references) {

@@ -3,19 +3,26 @@ import Link from "next/link";
 import { SignOutButton } from "@/components/shared/sign-out-button";
 import { getServerSessionUser } from "@/lib/auth/session";
 
+const DEMO_CAPTURE_HREF = "/app/capture?mode=second";
+const AUTH_CAPTURE_HREF = "/login?returnTo=/app/capture?mode=second";
+
 export async function SiteHeader() {
   const session = await getServerSessionUser();
+  const publicCaptureHref = session.authEnabled ? AUTH_CAPTURE_HREF : DEMO_CAPTURE_HREF;
 
   return (
     <header className="sticky top-0 z-50 border-b border-[var(--border)] bg-[color:color-mix(in_srgb,var(--surface)_92%,transparent)] backdrop-blur">
       <div className="mx-auto flex w-full max-w-[1180px] items-center justify-between gap-5 px-5 py-4 sm:px-8">
         <Link href="/" className="flex min-w-0 items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[color:var(--primary)] text-sm font-medium text-white">
-            IV
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[color:var(--primary)] text-sm font-semibold text-white">
+            답
           </div>
           <div className="min-w-0">
-            <p className="text-base font-medium tracking-tight text-[color:var(--foreground-strong)]">Inverge</p>
-            <p className="truncate text-caption text-[color:var(--muted)]">감정평가사 합격 운영 시스템</p>
+            <div className="flex items-baseline gap-2">
+              <p className="text-base font-semibold tracking-normal text-[color:var(--foreground-strong)]">답안길</p>
+              <p className="text-[11px] font-medium text-[color:var(--muted)]">by Inverge</p>
+            </div>
+            <p className="truncate text-caption text-[color:var(--muted)]">감정평가사 2차 답안 훈련 OS</p>
           </div>
         </Link>
 
@@ -39,8 +46,11 @@ export async function SiteHeader() {
               >
                 소개
               </Link>
-              <Link href="/exams" className="rounded-full bg-[color:var(--primary)] px-4 py-2 text-sm font-medium text-white">
-                시작하기
+              <Link
+                href={publicCaptureHref}
+                className="rounded-full border border-[var(--border)] bg-[color:var(--surface)]/60 px-4 py-2 text-sm font-medium text-[color:var(--foreground-strong)] hover:bg-[color:var(--surface-soft)]"
+              >
+                오늘 답안 올리기
               </Link>
               {session.authEnabled ? (
                 <Link

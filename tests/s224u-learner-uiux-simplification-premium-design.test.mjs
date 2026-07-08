@@ -41,12 +41,11 @@ test("capture and answer review expose one loop: input, confirmation, gap, actio
 
   for (const phrase of [
     "data-capture-stage-flow",
-    "입력 방법",
+    "입력",
     "OCR/텍스트 확인",
-    "가장 큰 약점 + 다음 행동",
-    "오늘 계획 / 복습 / 학습 노트 저장",
+    "가장 큰 약점",
+    "오늘 계획 반영",
     "data-trust-layer=\"capture-intake\"",
-    "data-trust-layer=\"capture-preview\"",
   ]) {
     assert.ok(capture.includes(phrase), `missing capture loop phrase: ${phrase}`);
   }
@@ -72,10 +71,10 @@ test("trust layer copy is consistent and not stacked as repeated warnings", () =
   const capture = read("components/review-os/capture-form.tsx");
   const trustCard = read("components/review-os/trust-status-card.tsx");
 
-  assert.match(capturePage, /data-trust-layer="capture-page-shell"/);
-  assert.equal(count(capture, "OCR/AI 정리는 초안입니다. 저장 전 직접 확인해 주세요."), 1);
+  assert.doesNotMatch(capturePage, /data-trust-layer="capture-page-shell"/);
+  assert.equal(count(capture, "OCR과 AI 정리는 학습 보조 초안입니다. 저장 전 직접 수정할 수 있습니다."), 1);
   assert.match(capture, /const CAPTURE_TRUST_LAYER_COPY/);
-  assert.match(capture, /ANSWER_SUBMISSION_OCR_TRUST_COPY/);
+  assert.doesNotMatch(capture, /ANSWER_SUBMISSION_OCR_TRUST_COPY/);
   assert.match(trustCard, /사용자 확인 텍스트/);
   assert.match(trustCard, /OCR\/가져온 텍스트 초안/);
   assert.match(trustCard, /AI 분석 초안/);

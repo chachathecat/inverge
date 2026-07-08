@@ -26,11 +26,11 @@ test("/app/capture exposes mobile-first text-first copy", () => {
   const combined = `${page}\n${form}`;
 
   assert.match(combined, /오늘 한 것 올리기/);
-  assert.match(combined, /사진\/PDF\/텍스트 중 하나로 시작하고, OCR\/AI 초안은 직접 확인합니다\./);
+  assert.match(combined, /사진, PDF, 텍스트 중 하나로 시작하세요\./);
   assert.match(combined, /촬영하거나 업로드한 뒤 OCR 초안을 직접 확인합니다\./);
-  assert.match(combined, /OCR\/AI 정리는 초안/);
+  assert.match(combined, /OCR과 AI 정리는 학습 보조 초안입니다/);
   assert.match(form, /텍스트 붙여넣기/);
-  assert.match(form, /AI로 정리/);
+  assert.match(form, /입력 내용 확인하기/);
   assert.match(form, /AI가 이렇게 읽었습니다\. 틀린 부분만 고쳐 주세요\./);
 });
 
@@ -68,9 +68,9 @@ test("second-mode retrieval-before-explanation guard remains documented in the f
 test("after-save acknowledgement names Today Plan, Review Queue, note location, and safe CTAs", () => {
   const session = sessionPage();
   assert.match(session, /오늘 계획에 반영했습니다\./);
-  assert.match(session, /Today Plan candidate/);
-  assert.match(session, /Review Queue candidate/);
-  assert.match(session, /Note\/details/);
+  assert.match(session, /오늘 할 일 후보/);
+  assert.match(session, /복습 후보/);
+  assert.match(session, /학습 노트 상세/);
   assert.match(session, /가장 큰 간극/);
   assert.match(session, /다음 행동/);
   assert.match(session, /오늘 계획으로 이동/);

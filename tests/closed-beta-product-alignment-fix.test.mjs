@@ -13,7 +13,7 @@ const todayPlanEnginePath = "lib/review-os/today-plan-engine.ts";
 const firstSubjects = ["민법", "경제학원론", "부동산학원론", "감정평가관계법규", "회계학"];
 const secondSubjects = ["감정평가실무", "감정평가이론", "감정평가 및 보상법규"];
 const forbiddenLearnerCopy =
-  /기준\s*답안|기준답안|공식\s*채점|모범답안|공식답안|점수예측|합격예측|합격\s*가능성\s*확정|official\s+grading|official\s+model\s+answer|pass\/fail\s+prediction/i;
+  /기준\s*답안|기준답안|공식\s*채점(?!\s*아님)|모범답안|공식답안|점수예측|합격예측|합격\s*가능성\s*확정|official\s+grading|official\s+model\s+answer|pass\/fail\s+prediction/i;
 
 function read(path) {
   return readFileSync(path, "utf8");
@@ -66,13 +66,15 @@ test("Capture first frame keeps photo, PDF, and text as visible input options", 
     assert.match(intake, new RegExp(phrase));
   }
   assert.match(intake, /현재 PDF는 내용 확인 후 직접 붙여넣을 수 있습니다\./);
-  assert.match(intake, /OCR\/AI 정리는 초안입니다\. 저장 전 직접 확인해 주세요\./);
+  assert.match(form, /OCR과 AI 정리는 학습 보조 초안입니다\. 저장 전 직접 수정할 수 있습니다\./);
+  assert.match(intake, /CAPTURE_TRUST_LAYER_COPY/);
 });
 
 test("Mode copy is neutral and does not hard-code one subject as the only start", () => {
   const appraisal = read(appraisalPath);
   const selector = read(todaySubjectSelectorPath);
   const capturePage = read(capturePagePath);
+  const captureForm = read(captureFormPath);
 
   assert.match(appraisal, /1차 오답 1개로 시작하세요/);
   assert.match(selector, /오늘 본 과목을 선택하고 오답 1개를 기록하세요\./);
@@ -80,7 +82,8 @@ test("Mode copy is neutral and does not hard-code one subject as the only start"
   assert.match(appraisal, /2차 답안 한 건으로 시작하세요/);
   assert.match(selector, /오늘 본 과목을 선택하고 답안\/강의 정리\/필기 중 하나를 올리세요\./);
   assert.match(selector, /과목을 고르면 보강할 논점과 다음 복습에 반영됩니다\./);
-  assert.match(capturePage, /사진\/PDF\/텍스트 중 하나로 시작하고/);
+  assert.doesNotMatch(capturePage, /사진\/PDF\/텍스트 중 하나로 시작하고/);
+  assert.match(captureForm, /사진, PDF, 텍스트 중 하나로 시작하세요\./);
 
   assert.doesNotMatch(appraisal, /민법 오답 1개로 시작하세요|민법 오답 1개를 기록/);
   assert.doesNotMatch(appraisal, /감정평가실무.*으로 시작하세요/);

@@ -2,12 +2,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { ReviewOsFeedbackButton } from "@/components/review-os/feedback-button";
-import { ClosedBetaBanner } from "@/components/shared/closed-beta-banner";
 import { LocalBetaTodayReflection } from "@/components/review-os/local-beta-note-reflection";
 import { TodaySubjectSelector } from "@/components/review-os/today-first-subject-selector";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { DailyCommandCard, EvidenceLine, OneActionFooter, QuietDetails } from "@/components/review-os/minimal-study-system";
+import { EvidenceLine, OneActionFooter } from "@/components/review-os/minimal-study-system";
 import { getModeConfig, normalizeSubjectForMode, resolveAppraisalMode } from "@/lib/review-os/appraisal";
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
 import { DEFAULT_DAILY_STUDY_ACTIVITY, reviewOsService } from "@/lib/review-os/service";
@@ -239,6 +238,9 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
       ? { label: "답안 검토로 보기", href: `/answer-review?mode=${mode}` }
       : { label: "다시 풀기", href: `/problem-snap?mode=${mode}` };
   const visibleTodayPlanTasks = todayPlanTasks;
+  const heroTodayPlanTasks = todayPlanTasks.slice(0, TODAY_PLAN_MAX_PRIMARY_TASKS);
+  const heroTodayPlanEstimatedMinutes = heroTodayPlanTasks.reduce((sum, task) => sum + task.estimated_minutes, 0);
+  const heroPrimaryHref = heroTodayPlanTasks[0] ? resolveTaskHref(heroTodayPlanTasks[0]) : modeCaptureHref;
 
   return (
     <div
@@ -251,12 +253,42 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
       data-s224v-equal-weight-card-grid="absent"
       data-s224v-repeated-warning-copy="absent"
     >
-      <ClosedBetaBanner />
-      <DailyCommandCard title="오늘 할 일" description="오늘 한 것 1개를 정리하면 가장 큰 약점 1개와 다음 행동 1개로 이어집니다.">
-        <QuietDetails>
-          <p>채점 확정이 아니라, 다음 행동을 정리하는 학습 운영 도구입니다.</p>
-        </QuietDetails>
-      </DailyCommandCard>
+      <section
+        className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-5 shadow-[var(--shadow-focus)] sm:p-7"
+        data-ux-surface-reset-primary-card
+      >
+        <p className="text-caption font-medium text-[color:var(--muted)]">Today · 오늘 기록 기반</p>
+        <h1 className="mt-2 text-[28px] font-semibold leading-tight text-[color:var(--foreground-strong)]">
+          오늘은 이것만 하면 됩니다
+        </h1>
+        {heroTodayPlanTasks.length > 0 ? (
+          <ol className="mt-5 space-y-3 text-[15px] leading-7 text-[color:var(--foreground-strong)]">
+            {heroTodayPlanTasks.map((task, index) => (
+              <li key={task.itemId}>
+                {index + 1}. {task.title}
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <p className="mt-5 rounded-[var(--radius-md)] bg-[color:var(--surface-soft)] px-4 py-4 text-[15px] leading-7 text-[color:var(--foreground-strong)]">
+            오늘 한 것 1개를 올리면 첫 계획을 만들 수 있습니다.
+          </p>
+        )}
+        <div className="mt-6 flex flex-col gap-3 border-t border-[color:var(--border-subtle)] pt-5 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-[color:var(--muted)]">
+            예상 시간{" "}
+            <span className="font-semibold text-[color:var(--foreground-strong)]">
+              {heroTodayPlanTasks.length > 0 ? `${heroTodayPlanEstimatedMinutes}분` : "계획 생성 후 표시"}
+            </span>
+          </p>
+          <Link
+            href={heroPrimaryHref}
+            className="inline-flex min-h-12 w-full items-center justify-center rounded-[var(--radius-pill)] bg-[color:var(--brand-900)] px-6 text-sm font-semibold text-white transition hover:bg-[color:var(--brand-800)] sm:w-auto"
+          >
+            오늘 공부 시작
+          </Link>
+        </div>
+      </section>
 
       {savedParam ? (
         <section className="rounded-[var(--radius-md)] bg-[color:var(--surfaceQuiet)] px-4 py-4">
@@ -324,6 +356,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                 selectedSubject={selectedSubject}
                 primaryHref={modeCaptureHref}
                 primaryLabel="오늘 한 것 올리기"
+                quietPrimary
                 captureHref={modeCaptureHref}
                 reviewHref={mode === "second" ? secondReviewHref : firstReviewHref}
                 notesHref={mode === "second" ? secondNotesHref : firstNotesHref}
@@ -451,6 +484,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                 selectedSubject={selectedSubject}
                 primaryHref={primaryHref}
                 primaryLabel={homeState === "start_today_task" ? primaryCtaLabel : homePrimaryCta}
+                quietPrimary
                 isFirstSetStart={isFirstSetStart}
                 captureHref={modeCaptureHref}
                 reviewHref={mode === "second" ? secondReviewHref : firstReviewHref}
