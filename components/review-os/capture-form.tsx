@@ -1541,7 +1541,7 @@ export function WrongAnswerCaptureForm({
               data-testid={mode === "second" && stage === "second-rewrite" && !rewriteContext ? "second-write-submit" : undefined}
               className="w-full sm:w-auto"
             >
-              {submitting ? "저장 중" : "저장하고 오늘 할 일에 반영"}
+              {submitting ? "저장 중" : "저장하고 오늘 계획에 반영"}
             </Button>
           )}
         </div>
@@ -1593,7 +1593,7 @@ function SavedCaptureConfirmationPanel({
   onReset: () => void;
 }) {
   const encodedSubject = encodeURIComponent(normalizeSubjectForMode(subject, mode));
-  const learningDraftCopy = "학습 노트와 오늘 할 일에 반영할 후보입니다.";
+  const learningDraftCopy = "학습 노트에 저장되고 오늘 계획과 복습으로 이어집니다.";
   const persistenceStatus = confirmation.status ?? (confirmation.persistence === "durable" ? "durable_saved" : "local_fallback_saved");
   const persistenceCopy = getCaptureSavePersistenceCopy(persistenceStatus);
   const saveFailed = persistenceStatus === "save_failed";
@@ -1607,14 +1607,14 @@ function SavedCaptureConfirmationPanel({
         data-capture-plan-reflection-stage
       >
         <p className="text-caption text-[color:var(--brand-700)]">4. 오늘 계획 반영 · {persistenceCopy.eyebrow}</p>
-        <h3 className="mt-2 text-title text-[color:var(--foreground-strong)]">오늘 할 일에 반영할 준비가 되었습니다.</h3>
+        <h3 className="mt-2 text-title text-[color:var(--foreground-strong)]">오늘 계획에 반영할 준비가 되었습니다.</h3>
         <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">{persistenceCopy.description}</p>
         <div className="mt-5 grid gap-3 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-4">
           <PreviewLine label="가장 큰 약점 1개" value={confirmation.biggestGap} />
           <PreviewLine label="다음 행동 1개" value={confirmation.nextAction} />
           <PreviewLine label="학습 노트 저장 상태" value={persistenceCopy.statusLabel} />
-          <PreviewLine label="오늘 할 일 후보" value={confirmation.todayPlanCandidate ?? confirmation.nextAction} />
-          <PreviewLine label="복습 후보" value={confirmation.reviewQueueCandidate ?? confirmation.biggestGap} />
+          <PreviewLine label="오늘 계획에 반영" value={confirmation.todayPlanCandidate ?? confirmation.nextAction} />
+          <PreviewLine label="복습에 남길 내용" value={confirmation.reviewQueueCandidate ?? confirmation.biggestGap} />
           {confirmation.legalGroundingMessage ? <PreviewLine label="법령 근거 상태" value={confirmation.legalGroundingMessage} /> : null}
         </div>
         <div className="mt-3">
@@ -1671,14 +1671,14 @@ function SavedCaptureConfirmationPanel({
       data-capture-plan-reflection-stage
     >
       <p className="text-caption text-[color:var(--brand-700)]">4. 오늘 계획 반영 · 저장되었습니다</p>
-      <h3 className="mt-2 text-title text-[color:var(--foreground-strong)]">오늘 할 일에 반영할 후보를 만들었습니다.</h3>
-      <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">학습 노트와 복습 후보를 같은 흐름에 연결했습니다.</p>
+      <h3 className="mt-2 text-title text-[color:var(--foreground-strong)]">오늘 계획에 반영할 준비가 되었습니다.</h3>
+      <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">학습 노트와 복습을 같은 흐름에 연결했습니다.</p>
       <div className="mt-5 grid gap-3 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-4">
         <PreviewLine label="가장 큰 약점 1개" value={confirmation.biggestGap} />
         <PreviewLine label="다음 행동 1개" value={confirmation.nextAction} />
         <PreviewLine label="학습 노트 저장 상태" value={persistenceCopy.statusLabel} />
-        <PreviewLine label="오늘 할 일 후보" value={confirmation.todayPlanCandidate ?? confirmation.nextAction} />
-        <PreviewLine label="복습 후보" value={confirmation.reviewQueueCandidate ?? confirmation.biggestGap} />
+        <PreviewLine label="오늘 계획에 반영" value={confirmation.todayPlanCandidate ?? confirmation.nextAction} />
+        <PreviewLine label="복습에 남길 내용" value={confirmation.reviewQueueCandidate ?? confirmation.biggestGap} />
       </div>
       <div className="mt-3">
         <CognitiveLearningActionCard unit={confirmation.learningAction} compact />
@@ -1815,8 +1815,8 @@ function IntakePanel({
     <section className="rounded-[var(--radius-card)] border border-[color:var(--border-hairline)] bg-[color:var(--surface)] p-4 shadow-[var(--shadow-soft)] sm:p-6">
       <div className="space-y-2">
         <p className="text-caption font-medium text-[color:var(--muted)]">1. 입력</p>
-        <h2 className="text-[28px] font-semibold leading-tight text-[color:var(--foreground-strong)]">오늘 한 것 올리기</h2>
-        <p className="text-body text-[color:var(--muted)]">사진, PDF, 텍스트 중 하나로 시작하세요.</p>
+        <h2 className="hero-balance ko-keep text-[28px] font-semibold leading-tight text-[color:var(--foreground-strong)]">오늘 한 것 올리기</h2>
+        <p className="ko-keep text-body text-[color:var(--muted)]">사진, PDF, 텍스트 중 하나로 시작하세요.</p>
       </div>
 
       <div className="mt-6 space-y-3" data-capture-subject-selector={mode}>
@@ -1857,8 +1857,8 @@ function IntakePanel({
         </Button>
         <Button
           type="button"
-          variant={hasActiveInput ? "outline" : undefined}
-          className={hasActiveInput ? "min-h-24 w-full flex-col items-start justify-center gap-2 px-5 text-left" : "primary-action min-h-24 w-full flex-col items-start justify-center gap-2 px-5 text-left"}
+          variant="outline"
+          className="min-h-24 w-full flex-col items-start justify-center gap-2 px-5 text-left"
           onClick={() => {
             const sourceType = inferSourceTypeFromAction("text");
             setSelectedInputMethod(sourceType);
@@ -1923,11 +1923,11 @@ function IntakePanel({
         data-trust-layer="capture-intake"
       >
         <p className="font-semibold text-[color:var(--foreground-strong)]">AI 초안</p>
-        <p className="mt-1">{CAPTURE_TRUST_LAYER_COPY}</p>
+        <p className="ko-keep mt-1">{CAPTURE_TRUST_LAYER_COPY}</p>
         <div className="mt-3 flex flex-wrap gap-2">
           <span className="rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-2.5 py-1 text-[11px] font-medium text-[color:var(--muted)]">OCR 초안</span>
           <span className="rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-2.5 py-1 text-[11px] font-medium text-[color:var(--muted)]">직접 수정 가능</span>
-          <span className="rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-2.5 py-1 text-[11px] font-medium text-[color:var(--muted)]">학습 보조용</span>
+          <span className="rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-2.5 py-1 text-[11px] font-medium text-[color:var(--muted)]">공식 채점 아님</span>
         </div>
       </div>
       <div className={`mt-3 rounded-[var(--radius-pill)] border px-3 py-2 ${extractionState === "failed" ? "border-[color:var(--status-red)] bg-[color:var(--status-red-soft)]" : "border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)]"}`}>
@@ -1971,8 +1971,8 @@ function IntakePanel({
       <div className="sticky bottom-3 z-30 mt-3 rounded-[var(--radius-lg)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)]/95 p-3 shadow-lg backdrop-blur sm:bottom-5 sm:p-4" data-testid="capture-save-action-bar">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm font-medium text-[color:var(--foreground-strong)]">입력 내용을 먼저 확인합니다.</p>
-            <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">다음 단계에서 OCR/텍스트 초안을 보고 수정한 뒤 가장 큰 약점 1개를 정리합니다.</p>
+            <p className="ko-keep text-sm font-medium text-[color:var(--foreground-strong)]">입력 내용을 먼저 확인합니다.</p>
+            <p className="ko-keep mt-1 text-xs leading-5 text-[color:var(--muted)]">다음 단계에서 OCR/텍스트 초안을 보고 수정한 뒤 가장 큰 약점 1개를 정리합니다.</p>
             <button
               type="button"
               onClick={onQuickSave}
@@ -1990,6 +1990,7 @@ function IntakePanel({
               className="primary-action min-h-12 w-full shrink-0 sm:w-auto disabled:cursor-not-allowed disabled:opacity-60"
               data-testid="capture-save-primary"
               data-s224v-dominant-primary-action
+              data-s225x-dominant-primary-after-input
             >
               {extracting ? "입력 내용 확인 중" : "입력 내용 확인하기"}
             </Button>
@@ -2229,11 +2230,11 @@ function ConfirmPanel({
 
   return (
     <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 sm:p-5">
-      <p className="text-caption text-[color:var(--muted)]">Step 3. 저장하고 오늘 할 일에 반영</p>
+      <p className="text-caption text-[color:var(--muted)]">Step 3. 저장하고 오늘 계획에 반영</p>
       <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">AI가 이렇게 읽었습니다. 틀린 부분만 고쳐 주세요.</h3>
       <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">이미 읽은 값은 다시 입력하지 않아도 됩니다. 부족한 항목이 있으면 그 항목만 정확히 알려드립니다.</p>
       <div className="mt-4 grid gap-3 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-4" data-testid="capture-note-summary">
-        <PreviewLine label="상태" value={`${captureSummary.capturedTextStatus === "draft" ? "OCR 초안" : "직접 확인됨"} · metadataOnly`} />
+        <PreviewLine label="상태" value={`${captureSummary.capturedTextStatus === "draft" ? "OCR 초안" : "직접 확인됨"} · 학습 노트에 저장됨`} />
         <PreviewLine label="과목/입력" value={`${captureSummary.subject} · ${captureSummary.sourceType}`} />
         <PreviewLine label="가장 큰 약점" value={captureCopy.gapLabel.replace("가장 큰 약점: ", "")} />
         <PreviewLine label="다음 행동" value={captureCopy.nextActionLabel.replace("다음 행동: ", "")} />

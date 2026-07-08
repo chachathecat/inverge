@@ -12,13 +12,13 @@ export type CaptureSavePersistenceCopy = {
 const CAPTURE_SAVE_PERSISTENCE_COPY: Record<CaptureSavePersistenceStatus, CaptureSavePersistenceCopy> = {
   durable_saved: {
     eyebrow: "저장되었습니다",
-    title: "계정 기록에 저장되어 Today, Notes, Review에 반영되었습니다.",
+    title: "계정 기록에 저장되어 오늘 할 일, 학습 노트, 복습에 반영되었습니다.",
     description: "같은 계정으로 다시 열어도 이어서 확인할 수 있습니다.",
     statusLabel: "계정 기록에 저장",
   },
   local_fallback_saved: {
     eyebrow: "이 브라우저에 임시 저장되었습니다",
-    title: "closed beta 임시 저장으로 Notes, Review, Today에서 이어서 볼 수 있습니다.",
+    title: "이 브라우저의 학습 노트, 복습, 오늘 할 일에서 이어서 볼 수 있습니다.",
     description: "계정 저장을 사용할 수 없어 이 브라우저에만 보관했습니다. 같은 브라우저에서는 새로고침 후에도 이어서 확인할 수 있습니다.",
     statusLabel: "브라우저 임시 저장",
   },

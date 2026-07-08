@@ -20,8 +20,8 @@ export function CognitiveLearningActionCard({ unit, compact = false }: Cognitive
         <ActionLine label="오늘 다시 쓸 문단 1개" value={unit.nextRewriteAction} />
         <ActionLine label={unit.retrievalCheck.label} value={unit.retrievalCheck.prompt} />
         <ActionLine
-          label={unit.continuation.label || "내일 복습 후보"}
-          value={`${unit.continuation.reviewQueueCandidate} / Today Plan 최대 ${unit.continuation.todayPlanMaxPrimaryTasks}개 / Notes`}
+          label={unit.continuation.label || "내일 복습에 남길 내용"}
+          value={`${unit.continuation.reviewQueueCandidate} / 오늘 할 일 최대 ${unit.continuation.todayPlanMaxPrimaryTasks}개 / 학습 노트`}
         />
       </div>
     </section>

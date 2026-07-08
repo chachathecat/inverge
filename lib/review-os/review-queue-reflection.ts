@@ -253,7 +253,7 @@ function reviewPromptFor(reasonCode: ReviewQueueReflectionReasonCode, persistenc
   }
 
   if (reasonCode === "local_fallback_review") {
-    return "closed beta 브라우저 임시 기록입니다. 같은 브라우저에서 복습 후보로 이어갑니다.";
+    return "이 브라우저에 임시 저장되었습니다. 같은 브라우저에서 복습으로 이어갑니다.";
   }
   if (reasonCode === "due_review") return "복습 시점이 된 기록입니다. 오늘 먼저 짧게 회수합니다.";
   if (reasonCode === "recent_wrong_review") return "최근 틀린 흐름을 다시 확인할 차례입니다.";
@@ -266,7 +266,7 @@ function reviewPromptFor(reasonCode: ReviewQueueReflectionReasonCode, persistenc
 }
 
 function fallbackActionFor(reasonCode: ReviewQueueReflectionReasonCode, persistenceStatus: ReviewQueueReflectionPersistenceStatus): string {
-  if (persistenceStatus === "save_failed") return "다시 저장한 뒤 복습 후보로 이어가기";
+  if (persistenceStatus === "save_failed") return "다시 저장한 뒤 복습으로 이어가기";
   if (reasonCode === "calculation_template_review") return "계산 조건과 단위를 다시 확인하기";
   if (reasonCode === "rewrite_review") return "약점 문단 1개 다시 쓰기";
   if (reasonCode === "issue_recall_review") return "쟁점 목차를 떠올리고 한 문단으로 이어가기";

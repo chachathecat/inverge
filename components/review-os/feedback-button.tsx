@@ -49,7 +49,7 @@ export function ReviewOsFeedbackButton({ route, pageContext }: FeedbackButtonPro
   return (
     <div className="space-y-3">
       <Button type="button" variant="outline" onClick={() => setOpen((prev) => !prev)}>
-        closed beta 피드백 보내기
+        답안길 피드백 보내기
       </Button>
 
       {open ? (
@@ -61,7 +61,7 @@ export function ReviewOsFeedbackButton({ route, pageContext }: FeedbackButtonPro
             className="min-h-24 w-full resize-none rounded-2xl border border-[var(--border)] bg-[color:var(--surface-soft)] px-4 py-3 text-sm leading-7 outline-none"
           />
           <div className="mt-3 flex items-center justify-between gap-3">
-            <p className="text-xs text-[color:var(--muted)]">closed beta 개선용으로만 사용합니다.</p>
+            <p className="text-xs text-[color:var(--muted)]">답안길 개선용으로만 사용합니다.</p>
             <Button type="button" onClick={() => void handleSubmit()} disabled={!message.trim() || submitting}>
               {submitted ? "보냈습니다" : submitting ? "보내는 중..." : "보내기"}
             </Button>

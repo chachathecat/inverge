@@ -23,7 +23,7 @@ export default async function StudyLogPage({ searchParams }: PageProps) {
     <div className="space-y-6">
       <section className="space-y-2">
         <h2 className="text-2xl font-medium tracking-[-0.04em] text-[color:var(--foreground-strong)]">오늘 공부 기록</h2>
-        <p className="text-sm leading-7 text-[color:var(--muted)]">오늘 실제로 본 범위를 남기면 다음 복습 후보가 정리됩니다. 짧게 기록하고 바로 마무리하세요.</p>
+        <p className="text-sm leading-7 text-[color:var(--muted)]">오늘 실제로 본 범위를 남기면 다음 복습에 남길 내용이 정리됩니다. 짧게 기록하고 바로 마무리하세요.</p>
       </section>
       <Card className="border-[color:var(--border-subtle)] bg-[color:var(--surface)] shadow-none">
         <CardHeader className="space-y-2">

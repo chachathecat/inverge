@@ -68,17 +68,17 @@ export async function FrontPage() {
     <RefinedShell className="space-y-14 py-10 sm:py-14 lg:py-16">
       <section className="grid min-h-[calc(100vh-180px)] items-center gap-8 lg:grid-cols-[minmax(0,1fr)_440px] lg:gap-12">
         <div className="space-y-7">
-          <RefinedBadge>비공개 베타 · 감정평가사 2차</RefinedBadge>
+          <RefinedBadge>학습 보조 초안 · 공식 채점 아님</RefinedBadge>
           <div className="space-y-5">
-            <h1 className="max-w-3xl text-h1 font-semibold text-[color:var(--foreground-strong)]">
+            <h1 className="hero-balance ko-keep max-w-3xl text-h1 font-semibold text-[color:var(--foreground-strong)]">
               오늘 쓴 답안에서
               <br />
               가장 먼저 고칠 문단을 찾습니다.
             </h1>
-            <p className="max-w-[44rem] text-body text-[color:var(--muted)]">
+            <p className="ko-keep max-w-[44rem] text-body text-[color:var(--muted)]">
               사진이나 텍스트를 올리면
               <br className="hidden sm:block" />
-              가장 큰 감점 위험 1개와
+              가장 큰 약점 1개와
               <br className="hidden sm:block" />
               오늘 다시 쓸 문단 1개로 정리합니다.
             </p>
@@ -87,6 +87,7 @@ export async function FrontPage() {
             <Link
               href={primaryCaptureHref}
               className={cn(buttonVariants({ size: "lg" }), "w-full sm:w-auto")}
+              data-s225x-dominant-primary-above-fold
             >
               오늘 답안 올리기
               <ArrowRight className="ml-2 h-4 w-4" />
@@ -95,7 +96,7 @@ export async function FrontPage() {
               href="#demo"
               className={cn(buttonVariants({ variant: "outline", size: "lg" }), "w-full sm:w-auto")}
             >
-              데모 먼저 보기
+              데모 결과 보기
             </Link>
           </div>
         </div>
@@ -121,7 +122,7 @@ export async function FrontPage() {
 
       <details className="quiet-disclosure rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
         <summary className="cursor-pointer list-none px-5 py-4 text-sm font-medium text-[color:var(--foreground-strong)]">
-          전체 Skeleton Framework 보기
+          답안길 미리보기
         </summary>
         <div className="border-t border-[color:var(--border-subtle)] px-4 py-5 sm:px-6">
           <FrontPageHeroAnimation />

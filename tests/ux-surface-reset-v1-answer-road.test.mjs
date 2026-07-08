@@ -47,12 +47,12 @@ test("public brand hierarchy and landing first screen match Answer Road reset", 
     "오늘 쓴 답안에서",
     "가장 먼저 고칠 문단을 찾습니다.",
     "오늘 답안 올리기",
-    "데모 먼저 보기",
+    "데모 결과 보기",
     "AI가 찾은 가장 큰 약점",
     "쟁점은 잡았지만 기준/법리 문단이 약합니다.",
     "오늘 다시 쓸 문단",
     "민법 제109조의 중요 부분 착오와 중대한 과실 예외를 분리해 쓰기",
-    "전체 Skeleton Framework 보기",
+    "답안길 미리보기",
   ]) {
     assert.ok(`${header}\n${landing}`.includes(phrase), `missing landing/header phrase: ${phrase}`);
   }
@@ -60,6 +60,7 @@ test("public brand hierarchy and landing first screen match Answer Road reset", 
   assert.doesNotMatch(`${header}\n${landing}`, /IV|감정평가사 합격 운영 시스템|2차 합격관제 OS/);
   assert.equal(landing.includes('href="/answer-review?mode=second"'), false);
   assert.equal(header.includes('href="/answer-review?mode=second"'), false);
+  assert.equal(count(landing, "data-s225x-dominant-primary-above-fold"), 1);
   assert.equal(header.includes('className="rounded-full bg-[color:var(--primary)] px-4 py-2'), false);
 });
 
@@ -117,12 +118,12 @@ test("capture flow starts as a four-step wizard with one Trust Card", () => {
     "AI 초안",
     "OCR 초안",
     "직접 수정 가능",
-    "학습 보조용",
+    "공식 채점 아님",
     "saved-plan",
     "data-capture-plan-reflection-stage",
     "학습 노트 저장 상태",
-    "오늘 할 일 후보",
-    "복습 후보",
+    "오늘 계획에 반영",
+    "복습에 남길 내용",
     "오늘 할 일로 이동",
   ]) {
     assert.ok(combined.includes(phrase), `missing capture phrase: ${phrase}`);
@@ -133,6 +134,7 @@ test("capture flow starts as a four-step wizard with one Trust Card", () => {
   assert.ok(actionBarBlock.includes("입력 내용 확인하기"));
   assert.ok(actionBarBlock.includes("빠르게 저장"));
   assert.equal(count(actionBarBlock, "data-s224v-dominant-primary-action"), 1);
+  assert.equal(count(actionBarBlock, "data-s225x-dominant-primary-after-input"), 1);
   assert.ok(actionBarBlock.includes("text-xs font-medium text-[color:var(--muted)] underline underline-offset-4"));
   assert.equal(actionBarBlock.slice(actionBarBlock.indexOf("빠르게 저장") - 300, actionBarBlock.indexOf("빠르게 저장") + 300).includes("data-s224v-dominant-primary-action"), false);
   assert.equal(capture.includes("Today Plan candidate"), false);

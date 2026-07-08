@@ -145,7 +145,7 @@ export function StudyLogIntakeForm({ mode, initialSubject, subjectOptions }: Pro
           </select>
         </label>
       </section>
-      <p className="text-xs text-[color:var(--muted)]">오늘 실제로 본 범위를 남기면 다음 복습 후보가 정리됩니다.</p>
+      <p className="text-xs text-[color:var(--muted)]">오늘 실제로 본 범위를 남기면 다음 복습에 남길 내용이 정리됩니다.</p>
       {error ? <p className="text-xs text-[color:var(--danger)]">{error}</p> : null}
       <Button type="button" className="w-full sm:w-auto" onClick={() => void onSubmit()} disabled={submitting}>
         {submitting ? "저장 중" : "오늘 공부 기록 저장"}

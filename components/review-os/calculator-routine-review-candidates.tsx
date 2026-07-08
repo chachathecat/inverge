@@ -17,7 +17,7 @@ export function CalculatorRoutineReviewCandidates({
       className="rounded-[var(--radius-lg)] border border-[color:var(--border-hairline)] bg-[color:var(--surface)] p-4"
       data-calculator-routine-review-candidates
     >
-      <h3 className="text-sm font-semibold text-[color:var(--foreground-strong)]">계산·검산 복습 후보</h3>
+      <h3 className="text-sm font-semibold text-[color:var(--foreground-strong)]">계산·검산 복습</h3>
       <ul className="mt-3 divide-y divide-[color:var(--border-hairline)]">
         {candidates.map((candidate) => (
           <li key={candidate.id} className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between">

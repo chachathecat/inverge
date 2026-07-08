@@ -61,7 +61,7 @@ The learner-facing UX must preserve this framing:
 
 Expected learner copy or equivalent:
 
-- `OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요.`
+- `OCR 결과는 학습 보조 초안입니다. 저장 전 직접 수정할 수 있습니다.`
 - `공식 채점이나 모범답안이 아니라, 내 공부 기록을 정리하는 기능입니다.`
 
 The smoke proof must not behave like official grading, model-answer generation, score prediction, or pass/fail judgment.

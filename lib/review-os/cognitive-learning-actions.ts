@@ -26,7 +26,7 @@ export type CognitiveLearningActionUnit = {
     prompt: string;
   };
   continuation: {
-    label: "내일 복습 후보";
+    label: "내일 복습에 남길 내용";
     reviewQueueCandidate: string;
     todayPlanCandidate: string;
     notesCandidate: string;
@@ -175,10 +175,10 @@ export function buildCognitiveLearningActionUnit(input: CognitiveLearningActionI
       prompt: retrievalPrompt,
     },
     continuation: {
-      label: "내일 복습 후보",
-      reviewQueueCandidate: `Review Queue: ${oneBiggestGap}을 ${retrievalPrompt}`,
-      todayPlanCandidate: `Today Plan: ${subject} ${nextRewriteAction}`,
-      notesCandidate: `Notes: ${oneBiggestGap} / ${nextRewriteAction}`,
+      label: "내일 복습에 남길 내용",
+      reviewQueueCandidate: `복습: ${oneBiggestGap}을 ${retrievalPrompt}`,
+      todayPlanCandidate: `오늘 할 일: ${subject} ${nextRewriteAction}`,
+      notesCandidate: `학습 노트: ${oneBiggestGap} / ${nextRewriteAction}`,
       todayPlanMaxPrimaryTasks: 3,
     },
     secondRoundPriorityOrder: SECOND_ROUND_PRIORITY_ORDER,

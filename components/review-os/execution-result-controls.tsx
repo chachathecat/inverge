@@ -35,7 +35,7 @@ type ResultControlOption = {
 
 const RESULT_CONTROL_OPTIONS: ResultControlOption[] = [
   { result: "done", label: "완료", description: "추가 판단 없이 완료로 닫기" },
-  { result: "wrong", label: "틀림", description: "짧은 복습 후보로 남기기" },
+  { result: "wrong", label: "틀림", description: "짧은 복습에 남기기" },
   { result: "unknown", label: "모르겠음", description: "확신 낮은 회상 후보로 남기기" },
   { result: "needs_rewrite", label: "다시쓰기 필요", description: "한 문단 보강 후보로 남기기" },
   { result: "skipped", label: "나중에", description: "부담 낮은 복구 후보로 남기기" },

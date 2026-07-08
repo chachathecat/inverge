@@ -12,7 +12,9 @@ test("standalone learner tools expose links back into the learner OS with mode a
   const problemSnap = read("app/problem-snap/problem-snap-client.tsx");
   const problemSnapPage = read("app/problem-snap/page.tsx");
 
-  assert.ok(answerReview.includes("StandaloneLearnerToolNav"));
+  assert.ok(answerReview.includes("답안 훈련"));
+  assert.ok(answerReview.includes('href={examMode === "second" ? "/app?mode=second" : "/app?mode=first"}'));
+  assert.ok(answerReview.includes("/login?returnTo=%2Fanswer-review%3Fmode%3Dsecond"));
   assert.ok(problemSnap.includes("StandaloneLearnerToolNav"));
   assert.ok(problemSnapPage.includes("initialSubject"));
   ["오늘 홈", "오늘 한 것", "복습", "학습 기록"].forEach((label) => assert.ok(nav.includes(label), label));
@@ -67,7 +69,8 @@ test("Answer Review reuses the calculation routine and avoids duplicate passive 
   assert.ok(answerReview.includes('setAnswerReviewRoutineRunId(createCalculatorRoutineRunId("answer-review"));'));
   assert.ok(answerReview.includes("calculatorRoutineReferenceHints"));
   assert.ok(answerReview.includes("getCalculatorRoutineEligibility"));
-  assert.doesNotMatch(answerReview, /기준\s*답안|기준답안|모범답안|공식\s*채점/);
+  assert.doesNotMatch(answerReview, /기준\s*답안|기준답안|모범답안|공식\s*채점\s*(결과|서비스|기준|입니다)/);
+  assert.match(answerReview, /공식\s*채점이나\s*합격\s*판정이\s*아닙니다/);
 });
 
 test("Review Queue has one primary review card and collapses extra signals", () => {
@@ -78,7 +81,7 @@ test("Review Queue has one primary review card and collapses extra signals", () 
   assert.ok(reviewQueue.includes("data-review-extra-signals"));
   assert.ok(reviewQueue.includes("상세 신호 보기"));
   assert.ok(reviewQueue.includes("data-review-secondary-list"));
-  assert.ok(reviewQueue.includes("다음 복습 후보"));
+  assert.ok(reviewQueue.includes("다음 복습 보기"));
   assert.ok(reviewQueue.includes("복습 완료"));
 });
 

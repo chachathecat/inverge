@@ -76,7 +76,7 @@ test("Today Plan empty state links learners back to Capture", () => {
 test("Today Plan active selector caps tasks and excludes completed tasks", () => {
   const tasks = Array.from({ length: 5 }, (_, index) => ({
     itemId: `candidate-${index}`,
-    title: `오늘 할 일 후보 ${index}`,
+    title: `오늘 계획 항목 ${index}`,
     subject: "민법",
     exam_mode: "first",
     due_bucket: "today",

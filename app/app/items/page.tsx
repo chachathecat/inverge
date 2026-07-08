@@ -85,7 +85,7 @@ function formatCreatedDate(value?: string | null) {
 
 function sourceTypeLabel(sourceType: string) {
   if (sourceType === "problem-snap") return "Problem Snap";
-  if (sourceType === "answer_review") return "답안 검토 기록";
+  if (sourceType === "answer_review") return "답안 훈련 기록";
   if (sourceType === "review_queue") return "복습 예정";
   if (sourceType === "wrong_answer") return "학습 노트";
   return "학습 기록";
@@ -94,12 +94,12 @@ function sourceTypeLabel(sourceType: string) {
 function signalCta(signal: Pick<LearningSignalEventRecord, "sourceType" | "subject">, mode: AppraisalMode) {
   if (signal.sourceType === "problem-snap") {
     return mode === "second"
-      ? { label: "답안 검토로 보기", href: `/answer-review?mode=${mode}&subject=${encodeURIComponent(signal.subject)}` }
+      ? { label: "답안 훈련으로 보기", href: `/answer-review?mode=${mode}&subject=${encodeURIComponent(signal.subject)}` }
       : { label: "다시 풀기", href: `/problem-snap?mode=${mode}&subject=${encodeURIComponent(signal.subject)}` };
   }
 
   if (signal.sourceType === "answer_review") {
-    return { label: "답안 검토하기", href: `/answer-review?mode=${mode}` };
+    return { label: "답안 훈련하기", href: `/answer-review?mode=${mode}` };
   }
 
   return { label: "오늘 할 일에서 보기", href: `/app?mode=${mode}` };
@@ -202,7 +202,7 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
             <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] px-4 py-3">
               <p className="text-sm font-medium text-[color:var(--foreground-strong)]">방금 저장한 학습 노트가 반영되었습니다.</p>
               <p className="mt-1 text-sm text-[color:var(--muted)]">
-                가장 큰 약점 1개와 다음 행동 1개를 먼저 확인하고, 오늘 할 일에 반영할 후보로 이어갑니다.
+                가장 큰 약점 1개와 다음 행동 1개를 먼저 확인하고, 오늘 계획에 반영합니다.
               </p>
               <div className="mt-3 flex flex-wrap gap-3 text-xs text-[color:var(--muted)]">
                 <Link href={`/app?mode=${mode}`} className="underline-offset-4 hover:underline">오늘 할 일</Link>
@@ -250,9 +250,9 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
                     </div>
 
                     <div className="mt-3 flex flex-wrap gap-2 text-xs text-[color:var(--muted)]">
-                      <span>오늘 할 일 연결: 오늘 할 일에 반영할 후보</span>
-                      <span>복습 연결: 다시 풀기/다시 쓰기 복습 예정</span>
-                      <span>학습 기록 연결: 학습 기록</span>
+                      <span>오늘 계획 연결: 오늘 계획에 반영</span>
+                      <span>복습 연결: 복습에 남길 내용</span>
+                      <span>학습 기록 연결: 학습 기록에 저장</span>
                     </div>
                   </section>
                 );

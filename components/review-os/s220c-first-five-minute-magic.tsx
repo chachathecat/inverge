@@ -22,7 +22,7 @@ const S220C_STEPS = [
   },
   {
     title: "4. 다시쓰기/복습 연결",
-    body: "다시 쓸 문단 1개와 Today Plan / Review Queue 연결을 미리 봅니다.",
+    body: "다시 쓸 문단 1개와 오늘 할 일 / 복습 연결을 미리 봅니다.",
   },
 ] as const;
 
@@ -52,7 +52,7 @@ export function S220CFirstFiveMinuteMagic() {
             오늘 쓴 답안 하나만 올리세요.
           </h1>
           <p className="max-w-3xl text-sm leading-7 text-[color:var(--muted)] sm:text-base">
-            답안길은 첫 입력을 가장 큰 감점 위험 1개, 다시 쓸 문단 1개, 다음 복습 후보로 압축합니다.
+            답안길은 첫 입력을 가장 큰 약점 1개, 다시 쓸 문단 1개, 다음 복습에 남길 내용으로 압축합니다.
           </p>
         </div>
         <div className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-4">
@@ -91,7 +91,7 @@ export function S220CFirstFiveMinuteMagic() {
         </article>
         <article className="rounded-[var(--radius-md)] border border-[var(--border)] p-3">
           <p className="text-caption font-medium text-[color:var(--muted)]">계속할 곳</p>
-          <p className="mt-1 text-sm text-[color:var(--foreground-strong)]">Today Plan, Review Queue, Notes로 이어질 수 있음을 먼저 보여줍니다.</p>
+          <p className="mt-1 text-sm text-[color:var(--foreground-strong)]">오늘 할 일, 복습, 학습 노트로 이어질 수 있음을 먼저 보여줍니다.</p>
         </article>
       </div>
     </section>

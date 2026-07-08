@@ -98,7 +98,7 @@ export function AuthForm() {
         <span className="text-[color:var(--foreground-strong)]">이메일</span>
         <input
           type="email"
-          className="w-full rounded-xl border border-[var(--border)] bg-[color:var(--surface)] px-4 py-3 outline-none"
+          className="long-token w-full rounded-xl border border-[var(--border)] bg-[color:var(--surface)] px-4 py-3 outline-none"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           autoComplete="email"

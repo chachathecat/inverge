@@ -258,7 +258,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
         data-ux-surface-reset-primary-card
       >
         <p className="text-caption font-medium text-[color:var(--muted)]">Today · 오늘 기록 기반</p>
-        <h1 className="mt-2 text-[28px] font-semibold leading-tight text-[color:var(--foreground-strong)]">
+        <h1 className="hero-balance ko-keep mt-2 text-[28px] font-semibold leading-tight text-[color:var(--foreground-strong)]">
           오늘은 이것만 하면 됩니다
         </h1>
         {heroTodayPlanTasks.length > 0 ? (
@@ -270,7 +270,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
             ))}
           </ol>
         ) : (
-          <p className="mt-5 rounded-[var(--radius-md)] bg-[color:var(--surface-soft)] px-4 py-4 text-[15px] leading-7 text-[color:var(--foreground-strong)]">
+          <p className="ko-keep mt-5 rounded-[var(--radius-md)] bg-[color:var(--surface-soft)] px-4 py-4 text-[15px] leading-7 text-[color:var(--foreground-strong)]">
             오늘 한 것 1개를 올리면 첫 계획을 만들 수 있습니다.
           </p>
         )}
@@ -285,7 +285,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
             href={heroPrimaryHref}
             className="inline-flex min-h-12 w-full items-center justify-center rounded-[var(--radius-pill)] bg-[color:var(--brand-900)] px-6 text-sm font-semibold text-white transition hover:bg-[color:var(--brand-800)] sm:w-auto"
           >
-            오늘 공부 시작
+            {heroTodayPlanTasks.length > 0 ? "오늘 공부 시작" : "오늘 한 것 올리기"}
           </Link>
         </div>
       </section>

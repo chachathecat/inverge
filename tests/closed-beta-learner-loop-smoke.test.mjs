@@ -23,7 +23,8 @@ import { buildTodayPlanTasks } from "../lib/review-os/today-plan-engine.ts";
 const read = (file) => readFileSync(file, "utf8");
 const serialize = (value) => JSON.stringify(value);
 const RAW_TOKENS = ["학습자 OCR 원문", "학습자 답안 원문", "문제 원문 전문", "다시쓴 문단 원문"];
-const FORBIDDEN_LEARNER_COPY = ["공식 채점", "합격 판정", "확정 점수", "모범답안 확정", "pass/fail", "paywall", "결제 먼저"];
+const OFFICIAL_GRADING_CLAIM_PATTERN = /공식\s*채점(?!\s*아님)/;
+const FORBIDDEN_LEARNER_COPY = ["합격 판정", "확정 점수", "모범답안 확정", "pass/fail", "paywall", "결제 먼저"];
 
 function assertNoRawLeak(value) {
   const text = serialize(value);
@@ -184,6 +185,7 @@ test("today plan and review queue are capped, collapsed, action-oriented, and sc
   assert.ok(appPage.includes("data-s224v-secondary-diagnostics"));
   assert.ok(appPage.includes("questionReferenceHintsByTaskId"));
   assert.ok(appPage.includes("slice(0, 3)"));
+  assert.equal(OFFICIAL_GRADING_CLAIM_PATTERN.test(appPage), false, "forbidden Today Plan copy: official grading claim");
   FORBIDDEN_LEARNER_COPY.forEach((phrase) => assert.equal(appPage.includes(phrase), false, `forbidden Today Plan copy: ${phrase}`));
 });
 
@@ -281,7 +283,8 @@ test("2차 rewrite/CASIO keeps answer separation, one gap/action, and no grading
 
   const source = read("components/review-os/today-session-runner.tsx") + read("lib/review-os/second-answer-rewrite.ts") + read("components/review-os/capture-form.tsx");
   ["가장 큰 간극", "문단 1개 다시쓰기", "내 답안 요약", "지원되는 계산 템플릿"].forEach((phrase) => assert.ok(source.includes(phrase), `missing rewrite phrase: ${phrase}`));
-  ["공식 채점", "모범답안 확정", "확정 점수", "합격 판정"].forEach((phrase) => assert.equal(source.toLowerCase().includes(phrase.toLowerCase()), false));
+  assert.equal(OFFICIAL_GRADING_CLAIM_PATTERN.test(source), false);
+  ["모범답안 확정", "확정 점수", "합격 판정"].forEach((phrase) => assert.equal(source.toLowerCase().includes(phrase.toLowerCase()), false));
 });
 
 test("reference context and question archive are optional metadata-only hints", async () => {

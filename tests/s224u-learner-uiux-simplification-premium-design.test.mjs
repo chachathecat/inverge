@@ -78,9 +78,9 @@ test("trust layer copy is consistent and not stacked as repeated warnings", () =
   assert.match(trustCard, /사용자 확인 텍스트/);
   assert.match(trustCard, /OCR\/가져온 텍스트 초안/);
   assert.match(trustCard, /AI 분석 초안/);
-  assert.match(trustCard, /Today Plan/);
-  assert.match(trustCard, /Review Queue/);
-  assert.match(trustCard, /Notes/);
+  assert.match(trustCard, /오늘 할 일/);
+  assert.match(trustCard, /복습/);
+  assert.match(trustCard, /학습 노트/);
 });
 
 test("design system documents and globals define the S224U premium gate primitives", () => {

@@ -23,7 +23,7 @@ export function ExamArchiveListClient({ exams }: Props) {
             시험 선택으로 돌아가기
           </Link>
           <Link href="/answer-review" className="inline-flex rounded-full border border-[var(--border)] px-4 py-2 text-sm font-medium text-[color:var(--foreground-strong)] transition-colors hover:bg-[color:var(--surface-subtle)]">
-            답안 검토실로 이동
+            답안 훈련으로 이동
           </Link>
         </div>
       </section>

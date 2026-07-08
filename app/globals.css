@@ -192,6 +192,26 @@ body {
   line-height: 1.7;
 }
 
+.ko-keep {
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+.hero-balance {
+  text-wrap: balance;
+  word-break: keep-all;
+}
+
+.text-readable {
+  word-break: keep-all;
+  line-height: 1.7;
+}
+
+.long-token {
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
 .text-caption {
   font-size: 12px;
   line-height: 1.4;

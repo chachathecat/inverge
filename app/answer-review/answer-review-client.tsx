@@ -16,7 +16,6 @@ import {
   CalculatorRoutineSyncStatusLine,
   useCalculatorRoutineLearningSignalSync,
 } from "@/components/review-os/calculator-routine-sync-status";
-import { StandaloneLearnerToolNav } from "@/components/review-os/standalone-learner-tool-nav";
 import { ResultFeedbackPrompt } from "@/components/shared/result-feedback-prompt";
 import { buttonVariants } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -72,7 +71,7 @@ const FILE_NAME_MAX_LENGTH = 34;
 const STEP_ITEMS: Array<{ id: StepId; label: string }> = [
   { id: 1, label: "자료 입력" },
   { id: 2, label: "검토 결과 확인" },
-  { id: 3, label: "피드백 초안 정리" },
+  { id: 3, label: "보강 문단 정리" },
 ];
 
 const createCalculatorRoutineRunId = (source: "problem-snap" | "answer-review") => {
@@ -374,10 +373,10 @@ export default function AnswerReviewClientPage({
     }`;
     const missingPointSummary = hasMissingPointMemo
       ? `이번 답안은 ${missingPointMemo.trim()} 보강이 우선입니다.`
-      : "누락 논점 후보를 먼저 적으면 피드백 초안이 완성됩니다.";
+      : "누락 논점 후보를 먼저 적으면 학습 보조 정리가 완성됩니다.";
     const revisionSummary = hasRevisionParagraph
       ? revisionParagraph.trim()
-      : "교정 문단을 작성하면 학생에게 줄 다음 행동이 더 선명해집니다.";
+      : "보강 문단을 작성하면 다음 행동이 더 선명해집니다.";
 
     return [
       "[입력 상태]",
@@ -390,9 +389,9 @@ export default function AnswerReviewClientPage({
       `- ${revisionSummary}`,
       "",
       "[다음 행동]",
-      "- 교정 문단 구조를 기준으로 한 문단만 다시 작성해 보세요.",
+      "- 보강 문단 구조를 기준으로 한 문단만 다시 작성해 보세요.",
       "",
-      "※ 검토자 확인 전 전달하지 않는 피드백 초안입니다.",
+      "※ 학습 보조 초안입니다. 공식 채점이나 합격 판정이 아닙니다.",
     ].join("\n");
   }, [hasMissingPointMemo, hasMyAnswer, hasProblemInput, hasReferenceAnswer, hasRevisionParagraph, missingPointMemo, revisionParagraph]);
 
@@ -458,11 +457,11 @@ export default function AnswerReviewClientPage({
   const primaryActionLabel =
     currentStep === 1
       ? isStructuring
-        ? "답안 검토 중..."
+        ? "답안 정리 중..."
         : "답안 스냅으로 시작"
       : currentStep === 2
-        ? "피드백 초안 만들기"
-        : "피드백 초안 복사";
+        ? "보강 문단 정리"
+        : "정리 내용 복사";
   const isPrimaryActionDisabled = currentStep === 1 ? !hasMyAnswer || isStructuring : false;
   const completionStatus = structureError
     ? "검토 오류"
@@ -478,10 +477,10 @@ export default function AnswerReviewClientPage({
   }`;
   const missingPointSummary = hasMissingPointMemo
     ? `이번 답안은 ${missingPointMemo.trim()} 보강이 우선입니다.`
-    : "누락 논점 후보를 먼저 적으면 피드백 초안이 완성됩니다.";
+    : "누락 논점 후보를 먼저 적으면 학습 보조 정리가 완성됩니다.";
   const revisionSummary = hasRevisionParagraph
     ? revisionParagraph.trim()
-    : "교정 문단을 작성하면 학생에게 줄 다음 행동이 더 선명해집니다.";
+    : "보강 문단을 작성하면 다음 행동이 더 선명해집니다.";
   const tenSecondCheckSummary = cognitiveLearningActions.retrievalCheck.prompt;
   const continuationSummary = `${cognitiveLearningActions.continuation.reviewQueueCandidate} / 오늘 할 일 최대 ${cognitiveLearningActions.continuation.todayPlanMaxPrimaryTasks}개 / 학습 노트`;
 
@@ -514,14 +513,13 @@ export default function AnswerReviewClientPage({
       data-s224v-equal-weight-card-grid="absent"
       data-s224v-repeated-warning-copy="absent"
     >
-      <StandaloneLearnerToolNav mode={examMode} subject={subject} />
       <section className="space-y-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] p-4 sm:p-6" data-trust-layer="answer-review-shell">
         <div className="flex flex-wrap items-center gap-2">
-          <RefinedBadge>답안 검토실</RefinedBadge>
-          <RefinedBadge tone="amber">검토 결과는 학습 보조 초안입니다</RefinedBadge>
+          <RefinedBadge>답안 훈련</RefinedBadge>
+          <RefinedBadge tone="amber">학습 보조 초안</RefinedBadge>
         </div>
-        <p className="text-caption leading-5 text-[color:var(--muted)]">
-          이미 쓴 답안을 올리면 누락 논점, 약한 구조, 다시 쓸 문장을 정리합니다. 검토 결과는 학습 보조 초안이며 저장 전 직접 확인해 주세요.
+        <p className="ko-keep text-caption leading-5 text-[color:var(--muted)]">
+          이미 쓴 답안을 올리면 누락 논점, 약한 구조, 오늘 다시 쓸 문장을 정리합니다. 결과는 학습 보조 초안이며 공식 채점이나 합격 판정이 아닙니다.
         </p>
         {problemSnapNoticeVisible ? (
           <article className="flex items-center justify-between gap-3 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] px-3 py-2">
@@ -531,8 +529,8 @@ export default function AnswerReviewClientPage({
         ) : null}
         {viewerMode === "anonymous" ? (
           <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] px-3 py-2">
-            <p className="text-caption leading-5 text-[color:var(--muted)]">로그인 없이 오늘 1회 답안 검토를 체험할 수 있습니다.</p>
-            <p className="text-caption leading-5 text-[color:var(--muted)]">결과 저장, 복습 큐, 오늘 계획 반영은 로그인 후 사용할 수 있습니다.</p>
+            <p className="text-caption leading-5 text-[color:var(--muted)]">로그인 없이 오늘 1회 빠른 답안 정리를 체험할 수 있습니다.</p>
+            <p className="text-caption leading-5 text-[color:var(--muted)]">기록 저장, 복습, 오늘 계획 반영은 로그인 후 사용할 수 있습니다.</p>
           </article>
         ) : null}
 
@@ -603,7 +601,7 @@ export default function AnswerReviewClientPage({
                   transition={{ duration: 0.26, ease: "easeOut" }}
                 >
                   <article className="rounded-[var(--radius-md)] border border-[color:var(--brand-700)] bg-[color:var(--brand-050)] p-4 sm:p-5">
-                    <p className="text-caption font-medium text-[#3f4c66]">답안 검토실 · 빠른 시작</p>
+                    <p className="text-caption font-medium text-[#3f4c66]">빠른 답안 정리</p>
                     <p className="mt-2 text-sm font-semibold text-[#1e2a46]">답안 스냅으로 시작</p>
                     <p className="mt-1 text-caption leading-5 text-[#3f4c66]">사례 스캔, PDF/사진 불러오기, 텍스트 붙여넣기를 함께 사용할 수 있습니다.</p>
                   </article>
@@ -778,7 +776,7 @@ export default function AnswerReviewClientPage({
                         </label>
                       ))}
                     </div>
-                    <p className="mt-2 text-[11px] leading-5 text-[color:var(--muted)]">쉬운 풀이는 이해용이고, Skeleton은 답안 작성용입니다.</p>
+                    <p className="mt-2 text-[11px] leading-5 text-[color:var(--muted)]">쉬운 풀이는 이해용이고, 답안 구조는 작성용입니다.</p>
                     <p className="mt-2 text-caption leading-5 text-[color:var(--muted)]">
                       내 답안만 있어도 검토를 시작할 수 있습니다.
                     </p>
@@ -791,7 +789,7 @@ export default function AnswerReviewClientPage({
                       data-testid="answer-review-start"
                       data-s224v-dominant-primary-action
                     >
-                      답안 검토 시작
+                      답안 정리 시작
                     </motion.button>
                   </article>
                 </motion.aside>
@@ -838,7 +836,7 @@ export default function AnswerReviewClientPage({
                     </div>
                 {referenceGrounding?.used ? (
                   <p className="mt-2 text-caption text-[color:var(--muted)]">
-                    유사 기출 Skeleton을 참고해 검토했습니다. {referenceGrounding.displayLabel}
+                    유사 기출 구조를 참고해 검토했습니다. {referenceGrounding.displayLabel}
                   </p>
                 ) : qualityView ? (
                   <p className="mt-2 text-caption text-[color:var(--muted)]">유사 기출 reference 없이 입력 자료 기준으로 검토했습니다.</p>
@@ -898,7 +896,7 @@ export default function AnswerReviewClientPage({
                 {learningSignalStatus === "failed" ? (
                   <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] px-4 py-3">
                     <p className="text-caption leading-5 text-[color:var(--muted)]">
-                      학습 신호를 저장하지 못했습니다. 검토자 확인 후 수동 기록해 주세요.
+                      학습 신호를 저장하지 못했습니다. 직접 확인한 뒤 다시 저장해 주세요.
                     </p>
                   </article>
                 ) : null}
@@ -914,11 +912,11 @@ export default function AnswerReviewClientPage({
                     <p className="text-caption font-medium text-[color:var(--foreground-strong)]">검토 결과가 준비되었습니다.</p>
                     <ul className="mt-1 space-y-1 text-caption leading-5 text-[color:var(--muted)]">
                       <li>• 이 결과가 약점 신호에 누적됩니다.</li>
-                      <li>• 복습 큐에 들어갑니다.</li>
+                      <li>• 복습에 남습니다.</li>
                       <li>• 오늘 계획에 반영됩니다.</li>
                     </ul>
                     <div className="mt-2 flex flex-wrap gap-2">
-                      <Link href="/login?returnTo=%2Fanswer-review%3Fmode%3Dsecond" className={cn(buttonVariants({ variant: "default" }), "h-8 px-3 text-xs")}>계정 만들고 기록 저장</Link>
+                      <Link href="/login?returnTo=%2Fanswer-review%3Fmode%3Dsecond" className={cn(buttonVariants({ variant: "default" }), "h-8 px-3 text-xs")}>로그인하고 기록 저장</Link>
                       <button type="button" className={cn(buttonVariants({ variant: "outline" }), "h-8 px-3 text-xs")} onClick={() => setCurrentStep(2)}>결과만 계속 보기</button>
                     </div>
                   </article>
@@ -936,8 +934,8 @@ export default function AnswerReviewClientPage({
                 <ResultFeedbackPrompt route="/answer-review" pageContext={{ section: "answer-review-result", viewerMode, examMode, subject }} />
                 {viewerMode === "anonymous" && trialLimitReached ? (
                   <article className="rounded-[var(--radius-sm)] border border-[#b9a98a] bg-[#f8f4ea] px-4 py-3">
-                    <p className="text-caption leading-5 text-[#5a4b32]">오늘 무료 검토 1회를 사용했습니다. 계정을 만들면 기록 저장과 복습 큐 연결을 사용할 수 있습니다.</p>
-                    <Link href="/login?returnTo=%2Fanswer-review%3Fmode%3Dsecond" className={cn(buttonVariants({ variant: "default" }), "mt-2 h-8 px-3 text-xs")}>계정 만들기</Link>
+                    <p className="text-caption leading-5 text-[#5a4b32]">오늘 무료 정리 1회를 사용했습니다. 로그인하면 기록 저장과 복습 연결을 사용할 수 있습니다.</p>
+                    <Link href="/login?returnTo=%2Fanswer-review%3Fmode%3Dsecond" className={cn(buttonVariants({ variant: "default" }), "mt-2 h-8 px-3 text-xs")}>로그인하고 기록 저장</Link>
                   </article>
                 ) : null}
 
@@ -958,7 +956,7 @@ export default function AnswerReviewClientPage({
                         className={cn(buttonVariants({ variant: "default" }), "primary-action mt-4 h-10 px-4")}
                         data-s224v-dominant-primary-action
                       >
-                        보강 문단 초안 만들기
+                        보강 문단 정리
                       </motion.button>
                     </article>
 
@@ -1059,7 +1057,7 @@ export default function AnswerReviewClientPage({
                       </ul>
                     </article>
                     <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
-                      <p className="text-caption font-medium text-[color:var(--muted)]">답안 구조 Skeleton</p>
+                      <p className="text-caption font-medium text-[color:var(--muted)]">답안 구조</p>
                       <p className="mt-1 text-caption leading-5 text-[color:var(--muted)]">문장형 답안이 아니라 목차와 필수 키워드만 정리합니다.</p>
                       <ul className="mt-2 space-y-1 text-caption leading-5 text-[color:var(--foreground-strong)]">
                         <li>Ⅰ. 논점의 정리: {toShortLine(qualityView?.skeleton.issue.join(" · ") || "", "핵심 논점과 기준 키워드를 1줄로 정리합니다.")}</li>
@@ -1072,7 +1070,7 @@ export default function AnswerReviewClientPage({
                       <p className="text-caption font-medium text-[color:var(--muted)]">다음 행동</p>
                       <div className="mt-2 grid gap-2">
                         <motion.button whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }} type="button" onClick={() => setCurrentStep(1)} className={cn(buttonVariants({ variant: "outline" }), "h-9")}>입력 수정하기</motion.button>
-                        <motion.button whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }} type="button" onClick={() => setCurrentStep(3)} data-testid="answer-review-build-feedback" className={cn(buttonVariants({ variant: "outline" }), "h-9")}>피드백 초안 만들기</motion.button>
+                        <motion.button whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }} type="button" onClick={() => setCurrentStep(3)} data-testid="answer-review-build-feedback" className={cn(buttonVariants({ variant: "outline" }), "h-9")}>보강 문단 정리</motion.button>
                       </div>
                     </article>
                   </motion.aside>
@@ -1092,8 +1090,8 @@ export default function AnswerReviewClientPage({
               <div className="flex flex-wrap items-start justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4 sm:p-5">
                 <div className="space-y-1">
                   <p className="text-caption text-[color:var(--muted)]">{examMode === "second" ? "감정평가사 2차" : "감정평가사 1차"} · {subject}</p>
-                  <h2 className="text-base font-semibold text-[color:var(--foreground-strong)]">피드백 초안 스튜디오</h2>
-                  <p className="text-caption leading-5 text-[color:var(--muted)]">검토자 확인 전 전달하지 않는 초안입니다.</p>
+                  <h2 className="text-base font-semibold text-[color:var(--foreground-strong)]">보강 문단 정리</h2>
+                  <p className="text-caption leading-5 text-[color:var(--muted)]">학습 보조 초안입니다. 저장 전 직접 수정할 수 있습니다.</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <motion.button
@@ -1110,7 +1108,7 @@ export default function AnswerReviewClientPage({
                     onClick={copyFeedbackDraft}
                     className={cn(buttonVariants({ variant: "default" }), "h-9 px-4")}
                   >
-                    피드백 초안 복사
+                    정리 내용 복사
                   </motion.button>
                 </div>
               </div>
@@ -1162,20 +1160,20 @@ export default function AnswerReviewClientPage({
                   <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
                     <div className="grid gap-2">
                       <motion.button whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }} type="button" onClick={copyFeedbackDraft} className={cn(buttonVariants({ variant: "default" }), "h-9")}>
-                        피드백 초안 복사
+                        정리 내용 복사
                       </motion.button>
                       <motion.button whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }} type="button" onClick={() => setCurrentStep(2)} className={cn(buttonVariants({ variant: "outline" }), "h-9")}>
                         다시 보강하기
                       </motion.button>
                     </div>
                     <p className="mt-3 text-caption leading-5 text-[color:var(--muted)]">
-                      검토 결과는 학습 보조 초안입니다. 저장 전 직접 확인해 주세요. 최종 판단은 사용자가 확인해야 합니다.
+                      결과는 학습 보조 초안입니다. 저장 전 직접 수정할 수 있으며 공식 채점이나 합격 판정이 아닙니다.
                     </p>
                   </article>
                 </motion.aside>
               </div>
 
-              {didCopyCurrentDraft ? <p className="text-caption leading-5 text-[color:var(--muted)]">복사 완료. 전달 전 검토해 주세요.</p> : null}
+              {didCopyCurrentDraft ? <p className="text-caption leading-5 text-[color:var(--muted)]">복사 완료. 저장 전 직접 확인해 주세요.</p> : null}
               {visibleFeedbackCopyStatus === "failed" ? (
                 <p className="text-caption leading-5 text-[color:var(--muted)]">클립보드 복사에 실패했습니다. 텍스트를 수동으로 복사해 주세요.</p>
               ) : null}
@@ -1191,7 +1189,7 @@ export default function AnswerReviewClientPage({
                   <li>1) 문제/사례 입력</li>
                   <li>2) 내 답안 입력</li>
                   <li>3) 참고 정리 입력</li>
-                  <li>4) 피드백 전달 전 검수</li>
+                  <li>4) 보강 문단 저장 전 확인</li>
                 </ul>
                 <p className="text-caption leading-5 text-[color:var(--muted)]">긴 PDF는 필요한 문제/답안/참고 정리 페이지만 나눠 넣는 것이 좋습니다.</p>
                 {hasMyAnswer ? (
@@ -1225,7 +1223,7 @@ export default function AnswerReviewClientPage({
               </section>
 
               <section className="space-y-2">
-                <p className="text-caption font-medium text-[color:var(--muted)]">검토자 노트</p>
+                <p className="text-caption font-medium text-[color:var(--muted)]">학습 보조 정리</p>
                 <pre className="max-h-[240px] overflow-auto whitespace-pre-wrap rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3 text-caption leading-6 text-[color:var(--foreground-strong)]">
                   {reviewerNoteText}
                 </pre>
@@ -1259,19 +1257,19 @@ export default function AnswerReviewClientPage({
                     </article>
                     <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3">
                       <p className="text-caption font-medium text-[color:var(--muted)]">보강 문단 포인트</p>
-                      <p className="mt-1 text-caption leading-5 text-[color:var(--foreground-strong)]">{toDetailLine(structureDraft.weakParagraphPoint, "보강할 문단 포인트를 검토자가 직접 확인해 주세요.")}</p>
+                      <p className="mt-1 text-caption leading-5 text-[color:var(--foreground-strong)]">{toDetailLine(structureDraft.weakParagraphPoint, "보강할 문단 포인트를 직접 확인해 주세요.")}</p>
                     </article>
                     <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3">
                       <p className="text-caption font-medium text-[color:var(--muted)]">논리 보강 포인트</p>
-                      <p className="mt-1 text-caption leading-5 text-[color:var(--foreground-strong)]">{toDetailLine(structureDraft.weakLogicPoint, "논리 연결이 약한 지점을 검토자가 직접 확인해 주세요.")}</p>
+                      <p className="mt-1 text-caption leading-5 text-[color:var(--foreground-strong)]">{toDetailLine(structureDraft.weakLogicPoint, "논리 연결이 약한 지점을 직접 확인해 주세요.")}</p>
                     </article>
                     <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3">
                       <p className="text-caption font-medium text-[color:var(--muted)]">검토 메모</p>
-                      <p className="mt-1 text-caption leading-5 text-[color:var(--foreground-strong)]">{toDetailLine(structureDraft.caution, "이 결과는 검토 보조 초안이며 검토자 확인이 필요합니다.")}</p>
+                      <p className="mt-1 text-caption leading-5 text-[color:var(--foreground-strong)]">{toDetailLine(structureDraft.caution, "이 결과는 학습 보조 초안이며 직접 확인이 필요합니다.")}</p>
                     </article>
                   </div>
                 ) : (
-                  <p className="text-caption leading-5 text-[color:var(--muted)]">먼저 답안 검토를 실행하면 세부 분석을 확인할 수 있습니다.</p>
+                  <p className="text-caption leading-5 text-[color:var(--muted)]">먼저 답안 정리를 시작하면 세부 분석을 확인할 수 있습니다.</p>
                 )}
               </section>
             </div>

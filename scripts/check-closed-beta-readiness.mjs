@@ -55,7 +55,7 @@ const m418RequiredFiles = [
 ];
 
 const prohibitedLearnerCopyPatterns = [
-  { label: "official grading", pattern: /공식\s*채점|official\s+grading/i },
+  { label: "official grading", pattern: /공식\s*채점(?!\s*아님)|official\s+grading/i },
   { label: "official model answer", pattern: /공식\s*모범\s*답안|공식\s*모범답안|모범답안|official\s+model\s+answer/i },
   { label: "score prediction", pattern: /점수\s*예측|공식\s*점수|official\s+score|score\s+prediction/i },
   { label: "pass/fail judgment", pattern: /합격\s*\/\s*불합격\s*판정|합격\s*판정|불합격\s*판정|pass\s*\/\s*fail|pass-fail/i },
@@ -161,7 +161,7 @@ function runStaticReadinessGate() {
   check(has(localReflection, '"use client";'), "local beta reflection must remain client-only", failures);
   check(has(localReflection, "useEffect"), "local beta reflection must load localStorage from client effects", failures);
   check(has(localReflection, "window.setTimeout"), "local beta reflection must settle after hydration", failures);
-  check(has(localReflection, "닫힌 베타 브라우저 임시 기록"), "local beta reflection cards must disclose browser-local temporary records", failures);
+  check(/(?:브라우저\s*임시|브라우저에\s*임시\s*저장)/.test(localReflection), "local beta reflection cards must disclose browser-local temporary records", failures);
   check(has(notesPage, "renderReviewOsItemsPage"), "Notes must render the shared notes page", failures);
   check(has(itemsPage, "LocalBetaNotesSection"), "Notes must include local beta reflection surface through the shared items route", failures);
   check(has(reviewPage, "LocalBetaReviewCandidateSection"), "Review must include local beta reflection surface", failures);

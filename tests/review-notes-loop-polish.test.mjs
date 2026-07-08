@@ -48,7 +48,7 @@ test("Review queue keeps one primary review surface and collapses extra signals"
   assert.ok(client.includes("data-review-extra-signals"));
   assert.ok(client.includes("상세 신호 보기"));
   assert.ok(client.includes("data-review-secondary-list"));
-  assert.ok(client.includes("다음 복습 후보"));
+  assert.ok(client.includes("다음 복습 보기"));
 });
 
 test("Notes and item detail expose biggest gap, next action, and loop connections", () => {
@@ -59,7 +59,7 @@ test("Notes and item detail expose biggest gap, next action, and loop connection
 
   assert.ok(notesPage.includes("renderReviewOsItemsPage"));
   for (const source of [itemsPage, detailPage, localBeta]) {
-    for (const phrase of ["학습 노트", "가장 큰 약점", "다음 행동", "오늘 할 일 연결", "복습 연결", "학습 기록 연결"]) {
+    for (const phrase of ["학습 노트", "가장 큰 약점", "다음 행동", "오늘 계획 연결", "복습 연결", "학습 기록 연결"]) {
       assert.ok(source.includes(phrase), phrase);
     }
   }

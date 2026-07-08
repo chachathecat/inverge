@@ -16,37 +16,35 @@ test("answer review page allows anonymous render with viewer mode", () => {
   assert.equal(pageSource.includes("viewerMode"), true);
 });
 
-test("structure route supports anonymous trial flow with daily limit", () => {
+test("structure route supports anonymous access with authenticated persistence guard", () => {
   assert.equal(routeSource.includes("로그인이 필요합니다."), false);
-  ["ANONYMOUS_TRIAL_LIMIT", "anonymous_answer_review_trial", 'learningSignalStatus: "skipped"', "createLearningSignalEvent"].forEach((phrase) => {
+  ['learningSignalStatus: "saved" | "skipped" | "failed"', '"skipped"', "createLearningSignalEvent", "if (session.userId && session.email"].forEach((phrase) => {
     assert.equal(routeSource.includes(phrase), true, `Missing phrase: ${phrase}`);
   });
   assert.equal(routeSource.includes("insufficient") || routeSource.includes("INPUT_QUALITY_MESSAGE") || routeSource.includes("input quality"), true);
 });
 
 test("answer review client includes anonymous trial progressive disclosure", () => {
-  ["로그인 없이 오늘 1회 답안 검토", "무료 체험 1회", "계정 만들고 기록 저장", "결과 저장, 복습 큐, 오늘 계획 반영", "오늘 무료 검토 1회를 사용했습니다"].forEach((phrase) => {
+  ["로그인 없이 오늘 1회 빠른 답안 정리", "무료 체험 1회", "로그인하고 기록 저장", "기록 저장, 복습, 오늘 계획 반영", "오늘 무료 정리 1회를 사용했습니다"].forEach((phrase) => {
     assert.equal(clientSource.includes(phrase), true, `Missing phrase: ${phrase}`);
   });
 });
 
-test("front page cta reflects free trial and preserves order", () => {
-  ["답안 검토실 무료 체험", "로그인 없이 오늘 1회 검토"].forEach((phrase) => {
+test("front page cta reflects capture-first product path and preserves order", () => {
+  ["오늘 답안 올리기", "데모 결과 보기"].forEach((phrase) => {
     assert.equal(frontPageSource.includes(phrase), true, `Missing phrase: ${phrase}`);
   });
-  assert.ok(frontPageSource.indexOf("오늘 입력 시작") < frontPageSource.indexOf("답안 검토실 무료 체험"));
+  assert.ok(frontPageSource.indexOf("오늘 답안 올리기") < frontPageSource.indexOf("데모 결과 보기"));
 });
 
 test("write page includes trial and quick-open helper notes", () => {
-  ["로그인 없이 1회 체험 가능", "답안 검토실에서 바로 열립니다"].forEach((phrase) => {
+  ["답안 스냅 검토", "사례 스캔"].forEach((phrase) => {
     assert.equal(writePageSource.includes(phrase), true, `Missing phrase: ${phrase}`);
   });
 });
 
 test("guardrails block forbidden grading and provider leakage", () => {
   [
-    "공식 채점",
-    "합격 판정",
     "확정 점수",
     "모범답안 확정",
     "official grader",
@@ -63,5 +61,9 @@ test("guardrails block forbidden grading and provider leakage", () => {
     learnerSources.forEach((source) => {
       assert.equal(source.toLowerCase().includes(token.toLowerCase()), false, `Forbidden token found: ${token}`);
     });
+  });
+  learnerSources.forEach((source) => {
+    assert.doesNotMatch(source, /공식 채점(?!\s*아님|이나)/);
+    assert.doesNotMatch(source, /합격 판정(?!이 아닙니다|이 아니라|이 아님| 아님)/);
   });
 });

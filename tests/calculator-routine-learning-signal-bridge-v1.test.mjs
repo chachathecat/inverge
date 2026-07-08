@@ -540,7 +540,7 @@ test("review page exposes calculator candidates separately from review queue com
   assert.ok(reviewPage.includes("listCalculatorRoutineReviewCandidates"));
   assert.ok(reviewPage.includes("CalculatorRoutineReviewCandidates"));
   assert.ok(reviewCandidates.includes("data-calculator-routine-review-candidates"));
-  assert.ok(reviewCandidates.includes("계산·검산 복습 후보"));
+  assert.ok(reviewCandidates.includes("계산·검산 복습"));
   assert.ok(reviewCandidates.includes("buildCalculatorRoutineRecoveryHref(candidate.recoveryReference)"));
   assert.equal(reviewCandidates.includes('href="/app/calculator?mode=second&context=practice&focus=casio"'), false);
   assert.ok(appPage.includes("buildCalculatorRoutineRecoveryHref(task.calculator_routine_recovery)"));

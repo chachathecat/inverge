@@ -294,7 +294,7 @@ function toCalculatorRoutineTask(candidate: CalculatorRoutineReviewCandidate): T
     one_next_action: "입력 순서와 단위·반올림 기준을 다시 확인합니다.",
     task_type: "calculator_routine",
     estimated_minutes: 10,
-    priority_reason: "계산·검산 루틴 기반 복습 후보입니다.",
+    priority_reason: "계산·검산 루틴 기반 복습 항목입니다.",
     primary_cta: primaryCtaFor("calculator_routine", "second"),
     created_from_capture: false,
     source_label: "계산·검산 루틴 기반",

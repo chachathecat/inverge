@@ -34,7 +34,7 @@ export function OcrAssistPanel({
   applyLabel,
   directInputPlaceholder,
   reviewLabel = "불러온 텍스트 검토",
-  helperText = "closed beta에서는 직접 입력한 텍스트가 안정 경로입니다. 사진 추출은 보조 실험으로만 사용합니다.",
+  helperText = "현재는 직접 입력한 텍스트가 안정 경로입니다. 사진 추출은 학습 보조 초안으로만 사용합니다.",
   initialText = "",
   onApply,
 }: OcrAssistPanelProps) {

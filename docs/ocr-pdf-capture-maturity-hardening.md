@@ -14,7 +14,7 @@ OCR/PDF/text capture -> editable draft -> learner-owned note -> biggest gap -> n
 
 | Area | Required behavior | Evidence |
 | --- | --- | --- |
-| Draft framing | OCR/PDF output must be described as a draft. | Capture route and form include: `OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요.` |
+| Draft framing | OCR/PDF output must be described as a learning-support draft. | Capture route and form include: `OCR 결과는 학습 보조 초안입니다. 저장 전 직접 수정할 수 있습니다.` |
 | Editable before save | OCR/PDF text must be editable before the learner saves. | Capture form binds `value={form.rawQuestionText}` and `update("rawQuestionText", value)` to the editable textarea. |
 | Learner-owned note | Saved output must represent the learner's study record, not official source content. | Synthetic fixtures validate through the Capture-to-Note quality contract. |
 | One biggest gap | Each fixture must contain exactly one `biggestGap`. | Fixture contract test rejects empty or multi-line candidates. |
@@ -60,7 +60,7 @@ Required fixture coverage:
 
 The current capture path already includes the required learner-facing framing:
 
-- `OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요.`
+- `OCR 결과는 학습 보조 초안입니다. 저장 전 직접 수정할 수 있습니다.`
 - `사진/PDF 인식이 불안정하면 텍스트로 붙여넣어도 됩니다.`
 - `현재 PDF는 파일명만 기록됩니다. 내용은 직접 붙여넣어 주세요.`
 - `OCR 결과 확인 (편집 가능 · 자동 저장)`

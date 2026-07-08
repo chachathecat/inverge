@@ -58,7 +58,7 @@ test("provider-disabled synthetic image OCR smoke runbook includes draft and edi
     "Output text area is editable before save",
     "The learner can replace the draft manually when OCR is disabled",
     "Saving must create a learner-owned note from edited draft or manual replacement text",
-    "OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요.",
+    "OCR 결과는 학습 보조 초안입니다. 저장 전 직접 수정할 수 있습니다.",
     "공식 채점이나 모범답안이 아니라, 내 공부 기록을 정리하는 기능입니다.",
   ]);
 });

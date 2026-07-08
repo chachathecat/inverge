@@ -12,12 +12,12 @@ const forbiddenLaunchCopy = [
   "공식 모범답안",
 ];
 
-test("S220C answer review route defaults into second-round first-minute flow", () => {
+test("S220C legacy first-minute component no longer renders on answer review route", () => {
   const page = read("app/answer-review/page.tsx");
 
-  assert.match(page, /redirect\("\/answer-review\?mode=second"\)/);
-  assert.match(page, /S220CFirstFiveMinuteMagic/);
-  assert.match(page, /id="answer-review-start"/);
+  assert.doesNotMatch(page, /S220CFirstFiveMinuteMagic/);
+  assert.match(page, /AnswerReviewClientPage/);
+  assert.match(page, /viewerMode/);
 });
 
 test("S220C first five-minute component exposes staged capture-to-review wizard copy", () => {
@@ -37,9 +37,9 @@ test("S220C first five-minute component exposes staged capture-to-review wizard 
     "저장 전 직접 확인해 주세요.",
     "감점 위험 preview",
     "다시 쓸 문단 preview",
-    "Today Plan",
-    "Review Queue",
-    "Notes",
+    "오늘 할 일",
+    "복습",
+    "학습 노트",
   ]) {
     assert.ok(source.includes(phrase), `missing S220C phrase: ${phrase}`);
   }
