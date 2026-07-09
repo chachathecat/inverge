@@ -41,10 +41,10 @@ test('final visual qa doc has required sections and launch gate lines', () => {
 test('global focus color tokens remain coherent', () => {
   const css = read('app/globals.css');
   [
-    '--bg-canvas: #f7f4ee',
-    '--bg-subtle: #eff6ff',
-    '--text-primary: #111827',
-    '--brand-900: #0b1b34',
+    '--bg-canvas: #f7f6f3',
+    '--bg-subtle: #f2f0ea',
+    '--text-primary: #141821',
+    '--brand-900: #10233f',
   ].forEach((token) => {
     assert.ok(css.includes(token), `Missing token: ${token}`);
   });
@@ -58,10 +58,12 @@ test('public landing keeps proof/demo copy anchors', () => {
 
   [
     '답안길 미리보기',
-    '데모 결과',
+    '전환 흐름',
     '공식 채점 아님',
-    '오늘 답안 올리기',
-    '데모 결과 보기',
+    '답안 1개 올리기',
+    '검토 예시 보기',
+    '답안 검토',
+    '근거 확인',
   ].forEach((phrase) => {
     assert.ok(joined.includes(phrase), `Missing public landing phrase: ${phrase}`);
   });

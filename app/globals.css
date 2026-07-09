@@ -1,28 +1,28 @@
 @import "tailwindcss";
 
 :root {
-  --bg-canvas: #f7f4ee;
+  --bg-canvas: #f7f6f3;
   --bg-surface: #ffffff;
-  --bg-subtle: #eff6ff;
-  --bg-elevated: #ffffff;
-  --border-subtle: #e7e2d8;
+  --bg-subtle: #f2f0ea;
+  --bg-elevated: #fcfbf8;
+  --border-subtle: #e6e1d7;
   --border-strong: #d7d1c4;
-  --text-primary: #111827;
-  --text-secondary: #6b7280;
-  --text-tertiary: #8b95a5;
+  --text-primary: #141821;
+  --text-secondary: #5a6472;
+  --text-tertiary: #8791a0;
   --text-inverse: #f9fbff;
-  --brand-900: #0b1b34;
-  --brand-800: #10233f;
-  --brand-700: #25517f;
-  --brand-050: #eff6ff;
+  --brand-900: #10233f;
+  --brand-800: #163053;
+  --brand-700: #23456f;
+  --brand-050: #eef4fb;
   --cue-review: #b56b16;
-  --cue-review-bg: #fff7e6;
+  --cue-review-bg: #fef4e7;
   --cue-focus: #2b5c9a;
   --cue-focus-bg: #edf4fc;
   --cue-risk: #b24d45;
   --cue-risk-bg: #fdedec;
   --cue-stable: #2e6e58;
-  --cue-stable-bg: #eaf7ef;
+  --cue-stable-bg: #eaf6f0;
   --cue-compare: #6b53a6;
   --cue-compare-bg: #f2eefb;
   --sub-civil: #5268a5;
@@ -32,23 +32,23 @@
   --sub-practice: #3f679e;
   --sub-theory: #7457a8;
   --sub-law: #a35b45;
-  --textPrimary: #111827;
-  --textSecondary: #6b7280;
-  --navy: #0b1b34;
-  --softBlue: #eff6ff;
-  --successSoft: #eaf7ef;
-  --warningSoft: #fff7e6;
+  --textPrimary: var(--text-primary);
+  --textSecondary: var(--text-secondary);
+  --navy: var(--brand-900);
+  --softBlue: var(--brand-050);
+  --successSoft: var(--cue-stable-bg);
+  --warningSoft: var(--cue-review-bg);
   --radiusButton: 999px;
-  --cardShadow: 0 16px 40px rgba(15, 23, 42, 0.06);
+  --cardShadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 
   --surfaceBase: #ffffff;
   --surfaceElevated: #ffffff;
-  --surfaceQuiet: #f7f4ee;
+  --surfaceQuiet: var(--bg-canvas);
   --borderQuiet: #e7e2d8;
-  --textStrong: #111827;
-  --textBody: #111827;
-  --textMuted: #6b7280;
-  --actionPrimary: #0b1b34;
+  --textStrong: var(--text-primary);
+  --textBody: var(--text-primary);
+  --textMuted: var(--text-secondary);
+  --actionPrimary: var(--brand-900);
   --actionSecondaryText: #475569;
   --cueRisk: #9f463f;
   --cueRecovery: #8a6a22;
@@ -80,10 +80,10 @@
   --radius-md: 16px;
   --radius-lg: 20px;
   --radius-card: 20px;
-  --radius-input: 14px;
+  --radius-input: 16px;
   --radius-pill: 999px;
-  --shadow-soft: 0 16px 40px rgba(15, 23, 42, 0.06);
-  --shadow-focus: 0 16px 40px rgba(15, 23, 42, 0.06);
+  --shadow-soft: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-focus: 0 1px 2px rgba(15, 23, 42, 0.04);
   --space-page: 40px;
   --chart-grid: rgba(17, 20, 24, 0.1);
   --font-ui: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -278,10 +278,37 @@ body {
   color: var(--cta-secondary-fg);
 }
 
+.operating-surface {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.mission-surface {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-focus);
+}
+
+.density-quiet {
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .trust-layer {
   border: 1px solid var(--trust-layer-border);
   border-radius: var(--radius-md);
   background: var(--trust-layer-bg);
+}
+
+.evidence-bar,
+.trust-evidence {
+  border: 1px solid var(--trust-layer-border);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
 }
 
 .quiet-disclosure {
@@ -318,6 +345,16 @@ body {
 .status-stable {
   border-color: var(--cue-stable);
   background: var(--cue-stable-bg);
+}
+
+.status-risk {
+  border-color: var(--cue-risk);
+  background: var(--cue-risk-bg);
+}
+
+.status-compare {
+  border-color: var(--cue-compare);
+  background: var(--cue-compare-bg);
 }
 
 .status-failure {

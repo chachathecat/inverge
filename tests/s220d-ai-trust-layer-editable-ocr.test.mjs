@@ -6,7 +6,8 @@ const read = (path) => readFileSync(path, "utf8");
 
 const forbiddenClaims = [
   "공식 모범답안",
-  "확정 점수",
+  "확정 점수 결과",
+  "확정 점수 확인",
   "합격 가능성",
   "pass probability",
   "guarantee",

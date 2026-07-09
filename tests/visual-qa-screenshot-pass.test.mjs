@@ -28,7 +28,7 @@ test("capture keeps primary action before optional metadata", () => {
 });
 
 test("home keeps priority and queue framing", () => {
-  assert.ok(home.includes("오늘의 우선순위") || home.includes("오늘은 이것만 하면 됩니다"));
+  assert.ok(home.includes("오늘의 우선순위") || home.includes("오늘의 1개"));
   assert.ok(home.includes("오늘 한 것 올리기"));
   assert.ok(home.includes("복습"));
 });

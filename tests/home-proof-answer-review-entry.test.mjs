@@ -11,7 +11,7 @@ const answerReviewClient = readFileSync("app/answer-review/answer-review-client.
 const learnerFacingSources = [homePage, homeProof, writePage, answerReviewPage, answerReviewClient];
 
 test("home keeps Today Plan as primary and does not route the main CTA to legacy answer review", () => {
-  ["오늘은 이것만 하면 됩니다", "오늘 한 것 1개를 올리면 첫 계획을 만들 수 있습니다.", "오늘 공부 시작"].forEach((phrase) => {
+  ["오늘의 1개", "끝나면 이어질 것", "답안 1개 올리기"].forEach((phrase) => {
     assert.ok(homePage.includes(phrase), `Missing home phrase: ${phrase}`);
   });
   assert.equal(homePage.includes('href="/answer-review?mode=second"'), false);

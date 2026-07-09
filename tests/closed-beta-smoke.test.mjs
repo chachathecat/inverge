@@ -36,9 +36,9 @@ const LEARNER_FILES = [
 
 test("learner home contains operational copy", () => {
   const source = read("app/app/page.tsx");
-  assert.ok(source.includes("오늘은 이것만 하면 됩니다") || source.includes("오늘의 우선순위"));
-  assert.ok(source.includes("오늘 공부 시작"));
-  assert.ok(source.includes("오늘 기록 기반"));
+  assert.ok(source.includes("오늘의 1개") || source.includes("오늘의 우선순위"));
+  assert.ok(source.includes("답안 1개 올리기"));
+  assert.ok(source.includes("끝나면 이어질 것"));
   assert.ok(source.includes("복습"));
   assert.ok(source.includes("오늘 할 일"));
 });

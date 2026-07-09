@@ -79,8 +79,8 @@ test("S225X landing and capture keep one dominant action marker", () => {
 
   assert.equal(count(landing, "data-s225x-dominant-primary-above-fold"), 1);
   assert.equal(count(capture, "data-s225x-dominant-primary-after-input"), 1);
-  assert.ok(landing.includes("오늘 답안 올리기"));
-  assert.ok(landing.includes("데모 결과 보기"));
+  assert.ok(landing.includes("답안 1개 올리기"));
+  assert.ok(landing.includes("검토 예시 보기"));
   assert.ok(capture.includes("사진 찍기"));
   assert.ok(capture.includes("PDF 선택"));
   assert.ok(capture.includes("텍스트 붙여넣기"));

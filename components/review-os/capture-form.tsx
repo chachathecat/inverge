@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 
 import { BottomPrimaryAction } from "@/components/learner";
 import { CognitiveLearningActionCard } from "@/components/review-os/cognitive-learning-action-card";
+import { TrustEvidenceBar } from "@/components/review-os/trust-status-card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { buildCaptureToNoteDraft } from "@/lib/capture/capture-to-note";
@@ -1812,53 +1813,31 @@ function IntakePanel({
   };
 
   return (
-    <section className="rounded-[var(--radius-card)] border border-[color:var(--border-hairline)] bg-[color:var(--surface)] p-4 shadow-[var(--shadow-soft)] sm:p-6">
+    <section className="operating-surface p-4 sm:p-6">
       <div className="space-y-2">
         <p className="text-caption font-medium text-[color:var(--muted)]">1. 입력</p>
         <h2 className="hero-balance ko-keep text-[28px] font-semibold leading-tight text-[color:var(--foreground-strong)]">오늘 한 것 올리기</h2>
         <p className="ko-keep text-body text-[color:var(--muted)]">사진, PDF, 텍스트 중 하나로 시작하세요.</p>
       </div>
 
-      <div className="mt-6 space-y-3" data-capture-subject-selector={mode}>
-        <SubjectSelect
-          subjectLabel={config.subjectLabel}
-          subjects={config.subjects}
-          value={form.subjectLabel}
-          onChange={updateSubject}
-        />
-      </div>
-
-      <div className="mt-5 grid gap-3 sm:grid-cols-3" data-capture-input-options data-s224v-secondary-input-options="quiet">
+      <div className="mt-5 grid gap-3 sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)]" data-capture-input-options data-s224v-secondary-input-options="quiet">
         <Button
           type="button"
-          variant="outline"
-          className="min-h-24 w-full flex-col items-start justify-center gap-2 px-5 text-left"
+          className="primary-action min-h-24 w-full flex-col items-start justify-center gap-2 px-5 text-left"
           onClick={() => {
             const sourceType = inferSourceTypeFromAction("camera");
             setSelectedInputMethod(sourceType);
             update("sourceType", sourceType);
             cameraInputRef.current?.click();
           }}
+          data-s226-capture-primary-action
         >
           사진 찍기
         </Button>
         <Button
           type="button"
           variant="outline"
-          className="min-h-24 w-full flex-col items-start justify-center gap-2 px-5 text-left"
-          onClick={() => {
-            const sourceType = inferSourceTypeFromAction("pdf");
-            setSelectedInputMethod(sourceType);
-            update("sourceType", sourceType);
-            pdfInputRef.current?.click();
-          }}
-        >
-          PDF 선택
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          className="min-h-24 w-full flex-col items-start justify-center gap-2 px-5 text-left"
+          className="secondary-action min-h-24 w-full flex-col items-start justify-center gap-2 px-5 text-left"
           onClick={() => {
             const sourceType = inferSourceTypeFromAction("text");
             setSelectedInputMethod(sourceType);
@@ -1870,6 +1849,19 @@ function IntakePanel({
           }}
         >
           텍스트 붙여넣기
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          className="min-h-24 w-full flex-col items-start justify-center gap-2 px-5 text-left text-[color:var(--muted)]"
+          onClick={() => {
+            const sourceType = inferSourceTypeFromAction("pdf");
+            setSelectedInputMethod(sourceType);
+            update("sourceType", sourceType);
+            pdfInputRef.current?.click();
+          }}
+        >
+          PDF 선택
         </Button>
       </div>
       <details className="quiet-disclosure mt-3 rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] bg-[color:var(--surface)]" data-s224v-secondary-diagnostics>
@@ -1918,21 +1910,26 @@ function IntakePanel({
       </div>
       {hasActiveInput ? (
         <>
-      <div
-        className="trust-layer mt-4 px-4 py-4 text-xs leading-5 text-[color:var(--muted)]"
-        data-trust-layer="capture-intake"
-      >
-        <p className="font-semibold text-[color:var(--foreground-strong)]">AI 초안</p>
-        <p className="ko-keep mt-1">{CAPTURE_TRUST_LAYER_COPY}</p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <span className="rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-2.5 py-1 text-[11px] font-medium text-[color:var(--muted)]">OCR 초안</span>
-          <span className="rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-2.5 py-1 text-[11px] font-medium text-[color:var(--muted)]">직접 수정 가능</span>
-          <span className="rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-2.5 py-1 text-[11px] font-medium text-[color:var(--muted)]">공식 채점 아님</span>
-        </div>
+      <div className="mt-4" data-trust-layer="capture-intake">
+        <TrustEvidenceBar
+          source={form.sourceType === "text" ? "사용자 텍스트" : form.sourceType === "pdf" ? "가져온 텍스트" : "OCR 초안"}
+          confidence={needsOcrConfirmation ? "확인 필요" : "안정"}
+          learnerConfirmed={Boolean(form.ocrConfirmedByLearner || form.hasManualCorrection)}
+          officialStatus="공식 채점 아님"
+          editable
+          note={CAPTURE_TRUST_LAYER_COPY}
+        />
       </div>
-      <div className={`mt-3 rounded-[var(--radius-pill)] border px-3 py-2 ${extractionState === "failed" ? "border-[color:var(--status-red)] bg-[color:var(--status-red-soft)]" : "border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)]"}`}>
-        <p className="text-xs font-medium text-[color:var(--muted)]">OCR 상태 · {extractionStateLabel[extractionState]}</p>
-        <p className="mt-1 text-sm text-[color:var(--foreground-strong)]">
+      <details
+        className={`quiet-disclosure mt-3 rounded-[var(--radius-md)] border ${extractionState === "failed" ? "border-[color:var(--status-red)] bg-[color:var(--status-red-soft)]" : "border-[color:var(--border-hairline)] bg-[color:var(--surface)]"}`}
+        open={extractionState === "failed"}
+        data-capture-ocr-status-disclosure
+        data-s224v-secondary-diagnostics
+      >
+        <summary className="cursor-pointer list-none px-3 py-2 text-xs font-medium text-[color:var(--muted)]">
+          OCR 상태 · {extractionStateLabel[extractionState]}
+        </summary>
+        <p className="border-t border-[color:var(--border-hairline)] px-3 py-3 text-sm text-[color:var(--foreground-strong)]">
           {{
             idle: "사진을 찍거나 텍스트를 붙여넣어 시작하세요.",
             uploading: "사진을 불러오는 중입니다.",
@@ -1942,7 +1939,7 @@ function IntakePanel({
             manual: "파일을 기록했습니다. 내용은 직접 확인해 주세요.",
           }[extractionState]}
         </p>
-      </div>
+      </details>
       <label className="mt-4 block space-y-2">
         <span className="text-sm text-[color:var(--foreground-strong)]">
           오늘 공부한 내용 또는 내 답안
@@ -1968,7 +1965,18 @@ function IntakePanel({
         />
       </label>
       <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">학습 노트 원문은 비공개로 보관되며, 파생 학습 신호는 개인 추천 개선에만 사용됩니다.</p>
-      <div className="sticky bottom-3 z-30 mt-3 rounded-[var(--radius-lg)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)]/95 p-3 shadow-lg backdrop-blur sm:bottom-5 sm:p-4" data-testid="capture-save-action-bar">
+      <details className="quiet-disclosure mt-4 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]" data-capture-subject-selector={mode} data-s224v-secondary-diagnostics>
+        <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">과목 확인</summary>
+        <div className="border-t border-[color:var(--border-subtle)] px-4 py-3">
+          <SubjectSelect
+            subjectLabel={config.subjectLabel}
+            subjects={config.subjects}
+            value={form.subjectLabel}
+            onChange={updateSubject}
+          />
+        </div>
+      </details>
+      <div className="sticky bottom-3 z-30 mt-3 rounded-[var(--radius-lg)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-3 shadow-[var(--shadow-soft)] sm:bottom-5 sm:p-4" data-testid="capture-save-action-bar">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="ko-keep text-sm font-medium text-[color:var(--foreground-strong)]">입력 내용을 먼저 확인합니다.</p>

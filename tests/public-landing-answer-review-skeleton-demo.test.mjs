@@ -22,14 +22,14 @@ test("hero animation includes compact answer-training preview and safety framing
 });
 
 test("front page keeps CTA copy and compact preview value proposition", () => {
-  ["오늘 답안 올리기", "데모 결과 보기", "답안길 미리보기"].forEach((phrase) => {
+  ["답안 1개 올리기", "검토 예시 보기", "답안길 미리보기"].forEach((phrase) => {
     assert.ok(frontPage.includes(phrase), `Missing front page phrase: ${phrase}`);
   });
 });
 
 test("front page keeps primary CTA before secondary CTA", () => {
-  const primaryIndex = frontPage.indexOf("오늘 답안 올리기");
-  const secondaryIndex = frontPage.indexOf("데모 결과 보기");
+  const primaryIndex = frontPage.indexOf("답안 1개 올리기");
+  const secondaryIndex = frontPage.indexOf("검토 예시 보기");
 
   assert.ok(primaryIndex >= 0, "Primary CTA is missing");
   assert.ok(secondaryIndex >= 0, "Secondary CTA is missing");

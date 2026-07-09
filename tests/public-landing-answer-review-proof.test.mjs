@@ -7,7 +7,7 @@ const heroAnimation = readFileSync("components/inverge/front-page-hero-animation
 const publicSources = [frontPage, heroAnimation];
 
 test("public front page surfaces Answer Road capture-first hero and proof access", () => {
-  ["오늘 쓴 답안에서", "가장 먼저 고칠 문단을 찾습니다.", "/app/capture?mode=second", "/login?returnTo=/app/capture?mode=second", "AI가 찾은 가장 큰 약점", "공식 채점 아님"].forEach((phrase) => {
+  ["답안 1개에서", "오늘 다시 쓸 문단을 정합니다.", "/app/capture?mode=second", "/login?returnTo=/app/capture?mode=second", "답안 검토", "근거 확인", "공식 채점 아님"].forEach((phrase) => {
     assert.ok(frontPage.includes(phrase), `Missing front page phrase: ${phrase}`);
   });
   assert.equal(frontPage.includes("/answer-review?mode=second"), false);

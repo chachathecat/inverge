@@ -33,7 +33,6 @@ const LEARNER_NAV_ITEMS: readonly LearnerNavItem[] = [
     activeHrefs: ["/app/capture", "/app/input", "/app/entry", "/app/write"],
     analyticsAction: "input",
   },
-  { href: "/app/review", label: "복습", preserveMode: true, analyticsAction: "review" },
   {
     href: "/app/notes",
     label: "학습 노트",
@@ -41,6 +40,7 @@ const LEARNER_NAV_ITEMS: readonly LearnerNavItem[] = [
     activeHrefs: ["/app/notes", "/app/items"],
     analyticsAction: "notes",
   },
+  { href: "/app/review", label: "복습", preserveMode: true, analyticsAction: "review" },
   { href: "/app/agenda", label: "학습 기록", preserveMode: true, analyticsAction: "agenda" },
 ] as const;
 
@@ -59,7 +59,7 @@ export function LearnerShell({ email, children, rightSlot }: LearnerShellProps) 
 
   return (
     <div className="min-h-dvh overflow-x-hidden bg-[color:var(--bg-canvas)]">
-      <div className="mx-auto flex w-full max-w-[860px] flex-col px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-4 sm:px-6 sm:pb-12 sm:pt-8">
+      <div className="mx-auto flex w-full max-w-[1120px] flex-col px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-3 sm:px-6 sm:pb-12 sm:pt-6 lg:px-8">
         <header className="space-y-4 border-b border-[var(--border-subtle)] pb-4 sm:pb-5" aria-label="학습 공간 헤더">
           <div className="flex items-start justify-between gap-3">
             <Link href={homeHref} className="flex min-h-11 min-w-0 items-center gap-3 rounded-[var(--radius-md)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:rgba(16,35,63,0.16)]" aria-label="답안길 오늘 학습으로 이동">
@@ -80,7 +80,7 @@ export function LearnerShell({ email, children, rightSlot }: LearnerShellProps) 
             </div>
           </div>
 
-          <nav aria-label="학습 메뉴" className="flex flex-wrap gap-2">
+          <nav aria-label="학습 메뉴" className="flex flex-wrap gap-1.5">
             {LEARNER_NAV_ITEMS.map((item) => {
               const href = item.href;
               const nextHref = item.preserveMode ? `${href}?mode=${currentMode}` : href;
@@ -101,7 +101,7 @@ export function LearnerShell({ email, children, rightSlot }: LearnerShellProps) 
                   }}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "inline-flex min-h-10 items-center justify-center rounded-full border px-4 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:rgba(16,35,63,0.16)]",
+                    "inline-flex min-h-10 items-center justify-center rounded-full border px-3.5 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:rgba(16,35,63,0.16)]",
                     active
                       ? "border-[color:var(--brand-700)] bg-[color:var(--brand-900)] text-[color:var(--text-inverse)]"
                       : "border-transparent bg-transparent text-[color:var(--muted)] hover:bg-[color:var(--surface)] hover:text-[color:var(--foreground-strong)]",
@@ -172,7 +172,7 @@ export function SingleFocusCard({ eyebrow, title, description, children, footer,
 
 export function BottomPrimaryAction({ children, secondary, className }: { children: ReactNode; secondary?: ReactNode; className?: string }) {
   return (
-    <div className={cn("fixed inset-x-0 bottom-0 z-40 border-t border-[var(--border-subtle)] bg-[color:var(--bg-surface)]/96 px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 backdrop-blur sm:static sm:z-auto sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-0", className)}>
+    <div className={cn("fixed inset-x-0 bottom-0 z-40 border-t border-[var(--border-subtle)] bg-[color:var(--bg-surface)] px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 sm:static sm:z-auto sm:border-0 sm:bg-transparent sm:p-0", className)}>
       <div className="mx-auto flex w-full max-w-[760px] flex-col gap-2 sm:max-w-none sm:flex-row sm:items-center">
         {children}
         {secondary ? <div className="sm:ml-2">{secondary}</div> : null}

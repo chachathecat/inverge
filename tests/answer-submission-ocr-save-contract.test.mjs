@@ -102,7 +102,8 @@ test("learner capture UI keeps OCR editable before save and uses required trust 
   const combined = `${capturePage}\n${captureForm}`;
 
   assert.equal(ANSWER_SUBMISSION_OCR_TRUST_COPY, "OCR 결과는 학습 보조 초안입니다. 저장 전 직접 수정할 수 있습니다.");
-  assert.ok(combined.includes("AI 초안"));
+  assert.ok(combined.includes("<TrustEvidenceBar"));
+  assert.ok(combined.includes('data-trust-layer="capture-intake"'));
   assert.ok(combined.includes("OCR과 AI 정리는 학습 보조 초안입니다. 저장 전 직접 수정할 수 있습니다."));
   assert.equal(combined.includes("OCR 결과는 초안입니다. 저장 전 직접 확인해 주세요."), false);
   assert.ok(captureForm.includes("OCR 결과 확인 (편집 가능 · 자동 저장)"));
