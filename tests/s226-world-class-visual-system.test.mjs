@@ -120,6 +120,7 @@ test("S226 forbids decorative colors, glass styling, and positive authority clai
 
 test("S226 screenshot QA evidence document exists with honest viewport status", () => {
   const qa = read("docs/qa/s226-world-class-visual-system.md");
+  const manifest = JSON.parse(read("docs/qa/s226-world-class-visual-system/screenshots/manifest.json"));
 
   for (const phrase of [
     "/",
@@ -129,8 +130,19 @@ test("S226 screenshot QA evidence document exists with honest viewport status", 
     "390px",
     "768px",
     "1440px",
-    "Real browser screenshots were not generated",
+    "Real browser screenshots were generated",
+    "docs/qa/s226-world-class-visual-system/screenshots/",
+    "manifest.json",
+    "saved/result state",
+    "Routes Not Captured",
+    "None from the requested route and viewport matrix.",
+    "local auth-disabled demo mode",
   ]) {
     assert.ok(qa.includes(phrase), `missing S226 QA phrase: ${phrase}`);
   }
+
+  assert.equal(manifest.results.length, 18);
+  assert.equal(manifest.results.every((result) => result.captured === true), true);
+  assert.equal(manifest.results.every((result) => result.pageErrors.length === 0), true);
+  assert.equal(manifest.samplePolicy.includes("raw sample text is intentionally omitted"), true);
 });
