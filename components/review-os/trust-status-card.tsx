@@ -12,6 +12,15 @@ type TrustStatusCardProps = {
   items?: TrustStatusItem[];
 };
 
+type TrustEvidenceBarProps = {
+  source: "사용자 텍스트" | "OCR 초안" | "수동 입력" | "가져온 텍스트";
+  confidence: "안정" | "확인 필요";
+  learnerConfirmed: boolean;
+  officialStatus?: "공식 채점 아님";
+  editable?: boolean;
+  note?: string;
+};
+
 const DEFAULT_TRUST_ITEMS: TrustStatusItem[] = [
   {
     label: "사용자 확인 텍스트",
@@ -31,13 +40,49 @@ const DEFAULT_TRUST_ITEMS: TrustStatusItem[] = [
   {
     label: "계속할 곳",
     status: "복습 연결",
-    helper: "확인한 내용만 오늘 할 일, 복습, 학습 노트로 이어집니다.",
+    helper: "확인한 내용만 오늘 할 일, 복습, 교정 노트로 이어집니다.",
   },
 ];
 
+export function TrustEvidenceBar({
+  source,
+  confidence,
+  learnerConfirmed,
+  officialStatus = "공식 채점 아님",
+  editable = true,
+  note,
+}: TrustEvidenceBarProps) {
+  const items = [
+    ["출처", source],
+    ["신뢰", confidence],
+    ["확인", learnerConfirmed ? "확인됨" : "확인 전"],
+    ["채점", officialStatus],
+    ["편집", editable ? "가능" : "불가"],
+  ] as const;
+
+  return (
+    <section
+      className="trust-evidence evidence-bar px-4 py-3 text-xs text-[color:var(--muted)] sm:px-5"
+      data-s226-trust-evidence
+      data-testid="trust-evidence-bar"
+      aria-label="Trust Evidence"
+    >
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        {items.map(([label, value]) => (
+          <span key={label} className="inline-flex items-center gap-1.5">
+            <span className="text-[color:var(--text-tertiary)]">{label}</span>
+            <span className="font-semibold text-[color:var(--foreground-strong)]">{value}</span>
+          </span>
+        ))}
+      </div>
+      {note ? <p className="ko-keep mt-2 leading-5">{note}</p> : null}
+    </section>
+  );
+}
+
 export function TrustStatusCard({
   title = "입력 상태와 신뢰 확인",
-  summary = "무엇이 사용자 입력이고 무엇이 OCR/AI 초안인지 구분한 뒤 저장 전 직접 확인합니다.",
+  summary = "무엇이 사용자 입력이고 무엇이 OCR/AI 초안인지 구분한 뒤 저장 전 직접 확인합니다. 공식 채점이나 확정 점수가 아닙니다.",
   items = DEFAULT_TRUST_ITEMS,
 }: TrustStatusCardProps) {
   return (

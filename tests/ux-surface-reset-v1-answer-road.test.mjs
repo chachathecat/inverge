@@ -10,18 +10,18 @@ test("UX Surface Reset v1 defines the requested shared visual tokens", () => {
   const cards = read("components/ui/card.tsx");
 
   for (const token of [
-    "--bg-canvas: #f7f4ee",
+    "--bg-canvas: #f7f6f3",
     "--bg-surface: #ffffff",
-    "--text-primary: #111827",
-    "--text-secondary: #6b7280",
-    "--border-subtle: #e7e2d8",
-    "--navy: #0b1b34",
-    "--softBlue: #eff6ff",
-    "--successSoft: #eaf7ef",
-    "--warningSoft: #fff7e6",
+    "--text-primary: #141821",
+    "--text-secondary: #5a6472",
+    "--border-subtle: #e6e1d7",
+    "--navy: var(--brand-900)",
+    "--softBlue: var(--brand-050)",
+    "--successSoft: var(--cue-stable-bg)",
+    "--warningSoft: var(--cue-review-bg)",
     "--radius-card: 20px",
     "--radiusButton: 999px",
-    "--cardShadow: 0 16px 40px rgba(15, 23, 42, 0.06)",
+    "--cardShadow: 0 1px 2px rgba(15, 23, 42, 0.04)",
   ]) {
     assert.ok(globals.includes(token), `missing token: ${token}`);
   }
@@ -44,17 +44,22 @@ test("public brand hierarchy and landing first screen match Answer Road reset", 
     "감정평가사 2차 답안 훈련 OS",
     "/login?returnTo=/app/capture?mode=second",
     "/app/capture?mode=second",
-    "오늘 쓴 답안에서",
-    "가장 먼저 고칠 문단을 찾습니다.",
-    "오늘 답안 올리기",
-    "데모 결과 보기",
-    "AI가 찾은 가장 큰 약점",
-    "쟁점은 잡았지만 기준/법리 문단이 약합니다.",
-    "오늘 다시 쓸 문단",
-    "민법 제109조의 중요 부분 착오와 중대한 과실 예외를 분리해 쓰기",
+    "답안 1개에서",
+    "오늘 다시 쓸 문단을 정합니다.",
+    "답안 1개 올리기",
+    "검토 예시 보기",
+    "답안 올리기",
+    "근거 확인",
+    "가장 큰 간극 1개",
+    "다시 쓸 문단",
+    "복습 예약",
     "답안길 미리보기",
   ]) {
     assert.ok(`${header}\n${landing}`.includes(phrase), `missing landing/header phrase: ${phrase}`);
+  }
+
+  for (const phrase of ["Raw answer / photo / text", "Evidence Review", "rewrite mission", "scheduled review"]) {
+    assert.equal(`${header}\n${landing}`.includes(phrase), false, `generic landing process label remains: ${phrase}`);
   }
 
   assert.doesNotMatch(`${header}\n${landing}`, /IV|감정평가사 합격 운영 시스템|2차 합격관제 OS/);
@@ -75,12 +80,11 @@ test("authenticated Today shell opens with one calm primary task card backed by 
     "답안길",
     "by Inverge",
     "감정평가사 2차 답안 훈련 OS",
-    "오늘은 이것만 하면 됩니다",
+    "오늘의 1개",
     "todayPlanTasks.slice(0, TODAY_PLAN_MAX_PRIMARY_TASKS)",
-    "오늘 한 것 1개를 올리면 첫 계획을 만들 수 있습니다.",
     "예상 시간",
-    "계획 생성 후 표시",
-    "오늘 공부 시작",
+    "끝나면 이어질 것",
+    "답안 1개 올리기",
   ]) {
     assert.ok(`${shell}\n${home}`.includes(phrase), `missing Today reset phrase: ${phrase}`);
   }
@@ -115,9 +119,10 @@ test("capture flow starts as a four-step wizard with one Trust Card", () => {
     "PDF 선택",
     "텍스트 붙여넣기",
     "입력 내용 확인하기",
-    "AI 초안",
+    "TrustEvidenceBar",
+    'data-trust-layer="capture-intake"',
     "OCR 초안",
-    "직접 수정 가능",
+    "저장 전 직접 수정할 수 있습니다",
     "공식 채점 아님",
     "saved-plan",
     "data-capture-plan-reflection-stage",

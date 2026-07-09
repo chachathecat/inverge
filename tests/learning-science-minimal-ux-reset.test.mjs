@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 
 test("home daily command card keeps one primary CTA and folds details", async () => {
   const source = await readFile(new URL("../app/app/page.tsx", import.meta.url), "utf8");
-  ["오늘은 이것만 하면 됩니다", "todayPlanTasks.slice(0, TODAY_PLAN_MAX_PRIMARY_TASKS)", "오늘 한 것 1개를 올리면 첫 계획을 만들 수 있습니다.", "오늘 공부 시작"].forEach((t) =>
+  ["오늘의 1개", "todayPlanTasks.slice(0, TODAY_PLAN_MAX_PRIMARY_TASKS)", "끝나면 이어질 것", "답안 1개 올리기"].forEach((t) =>
     assert.ok(source.includes(t)),
   );
   assert.equal(/어제 쓴 법규 문단|실무 계산형 답안|민법 착오/.test(source), false);

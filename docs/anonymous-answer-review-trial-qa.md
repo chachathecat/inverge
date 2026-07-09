@@ -7,7 +7,7 @@
 
 ## 대상 흐름
 Public landing
-→ 오늘 답안 올리기 / 데모 결과 보기
+→ 답안 1개 올리기 / 검토 예시 보기
 → /answer-review?mode=second
 → answer/photo/text input
 → result shown
@@ -17,8 +17,8 @@ Public landing
 ---
 
 ## 1) Public landing
-- [ ] `오늘 답안 올리기` CTA가 primary 위치를 유지한다.
-- [ ] `데모 결과 보기` CTA는 secondary로 노출된다.
+- [ ] `답안 1개 올리기` CTA가 primary 위치를 유지한다.
+- [ ] `검토 예시 보기` CTA는 secondary로 노출된다.
 - [ ] 랜딩에 오래된 review-room 무료 체험 카피가 없다.
 - [ ] 공식 채점/합격 판정/확정 점수 등 최종 판정성 문구가 없다.
 

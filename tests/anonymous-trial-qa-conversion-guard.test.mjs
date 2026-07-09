@@ -52,10 +52,10 @@ test("answer review client includes anonymous trial conversion copy", () => {
 });
 
 test("front page includes capture CTA and keeps primary CTA order", () => {
-  ["오늘 답안 올리기", "데모 결과 보기"].forEach((phrase) => {
+  ["답안 1개 올리기", "검토 예시 보기"].forEach((phrase) => {
     assert.equal(frontPageSource.includes(phrase), true, `Missing front page phrase: ${phrase}`);
   });
-  assert.ok(frontPageSource.indexOf("오늘 답안 올리기") < frontPageSource.indexOf("데모 결과 보기"));
+  assert.ok(frontPageSource.indexOf("답안 1개 올리기") < frontPageSource.indexOf("검토 예시 보기"));
 });
 
 test("guardrails block forbidden grading, route leakage, and provider expansion tokens", () => {

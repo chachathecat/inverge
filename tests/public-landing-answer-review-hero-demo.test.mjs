@@ -8,11 +8,12 @@ const publicSources = [frontPage, heroAnimation];
 
 test("front page includes required answer review hero CTA and safety copy", () => {
   [
-    "오늘 답안 올리기",
-    "데모 결과 보기",
+    "답안 1개 올리기",
+    "검토 예시 보기",
     "/app/capture?mode=second",
     "/login?returnTo=/app/capture?mode=second",
-    "AI가 찾은 가장 큰 약점",
+    "답안 검토",
+    "근거 확인",
     "공식 채점 아님",
   ].forEach((phrase) => {
     assert.ok(frontPage.includes(phrase), `Missing front page phrase: ${phrase}`);
@@ -21,8 +22,8 @@ test("front page includes required answer review hero CTA and safety copy", () =
 });
 
 test("front page keeps primary CTA before secondary answer review CTA", () => {
-  const primaryIndex = frontPage.indexOf("오늘 답안 올리기");
-  const secondaryIndex = frontPage.indexOf("데모 결과 보기");
+  const primaryIndex = frontPage.indexOf("답안 1개 올리기");
+  const secondaryIndex = frontPage.indexOf("검토 예시 보기");
 
   assert.ok(primaryIndex >= 0, "Primary CTA is missing");
   assert.ok(secondaryIndex >= 0, "Secondary CTA is missing");
