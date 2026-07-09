@@ -2,7 +2,7 @@
   "evidence": "S226 world-class visual system real browser screenshots",
   "baseUrl": "http://127.0.0.1:3000",
   "browser": "chromium via Playwright against next start production server",
-  "capturedAt": "2026-07-09T04:02:46.466Z",
+  "capturedAt": "2026-07-09T05:22:38.820Z",
   "samplePolicy": "Synthetic safe Korean sample was used only inside browser capture contexts; raw sample text is intentionally omitted from this manifest.",
   "savePolicy": "Saved/result screenshots blocked /api/os/items in-browser to force local fallback and avoid writing synthetic text to repository data.",
   "results": [

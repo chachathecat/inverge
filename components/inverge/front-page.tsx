@@ -69,8 +69,8 @@ export async function FrontPage() {
   const primaryCaptureHref = session.authEnabled ? AUTH_CAPTURE_HREF : DEMO_CAPTURE_HREF;
 
   return (
-    <RefinedShell className="space-y-14 py-10 sm:py-14 lg:py-16">
-      <section className="grid min-h-[calc(100vh-180px)] items-center gap-8 lg:grid-cols-[minmax(0,1fr)_440px] lg:gap-12">
+    <RefinedShell className="space-y-12 py-8 sm:py-10 lg:py-12">
+      <section className="grid items-start gap-8 pt-4 sm:pt-6 lg:grid-cols-[minmax(0,1fr)_440px] lg:gap-12 lg:pt-8">
         <div className="space-y-7">
           <RefinedBadge>학습 보조 초안 · 공식 채점 아님</RefinedBadge>
           <div className="space-y-5">

@@ -84,6 +84,15 @@ function deriveSecondNextTaskType(text: string): CaptureToNoteNextTaskType {
   return "paragraph_rewrite";
 }
 
+function formatNextTaskTypeLabel(taskType: CaptureToNoteNextTaskType) {
+  if (taskType === "paragraph_rewrite") return "문단 다시쓰기";
+  if (taskType === "issue_recall") return "쟁점 회상";
+  if (taskType === "outline_review") return "목차 점검";
+  if (taskType === "concept_review") return "개념 확인";
+  if (taskType === "cloze") return "빈칸 회상";
+  return "O/X 재확인";
+}
+
 function deriveBiggestGap(input: { examMode: "first" | "second"; subject: string; text: string; confidence: string }) {
   const text = `${input.subject} ${input.text}`;
   if (input.examMode === "first") {
@@ -160,7 +169,7 @@ function buildTodayPlanCandidate(input: {
     sourceMode: "learner_capture",
     examMode: input.examMode,
     subject: input.subject,
-    title: `${input.subject} ${input.nextTaskType} ${input.estimatedMinutes}분`,
+    title: `${input.subject} ${formatNextTaskTypeLabel(input.nextTaskType)} ${input.estimatedMinutes}분`,
     topicCandidates: input.topicCandidates.slice(0, 3),
     biggestGap: input.biggestGap,
     nextAction: input.nextAction,

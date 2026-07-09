@@ -49,6 +49,12 @@ The text-input and saved/result states used only the approved synthetic Korean s
 
 None from the requested route and viewport matrix.
 
+## Blocker Patch Follow-up
+
+- Landing hero framing was patched after the screenshot review so the 1440px first viewport no longer starts with an accidental blank vertical band before the hero.
+- The saved/result confirmation copy was patched to show learner-facing Korean task labels instead of internal task keys.
+- The affected screenshots were regenerated after the patch; screenshot evidence remains real-browser local production evidence, not a claim that visual QA is complete.
+
 ## Important Evidence Notes
 
 - `/app?mode=second` and `/app/capture?mode=second` were not auth-blocked in this local run because Supabase auth was not configured, so the app used demo mode.
@@ -68,8 +74,7 @@ None from the requested route and viewport matrix.
 
 ## Remaining Visual Risks
 
-- `/` at 1440px has a large vertical blank band before the hero content because the first viewport is vertically centered.
 - `/app?mode=second` still shows secondary local-beta reflection and disclosure surfaces below the mission; the primary action remains dominant, but the page can still read as dashboard-like if those sections accumulate real data.
-- Saved/result screenshots expose an internal task key, `paragraph_rewrite`, in learner-facing copy.
-- This run did not prove authenticated Supabase-account density, invited-account data, or durable save behavior.
+- This run used local auth-disabled demo mode, not a real Supabase invited account, so invited-account data density remains unproved.
+- The saved/result screenshots prove the local fallback confirmation state, not a durable Supabase write.
 - This run did not include pixel-diff comparison against a golden baseline.

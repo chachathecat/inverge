@@ -146,3 +146,25 @@ test("S226 screenshot QA evidence document exists with honest viewport status", 
   assert.equal(manifest.results.every((result) => result.pageErrors.length === 0), true);
   assert.equal(manifest.samplePolicy.includes("raw sample text is intentionally omitted"), true);
 });
+
+test("S226 learner-facing evidence does not expose internal capture task keys", () => {
+  const internalRewriteTaskKey = ["paragraph", "rewrite"].join("_");
+  const qa = read("docs/qa/s226-world-class-visual-system.md");
+  const manifest = read("docs/qa/s226-world-class-visual-system/screenshots/manifest.json");
+  const captureForm = read("components/review-os/capture-form.tsx");
+  const captureBuilder = read("lib/capture/capture-to-note.ts");
+
+  const learnerRenderedSurfaces = [
+    qa,
+    manifest,
+    read("components/inverge/front-page.tsx"),
+    read("app/app/page.tsx"),
+    captureForm,
+    read("components/review-os/trust-status-card.tsx"),
+  ].join("\n");
+
+  assert.equal(learnerRenderedSurfaces.includes(internalRewriteTaskKey), false);
+  assert.match(captureBuilder, /formatNextTaskTypeLabel\(input\.nextTaskType\)/);
+  assert.match(captureBuilder, /문단 다시쓰기/);
+  assert.doesNotMatch(captureBuilder, /title:\s*`\$\{input\.subject\}\s+\$\{input\.nextTaskType\}/);
+});
