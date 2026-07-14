@@ -28,7 +28,7 @@
 
 Verify the Draft PR Preview with a dedicated invited account. Do not attach raw learner content to screenshots or logs.
 
-The PR-scoped lane refuses every host except the exact PR #566 Preview and records the runner head separately from actual READY branch-alias deployment SHA `a6fddcf25a931037f92138dc54ddf2376ba215d9`. Contract head `1231389c0b45344dbc84eccb6c434c1db99438e2` is product-equivalent but is never labelled as the deployed target. The lane waits for client hydration before submission and bounds sign-in response waits to 20 seconds. It repeats the submit click only once when no sign-in request was emitted, never retries 400/401/403 credential failures, disables trace/video, and publishes only masked screenshots plus a sanitized count-only manifest.
+The PR-scoped lane refuses every host except the exact PR #566 Preview and records the runner head separately from actual READY branch-alias deployment SHA `a6fddcf25a931037f92138dc54ddf2376ba215d9`. Contract head `1231389c0b45344dbc84eccb6c434c1db99438e2` is product-equivalent to that deployed target but is never labelled as the deployment. Both revisions predate the responsive next-review reorder on the current branch, so the earlier passing runtime is not final-product evidence. The lane waits for client hydration before submission and bounds sign-in response waits to 20 seconds. It repeats the submit click only once when no sign-in request was emitted, never retries 400/401/403 credential failures, disables trace/video, and publishes only masked screenshots plus a sanitized count-only manifest.
 
 - [ ] 390 × 844: no horizontal overflow; primary action and event links are at least 44px high.
 - [ ] 768 × 1024: timeline remains primary and history disclosure is operable.
@@ -38,6 +38,8 @@ The PR-scoped lane refuses every host except the exact PR #566 Preview and recor
 - [ ] Automated accessibility scan: zero critical or serious findings.
 - [ ] Console/page errors: zero.
 - [ ] Typecheck, lint, focused test, full suite, learner-loop verification, and production build pass.
+
+At 390px and 768px, the next-review card and its single dominant action precede the long timeline in both visual and keyboard order. At 1440px, the same DOM order is placed into the subordinate sticky right rail. Screenshot capture masks the entire signed-in identity element, rejects any second visible email-like text node, and runs an OCR email guard before artifact upload.
 
 ## Synthetic fixtures
 
