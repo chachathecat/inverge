@@ -28,6 +28,8 @@
 
 Verify the Draft PR Preview with a dedicated invited account. Do not attach raw learner content to screenshots or logs.
 
+The PR-scoped lane refuses every host except the exact PR #566 Preview, waits for client hydration before submission, and bounds sign-in response waits to 20 seconds. It repeats the submit click only once when no sign-in request was emitted, never retries 400/401/403 credential failures, disables trace/video, and publishes only masked screenshots plus a sanitized count-only manifest.
+
 - [ ] 390 × 844: no horizontal overflow; primary action and event links are at least 44px high.
 - [ ] 768 × 1024: timeline remains primary and history disclosure is operable.
 - [ ] 1440 × 1024: next review rail is subordinate to the timeline and stays readable at 200% zoom.
@@ -40,13 +42,3 @@ Verify the Draft PR Preview with a dedicated invited account. Do not attach raw 
 ## Synthetic fixtures
 
 Focused tests cover a sparse timeline with one historical item and one next review, plus a dense 14-event week. Fixture payloads contain only synthetic IDs, event types, dates, and subject labels.
-
-## Pull request gate
-
-- Risk classification: medium
-- Merge recommendation: human approval required
-- Exact-head CI and Preview runtime evidence are required before the Draft PR can be marked ready.
-
-## Automated authenticated lane
-
-The temporary PR marker `run-s230-auth-e2e` enables one #566-only job. The job hardcodes the branch Preview host, refuses any other host, reads credentials and the Vercel bypass only from repository secrets, disables trace/video, and uploads only masked 390/768/1440 screenshots plus a sanitized JSON manifest.
