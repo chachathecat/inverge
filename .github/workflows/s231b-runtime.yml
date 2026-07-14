@@ -63,7 +63,6 @@ jobs:
                 --connect-timeout 5 \
                 --max-time 10 \
                 --header "x-vercel-protection-bypass: ${VERCEL_AUTOMATION_BYPASS_SECRET}" \
-                --header "x-vercel-set-bypass-cookie: true" \
                 "${E2E_BASE_URL}/api/runtime/version?runner=${E2E_RUNNER_SHA}&attempt=${attempt}"
             )" || status="000"
 
@@ -126,7 +125,7 @@ jobs:
           test -n "${E2E_USER_EMAIL:-}"
           test -n "${E2E_USER_PASSWORD:-}"
           test -n "${VERCEL_AUTOMATION_BYPASS_SECRET:-}"
-          npm run test:e2e -- tests/e2e/s231b-trust-provenance.spec.ts --project=chromium --workers=1 --reporter=line
+          npm run test:e2e -- tests/e2e/s231b-trust-provenance.spec.ts --project=chromium --workers=1 --reporter=line --trace=off
 
       - name: Recheck exact deployment SHA after runtime
         id: postflight_sha

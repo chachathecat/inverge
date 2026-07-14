@@ -160,8 +160,27 @@ test("S231B runtime fixtures and deployment proof are preview-only and metadata-
       runtimeSpec.indexOf("loginWithDedicatedTestAccount(page"),
     "runtime error monitoring must begin before the login flow",
   );
-  assert.match(runtimeSupport, /page\.context\(\)\.request\.get/);
-  assert.match(runtimeSupport, /responseUrl\.origin !== previewUrl\.origin/);
+  const protectionBootstrap = runtimeSupport.slice(
+    runtimeSupport.indexOf("export async function establishProtectedPreviewSession"),
+    runtimeSupport.indexOf("type RuntimeSafetyOptions"),
+  );
+  assert.equal((protectionBootstrap.match(/page\.context\(\)\.request\.get/g) ?? []).length, 2);
+  assert.equal((protectionBootstrap.match(/headers: protectionHeaders/g) ?? []).length, 1);
+  assert.match(protectionBootstrap, /previewUrl\.hostname\.toLowerCase\(\) !== expectedRuntimeHost/);
+  assert.match(runtimeSupport, /const bootstrapStatus = bootstrapResponse\.status\(\)/);
+  assert.match(runtimeSupport, /bootstrapStatus !== 200/);
+  assert.match(runtimeSupport, /new Set\(\[301, 302, 303, 307, 308\]\)/);
+  assert.match(runtimeSupport, /\.headersArray\(\)/);
+  assert.match(runtimeSupport, /page\.context\(\)\.cookies\(versionUrl\.toString\(\)\)/);
+  assert.match(runtimeSupport, /storedBypassCookie\.path !== "\/"/);
+  assert.match(runtimeSupport, /!storedBypassCookie\.secure/);
+  assert.match(runtimeSupport, /!storedBypassCookie\.httpOnly/);
+  assert.match(runtimeSupport, /redirectUrl\.origin !== previewUrl\.origin/);
+  assert.match(runtimeSupport, /redirectUrl\.pathname !== versionUrl\.pathname/);
+  assert.match(runtimeSupport, /redirectUrl\.search !== versionUrl\.search/);
+  assert.match(runtimeSupport, /redirectUrl\.username !== ""/);
+  assert.match(runtimeSupport, /redirectUrl\.href\.includes\(vercelBypassSecret\)/);
+  assert.match(runtimeSupport, /cookieProofResponse\.status\(\) !== 200/);
   assert.match(runtimeSupport, /maxRedirects: 0/);
   assert.match(appLayout, /isMetadataOnlyTrustAcceptance/);
   assert.match(appLayout, /data-private-account-usage/);
@@ -189,6 +208,14 @@ test("S231B runtime workflow is exact-head, secret-scoped, and evidence fail-clo
     workflow.indexOf("    env:"),
     workflow.indexOf("    steps:"),
   );
+  const preflight = workflow.slice(
+    workflow.indexOf("- name: Wait for exact-head Preview"),
+    workflow.indexOf("- name: Install dependencies"),
+  );
+  const postflight = workflow.slice(
+    workflow.indexOf("- name: Recheck exact deployment SHA"),
+    workflow.indexOf("- name: Redact and validate S231B evidence"),
+  );
 
   assert.match(workflow, /github\.event\.pull_request\.number == 571/);
   assert.match(workflow, /<!-- run-s231b-auth-e2e -->/);
@@ -202,7 +229,12 @@ test("S231B runtime workflow is exact-head, secret-scoped, and evidence fail-clo
   assert.match(workflow, /\/api\/runtime\/version\?runner=/);
   assert.match(workflow, /Recheck exact deployment SHA after runtime/);
   assert.match(workflow, /\/api\/runtime\/version\?postflight=/);
-  assert.match(workflow, /--max-redirs 0/);
+  assert.match(preflight, /--max-redirs 0/);
+  assert.match(preflight, /x-vercel-protection-bypass/);
+  assert.match(preflight, /301\|302\|303\|307\|308\|401\|403/);
+  assert.match(postflight, /--max-redirs 0/);
+  assert.match(postflight, /x-vercel-protection-bypass/);
+  assert.doesNotMatch(workflow, /x-vercel-set-bypass-cookie/);
   assert.match(workflow, /deadline=\$\(\(SECONDS \+ 600\)\)/);
   assert.match(workflow, /node-version: 22/);
   assert.match(workflow, /secrets\.E2E_USER_EMAIL \|\| secrets\.TEST_USER_EMAIL/);
@@ -211,6 +243,7 @@ test("S231B runtime workflow is exact-head, secret-scoped, and evidence fail-clo
   assert.doesNotMatch(jobEnvironment, /secrets\./);
   assert.doesNotMatch(jobEnvironment, /E2E_TARGET_SHA:/);
   assert.match(workflow, /tests\/e2e\/s231b-trust-provenance\.spec\.ts/);
+  assert.match(workflow, /--trace=off/);
   assert.match(workflow, /tesseract-ocr imagemagick/);
   assert.match(workflow, /normalized_ocr/);
   assert.match(workflow, /screenshot_count.*-ne 15/s);
