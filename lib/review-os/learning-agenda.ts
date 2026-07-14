@@ -269,7 +269,6 @@ export function buildLocalBetaLearningAgendaEvents(notes: AgendaLocalNote[], mod
       type: "capture_saved",
       date: createdAt,
       sourceId: noteId,
-      noteId,
       subject,
     });
     const noteEvent = normalizeEvent({
@@ -277,7 +276,6 @@ export function buildLocalBetaLearningAgendaEvents(notes: AgendaLocalNote[], mod
       type: "note_created",
       date: createdAt,
       sourceId: noteId,
-      noteId,
       subject,
     });
     if (captureEvent) events.push(captureEvent);
