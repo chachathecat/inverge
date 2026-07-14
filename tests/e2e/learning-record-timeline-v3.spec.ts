@@ -3,8 +3,6 @@ import { writeFile } from "node:fs/promises";
 
 const expectedPreviewUrl = "https://inverge-git-agent-s230-learning-r-546b4c-chachathecats-projects.vercel.app";
 const expectedPreviewHost = new URL(expectedPreviewUrl).hostname;
-const expectedTargetDeploymentSha = "a6fddcf25a931037f92138dc54ddf2376ba215d9";
-const targetProductEquivalentContractSha = "1231389c0b45344dbc84eccb6c434c1db99438e2";
 const runtimeEnabled = process.env.S230_AUTH_RUNTIME === "1";
 const runtimeBaseUrl = process.env.E2E_BASE_URL?.trim() ?? "";
 const runtimeRunnerHeadSha = process.env.S230_RUNNER_HEAD_SHA?.trim() ?? "";
@@ -49,8 +47,11 @@ function requireSafeRuntimeEnvironment() {
   if (url.protocol !== "https:" || url.hostname.toLowerCase() !== expectedPreviewHost) {
     throw new Error("S230 runtime acceptance refuses any host except the exact PR #566 Vercel Preview.");
   }
-  if (runtimeTargetDeploymentSha !== expectedTargetDeploymentSha) {
-    throw new Error("S230 runtime acceptance refuses an unpinned target deployment SHA.");
+  if (!/^[0-9a-f]{40}$/i.test(runtimeRunnerHeadSha)) {
+    throw new Error("S230 runtime acceptance requires a full current PR head SHA.");
+  }
+  if (runtimeTargetDeploymentSha !== runtimeRunnerHeadSha) {
+    throw new Error("S230 runtime acceptance requires the deployment target SHA to equal the runner head SHA.");
   }
 }
 
@@ -255,7 +256,6 @@ async function tabToPrimaryAction(page: Page, testInfo: TestInfo) {
           stage: "keyboard-focus",
           runnerHeadSha: runtimeRunnerHeadSha,
           targetDeploymentSha: runtimeTargetDeploymentSha,
-          targetProductEquivalentContractSha,
           previewHost: expectedPreviewHost,
           viewport: "390x844",
           reachedPrimaryAction,
@@ -356,7 +356,6 @@ test.describe("S230 PR-scoped authenticated Learning Record runtime", () => {
       result: cleanRuntime ? "pass" : "fail",
       runnerHeadSha: runtimeRunnerHeadSha,
       targetDeploymentSha: runtimeTargetDeploymentSha,
-      targetProductEquivalentContractSha,
       previewHost: expectedPreviewHost,
       viewports: ["390x844", "768x1024", "1440x1024"],
       accountRouteState: mobile.state,

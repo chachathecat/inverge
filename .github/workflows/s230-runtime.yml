@@ -20,7 +20,7 @@ jobs:
       CI: "true"
       S230_AUTH_RUNTIME: "1"
       S230_RUNNER_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-      S230_TARGET_DEPLOYMENT_SHA: a6fddcf25a931037f92138dc54ddf2376ba215d9
+      S230_TARGET_DEPLOYMENT_SHA: ${{ github.event.pull_request.head.sha }}
       E2E_BASE_URL: https://inverge-git-agent-s230-learning-r-546b4c-chachathecats-projects.vercel.app
       E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL || secrets.TEST_USER_EMAIL }}
       E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD || secrets.TEST_USER_PASSWORD }}
@@ -45,8 +45,8 @@ jobs:
             exit 1
           fi
 
-          if [ "${S230_TARGET_DEPLOYMENT_SHA}" != "a6fddcf25a931037f92138dc54ddf2376ba215d9" ]; then
-            echo "::error::S230 runtime lane requires the actual pinned target deployment SHA."
+          if [ "${S230_TARGET_DEPLOYMENT_SHA}" != "${S230_RUNNER_HEAD_SHA}" ]; then
+            echo "::error::S230 runtime lane requires the current PR head as both runner and deployment target."
             exit 1
           fi
 

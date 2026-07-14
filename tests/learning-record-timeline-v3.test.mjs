@@ -138,6 +138,18 @@ test("S230 authenticated runtime lane is exact-Preview, secret-backed, and sanit
   assert.match(workflow, /github\.event\.pull_request\.number == 566/);
   assert.match(workflow, /<!-- run-s230-auth-e2e -->/);
   assert.match(workflow, /S230_AUTH_RUNTIME: "1"/);
+  assert.ok(
+    workflow.includes("S230_RUNNER_HEAD_SHA: ${{ github.event.pull_request.head.sha }}"),
+    "runner SHA must come from the current PR head",
+  );
+  assert.ok(
+    workflow.includes("S230_TARGET_DEPLOYMENT_SHA: ${{ github.event.pull_request.head.sha }}"),
+    "deployment target SHA must come from the current PR head",
+  );
+  assert.ok(
+    workflow.includes('[ "${S230_TARGET_DEPLOYMENT_SHA}" != "${S230_RUNNER_HEAD_SHA}" ]'),
+    "workflow must refuse a target that differs from the checked-out PR head",
+  );
   assert.match(workflow, /secrets\.E2E_USER_EMAIL \|\| secrets\.TEST_USER_EMAIL/);
   assert.match(workflow, /secrets\.E2E_USER_PASSWORD \|\| secrets\.TEST_USER_PASSWORD/);
   assert.match(workflow, /secrets\.VERCEL_AUTOMATION_BYPASS_SECRET/);
@@ -159,7 +171,13 @@ test("S230 authenticated runtime lane is exact-Preview, secret-backed, and sanit
   assert.match(spec, /\[400, 401, 403\]\.includes\(status\)/);
   assert.match(spec, /test\.describe\.configure\(\{ retries: 0/);
   assert.match(spec, /targetDeploymentSha: runtimeTargetDeploymentSha/);
-  assert.match(spec, /targetProductEquivalentContractSha/);
+  assert.match(spec, /runtimeTargetDeploymentSha !== runtimeRunnerHeadSha/);
+  assert.match(spec, /requires the deployment target SHA to equal the runner head SHA/);
+  assert.doesNotMatch(spec, /expectedTargetDeploymentSha|targetProductEquivalentContractSha/);
+  assert.doesNotMatch(
+    [workflow, spec].join("\n"),
+    /a6fddcf25a931037f92138dc54ddf2376ba215d9|1231389c0b45344dbc84eccb6c434c1db99438e2/,
+  );
   assert.match(spec, /toBeFocused\(\)/);
   assert.match(spec, /toBeInViewport\(\{ ratio: 0\.8 \}\)/);
   assert.match(spec, /element\.matches\(":focus-visible"\)/);
