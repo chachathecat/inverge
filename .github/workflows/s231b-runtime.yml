@@ -284,7 +284,7 @@ jobs:
           const actualPaths = walk("test-results").filter((path) =>
             /^s231b-.*\.png$/.test(basename(path)),
           );
-          const actualNames = actualPaths.map(basename);
+          const actualNames = actualPaths.map((path) => basename(path));
 
           if (manifest.schemaVersion !== 1 || manifest.result !== "pass") fail("invalid result contract");
           for (const key of ["runnerSha", "targetDeploymentSha", "observedDeploymentSha"]) {

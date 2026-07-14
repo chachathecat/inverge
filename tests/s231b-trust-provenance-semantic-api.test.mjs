@@ -257,6 +257,8 @@ test("S231B runtime workflow is exact-head, secret-scoped, and evidence fail-clo
   assert.match(workflow, /screenshot_count.*-ne 15/s);
   assert.match(workflow, /viewportEvidence\.length !== 15/);
   assert.match(workflow, /combinations\.size !== 15/);
+  assert.match(workflow, /actualPaths\.map\(\(path\) => basename\(path\)\)/);
+  assert.doesNotMatch(workflow, /actualPaths\.map\(basename\)/);
   assert.match(workflow, /privateAccountTelemetryAbsent !== true/);
   assert.match(workflow, /"observedDeploymentSha"/);
   assert.match(workflow, /s231b-evidence\/\*\.png/);
