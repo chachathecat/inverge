@@ -1,6 +1,6 @@
 # S227 Invited-Account Runtime Visual-Density QA
 
-Status: automation prepared on the exact post-#560 main baseline; authenticated evidence is pending. This document does not claim #558 complete.
+Status: the S227 authenticated learner-loop matrix passed against the exact #560 Preview revision. Final #558 acceptance remains blocked by the #562 / S229 calculator dependency.
 
 ## Scope
 
@@ -80,20 +80,22 @@ Until that occurs and a passing artifact is reviewed:
 
 - Run 29326975617: safe prerequisites and exact host/SHA binding passed; no evidence accepted because authentication was non-2xx and the initial Capture assertion targeted an obsolete test id.
 - Run 29327208505: exact target `48df4437fea8853250fcab00f7250c41f8d93a23` reached authenticated durable source/rewrite creation, comparison reload, Review, and six sanitized screenshots. The run is not accepted because a guardrail regex incorrectly rejected the explicit disclaimer `공식 채점 아님`; artifact 8308472156 is diagnostic-only.
-- The next run narrows only that false-positive authority regex. It still rejects affirmative official grading, score, model-answer, pass, and AI-final-judgment claims.
+- Run 29327563789: the primary attempt reached durable save/reload and six screenshots, then exposed an over-eager mobile viewport assertion after the Review action had received keyboard focus. The retry was rejected by login HTTP 400. Artifact 8308601810 is diagnostic-only.
+- Run 29328078708: **passed**. The first Playwright attempt was rejected by login HTTP 400; the unchanged bounded-auth policy did not retry that non-transient response. Playwright's isolated retry then completed the full matrix. Artifact 8308839274 contains the pass manifest and 18 sanitized screenshots; digest `sha256:09ad382e572501e789cde3acb53f63d48b2ecdcde538bc9535c1533efc9ae1a9`. Treat the initial 400 as an authentication flake to monitor, not as evidence of stable first-attempt login.
+- The successful PR check executed merge SHA `4e255699d06d34e10a913180182911fbb7a8ec86`, generated from branch head `e3417a6c9dd915d65213eb78c376b9f1076df210` and baseline `e054485201f6671dfc28bca4fc940cb30cd65f18`. The target deployment was independently pinned to `48df4437fea8853250fcab00f7250c41f8d93a23`.
 
 ## Evidence ledger
 
 | Item | Required value | Current value |
 | --- | --- | --- |
-| Runner SHA | Exact branch head | Pending |
-| Target deployment SHA | Exact deployed app head | Pending |
-| Actions run | Passing manual run URL | Pending |
-| 390/768/1440 screenshots | Sanitized artifact | Pending |
-| Keyboard/focus | Manifest stop counts | Pending |
-| Console errors | 0 | Pending |
-| Page errors | 0 | Pending |
-| Same-origin request failures | 0 | Pending |
-| Durable save/reload | Pass | Pending |
-| Notes / Review visibility | Pass | Pending |
+| Runner SHA | Exact branch head | `e3417a6c9dd915d65213eb78c376b9f1076df210` (executed PR merge: `4e255699d06d34e10a913180182911fbb7a8ec86`) |
+| Target deployment SHA | Exact deployed app head | `48df4437fea8853250fcab00f7250c41f8d93a23` |
+| Actions run | Passing run URL | [29328078708](https://github.com/chachathecat/inverge/actions/runs/29328078708) |
+| 390/768/1440 screenshots | Sanitized artifact | 18 PNGs in artifact 8308839274 |
+| Keyboard/focus | Manifest stop counts | Pass — detail 10, save 11, Today 8 each, Review 9 |
+| Console errors | 0 | 0 |
+| Page errors | 0 | 0 |
+| Same-origin request failures | 0 | 0 |
+| Durable save/reload | Pass | Pass |
+| Notes / Review visibility | Pass | Pass |
 | S229 calculator active/completed | Pass | Blocked by #562 |
