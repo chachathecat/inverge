@@ -75,43 +75,6 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
     resolvedDetail.item.derivedPayload?.evidence_conflict === true;
   const rewriteCompleted = resolvedDetail.item.rewriteCompleted === true || Boolean(rewriteComparison);
 
-  if (isSecond) {
-    const calculatorHref =
-      calculatorWorkflow && hasCalculationMistake
-        ? `/app/calculator?context=${calculatorWorkflow.context}&mode=${calculatorWorkflow.mode}`
-        : null;
-
-    return (
-      <>
-        <StudyLedgerDetail
-          itemId={resolvedDetail.item.id}
-          rewriteFromItemId={rewriteSourceItemId ?? itemId}
-          title={title}
-          subject={resolvedDetail.item.subjectLabel}
-          createdAt={resolvedDetail.item.createdAt}
-          biggestGap={note.missingIssue ?? note.weakPoint}
-          nextAction={note.rewriteInstruction ?? note.nextAction}
-          coreLine={note.coreLine}
-          keyTerms={note.keyTerms}
-          learnerExcerpt={resolvedDetail.item.rewriteParagraph ?? resolvedDetail.item.userAnswer}
-          referenceExcerpt={resolvedDetail.item.referenceStructure ?? resolvedDetail.item.correctAnswer}
-          nextReviewDate={note.nextReviewDate}
-          recurrenceText={note.recurrenceText}
-          reviewQueueCount={resolvedDetail.reviewQueue.length}
-          learnerConfirmed={learnerConfirmed}
-          completed={rewriteCompleted}
-          evidenceConflict={evidenceConflict}
-          comparison={rewriteComparison}
-          calculatorHref={calculatorHref}
-          reviewHref={`/app/review?mode=${mode}`}
-        />
-        <div className="mx-auto mt-6 w-full max-w-[1048px]">
-          <ReviewOsFeedbackButton route={`/app/items/${itemId}`} pageContext={{ itemId, isSecond }} />
-        </div>
-      </>
-    );
-  }
-
   const secondCompletionWork = rewriteComparison
     ? "문단 다시쓰기를 저장하고 전/후 비교까지 확인했습니다."
     : "2차 작성 기록을 저장하고 비교 노트를 만들었습니다.";
@@ -162,6 +125,74 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
   const firstOxNextActionLine = firstOxReview ? "같은 선지를 근거 1줄로 다시 판단합니다." : nextActionLine;
 
   const polishedNextActionLine = firstOxReview ? "같은 선택지를 근거 1줄로 다시 판단합니다." : firstOxNextActionLine;
+
+  if (isSecond) {
+    const calculatorHref =
+      calculatorWorkflow && hasCalculationMistake
+        ? `/app/calculator?context=${calculatorWorkflow.context}&mode=${calculatorWorkflow.mode}`
+        : null;
+    const supportingEvidence = [
+      ...questionReferenceHints.slice(0, 2).map((hint) => ({
+        id: `question-reference-${hint.referenceId}`,
+        title: hint.title,
+        description: hint.reason,
+        meta: `권리 상태: ${hint.sourceRightsStatus} · 원문 사용: ${hint.rawTextAvailable ? "정책 확인 필요" : "사용 안 함"}`,
+      })),
+      ...captureReferenceCandidates.slice(0, 2).map((match) => {
+        const guide = buildAnswerSkeletonGuide(match.reference);
+        return {
+          id: `past-exam-reference-${match.reference.id}`,
+          title: `${match.reference.exam_year} · ${match.reference.subject} · ${match.reference.question_number}번`,
+          description: `${match.reason} · 다음 행동: ${guide.next_action}`,
+          meta: `연결된 신호: ${formatMatchedFieldLabels(match.matched_fields).join(" · ")}`,
+        };
+      }),
+    ];
+    const ledgerTopicCandidate = taxonomyCandidate
+      ? `${taxonomyCandidate.subject} · ${taxonomyCandidate.unit} · ${taxonomyCandidate.topic}`
+      : noteTopicCandidate;
+
+    return (
+      <>
+        <StudyLedgerDetail
+          itemId={resolvedDetail.item.id}
+          rewriteFromItemId={rewriteSourceItemId ?? itemId}
+          title={title}
+          subject={resolvedDetail.item.subjectLabel}
+          createdAt={resolvedDetail.item.createdAt}
+          biggestGap={note.missingIssue ?? note.weakPoint}
+          nextAction={note.rewriteInstruction ?? note.nextAction}
+          coreLine={note.coreLine}
+          keyTerms={note.keyTerms}
+          learnerExcerpt={
+            resolvedDetail.item.rewriteParagraph?.trim() ||
+            resolvedDetail.item.userAnswer?.trim() ||
+            null
+          }
+          referenceExcerpt={
+            resolvedDetail.item.referenceStructure?.trim() ||
+            resolvedDetail.item.correctAnswer?.trim() ||
+            null
+          }
+          nextReviewDate={note.nextReviewDate}
+          recurrenceText={note.recurrenceText}
+          reviewQueueCount={resolvedDetail.reviewQueue.length}
+          learnerConfirmed={learnerConfirmed}
+          completed={rewriteCompleted}
+          evidenceConflict={evidenceConflict}
+          comparison={rewriteComparison}
+          calculatorHref={calculatorHref}
+          reviewHref={`/app/review?mode=${mode}`}
+          writeHref={`/app/write?mode=${mode}`}
+          topicCandidate={ledgerTopicCandidate}
+          supportingEvidence={supportingEvidence}
+        />
+        <div className="mx-auto mt-6 w-full max-w-[1048px]">
+          <ReviewOsFeedbackButton route={`/app/items/${itemId}`} pageContext={{ itemId, isSecond }} />
+        </div>
+      </>
+    );
+  }
 
   return (
     <div className="space-y-6">
