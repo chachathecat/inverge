@@ -16,8 +16,16 @@ export {
 export {
   BiggestGap,
   EvidenceExcerpt,
+  RewriteComparisonPanel,
   StateChip,
   StickyAction,
   StudyLedgerDetail,
+  StudyLedgerEvidenceEmpty,
+  StudyLedgerSupportingEvidencePanel,
   StudyLedgerTrustBar,
+} from "./study-ledger-ui";
+export type {
+  LearningState,
+  StudyLedgerComparison,
+  StudyLedgerSupportingEvidence,
 } from "./study-ledger-ui";
