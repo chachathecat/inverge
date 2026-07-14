@@ -148,4 +148,3 @@ jobs:
             test-results/**/s228-runtime.json
           if-no-files-found: ignore
           retention-days: 7
-
