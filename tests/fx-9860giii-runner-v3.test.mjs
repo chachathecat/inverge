@@ -59,7 +59,8 @@ test("S229 runner makes one step dominant and keeps device claims honest", () =>
   assert.ok(component.includes("data-calculator-routine-view-state"));
   assert.ok(component.includes("data-calculator-routine-active-step"));
   assert.ok(component.includes("const [restoredDraftKey, setRestoredDraftKey]"));
-  assert.ok(component.includes("setDraft(readDraftFromStorage(draftLoadKey, fallbackDraft))"));
+  assert.ok(component.includes("const restoredDraft = readDraftFromStorage(draftLoadKey, fallbackDraft)"));
+  assert.ok(component.includes("queueMicrotask(() =>"));
   assert.ok(component.includes("!isDraftRestored || typeof window"));
   assert.equal(
     component.includes("return readDraftFromStorage(draftLoadKey, fallbackDraft);"),
