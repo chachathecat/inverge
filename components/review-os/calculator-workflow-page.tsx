@@ -77,10 +77,10 @@ export function CalculatorWorkflowPage({ focus, workflow, recoveryReference = nu
               </span>
             </div>
             <h2 className="mt-3 text-2xl font-semibold tracking-[-0.035em] text-[color:var(--foreground-strong)]">{workflow.title}</h2>
-            <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">{isCasioFocus ? "CASIO 계산형 연습입니다. 답안 전문 작성이 아니라 계산기 입력 순서, 단위 확인, 판단 문장 연결만 고정합니다." : "계산 결과를 답안 판단으로 연결합니다. 지금은 한 번에 한 루틴만 고정합니다."}</p>
+            <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">{isCasioFocus ? "CASIO 계산형 연습입니다. 입력 순서, 단위, 화면값을 직접 기록하고 실제 기기에서 대조합니다. 기기별 안내는 아직 검증 전입니다." : "계산 결과를 답안 판단으로 연결합니다. 지금은 한 번에 한 루틴만 고정합니다."}</p>
           </div>
           <Link href={`/app?mode=${workflow.mode}`}>
-            <Button type="button" variant="outline">
+            <Button type="button" variant="outline" className="min-h-11">
               오늘로 돌아가기
             </Button>
           </Link>
@@ -120,10 +120,35 @@ export function CalculatorWorkflowPage({ focus, workflow, recoveryReference = nu
         </section>
       ) : null}
 
+      {isCasioFocus && !isRecoveryMode ? (
+        <section data-calculator-routine-v3 aria-label="fx-9860GIII 계산·검산 실행">
+          <CalculatorRoutineTrainer
+            source="answer-review"
+            examMode="second"
+            subject={workflow.subject}
+            eligibility={{
+              eligible: false,
+              manualEligible: true,
+              hasStrongSignal: false,
+              reason: "manual_practice",
+            }}
+            onComplete={calculatorRoutineSync.syncCompletion}
+          />
+          <div className="mt-3">
+            <CalculatorRoutineSyncStatusLine
+              status={calculatorRoutineSync.status}
+              retryAvailable={calculatorRoutineSync.retryAvailable}
+              onRetry={calculatorRoutineSync.retry}
+            />
+          </div>
+        </section>
+      ) : null}
+
       {workflow.context === "accounting" ? <AccountingTemplateCard /> : null}
 
-      <section className="rounded-[var(--radius-card)] border border-[color:var(--brand-700)] bg-[color:var(--brand-050)] p-5 md:p-6">
-        <p className="text-caption text-[color:var(--brand-700)]">{isCasioFocus ? "CASIO 계산형 루틴 1개" : "오늘 계산 루틴 1개"}</p>
+      {!isCasioFocus ? (
+        <section className="rounded-[var(--radius-card)] border border-[color:var(--brand-700)] bg-[color:var(--brand-050)] p-5 md:p-6">
+          <p className="text-caption text-[color:var(--brand-700)]">오늘 계산 루틴 1개</p>
         <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">계산 실수 방지 3단계</h3>
         <ol className="mt-4 space-y-2">
           {ROUTINE_STEPS.map((step, index) => (
@@ -133,9 +158,11 @@ export function CalculatorWorkflowPage({ focus, workflow, recoveryReference = nu
             </li>
           ))}
         </ol>
-      </section>
+        </section>
+      ) : null}
 
-      <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4">
+      {!isCasioFocus ? (
+        <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4">
         <div className="flex flex-wrap gap-2">
           {workflow.problemTypes.map((type) => {
             const isActive = type.id === selectedType;
@@ -160,9 +187,10 @@ export function CalculatorWorkflowPage({ focus, workflow, recoveryReference = nu
           })}
         </div>
         <p className="mt-3 text-xs leading-5 text-[color:var(--muted)]">{selectedTypeMeta?.description}</p>
-      </section>
+        </section>
+      ) : null}
 
-      {activeCard ? (
+      {activeCard && !isCasioFocus ? (
         <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-5">
           <p className="text-caption text-[color:var(--cue-focus)]">지금 할 일</p>
           <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">{activeCard.title}</h3>
@@ -190,8 +218,9 @@ export function CalculatorWorkflowPage({ focus, workflow, recoveryReference = nu
         </section>
       ) : null}
 
-      <section className="rounded-[var(--radius-card)] border border-[color:var(--brand-700)] bg-[color:var(--brand-050)] p-5">
-        <p className="text-caption text-[color:var(--brand-700)]">마무리 실행</p>
+      {!isCasioFocus ? (
+        <section className="rounded-[var(--radius-card)] border border-[color:var(--brand-700)] bg-[color:var(--brand-050)] p-5">
+          <p className="text-caption text-[color:var(--brand-700)]">마무리 실행</p>
         <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">1분 드릴 시작</h3>
         <ul className="mt-3 space-y-2 text-sm leading-6 text-[color:var(--foreground-strong)]">
           {ROUTINE_STEPS.map((step) => (
@@ -200,9 +229,10 @@ export function CalculatorWorkflowPage({ focus, workflow, recoveryReference = nu
             </li>
           ))}
         </ul>
-      </section>
+        </section>
+      ) : null}
 
-      {!isRecoveryMode ? (
+      {!isRecoveryMode && !isCasioFocus ? (
         <ExecutionResultControls
           examMode={workflow.mode}
           executionSource="calculator"
@@ -212,7 +242,7 @@ export function CalculatorWorkflowPage({ focus, workflow, recoveryReference = nu
       ) : null}
 
       <details className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-5">
-        <summary className="cursor-pointer text-sm font-medium text-[color:var(--foreground-strong)]">시험 전 체크 / 기본 세팅 보기</summary>
+        <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium text-[color:var(--foreground-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--brand-700)]">시험 전 체크 / 기본 세팅 보기</summary>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           <SimpleListCard title="시험 전 체크" items={workflow.preExamChecks} />
           <SimpleListCard title="기본 세팅" items={workflow.basicSetup} />
@@ -220,7 +250,7 @@ export function CalculatorWorkflowPage({ focus, workflow, recoveryReference = nu
       </details>
 
       <details className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-5">
-        <summary className="cursor-pointer text-sm font-medium text-[color:var(--foreground-strong)]">기기 부록 보기 (Draft/Beta)</summary>
+        <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium text-[color:var(--foreground-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--brand-700)]">기기 부록 보기 (Draft/Beta)</summary>
         <p className="mt-3 text-sm leading-6 text-[color:var(--muted)]">
           기기별 조작은 Draft/Beta 부록입니다. 지금은 답안에 남길 값과 문장을 먼저 고정합니다.
         </p>
