@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 
+import { StudyLedgerDetail } from "@/components/learner";
 import { ReviewOsFeedbackButton } from "@/components/review-os/feedback-button";
 import { Button } from "@/components/ui/button";
 import { getAppraisalMode, parseAppraisalMode } from "@/lib/review-os/appraisal";
@@ -34,6 +35,35 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
     getAppraisalMode(resolvedDetail.item.examName);
   const isSecond = mode === "second";
   const note = buildDetailStudyNote(resolvedDetail);
+  const title = resolvedDetail.item.problemTitle ?? resolvedDetail.item.problemIdentifier ?? note.title;
+  const confirmedFieldsValue = resolvedDetail.item.rawPayload?.user_confirmed_fields;
+  const confirmedFields =
+    typeof confirmedFieldsValue === "object" && confirmedFieldsValue !== null && !Array.isArray(confirmedFieldsValue)
+      ? (confirmedFieldsValue as Record<string, unknown>)
+      : null;
+  const learnerConfirmed = Boolean(confirmedFields && Object.keys(confirmedFields).length > 0);
+
+  if (isSecond) {
+    return (
+      <StudyLedgerDetail
+        itemId={resolvedDetail.item.id}
+        title={title}
+        subject={resolvedDetail.item.subjectLabel}
+        createdAt={resolvedDetail.item.createdAt}
+        biggestGap={note.missingIssue ?? note.weakPoint}
+        nextAction={note.rewriteInstruction ?? note.nextAction}
+        coreLine={note.coreLine}
+        keyTerms={note.keyTerms}
+        learnerExcerpt={resolvedDetail.item.rewriteParagraph ?? resolvedDetail.item.userAnswer}
+        referenceExcerpt={resolvedDetail.item.referenceStructure ?? resolvedDetail.item.correctAnswer}
+        nextReviewDate={note.nextReviewDate}
+        recurrenceText={note.recurrenceText}
+        reviewQueueCount={resolvedDetail.reviewQueue.length}
+        learnerConfirmed={learnerConfirmed}
+      />
+    );
+  }
+
   const rewriteSourceItemId =
     typeof resolvedDetail.item.rawPayload?.rewrite_source_item_id === "string"
       ? resolvedDetail.item.rawPayload.rewrite_source_item_id
@@ -47,7 +77,6 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
       ? await reviewOsService.getWrongAnswerDetail(session.userId, session.email, rewriteSourceItemId)
       : null;
   const rewriteComparison = buildRewriteComparisonNote(resolvedDetail, note, rewriteSourceDetail);
-  const title = resolvedDetail.item.problemTitle ?? resolvedDetail.item.problemIdentifier ?? note.title;
   const calculatorWorkflow = getCalculatorWorkflowForSubject(resolvedDetail.item.subjectLabel);
   const hasCalculationMistake = hasCalculationSignal([
     resolvedDetail.item.userReasonText,
