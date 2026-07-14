@@ -126,3 +126,26 @@ test("S230 contains no heatmap gamification, raw learner content, or authority c
   }
   assert.doesNotMatch(client, /rawOcrText|rawAnswerText|rawQuestionText|rawProblemText|ocrText|answerText|questionText|problemText/);
 });
+
+test("S230 authenticated runtime lane is exact-Preview, secret-backed, and sanitized", () => {
+  const workflow = read(".github/workflows/e2e-smoke.yml");
+  const spec = read("tests/e2e/learning-record-timeline-v3.spec.ts");
+
+  assert.match(workflow, /github\.event\.pull_request\.number == 566/);
+  assert.match(workflow, /<!-- run-s230-auth-e2e -->/);
+  assert.match(workflow, /S230_AUTH_RUNTIME: "1"/);
+  assert.match(workflow, /secrets\.E2E_USER_EMAIL \|\| secrets\.TEST_USER_EMAIL/);
+  assert.match(workflow, /secrets\.E2E_USER_PASSWORD \|\| secrets\.TEST_USER_PASSWORD/);
+  assert.match(workflow, /secrets\.VERCEL_AUTOMATION_BYPASS_SECRET/);
+  assert.match(workflow, /test-results\/\*\*\/s230-runtime\.json/);
+
+  assert.match(spec, /expectedPreviewHost/);
+  assert.match(spec, /refuses any host except the exact PR #566 Vercel Preview/);
+  assert.match(spec, /trace: "off"/);
+  assert.match(spec, /video: "off"/);
+  assert.match(spec, /390x844/);
+  assert.match(spec, /768x1024/);
+  assert.match(spec, /1440x1024/);
+  assert.match(spec, /sanitizeEvidence/);
+  assert.match(spec, /mask: \[page\.getByText\(testEmail/);
+});
