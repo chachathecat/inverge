@@ -54,7 +54,7 @@ const EVENT_COPY: Record<
     marker: "border-[var(--status-green)] bg-[var(--status-green-soft)]",
   },
   weakness_recovered: {
-    state: "회복 후보",
+    state: "약점 회복 후보",
     description: "약점이 줄었을 가능성을 보여 주는 학습 신호입니다.",
     marker: "border-[var(--status-green)] bg-[var(--status-green-soft)]",
   },
