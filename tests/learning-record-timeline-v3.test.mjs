@@ -148,4 +148,10 @@ test("S230 authenticated runtime lane is exact-Preview, secret-backed, and sanit
   assert.match(spec, /1440x1024/);
   assert.match(spec, /sanitizeEvidence/);
   assert.match(spec, /mask: \[page\.getByText\(testEmail/);
+  assert.match(spec, /The login form must be client-hydrated before submission/);
+  assert.match(spec, /hydration-check@inverge\.invalid/);
+  assert.match(spec, /toBeEnabled\(\{ timeout: 20_000 \}\)/);
+  assert.match(spec, /waitForResponse\(isSignInResponse, \{ timeout: 20_000 \}\)/);
+  assert.match(spec, /\[400, 401, 403\]\.includes\(status\)/);
+  assert.match(spec, /test\.describe\.configure\(\{ retries: 0/);
 });
