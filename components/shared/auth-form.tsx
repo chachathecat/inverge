@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { parseAppraisalMode } from "@/lib/review-os/appraisal";
@@ -46,7 +46,6 @@ function sanitizeInternalReturnTo(value: string | null | undefined, fallback = "
 }
 
 export function AuthForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const returnTo = sanitizeInternalReturnTo(searchParams.get("returnTo"));
   const returnToUrl = new URL(returnTo, "http://inverge.local");
@@ -82,8 +81,9 @@ export function AuthForm() {
       }
 
       setStatus("success");
-      router.push(returnTo === "/app" ? sanitizeInternalReturnTo(result.redirectTo, returnTo) : returnTo);
-      router.refresh();
+      const redirectTarget =
+        returnTo === "/app" ? sanitizeInternalReturnTo(result.redirectTo, returnTo) : returnTo;
+      window.location.assign(redirectTarget);
     } catch {
       setStatus("error");
       setMessage(getErrorMessage());
