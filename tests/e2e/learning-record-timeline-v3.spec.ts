@@ -3,11 +3,12 @@ import { writeFile } from "node:fs/promises";
 
 const expectedPreviewUrl = "https://inverge-git-agent-s230-learning-r-546b4c-chachathecats-projects.vercel.app";
 const expectedPreviewHost = new URL(expectedPreviewUrl).hostname;
-const expectedProductSha = "1231389c0b45344dbc84eccb6c434c1db99438e2";
+const expectedTargetDeploymentSha = "a6fddcf25a931037f92138dc54ddf2376ba215d9";
+const productEquivalentContractSha = "1231389c0b45344dbc84eccb6c434c1db99438e2";
 const runtimeEnabled = process.env.S230_AUTH_RUNTIME === "1";
 const runtimeBaseUrl = process.env.E2E_BASE_URL?.trim() ?? "";
 const runtimeRunnerHeadSha = process.env.S230_RUNNER_HEAD_SHA?.trim() ?? "";
-const runtimeProductSha = process.env.S230_PRODUCT_SHA?.trim() ?? "";
+const runtimeTargetDeploymentSha = process.env.S230_TARGET_DEPLOYMENT_SHA?.trim() ?? "";
 const testEmail = process.env.E2E_USER_EMAIL?.trim() ?? "";
 const testPassword = process.env.E2E_USER_PASSWORD ?? "";
 const vercelBypassSecret = process.env.VERCEL_AUTOMATION_BYPASS_SECRET?.trim() ?? "";
@@ -35,7 +36,7 @@ function requireSafeRuntimeEnvironment() {
     ["E2E_USER_PASSWORD", testPassword],
     ["VERCEL_AUTOMATION_BYPASS_SECRET", vercelBypassSecret],
     ["S230_RUNNER_HEAD_SHA", runtimeRunnerHeadSha],
-    ["S230_PRODUCT_SHA", runtimeProductSha],
+    ["S230_TARGET_DEPLOYMENT_SHA", runtimeTargetDeploymentSha],
   ]
     .filter(([, value]) => !value)
     .map(([name]) => name);
@@ -48,8 +49,8 @@ function requireSafeRuntimeEnvironment() {
   if (url.protocol !== "https:" || url.hostname.toLowerCase() !== expectedPreviewHost) {
     throw new Error("S230 runtime acceptance refuses any host except the exact PR #566 Vercel Preview.");
   }
-  if (runtimeProductSha !== expectedProductSha) {
-    throw new Error("S230 runtime acceptance refuses an unpinned product deployment SHA.");
+  if (runtimeTargetDeploymentSha !== expectedTargetDeploymentSha) {
+    throw new Error("S230 runtime acceptance refuses an unpinned target deployment SHA.");
   }
 }
 
@@ -238,7 +239,8 @@ async function tabToPrimaryAction(page: Page, testInfo: TestInfo) {
           result: "fail",
           stage: "keyboard-focus",
           runnerHeadSha: runtimeRunnerHeadSha,
-          productDeploymentSha: runtimeProductSha,
+          targetDeploymentSha: runtimeTargetDeploymentSha,
+          productEquivalentContractSha,
           previewHost: expectedPreviewHost,
           viewport: "390x844",
           reachedPrimaryAction,
@@ -314,7 +316,8 @@ test.describe("S230 PR-scoped authenticated Learning Record runtime", () => {
     const manifest = {
       result: cleanRuntime ? "pass" : "fail",
       runnerHeadSha: runtimeRunnerHeadSha,
-      productDeploymentSha: runtimeProductSha,
+      targetDeploymentSha: runtimeTargetDeploymentSha,
+      productEquivalentContractSha,
       previewHost: expectedPreviewHost,
       viewports: ["390x844", "768x1024", "1440x1024"],
       accountRouteState: mobile.state,
