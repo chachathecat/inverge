@@ -124,7 +124,10 @@ const learnerShell = existsSync(sourcePath("components/learner/learner-ui.tsx"))
 check(learnerShell.includes('href: "/app/capture"'), "learner Input tab must target /app/capture");
 check(learnerShell.includes('href: "/app/notes"'), "learner Notes tab must target /app/notes");
 check(learnerShell.includes('activeHrefs: ["/app/capture", "/app/input", "/app/entry", "/app/write"]'), "learner Input tab must mark input aliases active");
-check(learnerShell.includes('activeHrefs: ["/app/notes", "/app/items"]'), "learner Notes tab must mark notes/items active");
+check(
+  learnerShell.includes('activeHrefs: ["/app/notes", "/app/items", "/app/calculator"]'),
+  "learner Notes tab must mark notes/items/calculator active",
+);
 check(learnerShell.includes('`${href}?mode=${currentMode}`'), "learner nav must preserve selected exam mode");
 
 for (const file of ["app/app/input/page.tsx", "app/app/entry/page.tsx"]) {
