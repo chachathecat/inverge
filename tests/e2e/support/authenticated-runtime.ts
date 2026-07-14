@@ -2,6 +2,7 @@ import { expect, type Page, type TestInfo } from "@playwright/test";
 
 export const runtimeBaseUrl = process.env.E2E_BASE_URL?.trim() ?? "";
 export const runtimeTargetSha = process.env.E2E_TARGET_SHA?.trim() ?? "";
+const expectedRuntimeHost = process.env.E2E_EXPECTED_HOST?.trim().toLowerCase() ?? "";
 
 const testEmail = process.env.E2E_USER_EMAIL?.trim() ?? "";
 const testPassword = process.env.E2E_USER_PASSWORD ?? "";
@@ -53,6 +54,12 @@ export function requireSafeAuthenticatedRuntime(
   if (productionHosts.has(host)) {
     throw new Error(
       `${suiteLabel} runtime acceptance refuses production. Use an approved non-production Preview or staging URL.`,
+    );
+  }
+
+  if (expectedRuntimeHost && host !== expectedRuntimeHost) {
+    throw new Error(
+      `${suiteLabel} runtime acceptance target host does not match the owner-approved Preview.`,
     );
   }
 
