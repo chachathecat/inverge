@@ -101,7 +101,7 @@ test("unsupported contexts remain fail-closed", () => {
 
 test("S229 authenticated browser gate stays Preview-only and credential-safe", () => {
   const spec = read("tests/e2e/fx-9860giii-runner-v3.spec.ts");
-  const workflow = read(".github/workflows/e2e-smoke.yml");
+  const workflow = read(".github/workflows/s229-runtime.yml");
 
   assert.ok(spec.includes('trace: "off"'));
   assert.ok(spec.includes('video: "off"'));
@@ -118,5 +118,7 @@ test("S229 authenticated browser gate stays Preview-only and credential-safe", (
   assert.ok(workflow.includes("VERCEL_AUTOMATION_BYPASS_SECRET"));
   assert.ok(workflow.includes("test-results/**/s229-runtime.json"));
   assert.equal(workflow.includes("echo \"\${E2E_USER_PASSWORD}\""), false);
-  assert.equal(workflow.includes("**/trace.zip"), true, "legacy S228/staging artifact policy remains unchanged");
+  assert.equal(workflow.includes("**/trace.zip"), false);
+  assert.equal(workflow.includes("test-results/**/s229-*.png"), true);
+  assert.equal(workflow.includes("s229-authenticated-runtime"), true);
 });
