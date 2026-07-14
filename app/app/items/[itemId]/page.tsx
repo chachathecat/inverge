@@ -166,6 +166,7 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
           keyTerms={note.keyTerms}
           learnerExcerpt={
             resolvedDetail.item.rewriteParagraph?.trim() ||
+            rewriteComparison?.rewrittenParagraph.trim() ||
             resolvedDetail.item.userAnswer?.trim() ||
             null
           }
