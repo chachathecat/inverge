@@ -68,6 +68,7 @@ test("S228 route states cover loading, empty, recoverable error, and real offlin
   const empty = read("app/app/items/[itemId]/not-found.tsx");
   const error = read("app/app/items/[itemId]/error.tsx");
   const ui = read("components/learner/study-ledger-ui.tsx");
+  const trust = read("components/review-os/trust-provenance-layer.tsx");
 
   assert.match(loading, /data-s228-state="loading"/);
   assert.match(loading, /aria-busy="true"/);
@@ -79,7 +80,11 @@ test("S228 route states cover loading, empty, recoverable error, and real offlin
   assert.match(error, /현재 오프라인입니다/);
   assert.match(ui, /data-s228-state="completed"/);
   assert.match(ui, /evidenceConflict/);
-  assert.match(ui, /role=\{evidenceConflict \? "alert" : undefined\}/);
+  assert.match(ui, /announceChange=\{evidenceConflict\}/);
+  assert.match(trust, /announceChange && model\.actionableChange/);
+  assert.match(trust, /role="status"/);
+  assert.match(trust, /aria-live="polite"/);
+  assert.doesNotMatch(trust, /role="alert"/);
 });
 
 test("S228 keeps one action, strong focus contrast, and scoped editorial geometry", () => {

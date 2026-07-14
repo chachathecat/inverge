@@ -41,7 +41,9 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
     typeof confirmedFieldsValue === "object" && confirmedFieldsValue !== null && !Array.isArray(confirmedFieldsValue)
       ? (confirmedFieldsValue as Record<string, unknown>)
       : null;
-  const learnerConfirmed = Boolean(confirmedFields && Object.keys(confirmedFields).length > 0);
+  const learnerConfirmed =
+    confirmedFields?.ocrConfirmedByLearner === true ||
+    confirmedFields?.hasManualCorrection === true;
 
   const rewriteSourceItemId =
     typeof resolvedDetail.item.rawPayload?.rewrite_source_item_id === "string"

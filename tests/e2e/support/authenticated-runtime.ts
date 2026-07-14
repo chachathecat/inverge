@@ -23,6 +23,115 @@ export const protectionHeaders: Record<string, string> = vercelBypassSecret
     }
   : {};
 
+export async function establishProtectedPreviewSession(
+  page: Page,
+  suiteLabel: string,
+) {
+  const previewUrl = new URL(runtimeBaseUrl);
+  if (!previewUrl.hostname.toLowerCase().endsWith(".vercel.app")) return;
+  if (
+    previewUrl.protocol !== "https:" ||
+    (expectedRuntimeHost && previewUrl.hostname.toLowerCase() !== expectedRuntimeHost)
+  ) {
+    throw new Error(
+      `${suiteLabel} Vercel protection bootstrap target is not the owner-approved HTTPS Preview.`,
+    );
+  }
+  if (!vercelBypassSecret) {
+    throw new Error(
+      `${suiteLabel} runtime acceptance requires VERCEL_AUTOMATION_BYPASS_SECRET for a protected Vercel Preview.`,
+    );
+  }
+
+  const versionUrl = new URL("/api/runtime/version", previewUrl);
+  const bootstrapResponse = await page.context().request.get(versionUrl.toString(), {
+    headers: protectionHeaders,
+    maxRedirects: 0,
+    timeout: 30_000,
+  });
+  const bootstrapUrl = new URL(bootstrapResponse.url());
+  const bootstrapStatus = bootstrapResponse.status();
+
+  if (bootstrapUrl.origin !== previewUrl.origin) {
+    throw new Error(
+      `${suiteLabel} Vercel protection bootstrap left the approved Preview origin.`,
+    );
+  }
+  let cookieProofTarget = versionUrl;
+  if (bootstrapStatus !== 200) {
+    const cookieRedirectStatuses = new Set([301, 302, 303, 307, 308]);
+    const bootstrapHeaders = bootstrapResponse.headers();
+    const setCookieHeaders = bootstrapResponse
+      .headersArray()
+      .filter(({ name }) => name.toLowerCase() === "set-cookie");
+    const location = bootstrapHeaders["location"];
+    if (!cookieRedirectStatuses.has(bootstrapStatus) || !location || setCookieHeaders.length < 1) {
+      throw new Error(
+        `${suiteLabel} Vercel protection bootstrap returned HTTP ${bootstrapStatus} without a valid cookie redirect.`,
+      );
+    }
+
+    const redirectUrl = new URL(location, versionUrl);
+    const encodedSecret = encodeURIComponent(vercelBypassSecret);
+    if (
+      redirectUrl.origin !== previewUrl.origin ||
+      redirectUrl.pathname !== versionUrl.pathname ||
+      redirectUrl.search !== versionUrl.search ||
+      redirectUrl.hash !== versionUrl.hash ||
+      redirectUrl.username !== "" ||
+      redirectUrl.password !== "" ||
+      redirectUrl.href.includes(vercelBypassSecret) ||
+      redirectUrl.href.includes(encodedSecret)
+    ) {
+      throw new Error(
+        `${suiteLabel} Vercel protection bootstrap returned an unsafe redirect target.`,
+      );
+    }
+
+    const setCookieNames = new Set(
+      setCookieHeaders
+        .map(({ value }) => {
+          const separator = value.indexOf("=");
+          return separator > 0 ? value.slice(0, separator).trim() : "";
+        })
+        .filter(Boolean),
+    );
+    const storedBypassCookie = (await page.context().cookies(versionUrl.toString())).find(
+      (cookie) => setCookieNames.has(cookie.name),
+    );
+    if (
+      !storedBypassCookie ||
+      storedBypassCookie.domain.replace(/^\./, "").toLowerCase() !==
+        previewUrl.hostname.toLowerCase() ||
+      storedBypassCookie.path !== "/" ||
+      !storedBypassCookie.secure ||
+      !storedBypassCookie.httpOnly
+    ) {
+      throw new Error(
+        `${suiteLabel} Vercel protection bootstrap did not install a safely scoped cookie.`,
+      );
+    }
+    cookieProofTarget = redirectUrl;
+  }
+
+  // APIRequestContext shares cookies with this BrowserContext. The redirect response
+  // installs the bypass cookie; prove it works with a second same-origin request that
+  // deliberately carries no protection secret header.
+  const cookieProofResponse = await page.context().request.get(cookieProofTarget.toString(), {
+    maxRedirects: 0,
+    timeout: 30_000,
+  });
+  const observedCookieProofUrl = new URL(cookieProofResponse.url());
+  if (
+    observedCookieProofUrl.origin !== previewUrl.origin ||
+    cookieProofResponse.status() !== 200
+  ) {
+    throw new Error(
+      `${suiteLabel} Vercel protection cookie proof returned HTTP ${cookieProofResponse.status()}.`,
+    );
+  }
+}
+
 type RuntimeSafetyOptions = {
   requireTargetSha?: boolean;
   requireExactHead?: boolean;

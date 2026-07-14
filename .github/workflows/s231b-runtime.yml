@@ -1,0 +1,358 @@
+name: S231B Trust Provenance Runtime Acceptance
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  contents: read
+
+jobs:
+  s231b-trust-provenance-runtime:
+    name: S231B Exact-Head Trust Provenance Runtime
+    if: >-
+      github.event.pull_request.number == 571 &&
+      contains(github.event.pull_request.body, '<!-- run-s231b-auth-e2e -->') &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'agent/s231b-trust-provenance-api'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency:
+      group: s231b-trust-provenance-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    env:
+      CI: "true"
+      S231B_AUTH_RUNTIME: "1"
+      E2E_BASE_URL: https://inverge-git-agent-s231b-trust-pro-e87183-chachathecats-projects.vercel.app
+      E2E_EXPECTED_HOST: inverge-git-agent-s231b-trust-pro-e87183-chachathecats-projects.vercel.app
+      E2E_RUNNER_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - name: Check out exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Wait for exact-head Preview and verify safe prerequisites
+        shell: bash
+        env:
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: |
+          set -euo pipefail
+          test -n "${VERCEL_AUTOMATION_BYPASS_SECRET:-}"
+          test "${E2E_BASE_URL}" = "https://inverge-git-agent-s231b-trust-pro-e87183-chachathecats-projects.vercel.app"
+          test "${E2E_EXPECTED_HOST}" = "inverge-git-agent-s231b-trust-pro-e87183-chachathecats-projects.vercel.app"
+          [[ "${E2E_RUNNER_SHA}" =~ ^[0-9a-fA-F]{40}$ ]]
+
+          exact_head_ready=0
+          attempt=0
+          deadline=$((SECONDS + 600))
+          while [ "${SECONDS}" -lt "${deadline}" ]; do
+            attempt=$((attempt + 1))
+            body_path="$(mktemp)"
+            status="$(
+              curl --silent --show-error \
+                --output "${body_path}" \
+                --write-out '%{http_code}' \
+                --max-redirs 0 \
+                --connect-timeout 5 \
+                --max-time 10 \
+                --header "x-vercel-protection-bypass: ${VERCEL_AUTOMATION_BYPASS_SECRET}" \
+                "${E2E_BASE_URL}/api/runtime/version?runner=${E2E_RUNNER_SHA}&attempt=${attempt}"
+            )" || status="000"
+
+            if [ "${status}" = "200" ] && \
+              BODY_PATH="${body_path}" EXPECTED_SHA="${E2E_RUNNER_SHA}" node --input-type=module -e '
+                import { readFileSync } from "node:fs";
+                const payload = JSON.parse(readFileSync(process.env.BODY_PATH, "utf8"));
+                if (payload.ready !== true || payload.deploymentSha !== process.env.EXPECTED_SHA) {
+                  process.exit(1);
+                }
+              ' >/dev/null 2>&1; then
+              exact_head_ready=1
+              rm -f "${body_path}"
+              break
+            fi
+
+            case "${status}" in
+              301|302|303|307|308|401|403)
+                rm -f "${body_path}"
+                echo "::error::Preview protection or host validation failed with HTTP ${status}."
+                exit 1
+                ;;
+            esac
+
+            rm -f "${body_path}"
+            echo "::notice::Exact-head Preview is not ready yet (HTTP ${status}, attempt ${attempt})."
+            sleep 5
+          done
+
+          if [ "${exact_head_ready}" -ne 1 ]; then
+            echo "::error::The bounded wait expired before Preview reported the exact PR head SHA."
+            exit 1
+          fi
+
+          echo "E2E_TARGET_SHA=${E2E_RUNNER_SHA}" >> "${GITHUB_ENV}"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browser
+        run: npm exec playwright install -- --with-deps chromium
+
+      - name: Install OCR redaction dependencies
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends tesseract-ocr imagemagick
+          command -v tesseract >/dev/null 2>&1
+          command -v convert >/dev/null 2>&1
+
+      - name: Run exact-head trust provenance acceptance
+        id: runtime_acceptance
+        env:
+          E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL || secrets.TEST_USER_EMAIL }}
+          E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD || secrets.TEST_USER_PASSWORD }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${E2E_USER_EMAIL:-}"
+          test -n "${E2E_USER_PASSWORD:-}"
+          test -n "${VERCEL_AUTOMATION_BYPASS_SECRET:-}"
+          npm run test:e2e -- tests/e2e/s231b-trust-provenance.spec.ts --project=chromium --workers=1 --reporter=line --trace=off
+
+      - name: Recheck exact deployment SHA after runtime
+        id: postflight_sha
+        if: steps.runtime_acceptance.outcome == 'success'
+        shell: bash
+        env:
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: |
+          set -euo pipefail
+          body_path="$(mktemp)"
+          status="$(
+            curl --silent --show-error \
+              --output "${body_path}" \
+              --write-out '%{http_code}' \
+              --max-redirs 0 \
+              --connect-timeout 10 \
+              --max-time 30 \
+              --header "x-vercel-protection-bypass: ${VERCEL_AUTOMATION_BYPASS_SECRET}" \
+              "${E2E_BASE_URL}/api/runtime/version?postflight=${E2E_RUNNER_SHA}"
+          )"
+          test "${status}" = "200"
+          BODY_PATH="${body_path}" EXPECTED_SHA="${E2E_RUNNER_SHA}" node --input-type=module -e '
+            import { readFileSync } from "node:fs";
+            const payload = JSON.parse(readFileSync(process.env.BODY_PATH, "utf8"));
+            if (payload.ready !== true || payload.deploymentSha !== process.env.EXPECTED_SHA) {
+              throw new Error("Postflight deployment SHA mismatch.");
+            }
+          '
+          rm -f "${body_path}"
+
+      - name: Redact and validate S231B evidence
+        id: evidence_guard
+        if: always()
+        shell: bash
+        env:
+          E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL || secrets.TEST_USER_EMAIL }}
+          RUNTIME_OUTCOME: ${{ steps.runtime_acceptance.outcome }}
+          POSTFLIGHT_OUTCOME: ${{ steps.postflight_sha.outcome }}
+        run: |
+          set -euo pipefail
+
+          if [ "${RUNTIME_OUTCOME}" != "success" ] || [ "${POSTFLIGHT_OUTCOME}" != "success" ]; then
+            echo "::error::Runtime or postflight SHA verification failed; refusing evidence publication."
+            exit 1
+          fi
+          command -v tesseract >/dev/null 2>&1
+          command -v convert >/dev/null 2>&1
+
+          email_pattern='[[:alnum:]._%+-]+@[[:alnum:].-]+\.[[:alpha:]]{2,}'
+          screenshot_count=0
+          leak_found=0
+          while IFS= read -r -d '' screenshot; do
+            screenshot_count=$((screenshot_count + 1))
+            pre_tsv="$(mktemp)"
+            post_ocr="$(mktemp)"
+            redacted_png="${screenshot%.png}.redacted.png"
+            rm -f "${redacted_png}"
+
+            if ! tesseract "${screenshot}" stdout -l eng tsv >"${pre_tsv}" 2>/dev/null; then
+              rm -f "${pre_tsv}" "${post_ocr}" "${redacted_png}"
+              echo "::error file=$(basename "${screenshot}")::OCR pre-scan failed; refusing evidence publication."
+              exit 1
+            fi
+
+            draw_args=()
+            candidate_count=0
+            while IFS=$'\t' read -r level page block paragraph line word left top width height confidence token; do
+              [[ "${token:-}" =~ ${email_pattern} ]] || continue
+              x1=$((left > 8 ? left - 8 : 0))
+              y1=$((top > 8 ? top - 8 : 0))
+              x2=$((left + width + 8))
+              y2=$((top + height + 8))
+              draw_args+=( -draw "rectangle ${x1},${y1} ${x2},${y2}" )
+              candidate_count=$((candidate_count + 1))
+            done < <(tail -n +2 "${pre_tsv}")
+
+            if [ "${candidate_count}" -gt 0 ]; then
+              if ! convert "${screenshot}" -fill '#111827' -stroke '#111827' "${draw_args[@]}" "${redacted_png}"; then
+                rm -f "${pre_tsv}" "${post_ocr}" "${redacted_png}"
+                echo "::error file=$(basename "${screenshot}")::Deterministic redaction failed; refusing evidence publication."
+                exit 1
+              fi
+              mv "${redacted_png}" "${screenshot}"
+            fi
+
+            if ! tesseract "${screenshot}" stdout -l eng >"${post_ocr}" 2>/dev/null; then
+              rm -f "${pre_tsv}" "${post_ocr}" "${redacted_png}"
+              echo "::error file=$(basename "${screenshot}")::OCR post-scan failed; refusing evidence publication."
+              exit 1
+            fi
+            normalized_ocr="$(tr -d '[:space:]' < "${post_ocr}")"
+            normalized_email="$(printf '%s' "${E2E_USER_EMAIL}" | tr -d '[:space:]')"
+            if grep -Eqi "${email_pattern}" "${post_ocr}" || \
+              grep -Fqi -- "${E2E_USER_EMAIL}" "${post_ocr}" || \
+              [[ "${normalized_ocr}" =~ ${email_pattern} ]] || \
+              [[ "${normalized_ocr,,}" == *"${normalized_email,,}"* ]]; then
+              echo "::error file=$(basename "${screenshot}")::Identity text remained after redaction."
+              leak_found=1
+            fi
+            rm -f "${pre_tsv}" "${post_ocr}" "${redacted_png}"
+          done < <(find test-results -type f -name 's231b-*.png' -print0)
+
+          if [ "${screenshot_count}" -ne 15 ] || [ "${leak_found}" -ne 0 ]; then
+            echo "::error::S231B screenshot count or privacy validation failed."
+            exit 1
+          fi
+          if find test-results -type f \( -name '*.zip' -o -name '*.webm' \) -print -quit | grep -q .; then
+            echo "::error::Trace or video output exists; refusing evidence publication."
+            exit 1
+          fi
+
+          mapfile -d '' manifests < <(find test-results -type f -name 's231b-runtime.json' -print0)
+          if [ "${#manifests[@]}" -ne 1 ]; then
+            echo "::error::Exactly one S231B manifest is required."
+            exit 1
+          fi
+
+          MANIFEST_PATH="${manifests[0]}" node --input-type=module - <<'NODE'
+          import {
+            copyFileSync,
+            existsSync,
+            mkdirSync,
+            readFileSync,
+            readdirSync,
+          } from "node:fs";
+          import { basename, join } from "node:path";
+
+          const walk = (directory) =>
+            readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+              const path = join(directory, entry.name);
+              return entry.isDirectory() ? walk(path) : [path];
+            });
+          const fail = (message) => {
+            throw new Error(`S231B evidence integrity: ${message}`);
+          };
+
+          const manifest = JSON.parse(readFileSync(process.env.MANIFEST_PATH, "utf8"));
+          const expectedSha = process.env.E2E_RUNNER_SHA;
+          const stateEvidence = new Map([
+            ["confirmed_record", "learner_confirmation"],
+            ["needs_review", "review_requirement"],
+            ["conflict", "conflict_record"],
+            ["offline", "offline_state"],
+            ["unavailable", "unavailable"],
+          ]);
+          const viewportLabels = new Map([
+            ["390x844", "390"],
+            ["768x1024", "768"],
+            ["1440x1024", "1440"],
+          ]);
+          const expectedNames = new Set(
+            [...viewportLabels.values()].flatMap((label) =>
+              [...stateEvidence.keys()].map((state) => `s231b-${label}-${state}.png`),
+            ),
+          );
+          const actualPaths = walk("test-results").filter((path) =>
+            /^s231b-.*\.png$/.test(basename(path)),
+          );
+          const actualNames = actualPaths.map((path) => basename(path));
+
+          if (manifest.schemaVersion !== 1 || manifest.result !== "pass") fail("invalid result contract");
+          for (const key of ["runnerSha", "targetDeploymentSha", "observedDeploymentSha"]) {
+            if (manifest[key] !== expectedSha) fail(`${key} does not match the exact PR head`);
+          }
+          if (manifest.screenshotCount !== 15 || actualPaths.length !== 15) fail("expected 15 screenshots");
+          if (!Array.isArray(manifest.screenshots) || manifest.screenshots.length !== 15) fail("invalid screenshot manifest");
+          if (new Set(actualNames).size !== 15 || new Set(manifest.screenshots).size !== 15) fail("duplicate screenshot names");
+          for (const name of expectedNames) {
+            if (!actualNames.includes(name) || !manifest.screenshots.includes(name)) fail(`missing screenshot ${name}`);
+          }
+
+          if (!Array.isArray(manifest.viewportEvidence) || manifest.viewportEvidence.length !== 15) {
+            fail("expected 15 viewport-state records");
+          }
+          const combinations = new Set();
+          for (const entry of manifest.viewportEvidence) {
+            const expectedEvidence = stateEvidence.get(entry.state);
+            if (!expectedEvidence || entry.evidenceKind !== expectedEvidence) fail("state/evidence mismatch");
+            if (!viewportLabels.has(entry.viewport)) fail("unexpected viewport");
+            const combination = `${entry.viewport}|${entry.state}|${entry.evidenceKind}`;
+            if (combinations.has(combination)) fail("duplicate viewport-state record");
+            combinations.add(combination);
+            if (entry.trustLayerCount !== 1) fail("trust layer count mismatch");
+            const expectedAnnouncer = ["conflict", "offline"].includes(entry.state) ? 1 : 0;
+            if (entry.liveAnnouncerCount !== expectedAnnouncer) fail("live announcer mismatch");
+            if (!Number.isFinite(entry.horizontalOverflow) || entry.horizontalOverflow < 0 || entry.horizontalOverflow > 1) {
+              fail("horizontal overflow mismatch");
+            }
+            if (entry.skipLinkTransferredFocus !== true || entry.metadataOnly !== true) fail("interaction metadata mismatch");
+            if (entry.privateAccountTelemetryAbsent !== true) fail("private account telemetry boundary mismatch");
+          }
+          if (combinations.size !== 15) fail("incomplete viewport-state Cartesian product");
+
+          const surfaces = manifest.actualSurfaceEvidence ?? {};
+          if (
+            surfaces.answerReviewTrustLayerCount !== 1 ||
+            surfaces.captureTrustLayerCount !== 1 ||
+            surfaces.studyLedgerAdapterCoveredByConflictFixture !== true ||
+            surfaces.firstFiveAdapterCoveredByUnavailableFixture !== true
+          ) fail("actual surface adapter evidence mismatch");
+          if (
+            manifest.consoleErrorCount !== 0 ||
+            manifest.pageErrorCount !== 0 ||
+            manifest.sameOriginRequestFailureCount !== 0
+          ) fail("runtime errors were recorded");
+          if (
+            manifest.syntheticMetadataOnly !== true ||
+            manifest.privateAccountTelemetryAbsent !== true ||
+            manifest.credentialsRedacted !== true ||
+            manifest.traceCaptured !== false ||
+            manifest.videoCaptured !== false
+          ) fail("privacy or capture contract mismatch");
+
+          const evidenceDirectory = "s231b-evidence";
+          if (existsSync(evidenceDirectory)) fail("evidence directory already exists");
+          mkdirSync(evidenceDirectory);
+          for (const path of actualPaths) copyFileSync(path, join(evidenceDirectory, basename(path)));
+          copyFileSync(process.env.MANIFEST_PATH, join(evidenceDirectory, "s231b-runtime.json"));
+          NODE
+
+      - name: Upload validated S231B runtime evidence
+        if: always() && steps.evidence_guard.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: s231b-trust-provenance-${{ github.run_id }}
+          path: |
+            s231b-evidence/*.png
+            s231b-evidence/s231b-runtime.json
+          if-no-files-found: error
+          retention-days: 7

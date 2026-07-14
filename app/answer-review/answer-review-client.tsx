@@ -7,6 +7,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
 import { RefinedBadge, RefinedShell } from "@/components/inverge/refined-primitives";
 import { CognitiveLearningActionCard } from "@/components/review-os/cognitive-learning-action-card";
+import { TrustProvenanceLayer } from "@/components/review-os/trust-provenance-layer";
 import {
   CalculatorRoutineTrainer,
   type CalculatorRoutineDraftReference,
@@ -29,6 +30,7 @@ import { getDefaultSubject, normalizeSubjectForMode, parseAppraisalMode, type Ap
 import { getCalculatorRoutineEligibility, getCalculatorRoutineIdFromDraftStorageKey } from "@/lib/review-os/calculator-routine";
 import { buildCognitiveLearningActionUnit } from "@/lib/review-os/cognitive-learning-actions";
 import { APPRAISAL_FIRST_SUBJECTS, APPRAISAL_SECOND_SUBJECTS } from "@/lib/review-os/types";
+import type { TrustProvenanceEvidence } from "@/lib/review-os/trust-provenance";
 import { cn } from "@/lib/utils";
 
 type InputStatusCardProps = {
@@ -435,9 +437,6 @@ export default function AnswerReviewClientPage({
       "",
       "교정 문단",
       `- ${hasRevisionParagraph ? revisionParagraph.trim() : "교정 문단 작성 필요"}`,
-      "",
-      "확인 필요",
-      "- 현재 화면에서만 확인하는 초안입니다.",
     ].join("\n");
   }, [hasMissingPointMemo, hasMyAnswer, hasProblemInput, hasReferenceAnswer, hasRevisionParagraph, missingPointMemo, revisionParagraph]);
 
@@ -483,6 +482,11 @@ export default function AnswerReviewClientPage({
     : "보강 문단을 작성하면 다음 행동이 더 선명해집니다.";
   const tenSecondCheckSummary = cognitiveLearningActions.retrievalCheck.prompt;
   const continuationSummary = `${cognitiveLearningActions.continuation.reviewQueueCandidate} / 오늘 할 일 최대 ${cognitiveLearningActions.continuation.todayPlanMaxPrimaryTasks}개 / 학습 노트`;
+  const trustEvidence: TrustProvenanceEvidence = structureError
+    ? { kind: "unavailable", evidenceAvailable: false }
+    : hasProblemInput || hasMyAnswer || hasReferenceAnswer || isStructuring || Boolean(structureDraft)
+      ? { kind: "review_requirement", reviewRequired: true }
+      : { kind: "unavailable", evidenceAvailable: false };
 
 
   const handlePrimaryAction = () => {
@@ -513,14 +517,32 @@ export default function AnswerReviewClientPage({
       data-s224v-equal-weight-card-grid="absent"
       data-s224v-repeated-warning-copy="absent"
     >
-      <section className="space-y-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] p-4 sm:p-6" data-trust-layer="answer-review-shell">
+      <section className="space-y-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] p-4 sm:p-6" data-answer-review-stage="answer-review-shell">
         <div className="flex flex-wrap items-center gap-2">
           <RefinedBadge>답안 훈련</RefinedBadge>
-          <RefinedBadge tone="amber">학습 보조 초안</RefinedBadge>
         </div>
         <p className="ko-keep text-caption leading-5 text-[color:var(--muted)]">
-          이미 쓴 답안을 올리면 누락 논점, 약한 구조, 오늘 다시 쓸 문장을 정리합니다. 결과는 학습 보조 초안이며 공식 채점이나 합격 판정이 아닙니다.
+          이미 쓴 답안을 올리면 누락 논점, 약한 구조, 오늘 다시 쓸 문장을 정리합니다.
         </p>
+        <TrustProvenanceLayer
+          evidence={trustEvidence}
+          sources={[
+            ...(hasProblemInput || hasMyAnswer ? (["learner_text"] as const) : []),
+            ...(hasReferenceAnswer ? (["reference"] as const) : []),
+            ...(structureDraft ? (["ai_draft"] as const) : []),
+            ...(!hasProblemInput && !hasMyAnswer && !hasReferenceAnswer && !structureDraft ? (["none"] as const) : []),
+          ]}
+          title="답안 검토의 신뢰 상태"
+          summary="결과는 학습 보조 초안이며 공식 채점이나 합격 판정이 아닙니다. 입력과 참고자료를 직접 확인한 뒤 사용하세요."
+          details={[
+            { label: "입력 상태", value: inputStatusSummary },
+            { label: "검토 상태", value: completionStatus },
+          ]}
+          stage="answer-review-shell"
+          trustLayerMarker="answer-review-shell"
+          ariaLabel="답안 검토 신뢰 및 출처 상태"
+          testId="answer-review-trust-layer"
+        />
         {problemSnapNoticeVisible ? (
           <article className="flex items-center justify-between gap-3 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] px-3 py-2">
             <p className="text-caption leading-5 text-[color:var(--muted)]">Problem Snap에서 다시 푼 답안을 불러왔습니다.</p>
@@ -1091,7 +1113,7 @@ export default function AnswerReviewClientPage({
                 <div className="space-y-1">
                   <p className="text-caption text-[color:var(--muted)]">{examMode === "second" ? "감정평가사 2차" : "감정평가사 1차"} · {subject}</p>
                   <h2 className="text-base font-semibold text-[color:var(--foreground-strong)]">보강 문단 정리</h2>
-                  <p className="text-caption leading-5 text-[color:var(--muted)]">학습 보조 초안입니다. 저장 전 직접 수정할 수 있습니다.</p>
+                  <p className="text-caption leading-5 text-[color:var(--muted)]">작성한 내용은 아래 편집창에서 계속 수정할 수 있습니다.</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <motion.button
@@ -1167,7 +1189,7 @@ export default function AnswerReviewClientPage({
                       </motion.button>
                     </div>
                     <p className="mt-3 text-caption leading-5 text-[color:var(--muted)]">
-                      결과는 학습 보조 초안입니다. 저장 전 직접 수정할 수 있으며 공식 채점이나 합격 판정이 아닙니다.
+                      입력과 보강 내용을 수정한 뒤 정리본을 복사할 수 있습니다.
                     </p>
                   </article>
                 </motion.aside>
@@ -1265,7 +1287,7 @@ export default function AnswerReviewClientPage({
                     </article>
                     <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3">
                       <p className="text-caption font-medium text-[color:var(--muted)]">검토 메모</p>
-                      <p className="mt-1 text-caption leading-5 text-[color:var(--foreground-strong)]">{toDetailLine(structureDraft.caution, "이 결과는 학습 보조 초안이며 직접 확인이 필요합니다.")}</p>
+                      <p className="mt-1 text-caption leading-5 text-[color:var(--foreground-strong)]">{toDetailLine(structureDraft.caution, "검토 메모를 확인하고 필요한 부분을 수정해 주세요.")}</p>
                     </article>
                   </div>
                 ) : (

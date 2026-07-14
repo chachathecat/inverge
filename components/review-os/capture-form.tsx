@@ -6,7 +6,10 @@ import { useRouter } from "next/navigation";
 
 import { BottomPrimaryAction } from "@/components/learner";
 import { CognitiveLearningActionCard } from "@/components/review-os/cognitive-learning-action-card";
-import { TrustEvidenceBar } from "@/components/review-os/trust-status-card";
+import {
+  TrustEvidenceBar,
+  type TrustEvidenceBarProps,
+} from "@/components/review-os/trust-status-card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { buildCaptureToNoteDraft } from "@/lib/capture/capture-to-note";
@@ -40,6 +43,17 @@ import {
 type ExtractionState = "idle" | "uploading" | "extracting" | "succeeded" | "failed" | "manual";
 
 const CAPTURE_TRUST_LAYER_COPY = "OCR과 AI 정리는 학습 보조 초안입니다. 저장 전 직접 수정할 수 있습니다.";
+
+const CAPTURE_TRUST_SOURCE_LABELS: Record<
+  SourceType,
+  TrustEvidenceBarProps["source"]
+> = {
+  photo: "OCR 초안",
+  image: "OCR 초안",
+  pdf: "가져온 텍스트",
+  text: "사용자 텍스트",
+  manual: "수동 입력",
+};
 
 type SavedCaptureConfirmation = {
   itemId?: string;
@@ -1912,9 +1926,14 @@ function IntakePanel({
         <>
       <div className="mt-4" data-trust-layer="capture-intake">
         <TrustEvidenceBar
-          source={form.sourceType === "text" ? "사용자 텍스트" : form.sourceType === "pdf" ? "가져온 텍스트" : "OCR 초안"}
+          source={CAPTURE_TRUST_SOURCE_LABELS[form.sourceType]}
           confidence={needsOcrConfirmation ? "확인 필요" : "안정"}
           learnerConfirmed={Boolean(form.ocrConfirmedByLearner || form.hasManualCorrection)}
+          evidenceUnavailable={
+            extractionState === "uploading" ||
+            extractionState === "extracting" ||
+            extractionState === "failed"
+          }
           officialStatus="공식 채점 아님"
           editable
           note={CAPTURE_TRUST_LAYER_COPY}

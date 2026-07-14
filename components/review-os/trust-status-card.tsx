@@ -1,4 +1,12 @@
-import { RefinedBadge } from "@/components/inverge/refined-primitives";
+import {
+  TrustProvenanceLayer,
+  type TrustProvenanceDetail,
+} from "@/components/review-os/trust-provenance-layer";
+import {
+  adaptLegacyTrustSignals,
+  type TrustProvenanceEvidence,
+  type TrustProvenanceSourceKind,
+} from "@/lib/review-os/trust-provenance";
 
 export type TrustStatusItem = {
   label: string;
@@ -6,19 +14,22 @@ export type TrustStatusItem = {
   helper: string;
 };
 
-type TrustStatusCardProps = {
+export type TrustStatusCardProps = {
   title?: string;
   summary?: string;
   items?: TrustStatusItem[];
+  evidence?: TrustProvenanceEvidence;
 };
 
-type TrustEvidenceBarProps = {
+export type TrustEvidenceBarProps = {
   source: "사용자 텍스트" | "OCR 초안" | "수동 입력" | "가져온 텍스트";
   confidence: "안정" | "확인 필요";
   learnerConfirmed: boolean;
   officialStatus?: "공식 채점 아님";
   editable?: boolean;
   note?: string;
+  offline?: boolean;
+  evidenceUnavailable?: boolean;
 };
 
 const DEFAULT_TRUST_ITEMS: TrustStatusItem[] = [
@@ -44,6 +55,16 @@ const DEFAULT_TRUST_ITEMS: TrustStatusItem[] = [
   },
 ];
 
+const LEGACY_SOURCE_KINDS: Record<
+  TrustEvidenceBarProps["source"],
+  TrustProvenanceSourceKind
+> = {
+  "사용자 텍스트": "learner_text",
+  "OCR 초안": "ocr_draft",
+  "수동 입력": "manual_entry",
+  "가져온 텍스트": "imported_text",
+};
+
 export function TrustEvidenceBar({
   source,
   confidence,
@@ -51,32 +72,34 @@ export function TrustEvidenceBar({
   officialStatus = "공식 채점 아님",
   editable = true,
   note,
+  offline = false,
+  evidenceUnavailable = false,
 }: TrustEvidenceBarProps) {
-  const items = [
-    ["출처", source],
-    ["신뢰", confidence],
-    ["확인", learnerConfirmed ? "확인됨" : "확인 전"],
-    ["채점", officialStatus],
-    ["편집", editable ? "가능" : "불가"],
-  ] as const;
+  const evidence = adaptLegacyTrustSignals({
+    offline,
+    evidenceAvailable: !evidenceUnavailable,
+    learnerConfirmed,
+    reviewRequired: confidence === "확인 필요",
+  });
+  const details: TrustProvenanceDetail[] = [
+    { label: "입력 상태", value: confidence },
+    { label: "확인", value: learnerConfirmed ? "확인됨" : "확인 전" },
+    { label: "채점", value: officialStatus },
+    { label: "편집", value: editable ? "가능" : "불가" },
+  ];
 
   return (
-    <section
-      className="trust-evidence evidence-bar px-4 py-3 text-xs text-[color:var(--muted)] sm:px-5"
-      data-s226-trust-evidence
-      data-testid="trust-evidence-bar"
-      aria-label="Trust Evidence"
-    >
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        {items.map(([label, value]) => (
-          <span key={label} className="inline-flex items-center gap-1.5">
-            <span className="text-[color:var(--text-tertiary)]">{label}</span>
-            <span className="font-semibold text-[color:var(--foreground-strong)]">{value}</span>
-          </span>
-        ))}
-      </div>
-      {note ? <p className="ko-keep mt-2 leading-5">{note}</p> : null}
-    </section>
+    <TrustProvenanceLayer
+      evidence={evidence}
+      sources={evidenceUnavailable ? ["none"] : [LEGACY_SOURCE_KINDS[source]]}
+      details={details}
+      summary={note}
+      layout="bar"
+      stage="capture-intake"
+      ariaLabel="입력 신뢰 및 출처 상태"
+      testId="trust-evidence-bar"
+      legacyMarker="s226"
+    />
   );
 }
 
@@ -84,24 +107,22 @@ export function TrustStatusCard({
   title = "입력 상태와 신뢰 확인",
   summary = "무엇이 사용자 입력이고 무엇이 OCR/AI 초안인지 구분한 뒤 저장 전 직접 확인합니다. 공식 채점이나 확정 점수가 아닙니다.",
   items = DEFAULT_TRUST_ITEMS,
+  evidence = { kind: "unavailable", evidenceAvailable: false },
 }: TrustStatusCardProps) {
   return (
-    <section data-testid="trust-status-card" className="trust-layer p-4 sm:p-5">
-      <div className="flex flex-wrap items-center gap-2">
-        <RefinedBadge>신뢰 상태</RefinedBadge>
-        <RefinedBadge tone="amber">저장 전 확인</RefinedBadge>
-      </div>
-      <h2 className="mt-3 text-base font-semibold text-[color:var(--foreground-strong)]">{title}</h2>
-      <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">{summary}</p>
-      <div className="mt-4 grid gap-3 md:grid-cols-2">
-        {items.map((item) => (
-          <article key={item.label} className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-3">
-            <p className="text-caption font-medium text-[color:var(--muted)]">{item.label}</p>
-            <p className="mt-1 text-sm font-semibold text-[color:var(--foreground-strong)]">{item.status}</p>
-            <p className="mt-1 text-caption leading-5 text-[color:var(--muted)]">{item.helper}</p>
-          </article>
-        ))}
-      </div>
-    </section>
+    <TrustProvenanceLayer
+      evidence={evidence}
+      sources={["none"]}
+      title={title}
+      summary={summary}
+      details={items.map((item) => ({
+        label: item.label,
+        value: item.status,
+        helper: item.helper,
+      }))}
+      stage="first-five-minute-preview"
+      trustLayerMarker="first-five-minute-preview"
+      testId="trust-status-card"
+    />
   );
 }

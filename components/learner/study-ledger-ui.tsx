@@ -1,6 +1,9 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { TrustProvenanceLayer } from "@/components/review-os/trust-provenance-layer";
+import { adaptLegacyTrustSignals } from "@/lib/review-os/trust-provenance";
+
 export type LearningState = "scheduled" | "attention" | "ready" | "completed";
 
 export type StudyLedgerComparison = {
@@ -86,41 +89,48 @@ export function StudyLedgerTrustBar({
   learnerConfirmed,
   referenceAvailable,
   evidenceConflict = false,
+  reviewRequired = false,
 }: {
   learnerConfirmed: boolean;
   referenceAvailable: boolean;
   evidenceConflict?: boolean;
+  reviewRequired?: boolean;
 }) {
+  const evidence = adaptLegacyTrustSignals({
+    conflictRecorded: evidenceConflict,
+    learnerConfirmed,
+    reviewRequired,
+  });
+
   return (
-    <section
-      data-s228-trust-evidence
-      aria-label="근거 신뢰 상태"
-      role={evidenceConflict ? "alert" : undefined}
-      aria-live={evidenceConflict ? "polite" : undefined}
-      className="rounded-[var(--ledger-radius-card)] border border-[var(--trust-layer-border)] bg-[var(--trust-layer-bg)] p-4"
-    >
-      <p className="text-xs font-semibold tracking-[0.08em] text-[var(--brand-700)]">TRUST &amp; EVIDENCE</p>
-      <dl className="mt-3 space-y-3 text-sm">
-        <div className="flex items-center justify-between gap-3">
-          <dt className="font-medium text-[var(--text-primary)]">학습자 입력</dt>
-          <dd className="text-right text-xs font-semibold text-[var(--text-secondary)]">
-            {evidenceConflict ? "근거 차이 확인" : learnerConfirmed ? "확인 기록 있음" : "확인 필요"}
-          </dd>
-        </div>
-        <div className="h-px bg-[var(--trust-layer-border)]" />
-        <div className="flex items-center justify-between gap-3">
-          <dt className="font-medium text-[var(--text-primary)]">참고용 근거</dt>
-          <dd className="max-w-36 text-right text-xs font-semibold text-[var(--text-secondary)]">
-            {referenceAvailable ? "원 출처 확인 필요" : "추가되지 않음"}
-          </dd>
-        </div>
-      </dl>
-      <p className="mt-3 text-xs leading-5 text-[var(--text-secondary)]">
-        {evidenceConflict
+    <TrustProvenanceLayer
+      evidence={evidence}
+      sources={referenceAvailable ? ["persisted_record", "reference"] : ["persisted_record"]}
+      title="근거 신뢰 상태"
+      details={[
+        {
+          label: "학습자 입력",
+          value: evidenceConflict ? "근거 차이 확인" : learnerConfirmed ? "확인 기록 있음" : reviewRequired ? "확인 필요" : "확인 기록 없음",
+        },
+        {
+          label: "참고용 근거",
+          value: referenceAvailable ? "원 출처 확인 필요" : "추가되지 않음",
+        },
+      ]}
+      summary={
+        evidenceConflict
           ? "학습자 입력과 참고 근거의 차이를 먼저 확인하세요."
-          : "학습 보조 기록입니다. 채점 결과로 확정하지 않습니다."}
-      </p>
-    </section>
+          : "학습 보조 기록입니다. 채점 결과로 확정하지 않습니다."
+      }
+      layout="rail"
+      stage="study-ledger-detail"
+      trustLayerMarker="study-ledger-detail"
+      ariaLabel="근거 신뢰 상태"
+      className="rounded-[var(--ledger-radius-card)]"
+      testId="study-ledger-trust-bar"
+      legacyMarker="s228"
+      announceChange={evidenceConflict}
+    />
   );
 }
 
