@@ -4,7 +4,7 @@ import { writeFile } from "node:fs/promises";
 const expectedPreviewUrl = "https://inverge-git-agent-s230-learning-r-546b4c-chachathecats-projects.vercel.app";
 const expectedPreviewHost = new URL(expectedPreviewUrl).hostname;
 const expectedTargetDeploymentSha = "a6fddcf25a931037f92138dc54ddf2376ba215d9";
-const productEquivalentContractSha = "1231389c0b45344dbc84eccb6c434c1db99438e2";
+const targetProductEquivalentContractSha = "1231389c0b45344dbc84eccb6c434c1db99438e2";
 const runtimeEnabled = process.env.S230_AUTH_RUNTIME === "1";
 const runtimeBaseUrl = process.env.E2E_BASE_URL?.trim() ?? "";
 const runtimeRunnerHeadSha = process.env.S230_RUNNER_HEAD_SHA?.trim() ?? "";
@@ -150,18 +150,33 @@ async function openExactHeadAgenda(page: Page) {
 
 async function expectAgendaLayout(page: Page) {
   const root = page.locator("[data-s230-learning-record-timeline]");
+  const primaryTimeline = page.locator("[data-s230-primary-timeline]");
+  const nextReview = page.locator("[data-s230-next-review]");
+  const primaryAction = page.locator("[data-s230-dominant-next-action]");
   await expect(root).toBeVisible();
   await expect(page.locator("main")).toHaveCount(1);
   await expect(page.getByRole("heading", { level: 1, name: "배운 흐름을 다시 이어봅니다" })).toBeVisible();
-  await expect(page.locator("[data-s230-dominant-next-action]")).toHaveCount(1);
-  await expect(page.locator("[data-s230-dominant-next-action]")).toBeVisible();
+  await expect(primaryAction).toHaveCount(1);
+  await expect(primaryAction).toBeVisible();
 
   const state = await root.getAttribute("data-s230-state");
   expect(["ready", "empty"]).toContain(state);
   if (state === "ready") {
-    await expect(page.locator("[data-s230-primary-timeline]")).toBeVisible();
-    await expect(page.locator("[data-s230-next-review]")).toBeVisible();
+    await expect(primaryTimeline).toBeVisible();
+    await expect(nextReview).toBeVisible();
     await expect(page.getByRole("heading", { level: 2, name: "회복의 시간순 기록" })).toBeVisible();
+
+    const nextReviewPrecedesTimeline = await nextReview.evaluate((element) => {
+      const timelineElement = document.querySelector("[data-s230-primary-timeline]");
+      return Boolean(
+        timelineElement &&
+          element.compareDocumentPosition(timelineElement) & Node.DOCUMENT_POSITION_FOLLOWING,
+      );
+    });
+    expect(nextReviewPrecedesTimeline, "The dominant next review must precede the long timeline in DOM order.").toBe(true);
+    if ((page.viewportSize()?.width ?? 1440) < 1024) {
+      await expect(primaryAction, "The dominant action must start above the long mobile/tablet timeline.").toBeInViewport({ ratio: 0.8 });
+    }
   }
 
   const horizontalOverflow = await page.evaluate(
@@ -240,7 +255,7 @@ async function tabToPrimaryAction(page: Page, testInfo: TestInfo) {
           stage: "keyboard-focus",
           runnerHeadSha: runtimeRunnerHeadSha,
           targetDeploymentSha: runtimeTargetDeploymentSha,
-          productEquivalentContractSha,
+          targetProductEquivalentContractSha,
           previewHost: expectedPreviewHost,
           viewport: "390x844",
           reachedPrimaryAction,
@@ -260,11 +275,35 @@ async function tabToPrimaryAction(page: Page, testInfo: TestInfo) {
 }
 
 async function captureEvidence(page: Page, testInfo: TestInfo, fileName: string) {
+  const accountIdentitySelector = '[data-s224v-learner-mode-entry="second-only"] > span:last-child';
+  const accountIdentity = page.locator(accountIdentitySelector);
+  await expect(accountIdentity, "The signed-in account identity must be present so it can be masked.").toHaveCount(1);
+  await expect(accountIdentity).toBeVisible();
+  const unmaskedVisibleEmailCount = await page.locator("body *").evaluateAll(
+    (elements, maskedSelector) => {
+      const emailPattern = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i;
+      return elements.filter((element) => {
+        if (!(element instanceof HTMLElement) || element.matches(maskedSelector)) return false;
+        const directText = Array.from(element.childNodes)
+          .filter((node) => node.nodeType === Node.TEXT_NODE)
+          .map((node) => node.textContent ?? "")
+          .join(" ")
+          .trim();
+        if (!emailPattern.test(directText)) return false;
+        const rect = element.getBoundingClientRect();
+        const style = getComputedStyle(element);
+        return rect.width > 0 && rect.height > 0 && style.visibility !== "hidden" && style.display !== "none";
+      }).length;
+    },
+    accountIdentitySelector,
+  );
+  expect(unmaskedVisibleEmailCount, "Every visible email-like identity must be inside the masked account region.").toBe(0);
+
   const path = testInfo.outputPath(fileName);
   await page.screenshot({
     path,
     fullPage: true,
-    mask: [page.getByText(testEmail, { exact: false })],
+    mask: [accountIdentity, page.getByText(testEmail, { exact: false })],
   });
   return fileName;
 }
@@ -317,7 +356,7 @@ test.describe("S230 PR-scoped authenticated Learning Record runtime", () => {
       result: cleanRuntime ? "pass" : "fail",
       runnerHeadSha: runtimeRunnerHeadSha,
       targetDeploymentSha: runtimeTargetDeploymentSha,
-      productEquivalentContractSha,
+      targetProductEquivalentContractSha,
       previewHost: expectedPreviewHost,
       viewports: ["390x844", "768x1024", "1440x1024"],
       accountRouteState: mobile.state,
