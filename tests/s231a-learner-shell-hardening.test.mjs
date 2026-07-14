@@ -168,6 +168,7 @@ test("S231A exact-head runtime covers responsive, keyboard, and accessibility se
 
 test("S231A workflow is one-shot, exact-head, and privacy fail-closed", () => {
   const workflow = read(".github/workflows/s231a-runtime.yml");
+  const jobEnvironment = workflow.slice(workflow.indexOf("    env:"), workflow.indexOf("    steps:"));
 
   assert.match(workflow, /github\.event\.pull_request\.number == 569/);
   assert.match(workflow, /<!-- run-s231a-auth-e2e -->/);
@@ -179,11 +180,18 @@ test("S231A workflow is one-shot, exact-head, and privacy fail-closed", () => {
   assert.match(workflow, /secrets\.E2E_USER_EMAIL \|\| secrets\.TEST_USER_EMAIL/);
   assert.match(workflow, /secrets\.E2E_USER_PASSWORD \|\| secrets\.TEST_USER_PASSWORD/);
   assert.match(workflow, /secrets\.VERCEL_AUTOMATION_BYPASS_SECRET/);
+  assert.doesNotMatch(jobEnvironment, /secrets\./);
+  assert.match(workflow, /id: runtime_acceptance/);
+  assert.match(workflow, /RUNTIME_OUTCOME: \$\{\{ steps\.runtime_acceptance\.outcome \}\}/);
   assert.match(workflow, /tests\/e2e\/s231a-learner-shell-accessibility\.spec\.ts/);
   assert.match(workflow, /tesseract-ocr imagemagick/);
   assert.match(workflow, /Email-like text remained after deterministic redaction/);
+  assert.match(workflow, /A successful runtime must produce exactly one S231A manifest/);
+  assert.match(workflow, /manifest\.targetDeploymentSha === expectedSha/);
+  assert.match(workflow, /viewportLabels\.has\("1440"\)/);
   assert.match(workflow, /if: always\(\) && steps\.redaction_guard\.outcome == 'success'/);
   assert.match(workflow, /test-results\/\*\*\/s231a-\*\.png/);
   assert.match(workflow, /test-results\/\*\*\/s231a-runtime\.json/);
+  assert.match(workflow, /if-no-files-found: error/);
   assert.doesNotMatch(workflow, /trace\.zip|\*\*\/\*\.png/);
 });

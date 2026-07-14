@@ -24,9 +24,6 @@ jobs:
       E2E_EXPECTED_HOST: inverge-git-agent-s231a-learner-s-239037-chachathecats-projects.vercel.app
       E2E_RUNNER_SHA: ${{ github.event.pull_request.head.sha }}
       E2E_TARGET_SHA: ${{ github.event.pull_request.head.sha }}
-      E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL || secrets.TEST_USER_EMAIL }}
-      E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD || secrets.TEST_USER_PASSWORD }}
-      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
     steps:
       - name: Check out exact PR head
         uses: actions/checkout@v4
@@ -40,6 +37,10 @@ jobs:
 
       - name: Verify exact Preview and safe account prerequisites
         shell: bash
+        env:
+          E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL || secrets.TEST_USER_EMAIL }}
+          E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD || secrets.TEST_USER_PASSWORD }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
         run: |
           set -euo pipefail
           test -n "${E2E_USER_EMAIL:-}"
@@ -65,12 +66,20 @@ jobs:
           command -v convert >/dev/null 2>&1
 
       - name: Run exact-head learner-shell runtime acceptance
+        id: runtime_acceptance
+        env:
+          E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL || secrets.TEST_USER_EMAIL }}
+          E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD || secrets.TEST_USER_PASSWORD }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
         run: npm run test:e2e -- tests/e2e/s231a-learner-shell-accessibility.spec.ts --project=chromium --workers=1 --reporter=line
 
       - name: Reject email-like text in screenshots
         id: redaction_guard
         if: always()
         shell: bash
+        env:
+          E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL || secrets.TEST_USER_EMAIL }}
+          RUNTIME_OUTCOME: ${{ steps.runtime_acceptance.outcome }}
         run: |
           set -euo pipefail
 
@@ -144,6 +153,38 @@ jobs:
             echo "::error::The OCR redaction guard rejected S231A screenshot evidence."
             exit 1
           fi
+          if [ "${RUNTIME_OUTCOME}" = "success" ]; then
+            mapfile -d '' manifests < <(find test-results -type f -name 's231a-runtime.json' -print0)
+            if [ "${#manifests[@]}" -ne 1 ]; then
+              echo "::error::A successful runtime must produce exactly one S231A manifest."
+              exit 1
+            fi
+            MANIFEST_PATH="${manifests[0]}" node --input-type=module -e '
+              import { readFileSync } from "node:fs";
+              const manifest = JSON.parse(readFileSync(process.env.MANIFEST_PATH, "utf8"));
+              const expectedSha = process.env.E2E_RUNNER_SHA;
+              const viewportLabels = new Set(
+                (manifest.viewportEvidence ?? []).map((entry) => String(entry.viewport).split("x")[0]),
+              );
+              const valid =
+                manifest.result === "pass" &&
+                manifest.runnerSha === expectedSha &&
+                manifest.targetDeploymentSha === expectedSha &&
+                manifest.screenshotCount === 3 &&
+                manifest.screenshots?.length === 3 &&
+                viewportLabels.size === 3 &&
+                viewportLabels.has("390") &&
+                viewportLabels.has("768") &&
+                viewportLabels.has("1440") &&
+                manifest.consoleErrorCount === 0 &&
+                manifest.pageErrorCount === 0 &&
+                manifest.sameOriginRequestFailureCount === 0 &&
+                manifest.credentialsRedacted === true &&
+                manifest.traceCaptured === false &&
+                manifest.videoCaptured === false;
+              if (!valid) throw new Error("S231A manifest integrity check failed.");
+            '
+          fi
 
       - name: Upload sanitized S231A runtime evidence
         if: always() && steps.redaction_guard.outcome == 'success'
@@ -153,5 +194,5 @@ jobs:
           path: |
             test-results/**/s231a-*.png
             test-results/**/s231a-runtime.json
-          if-no-files-found: ignore
+          if-no-files-found: error
           retention-days: 7
