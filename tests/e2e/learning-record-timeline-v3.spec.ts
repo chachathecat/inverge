@@ -1,4 +1,4 @@
-import { expect, test, type Page, type TestInfo } from "@playwright/test";
+import { expect, test, type Locator, type Page, type Response, type TestInfo } from "@playwright/test";
 import { writeFile } from "node:fs/promises";
 
 const expectedPreviewUrl = "https://inverge-git-agent-s230-learning-r-546b4c-chachathecats-projects.vercel.app";
@@ -53,22 +53,78 @@ function sanitizeEvidence(value: string) {
   return sanitized;
 }
 
+function isSignInResponse(candidate: Response) {
+  const url = new URL(candidate.url());
+  return candidate.request().method() === "POST" && url.pathname === "/api/auth/sign-in";
+}
+
+async function waitForHydratedLoginForm(page: Page) {
+  const emailInput = page.getByLabel("이메일");
+  const passwordInput = page.getByLabel("비밀번호");
+  const submit = page.getByTestId("login-submit");
+
+  await expect(emailInput).toBeVisible({ timeout: 20_000 });
+  await expect(passwordInput).toBeVisible({ timeout: 20_000 });
+  await expect(submit).toBeVisible({ timeout: 20_000 });
+  await expect
+    .poll(
+      () =>
+        submit.evaluate((element) =>
+          Object.keys(element).some(
+            (key) => key.startsWith("__reactProps$") || key.startsWith("__reactFiber$"),
+          ),
+        ),
+      { timeout: 20_000, message: "The login form must be client-hydrated before submission." },
+    )
+    .toBe(true);
+
+  // Exercise the controlled input handlers after hydration, then restore the secret-backed values.
+  await emailInput.fill("hydration-check@inverge.invalid");
+  await expect(emailInput).toHaveValue("hydration-check@inverge.invalid");
+  await emailInput.fill(testEmail);
+  await passwordInput.fill(testPassword);
+  await expect(emailInput).toHaveValue(testEmail);
+  await expect(passwordInput).toHaveValue(testPassword);
+  await expect(submit).toBeEnabled({ timeout: 20_000 });
+
+  return { emailInput, passwordInput, submit };
+}
+
+async function clickForSignInResponse(page: Page, submit: Locator) {
+  const responsePromise = page.waitForResponse(isSignInResponse, { timeout: 20_000 }).catch((error: unknown) => {
+    if (error instanceof Error && error.name === "TimeoutError") return null;
+    throw error;
+  });
+  await submit.click({ timeout: 20_000 });
+  return responsePromise;
+}
+
 async function login(page: Page) {
-  await page.goto("/login?mode=second", { waitUntil: "domcontentloaded" });
-  await expect(page.getByLabel("이메일")).toBeVisible();
-  await page.getByLabel("이메일").fill(testEmail);
-  await page.getByLabel("비밀번호").fill(testPassword);
+  await page.goto("/login?mode=second", { waitUntil: "domcontentloaded", timeout: 30_000 });
+  if (new URL(page.url()).pathname === "/app") return;
 
-  const [response] = await Promise.all([
-    page.waitForResponse((candidate) => {
-      const url = new URL(candidate.url());
-      return candidate.request().method() === "POST" && url.pathname === "/api/auth/sign-in";
-    }),
-    page.getByTestId("login-submit").click(),
-  ]);
+  let form = await waitForHydratedLoginForm(page);
+  let response = await clickForSignInResponse(page, form.submit);
 
-  expect(response.ok(), "The dedicated invited account must sign in through the app endpoint.").toBe(true);
-  await expect(page).toHaveURL((url) => url.pathname === "/app");
+  // A single no-request retry covers the SSR-to-hydration click race. HTTP failures are never retried.
+  if (!response) {
+    form = await waitForHydratedLoginForm(page);
+    response = await clickForSignInResponse(page, form.submit);
+  }
+
+  if (!response) {
+    throw new Error("The hydrated login form emitted no sign-in request after one bounded retry.");
+  }
+
+  const status = response.status();
+  if ([400, 401, 403].includes(status)) {
+    throw new Error(`The dedicated invited account sign-in returned ${status}; credential failures are not retried.`);
+  }
+  if (!response.ok()) {
+    throw new Error(`The dedicated invited account sign-in returned HTTP ${status}.`);
+  }
+
+  await expect(page).toHaveURL((url) => url.pathname === "/app", { timeout: 20_000 });
 }
 
 async function openExactHeadAgenda(page: Page) {
@@ -159,7 +215,7 @@ async function captureEvidence(page: Page, testInfo: TestInfo, fileName: string)
 }
 
 test.describe("S230 PR-scoped authenticated Learning Record runtime", () => {
-  test.describe.configure({ timeout: 300_000 });
+  test.describe.configure({ retries: 0, timeout: 300_000 });
 
   test("390/768/1440, focus, overflow, landmarks, and clean console", async ({ page }, testInfo) => {
     requireSafeRuntimeEnvironment();
