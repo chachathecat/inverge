@@ -153,16 +153,28 @@ export function CalculatorRoutineTrainer({
   const isOffline = !useSyncExternalStore(subscribeToConnectivity, getOnlineSnapshot, getServerOnlineSnapshot);
   const [liveMessage, setLiveMessage] = useState("계산·검산 루틴을 시작할 수 있습니다.");
   const [revealedHintStepIds, setRevealedHintStepIds] = useState<CalculatorRoutineStepId[]>([]);
-  const [draft, setDraft] = useState<CalculatorRoutineDraftV1>(() => {
+  const [draft, setDraft] = useState<CalculatorRoutineDraftV1>(() =>
+    createCalculatorRoutineDraft({
+      source,
+      examMode,
+      subject,
+      routineId: storageRoutineId,
+    }),
+  );
+  const [restoredDraftKey, setRestoredDraftKey] = useState<string | null>(null);
+  const [completionSignal, setCompletionSignal] = useState<CalculatorRoutineCompletionSignalV1 | null>(null);
+  const isDraftRestored = restoredDraftKey === draftLoadKey;
+
+  useEffect(() => {
     const fallbackDraft = createCalculatorRoutineDraft({
       source,
       examMode,
       subject,
       routineId: storageRoutineId,
     });
-    return readDraftFromStorage(draftLoadKey, fallbackDraft);
-  });
-  const [completionSignal, setCompletionSignal] = useState<CalculatorRoutineCompletionSignalV1 | null>(null);
+    setDraft(readDraftFromStorage(draftLoadKey, fallbackDraft));
+    setRestoredDraftKey(draftLoadKey);
+  }, [draftLoadKey, examMode, source, storageRoutineId, subject]);
 
   const canRender = eligibility.eligible || eligibility.manualEligible;
   const currentStepIndex = Math.max(0, CALCULATOR_ROUTINE_STEPS.findIndex((step) => step.id === draft.currentStepId));
@@ -188,7 +200,7 @@ export function CalculatorRoutineTrainer({
     draft.mistakeTypes.length > 0 ||
     draft.stuckStepIds.length > 0;
   const isReferenceUnlocked = trainerState === "completed" || hasAnyRoutineAttempt;
-  const viewState: RunnerViewState = !isHydrated
+  const viewState: RunnerViewState = !isHydrated || !isDraftRestored
     ? "loading"
     : !canRender
       ? "error"
@@ -201,23 +213,23 @@ export function CalculatorRoutineTrainer({
             : "empty";
 
   useEffect(() => {
-    if (!canRender || typeof window === "undefined") return;
+    if (!canRender || !isDraftRestored || typeof window === "undefined") return;
     try {
       window.sessionStorage.setItem(draftStorageKey, serializeCalculatorRoutineDraftForSession(draft));
     } catch {
       // Session storage is a local convenience only; routine completion must not depend on it.
     }
     onDraftReferenceChange?.({ routineId: draft.routineId, draftKey: draftStorageKey });
-  }, [canRender, draft, draftStorageKey, onDraftReferenceChange]);
+  }, [canRender, draft, draftStorageKey, isDraftRestored, onDraftReferenceChange]);
 
   useEffect(() => {
-    if (!canRender) return;
+    if (!canRender || !isDraftRestored) return;
     onReferenceAccessChange?.({
       routineId: draft.routineId,
       unlocked: isReferenceUnlocked,
       completed: trainerState === "completed",
     });
-  }, [canRender, draft.routineId, isReferenceUnlocked, onReferenceAccessChange, trainerState]);
+  }, [canRender, draft.routineId, isDraftRestored, isReferenceUnlocked, onReferenceAccessChange, trainerState]);
 
   if (!canRender) {
     return (
@@ -404,7 +416,7 @@ export function CalculatorRoutineTrainer({
 
       <div className="p-4 sm:p-5">
         <p className="sr-only" aria-live="polite">{liveMessage}</p>
-        {!isHydrated ? <p className="sr-only" role="status">루틴을 불러오는 중입니다.</p> : null}
+        {!isHydrated || !isDraftRestored ? <p className="sr-only" role="status">루틴을 불러오는 중입니다.</p> : null}
         {isOffline ? (
           <p className="mb-4 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3 text-xs leading-5 text-[color:var(--muted)]" role="status">
             오프라인 상태입니다. 입력은 이 탭의 임시 세션에 유지되며 서버 학습 기록 동기화는 연결 후 다시 확인해 주세요.
@@ -419,6 +431,7 @@ export function CalculatorRoutineTrainer({
             <button
               type="button"
               className={cn(buttonVariants({ variant: "default" }), interactiveFocusClass, "mt-4 w-full px-5 sm:w-auto")}
+              disabled={!isDraftRestored}
               onClick={() => {
                 setTrainerState("active");
                 setStorageStatus((prev) => (prev === "saved" ? prev : "session"));
