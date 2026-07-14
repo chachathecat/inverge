@@ -72,6 +72,7 @@ test("S231C runtime acceptance is axe-backed, metadata-only, and honest about ma
 
 test("S231C keeps one dominant step action and announces focus and copy state", () => {
   const answerReview = read("app/answer-review/answer-review-client.tsx");
+  const captureForm = read("components/review-os/capture-form.tsx");
   const globals = read("app/globals.css");
   const spec = read("tests/e2e/s231c-wcag-aa.spec.ts");
   const gitignore = read(".gitignore");
@@ -86,6 +87,9 @@ test("S231C keeps one dominant step action and announces focus and copy state", 
   assert.match(answerReview, /htmlFor="answer-review-problem-input"[\s\S]*?id="answer-review-problem-input"/);
   assert.match(answerReview, /id="answer-review-reference-label"[\s\S]*?aria-labelledby="answer-review-reference-label"/);
   assert.equal((answerReview.match(/type="file"[^>]+aria-label=/g) ?? []).length, 3);
+  for (const refName of ["cameraInputRef", "galleryInputRef", "pdfInputRef"]) {
+    assert.match(captureForm, new RegExp(`ref=\\{${refName}\\}[\\s\\S]{0,180}?className="hidden"`));
+  }
   const summaryTargetBlock = globals.match(/:where\(summary\)\s*\{([^}]*)\}/)?.[1] ?? "";
   assert.match(summaryTargetBlock, /min-inline-size:\s*var\(--touch-target-min\)/);
   assert.match(summaryTargetBlock, /min-block-size:\s*var\(--touch-target-min\)/);

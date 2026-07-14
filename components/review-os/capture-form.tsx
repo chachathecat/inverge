@@ -1898,7 +1898,7 @@ function IntakePanel({
           accept="image/*"
           capture="environment"
           multiple
-          className="sr-only"
+          className="hidden"
           onChange={(event) => {
             if (event.currentTarget.files) onImage(event.currentTarget.files);
           }}
@@ -1908,14 +1908,14 @@ function IntakePanel({
           type="file"
           accept="image/*"
           multiple
-          className="sr-only"
+          className="hidden"
           onChange={(event) => event.currentTarget.files && onImage(event.currentTarget.files)}
         />
         <input
           ref={pdfInputRef}
           type="file"
           accept="application/pdf"
-          className="sr-only"
+          className="hidden"
           onChange={(event) => {
             const file = event.currentTarget.files?.[0];
             if (file) onPdf(file);
