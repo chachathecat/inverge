@@ -155,6 +155,14 @@ test("S231B runtime fixtures and deployment proof are preview-only and metadata-
   assert.match(endpoint, /status: 503/);
   assert.match(runtimeSpec, /establishProtectedPreviewSession\(page, "S231B"\)/);
   assert.doesNotMatch(runtimeSpec, /extraHTTPHeaders/);
+  assert.match(runtimeSpec, /waitForReactClickHandler\(textInputButton, "Capture text input"\)/);
+  assert.match(runtimeSpec, /key\.startsWith\("__reactProps\$"\)/);
+  assert.match(runtimeSpec, /typeof reactProps\?\.onClick === "function"/);
+  assert.match(runtimeSpec, /await expect\(textInput\)\.toBeFocused\(\)/);
+  assert.match(runtimeSpec, /captureInputOptions\.getByRole\("button"/);
+  assert.match(runtimeSpec, /expect\(captureTrustWrapper\)\.toHaveCount\(0\)/);
+  assert.match(runtimeSpec, /expect\(captureTrustLayer\)\.toHaveAttribute\("data-trust-stage", "capture-intake"\)/);
+  assert.match(runtimeSpec, /expect\(captureTrustLayer\)\.toHaveAttribute\("data-trust-evidence-kind", "unavailable"\)/);
   assert.ok(
     runtimeSpec.indexOf("monitorRuntimeErrors(page)") <
       runtimeSpec.indexOf("loginWithDedicatedTestAccount(page"),

@@ -1,4 +1,4 @@
-import { expect, test, type Page, type TestInfo } from "@playwright/test";
+import { expect, test, type Locator, type Page, type TestInfo } from "@playwright/test";
 import { writeFile } from "node:fs/promises";
 
 import {
@@ -66,6 +66,27 @@ async function horizontalOverflow(page: Page) {
   return page.evaluate(() =>
     Math.max(0, document.documentElement.scrollWidth - window.innerWidth),
   );
+}
+
+async function waitForReactClickHandler(locator: Locator, controlName: string) {
+  await expect(locator).toBeVisible({ timeout: 20_000 });
+  await expect
+    .poll(
+      () =>
+        locator.evaluate((element) => {
+          const reactPropsKey = Object.keys(element).find((key) => key.startsWith("__reactProps$"));
+          if (!reactPropsKey) return false;
+          const reactProps = (
+            element as unknown as Record<string, { onClick?: unknown } | undefined>
+          )[reactPropsKey];
+          return typeof reactProps?.onClick === "function";
+        }),
+      {
+        timeout: 20_000,
+        message: `${controlName} must have its React click handler before interaction.`,
+      },
+    )
+    .toBe(true);
 }
 
 async function hasForbiddenAuthorityClaim(page: Page) {
@@ -171,13 +192,28 @@ test("S231B trust/provenance stays evidence-backed at 390/768/1440", async ({ pa
   );
 
   await page.goto("/app/capture?mode=second", { waitUntil: "domcontentloaded" });
-  await page.getByRole("button", { name: "텍스트 붙여넣기" }).click();
+  const captureInputOptions = page.locator("[data-capture-input-options]");
+  const captureTrustWrapper = page.locator('[data-trust-layer="capture-intake"]');
+  const captureTrustLayer = captureTrustWrapper.locator("[data-trust-provenance-layer]");
+  const textInputButton = captureInputOptions.getByRole("button", {
+    name: "텍스트 붙여넣기",
+    exact: true,
+  });
+  await expect(captureTrustWrapper).toHaveCount(0);
+  await waitForReactClickHandler(textInputButton, "Capture text input");
+  await textInputButton.click();
+  const textInput = page.getByLabel("오늘 공부한 내용 또는 내 답안", { exact: true });
+  await expect(captureTrustWrapper).toHaveCount(1);
+  await expect(captureTrustLayer).toHaveCount(1);
+  await expect(textInput).toBeVisible();
+  await expect(textInput).toBeFocused();
   await expect(page.locator("[data-trust-provenance-layer]")).toHaveCount(1);
-  await expect(page.locator('[data-trust-layer="capture-intake"]')).toHaveCount(1);
-  await expect(page.locator("[data-trust-provenance-layer]")).toHaveAttribute(
+  await expect(captureTrustLayer).toHaveAttribute("data-trust-stage", "capture-intake");
+  await expect(captureTrustLayer).toHaveAttribute(
     "data-trust-state",
     "unavailable",
   );
+  await expect(captureTrustLayer).toHaveAttribute("data-trust-evidence-kind", "unavailable");
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 
   expect(runtimeErrors.consoleErrors).toEqual([]);
