@@ -58,6 +58,14 @@ test("S229 runner makes one step dominant and keeps device claims honest", () =>
   assert.ok(component.includes('type RunnerViewState = "loading" | "empty" | "error" | "offline" | "active" | "completed"'));
   assert.ok(component.includes("data-calculator-routine-view-state"));
   assert.ok(component.includes("data-calculator-routine-active-step"));
+  assert.ok(component.includes("const [restoredDraftKey, setRestoredDraftKey]"));
+  assert.ok(component.includes("setDraft(readDraftFromStorage(draftLoadKey, fallbackDraft))"));
+  assert.ok(component.includes("!isDraftRestored || typeof window"));
+  assert.equal(
+    component.includes("return readDraftFromStorage(draftLoadKey, fallbackDraft);"),
+    false,
+    "sessionStorage must not change the server/client first render",
+  );
   assert.ok(component.includes("grid grid-cols-9"));
   assert.ok(component.includes("CASIO fx-9860GIII"));
   assert.ok(component.includes("기기 검증 전"));
@@ -113,6 +121,7 @@ test("S229 authenticated browser gate stays Preview-only and credential-safe", (
   assert.ok(spec.includes("sameOriginErrorCount"));
   assert.ok(workflow.includes("<!-- run-s229-auth-e2e -->"));
   assert.ok(workflow.includes("github.event.pull_request.number == 564"));
+  assert.ok(workflow.includes("github.event.pull_request.head.sha"));
   assert.ok(workflow.includes("secrets.E2E_USER_EMAIL || secrets.TEST_USER_EMAIL"));
   assert.ok(workflow.includes("secrets.E2E_USER_PASSWORD || secrets.TEST_USER_PASSWORD"));
   assert.ok(workflow.includes("VERCEL_AUTOMATION_BYPASS_SECRET"));
