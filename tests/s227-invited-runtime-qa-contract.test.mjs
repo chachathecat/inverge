@@ -26,6 +26,7 @@ test("S227 and S228 reuse one safe authenticated credential boundary", () => {
   assert.match(helper, /\[400, 401, 403\]\.includes\(status\)/);
   assert.match(helper, /response\.status\(\) < 400/);
   assert.match(helper, /Every visible email-like identity must be inside the masked account region/);
+  assert.match(helper, /maskColor: "#000000"/);
   assert.ok(helper.includes('data-s224v-surface=\"/app\"'));
   assert.match(helper, /E2E_TARGET_SHA as the exact 40-character deployment commit/);
   assert.match(helper, /\[redacted-email\]/);
@@ -93,6 +94,7 @@ test("S227 dedicated workflow is marker-gated, exact-head, and privacy fail-clos
 
   assert.match(workflow, /github\.event\.pull_request\.number == 565/);
   assert.match(workflow, /<!-- run-s227-auth-e2e -->/);
+  assert.match(workflow, /types: \[opened, synchronize, reopened, edited\]/);
   assert.match(workflow, /S227_AUTH_RUNTIME: "1"/);
   assert.ok(
     workflow.includes("E2E_RUNNER_SHA: ${{ github.event.pull_request.head.sha }}"),
@@ -108,7 +110,10 @@ test("S227 dedicated workflow is marker-gated, exact-head, and privacy fail-clos
   assert.match(workflow, /secrets\.E2E_USER_PASSWORD \|\| secrets\.TEST_USER_PASSWORD/);
   assert.match(workflow, /secrets\.VERCEL_AUTOMATION_BYPASS_SECRET/);
   assert.match(workflow, /tests\/e2e\/s227-invited-runtime-acceptance\.spec\.ts/);
-  assert.match(workflow, /apt-get install --yes --no-install-recommends tesseract-ocr/);
+  assert.match(workflow, /tesseract-ocr imagemagick/);
+  assert.match(workflow, /command -v convert/);
+  assert.match(workflow, /OCR-detected identity region/);
+  assert.match(workflow, /Email-like text remained after deterministic redaction/);
   assert.match(workflow, /Reject email-like text in screenshots/);
   assert.match(workflow, /if: always\(\) && steps\.redaction_guard\.outcome == 'success'/);
   assert.match(workflow, /test-results\/\*\*\/s227-\*\.png/);
@@ -121,16 +126,23 @@ test("S227 dedicated workflow is marker-gated, exact-head, and privacy fail-clos
   assert.doesNotMatch(s227Job, /\*\*\/\*\.png/);
 });
 
-test("S227 QA document records the merged dependency and keeps claims evidence-bound", () => {
+test("S227 QA document records reviewed post-merge evidence without overstating device acceptance", () => {
   const doc = read("docs/qa/s227-invited-account-runtime.md");
 
-  assert.match(doc, /Refs #558/);
-  assert.match(doc, /#558 stays open/);
+  assert.match(doc, /Closes #558/);
+  assert.match(doc, /#558 closes when #565 merges/);
+  assert.match(doc, /post-merge integrated matrix passed/i);
+  assert.match(doc, /29340100500/);
+  assert.match(doc, /8313782732/);
+  assert.match(doc, /8c22a9dfe6296c190cc23d45e0b0328666a9c9840d950ca3a1085d1c0c0b1990/);
+  assert.match(doc, /dpl_AqBUdjrbyBjGU3hKa9omhuz66RuX/);
+  assert.match(doc, /36 sanitized PNGs/);
   assert.match(doc, /#562.*merged/i);
   assert.match(doc, /calculator active\/completed/);
   assert.match(doc, /normal\/empty-evidence\/completed\/error\/offline/);
-  assert.match(doc, /no calculator\/device correctness claim/);
+  assert.match(doc, /No calculator\/device correctness claim/i);
   assert.match(doc, /runner SHA/);
   assert.match(doc, /target deployment SHA/);
+  assert.doesNotMatch(doc, /Pending new run|Prepared/);
   assert.doesNotMatch(doc, /Status: complete/i);
 });
