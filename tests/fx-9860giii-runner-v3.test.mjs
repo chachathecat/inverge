@@ -120,9 +120,24 @@ test("S229 authenticated browser gate stays Preview-only and credential-safe", (
   assert.ok(spec.includes('deviceStatus: "기기 검증 전"'));
   assert.ok(spec.includes("consoleErrorCount"));
   assert.ok(spec.includes("sameOriginErrorCount"));
+  assert.ok(spec.includes("The login form must be client-hydrated before submission."));
+  assert.ok(spec.includes("hydration-check@inverge.invalid"));
+  assert.ok(spec.includes("waitForResponse(isSignInResponse, { timeout: 20_000 })"));
+  assert.ok(spec.includes("if (!attempt.response && !attempt.requestEmitted)"));
+  assert.ok(spec.includes("[400, 401, 403].includes(status)"));
+  assert.ok(spec.includes("credential failures are not retried"));
+  assert.ok(spec.includes("test.describe.configure({ timeout: 180_000, retries: 0 })"));
+  assert.ok(spec.includes("runnerHeadSha: runtimeRunnerHeadSha"));
+  assert.ok(spec.includes("targetDeploymentSha: runtimeTargetDeploymentSha"));
+  assert.ok(spec.includes("runtimeTargetDeploymentSha !== runtimeRunnerHeadSha"));
+  assert.equal(spec.includes("toHaveValue(testEmail)"), false);
+  assert.equal(spec.includes("toHaveValue(testPassword)"), false);
   assert.ok(workflow.includes("<!-- run-s229-auth-e2e -->"));
   assert.ok(workflow.includes("github.event.pull_request.number == 564"));
   assert.ok(workflow.includes("github.event.pull_request.head.sha"));
+  assert.ok(workflow.includes("S229_RUNNER_HEAD_SHA: ${{ github.event.pull_request.head.sha }}"));
+  assert.ok(workflow.includes("S229_TARGET_DEPLOYMENT_SHA: ${{ github.event.pull_request.head.sha }}"));
+  assert.ok(workflow.includes('test "${S229_TARGET_DEPLOYMENT_SHA}" = "${S229_RUNNER_HEAD_SHA}"'));
   assert.ok(workflow.includes("secrets.E2E_USER_EMAIL || secrets.TEST_USER_EMAIL"));
   assert.ok(workflow.includes("secrets.E2E_USER_PASSWORD || secrets.TEST_USER_PASSWORD"));
   assert.ok(workflow.includes("VERCEL_AUTOMATION_BYPASS_SECRET"));
@@ -131,4 +146,9 @@ test("S229 authenticated browser gate stays Preview-only and credential-safe", (
   assert.equal(workflow.includes("**/trace.zip"), false);
   assert.equal(workflow.includes("test-results/**/s229-*.png"), true);
   assert.equal(workflow.includes("s229-authenticated-runtime"), true);
+  assert.equal(
+    [workflow, spec].join("\n").includes("8013cfe092e70ef72952f1d0d4c985b5037f91e0"),
+    false,
+    "runtime provenance must come from the current PR event, not a stale hardcoded deployment SHA",
+  );
 });

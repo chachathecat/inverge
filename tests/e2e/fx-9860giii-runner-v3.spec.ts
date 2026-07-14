@@ -1,8 +1,18 @@
-import { expect, test, type Locator, type Page, type TestInfo } from "@playwright/test";
+import {
+  expect,
+  test,
+  type Locator,
+  type Page,
+  type Request,
+  type Response,
+  type TestInfo,
+} from "@playwright/test";
 import { writeFile } from "node:fs/promises";
 
 const runtimeEnabled = process.env.S229_AUTH_RUNTIME === "1";
 const runtimeBaseUrl = process.env.E2E_BASE_URL?.trim() ?? "";
+const runtimeRunnerHeadSha = process.env.S229_RUNNER_HEAD_SHA?.trim() ?? "";
+const runtimeTargetDeploymentSha = process.env.S229_TARGET_DEPLOYMENT_SHA?.trim() ?? "";
 const testEmail = process.env.E2E_USER_EMAIL?.trim() ?? "";
 const testPassword = process.env.E2E_USER_PASSWORD ?? "";
 const vercelBypassSecret = process.env.VERCEL_AUTOMATION_BYPASS_SECRET?.trim() ?? "";
@@ -53,6 +63,9 @@ function requireSafeRuntimeEnvironment() {
     ["E2E_BASE_URL", runtimeBaseUrl],
     ["E2E_USER_EMAIL", testEmail],
     ["E2E_USER_PASSWORD", testPassword],
+    ["VERCEL_AUTOMATION_BYPASS_SECRET", vercelBypassSecret],
+    ["S229_RUNNER_HEAD_SHA", runtimeRunnerHeadSha],
+    ["S229_TARGET_DEPLOYMENT_SHA", runtimeTargetDeploymentSha],
   ]
     .filter(([, value]) => !value)
     .map(([name]) => name);
@@ -68,6 +81,12 @@ function requireSafeRuntimeEnvironment() {
   if (!vercelBypassSecret) {
     throw new Error("S229 runtime acceptance requires VERCEL_AUTOMATION_BYPASS_SECRET for the protected Preview.");
   }
+  if (!/^[0-9a-f]{40}$/i.test(runtimeRunnerHeadSha)) {
+    throw new Error("S229 runtime acceptance requires a full current PR head SHA.");
+  }
+  if (runtimeTargetDeploymentSha !== runtimeRunnerHeadSha) {
+    throw new Error("S229 runtime acceptance requires the deployment target SHA to equal the runner head SHA.");
+  }
 }
 
 function sanitizeEvidence(value: string) {
@@ -78,25 +97,109 @@ function sanitizeEvidence(value: string) {
   return sanitized;
 }
 
+function isSignInRequest(candidate: Request) {
+  const url = new URL(candidate.url());
+  return candidate.method() === "POST" && url.pathname === "/api/auth/sign-in";
+}
+
+function isSignInResponse(candidate: Response) {
+  return isSignInRequest(candidate.request());
+}
+
+async function waitForHydratedLoginForm(page: Page) {
+  const emailInput = page.getByLabel("이메일");
+  const passwordInput = page.getByLabel("비밀번호");
+  const submit = page.getByTestId("login-submit");
+
+  await expect(emailInput).toBeVisible({ timeout: 20_000 });
+  await expect(passwordInput).toBeVisible({ timeout: 20_000 });
+  await expect(submit).toBeVisible({ timeout: 20_000 });
+  await expect
+    .poll(
+      () =>
+        submit.evaluate((element) =>
+          Object.keys(element).some(
+            (key) => key.startsWith("__reactProps$") || key.startsWith("__reactFiber$"),
+          ),
+        ),
+      { timeout: 20_000, message: "The login form must be client-hydrated before submission." },
+    )
+    .toBe(true);
+
+  // Exercise controlled handlers after hydration without exposing the secret-backed values in assertions.
+  await emailInput.fill("hydration-check@inverge.invalid");
+  await expect(emailInput).toHaveValue("hydration-check@inverge.invalid");
+  await emailInput.fill(testEmail);
+  await passwordInput.fill(testPassword);
+  await expect
+    .poll(() => emailInput.inputValue().then((value) => value === testEmail), {
+      timeout: 20_000,
+      message: "The hydrated email control must retain its secret-backed value.",
+    })
+    .toBe(true);
+  await expect
+    .poll(() => passwordInput.inputValue().then((value) => value === testPassword), {
+      timeout: 20_000,
+      message: "The hydrated password control must retain its secret-backed value.",
+    })
+    .toBe(true);
+  await expect(submit).toBeEnabled({ timeout: 20_000 });
+
+  return { submit };
+}
+
+async function clickForSignInResponse(page: Page, submit: Locator) {
+  let requestEmitted = false;
+  const observeRequest = (request: Request) => {
+    if (isSignInRequest(request)) requestEmitted = true;
+  };
+  page.on("request", observeRequest);
+
+  try {
+    const responsePromise = page.waitForResponse(isSignInResponse, { timeout: 20_000 }).catch((error: unknown) => {
+      if (error instanceof Error && error.name === "TimeoutError") return null;
+      throw error;
+    });
+    await submit.click({ timeout: 20_000 });
+    const response = await responsePromise;
+    return { requestEmitted, response };
+  } finally {
+    page.off("request", observeRequest);
+  }
+}
+
 async function login(page: Page) {
-  await page.goto("/login?mode=second", { waitUntil: "domcontentloaded" });
-  await expect(page.getByLabel("이메일")).toBeVisible();
-  await page.getByLabel("이메일").fill(testEmail);
-  await page.getByLabel("비밀번호").fill(testPassword);
+  await page.goto("/login?mode=second", { waitUntil: "domcontentloaded", timeout: 30_000 });
+  if (new URL(page.url()).pathname === "/app") return { signInAttempts: 0 };
 
-  const [response] = await Promise.all([
-    page.waitForResponse(
-      (candidate) => {
-        const url = new URL(candidate.url());
-        return candidate.request().method() === "POST" && url.pathname === "/api/auth/sign-in";
-      },
-      { timeout: 20_000 },
-    ),
-    page.getByTestId("login-submit").click(),
-  ]);
+  let signInAttempts = 1;
+  let form = await waitForHydratedLoginForm(page);
+  let attempt = await clickForSignInResponse(page, form.submit);
 
-  expect(response.ok(), "The app login endpoint must accept the dedicated test account.").toBe(true);
-  await expect(page).toHaveURL((url) => url.pathname === "/app");
+  // Retry once only when the hydrated first click emitted no auth request at all.
+  if (!attempt.response && !attempt.requestEmitted) {
+    signInAttempts += 1;
+    form = await waitForHydratedLoginForm(page);
+    attempt = await clickForSignInResponse(page, form.submit);
+  }
+
+  if (!attempt.response) {
+    if (attempt.requestEmitted) {
+      throw new Error("The sign-in request was emitted but produced no response within the bounded wait; it was not retried.");
+    }
+    throw new Error("The hydrated login form emitted no sign-in request after one bounded no-request retry.");
+  }
+
+  const status = attempt.response.status();
+  if ([400, 401, 403].includes(status)) {
+    throw new Error(`The dedicated test account sign-in returned ${status}; credential failures are not retried.`);
+  }
+  if (!attempt.response.ok()) {
+    throw new Error(`The dedicated test account sign-in returned HTTP ${status}.`);
+  }
+
+  await expect(page).toHaveURL((url) => url.pathname === "/app", { timeout: 20_000 });
+  return { signInAttempts };
 }
 
 async function expectNoHorizontalOverflow(page: Page) {
@@ -170,10 +273,16 @@ async function tabToPrimaryAction(
         {
           result: "fail",
           stage: "keyboard-focus",
+          runnerHeadSha: runtimeRunnerHeadSha,
+          targetDeploymentSha: runtimeTargetDeploymentSha,
+          previewHost: expectedPreviewHost,
           reached,
           tabStops,
           geometry,
           activeStepCount: await trainer.locator("[data-calculator-routine-active-step]").count(),
+          credentialsRedacted: true,
+          traceCaptured: false,
+          videoCaptured: false,
           realDeviceVerified: false,
           deviceStatus: "기기 검증 전",
           screenshots: [screenshot],
@@ -224,7 +333,13 @@ async function expectPreLoopRunnerState(trainer: Locator, testInfo: TestInfo) {
         {
           result: "fail",
           stage: "pre-loop",
+          runnerHeadSha: runtimeRunnerHeadSha,
+          targetDeploymentSha: runtimeTargetDeploymentSha,
+          previewHost: expectedPreviewHost,
           ...diagnostic,
+          credentialsRedacted: true,
+          traceCaptured: false,
+          videoCaptured: false,
           realDeviceVerified: false,
           deviceStatus: "기기 검증 전",
           screenshots: [screenshot],
@@ -269,7 +384,33 @@ test.describe("S229 authenticated fx-9860GIII runner acceptance", () => {
     });
 
     await page.setViewportSize({ width: 390, height: 844 });
-    await login(page);
+    let signInAttempts = 0;
+    try {
+      ({ signInAttempts } = await login(page));
+    } catch (error) {
+      await writeFile(
+        testInfo.outputPath("s229-runtime.json"),
+        JSON.stringify(
+          {
+            result: "fail",
+            stage: "authentication",
+            runnerHeadSha: runtimeRunnerHeadSha,
+            targetDeploymentSha: runtimeTargetDeploymentSha,
+            previewHost: expectedPreviewHost,
+            credentialsRedacted: true,
+            traceCaptured: false,
+            videoCaptured: false,
+            realDeviceVerified: false,
+            deviceStatus: "기기 검증 전",
+            screenshots: [],
+          },
+          null,
+          2,
+        ),
+        "utf8",
+      );
+      throw error;
+    }
     await clearCalculatorRoutineSessionDrafts(page);
     await page.goto("/app/calculator?mode=second&context=practice&focus=casio", {
       waitUntil: "domcontentloaded",
@@ -361,7 +502,10 @@ test.describe("S229 authenticated fx-9860GIII runner acceptance", () => {
     const cleanRuntime = consoleErrors.length === 0 && pageErrors.length === 0 && sameOriginErrors.length === 0;
     const manifest = {
       result: cleanRuntime ? "pass" : "fail",
+      runnerHeadSha: runtimeRunnerHeadSha,
+      targetDeploymentSha: runtimeTargetDeploymentSha,
       previewHost: expectedPreviewHost,
+      signInAttempts,
       viewports: ["390x844", "1440x1024"],
       activeStepCount: 1,
       completedStepIds: observedStepIds,
@@ -373,6 +517,9 @@ test.describe("S229 authenticated fx-9860GIII runner acceptance", () => {
       sameOriginErrorCount: sameOriginErrors.length,
       directCasio: "pass",
       recovery: "pass",
+      credentialsRedacted: true,
+      traceCaptured: false,
+      videoCaptured: false,
       realDeviceVerified: false,
       deviceStatus: "기기 검증 전",
       screenshots,
