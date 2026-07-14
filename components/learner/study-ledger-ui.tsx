@@ -308,7 +308,7 @@ export function StickyAction({
     <section
       data-s228-sticky-action
       aria-label="다음 학습 행동"
-      className="fixed inset-x-4 bottom-[calc(1rem+env(safe-area-inset-bottom))] z-30 rounded-[var(--ledger-radius-card)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3 shadow-[0_16px_40px_rgba(16,35,63,0.16)] lg:sticky lg:inset-auto lg:top-24 lg:shadow-[var(--shadow-soft)]"
+      className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] left-[max(1rem,env(safe-area-inset-left))] right-[max(1rem,env(safe-area-inset-right))] z-30 rounded-[var(--ledger-radius-card)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3 shadow-[0_16px_40px_rgba(16,35,63,0.16)] lg:sticky lg:inset-auto lg:top-24 lg:shadow-[var(--shadow-soft)]"
     >
       <Link
         href={href}

@@ -62,14 +62,14 @@ export function ResultFeedbackPrompt({ route = "unknown", pageContext = {} }: Re
               setSelected(rating);
               void submitFeedback(rating, note.trim() || undefined);
             }}
-            className={cn(buttonVariants({ variant: selected === value ? "default" : "outline" }), "h-8 px-3 text-xs")}
+            className={cn(buttonVariants({ variant: selected === value ? "default" : "outline" }), "min-h-11 px-3 text-xs")}
           >
             {label}
           </button>
         ))}
       </div>
       <label className="mt-2 block">
-        <span className="text-[11px] text-[color:var(--muted)]">무엇이 부족했나요?</span>
+        <span className="text-xs text-[color:var(--muted)]">무엇이 부족했나요?</span>
         <Textarea value={note} onChange={(event) => setNote(event.target.value)} className="mt-1 min-h-[72px] text-xs" placeholder="선택 입력" />
       </label>
       <div className="mt-2 flex items-center gap-2">
@@ -80,12 +80,12 @@ export function ResultFeedbackPrompt({ route = "unknown", pageContext = {} }: Re
             if (!selected) return;
             void submitFeedback(selected, note.trim() || undefined);
           }}
-          className={cn(buttonVariants({ variant: "outline" }), "h-7 px-2 text-[11px]")}
+          className={cn(buttonVariants({ variant: "outline" }), "min-h-11 px-2 text-xs")}
         >
           의견 보내기
         </button>
-        {status === "success" ? <p className="text-[11px] text-[color:var(--muted)]">의견이 저장되었습니다.</p> : null}
-        {status === "error" ? <p className="text-[11px] text-[color:var(--muted)]">의견을 저장하지 못했습니다. 나중에 다시 시도해 주세요.</p> : null}
+        {status === "success" ? <p className="text-xs text-[color:var(--muted)]">의견이 저장되었습니다.</p> : null}
+        {status === "error" ? <p className="text-xs text-[color:var(--muted)]">의견을 저장하지 못했습니다. 나중에 다시 시도해 주세요.</p> : null}
       </div>
     </article>
   );

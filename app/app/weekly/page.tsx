@@ -144,7 +144,7 @@ function WeeklyTaskItem({ task }: { task: WeeklyPlanTask }) {
             {task.subject} · {actionLabel}
           </p>
         </div>
-        <span className="rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] px-2 py-1 text-[11px] text-[color:var(--muted)]">
+        <span className="rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] px-2 py-1 text-xs text-[color:var(--muted)]">
           {task.estimatedDurationMinutes}분
         </span>
       </div>

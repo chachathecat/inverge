@@ -67,7 +67,7 @@ export default async function ReviewOsSettingsPage({ searchParams }: PageProps) 
             <CardDescription>문제·답안·계산 내용 없이 오늘 할 일과 복습 알림만 설정합니다.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Link href={`/app/settings/notifications?mode=${modeState.mode}`} className="inline-flex min-h-10 items-center rounded-full border border-[color:var(--border-subtle)] px-4 text-sm font-medium text-[color:var(--foreground-strong)]">
+            <Link href={`/app/settings/notifications?mode=${modeState.mode}`} className="inline-flex min-h-11 items-center rounded-full border border-[color:var(--border-subtle)] px-4 text-sm font-medium text-[color:var(--foreground-strong)]">
               알림 설정 열기
             </Link>
           </CardContent>

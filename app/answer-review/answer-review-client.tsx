@@ -544,7 +544,7 @@ export default function AnswerReviewClientPage({
             <button type="button" onClick={focusAnswerTextarea} className={cn(buttonVariants({ variant: "outline" }), "w-full justify-center h-11 text-sm")}>텍스트 입력</button>
           </div>
           {viewerMode === "anonymous" ? (
-            <p className="inline-flex w-fit rounded-full border border-[var(--border)] bg-[color:var(--surface)] px-2.5 py-1 text-[11px] font-medium text-[color:var(--muted)]">
+            <p className="inline-flex w-fit rounded-full border border-[var(--border)] bg-[color:var(--surface)] px-2.5 py-1 text-xs font-medium text-[color:var(--muted)]">
               무료 체험 1회
             </p>
           ) : null}
@@ -633,7 +633,7 @@ export default function AnswerReviewClientPage({
                   <article className="space-y-2 rounded-[var(--radius-md)] border border-[#27375f] bg-[color:var(--surface)] p-4" id="answer-review-text">
                     <div className="flex items-center justify-between gap-3">
                       <p className="text-caption font-medium text-[#3f4c66]">내 답안 입력 (필수)</p>
-                      <span className="rounded-full bg-[#eef2fb] px-2.5 py-1 text-[11px] font-semibold text-[#1e2a46]">최소 입력</span>
+                      <span className="rounded-full bg-[#eef2fb] px-2.5 py-1 text-xs font-semibold text-[#1e2a46]">최소 입력</span>
                     </div>
                     <Textarea
                       ref={answerTextRef}
@@ -770,13 +770,13 @@ export default function AnswerReviewClientPage({
                     <p className="text-caption font-medium text-[color:var(--muted)]">해설 난이도</p>
                     <div className="mt-2 grid gap-2">
                       {[{value:"easy",label:"쉽게 풀이"},{value:"standard",label:"기본 해설"},{value:"exam",label:"시험답안식"}].map((option)=>(
-                        <label key={option.value} className="flex items-center gap-2 text-caption text-[color:var(--foreground-strong)]">
+                        <label key={option.value} className="flex min-h-11 items-center gap-2 text-caption text-[color:var(--foreground-strong)]">
                           <input type="radio" name="explanationLevel" value={option.value} checked={explanationLevel===option.value} onChange={() => setExplanationLevel(option.value as AnswerReviewExplanationLevel)} />
                           <span>{option.label}</span>
                         </label>
                       ))}
                     </div>
-                    <p className="mt-2 text-[11px] leading-5 text-[color:var(--muted)]">쉬운 풀이는 이해용이고, 답안 구조는 작성용입니다.</p>
+                    <p className="mt-2 text-xs leading-5 text-[color:var(--muted)]">쉬운 풀이는 이해용이고, 답안 구조는 작성용입니다.</p>
                     <p className="mt-2 text-caption leading-5 text-[color:var(--muted)]">
                       내 답안만 있어도 검토를 시작할 수 있습니다.
                     </p>
@@ -916,7 +916,7 @@ export default function AnswerReviewClientPage({
                       <li>• 오늘 계획에 반영됩니다.</li>
                     </ul>
                     <div className="mt-2 flex flex-wrap gap-2">
-                      <Link href="/login?returnTo=%2Fanswer-review%3Fmode%3Dsecond" className={cn(buttonVariants({ variant: "default" }), "h-8 px-3 text-xs")}>로그인하고 기록 저장</Link>
+                      <Link href="/login?returnTo=%2Fanswer-review%3Fmode%3Dsecond" className={cn(buttonVariants({ variant: "default" }), "min-h-11 px-3 text-xs")}>로그인하고 기록 저장</Link>
                       <button type="button" className={cn(buttonVariants({ variant: "outline" }), "h-8 px-3 text-xs")} onClick={() => setCurrentStep(2)}>결과만 계속 보기</button>
                     </div>
                   </article>
@@ -924,7 +924,7 @@ export default function AnswerReviewClientPage({
                 {qualityView && qualityView.qualityWarnings.length > 0 ? (
                   <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] px-4 py-3">
                     <p className="text-caption font-medium text-[color:var(--muted)]">검토 품질 확인 필요</p>
-                    <ul className="mt-1 space-y-1 text-[11px] leading-5 text-[color:var(--muted)]">
+                    <ul className="mt-1 space-y-1 text-xs leading-5 text-[color:var(--muted)]">
                       {qualityView.qualityWarnings.map((warning) => (
                         <li key={warning}>• {warning}</li>
                       ))}
@@ -935,7 +935,7 @@ export default function AnswerReviewClientPage({
                 {viewerMode === "anonymous" && trialLimitReached ? (
                   <article className="rounded-[var(--radius-sm)] border border-[#b9a98a] bg-[#f8f4ea] px-4 py-3">
                     <p className="text-caption leading-5 text-[#5a4b32]">오늘 무료 정리 1회를 사용했습니다. 로그인하면 기록 저장과 복습 연결을 사용할 수 있습니다.</p>
-                    <Link href="/login?returnTo=%2Fanswer-review%3Fmode%3Dsecond" className={cn(buttonVariants({ variant: "default" }), "mt-2 h-8 px-3 text-xs")}>로그인하고 기록 저장</Link>
+                    <Link href="/login?returnTo=%2Fanswer-review%3Fmode%3Dsecond" className={cn(buttonVariants({ variant: "default" }), "mt-2 min-h-11 px-3 text-xs")}>로그인하고 기록 저장</Link>
                   </article>
                 ) : null}
 
@@ -953,7 +953,7 @@ export default function AnswerReviewClientPage({
                         whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
                         type="button"
                         onClick={() => setCurrentStep(3)}
-                        className={cn(buttonVariants({ variant: "default" }), "primary-action mt-4 h-10 px-4")}
+                        className={cn(buttonVariants({ variant: "default" }), "primary-action mt-4 min-h-11 px-4")}
                         data-s224v-dominant-primary-action
                       >
                         보강 문단 정리

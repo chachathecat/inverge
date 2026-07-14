@@ -27,7 +27,11 @@ test("closed beta top nav routes to canonical Today, Capture, Review, and Notes 
   assert.equal(learnerShell.includes('second: "/app/write"'), false, "Input tab should not route second mode to /app/write");
   assert.equal(learnerShell.includes('`${href}?mode=${currentMode}`'), true, "tab links should preserve the active exam mode");
   assert.equal(learnerShell.includes('activeHrefs: ["/app/capture", "/app/input", "/app/entry", "/app/write"]'), true);
-  assert.equal(learnerShell.includes('activeHrefs: ["/app/notes", "/app/items"]'), true);
+  assert.equal(
+    learnerShell.includes('activeHrefs: ["/app/notes", "/app/items", "/app/calculator"]'),
+    true,
+    "Notes tab should also stay active for the learner calculator route",
+  );
   assert.equal(forbiddenLearnerRoutePattern.test(learnerShell), false, "learner nav must not expose instructor/studio routes");
 });
 

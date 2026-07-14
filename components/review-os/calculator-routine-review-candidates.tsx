@@ -28,7 +28,7 @@ export function CalculatorRoutineReviewCandidates({
             </div>
             <Link
               href={buildCalculatorRoutineRecoveryHref(candidate.recoveryReference)}
-              className="inline-flex h-9 items-center justify-center rounded-full border border-[color:var(--border-subtle)] px-3 text-xs font-medium text-[color:var(--foreground-strong)]"
+              className="inline-flex min-h-11 items-center justify-center rounded-full border border-[color:var(--border-subtle)] px-3 text-xs font-medium text-[color:var(--foreground-strong)]"
             >
               계산·검산 다시 하기
             </Link>

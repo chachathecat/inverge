@@ -288,7 +288,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
         <section className="evidence-bar px-4 py-3">
           <EvidenceLine>저장한 내용은 교정 노트에서 확인할 수 있습니다.</EvidenceLine>
           <OneActionFooter>
-            <Link href={`/app/notes?mode=${mode}`} className="inline-flex rounded-full border border-[color:var(--border-subtle)] px-4 py-2 text-xs font-medium text-[color:var(--foreground-strong)]">
+            <Link href={`/app/notes?mode=${mode}`} className="inline-flex min-h-11 items-center rounded-full border border-[color:var(--border-subtle)] px-4 py-2 text-xs font-medium text-[color:var(--foreground-strong)]">
               교정 노트 보기
             </Link>
           </OneActionFooter>
@@ -331,13 +331,13 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                             <div className="flex flex-wrap items-center gap-2">
                               <p className="text-sm font-medium leading-6 text-[color:var(--foreground-strong)]">{index + 1}. {task.title}</p>
                               {task.display_source_label ? (
-                                <span className="rounded-full border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)] px-2 py-0.5 text-[11px] font-medium text-[color:var(--muted)]">{task.display_source_label}</span>
+                                <span className="rounded-full border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)] px-2 py-0.5 text-xs font-medium text-[color:var(--muted)]">{task.display_source_label}</span>
                               ) : null}
                             </div>
                             <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">{task.subject} · {task.estimated_minutes}분</p>
                             <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]"><span className="font-medium text-[color:var(--foreground-strong)]">왜 지금?</span> {task.display_reason ?? task.reason}</p>
                           </div>
-                          <Link href={resolveTaskHref(task)} className="secondary-action inline-flex min-h-10 w-full shrink-0 items-center justify-center px-3 py-2 text-xs font-medium sm:w-auto">
+                          <Link href={resolveTaskHref(task)} className="secondary-action inline-flex min-h-11 w-full shrink-0 items-center justify-center px-3 py-2 text-xs font-medium sm:w-auto">
                             {task.display_primary_cta ?? task.primary_cta.label}
                           </Link>
                         </div>
@@ -457,7 +457,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                           <p className="font-medium text-[color:var(--foreground-strong)]">{note.title}</p>
                           <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">{note.summaryLine}</p>
                         </div>
-                        <span className="rounded-full border border-[color:var(--border-subtle)] px-2 py-1 text-[11px] text-[color:var(--muted)]">
+                        <span className="rounded-full border border-[color:var(--border-subtle)] px-2 py-1 text-xs text-[color:var(--muted)]">
                           {note.noteLabel}
                         </span>
                       </div>
