@@ -56,7 +56,7 @@ async function openRoute(page: Page, path: string) {
   expect(theme).toEqual({ dataset: "light", colorScheme: "light" });
 }
 
-async function scanAxe(page: Page) {
+async function scanAxe(page: Page, context: { route: string; viewport: string }) {
   const results = await new AxeBuilder({ page }).withTags([...axeTags]).analyze();
   const blocking = results.violations
     .filter((violation) => violation.impact === "critical" || violation.impact === "serious")
@@ -66,6 +66,53 @@ async function scanAxe(page: Page) {
       nodeCount: violation.nodes.length,
     }));
   assertNoPrivateEvidence(blocking);
+  if (blocking.length > 0) {
+    const labelDiagnostics = await page.evaluate(() => {
+      const roots: ParentNode[] = [document];
+      const controls: HTMLElement[] = [];
+      for (let index = 0; index < roots.length; index += 1) {
+        const root = roots[index];
+        controls.push(...Array.from(root.querySelectorAll<HTMLElement>("input, select, textarea")));
+        for (const element of root.querySelectorAll<HTMLElement>("*")) {
+          if (element.shadowRoot) roots.push(element.shadowRoot);
+        }
+      }
+
+      const counts = new Map<string, { tag: string; type: string; visible: boolean; insideMain: boolean; insideShadowRoot: boolean; shadowHostTag: string | null; count: number }>();
+      for (const control of controls) {
+        const labelledBy = control.getAttribute("aria-labelledby")
+          ?.split(/\s+/)
+          .filter(Boolean)
+          .some((id) => document.getElementById(id)) ?? false;
+        const hasLabel = Boolean(
+          control.getAttribute("aria-label")?.trim() ||
+          labelledBy ||
+          control.closest("label") ||
+          (control.id && document.querySelector(`label[for="${CSS.escape(control.id)}"]`)) ||
+          control.getAttribute("title")?.trim(),
+        );
+        if (hasLabel) continue;
+        const rect = control.getBoundingClientRect();
+        const style = getComputedStyle(control);
+        const root = control.getRootNode();
+        const diagnostic = {
+          tag: control.tagName.toLowerCase(),
+          type: control instanceof HTMLInputElement ? control.type : "n/a",
+          visible: rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden",
+          insideMain: control.closest("main") !== null,
+          insideShadowRoot: root instanceof ShadowRoot,
+          shadowHostTag: root instanceof ShadowRoot ? root.host.tagName.toLowerCase() : null,
+        };
+        const key = JSON.stringify(diagnostic);
+        const existing = counts.get(key);
+        counts.set(key, { ...diagnostic, count: (existing?.count ?? 0) + 1 });
+      }
+      return Array.from(counts.values());
+    });
+    const safeDiagnostic = { context, blocking, labelDiagnostics };
+    assertNoPrivateEvidence(safeDiagnostic);
+    console.error(`S231C safe Axe diagnostic: ${JSON.stringify(safeDiagnostic)}`);
+  }
   expect(blocking).toEqual([]);
   return {
     blocking,
@@ -360,7 +407,7 @@ test("S231C exact-head light accessibility contract", async ({ page }, testInfo:
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
     for (const route of routes) {
       await openRoute(page, route.path);
-      const axe = await scanAxe(page);
+      const axe = await scanAxe(page, { route: route.label, viewport: viewport.label });
       const productRules = await productRuleFailures(page);
       const layout = await layoutFailures(page);
       expect(productRules.targetFailures).toEqual([]);
