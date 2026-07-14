@@ -1114,12 +1114,6 @@ export default function AnswerReviewClientPage({
                         <li>Ⅳ. 결론: {toShortLine(qualityView?.skeleton.conclusion.join(" · ") || "", "결론 문장을 다시 써서 마무리합니다.")}</li>
                       </ul>
                     </article>
-                    <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
-                      <p className="text-caption font-medium text-[color:var(--muted)]">다음 행동</p>
-                      <div className="mt-2 grid gap-2">
-                        <motion.button whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }} type="button" onClick={() => setCurrentStep(1)} className={cn(buttonVariants({ variant: "outline" }), "h-9")}>입력 수정하기</motion.button>
-                      </div>
-                    </article>
                   </motion.aside>
                 </div>
               </motion.section>

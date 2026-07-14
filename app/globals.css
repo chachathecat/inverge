@@ -142,6 +142,13 @@
     min-inline-size: var(--touch-target-min);
     min-block-size: var(--touch-target-min);
   }
+
+  :where(a[href]:not(p a[href], li a[href])) {
+    display: inline-flex;
+    min-inline-size: var(--touch-target-min);
+    min-block-size: var(--touch-target-min);
+    align-items: center;
+  }
 }
 
 html {

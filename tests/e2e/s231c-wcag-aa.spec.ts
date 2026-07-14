@@ -85,7 +85,10 @@ async function productRuleFailures(page: Page) {
       'a[href], button, summary, [role="button"], input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), select, textarea',
     )).flatMap((element) => {
       if (!visible(element)) return [];
-      if (element.matches('a[href]') && getComputedStyle(element).display === "inline") return [];
+      const isInlineProseLink = element.matches('a[href]') &&
+        getComputedStyle(element).display === "inline" &&
+        element.closest("p, li") !== null;
+      if (isInlineProseLink) return [];
       const rect = element.getBoundingClientRect();
       if (rect.width >= 44 && rect.height >= 44) return [];
       return [{ tag: element.tagName.toLowerCase(), width: rect.width, height: rect.height }];
@@ -273,6 +276,7 @@ async function verifyKeyboardCoreLoop(page: Page) {
   await expect(page.getByRole("button", { name: "보강 문단 정리", exact: true })).toHaveCount(1);
 
   const reviseInput = page.getByRole("button", { name: "입력 수정하기", exact: true });
+  await expect(reviseInput).toHaveCount(1);
   await resetKeyboardStart(page);
   await tabTo(page, reviseInput);
   await page.keyboard.press("Enter");

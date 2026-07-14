@@ -77,14 +77,18 @@ test("S231C keeps one dominant step action and announces focus and copy state", 
   const gitignore = read(".gitignore");
 
   assert.equal((answerReview.match(/answer-review-build-feedback/g) ?? []).length, 1);
+  assert.equal((answerReview.match(/입력 수정하기/g) ?? []).length, 1);
   assert.match(answerReview, /currentStep === 1[\s\S]*?answerTextRef\.current/);
   assert.match(answerReview, /stepTwoHeadingRef/);
   assert.match(answerReview, /stepThreeHeadingRef/);
   assert.match(answerReview, /role="status" aria-live="polite" aria-atomic="true"/);
-  assert.match(globals, /:where\(summary\)[\s\S]*?min-inline-size:\s*var\(--touch-target-min\)[\s\S]*?min-block-size:\s*var\(--touch-target-min\)/);
-  assert.doesNotMatch(globals, /:where\(summary\)[\s\S]{0,160}display:\s*inline-flex/);
+  const summaryTargetBlock = globals.match(/:where\(summary\)\s*\{([^}]*)\}/)?.[1] ?? "";
+  assert.match(summaryTargetBlock, /min-inline-size:\s*var\(--touch-target-min\)/);
+  assert.match(summaryTargetBlock, /min-block-size:\s*var\(--touch-target-min\)/);
+  assert.doesNotMatch(summaryTargetBlock, /display:\s*inline-flex/);
+  assert.match(globals, /a\[href\]:not\(p a\[href\], li a\[href\]\)[\s\S]*?min-inline-size:\s*var\(--touch-target-min\)[\s\S]*?min-block-size:\s*var\(--touch-target-min\)/);
   assert.match(spec, /'a\[href\], button, summary,/);
-  assert.match(spec, /element\.matches\('a\[href\]'\)[\s\S]*?display === "inline"/);
+  assert.match(spec, /isInlineProseLink[\s\S]*?element\.closest\("p, li"\) !== null/);
   assert.match(spec, /Keyboard traversal wrapped to the origin/);
   assert.match(spec, /name: "입력 수정하기", exact: true[\s\S]*?expect\(answer\)\.toBeFocused/);
   assert.match(spec, /name: "보강 문단 정리", exact: true[\s\S]*?toHaveCount\(1\)/);

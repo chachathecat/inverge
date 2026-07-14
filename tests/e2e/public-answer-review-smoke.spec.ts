@@ -90,6 +90,21 @@ test.describe('public answer-review smoke', () => {
       scrollBehavior: getComputedStyle(document.documentElement).scrollBehavior,
     }));
     expect(layout).toEqual({ overflow: 0, reducedMotion: true, scrollBehavior: 'auto' });
+    const undersizedTargets = await page.locator('a[href], button, summary, input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), select, textarea').evaluateAll((elements) =>
+      elements.flatMap((element) => {
+        const htmlElement = element as HTMLElement;
+        const style = getComputedStyle(htmlElement);
+        const rect = htmlElement.getBoundingClientRect();
+        const root = htmlElement.getRootNode();
+        const insideNextDevTools = root instanceof ShadowRoot && root.host.matches('nextjs-portal');
+        if (insideNextDevTools) return [];
+        if (rect.width === 0 || rect.height === 0 || style.display === 'none' || style.visibility === 'hidden') return [];
+        const inlineProseLink = htmlElement.matches('a[href]') && style.display === 'inline' && htmlElement.closest('p, li') !== null;
+        if (inlineProseLink || (rect.width >= 44 && rect.height >= 44)) return [];
+        return [{ tag: htmlElement.tagName.toLowerCase(), width: rect.width, height: rect.height }];
+      }),
+    );
+    expect(undersizedTargets).toEqual([]);
     expect(runtimeErrors).toEqual([]);
   });
 });
