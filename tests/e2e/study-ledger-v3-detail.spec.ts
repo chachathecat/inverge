@@ -286,10 +286,12 @@ test.describe("S228 authenticated Study Ledger runtime acceptance", () => {
     await expect(comparison).toContainText("전·후 비교가 준비되었습니다.");
     await expect(comparison).toContainText(rewrittenParagraph);
     await expect(page.locator('[data-s228-state-chip="completed"]')).toBeVisible();
+    await expect(page.locator("[data-s228-evidence-excerpt]").first()).toContainText(rewrittenParagraph);
 
     await page.reload();
     await expectLedgerLayout(page);
     await expect(page.locator('[data-s228-state="completed"]')).toContainText(rewrittenParagraph);
+    await expect(page.locator("[data-s228-evidence-excerpt]").first()).toContainText(rewrittenParagraph);
     screenshots.push(await captureEvidence(page, testInfo, "s228-after-reload-390.png"));
 
     await page.setViewportSize({ width: 1440, height: 1024 });
