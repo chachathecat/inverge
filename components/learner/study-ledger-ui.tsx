@@ -1,10 +1,20 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-type LearningState = "recovery" | "attention" | "ready";
+export type LearningState = "recovery" | "attention" | "ready" | "completed";
+
+export type StudyLedgerComparison = {
+  sourceGap: string;
+  previousParagraph: string;
+  sourceAnswerSummary: string;
+  rewrittenParagraph: string;
+  improvement: string;
+  remainingNextGap: string;
+};
 
 type StudyLedgerDetailProps = {
   itemId: string;
+  rewriteFromItemId?: string | null;
   title: string;
   subject: string;
   createdAt: string;
@@ -18,12 +28,18 @@ type StudyLedgerDetailProps = {
   recurrenceText: string;
   reviewQueueCount: number;
   learnerConfirmed: boolean;
+  completed?: boolean;
+  evidenceConflict?: boolean;
+  comparison?: StudyLedgerComparison | null;
+  calculatorHref?: string | null;
+  reviewHref?: string | null;
 };
 
 const STATE_STYLES: Record<LearningState, string> = {
   recovery: "border-[var(--cue-review)] bg-[var(--cue-review-bg)] text-[var(--cue-review)]",
   attention: "border-[var(--cue-risk)] bg-[var(--cue-risk-bg)] text-[var(--cue-risk)]",
   ready: "border-[var(--cue-stable)] bg-[var(--cue-stable-bg)] text-[var(--cue-stable)]",
+  completed: "border-[var(--cue-stable)] bg-[var(--cue-stable-bg)] text-[var(--cue-stable)]",
 };
 
 function formatRecordDate(value: string) {
@@ -59,14 +75,18 @@ export function StateChip({
 export function StudyLedgerTrustBar({
   learnerConfirmed,
   referenceAvailable,
+  evidenceConflict = false,
 }: {
   learnerConfirmed: boolean;
   referenceAvailable: boolean;
+  evidenceConflict?: boolean;
 }) {
   return (
     <section
       data-s228-trust-evidence
       aria-label="근거 신뢰 상태"
+      role={evidenceConflict ? "alert" : undefined}
+      aria-live={evidenceConflict ? "polite" : undefined}
       className="rounded-[var(--ledger-radius-card)] border border-[var(--trust-layer-border)] bg-[var(--trust-layer-bg)] p-4"
     >
       <p className="text-xs font-semibold tracking-[0.08em] text-[var(--brand-700)]">TRUST &amp; EVIDENCE</p>
@@ -74,7 +94,7 @@ export function StudyLedgerTrustBar({
         <div className="flex items-center justify-between gap-3">
           <dt className="font-medium text-[var(--text-primary)]">학습자 입력</dt>
           <dd className="text-right text-xs font-semibold text-[var(--text-secondary)]">
-            {learnerConfirmed ? "확인됨" : "확인 필요"}
+            {evidenceConflict ? "근거 차이 확인" : learnerConfirmed ? "확인됨" : "확인 필요"}
           </dd>
         </div>
         <div className="h-px bg-[var(--trust-layer-border)]" />
@@ -86,7 +106,9 @@ export function StudyLedgerTrustBar({
         </div>
       </dl>
       <p className="mt-3 text-xs leading-5 text-[var(--text-secondary)]">
-        학습 보조 기록입니다. 채점 결과로 확정하지 않습니다.
+        {evidenceConflict
+          ? "학습자 입력과 참고 근거의 차이를 먼저 확인하세요."
+          : "학습 보조 기록입니다. 채점 결과로 확정하지 않습니다."}
       </p>
     </section>
   );
@@ -150,6 +172,74 @@ export function EvidenceExcerpt({
   );
 }
 
+export function StudyLedgerEvidenceEmpty() {
+  return (
+    <section
+      data-s228-state="empty"
+      role="status"
+      className="rounded-[var(--ledger-radius-card)] border border-dashed border-[var(--border-strong)] bg-[var(--bg-surface)] p-5"
+    >
+      <h2 className="text-base font-bold text-[var(--text-primary)]">비교할 근거가 아직 없습니다.</h2>
+      <p className="ko-keep mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+        답안을 남기면 학습자 입력과 참고용 근거를 이 자리에서 나란히 확인할 수 있습니다.
+      </p>
+    </section>
+  );
+}
+
+export function RewriteComparisonPanel({
+  comparison,
+}: {
+  comparison: StudyLedgerComparison;
+}) {
+  return (
+    <section
+      data-s228-state="completed"
+      role="status"
+      className="rounded-[var(--ledger-radius-panel)] border border-[var(--cue-stable)] bg-[var(--cue-stable-bg)] p-5 sm:p-6"
+      aria-labelledby="study-ledger-comparison-title"
+    >
+      <p className="text-xs font-semibold tracking-[0.1em] text-[var(--cue-stable)]">다시쓰기 저장됨</p>
+      <h2 id="study-ledger-comparison-title" className="mt-2 text-lg font-bold text-[var(--text-primary)]">
+        전·후 비교가 준비되었습니다.
+      </h2>
+      <p className="ko-keep mt-3 text-sm leading-6 text-[var(--text-primary)]">{comparison.improvement}</p>
+      <dl className="mt-5 grid gap-4 border-t border-[color:rgba(46,110,88,0.22)] pt-5 sm:grid-cols-2">
+        <div>
+          <dt className="text-xs font-semibold text-[var(--text-secondary)]">이전 간극</dt>
+          <dd className="ko-keep mt-2 text-sm leading-6 text-[var(--text-primary)]">{comparison.sourceGap}</dd>
+        </div>
+        <div>
+          <dt className="text-xs font-semibold text-[var(--text-secondary)]">아직 남은 간극</dt>
+          <dd className="ko-keep mt-2 text-sm leading-6 text-[var(--text-primary)]">{comparison.remainingNextGap}</dd>
+        </div>
+      </dl>
+      <details className="mt-5 rounded-[var(--ledger-radius-card)] border border-[var(--border-subtle)] bg-[var(--bg-surface)]">
+        <summary className="flex min-h-11 cursor-pointer list-none items-center px-4 py-3 text-sm font-semibold text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]">
+          이전 문단과 다시 쓴 문단 비교
+        </summary>
+        <div className="grid gap-5 border-t border-[var(--border-subtle)] p-4 sm:grid-cols-2">
+          <div>
+            <p className="text-xs font-semibold text-[var(--text-secondary)]">이전 문단</p>
+            <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[var(--text-primary)]">
+              {comparison.previousParagraph}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-[var(--text-secondary)]">다시 쓴 문단</p>
+            <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[var(--text-primary)]">
+              {comparison.rewrittenParagraph}
+            </p>
+          </div>
+          <p className="sm:col-span-2 text-xs leading-5 text-[var(--text-secondary)]">
+            참고용 근거 요약 · 원 출처 확인 필요: {comparison.sourceAnswerSummary}
+          </p>
+        </div>
+      </details>
+    </section>
+  );
+}
+
 export function StickyAction({
   href,
   label,
@@ -179,6 +269,7 @@ export function StickyAction({
 
 export function StudyLedgerDetail({
   itemId,
+  rewriteFromItemId,
   title,
   subject,
   createdAt,
@@ -192,11 +283,33 @@ export function StudyLedgerDetail({
   recurrenceText,
   reviewQueueCount,
   learnerConfirmed,
+  completed = false,
+  evidenceConflict = false,
+  comparison,
+  calculatorHref,
+  reviewHref,
 }: StudyLedgerDetailProps) {
-  const state: LearningState = reviewQueueCount > 0 ? "recovery" : learnerConfirmed ? "ready" : "attention";
-  const stateLabel = state === "recovery" ? "회복 중" : state === "ready" ? "다시 쓰기 준비" : "확인 필요";
-  const actionHref = "/app/capture?mode=second&rewriteFrom=" + encodeURIComponent(itemId);
+  const state: LearningState = completed
+    ? "completed"
+    : reviewQueueCount > 0
+      ? "recovery"
+      : learnerConfirmed
+        ? "ready"
+        : "attention";
+  const stateLabel =
+    state === "completed"
+      ? "복습 완료"
+      : state === "recovery"
+        ? "회복 중"
+        : state === "ready"
+          ? "다시 쓰기 준비"
+          : "확인 필요";
+  const actionHref =
+    "/app/capture?mode=second&rewriteFrom=" + encodeURIComponent(rewriteFromItemId ?? itemId);
   const visibleTerms = keyTerms.filter(Boolean).slice(0, 5);
+  const learnerEvidence = normalizedExcerpt(learnerExcerpt);
+  const referenceEvidence = normalizedExcerpt(referenceExcerpt);
+  const evidenceEmpty = !learnerEvidence && !referenceEvidence;
 
   return (
     <main
@@ -228,6 +341,23 @@ export function StudyLedgerDetail({
 
       <div className="mt-7 grid gap-7 lg:grid-cols-[minmax(0,var(--ledger-reading-column))_var(--ledger-evidence-rail)] lg:items-start">
         <div className="min-w-0 space-y-8">
+          {completed ? (
+            comparison ? (
+              <RewriteComparisonPanel comparison={comparison} />
+            ) : (
+              <section
+                data-s228-state="completed"
+                role="status"
+                className="rounded-[var(--ledger-radius-card)] border border-[var(--cue-stable)] bg-[var(--cue-stable-bg)] p-5"
+              >
+                <h2 className="text-base font-bold text-[var(--text-primary)]">다시쓰기 기록이 저장되었습니다.</h2>
+                <p className="ko-keep mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                  다음 복습에서 남은 간극을 다시 확인합니다.
+                </p>
+              </section>
+            )
+          ) : null}
+
           <BiggestGap gap={biggestGap} nextAction={nextAction} />
 
           <section className="border-y border-[var(--border-subtle)] py-6" aria-labelledby="study-ledger-application">
@@ -271,11 +401,45 @@ export function StudyLedgerDetail({
         <aside data-s228-evidence-rail className="min-w-0 space-y-4">
           <StudyLedgerTrustBar
             learnerConfirmed={learnerConfirmed}
-            referenceAvailable={Boolean(normalizedExcerpt(referenceExcerpt))}
+            referenceAvailable={Boolean(referenceEvidence)}
+            evidenceConflict={evidenceConflict}
           />
-          <EvidenceExcerpt title="내가 남긴 답안" sourceLabel="학습자 입력" excerpt={learnerExcerpt} />
-          <EvidenceExcerpt title="비교 근거" sourceLabel="참고용 · 원 출처 확인" excerpt={referenceExcerpt} />
-          <StickyAction href={actionHref} label="10분 문단 다시쓰기" helper="가장 큰 간극 1개만 보강합니다." />
+          {evidenceEmpty ? (
+            <StudyLedgerEvidenceEmpty />
+          ) : (
+            <>
+              <EvidenceExcerpt title="내가 남긴 답안" sourceLabel="학습자 입력" excerpt={learnerEvidence} />
+              <EvidenceExcerpt title="비교 근거" sourceLabel="참고용 · 원 출처 확인" excerpt={referenceEvidence} />
+            </>
+          )}
+          {reviewHref || calculatorHref ? (
+            <nav
+              aria-label="연결된 학습 화면"
+              className="rounded-[var(--ledger-radius-card)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3"
+            >
+              {reviewHref ? (
+                <Link
+                  href={reviewHref}
+                  className="flex min-h-11 items-center text-sm font-semibold text-[var(--text-secondary)] underline-offset-4 hover:text-[var(--text-primary)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+                >
+                  다시 볼 항목 확인
+                </Link>
+              ) : null}
+              {calculatorHref ? (
+                <Link
+                  href={calculatorHref}
+                  className="flex min-h-11 items-center border-t border-[var(--border-subtle)] text-sm font-semibold text-[var(--text-secondary)] underline-offset-4 hover:text-[var(--text-primary)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+                >
+                  관련 계산 검산 순서 보기
+                </Link>
+              ) : null}
+            </nav>
+          ) : null}
+          <StickyAction
+            href={actionHref}
+            label={completed ? "문단 한 번 더 다듬기" : "10분 문단 다시쓰기"}
+            helper={completed ? "남은 간극 1개만 다시 확인합니다." : "가장 큰 간극 1개만 보강합니다."}
+          />
         </aside>
       </div>
     </main>
