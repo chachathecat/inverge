@@ -35,6 +35,12 @@ test.skip(
   "Set S231A_AUTH_RUNTIME=1 for the exact-head learner-shell accessibility acceptance.",
 );
 
+// One authenticated session deliberately exercises three viewport widths,
+// keyboard traversal, route transitions, and privacy-safe full-page captures.
+// Keep that complete acceptance story in one test without inheriting the
+// 60-second smoke-test budget.
+test.describe.configure({ timeout: 180_000, retries: 0 });
+
 type FocusStop = {
   href: string | null;
   label: string;

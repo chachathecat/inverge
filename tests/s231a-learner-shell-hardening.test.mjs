@@ -152,6 +152,7 @@ test("S231A exact-head runtime covers responsive, keyboard, and accessibility se
   assert.match(spec, /requireSafeAuthenticatedRuntime\("S231A"/);
   assert.match(spec, /requireTargetSha: true/);
   assert.match(spec, /requireExactHead: true/);
+  assert.match(spec, /test\.describe\.configure\(\{ timeout: 180_000, retries: 0 \}\)/);
   assert.match(spec, /rect\.width >= 44 && rect\.height >= 44/);
   assert.match(spec, /scrollWidth.*innerWidth/s);
   assert.match(spec, /outlineWidth.*GreaterThanOrEqual\(2\)/s);
