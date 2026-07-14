@@ -40,3 +40,9 @@ Verify the Draft PR Preview with a dedicated invited account. Do not attach raw 
 ## Synthetic fixtures
 
 Focused tests cover a sparse timeline with one historical item and one next review, plus a dense 14-event week. Fixture payloads contain only synthetic IDs, event types, dates, and subject labels.
+
+## Pull request gate
+
+- Risk classification: medium
+- Merge recommendation: human approval required
+- Exact-head CI and Preview runtime evidence are required before the Draft PR can be marked ready.
