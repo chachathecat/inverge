@@ -3,8 +3,11 @@ import { writeFile } from "node:fs/promises";
 
 const expectedPreviewUrl = "https://inverge-git-agent-s230-learning-r-546b4c-chachathecats-projects.vercel.app";
 const expectedPreviewHost = new URL(expectedPreviewUrl).hostname;
+const expectedProductSha = "1231389c0b45344dbc84eccb6c434c1db99438e2";
 const runtimeEnabled = process.env.S230_AUTH_RUNTIME === "1";
 const runtimeBaseUrl = process.env.E2E_BASE_URL?.trim() ?? "";
+const runtimeRunnerHeadSha = process.env.S230_RUNNER_HEAD_SHA?.trim() ?? "";
+const runtimeProductSha = process.env.S230_PRODUCT_SHA?.trim() ?? "";
 const testEmail = process.env.E2E_USER_EMAIL?.trim() ?? "";
 const testPassword = process.env.E2E_USER_PASSWORD ?? "";
 const vercelBypassSecret = process.env.VERCEL_AUTOMATION_BYPASS_SECRET?.trim() ?? "";
@@ -31,6 +34,8 @@ function requireSafeRuntimeEnvironment() {
     ["E2E_USER_EMAIL", testEmail],
     ["E2E_USER_PASSWORD", testPassword],
     ["VERCEL_AUTOMATION_BYPASS_SECRET", vercelBypassSecret],
+    ["S230_RUNNER_HEAD_SHA", runtimeRunnerHeadSha],
+    ["S230_PRODUCT_SHA", runtimeProductSha],
   ]
     .filter(([, value]) => !value)
     .map(([name]) => name);
@@ -42,6 +47,9 @@ function requireSafeRuntimeEnvironment() {
   const url = new URL(runtimeBaseUrl);
   if (url.protocol !== "https:" || url.hostname.toLowerCase() !== expectedPreviewHost) {
     throw new Error("S230 runtime acceptance refuses any host except the exact PR #566 Vercel Preview.");
+  }
+  if (runtimeProductSha !== expectedProductSha) {
+    throw new Error("S230 runtime acceptance refuses an unpinned product deployment SHA.");
   }
 }
 
@@ -168,7 +176,7 @@ async function expectAgendaLayout(page: Page) {
   };
 }
 
-async function tabToPrimaryAction(page: Page) {
+async function tabToPrimaryAction(page: Page, testInfo: TestInfo) {
   const primaryAction = page.locator("[data-s230-dominant-next-action]");
   await page.evaluate(() => {
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
@@ -182,26 +190,71 @@ async function tabToPrimaryAction(page: Page) {
     reachedPrimaryAction = await primaryAction.evaluate((element) => element === document.activeElement);
   }
 
-  expect(reachedPrimaryAction, "The one dominant agenda action must be reachable with Tab.").toBe(true);
-  const focusState = await primaryAction.evaluate((element) => {
-    const rect = element.getBoundingClientRect();
-    const style = getComputedStyle(element);
-    return {
-      visible:
-        rect.width > 0 &&
-        rect.height > 0 &&
-        rect.bottom > 0 &&
-        rect.right > 0 &&
-        rect.top < window.innerHeight &&
-        rect.left < window.innerWidth,
-      hasIndicator:
-        (style.outlineStyle !== "none" && Number.parseFloat(style.outlineWidth) > 0) ||
-        (style.boxShadow !== "none" && style.boxShadow.length > 0),
-    };
-  });
-  expect(focusState.visible, "The focused agenda action must remain visible.").toBe(true);
-  expect(focusState.hasIndicator, "The focused agenda action must expose a visible indicator.").toBe(true);
-  return tabStops;
+  try {
+    expect(reachedPrimaryAction, "The one dominant agenda action must be reachable with Tab.").toBe(true);
+    await expect(primaryAction, "Tab must leave the dominant agenda action focused.").toBeFocused();
+    await expect(
+      primaryAction,
+      "Chromium must finish scrolling the keyboard-focused agenda action into view.",
+    ).toBeInViewport({ ratio: 0.8 });
+
+    const focusState = await primaryAction.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      return {
+        height: rect.height,
+        focusVisible: element.matches(":focus-visible"),
+        hasIndicator:
+          (style.outlineStyle !== "none" && Number.parseFloat(style.outlineWidth) > 0) ||
+          (style.boxShadow !== "none" && style.boxShadow.length > 0),
+      };
+    });
+    expect(focusState.height, "The primary agenda action must be at least 44px high.").toBeGreaterThanOrEqual(44);
+    expect(focusState.focusVisible, "Keyboard focus must match :focus-visible.").toBe(true);
+    expect(focusState.hasIndicator, "The focused agenda action must expose a visible indicator.").toBe(true);
+    return tabStops;
+  } catch (error) {
+    const geometry = await primaryAction
+      .evaluate((element) => {
+        const rect = element.getBoundingClientRect();
+        return {
+          top: Math.round(rect.top),
+          bottom: Math.round(rect.bottom),
+          height: Math.round(rect.height),
+          viewportHeight: window.innerHeight,
+          focused: element === document.activeElement,
+          focusVisible: element.matches(":focus-visible"),
+        };
+      })
+      .catch(() => null);
+    const screenshot = "s230-focus-failure-390.png";
+    const screenshots = await captureEvidence(page, testInfo, screenshot)
+      .then((fileName) => [fileName])
+      .catch(() => []);
+    await writeFile(
+      testInfo.outputPath("s230-runtime.json"),
+      JSON.stringify(
+        {
+          result: "fail",
+          stage: "keyboard-focus",
+          runnerHeadSha: runtimeRunnerHeadSha,
+          productDeploymentSha: runtimeProductSha,
+          previewHost: expectedPreviewHost,
+          viewport: "390x844",
+          reachedPrimaryAction,
+          tabStops,
+          geometry,
+          credentialsRedacted: true,
+          traceCaptured: false,
+          screenshots,
+        },
+        null,
+        2,
+      ),
+      "utf8",
+    );
+    throw error;
+  }
 }
 
 async function captureEvidence(page: Page, testInfo: TestInfo, fileName: string) {
@@ -241,7 +294,7 @@ test.describe("S230 PR-scoped authenticated Learning Record runtime", () => {
     await login(page);
     await openExactHeadAgenda(page);
     const mobile = await expectAgendaLayout(page);
-    const tabStopsToPrimaryAction = await tabToPrimaryAction(page);
+    const tabStopsToPrimaryAction = await tabToPrimaryAction(page, testInfo);
     screenshots.push(await captureEvidence(page, testInfo, "s230-agenda-390.png"));
 
     await page.setViewportSize({ width: 768, height: 1024 });
@@ -260,6 +313,8 @@ test.describe("S230 PR-scoped authenticated Learning Record runtime", () => {
       sameOriginRequestFailures.length === 0;
     const manifest = {
       result: cleanRuntime ? "pass" : "fail",
+      runnerHeadSha: runtimeRunnerHeadSha,
+      productDeploymentSha: runtimeProductSha,
       previewHost: expectedPreviewHost,
       viewports: ["390x844", "768x1024", "1440x1024"],
       accountRouteState: mobile.state,
