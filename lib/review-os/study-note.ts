@@ -216,7 +216,12 @@ export function buildRewriteComparisonNote(
     getDraftString(sourceDetail?.item.rawPayload, "caseSummary") ||
     getDraftString(detail.item.rawPayload, "caseSummary") ||
     "참고 정리 기록이 없습니다.";
-  const rewrittenParagraph = detail.item.userAnswer?.trim() || "다시 쓴 문단이 아직 기록되지 않았습니다.";
+  const rewrittenParagraph =
+    getRawPayloadString(detail.item.rawPayload, "rewrite_paragraph") ??
+    getConfirmedFieldString(detail.item.rawPayload, "rewrite_paragraph") ??
+    (detail.item.rewriteParagraph?.trim() ||
+      detail.item.userAnswer?.trim() ||
+      "다시 쓴 문단이 아직 기록되지 않았습니다.");
 
   const remainingNextGap = detailNote.weakStructurePoint ?? detailNote.weakApplicationSentence ?? detailNote.weakPoint;
   const improvement = truncateLine(`${sourceGap}을 문단에 반영해 이전 문단보다 근거 연결이 또렷해졌습니다.`);
