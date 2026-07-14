@@ -589,9 +589,9 @@ export default function AnswerReviewClientPage({
           </article>
         ) : null}
 
-          <input ref={answerCameraInputRef} type="file" accept="image/*" capture="environment" multiple className="hidden" onChange={handleMyAnswerFileChange} />
-          <input ref={problemCameraInputRef} type="file" accept="image/*" capture="environment" multiple className="hidden" onChange={handleProblemFileChange} />
-          <input ref={generalFileInputRef} type="file" accept="image/*,.pdf" multiple className="hidden" onChange={handleGeneralFileChange} />
+          <input ref={answerCameraInputRef} type="file" accept="image/*" capture="environment" multiple className="hidden" aria-label="내 답안 카메라 파일 선택" onChange={handleMyAnswerFileChange} />
+          <input ref={problemCameraInputRef} type="file" accept="image/*" capture="environment" multiple className="hidden" aria-label="문제 또는 사례 카메라 파일 선택" onChange={handleProblemFileChange} />
+          <input ref={generalFileInputRef} type="file" accept="image/*,.pdf" multiple className="hidden" aria-label="답안 검토 파일 선택" onChange={handleGeneralFileChange} />
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4" data-s224v-secondary-input-options="quiet">
             <button type="button" onClick={() => answerCameraInputRef.current?.click()} className={cn(buttonVariants({ variant: "outline" }), "w-full justify-center h-11 text-sm font-semibold")}>답안 스냅</button>
             <button type="button" onClick={() => problemCameraInputRef.current?.click()} className={cn(buttonVariants({ variant: "outline" }), "w-full justify-center h-11 text-sm")}>사례 스캔</button>
@@ -689,10 +689,11 @@ export default function AnswerReviewClientPage({
                   </div>
                   <article className="space-y-2 rounded-[var(--radius-md)] border border-[#27375f] bg-[color:var(--surface)] p-4" id="answer-review-text">
                     <div className="flex items-center justify-between gap-3">
-                      <p className="text-caption font-medium text-[#3f4c66]">내 답안 입력 (필수)</p>
+                      <label htmlFor="answer-review-my-answer-input" className="text-caption font-medium text-[#3f4c66]">내 답안 입력 (필수)</label>
                       <span className="rounded-full bg-[#eef2fb] px-2.5 py-1 text-xs font-semibold text-[#1e2a46]">최소 입력</span>
                     </div>
                     <Textarea
+                      id="answer-review-my-answer-input"
                       ref={answerTextRef}
                       className="min-h-[210px] border-[#c9d1e7] bg-[color:var(--surface)]"
                       placeholder="초안 텍스트가 있으면 붙여 넣고, 없으면 직접 입력해 주세요."
@@ -779,8 +780,9 @@ export default function AnswerReviewClientPage({
 
               <div className="space-y-3">
                 <div className="space-y-2" id="answer-review-problem">
-                  <p className="text-caption font-medium text-[color:var(--muted)]">문제/사례 입력</p>
+                  <label htmlFor="answer-review-problem-input" className="text-caption font-medium text-[color:var(--muted)]">문제/사례 입력</label>
                   <Textarea
+                    id="answer-review-problem-input"
                     className="min-h-[120px] bg-[color:var(--surface)]"
                     placeholder="문제 요구사항, 사례 조건, 논점 키워드를 입력해 주세요."
                     data-testid="answer-review-problem-input"
@@ -792,9 +794,10 @@ export default function AnswerReviewClientPage({
                   />
                 </div>
                 <details className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface)] p-3" id="answer-review-reference">
-                  <summary className="cursor-pointer text-caption font-medium text-[color:var(--muted)]">참고 정리/메모 입력 (선택)</summary>
+                  <summary id="answer-review-reference-label" className="cursor-pointer text-caption font-medium text-[color:var(--muted)]">참고 정리/메모 입력 (선택)</summary>
                   <div className="mt-2 space-y-2">
                     <Textarea
+                      aria-labelledby="answer-review-reference-label"
                       className="min-h-[120px] bg-[color:var(--surface)]"
                       placeholder="강의/교재 정리 또는 참고 목차를 텍스트로 붙여 넣어 주세요."
                       data-testid="answer-review-reference-input"

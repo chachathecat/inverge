@@ -82,6 +82,10 @@ test("S231C keeps one dominant step action and announces focus and copy state", 
   assert.match(answerReview, /stepTwoHeadingRef/);
   assert.match(answerReview, /stepThreeHeadingRef/);
   assert.match(answerReview, /role="status" aria-live="polite" aria-atomic="true"/);
+  assert.match(answerReview, /htmlFor="answer-review-my-answer-input"[\s\S]*?id="answer-review-my-answer-input"/);
+  assert.match(answerReview, /htmlFor="answer-review-problem-input"[\s\S]*?id="answer-review-problem-input"/);
+  assert.match(answerReview, /id="answer-review-reference-label"[\s\S]*?aria-labelledby="answer-review-reference-label"/);
+  assert.equal((answerReview.match(/type="file"[^>]+aria-label=/g) ?? []).length, 3);
   const summaryTargetBlock = globals.match(/:where\(summary\)\s*\{([^}]*)\}/)?.[1] ?? "";
   assert.match(summaryTargetBlock, /min-inline-size:\s*var\(--touch-target-min\)/);
   assert.match(summaryTargetBlock, /min-block-size:\s*var\(--touch-target-min\)/);
