@@ -61,7 +61,7 @@ test("S229 runner makes one step dominant and keeps device claims honest", () =>
   assert.ok(component.includes("grid grid-cols-9"));
   assert.ok(component.includes("CASIO fx-9860GIII"));
   assert.ok(component.includes("기기 검증 전"));
-  assert.ok(component.includes("자동 계산·공식 채점·검증된 타건을 제공하지 않습니다."));
+  assert.ok(component.includes("자동으로 계산하거나 권위 있는 판정·검증된 타건을 제공하지 않습니다."));
   assert.ok(component.includes("지원하지 않는 계산 유형"));
   assert.ok(component.includes("자동 계산이나 공식 타건 안내를 만들지 않습니다."));
   assert.ok(component.includes("오프라인 상태입니다."));
