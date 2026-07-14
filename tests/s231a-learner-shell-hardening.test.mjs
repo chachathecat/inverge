@@ -139,3 +139,50 @@ test("S231A normalizes identified learner controls to explicit 44px targets", ()
   assert.match(accounting, /<summary className="flex min-h-11 cursor-pointer items-center/);
   assert.match(cloze, /<summary className="flex min-h-11 cursor-pointer items-center/);
 });
+
+test("S231A exact-head runtime covers responsive, keyboard, and accessibility semantics", () => {
+  const spec = read("tests/e2e/s231a-learner-shell-accessibility.spec.ts");
+
+  for (const width of ["390", "768", "1440"]) {
+    assert.ok(spec.includes(`label: "${width}"`), `missing runtime viewport: ${width}`);
+  }
+  for (const label of ["오늘", "답안", "교정 노트", "복습", "기록"]) {
+    assert.ok(spec.includes(`"${label}"`), `missing runtime mobile label: ${label}`);
+  }
+  assert.match(spec, /requireSafeAuthenticatedRuntime\("S231A"/);
+  assert.match(spec, /requireTargetSha: true/);
+  assert.match(spec, /requireExactHead: true/);
+  assert.match(spec, /rect\.width >= 44 && rect\.height >= 44/);
+  assert.match(spec, /scrollWidth.*innerWidth/s);
+  assert.match(spec, /outlineWidth.*GreaterThanOrEqual\(2\)/s);
+  assert.match(spec, /main#learner-main.*toBeFocused/s);
+  assert.match(spec, /aria-current/);
+  assert.match(spec, /consoleErrorCount/);
+  assert.match(spec, /sameOriginRequestFailureCount/);
+  assert.match(spec, /captureSanitizedScreenshot/);
+  assert.match(spec, /manualScreenReaderCertification: false/);
+  assert.match(spec, /traceCaptured: false/);
+  assert.match(spec, /videoCaptured: false/);
+});
+
+test("S231A workflow is one-shot, exact-head, and privacy fail-closed", () => {
+  const workflow = read(".github/workflows/s231a-runtime.yml");
+
+  assert.match(workflow, /github\.event\.pull_request\.number == 569/);
+  assert.match(workflow, /<!-- run-s231a-auth-e2e -->/);
+  assert.match(workflow, /types: \[opened, synchronize, reopened, edited\]/);
+  assert.ok(workflow.includes("E2E_RUNNER_SHA: ${{ github.event.pull_request.head.sha }}"));
+  assert.ok(workflow.includes("E2E_TARGET_SHA: ${{ github.event.pull_request.head.sha }}"));
+  assert.match(workflow, /inverge-git-agent-s231a-learner-s-239037-chachathecats-projects\.vercel\.app/);
+  assert.match(workflow, /ref: \$\{\{ github\.event\.pull_request\.head\.sha \}\}/);
+  assert.match(workflow, /secrets\.E2E_USER_EMAIL \|\| secrets\.TEST_USER_EMAIL/);
+  assert.match(workflow, /secrets\.E2E_USER_PASSWORD \|\| secrets\.TEST_USER_PASSWORD/);
+  assert.match(workflow, /secrets\.VERCEL_AUTOMATION_BYPASS_SECRET/);
+  assert.match(workflow, /tests\/e2e\/s231a-learner-shell-accessibility\.spec\.ts/);
+  assert.match(workflow, /tesseract-ocr imagemagick/);
+  assert.match(workflow, /Email-like text remained after deterministic redaction/);
+  assert.match(workflow, /if: always\(\) && steps\.redaction_guard\.outcome == 'success'/);
+  assert.match(workflow, /test-results\/\*\*\/s231a-\*\.png/);
+  assert.match(workflow, /test-results\/\*\*\/s231a-runtime\.json/);
+  assert.doesNotMatch(workflow, /trace\.zip|\*\*\/\*\.png/);
+});
