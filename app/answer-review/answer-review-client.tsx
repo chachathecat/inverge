@@ -139,7 +139,13 @@ export default function AnswerReviewClientPage({
   const [generalUploadIntent, setGeneralUploadIntent] = useState<"answer" | "problem">("answer");
   const [problemSnapNoticeVisible, setProblemSnapNoticeVisible] = useState(false);
 
-  const shouldReduceMotion = useReducedMotion();
+  const prefersReducedMotion = useReducedMotion();
+  const [motionReady, setMotionReady] = useState(false);
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => setMotionReady(true));
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
+  const shouldReduceMotion = !motionReady || Boolean(prefersReducedMotion);
   const subjectOptions = examMode === "second" ? APPRAISAL_SECOND_SUBJECTS : APPRAISAL_FIRST_SUBJECTS;
   const calculationContextText = [
     subject,
@@ -507,20 +513,31 @@ export default function AnswerReviewClientPage({
   };
 
   return (
-    <RefinedShell
-      className="space-y-5 py-6 sm:space-y-8 sm:py-10"
-      data-s224v-surface="/answer-review?mode=second"
-      data-s224v-primary-cta-count-above-fold="1"
-      data-s224v-visible-trust-layer-count="1"
-      data-s224v-visible-primary-work-items-max="1"
-      data-s224v-secondary-diagnostics="quiet-disclosure"
-      data-s224v-equal-weight-card-grid="absent"
-      data-s224v-repeated-warning-copy="absent"
-    >
+    <>
+      <a
+        href="#answer-review-main"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-[var(--radius-sm)] focus:bg-[color:var(--bg-surface)] focus:px-4 focus:py-3 focus:text-sm focus:font-semibold focus:text-[color:var(--foreground-strong)]"
+      >
+        본문 바로가기
+      </a>
+      <main id="answer-review-main" tabIndex={-1}>
+        <RefinedShell
+          className="space-y-5 py-6 sm:space-y-8 sm:py-10"
+          data-s224v-surface="/answer-review?mode=second"
+          data-s224v-primary-cta-count-above-fold="1"
+          data-s224v-visible-trust-layer-count="1"
+          data-s224v-visible-primary-work-items-max="1"
+          data-s224v-secondary-diagnostics="quiet-disclosure"
+          data-s224v-equal-weight-card-grid="absent"
+          data-s224v-repeated-warning-copy="absent"
+        >
       <section className="space-y-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] p-4 sm:p-6" data-answer-review-stage="answer-review-shell">
         <div className="flex flex-wrap items-center gap-2">
           <RefinedBadge>답안 훈련</RefinedBadge>
         </div>
+        <h1 className="ko-keep text-[28px] font-semibold leading-tight text-[color:var(--foreground-strong)] sm:text-[36px]">
+          답안 검토
+        </h1>
         <p className="ko-keep text-caption leading-5 text-[color:var(--muted)]">
           이미 쓴 답안을 올리면 누락 논점, 약한 구조, 오늘 다시 쓸 문장을 정리합니다.
         </p>
@@ -1115,24 +1132,14 @@ export default function AnswerReviewClientPage({
                   <h2 className="text-base font-semibold text-[color:var(--foreground-strong)]">보강 문단 정리</h2>
                   <p className="text-caption leading-5 text-[color:var(--muted)]">작성한 내용은 아래 편집창에서 계속 수정할 수 있습니다.</p>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <motion.button
-                    whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
-                    type="button"
-                    onClick={() => setCurrentStep(2)}
-                    className={cn(buttonVariants({ variant: "outline" }), "h-9 px-4")}
-                  >
-                    검토 결과로 돌아가기
-                  </motion.button>
-                  <motion.button
-                    whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
-                    type="button"
-                    onClick={copyFeedbackDraft}
-                    className={cn(buttonVariants({ variant: "default" }), "h-9 px-4")}
-                  >
-                    정리 내용 복사
-                  </motion.button>
-                </div>
+                <motion.button
+                  whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
+                  type="button"
+                  onClick={() => setCurrentStep(2)}
+                  className={cn(buttonVariants({ variant: "outline" }), "h-9 px-4")}
+                >
+                  검토 결과로 돌아가기
+                </motion.button>
               </div>
 
               <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
@@ -1180,14 +1187,9 @@ export default function AnswerReviewClientPage({
                     </ul>
                   </article>
                   <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
-                    <div className="grid gap-2">
-                      <motion.button whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }} type="button" onClick={copyFeedbackDraft} className={cn(buttonVariants({ variant: "default" }), "h-9")}>
-                        정리 내용 복사
-                      </motion.button>
-                      <motion.button whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }} type="button" onClick={() => setCurrentStep(2)} className={cn(buttonVariants({ variant: "outline" }), "h-9")}>
-                        다시 보강하기
-                      </motion.button>
-                    </div>
+                    <motion.button whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }} type="button" onClick={() => setCurrentStep(2)} className={cn(buttonVariants({ variant: "outline" }), "h-9 w-full")}>
+                      다시 보강하기
+                    </motion.button>
                     <p className="mt-3 text-caption leading-5 text-[color:var(--muted)]">
                       입력과 보강 내용을 수정한 뒤 정리본을 복사할 수 있습니다.
                     </p>
@@ -1304,6 +1306,8 @@ export default function AnswerReviewClientPage({
           시험 선택으로 돌아가기
         </Link>
       </div>
-    </RefinedShell>
+        </RefinedShell>
+      </main>
+    </>
   );
 }

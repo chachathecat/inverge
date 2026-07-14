@@ -1,5 +1,3 @@
-export type ThemeMode = "light" | "dark";
-
 export type RiskLevel = "Stable" | "Watch" | "Risk" | "Recovery Needed";
 
 export type SubmissionMode =

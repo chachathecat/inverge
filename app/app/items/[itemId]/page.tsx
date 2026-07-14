@@ -428,7 +428,7 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
           </section>
           {rewriteComparison ? (
             <section className="rounded-[var(--radius-card)] border border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] p-5">
-              <p className="text-caption text-[color:var(--cue-review)]">2차 다시쓰기 전/후 비교</p>
+              <p className="text-caption text-[color:var(--cue-review-text)]">2차 다시쓰기 전/후 비교</p>
               <div className="mt-3 space-y-3">
                 <MiniArtifact label="이전 간극" value={rewriteComparison.sourceGap} />
                 <details className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4">
@@ -588,7 +588,7 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
                     </div>
                   </div>
                   <div className="rounded-[var(--radius-md)] border border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] px-4 py-3">
-                    <p className="text-caption text-[color:var(--cue-review)]">다음 복습 시점</p>
+                    <p className="text-caption text-[color:var(--cue-review-text)]">다음 복습 시점</p>
                     <p className="mt-1 text-sm font-medium text-[color:var(--foreground-strong)]">{note.nextReviewDate}</p>
                   </div>
                 </div>
@@ -835,7 +835,7 @@ function ArtifactBlock({
     brand: "border-[color:var(--brand-700)] bg-[color:var(--brand-050)] text-[color:var(--brand-700)]",
     focus: "border-[color:var(--cue-focus)] bg-[color:var(--cue-focus-bg)] text-[color:var(--cue-focus)]",
     neutral: "border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] text-[color:var(--muted)]",
-    review: "border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] text-[color:var(--cue-review)]",
+    review: "border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] text-[color:var(--cue-review-text)]",
     risk: "border-[color:var(--cue-risk)] bg-[color:var(--cue-risk-bg)] text-[color:var(--cue-risk)]",
   }[tone];
 

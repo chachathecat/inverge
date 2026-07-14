@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { LocalBetaNotesSection } from "@/components/review-os/local-beta-note-reflection";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { getModeConfig, resolveAppraisalMode, type AppraisalMode } from "@/lib/review-os/appraisal";
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
 import { reviewOsService } from "@/lib/review-os/service";
@@ -175,7 +175,7 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
     >
       <Card className="border-[var(--border)] bg-[color:var(--surface)] shadow-none">
         <CardHeader className="space-y-2">
-          <CardTitle>{pageTitle}</CardTitle>
+          <h1 className="text-title text-[color:var(--foreground-strong)]">{pageTitle}</h1>
           <CardDescription>{helperCopy}</CardDescription>
           {isNotesRoute ? (
             <p className="text-xs leading-5 text-[color:var(--muted)]" data-notes-record-context>

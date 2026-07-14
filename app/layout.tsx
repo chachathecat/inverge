@@ -1,8 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import Script from "next/script";
 
 import { ServiceWorkerRegistration } from "@/components/pwa/service-worker-registration";
-import { ThemeProvider } from "@/components/shared/theme-provider";
 
 import "./globals.css";
 
@@ -29,20 +27,11 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: "#10233f",
-  colorScheme: "light dark",
+  colorScheme: "light",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
 };
-
-const themeScript = `
-  try {
-    var stored = window.localStorage.getItem("inverge:theme-mode");
-    document.documentElement.dataset.theme = stored === "dark" ? "dark" : "light";
-  } catch (error) {
-    document.documentElement.dataset.theme = "light";
-  }
-`;
 
 export default function RootLayout({
   children,
@@ -50,15 +39,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ko" className="h-full antialiased" suppressHydrationWarning data-theme="light">
+    <html lang="ko" className="h-full antialiased" data-theme="light">
       <body className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
-        <Script id="theme-script" strategy="beforeInteractive">
-          {themeScript}
-        </Script>
-        <ThemeProvider>
-          <ServiceWorkerRegistration />
-          {children}
-        </ThemeProvider>
+        <ServiceWorkerRegistration />
+        {children}
       </body>
     </html>
   );
