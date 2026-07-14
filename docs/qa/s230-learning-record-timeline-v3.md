@@ -42,3 +42,13 @@ The PR-scoped lane refuses every host except the exact PR #566 Preview, waits fo
 ## Synthetic fixtures
 
 Focused tests cover a sparse timeline with one historical item and one next review, plus a dense 14-event week. Fixture payloads contain only synthetic IDs, event types, dates, and subject labels.
+
+## Pull request gate
+
+- Risk classification: medium
+- Merge recommendation: human approval required
+- Exact-head CI and Preview runtime evidence are required before the Draft PR can be marked ready.
+
+## Automated authenticated lane
+
+The temporary PR marker `run-s230-auth-e2e` enables one #566-only job. The job hardcodes the branch Preview host, refuses any other host, reads credentials and the Vercel bypass only from repository secrets, disables trace/video, and uploads only masked 390/768/1440 screenshots plus a sanitized JSON manifest.
