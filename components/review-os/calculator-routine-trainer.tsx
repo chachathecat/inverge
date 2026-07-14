@@ -369,7 +369,7 @@ export function CalculatorRoutineTrainer({
             </div>
             <h3 className="text-lg font-semibold tracking-[-0.02em] text-[color:var(--foreground-strong)]">한 단계씩 계산·검산</h3>
             <p className="max-w-[62ch] text-xs leading-5 text-[color:var(--muted)]">
-              정답 판정이 아니라 내 계산 과정을 점검하는 훈련입니다. 자동 계산·공식 채점·검증된 타건을 제공하지 않습니다.
+              정답 판정이 아니라 내 계산 과정을 점검하는 훈련입니다. 자동으로 계산하거나 권위 있는 판정·검증된 타건을 제공하지 않습니다.
             </p>
             {!eligibility.eligible ? (
               <p className="text-xs leading-5 text-[color:var(--muted)]">계산형 문제라면 루틴 시작</p>
