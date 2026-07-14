@@ -85,10 +85,13 @@ async function login(page: Page) {
   await page.getByLabel("비밀번호").fill(testPassword);
 
   const [response] = await Promise.all([
-    page.waitForResponse((candidate) => {
-      const url = new URL(candidate.url());
-      return candidate.request().method() === "POST" && url.pathname === "/api/auth/sign-in";
-    }),
+    page.waitForResponse(
+      (candidate) => {
+        const url = new URL(candidate.url());
+        return candidate.request().method() === "POST" && url.pathname === "/api/auth/sign-in";
+      },
+      { timeout: 20_000 },
+    ),
     page.getByTestId("login-submit").click(),
   ]);
 
@@ -148,7 +151,7 @@ async function captureRunnerEvidence(trainer: Locator, testInfo: TestInfo, fileN
 }
 
 test.describe("S229 authenticated fx-9860GIII runner acceptance", () => {
-  test.describe.configure({ timeout: 240_000 });
+  test.describe.configure({ timeout: 180_000, retries: 0 });
 
   test("390/1440, keyboard, nine steps, recovery, and zero browser errors", async ({ page }, testInfo) => {
     requireSafeRuntimeEnvironment();
