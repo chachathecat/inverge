@@ -94,7 +94,7 @@ jobs:
 
   s228-study-ledger-runtime:
     name: S228 Authenticated Study Ledger Runtime
-    if: github.event_name == 'workflow_dispatch' && (inputs.suite == 's228-study-ledger' || inputs.suite == '')
+    if: (github.event_name == 'workflow_dispatch' && (inputs.suite == 's228-study-ledger' || inputs.suite == '')) || (github.event_name == 'pull_request' && github.event.pull_request.number == 560 && contains(github.event.pull_request.body, '<!-- run-s228-auth-e2e -->'))
     runs-on: ubuntu-latest
     timeout-minutes: 25
     concurrency:
