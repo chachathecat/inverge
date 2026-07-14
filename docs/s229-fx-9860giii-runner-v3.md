@@ -35,3 +35,7 @@ The learner UI must continue to show `기기 검증 전` until a sanitized real 
 - recovery from at least one common input mistake.
 
 Source-only tests and browser checks do not satisfy this gate.
+
+## Pull request acceptance
+
+The pull request remains Draft until its exact head passes the repository PR contract, source checks, production build, and responsive browser evidence. Human approval is still required.
