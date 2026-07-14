@@ -172,8 +172,16 @@ export function CalculatorRoutineTrainer({
       subject,
       routineId: storageRoutineId,
     });
-    setDraft(readDraftFromStorage(draftLoadKey, fallbackDraft));
-    setRestoredDraftKey(draftLoadKey);
+    const restoredDraft = readDraftFromStorage(draftLoadKey, fallbackDraft);
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled) return;
+      setDraft(restoredDraft);
+      setRestoredDraftKey(draftLoadKey);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [draftLoadKey, examMode, source, storageRoutineId, subject]);
 
   const canRender = eligibility.eligible || eligibility.manualEligible;
