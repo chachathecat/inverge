@@ -19,6 +19,8 @@ jobs:
     env:
       CI: "true"
       S230_AUTH_RUNTIME: "1"
+      S230_RUNNER_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+      S230_PRODUCT_SHA: 1231389c0b45344dbc84eccb6c434c1db99438e2
       E2E_BASE_URL: https://inverge-git-agent-s230-learning-r-546b4c-chachathecats-projects.vercel.app
       E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL || secrets.TEST_USER_EMAIL }}
       E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD || secrets.TEST_USER_PASSWORD }}
@@ -43,6 +45,11 @@ jobs:
             exit 1
           fi
 
+          if [ "${S230_PRODUCT_SHA}" != "1231389c0b45344dbc84eccb6c434c1db99438e2" ]; then
+            echo "::error::S230 runtime lane requires the pinned deployed product SHA."
+            exit 1
+          fi
+
       - name: Install dependencies
         run: npm ci
       - name: Install Playwright browser
@@ -60,4 +67,3 @@ jobs:
             test-results/**/s230-runtime.json
           if-no-files-found: ignore
           retention-days: 7
-
