@@ -89,21 +89,43 @@ export async function loginWithDedicatedTestAccount(
   page: Page,
   mode: "first" | "second" = "second",
 ) {
-  await page.goto(`/login?mode=${mode}`, { waitUntil: "domcontentloaded" });
-  await expect(page.getByLabel("이메일")).toBeVisible();
-  await page.getByLabel("이메일").fill(testEmail);
-  await page.getByLabel("비밀번호").fill(testPassword);
+  let lastStatus: number | null = null;
 
-  const [response] = await Promise.all([
-    page.waitForResponse((candidate) => {
-      const url = new URL(candidate.url());
-      return candidate.request().method() === "POST" && url.pathname === "/api/auth/sign-in";
-    }),
-    page.getByTestId("login-submit").click(),
-  ]);
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    await page.goto(`/login?mode=${mode}`, { waitUntil: "domcontentloaded" });
+    if (new URL(page.url()).pathname === "/app") return;
 
-  expect(response.ok(), "The app login endpoint must accept the dedicated test account.").toBe(true);
-  await expect(page).toHaveURL((url) => url.pathname === "/app");
+    const emailInput = page.getByLabel("이메일");
+    const passwordInput = page.getByLabel("비밀번호");
+    await expect(emailInput).toBeVisible();
+    await expect(passwordInput).toBeVisible();
+    await emailInput.fill(testEmail);
+    await passwordInput.fill(testPassword);
+
+    const [response] = await Promise.all([
+      page.waitForResponse((candidate) => {
+        const url = new URL(candidate.url());
+        return candidate.request().method() === "POST" && url.pathname === "/api/auth/sign-in";
+      }),
+      page.getByTestId("login-submit").click(),
+    ]);
+
+    lastStatus = response.status();
+    if (response.ok()) {
+      await expect(page).toHaveURL((url) => url.pathname === "/app");
+      return;
+    }
+
+    await emailInput.fill("").catch(() => undefined);
+    await passwordInput.fill("").catch(() => undefined);
+    if (attempt === 0) await page.waitForTimeout(800);
+  }
+
+  throw new Error(
+    "The app login endpoint rejected the dedicated test account after one bounded retry (HTTP " +
+      String(lastStatus ?? "unknown") +
+      ").",
+  );
 }
 
 export function monitorRuntimeErrors(page: Page): RuntimeErrors {
