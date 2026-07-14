@@ -57,8 +57,30 @@ jobs:
       - name: Run focused Learning Record runtime acceptance
         run: npm run test:e2e -- tests/e2e/learning-record-timeline-v3.spec.ts --project=chromium --workers=1 --reporter=line
 
-      - name: Upload sanitized S230 runtime evidence
+      - name: Reject email-like text in screenshots
+        id: redaction_guard
         if: always()
+        shell: bash
+        run: |
+          if ! command -v tesseract >/dev/null 2>&1; then
+            echo "::error::OCR redaction guard is unavailable; refusing to publish screenshots."
+            exit 1
+          fi
+
+          leak_found=0
+          while IFS= read -r -d '' screenshot; do
+            if tesseract "${screenshot}" stdout -l eng 2>/dev/null | grep -Eqi '[[:alnum:]._%+-]+@[[:alnum:].-]+\.[[:alpha:]]{2,}'; then
+              leak_found=1
+            fi
+          done < <(find test-results -type f -name 's230-*.png' -print0)
+
+          if [ "${leak_found}" -ne 0 ]; then
+            echo "::error::Email-like text detected in S230 screenshot evidence; refusing artifact upload."
+            exit 1
+          fi
+
+      - name: Upload sanitized S230 runtime evidence
+        if: always() && steps.redaction_guard.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: s230-learning-record-runtime-${{ github.run_id }}
