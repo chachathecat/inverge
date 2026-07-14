@@ -21,6 +21,10 @@ This vertical slice changes presentation only. It does not change database schem
 - 신뢰 상태: user_confirmed_fields presence; reference content remains explicitly provisional
 - 다음 복습: existing note date and review queue count
 
+## Pull request contract
+
+The PR must keep the repository-required Goal, Non-goals, Risk classification, Data boundary, Schema/API/environment, Tests and evidence, Runtime evidence, Rollout and rollback, Remaining risks, and Merge recommendation sections. Exactly one risk level and one merge recommendation are selected.
+
 ## Acceptance matrix
 
 | Check | Target | Current status |
