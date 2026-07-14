@@ -28,22 +28,21 @@ test("/app/agenda route renders learner agenda shell and sections", () => {
   assert.ok(page.includes("listLearningAgendaUsageEvents"));
 
   [
-    "학습 기록",
-    "오늘 한 것과 복습 흐름을 날짜별로 모아봅니다.",
-    "월간 기록",
-    "주간 기록",
-    "일별 상세",
-    "이번 주 기록 수",
-    "완료한 복습 수",
-    "예정된 복습 수",
-    "가장 많이 나온 과목",
-    "기록 있음",
-    "복습 예정",
-    "복습 완료",
-    "오늘 한 것",
-    "완료한 것",
-    "진한 칸은 학습 기록이 있는 날입니다.",
+    "학습 회복 기록",
+    "배운 흐름을 다시 이어봅니다",
+    "회복의 시간순 기록",
+    "이번 주",
+    "다음 복습",
+    "다음 복습 이어가기",
+    "이전 회복 기록",
+    "회복 후보는 저장된 행동 신호",
   ].forEach((text) => assert.ok(client.includes(text), text));
+
+  assert.ok(client.includes("data-s230-primary-timeline"));
+  assert.ok(client.includes("data-s230-next-review"));
+  assert.ok(client.includes("data-s230-dominant-next-action"));
+  assert.equal(client.includes("월간 학습 기록"), false);
+  assert.equal(client.includes("진한 칸"), false);
 
   assert.ok(shell.includes('href: "/app/agenda"'));
   assert.ok(shell.includes('label: "학습 기록"'));
@@ -53,7 +52,7 @@ test("agenda empty state links learner back to capture", () => {
   const client = read("components/review-os/learning-agenda-client.tsx");
 
   assert.ok(client.includes("아직 쌓인 학습 기록이 없습니다."));
-  assert.ok(client.includes("오늘 한 것 하나만 남기면 여기에 공부 흐름이 쌓입니다."));
+  assert.ok(client.includes("오늘 한 것 하나만 남기면 기록부터 복습까지의 흐름이 여기에 이어집니다."));
   assert.ok(client.includes("오늘 한 것 올리기"));
   assert.ok(client.includes("/app/capture?mode="));
 });

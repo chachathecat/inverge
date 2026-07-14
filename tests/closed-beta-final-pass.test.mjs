@@ -15,11 +15,11 @@ import {
 
 const ko = {
   agenda: "\ud559\uc2b5 \uae30\ub85d",
-  agendaEmptyBody: "오늘 한 것 하나만 남기면 여기에 공부 흐름이 쌓입니다.",
+  agendaEmptyBody: "오늘 한 것 하나만 남기면 기록부터 복습까지의 흐름이 여기에 이어집니다.",
   agendaEmptyTitle: "\uc544\uc9c1 \uc313\uc778 \ud559\uc2b5 \uae30\ub85d\uc774 \uc5c6\uc2b5\ub2c8\ub2e4.",
   biggestGap: "\uac00\uc7a5 \ud070 \uc57d\uc810",
   capture: "\uc624\ub298 \ud55c \uac83 \uc62c\ub9ac\uae30",
-  dailyDetail: "\uc77c\ubcc4 \uc0c1\uc138",
+  recoveryTimeline: "회복의 시간순 기록",
   draftTrust: "OCR과 AI 정리는 학습 보조 초안입니다",
   nextAction: "\ub2e4\uc74c \ud589\ub3d9",
   note: "\ud559\uc2b5 \ub178\ud2b8",
@@ -31,9 +31,9 @@ const ko = {
   reviewDue: "\ubcf5\uc2b5 \uc608\uc815",
   text: "\ud14d\uc2a4\ud2b8",
   todayTask: "\uc624\ub298 \ud560 \uc77c",
-  weeklyAgenda: "\uc8fc\uac04 \uae30\ub85d",
+  nextReview: "다음 복습",
   weaknessRecoveryCandidate: "\uc57d\uc810 \ud68c\ubcf5 \ud6c4\ubcf4",
-  monthlyHeatmap: "\uc6d4\uac04 \uae30\ub85d",
+  previousHistory: "이전 회복 기록",
 };
 
 const routeFiles = [
@@ -207,7 +207,7 @@ test("Review exposes due and completed review states with capture empty-state li
   assert.doesNotMatch(reviewSource, forbiddenLearnerWording);
 });
 
-test("Agenda exposes learning record sections and conservative recovery copy", () => {
+test("Agenda exposes one editorial recovery timeline and conservative state copy", () => {
   const agendaSource = combined([
     "app/app/agenda/page.tsx",
     "components/review-os/learning-agenda-client.tsx",
@@ -216,9 +216,9 @@ test("Agenda exposes learning record sections and conservative recovery copy", (
 
   assertIncludesAll(agendaSource, [
     ko.agenda,
-    ko.monthlyHeatmap,
-    ko.weeklyAgenda,
-    ko.dailyDetail,
+    ko.recoveryTimeline,
+    ko.nextReview,
+    ko.previousHistory,
     ko.reviewCompleted,
     ko.weaknessRecoveryCandidate,
     ko.agendaEmptyTitle,
