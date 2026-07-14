@@ -40,7 +40,7 @@ export function FrontPageHeroAnimation() {
         ))}
       </div>
 
-      <p className="ko-keep mt-4 text-[11px] leading-5 text-[color:var(--muted)]">
+      <p className="ko-keep mt-4 text-xs leading-5 text-[color:var(--muted)]">
         예시는 학습 흐름을 보여주기 위한 샘플입니다.
       </p>
     </div>

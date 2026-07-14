@@ -207,7 +207,7 @@ export function CalculatorWorkflowPage({ focus, workflow, recoveryReference = nu
           </div>
 
           <details className="mt-3 rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] px-4 py-3">
-            <summary className="cursor-pointer text-sm font-medium text-[color:var(--foreground-strong)]">실수 방지 보기</summary>
+            <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium text-[color:var(--foreground-strong)]">실수 방지 보기</summary>
             <ul className="mt-2 space-y-2 text-sm leading-6 text-[color:var(--foreground-strong)]">
               {activeCard.commonMistakes.map((mistake) => (
                 <li key={mistake}>• {mistake}</li>

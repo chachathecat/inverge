@@ -1240,7 +1240,7 @@ export function WrongAnswerCaptureForm({
   const footerSecondary =
     stage === "intake" ? null : (
       <details className="max-w-full rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-3 py-2">
-        <summary className="cursor-pointer whitespace-nowrap text-xs font-medium text-[color:var(--muted)]">다른 작업</summary>
+        <summary className="flex min-h-11 cursor-pointer items-center whitespace-nowrap text-xs font-medium text-[color:var(--muted)]">다른 작업</summary>
         <div className="mt-2 flex flex-col gap-2 sm:flex-row">
           <Button type="button" variant="outline" onClick={resetDraft} className="w-full sm:w-auto">
             {mode === "second" ? "다시 쓰기" : "다시 풀기"}
@@ -1262,7 +1262,7 @@ export function WrongAnswerCaptureForm({
     >
       <CaptureProgressPill current={currentCaptureStep} total={4} mode={mode} />
       <ol
-        className="grid grid-cols-2 gap-2 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-2 text-[11px] text-[color:var(--muted)] sm:grid-cols-4 sm:p-3 sm:text-xs"
+        className="grid grid-cols-2 gap-2 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-2 text-xs text-[color:var(--muted)] sm:grid-cols-4 sm:p-3"
         data-capture-stage-flow
         data-s224v-stage-indicator="compact"
       >
@@ -1557,7 +1557,7 @@ function CaptureProgressPill({ current, total, mode }: { current: number; total:
   const safeCurrent = Math.min(Math.max(current, 0), safeTotal);
   return (
     <div
-      className="flex max-w-full flex-wrap items-center justify-between gap-2 rounded-full border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)] px-3 py-2 text-[11px] text-[color:var(--muted)] sm:max-w-md"
+      className="flex max-w-full flex-wrap items-center justify-between gap-2 rounded-full border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)] px-3 py-2 text-xs text-[color:var(--muted)] sm:max-w-md"
       role="progressbar"
       aria-valuemin={0}
       aria-valuemax={safeTotal}
@@ -1732,7 +1732,7 @@ function SubjectSelect({
             key={option}
             type="button"
             onClick={() => onChange(option)}
-            className={`min-h-10 rounded-[var(--radius-md)] border px-3 py-2 text-left text-xs font-medium transition ${
+            className={`min-h-11 rounded-[var(--radius-md)] border px-3 py-2 text-left text-xs font-medium transition ${
               option === value
                 ? "border-[color:var(--foreground-strong)] bg-[color:var(--foreground-strong)] text-white"
                 : "border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] text-[color:var(--foreground-strong)] hover:bg-[color:var(--surface-soft)]"
@@ -1961,7 +1961,7 @@ function IntakePanel({
               ? "권장: 사례 메모, 강의/교재 정리, 내 답안을 텍스트로 붙여넣으세요. 예: 강의/교재 정리: ... / 내 답안: ..."
               : "권장: 문제와 정답, 내가 고른 답을 텍스트로 붙여넣으세요. 예: 정답: 3 / 내 답: 2"
           }
-          className="min-h-56 border-[color:var(--border-hairline)] bg-[color:var(--bg-surface)] text-[color:var(--foreground-strong)] leading-7 transition-colors focus-visible:border-[color:var(--accent-deep)] focus-visible:ring-2 focus-visible:ring-[color:var(--accent-deep)]/20"
+          className="min-h-56 border-[color:var(--border-hairline)] bg-[color:var(--bg-surface)] text-[color:var(--foreground-strong)] leading-7 transition-colors focus-visible:border-[color:var(--accent-deep)] focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2"
         />
       </label>
       <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">학습 노트 원문은 비공개로 보관되며, 파생 학습 신호는 개인 추천 개선에만 사용됩니다.</p>

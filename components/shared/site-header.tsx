@@ -13,14 +13,14 @@ export async function SiteHeader() {
   return (
     <header className="sticky top-0 z-50 border-b border-[var(--border)] bg-[color:var(--surface)]">
       <div className="mx-auto flex w-full max-w-[1180px] items-center justify-between gap-5 px-5 py-4 sm:px-8">
-        <Link href="/" className="flex min-w-0 items-center gap-3">
+        <Link href="/" className="flex min-h-11 min-w-0 items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[color:var(--primary)] text-sm font-semibold text-white">
             답
           </div>
           <div className="min-w-0">
             <div className="flex items-baseline gap-2">
               <p className="text-base font-semibold tracking-normal text-[color:var(--foreground-strong)]">답안길</p>
-              <p className="text-[11px] font-medium text-[color:var(--muted)]">by Inverge</p>
+              <p className="text-xs font-medium text-[color:var(--muted)]">by Inverge</p>
             </div>
             <p className="truncate text-caption text-[color:var(--muted)]">감정평가사 2차 답안 훈련 OS</p>
           </div>
@@ -31,7 +31,7 @@ export async function SiteHeader() {
             <>
               <Link
                 href="/app"
-                className="rounded-full border border-[var(--border)] px-3 py-2 text-sm text-[color:var(--foreground-strong)]"
+                className="inline-flex min-h-11 items-center rounded-full border border-[var(--border)] px-3 py-2 text-sm text-[color:var(--foreground-strong)]"
               >
                 오늘
               </Link>
@@ -42,20 +42,20 @@ export async function SiteHeader() {
             <>
               <Link
                 href="/"
-                className="rounded-full px-3 py-2 text-sm text-[color:var(--muted)] hover:text-[color:var(--foreground-strong)]"
+                className="inline-flex min-h-11 items-center rounded-full px-3 py-2 text-sm text-[color:var(--muted)] hover:text-[color:var(--foreground-strong)]"
               >
                 소개
               </Link>
               <Link
                 href={publicCaptureHref}
-                className="rounded-full border border-[var(--border)] bg-[color:var(--surface)]/60 px-4 py-2 text-sm font-medium text-[color:var(--foreground-strong)] hover:bg-[color:var(--surface-soft)]"
+                className="inline-flex min-h-11 items-center rounded-full border border-[var(--border)] bg-[color:var(--surface)]/60 px-4 py-2 text-sm font-medium text-[color:var(--foreground-strong)] hover:bg-[color:var(--surface-soft)]"
               >
                 답안 1개 올리기
               </Link>
               {session.authEnabled ? (
                 <Link
                   href="/login"
-                  className="rounded-full border border-[var(--border)] px-3 py-2 text-sm text-[color:var(--foreground-strong)]"
+                  className="inline-flex min-h-11 items-center rounded-full border border-[var(--border)] px-3 py-2 text-sm text-[color:var(--foreground-strong)]"
                 >
                   로그인
                 </Link>

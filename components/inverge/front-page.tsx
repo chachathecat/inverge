@@ -47,7 +47,7 @@ function ResultPreviewCard() {
       <div className="mt-6 space-y-3">
         {TRANSFORMATION_STEPS.map((step, index) => (
           <div key={step} className="flex items-center gap-3">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] text-[11px] font-semibold tabular-nums text-[color:var(--brand-900)]">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] text-xs font-semibold tabular-nums text-[color:var(--brand-900)]">
               {index + 1}
             </span>
             <p className="text-sm font-medium text-[color:var(--foreground-strong)]">{step}</p>

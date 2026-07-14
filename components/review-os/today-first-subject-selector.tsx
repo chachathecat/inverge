@@ -73,7 +73,7 @@ export function TodaySubjectSelector({
               key={option}
               type="button"
               onClick={() => setSubject(option)}
-              className={`min-h-10 rounded-[var(--radius-md)] border px-3 py-2 text-left text-xs font-medium transition ${
+              className={`min-h-11 rounded-[var(--radius-md)] border px-3 py-2 text-left text-xs font-medium transition ${
                 option === subject
                   ? "border-[color:var(--foreground-strong)] bg-[color:var(--foreground-strong)] text-white"
                   : "border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] text-[color:var(--foreground-strong)] hover:bg-[color:var(--surface-soft)]"

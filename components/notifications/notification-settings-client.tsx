@@ -333,7 +333,7 @@ export function NotificationSettingsClient() {
                 key={day.value}
                 type="button"
                 onClick={() => toggleDay(day.value)}
-                className={`min-h-10 rounded-full border px-4 text-sm font-medium ${
+                className={`min-h-11 rounded-full border px-4 text-sm font-medium ${
                   settings.reminderDays.includes(day.value)
                     ? "border-[color:var(--brand-700)] bg-[color:var(--brand-900)] text-[color:var(--text-inverse)]"
                     : "border-[var(--border-subtle)] text-[color:var(--muted)]"

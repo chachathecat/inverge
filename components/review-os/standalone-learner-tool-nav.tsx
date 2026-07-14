@@ -27,7 +27,7 @@ export function StandaloneLearnerToolNav({ mode, subject }: StandaloneLearnerToo
           <Link
             key={link.href}
             href={link.href}
-            className="rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] px-3 py-2 text-center text-sm font-medium text-[color:var(--foreground-strong)] hover:bg-[color:var(--surface-soft)]"
+            className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] px-3 py-2 text-center text-sm font-medium text-[color:var(--foreground-strong)] hover:bg-[color:var(--surface-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2"
           >
             {link.label}
           </Link>

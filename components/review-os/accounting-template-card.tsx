@@ -141,7 +141,7 @@ export function AccountingTemplateCard({ initialParseResult = DEMO_PARSE_RESULT 
           </p>
           <p className="mt-2 text-xs leading-5 text-[color:var(--muted)]">LLM 답안 문장이 아니라 Inverge 템플릿 계산 결과입니다.</p>
           <details className="mt-3 rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-3">
-            <summary className="cursor-pointer text-sm font-medium text-[color:var(--foreground-strong)]">{template?.renderHints.collapsedDetailTitle ?? "계산 세부 보기"}</summary>
+            <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium text-[color:var(--foreground-strong)]">{template?.renderHints.collapsedDetailTitle ?? "계산 세부 보기"}</summary>
             <div className="mt-3 grid gap-2">
               {calculation.intermediateValues.map((entry) => (
                 <div key={entry.label} className="rounded-xl border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] px-3 py-2 text-sm text-[color:var(--foreground-strong)]">

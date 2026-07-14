@@ -111,7 +111,7 @@ export function ExecutionResultControls({
                 onClick={() => setSelectedResult(option.result)}
               >
                 <span>{option.label}</span>
-                <span className="text-[11px] font-normal opacity-75">{option.description}</span>
+                <span className="text-xs font-normal opacity-75">{option.description}</span>
               </Button>
             );
           })}

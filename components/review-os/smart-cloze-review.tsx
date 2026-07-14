@@ -16,7 +16,7 @@ export function SmartClozeReview({ statement, trapWords = [], conceptCandidate }
       <p className="text-xs text-[color:var(--muted)]">빈칸 회상</p>
       <p className="mt-1 break-keep">{cloze.prompt}</p>
       <details className="mt-2 text-xs text-[color:var(--muted)]">
-        <summary className="cursor-pointer">정답 확인</summary>
+        <summary className="flex min-h-11 cursor-pointer items-center">정답 확인</summary>
         <p className="mt-1">{cloze.answer}</p>
       </details>
     </div>

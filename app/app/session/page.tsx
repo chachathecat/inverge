@@ -79,7 +79,7 @@ export default async function ReviewOsSessionPage({ searchParams }: PageProps) {
               오늘 계획으로 이동
             </Link>
             <details className="rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)]">
-              <summary className="cursor-pointer list-none px-3 py-2 text-xs text-[color:var(--ink-muted)]">다른 선택 보기</summary>
+              <summary className="flex min-h-11 cursor-pointer list-none items-center px-3 py-2 text-xs text-[color:var(--ink-muted)]">다른 선택 보기</summary>
               <div className="grid gap-2 border-t border-[color:var(--border-hairline)] px-3 py-2 text-xs text-[color:var(--ink-muted)]">
                 <Link href={`/app?mode=${mode}`}>오늘 계획으로 이동</Link>
                 <Link href={`/app/capture?mode=${mode}`}>하나 더 올리기</Link>
@@ -88,7 +88,7 @@ export default async function ReviewOsSessionPage({ searchParams }: PageProps) {
               </div>
             </details>
             <details className="rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)]">
-              <summary className="cursor-pointer list-none px-3 py-2 text-xs text-[color:var(--ink-muted)]">참고 힌트 보기</summary>
+              <summary className="flex min-h-11 cursor-pointer list-none items-center px-3 py-2 text-xs text-[color:var(--ink-muted)]">참고 힌트 보기</summary>
               <div className="grid gap-1 border-t border-[color:var(--border-hairline)] px-3 py-2 text-xs text-[color:var(--ink-muted)]">
                 <p>정답 확정이 아니라 다음 행동을 정리하는 학습 보조 결과입니다.</p>
                 <p>오늘은 이 작업 하나만 먼저 합니다.</p>
