@@ -4,13 +4,17 @@ import { readFileSync } from "node:fs";
 
 const read = (path) => readFileSync(path, "utf8");
 
-test("S227 invited-account suite reuses one safe credential boundary", () => {
+test("S227 and S228 reuse one safe authenticated credential boundary", () => {
   const helper = read("tests/e2e/support/authenticated-runtime.ts");
-  const spec = read("tests/e2e/s227-invited-runtime-acceptance.spec.ts");
+  const s227 = read("tests/e2e/s227-invited-runtime-acceptance.spec.ts");
+  const s228 = read("tests/e2e/study-ledger-v3-detail.spec.ts");
 
-  assert.match(spec, /from "\.\/support\/authenticated-runtime"/);
-  assert.match(spec, /loginWithDedicatedTestAccount/);
-  assert.match(spec, /requireSafeAuthenticatedRuntime\("S227", \{ requireTargetSha: true \}\)/);
+  assert.match(s227, /from "\.\/support\/authenticated-runtime"/);
+  assert.match(s228, /from "\.\/support\/authenticated-runtime"/);
+  assert.match(s227, /loginWithDedicatedTestAccount/);
+  assert.match(s228, /loginWithDedicatedTestAccount/);
+  assert.match(s227, /requireSafeAuthenticatedRuntime\("S227", \{ requireTargetSha: true \}\)/);
+  assert.match(s228, /requireSafeAuthenticatedRuntime\("S228"\)/);
   assert.match(helper, /runtime acceptance refuses production/);
   assert.match(helper, /VERCEL_AUTOMATION_BYPASS_SECRET/);
   assert.match(helper, /E2E_TARGET_SHA as the exact 40-character deployment commit/);
@@ -18,8 +22,10 @@ test("S227 invited-account suite reuses one safe credential boundary", () => {
   assert.match(helper, /\[redacted-password\]/);
   assert.match(helper, /\[redacted-bypass\]/);
   assert.match(helper, /\[redacted-runtime-url\]/);
-  assert.doesNotMatch(spec, /process\.env\.E2E_USER_PASSWORD/);
-  assert.doesNotMatch(spec, /process\.env\.E2E_USER_EMAIL/);
+  assert.doesNotMatch(s227, /process\.env\.E2E_USER_PASSWORD/);
+  assert.doesNotMatch(s227, /process\.env\.E2E_USER_EMAIL/);
+  assert.doesNotMatch(s228, /process\.env\.E2E_USER_PASSWORD/);
+  assert.doesNotMatch(s228, /process\.env\.E2E_USER_EMAIL/);
 });
 
 test("S227 matrix covers the durable second-round learner loop without product changes", () => {
@@ -50,7 +56,7 @@ test("S227 matrix covers the durable second-round learner loop without product c
   assert.doesNotMatch(spec, /calculator-routine-trainer/);
 });
 
-test("S227 manual workflow is secret-backed, exact-target, sanitized, and non-production", () => {
+test("S227 manual workflow is secret-backed, exact-target, and sanitized", () => {
   const workflow = read(".github/workflows/e2e-smoke.yml");
 
   assert.match(workflow, /s227-invited-runtime/);
@@ -62,10 +68,14 @@ test("S227 manual workflow is secret-backed, exact-target, sanitized, and non-pr
   assert.match(workflow, /tests\/e2e\/s227-invited-runtime-acceptance\.spec\.ts/);
   assert.match(workflow, /test-results\/\*\*\/s227-\*\.png/);
   assert.match(workflow, /test-results\/\*\*\/s227-runtime\.json/);
-  assert.doesNotMatch(workflow, /trace\.zip[\s\S]*s227-invited-runtime-/);
+
+  const s227Job = workflow.split("  s227-invited-account-runtime:")[1] ?? "";
+  assert.ok(s227Job, "missing S227 workflow job");
+  assert.doesNotMatch(s227Job, /trace\.zip/);
+  assert.doesNotMatch(s227Job, /\*\*\/\*\.png/);
 });
 
-test("S227 QA document keeps #558 open until S229 and real evidence are complete", () => {
+test("S227 QA document keeps final acceptance blocked until S229 and real evidence", () => {
   const doc = read("docs/qa/s227-invited-account-runtime.md");
 
   assert.match(doc, /Refs #558/);
