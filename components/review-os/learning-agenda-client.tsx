@@ -257,8 +257,38 @@ export function LearningAgendaClient({ mode, initialEvents }: LearningAgendaClie
       {!hasEvents ? <EmptyAgendaState mode={mode} isOnline={isOnline} /> : null}
 
       {hasEvents ? (
-        <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start">
-          <section className="min-w-0 space-y-5" aria-labelledby="this-week-timeline-title">
+        <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start" data-s230-responsive-priority="next-review-first">
+          <aside className="min-w-0 lg:col-start-2 lg:row-start-1 lg:sticky lg:top-6" aria-labelledby="next-review-title">
+            <section className="rounded-[var(--radius-lg)] border border-[var(--brand-700)] bg-[var(--brand-050)] p-5 shadow-[var(--shadow-focus)]" data-s230-next-review>
+              <p className="text-xs font-semibold leading-5 text-[var(--muted)]">
+                {timeline.nextReview ? (nextReviewIsOverdue ? "확인이 필요한 복습" : "다음 복습") : "다음 기록"}
+              </p>
+              <h2 id="next-review-title" className="mt-2 text-xl font-semibold leading-7 tracking-[-0.025em] text-[var(--foreground-strong)]">
+                {timeline.nextReview?.subject ?? (timeline.nextReview ? "저장된 복습 일정" : "오늘 한 것 하나 남기기")}
+              </h2>
+              {timeline.nextReview ? (
+                <>
+                  <p className="mt-3 text-sm font-medium leading-6 text-[var(--foreground-strong)]">{formatDayLabel(timeline.nextReview.date)}</p>
+                  <p className="mt-1 text-sm leading-6 text-[var(--muted-strong)]">
+                    {nextReviewIsOverdue ? "예정일이 지나 현재 복습 목록에서 확인이 필요합니다." : "저장된 복습 일정 중 가장 가까운 기록입니다."}
+                  </p>
+                  <div className="mt-5">
+                    <DominantAction href={`/app/review?mode=${mode}`} isOnline={isOnline}>다음 복습 이어가기</DominantAction>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="mt-3 text-sm leading-6 text-[var(--muted-strong)]">다음 복습은 아직 잡히지 않았습니다. 오늘 한 것을 남기면 학습 노트와 복습 흐름이 이어집니다.</p>
+                  <div className="mt-5">
+                    <DominantAction href={`/app/capture?mode=${mode}`} isOnline={isOnline}>오늘 한 것 올리기</DominantAction>
+                  </div>
+                </>
+              )}
+            </section>
+            <p className="mt-3 text-xs leading-5 text-[var(--muted)]">회복 후보는 저장된 행동 신호이며, 숙달이나 점수의 확정 판정이 아닙니다.</p>
+          </aside>
+
+          <section className="min-w-0 space-y-5 lg:col-start-1 lg:row-start-1" aria-labelledby="this-week-timeline-title">
             <section className="min-w-0 rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 sm:p-6" data-s230-primary-timeline>
               <div className="flex flex-col gap-2 border-b border-[var(--border-subtle)] pb-4 sm:flex-row sm:items-end sm:justify-between">
                 <div>
@@ -314,35 +344,6 @@ export function LearningAgendaClient({ mode, initialEvents }: LearningAgendaClie
             ) : null}
           </section>
 
-          <aside className="min-w-0 lg:sticky lg:top-6" aria-labelledby="next-review-title">
-            <section className="rounded-[var(--radius-lg)] border border-[var(--brand-700)] bg-[var(--brand-050)] p-5 shadow-[var(--shadow-focus)]" data-s230-next-review>
-              <p className="text-xs font-semibold leading-5 text-[var(--muted)]">
-                {timeline.nextReview ? (nextReviewIsOverdue ? "확인이 필요한 복습" : "다음 복습") : "다음 기록"}
-              </p>
-              <h2 id="next-review-title" className="mt-2 text-xl font-semibold leading-7 tracking-[-0.025em] text-[var(--foreground-strong)]">
-                {timeline.nextReview?.subject ?? (timeline.nextReview ? "저장된 복습 일정" : "오늘 한 것 하나 남기기")}
-              </h2>
-              {timeline.nextReview ? (
-                <>
-                  <p className="mt-3 text-sm font-medium leading-6 text-[var(--foreground-strong)]">{formatDayLabel(timeline.nextReview.date)}</p>
-                  <p className="mt-1 text-sm leading-6 text-[var(--muted-strong)]">
-                    {nextReviewIsOverdue ? "예정일이 지나 현재 복습 목록에서 확인이 필요합니다." : "저장된 복습 일정 중 가장 가까운 기록입니다."}
-                  </p>
-                  <div className="mt-5">
-                    <DominantAction href={`/app/review?mode=${mode}`} isOnline={isOnline}>다음 복습 이어가기</DominantAction>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <p className="mt-3 text-sm leading-6 text-[var(--muted-strong)]">다음 복습은 아직 잡히지 않았습니다. 오늘 한 것을 남기면 학습 노트와 복습 흐름이 이어집니다.</p>
-                  <div className="mt-5">
-                    <DominantAction href={`/app/capture?mode=${mode}`} isOnline={isOnline}>오늘 한 것 올리기</DominantAction>
-                  </div>
-                </>
-              )}
-            </section>
-            <p className="mt-3 text-xs leading-5 text-[var(--muted)]">회복 후보는 저장된 행동 신호이며, 숙달이나 점수의 확정 판정이 아닙니다.</p>
-          </aside>
         </div>
       ) : null}
     </div>
