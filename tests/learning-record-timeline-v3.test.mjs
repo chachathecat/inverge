@@ -2,7 +2,10 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-import { buildLearningRecordTimelineModel } from "../lib/review-os/learning-agenda.ts";
+import {
+  buildLearningRecordTimelineModel,
+  buildLocalBetaLearningAgendaEvents,
+} from "../lib/review-os/learning-agenda.ts";
 
 const read = (path) => readFileSync(path, "utf8");
 
@@ -53,6 +56,21 @@ test("S230 selects the nearest upcoming review and falls back honestly to an ove
     event("recent", "review_due", "2026-07-14T09:00:00+09:00", { reviewItemId: "queue-recent" }),
   ], now);
   assert.equal(overdueOnly.nextReview?.id, "recent");
+});
+
+test("S230 never turns browser-local note IDs into durable Study Ledger deep links", () => {
+  const localEvents = buildLocalBetaLearningAgendaEvents([
+    {
+      id: "browser-only-note",
+      mode: "second",
+      subjectLabel: "감정평가이론",
+      createdAt: "2026-07-15T09:00:00+09:00",
+    },
+  ], "second");
+
+  assert.equal(localEvents.length, 2);
+  assert.ok(localEvents.every((item) => item.sourceId === "browser-only-note"));
+  assert.ok(localEvents.every((item) => item.noteId === undefined));
 });
 
 test("S230 presentation keeps one timeline, one dominant action, real states, and supported deep links", () => {
