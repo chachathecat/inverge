@@ -106,7 +106,12 @@ async function expectNoHorizontalOverflow(page: Page) {
   expect(overflow, "The calculator page must not scroll horizontally.").toBeLessThanOrEqual(2);
 }
 
-async function tabToPrimaryAction(page: Page, trainer: Locator, primaryAction: Locator) {
+async function tabToPrimaryAction(
+  page: Page,
+  trainer: Locator,
+  primaryAction: Locator,
+  testInfo: TestInfo,
+) {
   await page.evaluate(() => {
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
   });
@@ -119,29 +124,67 @@ async function tabToPrimaryAction(page: Page, trainer: Locator, primaryAction: L
     reached = await primaryAction.evaluate((element) => element === document.activeElement);
   }
 
-  expect(reached, "The primary calculator continuation must be reachable with Tab.").toBe(true);
-  const focusState = await primaryAction.evaluate((element) => {
-    const rect = element.getBoundingClientRect();
-    const style = getComputedStyle(element);
-    return {
-      height: rect.height,
-      visible:
-        rect.width > 0 &&
-        rect.height > 0 &&
-        rect.bottom > 0 &&
-        rect.right > 0 &&
-        rect.top < window.innerHeight &&
-        rect.left < window.innerWidth,
-      hasIndicator:
-        (style.outlineStyle !== "none" && Number.parseFloat(style.outlineWidth) > 0) ||
-        (style.boxShadow !== "none" && style.boxShadow.length > 0),
-    };
-  });
-  expect(focusState.height, "The primary CTA must be at least 44px high.").toBeGreaterThanOrEqual(44);
-  expect(focusState.visible, "The focused CTA must stay visible.").toBe(true);
-  expect(focusState.hasIndicator, "The focused CTA must expose a visible focus indicator.").toBe(true);
-  await expect(trainer.locator("[data-calculator-routine-active-step]")).toHaveCount(1);
-  return tabStops;
+  try {
+    expect(reached, "The primary calculator continuation must be reachable with Tab.").toBe(true);
+    await expect(primaryAction, "The browser must scroll the keyboard-focused CTA into view.").toBeInViewport();
+    const focusState = await primaryAction.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      return {
+        height: rect.height,
+        visible:
+          rect.width > 0 &&
+          rect.height > 0 &&
+          rect.bottom > 0 &&
+          rect.right > 0 &&
+          rect.top < window.innerHeight &&
+          rect.left < window.innerWidth,
+        hasIndicator:
+          (style.outlineStyle !== "none" && Number.parseFloat(style.outlineWidth) > 0) ||
+          (style.boxShadow !== "none" && style.boxShadow.length > 0),
+      };
+    });
+    expect(focusState.height, "The primary CTA must be at least 44px high.").toBeGreaterThanOrEqual(44);
+    expect(focusState.visible, "The focused CTA must stay visible.").toBe(true);
+    expect(focusState.hasIndicator, "The focused CTA must expose a visible focus indicator.").toBe(true);
+    await expect(trainer.locator("[data-calculator-routine-active-step]")).toHaveCount(1);
+    return tabStops;
+  } catch (error) {
+    const geometry = await primaryAction
+      .evaluate((element) => {
+        const rect = element.getBoundingClientRect();
+        return {
+          top: Math.round(rect.top),
+          bottom: Math.round(rect.bottom),
+          height: Math.round(rect.height),
+          viewportHeight: window.innerHeight,
+          focused: element === document.activeElement,
+        };
+      })
+      .catch(() => null);
+    const screenshot = "s229-focus-failure-390.png";
+    await captureRunnerEvidence(trainer, testInfo, screenshot).catch(() => undefined);
+    await writeFile(
+      testInfo.outputPath("s229-runtime.json"),
+      JSON.stringify(
+        {
+          result: "fail",
+          stage: "keyboard-focus",
+          reached,
+          tabStops,
+          geometry,
+          activeStepCount: await trainer.locator("[data-calculator-routine-active-step]").count(),
+          realDeviceVerified: false,
+          deviceStatus: "기기 검증 전",
+          screenshots: [screenshot],
+        },
+        null,
+        2,
+      ),
+      "utf8",
+    );
+    throw error;
+  }
 }
 
 async function captureRunnerEvidence(trainer: Locator, testInfo: TestInfo, fileName: string) {
@@ -265,7 +308,7 @@ test.describe("S229 authenticated fx-9860GIII runner acceptance", () => {
       await expect(primaryAction).toBeEnabled();
 
       if (index === 0) {
-        tabStopsToPrimaryAction = await tabToPrimaryAction(page, trainer, primaryAction);
+        tabStopsToPrimaryAction = await tabToPrimaryAction(page, trainer, primaryAction, testInfo);
         screenshots.push(await captureRunnerEvidence(trainer, testInfo, "s229-active-focus-390.png"));
         await page.keyboard.press("Enter");
       } else {
