@@ -39,3 +39,5 @@ Source-only tests and browser checks do not satisfy this gate.
 ## Pull request acceptance
 
 The pull request remains Draft until its exact head passes the repository PR contract, source checks, production build, and responsive browser evidence. Human approval is still required.
+
+Authenticated Preview evidence is collected only through the PR-scoped S229 workflow. Its hidden one-run marker is removed immediately after evidence inspection.
