@@ -145,23 +145,38 @@ async function tabTo(page: Page, target: Locator, maximumStops = 80) {
   }
 
   expect(reached, "The dominant action must be reachable with Tab.").toBe(true);
+  await expect(target, "Tab must leave the dominant action focused.").toBeFocused();
+
+  // Chromium can focus a below-the-fold control before completing its visual
+  // scroll in a tall mobile document. Preserve the keyboard focus, bring that
+  // same control into view, and then assert both viewport intersection and the
+  // real :focus-visible treatment.
+  await target.scrollIntoViewIfNeeded();
+  await expect(target, "Scrolling must not move focus away from the action.").toBeFocused();
   const focus = await target.evaluate((element) => {
     const rect = element.getBoundingClientRect();
     const style = getComputedStyle(element);
+    const intersectionWidth =
+      Math.min(rect.right, window.innerWidth) - Math.max(rect.left, 0);
+    const intersectionHeight =
+      Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0);
     return {
-      visible:
-        rect.width > 0 &&
-        rect.height > 0 &&
-        rect.bottom > 0 &&
-        rect.right > 0 &&
-        rect.top < window.innerHeight &&
-        rect.left < window.innerWidth,
+      intersectionRatio:
+        rect.width > 0 && rect.height > 0
+          ? (Math.max(0, intersectionWidth) * Math.max(0, intersectionHeight)) /
+            (rect.width * rect.height)
+          : 0,
+      focusVisible: element.matches(":focus-visible"),
       hasIndicator:
         (style.outlineStyle !== "none" && Number.parseFloat(style.outlineWidth) > 0) ||
         (style.boxShadow !== "none" && style.boxShadow.length > 0),
     };
   });
-  expect(focus.visible, "The focused action must stay visible.").toBe(true);
+  expect(
+    focus.intersectionRatio,
+    "The focused action must be substantially inside the viewport.",
+  ).toBeGreaterThanOrEqual(0.8);
+  expect(focus.focusVisible, "Keyboard focus must match :focus-visible.").toBe(true);
   expect(focus.hasIndicator, "The focused action must expose a visible indicator.").toBe(true);
   return stops;
 }
