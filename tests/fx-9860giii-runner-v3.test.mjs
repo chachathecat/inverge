@@ -97,3 +97,26 @@ test("unsupported contexts remain fail-closed", () => {
     { eligible: false, manualEligible: false, hasStrongSignal: false, reason: "unsupported_context" },
   );
 });
+
+
+test("S229 authenticated browser gate stays Preview-only and credential-safe", () => {
+  const spec = read("tests/e2e/fx-9860giii-runner-v3.spec.ts");
+  const workflow = read(".github/workflows/e2e-smoke.yml");
+
+  assert.ok(spec.includes('trace: "off"'));
+  assert.ok(spec.includes('video: "off"'));
+  assert.ok(spec.includes('screenshot: "off"'));
+  assert.ok(spec.includes("refuses production and non-approved hosts"));
+  assert.ok(spec.includes("realDeviceVerified: false"));
+  assert.ok(spec.includes('deviceStatus: "기기 검증 전"'));
+  assert.ok(spec.includes("consoleErrorCount"));
+  assert.ok(spec.includes("sameOriginErrorCount"));
+  assert.ok(workflow.includes("<!-- run-s229-auth-e2e -->"));
+  assert.ok(workflow.includes("github.event.pull_request.number == 564"));
+  assert.ok(workflow.includes("secrets.E2E_USER_EMAIL || secrets.TEST_USER_EMAIL"));
+  assert.ok(workflow.includes("secrets.E2E_USER_PASSWORD || secrets.TEST_USER_PASSWORD"));
+  assert.ok(workflow.includes("VERCEL_AUTOMATION_BYPASS_SECRET"));
+  assert.ok(workflow.includes("test-results/**/s229-runtime.json"));
+  assert.equal(workflow.includes("echo \"\${E2E_USER_PASSWORD}\""), false);
+  assert.equal(workflow.includes("**/trace.zip"), true, "legacy S228/staging artifact policy remains unchanged");
+});
