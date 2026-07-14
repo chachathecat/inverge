@@ -329,6 +329,7 @@ export async function captureSanitizedScreenshot(
     fullPage: true,
     animations: "disabled",
     mask: [accountIdentity, page.getByText(testEmail, { exact: false })],
+    maskColor: "#000000",
   });
   return fileName;
 }

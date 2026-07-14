@@ -3,6 +3,7 @@ name: S227 Invited-Account Runtime Acceptance
 on:
   pull_request:
     branches: [main]
+    types: [opened, synchronize, reopened, edited]
 
 permissions:
   contents: read
@@ -59,8 +60,9 @@ jobs:
         shell: bash
         run: |
           sudo apt-get update
-          sudo apt-get install --yes --no-install-recommends tesseract-ocr
+          sudo apt-get install --yes --no-install-recommends tesseract-ocr imagemagick
           command -v tesseract >/dev/null 2>&1
+          command -v convert >/dev/null 2>&1
 
       - name: Run exact-head invited-account runtime acceptance
         run: npm run test:e2e -- tests/e2e/s227-invited-runtime-acceptance.spec.ts --project=chromium --workers=1 --reporter=line
@@ -70,20 +72,76 @@ jobs:
         if: always()
         shell: bash
         run: |
+          set -euo pipefail
+
           if ! command -v tesseract >/dev/null 2>&1; then
             echo "::error::OCR redaction guard is unavailable; refusing to publish screenshots."
             exit 1
           fi
+          if ! command -v convert >/dev/null 2>&1; then
+            echo "::error::Image redaction is unavailable; refusing to publish screenshots."
+            exit 1
+          fi
 
+          email_pattern='[[:alnum:]._%+-]+@[[:alnum:].-]+\.[[:alpha:]]{2,}'
           leak_found=0
+          screenshot_count=0
           while IFS= read -r -d '' screenshot; do
-            if tesseract "${screenshot}" stdout -l eng 2>/dev/null | grep -Eqi '[[:alnum:]._%+-]+@[[:alnum:].-]+\.[[:alpha:]]{2,}'; then
+            screenshot_count=$((screenshot_count + 1))
+            pre_tsv="$(mktemp)"
+            post_ocr="$(mktemp)"
+            redacted_png="${screenshot%.png}.redacted.png"
+            rm -f "${redacted_png}"
+
+            if ! tesseract "${screenshot}" stdout -l eng tsv >"${pre_tsv}" 2>/dev/null; then
+              rm -f "${pre_tsv}" "${post_ocr}" "${redacted_png}"
+              echo "::error file=$(basename "${screenshot}")::OCR pre-scan failed; refusing artifact upload."
+              exit 1
+            fi
+
+            candidate_count=0
+            draw_args=()
+            while IFS=$'\t' read -r level page block paragraph line word left top width height confidence token; do
+              [[ "${token:-}" =~ ${email_pattern} ]] || continue
+              x1=$((left > 8 ? left - 8 : 0))
+              y1=$((top > 8 ? top - 8 : 0))
+              x2=$((left + width + 8))
+              y2=$((top + height + 8))
+              draw_args+=( -draw "rectangle ${x1},${y1} ${x2},${y2}" )
+              candidate_count=$((candidate_count + 1))
+            done < <(tail -n +2 "${pre_tsv}")
+
+            if [ "${candidate_count}" -gt 0 ]; then
+              if ! convert "${screenshot}" -fill '#111827' -stroke '#111827' "${draw_args[@]}" "${redacted_png}"; then
+                rm -f "${pre_tsv}" "${post_ocr}" "${redacted_png}"
+                echo "::error file=$(basename "${screenshot}")::Deterministic image redaction failed; refusing artifact upload."
+                exit 1
+              fi
+              mv "${redacted_png}" "${screenshot}"
+              echo "::notice file=$(basename "${screenshot}")::Redacted ${candidate_count} OCR-detected identity region(s)."
+            fi
+
+            if ! tesseract "${screenshot}" stdout -l eng >"${post_ocr}" 2>/dev/null; then
+              rm -f "${pre_tsv}" "${post_ocr}" "${redacted_png}"
+              echo "::error file=$(basename "${screenshot}")::OCR post-scan failed; refusing artifact upload."
+              exit 1
+            fi
+
+            if grep -Eqi "${email_pattern}" "${post_ocr}" || \
+              grep -Fqi -- "${E2E_USER_EMAIL}" "${post_ocr}"; then
+              echo "::error file=$(basename "${screenshot}")::Email-like text remained after deterministic redaction; refusing artifact upload."
               leak_found=1
             fi
+
+            rm -f "${pre_tsv}" "${post_ocr}" "${redacted_png}"
           done < <(find test-results -type f -name 's227-*.png' -print0)
 
+          if [ "${screenshot_count}" -eq 0 ]; then
+            echo "::error::No S227 screenshots were produced; refusing an empty evidence artifact."
+            exit 1
+          fi
           if [ "${leak_found}" -ne 0 ]; then
-            echo "::error::Email-like text detected in S227 screenshot evidence; refusing artifact upload."
+            echo "::error::The OCR redaction guard rejected S227 screenshot evidence."
             exit 1
           fi
 
