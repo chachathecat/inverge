@@ -148,3 +148,57 @@ jobs:
             test-results/**/s228-runtime.json
           if-no-files-found: ignore
           retention-days: 7
+
+  s230-learning-record-runtime:
+    name: S230 Authenticated Learning Record Runtime
+    if: github.event_name == 'pull_request' && github.event.pull_request.number == 566 && contains(github.event.pull_request.body, '<!-- run-s230-auth-e2e -->')
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    concurrency:
+      group: s230-learning-record-${{ github.ref }}
+      cancel-in-progress: true
+    env:
+      CI: "true"
+      S230_AUTH_RUNTIME: "1"
+      E2E_BASE_URL: https://inverge-git-agent-s230-learning-r-546b4c-chachathecats-projects.vercel.app
+      E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL || secrets.TEST_USER_EMAIL }}
+      E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD || secrets.TEST_USER_PASSWORD }}
+      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Verify exact Preview and safe authenticated prerequisites
+        shell: bash
+        run: |
+          if [ -z "${E2E_USER_EMAIL}" ] || [ -z "${E2E_USER_PASSWORD}" ] || [ -z "${VERCEL_AUTOMATION_BYPASS_SECRET}" ]; then
+            echo "::error::Missing dedicated test-account credentials or Vercel automation bypass secret."
+            exit 1
+          fi
+
+          if [ "${E2E_BASE_URL}" != "https://inverge-git-agent-s230-learning-r-546b4c-chachathecats-projects.vercel.app" ]; then
+            echo "::error::S230 runtime lane refuses every host except the exact PR #566 Preview."
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Playwright browser
+        run: npm exec playwright install -- --with-deps chromium
+      - name: Run focused Learning Record runtime acceptance
+        run: npm run test:e2e -- tests/e2e/learning-record-timeline-v3.spec.ts --project=chromium --workers=1 --reporter=line
+
+      - name: Upload sanitized S230 runtime evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: s230-learning-record-runtime-${{ github.run_id }}
+          path: |
+            test-results/**/s230-*.png
+            test-results/**/s230-runtime.json
+          if-no-files-found: ignore
+          retention-days: 7
+
