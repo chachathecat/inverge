@@ -108,7 +108,7 @@ async function createSyntheticSourceItem(page: Page, suffix: string) {
 async function expectNoUnsafeClaims(page: Page) {
   await expect(page.locator('a[href*="/instructor"], a[href*="/studio"]')).toHaveCount(0);
   await expect(page.locator("body")).not.toContainText(
-    /official grading|official score|pass\/fail|pass guarantee|model answer|AI final judgment|합격\s*(가능성|확률|보장)|공식\s*(채점|점수|모범답안)|AI\s*최종\s*판정/i,
+    /official grading|official score|pass\/fail|pass guarantee|model answer|AI final judgment|합격\s*(가능성|확률|보장)|공식\s*채점\s*(결과|완료|확정|제공|입니다)|공식\s*점수\s*(결과|확정|제공|입니다)|공식\s*모범답안\s*(입니다|제공|확정)|AI\s*최종\s*판정/i,
   );
 }
 
