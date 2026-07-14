@@ -1,19 +1,16 @@
-import { expect, test, type Page, type TestInfo } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import { writeFile } from "node:fs/promises";
 
-const runtimeEnabled = process.env.S228_AUTH_RUNTIME === "1";
-const runtimeBaseUrl = process.env.E2E_BASE_URL?.trim() ?? "";
-const testEmail = process.env.E2E_USER_EMAIL?.trim() ?? "";
-const testPassword = process.env.E2E_USER_PASSWORD ?? "";
-const vercelBypassSecret = process.env.VERCEL_AUTOMATION_BYPASS_SECRET?.trim() ?? "";
+import {
+  captureSanitizedScreenshot,
+  loginWithDedicatedTestAccount,
+  monitorRuntimeErrors,
+  protectionHeaders,
+  requireSafeAuthenticatedRuntime,
+} from "./support/authenticated-runtime";
 
-const protectionHeaders: Record<string, string> = vercelBypassSecret
-  ? {
-      "x-vercel-protection-bypass": vercelBypassSecret,
-      "x-vercel-set-bypass-cookie": "true",
-    }
-  : {};
+const runtimeEnabled = process.env.S228_AUTH_RUNTIME === "1";
 
 test.use({
   extraHTTPHeaders: protectionHeaders,
@@ -23,64 +20,6 @@ test.use({
 });
 
 test.skip(!runtimeEnabled, "Set S228_AUTH_RUNTIME=1 for the owner-approved authenticated runtime acceptance.");
-
-function requireSafeRuntimeEnvironment() {
-  const missing = [
-    ["E2E_BASE_URL", runtimeBaseUrl],
-    ["E2E_USER_EMAIL", testEmail],
-    ["E2E_USER_PASSWORD", testPassword],
-  ]
-    .filter(([, value]) => !value)
-    .map(([name]) => name);
-
-  if (missing.length > 0) {
-    throw new Error("S228 runtime acceptance missing required env: " + missing.join(", "));
-  }
-
-  const url = new URL(runtimeBaseUrl);
-  const host = url.hostname.toLowerCase();
-  const productionHosts = new Set([
-    "inverge.vercel.app",
-    "inverge.ai",
-    "www.inverge.ai",
-    "inverge.app",
-    "www.inverge.app",
-  ]);
-
-  if (productionHosts.has(host)) {
-    throw new Error("S228 runtime acceptance refuses production. Use an approved non-production Preview or staging URL.");
-  }
-
-  if (host.endsWith(".vercel.app") && !vercelBypassSecret) {
-    throw new Error("S228 runtime acceptance requires VERCEL_AUTOMATION_BYPASS_SECRET for a protected Vercel Preview.");
-  }
-}
-
-function sanitizeEvidence(value: string) {
-  let sanitized = value;
-  if (testEmail) sanitized = sanitized.replaceAll(testEmail, "[redacted-email]");
-  if (testPassword) sanitized = sanitized.replaceAll(testPassword, "[redacted-password]");
-  if (vercelBypassSecret) sanitized = sanitized.replaceAll(vercelBypassSecret, "[redacted-bypass]");
-  return sanitized;
-}
-
-async function login(page: Page) {
-  await page.goto("/login?mode=second", { waitUntil: "domcontentloaded" });
-  await expect(page.getByLabel("이메일")).toBeVisible();
-  await page.getByLabel("이메일").fill(testEmail);
-  await page.getByLabel("비밀번호").fill(testPassword);
-
-  const [response] = await Promise.all([
-    page.waitForResponse((candidate) => {
-      const url = new URL(candidate.url());
-      return candidate.request().method() === "POST" && url.pathname === "/api/auth/sign-in";
-    }),
-    page.getByTestId("login-submit").click(),
-  ]);
-
-  expect(response.ok(), "The app login endpoint must accept the dedicated test account.").toBe(true);
-  await expect(page).toHaveURL((url) => url.pathname === "/app");
-}
 
 async function createSyntheticSourceItem(page: Page, suffix: string) {
   const originalParagraph =
@@ -193,52 +132,24 @@ async function tabToPrimaryAction(page: Page) {
   return tabStops;
 }
 
-async function captureEvidence(page: Page, testInfo: TestInfo, fileName: string) {
-  const path = testInfo.outputPath(fileName);
-  await page.screenshot({
-    path,
-    fullPage: true,
-    mask: [page.getByText(testEmail, { exact: false })],
-  });
-  return fileName;
-}
-
 test.describe("S228 authenticated Study Ledger runtime acceptance", () => {
-  test.describe.configure({ timeout: 240_000 });
+  test.describe.configure({ retries: 0, timeout: 240_000 });
 
   test("390/1440, keyboard, zero console errors, and durable rewrite comparison", async ({ page }, testInfo) => {
-    requireSafeRuntimeEnvironment();
+    requireSafeAuthenticatedRuntime("S228");
 
-    const consoleErrors: string[] = [];
-    const pageErrors: string[] = [];
-    const sameOriginRequestFailures: string[] = [];
-    const runtimeOrigin = new URL(runtimeBaseUrl).origin;
+    const runtimeErrors = monitorRuntimeErrors(page);
     const screenshots: string[] = [];
 
-    page.on("console", (message) => {
-      if (message.type() === "error") consoleErrors.push(sanitizeEvidence(message.text()));
-    });
-    page.on("pageerror", (error) => {
-      pageErrors.push(sanitizeEvidence(error.message));
-    });
-    page.on("requestfailed", (request) => {
-      const url = new URL(request.url());
-      const failure = request.failure()?.errorText ?? "unknown";
-      if (url.origin !== runtimeOrigin || failure.includes("ERR_ABORTED")) return;
-      sameOriginRequestFailures.push(
-        sanitizeEvidence(request.method() + " " + url.pathname + " " + failure),
-      );
-    });
-
     await page.setViewportSize({ width: 390, height: 844 });
-    await login(page);
+    await loginWithDedicatedTestAccount(page, "second");
     const suffix = randomUUID().replaceAll("-", "").slice(0, 10);
     const fixture = await createSyntheticSourceItem(page, suffix);
 
     await page.goto("/app/items/" + encodeURIComponent(fixture.sourceItemId) + "?mode=second");
     await expectLedgerLayout(page);
     await expect(page.locator("[data-s228-biggest-gap]")).toContainText(fixture.sourceGap);
-    screenshots.push(await captureEvidence(page, testInfo, "s228-before-390.png"));
+    screenshots.push(await captureSanitizedScreenshot(page, testInfo, "s228-before-390.png"));
 
     const tabStopsToPrimaryAction = await tabToPrimaryAction(page);
     await Promise.all([
@@ -292,25 +203,25 @@ test.describe("S228 authenticated Study Ledger runtime acceptance", () => {
     await expectLedgerLayout(page);
     await expect(page.locator('[data-s228-state="completed"]')).toContainText(rewrittenParagraph);
     await expect(page.locator("[data-s228-evidence-excerpt]").first()).toContainText(rewrittenParagraph);
-    screenshots.push(await captureEvidence(page, testInfo, "s228-after-reload-390.png"));
+    screenshots.push(await captureSanitizedScreenshot(page, testInfo, "s228-after-reload-390.png"));
 
     await page.setViewportSize({ width: 1440, height: 1024 });
     await page.reload();
     await expectLedgerLayout(page);
     await expect(page.locator('[data-s228-state="completed"]')).toContainText(rewrittenParagraph);
-    screenshots.push(await captureEvidence(page, testInfo, "s228-after-reload-1440.png"));
+    screenshots.push(await captureSanitizedScreenshot(page, testInfo, "s228-after-reload-1440.png"));
 
     const cleanRuntime =
-      consoleErrors.length === 0 &&
-      pageErrors.length === 0 &&
-      sameOriginRequestFailures.length === 0;
+      runtimeErrors.consoleErrors.length === 0 &&
+      runtimeErrors.pageErrors.length === 0 &&
+      runtimeErrors.sameOriginRequestFailures.length === 0;
     const manifest = {
       result: cleanRuntime ? "pass" : "fail",
       viewports: ["390x844", "1440x1024"],
       tabStopsToPrimaryAction,
-      consoleErrorCount: consoleErrors.length,
-      pageErrorCount: pageErrors.length,
-      sameOriginRequestFailureCount: sameOriginRequestFailures.length,
+      consoleErrorCount: runtimeErrors.consoleErrors.length,
+      pageErrorCount: runtimeErrors.pageErrors.length,
+      sameOriginRequestFailureCount: runtimeErrors.sameOriginRequestFailures.length,
       persistence: "durable",
       comparisonSurvivedReload: true,
       screenshots,
@@ -321,8 +232,8 @@ test.describe("S228 authenticated Study Ledger runtime acceptance", () => {
       "utf8",
     );
 
-    expect(consoleErrors, "Browser console errors must be zero.").toEqual([]);
-    expect(pageErrors, "Uncaught page errors must be zero.").toEqual([]);
-    expect(sameOriginRequestFailures, "Unexpected same-origin request failures must be zero.").toEqual([]);
+    expect(runtimeErrors.consoleErrors, "Browser console errors must be zero.").toEqual([]);
+    expect(runtimeErrors.pageErrors, "Uncaught page errors must be zero.").toEqual([]);
+    expect(runtimeErrors.sameOriginRequestFailures, "Unexpected same-origin request failures must be zero.").toEqual([]);
   });
 });

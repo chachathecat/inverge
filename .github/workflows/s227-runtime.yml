@@ -1,0 +1,157 @@
+name: S227 Invited-Account Runtime Acceptance
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  contents: read
+
+jobs:
+  s227-invited-account-runtime:
+    name: S227 Exact-Head Invited-Account Runtime
+    if: github.event.pull_request.number == 565 && contains(github.event.pull_request.body, '<!-- run-s227-auth-e2e -->')
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    concurrency:
+      group: s227-invited-runtime-${{ github.ref }}
+      cancel-in-progress: true
+    env:
+      CI: "true"
+      S227_AUTH_RUNTIME: "1"
+      E2E_BASE_URL: https://inverge-git-agent-s227-invited-ru-b0ac61-chachathecats-projects.vercel.app
+      E2E_EXPECTED_HOST: inverge-git-agent-s227-invited-ru-b0ac61-chachathecats-projects.vercel.app
+      E2E_RUNNER_SHA: ${{ github.event.pull_request.head.sha }}
+      E2E_TARGET_SHA: ${{ github.event.pull_request.head.sha }}
+      E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL || secrets.TEST_USER_EMAIL }}
+      E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD || secrets.TEST_USER_PASSWORD }}
+      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+    steps:
+      - name: Check out exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Verify exact Preview and safe invited-account prerequisites
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${E2E_USER_EMAIL:-}"
+          test -n "${E2E_USER_PASSWORD:-}"
+          test -n "${VERCEL_AUTOMATION_BYPASS_SECRET:-}"
+          test "${E2E_BASE_URL}" = "https://inverge-git-agent-s227-invited-ru-b0ac61-chachathecats-projects.vercel.app"
+          test "${E2E_EXPECTED_HOST}" = "inverge-git-agent-s227-invited-ru-b0ac61-chachathecats-projects.vercel.app"
+          [[ "${E2E_RUNNER_SHA}" =~ ^[0-9a-fA-F]{40}$ ]]
+          test "${E2E_TARGET_SHA}" = "${E2E_RUNNER_SHA}"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browser
+        run: npm exec playwright install -- --with-deps chromium
+
+      - name: Install OCR redaction dependency
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends tesseract-ocr imagemagick
+          command -v tesseract >/dev/null 2>&1
+          command -v convert >/dev/null 2>&1
+
+      - name: Run exact-head invited-account runtime acceptance
+        run: npm run test:e2e -- tests/e2e/s227-invited-runtime-acceptance.spec.ts --project=chromium --workers=1 --reporter=line
+
+      - name: Reject email-like text in screenshots
+        id: redaction_guard
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if ! command -v tesseract >/dev/null 2>&1; then
+            echo "::error::OCR redaction guard is unavailable; refusing to publish screenshots."
+            exit 1
+          fi
+          if ! command -v convert >/dev/null 2>&1; then
+            echo "::error::Image redaction is unavailable; refusing to publish screenshots."
+            exit 1
+          fi
+
+          email_pattern='[[:alnum:]._%+-]+@[[:alnum:].-]+\.[[:alpha:]]{2,}'
+          leak_found=0
+          screenshot_count=0
+          while IFS= read -r -d '' screenshot; do
+            screenshot_count=$((screenshot_count + 1))
+            pre_tsv="$(mktemp)"
+            post_ocr="$(mktemp)"
+            redacted_png="${screenshot%.png}.redacted.png"
+            rm -f "${redacted_png}"
+
+            if ! tesseract "${screenshot}" stdout -l eng tsv >"${pre_tsv}" 2>/dev/null; then
+              rm -f "${pre_tsv}" "${post_ocr}" "${redacted_png}"
+              echo "::error file=$(basename "${screenshot}")::OCR pre-scan failed; refusing artifact upload."
+              exit 1
+            fi
+
+            candidate_count=0
+            draw_args=()
+            while IFS=$'\t' read -r level page block paragraph line word left top width height confidence token; do
+              [[ "${token:-}" =~ ${email_pattern} ]] || continue
+              x1=$((left > 8 ? left - 8 : 0))
+              y1=$((top > 8 ? top - 8 : 0))
+              x2=$((left + width + 8))
+              y2=$((top + height + 8))
+              draw_args+=( -draw "rectangle ${x1},${y1} ${x2},${y2}" )
+              candidate_count=$((candidate_count + 1))
+            done < <(tail -n +2 "${pre_tsv}")
+
+            if [ "${candidate_count}" -gt 0 ]; then
+              if ! convert "${screenshot}" -fill '#111827' -stroke '#111827' "${draw_args[@]}" "${redacted_png}"; then
+                rm -f "${pre_tsv}" "${post_ocr}" "${redacted_png}"
+                echo "::error file=$(basename "${screenshot}")::Deterministic image redaction failed; refusing artifact upload."
+                exit 1
+              fi
+              mv "${redacted_png}" "${screenshot}"
+              echo "::notice file=$(basename "${screenshot}")::Redacted ${candidate_count} OCR-detected identity region(s)."
+            fi
+
+            if ! tesseract "${screenshot}" stdout -l eng >"${post_ocr}" 2>/dev/null; then
+              rm -f "${pre_tsv}" "${post_ocr}" "${redacted_png}"
+              echo "::error file=$(basename "${screenshot}")::OCR post-scan failed; refusing artifact upload."
+              exit 1
+            fi
+
+            if grep -Eqi "${email_pattern}" "${post_ocr}" || \
+              grep -Fqi -- "${E2E_USER_EMAIL}" "${post_ocr}"; then
+              echo "::error file=$(basename "${screenshot}")::Email-like text remained after deterministic redaction; refusing artifact upload."
+              leak_found=1
+            fi
+
+            rm -f "${pre_tsv}" "${post_ocr}" "${redacted_png}"
+          done < <(find test-results -type f -name 's227-*.png' -print0)
+
+          if [ "${screenshot_count}" -eq 0 ]; then
+            echo "::error::No S227 screenshots were produced; refusing an empty evidence artifact."
+            exit 1
+          fi
+          if [ "${leak_found}" -ne 0 ]; then
+            echo "::error::The OCR redaction guard rejected S227 screenshot evidence."
+            exit 1
+          fi
+
+      - name: Upload sanitized S227 runtime evidence
+        if: always() && steps.redaction_guard.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: s227-invited-runtime-${{ github.run_id }}
+          path: |
+            test-results/**/s227-*.png
+            test-results/**/s227-runtime.json
+          if-no-files-found: ignore
+          retention-days: 7
