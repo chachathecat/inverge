@@ -1,0 +1,64 @@
+name: S229 Authenticated GIII Runner Runtime
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  s229-giii-runner-runtime:
+    name: S229 Authenticated GIII Runner Runtime
+    if: github.event.pull_request.number == 564 && contains(github.event.pull_request.body, '<!-- run-s229-auth-e2e -->')
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    concurrency:
+      group: s229-giii-runner-${{ github.ref }}
+      cancel-in-progress: true
+    env:
+      CI: "true"
+      S229_AUTH_RUNTIME: "1"
+      E2E_BASE_URL: "https://inverge-git-agent-s229-giii-runner-v3-chachathecats-projects.vercel.app"
+      E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL || secrets.TEST_USER_EMAIL }}
+      E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD || secrets.TEST_USER_PASSWORD }}
+      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+    steps:
+      - name: Check out exact PR head
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Verify safe runtime inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${E2E_USER_EMAIL:-}"
+          test -n "${E2E_USER_PASSWORD:-}"
+          test -n "${VERCEL_AUTOMATION_BYPASS_SECRET:-}"
+          test "${E2E_BASE_URL}" = "https://inverge-git-agent-s229-giii-runner-v3-chachathecats-projects.vercel.app"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run authenticated S229 Preview acceptance
+        run: npx playwright test tests/e2e/fx-9860giii-runner-v3.spec.ts --project=chromium --workers=1 --reporter=line
+
+      - name: Upload sanitized S229 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: s229-authenticated-runtime
+          path: |
+            test-results/**/s229-*.png
+            test-results/**/s229-runtime.json
+          if-no-files-found: ignore
+          retention-days: 7
