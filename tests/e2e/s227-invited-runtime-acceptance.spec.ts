@@ -186,7 +186,7 @@ test.describe("S227 invited-account runtime visual-density acceptance", () => {
     await expect(page.getByTestId("capture-page-shell")).toBeVisible();
     await expectNoHorizontalOverflow(page);
     await expectNoUnsafeClaims(page);
-    await screenshot(page, testInfo, "s227-capture-empty-390.png", screenshots);
+    await screenshot(page, testInfo, "s227-capture-initial-empty-390.png", screenshots);
 
     const suffix = safeSuffix();
     const fixture = await createSyntheticSourceItem(page, suffix);
