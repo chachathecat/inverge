@@ -128,7 +128,7 @@ test("S230 contains no heatmap gamification, raw learner content, or authority c
 });
 
 test("S230 authenticated runtime lane is exact-Preview, secret-backed, and sanitized", () => {
-  const workflow = read(".github/workflows/e2e-smoke.yml");
+  const workflow = read(".github/workflows/s230-runtime.yml");
   const spec = read("tests/e2e/learning-record-timeline-v3.spec.ts");
 
   assert.match(workflow, /github\.event\.pull_request\.number == 566/);
