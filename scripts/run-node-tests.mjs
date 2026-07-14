@@ -66,6 +66,7 @@ const defaultTestFiles = [
   "tests/s222-academy-answer-operations-tenant-boundary.test.mjs",
   "tests/s223-three-subject-corpus-reference-quality-acceptance.test.mjs",
   "tests/s224-three-subject-learner-runtime-acceptance.test.mjs",
+  "tests/s231b-trust-provenance-semantic-api.test.mjs",
   "tests/s220b-dabangil-launch-surface.test.mjs",
   "tests/practice-calculation-unit-registry.test.mjs",
   "tests/rewrite-regrade-history-contract.test.mjs",

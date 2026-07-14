@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { headers } from "next/headers";
 
 import { ReviewOsAppShell } from "@/components/review-os/app-shell";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,10 @@ import { getReviewOsServerContext } from "@/lib/review-os/server";
 
 export default async function ReviewOsLayout({ children }: { children: ReactNode }) {
   const { session, access, usage } = await getReviewOsServerContext("/app");
+  const currentPath = (await headers()).get("x-inverge-current-path") ?? "";
+  const isMetadataOnlyTrustAcceptance = currentPath.startsWith(
+    "/app/acceptance/trust-provenance/",
+  );
 
   if (!access?.allowed) {
     return (
@@ -34,8 +39,11 @@ export default async function ReviewOsLayout({ children }: { children: ReactNode
     <ReviewOsAppShell
       email={session.email}
       rightSlot={
-        usage ? (
-          <div className="rounded-full border border-[var(--border)] px-4 py-2 text-sm text-[color:var(--muted)]">
+        usage && !isMetadataOnlyTrustAcceptance ? (
+          <div
+            className="rounded-full border border-[var(--border)] px-4 py-2 text-sm text-[color:var(--muted)]"
+            data-private-account-usage
+          >
             이번 달 {usage.monthlyUsed} / {usage.monthlyLimit}
           </div>
         ) : null

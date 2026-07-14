@@ -23,6 +23,38 @@ export const protectionHeaders: Record<string, string> = vercelBypassSecret
     }
   : {};
 
+export async function establishProtectedPreviewSession(
+  page: Page,
+  suiteLabel: string,
+) {
+  const previewUrl = new URL(runtimeBaseUrl);
+  if (!previewUrl.hostname.toLowerCase().endsWith(".vercel.app")) return;
+  if (!vercelBypassSecret) {
+    throw new Error(
+      `${suiteLabel} runtime acceptance requires VERCEL_AUTOMATION_BYPASS_SECRET for a protected Vercel Preview.`,
+    );
+  }
+
+  const versionUrl = new URL("/api/runtime/version", previewUrl);
+  const response = await page.context().request.get(versionUrl.toString(), {
+    headers: protectionHeaders,
+    maxRedirects: 0,
+    timeout: 30_000,
+  });
+  const responseUrl = new URL(response.url());
+
+  if (responseUrl.origin !== previewUrl.origin) {
+    throw new Error(
+      `${suiteLabel} Vercel protection bootstrap left the approved Preview origin.`,
+    );
+  }
+  if (response.status() !== 200) {
+    throw new Error(
+      `${suiteLabel} Vercel protection bootstrap returned HTTP ${response.status()}.`,
+    );
+  }
+}
+
 type RuntimeSafetyOptions = {
   requireTargetSha?: boolean;
   requireExactHead?: boolean;

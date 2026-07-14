@@ -12,6 +12,7 @@ const learnerSurfaceFiles = [
   "app/app/capture/page.tsx",
   "components/review-os/capture-form.tsx",
   "components/review-os/trust-status-card.tsx",
+  "components/review-os/trust-provenance-layer.tsx",
 ];
 
 test("S226 source of truth is second-round 답안길 only for current learner surfaces", () => {
@@ -84,10 +85,11 @@ test("S226 landing, home, and capture each expose one dominant marker", () => {
 
 test("S226 trust evidence is compact and OCR caveat is not repeated", () => {
   const trust = read("components/review-os/trust-status-card.tsx");
+  const renderer = read("components/review-os/trust-provenance-layer.tsx");
   const capture = read("components/review-os/capture-form.tsx");
 
   assert.match(trust, /TrustEvidenceBar/);
-  assert.match(trust, /data-s226-trust-evidence/);
+  assert.match(renderer, /data-s226-trust-evidence/);
   assert.match(trust, /공식 채점 아님/);
   assert.equal(count(capture, "OCR과 AI 정리는 학습 보조 초안입니다. 저장 전 직접 수정할 수 있습니다."), 1);
   assert.match(capture, /<TrustEvidenceBar/);
