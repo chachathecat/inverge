@@ -359,3 +359,66 @@ export function buildLearningAgendaWeekGroups(events: LearningAgendaEvent[], now
     };
   });
 }
+
+export type LearningRecordTimelineModel = {
+  thisWeek: LearningAgendaEvent[];
+  history: LearningAgendaEvent[];
+  nextReview: LearningAgendaEvent | null;
+  completedWeek: boolean;
+};
+
+function startOfLocalWeek(now: Date) {
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  const day = start.getDay();
+  start.setDate(start.getDate() + (day === 0 ? -6 : 1 - day));
+  return start;
+}
+
+function startOfLocalDay(now: Date) {
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  return start;
+}
+
+export function buildLearningRecordTimelineModel(
+  events: LearningAgendaEvent[],
+  now = new Date(),
+): LearningRecordTimelineModel {
+  const normalized = mergeLearningAgendaEvents(events);
+  const weekStart = startOfLocalWeek(now);
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekEnd.getDate() + 7);
+  const todayStart = startOfLocalDay(now).getTime();
+
+  const thisWeek = normalized
+    .filter((event) => {
+      const timestamp = Date.parse(event.date);
+      return timestamp >= weekStart.getTime() && timestamp < weekEnd.getTime();
+    })
+    .sort((left, right) => Date.parse(left.date) - Date.parse(right.date));
+
+  const history = normalized.filter((event) => Date.parse(event.date) < weekStart.getTime());
+  const dueReviews = normalized.filter((event) => event.type === "review_due");
+  const upcomingReviews = dueReviews
+    .filter((event) => Date.parse(event.date) >= todayStart)
+    .sort((left, right) => Date.parse(left.date) - Date.parse(right.date));
+  const overdueReviews = dueReviews
+    .filter((event) => Date.parse(event.date) < todayStart)
+    .sort((left, right) => Date.parse(right.date) - Date.parse(left.date));
+  const completedTypes = new Set<LearningAgendaEventType>([
+    "review_completed",
+    "today_task_completed",
+    "weakness_recovered",
+  ]);
+  const completedWeek =
+    thisWeek.some((event) => completedTypes.has(event.type)) &&
+    !thisWeek.some((event) => event.type === "review_due");
+
+  return {
+    thisWeek,
+    history,
+    nextReview: upcomingReviews[0] ?? overdueReviews[0] ?? null,
+    completedWeek,
+  };
+}
