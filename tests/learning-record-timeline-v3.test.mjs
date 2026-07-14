@@ -102,6 +102,10 @@ test("S230 presentation keeps one timeline, one dominant action, real states, an
   assert.match(client, /focus-visible:ring-2/);
   assert.match(client, /overflow-x-hidden/);
   assert.match(client, /data-s230-responsive-viewports="390,768,1440"/);
+  assert.match(client, /data-s230-responsive-priority="next-review-first"/);
+  assert.ok(client.indexOf("data-s230-next-review") < client.indexOf("data-s230-primary-timeline"));
+  assert.match(client, /lg:col-start-2 lg:row-start-1/);
+  assert.match(client, /lg:col-start-1 lg:row-start-1/);
 
   assert.match(loading, /data-s230-state="loading"/);
   assert.match(loading, /aria-busy="true"/);
@@ -147,7 +151,7 @@ test("S230 authenticated runtime lane is exact-Preview, secret-backed, and sanit
   assert.match(spec, /768x1024/);
   assert.match(spec, /1440x1024/);
   assert.match(spec, /sanitizeEvidence/);
-  assert.match(spec, /mask: \[page\.getByText\(testEmail/);
+  assert.match(spec, /mask: \[accountIdentity, page\.getByText\(testEmail/);
   assert.match(spec, /The login form must be client-hydrated before submission/);
   assert.match(spec, /hydration-check@inverge\.invalid/);
   assert.match(spec, /toBeEnabled\(\{ timeout: 20_000 \}\)/);
@@ -155,10 +159,17 @@ test("S230 authenticated runtime lane is exact-Preview, secret-backed, and sanit
   assert.match(spec, /\[400, 401, 403\]\.includes\(status\)/);
   assert.match(spec, /test\.describe\.configure\(\{ retries: 0/);
   assert.match(spec, /targetDeploymentSha: runtimeTargetDeploymentSha/);
-  assert.match(spec, /productEquivalentContractSha/);
+  assert.match(spec, /targetProductEquivalentContractSha/);
   assert.match(spec, /toBeFocused\(\)/);
   assert.match(spec, /toBeInViewport\(\{ ratio: 0\.8 \}\)/);
   assert.match(spec, /element\.matches\(":focus-visible"\)/);
   assert.match(spec, /s230-focus-failure-390\.png/);
   assert.doesNotMatch(spec, /scrollIntoViewIfNeeded/);
+  assert.match(spec, /The dominant next review must precede the long timeline in DOM order/);
+  assert.match(spec, /The dominant action must start above the long mobile\/tablet timeline/);
+  assert.match(spec, /data-s224v-learner-mode-entry/);
+  assert.match(spec, /Every visible email-like identity must be inside the masked account region/);
+  assert.match(workflow, /Reject email-like text in screenshots/);
+  assert.match(workflow, /tesseract/);
+  assert.match(workflow, /if: always\(\) && steps\.redaction_guard\.outcome == 'success'/);
 });
