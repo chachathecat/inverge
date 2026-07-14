@@ -9,7 +9,7 @@
   --border-strong: #d7d1c4;
   --text-primary: #141821;
   --text-secondary: #5a6472;
-  --text-tertiary: #8791a0;
+  --text-tertiary: #647080;
   --text-inverse: #f9fbff;
   --brand-900: #10233f;
   --brand-800: #163053;
@@ -96,6 +96,11 @@
   --trust-layer-border: #d7e2ef;
   --focus-ring: rgba(16, 35, 63, 0.16);
   --touch-target-min: 44px;
+  --ledger-radius-control: 12px;
+  --ledger-radius-card: 14px;
+  --ledger-radius-panel: 16px;
+  --ledger-reading-column: 680px;
+  --ledger-evidence-rail: 288px;
 }
 
 [data-theme="dark"] {
