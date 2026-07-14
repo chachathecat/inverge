@@ -150,6 +150,51 @@ async function captureRunnerEvidence(trainer: Locator, testInfo: TestInfo, fileN
   return fileName;
 }
 
+async function clearCalculatorRoutineSessionDrafts(page: Page) {
+  await page.evaluate((prefix) => {
+    for (const key of Object.keys(window.sessionStorage)) {
+      if (key.startsWith(prefix)) window.sessionStorage.removeItem(key);
+    }
+  }, draftStoragePrefix);
+}
+
+async function expectPreLoopRunnerState(trainer: Locator, testInfo: TestInfo) {
+  try {
+    await expect(trainer).toHaveAttribute("data-calculator-routine-state", "active");
+    await expect(trainer).toHaveAttribute("data-calculator-routine-view-state", "active");
+    await expect(trainer.locator("[data-calculator-routine-active-step]")).toHaveCount(1);
+    await expect(trainer.locator("[data-calculator-routine-active-step]")).toHaveAttribute(
+      "data-calculator-routine-active-step",
+      "conditions",
+    );
+  } catch (error) {
+    const diagnostic = await trainer.evaluate((element) => ({
+      state: element.getAttribute("data-calculator-routine-state"),
+      viewState: element.getAttribute("data-calculator-routine-view-state"),
+      activeStepCount: element.querySelectorAll("[data-calculator-routine-active-step]").length,
+    }));
+    const screenshot = "s229-pre-loop-failure.png";
+    await captureRunnerEvidence(trainer, testInfo, screenshot).catch(() => undefined);
+    await writeFile(
+      testInfo.outputPath("s229-runtime.json"),
+      JSON.stringify(
+        {
+          result: "fail",
+          stage: "pre-loop",
+          ...diagnostic,
+          realDeviceVerified: false,
+          deviceStatus: "기기 검증 전",
+          screenshots: [screenshot],
+        },
+        null,
+        2,
+      ),
+      "utf8",
+    );
+    throw error;
+  }
+}
+
 test.describe("S229 authenticated fx-9860GIII runner acceptance", () => {
   test.describe.configure({ timeout: 180_000, retries: 0 });
 
@@ -182,6 +227,7 @@ test.describe("S229 authenticated fx-9860GIII runner acceptance", () => {
 
     await page.setViewportSize({ width: 390, height: 844 });
     await login(page);
+    await clearCalculatorRoutineSessionDrafts(page);
     await page.goto("/app/calculator?mode=second&context=practice&focus=casio", {
       waitUntil: "domcontentloaded",
     });
@@ -192,8 +238,10 @@ test.describe("S229 authenticated fx-9860GIII runner acceptance", () => {
     await expect(trainer).toContainText("CASIO fx-9860GIII");
     await expect(trainer).toContainText("기기 검증 전");
     await expectNoHorizontalOverflow(page);
+    await expect(trainer).toHaveAttribute("data-calculator-routine-state", "collapsed");
 
     await trainer.getByRole("button", { name: /루틴 시작/ }).click();
+    await expectPreLoopRunnerState(trainer, testInfo);
     const observedStepIds: string[] = [];
     let tabStopsToPrimaryAction = 0;
 
