@@ -43,27 +43,6 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
       : null;
   const learnerConfirmed = Boolean(confirmedFields && Object.keys(confirmedFields).length > 0);
 
-  if (isSecond) {
-    return (
-      <StudyLedgerDetail
-        itemId={resolvedDetail.item.id}
-        title={title}
-        subject={resolvedDetail.item.subjectLabel}
-        createdAt={resolvedDetail.item.createdAt}
-        biggestGap={note.missingIssue ?? note.weakPoint}
-        nextAction={note.rewriteInstruction ?? note.nextAction}
-        coreLine={note.coreLine}
-        keyTerms={note.keyTerms}
-        learnerExcerpt={resolvedDetail.item.rewriteParagraph ?? resolvedDetail.item.userAnswer}
-        referenceExcerpt={resolvedDetail.item.referenceStructure ?? resolvedDetail.item.correctAnswer}
-        nextReviewDate={note.nextReviewDate}
-        recurrenceText={note.recurrenceText}
-        reviewQueueCount={resolvedDetail.reviewQueue.length}
-        learnerConfirmed={learnerConfirmed}
-      />
-    );
-  }
-
   const rewriteSourceItemId =
     typeof resolvedDetail.item.rawPayload?.rewrite_source_item_id === "string"
       ? resolvedDetail.item.rawPayload.rewrite_source_item_id
@@ -91,6 +70,48 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
     note.rewriteInstruction,
     ...resolvedDetail.tags.flatMap((tag) => [tag.topicTag, tag.mistakeType, tag.taskType]),
   ]);
+  const evidenceConflict =
+    resolvedDetail.item.rawPayload?.evidence_conflict === true ||
+    resolvedDetail.item.derivedPayload?.evidence_conflict === true;
+  const rewriteCompleted = resolvedDetail.item.rewriteCompleted === true || Boolean(rewriteComparison);
+
+  if (isSecond) {
+    const calculatorHref =
+      calculatorWorkflow && hasCalculationMistake
+        ? `/app/calculator?context=${calculatorWorkflow.context}&mode=${calculatorWorkflow.mode}`
+        : null;
+
+    return (
+      <>
+        <StudyLedgerDetail
+          itemId={resolvedDetail.item.id}
+          rewriteFromItemId={rewriteSourceItemId ?? itemId}
+          title={title}
+          subject={resolvedDetail.item.subjectLabel}
+          createdAt={resolvedDetail.item.createdAt}
+          biggestGap={note.missingIssue ?? note.weakPoint}
+          nextAction={note.rewriteInstruction ?? note.nextAction}
+          coreLine={note.coreLine}
+          keyTerms={note.keyTerms}
+          learnerExcerpt={resolvedDetail.item.rewriteParagraph ?? resolvedDetail.item.userAnswer}
+          referenceExcerpt={resolvedDetail.item.referenceStructure ?? resolvedDetail.item.correctAnswer}
+          nextReviewDate={note.nextReviewDate}
+          recurrenceText={note.recurrenceText}
+          reviewQueueCount={resolvedDetail.reviewQueue.length}
+          learnerConfirmed={learnerConfirmed}
+          completed={rewriteCompleted}
+          evidenceConflict={evidenceConflict}
+          comparison={rewriteComparison}
+          calculatorHref={calculatorHref}
+          reviewHref={`/app/review?mode=${mode}`}
+        />
+        <div className="mx-auto mt-6 w-full max-w-[1048px]">
+          <ReviewOsFeedbackButton route={`/app/items/${itemId}`} pageContext={{ itemId, isSecond }} />
+        </div>
+      </>
+    );
+  }
+
   const secondCompletionWork = rewriteComparison
     ? "문단 다시쓰기를 저장하고 전/후 비교까지 확인했습니다."
     : "2차 작성 기록을 저장하고 비교 노트를 만들었습니다.";
