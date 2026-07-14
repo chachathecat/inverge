@@ -183,7 +183,7 @@ test.describe("S227 invited-account runtime visual-density acceptance", () => {
     await loginWithDedicatedTestAccount(page, "second");
 
     await page.goto("/app/capture?mode=second");
-    await expect(page.getByTestId("capture-page-shell")).toBeVisible();
+    await expect(page.locator('[data-s224v-surface="/app/capture"]')).toBeVisible();
     await expectNoHorizontalOverflow(page);
     await expectNoUnsafeClaims(page);
     await screenshot(page, testInfo, "s227-capture-initial-empty-390.png", screenshots);
@@ -262,7 +262,7 @@ test.describe("S227 invited-account runtime visual-density acceptance", () => {
       await screenshot(page, testInfo, `s227-today-${viewport.label}.png`, screenshots);
 
       await page.goto("/app/capture?mode=second");
-      await expect(page.getByTestId("capture-page-shell")).toBeVisible();
+      await expect(page.locator('[data-s224v-surface="/app/capture"]')).toBeVisible();
       await expectNoHorizontalOverflow(page);
       await expectNoUnsafeClaims(page);
       await screenshot(
