@@ -98,6 +98,8 @@ test("S231C keeps one dominant step action and announces focus and copy state", 
   assert.match(spec, /'a\[href\], button, summary,/);
   assert.match(spec, /isInlineProseLink[\s\S]*?element\.closest\("p, li"\) !== null/);
   assert.match(spec, /Keyboard traversal wrapped to the origin/);
+  assert.match(spec, /element\.classList\.contains\("sr-only"\)/);
+  assert.match(spec, /S231C safe layout diagnostic/);
   assert.match(spec, /name: "입력 수정하기", exact: true[\s\S]*?expect\(answer\)\.toBeFocused/);
   assert.match(spec, /name: "보강 문단 정리", exact: true[\s\S]*?toHaveCount\(1\)/);
   assert.match(gitignore, /^\/test-results\/$/m);

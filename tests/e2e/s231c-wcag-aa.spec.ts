@@ -164,6 +164,7 @@ async function layoutFailures(page: Page) {
       const style = getComputedStyle(element);
       const rect = element.getBoundingClientRect();
       if (rect.width === 0 || rect.height === 0 || style.display === "none" || style.visibility === "hidden") return [];
+      if (element.classList.contains("sr-only")) return [];
       const horizontallyClipped = rect.left < -1 || rect.right > viewportWidth + 1;
       const internallyClipped = ["hidden", "clip"].includes(style.overflowX) && element.scrollWidth > element.clientWidth + 1;
       return horizontallyClipped || internallyClipped ? [{ tag: element.tagName.toLowerCase() }] : [];
@@ -410,6 +411,14 @@ test("S231C exact-head light accessibility contract", async ({ page }, testInfo:
       const axe = await scanAxe(page, { route: route.label, viewport: viewport.label });
       const productRules = await productRuleFailures(page);
       const layout = await layoutFailures(page);
+      if (layout.clippedCritical.length > 0) {
+        const safeDiagnostic = {
+          context: { route: route.label, viewport: viewport.label },
+          clippedCritical: layout.clippedCritical,
+        };
+        assertNoPrivateEvidence(safeDiagnostic);
+        console.error(`S231C safe layout diagnostic: ${JSON.stringify(safeDiagnostic)}`);
+      }
       expect(productRules.targetFailures).toEqual([]);
       expect(productRules.textFailures).toEqual([]);
       expect(layout.horizontalOverflow).toBeLessThanOrEqual(1);
