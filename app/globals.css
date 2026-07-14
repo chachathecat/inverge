@@ -16,6 +16,7 @@
   --brand-700: #23456f;
   --brand-050: #eef4fb;
   --cue-review: #b56b16;
+  --cue-review-text: #7a430c;
   --cue-review-bg: #fef4e7;
   --cue-focus: #2b5c9a;
   --cue-focus-bg: #edf4fc;
@@ -94,7 +95,7 @@
   --cta-secondary-fg: var(--text-primary);
   --trust-layer-bg: var(--brand-050);
   --trust-layer-border: #d7e2ef;
-  --focus-ring: rgba(16, 35, 63, 0.16);
+  --focus-ring: #23456f;
   --touch-target-min: 44px;
   --ledger-radius-control: 12px;
   --ledger-radius-card: 14px;
@@ -118,6 +119,7 @@
   --status-green: #93b8ad;
   --status-green-soft: rgba(147, 184, 173, 0.14);
   --status-amber: #d7b16e;
+  --cue-review-text: #e3b779;
   --status-amber-soft: rgba(215, 177, 110, 0.14);
   --status-red: #db9a91;
   --status-red-soft: rgba(219, 154, 145, 0.14);
