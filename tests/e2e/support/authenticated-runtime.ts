@@ -90,10 +90,14 @@ export async function loginWithDedicatedTestAccount(
   mode: "first" | "second" = "second",
 ) {
   let lastStatus: number | null = null;
+  const appSurface = page.locator('[data-s224v-surface="/app"]');
 
   for (let attempt = 0; attempt < 2; attempt += 1) {
     await page.goto(`/login?mode=${mode}`, { waitUntil: "domcontentloaded" });
-    if (new URL(page.url()).pathname === "/app") return;
+    if (new URL(page.url()).pathname === "/app") {
+      await expect(appSurface).toBeVisible();
+      return;
+    }
 
     const emailInput = page.getByLabel("이메일");
     const passwordInput = page.getByLabel("비밀번호");
@@ -113,16 +117,22 @@ export async function loginWithDedicatedTestAccount(
     lastStatus = response.status();
     if (response.ok()) {
       await expect(page).toHaveURL((url) => url.pathname === "/app");
+      await page.waitForLoadState("domcontentloaded");
+      await expect(appSurface).toBeVisible();
       return;
     }
 
     await emailInput.fill("").catch(() => undefined);
     await passwordInput.fill("").catch(() => undefined);
-    if (attempt === 0) await page.waitForTimeout(800);
+    const transient = lastStatus === 429 || lastStatus >= 500;
+    if (!transient || attempt === 1) break;
+    await page.waitForTimeout(800);
   }
 
   throw new Error(
-    "The app login endpoint rejected the dedicated test account after one bounded retry (HTTP " +
+    "The app login endpoint rejected the dedicated test account" +
+      (lastStatus === 429 || (lastStatus ?? 0) >= 500 ? " after one bounded transient retry" : "") +
+      " (HTTP " +
       String(lastStatus ?? "unknown") +
       ").",
   );
