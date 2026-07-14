@@ -148,3 +148,60 @@ jobs:
             test-results/**/s228-runtime.json
           if-no-files-found: ignore
           retention-days: 7
+
+  s229-giii-runner-runtime:
+    name: S229 Authenticated GIII Runner Runtime
+    if: github.event_name == 'pull_request' && github.event.pull_request.number == 564 && contains(github.event.pull_request.body, '<!-- run-s229-auth-e2e -->')
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    concurrency:
+      group: s229-giii-runner-${{ github.ref }}
+      cancel-in-progress: true
+    env:
+      CI: "true"
+      S229_AUTH_RUNTIME: "1"
+      E2E_BASE_URL: "https://inverge-git-agent-s229-giii-runner-v3-chachathecats-projects.vercel.app"
+      E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL || secrets.TEST_USER_EMAIL }}
+      E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD || secrets.TEST_USER_PASSWORD }}
+      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Verify safe authenticated S229 runtime prerequisites
+        shell: bash
+        run: |
+          if [ -z "${E2E_USER_EMAIL}" ] || [ -z "${E2E_USER_PASSWORD}" ] || [ -z "${VERCEL_AUTOMATION_BYPASS_SECRET}" ]; then
+            echo "::error::Missing dedicated test-account credentials or Vercel automation bypass."
+            exit 1
+          fi
+
+          case "${E2E_BASE_URL}" in
+            "https://inverge-git-agent-s229-giii-runner-v3-chachathecats-projects.vercel.app"|"https://inverge-git-agent-s229-giii-runner-v3-chachathecats-projects.vercel.app/")
+              ;;
+            *)
+              echo "::error::S229 runtime acceptance refuses production and non-approved hosts."
+              exit 1
+              ;;
+          esac
+
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Playwright browser
+        run: npm exec playwright install -- --with-deps chromium
+      - name: Run focused S229 runner runtime acceptance
+        run: npm run test:e2e -- tests/e2e/fx-9860giii-runner-v3.spec.ts --project=chromium --workers=1 --reporter=line
+
+      - name: Upload sanitized S229 runtime evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: s229-giii-runner-runtime-${{ github.run_id }}
+          path: |
+            test-results/**/s229-*.png
+            test-results/**/s229-runtime.json
+          if-no-files-found: ignore
+          retention-days: 7
