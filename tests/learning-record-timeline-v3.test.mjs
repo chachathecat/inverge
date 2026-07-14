@@ -154,7 +154,8 @@ test("S230 authenticated runtime lane is exact-Preview, secret-backed, and sanit
   assert.match(spec, /waitForResponse\(isSignInResponse, \{ timeout: 20_000 \}\)/);
   assert.match(spec, /\[400, 401, 403\]\.includes\(status\)/);
   assert.match(spec, /test\.describe\.configure\(\{ retries: 0/);
-  assert.match(spec, /productDeploymentSha: runtimeProductSha/);
+  assert.match(spec, /targetDeploymentSha: runtimeTargetDeploymentSha/);
+  assert.match(spec, /productEquivalentContractSha/);
   assert.match(spec, /toBeFocused\(\)/);
   assert.match(spec, /toBeInViewport\(\{ ratio: 0\.8 \}\)/);
   assert.match(spec, /element\.matches\(":focus-visible"\)/);
