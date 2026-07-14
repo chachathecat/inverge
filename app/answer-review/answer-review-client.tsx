@@ -136,6 +136,9 @@ export default function AnswerReviewClientPage({
   const problemCameraInputRef = useRef<HTMLInputElement | null>(null);
   const generalFileInputRef = useRef<HTMLInputElement | null>(null);
   const answerTextRef = useRef<HTMLTextAreaElement | null>(null);
+  const stepTwoHeadingRef = useRef<HTMLHeadingElement | null>(null);
+  const stepThreeHeadingRef = useRef<HTMLHeadingElement | null>(null);
+  const previousStepRef = useRef<StepId>(currentStep);
   const [generalUploadIntent, setGeneralUploadIntent] = useState<"answer" | "problem">("answer");
   const [problemSnapNoticeVisible, setProblemSnapNoticeVisible] = useState(false);
 
@@ -145,6 +148,19 @@ export default function AnswerReviewClientPage({
     const frame = window.requestAnimationFrame(() => setMotionReady(true));
     return () => window.cancelAnimationFrame(frame);
   }, []);
+  useEffect(() => {
+    if (previousStepRef.current === currentStep) return;
+    previousStepRef.current = currentStep;
+    const frame = window.requestAnimationFrame(() => {
+      const focusTarget = currentStep === 1
+        ? answerTextRef.current
+        : currentStep === 2
+          ? stepTwoHeadingRef.current
+          : stepThreeHeadingRef.current;
+      focusTarget?.focus();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [currentStep]);
   const shouldReduceMotion = !motionReady || Boolean(prefersReducedMotion);
   const subjectOptions = examMode === "second" ? APPRAISAL_SECOND_SUBJECTS : APPRAISAL_FIRST_SUBJECTS;
   const calculationContextText = [
@@ -619,6 +635,7 @@ export default function AnswerReviewClientPage({
               className={cn(buttonVariants({ variant: "default" }), "w-full sm:w-auto")}
               onClick={handlePrimaryAction}
               disabled={isPrimaryActionDisabled}
+              data-testid={currentStep === 2 ? "answer-review-build-feedback" : "answer-review-copy-feedback"}
             >
               {primaryActionLabel}
             </button>
@@ -632,6 +649,7 @@ export default function AnswerReviewClientPage({
               variants={SECTION_FADE}
               transition={{ duration: 0.28, ease: "easeOut" }}
             >
+              <h2 className="sr-only">자료 입력</h2>
               <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
                 <motion.div
                   className="space-y-4"
@@ -870,7 +888,7 @@ export default function AnswerReviewClientPage({
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="space-y-1">
                       <p className="text-caption text-[color:var(--muted)]">{examMode === "second" ? "감정평가사 2차" : "감정평가사 1차"} · {subject}</p>
-                      <h2 className="text-base font-semibold text-[color:var(--foreground-strong)]">가장 큰 간극부터 확인</h2>
+                      <h2 ref={stepTwoHeadingRef} tabIndex={-1} className="text-base font-semibold text-[color:var(--foreground-strong)]">가장 큰 간극부터 확인</h2>
                       <p className="text-caption leading-5 text-[color:var(--muted)]">{toShortLine(qualityView?.nextAction || "", "가장 큰 간극 하나를 먼저 보강하면 다음 초안의 완성도가 올라갑니다.")}</p>
                     </div>
                 {referenceGrounding?.used ? (
@@ -988,15 +1006,6 @@ export default function AnswerReviewClientPage({
                         <p><span className="font-medium">왜 중요한가</span>: {qualityView?.primaryFix.whyItMatters || "핵심 논점을 놓치면 답안의 설득력이 크게 떨어집니다."}</p>
                         <p><span className="font-medium">어떻게 고칠까</span>: {qualityView?.primaryFix.howToFix || biggestGapFix}</p>
                       </div>
-                      <motion.button
-                        whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
-                        type="button"
-                        onClick={() => setCurrentStep(3)}
-                        className={cn(buttonVariants({ variant: "default" }), "primary-action mt-4 min-h-11 px-4")}
-                        data-s224v-dominant-primary-action
-                      >
-                        보강 문단 정리
-                      </motion.button>
                     </article>
 
                     <CalculatorRoutineTrainer
@@ -1109,7 +1118,6 @@ export default function AnswerReviewClientPage({
                       <p className="text-caption font-medium text-[color:var(--muted)]">다음 행동</p>
                       <div className="mt-2 grid gap-2">
                         <motion.button whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }} type="button" onClick={() => setCurrentStep(1)} className={cn(buttonVariants({ variant: "outline" }), "h-9")}>입력 수정하기</motion.button>
-                        <motion.button whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }} type="button" onClick={() => setCurrentStep(3)} data-testid="answer-review-build-feedback" className={cn(buttonVariants({ variant: "outline" }), "h-9")}>보강 문단 정리</motion.button>
                       </div>
                     </article>
                   </motion.aside>
@@ -1129,7 +1137,7 @@ export default function AnswerReviewClientPage({
               <div className="flex flex-wrap items-start justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4 sm:p-5">
                 <div className="space-y-1">
                   <p className="text-caption text-[color:var(--muted)]">{examMode === "second" ? "감정평가사 2차" : "감정평가사 1차"} · {subject}</p>
-                  <h2 className="text-base font-semibold text-[color:var(--foreground-strong)]">보강 문단 정리</h2>
+                  <h2 ref={stepThreeHeadingRef} tabIndex={-1} className="text-base font-semibold text-[color:var(--foreground-strong)]">보강 문단 정리</h2>
                   <p className="text-caption leading-5 text-[color:var(--muted)]">작성한 내용은 아래 편집창에서 계속 수정할 수 있습니다.</p>
                 </div>
                 <motion.button
@@ -1197,9 +1205,12 @@ export default function AnswerReviewClientPage({
                 </motion.aside>
               </div>
 
-              {didCopyCurrentDraft ? <p className="text-caption leading-5 text-[color:var(--muted)]">복사 완료. 저장 전 직접 확인해 주세요.</p> : null}
-              {visibleFeedbackCopyStatus === "failed" ? (
-                <p className="text-caption leading-5 text-[color:var(--muted)]">클립보드 복사에 실패했습니다. 텍스트를 수동으로 복사해 주세요.</p>
+              {visibleFeedbackCopyStatus !== "idle" ? (
+                <p role="status" aria-live="polite" aria-atomic="true" className="text-caption leading-5 text-[color:var(--muted)]">
+                  {didCopyCurrentDraft
+                    ? "복사 완료. 저장 전 직접 확인해 주세요."
+                    : "클립보드 복사에 실패했습니다. 텍스트를 수동으로 복사해 주세요."}
+                </p>
               ) : null}
             </motion.section>
           ) : null}

@@ -47,8 +47,11 @@ test.describe('public answer-review smoke', () => {
     await page.getByTestId('answer-review-reference-input').fill('참고 정리 입력 smoke');
 
     await page.getByTestId('answer-review-start').click();
+    await expect(page.getByRole('heading', { name: '가장 큰 간극부터 확인', level: 2 })).toBeFocused();
     await expect(page.getByTestId('answer-review-build-feedback')).toBeVisible();
+    await expect(page.getByRole('button', { name: '보강 문단 정리', exact: true })).toHaveCount(1);
     await page.getByTestId('answer-review-build-feedback').click();
+    await expect(page.getByRole('heading', { name: '보강 문단 정리', level: 2 })).toBeFocused();
     await expect(page.getByRole('button', { name: '정리 내용 복사', exact: true })).toBeVisible();
   });
 

@@ -137,6 +137,11 @@
     --border-strong: var(--control-border-emphasis);
     --border-hairline: var(--control-border);
   }
+
+  :where(summary) {
+    min-inline-size: var(--touch-target-min);
+    min-block-size: var(--touch-target-min);
+  }
 }
 
 html {

@@ -82,9 +82,10 @@ async function productRuleFailures(page: Page) {
     };
 
     const targetFailures = Array.from(document.querySelectorAll<HTMLElement>(
-      'button, [role="button"], input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), select, textarea, nav a',
+      'a[href], button, summary, [role="button"], input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), select, textarea',
     )).flatMap((element) => {
       if (!visible(element)) return [];
+      if (element.matches('a[href]') && getComputedStyle(element).display === "inline") return [];
       const rect = element.getBoundingClientRect();
       if (rect.width >= 44 && rect.height >= 44) return [];
       return [{ tag: element.tagName.toLowerCase(), width: rect.width, height: rect.height }];
@@ -126,8 +127,17 @@ async function layoutFailures(page: Page) {
 
 async function resetKeyboardStart(page: Page) {
   await page.evaluate(() => {
-    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
     window.scrollTo(0, 0);
+    let origin = document.querySelector<HTMLElement>("#s231c-keyboard-origin");
+    if (!origin) {
+      origin = document.createElement("span");
+      origin.id = "s231c-keyboard-origin";
+      origin.tabIndex = 0;
+      origin.setAttribute("aria-hidden", "true");
+      origin.style.cssText = "position:fixed;inline-size:1px;block-size:1px;overflow:hidden;opacity:0;";
+      document.body.prepend(origin);
+    }
+    origin.focus();
   });
 }
 
@@ -135,6 +145,8 @@ async function tabTo(page: Page, target: Locator, maximumStops = 80) {
   for (let stop = 1; stop <= maximumStops; stop += 1) {
     await page.keyboard.press("Tab");
     if (await target.evaluate((element) => document.activeElement === element)) return stop;
+    const wrapped = await page.evaluate(() => document.activeElement?.id === "s231c-keyboard-origin");
+    if (wrapped) throw new Error("Keyboard traversal wrapped to the origin before reaching the target.");
   }
   throw new Error(`Keyboard target was not reached within ${maximumStops} Tab stops.`);
 }
@@ -255,11 +267,27 @@ async function verifyKeyboardCoreLoop(page: Page) {
   await tabTo(page, start);
   await page.keyboard.press("Enter");
 
+  const resultHeading = page.getByRole("heading", { name: "가장 큰 간극부터 확인", level: 2 });
+  await expect(resultHeading).toBeVisible();
+  await expect(resultHeading).toBeFocused();
+  await expect(page.getByRole("button", { name: "보강 문단 정리", exact: true })).toHaveCount(1);
+
+  const reviseInput = page.getByRole("button", { name: "입력 수정하기", exact: true });
+  await resetKeyboardStart(page);
+  await tabTo(page, reviseInput);
+  await page.keyboard.press("Enter");
+  await expect(answer).toBeFocused();
+  await resetKeyboardStart(page);
+  await tabTo(page, start);
+  await page.keyboard.press("Enter");
+  await expect(resultHeading).toBeFocused();
+
   const buildFeedback = page.getByTestId("answer-review-build-feedback");
   await expect(buildFeedback).toBeVisible();
   await resetKeyboardStart(page);
   await tabTo(page, buildFeedback);
   await page.keyboard.press("Enter");
+  await expect(page.getByRole("heading", { name: "보강 문단 정리", level: 2 })).toBeFocused();
   await expect(page.getByRole("button", { name: "정리 내용 복사", exact: true })).toBeVisible();
   await page.unroute("**/api/answer-review/structure");
 

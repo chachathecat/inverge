@@ -70,6 +70,46 @@ test("S231C runtime acceptance is axe-backed, metadata-only, and honest about ma
   assert.ok(runner.includes("tests/s231a-learner-shell-hardening.test.mjs"));
 });
 
+test("S231C keeps one dominant step action and announces focus and copy state", () => {
+  const answerReview = read("app/answer-review/answer-review-client.tsx");
+  const globals = read("app/globals.css");
+  const spec = read("tests/e2e/s231c-wcag-aa.spec.ts");
+  const gitignore = read(".gitignore");
+
+  assert.equal((answerReview.match(/answer-review-build-feedback/g) ?? []).length, 1);
+  assert.match(answerReview, /currentStep === 1[\s\S]*?answerTextRef\.current/);
+  assert.match(answerReview, /stepTwoHeadingRef/);
+  assert.match(answerReview, /stepThreeHeadingRef/);
+  assert.match(answerReview, /role="status" aria-live="polite" aria-atomic="true"/);
+  assert.match(globals, /:where\(summary\)[\s\S]*?min-inline-size:\s*var\(--touch-target-min\)[\s\S]*?min-block-size:\s*var\(--touch-target-min\)/);
+  assert.doesNotMatch(globals, /:where\(summary\)[\s\S]{0,160}display:\s*inline-flex/);
+  assert.match(spec, /'a\[href\], button, summary,/);
+  assert.match(spec, /element\.matches\('a\[href\]'\)[\s\S]*?display === "inline"/);
+  assert.match(spec, /Keyboard traversal wrapped to the origin/);
+  assert.match(spec, /name: "입력 수정하기", exact: true[\s\S]*?expect\(answer\)\.toBeFocused/);
+  assert.match(spec, /name: "보강 문단 정리", exact: true[\s\S]*?toHaveCount\(1\)/);
+  assert.match(gitignore, /^\/test-results\/$/m);
+  assert.match(gitignore, /^\/playwright-report\/$/m);
+});
+
+test("S231C workflow is PR-scoped, exact-head, and publishes JSON-only evidence", () => {
+  const workflow = read(".github/workflows/s231c-runtime.yml");
+
+  assert.match(workflow, /pull_request\.number == 573/);
+  assert.match(workflow, /run-s231c-auth-e2e/);
+  assert.match(workflow, /agent\/s231c-light-accessibility-hardening/);
+  assert.match(workflow, /inverge-git-agent-s231c-light-acc-ce4dd4-chachathecats-projects\.vercel\.app/);
+  assert.match(workflow, /api\/runtime\/version/);
+  assert.match(workflow, /deploymentSha !== process\.env\.EXPECTED_SHA/);
+  assert.match(workflow, /s231c-wcag-aa\.spec\.ts/);
+  assert.match(workflow, /s231c-runtime\.json/);
+  assert.match(workflow, /manualBrowserZoomCertification !== false/);
+  assert.match(workflow, /manualScreenReaderCertification !== false/);
+  assert.match(workflow, /Screenshot, trace, or video output exists/);
+  assert.match(workflow, /path: s231c-evidence\/s231c-runtime\.json/);
+  assert.doesNotMatch(workflow, /tesseract|imagemagick|\.png\s*$/im);
+});
+
 test("S231C documents dark re-enable criteria and preserves the manual acceptance boundary", () => {
   const runbook = read("docs/qa/s231c-light-only-accessibility.md");
 
