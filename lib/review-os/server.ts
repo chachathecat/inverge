@@ -8,7 +8,15 @@ import type { AccessState } from "@/lib/review-os/types";
 import { reviewOsRepository } from "@/lib/review-os/repository";
 import { reviewOsService } from "@/lib/review-os/service";
 
-export async function getReviewOsServerContext(returnTo = "/app") {
+type ReviewOsServerContextOptions = Readonly<{
+  includeProfile?: boolean;
+  includeUsage?: boolean;
+}>;
+
+export async function getReviewOsServerContext(
+  returnTo = "/app",
+  options: ReviewOsServerContextOptions = {},
+) {
   const session = await requireServerSession(await resolveReviewOsReturnTo(returnTo));
 
   if (!session.authEnabled) {
@@ -23,9 +31,12 @@ export async function getReviewOsServerContext(returnTo = "/app") {
 
   try {
     const access = session.userId ? await reviewOsRepository.ensureAccess(session.userId, session.email) : null;
-    const profile = session.userId ? await reviewOsRepository.getStudyProfile(session.userId) : null;
+    const profile =
+      options.includeProfile !== false && session.userId
+        ? await reviewOsRepository.getStudyProfile(session.userId)
+        : null;
     const usage =
-      session.userId && session.email && access?.allowed
+      options.includeUsage !== false && session.userId && session.email && access?.allowed
         ? await reviewOsService.getUsageSummary(session.userId, session.email)
         : null;
     return { session, access, profile, usage };

@@ -7,11 +7,14 @@ import { Button } from "@/components/ui/button";
 import { getReviewOsServerContext } from "@/lib/review-os/server";
 
 export default async function ReviewOsLayout({ children }: { children: ReactNode }) {
-  const { session, access, usage } = await getReviewOsServerContext("/app");
   const currentPath = (await headers()).get("x-inverge-current-path") ?? "";
   const isMetadataOnlyTrustAcceptance = currentPath.startsWith(
     "/app/acceptance/trust-provenance/",
   );
+  const { session, access, usage } = await getReviewOsServerContext("/app", {
+    includeProfile: !isMetadataOnlyTrustAcceptance,
+    includeUsage: !isMetadataOnlyTrustAcceptance,
+  });
 
   if (!access?.allowed) {
     return (

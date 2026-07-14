@@ -136,12 +136,13 @@ test("S231B uses one semantic renderer while preserving narrow public adapters",
 });
 
 test("S231B runtime fixtures and deployment proof are preview-only and metadata-only", async () => {
-  const [fixture, endpoint, runtimeSpec, runtimeSupport, appLayout] = await Promise.all([
+  const [fixture, endpoint, runtimeSpec, runtimeSupport, appLayout, serverContext] = await Promise.all([
     read("app/app/acceptance/trust-provenance/[state]/page.tsx"),
     read("app/api/runtime/version/route.ts"),
     read("tests/e2e/s231b-trust-provenance.spec.ts"),
     read("tests/e2e/support/authenticated-runtime.ts"),
     read("app/app/layout.tsx"),
+    read("lib/review-os/server.ts"),
   ]);
 
   assert.match(fixture, /process\.env\.VERCEL_ENV !== "preview"/);
@@ -164,6 +165,10 @@ test("S231B runtime fixtures and deployment proof are preview-only and metadata-
   assert.match(runtimeSupport, /maxRedirects: 0/);
   assert.match(appLayout, /isMetadataOnlyTrustAcceptance/);
   assert.match(appLayout, /data-private-account-usage/);
+  assert.match(appLayout, /includeProfile: !isMetadataOnlyTrustAcceptance/);
+  assert.match(appLayout, /includeUsage: !isMetadataOnlyTrustAcceptance/);
+  assert.match(serverContext, /options\.includeProfile !== false/);
+  assert.match(serverContext, /options\.includeUsage !== false/);
   assert.match(runtimeSpec, /privateAccountTelemetryAbsent: true/);
   assert.match(runtimeSpec, /\[data-private-account-usage\]/);
 });
@@ -176,4 +181,45 @@ test("S231B keeps repeated visual authority caveats out of Answer Review child c
     "one visible trust layer and one copied-output boundary should own the caveat",
   );
   assert.doesNotMatch(answerReview, /<p[^>]*>학습 보조 초안입니다\. 저장 전 직접 수정할 수 있습니다\.<\/p>/);
+});
+
+test("S231B runtime workflow is exact-head, secret-scoped, and evidence fail-closed", async () => {
+  const workflow = await read(".github/workflows/s231b-runtime.yml");
+  const jobEnvironment = workflow.slice(
+    workflow.indexOf("    env:"),
+    workflow.indexOf("    steps:"),
+  );
+
+  assert.match(workflow, /github\.event\.pull_request\.number == 571/);
+  assert.match(workflow, /<!-- run-s231b-auth-e2e -->/);
+  assert.match(workflow, /head\.repo\.full_name == github\.repository/);
+  assert.match(workflow, /agent\/s231b-trust-provenance-api/);
+  assert.match(workflow, /types: \[opened, synchronize, reopened, edited\]/);
+  assert.match(workflow, /inverge-git-agent-s231b-trust-pro-e87183-chachathecats-projects\.vercel\.app/);
+  assert.ok(workflow.includes("E2E_RUNNER_SHA: ${{ github.event.pull_request.head.sha }}"));
+  assert.ok(workflow.includes('echo "E2E_TARGET_SHA=${E2E_RUNNER_SHA}" >> "${GITHUB_ENV}"'));
+  assert.match(workflow, /ref: \$\{\{ github\.event\.pull_request\.head\.sha \}\}/);
+  assert.match(workflow, /\/api\/runtime\/version\?runner=/);
+  assert.match(workflow, /Recheck exact deployment SHA after runtime/);
+  assert.match(workflow, /\/api\/runtime\/version\?postflight=/);
+  assert.match(workflow, /--max-redirs 0/);
+  assert.match(workflow, /deadline=\$\(\(SECONDS \+ 600\)\)/);
+  assert.match(workflow, /node-version: 22/);
+  assert.match(workflow, /secrets\.E2E_USER_EMAIL \|\| secrets\.TEST_USER_EMAIL/);
+  assert.match(workflow, /secrets\.E2E_USER_PASSWORD \|\| secrets\.TEST_USER_PASSWORD/);
+  assert.match(workflow, /secrets\.VERCEL_AUTOMATION_BYPASS_SECRET/);
+  assert.doesNotMatch(jobEnvironment, /secrets\./);
+  assert.doesNotMatch(jobEnvironment, /E2E_TARGET_SHA:/);
+  assert.match(workflow, /tests\/e2e\/s231b-trust-provenance\.spec\.ts/);
+  assert.match(workflow, /tesseract-ocr imagemagick/);
+  assert.match(workflow, /normalized_ocr/);
+  assert.match(workflow, /screenshot_count.*-ne 15/s);
+  assert.match(workflow, /viewportEvidence\.length !== 15/);
+  assert.match(workflow, /combinations\.size !== 15/);
+  assert.match(workflow, /privateAccountTelemetryAbsent !== true/);
+  assert.match(workflow, /"observedDeploymentSha"/);
+  assert.match(workflow, /s231b-evidence\/\*\.png/);
+  assert.match(workflow, /s231b-evidence\/s231b-runtime\.json/);
+  assert.match(workflow, /if-no-files-found: error/);
+  assert.doesNotMatch(workflow, /trace\.zip|test-results\/\*\*\/\*\.png/);
 });
