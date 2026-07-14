@@ -133,12 +133,13 @@ async function tabToPrimaryAction(page: Page) {
 }
 
 test.describe("S228 authenticated Study Ledger runtime acceptance", () => {
-  test.describe.configure({ timeout: 240_000 });
+  test.describe.configure({ retries: 0, timeout: 240_000 });
 
   test("390/1440, keyboard, zero console errors, and durable rewrite comparison", async ({ page }, testInfo) => {
     requireSafeAuthenticatedRuntime("S228");
 
     const runtimeErrors = monitorRuntimeErrors(page);
+    const screenshots: string[] = [];
 
     await page.setViewportSize({ width: 390, height: 844 });
     await loginWithDedicatedTestAccount(page, "second");

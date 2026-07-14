@@ -1,7 +1,15 @@
-import { expect, type Page, type TestInfo } from "@playwright/test";
+import {
+  expect,
+  type Locator,
+  type Page,
+  type Request,
+  type Response,
+  type TestInfo,
+} from "@playwright/test";
 
 export const runtimeBaseUrl = process.env.E2E_BASE_URL?.trim() ?? "";
 export const runtimeTargetSha = process.env.E2E_TARGET_SHA?.trim() ?? "";
+export const runtimeRunnerSha = process.env.E2E_RUNNER_SHA?.trim() ?? "";
 const expectedRuntimeHost = process.env.E2E_EXPECTED_HOST?.trim().toLowerCase() ?? "";
 
 const testEmail = process.env.E2E_USER_EMAIL?.trim() ?? "";
@@ -17,6 +25,7 @@ export const protectionHeaders: Record<string, string> = vercelBypassSecret
 
 type RuntimeSafetyOptions = {
   requireTargetSha?: boolean;
+  requireExactHead?: boolean;
 };
 
 export type RuntimeErrors = {
@@ -33,6 +42,12 @@ export function requireSafeAuthenticatedRuntime(
     ["E2E_BASE_URL", runtimeBaseUrl],
     ["E2E_USER_EMAIL", testEmail],
     ["E2E_USER_PASSWORD", testPassword],
+    ...(options.requireExactHead
+      ? ([
+          ["E2E_RUNNER_SHA", runtimeRunnerSha],
+          ["E2E_TARGET_SHA", runtimeTargetSha],
+        ] as const)
+      : []),
   ]
     .filter(([, value]) => !value)
     .map(([name]) => name);
@@ -57,6 +72,10 @@ export function requireSafeAuthenticatedRuntime(
     );
   }
 
+  if (url.protocol !== "https:") {
+    throw new Error(`${suiteLabel} runtime acceptance requires an HTTPS target.`);
+  }
+
   if (expectedRuntimeHost && host !== expectedRuntimeHost) {
     throw new Error(
       `${suiteLabel} runtime acceptance target host does not match the owner-approved Preview.`,
@@ -74,6 +93,20 @@ export function requireSafeAuthenticatedRuntime(
       `${suiteLabel} runtime acceptance requires E2E_TARGET_SHA as the exact 40-character deployment commit.`,
     );
   }
+
+
+  if (options.requireExactHead) {
+    if (!/^[0-9a-f]{40}$/i.test(runtimeRunnerSha)) {
+      throw new Error(
+        `${suiteLabel} runtime acceptance requires E2E_RUNNER_SHA as the full current PR head.`,
+      );
+    }
+    if (runtimeTargetSha !== runtimeRunnerSha) {
+      throw new Error(
+        `${suiteLabel} runtime acceptance requires the deployment target SHA to equal the runner head SHA.`,
+      );
+    }
+  }
 }
 
 export function sanitizeRuntimeEvidence(value: string) {
@@ -85,57 +118,131 @@ export function sanitizeRuntimeEvidence(value: string) {
   return sanitized;
 }
 
+function isSignInRequest(candidate: Request) {
+  const url = new URL(candidate.url());
+  return candidate.method() === "POST" && url.pathname === "/api/auth/sign-in";
+}
+
+function isSignInResponse(candidate: Response) {
+  return isSignInRequest(candidate.request());
+}
+
+async function waitForHydratedLoginForm(page: Page) {
+  const emailInput = page.getByLabel("이메일");
+  const passwordInput = page.getByLabel("비밀번호");
+  const submit = page.getByTestId("login-submit");
+
+  await expect(emailInput).toBeVisible({ timeout: 20_000 });
+  await expect(passwordInput).toBeVisible({ timeout: 20_000 });
+  await expect(submit).toBeVisible({ timeout: 20_000 });
+  await expect
+    .poll(
+      () =>
+        submit.evaluate((element) =>
+          Object.keys(element).some(
+            (key) => key.startsWith("__reactProps$") || key.startsWith("__reactFiber$"),
+          ),
+        ),
+      {
+        timeout: 20_000,
+        message: "The login form must be client-hydrated before submission.",
+      },
+    )
+    .toBe(true);
+
+  // Exercise React's controlled handlers with a public sentinel before restoring secrets.
+  await emailInput.fill("hydration-check@inverge.invalid");
+  await expect(emailInput).toHaveValue("hydration-check@inverge.invalid");
+  await emailInput.fill(testEmail);
+  await passwordInput.fill(testPassword);
+  await expect
+    .poll(() => emailInput.inputValue().then((value) => value === testEmail), {
+      timeout: 20_000,
+      message: "The hydrated email control must retain its secret-backed value.",
+    })
+    .toBe(true);
+  await expect
+    .poll(() => passwordInput.inputValue().then((value) => value === testPassword), {
+      timeout: 20_000,
+      message: "The hydrated password control must retain its secret-backed value.",
+    })
+    .toBe(true);
+  await expect(submit).toBeEnabled({ timeout: 20_000 });
+
+  return submit;
+}
+
+async function clickForSignInResponse(page: Page, submit: Locator) {
+  let requestEmitted = false;
+  const observeRequest = (request: Request) => {
+    if (isSignInRequest(request)) requestEmitted = true;
+  };
+  page.on("request", observeRequest);
+
+  try {
+    const responsePromise = page
+      .waitForResponse(isSignInResponse, { timeout: 20_000 })
+      .catch((error: unknown) => {
+        if (error instanceof Error && error.name === "TimeoutError") return null;
+        throw error;
+      });
+    await submit.click({ timeout: 20_000 });
+    const response = await responsePromise;
+    return { requestEmitted, response };
+  } finally {
+    page.off("request", observeRequest);
+  }
+}
+
 export async function loginWithDedicatedTestAccount(
   page: Page,
   mode: "first" | "second" = "second",
 ) {
-  let lastStatus: number | null = null;
+  await page.goto(`/login?mode=${mode}`, {
+    waitUntil: "domcontentloaded",
+    timeout: 30_000,
+  });
   const appSurface = page.locator('[data-s224v-surface="/app"]');
-
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    await page.goto(`/login?mode=${mode}`, { waitUntil: "domcontentloaded" });
-    if (new URL(page.url()).pathname === "/app") {
-      await expect(appSurface).toBeVisible();
-      return;
-    }
-
-    const emailInput = page.getByLabel("이메일");
-    const passwordInput = page.getByLabel("비밀번호");
-    await expect(emailInput).toBeVisible();
-    await expect(passwordInput).toBeVisible();
-    await emailInput.fill(testEmail);
-    await passwordInput.fill(testPassword);
-
-    const [response] = await Promise.all([
-      page.waitForResponse((candidate) => {
-        const url = new URL(candidate.url());
-        return candidate.request().method() === "POST" && url.pathname === "/api/auth/sign-in";
-      }),
-      page.getByTestId("login-submit").click(),
-    ]);
-
-    lastStatus = response.status();
-    if (response.ok()) {
-      await expect(page).toHaveURL((url) => url.pathname === "/app");
-      await page.waitForLoadState("domcontentloaded");
-      await expect(appSurface).toBeVisible();
-      return;
-    }
-
-    await emailInput.fill("").catch(() => undefined);
-    await passwordInput.fill("").catch(() => undefined);
-    const transient = lastStatus === 429 || lastStatus >= 500;
-    if (!transient || attempt === 1) break;
-    await page.waitForTimeout(800);
+  if (new URL(page.url()).pathname === "/app") {
+    await expect(appSurface).toBeVisible({ timeout: 20_000 });
+    return { signInAttempts: 0 };
   }
 
-  throw new Error(
-    "The app login endpoint rejected the dedicated test account" +
-      (lastStatus === 429 || (lastStatus ?? 0) >= 500 ? " after one bounded transient retry" : "") +
-      " (HTTP " +
-      String(lastStatus ?? "unknown") +
-      ").",
-  );
+  let signInAttempts = 1;
+  let submit = await waitForHydratedLoginForm(page);
+  let attempt = await clickForSignInResponse(page, submit);
+
+  // Retry once only when the hydrated click emitted no authentication request.
+  if (!attempt.response && !attempt.requestEmitted) {
+    signInAttempts += 1;
+    submit = await waitForHydratedLoginForm(page);
+    attempt = await clickForSignInResponse(page, submit);
+  }
+
+  if (!attempt.response) {
+    if (attempt.requestEmitted) {
+      throw new Error(
+        "The sign-in request was emitted but produced no response within the bounded wait; it was not retried.",
+      );
+    }
+    throw new Error(
+      "The hydrated login form emitted no sign-in request after one bounded no-request retry.",
+    );
+  }
+
+  const status = attempt.response.status();
+  if ([400, 401, 403].includes(status)) {
+    throw new Error(
+      `The dedicated test account sign-in returned ${status}; credential failures are not retried.`,
+    );
+  }
+  if (!attempt.response.ok()) {
+    throw new Error(`The dedicated test account sign-in returned HTTP ${status}.`);
+  }
+
+  await expect(page).toHaveURL((url) => url.pathname === "/app", { timeout: 20_000 });
+  await expect(appSurface).toBeVisible({ timeout: 20_000 });
+  return { signInAttempts };
 }
 
 export function monitorRuntimeErrors(page: Page): RuntimeErrors {
@@ -162,6 +269,15 @@ export function monitorRuntimeErrors(page: Page): RuntimeErrors {
       sanitizeRuntimeEvidence(request.method() + " " + url.pathname + " " + failure),
     );
   });
+  page.on("response", (response) => {
+    const url = new URL(response.url());
+    if (url.origin !== runtimeOrigin || response.status() < 400) return;
+    errors.sameOriginRequestFailures.push(
+      sanitizeRuntimeEvidence(
+        response.request().method() + " " + url.pathname + " HTTP " + response.status(),
+      ),
+    );
+  });
 
   return errors;
 }
@@ -171,10 +287,48 @@ export async function captureSanitizedScreenshot(
   testInfo: TestInfo,
   fileName: string,
 ) {
+  const accountIdentitySelector =
+    '[data-s224v-learner-mode-entry="second-only"] > span:last-child';
+  const accountIdentity = page.locator(accountIdentitySelector);
+  await expect(
+    accountIdentity,
+    "The signed-in identity must be present so screenshot evidence can mask it.",
+  ).toHaveCount(1);
+  await expect(accountIdentity).toBeVisible();
+
+  const unmaskedVisibleEmailCount = await page.locator("body *").evaluateAll(
+    (elements, maskedSelector) => {
+      const emailPattern = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i;
+      return elements.filter((element) => {
+        if (!(element instanceof HTMLElement) || element.matches(maskedSelector)) return false;
+        const directText = Array.from(element.childNodes)
+          .filter((node) => node.nodeType === Node.TEXT_NODE)
+          .map((node) => node.textContent ?? "")
+          .join(" ")
+          .trim();
+        if (!emailPattern.test(directText)) return false;
+        const rect = element.getBoundingClientRect();
+        const style = getComputedStyle(element);
+        return (
+          rect.width > 0 &&
+          rect.height > 0 &&
+          style.visibility !== "hidden" &&
+          style.display !== "none"
+        );
+      }).length;
+    },
+    accountIdentitySelector,
+  );
+  expect(
+    unmaskedVisibleEmailCount,
+    "Every visible email-like identity must be inside the masked account region.",
+  ).toBe(0);
+
   await page.screenshot({
     path: testInfo.outputPath(fileName),
     fullPage: true,
-    mask: [page.getByText(testEmail, { exact: false })],
+    animations: "disabled",
+    mask: [accountIdentity, page.getByText(testEmail, { exact: false })],
   });
   return fileName;
 }

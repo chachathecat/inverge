@@ -1,14 +1,14 @@
 # S227 Invited-Account Runtime Visual-Density QA
 
-Status: the S227 authenticated learner-loop matrix passed against the exact #560 Preview revision. Final #558 acceptance remains blocked by the #562 / S229 calculator dependency.
+Status: the earlier S227 learner-loop matrix passed only against the exact #560 Preview revision. The #562 dependency is merged through #564, and #566 is also merged. The combined post-merge matrix is now prepared, but final #558 acceptance still requires one exact-head authenticated run and reviewed sanitized artifact.
 
 ## Scope
 
 - Issue: #558
-- Baseline: `e054485201f6671dfc28bca4fc940cb30cd65f18`
+- Baseline: post-#564/#566 `main`
 - Branch: `agent/s227-invited-runtime-qa`
 - Runtime suite: `tests/e2e/s227-invited-runtime-acceptance.spec.ts`
-- Manual Actions suite: `s227-invited-runtime`
+- Dedicated Actions workflow: `.github/workflows/s227-runtime.yml`
 
 This QA track changes tests, workflow wiring, and evidence documentation only. It does not change learner UI, calculator behavior, database schemas, migrations, APIs, payments, instructor routes, or shared shell design.
 
@@ -18,10 +18,12 @@ This QA track changes tests, workflow wiring, and evidence documentation only. I
 - Only synthetic Korean sample data is created.
 - The suite refuses known production hosts.
 - A protected Vercel Preview requires `VERCEL_AUTOMATION_BYPASS_SECRET`.
-- The exact target deployment commit must be supplied as a 40-character `E2E_TARGET_SHA`.
+- The workflow checks out the exact #565 PR head and derives both runner and target SHA from that current event.
+- The approved #565 Preview alias is fixed in the workflow; runner and target SHA must be the same full 40-character value.
 - Credentials and the runtime URL are redacted from captured diagnostics.
 - Playwright trace, video, and implicit failure screenshots are disabled.
-- Uploaded artifacts are limited to explicit sanitized `s227-*.png` files and a count-only JSON manifest.
+- The signed-in identity is masked in the DOM, visible email-like text is rejected before capture, and Tesseract runs a second fail-closed screenshot guard.
+- Uploaded artifacts are limited to explicit sanitized `s227-*.png` files and a metadata-only JSON manifest.
 - No raw private learner answer or copyrighted question text may be used.
 
 ## Current automated matrix
@@ -32,12 +34,16 @@ This QA track changes tests, workflow wiring, and evidence documentation only. I
 | `/app/capture?mode=second` empty | Prepared | Prepared | Prepared | Fresh form state |
 | rewrite input and saved confirmation | Prepared | — | — | Account-storage confirmation required |
 | `/app/notes?mode=second` | Prepared | Prepared | Prepared | Synthetic source remains visible |
-| completed detail | Prepared | Prepared | Prepared | Rewritten paragraph survives reload |
+| detail normal | Prepared | Prepared | Prepared | Two evidence excerpts remain readable |
+| detail empty-evidence | Prepared | Prepared | Prepared | Existing record shows the honest evidence-empty state |
+| detail completed | Prepared | Prepared | Prepared | Rewritten paragraph survives reload |
+| detail error / offline | Prepared | Prepared | Prepared | Expected invalid-ID boundary is isolated; `navigator.onLine` changes the state honestly |
 | `/app/review?mode=second` | Prepared | Prepared | Prepared | Synthetic source reaches the queue |
-| keyboard/focus | Prepared | Prepared | Prepared | Today, rewrite save, and Review action |
+| calculator active / completed | Prepared | Prepared | Prepared | One active step, all nine canonical steps, visible `기기 검증 전` |
+| keyboard/focus | Prepared | Prepared | Prepared | Today, rewrite save, Review, and calculator continuation |
 | console/page/same-origin failures | Zero required | Zero required | Zero required | Counts only in manifest |
 
-The suite also checks one `main` learner shell indirectly through the route surfaces, horizontal overflow, unsupported authority claims, a single dominant Today action, and visible focus indication.
+The suite checks calculator active/completed and detail normal/empty-evidence/completed/error/offline at every viewport. It also checks one `main` learner shell indirectly through the route surfaces, horizontal overflow, unsupported authority claims, a single dominant Today action, and visible focus indication. The one deliberate invalid-UUID request used to reach the detail error boundary runs in an isolated page; the primary learner-loop page must still report zero unexpected console, page, and same-origin request failures.
 
 ## Exact deployment contract
 
@@ -46,34 +52,36 @@ The workflow runner SHA and target deployment SHA are different concepts:
 - runner SHA: the branch revision containing this test;
 - target deployment SHA: the application revision behind `E2E_BASE_URL`.
 
-A run is not accepted without both. The target URL itself stays secret and is not emitted into the artifact. If the URL still points at the merged #560 Preview, the manifest may evidence that exact deployed revision only; it must not be described as proof of later branch application code.
+A run is not accepted unless both are full SHAs and equal. The dedicated workflow fixes the approved #565 Preview alias, checks out the exact current PR head, and records both SHAs in the manifest. The final run must target a deployment containing this branch plus merged #564 and #566; the earlier #560 Preview remains historical evidence only.
 
-## Manual run
+## Exact-head run
 
-From GitHub Actions, dispatch **E2E Smoke** on the intended branch:
+The dedicated workflow is intentionally one-shot and marker-gated:
 
-- `suite`: `s227-invited-runtime`
-- `target_sha`: exact 40-character git SHA deployed at the configured `E2E_BASE_URL`
+1. Confirm Vercel reports the current #565 head as Ready at the fixed Preview alias.
+2. Add `<!-- run-s227-auth-e2e -->` to the #565 body.
+3. Synchronize the exact head so the `pull_request` workflow observes the marker.
+4. Remove the marker as soon as the run appears; the already-started run keeps the exact event SHA.
 
 The existing repository secrets are reused without inspection:
 
-- `E2E_BASE_URL`
 - `E2E_USER_EMAIL` / `E2E_USER_PASSWORD`
 - fallback `TEST_USER_EMAIL` / `TEST_USER_PASSWORD`
 - `VERCEL_AUTOMATION_BYPASS_SECRET`
 
 Expected artifact: `s227-invited-runtime-<run-id>`, retained for seven days.
 
-## Remaining dependency and honest gate
+## Remaining evidence gate
 
-Issue #558 says the final matrix must also include the S229 calculator runner v3. That dependency is not present on this branch and is intentionally not reimplemented here. After #562 is merged, update this branch from `main`, add the active/completed calculator states and any newly required detail error/offline evidence, then run the full invited-account matrix against an exact deployment of that head.
+The #562 / S229 calculator dependency is merged through #564. This branch now consumes that product implementation from `main` and adds calculator active/completed plus detail normal/empty-evidence/completed/error/offline runtime coverage without duplicating or changing product code.
 
-Until that occurs and a passing artifact is reviewed:
+Until an exact deployment of the combined head passes and its artifact is reviewed:
 
 - this PR must use `Refs #558`, not `Closes #558`;
 - #558 stays open;
 - no public-launch or world-class completion claim is allowed;
 - no calculator/device correctness claim is allowed;
+- the calculator must continue to display `기기 검증 전` and the manifest must record `realDeviceVerified: false`;
 - merge remains human-approved only.
 
 ## Attempt history
@@ -98,4 +106,7 @@ Until that occurs and a passing artifact is reviewed:
 | Same-origin request failures | 0 | 0 |
 | Durable save/reload | Pass | Pass |
 | Notes / Review visibility | Pass | Pass |
-| S229 calculator active/completed | Pass | Blocked by #562 |
+| Post-merge combined runner/target SHA | Exact and equal to deployed head | Pending new run |
+| Detail normal/empty-evidence/completed/error/offline | Pass at 390/768/1440 | Prepared; pending new run |
+| S229 calculator active/completed | Pass at 390/768/1440 | Prepared from merged #564; pending new run |
+| Physical-device claim | Must remain unverified | `기기 검증 전`; no calculator/device correctness claim |
