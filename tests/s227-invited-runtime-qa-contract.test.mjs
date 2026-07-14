@@ -17,6 +17,9 @@ test("S227 and S228 reuse one safe authenticated credential boundary", () => {
   assert.match(s228, /requireSafeAuthenticatedRuntime\("S228"\)/);
   assert.match(helper, /runtime acceptance refuses production/);
   assert.match(helper, /VERCEL_AUTOMATION_BYPASS_SECRET/);
+  assert.match(helper, /E2E_EXPECTED_HOST/);
+  assert.match(helper, /lastStatus === 429/);
+  assert.match(helper, /data-s224v-surface="\\/app"/);
   assert.match(helper, /E2E_TARGET_SHA as the exact 40-character deployment commit/);
   assert.match(helper, /\[redacted-email\]/);
   assert.match(helper, /\[redacted-password\]/);
