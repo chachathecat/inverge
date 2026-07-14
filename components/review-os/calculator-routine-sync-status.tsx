@@ -78,10 +78,14 @@ export function CalculatorRoutineSyncStatusLine({
             : "학습 기록 연결 실패";
 
   return (
-    <div className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] px-3 py-2 text-caption leading-5 text-[color:var(--muted)]">
+    <div className="flex min-h-11 flex-wrap items-center justify-between gap-2 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] px-3 py-2 text-xs leading-5 text-[color:var(--muted)]">
       <span>{copy}</span>
       {retryAvailable && onRetry ? (
-        <button type="button" className="ml-2 font-medium text-[color:var(--foreground-strong)] underline" onClick={onRetry}>
+        <button
+          type="button"
+          className="inline-flex min-h-11 items-center rounded-[var(--radius-sm)] px-3 font-medium text-[color:var(--foreground-strong)] underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--brand-700)]"
+          onClick={onRetry}
+        >
           다시 시도
         </button>
       ) : null}
