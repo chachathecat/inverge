@@ -76,6 +76,12 @@ Until that occurs and a passing artifact is reviewed:
 - no calculator/device correctness claim is allowed;
 - merge remains human-approved only.
 
+## Attempt history
+
+- Run 29326975617: safe prerequisites and exact host/SHA binding passed; no evidence accepted because authentication was non-2xx and the initial Capture assertion targeted an obsolete test id.
+- Run 29327208505: exact target `48df4437fea8853250fcab00f7250c41f8d93a23` reached authenticated durable source/rewrite creation, comparison reload, Review, and six sanitized screenshots. The run is not accepted because a guardrail regex incorrectly rejected the explicit disclaimer `공식 채점 아님`; artifact 8308472156 is diagnostic-only.
+- The next run narrows only that false-positive authority regex. It still rejects affirmative official grading, score, model-answer, pass, and AI-final-judgment claims.
+
 ## Evidence ledger
 
 | Item | Required value | Current value |
