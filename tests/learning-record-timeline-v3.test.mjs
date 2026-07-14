@@ -188,6 +188,13 @@ test("S230 authenticated runtime lane is exact-Preview, secret-backed, and sanit
   assert.match(spec, /data-s224v-learner-mode-entry/);
   assert.match(spec, /Every visible email-like identity must be inside the masked account region/);
   assert.match(workflow, /Reject email-like text in screenshots/);
-  assert.match(workflow, /tesseract/);
+  assert.match(workflow, /apt-get install --yes --no-install-recommends tesseract-ocr/);
+  const ocrInstallIndex = workflow.indexOf("Install OCR redaction dependency");
+  const redactionGuardIndex = workflow.indexOf("Reject email-like text in screenshots");
+  assert.ok(
+    ocrInstallIndex >= 0 && redactionGuardIndex > ocrInstallIndex,
+    "the OCR dependency must be installed before the redaction guard runs",
+  );
+  assert.match(workflow, /command -v tesseract/);
   assert.match(workflow, /if: always\(\) && steps\.redaction_guard\.outcome == 'success'/);
 });

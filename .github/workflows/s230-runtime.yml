@@ -54,6 +54,12 @@ jobs:
         run: npm ci
       - name: Install Playwright browser
         run: npm exec playwright install -- --with-deps chromium
+      - name: Install OCR redaction dependency
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends tesseract-ocr
+          command -v tesseract >/dev/null 2>&1
       - name: Run focused Learning Record runtime acceptance
         run: npm run test:e2e -- tests/e2e/learning-record-timeline-v3.spec.ts --project=chromium --workers=1 --reporter=line
 

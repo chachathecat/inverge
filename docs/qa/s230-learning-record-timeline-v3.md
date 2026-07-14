@@ -39,7 +39,7 @@ The PR-scoped lane refuses every host except the exact PR #566 Preview. Both the
 - [ ] Console/page errors: zero.
 - [ ] Typecheck, lint, focused test, full suite, learner-loop verification, and production build pass.
 
-At 390px and 768px, the next-review card and its single dominant action precede the long timeline in both visual and keyboard order. At 1440px, the same DOM order is placed into the subordinate sticky right rail. Screenshot capture masks the entire signed-in identity element, rejects any second visible email-like text node, and runs an OCR email guard before artifact upload.
+At 390px and 768px, the next-review card and its single dominant action precede the long timeline in both visual and keyboard order. At 1440px, the same DOM order is placed into the subordinate sticky right rail. Screenshot capture masks the entire signed-in identity element, rejects any second visible email-like text node, and runs an OCR email guard before artifact upload. The workflow installs `tesseract-ocr` explicitly and still fails closed if the executable is unavailable.
 
 ## Synthetic fixtures
 
