@@ -162,6 +162,7 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
           title={title}
           subject={resolvedDetail.item.subjectLabel}
           createdAt={resolvedDetail.item.createdAt}
+          savedAt={resolvedDetail.item.updatedAt}
           biggestGap={note.missingIssue ?? note.weakPoint}
           nextAction={note.rewriteInstruction ?? note.nextAction}
           coreLine={note.coreLine}
