@@ -42,11 +42,13 @@ test("S231A shell exposes one skip target before its single main landmark", () =
   const shell = read("components/learner/learner-ui.tsx");
 
   assert.match(shell, /data-learner-shell/);
-  assert.match(shell, /href="#learner-main"/);
+  assert.match(shell, /href=\{focusMode \? "#study-ledger-content" : "#learner-main"\}/);
   assert.match(shell, /<main id="learner-main" tabIndex=\{-1\}/);
-  assert.equal((shell.match(/<main\b/g) ?? []).length, 1);
+  assert.equal((shell.match(/<main\b/g) ?? []).length, 2);
+  assert.match(shell, /data-learner-shell-mode="focus"/);
+  assert.match(shell, /data-learner-shell-mode="default"/);
   assert.ok(
-    shell.indexOf('href="#learner-main"') < shell.indexOf("<header"),
+    shell.indexOf("const skipLink") < shell.indexOf("<header"),
     "skip link must be the first focusable shell control",
   );
 });

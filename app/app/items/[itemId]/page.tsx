@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import type { ReactNode } from "react";
 
 import { StudyLedgerDetail } from "@/components/learner";
@@ -37,6 +37,7 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
   const mode =
     parseAppraisalMode(typeof resolvedDetail.item.rawPayload?.mode === "string" ? resolvedDetail.item.rawPayload.mode : null) ??
     getAppraisalMode(resolvedDetail.item.examName);
+  if (modeParam !== mode) redirect(`/app/items/${encodeURIComponent(itemId)}?mode=${mode}`);
   const isSecond = mode === "second";
   const note = buildDetailStudyNote(resolvedDetail);
   const title = resolvedDetail.item.problemTitle ?? resolvedDetail.item.problemIdentifier ?? note.title;
@@ -195,7 +196,7 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
           topicCandidate={ledgerTopicCandidate}
           supportingEvidence={supportingEvidence}
         />
-        <div className="mx-auto mt-6 w-full max-w-[1048px]">
+        <div className="mx-auto mt-6 w-full max-w-[1000px] px-5 pb-[calc(136px+env(safe-area-inset-bottom))] lg:px-0 lg:pb-10">
           <ReviewOsFeedbackButton route={`/app/items/${itemId}`} pageContext={{ itemId, isSecond }} />
         </div>
       </>

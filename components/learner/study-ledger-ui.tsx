@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { StudyLedgerFocusChrome } from "@/components/learner/study-ledger-focus-chrome";
 import { TrustEvidenceBar } from "@/components/learner/trust-evidence-bar";
 import { TrustProvenanceLayer } from "@/components/review-os/trust-provenance-layer";
 import { adaptLegacyTrustSignals } from "@/lib/review-os/trust-provenance";
@@ -726,39 +727,46 @@ export function StudyLedgerDetail({
     : "저장된 학습 기록 · 참고용 근거 없음";
 
   return (
-    <article
-      data-s228-study-ledger-detail
-      className="mx-auto w-full max-w-[1000px] px-1 pb-28 sm:px-0 max-lg:pb-[calc(136px+env(safe-area-inset-bottom))] lg:pb-10"
-      aria-labelledby="study-ledger-title"
-    >
-      <header className="max-w-[var(--ledger-reading-column)] border-b border-[var(--border-subtle)] pb-7">
-        <Link
-          href="/app/items?mode=second"
-          className="inline-flex min-h-11 items-center text-sm font-semibold text-[var(--text-secondary)] underline-offset-4 hover:text-[var(--text-primary)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
-        >
-          학습 원장으로 돌아가기
-        </Link>
-        <div className="mt-3 flex flex-wrap items-center gap-3">
-          <StateChip
-            evidence={stateChipEvidence}
-            showEvidence={false}
-            legacyState={state}
-          />
-          <p className="text-xs font-medium text-[var(--text-tertiary)]">
-            {subject} · {formatRecordDate(createdAt)}
+    <>
+      <StudyLedgerFocusChrome
+        title={title}
+        mobileStatus="저장됨"
+        desktopStatus={`저장됨 · ${formatRecordDate(savedAt)}`}
+      />
+      <article
+        id="study-ledger-content"
+        tabIndex={-1}
+        data-s228-study-ledger-detail
+        className="mx-auto w-full max-w-[1000px] px-5 pb-28 pt-6 max-lg:pb-[calc(136px+env(safe-area-inset-bottom))] lg:px-0 lg:pb-10 lg:pt-10"
+        aria-labelledby="study-ledger-title"
+      >
+        <header className="max-w-[var(--ledger-reading-column)] border-b border-[var(--border-subtle)] pb-7">
+          <div className="flex flex-wrap items-center gap-3">
+            <StateChip
+              evidence={stateChipEvidence}
+              showEvidence={false}
+              legacyState={state}
+            />
+            <p className="text-xs font-medium text-[var(--text-tertiary)]">
+              {subject} · {formatRecordDate(createdAt)}
+            </p>
+          </div>
+          <h1
+            id="study-ledger-title"
+            className="v3-type-screen ko-keep mt-5 break-words text-[var(--text-primary)]"
+            data-v3-typography-role="heading-screen"
+          >
+            {title}
+          </h1>
+          <p className="ko-keep mt-4 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">
+            {recurrenceText}
           </p>
-        </div>
-        <h1
-          id="study-ledger-title"
-          className="v3-type-screen ko-keep mt-5 break-words text-[var(--text-primary)]"
-          data-v3-typography-role="heading-screen"
+        </header>
+        <div
+          className="mt-5 grid gap-8 lg:grid-cols-[minmax(0,var(--ledger-reading-column))_var(--ledger-evidence-rail)] lg:items-start"
+          data-s232d1-ledger-workspace
         >
-          {title}
-        </h1>
-        <p className="ko-keep mt-4 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">{recurrenceText}</p>
-      </header>
-      <div className="mt-5 grid gap-8 lg:grid-cols-[minmax(0,var(--ledger-reading-column))_var(--ledger-evidence-rail)] lg:items-start">
-        <div data-s232b1-reading-column className="min-w-0 space-y-8">
+          <div data-s232b1-reading-column className="min-w-0 space-y-8">
           <div data-s232b1-trust-gap-stack className="space-y-5">
             <TrustEvidenceBar
               evidence={trustEvidence}
@@ -914,7 +922,8 @@ export function StudyLedgerDetail({
             </nav>
           ) : null}
         </aside>
-      </div>
-    </article>
+        </div>
+      </article>
+    </>
   );
 }

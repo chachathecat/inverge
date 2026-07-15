@@ -73,7 +73,7 @@ test("S228 route states cover loading, empty, recoverable error, and real offlin
   assert.match(loading, /data-s228-state="loading"/);
   assert.match(loading, /aria-busy="true"/);
   assert.match(empty, /data-s228-state="empty"/);
-  assert.match(empty, /학습 원장으로 돌아가기/);
+  assert.match(empty, /학습 노트로 돌아가기/);
   assert.match(error, /useSyncExternalStore/);
   assert.match(error, /data-s228-state=\{isOnline \? "error" : "offline"\}/);
   assert.match(error, /navigator\.onLine/);
