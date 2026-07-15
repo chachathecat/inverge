@@ -46,6 +46,15 @@ export default async function ReviewOsCapturePage({ searchParams }: PageProps) {
       data-s224v-equal-weight-card-grid="absent"
       data-s224v-repeated-warning-copy="absent"
     >
+      <header className="space-y-2" data-s232e-capture-header>
+        <p className="v3-type-caption text-[var(--color-text-secondary)]">Capture · 4단계</p>
+        <h1 id="capture-page-title" className="v3-type-screen hero-balance ko-keep text-[var(--color-text-primary)]">
+          오늘 한 것 올리기
+        </h1>
+        <p className="v3-type-body ko-keep text-[var(--color-text-secondary)]">
+          입력한 내용을 단계별로 살펴보고, 저장 결과에 따라 오늘 계획과 복습으로 이어갑니다.
+        </p>
+      </header>
       <WrongAnswerCaptureForm
         userId={session.userId}
         mode={mode}

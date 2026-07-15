@@ -22,7 +22,16 @@ export default async function ReviewOsWritePage({ searchParams }: PageProps) {
   }
 
   return (
-    <div className="space-y-7">
+    <div className="space-y-7" data-s232e-write-flow="capture-form">
+      <header className="space-y-2" data-s232e-write-header>
+        <p className="v3-type-caption text-[var(--color-text-secondary)]">다시쓰기 · 한 단계씩</p>
+        <h1 id="write-page-title" className="v3-type-screen hero-balance ko-keep text-[var(--color-text-primary)]">
+          새 답안 작성
+        </h1>
+        <p className="v3-type-body ko-keep text-[var(--color-text-secondary)]">
+          먼저 회상하고 작성한 뒤, 참고 정리와 비교해 가장 큰 약점 1개를 고칩니다.
+        </p>
+      </header>
       <DailyCommandCard
         title="2차 답안 작성 워크스페이스"
         description="누락 논점을 빠르게 확인하고 답안 작성으로 바로 이어갑니다."
@@ -43,6 +52,7 @@ export default async function ReviewOsWritePage({ searchParams }: PageProps) {
           <WrongAnswerCaptureForm
             userId={session.userId}
             mode={mode}
+            labelledBy="write-page-title"
             workflow="second-write"
             initialPreferredSubjects={profile?.preferredSubjects}
           />
