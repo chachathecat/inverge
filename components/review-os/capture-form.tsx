@@ -21,7 +21,7 @@ import {
   type AppraisalMode,
 } from "@/lib/review-os/appraisal";
 import { clearReviewOsDraft, loadReviewOsDraft, saveReviewOsDraft, saveReviewOsLocalBetaNoteWithStatus } from "@/lib/review-os/browser-storage";
-import { getCalculatorWorkflowForSubject } from "@/lib/review-os/calculator-workflow";
+import { getCalculatorWorkflowForSubject, getCalculatorWorkflowHref } from "@/lib/review-os/calculator-workflow";
 import { resolveCaptureConfirmationCopy } from "@/lib/review-os/capture-confirmation-copy";
 import { getCaptureSavePersistenceCopy, type CaptureSavePersistenceStatus } from "@/lib/review-os/capture-save-persistence";
 import { buildCaptureNoteDisplayCopy, buildCaptureNoteSummary } from "@/lib/review-os/capture-note-display-copy";
@@ -2109,7 +2109,7 @@ function IntakePanel({
             <p className="text-sm leading-6 text-[color:var(--foreground-strong)]">
               {calculatorWorkflow.subject} 계산형 기록이면 fx-9860GIII 손타건 루틴을 함께 확인할 수 있습니다.
             </p>
-            <Link href={`/app/calculator?context=${calculatorWorkflow.context}&mode=${calculatorWorkflow.mode}`}>
+            <Link href={getCalculatorWorkflowHref(calculatorWorkflow)}>
               <Button type="button" variant="outline">
                 루틴 보기
               </Button>

@@ -6,7 +6,11 @@ import { StudyLedgerDetail } from "@/components/learner";
 import { ReviewOsFeedbackButton } from "@/components/review-os/feedback-button";
 import { Button } from "@/components/ui/button";
 import { getAppraisalMode, parseAppraisalMode } from "@/lib/review-os/appraisal";
-import { getCalculatorWorkflowForSubject, hasCalculationSignal } from "@/lib/review-os/calculator-workflow";
+import {
+  getCalculatorWorkflowForSubject,
+  getCalculatorWorkflowHref,
+  hasCalculationSignal,
+} from "@/lib/review-os/calculator-workflow";
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
 import { buildAnswerSkeletonGuide, mapCaptureNoteToPastExamReferenceMatches } from "@/lib/review-os/past-exam-reference";
 import { getSimilarQuestionReferenceCandidates } from "@/lib/review-os/question-reference";
@@ -131,7 +135,7 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
   if (isSecond) {
     const calculatorHref =
       calculatorWorkflow && hasCalculationMistake
-        ? `/app/calculator?context=${calculatorWorkflow.context}&mode=${calculatorWorkflow.mode}`
+        ? getCalculatorWorkflowHref(calculatorWorkflow)
         : null;
     const supportingEvidence = [
       ...questionReferenceHints.slice(0, 2).map((hint) => ({
@@ -621,7 +625,7 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
             <p className="text-sm leading-7 text-[color:var(--muted)]">
               자동 풀이가 아니라, 다음 계산형 문제에서 적을 값과 검산 순서를 고정하는 실행 보조입니다.
             </p>
-            <Link href={`/app/calculator?context=${calculatorWorkflow.context}&mode=${calculatorWorkflow.mode}`}>
+            <Link href={getCalculatorWorkflowHref(calculatorWorkflow)}>
               <Button type="button" variant="outline">
                 관련 계산기 스텝 보기
               </Button>

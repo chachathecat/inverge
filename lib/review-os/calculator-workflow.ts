@@ -242,6 +242,15 @@ export function getCalculatorWorkflowForSubject(subjectLabel?: string | null) {
   return null;
 }
 
+export function getCalculatorWorkflowHref(workflow: Pick<CalculatorWorkflow, "context" | "mode">) {
+  const params = new URLSearchParams({
+    context: workflow.context,
+    mode: workflow.mode,
+    focus: workflow.mode === "second" ? "casio" : "accounting_template",
+  });
+  return `/app/calculator?${params.toString()}`;
+}
+
 export function hasCalculationSignal(values: Array<string | undefined | null>) {
   return values.some((value) => /계산|산식|금액|숫자|검산|보정|현가|현재가치|환원|분개/.test(value ?? ""));
 }

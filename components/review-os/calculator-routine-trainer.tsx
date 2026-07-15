@@ -4,6 +4,7 @@ import { useEffect, useId, useMemo, useState, useSyncExternalStore } from "react
 
 import { buttonVariants } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { CalculatorStep } from "@/components/review-os/calculator-step";
 import {
   appendCalculatorRoutineCompletionSignal,
   buildCalculatorRoutineCompletionSignal,
@@ -33,6 +34,7 @@ import {
   type CalculatorRoutineTextStepId,
   type CalculatorRoutineVerificationMethod,
 } from "@/lib/review-os/calculator-routine";
+import { buildCalculatorStepPresentation } from "@/lib/review-os/calculator-step-presentation";
 import { cn } from "@/lib/utils";
 
 export type CalculatorRoutineReferenceHints = Partial<Record<CalculatorRoutineStepId, string[]>>;
@@ -205,6 +207,7 @@ export function CalculatorRoutineTrainer({
   const visibleHints = hasActiveHints ? activeHints : [noReferenceHintFallback];
   const currentTextValue = currentTextStepId ? draft.entries[currentTextStepId] ?? "" : draft.entries[currentStep.id] ?? "";
   const isCurrentStepStuck = draft.stuckStepIds.includes(currentStep.id);
+  const calculatorStepPresentation = buildCalculatorStepPresentation(draft, currentStep.id);
   const hasAttemptForReveal =
     currentTextValue.trim().length > 0 ||
     isCurrentStepStuck ||
@@ -468,6 +471,13 @@ export function CalculatorRoutineTrainer({
               data-calculator-routine-active-step={currentStep.id}
               aria-labelledby={`calculator-routine-step-${currentStep.id}`}
             >
+              {calculatorStepPresentation ? (
+                <CalculatorStep
+                  {...calculatorStepPresentation}
+                  className="mb-5 max-w-none"
+                  testId="calculator-step-runner-v3"
+                />
+              ) : null}
               <p className="v3-type-caption font-semibold text-[color:var(--brand-700)]">지금 할 일 · {currentStepIndex + 1}/{CALCULATOR_ROUTINE_STEPS.length}</p>
               <h4 id={`calculator-routine-step-${currentStep.id}`} className="v3-type-item mt-1 text-[color:var(--foreground-strong)]">{currentStep.label}</h4>
               <p className="mt-2 text-xs leading-5 text-[color:var(--muted)]">{stepInputPrompts[currentStep.id]}</p>
