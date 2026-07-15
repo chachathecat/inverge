@@ -12,10 +12,18 @@ const learnerPublicFiles = [
   "app/answer-review/answer-review-client.tsx",
 ].map((file) => readFileSync(file, "utf8"));
 
-function cssHex(name) {
-  const match = globals.match(new RegExp(`--${name}:\\s*(#[0-9a-f]{6})`, "i"));
-  assert.ok(match, `Missing six-digit CSS color token: --${name}`);
-  return match[1];
+function cssHex(name, seen = new Set()) {
+  assert.equal(seen.has(name), false, `Circular CSS color token reference: --${name}`);
+  seen.add(name);
+
+  const match = globals.match(new RegExp(`--${name}:\\s*([^;]+);`, "i"));
+  assert.ok(match, `Missing CSS color token: --${name}`);
+  const value = match[1].trim();
+  if (/^#[0-9a-f]{6}$/i.test(value)) return value;
+
+  const reference = value.match(/^var\(--([a-z0-9-]+)\)$/i);
+  assert.ok(reference, `CSS color token --${name} must resolve to a six-digit color`);
+  return cssHex(reference[1], seen);
 }
 
 function luminance(hex) {

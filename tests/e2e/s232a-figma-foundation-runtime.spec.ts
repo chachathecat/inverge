@@ -40,6 +40,7 @@ for (const viewport of viewports) {
         const result = {
           fontFamily: computed.fontFamily,
           fontSize: computed.fontSize,
+          fontWeight: computed.fontWeight,
           lineHeight: computed.lineHeight,
         };
         sample.remove();
@@ -74,6 +75,7 @@ for (const viewport of viewports) {
     expect(runtime.bodyFont).toContain("Noto Sans KR Variable");
     expect(runtime.prose).toMatchObject({ fontSize: "17px", lineHeight: "30px" });
     expect(runtime.prose.fontFamily).toContain("Noto Serif KR Variable");
+    expect(runtime.calculator).toMatchObject({ fontSize: "13px", fontWeight: "500", lineHeight: "20px" });
     expect(runtime.calculator.fontFamily).toContain("IBM Plex Mono");
     expect(runtime.fonts).toEqual({ ui: true, prose: true, mono: true });
     expect(browserErrors).toEqual([]);

@@ -94,7 +94,7 @@ test("S228 keeps one action, strong focus contrast, and scoped editorial geometr
   assert.equal(count(ui, "data-s228-primary-action"), 1);
   assert.match(globals, /--text-tertiary:\s*#647080/);
   assert.match(globals, /--cue-review-text:\s*#7a430c/i);
-  assert.match(globals, /--focus-ring:\s*#23456f/i);
+  assert.match(globals, /--focus-ring:\s*var\(--cue-focus\)/i);
   assert.match(globals, /--ledger-radius-control:\s*12px/);
   assert.match(globals, /--ledger-radius-card:\s*14px/);
   assert.match(globals, /--ledger-radius-panel:\s*16px/);
