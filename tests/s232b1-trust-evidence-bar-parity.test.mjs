@@ -65,7 +65,8 @@ test("S232B.1 client primitive matches Figma geometry and supplies accessible di
   assert.match(component, /aria-controls=\{detailsId\}/);
   assert.match(component, /hidden=\{!expanded\}/);
   assert.match(component, /min-h-11 min-w-11/);
-  assert.match(component, /expanded \? "min-h-\[170px\]" : "min-h-\[72px\]"/);
+assert.match(component, /expanded \? "min-h-\[170px\]" : "min-h-\[72px\]"/);
+assert.doesNotMatch(component, /transition-\[min-height\]/);
   assert.match(component, /rounded-\[var\(--v3-radius-control\)\]/);
   assert.match(component, /size-6/);
   assert.match(component, /v3-type-label-strong/);
