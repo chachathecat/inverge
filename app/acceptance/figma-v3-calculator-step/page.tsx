@@ -107,7 +107,7 @@ export default function S232C1CalculatorStepAcceptancePage() {
             showHint
             showStateLabel={false}
             showVerification
-            className="min-h-[380px]"
+            className="min-h-[380px] sm:min-h-[380px]"
             testId="calculator-step-real-mobile"
           />
         </div>
