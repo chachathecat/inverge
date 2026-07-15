@@ -40,6 +40,10 @@ export type {
   LearningState,
   StateChipEvidence,
   StateChipState,
+  StickyActionControllerEvidence,
+  StickyActionMode,
+  StickyActionProps,
+  StickyActionState,
   StudyLedgerComparison,
   StudyLedgerSupportingEvidence,
 } from "./study-ledger-ui";

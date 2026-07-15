@@ -64,8 +64,10 @@ test("S231A shell covers every viewport safe area without losing the bottom acti
   assert.match(shell, /lg:pb-12/);
   assert.doesNotMatch(shell, /sm:pb-12/);
   assert.match(shell, /BottomPrimaryAction/);
-  assert.match(ledger, /left-\[max\(1rem,env\(safe-area-inset-left\)\)\]/);
-  assert.match(ledger, /right-\[max\(1rem,env\(safe-area-inset-right\)\)\]/);
+  assert.match(ledger, /inset-x-0/);
+  assert.match(ledger, /pl-\[max\(20px,env\(safe-area-inset-left\)\)\]/);
+  assert.match(ledger, /pr-\[max\(20px,env\(safe-area-inset-right\)\)\]/);
+  assert.match(ledger, /pb-\[max\(20px,env\(safe-area-inset-bottom\)\)\]/);
 });
 
 test("S231A mobile navigation is stable, second-round only, and semantically current", () => {
