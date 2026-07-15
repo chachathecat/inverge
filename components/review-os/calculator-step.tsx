@@ -51,7 +51,7 @@ const STATE_PRESENTATION: Record<
   Current: {
     label: "현재 단계",
     shellClassName:
-      "border-[var(--color-border-focus)] bg-[var(--color-background-focus)]",
+      "bg-[var(--color-background-focus)] outline-[var(--color-border-focus)]",
     emphasisClassName: "text-[var(--color-text-link)]",
     hintClassName:
       "bg-[var(--color-background-elevated)] text-[var(--color-text-link)]",
@@ -59,7 +59,7 @@ const STATE_PRESENTATION: Record<
   Error: {
     label: "입력 오류",
     shellClassName:
-      "border-[var(--color-border-risk)] bg-[var(--color-background-risk)]",
+      "bg-[var(--color-background-risk)] outline-[var(--color-border-risk)]",
     emphasisClassName: "text-[var(--color-text-risk)]",
     hintClassName:
       "bg-[var(--color-background-surface)] text-[var(--color-text-risk)]",
@@ -67,7 +67,7 @@ const STATE_PRESENTATION: Record<
   Complete: {
     label: "확인 완료",
     shellClassName:
-      "border-[var(--color-border-stable)] bg-[var(--color-background-stable)]",
+      "bg-[var(--color-background-stable)] outline-[var(--color-border-stable)]",
     emphasisClassName: "text-[var(--color-text-stable)]",
     hintClassName:
       "bg-[var(--color-background-surface)] text-[var(--color-text-stable)]",
@@ -137,7 +137,7 @@ export function CalculatorStep({
       data-testid={testId}
       aria-label={`${normalizedStepLabel} · ${presentation.label}`}
       className={cn(
-        "flex min-h-[380px] w-full max-w-[552px] flex-col gap-3 rounded-[var(--v3-radius-panel)] border p-6 sm:min-h-[350px]",
+        "flex min-h-[380px] w-full max-w-[552px] flex-col gap-3 rounded-[var(--v3-radius-panel)] p-6 outline outline-1 outline-offset-[-1px] sm:min-h-[350px]",
         presentation.shellClassName,
         className,
       )}
