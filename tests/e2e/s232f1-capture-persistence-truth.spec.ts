@@ -117,11 +117,14 @@ test("S232F.1 exact-head Capture failure is memory-only, recoverable, and never 
 
   const pageRoot = page.locator('[data-s224v-surface="/app/capture"]');
   const captureForm = pageRoot.locator('form[data-s232e-capture-flow="four-stage"]');
+  const textInputMethod = captureForm.getByRole("button", { name: "텍스트 붙여넣기", exact: true });
   const learnerInput = captureForm.getByLabel("오늘 공부한 내용 또는 내 답안");
   const quickSave = captureForm.getByRole("button", { name: "빠르게 저장" });
   await expect(pageRoot).toHaveCount(1);
   await expect(captureForm).toHaveCount(1);
   await expect(pageRoot.locator("h1#capture-page-title")).toHaveCount(1);
+  await expect(textInputMethod).toBeVisible();
+  await textInputMethod.click();
   await expect(learnerInput).toBeVisible();
 
   const observedBefore = await readObservedDeploymentSha(page);

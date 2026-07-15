@@ -352,6 +352,8 @@ test("S232F.1 keeps Capture and Write on the same truthful controller and wires 
   assert.match(runtime, /capture-persistence-error-state/);
   assert.match(runtime, /data-capture-plan-reflection-stage/);
   assert.match(runtime, /입력 확인 후 다시 저장하기/);
+  assert.match(runtime, /textInputMethod = captureForm\.getByRole\("button", \{ name: "텍스트 붙여넣기", exact: true \}\)/);
+  assert.ok(runtime.indexOf("await textInputMethod.click()") < runtime.indexOf("await expect(learnerInput).toBeVisible()"));
   assert.match(runtime, /AxeBuilder/);
   assert.match(runtime, /390/);
   assert.match(runtime, /1440/);
