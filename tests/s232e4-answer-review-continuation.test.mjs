@@ -23,8 +23,8 @@ test("S232E.4 scopes answer snap and text focus to entry step 1", () => {
 });
 
 test("S232E.4 makes one successful biggest-gap result lead to one rewrite action", () => {
-  const resultStep = sliceBetween("{currentStep === 2 ? (", "{currentStep === 3 ? (");
-  const result = sliceBetween('data-s232e4-answer-review-result="one-gap-first"', "{structureError ? (");
+  const resultStep = sliceBetween("{currentStep === 2 ? (", "{currentStep === 3 && structureDraft ? (");
+  const result = sliceBetween('data-s232e4-answer-review-result={structureDraft ? "one-gap-first" : undefined}', "{structureError ? (");
   assert.match(result, /\{structureDraft \? \([\s\S]*?data-s232e4-biggest-gap/);
   assert.match(result, /가장 먼저 고칠 1가지/);
   assert.match(result, /<h3[^>]*>가장 큰 간극<\/h3>/);
@@ -60,7 +60,7 @@ test("S232E.4 keeps result status, evidence, calculator, and diagnostics quiet",
 });
 
 test("S232E.4 presents rewrite target, instruction, editor, then copy or continue", () => {
-  const rewrite = sliceBetween('data-s232e4-answer-review-rewrite="single-paragraph"', "{currentStep !== 1 ? (");
+  const rewrite = sliceBetween('data-s232e4-answer-review-rewrite="single-paragraph"', "{currentStep !== 1 && structureDraft ? (");
   for (const marker of [
     "data-s232e4-rewrite-surface",
     'data-testid="answer-review-revision-input"',
@@ -103,7 +103,7 @@ test("S232E.4 preserves service, state, trial, handoff, clipboard, and cognitive
     "setMissingPointMemo(normalizedDraft.missingIssueCandidates.join",
     "setRevisionParagraph(normalizedDraft.rewriteDraftSuggestion)",
     'viewerMode === "anonymous"',
-    "trialLimitReached",
+    "structureErrorAction",
     "Problem Snap에서 다시 푼 답안을 불러왔습니다.",
     "navigator.clipboard.writeText(feedbackDraftText)",
     "buildCognitiveLearningActionUnit",
@@ -123,7 +123,7 @@ test("S232E.4 clears a prior successful result before every valid structure retr
   const runStructure = sliceBetween("  const runStructure = async () => {", "  const feedbackDraftText = useMemo");
   const firstDraftClear = runStructure.indexOf("setStructureDraft(null)");
   const structureRequest = runStructure.indexOf('fetch("/api/answer-review/structure"');
-  const billingReturn = runStructure.indexOf('setStructureError(`${payload.error} (업그레이드 또는 지원팀 문의)`);');
+  const billingReturn = runStructure.indexOf("if (!payload.ok && (isAnonymousTrialLimit || isAccountLimit || isInputQualityFailure))");
 
   assert.ok(firstDraftClear >= 0, "the retry path must clear any stale successful draft");
   assert.ok(firstDraftClear < structureRequest, "the stale draft must clear before the structure request starts");

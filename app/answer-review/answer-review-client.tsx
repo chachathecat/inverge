@@ -6,6 +6,7 @@ import type { ChangeEvent } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
 import { RefinedBadge, RefinedShell } from "@/components/inverge/refined-primitives";
+import { FailureAwareState } from "@/components/learner/failure-aware-state";
 import { CognitiveLearningActionCard } from "@/components/review-os/cognitive-learning-action-card";
 import { TrustProvenanceLayer } from "@/components/review-os/trust-provenance-layer";
 import {
@@ -41,6 +42,7 @@ type InputStatusCardProps = {
 
 type StepId = 1 | 2 | 3;
 type ViewerMode = "anonymous" | "authenticated";
+type StructureErrorAction = "retry" | "edit_input" | "login" | "pricing";
 
 type AnswerReviewClientPageProps = {
   viewerMode?: ViewerMode;
@@ -75,6 +77,28 @@ const STEP_ITEMS: Array<{ id: StepId; label: string }> = [
   { id: 2, label: "검토 결과 확인" },
   { id: 3, label: "보강 문단 정리" },
 ];
+
+const NON_RETRYABLE_STRUCTURE_ERROR_COPY: Readonly<Record<string, string>> =
+  Object.freeze({
+    ANONYMOUS_TRIAL_LIMIT:
+      "체험 답안 검토 이용 범위를 모두 사용했습니다. 로그인하면 계속할 수 있습니다.",
+    FREE_TRIAL_LIMIT_REACHED:
+      "무료 체험의 답안 검토 이용 범위를 모두 사용했습니다. 이용 범위를 확인해 주세요.",
+    CORE_LIMIT_REACHED:
+      "현재 요금제의 답안 검토 이용 범위를 모두 사용했습니다. 이용 범위를 확인해 주세요.",
+    BILLING_REQUIRED:
+      "답안 검토를 계속하려면 이용 범위를 확인해 주세요.",
+    INSUFFICIENT_INPUT:
+      "검토에 필요한 정보가 부족합니다. 내 답안을 보강하거나 문제·참고자료를 추가해 주세요.",
+  });
+
+const STRUCTURE_ERROR_HEADING: Readonly<Record<StructureErrorAction, string>> =
+  Object.freeze({
+    retry: "답안 검토를 다시 시도해 주세요",
+    edit_input: "검토 입력을 보강해 주세요",
+    login: "로그인 후 답안 검토를 계속할 수 있습니다",
+    pricing: "답안 검토 이용 범위를 확인해 주세요",
+  });
 
 const createCalculatorRoutineRunId = (source: "problem-snap" | "answer-review") => {
   const randomPart =
@@ -119,10 +143,12 @@ export default function AnswerReviewClientPage({
   const [copiedFeedbackDraftText, setCopiedFeedbackDraftText] = useState<string | null>(null);
   const [isStructuring, setIsStructuring] = useState(false);
   const [structureError, setStructureError] = useState<string | null>(null);
+  const [isStructureErrorRetryable, setIsStructureErrorRetryable] = useState(false);
+  const [structureErrorAction, setStructureErrorAction] =
+    useState<StructureErrorAction>("retry");
   const [structureDraft, setStructureDraft] = useState<AnswerReviewStructureDraft | null>(null);
   const [learningSignalStatus, setLearningSignalStatus] = useState<"saved" | "skipped" | "failed" | null>(null);
   const [referenceGrounding, setReferenceGrounding] = useState<{ used: boolean; displayLabel: string; references: Array<{ id: string; exam_year: number; subject: string; reason: string }> } | null>(null);
-  const [trialLimitReached, setTrialLimitReached] = useState(false);
   const [currentStep, setCurrentStep] = useState<StepId>(1);
   const [examMode, setExamMode] = useState<AppraisalMode>(initialReviewContext.examMode);
   const [subject, setSubject] = useState<string>(initialReviewContext.subject);
@@ -322,17 +348,44 @@ export default function AnswerReviewClientPage({
   };
 
 
-  const runStructure = async () => {
-    if (!hasMyAnswer) {
-      setStructureError("내 답안 불러오기 또는 텍스트를 먼저 입력해 주세요.");
-      return;
-    }
-
-    setIsStructuring(true);
+  const returnToEntry = () => {
+    setResultSecondaryOpen(false);
     setStructureError(null);
+    setIsStructureErrorRetryable(false);
+    setStructureErrorAction("retry");
     setStructureDraft(null);
     setLearningSignalStatus(null);
     setReferenceGrounding(null);
+    setMissingPointMemo("");
+    setRevisionParagraph("");
+    setFeedbackCopyStatus("idle");
+    setCopiedFeedbackDraftText(null);
+    calculatorRoutineSync.reset();
+    setCurrentStep(1);
+    window.setTimeout(() => answerTextRef.current?.focus(), 0);
+  };
+
+  const runStructure = async () => {
+    if (!hasMyAnswer) {
+      setStructureError("내 답안 불러오기 또는 텍스트를 먼저 입력해 주세요.");
+      setIsStructureErrorRetryable(false);
+      setStructureErrorAction("edit_input");
+      return;
+    }
+
+    setCurrentStep(1);
+    setIsStructuring(true);
+    setStructureError(null);
+    setIsStructureErrorRetryable(false);
+    setStructureErrorAction("retry");
+    setStructureDraft(null);
+    setLearningSignalStatus(null);
+    setReferenceGrounding(null);
+    setMissingPointMemo("");
+    setRevisionParagraph("");
+    setFeedbackCopyStatus("idle");
+    setCopiedFeedbackDraftText(null);
+    setResultSecondaryOpen(false);
     calculatorRoutineSync.reset();
     if (hasProblemSnapRoutineHandoff && problemSnapRoutineReference?.routineId && problemSnapRoutineReference.draftKey) {
       setAnswerReviewRoutineRunId(null);
@@ -362,11 +415,26 @@ export default function AnswerReviewClientPage({
         | { ok: false; error: string; errorCode?: string };
 
       if (!response.ok || !payload.ok) {
-        if (!payload.ok && payload.errorCode === "ANONYMOUS_TRIAL_LIMIT") {
-          setTrialLimitReached(true);
-        }
-        if (!payload.ok && ["FREE_TRIAL_LIMIT_REACHED", "CORE_LIMIT_REACHED", "BILLING_REQUIRED"].includes(payload.errorCode ?? "")) {
-          setStructureError(`${payload.error} (업그레이드 또는 지원팀 문의)`);
+        const errorCode = payload.ok ? "" : payload.errorCode ?? "";
+        const isAnonymousTrialLimit = errorCode === "ANONYMOUS_TRIAL_LIMIT";
+        const isAccountLimit = ["FREE_TRIAL_LIMIT_REACHED", "CORE_LIMIT_REACHED", "BILLING_REQUIRED"].includes(errorCode);
+        const isInputQualityFailure = errorCode === "INSUFFICIENT_INPUT";
+        if (!payload.ok && (isAnonymousTrialLimit || isAccountLimit || isInputQualityFailure)) {
+          setStructureDraft(null);
+          setLearningSignalStatus(null);
+          setReferenceGrounding(null);
+          setIsStructureErrorRetryable(false);
+          setStructureErrorAction(
+            isInputQualityFailure
+              ? "edit_input"
+              : isAnonymousTrialLimit
+                ? "login"
+                : "pricing",
+          );
+          setStructureError(
+            NON_RETRYABLE_STRUCTURE_ERROR_COPY[errorCode] ??
+              "현재 입력으로는 답안 검토를 계속할 수 없습니다. 이용 범위 또는 입력 내용을 확인해 주세요.",
+          );
           setCurrentStep(2);
           return;
         }
@@ -375,6 +443,8 @@ export default function AnswerReviewClientPage({
 
       const normalizedDraft = normalizeAnswerReviewStructureDraft(payload.draft);
       setStructureDraft(normalizedDraft);
+      setIsStructureErrorRetryable(false);
+      setStructureErrorAction("retry");
       setLearningSignalStatus(payload.learningSignalStatus ?? "skipped");
       setReferenceGrounding(payload.referenceGrounding ?? null);
       setMissingPointMemo(normalizedDraft.missingIssueCandidates.join(", "));
@@ -384,6 +454,8 @@ export default function AnswerReviewClientPage({
       setStructureDraft(null);
       setLearningSignalStatus(null);
       setReferenceGrounding(null);
+      setIsStructureErrorRetryable(true);
+      setStructureErrorAction("retry");
       setStructureError(
         error instanceof Error
           ? error.message
@@ -513,6 +585,7 @@ export default function AnswerReviewClientPage({
       return;
     }
     if (currentStep === 2) {
+      if (!structureDraft) return;
       setResultSecondaryOpen(false);
       setCurrentStep(3);
       return;
@@ -610,9 +683,9 @@ export default function AnswerReviewClientPage({
           </article>
         ) : null}
 
-          <input ref={answerCameraInputRef} type="file" accept="image/*" capture="environment" multiple className="hidden" aria-label="내 답안 카메라 파일 선택" onChange={handleMyAnswerFileChange} />
-          <input ref={problemCameraInputRef} type="file" accept="image/*" capture="environment" multiple className="hidden" aria-label="문제 또는 사례 카메라 파일 선택" onChange={handleProblemFileChange} />
-          <input ref={generalFileInputRef} type="file" accept="image/*,.pdf" multiple className="hidden" aria-label="답안 검토 파일 선택" onChange={handleGeneralFileChange} />
+          <input ref={answerCameraInputRef} type="file" accept="image/*" capture="environment" multiple className="hidden" aria-label="내 답안 카메라 파일 선택" disabled={isStructuring} onChange={handleMyAnswerFileChange} />
+          <input ref={problemCameraInputRef} type="file" accept="image/*" capture="environment" multiple className="hidden" aria-label="문제 또는 사례 카메라 파일 선택" disabled={isStructuring} onChange={handleProblemFileChange} />
+          <input ref={generalFileInputRef} type="file" accept="image/*,.pdf" multiple className="hidden" aria-label="답안 검토 파일 선택" disabled={isStructuring} onChange={handleGeneralFileChange} />
           {currentStep === 1 ? (
             <>
               <div
@@ -621,8 +694,8 @@ export default function AnswerReviewClientPage({
                 data-s232e3-answer-entry-actions
                 data-s232e4-entry-actions-scoped="step-1"
               >
-                <button type="button" onClick={() => answerCameraInputRef.current?.click()} className={cn(buttonVariants({ variant: "outline" }), "h-11 w-full justify-center text-sm font-semibold")}>답안 스냅</button>
-                <button type="button" onClick={focusAnswerTextarea} className={cn(buttonVariants({ variant: "outline" }), "h-11 w-full justify-center text-sm")}>텍스트 붙여넣기</button>
+                <button type="button" disabled={isStructuring} onClick={() => answerCameraInputRef.current?.click()} className={cn(buttonVariants({ variant: "outline" }), "h-11 w-full justify-center text-sm font-semibold")}>답안 스냅</button>
+                <button type="button" disabled={isStructuring} onClick={focusAnswerTextarea} className={cn(buttonVariants({ variant: "outline" }), "h-11 w-full justify-center text-sm")}>텍스트 붙여넣기</button>
               </div>
               {viewerMode === "anonymous" ? (
                 <p className="inline-flex w-fit rounded-full border border-[var(--border)] bg-[color:var(--surface)] px-2.5 py-1 text-xs font-medium text-[color:var(--muted)]">
@@ -665,6 +738,13 @@ export default function AnswerReviewClientPage({
               variants={SECTION_FADE}
               transition={{ duration: 0.28, ease: "easeOut" }}
             >
+              <fieldset
+                className="min-w-0 space-y-4 border-0 p-0"
+                disabled={isStructuring}
+                aria-busy={isStructuring ? true : undefined}
+                data-s232f3-answer-input-lock={isStructuring ? "locked" : "editable"}
+              >
+              <legend className="sr-only">답안 검토 입력</legend>
               <h2 className="v3-type-section ko-keep text-[color:var(--foreground-strong)]">내 답안을 먼저 남겨주세요.</h2>
               <p className="v3-type-compact ko-keep text-[color:var(--muted)]">문제와 참고자료는 없어도 됩니다. 내 답안 하나로 검토를 시작할 수 있습니다.</p>
               <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
@@ -910,6 +990,21 @@ export default function AnswerReviewClientPage({
                 </AnimatePresence>
               </section>
 
+              </fieldset>
+
+              {isStructuring ? (
+                <div data-s232f3-answer-review-loading="memory-only">
+                  <FailureAwareState
+                    evidence={{
+                      kind: "loading",
+                      safety: { kind: "memory_only", retainedInMemory: true },
+                    }}
+                    announceChange
+                    testId="answer-review-structure-loading"
+                  />
+                </div>
+              ) : null}
+
               {structureError ? <p className="text-caption leading-5 text-[color:var(--muted)]">{structureError}</p> : null}
             </motion.section>
           ) : null}
@@ -930,19 +1025,23 @@ export default function AnswerReviewClientPage({
                   animate={{ y: 0 }}
                   transition={{ duration: shouldReduceMotion ? 0 : 0.28, ease: "easeOut" }}
                   data-answer-review-result-shell
-                  data-s232e4-answer-review-result="one-gap-first"
+                  data-s232e4-answer-review-result={structureDraft ? "one-gap-first" : undefined}
+                  data-s232f3-answer-review-analysis={structureDraft ? "succeeded" : structureError ? "failed" : "pending"}
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="space-y-1">
                       <p className="text-caption text-[color:var(--muted)]">{examMode === "second" ? "감정평가사 2차" : "감정평가사 1차"} · {subject}</p>
-                      <h2 ref={stepTwoHeadingRef} tabIndex={-1} className="text-base font-semibold text-[color:var(--foreground-strong)]">가장 큰 간극부터 확인</h2>
-                      <p className="text-caption leading-5 text-[color:var(--muted)]">점수보다 가장 큰 간극 1개를 먼저 다시 씁니다.</p>
+                      <h2 ref={stepTwoHeadingRef} tabIndex={-1} className="text-base font-semibold text-[color:var(--foreground-strong)]">
+                        {structureDraft ? "가장 큰 간극부터 확인" : STRUCTURE_ERROR_HEADING[structureErrorAction]}
+                      </h2>
+                      <p className="text-caption leading-5 text-[color:var(--muted)]">
+                        {structureDraft ? "점수보다 가장 큰 간극 1개를 먼저 다시 씁니다." : "현재 답안은 이 화면에 남아 있습니다."}
+                      </p>
                     </div>
                     <button
                       type="button"
                       onClick={() => {
-                        setResultSecondaryOpen(false);
-                        setCurrentStep(1);
+                        returnToEntry();
                       }}
                       className={cn(buttonVariants({ variant: "outline" }), "h-9 px-4")}
                     >
@@ -984,11 +1083,46 @@ export default function AnswerReviewClientPage({
                     </article>
                   ) : null}
                 </motion.div>
-                {structureError ? (
-                  <article className="rounded-[var(--radius-sm)] border border-[#b9a98a] bg-[#f8f4ea] px-4 py-3">
-                    <p className="text-caption font-medium text-[#5a4b32]">검토 오류</p>
-                    <p className="mt-1 text-caption leading-5 text-[#5a4b32]">{structureError}</p>
+                {structureDraft && learningSignalStatus === "failed" ? (
+                  <article
+                    className="rounded-[var(--radius-sm)] border border-[var(--color-border-attention)] bg-[var(--color-background-attention)] px-4 py-3"
+                    role="status"
+                    data-s232f3-answer-review-analysis-status="succeeded"
+                    data-s232f3-learning-signal-status="failed"
+                  >
+                    <p className="text-caption font-medium text-[var(--color-text-primary)]">답안 분석은 완료됐지만 학습 기록 저장 여부는 확인되지 않았습니다.</p>
+                    <p className="mt-1 text-caption leading-5 text-[var(--color-text-secondary)]">
+                      아래 분석 결과와 보강 문단은 현재 화면에서 사용할 수 있습니다. 약점 신호·복습·오늘 계획 반영은 확인되지 않았습니다.
+                    </p>
                   </article>
+                ) : null}
+                {structureError ? (
+                  <div
+                    className="space-y-3"
+                    data-s232f3-answer-review-error={isStructureErrorRetryable ? "retryable-memory-only" : "blocked-memory-only"}
+                  >
+                    <FailureAwareState
+                      evidence={{
+                        kind: "error",
+                        retryable: isStructureErrorRetryable,
+                        safety: { kind: "memory_only", retainedInMemory: true },
+                      }}
+                      action={
+                        structureErrorAction === "retry"
+                          ? { kind: "button", label: "답안 검토 다시 시도", onAction: () => void runStructure() }
+                          : structureErrorAction === "edit_input"
+                            ? { kind: "button", label: "입력 보강하기", onAction: returnToEntry }
+                            : structureErrorAction === "login"
+                            ? { kind: "link", label: "로그인하고 계속", href: "/login?returnTo=%2Fanswer-review%3Fmode%3Dsecond" }
+                            : { kind: "link", label: "이용 범위 확인", href: "/pricing" }
+                      }
+                      announceChange
+                      testId="answer-review-structure-error"
+                    />
+                    <p className="v3-type-caption ko-keep text-[color:var(--color-text-risk)]" role="alert" data-s232f3-answer-review-error-detail>
+                      {structureError}
+                    </p>
+                  </div>
                 ) : null}
                 {structureDraft ? (
                   <details
@@ -1017,13 +1151,6 @@ export default function AnswerReviewClientPage({
                       >
                         오늘 확인
                       </Link>
-                    </p>
-                  </article>
-                ) : null}
-                {learningSignalStatus === "failed" ? (
-                  <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] px-4 py-3">
-                    <p className="text-caption leading-5 text-[color:var(--muted)]">
-                      학습 신호를 저장하지 못했습니다. 직접 확인한 뒤 다시 저장해 주세요.
                     </p>
                   </article>
                 ) : null}
@@ -1062,13 +1189,6 @@ export default function AnswerReviewClientPage({
                     </div>
                   </details>
                 ) : null}
-                {viewerMode === "anonymous" && trialLimitReached ? (
-                  <article className="rounded-[var(--radius-sm)] border border-[#b9a98a] bg-[#f8f4ea] px-4 py-3">
-                    <p className="text-caption leading-5 text-[#5a4b32]">오늘 무료 정리 1회를 사용했습니다. 로그인하면 기록 저장과 복습 연결을 사용할 수 있습니다.</p>
-                    <Link href="/login?returnTo=%2Fanswer-review%3Fmode%3Dsecond" className={cn(buttonVariants({ variant: "default" }), "mt-2 min-h-11 px-3 text-xs")}>로그인하고 기록 저장</Link>
-                  </article>
-                ) : null}
-
                 {structureDraft ? (
                   <details
                     className="quiet-disclosure rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4"
@@ -1196,7 +1316,7 @@ export default function AnswerReviewClientPage({
             </AnimatePresence>
           ) : null}
 
-          {currentStep === 3 ? (
+          {currentStep === 3 && structureDraft ? (
             <motion.section
               className="space-y-5"
               initial={shouldReduceMotion ? false : { y: 8 }}
@@ -1327,7 +1447,7 @@ export default function AnswerReviewClientPage({
             </motion.section>
           ) : null}
 
-          {currentStep !== 1 ? (
+          {currentStep !== 1 && structureDraft ? (
           <details
             className="quiet-disclosure rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4"
             data-s224v-secondary-diagnostics

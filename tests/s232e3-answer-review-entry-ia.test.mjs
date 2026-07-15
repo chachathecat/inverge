@@ -127,7 +127,7 @@ test("S232E.3 preserves Answer Review service, state, trial, and test contracts"
     "handleReferenceFileChange",
     "handleGeneralFileChange",
     'viewerMode === "anonymous"',
-    "trialLimitReached",
+    "structureErrorAction",
     'data-testid="answer-review-start"',
     'data-testid="answer-review-my-answer-input"',
     'data-testid="answer-review-problem-input"',

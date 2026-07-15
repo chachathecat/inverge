@@ -134,7 +134,8 @@ test("S231A normalizes identified learner controls to explicit 44px targets", ()
 
   assert.match(standaloneNav, /inline-flex min-h-11 items-center justify-center/);
   assert.match(calculatorCandidates, /inline-flex min-h-11 items-center justify-center/);
-  assert.equal((answerReview.match(/login\?returnTo=[^\n]+min-h-11/g) ?? []).length, 2);
+  assert.equal((answerReview.match(/login\?returnTo=[^\n]+min-h-11/g) ?? []).length, 1);
+  assert.match(answerReview, /structureErrorAction === "login"[\s\S]*?kind: "link", label: "로그인하고 계속"/);
   assert.match(answerReview, /label key=\{option\.value\} className="flex min-h-11 items-center/);
   assert.equal((session.match(/<summary className="flex min-h-11/g) ?? []).length, 2);
   assert.match(capture, /<summary className="flex min-h-11 cursor-pointer items-center whitespace-nowrap/);
