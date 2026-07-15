@@ -6,6 +6,8 @@ Parent: S232 App-wide Figma V3 parity (`#574`)
 
 Delivery issue: S232B.1 TrustEvidenceBar parity (`#581`)
 
+Delivery pull request: `#582`
+
 ## Source contract
 
 Figma file: `jcOKSi2WwhDOAfV2xMv9gO`
