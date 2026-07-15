@@ -13,6 +13,25 @@ export {
   SingleFocusCard,
 } from "./learner-ui";
 
+export { FailureAwareState } from "./failure-aware-state";
+export type {
+  FailureAwareStateAction,
+  FailureAwareStateProps,
+} from "./failure-aware-state";
+export type {
+  FailureAwareConflictComparator,
+  FailureAwareConflictComparisonEvidence,
+  FailureAwareConflictSource,
+  FailureAwareConflictSourceKind,
+  FailureAwarePersistenceEvidence,
+  FailureAwarePersistenceKind,
+  FailureAwareSafetyEvidence,
+  FailureAwareSafetyKind,
+  FailureAwareStateEvidence,
+  FailureAwareStateModel,
+  FailureAwareSystemState,
+} from "../../lib/review-os/failure-aware-state";
+
 export { TrustEvidenceBar } from "./trust-evidence-bar";
 export type { TrustEvidenceBarProps } from "./trust-evidence-bar";
 export type {
