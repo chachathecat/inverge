@@ -25,7 +25,7 @@ export default defineConfig({
   webServer: isExternalBaseUrl
     ? undefined
     : {
-        command: 'npm run dev',
+        command: 'npm run dev -- --hostname 127.0.0.1',
         url: baseURL,
         reuseExistingServer: true,
         timeout: 120_000,

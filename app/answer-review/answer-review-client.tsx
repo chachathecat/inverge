@@ -136,10 +136,32 @@ export default function AnswerReviewClientPage({
   const problemCameraInputRef = useRef<HTMLInputElement | null>(null);
   const generalFileInputRef = useRef<HTMLInputElement | null>(null);
   const answerTextRef = useRef<HTMLTextAreaElement | null>(null);
+  const stepTwoHeadingRef = useRef<HTMLHeadingElement | null>(null);
+  const stepThreeHeadingRef = useRef<HTMLHeadingElement | null>(null);
+  const previousStepRef = useRef<StepId>(currentStep);
   const [generalUploadIntent, setGeneralUploadIntent] = useState<"answer" | "problem">("answer");
   const [problemSnapNoticeVisible, setProblemSnapNoticeVisible] = useState(false);
 
-  const shouldReduceMotion = useReducedMotion();
+  const prefersReducedMotion = useReducedMotion();
+  const [motionReady, setMotionReady] = useState(false);
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => setMotionReady(true));
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
+  useEffect(() => {
+    if (previousStepRef.current === currentStep) return;
+    previousStepRef.current = currentStep;
+    const frame = window.requestAnimationFrame(() => {
+      const focusTarget = currentStep === 1
+        ? answerTextRef.current
+        : currentStep === 2
+          ? stepTwoHeadingRef.current
+          : stepThreeHeadingRef.current;
+      focusTarget?.focus();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [currentStep]);
+  const shouldReduceMotion = !motionReady || Boolean(prefersReducedMotion);
   const subjectOptions = examMode === "second" ? APPRAISAL_SECOND_SUBJECTS : APPRAISAL_FIRST_SUBJECTS;
   const calculationContextText = [
     subject,
@@ -507,20 +529,31 @@ export default function AnswerReviewClientPage({
   };
 
   return (
-    <RefinedShell
-      className="space-y-5 py-6 sm:space-y-8 sm:py-10"
-      data-s224v-surface="/answer-review?mode=second"
-      data-s224v-primary-cta-count-above-fold="1"
-      data-s224v-visible-trust-layer-count="1"
-      data-s224v-visible-primary-work-items-max="1"
-      data-s224v-secondary-diagnostics="quiet-disclosure"
-      data-s224v-equal-weight-card-grid="absent"
-      data-s224v-repeated-warning-copy="absent"
-    >
+    <>
+      <a
+        href="#answer-review-main"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-[var(--radius-sm)] focus:bg-[color:var(--bg-surface)] focus:px-4 focus:py-3 focus:text-sm focus:font-semibold focus:text-[color:var(--foreground-strong)]"
+      >
+        본문 바로가기
+      </a>
+      <main id="answer-review-main" tabIndex={-1}>
+        <RefinedShell
+          className="space-y-5 py-6 sm:space-y-8 sm:py-10"
+          data-s224v-surface="/answer-review?mode=second"
+          data-s224v-primary-cta-count-above-fold="1"
+          data-s224v-visible-trust-layer-count="1"
+          data-s224v-visible-primary-work-items-max="1"
+          data-s224v-secondary-diagnostics="quiet-disclosure"
+          data-s224v-equal-weight-card-grid="absent"
+          data-s224v-repeated-warning-copy="absent"
+        >
       <section className="space-y-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] p-4 sm:p-6" data-answer-review-stage="answer-review-shell">
         <div className="flex flex-wrap items-center gap-2">
           <RefinedBadge>답안 훈련</RefinedBadge>
         </div>
+        <h1 className="ko-keep text-[28px] font-semibold leading-tight text-[color:var(--foreground-strong)] sm:text-[36px]">
+          답안 검토
+        </h1>
         <p className="ko-keep text-caption leading-5 text-[color:var(--muted)]">
           이미 쓴 답안을 올리면 누락 논점, 약한 구조, 오늘 다시 쓸 문장을 정리합니다.
         </p>
@@ -556,9 +589,9 @@ export default function AnswerReviewClientPage({
           </article>
         ) : null}
 
-          <input ref={answerCameraInputRef} type="file" accept="image/*" capture="environment" multiple className="hidden" onChange={handleMyAnswerFileChange} />
-          <input ref={problemCameraInputRef} type="file" accept="image/*" capture="environment" multiple className="hidden" onChange={handleProblemFileChange} />
-          <input ref={generalFileInputRef} type="file" accept="image/*,.pdf" multiple className="hidden" onChange={handleGeneralFileChange} />
+          <input ref={answerCameraInputRef} type="file" accept="image/*" capture="environment" multiple className="hidden" aria-label="내 답안 카메라 파일 선택" onChange={handleMyAnswerFileChange} />
+          <input ref={problemCameraInputRef} type="file" accept="image/*" capture="environment" multiple className="hidden" aria-label="문제 또는 사례 카메라 파일 선택" onChange={handleProblemFileChange} />
+          <input ref={generalFileInputRef} type="file" accept="image/*,.pdf" multiple className="hidden" aria-label="답안 검토 파일 선택" onChange={handleGeneralFileChange} />
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4" data-s224v-secondary-input-options="quiet">
             <button type="button" onClick={() => answerCameraInputRef.current?.click()} className={cn(buttonVariants({ variant: "outline" }), "w-full justify-center h-11 text-sm font-semibold")}>답안 스냅</button>
             <button type="button" onClick={() => problemCameraInputRef.current?.click()} className={cn(buttonVariants({ variant: "outline" }), "w-full justify-center h-11 text-sm")}>사례 스캔</button>
@@ -602,6 +635,7 @@ export default function AnswerReviewClientPage({
               className={cn(buttonVariants({ variant: "default" }), "w-full sm:w-auto")}
               onClick={handlePrimaryAction}
               disabled={isPrimaryActionDisabled}
+              data-testid={currentStep === 2 ? "answer-review-build-feedback" : "answer-review-copy-feedback"}
             >
               {primaryActionLabel}
             </button>
@@ -615,6 +649,7 @@ export default function AnswerReviewClientPage({
               variants={SECTION_FADE}
               transition={{ duration: 0.28, ease: "easeOut" }}
             >
+              <h2 className="sr-only">자료 입력</h2>
               <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
                 <motion.div
                   className="space-y-4"
@@ -654,10 +689,11 @@ export default function AnswerReviewClientPage({
                   </div>
                   <article className="space-y-2 rounded-[var(--radius-md)] border border-[#27375f] bg-[color:var(--surface)] p-4" id="answer-review-text">
                     <div className="flex items-center justify-between gap-3">
-                      <p className="text-caption font-medium text-[#3f4c66]">내 답안 입력 (필수)</p>
+                      <label htmlFor="answer-review-my-answer-input" className="text-caption font-medium text-[#3f4c66]">내 답안 입력 (필수)</label>
                       <span className="rounded-full bg-[#eef2fb] px-2.5 py-1 text-xs font-semibold text-[#1e2a46]">최소 입력</span>
                     </div>
                     <Textarea
+                      id="answer-review-my-answer-input"
                       ref={answerTextRef}
                       className="min-h-[210px] border-[#c9d1e7] bg-[color:var(--surface)]"
                       placeholder="초안 텍스트가 있으면 붙여 넣고, 없으면 직접 입력해 주세요."
@@ -744,8 +780,9 @@ export default function AnswerReviewClientPage({
 
               <div className="space-y-3">
                 <div className="space-y-2" id="answer-review-problem">
-                  <p className="text-caption font-medium text-[color:var(--muted)]">문제/사례 입력</p>
+                  <label htmlFor="answer-review-problem-input" className="text-caption font-medium text-[color:var(--muted)]">문제/사례 입력</label>
                   <Textarea
+                    id="answer-review-problem-input"
                     className="min-h-[120px] bg-[color:var(--surface)]"
                     placeholder="문제 요구사항, 사례 조건, 논점 키워드를 입력해 주세요."
                     data-testid="answer-review-problem-input"
@@ -757,9 +794,10 @@ export default function AnswerReviewClientPage({
                   />
                 </div>
                 <details className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface)] p-3" id="answer-review-reference">
-                  <summary className="cursor-pointer text-caption font-medium text-[color:var(--muted)]">참고 정리/메모 입력 (선택)</summary>
+                  <summary id="answer-review-reference-label" className="cursor-pointer text-caption font-medium text-[color:var(--muted)]">참고 정리/메모 입력 (선택)</summary>
                   <div className="mt-2 space-y-2">
                     <Textarea
+                      aria-labelledby="answer-review-reference-label"
                       className="min-h-[120px] bg-[color:var(--surface)]"
                       placeholder="강의/교재 정리 또는 참고 목차를 텍스트로 붙여 넣어 주세요."
                       data-testid="answer-review-reference-input"
@@ -853,7 +891,7 @@ export default function AnswerReviewClientPage({
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="space-y-1">
                       <p className="text-caption text-[color:var(--muted)]">{examMode === "second" ? "감정평가사 2차" : "감정평가사 1차"} · {subject}</p>
-                      <h2 className="text-base font-semibold text-[color:var(--foreground-strong)]">가장 큰 간극부터 확인</h2>
+                      <h2 ref={stepTwoHeadingRef} tabIndex={-1} className="text-base font-semibold text-[color:var(--foreground-strong)]">가장 큰 간극부터 확인</h2>
                       <p className="text-caption leading-5 text-[color:var(--muted)]">{toShortLine(qualityView?.nextAction || "", "가장 큰 간극 하나를 먼저 보강하면 다음 초안의 완성도가 올라갑니다.")}</p>
                     </div>
                 {referenceGrounding?.used ? (
@@ -971,15 +1009,6 @@ export default function AnswerReviewClientPage({
                         <p><span className="font-medium">왜 중요한가</span>: {qualityView?.primaryFix.whyItMatters || "핵심 논점을 놓치면 답안의 설득력이 크게 떨어집니다."}</p>
                         <p><span className="font-medium">어떻게 고칠까</span>: {qualityView?.primaryFix.howToFix || biggestGapFix}</p>
                       </div>
-                      <motion.button
-                        whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
-                        type="button"
-                        onClick={() => setCurrentStep(3)}
-                        className={cn(buttonVariants({ variant: "default" }), "primary-action mt-4 min-h-11 px-4")}
-                        data-s224v-dominant-primary-action
-                      >
-                        보강 문단 정리
-                      </motion.button>
                     </article>
 
                     <CalculatorRoutineTrainer
@@ -1088,13 +1117,6 @@ export default function AnswerReviewClientPage({
                         <li>Ⅳ. 결론: {toShortLine(qualityView?.skeleton.conclusion.join(" · ") || "", "결론 문장을 다시 써서 마무리합니다.")}</li>
                       </ul>
                     </article>
-                    <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
-                      <p className="text-caption font-medium text-[color:var(--muted)]">다음 행동</p>
-                      <div className="mt-2 grid gap-2">
-                        <motion.button whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }} type="button" onClick={() => setCurrentStep(1)} className={cn(buttonVariants({ variant: "outline" }), "h-9")}>입력 수정하기</motion.button>
-                        <motion.button whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }} type="button" onClick={() => setCurrentStep(3)} data-testid="answer-review-build-feedback" className={cn(buttonVariants({ variant: "outline" }), "h-9")}>보강 문단 정리</motion.button>
-                      </div>
-                    </article>
                   </motion.aside>
                 </div>
               </motion.section>
@@ -1112,27 +1134,17 @@ export default function AnswerReviewClientPage({
               <div className="flex flex-wrap items-start justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4 sm:p-5">
                 <div className="space-y-1">
                   <p className="text-caption text-[color:var(--muted)]">{examMode === "second" ? "감정평가사 2차" : "감정평가사 1차"} · {subject}</p>
-                  <h2 className="text-base font-semibold text-[color:var(--foreground-strong)]">보강 문단 정리</h2>
+                  <h2 ref={stepThreeHeadingRef} tabIndex={-1} className="text-base font-semibold text-[color:var(--foreground-strong)]">보강 문단 정리</h2>
                   <p className="text-caption leading-5 text-[color:var(--muted)]">작성한 내용은 아래 편집창에서 계속 수정할 수 있습니다.</p>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <motion.button
-                    whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
-                    type="button"
-                    onClick={() => setCurrentStep(2)}
-                    className={cn(buttonVariants({ variant: "outline" }), "h-9 px-4")}
-                  >
-                    검토 결과로 돌아가기
-                  </motion.button>
-                  <motion.button
-                    whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
-                    type="button"
-                    onClick={copyFeedbackDraft}
-                    className={cn(buttonVariants({ variant: "default" }), "h-9 px-4")}
-                  >
-                    정리 내용 복사
-                  </motion.button>
-                </div>
+                <motion.button
+                  whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
+                  type="button"
+                  onClick={() => setCurrentStep(2)}
+                  className={cn(buttonVariants({ variant: "outline" }), "h-9 px-4")}
+                >
+                  검토 결과로 돌아가기
+                </motion.button>
               </div>
 
               <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
@@ -1180,14 +1192,9 @@ export default function AnswerReviewClientPage({
                     </ul>
                   </article>
                   <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
-                    <div className="grid gap-2">
-                      <motion.button whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }} type="button" onClick={copyFeedbackDraft} className={cn(buttonVariants({ variant: "default" }), "h-9")}>
-                        정리 내용 복사
-                      </motion.button>
-                      <motion.button whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }} type="button" onClick={() => setCurrentStep(2)} className={cn(buttonVariants({ variant: "outline" }), "h-9")}>
-                        다시 보강하기
-                      </motion.button>
-                    </div>
+                    <motion.button whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }} type="button" onClick={() => setCurrentStep(2)} className={cn(buttonVariants({ variant: "outline" }), "h-9 w-full")}>
+                      다시 보강하기
+                    </motion.button>
                     <p className="mt-3 text-caption leading-5 text-[color:var(--muted)]">
                       입력과 보강 내용을 수정한 뒤 정리본을 복사할 수 있습니다.
                     </p>
@@ -1195,9 +1202,12 @@ export default function AnswerReviewClientPage({
                 </motion.aside>
               </div>
 
-              {didCopyCurrentDraft ? <p className="text-caption leading-5 text-[color:var(--muted)]">복사 완료. 저장 전 직접 확인해 주세요.</p> : null}
-              {visibleFeedbackCopyStatus === "failed" ? (
-                <p className="text-caption leading-5 text-[color:var(--muted)]">클립보드 복사에 실패했습니다. 텍스트를 수동으로 복사해 주세요.</p>
+              {visibleFeedbackCopyStatus !== "idle" ? (
+                <p role="status" aria-live="polite" aria-atomic="true" className="text-caption leading-5 text-[color:var(--muted)]">
+                  {didCopyCurrentDraft
+                    ? "복사 완료. 저장 전 직접 확인해 주세요."
+                    : "클립보드 복사에 실패했습니다. 텍스트를 수동으로 복사해 주세요."}
+                </p>
               ) : null}
             </motion.section>
           ) : null}
@@ -1304,6 +1314,8 @@ export default function AnswerReviewClientPage({
           시험 선택으로 돌아가기
         </Link>
       </div>
-    </RefinedShell>
+        </RefinedShell>
+      </main>
+    </>
   );
 }

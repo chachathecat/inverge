@@ -1,0 +1,300 @@
+name: S231C Light Accessibility Runtime Acceptance
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  contents: read
+
+jobs:
+  s231c-light-accessibility-runtime:
+    name: S231C Exact-Head Light Accessibility Runtime
+    if: >-
+      github.event.pull_request.number == 573 &&
+      contains(github.event.pull_request.body, '<!-- run-s231c-auth-e2e -->') &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'agent/s231c-light-accessibility-hardening'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency:
+      group: s231c-light-accessibility-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    env:
+      CI: "true"
+      S231C_AUTH_RUNTIME: "1"
+      E2E_BASE_URL: https://inverge-git-agent-s231c-light-acc-ce4dd4-chachathecats-projects.vercel.app
+      E2E_EXPECTED_HOST: inverge-git-agent-s231c-light-acc-ce4dd4-chachathecats-projects.vercel.app
+      E2E_RUNNER_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - name: Check out exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Wait for exact-head Preview and verify safe prerequisites
+        shell: bash
+        env:
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: |
+          set -euo pipefail
+          test -n "${VERCEL_AUTOMATION_BYPASS_SECRET:-}"
+          test "${E2E_BASE_URL}" = "https://inverge-git-agent-s231c-light-acc-ce4dd4-chachathecats-projects.vercel.app"
+          test "${E2E_EXPECTED_HOST}" = "inverge-git-agent-s231c-light-acc-ce4dd4-chachathecats-projects.vercel.app"
+          [[ "${E2E_RUNNER_SHA}" =~ ^[0-9a-fA-F]{40}$ ]]
+
+          exact_head_ready=0
+          attempt=0
+          deadline=$((SECONDS + 600))
+          while [ "${SECONDS}" -lt "${deadline}" ]; do
+            attempt=$((attempt + 1))
+            body_path="$(mktemp)"
+            status="$(
+              curl --silent --show-error \
+                --output "${body_path}" \
+                --write-out '%{http_code}' \
+                --max-redirs 0 \
+                --connect-timeout 5 \
+                --max-time 10 \
+                --header "x-vercel-protection-bypass: ${VERCEL_AUTOMATION_BYPASS_SECRET}" \
+                "${E2E_BASE_URL}/api/runtime/version?runner=${E2E_RUNNER_SHA}&attempt=${attempt}"
+            )" || status="000"
+
+            if [ "${status}" = "200" ] && \
+              BODY_PATH="${body_path}" EXPECTED_SHA="${E2E_RUNNER_SHA}" node --input-type=module -e '
+                import { readFileSync } from "node:fs";
+                const payload = JSON.parse(readFileSync(process.env.BODY_PATH, "utf8"));
+                if (payload.ready !== true || payload.deploymentSha !== process.env.EXPECTED_SHA) {
+                  process.exit(1);
+                }
+              ' >/dev/null 2>&1; then
+              exact_head_ready=1
+              rm -f "${body_path}"
+              break
+            fi
+
+            case "${status}" in
+              301|302|303|307|308|401|403)
+                rm -f "${body_path}"
+                echo "::error::Preview protection or host validation failed with HTTP ${status}."
+                exit 1
+                ;;
+            esac
+
+            rm -f "${body_path}"
+            echo "::notice::Exact-head Preview is not ready yet (HTTP ${status}, attempt ${attempt})."
+            sleep 5
+          done
+
+          if [ "${exact_head_ready}" -ne 1 ]; then
+            echo "::error::The bounded wait expired before Preview reported the exact PR head SHA."
+            exit 1
+          fi
+
+          echo "E2E_TARGET_SHA=${E2E_RUNNER_SHA}" >> "${GITHUB_ENV}"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browser
+        run: npm exec playwright install -- --with-deps chromium
+
+      - name: Run exact-head light accessibility acceptance
+        id: runtime_acceptance
+        env:
+          E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL || secrets.TEST_USER_EMAIL }}
+          E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD || secrets.TEST_USER_PASSWORD }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${E2E_USER_EMAIL:-}"
+          test -n "${E2E_USER_PASSWORD:-}"
+          test -n "${VERCEL_AUTOMATION_BYPASS_SECRET:-}"
+          npm run test:e2e -- tests/e2e/s231c-wcag-aa.spec.ts --project=chromium --workers=1 --reporter=line --trace=off
+
+      - name: Recheck exact deployment SHA after runtime
+        id: postflight_sha
+        if: steps.runtime_acceptance.outcome == 'success'
+        shell: bash
+        env:
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: |
+          set -euo pipefail
+          body_path="$(mktemp)"
+          status="$(
+            curl --silent --show-error \
+              --output "${body_path}" \
+              --write-out '%{http_code}' \
+              --max-redirs 0 \
+              --connect-timeout 10 \
+              --max-time 30 \
+              --header "x-vercel-protection-bypass: ${VERCEL_AUTOMATION_BYPASS_SECRET}" \
+              "${E2E_BASE_URL}/api/runtime/version?postflight=${E2E_RUNNER_SHA}"
+          )"
+          test "${status}" = "200"
+          BODY_PATH="${body_path}" EXPECTED_SHA="${E2E_RUNNER_SHA}" node --input-type=module -e '
+            import { readFileSync } from "node:fs";
+            const payload = JSON.parse(readFileSync(process.env.BODY_PATH, "utf8"));
+            if (payload.ready !== true || payload.deploymentSha !== process.env.EXPECTED_SHA) {
+              throw new Error("Postflight deployment SHA mismatch.");
+            }
+          '
+          rm -f "${body_path}"
+
+      - name: Validate metadata-only S231C evidence
+        id: evidence_guard
+        if: always()
+        shell: bash
+        env:
+          RUNTIME_OUTCOME: ${{ steps.runtime_acceptance.outcome }}
+          POSTFLIGHT_OUTCOME: ${{ steps.postflight_sha.outcome }}
+          EVENT_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+
+          if [ "${RUNTIME_OUTCOME}" != "success" ] || [ "${POSTFLIGHT_OUTCOME}" != "success" ]; then
+            echo "::error::Runtime or postflight SHA verification failed; refusing evidence publication."
+            exit 1
+          fi
+          test -d test-results
+          if find test-results -type f \( -name '*.png' -o -name '*.zip' -o -name '*.webm' \) -print -quit | grep -q .; then
+            echo "::error::Screenshot, trace, or video output exists; refusing evidence publication."
+            exit 1
+          fi
+
+          mapfile -d '' manifests < <(find test-results -type f -name 's231c-runtime.json' -print0)
+          if [ "${#manifests[@]}" -ne 1 ]; then
+            echo "::error::Exactly one S231C manifest is required."
+            exit 1
+          fi
+
+          MANIFEST_PATH="${manifests[0]}" node --input-type=module - <<'NODE'
+          import { copyFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
+
+          const fail = (message) => {
+            throw new Error(`S231C evidence integrity: ${message}`);
+          };
+          const routes = new Set(["today", "capture", "notes", "review", "agenda", "answer-review"]);
+          const viewports = new Set(["390", "768", "1440"]);
+          const manifestText = readFileSync(process.env.MANIFEST_PATH, "utf8");
+          if (/@[a-z0-9.-]+\.[a-z]{2,}/i.test(manifestText)) fail("email-like text found");
+          if (/\"(?:password|email|outerhtml|innerhtml|raw[_-]?(?:answer|ocr|problem|reference))\"\s*:/i.test(manifestText)) {
+            fail("private or raw-content key found");
+          }
+          const manifest = JSON.parse(manifestText);
+          const expectedSha = process.env.E2E_RUNNER_SHA;
+          if (!/^[0-9a-f]{40}$/i.test(expectedSha ?? "") || process.env.EVENT_HEAD_SHA !== expectedSha) {
+            fail("event head is not the expected exact SHA");
+          }
+          if (manifest.schemaVersion !== 1 || manifest.result !== "pass") fail("invalid result contract");
+          for (const key of ["runnerSha", "targetDeploymentSha", "observedDeploymentSha"]) {
+            if (manifest[key] !== expectedSha) fail(`${key} does not match the exact PR head`);
+          }
+
+          if (!Array.isArray(manifest.routeEvidence) || manifest.routeEvidence.length !== 18) {
+            fail("expected 18 route/viewport records");
+          }
+          const combinations = new Set();
+          const viewportCounts = new Map([...viewports].map((viewport) => [viewport, 0]));
+          for (const entry of manifest.routeEvidence) {
+            if (!routes.has(entry.route) || !viewports.has(entry.viewport)) fail("unexpected route or viewport");
+            const combination = `${entry.route}|${entry.viewport}`;
+            if (combinations.has(combination)) fail("duplicate route/viewport record");
+            combinations.add(combination);
+            viewportCounts.set(entry.viewport, viewportCounts.get(entry.viewport) + 1);
+            if (
+              entry.axeBlockingCount !== 0 ||
+              entry.targetFailureCount !== 0 ||
+              entry.sub12TextCount !== 0 ||
+              entry.clippedCriticalCount !== 0 ||
+              entry.theme !== "light" ||
+              !Number.isFinite(entry.horizontalOverflow) ||
+              entry.horizontalOverflow < 0 ||
+              entry.horizontalOverflow > 1
+            ) fail("route accessibility evidence mismatch");
+          }
+          if (combinations.size !== 18 || [...viewportCounts.values()].some((count) => count !== 6)) {
+            fail("incomplete route/viewport matrix");
+          }
+
+          const validateLayoutSeries = (entries, percentKey) => {
+            if (!Array.isArray(entries) || entries.length !== 6) fail(`invalid ${percentKey} evidence`);
+            const seen = new Set();
+            for (const entry of entries) {
+              if (!routes.has(entry.route) || seen.has(entry.route)) fail(`invalid ${percentKey} route`);
+              seen.add(entry.route);
+              if (
+                entry[percentKey] !== 200 ||
+                !Number.isFinite(entry.horizontalOverflow) ||
+                entry.horizontalOverflow < 0 ||
+                entry.horizontalOverflow > 1 ||
+                !Array.isArray(entry.clippedCritical) ||
+                entry.clippedCritical.length !== 0
+              ) fail(`${percentKey} layout mismatch`);
+            }
+          };
+          validateLayoutSeries(manifest.reflowEvidence, "desktopZoomEquivalentPercent");
+          validateLayoutSeries(manifest.textResizeEvidence, "textResizePercent");
+
+          if (
+            !manifest.focusContrast ||
+            manifest.focusContrast.checkedStops !== 6 ||
+            !Number.isFinite(manifest.focusContrast.minimumRatio) ||
+            manifest.focusContrast.minimumRatio < 3
+          ) fail("focus contrast evidence mismatch");
+          if (
+            manifest.keyboardCoreLoop?.skipLinkTransferredFocus !== true ||
+            manifest.keyboardCoreLoop?.answerEnteredWithoutPointer !== true ||
+            manifest.keyboardCoreLoop?.structureRequestedWithoutPointer !== true ||
+            manifest.keyboardCoreLoop?.feedbackBuiltWithoutPointer !== true
+          ) fail("keyboard core-loop evidence mismatch");
+          if (
+            manifest.reducedMotion?.mediaMatches !== true ||
+            !Number.isFinite(manifest.reducedMotion.animationDurationMs) ||
+            manifest.reducedMotion.animationDurationMs > 0.1 ||
+            !Number.isFinite(manifest.reducedMotion.transitionDurationMs) ||
+            manifest.reducedMotion.transitionDurationMs > 0.1 ||
+            manifest.reducedMotion.scrollBehavior !== "auto"
+          ) fail("reduced-motion evidence mismatch");
+
+          if (
+            manifest.axeBlockingViolationCount !== 0 ||
+            manifest.desktopZoomEquivalentPercent !== 200 ||
+            manifest.textResizePercent !== 200 ||
+            manifest.manualBrowserZoomCertification !== false ||
+            manifest.manualScreenReaderCertification !== false ||
+            manifest.syntheticAccountOnly !== true ||
+            manifest.credentialsRedacted !== true ||
+            manifest.rawLearnerContentCaptured !== false ||
+            manifest.screenshotCaptured !== false ||
+            manifest.traceCaptured !== false ||
+            manifest.videoCaptured !== false ||
+            manifest.consoleErrorCount !== 0 ||
+            manifest.pageErrorCount !== 0 ||
+            manifest.sameOriginRequestFailureCount !== 0
+          ) fail("privacy, capture, or runtime-error contract mismatch");
+          if (!Number.isInteger(manifest.signInAttempts) || manifest.signInAttempts < 0 || manifest.signInAttempts > 2) {
+            fail("unexpected sign-in attempt count");
+          }
+
+          const evidenceDirectory = "s231c-evidence";
+          if (existsSync(evidenceDirectory)) fail("evidence directory already exists");
+          mkdirSync(evidenceDirectory);
+          copyFileSync(process.env.MANIFEST_PATH, `${evidenceDirectory}/s231c-runtime.json`);
+          NODE
+
+      - name: Upload validated S231C runtime evidence
+        if: always() && steps.evidence_guard.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: s231c-light-accessibility-${{ github.run_id }}
+          path: s231c-evidence/s231c-runtime.json
+          if-no-files-found: error
+          retention-days: 7

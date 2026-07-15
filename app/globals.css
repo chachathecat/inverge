@@ -1,12 +1,15 @@
 @import "tailwindcss";
 
 :root {
+  color-scheme: light;
   --bg-canvas: #f7f6f3;
   --bg-surface: #ffffff;
   --bg-subtle: #f2f0ea;
   --bg-elevated: #fcfbf8;
   --border-subtle: #e6e1d7;
   --border-strong: #d7d1c4;
+  --control-border: #81796d;
+  --control-border-emphasis: #6f685d;
   --text-primary: #141821;
   --text-secondary: #5a6472;
   --text-tertiary: #647080;
@@ -104,40 +107,48 @@
   --ledger-evidence-rail: 288px;
 }
 
-[data-theme="dark"] {
-  --background: #171d26;
-  --surface: #202834;
-  --surface-soft: #1c2430;
-  --surface-muted: #273241;
-  --foreground: #e7ebf0;
-  --foreground-strong: #f6f8fb;
-  --muted: #a8b0bb;
-  --muted-strong: #c2c9d2;
-  --primary: #e8edf4;
-  --primary-hover: #ffffff;
-  --primary-soft: #263244;
-  --status-green: #93b8ad;
-  --status-green-soft: rgba(147, 184, 173, 0.14);
-  --status-amber: #d7b16e;
-  --cue-review-text: #e3b779;
-  --status-amber-soft: rgba(215, 177, 110, 0.14);
-  --status-red: #db9a91;
-  --status-red-soft: rgba(219, 154, 145, 0.14);
-  --border: rgba(255, 255, 255, 0.1);
-  --border-strong: rgba(255, 255, 255, 0.18);
-  --shadow-soft: 0 20px 54px rgba(0, 0, 0, 0.22);
-  --shadow-focus: 0 28px 80px rgba(0, 0, 0, 0.3);
-  --chart-grid: rgba(255, 255, 255, 0.12);
-}
-
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-ui);
 }
 
-* {
-  border-color: var(--border);
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  :where(
+    a[href],
+    button,
+    input,
+    select,
+    textarea,
+    summary,
+    [role="button"],
+    [role="link"],
+    [role="tab"],
+    [role="switch"],
+    [role="checkbox"],
+    [role="radio"]
+  ) {
+    --border: var(--control-border);
+    --border-subtle: var(--control-border);
+    --border-strong: var(--control-border-emphasis);
+    --border-hairline: var(--control-border);
+  }
+
+  :where(summary) {
+    min-inline-size: var(--touch-target-min);
+    min-block-size: var(--touch-target-min);
+  }
+
+  :where(a[href]:not(p a[href], li a[href])) {
+    display: inline-flex;
+    min-inline-size: var(--touch-target-min);
+    min-block-size: var(--touch-target-min);
+    align-items: center;
+  }
 }
 
 html {
@@ -390,7 +401,13 @@ body {
     scroll-behavior: auto;
   }
 
-  .animate-in-up {
-    animation: none;
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
   }
 }

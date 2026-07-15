@@ -1830,7 +1830,7 @@ function IntakePanel({
     <section className="operating-surface p-4 sm:p-6">
       <div className="space-y-2">
         <p className="text-caption font-medium text-[color:var(--muted)]">1. 입력</p>
-        <h2 className="hero-balance ko-keep text-[28px] font-semibold leading-tight text-[color:var(--foreground-strong)]">오늘 한 것 올리기</h2>
+        <h1 className="hero-balance ko-keep text-[28px] font-semibold leading-tight text-[color:var(--foreground-strong)]">오늘 한 것 올리기</h1>
         <p className="ko-keep text-body text-[color:var(--muted)]">사진, PDF, 텍스트 중 하나로 시작하세요.</p>
       </div>
 
@@ -1898,7 +1898,7 @@ function IntakePanel({
           accept="image/*"
           capture="environment"
           multiple
-          className="sr-only"
+          className="hidden"
           onChange={(event) => {
             if (event.currentTarget.files) onImage(event.currentTarget.files);
           }}
@@ -1908,14 +1908,14 @@ function IntakePanel({
           type="file"
           accept="image/*"
           multiple
-          className="sr-only"
+          className="hidden"
           onChange={(event) => event.currentTarget.files && onImage(event.currentTarget.files)}
         />
         <input
           ref={pdfInputRef}
           type="file"
           accept="application/pdf"
-          className="sr-only"
+          className="hidden"
           onChange={(event) => {
             const file = event.currentTarget.files?.[0];
             if (file) onPdf(file);
@@ -2731,7 +2731,7 @@ function RewriteContextPanel({
 }) {
   return (
     <section className="rounded-[var(--radius-card)] border border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] p-4 sm:p-5">
-      <p className="text-caption text-[color:var(--cue-review)]">문단 다시쓰기 컨텍스트</p>
+      <p className="text-caption text-[color:var(--cue-review-text)]">문단 다시쓰기 컨텍스트</p>
       <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">{title}</h3>
       <div className="mt-4 grid gap-3">
         <PreviewLine label="가장 큰 약점" value={biggestGap} />

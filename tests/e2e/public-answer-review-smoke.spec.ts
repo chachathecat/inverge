@@ -1,3 +1,4 @@
+import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 
 test.describe('public answer-review smoke', () => {
@@ -13,7 +14,7 @@ test.describe('public answer-review smoke', () => {
 
   test('/answer-review opens', async ({ page }) => {
     await page.goto('/answer-review');
-    await expect(page).toHaveURL('/answer-review');
+    await expect(page).toHaveURL('/answer-review?mode=second');
     await expect(page.getByTestId('answer-review-start')).toBeVisible();
   });
 
@@ -42,11 +43,68 @@ test.describe('public answer-review smoke', () => {
     await page.goto('/answer-review');
     await page.getByTestId('answer-review-problem-input').fill('문제/사례 입력 smoke');
     await page.getByTestId('answer-review-my-answer-input').fill('내 답안 입력 smoke');
+    await page.locator('summary').filter({ hasText: '참고 정리/메모 입력 (선택)' }).click();
     await page.getByTestId('answer-review-reference-input').fill('참고 정리 입력 smoke');
 
     await page.getByTestId('answer-review-start').click();
+    await expect(page.getByRole('heading', { name: '가장 큰 간극부터 확인', level: 2 })).toBeFocused();
     await expect(page.getByTestId('answer-review-build-feedback')).toBeVisible();
+    await expect(page.getByRole('button', { name: '보강 문단 정리', exact: true })).toHaveCount(1);
     await page.getByTestId('answer-review-build-feedback').click();
-    await expect(page.getByRole('button', { name: '피드백 초안 복사' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '보강 문단 정리', level: 2 })).toBeFocused();
+    await expect(page.getByRole('button', { name: '정리 내용 복사', exact: true })).toBeVisible();
+  });
+
+  test('/answer-review keeps the public S231C accessibility contract', async ({ page }) => {
+    const runtimeErrors: string[] = [];
+    page.on('console', (message) => {
+      if (message.type() === 'error') runtimeErrors.push(message.text());
+    });
+    page.on('pageerror', (error) => runtimeErrors.push(error.message));
+    await page.addInitScript(() => window.localStorage.setItem('inverge:theme-mode', 'dark'));
+    await page.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/answer-review?mode=second');
+
+    await expect(page.locator('main#answer-review-main')).toHaveCount(1);
+    await expect(page.locator('h1', { hasText: '답안 검토' })).toHaveCount(1);
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+    expect(await page.locator('html').evaluate((element) => getComputedStyle(element).colorScheme)).toBe('light');
+
+    await page.keyboard.press('Tab');
+    const skipLink = page.locator('a[href="#answer-review-main"]');
+    await expect(skipLink).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(page.locator('main#answer-review-main')).toBeFocused();
+
+    const blocking = (await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
+      .analyze()).violations.filter((violation) =>
+        violation.impact === 'critical' || violation.impact === 'serious',
+      );
+    expect(blocking.map(({ id, impact, nodes }) => ({ id, impact, nodeCount: nodes.length }))).toEqual([]);
+
+    const layout = await page.evaluate(() => ({
+      overflow: Math.max(0, document.documentElement.scrollWidth - window.innerWidth),
+      reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches,
+      scrollBehavior: getComputedStyle(document.documentElement).scrollBehavior,
+    }));
+    expect(layout).toEqual({ overflow: 0, reducedMotion: true, scrollBehavior: 'auto' });
+    const undersizedTargets = await page.locator('a[href], button, summary, input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), select, textarea').evaluateAll((elements) =>
+      elements.flatMap((element) => {
+        const htmlElement = element as HTMLElement;
+        const style = getComputedStyle(htmlElement);
+        const rect = htmlElement.getBoundingClientRect();
+        const root = htmlElement.getRootNode();
+        const insideNextDevTools = root instanceof ShadowRoot && root.host.matches('nextjs-portal');
+        if (insideNextDevTools) return [];
+        if (rect.width === 0 || rect.height === 0 || style.display === 'none' || style.visibility === 'hidden') return [];
+        const inlineProseLink = htmlElement.matches('a[href]') && style.display === 'inline' && htmlElement.closest('p, li') !== null;
+        if (inlineProseLink || (rect.width >= 44 && rect.height >= 44)) return [];
+        return [{ tag: htmlElement.tagName.toLowerCase(), width: rect.width, height: rect.height }];
+      }),
+    );
+    expect(undersizedTargets).toEqual([]);
+    expect(runtimeErrors).toEqual([]);
   });
 });
