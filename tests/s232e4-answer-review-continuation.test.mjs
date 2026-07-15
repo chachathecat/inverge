@@ -103,7 +103,7 @@ test("S232E.4 preserves service, state, trial, handoff, clipboard, and cognitive
     "setMissingPointMemo(normalizedDraft.missingIssueCandidates.join",
     "setRevisionParagraph(normalizedDraft.rewriteDraftSuggestion)",
     'viewerMode === "anonymous"',
-    "trialLimitReached",
+    "structureErrorAction",
     "Problem Snap에서 다시 푼 답안을 불러왔습니다.",
     "navigator.clipboard.writeText(feedbackDraftText)",
     "buildCognitiveLearningActionUnit",
@@ -123,7 +123,7 @@ test("S232E.4 clears a prior successful result before every valid structure retr
   const runStructure = sliceBetween("  const runStructure = async () => {", "  const feedbackDraftText = useMemo");
   const firstDraftClear = runStructure.indexOf("setStructureDraft(null)");
   const structureRequest = runStructure.indexOf('fetch("/api/answer-review/structure"');
-  const billingReturn = runStructure.indexOf("if (!payload.ok && (isAnonymousTrialLimit || isAccountLimit))");
+  const billingReturn = runStructure.indexOf("if (!payload.ok && (isAnonymousTrialLimit || isAccountLimit || isInputQualityFailure))");
 
   assert.ok(firstDraftClear >= 0, "the retry path must clear any stale successful draft");
   assert.ok(firstDraftClear < structureRequest, "the stale draft must clear before the structure request starts");

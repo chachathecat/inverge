@@ -121,7 +121,7 @@ async function waitForReactHandler(
     .toBe(true);
 }
 
-async function tabUntilFocused(page: Page, target: Locator, maxSteps: number) {
+async function tabUntilFocused(page: Page, target: Locator, controlName: string, maxSteps: number) {
   await page.evaluate(() => {
     if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
     window.scrollTo(0, 0);
@@ -133,7 +133,7 @@ async function tabUntilFocused(page: Page, target: Locator, maxSteps: number) {
     reached = await target.evaluate((element) => element === document.activeElement);
     if (reached) break;
   }
-  expect(reached, "Tab must reach the retry action.").toBe(true);
+  expect(reached, `Tab must reach ${controlName}.`).toBe(true);
   const after = await readFocusStyle(target);
   expect(after.focusVisible).toBe(true);
   expect(
@@ -141,7 +141,7 @@ async function tabUntilFocused(page: Page, target: Locator, maxSteps: number) {
       before.boxShadow !== after.boxShadow ||
       before.borderColor !== after.borderColor ||
       before.backgroundColor !== after.backgroundColor,
-    "The retry action must expose a computed focus-style delta.",
+    `${controlName} must expose a computed focus-style delta.`,
   ).toBe(true);
 }
 
@@ -255,6 +255,18 @@ test("S232F.3 exact-head Answer Review keeps failures evidence-bound", async ({ 
         });
         return;
       }
+      if (mockedStructureRequestCount === 3) {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            ok: false,
+            error: "Synthetic payload says to retry, but the UI must ignore this text.",
+            errorCode: "CORE_LIMIT_REACHED",
+          }),
+        });
+        return;
+      }
 
       serverMutationRequestCount += 1;
       await route.abort("blockedbyclient");
@@ -313,6 +325,9 @@ test("S232F.3 exact-head Answer Review keeps failures evidence-bound", async ({ 
   await page.setViewportSize({ width: viewports[0].width, height: viewports[0].height });
   await successfulResult.getByRole("button", { name: "입력 수정하기", exact: true }).click();
   await expect(requiredAnswer).toHaveValue(syntheticAnswer);
+  await expect(successfulResult).toHaveCount(0);
+  await expect(biggestGap).toHaveCount(0);
+  await expect(rewriteEntry).toHaveCount(0);
   await waitForReactHandler(requiredAnswer, "onChange", "Remounted Answer Review learner answer");
   await waitForReactHandler(start, "onClick", "Remounted Answer Review start action");
   await start.click();
@@ -366,8 +381,52 @@ test("S232F.3 exact-head Answer Review keeps failures evidence-bound", async ({ 
     await expectNoHorizontalOverflow(page, `${viewport.label}px retryable error`);
     axeBlockingCount += await scanAccessibility(page, `${viewport.label}px retryable error`);
     if (index === 0) {
-      await tabUntilFocused(page, retry, 180);
+      await tabUntilFocused(page, retry, "the retry action", 180);
       retryKeyboardFocusVerified = true;
+    }
+  }
+
+  await page.setViewportSize({ width: viewports[0].width, height: viewports[0].height });
+  await primarySurface.getByRole("button", { name: "입력 수정하기", exact: true }).click();
+  await expect(requiredAnswer).toHaveValue(syntheticAnswer);
+  await waitForReactHandler(start, "onClick", "Answer Review start action after retryable failure");
+  await start.click();
+
+  const nonRetryableError = primarySurface.getByTestId("answer-review-structure-error");
+  const nonRetryableResultShell = primarySurface.locator('[data-s232f3-answer-review-analysis="failed"]');
+  const pricingLink = nonRetryableError.getByRole("link", { name: "이용 범위 확인", exact: true });
+  const nonRetryableDetail = primarySurface.locator("[data-s232f3-answer-review-error-detail]");
+  await expect(nonRetryableError).toBeVisible();
+  await expect(nonRetryableError).toHaveAttribute("data-v3-system-state", "error");
+  await expect(nonRetryableError).toHaveAttribute("data-failure-aware-safety", "memory_only");
+  await expect(nonRetryableError).toHaveAttribute("data-failure-aware-auto-sync", "none");
+  await expect(nonRetryableResultShell.getByRole("heading", { name: "답안 검토 이용 범위를 확인해 주세요", exact: true })).toBeVisible();
+  await expect(primarySurface.locator('[data-s232f3-answer-review-error="blocked-memory-only"]')).toBeVisible();
+  await expect(pricingLink).toBeVisible();
+  await expect(nonRetryableError.getByRole("button", { name: "답안 검토 다시 시도", exact: true })).toHaveCount(0);
+  await expect(nonRetryableDetail).toContainText("현재 요금제의 답안 검토 이용 범위를 모두 사용했습니다");
+  await expect(nonRetryableDetail).not.toContainText("다시 시도");
+  await expect(nonRetryableDetail).not.toContainText("Synthetic payload");
+  await expect(nonRetryableResultShell).not.toContainText("다시 시도");
+  await expect(nonRetryableResultShell).not.toContainText("Synthetic payload");
+  await expect(biggestGap).toHaveCount(0);
+  await expect(rewriteEntry).toHaveCount(0);
+
+  const nonRetryableLimitStateVerified = await pricingLink.isVisible();
+  const nonRetryableLimitRetryActionAbsent =
+    (await nonRetryableError.getByRole("button", { name: "답안 검토 다시 시도", exact: true }).count()) === 0;
+  const nonRetryableLimitCopyContradictionAbsent =
+    !(await nonRetryableResultShell.textContent())?.includes("다시 시도") &&
+    !(await nonRetryableResultShell.textContent())?.includes("Synthetic payload");
+  let nonRetryableLimitKeyboardFocusVerified = false;
+  for (const [index, viewport] of viewports.entries()) {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await expect(nonRetryableError).toBeVisible();
+    await expectNoHorizontalOverflow(page, `${viewport.label}px non-retryable limit error`);
+    axeBlockingCount += await scanAccessibility(page, `${viewport.label}px non-retryable limit error`);
+    if (index === 0) {
+      await tabUntilFocused(page, pricingLink, "the non-retryable recovery action", 180);
+      nonRetryableLimitKeyboardFocusVerified = true;
     }
   }
 
@@ -382,7 +441,7 @@ test("S232F.3 exact-head Answer Review keeps failures evidence-bound", async ({ 
   const analyticsAfter = await readAnalyticsLengths(page);
   expect(storageAfter).toBe(storageBefore);
   expect(analyticsAfter).toEqual(analyticsBefore);
-  expect(mockedStructureRequestCount).toBe(2);
+  expect(mockedStructureRequestCount).toBe(3);
   expect(negativeAckStatus).toBe(200);
   expect(serverMutationRequestCount).toBe(0);
   expect(runtimeErrors.consoleErrors).toEqual([]);
@@ -414,6 +473,10 @@ test("S232F.3 exact-head Answer Review keeps failures evidence-bound", async ({ 
     errorMemoryOnlyVerified: true,
     retryActionCount,
     retryKeyboardFocusVerified,
+    nonRetryableLimitStateVerified,
+    nonRetryableLimitRetryActionAbsent,
+    nonRetryableLimitKeyboardFocusVerified,
+    nonRetryableLimitCopyContradictionAbsent,
     staleResultAbsentAfterFailure,
     learnerAnswerPreservedAfterFailure,
     serverMutationRequestCount,

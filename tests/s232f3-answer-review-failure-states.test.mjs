@@ -65,11 +65,12 @@ test("S232F.3 renders F0 Loading while the current learner answer is locked in m
 
 test("S232F.3 clears stale result evidence before every request and every failure exit", () => {
   const runStructure = sliceBetween("  const runStructure = async () => {", "  const feedbackDraftText = useMemo");
+  const returnToEntry = sliceBetween("  const returnToEntry = () => {", "  const runStructure = async () => {");
   const request = runStructure.indexOf('fetch("/api/answer-review/structure"');
   const initialDraftClear = runStructure.indexOf("setStructureDraft(null)");
   const loadingStepReset = runStructure.indexOf("setCurrentStep(1)");
   const billingBranch = sliceBetween(
-    "if (!payload.ok && (isAnonymousTrialLimit || isAccountLimit))",
+    "if (!payload.ok && (isAnonymousTrialLimit || isAccountLimit || isInputQualityFailure))",
     "throw new Error",
     runStructure,
   );
@@ -77,6 +78,25 @@ test("S232F.3 clears stale result evidence before every request and every failur
 
   assert.ok(initialDraftClear >= 0 && initialDraftClear < request);
   assert.ok(loadingStepReset >= 0 && loadingStepReset < request, "every valid retry must return to the visible F0 Loading step");
+  for (const reset of [
+    'setMissingPointMemo("")',
+    'setRevisionParagraph("")',
+    'setFeedbackCopyStatus("idle")',
+    "setCopiedFeedbackDraftText(null)",
+    "setResultSecondaryOpen(false)",
+  ]) {
+    const resetIndex = runStructure.indexOf(reset);
+    assert.ok(resetIndex >= 0 && resetIndex < request, `${reset} must clear derived result state before fetch`);
+    assert.ok(returnToEntry.includes(reset), `${reset} must invalidate the result before learner input can be edited`);
+  }
+  for (const reset of [
+    "setStructureDraft(null)",
+    "setLearningSignalStatus(null)",
+    "setReferenceGrounding(null)",
+    "calculatorRoutineSync.reset()",
+  ]) {
+    assert.ok(returnToEntry.includes(reset), `${reset} must invalidate trust evidence on return to entry`);
+  }
   for (const branch of [billingBranch, catchBranch]) {
     assert.match(branch, /setStructureDraft\(null\);[\s\S]*?setLearningSignalStatus\(null\);[\s\S]*?setReferenceGrounding\(null\);/);
   }
@@ -93,7 +113,7 @@ test("S232F.3 renders transient errors as retryable F0 without removing the lear
 
   assert.match(resultStep, /data-s232f3-answer-review-error=\{isStructureErrorRetryable \? "retryable-memory-only" : "blocked-memory-only"\}/);
   assert.match(resultStep, /kind: "error"[\s\S]*?retryable: isStructureErrorRetryable[\s\S]*?kind: "memory_only", retainedInMemory: true/);
-  assert.match(resultStep, /isStructureErrorRetryable[\s\S]*?kind: "button", label: "답안 검토 다시 시도"/);
+  assert.match(resultStep, /structureErrorAction === "retry"[\s\S]*?kind: "button", label: "답안 검토 다시 시도"/);
   assert.match(resultStep, /label: "답안 검토 다시 시도", onAction: \(\) => void runStructure\(\)/);
   assert.match(resultStep, /testId="answer-review-structure-error"/);
   assert.match(resultStep, /role="alert" data-s232f3-answer-review-error-detail/);
@@ -101,7 +121,7 @@ test("S232F.3 renders transient errors as retryable F0 without removing the lear
   assert.doesNotMatch(resultStep, /structureError[\s\S]{0,300}?data-s232e4-rewrite-entry/);
 });
 
-test("S232F.3 classifies entitlement and trial limits as non-retryable F0 errors", () => {
+test("S232F.3 gives entitlement, trial, and insufficient-input failures truthful non-retry actions", () => {
   const runStructure = sliceBetween("  const runStructure = async () => {", "  const feedbackDraftText = useMemo");
   const resultStep = sliceBetween("{currentStep === 2 ? (", "{currentStep === 3 && structureDraft ? (");
   const limitBranch = sliceBetween("const isAnonymousTrialLimit", "throw new Error", runStructure);
@@ -112,14 +132,33 @@ test("S232F.3 classifies entitlement and trial limits as non-retryable F0 errors
     "FREE_TRIAL_LIMIT_REACHED",
     "CORE_LIMIT_REACHED",
     "BILLING_REQUIRED",
+    "INSUFFICIENT_INPUT",
   ]) {
     assert.ok(limitBranch.includes(code), `missing non-retryable limit code: ${code}`);
   }
+  for (const copy of [
+    "체험 답안 검토 이용 범위를 모두 사용했습니다",
+    "무료 체험의 답안 검토 이용 범위를 모두 사용했습니다",
+    "현재 요금제의 답안 검토 이용 범위를 모두 사용했습니다",
+    "답안 검토를 계속하려면 이용 범위를 확인해 주세요",
+    "검토에 필요한 정보가 부족합니다",
+  ]) {
+    assert.ok(source.includes(copy), `missing stable non-retryable copy: ${copy}`);
+  }
   assert.match(limitBranch, /setIsStructureErrorRetryable\(false\)/);
   assert.match(catchBranch, /setIsStructureErrorRetryable\(true\)/);
-  assert.match(resultStep, /viewerMode === "anonymous" && trialLimitReached[\s\S]*?kind: "link", label: "로그인하고 계속"/);
+  assert.match(limitBranch, /isInputQualityFailure[\s\S]*?"edit_input"/);
+  assert.match(limitBranch, /isAnonymousTrialLimit[\s\S]*?"login"/);
+  assert.match(resultStep, /structureErrorAction === "edit_input"[\s\S]*?label: "입력 보강하기"/);
+  assert.match(resultStep, /structureErrorAction === "login"[\s\S]*?kind: "link", label: "로그인하고 계속"/);
   assert.match(resultStep, /kind: "link", label: "이용 범위 확인", href: "\/pricing"/);
+  assert.match(source, /STRUCTURE_ERROR_HEADING\[structureErrorAction\]/);
+  assert.match(source, /pricing: "답안 검토 이용 범위를 확인해 주세요"/);
   assert.match(resultStep, /blocked-memory-only/);
+  assert.doesNotMatch(
+    sliceBetween("const NON_RETRYABLE_STRUCTURE_ERROR_COPY", "const STRUCTURE_ERROR_HEADING"),
+    /다시 시도|잠시 후/,
+  );
 });
 
 test("S232F.3 distinguishes analysis success from learning-signal persistence failure", () => {
@@ -128,8 +167,9 @@ test("S232F.3 distinguishes analysis success from learning-signal persistence fa
   assert.match(resultStep, /structureDraft && learningSignalStatus === "failed"/);
   assert.match(resultStep, /data-s232f3-answer-review-analysis-status="succeeded"/);
   assert.match(resultStep, /data-s232f3-learning-signal-status="failed"/);
-  assert.match(resultStep, /답안 분석은 완료됐지만 학습 기록은 저장되지 않았습니다/);
+  assert.match(resultStep, /답안 분석은 완료됐지만 학습 기록 저장 여부는 확인되지 않았습니다/);
   assert.match(resultStep, /약점 신호·복습·오늘 계획 반영은 확인되지 않았습니다/);
+  assert.doesNotMatch(resultStep, /학습 기록은 저장되지 않았습니다/);
   assert.doesNotMatch(resultStep, /학습 신호를 저장하지 못했습니다\. 직접 확인한 뒤 다시 저장해 주세요/);
 
   const successMarker = resultStep.indexOf('data-s232f3-answer-review-analysis-status="succeeded"');
@@ -204,11 +244,15 @@ test("S232F.3 runtime is exact-head, HTTP-200-negative-ack, remotely read-only, 
   assert.match(spec, /if \(!readOnlyMethods\.has\(request\.method\(\)\)\)/);
   assert.match(spec, /route\.abort\("blockedbyclient"\)/);
   assert.doesNotMatch(spec, /request\.postData|request\.postDataBuffer|request\.postDataJSON/);
-  assert.match(spec, /mockedStructureRequestCount\)\.toBe\(2\)/);
+  assert.match(spec, /mockedStructureRequestCount\)\.toBe\(3\)/);
   assert.match(spec, /runtimeErrors\.consoleErrors\)\.toEqual\(\[\]\)/);
   assert.match(spec, /runtimeErrors\.sameOriginRequestFailures\)\.toEqual\(\[\]\)/);
   assert.match(spec, /learnerAnswerPreservedAfterFailure/);
   assert.match(spec, /staleResultAbsentAfterFailure/);
+  assert.match(spec, /nonRetryableLimitStateVerified/);
+  assert.match(spec, /nonRetryableLimitRetryActionAbsent/);
+  assert.match(spec, /nonRetryableLimitKeyboardFocusVerified/);
+  assert.match(spec, /nonRetryableLimitCopyContradictionAbsent/);
   assert.match(spec, /new AxeBuilder/);
   assert.match(spec, /page\.keyboard\.press\("Tab"\)/);
   assert.match(spec, /\(element as HTMLFieldSetElement\)\.disabled/);
@@ -253,6 +297,10 @@ test("S232F.3 runtime is exact-head, HTTP-200-negative-ack, remotely read-only, 
   assert.match(workflow, /negativeAckHttpStatus: 200/);
   assert.match(workflow, /staleResultAbsentAfterFailure: true/);
   assert.match(workflow, /learnerAnswerPreservedAfterFailure: true/);
+  assert.match(workflow, /nonRetryableLimitStateVerified: true/);
+  assert.match(workflow, /nonRetryableLimitRetryActionAbsent: true/);
+  assert.match(workflow, /nonRetryableLimitKeyboardFocusVerified: true/);
+  assert.match(workflow, /nonRetryableLimitCopyContradictionAbsent: true/);
   assert.match(workflow, /test "\$\{#evidence_paths\[@\]\}" -eq 1/);
   assert.match(workflow, /path: validated-runtime-evidence\/s232f3-runtime\.json/);
   assert.doesNotMatch(jobEnv, /E2E_USER_EMAIL|E2E_USER_PASSWORD|VERCEL_AUTOMATION_BYPASS_SECRET|GH_TOKEN/);
