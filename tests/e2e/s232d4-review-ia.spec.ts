@@ -140,6 +140,7 @@ async function exerciseLocalReviewState(page: Page, primary: Locator) {
   const completion = selfRating.locator("[data-s232d4-review-completion]");
   await expect(completion).toBeVisible();
   await expect(completion).toBeEnabled();
+  await expect(completion).toHaveCSS("opacity", "1");
 }
 
 test("S232D.4 exact-head Review IA is responsive, accessible, and completion-safe", async ({ page }, testInfo: TestInfo) => {
@@ -239,7 +240,7 @@ test("S232D.4 exact-head Review IA is responsive, accessible, and completion-saf
     const blockingRuleIds = [...new Set(blockingAxe.map((violation) => violation.id))].sort();
     expect(
       blockingAxe.length,
-      `Axe blocking rule count must be zero; ids=${blockingRuleIds.join(",") || "none"}`,
+      `Axe blocking rule count must be zero at ${viewport.label}px; ids=${blockingRuleIds.join(",") || "none"}`,
     ).toBe(0);
   }
 
