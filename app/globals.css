@@ -63,6 +63,7 @@
   --color-border-compare: var(--cue-compare);
   --color-icon-primary: var(--text-primary);
   --color-icon-secondary: var(--text-secondary);
+  --color-icon-brand: var(--brand-900);
   --color-icon-focus: var(--cue-focus);
   --color-icon-attention: var(--cue-review-text);
   --color-icon-risk: var(--cue-risk-text);

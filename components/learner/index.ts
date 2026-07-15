@@ -25,7 +25,14 @@ export {
   StudyLedgerTrustBar,
 } from "./study-ledger-ui";
 export type {
+  BiggestGapDensity,
+  BiggestGapType,
+  EvidenceExcerptEvidence,
+  EvidenceExcerptReview,
+  EvidenceExcerptSource,
   LearningState,
+  StateChipEvidence,
+  StateChipState,
   StudyLedgerComparison,
   StudyLedgerSupportingEvidence,
 } from "./study-ledger-ui";

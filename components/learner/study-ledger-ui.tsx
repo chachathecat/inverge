@@ -1,5 +1,4 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
 
 import { TrustProvenanceLayer } from "@/components/review-os/trust-provenance-layer";
 import { adaptLegacyTrustSignals } from "@/lib/review-os/trust-provenance";
@@ -48,16 +47,129 @@ type StudyLedgerDetailProps = {
   supportingEvidence?: StudyLedgerSupportingEvidence[];
 };
 
-const STATE_STYLES: Record<LearningState, string> = {
-  scheduled: "border-[var(--cue-review)] bg-[var(--cue-review-bg)] text-[var(--cue-review-text)]",
-  attention: "border-[var(--cue-risk)] bg-[var(--cue-risk-bg)] text-[var(--cue-risk)]",
-  ready: "border-[var(--cue-stable)] bg-[var(--cue-stable-bg)] text-[var(--cue-stable)]",
-  completed: "border-[var(--cue-stable)] bg-[var(--cue-stable-bg)] text-[var(--cue-stable)]",
+export type StateChipState = "Unverified" | "Weak" | "Recovering" | "Stable";
+export type StateChipEvidence =
+  | { state: "Unverified"; basis: "missing-confirmation"; detail: string }
+  | { state: "Weak"; basis: "confirmed-incorrect-retrieval"; detail: string }
+  | { state: "Recovering"; basis: "recovery-observed"; detail: string }
+  | {
+      state: "Stable";
+      basis: "distinct-day-successes";
+      detail: string;
+      distinctDaySuccessCount: number;
+    };
+export type BiggestGapType = "MissingLink" | "Incorrect" | "Unverified";
+export type BiggestGapDensity = "Default" | "Compact";
+export type EvidenceExcerptSource = "Learner" | "Official" | "AI";
+export type EvidenceExcerptReview = "Default" | "Confirmed";
+type EvidenceExcerptSourceEvidence =
+  | { source: "Learner"; sourceBasis: "learner-authored" }
+  | { source: "Official"; sourceBasis: "verified-official-source" }
+  | { source: "AI"; sourceBasis: "ai-generated" };
+type EvidenceExcerptReviewEvidence =
+  | { review: "Default" }
+  | { review: "Confirmed"; confirmationRecorded: true };
+export type EvidenceExcerptEvidence = EvidenceExcerptSourceEvidence &
+  EvidenceExcerptReviewEvidence & { provenance: string };
+
+const STATE_CHIP_PRESENTATION: Record<
+  StateChipState,
+  { label: string; className: string; markClassName: string }
+> = {
+  Unverified: {
+    label: "미확인",
+    className: "border-[var(--color-border-default)] bg-[var(--color-background-subtle)] text-[var(--color-text-secondary)]",
+    markClassName: "bg-[var(--color-icon-secondary)]",
+  },
+  Weak: {
+    label: "취약",
+    className: "border-[var(--color-border-risk)] bg-[var(--color-background-risk)] text-[var(--color-text-risk)]",
+    markClassName: "bg-[var(--color-icon-risk)]",
+  },
+  Recovering: {
+    label: "회복 중",
+    className: "border-[var(--color-border-attention)] bg-[var(--color-background-attention)] text-[var(--color-text-attention)]",
+    markClassName: "bg-[var(--color-icon-attention)]",
+  },
+  Stable: {
+    label: "안정",
+    className: "border-[var(--color-border-stable)] bg-[var(--color-background-stable)] text-[var(--color-text-stable)]",
+    markClassName: "bg-[var(--color-icon-stable)]",
+  },
+};
+
+const BIGGEST_GAP_PRESENTATION: Record<
+  BiggestGapType,
+  { label: string; shellClassName: string; markClassName: string; labelClassName: string }
+> = {
+  MissingLink: {
+    label: "가장 큰 간극 1개",
+    shellClassName: "bg-[var(--color-background-attention)]",
+    markClassName: "bg-[var(--color-icon-attention)]",
+    labelClassName: "text-[var(--color-text-attention)]",
+  },
+  Incorrect: {
+    label: "잘못된 연결 1개",
+    shellClassName: "bg-[var(--color-background-risk)]",
+    markClassName: "bg-[var(--color-icon-risk)]",
+    labelClassName: "text-[var(--color-text-risk)]",
+  },
+  Unverified: {
+    label: "확인할 근거 1개",
+    shellClassName: "bg-[var(--color-background-focus)]",
+    markClassName: "bg-[var(--color-icon-brand)]",
+    labelClassName: "text-[var(--color-text-link)]",
+  },
+};
+
+const EVIDENCE_SOURCE_PRESENTATION: Record<
+  EvidenceExcerptSource,
+  { label: string; shellClassName: string; markClassName: string; titleClassName: string }
+> = {
+  Learner: {
+    label: "학습자 근거",
+    shellClassName: "bg-[var(--color-background-surface)]",
+    markClassName: "bg-[var(--color-icon-secondary)]",
+    titleClassName: "text-[var(--color-text-primary)]",
+  },
+  Official: {
+    label: "공식 근거",
+    shellClassName: "bg-[var(--color-background-brand-soft)]",
+    markClassName: "bg-[var(--color-icon-brand)]",
+    titleClassName: "text-[var(--color-text-brand)]",
+  },
+  AI: {
+    label: "AI 제안",
+    shellClassName: "bg-[var(--color-background-compare)]",
+    markClassName: "bg-[var(--color-icon-brand)]",
+    titleClassName: "text-[var(--color-text-compare)]",
+  },
 };
 
 function formatRecordDate(value: string) {
   const date = value.slice(0, 10);
   return date ? date.replaceAll("-", ".") : "기록일 확인 필요";
+}
+
+function buildLedgerStateEvidence({
+  state,
+  reviewQueueCount,
+  nextReviewDate,
+}: {
+  state: LearningState;
+  reviewQueueCount: number;
+  nextReviewDate: string;
+}) {
+  switch (state) {
+    case "scheduled":
+      return `복습 예정 · 큐 ${reviewQueueCount}개 · ${nextReviewDate}`;
+    case "ready":
+      return "학습자 확인 기록 · 다시쓰기 준비";
+    case "completed":
+      return `다시쓰기 기록 · ${nextReviewDate} 확인`;
+    case "attention":
+      return "학습자 확인 필요";
+  }
 }
 
 function normalizedExcerpt(value?: string | null) {
@@ -66,21 +178,45 @@ function normalizedExcerpt(value?: string | null) {
 }
 
 export function StateChip({
-  state,
-  children,
+  evidence,
+  showEvidence = true,
+  legacyState,
 }: {
-  state: LearningState;
-  children: ReactNode;
+  evidence: StateChipEvidence;
+  showEvidence?: boolean;
+  legacyState?: LearningState;
 }) {
+  const state = evidence.state;
+  const presentation = STATE_CHIP_PRESENTATION[state];
+  const normalizedEvidence = evidence.detail.trim();
+  if (!normalizedEvidence) throw new Error(`StateChip ${state} requires non-empty evidence.`);
+  if (evidence.state === "Stable" && evidence.distinctDaySuccessCount < 2) {
+    throw new Error("StateChip Stable requires successful retrieval evidence from at least two distinct days.");
+  }
+
   return (
     <span
-      data-s228-state-chip={state}
+      data-v3-component="StateChip"
+      data-v3-state={state}
+      data-s228-state-chip={legacyState}
+      aria-label={showEvidence ? `${presentation.label} · ${normalizedEvidence}` : presentation.label}
       className={
-        "v3-type-caption inline-flex min-h-7 items-center rounded-full border px-3 font-semibold leading-none " +
-        STATE_STYLES[state]
+        "inline-flex min-h-[38px] max-w-full items-center gap-2 rounded-[var(--v3-radius-full)] border px-3 py-2 " +
+        presentation.className
       }
     >
-      {children}
+      <span className="v3-type-label-strong shrink-0 whitespace-nowrap">{presentation.label}</span>
+      {showEvidence ? (
+        <>
+          <span
+            aria-hidden="true"
+            className={`size-1 shrink-0 rounded-full ${presentation.markClassName}`}
+          />
+          <span className="v3-type-label min-w-0 break-words text-[var(--color-text-secondary)]">
+            {normalizedEvidence}
+          </span>
+        </>
+      ) : null}
     </span>
   );
 }
@@ -136,27 +272,49 @@ export function StudyLedgerTrustBar({
 
 export function BiggestGap({
   gap,
-  nextAction,
+  evidence,
+  type = "MissingLink",
+  density = "Default",
+  showEvidence = true,
+  headingId = "study-ledger-biggest-gap",
 }: {
   gap: string;
-  nextAction: string;
+  evidence?: string;
+  type?: BiggestGapType;
+  density?: BiggestGapDensity;
+  showEvidence?: boolean;
+  headingId?: string;
 }) {
+  const presentation = BIGGEST_GAP_PRESENTATION[type];
+  const compact = density === "Compact";
+  const normalizedEvidence = evidence?.trim() || null;
+
   return (
     <section
+      data-v3-component="BiggestGap"
+      data-v3-biggest-gap
+      data-v3-type={type}
+      data-v3-density={density}
       data-s228-biggest-gap
-      className="rounded-[var(--ledger-radius-panel)] border border-[var(--border-strong)] bg-[var(--bg-surface)] p-5 shadow-[var(--shadow-soft)] sm:p-7"
-      aria-labelledby="study-ledger-biggest-gap"
+      className={`flex w-full items-stretch gap-4 ${compact ? "p-3" : "p-4"} ${presentation.shellClassName}`}
+      aria-labelledby={headingId}
     >
-      <p className="v3-type-caption font-semibold text-[var(--cue-review-text)]">이번 복습의 초점</p>
-      <h2 id="study-ledger-biggest-gap" className="v3-type-section mt-2 text-[var(--text-primary)]">
-        가장 큰 간극
-      </h2>
-      <p className="v3-type-item ko-keep mt-4 text-[var(--text-primary)]">
-        {gap}
-      </p>
-      <div className="mt-6 border-t border-[var(--border-subtle)] pt-5">
-        <p className="v3-type-caption font-semibold text-[var(--text-secondary)]">다음 행동</p>
-        <p className="v3-type-body ko-keep mt-2 text-[var(--text-primary)]">{nextAction}</p>
+      <span
+        aria-hidden="true"
+        className={`w-1 shrink-0 self-stretch rounded-[var(--v3-radius-mark)] ${compact ? "min-h-16" : "min-h-[100px]"} ${presentation.markClassName}`}
+      />
+      <div className={`min-w-0 flex-1 ${compact ? "space-y-1" : "space-y-2"}`}>
+        <h2 id={headingId} className={`v3-type-label-strong ${presentation.labelClassName}`}>
+          {presentation.label}
+        </h2>
+        <p className={`${compact ? "v3-type-body-strong" : "v3-type-item"} ko-keep text-[var(--color-text-primary)]`}>
+          {gap}
+        </p>
+        {showEvidence && normalizedEvidence ? (
+          <p className="v3-type-label ko-keep text-[var(--color-text-secondary)]">
+            {normalizedEvidence}
+          </p>
+        ) : null}
       </div>
     </section>
   );
@@ -164,22 +322,71 @@ export function BiggestGap({
 
 export function EvidenceExcerpt({
   title,
+  body,
+  evidence,
+}: {
+  title: string;
+  body?: string | null;
+  evidence: EvidenceExcerptEvidence;
+}) {
+  const { source, review } = evidence;
+  const presentation = EVIDENCE_SOURCE_PRESENTATION[source];
+  const normalizedBody = normalizedExcerpt(body);
+  const normalizedProvenance = evidence.provenance.trim();
+  if (!normalizedProvenance) {
+    throw new Error(`EvidenceExcerpt ${source}/${review} requires non-empty provenance.`);
+  }
+  const confirmed = review === "Confirmed";
+
+  return (
+    <figure
+      data-v3-component="EvidenceExcerpt"
+      data-v3-source={source}
+      data-v3-review={review}
+      data-s228-evidence-excerpt
+      aria-label={`${title} · ${presentation.label}`}
+      className={`flex w-full flex-col gap-3 rounded-[var(--v3-radius-card)] border p-6 ${presentation.shellClassName} ${confirmed ? "border-[var(--color-border-stable)]" : "border-[var(--color-border-default)]"}`}
+    >
+      <span aria-hidden="true" className={`h-[3px] w-full rounded-[var(--v3-radius-mark)] ${presentation.markClassName}`} />
+      <figcaption className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <span className={`v3-type-label-strong ${presentation.titleClassName}`}>{title}</span>
+        <span className="v3-type-label flex flex-wrap items-center gap-1.5 text-[var(--color-text-secondary)]">
+          <span>{presentation.label}</span>
+          <span aria-hidden="true">·</span>
+          <span className={confirmed ? "text-[var(--color-text-stable)]" : undefined}>
+            {confirmed ? "확인됨" : "확인 필요"}
+          </span>
+        </span>
+      </figcaption>
+      <blockquote
+        className="v3-prose whitespace-pre-wrap break-words text-[var(--color-text-primary)]"
+        data-v3-typography-role="prose"
+      >
+        {normalizedBody ?? "기록된 내용이 없습니다."}
+      </blockquote>
+      <p className={`v3-type-label ko-keep ${confirmed ? "text-[var(--color-text-stable)]" : "text-[var(--color-text-secondary)]"}`}>
+        {normalizedProvenance}
+      </p>
+    </figure>
+  );
+}
+
+function UntypedReferenceDisclosure({
+  title,
   sourceLabel,
   excerpt,
-  openByDefault = false,
 }: {
   title: string;
   sourceLabel: string;
   excerpt?: string | null;
-  openByDefault?: boolean;
 }) {
   const body = normalizedExcerpt(excerpt);
 
   return (
     <details
       data-s228-evidence-excerpt
+      data-s228-evidence-disclosure
       className="group rounded-[var(--ledger-radius-card)] border border-[var(--border-subtle)] bg-[var(--bg-surface)]"
-      open={openByDefault}
     >
       <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]">
         <span className="v3-type-compact font-semibold text-[var(--text-primary)]">{title}</span>
@@ -368,14 +575,14 @@ export function StudyLedgerDetail({
       : learnerConfirmed
         ? "ready"
         : "attention";
-  const stateLabel =
-    state === "completed"
-      ? "복습 완료"
-      : state === "scheduled"
-        ? "복습 예정"
-        : state === "ready"
-          ? "다시 쓰기 준비"
-          : "확인 필요";
+  // Workflow completion is not the same as stable learning. Without two
+  // distinct-day retrieval successes, the evidence-backed state stays
+  // conservative: unverified or recovering.
+  const stateChipState: StateChipState = state === "attention" ? "Unverified" : "Recovering";
+  const stateEvidence = buildLedgerStateEvidence({ state, reviewQueueCount, nextReviewDate });
+  const stateChipEvidence: StateChipEvidence = stateChipState === "Unverified"
+    ? { state: "Unverified", basis: "missing-confirmation", detail: stateEvidence }
+    : { state: "Recovering", basis: "recovery-observed", detail: stateEvidence };
   const actionHref =
     "/app/capture?mode=second&rewriteFrom=" + encodeURIComponent(rewriteFromItemId ?? itemId);
   const visibleTerms = keyTerms.filter(Boolean).slice(0, 5);
@@ -397,7 +604,11 @@ export function StudyLedgerDetail({
           학습 원장으로 돌아가기
         </Link>
         <div className="mt-3 flex flex-wrap items-center gap-3">
-          <StateChip state={state}>{stateLabel}</StateChip>
+          <StateChip
+            evidence={stateChipEvidence}
+            showEvidence={false}
+            legacyState={state}
+          />
           <p className="text-xs font-medium text-[var(--text-tertiary)]">
             {subject} · {formatRecordDate(createdAt)}
           </p>
@@ -431,7 +642,18 @@ export function StudyLedgerDetail({
             )
           ) : null}
 
-          <BiggestGap gap={biggestGap} nextAction={nextAction} />
+          <BiggestGap gap={biggestGap} evidence={stateEvidence} />
+
+          <section
+            data-s228-next-action
+            className="border-b border-[var(--border-subtle)] pb-6"
+            aria-labelledby="study-ledger-next-action"
+          >
+            <h2 id="study-ledger-next-action" className="v3-type-label-strong text-[var(--color-text-secondary)]">
+              다음 행동
+            </h2>
+            <p className="v3-type-body ko-keep mt-2 text-[var(--color-text-primary)]">{nextAction}</p>
+          </section>
 
           <section className="border-y border-[var(--border-subtle)] py-6" aria-labelledby="study-ledger-application">
             <p className="text-xs font-semibold tracking-[0.12em] text-[var(--text-secondary)]">APPLICATION</p>
@@ -496,17 +718,25 @@ export function StudyLedgerDetail({
             <StudyLedgerEvidenceEmpty />
           ) : (
             <>
-              <EvidenceExcerpt
-                title="내가 남긴 답안"
-                sourceLabel="학습자 입력"
-                excerpt={learnerEvidence}
-                openByDefault
-              />
-              <EvidenceExcerpt
-                title="비교 근거"
-                sourceLabel="참고용 · 원 출처 확인"
-                excerpt={referenceEvidence}
-              />
+              {learnerEvidence ? (
+                <EvidenceExcerpt
+                  title="내가 쓴 핵심"
+                  body={learnerEvidence}
+                  evidence={{
+                    source: "Learner",
+                    sourceBasis: "learner-authored",
+                    review: "Default",
+                    provenance: `학습자 작성 · ${formatRecordDate(createdAt)}`,
+                  }}
+                />
+              ) : null}
+              {referenceEvidence ? (
+                <UntypedReferenceDisclosure
+                  title="비교 근거"
+                  sourceLabel="참고용 근거 · 원 출처 확인"
+                  excerpt={referenceEvidence}
+                />
+              ) : null}
             </>
           )}
           {reviewHref || calculatorHref || writeHref ? (
