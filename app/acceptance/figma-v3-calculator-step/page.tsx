@@ -102,7 +102,7 @@ export default function S232C1CalculatorStepAcceptancePage() {
             stateEvidence={{ kind: "active-step", active: true }}
             stepLabel="3 / 5 · 계산기 입력"
             displayValue="입력 후  EXE"
-            keySequence="1 2 0 0 0 0 0 0 0 ÷ 0 . 0 5 5 EXE"
+            keySequence="1 2 0 0 0 0 0 0 0  ÷  0 . 0 5 5  EXE"
             hint="0.55가 아니라 0.055인지 확인하세요."
             showHint
             showStateLabel={false}
