@@ -182,6 +182,9 @@ test("S232A QA evidence records source nodes, rollout boundary, and privacy boun
   assert.match(authRuntimeSpec, /expect\(ledgerDetailAvailable\)\.toBe\(true\)/);
   assert.match(authRuntimeSpec, /fontSize:\s*"13px", fontWeight:\s*"500", lineHeight:\s*"20px"/);
   assert.match(workflow, /pull_request\.number == 576/);
+  assert.match(workflow, /pull_request\.number == 579/);
+  assert.match(workflow, /agent\/s232a1-runtime-mono-hardening/);
+  assert.match(workflow, /inverge-git-agent-s232a1-runtime-7a5613-chachathecats-projects\.vercel\.app/);
   assert.match(workflow, /run-s232a-auth-e2e/);
   assert.match(workflow, /deploymentSha !== process\.env\.EXPECTED_SHA/);
   assert.match(workflow, /s232a-runtime\.json/);
