@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { BiggestGap } from "@/components/learner";
 import { LocalBetaNotesSection } from "@/components/review-os/local-beta-note-reflection";
+import { ReviewOsAccessState } from "@/components/review-os/review-os-access-state";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { getModeConfig, resolveAppraisalMode, type AppraisalMode } from "@/lib/review-os/appraisal";
@@ -143,7 +144,8 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
   const query = await searchParams;
   const modeParam = query?.mode;
   const savedParam = query?.saved;
-  const { session, profile } = await getReviewOsServerContext(buildReviewOsReturnTo(routePath, modeParam));
+  const { session, access, profile } = await getReviewOsServerContext(buildReviewOsReturnTo(routePath, modeParam));
+  if (access.status !== "allowed") return <ReviewOsAccessState access={access} embedded />;
   if (!session.userId || !session.email) return null;
 
   const mode = resolveAppraisalMode(profile, modeParam);

@@ -86,11 +86,15 @@ test("/exams remains a two-track learner selection surface for closed beta", () 
 
 test("access/onboarding route sources keep invite-only learner access and admin boundaries", async () => {
   const layout = read("app/app/layout.tsx");
-  assert.ok(layout.includes("if (!access?.allowed)"));
-  assert.ok(layout.includes("아직 초대 승인 전입니다."));
-  assert.ok(layout.includes("답안길"));
-  assert.ok(layout.includes("감정평가사 2차"));
-  assert.ok(layout.includes("오늘 할 일에서 바로 이어서 사용할 수 있습니다."));
+  const accessState = read("components/review-os/review-os-access-state.tsx");
+  assert.ok(layout.includes('if (access.status !== "allowed")'));
+  assert.ok(layout.includes("<ReviewOsAccessState access={access} />"));
+  assert.ok(accessState.includes('if (access.status === "unavailable")'));
+  assert.ok(accessState.includes("<AccessCheckUnavailableState embedded={embedded} />"));
+  assert.ok(accessState.includes("아직 초대 승인 전입니다."));
+  assert.ok(accessState.includes("답안길"));
+  assert.ok(accessState.includes("감정평가사 2차"));
+  assert.ok(accessState.includes("오늘 할 일에서 바로 이어서 사용할 수 있습니다."));
 
   const repository = read("lib/review-os/repository.ts");
   assert.ok(repository.includes('allowed: inviteStatus === "invited" || inviteStatus === "active"'));

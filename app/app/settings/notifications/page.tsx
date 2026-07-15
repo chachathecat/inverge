@@ -1,4 +1,5 @@
 import { NotificationSettingsClient } from "@/components/notifications/notification-settings-client";
+import { ReviewOsAccessState } from "@/components/review-os/review-os-access-state";
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
 
 type PageProps = {
@@ -7,7 +8,8 @@ type PageProps = {
 
 export default async function NotificationSettingsPage({ searchParams }: PageProps) {
   const modeParam = (await searchParams)?.mode;
-  await getReviewOsServerContext(buildReviewOsReturnTo("/app/settings/notifications", modeParam));
+  const { access } = await getReviewOsServerContext(buildReviewOsReturnTo("/app/settings/notifications", modeParam));
+  if (access.status !== "allowed") return <ReviewOsAccessState access={access} embedded />;
 
   return (
     <div className="space-y-5">

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { WrongAnswerCaptureForm } from "@/components/review-os/capture-form";
 import { ReviewOsFeedbackButton } from "@/components/review-os/feedback-button";
+import { ReviewOsAccessState } from "@/components/review-os/review-os-access-state";
 import { DailyCommandCard, MinimalStepPanel, QuietDetails } from "@/components/review-os/minimal-study-system";
 import { resolveAppraisalMode } from "@/lib/review-os/appraisal";
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
@@ -13,7 +14,8 @@ type PageProps = {
 
 export default async function ReviewOsWritePage({ searchParams }: PageProps) {
   const modeParam = (await searchParams)?.mode;
-  const { session, profile } = await getReviewOsServerContext(buildReviewOsReturnTo("/app/write", modeParam));
+  const { session, access, profile } = await getReviewOsServerContext(buildReviewOsReturnTo("/app/write", modeParam));
+  if (access.status !== "allowed") return <ReviewOsAccessState access={access} embedded />;
   if (!session.userId) return null;
 
   const mode = resolveAppraisalMode(profile, modeParam);

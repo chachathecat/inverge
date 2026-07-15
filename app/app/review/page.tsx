@@ -3,6 +3,7 @@ import { ClosedBetaBanner } from "@/components/shared/closed-beta-banner";
 import { LocalBetaReviewCandidateSection } from "@/components/review-os/local-beta-note-reflection";
 import { CalculatorRoutineReviewCandidates } from "@/components/review-os/calculator-routine-review-candidates";
 import { ReviewQueueClient } from "@/components/review-os/review-queue-client";
+import { ReviewOsAccessState } from "@/components/review-os/review-os-access-state";
 import { getModeConfig, resolveAppraisalMode } from "@/lib/review-os/appraisal";
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
 import { reviewOsService } from "@/lib/review-os/service";
@@ -14,7 +15,8 @@ type PageProps = {
 
 export default async function ReviewOsReviewPage({ searchParams }: PageProps) {
   const modeParam = (await searchParams)?.mode;
-  const { session, profile } = await getReviewOsServerContext(buildReviewOsReturnTo("/app/review", modeParam));
+  const { session, access, profile } = await getReviewOsServerContext(buildReviewOsReturnTo("/app/review", modeParam));
+  if (access.status !== "allowed") return <ReviewOsAccessState access={access} embedded />;
   if (!session.userId || !session.email) return null;
 
   const mode = resolveAppraisalMode(profile, modeParam);

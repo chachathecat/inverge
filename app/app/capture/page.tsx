@@ -1,5 +1,6 @@
 import { WrongAnswerCaptureForm } from "@/components/review-os/capture-form";
 import { ReviewOsFeedbackButton } from "@/components/review-os/feedback-button";
+import { ReviewOsAccessState } from "@/components/review-os/review-os-access-state";
 import { normalizeSubjectForMode, resolveAppraisalMode } from "@/lib/review-os/appraisal";
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
 import { reviewOsService } from "@/lib/review-os/service";
@@ -13,7 +14,8 @@ export default async function ReviewOsCapturePage({ searchParams }: PageProps) {
   const query = await searchParams;
   const modeParam = query?.mode;
   const rewriteFrom = typeof query?.rewriteFrom === "string" ? query.rewriteFrom : "";
-  const { session, profile } = await getReviewOsServerContext(buildReviewOsReturnTo("/app/capture", modeParam));
+  const { session, access, profile } = await getReviewOsServerContext(buildReviewOsReturnTo("/app/capture", modeParam));
+  if (access.status !== "allowed") return <ReviewOsAccessState access={access} embedded />;
   if (!session.userId) return null;
 
   const mode = resolveAppraisalMode(profile, modeParam);

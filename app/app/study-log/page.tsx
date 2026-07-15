@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { StudyLogIntakeForm } from "@/components/review-os/study-log-intake-form";
+import { ReviewOsAccessState } from "@/components/review-os/review-os-access-state";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getModeConfig, normalizeSubjectForMode, resolveAppraisalMode } from "@/lib/review-os/appraisal";
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
@@ -12,7 +13,8 @@ type PageProps = {
 export default async function StudyLogPage({ searchParams }: PageProps) {
   const query = await searchParams;
   const modeParam = query?.mode;
-  const { session, profile } = await getReviewOsServerContext(buildReviewOsReturnTo("/app/study-log", modeParam));
+  const { session, access, profile } = await getReviewOsServerContext(buildReviewOsReturnTo("/app/study-log", modeParam));
+  if (access.status !== "allowed") return <ReviewOsAccessState access={access} embedded />;
   if (!session.userId) return null;
 
   const mode = resolveAppraisalMode(profile, modeParam);

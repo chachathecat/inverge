@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { FirstSetSolvingForm } from "@/components/review-os/first-set-solving-form";
+import { ReviewOsAccessState } from "@/components/review-os/review-os-access-state";
 import { normalizeSubjectForMode, resolveAppraisalMode } from "@/lib/review-os/appraisal";
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
 
@@ -11,7 +12,8 @@ type PageProps = {
 export default async function FirstSetSolvingPage({ searchParams }: PageProps) {
   const query = await searchParams;
   const modeParam = query?.mode;
-  const { session, profile } = await getReviewOsServerContext(buildReviewOsReturnTo("/app/sets", modeParam));
+  const { session, access, profile } = await getReviewOsServerContext(buildReviewOsReturnTo("/app/sets", modeParam));
+  if (access.status !== "allowed") return <ReviewOsAccessState access={access} embedded />;
   if (!session.userId) return null;
 
   const mode = resolveAppraisalMode(profile, modeParam);

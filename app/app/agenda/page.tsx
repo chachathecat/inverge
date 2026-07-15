@@ -1,5 +1,6 @@
 import { LearningAgendaClient } from "@/components/review-os/learning-agenda-client";
 import { ReviewOsFeedbackButton } from "@/components/review-os/feedback-button";
+import { ReviewOsAccessState } from "@/components/review-os/review-os-access-state";
 import { ClosedBetaBanner } from "@/components/shared/closed-beta-banner";
 import { buildLearningAgendaEvents } from "@/lib/review-os/learning-agenda";
 import { getModeConfig, resolveAppraisalMode } from "@/lib/review-os/appraisal";
@@ -13,7 +14,8 @@ type PageProps = {
 export default async function LearningAgendaPage({ searchParams }: PageProps) {
   const query = await searchParams;
   const modeParam = query?.mode;
-  const { session, profile } = await getReviewOsServerContext(buildReviewOsReturnTo("/app/agenda", modeParam));
+  const { session, access, profile } = await getReviewOsServerContext(buildReviewOsReturnTo("/app/agenda", modeParam));
+  if (access.status !== "allowed") return <ReviewOsAccessState access={access} embedded />;
   if (!session.userId || !session.email) return null;
 
   const mode = resolveAppraisalMode(profile, modeParam);
