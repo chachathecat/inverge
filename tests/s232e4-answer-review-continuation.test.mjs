@@ -78,6 +78,16 @@ test("S232E.4 presents rewrite target, instruction, editor, then copy or continu
   assert.match(rewrite, /data-s232e4-copy-or-continue[\s\S]*?answer-review-copy-feedback[\s\S]*?오늘 학습으로 계속/);
   assert.match(rewrite, /data-s232e4-rewrite-guidance[\s\S]*?<CognitiveLearningActionCard/);
   assert.match(rewrite, /role="status" aria-live="polite" aria-atomic="true"/);
+  assert.doesNotMatch(
+    rewrite,
+    /initial=\{shouldReduceMotion \? false : \{ opacity: 0|animate=\{shouldReduceMotion \? undefined/,
+    "rewrite text surfaces must not enter through a transient low-contrast opacity state",
+  );
+  assert.match(
+    source,
+    /currentStep === 3[\s\S]*?transition=\{\{ duration: shouldReduceMotion \? 0 : 0\.32/,
+  );
+  assert.match(rewrite, /transition=\{\{ duration: shouldReduceMotion \? 0 : 0\.28/);
 });
 
 test("S232E.4 preserves service, state, trial, handoff, clipboard, and cognitive contracts", () => {

@@ -1200,10 +1200,9 @@ export default function AnswerReviewClientPage({
           {currentStep === 3 ? (
             <motion.section
               className="space-y-5"
-              initial={shouldReduceMotion ? false : "hidden"}
-              animate={shouldReduceMotion ? undefined : "visible"}
-              variants={SECTION_FADE}
-              transition={{ duration: 0.32, ease: "easeOut" }}
+              initial={shouldReduceMotion ? false : { y: 8 }}
+              animate={{ y: 0 }}
+              transition={{ duration: shouldReduceMotion ? 0 : 0.32, ease: "easeOut" }}
               data-s232e4-answer-review-rewrite="single-paragraph"
             >
               <div className="flex flex-wrap items-start justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4 sm:p-5">
@@ -1224,9 +1223,9 @@ export default function AnswerReviewClientPage({
 
               <motion.article
                 className="space-y-5 rounded-[var(--radius-md)] border border-[color:var(--brand-700)] bg-[color:var(--surface)] p-4 sm:p-6"
-                initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
-                animate={shouldReduceMotion ? undefined : { opacity: 1, y: 0 }}
-                transition={{ duration: 0.28, ease: "easeOut" }}
+                initial={shouldReduceMotion ? false : { y: 8 }}
+                animate={{ y: 0 }}
+                transition={{ duration: shouldReduceMotion ? 0 : 0.28, ease: "easeOut" }}
                 data-s232e4-rewrite-surface
               >
                 <dl className="divide-y divide-[color:var(--border)] rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)]">
