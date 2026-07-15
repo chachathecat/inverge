@@ -170,6 +170,13 @@ test("S232B.2 exact-head Study Ledger action placement and rewrite navigation", 
       const controlRect = controlElement.getBoundingClientRect();
       const actionStyle = getComputedStyle(actionElement);
       const detailStyle = getComputedStyle(detailElement);
+      const shadowColors = actionStyle.boxShadow.match(/rgba?\([^)]+\)/g) ?? [];
+      const boxShadowVisible =
+        actionStyle.boxShadow !== "none" &&
+        shadowColors.some((color) => {
+          const channels = color.match(/[\d.]+/g)?.map(Number) ?? [];
+          return channels.length < 4 || channels[3] > 0;
+        });
       return {
         horizontalOverflow: Math.max(0, document.documentElement.scrollWidth - window.innerWidth),
         componentCount: detailElement.querySelectorAll('[data-v3-component="StickyAction"]').length,
@@ -190,7 +197,7 @@ test("S232B.2 exact-head Study Ledger action placement and rewrite navigation", 
         articleBottomPadding: Number.parseFloat(detailStyle.paddingBottom),
         background: actionStyle.backgroundColor,
         borderTopWidth: actionStyle.borderTopWidth,
-        boxShadow: actionStyle.boxShadow,
+        boxShadowVisible,
       };
     });
     expect(metrics).not.toBeNull();
@@ -215,7 +222,7 @@ test("S232B.2 exact-head Study Ledger action placement and rewrite navigation", 
       expect(metrics?.statusTop).toBeLessThanOrEqual(17);
       expect(metrics?.controlTop).toBeGreaterThanOrEqual(42);
       expect(metrics?.controlTop).toBeLessThanOrEqual(43);
-      expect(metrics?.boxShadow).not.toBe("none");
+      expect(metrics?.boxShadowVisible).toBe(true);
       expect(metrics?.articleBottomPadding).toBeGreaterThanOrEqual(136);
     } else {
       expect(metrics).toMatchObject({
@@ -229,7 +236,7 @@ test("S232B.2 exact-head Study Ledger action placement and rewrite navigation", 
         readingWidth: 680,
         background: "rgba(0, 0, 0, 0)",
         borderTopWidth: "0px",
-        boxShadow: "none",
+        boxShadowVisible: false,
       });
     }
 
