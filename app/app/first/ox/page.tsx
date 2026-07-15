@@ -1,4 +1,5 @@
 import { FirstOxPracticeClient } from "@/components/review-os/first-ox/first-ox-practice-client";
+import { ReviewOsAccessState } from "@/components/review-os/review-os-access-state";
 import { extractFirstExamFiveChoicesFromText, extractFirstOxTrapWords, normalizeFiveChoiceItemToStatements, type FirstExamStatement } from "@/lib/review-os/first-ox-engine";
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
 import { reviewOsService } from "@/lib/review-os/service";
@@ -30,7 +31,8 @@ export default async function FirstOxPracticePage({ searchParams }: PageProps) {
     : sourceItemId
       ? `/app/first/ox?sourceItemId=${encodeURIComponent(sourceItemId)}`
       : buildReviewOsReturnTo("/app/first/ox", "first");
-  const { session } = await getReviewOsServerContext(returnTo);
+  const { session, access } = await getReviewOsServerContext(returnTo);
+  if (access.status !== "allowed") return <ReviewOsAccessState access={access} embedded />;
   const initialState = session.userId && session.email && retryItemId
     ? await loadFirstOxRetryState(session.userId, session.email, retryItemId)
     : session.userId && session.email && sourceItemId

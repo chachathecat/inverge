@@ -1,4 +1,5 @@
 import { ReviewOsFeedbackButton } from "@/components/review-os/feedback-button";
+import { ReviewOsAccessState } from "@/components/review-os/review-os-access-state";
 import { ClosedBetaBanner } from "@/components/shared/closed-beta-banner";
 import { TodaySessionRunner } from "@/components/review-os/today-session-runner";
 import { getModeConfig, resolveAppraisalMode } from "@/lib/review-os/appraisal";
@@ -18,7 +19,8 @@ export default async function ReviewOsSessionPage({ searchParams }: PageProps) {
   const modeParam = query?.mode;
   const savedCapture = query?.savedCapture === "1";
   const savedCaptureItemId = typeof query?.itemId === "string" ? query.itemId : null;
-  const { session, profile } = await getReviewOsServerContext(buildReviewOsReturnTo("/app/session", modeParam));
+  const { session, access, profile } = await getReviewOsServerContext(buildReviewOsReturnTo("/app/session", modeParam));
+  if (access.status !== "allowed") return <ReviewOsAccessState access={access} embedded />;
   if (!session.userId || !session.email) return null;
 
   const mode = resolveAppraisalMode(profile, modeParam);

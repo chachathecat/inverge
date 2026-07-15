@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { ReviewOsAccessState } from "@/components/review-os/review-os-access-state";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -11,6 +12,7 @@ import {
 } from "@/lib/review-os/beginner-first-plan";
 import { type AppraiserExamMode } from "@/lib/review-os/curriculum-reference";
 import { buildExecutionBridge } from "@/lib/review-os/first-plan-execution-bridge";
+import { getReviewOsServerContext } from "@/lib/review-os/server";
 
 const EXAM_MODE_OPTIONS: Array<{ value: AppraiserExamMode; label: string }> = [
   { value: "first", label: "감정평가사 1차" },
@@ -70,6 +72,12 @@ function startHref(examMode: AppraiserExamMode, subjectName: string | null | und
 
 export default async function ReviewOsOnboardingPage({ searchParams }: PageProps) {
   const params = (await searchParams) ?? {};
+  const { access } = await getReviewOsServerContext("/app/onboarding", {
+    includeProfile: false,
+    includeUsage: false,
+  });
+  if (access.status !== "allowed") return <ReviewOsAccessState access={access} embedded />;
+
   const examMode = parseExamMode(firstValue(params.examMode));
   const daysUntilExam = parseDaysUntilExam(firstValue(params.daysUntilExam));
   const dailyAvailableMinutes = parseDailyMinutes(firstValue(params.dailyAvailableMinutes));

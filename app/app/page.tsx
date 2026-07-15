@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { ReviewOsFeedbackButton } from "@/components/review-os/feedback-button";
 import { LocalBetaTodayReflection } from "@/components/review-os/local-beta-note-reflection";
+import { ReviewOsAccessState } from "@/components/review-os/review-os-access-state";
 import { TodaySubjectSelector } from "@/components/review-os/today-first-subject-selector";
 import { EvidenceLine, OneActionFooter } from "@/components/review-os/minimal-study-system";
 import { getModeConfig, normalizeSubjectForMode, resolveAppraisalMode } from "@/lib/review-os/appraisal";
@@ -63,7 +64,8 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
   const subjectParam = query?.subject;
   const savedParam = query?.saved;
   const migratedParam = query?.migrated;
-  const { session, profile } = await getReviewOsServerContext(buildReviewOsReturnTo("/app", modeParam));
+  const { session, access, profile } = await getReviewOsServerContext(buildReviewOsReturnTo("/app", modeParam));
+  if (access.status !== "allowed") return <ReviewOsAccessState access={access} embedded />;
   if (!session.userId || !session.email) return null;
 
   if (!profile && !modeParam) redirect("/app/onboarding");

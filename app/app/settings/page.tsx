@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { ProfileSetupForm } from "@/components/review-os/profile-setup-form";
+import { ReviewOsAccessState } from "@/components/review-os/review-os-access-state";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getEntitlementLimit } from "@/lib/review-os/entitlements";
 import { resolveModeState } from "@/lib/review-os/appraisal";
@@ -13,7 +14,8 @@ type PageProps = {
 export default async function ReviewOsSettingsPage({ searchParams }: PageProps) {
   const modeParam = (await searchParams)?.mode;
   const { access, usage, profile } = await getReviewOsServerContext(buildReviewOsReturnTo("/app/settings", modeParam));
-  const limits = getEntitlementLimit(access?.entitlementTier ?? "free_trial");
+  if (access.status !== "allowed") return <ReviewOsAccessState access={access} embedded />;
+  const limits = getEntitlementLimit(access.access.entitlementTier);
   const modeState = resolveModeState(profile, modeParam);
   const config = modeState.config;
 

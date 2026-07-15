@@ -1,6 +1,7 @@
 import "server-only";
 
 import { consumeRateLimit } from "@/lib/rate-limit";
+import type { ReviewOsAccessResult } from "@/lib/review-os/access-result";
 import { generateWrongAnswerArtifacts } from "@/lib/review-os/ai";
 import {
   getModeConfig,
@@ -816,7 +817,23 @@ export class ReviewOsService {
 
   async getUsageSummary(userId: string, email: string | null): Promise<UsageSummary> {
     const access = await this.ensureAccess(userId, email);
-    const tier = access.entitlementTier;
+    return this.buildUsageSummary(userId, access.entitlementTier);
+  }
+
+  async getUsageSummaryAfterAccessCheck(
+    userId: string,
+    access: ReviewOsAccessResult,
+  ): Promise<UsageSummary> {
+    if (access.status !== "allowed" || !access.access.allowed) {
+      throw new Error("review-os-usage-summary-requires-allowed-access");
+    }
+    return this.buildUsageSummary(userId, access.access.entitlementTier);
+  }
+
+  private async buildUsageSummary(
+    userId: string,
+    tier: AccessState["entitlementTier"],
+  ): Promise<UsageSummary> {
     const limits = getEntitlementLimit(tier);
     const monthlyUsed = await reviewOsRepository.countMonthlyWrongAnswers(userId, getMonthStartIso());
     return {

@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { ReviewOsFeedbackButton } from "@/components/review-os/feedback-button";
+import { ReviewOsAccessState } from "@/components/review-os/review-os-access-state";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getModeConfig, resolveAppraisalMode } from "@/lib/review-os/appraisal";
@@ -15,7 +16,8 @@ type PageProps = {
 
 export default async function ReviewOsWeeklyPage({ searchParams }: PageProps) {
   const modeParam = (await searchParams)?.mode;
-  const { session, profile } = await getReviewOsServerContext(buildReviewOsReturnTo("/app/weekly", modeParam));
+  const { session, access, profile } = await getReviewOsServerContext(buildReviewOsReturnTo("/app/weekly", modeParam));
+  if (access.status !== "allowed") return <ReviewOsAccessState access={access} embedded />;
   if (!session.userId || !session.email) return null;
 
   const mode = resolveAppraisalMode(profile, modeParam);

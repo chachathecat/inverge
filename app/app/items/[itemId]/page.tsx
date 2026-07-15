@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 
 import { StudyLedgerDetail } from "@/components/learner";
 import { ReviewOsFeedbackButton } from "@/components/review-os/feedback-button";
+import { ReviewOsAccessState } from "@/components/review-os/review-os-access-state";
 import { Button } from "@/components/ui/button";
 import { getAppraisalMode, parseAppraisalMode } from "@/lib/review-os/appraisal";
 import {
@@ -25,9 +26,10 @@ type PageProps = {
 
 export default async function ReviewOsItemDetailPage({ params, searchParams }: PageProps) {
   const [{ itemId }, modeParam] = await Promise.all([params, searchParams?.then((value) => value.mode)]);
-  const { session } = await getReviewOsServerContext(
+  const { session, access } = await getReviewOsServerContext(
     buildReviewOsReturnTo(`/app/items/${itemId}`, modeParam),
   );
+  if (access.status !== "allowed") return <ReviewOsAccessState access={access} embedded />;
   if (!session.userId || !session.email) return null;
 
   const detail = await reviewOsService.getWrongAnswerDetail(session.userId, session.email, itemId);
