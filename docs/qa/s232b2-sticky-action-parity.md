@@ -29,7 +29,7 @@ Inline is left-aligned, 300×84, transparent, and has no border or shadow. Its s
 
 Production renders exactly one responsive component:
 
-- below 1024px: viewport-bottom Dock, full width, 20px horizontal content edges, safe-area-aware bottom padding
+- below 1024px: viewport-bottom Dock, full width, 20px minimum horizontal edges with left/right safe-area coverage, and safe-area-aware bottom padding
 - at or above 1024px: static 300px Inline at the end of the 680px reading column
 
 The mobile article reserves the Dock height plus safe-area space so the final content and keyboard focus are not obscured. The desktop component is not sticky and is not in the 288px evidence rail.
@@ -70,6 +70,10 @@ This keeps the original rewrite source preference and existing session/ownership
 
 - source contract: `tests/s232b2-sticky-action-parity.test.mjs`
 - Preview-only synthetic matrix: `/acceptance/figma-v3-sticky-action`
+- browser contract: `tests/e2e/s232b2-sticky-action.spec.ts`
+- authenticated contract: `tests/e2e/s232b2-authenticated-runtime.spec.ts`
+- exact-head workflow: `.github/workflows/s232b2-runtime.yml`
+- stable Preview alias: `inverge-git-agent-s232b2-sticky-a-8decab-chachathecats-projects.vercel.app`
 - exact Cartesian matrix: both modes and all four states
 - target viewports: 390px, 768px, 1440px, plus a 720px desktop-200%-reflow equivalent
 - authenticated Study Ledger: one action, mobile Dock, desktop Inline, Tab focus, Enter navigation, preserved `mode=second` and `rewriteFrom`, visible rewrite context
