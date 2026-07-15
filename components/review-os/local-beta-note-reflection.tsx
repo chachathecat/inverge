@@ -4,7 +4,15 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { type AppraisalMode } from "@/lib/review-os/appraisal";
-import { listReviewOsLocalBetaNotes, type LocalBetaLearnerNote } from "@/lib/review-os/browser-storage";
+import {
+  createCheckingLocalBetaNotesReadOutcome,
+  listReviewOsLocalBetaNotesWithStatus,
+  scopeLocalBetaNotesReadOutcome,
+  selectLocalBetaNotesReadOutcomeForMode,
+  type LocalBetaLearnerNote,
+  type ModeScopedLocalBetaNotesReadOutcome,
+} from "@/lib/review-os/browser-storage";
+import { CoreRouteLocalReadDegradedNotice } from "@/components/review-os/core-route-read-state";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 type LocaleDate = string;
@@ -40,12 +48,22 @@ function modeNoteTitle(mode: AppraisalMode) {
 }
 
 function useClientLocalBetaNotes(mode: AppraisalMode) {
-  const [notes, setNotes] = useState<LocalBetaLearnerNote[]>([]);
+  const [storedOutcome, setStoredOutcome] =
+    useState<ModeScopedLocalBetaNotesReadOutcome>(() =>
+      createCheckingLocalBetaNotesReadOutcome(mode),
+    );
 
   useEffect(() => {
-    const nextNotes = listReviewOsLocalBetaNotes(mode).slice(0, 3);
     const timeoutId = window.setTimeout(() => {
-      setNotes(nextNotes);
+      const nextOutcome = listReviewOsLocalBetaNotesWithStatus(mode);
+      setStoredOutcome(
+        scopeLocalBetaNotesReadOutcome(
+          mode,
+          nextOutcome.status === "ready"
+            ? { status: "ready", notes: nextOutcome.notes.slice(0, 3) }
+            : nextOutcome,
+        ),
+      );
     }, 0);
 
     return () => {
@@ -53,7 +71,7 @@ function useClientLocalBetaNotes(mode: AppraisalMode) {
     };
   }, [mode]);
 
-  return notes;
+  return selectLocalBetaNotesReadOutcomeForMode(storedOutcome, mode);
 }
 
 function LocalBetaCaptureNoteList({
@@ -64,6 +82,8 @@ function LocalBetaCaptureNoteList({
   showAction,
   emptyMessage,
   emptyActionLabel,
+  readStatus,
+  showReadUnavailableNotice,
 }: {
   notes: LocalBetaLearnerNote[];
   mode: AppraisalMode;
@@ -72,7 +92,16 @@ function LocalBetaCaptureNoteList({
   showAction: boolean;
   emptyMessage?: string | null;
   emptyActionLabel?: string;
+  readStatus: "checking" | "ready" | "unavailable";
+  showReadUnavailableNotice: boolean;
 }) {
+  if (readStatus === "checking") return null;
+  if (readStatus === "unavailable") {
+    return showReadUnavailableNotice ? (
+      <CoreRouteLocalReadDegradedNotice coreRecordsVisible />
+    ) : null;
+  }
+
   if (notes.length === 0) {
     if (!emptyMessage) return null;
     return (
@@ -135,17 +164,27 @@ function LocalBetaCaptureNoteList({
   );
 }
 
-export function LocalBetaNotesSection({ mode }: { mode: AppraisalMode }) {
-  const notes = useClientLocalBetaNotes(mode);
+export function LocalBetaNotesSection({
+  mode,
+  showEmptyMessage = true,
+  showReadUnavailableNotice = true,
+}: {
+  mode: AppraisalMode;
+  showEmptyMessage?: boolean;
+  showReadUnavailableNotice?: boolean;
+}) {
+  const outcome = useClientLocalBetaNotes(mode);
 
   return (
     <LocalBetaCaptureNoteList
-      notes={notes}
+      notes={outcome.notes}
       mode={mode}
       title={modeNoteTitle(mode)}
       subtitle="저장한 오늘 한 것의 가장 큰 약점과 다음 행동을 확인합니다."
       showAction
-      emptyMessage="아직 이 브라우저에 저장된 학습 노트가 없습니다. 오늘 한 것을 저장하면 학습 노트에서 찾고 복습, 오늘 할 일, 학습 기록으로 이어집니다."
+      emptyMessage={showEmptyMessage ? "아직 이 브라우저에 저장된 학습 노트가 없습니다. 오늘 한 것을 저장하면 학습 노트에서 찾고 복습, 오늘 할 일, 학습 기록으로 이어집니다." : null}
+      readStatus={outcome.status}
+      showReadUnavailableNotice={showReadUnavailableNotice}
     />
   );
 }
@@ -153,37 +192,55 @@ export function LocalBetaNotesSection({ mode }: { mode: AppraisalMode }) {
 export function LocalBetaReviewCandidateSection({
   mode,
   hasDurableQueue,
+  showEmptyMessage = true,
+  showReadUnavailableNotice = true,
 }: {
   mode: AppraisalMode;
   hasDurableQueue: boolean;
+  showEmptyMessage?: boolean;
+  showReadUnavailableNotice?: boolean;
 }) {
-  const notes = useClientLocalBetaNotes(mode);
+  const outcome = useClientLocalBetaNotes(mode);
 
   return (
     <LocalBetaCaptureNoteList
-      notes={notes}
+      notes={outcome.notes}
       mode={mode}
       title="오늘 한 것에서 남긴 복습"
       subtitle="저장한 학습 노트에서 다시 보기나 다시쓰기로 이어갈 내용을 모아둡니다."
       showAction
-      emptyMessage={hasDurableQueue ? undefined : "아직 복습에 남긴 내용이 없습니다. 오늘 한 것 1개를 저장하면 가장 큰 약점과 다음 행동이 복습으로 이어집니다."}
+      emptyMessage={hasDurableQueue || !showEmptyMessage ? undefined : "아직 복습에 남긴 내용이 없습니다. 오늘 한 것 1개를 저장하면 가장 큰 약점과 다음 행동이 복습으로 이어집니다."}
+      readStatus={outcome.status}
+      showReadUnavailableNotice={showReadUnavailableNotice}
     />
   );
 }
 
-export function LocalBetaTodayReflection({ mode, hasDurableSummary }: { mode: AppraisalMode; hasDurableSummary: boolean }) {
-  const notes = useClientLocalBetaNotes(mode);
+export function LocalBetaTodayReflection({
+  mode,
+  hasDurableSummary,
+  showEmptyMessage = true,
+  showReadUnavailableNotice = true,
+}: {
+  mode: AppraisalMode;
+  hasDurableSummary: boolean;
+  showEmptyMessage?: boolean;
+  showReadUnavailableNotice?: boolean;
+}) {
+  const outcome = useClientLocalBetaNotes(mode);
 
-  if (hasDurableSummary) return null;
+  if (hasDurableSummary && outcome.status !== "unavailable") return null;
 
   return (
     <LocalBetaCaptureNoteList
-      notes={notes}
+      notes={outcome.notes}
       mode={mode}
       title="오늘 계획에 반영"
       subtitle="오늘 할 일에 이어갈 최근 학습 노트입니다."
       showAction={false}
-      emptyMessage="오늘 한 것 1개를 올리면 오늘 할 일에 반영됩니다."
+      emptyMessage={showEmptyMessage ? "오늘 한 것 1개를 올리면 오늘 할 일에 반영됩니다." : null}
+      readStatus={outcome.status}
+      showReadUnavailableNotice={showReadUnavailableNotice}
     />
   );
 }

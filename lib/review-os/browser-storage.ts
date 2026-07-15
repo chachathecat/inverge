@@ -55,21 +55,102 @@ export type LocalBetaLearnerNote = {
 };
 
 const LOCAL_BETA_NOTES_KEY = `${PREFIX}:local-beta-notes`;
+const LOCAL_BETA_NOTE_KEYS = new Set([
+  "id",
+  "mode",
+  "subjectLabel",
+  "sourceType",
+  "problemTitle",
+  "biggestGap",
+  "nextAction",
+  "createdAt",
+  "metadataOnly",
+  "safeUse",
+]);
+const LOCAL_BETA_NOTE_MODES = new Set(["first", "second"]);
+const LOCAL_BETA_NOTE_SOURCE_TYPES = new Set(["text", "photo", "pdf"]);
 
-function readLocalBetaNotes() {
-  if (typeof window === "undefined") return [] as LocalBetaLearnerNote[];
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function isLocalBetaLearnerNote(value: unknown): value is LocalBetaLearnerNote {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const note = value as Record<string, unknown>;
+  if (Object.keys(note).some((key) => !LOCAL_BETA_NOTE_KEYS.has(key))) return false;
+  return (
+    isNonEmptyString(note.id) &&
+    isNonEmptyString(note.mode) &&
+    LOCAL_BETA_NOTE_MODES.has(note.mode) &&
+    isNonEmptyString(note.subjectLabel) &&
+    (note.sourceType === undefined ||
+      (isNonEmptyString(note.sourceType) && LOCAL_BETA_NOTE_SOURCE_TYPES.has(note.sourceType))) &&
+    (note.problemTitle === undefined || isNonEmptyString(note.problemTitle)) &&
+    isNonEmptyString(note.biggestGap) &&
+    isNonEmptyString(note.nextAction) &&
+    isNonEmptyString(note.createdAt) &&
+    note.metadataOnly === true &&
+    note.safeUse === "closed_beta_local_note"
+  );
+}
+
+export type LocalBetaNotesReadOutcome =
+  | Readonly<{ status: "ready"; notes: LocalBetaLearnerNote[] }>
+  | Readonly<{ status: "unavailable"; notes: [] }>;
+
+export type ModeScopedLocalBetaNotesReadOutcome =
+  | Readonly<{ mode: string; status: "checking"; notes: [] }>
+  | Readonly<{ mode: string; status: "ready"; notes: LocalBetaLearnerNote[] }>
+  | Readonly<{ mode: string; status: "unavailable"; notes: [] }>;
+
+export function createCheckingLocalBetaNotesReadOutcome(
+  mode: string,
+): ModeScopedLocalBetaNotesReadOutcome {
+  return { mode, status: "checking", notes: [] };
+}
+
+export function scopeLocalBetaNotesReadOutcome(
+  mode: string,
+  outcome: LocalBetaNotesReadOutcome,
+): ModeScopedLocalBetaNotesReadOutcome {
+  return outcome.status === "ready"
+    ? { mode, status: "ready", notes: outcome.notes }
+    : { mode, status: "unavailable", notes: [] };
+}
+
+export function selectLocalBetaNotesReadOutcomeForMode(
+  outcome: ModeScopedLocalBetaNotesReadOutcome,
+  mode: string,
+): ModeScopedLocalBetaNotesReadOutcome {
+  return outcome.mode === mode
+    ? outcome
+    : createCheckingLocalBetaNotesReadOutcome(mode);
+}
+
+export function listReviewOsLocalBetaNotesWithStatus(mode?: string): LocalBetaNotesReadOutcome {
+  if (typeof window === "undefined") return { status: "ready", notes: [] };
   try {
     const raw = window.localStorage.getItem(LOCAL_BETA_NOTES_KEY);
-    return raw ? (JSON.parse(raw) as LocalBetaLearnerNote[]) : [];
+    const parsed: unknown = raw === null ? [] : JSON.parse(raw);
+    if (!Array.isArray(parsed) || !parsed.every(isLocalBetaLearnerNote)) {
+      return { status: "unavailable", notes: [] };
+    }
+    const notes = parsed;
+    return {
+      status: "ready",
+      notes: mode ? notes.filter((note) => note.mode === mode) : notes,
+    };
   } catch {
-    return [];
+    return { status: "unavailable", notes: [] };
   }
 }
 
+function readLocalBetaNotes() {
+  return listReviewOsLocalBetaNotesWithStatus().notes;
+}
+
 export function listReviewOsLocalBetaNotes(mode?: string) {
-  const notes = readLocalBetaNotes();
-  if (!mode) return notes;
-  return notes.filter((note) => note.mode === mode);
+  return listReviewOsLocalBetaNotesWithStatus(mode).notes;
 }
 
 export function getReviewOsLocalBetaNote(id: string) {
@@ -97,8 +178,14 @@ export function saveReviewOsLocalBetaNoteWithStatus(note: Omit<LocalBetaLearnerN
   let savedToBrowser = false;
   if (typeof window !== "undefined") {
     try {
-      const notes = readLocalBetaNotes();
-      window.localStorage.setItem(LOCAL_BETA_NOTES_KEY, JSON.stringify([localNote, ...notes].slice(0, 20)));
+      const existing = listReviewOsLocalBetaNotesWithStatus();
+      if (existing.status !== "ready") {
+        return { note: localNote, savedToBrowser };
+      }
+      window.localStorage.setItem(
+        LOCAL_BETA_NOTES_KEY,
+        JSON.stringify([localNote, ...existing.notes].slice(0, 20)),
+      );
       savedToBrowser = true;
     } catch {
       // ignore browser storage failures

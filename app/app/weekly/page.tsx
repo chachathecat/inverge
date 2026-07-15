@@ -2,9 +2,19 @@ import Link from "next/link";
 
 import { ReviewOsFeedbackButton } from "@/components/review-os/feedback-button";
 import { ReviewOsAccessState } from "@/components/review-os/review-os-access-state";
-import { Button } from "@/components/ui/button";
+import {
+  CoreRouteReadDegradedNotice,
+  CoreRouteReadEmptyShell,
+  CoreRouteReadErrorPage,
+} from "@/components/review-os/core-route-read-state";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getModeConfig, resolveAppraisalMode } from "@/lib/review-os/appraisal";
+import {
+  countDegradedCoreRouteReads,
+  resolveEssentialCoreRouteRead,
+  resolveOptionalCoreRouteRead,
+} from "@/lib/review-os/core-route-read-outcome";
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
 import { reviewOsService } from "@/lib/review-os/service";
 import { buildPersonalWeaknessProfile } from "@/lib/review-os/weakness-diagnostics";
@@ -22,12 +32,82 @@ export default async function ReviewOsWeeklyPage({ searchParams }: PageProps) {
 
   const mode = resolveAppraisalMode(profile, modeParam);
   const config = getModeConfig(mode);
-  const plan = await reviewOsService.getWeeklyPlan(session.userId, session.email, mode);
-  const [learningSignalSummary, learningSignalEvents, focus] = await Promise.all([
-    reviewOsService.getLearningSignalSummary(session.userId, session.email, mode).catch(() => null),
-    reviewOsService.listLearningSignalEvents(session.userId, session.email, mode, 10).catch(() => []),
-    reviewOsService.getTodayFocus(session.userId, session.email, mode).catch(() => ({ queue: [] })),
+  const planRead = await resolveEssentialCoreRouteRead("weekly_plan", () =>
+    reviewOsService.getWeeklyPlan(session.userId!, session.email!, mode),
+  );
+  if (planRead.status !== "ready") {
+    return <CoreRouteReadErrorPage surface="weekly" />;
+  }
+  const plan = planRead.value;
+  const [learningSignalSummaryRead, learningSignalEventsRead, focusRead] = await Promise.all([
+    resolveOptionalCoreRouteRead<
+      Awaited<ReturnType<typeof reviewOsService.getLearningSignalSummary>> | null
+    >(
+      "weekly_learning_signal_summary",
+      () => reviewOsService.getLearningSignalSummary(session.userId!, session.email!, mode),
+      () => null,
+    ),
+    resolveOptionalCoreRouteRead(
+      "weekly_learning_signal_events",
+      () => reviewOsService.listLearningSignalEvents(session.userId!, session.email!, mode, 10),
+      () => [],
+    ),
+    resolveOptionalCoreRouteRead<
+      Pick<Awaited<ReturnType<typeof reviewOsService.getTodayFocus>>, "queue">
+    >(
+      "weekly_focus",
+      () => reviewOsService.getTodayFocus(session.userId!, session.email!, mode),
+      () => ({ queue: [] }),
+    ),
   ]);
+  const learningSignalSummary = learningSignalSummaryRead.value;
+  const learningSignalEvents = learningSignalEventsRead.value;
+  const focus = focusRead.value;
+  const degradedReadCount = countDegradedCoreRouteReads([
+    learningSignalSummaryRead,
+    learningSignalEventsRead,
+    focusRead,
+  ]);
+  const inputStartHref = `/app/capture?mode=${mode}`;
+
+  if (plan.tasks.length === 0) {
+    return (
+      <CoreRouteReadEmptyShell
+        surface="weekly"
+        mode={mode}
+        degradedCount={degradedReadCount}
+        includeBrowserLocalRecords={false}
+        confirmedEmptyContent={(
+          <section
+            className="space-y-4 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] p-4"
+            aria-label="이번 주 계획 시작 안내"
+            data-s232f4b-weekly-confirmed-empty
+          >
+            <p className="text-sm leading-7 text-[color:var(--muted)]">
+              {config.emptyDescription}
+            </p>
+            <p className="text-sm leading-7 text-[color:var(--foreground-strong)]">
+              {mode === "second"
+                ? "오늘은 답안 1건만 입력해 주간 계획의 기준점을 만듭니다."
+                : "오늘은 오답 1건만 입력해 주간 계획의 기준점을 만듭니다."}
+            </p>
+            <Link
+              href={inputStartHref}
+              className={buttonVariants({ className: "w-full sm:w-auto" })}
+            >
+              {config.primaryCta}
+            </Link>
+          </section>
+        )}
+      >
+        <ReviewOsFeedbackButton
+          route="/app/weekly"
+          pageContext={{ mode, taskCount: 0, hasRecovery: false, overdueCount: 0 }}
+        />
+      </CoreRouteReadEmptyShell>
+    );
+  }
+
   const weaknessProfile = buildPersonalWeaknessProfile({
     learningSignalSummary,
     learningSignalEvents,
@@ -36,11 +116,11 @@ export default async function ReviewOsWeeklyPage({ searchParams }: PageProps) {
   });
   const visibleTasks = plan.tasks.slice(0, 3);
   const primaryTask = plan.recovery?.task ?? plan.tasks[0] ?? null;
-  const inputStartHref = `/app/capture?mode=${mode}`;
   const primaryHref = primaryTask ? `/app/review?mode=${mode}` : inputStartHref;
 
   return (
     <div className="space-y-6 sm:space-y-7">
+      <CoreRouteReadDegradedNotice count={degradedReadCount} />
       <Card className="border-[color:var(--border-strong)] bg-[color:var(--surface)] shadow-none">
         <CardHeader className="space-y-3 p-4 sm:p-6">
           <div className="rounded-[var(--radius-md)] border border-[color:var(--brand-700)] bg-[color:var(--brand-050)] px-4 py-3">
@@ -63,30 +143,16 @@ export default async function ReviewOsWeeklyPage({ searchParams }: PageProps) {
             </div>
           ) : null}
 
-          {visibleTasks.length > 0 ? (
-            <div className="space-y-3">
-              {visibleTasks.map((task) => (
-                <WeeklyTaskItem key={task.queueId} task={task} />
-              ))}
-              {plan.tasks.length > 3 ? (
-                <p className="text-xs leading-5 text-[color:var(--muted)]">
-                  이번 주 작업은 최대 3개만 먼저 제시합니다. 나머지는 첫 작업 완료 후 자동으로 이어집니다.
-                </p>
-              ) : null}
-            </div>
-          ) : (
-            <div className="space-y-4 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] p-4">
-              <p className="text-sm leading-7 text-[color:var(--muted)]">{config.emptyDescription}</p>
-              <p className="text-sm leading-7 text-[color:var(--foreground-strong)]">
-                {mode === "second"
-                  ? "오늘은 답안 1건만 입력해 주간 계획의 기준점을 만듭니다."
-                  : "오늘은 오답 1건만 입력해 주간 계획의 기준점을 만듭니다."}
+          <div className="space-y-3">
+            {visibleTasks.map((task) => (
+              <WeeklyTaskItem key={task.queueId} task={task} />
+            ))}
+            {plan.tasks.length > 3 ? (
+              <p className="text-xs leading-5 text-[color:var(--muted)]">
+                이번 주 작업은 최대 3개만 먼저 제시합니다. 나머지는 첫 작업 완료 후 자동으로 이어집니다.
               </p>
-              <Link href={inputStartHref}>
-                <Button type="button">{config.primaryCta}</Button>
-              </Link>
-            </div>
-          )}
+            ) : null}
+          </div>
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <Link href={primaryHref} className="w-full sm:w-auto">

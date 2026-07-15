@@ -3,9 +3,17 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
-import { LearnerEmptyState, LearnerPrimaryLink } from "@/components/learner";
+import { FailureAwareState, LearnerPrimaryLink } from "@/components/learner";
+import { CoreRouteLocalReadDegradedNotice } from "@/components/review-os/core-route-read-state";
 import type { AppraisalMode } from "@/lib/review-os/appraisal";
-import { listReviewOsLocalBetaNotes, type LocalBetaLearnerNote } from "@/lib/review-os/browser-storage";
+import {
+  createCheckingLocalBetaNotesReadOutcome,
+  listReviewOsLocalBetaNotesWithStatus,
+  scopeLocalBetaNotesReadOutcome,
+  selectLocalBetaNotesReadOutcomeForMode,
+  type ModeScopedLocalBetaNotesReadOutcome,
+} from "@/lib/review-os/browser-storage";
+import type { FailureAwareStateEvidence } from "@/lib/review-os/failure-aware-state";
 import {
   buildLearningRecordTimelineModel,
   buildLocalBetaLearningAgendaEvents,
@@ -23,6 +31,16 @@ const COMPLETED_EVENT_TYPES = new Set<LearningAgendaEvent["type"]>([
   "today_task_completed",
   "weakness_recovered",
 ]);
+
+const AGENDA_LOADING_EVIDENCE = Object.freeze({
+  kind: "loading",
+  safety: Object.freeze({ kind: "not_applicable" }),
+}) satisfies FailureAwareStateEvidence;
+
+const AGENDA_EMPTY_EVIDENCE = Object.freeze({
+  kind: "empty",
+  safety: Object.freeze({ kind: "not_applicable" }),
+}) satisfies FailureAwareStateEvidence;
 
 const EVENT_COPY: Record<
   LearningAgendaEvent["type"],
@@ -193,20 +211,33 @@ function DominantAction({
 
 function EmptyAgendaState({ mode, isOnline }: { mode: AppraisalMode; isOnline: boolean }) {
   return (
-    <LearnerEmptyState
-      title="아직 쌓인 학습 기록이 없습니다."
-      description="오늘 한 것 하나만 남기면 기록부터 복습까지의 흐름이 여기에 이어집니다."
-      action={
+    <div className="space-y-4" data-s232f4b-agenda-confirmed-empty>
+      <FailureAwareState
+        evidence={AGENDA_EMPTY_EVIDENCE}
+        announceChange={false}
+        testId="s232f4b-agenda-empty-state"
+      />
+      <div className="space-y-3 rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-4 sm:p-5">
+        <p className="text-sm font-semibold text-[var(--foreground-strong)]">
+          아직 쌓인 학습 기록이 없습니다.
+        </p>
+        <p className="text-sm leading-6 text-[var(--muted-strong)]">
+          오늘 한 것 하나만 남기면 기록부터 복습까지의 흐름이 여기에 이어집니다.
+        </p>
         <DominantAction href={`/app/capture?mode=${mode}`} isOnline={isOnline}>
           오늘 한 것 올리기
         </DominantAction>
-      }
-    />
+      </div>
+    </div>
   );
 }
 
 export function LearningAgendaClient({ mode, initialEvents }: LearningAgendaClientProps) {
-  const [localNotes, setLocalNotes] = useState<LocalBetaLearnerNote[]>([]);
+  const [storedLocalRead, setStoredLocalRead] =
+    useState<ModeScopedLocalBetaNotesReadOutcome>(() =>
+      createCheckingLocalBetaNotesReadOutcome(mode),
+    );
+  const localRead = selectLocalBetaNotesReadOutcomeForMode(storedLocalRead, mode);
   const isOnline = useSyncExternalStore(
     subscribeToConnection,
     getConnectionSnapshot,
@@ -214,13 +245,24 @@ export function LearningAgendaClient({ mode, initialEvents }: LearningAgendaClie
   );
 
   useEffect(() => {
-    const timeoutId = window.setTimeout(() => setLocalNotes(listReviewOsLocalBetaNotes(mode)), 0);
+    const timeoutId = window.setTimeout(() => {
+      setStoredLocalRead(
+        scopeLocalBetaNotesReadOutcome(
+          mode,
+          listReviewOsLocalBetaNotesWithStatus(mode),
+        ),
+      );
+    }, 0);
     return () => window.clearTimeout(timeoutId);
   }, [mode]);
 
   const events = useMemo(
-    () => mergeLearningAgendaEvents([...initialEvents, ...buildLocalBetaLearningAgendaEvents(localNotes, mode)]),
-    [initialEvents, localNotes, mode],
+    () =>
+      mergeLearningAgendaEvents([
+        ...initialEvents,
+        ...buildLocalBetaLearningAgendaEvents(localRead.notes, mode),
+      ]),
+    [initialEvents, localRead.notes, mode],
   );
   const timeline = useMemo(() => buildLearningRecordTimelineModel(events), [events]);
   const visibleThisWeek = timeline.thisWeek.slice(-8);
@@ -228,12 +270,25 @@ export function LearningAgendaClient({ mode, initialEvents }: LearningAgendaClie
   const completedCount = timeline.thisWeek.filter((event) => COMPLETED_EVENT_TYPES.has(event.type)).length;
   const nextReviewIsOverdue = timeline.nextReview ? isBeforeToday(timeline.nextReview.date) : false;
   const hasEvents = events.length > 0;
+  const localReadChecking = localRead.status === "checking";
+  const localReadUnavailable = localRead.status === "unavailable";
+  const confirmedEmpty = localRead.status === "ready" && !hasEvents;
+  const routeState = !isOnline
+    ? "offline"
+    : localReadChecking && !hasEvents
+      ? "loading"
+      : localReadUnavailable
+        ? "degraded"
+        : hasEvents
+          ? "ready"
+          : "empty";
 
   return (
     <div
       className="mx-auto w-full max-w-[1048px] min-w-0 space-y-6 overflow-x-hidden"
       data-s230-learning-record-timeline
-      data-s230-state={!isOnline ? "offline" : hasEvents ? "ready" : "empty"}
+      data-s230-state={routeState}
+      data-s232f4b-agenda-local-read={localRead.status}
       data-s230-responsive-viewports="390,768,1440"
       data-s230-primary-action-count="1"
     >
@@ -254,7 +309,19 @@ export function LearningAgendaClient({ mode, initialEvents }: LearningAgendaClie
         </section>
       ) : null}
 
-      {!hasEvents ? <EmptyAgendaState mode={mode} isOnline={isOnline} /> : null}
+      {localReadChecking && !hasEvents ? (
+        <FailureAwareState
+          evidence={AGENDA_LOADING_EVIDENCE}
+          announceChange={false}
+          testId="s232f4b-agenda-local-check-loading"
+        />
+      ) : null}
+
+      {localReadUnavailable ? (
+        <CoreRouteLocalReadDegradedNotice coreRecordsVisible={hasEvents} />
+      ) : null}
+
+      {confirmedEmpty ? <EmptyAgendaState mode={mode} isOnline={isOnline} /> : null}
 
       {hasEvents ? (
         <div className="grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start" data-s230-responsive-priority="next-review-first">

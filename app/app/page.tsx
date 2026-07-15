@@ -2,42 +2,32 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { ReviewOsFeedbackButton } from "@/components/review-os/feedback-button";
+import {
+  CoreRouteReadDegradedNotice,
+  CoreRouteReadEmptyShell,
+  CoreRouteReadErrorPage,
+} from "@/components/review-os/core-route-read-state";
 import { LocalBetaTodayReflection } from "@/components/review-os/local-beta-note-reflection";
 import { ReviewOsAccessState } from "@/components/review-os/review-os-access-state";
 import { TodaySubjectSelector } from "@/components/review-os/today-first-subject-selector";
 import { EvidenceLine, OneActionFooter } from "@/components/review-os/minimal-study-system";
 import { getModeConfig, normalizeSubjectForMode, resolveAppraisalMode } from "@/lib/review-os/appraisal";
+import {
+  countDegradedCoreRouteReads,
+  readyEssentialCoreRouteRead,
+  resolveEssentialCoreRouteRead,
+  resolveOptionalCoreRouteRead,
+} from "@/lib/review-os/core-route-read-outcome";
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
-import { DEFAULT_DAILY_STUDY_ACTIVITY, reviewOsService } from "@/lib/review-os/service";
+import { reviewOsService } from "@/lib/review-os/service";
 import { buildNotebookPreview } from "@/lib/review-os/study-note";
 import { getSimilarQuestionReferenceCandidates } from "@/lib/review-os/question-reference";
-import { type TodayFocus } from "@/lib/review-os/types";
 import { buildTodayPlanCard, type TodayPlanActionKind } from "@/lib/review-os/today-plan";
 import { selectActiveTodayPlanTasks, TODAY_PLAN_MAX_PRIMARY_TASKS, type TodayPlanTaskKind } from "@/lib/review-os/today-plan-engine";
 import { buildLearnerTodayPlanTasksWithGatedDurableConceptGraph } from "@/lib/review-os/today-plan-learner-route-integration";
 import { buildCalculatorRoutineRecoveryHref } from "@/lib/review-os/calculator-routine-learning-signal";
 import { buildPersonalWeaknessProfile } from "@/lib/review-os/weakness-diagnostics";
 import { isOverdueDueAt, resolveDailyStudyState } from "@/lib/review-os/daily-study-state";
-
-
-function buildFallbackTodayFocus(mode: "first" | "second"): TodayFocus {
-  return {
-    lines: [
-      "오늘은 이 작업 하나만 먼저 합니다.",
-      "아직 오늘 할 일 신호가 없어 오늘 한 것부터 시작합니다.",
-      mode === "second" ? "쟁점 회상 1개를 남기면 복습과 학습 노트로 이어집니다." : "오답 1개를 남기면 복습과 학습 노트로 이어집니다.",
-    ],
-    nextAction: mode === "second" ? "2차 답안 흐름을 사진/PDF/텍스트 중 하나로 정리하세요." : "1차 오답 1개를 사진/PDF/텍스트 중 하나로 정리하세요.",
-    nextActionType: "capture_now",
-    primaryTaskLabel: mode === "second" ? "2차 답안 1건 정리" : "1차 오답 1건 정리",
-    reason: "첫 기록을 저장하면 오늘 할 일, 복습, 학습 노트가 이어집니다.",
-    estimatedDurationMinutes: mode === "second" ? 18 : 12,
-    priorityScore: 0,
-    sourceQueueId: null,
-    sourceItemId: null,
-    queue: [],
-  };
-}
 
 const TASK_TYPE_LABELS: Record<TodayPlanTaskKind, string> = {
   first_ox_retry: "5분 재풀이",
@@ -71,25 +61,61 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
   if (!profile && !modeParam) redirect("/app/onboarding");
   const mode = resolveAppraisalMode(profile, modeParam);
   const config = getModeConfig(mode);
-  const [focus, weekly, allItems, learningSignal, learningSignalEvents, dailyActivity] = await Promise.all([
-    reviewOsService.getTodayFocus(session.userId, session.email, mode).catch(() => buildFallbackTodayFocus(mode)),
-    reviewOsService.getWeeklySummary(session.userId, session.email).catch(() => null),
-    reviewOsService.listWrongAnswerItems(session.userId, session.email, 12).catch(() => []),
-    reviewOsService.getLearningSignalSummary(session.userId, session.email, mode).catch(() => null),
-    reviewOsService.listLearningSignalEvents(session.userId, session.email, mode, 10).catch(() => []),
-    reviewOsService.getDailyStudyActivity(session.userId, session.email, mode).catch(() => DEFAULT_DAILY_STUDY_ACTIVITY),
+  const [focusRead, weeklyRead, itemsRead, learningSignalRead, learningSignalEventsRead, dailyActivityRead] = await Promise.all([
+    resolveEssentialCoreRouteRead(
+      "today_focus",
+      reviewOsService.getTodayFocus(session.userId, session.email, mode),
+    ),
+    resolveOptionalCoreRouteRead<Awaited<ReturnType<typeof reviewOsService.getWeeklySummary>> | null>(
+      "today_weekly_summary",
+      () => reviewOsService.getWeeklySummary(session.userId!, session.email!),
+      () => null,
+    ),
+    resolveEssentialCoreRouteRead("today_items", () =>
+      reviewOsService.listWrongAnswerItems(session.userId!, session.email!, 12),
+    ),
+    resolveOptionalCoreRouteRead<Awaited<ReturnType<typeof reviewOsService.getLearningSignalSummary>> | null>(
+      "today_learning_signal_summary",
+      () => reviewOsService.getLearningSignalSummary(session.userId!, session.email!, mode),
+      () => null,
+    ),
+    resolveEssentialCoreRouteRead("today_learning_signal_events", () =>
+      reviewOsService.listLearningSignalEvents(session.userId!, session.email!, mode, 10),
+    ),
+    resolveEssentialCoreRouteRead("today_daily_activity", () =>
+      reviewOsService.getDailyStudyActivity(session.userId!, session.email!, mode),
+    ),
   ]);
+  if (
+    focusRead.status !== "ready" ||
+    itemsRead.status !== "ready" ||
+    learningSignalEventsRead.status !== "ready" ||
+    dailyActivityRead.status !== "ready"
+  ) {
+    return <CoreRouteReadErrorPage surface="today" />;
+  }
+
+  const recentStudyLogRead =
+    mode === "first"
+      ? await resolveEssentialCoreRouteRead<Awaited<ReturnType<typeof reviewOsService.getRecentStudyLog>> | null>(
+          "today_recent_study_log",
+          () => reviewOsService.getRecentStudyLog(session.userId!, session.email!, "first"),
+        )
+      : readyEssentialCoreRouteRead<Awaited<ReturnType<typeof reviewOsService.getRecentStudyLog>> | null>(null);
+  if (recentStudyLogRead.status !== "ready") {
+    return <CoreRouteReadErrorPage surface="today" />;
+  }
+
+  const focus = focusRead.value;
+  const weekly = weeklyRead.value;
+  const allItems = itemsRead.value;
+  const learningSignal = learningSignalRead.value;
+  const learningSignalEvents = learningSignalEventsRead.value;
+  const dailyActivity = dailyActivityRead.value;
+  const recentStudyLog = recentStudyLogRead.value;
 
   const items = allItems.filter((item) => item.examName === config.label).slice(0, 5);
   const queue = focus.queue.filter((item) => item.examName === config.label);
-  let recentStudyLog: Awaited<ReturnType<typeof reviewOsService.getRecentStudyLog>> | null = null;
-  if (mode === "first") {
-    try {
-      recentStudyLog = await reviewOsService.getRecentStudyLog(session.userId, session.email, "first");
-    } catch (error) {
-      console.warn("[review-os] failed to load optional recent study log", error);
-    }
-  }
   const hasDataSignals = learningSignalEvents.length > 0 || queue.length > 0 || Boolean(recentStudyLog);
   const firstUse = items.length === 0 && !hasDataSignals;
   const hasDurableSummary = items.length > 0 || queue.length > 0 || learningSignalEvents.length > 0 || Boolean(recentStudyLog);
@@ -120,33 +146,88 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
     wrongAnswerItems: items,
     mode,
   });
-  const todayPlanTasks = selectActiveTodayPlanTasks(
-    await buildLearnerTodayPlanTasksWithGatedDurableConceptGraph({
-      userId: session.userId,
-      mode,
-      queue,
-      items,
-      learningSignals: learningSignalEvents,
-      repeatedGaps: weaknessProfile.repeatedGaps,
-      riskLevel: weaknessProfile.riskLevel,
-    }).catch(() => []),
-    TODAY_PLAN_MAX_PRIMARY_TASKS,
+  const todayPlanTasksRead = await resolveEssentialCoreRouteRead(
+    "today_plan_tasks",
+    async () =>
+      selectActiveTodayPlanTasks(
+        await buildLearnerTodayPlanTasksWithGatedDurableConceptGraph({
+          userId: session.userId!,
+          mode,
+          queue,
+          items,
+          learningSignals: learningSignalEvents,
+          repeatedGaps: weaknessProfile.repeatedGaps,
+          riskLevel: weaknessProfile.riskLevel,
+        }),
+        TODAY_PLAN_MAX_PRIMARY_TASKS,
+      ),
   );
-  const questionReferenceHintsByTaskId = new Map(
-    await Promise.all(todayPlanTasks.map(async (task) => ([
-      task.itemId,
-      await getSimilarQuestionReferenceCandidates({
-        examMode: task.exam_mode,
-        subject: task.subject,
-        topicCandidate: task.title,
-        conceptCandidate: task.one_biggest_gap,
-        mistakeType: task.task_type,
-        issueTags: [task.one_biggest_gap],
-        derivedTags: [task.priority_reason, task.source_label].filter((value): value is string => Boolean(value)),
-        safeSkeletonIds: task.task_type === "second_answer_rewrite" ? ["appraisal_income_capitalization", "second_law_requirement_subsumption"] : [],
-      }),
-    ] as const))),
+  if (todayPlanTasksRead.status !== "ready") {
+    return <CoreRouteReadErrorPage surface="today" />;
+  }
+  const todayPlanTasks = todayPlanTasksRead.value;
+  const questionReferenceHintsRead = await resolveOptionalCoreRouteRead<
+    Map<string, Awaited<ReturnType<typeof getSimilarQuestionReferenceCandidates>>>
+  >(
+    "today_question_references",
+    async () =>
+      new Map(
+        await Promise.all(
+          todayPlanTasks.map(
+            async (task) =>
+              [
+                task.itemId,
+                await getSimilarQuestionReferenceCandidates({
+                  examMode: task.exam_mode,
+                  subject: task.subject,
+                  topicCandidate: task.title,
+                  conceptCandidate: task.one_biggest_gap,
+                  mistakeType: task.task_type,
+                  issueTags: [task.one_biggest_gap],
+                  derivedTags: [task.priority_reason, task.source_label].filter(
+                    (value): value is string => Boolean(value),
+                  ),
+                  safeSkeletonIds:
+                    task.task_type === "second_answer_rewrite"
+                      ? ["appraisal_income_capitalization", "second_law_requirement_subsumption"]
+                      : [],
+                }),
+              ] as const,
+          ),
+        ),
+      ),
+    () => new Map(),
   );
+  const questionReferenceHintsByTaskId = questionReferenceHintsRead.value;
+  const degradedReadCount = countDegradedCoreRouteReads([
+    weeklyRead,
+    learningSignalRead,
+    questionReferenceHintsRead,
+  ]);
+  const hasCoreTodayRecords =
+    items.length > 0 ||
+    queue.length > 0 ||
+    learningSignalEvents.length > 0 ||
+    Boolean(recentStudyLog) ||
+    todayPlanTasks.length > 0 ||
+    Boolean(focus.sourceItemId) ||
+    Boolean(focus.sourceQueueId) ||
+    dailyActivity.savedToday ||
+    dailyActivity.completedToday;
+
+  if (!hasCoreTodayRecords) {
+    return (
+      <CoreRouteReadEmptyShell surface="today" mode={mode} degradedCount={degradedReadCount}>
+        <LocalBetaTodayReflection
+          mode={mode}
+          hasDurableSummary={false}
+          showEmptyMessage={false}
+          showReadUnavailableNotice={false}
+        />
+        <ReviewOsFeedbackButton route="/app" pageContext={{ section: "today", firstUse: true, mode }} />
+      </CoreRouteReadEmptyShell>
+    );
+  }
   const isFirstSetStart = mode === "first" && focus.nextActionType === "capture_now";
   const selectedSubject = normalizeSubjectForMode(subjectParam, mode);
   const selectedFirstSubject = mode === "first" ? selectedSubject : normalizeSubjectForMode(null, "first");
@@ -249,6 +330,8 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
       data-overdue-recovery-help={dailyStateCopy.overdueHelp}
       data-s232d5-today-page="single-priority"
     >
+      <CoreRouteReadDegradedNotice count={degradedReadCount} />
+
       <section
         className="mission-surface p-5 sm:p-7"
         aria-labelledby="s232d5-today-title"
@@ -309,7 +392,11 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
         </section>
       ) : null}
 
-      <LocalBetaTodayReflection mode={mode} hasDurableSummary={hasDurableSummary} />
+      <LocalBetaTodayReflection
+        mode={mode}
+        hasDurableSummary={hasDurableSummary}
+        showEmptyMessage={false}
+      />
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
         <section className="space-y-4">
