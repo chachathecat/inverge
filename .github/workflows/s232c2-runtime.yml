@@ -54,9 +54,7 @@ jobs:
           exact_head_ready=0
           deadline=$((SECONDS + 900))
           while [ "${SECONDS}" -lt "${deadline}" ]; do
-            deployments="$(
-              gh api -X GET +                "/repos/${GITHUB_REPOSITORY}/deployments?sha=${E2E_RUNNER_SHA}&environment=Preview&per_page=20"
-            )" || deployments="[]"
+            deployments="$(gh api -X GET "/repos/${GITHUB_REPOSITORY}/deployments?sha=${E2E_RUNNER_SHA}&environment=Preview&per_page=20")" || deployments="[]"
             deployment_id="$(
               DEPLOYMENTS="${deployments}" node --input-type=module -e '
                 const values = JSON.parse(process.env.DEPLOYMENTS ?? "[]");
@@ -87,10 +85,8 @@ jobs:
 
               if [ -n "${preview_url}" ]; then
                 body_path="$(mktemp)"
-                status="$(
-                  curl --silent --show-error +                    --output "${body_path}" +                    --write-out '%{http_code}' +                    --connect-timeout 5 +                    --max-time 15 +                    --header "x-vercel-protection-bypass: ${VERCEL_AUTOMATION_BYPASS_SECRET}" +                    "${preview_url}/api/runtime/version"
-                )" || status="000"
-                if [ "${status}" = "200" ] && +                  BODY_PATH="${body_path}" EXPECTED_SHA="${E2E_RUNNER_SHA}" node --input-type=module -e '
+                status="$(curl --silent --show-error --output "${body_path}" --write-out '%{http_code}' --connect-timeout 5 --max-time 15 --header "x-vercel-protection-bypass: ${VERCEL_AUTOMATION_BYPASS_SECRET}" "${preview_url}/api/runtime/version")" || status="000"
+                if [ "${status}" = "200" ] && BODY_PATH="${body_path}" EXPECTED_SHA="${E2E_RUNNER_SHA}" node --input-type=module -e '
                     import { readFileSync } from "node:fs";
                     const payload = JSON.parse(readFileSync(process.env.BODY_PATH, "utf8"));
                     if (payload.ready !== true || payload.deploymentSha !== process.env.EXPECTED_SHA) process.exit(1);
@@ -124,9 +120,7 @@ jobs:
         run: |
           set -euo pipefail
           body_path="$(mktemp)"
-          status="$(
-            curl --silent --show-error +              --output "${body_path}" +              --write-out '%{http_code}' +              --connect-timeout 5 +              --max-time 15 +              --header "x-vercel-protection-bypass: ${VERCEL_AUTOMATION_BYPASS_SECRET}" +              "${E2E_BASE_URL}/api/runtime/version"
-          )"
+          status="$(curl --silent --show-error --output "${body_path}" --write-out '%{http_code}' --connect-timeout 5 --max-time 15 --header "x-vercel-protection-bypass: ${VERCEL_AUTOMATION_BYPASS_SECRET}" "${E2E_BASE_URL}/api/runtime/version")"
           test "${status}" = "200"
           BODY_PATH="${body_path}" EXPECTED_SHA="${E2E_RUNNER_SHA}" node --input-type=module -e '
             import { readFileSync } from "node:fs";
