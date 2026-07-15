@@ -82,6 +82,7 @@ const defaultTestFiles = [
   "tests/s232d4-review-ia.test.mjs",
   "tests/s232d5-today-primary-ia.test.mjs",
   "tests/s232e1-capture-outer-flow.test.mjs",
+  "tests/s232e2-second-write-clarity.test.mjs",
   "tests/s232e3-answer-review-entry-ia.test.mjs",
   "tests/s220b-dabangil-launch-surface.test.mjs",
   "tests/practice-calculation-unit-registry.test.mjs",
