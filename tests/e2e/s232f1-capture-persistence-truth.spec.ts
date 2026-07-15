@@ -80,6 +80,27 @@ async function readFocusStyle(target: Locator) {
   });
 }
 
+async function waitForReactClickHandler(locator: Locator, controlName: string) {
+  await expect(locator).toBeVisible({ timeout: 20_000 });
+  await expect
+    .poll(
+      () =>
+        locator.evaluate((element) => {
+          const reactPropsKey = Object.keys(element).find((key) => key.startsWith("__reactProps$"));
+          if (!reactPropsKey) return false;
+          const reactProps = (
+            element as unknown as Record<string, { onClick?: unknown } | undefined>
+          )[reactPropsKey];
+          return typeof reactProps?.onClick === "function";
+        }),
+      {
+        timeout: 20_000,
+        message: `${controlName} must have its React click handler before interaction.`,
+      },
+    )
+    .toBe(true);
+}
+
 async function tabUntilFocused(page: Page, target: Locator, maxSteps: number) {
   const before = await readFocusStyle(target);
   let reached = false;
@@ -123,7 +144,7 @@ test("S232F.1 exact-head Capture failure is memory-only, recoverable, and never 
   await expect(pageRoot).toHaveCount(1);
   await expect(captureForm).toHaveCount(1);
   await expect(pageRoot.locator("h1#capture-page-title")).toHaveCount(1);
-  await expect(textInputMethod).toBeVisible();
+  await waitForReactClickHandler(textInputMethod, "Capture text input");
   await textInputMethod.click();
   await expect(learnerInput).toBeVisible();
 
