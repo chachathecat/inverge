@@ -75,6 +75,7 @@ test("S232C.1 Preview renders every combination and the real mobile boolean over
 test("S232C.1 evidence records the exact Figma and runtime boundary", () => {
   const runbook = read("docs/qa/s232c1-calculator-step-parity.md");
   const browser = read("tests/e2e/s232c1-calculator-step.spec.ts");
+  const workflow = read(".github/workflows/s232c1-runtime.yml");
 
   for (const phrase of [
     "53:129",
@@ -96,4 +97,12 @@ test("S232C.1 evidence records the exact Figma and runtime boundary", () => {
   assert.match(browser, /blockingAxe/);
   assert.match(browser, /unexpectedTabStops/);
   assert.match(browser, /screenshot: "off", trace: "off", video: "off"/);
+  assert.match(workflow, /pull_request\.number == 586/);
+  assert.match(workflow, /agent\/s232c1-calculator-step-parity/);
+  assert.match(workflow, /inverge-git-agent-s232c1-calculat-c75c6c-chachathecats-projects\.vercel\.app/);
+  assert.match(workflow, /run-s232c1-auth-e2e/);
+  assert.match(workflow, /E2E_TARGET_SHA: \$\{\{ github\.event\.pull_request\.head\.sha \}\}/);
+  assert.match(workflow, /Postflight deployment SHA mismatch/);
+  assert.match(workflow, /s232c1-runtime\.json/);
+  assert.equal(workflow.includes("E2E_USER_PASSWORD"), false);
 });
