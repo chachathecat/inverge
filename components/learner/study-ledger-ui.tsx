@@ -74,6 +74,46 @@ type EvidenceExcerptReviewEvidence =
 export type EvidenceExcerptEvidence = EvidenceExcerptSourceEvidence &
   EvidenceExcerptReviewEvidence & { provenance: string };
 
+export type StickyActionMode = "Dock" | "Inline";
+export type StickyActionState = "Ready" | "Saving" | "Offline" | "Disabled";
+export type StickyActionControllerEvidence =
+  | { kind: "save-in-progress"; saveInProgress: true }
+  | { kind: "network-offline"; isOnline: false }
+  | { kind: "action-disabled"; disabled: true; reason: string };
+
+type StickyActionBaseProps = {
+  label?: string;
+  status?: string;
+  showStatus?: boolean;
+  mode?: StickyActionMode;
+  responsive?: boolean;
+  testId?: string;
+};
+
+export type StickyActionProps = StickyActionBaseProps &
+  (
+    | {
+        state?: "Ready";
+        href: string;
+        controllerEvidence?: never;
+      }
+    | {
+        state: "Saving";
+        href?: never;
+        controllerEvidence: Extract<StickyActionControllerEvidence, { kind: "save-in-progress" }>;
+      }
+    | {
+        state: "Offline";
+        href?: never;
+        controllerEvidence: Extract<StickyActionControllerEvidence, { kind: "network-offline" }>;
+      }
+    | {
+        state: "Disabled";
+        href?: never;
+        controllerEvidence: Extract<StickyActionControllerEvidence, { kind: "action-disabled" }>;
+      }
+  );
+
 const STATE_CHIP_PRESENTATION: Record<
   StateChipState,
   { label: string; className: string; markClassName: string }
@@ -145,6 +185,36 @@ const EVIDENCE_SOURCE_PRESENTATION: Record<
     shellClassName: "bg-[var(--color-background-compare)]",
     markClassName: "bg-[var(--color-icon-brand)]",
     titleClassName: "text-[var(--color-text-compare)]",
+  },
+};
+
+const STICKY_ACTION_PRESENTATION: Record<
+  StickyActionState,
+  { accessibleLabel: string; controlClassName: string; statusClassName: string }
+> = {
+  Ready: {
+    accessibleLabel: "준비됨",
+    controlClassName:
+      "bg-[var(--color-background-brand)] text-[var(--color-text-inverse)] hover:bg-[var(--color-background-brand-hover)]",
+    statusClassName: "text-[var(--color-text-secondary)]",
+  },
+  Saving: {
+    accessibleLabel: "저장 중",
+    controlClassName:
+      "bg-[var(--color-background-brand-soft)] text-[var(--color-text-brand)]",
+    statusClassName: "text-[var(--color-text-secondary)]",
+  },
+  Offline: {
+    accessibleLabel: "오프라인",
+    controlClassName:
+      "bg-[var(--color-background-attention)] text-[var(--color-text-attention)]",
+    statusClassName: "text-[var(--color-text-attention)]",
+  },
+  Disabled: {
+    accessibleLabel: "사용할 수 없음",
+    controlClassName:
+      "bg-[var(--color-background-subtle)] text-[var(--color-text-tertiary)]",
+    statusClassName: "text-[var(--color-text-secondary)]",
   },
 };
 
@@ -517,30 +587,80 @@ export function StudyLedgerSupportingEvidencePanel({
   );
 }
 
-export function StickyAction({
-  href,
-  label,
-  helper,
-}: {
-  href: string;
-  label: string;
-  helper: string;
-}) {
+export function StickyAction(props: StickyActionProps) {
+  const {
+    label = "10분 문단 다시쓰기",
+    status = "2분 전 저장됨",
+    showStatus = true,
+    mode = "Inline",
+    responsive = false,
+    state = "Ready",
+    testId,
+  } = props;
+  const presentation = STICKY_ACTION_PRESENTATION[state];
+  const actionMarker = { "data-s228-primary-action": "true" };
+  const actionClassName = [
+    "flex min-h-[52px] w-full items-center justify-center rounded-[var(--v3-radius-control)] px-4 py-[15px]",
+    "text-center text-[15px] font-bold leading-[22px]",
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2",
+    presentation.controlClassName,
+  ].join(" ");
+  const accessibleName = showStatus ? `${label}: ${status}` : label;
+  const control = props.state === undefined || props.state === "Ready" ? (
+    <Link
+      {...actionMarker}
+      href={props.href}
+      data-testid={testId ? `${testId}-control` : undefined}
+      aria-label={accessibleName}
+      className={actionClassName}
+    >
+      {label}
+    </Link>
+  ) : (
+    <button
+      {...actionMarker}
+      type="button"
+      disabled
+      aria-busy={state === "Saving" ? true : undefined}
+      data-testid={testId ? `${testId}-control` : undefined}
+      aria-label={accessibleName}
+      className={actionClassName}
+    >
+      {label}
+    </button>
+  );
+
   return (
     <section
       data-s228-sticky-action
+      data-v3-component="StickyAction"
+      data-v3-mode={responsive ? undefined : mode}
+      data-v3-state={state}
+      data-s232b2-responsive={responsive ? "Dock-to-Inline" : undefined}
+      data-status-visible={showStatus}
+      data-testid={testId}
       aria-label="다음 학습 행동"
-      className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] left-[max(1rem,env(safe-area-inset-left))] right-[max(1rem,env(safe-area-inset-right))] z-30 rounded-[var(--ledger-radius-card)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3 shadow-[0_16px_40px_rgba(16,35,63,0.16)] lg:sticky lg:inset-auto lg:top-24 lg:shadow-[var(--shadow-soft)]"
+      className={[
+        "flex w-full flex-col gap-2",
+        responsive
+          ? "fixed inset-x-0 bottom-0 z-30 min-h-[116px] border-t border-[var(--color-border-default)] bg-[var(--color-background-surface)] px-5 pb-[max(20px,env(safe-area-inset-bottom))] pt-4 shadow-[0_-6px_20px_-8px_rgba(20,23,33,0.08)] lg:static lg:min-h-[84px] lg:w-[300px] lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none"
+          : mode === "Dock"
+            ? "min-h-[116px] max-w-[390px] border-t border-[var(--color-border-default)] bg-[var(--color-background-surface)] px-5 pb-5 pt-4 shadow-[0_-6px_20px_-8px_rgba(20,23,33,0.08)]"
+            : "min-h-[84px] max-w-[300px]",
+      ].join(" ")}
     >
-      <Link
-        href={href}
-        data-s228-primary-action
-        aria-label={label + ": " + helper}
-        className="flex min-h-11 w-full items-center justify-center rounded-[var(--ledger-radius-control)] bg-[var(--cta-primary-bg)] px-4 py-3 text-center text-sm font-bold text-[var(--cta-primary-fg)] transition-colors hover:bg-[var(--cta-primary-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2"
-      >
-        {label}
-      </Link>
-      <p className="mt-2 text-center text-xs leading-5 text-[var(--text-secondary)]">{helper}</p>
+      {showStatus ? (
+        <p
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+          className={`min-h-[18px] text-center text-[12px] font-medium leading-[18px] tracking-[0.1px] ${presentation.statusClassName}`}
+        >
+          <span className="sr-only">{presentation.accessibleLabel} · </span>
+          {status}
+        </p>
+      ) : null}
+      {control}
     </section>
   );
 }
@@ -608,7 +728,7 @@ export function StudyLedgerDetail({
   return (
     <article
       data-s228-study-ledger-detail
-      className="mx-auto w-full max-w-[1000px] px-1 pb-28 sm:px-0 lg:pb-10"
+      className="mx-auto w-full max-w-[1000px] px-1 pb-28 sm:px-0 max-lg:pb-[calc(136px+env(safe-area-inset-bottom))] lg:pb-10"
       aria-labelledby="study-ledger-title"
     >
       <header className="max-w-[var(--ledger-reading-column)] border-b border-[var(--border-subtle)] pb-7">
@@ -637,7 +757,6 @@ export function StudyLedgerDetail({
         </h1>
         <p className="ko-keep mt-4 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">{recurrenceText}</p>
       </header>
-
       <div className="mt-5 grid gap-8 lg:grid-cols-[minmax(0,var(--ledger-reading-column))_var(--ledger-evidence-rail)] lg:items-start">
         <div data-s232b1-reading-column className="min-w-0 space-y-8">
           <div data-s232b1-trust-gap-stack className="space-y-5">
@@ -727,14 +846,17 @@ export function StudyLedgerDetail({
               </p>
             </div>
           </section>
+
+          <StickyAction
+            responsive
+            state="Ready"
+            href={actionHref}
+            label={completed ? "문단 한 번 더 다듬기" : "10분 문단 다시쓰기"}
+            status={completed ? "남은 간극 1개만 다시 확인합니다." : "가장 큰 간극 1개만 보강합니다."}
+          />
         </div>
 
         <aside data-s228-evidence-rail className="min-w-0 space-y-4">
-          <StickyAction
-            href={actionHref}
-            label={completed ? "문단 한 번 더 다듬기" : "10분 문단 다시쓰기"}
-            helper={completed ? "남은 간극 1개만 다시 확인합니다." : "가장 큰 간극 1개만 보강합니다."}
-          />
           {evidenceEmpty ? (
             <StudyLedgerEvidenceEmpty />
           ) : (
