@@ -18,6 +18,7 @@ const fixture = read("app/acceptance/figma-v3-trust-evidence/page.tsx");
 const barrel = read("components/learner/index.ts");
 const runner = read("scripts/run-node-tests.mjs");
 const qa = read("docs/qa/s232b1-trust-evidence-bar-parity.md");
+const workflow = read(".github/workflows/s232b1-runtime.yml");
 
 test("S232B.1 maps only typed trust evidence into the exact three-state Figma contract", () => {
   assert.deepEqual(TRUST_EVIDENCE_BAR_STATES, ["Verified", "NeedsReview", "Conflict"]);
@@ -143,4 +144,19 @@ test("S232B.1 records the Figma, truth, privacy, and rollback boundaries", () =>
   assert.match(qa, /680px reading column, 32px gutter, 288px evidence rail/);
   assert.match(qa, /metadata JSON/);
   assert.match(qa, /## Rollback/);
+});
+
+test("S232B.1 exact-head workflow is PR-scoped and publishes metadata only", () => {
+  assert.match(workflow, /pull_request\.number == 582/);
+  assert.match(workflow, /agent\/s232b1-trust-evidence-bar-parity/);
+  assert.match(workflow, /run-s232b1-auth-e2e/);
+  assert.match(workflow, /inverge-git-agent-s232b1-trust-ev-8fe8bf-chachathecats-projects\.vercel\.app/);
+  assert.match(workflow, /tests\/e2e\/s232b1-trust-evidence-bar\.spec\.ts/);
+  assert.match(workflow, /tests\/e2e\/s232b1-authenticated-runtime\.spec\.ts/);
+  assert.match(workflow, /Postflight deployment SHA mismatch/);
+  assert.match(workflow, /Exactly one S232B\.1 manifest is required/);
+  assert.match(workflow, /unexpected top-level key/);
+  assert.match(workflow, /unexpected viewport key/);
+  assert.match(workflow, /path: s232b1-evidence\/s232b1-runtime\.json/);
+  assert.doesNotMatch(workflow, /extraHTTPHeaders/);
 });
