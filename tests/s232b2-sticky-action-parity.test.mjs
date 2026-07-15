@@ -188,6 +188,8 @@ test("S232B.2 authenticated acceptance proves one responsive action and rewrite 
   assert.match(authRuntime, /componentWidth: 390/);
   assert.match(authRuntime, /componentWidth: 300/);
   assert.match(authRuntime, /async function tabTo/);
+  assert.match(authRuntime, /toBeInViewport\(\{ ratio: 1, timeout: 5_000 \}\)/);
+  assert.match(authRuntime, /expect\.poll\(readFocusEvidence/);
   assert.match(authRuntime, /page\.keyboard\.press\("Enter"\)/);
   assert.match(authRuntime, /url\.searchParams\.get\("rewriteFrom"\)/);
   assert.match(authRuntime, /문단 다시쓰기 컨텍스트/);
