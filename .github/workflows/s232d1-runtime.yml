@@ -1,0 +1,221 @@
+name: S232D.1 Study Ledger Focus Shell Runtime Acceptance
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  contents: read
+  deployments: read
+
+jobs:
+  s232d1-study-ledger-focus-shell:
+    name: S232D.1 Exact-Head Focus Shell
+    if: >-
+      github.event.pull_request.head.ref == 'agent/s232d-shell-ia' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    concurrency:
+      group: s232d1-study-ledger-focus-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    env:
+      CI: "true"
+      E2E_RUNNER_SHA: ${{ github.event.pull_request.head.sha }}
+      E2E_TARGET_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - name: Require explicit authenticated acceptance marker
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: >-
+          node --input-type=module -e
+          'if (!(process.env.PR_BODY ?? "").includes("<!-- run-s232d1-auth-e2e -->")) {
+          throw new Error("Missing S232D.1 authenticated acceptance marker"); }'
+
+      - name: Check out exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Discover and verify exact-head Preview
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: |
+          set -euo pipefail
+          test -n "${VERCEL_AUTOMATION_BYPASS_SECRET:-}"
+          [[ "${E2E_RUNNER_SHA}" =~ ^[0-9a-fA-F]{40}$ ]]
+          test "${E2E_TARGET_SHA}" = "${E2E_RUNNER_SHA}"
+
+          exact_head_ready=0
+          deadline=$((SECONDS + 900))
+          while [ "${SECONDS}" -lt "${deadline}" ]; do
+            deployments="$(gh api -X GET "/repos/${GITHUB_REPOSITORY}/deployments?sha=${E2E_RUNNER_SHA}&environment=Preview&per_page=20")" || deployments="[]"
+            mapfile -t deployment_ids < <(
+              DEPLOYMENTS="${deployments}" node --input-type=module -e '
+                const values = JSON.parse(process.env.DEPLOYMENTS ?? "[]");
+                for (const value of values) {
+                  if (value?.id) process.stdout.write(String(value.id) + "\n");
+                }
+              '
+            )
+
+            for deployment_id in "${deployment_ids[@]}"; do
+              statuses="$(gh api -X GET "/repos/${GITHUB_REPOSITORY}/deployments/${deployment_id}/statuses?per_page=20")" || statuses="[]"
+              preview_url="$(
+                STATUSES="${statuses}" node --input-type=module -e '
+                  const values = JSON.parse(process.env.STATUSES ?? "[]");
+                  const latest = values[0];
+                  if (latest?.state !== "success") process.exit(0);
+                  const raw = latest.environment_url ?? latest.target_url ?? "";
+                  if (!raw) process.exit(0);
+                  const url = new URL(raw);
+                  if (
+                    url.protocol !== "https:" ||
+                    url.username ||
+                    url.password ||
+                    url.search ||
+                    url.hash ||
+                    !/^inverge-[a-z0-9-]+-chachathecats-projects\.vercel\.app$/i.test(url.hostname)
+                  ) process.exit(1);
+                  process.stdout.write(url.origin);
+                '
+              )"
+
+              if [ -n "${preview_url}" ]; then
+                body_path="$(mktemp)"
+                status="$(curl --silent --show-error --output "${body_path}" --write-out '%{http_code}' --connect-timeout 5 --max-time 15 --header "x-vercel-protection-bypass: ${VERCEL_AUTOMATION_BYPASS_SECRET}" "${preview_url}/api/runtime/version")" || status="000"
+                if [ "${status}" = "200" ] && BODY_PATH="${body_path}" EXPECTED_SHA="${E2E_RUNNER_SHA}" node --input-type=module -e '
+                    import { readFileSync } from "node:fs";
+                    const payload = JSON.parse(readFileSync(process.env.BODY_PATH, "utf8"));
+                    if (payload.ready !== true || payload.deploymentSha !== process.env.EXPECTED_SHA) process.exit(1);
+                  '; then
+                  echo "E2E_BASE_URL=${preview_url}" >> "${GITHUB_ENV}"
+                  echo "E2E_EXPECTED_HOST=${preview_url#https://}" >> "${GITHUB_ENV}"
+                  exact_head_ready=1
+                  rm -f "${body_path}"
+                  break
+                fi
+                rm -f "${body_path}"
+              fi
+            done
+            if [ "${exact_head_ready}" = "1" ]; then break; fi
+            sleep 10
+          done
+          test "${exact_head_ready}" = "1"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Run exact-head authenticated focus-shell acceptance
+        env:
+          S232D1_AUTH_RUNTIME: "1"
+          E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL || secrets.TEST_USER_EMAIL }}
+          E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD || secrets.TEST_USER_PASSWORD }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: npx playwright test tests/e2e/s232d1-study-ledger-focus-shell.spec.ts --project=chromium --workers=1
+
+      - name: Recheck exact deployment SHA
+        shell: bash
+        env:
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: |
+          set -euo pipefail
+          body_path="$(mktemp)"
+          status="$(curl --silent --show-error --output "${body_path}" --write-out '%{http_code}' --connect-timeout 5 --max-time 15 --header "x-vercel-protection-bypass: ${VERCEL_AUTOMATION_BYPASS_SECRET}" "${E2E_BASE_URL}/api/runtime/version")"
+          test "${status}" = "200"
+          BODY_PATH="${body_path}" EXPECTED_SHA="${E2E_RUNNER_SHA}" node --input-type=module -e '
+            import { readFileSync } from "node:fs";
+            const payload = JSON.parse(readFileSync(process.env.BODY_PATH, "utf8"));
+            if (payload.ready !== true || payload.deploymentSha !== process.env.EXPECTED_SHA) process.exit(1);
+          '
+          rm -f "${body_path}"
+
+      - name: Validate metadata-only S232D.1 evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t evidence_paths < <(find test-results -name s232d1-runtime.json -print)
+          test "${#evidence_paths[@]}" -eq 1
+          evidence_path="${evidence_paths[0]}"
+          EVIDENCE_PATH="${evidence_path}" EXPECTED_SHA="${E2E_RUNNER_SHA}" node --input-type=module -e '
+            import { readFileSync } from "node:fs";
+            const evidence = JSON.parse(readFileSync(process.env.EVIDENCE_PATH, "utf8"));
+            if (!evidence || typeof evidence !== "object" || Array.isArray(evidence)) {
+              throw new Error("Evidence must be a scalar object");
+            }
+            const allowed = new Set([
+              "schemaVersion", "result", "runnerSha", "targetDeploymentSha",
+              "observedDeploymentSha", "signInAttempts", "viewportCount",
+              "mobileChromeCount", "desktopChromeCount", "focusShellVerified",
+              "defaultShellPreserved", "clientNavigationVerified", "skipLinkVerified",
+              "minimumTargetSizeVerified", "responsiveGeometryVerified",
+              "detailPrimitiveCountVerified", "axeBlockingCount", "consoleErrorCount",
+              "pageErrorCount", "sameOriginRequestFailureCount", "credentialsCaptured",
+              "rawLearnerContentCaptured", "domCaptured", "screenshotCaptured",
+              "traceCaptured", "videoCaptured"
+            ]);
+            if (Object.keys(evidence).length !== allowed.size) throw new Error("Evidence key count mismatch");
+            for (const key of allowed) {
+              if (!(key in evidence)) throw new Error("Missing evidence key: " + key);
+            }
+            for (const key of Object.keys(evidence)) {
+              if (!allowed.has(key)) throw new Error("Unexpected evidence key: " + key);
+              const value = evidence[key];
+              if (value !== null && typeof value === "object") {
+                throw new Error("Nested evidence is forbidden: " + key);
+              }
+            }
+            for (const key of ["runnerSha", "targetDeploymentSha", "observedDeploymentSha"]) {
+              if (evidence[key] !== process.env.EXPECTED_SHA) throw new Error(key + " mismatch");
+            }
+            if (
+              evidence.schemaVersion !== 1 ||
+              evidence.result !== "pass" ||
+              evidence.viewportCount !== 3 ||
+              evidence.mobileChromeCount !== 2 ||
+              evidence.desktopChromeCount !== 1 ||
+              evidence.focusShellVerified !== true ||
+              evidence.defaultShellPreserved !== true ||
+              evidence.clientNavigationVerified !== true ||
+              evidence.skipLinkVerified !== true ||
+              evidence.minimumTargetSizeVerified !== true ||
+              evidence.responsiveGeometryVerified !== true ||
+              evidence.detailPrimitiveCountVerified !== true ||
+              evidence.axeBlockingCount !== 0 ||
+              evidence.consoleErrorCount !== 0 ||
+              evidence.pageErrorCount !== 0 ||
+              evidence.sameOriginRequestFailureCount !== 0
+            ) throw new Error("S232D.1 acceptance evidence failed");
+            if (!Number.isInteger(evidence.signInAttempts) || evidence.signInAttempts < 1 || evidence.signInAttempts > 3) {
+              throw new Error("signInAttempts must be a bounded integer");
+            }
+            for (const key of [
+              "credentialsCaptured", "rawLearnerContentCaptured", "domCaptured",
+              "screenshotCaptured", "traceCaptured", "videoCaptured"
+            ]) {
+              if (evidence[key] !== false) throw new Error(key + " must be false");
+            }
+            const raw = JSON.stringify(evidence);
+            if (/@[a-z0-9.-]+\.[a-z]{2,}/i.test(raw)) throw new Error("Email-like content in evidence");
+          '
+          mkdir -p validated-runtime-evidence
+          cp -- "${evidence_path}" validated-runtime-evidence/s232d1-runtime.json
+
+      - name: Upload validated S232D.1 runtime evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: s232d1-study-ledger-focus-evidence-${{ github.run_id }}
+          path: validated-runtime-evidence/s232d1-runtime.json
+          if-no-files-found: error
+          retention-days: 7

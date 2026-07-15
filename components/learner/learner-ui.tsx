@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
 
 import { SignOutButton } from "@/components/shared/sign-out-button";
@@ -68,20 +68,44 @@ function matchesLearnerNavPath(pathname: string, item: LearnerNavItem) {
 
 export function LearnerShell({ email, children, rightSlot }: LearnerShellProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   // The authenticated learner shell intentionally exposes only the second-round Answer Road OS.
   // First-round code remains compatibility-only and is not surfaced in learner navigation.
   const currentMode: AppraisalMode = "second";
   const config = getModeConfig(currentMode);
   const homeHref = `/app?mode=${currentMode}`;
+  const focusMode = pathname.startsWith("/app/items/") && searchParams.get("mode") === "second";
+  const skipLink = (
+    <a
+      href={focusMode ? "#study-ledger-content" : "#learner-main"}
+      className="fixed left-[max(1rem,env(safe-area-inset-left))] top-[max(1rem,env(safe-area-inset-top))] z-[60] inline-flex min-h-11 -translate-y-[200%] items-center rounded-[var(--radius-md)] bg-[color:var(--brand-900)] px-4 text-sm font-semibold text-[color:var(--text-inverse)] transition-transform focus:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-canvas)]"
+    >
+      {focusMode ? "학습 노트 내용으로 바로가기" : "학습 내용으로 바로가기"}
+    </a>
+  );
+
+  if (focusMode) {
+    return (
+      <div
+        className="min-h-dvh overflow-x-hidden bg-[color:var(--bg-canvas)]"
+        data-learner-shell
+        data-learner-shell-mode="focus"
+      >
+        {skipLink}
+        <main id="learner-main" tabIndex={-1} className="w-full min-w-0" aria-label="학습 내용">
+          {children}
+        </main>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-dvh overflow-x-hidden bg-[color:var(--bg-canvas)]" data-learner-shell>
-      <a
-        href="#learner-main"
-        className="fixed left-[max(1rem,env(safe-area-inset-left))] top-[max(1rem,env(safe-area-inset-top))] z-[60] inline-flex min-h-11 -translate-y-[200%] items-center rounded-[var(--radius-md)] bg-[color:var(--brand-900)] px-4 text-sm font-semibold text-[color:var(--text-inverse)] transition-transform focus:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-canvas)]"
-      >
-        학습 내용으로 바로가기
-      </a>
+    <div
+      className="min-h-dvh overflow-x-hidden bg-[color:var(--bg-canvas)]"
+      data-learner-shell
+      data-learner-shell-mode="default"
+    >
+      {skipLink}
       <div className="mx-auto flex w-full max-w-[1120px] flex-col pb-[calc(6rem+env(safe-area-inset-bottom))] pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-[calc(0.75rem+env(safe-area-inset-top))] sm:pl-[max(1.5rem,env(safe-area-inset-left))] sm:pr-[max(1.5rem,env(safe-area-inset-right))] sm:pt-[calc(1.5rem+env(safe-area-inset-top))] lg:pb-12 lg:pl-[max(2rem,env(safe-area-inset-left))] lg:pr-[max(2rem,env(safe-area-inset-right))]">
         <header className="space-y-4 border-b border-[var(--border-subtle)] pb-4 sm:pb-5" aria-label="학습 공간 헤더">
           <div className="flex items-start justify-between gap-3">

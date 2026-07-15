@@ -76,6 +76,7 @@ const defaultTestFiles = [
   "tests/s232b2-sticky-action-parity.test.mjs",
   "tests/s232c1-calculator-step-parity.test.mjs",
   "tests/s232c2-calculator-step-runner-adapter.test.mjs",
+  "tests/s232d1-study-ledger-focus-shell.test.mjs",
   "tests/s220b-dabangil-launch-surface.test.mjs",
   "tests/practice-calculation-unit-registry.test.mjs",
   "tests/rewrite-regrade-history-contract.test.mjs",
