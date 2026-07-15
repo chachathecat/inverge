@@ -22,7 +22,12 @@ export default async function ReviewOsWritePage({ searchParams }: PageProps) {
   }
 
   return (
-    <div className="space-y-7" data-s232e-write-flow="capture-form">
+    <div
+      className="space-y-7"
+      data-s224v-surface="/app/write"
+      data-s232e-write-flow="capture-form"
+      data-s232e-second-write-page
+    >
       <header className="space-y-2" data-s232e-write-header>
         <p className="v3-type-caption text-[var(--color-text-secondary)]">다시쓰기 · 한 단계씩</p>
         <h1 id="write-page-title" className="v3-type-screen hero-balance ko-keep text-[var(--color-text-primary)]">

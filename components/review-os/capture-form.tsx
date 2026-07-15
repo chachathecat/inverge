@@ -30,6 +30,7 @@ import { applyDraftToConfirmedSubject, type ExtractionDraft, type ExtractionPipe
 import { extractFirstExamFiveChoicesFromText } from "@/lib/review-os/first-ox-engine";
 import { pushLocalLearnerAnalyticsEvent } from "@/lib/review-os/local-analytics";
 import { resolveReviewSchedule } from "@/lib/review-os/scheduling";
+import { hasSecondWriteReferenceStep } from "@/lib/review-os/second-write-reference-step";
 import {
   CONFIDENCE_OPTIONS,
   getFirstSubjectTemplate,
@@ -166,6 +167,15 @@ const SECOND_WRITE_STAGE_POSITION: Partial<Record<CaptureStage, string>> = {
   confirm: "저장 전 확인",
   "saved-plan": "저장 결과",
 };
+
+const SECOND_WRITE_FLOW_STEPS = [
+  { stage: "second-issue-recall", position: 1, label: "쟁점 회상" },
+  { stage: "second-outline", position: 2, label: "목차 정리" },
+  { stage: "second-answer", position: 3, label: "내 답안" },
+  { stage: "second-reference", position: 4, label: "참고 비교" },
+  { stage: "second-gap", position: 5, label: "가장 큰 약점" },
+  { stage: "second-rewrite", position: 6, label: "문단 다시쓰기" },
+] as const;
 
 const SECOND_PREVIEW_STAGE_CONTEXT = {
   eyebrow: "2. OCR/텍스트 확인",
@@ -380,7 +390,7 @@ function hasSecondModeLearnerProducedResponse(form: DraftState) {
 }
 
 function hasSecondModeReferenceStep(form: DraftState) {
-  return form.referenceAnswerAddedAfterProduction || form.correctAnswer.trim().length >= 4;
+  return hasSecondWriteReferenceStep(form);
 }
 
 function getMissingConfirmationFields(form: DraftState, mode: AppraisalMode) {
@@ -424,6 +434,11 @@ function getCaptureStageContext(
   if (hasRewriteContext && mode === "second") return REWRITE_CONTEXT_STAGE_CONTEXT;
   if (stage === "preview" && mode === "second") return SECOND_PREVIEW_STAGE_CONTEXT;
   return CAPTURE_STAGE_CONTEXT[stage];
+}
+
+function getSecondWriteStepNumber(stage: CaptureStage) {
+  const index = SECOND_WRITE_FLOW_STEPS.findIndex((item) => item.stage === stage);
+  return index < 0 ? null : index + 1;
 }
 
 function getPageBoundaryLabel(index: number) {
@@ -573,8 +588,10 @@ export function WrongAnswerCaptureForm({
   ]);
   const hideGlobalFooterActions = mode === "second" && secondModeHiddenFooterStages.has(stage);
   const currentCaptureStep = getCaptureStep(stage, mode);
+  const currentSecondWriteStep = getSecondWriteStepNumber(stage);
   const currentCaptureFlowSteps = mode === "second" ? SECOND_CAPTURE_FLOW_STEPS : CAPTURE_FLOW_STEPS;
   const currentCaptureStageContext = getCaptureStageContext(stage, mode, Boolean(rewriteContext));
+  const secondModeReferenceStepComplete = hasSecondModeReferenceStep(form);
   const captureStageHeadingRef = useRef<HTMLHeadingElement | null>(null);
   const announcedCaptureStageRef = useRef<CaptureStage>(stage);
   useEffect(() => {
@@ -591,7 +608,7 @@ export function WrongAnswerCaptureForm({
     const nextStage =
       stage === "second-reference" && form.userAnswer.trim().length < 8
         ? "second-answer"
-        : stage === "second-gap" && form.correctAnswer.trim().length < 8
+        : stage === "second-gap" && !secondModeReferenceStepComplete
           ? "second-reference"
           : stage === "second-rewrite" && form.biggestGap.trim().length < 4
             ? "second-gap"
@@ -601,7 +618,7 @@ export function WrongAnswerCaptureForm({
 
     const timeout = window.setTimeout(() => setStage(nextStage), 0);
     return () => window.clearTimeout(timeout);
-  }, [secondWriteEnabled, stage, form.userAnswer, form.correctAnswer, form.biggestGap]);
+  }, [secondWriteEnabled, stage, form.userAnswer, secondModeReferenceStepComplete, form.biggestGap]);
 
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const galleryInputRef = useRef<HTMLInputElement | null>(null);
@@ -1431,12 +1448,51 @@ export function WrongAnswerCaptureForm({
       data-s232e-capture-stage={stage}
     >
       {secondWriteEnabled ? (
-        <p
-          className="v3-type-label rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-subtle)] px-3 py-2 text-[var(--color-text-secondary)]"
-          data-s232e-second-write-position={stage}
+        <section
+          className="rounded-[var(--v3-radius-panel)] border border-[var(--color-border-default)] bg-[var(--color-background-subtle)] p-3 sm:p-4"
+          aria-label="다시쓰기 6단계 진행"
+          data-s232e-second-write-progress
         >
-          다시쓰기 진행 · {SECOND_WRITE_STAGE_POSITION[stage] ?? "현재 작업"}
-        </p>
+          <p
+            className="v3-type-label text-[var(--color-text-secondary)]"
+            data-s232e-second-write-position={stage}
+          >
+            다시쓰기 진행 · {SECOND_WRITE_STAGE_POSITION[stage] ?? "현재 작업"}
+          </p>
+          <ol
+            className="mt-3 grid grid-cols-3 gap-1.5 sm:grid-cols-6 sm:gap-2"
+            aria-label="다시쓰기 6단계 흐름"
+            data-s232e-second-write-stage-list
+          >
+            {SECOND_WRITE_FLOW_STEPS.map((item) => {
+              const isCurrent = currentSecondWriteStep === item.position;
+              const isComplete =
+                (currentSecondWriteStep !== null && item.position < currentSecondWriteStep) ||
+                stage === "confirm" ||
+                stage === "saved-plan";
+              return (
+                <li
+                  key={item.stage}
+                  className={`min-w-0 rounded-[var(--v3-radius-control)] border px-2 py-2 text-center ${
+                    isCurrent
+                      ? "border-[var(--color-border-focus)] bg-[var(--color-background-brand)] text-[var(--color-text-inverse)]"
+                      : isComplete
+                        ? "border-[var(--color-border-stable)] bg-[var(--color-background-surface)] text-[var(--color-text-primary)]"
+                        : "border-[var(--color-border-default)] bg-[var(--color-background-surface)] text-[var(--color-text-secondary)]"
+                  }`}
+                  aria-current={isCurrent ? "step" : undefined}
+                  data-s232e-second-write-progress-step={item.position}
+                  data-s232e-second-write-stage={item.stage}
+                >
+                  <span className="v3-type-label-strong block tabular-nums" aria-hidden="true">
+                    {item.position}/6
+                  </span>
+                  <span className="v3-type-caption ko-keep mt-1 block">{item.label}</span>
+                </li>
+              );
+            })}
+          </ol>
+        </section>
       ) : (
         <>
           <CaptureProgressPill current={currentCaptureStep} total={4} mode={mode} />
@@ -1745,6 +1801,7 @@ export function WrongAnswerCaptureForm({
               disabled={submitting}
               onClick={() => setStage("confirm")}
               className="w-full sm:w-auto"
+              data-s232e-second-write-primary-action="6"
             >
               마지막 확인으로 이동
             </Button>
@@ -2696,20 +2753,24 @@ function SecondIssueRecallPanel({
 }) {
   const template = getSecondSubjectTemplate(subject);
   return (
-    <section className="rounded-[var(--radius-card)] border border-[color:var(--cue-focus)] bg-[color:var(--cue-focus-bg)] p-4 sm:p-5">
-      <p className="text-caption text-[color:var(--muted)]">Step 1. 쟁점 회상</p>
-      <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">강의/교재 정리 보기 전, 쟁점 1개만 적으세요.</h3>
-      <details className="quiet-disclosure mt-2 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3" data-s224v-secondary-diagnostics><summary className="cursor-pointer text-xs font-medium text-[color:var(--muted)]">왜 이 순서인가요?</summary><p className="mt-2 text-xs leading-6 text-[color:var(--muted)]">완벽히 쓰지 말고, 지금 떠오르는 문장만 적으세요. 이 과목은 먼저 이 구조로 답안을 잡습니다. {template.structure}</p></details>
+    <section
+      className="rounded-[var(--v3-radius-panel)] border border-[var(--color-border-focus)] bg-[var(--color-background-brand-soft)] p-4 sm:p-5"
+      aria-labelledby="second-write-step-1-title"
+      data-s232e-second-write-panel="1"
+    >
+      <p className="v3-type-caption text-[var(--color-text-brand)]" data-controller-label="Step 1. 쟁점 회상">다시쓰기 · 1/6 · 쟁점 회상</p>
+      <h3 id="second-write-step-1-title" className="v3-type-section ko-keep mt-1 text-[var(--color-text-primary)]">강의/교재 정리 보기 전, 쟁점 1개만 적으세요.</h3>
+      <details className="quiet-disclosure mt-3 rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-surface)] p-3" data-s224v-secondary-diagnostics><summary className="v3-type-caption cursor-pointer text-[var(--color-text-secondary)]">왜 이 순서인가요?</summary><p className="v3-type-label ko-keep mt-2 text-[var(--color-text-secondary)]">완벽히 쓰지 말고, 지금 떠오르는 문장만 적으세요. 이 과목은 먼저 이 구조로 답안을 잡습니다. {template.structure}</p></details>
       <label className="mt-4 block space-y-2">
-        <span className="text-sm text-[color:var(--foreground-strong)]">쟁점 회상</span>
+        <span className="v3-type-label text-[var(--color-text-primary)]">쟁점 회상</span>
         <Textarea
           value={issueRecall}
           onChange={(event) => onChange(event.target.value)}
-          className="min-h-44 border-[var(--border)] bg-[color:var(--surface)] text-[color:var(--foreground-strong)] leading-7"
+          className="min-h-44 rounded-[var(--v3-radius-control)] border-[var(--color-border-default)] bg-[var(--color-background-surface)] text-[var(--color-text-primary)] leading-7"
           placeholder={template.issueRecallPlaceholder}
         />
       </label>
-      <Button type="button" className="mt-4 w-full sm:w-auto" disabled={issueRecall.trim().length < 8} onClick={onNext}>
+      <Button type="button" className="mt-4 min-h-12 w-full sm:w-auto" disabled={issueRecall.trim().length < 8} onClick={onNext} data-s232e-second-write-primary-action="1">
         다음: 목차 작성
       </Button>
     </section>
@@ -2729,20 +2790,24 @@ function SecondOutlinePanel({
 }) {
   const template = getSecondSubjectTemplate(subject);
   return (
-    <section className="rounded-[var(--radius-card)] border border-[color:var(--cue-focus)] bg-[color:var(--cue-focus-bg)] p-4 sm:p-5">
-      <p className="text-caption text-[color:var(--muted)]">Step 2. 목차 작성</p>
-      <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">전체 답안보다 목차 3줄이 먼저입니다.</h3>
-      <details className="quiet-disclosure mt-2 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3" data-s224v-secondary-diagnostics><summary className="cursor-pointer text-xs font-medium text-[color:var(--muted)]">왜 이 순서인가요?</summary><p className="mt-2 text-xs leading-6 text-[color:var(--muted)]">강의/교재 정리를 보기 전에 이 체크포인트 중 3개를 떠올립니다: {template.checklist.slice(0, 3).join(", ")}</p></details>
+    <section
+      className="rounded-[var(--v3-radius-panel)] border border-[var(--color-border-focus)] bg-[var(--color-background-brand-soft)] p-4 sm:p-5"
+      aria-labelledby="second-write-step-2-title"
+      data-s232e-second-write-panel="2"
+    >
+      <p className="v3-type-caption text-[var(--color-text-brand)]" data-controller-label="Step 2. 목차 작성">다시쓰기 · 2/6 · 목차 정리</p>
+      <h3 id="second-write-step-2-title" className="v3-type-section ko-keep mt-1 text-[var(--color-text-primary)]">전체 답안보다 목차 3줄이 먼저입니다.</h3>
+      <details className="quiet-disclosure mt-3 rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-surface)] p-3" data-s224v-secondary-diagnostics><summary className="v3-type-caption cursor-pointer text-[var(--color-text-secondary)]">왜 이 순서인가요?</summary><p className="v3-type-label ko-keep mt-2 text-[var(--color-text-secondary)]">강의/교재 정리를 보기 전에 이 체크포인트 중 3개를 떠올립니다: {template.checklist.slice(0, 3).join(", ")}</p></details>
       <label className="mt-4 block space-y-2">
-        <span className="text-sm text-[color:var(--foreground-strong)]">목차 초안</span>
+        <span className="v3-type-label text-[var(--color-text-primary)]">목차 초안</span>
         <Textarea
           value={outlineDraft}
           onChange={(event) => onChange(event.target.value)}
-          className="min-h-44 border-[var(--border)] bg-[color:var(--surface)] text-[color:var(--foreground-strong)] leading-7"
+          className="min-h-44 rounded-[var(--v3-radius-control)] border-[var(--color-border-default)] bg-[var(--color-background-surface)] text-[var(--color-text-primary)] leading-7"
           placeholder={template.outlinePlaceholder}
         />
       </label>
-      <Button type="button" className="mt-4 w-full sm:w-auto" disabled={outlineDraft.trim().length < 8} onClick={onNext}>
+      <Button type="button" className="mt-4 min-h-12 w-full sm:w-auto" disabled={outlineDraft.trim().length < 8} onClick={onNext} data-s232e-second-write-primary-action="2">
         다음: 내 답안 작성
       </Button>
     </section>
@@ -2766,20 +2831,24 @@ function SecondAnswerPanel({
     "감정평가 및 보상법규": "법적 성질:\n처분성/권리구제:\n요건:\n조문/법리:\n사안 포섭:\n사안 해결:",
   };
   return (
-    <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 sm:p-5">
-      <p className="text-caption text-[color:var(--muted)]">Step 3. 내 답안 작성</p>
-      <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">비교는 작성 이후에 합니다.</h3>
-      <details className="quiet-disclosure mt-2 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3" data-s224v-secondary-diagnostics><summary className="cursor-pointer text-xs font-medium text-[color:var(--muted)]">왜 이 순서인가요?</summary><p className="mt-2 text-xs leading-6 text-[color:var(--muted)]">완벽히 쓰지 말고, 지금 떠오르는 문장만 적으세요.</p></details>
+    <section
+      className="rounded-[var(--v3-radius-panel)] border border-[var(--color-border-default)] bg-[var(--color-background-surface)] p-4 sm:p-5"
+      aria-labelledby="second-write-step-3-title"
+      data-s232e-second-write-panel="3"
+    >
+      <p className="v3-type-caption text-[var(--color-text-brand)]" data-controller-label="Step 3. 내 답안 작성">다시쓰기 · 3/6 · 내 답안 작성</p>
+      <h3 id="second-write-step-3-title" className="v3-type-section ko-keep mt-1 text-[var(--color-text-primary)]">비교는 작성 이후에 합니다.</h3>
+      <details className="quiet-disclosure mt-3 rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-subtle)] p-3" data-s224v-secondary-diagnostics><summary className="v3-type-caption cursor-pointer text-[var(--color-text-secondary)]">왜 이 순서인가요?</summary><p className="v3-type-label ko-keep mt-2 text-[var(--color-text-secondary)]">완벽히 쓰지 말고, 지금 떠오르는 문장만 적으세요.</p></details>
       <label className="mt-4 block space-y-2">
-        <span className="text-sm text-[color:var(--foreground-strong)]">내 답안</span>
+        <span className="v3-type-label text-[var(--color-text-primary)]">내 답안</span>
         <Textarea
           value={answer}
           onChange={(event) => onChange(event.target.value)}
-          className="min-h-56 border-[var(--border)] bg-[color:var(--surface)] text-[color:var(--foreground-strong)] leading-7"
+          className="min-h-56 rounded-[var(--v3-radius-control)] border-[var(--color-border-default)] bg-[var(--color-background-surface)] text-[var(--color-text-primary)] leading-7"
           placeholder={templates[subject] ?? "핵심 문장 1개:\n근거:\n결론:"}
         />
       </label>
-      <Button type="button" className="mt-4 w-full sm:w-auto" disabled={answer.trim().length < 8} onClick={onNext}>
+      <Button type="button" className="mt-4 min-h-12 w-full sm:w-auto" disabled={answer.trim().length < 8} onClick={onNext} data-s232e-second-write-primary-action="3">
         다음: 강의/교재 정리 입력
       </Button>
     </section>
@@ -2796,23 +2865,27 @@ function SecondReferencePanel({
   onNext: () => void;
 }) {
   return (
-    <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 sm:p-5">
-      <p className="text-caption text-[color:var(--muted)]">Step 4. 강의/교재 정리 입력</p>
-      <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">작성한 뒤에만 강의/교재 정리를 봅니다.</h3>
-      <details className="quiet-disclosure mt-2 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3" data-s224v-secondary-diagnostics><summary className="cursor-pointer text-xs font-medium text-[color:var(--muted)]">왜 이 순서인가요?</summary><p className="mt-2 text-xs leading-6 text-[color:var(--muted)]">비교는 작성 이후에 합니다.</p></details>
+    <section
+      className="rounded-[var(--v3-radius-panel)] border border-[var(--color-border-default)] bg-[var(--color-background-surface)] p-4 sm:p-5"
+      aria-labelledby="second-write-step-4-title"
+      data-s232e-second-write-panel="4"
+    >
+      <p className="v3-type-caption text-[var(--color-text-brand)]" data-controller-label="Step 4. 강의/교재 정리 입력">다시쓰기 · 4/6 · 참고 정리 비교</p>
+      <h3 id="second-write-step-4-title" className="v3-type-section ko-keep mt-1 text-[var(--color-text-primary)]">작성한 뒤에만 강의/교재 정리를 봅니다.</h3>
+      <details className="quiet-disclosure mt-3 rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-subtle)] p-3" data-s224v-secondary-diagnostics><summary className="v3-type-caption cursor-pointer text-[var(--color-text-secondary)]">왜 이 순서인가요?</summary><p className="v3-type-label ko-keep mt-2 text-[var(--color-text-secondary)]">비교는 작성 이후에 합니다.</p></details>
       <label className="mt-4 block space-y-2">
-        <span className="text-sm text-[color:var(--foreground-strong)]">강의/교재 정리 요약</span>
+        <span className="v3-type-label text-[var(--color-text-primary)]">강의/교재 정리 요약</span>
         <Textarea
           value={reference}
           onChange={(event) => onChange(event.target.value)}
-          className="min-h-56 border-[var(--border)] bg-[color:var(--surface)] text-[color:var(--foreground-strong)] leading-7"
+          className="min-h-56 rounded-[var(--v3-radius-control)] border-[var(--color-border-default)] bg-[var(--color-background-surface)] text-[var(--color-text-primary)] leading-7"
         />
       </label>
       <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-        <Button type="button" className="w-full sm:w-auto" disabled={reference.trim().length < 4} onClick={onNext}>
+        <Button type="button" className="min-h-12 w-full sm:w-auto" disabled={reference.trim().length < 4} onClick={onNext} data-s232e-second-write-primary-action="4">
           다음: 가장 큰 약점 1개
         </Button>
-        <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={onNext}>
+        <Button type="button" variant="ghost" className="w-full sm:w-auto" onClick={onNext} data-s232e-second-write-secondary-action="defer-reference">
           강의/교재 정리는 나중에 확인
         </Button>
       </div>
@@ -2833,20 +2906,24 @@ function SecondGapPanel({
 }) {
   const template = getSecondSubjectTemplate(subject);
   return (
-    <section className="rounded-[var(--radius-card)] border border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] p-4 sm:p-5">
-      <p className="text-caption text-[color:var(--muted)]">Step 5. 가장 큰 약점 1개</p>
-      <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">오늘은 가장 큰 약점 1개만 고칩니다.</h3>
-      <details className="quiet-disclosure mt-2 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3" data-s224v-secondary-diagnostics><summary className="cursor-pointer text-xs font-medium text-[color:var(--muted)]">왜 이 순서인가요?</summary><p className="mt-2 text-xs leading-6 text-[color:var(--muted)]">{template.biggestGapGuidance}</p></details>
+    <section
+      className="rounded-[var(--v3-radius-panel)] border border-[var(--color-border-attention)] bg-[var(--color-background-attention)] p-4 sm:p-5"
+      aria-labelledby="second-write-step-5-title"
+      data-s232e-second-write-panel="5"
+    >
+      <p className="v3-type-caption text-[var(--color-text-brand)]" data-controller-label="Step 5. 가장 큰 약점 1개">다시쓰기 · 5/6 · 가장 큰 약점</p>
+      <h3 id="second-write-step-5-title" className="v3-type-section ko-keep mt-1 text-[var(--color-text-primary)]">오늘은 가장 큰 약점 1개만 고칩니다.</h3>
+      <details className="quiet-disclosure mt-3 rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-surface)] p-3" data-s224v-secondary-diagnostics><summary className="v3-type-caption cursor-pointer text-[var(--color-text-secondary)]">왜 이 순서인가요?</summary><p className="v3-type-label ko-keep mt-2 text-[var(--color-text-secondary)]">{template.biggestGapGuidance}</p></details>
       <label className="mt-4 block space-y-2">
-        <span className="text-sm text-[color:var(--foreground-strong)]">보강할 논점 1개</span>
+        <span className="v3-type-label text-[var(--color-text-primary)]">보강할 논점 1개</span>
         <Textarea
           value={biggestGap}
           onChange={(event) => onChange(event.target.value)}
-          className="min-h-32 border-[var(--border)] bg-[color:var(--surface)] text-[color:var(--foreground-strong)] leading-7"
+          className="min-h-32 rounded-[var(--v3-radius-control)] border-[var(--color-border-default)] bg-[var(--color-background-surface)] text-[var(--color-text-primary)] leading-7"
           placeholder={template.commonGaps[0]}
         />
       </label>
-      <Button type="button" className="mt-4 w-full sm:w-auto" disabled={biggestGap.trim().length < 4} onClick={onNext}>
+      <Button type="button" className="mt-4 min-h-12 w-full sm:w-auto" disabled={biggestGap.trim().length < 4} onClick={onNext} data-s232e-second-write-primary-action="5">
         다음: 문단 다시쓰기
       </Button>
     </section>
@@ -2866,44 +2943,48 @@ function SecondGapRewritePanel({
 }) {
   const template = getSecondSubjectTemplate(subject);
   return (
-    <section className="rounded-[var(--radius-card)] border border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] p-4 sm:p-5">
-      <p className="text-caption text-[color:var(--muted)]">Step 6. 문단 다시쓰기</p>
-      <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">한 문단만 다시 씁니다.</h3>
-      <details className="quiet-disclosure mt-2 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3" data-s224v-secondary-diagnostics><summary className="cursor-pointer text-xs font-medium text-[color:var(--muted)]">왜 이 순서인가요?</summary><p className="mt-2 text-xs leading-6 text-[color:var(--muted)]">{template.rewriteGuidance}</p></details>
+    <section
+      className="rounded-[var(--v3-radius-panel)] border border-[var(--color-border-attention)] bg-[var(--color-background-attention)] p-4 sm:p-5"
+      aria-labelledby="second-write-step-6-title"
+      data-s232e-second-write-panel="6"
+    >
+      <p className="v3-type-caption text-[var(--color-text-brand)]" data-controller-label="Step 6. 문단 다시쓰기">다시쓰기 · 6/6 · 문단 다시쓰기</p>
+      <h3 id="second-write-step-6-title" className="v3-type-section ko-keep mt-1 text-[var(--color-text-primary)]">한 문단만 다시 씁니다.</h3>
+      <details className="quiet-disclosure mt-3 rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-surface)] p-3" data-s224v-secondary-diagnostics><summary className="v3-type-caption cursor-pointer text-[var(--color-text-secondary)]">왜 이 순서인가요?</summary><p className="v3-type-label ko-keep mt-2 text-[var(--color-text-secondary)]">{template.rewriteGuidance}</p></details>
       <div className="mt-4 space-y-4">
-        <details className="quiet-disclosure rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3" data-s224v-secondary-diagnostics>
-          <summary className="cursor-pointer text-xs font-medium text-[color:var(--muted)]">처음 쓴 답안 보기</summary>
-          <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[color:var(--foreground-strong)]">{form.userAnswer || "아직 작성된 답안이 없습니다."}</p>
+        <details className="quiet-disclosure rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-surface)] p-3" data-s224v-secondary-diagnostics>
+          <summary className="v3-type-caption cursor-pointer text-[var(--color-text-secondary)]">처음 쓴 답안 보기</summary>
+          <p className="v3-type-label mt-2 whitespace-pre-wrap text-[var(--color-text-primary)]">{form.userAnswer || "아직 작성된 답안이 없습니다."}</p>
         </details>
         <label className="block space-y-2">
-          <span className="text-sm text-[color:var(--foreground-strong)]">다시 쓴 문단</span>
+          <span className="v3-type-label text-[var(--color-text-primary)]">다시 쓴 문단</span>
           <Textarea
             value={form.rewriteParagraph}
             onChange={(event) => {
               update("rewriteParagraph", event.target.value);
             }}
             data-testid="second-write-final-textarea"
-            className="min-h-56 border-[var(--border)] bg-[color:var(--surface)] text-[color:var(--foreground-strong)] leading-7"
+            className="min-h-56 rounded-[var(--v3-radius-control)] border-[var(--color-border-default)] bg-[var(--color-background-surface)] text-[var(--color-text-primary)] leading-7"
             placeholder="누락 논점 1개를 반영해 문단을 다시 작성하세요."
           />
         </label>
       </div>
-      <details className="quiet-disclosure mt-4 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3" data-s224v-secondary-diagnostics>
-        <summary className="cursor-pointer text-xs font-medium text-[color:var(--muted)]">세부 입력 보기 (선택)</summary>
+      <details className="quiet-disclosure mt-4 rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-surface)] p-3" data-s224v-secondary-diagnostics>
+        <summary className="v3-type-caption cursor-pointer text-[var(--color-text-secondary)]">세부 입력 보기 (선택)</summary>
         <div className="mt-3 space-y-3">
           <label className="block space-y-2">
-            <span className="text-sm text-[color:var(--foreground-strong)]">보강할 논점 1개</span>
+            <span className="v3-type-label text-[var(--color-text-primary)]">보강할 논점 1개</span>
             <Textarea
               value={form.userReasonText}
               onChange={(event) => {
                 update("userReasonText", event.target.value);
                 update("missingIssue", event.target.value);
               }}
-              className="min-h-28 border-[var(--border)] bg-[color:var(--surface)] text-[color:var(--foreground-strong)] leading-7"
+              className="min-h-28 rounded-[var(--v3-radius-control)] border-[var(--color-border-default)] bg-[var(--color-background-surface)] text-[var(--color-text-primary)] leading-7"
             />
           </label>
           <label className="space-y-2">
-            <span className="text-sm text-[color:var(--foreground-strong)]">rewrite 지시</span>
+            <span className="v3-type-label text-[var(--color-text-primary)]">rewrite 지시</span>
             <input
               value={form.rewriteInstruction}
               onChange={(event) => update("rewriteInstruction", event.target.value)}
