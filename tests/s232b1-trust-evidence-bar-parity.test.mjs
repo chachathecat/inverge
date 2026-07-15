@@ -19,6 +19,8 @@ const barrel = read("components/learner/index.ts");
 const runner = read("scripts/run-node-tests.mjs");
 const qa = read("docs/qa/s232b1-trust-evidence-bar-parity.md");
 const workflow = read(".github/workflows/s232b1-runtime.yml");
+const browserRuntime = read("tests/e2e/s232b1-trust-evidence-bar.spec.ts");
+const authRuntime = read("tests/e2e/s232b1-authenticated-runtime.spec.ts");
 
 test("S232B.1 maps only typed trust evidence into the exact three-state Figma contract", () => {
   assert.deepEqual(TRUST_EVIDENCE_BAR_STATES, ["Verified", "NeedsReview", "Conflict"]);
@@ -159,4 +161,18 @@ test("S232B.1 exact-head workflow is PR-scoped and publishes metadata only", () 
   assert.match(workflow, /unexpected viewport key/);
   assert.match(workflow, /path: s232b1-evidence\/s232b1-runtime\.json/);
   assert.doesNotMatch(workflow, /extraHTTPHeaders/);
+});
+
+test("S232B.1 runtime uses stable disclosure selectors and a persisted confirmed test fixture", () => {
+  assert.match(browserRuntime, /width: 720, height: 1024, pageEdge: "20px"/);
+  assert.match(browserRuntime, /getByTestId\("trust-evidence-Verified-Collapsed"\)/);
+  assert.doesNotMatch(
+    browserRuntime,
+    /const bar = page\.locator\('\[data-v3-state="Verified"\]\[data-v3-view="Collapsed"\]'\)/,
+  );
+  assert.match(authRuntime, /createConfirmedSyntheticDetailHref/);
+  assert.match(authRuntime, /user_confirmed_fields:[\s\S]*hasManualCorrection: true,[\s\S]*ocrConfirmedByLearner: true/);
+  assert.match(authRuntime, /findEvidenceBackedStudyLedgerDetailHref/);
+  assert.match(authRuntime, /normal item API/);
+  assert.doesNotMatch(authRuntime, /screenshotCaptured: true|traceCaptured: true|videoCaptured: true/);
 });
