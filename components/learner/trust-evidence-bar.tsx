@@ -104,7 +104,6 @@ export function TrustEvidenceBar({
       aria-label={`신뢰 근거 · ${presentation.label}`}
       className={cn(
         "w-full rounded-[var(--v3-radius-control)] border p-4",
-        "transition-[min-height] motion-reduce:transition-none",
         expanded ? "min-h-[170px]" : "min-h-[72px]",
         presentation.shellClassName,
         className,
