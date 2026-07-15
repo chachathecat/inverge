@@ -127,6 +127,7 @@ export default function AnswerReviewClientPage({
   const [examMode, setExamMode] = useState<AppraisalMode>(initialReviewContext.examMode);
   const [subject, setSubject] = useState<string>(initialReviewContext.subject);
   const [showExampleAnswer, setShowExampleAnswer] = useState(false);
+  const [resultSecondaryOpen, setResultSecondaryOpen] = useState(false);
   const [explanationLevel, setExplanationLevel] = useState<AnswerReviewExplanationLevel>("standard");
   const [problemSnapRoutineReference, setProblemSnapRoutineReference] = useState<CalculatorRoutineDraftReference | null>(null);
   const [hasProblemSnapRoutineHandoff, setHasProblemSnapRoutineHandoff] = useState(false);
@@ -329,6 +330,9 @@ export default function AnswerReviewClientPage({
 
     setIsStructuring(true);
     setStructureError(null);
+    setStructureDraft(null);
+    setLearningSignalStatus(null);
+    setReferenceGrounding(null);
     calculatorRoutineSync.reset();
     if (hasProblemSnapRoutineHandoff && problemSnapRoutineReference?.routineId && problemSnapRoutineReference.draftKey) {
       setAnswerReviewRoutineRunId(null);
@@ -496,14 +500,6 @@ export default function AnswerReviewClientPage({
   const inputStatusSummary = `문제/사례 ${hasProblemInput ? "입력됨" : "미입력"}, 내 답안 ${hasMyAnswer ? "입력됨" : "미입력"}, 검토 참고자료 ${
     hasReferenceAnswer ? "입력됨" : "미입력"
   }`;
-  const missingPointSummary = hasMissingPointMemo
-    ? `이번 답안은 ${missingPointMemo.trim()} 보강이 우선입니다.`
-    : "누락 논점 후보를 먼저 적으면 학습 보조 정리가 완성됩니다.";
-  const revisionSummary = hasRevisionParagraph
-    ? revisionParagraph.trim()
-    : "보강 문단을 작성하면 다음 행동이 더 선명해집니다.";
-  const tenSecondCheckSummary = cognitiveLearningActions.retrievalCheck.prompt;
-  const continuationSummary = `${cognitiveLearningActions.continuation.reviewQueueCandidate} / 오늘 할 일 최대 ${cognitiveLearningActions.continuation.todayPlanMaxPrimaryTasks}개 / 학습 노트`;
   const trustEvidence: TrustProvenanceEvidence = structureError
     ? { kind: "unavailable", evidenceAvailable: false }
     : hasProblemInput || hasMyAnswer || hasReferenceAnswer || isStructuring || Boolean(structureDraft)
@@ -517,6 +513,7 @@ export default function AnswerReviewClientPage({
       return;
     }
     if (currentStep === 2) {
+      setResultSecondaryOpen(false);
       setCurrentStep(3);
       return;
     }
@@ -616,18 +613,23 @@ export default function AnswerReviewClientPage({
           <input ref={answerCameraInputRef} type="file" accept="image/*" capture="environment" multiple className="hidden" aria-label="내 답안 카메라 파일 선택" onChange={handleMyAnswerFileChange} />
           <input ref={problemCameraInputRef} type="file" accept="image/*" capture="environment" multiple className="hidden" aria-label="문제 또는 사례 카메라 파일 선택" onChange={handleProblemFileChange} />
           <input ref={generalFileInputRef} type="file" accept="image/*,.pdf" multiple className="hidden" aria-label="답안 검토 파일 선택" onChange={handleGeneralFileChange} />
-          <div
-            className="grid gap-2 sm:grid-cols-2"
-            data-s224v-secondary-input-options="quiet"
-            data-s232e3-answer-entry-actions
-          >
-            <button type="button" onClick={() => answerCameraInputRef.current?.click()} className={cn(buttonVariants({ variant: "outline" }), "w-full justify-center h-11 text-sm font-semibold")}>답안 스냅</button>
-            <button type="button" onClick={focusAnswerTextarea} className={cn(buttonVariants({ variant: "outline" }), "w-full justify-center h-11 text-sm")}>텍스트 붙여넣기</button>
-          </div>
-          {viewerMode === "anonymous" ? (
-            <p className="inline-flex w-fit rounded-full border border-[var(--border)] bg-[color:var(--surface)] px-2.5 py-1 text-xs font-medium text-[color:var(--muted)]">
-              무료 체험 1회
-            </p>
+          {currentStep === 1 ? (
+            <>
+              <div
+                className="grid gap-2 sm:grid-cols-2"
+                data-s224v-secondary-input-options="quiet"
+                data-s232e3-answer-entry-actions
+                data-s232e4-entry-actions-scoped="step-1"
+              >
+                <button type="button" onClick={() => answerCameraInputRef.current?.click()} className={cn(buttonVariants({ variant: "outline" }), "h-11 w-full justify-center text-sm font-semibold")}>답안 스냅</button>
+                <button type="button" onClick={focusAnswerTextarea} className={cn(buttonVariants({ variant: "outline" }), "h-11 w-full justify-center text-sm")}>텍스트 붙여넣기</button>
+              </div>
+              {viewerMode === "anonymous" ? (
+                <p className="inline-flex w-fit rounded-full border border-[var(--border)] bg-[color:var(--surface)] px-2.5 py-1 text-xs font-medium text-[color:var(--muted)]">
+                  무료 체험 1회
+                </p>
+              ) : null}
+            </>
           ) : null}
 
         <section className="space-y-4 rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-4 sm:p-5">
@@ -654,18 +656,6 @@ export default function AnswerReviewClientPage({
               })}
             </ol>
           </div>
-
-          {currentStep !== 1 ? (
-            <button
-              type="button"
-              className={cn(buttonVariants({ variant: "default" }), "w-full sm:w-auto")}
-              onClick={handlePrimaryAction}
-              disabled={isPrimaryActionDisabled}
-              data-testid={currentStep === 2 ? "answer-review-build-feedback" : "answer-review-copy-feedback"}
-            >
-              {primaryActionLabel}
-            </button>
-          ) : null}
 
           {currentStep === 1 ? (
             <motion.section
@@ -941,52 +931,59 @@ export default function AnswerReviewClientPage({
                   animate={shouldReduceMotion ? undefined : { opacity: 1, y: 0 }}
                   transition={{ duration: 0.28, ease: "easeOut" }}
                   data-answer-review-result-shell
+                  data-s232e4-answer-review-result="one-gap-first"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="space-y-1">
                       <p className="text-caption text-[color:var(--muted)]">{examMode === "second" ? "감정평가사 2차" : "감정평가사 1차"} · {subject}</p>
                       <h2 ref={stepTwoHeadingRef} tabIndex={-1} className="text-base font-semibold text-[color:var(--foreground-strong)]">가장 큰 간극부터 확인</h2>
-                      <p className="text-caption leading-5 text-[color:var(--muted)]">{toShortLine(qualityView?.nextAction || "", "가장 큰 간극 하나를 먼저 보강하면 다음 초안의 완성도가 올라갑니다.")}</p>
+                      <p className="text-caption leading-5 text-[color:var(--muted)]">점수보다 가장 큰 간극 1개를 먼저 다시 씁니다.</p>
                     </div>
-                {referenceGrounding?.used ? (
-                  <p className="mt-2 text-caption text-[color:var(--muted)]">
-                    유사 기출 구조를 참고해 검토했습니다. {referenceGrounding.displayLabel}
-                  </p>
-                ) : qualityView ? (
-                  <p className="mt-2 text-caption text-[color:var(--muted)]">유사 기출 reference 없이 입력 자료 기준으로 검토했습니다.</p>
-                ) : null}
-                    <div className="space-y-2 text-right">
-                      <p className="text-caption text-[color:var(--muted)]">상태 · {completionStatus}</p>
-                      <button type="button" onClick={() => setCurrentStep(1)} className={cn(buttonVariants({ variant: "outline" }), "h-9 px-4")}>
-                        입력 수정하기
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setResultSecondaryOpen(false);
+                        setCurrentStep(1);
+                      }}
+                      className={cn(buttonVariants({ variant: "outline" }), "h-9 px-4")}
+                    >
+                      입력 수정하기
+                    </button>
                   </div>
-                  <section className="one-gap-feedback-card grid gap-3 md:grid-cols-2" data-answer-review-result-loop data-s224v-one-gap-feedback-card>
-                    {[
-                      {
-                        label: "가장 큰 간극",
-                        body: toDetailLine(qualityView?.primaryFix.gap || "", "핵심 논점 입력을 보강하면 가장 큰 간극이 자동 정리됩니다."),
-                      },
-                      {
-                        label: "다음 행동",
-                        body: toDetailLine(qualityView?.nextAction || biggestGapFix, "누락 논점 1개를 먼저 보강하세요."),
-                      },
-                      {
-                        label: "10초 확인",
-                        body: toDetailLine(tenSecondCheckSummary, "쟁점, 기준, 적용 순서를 10초 안에 떠올려 보세요."),
-                      },
-                      {
-                        label: "계속할 곳",
-                        body: continuationSummary,
-                      },
-                    ].map((item) => (
-                      <article key={item.label} className="rounded-[var(--radius-sm)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-soft)] p-3">
-                        <p className="text-caption font-medium text-[color:var(--muted)]">{item.label}</p>
-                        <p className="mt-1 text-sm leading-6 text-[color:var(--foreground-strong)]">{item.body}</p>
-                      </article>
-                    ))}
-                  </section>
+                  {structureDraft ? (
+                    <article
+                      className="one-gap-feedback-card rounded-[var(--radius-md)] border border-[color:var(--brand-700)] bg-[color:var(--brand-050)] p-5"
+                      data-answer-review-result-loop
+                      data-s224v-one-gap-feedback-card
+                      data-s232e4-biggest-gap
+                    >
+                      <p className="v3-type-caption text-[#3f4c66]">가장 먼저 고칠 1가지</p>
+                      <h3 className="v3-type-section ko-keep mt-2 text-[#1e2a46]">가장 큰 간극</h3>
+                      <p className="v3-type-body ko-keep mt-2 text-[#1e2a46]">
+                        {toDetailLine(qualityView?.primaryFix.gap || "", "핵심 논점 입력을 보강하면 가장 큰 간극이 자동 정리됩니다.")}
+                      </p>
+                      <dl className="mt-4 divide-y divide-[#cbd3e2] border-y border-[#cbd3e2]">
+                        <div className="py-3 sm:grid sm:grid-cols-[112px_minmax(0,1fr)] sm:gap-3">
+                          <dt className="v3-type-caption text-[#3f4c66]">왜 중요한가</dt>
+                          <dd className="v3-type-compact ko-keep mt-1 text-[#1e2a46] sm:mt-0">{qualityView?.primaryFix.whyItMatters || "핵심 논점을 놓치면 답안의 설득력이 크게 떨어집니다."}</dd>
+                        </div>
+                        <div className="py-3 sm:grid sm:grid-cols-[112px_minmax(0,1fr)] sm:gap-3">
+                          <dt className="v3-type-caption text-[#3f4c66]">다시 쓸 대상</dt>
+                          <dd className="v3-type-compact ko-keep mt-1 text-[#1e2a46] sm:mt-0">{qualityView?.primaryFix.howToFix || biggestGapFix}</dd>
+                        </div>
+                      </dl>
+                      <button
+                        type="button"
+                        className={cn(buttonVariants({ variant: "default" }), "mt-4 w-full sm:w-auto")}
+                        onClick={handlePrimaryAction}
+                        data-testid="answer-review-build-feedback"
+                        data-s232e4-rewrite-entry
+                      >
+                        {primaryActionLabel}
+                      </button>
+                      <p className="v3-type-caption ko-keep mt-2 text-[#3f4c66]">이 간극을 반영할 한 문단만 다음 단계에서 수정합니다.</p>
+                    </article>
+                  ) : null}
                 </motion.div>
                 {structureError ? (
                   <article className="rounded-[var(--radius-sm)] border border-[#b9a98a] bg-[#f8f4ea] px-4 py-3">
@@ -994,6 +991,23 @@ export default function AnswerReviewClientPage({
                     <p className="mt-1 text-caption leading-5 text-[#5a4b32]">{structureError}</p>
                   </article>
                 ) : null}
+                {structureDraft ? (
+                  <details
+                    className="quiet-disclosure rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4"
+                    data-s224v-secondary-diagnostics
+                    data-s232e4-result-status-evidence
+                  >
+                    <summary className="cursor-pointer text-caption font-medium text-[color:var(--muted)]">검토 상태·근거 보기
+                    </summary>
+                    <div className="mt-4 space-y-3">
+                      <p className="text-caption leading-5 text-[color:var(--muted)]">검토 상태 · {completionStatus}</p>
+                      {referenceGrounding?.used ? (
+                        <p className="text-caption leading-5 text-[color:var(--muted)]">
+                          유사 기출 구조를 참고해 검토했습니다. {referenceGrounding.displayLabel}
+                        </p>
+                      ) : qualityView ? (
+                        <p className="text-caption leading-5 text-[color:var(--muted)]">유사 기출 reference 없이 입력 자료 기준으로 검토했습니다.</p>
+                      ) : null}
                 {learningSignalStatus === "saved" ? (
                   <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] px-4 py-3">
                     <p className="text-caption leading-5 text-[color:var(--muted)]">
@@ -1025,9 +1039,9 @@ export default function AnswerReviewClientPage({
                   <article className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] px-4 py-3">
                     <p className="text-caption font-medium text-[color:var(--foreground-strong)]">검토 결과가 준비되었습니다.</p>
                     <ul className="mt-1 space-y-1 text-caption leading-5 text-[color:var(--muted)]">
-                      <li>• 이 결과가 약점 신호에 누적됩니다.</li>
-                      <li>• 복습에 남습니다.</li>
-                      <li>• 오늘 계획에 반영됩니다.</li>
+                      <li>• 로그인해 저장하면 약점 신호에 누적됩니다.</li>
+                      <li>• 로그인해 저장하면 복습에 남습니다.</li>
+                      <li>• 로그인해 저장하면 오늘 계획에 반영됩니다.</li>
                     </ul>
                     <div className="mt-2 flex flex-wrap gap-2">
                       <Link href="/login?returnTo=%2Fanswer-review%3Fmode%3Dsecond" className={cn(buttonVariants({ variant: "default" }), "min-h-11 px-3 text-xs")}>로그인하고 기록 저장</Link>
@@ -1045,7 +1059,10 @@ export default function AnswerReviewClientPage({
                     </ul>
                   </article>
                 ) : null}
-                <ResultFeedbackPrompt route="/answer-review" pageContext={{ section: "answer-review-result", viewerMode, examMode, subject }} />
+                      <ResultFeedbackPrompt route="/answer-review" pageContext={{ section: "answer-review-result", viewerMode, examMode, subject }} />
+                    </div>
+                  </details>
+                ) : null}
                 {viewerMode === "anonymous" && trialLimitReached ? (
                   <article className="rounded-[var(--radius-sm)] border border-[#b9a98a] bg-[#f8f4ea] px-4 py-3">
                     <p className="text-caption leading-5 text-[#5a4b32]">오늘 무료 정리 1회를 사용했습니다. 로그인하면 기록 저장과 복습 연결을 사용할 수 있습니다.</p>
@@ -1053,18 +1070,18 @@ export default function AnswerReviewClientPage({
                   </article>
                 ) : null}
 
-                <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
+                {structureDraft ? (
+                  <details
+                    className="quiet-disclosure rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4"
+                    data-s224v-secondary-diagnostics
+                    data-s232e4-result-secondary
+                    open={resultSecondaryOpen}
+                    onToggle={(event) => setResultSecondaryOpen(event.currentTarget.open)}
+                  >
+                    <summary className="cursor-pointer text-caption font-medium text-[color:var(--muted)]">진단·계산 과정 보기 (선택)</summary>
+                    {resultSecondaryOpen ? (
+                    <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
                   <div className="space-y-4">
-                    <article className="one-gap-feedback-card rounded-[var(--radius-md)] border border-[color:var(--brand-700)] bg-[color:var(--brand-050)] p-5">
-                      <p className="text-caption font-medium text-[#3f4c66]">가장 먼저 고칠 1가지</p>
-                      <p className="mt-3 text-caption font-medium text-[#3f4c66]">가장 큰 간극</p>
-                      <p className="mt-1 text-sm font-semibold leading-6 text-[#1e2a46]">{toDetailLine(qualityView?.primaryFix.gap || "", "핵심 논점 입력을 보강하면 가장 큰 간극이 자동 정리됩니다.")}</p>
-                      <div className="mt-3 space-y-2 text-caption leading-5 text-[#3f4c66]">
-                        <p><span className="font-medium">왜 중요한가</span>: {qualityView?.primaryFix.whyItMatters || "핵심 논점을 놓치면 답안의 설득력이 크게 떨어집니다."}</p>
-                        <p><span className="font-medium">어떻게 고칠까</span>: {qualityView?.primaryFix.howToFix || biggestGapFix}</p>
-                      </div>
-                    </article>
-
                     <CalculatorRoutineTrainer
                       key={
                         hasProblemSnapRoutineHandoff
@@ -1172,7 +1189,10 @@ export default function AnswerReviewClientPage({
                       </ul>
                     </article>
                   </motion.aside>
-                </div>
+                    </div>
+                    ) : null}
+                  </details>
+                ) : null}
               </motion.section>
             </AnimatePresence>
           ) : null}
@@ -1184,12 +1204,13 @@ export default function AnswerReviewClientPage({
               animate={shouldReduceMotion ? undefined : "visible"}
               variants={SECTION_FADE}
               transition={{ duration: 0.32, ease: "easeOut" }}
+              data-s232e4-answer-review-rewrite="single-paragraph"
             >
               <div className="flex flex-wrap items-start justify-between gap-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4 sm:p-5">
                 <div className="space-y-1">
                   <p className="text-caption text-[color:var(--muted)]">{examMode === "second" ? "감정평가사 2차" : "감정평가사 1차"} · {subject}</p>
-                  <h2 ref={stepThreeHeadingRef} tabIndex={-1} className="text-base font-semibold text-[color:var(--foreground-strong)]">보강 문단 정리</h2>
-                  <p className="text-caption leading-5 text-[color:var(--muted)]">작성한 내용은 아래 편집창에서 계속 수정할 수 있습니다.</p>
+                  <h2 ref={stepThreeHeadingRef} tabIndex={-1} className="v3-type-section ko-keep text-[color:var(--foreground-strong)]">보강 문단 정리</h2>
+                  <p className="v3-type-compact ko-keep text-[color:var(--muted)]">가장 큰 간극을 반영할 한 문단만 다시 쓰고, 복사하거나 다음 학습으로 계속합니다.</p>
                 </div>
                 <motion.button
                   whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
@@ -1201,73 +1222,120 @@ export default function AnswerReviewClientPage({
                 </motion.button>
               </div>
 
-              <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
-                <div className="space-y-4">
-                  {[
-                    { title: "입력 상태", body: inputStatusSummary },
-                    { title: "가장 큰 간극", body: missingPointSummary },
-                    { title: "다시 쓸 문장", body: revisionSummary },
-                    { title: "다음 행동", body: "교정 문단 구조를 기준으로 한 문단만 다시 작성해 보세요." },
-                  ].map((section, index) => (
-                    <motion.article
-                      key={section.title}
-                      className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-4"
-                      initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
-                      animate={shouldReduceMotion ? undefined : { opacity: 1, y: 0 }}
-                      transition={{ duration: 0.24, ease: "easeOut", delay: shouldReduceMotion ? 0 : index * 0.04 }}
-                    >
-                      <p className="text-caption font-medium text-[color:var(--muted)]">{section.title}</p>
-                      <p className="mt-2 text-caption leading-6 text-[color:var(--foreground-strong)]">{toDetailLine(section.body, "검토 보강 내용을 입력해 주세요.")}</p>
-                    </motion.article>
-                  ))}
-                  <CognitiveLearningActionCard unit={cognitiveLearningActions} compact />
+              <motion.article
+                className="space-y-5 rounded-[var(--radius-md)] border border-[color:var(--brand-700)] bg-[color:var(--surface)] p-4 sm:p-6"
+                initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
+                animate={shouldReduceMotion ? undefined : { opacity: 1, y: 0 }}
+                transition={{ duration: 0.28, ease: "easeOut" }}
+                data-s232e4-rewrite-surface
+              >
+                <dl className="divide-y divide-[color:var(--border)] rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)]">
+                  <div className="px-3 py-3 sm:grid sm:grid-cols-[112px_minmax(0,1fr)] sm:gap-3">
+                    <dt className="v3-type-caption text-[color:var(--muted)]">다시 쓸 대상</dt>
+                    <dd className="v3-type-compact ko-keep mt-1 text-[color:var(--foreground-strong)] sm:mt-0">{biggestGapFix}</dd>
+                  </div>
+                  <div className="px-3 py-3 sm:grid sm:grid-cols-[112px_minmax(0,1fr)] sm:gap-3">
+                    <dt className="v3-type-caption text-[color:var(--muted)]">작성 지시</dt>
+                    <dd className="v3-type-compact ko-keep mt-1 text-[color:var(--foreground-strong)] sm:mt-0">
+                      {toDetailLine(qualityView?.nextAction || structureDraft?.nextAction || "", "교정 문단 구조를 기준으로 한 문단만 다시 작성해 보세요.")}
+                    </dd>
+                  </div>
+                </dl>
+
+                <div className="space-y-2">
+                  <label htmlFor="answer-review-revision-input" className="v3-type-label-strong text-[color:var(--foreground-strong)]">보강할 한 문단</label>
+                  <p id="answer-review-revision-help" className="v3-type-caption ko-keep text-[color:var(--muted)]">제안 문장을 그대로 쓰지 말고, 내 답안과 문제 조건에 맞는지 직접 확인하세요.</p>
+                  <Textarea
+                    id="answer-review-revision-input"
+                    aria-describedby="answer-review-revision-help"
+                    className="min-h-[160px] bg-[color:var(--surface)]"
+                    placeholder="누락 논점을 반영해 보강 문단을 직접 작성해 주세요."
+                    value={revisionParagraph}
+                    onChange={(event) => setRevisionParagraph(event.target.value)}
+                    data-testid="answer-review-revision-input"
+                  />
                 </div>
 
-                <motion.aside
-                  className="space-y-3 lg:sticky lg:top-6 lg:self-start"
-                  initial={shouldReduceMotion ? false : { opacity: 0, x: 10 }}
-                  animate={shouldReduceMotion ? undefined : { opacity: 1, x: 0 }}
-                  transition={{ duration: 0.3, ease: "easeOut", delay: shouldReduceMotion ? 0 : 0.08 }}
-                >
-                  <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
-                    <p className="text-caption font-medium text-[color:var(--muted)]">입력 상태 요약</p>
-                    <ul className="mt-2 space-y-1 text-caption leading-5 text-[color:var(--foreground-strong)]">
-                      <li>문제/사례: {hasProblemInput ? "입력됨" : "미입력"}</li>
-                      <li>내 답안: {hasMyAnswer ? "입력됨" : "미입력"}</li>
-                      <li>검토 참고자료: {hasReferenceAnswer ? "입력됨" : "미입력"}</li>
-                    </ul>
-                  </article>
-                  <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
-                    <p className="text-caption font-medium text-[color:var(--muted)]">초안 구성 요약</p>
-                    <ul className="mt-2 space-y-1 text-caption leading-5 text-[color:var(--foreground-strong)]">
-                      <li>누락 후보: {hasMissingPointMemo ? toShortLine(missingPointMemo, "메모 필요", 72) : "메모 필요"}</li>
-                      <li>교정 문단: {hasRevisionParagraph ? `${getParagraphCount(revisionParagraph)}문단` : "작성 필요"}</li>
-                      <li>강점 {structureDraft?.strengths.length ?? 0}개 / 간극 {structureDraft?.missingIssueCandidates.length ?? 0}개</li>
-                    </ul>
-                  </article>
-                  <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
-                    <motion.button whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }} type="button" onClick={() => setCurrentStep(2)} className={cn(buttonVariants({ variant: "outline" }), "h-9 w-full")}>
-                      다시 보강하기
-                    </motion.button>
-                    <p className="mt-3 text-caption leading-5 text-[color:var(--muted)]">
-                      입력과 보강 내용을 수정한 뒤 정리본을 복사할 수 있습니다.
-                    </p>
-                  </article>
-                </motion.aside>
-              </div>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center" data-s232e4-copy-or-continue>
+                  <button
+                    type="button"
+                    className={cn(buttonVariants({ variant: "default" }), "w-full sm:w-auto")}
+                    onClick={handlePrimaryAction}
+                    data-testid="answer-review-copy-feedback"
+                  >
+                    {primaryActionLabel}
+                  </button>
+                  <Link
+                    href={examMode === "second" ? "/app?mode=second" : "/app?mode=first"}
+                    className={cn(buttonVariants({ variant: "outline" }), "w-full sm:w-auto")}
+                    data-s232e4-answer-review-continue
+                  >
+                    오늘 학습으로 계속
+                  </Link>
+                </div>
 
-              {visibleFeedbackCopyStatus !== "idle" ? (
-                <p role="status" aria-live="polite" aria-atomic="true" className="text-caption leading-5 text-[color:var(--muted)]">
-                  {didCopyCurrentDraft
-                    ? "복사 완료. 저장 전 직접 확인해 주세요."
-                    : "클립보드 복사에 실패했습니다. 텍스트를 수동으로 복사해 주세요."}
-                </p>
-              ) : null}
+                {visibleFeedbackCopyStatus !== "idle" ? (
+                  <p role="status" aria-live="polite" aria-atomic="true" className="text-caption leading-5 text-[color:var(--muted)]">
+                    {didCopyCurrentDraft
+                      ? "복사 완료. 저장 전 직접 확인해 주세요."
+                      : "클립보드 복사에 실패했습니다. 텍스트를 수동으로 복사해 주세요."}
+                  </p>
+                ) : null}
+              </motion.article>
+
+              <details
+                className="quiet-disclosure rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4"
+                data-s224v-secondary-diagnostics
+                data-s232e4-rewrite-guidance
+              >
+                <summary className="cursor-pointer text-caption font-medium text-[color:var(--muted)]">복습·계속 단서 보기 (선택)</summary>
+                <div className="mt-4">
+                  <CognitiveLearningActionCard unit={cognitiveLearningActions} compact />
+                </div>
+              </details>
+
+              <details
+                className="quiet-disclosure rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4"
+                data-s224v-secondary-diagnostics
+                data-s232e4-rewrite-details
+              >
+                <summary className="cursor-pointer text-caption font-medium text-[color:var(--muted)]">입력·초안 상태 보기</summary>
+                <div className="mt-4 space-y-4">
+                  <dl className="grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-[var(--radius-sm)] bg-[color:var(--surface-soft)] p-3">
+                      <dt className="text-caption font-medium text-[color:var(--muted)]">입력 상태</dt>
+                      <dd className="mt-1 text-caption leading-5 text-[color:var(--foreground-strong)]">{inputStatusSummary}</dd>
+                    </div>
+                    <div className="rounded-[var(--radius-sm)] bg-[color:var(--surface-soft)] p-3">
+                      <dt className="text-caption font-medium text-[color:var(--muted)]">초안 구성</dt>
+                      <dd className="mt-1 text-caption leading-5 text-[color:var(--foreground-strong)]">교정 문단 {hasRevisionParagraph ? `${getParagraphCount(revisionParagraph)}문단` : "작성 필요"} · 강점 {structureDraft?.strengths.length ?? 0}개 · 간극 {structureDraft?.missingIssueCandidates.length ?? 0}개</dd>
+                    </div>
+                  </dl>
+                  <div className="space-y-2">
+                    <label htmlFor="answer-review-missing-point-input" className="text-caption font-medium text-[color:var(--muted)]">누락 논점 후보 메모</label>
+                    <Textarea
+                      id="answer-review-missing-point-input"
+                      className="min-h-[96px] bg-[color:var(--surface)]"
+                      placeholder="예: 처분 근거 조문 제시가 누락되어 논증 연결이 약함"
+                      value={missingPointMemo}
+                      onChange={(event) => setMissingPointMemo(event.target.value)}
+                    />
+                  </div>
+                  <pre className="max-h-[240px] overflow-auto whitespace-pre-wrap rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3 text-caption leading-6 text-[color:var(--foreground-strong)]">
+                    {reviewerNoteText}
+                  </pre>
+                </div>
+              </details>
             </motion.section>
           ) : null}
 
-          <details className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
-            <summary className="cursor-pointer text-sm font-medium text-[color:var(--foreground-strong)]">보조 영역 펼치기</summary>
+          {currentStep !== 1 ? (
+          <details
+            className="quiet-disclosure rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4"
+            data-s224v-secondary-diagnostics
+            data-s232e4-full-diagnostics
+          >
+            <summary className="cursor-pointer text-sm font-medium text-[color:var(--foreground-strong)]">전체 진단 보기 (선택)</summary>
             <div className="mt-3 space-y-3">
               <section id="manual-comparison-preview" className="space-y-2">
                 <p className="text-caption font-medium text-[color:var(--muted)]">검토 흐름</p>
@@ -1284,35 +1352,6 @@ export default function AnswerReviewClientPage({
                     {getParagraphCount(referenceAnswerText)}문단.
                   </p>
                 ) : null}
-              </section>
-
-              <section className="space-y-3">
-                <p className="text-caption font-medium text-[color:var(--muted)]">수동 검토 메모</p>
-                <div className="space-y-2">
-                  <p className="text-caption font-medium text-[color:var(--muted)]">누락 논점 후보</p>
-                  <Textarea
-                    className="min-h-[96px] bg-[color:var(--surface)]"
-                    placeholder="예: 처분 근거 조문 제시가 누락되어 논증 연결이 약함"
-                    value={missingPointMemo}
-                    onChange={(event) => setMissingPointMemo(event.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <p className="text-caption font-medium text-[color:var(--muted)]">교정 문단</p>
-                  <Textarea
-                    className="min-h-[120px] bg-[color:var(--surface)]"
-                    placeholder="누락 논점을 반영해 보강 문단을 직접 작성해 주세요."
-                    value={revisionParagraph}
-                    onChange={(event) => setRevisionParagraph(event.target.value)}
-                  />
-                </div>
-              </section>
-
-              <section className="space-y-2">
-                <p className="text-caption font-medium text-[color:var(--muted)]">학습 보조 정리</p>
-                <pre className="max-h-[240px] overflow-auto whitespace-pre-wrap rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-3 text-caption leading-6 text-[color:var(--foreground-strong)]">
-                  {reviewerNoteText}
-                </pre>
               </section>
 
               <section className="space-y-2">
@@ -1360,6 +1399,7 @@ export default function AnswerReviewClientPage({
               </section>
             </div>
           </details>
+          ) : null}
         </section>
       </section>
 
