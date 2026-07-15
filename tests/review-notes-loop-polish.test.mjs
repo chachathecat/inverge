@@ -18,7 +18,8 @@ test("/app/review renders a calm Review Queue shell and empty state", () => {
   const client = read("components/review-os/review-queue-client.tsx");
 
   assert.equal(existsSync("app/app/review/page.tsx"), true);
-  assert.ok(page.includes('title="복습"'));
+  assert.ok(page.includes("<h1"));
+  assert.ok(page.includes("data-s232d4-review-header"));
   assert.ok(page.includes("학습 노트에서 만든"));
   assert.ok(client.includes("data-review-empty-state"));
   assert.ok(client.includes("지금 복습할 항목이 없습니다."));
@@ -46,7 +47,7 @@ test("Review queue keeps one primary review surface and collapses extra signals"
   assert.ok(client.includes("문단/기준 먼저 떠올리기"));
   assert.ok(client.includes("복습 완료"));
   assert.ok(client.includes("data-review-extra-signals"));
-  assert.ok(client.includes("상세 신호 보기"));
+  assert.ok(client.includes("복습 근거 보기"));
   assert.ok(client.includes("data-review-secondary-list"));
   assert.ok(client.includes("다음 복습 보기"));
 });

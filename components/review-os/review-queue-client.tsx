@@ -95,29 +95,47 @@ export function ReviewQueueClient({
       data-s224v-surface-fragment="review-queue"
       data-s224v-primary-cta-count-above-fold="1"
       data-s224v-visible-primary-work-items-max="1"
+      data-s232d4-review-queue
     >
       <section
         className="rounded-[var(--radius-lg)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-elevated)] p-4 sm:p-5"
         data-review-primary-surface
+        data-s232d4-review-primary
       >
         <div className="space-y-5">
-          <div className="space-y-3">
+          <header className="space-y-3" data-s232d4-review-meta>
             <span className="inline-flex w-fit rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--bg-subtle)] px-3 py-1 text-xs text-[color:var(--muted)]">
               지금 복습할 1개
             </span>
-            <p className="text-xs text-[color:var(--muted)]">{primaryItem.subjectLabel}</p>
-            <h3 className="text-base font-medium leading-7 text-[color:var(--foreground-strong)] sm:text-lg">
+            <p className="text-xs leading-5 text-[color:var(--muted)]">
+              복습 예정 · {primaryItem.createdFromCapture ? "학습 노트에서 생성됨" : "미완료 항목"} · {primaryItem.subjectLabel}
+            </p>
+            <h2 className="text-base font-medium leading-7 text-[color:var(--foreground-strong)] sm:text-lg">
               {primaryItem.problemTitle}
-            </h3>
-            <div className="grid gap-2 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3 text-xs leading-5 text-[color:var(--muted)] sm:grid-cols-2" data-review-why-next>
-              <p><span className="font-medium text-[color:var(--foreground-strong)]">왜 여기 있나</span>: {getReviewReason(primaryItem)}</p>
-              <p><span className="font-medium text-[color:var(--foreground-strong)]">다음 행동</span>: {primaryNextAction}</p>
-            </div>
+            </h2>
+          </header>
+
+          <div className="space-y-3" data-review-why-next>
+            <section
+              className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3"
+              data-s232d4-review-reason
+            >
+              <p className="text-xs font-medium text-[color:var(--muted)]">복습 이유</p>
+              <p className="mt-1 text-sm leading-6 text-[color:var(--foreground-strong)]">{getReviewReason(primaryItem)}</p>
+            </section>
+            <section
+              className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3"
+              data-s232d4-review-next-action
+            >
+              <p className="text-xs font-medium text-[color:var(--muted)]">다음 행동</p>
+              <p className="mt-1 text-sm leading-6 text-[color:var(--foreground-strong)]">{primaryNextAction}</p>
+            </section>
           </div>
 
           <section
             className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-4"
             data-review-retrieval-step="recall"
+            data-s232d4-review-recall
           >
             <p className="text-xs font-semibold text-[color:var(--muted)]">1. 먼저 떠올리기</p>
             <p className="mt-2 text-sm font-medium leading-6 text-[color:var(--foreground-strong)]">
@@ -143,6 +161,7 @@ export function ReviewQueueClient({
               onClick={() => setRevealedHintByQueueId((prev) => ({ ...prev, [primaryItem.queueId]: true }))}
               className="mt-3 w-full sm:w-auto"
               data-s224v-dominant-primary-action
+              data-s232d4-confirm-action
             >
               확인하기
             </Button>
@@ -152,6 +171,7 @@ export function ReviewQueueClient({
             <section
               className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-soft)] p-4"
               data-review-retrieval-step="check"
+              data-s232d4-review-check
             >
               <p className="text-xs font-semibold text-[color:var(--muted)]">2. 확인하기</p>
               <div className="mt-2 space-y-2 text-sm leading-7 text-[color:var(--foreground-strong)]">
@@ -184,7 +204,7 @@ export function ReviewQueueClient({
                 data-review-extra-signals
                 data-s224v-secondary-diagnostics
               >
-                <summary className="cursor-pointer text-xs font-medium text-[color:var(--muted)]">상세 신호 보기</summary>
+                <summary className="cursor-pointer text-xs font-medium text-[color:var(--muted)]">복습 근거 보기</summary>
                 <ul className="mt-2 space-y-1 text-xs leading-5 text-[color:var(--muted)]">
                   {buildDetailedSignals(primaryItem, captureReferenceLineByItemId[primaryItem.itemId]).map((signal) => (
                     <li key={signal}>• {signal}</li>
@@ -194,7 +214,7 @@ export function ReviewQueueClient({
             </section>
           ) : (
             <p className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-soft)] p-3 text-xs leading-5 text-[color:var(--muted)]">
-              상세 신호와 학습 노트는 먼저 떠올린 뒤 확인합니다.
+              복습 근거와 학습 노트는 먼저 떠올린 뒤 확인합니다.
             </p>
           )}
 
@@ -202,6 +222,7 @@ export function ReviewQueueClient({
             <section
               className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-4"
               data-review-retrieval-step="self-rating"
+              data-s232d4-review-self-rating
             >
               <p className="text-xs font-semibold text-[color:var(--muted)]">3. 자기평가</p>
               <p className="mt-2 text-sm leading-7 text-[color:var(--foreground-strong)]">
@@ -230,7 +251,7 @@ export function ReviewQueueClient({
                   <p>
                     선택: {getRecallOutcomeCopy(primaryOutcome)} · 제안: {getSuggestedReviewIntervalCopy(primaryOutcome)}
                   </p>
-                  <p>이번 PR에서는 복습 완료 신호만 저장하고, 세부 간격 조정은 다음 단계에서 연결합니다.</p>
+                  <p>표시된 간격은 학습 제안입니다. 복습 완료를 누르면 선택한 자기평가가 함께 저장됩니다.</p>
                 </div>
               ) : null}
               <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -240,6 +261,7 @@ export function ReviewQueueClient({
                   disabled={pendingId === primaryItem.queueId || !primaryOutcome}
                   className="w-full sm:w-auto"
                   aria-label={`복습 완료: ${primaryItem.problemTitle}`}
+                  data-s232d4-review-completion
                 >
                   {pendingId === primaryItem.queueId ? "복습 완료 저장 중" : "복습 완료"}
                 </Button>
@@ -258,6 +280,7 @@ export function ReviewQueueClient({
           className="quiet-disclosure rounded-[var(--radius-lg)] border border-[color:var(--border-hairline)] bg-[color:var(--surface)] p-4"
           data-review-secondary-list
           data-s224v-secondary-diagnostics
+          data-s232d4-review-secondary-list
         >
           <summary className="cursor-pointer list-none text-sm font-semibold text-[color:var(--foreground-strong)]">
             다음 복습 보기
@@ -271,12 +294,12 @@ export function ReviewQueueClient({
                     복습 예정 · {item.createdFromCapture ? "학습 노트에서 생성됨" : "미완료 항목"} · {item.subjectLabel}
                   </p>
                   <p className="mt-1 truncate text-sm font-medium text-[color:var(--foreground-strong)]">{item.problemTitle}</p>
-                  <p className="mt-1 text-xs text-[color:var(--muted)]">왜 여기 있나: {getReviewReason(item)}</p>
+                  <p className="mt-1 text-xs text-[color:var(--muted)]">복습 이유: {getReviewReason(item)}</p>
                   <p className="mt-1 text-xs text-[color:var(--muted)]">다음 행동: {getReviewNextAction(item)}</p>
                 </div>
                 <div className="flex gap-2 sm:shrink-0">
                   <Button type="button" onClick={() => router.push(`/app/items/${item.itemId}?mode=${mode}`)} variant="outline" className="h-9 px-3 text-xs">
-                    보기
+                    학습 노트 보기
                   </Button>
                   <Button
                     type="button"
