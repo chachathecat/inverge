@@ -48,6 +48,7 @@ test("S232C.1 matches the Figma geometry, typography, and optional properties", 
     "v3-type-compact",
     "v3-mono-small",
     "v3-mono-display",
+    "whitespace-break-spaces",
     "data-hint-visible",
     "data-state-label-visible",
     "data-verification-visible",
@@ -68,6 +69,7 @@ test("S232C.1 Preview renders every combination and the real mobile boolean over
   assert.ok(page.includes("CALCULATOR_STEP_VARIANTS.flatMap"));
   assert.ok(page.includes("CALCULATOR_STEP_STATES.map"));
   assert.ok(page.includes('showStateLabel={false}'));
+  assert.ok(page.includes('keySequence="1 2 0 0 0 0 0 0 0  ÷  0 . 0 5 5  EXE"'));
   assert.ok(page.includes('testId="calculator-step-real-mobile"'));
   assert.ok(page.includes('data-private-learner-data="absent"'));
   assert.ok(page.includes('process.env.VERCEL_ENV !== "preview"'));
