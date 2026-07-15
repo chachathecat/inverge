@@ -436,7 +436,7 @@ test.describe("S227 invited-account runtime visual-density acceptance", () => {
       await expect(emptyEvidenceDetail).toBeVisible();
       await expect(emptyEvidenceDetail.locator('[data-s228-state="empty"]')).toBeVisible();
       await expect(emptyEvidenceDetail.locator("[data-s228-evidence-excerpt]")).toHaveCount(0);
-      await expect(page.getByText("비교할 근거가 아직 없습니다.", { exact: true })).toBeVisible();
+      await expect(page.getByText("참고용 근거가 연결되지 않았습니다.", { exact: true })).toBeVisible();
       await expectNoHorizontalOverflow(page);
       await expectNoUnsafeClaims(page);
       await screenshot(

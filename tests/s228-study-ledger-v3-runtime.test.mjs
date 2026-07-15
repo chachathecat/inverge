@@ -41,10 +41,13 @@ test("S228 Study Ledger v3 exposes reusable, honest learning primitives", () => 
   assert.doesNotMatch(ui, /<main/);
   assert.match(ui, /<article/);
   assert.match(ui, /safe-area-inset-bottom/);
-  assert.ok(
-    ui.indexOf("          <StickyAction") < ui.indexOf("              <EvidenceExcerpt"),
-    "primary action must precede long evidence in the rail",
-  );
+  const detail = ui.slice(ui.indexOf("export function StudyLedgerDetail"));
+  const readingStart = detail.indexOf("data-s232d2-reading-column");
+  const railStart = detail.indexOf("<aside", readingStart);
+  const reading = detail.slice(readingStart, railStart);
+  const rail = detail.slice(railStart, detail.indexOf("</aside>", railStart));
+  assert.ok(reading.indexOf("<EvidenceExcerpt") < reading.indexOf("<StickyAction"));
+  assert.doesNotMatch(rail, /<EvidenceExcerpt|<StickyAction/);
 });
 
 test("S228 retains second-round completion, comparison, calculator, and support paths", () => {

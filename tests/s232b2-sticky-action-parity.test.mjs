@@ -95,7 +95,7 @@ test("S232B.2 production keeps the rewrite URL and adopts Ready in the reading c
   const detailStart = ui.indexOf("export function StudyLedgerDetail");
   const detail = ui.slice(detailStart);
   const actionIndex = detail.indexOf("<StickyAction");
-  const railIndex = detail.indexOf("<aside data-s228-evidence-rail");
+  const railIndex = detail.indexOf("data-s232d2-evidence-rail");
   assert.ok(actionIndex > -1 && actionIndex < railIndex, "StickyAction must belong to the reading column");
   assert.doesNotMatch(detail.slice(railIndex), /<StickyAction/);
   assert.match(detail.slice(actionIndex, railIndex), /responsive[\s\S]*state="Ready"[\s\S]*href=\{actionHref\}/);
