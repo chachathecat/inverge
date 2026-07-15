@@ -204,6 +204,7 @@ test("S232F.1 exact-head Capture failure is memory-only, recoverable, and never 
 
   const runtimeOrigin = new URL(runtimeBaseUrl).origin;
   let interceptedSaveRequestCount = 0;
+  let expectedSyntheticFailureResponseCount = 0;
   let serverMutationRequestCount = 0;
   let releaseSyntheticFailure = () => {};
   const syntheticFailureGate = new Promise<void>((resolve) => {
@@ -220,8 +221,9 @@ test("S232F.1 exact-head Capture failure is memory-only, recoverable, and never 
     ) {
       interceptedSaveRequestCount += 1;
       await syntheticFailureGate;
+      expectedSyntheticFailureResponseCount += 1;
       await route.fulfill({
-        status: 503,
+        status: 200,
         contentType: "application/json",
         body: JSON.stringify({ ok: false, error: "synthetic-runtime-save-failure" }),
       });
@@ -328,16 +330,10 @@ test("S232F.1 exact-head Capture failure is memory-only, recoverable, and never 
   expect(interceptedSaveRequestCount).toBe(1);
   expect(serverMutationRequestCount).toBe(0);
   expect(storageWriteAttemptCount).toBeGreaterThanOrEqual(2);
-  const expectedSyntheticFailureResponseCount = runtimeErrors.sameOriginRequestFailures.filter(
-    (failure) => failure === "POST /api/os/items HTTP 503",
-  ).length;
-  const unexpectedSameOriginFailures = runtimeErrors.sameOriginRequestFailures.filter(
-    (failure) => failure !== "POST /api/os/items HTTP 503",
-  );
   expect(expectedSyntheticFailureResponseCount).toBe(1);
   expect(runtimeErrors.consoleErrors).toEqual([]);
   expect(runtimeErrors.pageErrors).toEqual([]);
-  expect(unexpectedSameOriginFailures).toEqual([]);
+  expect(runtimeErrors.sameOriginRequestFailures).toEqual([]);
 
   const evidence = {
     schemaVersion: 1,
@@ -374,7 +370,7 @@ test("S232F.1 exact-head Capture failure is memory-only, recoverable, and never 
     identifierExposureCount,
     consoleErrorCount: runtimeErrors.consoleErrors.length,
     pageErrorCount: runtimeErrors.pageErrors.length,
-    sameOriginRequestFailureCount: unexpectedSameOriginFailures.length,
+    sameOriginRequestFailureCount: runtimeErrors.sameOriginRequestFailures.length,
     globalDatabaseImmutabilityClaimed: false,
     credentialsCaptured: false,
     rawLearnerContentCaptured: false,

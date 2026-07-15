@@ -356,6 +356,9 @@ test("S232F.1 keeps Capture and Write on the same truthful controller and wires 
   assert.match(runtime, /waitForReactClickHandler/);
   assert.ok(runtime.indexOf('await waitForReactClickHandler(textInputMethod, "Capture text input")') < runtime.indexOf("await textInputMethod.click()"));
   assert.ok(runtime.indexOf("await textInputMethod.click()") < runtime.indexOf("await expect(learnerInput).toBeVisible()"));
+  assert.match(runtime, /status:\s*200[\s\S]*?ok:\s*false[\s\S]*?synthetic-runtime-save-failure/);
+  assert.doesNotMatch(runtime, /status:\s*503/);
+  assert.match(runtime, /sameOriginRequestFailureCount:\s*runtimeErrors\.sameOriginRequestFailures\.length/);
   assert.match(runtime, /AxeBuilder/);
   assert.match(runtime, /390/);
   assert.match(runtime, /1440/);

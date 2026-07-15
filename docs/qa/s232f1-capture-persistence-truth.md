@@ -61,7 +61,7 @@ The PR body must include:
 
 `.github/workflows/s232f1-runtime.yml` discovers a successful Vercel Preview for the exact PR head, verifies `/api/runtime/version`, and runs the authenticated Capture scenario at 390px and 1440px in the same document.
 
-The test blocks browser storage writes and fulfills the Capture POST with a synthetic 503 before it reaches the server. It proves:
+The test blocks browser storage writes and fulfills the Capture POST with an explicit synthetic negative acknowledgement (`HTTP 200`, `ok: false`) before it reaches the server. This exercises the same no-receipt fallback without creating a browser-generated resource error. It proves:
 
 - the in-flight state says input is memory-only and a save receipt is not yet confirmed;
 - the editable work surface is locked until that request resolves and is re-enabled for recovery;
@@ -72,7 +72,7 @@ The test blocks browser storage writes and fulfills the Capture POST with a synt
 - the intercepted save request never reaches the server;
 - browser storage and analytics remain unchanged, while blocked storage write attempts are observed only as a count;
 - responsive overflow is absent and serious/critical Axe findings are zero;
-- console errors, page errors, and unexpected same-origin request failures are zero; the one intercepted synthetic 503 is counted separately.
+- console errors, page errors, and same-origin request failures are zero; the one intercepted synthetic negative acknowledgement is counted separately.
 
 The test does not claim global database immutability because unrelated external activity is outside browser-local evidence.
 
