@@ -526,7 +526,7 @@ test("UI integration uses the existing onComplete path and the single completion
   assert.ok(workflowPage.includes("source={recoveryReference.source}"));
   assert.ok(workflowPage.includes("onComplete={calculatorRoutineSync.syncCompletion}"));
   assert.ok(workflowPage.includes("CalculatorRoutineSyncStatusLine"));
-  assert.ok(workflowPage.includes("{!isRecoveryMode ? ("));
+  assert.ok(workflowPage.includes("{!isRecoveryMode && !isCasioFocus ? ("));
   assert.ok(workflowPage.includes("<ExecutionResultControls"));
   assert.equal(problemSnap.includes("learning_signal_events"), false);
   assert.equal(answerReview.includes("learning_signal_events"), false);
