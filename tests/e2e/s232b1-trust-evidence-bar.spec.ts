@@ -17,7 +17,7 @@ const viewports = [
   { name: "mobile", width: 390, height: 844, pageEdge: "20px" },
   { name: "tablet", width: 768, height: 1024, pageEdge: "32px" },
   { name: "desktop", width: 1440, height: 1024, pageEdge: "32px" },
-  { name: "desktop-200-percent-equivalent", width: 720, height: 1024, pageEdge: "32px" },
+  { name: "desktop-200-percent-equivalent", width: 720, height: 1024, pageEdge: "20px" },
 ] as const;
 
 for (const viewport of viewports) {
@@ -139,7 +139,7 @@ test("S232B.1 native disclosure toggles with Enter and Space", async ({ page }) 
     waitUntil: "domcontentloaded",
   });
 
-  const bar = page.locator('[data-v3-state="Verified"][data-v3-view="Collapsed"]');
+  const bar = page.getByTestId("trust-evidence-Verified-Collapsed");
   const button = bar.getByRole("button");
   await button.focus();
   await page.keyboard.press("Enter");
