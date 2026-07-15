@@ -23,6 +23,7 @@ test("S232E.4 scopes answer snap and text focus to entry step 1", () => {
 });
 
 test("S232E.4 makes one successful biggest-gap result lead to one rewrite action", () => {
+  const resultStep = sliceBetween("{currentStep === 2 ? (", "{currentStep === 3 ? (");
   const result = sliceBetween('data-s232e4-answer-review-result="one-gap-first"', "{structureError ? (");
   assert.match(result, /\{structureDraft \? \([\s\S]*?data-s232e4-biggest-gap/);
   assert.match(result, /가장 먼저 고칠 1가지/);
@@ -34,6 +35,11 @@ test("S232E.4 makes one successful biggest-gap result lead to one rewrite action
   assert.equal((result.match(/data-s232e4-biggest-gap/g) ?? []).length, 1);
   assert.equal((result.match(/data-testid="answer-review-build-feedback"/g) ?? []).length, 1);
   assert.ok(result.indexOf("data-s232e4-biggest-gap") < result.indexOf('data-testid="answer-review-build-feedback"'));
+  assert.doesNotMatch(
+    resultStep,
+    /initial=\{shouldReduceMotion \? false : \{ opacity: 0|animate=\{shouldReduceMotion \? undefined/,
+    "result text surfaces must not enter through a transient low-contrast opacity state",
+  );
 });
 
 test("S232E.4 keeps result status, evidence, calculator, and diagnostics quiet", () => {

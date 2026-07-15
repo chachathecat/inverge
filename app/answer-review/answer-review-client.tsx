@@ -920,16 +920,15 @@ export default function AnswerReviewClientPage({
                 key="studio-step-2"
                 id="answer-review-structure-result"
                 className="space-y-5"
-                initial={shouldReduceMotion ? false : "hidden"}
-                animate={shouldReduceMotion ? undefined : "visible"}
-                variants={SECTION_FADE}
-                transition={{ duration: 0.32, ease: "easeOut" }}
+                initial={shouldReduceMotion ? false : { y: 10 }}
+                animate={{ y: 0 }}
+                transition={{ duration: shouldReduceMotion ? 0 : 0.32, ease: "easeOut" }}
               >
                 <motion.div
                   className="space-y-4 rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4 sm:p-5"
-                  initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
-                  animate={shouldReduceMotion ? undefined : { opacity: 1, y: 0 }}
-                  transition={{ duration: 0.28, ease: "easeOut" }}
+                  initial={shouldReduceMotion ? false : { y: 8 }}
+                  animate={{ y: 0 }}
+                  transition={{ duration: shouldReduceMotion ? 0 : 0.28, ease: "easeOut" }}
                   data-answer-review-result-shell
                   data-s232e4-answer-review-result="one-gap-first"
                 >
@@ -1159,8 +1158,8 @@ export default function AnswerReviewClientPage({
 
                   <motion.aside
                     className="space-y-3 lg:sticky lg:top-6 lg:self-start"
-                    initial={shouldReduceMotion ? false : { opacity: 0, x: 10 }}
-                    animate={shouldReduceMotion ? undefined : { opacity: 1, x: 0 }}
+                    initial={shouldReduceMotion ? false : { x: 10 }}
+                    animate={{ x: 0 }}
                     transition={{ duration: 0.3, ease: "easeOut", delay: shouldReduceMotion ? 0 : 0.08 }}
                   >
                     <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
