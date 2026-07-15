@@ -459,6 +459,7 @@ function UntypedReferenceDisclosure({
     <details
       data-s228-evidence-excerpt
       data-s228-evidence-disclosure
+      data-s232d2-reference-untyped
       className="group rounded-[var(--ledger-radius-card)] border border-[var(--border-subtle)] bg-[var(--bg-surface)]"
     >
       <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]">
@@ -484,12 +485,12 @@ export function StudyLedgerEvidenceEmpty() {
   return (
     <section
       data-s228-state="empty"
-      role="status"
+      data-s232d2-reference-state="empty"
       className="rounded-[var(--ledger-radius-card)] border border-dashed border-[var(--border-strong)] bg-[var(--bg-surface)] p-5"
     >
-      <h2 className="text-base font-bold text-[var(--text-primary)]">비교할 근거가 아직 없습니다.</h2>
+      <h2 className="text-base font-bold text-[var(--text-primary)]">참고용 근거가 연결되지 않았습니다.</h2>
       <p className="ko-keep mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-        답안을 남기면 학습자 입력과 참고용 근거를 이 자리에서 나란히 확인할 수 있습니다.
+        학습자 작성 내용은 본문에서 확인할 수 있습니다. 출처를 확인할 수 있는 근거가 연결되면 이 영역에 표시됩니다.
       </p>
     </section>
   );
@@ -712,7 +713,6 @@ export function StudyLedgerDetail({
   const visibleTerms = keyTerms.filter(Boolean).slice(0, 5);
   const learnerEvidence = normalizedExcerpt(learnerExcerpt);
   const referenceEvidence = normalizedExcerpt(referenceExcerpt);
-  const evidenceEmpty = !learnerEvidence && !referenceEvidence;
   const trustEvidence = adaptLegacyTrustSignals({
     conflictRecorded: evidenceConflict,
     learnerConfirmed,
@@ -740,135 +740,62 @@ export function StudyLedgerDetail({
         className="mx-auto w-full max-w-[1000px] px-5 pb-28 pt-6 max-lg:pb-[calc(136px+env(safe-area-inset-bottom))] lg:px-0 lg:pb-10 lg:pt-10"
         aria-labelledby="study-ledger-title"
       >
-        <header className="max-w-[var(--ledger-reading-column)] border-b border-[var(--border-subtle)] pb-7">
-          <div className="flex flex-wrap items-center gap-3">
-            <StateChip
-              evidence={stateChipEvidence}
-              showEvidence={false}
-              legacyState={state}
-            />
-            <p className="text-xs font-medium text-[var(--text-tertiary)]">
-              {subject} · {formatRecordDate(createdAt)}
-            </p>
-          </div>
-          <h1
-            id="study-ledger-title"
-            className="v3-type-screen ko-keep mt-5 break-words text-[var(--text-primary)]"
-            data-v3-typography-role="heading-screen"
-          >
-            {title}
-          </h1>
-          <p className="ko-keep mt-4 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">
-            {recurrenceText}
-          </p>
-        </header>
         <div
-          className="mt-5 grid gap-8 lg:grid-cols-[minmax(0,var(--ledger-reading-column))_var(--ledger-evidence-rail)] lg:items-start"
+          className="grid gap-8 lg:grid-cols-[minmax(0,var(--ledger-reading-column))_var(--ledger-evidence-rail)] lg:items-start"
           data-s232d1-ledger-workspace
+          data-s232d2-ledger-workspace
         >
-          <div data-s232b1-reading-column className="min-w-0 space-y-8">
-          <div data-s232b1-trust-gap-stack className="space-y-5">
-            <TrustEvidenceBar
-              evidence={trustEvidence}
-              sources={referenceEvidence ? ["persisted_record", "reference"] : ["persisted_record"]}
-              summary={trustSummary}
-              detail={trustDetail}
-              saveStatus={`${formatRecordDate(savedAt)} 저장 · 수정 가능`}
-              announceChange={evidenceConflict}
-            />
-
-            <BiggestGap gap={biggestGap} evidence={stateEvidence} />
-          </div>
-
-          {completed ? (
-            comparison ? (
-              <RewriteComparisonPanel comparison={comparison} />
-            ) : (
-              <section
-                data-s228-state="completed"
-                role="status"
-                className="rounded-[var(--ledger-radius-card)] border border-[var(--cue-stable)] bg-[var(--cue-stable-bg)] p-5"
-              >
-                <h2 className="text-base font-bold text-[var(--text-primary)]">다시쓰기 기록이 저장되었습니다.</h2>
-                <p className="ko-keep mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-                  다음 복습에서 남은 간극을 다시 확인합니다.
-                </p>
-              </section>
-            )
-          ) : null}
-
-          <section
-            data-s228-next-action
-            className="border-b border-[var(--border-subtle)] pb-6"
-            aria-labelledby="study-ledger-next-action"
+          <div
+            data-s232b1-reading-column
+            data-s232d2-reading-column
+            className="min-w-0 space-y-5"
           >
-            <h2 id="study-ledger-next-action" className="v3-type-label-strong text-[var(--color-text-secondary)]">
-              다음 행동
-            </h2>
-            <p className="v3-type-body ko-keep mt-2 text-[var(--color-text-primary)]">{nextAction}</p>
-          </section>
-
-          <section className="border-y border-[var(--border-subtle)] py-6" aria-labelledby="study-ledger-application">
-            <p className="text-xs font-semibold tracking-[0.12em] text-[var(--text-secondary)]">APPLICATION</p>
-            <h2 id="study-ledger-application" className="v3-type-item mt-2 text-[var(--text-primary)]">
-              적용 문장 초점
-            </h2>
-            <p
-              className="v3-prose ko-keep mt-3 text-[var(--text-primary)]"
-              data-v3-typography-role="prose"
+            <header
+              data-s232d2-reading-header
+              className="border-b border-[var(--border-subtle)] pb-7"
             >
-              {coreLine}
-            </p>
-            {visibleTerms.length > 0 ? (
-              <ul className="mt-5 flex flex-wrap gap-2" aria-label="핵심 키워드">
-                {visibleTerms.map((term) => (
-                  <li
-                    key={term}
-                    className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-subtle)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)]"
-                  >
-                    {term}
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </section>
+              <div className="flex flex-wrap items-center gap-3">
+                <p className="text-xs font-medium text-[var(--text-tertiary)]">
+                  {subject} · {formatRecordDate(createdAt)}
+                </p>
+                <StateChip
+                  evidence={stateChipEvidence}
+                  showEvidence={false}
+                  legacyState={state}
+                />
+              </div>
+              <h1
+                id="study-ledger-title"
+                className="v3-type-screen ko-keep mt-5 break-words text-[var(--text-primary)]"
+                data-v3-typography-role="heading-screen"
+              >
+                {title}
+              </h1>
+            </header>
 
-          <StudyLedgerSupportingEvidencePanel
-            topicCandidate={topicCandidate}
-            items={supportingEvidence}
-          />
+            <div data-s232b1-trust-gap-stack className="space-y-5">
+              <TrustEvidenceBar
+                evidence={trustEvidence}
+                sources={referenceEvidence ? ["persisted_record", "reference"] : ["persisted_record"]}
+                summary={trustSummary}
+                detail={trustDetail}
+                saveStatus={`${formatRecordDate(savedAt)} 저장 · 수정 가능`}
+                announceChange={evidenceConflict}
+              />
 
-          <section
-            data-s228-review-timing
-            className="grid gap-5 rounded-[var(--ledger-radius-card)] bg-[var(--bg-subtle)] p-5 sm:grid-cols-2"
-            aria-label="복습 일정"
-          >
-            <div>
-              <p className="text-xs font-semibold text-[var(--text-secondary)]">다음 복습</p>
-              <p className="mt-2 text-base font-bold text-[var(--text-primary)]">{nextReviewDate}</p>
+              <BiggestGap gap={biggestGap} evidence={stateEvidence} />
             </div>
-            <div>
-              <p className="text-xs font-semibold text-[var(--text-secondary)]">복습 큐</p>
-              <p className="mt-2 text-base font-bold text-[var(--text-primary)]">
-                {reviewQueueCount > 0 ? reviewQueueCount + "개 대기" : "예약 확인 필요"}
-              </p>
-            </div>
-          </section>
 
-          <StickyAction
-            responsive
-            state="Ready"
-            href={actionHref}
-            label={completed ? "문단 한 번 더 다듬기" : "10분 문단 다시쓰기"}
-            status={completed ? "남은 간극 1개만 다시 확인합니다." : "가장 큰 간극 1개만 보강합니다."}
-          />
-        </div>
+            <section
+              data-s232d2-recovery-context
+              className="border-b border-[var(--border-subtle)] pb-6"
+              aria-label="회복 맥락"
+            >
+              <p className="v3-type-label-strong text-[var(--color-text-secondary)]">회복 맥락</p>
+              <p className="v3-type-body ko-keep mt-2 text-[var(--color-text-primary)]">{recurrenceText}</p>
+            </section>
 
-        <aside data-s228-evidence-rail className="min-w-0 space-y-4">
-          {evidenceEmpty ? (
-            <StudyLedgerEvidenceEmpty />
-          ) : (
-            <>
+            <section data-s232d2-learner-evidence aria-label="학습자 작성 근거">
               {learnerEvidence ? (
                 <EvidenceExcerpt
                   title="내가 쓴 핵심"
@@ -880,48 +807,154 @@ export function StudyLedgerDetail({
                     provenance: `학습자 작성 · ${formatRecordDate(createdAt)}`,
                   }}
                 />
+              ) : (
+                <div
+                  data-s232d2-learner-state="empty"
+                  className="rounded-[var(--ledger-radius-card)] border border-dashed border-[var(--border-strong)] bg-[var(--bg-surface)] p-5"
+                >
+                  <h2 className="text-base font-bold text-[var(--text-primary)]">내가 쓴 핵심이 아직 없습니다.</h2>
+                  <p className="ko-keep mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                    다시쓰기를 저장하면 학습자 작성 근거가 이 위치에 표시됩니다.
+                  </p>
+                </div>
+              )}
+            </section>
+
+            {completed ? (
+              comparison ? (
+                <RewriteComparisonPanel comparison={comparison} />
+              ) : (
+                <section
+                  data-s228-state="completed"
+                  role="status"
+                  className="rounded-[var(--ledger-radius-card)] border border-[var(--cue-stable)] bg-[var(--cue-stable-bg)] p-5"
+                >
+                  <h2 className="text-base font-bold text-[var(--text-primary)]">다시쓰기 기록이 저장되었습니다.</h2>
+                  <p className="ko-keep mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+                    다음 복습에서 남은 간극을 다시 확인합니다.
+                  </p>
+                </section>
+              )
+            ) : null}
+
+            <section
+              data-s228-next-action
+              className="border-b border-[var(--border-subtle)] pb-6"
+              aria-labelledby="study-ledger-next-action"
+            >
+              <h2 id="study-ledger-next-action" className="v3-type-label-strong text-[var(--color-text-secondary)]">
+                다음 행동
+              </h2>
+              <p className="v3-type-body ko-keep mt-2 text-[var(--color-text-primary)]">{nextAction}</p>
+            </section>
+
+            <section className="border-y border-[var(--border-subtle)] py-6" aria-labelledby="study-ledger-application">
+              <p className="text-xs font-semibold tracking-[0.12em] text-[var(--text-secondary)]">APPLICATION</p>
+              <h2 id="study-ledger-application" className="v3-type-item mt-2 text-[var(--text-primary)]">
+                적용 문장 초점
+              </h2>
+              <p
+                className="v3-prose ko-keep mt-3 text-[var(--text-primary)]"
+                data-v3-typography-role="prose"
+              >
+                {coreLine}
+              </p>
+              {visibleTerms.length > 0 ? (
+                <ul className="mt-5 flex flex-wrap gap-2" aria-label="핵심 키워드">
+                  {visibleTerms.map((term) => (
+                    <li
+                      key={term}
+                      className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-subtle)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)]"
+                    >
+                      {term}
+                    </li>
+                  ))}
+                </ul>
               ) : null}
+            </section>
+
+            <StickyAction
+              responsive
+              state="Ready"
+              href={actionHref}
+              label={completed ? "문단 한 번 더 다듬기" : "10분 문단 다시쓰기"}
+              status={completed ? "남은 간극 1개만 다시 확인합니다." : "가장 큰 간극 1개만 보강합니다."}
+            />
+          </div>
+
+          <aside
+            data-s228-evidence-rail
+            data-s232d2-evidence-rail
+            className="min-w-0 space-y-4"
+          >
+            <section
+              data-s228-review-timing
+              data-s232d2-review-context
+              className="grid gap-5 rounded-[var(--ledger-radius-card)] bg-[var(--bg-subtle)] p-5 sm:grid-cols-2 lg:grid-cols-1 lg:p-6"
+              aria-label="복습 일정"
+            >
+              <div>
+                <p className="text-xs font-semibold text-[var(--text-secondary)]">다음 복습</p>
+                <p className="mt-2 text-base font-bold text-[var(--text-primary)]">{nextReviewDate}</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-[var(--text-secondary)]">복습 큐</p>
+                <p className="mt-2 text-base font-bold text-[var(--text-primary)]">
+                  {reviewQueueCount > 0 ? reviewQueueCount + "개 대기" : "예약 확인 필요"}
+                </p>
+              </div>
+            </section>
+
+            <div data-s232d2-reference-slot>
               {referenceEvidence ? (
                 <UntypedReferenceDisclosure
                   title="비교 근거"
                   sourceLabel="참고용 근거 · 원 출처 확인"
                   excerpt={referenceEvidence}
                 />
-              ) : null}
-            </>
-          )}
-          {reviewHref || calculatorHref || writeHref ? (
-            <nav
-              aria-label="연결된 학습 화면"
-              className="rounded-[var(--ledger-radius-card)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3"
-            >
-              {reviewHref ? (
-                <Link
-                  href={reviewHref}
-                  className="flex min-h-11 items-center text-sm font-semibold text-[var(--text-secondary)] underline-offset-4 hover:text-[var(--text-primary)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
-                >
-                  다시 볼 항목 확인
-                </Link>
-              ) : null}
-              {writeHref ? (
-                <Link
-                  href={writeHref}
-                  className="flex min-h-11 items-center border-t border-[var(--border-subtle)] text-sm font-semibold text-[var(--text-secondary)] underline-offset-4 hover:text-[var(--text-primary)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
-                >
-                  다른 답안 작업 보기
-                </Link>
-              ) : null}
-              {calculatorHref ? (
-                <Link
-                  href={calculatorHref}
-                  className="flex min-h-11 items-center border-t border-[var(--border-subtle)] text-sm font-semibold text-[var(--text-secondary)] underline-offset-4 hover:text-[var(--text-primary)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
-                >
-                  관련 계산 검산 순서 보기
-                </Link>
-              ) : null}
-            </nav>
-          ) : null}
-        </aside>
+              ) : (
+                <StudyLedgerEvidenceEmpty />
+              )}
+            </div>
+
+            <StudyLedgerSupportingEvidencePanel
+              topicCandidate={topicCandidate}
+              items={supportingEvidence}
+            />
+
+            {reviewHref || calculatorHref || writeHref ? (
+              <nav
+                data-s232d2-linked-learning
+                aria-label="연결된 학습 화면"
+                className="rounded-[var(--ledger-radius-card)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3"
+              >
+                {reviewHref ? (
+                  <Link
+                    href={reviewHref}
+                    className="flex min-h-11 items-center text-sm font-semibold text-[var(--text-secondary)] underline-offset-4 hover:text-[var(--text-primary)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+                  >
+                    다시 볼 항목 확인
+                  </Link>
+                ) : null}
+                {writeHref ? (
+                  <Link
+                    href={writeHref}
+                    className="flex min-h-11 items-center border-t border-[var(--border-subtle)] text-sm font-semibold text-[var(--text-secondary)] underline-offset-4 hover:text-[var(--text-primary)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+                  >
+                    다른 답안 작업 보기
+                  </Link>
+                ) : null}
+                {calculatorHref ? (
+                  <Link
+                    href={calculatorHref}
+                    className="flex min-h-11 items-center border-t border-[var(--border-subtle)] text-sm font-semibold text-[var(--text-secondary)] underline-offset-4 hover:text-[var(--text-primary)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+                  >
+                    관련 계산 검산 순서 보기
+                  </Link>
+                ) : null}
+              </nav>
+            ) : null}
+          </aside>
         </div>
       </article>
     </>
