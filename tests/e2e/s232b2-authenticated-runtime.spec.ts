@@ -241,7 +241,7 @@ test("S232B.2 exact-head Study Ledger action placement and rewrite navigation", 
     }
 
     const tabStops = await tabTo(page, control);
-    const focusEvidence = await control.evaluate((element) => {
+    const readFocusEvidence = () => control.evaluate((element) => {
       const rect = element.getBoundingClientRect();
       const style = getComputedStyle(element);
       const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
@@ -258,6 +258,14 @@ test("S232B.2 exact-head Study Ledger action placement and rewrite navigation", 
       };
     });
     expect(tabStops).toBeGreaterThan(0);
+    await expect(control).toBeFocused();
+    await expect(control).toBeInViewport({ ratio: 1, timeout: 5_000 });
+    await expect.poll(readFocusEvidence, { timeout: 5_000 }).toEqual({
+      visible: true,
+      indicator: true,
+      topmost: true,
+    });
+    const focusEvidence = await readFocusEvidence();
     expect(focusEvidence).toEqual({ visible: true, indicator: true, topmost: true });
 
     const href = await control.getAttribute("href");
