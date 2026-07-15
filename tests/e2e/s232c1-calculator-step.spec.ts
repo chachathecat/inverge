@@ -131,7 +131,9 @@ for (const viewport of viewports) {
               padding: shellStyle.padding,
               gap: shellStyle.gap,
               borderRadius: shellStyle.borderRadius,
-              borderColor: shellStyle.borderColor,
+              outlineColor: shellStyle.outlineColor,
+              outlineWidth: shellStyle.outlineWidth,
+              outlineOffset: shellStyle.outlineOffset,
               background: shellStyle.backgroundColor,
             },
             state: {
@@ -165,7 +167,9 @@ for (const viewport of viewports) {
           padding: "24px",
           gap: "12px",
           borderRadius: "16px",
-          borderColor: stateContract[state].border,
+          outlineColor: stateContract[state].border,
+          outlineWidth: "1px",
+          outlineOffset: "-1px",
           background: stateContract[state].background,
         });
         expect(geometry?.state).toMatchObject({
