@@ -245,39 +245,45 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
       data-review-completion-action={dailyStateCopy.completionAction}
       data-recommendation-basis={dailyStateCopy.recommendationBasis}
       data-overdue-recovery-help={dailyStateCopy.overdueHelp}
+      data-s232d5-today-page="single-priority"
     >
       <section
         className="mission-surface p-5 sm:p-7"
+        aria-labelledby="s232d5-today-title"
         data-ux-surface-reset-primary-card
         data-today-plan-primary-surface
         data-visible-primary-task-cap={TODAY_PLAN_MAX_PRIMARY_TASKS}
         data-s226-primary-mission
+        data-s232d5-today-primary
       >
-        <p className="text-caption font-medium text-[color:var(--muted)]">오늘의 1개</p>
-        <div className="mt-3 grid gap-6 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-end">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_220px] lg:items-end">
           <div className="min-w-0">
-            <h1 className="hero-balance ko-keep text-[30px] font-semibold leading-tight text-[color:var(--foreground-strong)] sm:text-[36px]">
-              {missionTitle}
-            </h1>
-            <div className="mt-5 grid gap-4 text-sm sm:grid-cols-3">
-              <div>
-                <p className="density-quiet">왜 이걸 하나요</p>
-                <p className="mt-1 leading-6 text-[color:var(--foreground-strong)]">{missionWhy}</p>
+            <header data-s232d5-today-meta>
+              <p className="v3-type-caption text-[color:var(--muted)]">오늘 할 일 · 오늘의 1개</p>
+              <h1 id="s232d5-today-title" className="v3-type-screen hero-balance ko-keep mt-3 text-[color:var(--foreground-strong)]">
+                {missionTitle}
+              </h1>
+            </header>
+            <dl className="mt-5 grid gap-4 sm:grid-cols-3" data-s232d5-today-context>
+              <div data-s232d5-today-reason>
+                <dt className="v3-type-caption text-[color:var(--muted)]">왜 이걸 하나요</dt>
+                <dd className="v3-type-compact mt-1 text-[color:var(--foreground-strong)]">{missionWhy}</dd>
               </div>
-              <div>
-                <p className="density-quiet">예상 시간</p>
-                <p className="mt-1 tabular-nums leading-6 text-[color:var(--foreground-strong)]">{missionMinutes}</p>
+              <div data-s232d5-today-duration>
+                <dt className="v3-type-caption text-[color:var(--muted)]">예상 시간</dt>
+                <dd className="v3-type-compact mt-1 tabular-nums text-[color:var(--foreground-strong)]">{missionMinutes}</dd>
               </div>
-              <div>
-                <p className="density-quiet">끝나면 이어질 것</p>
-                <p className="mt-1 leading-6 text-[color:var(--foreground-strong)]">{missionAfter}</p>
+              <div data-s232d5-today-continuation>
+                <dt className="v3-type-caption text-[color:var(--muted)]">끝나면 이어질 것</dt>
+                <dd className="v3-type-compact mt-1 text-[color:var(--foreground-strong)]">{missionAfter}</dd>
               </div>
-            </div>
+            </dl>
           </div>
           <Link
             href={heroPrimaryHref}
             className="primary-action inline-flex min-h-12 w-full items-center justify-center px-6 text-sm font-semibold transition hover:bg-[color:var(--brand-800)] sm:w-auto"
             data-s226-primary-cta
+            data-s232d5-today-primary-cta
           >
             {missionPrimaryLabel}
           </Link>
@@ -309,6 +315,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
             className="operating-surface"
             data-learning-loop-summary
             data-s224v-secondary-diagnostics
+            data-s232d5-today-secondary
           >
             <summary className="cursor-pointer list-none px-4 py-4 text-sm font-medium text-[color:var(--foreground-strong)] sm:px-5">
               다른 작업 · 오늘 기록 근거 보기
@@ -325,7 +332,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                     </div>
                   ) : (
                     visibleTodayPlanTasks.map((task, index) => (
-                      <article key={task.itemId} className="rounded-[var(--radius-sm)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3" data-today-plan-primary-task>
+                      <article key={task.itemId} className="rounded-[var(--radius-sm)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3" data-today-plan-primary-task data-s232d5-today-task>
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                           <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-2">
