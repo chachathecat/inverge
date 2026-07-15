@@ -92,7 +92,15 @@ export default function S232B2StickyActionAcceptancePage() {
               {states.map((state) => (
                 <article key={state} className="space-y-2">
                   <h3 className="v3-type-label-strong text-[var(--color-text-secondary)]">{state}</h3>
-                  <SyntheticStickyAction mode={mode} state={state} />
+                  <div
+                    className={
+                      mode === "Dock"
+                        ? "relative left-1/2 w-screen max-w-[390px] -translate-x-1/2 sm:left-0 sm:w-full sm:translate-x-0"
+                        : undefined
+                    }
+                  >
+                    <SyntheticStickyAction mode={mode} state={state} />
+                  </div>
                 </article>
               ))}
             </div>
