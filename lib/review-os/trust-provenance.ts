@@ -32,6 +32,22 @@ export type TrustProvenanceEvidence =
 
 export type TrustProvenanceTone = "green" | "amber" | "red" | "neutral";
 
+export const TRUST_EVIDENCE_BAR_STATES = [
+  "Verified",
+  "NeedsReview",
+  "Conflict",
+] as const;
+
+export type TrustEvidenceBarState = (typeof TRUST_EVIDENCE_BAR_STATES)[number];
+
+export const TRUST_EVIDENCE_BAR_DISCLOSURES = [
+  "Collapsed",
+  "Expanded",
+] as const;
+
+export type TrustEvidenceBarDisclosure =
+  (typeof TRUST_EVIDENCE_BAR_DISCLOSURES)[number];
+
 export type TrustProvenanceModel = Readonly<{
   state: TrustProvenanceState;
   evidenceKind: TrustProvenanceEvidence["kind"];
@@ -42,6 +58,27 @@ export type TrustProvenanceModel = Readonly<{
   actionableChange: boolean;
   authorityBoundary: typeof TRUST_AUTHORITY_BOUNDARY;
 }>;
+
+/**
+ * Read-only Figma V3 presentation adapter. Only evidence-backed trust states
+ * enter the three-state component contract. Offline or unavailable evidence
+ * stays neutral instead of being promoted to NeedsReview or Verified.
+ */
+export function resolveTrustEvidenceBarState(
+  model: TrustProvenanceModel,
+): TrustEvidenceBarState | null {
+  switch (model.state) {
+    case "confirmed_record":
+      return "Verified";
+    case "needs_review":
+      return "NeedsReview";
+    case "conflict":
+      return "Conflict";
+    case "offline":
+    case "unavailable":
+      return null;
+  }
+}
 
 export type LegacyTrustSignals = Readonly<{
   learnerConfirmed?: boolean;
