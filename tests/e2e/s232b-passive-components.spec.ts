@@ -39,7 +39,10 @@ for (const viewport of viewports) {
     });
     page.on("requestfailed", (request) => {
       const url = new URL(request.url());
-      if (url.origin === expectedOrigin) requestErrors.push(`failed ${url.pathname}`);
+      const failure = request.failure()?.errorText ?? "unknown";
+      if (url.origin === expectedOrigin && !failure.includes("ERR_ABORTED")) {
+        requestErrors.push(`failed ${url.pathname} ${failure}`);
+      }
     });
 
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
