@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page, type TestInfo } from "@playwright/test";
+import { randomUUID } from "node:crypto";
 import { writeFile } from "node:fs/promises";
 
 import {
@@ -22,7 +23,7 @@ test.use({ screenshot: "off", trace: "off", video: "off" });
 test.skip(!runtimeEnabled, "Set S232B1_AUTH_RUNTIME=1 for exact-head TrustEvidenceBar acceptance.");
 test.describe.configure({ timeout: 300_000, retries: 0 });
 
-async function findEvidenceBackedStudyLedgerDetail(page: Page) {
+async function findEvidenceBackedStudyLedgerDetailHref(page: Page) {
   await page.goto("/app/items?mode=second", { waitUntil: "domcontentloaded" });
   await expect(page.locator('[data-s224v-surface="/app/items"]')).toBeVisible({ timeout: 20_000 });
   const detailHrefs = await page
@@ -42,12 +43,65 @@ async function findEvidenceBackedStudyLedgerDetail(page: Page) {
     const detail = page.locator("[data-s228-study-ledger-detail]");
     await expect(detail).toBeVisible({ timeout: 20_000 });
     if (await detail.locator('[data-v3-component="TrustEvidenceBar"][data-v3-state]').count()) {
-      return detail;
+      return href;
     }
   }
 
-  throw new Error(
-    "S232B.1 requires a persisted detail with explicit confirmation, review, or conflict evidence; neutral data is not promoted.",
+  return null;
+}
+
+async function createConfirmedSyntheticDetailHref(page: Page) {
+  const suffix = randomUUID().replaceAll("-", "").slice(0, 10);
+  const syntheticParagraph =
+    "보상액 산정의 기준시점과 적용 근거를 순서대로 연결합니다. S232B.1 합성 테스트 기록입니다.";
+  const syntheticGap = "기준시점과 적용 근거 사이의 연결 문장을 한 번 더 확인합니다.";
+  const response = await page.context().request.post("/api/os/items", {
+    data: {
+      examName: "감정평가사 2차",
+      subjectLabel: "감정평가실무",
+      sourceType: "text",
+      sourceLabel: "S232B.1 synthetic runtime acceptance",
+      problemTitle: `S232B.1 synthetic confirmed detail ${suffix}`,
+      rawQuestionText: "보상액 산정의 기준시점과 적용 근거를 설명하시오. 합성 테스트 데이터입니다.",
+      rawAnswerText: syntheticParagraph,
+      correctAnswer: "기준시점과 적용 근거를 순서대로 설명합니다.",
+      userAnswer: syntheticParagraph,
+      userReasonText: syntheticGap,
+      confidence: "중간",
+      keyConcepts: ["기준시점", "적용 근거"],
+      missingIssue: syntheticGap,
+      weakStructurePoint: syntheticGap,
+      rewriteInstruction: "기준시점과 적용 근거를 한 문단에 연결합니다.",
+      myAnswerSummary: syntheticParagraph,
+      biggestGap: syntheticGap,
+      captureIntent: "save",
+      createdFromCapture: true,
+      extractionPayload: {
+        raw_ocr_text: syntheticParagraph,
+        raw_extraction_json: {},
+        normalized_draft: null,
+        user_confirmed_fields: {
+          subjectLabel: "감정평가실무",
+          userAnswer: syntheticParagraph,
+          sourceType: "text",
+          examMode: "second",
+          hasManualCorrection: true,
+          ocrConfirmedByLearner: true,
+        },
+      },
+    },
+  });
+  expect(response.ok(), "Dedicated-account confirmed fixture must persist through the normal item API.").toBe(true);
+  const body = (await response.json()) as { ok?: boolean; item?: { id?: string }; error?: string };
+  expect(body.ok, body.error ?? "Confirmed fixture response must be ok.").toBe(true);
+  expect(body.item?.id).toBeTruthy();
+  return `/app/items/${encodeURIComponent(body.item!.id!)}?mode=second`;
+}
+
+async function ensureEvidenceBackedStudyLedgerDetailHref(page: Page) {
+  return (
+    (await findEvidenceBackedStudyLedgerDetailHref(page)) ??
+    (await createConfirmedSyntheticDetailHref(page))
   );
 }
 
@@ -74,10 +128,13 @@ test("S232B.1 exact-head Study Ledger trust bar placement and disclosure", async
   expect(observedVersion.body.ready).toBe(true);
   expect(observedVersion.body.deploymentSha).toBe(runtimeTargetSha);
 
+  const evidenceDetailHref = await ensureEvidenceBackedStudyLedgerDetailHref(page);
   const viewportEvidence: Array<Record<string, unknown>> = [];
   for (const viewport of viewports) {
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
-    const detail = await findEvidenceBackedStudyLedgerDetail(page);
+    await page.goto(evidenceDetailHref, { waitUntil: "domcontentloaded" });
+    const detail = page.locator("[data-s228-study-ledger-detail]");
+    await expect(detail).toBeVisible({ timeout: 20_000 });
     const readingColumn = detail.locator("[data-s232b1-reading-column]");
     const bar = detail.locator('[data-v3-component="TrustEvidenceBar"]');
     const rail = detail.locator("[data-s228-evidence-rail]");
