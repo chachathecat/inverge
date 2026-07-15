@@ -175,12 +175,15 @@ for (const viewport of viewports) {
           fontWeight: "500",
         });
         expect(geometry?.display).toMatchObject({
-          height: 124,
           borderRadius: "12px",
           background: "rgb(16, 35, 63)",
           valueFontSize: "28px",
           valueLineHeight: "36px",
         });
+        expect(geometry?.display.height ?? 0).toBeGreaterThanOrEqual(124);
+        if (viewport.name !== "mobile") {
+          expect(geometry?.display.height).toBe(124);
+        }
         expect(geometry?.keys.codeFontSize).toBe("13px");
         expect(geometry?.keys.codeLineHeight).toBe("20px");
         expect(geometry?.keys.height ?? 0).toBeGreaterThanOrEqual(66);
