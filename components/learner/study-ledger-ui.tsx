@@ -76,7 +76,7 @@ export function StateChip({
     <span
       data-s228-state-chip={state}
       className={
-        "inline-flex min-h-7 items-center rounded-full border px-3 text-xs font-semibold leading-none " +
+        "v3-type-caption inline-flex min-h-7 items-center rounded-full border px-3 font-semibold leading-none " +
         STATE_STYLES[state]
       }
     >
@@ -147,16 +147,16 @@ export function BiggestGap({
       className="rounded-[var(--ledger-radius-panel)] border border-[var(--border-strong)] bg-[var(--bg-surface)] p-5 shadow-[var(--shadow-soft)] sm:p-7"
       aria-labelledby="study-ledger-biggest-gap"
     >
-      <p className="text-xs font-semibold tracking-[0.12em] text-[var(--cue-review-text)]">이번 복습의 초점</p>
-      <h2 id="study-ledger-biggest-gap" className="mt-2 text-lg font-bold text-[var(--text-primary)]">
+      <p className="v3-type-caption font-semibold text-[var(--cue-review-text)]">이번 복습의 초점</p>
+      <h2 id="study-ledger-biggest-gap" className="v3-type-section mt-2 text-[var(--text-primary)]">
         가장 큰 간극
       </h2>
-      <p className="ko-keep mt-4 text-xl font-semibold leading-8 text-[var(--text-primary)] sm:text-2xl sm:leading-9">
+      <p className="v3-type-item ko-keep mt-4 text-[var(--text-primary)]">
         {gap}
       </p>
       <div className="mt-6 border-t border-[var(--border-subtle)] pt-5">
-        <p className="text-xs font-semibold text-[var(--text-secondary)]">다음 행동</p>
-        <p className="ko-keep mt-2 text-base leading-7 text-[var(--text-primary)]">{nextAction}</p>
+        <p className="v3-type-caption font-semibold text-[var(--text-secondary)]">다음 행동</p>
+        <p className="v3-type-body ko-keep mt-2 text-[var(--text-primary)]">{nextAction}</p>
       </div>
     </section>
   );
@@ -182,14 +182,17 @@ export function EvidenceExcerpt({
       open={openByDefault}
     >
       <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]">
-        <span className="text-sm font-semibold text-[var(--text-primary)]">{title}</span>
-        <span className="flex items-center gap-2 text-right text-xs font-medium text-[var(--text-tertiary)]">
+        <span className="v3-type-compact font-semibold text-[var(--text-primary)]">{title}</span>
+        <span className="v3-type-caption flex items-center gap-2 text-right text-[var(--text-tertiary)]">
           {sourceLabel}
           <span aria-hidden="true" className="transition-transform group-open:rotate-180">⌄</span>
         </span>
       </summary>
       <div className="border-t border-[var(--border-subtle)] px-4 py-4">
-        <p className="max-h-56 overflow-auto whitespace-pre-wrap break-words text-sm leading-6 text-[var(--text-secondary)]">
+        <p
+          className="v3-prose max-h-56 overflow-auto whitespace-pre-wrap break-words text-[var(--text-secondary)]"
+          data-v3-typography-role="prose"
+        >
           {body ?? "기록된 내용이 없습니다."}
         </p>
       </div>
@@ -401,7 +404,8 @@ export function StudyLedgerDetail({
         </div>
         <h1
           id="study-ledger-title"
-          className="ko-keep mt-5 break-words text-[clamp(1.8rem,4vw,2.75rem)] font-bold leading-[1.16] tracking-[-0.025em] text-[var(--text-primary)]"
+          className="v3-type-screen ko-keep mt-5 break-words text-[var(--text-primary)]"
+          data-v3-typography-role="heading-screen"
         >
           {title}
         </h1>
@@ -431,10 +435,15 @@ export function StudyLedgerDetail({
 
           <section className="border-y border-[var(--border-subtle)] py-6" aria-labelledby="study-ledger-application">
             <p className="text-xs font-semibold tracking-[0.12em] text-[var(--text-secondary)]">APPLICATION</p>
-            <h2 id="study-ledger-application" className="mt-2 text-lg font-bold text-[var(--text-primary)]">
+            <h2 id="study-ledger-application" className="v3-type-item mt-2 text-[var(--text-primary)]">
               적용 문장 초점
             </h2>
-            <p className="ko-keep mt-3 text-base leading-7 text-[var(--text-primary)]">{coreLine}</p>
+            <p
+              className="v3-prose ko-keep mt-3 text-[var(--text-primary)]"
+              data-v3-typography-role="prose"
+            >
+              {coreLine}
+            </p>
             {visibleTerms.length > 0 ? (
               <ul className="mt-5 flex flex-wrap gap-2" aria-label="핵심 키워드">
                 {visibleTerms.map((term) => (

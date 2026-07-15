@@ -1,10 +1,24 @@
 import type { ReactNode } from "react";
 
-export function DailyCommandCard({ title, description, children }: { title: string; description: string; children: ReactNode }) {
+type DailyCommandCardProps = {
+  title: string;
+  description: string;
+  children: ReactNode;
+  headingLevel?: "h1" | "h2";
+};
+
+export function DailyCommandCard({
+  title,
+  description,
+  children,
+  headingLevel = "h1",
+}: DailyCommandCardProps) {
+  const Heading = headingLevel;
+
   return (
     <section className="rounded-[var(--radius-lg)] bg-[color:var(--surface-elevated)] px-5 py-5 sm:px-7 sm:py-7">
       <p className="text-xs text-[color:var(--textMuted)]">오늘 명령</p>
-      <h1 className="mt-2 text-xl font-semibold tracking-normal text-[color:var(--textStrong)]">{title}</h1>
+      <Heading className="mt-2 text-xl font-semibold tracking-normal text-[color:var(--textStrong)]">{title}</Heading>
       <p className="mt-2 text-sm leading-7 text-[color:var(--textBody)]">{description}</p>
       <div className="mt-7">{children}</div>
     </section>

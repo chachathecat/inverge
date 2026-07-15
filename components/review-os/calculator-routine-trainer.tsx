@@ -93,6 +93,15 @@ const textStepIds = new Set<CalculatorRoutineStepId>([
   "unit_rounding",
 ]);
 
+const calculatorNotationStepIds = new Set<CalculatorRoutineStepId>([
+  "formula",
+  "numbers_units",
+  "casio_input",
+  "display_value",
+  "answer_value",
+  "unit_rounding",
+]);
+
 const stepInputPrompts: Record<CalculatorRoutineStepId, string> = {
   conditions: "문제에서 실제로 쓸 조건을 내 말로 적어 주세요.",
   formula: "선택한 산식과 선택 이유를 짧게 적어 주세요.",
@@ -187,6 +196,7 @@ export function CalculatorRoutineTrainer({
   const canRender = eligibility.eligible || eligibility.manualEligible;
   const currentStepIndex = Math.max(0, CALCULATOR_ROUTINE_STEPS.findIndex((step) => step.id === draft.currentStepId));
   const currentStep = CALCULATOR_ROUTINE_STEPS[currentStepIndex] ?? CALCULATOR_ROUTINE_STEPS[0];
+  const usesCalculatorNotation = calculatorNotationStepIds.has(currentStep.id);
   const progress = getCalculatorRoutineProgress(draft);
   const currentStepComplete = isCalculatorRoutineStepComplete(draft, currentStep.id);
   const currentTextStepId = isTextStepId(currentStep.id) ? currentStep.id : null;
@@ -387,7 +397,7 @@ export function CalculatorRoutineTrainer({
                 기기 검증 전
               </span>
             </div>
-            <h3 className="text-lg font-semibold tracking-[-0.02em] text-[color:var(--foreground-strong)]">한 단계씩 계산·검산</h3>
+            <h3 className="v3-type-section text-[color:var(--foreground-strong)]">한 단계씩 계산·검산</h3>
             <p className="max-w-[62ch] text-xs leading-5 text-[color:var(--muted)]">
               정답 판정이 아니라 내 계산 과정을 점검하는 훈련입니다. 자동으로 계산하거나 권위 있는 판정·검증된 타건을 제공하지 않습니다.
             </p>
@@ -395,7 +405,7 @@ export function CalculatorRoutineTrainer({
               <p className="text-xs leading-5 text-[color:var(--muted)]">계산형 문제라면 루틴 시작</p>
             ) : null}
           </div>
-          <p className="shrink-0 text-xs font-medium tabular-nums text-[color:var(--muted)]">
+          <p className="v3-mono-small shrink-0 text-[color:var(--muted)]">
             {trainerState === "active" ? `단계 ${currentStepIndex + 1}/${CALCULATOR_ROUTINE_STEPS.length}` : `${progress.completedCount}/${progress.totalCount} 완료`}
           </p>
         </div>
@@ -458,15 +468,19 @@ export function CalculatorRoutineTrainer({
               data-calculator-routine-active-step={currentStep.id}
               aria-labelledby={`calculator-routine-step-${currentStep.id}`}
             >
-              <p className="text-xs font-semibold text-[color:var(--brand-700)]">지금 할 일 · {currentStepIndex + 1}/{CALCULATOR_ROUTINE_STEPS.length}</p>
-              <h4 id={`calculator-routine-step-${currentStep.id}`} className="mt-1 text-lg font-semibold text-[color:var(--foreground-strong)]">{currentStep.label}</h4>
+              <p className="v3-type-caption font-semibold text-[color:var(--brand-700)]">지금 할 일 · {currentStepIndex + 1}/{CALCULATOR_ROUTINE_STEPS.length}</p>
+              <h4 id={`calculator-routine-step-${currentStep.id}`} className="v3-type-item mt-1 text-[color:var(--foreground-strong)]">{currentStep.label}</h4>
               <p className="mt-2 text-xs leading-5 text-[color:var(--muted)]">{stepInputPrompts[currentStep.id]}</p>
 
               {currentTextStepId ? (
                 <label className="mt-5 block text-xs font-medium text-[color:var(--foreground-strong)]">
                   {currentStep.label} 입력
                   <Textarea
-                    className="mt-2 min-h-[132px] border-[var(--border)] bg-[color:var(--surface)] text-sm focus:border-[color:var(--brand-700)] focus-visible:ring-2 focus-visible:ring-[color:var(--brand-700)]"
+                    className={cn(
+                      "mt-2 min-h-[132px] border-[var(--border)] bg-[color:var(--surface)] text-sm focus:border-[color:var(--brand-700)] focus-visible:ring-2 focus-visible:ring-[color:var(--brand-700)]",
+                      usesCalculatorNotation && "v3-calculator-input",
+                    )}
+                    data-v3-typography-role={usesCalculatorNotation ? "calculator-mono" : "ui-body"}
                     value={draft.entries[currentTextStepId] ?? ""}
                     onChange={(event) => updateTextEntry(currentTextStepId, event.target.value)}
                   />

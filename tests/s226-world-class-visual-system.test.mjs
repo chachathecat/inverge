@@ -36,7 +36,7 @@ test("S226 globals define the required warm neutral visual primitives", () => {
     "--bg-surface: #ffffff",
     "--bg-subtle: #f2f0ea",
     "--bg-elevated: #fcfbf8",
-    "--border-subtle: #e6e1d7",
+    "--border-subtle: #e1ded6",
     "--text-primary: #141821",
     "--text-secondary: #5a6472",
     "--brand-900: #10233f",

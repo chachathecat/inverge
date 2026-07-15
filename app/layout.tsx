@@ -1,5 +1,9 @@
 import type { Metadata, Viewport } from "next";
 
+import "@fontsource-variable/noto-sans-kr/wght.css";
+import "@fontsource-variable/noto-serif-kr/wght.css";
+import "@fontsource/ibm-plex-mono/500.css";
+
 import { ServiceWorkerRegistration } from "@/components/pwa/service-worker-registration";
 
 import "./globals.css";

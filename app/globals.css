@@ -6,14 +6,14 @@
   --bg-surface: #ffffff;
   --bg-subtle: #f2f0ea;
   --bg-elevated: #fcfbf8;
-  --border-subtle: #e6e1d7;
-  --border-strong: #d7d1c4;
+  --border-subtle: #e1ded6;
+  --border-strong: #c9c5bc;
   --control-border: #81796d;
   --control-border-emphasis: #6f685d;
   --text-primary: #141821;
   --text-secondary: #5a6472;
   --text-tertiary: #647080;
-  --text-inverse: #f9fbff;
+  --text-inverse: #ffffff;
   --brand-900: #10233f;
   --brand-800: #163053;
   --brand-700: #23456f;
@@ -24,11 +24,50 @@
   --cue-focus: #2b5c9a;
   --cue-focus-bg: #edf4fc;
   --cue-risk: #b24d45;
+  --cue-risk-text: #8f3832;
   --cue-risk-bg: #fdedec;
   --cue-stable: #2e6e58;
   --cue-stable-bg: #eaf6f0;
   --cue-compare: #6b53a6;
   --cue-compare-bg: #f2eefb;
+
+  /* S232A · Figma V3 light semantic bridge (Color & Theme 43:2). */
+  --color-background-canvas: var(--bg-canvas);
+  --color-background-surface: var(--bg-surface);
+  --color-background-subtle: var(--bg-subtle);
+  --color-background-elevated: var(--bg-elevated);
+  --color-background-brand: var(--brand-900);
+  --color-background-brand-hover: var(--brand-800);
+  --color-background-brand-soft: var(--brand-050);
+  --color-background-focus: var(--cue-focus-bg);
+  --color-background-attention: var(--cue-review-bg);
+  --color-background-risk: var(--cue-risk-bg);
+  --color-background-stable: var(--cue-stable-bg);
+  --color-background-compare: var(--cue-compare-bg);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-text-inverse: var(--text-inverse);
+  --color-text-brand: var(--brand-900);
+  --color-text-link: var(--cue-focus);
+  --color-text-attention: var(--cue-review-text);
+  --color-text-risk: var(--cue-risk-text);
+  --color-text-stable: var(--cue-stable);
+  --color-text-compare: var(--cue-compare);
+  --color-border-default: var(--border-subtle);
+  --color-border-strong: var(--border-strong);
+  --color-border-focus: var(--cue-focus);
+  --color-border-attention: var(--cue-review);
+  --color-border-risk: var(--cue-risk);
+  --color-border-stable: var(--cue-stable);
+  --color-border-compare: var(--cue-compare);
+  --color-icon-primary: var(--text-primary);
+  --color-icon-secondary: var(--text-secondary);
+  --color-icon-focus: var(--cue-focus);
+  --color-icon-attention: var(--cue-review-text);
+  --color-icon-risk: var(--cue-risk-text);
+  --color-icon-stable: var(--cue-stable);
+  --color-icon-compare: var(--cue-compare);
   --sub-civil: #5268a5;
   --sub-econ: #3d7e7b;
   --sub-accounting: #a9751d;
@@ -88,9 +127,65 @@
   --radius-pill: 999px;
   --shadow-soft: 0 1px 2px rgba(15, 23, 42, 0.04);
   --shadow-focus: 0 1px 2px rgba(15, 23, 42, 0.04);
-  --space-page: 40px;
+  --space-0: 0px;
+  --space-4: 4px;
+  --space-8: 8px;
+  --space-12: 12px;
+  --space-16: 16px;
+  --space-20: 20px;
+  --space-24: 24px;
+  --space-28: 28px;
+  --space-32: 32px;
+  --space-40: 40px;
+  --space-48: 48px;
+  --space-64: 64px;
+  --space-section: 96px;
+  --space-page: 80px;
+  --v3-radius-control: 12px;
+  --v3-radius-card: 14px;
+  --v3-radius-panel: 16px;
+  --v3-radius-sheet: 20px;
+  --v3-radius-mark: 2px;
+  --v3-radius-micro: 4px;
+  --v3-radius-full: 9999px;
+  --control-height: 52px;
+  --icon-size: 24px;
+  --layout-page-edge: 20px;
+  --layout-content-max: 1120px;
+  --layout-reading-column: 680px;
+  --layout-evidence-rail: 288px;
+  --layout-hairline: 1px;
+  --layout-focus-ring: 2px;
   --chart-grid: rgba(17, 20, 24, 0.1);
-  --font-ui: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-ui: "Noto Sans KR Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-prose: "Noto Serif KR Variable", "Noto Serif KR", Georgia, serif;
+  --font-mono-code: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+  --type-display-size: 40px;
+  --type-display-line: 52px;
+  --type-display-tracking: -0.6px;
+  --type-screen-size: 28px;
+  --type-screen-line: 36px;
+  --type-screen-tracking: -0.4px;
+  --type-section-size: 20px;
+  --type-section-line: 28px;
+  --type-section-tracking: -0.2px;
+  --type-item-size: 18px;
+  --type-item-line: 26px;
+  --type-item-tracking: -0.1px;
+  --type-body-size: 16px;
+  --type-body-line: 26px;
+  --type-compact-size: 14px;
+  --type-compact-line: 22px;
+  --type-label-size: 13px;
+  --type-label-line: 20px;
+  --type-caption-size: 12px;
+  --type-caption-line: 18px;
+  --type-prose-size: 17px;
+  --type-prose-line: 30px;
+  --type-mono-display-size: 28px;
+  --type-mono-display-line: 36px;
+  --type-mono-small-size: 13px;
+  --type-mono-small-line: 20px;
   --cta-primary-bg: var(--brand-900);
   --cta-primary-hover: var(--brand-800);
   --cta-primary-fg: var(--text-inverse);
@@ -98,7 +193,7 @@
   --cta-secondary-fg: var(--text-primary);
   --trust-layer-bg: var(--brand-050);
   --trust-layer-border: #d7e2ef;
-  --focus-ring: #23456f;
+  --focus-ring: #2b5c9a;
   --touch-target-min: 44px;
   --ledger-radius-control: 12px;
   --ledger-radius-card: 14px;
@@ -111,6 +206,14 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-ui);
+  --font-serif: var(--font-prose);
+  --font-mono: var(--font-mono-code);
+}
+
+@media (min-width: 48rem) {
+  :root {
+    --layout-page-edge: 32px;
+  }
 }
 
 @layer base {
@@ -167,6 +270,126 @@ body {
 ::selection {
   background: rgba(19, 34, 56, 0.16);
   color: var(--foreground-strong);
+}
+
+/* S232A · Figma V3 typography roles (Typography 44:9). */
+.v3-type-display {
+  font-family: var(--font-ui);
+  font-size: var(--type-display-size);
+  font-weight: 700;
+  line-height: var(--type-display-line);
+  letter-spacing: var(--type-display-tracking);
+}
+
+.v3-type-screen {
+  font-family: var(--font-ui);
+  font-size: var(--type-screen-size);
+  font-weight: 700;
+  line-height: var(--type-screen-line);
+  letter-spacing: var(--type-screen-tracking);
+}
+
+.v3-type-section {
+  font-family: var(--font-ui);
+  font-size: var(--type-section-size);
+  font-weight: 700;
+  line-height: var(--type-section-line);
+  letter-spacing: var(--type-section-tracking);
+}
+
+.v3-type-item {
+  font-family: var(--font-ui);
+  font-size: var(--type-item-size);
+  font-weight: 700;
+  line-height: var(--type-item-line);
+  letter-spacing: var(--type-item-tracking);
+}
+
+.v3-type-body,
+.v3-type-body-strong {
+  font-family: var(--font-ui);
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line);
+  letter-spacing: 0;
+}
+
+.v3-type-body {
+  font-weight: 400;
+}
+
+.v3-type-body-strong {
+  font-weight: 700;
+}
+
+.v3-type-compact {
+  font-family: var(--font-ui);
+  font-size: var(--type-compact-size);
+  font-weight: 400;
+  line-height: var(--type-compact-line);
+  letter-spacing: 0;
+}
+
+.v3-type-label,
+.v3-type-label-strong {
+  font-family: var(--font-ui);
+  line-height: var(--type-label-line);
+  letter-spacing: 0;
+}
+
+.v3-type-label {
+  font-size: var(--type-label-size);
+  font-weight: 500;
+}
+
+.v3-type-label-strong {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 22px;
+}
+
+.v3-type-caption {
+  font-family: var(--font-ui);
+  font-size: var(--type-caption-size);
+  font-weight: 500;
+  line-height: var(--type-caption-line);
+  letter-spacing: 0.1px;
+}
+
+.v3-prose,
+.v3-prose-strong {
+  max-inline-size: 42ch;
+  font-family: var(--font-prose);
+  font-size: var(--type-prose-size);
+  line-height: var(--type-prose-line);
+  letter-spacing: 0;
+}
+
+.v3-prose {
+  font-weight: 400;
+}
+
+.v3-prose-strong {
+  font-weight: 600;
+}
+
+.v3-mono-display,
+.v3-mono-small,
+.v3-calculator-input {
+  font-family: var(--font-mono-code);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+}
+
+.v3-mono-display {
+  font-size: var(--type-mono-display-size);
+  font-weight: 500;
+  line-height: var(--type-mono-display-line);
+}
+
+.v3-mono-small {
+  font-size: var(--type-mono-small-size);
+  font-weight: 500;
+  line-height: var(--type-mono-small-line);
 }
 
 .text-h1 {

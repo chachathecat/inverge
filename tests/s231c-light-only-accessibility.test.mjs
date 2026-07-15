@@ -73,6 +73,8 @@ test("S231C runtime acceptance is axe-backed, metadata-only, and honest about ma
 test("S231C keeps one dominant step action and announces focus and copy state", () => {
   const answerReview = read("app/answer-review/answer-review-client.tsx");
   const captureForm = read("components/review-os/capture-form.tsx");
+  const minimalStudySystem = read("components/review-os/minimal-study-system.tsx");
+  const writePage = read("app/app/write/page.tsx");
   const globals = read("app/globals.css");
   const spec = read("tests/e2e/s231c-wcag-aa.spec.ts");
   const gitignore = read(".gitignore");
@@ -104,6 +106,9 @@ test("S231C keeps one dominant step action and announces focus and copy state", 
   assert.match(spec, /name: "보강 문단 정리", exact: true[\s\S]*?toHaveCount\(1\)/);
   assert.match(gitignore, /^\/test-results\/$/m);
   assert.match(gitignore, /^\/playwright-report\/$/m);
+  assert.match(minimalStudySystem, /headingLevel\?: "h1" \| "h2"/);
+  assert.match(minimalStudySystem, /const Heading = headingLevel/);
+  assert.match(writePage, /<DailyCommandCard[\s\S]*?headingLevel="h2"/);
 });
 
 test("S231C workflow is PR-scoped, exact-head, and publishes JSON-only evidence", () => {
