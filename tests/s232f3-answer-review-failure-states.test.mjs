@@ -211,6 +211,9 @@ test("S232F.3 runtime is exact-head, HTTP-200-negative-ack, remotely read-only, 
   assert.match(spec, /staleResultAbsentAfterFailure/);
   assert.match(spec, /new AxeBuilder/);
   assert.match(spec, /page\.keyboard\.press\("Tab"\)/);
+  assert.match(spec, /\(element as HTMLFieldSetElement\)\.disabled/);
+  assert.match(spec, /await expect\(requiredAnswer\)\.toBeDisabled\(\)/);
+  assert.doesNotMatch(spec, /await expect\(entryFieldset\)\.toBeDisabled\(\)/);
 
   const firstChangeGuard = spec.indexOf('await waitForReactHandler(requiredAnswer, "onChange", "Answer Review learner answer")');
   const firstFill = spec.indexOf("await requiredAnswer.fill(syntheticAnswer)");

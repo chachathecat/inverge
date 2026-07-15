@@ -323,7 +323,12 @@ test("S232F.3 exact-head Answer Review keeps failures evidence-bound", async ({ 
   await expect(loading).toHaveAttribute("data-v3-system-state", "loading");
   await expect(loading).toHaveAttribute("data-failure-aware-safety", "memory_only");
   await expect(loading).toHaveAttribute("data-failure-aware-auto-sync", "none");
-  await expect(entryFieldset).toBeDisabled();
+  expect(
+    await entryFieldset.evaluate(
+      (element) => (element as HTMLFieldSetElement).disabled,
+    ),
+    "The Answer Review input fieldset must expose native disabled semantics while loading.",
+  ).toBe(true);
   await expect(requiredAnswer).toBeDisabled();
   await expect(requiredAnswer).toHaveValue(syntheticAnswer);
   await expect(biggestGap).toHaveCount(0);
