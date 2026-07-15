@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { TrustEvidenceBar } from "@/components/learner/trust-evidence-bar";
 import { TrustProvenanceLayer } from "@/components/review-os/trust-provenance-layer";
 import { adaptLegacyTrustSignals } from "@/lib/review-os/trust-provenance";
 
@@ -27,6 +28,7 @@ type StudyLedgerDetailProps = {
   title: string;
   subject: string;
   createdAt: string;
+  savedAt: string;
   biggestGap: string;
   nextAction: string;
   coreLine: string;
@@ -549,6 +551,7 @@ export function StudyLedgerDetail({
   title,
   subject,
   createdAt,
+  savedAt,
   biggestGap,
   nextAction,
   coreLine,
@@ -589,11 +592,23 @@ export function StudyLedgerDetail({
   const learnerEvidence = normalizedExcerpt(learnerExcerpt);
   const referenceEvidence = normalizedExcerpt(referenceExcerpt);
   const evidenceEmpty = !learnerEvidence && !referenceEvidence;
+  const trustEvidence = adaptLegacyTrustSignals({
+    conflictRecorded: evidenceConflict,
+    learnerConfirmed,
+  });
+  const trustSummary = evidenceConflict
+    ? "학습자 입력과 참고용 근거 차이"
+    : learnerConfirmed
+      ? "학습자 확인 기록 있음"
+      : "학습자 확인 기록 없음";
+  const trustDetail = referenceEvidence
+    ? "저장된 학습 기록 · 참고용 근거 연결, 원 출처 확인 필요"
+    : "저장된 학습 기록 · 참고용 근거 없음";
 
   return (
     <article
       data-s228-study-ledger-detail
-      className="mx-auto w-full max-w-[1048px] pb-28 lg:pb-10"
+      className="mx-auto w-full max-w-[1000px] px-1 pb-28 sm:px-0 lg:pb-10"
       aria-labelledby="study-ledger-title"
     >
       <header className="max-w-[var(--ledger-reading-column)] border-b border-[var(--border-subtle)] pb-7">
@@ -623,8 +638,21 @@ export function StudyLedgerDetail({
         <p className="ko-keep mt-4 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">{recurrenceText}</p>
       </header>
 
-      <div className="mt-7 grid gap-7 lg:grid-cols-[minmax(0,var(--ledger-reading-column))_var(--ledger-evidence-rail)] lg:items-start">
-        <div className="min-w-0 space-y-8">
+      <div className="mt-5 grid gap-8 lg:grid-cols-[minmax(0,var(--ledger-reading-column))_var(--ledger-evidence-rail)] lg:items-start">
+        <div data-s232b1-reading-column className="min-w-0 space-y-8">
+          <div data-s232b1-trust-gap-stack className="space-y-5">
+            <TrustEvidenceBar
+              evidence={trustEvidence}
+              sources={referenceEvidence ? ["persisted_record", "reference"] : ["persisted_record"]}
+              summary={trustSummary}
+              detail={trustDetail}
+              saveStatus={`${formatRecordDate(savedAt)} 저장 · 수정 가능`}
+              announceChange={evidenceConflict}
+            />
+
+            <BiggestGap gap={biggestGap} evidence={stateEvidence} />
+          </div>
+
           {completed ? (
             comparison ? (
               <RewriteComparisonPanel comparison={comparison} />
@@ -641,8 +669,6 @@ export function StudyLedgerDetail({
               </section>
             )
           ) : null}
-
-          <BiggestGap gap={biggestGap} evidence={stateEvidence} />
 
           <section
             data-s228-next-action
@@ -704,11 +730,6 @@ export function StudyLedgerDetail({
         </div>
 
         <aside data-s228-evidence-rail className="min-w-0 space-y-4">
-          <StudyLedgerTrustBar
-            learnerConfirmed={learnerConfirmed}
-            referenceAvailable={Boolean(referenceEvidence)}
-            evidenceConflict={evidenceConflict}
-          />
           <StickyAction
             href={actionHref}
             label={completed ? "문단 한 번 더 다듬기" : "10분 문단 다시쓰기"}
