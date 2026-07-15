@@ -8,6 +8,7 @@ const barrel = read("components/learner/index.ts");
 const fixture = read("app/acceptance/figma-v3-passive/page.tsx");
 const runtime = read("tests/e2e/s232b-passive-components.spec.ts");
 const authRuntime = read("tests/e2e/s232b-authenticated-runtime.spec.ts");
+const workflow = read(".github/workflows/s232b-runtime.yml");
 const runner = read("scripts/run-node-tests.mjs");
 
 const functionSource = (name, nextName) => {
@@ -157,4 +158,14 @@ test("S232B defines metadata-only exact-head authenticated integration evidence"
   assert.match(authRuntime, /traceCaptured: false/);
   assert.match(authRuntime, /videoCaptured: false/);
   assert.doesNotMatch(authRuntime, /page\.screenshot|outerHTML|innerHTML|localStorage|sessionStorage/);
+  assert.match(workflow, /pull_request\.number == 580/);
+  assert.match(workflow, /agent\/s232b-shared-component-parity/);
+  assert.match(workflow, /inverge-git-agent-s232b-shared-co-e91d86-chachathecats-projects\.vercel\.app/);
+  assert.match(workflow, /run-s232b-auth-e2e/);
+  assert.match(workflow, /s232b-passive-components\.spec\.ts/);
+  assert.match(workflow, /s232b-authenticated-runtime\.spec\.ts/);
+  assert.match(workflow, /Postflight deployment SHA mismatch/);
+  assert.match(workflow, /Exactly one S232B manifest is required/);
+  assert.match(workflow, /Screenshot, trace, or video output exists/);
+  assert.match(workflow, /path: s232b-evidence\/s232b-runtime\.json/);
 });

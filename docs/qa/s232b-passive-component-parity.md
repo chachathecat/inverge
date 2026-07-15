@@ -1,6 +1,6 @@
 # S232B Figma V3 Passive Component Parity
 
-Status: source implementation complete; local synthetic runtime PASS; exact-head runtime pending.
+Status: source implementation complete; exact-head Preview runtime pending.
 
 Parent: S232 App-wide Figma V3 parity (`#574`)
 
@@ -36,6 +36,8 @@ BiggestGap remains exactly one signature annotation. The existing next action st
 
 EvidenceExcerpt supports the exact `Learner | Official | AI` and `Default | Confirmed` matrix. Production adopts the Learner/Default variant for learner-authored text. The current reference excerpt has no typed official/AI source or confirmation flag, so it deliberately remains a neutral disclosure labelled `참고용 근거 · 원 출처 확인`; it is not auto-promoted to Official, AI, or Confirmed.
 
+StateChip and EvidenceExcerpt are fail-closed at their public boundary. StateChip requires a typed evidence basis, non-empty detail, and at least two distinct-day successes for Stable. EvidenceExcerpt requires a typed source basis, explicit confirmation evidence for Confirmed, and non-empty provenance. Source and review labels remain visible rather than relying on color.
+
 ## Responsive contract
 
 Figma library reference widths and heights are not copied as fixed production dimensions. Components fill their container and grow with Korean text:
@@ -62,13 +64,17 @@ No exact component uses clipping, ellipsis, line clamp, or an internal scroll re
 - source contract: `tests/s232b-passive-component-parity.test.mjs`
 - Preview-only synthetic matrix: `/acceptance/figma-v3-passive`
 - browser contract: `tests/e2e/s232b-passive-components.spec.ts`
-- local Chromium synthetic matrix: 3/3 PASS at 390px, 768px, and 1440px
-- local observations: all variants present, axe critical/serious 0, clipped components 0, horizontal overflow 0, console/page/request errors 0
+- authenticated contract: `tests/e2e/s232b-authenticated-runtime.spec.ts`
+- exact-head workflow: `.github/workflows/s232b-runtime.yml`
+- synthetic matrix: 390px, 768px, 1440px, plus a 720px desktop-200%-zoom equivalent
+- exact Cartesian selectors verify every type/density and source/review pair once
+- runtime requires axe critical/serious 0, clipped components 0, horizontal overflow at most 1px, and console/page/request errors 0
 - existing S228 Study Ledger contract remains green
 - S231B trust and S231C light/accessibility contracts remain green
 - S232A foundation contract remains green
 - 390px, 768px, and 1440px: overflow at most 1px; console, page, and unexpected same-origin request errors 0
 - exact Preview SHA must match the PR head before authenticated integration evidence is accepted
+- exact Preview SHA is checked before and after the run; only one allowlisted metadata JSON artifact may be uploaded
 
 ## Rollback
 
