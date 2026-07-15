@@ -131,8 +131,8 @@ test("S232B.2 exposes a Preview-only privacy-safe exact 2 by 4 matrix", () => {
   assert.match(fixture, /controllerEvidence=\{\{ kind: "save-in-progress", saveInProgress: true \}\}/);
   assert.match(fixture, /controllerEvidence=\{\{ kind: "network-offline", isOnline: false \}\}/);
   assert.match(fixture, /kind: "action-disabled"/);
-  assert.match(fixture, /left-1\/2 w-screen max-w-\[390px\] -translate-x-1\/2/);
-  assert.match(fixture, /sm:left-0 sm:w-full sm:translate-x-0/);
+  assert.match(fixture, /-ml-5 w-screen max-w-\[390px\]/);
+  assert.match(fixture, /sm:ml-0 sm:w-full/);
   assert.doesNotMatch(
     fixture,
     /prisma|supabase|getReviewOsServerContext|cookies\(|headers\(|from\s+["'][^"']*auth[^"']*["']/i,
