@@ -13,6 +13,13 @@ export {
   SingleFocusCard,
 } from "./learner-ui";
 
+export { TrustEvidenceBar } from "./trust-evidence-bar";
+export type { TrustEvidenceBarProps } from "./trust-evidence-bar";
+export type {
+  TrustEvidenceBarDisclosure,
+  TrustEvidenceBarState,
+} from "../../lib/review-os/trust-provenance";
+
 export {
   BiggestGap,
   EvidenceExcerpt,
