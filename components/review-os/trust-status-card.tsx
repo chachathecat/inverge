@@ -51,7 +51,7 @@ const DEFAULT_TRUST_ITEMS: TrustStatusItem[] = [
   {
     label: "계속할 곳",
     status: "복습 연결",
-    helper: "확인한 내용만 오늘 할 일, 복습, 교정 노트로 이어집니다.",
+    helper: "확인한 내용만 오늘 할 일, 복습, 학습 노트로 이어집니다.",
   },
 ];
 

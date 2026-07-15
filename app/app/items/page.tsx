@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { BiggestGap } from "@/components/learner";
 import { LocalBetaNotesSection } from "@/components/review-os/local-beta-note-reflection";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
@@ -172,6 +173,7 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
       data-s224v-secondary-diagnostics="quiet-disclosure"
       data-s224v-equal-weight-card-grid="absent"
       data-s224v-repeated-warning-copy="absent"
+      data-s232d3-notes-list={isNotesRoute ? "recent-first" : undefined}
     >
       <Card className="border-[var(--border)] bg-[color:var(--surface)] shadow-none">
         <CardHeader className="space-y-2">
@@ -219,6 +221,67 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
                 const biggestGap = resolveBiggestGap(item);
                 const nextAction = resolveNextAction(item, mode);
                 const createdAt = formatCreatedDate(item.createdAt);
+
+                if (isNotesRoute) {
+                  const title = item.problemTitle ?? item.problemIdentifier ?? `${item.subjectLabel} 학습 노트`;
+
+                  return (
+                    <section
+                      key={item.id}
+                      className="review-reason-card rounded-[var(--radius-lg)] border border-[var(--border)] px-4 py-4"
+                      aria-labelledby={`notes-title-${item.id}`}
+                      data-notes-record-context
+                      data-s232d3-note-card
+                    >
+                      <div className="space-y-4">
+                        <header className="space-y-1" data-s232d3-note-meta>
+                          <p className="text-xs text-[color:var(--muted)]">
+                            {item.subjectLabel}
+                            {createdAt ? ` · ${createdAt}` : ""}
+                          </p>
+                          <h2 id={`notes-title-${item.id}`} className="break-words text-sm font-medium text-[color:var(--foreground-strong)]">
+                            {title}
+                          </h2>
+                        </header>
+
+                        <BiggestGap
+                          gap={biggestGap}
+                          density="Compact"
+                          showEvidence={false}
+                          headingId={`notes-biggest-gap-${item.id}`}
+                        />
+
+                        <div
+                          className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-3"
+                          data-s232d3-next-action
+                        >
+                          <p className="text-xs font-medium text-[color:var(--muted)]">다음 행동</p>
+                          <p className="mt-1 break-words text-sm leading-6 text-[color:var(--foreground-strong)]">
+                            {nextAction || EMPTY_ACTION_COPY}
+                          </p>
+                        </div>
+
+                        <Link
+                          href={`/app/items/${item.id}?mode=${mode}`}
+                          className="inline-flex min-h-11 items-center text-sm font-medium text-[color:var(--foreground-strong)] underline-offset-4 hover:underline"
+                          aria-label={`노트 자세히 보기: ${title}`}
+                          data-s232d3-detail-link
+                        >
+                          노트 자세히 보기
+                        </Link>
+
+                        <div
+                          className="flex flex-wrap gap-x-3 gap-y-1 border-t border-[color:var(--border-subtle)] pt-3 text-xs text-[color:var(--muted)]"
+                          data-s232d3-secondary-connections
+                        >
+                          <span>논점 후보: {topic}</span>
+                          <span>복습에 남길 내용</span>
+                          <span>학습 기록에 저장</span>
+                        </div>
+                      </div>
+                    </section>
+                  );
+                }
 
                 return (
                   <section key={item.id} className="review-reason-card rounded-[var(--radius-lg)] border border-[var(--border)] px-4 py-4" data-notes-record-context>

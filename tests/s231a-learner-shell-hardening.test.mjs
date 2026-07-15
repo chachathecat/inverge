@@ -76,7 +76,7 @@ test("S231A mobile navigation is stable, second-round only, and semantically cur
   const shell = read("components/learner/learner-ui.tsx");
 
   assert.match(shell, /grid grid-cols-5 gap-1 sm:flex/);
-  for (const label of ["오늘", "답안", "교정 노트", "복습", "기록"]) {
+  for (const label of ["오늘", "답안", "학습 노트", "복습", "기록"]) {
     assert.ok(shell.includes(`mobileLabel: "${label}"`), `missing mobile learner label: ${label}`);
   }
   assert.doesNotMatch(shell, /aria-label=\{item\.label\}/);
@@ -150,7 +150,7 @@ test("S231A exact-head runtime covers responsive, keyboard, and accessibility se
   for (const width of ["390", "768", "1440"]) {
     assert.ok(spec.includes(`label: "${width}"`), `missing runtime viewport: ${width}`);
   }
-  for (const label of ["오늘", "답안", "교정 노트", "복습", "기록"]) {
+  for (const label of ["오늘", "답안", "학습 노트", "복습", "기록"]) {
     assert.ok(spec.includes(`"${label}"`), `missing runtime mobile label: ${label}`);
   }
   assert.match(spec, /requireSafeAuthenticatedRuntime\("S231A"/);

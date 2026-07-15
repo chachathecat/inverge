@@ -222,7 +222,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
   const missionWhy = homeState === "overdue_recovery" ? dailyStateCopy.overdueReason : missionTask?.display_reason ?? missionTask?.reason ?? todayPlan.reason;
   const missionMinutes = missionTask ? `${missionTask.estimated_minutes}분` : mode === "second" ? "18분 안팎" : "12분 안팎";
   const missionAfter = missionTask
-    ? "교정 노트에 저장되고 다음 복습 시점으로 돌아옵니다."
+    ? "학습 노트에 저장되고 다음 복습 시점으로 돌아옵니다."
     : "학습 노트, 오늘 할 일, 복습 대기가 함께 만들어집니다.";
   const fallbackMissionPrimaryLabel =
     homeState === "first_capture" || homeState === "overdue_recovery" || homeState === "evening_capture"
@@ -286,10 +286,10 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
 
       {savedParam ? (
         <section className="evidence-bar px-4 py-3">
-          <EvidenceLine>저장한 내용은 교정 노트에서 확인할 수 있습니다.</EvidenceLine>
+          <EvidenceLine>저장한 내용은 학습 노트에서 확인할 수 있습니다.</EvidenceLine>
           <OneActionFooter>
             <Link href={`/app/notes?mode=${mode}`} className="inline-flex min-h-11 items-center rounded-full border border-[color:var(--border-subtle)] px-4 py-2 text-xs font-medium text-[color:var(--foreground-strong)]">
-              교정 노트 보기
+              학습 노트 보기
             </Link>
           </OneActionFooter>
         </section>
@@ -442,7 +442,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                 {notebookPreview.length === 0 ? (
                   <div className="space-y-2">
                     <p className="text-sm text-[color:var(--muted)]">아직 기록이 없습니다.</p>
-                    <p className="text-sm text-[color:var(--muted)]">오늘 푼 문제나 답안 일부를 정리하면 첫 교정 노트가 만들어집니다.</p>
+                    <p className="text-sm text-[color:var(--muted)]">오늘 푼 문제나 답안 일부를 정리하면 첫 학습 노트가 만들어집니다.</p>
                     <Link href={modeCaptureHref} className="inline-flex text-sm font-medium text-[color:var(--foreground-strong)] underline underline-offset-2">오늘 한 것 올리기</Link>
                   </div>
                 ) : (
