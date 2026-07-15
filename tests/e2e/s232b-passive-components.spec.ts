@@ -43,10 +43,12 @@ for (const viewport of viewports) {
     });
 
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
-    const response = await page.goto("/acceptance/figma-v3-passive", { waitUntil: "networkidle" });
+    const response = await page.goto("/acceptance/figma-v3-passive", { waitUntil: "domcontentloaded" });
 
     expect(response?.ok()).toBe(true);
-    await expect(page.locator("[data-s232b-passive-acceptance]")).toHaveAttribute("data-private-learner-data", "absent");
+    const acceptanceSurface = page.locator("[data-s232b-passive-acceptance]");
+    await expect(acceptanceSurface).toBeVisible();
+    await expect(acceptanceSurface).toHaveAttribute("data-private-learner-data", "absent");
     await expect(page.locator('[data-v3-component="StateChip"]')).toHaveCount(5);
     await expect(page.locator('[data-v3-component="BiggestGap"]')).toHaveCount(6);
     await expect(page.locator('[data-v3-component="EvidenceExcerpt"]')).toHaveCount(6);
@@ -142,7 +144,9 @@ for (const viewport of viewports) {
 
 test("S232B passive matrix reflows at a 200% desktop zoom equivalent", async ({ page }) => {
   await page.setViewportSize({ width: 720, height: 1024 });
-  await page.goto("/acceptance/figma-v3-passive", { waitUntil: "networkidle" });
+  const response = await page.goto("/acceptance/figma-v3-passive", { waitUntil: "domcontentloaded" });
+  expect(response?.ok()).toBe(true);
+  await expect(page.locator("[data-s232b-passive-acceptance]")).toBeVisible();
 
   const layout = await page.evaluate(() => ({
     overflow: document.documentElement.scrollWidth - window.innerWidth,
