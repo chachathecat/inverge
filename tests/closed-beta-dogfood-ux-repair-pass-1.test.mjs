@@ -79,7 +79,7 @@ test("Review Queue has one primary review card and collapses extra signals", () 
   assert.ok(reviewQueue.includes("data-review-primary-surface"));
   assert.ok(reviewQueue.includes("지금 복습할 1개"));
   assert.ok(reviewQueue.includes("data-review-extra-signals"));
-  assert.ok(reviewQueue.includes("상세 신호 보기"));
+  assert.ok(reviewQueue.includes("복습 근거 보기"));
   assert.ok(reviewQueue.includes("data-review-secondary-list"));
   assert.ok(reviewQueue.includes("다음 복습 보기"));
   assert.ok(reviewQueue.includes("복습 완료"));

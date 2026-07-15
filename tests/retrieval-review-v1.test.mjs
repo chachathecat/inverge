@@ -35,7 +35,7 @@ test("Review Queue primary surface starts with active recall before details", ()
   assert.ok(source.includes("확인하기"));
 
   assert.ok(source.indexOf('data-review-retrieval-step="check"') < source.indexOf("data-review-extra-signals"));
-  assert.ok(source.includes("상세 신호와 학습 노트는 먼저 떠올린 뒤 확인합니다."));
+  assert.ok(source.includes("복습 근거와 학습 노트는 먼저 떠올린 뒤 확인합니다."));
 });
 
 test("Review Queue self-rating outcomes and learning-signal copy are present", () => {
@@ -46,7 +46,7 @@ test("Review Queue self-rating outcomes and learning-signal copy are present", (
   ["기억남", "헷갈림", "틀림", "확신하고 틀림"].forEach((label) => assert.ok(combined.includes(label), label));
   assert.ok(source.includes("이 평가는 점수가 아니라 다음 복습 간격을 정하기 위한 학습 신호입니다."));
   assert.ok(source.includes("data-review-interval-suggestion"));
-  assert.ok(source.includes("이번 PR에서는 복습 완료 신호만 저장하고, 세부 간격 조정은 다음 단계에서 연결합니다."));
+  assert.ok(source.includes("표시된 간격은 학습 제안입니다. 복습 완료를 누르면 선택한 자기평가가 함께 저장됩니다."));
   assert.ok(source.includes("복습 완료"));
   assert.ok(source.includes("disabled={pendingId === primaryItem.queueId || !primaryOutcome}"));
   assert.ok(source.includes("retrievalReviewVersion: \"v1\""));

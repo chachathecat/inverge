@@ -62,7 +62,7 @@ test("capture and answer review expose one loop: input, confirmation, gap, actio
   }
 
   assert.match(reviewQueue, /data-review-why-next/);
-  assert.match(reviewQueue, /왜 여기 있나/);
+  assert.match(reviewQueue, /복습 이유/);
   assert.match(reviewQueue, /다음 행동/);
 });
 
