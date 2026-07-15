@@ -2,10 +2,15 @@ import Link from "next/link";
 
 import { BiggestGap } from "@/components/learner";
 import { LocalBetaNotesSection } from "@/components/review-os/local-beta-note-reflection";
+import {
+  CoreRouteReadEmptyShell,
+  CoreRouteReadErrorPage,
+} from "@/components/review-os/core-route-read-state";
 import { ReviewOsAccessState } from "@/components/review-os/review-os-access-state";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { getModeConfig, resolveAppraisalMode, type AppraisalMode } from "@/lib/review-os/appraisal";
+import { resolveEssentialCoreRouteRead } from "@/lib/review-os/core-route-read-outcome";
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
 import { reviewOsService } from "@/lib/review-os/service";
 import type { LearningSignalEventRecord, WrongAnswerItemRecord } from "@/lib/review-os/types";
@@ -150,13 +155,23 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
 
   const mode = resolveAppraisalMode(profile, modeParam);
   const config = getModeConfig(mode);
-  const items = (await reviewOsService.listWrongAnswerItems(session.userId, session.email, 60).catch(() => [])).filter(
-    (item) => item.examName === config.label,
-  );
-  const learningSignals = await reviewOsService.listLearningSignalEvents(session.userId, session.email, mode, 20).catch(() => []);
+  const isNotesRoute = routePath === "/app/notes";
+  const [itemsRead, learningSignalsRead] = await Promise.all([
+    resolveEssentialCoreRouteRead("notes_items", () =>
+      reviewOsService.listWrongAnswerItems(session.userId!, session.email!, 60),
+    ),
+    resolveEssentialCoreRouteRead("notes_learning_signal_events", () =>
+      reviewOsService.listLearningSignalEvents(session.userId!, session.email!, mode, 20),
+    ),
+  ]);
+  if (itemsRead.status !== "ready" || learningSignalsRead.status !== "ready") {
+    return <CoreRouteReadErrorPage surface={isNotesRoute ? "notes" : "items"} />;
+  }
+
+  const items = itemsRead.value.filter((item) => item.examName === config.label);
+  const learningSignals = learningSignalsRead.value;
   const hasItems = items.length > 0;
   const hasLearningSignals = learningSignals.length > 0;
-  const isNotesRoute = routePath === "/app/notes";
   const pageTitle = isNotesRoute ? "학습 노트" : "학습 기록";
   const helperCopy = isNotesRoute
     ? "오늘 한 것에서 만든 가장 큰 약점과 다음 행동을 모아봅니다."
@@ -164,6 +179,44 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
   const visibleItems = isNotesRoute ? items.slice(0, 3) : items;
   const foldedItems = isNotesRoute ? items.slice(3) : [];
   const visibleLearningSignals = isNotesRoute ? learningSignals.slice(0, 3) : learningSignals.slice(0, 8);
+
+  if (!hasItems && !hasLearningSignals) {
+    return (
+      <CoreRouteReadEmptyShell
+        surface={isNotesRoute ? "notes" : "items"}
+        mode={mode}
+        confirmedEmptyContent={(
+          <section
+            className="space-y-3"
+            aria-label="학습 노트 시작 안내"
+            data-s232f4a-route-specific-empty
+          >
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-[color:var(--foreground-strong)]">
+                아직 쌓인 학습 노트가 없습니다.
+              </p>
+              <p className="text-sm text-[color:var(--muted)]">
+                오늘 한 것을 하나 올리면 가장 큰 약점과 다음 행동이 만들어집니다.
+              </p>
+            </div>
+            <Link
+              href={`/app/capture?mode=${mode}`}
+              className={buttonVariants({ className: "primary-action w-full sm:w-auto" })}
+              data-s224v-dominant-primary-action
+            >
+              오늘 한 것 올리기
+            </Link>
+          </section>
+        )}
+      >
+        <LocalBetaNotesSection
+          mode={mode}
+          showEmptyMessage={false}
+          showReadUnavailableNotice={false}
+        />
+      </CoreRouteReadEmptyShell>
+    );
+  }
 
   return (
     <div
@@ -188,20 +241,6 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
           ) : null}
         </CardHeader>
         <CardContent className="space-y-4">
-          {!hasItems && !hasLearningSignals ? (
-            <div className="quiet-empty-state space-y-4 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4">
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-[color:var(--foreground-strong)]">아직 쌓인 학습 노트가 없습니다.</p>
-                <p className="text-sm text-[color:var(--muted)]">오늘 한 것을 하나 올리면 가장 큰 약점과 다음 행동이 만들어집니다.</p>
-              </div>
-              <Link href={`/app/capture?mode=${mode}`} className="inline-flex w-full sm:w-auto">
-                <Button type="button" className="primary-action w-full sm:w-auto" data-s224v-dominant-primary-action>
-                  오늘 한 것 올리기
-                </Button>
-              </Link>
-            </div>
-          ) : null}
-
           {savedParam ? (
             <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] px-4 py-3">
               <p className="text-sm font-medium text-[color:var(--foreground-strong)]">방금 저장한 학습 노트가 반영되었습니다.</p>
@@ -371,7 +410,7 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
         </CardContent>
       </Card>
 
-      <LocalBetaNotesSection mode={mode} />
+      <LocalBetaNotesSection mode={mode} showEmptyMessage={false} />
     </div>
   );
 }

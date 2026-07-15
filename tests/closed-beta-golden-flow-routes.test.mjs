@@ -297,7 +297,11 @@ test("Today and empty states use capture for generic input while preserving spec
   assert.equal(todayPage.includes('if (hrefKind === "write") return `/app/write?mode=second&subject=${selectedSubjectQuery}`;'), true, "specialized write tasks should remain available");
   assert.equal(reviewQueue.includes('router.push(mode === "second" ? "/app/capture?mode=second" : "/app/capture?mode=first")'), true, "empty review state should not send learners to a missing input route");
   assert.equal(reviewPage.includes("학습 노트에서 만든 다시쓰기 후보를 오늘 복습으로 이어갑니다."), true, "Review page should explain the page purpose");
-  assert.equal(itemsPage.includes('<Link href={`/app/capture?mode=${mode}`'), true, "empty notes state should send learners to capture");
+  assert.match(
+    itemsPage,
+    /<Link\s+href=\{`\/app\/capture\?mode=\$\{mode\}`\}/,
+    "empty notes state should send learners to capture",
+  );
   assert.equal(itemsPage.includes("오늘 한 것을 하나 올리면 가장 큰 약점과 다음 행동이 만들어집니다."), true, "Notes empty state should explain saved-note reflection");
   assert.equal(localBetaReflection.includes('href={`/app/capture?mode=${mode}`}'), true, "local beta empty states should preserve mode when returning to capture");
   assert.equal(localBetaReflection.includes("이 브라우저에 저장된 학습 노트"), true, "local beta Notes copy should remain browser-local scoped");

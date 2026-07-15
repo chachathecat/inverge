@@ -89,6 +89,8 @@ const defaultTestFiles = [
   "tests/s232f1-capture-persistence-truth.test.mjs",
   "tests/s232f2-access-availability.test.mjs",
   "tests/s232f3-answer-review-failure-states.test.mjs",
+  "tests/s232f4a-core-route-read-states.test.mjs",
+  "tests/s232f4b-remaining-read-states.test.mjs",
   "tests/s220b-dabangil-launch-surface.test.mjs",
   "tests/practice-calculation-unit-registry.test.mjs",
   "tests/rewrite-regrade-history-contract.test.mjs",

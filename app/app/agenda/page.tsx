@@ -1,9 +1,11 @@
 import { LearningAgendaClient } from "@/components/review-os/learning-agenda-client";
+import { CoreRouteReadErrorPage } from "@/components/review-os/core-route-read-state";
 import { ReviewOsFeedbackButton } from "@/components/review-os/feedback-button";
 import { ReviewOsAccessState } from "@/components/review-os/review-os-access-state";
 import { ClosedBetaBanner } from "@/components/shared/closed-beta-banner";
 import { buildLearningAgendaEvents } from "@/lib/review-os/learning-agenda";
 import { getModeConfig, resolveAppraisalMode } from "@/lib/review-os/appraisal";
+import { resolveEssentialCoreRouteRead } from "@/lib/review-os/core-route-read-outcome";
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
 import { reviewOsService } from "@/lib/review-os/service";
 
@@ -23,17 +25,35 @@ export default async function LearningAgendaPage({ searchParams }: PageProps) {
   const since = new Date();
   since.setUTCDate(since.getUTCDate() - 90);
 
-  const [items, reviewQueue, usageEvents] = await Promise.all([
-    reviewOsService.listWrongAnswerItems(session.userId, session.email, 80).catch(() => []),
-    reviewOsService.listReviewQueueForAgenda(session.userId, session.email, 40).catch(() => []),
-    reviewOsService.listLearningAgendaUsageEvents(session.userId, session.email, since.toISOString(), 160).catch(() => []),
+  const [itemsRead, reviewQueueRead, usageEventsRead] = await Promise.all([
+    resolveEssentialCoreRouteRead("agenda_items", () =>
+      reviewOsService.listWrongAnswerItems(session.userId!, session.email!, 80),
+    ),
+    resolveEssentialCoreRouteRead("agenda_review_queue", () =>
+      reviewOsService.listReviewQueueForAgenda(session.userId!, session.email!, 40),
+    ),
+    resolveEssentialCoreRouteRead("agenda_usage_events", () =>
+      reviewOsService.listLearningAgendaUsageEvents(
+        session.userId!,
+        session.email!,
+        since.toISOString(),
+        160,
+      ),
+    ),
   ]);
+  if (
+    itemsRead.status !== "ready" ||
+    reviewQueueRead.status !== "ready" ||
+    usageEventsRead.status !== "ready"
+  ) {
+    return <CoreRouteReadErrorPage surface="agenda" />;
+  }
 
   const agendaEvents = buildLearningAgendaEvents({
     mode,
-    items: items.filter((item) => item.examName === config.label),
-    reviewQueue: reviewQueue.filter((item) => item.examName === config.label),
-    usageEvents,
+    items: itemsRead.value.filter((item) => item.examName === config.label),
+    reviewQueue: reviewQueueRead.value.filter((item) => item.examName === config.label),
+    usageEvents: usageEventsRead.value,
   });
 
   return (
