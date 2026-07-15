@@ -179,7 +179,7 @@ export function CalculatorStep({
         data-calculator-step-key-sequence
       >
         <p className="v3-type-caption">키 순서</p>
-        <code className="v3-mono-small mt-1 block whitespace-normal break-words">
+        <code className="v3-mono-small mt-1 block whitespace-break-spaces break-words">
           {normalizedKeySequence}
         </code>
       </section>
