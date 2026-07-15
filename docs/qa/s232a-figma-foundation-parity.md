@@ -77,6 +77,8 @@ Automated CI evidence should contain only route names, viewport sizes, loaded fo
 
 - Source contract test: `tests/s232a-figma-foundation-parity.test.mjs`
 - Public runtime foundation test: `tests/e2e/s232a-figma-foundation-runtime.spec.ts`
+- Exact-head authenticated runtime test: `tests/e2e/s232a-authenticated-runtime.spec.ts`
+- PR-scoped runtime workflow: `.github/workflows/s232a-runtime.yml`
 - Local Chromium runtime: 2/2 PASS at 390px and 1440px; all three font roles loaded, horizontal overflow 0, browser console errors 0
 - Existing S231C light/accessibility regression test retained
 - Existing S228 study-ledger behavior regression retained

@@ -141,6 +141,8 @@ test("S232A QA evidence records source nodes, rollout boundary, and privacy boun
   const runbook = read("docs/qa/s232a-figma-foundation-parity.md");
   const runner = read("scripts/run-node-tests.mjs");
   const runtimeSpec = read("tests/e2e/s232a-figma-foundation-runtime.spec.ts");
+  const authRuntimeSpec = read("tests/e2e/s232a-authenticated-runtime.spec.ts");
+  const workflow = read(".github/workflows/s232a-runtime.yml");
 
   for (const phrase of [
     "43:2",
@@ -168,4 +170,12 @@ test("S232A QA evidence records source nodes, rollout boundary, and privacy boun
   assert.match(runtimeSpec, /document\.fonts\.load/);
   assert.match(runtimeSpec, /browserErrors/);
   assert.match(runtimeSpec, /screenshot:\s*"off",\s*trace:\s*"off",\s*video:\s*"off"/);
+  assert.match(authRuntimeSpec, /requireSafeAuthenticatedRuntime\("S232A", \{ requireTargetSha: true, requireExactHead: true \}\)/);
+  assert.match(authRuntimeSpec, /data-v3-typography-role="calculator-mono"/);
+  assert.match(authRuntimeSpec, /ledgerDetailAvailable/);
+  assert.match(workflow, /pull_request\.number == 576/);
+  assert.match(workflow, /run-s232a-auth-e2e/);
+  assert.match(workflow, /deploymentSha !== process\.env\.EXPECTED_SHA/);
+  assert.match(workflow, /s232a-runtime\.json/);
+  assert.match(workflow, /Screenshot, trace, or video output exists/);
 });
