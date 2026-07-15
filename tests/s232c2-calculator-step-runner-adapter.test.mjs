@@ -147,3 +147,24 @@ test("S232C.2 keeps the passive primitive outside the existing editable control 
     "inverge.calculatorRoutine.draft.v1:s232c2-synthetic",
   );
 });
+
+test("S232C.2 authenticated gate is exact-head and metadata-only", () => {
+  const spec = read("tests/e2e/s232c2-calculator-step-runner.spec.ts");
+  const workflow = read(".github/workflows/s232c2-runtime.yml");
+  assert.ok(spec.includes('screenshot: "off"'));
+  assert.ok(spec.includes('trace: "off"'));
+  assert.ok(spec.includes('video: "off"'));
+  assert.ok(spec.includes("rawLearnerContentCaptured: false"));
+  assert.ok(spec.includes("credentialsCaptured: false"));
+  assert.ok(spec.includes("keyboardOrderVerified: true"));
+  assert.ok(spec.includes("passivePrimitiveTabStopCount: 0"));
+  assert.ok(workflow.includes("github.event.pull_request.number == 588"));
+  assert.ok(workflow.includes("github.event.pull_request.head.sha"));
+  assert.ok(workflow.includes("deployments?sha=${E2E_RUNNER_SHA}"));
+  assert.ok(workflow.includes("secrets.E2E_USER_EMAIL || secrets.TEST_USER_EMAIL"));
+  assert.ok(workflow.includes("secrets.E2E_USER_PASSWORD || secrets.TEST_USER_PASSWORD"));
+  assert.ok(workflow.includes("VERCEL_AUTOMATION_BYPASS_SECRET"));
+  assert.ok(workflow.includes("test-results/**/s232c2-runtime.json"));
+  assert.equal(workflow.includes("**/trace.zip"), false);
+  assert.equal(workflow.includes("**/*.png"), false);
+});
