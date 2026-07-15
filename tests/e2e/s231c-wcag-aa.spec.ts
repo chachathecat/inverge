@@ -301,6 +301,7 @@ async function verifyKeyboardCoreLoop(page: Page) {
   await expect(page.locator("main#answer-review-main")).toBeFocused();
 
   const answer = page.getByTestId("answer-review-my-answer-input");
+  const accuracyDisclosure = page.locator("summary").filter({ hasText: "정확도 높이기 (선택)" });
   const problem = page.getByTestId("answer-review-problem-input");
   const referenceDisclosure = page.locator("summary").filter({ hasText: "참고 정리/메모 입력 (선택)" });
   const reference = page.getByTestId("answer-review-reference-input");
@@ -309,12 +310,15 @@ async function verifyKeyboardCoreLoop(page: Page) {
   await resetKeyboardStart(page);
   await tabTo(page, answer);
   await page.keyboard.type("synthetic answer for keyboard-only acceptance");
+  await tabTo(page, accuracyDisclosure);
+  await page.keyboard.press("Enter");
   await tabTo(page, problem);
   await page.keyboard.type("synthetic problem context");
   await tabTo(page, referenceDisclosure);
   await page.keyboard.press("Enter");
   await tabTo(page, reference);
   await page.keyboard.type("synthetic reference context");
+  await resetKeyboardStart(page);
   await tabTo(page, start);
   await page.keyboard.press("Enter");
 

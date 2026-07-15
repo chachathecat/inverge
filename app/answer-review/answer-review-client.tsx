@@ -536,7 +536,11 @@ export default function AnswerReviewClientPage({
       >
         본문 바로가기
       </a>
-      <main id="answer-review-main" tabIndex={-1}>
+      <main
+        id="answer-review-main"
+        tabIndex={-1}
+        data-s232e3-answer-review-entry="learner-first"
+      >
         <RefinedShell
           className="space-y-5 py-6 sm:space-y-8 sm:py-10"
           data-s224v-surface="/answer-review?mode=second"
@@ -547,16 +551,36 @@ export default function AnswerReviewClientPage({
           data-s224v-equal-weight-card-grid="absent"
           data-s224v-repeated-warning-copy="absent"
         >
-      <section className="space-y-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] p-4 sm:p-6" data-answer-review-stage="answer-review-shell">
+      <section
+        className="space-y-4 rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--surface)] p-4 sm:p-6"
+        aria-labelledby="s232e3-answer-review-title"
+        data-answer-review-stage="answer-review-shell"
+        data-s232e3-answer-review-primary
+      >
         <div className="flex flex-wrap items-center gap-2">
           <RefinedBadge>답안 훈련</RefinedBadge>
         </div>
-        <h1 className="ko-keep text-[28px] font-semibold leading-tight text-[color:var(--foreground-strong)] sm:text-[36px]">
+        <p className="v3-type-caption text-[color:var(--muted)]">답안 훈련 · 지금 할 일</p>
+        <h1 id="s232e3-answer-review-title" className="v3-type-screen ko-keep text-[color:var(--foreground-strong)]">
           답안 검토
         </h1>
-        <p className="ko-keep text-caption leading-5 text-[color:var(--muted)]">
+        <p className="v3-type-body ko-keep text-[color:var(--muted)]">
           이미 쓴 답안을 올리면 누락 논점, 약한 구조, 오늘 다시 쓸 문장을 정리합니다.
         </p>
+        <dl className="divide-y divide-[color:var(--border)] rounded-[var(--radius-sm)] border border-[var(--border)] bg-[color:var(--surface-soft)]" data-s232e3-answer-review-context>
+          <div className="px-3 py-3 sm:grid sm:grid-cols-[80px_minmax(0,1fr)] sm:gap-3" data-s232e3-stage="now">
+            <dt className="v3-type-caption text-[color:var(--muted)]">지금</dt>
+            <dd className="v3-type-compact ko-keep mt-1 text-[color:var(--foreground-strong)]">내 답안을 스냅하거나 텍스트로 남깁니다.</dd>
+          </div>
+          <div className="px-3 py-3 sm:grid sm:grid-cols-[80px_minmax(0,1fr)] sm:gap-3" data-s232e3-stage="why">
+            <dt className="v3-type-caption text-[color:var(--muted)]">왜</dt>
+            <dd className="v3-type-compact ko-keep mt-1 text-[color:var(--foreground-strong)]">내 답안의 누락 논점과 약한 구조를 먼저 좁힙니다.</dd>
+          </div>
+          <div className="px-3 py-3 sm:grid sm:grid-cols-[80px_minmax(0,1fr)] sm:gap-3" data-s232e3-stage="result">
+            <dt className="v3-type-caption text-[color:var(--muted)]">결과</dt>
+            <dd className="v3-type-compact ko-keep mt-1 text-[color:var(--foreground-strong)]">가장 큰 간극 1개와 다시 쓸 문장을 확인합니다.</dd>
+          </div>
+        </dl>
         <TrustProvenanceLayer
           evidence={trustEvidence}
           sources={[
@@ -592,11 +616,13 @@ export default function AnswerReviewClientPage({
           <input ref={answerCameraInputRef} type="file" accept="image/*" capture="environment" multiple className="hidden" aria-label="내 답안 카메라 파일 선택" onChange={handleMyAnswerFileChange} />
           <input ref={problemCameraInputRef} type="file" accept="image/*" capture="environment" multiple className="hidden" aria-label="문제 또는 사례 카메라 파일 선택" onChange={handleProblemFileChange} />
           <input ref={generalFileInputRef} type="file" accept="image/*,.pdf" multiple className="hidden" aria-label="답안 검토 파일 선택" onChange={handleGeneralFileChange} />
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4" data-s224v-secondary-input-options="quiet">
+          <div
+            className="grid gap-2 sm:grid-cols-2"
+            data-s224v-secondary-input-options="quiet"
+            data-s232e3-answer-entry-actions
+          >
             <button type="button" onClick={() => answerCameraInputRef.current?.click()} className={cn(buttonVariants({ variant: "outline" }), "w-full justify-center h-11 text-sm font-semibold")}>답안 스냅</button>
-            <button type="button" onClick={() => problemCameraInputRef.current?.click()} className={cn(buttonVariants({ variant: "outline" }), "w-full justify-center h-11 text-sm")}>사례 스캔</button>
-            <button type="button" onClick={() => { setGeneralUploadIntent("answer"); generalFileInputRef.current?.click(); }} className={cn(buttonVariants({ variant: "outline" }), "w-full justify-center h-11 text-sm")}>PDF/사진</button>
-            <button type="button" onClick={focusAnswerTextarea} className={cn(buttonVariants({ variant: "outline" }), "w-full justify-center h-11 text-sm")}>텍스트 입력</button>
+            <button type="button" onClick={focusAnswerTextarea} className={cn(buttonVariants({ variant: "outline" }), "w-full justify-center h-11 text-sm")}>텍스트 붙여넣기</button>
           </div>
           {viewerMode === "anonymous" ? (
             <p className="inline-flex w-fit rounded-full border border-[var(--border)] bg-[color:var(--surface)] px-2.5 py-1 text-xs font-medium text-[color:var(--muted)]">
@@ -649,7 +675,8 @@ export default function AnswerReviewClientPage({
               variants={SECTION_FADE}
               transition={{ duration: 0.28, ease: "easeOut" }}
             >
-              <h2 className="sr-only">자료 입력</h2>
+              <h2 className="v3-type-section ko-keep text-[color:var(--foreground-strong)]">내 답안을 먼저 남겨주세요.</h2>
+              <p className="v3-type-compact ko-keep text-[color:var(--muted)]">문제와 참고자료는 없어도 됩니다. 내 답안 하나로 검토를 시작할 수 있습니다.</p>
               <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
                 <motion.div
                   className="space-y-4"
@@ -658,9 +685,9 @@ export default function AnswerReviewClientPage({
                   transition={{ duration: 0.26, ease: "easeOut" }}
                 >
                   <article className="rounded-[var(--radius-md)] border border-[color:var(--brand-700)] bg-[color:var(--brand-050)] p-4 sm:p-5">
-                    <p className="text-caption font-medium text-[#3f4c66]">빠른 답안 정리</p>
-                    <p className="mt-2 text-sm font-semibold text-[#1e2a46]">답안 스냅으로 시작</p>
-                    <p className="mt-1 text-caption leading-5 text-[#3f4c66]">사례 스캔, PDF/사진 불러오기, 텍스트 붙여넣기를 함께 사용할 수 있습니다.</p>
+                    <p className="v3-type-caption text-[#3f4c66]">지금 할 일</p>
+                    <p className="v3-type-item ko-keep mt-2 text-[#1e2a46]">답안 스냅으로 시작</p>
+                    <p className="v3-type-compact ko-keep mt-1 text-[#3f4c66]">먼저 쓴 답안을 남기고, 문제·사례·참고자료는 필요할 때만 더합니다.</p>
                   </article>
                   <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-2 text-caption font-medium text-[color:var(--muted)]" data-s224v-answer-review-scope="second-only">
@@ -687,7 +714,11 @@ export default function AnswerReviewClientPage({
                   </select>
                 </label>
                   </div>
-                  <article className="space-y-2 rounded-[var(--radius-md)] border border-[#27375f] bg-[color:var(--surface)] p-4" id="answer-review-text">
+                  <article
+                    className="space-y-2 rounded-[var(--radius-md)] border border-[#27375f] bg-[color:var(--surface)] p-4"
+                    id="answer-review-text"
+                    data-s232e3-answer-required
+                  >
                     <div className="flex items-center justify-between gap-3">
                       <label htmlFor="answer-review-my-answer-input" className="text-caption font-medium text-[#3f4c66]">내 답안 입력 (필수)</label>
                       <span className="rounded-full bg-[#eef2fb] px-2.5 py-1 text-xs font-semibold text-[#1e2a46]">최소 입력</span>
@@ -710,6 +741,36 @@ export default function AnswerReviewClientPage({
                     </div>
                   </article>
 
+                  <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4" data-s232e3-answer-review-start-surface>
+                    <p className="v3-type-compact ko-keep text-[color:var(--muted)]">
+                      내 답안만 있어도 검토를 시작할 수 있습니다.
+                    </p>
+                    <motion.button
+                      whileTap={shouldReduceMotion ? undefined : { scale: 0.985 }}
+                      type="button"
+                      className={cn(buttonVariants({ variant: "default" }), "primary-action mt-3 w-full")}
+                      onClick={handlePrimaryAction}
+                      disabled={isPrimaryActionDisabled}
+                      data-testid="answer-review-start"
+                      data-s224v-dominant-primary-action
+                      data-s232e3-answer-review-start
+                    >
+                      답안 정리 시작
+                    </motion.button>
+                  </article>
+
+                  <details
+                    className="quiet-disclosure rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4"
+                    data-s224v-secondary-input-options="quiet"
+                    data-s232e3-answer-review-optional
+                  >
+                    <summary className="v3-type-label-strong cursor-pointer text-[color:var(--foreground-strong)]">정확도 높이기 (선택)</summary>
+                    <div className="mt-4 space-y-4">
+                      <p className="v3-type-compact ko-keep text-[color:var(--muted)]">문제·사례·참고자료와 해설 방식을 더하면 검토 맥락을 보강할 수 있습니다.</p>
+                      <div className="grid gap-2 sm:grid-cols-2" data-s232e3-optional-entry-actions>
+                        <button type="button" onClick={() => problemCameraInputRef.current?.click()} className={cn(buttonVariants({ variant: "outline" }), "w-full justify-center h-11 text-sm")}>사례 스캔</button>
+                        <button type="button" onClick={() => { setGeneralUploadIntent("answer"); generalFileInputRef.current?.click(); }} className={cn(buttonVariants({ variant: "outline" }), "w-full justify-center h-11 text-sm")}>PDF/사진</button>
+                      </div>
                   <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
                     <p className="text-caption font-medium text-[color:var(--muted)]">이미지/PDF 입력</p>
                     <p className="mt-1 text-caption leading-5 text-[color:var(--muted)]">텍스트가 가장 빠르지만, 파일 업로드도 바로 사용할 수 있습니다.</p>
@@ -810,6 +871,27 @@ export default function AnswerReviewClientPage({
                   </div>
                 </details>
               </div>
+                      <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-4">
+                        <p className="v3-type-label-strong text-[color:var(--foreground-strong)]">해설 난이도</p>
+                        <div className="mt-2 grid gap-2">
+                          {[{value:"easy",label:"쉽게 풀이"},{value:"standard",label:"기본 해설"},{value:"exam",label:"시험답안식"}].map((option)=>(
+                            <label key={option.value} className="flex min-h-11 items-center gap-2 text-caption text-[color:var(--foreground-strong)]">
+                              <input type="radio" name="explanationLevel" value={option.value} checked={explanationLevel===option.value} onChange={() => setExplanationLevel(option.value as AnswerReviewExplanationLevel)} />
+                              <span>{option.label}</span>
+                            </label>
+                          ))}
+                        </div>
+                        <p className="mt-2 text-xs leading-5 text-[color:var(--muted)]">쉬운 풀이는 이해용이고, 답안 구조는 작성용입니다.</p>
+                      </article>
+                      <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-4">
+                        <p className="v3-type-label-strong text-[color:var(--foreground-strong)]">선택 입력 상태</p>
+                        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                          <InputStatusCard title="문제/사례" statusText={hasProblemInput ? "입력됨" : "선택"} helper="선택 입력" />
+                          <InputStatusCard title="검토 참고자료" statusText={hasReferenceAnswer ? "입력됨" : "선택"} helper="선택 입력" />
+                        </div>
+                      </article>
+                    </div>
+                  </details>
                 </motion.div>
 
                 <motion.aside
@@ -822,35 +904,7 @@ export default function AnswerReviewClientPage({
                     <p className="text-caption font-medium text-[color:var(--muted)]">입력 준비 상태</p>
                     <div className="mt-3 grid gap-2">
                       <InputStatusCard title="내 답안" statusText={hasMyAnswer ? "입력됨" : "미입력"} helper="필수 입력" />
-                      <InputStatusCard title="문제/사례" statusText={hasProblemInput ? "입력됨" : "선택"} helper="선택 입력" />
-                      <InputStatusCard title="검토 참고자료" statusText={hasReferenceAnswer ? "입력됨" : "선택"} helper="선택 입력" />
                     </div>
-                  </article>
-                  <article className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface)] p-4">
-                    <p className="text-caption font-medium text-[color:var(--muted)]">해설 난이도</p>
-                    <div className="mt-2 grid gap-2">
-                      {[{value:"easy",label:"쉽게 풀이"},{value:"standard",label:"기본 해설"},{value:"exam",label:"시험답안식"}].map((option)=>(
-                        <label key={option.value} className="flex min-h-11 items-center gap-2 text-caption text-[color:var(--foreground-strong)]">
-                          <input type="radio" name="explanationLevel" value={option.value} checked={explanationLevel===option.value} onChange={() => setExplanationLevel(option.value as AnswerReviewExplanationLevel)} />
-                          <span>{option.label}</span>
-                        </label>
-                      ))}
-                    </div>
-                    <p className="mt-2 text-xs leading-5 text-[color:var(--muted)]">쉬운 풀이는 이해용이고, 답안 구조는 작성용입니다.</p>
-                    <p className="mt-2 text-caption leading-5 text-[color:var(--muted)]">
-                      내 답안만 있어도 검토를 시작할 수 있습니다.
-                    </p>
-                    <motion.button
-                      whileTap={shouldReduceMotion ? undefined : { scale: 0.985 }}
-                      type="button"
-                      className={cn(buttonVariants({ variant: "default" }), "primary-action mt-3 w-full")}
-                      onClick={handlePrimaryAction}
-                      disabled={isPrimaryActionDisabled}
-                      data-testid="answer-review-start"
-                      data-s224v-dominant-primary-action
-                    >
-                      답안 정리 시작
-                    </motion.button>
                   </article>
                 </motion.aside>
               </div>

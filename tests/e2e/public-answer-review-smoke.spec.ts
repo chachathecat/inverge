@@ -16,6 +16,10 @@ test.describe('public answer-review smoke', () => {
     await page.goto('/answer-review');
     await expect(page).toHaveURL('/answer-review?mode=second');
     await expect(page.getByTestId('answer-review-start')).toBeVisible();
+    const accuracyDetails = page.locator('details[data-s232e3-answer-review-optional]');
+    await expect(accuracyDetails).not.toHaveAttribute('open', '');
+    await expect(accuracyDetails.getByTestId('answer-review-problem-input')).toBeHidden();
+    await expect(accuracyDetails.getByTestId('answer-review-reference-input')).toBeHidden();
   });
 
   test('/answer-review text-only smoke', async ({ page }) => {
@@ -41,6 +45,9 @@ test.describe('public answer-review smoke', () => {
     });
 
     await page.goto('/answer-review');
+    const accuracyDetails = page.locator('details[data-s232e3-answer-review-optional]');
+    await accuracyDetails.locator('summary').filter({ hasText: '정확도 높이기 (선택)' }).click();
+    await expect(accuracyDetails).toHaveAttribute('open', '');
     await page.getByTestId('answer-review-problem-input').fill('문제/사례 입력 smoke');
     await page.getByTestId('answer-review-my-answer-input').fill('내 답안 입력 smoke');
     await page.locator('summary').filter({ hasText: '참고 정리/메모 입력 (선택)' }).click();
@@ -53,6 +60,55 @@ test.describe('public answer-review smoke', () => {
     await page.getByTestId('answer-review-build-feedback').click();
     await expect(page.getByRole('heading', { name: '보강 문단 정리', level: 2 })).toBeFocused();
     await expect(page.getByRole('button', { name: '정리 내용 복사', exact: true })).toBeVisible();
+  });
+
+  test('/answer-review preserves Problem Snap handoff values and notice', async ({ page }) => {
+    const handoff = {
+      source: 'problem-snap',
+      examMode: 'second',
+      subject: '감정평가실무',
+      problemText: 'Problem Snap 문제 원문',
+      retryMemo: 'Problem Snap에서 다시 쓴 답안',
+      nextPracticeAction: '수익환원식의 변수와 단위를 한 문단으로 보강',
+    };
+    await page.addInitScript((value) => {
+      window.sessionStorage.setItem('inverge.problemSnap.answerReviewHandoff', JSON.stringify(value));
+    }, handoff);
+    await page.route('**/api/answer-review/structure', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          ok: true,
+          draft: {
+            questionSummary: 'Problem Snap handoff smoke',
+            coreConcepts: ['수익환원식'],
+            strengths: ['다시 쓴 답안을 보존했습니다.'],
+            missingIssueCandidates: ['변수와 단위 연결'],
+            weakLogicPoint: '변수 설명이 짧음',
+            weakParagraphPoint: '단위 연결이 약함',
+            rewriteTarget: '변수와 단위를 한 문단으로 연결',
+            rewriteDraftSuggestion: '변수의 의미와 단위를 차례로 연결합니다.',
+            nextAction: '한 문단을 다시 작성합니다.',
+          },
+        }),
+      });
+    });
+
+    await page.goto('/answer-review?mode=second');
+    await expect(page.getByText('Problem Snap에서 다시 푼 답안을 불러왔습니다.', { exact: true })).toBeVisible();
+    await expect(page.getByTestId('answer-review-my-answer-input')).toHaveValue(handoff.retryMemo);
+    await expect(page.getByRole('combobox')).toHaveValue(handoff.subject);
+
+    const accuracyDetails = page.locator('details[data-s232e3-answer-review-optional]');
+    await expect(accuracyDetails).not.toHaveAttribute('open', '');
+    await accuracyDetails.locator('summary').filter({ hasText: '정확도 높이기 (선택)' }).click();
+    await expect(accuracyDetails.getByTestId('answer-review-problem-input')).toHaveValue(handoff.problemText);
+    expect(await page.evaluate(() => window.sessionStorage.getItem('inverge.problemSnap.answerReviewHandoff'))).toBeNull();
+
+    await page.getByTestId('answer-review-start').click();
+    await page.getByTestId('answer-review-build-feedback').click();
+    await expect(page.getByPlaceholder('예: 처분 근거 조문 제시가 누락되어 논증 연결이 약함')).toHaveValue(handoff.nextPracticeAction);
   });
 
   test('/answer-review keeps the public S231C accessibility contract', async ({ page }) => {
