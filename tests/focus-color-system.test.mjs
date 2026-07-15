@@ -4,6 +4,14 @@ import test from "node:test";
 
 const globals = readFileSync("app/globals.css", "utf8");
 
+const learnerPublicFiles = [
+  "app/globals.css",
+  "components/inverge/front-page.tsx",
+  "components/inverge/front-page-hero-animation.tsx",
+  "components/review-os/capture-form.tsx",
+  "app/answer-review/answer-review-client.tsx",
+].map((file) => readFileSync(file, "utf8"));
+
 function cssHex(name) {
   const match = globals.match(new RegExp(`--${name}:\\s*(#[0-9a-f]{6})`, "i"));
   assert.ok(match, `Missing six-digit CSS color token: --${name}`);
@@ -79,4 +87,24 @@ test("learner surfaces use the dedicated review text token", () => {
 
   assert.doesNotMatch(learnerSources, /text-\[(?:color:)?var\(--cue-review\)\]/);
   assert.match(learnerSources, /text-\[(?:color:)?var\(--cue-review-text\)\]/);
+});
+
+test("guardrails: no official grading/pass-fail claims in learner/public files", () => {
+  const joined = learnerPublicFiles
+    .join("\n")
+    .toLowerCase()
+    .replaceAll("공식 채점이나 합격 판정이 아닙니다", "")
+    .replaceAll("공식 채점이 아닙니다", "")
+    .replaceAll("공식 채점 아님", "");
+
+  for (const phrase of [
+    "공식 채점",
+    "합격 판정",
+    "확정 점수",
+    "모범답안 확정",
+    "official grader",
+    "pass/fail judge",
+  ]) {
+    assert.equal(joined.includes(phrase.toLowerCase()), false, `Forbidden phrase found: ${phrase}`);
+  }
 });

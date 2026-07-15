@@ -80,12 +80,12 @@ Required palette:
   --bg-surface: #FFFFFF;
   --bg-subtle: #F2F0EA;
   --bg-elevated: #FCFBF8;
-  --border-subtle: #E6E1D7;
-  --border-strong: #D7D1C4;
+  --border-subtle: #E1DED6;
+  --border-strong: #C9C5BC;
   --text-primary: #141821;
   --text-secondary: #5A6472;
-  --text-tertiary: #8791A0;
-  --text-inverse: #F9FBFF;
+  --text-tertiary: #647080;
+  --text-inverse: #FFFFFF;
   --brand-900: #10233F;
   --brand-800: #163053;
   --brand-700: #23456F;
@@ -95,6 +95,7 @@ Required palette:
   --cue-focus: #2B5C9A;
   --cue-focus-bg: #EDF4FC;
   --cue-risk: #B24D45;
+  --cue-risk-text: #8F3832;
   --cue-risk-bg: #FDEDEC;
   --cue-stable: #2E6E58;
   --cue-stable-bg: #EAF6F0;
@@ -128,19 +129,27 @@ Preserve:
 
 ## Typography
 
-Use the current Korean-first font stack. Prefer Pretendard if integrated. Letter spacing is `0`.
+S232A aligns production foundations with Figma V3 Typography node `44:9`. The pinned, self-hosted roles are:
 
-Type rhythm:
+- UI and headings: Noto Sans KR Variable
+- learner prose and evidence excerpts: Noto Serif KR Variable
+- calculator notation and numeric progress: IBM Plex Mono 500
 
-- display: 56 / 1.08 / 700
-- h1: 44 / 1.12 / 700
-- h2: 32 / 1.18 / 700
-- h3: 24 / 1.24 / 650
-- title: 20 / 1.32 / 600
-- body-lg: 17 / 1.68 / 500
-- body: 15 / 1.66 / 400
-- label: 13 / 1.45 / 500
-- micro: 12 / 1.4 / 500
+V3 type rhythm uses pixel size / pixel line-height / weight / tracking:
+
+- display: 40 / 52 / 700 / -0.6px
+- screen heading: 28 / 36 / 700 / -0.4px
+- section heading: 20 / 28 / 700 / -0.2px
+- item heading: 18 / 26 / 700 / -0.1px
+- body: 16 / 26 / 400; strong uses 700
+- compact: 14 / 22 / 400
+- label: 13 / 20 / 500; strong is 15 / 22 / 700
+- caption: 12 / 18 / 500 / +0.1px
+- prose: 17 / 30 / 400 or 600, with a 42ch maximum measure
+- mono display: 28 / 36 / 500
+- mono small: 13 / 20 / 500
+
+Use the `.v3-type-*`, `.v3-prose*`, and `.v3-mono-*` role utilities. Legacy type helpers remain compatibility shims until their owning S232 surface slice is migrated; do not use them as the source for new Figma V3 work.
 
 Keep body copy short. Authenticated explanations should usually stay within two lines.
 

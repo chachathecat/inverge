@@ -23,7 +23,11 @@ export default async function ReviewOsWritePage({ searchParams }: PageProps) {
 
   return (
     <div className="space-y-7">
-      <DailyCommandCard title="2차 답안 작성 워크스페이스" description="누락 논점을 빠르게 확인하고 답안 작성으로 바로 이어갑니다.">
+      <DailyCommandCard
+        title="2차 답안 작성 워크스페이스"
+        description="누락 논점을 빠르게 확인하고 답안 작성으로 바로 이어갑니다."
+        headingLevel="h2"
+      >
         <div className="space-y-2 text-sm">
           <Link href="/answer-review?mode=second" className="inline-flex text-[color:var(--ink-primary)] underline underline-offset-2">답안 스냅 검토</Link>
           <Link href="/answer-review?mode=second&intent=case" className="inline-flex text-[color:var(--ink-primary)] underline underline-offset-2">사례 스캔</Link>

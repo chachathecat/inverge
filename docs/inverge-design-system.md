@@ -100,9 +100,18 @@ Inverge experience should feel like:
 
 ### Spacing, Radius, Typography
 - Authenticated learner pages use warm canvas, white surfaces, thin borders, and no decorative gradients.
-- Letter spacing is `0`; do not add negative tracking.
+- S232A Figma V3 foundations use the exact spacing, radius, layout, and type-role tokens in `app/globals.css`.
+- Use Noto Sans KR Variable for UI, Noto Serif KR Variable for learner prose/evidence, and IBM Plex Mono 500 for calculator notation.
+- Use role-specific tracking from Figma Typography `44:9`; body copy remains `0`, while headings and captions use their documented V3 values.
 - Keep body copy to two or three short lines on work surfaces.
 - Use stable dimensions for buttons, pills, progress rows, and primary task cards.
+
+### S232A Figma V3 Foundation Contract
+
+- Color & Theme source: Figma `43:2`; runtime remains light-only.
+- Typography source: Figma `44:9`; use `.v3-type-*`, `.v3-prose*`, and `.v3-mono-*` roles.
+- Layout & Spacing source: Figma `45:2`; 20px mobile edge, 32px tablet/desktop edge, 1120px content, 680px reading column, 288px evidence rail.
+- Component nodes are migrated in later S232 slices. A foundation token existing in code is not evidence of component-level parity.
 
 ### Mobile and Focus
 - Interactive controls should meet a 44px minimum target.

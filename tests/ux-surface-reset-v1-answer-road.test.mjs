@@ -14,7 +14,7 @@ test("UX Surface Reset v1 defines the requested shared visual tokens", () => {
     "--bg-surface: #ffffff",
     "--text-primary: #141821",
     "--text-secondary: #5a6472",
-    "--border-subtle: #e6e1d7",
+    "--border-subtle: #e1ded6",
     "--navy: var(--brand-900)",
     "--softBlue: var(--brand-050)",
     "--successSoft: var(--cue-stable-bg)",
