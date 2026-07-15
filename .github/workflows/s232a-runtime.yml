@@ -201,7 +201,14 @@ jobs:
             manifest.traceCaptured !== false ||
             manifest.videoCaptured !== false
           ) fail("runtime or privacy mismatch");
-          if (typeof manifest.ledgerDetailAvailable !== "boolean") fail("ledger availability must be explicit");
+          if (manifest.ledgerDetailAvailable !== true) fail("persisted ledger detail coverage is required");
+          if (
+            !Array.isArray(manifest.ledgerDetailViewports) ||
+            manifest.ledgerDetailViewports.length !== 2 ||
+            new Set(manifest.ledgerDetailViewports).size !== 2 ||
+            !manifest.ledgerDetailViewports.includes("390") ||
+            !manifest.ledgerDetailViewports.includes("1440")
+          ) fail("ledger detail viewport coverage is incomplete");
           if (existsSync("s232a-evidence")) fail("evidence directory already exists");
           mkdirSync("s232a-evidence");
           copyFileSync(process.env.MANIFEST_PATH, "s232a-evidence/s232a-runtime.json");

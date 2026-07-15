@@ -116,6 +116,8 @@ test("S232A defines and applies V3 type roles to prose, headings, and calculator
     "--type-prose-line: 30px",
     "--type-mono-display-size: 28px",
     "--type-mono-small-size: 13px",
+    "--type-mono-small-line: 20px",
+    "--focus-ring: var(--cue-focus)",
     ".v3-type-screen",
     ".v3-type-section",
     ".v3-type-item",
@@ -135,6 +137,10 @@ test("S232A defines and applies V3 type roles to prose, headings, and calculator
   }
   assert.match(calculator, /usesCalculatorNotation && "v3-calculator-input"/);
   assert.match(calculator, /data-v3-typography-role=\{usesCalculatorNotation \? "calculator-mono" : "ui-body"\}/);
+  assert.match(
+    globals,
+    /\.v3-mono-small,\s*\.v3-calculator-input\s*\{[\s\S]*?font-size:\s*var\(--type-mono-small-size\);[\s\S]*?font-weight:\s*500;[\s\S]*?line-height:\s*var\(--type-mono-small-line\);/,
+  );
 });
 
 test("S232A QA evidence records source nodes, rollout boundary, and privacy boundary", () => {
@@ -172,10 +178,15 @@ test("S232A QA evidence records source nodes, rollout boundary, and privacy boun
   assert.match(runtimeSpec, /screenshot:\s*"off",\s*trace:\s*"off",\s*video:\s*"off"/);
   assert.match(authRuntimeSpec, /requireSafeAuthenticatedRuntime\("S232A", \{ requireTargetSha: true, requireExactHead: true \}\)/);
   assert.match(authRuntimeSpec, /data-v3-typography-role="calculator-mono"/);
-  assert.match(authRuntimeSpec, /ledgerDetailAvailable/);
+  assert.match(authRuntimeSpec, /ledgerDetailViewports\.push\(viewport\.label\)/);
+  assert.match(authRuntimeSpec, /expect\(ledgerDetailAvailable\)\.toBe\(true\)/);
+  assert.match(authRuntimeSpec, /fontSize:\s*"13px", fontWeight:\s*"500", lineHeight:\s*"20px"/);
   assert.match(workflow, /pull_request\.number == 576/);
   assert.match(workflow, /run-s232a-auth-e2e/);
   assert.match(workflow, /deploymentSha !== process\.env\.EXPECTED_SHA/);
   assert.match(workflow, /s232a-runtime\.json/);
   assert.match(workflow, /Screenshot, trace, or video output exists/);
+  assert.match(workflow, /manifest\.ledgerDetailAvailable !== true/);
+  assert.match(workflow, /manifest\.ledgerDetailViewports\.includes\("390"\)/);
+  assert.match(workflow, /manifest\.ledgerDetailViewports\.includes\("1440"\)/);
 });

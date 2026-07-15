@@ -66,6 +66,7 @@ test("S232A exact-head authenticated Figma V3 foundation contract", async ({ pag
   expect(observedVersion.body.deploymentSha).toBe(runtimeTargetSha);
 
   const routeEvidence: Array<Record<string, unknown>> = [];
+  const ledgerDetailViewports: Array<(typeof viewports)[number]["label"]> = [];
   for (const viewport of viewports) {
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
     for (const route of routes) {
@@ -85,13 +86,16 @@ test("S232A exact-head authenticated Figma V3 foundation contract", async ({ pag
       expect(metrics.horizontalOverflow).toBeLessThanOrEqual(1);
       routeEvidence.push({ route: route.label, viewport: viewport.label, ...metrics });
     }
-  }
 
-  await page.goto("/app/items?mode=second", { waitUntil: "domcontentloaded" });
-  await expect(page.locator('[data-s224v-surface="/app/items"]')).toBeVisible({ timeout: 20_000 });
-  const detailLink = page.locator('a[href^="/app/items/"]').filter({ hasText: "노트 자세히 보기" }).first();
-  const ledgerDetailAvailable = await detailLink.count() === 1;
-  if (ledgerDetailAvailable) {
+    await page.goto("/app/items?mode=second", { waitUntil: "domcontentloaded" });
+    await expect(page.locator('[data-s224v-surface="/app/items"]')).toBeVisible({ timeout: 20_000 });
+    const detailLinks = page.locator('a[href^="/app/items/"]').filter({ hasText: "노트 자세히 보기" });
+    expect(
+      await detailLinks.count(),
+      `Persisted Study Ledger detail is required at ${viewport.label}px for exact-head acceptance.`,
+    ).toBeGreaterThan(0);
+    const detailLink = detailLinks.first();
+    await expect(detailLink).toBeVisible();
     await detailLink.click();
     await expect(page.locator("[data-s228-study-ledger-detail]")).toBeVisible({ timeout: 20_000 });
     const typeRoles = await page.evaluate(() => {
@@ -109,7 +113,12 @@ test("S232A exact-head authenticated Figma V3 foundation contract", async ({ pag
     expect(typeRoles?.headingFamily).toContain("Noto Sans KR Variable");
     expect(typeRoles?.proseFamily).toContain("Noto Serif KR Variable");
     expect(typeRoles).toMatchObject({ proseSize: "17px", proseLine: "30px" });
+    const detailOverflow = await page.evaluate(() => Math.max(0, document.documentElement.scrollWidth - window.innerWidth));
+    expect(detailOverflow).toBeLessThanOrEqual(1);
+    ledgerDetailViewports.push(viewport.label);
   }
+  const ledgerDetailAvailable = ledgerDetailViewports.length === viewports.length;
+  expect(ledgerDetailAvailable).toBe(true);
 
   await page.goto("/app/calculator?mode=second&focus=casio", { waitUntil: "domcontentloaded" });
   await expect(page.locator("[data-calculator-routine-v3]")).toBeVisible({ timeout: 20_000 });
@@ -120,8 +129,17 @@ test("S232A exact-head authenticated Figma V3 foundation contract", async ({ pag
   await page.getByRole("button", { name: /다음/ }).click();
   const calculatorInput = page.locator('textarea[data-v3-typography-role="calculator-mono"]');
   await expect(calculatorInput).toBeVisible();
-  const calculatorFont = await calculatorInput.evaluate((element) => getComputedStyle(element).fontFamily);
-  expect(calculatorFont).toContain("IBM Plex Mono");
+  const calculatorTypography = await calculatorInput.evaluate((element) => {
+    const computed = getComputedStyle(element);
+    return {
+      fontFamily: computed.fontFamily,
+      fontSize: computed.fontSize,
+      fontWeight: computed.fontWeight,
+      lineHeight: computed.lineHeight,
+    };
+  });
+  expect(calculatorTypography).toMatchObject({ fontSize: "13px", fontWeight: "500", lineHeight: "20px" });
+  expect(calculatorTypography.fontFamily).toContain("IBM Plex Mono");
 
   expect(runtimeErrors).toEqual({ consoleErrors: [], pageErrors: [], sameOriginRequestFailures: [] });
 
@@ -134,6 +152,7 @@ test("S232A exact-head authenticated Figma V3 foundation contract", async ({ pag
     signInAttempts,
     routeEvidence,
     ledgerDetailAvailable,
+    ledgerDetailViewports,
     calculatorMonoRoleVerified: true,
     consoleErrorCount: runtimeErrors.consoleErrors.length,
     pageErrorCount: runtimeErrors.pageErrors.length,
