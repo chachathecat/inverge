@@ -131,7 +131,12 @@ test("capture save confirmation includes biggest gap, next action, and learner l
   assert.equal(captureForm.includes("학습 노트에 저장되고 오늘 계획과 복습으로 이어집니다."), true, "confirmation should frame the plan handoff as saved learner flow");
   assert.equal(captureForm.includes('href={`/app/review?mode=${mode}&subject=${encodedSubject}`}'), true, "confirmation should link to Review with mode and subject");
   assert.equal(captureForm.includes('href={`/app/notes?mode=${mode}&subject=${encodedSubject}`}'), true, "confirmation should link to Notes with mode and subject");
-  assert.equal(captureForm.includes('href={`/app?mode=${mode}&subject=${encodedSubject}`}'), true, "confirmation should link back to Today with mode and subject");
+  assert.equal(
+    captureForm.includes('href={`/app?mode=${mode}&subject=${encodedSubject}`}') ||
+      captureForm.includes('href: `/app?mode=${mode}&subject=${encodedSubject}`'),
+    true,
+    "confirmation should link back to Today with mode and subject through Link or FailureAwareState",
+  );
   assert.equal(captureForm.includes("복습으로 이어가기"), true, "confirmation should offer a clear review next action");
   assert.equal(captureForm.includes("학습 노트에서 보기"), true, "confirmation should offer a clear notes link");
   assert.equal(captureForm.includes("오늘 할 일로 이동"), true, "confirmation should offer a clear Today link");

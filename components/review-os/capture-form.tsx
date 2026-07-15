@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-import { BottomPrimaryAction } from "@/components/learner";
+import { BottomPrimaryAction, FailureAwareState } from "@/components/learner";
 import { CognitiveLearningActionCard } from "@/components/review-os/cognitive-learning-action-card";
 import {
   TrustEvidenceBar,
@@ -23,6 +23,16 @@ import {
 import { clearReviewOsDraft, loadReviewOsDraft, saveReviewOsDraft, saveReviewOsLocalBetaNoteWithStatus } from "@/lib/review-os/browser-storage";
 import { getCalculatorWorkflowForSubject, getCalculatorWorkflowHref } from "@/lib/review-os/calculator-workflow";
 import { resolveCaptureConfirmationCopy } from "@/lib/review-os/capture-confirmation-copy";
+import {
+  CAPTURE_MEMORY_ONLY_SAVE_ERROR_EVIDENCE,
+  buildCaptureCompletedEvidence,
+  buildCaptureDedupeConflictEvidence,
+  buildCapturePersistenceMetadata,
+  buildDurableCapturePersistenceReceipt,
+  resolvePendingCaptureSaveOperation,
+  type CaptureSaveOperationBinding,
+  type PendingCaptureSaveOperation,
+} from "@/lib/review-os/capture-persistence-controller";
 import { getCaptureSavePersistenceCopy, type CaptureSavePersistenceStatus } from "@/lib/review-os/capture-save-persistence";
 import { buildCaptureNoteDisplayCopy, buildCaptureNoteSummary } from "@/lib/review-os/capture-note-display-copy";
 import { buildCognitiveLearningActionUnit, type CognitiveLearningActionUnit } from "@/lib/review-os/cognitive-learning-actions";
@@ -31,6 +41,7 @@ import { extractFirstExamFiveChoicesFromText } from "@/lib/review-os/first-ox-en
 import { pushLocalLearnerAnalyticsEvent } from "@/lib/review-os/local-analytics";
 import { resolveReviewSchedule } from "@/lib/review-os/scheduling";
 import { hasSecondWriteReferenceStep } from "@/lib/review-os/second-write-reference-step";
+import type { FailureAwarePersistenceEvidence, FailureAwareStateEvidence } from "@/lib/review-os/failure-aware-state";
 import {
   CONFIDENCE_OPTIONS,
   getFirstSubjectTemplate,
@@ -195,6 +206,8 @@ type SavedCaptureConfirmation = {
   itemId?: string;
   status?: CaptureSavePersistenceStatus;
   persistence?: "durable" | "local-beta";
+  persistenceEvidence?: FailureAwarePersistenceEvidence | null;
+  conflictEvidence?: Extract<FailureAwareStateEvidence, { kind: "conflict" }> | null;
   retryAction?: "quick" | "session";
   biggestGap: string;
   nextAction: string;
@@ -575,6 +588,7 @@ export function WrongAnswerCaptureForm({
   const [savedConfirmation, setSavedConfirmation] = useState<SavedCaptureConfirmation | null>(null);
   const [extractionState, setExtractionState] = useState<ExtractionState>("idle");
   const [uploadedPages, setUploadedPages] = useState<UploadedPage[]>(() => form.capturePages ?? []);
+  const pendingCaptureSaveRef = useRef<PendingCaptureSaveOperation | null>(null);
   function openSavedPlanStage(confirmation: SavedCaptureConfirmation) {
     setSavedConfirmation(confirmation);
     setStage("saved-plan");
@@ -597,6 +611,7 @@ export function WrongAnswerCaptureForm({
   useEffect(() => {
     if (announcedCaptureStageRef.current === stage) return;
     announcedCaptureStageRef.current = stage;
+    if (stage === "saved-plan") return;
     const frame = window.requestAnimationFrame(() => {
       captureStageHeadingRef.current?.focus();
     });
@@ -631,6 +646,40 @@ export function WrongAnswerCaptureForm({
   function persist(next: DraftState) {
     saveReviewOsDraft(storageKey, next);
     return next;
+  }
+
+  function resolveCaptureSaveOperation(source: DraftState) {
+    const workFingerprint = JSON.stringify({
+      mode,
+      workflow,
+      rewriteSourceItemId: rewriteContext?.sourceItemId ?? null,
+      source,
+      pages: uploadedPages.map((page) => ({
+        id: page.id,
+        name: page.name,
+        label: page.label,
+        sourceType: page.sourceType,
+        ocrText: page.ocrText ?? null,
+        lowConfidenceFlag: page.lowConfidenceFlag ?? false,
+        captureQualityIssue: page.captureQualityIssue ?? null,
+      })),
+    });
+    const pending = resolvePendingCaptureSaveOperation(
+      pendingCaptureSaveRef.current,
+      workFingerprint,
+    );
+    pendingCaptureSaveRef.current = pending;
+    return pending.binding;
+  }
+
+  function settleCaptureSaveOperation(operation: CaptureSaveOperationBinding) {
+    const pending = pendingCaptureSaveRef.current;
+    if (
+      pending?.binding.operationId === operation.operationId &&
+      pending.binding.workRevisionId === operation.workRevisionId
+    ) {
+      pendingCaptureSaveRef.current = null;
+    }
   }
 
   function update<K extends keyof DraftState>(key: K, value: DraftState[K]) {
@@ -1000,6 +1049,7 @@ export function WrongAnswerCaptureForm({
       if (page.previewUrl) URL.revokeObjectURL(page.previewUrl);
     });
     clearReviewOsDraft(storageKey);
+    pendingCaptureSaveRef.current = null;
     setStage(getInitialStage());
     setError("");
     setExtractError("");
@@ -1086,6 +1136,8 @@ export function WrongAnswerCaptureForm({
     itemId?: string;
     status: CaptureSavePersistenceStatus;
     retryAction?: "quick" | "session";
+    persistenceEvidence?: FailureAwarePersistenceEvidence | null;
+    conflictEvidence?: Extract<FailureAwareStateEvidence, { kind: "conflict" }> | null;
     copy: ReturnType<typeof getCaptureConfirmationCopy>;
     foundationDraft: Awaited<ReturnType<typeof buildLearnerNoteFoundation>>;
   }): SavedCaptureConfirmation {
@@ -1093,6 +1145,8 @@ export function WrongAnswerCaptureForm({
       itemId: input.itemId,
       status: input.status,
       retryAction: input.retryAction,
+      persistenceEvidence: input.persistenceEvidence,
+      conflictEvidence: input.conflictEvidence,
       ...input.copy,
       todayPlanCandidate: input.foundationDraft.todayPlanCandidate.title,
       reviewQueueCandidate: input.foundationDraft.reviewQueueCandidate.reviewReason,
@@ -1101,7 +1155,10 @@ export function WrongAnswerCaptureForm({
     };
   }
 
-  async function saveLocalCaptureConfirmation(source: DraftState, retryAction: "quick" | "session" = "session") {
+  async function saveLocalCaptureConfirmation(
+    source: DraftState,
+    retryAction: "quick" | "session" = "session",
+  ) {
     const copy = getCaptureConfirmationCopy(source);
     const foundationDraft = await buildLearnerNoteFoundation(source);
     const sourceType = normalizeCaptureSourceType(source.sourceType);
@@ -1117,8 +1174,12 @@ export function WrongAnswerCaptureForm({
       openSavedPlanStage(buildSaveConfirmation({ itemId: localSave.note.id, status: "save_failed", retryAction, copy, foundationDraft }));
       return false;
     }
-    openSavedPlanStage(buildSaveConfirmation({ itemId: localSave.note.id, status: "local_fallback_saved", copy, foundationDraft }));
-    clearReviewOsDraft(storageKey);
+    openSavedPlanStage(buildSaveConfirmation({
+      itemId: localSave.note.id,
+      status: "local_fallback_saved",
+      copy,
+      foundationDraft,
+    }));
     pushLocalLearnerAnalyticsEvent({
       event: "capture_saved",
       surface: "capture",
@@ -1164,6 +1225,7 @@ export function WrongAnswerCaptureForm({
     );
     const copy = getCaptureConfirmationCopy(structured);
     const foundationDraft = await buildLearnerNoteFoundation(structured);
+    const operation = resolveCaptureSaveOperation(structured);
     setForm(persist(structured));
     try {
       const response = await fetch("/api/os/items", {
@@ -1215,15 +1277,37 @@ export function WrongAnswerCaptureForm({
               issue_recall: structured.issueRecall || null,
               production_before_comparison: mode === "second" ? true : null,
               local_beta_confirmation_available: true,
+              ...buildCapturePersistenceMetadata(operation),
             },
           },
         }),
       });
-      const result = (await response.json()) as { ok?: boolean; item?: { id: string }; error?: string };
+      const result = (await response.json()) as {
+        ok?: boolean;
+        deduped?: boolean;
+        item?: { id: string; updatedAt?: string; rawPayload?: Record<string, unknown> };
+        error?: string;
+      };
       if (!response.ok || !result.ok || !result.item) {
         await saveLocalCaptureConfirmation(structured, "quick");
         return;
       }
+      const persistenceEvidence = buildDurableCapturePersistenceReceipt(result.item, operation);
+      if (!persistenceEvidence) {
+        const conflictEvidence = result.deduped
+          ? buildCaptureDedupeConflictEvidence(result.item, operation)
+          : null;
+        openSavedPlanStage(buildSaveConfirmation({
+          itemId: result.item.id,
+          status: "save_failed",
+          retryAction: "quick",
+          conflictEvidence,
+          copy,
+          foundationDraft,
+        }));
+        return;
+      }
+      settleCaptureSaveOperation(operation);
       clearReviewOsDraft(storageKey);
       pushLocalLearnerAnalyticsEvent({
         event: "capture_saved",
@@ -1236,7 +1320,13 @@ export function WrongAnswerCaptureForm({
         createdFromCapture: true,
         nextTaskType: mode === "second" ? "rewrite" : "retry",
       });
-      openSavedPlanStage(buildSaveConfirmation({ itemId: result.item.id, status: "durable_saved", copy, foundationDraft }));
+      openSavedPlanStage(buildSaveConfirmation({
+        itemId: result.item.id,
+        status: "durable_saved",
+        persistenceEvidence,
+        copy,
+        foundationDraft,
+      }));
     } catch {
       await saveLocalCaptureConfirmation(structured, "quick");
     } finally {
@@ -1296,6 +1386,7 @@ export function WrongAnswerCaptureForm({
       }
 
       const foundationDraft = await buildLearnerNoteFoundation(form);
+      const operation = resolveCaptureSaveOperation(form);
       const response = await fetch("/api/os/items", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1359,6 +1450,7 @@ export function WrongAnswerCaptureForm({
               captureQualityIssue: form.captureQualityIssue || null,
               hasManualCorrection: Boolean(form.hasManualCorrection),
               ocrConfirmedByLearner: Boolean(form.ocrConfirmedByLearner),
+              ...buildCapturePersistenceMetadata(operation),
             },
           },
           issueRecall: form.issueRecall || undefined,
@@ -1373,7 +1465,19 @@ export function WrongAnswerCaptureForm({
           createdFromCapture: true,
         }),
       });
-      const result = (await response.json()) as { ok?: boolean; item?: { id: string; examName?: string }; error?: string; message?: string; errorCode?: string };
+      const result = (await response.json()) as {
+        ok?: boolean;
+        deduped?: boolean;
+        item?: {
+          id: string;
+          examName?: string;
+          updatedAt?: string;
+          rawPayload?: Record<string, unknown>;
+        };
+        error?: string;
+        message?: string;
+        errorCode?: string;
+      };
       if (!response.ok || !result.ok || !result.item) {
         if (destination === "session") {
           await saveLocalCaptureConfirmation(form, "session");
@@ -1382,6 +1486,22 @@ export function WrongAnswerCaptureForm({
         setError("정리하지 못했습니다. 내용을 조금 더 확인한 뒤 다시 시도해 주세요.");
         return;
       }
+      const persistenceEvidence = buildDurableCapturePersistenceReceipt(result.item, operation);
+      if (!persistenceEvidence) {
+        const conflictEvidence = result.deduped
+          ? buildCaptureDedupeConflictEvidence(result.item, operation)
+          : null;
+        openSavedPlanStage(buildSaveConfirmation({
+          itemId: result.item.id,
+          status: "save_failed",
+          retryAction: "session",
+          conflictEvidence,
+          copy: getCaptureConfirmationCopy(form),
+          foundationDraft,
+        }));
+        return;
+      }
+      settleCaptureSaveOperation(operation);
       clearReviewOsDraft(storageKey);
       pushLocalLearnerAnalyticsEvent({
         event: "capture_saved",
@@ -1399,7 +1519,13 @@ export function WrongAnswerCaptureForm({
         router.refresh();
         return;
       }
-      openSavedPlanStage(buildSaveConfirmation({ itemId: result.item.id, status: "durable_saved", copy: getCaptureConfirmationCopy(form), foundationDraft }));
+      openSavedPlanStage(buildSaveConfirmation({
+        itemId: result.item.id,
+        status: "durable_saved",
+        persistenceEvidence,
+        copy: getCaptureConfirmationCopy(form),
+        foundationDraft,
+      }));
     } catch {
       if (destination === "session") {
         await saveLocalCaptureConfirmation(form, "session");
@@ -1421,7 +1547,7 @@ export function WrongAnswerCaptureForm({
   const canQuickSaveCapture = hasLearnerCaptureContent(form);
 
   const footerSecondary =
-    stage === "intake" ? null : (
+    submitting || stage === "intake" ? null : (
       <details className="max-w-full rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-3 py-2">
         <summary className="flex min-h-11 cursor-pointer items-center whitespace-nowrap text-xs font-medium text-[color:var(--muted)]">다른 작업</summary>
         <div className="mt-2 flex flex-col gap-2 sm:flex-row">
@@ -1559,32 +1685,43 @@ export function WrongAnswerCaptureForm({
         </dl>
       </section>
 
-      {savedConfirmation ? (
-        <SavedCaptureConfirmationPanel
+      {submitting && !savedConfirmation ? (
+        <section
+          role="status"
+          aria-live="polite"
+          aria-busy="true"
+          className="rounded-[var(--v3-radius-panel)] border border-[var(--color-border-default)] bg-[var(--color-background-subtle)] p-5"
+          data-capture-persistence-state="saving"
+        >
+          <p className="v3-type-label-strong text-[var(--color-text-secondary)]">저장 중</p>
+          <h2 className="v3-type-section ko-keep mt-1 text-[var(--color-text-primary)]">현재 입력을 저장하고 있습니다.</h2>
+          <p className="v3-type-body ko-keep mt-3 text-[var(--color-text-primary)]">
+            입력은 이 화면의 작업 메모리에 남아 있으며, 저장 완료 영수증은 아직 확인되지 않았습니다.
+          </p>
+        </section>
+      ) : null}
+
+      <fieldset
+        className="contents"
+        disabled={submitting}
+        data-capture-work-lock={submitting ? "locked" : "editable"}
+      >
+        {savedConfirmation ? (
+          <SavedCaptureConfirmationPanel
           mode={mode}
           subject={form.subjectLabel}
           confirmation={savedConfirmation}
-          saving={submitting}
           onBack={() => {
             setSavedConfirmation(null);
             setStage(savedConfirmation.retryAction === "quick" ? "intake" : "confirm");
-          }}
-          onRetry={() => {
-            const retryAction = savedConfirmation.retryAction ?? "session";
-            setSavedConfirmation(null);
-            if (retryAction === "quick") {
-              void saveQuickCaptureFromIntake();
-              return;
-            }
-            void saveCaptureAfterConfirmation("session");
           }}
           onReset={() => {
             setSavedConfirmation(null);
             resetDraft();
           }}
-        />
-      ) : rewriteContext && mode === "second" ? (
-        <>
+          />
+        ) : rewriteContext && mode === "second" ? (
+          <>
           <RewriteContextPanel
             title={rewriteContext.sourceTitle}
             biggestGap={rewriteContext.biggestGap}
@@ -1593,9 +1730,9 @@ export function WrongAnswerCaptureForm({
             myAnswerSummary={rewriteContext.myAnswerSummary}
           />
           <RewriteParagraphPanel form={form} update={update} />
-        </>
-      ) : secondWriteEnabled ? (
-        <>
+          </>
+        ) : secondWriteEnabled ? (
+          <>
           <section className="rounded-[var(--radius-md)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)] p-3">
             <div className="flex flex-wrap items-center gap-2 text-sm text-[color:var(--muted)]">
               <span>과목: {form.subjectLabel}</span>
@@ -1661,9 +1798,9 @@ export function WrongAnswerCaptureForm({
           {stage === "second-rewrite" ? (
             <SecondGapRewritePanel form={form} subject={form.subjectLabel} update={update} onBack={() => setStage("second-gap")} />
           ) : null}
-        </>
-      ) : (
-        <>
+          </>
+        ) : (
+          <>
           <IntakePanel
             form={form}
             mode={mode}
@@ -1771,9 +1908,8 @@ export function WrongAnswerCaptureForm({
           {mode === "second" && stage === "second-rewrite" ? (
             <SecondGapRewritePanel form={form} subject={form.subjectLabel} update={update} onBack={() => setStage("second-gap")} />
           ) : null}
-        </>
-      )}
-
+          </>
+        )}
       {error ? (
         <p className="text-sm text-[color:var(--status-red)]" data-testid={mode === "second" ? "second-write-error" : "capture-form-error"}>
           {error}
@@ -1790,6 +1926,7 @@ export function WrongAnswerCaptureForm({
           ) : stage === "preview" ? (
             <Button
               type="button"
+              disabled={submitting}
               onClick={() => setStage(mode === "second" ? "second-issue-recall" : "confirm")}
               className="w-full sm:w-auto"
             >
@@ -1818,6 +1955,7 @@ export function WrongAnswerCaptureForm({
         </div>
         </BottomPrimaryAction>
       ) : null}
+      </fieldset>
     </form>
   );
 }
@@ -1850,86 +1988,102 @@ function SavedCaptureConfirmationPanel({
   mode,
   subject,
   confirmation,
-  saving,
   onBack,
-  onRetry,
   onReset,
 }: {
   mode: AppraisalMode;
   subject: string;
   confirmation: SavedCaptureConfirmation;
-  saving: boolean;
   onBack: () => void;
-  onRetry: () => void;
   onReset: () => void;
 }) {
   const encodedSubject = encodeURIComponent(normalizeSubjectForMode(subject, mode));
-  const learningDraftCopy = "학습 노트에 저장되고 오늘 계획과 복습으로 이어집니다.";
   const persistenceStatus = confirmation.status ?? (confirmation.persistence === "durable" ? "durable_saved" : "local_fallback_saved");
   const persistenceCopy = getCaptureSavePersistenceCopy(persistenceStatus);
   const saveFailed = persistenceStatus === "save_failed";
+  const completedEvidence = confirmation.persistenceEvidence
+    ? buildCaptureCompletedEvidence(confirmation.persistenceEvidence)
+    : null;
 
-  if (confirmation.status || confirmation.persistence) {
+  if (confirmation.conflictEvidence) {
     return (
       <section
-        className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-5 sm:p-6"
+        data-testid="capture-save-confirmation"
+        data-capture-dedupe-conflict
+        data-capture-receipt-bound="false"
+      >
+        <FailureAwareState
+          evidence={confirmation.conflictEvidence}
+          action={{
+            kind: "link",
+            label: "학습 노트에서 기존 기록 확인",
+            href: `/app/notes?mode=${mode}&subject=${encodedSubject}`,
+          }}
+          focusHeadingOnChange={false}
+          testId="capture-persistence-conflict-state"
+        />
+      </section>
+    );
+  }
+
+  if (saveFailed) {
+    return (
+      <section
+        data-testid="capture-save-confirmation"
+        data-capture-persistence-failure
+        data-capture-receipt-bound="false"
+      >
+        <FailureAwareState
+          evidence={CAPTURE_MEMORY_ONLY_SAVE_ERROR_EVIDENCE}
+          action={{ kind: "button", label: "입력 확인 후 다시 저장하기", onAction: onBack }}
+          focusHeadingOnChange={false}
+          testId="capture-persistence-error-state"
+        />
+      </section>
+    );
+  }
+
+  if (persistenceStatus === "local_fallback_saved") {
+    return (
+      <section
+        className="rounded-[var(--v3-radius-panel)] border border-[var(--color-border-attention)] bg-[var(--color-background-attention)] p-5 sm:p-6"
         aria-live="polite"
         data-testid="capture-save-confirmation"
-        data-capture-plan-reflection-stage
+        data-capture-local-summary
+        data-capture-receipt-bound="false"
       >
-        <p className="text-caption text-[color:var(--brand-700)]">4. 오늘 계획 반영 · {persistenceCopy.eyebrow}</p>
-        <h3 className="mt-2 text-title text-[color:var(--foreground-strong)]">오늘 계획에 반영할 준비가 되었습니다.</h3>
-        <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">{persistenceCopy.description}</p>
-        <div className="mt-5 grid gap-3 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-4">
-          <PreviewLine label="가장 큰 약점 1개" value={confirmation.biggestGap} />
-          <PreviewLine label="다음 행동 1개" value={confirmation.nextAction} />
-          <PreviewLine label="학습 노트 저장 상태" value={persistenceCopy.statusLabel} />
-          <PreviewLine label="오늘 계획에 반영" value={confirmation.todayPlanCandidate ?? confirmation.nextAction} />
-          <PreviewLine label="복습에 남길 내용" value={confirmation.reviewQueueCandidate ?? confirmation.biggestGap} />
-          {confirmation.legalGroundingMessage ? <PreviewLine label="법령 근거 상태" value={confirmation.legalGroundingMessage} /> : null}
-        </div>
-        <div className="mt-3">
-          <CognitiveLearningActionCard unit={confirmation.learningAction} compact />
-        </div>
-        <p className="mt-3 text-xs leading-5 text-[color:var(--muted)]">{learningDraftCopy}</p>
-        {saveFailed ? (
-          <div className="mt-5 flex flex-col gap-2 sm:flex-row">
-            <Button type="button" className="w-full sm:w-auto" onClick={onRetry} disabled={saving}>
-              {saving ? "저장 중" : "다시 저장하기"}
-            </Button>
-            <Button type="button" variant="ghost" className="w-full sm:w-auto" onClick={onBack}>
-              입력으로 돌아가기
-            </Button>
-          </div>
-        ) : (
-          <>
-            <div className="mt-5 grid gap-2 sm:grid-cols-3">
-              <Link
-                href={`/app?mode=${mode}&subject=${encodedSubject}`}
-                aria-label="오늘 할 일로 이동"
-                className="inline-flex min-h-11 items-center justify-center rounded-full bg-[color:var(--brand-900)] px-4 py-2 text-sm font-medium text-white"
-              >
-                오늘 할 일로 이동
-              </Link>
-              <Link
-                href={`/app/notes?mode=${mode}&subject=${encodedSubject}`}
-                className="inline-flex min-h-11 items-center justify-center rounded-full border border-[color:var(--border-subtle)] px-4 py-2 text-sm font-medium text-[color:var(--foreground-strong)]"
-              >
-                학습 노트에서 보기
-              </Link>
-              <Link
-                href={`/app/review?mode=${mode}&subject=${encodedSubject}`}
-                aria-label="복습으로 이어가기"
-                className="inline-flex min-h-11 items-center justify-center rounded-full border border-[color:var(--border-subtle)] px-4 py-2 text-sm font-medium text-[color:var(--foreground-strong)]"
-              >
-                복습으로 이어가기
-              </Link>
-            </div>
-            <Button type="button" variant="ghost" className="mt-4 w-full sm:w-auto" onClick={onReset}>
-              다시 쓰기 또는 다시 찍기
-            </Button>
-          </>
-        )}
+        <p className="v3-type-label-strong text-[var(--color-text-attention)]">계정 저장 미확인 · 브라우저 요약 보관</p>
+        <h2 className="v3-type-section ko-keep mt-1 text-[var(--color-text-primary)]">
+          약점과 다음 행동 요약만 이 브라우저에 임시 저장되었습니다.
+        </h2>
+        <p className="v3-type-body ko-keep mt-3 text-[var(--color-text-primary)]">
+          원문 입력은 이 작성 화면에 그대로 남아 있습니다. 자동 동기화는 등록되지 않았으므로 입력을 확인한 뒤 계정 저장을 다시 시도해 주세요.
+        </p>
+        <dl className="mt-5 grid gap-3 rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-surface)] p-4">
+          <PreviewLine label="브라우저에 남긴 약점 요약" value={confirmation.biggestGap} />
+          <PreviewLine label="브라우저에 남긴 다음 행동" value={confirmation.nextAction} />
+          <PreviewLine label="저장 범위" value={persistenceCopy.statusLabel} />
+        </dl>
+        <Button type="button" className="mt-5 w-full sm:w-auto" onClick={onBack}>
+          입력 확인 후 계정 저장 다시 시도
+        </Button>
+      </section>
+    );
+  }
+
+  if (!completedEvidence) {
+    return (
+      <section
+        data-testid="capture-save-confirmation"
+        data-capture-persistence-failure
+        data-capture-receipt-bound="false"
+      >
+        <FailureAwareState
+          evidence={CAPTURE_MEMORY_ONLY_SAVE_ERROR_EVIDENCE}
+          action={{ kind: "button", label: "입력 확인 후 다시 저장하기", onAction: onBack }}
+          focusHeadingOnChange={false}
+          testId="capture-persistence-error-state"
+        />
       </section>
     );
   }
@@ -1937,13 +2091,24 @@ function SavedCaptureConfirmationPanel({
   return (
     <section
       className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-5 sm:p-6"
-      aria-live="polite"
       data-testid="capture-save-confirmation"
       data-capture-plan-reflection-stage
+      data-capture-persistence-status={persistenceStatus}
+      data-capture-receipt-bound="true"
     >
-      <p className="text-caption text-[color:var(--brand-700)]">4. 오늘 계획 반영 · 저장되었습니다</p>
-      <h3 className="mt-2 text-title text-[color:var(--foreground-strong)]">오늘 계획에 반영할 준비가 되었습니다.</h3>
-      <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">학습 노트와 복습을 같은 흐름에 연결했습니다.</p>
+      <FailureAwareState
+        evidence={completedEvidence}
+        action={{
+          kind: "link",
+          label: "오늘 할 일로 이동",
+          href: `/app?mode=${mode}&subject=${encodedSubject}`,
+        }}
+        focusHeadingOnChange={false}
+        testId="capture-persistence-completed-state"
+      />
+
+      <p className="v3-type-caption mt-5 text-[var(--color-text-brand)]">4. 오늘 계획 반영 · {persistenceCopy.eyebrow}</p>
+      <h3 className="v3-type-section ko-keep mt-2 text-[var(--color-text-primary)]">이 저장 기록에서 이어갈 내용</h3>
       <div className="mt-5 grid gap-3 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-4">
         <PreviewLine label="가장 큰 약점 1개" value={confirmation.biggestGap} />
         <PreviewLine label="다음 행동 1개" value={confirmation.nextAction} />
@@ -1954,30 +2119,33 @@ function SavedCaptureConfirmationPanel({
       <div className="mt-3">
         <CognitiveLearningActionCard unit={confirmation.learningAction} compact />
       </div>
-      <p className="mt-3 text-xs leading-5 text-[color:var(--muted)]">{learningDraftCopy}</p>
-    <div className="mt-5 grid gap-2 sm:grid-cols-3">
-      <Link
-        href={`/app?mode=${mode}&subject=${encodedSubject}`}
-        className="inline-flex min-h-11 items-center justify-center rounded-full bg-[color:var(--brand-900)] px-4 py-2 text-sm font-medium text-white"
-      >
-        오늘 할 일로 이동
-      </Link>
-      <Link
-        href={`/app/notes?mode=${mode}&subject=${encodedSubject}`}
-          className="inline-flex min-h-11 items-center justify-center rounded-full border border-[color:var(--border-subtle)] px-4 py-2 text-sm font-medium text-[color:var(--foreground-strong)]"
-        >
-          학습 노트에서 보기
-      </Link>
-      <Link
-        href={`/app/review?mode=${mode}&subject=${encodedSubject}`}
-        className="inline-flex min-h-11 items-center justify-center rounded-full border border-[color:var(--border-subtle)] px-4 py-2 text-sm font-medium text-[color:var(--foreground-strong)]"
-      >
-        복습으로 이어가기
-      </Link>
-      </div>
-      <Button type="button" variant="ghost" className="mt-4 w-full sm:w-auto" onClick={onReset}>
-        하나 더 올리기
-      </Button>
+      <p className="mt-3 text-xs leading-5 text-[color:var(--muted)]">
+        학습 노트에 저장되고 오늘 계획과 복습으로 이어집니다.
+      </p>
+      <p className="mt-3 text-xs leading-5 text-[color:var(--muted)]">{persistenceCopy.description}</p>
+
+      <details className="quiet-disclosure mt-5 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
+        <summary className="min-h-11 cursor-pointer px-4 py-3 text-sm font-medium text-[color:var(--foreground-strong)]">
+          다른 저장 위치 또는 새 기록
+        </summary>
+        <div className="grid gap-2 border-t border-[color:var(--border-subtle)] p-4 sm:grid-cols-3">
+          <Link
+            href={`/app/notes?mode=${mode}&subject=${encodedSubject}`}
+            className="inline-flex min-h-11 items-center justify-center rounded-full border border-[color:var(--border-subtle)] px-4 py-2 text-sm font-medium text-[color:var(--foreground-strong)]"
+          >
+            학습 노트에서 보기
+          </Link>
+          <Link
+            href={`/app/review?mode=${mode}&subject=${encodedSubject}`}
+            className="inline-flex min-h-11 items-center justify-center rounded-full border border-[color:var(--border-subtle)] px-4 py-2 text-sm font-medium text-[color:var(--foreground-strong)]"
+          >
+            복습으로 이어가기
+          </Link>
+          <Button type="button" variant="ghost" className="w-full" onClick={onReset}>
+            하나 더 올리기
+          </Button>
+        </div>
+      </details>
     </section>
   );
 }
