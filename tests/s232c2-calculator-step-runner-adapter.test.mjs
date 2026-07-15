@@ -165,6 +165,9 @@ test("S232C.2 authenticated gate is exact-head and metadata-only", () => {
   assert.ok(workflow.includes("secrets.E2E_USER_PASSWORD || secrets.TEST_USER_PASSWORD"));
   assert.ok(workflow.includes("VERCEL_AUTOMATION_BYPASS_SECRET"));
   assert.ok(workflow.includes("test-results/**/s232c2-runtime.json"));
+  assert.equal(workflow.includes("gh api -X GET +"), false);
+  assert.equal(workflow.includes("curl --silent --show-error +"), false);
+  assert.equal(workflow.includes('] && +'), false);
   assert.equal(workflow.includes("**/trace.zip"), false);
   assert.equal(workflow.includes("**/*.png"), false);
 });
