@@ -95,7 +95,7 @@ export default function S232B2StickyActionAcceptancePage() {
                   <div
                     className={
                       mode === "Dock"
-                        ? "relative left-1/2 w-screen max-w-[390px] -translate-x-1/2 sm:left-0 sm:w-full sm:translate-x-0"
+                        ? "-ml-5 w-screen max-w-[390px] sm:ml-0 sm:w-full"
                         : undefined
                     }
                   >
