@@ -71,6 +71,7 @@ const defaultTestFiles = [
   "tests/focus-color-system.test.mjs",
   "tests/s231c-light-only-accessibility.test.mjs",
   "tests/s232a-figma-foundation-parity.test.mjs",
+  "tests/s232b-passive-component-parity.test.mjs",
   "tests/s220b-dabangil-launch-surface.test.mjs",
   "tests/practice-calculation-unit-registry.test.mjs",
   "tests/rewrite-regrade-history-contract.test.mjs",

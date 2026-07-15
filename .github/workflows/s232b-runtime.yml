@@ -1,0 +1,223 @@
+name: S232B Figma V3 Passive Runtime Acceptance
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  contents: read
+
+jobs:
+  s232b-passive-runtime:
+    name: S232B Exact-Head Passive Component Runtime
+    if: >-
+      github.event.pull_request.number == 580 &&
+      github.event.pull_request.head.ref == 'agent/s232b-shared-component-parity' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      contains(github.event.pull_request.body, '<!-- run-s232b-auth-e2e -->')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency:
+      group: s232b-passive-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    env:
+      CI: "true"
+      S232B_AUTH_RUNTIME: "1"
+      E2E_BASE_URL: https://inverge-git-agent-s232b-shared-co-e91d86-chachathecats-projects.vercel.app
+      E2E_EXPECTED_HOST: inverge-git-agent-s232b-shared-co-e91d86-chachathecats-projects.vercel.app
+      E2E_RUNNER_SHA: ${{ github.event.pull_request.head.sha }}
+      E2E_TARGET_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - name: Check out exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Wait for exact-head Preview
+        shell: bash
+        env:
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: |
+          set -euo pipefail
+          test -n "${VERCEL_AUTOMATION_BYPASS_SECRET:-}"
+          test "${E2E_BASE_URL}" = "https://${E2E_EXPECTED_HOST}"
+          [[ "${E2E_RUNNER_SHA}" =~ ^[0-9a-fA-F]{40}$ ]]
+
+          exact_head_ready=0
+          attempt=0
+          deadline=$((SECONDS + 600))
+          while [ "${SECONDS}" -lt "${deadline}" ]; do
+            attempt=$((attempt + 1))
+            body_path="$(mktemp)"
+            status="$(
+              curl --silent --show-error \
+                --output "${body_path}" \
+                --write-out '%{http_code}' \
+                --max-redirs 0 \
+                --connect-timeout 5 \
+                --max-time 10 \
+                --header "x-vercel-protection-bypass: ${VERCEL_AUTOMATION_BYPASS_SECRET}" \
+                "${E2E_BASE_URL}/api/runtime/version?runner=${E2E_RUNNER_SHA}&attempt=${attempt}"
+            )" || status="000"
+
+            if [ "${status}" = "200" ] && \
+              BODY_PATH="${body_path}" EXPECTED_SHA="${E2E_RUNNER_SHA}" node --input-type=module -e '
+                import { readFileSync } from "node:fs";
+                const payload = JSON.parse(readFileSync(process.env.BODY_PATH, "utf8"));
+                if (payload.ready !== true || payload.deploymentSha !== process.env.EXPECTED_SHA) process.exit(1);
+              ' >/dev/null 2>&1; then
+              exact_head_ready=1
+              rm -f "${body_path}"
+              break
+            fi
+
+            case "${status}" in
+              301|302|303|307|308|401|403)
+                rm -f "${body_path}"
+                echo "::error::Preview protection or host validation failed with HTTP ${status}."
+                exit 1
+                ;;
+            esac
+            rm -f "${body_path}"
+            echo "::notice::Exact-head Preview is not ready yet (HTTP ${status}, attempt ${attempt})."
+            sleep 5
+          done
+          test "${exact_head_ready}" = "1"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browser
+        run: npm exec playwright install -- --with-deps chromium
+
+      - name: Run exact-head synthetic and authenticated passive acceptance
+        id: runtime_acceptance
+        env:
+          E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL || secrets.TEST_USER_EMAIL }}
+          E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD || secrets.TEST_USER_PASSWORD }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${E2E_USER_EMAIL:-}"
+          test -n "${E2E_USER_PASSWORD:-}"
+          test -n "${VERCEL_AUTOMATION_BYPASS_SECRET:-}"
+          npm run test:e2e -- tests/e2e/s232b-passive-components.spec.ts tests/e2e/s232b-authenticated-runtime.spec.ts --project=chromium --workers=1 --reporter=line --trace=off
+
+      - name: Recheck exact deployment SHA
+        id: postflight_sha
+        if: steps.runtime_acceptance.outcome == 'success'
+        shell: bash
+        env:
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: |
+          set -euo pipefail
+          body_path="$(mktemp)"
+          status="$(
+            curl --silent --show-error \
+              --output "${body_path}" \
+              --write-out '%{http_code}' \
+              --max-redirs 0 \
+              --connect-timeout 10 \
+              --max-time 30 \
+              --header "x-vercel-protection-bypass: ${VERCEL_AUTOMATION_BYPASS_SECRET}" \
+              "${E2E_BASE_URL}/api/runtime/version?postflight=${E2E_RUNNER_SHA}"
+          )"
+          test "${status}" = "200"
+          BODY_PATH="${body_path}" EXPECTED_SHA="${E2E_RUNNER_SHA}" node --input-type=module -e '
+            import { readFileSync } from "node:fs";
+            const payload = JSON.parse(readFileSync(process.env.BODY_PATH, "utf8"));
+            if (payload.ready !== true || payload.deploymentSha !== process.env.EXPECTED_SHA) {
+              throw new Error("Postflight deployment SHA mismatch.");
+            }
+          '
+          rm -f "${body_path}"
+
+      - name: Validate metadata-only S232B evidence
+        id: evidence_guard
+        if: always()
+        shell: bash
+        env:
+          RUNTIME_OUTCOME: ${{ steps.runtime_acceptance.outcome }}
+          POSTFLIGHT_OUTCOME: ${{ steps.postflight_sha.outcome }}
+          EVENT_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          if [ "${RUNTIME_OUTCOME}" != "success" ] || [ "${POSTFLIGHT_OUTCOME}" != "success" ]; then
+            echo "::error::Runtime or postflight SHA verification failed; refusing evidence publication."
+            exit 1
+          fi
+          if find test-results -type f \( -name '*.png' -o -name '*.zip' -o -name '*.webm' \) -print -quit | grep -q .; then
+            echo "::error::Screenshot, trace, or video output exists; refusing evidence publication."
+            exit 1
+          fi
+          mapfile -d '' manifests < <(find test-results -type f -name 's232b-runtime.json' -print0)
+          if [ "${#manifests[@]}" -ne 1 ]; then
+            echo "::error::Exactly one S232B manifest is required."
+            exit 1
+          fi
+
+          MANIFEST_PATH="${manifests[0]}" node --input-type=module - <<'NODE'
+          import { copyFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
+          const fail = (message) => { throw new Error(`S232B evidence integrity: ${message}`); };
+          const text = readFileSync(process.env.MANIFEST_PATH, "utf8");
+          if (/@[a-z0-9.-]+\.[a-z]{2,}/i.test(text)) fail("email-like text found");
+          if (/"(?:password|email|outerhtml|innerhtml|raw[_-]?(?:answer|ocr|problem|reference)|localstorage|sessionstorage)"\s*:/i.test(text)) {
+            fail("private or raw-content key found");
+          }
+          const manifest = JSON.parse(text);
+          const expectedSha = process.env.E2E_RUNNER_SHA;
+          if (!/^[0-9a-f]{40}$/i.test(expectedSha ?? "") || process.env.EVENT_HEAD_SHA !== expectedSha) fail("invalid exact head");
+          if (manifest.result !== "pass" || manifest.schemaVersion !== 1) fail("invalid result");
+          for (const key of ["runnerSha", "targetDeploymentSha", "observedDeploymentSha"]) {
+            if (manifest[key] !== expectedSha) fail(`${key} mismatch`);
+          }
+          if (manifest.persistedDetailAvailable !== true) fail("persisted detail is required");
+          if (!Array.isArray(manifest.componentEvidence) || manifest.componentEvidence.length !== 3) fail("invalid component matrix");
+          const expectedViewports = new Map([["390", "20px"], ["768", "32px"], ["1440", "32px"]]);
+          const observedViewports = new Set();
+          for (const entry of manifest.componentEvidence) {
+            if (!expectedViewports.has(entry.viewport) || observedViewports.has(entry.viewport)) fail("invalid viewport");
+            observedViewports.add(entry.viewport);
+            if (entry.pageEdge !== expectedViewports.get(entry.viewport)) fail("page edge mismatch");
+            if (entry.horizontalOverflow < 0 || entry.horizontalOverflow > 1) fail("horizontal overflow");
+            if (!["Unverified", "Recovering"].includes(entry.state)) fail("unsafe learning state");
+            if (!["scheduled", "attention", "ready", "completed"].includes(entry.legacyState)) fail("legacy state mismatch");
+            if (entry.chipHeight < 38 || entry.gapType !== "MissingLink" || entry.gapDensity !== "Default") fail("passive variant mismatch");
+            if (entry.gapPadding !== "16px" || entry.gapMarkWidth !== "4px") fail("gap geometry mismatch");
+            if (entry.evidenceSource !== "Learner" || entry.evidenceReview !== "Default") fail("evidence authority mismatch");
+            if (entry.excerptPadding !== "24px" || entry.excerptRadius !== "14px") fail("excerpt geometry mismatch");
+            if (entry.proseSize !== "17px" || entry.proseLineHeight !== "30px" || !entry.proseFamily.includes("Noto Serif KR Variable")) fail("prose role mismatch");
+            if (entry.componentCounts?.stateChip !== 1 || entry.componentCounts?.biggestGap !== 1 || entry.componentCounts?.evidenceExcerpt !== 1) fail("component count mismatch");
+          }
+          if (observedViewports.size !== expectedViewports.size) fail("incomplete viewport coverage");
+          if (
+            manifest.consoleErrorCount !== 0 ||
+            manifest.pageErrorCount !== 0 ||
+            manifest.sameOriginRequestFailureCount !== 0 ||
+            manifest.syntheticAccountOnly !== true ||
+            manifest.credentialsRedacted !== true ||
+            manifest.rawLearnerContentCaptured !== false ||
+            manifest.screenshotCaptured !== false ||
+            manifest.traceCaptured !== false ||
+            manifest.videoCaptured !== false
+          ) fail("runtime or privacy mismatch");
+          if (existsSync("s232b-evidence")) fail("evidence directory already exists");
+          mkdirSync("s232b-evidence");
+          copyFileSync(process.env.MANIFEST_PATH, "s232b-evidence/s232b-runtime.json");
+          NODE
+
+      - name: Upload validated S232B runtime evidence
+        if: always() && steps.evidence_guard.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: s232b-figma-v3-${{ github.run_id }}
+          path: s232b-evidence/s232b-runtime.json
+          if-no-files-found: error
+          retention-days: 7
