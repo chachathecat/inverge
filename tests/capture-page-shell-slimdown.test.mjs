@@ -35,7 +35,7 @@ test("capture first screen keeps optional controls secondary", () => {
 
   assert.ok(form.includes("CaptureProgressPill"), "progress should be a quiet local pill");
   assert.ok(form.includes('stage === "intake" ? null'), "bottom other-choice control should not float on the first intake screen");
-  assert.ok(form.indexOf("data-capture-subject-selector") < form.indexOf("data-capture-input-options"), "subject selector should appear before input options");
+  assert.ok(form.indexOf("data-capture-input-options") < form.indexOf("data-capture-subject-selector"), "primary input methods should appear before the optional subject selector");
   assert.ok(form.indexOf("data-capture-input-options") < form.indexOf("오늘 공부한 내용 또는 내 답안"), "photo/PDF/text options should appear before the main textarea");
   assert.ok(form.indexOf("textAreaRef={textAreaRef}") < form.indexOf("선택 연습"), "optional O/X bridge should sit after the main intake card");
   assert.ok(form.includes("variant=\"outline\" className=\"mt-4 w-full sm:w-auto\""), "optional O/X bridge should not look like the primary CTA");

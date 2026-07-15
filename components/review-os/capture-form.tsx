@@ -55,6 +55,132 @@ const CAPTURE_TRUST_SOURCE_LABELS: Record<
   manual: "수동 입력",
 };
 
+const CAPTURE_FLOW_STEPS = [
+  {
+    eyebrow: "1. 입력",
+    label: "입력",
+    now: "사진, PDF, 텍스트 중 한 가지 방식으로 시작합니다.",
+    why: "처음에는 필요한 자료 하나만 고르면 됩니다.",
+    result: "가져온 초안을 직접 확인하거나, 입력한 내용으로 빠르게 저장할 수 있습니다.",
+  },
+  {
+    eyebrow: "2. OCR/텍스트 확인",
+    label: "OCR/텍스트 확인",
+    now: "가져온 초안을 읽고 틀린 부분을 직접 고칩니다.",
+    why: "OCR/텍스트 초안은 저장 전에 직접 고칠 수 있습니다.",
+    result: "확인한 내용에서 이번에 고칠 가장 큰 약점 1개를 정합니다.",
+  },
+  {
+    eyebrow: "3. 가장 큰 약점",
+    label: "가장 큰 약점",
+    now: "이번 답안을 바꿀 가장 큰 약점 1개에 집중합니다.",
+    why: "여러 약점을 나열하는 것보다 한 번에 하나를 고치는 편이 실행하기 쉽습니다.",
+    result: "다시쓰기 또는 다음 행동을 마지막 저장 확인에 연결합니다.",
+  },
+  {
+    eyebrow: "4. 오늘 계획 반영",
+    label: "오늘 계획 반영",
+    now: "저장 결과와 이어질 다음 행동을 확인합니다.",
+    why: "저장 위치와 상태를 확인해야 기록을 안전하게 이어갈 수 있습니다.",
+    result: "저장 상태에 따라 다시 시도하거나 오늘 계획·복습으로 이어갑니다.",
+  },
+] as const;
+
+const SECOND_CAPTURE_FLOW_STEPS = [
+  CAPTURE_FLOW_STEPS[0],
+  CAPTURE_FLOW_STEPS[1],
+  {
+    eyebrow: "3. 회상·비교·수정",
+    label: "회상·비교·수정",
+    now: "참고자료 없이 회상하고 작성한 뒤 비교해 한 문단을 고칩니다.",
+    why: "회상과 비교를 분리해야 실제로 보강할 약점을 찾을 수 있습니다.",
+    result: "다시 쓴 문단과 다음 행동을 저장 전에 확인합니다.",
+  },
+  {
+    eyebrow: "4. 저장·오늘 계획",
+    label: "저장·오늘 계획",
+    now: "저장할 내용과 저장 결과를 확인합니다.",
+    why: "저장 상태를 확인해야 학습 흐름을 안전하게 이어갈 수 있습니다.",
+    result: "저장 상태에 따라 다시 시도하거나 오늘 계획·복습으로 이어갑니다.",
+  },
+] as const;
+
+const CAPTURE_STAGE_CONTEXT: Record<
+  CaptureStage,
+  { eyebrow: string; now: string; why: string; result: string }
+> = {
+  intake: CAPTURE_FLOW_STEPS[0],
+  preview: CAPTURE_FLOW_STEPS[1],
+  confirm: {
+    eyebrow: "저장 전 확인",
+    now: "저장할 핵심 내용과 다음 행동을 마지막으로 확인합니다.",
+    why: "단계형 흐름에서는 저장 전에 바꿀 내용을 한 번 더 점검할 수 있습니다.",
+    result: "확인한 기록을 저장하고 오늘 계획과 복습으로 이어갑니다.",
+  },
+  "second-issue-recall": {
+    eyebrow: "세부 작업 1/6 · 쟁점 회상",
+    now: "참고자료를 보기 전에 기억나는 쟁점부터 적습니다.",
+    why: "먼저 회상해야 지금 스스로 설명할 수 있는 범위를 구분할 수 있습니다.",
+    result: "떠올린 쟁점을 답안 목차로 정리합니다.",
+  },
+  "second-outline": {
+    eyebrow: "세부 작업 2/6 · 목차 정리",
+    now: "회상한 쟁점을 답안 목차 3줄로 정리합니다.",
+    why: "짧은 구조를 먼저 세우면 답안의 누락과 순서를 확인하기 쉽습니다.",
+    result: "목차를 바탕으로 내 답안을 작성합니다.",
+  },
+  "second-answer": {
+    eyebrow: "세부 작업 3/6 · 내 답안 작성",
+    now: "참고 정리를 보기 전에 내 답안을 먼저 작성합니다.",
+    why: "작성 전 참고자료를 열지 않아야 실제 회상 수준을 확인할 수 있습니다.",
+    result: "작성한 답안을 참고 정리와 비교합니다.",
+  },
+  "second-reference": {
+    eyebrow: "세부 작업 4/6 · 참고 정리 비교",
+    now: "내 답안을 작성한 뒤 참고 정리와 비교합니다.",
+    why: "작성 이후의 비교는 내 답안에서 빠진 내용을 분명하게 보여 줍니다.",
+    result: "이번에 고칠 가장 큰 약점 1개를 정합니다.",
+  },
+  "second-gap": {
+    eyebrow: "세부 작업 5/6 · 가장 큰 약점",
+    now: "비교 결과에서 가장 큰 약점 1개를 정합니다.",
+    why: "한 번에 하나를 고르면 다음 답안에서 바로 실행할 수 있습니다.",
+    result: "선택한 약점을 반영해 한 문단을 다시 씁니다.",
+  },
+  "second-rewrite": {
+    eyebrow: "세부 작업 6/6 · 문단 다시쓰기",
+    now: "가장 큰 약점 1개를 반영해 한 문단을 다시 씁니다.",
+    why: "발견한 약점을 실제 문장으로 바꿔야 다음 답안에 남습니다.",
+    result: "다시 쓴 문단과 다음 행동을 저장 전에 확인합니다.",
+  },
+  "saved-plan": CAPTURE_FLOW_STEPS[3],
+};
+
+const SECOND_WRITE_STAGE_POSITION: Partial<Record<CaptureStage, string>> = {
+  "second-issue-recall": "1/6 · 쟁점 회상",
+  "second-outline": "2/6 · 목차 정리",
+  "second-answer": "3/6 · 내 답안 작성",
+  "second-reference": "4/6 · 참고 정리 비교",
+  "second-gap": "5/6 · 가장 큰 약점",
+  "second-rewrite": "6/6 · 문단 다시쓰기",
+  confirm: "저장 전 확인",
+  "saved-plan": "저장 결과",
+};
+
+const SECOND_PREVIEW_STAGE_CONTEXT = {
+  eyebrow: "2. OCR/텍스트 확인",
+  now: "가져온 초안을 읽고 틀린 부분을 직접 고칩니다.",
+  why: "OCR/텍스트 초안은 저장 전에 직접 고칠 수 있습니다.",
+  result: "확인한 내용을 닫고, 참고자료 없이 쟁점 회상부터 시작합니다.",
+} as const;
+
+const REWRITE_CONTEXT_STAGE_CONTEXT = {
+  eyebrow: "세부 작업 · 문단 다시쓰기",
+  now: "이전 답안의 가장 큰 약점을 반영해 한 문단을 다시 씁니다.",
+  why: "발견한 약점을 실제 문장으로 바꿔야 다음 답안에 남습니다.",
+  result: "다시 쓴 문단을 저장하고 오늘 계획과 복습으로 이어갑니다.",
+} as const;
+
 type SavedCaptureConfirmation = {
   itemId?: string;
   status?: CaptureSavePersistenceStatus;
@@ -71,6 +197,7 @@ type SavedCaptureConfirmation = {
 type CaptureFormProps = {
   userId: string;
   mode: AppraisalMode;
+  labelledBy?: string;
   initialPreferredSubjects?: string[];
   initialSubject?: string;
   workflow?: "default" | "second-write";
@@ -279,12 +406,24 @@ function parseTimeSpentMinutes(value: string) {
   return Number(match[0]);
 }
 
-function getCaptureStep(stage: CaptureStage) {
+function getCaptureStep(stage: CaptureStage, mode: AppraisalMode) {
   if (stage === "intake") return 1;
   if (stage === "preview") return 2;
   if (stage === "saved-plan") return 4;
-  if (stage === "confirm" || stage.startsWith("second-")) return 3;
+  if (stage === "confirm") return mode === "second" ? 4 : 3;
+  if (stage.startsWith("second-")) return 3;
   return 4;
+}
+
+function getCaptureStageContext(
+  stage: CaptureStage,
+  mode: AppraisalMode,
+  hasRewriteContext: boolean,
+) {
+  if (stage === "saved-plan") return CAPTURE_STAGE_CONTEXT[stage];
+  if (hasRewriteContext && mode === "second") return REWRITE_CONTEXT_STAGE_CONTEXT;
+  if (stage === "preview" && mode === "second") return SECOND_PREVIEW_STAGE_CONTEXT;
+  return CAPTURE_STAGE_CONTEXT[stage];
 }
 
 function getPageBoundaryLabel(index: number) {
@@ -342,6 +481,7 @@ function stripPreviewUrls(pages: UploadedPage[]): PersistedCapturePage[] {
 export function WrongAnswerCaptureForm({
   userId,
   mode,
+  labelledBy = "capture-page-title",
   initialPreferredSubjects = [],
   initialSubject,
   workflow = "default",
@@ -432,7 +572,19 @@ export function WrongAnswerCaptureForm({
     "second-gap",
   ]);
   const hideGlobalFooterActions = mode === "second" && secondModeHiddenFooterStages.has(stage);
-  const currentCaptureStep = getCaptureStep(stage);
+  const currentCaptureStep = getCaptureStep(stage, mode);
+  const currentCaptureFlowSteps = mode === "second" ? SECOND_CAPTURE_FLOW_STEPS : CAPTURE_FLOW_STEPS;
+  const currentCaptureStageContext = getCaptureStageContext(stage, mode, Boolean(rewriteContext));
+  const captureStageHeadingRef = useRef<HTMLHeadingElement | null>(null);
+  const announcedCaptureStageRef = useRef<CaptureStage>(stage);
+  useEffect(() => {
+    if (announcedCaptureStageRef.current === stage) return;
+    announcedCaptureStageRef.current = stage;
+    const frame = window.requestAnimationFrame(() => {
+      captureStageHeadingRef.current?.focus();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [stage]);
   useEffect(() => {
     if (!secondWriteEnabled) return;
 
@@ -1268,41 +1420,88 @@ export function WrongAnswerCaptureForm({
 
   return (
     <form
-      className="space-y-6 overflow-x-hidden pb-28 sm:pb-0"
+      className="space-y-4 overflow-x-hidden pb-28 sm:space-y-6 sm:pb-0"
       onSubmit={handleSubmit}
+      aria-labelledby={labelledBy}
       data-s224v-surface-fragment="capture-form"
       data-s224v-secondary-diagnostics="quiet-disclosure"
       data-s224v-primary-cta-count-above-fold="1"
+      data-s232e-capture-flow={secondWriteEnabled ? "second-write" : "four-stage"}
+      data-s232e-capture-step={currentCaptureStep}
+      data-s232e-capture-stage={stage}
     >
-      <CaptureProgressPill current={currentCaptureStep} total={4} mode={mode} />
-      <ol
-        className="grid grid-cols-2 gap-2 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-2 text-xs text-[color:var(--muted)] sm:grid-cols-4 sm:p-3"
-        data-capture-stage-flow
-        data-s224v-stage-indicator="compact"
+      {secondWriteEnabled ? (
+        <p
+          className="v3-type-label rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-subtle)] px-3 py-2 text-[var(--color-text-secondary)]"
+          data-s232e-second-write-position={stage}
+        >
+          다시쓰기 진행 · {SECOND_WRITE_STAGE_POSITION[stage] ?? "현재 작업"}
+        </p>
+      ) : (
+        <>
+          <CaptureProgressPill current={currentCaptureStep} total={4} mode={mode} />
+          <ol
+            className="sr-only grid-cols-2 gap-2 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-2 text-xs text-[color:var(--muted)] sm:not-sr-only sm:grid sm:grid-cols-4 sm:p-3"
+            data-capture-stage-flow
+            data-s224v-stage-indicator="compact"
+            aria-label="Capture 4단계 흐름"
+          >
+            {currentCaptureFlowSteps.map((item, index) => {
+              const step = index + 1;
+              return (
+                <li
+                  key={item.label}
+                  className={`flex min-h-12 items-center gap-2 rounded-[var(--radius-sm)] px-2 py-2 leading-tight sm:min-h-0 sm:px-3 ${
+                    currentCaptureStep === step
+                      ? "bg-[color:var(--brand-050)] text-[color:var(--foreground-strong)]"
+                      : "bg-[color:var(--surface-soft)]"
+                  }`}
+                  aria-current={currentCaptureStep === step ? "step" : undefined}
+                  data-capture-stage={step}
+                >
+                  <span
+                    className="v3-type-label-strong inline-flex size-11 shrink-0 items-center justify-center rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-surface)] tabular-nums"
+                    aria-hidden="true"
+                  >
+                    {String(step).padStart(2, "0")}
+                  </span>
+                  <span className="v3-type-caption ko-keep text-left">{item.label}</span>
+                </li>
+              );
+            })}
+          </ol>
+        </>
+      )}
+
+      <section
+        className="rounded-[var(--v3-radius-panel)] border border-[var(--color-border-default)] bg-[var(--color-background-subtle)] p-3 sm:p-5"
+        aria-labelledby="capture-stage-current-title"
+        data-capture-stage-context
+        data-capture-stage-current={currentCaptureStep}
+        data-capture-controller-stage={stage}
       >
-        {[
-          "입력",
-          "OCR/텍스트 확인",
-          "가장 큰 약점",
-          "오늘 계획 반영",
-        ].map((label, index) => {
-          const step = index + 1;
-          return (
-            <li
-              key={label}
-              className={`flex min-h-12 flex-col justify-center rounded-[var(--radius-sm)] px-2 py-2 text-center leading-tight sm:min-h-0 sm:px-3 ${
-                currentCaptureStep === step
-                  ? "bg-[color:var(--brand-050)] text-[color:var(--foreground-strong)]"
-                  : "bg-[color:var(--surface-soft)]"
-              }`}
-              aria-current={currentCaptureStep === step ? "step" : undefined}
-            >
-              <span className="font-medium">{step}. </span>
-              {label}
-            </li>
-          );
-        })}
-      </ol>
+        <p className="v3-type-caption text-[var(--color-text-brand)]">
+          지금 할 일 · {currentCaptureStageContext.eyebrow}
+        </p>
+        <h2
+          id="capture-stage-current-title"
+          ref={captureStageHeadingRef}
+          tabIndex={-1}
+          className="v3-type-section ko-keep mt-2 text-[var(--color-text-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--color-border-focus)]"
+        >
+          {currentCaptureStageContext.now}
+        </h2>
+        <dl className="mt-3 grid grid-cols-2 gap-2 sm:mt-4 sm:gap-3" data-capture-stage-explanation>
+          <div>
+            <dt className="v3-type-caption text-[var(--color-text-secondary)]">왜 필요한가</dt>
+            <dd className="v3-type-label ko-keep mt-1 text-[var(--color-text-primary)]">{currentCaptureStageContext.why}</dd>
+          </div>
+          <div>
+            <dt className="v3-type-caption text-[var(--color-text-secondary)]">다음 결과</dt>
+            <dd className="v3-type-label ko-keep mt-1 text-[var(--color-text-primary)]">{currentCaptureStageContext.result}</dd>
+          </div>
+        </dl>
+      </section>
 
       {savedConfirmation ? (
         <SavedCaptureConfirmationPanel
@@ -1571,7 +1770,7 @@ function CaptureProgressPill({ current, total, mode }: { current: number; total:
   const safeCurrent = Math.min(Math.max(current, 0), safeTotal);
   return (
     <div
-      className="flex max-w-full flex-wrap items-center justify-between gap-2 rounded-full border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)] px-3 py-2 text-xs text-[color:var(--muted)] sm:max-w-md"
+      className="hidden max-w-full flex-wrap items-center justify-between gap-2 rounded-full border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)] px-3 py-2 text-xs text-[color:var(--muted)] sm:flex sm:max-w-md"
       role="progressbar"
       aria-valuemin={0}
       aria-valuemax={safeTotal}
@@ -1827,17 +2026,17 @@ function IntakePanel({
   };
 
   return (
-    <section className="operating-surface p-4 sm:p-6">
-      <div className="space-y-2">
+    <section className="operating-surface p-3 sm:p-6">
+      <div className="space-y-1 sm:space-y-2">
         <p className="text-caption font-medium text-[color:var(--muted)]">1. 입력</p>
-        <h1 className="hero-balance ko-keep text-[28px] font-semibold leading-tight text-[color:var(--foreground-strong)]">오늘 한 것 올리기</h1>
+        <h2 className="v3-type-section ko-keep text-[color:var(--foreground-strong)]">입력 방식 선택</h2>
         <p className="ko-keep text-body text-[color:var(--muted)]">사진, PDF, 텍스트 중 하나로 시작하세요.</p>
       </div>
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)]" data-capture-input-options data-s224v-secondary-input-options="quiet">
+      <div className="mt-3 grid gap-3 sm:mt-5 sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)]" data-capture-input-options data-s224v-secondary-input-options="quiet">
         <Button
           type="button"
-          className="primary-action min-h-24 w-full flex-col items-start justify-center gap-2 px-5 text-left"
+          className="primary-action min-h-16 w-full flex-col items-start justify-center gap-2 px-5 text-left sm:min-h-24"
           onClick={() => {
             const sourceType = inferSourceTypeFromAction("camera");
             setSelectedInputMethod(sourceType);
@@ -1851,7 +2050,7 @@ function IntakePanel({
         <Button
           type="button"
           variant="outline"
-          className="secondary-action min-h-24 w-full flex-col items-start justify-center gap-2 px-5 text-left"
+          className="secondary-action min-h-16 w-full flex-col items-start justify-center gap-2 px-5 text-left sm:min-h-24"
           onClick={() => {
             const sourceType = inferSourceTypeFromAction("text");
             setSelectedInputMethod(sourceType);
@@ -1867,7 +2066,7 @@ function IntakePanel({
         <Button
           type="button"
           variant="outline"
-          className="min-h-24 w-full flex-col items-start justify-center gap-2 px-5 text-left text-[color:var(--muted)]"
+          className="min-h-16 w-full flex-col items-start justify-center gap-2 px-5 text-left text-[color:var(--muted)] sm:min-h-24"
           onClick={() => {
             const sourceType = inferSourceTypeFromAction("pdf");
             setSelectedInputMethod(sourceType);
@@ -1878,7 +2077,11 @@ function IntakePanel({
           PDF 선택
         </Button>
       </div>
-      <details className="quiet-disclosure mt-3 rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] bg-[color:var(--surface)]" data-s224v-secondary-diagnostics>
+      <details
+        className="quiet-disclosure mt-3 rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] bg-[color:var(--surface)]"
+        data-s224v-secondary-diagnostics
+        data-s232e-capture-optional-inputs
+      >
         <summary className="cursor-pointer list-none px-3 py-2 text-xs font-medium text-[color:var(--ink-muted)]">촬영 품질과 앨범 업로드</summary>
         <div className="border-t border-[color:var(--border-hairline)] px-3 py-3">
           <p className="text-xs leading-5 text-[color:var(--muted)]">촬영하거나 업로드한 뒤 OCR 초안을 직접 확인합니다.</p>
