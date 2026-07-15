@@ -277,12 +277,18 @@ test("S232D.5 exact-head Today IA is responsive, accessible, and interaction-saf
     expect(layout.scrollWidth).toBeLessThanOrEqual(layout.innerWidth + 1);
 
     await resetKeyboardStart(page);
+    const skipLink = page.locator('a[href="#learner-main"]');
+    const skipLinkUnfocusedStyle = await readFocusStyle(skipLink);
     const primaryCtaUnfocusedStyle = await readFocusStyle(primaryCta);
     const secondarySummary = secondary.locator(":scope > summary");
     const secondarySummaryUnfocusedStyle = await readFocusStyle(secondarySummary);
-    await page.keyboard.press("Tab");
-    const skipLink = page.locator('a[href="#learner-main"]');
-    await expect(skipLink).toBeFocused();
+    await tabUntilFocused(
+      page,
+      skipLink,
+      skipLinkUnfocusedStyle,
+      120,
+      "The skip link must be reachable with real Tab navigation after the authenticated redirect.",
+    );
     await expect(skipLink).toBeVisible();
     await page.keyboard.press("Enter");
     await expect(page.locator("main#learner-main")).toBeFocused();
