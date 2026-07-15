@@ -45,7 +45,7 @@ const LEARNER_NAV_ITEMS: readonly LearnerNavItem[] = [
   {
     href: "/app/notes",
     label: "학습 노트",
-    mobileLabel: "교정 노트",
+    mobileLabel: "학습 노트",
     preserveMode: true,
     activeHrefs: ["/app/notes", "/app/items", "/app/calculator"],
     analyticsAction: "notes",

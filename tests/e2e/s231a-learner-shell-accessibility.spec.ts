@@ -19,7 +19,7 @@ const viewports = [
   { label: "1440", width: 1440, height: 1024 },
 ] as const;
 
-const mobileLabels = ["오늘", "답안", "교정 노트", "복습", "기록"] as const;
+const mobileLabels = ["오늘", "답안", "학습 노트", "복습", "기록"] as const;
 const desktopLabels = ["오늘 할 일", "오늘 한 것", "학습 노트", "복습", "학습 기록"] as const;
 const navigationPaths = ["/app", "/app/capture", "/app/notes", "/app/review", "/app/agenda"] as const;
 
