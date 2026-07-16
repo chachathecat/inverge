@@ -701,6 +701,20 @@ export function WrongAnswerCaptureForm({
     });
   }
 
+  function updateCaptureText(value: string) {
+    setSavedConfirmation(null);
+    setForm((prev) =>
+      persist({
+        ...prev,
+        rawQuestionText: value,
+        rawOcrText: value,
+        hasManualCorrection: true,
+        ocrConfirmedByLearner: true,
+        lowConfidenceFlag: prev.lowConfidenceFlag || hasLowConfidenceText(value),
+      }),
+    );
+  }
+
   function updateSubject(value: string) {
     setForm((prev) => {
       const first = firstDefaults(value);
@@ -1814,6 +1828,7 @@ export function WrongAnswerCaptureForm({
             needsOcrConfirmation={needsOcrConfirmation}
             missingConfirmationFields={missingConfirmationFields.map((field) => field.label)}
             update={update}
+            updateCaptureText={updateCaptureText}
             updateSubject={updateSubject}
             onImage={handleImageImport}
             onPdf={handlePdfImport}
@@ -2192,6 +2207,7 @@ function IntakePanel({
   extracting,
   extractError,
   update,
+  updateCaptureText,
   updateSubject,
   needsOcrConfirmation,
   missingConfirmationFields,
@@ -2214,6 +2230,7 @@ function IntakePanel({
   extracting: boolean;
   extractError: string;
   updateSubject: (value: string) => void;
+  updateCaptureText: (value: string) => void;
   needsOcrConfirmation: boolean;
   missingConfirmationFields: string[];
   extractionState: ExtractionState;
@@ -2394,14 +2411,7 @@ function IntakePanel({
         <Textarea
           ref={textAreaRef}
           value={form.rawQuestionText}
-          onChange={(event) => {
-            const value = event.target.value;
-            update("rawQuestionText", value);
-            update("rawOcrText", value);
-            update("hasManualCorrection", true);
-            update("ocrConfirmedByLearner", true);
-            update("lowConfidenceFlag", form.lowConfidenceFlag || hasLowConfidenceText(value));
-          }}
+          onChange={(event) => updateCaptureText(event.target.value)}
           onFocus={() => { if (uploadedPages.length === 0 && !form.sourceLabel) update("sourceType", inferSourceTypeFromAction("text")); }}
           placeholder={
             mode === "second"

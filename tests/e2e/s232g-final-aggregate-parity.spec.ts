@@ -4,6 +4,7 @@ import {
   test,
   type Browser,
   type BrowserContext,
+  type Locator,
   type Page,
   type Response,
   type Route,
@@ -243,6 +244,68 @@ function requireTruth(value: unknown, code: string): asserts value {
 function emitSafeFailureDiagnostic(kind: "stage" | "assertion", code: string) {
   const safeCode = /^[a-z0-9-]{1,64}$/.test(code) ? code : "unknown";
   process.stdout.write(`[S232G] failure; kind=${kind}; code=${safeCode}\n`);
+}
+
+type SyntheticTextareaValueState =
+  | "exact-after-timeout"
+  | "empty"
+  | "whitespace-equivalent"
+  | "different"
+  | "wrong-control"
+  | "unavailable";
+
+const syntheticTextareaFailureCodes = {
+  "exact-after-timeout": "capture-text-entry-value-exact-after-timeout",
+  empty: "capture-text-entry-value-empty",
+  "whitespace-equivalent": "capture-text-entry-value-whitespace-equivalent",
+  different: "capture-text-entry-value-different",
+  "wrong-control": "capture-text-entry-value-wrong-control",
+  unavailable: "capture-text-entry-value-unavailable",
+} as const satisfies Record<SyntheticTextareaValueState, string>;
+
+async function classifySyntheticTextareaValue(
+  input: Locator,
+  expectedValue: string,
+): Promise<SyntheticTextareaValueState> {
+  try {
+    const state = await input.evaluate(
+      (element, expected) => {
+        if (!(element instanceof HTMLTextAreaElement)) return "wrong-control" as const;
+        if (element.value === expected) return "exact-after-timeout" as const;
+        if (element.value === "") return "empty" as const;
+        const normalizeWhitespace = (value: string) => value.replace(/\s+/gu, " ").trim();
+        return normalizeWhitespace(element.value) === normalizeWhitespace(expected)
+          ? ("whitespace-equivalent" as const)
+          : ("different" as const);
+      },
+      expectedValue,
+      { timeout: 5_000 },
+    );
+    switch (state) {
+      case "exact-after-timeout":
+      case "empty":
+      case "whitespace-equivalent":
+      case "different":
+      case "wrong-control":
+        return state;
+      default:
+        return "unavailable";
+    }
+  } catch {
+    return "unavailable";
+  }
+}
+
+async function requireExactSyntheticTextareaValue(input: Locator, expectedValue: string) {
+  try {
+    await expect(input).toHaveValue(expectedValue, { timeout: 20_000 });
+    return;
+  } catch {
+    const state = await classifySyntheticTextareaValue(input, expectedValue);
+    const code = syntheticTextareaFailureCodes[state];
+    emitSafeFailureDiagnostic("assertion", code);
+    throw new Error(`S232G acceptance failed: ${code}`);
+  }
 }
 
 function requireTwoAccounts() {
@@ -575,9 +638,7 @@ async function createSyntheticSourceThroughCapture(
   await staticStage("capture-text-entry-fill", () =>
     input.fill(syntheticCaptureText, { timeout: 20_000 }),
   );
-  await staticStage("capture-text-entry-value", () =>
-    expect(input).toHaveValue(syntheticCaptureText, { timeout: 20_000 }),
-  );
+  await requireExactSyntheticTextareaValue(input, syntheticCaptureText);
 
   let releaseRequest = () => {};
   const heldRequest = new Promise<void>((resolve) => {

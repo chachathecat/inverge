@@ -39,6 +39,7 @@ const firstOxRequestedClient = read(
 const todaySessionRunner = read("components/review-os/today-session-runner.tsx");
 const answerReview = read("app/answer-review/answer-review-client.tsx");
 const studyLogPage = read("app/app/study-log/page.tsx");
+const captureFormSource = read("components/review-os/capture-form.tsx");
 
 function learnerPageInventory() {
   const pages = [];
@@ -353,11 +354,44 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
     "capture-text-entry-focused",
     "capture-text-entry-editable",
     "capture-text-entry-fill",
-    "capture-text-entry-value",
   ]) {
     assert.match(runtimeSpec, new RegExp(`staticStage\\("${stage}"`));
   }
   assert.match(runtimeSpec, /input\.fill\(syntheticCaptureText, \{ timeout: 20_000 \}\)/);
+  assert.doesNotMatch(runtimeSpec, /staticStage\("capture-text-entry-value"/);
+  assert.match(
+    runtimeSpec,
+    /requireExactSyntheticTextareaValue\(input, syntheticCaptureText\)/,
+  );
+  assert.match(runtimeSpec, /toHaveValue\(expectedValue, \{ timeout: 20_000 \}\)/);
+  assert.match(runtimeSpec, /expectedValue,\s*\{ timeout: 5_000 \}/);
+  for (const state of [
+    "exact-after-timeout",
+    "empty",
+    "whitespace-equivalent",
+    "different",
+    "wrong-control",
+    "unavailable",
+  ]) {
+    assert.match(runtimeSpec, new RegExp(`capture-text-entry-value-${state}`));
+  }
+  const valueClassifierBlock = runtimeSpec.match(
+    /async function classifySyntheticTextareaValue[\s\S]*?\n}\n\nasync function requireExactSyntheticTextareaValue/,
+  )?.[0] ?? "";
+  assert.notEqual(valueClassifierBlock, "");
+  assert.doesNotMatch(
+    valueClassifierBlock,
+    /console\.|process\.stdout|inputValue|textContent|innerHTML|outerHTML|JSON\.stringify/,
+  );
+  assert.match(captureFormSource, /function updateCaptureText\(value: string\)/);
+  assert.match(
+    captureFormSource,
+    /rawQuestionText: value,[\s\S]*?rawOcrText: value,[\s\S]*?hasManualCorrection: true,[\s\S]*?ocrConfirmedByLearner: true,[\s\S]*?lowConfidenceFlag: prev\.lowConfidenceFlag \|\| hasLowConfidenceText\(value\)/,
+  );
+  assert.match(
+    captureFormSource,
+    /onChange=\{\(event\) => updateCaptureText\(event\.target\.value\)\}/,
+  );
   assert.match(runtimeSpec, /capture-saving-announcement/);
   assert.match(runtimeSpec, /rewrite-source-exact-binding/);
   assert.match(runtimeSpec, /calculatorStepFigmaProbe/);
