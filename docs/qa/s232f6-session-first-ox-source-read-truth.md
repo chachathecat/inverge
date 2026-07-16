@@ -70,9 +70,12 @@ synthetic payload, request/response body, DOM, screenshot, trace, or video.
   fails closed when either account is unavailable, both credentials resolve to
   one identity, or account A has no existing read-only item fixture. The run
   creates no learner record.
-- Browser mutation instrumentation fails closed when its context binding,
-  barrier, or origin validation is unavailable; browser-local and Node-side
-  instrumentation error counts must both remain zero.
+- Browser mutation instrumentation is installed only in exact runtime-origin
+  documents, including same-origin child frames; the protected Preview toolbar's
+  cross-origin documents are outside the product mutation boundary. The probe
+  still fails closed when its context binding, barrier, or origin validation is
+  unavailable; browser-local and Node-side instrumentation error counts must
+  both remain zero.
 - The protected Preview may inject its own `vercel.live` toolbar. Its bounded
   cross-origin POST is aborted before transmission, counted separately, and
   never treated as an application mutation. Every other non-read request,

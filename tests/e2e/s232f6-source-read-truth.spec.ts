@@ -338,7 +338,8 @@ async function installContextWideMutationProbe(page: Page) {
       if (kind === "analytics") analyticsMutationCount += 1;
     },
   );
-  await page.context().addInitScript(() => {
+  await page.context().addInitScript((expectedOrigin: string) => {
+    if (window.location.origin !== expectedOrigin) return;
     const runtimeWindow = window as Window & {
       __s232f6RecordMutation?: (
         kind: "storage" | "analytics" | "barrier",
@@ -433,7 +434,7 @@ async function installContextWideMutationProbe(page: Page) {
       }
       return localInstrumentationErrorCount;
     };
-  });
+  }, runtimeOrigin);
   return {
     barrier: async () => {
       return page.evaluate(async () => {

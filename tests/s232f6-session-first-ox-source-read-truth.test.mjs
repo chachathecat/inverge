@@ -271,6 +271,11 @@ test("S232F.6 repository ownership and exact-head runtime evidence fail closed",
   assert.match(runtimeSpec, /realCrossAccountUnexpectedRuntimeErrorCount/);
   assert.match(runtimeSpec, /realTwoAccountDenialClaimed: true/);
   assert.match(runtimeSpec, /installContextWideMutationProbe/);
+  assert.match(
+    runtimeSpec,
+    /if \(window\.location\.origin !== expectedOrigin\) return;/,
+    "mutation instrumentation must run only inside exact runtime-origin documents",
+  );
   assert.match(runtimeSpec, /__s232f6RecordMutation/);
   assert.match(runtimeSpec, /localInstrumentationErrorCount/);
   assert.match(runtimeSpec, /browserInstrumentationErrorCount/);
