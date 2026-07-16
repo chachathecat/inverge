@@ -361,6 +361,7 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
     "capture-quick-save-click",
     "capture-saving-visible",
     "capture-saving-semantics",
+    "capture-saving-work-lock-count",
     "capture-source-mutation-release",
     "capture-source-emergency-release",
     "capture-source-response-wait",
@@ -377,6 +378,11 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
   assert.doesNotMatch(runtimeSpec, /page\.route\("\*\*\/api\/os\/items", holdItemMutation, \{ times: 1 \}\)/);
   assert.match(runtimeSpec, /capture-held-item-mutation-exact/);
   assert.match(runtimeSpec, /capture-held-item-mutation-final-exact/);
+  assert.match(runtimeSpec, /capture-source-route-handler/);
+  assert.match(runtimeSpec, /capture-source-receipt-shape/);
+  assert.match(runtimeSpec, /error instanceof Error/);
+  assert.match(runtimeSpec, /static stage failed\|acceptance failed/);
+  assert.match(runtimeSpec, /throw error;/);
   assert.match(
     runtimeSpec,
     /capture-saving-work-lock[\s\S]*?capture-source-mutation-release[\s\S]*?capture-source-response-wait[\s\S]*?capture-source-route-remove[\s\S]*?capture-source-receipt[\s\S]*?capture-completed-visible[\s\S]*?capture-completed-announcement/,

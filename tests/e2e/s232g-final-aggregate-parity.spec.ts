@@ -228,8 +228,16 @@ async function installPrivacySafeRuntimeGuard(
 async function staticStage<T>(code: string, action: () => Promise<T>): Promise<T> {
   try {
     return await action();
-  } catch {
+  } catch (error) {
     emitSafeFailureDiagnostic("stage", code);
+    if (
+      error instanceof Error &&
+      /^S232G (?:static stage failed|acceptance failed): [a-z0-9-]{1,64}$/.test(
+        error.message,
+      )
+    ) {
+      throw error;
+    }
     throw new Error(`S232G static stage failed: ${code}`);
   }
 }
@@ -812,6 +820,7 @@ async function createSyntheticSourceThroughCapture(
   let releaseRequest = () => {};
   let mutationReleased = false;
   let heldItemMutationCount = 0;
+  let routeHandlerFailed = false;
   const heldRequest = new Promise<void>((resolve) => {
     releaseRequest = resolve;
   });
@@ -821,22 +830,21 @@ async function createSyntheticSourceThroughCapture(
     releaseRequest();
   };
   const holdItemMutation = async (route: Route) => {
-    const request = route.request();
-    let targetMutation = false;
     try {
-      targetMutation =
+      const request = route.request();
+      const targetMutation =
         request.method() === "POST" &&
         new URL(request.url()).pathname === "/api/os/items";
-    } catch {
-      targetMutation = false;
-    }
-    if (!targetMutation) {
+      if (!targetMutation) {
+        await route.fallback();
+        return;
+      }
+      heldItemMutationCount += 1;
+      await heldRequest;
       await route.fallback();
-      return;
+    } catch {
+      routeHandlerFailed = true;
     }
-    heldItemMutationCount += 1;
-    await heldRequest;
-    await route.fallback();
   };
   await staticStage("capture-source-route-hold", () =>
     page.route("**/api/os/items", holdItemMutation),
@@ -886,10 +894,10 @@ async function createSyntheticSourceThroughCapture(
         savingAnnouncement.visible,
       "capture-saving-announcement",
     );
-    requireTruth(
-      (await page.locator('fieldset[data-capture-work-lock="locked"]:disabled').count()) === 1,
-      "capture-saving-work-lock",
+    const workLockCount = await staticStage("capture-saving-work-lock-count", () =>
+      page.locator('fieldset[data-capture-work-lock="locked"]:disabled').count(),
     );
+    requireTruth(workLockCount === 1, "capture-saving-work-lock");
     requireTruth(heldItemMutationCount === 1, "capture-held-item-mutation-exact");
     await staticStage("capture-source-mutation-release", async () => {
       releaseHeldMutation();
@@ -906,11 +914,21 @@ async function createSyntheticSourceThroughCapture(
     );
   }
 
+  requireTruth(!routeHandlerFailed, "capture-source-route-handler");
   requireTruth(heldItemMutationCount === 1, "capture-held-item-mutation-final-exact");
   requireTruth(response, "capture-source-response");
-  const receipt = await staticStage("capture-source-receipt", () =>
-    response.json() as Promise<{ ok?: unknown; deduped?: unknown; item?: { id?: unknown } }>,
+  const receiptValue = await staticStage("capture-source-receipt", () =>
+    response.json() as Promise<unknown>,
   );
+  requireTruth(
+    receiptValue !== null && typeof receiptValue === "object" && !Array.isArray(receiptValue),
+    "capture-source-receipt-shape",
+  );
+  const receipt = receiptValue as {
+    ok?: unknown;
+    deduped?: unknown;
+    item?: { id?: unknown };
+  };
   requireTruth(response.status() === 200, "capture-source-http-receipt");
   requireTruth(receipt.ok === true, "capture-source-ok-receipt");
   requireTruth(receipt.deduped === false, "capture-source-new-receipt");
