@@ -580,6 +580,32 @@ function syntheticCaptureDetail(userId: string, itemId: string, rawText: string)
   };
 }
 
+function classifyUnexpectedMutationRequest(
+  requestUrl: URL,
+  runtimeOrigin: string,
+) {
+  if (requestUrl.origin !== runtimeOrigin) return "cross-origin";
+  if (requestUrl.pathname.startsWith("/_vercel/insights")) {
+    return "platform-analytics";
+  }
+  if (requestUrl.pathname === "/api/inverge/events") {
+    return "product-analytics";
+  }
+  if (requestUrl.pathname === "/api/auth/session") {
+    return "auth-session";
+  }
+  if (requestUrl.pathname === "/api/os/profile") {
+    return "profile";
+  }
+  if (requestUrl.pathname === "/api/os/first-ox/attempts") {
+    return "first-ox-attempt";
+  }
+  if (/^\/api\/os\/review-queue\/[^/]+\/complete$/.test(requestUrl.pathname)) {
+    return "review-queue-completion";
+  }
+  return "unclassified-same-origin";
+}
+
 test("S232F.6 exact-head Session and First OX keep requested reads truthful", async ({
   browser,
   page,
@@ -721,8 +747,11 @@ test("S232F.6 exact-head Session and First OX keep requested reads truthful", as
 
     if (!readOnlyMethods.has(request.method())) {
       postLoginBrowserMutationRequestCount += 1;
+      const requestClass = classifyUnexpectedMutationRequest(url, runtimeOrigin);
       await route.abort("blockedbyclient");
-      throw new Error("S232F.6 blocked an unexpected non-read browser request.");
+      throw new Error(
+        `S232F.6 blocked an unexpected non-read browser request (${request.method()} ${requestClass}).`,
+      );
     }
     await route.continue();
   });
