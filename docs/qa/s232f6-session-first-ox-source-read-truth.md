@@ -65,9 +65,11 @@ synthetic payload, request/response body, DOM, screenshot, trace, or video.
 
 ## Evidence limits
 
-- CI requires dedicated account A and B secrets. It fails closed when either
-  account is unavailable, both credentials resolve to one identity, or account
-  A has no existing read-only item fixture. The run creates no learner record.
+- CI prefers dedicated account A and B secrets and may reuse the existing
+  E2E/TEST credential namespaces as A/B only when both are provisioned. It
+  fails closed when either account is unavailable, both credentials resolve to
+  one identity, or account A has no existing read-only item fixture. The run
+  creates no learner record.
 - Browser mutation instrumentation fails closed when its context binding,
   barrier, or origin validation is unavailable; browser-local and Node-side
   instrumentation error counts must both remain zero.

@@ -287,6 +287,14 @@ test("S232F.6 repository ownership and exact-head runtime evidence fail closed",
   assert.match(runtimeWorkflow, /secrets\.E2E_USER_A_PASSWORD/);
   assert.match(runtimeWorkflow, /secrets\.E2E_USER_B_EMAIL/);
   assert.match(runtimeWorkflow, /secrets\.E2E_USER_B_PASSWORD/);
+  assert.match(
+    runtimeWorkflow,
+    /secrets\.E2E_USER_A_EMAIL \|\| secrets\.E2E_USER_EMAIL/,
+  );
+  assert.match(
+    runtimeWorkflow,
+    /secrets\.E2E_USER_B_EMAIL \|\| secrets\.TEST_USER_EMAIL/,
+  );
   assert.match(qa, /two isolated real invited-account sessions/i);
   assert.match(qa, /first-100 visible ID\s+digest is a final-state backstop/i);
   assert.match(qa, /not database-wide immutability/i);
