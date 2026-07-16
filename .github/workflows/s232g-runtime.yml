@@ -180,7 +180,8 @@ jobs:
             > "${runner_log}" 2>&1; then
             diagnostic="$(
               sed -nE \
-                's/^\[S232G\] test completed; class=(aggregate|calculator-step|unknown); status=(passed|failed|timedOut|skipped|interrupted|unknown); failure-code=([a-z0-9-]{1,64})$/class=\1,status=\2,code=\3/p' \
+                -e 's/^\[S232G\] test completed; class=(aggregate|calculator-step|unknown); status=(passed|failed|timedOut|skipped|interrupted|unknown); failure-code=([a-z0-9-]{1,64})$/class=\1,status=\2,code=\3/p' \
+                -e 's/^\[S232G\] failure; kind=(stage|assertion); code=([a-z0-9-]{1,64})$/kind=\1,code=\2/p' \
                 "${runner_log}" | paste -sd ';' -
             )"
             rm -f "${runner_log}"

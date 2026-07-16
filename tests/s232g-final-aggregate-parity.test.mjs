@@ -353,6 +353,9 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
   assert.doesNotMatch(runtimeSpec, /causallyBoundNavigationAbortCount <= 8/);
   assert.match(runtimeSpec, /data-s232g-skip-wrap-sentinel/);
   assert.match(runtimeSpec, /skip-link-wrap-sentinel-focus/);
+  assert.match(runtimeSpec, /emitSafeFailureDiagnostic\("stage", code\)/);
+  assert.match(runtimeSpec, /emitSafeFailureDiagnostic\("assertion", code\)/);
+  assert.match(runtimeSpec, /\^\[a-z0-9-\]\{1,64\}\$/);
   assert.match(runtimeSpec, /keyboard-forward-start-sentinel/);
   assert.doesNotMatch(runtimeSpec, /keyboard-visible-focus-activation/);
   assert.match(runtimeSpec, /actualBrowserZoomClaimed: false/);
@@ -393,6 +396,7 @@ test("S232G workflow checks the exact deployment and uploads validated files onl
   assert.match(workflow, /--reporter=\.\/tests\/e2e\/support\/s232g-metadata-reporter\.ts/);
   assert.match(workflow, /> "\$\{runner_log\}" 2>&1/);
   assert.match(workflow, /failure-code=\(\[a-z0-9-\]\{1,64\}\)/);
+  assert.match(workflow, /failure; kind=\(stage\|assertion\); code=/);
   assert.match(workflow, /paste -sd ';' -/);
   assert.match(workflow, /rm -f "\$\{runner_log\}"/);
   assert.match(workflow, /class=unknown,status=unknown,code=unknown/);

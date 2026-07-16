@@ -23,7 +23,7 @@ const allowedRunStatuses = new Set([
 ]);
 
 const safeS232GFailurePattern =
-  /(?:^|\n)(?:Error: )?S232G (?:static stage failed|acceptance failed): ([a-z0-9-]{1,64})(?:\n|$)/;
+  /(?:^|\n)(?:Error: )?S232G (?:static stage failed|acceptance failed): ([a-z0-9-]{1,64})\b/;
 
 function classifyTest(test: TestCase) {
   if (test.title === "S232G final aggregate exact-head authenticated parity") {

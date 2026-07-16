@@ -228,12 +228,21 @@ async function staticStage<T>(code: string, action: () => Promise<T>): Promise<T
   try {
     return await action();
   } catch {
+    emitSafeFailureDiagnostic("stage", code);
     throw new Error(`S232G static stage failed: ${code}`);
   }
 }
 
 function requireTruth(value: unknown, code: string): asserts value {
-  if (!value) throw new Error(`S232G acceptance failed: ${code}`);
+  if (!value) {
+    emitSafeFailureDiagnostic("assertion", code);
+    throw new Error(`S232G acceptance failed: ${code}`);
+  }
+}
+
+function emitSafeFailureDiagnostic(kind: "stage" | "assertion", code: string) {
+  const safeCode = /^[a-z0-9-]{1,64}$/.test(code) ? code : "unknown";
+  process.stdout.write(`[S232G] failure; kind=${kind}; code=${safeCode}\n`);
 }
 
 function requireTwoAccounts() {
