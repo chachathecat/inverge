@@ -222,6 +222,17 @@ async function expectNoHorizontalOverflow(page: Page, label: string) {
   expect(overflow, `${label} must not have horizontal overflow.`).toBeLessThanOrEqual(1);
 }
 
+function expectOnlyControlledInitialConsoleErrors(errors: string[]) {
+  const controlledErrors = new Set([
+    "Failed to load resource: net::ERR_INTERNET_DISCONNECTED",
+    "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
+  ]);
+  expect(
+    errors.filter((error) => !controlledErrors.has(error)),
+    "Only the deliberately injected Offline and 401 browser messages may reach the console.",
+  ).toEqual([]);
+}
+
 async function reachByKeyboardTab(page: Page, target: Locator) {
   await page.locator("body").click({ position: { x: 2, y: 2 } });
   for (let index = 0; index < 80; index += 1) {
@@ -548,7 +559,7 @@ test("S232F.5 exact-head calculator outbox is account-bound, receipt-bound, and 
     const observedAfter = await observedDeploymentSha(writerPage);
     expect(observedAfter.deploymentSha).toBe(runtimeRunnerSha);
     expect(serverMutationRequestCount).toBe(0);
-    expect(initialErrors.consoleErrors).toEqual([]);
+    expectOnlyControlledInitialConsoleErrors(initialErrors.consoleErrors);
     expect(initialErrors.pageErrors).toEqual([]);
     expect(initialErrors.sameOriginRequestFailures).toHaveLength(1);
     expect(initialErrors.sameOriginRequestFailures[0]).toContain("HTTP 401");
