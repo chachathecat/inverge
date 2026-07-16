@@ -2060,12 +2060,14 @@ function sumCounters(counters: readonly RuntimeCounters[], key: keyof RuntimeCou
 }
 
 test("S232G final aggregate exact-head authenticated parity", async ({ browser, page }, testInfo: TestInfo) => {
-  requireSafeAuthenticatedRuntime("S232G", {
-    requireTargetSha: true,
-    requireExactHead: true,
+  await staticStage("runtime-preflight", async () => {
+    requireSafeAuthenticatedRuntime("S232G", {
+      requireTargetSha: true,
+      requireExactHead: true,
+    });
+    requireTwoAccounts();
+    requireRunNonce();
   });
-  requireTwoAccounts();
-  requireRunNonce();
 
   await staticStage("durable-flow-mobile-viewport", () =>
     page.setViewportSize({ width: 390, height: 844 }),
@@ -2073,7 +2075,9 @@ test("S232G final aggregate exact-head authenticated parity", async ({ browser, 
 
   const mainCounters = createRuntimeCounters();
   const mainPhase = createRuntimePhaseState();
-  await installPrivacySafeRuntimeGuard(page.context(), page, mainCounters, mainPhase);
+  await staticStage("main-runtime-guard", () =>
+    installPrivacySafeRuntimeGuard(page.context(), page, mainCounters, mainPhase),
+  );
   await staticStage("protected-preview-main", () => establishProtectedPreviewSession(page, "S232G"));
   mainPhase.current = "auth-navigation";
   try {
@@ -2136,11 +2140,13 @@ test("S232G final aggregate exact-head authenticated parity", async ({ browser, 
   await staticStage("secondary-mobile-viewport", () =>
     secondaryPage.setViewportSize({ width: 390, height: 844 }),
   );
-  await installPrivacySafeRuntimeGuard(
-    secondaryContext,
-    secondaryPage,
-    secondaryCounters,
-    secondaryPhase,
+  await staticStage("secondary-runtime-guard", () =>
+    installPrivacySafeRuntimeGuard(
+      secondaryContext,
+      secondaryPage,
+      secondaryCounters,
+      secondaryPhase,
+    ),
   );
   try {
     await staticStage("protected-preview-secondary", () =>
@@ -2235,7 +2241,9 @@ test("S232G final aggregate exact-head authenticated parity", async ({ browser, 
   await staticStage("fresh-owner-mobile-viewport", () =>
     freshPage.setViewportSize({ width: 390, height: 844 }),
   );
-  await installPrivacySafeRuntimeGuard(freshContext, freshPage, freshCounters, freshPhase);
+  await staticStage("fresh-owner-runtime-guard", () =>
+    installPrivacySafeRuntimeGuard(freshContext, freshPage, freshCounters, freshPhase),
+  );
   try {
     await staticStage("protected-preview-fresh-owner", () =>
       establishProtectedPreviewSession(freshPage, "S232G-A-fresh"));

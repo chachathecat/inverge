@@ -356,6 +356,8 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
   assert.match(runtimeSpec, /emitSafeFailureDiagnostic\("stage", code\)/);
   assert.match(runtimeSpec, /emitSafeFailureDiagnostic\("assertion", code\)/);
   assert.match(runtimeSpec, /\^\[a-z0-9-\]\{1,64\}\$/);
+  assert.match(runtimeSpec, /staticStage\("runtime-preflight"/);
+  assert.match(runtimeSpec, /staticStage\("main-runtime-guard"/);
   assert.match(runtimeSpec, /keyboard-forward-start-sentinel/);
   assert.doesNotMatch(runtimeSpec, /keyboard-visible-focus-activation/);
   assert.match(runtimeSpec, /actualBrowserZoomClaimed: false/);
@@ -388,9 +390,16 @@ test("S232G workflow checks the exact deployment and uploads validated files onl
   assert.match(workflow, /value\?\.sha === process\.env\.EXPECTED_SHA/);
   assert.match(workflow, /value\?\.environment === "Preview"/);
   assert.match(workflow, /payload\.deploymentSha !== process\.env\.EXPECTED_SHA/);
-  assert.match(workflow, /E2E_USER_A_EMAIL: \$\{\{ secrets\.E2E_USER_A_EMAIL \}\}/);
+  assert.match(
+    workflow,
+    /E2E_USER_A_EMAIL: \$\{\{ secrets\.E2E_USER_A_EMAIL \|\| secrets\.E2E_USER_EMAIL \}\}/,
+  );
+  assert.match(
+    workflow,
+    /E2E_USER_A_PASSWORD: \$\{\{ secrets\.E2E_USER_A_PASSWORD \|\| secrets\.E2E_USER_PASSWORD \}\}/,
+  );
   assert.match(workflow, /E2E_USER_B_EMAIL: \$\{\{ secrets\.E2E_USER_B_EMAIL \}\}/);
-  assert.doesNotMatch(workflow, /\|\| secrets\./);
+  assert.doesNotMatch(workflow, /E2E_USER_B_(?:EMAIL|PASSWORD):[^\n]*\|\|/);
   assert.match(workflow, /--workers=1/);
   assert.match(workflow, /--retries=0/);
   assert.match(workflow, /--reporter=\.\/tests\/e2e\/support\/s232g-metadata-reporter\.ts/);

@@ -160,10 +160,10 @@ jobs:
         shell: bash
         env:
           S232G_AUTH_RUNTIME: "1"
-          E2E_USER_EMAIL: ${{ secrets.E2E_USER_A_EMAIL }}
-          E2E_USER_PASSWORD: ${{ secrets.E2E_USER_A_PASSWORD }}
-          E2E_USER_A_EMAIL: ${{ secrets.E2E_USER_A_EMAIL }}
-          E2E_USER_A_PASSWORD: ${{ secrets.E2E_USER_A_PASSWORD }}
+          E2E_USER_EMAIL: ${{ secrets.E2E_USER_A_EMAIL || secrets.E2E_USER_EMAIL }}
+          E2E_USER_PASSWORD: ${{ secrets.E2E_USER_A_PASSWORD || secrets.E2E_USER_PASSWORD }}
+          E2E_USER_A_EMAIL: ${{ secrets.E2E_USER_A_EMAIL || secrets.E2E_USER_EMAIL }}
+          E2E_USER_A_PASSWORD: ${{ secrets.E2E_USER_A_PASSWORD || secrets.E2E_USER_PASSWORD }}
           E2E_USER_B_EMAIL: ${{ secrets.E2E_USER_B_EMAIL }}
           E2E_USER_B_PASSWORD: ${{ secrets.E2E_USER_B_PASSWORD }}
           VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
