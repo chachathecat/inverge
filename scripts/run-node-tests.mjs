@@ -92,6 +92,7 @@ const defaultTestFiles = [
   "tests/s232f4a-core-route-read-states.test.mjs",
   "tests/s232f4b-remaining-read-states.test.mjs",
   "tests/s232f5-calculator-outbox.test.mjs",
+  "tests/s232f6-session-first-ox-source-read-truth.test.mjs",
   "tests/s220b-dabangil-launch-surface.test.mjs",
   "tests/practice-calculation-unit-registry.test.mjs",
   "tests/rewrite-regrade-history-contract.test.mjs",
