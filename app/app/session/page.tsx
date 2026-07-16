@@ -2,7 +2,12 @@ import { ReviewOsFeedbackButton } from "@/components/review-os/feedback-button";
 import { ReviewOsAccessState } from "@/components/review-os/review-os-access-state";
 import { ClosedBetaBanner } from "@/components/shared/closed-beta-banner";
 import { TodaySessionRunner } from "@/components/review-os/today-session-runner";
+import { RequestedSourceReadState } from "@/components/review-os/requested-source-read-state";
 import { getModeConfig, resolveAppraisalMode } from "@/lib/review-os/appraisal";
+import {
+  missingRequestedCoreRouteRead,
+  resolveRequestedCoreRouteRead,
+} from "@/lib/review-os/core-route-read-outcome";
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
 import { reviewOsService } from "@/lib/review-os/service";
 import { buildDetailStudyNote } from "@/lib/review-os/study-note";
@@ -18,13 +23,62 @@ export default async function ReviewOsSessionPage({ searchParams }: PageProps) {
   const query = await searchParams;
   const modeParam = query?.mode;
   const savedCapture = query?.savedCapture === "1";
-  const savedCaptureItemId = typeof query?.itemId === "string" ? query.itemId : null;
-  const { session, access, profile } = await getReviewOsServerContext(buildReviewOsReturnTo("/app/session", modeParam));
+  const savedCaptureItemId =
+    typeof query?.itemId === "string" ? query.itemId.trim() || null : null;
+  const { session, access, profile } = await getReviewOsServerContext(
+    buildReviewOsReturnTo("/app/session", modeParam),
+    { includeUsage: false },
+  );
   if (access.status !== "allowed") return <ReviewOsAccessState access={access} embedded />;
-  if (!session.userId || !session.email) return null;
+  if (!session.userId) return null;
 
   const mode = resolveAppraisalMode(profile, modeParam);
   const config = getModeConfig(mode);
+  const savedCaptureRead = savedCapture
+    ? savedCaptureItemId
+      ? await resolveRequestedCoreRouteRead(
+          "session_saved_capture_detail",
+          () =>
+            reviewOsService.getWrongAnswerDetail(
+              session.userId!,
+              session.email,
+              savedCaptureItemId,
+            ),
+          (detail) =>
+            detail.item.userId === session.userId &&
+            detail.item.createdFromCapture === true &&
+            detail.item.examName === config.label,
+        )
+      : missingRequestedCoreRouteRead()
+    : null;
+
+  if (savedCaptureRead?.status === "unavailable") {
+    return (
+      <div className="space-y-6">
+        <ClosedBetaBanner />
+        <RequestedSourceReadState
+          surface="session"
+          status="unavailable"
+          returnHref={`/app/session?mode=${mode}`}
+        />
+      </div>
+    );
+  }
+  if (savedCaptureRead?.status === "missing") {
+    return (
+      <div className="space-y-6">
+        <ClosedBetaBanner />
+        <RequestedSourceReadState
+          surface="session"
+          status="missing"
+          returnHref={`/app/session?mode=${mode}`}
+        />
+      </div>
+    );
+  }
+
+  const savedCaptureDetail =
+    savedCaptureRead?.status === "ready" ? savedCaptureRead.value : null;
   const focus = await reviewOsService.getTodayFocus(session.userId, session.email, mode);
   if (mode === "second" && focus.nextActionType === "capture_now") {
     redirect("/app/write?mode=second");
@@ -33,11 +87,15 @@ export default async function ReviewOsSessionPage({ searchParams }: PageProps) {
     ? focus.queue.find((item) => item.itemId === savedCaptureItemId) ?? null
     : null;
   const queueItem = savedCaptureQueueItem ?? focus.queue.find((item) => item.queueId === focus.sourceQueueId) ?? focus.queue[0] ?? null;
-  const queueItemDetail = queueItem ? await reviewOsService.getWrongAnswerDetail(session.userId, session.email, queueItem.itemId) : null;
-  const savedCaptureDetail =
-    savedCapture && savedCaptureItemId
-      ? await reviewOsService.getWrongAnswerDetail(session.userId, session.email, savedCaptureItemId).catch(() => null)
-      : null;
+  const queueItemDetail = !queueItem
+    ? null
+    : savedCaptureDetail?.item.id === queueItem.itemId
+      ? savedCaptureDetail
+      : await reviewOsService.getWrongAnswerDetail(
+          session.userId,
+          session.email,
+          queueItem.itemId,
+        );
   const savedCaptureSignals =
     typeof savedCaptureDetail?.item.derivedPayload?.capture_note_engine_v2 === "object" &&
     savedCaptureDetail.item.derivedPayload.capture_note_engine_v2
@@ -46,25 +104,26 @@ export default async function ReviewOsSessionPage({ searchParams }: PageProps) {
           savedCaptureDetail.item.derivedPayload.capture_note_engine_v1
         ? (savedCaptureDetail.item.derivedPayload.capture_note_engine_v1 as Record<string, unknown>)
       : null;
-  const activeDetail =
-    savedCaptureDetail && queueItem && savedCaptureDetail.item.id === queueItem.itemId
-      ? savedCaptureDetail
-      : queueItemDetail;
-  const note = activeDetail ? buildDetailStudyNote(activeDetail) : null;
+  const savedCaptureNote = savedCaptureDetail
+    ? buildDetailStudyNote(savedCaptureDetail)
+    : null;
+  const queueItemNote = queueItemDetail
+    ? buildDetailStudyNote(queueItemDetail)
+    : null;
 
   return (
     <div className="space-y-6">
       <ClosedBetaBanner />
-      {savedCapture ? (
+      {savedCaptureDetail ? (
         <DailyCommandCard title="오늘 계획에 반영했습니다." description="오늘 계획에 반영 · 복습에 남길 내용 · 학습 노트 상세에 저장했습니다.">
           <div className="grid gap-3 rounded-[var(--radius-sm)] bg-[color:var(--surface-soft)] p-3" aria-live="polite">
             <p className="text-sm leading-6 text-[color:var(--ink-muted)]">
               <span className="font-medium text-[color:var(--ink-primary)]">가장 큰 간극:</span>{" "}
-              {String(savedCaptureSignals?.one_biggest_gap ?? note?.missingIssue ?? note?.weakPoint ?? "간극 1개를 먼저 고정합니다.")}
+              {String(savedCaptureSignals?.one_biggest_gap ?? savedCaptureNote?.missingIssue ?? savedCaptureNote?.weakPoint ?? "간극 1개를 먼저 고정합니다.")}
             </p>
             <p className="text-sm leading-6 text-[color:var(--ink-muted)]">
               <span className="font-medium text-[color:var(--ink-primary)]">다음 행동:</span>{" "}
-              {String(savedCaptureSignals?.one_next_action ?? note?.rewriteInstruction ?? note?.coreLine ?? "한 문장 재시도/다시쓰기로 바로 이어갑니다.")}
+              {String(savedCaptureSignals?.one_next_action ?? savedCaptureNote?.rewriteInstruction ?? savedCaptureNote?.coreLine ?? "한 문장 재시도/다시쓰기로 바로 이어갑니다.")}
             </p>
           </div>
           <div className="mt-4 grid gap-2">
@@ -101,19 +160,20 @@ export default async function ReviewOsSessionPage({ searchParams }: PageProps) {
       ) : null}
       <section id="today-session-runner">
         <TodaySessionRunner
+        key={`${session.userId}:${queueItem?.queueId ?? "none"}`}
         mode={mode}
         modeLabel={config.label}
         focus={focus}
         queueItem={queueItem}
         note={
-          note
+          queueItemNote
             ? {
-                summary: note.summary,
-                weakPoint: note.weakPoint,
-                missingIssue: note.missingIssue,
-                rewriteInstruction: note.rewriteInstruction,
-                coreLine: note.coreLine,
-                nextReviewDate: note.nextReviewDate,
+                summary: queueItemNote.summary,
+                weakPoint: queueItemNote.weakPoint,
+                missingIssue: queueItemNote.missingIssue,
+                rewriteInstruction: queueItemNote.rewriteInstruction,
+                coreLine: queueItemNote.coreLine,
+                nextReviewDate: queueItemNote.nextReviewDate,
               }
             : null
         }

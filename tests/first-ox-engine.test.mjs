@@ -345,24 +345,26 @@ test("first-ox concept card uses trap-specific copy and removes vague fallback",
 });
 
 
-test("first O/X retry route consumes retryItemId and loads user-owned raw statement", async () => {
+test("first O/X retry route consumes retryItemId through the user-scoped strict loader", async () => {
   const pageSource = await readFile("app/app/first/ox/page.tsx", "utf8");
+  const requestedSource = await readFile("components/review-os/first-ox/first-ox-requested-source-client.tsx", "utf8");
   assert.match(pageSource, /searchParams\?: Promise<\{ retryItemId\?: string; sourceItemId\?: string \}>/);
-  assert.ok(pageSource.includes("reviewOsService.getWrongAnswerDetail(userId, email, retryItemId)"));
-  assert.ok(pageSource.includes("detail.item.userId !== userId"));
-  assert.ok(pageSource.includes("isFirstOxRetryItem(detail.item)"));
-  assert.ok(pageSource.includes("splitFirstOxRawQuestionText(detail.item.rawQuestionText)"));
-  assert.equal(/derivedPayload.*statementText|metadata.*statementText|conceptCard\?.*statementText/s.test(pageSource), false);
-  assert.ok(pageSource.includes("id: detail.item.problemIdentifier ?? detail.item.id"));
-  assert.ok(pageSource.includes("expectedOx = isKnownOx(detail.item.correctAnswer)"));
+  assert.ok(pageSource.includes("FirstOxRequestedSourceClient"));
+  assert.ok(requestedSource.includes("readFirstOxSourceDetail(itemId, controller.signal)"));
+  assert.ok(requestedSource.includes("outcome.detail.item.userId !== expectedUserId"));
+  assert.ok(requestedSource.includes("isFirstOxRetryItem(detail.item)"));
+  assert.ok(requestedSource.includes("splitFirstOxRawQuestionText(detail.item.rawQuestionText)"));
+  assert.equal(/derivedPayload.*statementText|metadata.*statementText|conceptCard\?.*statementText/s.test(requestedSource), false);
+  assert.ok(requestedSource.includes("id: detail.item.problemIdentifier ?? detail.item.id"));
+  assert.ok(requestedSource.includes("expectedOx = isKnownOx(detail.item.correctAnswer)"));
 });
 
 test("FirstOxPracticeClient accepts retry statements while preserving generic practice", async () => {
   const clientSource = await readFile("components/review-os/first-ox/first-ox-practice-client.tsx", "utf8");
-  ["initialStatements?: FirstExamStatement[]", "initialSubject?: string", "initialStem?: string", "initialChoiceText?: string", "retrySourceItemId?: string", "retryLoadStatus?: \"loaded\" | \"not_found\" | \"generic\""].forEach((token) => assert.ok(clientSource.includes(token), token));
-  assert.ok(clientSource.includes("retryStatements ?? buildSampleStatements()"));
+  ["initialStatements?: FirstExamStatement[]", "initialSubject?: string", "initialStem?: string", "initialChoiceText?: string", "retrySourceItemId?: string", "retryLoadStatus?: \"loaded\" | \"generic\""].forEach((token) => assert.ok(clientSource.includes(token), token));
+  assert.ok(clientSource.includes("retryStatements ?? (isGenericSource ? buildSampleStatements() : [])"));
   assert.ok(clientSource.includes("저장된 선지를 다시 판단합니다."));
-  assert.ok(clientSource.includes("저장된 선지를 불러오지 못해 기본 O/X 연습으로 시작합니다."));
+  assert.equal(clientSource.includes("저장된 선지를 불러오지 못해 기본 O/X 연습으로 시작합니다."), false);
   assert.equal(clientSource.includes('retryLoadStatus === "fallback"'), false);
   assert.ok(clientSource.includes("<CollapsibleDetails title=\"5지선다 직접 붙여넣기\""));
   assert.ok(clientSource.includes("buildSampleStatements()"));
@@ -416,10 +418,12 @@ test("capture-to-OX bridge copy, source route, and source-specific O/X copy are 
   ].forEach((phrase) => phrase instanceof RegExp ? assert.match(captureSource, phrase) : assert.ok(captureSource.includes(phrase), phrase));
 
   const pageSource = await readFile("app/app/first/ox/page.tsx", "utf8");
+  const requestedSource = await readFile("components/review-os/first-ox/first-ox-requested-source-client.tsx", "utf8");
   assert.ok(pageSource.includes("sourceItemId"));
-  assert.ok(pageSource.includes("loadFirstOxCaptureSourceState"));
-  assert.ok(pageSource.includes("getConfirmedCaptureText"));
-  assert.equal(pageSource.includes("derivedPayload.rawQuestionText"), false);
+  assert.ok(pageSource.includes("FirstOxRequestedSourceClient"));
+  assert.ok(requestedSource.includes("buildFirstOxCaptureSourceState"));
+  assert.ok(requestedSource.includes("getConfirmedCaptureText"));
+  assert.equal(requestedSource.includes("derivedPayload.rawQuestionText"), false);
 
   const clientSource = await readFile("components/review-os/first-ox/first-ox-practice-client.tsx", "utf8");
   [

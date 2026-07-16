@@ -20,6 +20,9 @@ export const CORE_ROUTE_READ_SOURCES = [
   "weekly_learning_signal_summary",
   "weekly_learning_signal_events",
   "weekly_focus",
+  "session_saved_capture_detail",
+  "first_ox_capture_source",
+  "first_ox_retry_source",
 ] as const;
 
 export type CoreRouteReadSource = (typeof CORE_ROUTE_READ_SOURCES)[number];
@@ -39,6 +42,11 @@ export type OptionalCoreRouteReadOutcome<T> =
       value: T;
       reason: "optional_read_unavailable";
     }>;
+
+export type RequestedCoreRouteReadOutcome<T> =
+  | Readonly<{ status: "ready"; value: T }>
+  | Readonly<{ status: "missing" }>
+  | Extract<EssentialCoreRouteReadOutcome<T>, { status: "unavailable" }>;
 
 function logUnavailableRead(
   source: CoreRouteReadSource,
@@ -77,6 +85,23 @@ export async function resolveEssentialCoreRouteRead<T>(
       }),
     });
   }
+}
+
+export function missingRequestedCoreRouteRead(): RequestedCoreRouteReadOutcome<never> {
+  return Object.freeze({ status: "missing" });
+}
+
+export async function resolveRequestedCoreRouteRead<T>(
+  source: CoreRouteReadSource,
+  read: () => Promise<T | null>,
+  isReadable: (value: T) => boolean,
+): Promise<RequestedCoreRouteReadOutcome<T>> {
+  const outcome = await resolveEssentialCoreRouteRead(source, read);
+  if (outcome.status === "unavailable") return outcome;
+  if (outcome.value === null || !isReadable(outcome.value)) {
+    return missingRequestedCoreRouteRead();
+  }
+  return Object.freeze({ status: "ready", value: outcome.value });
 }
 
 export async function resolveOptionalCoreRouteRead<T>(

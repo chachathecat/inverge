@@ -126,7 +126,7 @@ test("learning metrics remain metadata-only and disabled by default", () => {
 
 test("shared after-save output does not leak raw fields or forbidden claims", () => {
   const session = sessionPage();
-  const outputSlice = session.match(/savedCapture \? \([\s\S]*?\) : null/)?.[0] ?? session;
+  const outputSlice = session.match(/savedCaptureDetail \? \([\s\S]*?\) : null/)?.[0] ?? session;
   assert.doesNotMatch(outputSlice, sharedOutputForbiddenPattern);
   assert.doesNotMatch(outputSlice, forbiddenClaimPattern);
 });

@@ -104,6 +104,9 @@ test("S232F.4a returns typed essential and optional read outcomes without loggin
     "weekly_learning_signal_summary",
     "weekly_learning_signal_events",
     "weekly_focus",
+    "session_saved_capture_detail",
+    "first_ox_capture_source",
+    "first_ox_retry_source",
   ]);
 });
 
