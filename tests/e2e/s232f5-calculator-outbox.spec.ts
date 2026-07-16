@@ -222,19 +222,140 @@ async function expectNoHorizontalOverflow(page: Page, label: string) {
   expect(overflow, `${label} must not have horizontal overflow.`).toBeLessThanOrEqual(1);
 }
 
-function unexpectedInitialConsoleErrors(errors: string[]) {
-  const controlledErrors = new Set([
-    "Failed to load resource: net::ERR_INTERNET_DISCONNECTED",
-    "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
-  ]);
-  return errors.filter((error) => !controlledErrors.has(error));
+type RuntimePhase =
+  | "setup"
+  | "offline"
+  | "account_mismatch"
+  | "auth"
+  | "malformed"
+  | "durable";
+
+type PhasedConsoleError = {
+  phase: RuntimePhase;
+  sameOrigin: boolean;
+  pathname: string;
+  text: string;
+};
+
+type PhasedRequestFailure = {
+  phase: RuntimePhase;
+  kind: "requestfailed" | "response";
+  sameOrigin: boolean;
+  pathname: string;
+  method: string;
+  detail: string;
+};
+
+function monitorPhasedRuntimeErrors(
+  page: Page,
+  phase: { current: RuntimePhase },
+) {
+  const runtimeOrigin = new URL(runtimeBaseUrl).origin;
+  const consoleErrors: PhasedConsoleError[] = [];
+  const pageErrors: string[] = [];
+  const requestFailures: PhasedRequestFailure[] = [];
+  const location = (raw: string) => {
+    try {
+      const url = new URL(raw);
+      return { sameOrigin: url.origin === runtimeOrigin, pathname: url.pathname };
+    } catch {
+      return { sameOrigin: false, pathname: "" };
+    }
+  };
+
+  page.on("console", (message) => {
+    if (message.type() !== "error") return;
+    consoleErrors.push({
+      phase: phase.current,
+      ...location(message.location().url),
+      text: message.text(),
+    });
+  });
+  page.on("pageerror", (error) => {
+    pageErrors.push(error.name);
+  });
+  page.on("requestfailed", (request) => {
+    const failure = request.failure()?.errorText ?? "unknown";
+    if (failure.includes("ERR_ABORTED")) return;
+    const requestLocation = location(request.url());
+    requestFailures.push({
+      phase: phase.current,
+      kind: "requestfailed",
+      ...requestLocation,
+      method: request.method(),
+      detail: failure,
+    });
+  });
+  page.on("response", (response) => {
+    if (response.status() < 400) return;
+    const responseLocation = location(response.url());
+    requestFailures.push({
+      phase: phase.current,
+      kind: "response",
+      ...responseLocation,
+      method: response.request().method(),
+      detail: String(response.status()),
+    });
+  });
+
+  return { consoleErrors, pageErrors, requestFailures };
 }
 
-function expectOnlyControlledInitialConsoleErrors(errors: string[]) {
-  expect(
-    unexpectedInitialConsoleErrors(errors),
-    "Only the deliberately injected Offline and 401 browser messages may reach the console.",
-  ).toEqual([]);
+function classifyInitialRuntimeErrors(
+  errors: ReturnType<typeof monitorPhasedRuntimeErrors>,
+) {
+  const fontPath = /^\/_next\/static\/media\/[A-Za-z0-9._~-]+\.woff2$/;
+  const offlineConsoleText = "Failed to load resource: net::ERR_INTERNET_DISCONNECTED";
+  const authConsoleText =
+    "Failed to load resource: the server responded with a status of 401 (Unauthorized)";
+  const controlledOfflineConsoleErrors = errors.consoleErrors.filter((error) =>
+    error.phase === "offline" &&
+    error.sameOrigin &&
+    fontPath.test(error.pathname) &&
+    error.text === offlineConsoleText,
+  );
+  const controlledAuthConsoleErrors = errors.consoleErrors.filter((error) =>
+    error.phase === "auth" &&
+    error.sameOrigin &&
+    error.pathname === "/api/os/calculator-routine/complete" &&
+    error.text === authConsoleText,
+  );
+  const controlledConsoleErrors = new Set([
+    ...controlledOfflineConsoleErrors,
+    ...controlledAuthConsoleErrors,
+  ]);
+  const controlledOfflineFontFailures = errors.requestFailures.filter((error) =>
+    error.phase === "offline" &&
+    error.kind === "requestfailed" &&
+    error.sameOrigin &&
+    error.method === "GET" &&
+    fontPath.test(error.pathname) &&
+    error.detail === "net::ERR_INTERNET_DISCONNECTED",
+  );
+  const controlledAuthFailures = errors.requestFailures.filter((error) =>
+    error.phase === "auth" &&
+    error.kind === "response" &&
+    error.sameOrigin &&
+    error.method === "POST" &&
+    error.pathname === "/api/os/calculator-routine/complete" &&
+    error.detail === "401",
+  );
+  const controlledRequestFailures = new Set([
+    ...controlledOfflineFontFailures,
+    ...controlledAuthFailures,
+  ]);
+  return {
+    controlledOfflineConsoleErrors,
+    controlledAuthConsoleErrors,
+    unexpectedConsoleErrors: errors.consoleErrors.filter(
+      (error) => !controlledConsoleErrors.has(error),
+    ),
+    controlledOfflineFontFailures,
+    controlledAuthFailures,
+    unexpectedRequestFailures: errors.requestFailures.filter(
+      (error) => !controlledRequestFailures.has(error),
+    ),
+  };
 }
 
 async function reachByKeyboardTab(page: Page, target: Locator) {
@@ -251,7 +372,8 @@ test("S232F.5 exact-head calculator outbox is account-bound, receipt-bound, and 
     requireTargetSha: true,
     requireExactHead: true,
   });
-  const initialErrors = monitorRuntimeErrors(page);
+  const runtimePhase: { current: RuntimePhase } = { current: "setup" };
+  const initialErrors = monitorPhasedRuntimeErrors(page, runtimePhase);
   await page.setViewportSize(viewports[0]);
   await establishProtectedPreviewSession(page, "S232F.5");
   const { signInAttempts } = await loginWithDedicatedTestAccount(page, "second");
@@ -369,6 +491,7 @@ test("S232F.5 exact-head calculator outbox is account-bound, receipt-bound, and 
       deploymentSha: runtimeTargetSha,
     });
 
+    runtimePhase.current = "offline";
     await context.setOffline(true);
     await completeRoutine(page);
 
@@ -429,6 +552,7 @@ test("S232F.5 exact-head calculator outbox is account-bound, receipt-bound, and 
     await expect(ariaStatus).toHaveAttribute("aria-atomic", "true");
 
     await rememberQueueIdentity(page);
+    runtimePhase.current = "account_mismatch";
     sessionStage = "foreign";
     await context.setOffline(false);
     await expect(
@@ -451,6 +575,7 @@ test("S232F.5 exact-head calculator outbox is account-bound, receipt-bound, and 
     expect(reloadedForeignProbe.queueCount).toBe(1);
     expect(reloadedForeignProbe.queueIdentityPersisted).toBe(true);
 
+    runtimePhase.current = "auth";
     sessionStage = "actual";
     transportStage = "auth";
     await page.reload({ waitUntil: "domcontentloaded", timeout: 30_000 });
@@ -464,6 +589,7 @@ test("S232F.5 exact-head calculator outbox is account-bound, receipt-bound, and 
     expect(afterAuthProbe.entryKeySetExact).toBe(true);
     expect(afterAuthProbe.signalKeySetExact).toBe(true);
 
+    runtimePhase.current = "malformed";
     transportStage = "malformed";
     await signalOutboxStorage(page);
     await expect.poll(() => interceptedCompletionRequestCount, { timeout: 20_000 }).toBe(2);
@@ -476,6 +602,7 @@ test("S232F.5 exact-head calculator outbox is account-bound, receipt-bound, and 
     expect(afterMalformedProbe.entryKeySetExact).toBe(true);
     expect(afterMalformedProbe.signalKeySetExact).toBe(true);
 
+    runtimePhase.current = "durable";
     await page.evaluate(() => window.dispatchEvent(new Event("offline")));
     sessionStage = "unavailable";
     transportStage = "durable";
@@ -563,10 +690,17 @@ test("S232F.5 exact-head calculator outbox is account-bound, receipt-bound, and 
     const observedAfter = await observedDeploymentSha(writerPage);
     expect(observedAfter.deploymentSha).toBe(runtimeRunnerSha);
     expect(serverMutationRequestCount).toBe(0);
-    expectOnlyControlledInitialConsoleErrors(initialErrors.consoleErrors);
+    const initialErrorSummary = classifyInitialRuntimeErrors(initialErrors);
+    expect(initialErrorSummary.unexpectedConsoleErrors).toEqual([]);
+    expect(initialErrorSummary.controlledOfflineConsoleErrors.length).toBeLessThanOrEqual(8);
+    expect(initialErrorSummary.controlledAuthConsoleErrors).toHaveLength(1);
     expect(initialErrors.pageErrors).toEqual([]);
-    expect(initialErrors.sameOriginRequestFailures).toHaveLength(1);
-    expect(initialErrors.sameOriginRequestFailures[0]).toContain("HTTP 401");
+    expect(initialErrorSummary.unexpectedRequestFailures).toEqual([]);
+    expect(initialErrorSummary.controlledOfflineFontFailures.length).toBeLessThanOrEqual(8);
+    expect(new Set(
+      initialErrorSummary.controlledOfflineFontFailures.map((error) => error.pathname),
+    ).size).toBe(initialErrorSummary.controlledOfflineFontFailures.length);
+    expect(initialErrorSummary.controlledAuthFailures).toHaveLength(1);
     expect(writerErrors.consoleErrors).toEqual([]);
     expect(writerErrors.pageErrors).toEqual([]);
     expect(writerErrors.sameOriginRequestFailures).toEqual([]);
@@ -607,12 +741,25 @@ test("S232F.5 exact-head calculator outbox is account-bound, receipt-bound, and 
       axeBlockingCount,
       interceptedCompletionRequestCount,
       serverMutationRequestCount,
+      controlledOfflineConsoleErrorCount:
+        initialErrorSummary.controlledOfflineConsoleErrors.length,
+      controlledAuthConsoleErrorCount:
+        initialErrorSummary.controlledAuthConsoleErrors.length,
+      controlledOfflineFontFailureCount:
+        initialErrorSummary.controlledOfflineFontFailures.length,
+      controlledAuthFailureCount: initialErrorSummary.controlledAuthFailures.length,
       unexpectedConsoleErrorCount:
-        unexpectedInitialConsoleErrors(initialErrors.consoleErrors).length +
+        initialErrorSummary.unexpectedConsoleErrors.length +
         writerErrors.consoleErrors.length +
         contenderErrors.consoleErrors.length,
-      pageErrorCount: 0,
-      unexpectedSameOriginRequestFailureCount: 0,
+      pageErrorCount:
+        initialErrors.pageErrors.length +
+        writerErrors.pageErrors.length +
+        contenderErrors.pageErrors.length,
+      unexpectedRequestFailureCount:
+        initialErrorSummary.unexpectedRequestFailures.length +
+        writerErrors.sameOriginRequestFailures.length +
+        contenderErrors.sameOriginRequestFailures.length,
       globalDatabaseImmutabilityClaimed: false,
       credentialsCaptured: false,
       rawLearnerContentCaptured: false,

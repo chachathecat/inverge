@@ -405,10 +405,14 @@ test("S232F.5 registers exact-head, mutation-blocked, metadata-only runtime acce
   assert.match(spec, /context\.route\("\*\*\/\*"/);
   assert.match(spec, /serverMutationRequestCount/);
   assert.match(spec, /accountScopeMismatchDenied: true/);
+  assert.match(spec, /monitorPhasedRuntimeErrors/);
+  assert.match(spec, /controlledOfflineConsoleErrorCount/);
+  assert.match(spec, /controlledAuthFailureCount/);
   assert.match(workflow, /agent\/s232f5-calculator-outbox/);
   assert.match(workflow, /run-s232f5-auth-e2e/);
   assert.match(workflow, /tests\/e2e\/s232f5-calculator-outbox\.spec\.ts/);
   assert.match(workflow, /Validate metadata-only S232F\.5 evidence/);
+  assert.match(workflow, /controlledOfflineFontFailureCount/);
   assert.match(workflow, /retention-days: 7/);
   assert.match(doc, /metadata-only/i);
   assert.ok(runner.includes('"tests/s232f5-calculator-outbox.test.mjs"'));

@@ -164,7 +164,9 @@ jobs:
               "widthEquivalentReflowVerified", "keyboardTabReachabilityVerified",
               "ariaLiveStatusContractVerified", "axeBlockingCount",
               "interceptedCompletionRequestCount", "serverMutationRequestCount",
-              "unexpectedConsoleErrorCount", "pageErrorCount", "unexpectedSameOriginRequestFailureCount",
+              "controlledOfflineConsoleErrorCount", "controlledAuthConsoleErrorCount",
+              "controlledOfflineFontFailureCount", "controlledAuthFailureCount",
+              "unexpectedConsoleErrorCount", "pageErrorCount", "unexpectedRequestFailureCount",
               "globalDatabaseImmutabilityClaimed", "credentialsCaptured",
               "rawLearnerContentCaptured", "requestBodyCaptured", "responseBodyCaptured",
               "queueIdCaptured", "recordIdCaptured", "accountScopeCaptured", "emailCaptured",
@@ -212,9 +214,11 @@ jobs:
               axeBlockingCount: 0,
               interceptedCompletionRequestCount: 3,
               serverMutationRequestCount: 0,
+              controlledAuthConsoleErrorCount: 1,
+              controlledAuthFailureCount: 1,
               unexpectedConsoleErrorCount: 0,
               pageErrorCount: 0,
-              unexpectedSameOriginRequestFailureCount: 0,
+              unexpectedRequestFailureCount: 0,
               globalDatabaseImmutabilityClaimed: false,
               credentialsCaptured: false,
               rawLearnerContentCaptured: false,
@@ -232,6 +236,11 @@ jobs:
             };
             for (const [key, value] of Object.entries(expected)) {
               if (evidence[key] !== value) throw new Error(key + " acceptance mismatch");
+            }
+            for (const key of ["controlledOfflineConsoleErrorCount", "controlledOfflineFontFailureCount"]) {
+              if (!Number.isInteger(evidence[key]) || evidence[key] < 0 || evidence[key] > 8) {
+                throw new Error(key + " must be a bounded integer");
+              }
             }
             if (!Number.isInteger(evidence.signInAttempts) || evidence.signInAttempts < 0 || evidence.signInAttempts > 3) {
               throw new Error("signInAttempts must be a bounded integer");
