@@ -506,6 +506,30 @@ function requireRunNonce() {
   requireTruth(/^\d+-\d+$/.test(runtimeRunNonce), "run-nonce-format");
 }
 
+type SecondaryLoginResponseState =
+  | "accepted"
+  | "auth-rejected"
+  | "access-denied"
+  | "server-error"
+  | "unexpected";
+
+const secondaryLoginFailureCodes = {
+  accepted: "secondary-login-accepted-unexpected",
+  "auth-rejected": "secondary-login-auth-rejected",
+  "access-denied": "secondary-login-access-denied",
+  "server-error": "secondary-login-server-error",
+  unexpected: "secondary-login-unexpected-status",
+} as const satisfies Record<SecondaryLoginResponseState, string>;
+
+function classifySecondaryLoginResponse(response: Response): SecondaryLoginResponseState {
+  const status = response.status();
+  if (status === 200) return "accepted";
+  if (status === 400) return "auth-rejected";
+  if (status === 401 || status === 403) return "access-denied";
+  if (status >= 500) return "server-error";
+  return "unexpected";
+}
+
 async function observedDeploymentSha(page: Page) {
   return staticStage("observed-deployment", () =>
     page.evaluate(async () => {
@@ -552,18 +576,22 @@ async function authenticatedIdentity(page: Page) {
 }
 
 async function loginWithCredentials(page: Page, email: string, password: string) {
-  await staticStage("secondary-login", async () => {
-    await page.goto("/login?mode=second", {
+  await staticStage("secondary-login-navigation", () =>
+    page.goto("/login?mode=second", {
       waitUntil: "domcontentloaded",
       timeout: 30_000,
-    });
-    const emailInput = page.getByLabel("이메일");
-    const passwordInput = page.getByLabel("비밀번호");
-    const submit = page.getByTestId("login-submit");
+    }),
+  );
+  const emailInput = page.getByLabel("이메일");
+  const passwordInput = page.getByLabel("비밀번호");
+  const submit = page.getByTestId("login-submit");
+  await staticStage("secondary-login-form-visible", async () => {
     await emailInput.waitFor({ state: "visible", timeout: 20_000 });
     await passwordInput.waitFor({ state: "visible", timeout: 20_000 });
     await submit.waitFor({ state: "visible", timeout: 20_000 });
-    await page.waitForFunction(
+  });
+  await staticStage("secondary-login-hydrated", () =>
+    page.waitForFunction(
       () => {
         const button = document.querySelector('[data-testid="login-submit"]');
         return Boolean(
@@ -575,11 +603,16 @@ async function loginWithCredentials(page: Page, email: string, password: string)
       },
       null,
       { timeout: 20_000 },
-    );
+    ),
+  );
+  await staticStage("secondary-login-hydration-sentinel", async () => {
     await emailInput.fill("hydration-check@inverge.invalid");
-    if ((await emailInput.inputValue()) !== "hydration-check@inverge.invalid") {
-      throw new Error("hydration-sentinel-rejected");
-    }
+    requireTruth(
+      (await emailInput.inputValue()) === "hydration-check@inverge.invalid",
+      "secondary-login-hydration-sentinel-rejected",
+    );
+  });
+  await staticStage("secondary-login-credential-retention", async () => {
     await emailInput.fill(email);
     await passwordInput.fill(password);
     await page.waitForFunction(
@@ -596,36 +629,41 @@ async function loginWithCredentials(page: Page, email: string, password: string)
       { expectedEmail: email, expectedPassword: password },
       { timeout: 20_000 },
     );
+  });
 
-    let requestEmitted = false;
-    const observeRequest = (request: { method(): string; url(): string }) => {
-      try {
-        if (
-          request.method() === "POST" &&
-          new URL(request.url()).pathname === "/api/auth/sign-in"
-        ) {
-          requestEmitted = true;
-        }
-      } catch {
-        // A malformed unrelated URL is not a sign-in request.
-      }
-    };
-    page.on("request", observeRequest);
-    const waitForSignIn = () =>
-      page
-        .waitForResponse((response) => {
-          try {
-            return (
-              response.request().method() === "POST" &&
-              new URL(response.url()).pathname === "/api/auth/sign-in"
-            );
-          } catch {
-            return false;
-          }
-        }, { timeout: 20_000 })
-        .catch(() => null);
-    let response: Response | null = null;
+  let requestEmitted = false;
+  const observeRequest = (request: { method(): string; url(): string }) => {
     try {
+      if (
+        request.method() === "POST" &&
+        new URL(request.url()).pathname === "/api/auth/sign-in"
+      ) {
+        requestEmitted = true;
+      }
+    } catch {
+      // A malformed unrelated URL is not a sign-in request.
+    }
+  };
+  page.on("request", observeRequest);
+  const waitForSignIn = () =>
+    page
+      .waitForResponse((candidate) => {
+        try {
+          return (
+            candidate.request().method() === "POST" &&
+            new URL(candidate.url()).pathname === "/api/auth/sign-in"
+          );
+        } catch {
+          return false;
+        }
+      }, { timeout: 20_000 })
+      .catch((error: unknown) => {
+        if (error instanceof Error && error.name === "TimeoutError") return null;
+        throw error;
+      });
+  let response: Response | null = null;
+  try {
+    await staticStage("secondary-login-submit", async () => {
       let responsePromise = waitForSignIn();
       await submit.click({ timeout: 20_000 });
       response = await responsePromise;
@@ -636,19 +674,29 @@ async function loginWithCredentials(page: Page, email: string, password: string)
         await submit.click({ timeout: 20_000 });
         response = await responsePromise;
       }
-    } finally {
-      page.off("request", observeRequest);
-    }
-    if (!response) throw new Error("sign-in-response-missing");
-    if (response.status() !== 200) throw new Error("sign-in-rejected");
-    await page.waitForFunction(() => window.location.pathname === "/app", null, {
-      timeout: 20_000,
     });
-    await page.locator('[data-s224v-surface="/app"]').waitFor({
+  } finally {
+    page.off("request", observeRequest);
+  }
+  requireTruth(
+    response,
+    requestEmitted
+      ? "secondary-login-response-timeout"
+      : "secondary-login-request-not-emitted",
+  );
+  const responseState = classifySecondaryLoginResponse(response);
+  requireTruth(responseState === "accepted", secondaryLoginFailureCodes[responseState]);
+  await staticStage("secondary-login-app-navigation", () =>
+    page.waitForFunction(() => window.location.pathname === "/app", null, {
+      timeout: 20_000,
+    }),
+  );
+  await staticStage("secondary-login-app-visible", () =>
+    page.locator('[data-s224v-surface="/app"]').waitFor({
       state: "visible",
       timeout: 20_000,
-    });
-  });
+    }),
+  );
 }
 
 async function requireSyntheticMutationCapacity(page: Page) {

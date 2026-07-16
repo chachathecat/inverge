@@ -408,6 +408,39 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
   );
   assert.doesNotMatch(confirmationClassifier, /textContent|innerHTML|outerHTML/);
   assert.doesNotMatch(confirmationClassifier, /receipt\.item|sourceTitle|syntheticCaptureText/);
+  for (const stage of [
+    "secondary-login-navigation",
+    "secondary-login-form-visible",
+    "secondary-login-hydrated",
+    "secondary-login-hydration-sentinel",
+    "secondary-login-credential-retention",
+    "secondary-login-submit",
+    "secondary-login-app-navigation",
+    "secondary-login-app-visible",
+  ]) {
+    assert.match(runtimeSpec, new RegExp(`staticStage\\(\\s*"${stage}"`));
+  }
+  assert.match(runtimeSpec, /classifySecondaryLoginResponse/);
+  assert.match(runtimeSpec, /secondaryLoginFailureCodes/);
+  for (const state of [
+    "accepted",
+    "auth-rejected",
+    "access-denied",
+    "server-error",
+    "unexpected",
+  ]) {
+    assert.match(runtimeSpec, new RegExp(`(?:"|\\b)${state}(?:"|\\b)`));
+  }
+  assert.match(runtimeSpec, /error instanceof Error && error\.name === "TimeoutError"/);
+  const secondaryLoginStart = runtimeSpec.indexOf("async function loginWithCredentials");
+  const secondaryLoginEnd = runtimeSpec.indexOf(
+    "async function requireSyntheticMutationCapacity",
+    secondaryLoginStart,
+  );
+  assert.ok(secondaryLoginStart >= 0 && secondaryLoginEnd > secondaryLoginStart);
+  const secondaryLoginSource = runtimeSpec.slice(secondaryLoginStart, secondaryLoginEnd);
+  assert.doesNotMatch(secondaryLoginSource, /console\.|process\.stdout|JSON\.stringify/);
+  assert.doesNotMatch(secondaryLoginSource, /catch\(\(\) => null\)/);
   assert.match(runtimeSpec, /error instanceof Error/);
   assert.match(runtimeSpec, /static stage failed\|acceptance failed/);
   assert.match(runtimeSpec, /throw error;/);
