@@ -817,7 +817,9 @@ test("S232F.6 exact-head Session and First OX keep requested reads truthful", as
   await expect(liveStatus).toHaveCount(1);
   await page.keyboard.press("Enter");
 
-  await expect(page.getByText("확인하고 O/X 연습 시작", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "확인하고 O/X 연습 시작", level: 2 }),
+  ).toBeVisible();
   await expect(page.getByRole("button", { name: "O + 확실함" })).toHaveCount(0);
   expect(syntheticSourceAttempts).toBe(2);
 
