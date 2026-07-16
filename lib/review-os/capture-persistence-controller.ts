@@ -26,6 +26,24 @@ type DurableCaptureRecord = Readonly<{
   rawPayload?: unknown;
 }>;
 
+const POSTGREST_UTC_TIMESTAMP_PATTERN =
+  /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(\d{1,6}))?\+00:00$/;
+
+/**
+ * PostgREST serializes UTC timestamptz values with a +00:00 suffix and can
+ * preserve microseconds, while the failure-aware evidence contract deliberately
+ * accepts only JavaScript's round-trippable millisecond UTC form. Adapt only
+ * that trusted transport representation here; the strict evidence parser still
+ * rejects invalid dates, unsupported offsets, and malformed values.
+ */
+function normalizePostgrestUtcTimestamp(value: unknown): unknown {
+  if (typeof value !== "string") return value;
+  const match = POSTGREST_UTC_TIMESTAMP_PATTERN.exec(value);
+  if (!match) return value;
+  const milliseconds = (match[2] ?? "").padEnd(3, "0").slice(0, 3);
+  return `${match[1]}.${milliseconds}Z`;
+}
+
 export function createCaptureSaveOperationBinding(): CaptureSaveOperationBinding {
   if (typeof globalThis.crypto?.randomUUID !== "function") {
     throw new Error("s232f1-capture-persistence:secure-random-uuid-unavailable");
@@ -110,7 +128,7 @@ export function buildDurableCapturePersistenceReceipt(
     recordId: record.id,
     operationId: operation.operationId,
     workRevisionId: operation.workRevisionId,
-    persistedAt: record.updatedAt,
+    persistedAt: normalizePostgrestUtcTimestamp(record.updatedAt),
   });
 }
 
@@ -126,6 +144,7 @@ export function buildCaptureDedupeConflictEvidence(
 ): Extract<FailureAwareStateEvidence, { kind: "conflict" }> | null {
   if (buildDurableCapturePersistenceReceipt(record, operation)) return null;
   const confirmedFields = readConfirmedFields(record.rawPayload);
+  const persistedAt = normalizePostgrestUtcTimestamp(record.updatedAt);
   const persistedBinding = validatedReceipt({
     kind: "durable_record",
     recordId: record.id,
@@ -133,7 +152,7 @@ export function buildCaptureDedupeConflictEvidence(
       confirmedFields?.[CAPTURE_PERSISTENCE_METADATA_KEYS.operationId],
     workRevisionId:
       confirmedFields?.[CAPTURE_PERSISTENCE_METADATA_KEYS.workRevisionId],
-    persistedAt: record.updatedAt,
+    persistedAt,
   });
   if (
     !persistedBinding ||
@@ -154,7 +173,7 @@ export function buildCaptureDedupeConflictEvidence(
       {
         kind: "persisted_record",
         sourceId: persistedBinding.workRevisionId,
-        observedAt: record.updatedAt,
+        observedAt: persistedAt,
       },
     ],
     comparison: {

@@ -193,6 +193,65 @@ test("S232F.1 binds durable Completed to the exact echoed save operation and wor
   );
 });
 
+test("S232F.1 adapts only PostgREST UTC timestamptz transport values before strict receipt validation", () => {
+  const record = {
+    id: RECORD_ID,
+    rawPayload: {
+      user_confirmed_fields: buildCapturePersistenceMetadata(operation),
+    },
+  };
+
+  for (const [updatedAt, persistedAt] of [
+    ["2026-07-15T03:04:05.123Z", "2026-07-15T03:04:05.123Z"],
+    ["2026-07-15T03:04:05.123+00:00", "2026-07-15T03:04:05.123Z"],
+    ["2026-07-15T03:04:05.123456+00:00", "2026-07-15T03:04:05.123Z"],
+    ["2026-07-15T03:04:05+00:00", "2026-07-15T03:04:05.000Z"],
+  ]) {
+    assert.equal(
+      buildDurableCapturePersistenceReceipt({ ...record, updatedAt }, operation)?.persistedAt,
+      persistedAt,
+      "known UTC database serialization must normalize to the strict evidence form",
+    );
+  }
+
+  for (const updatedAt of [
+    "2026-02-31T03:04:05.000+00:00",
+    "2026-07-15",
+    "2026-07-15T03:04:05.000",
+    "2026-07-15T03:04:05.000+09:00",
+    "2026-07-15T03:04:05.1234567+00:00",
+    "2026-07-15T03:04:05Z",
+    "2026-07-15T03:04:05.1Z",
+    "2026-07-15T03:04:05.123456Z",
+    1_752_548_645_000,
+    null,
+  ]) {
+    assert.equal(
+      buildDurableCapturePersistenceReceipt({ ...record, updatedAt }, operation),
+      null,
+      "unsupported or invalid timestamp transports must remain fail-closed",
+    );
+  }
+
+  const persistedOperationId = "018f2f4a-7b2c-7d25-8a3f-1234567890ab";
+  const conflict = buildCaptureDedupeConflictEvidence(
+    {
+      ...record,
+      updatedAt: "2026-07-15T03:04:05.123456+00:00",
+      rawPayload: {
+        user_confirmed_fields: {
+          persistence_operation_id: persistedOperationId,
+          persistence_work_revision_id: OTHER_REVISION_ID,
+        },
+      },
+    },
+    operation,
+    "2026-07-15T03:04:06.000Z",
+  );
+  assert.ok(conflict);
+  assert.equal(conflict.sources[1]?.observedAt, "2026-07-15T03:04:05.123Z");
+});
+
 test("S232F.1 round-trips only a browser-local summary and never synthesizes Completed", () => {
   const values = new Map();
   const localStorage = {

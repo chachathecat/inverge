@@ -367,10 +367,12 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
     "capture-source-response-wait",
     "capture-source-route-remove",
     "capture-source-receipt",
+    "capture-confirmation-visible",
+    "capture-confirmation-classify",
     "capture-completed-visible",
     "capture-completed-announcement",
   ]) {
-    assert.match(runtimeSpec, new RegExp(`staticStage\\("${stage}"`));
+    assert.match(runtimeSpec, new RegExp(`staticStage\\(\\s*"${stage}"`));
   }
   assert.match(runtimeSpec, /input\.fill\(syntheticCaptureText, \{ timeout: 20_000 \}\)/);
   assert.match(runtimeSpec, /request\.method\(\) === "POST"/);
@@ -380,12 +382,38 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
   assert.match(runtimeSpec, /capture-held-item-mutation-final-exact/);
   assert.match(runtimeSpec, /capture-source-route-handler/);
   assert.match(runtimeSpec, /capture-source-receipt-shape/);
+  assert.match(runtimeSpec, /captureConfirmationFailureCodes/);
+  for (const state of [
+    "completed",
+    "dedupe-conflict",
+    "local-fallback",
+    "persistence-error-unbound",
+    "receipt-bound-shell-without-completed",
+    "multiple-confirmations",
+    "unknown",
+  ]) {
+    assert.match(runtimeSpec, new RegExp(`(?:\\"|\\b)${state}(?:\\"|\\b)`));
+  }
+  const confirmationClassifierStart = runtimeSpec.indexOf(
+    "const confirmations = page.locator",
+  );
+  const confirmationClassifierEnd = runtimeSpec.indexOf(
+    "const completed = page.locator",
+    confirmationClassifierStart,
+  );
+  assert.ok(confirmationClassifierStart >= 0 && confirmationClassifierEnd > confirmationClassifierStart);
+  const confirmationClassifier = runtimeSpec.slice(
+    confirmationClassifierStart,
+    confirmationClassifierEnd,
+  );
+  assert.doesNotMatch(confirmationClassifier, /textContent|innerHTML|outerHTML/);
+  assert.doesNotMatch(confirmationClassifier, /receipt\.item|sourceTitle|syntheticCaptureText/);
   assert.match(runtimeSpec, /error instanceof Error/);
   assert.match(runtimeSpec, /static stage failed\|acceptance failed/);
   assert.match(runtimeSpec, /throw error;/);
   assert.match(
     runtimeSpec,
-    /capture-saving-work-lock[\s\S]*?capture-source-mutation-release[\s\S]*?capture-source-response-wait[\s\S]*?capture-source-route-remove[\s\S]*?capture-source-receipt[\s\S]*?capture-completed-visible[\s\S]*?capture-completed-announcement/,
+    /capture-saving-work-lock[\s\S]*?capture-source-mutation-release[\s\S]*?capture-source-response-wait[\s\S]*?capture-source-route-remove[\s\S]*?capture-source-receipt[\s\S]*?capture-confirmation-visible[\s\S]*?capture-confirmation-classify[\s\S]*?capture-completed-visible[\s\S]*?capture-completed-announcement/,
   );
   assert.doesNotMatch(runtimeSpec, /staticStage\("capture-text-entry-value"/);
   assert.match(

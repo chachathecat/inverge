@@ -301,6 +301,40 @@ const syntheticCaptureFailureCodes = {
   unavailable: "capture-text-entry-contract-unavailable",
 } as const satisfies Record<SyntheticCaptureValueState, string>;
 
+type CaptureConfirmationState =
+  | "completed"
+  | "dedupe-conflict"
+  | "local-fallback"
+  | "persistence-error-unbound"
+  | "receipt-bound-shell-without-completed"
+  | "multiple-confirmations"
+  | "unknown";
+
+const captureConfirmationFailureCodes = {
+  completed: "capture-confirmation-completed-unexpected",
+  "dedupe-conflict": "capture-confirmation-dedupe-conflict",
+  "local-fallback": "capture-confirmation-local-fallback",
+  "persistence-error-unbound": "capture-confirmation-persistence-error-unbound",
+  "receipt-bound-shell-without-completed":
+    "capture-confirmation-receipt-bound-without-completed",
+  "multiple-confirmations": "capture-confirmation-multiple",
+  unknown: "capture-confirmation-unknown",
+} as const satisfies Record<CaptureConfirmationState, string>;
+
+function normalizeCaptureConfirmationState(value: unknown): CaptureConfirmationState {
+  switch (value) {
+    case "completed":
+    case "dedupe-conflict":
+    case "local-fallback":
+    case "persistence-error-unbound":
+    case "receipt-bound-shell-without-completed":
+    case "multiple-confirmations":
+      return value;
+    default:
+      return "unknown";
+  }
+}
+
 function normalizeSyntheticCaptureValueState(value: unknown): SyntheticCaptureValueState {
   switch (value) {
     case "exact":
@@ -936,6 +970,55 @@ async function createSyntheticSourceThroughCapture(
   requireTruth(
     Object.keys(receipt).sort().join(",") === "deduped,item,ok",
     "capture-source-exact-receipt",
+  );
+
+  const confirmations = page.locator('[data-testid="capture-save-confirmation"]');
+  await staticStage("capture-confirmation-visible", () =>
+    confirmations.first().waitFor({ state: "visible", timeout: 30_000 }),
+  );
+  const confirmationState = await staticStage(
+    "capture-confirmation-classify",
+    async (): Promise<CaptureConfirmationState> => {
+      if ((await confirmations.count()) !== 1) return "multiple-confirmations";
+      return normalizeCaptureConfirmationState(
+        await confirmations.first().evaluate((element) => {
+          if (element.hasAttribute("data-capture-dedupe-conflict")) {
+            return "dedupe-conflict" as const;
+          }
+          if (element.hasAttribute("data-capture-local-summary")) {
+            return "local-fallback" as const;
+          }
+          if (
+            element.hasAttribute("data-capture-persistence-failure") &&
+            element.getAttribute("data-capture-receipt-bound") === "false"
+          ) {
+            return "persistence-error-unbound" as const;
+          }
+          const receiptBound =
+            element.getAttribute("data-capture-receipt-bound") === "true";
+          const durableSaved =
+            element.getAttribute("data-capture-persistence-status") === "durable_saved";
+          const hasFailureMarker =
+            element.hasAttribute("data-capture-dedupe-conflict") ||
+            element.hasAttribute("data-capture-local-summary") ||
+            element.hasAttribute("data-capture-persistence-failure");
+          const completedCount = element.querySelectorAll(
+            '[data-testid="capture-persistence-completed-state"]' +
+              '[data-v3-system-state="completed"]' +
+              '[data-failure-aware-safety="persisted"]',
+          ).length;
+          if (receiptBound && durableSaved && !hasFailureMarker && completedCount === 1) {
+            return "completed" as const;
+          }
+          if (receiptBound) return "receipt-bound-shell-without-completed" as const;
+          return "unknown" as const;
+        }),
+      );
+    },
+  );
+  requireTruth(
+    confirmationState === "completed",
+    captureConfirmationFailureCodes[confirmationState],
   );
 
   const completed = page.locator(
