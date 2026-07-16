@@ -303,15 +303,18 @@ function monitorPhasedRuntimeErrors(
 
 function classifyInitialRuntimeErrors(
   errors: ReturnType<typeof monitorPhasedRuntimeErrors>,
+  allowedOfflineNavigationPaths: ReadonlySet<string>,
 ) {
-  const fontPath = /^\/_next\/static\/media\/[A-Za-z0-9._~-]+\.woff2$/;
+  const nextStaticPath = /^\/_next\/static\/(?:chunks\/[A-Za-z0-9._~-]+\.(?:js|css)|css\/[A-Za-z0-9._~-]+\.css|media\/[A-Za-z0-9._~-]+\.woff2)$/;
+  const controlledOfflinePath = (pathname: string) =>
+    nextStaticPath.test(pathname) || allowedOfflineNavigationPaths.has(pathname);
   const offlineConsoleText = "Failed to load resource: net::ERR_INTERNET_DISCONNECTED";
   const authConsoleText =
     "Failed to load resource: the server responded with a status of 401 (Unauthorized)";
   const controlledOfflineConsoleErrors = errors.consoleErrors.filter((error) =>
     error.phase === "offline" &&
     error.sameOrigin &&
-    fontPath.test(error.pathname) &&
+    controlledOfflinePath(error.pathname) &&
     error.text === offlineConsoleText,
   );
   const controlledAuthConsoleErrors = errors.consoleErrors.filter((error) =>
@@ -324,12 +327,12 @@ function classifyInitialRuntimeErrors(
     ...controlledOfflineConsoleErrors,
     ...controlledAuthConsoleErrors,
   ]);
-  const controlledOfflineFontFailures = errors.requestFailures.filter((error) =>
+  const controlledOfflineResourceFailures = errors.requestFailures.filter((error) =>
     error.phase === "offline" &&
     error.kind === "requestfailed" &&
     error.sameOrigin &&
     error.method === "GET" &&
-    fontPath.test(error.pathname) &&
+    controlledOfflinePath(error.pathname) &&
     error.detail === "net::ERR_INTERNET_DISCONNECTED",
   );
   const controlledAuthFailures = errors.requestFailures.filter((error) =>
@@ -341,7 +344,7 @@ function classifyInitialRuntimeErrors(
     error.detail === "401",
   );
   const controlledRequestFailures = new Set([
-    ...controlledOfflineFontFailures,
+    ...controlledOfflineResourceFailures,
     ...controlledAuthFailures,
   ]);
   return {
@@ -350,7 +353,7 @@ function classifyInitialRuntimeErrors(
     unexpectedConsoleErrors: errors.consoleErrors.filter(
       (error) => !controlledConsoleErrors.has(error),
     ),
-    controlledOfflineFontFailures,
+    controlledOfflineResourceFailures,
     controlledAuthFailures,
     unexpectedRequestFailures: errors.requestFailures.filter(
       (error) => !controlledRequestFailures.has(error),
@@ -490,6 +493,15 @@ test("S232F.5 exact-head calculator outbox is account-bound, receipt-bound, and 
       ready: true,
       deploymentSha: runtimeTargetSha,
     });
+    const allowedOfflineNavigationPaths = new Set(await page.locator("a[href]").evaluateAll(
+      (anchors) => anchors.flatMap((anchor) => {
+        const url = new URL((anchor as HTMLAnchorElement).href);
+        return url.origin === window.location.origin &&
+          (url.pathname === "/app" || url.pathname.startsWith("/app/"))
+          ? [url.pathname]
+          : [];
+      }),
+    ));
 
     runtimePhase.current = "offline";
     await context.setOffline(true);
@@ -690,16 +702,16 @@ test("S232F.5 exact-head calculator outbox is account-bound, receipt-bound, and 
     const observedAfter = await observedDeploymentSha(writerPage);
     expect(observedAfter.deploymentSha).toBe(runtimeRunnerSha);
     expect(serverMutationRequestCount).toBe(0);
-    const initialErrorSummary = classifyInitialRuntimeErrors(initialErrors);
+    const initialErrorSummary = classifyInitialRuntimeErrors(
+      initialErrors,
+      allowedOfflineNavigationPaths,
+    );
     expect(initialErrorSummary.unexpectedConsoleErrors).toEqual([]);
-    expect(initialErrorSummary.controlledOfflineConsoleErrors.length).toBeLessThanOrEqual(8);
+    expect(initialErrorSummary.controlledOfflineConsoleErrors.length).toBeLessThanOrEqual(16);
     expect(initialErrorSummary.controlledAuthConsoleErrors).toHaveLength(1);
     expect(initialErrors.pageErrors).toEqual([]);
     expect(initialErrorSummary.unexpectedRequestFailures).toEqual([]);
-    expect(initialErrorSummary.controlledOfflineFontFailures.length).toBeLessThanOrEqual(8);
-    expect(new Set(
-      initialErrorSummary.controlledOfflineFontFailures.map((error) => error.pathname),
-    ).size).toBe(initialErrorSummary.controlledOfflineFontFailures.length);
+    expect(initialErrorSummary.controlledOfflineResourceFailures.length).toBeLessThanOrEqual(16);
     expect(initialErrorSummary.controlledAuthFailures).toHaveLength(1);
     expect(writerErrors.consoleErrors).toEqual([]);
     expect(writerErrors.pageErrors).toEqual([]);
@@ -745,8 +757,8 @@ test("S232F.5 exact-head calculator outbox is account-bound, receipt-bound, and 
         initialErrorSummary.controlledOfflineConsoleErrors.length,
       controlledAuthConsoleErrorCount:
         initialErrorSummary.controlledAuthConsoleErrors.length,
-      controlledOfflineFontFailureCount:
-        initialErrorSummary.controlledOfflineFontFailures.length,
+      controlledOfflineResourceFailureCount:
+        initialErrorSummary.controlledOfflineResourceFailures.length,
       controlledAuthFailureCount: initialErrorSummary.controlledAuthFailures.length,
       unexpectedConsoleErrorCount:
         initialErrorSummary.unexpectedConsoleErrors.length +

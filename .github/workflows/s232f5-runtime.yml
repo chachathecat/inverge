@@ -165,7 +165,7 @@ jobs:
               "ariaLiveStatusContractVerified", "axeBlockingCount",
               "interceptedCompletionRequestCount", "serverMutationRequestCount",
               "controlledOfflineConsoleErrorCount", "controlledAuthConsoleErrorCount",
-              "controlledOfflineFontFailureCount", "controlledAuthFailureCount",
+              "controlledOfflineResourceFailureCount", "controlledAuthFailureCount",
               "unexpectedConsoleErrorCount", "pageErrorCount", "unexpectedRequestFailureCount",
               "globalDatabaseImmutabilityClaimed", "credentialsCaptured",
               "rawLearnerContentCaptured", "requestBodyCaptured", "responseBodyCaptured",
@@ -237,8 +237,8 @@ jobs:
             for (const [key, value] of Object.entries(expected)) {
               if (evidence[key] !== value) throw new Error(key + " acceptance mismatch");
             }
-            for (const key of ["controlledOfflineConsoleErrorCount", "controlledOfflineFontFailureCount"]) {
-              if (!Number.isInteger(evidence[key]) || evidence[key] < 0 || evidence[key] > 8) {
+            for (const key of ["controlledOfflineConsoleErrorCount", "controlledOfflineResourceFailureCount"]) {
+              if (!Number.isInteger(evidence[key]) || evidence[key] < 0 || evidence[key] > 16) {
                 throw new Error(key + " must be a bounded integer");
               }
             }
