@@ -1223,6 +1223,7 @@ export default function AnswerReviewClientPage({
                     />
                     <CalculatorRoutineSyncStatusLine
                       status={calculatorRoutineSync.status}
+                      offlineEvidence={calculatorRoutineSync.offlineEvidence}
                       retryAvailable={calculatorRoutineSync.retryAvailable}
                       onRetry={calculatorRoutineSync.retry}
                     />

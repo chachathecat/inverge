@@ -113,6 +113,7 @@ export function CalculatorWorkflowPage({ focus, workflow, recoveryReference = nu
             />
             <CalculatorRoutineSyncStatusLine
               status={calculatorRoutineSync.status}
+              offlineEvidence={calculatorRoutineSync.offlineEvidence}
               retryAvailable={calculatorRoutineSync.retryAvailable}
               onRetry={calculatorRoutineSync.retry}
             />
@@ -121,7 +122,13 @@ export function CalculatorWorkflowPage({ focus, workflow, recoveryReference = nu
       ) : null}
 
       {isCasioFocus && !isRecoveryMode ? (
-        <section data-calculator-routine-v3 aria-label="fx-9860GIII 계산·검산 실행">
+        <section
+          data-calculator-routine-v3
+          data-calculator-routine-account-scope={
+            calculatorRoutineSync.accountScopeReady ? "ready" : "pending"
+          }
+          aria-label="fx-9860GIII 계산·검산 실행"
+        >
           <CalculatorRoutineTrainer
             source="answer-review"
             examMode="second"
@@ -137,6 +144,7 @@ export function CalculatorWorkflowPage({ focus, workflow, recoveryReference = nu
           <div className="mt-3">
             <CalculatorRoutineSyncStatusLine
               status={calculatorRoutineSync.status}
+              offlineEvidence={calculatorRoutineSync.offlineEvidence}
               retryAvailable={calculatorRoutineSync.retryAvailable}
               onRetry={calculatorRoutineSync.retry}
             />
