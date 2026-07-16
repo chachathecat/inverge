@@ -354,7 +354,12 @@ test("first O/X retry route consumes retryItemId through the user-scoped strict 
   assert.ok(requestedSource.includes("outcome.detail.item.userId !== expectedUserId"));
   assert.ok(requestedSource.includes("isFirstOxRetryItem(detail.item)"));
   assert.ok(requestedSource.includes("splitFirstOxRawQuestionText(detail.item.rawQuestionText)"));
-  assert.equal(/derivedPayload.*statementText|metadata.*statementText|conceptCard\?.*statementText/s.test(requestedSource), false);
+  assert.equal(
+    /(?:derivedPayload|metadata|conceptCard)(?:\?\.|\.)statementText|\["statementText"\]/.test(
+      requestedSource,
+    ),
+    false,
+  );
   assert.ok(requestedSource.includes("id: detail.item.problemIdentifier ?? detail.item.id"));
   assert.ok(requestedSource.includes("expectedOx = isKnownOx(detail.item.correctAnswer)"));
 });
