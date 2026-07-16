@@ -1093,6 +1093,9 @@ test("S232F.6 exact-head Session and First OX keep requested reads truthful", as
   expect(controlledRequestFailureCount).toBe(1);
   expect(controlledConsoleErrorCount).toBe(controlledRequestFailureCount);
   expect(blockedPreviewToolbarConsoleErrorCount).toBeLessThanOrEqual(8);
+  expect(blockedPreviewToolbarConsoleErrorCount).toBeLessThanOrEqual(
+    blockedPreviewToolbarMutationCount,
+  );
   expect(unexpectedRequestFailures).toEqual([]);
   expect(unexpectedConsoleErrors).toEqual([]);
   expect(runtimeErrors.pageErrors).toEqual([]);

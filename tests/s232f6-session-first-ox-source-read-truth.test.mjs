@@ -307,6 +307,10 @@ test("S232F.6 repository ownership and exact-head runtime evidence fail closed",
   assert.match(runtimeSpec, /blockedPreviewToolbarConsoleErrorCount/);
   assert.match(runtimeSpec, /blockedPreviewToolbarConsolePattern/);
   assert.match(runtimeSpec, /entry\.sourceClass === "vercel-preview-toolbar"/);
+  assert.match(
+    runtimeSpec,
+    /blockedPreviewToolbarConsoleErrorCount\)\.toBeLessThanOrEqual\(\s*blockedPreviewToolbarMutationCount/,
+  );
   assert.match(runtimeSpec, /requestClass === "vercel-preview-toolbar"/);
   assert.match(runtimeSpec, /previewToolbarExcludedFromProductMutationGate: true/);
   assert.match(runtimeWorkflow, /blockedPreviewToolbarMutationCount must be a bounded integer/);

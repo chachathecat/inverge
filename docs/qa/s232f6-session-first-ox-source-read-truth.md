@@ -87,8 +87,9 @@ synthetic payload, request/response body, DOM, screenshot, trace, or video.
   cross-origin POST is aborted before transmission, counted separately, and
   never treated as an application mutation. The exact toolbar-origin
   `ERR_BLOCKED_BY_CLIENT` console result of that isolation is also counted in a
-  separate bounded scalar; it is not treated as a product console error. Every
-  other non-read request or console error, including unknown cross-origin
+  separate bounded scalar that may never exceed the number of toolbar requests
+  actually aborted by the test; it is not treated as a product console error.
+  Every other non-read request or console error, including unknown cross-origin
   traffic, remains fail-closed.
 - The controlled 503 and strict recovery payload exist only in Playwright route
   interception. There is no production query, cookie, header, environment
