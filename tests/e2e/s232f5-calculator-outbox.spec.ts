@@ -222,13 +222,17 @@ async function expectNoHorizontalOverflow(page: Page, label: string) {
   expect(overflow, `${label} must not have horizontal overflow.`).toBeLessThanOrEqual(1);
 }
 
-function expectOnlyControlledInitialConsoleErrors(errors: string[]) {
+function unexpectedInitialConsoleErrors(errors: string[]) {
   const controlledErrors = new Set([
     "Failed to load resource: net::ERR_INTERNET_DISCONNECTED",
     "Failed to load resource: the server responded with a status of 401 (Unauthorized)",
   ]);
+  return errors.filter((error) => !controlledErrors.has(error));
+}
+
+function expectOnlyControlledInitialConsoleErrors(errors: string[]) {
   expect(
-    errors.filter((error) => !controlledErrors.has(error)),
+    unexpectedInitialConsoleErrors(errors),
     "Only the deliberately injected Offline and 401 browser messages may reach the console.",
   ).toEqual([]);
 }
@@ -603,7 +607,10 @@ test("S232F.5 exact-head calculator outbox is account-bound, receipt-bound, and 
       axeBlockingCount,
       interceptedCompletionRequestCount,
       serverMutationRequestCount,
-      consoleErrorCount: 0,
+      unexpectedConsoleErrorCount:
+        unexpectedInitialConsoleErrors(initialErrors.consoleErrors).length +
+        writerErrors.consoleErrors.length +
+        contenderErrors.consoleErrors.length,
       pageErrorCount: 0,
       unexpectedSameOriginRequestFailureCount: 0,
       globalDatabaseImmutabilityClaimed: false,
