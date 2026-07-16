@@ -569,6 +569,7 @@ export default function ProblemSnapClientPage({
               />
               <CalculatorRoutineSyncStatusLine
                 status={calculatorRoutineSync.status}
+                offlineEvidence={calculatorRoutineSync.offlineEvidence}
                 retryAvailable={calculatorRoutineSync.retryAvailable}
                 onRetry={calculatorRoutineSync.retry}
               />
