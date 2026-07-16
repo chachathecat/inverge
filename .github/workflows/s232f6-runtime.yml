@@ -171,6 +171,7 @@ jobs:
               "controlledConsoleErrorCount",
               "unexpectedConsoleErrorCount", "pageErrorCount", "unexpectedRequestFailureCount",
               "postLoginBrowserMutationRequestCount", "blockedPreviewToolbarMutationCount",
+              "excludedPreviewToolbarInstrumentationCount",
               "previewToolbarExcludedFromProductMutationGate",
               "first100WrongAnswerIdsFinalDigestUnchanged",
               "browserStorageFinalDigestUnchanged", "browserStorageMutationCount",
@@ -261,6 +262,13 @@ jobs:
               evidence.blockedPreviewToolbarMutationCount > 8
             ) {
               throw new Error("blockedPreviewToolbarMutationCount must be a bounded integer");
+            }
+            if (
+              !Number.isInteger(evidence.excludedPreviewToolbarInstrumentationCount) ||
+              evidence.excludedPreviewToolbarInstrumentationCount < 0 ||
+              evidence.excludedPreviewToolbarInstrumentationCount > 8
+            ) {
+              throw new Error("excludedPreviewToolbarInstrumentationCount must be a bounded integer");
             }
             const raw = JSON.stringify(evidence);
             if (/@[a-z0-9.-]+\.[a-z]{2,}/i.test(raw)) throw new Error("Email-like content in evidence");

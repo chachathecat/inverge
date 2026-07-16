@@ -313,18 +313,27 @@ async function installContextWideMutationProbe(page: Page) {
   let storageMutationCount = 0;
   let analyticsMutationCount = 0;
   let instrumentationErrorCount = 0;
+  let excludedPreviewToolbarInstrumentationCount = 0;
   const runtimeOrigin = new URL(runtimeBaseUrl).origin;
   await page.context().exposeBinding(
     "__s232f6RecordMutation",
     (_source, kind: unknown) => {
-      let sourceOrigin = "";
+      if (!active && kind !== "barrier") return;
+      let sourceUrl: URL;
       try {
-        sourceOrigin = new URL(_source.frame.url()).origin;
+        sourceUrl = new URL(_source.frame.url());
       } catch {
         instrumentationErrorCount += 1;
         return;
       }
-      if (sourceOrigin !== runtimeOrigin) {
+      if (sourceUrl.origin !== runtimeOrigin) {
+        if (
+          classifyUnexpectedMutationRequest(sourceUrl, runtimeOrigin) ===
+          "vercel-preview-toolbar"
+        ) {
+          excludedPreviewToolbarInstrumentationCount += 1;
+          return;
+        }
         instrumentationErrorCount += 1;
         return;
       }
@@ -333,13 +342,11 @@ async function installContextWideMutationProbe(page: Page) {
         instrumentationErrorCount += 1;
         return;
       }
-      if (!active) return;
       if (kind === "storage") storageMutationCount += 1;
       if (kind === "analytics") analyticsMutationCount += 1;
     },
   );
-  await page.context().addInitScript((expectedOrigin: string) => {
-    if (window.location.origin !== expectedOrigin) return;
+  await page.context().addInitScript(() => {
     const runtimeWindow = window as Window & {
       __s232f6RecordMutation?: (
         kind: "storage" | "analytics" | "barrier",
@@ -434,7 +441,7 @@ async function installContextWideMutationProbe(page: Page) {
       }
       return localInstrumentationErrorCount;
     };
-  }, runtimeOrigin);
+  });
   return {
     barrier: async () => {
       return page.evaluate(async () => {
@@ -454,6 +461,7 @@ async function installContextWideMutationProbe(page: Page) {
       storageMutationCount,
       analyticsMutationCount,
       instrumentationErrorCount,
+      excludedPreviewToolbarInstrumentationCount,
     }),
   };
 }
@@ -881,6 +889,9 @@ test("S232F.6 exact-head Session and First OX keep requested reads truthful", as
   expect(mutationCounts.storageMutationCount).toBe(0);
   expect(mutationCounts.analyticsMutationCount).toBe(0);
   expect(mutationCounts.instrumentationErrorCount).toBe(0);
+  expect(
+    mutationCounts.excludedPreviewToolbarInstrumentationCount,
+  ).toBeLessThanOrEqual(8);
   expect(finalBrowserInstrumentationErrorCount).toBe(0);
   expect(postLoginBrowserMutationRequestCount).toBe(0);
   expect(blockedPreviewToolbarMutationCount).toBeLessThanOrEqual(8);
@@ -953,6 +964,8 @@ test("S232F.6 exact-head Session and First OX keep requested reads truthful", as
     unexpectedRequestFailureCount: unexpectedRequestFailures.length,
     postLoginBrowserMutationRequestCount,
     blockedPreviewToolbarMutationCount,
+    excludedPreviewToolbarInstrumentationCount:
+      mutationCounts.excludedPreviewToolbarInstrumentationCount,
     previewToolbarExcludedFromProductMutationGate: true,
     first100WrongAnswerIdsFinalDigestUnchanged:
       itemDigestAfter === itemDigestBefore,

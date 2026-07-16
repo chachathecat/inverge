@@ -271,11 +271,13 @@ test("S232F.6 repository ownership and exact-head runtime evidence fail closed",
   assert.match(runtimeSpec, /realCrossAccountUnexpectedRuntimeErrorCount/);
   assert.match(runtimeSpec, /realTwoAccountDenialClaimed: true/);
   assert.match(runtimeSpec, /installContextWideMutationProbe/);
+  assert.match(runtimeSpec, /if \(!active && kind !== "barrier"\) return;/);
+  assert.match(runtimeSpec, /excludedPreviewToolbarInstrumentationCount/);
   assert.match(
     runtimeSpec,
-    /if \(window\.location\.origin !== expectedOrigin\) return;/,
-    "mutation instrumentation must run only inside exact runtime-origin documents",
+    /hostname === "vercel\.live" \|\| hostname\.endsWith\("\.vercel\.live"\)/,
   );
+  assert.match(runtimeSpec, /return "unclassified-cross-origin";/);
   assert.match(runtimeSpec, /__s232f6RecordMutation/);
   assert.match(runtimeSpec, /localInstrumentationErrorCount/);
   assert.match(runtimeSpec, /browserInstrumentationErrorCount/);
@@ -292,6 +294,10 @@ test("S232F.6 repository ownership and exact-head runtime evidence fail closed",
   assert.match(runtimeSpec, /requestClass === "vercel-preview-toolbar"/);
   assert.match(runtimeSpec, /previewToolbarExcludedFromProductMutationGate: true/);
   assert.match(runtimeWorkflow, /blockedPreviewToolbarMutationCount must be a bounded integer/);
+  assert.match(
+    runtimeWorkflow,
+    /excludedPreviewToolbarInstrumentationCount must be a bounded integer/,
+  );
   assert.match(runtimeWorkflow, /secrets\.E2E_USER_A_EMAIL/);
   assert.match(runtimeWorkflow, /secrets\.E2E_USER_A_PASSWORD/);
   assert.match(runtimeWorkflow, /secrets\.E2E_USER_B_EMAIL/);
