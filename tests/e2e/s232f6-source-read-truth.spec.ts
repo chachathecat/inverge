@@ -584,7 +584,24 @@ function classifyUnexpectedMutationRequest(
   requestUrl: URL,
   runtimeOrigin: string,
 ) {
-  if (requestUrl.origin !== runtimeOrigin) return "cross-origin";
+  if (requestUrl.origin !== runtimeOrigin) {
+    const hostname = requestUrl.hostname.toLowerCase();
+    if (hostname === "vercel.live" || hostname.endsWith(".vercel.live")) {
+      return "vercel-preview-toolbar";
+    }
+    if (
+      hostname === "vercel-insights.com" ||
+      hostname.endsWith(".vercel-insights.com") ||
+      hostname === "vercel-scripts.com" ||
+      hostname.endsWith(".vercel-scripts.com")
+    ) {
+      return "vercel-platform-metrics";
+    }
+    if (hostname.endsWith(".supabase.co")) {
+      return "auth-provider";
+    }
+    return "unclassified-cross-origin";
+  }
   if (requestUrl.pathname.startsWith("/_vercel/insights")) {
     return "platform-analytics";
   }
