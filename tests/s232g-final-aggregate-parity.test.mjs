@@ -363,14 +363,18 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
   assert.doesNotMatch(runtimeSpec, /expect\(.*violations/);
 
   for (const forbidden of [
-    "onError", "onStdOut", "onStdErr", "result.error", "result.errors",
-    "test.title", "test.location", "attachments", "result.stdout", "result.stderr", "chunk",
+    "onError", "onStdOut", "onStdErr", "test.location", "attachments",
+    "result.stdout", "result.stderr", "chunk",
   ]) {
     assert.equal(reporter.includes(forbidden), false, `metadata reporter must not read ${forbidden}`);
   }
   assert.match(reporter, /printsToStdio\(\)/);
   assert.match(reporter, /allowedTestStatuses/);
   assert.match(reporter, /allowedRunStatuses/);
+  assert.match(reporter, /safeS232GFailurePattern/);
+  assert.match(reporter, /\[a-z0-9-\]\{1,64\}/);
+  assert.match(reporter, /return "unknown"/);
+  assert.doesNotMatch(reporter, /\$\{(?:test\.title|error\.message)\}/);
 });
 
 test("S232G workflow checks the exact deployment and uploads validated files only", () => {
@@ -388,6 +392,10 @@ test("S232G workflow checks the exact deployment and uploads validated files onl
   assert.match(workflow, /--retries=0/);
   assert.match(workflow, /--reporter=\.\/tests\/e2e\/support\/s232g-metadata-reporter\.ts/);
   assert.match(workflow, /> "\$\{runner_log\}" 2>&1/);
+  assert.match(workflow, /failure-code=\(\[a-z0-9-\]\{1,64\}\)/);
+  assert.match(workflow, /paste -sd ';' -/);
+  assert.match(workflow, /rm -f "\$\{runner_log\}"/);
+  assert.match(workflow, /class=unknown,status=unknown,code=unknown/);
   assert.match(workflow, /2> "\$\{curl_error_path\}"/);
   assert.match(workflow, /node scripts\/validate-s232g-evidence\.mjs/);
   assert.match(workflow, /validated-s232g-evidence\/s232g-matrix\.ndjson/);

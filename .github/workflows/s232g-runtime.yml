@@ -178,8 +178,16 @@ jobs:
             --retries=0 \
             --reporter=./tests/e2e/support/s232g-metadata-reporter.ts \
             > "${runner_log}" 2>&1; then
+            diagnostic="$(
+              sed -nE \
+                's/^\[S232G\] test completed; class=(aggregate|calculator-step|unknown); status=(passed|failed|timedOut|skipped|interrupted|unknown); failure-code=([a-z0-9-]{1,64})$/class=\1,status=\2,code=\3/p' \
+                "${runner_log}" | paste -sd ';' -
+            )"
             rm -f "${runner_log}"
-            echo "::error::S232G metadata-only runtime failed; dynamic runner details were intentionally suppressed."
+            if [ -z "${diagnostic}" ]; then
+              diagnostic="class=unknown,status=unknown,code=unknown"
+            fi
+            echo "::error::S232G metadata-only runtime failed; ${diagnostic}"
             exit 1
           fi
           rm -f "${runner_log}"
