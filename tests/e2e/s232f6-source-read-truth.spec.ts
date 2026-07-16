@@ -184,6 +184,29 @@ async function ownedDetailProof(page: Page, itemId: string, expectedUserId: stri
   );
 }
 
+async function boundedCrossAccountStage<T>(
+  stage: string,
+  action: () => Promise<T>,
+  timeoutMs = 35_000,
+) {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      action(),
+      new Promise<T>((_, reject) => {
+        timeout = setTimeout(
+          () => reject(new Error(`S232F.6 cross-account stage timed out: ${stage}.`)),
+          timeoutMs,
+        );
+      }),
+    ]);
+  } catch {
+    throw new Error(`S232F.6 cross-account stage failed: ${stage}.`);
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
+}
+
 async function verifyRealCrossAccountDenial(browser: Browser) {
   requireTwoAccountCredentials();
   const contextOptions = {
@@ -194,54 +217,68 @@ async function verifyRealCrossAccountDenial(browser: Browser) {
   const accountAContext = await browser.newContext(contextOptions);
   const accountBContext = await browser.newContext(contextOptions);
   try {
-    const accountAPage = await accountAContext.newPage();
-    await establishProtectedPreviewSession(accountAPage, "S232F.6 account A");
-    const accountAUserId = await loginWithCredentials(
-      accountAPage,
-      accountAEmail,
-      accountAPassword,
+    const accountAPage = await boundedCrossAccountStage("a-page", () =>
+      accountAContext.newPage(),
+    );
+    await boundedCrossAccountStage(
+      "a-preview",
+      () => establishProtectedPreviewSession(accountAPage, "S232F.6 account A"),
+      45_000,
+    );
+    const accountAUserId = await boundedCrossAccountStage("a-login", () =>
+      loginWithCredentials(accountAPage, accountAEmail, accountAPassword),
     );
     const accountARuntimeErrors = monitorRuntimeErrors(accountAPage);
-    const accountAItemId = await firstExistingWrongAnswerItemId(accountAPage);
-    expect(
-      await ownedDetailProof(accountAPage, accountAItemId, accountAUserId),
-    ).toEqual({
-      status: 200,
-      exactKeys: true,
-      ok: true,
-      detailIsPresent: true,
-      itemMatches: true,
+    const accountAItemId = await boundedCrossAccountStage("a-item-list", () =>
+      firstExistingWrongAnswerItemId(accountAPage),
+    );
+    await boundedCrossAccountStage("a-owner-positive-before", async () => {
+      expect(
+        await ownedDetailProof(accountAPage, accountAItemId, accountAUserId),
+      ).toEqual({
+        status: 200,
+        exactKeys: true,
+        ok: true,
+        detailIsPresent: true,
+        itemMatches: true,
+      });
     });
 
-    const accountBPage = await accountBContext.newPage();
-    await establishProtectedPreviewSession(accountBPage, "S232F.6 account B");
-    const accountBUserId = await loginWithCredentials(
-      accountBPage,
-      accountBEmail,
-      accountBPassword,
+    const accountBPage = await boundedCrossAccountStage("b-page", () =>
+      accountBContext.newPage(),
+    );
+    await boundedCrossAccountStage(
+      "b-preview",
+      () => establishProtectedPreviewSession(accountBPage, "S232F.6 account B"),
+      45_000,
+    );
+    const accountBUserId = await boundedCrossAccountStage("b-login", () =>
+      loginWithCredentials(accountBPage, accountBEmail, accountBPassword),
     );
     const accountBRuntimeErrors = monitorRuntimeErrors(accountBPage);
     if (accountAUserId === accountBUserId) {
       throw new Error("S232F.6 cross-account credentials resolved to the same identity.");
     }
 
-    const denial = await accountBPage.evaluate(async (itemId) => {
-      const response = await fetch(`/api/os/items/${encodeURIComponent(itemId)}`, {
-        cache: "no-store",
-        credentials: "same-origin",
-      });
-      const body = (await response.json().catch(() => null)) as
-        | { ok?: unknown; detail?: unknown }
-        | null;
-      return {
-        status: response.status,
-        exactKeys:
-          body !== null &&
-          Object.keys(body).sort().join(",") === "detail,ok",
-        ok: body?.ok === true,
-        detailIsNull: body?.detail === null,
-      };
-    }, accountAItemId);
+    const denial = await boundedCrossAccountStage("b-api-denial", () =>
+      accountBPage.evaluate(async (itemId) => {
+        const response = await fetch(`/api/os/items/${encodeURIComponent(itemId)}`, {
+          cache: "no-store",
+          credentials: "same-origin",
+        });
+        const body = (await response.json().catch(() => null)) as
+          | { ok?: unknown; detail?: unknown }
+          | null;
+        return {
+          status: response.status,
+          exactKeys:
+            body !== null &&
+            Object.keys(body).sort().join(",") === "detail,ok",
+          ok: body?.ok === true,
+          detailIsNull: body?.detail === null,
+        };
+      }, accountAItemId),
+    );
     expect(denial).toEqual({
       status: 200,
       exactKeys: true,
@@ -249,37 +286,43 @@ async function verifyRealCrossAccountDenial(browser: Browser) {
       detailIsNull: true,
     });
 
-    await accountBPage.goto(
-      `/app/first/ox?sourceItemId=${encodeURIComponent(accountAItemId)}`,
-      { waitUntil: "domcontentloaded", timeout: 30_000 },
-    );
-    await expect(
-      accountBPage.locator(
-        '[data-s232f6-source-read-state="missing"][data-s232f6-source-read-surface="first_ox"]',
-      ),
-    ).toHaveCount(1);
-    await expect(accountBPage.getByRole("button", { name: "O + 확실함" })).toHaveCount(0);
+    await boundedCrossAccountStage("b-first-ox-ui-denial", async () => {
+      await accountBPage.goto(
+        `/app/first/ox?sourceItemId=${encodeURIComponent(accountAItemId)}`,
+        { waitUntil: "domcontentloaded", timeout: 30_000 },
+      );
+      await expect(
+        accountBPage.locator(
+          '[data-s232f6-source-read-state="missing"][data-s232f6-source-read-surface="first_ox"]',
+        ),
+      ).toHaveCount(1);
+      await expect(accountBPage.getByRole("button", { name: "O + 확실함" })).toHaveCount(0);
+    }, 45_000);
 
-    await accountBPage.goto(
-      `/app/session?mode=first&savedCapture=1&itemId=${encodeURIComponent(accountAItemId)}`,
-      { waitUntil: "domcontentloaded", timeout: 30_000 },
-    );
-    await expect(
-      accountBPage.locator(
-        '[data-s232f6-source-read-state="missing"][data-s232f6-source-read-surface="session"]',
-      ),
-    ).toHaveCount(1);
-    await expect(
-      accountBPage.getByText("오늘 계획에 반영했습니다.", { exact: true }),
-    ).toHaveCount(0);
-    expect(
-      await ownedDetailProof(accountAPage, accountAItemId, accountAUserId),
-    ).toEqual({
-      status: 200,
-      exactKeys: true,
-      ok: true,
-      detailIsPresent: true,
-      itemMatches: true,
+    await boundedCrossAccountStage("b-session-ui-denial", async () => {
+      await accountBPage.goto(
+        `/app/session?mode=first&savedCapture=1&itemId=${encodeURIComponent(accountAItemId)}`,
+        { waitUntil: "domcontentloaded", timeout: 30_000 },
+      );
+      await expect(
+        accountBPage.locator(
+          '[data-s232f6-source-read-state="missing"][data-s232f6-source-read-surface="session"]',
+        ),
+      ).toHaveCount(1);
+      await expect(
+        accountBPage.getByText("오늘 계획에 반영했습니다.", { exact: true }),
+      ).toHaveCount(0);
+    }, 45_000);
+    await boundedCrossAccountStage("a-owner-positive-after", async () => {
+      expect(
+        await ownedDetailProof(accountAPage, accountAItemId, accountAUserId),
+      ).toEqual({
+        status: 200,
+        exactKeys: true,
+        ok: true,
+        detailIsPresent: true,
+        itemMatches: true,
+      });
     });
 
     const accountRuntimeErrors = [accountARuntimeErrors, accountBRuntimeErrors];

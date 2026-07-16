@@ -70,6 +70,10 @@ synthetic payload, request/response body, DOM, screenshot, trace, or video.
   fails closed when either account is unavailable, both credentials resolve to
   one identity, or account A has no existing read-only item fixture. The run
   creates no learner record.
+- Every A/B preview, login, owner-positive, API-denial, and UI-denial stage has a
+  fixed bounded timeout and emits only a static stage code on failure. A stalled
+  provider or navigation therefore cannot consume the whole acceptance timeout
+  or disclose account/item data while being diagnosed.
 - Browser mutation instrumentation covers every document in the browser context.
   Events before the post-login measurement window are ignored. During that
   window, only exact `vercel.live` Preview-toolbar activity is separated into a

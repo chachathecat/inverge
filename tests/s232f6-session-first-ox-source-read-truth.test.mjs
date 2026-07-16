@@ -270,6 +270,12 @@ test("S232F.6 repository ownership and exact-head runtime evidence fail closed",
   assert.match(runtimeSpec, /realCrossAccountOwnerReadablePositiveControlCount/);
   assert.match(runtimeSpec, /realCrossAccountUnexpectedRuntimeErrorCount/);
   assert.match(runtimeSpec, /realTwoAccountDenialClaimed: true/);
+  assert.match(runtimeSpec, /boundedCrossAccountStage/);
+  assert.match(runtimeSpec, /cross-account stage failed: \$\{stage\}/);
+  assert.match(runtimeSpec, /"b-api-denial"/);
+  assert.match(runtimeSpec, /"b-first-ox-ui-denial"/);
+  assert.match(runtimeSpec, /"b-session-ui-denial"/);
+  assert.match(runtimeSpec, /"a-owner-positive-after"/);
   assert.match(runtimeSpec, /installContextWideMutationProbe/);
   assert.match(runtimeSpec, /if \(!active && kind !== "barrier"\) return;/);
   assert.match(runtimeSpec, /excludedPreviewToolbarInstrumentationCount/);
