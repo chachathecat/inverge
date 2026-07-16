@@ -350,6 +350,7 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
     /textInputMethod\.press\("Enter", \{ timeout: 20_000 \}\)/,
   );
   for (const stage of [
+    "capture-text-entry-binding",
     "capture-text-entry-visible",
     "capture-text-entry-focused",
     "capture-text-entry-editable",
@@ -361,31 +362,56 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
   assert.doesNotMatch(runtimeSpec, /staticStage\("capture-text-entry-value"/);
   assert.match(
     runtimeSpec,
-    /requireExactSyntheticTextareaValue\(input, captureForm, syntheticCaptureText\)/,
+    /requireExactSyntheticCaptureValue\(\s*page,\s*input,\s*accountUserId,\s*syntheticCaptureText,\s*\)/,
   );
-  assert.match(runtimeSpec, /toHaveValue\(expectedValue, \{ timeout: 20_000 \}\)/);
-  assert.match(runtimeSpec, /expectedValue,\s*\{ timeout: 5_000 \}/);
+  assert.doesNotMatch(runtimeSpec, /toHaveValue\(expectedValue/);
+  assert.match(runtimeSpec, /const labeledInput = captureForm\.getByLabel/);
+  assert.match(runtimeSpec, /const input = captureForm\.locator\("textarea"\)/);
+  assert.match(runtimeSpec, /capture-text-entry-labeled-control/);
+  assert.match(runtimeSpec, /window\.requestAnimationFrame/);
+  assert.match(runtimeSpec, /window\.setTimeout\(\(\) => finishFrame\(false\), 2_000\)/);
+  assert.match(runtimeSpec, /setTimeout\(\(\) => finishHost\(false\), 5_000\)/);
+  assert.match(
+    runtimeSpec,
+    /`inverge:review-os:\$\{contract\.accountUserId\}:capture-draft:second`/,
+  );
+  assert.match(runtimeSpec, /draft\.rawQuestionText !== contract\.expectedValue/);
+  assert.match(runtimeSpec, /draft\.rawOcrText !== contract\.expectedValue/);
+  assert.match(runtimeSpec, /\{ timeout: 5_000 \}/);
   for (const state of [
-    "exact-after-timeout",
-    "empty",
-    "whitespace-equivalent",
-    "different",
     "wrong-control",
-    "form-absent",
-    "form-multiple",
-    "textarea-absent",
-    "textarea-multiple",
-    "unavailable",
+    "dom-empty",
+    "dom-whitespace-equivalent",
+    "dom-different",
+    "draft-absent",
+    "draft-invalid-json",
+    "draft-invalid-shape",
+    "draft-question-missing",
+    "draft-question-non-string",
+    "draft-question-empty",
+    "draft-question-whitespace-equivalent",
+    "draft-question-different",
+    "draft-ocr-missing",
+    "draft-ocr-non-string",
+    "draft-ocr-empty",
+    "draft-ocr-whitespace-equivalent",
+    "draft-ocr-different",
+    "frame-timeout",
+    "contract-unavailable",
   ]) {
-    assert.match(runtimeSpec, new RegExp(`capture-text-entry-value-${state}`));
+    assert.match(runtimeSpec, new RegExp(`capture-text-entry-${state}`));
   }
   const valueClassifierBlock = runtimeSpec.match(
-    /async function classifySyntheticTextareaValue[\s\S]*?\n}\n\nasync function requireExactSyntheticTextareaValue/,
+    /async function classifySyntheticCaptureValue[\s\S]*?\n}\n\nfunction throwSyntheticCaptureValueFailure/,
   )?.[0] ?? "";
   assert.notEqual(valueClassifierBlock, "");
   assert.doesNotMatch(
     valueClassifierBlock,
     /console\.|process\.stdout|inputValue|textContent|innerHTML|outerHTML|JSON\.stringify/,
+  );
+  assert.match(
+    runtimeSpec,
+    /const immediateState = await classifySyntheticCaptureValue[\s\S]*?await waitForTwoAnimationFrames\(page\)[\s\S]*?const settledState = await classifySyntheticCaptureValue/,
   );
   assert.match(captureFormSource, /function updateCaptureText\(value: string\)/);
   assert.match(

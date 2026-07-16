@@ -246,113 +246,210 @@ function emitSafeFailureDiagnostic(kind: "stage" | "assertion", code: string) {
   process.stdout.write(`[S232G] failure; kind=${kind}; code=${safeCode}\n`);
 }
 
-type SyntheticTextareaValueState =
+type SyntheticCaptureValueState =
   | "exact"
-  | "empty"
-  | "whitespace-equivalent"
-  | "different"
   | "wrong-control"
-  | "form-absent"
-  | "form-multiple"
-  | "textarea-absent"
-  | "textarea-multiple"
+  | "dom-empty"
+  | "dom-whitespace-equivalent"
+  | "dom-different"
+  | "draft-absent"
+  | "draft-invalid-json"
+  | "draft-invalid-shape"
+  | "draft-question-missing"
+  | "draft-question-non-string"
+  | "draft-question-empty"
+  | "draft-question-whitespace-equivalent"
+  | "draft-question-different"
+  | "draft-ocr-missing"
+  | "draft-ocr-non-string"
+  | "draft-ocr-empty"
+  | "draft-ocr-whitespace-equivalent"
+  | "draft-ocr-different"
+  | "frame-timeout"
   | "unavailable";
 
-const syntheticTextareaFailureCodes = {
-  exact: "capture-text-entry-value-exact-after-timeout",
-  empty: "capture-text-entry-value-empty",
-  "whitespace-equivalent": "capture-text-entry-value-whitespace-equivalent",
-  different: "capture-text-entry-value-different",
-  "wrong-control": "capture-text-entry-value-wrong-control",
-  "form-absent": "capture-text-entry-value-form-absent",
-  "form-multiple": "capture-text-entry-value-form-multiple",
-  "textarea-absent": "capture-text-entry-value-textarea-absent",
-  "textarea-multiple": "capture-text-entry-value-textarea-multiple",
-  unavailable: "capture-text-entry-value-unavailable",
-} as const satisfies Record<SyntheticTextareaValueState, string>;
+const syntheticCaptureFailureCodes = {
+  exact: "capture-text-entry-contract-exact-unexpected",
+  "wrong-control": "capture-text-entry-wrong-control",
+  "dom-empty": "capture-text-entry-dom-empty",
+  "dom-whitespace-equivalent": "capture-text-entry-dom-whitespace-equivalent",
+  "dom-different": "capture-text-entry-dom-different",
+  "draft-absent": "capture-text-entry-draft-absent",
+  "draft-invalid-json": "capture-text-entry-draft-invalid-json",
+  "draft-invalid-shape": "capture-text-entry-draft-invalid-shape",
+  "draft-question-missing": "capture-text-entry-draft-question-missing",
+  "draft-question-non-string": "capture-text-entry-draft-question-non-string",
+  "draft-question-empty": "capture-text-entry-draft-question-empty",
+  "draft-question-whitespace-equivalent":
+    "capture-text-entry-draft-question-whitespace-equivalent",
+  "draft-question-different": "capture-text-entry-draft-question-different",
+  "draft-ocr-missing": "capture-text-entry-draft-ocr-missing",
+  "draft-ocr-non-string": "capture-text-entry-draft-ocr-non-string",
+  "draft-ocr-empty": "capture-text-entry-draft-ocr-empty",
+  "draft-ocr-whitespace-equivalent":
+    "capture-text-entry-draft-ocr-whitespace-equivalent",
+  "draft-ocr-different": "capture-text-entry-draft-ocr-different",
+  "frame-timeout": "capture-text-entry-frame-timeout",
+  unavailable: "capture-text-entry-contract-unavailable",
+} as const satisfies Record<SyntheticCaptureValueState, string>;
 
-function normalizeSyntheticTextareaValueState(value: unknown): SyntheticTextareaValueState {
+function normalizeSyntheticCaptureValueState(value: unknown): SyntheticCaptureValueState {
   switch (value) {
     case "exact":
-    case "empty":
-    case "whitespace-equivalent":
-    case "different":
     case "wrong-control":
-    case "form-absent":
-    case "form-multiple":
-    case "textarea-absent":
-    case "textarea-multiple":
+    case "dom-empty":
+    case "dom-whitespace-equivalent":
+    case "dom-different":
+    case "draft-absent":
+    case "draft-invalid-json":
+    case "draft-invalid-shape":
+    case "draft-question-missing":
+    case "draft-question-non-string":
+    case "draft-question-empty":
+    case "draft-question-whitespace-equivalent":
+    case "draft-question-different":
+    case "draft-ocr-missing":
+    case "draft-ocr-non-string":
+    case "draft-ocr-empty":
+    case "draft-ocr-whitespace-equivalent":
+    case "draft-ocr-different":
+    case "frame-timeout":
       return value;
     default:
       return "unavailable";
   }
 }
 
-async function classifySyntheticTextareaValue(
+async function classifySyntheticCaptureValue(
   input: Locator,
-  captureForm: Locator,
+  accountUserId: string,
   expectedValue: string,
-): Promise<SyntheticTextareaValueState> {
-  const classifyElement = (element: Element, expected: string) => {
-    if (!(element instanceof HTMLTextAreaElement)) return "wrong-control" as const;
-    if (element.value === expected) return "exact" as const;
-    if (element.value === "") return "empty" as const;
-    const normalizeWhitespace = (value: string) => value.replace(/\s+/gu, " ").trim();
-    return normalizeWhitespace(element.value) === normalizeWhitespace(expected)
-      ? ("whitespace-equivalent" as const)
-      : ("different" as const);
-  };
+): Promise<SyntheticCaptureValueState> {
   try {
-    const state = await input.evaluate(classifyElement, expectedValue, { timeout: 5_000 });
-    return normalizeSyntheticTextareaValueState(state);
+    const state = await input.evaluate(
+      (element, contract) => {
+        if (!(element instanceof HTMLTextAreaElement)) return "wrong-control" as const;
+        const normalizeWhitespace = (value: string) => value.replace(/\s+/gu, " ").trim();
+        if (element.value === "") return "dom-empty" as const;
+        if (element.value !== contract.expectedValue) {
+          return normalizeWhitespace(element.value) === normalizeWhitespace(contract.expectedValue)
+            ? ("dom-whitespace-equivalent" as const)
+            : ("dom-different" as const);
+        }
+
+        const rawDraft = window.localStorage.getItem(
+          `inverge:review-os:${contract.accountUserId}:capture-draft:second`,
+        );
+        if (rawDraft === null) return "draft-absent" as const;
+        let parsedDraft: unknown;
+        try {
+          parsedDraft = JSON.parse(rawDraft) as unknown;
+        } catch {
+          return "draft-invalid-json" as const;
+        }
+        if (
+          parsedDraft === null ||
+          typeof parsedDraft !== "object" ||
+          Array.isArray(parsedDraft)
+        ) {
+          return "draft-invalid-shape" as const;
+        }
+        const draft = parsedDraft as Record<string, unknown>;
+        if (!("rawQuestionText" in draft)) return "draft-question-missing" as const;
+        if (typeof draft.rawQuestionText !== "string") {
+          return "draft-question-non-string" as const;
+        }
+        if (draft.rawQuestionText === "") return "draft-question-empty" as const;
+        if (draft.rawQuestionText !== contract.expectedValue) {
+          return normalizeWhitespace(draft.rawQuestionText) ===
+            normalizeWhitespace(contract.expectedValue)
+            ? ("draft-question-whitespace-equivalent" as const)
+            : ("draft-question-different" as const);
+        }
+        if (!("rawOcrText" in draft)) return "draft-ocr-missing" as const;
+        if (typeof draft.rawOcrText !== "string") return "draft-ocr-non-string" as const;
+        if (draft.rawOcrText === "") return "draft-ocr-empty" as const;
+        if (draft.rawOcrText !== contract.expectedValue) {
+          return normalizeWhitespace(draft.rawOcrText) ===
+            normalizeWhitespace(contract.expectedValue)
+            ? ("draft-ocr-whitespace-equivalent" as const)
+            : ("draft-ocr-different" as const);
+        }
+        return "exact" as const;
+      },
+      { accountUserId, expectedValue },
+      { timeout: 5_000 },
+    );
+    return normalizeSyntheticCaptureValueState(state);
   } catch {
-    try {
-      const formCount = await captureForm.count();
-      if (formCount === 0) return "form-absent";
-      if (formCount !== 1) return "form-multiple";
-      return normalizeSyntheticTextareaValueState(await captureForm.evaluate(
-        (form, expected) => {
-          const textareas = form.querySelectorAll("textarea");
-          if (textareas.length === 0) return "textarea-absent" as const;
-          if (textareas.length !== 1) return "textarea-multiple" as const;
-          const textarea = textareas[0];
-          if (textarea.value === expected) return "exact" as const;
-          if (textarea.value === "") return "empty" as const;
-          const normalizeWhitespace = (value: string) => value.replace(/\s+/gu, " ").trim();
-          return normalizeWhitespace(textarea.value) === normalizeWhitespace(expected)
-            ? ("whitespace-equivalent" as const)
-            : ("different" as const);
-        },
-        expectedValue,
-        { timeout: 5_000 },
-      ));
-    } catch {
-      return "unavailable";
-    }
+    return "unavailable";
   }
 }
 
-function throwSyntheticTextareaValueFailure(state: SyntheticTextareaValueState): never {
-  const code = syntheticTextareaFailureCodes[state];
+function throwSyntheticCaptureValueFailure(state: SyntheticCaptureValueState): never {
+  const code = syntheticCaptureFailureCodes[state];
   emitSafeFailureDiagnostic("assertion", code);
   throw new Error(`S232G acceptance failed: ${code}`);
 }
 
-async function requireExactSyntheticTextareaValue(
+async function waitForTwoAnimationFrames(page: Page): Promise<boolean> {
+  try {
+    return await new Promise<boolean>((resolve) => {
+      let hostSettled = false;
+      const finishHost = (value: boolean) => {
+        if (hostSettled) return;
+        hostSettled = true;
+        clearTimeout(hostDeadline);
+        resolve(value);
+      };
+      const hostDeadline = setTimeout(() => finishHost(false), 5_000);
+      void page
+        .evaluate(
+          () =>
+            new Promise<boolean>((resolveFrame) => {
+              let frameSettled = false;
+              const finishFrame = (value: boolean) => {
+                if (frameSettled) return;
+                frameSettled = true;
+                resolveFrame(value);
+              };
+              const frameDeadline = window.setTimeout(() => finishFrame(false), 2_000);
+              window.requestAnimationFrame(() => {
+                window.requestAnimationFrame(() => {
+                  window.clearTimeout(frameDeadline);
+                  finishFrame(true);
+                });
+              });
+            }),
+        )
+        .then((value) => finishHost(value === true), () => finishHost(false));
+    });
+  } catch {
+    return false;
+  }
+}
+
+async function requireExactSyntheticCaptureValue(
+  page: Page,
   input: Locator,
-  captureForm: Locator,
+  accountUserId: string,
   expectedValue: string,
 ) {
-  const immediateState = await classifySyntheticTextareaValue(input, captureForm, expectedValue);
-  if (immediateState !== "exact") throwSyntheticTextareaValueFailure(immediateState);
-  try {
-    await expect(input).toHaveValue(expectedValue, { timeout: 20_000 });
-    return;
-  } catch {
-    throwSyntheticTextareaValueFailure(
-      await classifySyntheticTextareaValue(input, captureForm, expectedValue),
-    );
+  const immediateState = await classifySyntheticCaptureValue(
+    input,
+    accountUserId,
+    expectedValue,
+  );
+  if (immediateState !== "exact") throwSyntheticCaptureValueFailure(immediateState);
+  if (!(await waitForTwoAnimationFrames(page))) {
+    throwSyntheticCaptureValueFailure("frame-timeout");
   }
+  const settledState = await classifySyntheticCaptureValue(
+    input,
+    accountUserId,
+    expectedValue,
+  );
+  if (settledState !== "exact") throwSyntheticCaptureValueFailure(settledState);
 }
 
 function requireTwoAccounts() {
@@ -672,7 +769,27 @@ async function createSyntheticSourceThroughCapture(
     await expect(textInputMethod).toBeFocused({ timeout: 20_000 });
     await textInputMethod.press("Enter", { timeout: 20_000 });
   });
-  const input = captureForm.getByLabel("오늘 공부한 내용 또는 내 답안", { exact: true });
+  const labeledInput = captureForm.getByLabel("오늘 공부한 내용 또는 내 답안", {
+    exact: true,
+  });
+  const input = captureForm.locator("textarea");
+  await staticStage("capture-text-entry-binding", async () => {
+    await expect(captureForm).toHaveCount(1, { timeout: 20_000 });
+    await expect(labeledInput).toHaveCount(1, { timeout: 20_000 });
+    await expect(input).toHaveCount(1, { timeout: 20_000 });
+    const sameControl = await labeledInput.evaluate(
+      (element) => {
+        const form = element.closest(
+          'form[data-s232e-capture-flow="four-stage"]',
+        );
+        if (!form) return false;
+        const textareas = form.querySelectorAll("textarea");
+        return textareas.length === 1 && textareas[0] === element;
+      },
+      { timeout: 5_000 },
+    );
+    requireTruth(sameControl, "capture-text-entry-labeled-control");
+  });
   await staticStage("capture-text-entry-visible", () =>
     expect(input).toBeVisible({ timeout: 20_000 }),
   );
@@ -685,7 +802,12 @@ async function createSyntheticSourceThroughCapture(
   await staticStage("capture-text-entry-fill", () =>
     input.fill(syntheticCaptureText, { timeout: 20_000 }),
   );
-  await requireExactSyntheticTextareaValue(input, captureForm, syntheticCaptureText);
+  await requireExactSyntheticCaptureValue(
+    page,
+    input,
+    accountUserId,
+    syntheticCaptureText,
+  );
 
   let releaseRequest = () => {};
   const heldRequest = new Promise<void>((resolve) => {
