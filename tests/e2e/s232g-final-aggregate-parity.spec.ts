@@ -810,40 +810,75 @@ async function createSyntheticSourceThroughCapture(
   );
 
   let releaseRequest = () => {};
+  let mutationReleased = false;
+  let heldItemMutationCount = 0;
   const heldRequest = new Promise<void>((resolve) => {
     releaseRequest = resolve;
   });
+  const releaseHeldMutation = () => {
+    if (mutationReleased) return;
+    mutationReleased = true;
+    releaseRequest();
+  };
   const holdItemMutation = async (route: Route) => {
+    const request = route.request();
+    let targetMutation = false;
+    try {
+      targetMutation =
+        request.method() === "POST" &&
+        new URL(request.url()).pathname === "/api/os/items";
+    } catch {
+      targetMutation = false;
+    }
+    if (!targetMutation) {
+      await route.fallback();
+      return;
+    }
+    heldItemMutationCount += 1;
     await heldRequest;
     await route.fallback();
   };
-  await page.route("**/api/os/items", holdItemMutation, { times: 1 });
+  await staticStage("capture-source-route-hold", () =>
+    page.route("**/api/os/items", holdItemMutation),
+  );
   let response: Response | null = null;
   try {
-    const responsePromise = page.waitForResponse((candidate) => {
-      try {
-        return (
-          candidate.request().method() === "POST" &&
-          new URL(candidate.url()).pathname === "/api/os/items"
-        );
-      } catch {
-        return false;
-      }
-    }, { timeout: 60_000 });
-    await page
+    const responsePromise = page
+      .waitForResponse((candidate) => {
+        try {
+          return (
+            candidate.request().method() === "POST" &&
+            new URL(candidate.url()).pathname === "/api/os/items"
+          );
+        } catch {
+          return false;
+        }
+      }, { timeout: 60_000 })
+      .catch(() => null);
+    const quickSave = page
       .getByTestId("capture-save-action-bar")
-      .getByRole("button", { name: "빠르게 저장", exact: true })
-      .click();
+      .getByRole("button", { name: "빠르게 저장", exact: true });
+    await staticStage("capture-quick-save-ready", async () => {
+      await quickSave.waitFor({ state: "visible", timeout: 20_000 });
+      await expect(quickSave).toBeEnabled({ timeout: 20_000 });
+    });
+    await staticStage("capture-quick-save-click", () =>
+      quickSave.click({ timeout: 20_000 }),
+    );
     const saving = page.locator('[data-capture-persistence-state="saving"]');
-    await saving.waitFor({ state: "visible", timeout: 20_000 });
-    const savingAnnouncement = await saving.evaluate((element) => ({
-      role: element.getAttribute("role"),
-      live: element.getAttribute("aria-live"),
-      busy: element.getAttribute("aria-busy"),
-      visible:
-        element.getBoundingClientRect().width > 0 &&
-        element.getBoundingClientRect().height > 0,
-    }));
+    await staticStage("capture-saving-visible", () =>
+      saving.waitFor({ state: "visible", timeout: 20_000 }),
+    );
+    const savingAnnouncement = await staticStage("capture-saving-semantics", () =>
+      saving.evaluate((element) => ({
+        role: element.getAttribute("role"),
+        live: element.getAttribute("aria-live"),
+        busy: element.getAttribute("aria-busy"),
+        visible:
+          element.getBoundingClientRect().width > 0 &&
+          element.getBoundingClientRect().height > 0,
+      })),
+    );
     requireTruth(
       savingAnnouncement.role === "status" &&
         savingAnnouncement.live === "polite" &&
@@ -855,13 +890,23 @@ async function createSyntheticSourceThroughCapture(
       (await page.locator('fieldset[data-capture-work-lock="locked"]:disabled').count()) === 1,
       "capture-saving-work-lock",
     );
-    releaseRequest();
-    response = await responsePromise;
+    requireTruth(heldItemMutationCount === 1, "capture-held-item-mutation-exact");
+    await staticStage("capture-source-mutation-release", async () => {
+      releaseHeldMutation();
+    });
+    response = await staticStage("capture-source-response-wait", () => responsePromise);
   } finally {
-    releaseRequest();
-    await page.unroute("**/api/os/items", holdItemMutation);
+    if (!mutationReleased) {
+      await staticStage("capture-source-emergency-release", async () => {
+        releaseHeldMutation();
+      });
+    }
+    await staticStage("capture-source-route-remove", () =>
+      page.unroute("**/api/os/items", holdItemMutation),
+    );
   }
 
+  requireTruth(heldItemMutationCount === 1, "capture-held-item-mutation-final-exact");
   requireTruth(response, "capture-source-response");
   const receipt = await staticStage("capture-source-receipt", () =>
     response.json() as Promise<{ ok?: unknown; deduped?: unknown; item?: { id?: unknown } }>,
@@ -880,7 +925,9 @@ async function createSyntheticSourceThroughCapture(
       '[data-v3-system-state="completed"]' +
       '[data-failure-aware-safety="persisted"]',
   );
-  await completed.waitFor({ state: "visible", timeout: 30_000 });
+  await staticStage("capture-completed-visible", () =>
+    completed.waitFor({ state: "visible", timeout: 30_000 }),
+  );
   const completedAnnouncement = await staticStage("capture-completed-announcement", () =>
     page.getByTestId("capture-save-confirmation").evaluate((element) => ({
       receiptBound: element.getAttribute("data-capture-receipt-bound") === "true",
@@ -2367,7 +2414,9 @@ test("S232G final aggregate exact-head authenticated parity", async ({ browser, 
     "pre-runtime-sha",
   );
 
-  const source = await createSyntheticSourceThroughCapture(page, accountAUserId);
+  const source = await staticStage("capture-source-flow", () =>
+    createSyntheticSourceThroughCapture(page, accountAUserId),
+  );
   requireTruth(
     await sourceDetailProbe(page, source.id, accountAUserId),
     "capture-source-owner-binding",

@@ -355,10 +355,32 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
     "capture-text-entry-focused",
     "capture-text-entry-editable",
     "capture-text-entry-fill",
+    "capture-source-flow",
+    "capture-source-route-hold",
+    "capture-quick-save-ready",
+    "capture-quick-save-click",
+    "capture-saving-visible",
+    "capture-saving-semantics",
+    "capture-source-mutation-release",
+    "capture-source-emergency-release",
+    "capture-source-response-wait",
+    "capture-source-route-remove",
+    "capture-source-receipt",
+    "capture-completed-visible",
+    "capture-completed-announcement",
   ]) {
     assert.match(runtimeSpec, new RegExp(`staticStage\\("${stage}"`));
   }
   assert.match(runtimeSpec, /input\.fill\(syntheticCaptureText, \{ timeout: 20_000 \}\)/);
+  assert.match(runtimeSpec, /request\.method\(\) === "POST"/);
+  assert.match(runtimeSpec, /new URL\(request\.url\(\)\)\.pathname === "\/api\/os\/items"/);
+  assert.doesNotMatch(runtimeSpec, /page\.route\("\*\*\/api\/os\/items", holdItemMutation, \{ times: 1 \}\)/);
+  assert.match(runtimeSpec, /capture-held-item-mutation-exact/);
+  assert.match(runtimeSpec, /capture-held-item-mutation-final-exact/);
+  assert.match(
+    runtimeSpec,
+    /capture-saving-work-lock[\s\S]*?capture-source-mutation-release[\s\S]*?capture-source-response-wait[\s\S]*?capture-source-route-remove[\s\S]*?capture-source-receipt[\s\S]*?capture-completed-visible[\s\S]*?capture-completed-announcement/,
+  );
   assert.doesNotMatch(runtimeSpec, /staticStage\("capture-text-entry-value"/);
   assert.match(
     runtimeSpec,
