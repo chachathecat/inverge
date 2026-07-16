@@ -334,6 +334,19 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
   assert.match(runtimeSpec, /notesRoundTripProbe/);
   assert.match(runtimeSpec, /rewrite-reload-durability/);
   assert.match(runtimeSpec, /createSyntheticSourceThroughCapture/);
+  assert.match(runtimeSpec, /capture-input-method-ready/);
+  assert.match(runtimeSpec, /capture-input-method-activate/);
+  assert.match(runtimeSpec, /Capture input method must be hydrated/);
+  assert.match(
+    runtimeSpec,
+    /textInputMethod\.evaluate\(\s*\(element\)[\s\S]*?\),\s*\{ timeout: 20_000 \},\s*\)/,
+  );
+  assert.match(runtimeSpec, /expect\(textInputMethod\)\.toBeFocused/);
+  assert.match(
+    runtimeSpec,
+    /textInputMethod\.press\("Enter", \{ timeout: 20_000 \}\)/,
+  );
+  assert.match(runtimeSpec, /input\.fill\(syntheticCaptureText, \{ timeout: 20_000 \}\)/);
   assert.match(runtimeSpec, /capture-saving-announcement/);
   assert.match(runtimeSpec, /rewrite-source-exact-binding/);
   assert.match(runtimeSpec, /calculatorStepFigmaProbe/);

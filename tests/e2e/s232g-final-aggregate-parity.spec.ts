@@ -524,14 +524,41 @@ async function createSyntheticSourceThroughCapture(
     "/app/capture?mode=second",
     '[data-s224v-surface="/app/capture"] form[data-s232e-capture-flow="four-stage"]',
   );
+  const textInputMethod = page.getByRole("button", {
+    name: "텍스트 붙여넣기",
+    exact: true,
+  });
+  await staticStage("capture-input-method-ready", async () => {
+    await textInputMethod.waitFor({ state: "visible", timeout: 20_000 });
+    await expect(textInputMethod).toBeEnabled({ timeout: 20_000 });
+    await expect
+      .poll(
+        () =>
+          textInputMethod.evaluate(
+            (element) =>
+              Object.keys(element).some(
+                (key) => key.startsWith("__reactProps$") || key.startsWith("__reactFiber$"),
+              ),
+            { timeout: 20_000 },
+          ),
+        {
+          timeout: 20_000,
+          message: "Capture input method must be hydrated before keyboard activation.",
+        },
+      )
+      .toBe(true);
+  });
+  await staticStage("capture-input-method-activate", async () => {
+    await textInputMethod.focus({ timeout: 20_000 });
+    await expect(textInputMethod).toBeFocused({ timeout: 20_000 });
+    await textInputMethod.press("Enter", { timeout: 20_000 });
+  });
   await staticStage("capture-text-entry", async () => {
-    await page.getByRole("button", { name: "텍스트 붙여넣기", exact: true }).click();
     const input = page.getByLabel("오늘 공부한 내용 또는 내 답안", { exact: true });
-    await input.waitFor({ state: "visible", timeout: 20_000 });
-    await input.fill(syntheticCaptureText);
-    if ((await input.inputValue()) !== syntheticCaptureText) {
-      throw new Error("capture-controlled-input-rejected");
-    }
+    await expect(input).toBeVisible({ timeout: 20_000 });
+    await expect(input).toBeEditable({ timeout: 20_000 });
+    await input.fill(syntheticCaptureText, { timeout: 20_000 });
+    await expect(input).toHaveValue(syntheticCaptureText, { timeout: 20_000 });
   });
 
   let releaseRequest = () => {};
