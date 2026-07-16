@@ -247,64 +247,111 @@ function emitSafeFailureDiagnostic(kind: "stage" | "assertion", code: string) {
 }
 
 type SyntheticTextareaValueState =
-  | "exact-after-timeout"
+  | "exact"
   | "empty"
   | "whitespace-equivalent"
   | "different"
   | "wrong-control"
+  | "form-absent"
+  | "form-multiple"
+  | "textarea-absent"
+  | "textarea-multiple"
   | "unavailable";
 
 const syntheticTextareaFailureCodes = {
-  "exact-after-timeout": "capture-text-entry-value-exact-after-timeout",
+  exact: "capture-text-entry-value-exact-after-timeout",
   empty: "capture-text-entry-value-empty",
   "whitespace-equivalent": "capture-text-entry-value-whitespace-equivalent",
   different: "capture-text-entry-value-different",
   "wrong-control": "capture-text-entry-value-wrong-control",
+  "form-absent": "capture-text-entry-value-form-absent",
+  "form-multiple": "capture-text-entry-value-form-multiple",
+  "textarea-absent": "capture-text-entry-value-textarea-absent",
+  "textarea-multiple": "capture-text-entry-value-textarea-multiple",
   unavailable: "capture-text-entry-value-unavailable",
 } as const satisfies Record<SyntheticTextareaValueState, string>;
 
-async function classifySyntheticTextareaValue(
-  input: Locator,
-  expectedValue: string,
-): Promise<SyntheticTextareaValueState> {
-  try {
-    const state = await input.evaluate(
-      (element, expected) => {
-        if (!(element instanceof HTMLTextAreaElement)) return "wrong-control" as const;
-        if (element.value === expected) return "exact-after-timeout" as const;
-        if (element.value === "") return "empty" as const;
-        const normalizeWhitespace = (value: string) => value.replace(/\s+/gu, " ").trim();
-        return normalizeWhitespace(element.value) === normalizeWhitespace(expected)
-          ? ("whitespace-equivalent" as const)
-          : ("different" as const);
-      },
-      expectedValue,
-      { timeout: 5_000 },
-    );
-    switch (state) {
-      case "exact-after-timeout":
-      case "empty":
-      case "whitespace-equivalent":
-      case "different":
-      case "wrong-control":
-        return state;
-      default:
-        return "unavailable";
-    }
-  } catch {
-    return "unavailable";
+function normalizeSyntheticTextareaValueState(value: unknown): SyntheticTextareaValueState {
+  switch (value) {
+    case "exact":
+    case "empty":
+    case "whitespace-equivalent":
+    case "different":
+    case "wrong-control":
+    case "form-absent":
+    case "form-multiple":
+    case "textarea-absent":
+    case "textarea-multiple":
+      return value;
+    default:
+      return "unavailable";
   }
 }
 
-async function requireExactSyntheticTextareaValue(input: Locator, expectedValue: string) {
+async function classifySyntheticTextareaValue(
+  input: Locator,
+  captureForm: Locator,
+  expectedValue: string,
+): Promise<SyntheticTextareaValueState> {
+  const classifyElement = (element: Element, expected: string) => {
+    if (!(element instanceof HTMLTextAreaElement)) return "wrong-control" as const;
+    if (element.value === expected) return "exact" as const;
+    if (element.value === "") return "empty" as const;
+    const normalizeWhitespace = (value: string) => value.replace(/\s+/gu, " ").trim();
+    return normalizeWhitespace(element.value) === normalizeWhitespace(expected)
+      ? ("whitespace-equivalent" as const)
+      : ("different" as const);
+  };
+  try {
+    const state = await input.evaluate(classifyElement, expectedValue, { timeout: 5_000 });
+    return normalizeSyntheticTextareaValueState(state);
+  } catch {
+    try {
+      const formCount = await captureForm.count();
+      if (formCount === 0) return "form-absent";
+      if (formCount !== 1) return "form-multiple";
+      return normalizeSyntheticTextareaValueState(await captureForm.evaluate(
+        (form, expected) => {
+          const textareas = form.querySelectorAll("textarea");
+          if (textareas.length === 0) return "textarea-absent" as const;
+          if (textareas.length !== 1) return "textarea-multiple" as const;
+          const textarea = textareas[0];
+          if (textarea.value === expected) return "exact" as const;
+          if (textarea.value === "") return "empty" as const;
+          const normalizeWhitespace = (value: string) => value.replace(/\s+/gu, " ").trim();
+          return normalizeWhitespace(textarea.value) === normalizeWhitespace(expected)
+            ? ("whitespace-equivalent" as const)
+            : ("different" as const);
+        },
+        expectedValue,
+        { timeout: 5_000 },
+      ));
+    } catch {
+      return "unavailable";
+    }
+  }
+}
+
+function throwSyntheticTextareaValueFailure(state: SyntheticTextareaValueState): never {
+  const code = syntheticTextareaFailureCodes[state];
+  emitSafeFailureDiagnostic("assertion", code);
+  throw new Error(`S232G acceptance failed: ${code}`);
+}
+
+async function requireExactSyntheticTextareaValue(
+  input: Locator,
+  captureForm: Locator,
+  expectedValue: string,
+) {
+  const immediateState = await classifySyntheticTextareaValue(input, captureForm, expectedValue);
+  if (immediateState !== "exact") throwSyntheticTextareaValueFailure(immediateState);
   try {
     await expect(input).toHaveValue(expectedValue, { timeout: 20_000 });
     return;
   } catch {
-    const state = await classifySyntheticTextareaValue(input, expectedValue);
-    const code = syntheticTextareaFailureCodes[state];
-    emitSafeFailureDiagnostic("assertion", code);
-    throw new Error(`S232G acceptance failed: ${code}`);
+    throwSyntheticTextareaValueFailure(
+      await classifySyntheticTextareaValue(input, captureForm, expectedValue),
+    );
   }
 }
 
@@ -638,7 +685,7 @@ async function createSyntheticSourceThroughCapture(
   await staticStage("capture-text-entry-fill", () =>
     input.fill(syntheticCaptureText, { timeout: 20_000 }),
   );
-  await requireExactSyntheticTextareaValue(input, syntheticCaptureText);
+  await requireExactSyntheticTextareaValue(input, captureForm, syntheticCaptureText);
 
   let releaseRequest = () => {};
   const heldRequest = new Promise<void>((resolve) => {

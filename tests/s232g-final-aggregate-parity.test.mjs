@@ -361,7 +361,7 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
   assert.doesNotMatch(runtimeSpec, /staticStage\("capture-text-entry-value"/);
   assert.match(
     runtimeSpec,
-    /requireExactSyntheticTextareaValue\(input, syntheticCaptureText\)/,
+    /requireExactSyntheticTextareaValue\(input, captureForm, syntheticCaptureText\)/,
   );
   assert.match(runtimeSpec, /toHaveValue\(expectedValue, \{ timeout: 20_000 \}\)/);
   assert.match(runtimeSpec, /expectedValue,\s*\{ timeout: 5_000 \}/);
@@ -371,6 +371,10 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
     "whitespace-equivalent",
     "different",
     "wrong-control",
+    "form-absent",
+    "form-multiple",
+    "textarea-absent",
+    "textarea-multiple",
     "unavailable",
   ]) {
     assert.match(runtimeSpec, new RegExp(`capture-text-entry-value-${state}`));
