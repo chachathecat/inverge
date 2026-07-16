@@ -415,7 +415,7 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
     "secondary-login-hydration-sentinel",
     "secondary-login-credential-retention",
     "secondary-login-submit",
-    "secondary-login-app-navigation",
+    "secondary-login-app-classify",
     "secondary-login-app-visible",
   ]) {
     assert.match(runtimeSpec, new RegExp(`staticStage\\(\\s*"${stage}"`));
@@ -431,6 +431,24 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
   ]) {
     assert.match(runtimeSpec, new RegExp(`(?:"|\\b)${state}(?:"|\\b)`));
   }
+  assert.match(runtimeSpec, /classifySecondaryAppState/);
+  assert.match(runtimeSpec, /secondaryAppFailureCodes/);
+  for (const state of [
+    "allowed",
+    "invite-denied",
+    "access-unavailable",
+    "session-lost",
+    "onboarding",
+    "unknown",
+  ]) {
+    assert.match(runtimeSpec, new RegExp(`(?:"|\\b)${state}(?:"|\\b)`));
+  }
+  assert.match(runtimeSpec, /data-review-os-access-status="denied"/);
+  assert.match(runtimeSpec, /data-review-os-access-status="unavailable"/);
+  assert.match(runtimeSpec, /page\.locator\("\[data-learner-shell\]"\)/);
+  assert.match(runtimeSpec, /pathname === "\/app"/);
+  assert.match(runtimeSpec, /for \(let attempt = 0; attempt < 80; attempt \+= 1\)/);
+  assert.match(runtimeSpec, /page\.waitForTimeout\(250\)/);
   assert.match(runtimeSpec, /error instanceof Error && error\.name === "TimeoutError"/);
   const secondaryLoginStart = runtimeSpec.indexOf("async function loginWithCredentials");
   const secondaryLoginEnd = runtimeSpec.indexOf(

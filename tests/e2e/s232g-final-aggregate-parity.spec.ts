@@ -530,6 +530,55 @@ function classifySecondaryLoginResponse(response: Response): SecondaryLoginRespo
   return "unexpected";
 }
 
+type SecondaryAppState =
+  | "allowed"
+  | "invite-denied"
+  | "access-unavailable"
+  | "session-lost"
+  | "onboarding"
+  | "unknown";
+
+const secondaryAppFailureCodes = {
+  allowed: "secondary-login-app-allowed-unexpected",
+  "invite-denied": "secondary-login-invite-not-active",
+  "access-unavailable": "secondary-login-access-unavailable",
+  "session-lost": "secondary-login-session-not-retained",
+  onboarding: "secondary-login-onboarding-redirect",
+  unknown: "secondary-login-app-state-unknown",
+} as const satisfies Record<SecondaryAppState, string>;
+
+async function classifySecondaryAppState(page: Page): Promise<SecondaryAppState> {
+  const appSurface = page.locator('[data-s224v-surface="/app"]');
+  const learnerShell = page.locator("[data-learner-shell]");
+  const inviteDenied = page.locator('[data-review-os-access-status="denied"]');
+  const accessUnavailable = page.locator(
+    '[data-review-os-access-status="unavailable"]',
+  );
+  for (let attempt = 0; attempt < 80; attempt += 1) {
+    const pathname = new URL(page.url()).pathname;
+    if (await inviteDenied.isVisible().catch(() => false)) return "invite-denied";
+    if (await accessUnavailable.isVisible().catch(() => false)) {
+      return "access-unavailable";
+    }
+    if (
+      pathname === "/app/onboarding" &&
+      (await learnerShell.isVisible().catch(() => false))
+    ) {
+      return "onboarding";
+    }
+    if (
+      pathname === "/app" &&
+      (await learnerShell.isVisible().catch(() => false)) &&
+      (await appSurface.isVisible().catch(() => false))
+    ) {
+      return "allowed";
+    }
+    await page.waitForTimeout(250);
+  }
+  if (new URL(page.url()).pathname === "/login") return "session-lost";
+  return "unknown";
+}
+
 async function observedDeploymentSha(page: Page) {
   return staticStage("observed-deployment", () =>
     page.evaluate(async () => {
@@ -686,11 +735,10 @@ async function loginWithCredentials(page: Page, email: string, password: string)
   );
   const responseState = classifySecondaryLoginResponse(response);
   requireTruth(responseState === "accepted", secondaryLoginFailureCodes[responseState]);
-  await staticStage("secondary-login-app-navigation", () =>
-    page.waitForFunction(() => window.location.pathname === "/app", null, {
-      timeout: 20_000,
-    }),
+  const appState = await staticStage("secondary-login-app-classify", () =>
+    classifySecondaryAppState(page),
   );
+  requireTruth(appState === "allowed", secondaryAppFailureCodes[appState]);
   await staticStage("secondary-login-app-visible", () =>
     page.locator('[data-s224v-surface="/app"]').waitFor({
       state: "visible",
