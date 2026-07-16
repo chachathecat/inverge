@@ -524,7 +524,10 @@ async function createSyntheticSourceThroughCapture(
     "/app/capture?mode=second",
     '[data-s224v-surface="/app/capture"] form[data-s232e-capture-flow="four-stage"]',
   );
-  const textInputMethod = page.getByRole("button", {
+  const captureForm = page.locator(
+    '[data-s224v-surface="/app/capture"] form[data-s232e-capture-flow="four-stage"]',
+  );
+  const textInputMethod = captureForm.getByRole("button", {
     name: "텍스트 붙여넣기",
     exact: true,
   });
@@ -535,10 +538,16 @@ async function createSyntheticSourceThroughCapture(
       .poll(
         () =>
           textInputMethod.evaluate(
-            (element) =>
-              Object.keys(element).some(
-                (key) => key.startsWith("__reactProps$") || key.startsWith("__reactFiber$"),
-              ),
+            (element) => {
+              const reactPropsKey = Object.keys(element).find((key) =>
+                key.startsWith("__reactProps$"),
+              );
+              if (!reactPropsKey) return false;
+              const reactProps = (
+                element as unknown as Record<string, { onClick?: unknown } | undefined>
+              )[reactPropsKey];
+              return typeof reactProps?.onClick === "function";
+            },
             { timeout: 20_000 },
           ),
         {
@@ -553,13 +562,22 @@ async function createSyntheticSourceThroughCapture(
     await expect(textInputMethod).toBeFocused({ timeout: 20_000 });
     await textInputMethod.press("Enter", { timeout: 20_000 });
   });
-  await staticStage("capture-text-entry", async () => {
-    const input = page.getByLabel("오늘 공부한 내용 또는 내 답안", { exact: true });
-    await expect(input).toBeVisible({ timeout: 20_000 });
-    await expect(input).toBeEditable({ timeout: 20_000 });
-    await input.fill(syntheticCaptureText, { timeout: 20_000 });
-    await expect(input).toHaveValue(syntheticCaptureText, { timeout: 20_000 });
-  });
+  const input = captureForm.getByLabel("오늘 공부한 내용 또는 내 답안", { exact: true });
+  await staticStage("capture-text-entry-visible", () =>
+    expect(input).toBeVisible({ timeout: 20_000 }),
+  );
+  await staticStage("capture-text-entry-focused", () =>
+    expect(input).toBeFocused({ timeout: 20_000 }),
+  );
+  await staticStage("capture-text-entry-editable", () =>
+    expect(input).toBeEditable({ timeout: 20_000 }),
+  );
+  await staticStage("capture-text-entry-fill", () =>
+    input.fill(syntheticCaptureText, { timeout: 20_000 }),
+  );
+  await staticStage("capture-text-entry-value", () =>
+    expect(input).toHaveValue(syntheticCaptureText, { timeout: 20_000 }),
+  );
 
   let releaseRequest = () => {};
   const heldRequest = new Promise<void>((resolve) => {

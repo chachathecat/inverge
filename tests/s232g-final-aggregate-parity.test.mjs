@@ -337,6 +337,8 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
   assert.match(runtimeSpec, /capture-input-method-ready/);
   assert.match(runtimeSpec, /capture-input-method-activate/);
   assert.match(runtimeSpec, /Capture input method must be hydrated/);
+  assert.match(runtimeSpec, /key\.startsWith\("__reactProps\$"\)/);
+  assert.match(runtimeSpec, /typeof reactProps\?\.onClick === "function"/);
   assert.match(
     runtimeSpec,
     /textInputMethod\.evaluate\(\s*\(element\)[\s\S]*?\),\s*\{ timeout: 20_000 \},\s*\)/,
@@ -346,6 +348,15 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
     runtimeSpec,
     /textInputMethod\.press\("Enter", \{ timeout: 20_000 \}\)/,
   );
+  for (const stage of [
+    "capture-text-entry-visible",
+    "capture-text-entry-focused",
+    "capture-text-entry-editable",
+    "capture-text-entry-fill",
+    "capture-text-entry-value",
+  ]) {
+    assert.match(runtimeSpec, new RegExp(`staticStage\\("${stage}"`));
+  }
   assert.match(runtimeSpec, /input\.fill\(syntheticCaptureText, \{ timeout: 20_000 \}\)/);
   assert.match(runtimeSpec, /capture-saving-announcement/);
   assert.match(runtimeSpec, /rewrite-source-exact-binding/);
