@@ -272,6 +272,13 @@ test("S232F.6 repository ownership and exact-head runtime evidence fail closed",
   assert.match(runtimeSpec, /realTwoAccountDenialClaimed: true/);
   assert.match(runtimeSpec, /boundedCrossAccountStage/);
   assert.match(runtimeSpec, /cross-account stage failed: \$\{stage\}/);
+  assert.match(runtimeSpec, /Date\.now\(\) \+ 180_000/);
+  assert.match(runtimeSpec, /remainingBudget <= 0/);
+  assert.match(runtimeSpec, /"a-context"/);
+  assert.match(runtimeSpec, /"b-context"/);
+  assert.match(runtimeSpec, /closeCrossAccountContext/);
+  assert.match(runtimeSpec, /const cleanupResults = await Promise\.all/);
+  assert.match(runtimeSpec, /cleanup-incomplete/);
   assert.match(runtimeSpec, /"b-api-denial"/);
   assert.match(runtimeSpec, /"b-first-ox-ui-denial"/);
   assert.match(runtimeSpec, /"b-session-ui-denial"/);
@@ -297,9 +304,16 @@ test("S232F.6 repository ownership and exact-head runtime evidence fail closed",
   assert.match(runtimeSpec, /desktopZoomWidthEquivalentPercent: 200/);
   assert.match(runtimeSpec, /postLoginBrowserMutationRequestCount/);
   assert.match(runtimeSpec, /blockedPreviewToolbarMutationCount/);
+  assert.match(runtimeSpec, /blockedPreviewToolbarConsoleErrorCount/);
+  assert.match(runtimeSpec, /blockedPreviewToolbarConsolePattern/);
+  assert.match(runtimeSpec, /entry\.sourceClass === "vercel-preview-toolbar"/);
   assert.match(runtimeSpec, /requestClass === "vercel-preview-toolbar"/);
   assert.match(runtimeSpec, /previewToolbarExcludedFromProductMutationGate: true/);
   assert.match(runtimeWorkflow, /blockedPreviewToolbarMutationCount must be a bounded integer/);
+  assert.match(
+    runtimeWorkflow,
+    /blockedPreviewToolbarConsoleErrorCount must be a bounded integer/,
+  );
   assert.match(
     runtimeWorkflow,
     /excludedPreviewToolbarInstrumentationCount must be a bounded integer/,

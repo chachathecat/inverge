@@ -71,9 +71,12 @@ synthetic payload, request/response body, DOM, screenshot, trace, or video.
   one identity, or account A has no existing read-only item fixture. The run
   creates no learner record.
 - Every A/B preview, login, owner-positive, API-denial, and UI-denial stage has a
-  fixed bounded timeout and emits only a static stage code on failure. A stalled
-  provider or navigation therefore cannot consume the whole acceptance timeout
-  or disclose account/item data while being diagnosed.
+  fixed bounded timeout under one shared 180-second deadline and emits only a
+  static stage code on failure. Context creation is covered by the same budget;
+  both contexts are always closed concurrently behind independent 8-second
+  cleanup bounds. A stalled provider, navigation, or cleanup therefore cannot
+  consume the whole acceptance timeout or disclose account/item data while being
+  diagnosed.
 - Browser mutation instrumentation covers every document in the browser context.
   Events before the post-login measurement window are ignored. During that
   window, only exact `vercel.live` Preview-toolbar activity is separated into a
@@ -82,8 +85,11 @@ synthetic payload, request/response body, DOM, screenshot, trace, or video.
   instrumentation error counts must both remain zero.
 - The protected Preview may inject its own `vercel.live` toolbar. Its bounded
   cross-origin POST is aborted before transmission, counted separately, and
-  never treated as an application mutation. Every other non-read request,
-  including unknown cross-origin traffic, remains fail-closed.
+  never treated as an application mutation. The exact toolbar-origin
+  `ERR_BLOCKED_BY_CLIENT` console result of that isolation is also counted in a
+  separate bounded scalar; it is not treated as a product console error. Every
+  other non-read request or console error, including unknown cross-origin
+  traffic, remains fail-closed.
 - The controlled 503 and strict recovery payload exist only in Playwright route
   interception. There is no production query, cookie, header, environment
   branch, or fault-injection backdoor.

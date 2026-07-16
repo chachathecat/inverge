@@ -3,6 +3,7 @@ import {
   expect,
   test,
   type Browser,
+  type BrowserContext,
   type Locator,
   type Page,
   type TestInfo,
@@ -187,21 +188,56 @@ async function ownedDetailProof(page: Page, itemId: string, expectedUserId: stri
 async function boundedCrossAccountStage<T>(
   stage: string,
   action: () => Promise<T>,
+  budget: { deadline: number },
   timeoutMs = 35_000,
 ) {
+  const remainingBudget = budget.deadline - Date.now();
+  if (remainingBudget <= 0) {
+    throw new Error(`S232F.6 cross-account stage budget-exhausted: ${stage}.`);
+  }
+  const effectiveTimeout = Math.min(timeoutMs, remainingBudget);
+  const budgetLimited = remainingBudget <= timeoutMs;
   let timeout: ReturnType<typeof setTimeout> | undefined;
+  let timedOut = false;
   try {
     return await Promise.race([
       action(),
       new Promise<T>((_, reject) => {
         timeout = setTimeout(
-          () => reject(new Error(`S232F.6 cross-account stage timed out: ${stage}.`)),
-          timeoutMs,
+          () => {
+            timedOut = true;
+            reject(new Error("S232F.6 bounded cross-account stage expired."));
+          },
+          effectiveTimeout,
         );
       }),
     ]);
   } catch {
+    if (timedOut) {
+      const code = budgetLimited ? "budget-exhausted" : "timeout";
+      throw new Error(`S232F.6 cross-account stage ${code}: ${stage}.`);
+    }
     throw new Error(`S232F.6 cross-account stage failed: ${stage}.`);
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
+}
+
+async function closeCrossAccountContext(context: BrowserContext | null) {
+  if (!context) return true;
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      context.close().then(
+        () => true,
+        () => false,
+      ),
+      new Promise<boolean>((resolve) => {
+        timeout = setTimeout(() => resolve(false), 8_000);
+      }),
+    ]);
+  } catch {
+    return false;
   } finally {
     if (timeout) clearTimeout(timeout);
   }
@@ -209,59 +245,93 @@ async function boundedCrossAccountStage<T>(
 
 async function verifyRealCrossAccountDenial(browser: Browser) {
   requireTwoAccountCredentials();
+  const budget = { deadline: Date.now() + 180_000 };
   const contextOptions = {
     baseURL: runtimeBaseUrl,
     extraHTTPHeaders: protectionHeaders,
     serviceWorkers: "block" as const,
   };
-  const accountAContext = await browser.newContext(contextOptions);
-  const accountBContext = await browser.newContext(contextOptions);
+  let accountAContext: BrowserContext | null = null;
+  let accountBContext: BrowserContext | null = null;
+  let primaryFailure: Error | null = null;
+  let result: {
+    apiDenialCount: 1;
+    uiDenialCount: 2;
+    ownerReadablePositiveControlCount: 2;
+    unexpectedRuntimeErrorCount: number;
+  } | null = null;
   try {
-    const accountAPage = await boundedCrossAccountStage("a-page", () =>
-      accountAContext.newPage(),
+    accountAContext = await boundedCrossAccountStage(
+      "a-context",
+      () => browser.newContext(contextOptions),
+      budget,
+    );
+    accountBContext = await boundedCrossAccountStage(
+      "b-context",
+      () => browser.newContext(contextOptions),
+      budget,
+    );
+    const accountAPage = await boundedCrossAccountStage(
+      "a-page",
+      () => accountAContext!.newPage(),
+      budget,
     );
     await boundedCrossAccountStage(
       "a-preview",
       () => establishProtectedPreviewSession(accountAPage, "S232F.6 account A"),
+      budget,
       45_000,
     );
-    const accountAUserId = await boundedCrossAccountStage("a-login", () =>
-      loginWithCredentials(accountAPage, accountAEmail, accountAPassword),
+    const accountAUserId = await boundedCrossAccountStage(
+      "a-login",
+      () => loginWithCredentials(accountAPage, accountAEmail, accountAPassword),
+      budget,
     );
     const accountARuntimeErrors = monitorRuntimeErrors(accountAPage);
-    const accountAItemId = await boundedCrossAccountStage("a-item-list", () =>
-      firstExistingWrongAnswerItemId(accountAPage),
+    const accountAItemId = await boundedCrossAccountStage(
+      "a-item-list",
+      () => firstExistingWrongAnswerItemId(accountAPage),
+      budget,
     );
-    await boundedCrossAccountStage("a-owner-positive-before", async () => {
-      expect(
-        await ownedDetailProof(accountAPage, accountAItemId, accountAUserId),
-      ).toEqual({
-        status: 200,
-        exactKeys: true,
-        ok: true,
-        detailIsPresent: true,
-        itemMatches: true,
-      });
-    });
+    await boundedCrossAccountStage(
+      "a-owner-positive-before",
+      async () => {
+        expect(
+          await ownedDetailProof(accountAPage, accountAItemId, accountAUserId),
+        ).toEqual({
+          status: 200,
+          exactKeys: true,
+          ok: true,
+          detailIsPresent: true,
+          itemMatches: true,
+        });
+      },
+      budget,
+    );
 
-    const accountBPage = await boundedCrossAccountStage("b-page", () =>
-      accountBContext.newPage(),
+    const accountBPage = await boundedCrossAccountStage(
+      "b-page",
+      () => accountBContext!.newPage(),
+      budget,
     );
     await boundedCrossAccountStage(
       "b-preview",
       () => establishProtectedPreviewSession(accountBPage, "S232F.6 account B"),
+      budget,
       45_000,
     );
-    const accountBUserId = await boundedCrossAccountStage("b-login", () =>
-      loginWithCredentials(accountBPage, accountBEmail, accountBPassword),
+    const accountBUserId = await boundedCrossAccountStage(
+      "b-login",
+      () => loginWithCredentials(accountBPage, accountBEmail, accountBPassword),
+      budget,
     );
     const accountBRuntimeErrors = monitorRuntimeErrors(accountBPage);
     if (accountAUserId === accountBUserId) {
       throw new Error("S232F.6 cross-account credentials resolved to the same identity.");
     }
 
-    const denial = await boundedCrossAccountStage("b-api-denial", () =>
-      accountBPage.evaluate(async (itemId) => {
+    await boundedCrossAccountStage("b-api-denial", async () => {
+      const denial = await accountBPage.evaluate(async (itemId) => {
         const response = await fetch(`/api/os/items/${encodeURIComponent(itemId)}`, {
           cache: "no-store",
           credentials: "same-origin",
@@ -277,53 +347,69 @@ async function verifyRealCrossAccountDenial(browser: Browser) {
           ok: body?.ok === true,
           detailIsNull: body?.detail === null,
         };
-      }, accountAItemId),
-    );
-    expect(denial).toEqual({
-      status: 200,
-      exactKeys: true,
-      ok: true,
-      detailIsNull: true,
-    });
-
-    await boundedCrossAccountStage("b-first-ox-ui-denial", async () => {
-      await accountBPage.goto(
-        `/app/first/ox?sourceItemId=${encodeURIComponent(accountAItemId)}`,
-        { waitUntil: "domcontentloaded", timeout: 30_000 },
-      );
-      await expect(
-        accountBPage.locator(
-          '[data-s232f6-source-read-state="missing"][data-s232f6-source-read-surface="first_ox"]',
-        ),
-      ).toHaveCount(1);
-      await expect(accountBPage.getByRole("button", { name: "O + 확실함" })).toHaveCount(0);
-    }, 45_000);
-
-    await boundedCrossAccountStage("b-session-ui-denial", async () => {
-      await accountBPage.goto(
-        `/app/session?mode=first&savedCapture=1&itemId=${encodeURIComponent(accountAItemId)}`,
-        { waitUntil: "domcontentloaded", timeout: 30_000 },
-      );
-      await expect(
-        accountBPage.locator(
-          '[data-s232f6-source-read-state="missing"][data-s232f6-source-read-surface="session"]',
-        ),
-      ).toHaveCount(1);
-      await expect(
-        accountBPage.getByText("오늘 계획에 반영했습니다.", { exact: true }),
-      ).toHaveCount(0);
-    }, 45_000);
-    await boundedCrossAccountStage("a-owner-positive-after", async () => {
-      expect(
-        await ownedDetailProof(accountAPage, accountAItemId, accountAUserId),
-      ).toEqual({
+      }, accountAItemId);
+      expect(denial).toEqual({
         status: 200,
         exactKeys: true,
         ok: true,
-        detailIsPresent: true,
-        itemMatches: true,
+        detailIsNull: true,
       });
-    });
+    }, budget);
+
+    await boundedCrossAccountStage(
+      "b-first-ox-ui-denial",
+      async () => {
+        await accountBPage.goto(
+          `/app/first/ox?sourceItemId=${encodeURIComponent(accountAItemId)}`,
+          { waitUntil: "domcontentloaded", timeout: 30_000 },
+        );
+        await expect(
+          accountBPage.locator(
+            '[data-s232f6-source-read-state="missing"][data-s232f6-source-read-surface="first_ox"]',
+          ),
+        ).toHaveCount(1);
+        await expect(
+          accountBPage.getByRole("button", { name: "O + 확실함" }),
+        ).toHaveCount(0);
+      },
+      budget,
+      45_000,
+    );
+
+    await boundedCrossAccountStage(
+      "b-session-ui-denial",
+      async () => {
+        await accountBPage.goto(
+          `/app/session?mode=first&savedCapture=1&itemId=${encodeURIComponent(accountAItemId)}`,
+          { waitUntil: "domcontentloaded", timeout: 30_000 },
+        );
+        await expect(
+          accountBPage.locator(
+            '[data-s232f6-source-read-state="missing"][data-s232f6-source-read-surface="session"]',
+          ),
+        ).toHaveCount(1);
+        await expect(
+          accountBPage.getByText("오늘 계획에 반영했습니다.", { exact: true }),
+        ).toHaveCount(0);
+      },
+      budget,
+      45_000,
+    );
+    await boundedCrossAccountStage(
+      "a-owner-positive-after",
+      async () => {
+        expect(
+          await ownedDetailProof(accountAPage, accountAItemId, accountAUserId),
+        ).toEqual({
+          status: 200,
+          exactKeys: true,
+          ok: true,
+          detailIsPresent: true,
+          itemMatches: true,
+        });
+      },
+      budget,
+    );
 
     const accountRuntimeErrors = [accountARuntimeErrors, accountBRuntimeErrors];
     const unexpectedRuntimeErrorCount = accountRuntimeErrors.reduce(
@@ -334,21 +420,43 @@ async function verifyRealCrossAccountDenial(browser: Browser) {
         errors.sameOriginRequestFailures.length,
       0,
     );
-    for (const errors of accountRuntimeErrors) {
-      expect(errors.consoleErrors).toEqual([]);
-      expect(errors.pageErrors).toEqual([]);
-      expect(errors.sameOriginRequestFailures).toEqual([]);
-    }
-    return {
+    await boundedCrossAccountStage("runtime-error-audit", async () => {
+      for (const errors of accountRuntimeErrors) {
+        expect(errors.consoleErrors).toEqual([]);
+        expect(errors.pageErrors).toEqual([]);
+        expect(errors.sameOriginRequestFailures).toEqual([]);
+      }
+    }, budget);
+    result = {
       apiDenialCount: 1,
       uiDenialCount: 2,
       ownerReadablePositiveControlCount: 2,
       unexpectedRuntimeErrorCount,
-    } as const;
-  } finally {
-    await accountAContext.close();
-    await accountBContext.close();
+    };
+  } catch (error) {
+    primaryFailure =
+      error instanceof Error && error.message.startsWith("S232F.6 cross-account")
+        ? new Error(error.message)
+        : new Error("S232F.6 cross-account stage failed: unclassified.");
   }
+  const cleanupResults = await Promise.all([
+    closeCrossAccountContext(accountAContext),
+    closeCrossAccountContext(accountBContext),
+  ]);
+  const cleanupComplete = cleanupResults.every(Boolean);
+  if (primaryFailure) {
+    if (!cleanupComplete) {
+      throw new Error(`${primaryFailure.message} cleanup-incomplete.`);
+    }
+    throw primaryFailure;
+  }
+  if (!cleanupComplete) {
+    throw new Error("S232F.6 cross-account cleanup-incomplete.");
+  }
+  if (!result) {
+    throw new Error("S232F.6 cross-account result-unavailable.");
+  }
+  return result;
 }
 
 async function installContextWideMutationProbe(page: Page) {
@@ -698,6 +806,7 @@ test("S232F.6 exact-head Session and First OX keep requested reads truthful", as
     sameOrigin: boolean;
     pathname: string;
     emptySearchAndHash: boolean;
+    sourceClass: string;
   }> = [];
   page.on("console", (message) => {
     if (message.type() !== "error") return;
@@ -705,14 +814,19 @@ test("S232F.6 exact-head Session and First OX keep requested reads truthful", as
     let sameOrigin = false;
     let pathname = "";
     let emptySearchAndHash = false;
+    let sourceClass = "missing-location";
     if (rawLocation) {
       try {
         const location = new URL(rawLocation);
         sameOrigin = location.origin === runtimeOrigin;
         pathname = sameOrigin ? location.pathname : "cross-origin";
         emptySearchAndHash = location.search === "" && location.hash === "";
+        sourceClass = sameOrigin
+          ? "runtime-origin"
+          : classifyUnexpectedMutationRequest(location, runtimeOrigin);
       } catch {
         pathname = "invalid";
+        sourceClass = "invalid-location";
       }
     }
     locatedConsoleErrors.push({
@@ -720,6 +834,7 @@ test("S232F.6 exact-head Session and First OX keep requested reads truthful", as
       sameOrigin,
       pathname,
       emptySearchAndHash,
+      sourceClass,
     });
   });
   const postLoginBrowserInstrumentationErrorCount = await mutationProbe.barrier();
@@ -949,22 +1064,35 @@ test("S232F.6 exact-head Session and First OX keep requested reads truthful", as
     runtimeErrors.sameOriginRequestFailures.length - unexpectedRequestFailures.length;
   const controlledConsolePattern =
     /^Failed to load resource: the server responded with a status of 503(?: \(Service Unavailable\))?$/;
+  const blockedPreviewToolbarConsolePattern =
+    /^Failed to load resource: net::ERR_BLOCKED_BY_CLIENT(?:\.Inspector)?$/;
   expect(locatedConsoleErrors.map(({ text }) => text)).toEqual(
     runtimeErrors.consoleErrors,
   );
+  const isControlledConsoleError = (entry: (typeof locatedConsoleErrors)[number]) =>
+    entry.sameOrigin &&
+    entry.pathname === exactSyntheticPath &&
+    entry.emptySearchAndHash &&
+    controlledConsolePattern.test(entry.text);
+  const isBlockedPreviewToolbarConsoleError = (
+    entry: (typeof locatedConsoleErrors)[number],
+  ) =>
+    entry.sourceClass === "vercel-preview-toolbar" &&
+    blockedPreviewToolbarConsolePattern.test(entry.text);
   const unexpectedConsoleErrors = locatedConsoleErrors.filter(
     (entry) =>
-      !(
-        entry.sameOrigin &&
-        entry.pathname === exactSyntheticPath &&
-        entry.emptySearchAndHash &&
-        controlledConsolePattern.test(entry.text)
-      ),
+      !isControlledConsoleError(entry) &&
+      !isBlockedPreviewToolbarConsoleError(entry),
   );
-  const controlledConsoleErrorCount =
-    locatedConsoleErrors.length - unexpectedConsoleErrors.length;
+  const controlledConsoleErrorCount = locatedConsoleErrors.filter(
+    isControlledConsoleError,
+  ).length;
+  const blockedPreviewToolbarConsoleErrorCount = locatedConsoleErrors.filter(
+    isBlockedPreviewToolbarConsoleError,
+  ).length;
   expect(controlledRequestFailureCount).toBe(1);
   expect(controlledConsoleErrorCount).toBe(controlledRequestFailureCount);
+  expect(blockedPreviewToolbarConsoleErrorCount).toBeLessThanOrEqual(8);
   expect(unexpectedRequestFailures).toEqual([]);
   expect(unexpectedConsoleErrors).toEqual([]);
   expect(runtimeErrors.pageErrors).toEqual([]);
@@ -1007,6 +1135,7 @@ test("S232F.6 exact-head Session and First OX keep requested reads truthful", as
     unexpectedRequestFailureCount: unexpectedRequestFailures.length,
     postLoginBrowserMutationRequestCount,
     blockedPreviewToolbarMutationCount,
+    blockedPreviewToolbarConsoleErrorCount,
     excludedPreviewToolbarInstrumentationCount:
       mutationCounts.excludedPreviewToolbarInstrumentationCount,
     previewToolbarExcludedFromProductMutationGate: true,

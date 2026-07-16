@@ -171,6 +171,7 @@ jobs:
               "controlledConsoleErrorCount",
               "unexpectedConsoleErrorCount", "pageErrorCount", "unexpectedRequestFailureCount",
               "postLoginBrowserMutationRequestCount", "blockedPreviewToolbarMutationCount",
+              "blockedPreviewToolbarConsoleErrorCount",
               "excludedPreviewToolbarInstrumentationCount",
               "previewToolbarExcludedFromProductMutationGate",
               "first100WrongAnswerIdsFinalDigestUnchanged",
@@ -262,6 +263,13 @@ jobs:
               evidence.blockedPreviewToolbarMutationCount > 8
             ) {
               throw new Error("blockedPreviewToolbarMutationCount must be a bounded integer");
+            }
+            if (
+              !Number.isInteger(evidence.blockedPreviewToolbarConsoleErrorCount) ||
+              evidence.blockedPreviewToolbarConsoleErrorCount < 0 ||
+              evidence.blockedPreviewToolbarConsoleErrorCount > 8
+            ) {
+              throw new Error("blockedPreviewToolbarConsoleErrorCount must be a bounded integer");
             }
             if (
               !Number.isInteger(evidence.excludedPreviewToolbarInstrumentationCount) ||
