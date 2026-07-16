@@ -1,0 +1,234 @@
+name: S232G Final Aggregate Exact-Head Runtime Acceptance
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, edited]
+
+permissions:
+  contents: read
+  deployments: read
+
+jobs:
+  s232g-final-aggregate:
+    name: S232G Exact-Head Aggregate Parity
+    if: >-
+      github.event.pull_request.head.ref == 'agent/s232g-final-aggregate-parity' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    concurrency:
+      group: s232g-final-aggregate-${{ github.event.pull_request.number }}
+      cancel-in-progress: false
+    env:
+      CI: "true"
+      E2E_RUNNER_SHA: ${{ github.event.pull_request.head.sha }}
+      E2E_TARGET_SHA: ${{ github.event.pull_request.head.sha }}
+      S232G_RUN_NONCE: ${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - name: Require explicit authenticated aggregate marker
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: >-
+          node --input-type=module -e
+          'if (!(process.env.PR_BODY ?? "").includes("<!-- run-s232g-auth-e2e -->")) {
+          throw new Error("Missing S232G authenticated aggregate marker"); }'
+
+      - name: Check out exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Discover and verify exact-head Preview
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: |
+          set -euo pipefail
+          test -n "${VERCEL_AUTOMATION_BYPASS_SECRET:-}"
+          [[ "${E2E_RUNNER_SHA}" =~ ^[0-9a-f]{40}$ ]]
+          test "${E2E_TARGET_SHA}" = "${E2E_RUNNER_SHA}"
+
+          exact_head_ready=0
+          deadline=$((SECONDS + 900))
+          while [ "${SECONDS}" -lt "${deadline}" ]; do
+            deployments_path="$(mktemp)"
+            if ! gh api -X GET "/repos/${GITHUB_REPOSITORY}/deployments?sha=${E2E_RUNNER_SHA}&environment=Preview&per_page=20" > "${deployments_path}"; then
+              rm -f "${deployments_path}"
+              sleep 10
+              continue
+            fi
+            mapfile -t deployment_ids < <(
+              DEPLOYMENTS_PATH="${deployments_path}" EXPECTED_SHA="${E2E_RUNNER_SHA}" node --input-type=module -e '
+                import { readFileSync } from "node:fs";
+                const values = JSON.parse(readFileSync(process.env.DEPLOYMENTS_PATH, "utf8"));
+                if (!Array.isArray(values)) process.exit(1);
+                for (const value of values) {
+                  if (
+                    value?.sha === process.env.EXPECTED_SHA &&
+                    value?.environment === "Preview" &&
+                    Number.isInteger(value?.id)
+                  ) process.stdout.write(String(value.id) + "\n");
+                }
+              '
+            )
+            rm -f "${deployments_path}"
+
+            for deployment_id in "${deployment_ids[@]}"; do
+              statuses_path="$(mktemp)"
+              if ! gh api -X GET "/repos/${GITHUB_REPOSITORY}/deployments/${deployment_id}/statuses?per_page=20" > "${statuses_path}"; then
+                rm -f "${statuses_path}"
+                continue
+              fi
+              preview_url="$(
+                STATUSES_PATH="${statuses_path}" node --input-type=module -e '
+                  import { readFileSync } from "node:fs";
+                  const values = JSON.parse(readFileSync(process.env.STATUSES_PATH, "utf8"));
+                  const latest = Array.isArray(values) ? values[0] : null;
+                  if (latest?.state !== "success") process.exit(0);
+                  const raw = latest.environment_url ?? latest.target_url ?? "";
+                  if (!raw) process.exit(0);
+                  let url;
+                  try {
+                    url = new URL(raw);
+                  } catch {
+                    process.exit(2);
+                  }
+                  if (
+                    url.protocol !== "https:" || url.username || url.password ||
+                    url.search || url.hash || url.pathname !== "/" ||
+                    !/^inverge-[a-z0-9-]+-chachathecats-projects\.vercel\.app$/i.test(url.hostname)
+                  ) process.exit(1);
+                  process.stdout.write(url.origin);
+                '
+              )"
+              rm -f "${statuses_path}"
+
+              if [ -n "${preview_url}" ]; then
+                body_path="$(mktemp)"
+                curl_error_path="$(mktemp)"
+                if ! status="$(curl --silent --show-error --output "${body_path}" --write-out '%{http_code}' --connect-timeout 5 --max-time 15 --header "x-vercel-protection-bypass: ${VERCEL_AUTOMATION_BYPASS_SECRET}" "${preview_url}/api/runtime/version" 2> "${curl_error_path}")"; then
+                  status="000"
+                fi
+                rm -f "${curl_error_path}"
+                if [ "${status}" = "200" ] && BODY_PATH="${body_path}" EXPECTED_SHA="${E2E_RUNNER_SHA}" node --input-type=module -e '
+                    import { readFileSync } from "node:fs";
+                    const payload = JSON.parse(readFileSync(process.env.BODY_PATH, "utf8"));
+                    if (payload.ready !== true || payload.deploymentSha !== process.env.EXPECTED_SHA) process.exit(1);
+                  '; then
+                  echo "E2E_BASE_URL=${preview_url}" >> "${GITHUB_ENV}"
+                  echo "E2E_EXPECTED_HOST=${preview_url#https://}" >> "${GITHUB_ENV}"
+                  exact_head_ready=1
+                  rm -f "${body_path}"
+                  break
+                fi
+                rm -f "${body_path}"
+              fi
+            done
+            if [ "${exact_head_ready}" = "1" ]; then break; fi
+            sleep 10
+          done
+          test "${exact_head_ready}" = "1"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Run exact-head aggregate source contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          contract_log="$(mktemp)"
+          if ! npm test > "${contract_log}" 2>&1; then
+            rm -f "${contract_log}"
+            echo "::error::S232G exact-head source contracts failed; dynamic test details were intentionally suppressed."
+            exit 1
+          fi
+          rm -f "${contract_log}"
+          echo "S232G exact-head source contracts completed."
+
+      - name: Run privacy-safe exact-head aggregate acceptance
+        shell: bash
+        env:
+          S232G_AUTH_RUNTIME: "1"
+          E2E_USER_EMAIL: ${{ secrets.E2E_USER_A_EMAIL }}
+          E2E_USER_PASSWORD: ${{ secrets.E2E_USER_A_PASSWORD }}
+          E2E_USER_A_EMAIL: ${{ secrets.E2E_USER_A_EMAIL }}
+          E2E_USER_A_PASSWORD: ${{ secrets.E2E_USER_A_PASSWORD }}
+          E2E_USER_B_EMAIL: ${{ secrets.E2E_USER_B_EMAIL }}
+          E2E_USER_B_PASSWORD: ${{ secrets.E2E_USER_B_PASSWORD }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: |
+          set -euo pipefail
+          runner_log="$(mktemp)"
+          if ! npx playwright test \
+            tests/e2e/s232c1-calculator-step.spec.ts \
+            tests/e2e/s232g-final-aggregate-parity.spec.ts \
+            --project=chromium \
+            --workers=1 \
+            --retries=0 \
+            --reporter=./tests/e2e/support/s232g-metadata-reporter.ts \
+            > "${runner_log}" 2>&1; then
+            rm -f "${runner_log}"
+            echo "::error::S232G metadata-only runtime failed; dynamic runner details were intentionally suppressed."
+            exit 1
+          fi
+          rm -f "${runner_log}"
+          echo "S232G metadata-only runtime completed."
+
+      - name: Recheck exact deployment SHA
+        shell: bash
+        env:
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: |
+          set -euo pipefail
+          body_path="$(mktemp)"
+          curl_error_path="$(mktemp)"
+          if ! status="$(curl --silent --show-error --output "${body_path}" --write-out '%{http_code}' --connect-timeout 5 --max-time 15 --header "x-vercel-protection-bypass: ${VERCEL_AUTOMATION_BYPASS_SECRET}" "${E2E_BASE_URL}/api/runtime/version" 2> "${curl_error_path}")"; then
+            rm -f "${body_path}" "${curl_error_path}"
+            echo "::error::S232G exact-head deployment recheck failed; dynamic network details were intentionally suppressed."
+            exit 1
+          fi
+          rm -f "${curl_error_path}"
+          test "${status}" = "200"
+          BODY_PATH="${body_path}" EXPECTED_SHA="${E2E_RUNNER_SHA}" node --input-type=module -e '
+            import { readFileSync } from "node:fs";
+            const payload = JSON.parse(readFileSync(process.env.BODY_PATH, "utf8"));
+            if (payload.ready !== true || payload.deploymentSha !== process.env.EXPECTED_SHA) process.exit(1);
+          '
+          rm -f "${body_path}"
+
+      - name: Validate metadata-only S232G evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t matrix_paths < <(find test-results -name s232g-matrix.ndjson -type f -print)
+          mapfile -t summary_paths < <(find test-results -name s232g-summary.json -type f -print)
+          test "${#matrix_paths[@]}" -eq 1
+          test "${#summary_paths[@]}" -eq 1
+          rm -rf validated-s232g-evidence
+          node scripts/validate-s232g-evidence.mjs \
+            "${matrix_paths[0]}" \
+            "${summary_paths[0]}" \
+            "${E2E_RUNNER_SHA}" \
+            validated-s232g-evidence
+          test "$(find validated-s232g-evidence -maxdepth 1 -type f | wc -l)" -eq 2
+
+      - name: Upload validated metadata-only S232G evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: s232g-final-aggregate-evidence-${{ github.run_id }}
+          path: |
+            validated-s232g-evidence/s232g-matrix.ndjson
+            validated-s232g-evidence/s232g-summary.json
+          if-no-files-found: error
+          retention-days: 7

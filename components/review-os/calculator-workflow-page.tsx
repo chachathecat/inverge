@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { AccountingTemplateCard } from "@/components/review-os/accounting-template-card";
 import { ExecutionResultControls } from "@/components/review-os/execution-result-controls";
 import { CalculatorRoutineTrainer } from "@/components/review-os/calculator-routine-trainer";
@@ -64,7 +64,7 @@ export function CalculatorWorkflowPage({ focus, workflow, recoveryReference = nu
   );
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5" data-s232g-route="calculator">
       <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-5 md:p-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="max-w-[70ch]">
@@ -76,13 +76,14 @@ export function CalculatorWorkflowPage({ focus, workflow, recoveryReference = nu
                 {workflow.subject}
               </span>
             </div>
-            <h2 className="mt-3 text-2xl font-semibold tracking-[-0.035em] text-[color:var(--foreground-strong)]">{workflow.title}</h2>
+            <h1 className="mt-3 text-2xl font-semibold tracking-[-0.035em] text-[color:var(--foreground-strong)]">{workflow.title}</h1>
             <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">{isCasioFocus ? "CASIO 계산형 연습입니다. 입력 순서, 단위, 화면값을 직접 기록하고 실제 기기에서 대조합니다. 기기별 안내는 아직 검증 전입니다." : "계산 결과를 답안 판단으로 연결합니다. 지금은 한 번에 한 루틴만 고정합니다."}</p>
           </div>
-          <Link href={`/app?mode=${workflow.mode}`}>
-            <Button type="button" variant="outline" className="min-h-11">
-              오늘로 돌아가기
-            </Button>
+          <Link
+            href={`/app?mode=${workflow.mode}`}
+            className={buttonVariants({ variant: "outline", className: "min-h-11" })}
+          >
+            오늘로 돌아가기
           </Link>
         </div>
       </section>

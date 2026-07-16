@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ExecutionResultControls } from "@/components/review-os/execution-result-controls";
 import { MicroPracticeCard } from "@/components/review-os/minimal-study-system";
@@ -224,7 +224,12 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
                 </details>
               </section>
             ) : null}
-            <Button type="button" className="w-full sm:w-auto" onClick={() => setStepIndex((prev) => prev + 1)}>
+            <Button
+              type="button"
+              className="w-full sm:w-auto"
+              data-s232g-primary-action
+              onClick={() => setStepIndex((prev) => prev + 1)}
+            >
               {hasQueueItem ? (mode === "second" ? "10분 다시 쓰기" : "추천 작업으로 시작") : mode === "second" ? "2차 작성 워크스페이스 시작" : "오늘 입력 작업 시작"}
             </Button>
             {quietLinks}
@@ -486,10 +491,12 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
                 오늘 queue가 아직 없어 먼저 기록 1건을 남기면 session 루프가 시작됩니다.
               </p>
             )}
-            <Link href={mode === "first" ? "/app/sets?mode=first" : `/app/write?mode=${mode}`} className="inline-flex w-full sm:w-auto">
-              <Button type="button" className="w-full sm:w-auto">
-                {mode === "second" ? "2차 작성 워크스페이스로 이동" : "세트 풀이 시작"}
-              </Button>
+            <Link
+              href={mode === "first" ? "/app/sets?mode=first" : `/app/write?mode=${mode}`}
+              data-s232g-primary-action
+              className={buttonVariants({ className: "w-full sm:w-auto" })}
+            >
+              {mode === "second" ? "2차 작성 워크스페이스로 이동" : "세트 풀이 시작"}
             </Link>
             {mode === "first" ? (
               <Link
@@ -525,10 +532,12 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
               executionSource="session"
             />
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <Link href={`/app?mode=${mode}`} className="w-full sm:w-auto">
-                <Button type="button" className="w-full sm:w-auto">
-                  종료하고 오늘 화면으로
-                </Button>
+              <Link
+                href={`/app?mode=${mode}`}
+                data-s232g-primary-action
+                className={buttonVariants({ className: "w-full sm:w-auto" })}
+              >
+                종료하고 오늘 화면으로
               </Link>
               <Link href={`/app/weekly?mode=${mode}`} className="text-xs text-[color:var(--muted)] underline-offset-2 hover:underline">
                 주간 정리 보기

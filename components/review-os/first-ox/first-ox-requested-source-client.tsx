@@ -96,9 +96,13 @@ export function FirstOxRequestedSourceClient({
 function buildFirstOxCaptureSourceState(
   detail: WrongAnswerDetail,
 ): FirstOxPracticeClientProps | null {
+  const createdFromCapture =
+    detail.item.rawPayload?.created_from_capture === true ||
+    detail.item.derivedPayload?.created_from_capture === true ||
+    detail.item.createdFromCapture === true;
   if (
     detail.item.examName !== "감정평가사 1차" ||
-    detail.item.createdFromCapture !== true
+    !createdFromCapture
   ) {
     return null;
   }

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { StudyLogIntakeForm } from "@/components/review-os/study-log-intake-form";
 import { ReviewOsAccessState } from "@/components/review-os/review-os-access-state";
@@ -13,6 +14,9 @@ type PageProps = {
 export default async function StudyLogPage({ searchParams }: PageProps) {
   const query = await searchParams;
   const modeParam = query?.mode;
+  if (modeParam === "second") {
+    redirect("/app/agenda?mode=second");
+  }
   const { session, access, profile } = await getReviewOsServerContext(buildReviewOsReturnTo("/app/study-log", modeParam));
   if (access.status !== "allowed") return <ReviewOsAccessState access={access} embedded />;
   if (!session.userId) return null;

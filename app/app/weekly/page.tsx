@@ -7,7 +7,7 @@ import {
   CoreRouteReadEmptyShell,
   CoreRouteReadErrorPage,
 } from "@/components/review-os/core-route-read-state";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getModeConfig, resolveAppraisalMode } from "@/lib/review-os/appraisal";
 import {
@@ -81,6 +81,7 @@ export default async function ReviewOsWeeklyPage({ searchParams }: PageProps) {
           <section
             className="space-y-4 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] p-4"
             aria-label="이번 주 계획 시작 안내"
+            data-s232g-route="weekly"
             data-s232f4b-weekly-confirmed-empty
           >
             <p className="text-sm leading-7 text-[color:var(--muted)]">
@@ -93,6 +94,7 @@ export default async function ReviewOsWeeklyPage({ searchParams }: PageProps) {
             </p>
             <Link
               href={inputStartHref}
+              data-s232g-primary-action
               className={buttonVariants({ className: "w-full sm:w-auto" })}
             >
               {config.primaryCta}
@@ -119,7 +121,7 @@ export default async function ReviewOsWeeklyPage({ searchParams }: PageProps) {
   const primaryHref = primaryTask ? `/app/review?mode=${mode}` : inputStartHref;
 
   return (
-    <div className="space-y-6 sm:space-y-7">
+    <div className="space-y-6 sm:space-y-7" data-s232g-route="weekly">
       <CoreRouteReadDegradedNotice count={degradedReadCount} />
       <Card className="border-[color:var(--border-strong)] bg-[color:var(--surface)] shadow-none">
         <CardHeader className="space-y-3 p-4 sm:p-6">
@@ -127,7 +129,9 @@ export default async function ReviewOsWeeklyPage({ searchParams }: PageProps) {
             <p className="text-caption text-[color:var(--brand-800)]">이번 주 우선 작업</p>
             <p className="mt-1 text-body-lg text-[color:var(--foreground-strong)]">{plan.primaryActionLabel}</p>
           </div>
-          <CardTitle>{mode === "second" ? "이번 주 2차 실행 계획" : "이번 주 1차 실행 계획"}</CardTitle>
+          <h1 className="v3-type-screen ko-keep text-[color:var(--foreground-strong)]">
+            {mode === "second" ? "이번 주 2차 실행 계획" : "이번 주 1차 실행 계획"}
+          </h1>
           <CardDescription>{plan.summary}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-5 p-4 pt-0 sm:p-6 sm:pt-0">
@@ -155,10 +159,12 @@ export default async function ReviewOsWeeklyPage({ searchParams }: PageProps) {
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <Link href={primaryHref} className="w-full sm:w-auto">
-              <Button type="button" className="w-full sm:w-auto">
-                {plan.recovery ? "복구 작업 시작" : "이번 주 첫 작업 시작"}
-              </Button>
+            <Link
+              href={primaryHref}
+              data-s232g-primary-action
+              className={buttonVariants({ className: "w-full sm:w-auto" })}
+            >
+              {plan.recovery ? "복구 작업 시작" : "이번 주 첫 작업 시작"}
             </Link>
             <Link href={`/app/review?mode=${mode}`} className="text-xs text-[color:var(--muted)] underline-offset-2 hover:underline">
               다른 작업 보기

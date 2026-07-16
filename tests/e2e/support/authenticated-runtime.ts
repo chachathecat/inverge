@@ -57,13 +57,37 @@ export async function establishProtectedPreviewSession(
       `${suiteLabel} Vercel protection bootstrap left the approved Preview origin.`,
     );
   }
+  const bootstrapHeaders = bootstrapResponse.headers();
+  const setCookieHeaders = bootstrapResponse
+    .headersArray()
+    .filter(({ name }) => name.toLowerCase() === "set-cookie");
+  const setCookieNames = new Set(
+    setCookieHeaders
+      .map(({ value }) => {
+        const separator = value.indexOf("=");
+        return separator > 0 ? value.slice(0, separator).trim() : "";
+      })
+      .filter(Boolean),
+  );
+  const storedBypassCookie = (await page.context().cookies(versionUrl.toString())).find(
+    (cookie) => setCookieNames.has(cookie.name),
+  );
+  if (
+    setCookieHeaders.length < 1 ||
+    !storedBypassCookie ||
+    storedBypassCookie.domain.replace(/^\./, "").toLowerCase() !==
+      previewUrl.hostname.toLowerCase() ||
+    storedBypassCookie.path !== "/" ||
+    !storedBypassCookie.secure ||
+    !storedBypassCookie.httpOnly
+  ) {
+    throw new Error(
+      `${suiteLabel} Vercel protection bootstrap did not install a safely scoped cookie.`,
+    );
+  }
   let cookieProofTarget = versionUrl;
   if (bootstrapStatus !== 200) {
     const cookieRedirectStatuses = new Set([301, 302, 303, 307, 308]);
-    const bootstrapHeaders = bootstrapResponse.headers();
-    const setCookieHeaders = bootstrapResponse
-      .headersArray()
-      .filter(({ name }) => name.toLowerCase() === "set-cookie");
     const location = bootstrapHeaders["location"];
     if (!cookieRedirectStatuses.has(bootstrapStatus) || !location || setCookieHeaders.length < 1) {
       throw new Error(
@@ -88,29 +112,6 @@ export async function establishProtectedPreviewSession(
       );
     }
 
-    const setCookieNames = new Set(
-      setCookieHeaders
-        .map(({ value }) => {
-          const separator = value.indexOf("=");
-          return separator > 0 ? value.slice(0, separator).trim() : "";
-        })
-        .filter(Boolean),
-    );
-    const storedBypassCookie = (await page.context().cookies(versionUrl.toString())).find(
-      (cookie) => setCookieNames.has(cookie.name),
-    );
-    if (
-      !storedBypassCookie ||
-      storedBypassCookie.domain.replace(/^\./, "").toLowerCase() !==
-        previewUrl.hostname.toLowerCase() ||
-      storedBypassCookie.path !== "/" ||
-      !storedBypassCookie.secure ||
-      !storedBypassCookie.httpOnly
-    ) {
-      throw new Error(
-        `${suiteLabel} Vercel protection bootstrap did not install a safely scoped cookie.`,
-      );
-    }
     cookieProofTarget = redirectUrl;
   }
 

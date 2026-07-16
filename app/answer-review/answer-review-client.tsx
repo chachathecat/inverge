@@ -717,12 +717,12 @@ export default function AnswerReviewClientPage({
                     className={cn(
                       "rounded-[var(--radius-sm)] border px-3 py-2 text-caption leading-5",
                       isActive
-                        ? "border-[#1E2A46] text-[#1E2A46]"
+                        ? "border-[color:var(--brand-900)] text-[color:var(--brand-900)]"
                         : "border-[var(--border)] text-[color:var(--muted)]",
                     )}
                     aria-current={isActive ? "step" : undefined}
                   >
-                    <span className={cn("mr-1", isDone ? "text-[#1E2A46]" : "text-[color:var(--muted)]")}>{item.id}.</span>
+                    <span className={cn("mr-1", isDone ? "text-[color:var(--brand-900)]" : "text-[color:var(--muted)]")}>{item.id}.</span>
                     {item.label}
                   </li>
                 );
@@ -755,9 +755,9 @@ export default function AnswerReviewClientPage({
                   transition={{ duration: 0.26, ease: "easeOut" }}
                 >
                   <article className="rounded-[var(--radius-md)] border border-[color:var(--brand-700)] bg-[color:var(--brand-050)] p-4 sm:p-5">
-                    <p className="v3-type-caption text-[#3f4c66]">지금 할 일</p>
-                    <p className="v3-type-item ko-keep mt-2 text-[#1e2a46]">답안 스냅으로 시작</p>
-                    <p className="v3-type-compact ko-keep mt-1 text-[#3f4c66]">먼저 쓴 답안을 남기고, 문제·사례·참고자료는 필요할 때만 더합니다.</p>
+                    <p className="v3-type-caption text-[color:var(--muted)]">지금 할 일</p>
+                    <p className="v3-type-item ko-keep mt-2 text-[color:var(--foreground-strong)]">답안 스냅으로 시작</p>
+                    <p className="v3-type-compact ko-keep mt-1 text-[color:var(--muted)]">먼저 쓴 답안을 남기고, 문제·사례·참고자료는 필요할 때만 더합니다.</p>
                   </article>
                   <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-2 text-caption font-medium text-[color:var(--muted)]" data-s224v-answer-review-scope="second-only">
@@ -785,18 +785,18 @@ export default function AnswerReviewClientPage({
                 </label>
                   </div>
                   <article
-                    className="space-y-2 rounded-[var(--radius-md)] border border-[#27375f] bg-[color:var(--surface)] p-4"
+                    className="space-y-2 rounded-[var(--radius-md)] border border-[color:var(--brand-700)] bg-[color:var(--surface)] p-4"
                     id="answer-review-text"
                     data-s232e3-answer-required
                   >
                     <div className="flex items-center justify-between gap-3">
-                      <label htmlFor="answer-review-my-answer-input" className="text-caption font-medium text-[#3f4c66]">내 답안 입력 (필수)</label>
-                      <span className="rounded-full bg-[#eef2fb] px-2.5 py-1 text-xs font-semibold text-[#1e2a46]">최소 입력</span>
+                      <label htmlFor="answer-review-my-answer-input" className="text-caption font-medium text-[color:var(--muted)]">내 답안 입력 (필수)</label>
+                      <span className="rounded-full bg-[color:var(--brand-050)] px-2.5 py-1 text-xs font-semibold text-[color:var(--foreground-strong)]">최소 입력</span>
                     </div>
                     <Textarea
                       id="answer-review-my-answer-input"
                       ref={answerTextRef}
-                      className="min-h-[210px] border-[#c9d1e7] bg-[color:var(--surface)]"
+                      className="min-h-[210px] border-[color:var(--border-strong)] bg-[color:var(--surface)]"
                       placeholder="초안 텍스트가 있으면 붙여 넣고, 없으면 직접 입력해 주세요."
                       data-testid="answer-review-my-answer-input"
                       value={myAnswerText}
@@ -807,7 +807,7 @@ export default function AnswerReviewClientPage({
                     />
                     <div className="mt-2 flex items-center justify-between text-caption text-[color:var(--muted)]">
                       <span>현재 {myAnswerLength}자</span>
-                      {isVeryShortAnswer ? <motion.span animate={shouldReduceMotion ? undefined : { opacity: [0.6, 1, 0.6] }} transition={{ duration: 1.2, repeat: Infinity }} className="text-[#7a5a2a]">답안이 너무 짧을 수 있습니다.</motion.span> : null}
+                      {isVeryShortAnswer ? <motion.span animate={shouldReduceMotion ? undefined : { opacity: [0.6, 1, 0.6] }} transition={{ duration: 1.2, repeat: Infinity }} className="text-[color:var(--cue-review-text)]">답안이 너무 짧을 수 있습니다.</motion.span> : null}
                     </div>
                   </article>
 
@@ -866,8 +866,8 @@ export default function AnswerReviewClientPage({
                   </p>
                 </section>
 
-                <section className="space-y-2 rounded-[var(--radius-sm)] border border-[#b7c1dd] bg-[#f8faff] p-3" id="my-answer-upload">
-                  <p className="text-caption font-medium text-[#3f4c66]">내 답안 불러오기</p>
+                <section className="space-y-2 rounded-[var(--radius-sm)] border border-[color:var(--border-strong)] bg-[color:var(--bg-elevated)] p-3" id="my-answer-upload">
+                  <p className="text-caption font-medium text-[color:var(--muted)]">내 답안 불러오기</p>
                   <label
                     htmlFor="answer-review-my-answer-file-upload"
                     className={cn(buttonVariants({ variant: "outline" }), "w-full cursor-pointer justify-center sm:w-auto")}
@@ -1055,19 +1055,19 @@ export default function AnswerReviewClientPage({
                       data-s224v-one-gap-feedback-card
                       data-s232e4-biggest-gap
                     >
-                      <p className="v3-type-caption text-[#3f4c66]">가장 먼저 고칠 1가지</p>
-                      <h3 className="v3-type-section ko-keep mt-2 text-[#1e2a46]">가장 큰 간극</h3>
-                      <p className="v3-type-body ko-keep mt-2 text-[#1e2a46]">
+                      <p className="v3-type-caption text-[color:var(--muted)]">가장 먼저 고칠 1가지</p>
+                      <h3 className="v3-type-section ko-keep mt-2 text-[color:var(--foreground-strong)]">가장 큰 간극</h3>
+                      <p className="v3-type-body ko-keep mt-2 text-[color:var(--foreground-strong)]">
                         {toDetailLine(qualityView?.primaryFix.gap || "", "핵심 논점 입력을 보강하면 가장 큰 간극이 자동 정리됩니다.")}
                       </p>
-                      <dl className="mt-4 divide-y divide-[#cbd3e2] border-y border-[#cbd3e2]">
+                      <dl className="mt-4 divide-y divide-[color:var(--border-strong)] border-y border-[color:var(--border-strong)]">
                         <div className="py-3 sm:grid sm:grid-cols-[112px_minmax(0,1fr)] sm:gap-3">
-                          <dt className="v3-type-caption text-[#3f4c66]">왜 중요한가</dt>
-                          <dd className="v3-type-compact ko-keep mt-1 text-[#1e2a46] sm:mt-0">{qualityView?.primaryFix.whyItMatters || "핵심 논점을 놓치면 답안의 설득력이 크게 떨어집니다."}</dd>
+                          <dt className="v3-type-caption text-[color:var(--muted)]">왜 중요한가</dt>
+                          <dd className="v3-type-compact ko-keep mt-1 text-[color:var(--foreground-strong)] sm:mt-0">{qualityView?.primaryFix.whyItMatters || "핵심 논점을 놓치면 답안의 설득력이 크게 떨어집니다."}</dd>
                         </div>
                         <div className="py-3 sm:grid sm:grid-cols-[112px_minmax(0,1fr)] sm:gap-3">
-                          <dt className="v3-type-caption text-[#3f4c66]">다시 쓸 대상</dt>
-                          <dd className="v3-type-compact ko-keep mt-1 text-[#1e2a46] sm:mt-0">{qualityView?.primaryFix.howToFix || biggestGapFix}</dd>
+                          <dt className="v3-type-caption text-[color:var(--muted)]">다시 쓸 대상</dt>
+                          <dd className="v3-type-compact ko-keep mt-1 text-[color:var(--foreground-strong)] sm:mt-0">{qualityView?.primaryFix.howToFix || biggestGapFix}</dd>
                         </div>
                       </dl>
                       <button
@@ -1079,7 +1079,7 @@ export default function AnswerReviewClientPage({
                       >
                         {primaryActionLabel}
                       </button>
-                      <p className="v3-type-caption ko-keep mt-2 text-[#3f4c66]">이 간극을 반영할 한 문단만 다음 단계에서 수정합니다.</p>
+                      <p className="v3-type-caption ko-keep mt-2 text-[color:var(--muted)]">이 간극을 반영할 한 문단만 다음 단계에서 수정합니다.</p>
                     </article>
                   ) : null}
                 </motion.div>

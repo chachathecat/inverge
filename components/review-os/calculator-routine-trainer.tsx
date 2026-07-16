@@ -435,7 +435,7 @@ export function CalculatorRoutineTrainer({
         </ol>
       </div>
 
-      <div className="p-4 sm:p-5">
+      <div className={cn(trainerState === "active" ? "p-1 sm:p-5" : "p-4 sm:p-5")}>
         <p className="sr-only" aria-live="polite">{liveMessage}</p>
         {!isHydrated || !isDraftRestored ? <p className="sr-only" role="status">루틴을 불러오는 중입니다.</p> : null}
         {isOffline ? (
@@ -467,20 +467,21 @@ export function CalculatorRoutineTrainer({
         {trainerState === "active" ? (
           <div className="space-y-5">
             <section
-              className="rounded-[var(--radius-md)] border border-[color:var(--brand-700)] bg-[color:var(--bg-surface)] p-4 shadow-sm sm:p-5"
+              className="rounded-[var(--radius-md)] border-0 bg-[color:var(--bg-surface)] p-0 shadow-none sm:border sm:border-[color:var(--brand-700)] sm:p-5 sm:shadow-sm"
               data-calculator-routine-active-step={currentStep.id}
               aria-labelledby={`calculator-routine-step-${currentStep.id}`}
             >
               {calculatorStepPresentation ? (
                 <CalculatorStep
                   {...calculatorStepPresentation}
-                  className="mb-5 max-w-none"
+                  className="mb-5"
                   testId="calculator-step-runner-v3"
                 />
               ) : null}
-              <p className="v3-type-caption font-semibold text-[color:var(--brand-700)]">지금 할 일 · {currentStepIndex + 1}/{CALCULATOR_ROUTINE_STEPS.length}</p>
-              <h4 id={`calculator-routine-step-${currentStep.id}`} className="v3-type-item mt-1 text-[color:var(--foreground-strong)]">{currentStep.label}</h4>
-              <p className="mt-2 text-xs leading-5 text-[color:var(--muted)]">{stepInputPrompts[currentStep.id]}</p>
+              <div className="px-4 pb-4 sm:px-0 sm:pb-0">
+                <p className="v3-type-caption font-semibold text-[color:var(--brand-700)]">지금 할 일 · {currentStepIndex + 1}/{CALCULATOR_ROUTINE_STEPS.length}</p>
+                <h4 id={`calculator-routine-step-${currentStep.id}`} className="v3-type-item mt-1 text-[color:var(--foreground-strong)]">{currentStep.label}</h4>
+                <p className="mt-2 text-xs leading-5 text-[color:var(--muted)]">{stepInputPrompts[currentStep.id]}</p>
 
               {currentTextStepId ? (
                 <label className="mt-5 block text-xs font-medium text-[color:var(--foreground-strong)]">
@@ -572,6 +573,7 @@ export function CalculatorRoutineTrainer({
                   </label>
                 </div>
               ) : null}
+              </div>
             </section>
 
             <div className="space-y-3" data-calculator-routine-reference-hints>

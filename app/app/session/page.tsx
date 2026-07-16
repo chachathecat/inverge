@@ -46,7 +46,9 @@ export default async function ReviewOsSessionPage({ searchParams }: PageProps) {
             ),
           (detail) =>
             detail.item.userId === session.userId &&
-            detail.item.createdFromCapture === true &&
+            (detail.item.rawPayload?.created_from_capture === true ||
+              detail.item.derivedPayload?.created_from_capture === true ||
+              detail.item.createdFromCapture === true) &&
             detail.item.examName === config.label,
         )
       : missingRequestedCoreRouteRead()
@@ -114,6 +116,15 @@ export default async function ReviewOsSessionPage({ searchParams }: PageProps) {
   return (
     <div className="space-y-6">
       <ClosedBetaBanner />
+      <header className="max-w-[680px] space-y-2" data-s232g-route="session">
+        <p className="v3-type-caption text-[color:var(--muted)]">오늘 학습 · {config.label}</p>
+        <h1 className="v3-type-screen ko-keep text-[color:var(--foreground-strong)]">
+          오늘 학습 세션
+        </h1>
+        <p className="v3-type-body ko-keep text-[color:var(--muted)]">
+          지금 할 한 가지를 끝내고 다음 복습까지 연결합니다.
+        </p>
+      </header>
       {savedCaptureDetail ? (
         <DailyCommandCard title="오늘 계획에 반영했습니다." description="오늘 계획에 반영 · 복습에 남길 내용 · 학습 노트 상세에 저장했습니다.">
           <div className="grid gap-3 rounded-[var(--radius-sm)] bg-[color:var(--surface-soft)] p-3" aria-live="polite">
@@ -158,7 +169,7 @@ export default async function ReviewOsSessionPage({ searchParams }: PageProps) {
           </div>
         </DailyCommandCard>
       ) : null}
-      <section id="today-session-runner">
+      <section id="today-session-runner" data-s232g-session-runner>
         <TodaySessionRunner
         key={`${session.userId}:${queueItem?.queueId ?? "none"}`}
         mode={mode}

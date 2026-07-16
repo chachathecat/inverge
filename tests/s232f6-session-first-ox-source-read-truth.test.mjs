@@ -180,6 +180,8 @@ test("S232F.6 access gates precede all requested source reads and nullable email
 test("S232F.6 Session confirms only the exact readable capture detail", () => {
   assert.match(sessionPage, /savedCaptureItemId[\s\S]*?missingRequestedCoreRouteRead\(\)/);
   assert.match(sessionPage, /detail\.item\.userId === session\.userId/);
+  assert.match(sessionPage, /detail\.item\.rawPayload\?\.created_from_capture === true/);
+  assert.match(sessionPage, /detail\.item\.derivedPayload\?\.created_from_capture === true/);
   assert.match(sessionPage, /detail\.item\.createdFromCapture === true/);
   assert.match(sessionPage, /detail\.item\.examName === config\.label/);
   assert.ok(
@@ -214,6 +216,8 @@ test("S232F.6 requested First OX never falls through to generic samples", () => 
   );
   assert.match(firstOxPage, /key=\{`\$\{session\.userId\}:\$\{sourceKind\}:\$\{requestedItemId\}`\}/);
   assert.match(requestedClient, /outcome\.detail\.item\.userId !== expectedUserId/);
+  assert.match(requestedClient, /detail\.item\.rawPayload\?\.created_from_capture === true/);
+  assert.match(requestedClient, /detail\.item\.derivedPayload\?\.created_from_capture === true/);
   assert.match(requestedClient, /state\.status !== "ready"/);
   assert.match(requestedClient, /status=\{state\.status\}/);
   assert.match(requestedClient, /initialStatements: \[\]/);

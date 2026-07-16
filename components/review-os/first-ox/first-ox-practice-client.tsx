@@ -304,7 +304,7 @@ export function FirstOxPracticeClient({
     : null;
 
   return (
-    <div className="space-y-5 overflow-x-hidden">
+    <div className="space-y-5 overflow-x-hidden" data-s232g-route="first-ox">
       <SingleFocusCard eyebrow="감정평가사 1차" title="O/X 역공학 연습" description="5지선다 위치를 외우지 않도록, 선지 하나씩만 판단합니다.">
         <div className="space-y-5">
           {statements.length > 0 ? (
