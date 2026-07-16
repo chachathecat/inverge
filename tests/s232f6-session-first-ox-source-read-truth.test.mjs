@@ -283,6 +283,10 @@ test("S232F.6 repository ownership and exact-head runtime evidence fail closed",
   assert.match(runtimeSpec, /new AxeBuilder/);
   assert.match(runtimeSpec, /desktopZoomWidthEquivalentPercent: 200/);
   assert.match(runtimeSpec, /postLoginBrowserMutationRequestCount/);
+  assert.match(runtimeSpec, /blockedPreviewToolbarMutationCount/);
+  assert.match(runtimeSpec, /requestClass === "vercel-preview-toolbar"/);
+  assert.match(runtimeSpec, /previewToolbarExcludedFromProductMutationGate: true/);
+  assert.match(runtimeWorkflow, /blockedPreviewToolbarMutationCount must be a bounded integer/);
   assert.match(runtimeWorkflow, /secrets\.E2E_USER_A_EMAIL/);
   assert.match(runtimeWorkflow, /secrets\.E2E_USER_A_PASSWORD/);
   assert.match(runtimeWorkflow, /secrets\.E2E_USER_B_EMAIL/);

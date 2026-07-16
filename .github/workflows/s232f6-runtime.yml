@@ -170,7 +170,9 @@ jobs:
               "axeBlockingCount", "sourceReadRequestCount", "controlledSourceFailureCount",
               "controlledConsoleErrorCount",
               "unexpectedConsoleErrorCount", "pageErrorCount", "unexpectedRequestFailureCount",
-              "postLoginBrowserMutationRequestCount", "first100WrongAnswerIdsFinalDigestUnchanged",
+              "postLoginBrowserMutationRequestCount", "blockedPreviewToolbarMutationCount",
+              "previewToolbarExcludedFromProductMutationGate",
+              "first100WrongAnswerIdsFinalDigestUnchanged",
               "browserStorageFinalDigestUnchanged", "browserStorageMutationCount",
               "analyticsMutationCount", "instrumentationErrorCount",
               "browserInstrumentationErrorCount",
@@ -224,6 +226,7 @@ jobs:
               pageErrorCount: 0,
               unexpectedRequestFailureCount: 0,
               postLoginBrowserMutationRequestCount: 0,
+              previewToolbarExcludedFromProductMutationGate: true,
               first100WrongAnswerIdsFinalDigestUnchanged: true,
               browserStorageFinalDigestUnchanged: true,
               browserStorageMutationCount: 0,
@@ -251,6 +254,13 @@ jobs:
             }
             if (!Number.isInteger(evidence.signInAttempts) || evidence.signInAttempts < 0 || evidence.signInAttempts > 3) {
               throw new Error("signInAttempts must be a bounded integer");
+            }
+            if (
+              !Number.isInteger(evidence.blockedPreviewToolbarMutationCount) ||
+              evidence.blockedPreviewToolbarMutationCount < 0 ||
+              evidence.blockedPreviewToolbarMutationCount > 8
+            ) {
+              throw new Error("blockedPreviewToolbarMutationCount must be a bounded integer");
             }
             const raw = JSON.stringify(evidence);
             if (/@[a-z0-9.-]+\.[a-z]{2,}/i.test(raw)) throw new Error("Email-like content in evidence");

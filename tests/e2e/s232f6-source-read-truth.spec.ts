@@ -690,6 +690,7 @@ test("S232F.6 exact-head Session and First OX keep requested reads truthful", as
   let syntheticSourceAttempts = 0;
   let sourceReadRequestCount = 0;
   let postLoginBrowserMutationRequestCount = 0;
+  let blockedPreviewToolbarMutationCount = 0;
 
   page.on("request", (request) => {
     const url = new URL(request.url());
@@ -763,8 +764,19 @@ test("S232F.6 exact-head Session and First OX keep requested reads truthful", as
     }
 
     if (!readOnlyMethods.has(request.method())) {
-      postLoginBrowserMutationRequestCount += 1;
       const requestClass = classifyUnexpectedMutationRequest(url, runtimeOrigin);
+      if (
+        request.method() === "POST" &&
+        requestClass === "vercel-preview-toolbar"
+      ) {
+        blockedPreviewToolbarMutationCount += 1;
+        await route.abort("blockedbyclient");
+        if (blockedPreviewToolbarMutationCount > 8) {
+          throw new Error("S232F.6 observed excessive Preview-toolbar mutations.");
+        }
+        return;
+      }
+      postLoginBrowserMutationRequestCount += 1;
       await route.abort("blockedbyclient");
       throw new Error(
         `S232F.6 blocked an unexpected non-read browser request (${request.method()} ${requestClass}).`,
@@ -868,6 +880,7 @@ test("S232F.6 exact-head Session and First OX keep requested reads truthful", as
   expect(mutationCounts.instrumentationErrorCount).toBe(0);
   expect(finalBrowserInstrumentationErrorCount).toBe(0);
   expect(postLoginBrowserMutationRequestCount).toBe(0);
+  expect(blockedPreviewToolbarMutationCount).toBeLessThanOrEqual(8);
   expect(sourceReadRequestCount).toBe(4);
   expect(axeBlocking).toBe(0);
 
@@ -936,6 +949,8 @@ test("S232F.6 exact-head Session and First OX keep requested reads truthful", as
     pageErrorCount: runtimeErrors.pageErrors.length,
     unexpectedRequestFailureCount: unexpectedRequestFailures.length,
     postLoginBrowserMutationRequestCount,
+    blockedPreviewToolbarMutationCount,
+    previewToolbarExcludedFromProductMutationGate: true,
     first100WrongAnswerIdsFinalDigestUnchanged:
       itemDigestAfter === itemDigestBefore,
     browserStorageFinalDigestUnchanged: storageAfter === storageBefore,

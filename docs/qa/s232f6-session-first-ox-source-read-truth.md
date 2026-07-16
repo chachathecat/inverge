@@ -53,7 +53,7 @@ head and fails closed on any SHA mismatch. Its authenticated browser run checks:
 - horizontal overflow, keyboard reachability, computed focus visibility,
   labelled failure region, polite live announcement, and Axe serious/critical
   zero;
-- zero main-flow post-login browser mutation requests, an unchanged final
+- zero product-origin main-flow post-login browser mutation requests, an unchanged final
   digest for the first 100 visible wrong-answer IDs, an unchanged final browser
   storage digest, and context-wide zero storage/analytics mutations after login;
 - zero unexpected console, page, or same-origin request failures across the
@@ -73,6 +73,10 @@ synthetic payload, request/response body, DOM, screenshot, trace, or video.
 - Browser mutation instrumentation fails closed when its context binding,
   barrier, or origin validation is unavailable; browser-local and Node-side
   instrumentation error counts must both remain zero.
+- The protected Preview may inject its own `vercel.live` toolbar. Its bounded
+  cross-origin POST is aborted before transmission, counted separately, and
+  never treated as an application mutation. Every other non-read request,
+  including unknown cross-origin traffic, remains fail-closed.
 - The controlled 503 and strict recovery payload exist only in Playwright route
   interception. There is no production query, cookie, header, environment
   branch, or fault-injection backdoor.
