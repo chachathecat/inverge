@@ -96,7 +96,7 @@ export function LearnerShell({ email, children, rightSlot }: LearnerShellProps) 
     <a
       href={focusTarget}
       data-v3-skip-link
-      className="v3-type-label-strong fixed left-[max(1rem,env(safe-area-inset-left))] top-[max(1rem,env(safe-area-inset-top))] z-[60] inline-flex min-h-11 -translate-y-[200%] items-center rounded-[var(--v3-radius-control)] bg-[var(--color-background-brand)] px-4 text-[var(--color-text-inverse)] transition-transform focus:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-background-canvas)]"
+      className="v3-type-label-strong fixed left-[max(1rem,env(safe-area-inset-left))] top-[max(1rem,env(safe-area-inset-top))] z-[60] inline-flex min-h-12 -translate-y-[200%] items-center rounded-[var(--v3-radius-control)] bg-[var(--color-background-brand)] px-4 text-[var(--color-text-inverse)] transition-transform focus:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-background-canvas)]"
     >
       {focusLabel}
     </a>
