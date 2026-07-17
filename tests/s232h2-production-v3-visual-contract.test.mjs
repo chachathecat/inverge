@@ -347,6 +347,47 @@ test("S232H.2 produces the fixed initial, dynamic, before, and Figma evidence se
   assert.match(workflow, /screenshotCount !== 28/);
   assert.match(workflow, /s232h2-\*\.png/);
   assert.match(workflow, /s232h2-visual-manifest\.json/);
+  assert.match(
+    workflow,
+    /Run exact-head production V3 visual acceptance[\s\S]*?id: visual_acceptance/,
+  );
+  const diagnosticStart = workflow.indexOf(
+    "Upload bounded representative PNG diagnostics after visual acceptance failure",
+  );
+  const diagnosticEnd = workflow.indexOf(
+    "\n      - name: Recheck both exact deployment SHAs",
+    diagnosticStart,
+  );
+  assert.ok(diagnosticStart >= 0 && diagnosticEnd > diagnosticStart);
+  const diagnosticBlock = workflow.slice(diagnosticStart, diagnosticEnd);
+  assert.match(
+    diagnosticBlock,
+    /if: \$\{\{ failure\(\) && steps\.visual_acceptance\.outcome == 'failure' \}\}/,
+  );
+  for (const fileName of [
+    "s232h2-after-ledger-390.png",
+    "s232h2-figma-mobile-ledger-56-2.png",
+    "s232h2-after-ledger-1440.png",
+    "s232h2-figma-desktop-ledger-59-62.png",
+    "s232h2-after-calculator-390.png",
+    "s232h2-figma-mobile-calculator-57-34.png",
+  ]) {
+    assert.ok(
+      diagnosticBlock.includes(`test-results/**/${fileName}`),
+      `missing bounded visual diagnostic: ${fileName}`,
+    );
+  }
+  assert.equal(
+    [...diagnosticBlock.matchAll(/test-results\/\*\*\/s232h2-[a-z0-9-]+\.png/g)]
+      .length,
+    6,
+  );
+  assert.match(diagnosticBlock, /if-no-files-found: warn/);
+  assert.match(diagnosticBlock, /retention-days: 7/);
+  assert.doesNotMatch(
+    diagnosticBlock,
+    /s232h2-\*\.png|manifest|trace\.zip|\.webm|playwright-report/,
+  );
   assert.doesNotMatch(
     workflow,
     /test-results\/\*\*\/\*\.png|trace\.zip|playwright-report/,
