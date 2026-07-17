@@ -180,6 +180,8 @@ test("S232H.2 audits all 13 production routes at 390, 768, and 1440", () => {
   assert.match(spec, /new AxeBuilder/);
   assert.match(spec, /serious.*critical/s);
   assert.match(spec, /verifyKeyboardFocus/);
+  assert.match(spec, /waitForFunction/);
+  assert.match(spec, /\{ timeout: 1_000 \}/);
   assert.match(spec, /completedFocusCycle/);
   assert.match(spec, /everyFocusVisible/);
   assert.match(spec, /visitedFocusIndexes/);
