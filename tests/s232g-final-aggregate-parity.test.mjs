@@ -726,7 +726,43 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
     ]) {
       assert.match(`keyboard-${route.key}-${suffix}`, /^[a-z0-9-]{1,64}$/);
     }
+    assert.match(`keyboard-${route.key}-viewport-settle`, /^[a-z0-9-]{1,64}$/);
   }
+  const keyboardViewportSettleStart = keyboardProbeBlock.indexOf(
+    "await staticStage(`keyboard-${routeKey}-viewport-settle`",
+  );
+  const keyboardViewportSettleEnd = keyboardProbeBlock.indexOf(
+    "focusedEvidence = await staticStage",
+    keyboardViewportSettleStart,
+  );
+  assert.ok(
+    keyboardViewportSettleStart >= 0 &&
+      keyboardViewportSettleEnd > keyboardViewportSettleStart,
+  );
+  const keyboardViewportSettleBlock = keyboardProbeBlock.slice(
+    keyboardViewportSettleStart,
+    keyboardViewportSettleEnd,
+  );
+  assert.match(keyboardViewportSettleBlock, /const active = document\.activeElement/);
+  assert.match(
+    keyboardViewportSettleBlock,
+    /active\.getAttribute\("data-s232g-keyboard-probe"\) !== "target"/,
+  );
+  assert.match(keyboardViewportSettleBlock, /rect\.width > 0/);
+  assert.match(keyboardViewportSettleBlock, /rect\.height > 0/);
+  assert.match(keyboardViewportSettleBlock, /rect\.bottom > 0/);
+  assert.match(keyboardViewportSettleBlock, /rect\.right > 0/);
+  assert.match(keyboardViewportSettleBlock, /rect\.top < window\.innerHeight/);
+  assert.match(keyboardViewportSettleBlock, /rect\.left < window\.innerWidth/);
+  assert.match(keyboardViewportSettleBlock, /polling: "raf", timeout: 2_000/);
+  assert.doesNotMatch(
+    keyboardViewportSettleBlock,
+    /scrollIntoView|scrollTo|scrollBy|setViewportSize|emulateMedia|classList|\.style/,
+  );
+  assert.ok(
+    keyboardProbeBlock.indexOf("forward-target-exact") < keyboardViewportSettleStart &&
+      keyboardViewportSettleStart < keyboardViewportSettleEnd,
+  );
   assert.doesNotMatch(keyboardProbeBlock, /forward-order-exact/);
   assert.match(keyboardProbeBlock, /finally \{/);
   assert.match(

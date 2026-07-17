@@ -2642,6 +2642,30 @@ async function keyboardFocusProbe(page: Page, preferredSelector: string, routeKe
       );
       if (expectedOrder === prepared.targetOrder) {
         requireTruth(state.target, `keyboard-${routeKey}-forward-target-exact`);
+        await staticStage(`keyboard-${routeKey}-viewport-settle`, async () => {
+          await page.waitForFunction(
+            () => {
+              const active = document.activeElement;
+              if (
+                !(active instanceof HTMLElement) ||
+                active.getAttribute("data-s232g-keyboard-probe") !== "target"
+              ) {
+                return false;
+              }
+              const rect = active.getBoundingClientRect();
+              return (
+                rect.width > 0 &&
+                rect.height > 0 &&
+                rect.bottom > 0 &&
+                rect.right > 0 &&
+                rect.top < window.innerHeight &&
+                rect.left < window.innerWidth
+              );
+            },
+            undefined,
+            { polling: "raf", timeout: 2_000 },
+          );
+        });
         focusedEvidence = await staticStage("keyboard-focused-evidence", () =>
           page.locator('[data-s232g-keyboard-probe="target"]').evaluate((element) => {
             const style = getComputedStyle(element);
