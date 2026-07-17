@@ -671,6 +671,30 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
   assert.match(keyboardProbeBlock, /keyboard-\$\{routeKey\}-reverse-end-boundary/);
   assert.match(keyboardProbeBlock, /keyboard-\$\{routeKey\}-reverse-start-boundary/);
   assert.match(keyboardProbeBlock, /prepared\.positiveTabIndexCount === 0/);
+  assert.match(
+    keyboardProbeBlock,
+    /let ancestor = element\.parentElement;[\s\S]*?ancestor = ancestor\.parentElement/,
+  );
+  assert.match(
+    keyboardProbeBlock,
+    /ancestor instanceof HTMLDetailsElement && !ancestor\.open/,
+  );
+  assert.match(
+    keyboardProbeBlock,
+    /Array\.from\(ancestor\.children\)\.find\([\s\S]*?child\.tagName === "SUMMARY"/,
+  );
+  assert.match(keyboardProbeBlock, /if \(controller !== element\)/);
+  assert.match(keyboardProbeBlock, /!hiddenByClosedDetails/);
+  assert.match(keyboardProbeBlock, /let ancestor = expected\?\.parentElement \?\? null/);
+  assert.match(keyboardProbeBlock, /if \(controller !== expected\)/);
+  assert.doesNotMatch(
+    keyboardProbeBlock,
+    /element\.closest\("details:not\(\[open\]\)"\)/,
+  );
+  assert.doesNotMatch(
+    keyboardProbeBlock,
+    /expected\?\.closest\("details:not\(\[open\]\)"\)/,
+  );
   assert.match(keyboardProbeBlock, /state\.registered && Number\.isInteger\(state\.order\)/);
   assert.match(keyboardProbeBlock, /state\.order <= expectedOrder/);
   assert.match(keyboardProbeBlock, /state\.order >= expectedOrder/);

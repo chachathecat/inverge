@@ -2434,10 +2434,27 @@ async function keyboardFocusProbe(page: Page, preferredSelector: string, routeKe
           if (!(element instanceof HTMLElement)) return false;
           const style = getComputedStyle(element);
           const rect = element.getBoundingClientRect();
+          let hiddenByClosedDetails = false;
+          for (
+            let ancestor = element.parentElement;
+            ancestor;
+            ancestor = ancestor.parentElement
+          ) {
+            if (ancestor instanceof HTMLDetailsElement && !ancestor.open) {
+              const controller = Array.from(ancestor.children).find(
+                (child) => child.tagName === "SUMMARY",
+              );
+              if (controller !== element) {
+                hiddenByClosedDetails = true;
+                break;
+              }
+            }
+          }
           return (
             rect.width > 0 && rect.height > 0 &&
             style.display !== "none" && style.visibility !== "hidden" &&
             style.opacity !== "0" &&
+            !hiddenByClosedDetails &&
             !element.matches(":disabled") &&
             !element.closest('[inert], [aria-hidden="true"], vercel-live-feedback, nextjs-portal')
           );
@@ -2537,13 +2554,26 @@ async function keyboardFocusProbe(page: Page, preferredSelector: string, routeKe
           const expected = document.querySelector<HTMLElement>(
             `[data-s232g-tab-order="${expectedOrder}"]`,
           );
-          const closedDetails = expected?.closest("details:not([open])");
-          const expectedIsDirectSummary =
-            expected?.tagName === "SUMMARY" && expected.parentElement === closedDetails;
+          let expectedHiddenByClosedDetails = false;
+          for (
+            let ancestor = expected?.parentElement ?? null;
+            ancestor;
+            ancestor = ancestor.parentElement
+          ) {
+            if (ancestor instanceof HTMLDetailsElement && !ancestor.open) {
+              const controller = Array.from(ancestor.children).find(
+                (child) => child.tagName === "SUMMARY",
+              );
+              if (controller !== expected) {
+                expectedHiddenByClosedDetails = true;
+                break;
+              }
+            }
+          }
           let skippedKind = "other";
           if (!expected || !expected.isConnected) {
             skippedKind = "detached";
-          } else if (closedDetails && !expectedIsDirectSummary) {
+          } else if (expectedHiddenByClosedDetails) {
             skippedKind = "closed-details";
           } else if (expected.matches(":disabled")) {
             skippedKind = "disabled";
