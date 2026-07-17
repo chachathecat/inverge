@@ -108,7 +108,15 @@ type UnexpectedRequestTarget =
   | "next-rsc"
   | "next-image"
   | "next-internal"
-  | "vercel"
+  | "vc-toolbar"
+  | "devtools"
+  | "vc-flags"
+  | "vc-flags-q"
+  | "vc-security"
+  | "vc-metrics"
+  | "vc-system"
+  | "well-known"
+  | "public-meta"
   | "manifest"
   | "icon"
   | "favicon"
@@ -268,7 +276,33 @@ function classifyUnexpectedRequestTarget(location: URL): UnexpectedRequestTarget
   if (location.pathname.startsWith("/_next/static/")) return "next-static";
   if (location.pathname === "/_next/image") return "next-image";
   if (location.pathname.startsWith("/_next/")) return "next-internal";
-  if (location.pathname.startsWith("/_vercel/")) return "vercel";
+  if (location.pathname.startsWith("/_next-live/")) return "vc-toolbar";
+  if (location.pathname === "/.well-known/appspecific/com.chrome.devtools.json") {
+    return "devtools";
+  }
+  if (location.pathname === "/.well-known/vercel/flags") {
+    return location.search === "" && location.hash === "" ? "vc-flags" : "vc-flags-q";
+  }
+  if (location.pathname.startsWith("/.well-known/vercel/security/")) {
+    return "vc-security";
+  }
+  if (location.pathname.startsWith("/.well-known/vercel/")) return "vc-system";
+  if (
+    location.pathname === "/_vercel/insights" ||
+    location.pathname.startsWith("/_vercel/insights/") ||
+    location.pathname === "/_vercel/speed-insights" ||
+    location.pathname.startsWith("/_vercel/speed-insights/")
+  ) {
+    return "vc-metrics";
+  }
+  if (
+    location.pathname.startsWith("/_vercel/") ||
+    location.pathname === "/__vercel" ||
+    location.pathname.startsWith("/__vercel/")
+  ) {
+    return "vc-system";
+  }
+  if (location.pathname.startsWith("/.well-known/")) return "well-known";
   if (location.pathname === "/") return "root-shell";
   if (/^\/(?:site\.)?manifest\.(?:json|webmanifest)$/.test(location.pathname)) {
     return "manifest";
@@ -276,6 +310,13 @@ function classifyUnexpectedRequestTarget(location: URL): UnexpectedRequestTarget
   if (location.pathname === "/favicon.ico") return "favicon";
   if (location.pathname.startsWith("/icons/")) return "icon";
   if (location.pathname === "/sw.js") return "sw";
+  if (
+    location.pathname === "/robots.txt" ||
+    location.pathname === "/sitemap.xml" ||
+    location.pathname === "/browserconfig.xml"
+  ) {
+    return "public-meta";
+  }
   if (location.pathname === "/login") return "login";
   if (location.pathname === "/app") return "app";
   if (/^\/app\/items\/[^/]+$/.test(location.pathname)) return "item";

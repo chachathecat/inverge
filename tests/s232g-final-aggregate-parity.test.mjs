@@ -699,8 +699,10 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
   ];
   const requestTargets = [
     "root-shell", "next-static", "next-rsc", "next-image", "next-internal",
-    "vercel", "manifest", "icon", "favicon", "sw", "asset", "login", "app",
-    "item", "auth-api", "items-api", "api", "app-route", "other", "invalid",
+    "vc-toolbar", "devtools", "vc-flags", "vc-flags-q", "vc-security",
+    "vc-metrics", "vc-system", "well-known", "public-meta", "manifest", "icon",
+    "favicon", "sw", "asset", "login", "app", "item", "auth-api", "items-api",
+    "api", "app-route", "other", "invalid",
   ];
   const requestResources = [
     "document", "image", "font", "style", "script", "fetch", "xhr",
@@ -728,6 +730,68 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
   );
   assert.match(runtimeSpec, /location\.searchParams\.has\("_rsc"\)/);
   assert.doesNotMatch(runtimeSpec, /location\.searchParams\.get\("_rsc"\)/);
+  assert.match(runtimeSpec, /location\.pathname\.startsWith\("\/_next-live\/"\)/);
+  assert.match(
+    runtimeSpec,
+    /location\.pathname === "\/\.well-known\/appspecific\/com\.chrome\.devtools\.json"/,
+  );
+  assert.match(runtimeSpec, /location\.pathname === "\/\.well-known\/vercel\/flags"/);
+  assert.match(
+    runtimeSpec,
+    /location\.search === "" && location\.hash === "" \? "vc-flags" : "vc-flags-q"/,
+  );
+  assert.match(runtimeSpec, /location\.pathname\.startsWith\("\/\.well-known\/vercel\/security\/"\)/);
+  assert.match(runtimeSpec, /location\.pathname === "\/_vercel\/insights"/);
+  assert.match(runtimeSpec, /location\.pathname\.startsWith\("\/_vercel\/insights\/"\)/);
+  assert.match(runtimeSpec, /location\.pathname === "\/_vercel\/speed-insights"/);
+  assert.match(runtimeSpec, /location\.pathname\.startsWith\("\/_vercel\/speed-insights\/"\)/);
+  assert.doesNotMatch(runtimeSpec, /startsWith\("\/_vercel\/(?:speed-)?insights"\)/);
+  assert.match(runtimeSpec, /location\.pathname\.startsWith\("\/\.well-known\/"\)/);
+  const requestTargetClassifierStart = runtimeSpec.indexOf(
+    "function classifyUnexpectedRequestTarget",
+  );
+  const requestTargetClassifierEnd = runtimeSpec.indexOf(
+    "function classifyUnexpectedRequestResource",
+    requestTargetClassifierStart,
+  );
+  const requestTargetClassifierSource = runtimeSpec.slice(
+    requestTargetClassifierStart,
+    requestTargetClassifierEnd,
+  );
+  const flagsPathOffset = requestTargetClassifierSource.indexOf(
+    'location.pathname === "/.well-known/vercel/flags"',
+  );
+  const securityPathOffset = requestTargetClassifierSource.indexOf(
+    'location.pathname.startsWith("/.well-known/vercel/security/")',
+  );
+  const genericVercelWellKnownOffset = requestTargetClassifierSource.indexOf(
+    'location.pathname.startsWith("/.well-known/vercel/")',
+  );
+  const metricsPathOffset = requestTargetClassifierSource.indexOf(
+    'location.pathname === "/_vercel/insights"',
+  );
+  const genericVercelPathOffset = requestTargetClassifierSource.indexOf(
+    'location.pathname.startsWith("/_vercel/")',
+  );
+  const devtoolsPathOffset = requestTargetClassifierSource.indexOf(
+    'location.pathname === "/.well-known/appspecific/com.chrome.devtools.json"',
+  );
+  const genericWellKnownOffset = requestTargetClassifierSource.indexOf(
+    'location.pathname.startsWith("/.well-known/")',
+  );
+  assert.ok(
+    flagsPathOffset >= 0 &&
+      securityPathOffset >= 0 &&
+      genericVercelWellKnownOffset >= 0 &&
+      metricsPathOffset >= 0 &&
+      genericVercelPathOffset >= 0 &&
+      devtoolsPathOffset >= 0 &&
+      genericWellKnownOffset >= 0 &&
+      flagsPathOffset < genericVercelWellKnownOffset &&
+      securityPathOffset < genericVercelWellKnownOffset &&
+      metricsPathOffset < genericVercelPathOffset &&
+      devtoolsPathOffset < genericWellKnownOffset,
+  );
   assert.match(runtimeSpec, /phase\.observedAuthSignInRequestCount > 0 \? "auth-post" : "auth-pre"/);
   assert.doesNotMatch(runtimeSpec, /"unexpected-request-failures"/);
   assert.match(
