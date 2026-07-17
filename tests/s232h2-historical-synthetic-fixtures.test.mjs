@@ -145,17 +145,6 @@ function rewriteFixture(overrides = {}) {
   };
 }
 
-function withoutPersistenceIds(confirmed) {
-  const {
-    persistence_operation_id: ignoredOperationId,
-    persistence_work_revision_id: ignoredWorkRevisionId,
-    ...legacy
-  } = confirmed;
-  assert.equal(typeof ignoredOperationId, "string");
-  assert.equal(typeof ignoredWorkRevisionId, "string");
-  return legacy;
-}
-
 function withoutConfirmedKey(confirmed, key) {
   const partial = { ...confirmed };
   delete partial[key];
@@ -167,16 +156,6 @@ test("S232H.2 recognizes only the exact retired S232G source grammar", () => {
   assert.deepEqual(historicalS232gSourceFailureFields(fixture()), []);
   assert.equal(isHistoricalS232gAggregateSource(fixture()), true);
   const currentSource = fixture();
-  const legacySource = fixture({
-    rawPayload: {
-      ...currentSource.rawPayload,
-      user_confirmed_fields: withoutPersistenceIds(
-        currentSource.rawPayload.user_confirmed_fields,
-      ),
-    },
-  });
-  assert.deepEqual(historicalS232gSourceFailureFields(legacySource), []);
-  assert.equal(isHistoricalS232gAggregateSource(legacySource), true);
   for (const key of [
     "persistence_operation_id",
     "persistence_work_revision_id",
@@ -285,30 +264,6 @@ test("S232H.2 recognizes only a rewrite with exact S232G parent binding", () => 
     [],
   );
   const currentRewrite = rewriteFixture();
-  const legacyRewrite = rewriteFixture({
-    rawPayload: {
-      ...currentRewrite.rawPayload,
-      user_confirmed_fields: withoutPersistenceIds(
-        currentRewrite.rawPayload.user_confirmed_fields,
-      ),
-    },
-  });
-  assert.deepEqual(
-    historicalS232gRewriteFailureFields(
-      legacyRewrite,
-      parentId,
-      parentTitle,
-    ),
-    [],
-  );
-  assert.equal(
-    isHistoricalS232gAggregateRewrite(
-      legacyRewrite,
-      parentId,
-      parentTitle,
-    ),
-    true,
-  );
   for (const key of [
     "persistence_operation_id",
     "persistence_work_revision_id",

@@ -44,15 +44,6 @@ const historicalS232gSourceConfirmedKeys = [
   "sourceType",
   "subject",
 ] as const;
-const historicalS232gLegacySourceConfirmedKeys = [
-  "biggest_gap",
-  "examMode",
-  "issue_recall",
-  "local_beta_confirmation_available",
-  "production_before_comparison",
-  "sourceType",
-  "subject",
-] as const;
 const historicalS232gRewriteConfirmedKeys = [
   "biggest_gap",
   "captureQualityIssue",
@@ -67,35 +58,6 @@ const historicalS232gRewriteConfirmedKeys = [
   "pageCount",
   "persistence_operation_id",
   "persistence_work_revision_id",
-  "problemTitle",
-  "produced_answer_before_reference",
-  "production_before_comparison",
-  "reference_answer_added_after_production",
-  "rewrite_completed",
-  "rewrite_instruction",
-  "rewrite_paragraph",
-  "rewrite_source_gap",
-  "rewrite_source_item_id",
-  "sourceType",
-  "subject",
-  "subjectLabel",
-  "timeSpentMinutes",
-  "userAnswer",
-  "userReasonPreset",
-  "userReasonText",
-] as const;
-const historicalS232gLegacyRewriteConfirmedKeys = [
-  "biggest_gap",
-  "captureQualityIssue",
-  "correctAnswer",
-  "examMode",
-  "hasManualCorrection",
-  "issue_recall",
-  "lowConfidenceFlag",
-  "nextReviewDate",
-  "ocrConfirmedByLearner",
-  "outline_draft",
-  "pageCount",
   "problemTitle",
   "produced_answer_before_reference",
   "production_before_comparison",
@@ -140,18 +102,6 @@ function hasDistinctPersistenceIds(confirmed: Record<string, unknown>) {
     typeof workRevisionId === "string" &&
     uuidV4Pattern.test(workRevisionId) &&
     operationId !== workRevisionId
-  );
-}
-
-function hasHistoricalConfirmedContract(
-  confirmed: Record<string, unknown>,
-  currentKeys: readonly string[],
-  legacyKeys: readonly string[],
-) {
-  if (hasExactKeys(confirmed, legacyKeys)) return true;
-  return (
-    hasExactKeys(confirmed, currentKeys) &&
-    hasDistinctPersistenceIds(confirmed)
   );
 }
 
@@ -249,8 +199,7 @@ export function historicalS232gSourceFailureFields(
     [
       "rawPayload.user_confirmed_fields.<keys>",
       confirmed !== null &&
-        (hasExactKeys(confirmed, historicalS232gSourceConfirmedKeys) ||
-          hasExactKeys(confirmed, historicalS232gLegacySourceConfirmedKeys)),
+        hasExactKeys(confirmed, historicalS232gSourceConfirmedKeys),
     ],
     [
       "rawPayload.user_confirmed_fields.sourceType",
@@ -283,11 +232,7 @@ export function historicalS232gSourceFailureFields(
     [
       "rawPayload.user_confirmed_fields.<persistence_ids>",
       confirmed !== null &&
-        hasHistoricalConfirmedContract(
-          confirmed,
-          historicalS232gSourceConfirmedKeys,
-          historicalS232gLegacySourceConfirmedKeys,
-        ),
+        hasDistinctPersistenceIds(confirmed),
     ],
     [
       "derivedPayload.created_from_capture",
@@ -364,11 +309,7 @@ export function historicalS232gRewriteFailureFields(
     [
       "rawPayload.user_confirmed_fields.<keys>",
       confirmed !== null &&
-        (hasExactKeys(confirmed, historicalS232gRewriteConfirmedKeys) ||
-          hasExactKeys(
-            confirmed,
-            historicalS232gLegacyRewriteConfirmedKeys,
-          )),
+        hasExactKeys(confirmed, historicalS232gRewriteConfirmedKeys),
     ],
     ["rawPayload.user_confirmed_fields.biggest_gap", confirmed?.biggest_gap === historicalS232gGap],
     ["rawPayload.user_confirmed_fields.captureQualityIssue", confirmed?.captureQualityIssue === null],
@@ -387,11 +328,7 @@ export function historicalS232gRewriteFailureFields(
     [
       "rawPayload.user_confirmed_fields.<persistence_ids>",
       confirmed !== null &&
-        hasHistoricalConfirmedContract(
-          confirmed,
-          historicalS232gRewriteConfirmedKeys,
-          historicalS232gLegacyRewriteConfirmedKeys,
-        ),
+        hasDistinctPersistenceIds(confirmed),
     ],
     ["rawPayload.user_confirmed_fields.problemTitle", confirmed?.problemTitle === parentTitle],
     ["rawPayload.user_confirmed_fields.produced_answer_before_reference", confirmed?.produced_answer_before_reference === true],

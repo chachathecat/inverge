@@ -142,14 +142,21 @@ test("S232H.2 is a narrow exact-head PR2 and fixed-PR1 Preview gate", () => {
     workflow,
     /contents: write|pull-requests: write|issues: write/,
   );
-  assert.match(operatorRunbook, /`E2E_USER_EMAIL` \(테스트 전용 계정\)/);
-  assert.match(operatorRunbook, /`E2E_USER_PASSWORD` \(테스트 전용 계정\)/);
-  assert.match(workflow, /E2E_USER_EMAIL: \$\{\{ secrets\.E2E_USER_EMAIL \}\}/);
+  assert.match(operatorRunbook, /`E2E_USER_B_EMAIL` \(2인 분리 검증용\)/);
+  assert.match(operatorRunbook, /`E2E_USER_B_PASSWORD` \(2인 분리 검증용\)/);
+  assert.match(workflow, /E2E_USER_EMAIL: \$\{\{ secrets\.E2E_USER_B_EMAIL \}\}/);
   assert.match(
     workflow,
-    /E2E_USER_PASSWORD: \$\{\{ secrets\.E2E_USER_PASSWORD \}\}/,
+    /E2E_USER_PASSWORD: \$\{\{ secrets\.E2E_USER_B_PASSWORD \}\}/,
   );
-  assert.doesNotMatch(workflow, /TEST_USER_EMAIL|TEST_USER_PASSWORD/);
+  assert.doesNotMatch(
+    workflow,
+    /E2E_USER_EMAIL: \$\{\{ secrets\.(?:E2E_USER_EMAIL|TEST_USER_EMAIL)/,
+  );
+  assert.doesNotMatch(
+    workflow,
+    /E2E_USER_PASSWORD: \$\{\{ secrets\.(?:E2E_USER_PASSWORD|TEST_USER_PASSWORD)/,
+  );
 });
 
 test("S232H.2 audits all 13 production routes at 390, 768, and 1440", () => {
