@@ -2456,20 +2456,46 @@ async function captureSyntheticScreenshot(
   fileName: string,
   options: { fullPage?: boolean } = {},
 ): Promise<ScreenshotEvidence> {
-  const screenshotScrollY = await page.evaluate(async () => {
+  const previousScrollBehavior = await page.evaluate(() => {
     if (document.activeElement instanceof HTMLElement)
       document.activeElement.blur();
     const root = document.documentElement;
-    const previousScrollBehavior = root.style.scrollBehavior;
-    root.style.scrollBehavior = "auto";
-    window.scrollTo(0, 0);
-    await new Promise<void>((resolve) =>
-      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-    );
-    const scrollY = window.scrollY;
-    root.style.scrollBehavior = previousScrollBehavior;
-    return scrollY;
+    const previous = {
+      value: root.style.getPropertyValue("scroll-behavior"),
+      priority: root.style.getPropertyPriority("scroll-behavior"),
+    };
+    root.style.setProperty("scroll-behavior", "auto", "important");
+    void root.offsetHeight;
+    const instantTop = {
+      top: 0,
+      left: 0,
+      behavior: "instant" as ScrollBehavior,
+    };
+    document.scrollingElement?.scrollTo(instantTop);
+    window.scrollTo(instantTop);
+    return previous;
   });
+  await page.waitForFunction(
+    () =>
+      window.scrollY === 0 &&
+      (document.scrollingElement?.scrollTop ?? 0) === 0,
+    undefined,
+    { timeout: 1_000 },
+  );
+  const screenshotScrollY = await page.evaluate((previous) => {
+    const root = document.documentElement;
+    const scrollY = window.scrollY;
+    if (previous.value) {
+      root.style.setProperty(
+        "scroll-behavior",
+        previous.value,
+        previous.priority,
+      );
+    } else {
+      root.style.removeProperty("scroll-behavior");
+    }
+    return scrollY;
+  }, previousScrollBehavior);
   expect(
     screenshotScrollY,
     `${fileName} must be captured from the canonical top position.`,
