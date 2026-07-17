@@ -20,6 +20,10 @@ import {
   runtimeTargetSha,
   sanitizeRuntimeEvidence,
 } from "./support/authenticated-runtime";
+import {
+  collectSyntheticPayloadFailurePaths,
+  summarizeSyntheticPayloadFailurePaths,
+} from "./support/synthetic-payload-diagnostics";
 
 const runtimeEnabled = process.env.S232H2_VISUAL_RUNTIME === "1";
 const baselineUrl = process.env.E2E_BASELINE_URL?.trim() ?? "";
@@ -905,26 +909,6 @@ const exactSyntheticSystemValuePatterns = [
   /^second-(?:practice-(?:method-selection|adjustment|income-approach|cost-approach|sales-comparison|final-value)|theory-(?:value-theory|price-principle|approach-logic|market-analysis|highest-best-use)|comp-law-(?:requirements|statute|procedure-project-approval|precedent-principles|issue-subsumption|conclusion))$/,
 ] as const;
 
-function addExactStringLeaves(value: unknown, target: Set<string>) {
-  if (typeof value === "string") {
-    target.add(value);
-    return true;
-  }
-  if (
-    value === undefined ||
-    value === null ||
-    typeof value === "boolean" ||
-    (typeof value === "number" && Number.isFinite(value))
-  )
-    return true;
-  if (Array.isArray(value))
-    return value.every((entry) => addExactStringLeaves(entry, target));
-  if (typeof value !== "object") return false;
-  return Object.values(value as Record<string, unknown>).every((entry) =>
-    addExactStringLeaves(entry, target),
-  );
-}
-
 function exactSyntheticPayloadValues(
   item: SyntheticItem,
   parent?: SyntheticItem,
@@ -967,13 +951,20 @@ function hasExactSyntheticPayloadContract(
   parent?: SyntheticItem,
 ) {
   const allowed = exactSyntheticPayloadValues(item, parent);
-  const observed = new Set<string>();
-  if (!addExactStringLeaves(item.rawPayload ?? {}, observed)) return false;
-  if (!addExactStringLeaves(item.derivedPayload ?? {}, observed)) return false;
-  return [...observed].every(
+  return exactSyntheticPayloadFailurePaths(item, allowed).length === 0;
+}
+
+function exactSyntheticPayloadFailurePaths(
+  item: SyntheticItem,
+  allowed = exactSyntheticPayloadValues(item),
+) {
+  return collectSyntheticPayloadFailurePaths(
+    item,
     (value) =>
       allowed.has(value) ||
-      exactSyntheticSystemValuePatterns.some((pattern) => pattern.test(value)),
+      exactSyntheticSystemValuePatterns.some((pattern) =>
+        pattern.test(value),
+      ),
   );
 }
 
@@ -1206,6 +1197,21 @@ async function auditSyntheticAccount(
     if (itemId) mergedById.set(itemId, item);
   }
   const mergedItems = [...mergedById.values()];
+  const rootPayloadFailures = summarizeSyntheticPayloadFailurePaths(
+    mergedItems
+      .filter(matchesExactSyntheticRootFields)
+      .map((item) => {
+        const allowed = exactSyntheticPayloadValues(item);
+        return {
+          item,
+          isAllowedString: (value: string) =>
+            allowed.has(value) ||
+            exactSyntheticSystemValuePatterns.some((pattern) =>
+              pattern.test(value),
+            ),
+        };
+      }),
+  );
   const { owned } = classifyOwnedSyntheticItems(mergedItems, sessionUserId);
   const listedOwned = listedItems.filter((item) =>
     owned.has(resolveSyntheticItemId(item)),
@@ -1274,6 +1280,10 @@ async function auditSyntheticAccount(
     studyLogListingComplete,
     "The dedicated account study-log listing must be complete before capture.",
   ).toBe(true);
+  expect(
+    rootPayloadFailures,
+    "Synthetic payload diagnostics expose schema paths and counts only, never values.",
+  ).toEqual([]);
   expect(listedOwned).toHaveLength(listedItems.length);
   expect(
     logs,

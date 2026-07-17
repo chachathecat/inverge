@@ -3,6 +3,11 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
+import {
+  collectSyntheticPayloadFailurePaths,
+  summarizeSyntheticPayloadFailurePaths,
+} from "./e2e/support/synthetic-payload-diagnostics.ts";
+
 const read = (path) => readFileSync(path, "utf8");
 const workflow = read(".github/workflows/s232h2-runtime.yml");
 const spec = read("tests/e2e/s232h2-production-v3-visual.spec.ts");
@@ -52,6 +57,47 @@ const requiredRoutes = [
   "/app/write?mode=second",
   "/app/calculator?mode=second&context=practice&focus=casio",
 ];
+
+test("synthetic payload diagnostics expose only allowlisted schema paths and counts", () => {
+  const privateValue = "PRIVATE_LEARNER_VALUE_DO_NOT_LOG";
+  const privateKey = "PRIVATE_LEARNER_KEY_DO_NOT_LOG";
+  const item = {
+    rawPayload: {
+      user_confirmed_fields: {
+        subjectLabel: privateValue,
+      },
+      [privateKey]: privateValue,
+    },
+    derivedPayload: {
+      concept_node_candidate: {
+        retrievalPrompt: privateValue,
+      },
+    },
+  };
+  const failures = collectSyntheticPayloadFailurePaths(
+    item,
+    (value) => value === "allowed",
+  );
+  assert.deepEqual(failures, [
+    "rawPayload.user_confirmed_fields.subjectLabel",
+    "rawPayload.<unknown-key>",
+    "derivedPayload.concept_node_candidate.retrievalPrompt",
+  ]);
+  const summary = summarizeSyntheticPayloadFailurePaths([
+    { item, isAllowedString: (value) => value === "allowed" },
+    { item, isAllowedString: (value) => value === "allowed" },
+  ]);
+  assert.deepEqual(summary, [
+    {
+      path: "derivedPayload.concept_node_candidate.retrievalPrompt",
+      count: 2,
+    },
+    { path: "rawPayload.<unknown-key>", count: 2 },
+    { path: "rawPayload.user_confirmed_fields.subjectLabel", count: 2 },
+  ]);
+  assert.equal(JSON.stringify({ failures, summary }).includes(privateValue), false);
+  assert.equal(JSON.stringify({ failures, summary }).includes(privateKey), false);
+});
 
 test("S232H.2 is a narrow exact-head PR2 and fixed-PR1 Preview gate", () => {
   assert.match(workflow, /agent\/figma-v3-production-routes/);
@@ -230,8 +276,10 @@ test("S232H.2 evidence is API-audited synthetic data and directly compared with 
   assert.match(spec, /item\.sourceType !== parent\.sourceType/);
   assert.match(spec, /item\.confidence !== parent\.confidence/);
   assert.match(spec, /hasExactSyntheticPayloadContract/);
-  assert.match(spec, /addExactStringLeaves\(item\.rawPayload \?\? \{\}, observed\)/);
-  assert.match(spec, /addExactStringLeaves\(item\.derivedPayload \?\? \{\}, observed\)/);
+  assert.match(spec, /exactSyntheticPayloadFailurePaths/);
+  assert.match(spec, /summarizeSyntheticPayloadFailurePaths/);
+  assert.match(spec, /schema paths and counts only, never values/);
+  assert.match(spec, /collectSyntheticPayloadFailurePaths/);
   assert.match(spec, /exactSyntheticSystemValuePatterns\.some/);
   assert.match(spec, /concept:second:\(\?:감정평가실무/);
   assert.match(spec, /second-\(\?:practice-/);
