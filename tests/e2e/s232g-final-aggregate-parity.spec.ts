@@ -2513,14 +2513,31 @@ async function keyboardFocusProbe(page: Page, preferredSelector: string, routeKe
           });
           return sentinel;
         };
-        focusables[0].before(boundary("start"));
-        focusables.at(-1)?.after(boundary("end"));
+        const boundaryAnchor = (element: HTMLElement) => {
+          const parent = element.parentElement;
+          if (parent instanceof HTMLDetailsElement && !parent.open) {
+            const controller = Array.from(parent.children).find(
+              (child) => child.tagName === "SUMMARY",
+            );
+            if (controller === element) return parent;
+          }
+          return element;
+        };
+        const startBoundary = boundary("start");
+        const endBoundary = boundary("end");
+        const startAnchor = boundaryAnchor(focusables[0]);
+        const endAnchor = boundaryAnchor(focusables.at(-1) ?? focusables[0]);
+        startAnchor.before(startBoundary);
+        endAnchor.after(endBoundary);
         if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
         window.scrollTo(0, 0);
         return {
           count: focusables.length,
           targetOrder: focusables.indexOf(target),
           positiveTabIndexCount: focusables.filter((element) => element.tabIndex > 0).length,
+          boundaryInsideClosedDetailsCount: [startBoundary, endBoundary].filter(
+            (element) => element.closest("details:not([open])") !== null,
+          ).length,
         };
       }, preferredSelector),
     );
@@ -2530,6 +2547,10 @@ async function keyboardFocusProbe(page: Page, preferredSelector: string, routeKe
     requireTruth(
       prepared.positiveTabIndexCount === 0,
       `keyboard-${routeKey}-positive-tabindex-absent`,
+    );
+    requireTruth(
+      prepared.boundaryInsideClosedDetailsCount === 0,
+      `keyboard-${routeKey}-boundaries-exposed`,
     );
 
     const before = await staticStage("keyboard-style-before", () =>

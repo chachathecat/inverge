@@ -664,9 +664,50 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
     /async function keyboardFocusProbe[\s\S]*?\n}\n\nasync function closeContext/,
   )?.[0] ?? "";
   assert.notEqual(keyboardProbeBlock, "");
+  const keyboardVisibleBlock = keyboardProbeBlock.slice(
+    keyboardProbeBlock.indexOf("const visible ="),
+    keyboardProbeBlock.indexOf("const candidates ="),
+  );
+  assert.notEqual(keyboardVisibleBlock, "");
   assert.match(keyboardProbeBlock, /data-s232g-keyboard-boundary/);
-  assert.match(keyboardProbeBlock, /focusables\[0\]\.before\(boundary\("start"\)\)/);
-  assert.match(keyboardProbeBlock, /focusables\.at\(-1\)\?\.after\(boundary\("end"\)\)/);
+  assert.match(keyboardProbeBlock, /const boundaryAnchor = \(element: HTMLElement\)/);
+  assert.match(
+    keyboardProbeBlock,
+    /parent instanceof HTMLDetailsElement && !parent\.open/,
+  );
+  assert.match(keyboardProbeBlock, /if \(controller === element\) return parent/);
+  assert.match(
+    keyboardProbeBlock,
+    /const startAnchor = boundaryAnchor\(focusables\[0\]\)/,
+  );
+  assert.match(
+    keyboardProbeBlock,
+    /const endAnchor = boundaryAnchor\(focusables\.at\(-1\) \?\? focusables\[0\]\)/,
+  );
+  assert.match(keyboardProbeBlock, /startAnchor\.before\(startBoundary\)/);
+  assert.match(keyboardProbeBlock, /endAnchor\.after\(endBoundary\)/);
+  const boundaryAnchorBlock = keyboardProbeBlock.slice(
+    keyboardProbeBlock.indexOf("const boundaryAnchor ="),
+    keyboardProbeBlock.indexOf("const startBoundary ="),
+  );
+  assert.notEqual(boundaryAnchorBlock, "");
+  assert.doesNotMatch(boundaryAnchorBlock, /\.closest\(/);
+  assert.doesNotMatch(
+    keyboardProbeBlock,
+    /focusables\[0\]\.before\(boundary\("start"\)\)|focusables\.at\(-1\)\?\.after\(boundary\("end"\)\)/,
+  );
+  assert.match(
+    keyboardProbeBlock,
+    /boundaryInsideClosedDetailsCount: \[startBoundary, endBoundary\]\.filter/,
+  );
+  assert.match(
+    keyboardProbeBlock,
+    /element\.closest\("details:not\(\[open\]\)"\) !== null/,
+  );
+  assert.match(
+    keyboardProbeBlock,
+    /prepared\.boundaryInsideClosedDetailsCount === 0/,
+  );
   assert.match(keyboardProbeBlock, /keyboard-\$\{routeKey\}-forward-start-boundary/);
   assert.match(keyboardProbeBlock, /keyboard-\$\{routeKey\}-forward-end-boundary/);
   assert.match(keyboardProbeBlock, /keyboard-\$\{routeKey\}-reverse-end-boundary/);
@@ -689,7 +730,7 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
   assert.match(keyboardProbeBlock, /let ancestor = expected\?\.parentElement \?\? null/);
   assert.match(keyboardProbeBlock, /if \(controller !== expected\)/);
   assert.doesNotMatch(
-    keyboardProbeBlock,
+    keyboardVisibleBlock,
     /element\.closest\("details:not\(\[open\]\)"\)/,
   );
   assert.doesNotMatch(
@@ -723,6 +764,7 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
       "focus-visible",
       "in-viewport",
       "interactive-control",
+      "boundaries-exposed",
     ]) {
       assert.match(`keyboard-${route.key}-${suffix}`, /^[a-z0-9-]{1,64}$/);
     }
