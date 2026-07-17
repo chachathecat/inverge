@@ -2456,15 +2456,24 @@ async function captureSyntheticScreenshot(
   fileName: string,
   options: { fullPage?: boolean } = {},
 ): Promise<ScreenshotEvidence> {
-  await page.evaluate(() => {
+  const screenshotScrollY = await page.evaluate(async () => {
     if (document.activeElement instanceof HTMLElement)
       document.activeElement.blur();
     const root = document.documentElement;
     const previousScrollBehavior = root.style.scrollBehavior;
     root.style.scrollBehavior = "auto";
     window.scrollTo(0, 0);
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+    );
+    const scrollY = window.scrollY;
     root.style.scrollBehavior = previousScrollBehavior;
+    return scrollY;
   });
+  expect(
+    screenshotScrollY,
+    `${fileName} must be captured from the canonical top position.`,
+  ).toBe(0);
 
   const identity = page.locator(
     '[data-s224v-learner-mode-entry="second-only"] > span:last-child',
