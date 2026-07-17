@@ -288,6 +288,10 @@ test("S232G product surfaces expose one route heading, stable targets, and seman
   assert.match(calculatorPage, /<h1[\s\S]*?\{workflow\.title\}[\s\S]*?<\/h1>/);
   assert.match(calculatorPage, /buttonVariants\(\{ variant: "outline"/);
   assert.doesNotMatch(calculatorPage, /<Link[^>]*>[\s\S]{0,120}<Button/);
+  assert.match(
+    calculatorPage,
+    /isCasioFocus && !isRecoveryMode[\s\S]*?<CalculatorRoutineTrainer[\s\S]*?source="answer-review"[\s\S]*?className="border-0 sm:border"/,
+  );
   assert.match(calculatorTrainer, /testId="calculator-step-runner-v3"/);
   assert.doesNotMatch(calculatorTrainer, /className="mb-5 max-w-none"/);
   assert.match(
@@ -861,6 +865,19 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
   }
   assert.doesNotMatch(runtimeSpec, /"route-clipped-core-content"/);
   assert.doesNotMatch(runtimeSpec, /"width-equivalent-clipping"/);
+  assert.match(
+    runtimeSpec,
+    /`calculator-step-\$\{viewport\.key\}-min-height`/,
+  );
+  assert.match(
+    runtimeSpec,
+    /`calculator-step-\$\{viewport\.key\}-shell-width`/,
+  );
+  assert.doesNotMatch(runtimeSpec, /"calculator-step-shell-geometry"/);
+  for (const viewport of [...S232G_VIEWPORTS, S232G_WIDTH_EQUIVALENT_VIEWPORT]) {
+    assert.match(`calculator-step-${viewport.key}-min-height`, /^[a-z0-9-]{1,64}$/);
+    assert.match(`calculator-step-${viewport.key}-shell-width`, /^[a-z0-9-]{1,64}$/);
+  }
   assert.doesNotMatch(runtimeSpec, /keyboard-visible-focus-activation/);
   assert.match(runtimeSpec, /actualBrowserZoomClaimed: false/);
   assert.match(runtimeSpec, /realScreenReaderClaimed: false/);

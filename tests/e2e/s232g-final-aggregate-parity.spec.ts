@@ -2022,16 +2022,7 @@ async function calculatorStepFigmaProbe(page: Page) {
       '[data-testid="calculator-step-runner-v3"]',
   );
   await keyInput.waitFor({ state: "visible", timeout: 20_000 });
-  const widths = [
-    ...S232G_VIEWPORTS.map((viewport) => ({
-      width: viewport.width,
-      height: viewport.height,
-    })),
-    {
-      width: S232G_WIDTH_EQUIVALENT_VIEWPORT.width,
-      height: S232G_WIDTH_EQUIVALENT_VIEWPORT.height,
-    },
-  ];
+  const widths = [...S232G_VIEWPORTS, S232G_WIDTH_EQUIVALENT_VIEWPORT];
   for (const viewport of widths) {
     await page.setViewportSize(viewport);
     await settleOwnedPage(page);
@@ -2120,9 +2111,12 @@ async function calculatorStepFigmaProbe(page: Page) {
       "calculator-step-shell-style",
     );
     requireTruth(
-      (viewport.width < 640 ? probe.minHeight === 380 : probe.minHeight === 350) &&
-        Math.abs(probe.width - (viewport.width < 640 ? 350 : 552)) <= 1,
-      "calculator-step-shell-geometry",
+      viewport.width < 640 ? probe.minHeight === 380 : probe.minHeight === 350,
+      `calculator-step-${viewport.key}-min-height`,
+    );
+    requireTruth(
+      Math.abs(probe.width - (viewport.width < 640 ? 350 : 552)) <= 1,
+      `calculator-step-${viewport.key}-shell-width`,
     );
     requireTruth(
       probe.displayHeight >= 124 &&

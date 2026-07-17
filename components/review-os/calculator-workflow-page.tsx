@@ -134,6 +134,7 @@ export function CalculatorWorkflowPage({ focus, workflow, recoveryReference = nu
             source="answer-review"
             examMode="second"
             subject={workflow.subject}
+            className="border-0 sm:border"
             eligibility={{
               eligible: false,
               manualEligible: true,
