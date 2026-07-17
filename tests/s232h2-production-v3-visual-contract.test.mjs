@@ -334,7 +334,7 @@ test("S232H.2 produces the fixed initial, dynamic, before, and Figma evidence se
   assert.match(spec, /data-v3-component=\"CalculatorStep\"/);
   assert.match(
     spec,
-    /async function captureSyntheticScreenshot[\s\S]*?root\.style\.scrollBehavior = "auto"[\s\S]*?window\.scrollTo\(0, 0\)[\s\S]*?requestAnimationFrame\(\(\) => requestAnimationFrame[\s\S]*?root\.style\.scrollBehavior = previousScrollBehavior[\s\S]*?screenshotScrollY[\s\S]*?canonical top position/,
+    /async function captureSyntheticScreenshot[\s\S]*?setProperty\("scroll-behavior", "auto", "important"\)[\s\S]*?behavior: "instant" as ScrollBehavior[\s\S]*?document\.scrollingElement\?\.scrollTo\(instantTop\)[\s\S]*?window\.scrollTo\(instantTop\)[\s\S]*?page\.waitForFunction\([\s\S]*?window\.scrollY === 0[\s\S]*?timeout: 1_000[\s\S]*?removeProperty\("scroll-behavior"\)[\s\S]*?screenshotScrollY[\s\S]*?canonical top position/,
   );
   for (const state of [
     "capture-extraction-preview",
