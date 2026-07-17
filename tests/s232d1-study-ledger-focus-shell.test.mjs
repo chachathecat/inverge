@@ -4,18 +4,21 @@ import test from "node:test";
 
 const read = (relativePath) => readFileSync(relativePath, "utf8");
 
-test("S232D.1 selects focus mode only for Study Ledger detail routes", () => {
+test("S232D.1 preserves Study Ledger focus mode while allowing the canonical calculator focus surface", () => {
   const learnerShell = read("components/learner/learner-ui.tsx");
   const detailPage = read("app/app/items/[itemId]/page.tsx");
 
   assert.match(learnerShell, /usePathname\(\)/);
   assert.match(learnerShell, /useSearchParams\(\)/);
-  assert.match(learnerShell, /pathname\.startsWith\("\/app\/items\/"\) && searchParams\.get\("mode"\) === "second"/);
+  assert.match(learnerShell, /const ledgerFocusMode = pathname\.startsWith\("\/app\/items\/"\) && searchParams\.get\("mode"\) === "second"/);
+  assert.match(learnerShell, /const calculatorFocusMode =/);
+  assert.match(learnerShell, /const focusMode = ledgerFocusMode \|\| calculatorFocusMode/);
   assert.match(learnerShell, /if \(focusMode\)/);
   assert.match(learnerShell, /data-learner-shell-mode="focus"/);
   assert.match(learnerShell, /data-learner-shell-mode="default"/);
   assert.equal((learnerShell.match(/<main id="learner-main" tabIndex=\{-1\}/g) ?? []).length, 2);
-  assert.match(learnerShell, /focusMode \? "#study-ledger-content" : "#learner-main"/);
+  assert.match(learnerShell, /const focusTarget = ledgerFocusMode/);
+  assert.match(learnerShell, /"#study-ledger-content"[\s\S]*"#calculator-routine-content"[\s\S]*"#learner-main"/);
   assert.match(learnerShell, /LEARNER_NAV_ITEMS\.map/);
   assert.match(detailPage, /modeParam !== mode/);
   assert.match(detailPage, /redirect\(`\/app\/items\/\$\{encodeURIComponent\(itemId\)\}\?mode=\$\{mode\}`\)/);

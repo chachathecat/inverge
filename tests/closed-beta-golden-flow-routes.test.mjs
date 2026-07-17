@@ -275,8 +275,10 @@ test("Notes tab has a real learner route and review action does not point to a m
   assert.equal(notesPage.includes("renderReviewOsItemsPage"), true, "notes should render the learner-owned notes list");
   assert.equal(itemsPage.includes('routePath = "/app/items"'), true, "existing items route should remain valid");
   assert.equal(reviewQueue.includes("router.push(`/app/items/${item.itemId}?mode=${mode}`)"), true, "review action should target existing item detail route");
-  assert.equal(sessionPage.includes("/app/review?mode=${mode}"), true, "post-save confirmation should link to review queue");
-  assert.equal(sessionPage.includes("/app/notes?mode=${mode}"), true, "post-save note link should use /app/notes");
+  assert.equal(sessionPage.includes('/app/review?mode=second'), true, "second-mode post-save confirmation should link to review queue");
+  assert.equal(sessionPage.includes('/app/notes?mode=second'), true, "second-mode post-save note link should use /app/notes");
+  assert.equal(sessionPage.includes('/app/review?mode=first'), true, "first-mode post-save confirmation should preserve its review route");
+  assert.equal(sessionPage.includes('/app/notes?mode=first'), true, "first-mode post-save note link should preserve its notes route");
 });
 
 test("Today and empty states use capture for generic input while preserving specialized write tasks", () => {
@@ -295,7 +297,8 @@ test("Today and empty states use capture for generic input while preserving spec
   assert.equal(todayPage.includes("오늘 한 것을 하나 올리면 다음 행동이 만들어집니다."), true, "Today empty state should guide learners back to capture");
   assert.equal(todayPage.includes("data-visible-primary-task-cap={TODAY_PLAN_MAX_PRIMARY_TASKS}"), true, "Today should keep max 3 primary plan tasks");
   assert.equal(todayPage.includes('if (hrefKind === "write") return `/app/write?mode=second&subject=${selectedSubjectQuery}`;'), true, "specialized write tasks should remain available");
-  assert.equal(reviewQueue.includes('router.push(mode === "second" ? "/app/capture?mode=second" : "/app/capture?mode=first")'), true, "empty review state should not send learners to a missing input route");
+  assert.equal(reviewQueue.includes('router.push("/app/capture?mode=second")'), true, "second-mode empty review state should return to capture");
+  assert.equal(reviewQueue.includes('router.push("/app/capture?mode=first")'), true, "first-mode empty review state should preserve its capture route");
   assert.equal(reviewPage.includes("학습 노트에서 만든 다시쓰기 후보를 오늘 복습으로 이어갑니다."), true, "Review page should explain the page purpose");
   assert.match(
     itemsPage,

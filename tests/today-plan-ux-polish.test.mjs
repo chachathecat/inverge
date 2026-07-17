@@ -130,7 +130,9 @@ test("learner Today Plan surface renders why-now line, subtle labels, max-3 sour
   assert.equal(source.includes("show all"), false);
   assert.equal(source.includes("전체 보기"), false);
 
-  assert.equal((source.match(/<Link href={resolveTaskHref\(task\)}/g) ?? []).length, 1);
-  const primaryCtaSnippet = source.slice(source.indexOf("<Link href={resolveTaskHref(task)}"), source.indexOf("</Link>", source.indexOf("<Link href={resolveTaskHref(task)}")));
+  assert.equal((source.match(/<TodayActionLink\s+[\s\S]{0,180}?href=\{resolveTaskHref\(task\)\}/g) ?? []).length, 1);
+  const hrefIndex = source.indexOf("href={resolveTaskHref(task)}");
+  const primaryCtaStart = source.lastIndexOf("<TodayActionLink", hrefIndex);
+  const primaryCtaSnippet = source.slice(primaryCtaStart, source.indexOf("</TodayActionLink>", hrefIndex));
   assert.equal(primaryCtaSnippet.includes("display_primary_cta"), true);
 });

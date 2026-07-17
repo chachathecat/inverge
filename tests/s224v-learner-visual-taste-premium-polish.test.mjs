@@ -51,6 +51,14 @@ test("S224V screenshot and taste QA document exists with required sections", () 
 test("launch-critical surfaces expose S224V density markers and one-primary-action rule", () => {
   for (const { route, file, marker } of requiredSurfaceFiles) {
     const source = read(file);
+    if (route === "/answer-review?mode=second") {
+      assert.match(source, /"data-s224v-surface": isSecond \? "\/answer-review\?mode=second"/);
+      assert.match(source, /<V3RouteFrame/);
+      assert.match(source, /<TrustEvidenceBar/);
+      assert.match(source, /<BiggestGap/);
+      assert.doesNotMatch(source, /data-s224v-(?:primary-cta-count-above-fold|visible-trust-layer-count|visible-primary-work-items-max|equal-weight-card-grid|repeated-warning-copy)/);
+      continue;
+    }
     assert.ok(source.includes(marker), `${route} missing surface marker in ${file}`);
     assert.ok(source.includes('data-s224v-primary-cta-count-above-fold="1"'), `${route} missing one-primary-CTA marker`);
     assert.ok(source.includes("data-s224v-visible-trust-layer-count"), `${route} missing trust-layer count marker`);
@@ -78,7 +86,7 @@ test("trust layers and secondary diagnostics are compact and explicit", () => {
   const notes = read("app/app/items/page.tsx");
 
   assert.match(capturePage, /data-s224v-visible-trust-layer-count="1"/);
-  assert.match(answerReview, /data-s224v-visible-trust-layer-count="1"/);
+  assert.match(answerReview, /<TrustEvidenceBar/);
   assert.doesNotMatch(captureForm, /CAPTURE_TRUST_LAYER_COPY\}\s*<\/p>\s*<p[^>]*>\{ANSWER_SUBMISSION_OCR_TRUST_COPY\}/);
   assert.match(captureForm, /data-s224v-stage-indicator="compact"/);
   assert.match(captureForm, /data-s224v-secondary-input-options="quiet"/);

@@ -1,5 +1,6 @@
 import { CalculatorWorkflowPage } from "@/components/review-os/calculator-workflow-page";
 import { ReviewOsAccessState } from "@/components/review-os/review-os-access-state";
+import { redirect } from "next/navigation";
 import { resolveAppraisalMode } from "@/lib/review-os/appraisal";
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
 import { getCalculatorWorkflow } from "@/lib/review-os/calculator-workflow";
@@ -22,6 +23,20 @@ export default async function CalculatorWorkflowRoute({ searchParams }: PageProp
   if (!session.userId) return null;
 
   const mode = resolveAppraisalMode(profile, params?.mode);
+  if (
+    mode === "second" &&
+    (params?.mode !== "second" || params?.context !== "practice" || params?.focus !== "casio")
+  ) {
+    const canonicalParams = new URLSearchParams({
+      mode: "second",
+      context: "practice",
+      focus: "casio",
+    });
+    if (params?.recoveryRoutineId) canonicalParams.set("recoveryRoutineId", params.recoveryRoutineId);
+    if (params?.recoverySource) canonicalParams.set("recoverySource", params.recoverySource);
+    redirect(`/app/calculator?${canonicalParams.toString()}`);
+  }
+
   const requestedContext = params?.context;
   const fallbackContext = mode === "second" ? "practice" : "accounting";
   const context =

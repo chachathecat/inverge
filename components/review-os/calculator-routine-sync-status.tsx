@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { FailureAwareState } from "@/components/learner";
+import { FailureAwareState, V3ActionButton } from "@/components/learner";
 import type { CalculatorRoutineCompletionSignalV1 } from "@/lib/review-os/calculator-routine";
 import {
   buildCalculatorRoutineOfflineEvidence,
@@ -613,11 +613,13 @@ export function CalculatorRoutineSyncStatusLine({
   offlineEvidence,
   retryAvailable,
   onRetry,
+  presentation = "legacy",
 }: {
   status: CalculatorRoutineSyncState["status"];
   offlineEvidence?: CalculatorRoutineSyncState["offlineEvidence"];
   retryAvailable?: boolean;
   onRetry?: () => void;
+  presentation?: "legacy" | "v3";
 }) {
   if (status === "idle") return null;
   if (status === "offline" && offlineEvidence) {
@@ -645,6 +647,59 @@ export function CalculatorRoutineSyncStatusLine({
                 : status === "offline"
                   ? "기기 전송 대기열을 확인할 수 없습니다"
                   : "학습 기록 연결 실패";
+
+  if (presentation === "v3") {
+    const systemState =
+      status === "saved" || status === "deduped"
+        ? "completed"
+        : status === "failed"
+          ? "error"
+          : status === "account_mismatch"
+            ? "conflict"
+            : status === "local_only" || status === "offline"
+              ? "offline"
+              : "loading";
+    const isAlertState = systemState === "error" || systemState === "conflict";
+    const toneClass =
+      systemState === "completed"
+        ? "border-[var(--color-border-stable)] bg-[var(--color-background-stable)]"
+        : isAlertState
+          ? "border-[var(--color-border-risk)] bg-[var(--color-background-risk)]"
+          : systemState === "offline"
+            ? "border-[var(--color-border-attention)] bg-[var(--color-background-attention)]"
+            : "border-[var(--color-border-default)] bg-[var(--color-background-subtle)]";
+    const markerClass =
+      systemState === "completed"
+        ? "bg-[var(--color-icon-stable)]"
+        : isAlertState
+          ? "bg-[var(--color-icon-risk)]"
+          : systemState === "offline"
+            ? "bg-[var(--color-icon-attention)]"
+            : "bg-[var(--color-icon-brand)]";
+
+    return (
+      <div
+        className={`flex min-h-11 flex-wrap items-center justify-between gap-3 rounded-[var(--v3-radius-control)] border px-4 py-3 ${toneClass}`}
+        data-calculator-routine-sync-state={status}
+        data-calculator-routine-sync-presentation="v3"
+        data-v3-component="UtilityState"
+        data-v3-system-state={systemState}
+        role={isAlertState ? "alert" : "status"}
+        aria-live={isAlertState ? undefined : "polite"}
+        aria-atomic="true"
+      >
+        <span className="flex min-w-0 items-center gap-3">
+          <span aria-hidden="true" className={`size-2.5 shrink-0 rounded-full ${markerClass}`} />
+          <span className="v3-type-compact ko-keep text-[var(--color-text-primary)]">{copy}</span>
+        </span>
+        {retryAvailable && onRetry ? (
+          <V3ActionButton tone="secondary" onClick={onRetry}>
+            다시 시도
+          </V3ActionButton>
+        ) : null}
+      </div>
+    );
+  }
 
   return (
     <div

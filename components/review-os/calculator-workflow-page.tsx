@@ -3,7 +3,12 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
-import { Button } from "@/components/ui/button";
+import {
+  TrustEvidenceBar,
+  V3QuietDisclosure,
+  V3Surface,
+} from "@/components/learner";
+import { buttonVariants } from "@/components/ui/button";
 import { AccountingTemplateCard } from "@/components/review-os/accounting-template-card";
 import { ExecutionResultControls } from "@/components/review-os/execution-result-controls";
 import { CalculatorRoutineTrainer } from "@/components/review-os/calculator-routine-trainer";
@@ -13,6 +18,7 @@ import {
 } from "@/components/review-os/calculator-routine-sync-status";
 import { DEVICE_APPENDIX_FX_9860GIII, type CalculatorWorkflow } from "@/lib/review-os/calculator-workflow";
 import type { CalculatorRoutineRecoveryReference } from "@/lib/review-os/calculator-routine-learning-signal";
+import { cn } from "@/lib/utils";
 
 type CalculatorWorkflowPageProps = {
   focus?: string | null;
@@ -54,7 +60,10 @@ export function CalculatorWorkflowPage({ focus, workflow, recoveryReference = nu
 
   const activeCard = workflow.stepCards[Math.min(activeStageIndex, workflow.stepCards.length - 1)];
   const selectedTypeMeta = workflow.problemTypes.find((type) => type.id === selectedType) ?? workflow.problemTypes[0];
-  const isCasioFocus = workflow.mode === "second" && focus === "casio";
+  // Every second-round practice workflow is the canonical CASIO focus surface.
+  // The route redirects non-canonical query strings, while this guard prevents
+  // direct component renders from falling back to the legacy calculator UI.
+  const isCasioFocus = workflow.mode === "second" && workflow.context === "practice";
   const isRecoveryMode = Boolean(recoveryReference);
   const resultTaskType = isCasioFocus ? "CASIO" : workflow.context === "accounting" ? "accounting template" : "calculation routine";
 
@@ -62,6 +71,171 @@ export function CalculatorWorkflowPage({ focus, workflow, recoveryReference = nu
     () => workflow.stepCards.map((card) => ({ title: card.title, common: card.buttonPath.common, draft: card.buttonPath.fx9860giiiDraft })),
     [workflow.stepCards],
   );
+
+  if (isCasioFocus) {
+    return (
+      <div
+        className="min-h-dvh bg-[var(--color-background-canvas)] text-[var(--color-text-primary)]"
+        data-calculator-focus-shell
+        data-calculator-focus-contract={focus === "casio" ? "canonical" : "normalized"}
+        data-v3-mobile-node="57:34"
+      >
+        <header className="h-[calc(56px+env(safe-area-inset-top))] border-b border-[var(--color-border-default)] bg-[var(--color-background-surface)] lg:h-[calc(72px+env(safe-area-inset-top))]">
+          <div className="mx-auto grid h-full w-full max-w-[var(--layout-content-max)] grid-cols-[44px_minmax(0,1fr)_44px] items-center gap-2 pb-0 pl-[max(8px,env(safe-area-inset-left))] pr-[max(20px,env(safe-area-inset-right))] pt-[env(safe-area-inset-top)] md:pr-[max(32px,env(safe-area-inset-right))]">
+            <Link
+              href="/app/notes?mode=second"
+              aria-label="학습 노트로 돌아가기"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-[var(--v3-radius-control)] text-2xl leading-none text-[var(--color-text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2"
+            >
+              <span aria-hidden="true">‹</span>
+            </Link>
+            <p className="v3-type-label-strong truncate text-[var(--color-text-primary)]">
+              계산 루틴
+            </p>
+            <p
+              className="v3-type-label shrink-0 text-right text-[var(--color-text-brand)]"
+              role="status"
+            >
+              {isRecoveryMode ? "복구" : "9단계"}
+            </p>
+          </div>
+        </header>
+
+        <section
+          id="calculator-routine-content"
+          tabIndex={-1}
+          className="mx-auto w-full max-w-[var(--layout-reading-column)] space-y-5 px-[var(--layout-page-edge)] pb-[calc(152px+env(safe-area-inset-bottom))] pt-5 outline-none md:pb-[calc(152px+env(safe-area-inset-bottom))] md:pt-8 lg:pb-8"
+          aria-labelledby="calculator-focus-title"
+        >
+          <div className="space-y-2" data-calculator-routine-identity>
+            <p className="v3-type-label text-[var(--color-text-secondary)]">
+              실무 · 계산·검산
+            </p>
+            <h1 id="calculator-focus-title" className="v3-type-screen ko-keep text-[var(--color-text-primary)]">
+              fx-9860GIII 계산 루틴
+            </h1>
+            <p className="v3-type-label ko-keep text-[var(--color-text-secondary)]">
+              {workflow.subtitle}
+            </p>
+          </div>
+
+          <TrustEvidenceBar
+            evidence={{ kind: "review_requirement", reviewRequired: true }}
+            sources={["learner_text", "reference"]}
+            summary="입력 순서 직접 확인 · 기기 검증 전"
+            detail="자동 계산이나 공식 타건 안내가 아니며, 실제 fx-9860GIII에서 원문 숫자·단위와 함께 대조해야 합니다."
+            showSaveStatus={false}
+            testId="calculator-focus-trust"
+          />
+
+          {recoveryReference ? (
+            <div data-calculator-routine-recovery-section>
+              <V3Surface tone="focus">
+                <p className="v3-type-caption text-[var(--color-text-brand)]">계산·검산 복구</p>
+                <h2 className="v3-type-section ko-keep mt-1 text-[var(--color-text-primary)]">
+                  계산·검산 다시 하기
+                </h2>
+                <p className="v3-type-body ko-keep mt-2 text-[var(--color-text-secondary)]">
+                  이전 계산·검산 기록에서 남은 신호를 다시 확인합니다.
+                </p>
+                <div className="mt-5">
+                  <CalculatorRoutineTrainer
+                    source={recoveryReference.source}
+                    examMode="second"
+                    subject={workflow.subject}
+                    routineId={recoveryReference.routineId}
+                    eligibility={{
+                      eligible: true,
+                      manualEligible: false,
+                      hasStrongSignal: true,
+                      reason: "eligible",
+                    }}
+                    presentation="focus"
+                    onComplete={calculatorRoutineSync.syncCompletion}
+                  />
+                </div>
+              </V3Surface>
+            </div>
+          ) : (
+            <section
+              data-calculator-routine-v3
+              data-calculator-routine-account-scope={
+                calculatorRoutineSync.accountScopeReady ? "ready" : "pending"
+              }
+              aria-label="fx-9860GIII 계산·검산 실행"
+            >
+              <CalculatorRoutineTrainer
+                source="answer-review"
+                examMode="second"
+                subject={workflow.subject}
+                eligibility={{
+                  eligible: false,
+                  manualEligible: true,
+                  hasStrongSignal: false,
+                  reason: "manual_practice",
+                }}
+                presentation="focus"
+                onComplete={calculatorRoutineSync.syncCompletion}
+              />
+            </section>
+          )}
+
+          <CalculatorRoutineSyncStatusLine
+            status={calculatorRoutineSync.status}
+            offlineEvidence={calculatorRoutineSync.offlineEvidence}
+            retryAvailable={calculatorRoutineSync.retryAvailable}
+            onRetry={calculatorRoutineSync.retry}
+            presentation="v3"
+          />
+
+          <V3QuietDisclosure
+            summary="시험 전 체크와 기기 부록 보기"
+            helper="보조 정보는 필요할 때만 펼쳐 확인합니다."
+          >
+            <div className="space-y-5">
+              <section aria-labelledby="calculator-pre-exam-title">
+                <h2
+                  id="calculator-pre-exam-title"
+                  className="v3-type-label-strong text-[var(--color-text-primary)]"
+                >
+                  시험 전 체크
+                </h2>
+                <ul className="mt-2 divide-y divide-[var(--color-border-default)]">
+                  {workflow.preExamChecks.map((item) => (
+                    <li key={item} className="ko-keep py-2 first:pt-0 last:pb-0">
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+              <section aria-labelledby="calculator-device-draft-title">
+                <h2
+                  id="calculator-device-draft-title"
+                  className="v3-type-label-strong text-[var(--color-text-primary)]"
+                >
+                  기기 부록 (Draft/Beta)
+                </h2>
+                <p className="ko-keep mt-2">
+                  {DEVICE_APPENDIX_FX_9860GIII.caution}
+                </p>
+                <ul className="mt-3 divide-y divide-[var(--color-border-default)]">
+                  {deviceDraftPaths.map((path) => (
+                    <li key={path.title} className="py-3 first:pt-0 last:pb-0">
+                      <p className="v3-type-label-strong text-[var(--color-text-primary)]">
+                        {path.title}
+                      </p>
+                      <p className="ko-keep mt-1">공통 조작 원칙: {path.common}</p>
+                      <p className="ko-keep mt-1">FX-9860GIII Draft: {path.draft}</p>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            </div>
+          </V3QuietDisclosure>
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">
@@ -76,13 +250,14 @@ export function CalculatorWorkflowPage({ focus, workflow, recoveryReference = nu
                 {workflow.subject}
               </span>
             </div>
-            <h2 className="mt-3 text-2xl font-semibold tracking-[-0.035em] text-[color:var(--foreground-strong)]">{workflow.title}</h2>
+            <h1 className="mt-3 text-2xl font-semibold tracking-[-0.035em] text-[color:var(--foreground-strong)]">{workflow.title}</h1>
             <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">{isCasioFocus ? "CASIO 계산형 연습입니다. 입력 순서, 단위, 화면값을 직접 기록하고 실제 기기에서 대조합니다. 기기별 안내는 아직 검증 전입니다." : "계산 결과를 답안 판단으로 연결합니다. 지금은 한 번에 한 루틴만 고정합니다."}</p>
           </div>
-          <Link href={`/app?mode=${workflow.mode}`}>
-            <Button type="button" variant="outline" className="min-h-11">
-              오늘로 돌아가기
-            </Button>
+          <Link
+            href={`/app?mode=${workflow.mode}`}
+            className={cn(buttonVariants({ variant: "outline" }), "min-h-11")}
+          >
+            오늘로 돌아가기
           </Link>
         </div>
       </section>

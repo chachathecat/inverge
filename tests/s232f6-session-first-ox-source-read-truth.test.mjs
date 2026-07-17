@@ -180,6 +180,8 @@ test("S232F.6 access gates precede all requested source reads and nullable email
 test("S232F.6 Session confirms only the exact readable capture detail", () => {
   assert.match(sessionPage, /savedCaptureItemId[\s\S]*?missingRequestedCoreRouteRead\(\)/);
   assert.match(sessionPage, /detail\.item\.userId === session\.userId/);
+  assert.match(sessionPage, /detail\.item\.rawPayload\?\.created_from_capture === true/);
+  assert.match(sessionPage, /detail\.item\.derivedPayload\?\.created_from_capture === true/);
   assert.match(sessionPage, /detail\.item\.createdFromCapture === true/);
   assert.match(sessionPage, /detail\.item\.examName === config\.label/);
   assert.ok(
@@ -190,7 +192,7 @@ test("S232F.6 Session confirms only the exact readable capture detail", () => {
     sessionPage.indexOf('savedCaptureRead?.status === "missing"') <
       sessionPage.indexOf('title="오늘 계획에 반영했습니다."'),
   );
-  assert.match(sessionPage, /\{savedCaptureDetail \? \(/);
+  assert.match(sessionPage, /const savedCapturePanel = savedCaptureDetail \? \(/);
   assert.equal(sessionPage.includes("activeDetail"), false);
   assert.match(
     sessionPage,

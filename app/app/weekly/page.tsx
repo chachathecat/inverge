@@ -1,5 +1,13 @@
 import Link from "next/link";
 
+import {
+  V3ActionLink,
+  V3QuietDisclosure,
+  V3RouteFrame,
+  V3RouteHeader,
+  V3SectionHeader,
+  V3Surface,
+} from "@/components/learner";
 import { ReviewOsFeedbackButton } from "@/components/review-os/feedback-button";
 import { ReviewOsAccessState } from "@/components/review-os/review-os-access-state";
 import {
@@ -78,31 +86,40 @@ export default async function ReviewOsWeeklyPage({ searchParams }: PageProps) {
         degradedCount={degradedReadCount}
         includeBrowserLocalRecords={false}
         confirmedEmptyContent={(
-          <section
-            className="space-y-4 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] p-4"
-            aria-label="이번 주 계획 시작 안내"
-            data-s232f4b-weekly-confirmed-empty
-          >
-            <p className="text-sm leading-7 text-[color:var(--muted)]">
-              {config.emptyDescription}
-            </p>
-            <p className="text-sm leading-7 text-[color:var(--foreground-strong)]">
-              {mode === "second"
-                ? "오늘은 답안 1건만 입력해 주간 계획의 기준점을 만듭니다."
-                : "오늘은 오답 1건만 입력해 주간 계획의 기준점을 만듭니다."}
-            </p>
-            <Link
-              href={inputStartHref}
-              className={buttonVariants({ className: "w-full sm:w-auto" })}
+          mode === "second" ? (
+            <V3Surface tone="subtle" className="space-y-4" labelledBy="weekly-empty-title">
+              <h2 id="weekly-empty-title" className="v3-type-section text-[var(--color-text-primary)]">이번 주 계획 시작</h2>
+              <p className="v3-type-body text-[var(--color-text-secondary)]">{config.emptyDescription}</p>
+              <p className="v3-type-body text-[var(--color-text-primary)]">
+                오늘은 답안 1건만 입력해 주간 계획의 기준점을 만듭니다.
+              </p>
+              <V3ActionLink href={inputStartHref}>{config.primaryCta}</V3ActionLink>
+              <span className="sr-only" data-s232f4b-weekly-confirmed-empty />
+            </V3Surface>
+          ) : (
+            <section
+              className="space-y-4 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] p-4"
+              aria-label="이번 주 계획 시작 안내"
+              data-s232f4b-weekly-confirmed-empty
             >
-              {config.primaryCta}
-            </Link>
-          </section>
+              <p className="text-sm leading-7 text-[color:var(--muted)]">{config.emptyDescription}</p>
+              <p className="text-sm leading-7 text-[color:var(--foreground-strong)]">
+                오늘은 오답 1건만 입력해 주간 계획의 기준점을 만듭니다.
+              </p>
+              <Link
+                href={inputStartHref}
+                className={buttonVariants({ className: "w-full sm:w-auto" })}
+              >
+                {config.primaryCta}
+              </Link>
+            </section>
+          )
         )}
       >
         <ReviewOsFeedbackButton
           route="/app/weekly"
           pageContext={{ mode, taskCount: 0, hasRecovery: false, overdueCount: 0 }}
+          presentation={mode === "second" ? "v3" : "legacy"}
         />
       </CoreRouteReadEmptyShell>
     );
@@ -118,6 +135,93 @@ export default async function ReviewOsWeeklyPage({ searchParams }: PageProps) {
   const primaryTask = plan.recovery?.task ?? plan.tasks[0] ?? null;
   const primaryHref = primaryTask ? `/app/review?mode=${mode}` : inputStartHref;
 
+  if (mode === "second") {
+    return (
+      <V3RouteFrame width="reading" className="space-y-7">
+        <V3RouteHeader
+          eyebrow="이번 주 우선 작업"
+          title="이번 주 2차 실행 계획"
+          description={plan.summary}
+        />
+        <CoreRouteReadDegradedNotice count={degradedReadCount} />
+
+        <V3Surface tone={plan.recovery ? "attention" : "focus"} className="space-y-6">
+          <V3SectionHeader
+            eyebrow="오늘의 1개"
+            title={plan.primaryActionLabel}
+            description={plan.recovery?.message ?? "가장 먼저 이어갈 작업 하나를 제시합니다."}
+          />
+
+          {plan.recovery ? (
+            <div className="border-y border-[var(--color-border-attention)] py-4">
+              <p className="v3-type-body text-[var(--color-text-primary)]">
+                오늘은 {plan.recovery.task.estimatedDurationMinutes}분짜리 복구 작업 하나만 하세요.
+              </p>
+              <p className="v3-type-caption mt-1 text-[var(--color-text-attention)]">
+                밀린 항목 {plan.recovery.overdueCount}개 중 1개만 먼저 처리합니다.
+              </p>
+            </div>
+          ) : null}
+
+          <div className="divide-y divide-[var(--color-border-default)] border-y border-[var(--color-border-default)]">
+            {visibleTasks.map((task) => {
+              const actionLabel = task.action === "rewrite" ? "문단 다시쓰기" : task.action === "retry" ? "재시도" : "복습";
+              return (
+                <article key={task.queueId} className="py-4">
+                  <p className="v3-type-caption text-[var(--color-text-secondary)]">
+                    우선순위 {task.priorityOrder} · {task.estimatedDurationMinutes}분
+                  </p>
+                  <h2 className="v3-type-label-strong mt-1 text-[var(--color-text-primary)]">
+                    {task.subject} · {actionLabel}
+                  </h2>
+                  <p className="v3-type-body mt-2 text-[var(--color-text-primary)]">{task.reason}</p>
+                  <p className="v3-type-caption mt-2 text-[var(--color-text-secondary)]">목표: {task.target}</p>
+                </article>
+              );
+            })}
+          </div>
+          {plan.tasks.length > 3 ? (
+            <p className="v3-type-caption text-[var(--color-text-secondary)]">
+              이번 주 작업은 최대 3개만 먼저 제시합니다. 나머지는 첫 작업 완료 후 자동으로 이어집니다.
+            </p>
+          ) : null}
+
+          <V3ActionLink href={primaryHref}>
+            {plan.recovery ? "복구 작업 시작" : "이번 주 첫 작업 시작"}
+          </V3ActionLink>
+        </V3Surface>
+
+        <V3QuietDisclosure summary="기록 보기" helper="계획의 근거가 된 보조 기록입니다.">
+          <dl className="divide-y divide-[var(--color-border-default)] border-y border-[var(--color-border-default)]">
+            <SecondaryRecord label="대기 큐" value={`${plan.secondaryRecords.queueCount}개`} v3 />
+            <SecondaryRecord label="밀린 항목" value={`${plan.secondaryRecords.overdueCount}개`} v3 />
+            <SecondaryRecord label="최근 오답(14일)" value={`${plan.secondaryRecords.recentWrongCount}개`} v3 />
+          </dl>
+        </V3QuietDisclosure>
+
+        <V3Surface density="compact" tone="subtle">
+          <V3SectionHeader
+            title="이번 주 반복 약점"
+            description={weaknessProfile.repeatedGaps[0]
+              ? `${weaknessProfile.repeatedGaps[0].label} 신호가 반복됩니다.`
+              : "반복 신호를 수집 중입니다."}
+          />
+        </V3Surface>
+
+        <ReviewOsFeedbackButton
+          route="/app/weekly"
+          pageContext={{
+            mode,
+            taskCount: plan.tasks.length,
+            hasRecovery: Boolean(plan.recovery),
+            overdueCount: plan.secondaryRecords.overdueCount,
+          }}
+          presentation="v3"
+        />
+      </V3RouteFrame>
+    );
+  }
+
   return (
     <div className="space-y-6 sm:space-y-7">
       <CoreRouteReadDegradedNotice count={degradedReadCount} />
@@ -127,7 +231,7 @@ export default async function ReviewOsWeeklyPage({ searchParams }: PageProps) {
             <p className="text-caption text-[color:var(--brand-800)]">이번 주 우선 작업</p>
             <p className="mt-1 text-body-lg text-[color:var(--foreground-strong)]">{plan.primaryActionLabel}</p>
           </div>
-          <CardTitle>{mode === "second" ? "이번 주 2차 실행 계획" : "이번 주 1차 실행 계획"}</CardTitle>
+          <CardTitle>이번 주 1차 실행 계획</CardTitle>
           <CardDescription>{plan.summary}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-5 p-4 pt-0 sm:p-6 sm:pt-0">
@@ -196,6 +300,7 @@ export default async function ReviewOsWeeklyPage({ searchParams }: PageProps) {
           hasRecovery: Boolean(plan.recovery),
           overdueCount: plan.secondaryRecords.overdueCount,
         }}
+        presentation="legacy"
       />
     </div>
   );
@@ -222,9 +327,9 @@ function WeeklyTaskItem({ task }: { task: WeeklyPlanTask }) {
   );
 }
 
-function SecondaryRecord({ label, value }: { label: string; value: string }) {
+function SecondaryRecord({ label, value, v3 = false }: { label: string; value: string; v3?: boolean }) {
   return (
-    <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] p-4">
+    <div className={v3 ? "flex items-center justify-between gap-4 py-3" : "rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] p-4"}>
       <p className="text-[color:var(--muted)]">{label}</p>
       <p className="mt-1 text-[color:var(--foreground-strong)]">{value}</p>
     </div>

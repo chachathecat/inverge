@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { V3ActionLink, V3SectionHeader, V3Surface } from "@/components/learner";
 
 import {
   buildCalculatorRoutineRecoveryHref,
@@ -13,28 +13,31 @@ export function CalculatorRoutineReviewCandidates({
   if (candidates.length === 0) return null;
 
   return (
-    <section
-      className="rounded-[var(--radius-lg)] border border-[color:var(--border-hairline)] bg-[color:var(--surface)] p-4"
-      data-calculator-routine-review-candidates
-    >
-      <h3 className="text-sm font-semibold text-[color:var(--foreground-strong)]">계산·검산 복습</h3>
-      <ul className="mt-3 divide-y divide-[color:var(--border-hairline)]">
+    <div data-calculator-routine-review-candidates>
+    <V3Surface as="section" className="space-y-4">
+      <V3SectionHeader
+        eyebrow="계산 루틴"
+        title="계산·검산 복습"
+        description="확인이 필요한 계산 루틴만 다시 실행합니다."
+      />
+      <ul className="divide-y divide-[var(--color-border-default)]">
         {candidates.map((candidate) => (
-          <li key={candidate.id} className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <li key={candidate.id} className="flex flex-col gap-4 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
-              <p className="text-xs text-[color:var(--muted)]">{candidate.sourceLabel} · {candidate.subject}</p>
-              <p className="mt-1 text-sm font-medium text-[color:var(--foreground-strong)]">{candidate.title}</p>
-              <p className="mt-1 text-xs text-[color:var(--muted)]">다음 행동: {candidate.nextAction}</p>
+              <p className="v3-type-caption text-[var(--color-text-secondary)]">{candidate.sourceLabel} · {candidate.subject}</p>
+              <p className="v3-type-body-strong ko-keep mt-1 text-[var(--color-text-primary)]">{candidate.title}</p>
+              <p className="v3-type-compact ko-keep mt-1 text-[var(--color-text-secondary)]">다음 행동: {candidate.nextAction}</p>
             </div>
-            <Link
+            <V3ActionLink
               href={buildCalculatorRoutineRecoveryHref(candidate.recoveryReference)}
-              className="inline-flex min-h-11 items-center justify-center rounded-full border border-[color:var(--border-subtle)] px-3 text-xs font-medium text-[color:var(--foreground-strong)]"
+              tone="secondary"
             >
               계산·검산 다시 하기
-            </Link>
+            </V3ActionLink>
           </li>
         ))}
       </ul>
-    </section>
+    </V3Surface>
+    </div>
   );
 }

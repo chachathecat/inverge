@@ -124,8 +124,8 @@ test("reference snippets are optional and collapsed in learner surfaces", async 
   assert.ok(firstOxSource.includes("<details"));
   assert.ok(firstOxSource.includes("참고 근거 힌트 보기 (선택)"));
   assert.ok(firstOxSource.includes("concept.referenceSnippets?.length"));
-  assert.ok(sessionSource.includes("<details"));
-  assert.ok(sessionSource.includes("참고 근거 힌트 보기 (선택)"));
+  assert.ok(sessionSource.includes("<V3QuietDisclosure"));
+  assert.ok(sessionSource.includes("관련 학습 구조 / 참고 근거 보기"));
   assert.ok(sessionSource.includes("note?.referenceSnippets?.length"));
   assert.equal(/<table/.test(firstOxSource + sessionSource), false);
 });

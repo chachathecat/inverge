@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 
-import { Button } from "@/components/ui/button";
+import { V3ActionButton } from "@/components/learner";
 import { parseAppraisalMode } from "@/lib/review-os/appraisal";
 
 type AuthResponse = {
@@ -91,25 +91,25 @@ export function AuthForm() {
   }
 
   return (
-    <form className="space-y-4" onSubmit={handleSubmit}>
-      <p className="text-sm leading-6 text-[color:var(--muted)]">초대받은 계정으로만 이용할 수 있습니다.</p>
+    <form className="space-y-5" onSubmit={handleSubmit} aria-busy={status === "submitting"}>
+      <p className="v3-type-compact text-[var(--color-text-secondary)]">초대받은 계정으로만 이용할 수 있습니다.</p>
 
-      <label className="block space-y-2 text-sm">
-        <span className="text-[color:var(--foreground-strong)]">이메일</span>
+      <label className="v3-type-label-strong block space-y-2 text-[var(--color-text-primary)]">
+        <span>이메일</span>
         <input
           type="email"
-          className="long-token w-full rounded-xl border border-[var(--border)] bg-[color:var(--surface)] px-4 py-3 outline-none"
+          className="v3-type-body long-token min-h-[var(--control-height)] w-full rounded-[var(--v3-radius-control)] border border-[var(--color-border-strong)] bg-[var(--color-background-surface)] px-4 py-3 text-[var(--color-text-primary)] outline-none transition-colors focus:border-[var(--color-border-focus)] focus:ring-2 focus:ring-[var(--focus-ring)] focus:ring-offset-2 focus:ring-offset-[var(--color-background-canvas)]"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           autoComplete="email"
         />
       </label>
 
-      <label className="block space-y-2 text-sm">
-        <span className="text-[color:var(--foreground-strong)]">비밀번호</span>
+      <label className="v3-type-label-strong block space-y-2 text-[var(--color-text-primary)]">
+        <span>비밀번호</span>
         <input
           type="password"
-          className="w-full rounded-xl border border-[var(--border)] bg-[color:var(--surface)] px-4 py-3 outline-none"
+          className="v3-type-body min-h-[var(--control-height)] w-full rounded-[var(--v3-radius-control)] border border-[var(--color-border-strong)] bg-[var(--color-background-surface)] px-4 py-3 text-[var(--color-text-primary)] outline-none transition-colors focus:border-[var(--color-border-focus)] focus:ring-2 focus:ring-[var(--focus-ring)] focus:ring-offset-2 focus:ring-offset-[var(--color-background-canvas)]"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           autoComplete="current-password"
@@ -117,12 +117,17 @@ export function AuthForm() {
       </label>
 
       {message ? (
-        <p className={`text-sm ${status === "error" ? "text-[color:var(--status-red)]" : "text-[color:var(--muted)]"}`}>{message}</p>
+        <p
+          className={`v3-type-compact ${status === "error" ? "text-[var(--color-text-risk)]" : "text-[var(--color-text-secondary)]"}`}
+          role={status === "error" ? "alert" : "status"}
+        >
+          {message}
+        </p>
       ) : null}
 
-      <Button type="submit" data-testid="login-submit" className="w-full" disabled={status === "submitting"}>
+      <V3ActionButton type="submit" fullWidth data-testid="login-submit" disabled={status === "submitting"}>
         {status === "submitting" ? "처리 중" : "로그인"}
-      </Button>
+      </V3ActionButton>
     </form>
   );
 }

@@ -13,7 +13,10 @@ test("standalone learner tools expose links back into the learner OS with mode a
   const problemSnapPage = read("app/problem-snap/page.tsx");
 
   assert.ok(answerReview.includes("답안 훈련"));
-  assert.ok(answerReview.includes('href={examMode === "second" ? "/app?mode=second" : "/app?mode=first"}'));
+  assert.match(
+    answerReview,
+    /href=\{\s*examMode === "second"\s*\?\s*"\/app\?mode=second"\s*:\s*"\/app\?mode=first"\s*\}/,
+  );
   assert.ok(answerReview.includes("/login?returnTo=%2Fanswer-review%3Fmode%3Dsecond"));
   assert.ok(problemSnap.includes("StandaloneLearnerToolNav"));
   assert.ok(problemSnapPage.includes("initialSubject"));
@@ -66,7 +69,10 @@ test("Answer Review reuses the calculation routine and avoids duplicate passive 
   assert.ok(answerReview.includes("problemSnapRoutineReference"));
   assert.ok(answerReview.includes("hasProblemSnapRoutineHandoff"));
   assert.ok(answerReview.includes("getCalculatorRoutineIdFromDraftStorageKey"));
-  assert.ok(answerReview.includes('setAnswerReviewRoutineRunId(createCalculatorRoutineRunId("answer-review"));'));
+  assert.match(
+    answerReview,
+    /setAnswerReviewRoutineRunId\(\s*createCalculatorRoutineRunId\("answer-review"\),?\s*\);/,
+  );
   assert.ok(answerReview.includes("calculatorRoutineReferenceHints"));
   assert.ok(answerReview.includes("getCalculatorRoutineEligibility"));
   assert.doesNotMatch(answerReview, /기준\s*답안|기준답안|모범답안|공식\s*채점\s*(결과|서비스|기준|입니다)/);

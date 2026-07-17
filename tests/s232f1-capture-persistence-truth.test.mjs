@@ -327,7 +327,7 @@ test("S232F.1 total save failure is memory-only, retryable, and excludes every s
   assert.match(localBranch, /자동 동기화는 등록되지 않았으므로/);
   assert.doesNotMatch(localBranch, /buildCaptureCompletedEvidence|FailureAwareState/);
   assert.doesNotMatch(localBranch, /todayPlanCandidate|reviewQueueCandidate|CognitiveLearningActionCard/);
-  assert.equal((localBranch.match(/<Button/g) ?? []).length, 1);
+  assert.equal((localBranch.match(/<CaptureActionButton/g) ?? []).length, 1);
 
   const localSaveStart = capture.indexOf("async function saveLocalCaptureConfirmation");
   const localSaveEnd = capture.indexOf("function getLearnerCaptureContent", localSaveStart);

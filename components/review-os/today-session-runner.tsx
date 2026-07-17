@@ -1,14 +1,27 @@
 "use client";
 
 import Link from "next/link";
+import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { useMemo, useState } from "react";
 
+import { BiggestGap, V3ActionButton, V3ActionLink, V3QuietDisclosure, V3Surface } from "@/components/learner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ExecutionResultControls } from "@/components/review-os/execution-result-controls";
+import {
+  ExecutionResultControls,
+  type ExecutionResultControlsProps,
+} from "@/components/review-os/execution-result-controls";
 import { MicroPracticeCard } from "@/components/review-os/minimal-study-system";
 import type { AppraisalMode } from "@/lib/review-os/appraisal";
 import type { ExecutionReferenceSupport } from "@/lib/review-os/execution-reference-support";
+import {
+  buildLearningSignalFromExecutionResult,
+  buildNextPlanSignalFromExecution,
+  buildReviewCandidateFromExecutionSignal,
+  type ExecutionLearningSignalResult,
+  type ExecutionNextPlanCandidate,
+  type ExecutionReviewCandidate,
+} from "@/lib/review-os/execution-learning-signal";
 import type { ReferenceSnippet } from "@/lib/review-os/reference-context";
 import { buildSecondRewriteComparison } from "@/lib/review-os/second-rewrite-comparison";
 import { SECOND_REWRITE_CASIO_UNSUPPORTED_MESSAGE } from "@/lib/review-os/second-answer-rewrite";
@@ -46,12 +59,155 @@ type TodaySessionRunnerProps = {
   queueItem: ReviewQueueCard | null;
   note: SessionNote | null;
   referenceSupport?: ExecutionReferenceSupport | null;
+  showHeader?: boolean;
 };
 
 type TrapCard = { trapType: string; prompt: string; recallPoint: string; caution: string };
 export const SECOND_LOOP_TOKENS = ["쟁점 회상", "가장 큰 간극 1개", "문단 1개만 다시 씁니다.", "전후 비교", "다음 보강 예약"] as const;
 export const FIRST_LOOP_TOKENS = ["핵심 조건 회상", "짧은 재풀이", "틀린 이유 1개", "근거 1문장"] as const;
 const FIRST_TRAP_CATEGORIES = ["요건 누락", "원칙/예외 혼동", "선지 끝 조건 오독", "계산/단위 실수", "그래프/공식 조건 혼동", "조문/절차 순서 혼동"] as const;
+
+const SECOND_EXECUTION_RESULT_OPTIONS: ReadonlyArray<{
+  result: ExecutionLearningSignalResult;
+  label: string;
+  description: string;
+}> = [
+  { result: "done", label: "완료", description: "추가 판단 없이 완료로 닫기" },
+  { result: "wrong", label: "틀림", description: "짧은 복습에 남기기" },
+  { result: "unknown", label: "모르겠음", description: "확신 낮은 회상 후보로 남기기" },
+  { result: "needs_rewrite", label: "다시쓰기 필요", description: "한 문단 보강 후보로 남기기" },
+  { result: "skipped", label: "나중에", description: "부담 낮은 복구 후보로 남기기" },
+];
+
+function secondExecutionDueCopy(dueHint: string) {
+  if (dueHint === "none") return "추가 예약 없음";
+  if (dueHint === "soon") return "곧 다시 보기";
+  if (dueHint === "tomorrow") return "내일 다시 보기";
+  if (dueHint === "three_days") return "3일 안에 다시 보기";
+  return "다음 주 다시 보기";
+}
+
+function secondExecutionNextAction(
+  candidate: ExecutionReviewCandidate | ExecutionNextPlanCandidate | null,
+  fallback: string,
+) {
+  if (!candidate) return fallback;
+  return "primaryAction" in candidate ? candidate.primaryAction : candidate.taskType;
+}
+
+function SecondExecutionResultControls(props: ExecutionResultControlsProps) {
+  const [selectedResult, setSelectedResult] = useState<ExecutionLearningSignalResult | null>(null);
+  const selectedSignal = useMemo(() => {
+    if (!selectedResult) return null;
+    return buildLearningSignalFromExecutionResult({
+      ...props,
+      result: selectedResult,
+    });
+  }, [props, selectedResult]);
+  const reviewCandidate = selectedSignal ? buildReviewCandidateFromExecutionSignal(selectedSignal) : null;
+  const nextPlanSignal = selectedSignal ? buildNextPlanSignalFromExecution(selectedSignal) : null;
+  const nextCandidate = reviewCandidate ?? nextPlanSignal?.candidates[0] ?? null;
+  const selectedNextAction = selectedSignal
+    ? secondExecutionNextAction(nextCandidate, secondExecutionDueCopy(selectedSignal.reviewDueHint))
+    : "";
+
+  return (
+    <section
+      className="space-y-4 border-t border-[var(--color-border-stable)] pt-5"
+      aria-labelledby="second-execution-result-title"
+      data-v3-presentation="execution-result"
+      data-v3-flow="single-primary"
+    >
+      <div className="space-y-1">
+        <p className="v3-type-caption text-[var(--color-text-stable)]">실행 결과</p>
+        <h3 id="second-execution-result-title" className="v3-type-section ko-keep text-[var(--color-text-primary)]">
+          방금 한 작업을 한 번만 표시해 주세요.
+        </h3>
+        <p className="v3-type-compact ko-keep text-[var(--color-text-secondary)]">
+          문제 원문이나 답안 입력 없이, 결과 메타데이터만 다음 학습 신호로 바꿉니다.
+        </p>
+      </div>
+
+      <div className="grid gap-2 sm:grid-cols-2" role="group" aria-label="실행 결과 선택">
+        {SECOND_EXECUTION_RESULT_OPTIONS.map((option) => {
+          const selected = selectedResult === option.result;
+          return (
+            <V3ActionButton
+              key={option.result}
+              tone="secondary"
+              type="button"
+              aria-pressed={selected}
+              className={selected
+                ? "justify-start border-[var(--color-border-stable)] bg-[var(--color-background-stable)] text-left text-[var(--color-text-stable)] ring-2 ring-[var(--color-border-stable)]"
+                : "justify-start text-left"}
+              onClick={() => setSelectedResult(option.result)}
+              data-v3-selected={selected ? "true" : undefined}
+            >
+              <span className="min-w-0">
+                <span className="block">{selected ? "✓ " : ""}{option.label}</span>
+                <span className="v3-type-caption mt-1 block font-normal text-[var(--color-text-secondary)]">
+                  {option.description}
+                </span>
+              </span>
+            </V3ActionButton>
+          );
+        })}
+      </div>
+
+      {selectedSignal ? (
+        <div className="space-y-3 border-t border-[var(--color-border-stable)] pt-4" role="status" aria-live="polite">
+          <p className="v3-type-body-strong ko-keep text-[var(--color-text-primary)]">{selectedSignal.feedbackCopy}</p>
+          <dl className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <dt className="v3-type-label text-[var(--color-text-secondary)]">다음 후보</dt>
+              <dd className="v3-type-compact mt-1 text-[var(--color-text-primary)]">
+                {nextCandidate?.title ?? "오늘 계획에서 조용히 이어가기"}
+              </dd>
+            </div>
+            <div>
+              <dt className="v3-type-label text-[var(--color-text-secondary)]">권장 행동</dt>
+              <dd className="v3-type-compact mt-1 text-[var(--color-text-primary)]">{selectedNextAction}</dd>
+            </div>
+          </dl>
+        </div>
+      ) : (
+        <p className="v3-type-caption text-[var(--color-text-secondary)]">
+          기본값은 완료입니다. 필요하면 다른 결과를 고를 수 있습니다.
+        </p>
+      )}
+    </section>
+  );
+}
+
+function SessionActionButton({
+  mode,
+  legacyVariant,
+  tone = "primary",
+  ...props
+}: ButtonHTMLAttributes<HTMLButtonElement> & {
+  mode: AppraisalMode;
+  legacyVariant?: "default" | "outline" | "ghost";
+  tone?: "primary" | "secondary" | "quiet";
+}) {
+  if (mode === "second") return <V3ActionButton tone={tone} {...props} />;
+  return <Button variant={legacyVariant} {...props} />;
+}
+
+function SessionStage({
+  mode,
+  children,
+  className,
+}: {
+  mode: AppraisalMode;
+  children: ReactNode;
+  className?: string;
+  tone?: "surface" | "subtle" | "focus" | "attention" | "risk" | "stable" | "compare";
+}) {
+  if (mode === "second") {
+    return <section className={className}>{children}</section>;
+  }
+  return <section className={className}>{children}</section>;
+}
 
 function buildFirstRoundTrapCards(subject: string, support: ExecutionReferenceSupport | null | undefined): TrapCard[] {
   if (!support) return [];
@@ -66,7 +222,7 @@ function buildFirstRoundTrapCards(subject: string, support: ExecutionReferenceSu
   }));
 }
 
-export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, referenceSupport }: TodaySessionRunnerProps) {
+export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, referenceSupport, showHeader = true }: TodaySessionRunnerProps) {
   const [stepIndex, setStepIndex] = useState(0);
   const [pending, setPending] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -117,6 +273,8 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
       ? "2차 작성 워크스페이스 시작 준비를 마쳤습니다."
       : "1차 입력 루프 시작 준비를 마쳤습니다.";
   const firstTrapCards = useMemo(() => (mode === "first" ? buildFirstRoundTrapCards(queueItem?.subjectLabel ?? "1차", referenceSupport) : []), [mode, queueItem?.subjectLabel, referenceSupport]);
+  const secondTextareaClass =
+    "v3-type-body min-h-28 w-full rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-surface)] px-4 py-3 text-[var(--color-text-primary)] outline-none focus:border-[var(--color-border-focus)] focus:ring-2 focus:ring-[var(--focus-ring)]";
 
   async function completeAndFinish(action: ReviewCompletionAction, metadata: ReviewCompletionMetadata = {}) {
     if (!queueItem) {
@@ -154,61 +312,80 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
     }
   }
 
-  const quietLinks = (
+  const quietLinks = mode === "second" ? (
+    <V3QuietDisclosure summary="다른 이동 보기">
+      <div className="grid gap-2 sm:grid-cols-2">
+        <V3ActionLink href="/app?mode=second" tone="quiet" fullWidth>오늘 화면으로 돌아가기</V3ActionLink>
+        <V3ActionLink href="/app/review?mode=second" tone="quiet" fullWidth>
+          다른 작업 보기<span className="sr-only">rewrite 저장하러 이동</span>
+        </V3ActionLink>
+      </div>
+    </V3QuietDisclosure>
+  ) : (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-[color:var(--muted)]">
-      <Link href={`/app?mode=${mode}`} className="underline-offset-2 hover:underline">
-        오늘 화면으로 돌아가기
-      </Link>
-      <Link href={`/app/review?mode=${mode}`} className="underline-offset-2 hover:underline">
-        다른 작업 보기
-        <span className="sr-only">rewrite 저장하러 이동</span>
+      <Link href="/app?mode=first" className="underline-offset-2 hover:underline">오늘 화면으로 돌아가기</Link>
+      <Link href="/app/review?mode=first" className="underline-offset-2 hover:underline">
+        다른 작업 보기<span className="sr-only">rewrite 저장하러 이동</span>
       </Link>
     </div>
   );
 
+  const SessionContainer = mode === "second" ? V3Surface : Card;
+  const SessionContent = mode === "second" ? "div" : CardContent;
+
   return (
-    <Card className="border-[color:var(--border-strong)] bg-[color:var(--surface)] shadow-none">
-      <CardHeader className="space-y-3 p-4 sm:p-6">
-        <p className="text-caption text-[color:var(--muted)]">Today Session Runner · {modeLabel}</p>
-        <CardTitle>오늘은 이것만 합니다.</CardTitle>
-        <CardDescription>{focus.reason}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4 p-4 pt-0 sm:p-6 sm:pt-0">
+    <SessionContainer className={mode === "second" ? "space-y-5" : "border-[color:var(--border-strong)] bg-[color:var(--surface)] shadow-none"}>
+      {mode === "second" && showHeader ? (
+        <header className="space-y-2">
+          <p className="v3-type-caption text-[var(--color-text-secondary)]">Today Session Runner · {modeLabel}</p>
+          <h2 className="v3-type-section ko-keep text-[var(--color-text-primary)]">오늘은 이것만 합니다.</h2>
+          <p className="v3-type-body ko-keep text-[var(--color-text-secondary)]">{focus.reason}</p>
+        </header>
+      ) : mode === "first" && showHeader ? (
+        <CardHeader className="space-y-3 p-4 sm:p-6">
+          <p className="text-caption text-[color:var(--muted)]">Today Session Runner · {modeLabel}</p>
+          <CardTitle>오늘은 이것만 합니다.</CardTitle>
+          <CardDescription>{focus.reason}</CardDescription>
+        </CardHeader>
+      ) : null}
+      <SessionContent className={mode === "second" ? "space-y-4" : "space-y-4 p-4 pt-0 sm:p-6 sm:pt-0"}>
         {currentStep === "intro" ? (
-          <section className="space-y-4">
-            <MicroPracticeCard title="지금 시작할 작업">
-              <p className="text-body-lg text-[color:var(--foreground-strong)]">{focus.primaryTaskLabel}</p>
-              <p className="mt-2 text-sm text-[color:var(--textBody)]">예상 {focus.estimatedDurationMinutes}분</p>
-            </MicroPracticeCard>
-            <p className="text-sm leading-7 text-[color:var(--foreground-strong)]">{focus.nextAction}</p>
+          <SessionStage mode={mode} className={mode === "second" ? "space-y-5" : "space-y-4"} tone={mode === "second" ? "focus" : "surface"}>
             {mode === "second" ? (
-              <section className="space-y-3 rounded-[var(--radius-lg)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-soft)] p-4">
-                <p className="text-caption text-[color:var(--muted)]">다시쓰기 목표 1개</p>
-                <div className="grid gap-3">
-                  <div>
-                    <p className="text-xs text-[color:var(--muted)]">가장 큰 누락/위험 1개</p>
-                    <p className="mt-1 text-sm font-medium leading-6 text-[color:var(--foreground-strong)]">{note?.missingIssue ?? note?.calculationRisk ?? "누락 논점 1개를 먼저 확인합니다."}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-[color:var(--muted)]">약한 답안 구조 1개</p>
-                    <p className="mt-1 text-sm leading-6 text-[color:var(--foreground-strong)]">{note?.weakStructurePoint ?? note?.weakPoint ?? "근거와 결론 연결을 한 문장으로 보강합니다."}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-[color:var(--muted)]">다시쓰기 지시 1개</p>
-                    <p className="mt-1 text-sm leading-6 text-[color:var(--foreground-strong)]">{note?.rewriteInstruction ?? secondTemplate.rewriteGuidance}</p>
-                  </div>
-                </div>
-                <details className="rounded-[var(--radius-md)] border border-[color:var(--border-hairline)] bg-[color:var(--bg-surface)]">
-                  <summary className="flex min-h-11 cursor-pointer items-center px-3 py-2 text-xs text-[color:var(--muted)]">관련 학습 구조 / 참고 근거 보기 (선택)<span className="sr-only">참고 근거 힌트 보기 (선택)</span></summary>
-                  <div className="border-t border-[color:var(--border-hairline)] px-3 py-3 text-xs leading-5 text-[color:var(--muted)]">
+              <div className="space-y-2 border-b border-[var(--color-border-default)] pb-4">
+                <p className="v3-type-caption text-[var(--color-text-brand)]">지금 시작할 작업 · 예상 {focus.estimatedDurationMinutes}분</p>
+                <h3 className="v3-type-section ko-keep text-[var(--color-text-primary)]">{focus.primaryTaskLabel}</h3>
+                <p className="v3-type-body ko-keep text-[var(--color-text-secondary)]">{focus.nextAction}</p>
+              </div>
+            ) : (
+              <>
+                <MicroPracticeCard title="지금 시작할 작업">
+                  <p className="text-body-lg text-[color:var(--foreground-strong)]">{focus.primaryTaskLabel}</p>
+                  <p className="mt-2 text-sm text-[color:var(--textBody)]">예상 {focus.estimatedDurationMinutes}분</p>
+                </MicroPracticeCard>
+                <p className="text-sm leading-7 text-[color:var(--foreground-strong)]">{focus.nextAction}</p>
+              </>
+            )}
+            {mode === "second" ? (
+              <section className="space-y-3">
+                <BiggestGap
+                  gap={note?.missingIssue ?? note?.calculationRisk ?? "누락 논점 1개를 먼저 확인합니다."}
+                  evidence={`약한 구조 · ${note?.weakStructurePoint ?? note?.weakPoint ?? "근거와 결론 연결을 한 문장으로 보강합니다."}`}
+                  type="MissingLink"
+                  headingId="today-session-runner-biggest-gap"
+                />
+                <p className="v3-type-body ko-keep text-[var(--color-text-primary)]">
+                  {note?.rewriteInstruction ?? secondTemplate.rewriteGuidance}
+                </p>
+                <V3QuietDisclosure summary="관련 학습 구조 / 참고 근거 보기" helper="정답 확정이 아닌 참고 힌트입니다.">
+                  <div className="text-xs leading-5 text-[var(--color-text-secondary)]">
                     {note?.referenceSnippets?.length ? note.referenceSnippets.slice(0, 2).map((snippet) => (
-                      <p key={snippet.referenceId} className="mb-2"><span className="font-medium text-[color:var(--foreground-strong)]">{snippet.title}</span> · {snippet.snippet}</p>
+                      <p key={snippet.referenceId} className="mb-2"><span className="font-medium text-[var(--color-text-primary)]">{snippet.title}</span> · {snippet.snippet}</p>
                     )) : <p>정답 확정이 아니라, 누락 논점 1개를 확인하는 짧은 참고 힌트입니다.</p>}
                   </div>
-                </details>
-                <details className="rounded-[var(--radius-md)] border border-[color:var(--border-hairline)] bg-[color:var(--bg-surface)]">
-                  <summary className="flex min-h-11 cursor-pointer items-center px-3 py-2 text-xs text-[color:var(--muted)]">계산/CASIO 세부 보기</summary>
-                  <div className="space-y-2 border-t border-[color:var(--border-hairline)] px-3 py-3 text-xs leading-5 text-[color:var(--foreground-strong)]">
+                </V3QuietDisclosure>
+                <V3QuietDisclosure summary="계산/CASIO 세부 보기">
+                  <div className="space-y-2 text-xs leading-5 text-[var(--color-text-primary)]">
                     {note?.unitRisk ? <p>단위 위험: {note.unitRisk}</p> : null}
                     {note?.casioKeystrokes?.length ? (
                       <div>
@@ -221,14 +398,14 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
                       <p>{note?.casioUnsupportedMessage ?? SECOND_REWRITE_CASIO_UNSUPPORTED_MESSAGE}</p>
                     )}
                   </div>
-                </details>
+                </V3QuietDisclosure>
               </section>
             ) : null}
-            <Button type="button" className="w-full sm:w-auto" onClick={() => setStepIndex((prev) => prev + 1)}>
+            <SessionActionButton mode={mode} type="button" className={mode === "first" ? "w-full sm:w-auto" : undefined} onClick={() => setStepIndex((prev) => prev + 1)}>
               {hasQueueItem ? (mode === "second" ? "10분 다시 쓰기" : "추천 작업으로 시작") : mode === "second" ? "2차 작성 워크스페이스 시작" : "오늘 입력 작업 시작"}
-            </Button>
+            </SessionActionButton>
             {quietLinks}
-          </section>
+          </SessionStage>
         ) : null}
 
         {currentStep === "retry" ? (
@@ -349,107 +526,132 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
         ) : null}
 
         {currentStep === "issue-recall" ? (
-          <section className="space-y-4">
-            <p className="text-sm font-medium text-[color:var(--foreground-strong)]">1) 쟁점 1개 회상</p>
-            <p className="text-sm leading-7 text-[color:var(--muted)]">이 과목은 먼저 이 구조로 답안을 잡습니다. {secondTemplate.structure}</p>
+          <SessionStage mode={mode} className="space-y-5" tone="focus">
+            <div className="space-y-2">
+              <p className="v3-type-caption text-[var(--color-text-brand)]">1/4 · 회상</p>
+              <h3 className="v3-type-section ko-keep text-[var(--color-text-primary)]">쟁점 1개 회상</h3>
+              <p className="v3-type-body ko-keep text-[var(--color-text-secondary)]">이 과목은 먼저 이 구조로 답안을 잡습니다. {secondTemplate.structure}</p>
+            </div>
             <textarea
-              className="min-h-28 w-full rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] px-3 py-2 text-sm"
+              className={secondTextareaClass}
               value={issueRecall}
               onChange={(event) => setIssueRecall(event.target.value)}
               placeholder={secondTemplate.issueRecallPlaceholder}
+              aria-label="회상한 쟁점"
             />
-            <Button
+            <SessionActionButton
+              mode={mode}
               type="button"
-              className="w-full sm:w-auto"
               disabled={issueRecall.trim().length < 4}
               onClick={() => setStepIndex((prev) => prev + 1)}
             >
               다음: 문단 1개 다시쓰기
-            </Button>
+            </SessionActionButton>
             {quietLinks}
-          </section>
+          </SessionStage>
         ) : null}
 
         {currentStep === "one-gap" ? (
-          <section className="space-y-4">
-            <p className="text-sm font-medium text-[color:var(--foreground-strong)]">3) 전후 비교</p>
-            <div className="rounded-[var(--radius-md)] border border-[color:var(--cue-risk)] bg-[color:var(--cue-risk-bg)] px-4 py-3">
-              <p className="text-caption text-[color:var(--muted)]">one biggest gap</p>
-              <p className="mt-1 text-sm text-[color:var(--foreground-strong)]">{note?.missingIssue ?? note?.weakPoint ?? "누락 논점 1개"}</p>
+          <SessionStage mode={mode} className="space-y-5" tone="compare">
+            <div className="space-y-2">
+              <p className="v3-type-caption text-[var(--color-text-compare)]">3/4 · 비교</p>
+              <h3 className="v3-type-section ko-keep text-[var(--color-text-primary)]">전후 비교</h3>
             </div>
-            <p className="text-sm leading-7 text-[color:var(--muted)]">
+            <BiggestGap
+              gap={note?.missingIssue ?? note?.weakPoint ?? "누락 논점 1개"}
+              evidence="방금 다시 쓴 문단과 비교합니다."
+              type="MissingLink"
+              density="Compact"
+              headingId="today-session-comparison-biggest-gap"
+            />
+            <p className="v3-type-body ko-keep text-[var(--color-text-secondary)]">
               {note?.rewriteInstruction ?? secondTemplate.rewriteGuidance}
             </p>
-            <Button type="button" className="w-full sm:w-auto" onClick={() => setStepIndex((prev) => prev + 1)}>
+            <SessionActionButton mode={mode} type="button" onClick={() => setStepIndex((prev) => prev + 1)}>
               다음 보강 예약
-            </Button>
+            </SessionActionButton>
             {quietLinks}
-          </section>
+          </SessionStage>
         ) : null}
 
         {currentStep === "rewrite" ? (
-          <section className="space-y-4">
-            <p className="text-sm font-medium text-[color:var(--foreground-strong)]">2) 문단 1개 다시쓰기</p>
-            <p className="text-sm leading-7 text-[color:var(--foreground-strong)]">
+          <SessionStage mode={mode} className="space-y-5">
+            <div className="space-y-2">
+              <p className="v3-type-caption text-[var(--color-text-brand)]">2/4 · 다시쓰기</p>
+              <h3 className="v3-type-section ko-keep text-[var(--color-text-primary)]">문단 1개 다시쓰기</h3>
+            </div>
+            <p className="v3-type-body ko-keep text-[var(--color-text-primary)]">
               가장 큰 간극 1개를 기준으로 문단 1개만 보강합니다.
             </p>
             <textarea
-              className="min-h-24 w-full rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] px-3 py-2 text-sm"
+              className={secondTextareaClass}
               value={rewriteParagraph}
               onChange={(event) => setRewriteParagraph(event.target.value)}
               placeholder="보강 문단 1개를 여기에 적습니다."
+              aria-label="보강할 문단"
             />
             {referenceSupport ? (
-              <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] px-4 py-3 text-sm text-[color:var(--foreground-strong)]">
-                <p className="text-caption text-[color:var(--muted)]">문단 보강 힌트</p>
-                <p className="mt-1">키워드 힌트: {referenceSupport.skeletonKeywordHint ?? referenceSupport.skeletonKeywordHints[0] ?? "핵심 키워드 1개 먼저 고정"}</p>
-                <p className="mt-1">누락 쟁점 후보: {referenceSupport.missingIssue ?? "누락 논점 1개"}</p>
-                <p className="mt-1">자주 빠지는 간극: {referenceSupport.commonGaps[0] ?? "적용 문장 1개 추가"}</p>
-                <p className="mt-1">시작 문장: 따라서 본 문단에서는 [요건]을 먼저 밝히고 [사실관계]에 연결한다.</p>
-                <p className="mt-2 text-xs text-[color:var(--muted)]">점수 판정이 아니라, 문단 보강을 돕는 참고 힌트입니다.</p>
-              </div>
+              <V3QuietDisclosure summary="문단 보강 힌트 보기" helper="점수 판정이 아니라, 문단 보강을 돕는 참고 힌트입니다.">
+                <div className="space-y-1">
+                  <p>키워드 힌트: {referenceSupport.skeletonKeywordHint ?? referenceSupport.skeletonKeywordHints[0] ?? "핵심 키워드 1개 먼저 고정"}</p>
+                  <p>누락 쟁점 후보: {referenceSupport.missingIssue ?? "누락 논점 1개"}</p>
+                  <p>자주 빠지는 간극: {referenceSupport.commonGaps[0] ?? "적용 문장 1개 추가"}</p>
+                  <p>시작 문장: 따라서 본 문단에서는 [요건]을 먼저 밝히고 [사실관계]에 연결한다.</p>
+                </div>
+              </V3QuietDisclosure>
             ) : null}
-            <div className="rounded-[var(--radius-md)] border border-[color:var(--cue-focus)] bg-[color:var(--cue-focus-bg)] px-4 py-3 text-sm text-[color:var(--foreground-strong)]">
-              <p className="text-caption text-[color:var(--muted)]">전후 비교</p>
-              <p className="mt-1">before: {note?.missingIssue ?? note?.weakPoint ?? "보강할 약점 1개"}</p>
-              <p className="mt-1">after: {rewriteParagraph.trim() || "작성한 보강 문단"}</p>
-            </div>
+            <V3Surface tone="compare" density="compact">
+              <p className="v3-type-caption text-[var(--color-text-compare)]">전후 비교</p>
+              <p className="v3-type-compact mt-1 text-[var(--color-text-primary)]">before: {note?.missingIssue ?? note?.weakPoint ?? "보강할 약점 1개"}</p>
+              <p className="v3-type-compact mt-1 text-[var(--color-text-primary)]">after: {rewriteParagraph.trim() || "작성한 보강 문단"}</p>
+            </V3Surface>
             {secondRewriteComparison ? (
-              <div className="rounded-[var(--radius-md)] border border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] px-4 py-3 text-sm text-[color:var(--foreground-strong)]">
-                <p className="font-medium">좋아진 점 1개</p>
+              <V3Surface tone="attention" density="compact" className="v3-type-compact text-[var(--color-text-primary)]">
+                <p className="v3-type-label-strong">좋아진 점 1개</p>
                 <p className="mt-1">{secondRewriteComparison.improvedPoint}</p>
-                <p className="mt-3 font-medium">아직 위험한 점 1개</p>
+                <p className="v3-type-label-strong mt-3">아직 위험한 점 1개</p>
                 <p className="mt-1">{secondRewriteComparison.remainingRisk}</p>
-                <p className="mt-3 font-medium">다음 문장 행동 1개</p>
+                <p className="v3-type-label-strong mt-3">다음 문장 행동 1개</p>
                 <p className="mt-1">{secondRewriteComparison.nextSentenceAction}</p>
-                <p className="mt-3 font-medium">다음 보강 예약</p>
+                <p className="v3-type-label-strong mt-3">다음 보강 예약</p>
                 <p className="mt-1">{note?.nextReviewDate ?? "복습 큐 기본 일정"}</p>
-                <p className="mt-2 text-xs text-[color:var(--muted)]">{secondRewriteComparison.caution}</p>
-              </div>
+                <p className="v3-type-caption mt-2 text-[var(--color-text-secondary)]">{secondRewriteComparison.caution}</p>
+              </V3Surface>
             ) : null}
-            <button
+            <SessionActionButton
+              mode={mode}
               type="button"
-              className="text-xs text-[color:var(--muted)] underline-offset-2 hover:underline"
               disabled={pending || rewriteParagraph.trim().length < 8}
               onClick={() => setStepIndex((prev) => prev + 1)}
             >
               {referenceSupport ? "힌트 보고 문단 1개 다시 쓰기" : "문단 1개만 보강"}
-            </button>
-            {errorMessage ? <p className="text-xs text-[color:var(--danger)]">{errorMessage}</p> : null}
+            </SessionActionButton>
+            {errorMessage ? <p role="alert" className="v3-type-caption text-[var(--color-text-risk)]">{errorMessage}</p> : null}
             {quietLinks}
-          </section>
+          </SessionStage>
         ) : null}
 
         {currentStep === "schedule" ? (
-          <section className="space-y-4">
-            <p className="text-sm font-medium text-[color:var(--foreground-strong)]">다음 복습은 기본값으로 자동 예약합니다.</p>
-            <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] px-4 py-3 text-sm text-[color:var(--foreground-strong)]">
+          <SessionStage mode={mode} className={mode === "second" ? "space-y-5" : "space-y-4"} tone={mode === "second" ? "attention" : "surface"}>
+            {mode === "second" ? (
+              <div className="space-y-2">
+                <p className="v3-type-caption text-[var(--color-text-attention)]">4/4 · 다음 보강</p>
+                <h3 className="v3-type-section ko-keep text-[var(--color-text-primary)]">다음 복습 예약</h3>
+                <p className="v3-type-body ko-keep text-[var(--color-text-secondary)]">다음 복습은 학습 신호에 맞춘 기본값으로 예약합니다.</p>
+              </div>
+            ) : (
+              <p className="text-sm font-medium text-[color:var(--foreground-strong)]">다음 복습은 기본값으로 자동 예약합니다.</p>
+            )}
+            <div className={mode === "second"
+              ? "v3-type-compact border-t border-[var(--color-border-attention)] pt-4 text-[var(--color-text-primary)]"
+              : "rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] px-4 py-3 text-sm text-[color:var(--foreground-strong)]"}>
               예정 시점: {note?.nextReviewDate ?? "복습 큐 기본 일정"}
-              <p className="mt-2 text-xs text-[color:var(--muted)]">이유: {adaptiveScheduleNote?.explanation ?? "복습 신호를 기준으로 자동 조정됩니다."}</p>
+              <p className={mode === "second" ? "mt-2 text-[var(--color-text-secondary)]" : "mt-2 text-xs text-[color:var(--muted)]"}>이유: {adaptiveScheduleNote?.explanation ?? "복습 신호를 기준으로 자동 조정됩니다."}</p>
             </div>
-            <Button
+            <SessionActionButton
+              mode={mode}
               type="button"
-              className="w-full sm:w-auto"
+              className={mode === "first" ? "w-full sm:w-auto" : undefined}
               disabled={pending}
               onClick={() =>
                 void completeAndFinish(mode === "second" ? "second_paragraph_rewrite" : "first_short_retry", {
@@ -462,35 +664,45 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
               }
             >
               {pending ? "예약 중" : mode === "second" ? "다음 보강 예약" : "다음 복습 예약"}
-            </Button>
-            {errorMessage ? <p className="text-xs text-[color:var(--danger)]">{errorMessage}</p> : null}
+            </SessionActionButton>
+            {errorMessage ? <p role="alert" className={mode === "second" ? "v3-type-caption text-[var(--color-text-risk)]" : "text-xs text-[color:var(--danger)]"}>{errorMessage}</p> : null}
             {quietLinks}
-          </section>
+          </SessionStage>
         ) : null}
 
         {currentStep === "capture-guide" ? (
-          <section className="space-y-4">
+          <SessionStage mode={mode} className={mode === "second" ? "space-y-5" : "space-y-4"} tone={mode === "second" ? "focus" : "surface"}>
             {mode === "second" ? (
-              <div className="space-y-3">
-                <p className="text-sm leading-7 text-[color:var(--foreground-strong)]">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <p className="v3-type-caption text-[var(--color-text-brand)]">시작 준비</p>
+                  <h3 className="v3-type-section ko-keep text-[var(--color-text-primary)]">첫 기록 1건 남기기</h3>
+                </div>
+                <p className="v3-type-body ko-keep text-[var(--color-text-secondary)]">
                   오늘 queue가 아직 없어 먼저 기록 1건을 남기면 session 루프가 시작됩니다.
                 </p>
-                <div className="rounded-[var(--radius-md)] border border-[color:var(--cue-focus)] bg-[color:var(--cue-focus-bg)] px-4 py-3 text-sm text-[color:var(--foreground-strong)]">
-                  <p>참고 정리 보기 전에 쟁점 3개를 먼저 떠올립니다.</p>
-                  <p>전체 답안보다 목차를 먼저 잡습니다.</p>
-                  <p>비교는 작성 이후에 합니다.</p>
-                </div>
+                <ul className="v3-type-compact divide-y divide-[var(--color-border-focus)] border-y border-[var(--color-border-focus)] text-[var(--color-text-primary)]">
+                  <li className="py-3">참고 정리 보기 전에 쟁점 3개를 먼저 떠올립니다.</li>
+                  <li className="py-3">전체 답안보다 목차를 먼저 잡습니다.</li>
+                  <li className="py-3">비교는 작성 이후에 합니다.</li>
+                </ul>
               </div>
             ) : (
               <p className="text-sm leading-7 text-[color:var(--foreground-strong)]">
                 오늘 queue가 아직 없어 먼저 기록 1건을 남기면 session 루프가 시작됩니다.
               </p>
             )}
-            <Link href={mode === "first" ? "/app/sets?mode=first" : `/app/write?mode=${mode}`} className="inline-flex w-full sm:w-auto">
-              <Button type="button" className="w-full sm:w-auto">
-                {mode === "second" ? "2차 작성 워크스페이스로 이동" : "세트 풀이 시작"}
-              </Button>
-            </Link>
+            {mode === "second" ? (
+              <V3ActionLink href={`/app/write?mode=${mode}`}>
+                2차 작성 워크스페이스로 이동
+              </V3ActionLink>
+            ) : (
+              <Link href="/app/sets?mode=first" className="inline-flex w-full sm:w-auto">
+                <Button type="button" className="w-full sm:w-auto">
+                  세트 풀이 시작
+                </Button>
+              </Link>
+            )}
             {mode === "first" ? (
               <Link
                 href="/app/capture?mode=first"
@@ -500,43 +712,59 @@ export function TodaySessionRunner({ mode, modeLabel, focus, queueItem, note, re
               </Link>
             ) : null}
             {quietLinks}
-          </section>
+          </SessionStage>
         ) : null}
 
         {currentStep === "done" ? (
-          <section className="space-y-4">
-            <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] px-4 py-4">
-              <p className="text-sm font-medium text-[color:var(--foreground-strong)]">오늘은 여기까지 해도 됩니다.</p>
-              <ul className="mt-2 space-y-1 text-sm text-[color:var(--foreground-strong)]">
-                <li>오늘 한 일: {completedWorkLabel}</li>
-                <li>가장 큰 신호: {biggestSignal}</li>
-                <li>다음 복습: {adaptiveScheduleNote?.nextReviewDate ?? note?.nextReviewDate ?? "자동 예약 완료"}</li>
-                <li>이유: {adaptiveScheduleNote?.explanation ?? "복습 신호를 기준으로 자동 조정됩니다."}</li>
+          <SessionStage mode={mode} className={mode === "second" ? "space-y-5" : "space-y-4"} tone={mode === "second" ? "stable" : "surface"}>
+            <div className={mode === "second" ? "space-y-3" : "rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] px-4 py-4"}>
+              <p className={mode === "second" ? "v3-type-section ko-keep text-[var(--color-text-stable)]" : "text-sm font-medium text-[color:var(--foreground-strong)]"}>오늘은 여기까지 해도 됩니다.</p>
+              <ul className={mode === "second" ? "v3-type-compact divide-y divide-[var(--color-border-stable)] border-y border-[var(--color-border-stable)] text-[var(--color-text-primary)]" : "mt-2 space-y-1 text-sm text-[color:var(--foreground-strong)]"}>
+                <li className={mode === "second" ? "py-2" : undefined}>오늘 한 일: {completedWorkLabel}</li>
+                <li className={mode === "second" ? "py-2" : undefined}>가장 큰 신호: {biggestSignal}</li>
+                <li className={mode === "second" ? "py-2" : undefined}>다음 복습: {adaptiveScheduleNote?.nextReviewDate ?? note?.nextReviewDate ?? "자동 예약 완료"}</li>
+                <li className={mode === "second" ? "py-2" : undefined}>이유: {adaptiveScheduleNote?.explanation ?? "복습 신호를 기준으로 자동 조정됩니다."}</li>
               </ul>
-              <p className="mt-2 text-sm text-[color:var(--foreground-strong)]">밀린 걸 전부 따라잡으려 하지 마세요.</p>
-              <p className="mt-1 text-sm text-[color:var(--foreground-strong)]">오늘은 가장 작은 것 1개만 복구합니다.</p>
-              <p className="mt-1 text-sm text-[color:var(--foreground-strong)]">새 범위보다 반복 실수 하나를 줄이는 게 우선입니다.</p>
+              <p className={mode === "second" ? "v3-type-body ko-keep text-[var(--color-text-secondary)]" : "mt-2 text-sm text-[color:var(--foreground-strong)]"}>밀린 걸 전부 따라잡으려 하지 마세요.</p>
+              <p className={mode === "second" ? "v3-type-body ko-keep text-[var(--color-text-secondary)]" : "mt-1 text-sm text-[color:var(--foreground-strong)]"}>오늘은 가장 작은 것 1개만 복구합니다.</p>
+              <p className={mode === "second" ? "v3-type-body ko-keep text-[var(--color-text-secondary)]" : "mt-1 text-sm text-[color:var(--foreground-strong)]"}>새 범위보다 반복 실수 하나를 줄이는 게 우선입니다.</p>
             </div>
-            <ExecutionResultControls
-              examMode={mode}
-              taskType={mode === "second" ? note?.rewriteTaskType ?? "rewrite" : "O/X"}
-              subjectName={queueItem?.subjectLabel}
-              unitName={queueItem?.topicTag}
-              executionSource="session"
-            />
+            {mode === "second" ? (
+              <SecondExecutionResultControls
+                examMode="second"
+                taskType={note?.rewriteTaskType ?? "rewrite"}
+                subjectName={queueItem?.subjectLabel}
+                unitName={queueItem?.topicTag}
+                executionSource="session"
+              />
+            ) : (
+              <ExecutionResultControls
+                examMode="first"
+                taskType="O/X"
+                subjectName={queueItem?.subjectLabel}
+                unitName={queueItem?.topicTag}
+                executionSource="session"
+              />
+            )}
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <Link href={`/app?mode=${mode}`} className="w-full sm:w-auto">
-                <Button type="button" className="w-full sm:w-auto">
-                  종료하고 오늘 화면으로
-                </Button>
-              </Link>
-              <Link href={`/app/weekly?mode=${mode}`} className="text-xs text-[color:var(--muted)] underline-offset-2 hover:underline">
-                주간 정리 보기
-              </Link>
+              {mode === "second" ? (
+                <V3ActionLink href={`/app?mode=${mode}`}>종료하고 오늘 화면으로</V3ActionLink>
+              ) : (
+                <Link href="/app?mode=first" className="w-full sm:w-auto">
+                  <Button type="button" className="w-full sm:w-auto">
+                    종료하고 오늘 화면으로
+                  </Button>
+                </Link>
+              )}
+              {mode === "second" ? (
+                <V3ActionLink href="/app/weekly?mode=second" tone="quiet">주간 정리 보기</V3ActionLink>
+              ) : (
+                <Link href="/app/weekly?mode=first" className="text-xs text-[color:var(--muted)] underline-offset-2 hover:underline">주간 정리 보기</Link>
+              )}
             </div>
-          </section>
+          </SessionStage>
         ) : null}
-      </CardContent>
-    </Card>
+      </SessionContent>
+    </SessionContainer>
   );
 }

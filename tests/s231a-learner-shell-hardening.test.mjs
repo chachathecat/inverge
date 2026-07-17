@@ -42,7 +42,9 @@ test("S231A shell exposes one skip target before its single main landmark", () =
   const shell = read("components/learner/learner-ui.tsx");
 
   assert.match(shell, /data-learner-shell/);
-  assert.match(shell, /href=\{focusMode \? "#study-ledger-content" : "#learner-main"\}/);
+  assert.match(shell, /const focusTarget = ledgerFocusMode/);
+  assert.match(shell, /"#study-ledger-content"[\s\S]*"#calculator-routine-content"[\s\S]*"#learner-main"/);
+  assert.match(shell, /href=\{focusTarget\}/);
   assert.match(shell, /<main id="learner-main" tabIndex=\{-1\}/);
   assert.equal((shell.match(/<main\b/g) ?? []).length, 2);
   assert.match(shell, /data-learner-shell-mode="focus"/);
@@ -129,18 +131,33 @@ test("S231A normalizes identified learner controls to explicit 44px targets", ()
   const session = read("app/app/session/page.tsx");
   const capture = read("components/review-os/capture-form.tsx");
   const todaySession = read("components/review-os/today-session-runner.tsx");
+  const v3RouteUi = read("components/learner/v3-route-ui.tsx");
   const calculator = read("components/review-os/calculator-workflow-page.tsx");
   const accounting = read("components/review-os/accounting-template-card.tsx");
   const cloze = read("components/review-os/smart-cloze-review.tsx");
 
   assert.match(standaloneNav, /inline-flex min-h-11 items-center justify-center/);
-  assert.match(calculatorCandidates, /inline-flex min-h-11 items-center justify-center/);
-  assert.equal((answerReview.match(/login\?returnTo=[^\n]+min-h-11/g) ?? []).length, 1);
-  assert.match(answerReview, /structureErrorAction === "login"[\s\S]*?kind: "link", label: "로그인하고 계속"/);
-  assert.match(answerReview, /label key=\{option\.value\} className="flex min-h-11 items-center/);
-  assert.equal((session.match(/<summary className="flex min-h-11/g) ?? []).length, 2);
+  assert.match(calculatorCandidates, /<V3ActionLink[\s\S]*?tone="secondary"/);
+  assert.equal(
+    (
+      answerReview.match(
+        /<Link\s+href="\/login\?returnTo=%2Fanswer-review%3Fmode%3Dfirst"[\s\S]{0,240}?min-h-11/g,
+      ) ?? []
+    ).length,
+    1,
+  );
+  assert.match(
+    answerReview,
+    /structureErrorAction === "login"[\s\S]*?kind:\s*"link",\s*label:\s*"로그인하고 계속"/,
+  );
+  assert.match(
+    answerReview,
+    /<label\s+key=\{option\.value\}\s+className=\{\s*examMode === "second"\s*\?\s*"[^"]*min-h-11[^"]*"\s*:\s*"[^"]*min-h-11/,
+  );
+  assert.equal((session.match(/<V3QuietDisclosure/g) ?? []).length, 2);
   assert.match(capture, /<summary className="flex min-h-11 cursor-pointer items-center whitespace-nowrap/);
-  assert.equal((todaySession.match(/<summary className="flex min-h-11 cursor-pointer items-center px-3 py-2/g) ?? []).length, 2);
+  assert.ok((todaySession.match(/<V3QuietDisclosure/g) ?? []).length >= 2);
+  assert.match(v3RouteUi, /<summary className="v3-type-label-strong flex min-h-11/);
   assert.match(calculator, /<summary className="flex min-h-11 cursor-pointer items-center/);
   assert.match(accounting, /<summary className="flex min-h-11 cursor-pointer items-center/);
   assert.match(cloze, /<summary className="flex min-h-11 cursor-pointer items-center/);

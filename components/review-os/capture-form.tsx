@@ -4,13 +4,21 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-import { BottomPrimaryAction, FailureAwareState } from "@/components/learner";
+import {
+  BiggestGap,
+  BottomPrimaryAction,
+  FailureAwareState,
+  TrustEvidenceBar,
+  V3ActionButton,
+  V3ActionLink,
+  V3QuietDisclosure,
+} from "@/components/learner";
 import { CognitiveLearningActionCard } from "@/components/review-os/cognitive-learning-action-card";
 import {
-  TrustEvidenceBar,
-  type TrustEvidenceBarProps,
+  TrustEvidenceBar as LegacyTrustEvidenceBar,
+  type TrustEvidenceBarProps as LegacyTrustEvidenceBarProps,
 } from "@/components/review-os/trust-status-card";
-import { Button } from "@/components/ui/button";
+import { Button, type ButtonProps } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { buildCaptureToNoteDraft } from "@/lib/capture/capture-to-note";
 import {
@@ -23,6 +31,15 @@ import {
 import { clearReviewOsDraft, loadReviewOsDraft, saveReviewOsDraft, saveReviewOsLocalBetaNoteWithStatus } from "@/lib/review-os/browser-storage";
 import { getCalculatorWorkflowForSubject, getCalculatorWorkflowHref } from "@/lib/review-os/calculator-workflow";
 import { resolveCaptureConfirmationCopy } from "@/lib/review-os/capture-confirmation-copy";
+import {
+  advanceCaptureExtractionRequestRevision,
+  clearUnchangedCaptureExtractionSemantics,
+  isCurrentCaptureExtractionRequest,
+  restoreLearnerEditedCaptureSemantics,
+  snapshotCaptureExtractionSemantics,
+  type CaptureExtractionRevisionEvent,
+  type CaptureExtractionSemanticSnapshot,
+} from "@/lib/review-os/capture-extraction-reconciliation";
 import {
   CAPTURE_MEMORY_ONLY_SAVE_ERROR_EVIDENCE,
   buildCaptureCompletedEvidence,
@@ -42,6 +59,7 @@ import { pushLocalLearnerAnalyticsEvent } from "@/lib/review-os/local-analytics"
 import { resolveReviewSchedule } from "@/lib/review-os/scheduling";
 import { hasSecondWriteReferenceStep } from "@/lib/review-os/second-write-reference-step";
 import type { FailureAwarePersistenceEvidence, FailureAwareStateEvidence } from "@/lib/review-os/failure-aware-state";
+import type { TrustProvenanceEvidence, TrustProvenanceSourceKind } from "@/lib/review-os/trust-provenance";
 import {
   CONFIDENCE_OPTIONS,
   getFirstSubjectTemplate,
@@ -54,11 +72,40 @@ import {
 
 type ExtractionState = "idle" | "uploading" | "extracting" | "succeeded" | "failed" | "manual";
 
+function CaptureActionButton({
+  mode,
+  variant,
+  size,
+  ...props
+}: ButtonProps & { mode: AppraisalMode }) {
+  if (mode === "second") {
+    return (
+      <V3ActionButton
+        tone={variant === "ghost" ? "quiet" : variant === "outline" ? "secondary" : "primary"}
+        {...props}
+      />
+    );
+  }
+
+  return <Button variant={variant} size={size} {...props} />;
+}
+
 const CAPTURE_TRUST_LAYER_COPY = "OCR과 AI 정리는 학습 보조 초안입니다. 저장 전 직접 수정할 수 있습니다.";
 
-const CAPTURE_TRUST_SOURCE_LABELS: Record<
+const V3_CAPTURE_TRUST_SOURCE_LABELS: Record<
   SourceType,
-  TrustEvidenceBarProps["source"]
+  TrustProvenanceSourceKind
+> = {
+  photo: "ocr_draft",
+  image: "ocr_draft",
+  pdf: "imported_text",
+  text: "learner_text",
+  manual: "manual_entry",
+};
+
+const LEGACY_CAPTURE_TRUST_SOURCE_LABELS: Record<
+  SourceType,
+  LegacyTrustEvidenceBarProps["source"]
 > = {
   photo: "OCR 초안",
   image: "OCR 초안",
@@ -522,6 +569,51 @@ export function WrongAnswerCaptureForm({
     (initialSubject && (config.subjects as readonly string[]).includes(initialSubject) ? initialSubject : null) ??
     initialPreferredSubjects.find((subject) => (config.subjects as readonly string[]).includes(subject)) ??
     getDefaultSubject(mode);
+  function createInitialDraftState(): DraftState {
+    return {
+      subjectLabel: resolvedInitialSubject,
+      sourceType: "text",
+      sourceLabel: "",
+      problemTitle: rewriteContext?.sourceTitle ?? "",
+      problemIdentifier: mode === "second" ? SECOND_TASK_PRESETS[0] : "",
+      rawQuestionText: "",
+      correctAnswer: rewriteContext?.referenceSummary ?? "",
+      userAnswer: "",
+      userReasonText:
+        rewriteContext?.biggestGap ??
+        (mode === "second" ? secondDefaults(resolvedInitialSubject).issue : firstDefaults(resolvedInitialSubject).reason),
+      userReasonPreset: "",
+      confidence: "중간",
+      timeSpentSeconds: "",
+      nextReviewDate: getDefaultNextReviewDate(mode),
+      keyConcepts: firstDefaults(resolvedInitialSubject).concepts,
+      coreFormula: firstDefaults(resolvedInitialSubject).formula,
+      comparisonPoint: firstDefaults(resolvedInitialSubject).comparison,
+      missingIssue: rewriteContext?.biggestGap ?? secondDefaults(resolvedInitialSubject).issue,
+      weakStructurePoint: secondDefaults(resolvedInitialSubject).structure,
+      weakApplicationSentence: secondDefaults(resolvedInitialSubject).sentence,
+      rewriteInstruction: rewriteContext?.rewriteInstruction ?? secondDefaults(resolvedInitialSubject).rewrite,
+      referenceStructure: secondDefaults(resolvedInitialSubject).structure,
+      myAnswerSummary: rewriteContext?.myAnswerSummary ?? "",
+      rewriteParagraph: "",
+      caseSummary: secondDefaults(resolvedInitialSubject).caseSummary,
+      issueRecall: "",
+      outlineDraft: "",
+      productionBeforeComparison: Boolean(rewriteContext),
+      referenceAnswerAddedAfterProduction: Boolean(rewriteContext),
+      biggestGap: rewriteContext?.biggestGap ?? secondDefaults(resolvedInitialSubject).issue,
+      rawOcrText: "",
+      rawExtractionJson: {},
+      normalizedDraft: undefined,
+      extractionNeedsReview: false,
+      capturePages: [],
+      pageCount: 0,
+      lowConfidenceFlag: false,
+      captureQualityIssue: "",
+      hasManualCorrection: false,
+      ocrConfirmedByLearner: false,
+    };
+  }
   const [form, setForm] = useState<DraftState>(() => {
     const saved = loadReviewOsDraft<DraftState>(storageKey);
     if (saved) {
@@ -530,49 +622,7 @@ export function WrongAnswerCaptureForm({
         subjectLabel: normalizeSubjectForMode(saved.subjectLabel, mode),
       };
     }
-    return {
-        subjectLabel: resolvedInitialSubject,
-        sourceType: "text",
-        sourceLabel: "",
-        problemTitle: rewriteContext?.sourceTitle ?? "",
-        problemIdentifier: mode === "second" ? SECOND_TASK_PRESETS[0] : "",
-        rawQuestionText: "",
-        correctAnswer: rewriteContext?.referenceSummary ?? "",
-        userAnswer: "",
-        userReasonText:
-          rewriteContext?.biggestGap ??
-          (mode === "second" ? secondDefaults(resolvedInitialSubject).issue : firstDefaults(resolvedInitialSubject).reason),
-        userReasonPreset: "",
-        confidence: "중간",
-        timeSpentSeconds: "",
-        nextReviewDate: getDefaultNextReviewDate(mode),
-        keyConcepts: firstDefaults(resolvedInitialSubject).concepts,
-        coreFormula: firstDefaults(resolvedInitialSubject).formula,
-        comparisonPoint: firstDefaults(resolvedInitialSubject).comparison,
-        missingIssue: rewriteContext?.biggestGap ?? secondDefaults(resolvedInitialSubject).issue,
-        weakStructurePoint: secondDefaults(resolvedInitialSubject).structure,
-        weakApplicationSentence: secondDefaults(resolvedInitialSubject).sentence,
-        rewriteInstruction: rewriteContext?.rewriteInstruction ?? secondDefaults(resolvedInitialSubject).rewrite,
-        referenceStructure: secondDefaults(resolvedInitialSubject).structure,
-        myAnswerSummary: rewriteContext?.myAnswerSummary ?? "",
-        rewriteParagraph: "",
-        caseSummary: secondDefaults(resolvedInitialSubject).caseSummary,
-        issueRecall: "",
-        outlineDraft: "",
-        productionBeforeComparison: Boolean(rewriteContext),
-        referenceAnswerAddedAfterProduction: Boolean(rewriteContext),
-        biggestGap: rewriteContext?.biggestGap ?? secondDefaults(resolvedInitialSubject).issue,
-        rawOcrText: "",
-        rawExtractionJson: {},
-        normalizedDraft: undefined,
-        extractionNeedsReview: false,
-        capturePages: [],
-        pageCount: 0,
-        lowConfidenceFlag: false,
-        captureQualityIssue: "",
-        hasManualCorrection: false,
-        ocrConfirmedByLearner: false,
-      };
+    return createInitialDraftState();
   });
   const secondWriteEnabled = mode === "second" && workflow === "second-write" && !rewriteContext;
   const getInitialStage = () => {
@@ -589,6 +639,36 @@ export function WrongAnswerCaptureForm({
   const [extractionState, setExtractionState] = useState<ExtractionState>("idle");
   const [uploadedPages, setUploadedPages] = useState<UploadedPage[]>(() => form.capturePages ?? []);
   const pendingCaptureSaveRef = useRef<PendingCaptureSaveOperation | null>(null);
+  const extractionEditRevisionRef = useRef(0);
+  const extractionRequestRevisionRef = useRef(0);
+  const formErrorRef = useRef<HTMLParagraphElement | null>(null);
+
+  function beginExtractionRequest(event: Extract<CaptureExtractionRevisionEvent, "text_request" | "image_import">) {
+    const requestRevision = advanceCaptureExtractionRequestRevision(
+      extractionRequestRevisionRef.current,
+      event,
+    );
+    extractionRequestRevisionRef.current = requestRevision;
+    setExtracting(true);
+    return requestRevision;
+  }
+
+  function invalidatePendingExtraction(event: Exclude<CaptureExtractionRevisionEvent, "text_request" | "image_import">) {
+    extractionRequestRevisionRef.current = advanceCaptureExtractionRequestRevision(
+      extractionRequestRevisionRef.current,
+      event,
+    );
+    extractionEditRevisionRef.current += 1;
+    setExtracting(false);
+  }
+
+  function requestIsCurrent(requestRevision: number) {
+    return isCurrentCaptureExtractionRequest(
+      requestRevision,
+      extractionRequestRevisionRef.current,
+    );
+  }
+
   function openSavedPlanStage(confirmation: SavedCaptureConfirmation) {
     setSavedConfirmation(confirmation);
     setStage("saved-plan");
@@ -617,6 +697,13 @@ export function WrongAnswerCaptureForm({
     });
     return () => window.cancelAnimationFrame(frame);
   }, [stage]);
+  useEffect(() => {
+    if (!error) return;
+    const frame = window.requestAnimationFrame(() => {
+      formErrorRef.current?.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [error]);
   useEffect(() => {
     if (!secondWriteEnabled) return;
 
@@ -693,6 +780,7 @@ export function WrongAnswerCaptureForm({
         "capturePages",
         "pageCount",
       ].includes(String(key));
+      if (learnerEditedField) extractionEditRevisionRef.current += 1;
       return persist({
         ...prev,
         [key]: value,
@@ -702,6 +790,7 @@ export function WrongAnswerCaptureForm({
   }
 
   function updateSubject(value: string) {
+    extractionEditRevisionRef.current += 1;
     setForm((prev) => {
       const first = firstDefaults(value);
       const second = secondDefaults(value);
@@ -762,6 +851,43 @@ export function WrongAnswerCaptureForm({
         };
   }
 
+  function rebuildLatestLearnerDraftAfterStaleExtraction(
+    base: DraftState,
+    requestSemanticSnapshot: CaptureExtractionSemanticSnapshot,
+  ): DraftState {
+    const latestText = base.rawQuestionText;
+    const cleared = clearUnchangedCaptureExtractionSemantics(
+      base,
+      requestSemanticSnapshot,
+      mode,
+    );
+    const rebuilt = buildStructuredDraft(
+      {
+        ...cleared,
+        rawExtractionJson: {},
+        normalizedDraft: undefined,
+        extractionNeedsReview: true,
+      },
+      latestText,
+    );
+    const reconciled = restoreLearnerEditedCaptureSemantics(
+      base,
+      requestSemanticSnapshot,
+      rebuilt,
+      mode,
+    );
+    return {
+      ...reconciled,
+      rawQuestionText: latestText,
+      rawOcrText: base.rawOcrText || latestText,
+      rawExtractionJson: {},
+      normalizedDraft: undefined,
+      extractionNeedsReview: true,
+      hasManualCorrection: base.hasManualCorrection,
+      ocrConfirmedByLearner: base.ocrConfirmedByLearner,
+    };
+  }
+
   function applyExtraction(base: DraftState, extraction: ExtractionPipelineResult): DraftState {
     const draft = extraction.normalized_draft;
     const subjectLabel = applyDraftToConfirmedSubject(mode, draft.subject_guess);
@@ -817,13 +943,14 @@ export function WrongAnswerCaptureForm({
   async function generateStructuredDraft(sourceText = form.rawQuestionText) {
     const text = sourceText.trim();
     if (!text) {
-      const next = buildStructuredDraft(form, sourceText);
-      setForm(persist(next));
+      setForm((prev) => persist(buildStructuredDraft(prev, sourceText)));
       setStage("preview");
       return;
     }
+    const requestRevision = beginExtractionRequest("text_request");
+    const requestEditRevision = extractionEditRevisionRef.current;
+    const requestSemanticSnapshot = snapshotCaptureExtractionSemantics(form, mode);
 
-    setExtracting(true);
     setExtractError("");
     setExtractionState("extracting");
     try {
@@ -833,9 +960,16 @@ export function WrongAnswerCaptureForm({
       body.append("source_label", form.sourceLabel);
       const response = await fetch("/api/inverge/ocr", { method: "POST", body });
       const extraction = (await response.json()) as ({ ok?: boolean; error?: string } & ExtractionPipelineResult);
+      if (!requestIsCurrent(requestRevision)) return;
       if (!response.ok || !extraction.ok) {
-        const fallback = buildStructuredDraft(form, text);
-        setForm(persist(fallback));
+        const learnerEditedDuringRequest = extractionEditRevisionRef.current !== requestEditRevision;
+        setForm((prev) => {
+          return persist(
+            learnerEditedDuringRequest
+              ? rebuildLatestLearnerDraftAfterStaleExtraction(prev, requestSemanticSnapshot)
+              : buildStructuredDraft(prev, text),
+          );
+        });
         setStage("preview");
         setExtractionState("failed");
         setExtractError("텍스트 추출에 실패했습니다. 직접 붙여넣거나 다시 시도해 주세요.");
@@ -844,12 +978,31 @@ export function WrongAnswerCaptureForm({
         }, 0);
         return;
       }
-      setForm(persist(applyExtraction(form, extraction)));
-      setExtractionState("succeeded");
+      const learnerEditedDuringRequest = extractionEditRevisionRef.current !== requestEditRevision;
+      setForm((prev) => {
+        return persist(
+          learnerEditedDuringRequest
+            ? rebuildLatestLearnerDraftAfterStaleExtraction(prev, requestSemanticSnapshot)
+            : applyExtraction(prev, extraction),
+        );
+      });
+      setExtractionState(learnerEditedDuringRequest ? "manual" : "succeeded");
+      setExtractError(
+        learnerEditedDuringRequest
+          ? "추출 중 입력이 수정되어 최신 내용을 유지했습니다. 저장 전 항목을 다시 확인해 주세요."
+          : "",
+      );
       setStage("preview");
     } catch {
-      const fallback = buildStructuredDraft(form, text);
-      setForm(persist(fallback));
+      if (!requestIsCurrent(requestRevision)) return;
+      const learnerEditedDuringRequest = extractionEditRevisionRef.current !== requestEditRevision;
+      setForm((prev) => {
+        return persist(
+          learnerEditedDuringRequest
+            ? rebuildLatestLearnerDraftAfterStaleExtraction(prev, requestSemanticSnapshot)
+            : buildStructuredDraft(prev, text),
+        );
+      });
       setStage("preview");
       setExtractionState("failed");
       setExtractError("텍스트 추출에 실패했습니다. 직접 붙여넣거나 다시 시도해 주세요.");
@@ -857,13 +1010,37 @@ export function WrongAnswerCaptureForm({
         textAreaRef.current?.focus();
       }, 0);
     } finally {
-      setExtracting(false);
+      if (requestIsCurrent(requestRevision)) setExtracting(false);
     }
+  }
+
+  function preserveLatestLearnerImageWorkAfterStaleExtraction(
+    requestSemanticSnapshot: CaptureExtractionSemanticSnapshot,
+  ) {
+    setForm((prev) =>
+      persist({
+        ...rebuildLatestLearnerDraftAfterStaleExtraction(prev, requestSemanticSnapshot),
+        sourceType: prev.sourceType,
+        sourceLabel: prev.sourceLabel,
+        capturePages: prev.capturePages,
+        pageCount: prev.pageCount,
+        lowConfidenceFlag: true,
+        captureQualityIssue: "edited_during_extraction",
+        extractionNeedsReview: true,
+      }),
+    );
+    setExtractionState("manual");
+    setExtractError("추출 중 입력이 수정되어 최신 내용을 유지했습니다. 저장 전 항목을 다시 확인해 주세요.");
+    setStage("preview");
   }
 
   async function handleImageImport(fileList: FileList) {
     const files = Array.from(fileList);
     if (files.length === 0) return;
+    extractionEditRevisionRef.current += 1;
+    const requestRevision = beginExtractionRequest("image_import");
+    const requestEditRevision = extractionEditRevisionRef.current;
+    const requestSemanticSnapshot = snapshotCaptureExtractionSemantics(form, mode);
     const initialPages = relabelPages(
       files.map((file, index) => ({
         id: `${Date.now()}-${index}-${file.name}`,
@@ -874,17 +1051,27 @@ export function WrongAnswerCaptureForm({
         ocrText: "OCR 초안을 만드는 중입니다.",
       })),
     );
-    setExtracting(true);
     setExtractError("");
     setExtractionState("uploading");
     setUploadedPages(initialPages);
     setForm((prev) =>
       persist({
-        ...prev,
+        ...clearUnchangedCaptureExtractionSemantics(
+          prev,
+          requestSemanticSnapshot,
+          mode,
+        ),
         sourceType: inferSourceTypeFromAction("gallery"),
         sourceLabel: initialPages.map((page) => page.label).join(" / "),
+        rawQuestionText: "",
+        rawOcrText: "",
+        rawExtractionJson: {},
+        normalizedDraft: undefined,
+        extractionNeedsReview: true,
         capturePages: stripPreviewUrls(initialPages),
         pageCount: initialPages.length,
+        lowConfidenceFlag: false,
+        captureQualityIssue: "",
         hasManualCorrection: false,
         ocrConfirmedByLearner: false,
       }),
@@ -902,6 +1089,12 @@ export function WrongAnswerCaptureForm({
         error?: string;
         pages?: Array<{ pageNumber?: number; name?: string; text?: string }>;
       } & ExtractionPipelineResult);
+      if (!requestIsCurrent(requestRevision)) return;
+      const learnerEditedDuringRequest = extractionEditRevisionRef.current !== requestEditRevision;
+      if (learnerEditedDuringRequest) {
+        preserveLatestLearnerImageWorkAfterStaleExtraction(requestSemanticSnapshot);
+        return;
+      }
       const sourceLabel = initialPages.map((page) => page.label).join(" / ");
       if (!response.ok || !result.ok) {
         const fallbackPages = initialPages.map((page) => ({
@@ -912,20 +1105,24 @@ export function WrongAnswerCaptureForm({
           ocrConfirmedByLearner: false,
         }));
         const mergedFallback = mergePageText(fallbackPages);
-        const fallback: DraftState = {
-          ...form,
-          sourceType: inferSourceTypeFromAction("gallery"),
-          sourceLabel,
-          rawQuestionText: mergedFallback,
-          rawOcrText: mergedFallback,
-          capturePages: stripPreviewUrls(fallbackPages),
-          pageCount: fallbackPages.length,
-          lowConfidenceFlag: true,
-          captureQualityIssue: "ocr_failed_manual_fallback",
-          ocrConfirmedByLearner: false,
-        };
         setUploadedPages(fallbackPages);
-        setForm(persist(fallback));
+        setForm((prev) =>
+          persist(
+            {
+              ...prev,
+              sourceType: inferSourceTypeFromAction("gallery"),
+              sourceLabel,
+              rawQuestionText: mergedFallback,
+              rawOcrText: mergedFallback,
+              capturePages: stripPreviewUrls(fallbackPages),
+              pageCount: fallbackPages.length,
+              lowConfidenceFlag: true,
+              captureQualityIssue: "ocr_failed_manual_fallback",
+              ocrConfirmedByLearner: false,
+              extractionNeedsReview: true,
+            },
+          ),
+        );
         setStage("preview");
         setExtractionState("failed");
         setExtractError("인식이 불안정합니다. 중요한 숫자/단어를 확인해 주세요. 직접 붙여넣거나 다시 찍기로 계속할 수 있습니다.");
@@ -953,33 +1150,52 @@ export function WrongAnswerCaptureForm({
       });
       const extractedText = mergePageText(pagesWithText);
       const lowConfidenceFlag = pagesWithText.some((page) => page.lowConfidenceFlag);
-      // Draft preservation invariant: rawQuestionText: extractedText || form.rawQuestionText
-      const base: DraftState = {
-        ...form,
-        sourceType: inferSourceTypeFromAction("gallery"),
-        sourceLabel,
-        rawQuestionText: extractedText,
-        rawOcrText: extractedText,
-        capturePages: stripPreviewUrls(pagesWithText),
-        pageCount: pagesWithText.length,
-        lowConfidenceFlag,
-        captureQualityIssue: lowConfidenceFlag ? "low_confidence_ocr" : "",
-        hasManualCorrection: false,
-        ocrConfirmedByLearner: false,
-      };
       setUploadedPages(relabelPages(pagesWithText));
-      const structured = result.normalized_draft ? applyExtraction(base, result) : buildStructuredDraft(base, extractedText);
-      setForm(persist({
-        ...structured,
-        capturePages: stripPreviewUrls(relabelPages(pagesWithText)),
-        pageCount: pagesWithText.length,
-        lowConfidenceFlag,
-        captureQualityIssue: lowConfidenceFlag ? "low_confidence_ocr" : "",
-      }));
+      setForm((prev) => {
+        const learnerText = prev.hasManualCorrection && prev.rawQuestionText.trim()
+          ? prev.rawQuestionText
+          : extractedText;
+        const base: DraftState = {
+          ...prev,
+          sourceType: inferSourceTypeFromAction("gallery"),
+          sourceLabel,
+          rawQuestionText: learnerText,
+          rawOcrText: prev.hasManualCorrection && prev.rawOcrText?.trim() ? prev.rawOcrText : extractedText,
+          capturePages: stripPreviewUrls(pagesWithText),
+          pageCount: pagesWithText.length,
+          lowConfidenceFlag,
+          captureQualityIssue: lowConfidenceFlag ? "low_confidence_ocr" : "",
+          ocrConfirmedByLearner: prev.hasManualCorrection ? prev.ocrConfirmedByLearner : false,
+        };
+        const structured = result.normalized_draft
+          ? applyExtraction(base, result)
+          : buildStructuredDraft(base, learnerText);
+        return persist({
+          ...structured,
+          rawQuestionText: learnerText,
+          rawOcrText: base.rawOcrText,
+          hasManualCorrection: prev.hasManualCorrection,
+          ocrConfirmedByLearner: base.ocrConfirmedByLearner,
+          capturePages: stripPreviewUrls(relabelPages(pagesWithText)),
+          pageCount: pagesWithText.length,
+          lowConfidenceFlag,
+          captureQualityIssue: lowConfidenceFlag ? "low_confidence_ocr" : "",
+        });
+      });
       setExtractionState(lowConfidenceFlag ? "manual" : "succeeded");
-      setExtractError(lowConfidenceFlag ? "인식이 불안정합니다. 중요한 숫자/단어를 확인해 주세요." : "");
+      setExtractError(
+        lowConfidenceFlag
+          ? "인식이 불안정합니다. 중요한 숫자/단어를 확인해 주세요."
+          : "",
+      );
       setStage("preview");
     } catch {
+      if (!requestIsCurrent(requestRevision)) return;
+      const learnerEditedDuringRequest = extractionEditRevisionRef.current !== requestEditRevision;
+      if (learnerEditedDuringRequest) {
+        preserveLatestLearnerImageWorkAfterStaleExtraction(requestSemanticSnapshot);
+        return;
+      }
       const fallbackPages = initialPages.map((page) => ({
         ...page,
         ocrText: "직접 내용을 입력해 주세요.",
@@ -987,19 +1203,24 @@ export function WrongAnswerCaptureForm({
         captureQualityIssue: "ocr_failed_manual_fallback",
       }));
       const mergedFallback = mergePageText(fallbackPages);
-      const fallback: DraftState = {
-        ...form,
-        sourceType: inferSourceTypeFromAction("gallery"),
-        sourceLabel: fallbackPages.map((page) => page.label).join(" / "),
-        rawQuestionText: mergedFallback,
-        rawOcrText: mergedFallback,
-        capturePages: stripPreviewUrls(fallbackPages),
-        pageCount: fallbackPages.length,
-        lowConfidenceFlag: true,
-        captureQualityIssue: "ocr_failed_manual_fallback",
-      };
       setUploadedPages(fallbackPages);
-      setForm(persist(fallback));
+      setForm((prev) =>
+        persist(
+          {
+            ...prev,
+            sourceType: inferSourceTypeFromAction("gallery"),
+            sourceLabel: fallbackPages.map((page) => page.label).join(" / "),
+            rawQuestionText: mergedFallback,
+            rawOcrText: mergedFallback,
+            capturePages: stripPreviewUrls(fallbackPages),
+            pageCount: fallbackPages.length,
+            lowConfidenceFlag: true,
+            captureQualityIssue: "ocr_failed_manual_fallback",
+            ocrConfirmedByLearner: false,
+            extractionNeedsReview: true,
+          },
+        ),
+      );
       setStage("preview");
       setExtractionState("failed");
       setExtractError("인식이 불안정합니다. 중요한 숫자/단어를 확인해 주세요. 직접 붙여넣거나 다시 찍기로 계속할 수 있습니다.");
@@ -1007,13 +1228,15 @@ export function WrongAnswerCaptureForm({
         textAreaRef.current?.focus();
       }, 0);
     } finally {
-      setExtracting(false);
+      if (requestIsCurrent(requestRevision)) setExtracting(false);
     }
   }
 
   function handlePdfImport(file: File) {
+    const requestSemanticSnapshot = snapshotCaptureExtractionSemantics(form, mode);
+    invalidatePendingExtraction("pdf_import");
     const pdfPage = relabelPages([{
-      id: `${Date.now()}-pdf-${file.name}`,
+      id: `pdf-${file.name}-${file.size}-${file.lastModified}`,
       name: file.name,
       label: `1페이지 · ${file.name}`,
       sourceType: "pdf" as const,
@@ -1025,15 +1248,24 @@ export function WrongAnswerCaptureForm({
     setUploadedPages(pdfPage);
     setForm((prev) =>
       persist({
-        ...prev,
+        ...clearUnchangedCaptureExtractionSemantics(
+          prev,
+          requestSemanticSnapshot,
+          mode,
+        ),
         sourceType: inferSourceTypeFromAction("pdf"),
         sourceLabel: pdfPage.map((page) => page.label).join(" / "),
-        rawQuestionText: prev.rawQuestionText.trim() || mergedText,
-        rawOcrText: prev.rawOcrText || mergedText,
+        rawQuestionText: mergedText,
+        rawOcrText: mergedText,
+        rawExtractionJson: {},
+        normalizedDraft: undefined,
+        extractionNeedsReview: true,
         capturePages: stripPreviewUrls(pdfPage),
         pageCount: 1,
         lowConfidenceFlag: true,
         captureQualityIssue: "pdf_manual_text_fallback",
+        hasManualCorrection: false,
+        ocrConfirmedByLearner: false,
       }),
     );
     setExtractionState("manual");
@@ -1044,7 +1276,20 @@ export function WrongAnswerCaptureForm({
     }, 0);
   }
 
+  function continueAfterExtractionReview() {
+    setForm((prev) =>
+      persist({
+        ...prev,
+        extractionNeedsReview: false,
+        ocrConfirmedByLearner: true,
+      }),
+    );
+    setExtractError("");
+    setStage(mode === "second" ? "second-issue-recall" : "confirm");
+  }
+
   function resetDraft() {
+    invalidatePendingExtraction("reset");
     uploadedPages.forEach((page) => {
       if (page.previewUrl) URL.revokeObjectURL(page.previewUrl);
     });
@@ -1055,8 +1300,13 @@ export function WrongAnswerCaptureForm({
     setExtractError("");
     setExtractionState("idle");
     setUploadedPages([]);
+    setForm(createInitialDraftState());
   }
-  function syncPageLabels(nextPages: UploadedPage[]) {
+  function syncPageLabels(
+    nextPages: UploadedPage[],
+    revisionEvent: Extract<CaptureExtractionRevisionEvent, "remove_page" | "move_page">,
+  ) {
+    invalidatePendingExtraction(revisionEvent);
     const relabeled = relabelPages(nextPages);
     const mergedText = mergePageText(relabeled);
     const lowConfidenceFlag = relabeled.some((page) => page.lowConfidenceFlag || hasLowConfidenceText(page.ocrText ?? ""));
@@ -1075,12 +1325,14 @@ export function WrongAnswerCaptureForm({
         ocrConfirmedByLearner: true,
       }),
     );
+    setExtractionState("manual");
+    setExtractError("페이지 구성을 직접 변경했습니다. 현재 순서와 내용을 저장 전에 다시 확인해 주세요.");
   }
   function removePage(index: number) {
     const page = uploadedPages[index];
     if (page?.previewUrl) URL.revokeObjectURL(page.previewUrl);
     const synced = syncPageTextFromMergedText(uploadedPages, form.rawQuestionText);
-    syncPageLabels(synced.filter((_, idx) => idx !== index));
+    syncPageLabels(synced.filter((_, idx) => idx !== index), "remove_page");
   }
   function movePage(index: number, direction: "up" | "down") {
     const target = direction === "up" ? index - 1 : index + 1;
@@ -1088,7 +1340,7 @@ export function WrongAnswerCaptureForm({
     const synced = syncPageTextFromMergedText(uploadedPages, form.rawQuestionText);
     const next = [...synced];
     [next[index], next[target]] = [next[target], next[index]];
-    syncPageLabels(next);
+    syncPageLabels(next, "move_page");
   }
 
   function getCaptureConfirmationCopy(source: DraftState) {
@@ -1339,6 +1591,11 @@ export function WrongAnswerCaptureForm({
     setError("");
 
     try {
+      if (form.extractionNeedsReview) {
+        setStage("preview");
+        setError("추출 중 수정된 최신 입력을 확인한 뒤 다시 진행해 주세요.");
+        return;
+      }
       if (destination === "first-ox") {
         if (form.lowConfidenceFlag && !form.ocrConfirmedByLearner) {
           setError("OCR 확인 필요: 숫자/용어를 직접 확인하거나 수정한 뒤 O/X 연습으로 나눌 수 있습니다.");
@@ -1551,12 +1808,12 @@ export function WrongAnswerCaptureForm({
       <details className="max-w-full rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-3 py-2">
         <summary className="flex min-h-11 cursor-pointer items-center whitespace-nowrap text-xs font-medium text-[color:var(--muted)]">다른 작업</summary>
         <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-          <Button type="button" variant="outline" onClick={resetDraft} className="w-full sm:w-auto">
+          <CaptureActionButton mode={mode} type="button" variant="outline" onClick={resetDraft} className="w-full sm:w-auto">
             {mode === "second" ? "다시 쓰기" : "다시 풀기"}
-          </Button>
-          <Button type="button" variant="ghost" onClick={resetDraft} className="w-full sm:w-auto">
+          </CaptureActionButton>
+          <CaptureActionButton mode={mode} type="button" variant="ghost" onClick={resetDraft} className="w-full sm:w-auto">
             나중에 하기
-          </Button>
+          </CaptureActionButton>
         </div>
       </details>
     );
@@ -1733,13 +1990,14 @@ export function WrongAnswerCaptureForm({
           </>
         ) : secondWriteEnabled ? (
           <>
-          <section className="rounded-[var(--radius-md)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)] p-3">
-            <div className="flex flex-wrap items-center gap-2 text-sm text-[color:var(--muted)]">
+          <section className="rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-subtle)] p-4">
+            <div className="flex flex-wrap items-center gap-2 v3-type-label text-[var(--color-text-secondary)]">
               <span>과목: {form.subjectLabel}</span>
               <details className="quiet-disclosure inline-block" data-s224v-secondary-diagnostics>
-                <summary className="cursor-pointer text-sm text-[color:var(--foreground-strong)] underline underline-offset-2">과목 바꾸기</summary>
+                <summary className="inline-flex min-h-11 cursor-pointer items-center text-[var(--color-text-primary)] underline underline-offset-4">과목 바꾸기</summary>
                 <div className="mt-2 min-w-64">
                   <SubjectSelect
+                    mode={mode}
                     subjectLabel={config.subjectLabel}
                     subjects={config.subjects}
                     value={form.subjectLabel}
@@ -1801,6 +2059,7 @@ export function WrongAnswerCaptureForm({
           </>
         ) : (
           <>
+          {mode === "first" || stage === "intake" ? (
           <IntakePanel
             form={form}
             mode={mode}
@@ -1826,6 +2085,7 @@ export function WrongAnswerCaptureForm({
             pdfInputRef={pdfInputRef}
             textAreaRef={textAreaRef}
           />
+          ) : null}
 
           {mode === "first" ? (
             <section className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4">
@@ -1841,14 +2101,15 @@ export function WrongAnswerCaptureForm({
             </section>
           ) : null}
 
-          {stage !== "intake" ? (
+          {(mode === "first" ? stage !== "intake" : stage === "preview") ? (
             <ExtractionPreview
               form={form}
               mode={mode}
               uploadedPages={uploadedPages}
               needsOcrConfirmation={needsOcrConfirmation}
               missingConfirmationFields={missingConfirmationFields.map((field) => field.label)}
-              onEdit={() => setStage(mode === "second" ? "second-issue-recall" : "confirm")}
+              extractError={extractError}
+              onEdit={continueAfterExtractionReview}
               onRegenerate={() => generateStructuredDraft()}
               onRawOcrChange={(value) => {
                 update("rawQuestionText", value);
@@ -1911,7 +2172,15 @@ export function WrongAnswerCaptureForm({
           </>
         )}
       {error ? (
-        <p className="text-sm text-[color:var(--status-red)]" data-testid={mode === "second" ? "second-write-error" : "capture-form-error"}>
+        <p
+          ref={formErrorRef}
+          role="alert"
+          aria-live="assertive"
+          aria-atomic="true"
+          tabIndex={-1}
+          className={mode === "second" ? "v3-type-compact ko-keep rounded-[var(--v3-radius-control)] border border-[var(--color-border-risk)] bg-[var(--color-background-risk)] px-4 py-3 text-[var(--color-text-risk)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-border-focus)]" : "text-sm text-[color:var(--status-red)]"}
+          data-testid={mode === "second" ? "second-write-error" : "capture-form-error"}
+        >
           {error}
         </p>
       ) : null}
@@ -1920,20 +2189,22 @@ export function WrongAnswerCaptureForm({
         <BottomPrimaryAction secondary={footerSecondary}>
         <div className="flex w-full flex-col gap-3 sm:flex-row">
           {rewriteContext && mode === "second" ? (
-            <Button type="submit" disabled={submitting || !form.rewriteParagraph.trim()} className="w-full sm:w-auto">
+            <CaptureActionButton mode={mode} type="submit" disabled={submitting || !form.rewriteParagraph.trim()} className="w-full sm:w-auto">
               {submitting ? "저장 중" : "문단 다시쓰기 저장"}
-            </Button>
+            </CaptureActionButton>
           ) : stage === "preview" ? (
-            <Button
+            <CaptureActionButton
+              mode={mode}
               type="button"
               disabled={submitting}
-              onClick={() => setStage(mode === "second" ? "second-issue-recall" : "confirm")}
+              onClick={continueAfterExtractionReview}
               className="w-full sm:w-auto"
             >
               {mode === "second" ? "쟁점 회상부터 진행" : "확인하고 저장하기"}
-            </Button>
+            </CaptureActionButton>
           ) : stage === "intake" ? null : mode === "second" && stage === "second-rewrite" && !rewriteContext ? (
-            <Button
+            <CaptureActionButton
+              mode={mode}
               type="button"
               disabled={submitting}
               onClick={() => setStage("confirm")}
@@ -1941,16 +2212,17 @@ export function WrongAnswerCaptureForm({
               data-s232e-second-write-primary-action="6"
             >
               마지막 확인으로 이동
-            </Button>
+            </CaptureActionButton>
           ) : (
-            <Button
+            <CaptureActionButton
+              mode={mode}
               type="submit"
               disabled={submitting || (mode === "second" && stage !== "second-rewrite" && stage !== "confirm")}
               data-testid={mode === "second" && stage === "second-rewrite" && !rewriteContext ? "second-write-submit" : undefined}
               className="w-full sm:w-auto"
             >
               {submitting ? "저장 중" : "저장하고 오늘 계획에 반영"}
-            </Button>
+            </CaptureActionButton>
           )}
         </div>
         </BottomPrimaryAction>
@@ -2008,6 +2280,9 @@ function SavedCaptureConfirmationPanel({
   if (confirmation.conflictEvidence) {
     return (
       <section
+        role="alert"
+        aria-live="assertive"
+        aria-atomic="true"
         data-testid="capture-save-confirmation"
         data-capture-dedupe-conflict
         data-capture-receipt-bound="false"
@@ -2019,7 +2294,7 @@ function SavedCaptureConfirmationPanel({
             label: "학습 노트에서 기존 기록 확인",
             href: `/app/notes?mode=${mode}&subject=${encodedSubject}`,
           }}
-          focusHeadingOnChange={false}
+          focusHeadingOnChange
           testId="capture-persistence-conflict-state"
         />
       </section>
@@ -2029,6 +2304,9 @@ function SavedCaptureConfirmationPanel({
   if (saveFailed) {
     return (
       <section
+        role="alert"
+        aria-live="assertive"
+        aria-atomic="true"
         data-testid="capture-save-confirmation"
         data-capture-persistence-failure
         data-capture-receipt-bound="false"
@@ -2036,7 +2314,7 @@ function SavedCaptureConfirmationPanel({
         <FailureAwareState
           evidence={CAPTURE_MEMORY_ONLY_SAVE_ERROR_EVIDENCE}
           action={{ kind: "button", label: "입력 확인 후 다시 저장하기", onAction: onBack }}
-          focusHeadingOnChange={false}
+          focusHeadingOnChange
           testId="capture-persistence-error-state"
         />
       </section>
@@ -2060,13 +2338,13 @@ function SavedCaptureConfirmationPanel({
           원문 입력은 이 작성 화면에 그대로 남아 있습니다. 자동 동기화는 등록되지 않았으므로 입력을 확인한 뒤 계정 저장을 다시 시도해 주세요.
         </p>
         <dl className="mt-5 grid gap-3 rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-surface)] p-4">
-          <PreviewLine label="브라우저에 남긴 약점 요약" value={confirmation.biggestGap} />
-          <PreviewLine label="브라우저에 남긴 다음 행동" value={confirmation.nextAction} />
-          <PreviewLine label="저장 범위" value={persistenceCopy.statusLabel} />
+          <PreviewLine label="브라우저에 남긴 약점 요약" value={confirmation.biggestGap} legacy={mode === "first"} />
+          <PreviewLine label="브라우저에 남긴 다음 행동" value={confirmation.nextAction} legacy={mode === "first"} />
+          <PreviewLine label="저장 범위" value={persistenceCopy.statusLabel} legacy={mode === "first"} />
         </dl>
-        <Button type="button" className="mt-5 w-full sm:w-auto" onClick={onBack}>
+        <CaptureActionButton mode={mode} type="button" className="mt-5 w-full sm:w-auto" onClick={onBack}>
           입력 확인 후 계정 저장 다시 시도
-        </Button>
+        </CaptureActionButton>
       </section>
     );
   }
@@ -2074,6 +2352,9 @@ function SavedCaptureConfirmationPanel({
   if (!completedEvidence) {
     return (
       <section
+        role="alert"
+        aria-live="assertive"
+        aria-atomic="true"
         data-testid="capture-save-confirmation"
         data-capture-persistence-failure
         data-capture-receipt-bound="false"
@@ -2081,7 +2362,7 @@ function SavedCaptureConfirmationPanel({
         <FailureAwareState
           evidence={CAPTURE_MEMORY_ONLY_SAVE_ERROR_EVIDENCE}
           action={{ kind: "button", label: "입력 확인 후 다시 저장하기", onAction: onBack }}
-          focusHeadingOnChange={false}
+          focusHeadingOnChange
           testId="capture-persistence-error-state"
         />
       </section>
@@ -2090,7 +2371,11 @@ function SavedCaptureConfirmationPanel({
 
   return (
     <section
-      className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-5 sm:p-6"
+      className={
+        mode === "second"
+          ? "rounded-[var(--v3-radius-panel)] border border-[var(--color-border-default)] bg-[var(--color-background-surface)] p-5 sm:p-6"
+          : "rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-5 sm:p-6"
+      }
       data-testid="capture-save-confirmation"
       data-capture-plan-reflection-stage
       data-capture-persistence-status={persistenceStatus}
@@ -2109,58 +2394,112 @@ function SavedCaptureConfirmationPanel({
 
       <p className="v3-type-caption mt-5 text-[var(--color-text-brand)]">4. 오늘 계획 반영 · {persistenceCopy.eyebrow}</p>
       <h3 className="v3-type-section ko-keep mt-2 text-[var(--color-text-primary)]">이 저장 기록에서 이어갈 내용</h3>
-      <div className="mt-5 grid gap-3 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-4">
-        <PreviewLine label="가장 큰 약점 1개" value={confirmation.biggestGap} />
-        <PreviewLine label="다음 행동 1개" value={confirmation.nextAction} />
-        <PreviewLine label="학습 노트 저장 상태" value={persistenceCopy.statusLabel} />
-        <PreviewLine label="오늘 계획에 반영" value={confirmation.todayPlanCandidate ?? confirmation.nextAction} />
-        <PreviewLine label="복습에 남길 내용" value={confirmation.reviewQueueCandidate ?? confirmation.biggestGap} />
-      </div>
+      {mode === "second" ? (
+        <div className="mt-5 space-y-3">
+          <BiggestGap
+            headingId="capture-saved-biggest-gap"
+            gap={confirmation.biggestGap}
+            evidence={`다음 행동 · ${confirmation.nextAction}`}
+            type="MissingLink"
+          />
+          <div className="grid gap-3 rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-subtle)] p-4">
+            <PreviewLine label="다음 행동 1개" value={confirmation.nextAction} />
+            <PreviewLine label="학습 노트 저장 상태" value={persistenceCopy.statusLabel} />
+            <PreviewLine label="오늘 계획에 반영" value={confirmation.todayPlanCandidate ?? confirmation.nextAction} />
+            <PreviewLine label="복습에 남길 내용" value={confirmation.reviewQueueCandidate ?? confirmation.biggestGap} />
+          </div>
+        </div>
+      ) : (
+        <div className="mt-5 grid gap-3 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-4">
+          <PreviewLine label="가장 큰 약점 1개" value={confirmation.biggestGap} legacy />
+          <PreviewLine label="다음 행동 1개" value={confirmation.nextAction} legacy />
+          <PreviewLine label="학습 노트 저장 상태" value={persistenceCopy.statusLabel} legacy />
+          <PreviewLine label="오늘 계획에 반영" value={confirmation.todayPlanCandidate ?? confirmation.nextAction} legacy />
+          <PreviewLine label="복습에 남길 내용" value={confirmation.reviewQueueCandidate ?? confirmation.biggestGap} legacy />
+        </div>
+      )}
       <div className="mt-3">
-        <CognitiveLearningActionCard unit={confirmation.learningAction} compact />
+        <CognitiveLearningActionCard
+          unit={confirmation.learningAction}
+          compact
+          presentation={mode === "second" ? "v3" : "legacy"}
+        />
       </div>
       <p className="mt-3 text-xs leading-5 text-[color:var(--muted)]">
         학습 노트에 저장되고 오늘 계획과 복습으로 이어집니다.
       </p>
       <p className="mt-3 text-xs leading-5 text-[color:var(--muted)]">{persistenceCopy.description}</p>
 
-      <details className="quiet-disclosure mt-5 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
-        <summary className="min-h-11 cursor-pointer px-4 py-3 text-sm font-medium text-[color:var(--foreground-strong)]">
-          다른 저장 위치 또는 새 기록
-        </summary>
-        <div className="grid gap-2 border-t border-[color:var(--border-subtle)] p-4 sm:grid-cols-3">
-          <Link
-            href={`/app/notes?mode=${mode}&subject=${encodedSubject}`}
-            className="inline-flex min-h-11 items-center justify-center rounded-full border border-[color:var(--border-subtle)] px-4 py-2 text-sm font-medium text-[color:var(--foreground-strong)]"
-          >
-            학습 노트에서 보기
-          </Link>
-          <Link
-            href={`/app/review?mode=${mode}&subject=${encodedSubject}`}
-            className="inline-flex min-h-11 items-center justify-center rounded-full border border-[color:var(--border-subtle)] px-4 py-2 text-sm font-medium text-[color:var(--foreground-strong)]"
-          >
-            복습으로 이어가기
-          </Link>
-          <Button type="button" variant="ghost" className="w-full" onClick={onReset}>
-            하나 더 올리기
-          </Button>
-        </div>
-      </details>
+      {mode === "second" ? (
+        <V3QuietDisclosure summary="다른 저장 위치 또는 새 기록" className="mt-5">
+          <div className="grid gap-2 sm:grid-cols-3">
+            <V3ActionLink href={`/app/notes?mode=${mode}&subject=${encodedSubject}`} tone="secondary" fullWidth>
+              학습 노트에서 보기
+            </V3ActionLink>
+            <V3ActionLink href={`/app/review?mode=${mode}&subject=${encodedSubject}`} tone="secondary" fullWidth>
+              복습으로 이어가기
+            </V3ActionLink>
+            <CaptureActionButton mode={mode} type="button" variant="ghost" className="w-full" onClick={onReset}>
+              하나 더 올리기
+            </CaptureActionButton>
+          </div>
+        </V3QuietDisclosure>
+      ) : (
+        <details className="quiet-disclosure mt-5 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]">
+          <summary className="min-h-11 cursor-pointer px-4 py-3 text-sm font-medium text-[color:var(--foreground-strong)]">
+            다른 저장 위치 또는 새 기록
+          </summary>
+          <div className="grid gap-2 border-t border-[color:var(--border-subtle)] p-4 sm:grid-cols-3">
+            <Link
+              href={`/app/notes?mode=${mode}&subject=${encodedSubject}`}
+              className="inline-flex min-h-11 items-center justify-center rounded-full border border-[color:var(--border-subtle)] px-4 py-2 text-sm font-medium text-[color:var(--foreground-strong)]"
+            >
+              학습 노트에서 보기
+            </Link>
+            <Link
+              href={`/app/review?mode=${mode}&subject=${encodedSubject}`}
+              className="inline-flex min-h-11 items-center justify-center rounded-full border border-[color:var(--border-subtle)] px-4 py-2 text-sm font-medium text-[color:var(--foreground-strong)]"
+            >
+              복습으로 이어가기
+            </Link>
+            <CaptureActionButton mode={mode} type="button" variant="ghost" className="w-full" onClick={onReset}>
+              하나 더 올리기
+            </CaptureActionButton>
+          </div>
+        </details>
+      )}
     </section>
   );
 }
 
 function SubjectSelect({
+  mode,
   subjectLabel,
   subjects,
   value,
   onChange,
 }: {
+  mode: AppraisalMode;
   subjectLabel: string;
   subjects: readonly string[];
   value: string;
   onChange: (value: string) => void;
 }) {
+  if (mode === "second") {
+    return (
+      <label className="block space-y-2">
+        <span className="v3-type-label-strong text-[var(--color-text-primary)]">{subjectLabel}</span>
+        <select
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          className="form-control min-h-11 rounded-[var(--v3-radius-control)] border-[var(--color-border-default)] bg-[var(--color-background-surface)] text-[var(--color-text-primary)]"
+        >
+          {subjects.map((option) => <option key={option} value={option}>{option}</option>)}
+        </select>
+      </label>
+    );
+  }
+
   return (
     <div className="space-y-2">
       <span className="text-sm text-[color:var(--foreground-strong)]">{subjectLabel}</span>
@@ -2249,71 +2588,148 @@ function IntakePanel({
     failed: "확인 필요",
     manual: "수동 입력 기록",
   };
+  const trustEvidence: TrustProvenanceEvidence =
+    extractionState === "uploading" ||
+    extractionState === "extracting" ||
+    extractionState === "failed"
+      ? { kind: "unavailable", evidenceAvailable: false }
+      : needsOcrConfirmation
+        ? { kind: "review_requirement", reviewRequired: true }
+        : form.ocrConfirmedByLearner || form.hasManualCorrection
+          ? { kind: "learner_confirmation", learnerConfirmed: true }
+          : { kind: "review_requirement", reviewRequired: true };
 
   return (
-    <section className="operating-surface p-3 sm:p-6">
+    <section
+      className={
+        mode === "second"
+          ? "rounded-[var(--v3-radius-panel)] border border-[var(--color-border-default)] bg-[var(--color-background-surface)] p-4 sm:p-6"
+          : "operating-surface p-3 sm:p-6"
+      }
+    >
       <div className="space-y-1 sm:space-y-2">
-        <p className="text-caption font-medium text-[color:var(--muted)]">1. 입력</p>
-        <h2 className="v3-type-section ko-keep text-[color:var(--foreground-strong)]">입력 방식 선택</h2>
-        <p className="ko-keep text-body text-[color:var(--muted)]">사진, PDF, 텍스트 중 하나로 시작하세요.</p>
+        <p className={mode === "second" ? "v3-type-caption text-[var(--color-text-secondary)]" : "text-caption font-medium text-[color:var(--muted)]"}>1. 입력</p>
+        <h2 className={mode === "second" ? "v3-type-section ko-keep text-[var(--color-text-primary)]" : "v3-type-section ko-keep text-[color:var(--foreground-strong)]"}>입력 방식 선택</h2>
+        <p className={mode === "second" ? "v3-type-body ko-keep text-[var(--color-text-secondary)]" : "ko-keep text-body text-[color:var(--muted)]"}>사진, PDF, 텍스트 중 하나로 시작하세요.</p>
       </div>
 
-      <div className="mt-3 grid gap-3 sm:mt-5 sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)]" data-capture-input-options data-s224v-secondary-input-options="quiet">
-        <Button
-          type="button"
-          className="primary-action min-h-16 w-full flex-col items-start justify-center gap-2 px-5 text-left sm:min-h-24"
-          onClick={() => {
-            const sourceType = inferSourceTypeFromAction("camera");
-            setSelectedInputMethod(sourceType);
-            update("sourceType", sourceType);
-            cameraInputRef.current?.click();
-          }}
-          data-s226-capture-primary-action
-        >
-          사진 찍기
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          className="secondary-action min-h-16 w-full flex-col items-start justify-center gap-2 px-5 text-left sm:min-h-24"
-          onClick={() => {
-            const sourceType = inferSourceTypeFromAction("text");
-            setSelectedInputMethod(sourceType);
-            update("sourceType", sourceType);
-            window.setTimeout(() => {
-              textAreaRef.current?.focus();
-              textAreaRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-            }, 0);
-          }}
-        >
-          텍스트 붙여넣기
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          className="min-h-16 w-full flex-col items-start justify-center gap-2 px-5 text-left text-[color:var(--muted)] sm:min-h-24"
-          onClick={() => {
-            const sourceType = inferSourceTypeFromAction("pdf");
-            setSelectedInputMethod(sourceType);
-            update("sourceType", sourceType);
-            pdfInputRef.current?.click();
-          }}
-        >
-          PDF 선택
-        </Button>
-      </div>
+      {mode === "second" ? (
+        <div className="mt-4 space-y-3" data-capture-input-options data-s224v-secondary-input-options="quiet">
+          <CaptureActionButton
+            mode={mode}
+            type="button"
+            variant={hasActiveInput ? "outline" : undefined}
+            className={`${hasActiveInput ? "" : "primary-action"} min-h-[var(--control-height)] w-full justify-center rounded-[var(--v3-radius-control)]`}
+            onClick={() => {
+              const sourceType = inferSourceTypeFromAction("camera");
+              setSelectedInputMethod(sourceType);
+              update("sourceType", sourceType);
+              cameraInputRef.current?.click();
+            }}
+            data-s226-capture-primary-action
+          >
+            답안 사진 찍기
+          </CaptureActionButton>
+          <V3QuietDisclosure
+            summary="다른 입력 방식"
+            helper="이미 텍스트나 PDF가 있을 때만 선택하세요."
+          >
+            <div className="grid gap-2 sm:grid-cols-2">
+              <CaptureActionButton
+                mode={mode}
+                type="button"
+                variant="outline"
+                className="min-h-[var(--control-height)] w-full"
+                onClick={() => {
+                  const sourceType = inferSourceTypeFromAction("text");
+                  setSelectedInputMethod(sourceType);
+                  update("sourceType", sourceType);
+                  window.setTimeout(() => {
+                    textAreaRef.current?.focus();
+                    textAreaRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+                  }, 0);
+                }}
+              >
+                텍스트 붙여넣기
+              </CaptureActionButton>
+              <CaptureActionButton
+                mode={mode}
+                type="button"
+                variant="outline"
+                className="min-h-[var(--control-height)] w-full"
+                onClick={() => {
+                  const sourceType = inferSourceTypeFromAction("pdf");
+                  setSelectedInputMethod(sourceType);
+                  update("sourceType", sourceType);
+                  pdfInputRef.current?.click();
+                }}
+              >
+                PDF 선택
+              </CaptureActionButton>
+            </div>
+          </V3QuietDisclosure>
+        </div>
+      ) : (
+        <div className="mt-3 grid gap-3 sm:mt-5 sm:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,1fr)]" data-capture-input-options data-s224v-secondary-input-options="quiet">
+          <CaptureActionButton
+            mode={mode}
+            type="button"
+            className="primary-action min-h-16 w-full flex-col items-start justify-center gap-2 px-5 text-left sm:min-h-24"
+            onClick={() => {
+              const sourceType = inferSourceTypeFromAction("camera");
+              setSelectedInputMethod(sourceType);
+              update("sourceType", sourceType);
+              cameraInputRef.current?.click();
+            }}
+            data-s226-capture-primary-action
+          >
+            사진 찍기
+          </CaptureActionButton>
+          <CaptureActionButton
+            mode={mode}
+            type="button"
+            variant="outline"
+            className="secondary-action min-h-16 w-full flex-col items-start justify-center gap-2 px-5 text-left sm:min-h-24"
+            onClick={() => {
+              const sourceType = inferSourceTypeFromAction("text");
+              setSelectedInputMethod(sourceType);
+              update("sourceType", sourceType);
+              window.setTimeout(() => {
+                textAreaRef.current?.focus();
+                textAreaRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+              }, 0);
+            }}
+          >
+            텍스트 붙여넣기
+          </CaptureActionButton>
+          <CaptureActionButton
+            mode={mode}
+            type="button"
+            variant="outline"
+            className="min-h-16 w-full flex-col items-start justify-center gap-2 px-5 text-left text-[color:var(--muted)] sm:min-h-24"
+            onClick={() => {
+              const sourceType = inferSourceTypeFromAction("pdf");
+              setSelectedInputMethod(sourceType);
+              update("sourceType", sourceType);
+              pdfInputRef.current?.click();
+            }}
+          >
+            PDF 선택
+          </CaptureActionButton>
+        </div>
+      )}
       <details
-        className="quiet-disclosure mt-3 rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] bg-[color:var(--surface)]"
+        className={mode === "second" ? "quiet-disclosure mt-3 rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-subtle)]" : "quiet-disclosure mt-3 rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] bg-[color:var(--surface)]"}
         data-s224v-secondary-diagnostics
         data-s232e-capture-optional-inputs
       >
-        <summary className="cursor-pointer list-none px-3 py-2 text-xs font-medium text-[color:var(--ink-muted)]">촬영 품질과 앨범 업로드</summary>
-        <div className="border-t border-[color:var(--border-hairline)] px-3 py-3">
-          <p className="text-xs leading-5 text-[color:var(--muted)]">촬영하거나 업로드한 뒤 OCR 초안을 직접 확인합니다.</p>
-          <Button type="button" variant="outline" className="mt-3 w-full sm:w-auto" onClick={() => { const sourceType = inferSourceTypeFromAction("gallery"); setSelectedInputMethod(sourceType); update("sourceType", sourceType); galleryInputRef.current?.click(); }}>
+        <summary className={mode === "second" ? "v3-type-label-strong flex min-h-11 cursor-pointer list-none items-center px-3 py-2 text-[var(--color-text-primary)]" : "cursor-pointer list-none px-3 py-2 text-xs font-medium text-[color:var(--ink-muted)]"}>촬영 품질과 앨범 업로드</summary>
+        <div className={mode === "second" ? "border-t border-[var(--color-border-default)] px-3 py-3" : "border-t border-[color:var(--border-hairline)] px-3 py-3"}>
+          <p className={mode === "second" ? "v3-type-caption ko-keep text-[var(--color-text-secondary)]" : "text-xs leading-5 text-[color:var(--muted)]"}>촬영하거나 업로드한 뒤 OCR 초안을 직접 확인합니다.</p>
+          <CaptureActionButton mode={mode} type="button" variant="outline" className="mt-3 w-full sm:w-auto" onClick={() => { const sourceType = inferSourceTypeFromAction("gallery"); setSelectedInputMethod(sourceType); update("sourceType", sourceType); galleryInputRef.current?.click(); }}>
             앨범에서 선택
-          </Button>
-          <ul className="mt-3 list-disc space-y-1 pl-5 text-xs text-[color:var(--muted)]">
+          </CaptureActionButton>
+          <ul className={mode === "second" ? "v3-type-caption ko-keep mt-3 list-disc space-y-1 pl-5 text-[var(--color-text-secondary)]" : "mt-3 list-disc space-y-1 pl-5 text-xs text-[color:var(--muted)]"}>
             <li>한 페이지씩 정면으로 찍기</li>
             <li>흔들리면 다시 찍기</li>
           </ul>
@@ -2353,30 +2769,43 @@ function IntakePanel({
       {hasActiveInput ? (
         <>
       <div className="mt-4" data-trust-layer="capture-intake">
-        <TrustEvidenceBar
-          source={CAPTURE_TRUST_SOURCE_LABELS[form.sourceType]}
-          confidence={needsOcrConfirmation ? "확인 필요" : "안정"}
-          learnerConfirmed={Boolean(form.ocrConfirmedByLearner || form.hasManualCorrection)}
-          evidenceUnavailable={
-            extractionState === "uploading" ||
-            extractionState === "extracting" ||
-            extractionState === "failed"
-          }
-          officialStatus="공식 채점 아님"
-          editable
-          note={CAPTURE_TRUST_LAYER_COPY}
-        />
+        {mode === "second" ? (
+          <TrustEvidenceBar
+            evidence={trustEvidence}
+            sources={[V3_CAPTURE_TRUST_SOURCE_LABELS[form.sourceType]]}
+            summary={CAPTURE_TRUST_LAYER_COPY}
+            detail="OCR·가져온 텍스트는 저장 전 직접 수정할 수 있으며 정답 판정이나 결과 확정을 제공하지 않습니다."
+            saveStatus="아직 계정 저장 영수증이 확인되지 않았습니다."
+            showSaveStatus={false}
+          />
+        ) : (
+          <LegacyTrustEvidenceBar
+            source={LEGACY_CAPTURE_TRUST_SOURCE_LABELS[form.sourceType]}
+            confidence={needsOcrConfirmation ? "확인 필요" : "안정"}
+            learnerConfirmed={Boolean(form.ocrConfirmedByLearner || form.hasManualCorrection)}
+            evidenceUnavailable={
+              extractionState === "uploading" ||
+              extractionState === "extracting" ||
+              extractionState === "failed"
+            }
+            officialStatus="공식 채점 아님"
+            editable
+            note={CAPTURE_TRUST_LAYER_COPY}
+          />
+        )}
       </div>
       <details
-        className={`quiet-disclosure mt-3 rounded-[var(--radius-md)] border ${extractionState === "failed" ? "border-[color:var(--status-red)] bg-[color:var(--status-red-soft)]" : "border-[color:var(--border-hairline)] bg-[color:var(--surface)]"}`}
+        className={mode === "second"
+          ? `quiet-disclosure mt-3 rounded-[var(--v3-radius-control)] border ${extractionState === "failed" ? "border-[var(--color-border-risk)] bg-[var(--color-background-risk)]" : "border-[var(--color-border-default)] bg-[var(--color-background-subtle)]"}`
+          : `quiet-disclosure mt-3 rounded-[var(--radius-md)] border ${extractionState === "failed" ? "border-[color:var(--status-red)] bg-[color:var(--status-red-soft)]" : "border-[color:var(--border-hairline)] bg-[color:var(--surface)]"}`}
         open={extractionState === "failed"}
         data-capture-ocr-status-disclosure
         data-s224v-secondary-diagnostics
       >
-        <summary className="cursor-pointer list-none px-3 py-2 text-xs font-medium text-[color:var(--muted)]">
+        <summary className={mode === "second" ? "v3-type-label-strong flex min-h-11 cursor-pointer list-none items-center px-3 py-2 text-[var(--color-text-primary)]" : "cursor-pointer list-none px-3 py-2 text-xs font-medium text-[color:var(--muted)]"}>
           OCR 상태 · {extractionStateLabel[extractionState]}
         </summary>
-        <p className="border-t border-[color:var(--border-hairline)] px-3 py-3 text-sm text-[color:var(--foreground-strong)]">
+        <p className={mode === "second" ? "v3-type-compact ko-keep border-t border-[var(--color-border-default)] px-3 py-3 text-[var(--color-text-primary)]" : "border-t border-[color:var(--border-hairline)] px-3 py-3 text-sm text-[color:var(--foreground-strong)]"}>
           {{
             idle: "사진을 찍거나 텍스트를 붙여넣어 시작하세요.",
             uploading: "사진을 불러오는 중입니다.",
@@ -2388,7 +2817,7 @@ function IntakePanel({
         </p>
       </details>
       <label className="mt-4 block space-y-2">
-        <span className="text-sm text-[color:var(--foreground-strong)]">
+        <span className={mode === "second" ? "v3-type-label-strong text-[var(--color-text-primary)]" : "text-sm text-[color:var(--foreground-strong)]"}>
           오늘 공부한 내용 또는 내 답안
         </span>
         <Textarea
@@ -2408,14 +2837,15 @@ function IntakePanel({
               ? "권장: 사례 메모, 강의/교재 정리, 내 답안을 텍스트로 붙여넣으세요. 예: 강의/교재 정리: ... / 내 답안: ..."
               : "권장: 문제와 정답, 내가 고른 답을 텍스트로 붙여넣으세요. 예: 정답: 3 / 내 답: 2"
           }
-          className="min-h-56 border-[color:var(--border-hairline)] bg-[color:var(--bg-surface)] text-[color:var(--foreground-strong)] leading-7 transition-colors focus-visible:border-[color:var(--accent-deep)] focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2"
+          className={mode === "second" ? "min-h-56 rounded-[var(--v3-radius-control)] border-[var(--color-border-default)] bg-[var(--color-background-surface)] text-[var(--color-text-primary)] leading-7 transition-colors focus-visible:border-[var(--color-border-focus)] focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2" : "min-h-56 border-[color:var(--border-hairline)] bg-[color:var(--bg-surface)] text-[color:var(--foreground-strong)] leading-7 transition-colors focus-visible:border-[color:var(--accent-deep)] focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2"}
         />
       </label>
-      <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">학습 노트 원문은 비공개로 보관되며, 파생 학습 신호는 개인 추천 개선에만 사용됩니다.</p>
-      <details className="quiet-disclosure mt-4 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]" data-capture-subject-selector={mode} data-s224v-secondary-diagnostics>
-        <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">과목 확인</summary>
-        <div className="border-t border-[color:var(--border-subtle)] px-4 py-3">
+      <p className={mode === "second" ? "v3-type-caption ko-keep mt-1 text-[var(--color-text-secondary)]" : "mt-1 text-xs leading-5 text-[color:var(--muted)]"}>학습 노트 원문은 비공개로 보관되며, 파생 학습 신호는 개인 추천 개선에만 사용됩니다.</p>
+      <details className={mode === "second" ? "quiet-disclosure mt-4 rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-subtle)]" : "quiet-disclosure mt-4 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]"} data-capture-subject-selector={mode} data-s224v-secondary-diagnostics>
+        <summary className={mode === "second" ? "v3-type-label-strong flex min-h-11 cursor-pointer list-none items-center px-4 py-3 text-[var(--color-text-primary)]" : "cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]"}>과목 확인</summary>
+        <div className={mode === "second" ? "border-t border-[var(--color-border-default)] px-4 py-3" : "border-t border-[color:var(--border-subtle)] px-4 py-3"}>
           <SubjectSelect
+            mode={mode}
             subjectLabel={config.subjectLabel}
             subjects={config.subjects}
             value={form.subjectLabel}
@@ -2423,22 +2853,30 @@ function IntakePanel({
           />
         </div>
       </details>
-      <div className="sticky bottom-3 z-30 mt-3 rounded-[var(--radius-lg)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-3 shadow-[var(--shadow-soft)] sm:bottom-5 sm:p-4" data-testid="capture-save-action-bar">
+      <div
+        className={
+          mode === "second"
+            ? "mt-4 rounded-[var(--v3-radius-panel)] border border-[var(--color-border-focus)] bg-[var(--color-background-brand-soft)] p-4"
+            : "sticky bottom-3 z-30 mt-3 rounded-[var(--radius-lg)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-3 shadow-[var(--shadow-soft)] sm:bottom-5 sm:p-4"
+        }
+        data-testid="capture-save-action-bar"
+      >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="ko-keep text-sm font-medium text-[color:var(--foreground-strong)]">입력 내용을 먼저 확인합니다.</p>
-            <p className="ko-keep mt-1 text-xs leading-5 text-[color:var(--muted)]">다음 단계에서 OCR/텍스트 초안을 보고 수정한 뒤 가장 큰 약점 1개를 정리합니다.</p>
+            <p className={mode === "second" ? "v3-type-label-strong ko-keep text-[var(--color-text-primary)]" : "ko-keep text-sm font-medium text-[color:var(--foreground-strong)]"}>입력 내용을 먼저 확인합니다.</p>
+            <p className={mode === "second" ? "v3-type-caption ko-keep mt-1 text-[var(--color-text-secondary)]" : "ko-keep mt-1 text-xs leading-5 text-[color:var(--muted)]"}>다음 단계에서 OCR/텍스트 초안을 보고 수정한 뒤 가장 큰 약점 1개를 정리합니다.</p>
             <button
               type="button"
               onClick={onQuickSave}
               disabled={!canQuickSave || saving || extracting}
-              className="mt-2 text-xs font-medium text-[color:var(--muted)] underline underline-offset-4 transition hover:text-[color:var(--foreground-strong)] disabled:cursor-not-allowed disabled:opacity-50"
+              className={mode === "second" ? "v3-type-caption mt-2 min-h-11 text-[var(--color-text-secondary)] underline underline-offset-4 transition hover:text-[var(--color-text-primary)] disabled:cursor-not-allowed disabled:opacity-50" : "mt-2 text-xs font-medium text-[color:var(--muted)] underline underline-offset-4 transition hover:text-[color:var(--foreground-strong)] disabled:cursor-not-allowed disabled:opacity-50"}
             >
               {saving ? "저장 중" : "빠르게 저장"}
             </button>
           </div>
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-            <Button
+            <CaptureActionButton
+              mode={mode}
               type="button"
               onClick={onGenerate}
               disabled={!canQuickSave || saving || extracting}
@@ -2448,41 +2886,41 @@ function IntakePanel({
               data-s225x-dominant-primary-after-input
             >
               {extracting ? "입력 내용 확인 중" : "입력 내용 확인하기"}
-            </Button>
+            </CaptureActionButton>
           </div>
         </div>
       </div>
-      {form.sourceType === "pdf" ? <p className="text-xs text-[color:var(--muted)]">선택한 PDF의 내용은 아래 텍스트 입력에서 직접 확인해 주세요.</p> : null}
+      {form.sourceType === "pdf" ? <p className={mode === "second" ? "v3-type-caption text-[var(--color-text-secondary)]" : "text-xs text-[color:var(--muted)]"}>선택한 PDF의 내용은 아래 텍스트 입력에서 직접 확인해 주세요.</p> : null}
       {uploadedPages.length > 0 ? (
-        <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3">
+        <div className={mode === "second" ? "border-y border-[var(--color-border-default)] py-4" : "rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3"}>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <p className="text-xs font-medium text-[color:var(--muted)]">페이지 순서 확인</p>
-              <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">여러 장 답안지는 순서가 중요합니다. 저장 전 페이지 순서와 OCR 내용을 확인해 주세요.</p>
+              <p className={mode === "second" ? "v3-type-label-strong text-[var(--color-text-primary)]" : "text-xs font-medium text-[color:var(--muted)]"}>페이지 순서 확인</p>
+              <p className={mode === "second" ? "v3-type-caption ko-keep mt-1 text-[var(--color-text-secondary)]" : "mt-1 text-xs leading-5 text-[color:var(--muted)]"}>여러 장 답안지는 순서가 중요합니다. 저장 전 페이지 순서와 OCR 내용을 확인해 주세요.</p>
             </div>
-            <Button type="button" variant="outline" className="min-h-11 w-full sm:w-auto" onClick={() => cameraInputRef.current?.click()}>
+            <CaptureActionButton mode={mode} type="button" variant="outline" className="min-h-11 w-full sm:w-auto" onClick={() => cameraInputRef.current?.click()}>
               다시 찍기
-            </Button>
+            </CaptureActionButton>
           </div>
-          <ul className="mt-3 space-y-2">
+          <ul className={mode === "second" ? "mt-3 divide-y divide-[var(--color-border-default)]" : "mt-3 space-y-2"}>
             {uploadedPages.map((page, index) => (
-              <li key={page.id} className="rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)] p-3 text-sm">
+              <li key={page.id} className={mode === "second" ? "py-3 first:pt-0 last:pb-0" : "rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)] p-3 text-sm"}>
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <span className="break-words font-medium text-[color:var(--foreground-strong)]">{page.label}</span>
-                  <div className="grid grid-cols-3 gap-2 sm:flex">
-                    <Button type="button" variant="outline" className="min-h-11 px-3 text-xs" onClick={() => onMovePage(index, "up")} disabled={index === 0} aria-label={`${page.label} 위로 이동`}>위로</Button>
-                    <Button type="button" variant="outline" className="min-h-11 px-3 text-xs" onClick={() => onMovePage(index, "down")} disabled={index === uploadedPages.length - 1} aria-label={`${page.label} 아래로 이동`}>아래로</Button>
-                    <Button type="button" variant="outline" className="min-h-11 px-3 text-xs" onClick={() => onRemovePage(index)} aria-label={`${page.label} 제거`}>제거</Button>
+                  <span className={mode === "second" ? "v3-type-compact break-words text-[var(--color-text-primary)]" : "break-words font-medium text-[color:var(--foreground-strong)]"}>{page.label}</span>
+                  <div className={mode === "second" ? "flex flex-wrap gap-2" : "grid grid-cols-3 gap-2 sm:flex"}>
+                    <CaptureActionButton mode={mode} type="button" variant="outline" className="min-h-11 px-3 text-xs" onClick={() => onMovePage(index, "up")} disabled={index === 0} aria-label={`${page.label} 위로 이동`}>위로</CaptureActionButton>
+                    <CaptureActionButton mode={mode} type="button" variant="outline" className="min-h-11 px-3 text-xs" onClick={() => onMovePage(index, "down")} disabled={index === uploadedPages.length - 1} aria-label={`${page.label} 아래로 이동`}>아래로</CaptureActionButton>
+                    <CaptureActionButton mode={mode} type="button" variant="outline" className="min-h-11 px-3 text-xs" onClick={() => onRemovePage(index)} aria-label={`${page.label} 제거`}>제거</CaptureActionButton>
                   </div>
                 </div>
-                <details className="quiet-disclosure mt-2 rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] bg-[color:var(--surface)]" data-s224v-secondary-diagnostics>
-                  <summary className="cursor-pointer list-none px-3 py-2 text-xs text-[color:var(--muted)]">미리보기</summary>
-                  <div className="border-t border-[color:var(--border-hairline)] px-3 py-3">
+                <details className={mode === "second" ? "quiet-disclosure mt-2 rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-subtle)]" : "quiet-disclosure mt-2 rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] bg-[color:var(--surface)]"} data-s224v-secondary-diagnostics>
+                  <summary className={mode === "second" ? "v3-type-label-strong flex min-h-11 cursor-pointer list-none items-center px-3 py-2 text-[var(--color-text-primary)]" : "cursor-pointer list-none px-3 py-2 text-xs text-[color:var(--muted)]"}>미리보기</summary>
+                  <div className={mode === "second" ? "border-t border-[var(--color-border-default)] px-3 py-3" : "border-t border-[color:var(--border-hairline)] px-3 py-3"}>
                     {page.previewUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element -- local blob preview keeps mobile capture lightweight without uploading raw pages.
-                      <img src={page.previewUrl} alt={`${page.label} 미리보기`} className="max-h-64 w-full rounded-[var(--radius-sm)] object-contain" />
+                      <img src={page.previewUrl} alt={`${page.label} 미리보기`} className={mode === "second" ? "max-h-64 w-full rounded-[var(--v3-radius-control)] object-contain" : "max-h-64 w-full rounded-[var(--radius-sm)] object-contain"} />
                     ) : null}
-                    <p className="mt-2 whitespace-pre-wrap break-words text-xs leading-5 text-[color:var(--muted)]">{page.ocrText || "내용은 아래 OCR 편집창에서 확인해 주세요."}</p>
+                    <p className={mode === "second" ? "v3-type-caption ko-keep mt-2 whitespace-pre-wrap break-words text-[var(--color-text-secondary)]" : "mt-2 whitespace-pre-wrap break-words text-xs leading-5 text-[color:var(--muted)]"}>{page.ocrText || "내용은 아래 OCR 편집창에서 확인해 주세요."}</p>
                   </div>
                 </details>
               </li>
@@ -2495,66 +2933,73 @@ function IntakePanel({
           최소 입력: 정답, 내 답, 틀린 이유를 한 줄로 남겨도 됩니다. 예: 정답: 3 / 내 답: 2 / 이유: 선지 오독
         </p>
       ) : null}
-      <details className="quiet-disclosure mt-4 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]" data-s224v-secondary-diagnostics>
-        <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">선택 정보</summary>
-        <div className="grid gap-3 border-t border-[color:var(--border-subtle)] px-4 py-3 sm:grid-cols-3">
+      <details className={mode === "second" ? "quiet-disclosure mt-4 rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-subtle)]" : "quiet-disclosure mt-4 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]"} data-s224v-secondary-diagnostics>
+        <summary className={mode === "second" ? "v3-type-label-strong flex min-h-11 cursor-pointer list-none items-center px-4 py-3 text-[var(--color-text-primary)]" : "cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]"}>선택 정보</summary>
+        <div className={mode === "second" ? "space-y-4 border-t border-[var(--color-border-default)] px-4 py-3" : "grid gap-3 border-t border-[color:var(--border-subtle)] px-4 py-3 sm:grid-cols-3"}>
         <label className="space-y-2">
-          <span className="text-xs text-[color:var(--muted)]">소요 시간</span>
+          <span className={mode === "second" ? "v3-type-caption text-[var(--color-text-secondary)]" : "text-xs text-[color:var(--muted)]"}>소요 시간</span>
           <input value={form.timeSpentSeconds} onChange={(event) => update("timeSpentSeconds", event.target.value)} className="form-control" placeholder="예: 45분" />
         </label>
         <label className="space-y-2">
-          <span className="text-xs text-[color:var(--muted)]">자신감</span>
+          <span className={mode === "second" ? "v3-type-caption text-[var(--color-text-secondary)]" : "text-xs text-[color:var(--muted)]"}>자신감</span>
           <select value={form.confidence} onChange={(event) => update("confidence", event.target.value as ConfidenceLevel)} className="form-control">
             {CONFIDENCE_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
           </select>
         </label>
         <label className="space-y-2">
-          <span className="text-xs text-[color:var(--muted)]">메모</span>
+          <span className={mode === "second" ? "v3-type-caption text-[var(--color-text-secondary)]" : "text-xs text-[color:var(--muted)]"}>메모</span>
           <input value={form.sourceLabel} onChange={(event) => update("sourceLabel", event.target.value)} className="form-control" placeholder="선택 입력" />
         </label>
         </div>
       </details>
-      <details className="quiet-disclosure mt-4 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]" data-s224v-secondary-diagnostics>
-        <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">첨부 상태</summary>
-        <div className="border-t border-[color:var(--border-subtle)] px-4 py-3">
-          {form.sourceLabel ? <p className="text-sm text-[color:var(--muted)]">보관한 파일: {form.sourceLabel}</p> : null}
-          {uploadedPages.length > 0 ? <p className="mt-2 text-sm text-[color:var(--muted)]">페이지 순서: {uploadedPages.map((page) => page.label).join(" / ")}</p> : null}
+      <details className={mode === "second" ? "quiet-disclosure mt-4 rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-subtle)]" : "quiet-disclosure mt-4 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]"} data-s224v-secondary-diagnostics>
+        <summary className={mode === "second" ? "v3-type-label-strong flex min-h-11 cursor-pointer list-none items-center px-4 py-3 text-[var(--color-text-primary)]" : "cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]"}>첨부 상태</summary>
+        <div className={mode === "second" ? "v3-type-caption ko-keep border-t border-[var(--color-border-default)] px-4 py-3 text-[var(--color-text-secondary)]" : "border-t border-[color:var(--border-subtle)] px-4 py-3"}>
+          {form.sourceLabel ? <p className={mode === "second" ? undefined : "text-sm text-[color:var(--muted)]"}>보관한 파일: {form.sourceLabel}</p> : null}
+          {uploadedPages.length > 0 ? <p className={mode === "second" ? "mt-2" : "mt-2 text-sm text-[color:var(--muted)]"}>페이지 순서: {uploadedPages.map((page) => page.label).join(" / ")}</p> : null}
           {form.sourceType === "pdf" ? (
-                <p className="mt-2 text-sm text-[color:var(--muted)]">현재 PDF는 내용 확인 후 직접 붙여넣을 수 있습니다.</p>
+                <p className={mode === "second" ? "mt-2" : "mt-2 text-sm text-[color:var(--muted)]"}>현재 PDF는 내용 확인 후 직접 붙여넣을 수 있습니다.</p>
           ) : null}
         </div>
       </details>
-      <p className="mt-3 text-caption leading-5 text-[color:var(--muted)]">오늘은 이 작업 하나만 먼저 합니다.</p>
+      <p className={mode === "second" ? "v3-type-caption ko-keep mt-3 text-[var(--color-text-secondary)]" : "mt-3 text-caption leading-5 text-[color:var(--muted)]"}>오늘은 이 작업 하나만 먼저 합니다.</p>
       {form.lowConfidenceFlag ? (
-        <p className="mt-4 rounded-[var(--radius-md)] border border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] px-4 py-3 text-sm leading-6 text-[color:var(--foreground-strong)]">
+        <p role="status" aria-live="polite" className={mode === "second" ? "v3-type-compact ko-keep mt-4 rounded-[var(--v3-radius-control)] border border-[var(--color-border-attention)] bg-[var(--color-background-attention)] px-4 py-3 text-[var(--color-text-primary)]" : "mt-4 rounded-[var(--radius-md)] border border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] px-4 py-3 text-sm leading-6 text-[color:var(--foreground-strong)]"}>
           인식이 불안정합니다. 중요한 숫자/단어를 확인해 주세요. 확인 또는 수정 후 O/X·계산형 정리를 진행할 수 있습니다.
         </p>
       ) : null}
       {calculatorWorkflow ? (
-        <details className="quiet-disclosure mt-4 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]" data-s224v-secondary-diagnostics>
-          <summary className="cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]">계산기 루틴 선택</summary>
-          <div className="flex flex-col gap-3 border-t border-[color:var(--border-subtle)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm leading-6 text-[color:var(--foreground-strong)]">
+        <details className={mode === "second" ? "quiet-disclosure mt-4 rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-subtle)]" : "quiet-disclosure mt-4 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]"} data-s224v-secondary-diagnostics>
+          <summary className={mode === "second" ? "v3-type-label-strong flex min-h-11 cursor-pointer list-none items-center px-4 py-3 text-[var(--color-text-primary)]" : "cursor-pointer list-none px-4 py-3 text-xs font-medium text-[color:var(--muted)]"}>계산기 루틴 선택</summary>
+          <div className={mode === "second" ? "flex flex-col gap-3 border-t border-[var(--color-border-default)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between" : "flex flex-col gap-3 border-t border-[color:var(--border-subtle)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between"}>
+            <p className={mode === "second" ? "v3-type-compact ko-keep text-[var(--color-text-primary)]" : "text-sm leading-6 text-[color:var(--foreground-strong)]"}>
               {calculatorWorkflow.subject} 계산형 기록이면 fx-9860GIII 손타건 루틴을 함께 확인할 수 있습니다.
             </p>
-            <Link href={getCalculatorWorkflowHref(calculatorWorkflow)}>
-              <Button type="button" variant="outline">
+            {mode === "second" ? (
+              <V3ActionLink href={getCalculatorWorkflowHref(calculatorWorkflow)} tone="secondary">
                 루틴 보기
-              </Button>
-            </Link>
+              </V3ActionLink>
+            ) : (
+              <Link
+                href={getCalculatorWorkflowHref(calculatorWorkflow)}
+                className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] px-4 py-2 text-sm font-medium text-[color:var(--foreground-strong)]"
+              >
+                루틴 보기
+              </Link>
+            )}
           </div>
         </details>
       ) : null}
       {needsOcrConfirmation ? (
-        <p className="mt-3 rounded-[var(--radius-md)] border border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] px-4 py-3 text-sm leading-6 text-[color:var(--foreground-strong)]">
+        <p role="status" aria-live="polite" className={mode === "second" ? "v3-type-compact ko-keep mt-3 rounded-[var(--v3-radius-control)] border border-[var(--color-border-attention)] bg-[var(--color-background-attention)] px-4 py-3 text-[var(--color-text-primary)]" : "mt-3 rounded-[var(--radius-md)] border border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] px-4 py-3 text-sm leading-6 text-[color:var(--foreground-strong)]"}>
           OCR 확인 필요{missingConfirmationFields.length > 0 ? `: ${missingConfirmationFields.join(", ")}` : ""}. 저장 전에 필수 항목을 확인해 주세요.
         </p>
       ) : null}
-      {extractError ? <p className="mt-3 text-sm leading-6 text-[color:var(--cue-risk)]">{extractError}</p> : null}
+      {extractError ? <p role="alert" aria-live="assertive" aria-atomic="true" className={mode === "second" ? "v3-type-compact ko-keep mt-3 rounded-[var(--v3-radius-control)] border border-[var(--color-border-risk)] bg-[var(--color-background-risk)] px-4 py-3 text-[var(--color-text-risk)]" : "mt-3 text-sm leading-6 text-[color:var(--cue-risk)]"}>{extractError}</p> : null}
       {mode === "second" ? (
-        <details className="quiet-disclosure mt-3 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)]" data-s224v-secondary-diagnostics>
-          <summary className="cursor-pointer list-none px-3 py-2 text-xs font-medium text-[color:var(--muted)]">저장 전 캡처 품질 체크</summary>
-          <ul className="border-t border-[color:var(--border-subtle)] px-3 py-3 list-disc space-y-1 pl-8 text-xs text-[color:var(--muted)]">
+        <details className="quiet-disclosure mt-3 rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-subtle)]" data-s224v-secondary-diagnostics>
+          <summary className="v3-type-label-strong flex min-h-11 cursor-pointer list-none items-center px-3 py-2 text-[var(--color-text-primary)]">저장 전 캡처 품질 체크</summary>
+          <ul className="v3-type-caption ko-keep list-disc space-y-1 border-t border-[var(--color-border-default)] px-3 py-3 pl-8 text-[var(--color-text-secondary)]">
             <li>글자가 선명한가</li>
             <li>페이지 순서가 맞는가</li>
             <li>문제번호가 보이는가</li>
@@ -2575,6 +3020,7 @@ function ExtractionPreview({
   uploadedPages,
   needsOcrConfirmation,
   missingConfirmationFields,
+  extractError,
   onEdit,
   onRegenerate,
   onRawOcrChange,
@@ -2584,10 +3030,101 @@ function ExtractionPreview({
   uploadedPages: UploadedPage[];
   needsOcrConfirmation: boolean;
   missingConfirmationFields: string[];
+  extractError: string;
   onEdit: () => void;
   onRegenerate: () => void;
   onRawOcrChange: (value: string) => void;
 }) {
+  if (mode === "second") {
+    const previewEvidence: TrustProvenanceEvidence = needsOcrConfirmation
+      ? { kind: "review_requirement", reviewRequired: true }
+      : form.ocrConfirmedByLearner || form.hasManualCorrection
+        ? { kind: "learner_confirmation", learnerConfirmed: true }
+        : { kind: "review_requirement", reviewRequired: true };
+
+    return (
+      <section
+        className="rounded-[var(--v3-radius-panel)] border border-[var(--color-border-default)] bg-[var(--color-background-surface)] p-4 sm:p-5"
+        data-v3-capture-extraction-preview
+      >
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="v3-type-caption text-[var(--color-text-secondary)]">2. 근거 확인</p>
+            <h3 className="v3-type-section ko-keep mt-1 text-[var(--color-text-primary)]">추출된 원문을 먼저 확인합니다.</h3>
+            <p className="v3-type-body ko-keep mt-2 text-[var(--color-text-secondary)]">틀린 글자만 바로잡으면 다음 단계에서 가장 큰 약점 하나를 정리합니다.</p>
+          </div>
+          <V3ActionButton type="button" tone="secondary" onClick={onRegenerate}>
+            다시 만들기
+          </V3ActionButton>
+        </div>
+
+        <div className="mt-4" data-trust-layer="capture-preview">
+          <TrustEvidenceBar
+            evidence={previewEvidence}
+            sources={[V3_CAPTURE_TRUST_SOURCE_LABELS[form.sourceType]]}
+            summary={CAPTURE_TRUST_LAYER_COPY}
+            detail="추출 원문과 구조화 초안은 저장 전 직접 수정할 수 있으며 정답 판정이나 결과 확정을 제공하지 않습니다."
+            saveStatus="아직 계정 저장 영수증이 확인되지 않았습니다."
+            showSaveStatus={false}
+          />
+        </div>
+
+        {needsOcrConfirmation ? (
+          <p
+            role="status"
+            aria-live="polite"
+            className="v3-type-compact ko-keep mt-4 rounded-[var(--v3-radius-control)] border border-[var(--color-border-attention)] bg-[var(--color-background-attention)] px-4 py-3 text-[var(--color-text-primary)]"
+          >
+            확인이 필요한 초안입니다.
+            {missingConfirmationFields.length > 0 ? ` 확인 필요: ${missingConfirmationFields.join(", ")}` : ""}
+          </p>
+        ) : null}
+        {extractError ? (
+          <p
+            role="alert"
+            aria-live="assertive"
+            aria-atomic="true"
+            className="v3-type-compact ko-keep mt-4 rounded-[var(--v3-radius-control)] border border-[var(--color-border-risk)] bg-[var(--color-background-risk)] px-4 py-3 text-[var(--color-text-risk)]"
+          >
+            {extractError}
+          </p>
+        ) : null}
+
+        <div className="mt-5 border-y border-[var(--color-border-default)] py-4">
+          <p className="v3-type-label-strong text-[var(--color-text-primary)]">OCR 결과 확인 · 편집 가능</p>
+          {uploadedPages.length > 0 ? (
+            <p className="v3-type-caption ko-keep mt-1 break-words text-[var(--color-text-secondary)]">페이지 라벨: {uploadedPages.map((page) => page.label).join(" / ")}</p>
+          ) : null}
+          <Textarea
+            value={form.rawQuestionText}
+            onChange={(event) => onRawOcrChange(event.target.value)}
+            placeholder="OCR 결과를 확인하고 바로 수정하세요."
+            className="mt-3 min-h-44 rounded-[var(--v3-radius-control)] border-[var(--color-border-default)] bg-[var(--color-background-surface)] text-[var(--color-text-primary)] leading-7 focus-visible:border-[var(--color-border-focus)] focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2"
+          />
+          <p className="v3-type-caption ko-keep mt-2 text-[var(--color-text-secondary)]">수정 내용은 이 기기 초안에 자동 저장됩니다.</p>
+        </div>
+
+        <div className="mt-5 space-y-3">
+          <BiggestGap
+            gap={form.biggestGap || form.missingIssue || "가장 큰 약점 1개를 확인해 주세요."}
+            evidence={`다음 행동 · ${form.rewriteInstruction || "확인 필요"}`}
+            type="MissingLink"
+          />
+          <V3QuietDisclosure summary="추출된 세부 정보" helper="저장 전 직접 확인하고 수정할 수 있습니다.">
+            <div className="divide-y divide-[var(--color-border-default)] border-y border-[var(--color-border-default)]">
+              <PreviewLine label="과목" value={form.subjectLabel} />
+              <PreviewLine label="주제/사례 요약" value={form.caseSummary || "확인 필요"} />
+              <PreviewLine label="확신/복습 시점" value={`${form.confidence} · ${form.nextReviewDate}`} />
+              <PreviewLine label="누락 논점 후보" value={form.missingIssue} />
+              <PreviewLine label="구조 약점" value={form.weakStructurePoint} />
+              <PreviewLine label="페이지 라벨" value={form.sourceLabel || "없음"} />
+            </div>
+          </V3QuietDisclosure>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 sm:p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -2596,12 +3133,12 @@ function ExtractionPreview({
           <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">텍스트를 확인한 뒤 노트로 정리합니다</h3>
         </div>
         <div className="flex gap-2">
-          <Button type="button" variant="outline" onClick={onRegenerate}>
+          <CaptureActionButton mode={mode} type="button" variant="outline" onClick={onRegenerate}>
             다시 만들기
-          </Button>
-          <Button type="button" variant="outline" onClick={onEdit}>
+          </CaptureActionButton>
+          <CaptureActionButton mode={mode} type="button" variant="outline" onClick={onEdit}>
             필드 확인
-          </Button>
+          </CaptureActionButton>
         </div>
       </div>
       {needsOcrConfirmation ? (
@@ -2623,31 +3160,17 @@ function ExtractionPreview({
         />
         <p className="mt-2 text-xs text-[color:var(--muted)]">수정 내용은 이 기기 초안에 자동 저장됩니다.</p>
       </div>
-      {mode === "first" ? (
-        <div className="mt-5 grid gap-3">
-          <PreviewLine label="과목" value={form.subjectLabel} />
-          <PreviewLine label="주제/사례 요약" value={form.problemTitle || form.caseSummary} />
-          <PreviewLine label="가장 큰 약점" value={form.userReasonText || "확인 필요"} />
-          <PreviewLine label="다음 행동" value={form.comparisonPoint || "확인 필요"} />
-          <PreviewLine label="확신/복습 시점" value={`${form.confidence} · ${form.nextReviewDate}`} />
-          <PreviewLine label="실수 원인 추정" value={form.userReasonPreset || form.userReasonText} />
-          <PreviewLine label="핵심 개념" value={form.keyConcepts} />
-          <PreviewLine label="유사/재시도 행동" value={form.comparisonPoint} />
-          <PreviewLine label="페이지 라벨" value={form.sourceLabel || "없음"} />
-        </div>
-      ) : (
-        <div className="mt-5 grid gap-3">
-          <PreviewLine label="과목" value={form.subjectLabel} />
-          <PreviewLine label="주제/사례 요약" value={form.caseSummary || "확인 필요"} />
-          <PreviewLine label="가장 큰 약점" value={form.biggestGap || form.missingIssue} />
-          <PreviewLine label="다음 행동" value={form.rewriteInstruction || "확인 필요"} />
-          <PreviewLine label="확신/복습 시점" value={`${form.confidence} · ${form.nextReviewDate}`} />
-          <PreviewLine label="누락 논점 후보" value={form.missingIssue} />
-          <PreviewLine label="구조 약점" value={form.weakStructurePoint} />
-          <PreviewLine label="다시쓰기 지시" value={form.rewriteInstruction} />
-          <PreviewLine label="페이지 라벨" value={form.sourceLabel || "없음"} />
-        </div>
-      )}
+      <div className="mt-5 grid gap-3">
+        <PreviewLine label="과목" value={form.subjectLabel} legacy />
+        <PreviewLine label="주제/사례 요약" value={form.problemTitle || form.caseSummary} legacy />
+        <PreviewLine label="가장 큰 약점" value={form.userReasonText || "확인 필요"} legacy />
+        <PreviewLine label="다음 행동" value={form.comparisonPoint || "확인 필요"} legacy />
+        <PreviewLine label="확신/복습 시점" value={`${form.confidence} · ${form.nextReviewDate}`} legacy />
+        <PreviewLine label="실수 원인 추정" value={form.userReasonPreset || form.userReasonText} legacy />
+        <PreviewLine label="핵심 개념" value={form.keyConcepts} legacy />
+        <PreviewLine label="유사/재시도 행동" value={form.comparisonPoint} legacy />
+        <PreviewLine label="페이지 라벨" value={form.sourceLabel || "없음"} legacy />
+      </div>
     </section>
   );
 }
@@ -2684,25 +3207,55 @@ function ConfirmPanel({
   });
 
   return (
-    <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 sm:p-5">
-      <p className="text-caption text-[color:var(--muted)]">Step 3. 저장하고 오늘 계획에 반영</p>
-      <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">AI가 이렇게 읽었습니다. 틀린 부분만 고쳐 주세요.</h3>
-      <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">이미 읽은 값은 다시 입력하지 않아도 됩니다. 부족한 항목이 있으면 그 항목만 정확히 알려드립니다.</p>
+    <section className={mode === "second" ? "rounded-[var(--v3-radius-panel)] border border-[var(--color-border-default)] bg-[var(--color-background-surface)] p-4 sm:p-5" : "rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 sm:p-5"}>
+      <p className={mode === "second" ? "v3-type-caption text-[var(--color-text-secondary)]" : "text-caption text-[color:var(--muted)]"}>Step 3. 저장하고 오늘 계획에 반영</p>
+      <h3 className={mode === "second" ? "v3-type-section ko-keep mt-1 text-[var(--color-text-primary)]" : "mt-1 text-title text-[color:var(--foreground-strong)]"}>AI가 이렇게 읽었습니다. 틀린 부분만 고쳐 주세요.</h3>
+      <p className={mode === "second" ? "v3-type-body ko-keep mt-2 text-[var(--color-text-secondary)]" : "mt-2 text-sm leading-6 text-[color:var(--muted)]"}>이미 읽은 값은 다시 입력하지 않아도 됩니다. 부족한 항목이 있으면 그 항목만 정확히 알려드립니다.</p>
+      {mode === "second" ? (
+        <div className="mt-4 space-y-3" data-testid="capture-note-summary">
+          <BiggestGap
+            gap={captureCopy.gapLabel.replace("가장 큰 약점: ", "")}
+            evidence={`다음 행동 · ${captureCopy.nextActionLabel.replace("다음 행동: ", "")}`}
+            type="MissingLink"
+          />
+          <div className="divide-y divide-[var(--color-border-default)] border-y border-[var(--color-border-default)] py-1">
+            <PreviewLine label="상태" value={`${captureSummary.capturedTextStatus === "draft" ? "OCR 초안" : "직접 확인됨"} · 아직 저장 전`} />
+            <PreviewLine label="과목/입력" value={`${captureSummary.subject} · ${captureSummary.sourceType}`} />
+            <PreviewLine label="오늘 할 일" value={captureCopy.todayPlanCta} />
+            <PreviewLine label="복습 선택" value={captureCopy.retryOrRewriteCta} />
+          </div>
+        </div>
+      ) : (
       <div className="mt-4 grid gap-3 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-4" data-testid="capture-note-summary">
-        <PreviewLine label="상태" value={`${captureSummary.capturedTextStatus === "draft" ? "OCR 초안" : "직접 확인됨"} · 학습 노트에 저장됨`} />
-        <PreviewLine label="과목/입력" value={`${captureSummary.subject} · ${captureSummary.sourceType}`} />
-        <PreviewLine label="가장 큰 약점" value={captureCopy.gapLabel.replace("가장 큰 약점: ", "")} />
-        <PreviewLine label="다음 행동" value={captureCopy.nextActionLabel.replace("다음 행동: ", "")} />
-        <PreviewLine label="오늘 할 일" value={captureCopy.todayPlanCta} />
-        <PreviewLine label="복습 선택" value={captureCopy.retryOrRewriteCta} />
+        <PreviewLine label="상태" value={`${captureSummary.capturedTextStatus === "draft" ? "OCR 초안" : "직접 확인됨"} · 아직 저장 전`} legacy />
+        <PreviewLine label="과목/입력" value={`${captureSummary.subject} · ${captureSummary.sourceType}`} legacy />
+        <PreviewLine label="가장 큰 약점" value={captureCopy.gapLabel.replace("가장 큰 약점: ", "")} legacy />
+        <PreviewLine label="다음 행동" value={captureCopy.nextActionLabel.replace("다음 행동: ", "")} legacy />
+        <PreviewLine label="오늘 할 일" value={captureCopy.todayPlanCta} legacy />
+        <PreviewLine label="복습 선택" value={captureCopy.retryOrRewriteCta} legacy />
       </div>
+      )}
       <div className="mt-3">
-        <CognitiveLearningActionCard unit={cognitiveLearningPreview} compact />
+        {mode === "second" ? (
+          <details className="quiet-disclosure rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-subtle)] p-4" data-s224v-secondary-diagnostics>
+            <summary className="v3-type-label-strong inline-flex min-h-11 cursor-pointer items-center text-[var(--color-text-primary)]">복습·오늘 계획 단서 보기</summary>
+            <dl className="mt-3 divide-y divide-[var(--color-border-default)] border-y border-[var(--color-border-default)]">
+              <div className="py-3"><dt className="v3-type-caption text-[var(--color-text-secondary)]">인출 확인</dt><dd className="v3-type-compact ko-keep mt-1 text-[var(--color-text-primary)]">{cognitiveLearningPreview.retrievalCheck.prompt}</dd></div>
+              <div className="py-3"><dt className="v3-type-caption text-[var(--color-text-secondary)]">내일 복습</dt><dd className="v3-type-compact ko-keep mt-1 text-[var(--color-text-primary)]">{cognitiveLearningPreview.continuation.reviewQueueCandidate}</dd></div>
+            </dl>
+          </details>
+        ) : (
+          <CognitiveLearningActionCard
+            unit={cognitiveLearningPreview}
+            compact
+            presentation="legacy"
+          />
+        )}
       </div>
-      <div className="mt-5 grid gap-4 lg:grid-cols-2">
-        <SubjectSelect subjectLabel={config.subjectLabel} subjects={config.subjects} value={form.subjectLabel} onChange={updateSubject} />
+      <div className={mode === "second" ? "mt-5 space-y-4 border-y border-[var(--color-border-default)] py-4" : "mt-5 grid gap-4 lg:grid-cols-2"}>
+        <SubjectSelect mode={mode} subjectLabel={config.subjectLabel} subjects={config.subjects} value={form.subjectLabel} onChange={updateSubject} />
         <label className="space-y-2">
-          <span className="text-sm text-[color:var(--foreground-strong)]">{mode === "second" ? "작업 단계" : "회차 / 번호"}</span>
+          <span className={mode === "second" ? "v3-type-label-strong text-[var(--color-text-primary)]" : "text-sm text-[color:var(--foreground-strong)]"}>{mode === "second" ? "작업 단계" : "회차 / 번호"}</span>
           {mode === "second" ? (
             <select
               value={form.problemIdentifier}
@@ -2728,10 +3281,10 @@ function ConfirmPanel({
 
       {mode === "first" ? <FirstConfirmFields form={form} mode={mode} update={update} /> : <SecondConfirmFields form={form} mode={mode} update={update} />}
 
-      <div className={`mt-5 grid gap-4 ${mode === "second" ? "lg:grid-cols-3" : "lg:grid-cols-2"}`}>
+      <div className={mode === "second" ? "mt-5 space-y-4 border-y border-[var(--color-border-default)] py-4" : "mt-5 grid gap-4 lg:grid-cols-2"}>
         {mode === "second" ? (
           <label className="space-y-2">
-            <span className="text-sm text-[color:var(--foreground-strong)]">분류</span>
+            <span className="v3-type-label-strong text-[var(--color-text-primary)]">분류</span>
             <select
               value={form.userReasonPreset}
               onChange={(event) => update("userReasonPreset", event.target.value)}
@@ -2747,7 +3300,7 @@ function ConfirmPanel({
           </label>
         ) : null}
         <label className="space-y-2">
-          <span className="text-sm text-[color:var(--foreground-strong)]">확신 정도</span>
+          <span className={mode === "second" ? "v3-type-label-strong text-[var(--color-text-primary)]" : "text-sm text-[color:var(--foreground-strong)]"}>확신 정도</span>
           <select
             value={form.confidence}
             onChange={(event) => update("confidence", event.target.value as ConfidenceLevel)}
@@ -2761,7 +3314,7 @@ function ConfirmPanel({
           </select>
         </label>
         <label className="space-y-2">
-          <span className="text-sm text-[color:var(--foreground-strong)]">다음 복습 시점</span>
+          <span className={mode === "second" ? "v3-type-label-strong text-[var(--color-text-primary)]" : "text-sm text-[color:var(--foreground-strong)]"}>다음 복습 시점</span>
           <input
             type="date"
             value={form.nextReviewDate}
@@ -2771,12 +3324,12 @@ function ConfirmPanel({
         </label>
       </div>
 
-      <details className="quiet-disclosure mt-5 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] p-4" data-s224v-secondary-diagnostics>
-        <summary className="cursor-pointer text-sm font-medium text-[color:var(--foreground-strong)]">저장될 원문 보기</summary>
+      <details className={mode === "second" ? "quiet-disclosure mt-5 rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-subtle)] p-4" : "quiet-disclosure mt-5 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] p-4"} data-s224v-secondary-diagnostics>
+        <summary className={mode === "second" ? "v3-type-label-strong inline-flex min-h-11 cursor-pointer items-center text-[var(--color-text-primary)]" : "cursor-pointer text-sm font-medium text-[color:var(--foreground-strong)]"}>저장될 원문 보기</summary>
         <Textarea
           value={form.rawQuestionText}
           onChange={(event) => update("rawQuestionText", event.target.value)}
-          className="mt-4 min-h-36 border-[var(--border)] bg-[color:var(--surface)] text-[color:var(--foreground-strong)] leading-7"
+          className={mode === "second" ? "mt-4 min-h-36 rounded-[var(--v3-radius-control)] border-[var(--color-border-default)] bg-[var(--color-background-surface)] text-[var(--color-text-primary)] leading-7" : "mt-4 min-h-36 border-[var(--border)] bg-[color:var(--surface)] text-[color:var(--foreground-strong)] leading-7"}
         />
       </details>
     </section>
@@ -2874,21 +3427,21 @@ function FirstConfirmFields(props: FieldProps) {
 function SecondConfirmFields(props: FieldProps) {
   const { form, update } = props;
   return (
-    <div className="mt-5 space-y-4">
+    <div className="mt-5 space-y-4 border-y border-[var(--color-border-default)] py-4">
       <label className="block space-y-2">
-        <span className="text-sm text-[color:var(--foreground-strong)]">보강할 논점 1개</span>
+        <span className="v3-type-label-strong text-[var(--color-text-primary)]">보강할 논점 1개</span>
         <Textarea
           value={form.userReasonText}
           onChange={(event) => {
             update("userReasonText", event.target.value);
             update("missingIssue", event.target.value);
           }}
-          className="min-h-32 border-[var(--border)] bg-[color:var(--surface)] text-[color:var(--foreground-strong)] leading-7"
+          className="min-h-32 rounded-[var(--v3-radius-control)] border-[var(--color-border-default)] bg-[var(--color-background-surface)] text-[var(--color-text-primary)] leading-7"
         />
       </label>
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="space-y-4">
         <label className="space-y-2">
-          <span className="text-sm text-[color:var(--foreground-strong)]">내 답안 요약</span>
+          <span className="v3-type-label-strong text-[var(--color-text-primary)]">내 답안 요약</span>
           <input
             value={form.myAnswerSummary}
             onChange={(event) => update("myAnswerSummary", event.target.value)}
@@ -2896,7 +3449,7 @@ function SecondConfirmFields(props: FieldProps) {
           />
         </label>
         <label className="space-y-2">
-          <span className="text-sm text-[color:var(--foreground-strong)]">rewrite 지시</span>
+          <span className="v3-type-label-strong text-[var(--color-text-primary)]">rewrite 지시</span>
           <input
             value={form.rewriteInstruction}
             onChange={(event) => update("rewriteInstruction", event.target.value)}
@@ -2928,7 +3481,7 @@ function SecondIssueRecallPanel({
     >
       <p className="v3-type-caption text-[var(--color-text-brand)]" data-controller-label="Step 1. 쟁점 회상">다시쓰기 · 1/6 · 쟁점 회상</p>
       <h3 id="second-write-step-1-title" className="v3-type-section ko-keep mt-1 text-[var(--color-text-primary)]">강의/교재 정리 보기 전, 쟁점 1개만 적으세요.</h3>
-      <details className="quiet-disclosure mt-3 rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-surface)] p-3" data-s224v-secondary-diagnostics><summary className="v3-type-caption cursor-pointer text-[var(--color-text-secondary)]">왜 이 순서인가요?</summary><p className="v3-type-label ko-keep mt-2 text-[var(--color-text-secondary)]">완벽히 쓰지 말고, 지금 떠오르는 문장만 적으세요. 이 과목은 먼저 이 구조로 답안을 잡습니다. {template.structure}</p></details>
+      <details className="quiet-disclosure mt-3 rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-surface)] p-3" data-s224v-secondary-diagnostics><summary className="v3-type-caption inline-flex min-h-11 cursor-pointer items-center text-[var(--color-text-secondary)]">왜 이 순서인가요?</summary><p className="v3-type-label ko-keep mt-2 text-[var(--color-text-secondary)]">완벽히 쓰지 말고, 지금 떠오르는 문장만 적으세요. 이 과목은 먼저 이 구조로 답안을 잡습니다. {template.structure}</p></details>
       <label className="mt-4 block space-y-2">
         <span className="v3-type-label text-[var(--color-text-primary)]">쟁점 회상</span>
         <Textarea
@@ -2938,9 +3491,9 @@ function SecondIssueRecallPanel({
           placeholder={template.issueRecallPlaceholder}
         />
       </label>
-      <Button type="button" className="mt-4 min-h-12 w-full sm:w-auto" disabled={issueRecall.trim().length < 8} onClick={onNext} data-s232e-second-write-primary-action="1">
+      <V3ActionButton type="button" className="mt-4" disabled={issueRecall.trim().length < 8} onClick={onNext} data-s232e-second-write-primary-action="1">
         다음: 목차 작성
-      </Button>
+      </V3ActionButton>
     </section>
   );
 }
@@ -2965,7 +3518,7 @@ function SecondOutlinePanel({
     >
       <p className="v3-type-caption text-[var(--color-text-brand)]" data-controller-label="Step 2. 목차 작성">다시쓰기 · 2/6 · 목차 정리</p>
       <h3 id="second-write-step-2-title" className="v3-type-section ko-keep mt-1 text-[var(--color-text-primary)]">전체 답안보다 목차 3줄이 먼저입니다.</h3>
-      <details className="quiet-disclosure mt-3 rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-surface)] p-3" data-s224v-secondary-diagnostics><summary className="v3-type-caption cursor-pointer text-[var(--color-text-secondary)]">왜 이 순서인가요?</summary><p className="v3-type-label ko-keep mt-2 text-[var(--color-text-secondary)]">강의/교재 정리를 보기 전에 이 체크포인트 중 3개를 떠올립니다: {template.checklist.slice(0, 3).join(", ")}</p></details>
+      <details className="quiet-disclosure mt-3 rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-surface)] p-3" data-s224v-secondary-diagnostics><summary className="v3-type-caption inline-flex min-h-11 cursor-pointer items-center text-[var(--color-text-secondary)]">왜 이 순서인가요?</summary><p className="v3-type-label ko-keep mt-2 text-[var(--color-text-secondary)]">강의/교재 정리를 보기 전에 이 체크포인트 중 3개를 떠올립니다: {template.checklist.slice(0, 3).join(", ")}</p></details>
       <label className="mt-4 block space-y-2">
         <span className="v3-type-label text-[var(--color-text-primary)]">목차 초안</span>
         <Textarea
@@ -2975,9 +3528,9 @@ function SecondOutlinePanel({
           placeholder={template.outlinePlaceholder}
         />
       </label>
-      <Button type="button" className="mt-4 min-h-12 w-full sm:w-auto" disabled={outlineDraft.trim().length < 8} onClick={onNext} data-s232e-second-write-primary-action="2">
+      <V3ActionButton type="button" className="mt-4" disabled={outlineDraft.trim().length < 8} onClick={onNext} data-s232e-second-write-primary-action="2">
         다음: 내 답안 작성
-      </Button>
+      </V3ActionButton>
     </section>
   );
 }
@@ -3006,7 +3559,7 @@ function SecondAnswerPanel({
     >
       <p className="v3-type-caption text-[var(--color-text-brand)]" data-controller-label="Step 3. 내 답안 작성">다시쓰기 · 3/6 · 내 답안 작성</p>
       <h3 id="second-write-step-3-title" className="v3-type-section ko-keep mt-1 text-[var(--color-text-primary)]">비교는 작성 이후에 합니다.</h3>
-      <details className="quiet-disclosure mt-3 rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-subtle)] p-3" data-s224v-secondary-diagnostics><summary className="v3-type-caption cursor-pointer text-[var(--color-text-secondary)]">왜 이 순서인가요?</summary><p className="v3-type-label ko-keep mt-2 text-[var(--color-text-secondary)]">완벽히 쓰지 말고, 지금 떠오르는 문장만 적으세요.</p></details>
+      <details className="quiet-disclosure mt-3 rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-subtle)] p-3" data-s224v-secondary-diagnostics><summary className="v3-type-caption inline-flex min-h-11 cursor-pointer items-center text-[var(--color-text-secondary)]">왜 이 순서인가요?</summary><p className="v3-type-label ko-keep mt-2 text-[var(--color-text-secondary)]">완벽히 쓰지 말고, 지금 떠오르는 문장만 적으세요.</p></details>
       <label className="mt-4 block space-y-2">
         <span className="v3-type-label text-[var(--color-text-primary)]">내 답안</span>
         <Textarea
@@ -3016,9 +3569,9 @@ function SecondAnswerPanel({
           placeholder={templates[subject] ?? "핵심 문장 1개:\n근거:\n결론:"}
         />
       </label>
-      <Button type="button" className="mt-4 min-h-12 w-full sm:w-auto" disabled={answer.trim().length < 8} onClick={onNext} data-s232e-second-write-primary-action="3">
+      <V3ActionButton type="button" className="mt-4" disabled={answer.trim().length < 8} onClick={onNext} data-s232e-second-write-primary-action="3">
         다음: 강의/교재 정리 입력
-      </Button>
+      </V3ActionButton>
     </section>
   );
 }
@@ -3040,7 +3593,7 @@ function SecondReferencePanel({
     >
       <p className="v3-type-caption text-[var(--color-text-brand)]" data-controller-label="Step 4. 강의/교재 정리 입력">다시쓰기 · 4/6 · 참고 정리 비교</p>
       <h3 id="second-write-step-4-title" className="v3-type-section ko-keep mt-1 text-[var(--color-text-primary)]">작성한 뒤에만 강의/교재 정리를 봅니다.</h3>
-      <details className="quiet-disclosure mt-3 rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-subtle)] p-3" data-s224v-secondary-diagnostics><summary className="v3-type-caption cursor-pointer text-[var(--color-text-secondary)]">왜 이 순서인가요?</summary><p className="v3-type-label ko-keep mt-2 text-[var(--color-text-secondary)]">비교는 작성 이후에 합니다.</p></details>
+      <details className="quiet-disclosure mt-3 rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-subtle)] p-3" data-s224v-secondary-diagnostics><summary className="v3-type-caption inline-flex min-h-11 cursor-pointer items-center text-[var(--color-text-secondary)]">왜 이 순서인가요?</summary><p className="v3-type-label ko-keep mt-2 text-[var(--color-text-secondary)]">비교는 작성 이후에 합니다.</p></details>
       <label className="mt-4 block space-y-2">
         <span className="v3-type-label text-[var(--color-text-primary)]">강의/교재 정리 요약</span>
         <Textarea
@@ -3050,12 +3603,12 @@ function SecondReferencePanel({
         />
       </label>
       <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-        <Button type="button" className="min-h-12 w-full sm:w-auto" disabled={reference.trim().length < 4} onClick={onNext} data-s232e-second-write-primary-action="4">
+        <V3ActionButton type="button" disabled={reference.trim().length < 4} onClick={onNext} data-s232e-second-write-primary-action="4">
           다음: 가장 큰 약점 1개
-        </Button>
-        <Button type="button" variant="ghost" className="w-full sm:w-auto" onClick={onNext} data-s232e-second-write-secondary-action="defer-reference">
+        </V3ActionButton>
+        <V3ActionButton type="button" tone="quiet" onClick={onNext} data-s232e-second-write-secondary-action="defer-reference">
           강의/교재 정리는 나중에 확인
-        </Button>
+        </V3ActionButton>
       </div>
     </section>
   );
@@ -3081,7 +3634,15 @@ function SecondGapPanel({
     >
       <p className="v3-type-caption text-[var(--color-text-brand)]" data-controller-label="Step 5. 가장 큰 약점 1개">다시쓰기 · 5/6 · 가장 큰 약점</p>
       <h3 id="second-write-step-5-title" className="v3-type-section ko-keep mt-1 text-[var(--color-text-primary)]">오늘은 가장 큰 약점 1개만 고칩니다.</h3>
-      <details className="quiet-disclosure mt-3 rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-surface)] p-3" data-s224v-secondary-diagnostics><summary className="v3-type-caption cursor-pointer text-[var(--color-text-secondary)]">왜 이 순서인가요?</summary><p className="v3-type-label ko-keep mt-2 text-[var(--color-text-secondary)]">{template.biggestGapGuidance}</p></details>
+      <details className="quiet-disclosure mt-3 rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-surface)] p-3" data-s224v-secondary-diagnostics><summary className="v3-type-caption inline-flex min-h-11 cursor-pointer items-center text-[var(--color-text-secondary)]">왜 이 순서인가요?</summary><p className="v3-type-label ko-keep mt-2 text-[var(--color-text-secondary)]">{template.biggestGapGuidance}</p></details>
+      <div className="mt-4">
+        <BiggestGap
+          gap={biggestGap.trim() || template.commonGaps[0]}
+          evidence="비교 결과에서 다음 문단을 바꿀 약점 하나만 남깁니다."
+          type="MissingLink"
+          density="Compact"
+        />
+      </div>
       <label className="mt-4 block space-y-2">
         <span className="v3-type-label text-[var(--color-text-primary)]">보강할 논점 1개</span>
         <Textarea
@@ -3091,9 +3652,9 @@ function SecondGapPanel({
           placeholder={template.commonGaps[0]}
         />
       </label>
-      <Button type="button" className="mt-4 min-h-12 w-full sm:w-auto" disabled={biggestGap.trim().length < 4} onClick={onNext} data-s232e-second-write-primary-action="5">
+      <V3ActionButton type="button" className="mt-4" disabled={biggestGap.trim().length < 4} onClick={onNext} data-s232e-second-write-primary-action="5">
         다음: 문단 다시쓰기
-      </Button>
+      </V3ActionButton>
     </section>
   );
 }
@@ -3118,10 +3679,10 @@ function SecondGapRewritePanel({
     >
       <p className="v3-type-caption text-[var(--color-text-brand)]" data-controller-label="Step 6. 문단 다시쓰기">다시쓰기 · 6/6 · 문단 다시쓰기</p>
       <h3 id="second-write-step-6-title" className="v3-type-section ko-keep mt-1 text-[var(--color-text-primary)]">한 문단만 다시 씁니다.</h3>
-      <details className="quiet-disclosure mt-3 rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-surface)] p-3" data-s224v-secondary-diagnostics><summary className="v3-type-caption cursor-pointer text-[var(--color-text-secondary)]">왜 이 순서인가요?</summary><p className="v3-type-label ko-keep mt-2 text-[var(--color-text-secondary)]">{template.rewriteGuidance}</p></details>
+      <details className="quiet-disclosure mt-3 rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-surface)] p-3" data-s224v-secondary-diagnostics><summary className="v3-type-caption inline-flex min-h-11 cursor-pointer items-center text-[var(--color-text-secondary)]">왜 이 순서인가요?</summary><p className="v3-type-label ko-keep mt-2 text-[var(--color-text-secondary)]">{template.rewriteGuidance}</p></details>
       <div className="mt-4 space-y-4">
         <details className="quiet-disclosure rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-surface)] p-3" data-s224v-secondary-diagnostics>
-          <summary className="v3-type-caption cursor-pointer text-[var(--color-text-secondary)]">처음 쓴 답안 보기</summary>
+          <summary className="v3-type-caption inline-flex min-h-11 cursor-pointer items-center text-[var(--color-text-secondary)]">처음 쓴 답안 보기</summary>
           <p className="v3-type-label mt-2 whitespace-pre-wrap text-[var(--color-text-primary)]">{form.userAnswer || "아직 작성된 답안이 없습니다."}</p>
         </details>
         <label className="block space-y-2">
@@ -3138,7 +3699,7 @@ function SecondGapRewritePanel({
         </label>
       </div>
       <details className="quiet-disclosure mt-4 rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-surface)] p-3" data-s224v-secondary-diagnostics>
-        <summary className="v3-type-caption cursor-pointer text-[var(--color-text-secondary)]">세부 입력 보기 (선택)</summary>
+        <summary className="v3-type-caption inline-flex min-h-11 cursor-pointer items-center text-[var(--color-text-secondary)]">세부 입력 보기 (선택)</summary>
         <div className="mt-3 space-y-3">
           <label className="block space-y-2">
             <span className="v3-type-label text-[var(--color-text-primary)]">보강할 논점 1개</span>
@@ -3182,23 +3743,19 @@ function RewriteContextPanel({
   myAnswerSummary: string;
 }) {
   return (
-    <section className="rounded-[var(--radius-card)] border border-[color:var(--cue-review)] bg-[color:var(--cue-review-bg)] p-4 sm:p-5">
-      <p className="text-caption text-[color:var(--cue-review-text)]">문단 다시쓰기 컨텍스트</p>
-      <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">{title}</h3>
-      <div className="mt-4 grid gap-3">
-        <PreviewLine label="가장 큰 약점" value={biggestGap} />
-        <PreviewLine label="다시쓰기 지시" value={rewriteInstruction} />
+    <section className="rounded-[var(--v3-radius-panel)] border border-[var(--color-border-attention)] bg-[var(--color-background-attention)] p-4 sm:p-5">
+      <p className="v3-type-caption text-[var(--color-text-attention)]">문단 다시쓰기 컨텍스트</p>
+      <h3 className="v3-type-section ko-keep mt-1 text-[var(--color-text-primary)]">{title}</h3>
+      <div className="mt-4 space-y-3">
+        <BiggestGap gap={biggestGap} evidence={`다시쓰기 지시 · ${rewriteInstruction}`} type="MissingLink" />
       </div>
-      <details className="quiet-disclosure mt-3 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)]" data-s224v-secondary-diagnostics>
-        <summary className="cursor-pointer list-none px-4 py-3 text-sm font-medium text-[color:var(--foreground-strong)]">
-          비교 요약 펼쳐서 보기
-        </summary>
-        <div className="grid gap-3 border-t border-[color:var(--border-subtle)] p-4 lg:grid-cols-2">
+      <V3QuietDisclosure summary="비교 요약 펼쳐서 보기" className="mt-3">
+        <div className="grid gap-3 lg:grid-cols-2">
           <PreviewLine label="강의/교재 정리 요약" value={referenceSummary} />
           <PreviewLine label="내 답안 요약" value={myAnswerSummary} />
         </div>
-      </details>
-      <p className="mt-4 text-sm leading-6 text-[color:var(--muted)]">
+      </V3QuietDisclosure>
+      <p className="v3-type-body ko-keep mt-4 text-[var(--color-text-secondary)]">
         전체 답안이 아니라 한 문단만 다시 씁니다. 위 약점 1개만 반영해 짧고 정확하게 작성하세요.
       </p>
     </section>
@@ -3213,23 +3770,23 @@ function RewriteParagraphPanel({
   update: <K extends keyof DraftState>(key: K, value: DraftState[K]) => void;
 }) {
   return (
-    <section className="rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-4 sm:p-5">
-      <p className="text-caption text-[color:var(--muted)]">실행 입력</p>
-      <h3 className="mt-1 text-title text-[color:var(--foreground-strong)]">보강 문단을 바로 작성합니다</h3>
-      <p className="mt-2 text-sm leading-6 text-[color:var(--muted)]">하나의 약점만 보강한 문단으로 저장하면 다음 복습 일정이 자동 연결됩니다.</p>
+    <section className="rounded-[var(--v3-radius-panel)] border border-[var(--color-border-default)] bg-[var(--color-background-surface)] p-4 sm:p-5">
+      <p className="v3-type-caption text-[var(--color-text-secondary)]">실행 입력</p>
+      <h3 className="v3-type-section ko-keep mt-1 text-[var(--color-text-primary)]">보강 문단을 바로 작성합니다</h3>
+      <p className="v3-type-body ko-keep mt-2 text-[var(--color-text-secondary)]">하나의 약점만 보강한 문단으로 저장하면 다음 복습 일정이 자동 연결됩니다.</p>
       <label className="mt-4 block space-y-2">
-        <span className="text-sm text-[color:var(--foreground-strong)]">다시 쓴 문단</span>
+        <span className="v3-type-label text-[var(--color-text-primary)]">다시 쓴 문단</span>
         <Textarea
           value={form.rewriteParagraph}
           onChange={(event) => {
             update("rewriteParagraph", event.target.value);
           }}
-          className="min-h-64 border-[var(--border)] bg-[color:var(--surface)] text-[color:var(--foreground-strong)] leading-7"
+          className="min-h-64 rounded-[var(--v3-radius-control)] border-[var(--color-border-default)] bg-[var(--color-background-surface)] text-[var(--color-text-primary)] leading-7"
           placeholder="누락 논점 1개를 반영해 문단을 다시 작성하세요."
         />
       </label>
       <label className="mt-4 block space-y-2">
-        <span className="text-sm text-[color:var(--foreground-strong)]">보강할 논점 1개</span>
+        <span className="v3-type-label text-[var(--color-text-primary)]">보강할 논점 1개</span>
         <input
           value={form.userReasonText}
           onChange={(event) => {
@@ -3243,11 +3800,11 @@ function RewriteParagraphPanel({
   );
 }
 
-function PreviewLine({ label, value }: { label: string; value?: string }) {
+function PreviewLine({ label, value, legacy = false }: { label: string; value?: string; legacy?: boolean }) {
   return (
-    <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] px-4 py-3">
-      <p className="text-caption text-[color:var(--muted)]">{label}</p>
-      <p className="mt-1 text-sm leading-6 text-[color:var(--foreground-strong)]">{value?.trim() ? value : "확인 필요"}</p>
+    <div className={legacy ? "rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] px-4 py-3" : "border-b border-[var(--color-border-default)] py-3 last:border-b-0"}>
+      <p className={legacy ? "text-caption text-[color:var(--muted)]" : "v3-type-caption text-[var(--color-text-secondary)]"}>{label}</p>
+      <p className={legacy ? "mt-1 text-sm leading-6 text-[color:var(--foreground-strong)]" : "v3-type-compact ko-keep mt-1 text-[var(--color-text-primary)]"}>{value?.trim() ? value : "확인 필요"}</p>
     </div>
   );
 }

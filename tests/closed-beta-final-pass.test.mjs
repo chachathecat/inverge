@@ -202,7 +202,8 @@ test("Review exposes due and completed review states with capture empty-state li
     "/app/capture?mode=second",
     "/app/capture?mode=first",
   ]);
-  assert.ok(reviewSource.includes('variant="outline"'));
+  assert.ok(reviewSource.includes('legacyVariant="outline"'));
+  assert.ok(reviewSource.includes("<Button variant={legacyVariant}"));
   assert.ok(reviewSource.includes("aria-label={`" + ko.reviewCompleted + ":"));
   assert.doesNotMatch(reviewSource, forbiddenLearnerWording);
 });

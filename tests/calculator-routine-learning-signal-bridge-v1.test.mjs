@@ -514,7 +514,10 @@ test("UI integration uses the existing onComplete path and the single completion
   const workflowPage = readFileSync("components/review-os/calculator-workflow-page.tsx", "utf8");
 
   assert.ok(problemSnap.includes("onComplete={calculatorRoutineSync.syncCompletion}"));
-  assert.ok(answerReview.includes("onComplete={calculatorRoutineSync.syncCompletion}"));
+  assert.match(
+    answerReview,
+    /onComplete=\{\s*calculatorRoutineSync\.syncCompletion\s*\}/,
+  );
   assert.ok(sync.includes('fetch("/api/os/calculator-routine/complete"'));
   assert.ok(sync.includes('response.status === 401'));
   assert.ok(route.includes("completeCalculatorRoutine"));
@@ -545,6 +548,6 @@ test("review page exposes calculator candidates separately from review queue com
   assert.equal(reviewCandidates.includes('href="/app/calculator?mode=second&context=practice&focus=casio"'), false);
   assert.ok(appPage.includes("buildCalculatorRoutineRecoveryHref(task.calculator_routine_recovery)"));
   assert.ok(appPage.includes("const resolveTaskHref = (task:"));
-  assert.ok(appPage.includes("<Link href={resolveTaskHref(task)}"));
+  assert.ok(appPage.includes("href={resolveTaskHref(task)}"));
   assert.equal(reviewCandidates.includes("/api/os/review-queue"), false);
 });

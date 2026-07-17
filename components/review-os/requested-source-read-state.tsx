@@ -5,6 +5,8 @@ import {
   LearnerEmptyState,
   LearnerLoadingState,
   LearnerPrimaryLink,
+  V3ActionLink,
+  V3Surface,
 } from "@/components/learner";
 
 type RequestedSourceReadSurface = "session" | "first_ox";
@@ -49,6 +51,7 @@ export function RequestedSourceReadState({
   onRetry?: () => void;
 }) {
   const copy = COPY[surface];
+  const useV3State = surface === "session" && /(?:\?|&)mode=second(?:&|$)/.test(returnHref);
 
   return (
     <div
@@ -66,20 +69,36 @@ export function RequestedSourceReadState({
       </header>
 
       {status === "loading" ? (
-        <LearnerLoadingState
-          title="원본 기록을 불러오는 중입니다."
-          description={copy.loading}
-        />
+        useV3State ? (
+          <V3Surface as="section" tone="subtle" className="space-y-3">
+            <p className="v3-type-caption text-[var(--color-text-secondary)]">불러오는 중</p>
+            <h2 className="v3-type-section ko-keep text-[var(--color-text-primary)]">원본 기록을 불러오는 중입니다.</h2>
+            <p className="v3-type-body ko-keep text-[var(--color-text-secondary)]">{copy.loading}</p>
+          </V3Surface>
+        ) : (
+          <LearnerLoadingState
+            title="원본 기록을 불러오는 중입니다."
+            description={copy.loading}
+          />
+        )
       ) : status === "missing" ? (
-        <LearnerEmptyState
-          title={copy.missingTitle}
-          description={copy.missingDescription}
-          action={
-            <LearnerPrimaryLink href={returnHref}>
-              {copy.returnLabel}
-            </LearnerPrimaryLink>
-          }
-        />
+        useV3State ? (
+          <V3Surface as="section" tone="subtle" className="space-y-4">
+            <h2 className="v3-type-section ko-keep text-[var(--color-text-primary)]">{copy.missingTitle}</h2>
+            <p className="v3-type-body ko-keep text-[var(--color-text-secondary)]">{copy.missingDescription}</p>
+            <V3ActionLink href={returnHref}>{copy.returnLabel}</V3ActionLink>
+          </V3Surface>
+        ) : (
+          <LearnerEmptyState
+            title={copy.missingTitle}
+            description={copy.missingDescription}
+            action={
+              <LearnerPrimaryLink href={returnHref}>
+                {copy.returnLabel}
+              </LearnerPrimaryLink>
+            }
+          />
+        )
       ) : (
         <FailureAwareState
           evidence={ERROR_EVIDENCE}

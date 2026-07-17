@@ -3,6 +3,11 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import {
+  V3ActionLink,
+  V3SectionHeader,
+  V3Surface,
+} from "@/components/learner";
 import { type AppraisalMode } from "@/lib/review-os/appraisal";
 import {
   createCheckingLocalBetaNotesReadOutcome,
@@ -100,6 +105,71 @@ function LocalBetaCaptureNoteList({
     return showReadUnavailableNotice ? (
       <CoreRouteLocalReadDegradedNotice coreRecordsVisible />
     ) : null;
+  }
+
+  if (mode === "second") {
+    if (notes.length === 0) {
+      if (!emptyMessage) return null;
+      return (
+        <V3Surface density="compact" tone="subtle" className="space-y-4">
+          <V3SectionHeader title={title} description={emptyMessage} />
+          <V3ActionLink href="/app/capture?mode=second" tone="secondary">
+            {emptyActionLabel ?? "오늘 한 것 올리기"}
+          </V3ActionLink>
+        </V3Surface>
+      );
+    }
+
+    return (
+      <V3Surface className="space-y-5">
+        <V3SectionHeader
+          title={title}
+          description={subtitle ?? "최근 브라우저 임시 학습 노트입니다."}
+        />
+        <p className="v3-type-caption text-[var(--color-text-secondary)]">
+          이 브라우저에 임시 저장된 학습 기록입니다. 같은 브라우저에서 학습 노트, 복습, 오늘 할 일, 학습 기록 연결 상태를 확인할 수 있습니다.
+        </p>
+        <div className="divide-y divide-[var(--color-border-default)] border-y border-[var(--color-border-default)]">
+          {notes.map((note) => {
+            const createdAt = formatNoteDate(note.createdAt);
+            return (
+              <section key={note.id} className="py-5 first:pt-4 last:pb-4">
+                <p className="v3-type-caption text-[var(--color-text-secondary)]">
+                  {buildModeText(note.mode as AppraisalMode)} · {sourceTypeLabel(note.sourceType)}
+                </p>
+                <h3 className="v3-type-label-strong mt-1 text-[var(--color-text-primary)]">
+                  {note.subjectLabel}
+                </h3>
+                <dl className="v3-type-compact mt-3 space-y-2 text-[var(--color-text-secondary)]">
+                  <div>
+                    <dt className="inline font-medium text-[var(--color-text-primary)]">가장 큰 약점: </dt>
+                    <dd className="inline">{note.biggestGap}</dd>
+                  </div>
+                  <div>
+                    <dt className="inline font-medium text-[var(--color-text-primary)]">다음 행동: </dt>
+                    <dd className="inline">{note.nextAction}</dd>
+                  </div>
+                </dl>
+                <p className="v3-type-caption mt-3 text-[var(--color-text-secondary)]">
+                  오늘 계획 연결: 오늘 계획에 반영 · 복습 연결: 복습에 남길 내용 · 학습 기록 연결: 학습 기록에 저장
+                </p>
+                {createdAt ? (
+                  <p className="v3-type-caption mt-1 text-[var(--color-text-tertiary)]">저장 시각: {createdAt}</p>
+                ) : null}
+                {showAction ? (
+                  <Link
+                    href={`/app/notes?mode=${encodeURIComponent(note.mode)}`}
+                    className="v3-type-label-strong mt-3 inline-flex min-h-11 items-center text-[var(--color-text-link)] underline-offset-4 hover:underline"
+                  >
+                    학습 노트 보기
+                  </Link>
+                ) : null}
+              </section>
+            );
+          })}
+        </div>
+      </V3Surface>
+    );
   }
 
   if (notes.length === 0) {

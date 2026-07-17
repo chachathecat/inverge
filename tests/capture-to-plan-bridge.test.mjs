@@ -169,7 +169,8 @@ test("learner-facing copy includes save bridge messages", async () => {
   assert.ok(source.includes('id="today-session-runner"'));
   assert.ok(source.includes("savedCaptureQueueItem"));
   assert.ok(source.includes("/app/capture?mode=second&rewriteFrom=${encodeURIComponent(savedCaptureItemId)}"));
-  assert.equal(source.includes('/app/capture?mode=first'), false);
+  assert.match(source, /mode === "second" \? \([\s\S]*?<V3Surface[\s\S]*?: \([\s\S]*?<DailyCommandCard/);
+  assert.ok(source.includes('<Link href="/app/capture?mode=first">하나 더 올리기</Link>'));
     assert.ok(source.includes("노트 보기"));
     assert.ok(source.includes("학습 노트 상세"));
     assert.ok(source.includes("복습에 남길 내용"));

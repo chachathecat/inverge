@@ -46,6 +46,12 @@ function hashPayload(value: string) {
   return crypto.createHash("sha256").update(value).digest("hex");
 }
 
+export function normalizePostgrestTimestamp(value: unknown): string {
+  const rawValue = String(value);
+  const timestamp = Date.parse(rawValue);
+  return Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : rawValue;
+}
+
 function toConceptReviewCard(value: unknown): ConceptReviewCardPayload | undefined {
   if (!value || typeof value !== "object") return undefined;
   const row = value as Record<string, unknown>;
@@ -177,8 +183,8 @@ function mapWrongAnswerItem(row: Record<string, unknown>): WrongAnswerItemRecord
       typeof row.derived_payload === "object" && row.derived_payload
         ? (row.derived_payload as Record<string, unknown>)
         : {},
-    createdAt: String(row.created_at),
-    updatedAt: String(row.updated_at),
+    createdAt: normalizePostgrestTimestamp(row.created_at),
+    updatedAt: normalizePostgrestTimestamp(row.updated_at),
   };
 }
 

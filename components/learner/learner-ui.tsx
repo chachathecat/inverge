@@ -74,13 +74,31 @@ export function LearnerShell({ email, children, rightSlot }: LearnerShellProps) 
   const currentMode: AppraisalMode = "second";
   const config = getModeConfig(currentMode);
   const homeHref = `/app?mode=${currentMode}`;
-  const focusMode = pathname.startsWith("/app/items/") && searchParams.get("mode") === "second";
+  const ledgerFocusMode = pathname.startsWith("/app/items/") && searchParams.get("mode") === "second";
+  const calculatorContext = searchParams.get("context");
+  const calculatorFocusMode =
+    pathname === "/app/calculator" &&
+    searchParams.get("mode") === "second" &&
+    searchParams.get("focus") === "casio" &&
+    (calculatorContext === null || calculatorContext === "practice");
+  const focusMode = ledgerFocusMode || calculatorFocusMode;
+  const focusTarget = ledgerFocusMode
+    ? "#study-ledger-content"
+    : calculatorFocusMode
+      ? "#calculator-routine-content"
+      : "#learner-main";
+  const focusLabel = ledgerFocusMode
+    ? "학습 노트 내용으로 바로가기"
+    : calculatorFocusMode
+      ? "계산·검산 내용으로 바로가기"
+      : "학습 내용으로 바로가기";
   const skipLink = (
     <a
-      href={focusMode ? "#study-ledger-content" : "#learner-main"}
+      href={focusTarget}
+      data-v3-skip-link
       className="v3-type-label-strong fixed left-[max(1rem,env(safe-area-inset-left))] top-[max(1rem,env(safe-area-inset-top))] z-[60] inline-flex min-h-11 -translate-y-[200%] items-center rounded-[var(--v3-radius-control)] bg-[var(--color-background-brand)] px-4 text-[var(--color-text-inverse)] transition-transform focus:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-background-canvas)]"
     >
-      {focusMode ? "학습 노트 내용으로 바로가기" : "학습 내용으로 바로가기"}
+      {focusLabel}
     </a>
   );
 

@@ -96,6 +96,13 @@ export type StickyActionProps = StickyActionBaseProps &
     | {
         state?: "Ready";
         href: string;
+        onAction?: never;
+        controllerEvidence?: never;
+      }
+    | {
+        state?: "Ready";
+        href?: never;
+        onAction: () => void;
         controllerEvidence?: never;
       }
     | {
@@ -609,15 +616,28 @@ export function StickyAction(props: StickyActionProps) {
   ].join(" ");
   const accessibleName = showStatus ? `${label}: ${status}` : label;
   const control = props.state === undefined || props.state === "Ready" ? (
-    <Link
-      {...actionMarker}
-      href={props.href}
-      data-testid={testId ? `${testId}-control` : undefined}
-      aria-label={accessibleName}
-      className={actionClassName}
-    >
-      {label}
-    </Link>
+    "href" in props && props.href ? (
+      <Link
+        {...actionMarker}
+        href={props.href}
+        data-testid={testId ? `${testId}-control` : undefined}
+        aria-label={accessibleName}
+        className={actionClassName}
+      >
+        {label}
+      </Link>
+    ) : (
+      <button
+        {...actionMarker}
+        type="button"
+        onClick={props.onAction}
+        data-testid={testId ? `${testId}-control` : undefined}
+        aria-label={accessibleName}
+        className={actionClassName}
+      >
+        {label}
+      </button>
+    )
   ) : (
     <button
       {...actionMarker}

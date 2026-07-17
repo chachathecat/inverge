@@ -1,4 +1,5 @@
 import { WrongAnswerCaptureForm } from "@/components/review-os/capture-form";
+import { V3RouteFrame } from "@/components/learner";
 import { ReviewOsFeedbackButton } from "@/components/review-os/feedback-button";
 import { ReviewOsAccessState } from "@/components/review-os/review-os-access-state";
 import { normalizeSubjectForMode, resolveAppraisalMode } from "@/lib/review-os/appraisal";
@@ -36,19 +37,13 @@ export default async function ReviewOsCapturePage({ searchParams }: PageProps) {
           myAnswerSummary: rewriteDetail.item.userAnswer || "",
         }
       : null;
-  return (
-    <div
-      className="space-y-5"
-      aria-label="오늘 한 것 올리기"
-      data-s224v-surface="/app/capture"
-      data-s224v-primary-cta-count-above-fold="1"
-      data-s224v-visible-trust-layer-count="1"
-      data-s224v-visible-primary-work-items-max="1"
-      data-s224v-secondary-diagnostics="quiet-disclosure"
-      data-s224v-equal-weight-card-grid="absent"
-      data-s224v-repeated-warning-copy="absent"
-    >
-      <header className="space-y-2" data-s232e-capture-header>
+  const captureContent = (
+    <>
+      <header
+        className={mode === "second" ? "max-w-[var(--layout-reading-column)] space-y-2" : "space-y-2"}
+        data-v3-layout={mode === "second" ? "route-header" : undefined}
+        data-s232e-capture-header
+      >
         <p className="v3-type-caption text-[var(--color-text-secondary)]">Capture · 4단계</p>
         <h1 id="capture-page-title" className="v3-type-screen hero-balance ko-keep text-[var(--color-text-primary)]">
           오늘 한 것 올리기
@@ -66,8 +61,27 @@ export default async function ReviewOsCapturePage({ searchParams }: PageProps) {
       />
 
       <div className="space-y-3">
-        <ReviewOsFeedbackButton route="/app/capture" pageContext={{ section: "capture", mode }} />
+        <ReviewOsFeedbackButton
+          route="/app/capture"
+          pageContext={{ section: "capture", mode }}
+          presentation={mode === "second" ? "v3" : "legacy"}
+        />
       </div>
+    </>
+  );
+  return (
+    <div
+      className={mode === "first" ? "space-y-5" : undefined}
+      aria-label="오늘 한 것 올리기"
+      data-s224v-surface="/app/capture"
+      data-s224v-primary-cta-count-above-fold="1"
+      data-s224v-visible-trust-layer-count="1"
+      data-s224v-visible-primary-work-items-max="1"
+      data-s224v-secondary-diagnostics="quiet-disclosure"
+      data-s224v-equal-weight-card-grid="absent"
+      data-s224v-repeated-warning-copy="absent"
+    >
+      {mode === "second" ? <V3RouteFrame className="space-y-6">{captureContent}</V3RouteFrame> : captureContent}
     </div>
   );
 }

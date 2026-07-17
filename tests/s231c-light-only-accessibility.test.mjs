@@ -75,6 +75,7 @@ test("S231C keeps one dominant step action and announces focus and copy state", 
   const captureForm = read("components/review-os/capture-form.tsx");
   const minimalStudySystem = read("components/review-os/minimal-study-system.tsx");
   const writePage = read("app/app/write/page.tsx");
+  const v3RouteUi = read("components/learner/v3-route-ui.tsx");
   const globals = read("app/globals.css");
   const spec = read("tests/e2e/s231c-wcag-aa.spec.ts");
   const gitignore = read(".gitignore");
@@ -84,7 +85,10 @@ test("S231C keeps one dominant step action and announces focus and copy state", 
   assert.match(answerReview, /currentStep === 1[\s\S]*?answerTextRef\.current/);
   assert.match(answerReview, /stepTwoHeadingRef/);
   assert.match(answerReview, /stepThreeHeadingRef/);
-  assert.match(answerReview, /role="status" aria-live="polite" aria-atomic="true"/);
+  assert.match(
+    answerReview,
+    /role="status"\s+aria-live="polite"\s+aria-atomic="true"/,
+  );
   assert.match(answerReview, /htmlFor="answer-review-my-answer-input"[\s\S]*?id="answer-review-my-answer-input"/);
   assert.match(answerReview, /htmlFor="answer-review-problem-input"[\s\S]*?id="answer-review-problem-input"/);
   assert.match(answerReview, /id="answer-review-reference-label"[\s\S]*?aria-labelledby="answer-review-reference-label"/);
@@ -108,7 +112,10 @@ test("S231C keeps one dominant step action and announces focus and copy state", 
   assert.match(gitignore, /^\/playwright-report\/$/m);
   assert.match(minimalStudySystem, /headingLevel\?: "h1" \| "h2"/);
   assert.match(minimalStudySystem, /const Heading = headingLevel/);
-  assert.match(writePage, /<DailyCommandCard[\s\S]*?headingLevel="h2"/);
+  assert.match(writePage, /<h1 id="write-page-title"/);
+  assert.match(writePage, /<V3Surface as="section"[\s\S]*?<V3SectionHeader/);
+  assert.match(writePage, /labelledBy="write-page-title"/);
+  assert.match(v3RouteUi, /export function V3SectionHeader[\s\S]*?<h2/);
 });
 
 test("S231C workflow is PR-scoped, exact-head, and publishes JSON-only evidence", () => {

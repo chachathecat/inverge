@@ -57,10 +57,13 @@ export default async function LearningAgendaPage({ searchParams }: PageProps) {
   });
 
   return (
-    <div className="space-y-5">
+    <div
+      className={mode === "second" ? "space-y-7" : "space-y-5"}
+      data-v3-route={mode === "second" ? "learning-agenda" : undefined}
+    >
       <LearningAgendaClient mode={mode} initialEvents={agendaEvents} />
       <ClosedBetaBanner />
-      <ReviewOsFeedbackButton route="/app/agenda" pageContext={{ section: "agenda", mode, eventCount: agendaEvents.length }} />
+      <ReviewOsFeedbackButton route="/app/agenda" pageContext={{ section: "agenda", mode, eventCount: agendaEvents.length }} presentation={mode === "second" ? "v3" : "legacy"} />
     </div>
   );
 }

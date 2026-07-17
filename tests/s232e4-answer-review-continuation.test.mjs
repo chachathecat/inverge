@@ -24,17 +24,31 @@ test("S232E.4 scopes answer snap and text focus to entry step 1", () => {
 
 test("S232E.4 makes one successful biggest-gap result lead to one rewrite action", () => {
   const resultStep = sliceBetween("{currentStep === 2 ? (", "{currentStep === 3 && structureDraft ? (");
-  const result = sliceBetween('data-s232e4-answer-review-result={structureDraft ? "one-gap-first" : undefined}', "{structureError ? (");
-  assert.match(result, /\{structureDraft \? \([\s\S]*?data-s232e4-biggest-gap/);
-  assert.match(result, /가장 먼저 고칠 1가지/);
-  assert.match(result, /<h3[^>]*>가장 큰 간극<\/h3>/);
-  assert.match(result, /<dt[^>]*>왜 중요한가<\/dt>/);
-  assert.match(result, /<dt[^>]*>다시 쓸 대상<\/dt>/);
+  const result = sliceBetween(
+    "data-s232e4-answer-review-result={",
+    "{structureError ? (",
+  );
+  assert.match(
+    result,
+    /data-s232e4-answer-review-result=\{\s*structureDraft\s*\?\s*"one-gap-first"\s*:\s*undefined\s*\}/,
+  );
+  assert.match(
+    result,
+    /\{structureDraft \? \([\s\S]*?<AnswerReviewGapContainer\s+isSecond=\{examMode === "second"\}\s*>/,
+  );
+  assert.match(result, /<BiggestGap/);
+  assert.match(
+    result,
+    /gap=\{\s*toDetailLine\(\s*qualityView\?\.primaryFix\.gap/,
+  );
+  assert.match(result, /evidence=\{`\$\{qualityView\?\.primaryFix\.whyItMatters/);
+  assert.match(result, /다시 쓸 대상:/);
+  assert.match(result, /type="MissingLink"/);
   assert.match(result, /data-testid="answer-review-build-feedback"/);
   assert.match(result, /data-s232e4-rewrite-entry/);
-  assert.equal((result.match(/data-s232e4-biggest-gap/g) ?? []).length, 1);
+  assert.equal((source.match(/"data-s232e4-biggest-gap"/g) ?? []).length, 1);
   assert.equal((result.match(/data-testid="answer-review-build-feedback"/g) ?? []).length, 1);
-  assert.ok(result.indexOf("data-s232e4-biggest-gap") < result.indexOf('data-testid="answer-review-build-feedback"'));
+  assert.ok(result.indexOf("<AnswerReviewGapContainer") < result.indexOf('data-testid="answer-review-build-feedback"'));
   assert.doesNotMatch(
     resultStep,
     /initial=\{shouldReduceMotion \? false : \{ opacity: 0|animate=\{shouldReduceMotion \? undefined/,
@@ -83,7 +97,10 @@ test("S232E.4 presents rewrite target, instruction, editor, then copy or continu
   assert.match(rewrite, /htmlFor="answer-review-revision-input"[\s\S]*?id="answer-review-revision-input"/);
   assert.match(rewrite, /data-s232e4-copy-or-continue[\s\S]*?answer-review-copy-feedback[\s\S]*?오늘 학습으로 계속/);
   assert.match(rewrite, /data-s232e4-rewrite-guidance[\s\S]*?<CognitiveLearningActionCard/);
-  assert.match(rewrite, /role="status" aria-live="polite" aria-atomic="true"/);
+  assert.match(
+    rewrite,
+    /role="status"\s+aria-live="polite"\s+aria-atomic="true"/,
+  );
   assert.doesNotMatch(
     rewrite,
     /initial=\{shouldReduceMotion \? false : \{ opacity: 0|animate=\{shouldReduceMotion \? undefined/,
@@ -91,9 +108,12 @@ test("S232E.4 presents rewrite target, instruction, editor, then copy or continu
   );
   assert.match(
     source,
-    /currentStep === 3[\s\S]*?transition=\{\{ duration: shouldReduceMotion \? 0 : 0\.32/,
+    /currentStep === 3[\s\S]*?transition=\{\{\s*duration:\s*shouldReduceMotion \? 0 : 0\.32/,
   );
-  assert.match(rewrite, /transition=\{\{ duration: shouldReduceMotion \? 0 : 0\.28/);
+  assert.match(
+    rewrite,
+    /transition=\{\{\s*duration:\s*shouldReduceMotion \? 0 : 0\.28/,
+  );
 });
 
 test("S232E.4 preserves service, state, trial, handoff, clipboard, and cognitive contracts", () => {
@@ -123,7 +143,9 @@ test("S232E.4 clears a prior successful result before every valid structure retr
   const runStructure = sliceBetween("  const runStructure = async () => {", "  const feedbackDraftText = useMemo");
   const firstDraftClear = runStructure.indexOf("setStructureDraft(null)");
   const structureRequest = runStructure.indexOf('fetch("/api/answer-review/structure"');
-  const billingReturn = runStructure.indexOf("if (!payload.ok && (isAnonymousTrialLimit || isAccountLimit || isInputQualityFailure))");
+  const billingReturn = runStructure.indexOf(
+    'const isAnonymousTrialLimit = errorCode === "ANONYMOUS_TRIAL_LIMIT"',
+  );
 
   assert.ok(firstDraftClear >= 0, "the retry path must clear any stale successful draft");
   assert.ok(firstDraftClear < structureRequest, "the stale draft must clear before the structure request starts");
@@ -134,7 +156,7 @@ test("S232E.4 clears a prior successful result before every valid structure retr
 test("S232E.4 keeps anonymous persistence promises conditional on login and save", () => {
   const anonymousResult = sliceBetween(
     'viewerMode === "anonymous" && structureDraft',
-    "qualityView && qualityView.qualityWarnings.length > 0",
+    "qualityView.qualityWarnings.length > 0",
   );
 
   for (const conditionalPromise of [

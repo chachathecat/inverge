@@ -54,11 +54,20 @@ test("S232F.3 renders F0 Loading while the current learner answer is locked in m
 
   assert.match(source, /import \{ FailureAwareState \} from "@\/components\/learner\/failure-aware-state"/);
   assert.match(entry, /<fieldset[\s\S]*?disabled=\{isStructuring\}[\s\S]*?aria-busy=\{isStructuring \? true : undefined\}/);
-  assert.match(entry, /data-s232f3-answer-input-lock=\{isStructuring \? "locked" : "editable"\}/);
+  assert.match(
+    entry,
+    /data-s232f3-answer-input-lock=\{\s*isStructuring\s*\?\s*"locked"\s*:\s*"editable"\s*\}/,
+  );
   assert.match(entry, /\{isStructuring \? \([\s\S]*?data-s232f3-answer-review-loading="memory-only"/);
-  assert.match(entry, /kind: "loading"[\s\S]*?kind: "memory_only", retainedInMemory: true/);
+  assert.match(
+    entry,
+    /kind:\s*"loading"[\s\S]*?kind:\s*"memory_only",\s*retainedInMemory:\s*true/,
+  );
   assert.match(entry, /testId="answer-review-structure-loading"/);
-  assert.match(source, /aria-label="내 답안 카메라 파일 선택" disabled=\{isStructuring\}/);
+  assert.match(
+    source,
+    /aria-label="내 답안 카메라 파일 선택"\s+disabled=\{isStructuring\}/,
+  );
   assert.match(source, /data-s232e4-entry-actions-scoped="step-1"[\s\S]*?disabled=\{isStructuring\}/);
   assert.doesNotMatch(source, /setMyAnswerText\(""\)|setMyAnswerFiles\(\[\]\)/);
 });
@@ -70,7 +79,7 @@ test("S232F.3 clears stale result evidence before every request and every failur
   const initialDraftClear = runStructure.indexOf("setStructureDraft(null)");
   const loadingStepReset = runStructure.indexOf("setCurrentStep(1)");
   const billingBranch = sliceBetween(
-    "if (!payload.ok && (isAnonymousTrialLimit || isAccountLimit || isInputQualityFailure))",
+    "const isAnonymousTrialLimit",
     "throw new Error",
     runStructure,
   );
@@ -101,7 +110,10 @@ test("S232F.3 clears stale result evidence before every request and every failur
     assert.match(branch, /setStructureDraft\(null\);[\s\S]*?setLearningSignalStatus\(null\);[\s\S]*?setReferenceGrounding\(null\);/);
   }
 
-  assert.match(source, /data-s232e4-answer-review-result=\{structureDraft \? "one-gap-first" : undefined\}/);
+  assert.match(
+    source,
+    /data-s232e4-answer-review-result=\{\s*structureDraft\s*\?\s*"one-gap-first"\s*:\s*undefined\s*\}/,
+  );
   assert.match(source, /\{structureDraft \? \([\s\S]*?data-s232e4-rewrite-entry/);
   assert.match(source, /if \(currentStep === 2\) \{[\s\S]*?if \(!structureDraft\) return;/);
   assert.match(source, /\{currentStep === 3 && structureDraft \? \(/);
@@ -111,12 +123,27 @@ test("S232F.3 clears stale result evidence before every request and every failur
 test("S232F.3 renders transient errors as retryable F0 without removing the learner answer", () => {
   const resultStep = sliceBetween("{currentStep === 2 ? (", "{currentStep === 3 && structureDraft ? (");
 
-  assert.match(resultStep, /data-s232f3-answer-review-error=\{isStructureErrorRetryable \? "retryable-memory-only" : "blocked-memory-only"\}/);
-  assert.match(resultStep, /kind: "error"[\s\S]*?retryable: isStructureErrorRetryable[\s\S]*?kind: "memory_only", retainedInMemory: true/);
-  assert.match(resultStep, /structureErrorAction === "retry"[\s\S]*?kind: "button", label: "답안 검토 다시 시도"/);
-  assert.match(resultStep, /label: "답안 검토 다시 시도", onAction: \(\) => void runStructure\(\)/);
+  assert.match(
+    resultStep,
+    /data-s232f3-answer-review-error=\{\s*isStructureErrorRetryable\s*\?\s*"retryable-memory-only"\s*:\s*"blocked-memory-only"\s*\}/,
+  );
+  assert.match(
+    resultStep,
+    /kind:\s*"error"[\s\S]*?retryable:\s*isStructureErrorRetryable[\s\S]*?kind:\s*"memory_only",\s*retainedInMemory:\s*true/,
+  );
+  assert.match(
+    resultStep,
+    /structureErrorAction === "retry"[\s\S]*?kind:\s*"button",\s*label:\s*"답안 검토 다시 시도"/,
+  );
+  assert.match(
+    resultStep,
+    /label:\s*"답안 검토 다시 시도",\s*onAction:\s*\(\) => void runStructure\(\)/,
+  );
   assert.match(resultStep, /testId="answer-review-structure-error"/);
-  assert.match(resultStep, /role="alert" data-s232f3-answer-review-error-detail/);
+  assert.match(
+    resultStep,
+    /role="alert"\s+data-s232f3-answer-review-error-detail/,
+  );
   assert.match(resultStep, /현재 답안은 이 화면에 남아 있습니다/);
   assert.doesNotMatch(resultStep, /structureError[\s\S]{0,300}?data-s232e4-rewrite-entry/);
 });
@@ -124,7 +151,11 @@ test("S232F.3 renders transient errors as retryable F0 without removing the lear
 test("S232F.3 gives entitlement, trial, and insufficient-input failures truthful non-retry actions", () => {
   const runStructure = sliceBetween("  const runStructure = async () => {", "  const feedbackDraftText = useMemo");
   const resultStep = sliceBetween("{currentStep === 2 ? (", "{currentStep === 3 && structureDraft ? (");
-  const limitBranch = sliceBetween("const isAnonymousTrialLimit", "throw new Error", runStructure);
+  const limitBranch = sliceBetween(
+    "const isAnonymousTrialLimit",
+    "throw new Error",
+    runStructure,
+  );
   const catchBranch = sliceBetween("    } catch (error) {", "    } finally {", runStructure);
 
   for (const code of [
@@ -149,9 +180,18 @@ test("S232F.3 gives entitlement, trial, and insufficient-input failures truthful
   assert.match(catchBranch, /setIsStructureErrorRetryable\(true\)/);
   assert.match(limitBranch, /isInputQualityFailure[\s\S]*?"edit_input"/);
   assert.match(limitBranch, /isAnonymousTrialLimit[\s\S]*?"login"/);
-  assert.match(resultStep, /structureErrorAction === "edit_input"[\s\S]*?label: "입력 보강하기"/);
-  assert.match(resultStep, /structureErrorAction === "login"[\s\S]*?kind: "link", label: "로그인하고 계속"/);
-  assert.match(resultStep, /kind: "link", label: "이용 범위 확인", href: "\/pricing"/);
+  assert.match(
+    resultStep,
+    /structureErrorAction === "edit_input"[\s\S]*?label:\s*"입력 보강하기"/,
+  );
+  assert.match(
+    resultStep,
+    /structureErrorAction === "login"[\s\S]*?kind:\s*"link",\s*label:\s*"로그인하고 계속"/,
+  );
+  assert.match(
+    resultStep,
+    /kind:\s*"link",\s*label:\s*"이용 범위 확인",\s*href:\s*"\/pricing"/,
+  );
   assert.match(source, /STRUCTURE_ERROR_HEADING\[structureErrorAction\]/);
   assert.match(source, /pricing: "답안 검토 이용 범위를 확인해 주세요"/);
   assert.match(resultStep, /blocked-memory-only/);
@@ -167,8 +207,14 @@ test("S232F.3 distinguishes analysis success from learning-signal persistence fa
   assert.match(resultStep, /structureDraft && learningSignalStatus === "failed"/);
   assert.match(resultStep, /data-s232f3-answer-review-analysis-status="succeeded"/);
   assert.match(resultStep, /data-s232f3-learning-signal-status="failed"/);
-  assert.match(resultStep, /답안 분석은 완료됐지만 학습 기록 저장 여부는 확인되지 않았습니다/);
-  assert.match(resultStep, /약점 신호·복습·오늘 계획 반영은 확인되지 않았습니다/);
+  assert.match(
+    resultStep,
+    /답안 분석은 완료됐지만 학습 기록 저장 여부는 확인되지\s+않았습니다/,
+  );
+  assert.match(
+    resultStep,
+    /약점 신호·복습·오늘 계획 반영은 확인되지\s+않았습니다/,
+  );
   assert.doesNotMatch(resultStep, /학습 기록은 저장되지 않았습니다/);
   assert.doesNotMatch(resultStep, /학습 신호를 저장하지 못했습니다\. 직접 확인한 뒤 다시 저장해 주세요/);
 
