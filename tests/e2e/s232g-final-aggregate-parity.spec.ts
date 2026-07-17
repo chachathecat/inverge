@@ -3045,7 +3045,10 @@ test("S232G final aggregate exact-head authenticated parity", async ({ browser, 
       requireTruth(layout.coreContentCount >= 1, "route-core-content-present");
       requireTruth(!layout.horizontalOverflow, "route-horizontal-overflow");
       requireTruth(layout.nestedTwoDimensionalScrollCount === 0, "route-nested-two-dimensional-scroll");
-      requireTruth(layout.clippedCoreContentCount === 0, "route-clipped-core-content");
+      requireTruth(
+        layout.clippedCoreContentCount === 0,
+        `route-${route.key}-${viewport.key}-clipped-core-content`,
+      );
       await figmaFoundationProbe(page, viewport.width);
       if (route.parityKind === "direct-product-frame") {
         requireTruth(route.directFigmaNodes.length === 9, "figma-study-ledger-node-registry");

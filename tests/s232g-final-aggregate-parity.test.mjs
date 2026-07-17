@@ -723,6 +723,19 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
     runtimeSpec,
     /keyboardFocusProbe\(page, route\.keyboardSelector, route\.key\)/,
   );
+  assert.match(
+    runtimeSpec,
+    /`route-\$\{route\.key\}-\$\{viewport\.key\}-clipped-core-content`/,
+  );
+  for (const route of S232G_ROUTES) {
+    for (const viewport of S232G_VIEWPORTS) {
+      assert.match(
+        `route-${route.key}-${viewport.key}-clipped-core-content`,
+        /^[a-z0-9-]{1,64}$/,
+      );
+    }
+  }
+  assert.doesNotMatch(runtimeSpec, /"route-clipped-core-content"/);
   assert.doesNotMatch(runtimeSpec, /keyboard-visible-focus-activation/);
   assert.match(runtimeSpec, /actualBrowserZoomClaimed: false/);
   assert.match(runtimeSpec, /realScreenReaderClaimed: false/);
