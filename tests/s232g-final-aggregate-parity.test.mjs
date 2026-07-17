@@ -710,6 +710,23 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
   assert.match(keyboardProbeBlock, /forward-unregistered-focus/);
   assert.match(keyboardProbeBlock, /forward-skipped-\$\{safeSkippedKind\}/);
   assert.match(keyboardProbeBlock, /forward-backward-jump/);
+  assert.match(keyboardProbeBlock, /keyboard-\$\{routeKey\}-focus-evidence-present/);
+  assert.match(keyboardProbeBlock, /keyboard-\$\{routeKey\}-focused/);
+  assert.match(keyboardProbeBlock, /keyboard-\$\{routeKey\}-focus-visible/);
+  assert.match(keyboardProbeBlock, /keyboard-\$\{routeKey\}-in-viewport/);
+  assert.match(keyboardProbeBlock, /keyboard-\$\{routeKey\}-interactive-control/);
+  assert.doesNotMatch(keyboardProbeBlock, /keyboard-\$\{routeKey\}-visible-focus-control/);
+  for (const route of S232G_ROUTES) {
+    for (const suffix of [
+      "focus-evidence-present",
+      "focused",
+      "focus-visible",
+      "in-viewport",
+      "interactive-control",
+    ]) {
+      assert.match(`keyboard-${route.key}-${suffix}`, /^[a-z0-9-]{1,64}$/);
+    }
+  }
   assert.doesNotMatch(keyboardProbeBlock, /forward-order-exact/);
   assert.match(keyboardProbeBlock, /finally \{/);
   assert.match(

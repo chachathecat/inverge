@@ -2720,14 +2720,13 @@ async function keyboardFocusProbe(page: Page, preferredSelector: string, routeKe
     );
     requireTruth(reverseStart, `keyboard-${routeKey}-reverse-start-boundary`);
 
+    requireTruth(focusedEvidence, `keyboard-${routeKey}-focus-evidence-present`);
+    requireTruth(focusedEvidence.focused, `keyboard-${routeKey}-focused`);
+    requireTruth(focusedEvidence.focusVisible, `keyboard-${routeKey}-focus-visible`);
+    requireTruth(focusedEvidence.visibleInViewport, `keyboard-${routeKey}-in-viewport`);
     requireTruth(
-      Boolean(
-        focusedEvidence?.focused &&
-          focusedEvidence.focusVisible &&
-          focusedEvidence.visibleInViewport &&
-          focusedEvidence.interactiveControlContract,
-      ),
-      `keyboard-${routeKey}-visible-focus-control`,
+      focusedEvidence.interactiveControlContract,
+      `keyboard-${routeKey}-interactive-control`,
     );
     requireTruth(
       before.outline !== focusedEvidence?.outline ||
