@@ -144,18 +144,18 @@ test("S232H.2 is a narrow exact-head PR2 and fixed-PR1 Preview gate", () => {
   );
   assert.match(operatorRunbook, /`E2E_USER_B_EMAIL` \(2인 분리 검증용\)/);
   assert.match(operatorRunbook, /`E2E_USER_B_PASSWORD` \(2인 분리 검증용\)/);
-  assert.match(workflow, /E2E_USER_EMAIL: \$\{\{ secrets\.E2E_USER_B_EMAIL \}\}/);
+  assert.match(workflow, /E2E_USER_EMAIL: \$\{\{ secrets\.E2E_USER_EMAIL \}\}/);
   assert.match(
     workflow,
-    /E2E_USER_PASSWORD: \$\{\{ secrets\.E2E_USER_B_PASSWORD \}\}/,
+    /E2E_USER_PASSWORD: \$\{\{ secrets\.E2E_USER_PASSWORD \}\}/,
   );
   assert.doesNotMatch(
     workflow,
-    /E2E_USER_EMAIL: \$\{\{ secrets\.(?:E2E_USER_EMAIL|TEST_USER_EMAIL)/,
+    /E2E_USER_EMAIL: \$\{\{ secrets\.(?:E2E_USER_B_EMAIL|TEST_USER_EMAIL)/,
   );
   assert.doesNotMatch(
     workflow,
-    /E2E_USER_PASSWORD: \$\{\{ secrets\.(?:E2E_USER_PASSWORD|TEST_USER_PASSWORD)/,
+    /E2E_USER_PASSWORD: \$\{\{ secrets\.(?:E2E_USER_B_PASSWORD|TEST_USER_PASSWORD)/,
   );
 });
 
@@ -224,7 +224,7 @@ test("S232H.2 audits all 13 production routes at 390, 768, and 1440", () => {
   assert.match(spec, /--v3-radius-control/);
   assert.match(spec, /--layout-reading-column/);
   assert.match(spec, /--layout-content-max/);
-  assert.match(spec, /Unexpected redirect/);
+  assert.match(spec, /must not redirect to a different pathname/);
 });
 
 test("route mapping claims only component contracts used by that production flow", () => {
@@ -409,7 +409,7 @@ test("S232H.2 produces the fixed initial, dynamic, before, and Figma evidence se
   );
 });
 
-test("S232H.2 evidence is API-audited synthetic data and directly compared with Figma", () => {
+test("S232H.2 evidence is privacy-bounded synthetic data and directly compared with Figma", () => {
   assert.match(spec, /loginWithDedicatedTestAccount/);
   assert.match(spec, /ensureSyntheticLedgerFixture/);
   assert.ok(spec.includes('"/api/auth/session"'));
@@ -504,20 +504,21 @@ test("S232H.2 evidence is API-audited synthetic data and directly compared with 
   );
   assert.match(
     spec,
-    /const listedFixtureCoverage =\s*listedExactFixtures\.length === listedItems\.length/,
+    /const strictOwnershipContract =\s*listedAccountOwnedItems\.length === listedItems\.length &&\s*detailOwnershipClosed &&\s*logs\.length === 0/,
   );
   assert.match(
     spec,
-    /const strictOwnershipContract =\s*listedFixtureCoverage &&\s*detailOwnershipClosed &&\s*logs\.length === 0/,
-  );
-  assert.match(
-    spec,
-    /const detailOwnershipClosed = detailItems\.every\(\s*\(item\) => owned\.has\(resolveSyntheticItemId\(item\)\)/,
+    /const detailOwnershipClosed = detailItems\.every\([\s\S]*?item\.userId === sessionUserId &&[\s\S]*?listedAccountOwnedIds\.has\(resolveSyntheticItemId\(item\)\)/,
   );
   assert.match(spec, /syntheticQueue = queue\.filter[\s\S]*?owned\.has\(item\.itemId\)/);
   assert.match(spec, /planningIds\.today\.filter\(\(itemId\) =>\s*owned\.has\(itemId\)/);
-  assert.match(spec, /planningIds\.weekly\.filter\(\(itemId\) =>\s*owned\.has\(itemId\)/);
-  assert.match(spec, /syntheticItemCount: listedExactFixtures\.length/);
+  assert.match(
+    spec,
+    /planningIds\.weekly\.every\([\s\S]*?listedAccountOwnedIds\.has\(itemId\)/,
+  );
+  assert.match(spec, /accountOwnedItemCount: listedAccountOwnedItems\.length/);
+  assert.match(spec, /exactFixtureItemCount: listedExactFixtures\.length/);
+  assert.match(spec, /unclassifiedAccountItemCount: unclassifiedItems\.length/);
   assert.match(spec, /historicalS232gSourceCount/);
   assert.match(spec, /historicalS232gRewriteCount/);
   assert.match(spec, /family-counts=/);
@@ -527,33 +528,54 @@ test("S232H.2 evidence is API-audited synthetic data and directly compared with 
   assert.match(spec, /payloadFailurePaths/);
   assert.match(spec, /parentRawPayload\.rewrite_instruction/);
   assert.match(spec, /parentAiDraft\.rewriteInstruction/);
-  assert.doesNotMatch(spec, /accountOwned|listedAccountOwned/);
-  assert.match(spec, /const governedSyntheticAccount = sessionBound/);
+  assert.match(spec, /const listedAccountOwnedIds = new Set/);
+  assert.match(spec, /const governedTestAccount = sessionBound/);
   assert.match(spec, /item\.userId === sessionUserId/);
   assert.match(spec, /exactFixtureItemCount/);
-  assert.match(spec, /governedSyntheticAccount/);
+  assert.match(spec, /governedTestAccount/);
   assert.match(spec, /detailOwnershipClosed/);
   assert.match(spec, /any study log makes capture fail closed/);
-  assert.match(spec, /syntheticStudyLogCount: 0/);
   assert.match(
     spec,
     /const preMutationAudit = await auditSyntheticAccount[\s\S]*?const initialAfterScreenshots/,
   );
   assert.match(spec, /accountItemCount/);
-  assert.match(spec, /syntheticItemCount/);
+  assert.match(spec, /accountOwnedItemCount/);
+  assert.match(spec, /unclassifiedAccountItemCount/);
   assert.match(spec, /accountStudyLogCount/);
-  assert.match(spec, /syntheticStudyLogCount/);
-  assert.match(spec, /syntheticAccountOnly/);
-  assert.match(spec, /syntheticFixtureOnly/);
+  assert.match(spec, /syntheticFixtureReady/);
+  assert.match(spec, /accountSnapshotStable/);
+  assert.match(spec, /screenshotDataBoundaryClosed/);
   assert.match(spec, /sessionBound/);
   assert.match(spec, /strictOwnershipContract/);
   assert.match(spec, /pendingOwnedQueue/);
   assert.match(spec, /queueDetailsAudited/);
   assert.match(spec, /weeklyTaskDetailsAudited/);
   assert.match(spec, /privateLearnerContentCaptured/);
-  assert.doesNotMatch(spec, /syntheticAccountOnly:\s*true/);
-  assert.doesNotMatch(spec, /syntheticFixtureOnly:\s*true/);
+  assert.doesNotMatch(spec, /syntheticAccountOnly|syntheticFixtureOnly/);
   assert.doesNotMatch(spec, /privateLearnerContentCaptured:\s*false/);
+  assert.match(spec, /createScreenshotDataBoundary/);
+  assert.match(spec, /const unclassifiedItems = listedItems\.filter/);
+  assert.match(spec, /NodeFilter\.SHOW_TEXT/);
+  assert.match(spec, /Array\.from\(element\.attributes\)/);
+  assert.match(spec, /HTMLInputElement/);
+  assert.match(spec, /"::before", "::after"/);
+  assert.match(spec, /visibleUninspectableSurfaceCount/);
+  assert.match(
+    spec,
+    /await assertScreenshotDataBoundary\(\);\s*const buffer = await page\.screenshot\([\s\S]*?await assertScreenshotDataBoundary\(\);\s*boundary\.captureCount/,
+  );
+  assert.match(
+    spec,
+    /const finalAccountAudit = await auditSyntheticAccount[\s\S]*?accountSnapshotStable[\s\S]*?for \(const screenshot of \[\.\.\.baselineScreenshots, \.\.\.afterScreenshots\]\)[\s\S]*?await writeFile/,
+  );
+  assert.match(spec, /screenshotBoundary\.checkCount === 50/);
+  assert.match(spec, /screenshotBoundary\.captureCount === 25/);
+  assert.doesNotMatch(spec, /JSON\.stringify\(boundary\)/);
+  assert.doesNotMatch(spec, /detailRead\.itemId} must/);
+  assert.doesNotMatch(spec, /textContent\?\.trim\(\)\.slice/);
+  assert.match(spec, /evidence\.consoleErrors\.push\("console-error"\)/);
+  assert.match(spec, /evidence\.pageErrors\.push\("page-error"\)/);
   assert.match(spec, /const credentialsRedacted =/);
   assert.match(spec, /\n\s+credentialsRedacted,\n/);
   assert.match(spec, /rawInputArtifactCaptured: false/);
@@ -642,7 +664,8 @@ test("S232H.2 evidence is API-audited synthetic data and directly compared with 
     );
   }
   assert.match(spec, /calculatorCasioInputVisible:\s*initialAuditRows\.some/);
-  assert.match(workflow, /syntheticAccountOnly !== true/);
+  assert.match(workflow, /screenshotDataBoundaryClosed/);
+  assert.match(workflow, /visibleUnclassifiedTextHitCount/);
   assert.match(workflow, /strictOwnershipContract/);
   assert.match(workflow, /edgeGridCorrelation/);
   assert.match(workflow, /figmaComparisonCount !== 3/);

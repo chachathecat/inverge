@@ -8,6 +8,7 @@ import {
   type Page,
   type TestInfo,
 } from "@playwright/test";
+import { createHash } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
 
 import {
@@ -18,7 +19,6 @@ import {
   runtimeBaseUrl,
   runtimeRunnerSha,
   runtimeTargetSha,
-  sanitizeRuntimeEvidence,
 } from "./support/authenticated-runtime";
 import {
   collectSyntheticPayloadFailurePaths,
@@ -213,10 +213,10 @@ type ScreenshotEvidence = {
 
 type PrivacyAudit = {
   accountItemCount: number;
-  syntheticItemCount: number;
+  accountOwnedItemCount: number;
   exactFixtureItemCount: number;
+  unclassifiedAccountItemCount: number;
   accountStudyLogCount: number;
-  syntheticStudyLogCount: number;
   queueItemCount: number;
   syntheticQueueItemCount: number;
   todayItemCount: number;
@@ -224,15 +224,23 @@ type PrivacyAudit = {
   itemListingComplete: boolean;
   studyLogListingComplete: boolean;
   sessionBound: boolean;
-  governedSyntheticAccount: boolean;
+  governedTestAccount: boolean;
   strictOwnershipContract: boolean;
   detailOwnershipClosed: boolean;
   pendingOwnedQueue: boolean;
   queueDetailsAudited: boolean;
   todayDetailsAudited: boolean;
   weeklyTaskDetailsAudited: boolean;
-  syntheticAccountOnly: boolean;
-  syntheticFixtureOnly: boolean;
+  syntheticFixtureReady: boolean;
+  screenshotBoundaryCheckCount: number;
+  screenshotCaptureCount: number;
+  visibleUnclassifiedTextHitCount: number;
+  visibleUnclassifiedReferenceHitCount: number;
+  visibleUnclassifiedFormValueHitCount: number;
+  visibleUnclassifiedGeneratedContentHitCount: number;
+  visibleUninspectableSurfaceCount: number;
+  accountSnapshotStable: boolean;
+  screenshotDataBoundaryClosed: boolean;
   privateLearnerContentCaptured: boolean;
 };
 
@@ -376,11 +384,11 @@ function monitorPageRuntime(
   };
   page.on("console", (message) => {
     if (message.type() === "error") {
-      evidence.consoleErrors.push(sanitizeRuntimeEvidence(message.text()));
+      evidence.consoleErrors.push("console-error");
     }
   });
-  page.on("pageerror", (error) => {
-    evidence.pageErrors.push(sanitizeRuntimeEvidence(error.message));
+  page.on("pageerror", () => {
+    evidence.pageErrors.push("page-error");
   });
   page.on("requestfailed", (request) => {
     const url = new URL(request.url());
@@ -401,16 +409,12 @@ function monitorPageRuntime(
       request.method() === "GET" &&
       isExplicitPrefetch;
     if (isSupersededDocumentNavigation || isCancelledExplicitPrefetch) return;
-    evidence.sameOriginRequestFailures.push(
-      `${request.method()} ${url.pathname} ${sanitizeRuntimeEvidence(failure)}`,
-    );
+    evidence.sameOriginRequestFailures.push("same-origin-request-failure");
   });
   page.on("response", (response) => {
     const url = new URL(response.url());
     if (url.origin !== expectedOrigin || response.status() < 400) return;
-    evidence.sameOriginRequestFailures.push(
-      `${response.request().method()} ${url.pathname} HTTP ${response.status()}`,
-    );
+    evidence.sameOriginRequestFailures.push("same-origin-http-error");
   });
   return evidence;
 }
@@ -490,11 +494,126 @@ type SyntheticAccountAudit = {
   items: SyntheticItem[];
   queue: SyntheticQueueCard[];
   ownedItemIds: Set<string>;
+  screenshotBoundary: ScreenshotDataBoundary;
   primaryQueueTitle: string | null;
+};
+
+type ScreenshotDataBoundary = {
+  unclassifiedItemIds: string[];
+  sensitiveFragments: string[];
+  unclassifiedItemCount: number;
+  checkCount: number;
+  captureCount: number;
+  visibleTextHitCount: number;
+  visibleReferenceHitCount: number;
+  visibleFormValueHitCount: number;
+  visibleGeneratedContentHitCount: number;
+  visibleUninspectableSurfaceCount: number;
 };
 
 function resolveSyntheticItemId(item: SyntheticItem) {
   return item.id ?? item.itemId ?? "";
+}
+
+const directLearnerContentFields = [
+  "sourceLabel",
+  "problemTitle",
+  "problemIdentifier",
+  "rawQuestionText",
+  "rawAnswerText",
+  "correctAnswer",
+  "userAnswer",
+  "userReasonText",
+] as const satisfies readonly (keyof SyntheticItem)[];
+
+const nestedLearnerContentKey =
+  /(?:question|answer|reason|gap|issue|outline|rewrite|summary|concept|formula|comparison|ocr|draft|sentence|evidence|excerpt|feedback|memo|note|weak|missing|retrieval|problem[_-]?(?:title|text)|source[_-]?label|image|attachment|upload|file[_-]?(?:url|uri)|content|body|paragraph)/i;
+const nestedMachineMetadataKey =
+  /(?:^|_)(?:id|uuid|timestamp|created|updated|deleted|version|schema|status|state|mode|type|role|index|count|seconds|deduped|confidence|exam|subject|owner|user|source|acceptance|runtime|provider)(?:$|_)/i;
+
+function normalizeBoundaryText(value: string) {
+  return value.normalize("NFKC").replace(/\s+/g, " ").trim();
+}
+
+function collectNestedLearnerContent(
+  value: unknown,
+  keyPath: readonly string[],
+  output: Set<string>,
+) {
+  if (typeof value === "string") {
+    const normalized = normalizeBoundaryText(value);
+    const key = (keyPath.at(-1) ?? "").replace(
+      /([a-z0-9])([A-Z])/g,
+      "$1_$2",
+    );
+    if (
+      normalized &&
+      normalized !== "-" &&
+      (nestedLearnerContentKey.test(key) ||
+        !nestedMachineMetadataKey.test(key))
+    ) {
+      output.add(normalized);
+    }
+    return;
+  }
+  if (Array.isArray(value)) {
+    for (const entry of value)
+      collectNestedLearnerContent(entry, keyPath, output);
+    return;
+  }
+  if (!value || typeof value !== "object") return;
+  for (const [key, entry] of Object.entries(value))
+    collectNestedLearnerContent(entry, [...keyPath, key], output);
+}
+
+function createScreenshotDataBoundary(
+  unclassifiedItems: readonly SyntheticItem[],
+): ScreenshotDataBoundary {
+  const unclassifiedItemIds = [
+    ...new Set(
+      unclassifiedItems
+        .map(resolveSyntheticItemId)
+        .filter((itemId) => itemId.length > 0),
+    ),
+  ];
+  const fragments = new Set<string>();
+  for (const item of unclassifiedItems) {
+    for (const field of directLearnerContentFields) {
+      const value = item[field];
+      if (typeof value !== "string") continue;
+      const normalized = normalizeBoundaryText(value);
+      if (normalized && normalized !== "-") fragments.add(normalized);
+    }
+    collectNestedLearnerContent(item.rawPayload, ["rawPayload"], fragments);
+    collectNestedLearnerContent(
+      item.derivedPayload,
+      ["derivedPayload"],
+      fragments,
+    );
+  }
+  return {
+    unclassifiedItemIds,
+    sensitiveFragments: [...fragments],
+    unclassifiedItemCount: unclassifiedItems.length,
+    checkCount: 0,
+    captureCount: 0,
+    visibleTextHitCount: 0,
+    visibleReferenceHitCount: 0,
+    visibleFormValueHitCount: 0,
+    visibleGeneratedContentHitCount: 0,
+    visibleUninspectableSurfaceCount: 0,
+  };
+}
+
+function screenshotDataBoundaryFingerprint(boundary: ScreenshotDataBoundary) {
+  return createHash("sha256")
+    .update(
+      JSON.stringify({
+        itemIds: [...boundary.unclassifiedItemIds].sort(),
+        fragments: [...boundary.sensitiveFragments].sort(),
+      }),
+    )
+    .digest("hex");
 }
 
 async function readSyntheticAccountData(
@@ -1395,14 +1514,15 @@ async function auditSyntheticAccount(
     session.email.toLowerCase() === testEmail.toLowerCase();
   // The operator runbook defines E2E_USER_EMAIL/E2E_USER_PASSWORD as a
   // test-only account. Those values are owner-controlled protected secrets;
-  // the exact secret/session match above is the runtime trust root.
-  const governedSyntheticAccount = sessionBound;
+  // the exact secret/session match above is the runtime trust root. The
+  // account is not assumed to contain only synthetic rows.
+  const governedTestAccount = sessionBound;
   expect(
     sessionBound,
     "The visual audit must be bound to the exact dedicated non-demo account.",
   ).toBe(true);
   expect(
-    governedSyntheticAccount,
+    governedTestAccount,
     "The protected test-only account secret must bind to the runtime session.",
   ).toBe(true);
 
@@ -1420,10 +1540,10 @@ async function auditSyntheticAccount(
   expect(Array.isArray(observed.queue.body.items)).toBe(true);
 
   const detailItems: SyntheticItem[] = [];
-  for (const detailRead of observed.details) {
+  for (const [detailIndex, detailRead] of observed.details.entries()) {
     expect(
       detailRead.read.status,
-      `Synthetic ownership detail ${detailRead.itemId} must be readable.`,
+      `Account ownership detail ${detailIndex} must be readable.`,
     ).toBe(200);
     expect(detailRead.read.body.ok).toBe(true);
     const detail =
@@ -1437,9 +1557,12 @@ async function auditSyntheticAccount(
         : null;
     expect(
       item,
-      `Synthetic ownership detail ${detailRead.itemId} must contain an item.`,
+      `Account ownership detail ${detailIndex} must contain an item.`,
     ).not.toBeNull();
-    expect(resolveSyntheticItemId(item!)).toBe(detailRead.itemId);
+    expect(
+      resolveSyntheticItemId(item!) === detailRead.itemId,
+      `Account ownership detail ${detailIndex} must match its requested row.`,
+    ).toBe(true);
     detailItems.push(item!);
   }
   const mergedById = new Map<string, SyntheticItem>();
@@ -1464,8 +1587,20 @@ async function auditSyntheticAccount(
       }),
   );
   const { owned } = classifyOwnedSyntheticItems(mergedItems, sessionUserId);
+  const listedAccountOwnedIds = new Set(
+    listedItems
+      .filter((item) => item.userId === sessionUserId)
+      .map(resolveSyntheticItemId)
+      .filter((itemId) => itemId.length > 0),
+  );
+  const listedAccountOwnedItems = listedItems.filter((item) =>
+    listedAccountOwnedIds.has(resolveSyntheticItemId(item)),
+  );
   const listedExactFixtures = listedItems.filter((item) =>
     owned.has(resolveSyntheticItemId(item)),
+  );
+  const unclassifiedItems = listedItems.filter(
+    (item) => !owned.has(resolveSyntheticItemId(item)),
   );
   const historicalS232gSourceCount = listedItems.filter((item) =>
     isHistoricalS232gAggregateSource(item),
@@ -1586,10 +1721,10 @@ async function auditSyntheticAccount(
     ),
     unmatched: Math.max(0, listedItems.length - listedExactFixtures.length),
   };
-  const listedFixtureCoverage =
-    listedExactFixtures.length === listedItems.length;
   const detailOwnershipClosed = detailItems.every(
-    (item) => owned.has(resolveSyntheticItemId(item)),
+    (item) =>
+      item.userId === sessionUserId &&
+      listedAccountOwnedIds.has(resolveSyntheticItemId(item)),
   );
   const queueIds = queue
     .map((item) => item.itemId)
@@ -1601,56 +1736,43 @@ async function auditSyntheticAccount(
   const syntheticTodayCount = planningIds.today.filter((itemId) =>
     owned.has(itemId),
   ).length;
-  const syntheticWeeklyCount = planningIds.weekly.filter((itemId) =>
-    owned.has(itemId),
-  ).length;
   const itemListingComplete = listedItems.length < 501;
   const studyLogListingComplete = logs.length < 501;
   const strictOwnershipContract =
-    listedFixtureCoverage &&
+    listedAccountOwnedItems.length === listedItems.length &&
     detailOwnershipClosed &&
     logs.length === 0;
   const queueDetailsAudited =
-    queueIds.length === syntheticQueue.length &&
     queueIds.every((itemId) =>
-      owned.has(itemId) &&
+      listedAccountOwnedIds.has(itemId) &&
       observed.details.some((detail) => detail.itemId === itemId),
     );
   const todayDetailsAudited =
     !includePlanning ||
-    (planningIds.today.length === syntheticTodayCount &&
-      planningIds.today.every((itemId) =>
-        owned.has(itemId) &&
+    planningIds.today.every(
+      (itemId) =>
+        listedAccountOwnedIds.has(itemId) &&
         observed.details.some((detail) => detail.itemId === itemId),
-      ));
+    );
   const weeklyTaskDetailsAudited =
     !includePlanning ||
-    (planningIds.weekly.length === syntheticWeeklyCount &&
-      planningIds.weekly.every((itemId) =>
-        owned.has(itemId) &&
+    planningIds.weekly.every(
+      (itemId) =>
+        listedAccountOwnedIds.has(itemId) &&
         observed.details.some((detail) => detail.itemId === itemId),
-      ));
+    );
   const pendingOwnedQueue = queueIds.some((itemId) => owned.has(itemId));
-  const syntheticAccountOnly =
-    governedSyntheticAccount &&
+  const syntheticFixtureReady =
+    governedTestAccount &&
     itemListingComplete &&
     studyLogListingComplete &&
     strictOwnershipContract &&
     queueDetailsAudited &&
     todayDetailsAudited &&
-    weeklyTaskDetailsAudited;
-  const syntheticFixtureOnly =
-    syntheticAccountOnly &&
+    weeklyTaskDetailsAudited &&
     (!expectedItemId || owned.has(expectedItemId)) &&
     (!expectedItemId || pendingOwnedQueue);
-  const privateLearnerContentCaptured = !(
-    syntheticFixtureOnly &&
-    governedSyntheticAccount &&
-    strictOwnershipContract &&
-    queueDetailsAudited &&
-    todayDetailsAudited &&
-    weeklyTaskDetailsAudited
-  );
+  const screenshotBoundary = createScreenshotDataBoundary(unclassifiedItems);
 
   expect(
     itemListingComplete,
@@ -1666,17 +1788,20 @@ async function auditSyntheticAccount(
   ).toEqual([]);
   expect(
     listedExactFixtures.length,
-    `Every listed row must be an exact allowlisted synthetic fixture or owned rewrite; family-counts=${JSON.stringify(fixtureFamilyCounts)}; historical-diagnostics=${JSON.stringify(historicalDiagnostics)}.`,
+    `At least one exact allowlisted synthetic fixture must be available; family-counts=${JSON.stringify(fixtureFamilyCounts)}; historical-diagnostics=${JSON.stringify(historicalDiagnostics)}.`,
+  ).toBeGreaterThan(0);
+  expect(
+    listedAccountOwnedItems.length,
+    "Every listed item must be owned by the authenticated test-account session.",
   ).toBe(listedItems.length);
-  expect(listedFixtureCoverage).toBe(true);
   expect(
     logs.length,
     "The visual fixture creates no study logs; any study log makes capture fail closed.",
   ).toBe(0);
   expect(
-    syntheticQueue.length,
-    "Every queue row must close to a governed account item.",
-  ).toBe(queue.length);
+    queueIds.every((itemId) => listedAccountOwnedIds.has(itemId)),
+    "Every queue row must close to the authenticated test-account boundary.",
+  ).toBe(true);
   expect(queueDetailsAudited).toBe(true);
   if (includePlanning) {
     expect(todayDetailsAudited).toBe(true);
@@ -1686,21 +1811,22 @@ async function auditSyntheticAccount(
     expect(owned.has(expectedItemId)).toBe(true);
     expect(pendingOwnedQueue).toBe(true);
   }
-  expect(syntheticAccountOnly).toBe(true);
-  expect(syntheticFixtureOnly).toBe(true);
-  expect(privateLearnerContentCaptured).toBe(false);
+  expect(syntheticFixtureReady).toBe(true);
 
   return {
     items: listedItems,
     queue,
     ownedItemIds: owned,
-    primaryQueueTitle: queue[0]?.problemTitle ?? null,
+    screenshotBoundary,
+    primaryQueueTitle:
+      queue.find((item) => Boolean(item.itemId && owned.has(item.itemId)))
+        ?.problemTitle ?? null,
     privacyAudit: {
       accountItemCount: listedItems.length,
-      syntheticItemCount: listedExactFixtures.length,
+      accountOwnedItemCount: listedAccountOwnedItems.length,
       exactFixtureItemCount: listedExactFixtures.length,
+      unclassifiedAccountItemCount: unclassifiedItems.length,
       accountStudyLogCount: logs.length,
-      syntheticStudyLogCount: 0,
       queueItemCount: queue.length,
       syntheticQueueItemCount: syntheticQueue.length,
       todayItemCount: planningIds.today.length,
@@ -1708,16 +1834,24 @@ async function auditSyntheticAccount(
       itemListingComplete,
       studyLogListingComplete,
       sessionBound,
-      governedSyntheticAccount,
+      governedTestAccount,
       strictOwnershipContract,
       detailOwnershipClosed,
       pendingOwnedQueue,
       queueDetailsAudited,
       todayDetailsAudited,
       weeklyTaskDetailsAudited,
-      syntheticAccountOnly,
-      syntheticFixtureOnly,
-      privateLearnerContentCaptured,
+      syntheticFixtureReady,
+      screenshotBoundaryCheckCount: 0,
+      screenshotCaptureCount: 0,
+      visibleUnclassifiedTextHitCount: 0,
+      visibleUnclassifiedReferenceHitCount: 0,
+      visibleUnclassifiedFormValueHitCount: 0,
+      visibleUnclassifiedGeneratedContentHitCount: 0,
+      visibleUninspectableSurfaceCount: 0,
+      accountSnapshotStable: false,
+      screenshotDataBoundaryClosed: false,
+      privateLearnerContentCaptured: true,
     },
   };
 }
@@ -1942,14 +2076,15 @@ async function gotoRequiredRoute(page: Page, requestedPath: string) {
   await waitForStableRender(page);
   const expected = new URL(requestedPath, "https://s232h2.invalid");
   const observed = new URL(page.url());
-  expect(observed.pathname, `Unexpected redirect from ${requestedPath}`).toBe(
-    expected.pathname,
-  );
+  expect(
+    observed.pathname === expected.pathname,
+    "The required production route must not redirect to a different pathname.",
+  ).toBe(true);
   for (const [key, value] of expected.searchParams) {
     expect(
-      observed.searchParams.get(key),
-      `Missing ${key} on ${requestedPath}`,
-    ).toBe(value);
+      observed.searchParams.get(key) === value,
+      `The required production route must preserve its ${key} query contract.`,
+    ).toBe(true);
   }
 }
 
@@ -1989,10 +2124,6 @@ async function visibleTargetFailures(page: Page) {
         return [
           {
             tag: element.tagName.toLowerCase(),
-            name:
-              element.getAttribute("aria-label") ??
-              element.textContent?.trim().slice(0, 60) ??
-              "",
             width: Math.round(targetRect.width * 10) / 10,
             height: Math.round(targetRect.height * 10) / 10,
           },
@@ -2004,7 +2135,6 @@ async function visibleTargetFailures(page: Page) {
 async function focusRevealTargetFailures(page: Page) {
   const links = page.locator("a[data-v3-skip-link]");
   const failures: Array<{
-    name: string;
     width: number;
     height: number;
     inViewport: boolean;
@@ -2035,7 +2165,6 @@ async function focusRevealTargetFailures(page: Page) {
     }
     if (!reachedByKeyboard) {
       failures.push({
-        name: (await link.textContent())?.trim().slice(0, 60) ?? "",
         width: 0,
         height: 0,
         inViewport: false,
@@ -2052,7 +2181,6 @@ async function focusRevealTargetFailures(page: Page) {
     );
     if (!box || box.width < 44 || box.height < 44 || !inViewport) {
       failures.push({
-        name: (await link.textContent())?.trim().slice(0, 60) ?? "",
         width: Math.round((box?.width ?? 0) * 10) / 10,
         height: Math.round((box?.height ?? 0) * 10) / 10,
         inViewport,
@@ -2119,10 +2247,6 @@ async function visiblePrimaryActions(page: Page) {
         return [
           {
             tag: element.tagName.toLowerCase(),
-            name:
-              element.getAttribute("aria-label") ??
-              element.textContent?.trim().slice(0, 80) ??
-              "",
             disabled:
               element.matches(":disabled") ||
               element.getAttribute("aria-disabled") === "true",
@@ -2157,10 +2281,6 @@ async function visibleViewportBoundsFailures(page: Page) {
         return [
           {
             tag: element.tagName.toLowerCase(),
-            name:
-              element.getAttribute("aria-label") ??
-              element.textContent?.trim().slice(0, 60) ??
-              "",
             left: Math.round(rect.left * 10) / 10,
             right: Math.round(rect.right * 10) / 10,
           },
@@ -2689,9 +2809,9 @@ async function auditRoute(
       violation.impact === "serious" || violation.impact === "critical",
   );
   expect(
-    blockingAxe,
+    blockingAxe.length,
     `${route.label} has serious/critical Axe violations: ${blockingAxe.map((item) => item.id).join(", ")}`,
-  ).toEqual([]);
+  ).toBe(0);
 
   const enabledPrimaryActionCount = primaryActions.filter(
     (action) => !action.disabled,
@@ -2740,10 +2860,198 @@ async function auditRoute(
 
 async function captureSyntheticScreenshot(
   page: Page,
-  testInfo: TestInfo,
+  boundary: ScreenshotDataBoundary,
   fileName: string,
   options: { fullPage?: boolean } = {},
 ): Promise<ScreenshotEvidence> {
+  const assertScreenshotDataBoundary = async () => {
+    const observation = await page.evaluate(
+      ({ itemIds, fragments, captureFullPage }) => {
+        const normalize = (value: string) =>
+          value.normalize("NFKC").replace(/\s+/g, " ").trim();
+        const normalizedItemIds = itemIds.map(normalize).filter(Boolean);
+        const normalizedFragments = fragments.map(normalize).filter(Boolean);
+        const matchesSensitiveFragment = (value: string) => {
+          const normalized = normalize(value);
+          if (!normalized) return false;
+          return normalizedFragments.some(
+            (fragment) =>
+              normalized === fragment ||
+              normalized.includes(fragment) ||
+              (normalized.length >= 12 && fragment.includes(normalized)),
+          );
+        };
+        const matchesUnclassifiedReference = (value: string) => {
+          const normalized = normalize(value);
+          const candidates = [normalized];
+          try {
+            const decoded = normalize(decodeURIComponent(normalized));
+            if (decoded !== normalized) candidates.push(decoded);
+          } catch {
+            // Invalid percent-encoding is compared in its original form.
+          }
+          return candidates.some(
+            (candidate) =>
+              normalizedItemIds.some((itemId) => candidate.includes(itemId)) ||
+              matchesSensitiveFragment(candidate),
+          );
+        };
+        const isRendered = (element: Element) => {
+          if (!(element instanceof HTMLElement || element instanceof SVGElement))
+            return false;
+          let current: Element | null = element;
+          while (current) {
+            const style = getComputedStyle(current);
+            if (
+              style.display === "none" ||
+              style.visibility === "hidden" ||
+              style.visibility === "collapse" ||
+              Number(style.opacity) === 0
+            )
+              return false;
+            const root = current.getRootNode();
+            current =
+              current.parentElement ??
+              (root instanceof ShadowRoot ? root.host : null);
+          }
+          return Array.from(element.getClientRects()).some((rect) => {
+            if (rect.width <= 0 || rect.height <= 0) return false;
+            return (
+              captureFullPage ||
+              (rect.bottom > 0 &&
+                rect.right > 0 &&
+                rect.top < window.innerHeight &&
+                rect.left < window.innerWidth)
+            );
+          });
+        };
+        let textHits = 0;
+        let referenceHits = 0;
+        let formValueHits = 0;
+        let generatedContentHits = 0;
+        const uninspectable = new Set<Element>();
+        const roots: Array<Document | ShadowRoot> = [document];
+        for (let rootIndex = 0; rootIndex < roots.length; rootIndex += 1) {
+          const root = roots[rootIndex];
+          const elements = Array.from(root.querySelectorAll("*"));
+          for (const element of elements) {
+            if (element.shadowRoot) roots.push(element.shadowRoot);
+            if (!isRendered(element)) continue;
+
+            const hasBlockChild = Array.from(element.children).some(
+              (child) =>
+                !["inline", "inline-block", "contents"].includes(
+                  getComputedStyle(child).display,
+                ),
+            );
+            if (
+              element instanceof HTMLElement &&
+              !hasBlockChild &&
+              matchesSensitiveFragment(element.innerText)
+            )
+              textHits += 1;
+
+            for (const attribute of Array.from(element.attributes)) {
+              if (matchesUnclassifiedReference(attribute.value)) {
+                referenceHits += 1;
+                break;
+              }
+            }
+
+            if (
+              element instanceof HTMLInputElement ||
+              element instanceof HTMLTextAreaElement
+            ) {
+              if (matchesSensitiveFragment(element.value)) formValueHits += 1;
+            } else if (element instanceof HTMLSelectElement) {
+              const selectedText = Array.from(element.selectedOptions)
+                .map((option) => option.textContent ?? "")
+                .join(" ");
+              if (matchesSensitiveFragment(selectedText)) formValueHits += 1;
+            }
+
+            for (const pseudo of ["::before", "::after"] as const) {
+              const content = getComputedStyle(element, pseudo).content;
+              if (
+                content &&
+                content !== "none" &&
+                content !== "normal" &&
+                matchesUnclassifiedReference(content)
+              )
+                generatedContentHits += 1;
+            }
+
+            const backgroundImage = getComputedStyle(element).backgroundImage;
+            if (
+              backgroundImage !== "none" &&
+              matchesUnclassifiedReference(backgroundImage)
+            )
+              referenceHits += 1;
+
+            const maskImage = getComputedStyle(element).maskImage;
+            if (
+              /url\(/i.test(backgroundImage) ||
+              /url\(/i.test(maskImage)
+            )
+              uninspectable.add(element);
+
+            if (
+              element instanceof HTMLIFrameElement ||
+              element instanceof HTMLCanvasElement ||
+              element instanceof HTMLObjectElement ||
+              element instanceof HTMLEmbedElement ||
+              element instanceof HTMLImageElement ||
+              element instanceof HTMLVideoElement
+            )
+              uninspectable.add(element);
+          }
+
+          const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+          let node = walker.nextNode();
+          while (node) {
+            const parent = node.parentElement;
+            if (
+              parent &&
+              isRendered(parent) &&
+              matchesSensitiveFragment(node.textContent ?? "")
+            )
+              textHits += 1;
+            node = walker.nextNode();
+          }
+        }
+        return {
+          textHits,
+          referenceHits,
+          formValueHits,
+          generatedContentHits,
+          uninspectableSurfaceCount: uninspectable.size,
+        };
+      },
+      {
+        itemIds: boundary.unclassifiedItemIds,
+        fragments: boundary.sensitiveFragments,
+        captureFullPage: options.fullPage ?? true,
+      },
+    );
+    boundary.checkCount += 1;
+    boundary.visibleTextHitCount += observation.textHits;
+    boundary.visibleReferenceHitCount += observation.referenceHits;
+    boundary.visibleFormValueHitCount += observation.formValueHits;
+    boundary.visibleGeneratedContentHitCount += observation.generatedContentHits;
+    boundary.visibleUninspectableSurfaceCount +=
+      observation.uninspectableSurfaceCount;
+    const blockingHitCount =
+      observation.textHits +
+      observation.referenceHits +
+      observation.formValueHits +
+      observation.generatedContentHits +
+      observation.uninspectableSurfaceCount;
+    expect(
+      blockingHitCount,
+      `Screenshot data boundary must close before any PNG is retained; count-only-observation=${JSON.stringify(observation)}.`,
+    ).toBe(0);
+  };
+
   const previousScrollBehavior = await page.evaluate(() => {
     if (document.activeElement instanceof HTMLElement)
       document.activeElement.blur();
@@ -2826,13 +3134,15 @@ async function captureSyntheticScreenshot(
   const masks: Locator[] = [];
   if ((await identity.count()) === 1 && (await identity.isVisible()))
     masks.push(identity);
+  await assertScreenshotDataBoundary();
   const buffer = await page.screenshot({
-    path: testInfo.outputPath(fileName),
     fullPage: options.fullPage ?? true,
     animations: "disabled",
     mask: masks,
     maskColor: "#000000",
   });
+  await assertScreenshotDataBoundary();
+  boundary.captureCount += 1;
   return { fileName, buffer };
 }
 
@@ -3648,7 +3958,13 @@ test("S232H.2 adopts V3 across the production learner routes with direct before/
     expectedItemId: syntheticItemId,
     includePlanning: true,
   });
-  const privacyAudit = postMutationAudit.privacyAudit;
+  const accountPrivacyAudit = postMutationAudit.privacyAudit;
+  const dataBoundary = postMutationAudit.screenshotBoundary;
+  const initialBoundaryFingerprint =
+    screenshotDataBoundaryFingerprint(dataBoundary);
+  expect(dataBoundary.unclassifiedItemCount).toBe(
+    accountPrivacyAudit.unclassifiedAccountItemCount,
+  );
   expect(postMutationAudit.primaryQueueTitle).toBeTruthy();
 
   const publicContext = await newPreviewContext(browser, runtimeBaseUrl);
@@ -3693,7 +4009,7 @@ test("S232H.2 adopts V3 across the production learner routes with direct before/
         initialAfterScreenshots.push(
           await captureSyntheticScreenshot(
             routePage,
-            testInfo,
+            dataBoundary,
             `s232h2-after-${route.id}-${viewport.label}.png`,
             { fullPage: !isRepresentativeViewport },
           ),
@@ -3743,7 +4059,7 @@ test("S232H.2 adopts V3 across the production learner routes with direct before/
   dynamicScreenshots.push(
     await captureSyntheticScreenshot(
       page,
-      testInfo,
+      dataBoundary,
       "s232h2-after-capture-extraction-preview-390.png",
     ),
   );
@@ -3761,7 +4077,7 @@ test("S232H.2 adopts V3 across the production learner routes with direct before/
   dynamicScreenshots.push(
     await captureSyntheticScreenshot(
       page,
-      testInfo,
+      dataBoundary,
       "s232h2-after-answer-review-result-390.png",
     ),
   );
@@ -3780,7 +4096,7 @@ test("S232H.2 adopts V3 across the production learner routes with direct before/
   dynamicScreenshots.push(
     await captureSyntheticScreenshot(
       page,
-      testInfo,
+      dataBoundary,
       "s232h2-after-answer-review-rewrite-390.png",
     ),
   );
@@ -3798,7 +4114,7 @@ test("S232H.2 adopts V3 across the production learner routes with direct before/
   dynamicScreenshots.push(
     await captureSyntheticScreenshot(
       page,
-      testInfo,
+      dataBoundary,
       "s232h2-after-review-revealed-selected-390.png",
     ),
   );
@@ -3819,7 +4135,7 @@ test("S232H.2 adopts V3 across the production learner routes with direct before/
   dynamicScreenshots.push(
     await captureSyntheticScreenshot(
       page,
-      testInfo,
+      dataBoundary,
       "s232h2-after-session-saved-capture-390.png",
     ),
   );
@@ -3853,7 +4169,7 @@ test("S232H.2 adopts V3 across the production learner routes with direct before/
   dynamicScreenshots.push(
     await captureSyntheticScreenshot(
       page,
-      testInfo,
+      dataBoundary,
       "s232h2-after-calculator-completed-saved-390.png",
     ),
   );
@@ -3894,7 +4210,7 @@ test("S232H.2 adopts V3 across the production learner routes with direct before/
     baselineScreenshots.push(
       await captureSyntheticScreenshot(
         baselinePage,
-        testInfo,
+        dataBoundary,
         `s232h2-before-ledger-${viewport.label}.png`,
         { fullPage: false },
       ),
@@ -3909,7 +4225,7 @@ test("S232H.2 adopts V3 across the production learner routes with direct before/
   baselineScreenshots.push(
     await captureSyntheticScreenshot(
       baselinePage,
-      testInfo,
+      dataBoundary,
       "s232h2-before-calculator-390.png",
       { fullPage: false },
     ),
@@ -3918,6 +4234,17 @@ test("S232H.2 adopts V3 across the production learner routes with direct before/
 
   await verifyRuntimeVersion(page, runtimeRunnerSha);
   await verifyRuntimeVersion(baselinePage, baselineSha);
+  const finalAccountAudit = await auditSyntheticAccount(page, {
+    expectedItemId: syntheticItemId,
+    includePlanning: true,
+  });
+  const accountSnapshotStable =
+    screenshotDataBoundaryFingerprint(finalAccountAudit.screenshotBoundary) ===
+    initialBoundaryFingerprint;
+  expect(
+    accountSnapshotStable,
+    "The unclassified account boundary must remain unchanged until every in-memory PNG has been audited.",
+  ).toBe(true);
   await settleRuntimeMonitors(page, publicPage, baselinePage);
 
   const afterErrors = allErrorCounts(
@@ -3931,6 +4258,9 @@ test("S232H.2 adopts V3 across the production learner routes with direct before/
   expect(baselineErrors.pageErrors).toEqual([]);
   expect(baselineErrors.sameOriginRequestFailures).toEqual([]);
 
+  for (const screenshot of [...baselineScreenshots, ...afterScreenshots])
+    await writeFile(testInfo.outputPath(screenshot.fileName), screenshot.buffer);
+
   const screenshotNames = [
     ...baselineScreenshots.map((screenshot) => screenshot.fileName),
     ...afterScreenshots.map((screenshot) => screenshot.fileName),
@@ -3940,8 +4270,40 @@ test("S232H.2 adopts V3 across the production learner routes with direct before/
   expect(new Set(screenshotNames).size).toBe(screenshotNames.length);
   const credentialsRedacted =
     testEmail.length > 0 && screenshotNames.every((name) => !/@/i.test(name));
+  const screenshotBoundary = dataBoundary;
+  const screenshotBoundaryHitCount =
+    screenshotBoundary.visibleTextHitCount +
+    screenshotBoundary.visibleReferenceHitCount +
+    screenshotBoundary.visibleFormValueHitCount +
+    screenshotBoundary.visibleGeneratedContentHitCount +
+    screenshotBoundary.visibleUninspectableSurfaceCount;
+  const screenshotDataBoundaryClosed =
+    screenshotBoundary.captureCount === 25 &&
+    screenshotBoundary.checkCount === 50 &&
+    accountSnapshotStable &&
+    screenshotBoundaryHitCount === 0;
+  const privacyAudit: PrivacyAudit = {
+    ...finalAccountAudit.privacyAudit,
+    screenshotBoundaryCheckCount: screenshotBoundary.checkCount,
+    screenshotCaptureCount: screenshotBoundary.captureCount,
+    visibleUnclassifiedTextHitCount:
+      screenshotBoundary.visibleTextHitCount,
+    visibleUnclassifiedReferenceHitCount:
+      screenshotBoundary.visibleReferenceHitCount,
+    visibleUnclassifiedFormValueHitCount:
+      screenshotBoundary.visibleFormValueHitCount,
+    visibleUnclassifiedGeneratedContentHitCount:
+      screenshotBoundary.visibleGeneratedContentHitCount,
+    visibleUninspectableSurfaceCount:
+      screenshotBoundary.visibleUninspectableSurfaceCount,
+    accountSnapshotStable,
+    screenshotDataBoundaryClosed,
+    privateLearnerContentCaptured: !screenshotDataBoundaryClosed,
+  };
   const syntheticContentCaptured =
-    privacyAudit.syntheticFixtureOnly && afterScreenshots.length === 22;
+    privacyAudit.syntheticFixtureReady &&
+    privacyAudit.screenshotDataBoundaryClosed &&
+    afterScreenshots.length === 22;
   const acceptanceSignals = [
     initialAuditRows.length === 39,
     dynamicAuditRows.length === 6,
@@ -3953,8 +4315,17 @@ test("S232H.2 adopts V3 across the production learner routes with direct before/
     figmaComparisons.length === 3,
     figmaComparisons.every((comparison) => comparison.passed),
     screenshotNames.length === 28,
-    privacyAudit.syntheticAccountOnly,
-    privacyAudit.syntheticFixtureOnly,
+    privacyAudit.governedTestAccount,
+    privacyAudit.syntheticFixtureReady,
+    privacyAudit.accountSnapshotStable,
+    privacyAudit.screenshotDataBoundaryClosed,
+    privacyAudit.screenshotBoundaryCheckCount === 50,
+    privacyAudit.screenshotCaptureCount === 25,
+    privacyAudit.visibleUnclassifiedTextHitCount === 0,
+    privacyAudit.visibleUnclassifiedReferenceHitCount === 0,
+    privacyAudit.visibleUnclassifiedFormValueHitCount === 0,
+    privacyAudit.visibleUnclassifiedGeneratedContentHitCount === 0,
+    privacyAudit.visibleUninspectableSurfaceCount === 0,
     privacyAudit.sessionBound,
     privacyAudit.strictOwnershipContract,
     privacyAudit.pendingOwnedQueue,
@@ -3986,7 +4357,7 @@ test("S232H.2 adopts V3 across the production learner routes with direct before/
   expect(result).toBe("pass");
 
   const manifest = {
-    schemaVersion: 2,
+    schemaVersion: 3,
     result,
     runnerSha: runtimeRunnerSha,
     targetDeploymentSha: runtimeTargetSha,
@@ -4077,8 +4448,8 @@ test("S232H.2 adopts V3 across the production learner routes with direct before/
       0,
     ),
     privacyAudit,
-    syntheticAccountOnly: privacyAudit.syntheticAccountOnly,
-    syntheticFixtureOnly: privacyAudit.syntheticFixtureOnly,
+    syntheticFixtureReady: privacyAudit.syntheticFixtureReady,
+    screenshotDataBoundaryClosed: privacyAudit.screenshotDataBoundaryClosed,
     syntheticContentCaptured,
     privateLearnerContentCaptured: privacyAudit.privateLearnerContentCaptured,
     credentialsRedacted,

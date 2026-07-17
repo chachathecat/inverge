@@ -151,11 +151,11 @@ jobs:
         id: visual_acceptance
         env:
           S232H2_VISUAL_RUNTIME: "1"
-          # Keep screenshot fixtures isolated from the long-lived primary E2E
-          # account. This secondary identity is already established by the
-          # repository's exact-head cross-account boundary lane.
-          E2E_USER_EMAIL: ${{ secrets.E2E_USER_B_EMAIL }}
-          E2E_USER_PASSWORD: ${{ secrets.E2E_USER_B_PASSWORD }}
+          # The primary protected identity is the established invited runtime
+          # account. Its long-lived rows are not assumed synthetic: every PNG
+          # is retained only after a value-free, fail-closed DOM boundary check.
+          E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL }}
+          E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD }}
           VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
         run: npx playwright test tests/e2e/s232h2-production-v3-visual.spec.ts --project=chromium --workers=1 --reporter=line
 
@@ -212,7 +212,7 @@ jobs:
           MANIFEST_PATH="${manifests[0]}" node --input-type=module -e '
             import { readFileSync, readdirSync } from "node:fs";
             const value = JSON.parse(readFileSync(process.env.MANIFEST_PATH, "utf8"));
-            if (value.schemaVersion !== 2 || value.result !== "pass") process.exit(1);
+            if (value.schemaVersion !== 3 || value.result !== "pass") process.exit(1);
             if (value.runnerSha !== process.env.E2E_RUNNER_SHA || value.targetDeploymentSha !== process.env.E2E_RUNNER_SHA) process.exit(1);
             if (value.baselineDeploymentSha !== process.env.E2E_BASELINE_SHA || value.mergeBaseSha !== process.env.E2E_MERGE_BASE_SHA) process.exit(1);
             if (value.baselineTreeSha !== process.env.E2E_BASELINE_TREE_SHA) process.exit(1);
@@ -232,20 +232,25 @@ jobs:
             const privacy = value.privacyAudit;
             if (!privacy || privacy.itemListingComplete !== true || privacy.studyLogListingComplete !== true) process.exit(1);
             const countFields = [
-              "accountItemCount", "syntheticItemCount", "exactFixtureItemCount", "accountStudyLogCount", "syntheticStudyLogCount",
+              "accountItemCount", "accountOwnedItemCount", "exactFixtureItemCount", "unclassifiedAccountItemCount", "accountStudyLogCount",
               "queueItemCount", "syntheticQueueItemCount", "todayItemCount", "syntheticTodayItemCount",
+              "screenshotBoundaryCheckCount", "screenshotCaptureCount", "visibleUnclassifiedTextHitCount", "visibleUnclassifiedReferenceHitCount",
+              "visibleUnclassifiedFormValueHitCount", "visibleUnclassifiedGeneratedContentHitCount", "visibleUninspectableSurfaceCount",
             ];
             if (!countFields.every((field) => Number.isInteger(privacy[field]) && privacy[field] >= 0)) process.exit(1);
-            if (privacy.accountItemCount < 1 || privacy.syntheticItemCount !== privacy.accountItemCount) process.exit(1);
-            if (privacy.exactFixtureItemCount < 1) process.exit(1);
-            if (privacy.syntheticStudyLogCount !== privacy.accountStudyLogCount) process.exit(1);
-            if (privacy.syntheticQueueItemCount !== privacy.queueItemCount || privacy.syntheticTodayItemCount !== privacy.todayItemCount) process.exit(1);
+            if (privacy.accountItemCount < 1 || privacy.accountOwnedItemCount !== privacy.accountItemCount) process.exit(1);
+            if (privacy.exactFixtureItemCount < 1 || privacy.accountItemCount !== privacy.exactFixtureItemCount + privacy.unclassifiedAccountItemCount) process.exit(1);
+            if (privacy.accountStudyLogCount !== 0) process.exit(1);
+            if (privacy.syntheticQueueItemCount > privacy.queueItemCount || privacy.syntheticTodayItemCount > privacy.todayItemCount) process.exit(1);
+            if (privacy.screenshotBoundaryCheckCount !== 50 || privacy.screenshotCaptureCount !== 25) process.exit(1);
+            if (privacy.visibleUnclassifiedTextHitCount !== 0 || privacy.visibleUnclassifiedReferenceHitCount !== 0) process.exit(1);
+            if (privacy.visibleUnclassifiedFormValueHitCount !== 0 || privacy.visibleUnclassifiedGeneratedContentHitCount !== 0 || privacy.visibleUninspectableSurfaceCount !== 0) process.exit(1);
             for (const field of [
-              "sessionBound", "governedSyntheticAccount", "strictOwnershipContract", "detailOwnershipClosed", "pendingOwnedQueue", "queueDetailsAudited",
-              "todayDetailsAudited", "weeklyTaskDetailsAudited",
+              "sessionBound", "governedTestAccount", "strictOwnershipContract", "detailOwnershipClosed", "pendingOwnedQueue", "queueDetailsAudited",
+              "todayDetailsAudited", "weeklyTaskDetailsAudited", "syntheticFixtureReady", "accountSnapshotStable", "screenshotDataBoundaryClosed",
             ]) if (privacy[field] !== true) process.exit(1);
-            if (privacy.syntheticAccountOnly !== true || privacy.syntheticFixtureOnly !== true || privacy.privateLearnerContentCaptured !== false) process.exit(1);
-            if (value.syntheticAccountOnly !== privacy.syntheticAccountOnly || value.syntheticFixtureOnly !== privacy.syntheticFixtureOnly) process.exit(1);
+            if (privacy.privateLearnerContentCaptured !== false) process.exit(1);
+            if (value.syntheticFixtureReady !== privacy.syntheticFixtureReady || value.screenshotDataBoundaryClosed !== privacy.screenshotDataBoundaryClosed) process.exit(1);
             if (value.privateLearnerContentCaptured !== privacy.privateLearnerContentCaptured) process.exit(1);
             if (value.syntheticContentCaptured !== true || value.credentialsRedacted !== true) process.exit(1);
             if (value.traceCaptured !== false || value.videoCaptured !== false || value.domCaptured !== false || value.rawInputArtifactCaptured !== false) process.exit(1);
