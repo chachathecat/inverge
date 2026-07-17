@@ -53,19 +53,20 @@ test("S231A shell exposes one skip target before its single main landmark", () =
   );
 });
 
-test("S231A shell covers every viewport safe area without losing the bottom action inset", () => {
+test("S231A shell covers safe areas and reserves a fixed dock for the canonical Ledger action", () => {
   const shell = read("components/learner/learner-ui.tsx");
   const ledger = read("components/learner/study-ledger-ui.tsx");
 
   for (const side of ["top", "right", "bottom", "left"]) {
     assert.ok(shell.includes(`safe-area-inset-${side}`), `learner shell is missing ${side} safe-area coverage`);
   }
-  assert.match(shell, /pl-\[max\(1rem,env\(safe-area-inset-left\)\)\]/);
-  assert.match(shell, /pr-\[max\(1rem,env\(safe-area-inset-right\)\)\]/);
-  assert.match(shell, /pb-\[calc\(6rem\+env\(safe-area-inset-bottom\)\)\]/);
+  assert.match(shell, /pl-\[max\(var\(--layout-page-edge\),env\(safe-area-inset-left\)\)\]/);
+  assert.match(shell, /pr-\[max\(var\(--layout-page-edge\),env\(safe-area-inset-right\)\)\]/);
+  assert.match(shell, /pb-\[calc\(var\(--space-32\)\+env\(safe-area-inset-bottom\)\)\]/);
   assert.match(shell, /lg:pb-12/);
   assert.doesNotMatch(shell, /sm:pb-12/);
-  assert.match(shell, /BottomPrimaryAction/);
+  assert.match(shell, /data-v3-placement="inline-action"/);
+  assert.doesNotMatch(shell, /fixed inset-x-0 bottom-0/);
   assert.match(ledger, /inset-x-0/);
   assert.match(ledger, /pl-\[max\(20px,env\(safe-area-inset-left\)\)\]/);
   assert.match(ledger, /pr-\[max\(20px,env\(safe-area-inset-right\)\)\]/);
@@ -75,7 +76,7 @@ test("S231A shell covers every viewport safe area without losing the bottom acti
 test("S231A mobile navigation is stable, second-round only, and semantically current", () => {
   const shell = read("components/learner/learner-ui.tsx");
 
-  assert.match(shell, /grid grid-cols-5 gap-1 sm:flex/);
+  assert.match(shell, /flex max-w-full gap-1 overflow-x-auto/);
   for (const label of ["오늘", "답안", "학습 노트", "복습", "기록"]) {
     assert.ok(shell.includes(`mobileLabel: "${label}"`), `missing mobile learner label: ${label}`);
   }
@@ -85,10 +86,10 @@ test("S231A mobile navigation is stable, second-round only, and semantically cur
   for (const activeHref of ["/app/today", "/app/session", "/app/weekly", "/app/calculator", "/app/study-log"]) {
     assert.ok(shell.includes(`"${activeHref}"`), `missing active-route mapping: ${activeHref}`);
   }
-  assert.match(shell, /inline-flex min-h-11 min-w-0/);
+  assert.match(shell, /inline-flex min-h-11 shrink-0/);
   assert.match(
     shell,
-    /border-\[color:var\(--brand-700\)\] bg-\[color:var\(--brand-050\)\] text-\[color:var\(--brand-900\)\]/,
+    /border-\[var\(--color-border-focus\)\] bg-\[var\(--color-background-brand-soft\)\] text-\[var\(--color-text-brand\)\]/,
   );
   assert.doesNotMatch(shell, /mode=first/);
   assert.doesNotMatch(shell, /inline-flex min-h-10 items-center justify-center rounded-full border/);
