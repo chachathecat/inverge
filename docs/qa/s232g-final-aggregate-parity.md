@@ -96,10 +96,12 @@ The test proves:
   and Current→Complete transitions without calling the server completion API;
 - zero unexpected product console errors, page errors, request failures, and
   same-origin HTTP errors. Exact causally bound Preview-toolbar blocks are
-  isolated as counters and are not application errors. A same-origin document
-  `ERR_ABORTED` is excluded only inside the explicit sign-in phase, only for
-  `/login` or `/app`, and at most twice per isolated context; every other abort
-  is an unexpected request failure.
+  isolated as counters and are not application errors. After exactly one
+  accepted sign-in response, one combined `net::ERR_ABORTED` budget is allowed
+  per isolated context: either the exact `/login` or `/app` document navigation,
+  or the same pre-acceptance root route-tree RSC prefetch identified by its
+  fixed Next request shape. Every other abort is an unexpected request failure.
+  No `networkidle` wait is used as a substitute for that causal request binding.
 
 Review and Today collection APIs are intentionally bounded and ranked. Exact
 item-detail owner/denial checks are definitive; the collection checks prove

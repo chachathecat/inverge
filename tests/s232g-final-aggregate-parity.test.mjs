@@ -42,6 +42,8 @@ const answerReview = read("app/answer-review/answer-review-client.tsx");
 const studyLogPage = read("app/app/study-log/page.tsx");
 const captureFormSource = read("components/review-os/capture-form.tsx");
 const itemDetailPage = read("app/app/items/[itemId]/page.tsx");
+const authFormSource = read("components/shared/auth-form.tsx");
+const signInRouteSource = read("app/api/auth/sign-in/route.ts");
 
 function learnerPageInventory() {
   const pages = [];
@@ -394,6 +396,32 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
   assert.match(runtimeSpec, /trace: "off"/);
   assert.match(runtimeSpec, /video: "off"/);
   assert.match(runtimeSpec, /serviceWorkers: "block"/);
+  assert.doesNotMatch(runtimeSpec, /waitUntil:\s*"networkidle"|waitForLoadState\(\s*"networkidle"/);
+  const authFetchOffset = authFormSource.indexOf('fetch("/api/auth/sign-in"');
+  const authJsonOffset = authFormSource.indexOf("response.json()", authFetchOffset);
+  const authFailureOffset = authFormSource.indexOf("if (!response.ok || !result.ok)", authJsonOffset);
+  const authConfirmationOffset = authFormSource.indexOf(
+    "if (result.requiresEmailConfirmation)",
+    authFailureOffset,
+  );
+  const authAssignOffset = authFormSource.indexOf(
+    "window.location.assign(redirectTarget)",
+    authConfirmationOffset,
+  );
+  assert.ok(
+    authFetchOffset >= 0 &&
+      authFetchOffset < authJsonOffset &&
+      authJsonOffset < authFailureOffset &&
+      authFailureOffset < authConfirmationOffset &&
+      authConfirmationOffset < authAssignOffset,
+  );
+  assert.doesNotMatch(authFormSource, /router\.(?:push|replace)\(/);
+  assert.match(
+    signInRouteSource,
+    /NextResponse\.json\(\{ ok: true, redirectTo \}\)/,
+  );
+  assert.match(signInRouteSource, /\{ status: 400 \}/);
+  assert.match(signInRouteSource, /\{ status: 503 \}/);
   assert.match(runtimeSpec, /crossAccountApiDenialProbe/);
   assert.match(runtimeSpec, /cross-account-source-exact-null-api/);
   assert.match(runtimeSpec, /cross-account-rewrite-exact-null-api/);
@@ -594,6 +622,96 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
     runtimeSpec,
     /secondaryPhase,\s*`\/app\/items\/\$\{encodeURIComponent\(rewrittenItemId\)\}`/,
   );
+  const authRequestPredicateStart = runtimeSpec.indexOf(
+    "function isExactAuthSignInRequest",
+  );
+  const rootRscPredicateStart = runtimeSpec.indexOf(
+    "function isExactLoginShellRootRscPrefetch",
+    authRequestPredicateStart,
+  );
+  const acceptedAuthPredicateStart = runtimeSpec.indexOf(
+    "function isExactAcceptedAuthSignInResponse",
+    rootRscPredicateStart,
+  );
+  const requestDiagnosticStart = runtimeSpec.indexOf(
+    "function unexpectedRequestDiagnosticPhase",
+    acceptedAuthPredicateStart,
+  );
+  assert.ok(
+    authRequestPredicateStart >= 0 &&
+      rootRscPredicateStart > authRequestPredicateStart &&
+      acceptedAuthPredicateStart > rootRscPredicateStart &&
+      requestDiagnosticStart > acceptedAuthPredicateStart,
+  );
+  const authRequestPredicateSource = runtimeSpec.slice(
+    authRequestPredicateStart,
+    rootRscPredicateStart,
+  );
+  const rootRscPredicateSource = runtimeSpec.slice(
+    rootRscPredicateStart,
+    acceptedAuthPredicateStart,
+  );
+  const acceptedAuthPredicateSource = runtimeSpec.slice(
+    acceptedAuthPredicateStart,
+    requestDiagnosticStart,
+  );
+  for (const predicateSource of [
+    authRequestPredicateSource,
+    rootRscPredicateSource,
+    acceptedAuthPredicateSource,
+  ]) {
+    assert.doesNotMatch(
+      predicateSource,
+      /console\.|process\.stdout|writeFile|JSON\.stringify|testInfo\.attach/,
+    );
+  }
+  assert.match(authRequestPredicateSource, /location\.origin === runtimeOrigin/);
+  assert.match(authRequestPredicateSource, /location\.pathname === "\/api\/auth\/sign-in"/);
+  assert.match(authRequestPredicateSource, /location\.search === ""/);
+  assert.match(authRequestPredicateSource, /location\.hash === ""/);
+  assert.match(authRequestPredicateSource, /request\.method\(\) === "POST"/);
+  assert.match(authRequestPredicateSource, /request\.resourceType\(\) === "fetch"/);
+  assert.match(authRequestPredicateSource, /!request\.isNavigationRequest\(\)/);
+  assert.match(authRequestPredicateSource, /request\.serviceWorker\(\) === null/);
+  assert.match(authRequestPredicateSource, /isJsonContentType\(headers\["content-type"\]\)/);
+  assert.match(authRequestPredicateSource, /headers\.rsc === undefined/);
+  assert.match(authRequestPredicateSource, /headers\["next-action"\] === undefined/);
+  assert.match(rootRscPredicateSource, /location\.pathname === "\/"/);
+  assert.match(rootRscPredicateSource, /location\.searchParams\.size === 1/);
+  assert.match(rootRscPredicateSource, /location\.searchParams\.has\("_rsc"\)/);
+  assert.match(rootRscPredicateSource, /\^\\\?_rsc=\[a-z0-9\]\{1,5\}\$/);
+  assert.doesNotMatch(rootRscPredicateSource, /searchParams\.get\("_rsc"\)/);
+  assert.match(rootRscPredicateSource, /location\.hash === ""/);
+  assert.match(rootRscPredicateSource, /request\.method\(\) === "GET"/);
+  assert.match(rootRscPredicateSource, /request\.resourceType\(\) === "fetch"/);
+  assert.match(rootRscPredicateSource, /!request\.isNavigationRequest\(\)/);
+  assert.match(rootRscPredicateSource, /request\.serviceWorker\(\) === null/);
+  assert.match(rootRscPredicateSource, /headers\.rsc === "1"/);
+  assert.match(rootRscPredicateSource, /headers\["next-router-prefetch"\] === "1"/);
+  assert.match(
+    rootRscPredicateSource,
+    /headers\["next-router-segment-prefetch"\] === "\/_tree"/,
+  );
+  assert.match(rootRscPredicateSource, /headers\["next-action"\] === undefined/);
+  assert.match(
+    rootRscPredicateSource,
+    /Object\.entries\(vercelAutomationHeaders\)\.every/,
+  );
+  assert.match(acceptedAuthPredicateSource, /pendingRequests\.has\(request\)/);
+  assert.match(acceptedAuthPredicateSource, /response\.status\(\) !== 200/);
+  assert.match(
+    acceptedAuthPredicateSource,
+    /isExactAuthSignInRequest\(request, location, runtimeOrigin\)/,
+  );
+  assert.match(
+    acceptedAuthPredicateSource,
+    /isJsonContentType\(response\.headers\(\)\["content-type"\]\)/,
+  );
+  assert.doesNotMatch(acceptedAuthPredicateSource, /response\.json\(|response\.body\(/);
+  assert.match(runtimeSpec, /pendingAuthSignInRequests: WeakSet<Request>/);
+  assert.match(runtimeSpec, /preAcceptedAuthRscRequests: WeakSet<Request>/);
+  assert.match(runtimeSpec, /pendingAuthSignInRequests: new WeakSet\(\)/);
+  assert.match(runtimeSpec, /preAcceptedAuthRscRequests: new WeakSet\(\)/);
   const runtimeGuardStart = runtimeSpec.indexOf(
     "async function installPrivacySafeRuntimeGuard",
   );
@@ -603,6 +721,7 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
   );
   assert.ok(runtimeGuardStart >= 0 && runtimeGuardEnd > runtimeGuardStart);
   const runtimeGuardSource = runtimeSpec.slice(runtimeGuardStart, runtimeGuardEnd);
+  const requestEventStart = runtimeGuardSource.indexOf('page.on("request"');
   const consoleGuardStart = runtimeGuardSource.indexOf('page.on("console"');
   const consoleGuardEnd = runtimeGuardSource.indexOf(
     'page.on("pageerror"',
@@ -610,12 +729,45 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
   );
   const responseGuardStart = runtimeGuardSource.indexOf('page.on("response"');
   assert.ok(
-    consoleGuardStart >= 0 &&
+    requestEventStart >= 0 &&
+      consoleGuardStart > requestEventStart &&
       consoleGuardEnd > consoleGuardStart &&
       responseGuardStart > consoleGuardEnd,
   );
+  const requestEventSource = runtimeGuardSource.slice(requestEventStart, consoleGuardStart);
   const consoleGuardSource = runtimeGuardSource.slice(consoleGuardStart, consoleGuardEnd);
   const responseGuardSource = runtimeGuardSource.slice(responseGuardStart);
+  assert.match(requestEventSource, /phase\.current === "auth-navigation"/);
+  assert.match(requestEventSource, /phase\.diagnosticPhase === "auth"/);
+  assert.match(
+    requestEventSource,
+    /isExactAuthSignInRequest\(request, location, runtimeOrigin\)/,
+  );
+  assert.match(requestEventSource, /phase\.pendingAuthSignInRequests\.add\(request\)/);
+  assert.match(
+    requestEventSource,
+    /phase\.observedAcceptedAuthSignInResponseCount === 0/,
+  );
+  assert.match(
+    requestEventSource,
+    /isExactLoginShellRootRscPrefetch\(request, location, runtimeOrigin\)/,
+  );
+  assert.match(requestEventSource, /phase\.preAcceptedAuthRscRequests\.add\(request\)/);
+  assert.match(responseGuardSource, /phase\.current === "auth-navigation"/);
+  assert.match(responseGuardSource, /phase\.diagnosticPhase === "auth"/);
+  assert.match(responseGuardSource, /isExactAcceptedAuthSignInResponse\(/);
+  assert.match(
+    responseGuardSource,
+    /phase\.pendingAuthSignInRequests/,
+  );
+  assert.match(
+    responseGuardSource,
+    /phase\.observedAcceptedAuthSignInResponseCount \+= 1/,
+  );
+  assert.ok(
+    responseGuardSource.indexOf("isExactAcceptedAuthSignInResponse(") <
+      responseGuardSource.indexOf("if (response.status() < 400) return"),
+  );
   for (const guardSource of [consoleGuardSource, responseGuardSource]) {
     assert.match(guardSource, /phase\.current === "expected-cross-account-ui-denial"/);
     assert.match(guardSource, /expectedCrossAccountItemPath !== null/);
@@ -745,10 +897,33 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
     requestGuardSource,
     /vc-(?:fs|fc|ms|mc|m0|m1|mx|s0|w0|x)/,
   );
+  assert.match(requestGuardSource, /phase\.current === "auth-navigation"/);
+  assert.match(requestGuardSource, /phase\.diagnosticPhase === "auth"/);
+  assert.match(
+    requestGuardSource,
+    /phase\.observedAcceptedAuthSignInResponseCount === 1/,
+  );
+  assert.match(requestGuardSource, /failure === "net::ERR_ABORTED"/);
+  assert.doesNotMatch(requestGuardSource, /failure\.includes\("ERR_ABORTED"\)/);
+  assert.match(requestGuardSource, /counters\.causallyBoundAuthAbortCount < 1/);
+  assert.match(requestGuardSource, /request\.isNavigationRequest\(\)/);
+  assert.match(requestGuardSource, /request\.resourceType\(\) === "document"/);
+  assert.match(requestGuardSource, /request\.method\(\) === "GET"/);
+  assert.match(requestGuardSource, /request\.serviceWorker\(\) === null/);
+  assert.match(requestGuardSource, /phase\.preAcceptedAuthRscRequests\.has\(request\)/);
+  assert.match(
+    requestGuardSource,
+    /isExactLoginShellRootRscPrefetch\(request, location, runtimeOrigin\)/,
+  );
+  assert.match(
+    requestGuardSource,
+    /if \(boundedNavigationAbort \|\| boundedRootRscPrefetchAbort\)/,
+  );
+  assert.match(requestGuardSource, /counters\.causallyBoundAuthAbortCount \+= 1/);
   assert.ok(
     requestGuardSource.indexOf('isPreviewToolbarUrl(request.url())') <
-      requestGuardSource.indexOf("if (boundedNavigationAbort)") &&
-      requestGuardSource.indexOf("if (boundedNavigationAbort)") <
+      requestGuardSource.indexOf("if (boundedNavigationAbort || boundedRootRscPrefetchAbort)") &&
+      requestGuardSource.indexOf("if (boundedNavigationAbort || boundedRootRscPrefetchAbort)") <
         requestGuardSource.indexOf("counters.requestFailureCount += 1") &&
       requestGuardSource.indexOf("counters.requestFailureCount += 1") <
         requestGuardSource.indexOf("phase.firstUnexpectedRequest === null"),
@@ -1103,7 +1278,10 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
       vercelWellKnownResidualOffset < genericWellKnownOffset,
   );
   assert.doesNotMatch(requestTargetClassifierSource, /wellKnownFamily === "vc-w"/);
-  assert.match(runtimeSpec, /phase\.observedAuthSignInRequestCount > 0 \? "auth-post" : "auth-pre"/);
+  assert.match(
+    runtimeSpec,
+    /phase\.observedAcceptedAuthSignInResponseCount > 0 \? "auth-post" : "auth-pre"/,
+  );
   assert.doesNotMatch(runtimeSpec, /"unexpected-request-failures"/);
   assert.match(
     itemDetailPage,
@@ -1206,10 +1384,25 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
     runtimeSpec,
     /location\.pathname === "\/login" \|\| location\.pathname === "\/app"/,
   );
-  assert.match(runtimeSpec, /observedAuthSignInRequestCount > 0/);
-  assert.match(runtimeSpec, /causallyBoundNavigationAbortCount < 1/);
-  assert.match(runtimeSpec, /causallyBoundNavigationAbortCount <= 1/);
-  assert.doesNotMatch(runtimeSpec, /causallyBoundNavigationAbortCount <= 8/);
+  assert.match(
+    runtimeSpec,
+    /allPhases\.every\(\(phase\) => phase\.observedAuthSignInRequestCount === 1\)/,
+  );
+  assert.match(
+    runtimeSpec,
+    /allPhases\.every\(\(phase\) => phase\.observedAcceptedAuthSignInResponseCount === 1\)/,
+  );
+  assert.match(runtimeSpec, /causallyBoundAuthAbortCount < 1/);
+  assert.match(runtimeSpec, /causallyBoundAuthAbortCount <= 1/);
+  assert.doesNotMatch(runtimeSpec, /causallyBoundAuthAbortCount <= 8/);
+  assert.match(runtimeSpec, /"auth-sign-in-request-exact"/);
+  assert.match(runtimeSpec, /"auth-sign-in-response-exact"/);
+  assert.match(runtimeSpec, /"auth-abort-causal-bound"/);
+  assert.doesNotMatch(runtimeSpec, /causallyBoundNavigationAbortCount/);
+  assert.match(qa, /one combined `net::ERR_ABORTED` budget/);
+  assert.match(qa, /pre-acceptance root route-tree RSC prefetch/);
+  assert.match(qa, /No `networkidle` wait is used/);
+  assert.doesNotMatch(qa, /at most twice per isolated context/);
   assert.match(runtimeSpec, /data-s232g-skip-wrap-sentinel/);
   assert.match(runtimeSpec, /skip-link-wrap-sentinel-focus/);
   const skipLinkProbeBlock = runtimeSpec.match(

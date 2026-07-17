@@ -184,9 +184,12 @@ type UnexpectedRequestObservation = Readonly<{
 type RuntimePhaseState = {
   current: RuntimePhase;
   observedAuthSignInRequestCount: number;
+  observedAcceptedAuthSignInResponseCount: number;
   diagnosticPhase: RuntimeDiagnosticPhase;
   firstUnexpectedConsole: UnexpectedConsoleObservation | null;
   firstUnexpectedRequest: UnexpectedRequestObservation | null;
+  pendingAuthSignInRequests: WeakSet<Request>;
+  preAcceptedAuthRscRequests: WeakSet<Request>;
   vercelRequestInitiators: WeakMap<Request, VercelRequestInitiator>;
 };
 
@@ -199,7 +202,7 @@ type RuntimeCounters = {
   excludedPreviewToolbarConsoleErrorCount: number;
   expectedCrossAccountConsoleErrorCount: number;
   expectedCrossAccountHttpErrorCount: number;
-  causallyBoundNavigationAbortCount: number;
+  causallyBoundAuthAbortCount: number;
   itemMutationRequestCount: number;
   calculatorRoutineCompletionRequestCount: number;
 };
@@ -214,7 +217,7 @@ function createRuntimeCounters(): RuntimeCounters {
     excludedPreviewToolbarConsoleErrorCount: 0,
     expectedCrossAccountConsoleErrorCount: 0,
     expectedCrossAccountHttpErrorCount: 0,
-    causallyBoundNavigationAbortCount: 0,
+    causallyBoundAuthAbortCount: 0,
     itemMutationRequestCount: 0,
     calculatorRoutineCompletionRequestCount: 0,
   };
@@ -224,9 +227,12 @@ function createRuntimePhaseState(): RuntimePhaseState {
   return {
     current: "normal",
     observedAuthSignInRequestCount: 0,
+    observedAcceptedAuthSignInResponseCount: 0,
     diagnosticPhase: "setup",
     firstUnexpectedConsole: null,
     firstUnexpectedRequest: null,
+    pendingAuthSignInRequests: new WeakSet(),
+    preAcceptedAuthRscRequests: new WeakSet(),
     vercelRequestInitiators: new WeakMap(),
   };
 }
@@ -500,11 +506,77 @@ function classifyUnexpectedRequestResource(request: Request): UnexpectedRequestR
   }
 }
 
+function isJsonContentType(value: string | undefined) {
+  return value?.split(";", 1)[0]?.trim().toLowerCase() === "application/json";
+}
+
+function isExactAuthSignInRequest(
+  request: Request,
+  location: URL,
+  runtimeOrigin: string,
+) {
+  const headers = request.headers();
+  return (
+    location.origin === runtimeOrigin &&
+    location.pathname === "/api/auth/sign-in" &&
+    location.search === "" &&
+    location.hash === "" &&
+    request.method() === "POST" &&
+    request.resourceType() === "fetch" &&
+    !request.isNavigationRequest() &&
+    request.serviceWorker() === null &&
+    isJsonContentType(headers["content-type"]) &&
+    headers.rsc === undefined &&
+    headers["next-action"] === undefined
+  );
+}
+
+function isExactLoginShellRootRscPrefetch(
+  request: Request,
+  location: URL,
+  runtimeOrigin: string,
+) {
+  const headers = request.headers();
+  return (
+    location.origin === runtimeOrigin &&
+    location.pathname === "/" &&
+    location.searchParams.size === 1 &&
+    location.searchParams.has("_rsc") &&
+    /^\?_rsc=[a-z0-9]{1,5}$/.test(location.search) &&
+    location.hash === "" &&
+    request.method() === "GET" &&
+    request.resourceType() === "fetch" &&
+    !request.isNavigationRequest() &&
+    request.serviceWorker() === null &&
+    headers.rsc === "1" &&
+    headers["next-router-prefetch"] === "1" &&
+    headers["next-router-segment-prefetch"] === "/_tree" &&
+    headers["next-action"] === undefined &&
+    Object.entries(vercelAutomationHeaders).every(
+      ([name, value]) => headers[name] === value,
+    )
+  );
+}
+
+function isExactAcceptedAuthSignInResponse(
+  response: Response,
+  runtimeOrigin: string,
+  pendingRequests: WeakSet<Request>,
+) {
+  const request = response.request();
+  if (!pendingRequests.has(request) || response.status() !== 200) return false;
+  const location = new URL(response.url());
+  return (
+    isExactAuthSignInRequest(request, location, runtimeOrigin) &&
+    isJsonContentType(response.headers()["content-type"])
+  );
+}
+
 function unexpectedRequestDiagnosticPhase(
   phase: RuntimePhaseState,
 ): UnexpectedRequestDiagnosticPhase {
   if (phase.diagnosticPhase !== "auth") return phase.diagnosticPhase;
-  return phase.observedAuthSignInRequestCount > 0 ? "auth-post" : "auth-pre";
+  return phase.observedAcceptedAuthSignInResponseCount > 0 ? "auth-post" : "auth-pre";
 }
 
 function unexpectedRequestFailureCode(
@@ -538,11 +610,19 @@ async function installPrivacySafeRuntimeGuard(
       const location = new URL(request.url());
       if (
         phase.current === "auth-navigation" &&
-        location.origin === runtimeOrigin &&
-        location.pathname === "/api/auth/sign-in" &&
-        request.method() === "POST"
+        phase.diagnosticPhase === "auth" &&
+        isExactAuthSignInRequest(request, location, runtimeOrigin)
       ) {
         phase.observedAuthSignInRequestCount += 1;
+        phase.pendingAuthSignInRequests.add(request);
+      }
+      if (
+        phase.current === "auth-navigation" &&
+        phase.diagnosticPhase === "auth" &&
+        phase.observedAcceptedAuthSignInResponseCount === 0 &&
+        isExactLoginShellRootRscPrefetch(request, location, runtimeOrigin)
+      ) {
+        phase.preAcceptedAuthRscRequests.add(request);
       }
       if (
         location.origin === runtimeOrigin &&
@@ -634,16 +714,26 @@ async function installPrivacySafeRuntimeGuard(
         location,
         phase.vercelRequestInitiators.get(request) ?? "na",
       );
-      const boundedNavigationAbort =
+      const exactAcceptedAuthNavigation =
         phase.current === "auth-navigation" &&
-        failure.includes("ERR_ABORTED") &&
+        phase.diagnosticPhase === "auth" &&
+        phase.observedAcceptedAuthSignInResponseCount === 1 &&
+        failure === "net::ERR_ABORTED" &&
+        counters.causallyBoundAuthAbortCount < 1;
+      const boundedNavigationAbort =
+        exactAcceptedAuthNavigation &&
         request.isNavigationRequest() &&
         request.resourceType() === "document" &&
+        request.method() === "GET" &&
+        request.serviceWorker() === null &&
         (location.pathname === "/login" || location.pathname === "/app") &&
-        phase.observedAuthSignInRequestCount > 0 &&
-        counters.causallyBoundNavigationAbortCount < 1;
-      if (boundedNavigationAbort) {
-        counters.causallyBoundNavigationAbortCount += 1;
+        location.hash === "";
+      const boundedRootRscPrefetchAbort =
+        exactAcceptedAuthNavigation &&
+        phase.preAcceptedAuthRscRequests.has(request) &&
+        isExactLoginShellRootRscPrefetch(request, location, runtimeOrigin);
+      if (boundedNavigationAbort || boundedRootRscPrefetchAbort) {
+        counters.causallyBoundAuthAbortCount += 1;
         return;
       }
     } catch {
@@ -661,6 +751,21 @@ async function installPrivacySafeRuntimeGuard(
   });
   page.on("response", (response) => {
     if (phase.current === "cleanup") return;
+    try {
+      if (
+        phase.current === "auth-navigation" &&
+        phase.diagnosticPhase === "auth" &&
+        isExactAcceptedAuthSignInResponse(
+          response,
+          runtimeOrigin,
+          phase.pendingAuthSignInRequests,
+        )
+      ) {
+        phase.observedAcceptedAuthSignInResponseCount += 1;
+      }
+    } catch {
+      // Exact accepted-auth response accounting is finalized after all three logins.
+    }
     if (response.status() < 400) return;
     let sameOrigin = false;
     let expectedDenialDocument = false;
@@ -3632,6 +3737,7 @@ test("S232G final aggregate exact-head authenticated parity", async ({ browser, 
   requireTruth(runtimeRunnerSha === runtimeTargetSha, "runner-target-sha-equality");
 
   const allCounters = [mainCounters, secondaryCounters, freshCounters];
+  const allPhases = [mainPhase, secondaryPhase, freshPhase];
   const consoleErrorCount = sumCounters(allCounters, "consoleErrorCount");
   const pageErrorCount = sumCounters(allCounters, "pageErrorCount");
   const requestFailureCount = sumCounters(allCounters, "requestFailureCount");
@@ -3644,9 +3750,9 @@ test("S232G final aggregate exact-head authenticated parity", async ({ browser, 
     allCounters,
     "expectedCrossAccountConsoleErrorCount",
   );
-  const causallyBoundNavigationAbortCount = sumCounters(
+  const causallyBoundAuthAbortCount = sumCounters(
     allCounters,
-    "causallyBoundNavigationAbortCount",
+    "causallyBoundAuthAbortCount",
   );
   const itemMutationRequestCount = sumCounters(allCounters, "itemMutationRequestCount");
   const calculatorRoutineCompletionRequestCount = sumCounters(
@@ -3688,6 +3794,14 @@ test("S232G final aggregate exact-head authenticated parity", async ({ browser, 
   );
   requireTruth(httpErrorCount === 0, "unexpected-http-errors");
   requireTruth(
+    allPhases.every((phase) => phase.observedAuthSignInRequestCount === 1),
+    "auth-sign-in-request-exact",
+  );
+  requireTruth(
+    allPhases.every((phase) => phase.observedAcceptedAuthSignInResponseCount === 1),
+    "auth-sign-in-response-exact",
+  );
+  requireTruth(
     expectedCrossAccountHttpErrorCount === expectedCrossAccountHttpErrorCountTarget,
     "exact-cross-account-http-denial-count",
   );
@@ -3697,9 +3811,9 @@ test("S232G final aggregate exact-head authenticated parity", async ({ browser, 
     "exact-cross-account-console-denial-count",
   );
   requireTruth(
-    allCounters.every((counter) => counter.causallyBoundNavigationAbortCount <= 1) &&
-      causallyBoundNavigationAbortCount <= allCounters.length,
-    "auth-navigation-abort-causal-bound",
+    allCounters.every((counter) => counter.causallyBoundAuthAbortCount <= 1) &&
+      causallyBoundAuthAbortCount <= allCounters.length,
+    "auth-abort-causal-bound",
   );
   requireTruth(itemMutationRequestCount === 2, "bounded-source-and-rewrite-mutations");
   requireTruth(
