@@ -2661,6 +2661,7 @@ test("S232G final aggregate exact-head authenticated parity", async ({ browser, 
 
   const secondaryCounters = createRuntimeCounters();
   const secondaryPhase = createRuntimePhaseState();
+  let expectedCrossAccountHttpErrorCountTarget = 0;
   const secondaryContext = await newIsolatedContext(browser);
   const secondaryPage = await secondaryContext.newPage();
   await staticStage("secondary-mobile-viewport", () =>
@@ -2708,7 +2709,12 @@ test("S232G final aggregate exact-head authenticated parity", async ({ browser, 
         timeout: 30_000,
       }),
     );
-    requireTruth(denialResponse?.status() === 404, "cross-account-detail-exact-404");
+    const denialStatus = denialResponse?.status() ?? null;
+    requireTruth(
+      denialStatus === 200 || denialStatus === 404,
+      "cross-account-detail-enumeration-safe-status",
+    );
+    expectedCrossAccountHttpErrorCountTarget = denialStatus === 404 ? 1 : 0;
     await staticStage("cross-account-detail-stable-denial", () =>
       secondaryPage.locator('#study-ledger-content[data-s228-state="empty"]').waitFor({
         state: "visible",
@@ -2721,6 +2727,9 @@ test("S232G final aggregate exact-head authenticated parity", async ({ browser, 
           ledgerCount: document.querySelectorAll("[data-s228-study-ledger-detail]").length,
           denialStateCount: document.querySelectorAll(
             '#study-ledger-content[data-s228-state="empty"]',
+          ).length,
+          notFoundNoindexCount: document.querySelectorAll(
+            'meta[name="robots"][content="noindex"]',
           ).length,
           denialCopyPresent: document.body.innerText.includes("이 학습 기록을 찾을 수 없습니다."),
           returnLinkCount: Array.from(document.querySelectorAll<HTMLAnchorElement>("a[href]")).filter(
@@ -2738,6 +2747,7 @@ test("S232G final aggregate exact-head authenticated parity", async ({ browser, 
     requireTruth(
       detailDenied.ledgerCount === 0 &&
         detailDenied.denialStateCount === 1 &&
+        detailDenied.notFoundNoindexCount === 1 &&
         detailDenied.denialCopyPresent &&
         detailDenied.returnLinkCount === 1 &&
         detailDenied.contentAbsent,
@@ -2908,7 +2918,10 @@ test("S232G final aggregate exact-head authenticated parity", async ({ browser, 
   requireTruth(pageErrorCount === 0, "unexpected-page-errors");
   requireTruth(requestFailureCount === 0, "unexpected-request-failures");
   requireTruth(httpErrorCount === 0, "unexpected-http-errors");
-  requireTruth(expectedCrossAccountHttpErrorCount === 1, "exact-cross-account-http-denial-count");
+  requireTruth(
+    expectedCrossAccountHttpErrorCount === expectedCrossAccountHttpErrorCountTarget,
+    "exact-cross-account-http-denial-count",
+  );
   requireTruth(
     allCounters.every((counter) => counter.causallyBoundNavigationAbortCount <= 1) &&
       causallyBoundNavigationAbortCount <= allCounters.length,

@@ -40,6 +40,7 @@ const todaySessionRunner = read("components/review-os/today-session-runner.tsx")
 const answerReview = read("app/answer-review/answer-review-client.tsx");
 const studyLogPage = read("app/app/study-log/page.tsx");
 const captureFormSource = read("components/review-os/capture-form.tsx");
+const itemDetailPage = read("app/app/items/[itemId]/page.tsx");
 
 function learnerPageInventory() {
   const pages = [];
@@ -499,6 +500,26 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
       accessUnavailableReturn < onboardingReturn &&
       onboardingReturn < allowedReturn,
   );
+  assert.match(runtimeSpec, /denialStatus === 200 \|\| denialStatus === 404/);
+  assert.match(runtimeSpec, /meta\[name="robots"\]\[content="noindex"\]/);
+  assert.match(runtimeSpec, /detailDenied\.notFoundNoindexCount === 1/);
+  assert.match(runtimeSpec, /detailDenied\.ledgerCount === 0/);
+  assert.match(
+    runtimeSpec,
+    /expectedCrossAccountHttpErrorCountTarget = denialStatus === 404 \? 1 : 0/,
+  );
+  assert.match(
+    runtimeSpec,
+    /expectedCrossAccountHttpErrorCount === expectedCrossAccountHttpErrorCountTarget/,
+  );
+  assert.match(
+    itemDetailPage,
+    /getWrongAnswerDetail\(session\.userId, session\.email, itemId\)/,
+  );
+  assert.match(itemDetailPage, /if \(!detail\) notFound\(\)/);
+  assert.doesNotMatch(runtimeSpec, /cross-account-detail-exact-404/);
+  assert.match(qa, /streamed `200` or non-streamed `404`/);
+  assert.doesNotMatch(qa, /exact 404 detail UI denial/);
   assert.match(runtimeSpec, /error instanceof Error && error\.name === "TimeoutError"/);
   const secondaryLoginStart = runtimeSpec.indexOf("async function loginWithCredentials");
   const secondaryLoginEnd = runtimeSpec.indexOf(

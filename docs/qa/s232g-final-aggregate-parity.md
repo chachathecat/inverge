@@ -88,8 +88,9 @@ The test proves:
   account-A context read;
 - account-A owner-positive detail before and after account-B checks, distinct
   real identities, account-B exact `200 { ok: true, detail: null }` for both the
-  source and rewrite, exact 404 detail UI denial, and absence from account-B's
-  bounded Notes, Review, and Today views;
+  source and rewrite, streamed `200` or non-streamed `404` enumeration-safe
+  detail denial with one exact `robots=noindex` marker and no protected content,
+  and absence from account-B's bounded Notes, Review, and Today views;
 - the real authenticated CalculatorStep integration at 390/768/1440 and 720
   width-equivalent, including component tokens, geometry, passive-tabstop zero,
   and Current→Complete transitions without calling the server completion API;
