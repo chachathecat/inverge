@@ -208,6 +208,7 @@ test("S232H.2 audits all 13 production routes at 390, 768, and 1440", () => {
   assert.match(spec, /component.*StickyAction/s);
   assert.match(spec, /gradientCount/);
   assert.match(spec, /shadowCount/);
+  assert.match(spec, /shadowElements/);
   assert.match(spec, /viewport\.width === 1440/);
   assert.match(spec, /rgb\(247, 246, 243\)/);
   assert.match(spec, /Noto Sans KR/);
