@@ -72,6 +72,11 @@ type RuntimeDiagnosticPhase =
   | "routes"
   | "postflight";
 
+type UnexpectedRequestDiagnosticPhase =
+  | Exclude<RuntimeDiagnosticPhase, "auth">
+  | "auth-pre"
+  | "auth-post";
+
 type UnexpectedConsoleClass =
   | "toolbar-inspector"
   | "toolbar-bound"
@@ -98,6 +103,17 @@ type UnexpectedRequestClass =
   | "other";
 
 type UnexpectedRequestTarget =
+  | "root-shell"
+  | "next-static"
+  | "next-rsc"
+  | "next-image"
+  | "next-internal"
+  | "vercel"
+  | "manifest"
+  | "icon"
+  | "favicon"
+  | "sw"
+  | "asset"
   | "login"
   | "app"
   | "item"
@@ -108,10 +124,22 @@ type UnexpectedRequestTarget =
   | "other"
   | "invalid";
 
+type UnexpectedRequestResource =
+  | "document"
+  | "image"
+  | "font"
+  | "style"
+  | "script"
+  | "fetch"
+  | "xhr"
+  | "manifest"
+  | "other";
+
 type UnexpectedRequestObservation = Readonly<{
-  phase: RuntimeDiagnosticPhase;
+  phase: UnexpectedRequestDiagnosticPhase;
   kind: UnexpectedRequestClass;
   target: UnexpectedRequestTarget;
+  resource: UnexpectedRequestResource;
 }>;
 
 type RuntimePhaseState = {
@@ -236,6 +264,18 @@ function classifyUnexpectedRequest(request: Request, failure: string): Unexpecte
 }
 
 function classifyUnexpectedRequestTarget(location: URL): UnexpectedRequestTarget {
+  if (location.searchParams.has("_rsc")) return "next-rsc";
+  if (location.pathname.startsWith("/_next/static/")) return "next-static";
+  if (location.pathname === "/_next/image") return "next-image";
+  if (location.pathname.startsWith("/_next/")) return "next-internal";
+  if (location.pathname.startsWith("/_vercel/")) return "vercel";
+  if (location.pathname === "/") return "root-shell";
+  if (/^\/(?:site\.)?manifest\.(?:json|webmanifest)$/.test(location.pathname)) {
+    return "manifest";
+  }
+  if (location.pathname === "/favicon.ico") return "favicon";
+  if (location.pathname.startsWith("/icons/")) return "icon";
+  if (location.pathname === "/sw.js") return "sw";
   if (location.pathname === "/login") return "login";
   if (location.pathname === "/app") return "app";
   if (/^\/app\/items\/[^/]+$/.test(location.pathname)) return "item";
@@ -243,7 +283,35 @@ function classifyUnexpectedRequestTarget(location: URL): UnexpectedRequestTarget
   if (location.pathname === "/api/os/items") return "items-api";
   if (location.pathname.startsWith("/api/")) return "api";
   if (location.pathname.startsWith("/app/")) return "app-route";
+  if (/\.(?:css|js|mjs|png|jpe?g|gif|svg|webp|avif|ico|woff2?|ttf|otf)$/.test(location.pathname)) {
+    return "asset";
+  }
   return "other";
+}
+
+function classifyUnexpectedRequestResource(request: Request): UnexpectedRequestResource {
+  const resourceType = request.resourceType();
+  switch (resourceType) {
+    case "document":
+    case "image":
+    case "font":
+    case "script":
+    case "fetch":
+    case "xhr":
+    case "manifest":
+      return resourceType;
+    case "stylesheet":
+      return "style";
+    default:
+      return "other";
+  }
+}
+
+function unexpectedRequestDiagnosticPhase(
+  phase: RuntimePhaseState,
+): UnexpectedRequestDiagnosticPhase {
+  if (phase.diagnosticPhase !== "auth") return phase.diagnosticPhase;
+  return phase.observedAuthSignInRequestCount > 0 ? "auth-post" : "auth-pre";
 }
 
 function unexpectedRequestFailureCode(
@@ -251,7 +319,7 @@ function unexpectedRequestFailureCode(
   observation: UnexpectedRequestObservation | null,
 ) {
   if (!observation) return `req-${context}-diagnostic-missing`;
-  return `req-${context}-${observation.phase}-${observation.kind}-${observation.target}`;
+  return `req-${context}-${observation.phase}-${observation.kind}-${observation.target}-${observation.resource}`;
 }
 
 async function installPrivacySafeRuntimeGuard(
@@ -378,9 +446,10 @@ async function installPrivacySafeRuntimeGuard(
     counters.requestFailureCount += 1;
     if (phase.firstUnexpectedRequest === null) {
       phase.firstUnexpectedRequest = {
-        phase: phase.diagnosticPhase,
+        phase: unexpectedRequestDiagnosticPhase(phase),
         kind: classifyUnexpectedRequest(request, failure),
         target: unexpectedTarget,
+        resource: classifyUnexpectedRequestResource(request),
       };
     }
   });

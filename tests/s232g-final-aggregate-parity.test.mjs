@@ -678,9 +678,10 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
   assert.ok(requestGuardStart >= 0 && requestGuardEnd > requestGuardStart);
   const requestGuardSource = runtimeGuardSource.slice(requestGuardStart, requestGuardEnd);
   assert.match(requestGuardSource, /phase\.firstUnexpectedRequest === null/);
-  assert.match(requestGuardSource, /phase: phase\.diagnosticPhase/);
+  assert.match(requestGuardSource, /phase: unexpectedRequestDiagnosticPhase\(phase\)/);
   assert.match(requestGuardSource, /kind: classifyUnexpectedRequest\(request, failure\)/);
   assert.match(requestGuardSource, /target: unexpectedTarget/);
+  assert.match(requestGuardSource, /resource: classifyUnexpectedRequestResource\(request\)/);
   assert.ok(
     requestGuardSource.indexOf('isPreviewToolbarUrl(request.url())') <
       requestGuardSource.indexOf("if (boundedNavigationAbort)") &&
@@ -692,19 +693,30 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
   const requestClasses = [
     "nav-abort", "resource-abort", "blocked", "timeout", "connection", "other",
   ];
+  const requestPhases = [
+    "setup", "auth-pre", "auth-post", "durable", "cross-api", "cross-ui",
+    "collections", "fresh-owner", "aliases", "routes", "postflight",
+  ];
   const requestTargets = [
-    "login", "app", "item", "auth-api", "items-api", "api", "app-route",
-    "other", "invalid",
+    "root-shell", "next-static", "next-rsc", "next-image", "next-internal",
+    "vercel", "manifest", "icon", "favicon", "sw", "asset", "login", "app",
+    "item", "auth-api", "items-api", "api", "app-route", "other", "invalid",
+  ];
+  const requestResources = [
+    "document", "image", "font", "style", "script", "fetch", "xhr",
+    "manifest", "other",
   ];
   for (const context of consoleContexts) {
     assert.match(`req-${context}-diagnostic-missing`, /^[a-z0-9-]{1,64}$/);
-    for (const phase of consolePhases) {
+    for (const phase of requestPhases) {
       for (const kind of requestClasses) {
         for (const target of requestTargets) {
-          assert.match(
-            `req-${context}-${phase}-${kind}-${target}`,
-            /^[a-z0-9-]{1,64}$/,
-          );
+          for (const resource of requestResources) {
+            assert.match(
+              `req-${context}-${phase}-${kind}-${target}-${resource}`,
+              /^[a-z0-9-]{1,64}$/,
+            );
+          }
         }
       }
     }
@@ -712,8 +724,11 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
   assert.match(runtimeSpec, /`req-\$\{context\}-diagnostic-missing`/);
   assert.match(
     runtimeSpec,
-    /`req-\$\{context\}-\$\{observation\.phase\}-\$\{observation\.kind\}-\$\{observation\.target\}`/,
+    /`req-\$\{context\}-\$\{observation\.phase\}-\$\{observation\.kind\}-\$\{observation\.target\}-\$\{observation\.resource\}`/,
   );
+  assert.match(runtimeSpec, /location\.searchParams\.has\("_rsc"\)/);
+  assert.doesNotMatch(runtimeSpec, /location\.searchParams\.get\("_rsc"\)/);
+  assert.match(runtimeSpec, /phase\.observedAuthSignInRequestCount > 0 \? "auth-post" : "auth-pre"/);
   assert.doesNotMatch(runtimeSpec, /"unexpected-request-failures"/);
   assert.match(
     itemDetailPage,
