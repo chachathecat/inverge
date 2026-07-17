@@ -77,6 +77,14 @@ type UnexpectedRequestDiagnosticPhase =
   | "auth-pre"
   | "auth-post";
 
+type VercelFallbackFamily = "vc-w" | "vc-r" | "vc-d";
+type VercelSpecificFamily = "vc-rate" | "vc-mfe" | "vc-ping";
+type VercelShapedFamily = VercelFallbackFamily | VercelSpecificFamily;
+type VercelRequestInitiator = "tb" | "rt" | "ot" | "na";
+type VercelRequestShape = "gc" | "gq" | "nc" | "nq";
+type VercelShapedTarget =
+  `${VercelShapedFamily}-${VercelRequestInitiator}-${VercelRequestShape}`;
+
 type UnexpectedConsoleClass =
   | "toolbar-inspector"
   | "toolbar-bound"
@@ -114,7 +122,7 @@ type UnexpectedRequestTarget =
   | "vc-flags-q"
   | "vc-security"
   | "vc-metrics"
-  | "vc-system"
+  | VercelShapedTarget
   | "well-known"
   | "public-meta"
   | "manifest"
@@ -156,6 +164,7 @@ type RuntimePhaseState = {
   diagnosticPhase: RuntimeDiagnosticPhase;
   firstUnexpectedConsole: UnexpectedConsoleObservation | null;
   firstUnexpectedRequest: UnexpectedRequestObservation | null;
+  vercelRequestInitiators: WeakMap<Request, VercelRequestInitiator>;
 };
 
 type RuntimeCounters = {
@@ -195,6 +204,7 @@ function createRuntimePhaseState(): RuntimePhaseState {
     diagnosticPhase: "setup",
     firstUnexpectedConsole: null,
     firstUnexpectedRequest: null,
+    vercelRequestInitiators: new WeakMap(),
   };
 }
 
@@ -271,7 +281,52 @@ function classifyUnexpectedRequest(request: Request, failure: string): Unexpecte
   return "other";
 }
 
-function classifyUnexpectedRequestTarget(location: URL): UnexpectedRequestTarget {
+function classifyVercelFallbackFamily(pathname: string): VercelFallbackFamily | null {
+  if (pathname.startsWith("/.well-known/vercel/")) return "vc-w";
+  if (pathname.startsWith("/_vercel/")) return "vc-r";
+  if (pathname === "/__vercel" || pathname.startsWith("/__vercel/")) return "vc-d";
+  return null;
+}
+
+function classifyVercelRequestInitiator(
+  request: Request,
+  runtimeOrigin: string,
+): VercelRequestInitiator {
+  if (request.serviceWorker() || request.isNavigationRequest()) return "na";
+  try {
+    const frameLocation = new URL(request.frame().url());
+    if (isPreviewToolbarUrl(frameLocation.toString())) return "tb";
+    if (frameLocation.origin === runtimeOrigin) return "rt";
+    if (frameLocation.protocol === "http:" || frameLocation.protocol === "https:") return "ot";
+    return "na";
+  } catch {
+    return "na";
+  }
+}
+
+function classifyVercelShapedTarget(
+  family: VercelShapedFamily,
+  initiator: VercelRequestInitiator,
+  request: Request,
+  location: URL,
+): VercelShapedTarget {
+  const cleanLocation = location.search === "" && location.hash === "";
+  const requestShape: VercelRequestShape =
+    request.method() === "GET"
+      ? cleanLocation
+        ? "gc"
+        : "gq"
+      : cleanLocation
+        ? "nc"
+        : "nq";
+  return `${family}-${initiator}-${requestShape}`;
+}
+
+function classifyUnexpectedRequestTarget(
+  request: Request,
+  location: URL,
+  initiator: VercelRequestInitiator,
+): UnexpectedRequestTarget {
   if (location.searchParams.has("_rsc")) return "next-rsc";
   if (location.pathname.startsWith("/_next/static/")) return "next-static";
   if (location.pathname === "/_next/image") return "next-image";
@@ -286,7 +341,19 @@ function classifyUnexpectedRequestTarget(location: URL): UnexpectedRequestTarget
   if (location.pathname.startsWith("/.well-known/vercel/security/")) {
     return "vc-security";
   }
-  if (location.pathname.startsWith("/.well-known/vercel/")) return "vc-system";
+  if (
+    location.pathname === "/.well-known/vercel/rate-limit-api" ||
+    location.pathname.startsWith("/.well-known/vercel/rate-limit-api/")
+  ) {
+    return classifyVercelShapedTarget("vc-rate", initiator, request, location);
+  }
+  if (location.pathname === "/.well-known/vercel/microfrontends/client-config") {
+    return classifyVercelShapedTarget("vc-mfe", initiator, request, location);
+  }
+  const wellKnownFamily = classifyVercelFallbackFamily(location.pathname);
+  if (wellKnownFamily === "vc-w") {
+    return classifyVercelShapedTarget(wellKnownFamily, initiator, request, location);
+  }
   if (
     location.pathname === "/_vercel/insights" ||
     location.pathname.startsWith("/_vercel/insights/") ||
@@ -295,12 +362,17 @@ function classifyUnexpectedRequestTarget(location: URL): UnexpectedRequestTarget
   ) {
     return "vc-metrics";
   }
-  if (
-    location.pathname.startsWith("/_vercel/") ||
-    location.pathname === "/__vercel" ||
-    location.pathname.startsWith("/__vercel/")
-  ) {
-    return "vc-system";
+  if (location.pathname === "/_vercel/ping") {
+    return classifyVercelShapedTarget("vc-ping", initiator, request, location);
+  }
+  const remainingVercelFamily = classifyVercelFallbackFamily(location.pathname);
+  if (remainingVercelFamily !== null) {
+    return classifyVercelShapedTarget(
+      remainingVercelFamily,
+      initiator,
+      request,
+      location,
+    );
   }
   if (location.pathname.startsWith("/.well-known/")) return "well-known";
   if (location.pathname === "/") return "root-shell";
@@ -394,6 +466,15 @@ async function installPrivacySafeRuntimeGuard(
       }
       if (
         location.origin === runtimeOrigin &&
+        classifyVercelFallbackFamily(location.pathname) !== null
+      ) {
+        phase.vercelRequestInitiators.set(
+          request,
+          classifyVercelRequestInitiator(request, runtimeOrigin),
+        );
+      }
+      if (
+        location.origin === runtimeOrigin &&
         location.pathname === "/api/os/items" &&
         request.method() === "POST"
       ) {
@@ -468,7 +549,11 @@ async function installPrivacySafeRuntimeGuard(
     try {
       const location = new URL(request.url());
       if (location.origin !== runtimeOrigin) return;
-      unexpectedTarget = classifyUnexpectedRequestTarget(location);
+      unexpectedTarget = classifyUnexpectedRequestTarget(
+        request,
+        location,
+        phase.vercelRequestInitiators.get(request) ?? "na",
+      );
       const boundedNavigationAbort =
         phase.current === "auth-navigation" &&
         failure.includes("ERR_ABORTED") &&
