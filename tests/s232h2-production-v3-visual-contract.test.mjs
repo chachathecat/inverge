@@ -187,6 +187,8 @@ test("S232H.2 audits all 13 production routes at 390, 768, and 1440", () => {
   assert.match(spec, /completionKind/);
   assert.match(spec, /browser-cycle/);
   assert.match(spec, /enumerated-stops/);
+  assert.match(spec, /document-exit/);
+  assert.match(spec, /if \(visitedFocusIndexes\.size > 0\)/);
   assert.match(spec, /candidate\.tabIndex >= 0/);
   assert.match(spec, /visitedFocusIndexes\.size >= state\.focusableCount/);
   assert.match(spec, /visitedFocusStopCount/);
