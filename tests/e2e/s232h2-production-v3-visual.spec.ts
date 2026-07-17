@@ -1970,6 +1970,29 @@ async function verifyKeyboardFocus(page: Page, primaryActionCount: number) {
   let emptyFocusStops = 0;
   for (let attempt = 0; attempt < 300; attempt += 1) {
     await page.keyboard.press("Tab");
+    // Production keeps smooth scrolling for in-page navigation. Give the
+    // browser a bounded chance to finish revealing the newly focused target
+    // before measuring it; a target that remains offscreen still fails below.
+    await page
+      .waitForFunction(
+        () => {
+          const element = document.activeElement;
+          if (!(element instanceof HTMLElement) || element === document.body)
+            return true;
+          const rect = element.getBoundingClientRect();
+          return (
+            rect.width > 0 &&
+            rect.height > 0 &&
+            rect.bottom > 0 &&
+            rect.right > 0 &&
+            rect.top < window.innerHeight &&
+            rect.left < window.innerWidth
+          );
+        },
+        undefined,
+        { timeout: 1_000 },
+      )
+      .catch(() => undefined);
     const state = await page.evaluate(() => {
       const element = document.activeElement;
       if (!(element instanceof HTMLElement) || element === document.body)
