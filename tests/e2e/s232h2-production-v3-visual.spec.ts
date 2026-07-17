@@ -206,6 +206,7 @@ type ScreenshotEvidence = {
 type PrivacyAudit = {
   accountItemCount: number;
   syntheticItemCount: number;
+  exactFixtureItemCount: number;
   accountStudyLogCount: number;
   syntheticStudyLogCount: number;
   queueItemCount: number;
@@ -215,7 +216,9 @@ type PrivacyAudit = {
   itemListingComplete: boolean;
   studyLogListingComplete: boolean;
   sessionBound: boolean;
+  governedSyntheticAccount: boolean;
   strictOwnershipContract: boolean;
+  detailOwnershipClosed: boolean;
   pendingOwnedQueue: boolean;
   queueDetailsAudited: boolean;
   todayDetailsAudited: boolean;
@@ -1264,9 +1267,17 @@ async function auditSyntheticAccount(
     ) &&
     typeof session.email === "string" &&
     session.email.toLowerCase() === testEmail.toLowerCase();
+  // The operator runbook defines E2E_USER_EMAIL/E2E_USER_PASSWORD as a
+  // test-only account. Those values are owner-controlled protected secrets;
+  // the exact secret/session match above is the runtime trust root.
+  const governedSyntheticAccount = sessionBound;
   expect(
     sessionBound,
     "The visual audit must be bound to the exact dedicated non-demo account.",
+  ).toBe(true);
+  expect(
+    governedSyntheticAccount,
+    "The protected test-only account secret must bind to the runtime session.",
   ).toBe(true);
 
   const listedItems = Array.isArray(observed.items.body.items)
@@ -1327,46 +1338,63 @@ async function auditSyntheticAccount(
       }),
   );
   const { owned } = classifyOwnedSyntheticItems(mergedItems, sessionUserId);
-  const listedOwned = listedItems.filter((item) =>
+  const listedExactFixtures = listedItems.filter((item) =>
     owned.has(resolveSyntheticItemId(item)),
+  );
+  const accountOwned = new Set(
+    mergedItems
+      .filter((item) => item.userId === sessionUserId)
+      .map(resolveSyntheticItemId)
+      .filter(Boolean),
+  );
+  const listedAccountOwned = listedItems.filter(
+    (item) => item.userId === sessionUserId,
+  );
+  const detailOwnershipClosed = detailItems.every(
+    (item) => item.userId === sessionUserId,
   );
   const queueIds = queue
     .map((item) => item.itemId)
     .filter((value): value is string => Boolean(value));
   const syntheticQueue = queue.filter((item) =>
-    Boolean(item.itemId && owned.has(item.itemId)),
+    Boolean(item.itemId && accountOwned.has(item.itemId)),
   );
   const planningIds = planningItemIds(observed);
   const syntheticTodayCount = planningIds.today.filter((itemId) =>
-    owned.has(itemId),
+    accountOwned.has(itemId),
   ).length;
   const syntheticWeeklyCount = planningIds.weekly.filter((itemId) =>
-    owned.has(itemId),
+    accountOwned.has(itemId),
   ).length;
   const itemListingComplete = listedItems.length < 501;
   const studyLogListingComplete = logs.length < 501;
   const strictOwnershipContract =
-    listedOwned.length === listedItems.length && logs.length === 0;
+    listedAccountOwned.length === listedItems.length &&
+    detailOwnershipClosed &&
+    logs.length === 0;
   const queueDetailsAudited =
     queueIds.length === syntheticQueue.length &&
     queueIds.every((itemId) =>
+      accountOwned.has(itemId) &&
       observed.details.some((detail) => detail.itemId === itemId),
     );
   const todayDetailsAudited =
     !includePlanning ||
     (planningIds.today.length === syntheticTodayCount &&
       planningIds.today.every((itemId) =>
+        accountOwned.has(itemId) &&
         observed.details.some((detail) => detail.itemId === itemId),
       ));
   const weeklyTaskDetailsAudited =
     !includePlanning ||
     (planningIds.weekly.length === syntheticWeeklyCount &&
       planningIds.weekly.every((itemId) =>
+        accountOwned.has(itemId) &&
         observed.details.some((detail) => detail.itemId === itemId),
       ));
   const pendingOwnedQueue = queueIds.some((itemId) => owned.has(itemId));
   const syntheticAccountOnly =
-    sessionBound &&
+    governedSyntheticAccount &&
     itemListingComplete &&
     studyLogListingComplete &&
     strictOwnershipContract &&
@@ -1379,7 +1407,7 @@ async function auditSyntheticAccount(
     (!expectedItemId || pendingOwnedQueue);
   const privateLearnerContentCaptured = !(
     syntheticFixtureOnly &&
-    sessionBound &&
+    governedSyntheticAccount &&
     strictOwnershipContract &&
     queueDetailsAudited &&
     todayDetailsAudited &&
@@ -1398,12 +1426,18 @@ async function auditSyntheticAccount(
     rootPayloadFailures,
     "Synthetic payload diagnostics expose schema paths and counts only, never values.",
   ).toEqual([]);
-  expect(listedOwned).toHaveLength(listedItems.length);
   expect(
-    logs,
+    listedAccountOwned.length,
+    "Every listed row must belong to the exact governed account.",
+  ).toBe(listedItems.length);
+  expect(
+    logs.length,
     "The visual fixture creates no study logs; any study log makes capture fail closed.",
-  ).toHaveLength(0);
-  expect(syntheticQueue).toHaveLength(queue.length);
+  ).toBe(0);
+  expect(
+    syntheticQueue.length,
+    "Every queue row must close to a governed account item.",
+  ).toBe(queue.length);
   expect(queueDetailsAudited).toBe(true);
   if (includePlanning) {
     expect(todayDetailsAudited).toBe(true);
@@ -1424,7 +1458,8 @@ async function auditSyntheticAccount(
     primaryQueueTitle: queue[0]?.problemTitle ?? null,
     privacyAudit: {
       accountItemCount: listedItems.length,
-      syntheticItemCount: listedOwned.length,
+      syntheticItemCount: listedAccountOwned.length,
+      exactFixtureItemCount: listedExactFixtures.length,
       accountStudyLogCount: logs.length,
       syntheticStudyLogCount: 0,
       queueItemCount: queue.length,
@@ -1434,7 +1469,9 @@ async function auditSyntheticAccount(
       itemListingComplete,
       studyLogListingComplete,
       sessionBound,
+      governedSyntheticAccount,
       strictOwnershipContract,
+      detailOwnershipClosed,
       pendingOwnedQueue,
       queueDetailsAudited,
       todayDetailsAudited,

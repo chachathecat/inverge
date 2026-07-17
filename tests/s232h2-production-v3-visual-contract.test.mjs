@@ -11,6 +11,7 @@ import {
 const read = (path) => readFileSync(path, "utf8");
 const workflow = read(".github/workflows/s232h2-runtime.yml");
 const spec = read("tests/e2e/s232h2-production-v3-visual.spec.ts");
+const operatorRunbook = read("docs/inverge-closed-beta-operator-runbook.md");
 const baselineSha = "35836d419161d7cfe55e3e3c088fcc4d66376a7d";
 const snapshotDirectory =
   "tests/e2e/s232h2-production-v3-visual.spec.ts-snapshots";
@@ -138,6 +139,14 @@ test("S232H.2 is a narrow exact-head PR2 and fixed-PR1 Preview gate", () => {
     workflow,
     /contents: write|pull-requests: write|issues: write/,
   );
+  assert.match(operatorRunbook, /`E2E_USER_EMAIL` \(테스트 전용 계정\)/);
+  assert.match(operatorRunbook, /`E2E_USER_PASSWORD` \(테스트 전용 계정\)/);
+  assert.match(workflow, /E2E_USER_EMAIL: \$\{\{ secrets\.E2E_USER_EMAIL \}\}/);
+  assert.match(
+    workflow,
+    /E2E_USER_PASSWORD: \$\{\{ secrets\.E2E_USER_PASSWORD \}\}/,
+  );
+  assert.doesNotMatch(workflow, /TEST_USER_EMAIL|TEST_USER_PASSWORD/);
 });
 
 test("S232H.2 audits all 13 production routes at 390, 768, and 1440", () => {
@@ -307,7 +316,15 @@ test("S232H.2 evidence is API-audited synthetic data and directly compared with 
     spec,
     /syntheticEvidencePattern|function isSyntheticText|values\.some|const syntheticLogs = logs\.filter/,
   );
-  assert.match(spec, /listedOwned\.length === listedItems\.length && logs\.length === 0/);
+  assert.match(
+    spec,
+    /listedAccountOwned\.length === listedItems\.length[\s\S]*?detailOwnershipClosed[\s\S]*?logs\.length === 0/,
+  );
+  assert.match(spec, /const governedSyntheticAccount = sessionBound/);
+  assert.match(spec, /item\.userId === sessionUserId/);
+  assert.match(spec, /exactFixtureItemCount/);
+  assert.match(spec, /governedSyntheticAccount/);
+  assert.match(spec, /detailOwnershipClosed/);
   assert.match(spec, /any study log makes capture fail closed/);
   assert.match(spec, /syntheticStudyLogCount: 0/);
   assert.match(

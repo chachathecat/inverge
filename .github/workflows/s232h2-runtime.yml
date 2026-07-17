@@ -150,8 +150,8 @@ jobs:
       - name: Run exact-head production V3 visual acceptance
         env:
           S232H2_VISUAL_RUNTIME: "1"
-          E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL || secrets.TEST_USER_EMAIL }}
-          E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD || secrets.TEST_USER_PASSWORD }}
+          E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL }}
+          E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD }}
           VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
         run: npx playwright test tests/e2e/s232h2-production-v3-visual.spec.ts --project=chromium --workers=1 --reporter=line
 
@@ -213,15 +213,16 @@ jobs:
             const privacy = value.privacyAudit;
             if (!privacy || privacy.itemListingComplete !== true || privacy.studyLogListingComplete !== true) process.exit(1);
             const countFields = [
-              "accountItemCount", "syntheticItemCount", "accountStudyLogCount", "syntheticStudyLogCount",
+              "accountItemCount", "syntheticItemCount", "exactFixtureItemCount", "accountStudyLogCount", "syntheticStudyLogCount",
               "queueItemCount", "syntheticQueueItemCount", "todayItemCount", "syntheticTodayItemCount",
             ];
             if (!countFields.every((field) => Number.isInteger(privacy[field]) && privacy[field] >= 0)) process.exit(1);
             if (privacy.accountItemCount < 1 || privacy.syntheticItemCount !== privacy.accountItemCount) process.exit(1);
+            if (privacy.exactFixtureItemCount < 1) process.exit(1);
             if (privacy.syntheticStudyLogCount !== privacy.accountStudyLogCount) process.exit(1);
             if (privacy.syntheticQueueItemCount !== privacy.queueItemCount || privacy.syntheticTodayItemCount !== privacy.todayItemCount) process.exit(1);
             for (const field of [
-              "sessionBound", "strictOwnershipContract", "pendingOwnedQueue", "queueDetailsAudited",
+              "sessionBound", "governedSyntheticAccount", "strictOwnershipContract", "detailOwnershipClosed", "pendingOwnedQueue", "queueDetailsAudited",
               "todayDetailsAudited", "weeklyTaskDetailsAudited",
             ]) if (privacy[field] !== true) process.exit(1);
             if (privacy.syntheticAccountOnly !== true || privacy.syntheticFixtureOnly !== true || privacy.privateLearnerContentCaptured !== false) process.exit(1);
