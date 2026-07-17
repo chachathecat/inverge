@@ -2203,12 +2203,29 @@ async function layoutProbe(page: Page, readySelector: string, keyboardSelector: 
           if (!(element instanceof HTMLElement)) return false;
           const style = getComputedStyle(element);
           const rect = element.getBoundingClientRect();
+          let hiddenByClosedDetails = false;
+          for (
+            let ancestor = element.parentElement;
+            ancestor;
+            ancestor = ancestor.parentElement
+          ) {
+            if (ancestor instanceof HTMLDetailsElement && !ancestor.open) {
+              const controller = Array.from(ancestor.children).find(
+                (child) => child.tagName === "SUMMARY",
+              );
+              if (!controller?.contains(element)) {
+                hiddenByClosedDetails = true;
+                break;
+              }
+            }
+          }
           return (
             rect.width > 0 &&
             rect.height > 0 &&
             style.display !== "none" &&
             style.visibility !== "hidden" &&
-            style.opacity !== "0"
+            style.opacity !== "0" &&
+            !hiddenByClosedDetails
           );
         };
         const root = Array.from(document.querySelectorAll(rootSelector)).find(visible);
@@ -3077,7 +3094,10 @@ test("S232G final aggregate exact-head authenticated parity", async ({ browser, 
       widthEquivalentLayout.nestedTwoDimensionalScrollCount === 0,
       "width-equivalent-nested-two-dimensional-scroll",
     );
-    requireTruth(widthEquivalentLayout.clippedCoreContentCount === 0, "width-equivalent-clipping");
+    requireTruth(
+      widthEquivalentLayout.clippedCoreContentCount === 0,
+      `route-${route.key}-${S232G_WIDTH_EQUIVALENT_VIEWPORT.key}-clipped-core-content`,
+    );
     requireTruth(widthEquivalentLayout.coreContentCount >= 1, "width-equivalent-core-content");
     await figmaFoundationProbe(page, S232G_WIDTH_EQUIVALENT_VIEWPORT.width);
     if (route.parityKind === "direct-product-frame") {

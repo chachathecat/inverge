@@ -14,6 +14,7 @@ import {
   S232G_ROUTES,
   S232G_SUMMARY_KEYS,
   S232G_VIEWPORTS,
+  S232G_WIDTH_EQUIVALENT_VIEWPORT,
   buildS232GExpectedEvidenceDescriptors,
   s232gEvidenceCompositeKey,
 } from "./support/s232g-contract.mjs";
@@ -727,8 +728,36 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
     runtimeSpec,
     /`route-\$\{route\.key\}-\$\{viewport\.key\}-clipped-core-content`/,
   );
+  const layoutProbeBlock = runtimeSpec.match(
+    /async function layoutProbe[\s\S]*?\n}\n\nasync function skipLinkProbe/,
+  )?.[0] ?? "";
+  assert.notEqual(layoutProbeBlock, "");
+  assert.match(
+    layoutProbeBlock,
+    /let ancestor = element\.parentElement;[\s\S]*?ancestor = ancestor\.parentElement/,
+  );
+  assert.match(
+    layoutProbeBlock,
+    /ancestor instanceof HTMLDetailsElement && !ancestor\.open/,
+  );
+  assert.match(
+    layoutProbeBlock,
+    /Array\.from\(ancestor\.children\)\.find\([\s\S]*?child\.tagName === "SUMMARY"/,
+  );
+  assert.match(layoutProbeBlock, /if \(!controller\?\.contains\(element\)\)/);
+  assert.doesNotMatch(layoutProbeBlock, /if \(controller !== element\)/);
+  assert.match(layoutProbeBlock, /!hiddenByClosedDetails/);
+  assert.match(layoutProbeBlock, /rect\.left < -1/);
+  assert.match(
+    layoutProbeBlock,
+    /rect\.right > document\.documentElement\.clientWidth \+ 1/,
+  );
+  assert.match(
+    runtimeSpec,
+    /`route-\$\{route\.key\}-\$\{S232G_WIDTH_EQUIVALENT_VIEWPORT\.key\}-clipped-core-content`/,
+  );
   for (const route of S232G_ROUTES) {
-    for (const viewport of S232G_VIEWPORTS) {
+    for (const viewport of [...S232G_VIEWPORTS, S232G_WIDTH_EQUIVALENT_VIEWPORT]) {
       assert.match(
         `route-${route.key}-${viewport.key}-clipped-core-content`,
         /^[a-z0-9-]{1,64}$/,
@@ -736,6 +765,7 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
     }
   }
   assert.doesNotMatch(runtimeSpec, /"route-clipped-core-content"/);
+  assert.doesNotMatch(runtimeSpec, /"width-equivalent-clipping"/);
   assert.doesNotMatch(runtimeSpec, /keyboard-visible-focus-activation/);
   assert.match(runtimeSpec, /actualBrowserZoomClaimed: false/);
   assert.match(runtimeSpec, /realScreenReaderClaimed: false/);
