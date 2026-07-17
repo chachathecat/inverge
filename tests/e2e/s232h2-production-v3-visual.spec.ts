@@ -1960,13 +1960,13 @@ async function verifyKeyboardFocus(page: Page, primaryActionCount: number) {
     window.scrollTo(0, 0);
   });
 
-  let completedFocusCycle = false;
+  let completedFocusTraversal = false;
   let everyFocusVisible = true;
   let enabledPrimaryReached = primaryActionCount === 0;
   let skipLinkActivated =
     (await page.locator("a[data-v3-skip-link]").count()) === 0;
-  let firstFocusIndex: number | null = null;
   const visitedFocusIndexes = new Set<number>();
+  let focusStopCount = 0;
   let emptyFocusStops = 0;
   for (let attempt = 0; attempt < 300; attempt += 1) {
     await page.keyboard.press("Tab");
@@ -2009,9 +2009,13 @@ async function verifyKeyboardFocus(page: Page, primaryActionCount: number) {
         ),
       ).filter((candidate) => {
         const candidateStyle = getComputedStyle(candidate);
+        const candidateRect = candidate.getBoundingClientRect();
         return (
+          candidate.tabIndex >= 0 &&
           !candidate.matches(":disabled") &&
           candidate.getAttribute("aria-disabled") !== "true" &&
+          candidateRect.width > 0 &&
+          candidateRect.height > 0 &&
           candidateStyle.display !== "none" &&
           candidateStyle.visibility !== "hidden"
         );
@@ -2034,6 +2038,7 @@ async function verifyKeyboardFocus(page: Page, primaryActionCount: number) {
           style.backgroundColor === brandBackground);
       return {
         focusIndex: focusable.indexOf(element),
+        focusableCount: focusable.length,
         inViewport:
           rect.width > 0 &&
           rect.height > 0 &&
@@ -2058,15 +2063,7 @@ async function verifyKeyboardFocus(page: Page, primaryActionCount: number) {
       continue;
     }
     emptyFocusStops = 0;
-    if (firstFocusIndex === null) {
-      firstFocusIndex = state.focusIndex;
-    } else if (
-      state.focusIndex === firstFocusIndex &&
-      visitedFocusIndexes.size > 0
-    ) {
-      completedFocusCycle = true;
-      break;
-    }
+    focusStopCount = Math.max(focusStopCount, state.focusableCount);
     visitedFocusIndexes.add(state.focusIndex);
     if (!state.inViewport || !state.hasIndicator) everyFocusVisible = false;
     if (state?.inViewport && state.hasIndicator && state.explicitPrimary)
@@ -2086,15 +2083,38 @@ async function verifyKeyboardFocus(page: Page, primaryActionCount: number) {
           target instanceof HTMLElement && document.activeElement === target
         );
       }, expectedHash);
+      await page.evaluate((hash) => {
+        const skipLink = Array.from(
+          document.querySelectorAll<HTMLAnchorElement>(
+            "a[data-v3-skip-link]",
+          ),
+        ).find((link) => link.hash === hash);
+        skipLink?.focus({ preventScroll: true });
+      }, expectedHash);
+    }
+    if (
+      state.focusableCount > 0 &&
+      visitedFocusIndexes.size >= state.focusableCount
+    ) {
+      completedFocusTraversal = true;
+      break;
     }
   }
-  return (
-    completedFocusCycle &&
+  const passed =
+    completedFocusTraversal &&
     visitedFocusIndexes.size > 0 &&
     everyFocusVisible &&
     enabledPrimaryReached &&
-    skipLinkActivated
-  );
+    skipLinkActivated;
+  return {
+    passed,
+    completedFocusTraversal,
+    focusStopCount,
+    visitedFocusStopCount: visitedFocusIndexes.size,
+    everyFocusVisible,
+    enabledPrimaryReached,
+    skipLinkActivated,
+  };
 }
 
 async function verifyRepresentativeFigmaStructure(
@@ -2359,13 +2379,14 @@ async function auditRoute(
   const enabledPrimaryActionCount = primaryActions.filter(
     (action) => !action.disabled,
   ).length;
-  const keyboardFocusVisible = await verifyKeyboardFocus(
+  const keyboardFocusAudit = await verifyKeyboardFocus(
     page,
     enabledPrimaryActionCount,
   );
+  const keyboardFocusVisible = keyboardFocusAudit.passed;
   expect(
     keyboardFocusVisible,
-    `${route.label} must expose visible keyboard focus.`,
+    `${route.label} must expose visible keyboard focus: ${JSON.stringify(keyboardFocusAudit)}.`,
   ).toBe(true);
 
   return {
