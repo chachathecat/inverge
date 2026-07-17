@@ -78,6 +78,12 @@ type UnexpectedRequestDiagnosticPhase =
   | "auth-post";
 
 type VercelFallbackFamily = "vc-w" | "vc-r" | "vc-d";
+type VercelResidualRelation = "r" | "s" | "c";
+type VercelResidualTokenShape = "a" | "k" | "n" | "x";
+type VercelResidualLength = "s" | "m" | "l";
+type VercelResidualFamily =
+  | "vc-x0"
+  | `vc-x${VercelResidualRelation}${VercelResidualTokenShape}${VercelResidualLength}`;
 type VercelSpecificFamily =
   | "vc-rate"
   | "vc-mfe"
@@ -88,7 +94,10 @@ type VercelSpecificFamily =
   | "vc-mc"
   | "vc-s0"
   | "vc-w0"
-  | "vc-wx";
+  | "vc-m0"
+  | "vc-m1"
+  | "vc-mx"
+  | VercelResidualFamily;
 type VercelShapedFamily = VercelFallbackFamily | VercelSpecificFamily;
 type VercelRequestInitiator = "tb" | "rt" | "ot" | "na";
 type VercelRequestShape = "gc" | "gq" | "nc" | "nq";
@@ -332,6 +341,28 @@ function classifyVercelShapedTarget(
   return `${family}-${initiator}-${requestShape}`;
 }
 
+function classifyVercelResidualFamily(pathname: string): VercelResidualFamily {
+  const prefix = "/.well-known/vercel/";
+  const suffix = pathname.startsWith(prefix) ? pathname.slice(prefix.length) : "";
+  if (suffix === "") return "vc-x0";
+
+  const slash = suffix.indexOf("/");
+  const first = slash === -1 ? suffix : suffix.slice(0, slash);
+  const relation: VercelResidualRelation =
+    slash === -1 ? "r" : slash === suffix.length - 1 ? "s" : "c";
+  const shape: VercelResidualTokenShape = /^[a-z]+$/.test(first)
+    ? "a"
+    : /^[a-z0-9]+(?:-[a-z0-9]+)+$/.test(first)
+      ? "k"
+      : /^[a-z0-9]+$/.test(first)
+        // n is a lowercase alphanumeric shape; x covers every other shape.
+        ? "n"
+        : "x";
+  const length: VercelResidualLength =
+    first.length <= 8 ? "s" : first.length <= 16 ? "m" : "l";
+  return `vc-x${relation}${shape}${length}`;
+}
+
 function classifyUnexpectedRequestTarget(
   request: Request,
   location: URL,
@@ -379,11 +410,25 @@ function classifyUnexpectedRequestTarget(
   ) {
     return classifyVercelShapedTarget("vc-mc", initiator, request, location);
   }
+  if (location.pathname === "/.well-known/vercel/microfrontends") {
+    return classifyVercelShapedTarget("vc-m0", initiator, request, location);
+  }
+  if (location.pathname === "/.well-known/vercel/microfrontends/") {
+    return classifyVercelShapedTarget("vc-m1", initiator, request, location);
+  }
+  if (location.pathname.startsWith("/.well-known/vercel/microfrontends/")) {
+    return classifyVercelShapedTarget("vc-mx", initiator, request, location);
+  }
   if (location.pathname === "/.well-known/vercel/") {
     return classifyVercelShapedTarget("vc-w0", initiator, request, location);
   }
   if (location.pathname.startsWith("/.well-known/vercel/")) {
-    return classifyVercelShapedTarget("vc-wx", initiator, request, location);
+    return classifyVercelShapedTarget(
+      classifyVercelResidualFamily(location.pathname),
+      initiator,
+      request,
+      location,
+    );
   }
   if (
     location.pathname === "/_vercel/insights" ||

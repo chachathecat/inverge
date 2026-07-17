@@ -719,7 +719,7 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
   assert.match(requestGuardSource, /resource: classifyUnexpectedRequestResource\(request\)/);
   assert.doesNotMatch(
     requestGuardSource,
-    /vc-(?:fs|fc|ms|mc|s0|w0|wx)/,
+    /vc-(?:fs|fc|ms|mc|m0|m1|mx|s0|w0|x)/,
   );
   assert.ok(
     requestGuardSource.indexOf('isPreviewToolbarUrl(request.url())') <
@@ -736,9 +736,22 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
     "setup", "auth-pre", "auth-post", "durable", "cross-api", "cross-ui",
     "collections", "fresh-owner", "aliases", "routes", "postflight",
   ];
+  const vercelResidualFamilies = [
+    "vc-x0",
+    ...["r", "s", "c"].flatMap((relation) =>
+      ["a", "k", "n", "x"].flatMap((shape) =>
+        ["s", "m", "l"].map(
+          (length) => `vc-x${relation}${shape}${length}`,
+        ),
+      ),
+    ),
+  ];
+  assert.equal(vercelResidualFamilies.length, 37);
+  assert.equal(new Set(vercelResidualFamilies).size, 37);
   const vercelShapedTargets = [
     "vc-w", "vc-r", "vc-d", "vc-rate", "vc-mfe", "vc-ping",
-    "vc-fs", "vc-fc", "vc-ms", "vc-mc", "vc-s0", "vc-w0", "vc-wx",
+    "vc-fs", "vc-fc", "vc-ms", "vc-mc", "vc-m0", "vc-m1", "vc-mx",
+    "vc-s0", "vc-w0", ...vercelResidualFamilies,
   ].flatMap((family) =>
     ["tb", "rt", "ot", "na"].flatMap((initiator) =>
       ["gc", "gq", "nc", "nq"].map(
@@ -846,7 +859,7 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
     "function classifyVercelShapedTarget",
   );
   const fallbackTargetEnd = runtimeSpec.indexOf(
-    "function classifyUnexpectedRequestTarget",
+    "function classifyVercelResidualFamily",
     fallbackTargetStart,
   );
   const fallbackTargetSource = runtimeSpec.slice(
@@ -868,6 +881,68 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
   assert.doesNotMatch(
     fallbackTargetSource,
     /process\.stdout|console\.|writeFile|JSON\.stringify|testInfo\.attach/,
+  );
+  const residualFamilyStart = runtimeSpec.indexOf(
+    "function classifyVercelResidualFamily",
+  );
+  const residualFamilyEnd = runtimeSpec.indexOf(
+    "function classifyUnexpectedRequestTarget",
+    residualFamilyStart,
+  );
+  assert.ok(
+    residualFamilyStart >= 0 && residualFamilyEnd > residualFamilyStart,
+  );
+  const residualFamilySource = runtimeSpec.slice(
+    residualFamilyStart,
+    residualFamilyEnd,
+  );
+  assert.match(
+    residualFamilySource,
+    /const prefix = "\/\.well-known\/vercel\/"/,
+  );
+  assert.match(
+    residualFamilySource,
+    /pathname\.startsWith\(prefix\) \? pathname\.slice\(prefix\.length\) : ""/,
+  );
+  assert.match(residualFamilySource, /if \(suffix === ""\) return "vc-x0"/);
+  assert.match(residualFamilySource, /const slash = suffix\.indexOf\("\/"\)/);
+  assert.match(
+    residualFamilySource,
+    /slash === -1 \? suffix : suffix\.slice\(0, slash\)/,
+  );
+  assert.match(
+    residualFamilySource,
+    /slash === -1 \? "r" : slash === suffix\.length - 1 \? "s" : "c"/,
+  );
+  assert.match(
+    residualFamilySource,
+    /\/\^\[a-z\]\+\$\/\.test\(first\)\s*\?\s*"a"\s*:\s*\/\^\[a-z0-9\]\+\(\?:-\[a-z0-9\]\+\)\+\$\/\.test\(first\)\s*\?\s*"k"\s*:\s*\/\^\[a-z0-9\]\+\$\/\.test\(first\)\s*(?:\/\/[^\n]*\n\s*)?\?\s*"n"\s*:\s*"x"/,
+  );
+  assert.match(
+    residualFamilySource,
+    /first\.length <= 8 \? "s" : first\.length <= 16 \? "m" : "l"/,
+  );
+  assert.match(
+    residualFamilySource,
+    /return `vc-x\$\{relation\}\$\{shape\}\$\{length\}`/,
+  );
+  assert.doesNotMatch(
+    residualFamilySource,
+    /\b(?:searchParams|URL|Buffer|btoa|atob|decodeURI(?:Component)?|crypto|createHash)\b|subtle\.digest|process\.stdout|console\.|writeFile|JSON\.stringify|testInfo\.attach|\.search\b|\.hash\b/,
+  );
+  assert.doesNotMatch(
+    residualFamilySource,
+    /["']\/\.well-known\/vercel\/[^"']+["']/,
+  );
+  assert.doesNotMatch(
+    residualFamilySource,
+    /\$\{(?:pathname|suffix|first)(?:\.[^}]*)?\}/,
+  );
+  assert.deepEqual(
+    [...residualFamilySource.matchAll(/\breturn\s+([^;\n]+);/g)].map(
+      (match) => match[1].trim(),
+    ),
+    ['"vc-x0"', "`vc-x${relation}${shape}${length}`"],
   );
   const requestTargetClassifierStart = runtimeSpec.indexOf(
     "function classifyUnexpectedRequestTarget",
@@ -893,7 +968,8 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
     /classifyVercelShapedTarget\("vc-ping", initiator, request, location\)/,
   );
   for (const family of [
-    "vc-fs", "vc-fc", "vc-ms", "vc-mc", "vc-s0", "vc-w0", "vc-wx",
+    "vc-fs", "vc-fc", "vc-ms", "vc-mc", "vc-m0", "vc-m1", "vc-mx",
+    "vc-s0", "vc-w0",
   ]) {
     assert.match(
       requestTargetClassifierSource,
@@ -902,6 +978,10 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
       ),
     );
   }
+  assert.match(
+    requestTargetClassifierSource,
+    /classifyVercelShapedTarget\(\s*classifyVercelResidualFamily\(location\.pathname\),/,
+  );
   const flagsPathOffset = requestTargetClassifierSource.indexOf(
     'location.pathname === "/.well-known/vercel/flags"',
   );
@@ -926,8 +1006,17 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
   const mfeSlashOffset = requestTargetClassifierSource.indexOf(
     'location.pathname === "/.well-known/vercel/microfrontends/client-config/"',
   );
-  const mfeChildOffset = requestTargetClassifierSource.indexOf(
-    'location.pathname.startsWith(\n      "/.well-known/vercel/microfrontends/client-config/",',
+  const mfeChildOffset = requestTargetClassifierSource.search(
+    /location\.pathname\.startsWith\(\s*"\/\.well-known\/vercel\/microfrontends\/client-config\/",?\s*\)/,
+  );
+  const mfeRootOffset = requestTargetClassifierSource.indexOf(
+    'location.pathname === "/.well-known/vercel/microfrontends"',
+  );
+  const mfeRootSlashOffset = requestTargetClassifierSource.indexOf(
+    'location.pathname === "/.well-known/vercel/microfrontends/"',
+  );
+  const mfeRootChildOffset = requestTargetClassifierSource.search(
+    /location\.pathname\.startsWith\(\s*"\/\.well-known\/vercel\/microfrontends\/"\s*\)/,
   );
   const vercelWellKnownRootOffset = requestTargetClassifierSource.indexOf(
     'location.pathname === "/.well-known/vercel/"',
@@ -960,6 +1049,9 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
       mfePathOffset >= 0 &&
       mfeSlashOffset >= 0 &&
       mfeChildOffset >= 0 &&
+      mfeRootOffset >= 0 &&
+      mfeRootSlashOffset >= 0 &&
+      mfeRootChildOffset >= 0 &&
       vercelWellKnownRootOffset >= 0 &&
       vercelWellKnownResidualOffset >= 0 &&
       metricsPathOffset >= 0 &&
@@ -975,7 +1067,10 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
       ratePathOffset < vercelWellKnownRootOffset &&
       mfePathOffset < mfeSlashOffset &&
       mfeSlashOffset < mfeChildOffset &&
-      mfeChildOffset < vercelWellKnownRootOffset &&
+      mfeChildOffset < mfeRootOffset &&
+      mfeRootOffset < mfeRootSlashOffset &&
+      mfeRootSlashOffset < mfeRootChildOffset &&
+      mfeRootChildOffset < vercelWellKnownRootOffset &&
       vercelWellKnownRootOffset < vercelWellKnownResidualOffset &&
       vercelWellKnownResidualOffset < genericVercelPathOffset &&
       metricsPathOffset < genericVercelPathOffset &&
