@@ -332,6 +332,10 @@ test("S232H.2 produces the fixed initial, dynamic, before, and Figma evidence se
   assert.match(spec, /visibleTargetFailures\(page\)/);
   assert.match(spec, /data-calculator-routine-active-step=\"casio_input\"/);
   assert.match(spec, /data-v3-component=\"CalculatorStep\"/);
+  assert.match(
+    spec,
+    /async function captureSyntheticScreenshot[\s\S]*?root\.style\.scrollBehavior = "auto"[\s\S]*?window\.scrollTo\(0, 0\)[\s\S]*?requestAnimationFrame\(\(\) => requestAnimationFrame[\s\S]*?root\.style\.scrollBehavior = previousScrollBehavior[\s\S]*?screenshotScrollY[\s\S]*?canonical top position/,
+  );
   for (const state of [
     "capture-extraction-preview",
     "answer-review-result",
