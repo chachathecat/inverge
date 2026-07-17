@@ -1513,11 +1513,10 @@ function syntheticItemPayload({
     userAnswer: syntheticFixtureAnswer,
     userReasonText: syntheticFixtureGap,
     confidence: queueAnchor ? "낮음" : "중간",
+    timeSpentSeconds: queueAnchor ? 180 : undefined,
     keyConcepts: ["신뢰보호", "공적 견해표명", "보호가치"],
     missingIssue: syntheticFixtureGap,
-    weakStructurePoint: queueAnchor
-      ? "답안 구조 점검"
-      : "요건과 사실 적용을 같은 순서로 연결해야 합니다.",
+    weakStructurePoint: "요건과 사실 적용을 같은 순서로 연결해야 합니다.",
     weakApplicationSentence:
       "공적 견해표명에 해당하는 합성 사실을 구체적으로 연결해야 합니다.",
     rewriteInstruction: "요건, 대응 사실, 소결론을 한 문단에 연결합니다.",
