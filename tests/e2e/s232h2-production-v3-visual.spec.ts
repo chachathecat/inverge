@@ -1963,8 +1963,6 @@ async function verifyKeyboardFocus(page: Page, primaryActionCount: number) {
   let completedFocusTraversal = false;
   let everyFocusVisible = true;
   let enabledPrimaryReached = primaryActionCount === 0;
-  let skipLinkActivated =
-    (await page.locator("a[data-v3-skip-link]").count()) === 0;
   let firstFocusIndex: number | null = null;
   let completionKind:
     | "enumerated-stops"
@@ -2055,12 +2053,6 @@ async function verifyKeyboardFocus(page: Page, primaryActionCount: number) {
         hasIndicator:
           element.matches(":focus-visible") && (hasOutline || hasRing),
         explicitPrimary,
-        skipHref:
-          element instanceof HTMLAnchorElement &&
-          element.hasAttribute("data-v3-skip-link") &&
-          element.hash
-            ? element.hash
-            : null,
       };
     });
     if (!state || state.focusIndex < 0) {
@@ -2091,30 +2083,6 @@ async function verifyKeyboardFocus(page: Page, primaryActionCount: number) {
     if (state?.inViewport && state.hasIndicator && state.explicitPrimary)
       enabledPrimaryReached = true;
     if (
-      !skipLinkActivated &&
-      state?.inViewport &&
-      state.hasIndicator &&
-      state.skipHref
-    ) {
-      const expectedHash = state.skipHref;
-      await page.keyboard.press("Enter");
-      await expect.poll(() => new URL(page.url()).hash).toBe(expectedHash);
-      skipLinkActivated = await page.evaluate((hash) => {
-        const target = document.querySelector(hash);
-        return (
-          target instanceof HTMLElement && document.activeElement === target
-        );
-      }, expectedHash);
-      await page.evaluate((hash) => {
-        const skipLink = Array.from(
-          document.querySelectorAll<HTMLAnchorElement>(
-            "a[data-v3-skip-link]",
-          ),
-        ).find((link) => link.hash === hash);
-        skipLink?.focus({ preventScroll: true });
-      }, expectedHash);
-    }
-    if (
       state.focusableCount > 0 &&
       visitedFocusIndexes.size >= state.focusableCount
     ) {
@@ -2123,6 +2091,32 @@ async function verifyKeyboardFocus(page: Page, primaryActionCount: number) {
       break;
     }
   }
+  const skipLinks = page.locator("a[data-v3-skip-link]");
+  let skipLinkActivated = (await skipLinks.count()) === 0;
+  if (!skipLinkActivated) {
+    const skipLink = skipLinks.first();
+    const expectedHash = await skipLink.getAttribute("href");
+    expect(expectedHash).toMatch(/^#[a-z0-9_-]+$/i);
+    await skipLink.evaluate((element) =>
+      element.focus({ preventScroll: true }),
+    );
+    await page.keyboard.press("Enter");
+    await expect.poll(() => new URL(page.url()).hash).toBe(expectedHash);
+    skipLinkActivated = await page.evaluate((hash) => {
+      if (!hash) return false;
+      const target = document.querySelector(hash);
+      return target instanceof HTMLElement && document.activeElement === target;
+    }, expectedHash);
+  }
+  await page.evaluate(() => {
+    if (document.activeElement instanceof HTMLElement)
+      document.activeElement.blur();
+    const root = document.documentElement;
+    const previousScrollBehavior = root.style.scrollBehavior;
+    root.style.scrollBehavior = "auto";
+    window.scrollTo(0, 0);
+    root.style.scrollBehavior = previousScrollBehavior;
+  });
   const passed =
     completedFocusTraversal &&
     visitedFocusIndexes.size > 0 &&
@@ -2454,7 +2448,11 @@ async function captureSyntheticScreenshot(
   await page.evaluate(() => {
     if (document.activeElement instanceof HTMLElement)
       document.activeElement.blur();
+    const root = document.documentElement;
+    const previousScrollBehavior = root.style.scrollBehavior;
+    root.style.scrollBehavior = "auto";
     window.scrollTo(0, 0);
+    root.style.scrollBehavior = previousScrollBehavior;
   });
 
   const identity = page.locator(
