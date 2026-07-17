@@ -947,7 +947,7 @@ export default function AnswerReviewClientPage({
         href="#answer-review-main"
         data-v3-skip-link
         className={cn(
-          "fixed left-[max(1rem,env(safe-area-inset-left))] top-[max(1rem,env(safe-area-inset-top))] z-[100] inline-flex min-h-11 min-w-11 -translate-y-[200%] items-center justify-center px-4 transition-transform focus-visible:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2",
+          "fixed left-[max(1rem,env(safe-area-inset-left))] top-[max(1rem,env(safe-area-inset-top))] z-[100] inline-flex min-h-12 min-w-11 -translate-y-[200%] items-center justify-center px-4 transition-transform focus-visible:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2",
           examMode === "second"
             ? "v3-type-label-strong rounded-[var(--v3-radius-control)] bg-[var(--color-background-surface)] text-[var(--color-text-primary)] focus-visible:ring-offset-[var(--color-background-canvas)]"
             : "rounded-[var(--radius-sm)] bg-[color:var(--bg-surface)] text-sm font-semibold text-[color:var(--foreground-strong)] focus-visible:ring-offset-[var(--bg-surface)]",
