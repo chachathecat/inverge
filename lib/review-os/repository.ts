@@ -800,56 +800,105 @@ export class ReviewOsRepository {
 
   async listReviewQueue(userId: string, limit = 10) {
     const client = getUserClient(userId);
-    const queueResult = await client
-      .from("review_queue_items")
-      .select("*")
-      .eq("user_id", userId)
-      .eq("exam_id", "wrong_answer_os")
-      .eq("stage", "alpha")
-      .eq("status", "pending")
-      .order("priority_score", { ascending: false })
-      .order("created_at", { ascending: false })
-      .limit(limit);
-    assertSupabaseOperation("review-os.listReviewQueue.queue", queueResult);
+    const requestedLimit = Math.max(0, Math.floor(limit));
+    if (requestedLimit === 0) return [];
 
-    const queueRows = (queueResult.data ?? []) as Record<string, unknown>[];
-    const itemIds = queueRows
-      .map((row) => (typeof row.source_submission_id === "string" ? row.source_submission_id : null))
-      .filter((value): value is string => Boolean(value));
-    if (itemIds.length === 0) {
-      return [];
+    // Queue rows can outlive their source submission because the legacy table
+    // has no foreign-key cascade. Scan in the canonical ranking order until we
+    // have enough resolvable cards so an orphaned top row cannot hide a valid
+    // learner item. The bound prevents unbounded reads on damaged accounts.
+    const scanPageSize = Math.max(25, Math.min(100, requestedLimit * 5));
+    const maxScannedRows = 500;
+    const cards: ReviewQueueCard[] = [];
+
+    for (
+      let offset = 0;
+      offset < maxScannedRows && cards.length < requestedLimit;
+      offset += scanPageSize
+    ) {
+      const rangeEnd = Math.min(
+        offset + scanPageSize - 1,
+        maxScannedRows - 1,
+      );
+      const queueResult = await client
+        .from("review_queue_items")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("exam_id", "wrong_answer_os")
+        .eq("stage", "alpha")
+        .eq("status", "pending")
+        .eq("source_kind", "wrong_answer")
+        .not("source_submission_id", "is", null)
+        .order("priority_score", { ascending: false })
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .range(offset, rangeEnd);
+      assertSupabaseOperation("review-os.listReviewQueue.queue", queueResult);
+
+      const queueRows = (queueResult.data ?? []) as Record<string, unknown>[];
+      if (queueRows.length === 0) break;
+
+      const itemIds = [
+        ...new Set(
+          queueRows
+            .map((row) =>
+              typeof row.source_submission_id === "string"
+                ? row.source_submission_id
+                : null,
+            )
+            .filter((value): value is string => Boolean(value)),
+        ),
+      ];
+      if (itemIds.length > 0) {
+        const itemsResult = await client
+          .from("wrong_answer_items")
+          .select("*")
+          .eq("user_id", userId)
+          .in("id", itemIds);
+        assertSupabaseOperation("review-os.listReviewQueue.items", itemsResult);
+        const itemsMap = new Map(
+          ((itemsResult.data ?? []) as Record<string, unknown>[]).map((row) => {
+            const item = mapWrongAnswerItem(row);
+            return [item.id, item] as const;
+          }),
+        );
+
+        const tagsResult = await client
+          .from("wrong_answer_tags")
+          .select("*")
+          .in("wrong_answer_item_id", itemIds);
+        assertSupabaseOperation("review-os.listReviewQueue.tags", tagsResult);
+        const primaryTagByItemId = new Map<string, WrongAnswerTagRecord>();
+        ((tagsResult.data ?? []) as Record<string, unknown>[]).forEach((row) => {
+          const tag = mapWrongAnswerTag(row);
+          if (!primaryTagByItemId.has(tag.wrongAnswerItemId)) {
+            primaryTagByItemId.set(tag.wrongAnswerItemId, tag);
+          }
+        });
+
+        for (const row of queueRows) {
+          const itemId =
+            typeof row.source_submission_id === "string"
+              ? row.source_submission_id
+              : null;
+          if (!itemId) continue;
+          const item = itemsMap.get(itemId);
+          if (!item) continue;
+          cards.push(
+            mapReviewQueueCard(
+              row,
+              item,
+              primaryTagByItemId.get(itemId) ?? null,
+            ),
+          );
+          if (cards.length === requestedLimit) break;
+        }
+      }
+
+      if (queueRows.length < rangeEnd - offset + 1) break;
     }
 
-    const itemsResult = await client
-      .from("wrong_answer_items")
-      .select("*")
-      .eq("user_id", userId)
-      .in("id", itemIds);
-    assertSupabaseOperation("review-os.listReviewQueue.items", itemsResult);
-    const itemsMap = new Map(
-      ((itemsResult.data ?? []) as Record<string, unknown>[]).map((row) => {
-        const item = mapWrongAnswerItem(row);
-        return [item.id, item] as const;
-      }),
-    );
-
-    const tagsResult = await client.from("wrong_answer_tags").select("*").in("wrong_answer_item_id", itemIds);
-    assertSupabaseOperation("review-os.listReviewQueue.tags", tagsResult);
-    const primaryTagByItemId = new Map<string, WrongAnswerTagRecord>();
-    ((tagsResult.data ?? []) as Record<string, unknown>[]).forEach((row) => {
-      const tag = mapWrongAnswerTag(row);
-      if (!primaryTagByItemId.has(tag.wrongAnswerItemId)) {
-        primaryTagByItemId.set(tag.wrongAnswerItemId, tag);
-      }
-    });
-
-    return queueRows.flatMap((row) => {
-      const itemId = typeof row.source_submission_id === "string" ? row.source_submission_id : null;
-      if (!itemId) return [];
-      const item = itemsMap.get(itemId);
-      if (!item) return [];
-      return [mapReviewQueueCard(row, item, primaryTagByItemId.get(itemId) ?? null)];
-    });
+    return cards;
   }
 
   async archiveReviewQueueItemsForMode(userId: string, queueIds: string[]) {

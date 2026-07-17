@@ -6,6 +6,7 @@ const read = (path) => readFileSync(path, "utf8");
 
 const capturePage = read("app/app/capture/page.tsx");
 const captureForm = read("components/review-os/capture-form.tsx");
+const globals = read("app/globals.css");
 const answerReview = read("app/answer-review/answer-review-client.tsx");
 const writePage = read("app/app/write/page.tsx");
 const sessionPage = read("app/app/session/page.tsx");
@@ -28,6 +29,11 @@ test("capture and write routes reuse the V3 reading frame without changing the s
   assert.match(captureForm, /mode === "second"[\s\S]*?다른 입력 방식/);
   assert.match(captureForm, /mode === "second"[\s\S]*?color-background-brand-soft/);
   assert.match(captureForm, /mode === "second" \? \([\s\S]*?<TrustEvidenceBar[\s\S]*?: \([\s\S]*?<LegacyTrustEvidenceBar/);
+  assert.match(captureForm, /mode === "second" \? "v3-capture-form" : ""/);
+  assert.match(captureForm, /mode === "second"[\s\S]*?v3-type-caption hidden max-w-full[\s\S]*?rounded-\[var\(--v3-radius-control\)\]/);
+  assert.match(captureForm, /mode === "second"[\s\S]*?v3-type-label-strong flex min-h-11[\s\S]*?다른 작업/);
+  assert.match(globals, /\.v3-capture-form \.form-control \{[\s\S]*?border-radius: var\(--v3-radius-control\);[\s\S]*?font-family: var\(--font-ui\);/);
+  assert.match(globals, /\.v3-capture-form \.form-control:focus-visible \{[\s\S]*?border-color: var\(--color-border-focus\);/);
 });
 
 test("asynchronous OCR completion discards stale semantic responses and keeps the latest learner revision", () => {

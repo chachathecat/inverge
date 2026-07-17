@@ -25,7 +25,8 @@ test("S232E.1 exposes one semantic four-stage Capture shell", () => {
   assert.match(capture, /data-s232e-capture-step=\{currentCaptureStep\}/);
   assert.match(capture, /data-s232e-capture-stage=\{stage\}/);
   assert.match(capture, /data-capture-stage-flow/);
-  assert.match(capture, /className="sr-only[^\"]*sm:not-sr-only sm:grid/);
+  assert.match(capture, /v3-type-caption sr-only[^\"]*sm:not-sr-only sm:grid/);
+  assert.match(capture, /"sr-only[^\"]*sm:not-sr-only sm:grid/);
   assert.match(capture, /aria-label="Capture 4단계 흐름"/);
   assert.match(capture, /aria-current=\{currentCaptureStep === step \? "step" : undefined\}/);
   assert.match(capture, /const SECOND_CAPTURE_FLOW_STEPS = \[/);

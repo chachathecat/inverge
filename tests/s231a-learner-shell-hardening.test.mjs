@@ -155,7 +155,8 @@ test("S231A normalizes identified learner controls to explicit 44px targets", ()
     /<label\s+key=\{option\.value\}\s+className=\{\s*examMode === "second"\s*\?\s*"[^"]*min-h-11[^"]*"\s*:\s*"[^"]*min-h-11/,
   );
   assert.equal((session.match(/<V3QuietDisclosure/g) ?? []).length, 2);
-  assert.match(capture, /<summary className="flex min-h-11 cursor-pointer items-center whitespace-nowrap/);
+  assert.match(capture, /v3-type-label-strong flex min-h-11 cursor-pointer items-center whitespace-nowrap/);
+  assert.match(capture, /"flex min-h-11 cursor-pointer items-center whitespace-nowrap/);
   assert.ok((todaySession.match(/<V3QuietDisclosure/g) ?? []).length >= 2);
   assert.match(v3RouteUi, /<summary className="v3-type-label-strong flex min-h-11/);
   assert.match(calculator, /<summary className="flex min-h-11 cursor-pointer items-center/);

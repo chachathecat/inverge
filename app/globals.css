@@ -497,6 +497,25 @@ body {
   box-shadow: 0 0 0 3px rgba(16, 35, 63, 0.08);
 }
 
+.v3-capture-form .form-control {
+  border-radius: var(--v3-radius-control);
+  border-color: var(--color-border-default);
+  background: var(--color-background-surface);
+  font-family: var(--font-ui);
+  font-size: var(--type-compact-size);
+  line-height: var(--type-compact-line);
+  color: var(--color-text-primary);
+}
+
+.v3-capture-form .form-control::placeholder {
+  color: var(--color-text-tertiary);
+}
+
+.v3-capture-form .form-control:focus-visible {
+  border-color: var(--color-border-focus);
+  box-shadow: 0 0 0 2px var(--focus-ring);
+}
+
 :where(button, [role="button"], input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
   min-height: var(--touch-target-min);
 }

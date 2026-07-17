@@ -11,6 +11,7 @@ import {
 const read = (path) => readFileSync(path, "utf8");
 const workflow = read(".github/workflows/s232h2-runtime.yml");
 const spec = read("tests/e2e/s232h2-production-v3-visual.spec.ts");
+const reviewRepository = read("lib/review-os/repository.ts");
 const operatorRunbook = read("docs/inverge-closed-beta-operator-runbook.md");
 const baselineSha = "35836d419161d7cfe55e3e3c088fcc4d66376a7d";
 const snapshotDirectory =
@@ -198,6 +199,76 @@ test("S232H.2 audits all 13 production routes at 390, 768, and 1440", () => {
   assert.match(spec, /--layout-reading-column/);
   assert.match(spec, /--layout-content-max/);
   assert.match(spec, /Unexpected redirect/);
+});
+
+test("route mapping claims only component contracts used by that production flow", () => {
+  const mappingStart = spec.indexOf("const routeContractNodes");
+  const mappingEnd = spec.indexOf("\n};", mappingStart);
+  assert.ok(mappingStart >= 0 && mappingEnd > mappingStart);
+  const mapping = spec.slice(mappingStart, mappingEnd + 3);
+  const readNodes = (route) => {
+    const key = route.includes("-") ? `"${route}"` : route;
+    const match = mapping.match(
+      new RegExp(`(?:^|\\n)\\s*${key}:\\s*\\[([\\s\\S]*?)\\],`),
+    );
+    assert.ok(match, `missing route contract mapping: ${route}`);
+    return [...match[1].matchAll(/"(\d+:\d+)"/g)].map((entry) => entry[1]);
+  };
+  const foundations = ["43:2", "44:9", "45:2"];
+  const shared = ["61:2", "61:80"];
+  const expected = {
+    home: [...foundations, ...shared],
+    login: [...foundations, ...shared],
+    today: [...foundations, ...shared],
+    capture: [...foundations, "48:75", "50:59", ...shared],
+    "answer-review": [...foundations, "48:75", "50:59", ...shared],
+    review: [...foundations, ...shared],
+    notes: [...foundations, "50:59", ...shared],
+    ledger: [
+      ...foundations,
+      "47:28",
+      "48:75",
+      "50:59",
+      "51:44",
+      "52:42",
+      "56:2",
+      "59:62",
+      ...shared,
+    ],
+    session: [...foundations, "50:59", ...shared],
+    agenda: [...foundations, ...shared],
+    weekly: [...foundations, ...shared],
+    write: [...foundations, "50:59", ...shared],
+    calculator: [
+      ...foundations,
+      "48:75",
+      "51:44",
+      "53:129",
+      "57:34",
+      ...shared,
+    ],
+  };
+  for (const [route, nodes] of Object.entries(expected)) {
+    assert.deepEqual(readNodes(route), nodes, `false component claim: ${route}`);
+  }
+});
+
+test("review queue keeps canonical ranking while scanning past orphaned source rows", () => {
+  const listReviewQueue = reviewRepository.slice(
+    reviewRepository.indexOf("  async listReviewQueue(userId: string, limit = 10)"),
+    reviewRepository.indexOf("\n  async archiveReviewQueueItemsForMode", reviewRepository.indexOf("  async listReviewQueue(userId: string, limit = 10)")),
+  );
+  assert.match(listReviewQueue, /const maxScannedRows = 500/);
+  assert.match(listReviewQueue, /\.eq\("source_kind", "wrong_answer"\)/);
+  assert.match(listReviewQueue, /\.not\("source_submission_id", "is", null\)/);
+  assert.match(listReviewQueue, /\.order\("priority_score", \{ ascending: false \}\)/);
+  assert.match(listReviewQueue, /\.order\("created_at", \{ ascending: false \}\)/);
+  assert.match(listReviewQueue, /\.order\("id", \{ ascending: false \}\)/);
+  assert.match(listReviewQueue, /\.range\(offset, rangeEnd\)/);
+  assert.match(listReviewQueue, /if \(!item\) continue;/);
+  assert.match(listReviewQueue, /if \(cards\.length === requestedLimit\) break;/);
+  assert.match(listReviewQueue, /return cards;/);
+  assert.doesNotMatch(listReviewQueue, /\.limit\(limit\)/);
 });
 
 test("S232H.2 pins the three canonical Figma representative PNGs", () => {

@@ -117,7 +117,7 @@ const requiredRoutes: readonly RouteDefinition[] = [
 const routeContractNodes: Record<string, string[]> = {
   home: ["43:2", "44:9", "45:2", "61:2", "61:80"],
   login: ["43:2", "44:9", "45:2", "61:2", "61:80"],
-  today: ["43:2", "44:9", "45:2", "47:28", "61:2", "61:80"],
+  today: ["43:2", "44:9", "45:2", "61:2", "61:80"],
   capture: ["43:2", "44:9", "45:2", "48:75", "50:59", "61:2", "61:80"],
   "answer-review": [
     "43:2",
@@ -125,12 +125,11 @@ const routeContractNodes: Record<string, string[]> = {
     "45:2",
     "48:75",
     "50:59",
-    "52:42",
     "61:2",
     "61:80",
   ],
-  review: ["43:2", "44:9", "45:2", "47:28", "61:2", "61:80"],
-  notes: ["43:2", "44:9", "45:2", "47:28", "50:59", "61:2", "61:80"],
+  review: ["43:2", "44:9", "45:2", "61:2", "61:80"],
+  notes: ["43:2", "44:9", "45:2", "50:59", "61:2", "61:80"],
   ledger: [
     "43:2",
     "44:9",
@@ -146,9 +145,9 @@ const routeContractNodes: Record<string, string[]> = {
     "61:80",
   ],
   session: ["43:2", "44:9", "45:2", "50:59", "61:2", "61:80"],
-  agenda: ["43:2", "44:9", "45:2", "47:28", "61:2", "61:80"],
-  weekly: ["43:2", "44:9", "45:2", "47:28", "61:2", "61:80"],
-  write: ["43:2", "44:9", "45:2", "48:75", "50:59", "61:2", "61:80"],
+  agenda: ["43:2", "44:9", "45:2", "61:2", "61:80"],
+  weekly: ["43:2", "44:9", "45:2", "61:2", "61:80"],
+  write: ["43:2", "44:9", "45:2", "50:59", "61:2", "61:80"],
   calculator: [
     "43:2",
     "44:9",
@@ -1616,6 +1615,11 @@ async function ensureSyntheticLedgerFixture(
     });
     let generation = Math.max(0, ...existingGenerations) + 1;
     let pendingQueueReady = false;
+    const attemptEvidence: Array<{
+      status: number;
+      ok: boolean;
+      deduped: boolean;
+    }> = [];
     for (
       let attempt = 0;
       attempt < 2 && !pendingQueueReady;
@@ -1625,6 +1629,11 @@ async function ensureSyntheticLedgerFixture(
         page,
         syntheticItemPayload({ role: "queue-anchor", generation }),
       );
+      attemptEvidence.push({
+        status: created.status,
+        ok: created.ok,
+        deduped: created.value.deduped === true,
+      });
       if (!created.ok && created.status !== 409 && created.status !== 429) {
         expect(
           created.ok,
@@ -1638,7 +1647,7 @@ async function ensureSyntheticLedgerFixture(
     }
     expect(
       pendingQueueReady,
-      "A bounded exact-owned pending review queue must exist.",
+      `A bounded exact-owned pending review queue must exist; creation attempts=${JSON.stringify(attemptEvidence)}.`,
     ).toBe(true);
   }
   return { ledgerItemId };

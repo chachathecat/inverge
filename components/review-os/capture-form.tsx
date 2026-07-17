@@ -1805,8 +1805,22 @@ export function WrongAnswerCaptureForm({
 
   const footerSecondary =
     submitting || stage === "intake" ? null : (
-      <details className="max-w-full rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-3 py-2">
-        <summary className="flex min-h-11 cursor-pointer items-center whitespace-nowrap text-xs font-medium text-[color:var(--muted)]">다른 작업</summary>
+      <details
+        className={
+          mode === "second"
+            ? "max-w-full rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-surface)] px-3 py-2"
+            : "max-w-full rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-3 py-2"
+        }
+      >
+        <summary
+          className={
+            mode === "second"
+              ? "v3-type-label-strong flex min-h-11 cursor-pointer items-center whitespace-nowrap text-[var(--color-text-secondary)]"
+              : "flex min-h-11 cursor-pointer items-center whitespace-nowrap text-xs font-medium text-[color:var(--muted)]"
+          }
+        >
+          다른 작업
+        </summary>
         <div className="mt-2 flex flex-col gap-2 sm:flex-row">
           <CaptureActionButton mode={mode} type="button" variant="outline" onClick={resetDraft} className="w-full sm:w-auto">
             {mode === "second" ? "다시 쓰기" : "다시 풀기"}
@@ -1820,7 +1834,7 @@ export function WrongAnswerCaptureForm({
 
   return (
     <form
-      className="space-y-4 overflow-x-hidden pb-28 sm:space-y-6 sm:pb-0"
+      className={`space-y-4 overflow-x-hidden pb-28 sm:space-y-6 sm:pb-0 ${mode === "second" ? "v3-capture-form" : ""}`}
       onSubmit={handleSubmit}
       aria-labelledby={labelledBy}
       data-s224v-surface-fragment="capture-form"
@@ -1880,7 +1894,11 @@ export function WrongAnswerCaptureForm({
         <>
           <CaptureProgressPill current={currentCaptureStep} total={4} mode={mode} />
           <ol
-            className="sr-only grid-cols-2 gap-2 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-2 text-xs text-[color:var(--muted)] sm:not-sr-only sm:grid sm:grid-cols-4 sm:p-3"
+            className={
+              mode === "second"
+                ? "v3-type-caption sr-only grid-cols-2 gap-2 rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-surface)] p-2 text-[var(--color-text-secondary)] sm:not-sr-only sm:grid sm:grid-cols-4 sm:p-3"
+                : "sr-only grid-cols-2 gap-2 rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-2 text-xs text-[color:var(--muted)] sm:not-sr-only sm:grid sm:grid-cols-4 sm:p-3"
+            }
             data-capture-stage-flow
             data-s224v-stage-indicator="compact"
             aria-label="Capture 4단계 흐름"
@@ -1890,10 +1908,18 @@ export function WrongAnswerCaptureForm({
               return (
                 <li
                   key={item.label}
-                  className={`flex min-h-12 items-center gap-2 rounded-[var(--radius-sm)] px-2 py-2 leading-tight sm:min-h-0 sm:px-3 ${
-                    currentCaptureStep === step
-                      ? "bg-[color:var(--brand-050)] text-[color:var(--foreground-strong)]"
-                      : "bg-[color:var(--surface-soft)]"
+                  className={`flex min-h-12 items-center gap-2 px-2 py-2 leading-tight sm:min-h-0 sm:px-3 ${
+                    mode === "second"
+                      ? `rounded-[var(--v3-radius-control)] border ${
+                          currentCaptureStep === step
+                            ? "border-[var(--color-border-focus)] bg-[var(--color-background-focus)] text-[var(--color-text-primary)]"
+                            : "border-[var(--color-border-default)] bg-[var(--color-background-subtle)] text-[var(--color-text-secondary)]"
+                        }`
+                      : `rounded-[var(--radius-sm)] ${
+                          currentCaptureStep === step
+                            ? "bg-[color:var(--brand-050)] text-[color:var(--foreground-strong)]"
+                            : "bg-[color:var(--surface-soft)]"
+                        }`
                   }`}
                   aria-current={currentCaptureStep === step ? "step" : undefined}
                   data-capture-stage={step}
@@ -2237,7 +2263,11 @@ function CaptureProgressPill({ current, total, mode }: { current: number; total:
   const safeCurrent = Math.min(Math.max(current, 0), safeTotal);
   return (
     <div
-      className="hidden max-w-full flex-wrap items-center justify-between gap-2 rounded-full border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)] px-3 py-2 text-xs text-[color:var(--muted)] sm:flex sm:max-w-md"
+      className={
+        mode === "second"
+          ? "v3-type-caption hidden max-w-full flex-wrap items-center justify-between gap-2 rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-surface)] px-3 py-2 text-[var(--color-text-secondary)] sm:flex sm:max-w-md"
+          : "hidden max-w-full flex-wrap items-center justify-between gap-2 rounded-full border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)] px-3 py-2 text-xs text-[color:var(--muted)] sm:flex sm:max-w-md"
+      }
       role="progressbar"
       aria-valuemin={0}
       aria-valuemax={safeTotal}
