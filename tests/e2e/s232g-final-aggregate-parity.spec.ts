@@ -4,6 +4,7 @@ import {
   test,
   type Browser,
   type BrowserContext,
+  type ConsoleMessage,
   type Locator,
   type Page,
   type Response,
@@ -58,9 +59,40 @@ type RuntimePhase =
   | "cleanup"
   | "expected-cross-account-ui-denial";
 
+type RuntimeDiagnosticPhase =
+  | "setup"
+  | "auth"
+  | "durable"
+  | "cross-api"
+  | "cross-ui"
+  | "collections"
+  | "fresh-owner"
+  | "aliases"
+  | "routes"
+  | "postflight";
+
+type UnexpectedConsoleClass =
+  | "toolbar-inspector"
+  | "toolbar-bound"
+  | "blocked"
+  | "http404"
+  | "http4xx"
+  | "http5xx"
+  | "resource"
+  | "hydration"
+  | "exception"
+  | "other";
+
+type UnexpectedConsoleObservation = Readonly<{
+  phase: RuntimeDiagnosticPhase;
+  kind: UnexpectedConsoleClass;
+}>;
+
 type RuntimePhaseState = {
   current: RuntimePhase;
   observedAuthSignInRequestCount: number;
+  diagnosticPhase: RuntimeDiagnosticPhase;
+  firstUnexpectedConsole: UnexpectedConsoleObservation | null;
 };
 
 type RuntimeCounters = {
@@ -97,6 +129,8 @@ function createRuntimePhaseState(): RuntimePhaseState {
   return {
     current: "normal",
     observedAuthSignInRequestCount: 0,
+    diagnosticPhase: "setup",
+    firstUnexpectedConsole: null,
   };
 }
 
@@ -107,6 +141,54 @@ function isPreviewToolbarUrl(raw: string) {
   } catch {
     return false;
   }
+}
+
+function classifyUnexpectedConsole(message: ConsoleMessage): UnexpectedConsoleClass {
+  const toolbarLocation = isPreviewToolbarUrl(message.location().url);
+  if (
+    toolbarLocation &&
+    message.text() === "Failed to load resource: net::ERR_BLOCKED_BY_CLIENT.Inspector"
+  ) {
+    return "toolbar-inspector";
+  }
+  if (
+    toolbarLocation &&
+    message.text() === "Failed to load resource: net::ERR_BLOCKED_BY_CLIENT"
+  ) {
+    return "toolbar-bound";
+  }
+  if (/^Failed to load resource: net::ERR_BLOCKED_BY_CLIENT(?:\.Inspector)?$/.test(message.text())) {
+    return "blocked";
+  }
+  if (/^Failed to load resource: the server responded with a status of 404(?:\s|$)/.test(message.text())) {
+    return "http404";
+  }
+  if (/^Failed to load resource: the server responded with a status of 4\d\d(?:\s|$)/.test(message.text())) {
+    return "http4xx";
+  }
+  if (/^Failed to load resource: the server responded with a status of 5\d\d(?:\s|$)/.test(message.text())) {
+    return "http5xx";
+  }
+  if (message.text().startsWith("Failed to load resource:")) return "resource";
+  if (
+    message.text().startsWith("Hydration failed") ||
+    message.text().startsWith("A tree hydrated but some attributes") ||
+    message.text().includes("server rendered HTML didn't match")
+  ) {
+    return "hydration";
+  }
+  if (/^(?:Uncaught )?(?:Error|TypeError|ReferenceError|RangeError):/.test(message.text())) {
+    return "exception";
+  }
+  return "other";
+}
+
+function unexpectedConsoleFailureCode(
+  context: "main" | "secondary" | "fresh",
+  observation: UnexpectedConsoleObservation | null,
+) {
+  if (!observation) return `console-${context}-diagnostic-missing`;
+  return `console-${context}-${observation.phase}-${observation.kind}`;
 }
 
 async function installPrivacySafeRuntimeGuard(
@@ -191,6 +273,12 @@ async function installPrivacySafeRuntimeGuard(
       return;
     }
     counters.consoleErrorCount += 1;
+    if (phase.firstUnexpectedConsole === null) {
+      phase.firstUnexpectedConsole = {
+        phase: phase.diagnosticPhase,
+        kind: classifyUnexpectedConsole(message),
+      };
+    }
   });
   page.on("pageerror", () => {
     if (phase.current === "cleanup") return;
@@ -2873,11 +2961,13 @@ test("S232G final aggregate exact-head authenticated parity", async ({ browser, 
     installPrivacySafeRuntimeGuard(page.context(), page, mainCounters, mainPhase),
   );
   await staticStage("protected-preview-main", () => establishProtectedPreviewSession(page, "S232G"));
+  mainPhase.diagnosticPhase = "auth";
   mainPhase.current = "auth-navigation";
   try {
     await staticStage("primary-login", () => loginWithDedicatedTestAccount(page, "second"));
   } finally {
     mainPhase.current = "normal";
+    mainPhase.diagnosticPhase = "durable";
   }
   const accountAUserId = await authenticatedIdentity(page);
   const beforeSha = await observedDeploymentSha(page);
@@ -2949,12 +3039,14 @@ test("S232G final aggregate exact-head authenticated parity", async ({ browser, 
   try {
     await staticStage("protected-preview-secondary", () =>
       establishProtectedPreviewSession(secondaryPage, "S232G-B"));
+    secondaryPhase.diagnosticPhase = "auth";
     secondaryPhase.current = "auth-navigation";
     try {
       await staticStage("secondary-login", () =>
         loginWithCredentials(secondaryPage, accountBEmail, accountBPassword));
     } finally {
       secondaryPhase.current = "normal";
+      secondaryPhase.diagnosticPhase = "cross-api";
     }
     const accountBUserId = await authenticatedIdentity(secondaryPage);
     requireTruth(accountBUserId !== accountAUserId, "real-account-identity-distinction");
@@ -2973,6 +3065,7 @@ test("S232G final aggregate exact-head authenticated parity", async ({ browser, 
       ),
       "cross-account-bounded-collection-absence",
     );
+    secondaryPhase.diagnosticPhase = "cross-ui";
     secondaryPhase.current = "expected-cross-account-ui-denial";
     const denialResponse = await staticStage("cross-account-detail-navigation", () =>
       secondaryPage.goto(`/app/items/${encodeURIComponent(rewrittenItemId)}?mode=second`, {
@@ -3039,6 +3132,7 @@ test("S232G final aggregate exact-head authenticated parity", async ({ browser, 
     );
     requireTruth(detailDenied.contentAbsent, "cross-account-detail-content-absent");
     secondaryPhase.current = "normal";
+    secondaryPhase.diagnosticPhase = "collections";
 
     for (const surface of ["notes", "review", "today"] as const) {
       await navigateSettledCollection(secondaryPage, surface);
@@ -3068,12 +3162,14 @@ test("S232G final aggregate exact-head authenticated parity", async ({ browser, 
   try {
     await staticStage("protected-preview-fresh-owner", () =>
       establishProtectedPreviewSession(freshPage, "S232G-A-fresh"));
+    freshPhase.diagnosticPhase = "auth";
     freshPhase.current = "auth-navigation";
     try {
       await staticStage("fresh-owner-login", () =>
         loginWithCredentials(freshPage, accountAEmail, accountAPassword));
     } finally {
       freshPhase.current = "normal";
+      freshPhase.diagnosticPhase = "fresh-owner";
     }
     const freshAccountAUserId = await authenticatedIdentity(freshPage);
     requireTruth(freshAccountAUserId === accountAUserId, "fresh-owner-identity");
@@ -3095,6 +3191,7 @@ test("S232G final aggregate exact-head authenticated parity", async ({ browser, 
     await closeContext(freshContext, freshPhase);
   }
 
+  mainPhase.diagnosticPhase = "aliases";
   for (const alias of S232G_ALIASES) {
     const canonical = S232G_ROUTES.find((route) => route.key === alias.canonicalKey);
     requireTruth(canonical, "alias-canonical-registry");
@@ -3110,6 +3207,7 @@ test("S232G final aggregate exact-head authenticated parity", async ({ browser, 
   let keyboardRouteCount = 0;
   let directFigmaProductFrameRouteCount = 0;
   let directFigmaComponentOnlyRouteCount = 0;
+  mainPhase.diagnosticPhase = "routes";
   for (const route of S232G_ROUTES) {
     const href = route.href ?? `/app/items/${encodeURIComponent(rewrittenItemId)}?mode=second`;
     await navigateFixed(page, href, route.readySelector);
@@ -3172,6 +3270,7 @@ test("S232G final aggregate exact-head authenticated parity", async ({ browser, 
     axeScanCount += await scanAxe(page);
   }
 
+  mainPhase.diagnosticPhase = "postflight";
   const afterSha = await observedDeploymentSha(page);
   requireTruth(
     afterSha.status === 200 && afterSha.ready && afterSha.deploymentSha === runtimeTargetSha,
@@ -3209,12 +3308,18 @@ test("S232G final aggregate exact-head authenticated parity", async ({ browser, 
     allCounters,
     "excludedPreviewToolbarConsoleErrorCount",
   );
-  requireTruth(mainCounters.consoleErrorCount === 0, "unexpected-console-main");
+  requireTruth(
+    mainCounters.consoleErrorCount === 0,
+    unexpectedConsoleFailureCode("main", mainPhase.firstUnexpectedConsole),
+  );
   requireTruth(
     secondaryCounters.consoleErrorCount === 0,
-    "unexpected-console-secondary",
+    unexpectedConsoleFailureCode("secondary", secondaryPhase.firstUnexpectedConsole),
   );
-  requireTruth(freshCounters.consoleErrorCount === 0, "unexpected-console-fresh");
+  requireTruth(
+    freshCounters.consoleErrorCount === 0,
+    unexpectedConsoleFailureCode("fresh", freshPhase.firstUnexpectedConsole),
+  );
   requireTruth(pageErrorCount === 0, "unexpected-page-errors");
   requireTruth(requestFailureCount === 0, "unexpected-request-failures");
   requireTruth(httpErrorCount === 0, "unexpected-http-errors");

@@ -574,10 +574,68 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
     /expectedCrossAccountConsoleErrorCount === expectedCrossAccountHttpErrorCountTarget[\s\S]*expectedCrossAccountConsoleErrorCount <= 1/,
   );
   assert.match(runtimeSpec, /"exact-cross-account-console-denial-count"/);
-  for (const context of ["main", "secondary", "fresh"]) {
-    assert.match(runtimeSpec, new RegExp(`"unexpected-console-${context}"`));
+  const consoleClassifierStart = runtimeSpec.indexOf(
+    "function classifyUnexpectedConsole",
+  );
+  const consoleClassifierEnd = runtimeSpec.indexOf(
+    "function unexpectedConsoleFailureCode",
+    consoleClassifierStart,
+  );
+  assert.ok(
+    consoleClassifierStart >= 0 && consoleClassifierEnd > consoleClassifierStart,
+  );
+  const consoleClassifierSource = runtimeSpec.slice(
+    consoleClassifierStart,
+    consoleClassifierEnd,
+  );
+  assert.doesNotMatch(
+    consoleClassifierSource,
+    /process\.stdout|console\.|writeFile|JSON\.stringify|testInfo\.attach/,
+  );
+  assert.doesNotMatch(
+    consoleClassifierSource,
+    /\b(?:const|let|var)\s+(?:text|url|content|raw)\b/,
+  );
+  assert.match(consoleGuardSource, /phase\.firstUnexpectedConsole === null/);
+  assert.match(consoleGuardSource, /phase: phase\.diagnosticPhase/);
+  assert.match(consoleGuardSource, /kind: classifyUnexpectedConsole\(message\)/);
+  assert.ok(
+    consoleGuardSource.indexOf("if (exactExpectedDenialConsoleError)") <
+      consoleGuardSource.indexOf("if (exactToolbarBlock)") &&
+      consoleGuardSource.indexOf("if (exactToolbarBlock)") <
+        consoleGuardSource.indexOf("counters.consoleErrorCount += 1") &&
+      consoleGuardSource.indexOf("counters.consoleErrorCount += 1") <
+        consoleGuardSource.indexOf("phase.firstUnexpectedConsole === null"),
+  );
+  const consoleContexts = ["main", "secondary", "fresh"];
+  const consolePhases = [
+    "setup", "auth", "durable", "cross-api", "cross-ui", "collections",
+    "fresh-owner", "aliases", "routes", "postflight",
+  ];
+  const consoleClasses = [
+    "toolbar-inspector", "toolbar-bound", "blocked", "http404", "http4xx",
+    "http5xx", "resource", "hydration", "exception", "other",
+  ];
+  for (const context of consoleContexts) {
+    assert.match(`console-${context}-diagnostic-missing`, /^[a-z0-9-]{1,64}$/);
+    for (const phase of consolePhases) {
+      for (const kind of consoleClasses) {
+        assert.match(`console-${context}-${phase}-${kind}`, /^[a-z0-9-]{1,64}$/);
+      }
+    }
   }
-  assert.doesNotMatch(runtimeSpec, /"unexpected-console-errors"/);
+  assert.match(runtimeSpec, /`console-\$\{context\}-diagnostic-missing`/);
+  assert.match(
+    runtimeSpec,
+    /`console-\$\{context\}-\$\{observation\.phase\}-\$\{observation\.kind\}`/,
+  );
+  for (const phase of consolePhases) {
+    assert.match(runtimeSpec, new RegExp(`diagnosticPhase = "${phase}"|diagnosticPhase: "${phase}"`));
+  }
+  assert.doesNotMatch(
+    runtimeSpec,
+    /"unexpected-console-errors"|"unexpected-console-(?:main|secondary|fresh)"/,
+  );
   assert.match(
     itemDetailPage,
     /getWrongAnswerDetail\(session\.userId, session\.email, itemId\)/,
