@@ -182,7 +182,11 @@ test("S232H.2 audits all 13 production routes at 390, 768, and 1440", () => {
   assert.match(spec, /verifyKeyboardFocus/);
   assert.match(spec, /waitForFunction/);
   assert.match(spec, /\{ timeout: 1_000 \}/);
-  assert.match(spec, /completedFocusCycle/);
+  assert.match(spec, /completedFocusTraversal/);
+  assert.match(spec, /candidate\.tabIndex >= 0/);
+  assert.match(spec, /visitedFocusIndexes\.size >= state\.focusableCount/);
+  assert.match(spec, /visitedFocusStopCount/);
+  assert.match(spec, /skipLink\?\.focus\(\{ preventScroll: true \}\)/);
   assert.match(spec, /everyFocusVisible/);
   assert.match(spec, /visitedFocusIndexes/);
   assert.match(spec, /element\.matches\(":focus-visible"\)/);
