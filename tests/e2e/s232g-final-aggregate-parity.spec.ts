@@ -44,8 +44,12 @@ const rewrittenParagraph =
   "합성 재작성 문단은 요건, 사실 적용, 소결론을 한 흐름으로 연결한 비민감 테스트 기록입니다.";
 const syntheticCaptureText = `${sourceTitle}\n내 답안: ${originalParagraph}`;
 const displayedCaptureText = syntheticCaptureText.replace(/\s+/g, " ").trim();
+const vercelAutomationHeaders = Object.freeze({
+  "x-vercel-skip-toolbar": "1",
+});
 
 test.use({
+  extraHTTPHeaders: vercelAutomationHeaders,
   serviceWorkers: "block",
   screenshot: "off",
   trace: "off",
@@ -3281,6 +3285,7 @@ async function closeContext(
 async function newIsolatedContext(browser: Browser) {
   return browser.newContext({
     baseURL: runtimeBaseUrl,
+    extraHTTPHeaders: vercelAutomationHeaders,
     serviceWorkers: "block",
   });
 }

@@ -362,6 +362,30 @@ test("S232G product surfaces expose one route heading, stable targets, and seman
 });
 
 test("S232G runtime and reporter are privacy-safe and fail closed on exact head", () => {
+  const toolbarSuppressionHeaderBlock = runtimeSpec.match(
+    /const vercelAutomationHeaders = Object\.freeze\(\{[\s\S]*?\}\);/,
+  )?.[0] ?? "";
+  assert.notEqual(toolbarSuppressionHeaderBlock, "");
+  assert.match(
+    toolbarSuppressionHeaderBlock,
+    /^const vercelAutomationHeaders = Object\.freeze\(\{\s*"x-vercel-skip-toolbar": "1",\s*\}\);$/,
+  );
+  assert.equal(
+    [...runtimeSpec.matchAll(/"x-vercel-skip-toolbar"/g)].length,
+    1,
+  );
+  assert.match(
+    runtimeSpec,
+    /test\.use\(\{\s*extraHTTPHeaders: vercelAutomationHeaders,/,
+  );
+  assert.match(
+    runtimeSpec,
+    /async function newIsolatedContext[\s\S]*?browser\.newContext\(\{[\s\S]*?extraHTTPHeaders: vercelAutomationHeaders,/,
+  );
+  assert.doesNotMatch(
+    toolbarSuppressionHeaderBlock,
+    /process\.env|credential|secret|password|email|runtimeBaseUrl|runtimeTargetSha/,
+  );
   assert.match(runtimeSpec, /requireExactHead: true/);
   assert.match(runtimeSpec, /runtimeRunnerSha === runtimeTargetSha/);
   assert.match(runtimeSpec, /beforeSha[\s\S]*?deploymentSha === runtimeTargetSha/);
