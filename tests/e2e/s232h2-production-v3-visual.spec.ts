@@ -1915,6 +1915,11 @@ async function visualStyleMetrics(page: Page) {
   return page.locator("html, body, body *").evaluateAll((elements) => {
     let gradientCount = 0;
     let shadowCount = 0;
+    const shadowElements: Array<{
+      tag: string;
+      component: string | null;
+      testId: string | null;
+    }> = [];
     const fixedDocks: Array<{
       component: string | null;
       bottom: number;
@@ -1933,8 +1938,14 @@ async function visualStyleMetrics(page: Page) {
       )
         continue;
       if (/gradient\(/i.test(style.backgroundImage)) gradientCount += 1;
-      if (style.boxShadow !== "none" || /drop-shadow\(/i.test(style.filter))
+      if (style.boxShadow !== "none" || /drop-shadow\(/i.test(style.filter)) {
         shadowCount += 1;
+        shadowElements.push({
+          tag: element.tagName.toLowerCase(),
+          component: element.getAttribute("data-v3-component"),
+          testId: element.getAttribute("data-testid"),
+        });
+      }
       if (
         style.position === "fixed" &&
         rect.bottom > window.innerHeight - 2 &&
@@ -1949,7 +1960,7 @@ async function visualStyleMetrics(page: Page) {
         });
       }
     }
-    return { gradientCount, shadowCount, fixedDocks };
+    return { gradientCount, shadowCount, shadowElements, fixedDocks };
   });
 }
 
@@ -2360,7 +2371,7 @@ async function auditRoute(
   if (viewport.width === 1440) {
     expect(
       styles.shadowCount,
-      `${route.label} desktop must not use shadows.`,
+      `${route.label} desktop must not use shadows: ${JSON.stringify(styles.shadowElements)}.`,
     ).toBe(0);
   }
 
