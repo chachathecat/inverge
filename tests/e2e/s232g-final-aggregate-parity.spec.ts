@@ -264,7 +264,9 @@ async function installPrivacySafeRuntimeGuard(
       return;
     }
     const exactToolbarBlock =
-      message.text() === "Failed to load resource: net::ERR_BLOCKED_BY_CLIENT" &&
+      /^Failed to load resource: net::ERR_BLOCKED_BY_CLIENT(?:\.Inspector)?$/.test(
+        message.text(),
+      ) &&
       isPreviewToolbarUrl(message.location().url) &&
       counters.excludedPreviewToolbarConsoleErrorCount <
         counters.blockedPreviewToolbarMutationCount;

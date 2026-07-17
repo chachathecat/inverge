@@ -599,6 +599,22 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
   assert.match(consoleGuardSource, /phase\.firstUnexpectedConsole === null/);
   assert.match(consoleGuardSource, /phase: phase\.diagnosticPhase/);
   assert.match(consoleGuardSource, /kind: classifyUnexpectedConsole\(message\)/);
+  assert.match(
+    consoleGuardSource,
+    /ERR_BLOCKED_BY_CLIENT\(\?:\\\.Inspector\)\?\$\/\.test/,
+  );
+  assert.doesNotMatch(
+    consoleGuardSource,
+    /message\.text\(\) === "Failed to load resource: net::ERR_BLOCKED_BY_CLIENT"/,
+  );
+  assert.match(
+    consoleGuardSource,
+    /isPreviewToolbarUrl\(message\.location\(\)\.url\)/,
+  );
+  assert.match(
+    consoleGuardSource,
+    /counters\.excludedPreviewToolbarConsoleErrorCount <\s*counters\.blockedPreviewToolbarMutationCount/,
+  );
   assert.ok(
     consoleGuardSource.indexOf("if (exactExpectedDenialConsoleError)") <
       consoleGuardSource.indexOf("if (exactToolbarBlock)") &&
