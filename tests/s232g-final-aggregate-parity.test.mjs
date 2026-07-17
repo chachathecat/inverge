@@ -659,7 +659,33 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
   assert.match(runtimeSpec, /\^\[a-z0-9-\]\{1,64\}\$/);
   assert.match(runtimeSpec, /staticStage\("runtime-preflight"/);
   assert.match(runtimeSpec, /staticStage\("main-runtime-guard"/);
-  assert.match(runtimeSpec, /keyboard-forward-start-sentinel/);
+  const keyboardProbeBlock = runtimeSpec.match(
+    /async function keyboardFocusProbe[\s\S]*?\n}\n\nasync function closeContext/,
+  )?.[0] ?? "";
+  assert.notEqual(keyboardProbeBlock, "");
+  assert.match(keyboardProbeBlock, /data-s232g-keyboard-boundary/);
+  assert.match(keyboardProbeBlock, /focusables\[0\]\.before\(boundary\("start"\)\)/);
+  assert.match(keyboardProbeBlock, /focusables\.at\(-1\)\?\.after\(boundary\("end"\)\)/);
+  assert.match(keyboardProbeBlock, /keyboard-\$\{routeKey\}-forward-start-boundary/);
+  assert.match(keyboardProbeBlock, /keyboard-\$\{routeKey\}-forward-end-boundary/);
+  assert.match(keyboardProbeBlock, /keyboard-\$\{routeKey\}-reverse-end-boundary/);
+  assert.match(keyboardProbeBlock, /keyboard-\$\{routeKey\}-reverse-start-boundary/);
+  assert.match(keyboardProbeBlock, /prepared\.positiveTabIndexCount === 0/);
+  assert.match(keyboardProbeBlock, /state\.order === expectedOrder/);
+  assert.match(keyboardProbeBlock, /order === expectedOrder/);
+  assert.match(keyboardProbeBlock, /finally \{/);
+  assert.match(
+    keyboardProbeBlock,
+    /querySelectorAll\("\[data-s232g-keyboard-boundary\]"\)[\s\S]*?element\.remove\(\)/,
+  );
+  assert.match(keyboardProbeBlock, /if \(!failed\) throw error/);
+  assert.doesNotMatch(keyboardProbeBlock, /keyboard-forward-complete-no-trap/);
+  assert.doesNotMatch(keyboardProbeBlock, /prepared\.count \+ 8/);
+  assert.doesNotMatch(keyboardProbeBlock, /completedForwardCycle|completedReverseCycle/);
+  assert.match(
+    runtimeSpec,
+    /keyboardFocusProbe\(page, route\.keyboardSelector, route\.key\)/,
+  );
   assert.doesNotMatch(runtimeSpec, /keyboard-visible-focus-activation/);
   assert.match(runtimeSpec, /actualBrowserZoomClaimed: false/);
   assert.match(runtimeSpec, /realScreenReaderClaimed: false/);

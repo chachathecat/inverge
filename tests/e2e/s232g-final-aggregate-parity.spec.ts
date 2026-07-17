@@ -2419,108 +2419,132 @@ async function skipLinkProbe(page: Page, routePathname: string, routeKey: string
   requireTruth(landed, "skip-link-exact-target");
 }
 
-async function keyboardFocusProbe(page: Page, preferredSelector: string) {
-  const prepared = await staticStage("keyboard-target-prepare", () =>
-    page.evaluate((selector) => {
-      const visible = (element: Element) => {
-        if (!(element instanceof HTMLElement)) return false;
-        const style = getComputedStyle(element);
-        const rect = element.getBoundingClientRect();
-        return (
-          rect.width > 0 && rect.height > 0 &&
-          style.display !== "none" && style.visibility !== "hidden" &&
-          style.opacity !== "0" &&
-          !element.matches(":disabled") &&
-          !element.closest('[inert], [aria-hidden="true"], vercel-live-feedback, nextjs-portal')
-        );
-      };
-      const candidates = Array.from(document.querySelectorAll<HTMLElement>(selector));
-      const target = candidates.find(visible);
-      if (!target) return false;
-      target.setAttribute("data-s232g-keyboard-probe", "target");
-      const focusables = Array.from(document.querySelectorAll<HTMLElement>(
-        'body a[href], body button, body input, body textarea, body select, body summary, body [tabindex]:not([tabindex="-1"])',
-      ))
-        .filter((element) => visible(element) && element.tabIndex >= 0)
-        .map((element, domIndex) => ({ element, domIndex, tabIndex: element.tabIndex }))
-        .sort((left, right) => {
-          const leftPositive = left.tabIndex > 0;
-          const rightPositive = right.tabIndex > 0;
-          if (leftPositive !== rightPositive) return leftPositive ? -1 : 1;
-          if (leftPositive && left.tabIndex !== right.tabIndex) return left.tabIndex - right.tabIndex;
-          return left.domIndex - right.domIndex;
-        })
-        .map(({ element }) => element);
-      if (!focusables.includes(target)) return false;
-      focusables.forEach((element, index) => {
-        element.setAttribute("data-s232g-tab-order", String(index));
-      });
-      if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
-      window.scrollTo(0, 0);
-      return { count: focusables.length, targetOrder: focusables.indexOf(target) };
-    }, preferredSelector),
-  );
-  requireTruth(prepared, "keyboard-target-present");
-
-  const before = await staticStage("keyboard-style-before", () =>
-    page.locator('[data-s232g-keyboard-probe="target"]').evaluate((element) => {
-      const style = getComputedStyle(element);
-      return {
-        outline: `${style.outlineWidth}|${style.outlineStyle}|${style.outlineColor}`,
-        boxShadow: style.boxShadow,
-        borderColor: style.borderColor,
-        backgroundColor: style.backgroundColor,
-      };
-    }),
-  );
-  const forwardPrepared = await staticStage("keyboard-forward-prepare", () =>
-    page.evaluate(() => {
-      const ordered = Array.from(
-        document.querySelectorAll<HTMLElement>("[data-s232g-tab-order]"),
-      ).sort(
-        (left, right) =>
-          Number(left.dataset.s232gTabOrder) - Number(right.dataset.s232gTabOrder),
-      );
-      const last = ordered.at(-1);
-      last?.focus();
-      return Boolean(last && document.activeElement === last);
-    }),
-  );
-  requireTruth(forwardPrepared, "keyboard-forward-start-sentinel");
-  let reached = false;
-  let completedForwardCycle = false;
-  const visited = new Set<number>();
-  let lastOrder = -1;
-  let focusedEvidence:
-    | (typeof before & {
-        focused: boolean;
-        focusVisible: boolean;
-        visibleInViewport: boolean;
-        interactiveControlContract: boolean;
-      })
-    | null = null;
-  for (let step = 0; step < prepared.count + 8; step += 1) {
-    await staticStage("keyboard-tab", () => page.keyboard.press("Tab"));
-    const state = await staticStage("keyboard-step-state", () =>
-      page.evaluate(() => {
-        const active = document.activeElement;
+async function keyboardFocusProbe(page: Page, preferredSelector: string, routeKey: string) {
+  let failed = false;
+  try {
+    const prepared = await staticStage("keyboard-target-prepare", () =>
+      page.evaluate((selector) => {
+        document.querySelectorAll("[data-s232g-keyboard-boundary]").forEach((element) =>
+          element.remove());
+        document.querySelectorAll("[data-s232g-keyboard-probe]").forEach((element) =>
+          element.removeAttribute("data-s232g-keyboard-probe"));
+        document.querySelectorAll("[data-s232g-tab-order]").forEach((element) =>
+          element.removeAttribute("data-s232g-tab-order"));
+        const visible = (element: Element) => {
+          if (!(element instanceof HTMLElement)) return false;
+          const style = getComputedStyle(element);
+          const rect = element.getBoundingClientRect();
+          return (
+            rect.width > 0 && rect.height > 0 &&
+            style.display !== "none" && style.visibility !== "hidden" &&
+            style.opacity !== "0" &&
+            !element.matches(":disabled") &&
+            !element.closest('[inert], [aria-hidden="true"], vercel-live-feedback, nextjs-portal')
+          );
+        };
+        const candidates = Array.from(document.querySelectorAll<HTMLElement>(selector));
+        const target = candidates.find(visible);
+        if (!target) return false;
+        target.setAttribute("data-s232g-keyboard-probe", "target");
+        const focusables = Array.from(document.querySelectorAll<HTMLElement>(
+          'body a[href], body button, body input, body textarea, body select, body summary, body [tabindex]:not([tabindex="-1"])',
+        ))
+          .filter((element) => visible(element) && element.tabIndex >= 0)
+          .map((element, domIndex) => ({ element, domIndex, tabIndex: element.tabIndex }))
+          .sort((left, right) => {
+            const leftPositive = left.tabIndex > 0;
+            const rightPositive = right.tabIndex > 0;
+            if (leftPositive !== rightPositive) return leftPositive ? -1 : 1;
+            if (leftPositive && left.tabIndex !== right.tabIndex) return left.tabIndex - right.tabIndex;
+            return left.domIndex - right.domIndex;
+          })
+          .map(({ element }) => element);
+        if (!focusables.includes(target)) return false;
+        focusables.forEach((element, index) => {
+          element.setAttribute("data-s232g-tab-order", String(index));
+        });
+        const boundary = (edge: "start" | "end") => {
+          const sentinel = document.createElement("button");
+          sentinel.type = "button";
+          sentinel.tabIndex = 0;
+          sentinel.setAttribute("aria-label", `순차 포커스 ${edge === "start" ? "시작" : "종료"} 경계`);
+          sentinel.setAttribute("data-s232g-keyboard-boundary", edge);
+          Object.assign(sentinel.style, {
+            position: "fixed",
+            width: "1px",
+            height: "1px",
+            inset: "auto 0 0 auto",
+            opacity: "0",
+            pointerEvents: "none",
+          });
+          return sentinel;
+        };
+        focusables[0].before(boundary("start"));
+        focusables.at(-1)?.after(boundary("end"));
+        if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+        window.scrollTo(0, 0);
         return {
-          reached: active?.getAttribute("data-s232g-keyboard-probe") === "target",
-          order: Number(active?.getAttribute("data-s232g-tab-order") ?? -1),
+          count: focusables.length,
+          targetOrder: focusables.indexOf(target),
+          positiveTabIndexCount: focusables.filter((element) => element.tabIndex > 0).length,
+        };
+      }, preferredSelector),
+    );
+    requireTruth(prepared, `keyboard-${routeKey}-target-present`);
+    requireTruth(prepared.count >= 1, `keyboard-${routeKey}-registry-present`);
+    requireTruth(prepared.targetOrder >= 0, `keyboard-${routeKey}-target-registered`);
+    requireTruth(
+      prepared.positiveTabIndexCount === 0,
+      `keyboard-${routeKey}-positive-tabindex-absent`,
+    );
+
+    const before = await staticStage("keyboard-style-before", () =>
+      page.locator('[data-s232g-keyboard-probe="target"]').evaluate((element) => {
+        const style = getComputedStyle(element);
+        return {
+          outline: `${style.outlineWidth}|${style.outlineStyle}|${style.outlineColor}`,
+          boxShadow: style.boxShadow,
+          borderColor: style.borderColor,
+          backgroundColor: style.backgroundColor,
         };
       }),
     );
-    if (state.order >= 0) {
-      if (visited.has(state.order)) {
-        completedForwardCycle =
-          visited.size === prepared.count && state.order === 0;
-        break;
-      }
-      requireTruth(state.order > lastOrder, "keyboard-forward-logical-order");
-      visited.add(state.order);
-      lastOrder = state.order;
-      if (state.reached) {
-        reached = true;
+    let focusedEvidence:
+      | (typeof before & {
+          focused: boolean;
+          focusVisible: boolean;
+          visibleInViewport: boolean;
+          interactiveControlContract: boolean;
+        })
+      | null = null;
+
+    const forwardPrepared = await staticStage("keyboard-forward-prepare", () =>
+      page.evaluate(() => {
+        const start = document.querySelector<HTMLElement>(
+          '[data-s232g-keyboard-boundary="start"]',
+        );
+        start?.focus();
+        return Boolean(start && document.activeElement === start);
+      }),
+    );
+    requireTruth(forwardPrepared, `keyboard-${routeKey}-forward-start-boundary`);
+    for (let expectedOrder = 0; expectedOrder < prepared.count; expectedOrder += 1) {
+      await staticStage("keyboard-tab", () => page.keyboard.press("Tab"));
+      const state = await staticStage("keyboard-step-state", () =>
+        page.evaluate(() => {
+          const active = document.activeElement;
+          return {
+            target: active?.getAttribute("data-s232g-keyboard-probe") === "target",
+            order: Number(active?.getAttribute("data-s232g-tab-order") ?? -1),
+          };
+        }),
+      );
+      requireTruth(
+        state.order === expectedOrder,
+        `keyboard-${routeKey}-forward-order-exact`,
+      );
+      if (expectedOrder === prepared.targetOrder) {
+        requireTruth(state.target, `keyboard-${routeKey}-forward-target-exact`);
         focusedEvidence = await staticStage("keyboard-focused-evidence", () =>
           page.locator('[data-s232g-keyboard-probe="target"]').evaluate((element) => {
             const style = getComputedStyle(element);
@@ -2547,80 +2571,79 @@ async function keyboardFocusProbe(page: Page, preferredSelector: string) {
           }),
         );
       }
-    } else if (visited.size === prepared.count) {
-      completedForwardCycle = true;
-      break;
     }
-  }
-  requireTruth(
-    reached && completedForwardCycle && visited.size === prepared.count,
-    "keyboard-forward-complete-no-trap",
-  );
-
-  const reversePrepared = await staticStage("keyboard-reverse-prepare", () =>
-    page.evaluate(() => {
-      const ordered = Array.from(
-        document.querySelectorAll<HTMLElement>("[data-s232g-tab-order]"),
-      ).sort(
-        (left, right) =>
-          Number(left.dataset.s232gTabOrder) - Number(right.dataset.s232gTabOrder),
-      );
-      ordered.at(-1)?.focus();
-      return ordered.length;
-    }),
-  );
-  requireTruth(reversePrepared === prepared.count, "keyboard-reverse-registry");
-  const reverseVisited = new Set<number>([prepared.count - 1]);
-  let reverseLastOrder = prepared.count - 1;
-  let completedReverseCycle = false;
-  for (let step = 0; step < prepared.count + 8; step += 1) {
-    await staticStage("keyboard-shift-tab", () => page.keyboard.press("Shift+Tab"));
-    const order = await staticStage("keyboard-reverse-state", () =>
-      page.evaluate(() => Number((document.activeElement as HTMLElement | null)?.dataset.s232gTabOrder ?? -1)),
+    await staticStage("keyboard-forward-exit", () => page.keyboard.press("Tab"));
+    const forwardEnd = await staticStage("keyboard-forward-end", () =>
+      page.evaluate(
+        () => document.activeElement?.getAttribute("data-s232g-keyboard-boundary") === "end",
+      ),
     );
-    if (order >= 0) {
-      if (reverseVisited.has(order)) {
-        completedReverseCycle =
-          reverseVisited.size === prepared.count && order === prepared.count - 1;
-        break;
-      }
-      requireTruth(order < reverseLastOrder, "keyboard-reverse-logical-order");
-      reverseVisited.add(order);
-      reverseLastOrder = order;
-    } else if (reverseVisited.size === prepared.count) {
-      completedReverseCycle = true;
-      break;
+    requireTruth(forwardEnd, `keyboard-${routeKey}-forward-end-boundary`);
+
+    const reversePrepared = await staticStage("keyboard-reverse-prepare", () =>
+      page.evaluate(() => {
+        const end = document.querySelector<HTMLElement>(
+          '[data-s232g-keyboard-boundary="end"]',
+        );
+        end?.focus();
+        return Boolean(end && document.activeElement === end);
+      }),
+    );
+    requireTruth(reversePrepared, `keyboard-${routeKey}-reverse-end-boundary`);
+    for (let expectedOrder = prepared.count - 1; expectedOrder >= 0; expectedOrder -= 1) {
+      await staticStage("keyboard-shift-tab", () => page.keyboard.press("Shift+Tab"));
+      const order = await staticStage("keyboard-reverse-state", () =>
+        page.evaluate(() =>
+          Number((document.activeElement as HTMLElement | null)?.dataset.s232gTabOrder ?? -1)),
+      );
+      requireTruth(
+        order === expectedOrder,
+        `keyboard-${routeKey}-reverse-order-exact`,
+      );
+    }
+    await staticStage("keyboard-reverse-exit", () => page.keyboard.press("Shift+Tab"));
+    const reverseStart = await staticStage("keyboard-reverse-start", () =>
+      page.evaluate(
+        () => document.activeElement?.getAttribute("data-s232g-keyboard-boundary") === "start",
+      ),
+    );
+    requireTruth(reverseStart, `keyboard-${routeKey}-reverse-start-boundary`);
+
+    requireTruth(
+      Boolean(
+        focusedEvidence?.focused &&
+          focusedEvidence.focusVisible &&
+          focusedEvidence.visibleInViewport &&
+          focusedEvidence.interactiveControlContract,
+      ),
+      `keyboard-${routeKey}-visible-focus-control`,
+    );
+    requireTruth(
+      before.outline !== focusedEvidence?.outline ||
+        before.boxShadow !== focusedEvidence?.boxShadow ||
+        before.borderColor !== focusedEvidence?.borderColor ||
+        before.backgroundColor !== focusedEvidence?.backgroundColor,
+      `keyboard-${routeKey}-focus-style-delta`,
+    );
+  } catch (error) {
+    failed = true;
+    throw error;
+  } finally {
+    try {
+      await staticStage("keyboard-target-cleanup", () =>
+        page.evaluate(() => {
+          document.querySelectorAll("[data-s232g-keyboard-probe]").forEach((element) =>
+            element.removeAttribute("data-s232g-keyboard-probe"));
+          document.querySelectorAll("[data-s232g-tab-order]").forEach((element) =>
+            element.removeAttribute("data-s232g-tab-order"));
+          document.querySelectorAll("[data-s232g-keyboard-boundary]").forEach((element) =>
+            element.remove());
+        }),
+      );
+    } catch (error) {
+      if (!failed) throw error;
     }
   }
-  requireTruth(
-    completedReverseCycle && reverseVisited.size === prepared.count,
-    "keyboard-reverse-complete-no-trap",
-  );
-
-  requireTruth(
-    Boolean(
-      focusedEvidence?.focused &&
-        focusedEvidence.focusVisible &&
-        focusedEvidence.visibleInViewport &&
-        focusedEvidence.interactiveControlContract,
-    ),
-    "keyboard-visible-focus-interactive-control",
-  );
-  requireTruth(
-    before.outline !== focusedEvidence?.outline ||
-      before.boxShadow !== focusedEvidence?.boxShadow ||
-      before.borderColor !== focusedEvidence?.borderColor ||
-      before.backgroundColor !== focusedEvidence?.backgroundColor,
-    "keyboard-focus-style-delta",
-  );
-  await staticStage("keyboard-target-cleanup", () =>
-    page.evaluate(() => {
-      document.querySelectorAll("[data-s232g-keyboard-probe]").forEach((element) =>
-        element.removeAttribute("data-s232g-keyboard-probe"));
-      document.querySelectorAll("[data-s232g-tab-order]").forEach((element) =>
-        element.removeAttribute("data-s232g-tab-order"));
-    }),
-  );
 }
 
 async function closeContext(
@@ -2942,7 +2965,7 @@ test("S232G final aggregate exact-head authenticated parity", async ({ browser, 
     visibleHeadingCount += 1;
     await staticStage("keyboard-viewport", () => page.setViewportSize({ width: 390, height: 844 }));
     await skipLinkProbe(page, route.pathname, route.key);
-    await keyboardFocusProbe(page, route.keyboardSelector);
+    await keyboardFocusProbe(page, route.keyboardSelector, route.key);
     keyboardRouteCount += 1;
 
     await staticStage("width-equivalent-resize", () =>
