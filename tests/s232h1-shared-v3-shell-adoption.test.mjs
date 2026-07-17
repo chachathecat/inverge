@@ -85,3 +85,25 @@ test("S232H.1 keeps second-round shared study and access surfaces on V3 roles", 
   assert.match(denied, /const Content = embedded \? "section" : "main"/);
   assert.doesNotMatch(denied, /<Link[\s\S]*?<Button/);
 });
+
+test("S232H.1 exact-head browser acceptance is focused and privacy-safe", () => {
+  const spec = read("tests/e2e/s232h1-shared-v3-shell.spec.ts");
+  const workflow = read(".github/workflows/s232h1-runtime.yml");
+
+  for (const width of ["390", "768", "1440"]) {
+    assert.ok(spec.includes(`label: "${width}"`), `missing viewport: ${width}`);
+  }
+  assert.match(spec, /new AxeBuilder/);
+  assert.match(spec, /captureSanitizedScreenshot/);
+  assert.match(spec, /horizontalOverflow/);
+  assert.match(spec, /undersizedHeaderTargetCount/);
+  assert.match(spec, /data-v3-shell=\"public\"/);
+  assert.match(spec, /publicHorizontalOverflow/);
+  assert.match(spec, /syntheticAccountOnly: true/);
+  assert.match(spec, /rawLearnerContentCaptured: false/);
+  assert.match(workflow, /pull_request\.head\.sha/);
+  assert.match(workflow, /Discover and verify exact-head Preview/);
+  assert.match(workflow, /tests\/e2e\/s232h1-shared-v3-shell\.spec\.ts/);
+  assert.match(workflow, /s232h1-shell-\*\.png/);
+  assert.doesNotMatch(workflow, /s232g|#624|pull_request\.number ==/);
+});
