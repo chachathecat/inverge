@@ -271,10 +271,7 @@ test("review queue keeps canonical ranking while scanning past orphaned source r
   assert.doesNotMatch(listReviewQueue, /\.limit\(limit\)/);
   assert.match(spec, /confidence: queueAnchor \? "낮음" : "중간"/);
   assert.match(spec, /item\.confidence === "낮음" &&\s*\n\s*h2AcceptanceMarkers\(item, "queue-anchor"\)/);
-  assert.match(
-    spec,
-    /weakStructurePoint: queueAnchor\s*\? "답안 구조 점검"\s*:\s*"요건과 사실 적용을 같은 순서로 연결해야 합니다\."/,
-  );
+  assert.match(spec, /timeSpentSeconds: queueAnchor \? 180 : undefined/);
 });
 
 test("S232H.2 pins the three canonical Figma representative PNGs", () => {
