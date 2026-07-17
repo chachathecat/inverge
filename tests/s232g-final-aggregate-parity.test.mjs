@@ -825,6 +825,10 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
   );
   assert.match(
     runtimeSpec,
+    /`route-\$\{route\.key\}-\$\{viewport\.key\}-ready`/,
+  );
+  assert.match(
+    runtimeSpec,
     /`route-\$\{route\.key\}-\$\{viewport\.key\}-clipped-core-content`/,
   );
   const layoutProbeBlock = runtimeSpec.match(
@@ -856,6 +860,9 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
     /`route-\$\{route\.key\}-\$\{S232G_WIDTH_EQUIVALENT_VIEWPORT\.key\}-clipped-core-content`/,
   );
   for (const route of S232G_ROUTES) {
+    for (const viewport of S232G_VIEWPORTS) {
+      assert.match(`route-${route.key}-${viewport.key}-ready`, /^[a-z0-9-]{1,64}$/);
+    }
     for (const viewport of [...S232G_VIEWPORTS, S232G_WIDTH_EQUIVALENT_VIEWPORT]) {
       assert.match(
         `route-${route.key}-${viewport.key}-clipped-core-content`,
@@ -863,6 +870,7 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
       );
     }
   }
+  assert.doesNotMatch(runtimeSpec, /"route-ready"/);
   assert.doesNotMatch(runtimeSpec, /"route-clipped-core-content"/);
   assert.doesNotMatch(runtimeSpec, /"width-equivalent-clipping"/);
   assert.match(

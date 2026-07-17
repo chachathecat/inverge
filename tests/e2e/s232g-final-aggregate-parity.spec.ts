@@ -3095,7 +3095,7 @@ test("S232G final aggregate exact-head authenticated parity", async ({ browser, 
         page.setViewportSize({ width: viewport.width, height: viewport.height }),
       );
       const layout = await layoutProbe(page, route.readySelector, route.keyboardSelector);
-      requireTruth(layout.ready, "route-ready");
+      requireTruth(layout.ready, `route-${route.key}-${viewport.key}-ready`);
       requireTruth(layout.visibleHeadingCount === 1, "route-visible-h1");
       requireTruth(layout.coreContentCount >= 1, "route-core-content-present");
       requireTruth(!layout.horizontalOverflow, "route-horizontal-overflow");
