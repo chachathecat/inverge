@@ -24,6 +24,11 @@ import {
   collectSyntheticPayloadFailurePaths,
   summarizeSyntheticPayloadFailurePaths,
 } from "./support/synthetic-payload-diagnostics";
+import {
+  historicalS232gRewriteParagraph,
+  isHistoricalS232gAggregateSource,
+  isHistoricalS232gAggregateRewrite,
+} from "./support/historical-synthetic-fixtures";
 
 const runtimeEnabled = process.env.S232H2_VISUAL_RUNTIME === "1";
 const baselineUrl = process.env.E2E_BASELINE_URL?.trim() ?? "";
@@ -850,6 +855,7 @@ function matchesExactSyntheticRootFields(item: SyntheticItem) {
     isLegacyH2Ledger(item) ||
     isH2QueueAnchor(item) ||
     isHistoricalH2QueueAnchor(item) ||
+    isHistoricalS232gAggregateSource(item) ||
     historicalSyntheticContracts.some((contract) => contract(item))
   );
 }
@@ -857,6 +863,7 @@ function matchesExactSyntheticRootFields(item: SyntheticItem) {
 const exactSyntheticRewriteParagraphs = new Set([
   "행정청의 공적 견해표명이 있었고 학습자에게 귀책사유가 없으며, 그 신뢰에 따른 행위와 보호가치를 사실관계에 대응해 검토하므로 신뢰보호원칙의 적용 가능성을 인정할 수 있습니다. 합성 테스트 문단입니다.",
   "사업인정은 공익사업 시행을 확정하면서 수용권을 설정하여 국민의 권리관계에 직접 영향을 주고, 그 법률효과에 대한 권리구제가 필요하므로 처분성을 인정할 수 있습니다. 합성 테스트 문단입니다.",
+  historicalS232gRewriteParagraph,
 ]);
 
 const exactSyntheticPayloadSystemStrings = new Set([
@@ -937,6 +944,20 @@ const exactSyntheticPayloadSystemStrings = new Set([
   "감정평가 및 보상법규",
   "감정평가실무",
   "감정평가이론",
+  "개념",
+  "조건",
+  "평가",
+  "부족",
+  "개념 -> 조건 -> 적용",
+  "해설 전에 기준 1개를 먼저 떠올립니다.",
+  "조문·요건과 사안 포섭 연결 부족",
+  "요건 1개와 사안 포섭 문장 1개를 다시 써보기",
+  "문제 요구 → 평가 근거 → 계산 → 결론",
+  "문제 요구 → 평가 근거 → 계산 → 결론(점검 필요)",
+  "수익환원법 적용과 검산 산식 검산 12분",
+  "실무 수익환원법 적용과 검산 산식 검산 12분",
+  "오늘은 간극 1개만 문단으로 보강합니다. 계산 근거와 결론 수치를 분리해 확인합니다.",
+  "이 과목은 먼저 이 구조로 답안을 잡습니다. 문제 요구 → 평가 근거 → 계산 → 결론",
   "신뢰보호",
   "공적 견해표명",
   "보호가치",
@@ -1092,6 +1113,7 @@ const exactSyntheticSystemValuePatterns = [
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
   /^\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z)?$/,
   /^s232h2:v3-visual:(?:ledger:v[12]|queue:\d{3})$/,
+  /^S232G aggregate synthetic Study Ledger source [1-9]\d*-[1-9]\d*(?:\n| )내 답안: 합성 원본 문단은 요건과 사실 대응을 확인하기 위한 비민감 테스트 기록입니다\.$/,
   /^concept:second:(?:감정평가실무:(?:3방식|원가방식|비교방식|수익방식|토지평가|건물평가|임대료평가|보상평가|특수물건|검산-CASIO)|감정평가이론:(?:감정평가의-본질|가치이론|시장분석|최고최선이용|3방식-이론|시장가치-공정가치|감정평가-절차|평가윤리)|감정평가-및-보상법규:(?:행정법-기초|토지보상법|사업인정|수용재결|손실보상-원칙|보상항목|행정쟁송|감정평가법령))$/,
   /^curriculum-(?:capture|review)-capture-note-second-(?:practice-(?:method-selection|adjustment|income-approach|cost-approach|sales-comparison|final-value)|theory-(?:value-theory|price-principle|approach-logic|market-analysis|highest-best-use)|comp-law-(?:requirements|statute|procedure-project-approval|precedent-principles|issue-subsumption|conclusion))$/,
   /^second-(?:practice-(?:method-selection|adjustment|income-approach|cost-approach|sales-comparison|final-value)|theory-(?:value-theory|price-principle|approach-logic|market-analysis|highest-best-use)|comp-law-(?:requirements|statute|procedure-project-approval|precedent-principles|issue-subsumption|conclusion))$/,
@@ -1165,6 +1187,13 @@ function isExactSyntheticRoot(item: SyntheticItem) {
 
 function isOwnedSyntheticRewrite(item: SyntheticItem, parent: SyntheticItem) {
   const rawPayload = item.rawPayload ?? {};
+  const parentRawPayload = parent.rawPayload ?? {};
+  const parentAiDraft =
+    parentRawPayload.aiDraft !== null &&
+    typeof parentRawPayload.aiDraft === "object" &&
+    !Array.isArray(parentRawPayload.aiDraft)
+      ? (parentRawPayload.aiDraft as Record<string, unknown>)
+      : {};
   if (
     item.examName !== parent.examName ||
     item.subjectLabel !== parent.subjectLabel ||
@@ -1173,6 +1202,15 @@ function isOwnedSyntheticRewrite(item: SyntheticItem, parent: SyntheticItem) {
     rawPayload.rewrite_completed !== true ||
     item.problemTitle !== parent.problemTitle ||
     rawPayload.rewrite_source_item_id !== resolveSyntheticItemId(parent)
+  )
+    return false;
+  if (
+    isHistoricalS232gAggregateSource(parent) &&
+    !isHistoricalS232gAggregateRewrite(
+      item,
+      resolveSyntheticItemId(parent),
+      parent.problemTitle ?? "",
+    )
   )
     return false;
   const rewriteParagraph = rawPayload.rewrite_paragraph;
@@ -1192,6 +1230,8 @@ function isOwnedSyntheticRewrite(item: SyntheticItem, parent: SyntheticItem) {
     parent.userReasonText,
     parent.userReasonPreset,
     parent.confidence,
+    parentRawPayload.rewrite_instruction,
+    parentAiDraft.rewriteInstruction,
     rewriteParagraph,
     undefined,
     null,
@@ -1412,6 +1452,32 @@ async function auditSyntheticAccount(
   const listedExactFixtures = listedItems.filter((item) =>
     owned.has(resolveSyntheticItemId(item)),
   );
+  const historicalS232gSourceCount = listedItems.filter((item) =>
+    isHistoricalS232gAggregateSource(item),
+  ).length;
+  const historicalS232gRewriteCount = listedItems.filter((item) => {
+    const sourceId =
+      typeof item.rawPayload?.rewrite_source_item_id === "string"
+        ? item.rawPayload.rewrite_source_item_id
+        : "";
+    const parent = mergedById.get(sourceId);
+    return Boolean(
+      parent &&
+        isHistoricalS232gAggregateSource(parent) &&
+        isOwnedSyntheticRewrite(item, parent),
+    );
+  }).length;
+  const fixtureFamilyCounts = {
+    historicalS232gSource: historicalS232gSourceCount,
+    historicalS232gRewrite: historicalS232gRewriteCount,
+    otherExact: Math.max(
+      0,
+      listedExactFixtures.length -
+        historicalS232gSourceCount -
+        historicalS232gRewriteCount,
+    ),
+    unmatched: Math.max(0, listedItems.length - listedExactFixtures.length),
+  };
   const listedFixtureCoverage =
     listedExactFixtures.length === listedItems.length;
   const detailOwnershipClosed = detailItems.every(
@@ -1492,7 +1558,7 @@ async function auditSyntheticAccount(
   ).toEqual([]);
   expect(
     listedExactFixtures.length,
-    "Every listed row must be an exact allowlisted synthetic fixture or owned rewrite.",
+    `Every listed row must be an exact allowlisted synthetic fixture or owned rewrite; family-counts=${JSON.stringify(fixtureFamilyCounts)}.`,
   ).toBe(listedItems.length);
   expect(listedFixtureCoverage).toBe(true);
   expect(

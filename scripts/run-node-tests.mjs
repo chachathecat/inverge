@@ -100,6 +100,7 @@ const defaultTestFiles = [
   "tests/capture-extraction-race-reconciliation.test.mjs",
   "tests/s232h2-shared-v3-presentation.test.mjs",
   "tests/s232h2-calculator-v3-adoption.test.mjs",
+  "tests/s232h2-historical-synthetic-fixtures.test.mjs",
   "tests/s232h2-production-v3-visual-contract.test.mjs",
   "tests/postgrest-timestamps-normalization.test.mjs",
   "tests/s220b-dabangil-launch-surface.test.mjs",

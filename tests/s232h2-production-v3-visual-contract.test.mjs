@@ -421,6 +421,9 @@ test("S232H.2 evidence is API-audited synthetic data and directly compared with 
   assert.match(spec, /s232h2:v3-visual:ledger:v2/);
   assert.match(spec, /s232h2:v3-visual:ledger:v1/);
   assert.match(spec, /isHistoricalH2LedgerV1/);
+  assert.match(spec, /isHistoricalS232gAggregateSource/);
+  assert.match(spec, /isHistoricalS232gAggregateRewrite/);
+  assert.match(spec, /historicalS232gRewriteParagraph/);
   assert.match(spec, /audit\.items\.find\(isCurrentH2Ledger\)/);
   const currentLedgerClassifier = spec.slice(
     spec.indexOf("function isCurrentH2Ledger"),
@@ -508,6 +511,11 @@ test("S232H.2 evidence is API-audited synthetic data and directly compared with 
   assert.match(spec, /planningIds\.today\.filter\(\(itemId\) =>\s*owned\.has\(itemId\)/);
   assert.match(spec, /planningIds\.weekly\.filter\(\(itemId\) =>\s*owned\.has\(itemId\)/);
   assert.match(spec, /syntheticItemCount: listedExactFixtures\.length/);
+  assert.match(spec, /historicalS232gSourceCount/);
+  assert.match(spec, /historicalS232gRewriteCount/);
+  assert.match(spec, /family-counts=/);
+  assert.match(spec, /parentRawPayload\.rewrite_instruction/);
+  assert.match(spec, /parentAiDraft\.rewriteInstruction/);
   assert.doesNotMatch(spec, /accountOwned|listedAccountOwned/);
   assert.match(spec, /const governedSyntheticAccount = sessionBound/);
   assert.match(spec, /item\.userId === sessionUserId/);
