@@ -547,8 +547,13 @@ const secondaryAppFailureCodes = {
   unknown: "secondary-login-app-state-unknown",
 } as const satisfies Record<SecondaryAppState, string>;
 
+const secondaryAppReadySelector = [
+  '[data-s224v-surface="/app"]',
+  '[data-s232f4a-route-state="zero-essential-records"][data-s232f4a-surface="today"] [data-testid="s232f4a-today-empty-state"]',
+].join(", ");
+
 async function classifySecondaryAppState(page: Page): Promise<SecondaryAppState> {
-  const appSurface = page.locator('[data-s224v-surface="/app"]');
+  const appReadyState = page.locator(secondaryAppReadySelector);
   const learnerShell = page.locator("[data-learner-shell]");
   const inviteDenied = page.locator('[data-review-os-access-status="denied"]');
   const accessUnavailable = page.locator(
@@ -569,7 +574,7 @@ async function classifySecondaryAppState(page: Page): Promise<SecondaryAppState>
     if (
       pathname === "/app" &&
       (await learnerShell.isVisible().catch(() => false)) &&
-      (await appSurface.isVisible().catch(() => false))
+      (await appReadyState.isVisible().catch(() => false))
     ) {
       return "allowed";
     }
@@ -740,7 +745,7 @@ async function loginWithCredentials(page: Page, email: string, password: string)
   );
   requireTruth(appState === "allowed", secondaryAppFailureCodes[appState]);
   await staticStage("secondary-login-app-visible", () =>
-    page.locator('[data-s224v-surface="/app"]').waitFor({
+    page.locator(secondaryAppReadySelector).waitFor({
       state: "visible",
       timeout: 20_000,
     }),

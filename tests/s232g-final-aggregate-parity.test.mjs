@@ -445,10 +445,60 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
   }
   assert.match(runtimeSpec, /data-review-os-access-status="denied"/);
   assert.match(runtimeSpec, /data-review-os-access-status="unavailable"/);
+  assert.match(runtimeSpec, /const secondaryAppReadySelector = \[/);
+  assert.ok(
+    runtimeSpec.includes(
+      `'[data-s232f4a-route-state="zero-essential-records"][data-s232f4a-surface="today"] [data-testid="s232f4a-today-empty-state"]'`,
+    ),
+  );
+  assert.equal(
+    (runtimeSpec.match(/page\.locator\(secondaryAppReadySelector\)/g) ?? []).length,
+    2,
+  );
+  const readySelectorStart = runtimeSpec.indexOf(
+    "const secondaryAppReadySelector = [",
+  );
+  const readySelectorEnd = runtimeSpec.indexOf("].join", readySelectorStart);
+  assert.ok(readySelectorStart >= 0 && readySelectorEnd > readySelectorStart);
+  const readySelectorSource = runtimeSpec.slice(readySelectorStart, readySelectorEnd);
+  assert.doesNotMatch(
+    readySelectorSource,
+    /route-state="(?:error|loading)"|degraded-local-read/,
+  );
+  assert.doesNotMatch(
+    readySelectorSource,
+    /['"]\[data-s232f4a-route-state="zero-essential-records"\]\[data-s232f4a-surface="today"\]['"]/,
+  );
   assert.match(runtimeSpec, /page\.locator\("\[data-learner-shell\]"\)/);
   assert.match(runtimeSpec, /pathname === "\/app"/);
   assert.match(runtimeSpec, /for \(let attempt = 0; attempt < 80; attempt \+= 1\)/);
   assert.match(runtimeSpec, /page\.waitForTimeout\(250\)/);
+  const secondaryClassifierStart = runtimeSpec.indexOf(
+    "async function classifySecondaryAppState",
+  );
+  const secondaryClassifierEnd = runtimeSpec.indexOf(
+    "async function observedDeploymentSha",
+    secondaryClassifierStart,
+  );
+  assert.ok(
+    secondaryClassifierStart >= 0 && secondaryClassifierEnd > secondaryClassifierStart,
+  );
+  const secondaryClassifierSource = runtimeSpec.slice(
+    secondaryClassifierStart,
+    secondaryClassifierEnd,
+  );
+  const inviteDeniedReturn = secondaryClassifierSource.indexOf('return "invite-denied"');
+  const accessUnavailableReturn = secondaryClassifierSource.indexOf(
+    'return "access-unavailable"',
+  );
+  const onboardingReturn = secondaryClassifierSource.indexOf('return "onboarding"');
+  const allowedReturn = secondaryClassifierSource.indexOf('return "allowed"');
+  assert.ok(
+    inviteDeniedReturn >= 0 &&
+      inviteDeniedReturn < accessUnavailableReturn &&
+      accessUnavailableReturn < onboardingReturn &&
+      onboardingReturn < allowedReturn,
+  );
   assert.match(runtimeSpec, /error instanceof Error && error\.name === "TimeoutError"/);
   const secondaryLoginStart = runtimeSpec.indexOf("async function loginWithCredentials");
   const secondaryLoginEnd = runtimeSpec.indexOf(
