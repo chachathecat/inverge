@@ -2160,6 +2160,10 @@ async function figmaFoundationProbe(page: Page, viewportWidth: number) {
         "StickyAction",
         "CalculatorStep",
         "FailureAwareState",
+        "Surface",
+        "Action",
+        "QuietDisclosure",
+        "UtilityState",
       ]);
       const unknownV3ComponentCount = Array.from(
         document.querySelectorAll<HTMLElement>("[data-v3-component]"),

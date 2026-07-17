@@ -61,6 +61,27 @@ function learnerPageInventory() {
   return pages.sort();
 }
 
+function literalV3ComponentInventory() {
+  const components = new Set();
+  const walk = (directory) => {
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const absolute = path.join(directory, entry.name);
+      if (entry.isDirectory()) {
+        walk(absolute);
+      } else if (entry.isFile() && entry.name.endsWith(".tsx")) {
+        const source = read(absolute);
+        assert.doesNotMatch(source, /data-v3-component=\{/);
+        for (const match of source.matchAll(/data-v3-component="([^"]+)"/g)) {
+          components.add(match[1]);
+        }
+      }
+    }
+  };
+  walk("app");
+  walk("components");
+  return [...components].sort();
+}
+
 function buildValidSummary(sha, rowCount) {
   return {
     schemaVersion: 1,
@@ -184,6 +205,17 @@ test("S232G registry distinguishes direct frames, direct components, and semanti
   for (const route of semanticOnly) assert.deepEqual(route.directFigmaNodes, []);
   assert.match(qa, /no direct product\s+page frame/i);
   assert.match(qa, /do not claim page-level pixel parity/i);
+});
+
+test("S232G runtime recognizes every literal V3 product component", () => {
+  const knownComponentsBlock = runtimeSpec.match(
+    /const knownComponents = new Set\(\[[\s\S]*?\]\);/,
+  )?.[0] ?? "";
+  assert.notEqual(knownComponentsBlock, "");
+  const runtimeKnownComponents = [
+    ...knownComponentsBlock.matchAll(/"([^"]+)"/g),
+  ].map((match) => match[1]).sort();
+  assert.deepEqual(runtimeKnownComponents, literalV3ComponentInventory());
 });
 
 test("S232G evidence descriptor set is exact, unique, and fixed-enum only", () => {
