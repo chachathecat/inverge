@@ -148,12 +148,28 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Run exact-head production V3 visual acceptance
+        id: visual_acceptance
         env:
           S232H2_VISUAL_RUNTIME: "1"
           E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL }}
           E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD }}
           VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
         run: npx playwright test tests/e2e/s232h2-production-v3-visual.spec.ts --project=chromium --workers=1 --reporter=line
+
+      - name: Upload bounded representative PNG diagnostics after visual acceptance failure
+        if: ${{ failure() && steps.visual_acceptance.outcome == 'failure' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: s232h2-production-v3-visual-failure-${{ github.event.pull_request.head.sha }}
+          path: |
+            test-results/**/s232h2-after-ledger-390.png
+            test-results/**/s232h2-figma-mobile-ledger-56-2.png
+            test-results/**/s232h2-after-ledger-1440.png
+            test-results/**/s232h2-figma-desktop-ledger-59-62.png
+            test-results/**/s232h2-after-calculator-390.png
+            test-results/**/s232h2-figma-mobile-calculator-57-34.png
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Recheck both exact deployment SHAs and the live PR head
         shell: bash
