@@ -821,6 +821,7 @@ const exactSyntheticPayloadSystemStrings = new Set([
   "draft",
   "unknown",
   "confused",
+  "low",
   "medium",
   "high",
   "critical",
