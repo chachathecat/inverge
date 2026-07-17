@@ -370,6 +370,11 @@ test("S232H.2 evidence is API-audited synthetic data and directly compared with 
   assert.ok(spec.includes('"low"'));
   assert.ok(spec.includes('"답안 구조 점검(점검 필요)"'));
   assert.ok(spec.includes('"구조"'));
+  assert.ok(spec.includes('"사안포섭"'));
+  assert.ok(spec.includes('"쟁점 구조화"'));
+  assert.ok(spec.includes('"포섭 논증"'));
+  assert.ok(spec.includes('"쟁점 누락"'));
+  assert.ok(spec.includes('"규범-사실 연결 부족"'));
   assert.ok(
     spec.includes(
       '"공적 견해표명에 해당하는 사실을 구체적으로 연결해야 합니다."',
