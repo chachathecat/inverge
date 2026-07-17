@@ -1965,6 +1965,8 @@ async function verifyKeyboardFocus(page: Page, primaryActionCount: number) {
   let enabledPrimaryReached = primaryActionCount === 0;
   let skipLinkActivated =
     (await page.locator("a[data-v3-skip-link]").count()) === 0;
+  let firstFocusIndex: number | null = null;
+  let completionKind: "enumerated-stops" | "browser-cycle" | null = null;
   const visitedFocusIndexes = new Set<number>();
   let focusStopCount = 0;
   let emptyFocusStops = 0;
@@ -2064,6 +2066,16 @@ async function verifyKeyboardFocus(page: Page, primaryActionCount: number) {
     }
     emptyFocusStops = 0;
     focusStopCount = Math.max(focusStopCount, state.focusableCount);
+    if (firstFocusIndex === null) {
+      firstFocusIndex = state.focusIndex;
+    } else if (
+      state.focusIndex === firstFocusIndex &&
+      visitedFocusIndexes.size > 0
+    ) {
+      completedFocusTraversal = true;
+      completionKind = "browser-cycle";
+      break;
+    }
     visitedFocusIndexes.add(state.focusIndex);
     if (!state.inViewport || !state.hasIndicator) everyFocusVisible = false;
     if (state?.inViewport && state.hasIndicator && state.explicitPrimary)
@@ -2097,6 +2109,7 @@ async function verifyKeyboardFocus(page: Page, primaryActionCount: number) {
       visitedFocusIndexes.size >= state.focusableCount
     ) {
       completedFocusTraversal = true;
+      completionKind = "enumerated-stops";
       break;
     }
   }
@@ -2109,6 +2122,7 @@ async function verifyKeyboardFocus(page: Page, primaryActionCount: number) {
   return {
     passed,
     completedFocusTraversal,
+    completionKind,
     focusStopCount,
     visitedFocusStopCount: visitedFocusIndexes.size,
     everyFocusVisible,
