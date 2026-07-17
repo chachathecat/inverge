@@ -78,7 +78,17 @@ type UnexpectedRequestDiagnosticPhase =
   | "auth-post";
 
 type VercelFallbackFamily = "vc-w" | "vc-r" | "vc-d";
-type VercelSpecificFamily = "vc-rate" | "vc-mfe" | "vc-ping";
+type VercelSpecificFamily =
+  | "vc-rate"
+  | "vc-mfe"
+  | "vc-ping"
+  | "vc-fs"
+  | "vc-fc"
+  | "vc-ms"
+  | "vc-mc"
+  | "vc-s0"
+  | "vc-w0"
+  | "vc-wx";
 type VercelShapedFamily = VercelFallbackFamily | VercelSpecificFamily;
 type VercelRequestInitiator = "tb" | "rt" | "ot" | "na";
 type VercelRequestShape = "gc" | "gq" | "nc" | "nq";
@@ -338,6 +348,15 @@ function classifyUnexpectedRequestTarget(
   if (location.pathname === "/.well-known/vercel/flags") {
     return location.search === "" && location.hash === "" ? "vc-flags" : "vc-flags-q";
   }
+  if (location.pathname === "/.well-known/vercel/flags/") {
+    return classifyVercelShapedTarget("vc-fs", initiator, request, location);
+  }
+  if (location.pathname.startsWith("/.well-known/vercel/flags/")) {
+    return classifyVercelShapedTarget("vc-fc", initiator, request, location);
+  }
+  if (location.pathname === "/.well-known/vercel/security") {
+    return classifyVercelShapedTarget("vc-s0", initiator, request, location);
+  }
   if (location.pathname.startsWith("/.well-known/vercel/security/")) {
     return "vc-security";
   }
@@ -350,9 +369,21 @@ function classifyUnexpectedRequestTarget(
   if (location.pathname === "/.well-known/vercel/microfrontends/client-config") {
     return classifyVercelShapedTarget("vc-mfe", initiator, request, location);
   }
-  const wellKnownFamily = classifyVercelFallbackFamily(location.pathname);
-  if (wellKnownFamily === "vc-w") {
-    return classifyVercelShapedTarget(wellKnownFamily, initiator, request, location);
+  if (location.pathname === "/.well-known/vercel/microfrontends/client-config/") {
+    return classifyVercelShapedTarget("vc-ms", initiator, request, location);
+  }
+  if (
+    location.pathname.startsWith(
+      "/.well-known/vercel/microfrontends/client-config/",
+    )
+  ) {
+    return classifyVercelShapedTarget("vc-mc", initiator, request, location);
+  }
+  if (location.pathname === "/.well-known/vercel/") {
+    return classifyVercelShapedTarget("vc-w0", initiator, request, location);
+  }
+  if (location.pathname.startsWith("/.well-known/vercel/")) {
+    return classifyVercelShapedTarget("vc-wx", initiator, request, location);
   }
   if (
     location.pathname === "/_vercel/insights" ||

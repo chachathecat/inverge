@@ -717,6 +717,10 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
   assert.match(requestGuardSource, /kind: classifyUnexpectedRequest\(request, failure\)/);
   assert.match(requestGuardSource, /target: unexpectedTarget/);
   assert.match(requestGuardSource, /resource: classifyUnexpectedRequestResource\(request\)/);
+  assert.doesNotMatch(
+    requestGuardSource,
+    /vc-(?:fs|fc|ms|mc|s0|w0|wx)/,
+  );
   assert.ok(
     requestGuardSource.indexOf('isPreviewToolbarUrl(request.url())') <
       requestGuardSource.indexOf("if (boundedNavigationAbort)") &&
@@ -734,6 +738,7 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
   ];
   const vercelShapedTargets = [
     "vc-w", "vc-r", "vc-d", "vc-rate", "vc-mfe", "vc-ping",
+    "vc-fs", "vc-fc", "vc-ms", "vc-mc", "vc-s0", "vc-w0", "vc-wx",
   ].flatMap((family) =>
     ["tb", "rt", "ot", "na"].flatMap((initiator) =>
       ["gc", "gq", "nc", "nq"].map(
@@ -887,10 +892,29 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
     requestTargetClassifierSource,
     /classifyVercelShapedTarget\("vc-ping", initiator, request, location\)/,
   );
+  for (const family of [
+    "vc-fs", "vc-fc", "vc-ms", "vc-mc", "vc-s0", "vc-w0", "vc-wx",
+  ]) {
+    assert.match(
+      requestTargetClassifierSource,
+      new RegExp(
+        `classifyVercelShapedTarget\\("${family}", initiator, request, location\\)`,
+      ),
+    );
+  }
   const flagsPathOffset = requestTargetClassifierSource.indexOf(
     'location.pathname === "/.well-known/vercel/flags"',
   );
-  const securityPathOffset = requestTargetClassifierSource.indexOf(
+  const flagsSlashOffset = requestTargetClassifierSource.indexOf(
+    'location.pathname === "/.well-known/vercel/flags/"',
+  );
+  const flagsChildOffset = requestTargetClassifierSource.indexOf(
+    'location.pathname.startsWith("/.well-known/vercel/flags/")',
+  );
+  const securityRootOffset = requestTargetClassifierSource.indexOf(
+    'location.pathname === "/.well-known/vercel/security"',
+  );
+  const securityChildOffset = requestTargetClassifierSource.indexOf(
     'location.pathname.startsWith("/.well-known/vercel/security/")',
   );
   const ratePathOffset = requestTargetClassifierSource.indexOf(
@@ -899,8 +923,17 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
   const mfePathOffset = requestTargetClassifierSource.indexOf(
     'location.pathname === "/.well-known/vercel/microfrontends/client-config"',
   );
-  const genericVercelWellKnownOffset = requestTargetClassifierSource.indexOf(
-    'wellKnownFamily === "vc-w"',
+  const mfeSlashOffset = requestTargetClassifierSource.indexOf(
+    'location.pathname === "/.well-known/vercel/microfrontends/client-config/"',
+  );
+  const mfeChildOffset = requestTargetClassifierSource.indexOf(
+    'location.pathname.startsWith(\n      "/.well-known/vercel/microfrontends/client-config/",',
+  );
+  const vercelWellKnownRootOffset = requestTargetClassifierSource.indexOf(
+    'location.pathname === "/.well-known/vercel/"',
+  );
+  const vercelWellKnownResidualOffset = requestTargetClassifierSource.indexOf(
+    'location.pathname.startsWith("/.well-known/vercel/")',
   );
   const metricsPathOffset = requestTargetClassifierSource.indexOf(
     'location.pathname === "/_vercel/insights"',
@@ -919,23 +952,38 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
   );
   assert.ok(
     flagsPathOffset >= 0 &&
-      securityPathOffset >= 0 &&
+      flagsSlashOffset >= 0 &&
+      flagsChildOffset >= 0 &&
+      securityRootOffset >= 0 &&
+      securityChildOffset >= 0 &&
       ratePathOffset >= 0 &&
       mfePathOffset >= 0 &&
-      genericVercelWellKnownOffset >= 0 &&
+      mfeSlashOffset >= 0 &&
+      mfeChildOffset >= 0 &&
+      vercelWellKnownRootOffset >= 0 &&
+      vercelWellKnownResidualOffset >= 0 &&
       metricsPathOffset >= 0 &&
       pingPathOffset >= 0 &&
       genericVercelPathOffset >= 0 &&
       devtoolsPathOffset >= 0 &&
       genericWellKnownOffset >= 0 &&
-      flagsPathOffset < genericVercelWellKnownOffset &&
-      securityPathOffset < genericVercelWellKnownOffset &&
-      ratePathOffset < genericVercelWellKnownOffset &&
-      mfePathOffset < genericVercelWellKnownOffset &&
+      flagsPathOffset < flagsSlashOffset &&
+      flagsSlashOffset < flagsChildOffset &&
+      flagsChildOffset < vercelWellKnownRootOffset &&
+      securityRootOffset < securityChildOffset &&
+      securityChildOffset < vercelWellKnownRootOffset &&
+      ratePathOffset < vercelWellKnownRootOffset &&
+      mfePathOffset < mfeSlashOffset &&
+      mfeSlashOffset < mfeChildOffset &&
+      mfeChildOffset < vercelWellKnownRootOffset &&
+      vercelWellKnownRootOffset < vercelWellKnownResidualOffset &&
+      vercelWellKnownResidualOffset < genericVercelPathOffset &&
       metricsPathOffset < genericVercelPathOffset &&
       pingPathOffset < genericVercelPathOffset &&
-      devtoolsPathOffset < genericWellKnownOffset,
+      devtoolsPathOffset < genericWellKnownOffset &&
+      vercelWellKnownResidualOffset < genericWellKnownOffset,
   );
+  assert.doesNotMatch(requestTargetClassifierSource, /wellKnownFamily === "vc-w"/);
   assert.match(runtimeSpec, /phase\.observedAuthSignInRequestCount > 0 \? "auth-post" : "auth-pre"/);
   assert.doesNotMatch(runtimeSpec, /"unexpected-request-failures"/);
   assert.match(
