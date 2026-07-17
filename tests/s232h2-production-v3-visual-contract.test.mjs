@@ -283,6 +283,17 @@ test("S232H.2 evidence is API-audited synthetic data and directly compared with 
   assert.match(spec, /exactSyntheticSystemValuePatterns\.some/);
   assert.match(spec, /concept:second:\(\?:감정평가실무/);
   assert.match(spec, /second-\(\?:practice-/);
+  assert.ok(spec.includes('"local_taxonomy_v1"'));
+  assert.ok(
+    spec.includes(
+      '"curriculum-capture-capture-note-second_law_project_approval_disposition"',
+    ),
+  );
+  assert.ok(
+    spec.includes(
+      '"시장가치\/공정가치에서 정의\/논거\/비교\/사례 적용 키워드를 먼저 떠올려 보세요."',
+    ),
+  );
   assert.doesNotMatch(spec, /\\p\{Letter\}|\^second\(\?:\[-_\]/);
   assert.match(spec, /rewrite_source_item_id/);
   assert.match(spec, /const itemListingComplete = listedItems\.length < 501/);
