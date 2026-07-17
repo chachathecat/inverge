@@ -140,7 +140,7 @@ export const S232G_ROUTES = Object.freeze([
     evidenceRoute: "/app/first/ox",
     href: "/app/first/ox",
     readySelector: '[data-s232g-route="first-ox"]',
-    keyboardSelector: "#first-ox-subject",
+    keyboardSelector: '[data-s232g-route="first-ox"] details > summary',
     parityKind: "semantic-component",
     directFigmaNodes: Object.freeze([]),
   }),

@@ -172,6 +172,10 @@ test("S232G registry distinguishes direct frames, direct components, and semanti
   assert.deepEqual(directFrame.map((route) => route.key), ["study-ledger"]);
   assert.deepEqual(directComponent.map((route) => route.key), ["calculator"]);
   assert.equal(semanticOnly.length, 11);
+  assert.equal(
+    S232G_ROUTES.find((route) => route.key === "first-ox")?.keyboardSelector,
+    '[data-s232g-route="first-ox"] details > summary',
+  );
   assert.deepEqual(directFrame[0].directFigmaNodes, [
     "56:2", "56:3", "56:8", "56:47",
     "59:62", "59:63", "59:68", "59:100", "59:104",
