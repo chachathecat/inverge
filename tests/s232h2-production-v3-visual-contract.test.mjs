@@ -368,6 +368,8 @@ test("S232H.2 evidence is API-audited synthetic data and directly compared with 
   assert.match(spec, /second-\(\?:practice-/);
   assert.ok(spec.includes('"local_taxonomy_v1"'));
   assert.ok(spec.includes('"low"'));
+  assert.ok(spec.includes('"답안 구조 점검(점검 필요)"'));
+  assert.ok(spec.includes('"구조"'));
   assert.ok(
     spec.includes(
       '"공적 견해표명에 해당하는 사실을 구체적으로 연결해야 합니다."',
