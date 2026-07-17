@@ -633,6 +633,8 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
   assert.notEqual(skipLinkProbeBlock, "");
   assert.match(skipLinkProbeBlock, /topology\.hrefCount === 1/);
   assert.match(skipLinkProbeBlock, /topology\.targetCount === 1/);
+  assert.match(skipLinkProbeBlock, /document\.body\.prepend\(sentinel\)/);
+  assert.doesNotMatch(skipLinkProbeBlock, /document\.body\.appendChild\(sentinel\)/);
   assert.match(skipLinkProbeBlock, /page\.keyboard\.press\("Tab"\)/);
   assert.match(skipLinkProbeBlock, /page\.waitForFunction\(/);
   assert.match(skipLinkProbeBlock, /active\.getAttribute\("href"\) === href/);

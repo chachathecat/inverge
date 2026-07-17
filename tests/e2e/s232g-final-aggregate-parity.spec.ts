@@ -2315,7 +2315,7 @@ async function skipLinkProbe(page: Page, routePathname: string, routeKey: string
         opacity: "0",
         pointerEvents: "none",
       });
-      document.body.appendChild(sentinel);
+      document.body.prepend(sentinel);
       sentinel.focus({ preventScroll: true });
       window.scrollTo(0, 0);
       return document.activeElement === sentinel;
