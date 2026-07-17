@@ -7,6 +7,7 @@ import {
   type ConsoleMessage,
   type Locator,
   type Page,
+  type Request,
   type Response,
   type Route,
   type TestInfo,
@@ -88,11 +89,37 @@ type UnexpectedConsoleObservation = Readonly<{
   kind: UnexpectedConsoleClass;
 }>;
 
+type UnexpectedRequestClass =
+  | "nav-abort"
+  | "resource-abort"
+  | "blocked"
+  | "timeout"
+  | "connection"
+  | "other";
+
+type UnexpectedRequestTarget =
+  | "login"
+  | "app"
+  | "item"
+  | "auth-api"
+  | "items-api"
+  | "api"
+  | "app-route"
+  | "other"
+  | "invalid";
+
+type UnexpectedRequestObservation = Readonly<{
+  phase: RuntimeDiagnosticPhase;
+  kind: UnexpectedRequestClass;
+  target: UnexpectedRequestTarget;
+}>;
+
 type RuntimePhaseState = {
   current: RuntimePhase;
   observedAuthSignInRequestCount: number;
   diagnosticPhase: RuntimeDiagnosticPhase;
   firstUnexpectedConsole: UnexpectedConsoleObservation | null;
+  firstUnexpectedRequest: UnexpectedRequestObservation | null;
 };
 
 type RuntimeCounters = {
@@ -131,6 +158,7 @@ function createRuntimePhaseState(): RuntimePhaseState {
     observedAuthSignInRequestCount: 0,
     diagnosticPhase: "setup",
     firstUnexpectedConsole: null,
+    firstUnexpectedRequest: null,
   };
 }
 
@@ -189,6 +217,41 @@ function unexpectedConsoleFailureCode(
 ) {
   if (!observation) return `console-${context}-diagnostic-missing`;
   return `console-${context}-${observation.phase}-${observation.kind}`;
+}
+
+function classifyUnexpectedRequest(request: Request, failure: string): UnexpectedRequestClass {
+  if (failure.includes("ERR_ABORTED")) {
+    return request.isNavigationRequest() ? "nav-abort" : "resource-abort";
+  }
+  if (failure.includes("ERR_BLOCKED_BY_CLIENT")) return "blocked";
+  if (failure.includes("TIMED_OUT") || failure.includes("TIMEOUT")) return "timeout";
+  if (
+    failure.includes("CONNECTION") ||
+    failure.includes("NAME_NOT_RESOLVED") ||
+    failure.includes("INTERNET_DISCONNECTED")
+  ) {
+    return "connection";
+  }
+  return "other";
+}
+
+function classifyUnexpectedRequestTarget(location: URL): UnexpectedRequestTarget {
+  if (location.pathname === "/login") return "login";
+  if (location.pathname === "/app") return "app";
+  if (/^\/app\/items\/[^/]+$/.test(location.pathname)) return "item";
+  if (location.pathname.startsWith("/api/auth/")) return "auth-api";
+  if (location.pathname === "/api/os/items") return "items-api";
+  if (location.pathname.startsWith("/api/")) return "api";
+  if (location.pathname.startsWith("/app/")) return "app-route";
+  return "other";
+}
+
+function unexpectedRequestFailureCode(
+  context: "main" | "secondary" | "fresh",
+  observation: UnexpectedRequestObservation | null,
+) {
+  if (!observation) return `req-${context}-diagnostic-missing`;
+  return `req-${context}-${observation.phase}-${observation.kind}-${observation.target}`;
 }
 
 async function installPrivacySafeRuntimeGuard(
@@ -292,9 +355,11 @@ async function installPrivacySafeRuntimeGuard(
     if (isPreviewToolbarUrl(request.url()) && failure.includes("ERR_BLOCKED_BY_CLIENT")) {
       return;
     }
+    let unexpectedTarget: UnexpectedRequestTarget = "invalid";
     try {
       const location = new URL(request.url());
       if (location.origin !== runtimeOrigin) return;
+      unexpectedTarget = classifyUnexpectedRequestTarget(location);
       const boundedNavigationAbort =
         phase.current === "auth-navigation" &&
         failure.includes("ERR_ABORTED") &&
@@ -308,10 +373,16 @@ async function installPrivacySafeRuntimeGuard(
         return;
       }
     } catch {
-      counters.requestFailureCount += 1;
-      return;
+      unexpectedTarget = "invalid";
     }
     counters.requestFailureCount += 1;
+    if (phase.firstUnexpectedRequest === null) {
+      phase.firstUnexpectedRequest = {
+        phase: phase.diagnosticPhase,
+        kind: classifyUnexpectedRequest(request, failure),
+        target: unexpectedTarget,
+      };
+    }
   });
   page.on("response", (response) => {
     if (phase.current === "cleanup") return;
@@ -3323,7 +3394,18 @@ test("S232G final aggregate exact-head authenticated parity", async ({ browser, 
     unexpectedConsoleFailureCode("fresh", freshPhase.firstUnexpectedConsole),
   );
   requireTruth(pageErrorCount === 0, "unexpected-page-errors");
-  requireTruth(requestFailureCount === 0, "unexpected-request-failures");
+  requireTruth(
+    mainCounters.requestFailureCount === 0,
+    unexpectedRequestFailureCode("main", mainPhase.firstUnexpectedRequest),
+  );
+  requireTruth(
+    secondaryCounters.requestFailureCount === 0,
+    unexpectedRequestFailureCode("secondary", secondaryPhase.firstUnexpectedRequest),
+  );
+  requireTruth(
+    freshCounters.requestFailureCount === 0,
+    unexpectedRequestFailureCode("fresh", freshPhase.firstUnexpectedRequest),
+  );
   requireTruth(httpErrorCount === 0, "unexpected-http-errors");
   requireTruth(
     expectedCrossAccountHttpErrorCount === expectedCrossAccountHttpErrorCountTarget,

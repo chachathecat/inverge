@@ -652,6 +652,69 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
     runtimeSpec,
     /"unexpected-console-errors"|"unexpected-console-(?:main|secondary|fresh)"/,
   );
+  const requestClassifierStart = runtimeSpec.indexOf(
+    "function classifyUnexpectedRequest",
+  );
+  const requestClassifierEnd = runtimeSpec.indexOf(
+    "function unexpectedRequestFailureCode",
+    requestClassifierStart,
+  );
+  assert.ok(
+    requestClassifierStart >= 0 && requestClassifierEnd > requestClassifierStart,
+  );
+  const requestClassifierSource = runtimeSpec.slice(
+    requestClassifierStart,
+    requestClassifierEnd,
+  );
+  assert.doesNotMatch(
+    requestClassifierSource,
+    /process\.stdout|console\.|writeFile|JSON\.stringify|testInfo\.attach/,
+  );
+  const requestGuardStart = runtimeGuardSource.indexOf('page.on("requestfailed"');
+  const requestGuardEnd = runtimeGuardSource.indexOf(
+    'page.on("response"',
+    requestGuardStart,
+  );
+  assert.ok(requestGuardStart >= 0 && requestGuardEnd > requestGuardStart);
+  const requestGuardSource = runtimeGuardSource.slice(requestGuardStart, requestGuardEnd);
+  assert.match(requestGuardSource, /phase\.firstUnexpectedRequest === null/);
+  assert.match(requestGuardSource, /phase: phase\.diagnosticPhase/);
+  assert.match(requestGuardSource, /kind: classifyUnexpectedRequest\(request, failure\)/);
+  assert.match(requestGuardSource, /target: unexpectedTarget/);
+  assert.ok(
+    requestGuardSource.indexOf('isPreviewToolbarUrl(request.url())') <
+      requestGuardSource.indexOf("if (boundedNavigationAbort)") &&
+      requestGuardSource.indexOf("if (boundedNavigationAbort)") <
+        requestGuardSource.indexOf("counters.requestFailureCount += 1") &&
+      requestGuardSource.indexOf("counters.requestFailureCount += 1") <
+        requestGuardSource.indexOf("phase.firstUnexpectedRequest === null"),
+  );
+  const requestClasses = [
+    "nav-abort", "resource-abort", "blocked", "timeout", "connection", "other",
+  ];
+  const requestTargets = [
+    "login", "app", "item", "auth-api", "items-api", "api", "app-route",
+    "other", "invalid",
+  ];
+  for (const context of consoleContexts) {
+    assert.match(`req-${context}-diagnostic-missing`, /^[a-z0-9-]{1,64}$/);
+    for (const phase of consolePhases) {
+      for (const kind of requestClasses) {
+        for (const target of requestTargets) {
+          assert.match(
+            `req-${context}-${phase}-${kind}-${target}`,
+            /^[a-z0-9-]{1,64}$/,
+          );
+        }
+      }
+    }
+  }
+  assert.match(runtimeSpec, /`req-\$\{context\}-diagnostic-missing`/);
+  assert.match(
+    runtimeSpec,
+    /`req-\$\{context\}-\$\{observation\.phase\}-\$\{observation\.kind\}-\$\{observation\.target\}`/,
+  );
+  assert.doesNotMatch(runtimeSpec, /"unexpected-request-failures"/);
   assert.match(
     itemDetailPage,
     /getWrongAnswerDetail\(session\.userId, session\.email, itemId\)/,
