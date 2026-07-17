@@ -1966,7 +1966,11 @@ async function verifyKeyboardFocus(page: Page, primaryActionCount: number) {
   let skipLinkActivated =
     (await page.locator("a[data-v3-skip-link]").count()) === 0;
   let firstFocusIndex: number | null = null;
-  let completionKind: "enumerated-stops" | "browser-cycle" | null = null;
+  let completionKind:
+    | "enumerated-stops"
+    | "browser-cycle"
+    | "document-exit"
+    | null = null;
   const visitedFocusIndexes = new Set<number>();
   let focusStopCount = 0;
   let emptyFocusStops = 0;
@@ -2061,7 +2065,13 @@ async function verifyKeyboardFocus(page: Page, primaryActionCount: number) {
     });
     if (!state || state.focusIndex < 0) {
       emptyFocusStops += 1;
-      if (emptyFocusStops > 2) return false;
+      if (emptyFocusStops > 2) {
+        if (visitedFocusIndexes.size > 0) {
+          completedFocusTraversal = true;
+          completionKind = "document-exit";
+        }
+        break;
+      }
       continue;
     }
     emptyFocusStops = 0;
