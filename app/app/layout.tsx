@@ -25,7 +25,7 @@ export default async function ReviewOsLayout({ children }: { children: ReactNode
       rightSlot={
         usage && !isMetadataOnlyTrustAcceptance ? (
           <div
-            className="rounded-full border border-[var(--border)] px-4 py-2 text-sm text-[color:var(--muted)]"
+            className="v3-type-caption flex min-h-11 items-center rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-elevated)] px-3 text-[var(--color-text-secondary)]"
             data-private-account-usage
           >
             이번 달 {usage.monthlyUsed} / {usage.monthlyLimit}

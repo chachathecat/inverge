@@ -94,6 +94,7 @@ const defaultTestFiles = [
   "tests/s232f5-calculator-outbox.test.mjs",
   "tests/s232f6-session-first-ox-source-read-truth.test.mjs",
   "tests/s232g-final-aggregate-parity.test.mjs",
+  "tests/s232h1-shared-v3-shell-adoption.test.mjs",
   "tests/s220b-dabangil-launch-surface.test.mjs",
   "tests/practice-calculation-unit-registry.test.mjs",
   "tests/rewrite-regrade-history-contract.test.mjs",
