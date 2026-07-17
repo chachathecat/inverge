@@ -11,6 +11,7 @@ import {
 const read = (path) => readFileSync(path, "utf8");
 const workflow = read(".github/workflows/s232h2-runtime.yml");
 const spec = read("tests/e2e/s232h2-production-v3-visual.spec.ts");
+const learnerUi = read("components/learner/learner-ui.tsx");
 const reviewRepository = read("lib/review-os/repository.ts");
 const operatorRunbook = read("docs/inverge-closed-beta-operator-runbook.md");
 const baselineSha = "35836d419161d7cfe55e3e3c088fcc4d66376a7d";
@@ -174,6 +175,7 @@ test("S232H.2 audits all 13 production routes at 390, 768, and 1440", () => {
   assert.match(spec, /targetRect\.width >= 44 && targetRect\.height >= 44/);
   assert.match(spec, /focusRevealTargetFailures/);
   assert.match(spec, /a\[data-v3-skip-link\]/);
+  assert.match(learnerUi, /data-v3-skip-link[\s\S]{0,500}?min-h-12/);
   assert.match(spec, /A keyboard-only skip target must reveal itself on focus/);
   assert.match(spec, /visibleViewportBoundsFailures/);
   assert.match(spec, /viewportBoundsFailureCount/);
