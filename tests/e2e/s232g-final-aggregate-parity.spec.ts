@@ -2531,23 +2531,63 @@ async function keyboardFocusProbe(page: Page, preferredSelector: string, routeKe
     for (let expectedOrder = 0; expectedOrder < prepared.count; expectedOrder += 1) {
       await staticStage("keyboard-tab", () => page.keyboard.press("Tab"));
       const state = await staticStage("keyboard-step-state", () =>
-        page.evaluate(() => {
+        page.evaluate((expectedOrder) => {
           const active = document.activeElement;
           const rawOrder = active?.getAttribute("data-s232g-tab-order") ?? null;
+          const expected = document.querySelector<HTMLElement>(
+            `[data-s232g-tab-order="${expectedOrder}"]`,
+          );
+          const closedDetails = expected?.closest("details:not([open])");
+          const expectedIsDirectSummary =
+            expected?.tagName === "SUMMARY" && expected.parentElement === closedDetails;
+          let skippedKind = "other";
+          if (!expected || !expected.isConnected) {
+            skippedKind = "detached";
+          } else if (closedDetails && !expectedIsDirectSummary) {
+            skippedKind = "closed-details";
+          } else if (expected.matches(":disabled")) {
+            skippedKind = "disabled";
+          } else if (expected.tabIndex !== 0) {
+            skippedKind = "tabindex";
+          } else {
+            const style = getComputedStyle(expected);
+            const rect = expected.getBoundingClientRect();
+            if (
+              rect.width <= 0 || rect.height <= 0 || style.display === "none" ||
+              style.visibility === "hidden" || style.opacity === "0" ||
+              expected.hidden || expected.closest("[hidden], [inert]")
+            ) {
+              skippedKind = "hidden";
+            } else if (expected instanceof HTMLInputElement && expected.type === "radio") {
+              skippedKind = "radio";
+            } else if (
+              expected.parentElement?.closest("[data-s232g-tab-order]")
+            ) {
+              skippedKind = "nested";
+            }
+          }
           return {
             target: active?.getAttribute("data-s232g-keyboard-probe") === "target",
             registered: rawOrder !== null && /^\d+$/.test(rawOrder),
             order: rawOrder === null ? -1 : Number(rawOrder),
+            skippedKind,
           };
-        }),
+        }, expectedOrder),
       );
       requireTruth(
         state.registered && Number.isInteger(state.order) && state.order >= 0,
         `keyboard-${routeKey}-forward-unregistered-focus`,
       );
+      const safeSkippedKinds = new Set([
+        "detached", "closed-details", "disabled", "tabindex",
+        "radio", "nested", "hidden", "other",
+      ]);
+      const safeSkippedKind = safeSkippedKinds.has(state.skippedKind)
+        ? state.skippedKind
+        : "other";
       requireTruth(
         state.order <= expectedOrder,
-        `keyboard-${routeKey}-forward-skipped-registered`,
+        `keyboard-${routeKey}-forward-skipped-${safeSkippedKind}`,
       );
       requireTruth(
         state.order >= expectedOrder,
