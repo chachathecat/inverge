@@ -27,14 +27,14 @@ Dock is a 390×116 reference frame with 20px horizontal edges, 16px top padding,
 
 Inline is left-aligned, 300×84, transparent, and has no border or shadow. Its status is 300×18 and the control begins 26px from the top. The control radius is 12px; label typography is Noto Sans KR Bold 15/22.
 
-Production renders exactly one responsive component:
+Production renders exactly one responsive component immediately after the learner EvidenceExcerpt:
 
 - below 1024px: viewport-bottom Dock, full width, 20px minimum horizontal edges with left/right safe-area coverage, and safe-area-aware bottom padding
 - at or above 1024px: static 300px Inline at the end of the 680px reading column
 
 The mobile article reserves the Dock height plus safe-area space so the final content and keyboard focus are not obscured. The desktop component is not sticky and is not in the 288px evidence rail.
 
-Figma desktop instance `59:100` follows a learner EvidenceExcerpt inside the Figma reading column. Production evidence remains in the existing evidence rail in this scoped slice; relocating all evidence is an S232D shell/information-architecture decision. StickyAction still adopts the correct reading-column ownership and Inline geometry without broadening this PR.
+Figma desktop instance `59:100` follows a learner EvidenceExcerpt inside the Figma reading column. Production now keeps the learner-authored excerpt in that reading column and places the StickyAction directly after it; untyped reference and supplemental context remain in the evidence rail. StickyAction retains the same controller and navigation contract.
 
 ## Typed state boundary
 

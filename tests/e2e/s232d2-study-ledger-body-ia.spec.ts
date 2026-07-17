@@ -120,6 +120,7 @@ test("S232D.2 exact-head Ledger owns body evidence and review context correctly"
       '[data-s232d2-learner-evidence] [data-v3-component="EvidenceExcerpt"][data-v3-source="Learner"]',
     );
     const review = rail.locator("[data-s232d2-review-context]");
+    const recoveryContext = rail.locator("[data-s232d2-recovery-context]");
     const referenceSlot = rail.locator("[data-s232d2-reference-slot]");
     const action = reading.locator('[data-v3-component="StickyAction"]');
 
@@ -134,9 +135,13 @@ test("S232D.2 exact-head Ledger owns body evidence and review context correctly"
     await expect(detail.locator('[data-v3-component="StickyAction"]')).toHaveCount(1);
     await expect(learner).toHaveCount(1);
     await expect(review).toHaveCount(1);
+    await expect(recoveryContext).toHaveCount(1);
     await expect(referenceSlot).toHaveCount(1);
     await expect(rail.locator('[data-v3-component="EvidenceExcerpt"][data-v3-source="Learner"]')).toHaveCount(0);
     await expect(reading.locator("[data-s232d2-review-context]")).toHaveCount(0);
+    await expect(reading.locator("[data-s232d2-recovery-context]")).toHaveCount(0);
+    await expect(reading.locator("[data-s232d2-state-evidence]")).toBeVisible();
+    await expect(reading.locator("[data-s232d2-reading-header]")).toHaveCSS("border-bottom-width", "0px");
     await expect(rail.locator('[data-v3-component="TrustEvidenceBar"], [data-v3-component="BiggestGap"], [data-v3-component="StickyAction"]')).toHaveCount(0);
     const promotionCount = await referenceSlot
       .locator(
@@ -160,10 +165,12 @@ test("S232D.2 exact-head Ledger owns body evidence and review context correctly"
       const railElement = detailElement?.querySelector<HTMLElement>("[data-s232d2-evidence-rail]");
       const trust = readingElement?.querySelector<HTMLElement>('[data-v3-component="TrustEvidenceBar"]');
       const gap = readingElement?.querySelector<HTMLElement>('[data-v3-component="BiggestGap"]');
-      const recovery = readingElement?.querySelector<HTMLElement>("[data-s232d2-recovery-context]");
+      const recoveryHeading = readingElement?.querySelector<HTMLElement>("[data-s232d2-recovery-heading]");
       const learnerEvidence = readingElement?.querySelector<HTMLElement>("[data-s232d2-learner-evidence]");
       const sticky = readingElement?.querySelector<HTMLElement>('[data-v3-component="StickyAction"]');
-      if (!workspaceElement || !readingElement || !railElement || !trust || !gap || !recovery || !learnerEvidence || !sticky) {
+      const recoveryContext = railElement?.querySelector<HTMLElement>("[data-s232d2-recovery-context]");
+      const supplementalContext = railElement?.querySelector<HTMLDetailsElement>("[data-s232d2-supplemental-context]");
+      if (!workspaceElement || !readingElement || !railElement || !trust || !gap || !recoveryHeading || !learnerEvidence || !sticky || !recoveryContext || !supplementalContext) {
         return null;
       }
       const follows = (before: Node, after: Node) =>
@@ -175,8 +182,13 @@ test("S232D.2 exact-head Ledger owns body evidence and review context correctly"
         readingWidth: readingElement.getBoundingClientRect().width,
         railWidth: railElement.getBoundingClientRect().width,
         horizontalOverflow: Math.max(0, document.documentElement.scrollWidth - window.innerWidth),
-        readingOrder: follows(trust, gap) && follows(gap, recovery) && follows(recovery, learnerEvidence) && follows(learnerEvidence, sticky),
+        readingOrder: follows(trust, gap) && follows(gap, recoveryHeading) && follows(recoveryHeading, learnerEvidence) && follows(learnerEvidence, sticky),
         railAfterReading: follows(readingElement, railElement),
+        recoveryContextInRail: recoveryContext.closest("[data-s232d2-evidence-rail]") === railElement,
+        initialRailSurfaceCount: railElement.children.length,
+        supplementalClosed: !supplementalContext.open,
+        supportingInSupplemental: supplementalContext.querySelectorAll("[data-s228-supporting-evidence]").length,
+        linkedInSupplemental: supplementalContext.querySelectorAll("[data-s232d2-linked-learning]").length,
         supportingInReading: readingElement.querySelectorAll("[data-s228-supporting-evidence]").length,
         supportingInRail: railElement.querySelectorAll("[data-s228-supporting-evidence]").length,
         supportingTotal: detailElement.querySelectorAll("[data-s228-supporting-evidence]").length,
@@ -189,11 +201,16 @@ test("S232D.2 exact-head Ledger owns body evidence and review context correctly"
     expect(metrics?.horizontalOverflow).toBeLessThanOrEqual(1);
     expect(metrics?.readingOrder).toBe(true);
     expect(metrics?.railAfterReading).toBe(true);
+    expect(metrics?.recoveryContextInRail).toBe(true);
+    expect(metrics?.initialRailSurfaceCount).toBe(3);
+    expect(metrics?.supplementalClosed).toBe(true);
     expect(metrics?.readingWidth).toBeCloseTo(viewport.expectedReadingWidth, 0);
     expect(metrics?.supportingInReading).toBe(0);
     expect(metrics?.supportingInRail).toBe(metrics?.supportingTotal);
+    expect(metrics?.supportingInSupplemental).toBe(metrics?.supportingTotal);
     expect(metrics?.linkedInReading).toBe(0);
     expect(metrics?.linkedInRail).toBe(metrics?.linkedTotal);
+    expect(metrics?.linkedInSupplemental).toBe(metrics?.linkedTotal);
     if (viewport.split) {
       expect(metrics?.tracks).toHaveLength(2);
       expect(Number.parseFloat(metrics!.tracks[0]!)).toBeCloseTo(680, 0);

@@ -39,7 +39,7 @@ Study Ledger renders exactly one TrustEvidenceBar in the reading column immediat
 
 - mobile: 350px content width inside 20px page edges
 - desktop: 680px reading column, 32px gutter, 288px evidence rail
-- vertical order: identity -> 20px -> TrustEvidenceBar -> 20px -> BiggestGap
+- vertical order: identity -> 20px -> TrustEvidenceBar -> 16px -> BiggestGap; the 16px token offsets the accessible 44px disclosure target while preserving the representative V3 rhythm
 - evidence rail: no TrustEvidenceBar duplicate
 
 The component fills its container and contains no clipping, ellipsis, line clamp, fixed height, or internal scroll region.

@@ -464,21 +464,25 @@ function UntypedReferenceDisclosure({
 
   return (
     <details
+      open
       data-s228-evidence-excerpt
       data-s228-evidence-disclosure
       data-s232d2-reference-untyped
-      className="group rounded-[var(--ledger-radius-card)] border border-[var(--border-subtle)] bg-[var(--bg-surface)]"
+      className="group min-h-[260px] rounded-[var(--ledger-radius-card)] border border-[var(--color-border-default)] bg-[var(--color-background-brand-soft)]"
     >
-      <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]">
-        <span className="v3-type-compact font-semibold text-[var(--text-primary)]">{title}</span>
-        <span className="v3-type-caption flex items-center gap-2 text-right text-[var(--text-tertiary)]">
-          {sourceLabel}
-          <span aria-hidden="true" className="transition-transform group-open:rotate-180">⌄</span>
+      <summary className="flex min-h-11 cursor-pointer list-none flex-col px-6 pb-4 pt-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]">
+        <span aria-hidden="true" className="h-[3px] w-full rounded-[var(--v3-radius-mark)] bg-[var(--color-icon-brand)]" />
+        <span className="mt-4 flex w-full items-center justify-between gap-3">
+          <span className="v3-type-compact font-semibold text-[var(--text-primary)]">{title}</span>
+          <span className="v3-type-caption flex items-center gap-2 text-right text-[var(--text-tertiary)]">
+            {sourceLabel}
+            <span aria-hidden="true" className="transition-transform group-open:rotate-180">⌄</span>
+          </span>
         </span>
       </summary>
-      <div className="border-t border-[var(--border-subtle)] px-4 py-4">
+      <div className="px-6 pb-6 pt-0">
         <p
-          className="v3-prose max-h-56 overflow-auto whitespace-pre-wrap break-words text-[var(--text-secondary)]"
+          className="v3-prose whitespace-pre-wrap break-words text-[var(--text-secondary)]"
           data-v3-typography-role="prose"
         >
           {body ?? "기록된 내용이 없습니다."}
@@ -761,20 +765,17 @@ export function StudyLedgerDetail({
         aria-labelledby="study-ledger-title"
       >
         <div
-          className="grid gap-8 lg:grid-cols-[minmax(0,var(--ledger-reading-column))_var(--ledger-evidence-rail)] lg:items-start"
+          className="grid gap-5 lg:grid-cols-[minmax(0,var(--ledger-reading-column))_var(--ledger-evidence-rail)] lg:items-start lg:gap-8"
           data-s232d1-ledger-workspace
           data-s232d2-ledger-workspace
         >
           <div
             data-s232b1-reading-column
             data-s232d2-reading-column
-            className="min-w-0 space-y-5"
+            className="min-w-0 space-y-5 lg:-mt-8"
           >
-            <header
-              data-s232d2-reading-header
-              className="border-b border-[var(--border-subtle)] pb-7"
-            >
-              <div className="flex flex-wrap items-center gap-3">
+            <header data-s232d2-reading-header>
+              <div className="flex w-full flex-wrap items-center justify-between gap-3">
                 <p className="text-xs font-medium text-[var(--text-tertiary)]">
                   {subject} · {formatRecordDate(createdAt)}
                 </p>
@@ -786,14 +787,20 @@ export function StudyLedgerDetail({
               </div>
               <h1
                 id="study-ledger-title"
-                className="v3-type-screen ko-keep mt-5 break-words text-[var(--text-primary)]"
+                className="v3-type-screen ko-keep mt-2 break-words text-[var(--text-primary)] lg:mt-10 lg:[font-size:var(--type-display-size)] lg:[letter-spacing:var(--type-display-tracking)] lg:[line-height:var(--type-display-line)]"
                 data-v3-typography-role="heading-screen"
               >
                 {title}
               </h1>
+              <p
+                data-s232d2-state-evidence
+                className="v3-type-label ko-keep mt-1 break-words text-[var(--color-text-secondary)]"
+              >
+                {stateEvidence}
+              </p>
             </header>
 
-            <div data-s232b1-trust-gap-stack className="space-y-5">
+            <div data-s232b1-trust-gap-stack className="space-y-4">
               <TrustEvidenceBar
                 evidence={trustEvidence}
                 sources={referenceEvidence ? ["persisted_record", "reference"] : ["persisted_record"]}
@@ -807,15 +814,22 @@ export function StudyLedgerDetail({
             </div>
 
             <section
-              data-s232d2-recovery-context
-              className="border-b border-[var(--border-subtle)] pb-6"
-              aria-label="회복 맥락"
+              data-s232d2-recovery-heading
+              aria-labelledby="study-ledger-recovery-heading"
             >
-              <p className="v3-type-label-strong text-[var(--color-text-secondary)]">회복 맥락</p>
-              <p className="v3-type-body ko-keep mt-2 text-[var(--color-text-primary)]">{recurrenceText}</p>
+              <h2
+                id="study-ledger-recovery-heading"
+                className="v3-type-section ko-keep text-[var(--color-text-primary)]"
+              >
+                이번에 회복할 문장
+              </h2>
             </section>
 
-            <section data-s232d2-learner-evidence aria-label="학습자 작성 근거">
+            <section
+              data-s232d2-learner-evidence
+              aria-label="학습자 작성 근거"
+              className="[&>figure]:min-h-[190px]"
+            >
               {learnerEvidence ? (
                 <EvidenceExcerpt
                   title="내가 쓴 핵심"
@@ -840,6 +854,14 @@ export function StudyLedgerDetail({
               )}
             </section>
 
+            <StickyAction
+              responsive
+              state="Ready"
+              href={actionHref}
+              label={completed ? "문단 한 번 더 다듬기" : "10분 문단 다시쓰기"}
+              status={completed ? "남은 간극 1개만 다시 확인합니다." : "가장 큰 간극 1개만 보강합니다."}
+            />
+
             {completed ? (
               comparison ? (
                 <RewriteComparisonPanel comparison={comparison} />
@@ -856,79 +878,32 @@ export function StudyLedgerDetail({
                 </section>
               )
             ) : null}
-
-            <section
-              data-s228-next-action
-              className="border-b border-[var(--border-subtle)] pb-6"
-              aria-labelledby="study-ledger-next-action"
-            >
-              <h2 id="study-ledger-next-action" className="v3-type-label-strong text-[var(--color-text-secondary)]">
-                다음 행동
-              </h2>
-              <p className="v3-type-body ko-keep mt-2 text-[var(--color-text-primary)]">{nextAction}</p>
-            </section>
-
-            <section className="border-y border-[var(--border-subtle)] py-6" aria-labelledby="study-ledger-application">
-              <p className="text-xs font-semibold tracking-[0.12em] text-[var(--text-secondary)]">APPLICATION</p>
-              <h2 id="study-ledger-application" className="v3-type-item mt-2 text-[var(--text-primary)]">
-                적용 문장 초점
-              </h2>
-              <p
-                className="v3-prose ko-keep mt-3 text-[var(--text-primary)]"
-                data-v3-typography-role="prose"
-              >
-                {coreLine}
-              </p>
-              {visibleTerms.length > 0 ? (
-                <ul className="mt-5 flex flex-wrap gap-2" aria-label="핵심 키워드">
-                  {visibleTerms.map((term) => (
-                    <li
-                      key={term}
-                      className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-subtle)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)]"
-                    >
-                      {term}
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-            </section>
-
-            <StickyAction
-              responsive
-              state="Ready"
-              href={actionHref}
-              label={completed ? "문단 한 번 더 다듬기" : "10분 문단 다시쓰기"}
-              status={completed ? "남은 간극 1개만 다시 확인합니다." : "가장 큰 간극 1개만 보강합니다."}
-            />
           </div>
 
           <aside
             data-s228-evidence-rail
             data-s232d2-evidence-rail
-            className="min-w-0 space-y-4"
+            className="min-w-0 space-y-5"
           >
             <section
               data-s228-review-timing
               data-s232d2-review-context
-              className="grid gap-5 rounded-[var(--ledger-radius-card)] bg-[var(--bg-subtle)] p-5 sm:grid-cols-2 lg:grid-cols-1 lg:p-6"
+              className="min-h-[180px] rounded-[var(--ledger-radius-card)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-6"
               aria-label="복습 일정"
             >
-              <div>
-                <p className="text-xs font-semibold text-[var(--text-secondary)]">다음 복습</p>
-                <p className="mt-2 text-base font-bold text-[var(--text-primary)]">{nextReviewDate}</p>
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-[var(--text-secondary)]">복습 큐</p>
-                <p className="mt-2 text-base font-bold text-[var(--text-primary)]">
-                  {reviewQueueCount > 0 ? reviewQueueCount + "개 대기" : "예약 확인 필요"}
-                </p>
-              </div>
+              <h2 className="v3-type-label-strong text-[var(--color-text-brand)]">다음 확인</h2>
+              <p className="v3-type-section ko-keep mt-4 text-[var(--text-primary)]">{nextReviewDate}</p>
+              <p className="v3-type-compact ko-keep mt-3 text-[var(--text-secondary)]">
+                {reviewQueueCount > 0
+                  ? `저장된 복습 큐 ${reviewQueueCount}개를 순서대로 확인합니다.`
+                  : "다음 확인 시점과 복습 큐 상태를 점검합니다."}
+              </p>
             </section>
 
             <div data-s232d2-reference-slot>
               {referenceEvidence ? (
                 <UntypedReferenceDisclosure
-                  title="비교 근거"
+                  title="확인할 근거"
                   sourceLabel="참고용 근거 · 원 출처 확인"
                   excerpt={referenceEvidence}
                 />
@@ -937,43 +912,99 @@ export function StudyLedgerDetail({
               )}
             </div>
 
-            <StudyLedgerSupportingEvidencePanel
-              topicCandidate={topicCandidate}
-              items={supportingEvidence}
-            />
-
-            {reviewHref || calculatorHref || writeHref ? (
-              <nav
-                data-s232d2-linked-learning
-                aria-label="연결된 학습 화면"
-                className="rounded-[var(--ledger-radius-card)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3"
+            <section
+              data-s232d2-recovery-context
+              className="min-h-[255px] rounded-[var(--ledger-radius-card)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-5"
+              aria-labelledby="study-ledger-recovery-context-title"
+            >
+              <h2
+                id="study-ledger-recovery-context-title"
+                className="v3-type-item text-[var(--text-primary)]"
               >
-                {reviewHref ? (
-                  <Link
-                    href={reviewHref}
-                    className="flex min-h-11 items-center text-sm font-semibold text-[var(--text-secondary)] underline-offset-4 hover:text-[var(--text-primary)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
-                  >
-                    다시 볼 항목 확인
-                  </Link>
-                ) : null}
-                {writeHref ? (
-                  <Link
-                    href={writeHref}
-                    className="flex min-h-11 items-center border-t border-[var(--border-subtle)] text-sm font-semibold text-[var(--text-secondary)] underline-offset-4 hover:text-[var(--text-primary)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
-                  >
-                    다른 답안 작업 보기
-                  </Link>
-                ) : null}
-                {calculatorHref ? (
-                  <Link
-                    href={calculatorHref}
-                    className="flex min-h-11 items-center border-t border-[var(--border-subtle)] text-sm font-semibold text-[var(--text-secondary)] underline-offset-4 hover:text-[var(--text-primary)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
-                  >
-                    관련 계산 검산 순서 보기
-                  </Link>
-                ) : null}
-              </nav>
-            ) : null}
+                복습 맥락
+              </h2>
+              <dl className="mt-3 space-y-3">
+                <div>
+                  <dt className="v3-type-caption font-semibold text-[var(--text-tertiary)]">반복 기준</dt>
+                  <dd className="v3-type-caption ko-keep mt-1 text-[var(--text-secondary)]">{recurrenceText}</dd>
+                </div>
+                <div className="border-t border-[var(--border-subtle)] pt-3">
+                  <dt className="v3-type-caption font-semibold text-[var(--text-tertiary)]">저장 기록</dt>
+                  <dd className="v3-type-caption ko-keep mt-1 text-[var(--text-secondary)]">
+                    {formatRecordDate(savedAt)} 저장 · {reviewQueueCount > 0 ? `복습 큐 ${reviewQueueCount}개` : "복습 큐 확인 필요"}
+                  </dd>
+                </div>
+              </dl>
+              <details data-s228-next-action data-s232d2-supplemental-context className="group mt-2 border-t border-[var(--border-subtle)]">
+                <summary className="v3-type-caption flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 font-semibold text-[var(--text-secondary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]">
+                  다음 행동과 보조 근거 보기
+                  <span aria-hidden="true" className="transition-transform group-open:rotate-180">⌄</span>
+                </summary>
+                <div className="space-y-4 pb-1 pt-2">
+                  <div>
+                    <p className="v3-type-caption font-semibold text-[var(--text-tertiary)]">다음 행동</p>
+                    <p className="v3-type-compact ko-keep mt-1 text-[var(--text-primary)]">{nextAction}</p>
+                  </div>
+                  <div className="border-t border-[var(--border-subtle)] pt-4">
+                    <p className="v3-type-caption font-semibold text-[var(--text-tertiary)]">적용 문장 초점</p>
+                    <p
+                      className="v3-prose ko-keep mt-2 text-[var(--text-primary)]"
+                      data-v3-typography-role="prose"
+                    >
+                      {coreLine}
+                    </p>
+                    {visibleTerms.length > 0 ? (
+                      <ul className="mt-4 flex flex-wrap gap-2" aria-label="핵심 키워드">
+                        {visibleTerms.map((term) => (
+                          <li
+                            key={term}
+                            className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-subtle)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)]"
+                          >
+                            {term}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </div>
+                  <StudyLedgerSupportingEvidencePanel
+                    topicCandidate={topicCandidate}
+                    items={supportingEvidence}
+                  />
+                  {reviewHref || calculatorHref || writeHref ? (
+                    <nav
+                      data-s232d2-linked-learning
+                      aria-label="연결된 학습 화면"
+                      className="rounded-[var(--ledger-radius-card)] border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-3"
+                    >
+                      {reviewHref ? (
+                        <Link
+                          href={reviewHref}
+                          className="flex min-h-11 items-center text-sm font-semibold text-[var(--text-secondary)] underline-offset-4 hover:text-[var(--text-primary)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+                        >
+                          다시 볼 항목 확인
+                        </Link>
+                      ) : null}
+                      {writeHref ? (
+                        <Link
+                          href={writeHref}
+                          className="flex min-h-11 items-center border-t border-[var(--border-subtle)] text-sm font-semibold text-[var(--text-secondary)] underline-offset-4 hover:text-[var(--text-primary)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+                        >
+                          다른 답안 작업 보기
+                        </Link>
+                      ) : null}
+                      {calculatorHref ? (
+                        <Link
+                          href={calculatorHref}
+                          className="flex min-h-11 items-center border-t border-[var(--border-subtle)] text-sm font-semibold text-[var(--text-secondary)] underline-offset-4 hover:text-[var(--text-primary)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+                        >
+                          관련 계산 검산 순서 보기
+                        </Link>
+                      ) : null}
+                    </nav>
+                  ) : null}
+                </div>
+              </details>
+            </section>
           </aside>
         </div>
       </article>

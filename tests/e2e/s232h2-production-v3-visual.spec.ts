@@ -256,9 +256,20 @@ type FigmaComparison = {
 
 const syntheticOwnerId = "s232h2:v3-visual:v1";
 const syntheticFixtureSource = "S232H2 synthetic visual acceptance";
-const syntheticFixtureTitle = "S232H2 합성 학습 원장";
-const syntheticFixtureProblemIdentifier = "s232h2:v3-visual:ledger:v1";
+const syntheticFixtureTitle = "사업인정의 처분성";
+const syntheticFixtureProblemIdentifier = "s232h2:v3-visual:ledger:v2";
 const syntheticFixtureQuestion =
+  "사업인정의 처분성을 검토하시오. 시각 검증용 합성 문제입니다.";
+const syntheticLedgerAnswer =
+  "사업인정은 수용권을 발생시키므로 처분성이 인정된다.";
+const syntheticLedgerCorrectAnswer =
+  "사업인정은 특정 사업에 수용권을 설정하여 국민의 권리·의무에 직접 영향을 미친다.";
+const syntheticLedgerGap =
+  "처분성 판단 기준과 수용권 발생의 연결이 빠졌습니다.";
+const historicalSyntheticFixtureTitle = "S232H2 합성 학습 원장";
+const historicalSyntheticFixtureProblemIdentifier =
+  "s232h2:v3-visual:ledger:v1";
+const historicalSyntheticFixtureQuestion =
   "신뢰보호원칙의 요건을 검토하시오. 시각 검증용 합성 문제입니다.";
 const syntheticFixtureAnswer =
   "행정청의 공적 견해표명과 보호가치 있는 신뢰를 차례로 검토합니다. 이 문장은 시각 검증용 합성 기록입니다.";
@@ -655,6 +666,26 @@ function h2AcceptanceMarkers(
   );
 }
 
+function hasExplicitUnconfirmedFields(item: SyntheticItem) {
+  const confirmed = item.rawPayload?.user_confirmed_fields;
+  return (
+    confirmed !== null &&
+    typeof confirmed === "object" &&
+    (confirmed as Record<string, unknown>).hasManualCorrection === false &&
+    (confirmed as Record<string, unknown>).ocrConfirmedByLearner === false
+  );
+}
+
+function hasHistoricalAbsentConfirmationFields(item: SyntheticItem) {
+  const confirmed = item.rawPayload?.user_confirmed_fields;
+  return (
+    confirmed !== null &&
+    typeof confirmed === "object" &&
+    !("hasManualCorrection" in confirmed) &&
+    !("ocrConfirmedByLearner" in confirmed)
+  );
+}
+
 function isCurrentH2Ledger(item: SyntheticItem) {
   return (
     item.examName === "감정평가사 2차" &&
@@ -664,12 +695,32 @@ function isCurrentH2Ledger(item: SyntheticItem) {
     item.problemTitle === syntheticFixtureTitle &&
     item.problemIdentifier === syntheticFixtureProblemIdentifier &&
     item.rawQuestionText === syntheticFixtureQuestion &&
+    item.rawAnswerText === syntheticLedgerAnswer &&
+    item.correctAnswer === syntheticLedgerCorrectAnswer &&
+    item.userAnswer === syntheticLedgerAnswer &&
+    item.userReasonText === syntheticLedgerGap &&
+    item.confidence === "중간" &&
+    h2AcceptanceMarkers(item, "ledger") &&
+    hasExplicitUnconfirmedFields(item)
+  );
+}
+
+function isHistoricalH2LedgerV1(item: SyntheticItem) {
+  return (
+    item.examName === "감정평가사 2차" &&
+    item.subjectLabel === "감정평가 및 보상법규" &&
+    item.sourceType === "text" &&
+    item.sourceLabel === syntheticFixtureSource &&
+    item.problemTitle === historicalSyntheticFixtureTitle &&
+    item.problemIdentifier === historicalSyntheticFixtureProblemIdentifier &&
+    item.rawQuestionText === historicalSyntheticFixtureQuestion &&
     item.rawAnswerText === syntheticFixtureAnswer &&
     item.correctAnswer === syntheticFixtureCorrectAnswer &&
     item.userAnswer === syntheticFixtureAnswer &&
     item.userReasonText === syntheticFixtureGap &&
     item.confidence === "중간" &&
-    h2AcceptanceMarkers(item, "ledger")
+    h2AcceptanceMarkers(item, "ledger") &&
+    hasHistoricalAbsentConfirmationFields(item)
   );
 }
 
@@ -677,8 +728,8 @@ function isLegacyH2Ledger(item: SyntheticItem) {
   return exactItemFields(item, {
     subjectLabel: "감정평가 및 보상법규",
     sourceLabel: syntheticFixtureSource,
-    problemTitle: syntheticFixtureTitle,
-    rawQuestionText: syntheticFixtureQuestion,
+    problemTitle: historicalSyntheticFixtureTitle,
+    rawQuestionText: historicalSyntheticFixtureQuestion,
     rawAnswerText: syntheticFixtureAnswer,
     correctAnswer: syntheticFixtureCorrectAnswer,
     userAnswer: syntheticFixtureAnswer,
@@ -686,7 +737,7 @@ function isLegacyH2Ledger(item: SyntheticItem) {
   });
 }
 
-function isH2QueueAnchor(item: SyntheticItem) {
+function matchesH2QueueAnchorFields(item: SyntheticItem) {
   const identifier = item.problemIdentifier?.match(
     /^s232h2:v3-visual:queue:(\d{3})$/,
   );
@@ -706,6 +757,17 @@ function isH2QueueAnchor(item: SyntheticItem) {
     item.userReasonText === syntheticFixtureGap &&
     item.confidence === "낮음" &&
     h2AcceptanceMarkers(item, "queue-anchor")
+  );
+}
+
+function isH2QueueAnchor(item: SyntheticItem) {
+  return matchesH2QueueAnchorFields(item) && hasExplicitUnconfirmedFields(item);
+}
+
+function isHistoricalH2QueueAnchor(item: SyntheticItem) {
+  return (
+    matchesH2QueueAnchorFields(item) &&
+    hasHistoricalAbsentConfirmationFields(item)
   );
 }
 
@@ -784,8 +846,10 @@ const historicalSyntheticContracts = [
 function matchesExactSyntheticRootFields(item: SyntheticItem) {
   return (
     isCurrentH2Ledger(item) ||
+    isHistoricalH2LedgerV1(item) ||
     isLegacyH2Ledger(item) ||
     isH2QueueAnchor(item) ||
+    isHistoricalH2QueueAnchor(item) ||
     historicalSyntheticContracts.some((contract) => contract(item))
   );
 }
@@ -1027,7 +1091,7 @@ const exactSyntheticPayloadSystemStrings = new Set([
 const exactSyntheticSystemValuePatterns = [
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
   /^\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z)?$/,
-  /^s232h2:v3-visual:(?:ledger:v1|queue:\d{3})$/,
+  /^s232h2:v3-visual:(?:ledger:v[12]|queue:\d{3})$/,
   /^concept:second:(?:감정평가실무:(?:3방식|원가방식|비교방식|수익방식|토지평가|건물평가|임대료평가|보상평가|특수물건|검산-CASIO)|감정평가이론:(?:감정평가의-본질|가치이론|시장분석|최고최선이용|3방식-이론|시장가치-공정가치|감정평가-절차|평가윤리)|감정평가-및-보상법규:(?:행정법-기초|토지보상법|사업인정|수용재결|손실보상-원칙|보상항목|행정쟁송|감정평가법령))$/,
   /^curriculum-(?:capture|review)-capture-note-second-(?:practice-(?:method-selection|adjustment|income-approach|cost-approach|sales-comparison|final-value)|theory-(?:value-theory|price-principle|approach-logic|market-analysis|highest-best-use)|comp-law-(?:requirements|statute|procedure-project-approval|precedent-principles|issue-subsumption|conclusion))$/,
   /^second-(?:practice-(?:method-selection|adjustment|income-approach|cost-approach|sales-comparison|final-value)|theory-(?:value-theory|price-principle|approach-logic|market-analysis|highest-best-use)|comp-law-(?:requirements|statute|procedure-project-approval|precedent-principles|issue-subsumption|conclusion))$/,
@@ -1348,55 +1412,48 @@ async function auditSyntheticAccount(
   const listedExactFixtures = listedItems.filter((item) =>
     owned.has(resolveSyntheticItemId(item)),
   );
-  const accountOwned = new Set(
-    mergedItems
-      .filter((item) => item.userId === sessionUserId)
-      .map(resolveSyntheticItemId)
-      .filter(Boolean),
-  );
-  const listedAccountOwned = listedItems.filter(
-    (item) => item.userId === sessionUserId,
-  );
+  const listedFixtureCoverage =
+    listedExactFixtures.length === listedItems.length;
   const detailOwnershipClosed = detailItems.every(
-    (item) => item.userId === sessionUserId,
+    (item) => owned.has(resolveSyntheticItemId(item)),
   );
   const queueIds = queue
     .map((item) => item.itemId)
     .filter((value): value is string => Boolean(value));
   const syntheticQueue = queue.filter((item) =>
-    Boolean(item.itemId && accountOwned.has(item.itemId)),
+    Boolean(item.itemId && owned.has(item.itemId)),
   );
   const planningIds = planningItemIds(observed);
   const syntheticTodayCount = planningIds.today.filter((itemId) =>
-    accountOwned.has(itemId),
+    owned.has(itemId),
   ).length;
   const syntheticWeeklyCount = planningIds.weekly.filter((itemId) =>
-    accountOwned.has(itemId),
+    owned.has(itemId),
   ).length;
   const itemListingComplete = listedItems.length < 501;
   const studyLogListingComplete = logs.length < 501;
   const strictOwnershipContract =
-    listedAccountOwned.length === listedItems.length &&
+    listedFixtureCoverage &&
     detailOwnershipClosed &&
     logs.length === 0;
   const queueDetailsAudited =
     queueIds.length === syntheticQueue.length &&
     queueIds.every((itemId) =>
-      accountOwned.has(itemId) &&
+      owned.has(itemId) &&
       observed.details.some((detail) => detail.itemId === itemId),
     );
   const todayDetailsAudited =
     !includePlanning ||
     (planningIds.today.length === syntheticTodayCount &&
       planningIds.today.every((itemId) =>
-        accountOwned.has(itemId) &&
+        owned.has(itemId) &&
         observed.details.some((detail) => detail.itemId === itemId),
       ));
   const weeklyTaskDetailsAudited =
     !includePlanning ||
     (planningIds.weekly.length === syntheticWeeklyCount &&
       planningIds.weekly.every((itemId) =>
-        accountOwned.has(itemId) &&
+        owned.has(itemId) &&
         observed.details.some((detail) => detail.itemId === itemId),
       ));
   const pendingOwnedQueue = queueIds.some((itemId) => owned.has(itemId));
@@ -1434,9 +1491,10 @@ async function auditSyntheticAccount(
     "Synthetic payload diagnostics expose schema paths and counts only, never values.",
   ).toEqual([]);
   expect(
-    listedAccountOwned.length,
-    "Every listed row must belong to the exact governed account.",
+    listedExactFixtures.length,
+    "Every listed row must be an exact allowlisted synthetic fixture or owned rewrite.",
   ).toBe(listedItems.length);
+  expect(listedFixtureCoverage).toBe(true);
   expect(
     logs.length,
     "The visual fixture creates no study logs; any study log makes capture fail closed.",
@@ -1465,7 +1523,7 @@ async function auditSyntheticAccount(
     primaryQueueTitle: queue[0]?.problemTitle ?? null,
     privacyAudit: {
       accountItemCount: listedItems.length,
-      syntheticItemCount: listedAccountOwned.length,
+      syntheticItemCount: listedExactFixtures.length,
       exactFixtureItemCount: listedExactFixtures.length,
       accountStudyLogCount: logs.length,
       syntheticStudyLogCount: 0,
@@ -1499,6 +1557,34 @@ function syntheticItemPayload({
 }) {
   const serial = String(generation ?? 0).padStart(3, "0");
   const queueAnchor = role === "queue-anchor";
+  const learnerAnswer = queueAnchor
+    ? syntheticFixtureAnswer
+    : syntheticLedgerAnswer;
+  const correctAnswer = queueAnchor
+    ? syntheticFixtureCorrectAnswer
+    : syntheticLedgerCorrectAnswer;
+  const biggestGap = queueAnchor ? syntheticFixtureGap : syntheticLedgerGap;
+  const keyConcepts = queueAnchor
+    ? ["신뢰보호", "공적 견해표명", "보호가치"]
+    : ["사업인정", "처분성", "수용권"];
+  const weakStructurePoint = queueAnchor
+    ? "요건과 사실 적용을 같은 순서로 연결해야 합니다."
+    : "법률효과와 권리구제 필요성을 같은 순서로 연결해야 합니다.";
+  const weakApplicationSentence = queueAnchor
+    ? "공적 견해표명에 해당하는 합성 사실을 구체적으로 연결해야 합니다."
+    : "사업인정으로 발생하는 구체적 법률효과를 적어야 합니다.";
+  const rewriteInstruction = queueAnchor
+    ? "요건, 대응 사실, 소결론을 한 문단에 연결합니다."
+    : "처분의 법률효과와 권리구제 필요성을 한 문단에 연결합니다.";
+  const referenceStructure = queueAnchor
+    ? "I. 공적 견해표명 II. 신뢰와 귀책 III. 보호가치 IV. 결론"
+    : syntheticLedgerCorrectAnswer;
+  const outlineDraft = queueAnchor
+    ? referenceStructure
+    : "I. 사업인정의 성격 II. 수용권 설정 III. 권리구제 IV. 결론";
+  const issueRecall = queueAnchor
+    ? "신뢰보호 요건을 순서대로 검토합니다."
+    : "사업인정의 처분성을 법률효과 중심으로 검토합니다.";
   return {
     examName: "감정평가사 2차",
     subjectLabel: "감정평가 및 보상법규",
@@ -1515,31 +1601,29 @@ function syntheticItemPayload({
     rawQuestionText: queueAnchor
       ? `S232H2 합성 복습 앵커 ${serial}: 신뢰보호 요건을 다시 연결합니다.`
       : syntheticFixtureQuestion,
-    rawAnswerText: syntheticFixtureAnswer,
-    correctAnswer: syntheticFixtureCorrectAnswer,
-    userAnswer: syntheticFixtureAnswer,
-    userReasonText: syntheticFixtureGap,
+    rawAnswerText: learnerAnswer,
+    correctAnswer,
+    userAnswer: learnerAnswer,
+    userReasonText: biggestGap,
     confidence: queueAnchor ? "낮음" : "중간",
     timeSpentSeconds: queueAnchor ? 180 : undefined,
-    keyConcepts: ["신뢰보호", "공적 견해표명", "보호가치"],
-    missingIssue: syntheticFixtureGap,
-    weakStructurePoint: "요건과 사실 적용을 같은 순서로 연결해야 합니다.",
-    weakApplicationSentence:
-      "공적 견해표명에 해당하는 합성 사실을 구체적으로 연결해야 합니다.",
-    rewriteInstruction: "요건, 대응 사실, 소결론을 한 문단에 연결합니다.",
-    referenceStructure:
-      "I. 공적 견해표명 II. 신뢰와 귀책 III. 보호가치 IV. 결론",
-    myAnswerSummary: syntheticFixtureAnswer,
-    issueRecall: "신뢰보호 요건을 순서대로 검토합니다.",
-    outlineDraft: "I. 공적 견해표명 II. 신뢰와 귀책 III. 보호가치 IV. 결론",
+    keyConcepts,
+    missingIssue: biggestGap,
+    weakStructurePoint,
+    weakApplicationSentence,
+    rewriteInstruction,
+    referenceStructure,
+    myAnswerSummary: learnerAnswer,
+    issueRecall,
+    outlineDraft,
     productionBeforeComparison: true,
     referenceAnswerAddedAfterProduction: true,
-    biggestGap: syntheticFixtureGap,
+    biggestGap,
     rewriteCompleted: false,
     captureIntent: "save",
     createdFromCapture: true,
     extractionPayload: {
-      raw_ocr_text: syntheticFixtureAnswer,
+      raw_ocr_text: learnerAnswer,
       raw_extraction_json: {
         acceptance_fixture_id: syntheticOwnerId,
         acceptance_fixture_role: role,
@@ -1547,12 +1631,14 @@ function syntheticItemPayload({
       normalized_draft: null,
       user_confirmed_fields: {
         subjectLabel: "감정평가 및 보상법규",
-        userAnswer: syntheticFixtureAnswer,
+        userAnswer: learnerAnswer,
         production_before_comparison: true,
         reference_answer_added_after_production: true,
-        biggest_gap: syntheticFixtureGap,
+        biggest_gap: biggestGap,
         sourceType: "text",
         examMode: "second",
+        hasManualCorrection: false,
+        ocrConfirmedByLearner: false,
         acceptance_fixture_id: syntheticOwnerId,
         acceptance_fixture_role: role,
       },
@@ -1585,9 +1671,7 @@ async function ensureSyntheticLedgerFixture(
   initialAudit: SyntheticAccountAudit,
 ) {
   let audit = initialAudit;
-  let ledger = audit.items.find(
-    (item) => isCurrentH2Ledger(item) || isLegacyH2Ledger(item),
-  );
+  let ledger = audit.items.find(isCurrentH2Ledger);
   if (!ledger) {
     const created = await postSyntheticItem(
       page,
@@ -2155,6 +2239,9 @@ async function verifyRepresentativeFigmaStructure(
     routeId === "ledger" &&
     (viewportWidth === 390 || viewportWidth === 1440)
   ) {
+    const readingHeader = page.locator("[data-s232d2-reading-header]");
+    const stateEvidence = readingHeader.locator("[data-s232d2-state-evidence]");
+    const recoveryHeading = page.locator("[data-s232d2-recovery-heading]");
     const chrome = await page
       .locator("[data-s232d1-ledger-chrome]")
       .boundingBox();
@@ -2176,6 +2263,30 @@ async function verifyRepresentativeFigmaStructure(
     const sticky = await page
       .locator('[data-v3-component="StickyAction"]')
       .boundingBox();
+    await expect(stateEvidence).toBeVisible();
+    await expect(readingHeader).toHaveCSS("border-bottom-width", "0px");
+    await expect(recoveryHeading).toContainText("이번에 회복할 문장");
+    const canonicalOrder = await page.evaluate(() => {
+      const reading = document.querySelector("[data-s232d2-reading-column]");
+      const selectors = [
+        '[data-v3-component="TrustEvidenceBar"]',
+        '[data-v3-component="BiggestGap"]',
+        "[data-s232d2-recovery-heading]",
+        "[data-s232d2-learner-evidence]",
+        '[data-v3-component="StickyAction"]',
+      ];
+      const nodes = selectors.map((selector) =>
+        reading?.querySelector(selector),
+      );
+      return nodes.every(Boolean) && nodes.every((node, index) =>
+        index === 0 ||
+        Boolean(
+          nodes[index - 1]!.compareDocumentPosition(node!) &
+            Node.DOCUMENT_POSITION_FOLLOWING,
+        ),
+      );
+    });
+    expect(canonicalOrder).toBe(true);
     for (const box of [chrome, reading, trust, gap, excerpt, sticky])
       expect(box).not.toBeNull();
     expect(chrome!.y).toBeCloseTo(0, 0);
@@ -2192,6 +2303,9 @@ async function verifyRepresentativeFigmaStructure(
       const rail = await page
         .locator("[data-s232d2-evidence-rail]")
         .boundingBox();
+      await expect(
+        page.locator("[data-s232d2-evidence-rail] [data-s232d2-recovery-context]"),
+      ).toBeVisible();
       expect(rail).not.toBeNull();
       expect(reading!.x).toBeCloseTo(220, 0);
       expect(reading!.width).toBeGreaterThanOrEqual(640);
@@ -3013,73 +3127,73 @@ async function compareScreenshotToFigmaReference(
     },
   );
 
-  expect(metrics.actualWidth, `${reference.node} actual width`).toBe(
+  expect.soft(metrics.actualWidth, `${reference.node} actual width`).toBe(
     metrics.referenceWidth,
   );
-  expect(metrics.actualHeight, `${reference.node} actual height`).toBe(
+  expect.soft(metrics.actualHeight, `${reference.node} actual height`).toBe(
     metrics.referenceHeight,
   );
-  expect(
+  expect.soft(
     metrics.meanColorDelta,
     `${reference.node} mean canonical-pixel delta`,
   ).toBeLessThanOrEqual(0.18);
-  expect(
+  expect.soft(
     metrics.nearPixelRatio,
     `${reference.node} near-canonical pixel ratio`,
   ).toBeGreaterThanOrEqual(0.5);
-  expect(
+  expect.soft(
     metrics.darkPixelRatioDelta,
     `${reference.node} quiet-navy distribution`,
   ).toBeLessThanOrEqual(0.09);
-  expect(
+  expect.soft(
     metrics.warmPixelRatioDelta,
     `${reference.node} recovery-cue distribution`,
   ).toBeLessThanOrEqual(0.09);
-  expect(
+  expect.soft(
     metrics.bluePixelRatioDelta,
     `${reference.node} evidence-blue distribution`,
   ).toBeLessThanOrEqual(0.12);
-  expect(
+  expect.soft(
     metrics.cellRgbMeanAbsoluteError,
     `${reference.node} spatial RGB grid`,
   ).toBeLessThanOrEqual(0.1);
-  expect(
+  expect.soft(
     metrics.cellOccupancyMeanAbsoluteError,
     `${reference.node} spatial semantic-color grid`,
   ).toBeLessThanOrEqual(0.12);
-  expect(
+  expect.soft(
     metrics.edgeGridCorrelation,
     `${reference.node} spatial edge-grid correlation`,
   ).toBeGreaterThanOrEqual(0.5);
-  expect(
+  expect.soft(
     metrics.edgeEnergyRatio,
     `${reference.node} edge-energy lower bound`,
   ).toBeGreaterThanOrEqual(0.4);
-  expect(
+  expect.soft(
     metrics.edgeEnergyRatio,
     `${reference.node} edge-energy upper bound`,
   ).toBeLessThanOrEqual(2.2);
-  expect(
+  expect.soft(
     metrics.dilatedEdgeF1,
     `${reference.node} spatial edge overlap`,
   ).toBeGreaterThanOrEqual(0.25);
-  expect(
+  expect.soft(
     metrics.anchorMaxRgbMeanDelta,
     `${reference.node} anchor RGB geometry`,
   ).toBeLessThanOrEqual(0.18);
-  expect(
+  expect.soft(
     metrics.anchorMaxLuminanceStdDelta,
     `${reference.node} anchor contrast geometry`,
   ).toBeLessThanOrEqual(0.18);
-  expect(
+  expect.soft(
     metrics.anchorMaxDarkRatioDelta,
     `${reference.node} anchor dark occupancy`,
   ).toBeLessThanOrEqual(0.2);
-  expect(
+  expect.soft(
     metrics.anchorMinEdgeDensityRatio,
     `${reference.node} anchor edge lower bound`,
   ).toBeGreaterThanOrEqual(0.2);
-  expect(
+  expect.soft(
     metrics.anchorMaxEdgeDensityRatio,
     `${reference.node} anchor edge upper bound`,
   ).toBeLessThanOrEqual(3.5);
@@ -3102,7 +3216,7 @@ async function compareScreenshotToFigmaReference(
     metrics.anchorMaxDarkRatioDelta <= 0.2 &&
     metrics.anchorMinEdgeDensityRatio >= 0.2 &&
     metrics.anchorMaxEdgeDensityRatio <= 3.5;
-  expect(
+  expect.soft(
     passed,
     `${reference.node} must satisfy every direct Figma comparison threshold.`,
   ).toBe(true);
@@ -3435,7 +3549,7 @@ test("S232H.2 adopts V3 across the production learner routes with direct before/
     );
   }
   expect(figmaComparisons).toHaveLength(3);
-  expect(figmaComparisons.every((comparison) => comparison.passed)).toBe(true);
+  expect.soft(figmaComparisons.every((comparison) => comparison.passed)).toBe(true);
   const figmaReferenceScreenshots = figmaReferences.map(
     (reference) => reference.referenceFileName,
   );

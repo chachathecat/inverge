@@ -320,6 +320,10 @@ test("S232H.2 produces the fixed initial, dynamic, before, and Figma evidence se
   assert.match(spec, /expect\(baselineScreenshots\)\.toHaveLength\(3\)/);
   assert.match(spec, /const figmaReferenceScreenshots = figmaReferences\.map/);
   assert.match(spec, /expect\(figmaComparisons\)\.toHaveLength\(3\)/);
+  assert.match(
+    spec,
+    /expect\.soft\(figmaComparisons\.every\(\(comparison\) => comparison\.passed\)\)\.toBe\(true\)/,
+  );
   assert.match(spec, /expect\(screenshotNames\)\.toHaveLength\(28\)/);
   assert.match(spec, /s232h2-before-ledger-/);
   assert.match(spec, /s232h2-before-calculator-390\.png/);
@@ -414,7 +418,33 @@ test("S232H.2 evidence is API-audited synthetic data and directly compared with 
   );
   assert.match(spec, /S232H2 synthetic visual acceptance/);
   assert.match(spec, /s232h2:v3-visual:v1/);
+  assert.match(spec, /s232h2:v3-visual:ledger:v2/);
   assert.match(spec, /s232h2:v3-visual:ledger:v1/);
+  assert.match(spec, /isHistoricalH2LedgerV1/);
+  assert.match(spec, /audit\.items\.find\(isCurrentH2Ledger\)/);
+  const currentLedgerClassifier = spec.slice(
+    spec.indexOf("function isCurrentH2Ledger"),
+    spec.indexOf("function isHistoricalH2LedgerV1"),
+  );
+  const currentQueueClassifier = spec.slice(
+    spec.indexOf("function isH2QueueAnchor"),
+    spec.indexOf("function isHistoricalH2QueueAnchor"),
+  );
+  const historicalLedgerClassifier = spec.slice(
+    spec.indexOf("function isHistoricalH2LedgerV1"),
+    spec.indexOf("function isLegacyH2Ledger"),
+  );
+  assert.match(currentLedgerClassifier, /hasExplicitUnconfirmedFields\(item\)/);
+  assert.match(currentQueueClassifier, /hasExplicitUnconfirmedFields\(item\)/);
+  assert.match(
+    historicalLedgerClassifier,
+    /hasHistoricalAbsentConfirmationFields\(item\)/,
+  );
+  assert.match(
+    spec,
+    /function hasExplicitUnconfirmedFields[\s\S]*?hasManualCorrection === false[\s\S]*?ocrConfirmedByLearner === false/,
+  );
+  assert.match(spec, /hasHistoricalAbsentConfirmationFields/);
   assert.match(spec, /acceptance_fixture_id/);
   assert.match(spec, /acceptance_fixture_role/);
   assert.match(spec, /isExactSyntheticRoot/);
@@ -464,8 +494,21 @@ test("S232H.2 evidence is API-audited synthetic data and directly compared with 
   );
   assert.match(
     spec,
-    /listedAccountOwned\.length === listedItems\.length[\s\S]*?detailOwnershipClosed[\s\S]*?logs\.length === 0/,
+    /const listedFixtureCoverage =\s*listedExactFixtures\.length === listedItems\.length/,
   );
+  assert.match(
+    spec,
+    /const strictOwnershipContract =\s*listedFixtureCoverage &&\s*detailOwnershipClosed &&\s*logs\.length === 0/,
+  );
+  assert.match(
+    spec,
+    /const detailOwnershipClosed = detailItems\.every\(\s*\(item\) => owned\.has\(resolveSyntheticItemId\(item\)\)/,
+  );
+  assert.match(spec, /syntheticQueue = queue\.filter[\s\S]*?owned\.has\(item\.itemId\)/);
+  assert.match(spec, /planningIds\.today\.filter\(\(itemId\) =>\s*owned\.has\(itemId\)/);
+  assert.match(spec, /planningIds\.weekly\.filter\(\(itemId\) =>\s*owned\.has\(itemId\)/);
+  assert.match(spec, /syntheticItemCount: listedExactFixtures\.length/);
+  assert.doesNotMatch(spec, /accountOwned|listedAccountOwned/);
   assert.match(spec, /const governedSyntheticAccount = sessionBound/);
   assert.match(spec, /item\.userId === sessionUserId/);
   assert.match(spec, /exactFixtureItemCount/);
@@ -540,7 +583,18 @@ test("S232H.2 evidence is API-audited synthetic data and directly compared with 
   assert.match(spec, /anchorMinEdgeDensityRatio/);
   assert.match(spec, /anchorsByNode/);
   assert.match(spec, /verifyRepresentativeFigmaStructure/);
+  assert.match(spec, /data-s232d2-state-evidence/);
+  assert.match(spec, /data-s232d2-recovery-heading/);
+  assert.match(spec, /이번에 회복할 문장/);
   assert.match(spec, /spatial edge-grid correlation/);
+  assert.match(
+    spec,
+    /expect\.soft\(\s*metrics\.edgeGridCorrelation,[\s\S]*?toBeGreaterThanOrEqual\(0\.5\)/,
+  );
+  assert.match(
+    spec,
+    /expect\.soft\(\s*passed,[\s\S]*?must satisfy every direct Figma comparison threshold/,
+  );
   assert.match(spec, /const passed =/);
   assert.match(spec, /figmaComparisons/);
   assert.match(spec, /meanColorDelta/);

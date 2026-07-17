@@ -11,6 +11,9 @@ const railStart = detail.indexOf("<aside", readingStart);
 const railEnd = detail.indexOf("</aside>", railStart);
 const reading = detail.slice(readingStart, railStart);
 const rail = detail.slice(railStart, railEnd);
+const supplementalStart = rail.indexOf("data-s232d2-supplemental-context");
+const supplementalEnd = rail.indexOf("</details>", supplementalStart);
+const supplemental = rail.slice(supplementalStart, supplementalEnd);
 
 test("S232D.2 assigns learner work to the reading column in canonical order", () => {
   assert.ok(readingStart >= 0, "missing D.2 reading-column ownership marker");
@@ -19,7 +22,7 @@ test("S232D.2 assigns learner work to the reading column in canonical order", ()
   const order = [
     "<TrustEvidenceBar",
     "<BiggestGap",
-    "data-s232d2-recovery-context",
+    "data-s232d2-recovery-heading",
     "data-s232d2-learner-evidence",
     "<EvidenceExcerpt",
     "<StickyAction",
@@ -37,10 +40,19 @@ test("S232D.2 assigns learner work to the reading column in canonical order", ()
 test("S232D.2 limits the evidence rail to persisted review and fail-closed support", () => {
   assert.match(rail, /data-s232d2-review-context/);
   assert.match(rail, /<UntypedReferenceDisclosure/);
+  assert.match(rail, /data-s232d2-recovery-context/);
+  assert.match(rail, /data-s228-next-action/);
+  assert.match(rail, /data-s232d2-supplemental-context/);
+  assert.match(rail, /\{coreLine\}/);
   assert.match(rail, /<StudyLedgerSupportingEvidencePanel/);
   assert.match(rail, /data-s232d2-linked-learning/);
+  assert.ok(supplementalStart >= 0 && supplementalEnd > supplementalStart);
+  assert.match(supplemental, /<StudyLedgerSupportingEvidencePanel/);
+  assert.match(supplemental, /data-s232d2-linked-learning/);
   assert.doesNotMatch(rail, /<TrustEvidenceBar|<BiggestGap|<EvidenceExcerpt|<StickyAction|learnerEvidence/);
-  assert.doesNotMatch(reading, /data-s232d2-review-context|<UntypedReferenceDisclosure|<StudyLedgerSupportingEvidencePanel/);
+  assert.doesNotMatch(reading, /data-s232d2-review-context|data-s232d2-recovery-context|<UntypedReferenceDisclosure|<StudyLedgerSupportingEvidencePanel/);
+  assert.match(reading, /data-s232d2-state-evidence/);
+  assert.doesNotMatch(reading, /data-s232d2-reading-header[\s\S]{0,120}?border-b/);
 });
 
 test("S232D.2 keeps learner and reference empty states independent", () => {
@@ -69,7 +81,7 @@ test("S232D.2 never promotes untyped reference text to Official or Confirmed", (
 
 test("S232D.2 preserves 680 + 32 + 288 desktop geometry and a 768 single column", () => {
   assert.match(detail, /data-s232d2-ledger-workspace/);
-  assert.match(detail, /grid gap-8 lg:grid-cols-\[minmax\(0,var\(--ledger-reading-column\)\)_var\(--ledger-evidence-rail\)\]/);
+  assert.match(detail, /grid gap-5 lg:grid-cols-\[minmax\(0,var\(--ledger-reading-column\)\)_var\(--ledger-evidence-rail\)\][^"\n]*lg:gap-8/);
   assert.doesNotMatch(detail, /(?:sm|md):grid-cols-\[minmax\(0,var\(--ledger-reading-column\)\)/);
   assert.match(globals, /--ledger-reading-column:\s*680px/);
   assert.match(globals, /--ledger-evidence-rail:\s*288px/);
