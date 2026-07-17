@@ -32,6 +32,16 @@ export type {
   FailureAwareSystemState,
 } from "../../lib/review-os/failure-aware-state";
 
+export {
+  V3ActionButton,
+  V3ActionLink,
+  V3QuietDisclosure,
+  V3RouteFrame,
+  V3RouteHeader,
+  V3SectionHeader,
+  V3Surface,
+} from "./v3-route-ui";
+
 export { TrustEvidenceBar } from "./trust-evidence-bar";
 export type { TrustEvidenceBarProps } from "./trust-evidence-bar";
 export type {
