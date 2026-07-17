@@ -2533,15 +2533,25 @@ async function keyboardFocusProbe(page: Page, preferredSelector: string, routeKe
       const state = await staticStage("keyboard-step-state", () =>
         page.evaluate(() => {
           const active = document.activeElement;
+          const rawOrder = active?.getAttribute("data-s232g-tab-order") ?? null;
           return {
             target: active?.getAttribute("data-s232g-keyboard-probe") === "target",
-            order: Number(active?.getAttribute("data-s232g-tab-order") ?? -1),
+            registered: rawOrder !== null && /^\d+$/.test(rawOrder),
+            order: rawOrder === null ? -1 : Number(rawOrder),
           };
         }),
       );
       requireTruth(
-        state.order === expectedOrder,
-        `keyboard-${routeKey}-forward-order-exact`,
+        state.registered && Number.isInteger(state.order) && state.order >= 0,
+        `keyboard-${routeKey}-forward-unregistered-focus`,
+      );
+      requireTruth(
+        state.order <= expectedOrder,
+        `keyboard-${routeKey}-forward-skipped-registered`,
+      );
+      requireTruth(
+        state.order >= expectedOrder,
+        `keyboard-${routeKey}-forward-backward-jump`,
       );
       if (expectedOrder === prepared.targetOrder) {
         requireTruth(state.target, `keyboard-${routeKey}-forward-target-exact`);
@@ -2592,13 +2602,27 @@ async function keyboardFocusProbe(page: Page, preferredSelector: string, routeKe
     requireTruth(reversePrepared, `keyboard-${routeKey}-reverse-end-boundary`);
     for (let expectedOrder = prepared.count - 1; expectedOrder >= 0; expectedOrder -= 1) {
       await staticStage("keyboard-shift-tab", () => page.keyboard.press("Shift+Tab"));
-      const order = await staticStage("keyboard-reverse-state", () =>
-        page.evaluate(() =>
-          Number((document.activeElement as HTMLElement | null)?.dataset.s232gTabOrder ?? -1)),
+      const state = await staticStage("keyboard-reverse-state", () =>
+        page.evaluate(() => {
+          const active = document.activeElement as HTMLElement | null;
+          const rawOrder = active?.getAttribute("data-s232g-tab-order") ?? null;
+          return {
+            registered: rawOrder !== null && /^\d+$/.test(rawOrder),
+            order: rawOrder === null ? -1 : Number(rawOrder),
+          };
+        }),
       );
       requireTruth(
-        order === expectedOrder,
-        `keyboard-${routeKey}-reverse-order-exact`,
+        state.registered && Number.isInteger(state.order) && state.order >= 0,
+        `keyboard-${routeKey}-reverse-unregistered-focus`,
+      );
+      requireTruth(
+        state.order >= expectedOrder,
+        `keyboard-${routeKey}-reverse-skipped-registered`,
+      );
+      requireTruth(
+        state.order <= expectedOrder,
+        `keyboard-${routeKey}-reverse-forward-jump`,
       );
     }
     await staticStage("keyboard-reverse-exit", () => page.keyboard.press("Shift+Tab"));

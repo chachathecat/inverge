@@ -671,8 +671,15 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
   assert.match(keyboardProbeBlock, /keyboard-\$\{routeKey\}-reverse-end-boundary/);
   assert.match(keyboardProbeBlock, /keyboard-\$\{routeKey\}-reverse-start-boundary/);
   assert.match(keyboardProbeBlock, /prepared\.positiveTabIndexCount === 0/);
-  assert.match(keyboardProbeBlock, /state\.order === expectedOrder/);
-  assert.match(keyboardProbeBlock, /order === expectedOrder/);
+  assert.match(keyboardProbeBlock, /state\.registered && Number\.isInteger\(state\.order\)/);
+  assert.match(keyboardProbeBlock, /state\.order <= expectedOrder/);
+  assert.match(keyboardProbeBlock, /state\.order >= expectedOrder/);
+  assert.match(keyboardProbeBlock, /state\.order >= expectedOrder/);
+  assert.match(keyboardProbeBlock, /state\.order <= expectedOrder/);
+  assert.match(keyboardProbeBlock, /forward-unregistered-focus/);
+  assert.match(keyboardProbeBlock, /forward-skipped-registered/);
+  assert.match(keyboardProbeBlock, /forward-backward-jump/);
+  assert.doesNotMatch(keyboardProbeBlock, /forward-order-exact/);
   assert.match(keyboardProbeBlock, /finally \{/);
   assert.match(
     keyboardProbeBlock,
