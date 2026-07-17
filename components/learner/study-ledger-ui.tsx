@@ -665,7 +665,7 @@ export function StickyAction(props: StickyActionProps) {
       className={[
         "flex w-full flex-col gap-2",
         responsive
-          ? "fixed inset-x-0 bottom-0 z-30 min-h-[116px] border-t border-[var(--color-border-default)] bg-[var(--color-background-surface)] pb-[max(20px,env(safe-area-inset-bottom))] pl-[max(20px,env(safe-area-inset-left))] pr-[max(20px,env(safe-area-inset-right))] pt-4 shadow-[0_-6px_20px_-8px_rgba(20,23,33,0.08)] lg:static lg:min-h-[84px] lg:w-[300px] lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none"
+          ? "fixed inset-x-0 bottom-0 z-30 min-h-[116px] border-t border-[var(--color-border-default)] bg-[var(--color-background-surface)] pb-[max(20px,env(safe-area-inset-bottom))] pl-[max(20px,env(safe-area-inset-left))] pr-[max(20px,env(safe-area-inset-right))] pt-4 max-lg:shadow-[0_-6px_20px_-8px_rgba(20,23,33,0.08)] lg:static lg:min-h-[84px] lg:w-[300px] lg:border-0 lg:bg-transparent lg:p-0"
           : mode === "Dock"
             ? "min-h-[116px] max-w-[390px] border-t border-[var(--color-border-default)] bg-[var(--color-background-surface)] px-5 pb-5 pt-4 shadow-[0_-6px_20px_-8px_rgba(20,23,33,0.08)]"
             : "min-h-[84px] max-w-[300px]",
