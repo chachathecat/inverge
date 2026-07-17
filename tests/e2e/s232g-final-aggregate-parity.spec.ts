@@ -70,6 +70,7 @@ type RuntimeCounters = {
   httpErrorCount: number;
   blockedPreviewToolbarMutationCount: number;
   excludedPreviewToolbarConsoleErrorCount: number;
+  expectedCrossAccountConsoleErrorCount: number;
   expectedCrossAccountHttpErrorCount: number;
   causallyBoundNavigationAbortCount: number;
   itemMutationRequestCount: number;
@@ -84,6 +85,7 @@ function createRuntimeCounters(): RuntimeCounters {
     httpErrorCount: 0,
     blockedPreviewToolbarMutationCount: 0,
     excludedPreviewToolbarConsoleErrorCount: 0,
+    expectedCrossAccountConsoleErrorCount: 0,
     expectedCrossAccountHttpErrorCount: 0,
     causallyBoundNavigationAbortCount: 0,
     itemMutationRequestCount: 0,
@@ -112,6 +114,7 @@ async function installPrivacySafeRuntimeGuard(
   page: Page,
   counters: RuntimeCounters,
   phase: RuntimePhaseState,
+  expectedCrossAccountItemPath: string | null = null,
 ) {
   const runtimeOrigin = new URL(runtimeBaseUrl).origin;
   await context.route("**/*", async (route) => {
@@ -157,6 +160,27 @@ async function installPrivacySafeRuntimeGuard(
   page.on("console", (message) => {
     if (phase.current === "cleanup") return;
     if (message.type() !== "error") return;
+    let exactExpectedDenialConsoleError = false;
+    try {
+      const location = new URL(message.location().url);
+      exactExpectedDenialConsoleError =
+        phase.current === "expected-cross-account-ui-denial" &&
+        expectedCrossAccountItemPath !== null &&
+        location.origin === runtimeOrigin &&
+        location.pathname === expectedCrossAccountItemPath &&
+        location.search === "?mode=second" &&
+        location.hash === "" &&
+        /^Failed to load resource: the server responded with a status of 404(?: \(Not Found\))?$/.test(
+          message.text(),
+        ) &&
+        counters.expectedCrossAccountConsoleErrorCount < 1;
+    } catch {
+      exactExpectedDenialConsoleError = false;
+    }
+    if (exactExpectedDenialConsoleError) {
+      counters.expectedCrossAccountConsoleErrorCount += 1;
+      return;
+    }
     const exactToolbarBlock =
       message.text() === "Failed to load resource: net::ERR_BLOCKED_BY_CLIENT" &&
       isPreviewToolbarUrl(message.location().url) &&
@@ -209,9 +233,12 @@ async function installPrivacySafeRuntimeGuard(
       sameOrigin = location.origin === runtimeOrigin;
       expectedDenialDocument =
         phase.current === "expected-cross-account-ui-denial" &&
+        expectedCrossAccountItemPath !== null &&
         response.status() === 404 &&
         response.request().isNavigationRequest() &&
-        /^\/app\/items\/[^/]+$/.test(location.pathname);
+        location.pathname === expectedCrossAccountItemPath &&
+        location.search === "?mode=second" &&
+        location.hash === "";
     } catch {
       counters.httpErrorCount += 1;
       return;
@@ -2916,6 +2943,7 @@ test("S232G final aggregate exact-head authenticated parity", async ({ browser, 
       secondaryPage,
       secondaryCounters,
       secondaryPhase,
+      `/app/items/${encodeURIComponent(rewrittenItemId)}`,
     ),
   );
   try {
@@ -3160,6 +3188,10 @@ test("S232G final aggregate exact-head authenticated parity", async ({ browser, 
     allCounters,
     "expectedCrossAccountHttpErrorCount",
   );
+  const expectedCrossAccountConsoleErrorCount = sumCounters(
+    allCounters,
+    "expectedCrossAccountConsoleErrorCount",
+  );
   const causallyBoundNavigationAbortCount = sumCounters(
     allCounters,
     "causallyBoundNavigationAbortCount",
@@ -3177,13 +3209,23 @@ test("S232G final aggregate exact-head authenticated parity", async ({ browser, 
     allCounters,
     "excludedPreviewToolbarConsoleErrorCount",
   );
-  requireTruth(consoleErrorCount === 0, "unexpected-console-errors");
+  requireTruth(mainCounters.consoleErrorCount === 0, "unexpected-console-main");
+  requireTruth(
+    secondaryCounters.consoleErrorCount === 0,
+    "unexpected-console-secondary",
+  );
+  requireTruth(freshCounters.consoleErrorCount === 0, "unexpected-console-fresh");
   requireTruth(pageErrorCount === 0, "unexpected-page-errors");
   requireTruth(requestFailureCount === 0, "unexpected-request-failures");
   requireTruth(httpErrorCount === 0, "unexpected-http-errors");
   requireTruth(
     expectedCrossAccountHttpErrorCount === expectedCrossAccountHttpErrorCountTarget,
     "exact-cross-account-http-denial-count",
+  );
+  requireTruth(
+    expectedCrossAccountConsoleErrorCount === expectedCrossAccountHttpErrorCountTarget &&
+      expectedCrossAccountConsoleErrorCount <= 1,
+    "exact-cross-account-console-denial-count",
   );
   requireTruth(
     allCounters.every((counter) => counter.causallyBoundNavigationAbortCount <= 1) &&

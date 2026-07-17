@@ -529,6 +529,55 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
     runtimeSpec,
     /expectedCrossAccountHttpErrorCount === expectedCrossAccountHttpErrorCountTarget/,
   );
+  assert.match(runtimeSpec, /expectedCrossAccountConsoleErrorCount < 1/);
+  assert.match(runtimeSpec, /expectedCrossAccountItemPath: string \| null = null/);
+  assert.match(
+    runtimeSpec,
+    /secondaryPhase,\s*`\/app\/items\/\$\{encodeURIComponent\(rewrittenItemId\)\}`/,
+  );
+  const runtimeGuardStart = runtimeSpec.indexOf(
+    "async function installPrivacySafeRuntimeGuard",
+  );
+  const runtimeGuardEnd = runtimeSpec.indexOf(
+    "async function staticStage",
+    runtimeGuardStart,
+  );
+  assert.ok(runtimeGuardStart >= 0 && runtimeGuardEnd > runtimeGuardStart);
+  const runtimeGuardSource = runtimeSpec.slice(runtimeGuardStart, runtimeGuardEnd);
+  const consoleGuardStart = runtimeGuardSource.indexOf('page.on("console"');
+  const consoleGuardEnd = runtimeGuardSource.indexOf(
+    'page.on("pageerror"',
+    consoleGuardStart,
+  );
+  const responseGuardStart = runtimeGuardSource.indexOf('page.on("response"');
+  assert.ok(
+    consoleGuardStart >= 0 &&
+      consoleGuardEnd > consoleGuardStart &&
+      responseGuardStart > consoleGuardEnd,
+  );
+  const consoleGuardSource = runtimeGuardSource.slice(consoleGuardStart, consoleGuardEnd);
+  const responseGuardSource = runtimeGuardSource.slice(responseGuardStart);
+  for (const guardSource of [consoleGuardSource, responseGuardSource]) {
+    assert.match(guardSource, /phase\.current === "expected-cross-account-ui-denial"/);
+    assert.match(guardSource, /expectedCrossAccountItemPath !== null/);
+    assert.match(guardSource, /location\.origin === runtimeOrigin/);
+    assert.match(guardSource, /location\.pathname === expectedCrossAccountItemPath/);
+    assert.match(guardSource, /location\.search === "\?mode=second"/);
+    assert.match(guardSource, /location\.hash === ""/);
+    assert.doesNotMatch(guardSource, /\^\\\/app\\\/items/);
+  }
+  assert.match(consoleGuardSource, /status of 404/);
+  assert.match(responseGuardSource, /response\.status\(\) === 404/);
+  assert.match(responseGuardSource, /response\.request\(\)\.isNavigationRequest\(\)/);
+  assert.match(
+    runtimeSpec,
+    /expectedCrossAccountConsoleErrorCount === expectedCrossAccountHttpErrorCountTarget[\s\S]*expectedCrossAccountConsoleErrorCount <= 1/,
+  );
+  assert.match(runtimeSpec, /"exact-cross-account-console-denial-count"/);
+  for (const context of ["main", "secondary", "fresh"]) {
+    assert.match(runtimeSpec, new RegExp(`"unexpected-console-${context}"`));
+  }
+  assert.doesNotMatch(runtimeSpec, /"unexpected-console-errors"/);
   assert.match(
     itemDetailPage,
     /getWrongAnswerDetail\(session\.userId, session\.email, itemId\)/,
