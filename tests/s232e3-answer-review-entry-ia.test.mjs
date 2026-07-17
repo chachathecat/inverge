@@ -42,14 +42,14 @@ test("S232E.3 gives Answer Review one runtime-labelled learner-first entry per m
   }
 });
 
-test("S232E.3 keeps the skip link hidden off-canvas until keyboard focus with a 44px target", () => {
+test("S232E.3 keeps the skip link hidden off-canvas until keyboard focus with a 48px target", () => {
   const skipLink = sliceBetween('href="#answer-review-main"', "본문 바로가기");
 
   assert.doesNotMatch(skipLink, /\bsr-only\b/);
   for (const contract of [
     "fixed",
     "inline-flex",
-    "min-h-11",
+    "min-h-12",
     "min-w-11",
     "-translate-y-[200%]",
     "focus-visible:translate-y-0",
