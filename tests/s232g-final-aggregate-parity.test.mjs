@@ -502,8 +502,16 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
   );
   assert.match(runtimeSpec, /denialStatus === 200 \|\| denialStatus === 404/);
   assert.match(runtimeSpec, /meta\[name="robots"\]\[content="noindex"\]/);
-  assert.match(runtimeSpec, /detailDenied\.notFoundNoindexCount === 1/);
+  assert.match(runtimeSpec, /detailDenied\.notFoundNoindexPresent/);
   assert.match(runtimeSpec, /detailDenied\.ledgerCount === 0/);
+  assert.match(
+    runtimeSpec,
+    /cross-account-detail-stable-denial[\s\S]*cross-account-detail-noindex-stable[\s\S]*cross-account-detail-protected-surface-absent[\s\S]*cross-account-detail-denial-state-exact[\s\S]*cross-account-detail-noindex-present[\s\S]*cross-account-detail-denial-copy[\s\S]*cross-account-detail-return-link-exact[\s\S]*cross-account-detail-content-absent/,
+  );
+  assert.doesNotMatch(
+    runtimeSpec,
+    /cross-account-detail-ui-denial|cross-account-detail-noindex-exact/,
+  );
   assert.match(
     runtimeSpec,
     /expectedCrossAccountHttpErrorCountTarget = denialStatus === 404 \? 1 : 0/,

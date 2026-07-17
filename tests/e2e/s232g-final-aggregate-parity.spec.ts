@@ -2721,6 +2721,12 @@ test("S232G final aggregate exact-head authenticated parity", async ({ browser, 
         timeout: 25_000,
       }),
     );
+    await staticStage("cross-account-detail-noindex-stable", () =>
+      secondaryPage
+        .locator('meta[name="robots"][content="noindex"]')
+        .first()
+        .waitFor({ state: "attached", timeout: 20_000 }),
+    );
     const detailDenied = await staticStage("cross-account-detail-ui", () =>
       secondaryPage.evaluate(
         ({ forbiddenParagraph, forbiddenTitle }) => ({
@@ -2728,9 +2734,8 @@ test("S232G final aggregate exact-head authenticated parity", async ({ browser, 
           denialStateCount: document.querySelectorAll(
             '#study-ledger-content[data-s228-state="empty"]',
           ).length,
-          notFoundNoindexCount: document.querySelectorAll(
-            'meta[name="robots"][content="noindex"]',
-          ).length,
+          notFoundNoindexPresent:
+            document.querySelector('meta[name="robots"][content="noindex"]') !== null,
           denialCopyPresent: document.body.innerText.includes("이 학습 기록을 찾을 수 없습니다."),
           returnLinkCount: Array.from(document.querySelectorAll<HTMLAnchorElement>("a[href]")).filter(
             (link) =>
@@ -2745,14 +2750,23 @@ test("S232G final aggregate exact-head authenticated parity", async ({ browser, 
       ),
     );
     requireTruth(
-      detailDenied.ledgerCount === 0 &&
-        detailDenied.denialStateCount === 1 &&
-        detailDenied.notFoundNoindexCount === 1 &&
-        detailDenied.denialCopyPresent &&
-        detailDenied.returnLinkCount === 1 &&
-        detailDenied.contentAbsent,
-      "cross-account-detail-ui-denial",
+      detailDenied.ledgerCount === 0,
+      "cross-account-detail-protected-surface-absent",
     );
+    requireTruth(
+      detailDenied.denialStateCount === 1,
+      "cross-account-detail-denial-state-exact",
+    );
+    requireTruth(
+      detailDenied.notFoundNoindexPresent,
+      "cross-account-detail-noindex-present",
+    );
+    requireTruth(detailDenied.denialCopyPresent, "cross-account-detail-denial-copy");
+    requireTruth(
+      detailDenied.returnLinkCount === 1,
+      "cross-account-detail-return-link-exact",
+    );
+    requireTruth(detailDenied.contentAbsent, "cross-account-detail-content-absent");
     secondaryPhase.current = "normal";
 
     for (const surface of ["notes", "review", "today"] as const) {
