@@ -2279,13 +2279,26 @@ async function layoutProbe(page: Page, readySelector: string, keyboardSelector: 
   );
 }
 
-async function skipLinkProbe(page: Page, routePathname: string) {
+async function skipLinkProbe(page: Page, routePathname: string, routeKey: string) {
   const expectedHref =
     routePathname === "/answer-review"
       ? "#answer-review-main"
       : routePathname === "/app/items/[itemId]"
         ? "#study-ledger-content"
         : "#learner-main";
+  const topology = await staticStage("skip-link-topology", () =>
+    page.evaluate((href) => {
+      const targetId = href.startsWith("#") ? href.slice(1) : "";
+      return {
+        hrefCount: Array.from(document.querySelectorAll<HTMLAnchorElement>("a[href]")).filter(
+          (link) => link.getAttribute("href") === href,
+        ).length,
+        targetCount: targetId ? document.querySelectorAll(`[id="${CSS.escape(targetId)}"]`).length : 0,
+      };
+    }, expectedHref),
+  );
+  requireTruth(topology.hrefCount === 1, `skip-link-${routeKey}-href-singleton`);
+  requireTruth(topology.targetCount === 1, `skip-link-${routeKey}-target-singleton`);
   const prepared = await staticStage("skip-link-prepare", () =>
     page.evaluate(() => {
       document.querySelector("[data-s232g-skip-wrap-sentinel]")?.remove();
@@ -2310,10 +2323,66 @@ async function skipLinkProbe(page: Page, routePathname: string) {
   );
   requireTruth(prepared, "skip-link-wrap-sentinel-focus");
   await staticStage("skip-link-first-tab", () => page.keyboard.press("Tab"));
-  const focused = await staticStage("skip-link-focused", () =>
+  const firstExactFocus = await staticStage("skip-link-first-focus", () =>
     page.evaluate((href) => {
       const active = document.activeElement;
       document.querySelector("[data-s232g-skip-wrap-sentinel]")?.remove();
+      return active instanceof HTMLAnchorElement && active.getAttribute("href") === href;
+    }, expectedHref),
+  );
+  requireTruth(firstExactFocus, `skip-link-${routeKey}-first-exact-focus`);
+  const focusVisibleSettled = await staticStage(
+    `skip-link-focus-visible-${routeKey}`,
+    async () => {
+      try {
+        await page.waitForFunction(
+          (href) => {
+            const active = document.activeElement;
+            return (
+              active instanceof HTMLAnchorElement &&
+              active.getAttribute("href") === href &&
+              active.matches(":focus-visible")
+            );
+          },
+          expectedHref,
+          { timeout: 2_000 },
+        );
+        return true;
+      } catch {
+        return false;
+      }
+    },
+  );
+  requireTruth(focusVisibleSettled, `skip-link-${routeKey}-focus-visible-settle`);
+  const visibleSettled = await staticStage(`skip-link-visible-${routeKey}`, async () => {
+    try {
+      await page.waitForFunction(
+        (href) => {
+          const active = document.activeElement;
+          if (!(active instanceof HTMLAnchorElement)) return false;
+          const rect = active.getBoundingClientRect();
+          return (
+            active.getAttribute("href") === href &&
+            rect.width > 0 &&
+            rect.height >= 44 &&
+            rect.top >= 0 &&
+            rect.left >= 0 &&
+            rect.bottom <= window.innerHeight &&
+            rect.right <= window.innerWidth
+          );
+        },
+        expectedHref,
+        { timeout: 2_000 },
+      );
+      return true;
+    } catch {
+      return false;
+    }
+  });
+  requireTruth(visibleSettled, `skip-link-${routeKey}-visible-settle`);
+  const focused = await staticStage("skip-link-focused", () =>
+    page.evaluate((href) => {
+      const active = document.activeElement;
       if (!(active instanceof HTMLAnchorElement)) return null;
       const rect = active.getBoundingClientRect();
       return {
@@ -2331,9 +2400,11 @@ async function skipLinkProbe(page: Page, routePathname: string) {
     }, expectedHref),
   );
   requireTruth(
-    focused?.exact && focused.href === expectedHref && focused.focusVisible && focused.visible,
-    "skip-link-first-visible-focus",
+    focused?.exact && focused.href === expectedHref,
+    `skip-link-${routeKey}-exact-focus`,
   );
+  requireTruth(focused?.focusVisible, `skip-link-${routeKey}-focus-visible`);
+  requireTruth(focused?.visible, `skip-link-${routeKey}-visible-focus`);
   await staticStage("skip-link-activate", () => page.keyboard.press("Enter"));
   const landed = await staticStage("skip-link-target", () =>
     page.evaluate((href) => {
@@ -2870,7 +2941,7 @@ test("S232G final aggregate exact-head authenticated parity", async ({ browser, 
     }
     visibleHeadingCount += 1;
     await staticStage("keyboard-viewport", () => page.setViewportSize({ width: 390, height: 844 }));
-    await skipLinkProbe(page, route.pathname);
+    await skipLinkProbe(page, route.pathname, route.key);
     await keyboardFocusProbe(page, route.keyboardSelector);
     keyboardRouteCount += 1;
 

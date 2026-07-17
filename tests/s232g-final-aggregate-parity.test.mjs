@@ -627,6 +627,31 @@ test("S232G runtime and reporter are privacy-safe and fail closed on exact head"
   assert.doesNotMatch(runtimeSpec, /causallyBoundNavigationAbortCount <= 8/);
   assert.match(runtimeSpec, /data-s232g-skip-wrap-sentinel/);
   assert.match(runtimeSpec, /skip-link-wrap-sentinel-focus/);
+  const skipLinkProbeBlock = runtimeSpec.match(
+    /async function skipLinkProbe[\s\S]*?\n}\n\nasync function keyboardFocusProbe/,
+  )?.[0] ?? "";
+  assert.notEqual(skipLinkProbeBlock, "");
+  assert.match(skipLinkProbeBlock, /topology\.hrefCount === 1/);
+  assert.match(skipLinkProbeBlock, /topology\.targetCount === 1/);
+  assert.match(skipLinkProbeBlock, /page\.keyboard\.press\("Tab"\)/);
+  assert.match(skipLinkProbeBlock, /page\.waitForFunction\(/);
+  assert.match(skipLinkProbeBlock, /active\.getAttribute\("href"\) === href/);
+  assert.match(skipLinkProbeBlock, /active\.matches\(":focus-visible"\)/);
+  assert.match(skipLinkProbeBlock, /rect\.height >= 44/);
+  assert.match(skipLinkProbeBlock, /skip-link-\$\{routeKey\}-first-exact-focus/);
+  assert.match(skipLinkProbeBlock, /skip-link-\$\{routeKey\}-focus-visible-settle/);
+  assert.match(skipLinkProbeBlock, /skip-link-\$\{routeKey\}-visible-settle/);
+  assert.ok(
+    skipLinkProbeBlock.indexOf("first-exact-focus") <
+      skipLinkProbeBlock.indexOf("focus-visible-settle") &&
+      skipLinkProbeBlock.indexOf("focus-visible-settle") <
+        skipLinkProbeBlock.indexOf("visible-settle"),
+  );
+  assert.doesNotMatch(skipLinkProbeBlock, /skip-link-first-visible-focus/);
+  assert.match(
+    runtimeSpec,
+    /skipLinkProbe\(page, route\.pathname, route\.key\)/,
+  );
   assert.match(runtimeSpec, /emitSafeFailureDiagnostic\("stage", code\)/);
   assert.match(runtimeSpec, /emitSafeFailureDiagnostic\("assertion", code\)/);
   assert.match(runtimeSpec, /\^\[a-z0-9-\]\{1,64\}\$/);
