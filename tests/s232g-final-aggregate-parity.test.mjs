@@ -334,7 +334,10 @@ test("S232G product surfaces expose one route heading, stable targets, and seman
     calculatorTrainer,
     /trainerState === "active" \? "p-1 sm:p-5" : "p-4 sm:p-5"/,
   );
-  assert.match(calculatorTrainer, /border-0[\s\S]*?p-0[\s\S]*?sm:border/);
+  assert.match(
+    calculatorTrainer,
+    /className="-mx-1[\s\S]*?border-0[\s\S]*?p-0[\s\S]*?sm:mx-0[\s\S]*?sm:border/,
+  );
   assert.match(calculatorTrainer, /px-4 pb-4 sm:px-0 sm:pb-0/);
 
   assert.match(weeklyPage, /data-s232g-route="weekly"/);

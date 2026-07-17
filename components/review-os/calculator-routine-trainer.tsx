@@ -467,7 +467,7 @@ export function CalculatorRoutineTrainer({
         {trainerState === "active" ? (
           <div className="space-y-5">
             <section
-              className="rounded-[var(--radius-md)] border-0 bg-[color:var(--bg-surface)] p-0 shadow-none sm:border sm:border-[color:var(--brand-700)] sm:p-5 sm:shadow-sm"
+              className="-mx-1 rounded-[var(--radius-md)] border-0 bg-[color:var(--bg-surface)] p-0 shadow-none sm:mx-0 sm:border sm:border-[color:var(--brand-700)] sm:p-5 sm:shadow-sm"
               data-calculator-routine-active-step={currentStep.id}
               aria-labelledby={`calculator-routine-step-${currentStep.id}`}
             >
