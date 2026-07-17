@@ -111,7 +111,7 @@ test("S232H.1 shared V3 shell is accessible at 390/768/1440", async ({ page }, t
     expect(targets).toEqual([]);
 
     const layout = await shell.evaluate((element) => {
-      const content = element.firstElementChild;
+      const content = element.querySelector(":scope > div");
       if (!(content instanceof HTMLElement)) throw new Error("Missing shell content wrapper");
       const contentStyle = getComputedStyle(content);
       return {
