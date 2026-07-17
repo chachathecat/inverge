@@ -24,6 +24,8 @@ export const historicalS232gRewriteParagraph =
 
 const historicalS232gTitlePattern =
   /^S232G aggregate synthetic Study Ledger source ([1-9]\d*-[1-9]\d*)$/;
+const historicalS232gCandidateTitlePattern =
+  /^S232G aggregate synthetic Study Ledger source(?:\s|$)/;
 const uuidV4Pattern =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const isoDatePattern = /^\d{4}-\d{2}-\d{2}$/;
@@ -42,6 +44,15 @@ const historicalS232gSourceConfirmedKeys = [
   "sourceType",
   "subject",
 ] as const;
+const historicalS232gLegacySourceConfirmedKeys = [
+  "biggest_gap",
+  "examMode",
+  "issue_recall",
+  "local_beta_confirmation_available",
+  "production_before_comparison",
+  "sourceType",
+  "subject",
+] as const;
 const historicalS232gRewriteConfirmedKeys = [
   "biggest_gap",
   "captureQualityIssue",
@@ -56,6 +67,35 @@ const historicalS232gRewriteConfirmedKeys = [
   "pageCount",
   "persistence_operation_id",
   "persistence_work_revision_id",
+  "problemTitle",
+  "produced_answer_before_reference",
+  "production_before_comparison",
+  "reference_answer_added_after_production",
+  "rewrite_completed",
+  "rewrite_instruction",
+  "rewrite_paragraph",
+  "rewrite_source_gap",
+  "rewrite_source_item_id",
+  "sourceType",
+  "subject",
+  "subjectLabel",
+  "timeSpentMinutes",
+  "userAnswer",
+  "userReasonPreset",
+  "userReasonText",
+] as const;
+const historicalS232gLegacyRewriteConfirmedKeys = [
+  "biggest_gap",
+  "captureQualityIssue",
+  "correctAnswer",
+  "examMode",
+  "hasManualCorrection",
+  "issue_recall",
+  "lowConfidenceFlag",
+  "nextReviewDate",
+  "ocrConfirmedByLearner",
+  "outline_draft",
+  "pageCount",
   "problemTitle",
   "produced_answer_before_reference",
   "production_before_comparison",
@@ -103,6 +143,159 @@ function hasDistinctPersistenceIds(confirmed: Record<string, unknown>) {
   );
 }
 
+function hasHistoricalConfirmedContract(
+  confirmed: Record<string, unknown>,
+  currentKeys: readonly string[],
+  legacyKeys: readonly string[],
+) {
+  if (hasExactKeys(confirmed, legacyKeys)) return true;
+  return (
+    hasExactKeys(confirmed, currentKeys) &&
+    hasDistinctPersistenceIds(confirmed)
+  );
+}
+
+function failedFields(checks: readonly (readonly [string, boolean])[]) {
+  return checks.filter(([, matches]) => !matches).map(([field]) => field);
+}
+
+export function isHistoricalS232gRewriteCandidate(
+  item: HistoricalSyntheticItem,
+) {
+  if (!historicalS232gCandidateTitlePattern.test(item.problemTitle ?? ""))
+    return false;
+  const rawPayload = item.rawPayload ?? {};
+  return (
+    rawPayload.rewrite_completed === true ||
+    typeof rawPayload.rewrite_source_item_id === "string" ||
+    typeof rawPayload.rewrite_paragraph === "string"
+  );
+}
+
+export function isHistoricalS232gSourceCandidate(
+  item: HistoricalSyntheticItem,
+) {
+  return (
+    historicalS232gCandidateTitlePattern.test(item.problemTitle ?? "") &&
+    !isHistoricalS232gRewriteCandidate(item)
+  );
+}
+
+export function historicalS232gSourceFailureFields(
+  item: HistoricalSyntheticItem,
+) {
+  const title = item.problemTitle ?? "";
+  const captureText = `${title}\n내 답안: ${historicalS232gOriginalParagraph}`;
+  const rawPayload = item.rawPayload ?? {};
+  const derivedPayload = item.derivedPayload ?? {};
+  const rawExtraction = asRecord(rawPayload.raw_extraction_json);
+  const confirmed = asRecord(rawPayload.user_confirmed_fields);
+
+  return failedFields([
+    ["item.problemTitle", historicalS232gTitlePattern.test(title)],
+    ["item.examName", item.examName === "감정평가사 2차"],
+    ["item.subjectLabel", item.subjectLabel === "감정평가실무"],
+    ["item.sourceType", item.sourceType === "text"],
+    ["item.sourceLabel", isUnset(item.sourceLabel)],
+    ["item.problemIdentifier", item.problemIdentifier === "답안 작성"],
+    ["item.rawQuestionText", item.rawQuestionText === captureText],
+    ["item.rawAnswerText", item.rawAnswerText === captureText],
+    ["item.correctAnswer", item.correctAnswer === "-"],
+    ["item.userAnswer", item.userAnswer === captureText],
+    ["item.userReasonText", item.userReasonText === historicalS232gGap],
+    ["item.userReasonPreset", isUnset(item.userReasonPreset)],
+    ["item.confidence", item.confidence === "중간"],
+    ["rawPayload.created_from_capture", rawPayload.created_from_capture === true],
+    ["rawPayload.capture_intent", rawPayload.capture_intent === "save"],
+    ["rawPayload.captureMethod", rawPayload.captureMethod === "text"],
+    ["rawPayload.mode", rawPayload.mode === "second"],
+    ["rawPayload.artifactType", rawPayload.artifactType === "second_correction"],
+    ["rawPayload.noteKind", rawPayload.noteKind === "교정노트"],
+    ["rawPayload.subjectLabel", rawPayload.subjectLabel === "감정평가실무"],
+    ["rawPayload.raw_ocr_text", rawPayload.raw_ocr_text === captureText],
+    ["rawPayload.raw_extraction_json", rawExtraction !== null],
+    [
+      "rawPayload.raw_extraction_json.<keys>",
+      rawExtraction !== null && Object.keys(rawExtraction).length === 0,
+    ],
+    ["rawPayload.normalized_draft", rawPayload.normalized_draft === null],
+    [
+      "rawPayload.production_before_comparison",
+      rawPayload.production_before_comparison === true,
+    ],
+    [
+      "rawPayload.produced_answer_before_reference",
+      rawPayload.produced_answer_before_reference === true,
+    ],
+    [
+      "rawPayload.reference_answer_added_after_production",
+      rawPayload.reference_answer_added_after_production === false,
+    ],
+    ["rawPayload.biggest_gap", rawPayload.biggest_gap === historicalS232gGap],
+    ["rawPayload.issue_recall", rawPayload.issue_recall === title],
+    ["rawPayload.outline_draft", rawPayload.outline_draft === null],
+    ["rawPayload.rewrite_completed", rawPayload.rewrite_completed === false],
+    [
+      "rawPayload.rewrite_source_item_id",
+      rawPayload.rewrite_source_item_id === null,
+    ],
+    ["rawPayload.rewrite_source_gap", rawPayload.rewrite_source_gap === null],
+    [
+      "rawPayload.rewrite_instruction",
+      rawPayload.rewrite_instruction === historicalS232gRewriteInstruction,
+    ],
+    ["rawPayload.rewrite_paragraph", rawPayload.rewrite_paragraph === null],
+    ["rawPayload.user_confirmed_fields", confirmed !== null],
+    [
+      "rawPayload.user_confirmed_fields.<keys>",
+      confirmed !== null &&
+        (hasExactKeys(confirmed, historicalS232gSourceConfirmedKeys) ||
+          hasExactKeys(confirmed, historicalS232gLegacySourceConfirmedKeys)),
+    ],
+    [
+      "rawPayload.user_confirmed_fields.sourceType",
+      confirmed?.sourceType === "text",
+    ],
+    [
+      "rawPayload.user_confirmed_fields.subject",
+      confirmed?.subject === "감정평가실무",
+    ],
+    [
+      "rawPayload.user_confirmed_fields.examMode",
+      confirmed?.examMode === "second",
+    ],
+    [
+      "rawPayload.user_confirmed_fields.biggest_gap",
+      confirmed?.biggest_gap === historicalS232gGap,
+    ],
+    [
+      "rawPayload.user_confirmed_fields.issue_recall",
+      confirmed?.issue_recall === title,
+    ],
+    [
+      "rawPayload.user_confirmed_fields.production_before_comparison",
+      confirmed?.production_before_comparison === true,
+    ],
+    [
+      "rawPayload.user_confirmed_fields.local_beta_confirmation_available",
+      confirmed?.local_beta_confirmation_available === true,
+    ],
+    [
+      "rawPayload.user_confirmed_fields.<persistence_ids>",
+      confirmed !== null &&
+        hasHistoricalConfirmedContract(
+          confirmed,
+          historicalS232gSourceConfirmedKeys,
+          historicalS232gLegacySourceConfirmedKeys,
+        ),
+    ],
+    [
+      "derivedPayload.created_from_capture",
+      derivedPayload.created_from_capture === true,
+    ],
+  ]);
+}
+
 /**
  * Recognizes only the bounded source record emitted by the retired S232G
  * aggregate runtime. This does not revive that workflow; it lets the visual
@@ -113,61 +306,111 @@ function hasDistinctPersistenceIds(confirmed: Record<string, unknown>) {
 export function isHistoricalS232gAggregateSource(
   item: HistoricalSyntheticItem,
 ) {
-  const title = item.problemTitle ?? "";
-  if (!historicalS232gTitlePattern.test(title)) return false;
-  const captureText = `${title}\n내 답안: ${historicalS232gOriginalParagraph}`;
+  return historicalS232gSourceFailureFields(item).length === 0;
+}
+
+export function historicalS232gRewriteFailureFields(
+  item: HistoricalSyntheticItem,
+  parentId: string,
+  parentTitle: string,
+) {
   const rawPayload = item.rawPayload ?? {};
   const derivedPayload = item.derivedPayload ?? {};
   const rawExtraction = asRecord(rawPayload.raw_extraction_json);
   const confirmed = asRecord(rawPayload.user_confirmed_fields);
 
-  return (
-    item.examName === "감정평가사 2차" &&
-    item.subjectLabel === "감정평가실무" &&
-    item.sourceType === "text" &&
-    isUnset(item.sourceLabel) &&
-    item.problemIdentifier === "답안 작성" &&
-    item.rawQuestionText === captureText &&
-    item.rawAnswerText === captureText &&
-    item.correctAnswer === "-" &&
-    item.userAnswer === captureText &&
-    item.userReasonText === historicalS232gGap &&
-    isUnset(item.userReasonPreset) &&
-    item.confidence === "중간" &&
-    rawPayload.created_from_capture === true &&
-    rawPayload.capture_intent === "save" &&
-    rawPayload.captureMethod === "text" &&
-    rawPayload.mode === "second" &&
-    rawPayload.artifactType === "second_correction" &&
-    rawPayload.noteKind === "교정노트" &&
-    rawPayload.subjectLabel === "감정평가실무" &&
-    rawPayload.raw_ocr_text === captureText &&
-    rawExtraction !== null &&
-    Object.keys(rawExtraction).length === 0 &&
-    rawPayload.normalized_draft === null &&
-    rawPayload.production_before_comparison === true &&
-    rawPayload.produced_answer_before_reference === true &&
-    rawPayload.reference_answer_added_after_production === false &&
-    rawPayload.biggest_gap === historicalS232gGap &&
-    rawPayload.issue_recall === title &&
-    rawPayload.outline_draft === null &&
-    rawPayload.rewrite_completed === false &&
-    rawPayload.rewrite_source_item_id === null &&
-    rawPayload.rewrite_source_gap === null &&
-    rawPayload.rewrite_instruction === historicalS232gRewriteInstruction &&
-    rawPayload.rewrite_paragraph === null &&
-    confirmed !== null &&
-    hasExactKeys(confirmed, historicalS232gSourceConfirmedKeys) &&
-    confirmed.sourceType === "text" &&
-    confirmed.subject === "감정평가실무" &&
-    confirmed.examMode === "second" &&
-    confirmed.biggest_gap === historicalS232gGap &&
-    confirmed.issue_recall === title &&
-    confirmed.production_before_comparison === true &&
-    confirmed.local_beta_confirmation_available === true &&
-    hasDistinctPersistenceIds(confirmed) &&
-    derivedPayload.created_from_capture === true
-  );
+  return failedFields([
+    ["parent.id", Boolean(parentId)],
+    ["parent.problemTitle", historicalS232gTitlePattern.test(parentTitle)],
+    ["item.examName", item.examName === "감정평가사 2차"],
+    ["item.subjectLabel", item.subjectLabel === "감정평가실무"],
+    ["item.sourceType", item.sourceType === "text"],
+    ["item.sourceLabel", isUnset(item.sourceLabel)],
+    ["item.problemTitle", item.problemTitle === parentTitle],
+    ["item.problemIdentifier", item.problemIdentifier === "답안 작성"],
+    ["item.rawQuestionText", isUnset(item.rawQuestionText)],
+    ["item.rawAnswerText", item.rawAnswerText === ""],
+    ["item.correctAnswer", item.correctAnswer === "-"],
+    ["item.userAnswer", item.userAnswer === "-"],
+    ["item.userReasonText", item.userReasonText === historicalS232gGap],
+    ["item.userReasonPreset", isUnset(item.userReasonPreset)],
+    ["item.confidence", item.confidence === "중간"],
+    ["rawPayload.created_from_capture", rawPayload.created_from_capture === true],
+    ["rawPayload.capture_intent", rawPayload.capture_intent === "save"],
+    ["rawPayload.captureMethod", rawPayload.captureMethod === "text"],
+    ["rawPayload.mode", rawPayload.mode === "second"],
+    ["rawPayload.artifactType", rawPayload.artifactType === "second_correction"],
+    ["rawPayload.noteKind", rawPayload.noteKind === "교정노트"],
+    ["rawPayload.subjectLabel", rawPayload.subjectLabel === "감정평가실무"],
+    ["rawPayload.raw_ocr_text", rawPayload.raw_ocr_text === ""],
+    ["rawPayload.raw_extraction_json", rawExtraction !== null],
+    [
+      "rawPayload.raw_extraction_json.<keys>",
+      rawExtraction !== null && Object.keys(rawExtraction).length === 0,
+    ],
+    ["rawPayload.normalized_draft", rawPayload.normalized_draft === null],
+    ["rawPayload.rewrite_source_item_id", rawPayload.rewrite_source_item_id === parentId],
+    ["rawPayload.rewrite_source_gap", rawPayload.rewrite_source_gap === historicalS232gGap],
+    ["rawPayload.rewrite_instruction", rawPayload.rewrite_instruction === historicalS232gRewriteInstruction],
+    ["rawPayload.rewrite_paragraph", rawPayload.rewrite_paragraph === historicalS232gRewriteParagraph],
+    ["rawPayload.rewrite_completed", rawPayload.rewrite_completed === true],
+    ["rawPayload.issue_recall", rawPayload.issue_recall === null],
+    ["rawPayload.outline_draft", rawPayload.outline_draft === null],
+    ["rawPayload.production_before_comparison", rawPayload.production_before_comparison === true],
+    ["rawPayload.produced_answer_before_reference", rawPayload.produced_answer_before_reference === true],
+    ["rawPayload.reference_answer_added_after_production", rawPayload.reference_answer_added_after_production === true],
+    ["rawPayload.biggest_gap", rawPayload.biggest_gap === historicalS232gGap],
+    ["rawPayload.user_confirmed_fields", confirmed !== null],
+    [
+      "rawPayload.user_confirmed_fields.<keys>",
+      confirmed !== null &&
+        (hasExactKeys(confirmed, historicalS232gRewriteConfirmedKeys) ||
+          hasExactKeys(
+            confirmed,
+            historicalS232gLegacyRewriteConfirmedKeys,
+          )),
+    ],
+    ["rawPayload.user_confirmed_fields.biggest_gap", confirmed?.biggest_gap === historicalS232gGap],
+    ["rawPayload.user_confirmed_fields.captureQualityIssue", confirmed?.captureQualityIssue === null],
+    ["rawPayload.user_confirmed_fields.correctAnswer", confirmed?.correctAnswer === "-"],
+    ["rawPayload.user_confirmed_fields.examMode", confirmed?.examMode === "second"],
+    ["rawPayload.user_confirmed_fields.hasManualCorrection", confirmed?.hasManualCorrection === false],
+    ["rawPayload.user_confirmed_fields.issue_recall", confirmed?.issue_recall === null],
+    ["rawPayload.user_confirmed_fields.lowConfidenceFlag", confirmed?.lowConfidenceFlag === false],
+    [
+      "rawPayload.user_confirmed_fields.nextReviewDate",
+      typeof confirmed?.nextReviewDate === "string" && isoDatePattern.test(confirmed.nextReviewDate),
+    ],
+    ["rawPayload.user_confirmed_fields.ocrConfirmedByLearner", confirmed?.ocrConfirmedByLearner === false],
+    ["rawPayload.user_confirmed_fields.outline_draft", confirmed?.outline_draft === null],
+    ["rawPayload.user_confirmed_fields.pageCount", confirmed?.pageCount === 0],
+    [
+      "rawPayload.user_confirmed_fields.<persistence_ids>",
+      confirmed !== null &&
+        hasHistoricalConfirmedContract(
+          confirmed,
+          historicalS232gRewriteConfirmedKeys,
+          historicalS232gLegacyRewriteConfirmedKeys,
+        ),
+    ],
+    ["rawPayload.user_confirmed_fields.problemTitle", confirmed?.problemTitle === parentTitle],
+    ["rawPayload.user_confirmed_fields.produced_answer_before_reference", confirmed?.produced_answer_before_reference === true],
+    ["rawPayload.user_confirmed_fields.production_before_comparison", confirmed?.production_before_comparison === true],
+    ["rawPayload.user_confirmed_fields.reference_answer_added_after_production", confirmed?.reference_answer_added_after_production === true],
+    ["rawPayload.user_confirmed_fields.rewrite_completed", confirmed?.rewrite_completed === true],
+    ["rawPayload.user_confirmed_fields.rewrite_instruction", confirmed?.rewrite_instruction === historicalS232gRewriteInstruction],
+    ["rawPayload.user_confirmed_fields.rewrite_paragraph", confirmed?.rewrite_paragraph === historicalS232gRewriteParagraph],
+    ["rawPayload.user_confirmed_fields.rewrite_source_gap", confirmed?.rewrite_source_gap === historicalS232gGap],
+    ["rawPayload.user_confirmed_fields.rewrite_source_item_id", confirmed?.rewrite_source_item_id === parentId],
+    ["rawPayload.user_confirmed_fields.sourceType", confirmed?.sourceType === "text"],
+    ["rawPayload.user_confirmed_fields.subject", confirmed?.subject === "감정평가실무"],
+    ["rawPayload.user_confirmed_fields.subjectLabel", confirmed?.subjectLabel === "감정평가실무"],
+    ["rawPayload.user_confirmed_fields.timeSpentMinutes", confirmed?.timeSpentMinutes === null],
+    ["rawPayload.user_confirmed_fields.userAnswer", confirmed?.userAnswer === ""],
+    ["rawPayload.user_confirmed_fields.userReasonPreset", confirmed?.userReasonPreset === ""],
+    ["rawPayload.user_confirmed_fields.userReasonText", confirmed?.userReasonText === historicalS232gGap],
+    ["derivedPayload.created_from_capture", derivedPayload.created_from_capture === true],
+  ]);
 }
 
 /**
@@ -180,79 +423,8 @@ export function isHistoricalS232gAggregateRewrite(
   parentId: string,
   parentTitle: string,
 ) {
-  if (!parentId || !historicalS232gTitlePattern.test(parentTitle)) return false;
-  const rawPayload = item.rawPayload ?? {};
-  const derivedPayload = item.derivedPayload ?? {};
-  const rawExtraction = asRecord(rawPayload.raw_extraction_json);
-  const confirmed = asRecord(rawPayload.user_confirmed_fields);
-
   return (
-    item.examName === "감정평가사 2차" &&
-    item.subjectLabel === "감정평가실무" &&
-    item.sourceType === "text" &&
-    isUnset(item.sourceLabel) &&
-    item.problemTitle === parentTitle &&
-    item.problemIdentifier === "답안 작성" &&
-    isUnset(item.rawQuestionText) &&
-    item.rawAnswerText === "" &&
-    item.correctAnswer === "-" &&
-    item.userAnswer === "-" &&
-    item.userReasonText === historicalS232gGap &&
-    isUnset(item.userReasonPreset) &&
-    item.confidence === "중간" &&
-    rawPayload.created_from_capture === true &&
-    rawPayload.capture_intent === "save" &&
-    rawPayload.captureMethod === "text" &&
-    rawPayload.mode === "second" &&
-    rawPayload.artifactType === "second_correction" &&
-    rawPayload.noteKind === "교정노트" &&
-    rawPayload.subjectLabel === "감정평가실무" &&
-    rawPayload.raw_ocr_text === "" &&
-    rawExtraction !== null &&
-    Object.keys(rawExtraction).length === 0 &&
-    rawPayload.normalized_draft === null &&
-    rawPayload.rewrite_source_item_id === parentId &&
-    rawPayload.rewrite_source_gap === historicalS232gGap &&
-    rawPayload.rewrite_instruction === historicalS232gRewriteInstruction &&
-    rawPayload.rewrite_paragraph === historicalS232gRewriteParagraph &&
-    rawPayload.rewrite_completed === true &&
-    rawPayload.issue_recall === null &&
-    rawPayload.outline_draft === null &&
-    rawPayload.production_before_comparison === true &&
-    rawPayload.produced_answer_before_reference === true &&
-    rawPayload.reference_answer_added_after_production === true &&
-    rawPayload.biggest_gap === historicalS232gGap &&
-    confirmed !== null &&
-    hasExactKeys(confirmed, historicalS232gRewriteConfirmedKeys) &&
-    confirmed.biggest_gap === historicalS232gGap &&
-    confirmed.captureQualityIssue === null &&
-    confirmed.correctAnswer === "-" &&
-    confirmed.examMode === "second" &&
-    confirmed.hasManualCorrection === false &&
-    confirmed.issue_recall === null &&
-    confirmed.lowConfidenceFlag === false &&
-    typeof confirmed.nextReviewDate === "string" &&
-    isoDatePattern.test(confirmed.nextReviewDate) &&
-    confirmed.ocrConfirmedByLearner === false &&
-    confirmed.outline_draft === null &&
-    confirmed.pageCount === 0 &&
-    hasDistinctPersistenceIds(confirmed) &&
-    confirmed.problemTitle === parentTitle &&
-    confirmed.produced_answer_before_reference === true &&
-    confirmed.production_before_comparison === true &&
-    confirmed.reference_answer_added_after_production === true &&
-    confirmed.rewrite_completed === true &&
-    confirmed.rewrite_instruction === historicalS232gRewriteInstruction &&
-    confirmed.rewrite_paragraph === historicalS232gRewriteParagraph &&
-    confirmed.rewrite_source_gap === historicalS232gGap &&
-    confirmed.rewrite_source_item_id === parentId &&
-    confirmed.sourceType === "text" &&
-    confirmed.subject === "감정평가실무" &&
-    confirmed.subjectLabel === "감정평가실무" &&
-    confirmed.timeSpentMinutes === null &&
-    confirmed.userAnswer === "" &&
-    confirmed.userReasonPreset === "" &&
-    confirmed.userReasonText === historicalS232gGap &&
-    derivedPayload.created_from_capture === true
+    historicalS232gRewriteFailureFields(item, parentId, parentTitle).length ===
+    0
   );
 }

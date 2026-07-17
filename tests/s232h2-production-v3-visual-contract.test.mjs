@@ -514,6 +514,10 @@ test("S232H.2 evidence is API-audited synthetic data and directly compared with 
   assert.match(spec, /historicalS232gSourceCount/);
   assert.match(spec, /historicalS232gRewriteCount/);
   assert.match(spec, /family-counts=/);
+  assert.match(spec, /historical-diagnostics=/);
+  assert.match(spec, /historicalS232gSourceFailureFields/);
+  assert.match(spec, /historicalS232gRewriteFailureFields/);
+  assert.match(spec, /payloadFailurePaths/);
   assert.match(spec, /parentRawPayload\.rewrite_instruction/);
   assert.match(spec, /parentAiDraft\.rewriteInstruction/);
   assert.doesNotMatch(spec, /accountOwned|listedAccountOwned/);

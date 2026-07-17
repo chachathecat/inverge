@@ -2,10 +2,14 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  historicalS232gRewriteFailureFields,
   historicalS232gOriginalParagraph,
   historicalS232gRewriteParagraph,
+  historicalS232gSourceFailureFields,
   isHistoricalS232gAggregateRewrite,
   isHistoricalS232gAggregateSource,
+  isHistoricalS232gRewriteCandidate,
+  isHistoricalS232gSourceCandidate,
 } from "./e2e/support/historical-synthetic-fixtures.ts";
 
 const gap = "조문·요건과 사안 포섭 연결 부족";
@@ -141,8 +145,53 @@ function rewriteFixture(overrides = {}) {
   };
 }
 
+function withoutPersistenceIds(confirmed) {
+  const {
+    persistence_operation_id: ignoredOperationId,
+    persistence_work_revision_id: ignoredWorkRevisionId,
+    ...legacy
+  } = confirmed;
+  assert.equal(typeof ignoredOperationId, "string");
+  assert.equal(typeof ignoredWorkRevisionId, "string");
+  return legacy;
+}
+
+function withoutConfirmedKey(confirmed, key) {
+  const partial = { ...confirmed };
+  delete partial[key];
+  return partial;
+}
+
 test("S232H.2 recognizes only the exact retired S232G source grammar", () => {
+  assert.equal(isHistoricalS232gSourceCandidate(fixture()), true);
+  assert.deepEqual(historicalS232gSourceFailureFields(fixture()), []);
   assert.equal(isHistoricalS232gAggregateSource(fixture()), true);
+  const currentSource = fixture();
+  const legacySource = fixture({
+    rawPayload: {
+      ...currentSource.rawPayload,
+      user_confirmed_fields: withoutPersistenceIds(
+        currentSource.rawPayload.user_confirmed_fields,
+      ),
+    },
+  });
+  assert.deepEqual(historicalS232gSourceFailureFields(legacySource), []);
+  assert.equal(isHistoricalS232gAggregateSource(legacySource), true);
+  for (const key of [
+    "persistence_operation_id",
+    "persistence_work_revision_id",
+  ]) {
+    const partialSource = fixture({
+      rawPayload: {
+        ...currentSource.rawPayload,
+        user_confirmed_fields: withoutConfirmedKey(
+          currentSource.rawPayload.user_confirmed_fields,
+          key,
+        ),
+      },
+    });
+    assert.equal(isHistoricalS232gAggregateSource(partialSource), false);
+  }
   assert.equal(
     isHistoricalS232gAggregateSource(
       fixture({
@@ -167,6 +216,11 @@ test("S232H.2 recognizes only the exact retired S232G source grammar", () => {
     ),
     false,
   );
+  const privateValueFailures = historicalS232gSourceFailureFields(
+    fixture({ rawQuestionText: "PRIVATE_LEARNER_VALUE_DO_NOT_LOG" }),
+  );
+  assert.deepEqual(privateValueFailures, ["item.rawQuestionText"]);
+  assert.equal(privateValueFailures.join(" ").includes("PRIVATE_LEARNER"), false);
   assert.equal(
     isHistoricalS232gAggregateSource(
       fixture({ userAnswer: `${historicalS232gOriginalParagraph} changed` }),
@@ -221,6 +275,62 @@ test("S232H.2 recognizes only the exact retired S232G source grammar", () => {
 });
 
 test("S232H.2 recognizes only a rewrite with exact S232G parent binding", () => {
+  assert.equal(isHistoricalS232gRewriteCandidate(rewriteFixture()), true);
+  assert.deepEqual(
+    historicalS232gRewriteFailureFields(
+      rewriteFixture(),
+      parentId,
+      parentTitle,
+    ),
+    [],
+  );
+  const currentRewrite = rewriteFixture();
+  const legacyRewrite = rewriteFixture({
+    rawPayload: {
+      ...currentRewrite.rawPayload,
+      user_confirmed_fields: withoutPersistenceIds(
+        currentRewrite.rawPayload.user_confirmed_fields,
+      ),
+    },
+  });
+  assert.deepEqual(
+    historicalS232gRewriteFailureFields(
+      legacyRewrite,
+      parentId,
+      parentTitle,
+    ),
+    [],
+  );
+  assert.equal(
+    isHistoricalS232gAggregateRewrite(
+      legacyRewrite,
+      parentId,
+      parentTitle,
+    ),
+    true,
+  );
+  for (const key of [
+    "persistence_operation_id",
+    "persistence_work_revision_id",
+  ]) {
+    const partialRewrite = rewriteFixture({
+      rawPayload: {
+        ...currentRewrite.rawPayload,
+        user_confirmed_fields: withoutConfirmedKey(
+          currentRewrite.rawPayload.user_confirmed_fields,
+          key,
+        ),
+      },
+    });
+    assert.equal(
+      isHistoricalS232gAggregateRewrite(
+        partialRewrite,
+        parentId,
+        parentTitle,
+      ),
+      false,
+    );
+  }
   assert.equal(
     isHistoricalS232gAggregateRewrite(
       rewriteFixture(),

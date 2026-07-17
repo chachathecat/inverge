@@ -25,9 +25,13 @@ import {
   summarizeSyntheticPayloadFailurePaths,
 } from "./support/synthetic-payload-diagnostics";
 import {
+  historicalS232gRewriteFailureFields,
   historicalS232gRewriteParagraph,
+  historicalS232gSourceFailureFields,
   isHistoricalS232gAggregateSource,
   isHistoricalS232gAggregateRewrite,
+  isHistoricalS232gRewriteCandidate,
+  isHistoricalS232gSourceCandidate,
 } from "./support/historical-synthetic-fixtures";
 
 const runtimeEnabled = process.env.S232H2_VISUAL_RUNTIME === "1";
@@ -1337,6 +1341,17 @@ function planningItemIds(observed: SyntheticAccountData) {
   };
 }
 
+function summarizeFailureFields(groups: readonly (readonly string[])[]) {
+  const counts = new Map<string, number>();
+  for (const fields of groups) {
+    for (const field of fields)
+      counts.set(field, (counts.get(field) ?? 0) + 1);
+  }
+  return [...counts]
+    .map(([field, count]) => ({ field, count }))
+    .sort((left, right) => left.field.localeCompare(right.field));
+}
+
 async function auditSyntheticAccount(
   page: Page,
   {
@@ -1467,6 +1482,99 @@ async function auditSyntheticAccount(
         isOwnedSyntheticRewrite(item, parent),
     );
   }).length;
+  const historicalSourceCandidates = listedItems.filter(
+    isHistoricalS232gSourceCandidate,
+  );
+  const historicalRewriteCandidates = listedItems.filter(
+    isHistoricalS232gRewriteCandidate,
+  );
+  const historicalSourcePayloadFailurePaths =
+    summarizeSyntheticPayloadFailurePaths(
+      historicalSourceCandidates.map((item) => {
+        const allowed = exactSyntheticPayloadValues(item);
+        return {
+          item,
+          isAllowedString: (value: string) =>
+            allowed.has(value) ||
+            exactSyntheticSystemValuePatterns.some((pattern) =>
+              pattern.test(value),
+            ),
+        };
+      }),
+    );
+  let historicalRewriteParentIdMissing = 0;
+  let historicalRewriteParentLookupMissing = 0;
+  let historicalRewriteParentCandidateMismatch = 0;
+  const historicalRewriteParentFailureGroups: string[][] = [];
+  const historicalRewriteFailureGroups: string[][] = [];
+  const historicalRewritePayloadEntries: Array<{
+    item: SyntheticItem;
+    isAllowedString: (value: string) => boolean;
+  }> = [];
+  for (const item of historicalRewriteCandidates) {
+    const sourceId =
+      typeof item.rawPayload?.rewrite_source_item_id === "string"
+        ? item.rawPayload.rewrite_source_item_id
+        : "";
+    if (!sourceId) {
+      historicalRewriteParentIdMissing += 1;
+      continue;
+    }
+    const parent = mergedById.get(sourceId);
+    if (!parent) {
+      historicalRewriteParentLookupMissing += 1;
+      continue;
+    }
+    if (!isHistoricalS232gSourceCandidate(parent)) {
+      historicalRewriteParentCandidateMismatch += 1;
+      continue;
+    }
+    historicalRewriteParentFailureGroups.push(
+      historicalS232gSourceFailureFields(parent),
+    );
+    historicalRewriteFailureGroups.push(
+      historicalS232gRewriteFailureFields(
+        item,
+        sourceId,
+        parent.problemTitle ?? "",
+      ),
+    );
+    const allowed = exactSyntheticPayloadValues(item, parent);
+    historicalRewritePayloadEntries.push({
+      item,
+      isAllowedString: (value: string) =>
+        allowed.has(value) ||
+        exactSyntheticSystemValuePatterns.some((pattern) =>
+          pattern.test(value),
+        ),
+    });
+  }
+  const historicalDiagnostics = {
+    source: {
+      candidates: historicalSourceCandidates.length,
+      exact: historicalS232gSourceCount,
+      predicateFailureFields: summarizeFailureFields(
+        historicalSourceCandidates.map(historicalS232gSourceFailureFields),
+      ),
+      payloadFailurePaths: historicalSourcePayloadFailurePaths,
+    },
+    rewrite: {
+      candidates: historicalRewriteCandidates.length,
+      parentIdMissing: historicalRewriteParentIdMissing,
+      parentLookupMissing: historicalRewriteParentLookupMissing,
+      parentCandidateMismatch: historicalRewriteParentCandidateMismatch,
+      parentPredicateFailureFields: summarizeFailureFields(
+        historicalRewriteParentFailureGroups,
+      ),
+      exact: historicalS232gRewriteCount,
+      predicateFailureFields: summarizeFailureFields(
+        historicalRewriteFailureGroups,
+      ),
+      payloadFailurePaths: summarizeSyntheticPayloadFailurePaths(
+        historicalRewritePayloadEntries,
+      ),
+    },
+  };
   const fixtureFamilyCounts = {
     historicalS232gSource: historicalS232gSourceCount,
     historicalS232gRewrite: historicalS232gRewriteCount,
@@ -1558,7 +1666,7 @@ async function auditSyntheticAccount(
   ).toEqual([]);
   expect(
     listedExactFixtures.length,
-    `Every listed row must be an exact allowlisted synthetic fixture or owned rewrite; family-counts=${JSON.stringify(fixtureFamilyCounts)}.`,
+    `Every listed row must be an exact allowlisted synthetic fixture or owned rewrite; family-counts=${JSON.stringify(fixtureFamilyCounts)}; historical-diagnostics=${JSON.stringify(historicalDiagnostics)}.`,
   ).toBe(listedItems.length);
   expect(listedFixtureCoverage).toBe(true);
   expect(
