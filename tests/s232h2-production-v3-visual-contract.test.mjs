@@ -269,6 +269,8 @@ test("review queue keeps canonical ranking while scanning past orphaned source r
   assert.match(listReviewQueue, /if \(cards\.length === requestedLimit\) break;/);
   assert.match(listReviewQueue, /return cards;/);
   assert.doesNotMatch(listReviewQueue, /\.limit\(limit\)/);
+  assert.match(spec, /confidence: queueAnchor \? "낮음" : "중간"/);
+  assert.match(spec, /item\.confidence === "낮음" &&\s*\n\s*h2AcceptanceMarkers\(item, "queue-anchor"\)/);
 });
 
 test("S232H.2 pins the three canonical Figma representative PNGs", () => {

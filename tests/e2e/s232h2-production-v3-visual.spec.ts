@@ -704,7 +704,7 @@ function isH2QueueAnchor(item: SyntheticItem) {
     item.correctAnswer === syntheticFixtureCorrectAnswer &&
     item.userAnswer === syntheticFixtureAnswer &&
     item.userReasonText === syntheticFixtureGap &&
-    item.confidence === "중간" &&
+    item.confidence === "낮음" &&
     h2AcceptanceMarkers(item, "queue-anchor")
   );
 }
@@ -1511,7 +1511,7 @@ function syntheticItemPayload({
     correctAnswer: syntheticFixtureCorrectAnswer,
     userAnswer: syntheticFixtureAnswer,
     userReasonText: syntheticFixtureGap,
-    confidence: "중간",
+    confidence: queueAnchor ? "낮음" : "중간",
     keyConcepts: ["신뢰보호", "공적 견해표명", "보호가치"],
     missingIssue: syntheticFixtureGap,
     weakStructurePoint: "요건과 사실 적용을 같은 순서로 연결해야 합니다.",
