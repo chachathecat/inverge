@@ -2503,7 +2503,143 @@ async function visualStyleMetrics(page: Page) {
   });
 }
 
+type CanonicalTopRecoveryOptions = Readonly<{
+  originalUrl?: string;
+  auditHash?: string | null;
+}>;
+
+async function stabilizeCanonicalTop(
+  page: Page,
+  options: CanonicalTopRecoveryOptions = {},
+) {
+  return page.evaluate(
+    async ({ originalUrl, auditHash }) => {
+      const describeActiveElement = () => {
+        const element = document.activeElement;
+        if (!(element instanceof HTMLElement)) return "non-html";
+        const tag = element.tagName.toLowerCase();
+        const role = element.getAttribute("role");
+        return role && /^[a-z][a-z0-9-]*$/i.test(role)
+          ? `${tag}:${role}`
+          : tag;
+      };
+      const root = document.documentElement;
+      const original = originalUrl ? new URL(originalUrl) : null;
+      const current = new URL(window.location.href);
+      const sameDocument = Boolean(
+        original &&
+          original.origin === current.origin &&
+          original.pathname === current.pathname &&
+          original.search === current.search,
+      );
+      const hashCreatedByAudit = Boolean(
+        auditHash &&
+          original &&
+          sameDocument &&
+          current.hash === auditHash &&
+          original.hash !== auditHash,
+      );
+      const metadata = {
+        originalHashPresent: original ? original.hash.length > 0 : null,
+        auditHashPresent: Boolean(auditHash),
+        hashBeforeRecoveryPresent: current.hash.length > 0,
+        hashCreatedByAudit,
+        hashRestored: false,
+        hashAfterRecoveryPresent: current.hash.length > 0,
+        activeElementBeforeBlur: describeActiveElement(),
+        activeElementAfterBlur: "unknown",
+        scrollSequence: [] as Array<{
+          frame: number;
+          windowScrollY: number;
+          scrollingElementScrollTop: number;
+        }>,
+      };
+
+      if (hashCreatedByAudit && original) {
+        history.replaceState(
+          history.state,
+          "",
+          `${original.pathname}${original.search}${original.hash}`,
+        );
+        metadata.hashRestored = true;
+      }
+      metadata.hashAfterRecoveryPresent = window.location.hash.length > 0;
+
+      if (document.activeElement instanceof HTMLElement)
+        document.activeElement.blur();
+      metadata.activeElementAfterBlur = describeActiveElement();
+
+      const previousScrollBehavior = {
+        value: root.style.getPropertyValue("scroll-behavior"),
+        priority: root.style.getPropertyPriority("scroll-behavior"),
+      };
+      root.style.setProperty("scroll-behavior", "auto", "important");
+      void root.offsetHeight;
+      const instantTop = {
+        top: 0,
+        left: 0,
+        behavior: "instant" as ScrollBehavior,
+      };
+      document.scrollingElement?.scrollTo(instantTop);
+      window.scrollTo(instantTop);
+
+      let consecutiveZeroFrames = 0;
+      await new Promise<void>((resolve) => {
+        const observe = () => {
+          const windowScrollY = window.scrollY;
+          const scrollingElementScrollTop =
+            document.scrollingElement?.scrollTop ?? 0;
+          metadata.scrollSequence.push({
+            frame: metadata.scrollSequence.length + 1,
+            windowScrollY,
+            scrollingElementScrollTop,
+          });
+          if (windowScrollY === 0 && scrollingElementScrollTop === 0)
+            consecutiveZeroFrames += 1;
+          else consecutiveZeroFrames = 0;
+
+          if (
+            consecutiveZeroFrames >= 3 ||
+            metadata.scrollSequence.length >= 60
+          ) {
+            resolve();
+            return;
+          }
+          requestAnimationFrame(observe);
+        };
+        requestAnimationFrame(observe);
+      });
+
+      const stable = consecutiveZeroFrames >= 3;
+      const finalWindowScrollY = window.scrollY;
+      const finalScrollingElementScrollTop =
+        document.scrollingElement?.scrollTop ?? 0;
+      if (stable) {
+        if (previousScrollBehavior.value) {
+          root.style.setProperty(
+            "scroll-behavior",
+            previousScrollBehavior.value,
+            previousScrollBehavior.priority,
+          );
+        } else {
+          root.style.removeProperty("scroll-behavior");
+        }
+      }
+
+      return {
+        ...metadata,
+        stable,
+        consecutiveZeroFrames,
+        finalWindowScrollY,
+        finalScrollingElementScrollTop,
+      };
+    },
+    options,
+  );
+}
+
 async function verifyKeyboardFocus(page: Page, primaryActionCount: number) {
+  const focusAuditStartUrl = page.url();
   await page.evaluate(() => {
     if (document.activeElement instanceof HTMLElement)
       document.activeElement.blur();
@@ -2642,6 +2778,7 @@ async function verifyKeyboardFocus(page: Page, primaryActionCount: number) {
     }
   }
   const skipLinks = page.locator("a[data-v3-skip-link]");
+  let activatedAuditHash: string | null = null;
   let skipLinkActivated = (await skipLinks.count()) === 0;
   if (!skipLinkActivated) {
     const skipLink = skipLinks.first();
@@ -2652,27 +2789,24 @@ async function verifyKeyboardFocus(page: Page, primaryActionCount: number) {
     );
     await page.keyboard.press("Enter");
     await expect.poll(() => new URL(page.url()).hash).toBe(expectedHash);
+    activatedAuditHash = expectedHash;
     skipLinkActivated = await page.evaluate((hash) => {
       if (!hash) return false;
       const target = document.querySelector(hash);
       return target instanceof HTMLElement && document.activeElement === target;
     }, expectedHash);
   }
-  await page.evaluate(() => {
-    if (document.activeElement instanceof HTMLElement)
-      document.activeElement.blur();
-    const root = document.documentElement;
-    const previousScrollBehavior = root.style.scrollBehavior;
-    root.style.scrollBehavior = "auto";
-    window.scrollTo(0, 0);
-    root.style.scrollBehavior = previousScrollBehavior;
+  const scrollRecovery = await stabilizeCanonicalTop(page, {
+    originalUrl: focusAuditStartUrl,
+    auditHash: activatedAuditHash,
   });
   const passed =
     completedFocusTraversal &&
     visitedFocusIndexes.size > 0 &&
     everyFocusVisible &&
     enabledPrimaryReached &&
-    skipLinkActivated;
+    skipLinkActivated &&
+    scrollRecovery.stable;
   return {
     passed,
     completedFocusTraversal,
@@ -2682,6 +2816,12 @@ async function verifyKeyboardFocus(page: Page, primaryActionCount: number) {
     everyFocusVisible,
     enabledPrimaryReached,
     skipLinkActivated,
+    scrollRecovery: {
+      ...scrollRecovery,
+      failureCode: scrollRecovery.stable
+        ? null
+        : "S232H2_FOCUS_AUDIT_SCROLL_UNSTABLE",
+    },
   };
 }
 
@@ -4084,46 +4224,12 @@ async function captureSyntheticScreenshot(
     ).toBe(0);
   };
 
-  const previousScrollBehavior = await page.evaluate(() => {
-    if (document.activeElement instanceof HTMLElement)
-      document.activeElement.blur();
-    const root = document.documentElement;
-    const previous = {
-      value: root.style.getPropertyValue("scroll-behavior"),
-      priority: root.style.getPropertyPriority("scroll-behavior"),
-    };
-    root.style.setProperty("scroll-behavior", "auto", "important");
-    void root.offsetHeight;
-    const instantTop = {
-      top: 0,
-      left: 0,
-      behavior: "instant" as ScrollBehavior,
-    };
-    document.scrollingElement?.scrollTo(instantTop);
-    window.scrollTo(instantTop);
-    return previous;
-  });
-  await page.waitForFunction(
-    () =>
-      window.scrollY === 0 &&
-      (document.scrollingElement?.scrollTop ?? 0) === 0,
-    undefined,
-    { timeout: 1_000 },
-  );
-  const screenshotScrollY = await page.evaluate((previous) => {
-    const root = document.documentElement;
-    const scrollY = window.scrollY;
-    if (previous.value) {
-      root.style.setProperty(
-        "scroll-behavior",
-        previous.value,
-        previous.priority,
-      );
-    } else {
-      root.style.removeProperty("scroll-behavior");
-    }
-    return scrollY;
-  }, previousScrollBehavior);
+  const canonicalTop = await stabilizeCanonicalTop(page);
+  expect(
+    canonicalTop.stable,
+    `Canonical top must remain stable before any PNG is retained; metadata-only-observation=${JSON.stringify({ failureCode: "S232H2_CANONICAL_TOP_UNSTABLE", capture: fileName.replace(/[^a-z0-9-]/gi, "-").slice(0, 80), hash: { originalPresent: canonicalTop.originalHashPresent, auditPresent: canonicalTop.auditHashPresent, beforeRecoveryPresent: canonicalTop.hashBeforeRecoveryPresent, createdByAudit: canonicalTop.hashCreatedByAudit, restored: canonicalTop.hashRestored, afterRecoveryPresent: canonicalTop.hashAfterRecoveryPresent }, activeElement: { beforeBlur: canonicalTop.activeElementBeforeBlur, afterBlur: canonicalTop.activeElementAfterBlur }, scrollSequence: canonicalTop.scrollSequence, consecutiveZeroFrames: canonicalTop.consecutiveZeroFrames, finalWindowScrollY: canonicalTop.finalWindowScrollY, finalScrollingElementScrollTop: canonicalTop.finalScrollingElementScrollTop })}.`,
+  ).toBe(true);
+  const screenshotScrollY = canonicalTop.finalWindowScrollY;
   expect(
     screenshotScrollY,
     `${fileName} must be captured from the canonical top position.`,

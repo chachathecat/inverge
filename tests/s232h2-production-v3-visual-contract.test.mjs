@@ -425,10 +425,52 @@ test("S232H.2 produces the fixed initial, dynamic, before, and Figma evidence se
   assert.match(spec, /visibleTargetFailures\(page\)/);
   assert.match(spec, /data-calculator-routine-active-step=\"casio_input\"/);
   assert.match(spec, /data-v3-component=\"CalculatorStep\"/);
-  assert.match(
-    spec,
-    /async function captureSyntheticScreenshot[\s\S]*?setProperty\("scroll-behavior", "auto", "important"\)[\s\S]*?behavior: "instant" as ScrollBehavior[\s\S]*?document\.scrollingElement\?\.scrollTo\(instantTop\)[\s\S]*?window\.scrollTo\(instantTop\)[\s\S]*?page\.waitForFunction\([\s\S]*?window\.scrollY === 0[\s\S]*?timeout: 1_000[\s\S]*?removeProperty\("scroll-behavior"\)[\s\S]*?screenshotScrollY[\s\S]*?canonical top position/,
+  const scrollHelperStart = spec.indexOf(
+    "async function stabilizeCanonicalTop",
   );
+  const focusAuditStart = spec.indexOf("async function verifyKeyboardFocus");
+  const captureStart = spec.indexOf(
+    "async function captureSyntheticScreenshot",
+  );
+  assert.ok(scrollHelperStart >= 0 && focusAuditStart > scrollHelperStart);
+  assert.ok(captureStart > focusAuditStart);
+  const scrollHelper = spec.slice(scrollHelperStart, focusAuditStart);
+  const focusAudit = spec.slice(focusAuditStart, captureStart);
+  const captureEnd = spec.indexOf(
+    "async function advanceCalculatorToCasioInput",
+    captureStart,
+  );
+  const capture = spec.slice(captureStart, captureEnd);
+  assert.match(
+    scrollHelper,
+    /current\.hash === auditHash[\s\S]*?original\.hash !== auditHash/,
+  );
+  assert.match(
+    scrollHelper,
+    /if \(hashCreatedByAudit && original\)[\s\S]*?history\.replaceState\([\s\S]*?original\.pathname[\s\S]*?original\.search[\s\S]*?original\.hash/,
+  );
+  assert.doesNotMatch(scrollHelper, /history\.pushState/);
+  assert.match(
+    scrollHelper,
+    /activeElement\.blur\(\)[\s\S]*?setProperty\("scroll-behavior", "auto", "important"\)[\s\S]*?document\.scrollingElement\?\.scrollTo\(instantTop\)[\s\S]*?window\.scrollTo\(instantTop\)[\s\S]*?requestAnimationFrame\(observe\)/,
+  );
+  assert.equal(
+    scrollHelper.match(/window\.scrollTo\(instantTop\)/g)?.length,
+    1,
+  );
+  assert.match(
+    scrollHelper,
+    /windowScrollY === 0 && scrollingElementScrollTop === 0[\s\S]*?consecutiveZeroFrames >= 3[\s\S]*?const stable = consecutiveZeroFrames >= 3[\s\S]*?if \(stable\)[\s\S]*?removeProperty\("scroll-behavior"\)/,
+  );
+  assert.match(
+    focusAudit,
+    /const focusAuditStartUrl = page\.url\(\)[\s\S]*?activatedAuditHash = expectedHash[\s\S]*?stabilizeCanonicalTop\(page, \{[\s\S]*?originalUrl: focusAuditStartUrl[\s\S]*?auditHash: activatedAuditHash/,
+  );
+  assert.match(
+    capture,
+    /const canonicalTop = await stabilizeCanonicalTop\(page\)[\s\S]*?S232H2_CANONICAL_TOP_UNSTABLE[\s\S]*?const screenshotScrollY = canonicalTop\.finalWindowScrollY[\s\S]*?canonical top position[\s\S]*?\.toBe\(0\)/,
+  );
+  assert.doesNotMatch(capture, /\.toBe\(31\)|toBeCloseTo|tolerance/i);
   for (const state of [
     "capture-extraction-preview",
     "answer-review-result",
