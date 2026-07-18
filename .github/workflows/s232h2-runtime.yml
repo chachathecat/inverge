@@ -224,6 +224,11 @@ jobs:
             if (!Array.isArray(value.auditRows) || value.auditRows.length !== value.auditRowCount) process.exit(1);
             if (value.beforeScreenshotCount !== 3 || value.initialAfterScreenshotCount !== 16 || value.dynamicScreenshotCount !== 6) process.exit(1);
             if (value.afterScreenshotCount !== 22 || value.figmaReferenceScreenshotCount !== 3 || value.figmaComparisonCount !== 3 || value.screenshotCount !== 28) process.exit(1);
+            if (value.screenshotCallCount !== 25) process.exit(1);
+            const preflight = value.preflightClosure;
+            if (!preflight || preflight.visualAuditCandidateCount !== 45 || preflight.privacyCandidateCount !== 25 || preflight.privacyCheckCount !== 25) process.exit(1);
+            if (preflight.privacyNotRunCount !== 0 || preflight.preparationBlockerCount !== 0 || preflight.visualA11yBlockerCount !== 0 || preflight.privacyBlockerCount !== 0) process.exit(1);
+            if (preflight.finalAccountSnapshotStable !== true || preflight.screenshotCallCount !== 0 || preflight.retainedPngCount !== 0) process.exit(1);
             if (!Array.isArray(value.screenshots) || value.screenshots.length !== value.screenshotCount || new Set(value.screenshots).size !== value.screenshotCount) process.exit(1);
             if (!value.screenshots.every((name) => typeof name === "string" && /^s232h2-[a-z0-9-]+\.png$/.test(name))) process.exit(1);
             const requiredReferences = new Set([

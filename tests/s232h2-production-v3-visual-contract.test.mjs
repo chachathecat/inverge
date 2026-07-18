@@ -253,21 +253,39 @@ test("S232H.2 audits all 13 production routes at 390, 768, and 1440", () => {
   }
   assert.match(spec, /expect\(requiredRoutes\)\.toHaveLength\(13\)/);
   assert.match(spec, /expect\(initialAuditRows\)\.toHaveLength\(39\)/);
-  assert.match(spec, /window\.scrollTo\(0, 0\)/);
+  assert.match(spec, /window\.scrollTo\(instantTop\)/);
   assert.match(spec, /page\.locator\("main"\)/);
   assert.match(spec, /horizontalOverflow/);
   assert.match(spec, /visiblePrimaryActionCount/);
-  assert.match(spec, /at most one primary action/);
+  assert.match(spec, /S232H2_PRIMARY_ACTION_COUNT_INVALID/);
   assert.match(spec, /data-s228-primary-action/);
   assert.match(spec, /data-s224v-dominant-primary-action/);
   assert.match(spec, /brandBackgrounds/);
   assert.match(spec, /visibleTargetFailures/);
   assert.match(spec, /targetRect\.width >= 44 && targetRect\.height >= 44/);
-  assert.match(spec, /focusRevealTargetFailures/);
+  assert.doesNotMatch(spec, /focusRevealTargetFailures/);
   assert.match(spec, /a\[data-v3-skip-link\]/);
   assert.match(learnerUi, /data-v3-skip-link[\s\S]{0,500}?min-h-12/);
   assert.match(answerReview, /data-v3-skip-link[\s\S]{0,500}?min-h-12/);
-  assert.match(spec, /A keyboard-only skip target must reveal itself on focus/);
+  assert.match(spec, /beginKeyboardTraversalAtDocumentStart/);
+  assert.match(spec, /document\.body\.insertBefore\(origin, document\.body\.firstChild\)/);
+  assert.match(spec, /origin\.focus\(\{ preventScroll: true \}\)/);
+  assert.match(spec, /const focusVisible = link\.matches\(":focus-visible"\)/);
+  assert.match(spec, /focusIndicatorPresent/);
+  assert.match(spec, /boundingBoxPresent/);
+  assert.match(spec, /activationMovedFocus/);
+  assert.match(spec, /originRemoved/);
+  for (const failureCode of [
+    "S232H2_SKIP_LINK_COUNT_INVALID",
+    "S232H2_SKIP_LINK_NOT_FIRST_TAB_STOP",
+    "S232H2_SKIP_LINK_NOT_FOCUS_VISIBLE",
+    "S232H2_SKIP_LINK_FOCUS_INDICATOR_MISSING",
+    "S232H2_SKIP_LINK_NO_RENDERED_BOX",
+    "S232H2_SKIP_LINK_TARGET_BELOW_44",
+    "S232H2_SKIP_LINK_NOT_FULLY_IN_VIEWPORT",
+    "S232H2_SKIP_LINK_ACTIVATION_FAILED",
+  ])
+    assert.ok(spec.includes(failureCode), `missing ${failureCode}`);
   assert.match(spec, /visibleViewportBoundsFailures/);
   assert.match(spec, /viewportBoundsFailureCount/);
   assert.match(spec, /new AxeBuilder/);
@@ -276,17 +294,17 @@ test("S232H.2 audits all 13 production routes at 390, 768, and 1440", () => {
   assert.match(spec, /waitForFunction/);
   assert.match(spec, /\{ timeout: 1_000 \}/);
   assert.match(spec, /completedFocusTraversal/);
-  assert.match(spec, /state\.focusIndex === firstFocusIndex/);
+  assert.match(spec, /focusState\.active\.focusIndex === firstFocusIndex/);
   assert.match(spec, /completionKind/);
   assert.match(spec, /browser-cycle/);
   assert.match(spec, /enumerated-stops/);
   assert.match(spec, /document-exit/);
-  assert.match(spec, /if \(visitedFocusIndexes\.size > 0\)/);
+  assert.match(spec, /visitedFocusIndexes\.size > 0/);
   assert.match(spec, /candidate\.tabIndex >= 0/);
-  assert.match(spec, /visitedFocusIndexes\.size >= state\.focusableCount/);
+  assert.match(spec, /visitedFocusIndexes\.size >= focusState\.focusableCount/);
   assert.match(spec, /visitedFocusStopCount/);
-  assert.match(spec, /element\.focus\(\{ preventScroll: true \}\)/);
-  assert.match(spec, /const skipLinks = page\.locator/);
+  assert.match(spec, /link\.focus\(\{ preventScroll: true \}\)/);
+  assert.doesNotMatch(spec, /for \(let stop = 0; stop < 30/);
   assert.match(spec, /previousScrollBehavior/);
   assert.match(spec, /everyFocusVisible/);
   assert.match(spec, /visitedFocusIndexes/);
@@ -307,6 +325,50 @@ test("S232H.2 audits all 13 production routes at 390, 768, and 1440", () => {
   assert.match(spec, /--layout-reading-column/);
   assert.match(spec, /--layout-content-max/);
   assert.match(spec, /must not redirect to a different pathname/);
+});
+
+test("deterministic focus origin has a real first Tab and hostile micro-fixtures", () => {
+  const beginStart = spec.indexOf(
+    "async function beginKeyboardTraversalAtDocumentStart",
+  );
+  const activateStart = spec.indexOf(
+    "async function activateCanonicalSkipLink",
+    beginStart,
+  );
+  assert.ok(beginStart >= 0 && activateStart > beginStart);
+  const begin = spec.slice(beginStart, activateStart);
+  assert.equal(begin.match(/page\.keyboard\.press\("Tab"\)/g)?.length, 1);
+  assert.match(
+    begin,
+    /document\.body\.insertBefore\(origin, document\.body\.firstChild\)/,
+  );
+  assert.match(begin, /origin\.tabIndex = -1/);
+  assert.match(begin, /origin\.focus\(\{ preventScroll: true \}\)/);
+  assert.match(begin, /finally \{[\s\S]*?removeKeyboardTraversalOrigin\(page\)/);
+  assert.doesNotMatch(begin, /for \([^)]*<\s*(?:30|100|300)/);
+
+  const microStart = spec.indexOf(
+    'test("S232H.2 deterministic focus-origin micro-fixture"',
+  );
+  const productionStart = spec.indexOf(
+    'test("S232H.2 adopts V3 across the production learner routes',
+    microStart,
+  );
+  assert.ok(microStart >= 0 && productionStart > microStart);
+  const micro = spec.slice(microStart, productionStart);
+  assert.match(micro, /laterControlCount = 36/);
+  assert.match(micro, /locator\(`#control-\$\{laterControlCount - 1\}`\)\.click\(\)/);
+  assert.match(micro, /beforeControl: true/);
+  assert.match(micro, /for \(const skipCount of \[0, 2\]\)/);
+  assert.match(micro, /'tabindex="-1"', "inert"/);
+  assert.match(micro, /top:900px/);
+  assert.match(micro, /width: 0, height: 0/);
+  assert.match(micro, /\[43, 48\][\s\S]*?\[48, 43\]/);
+  assert.match(micro, /width: 44, height: 44/);
+  assert.match(micro, /outline:none;box-shadow:none/);
+  assert.match(micro, /activation: false/);
+  assert.match(micro, /originRemoved\)\.toBe\(true\)/);
+  assert.match(micro, /originCount\)\.toBe\(0\)/);
 });
 
 test("route mapping claims only component contracts used by that production flow", () => {
@@ -494,7 +556,7 @@ test("S232H.2 produces the fixed initial, dynamic, before, and Figma evidence se
   );
   assert.match(
     focusAudit,
-    /const focusAuditStartUrl = page\.url\(\)[\s\S]*?const preFocusControl = await stabilizeCanonicalTop\(page\)[\s\S]*?activatedAuditHash = expectedHash[\s\S]*?stabilizeCanonicalTop\(page, \{[\s\S]*?originalUrl: focusAuditStartUrl[\s\S]*?auditHash: activatedAuditHash/,
+    /const focusAuditStartUrl = page\.url\(\)[\s\S]*?const preFocusControl = await stabilizeCanonicalTop\(page\)[\s\S]*?beginKeyboardTraversalAtDocumentStart\(page\)[\s\S]*?activateCanonicalSkipLink\(page\)[\s\S]*?stabilizeCanonicalTop\(page, \{[\s\S]*?originalUrl: focusAuditStartUrl[\s\S]*?auditHash: activation\.auditHash/,
   );
   assert.match(
     focusAudit,
@@ -510,11 +572,11 @@ test("S232H.2 produces the fixed initial, dynamic, before, and Figma evidence se
   );
   assert.match(
     focusAudit,
-    /navigation control must establish canonical top[\s\S]*?must expose visible keyboard focus[\s\S]*?pre-focus canonical-top control must pass independently[\s\S]*?post-focus scroll cleanup must restore canonical top independently/,
+    /S232H2_MAIN_LANDMARK_INVALID[\s\S]*?S232H2_POINTER_TARGET_BELOW_44[\s\S]*?S232H2_AXE_SERIOUS_CRITICAL[\s\S]*?S232H2_FOCUS_TRAVERSAL_INCOMPLETE[\s\S]*?S232H2_FOCUS_NOT_VISIBLE/,
   );
   assert.match(
     capture,
-    /const canonicalTop = await stabilizeCanonicalTop\(page\)[\s\S]*?canonicalTop\.failureCode[\s\S]*?\.toBeNull\(\)[\s\S]*?const screenshotScrollY = canonicalTop\.finalWindowScrollY[\s\S]*?canonical top position[\s\S]*?\.toBe\(0\)/,
+    /const canonicalTop = await stabilizeCanonicalTop\(page\)[\s\S]*?const screenshotScrollY = canonicalTop\.finalWindowScrollY[\s\S]*?if \(options\.preflight\)[\s\S]*?canonicalTop\.failureCode[\s\S]*?\.toBeNull\(\)[\s\S]*?canonical top position[\s\S]*?\.toBe\(0\)/,
   );
   assert.doesNotMatch(capture, /\.toBe\(31\)|toBeCloseTo|tolerance/i);
   for (const state of [
@@ -530,6 +592,13 @@ test("S232H.2 produces the fixed initial, dynamic, before, and Figma evidence se
   assert.match(workflow, /initialAuditRowCount !== 39/);
   assert.match(workflow, /dynamicAuditRowCount !== 6/);
   assert.match(workflow, /screenshotCount !== 28/);
+  assert.match(workflow, /value\.screenshotCallCount !== 25/);
+  assert.match(workflow, /preflight\.visualAuditCandidateCount !== 45/);
+  assert.match(workflow, /preflight\.privacyCandidateCount !== 25/);
+  assert.match(workflow, /preflight\.privacyCheckCount !== 25/);
+  assert.match(workflow, /preflight\.privacyNotRunCount !== 0/);
+  assert.match(workflow, /preflight\.screenshotCallCount !== 0/);
+  assert.match(workflow, /preflight\.retainedPngCount !== 0/);
   assert.match(workflow, /s232h2-\*\.png/);
   assert.match(workflow, /s232h2-visual-manifest\.json/);
   assert.match(
@@ -834,11 +903,28 @@ test("S232H.2 evidence is privacy-bounded synthetic data and directly compared w
   assert.match(spec, /test\.describe\.configure\(\{ timeout: 1_500_000, retries: 0 \}\)/);
   assert.match(spec, /metadata-only-observation=/);
   assert.match(spec, /S232H2_SCREENSHOT_BOUNDARY_OPEN/);
-  assert.match(spec, /S232H2_PRIVACY_PREFLIGHT_OPEN/);
-  assert.match(spec, /preflightCandidateCount === 25/);
-  assert.match(spec, /preflightCheckCount === 25/);
-  assert.match(spec, /preflightBlockerCount === 0/);
+  assert.match(spec, /S232H2_PREFLIGHT_OPEN/);
+  assert.match(spec, /visualAuditCandidateCount === 45/);
+  assert.match(spec, /privacyCandidateCount === 25/);
+  assert.match(spec, /privacyCheckCount === 25/);
+  assert.match(spec, /privacyNotRunCount === 0/);
+  assert.match(spec, /preparationBlockerCount === 0/);
+  assert.match(spec, /visualA11yBlockerCount === 0/);
+  assert.match(spec, /privacyBlockerCount === 0/);
+  assert.match(spec, /screenshotCallCount === 0/);
+  assert.match(spec, /retainedPngCount === 0/);
   assert.match(spec, /preflightAccountSnapshotStable/);
+  assert.match(spec, /type PreflightBlocker/);
+  assert.match(spec, /phase: collection\.phase/);
+  assert.match(spec, /routeStateAlias: collection\.routeStateAlias/);
+  assert.match(spec, /checkFamily/);
+  assert.match(spec, /failureCode/);
+  assert.match(spec, /sortedPreflightBlockers\(preflight\)/);
+  const preflightGate = spec.slice(
+    spec.indexOf("const preflightClosed ="),
+    spec.indexOf("const initialAfterScreenshots"),
+  );
+  assert.doesNotMatch(preflightGate, /expect\.soft/);
   assert.match(spec, /blockingBuckets/);
   assert.match(spec, /fragmentFamily/);
   assert.match(spec, /maskedLength/);
@@ -851,9 +937,30 @@ test("S232H.2 evidence is privacy-bounded synthetic data and directly compared w
     /if\s*\([^)]*(?:length|lengthFamily)[^)]*<=\s*7[^)]*\)\s*return\s*\{\s*block:\s*false/i,
   );
   assert.doesNotMatch(spec, /unknown-key.*(?:allow|ignore)/i);
+  const captureBoundaryStart = spec.indexOf(
+    "async function captureSyntheticScreenshot",
+  );
+  const captureBoundaryEnd = spec.indexOf(
+    "async function advanceCalculatorToCasioInput",
+    captureBoundaryStart,
+  );
+  const captureBoundary = spec.slice(captureBoundaryStart, captureBoundaryEnd);
+  const boundaryObservationIndex = captureBoundary.indexOf(
+    "const blockingHitCount = await assertScreenshotDataBoundary();",
+  );
+  const preflightReturnIndex = captureBoundary.indexOf(
+    "if (options.preflight)",
+    boundaryObservationIndex,
+  );
+  const screenshotCallIndex = captureBoundary.indexOf("page.screenshot(");
+  assert.ok(
+    boundaryObservationIndex >= 0 &&
+      preflightReturnIndex > boundaryObservationIndex &&
+      screenshotCallIndex > preflightReturnIndex,
+  );
   assert.match(
-    spec,
-    /await assertScreenshotDataBoundary\(\);\s*if \(options\.preflight\) return null;\s*const buffer = await page\.screenshot\([\s\S]*?await assertScreenshotDataBoundary\(\);\s*boundary\.captureCount/,
+    captureBoundary,
+    /boundary\.screenshotCallCount \+= 1;[\s\S]*?const buffer = await page\.screenshot\([\s\S]*?await assertScreenshotDataBoundary\(\);[\s\S]*?boundary\.captureCount/,
   );
   assert.equal([...spec.matchAll(/page\.screenshot\(/g)].length, 1);
   assert.match(
@@ -965,4 +1072,69 @@ test("S232H.2 evidence is privacy-bounded synthetic data and directly compared w
   assert.match(workflow, /rawInputArtifactCaptured !== false/);
   assert.match(workflow, /consoleErrorCount !== 0/);
   assert.match(workflow, /baselineConsoleErrorCount !== 0/);
+});
+
+test("pre-PNG aggregate closes 45 visual and 25 privacy candidates before capture", () => {
+  const runnerStart = spec.indexOf("async function runPreflightCandidate");
+  const dynamicAuditStart = spec.indexOf(
+    "async function auditDynamicState",
+    runnerStart,
+  );
+  assert.ok(runnerStart >= 0 && dynamicAuditStart > runnerStart);
+  const runner = spec.slice(runnerStart, dynamicAuditStart);
+  const preparationIndex = runner.indexOf("await prepare()");
+  const privacyIndex = runner.indexOf("captureSyntheticScreenshot(");
+  const auditIndex = runner.indexOf("auditRow = await audit()");
+  const finallyIndex = runner.indexOf("} finally {");
+  assert.ok(
+    preparationIndex >= 0 &&
+      privacyIndex > preparationIndex &&
+      auditIndex > privacyIndex &&
+      finallyIndex > auditIndex,
+  );
+  assert.match(runner, /privacyNotRunCount \+= 1/);
+  assert.match(runner, /S232H2_PRIVACY_CHECK_NOT_RUN/);
+  assert.match(runner, /removeKeyboardTraversalOrigin\(page\)/);
+  assert.match(runner, /S232H2_CANDIDATE_CLEANUP_FAILED/);
+
+  const gateStart = spec.indexOf("const preflightClosure =");
+  const capturePhaseStart = spec.indexOf(
+    "const initialAfterScreenshots",
+    gateStart,
+  );
+  assert.ok(gateStart >= 0 && capturePhaseStart > gateStart);
+  const gate = spec.slice(gateStart, capturePhaseStart);
+  for (const contract of [
+    "visualAuditCandidateCount === 45",
+    "privacyCandidateCount === 25",
+    "privacyCheckCount === 25",
+    "privacyNotRunCount === 0",
+    "preparationBlockerCount === 0",
+    "visualA11yBlockerCount === 0",
+    "privacyBlockerCount === 0",
+    "finalAccountSnapshotStable === true",
+    "screenshotCallCount === 0",
+    "retainedPngCount === 0",
+  ])
+    assert.ok(gate.includes(contract), `missing preflight closure: ${contract}`);
+  assert.match(gate, /S232H2_PREFLIGHT_OPEN/);
+  assert.doesNotMatch(gate, /expect\.soft|page\.screenshot\(/);
+
+  const screenshotFunctionStart = spec.indexOf(
+    "async function captureSyntheticScreenshot",
+  );
+  const screenshotFunctionEnd = spec.indexOf(
+    "async function advanceCalculatorToCasioInput",
+    screenshotFunctionStart,
+  );
+  const screenshotFunction = spec.slice(
+    screenshotFunctionStart,
+    screenshotFunctionEnd,
+  );
+  const preflightBranch = screenshotFunction.lastIndexOf(
+    "if (options.preflight)",
+  );
+  const screenshotApi = screenshotFunction.indexOf("page.screenshot(");
+  assert.ok(preflightBranch >= 0 && screenshotApi > preflightBranch);
+  assert.equal([...spec.matchAll(/page\.screenshot\(/g)].length, 1);
 });

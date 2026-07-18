@@ -254,6 +254,85 @@ type AuditRow = {
   contentMax: number;
 };
 
+type PreflightCheckFamily =
+  | "preparation"
+  | "canonical-top"
+  | "target-size"
+  | "skip-link"
+  | "viewport-bounds"
+  | "primary-action"
+  | "axe"
+  | "keyboard-focus"
+  | "scroll-recovery"
+  | "privacy-boundary"
+  | "account-snapshot"
+  | "privacy-not-run"
+  | "visual-contract";
+
+type PreflightBlocker = {
+  phase: "initial" | "dynamic" | "baseline" | "closure";
+  routeStateAlias: string;
+  viewport: string;
+  checkFamily: PreflightCheckFamily;
+  failureCode: string;
+  count: number;
+};
+
+type PreflightCollector = {
+  visualAuditCandidateCount: number;
+  privacyCandidateCount: number;
+  privacyCheckCount: number;
+  privacyNotRunCount: number;
+  screenshotCallCount: number;
+  retainedPngCount: number;
+  blockers: PreflightBlocker[];
+};
+
+type AuditCollectionContext = Pick<
+  PreflightBlocker,
+  "phase" | "routeStateAlias" | "viewport"
+> & {
+  collector: PreflightCollector;
+};
+
+function createPreflightCollector(): PreflightCollector {
+  return {
+    visualAuditCandidateCount: 0,
+    privacyCandidateCount: 0,
+    privacyCheckCount: 0,
+    privacyNotRunCount: 0,
+    screenshotCallCount: 0,
+    retainedPngCount: 0,
+    blockers: [],
+  };
+}
+
+function recordPreflightBlocker(
+  collector: PreflightCollector,
+  blocker: Omit<PreflightBlocker, "count"> & { count?: number },
+) {
+  const count = blocker.count ?? 1;
+  const existing = collector.blockers.find(
+    (candidate) =>
+      candidate.phase === blocker.phase &&
+      candidate.routeStateAlias === blocker.routeStateAlias &&
+      candidate.viewport === blocker.viewport &&
+      candidate.checkFamily === blocker.checkFamily &&
+      candidate.failureCode === blocker.failureCode,
+  );
+  if (existing) {
+    existing.count += count;
+    return;
+  }
+  collector.blockers.push({ ...blocker, count });
+}
+
+function sortedPreflightBlockers(collector: PreflightCollector) {
+  return [...collector.blockers].sort((left, right) =>
+    JSON.stringify(left).localeCompare(JSON.stringify(right)),
+  );
+}
+
 type ScreenshotEvidence = {
   fileName: string;
   buffer: Buffer;
@@ -572,6 +651,7 @@ type ScreenshotDataBoundary = {
     count: number;
   }>;
   preflightAccountSnapshotStable: boolean;
+  screenshotCallCount: number;
   checkCount: number;
   captureCount: number;
   visibleTextHitCount: number;
@@ -796,6 +876,7 @@ function createScreenshotDataBoundary(
     preflightBlockerCount: 0,
     preflightBlockingBuckets: [],
     preflightAccountSnapshotStable: false,
+    screenshotCallCount: 0,
     checkCount: 0,
     captureCount: 0,
     visibleTextHitCount: 0,
@@ -2354,66 +2435,193 @@ async function visibleTargetFailures(page: Page) {
     );
 }
 
-async function focusRevealTargetFailures(page: Page) {
-  const links = page.locator("a[data-v3-skip-link]");
-  const failures: Array<{
-    width: number;
-    height: number;
-    inViewport: boolean;
-  }> = [];
-  for (let index = 0; index < (await links.count()); index += 1) {
-    const link = links.nth(index);
-    const initiallyOffscreen = await link.evaluate((element) => {
-      const rect = element.getBoundingClientRect();
-      return (
-        rect.bottom <= 0 ||
-        rect.right <= 0 ||
-        rect.top >= window.innerHeight ||
-        rect.left >= window.innerWidth
-      );
-    });
-    if (!initiallyOffscreen) continue;
-    await page.evaluate(() => {
-      if (document.activeElement instanceof HTMLElement)
-        document.activeElement.blur();
-      window.scrollTo(0, 0);
-    });
-    let reachedByKeyboard = false;
-    for (let stop = 0; stop < 30 && !reachedByKeyboard; stop += 1) {
-      await page.keyboard.press("Tab");
-      reachedByKeyboard = await link.evaluate(
-        (element) => document.activeElement === element,
-      );
-    }
-    if (!reachedByKeyboard) {
-      failures.push({
-        width: 0,
-        height: 0,
-        inViewport: false,
-      });
-      continue;
-    }
-    await expect(
-      link,
-      "A keyboard-only skip target must reveal itself on focus.",
-    ).toBeInViewport();
-    const box = await link.boundingBox();
-    const inViewport = await link.evaluate((element) =>
-      element.matches(":focus-visible"),
-    );
-    if (!box || box.width < 44 || box.height < 44 || !inViewport) {
-      failures.push({
-        width: Math.round((box?.width ?? 0) * 10) / 10,
-        height: Math.round((box?.height ?? 0) * 10) / 10,
-        inViewport,
-      });
-    }
-    await page.evaluate(() => {
-      if (document.activeElement instanceof HTMLElement)
-        document.activeElement.blur();
-    });
+const focusOriginAttribute = "data-s232h2-focus-origin";
+
+type SkipLinkFailureCode =
+  | "S232H2_SKIP_LINK_COUNT_INVALID"
+  | "S232H2_SKIP_LINK_NOT_FIRST_TAB_STOP"
+  | "S232H2_SKIP_LINK_NOT_FOCUS_VISIBLE"
+  | "S232H2_SKIP_LINK_FOCUS_INDICATOR_MISSING"
+  | "S232H2_SKIP_LINK_NO_RENDERED_BOX"
+  | "S232H2_SKIP_LINK_TARGET_BELOW_44"
+  | "S232H2_SKIP_LINK_NOT_FULLY_IN_VIEWPORT"
+  | "S232H2_SKIP_LINK_ACTIVATION_FAILED";
+
+type SkipLinkMeasurement = {
+  skipLinkCount: number;
+  focusVisible: boolean;
+  focusIndicatorPresent: boolean;
+  inViewport: boolean;
+  boundingBoxPresent: boolean;
+  width: number;
+  height: number;
+  reachedByKeyboard: boolean;
+  activationMovedFocus: boolean;
+  originRemoved: boolean;
+};
+
+function skipLinkFailureCodes(
+  measurement: SkipLinkMeasurement,
+): SkipLinkFailureCode[] {
+  if (measurement.skipLinkCount !== 1)
+    return ["S232H2_SKIP_LINK_COUNT_INVALID"];
+  if (!measurement.reachedByKeyboard)
+    return ["S232H2_SKIP_LINK_NOT_FIRST_TAB_STOP"];
+  const failures: SkipLinkFailureCode[] = [];
+  if (!measurement.focusVisible)
+    failures.push("S232H2_SKIP_LINK_NOT_FOCUS_VISIBLE");
+  if (!measurement.focusIndicatorPresent)
+    failures.push("S232H2_SKIP_LINK_FOCUS_INDICATOR_MISSING");
+  if (!measurement.boundingBoxPresent) {
+    failures.push("S232H2_SKIP_LINK_NO_RENDERED_BOX");
+  } else {
+    if (measurement.width < 44 || measurement.height < 44)
+      failures.push("S232H2_SKIP_LINK_TARGET_BELOW_44");
+    if (!measurement.inViewport)
+      failures.push("S232H2_SKIP_LINK_NOT_FULLY_IN_VIEWPORT");
   }
+  if (!measurement.activationMovedFocus)
+    failures.push("S232H2_SKIP_LINK_ACTIVATION_FAILED");
   return failures;
+}
+
+async function removeKeyboardTraversalOrigin(page: Page) {
+  await page
+    .evaluate((attribute) => {
+      for (const origin of document.querySelectorAll(`[${attribute}]`))
+        origin.remove();
+    }, focusOriginAttribute)
+    .catch(() => undefined);
+}
+
+async function beginKeyboardTraversalAtDocumentStart(
+  page: Page,
+): Promise<SkipLinkMeasurement> {
+  let measurement: Omit<
+    SkipLinkMeasurement,
+    "activationMovedFocus" | "originRemoved"
+  > = {
+    skipLinkCount: 0,
+    focusVisible: false,
+    focusIndicatorPresent: false,
+    inViewport: false,
+    boundingBoxPresent: false,
+    width: 0,
+    height: 0,
+    reachedByKeyboard: false,
+  };
+  try {
+    await page.evaluate((attribute) => {
+      for (const staleOrigin of document.querySelectorAll(`[${attribute}]`))
+        staleOrigin.remove();
+      const origin = document.createElement("span");
+      origin.setAttribute(attribute, "");
+      origin.setAttribute("aria-hidden", "true");
+      origin.tabIndex = -1;
+      origin.style.position = "absolute";
+      origin.style.inlineSize = "0";
+      origin.style.blockSize = "0";
+      origin.style.overflow = "hidden";
+      origin.style.opacity = "0";
+      origin.style.pointerEvents = "none";
+      document.body.insertBefore(origin, document.body.firstChild);
+      origin.focus({ preventScroll: true });
+    }, focusOriginAttribute);
+
+    // This real keyboard transition is the reachability proof. The temporary
+    // programmatic focus above is only a deterministic traversal origin.
+    await page.keyboard.press("Tab");
+    measurement = await page.evaluate(async () => {
+      const links = Array.from(
+        document.querySelectorAll<HTMLAnchorElement>(
+          "a[data-v3-skip-link]",
+        ),
+      );
+      const link = links.length === 1 ? links[0] : null;
+      const reachedByKeyboard = Boolean(
+        link && document.activeElement === link,
+      );
+      if (!link) {
+        return {
+          skipLinkCount: links.length,
+          focusVisible: false,
+          focusIndicatorPresent: false,
+          inViewport: false,
+          boundingBoxPresent: false,
+          width: 0,
+          height: 0,
+          reachedByKeyboard,
+        };
+      }
+      await Promise.all(
+        link
+          .getAnimations()
+          .map((animation) => animation.finished.catch(() => undefined)),
+      );
+      const style = getComputedStyle(link);
+      const rect = link.getBoundingClientRect();
+      const focusVisible = link.matches(":focus-visible");
+      const hasOutline =
+        style.outlineStyle !== "none" &&
+        Number.parseFloat(style.outlineWidth) > 0;
+      const hasRing = style.boxShadow !== "none";
+      const boundingBoxPresent =
+        link.getClientRects().length > 0 && rect.width > 0 && rect.height > 0;
+      return {
+        skipLinkCount: links.length,
+        focusVisible,
+        focusIndicatorPresent: focusVisible && (hasOutline || hasRing),
+        inViewport:
+          boundingBoxPresent &&
+          rect.top >= 0 &&
+          rect.left >= 0 &&
+          rect.bottom <= window.innerHeight &&
+          rect.right <= window.innerWidth,
+        boundingBoxPresent,
+        width: Math.round(rect.width * 10) / 10,
+        height: Math.round(rect.height * 10) / 10,
+        reachedByKeyboard,
+      };
+    });
+  } finally {
+    await removeKeyboardTraversalOrigin(page);
+  }
+  const originRemoved =
+    (await page.locator(`[${focusOriginAttribute}]`).count()) === 0;
+  return {
+    ...measurement,
+    activationMovedFocus: false,
+    originRemoved,
+  };
+}
+
+async function activateCanonicalSkipLink(page: Page) {
+  const activation = await page.evaluate(() => {
+    const links = Array.from(
+      document.querySelectorAll<HTMLAnchorElement>("a[data-v3-skip-link]"),
+    );
+    const link = links.length === 1 ? links[0] : null;
+    const href = link?.getAttribute("href") ?? "";
+    const validHash = /^#[a-z0-9_-]+$/i.test(href);
+    if (!link || !validHash) return { ready: false, auditHash: null };
+    link.focus({ preventScroll: true });
+    return { ready: true, auditHash: href };
+  });
+  if (!activation.ready || !activation.auditHash)
+    return { activationMovedFocus: false, auditHash: null };
+  await page.keyboard.press("Enter");
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      ),
+  );
+  const activationMovedFocus = await page.evaluate((auditHash) => {
+    if (!auditHash || window.location.hash !== auditHash) return false;
+    const target = document.getElementById(auditHash.slice(1));
+    return target instanceof HTMLElement && document.activeElement === target;
+  }, activation.auditHash);
+  return { activationMovedFocus, auditHash: activation.auditHash };
 }
 
 async function visiblePrimaryActions(page: Page) {
@@ -2764,93 +2972,77 @@ async function stabilizeCanonicalTop(
   );
 }
 
-async function verifyKeyboardFocus(page: Page, primaryActionCount: number) {
-  const focusAuditStartUrl = page.url();
-  const preFocusControl = await stabilizeCanonicalTop(page);
-
-  let completedFocusTraversal = false;
-  let everyFocusVisible = true;
-  let enabledPrimaryReached = primaryActionCount === 0;
-  let firstFocusIndex: number | null = null;
-  let completionKind:
-    | "enumerated-stops"
-    | "browser-cycle"
-    | "document-exit"
-    | null = null;
-  const visitedFocusIndexes = new Set<number>();
-  let focusStopCount = 0;
-  let emptyFocusStops = 0;
-  for (let attempt = 0; attempt < 300; attempt += 1) {
-    await page.keyboard.press("Tab");
-    // Production keeps smooth scrolling for in-page navigation. Give the
-    // browser a bounded chance to finish revealing the newly focused target
-    // before measuring it; a target that remains offscreen still fails below.
-    await page
-      .waitForFunction(
-        () => {
-          const element = document.activeElement;
-          if (!(element instanceof HTMLElement) || element === document.body)
-            return true;
-          const rect = element.getBoundingClientRect();
-          return (
-            rect.width > 0 &&
-            rect.height > 0 &&
-            rect.bottom > 0 &&
-            rect.right > 0 &&
-            rect.top < window.innerHeight &&
-            rect.left < window.innerWidth
-          );
-        },
-        undefined,
-        { timeout: 1_000 },
-      )
-      .catch(() => undefined);
-    const state = await page.evaluate(() => {
-      const element = document.activeElement;
-      if (!(element instanceof HTMLElement) || element === document.body)
-        return null;
-      const style = getComputedStyle(element);
-      const rect = element.getBoundingClientRect();
-      const hasOutline =
-        style.outlineStyle !== "none" &&
-        Number.parseFloat(style.outlineWidth) > 0;
-      const hasRing = style.boxShadow !== "none";
-      const focusable = Array.from(
-        document.querySelectorAll<HTMLElement>(
-          'a[href], button, summary, input:not([type="hidden"]), select, textarea, [tabindex]:not([tabindex="-1"]), [role="button"]',
-        ),
-      ).filter((candidate) => {
-        const candidateStyle = getComputedStyle(candidate);
-        const candidateRect = candidate.getBoundingClientRect();
+async function waitForFocusedElementReveal(page: Page) {
+  await page
+    .waitForFunction(
+      () => {
+        const element = document.activeElement;
+        if (!(element instanceof HTMLElement) || element === document.body)
+          return true;
+        const rect = element.getBoundingClientRect();
         return (
-          candidate.tabIndex >= 0 &&
-          !candidate.matches(":disabled") &&
-          candidate.getAttribute("aria-disabled") !== "true" &&
-          candidateRect.width > 0 &&
-          candidateRect.height > 0 &&
-          candidateStyle.display !== "none" &&
-          candidateStyle.visibility !== "hidden"
+          rect.width > 0 &&
+          rect.height > 0 &&
+          rect.bottom > 0 &&
+          rect.right > 0 &&
+          rect.top < window.innerHeight &&
+          rect.left < window.innerWidth
         );
-      });
-      const brandProbe = document.createElement("span");
-      brandProbe.style.backgroundColor = "var(--color-background-brand)";
-      document.body.append(brandProbe);
-      const brandBackground = getComputedStyle(brandProbe).backgroundColor;
-      brandProbe.remove();
-      const explicitPrimary =
-        (element.dataset.v3Component === "Action" &&
-          element.dataset.v3ActionTone === "primary") ||
-        element.hasAttribute("data-s228-primary-action") ||
-        element.hasAttribute("data-s224v-dominant-primary-action") ||
-        element.hasAttribute("data-s225x-dominant-primary-after-input") ||
-        element.hasAttribute("data-s226-capture-primary-action") ||
-        element.hasAttribute("data-s226-primary-cta") ||
-        element.hasAttribute("data-s232e-second-write-primary-action") ||
-        (brandBackground !== "rgba(0, 0, 0, 0)" &&
-          style.backgroundColor === brandBackground);
-      return {
+      },
+      undefined,
+      { timeout: 1_000 },
+    )
+    .catch(() => undefined);
+}
+
+async function activeKeyboardFocusState(page: Page) {
+  return page.evaluate(() => {
+    const focusable = Array.from(
+      document.querySelectorAll<HTMLElement>(
+        'a[href], button, summary, input:not([type="hidden"]), select, textarea, [tabindex]:not([tabindex="-1"]), [role="button"]',
+      ),
+    ).filter((candidate) => {
+      const candidateStyle = getComputedStyle(candidate);
+      const candidateRect = candidate.getBoundingClientRect();
+      return (
+        candidate.tabIndex >= 0 &&
+        !candidate.matches(":disabled") &&
+        candidate.getAttribute("aria-disabled") !== "true" &&
+        !candidate.closest("[inert]") &&
+        candidateRect.width > 0 &&
+        candidateRect.height > 0 &&
+        candidateStyle.display !== "none" &&
+        candidateStyle.visibility !== "hidden"
+      );
+    });
+    const element = document.activeElement;
+    if (!(element instanceof HTMLElement) || element === document.body) {
+      return { active: null, focusableCount: focusable.length };
+    }
+    const style = getComputedStyle(element);
+    const rect = element.getBoundingClientRect();
+    const hasOutline =
+      style.outlineStyle !== "none" && Number.parseFloat(style.outlineWidth) > 0;
+    const hasRing = style.boxShadow !== "none";
+    const brandProbe = document.createElement("span");
+    brandProbe.style.backgroundColor = "var(--color-background-brand)";
+    document.body.append(brandProbe);
+    const brandBackground = getComputedStyle(brandProbe).backgroundColor;
+    brandProbe.remove();
+    const explicitPrimary =
+      (element.dataset.v3Component === "Action" &&
+        element.dataset.v3ActionTone === "primary") ||
+      element.hasAttribute("data-s228-primary-action") ||
+      element.hasAttribute("data-s224v-dominant-primary-action") ||
+      element.hasAttribute("data-s225x-dominant-primary-after-input") ||
+      element.hasAttribute("data-s226-capture-primary-action") ||
+      element.hasAttribute("data-s226-primary-cta") ||
+      element.hasAttribute("data-s232e-second-write-primary-action") ||
+      (brandBackground !== "rgba(0, 0, 0, 0)" &&
+        style.backgroundColor === brandBackground);
+    return {
+      active: {
         focusIndex: focusable.indexOf(element),
-        focusableCount: focusable.length,
         inViewport:
           rect.width > 0 &&
           rect.height > 0 &&
@@ -2861,66 +3053,98 @@ async function verifyKeyboardFocus(page: Page, primaryActionCount: number) {
         hasIndicator:
           element.matches(":focus-visible") && (hasOutline || hasRing),
         explicitPrimary,
-      };
-    });
-    if (!state || state.focusIndex < 0) {
-      emptyFocusStops += 1;
-      if (emptyFocusStops > 2) {
-        if (visitedFocusIndexes.size > 0) {
-          completedFocusTraversal = true;
-          completionKind = "document-exit";
-        }
-        break;
+      },
+      focusableCount: focusable.length,
+    };
+  });
+}
+
+async function verifyKeyboardFocus(page: Page, primaryActionCount: number) {
+  const focusAuditStartUrl = page.url();
+  const preFocusControl = await stabilizeCanonicalTop(page);
+  let completedFocusTraversal = false;
+  let everyFocusVisible = true;
+  let enabledPrimaryReached = primaryActionCount === 0;
+  let firstFocusIndex: number | null = null;
+  let completionKind:
+    | "enumerated-stops"
+    | "browser-cycle"
+    | "document-exit"
+    | null = null;
+  const visitedFocusIndexes = new Set<number>();
+
+  const skipLinkStart = await beginKeyboardTraversalAtDocumentStart(page);
+  await waitForFocusedElementReveal(page);
+  let focusState = await activeKeyboardFocusState(page);
+  const focusStopCount = focusState.focusableCount;
+  const visitFocusState = (state: typeof focusState) => {
+    const active = state.active;
+    if (!active || active.focusIndex < 0) return false;
+    if (firstFocusIndex === null) firstFocusIndex = active.focusIndex;
+    visitedFocusIndexes.add(active.focusIndex);
+    if (!active.inViewport || !active.hasIndicator) everyFocusVisible = false;
+    if (active.inViewport && active.hasIndicator && active.explicitPrimary)
+      enabledPrimaryReached = true;
+    return true;
+  };
+  visitFocusState(focusState);
+  if (
+    focusStopCount > 0 &&
+    visitedFocusIndexes.size >= focusStopCount
+  ) {
+    completedFocusTraversal = true;
+    completionKind = "enumerated-stops";
+  }
+
+  // The traversal budget is derived from the rendered focus stops. It is not
+  // an arbitrary retry loop and cannot hide a misplaced skip link.
+  for (
+    let remainingStop = 0;
+    remainingStop < focusStopCount && !completedFocusTraversal;
+    remainingStop += 1
+  ) {
+    await page.keyboard.press("Tab");
+    await waitForFocusedElementReveal(page);
+    focusState = await activeKeyboardFocusState(page);
+    if (!focusState.active || focusState.active.focusIndex < 0) {
+      if (visitedFocusIndexes.size > 0) {
+        completedFocusTraversal = true;
+        completionKind = "document-exit";
       }
-      continue;
+      break;
     }
-    emptyFocusStops = 0;
-    focusStopCount = Math.max(focusStopCount, state.focusableCount);
-    if (firstFocusIndex === null) {
-      firstFocusIndex = state.focusIndex;
-    } else if (
-      state.focusIndex === firstFocusIndex &&
+    if (
+      firstFocusIndex !== null &&
+      focusState.active.focusIndex === firstFocusIndex &&
       visitedFocusIndexes.size > 0
     ) {
       completedFocusTraversal = true;
       completionKind = "browser-cycle";
       break;
     }
-    visitedFocusIndexes.add(state.focusIndex);
-    if (!state.inViewport || !state.hasIndicator) everyFocusVisible = false;
-    if (state?.inViewport && state.hasIndicator && state.explicitPrimary)
-      enabledPrimaryReached = true;
+    visitFocusState(focusState);
     if (
-      state.focusableCount > 0 &&
-      visitedFocusIndexes.size >= state.focusableCount
+      focusState.focusableCount > 0 &&
+      visitedFocusIndexes.size >= focusState.focusableCount
     ) {
       completedFocusTraversal = true;
       completionKind = "enumerated-stops";
-      break;
     }
   }
-  const skipLinks = page.locator("a[data-v3-skip-link]");
-  let activatedAuditHash: string | null = null;
-  let skipLinkActivated = (await skipLinks.count()) === 0;
-  if (!skipLinkActivated) {
-    const skipLink = skipLinks.first();
-    const expectedHash = await skipLink.getAttribute("href");
-    expect(expectedHash).toMatch(/^#[a-z0-9_-]+$/i);
-    await skipLink.evaluate((element) =>
-      element.focus({ preventScroll: true }),
-    );
-    await page.keyboard.press("Enter");
-    await expect.poll(() => new URL(page.url()).hash).toBe(expectedHash);
-    activatedAuditHash = expectedHash;
-    skipLinkActivated = await page.evaluate((hash) => {
-      if (!hash) return false;
-      const target = document.querySelector(hash);
-      return target instanceof HTMLElement && document.activeElement === target;
-    }, expectedHash);
-  }
+
+  const activation = await activateCanonicalSkipLink(page);
+  const skipLink = {
+    ...skipLinkStart,
+    activationMovedFocus: activation.activationMovedFocus,
+  };
+  const skipLinkFailures = skipLinkFailureCodes(skipLink);
+  const skipLinkActivated =
+    skipLink.reachedByKeyboard &&
+    skipLink.activationMovedFocus &&
+    !skipLinkFailures.includes("S232H2_SKIP_LINK_ACTIVATION_FAILED");
   const scrollRecovery = await stabilizeCanonicalTop(page, {
     originalUrl: focusAuditStartUrl,
-    auditHash: activatedAuditHash,
+    auditHash: activation.auditHash,
   });
   const keyboardFocusPassed =
     completedFocusTraversal &&
@@ -2937,6 +3161,8 @@ async function verifyKeyboardFocus(page: Page, primaryActionCount: number) {
     everyFocusVisible,
     enabledPrimaryReached,
     skipLinkActivated,
+    skipLink,
+    skipLinkFailures,
     preFocusControl,
     scrollRecovery,
   };
@@ -3072,8 +3298,47 @@ async function auditRoute(
     navigate?: boolean;
     state?: string;
     expectedCanonicalDock?: boolean;
+    auditKind?: AuditRow["auditKind"];
+    collection?: AuditCollectionContext;
   } = {},
 ): Promise<AuditRow> {
+  const collection = options.collection;
+  if (collection) collection.collector.visualAuditCandidateCount += 1;
+  const recordFailure = (
+    checkFamily: PreflightCheckFamily,
+    failureCode: string,
+    count = 1,
+  ) => {
+    if (count <= 0) return;
+    if (!collection) {
+      expect(
+        count,
+        `${route.label} failed ${failureCode}.`,
+      ).toBe(0);
+      return;
+    }
+    recordPreflightBlocker(collection.collector, {
+      phase: collection.phase,
+      routeStateAlias: collection.routeStateAlias,
+      viewport: collection.viewport,
+      checkFamily,
+      failureCode,
+      count,
+    });
+  };
+  const observe = async (
+    checkFamily: PreflightCheckFamily,
+    failureCode: string,
+    operation: () => Promise<void>,
+  ) => {
+    try {
+      await operation();
+    } catch (error) {
+      if (!collection) throw error;
+      recordFailure(checkFamily, failureCode);
+    }
+  };
+
   await page.setViewportSize({
     width: viewport.width,
     height: viewport.height,
@@ -3091,28 +3356,27 @@ async function auditRoute(
     await advanceCalculatorToCasioInput(page);
   }
   const navigationControl = await stabilizeCanonicalTop(page);
-  expect(
-    navigationControl.failureCode,
-    `${route.label} navigation control must establish canonical top without product auto-scroll; metadata-only-observation=${JSON.stringify({ phase: "navigation-control", route: route.id, viewport: viewport.width, control: navigationControl })}.`,
-  ).toBeNull();
+  if (navigationControl.failureCode)
+    recordFailure("canonical-top", navigationControl.failureCode);
 
   const main = page.locator("main");
-  await expect(
-    main,
-    `${route.label} must expose exactly one main landmark.`,
-  ).toHaveCount(1);
-  await expect(main).toBeVisible();
-  const mainBox = await main.boundingBox();
-  expect(mainBox).not.toBeNull();
-  expect(mainBox!.width).toBeGreaterThan(0);
-  expect(mainBox!.x).toBeGreaterThanOrEqual(-1);
-  expect(mainBox!.x + mainBox!.width).toBeLessThanOrEqual(viewport.width + 1);
+  const mainCount = await main.count();
+  const mainVisible = mainCount === 1 && (await main.isVisible());
+  const mainBox = mainCount === 1 ? await main.boundingBox() : null;
+  if (
+    mainCount !== 1 ||
+    !mainVisible ||
+    !mainBox ||
+    mainBox.width <= 0 ||
+    mainBox.x < -1 ||
+    mainBox.x + mainBox.width > viewport.width + 1
+  ) {
+    recordFailure("viewport-bounds", "S232H2_MAIN_LANDMARK_INVALID");
+  }
 
   const visibleH1Count = await page.locator("h1:visible").count();
-  expect(
-    visibleH1Count,
-    `${route.label} must have one visible screen title.`,
-  ).toBe(1);
+  if (visibleH1Count !== 1)
+    recordFailure("visual-contract", "S232H2_SCREEN_TITLE_INVALID");
 
   const foundation = await page.evaluate(() => ({
     horizontalOverflow: Math.max(
@@ -3148,124 +3412,177 @@ async function auditRoute(
       ),
     ),
   }));
-  expect(
-    foundation.horizontalOverflow,
-    `${route.label} must not overflow horizontally.`,
-  ).toBe(0);
-  expect(foundation.canvasColor).toBe("rgb(247, 246, 243)");
-  expect(foundation.bodyFontFamily).toMatch(/Noto Sans KR/i);
-  expect(foundation.pageEdge).toBe(viewport.width < 768 ? 20 : 32);
-  expect(foundation.controlHeight).toBe(52);
-  expect(foundation.controlRadius).toBe(12);
-  expect(foundation.readingColumn).toBe(680);
-  expect(foundation.contentMax).toBe(1120);
+  if (foundation.horizontalOverflow !== 0)
+    recordFailure(
+      "viewport-bounds",
+      "S232H2_HORIZONTAL_OVERFLOW",
+      foundation.horizontalOverflow,
+    );
+  if (
+    foundation.canvasColor !== "rgb(247, 246, 243)" ||
+    !/Noto Sans KR/i.test(foundation.bodyFontFamily) ||
+    foundation.pageEdge !== (viewport.width < 768 ? 20 : 32) ||
+    foundation.controlHeight !== 52 ||
+    foundation.controlRadius !== 12 ||
+    foundation.readingColumn !== 680 ||
+    foundation.contentMax !== 1120
+  ) {
+    recordFailure("visual-contract", "S232H2_FOUNDATION_MISMATCH");
+  }
 
-  await verifyRepresentativeFigmaStructure(page, route.id, viewport.width);
+  await observe(
+    "visual-contract",
+    "S232H2_FIGMA_STRUCTURE_MISMATCH",
+    () => verifyRepresentativeFigmaStructure(page, route.id, viewport.width),
+  );
 
   const primaryActions = await visiblePrimaryActions(page);
   const visiblePrimaryActionCount = primaryActions.length;
-  expect(
-    visiblePrimaryActionCount,
-    `${route.label} must expose at most one primary action.`,
-  ).toBeLessThanOrEqual(1);
+  if (visiblePrimaryActionCount > 1)
+    recordFailure(
+      "primary-action",
+      "S232H2_PRIMARY_ACTION_COUNT_INVALID",
+      visiblePrimaryActionCount - 1,
+    );
 
-  const targetFailures = [
-    ...(await visibleTargetFailures(page)),
-    ...(await focusRevealTargetFailures(page)),
-  ];
-  expect(
-    targetFailures,
-    `${route.label} has visible targets below 44×44.`,
-  ).toEqual([]);
+  const targetFailures = await visibleTargetFailures(page);
+  if (targetFailures.length > 0)
+    recordFailure(
+      "target-size",
+      "S232H2_POINTER_TARGET_BELOW_44",
+      targetFailures.length,
+    );
   const viewportBoundsFailures = await visibleViewportBoundsFailures(page);
-  expect(
-    viewportBoundsFailures,
-    `${route.label} clips visible content outside the viewport.`,
-  ).toEqual([]);
+  if (viewportBoundsFailures.length > 0)
+    recordFailure(
+      "viewport-bounds",
+      "S232H2_VISIBLE_CONTENT_OUT_OF_BOUNDS",
+      viewportBoundsFailures.length,
+    );
 
   await page.evaluate(() => {
     if (document.activeElement instanceof HTMLElement)
       document.activeElement.blur();
   });
   const styles = await visualStyleMetrics(page);
-  expect(styles.gradientCount, `${route.label} must not use gradients.`).toBe(
-    0,
-  );
-  if (viewport.width === 1440) {
-    expect(
+  if (styles.gradientCount > 0)
+    recordFailure(
+      "visual-contract",
+      "S232H2_GRADIENT_PRESENT",
+      styles.gradientCount,
+    );
+  if (viewport.width === 1440 && styles.shadowCount > 0)
+    recordFailure(
+      "visual-contract",
+      "S232H2_DESKTOP_SHADOW_PRESENT",
       styles.shadowCount,
-      `${route.label} desktop must not use shadows: ${JSON.stringify(styles.shadowElements)}.`,
-    ).toBe(0);
-  }
+    );
 
   const expectsCanonicalDock =
     options.expectedCanonicalDock ??
     (viewport.width < 1024 &&
       (route.id === "ledger" || route.id === "calculator"));
   if (expectsCanonicalDock) {
-    expect(
-      styles.fixedDocks,
-      `${route.label} must expose exactly one canonical mobile dock.`,
-    ).toHaveLength(1);
-    expect(styles.fixedDocks[0]?.component).toBe("StickyAction");
-    expect(styles.fixedDocks[0]?.height ?? 0).toBeGreaterThanOrEqual(84);
-  } else {
-    expect(
-      styles.fixedDocks,
-      `${route.label} must not invent a fixed mobile dock.`,
-    ).toEqual([]);
+    if (
+      styles.fixedDocks.length !== 1 ||
+      styles.fixedDocks[0]?.component !== "StickyAction" ||
+      (styles.fixedDocks[0]?.height ?? 0) < 84
+    )
+      recordFailure("visual-contract", "S232H2_CANONICAL_DOCK_INVALID");
+  } else if (styles.fixedDocks.length !== 0) {
+    recordFailure(
+      "visual-contract",
+      "S232H2_UNEXPECTED_FIXED_DOCK",
+      styles.fixedDocks.length,
+    );
   }
 
-  const axe = await new AxeBuilder({ page })
-    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
-    .analyze();
-  const blockingAxe = axe.violations.filter(
-    (violation) =>
-      violation.impact === "serious" || violation.impact === "critical",
-  );
-  expect(
-    blockingAxe.length,
-    `${route.label} has serious/critical Axe violations: ${blockingAxe.map((item) => item.id).join(", ")}`,
-  ).toBe(0);
+  let blockingAxeCount = 0;
+  await observe("axe", "S232H2_AXE_AUDIT_ERROR", async () => {
+    const axe = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+      .analyze();
+    blockingAxeCount = axe.violations.filter(
+      (violation) =>
+        violation.impact === "serious" || violation.impact === "critical",
+    ).length;
+  });
+  if (blockingAxeCount > 0)
+    recordFailure(
+      "axe",
+      "S232H2_AXE_SERIOUS_CRITICAL",
+      blockingAxeCount,
+    );
 
   const enabledPrimaryActionCount = primaryActions.filter(
     (action) => !action.disabled,
   ).length;
-  const keyboardFocusAudit = await verifyKeyboardFocus(
-    page,
-    enabledPrimaryActionCount,
-  );
-  const keyboardFocusVisible = keyboardFocusAudit.passed;
-  expect(
-    keyboardFocusVisible,
-    `${route.label} must expose visible keyboard focus: ${JSON.stringify(keyboardFocusAudit)}.`,
-  ).toBe(true);
-  expect(
-    keyboardFocusAudit.preFocusControl.failureCode,
-    `${route.label} pre-focus canonical-top control must pass independently of keyboard accessibility; metadata-only-observation=${JSON.stringify({ phase: "pre-focus-control", route: route.id, viewport: viewport.width, navigationControl, preFocusControl: keyboardFocusAudit.preFocusControl })}.`,
-  ).toBeNull();
-  expect(
-    keyboardFocusAudit.scrollRecovery.failureCode,
-    `${route.label} post-focus scroll cleanup must restore canonical top independently of keyboard accessibility; metadata-only-observation=${JSON.stringify({ phase: "post-focus-recovery", route: route.id, viewport: viewport.width, navigationControl, preFocusControl: keyboardFocusAudit.preFocusControl, postFocusRecovery: keyboardFocusAudit.scrollRecovery })}.`,
-  ).toBeNull();
+  let keyboardFocusAudit: Awaited<ReturnType<typeof verifyKeyboardFocus>> | null =
+    null;
+  try {
+    keyboardFocusAudit = await verifyKeyboardFocus(
+      page,
+      enabledPrimaryActionCount,
+    );
+  } catch (error) {
+    if (!collection) throw error;
+    recordFailure(
+      "keyboard-focus",
+      "S232H2_KEYBOARD_FOCUS_AUDIT_ERROR",
+    );
+  }
+  const keyboardFocusVisible = keyboardFocusAudit?.passed ?? false;
+  if (keyboardFocusAudit) {
+    for (const failureCode of keyboardFocusAudit.skipLinkFailures)
+      recordFailure("skip-link", failureCode);
+    if (!keyboardFocusAudit.skipLink.originRemoved)
+      recordFailure(
+        "keyboard-focus",
+        "S232H2_FOCUS_ORIGIN_RETAINED",
+      );
+    if (
+      !keyboardFocusAudit.completedFocusTraversal ||
+      keyboardFocusAudit.visitedFocusStopCount === 0
+    )
+      recordFailure(
+        "keyboard-focus",
+        "S232H2_FOCUS_TRAVERSAL_INCOMPLETE",
+      );
+    if (!keyboardFocusAudit.everyFocusVisible)
+      recordFailure("keyboard-focus", "S232H2_FOCUS_NOT_VISIBLE");
+    if (!keyboardFocusAudit.enabledPrimaryReached)
+      recordFailure("primary-action", "S232H2_PRIMARY_NOT_REACHED");
+    if (keyboardFocusAudit.preFocusControl.failureCode)
+      recordFailure(
+        "canonical-top",
+        keyboardFocusAudit.preFocusControl.failureCode,
+      );
+    if (keyboardFocusAudit.scrollRecovery.failureCode)
+      recordFailure(
+        "scroll-recovery",
+        keyboardFocusAudit.scrollRecovery.failureCode,
+      );
+  }
 
   return {
-    auditKind: options.navigate === false ? "dynamic-state" : "initial-route",
+    auditKind:
+      options.auditKind ??
+      (options.navigate === false ? "dynamic-state" : "initial-route"),
     state: options.state ?? "initial",
     route: route.id,
     requestedPath:
       route.id === "ledger" ? "/app/items/[itemId]?mode=second" : requestedPath,
     viewport: `${viewport.width}x${viewport.height}`,
     viewportWidth: viewport.width,
-    mainCount: 1,
+    mainCount,
     visibleH1Count,
-    mainLeft: Math.round(mainBox!.x * 10) / 10,
-    mainWidth: Math.round(mainBox!.width * 10) / 10,
+    mainLeft: Math.round((mainBox?.x ?? 0) * 10) / 10,
+    mainWidth: Math.round((mainBox?.width ?? 0) * 10) / 10,
     horizontalOverflow: foundation.horizontalOverflow,
     visiblePrimaryActionCount,
     undersizedTargetCount: targetFailures.length,
     viewportBoundsFailureCount: viewportBoundsFailures.length,
-    axeSeriousOrCritical: blockingAxe.length,
+    axeSeriousOrCritical: blockingAxeCount,
     keyboardFocusVisible,
     gradientCount: styles.gradientCount,
     shadowCount: styles.shadowCount,
@@ -3288,13 +3605,20 @@ type ScreenshotPreflightOptions = {
   routeStateAlias: string;
   viewport: string;
 };
+type ScreenshotPreflightObservation = {
+  canonicalTopFailureCode: string | null;
+  canonicalTopAtZero: boolean;
+  focusOriginCount: number;
+  visibleEmailOutsideMask: number;
+  blockingHitCount: number;
+};
 
 async function captureSyntheticScreenshot(
   page: Page,
   boundary: ScreenshotDataBoundary,
   fileName: string,
   options: ScreenshotPreflightOptions,
-): Promise<null>;
+): Promise<ScreenshotPreflightObservation>;
 async function captureSyntheticScreenshot(
   page: Page,
   boundary: ScreenshotDataBoundary,
@@ -3306,7 +3630,7 @@ async function captureSyntheticScreenshot(
   boundary: ScreenshotDataBoundary,
   fileName: string,
   options: ScreenshotCaptureOptions | ScreenshotPreflightOptions = {},
-): Promise<ScreenshotEvidence | null> {
+): Promise<ScreenshotEvidence | ScreenshotPreflightObservation> {
   const screenshotBoundaryPolicyTable = buildScreenshotBoundaryPolicyTable();
   const assertScreenshotDataBoundary = async () => {
     const observation = await page.evaluate(
@@ -4566,15 +4890,12 @@ async function captureSyntheticScreenshot(
   };
 
   const canonicalTop = await stabilizeCanonicalTop(page);
-  expect(
-    canonicalTop.failureCode,
-    `Canonical top must remain stable before any PNG is retained; metadata-only-observation=${JSON.stringify({ phase: "pre-png-canonical-top", capture: fileName.replace(/[^a-z0-9-]/gi, "-").slice(0, 80), recovery: canonicalTop })}.`,
-  ).toBeNull();
   const screenshotScrollY = canonicalTop.finalWindowScrollY;
-  expect(
-    screenshotScrollY,
-    `${fileName} must be captured from the canonical top position.`,
-  ).toBe(0);
+  const canonicalTopAtZero =
+    canonicalTop.failureCode === null && screenshotScrollY === 0;
+  const focusOriginCount = await page
+    .locator(`[${focusOriginAttribute}]`)
+    .count();
 
   const identitySelector =
     '[data-s224v-learner-mode-entry="second-only"] > span:last-child';
@@ -4605,16 +4926,37 @@ async function captureSyntheticScreenshot(
         );
       }).length;
     }, identitySelector);
+  const masks: Locator[] = [];
+  for (const identitySurface of await identity.all())
+    if (await identitySurface.isVisible()) masks.push(identitySurface);
+  const blockingHitCount = await assertScreenshotDataBoundary();
+  if (options.preflight) {
+    return {
+      canonicalTopFailureCode: canonicalTop.failureCode,
+      canonicalTopAtZero,
+      focusOriginCount,
+      visibleEmailOutsideMask,
+      blockingHitCount,
+    };
+  }
+  expect(
+    canonicalTop.failureCode,
+    `Canonical top must remain stable before any PNG is retained; metadata-only-observation=${JSON.stringify({ phase: "pre-png-canonical-top", capture: fileName.replace(/[^a-z0-9-]/gi, "-").slice(0, 80), recovery: canonicalTop })}.`,
+  ).toBeNull();
+  expect(
+    screenshotScrollY,
+    `${fileName} must be captured from the canonical top position.`,
+  ).toBe(0);
+  expect(
+    focusOriginCount,
+    "The test-only keyboard traversal origin must be absent before PNG capture.",
+  ).toBe(0);
   expect(
     visibleEmailOutsideMask,
     "No visible email may escape the deterministic identity mask.",
   ).toBe(0);
-
-  const masks: Locator[] = [];
-  for (const identitySurface of await identity.all())
-    if (await identitySurface.isVisible()) masks.push(identitySurface);
-  await assertScreenshotDataBoundary();
-  if (options.preflight) return null;
+  expect(blockingHitCount).toBe(0);
+  boundary.screenshotCallCount += 1;
   const buffer = await page.screenshot({
     fullPage: options.fullPage ?? true,
     animations: "disabled",
@@ -5196,11 +5538,175 @@ function routeDefinition(id: string) {
   return route;
 }
 
+async function prepareInitialRoute(
+  page: Page,
+  route: RouteDefinition,
+  requestedPath: string,
+  viewport: (typeof viewports)[number],
+) {
+  await page.setViewportSize({ width: viewport.width, height: viewport.height });
+  await gotoRequiredRoute(page, requestedPath);
+  if (route.id === "calculator" && viewport.width === 390)
+    await advanceCalculatorToCasioInput(page);
+}
+
+type PreflightCandidateOptions = {
+  page: Page;
+  boundary: ScreenshotDataBoundary;
+  collector: PreflightCollector;
+  phase: PreflightBlocker["phase"];
+  routeStateAlias: string;
+  viewport: string;
+  prepare: () => Promise<void>;
+  audit?: () => Promise<AuditRow>;
+  privacy?: {
+    fileName: string;
+    fullPage?: boolean;
+  };
+  cleanup?: () => Promise<void>;
+};
+
+async function runPreflightCandidate({
+  page,
+  boundary,
+  collector,
+  phase,
+  routeStateAlias,
+  viewport,
+  prepare,
+  audit,
+  privacy,
+  cleanup,
+}: PreflightCandidateOptions): Promise<AuditRow | null> {
+  const candidateMetadata = { phase, routeStateAlias, viewport } as const;
+  let prepared = false;
+  let auditAttempted = false;
+  let auditRow: AuditRow | null = null;
+  try {
+    try {
+      await prepare();
+      prepared = true;
+    } catch {
+      recordPreflightBlocker(collector, {
+        ...candidateMetadata,
+        checkFamily: "preparation",
+        failureCode: "S232H2_CANDIDATE_PREPARATION_FAILED",
+      });
+    }
+
+    if (prepared && privacy) {
+      const checksBefore = boundary.preflightCheckCount;
+      try {
+        const observation = await captureSyntheticScreenshot(
+          page,
+          boundary,
+          privacy.fileName,
+          {
+            fullPage: privacy.fullPage,
+            preflight: true,
+            routeStateAlias,
+            viewport,
+          },
+        );
+        if (observation.canonicalTopFailureCode)
+          recordPreflightBlocker(collector, {
+            ...candidateMetadata,
+            checkFamily: "canonical-top",
+            failureCode: observation.canonicalTopFailureCode,
+          });
+        if (!observation.canonicalTopAtZero)
+          recordPreflightBlocker(collector, {
+            ...candidateMetadata,
+            checkFamily: "canonical-top",
+            failureCode: "S232H2_PREFLIGHT_CANONICAL_TOP_UNSTABLE",
+          });
+        if (observation.focusOriginCount > 0)
+          recordPreflightBlocker(collector, {
+            ...candidateMetadata,
+            checkFamily: "keyboard-focus",
+            failureCode: "S232H2_FOCUS_ORIGIN_RETAINED",
+            count: observation.focusOriginCount,
+          });
+        if (observation.visibleEmailOutsideMask > 0)
+          recordPreflightBlocker(collector, {
+            ...candidateMetadata,
+            checkFamily: "privacy-boundary",
+            failureCode: "S232H2_VISIBLE_IDENTITY_OUTSIDE_MASK",
+            count: observation.visibleEmailOutsideMask,
+          });
+        if (observation.blockingHitCount > 0)
+          recordPreflightBlocker(collector, {
+            ...candidateMetadata,
+            checkFamily: "privacy-boundary",
+            failureCode: "S232H2_SCREENSHOT_BOUNDARY_OPEN",
+            count: observation.blockingHitCount,
+          });
+      } catch {
+        if (boundary.preflightCheckCount === checksBefore)
+          recordPreflightBlocker(collector, {
+            ...candidateMetadata,
+            checkFamily: "privacy-not-run",
+            failureCode: "S232H2_PRIVACY_CHECK_NOT_RUN",
+          });
+        else
+          recordPreflightBlocker(collector, {
+            ...candidateMetadata,
+            checkFamily: "privacy-boundary",
+            failureCode: "S232H2_PRIVACY_OBSERVATION_FAILED",
+          });
+      }
+      if (boundary.preflightCheckCount === checksBefore) {
+        collector.privacyNotRunCount += 1;
+      }
+    } else if (privacy) {
+      collector.privacyNotRunCount += 1;
+      recordPreflightBlocker(collector, {
+        ...candidateMetadata,
+        checkFamily: "privacy-not-run",
+        failureCode: "S232H2_PRIVACY_CHECK_NOT_RUN",
+      });
+    }
+
+    if (prepared && audit) {
+      auditAttempted = true;
+      try {
+        auditRow = await audit();
+      } catch {
+        recordPreflightBlocker(collector, {
+          ...candidateMetadata,
+          checkFamily: "visual-contract",
+          failureCode: "S232H2_VISUAL_A11Y_OBSERVATION_FAILED",
+        });
+      }
+    }
+    if (audit && !auditAttempted)
+      collector.visualAuditCandidateCount += 1;
+  } finally {
+    await removeKeyboardTraversalOrigin(page);
+    if (cleanup) {
+      try {
+        await cleanup();
+      } catch {
+        recordPreflightBlocker(collector, {
+          ...candidateMetadata,
+          checkFamily: "preparation",
+          failureCode: "S232H2_CANDIDATE_CLEANUP_FAILED",
+        });
+      }
+    }
+  }
+  collector.privacyCandidateCount = boundary.preflightCandidateCount;
+  collector.privacyCheckCount = boundary.preflightCheckCount;
+  collector.screenshotCallCount = boundary.screenshotCallCount;
+  return auditRow;
+}
+
 async function auditDynamicState(
   page: Page,
   routeId: string,
   state: string,
   requestedPath: string,
+  collection?: AuditCollectionContext,
 ) {
   return auditRoute(
     page,
@@ -5211,6 +5717,8 @@ async function auditDynamicState(
       navigate: false,
       state,
       expectedCanonicalDock: false,
+      auditKind: "dynamic-state",
+      collection,
     },
   );
 }
@@ -5397,6 +5905,155 @@ function allErrorCounts(...groups: RuntimeErrorEvidence[]) {
   };
 }
 
+test("S232H.2 deterministic focus-origin micro-fixture", async ({ page }) => {
+  const fixture = async ({
+    skipCount = 1,
+    beforeControl = false,
+    skipAttributes = "",
+    focusRule = "top:0;outline:3px solid rgb(18,44,70)",
+    width = 44,
+    height = 44,
+    activation = true,
+    laterControlCount = 36,
+  }: {
+    skipCount?: number;
+    beforeControl?: boolean;
+    skipAttributes?: string;
+    focusRule?: string;
+    width?: number;
+    height?: number;
+    activation?: boolean;
+    laterControlCount?: number;
+  } = {}) => {
+    const skips = Array.from(
+      { length: skipCount },
+      (_, index) =>
+        `<a class="skip" data-v3-skip-link href="#main" ${skipAttributes}>skip-${index}</a>`,
+    ).join("");
+    const controls = Array.from(
+      { length: laterControlCount },
+      (_, index) => `<button id="control-${index}">control-${index}</button>`,
+    ).join("");
+    await page.setContent(`
+      <style>
+        * { box-sizing: border-box; }
+        .skip {
+          position: fixed;
+          top: -80px;
+          left: 0;
+          display: block;
+          width: ${width}px;
+          height: ${height}px;
+          padding: 0;
+          border: 0;
+          overflow: hidden;
+          font-size: 0;
+          outline: none;
+          box-shadow: none;
+        }
+        .skip:focus-visible { ${focusRule}; }
+      </style>
+      ${beforeControl ? '<button id="before">before</button>' : ""}
+      ${skips}
+      ${controls}
+      <main id="main" tabindex="-1">main</main>
+      <script>
+        for (const link of document.querySelectorAll('[data-v3-skip-link]')) {
+          if (${activation ? "true" : "false"}) {
+            link.addEventListener('click', () => {
+              document.getElementById('main')?.focus({ preventScroll: true });
+            });
+          } else {
+            link.addEventListener('click', (event) => event.preventDefault());
+          }
+        }
+      </script>
+    `);
+    if (laterControlCount > 0) {
+      await page.locator(`#control-${laterControlCount - 1}`).click();
+      await page.evaluate(() => {
+        if (document.activeElement instanceof HTMLElement)
+          document.activeElement.blur();
+      });
+    }
+    const start = await beginKeyboardTraversalAtDocumentStart(page);
+    const activated = await activateCanonicalSkipLink(page);
+    const measurement = {
+      ...start,
+      activationMovedFocus: activated.activationMovedFocus,
+    };
+    return {
+      measurement,
+      failures: skipLinkFailureCodes(measurement),
+      originCount: await page.locator(`[${focusOriginAttribute}]`).count(),
+    };
+  };
+
+  const success = await fixture();
+  expect(success.failures).toEqual([]);
+  expect(success.measurement).toMatchObject({
+    skipLinkCount: 1,
+    reachedByKeyboard: true,
+    focusVisible: true,
+    focusIndicatorPresent: true,
+    boundingBoxPresent: true,
+    inViewport: true,
+    width: 44,
+    height: 44,
+    activationMovedFocus: true,
+    originRemoved: true,
+  });
+  expect(success.originCount).toBe(0);
+
+  expect((await fixture({ beforeControl: true })).failures).toEqual([
+    "S232H2_SKIP_LINK_NOT_FIRST_TAB_STOP",
+  ]);
+  for (const skipCount of [0, 2])
+    expect((await fixture({ skipCount })).failures).toEqual([
+      "S232H2_SKIP_LINK_COUNT_INVALID",
+    ]);
+  for (const skipAttributes of ['tabindex="-1"', "inert"])
+    expect((await fixture({ skipAttributes })).failures).toContain(
+      "S232H2_SKIP_LINK_NOT_FIRST_TAB_STOP",
+    );
+  expect(
+    (
+      await fixture({
+        focusRule: "top:900px;outline:3px solid rgb(18,44,70)",
+      })
+    ).failures,
+  ).toContain("S232H2_SKIP_LINK_NOT_FULLY_IN_VIEWPORT");
+  expect((await fixture({ width: 0, height: 0 })).failures).toContain(
+    "S232H2_SKIP_LINK_NO_RENDERED_BOX",
+  );
+  for (const [width, height] of [
+    [43, 48],
+    [48, 43],
+  ] as const)
+    expect((await fixture({ width, height })).failures).toContain(
+      "S232H2_SKIP_LINK_TARGET_BELOW_44",
+    );
+  expect((await fixture({ width: 44, height: 44 })).failures).toEqual([]);
+  expect(
+    (
+      await fixture({
+        focusRule: "top:0;outline:none;box-shadow:none",
+      })
+    ).failures,
+  ).toContain("S232H2_SKIP_LINK_FOCUS_INDICATOR_MISSING");
+  expect((await fixture({ activation: false })).failures).toContain(
+    "S232H2_SKIP_LINK_ACTIVATION_FAILED",
+  );
+  for (const invalidFixture of [
+    await fixture({ beforeControl: true }),
+    await fixture({ skipCount: 0 }),
+    await fixture({ width: 0, height: 0 }),
+  ]) {
+    expect(invalidFixture.measurement.originRemoved).toBe(true);
+    expect(invalidFixture.originCount).toBe(0);
+  }
+});
+
 test("S232H.2 adopts V3 across the production learner routes with direct before/after evidence", async ({
   browser,
   page,
@@ -5461,262 +6118,299 @@ test("S232H.2 adopts V3 across the production learner routes with direct before/
   );
   await verifyRuntimeVersion(baselinePage, baselineSha);
 
+  const preflight = createPreflightCollector();
+  const initialAuditRows: AuditRow[] = [];
+  const dynamicAuditRows: AuditRow[] = [];
   for (const viewport of viewports) {
     for (const route of requiredRoutes) {
       const routePage = route.authenticated ? page : publicPage;
       const requestedPath = resolveRoutePath(route, syntheticItemId);
-      await auditRoute(routePage, route, requestedPath, viewport);
       const isAllRouteMobileEvidence = viewport.width === 390;
       const isRequiredReflowEvidence =
         viewport.width === 768 &&
         (route.id === "today" || route.id === "ledger");
       const isRequiredDesktopEvidence =
         viewport.width === 1440 && route.id === "ledger";
-      if (
+      const isPrivacyCandidate =
         isAllRouteMobileEvidence ||
         isRequiredReflowEvidence ||
-        isRequiredDesktopEvidence
-      ) {
-        if (route.id === "calculator" && viewport.width === 390) {
-          await expect(
-            routePage.locator(
-              '[data-calculator-routine-active-step="casio_input"] [data-v3-component="CalculatorStep"]',
-            ),
-          ).toBeVisible();
-        }
-        const isRepresentativeViewport =
-          (route.id === "ledger" &&
-            (viewport.width === 390 || viewport.width === 1440)) ||
-          (route.id === "calculator" && viewport.width === 390);
-        await captureSyntheticScreenshot(
-          routePage,
-          dataBoundary,
-          `s232h2-after-${route.id}-${viewport.label}.png`,
-          {
-            fullPage: !isRepresentativeViewport,
-            preflight: true,
-            routeStateAlias: `${route.id}-initial`,
-            viewport: `${viewport.width}x${viewport.height}`,
-          },
-        );
-      }
+        isRequiredDesktopEvidence;
+      const isRepresentativeViewport =
+        (route.id === "ledger" &&
+          (viewport.width === 390 || viewport.width === 1440)) ||
+        (route.id === "calculator" && viewport.width === 390);
+      const routeStateAlias = `${route.id}-initial`;
+      const viewportLabel = `${viewport.width}x${viewport.height}`;
+      const row = await runPreflightCandidate({
+        page: routePage,
+        boundary: dataBoundary,
+        collector: preflight,
+        phase: "initial",
+        routeStateAlias,
+        viewport: viewportLabel,
+        prepare: () =>
+          prepareInitialRoute(routePage, route, requestedPath, viewport),
+        privacy: isPrivacyCandidate
+          ? {
+              fileName: `s232h2-after-${route.id}-${viewport.label}.png`,
+              fullPage: !isRepresentativeViewport,
+            }
+          : undefined,
+        audit: () =>
+          auditRoute(routePage, route, requestedPath, viewport, {
+            navigate: false,
+            auditKind: "initial-route",
+            collection: {
+              collector: preflight,
+              phase: "initial",
+              routeStateAlias,
+              viewport: viewportLabel,
+            },
+          }),
+      });
+      if (row) initialAuditRows.push(row);
     }
   }
 
-  await prepareCaptureExtractionPreview(page);
-  await auditDynamicState(
-    page,
+  const runDynamicPreflight = async (
+    routeId: string,
+    state: string,
+    requestedPath: string,
+    fileName: string,
+    prepare: () => Promise<void>,
+    cleanup?: () => Promise<void>,
+  ) => {
+    const routeStateAlias = `${routeId}-${state}`;
+    const row = await runPreflightCandidate({
+      page,
+      boundary: dataBoundary,
+      collector: preflight,
+      phase: "dynamic",
+      routeStateAlias,
+      viewport: "390x844",
+      prepare,
+      privacy: { fileName },
+      audit: () =>
+        auditDynamicState(page, routeId, state, requestedPath, {
+          collector: preflight,
+          phase: "dynamic",
+          routeStateAlias,
+          viewport: "390x844",
+        }),
+      cleanup,
+    });
+    if (row) dynamicAuditRows.push(row);
+  };
+
+  await runDynamicPreflight(
     "capture",
     "extraction-preview",
     "/app/capture?mode=second",
-  );
-  await captureSyntheticScreenshot(
-    page,
-    dataBoundary,
     "s232h2-after-capture-extraction-preview-390.png",
-    {
-      preflight: true,
-      routeStateAlias: "capture-extraction-preview",
-      viewport: "390x844",
-    },
+    () => prepareCaptureExtractionPreview(page),
+    () => page.unroute("**/api/inverge/ocr"),
   );
-  await page.unroute("**/api/inverge/ocr");
-
-  await prepareAnswerReviewResult(page);
-  await auditDynamicState(
-    page,
+  await runDynamicPreflight(
     "answer-review",
     "result",
     "/answer-review?mode=second",
-  );
-  await captureSyntheticScreenshot(
-    page,
-    dataBoundary,
     "s232h2-after-answer-review-result-390.png",
-    {
-      preflight: true,
-      routeStateAlias: "answer-review-result",
-      viewport: "390x844",
-    },
+    () => prepareAnswerReviewResult(page),
+    () => page.unroute("**/api/answer-review/structure"),
   );
-  await page.locator("[data-s232e4-rewrite-entry]").click();
-  await expect(
-    page.locator('[data-s232e4-answer-review-rewrite="single-paragraph"]'),
-  ).toBeVisible();
-  await auditDynamicState(
-    page,
+  await runDynamicPreflight(
     "answer-review",
     "rewrite",
     "/answer-review?mode=second",
-  );
-  await captureSyntheticScreenshot(
-    page,
-    dataBoundary,
     "s232h2-after-answer-review-rewrite-390.png",
-    {
-      preflight: true,
-      routeStateAlias: "answer-review-rewrite",
-      viewport: "390x844",
+    async () => {
+      await prepareAnswerReviewResult(page);
+      await page.locator("[data-s232e4-rewrite-entry]").click();
+      await expect(
+        page.locator(
+          '[data-s232e4-answer-review-rewrite="single-paragraph"]',
+        ),
+      ).toBeVisible();
     },
+    () => page.unroute("**/api/answer-review/structure"),
   );
-  await page.unroute("**/api/answer-review/structure");
-
-  await prepareReviewSelectedState(page, postMutationAudit.primaryQueueTitle!);
-  await auditDynamicState(
-    page,
+  await runDynamicPreflight(
     "review",
     "revealed-selected",
     "/app/review?mode=second",
-  );
-  await captureSyntheticScreenshot(
-    page,
-    dataBoundary,
     "s232h2-after-review-revealed-selected-390.png",
-    {
-      preflight: true,
-      routeStateAlias: "review-revealed-selected",
-      viewport: "390x844",
-    },
+    () =>
+      prepareReviewSelectedState(
+        page,
+        postMutationAudit.primaryQueueTitle!,
+      ),
   );
-
   const preflightSavedCapturePath = `/app/session?mode=second&savedCapture=1&itemId=${encodeURIComponent(syntheticItemId)}`;
-  await gotoRequiredRoute(page, preflightSavedCapturePath);
-  await expect(
-    page.getByText("오늘 계획에 반영했습니다.", { exact: true }),
-  ).toBeVisible();
-  await auditDynamicState(
-    page,
+  await runDynamicPreflight(
     "session",
     "saved-capture",
     "/app/session?mode=second&savedCapture=1&itemId=[itemId]",
-  );
-  await captureSyntheticScreenshot(
-    page,
-    dataBoundary,
     "s232h2-after-session-saved-capture-390.png",
-    {
-      preflight: true,
-      routeStateAlias: "session-saved-capture",
-      viewport: "390x844",
+    async () => {
+      await gotoRequiredRoute(page, preflightSavedCapturePath);
+      await expect(
+        page.getByText("오늘 계획에 반영했습니다.", { exact: true }),
+      ).toBeVisible();
     },
   );
-
-  await page.route("**/api/os/calculator-routine/complete", async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
-        ok: true,
-        status: "saved",
-        learningRecordSaved: true,
-        learningRecordId: "11111111-1111-4111-8111-111111111111",
-        deduped: false,
-      }),
-    });
-  });
   const preflightCalculatorPath =
     "/app/calculator?mode=second&context=practice&focus=casio";
-  await gotoRequiredRoute(page, preflightCalculatorPath);
-  await advanceCalculatorToCasioInput(page);
-  await completeCalculatorRoutine(page);
-  await auditDynamicState(
-    page,
+  await runDynamicPreflight(
     "calculator",
     "completed-saved",
     preflightCalculatorPath,
-  );
-  await captureSyntheticScreenshot(
-    page,
-    dataBoundary,
     "s232h2-after-calculator-completed-saved-390.png",
-    {
-      preflight: true,
-      routeStateAlias: "calculator-completed-saved",
-      viewport: "390x844",
+    async () => {
+      await page.route(
+        "**/api/os/calculator-routine/complete",
+        async (route) => {
+          await route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify({
+              ok: true,
+              status: "saved",
+              learningRecordSaved: true,
+              learningRecordId: "11111111-1111-4111-8111-111111111111",
+              deduped: false,
+            }),
+          });
+        },
+      );
+      await gotoRequiredRoute(page, preflightCalculatorPath);
+      await advanceCalculatorToCasioInput(page);
+      await completeCalculatorRoutine(page);
     },
+    () => page.unroute("**/api/os/calculator-routine/complete"),
   );
-  await page.unroute("**/api/os/calculator-routine/complete");
 
   for (const viewport of [viewports[0], viewports[2]]) {
-    await baselinePage.setViewportSize({
-      width: viewport.width,
-      height: viewport.height,
-    });
-    await gotoRequiredRoute(
-      baselinePage,
-      `/app/items/${encodeURIComponent(syntheticItemId)}?mode=second`,
-    );
-    await captureSyntheticScreenshot(
-      baselinePage,
-      dataBoundary,
-      `s232h2-before-ledger-${viewport.label}.png`,
-      {
-        fullPage: false,
-        preflight: true,
-        routeStateAlias: "before-ledger",
-        viewport: `${viewport.width}x${viewport.height}`,
+    await runPreflightCandidate({
+      page: baselinePage,
+      boundary: dataBoundary,
+      collector: preflight,
+      phase: "baseline",
+      routeStateAlias: "before-ledger",
+      viewport: `${viewport.width}x${viewport.height}`,
+      prepare: async () => {
+        await baselinePage.setViewportSize({
+          width: viewport.width,
+          height: viewport.height,
+        });
+        await gotoRequiredRoute(
+          baselinePage,
+          `/app/items/${encodeURIComponent(syntheticItemId)}?mode=second`,
+        );
       },
-    );
+      privacy: {
+        fileName: `s232h2-before-ledger-${viewport.label}.png`,
+        fullPage: false,
+      },
+    });
   }
-  await baselinePage.setViewportSize({ width: 390, height: 844 });
-  await gotoRequiredRoute(
-    baselinePage,
-    "/app/calculator?mode=second&context=practice&focus=casio",
-  );
-  await advanceCalculatorToCasioInput(baselinePage);
-  await captureSyntheticScreenshot(
-    baselinePage,
-    dataBoundary,
-    "s232h2-before-calculator-390.png",
-    {
-      fullPage: false,
-      preflight: true,
-      routeStateAlias: "before-calculator",
-      viewport: "390x844",
+  await runPreflightCandidate({
+    page: baselinePage,
+    boundary: dataBoundary,
+    collector: preflight,
+    phase: "baseline",
+    routeStateAlias: "before-calculator",
+    viewport: "390x844",
+    prepare: async () => {
+      await baselinePage.setViewportSize({ width: 390, height: 844 });
+      await gotoRequiredRoute(
+        baselinePage,
+        "/app/calculator?mode=second&context=practice&focus=casio",
+      );
+      await advanceCalculatorToCasioInput(baselinePage);
     },
-  );
-
-  const preflightFinalAccountAudit = await auditSyntheticAccount(page, {
-    expectedItemId: syntheticItemId,
-    includePlanning: true,
+    privacy: {
+      fileName: "s232h2-before-calculator-390.png",
+      fullPage: false,
+    },
   });
-  dataBoundary.preflightAccountSnapshotStable =
-    screenshotDataBoundaryFingerprint(
-      preflightFinalAccountAudit.screenshotBoundary,
-    ) === initialBoundaryFingerprint;
-  if (!dataBoundary.preflightAccountSnapshotStable) {
-    dataBoundary.preflightBlockerCount += 1;
-    dataBoundary.preflightBlockingBuckets.push({
+
+  try {
+    const preflightFinalAccountAudit = await auditSyntheticAccount(page, {
+      expectedItemId: syntheticItemId,
+      includePlanning: true,
+    });
+    dataBoundary.preflightAccountSnapshotStable =
+      screenshotDataBoundaryFingerprint(
+        preflightFinalAccountAudit.screenshotBoundary,
+      ) === initialBoundaryFingerprint;
+  } catch {
+    dataBoundary.preflightAccountSnapshotStable = false;
+  }
+  if (!dataBoundary.preflightAccountSnapshotStable)
+    recordPreflightBlocker(preflight, {
+      phase: "closure",
       routeStateAlias: "account-snapshot",
       viewport: "all",
-      channel: "account-snapshot",
-      lengthFamily: "n-a",
-      originPathFamily: "account-boundary",
-      decision: "block",
-      reason: "snapshot-drift",
-      count: 1,
+      checkFamily: "account-snapshot",
+      failureCode: "S232H2_ACCOUNT_SNAPSHOT_DRIFT",
     });
-  }
-  const privacyPreflightClosed =
-    dataBoundary.preflightCandidateCount === 25 &&
-    dataBoundary.preflightCheckCount === 25 &&
-    dataBoundary.preflightAccountSnapshotStable &&
-    dataBoundary.preflightBlockerCount === 0;
+
+  preflight.privacyCheckCount = dataBoundary.preflightCheckCount;
+  preflight.screenshotCallCount = dataBoundary.screenshotCallCount;
+  const preparationBlockerCount = preflight.blockers
+    .filter((blocker) => blocker.checkFamily === "preparation")
+    .reduce((sum, blocker) => sum + blocker.count, 0);
+  const privacyBlockerCount = preflight.blockers
+    .filter((blocker) => blocker.checkFamily === "privacy-boundary")
+    .reduce((sum, blocker) => sum + blocker.count, 0);
+  const visualA11yBlockerCount = preflight.blockers
+    .filter(
+      (blocker) =>
+        blocker.phase !== "baseline" &&
+        ![
+          "preparation",
+          "privacy-boundary",
+          "privacy-not-run",
+          "account-snapshot",
+        ].includes(blocker.checkFamily),
+    )
+    .reduce((sum, blocker) => sum + blocker.count, 0);
+  const preflightClosure = {
+    visualAuditCandidateCount: preflight.visualAuditCandidateCount,
+    privacyCandidateCount: preflight.privacyCandidateCount,
+    privacyCheckCount: preflight.privacyCheckCount,
+    privacyNotRunCount: preflight.privacyNotRunCount,
+    preparationBlockerCount,
+    visualA11yBlockerCount,
+    privacyBlockerCount,
+    finalAccountSnapshotStable:
+      dataBoundary.preflightAccountSnapshotStable,
+    screenshotCallCount: preflight.screenshotCallCount,
+    retainedPngCount: preflight.retainedPngCount,
+  };
+  const preflightClosed =
+    preflightClosure.visualAuditCandidateCount === 45 &&
+    preflightClosure.privacyCandidateCount === 25 &&
+    preflightClosure.privacyCheckCount === 25 &&
+    preflightClosure.privacyNotRunCount === 0 &&
+    preflightClosure.preparationBlockerCount === 0 &&
+    preflightClosure.visualA11yBlockerCount === 0 &&
+    preflightClosure.privacyBlockerCount === 0 &&
+    preflightClosure.finalAccountSnapshotStable === true &&
+    preflightClosure.screenshotCallCount === 0 &&
+    preflightClosure.retainedPngCount === 0;
   expect(
-    privacyPreflightClosed,
-    `Privacy preflight must close across every capture candidate before any PNG buffer is created; metadata-only-observation=${JSON.stringify({ failureCode: "S232H2_PRIVACY_PREFLIGHT_OPEN", candidateCount: dataBoundary.preflightCandidateCount, checkCount: dataBoundary.preflightCheckCount, accountSnapshotStable: dataBoundary.preflightAccountSnapshotStable, blockerCount: dataBoundary.preflightBlockerCount, buckets: dataBoundary.preflightBlockingBuckets })}.`,
+    preflightClosed,
+    `S232H2 pre-PNG closure must pass; metadata-only-observation=${JSON.stringify({ failureCode: "S232H2_PREFLIGHT_OPEN", coverage: { visualAuditCandidateCount: preflightClosure.visualAuditCandidateCount, privacyCandidateCount: preflightClosure.privacyCandidateCount, privacyCheckCount: preflightClosure.privacyCheckCount }, counts: preflightClosure, blockers: sortedPreflightBlockers(preflight) })}.`,
   ).toBe(true);
 
-  const initialAuditRows: AuditRow[] = [];
+  expect(initialAuditRows).toHaveLength(39);
+  expect(dynamicAuditRows).toHaveLength(6);
   const initialAfterScreenshots: ScreenshotEvidence[] = [];
   for (const viewport of viewports) {
     for (const route of requiredRoutes) {
       const routePage = route.authenticated ? page : publicPage;
       const requestedPath = resolveRoutePath(route, syntheticItemId);
-      initialAuditRows.push(
-        await auditRoute(routePage, route, requestedPath, viewport),
-      );
-
       const isAllRouteMobileEvidence = viewport.width === 390;
       const isRequiredReflowEvidence =
         viewport.width === 768 &&
@@ -5728,6 +6422,12 @@ test("S232H.2 adopts V3 across the production learner routes with direct before/
         isRequiredReflowEvidence ||
         isRequiredDesktopEvidence
       ) {
+        await prepareInitialRoute(
+          routePage,
+          route,
+          requestedPath,
+          viewport,
+        );
         if (route.id === "calculator" && viewport.width === 390) {
           await expect(
             routePage.locator(
@@ -5777,18 +6477,9 @@ test("S232H.2 adopts V3 across the production learner routes with direct before/
     (reference) => reference.referenceFileName,
   );
 
-  const dynamicAuditRows: AuditRow[] = [];
   const dynamicScreenshots: ScreenshotEvidence[] = [];
 
   await prepareCaptureExtractionPreview(page);
-  dynamicAuditRows.push(
-    await auditDynamicState(
-      page,
-      "capture",
-      "extraction-preview",
-      "/app/capture?mode=second",
-    ),
-  );
   dynamicScreenshots.push(
     await captureSyntheticScreenshot(
       page,
@@ -5799,14 +6490,6 @@ test("S232H.2 adopts V3 across the production learner routes with direct before/
   await page.unroute("**/api/inverge/ocr");
 
   await prepareAnswerReviewResult(page);
-  dynamicAuditRows.push(
-    await auditDynamicState(
-      page,
-      "answer-review",
-      "result",
-      "/answer-review?mode=second",
-    ),
-  );
   dynamicScreenshots.push(
     await captureSyntheticScreenshot(
       page,
@@ -5818,14 +6501,6 @@ test("S232H.2 adopts V3 across the production learner routes with direct before/
   await expect(
     page.locator('[data-s232e4-answer-review-rewrite="single-paragraph"]'),
   ).toBeVisible();
-  dynamicAuditRows.push(
-    await auditDynamicState(
-      page,
-      "answer-review",
-      "rewrite",
-      "/answer-review?mode=second",
-    ),
-  );
   dynamicScreenshots.push(
     await captureSyntheticScreenshot(
       page,
@@ -5836,14 +6511,6 @@ test("S232H.2 adopts V3 across the production learner routes with direct before/
   await page.unroute("**/api/answer-review/structure");
 
   await prepareReviewSelectedState(page, postMutationAudit.primaryQueueTitle!);
-  dynamicAuditRows.push(
-    await auditDynamicState(
-      page,
-      "review",
-      "revealed-selected",
-      "/app/review?mode=second",
-    ),
-  );
   dynamicScreenshots.push(
     await captureSyntheticScreenshot(
       page,
@@ -5857,14 +6524,6 @@ test("S232H.2 adopts V3 across the production learner routes with direct before/
   await expect(
     page.getByText("오늘 계획에 반영했습니다.", { exact: true }),
   ).toBeVisible();
-  dynamicAuditRows.push(
-    await auditDynamicState(
-      page,
-      "session",
-      "saved-capture",
-      "/app/session?mode=second&savedCapture=1&itemId=[itemId]",
-    ),
-  );
   dynamicScreenshots.push(
     await captureSyntheticScreenshot(
       page,
@@ -5891,14 +6550,6 @@ test("S232H.2 adopts V3 across the production learner routes with direct before/
   await gotoRequiredRoute(page, calculatorPath);
   await advanceCalculatorToCasioInput(page);
   await completeCalculatorRoutine(page);
-  dynamicAuditRows.push(
-    await auditDynamicState(
-      page,
-      "calculator",
-      "completed-saved",
-      calculatorPath,
-    ),
-  );
   dynamicScreenshots.push(
     await captureSyntheticScreenshot(
       page,
@@ -6000,6 +6651,7 @@ test("S232H.2 adopts V3 across the production learner routes with direct before/
     screenshotBoundary.preflightCheckCount === 25 &&
     screenshotBoundary.preflightBlockerCount === 0 &&
     screenshotBoundary.preflightAccountSnapshotStable &&
+    screenshotBoundary.screenshotCallCount === 25 &&
     screenshotBoundary.captureCount === 25 &&
     screenshotBoundary.checkCount === 50 &&
     accountSnapshotStable &&
@@ -6061,6 +6713,7 @@ test("S232H.2 adopts V3 across the production learner routes with direct before/
     privacyAudit.privacyPreflightAccountSnapshotStable,
     privacyAudit.screenshotBoundaryCheckCount === 50,
     privacyAudit.screenshotCaptureCount === 25,
+    screenshotBoundary.screenshotCallCount === 25,
     privacyAudit.visibleUnclassifiedTextHitCount === 0,
     privacyAudit.visibleUnclassifiedReferenceHitCount === 0,
     privacyAudit.visibleUnclassifiedFormValueHitCount === 0,
@@ -6119,7 +6772,9 @@ test("S232H.2 adopts V3 across the production learner routes with direct before/
     figmaReferenceScreenshotCount: figmaReferenceScreenshots.length,
     figmaComparisonCount: figmaComparisons.length,
     screenshotCount: screenshotNames.length,
+    screenshotCallCount: screenshotBoundary.screenshotCallCount,
     screenshots: screenshotNames,
+    preflightClosure,
     figmaComparisons,
     consoleErrorCount: afterErrors.consoleErrors.length,
     pageErrorCount: afterErrors.pageErrors.length,
