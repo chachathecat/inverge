@@ -5,6 +5,7 @@ import test from "node:test";
 
 import {
   collectSyntheticPayloadFailurePaths,
+  isAllowedExactSyntheticTaxonomyString,
   summarizeSyntheticPayloadFailurePaths,
 } from "./e2e/support/synthetic-payload-diagnostics.ts";
 
@@ -101,6 +102,83 @@ test("synthetic payload diagnostics expose only allowlisted schema paths and cou
   ]);
   assert.equal(JSON.stringify({ failures, summary }).includes(privateValue), false);
   assert.equal(JSON.stringify({ failures, summary }).includes(privateKey), false);
+});
+
+test("deterministic taxonomy diagnostics allow only the exact matched-keyword schema", () => {
+  const exactPaths = [
+    "rawPayload.taxonomyClassification.candidates[].matchedKeywords[]",
+    "derivedPayload.taxonomyClassification.candidates[].matchedKeywords[]",
+  ];
+  const payload = {
+    rawPayload: {
+      taxonomyClassification: {
+        candidates: [{ matchedKeywords: ["판단"] }],
+      },
+    },
+    derivedPayload: {
+      taxonomyClassification: {
+        candidates: [{ matchedKeywords: ["판단"] }],
+      },
+    },
+  };
+
+  assert.deepEqual(
+    collectSyntheticPayloadFailurePaths(
+      payload,
+      isAllowedExactSyntheticTaxonomyString,
+    ),
+    [],
+  );
+  assert.deepEqual(
+    collectSyntheticPayloadFailurePaths(payload, () => false),
+    exactPaths,
+  );
+  for (const path of exactPaths) {
+    assert.equal(isAllowedExactSyntheticTaxonomyString("판단", path), true);
+  }
+  for (const path of [
+    "rawPayload.taxonomyClassification.candidates[].matchedKeywords",
+    "rawPayload.taxonomyClassification.primary.matchedKeywords[]",
+    "rawPayload.candidates[].matchedKeywords[]",
+    "derivedPayload.taxonomyClassification.candidates[].matchedKeywords[].value",
+  ]) {
+    assert.equal(isAllowedExactSyntheticTaxonomyString("판단", path), false);
+  }
+  assert.equal(
+    isAllowedExactSyntheticTaxonomyString("요건", exactPaths[0]),
+    false,
+  );
+  assert.deepEqual(
+    collectSyntheticPayloadFailurePaths(
+      {
+        rawPayload: {
+          taxonomyClassification: {
+            candidates: [{ matchedKeywords: "판단" }],
+          },
+        },
+      },
+      isAllowedExactSyntheticTaxonomyString,
+    ),
+    ["rawPayload.taxonomyClassification.candidates[].matchedKeywords"],
+  );
+
+  const globalSetStart = spec.indexOf(
+    "const exactSyntheticPayloadSystemStrings = new Set([",
+  );
+  const globalSetEnd = spec.indexOf("\n]);", globalSetStart);
+  assert.ok(globalSetStart >= 0 && globalSetEnd > globalSetStart);
+  assert.equal(
+    spec.slice(globalSetStart, globalSetEnd).includes('"판단"'),
+    false,
+  );
+  assert.equal(
+    (
+      spec.match(
+        /isAllowedExactSyntheticPayloadString\(value, path, allowed\)/g,
+      ) ?? []
+    ).length,
+    4,
+  );
 });
 
 test("S232H.2 is a narrow exact-head PR2 and fixed-PR1 Preview gate", () => {

@@ -22,6 +22,7 @@ import {
 } from "./support/authenticated-runtime";
 import {
   collectSyntheticPayloadFailurePaths,
+  isAllowedExactSyntheticTaxonomyString,
   summarizeSyntheticPayloadFailurePaths,
 } from "./support/synthetic-payload-diagnostics";
 import {
@@ -1242,6 +1243,18 @@ const exactSyntheticSystemValuePatterns = [
   /^second-(?:practice-(?:method-selection|adjustment|income-approach|cost-approach|sales-comparison|final-value)|theory-(?:value-theory|price-principle|approach-logic|market-analysis|highest-best-use)|comp-law-(?:requirements|statute|procedure-project-approval|precedent-principles|issue-subsumption|conclusion))$/,
 ] as const;
 
+function isAllowedExactSyntheticPayloadString(
+  value: string,
+  path: string,
+  allowed: ReadonlySet<string>,
+) {
+  return (
+    allowed.has(value) ||
+    exactSyntheticSystemValuePatterns.some((pattern) => pattern.test(value)) ||
+    isAllowedExactSyntheticTaxonomyString(value, path)
+  );
+}
+
 function exactSyntheticPayloadValues(
   item: SyntheticItem,
   parent?: SyntheticItem,
@@ -1293,11 +1306,8 @@ function exactSyntheticPayloadFailurePaths(
 ) {
   return collectSyntheticPayloadFailurePaths(
     item,
-    (value) =>
-      allowed.has(value) ||
-      exactSyntheticSystemValuePatterns.some((pattern) =>
-        pattern.test(value),
-      ),
+    (value, path) =>
+      isAllowedExactSyntheticPayloadString(value, path, allowed),
   );
 }
 
@@ -1578,11 +1588,8 @@ async function auditSyntheticAccount(
         const allowed = exactSyntheticPayloadValues(item);
         return {
           item,
-          isAllowedString: (value: string) =>
-            allowed.has(value) ||
-            exactSyntheticSystemValuePatterns.some((pattern) =>
-              pattern.test(value),
-            ),
+          isAllowedString: (value, path) =>
+            isAllowedExactSyntheticPayloadString(value, path, allowed),
         };
       }),
   );
@@ -1629,11 +1636,8 @@ async function auditSyntheticAccount(
         const allowed = exactSyntheticPayloadValues(item);
         return {
           item,
-          isAllowedString: (value: string) =>
-            allowed.has(value) ||
-            exactSyntheticSystemValuePatterns.some((pattern) =>
-              pattern.test(value),
-            ),
+          isAllowedString: (value, path) =>
+            isAllowedExactSyntheticPayloadString(value, path, allowed),
         };
       }),
     );
@@ -1644,7 +1648,7 @@ async function auditSyntheticAccount(
   const historicalRewriteFailureGroups: string[][] = [];
   const historicalRewritePayloadEntries: Array<{
     item: SyntheticItem;
-    isAllowedString: (value: string) => boolean;
+    isAllowedString: (value: string, path: string) => boolean;
   }> = [];
   for (const item of historicalRewriteCandidates) {
     const sourceId =
@@ -1677,11 +1681,8 @@ async function auditSyntheticAccount(
     const allowed = exactSyntheticPayloadValues(item, parent);
     historicalRewritePayloadEntries.push({
       item,
-      isAllowedString: (value: string) =>
-        allowed.has(value) ||
-        exactSyntheticSystemValuePatterns.some((pattern) =>
-          pattern.test(value),
-        ),
+      isAllowedString: (value, path) =>
+        isAllowedExactSyntheticPayloadString(value, path, allowed),
     });
   }
   const historicalDiagnostics = {

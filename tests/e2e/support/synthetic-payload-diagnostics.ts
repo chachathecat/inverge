@@ -14,6 +14,7 @@ const safeSyntheticPayloadPathSegments = new Set([
   "aiDraft",
   "biggest_gap",
   "calculation_risk",
+  "candidates",
   "capture_note_engine_v1",
   "capture_note_engine_v2",
   "casio_keystrokes",
@@ -44,6 +45,7 @@ const safeSyntheticPayloadPathSegments = new Set([
   "key_concepts",
   "labels",
   "learningStateUpdateCandidate",
+  "matchedKeywords",
   "metadataOnly",
   "missingIssueCandidate",
   "missing_issue_candidate",
@@ -92,6 +94,7 @@ const safeSyntheticPayloadPathSegments = new Set([
   "targetStatus",
   "taskType",
   "taskTypes",
+  "taxonomyClassification",
   "tenSecondCheckLabel",
   "title",
   "todayPlanCandidate",
@@ -110,14 +113,29 @@ function safePathSegment(key: string) {
   return safeSyntheticPayloadPathSegments.has(key) ? key : "<unknown-key>";
 }
 
+const exactSyntheticTaxonomyMatchedKeywordPaths = new Set([
+  "rawPayload.taxonomyClassification.candidates[].matchedKeywords[]",
+  "derivedPayload.taxonomyClassification.candidates[].matchedKeywords[]",
+]);
+
+export function isAllowedExactSyntheticTaxonomyString(
+  value: string,
+  path: string,
+) {
+  return (
+    value === "판단" &&
+    exactSyntheticTaxonomyMatchedKeywordPaths.has(path)
+  );
+}
+
 export function collectSyntheticPayloadFailurePaths(
   item: SyntheticPayloadEnvelope,
-  isAllowedString: (value: string) => boolean,
+  isAllowedString: (value: string, path: string) => boolean,
 ) {
   const failures: string[] = [];
   const visit = (value: unknown, path: string) => {
     if (typeof value === "string") {
-      if (!isAllowedString(value)) failures.push(path);
+      if (!isAllowedString(value, path)) failures.push(path);
       return;
     }
     if (
@@ -148,7 +166,7 @@ export function collectSyntheticPayloadFailurePaths(
 export function summarizeSyntheticPayloadFailurePaths(
   entries: readonly {
     item: SyntheticPayloadEnvelope;
-    isAllowedString: (value: string) => boolean;
+    isAllowedString: (value: string, path: string) => boolean;
   }[],
 ): SyntheticPayloadFailureSummary[] {
   const counts = new Map<string, number>();
