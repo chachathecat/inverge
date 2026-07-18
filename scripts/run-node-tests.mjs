@@ -102,6 +102,7 @@ const defaultTestFiles = [
   "tests/s232h2-calculator-v3-adoption.test.mjs",
   "tests/s232h2-historical-synthetic-fixtures.test.mjs",
   "tests/s232h2-production-v3-visual-contract.test.mjs",
+  "tests/screenshot-boundary-policy.test.mjs",
   "tests/postgrest-timestamps-normalization.test.mjs",
   "tests/s220b-dabangil-launch-surface.test.mjs",
   "tests/practice-calculation-unit-registry.test.mjs",

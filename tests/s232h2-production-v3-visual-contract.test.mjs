@@ -12,6 +12,9 @@ import {
 const read = (path) => readFileSync(path, "utf8");
 const workflow = read(".github/workflows/s232h2-runtime.yml");
 const spec = read("tests/e2e/s232h2-production-v3-visual.spec.ts");
+const boundaryPolicy = read(
+  "tests/e2e/support/screenshot-boundary-policy.ts",
+);
 const learnerUi = read("components/learner/learner-ui.tsx");
 const answerReview = read("app/answer-review/answer-review-client.tsx");
 const reviewRepository = read("lib/review-os/repository.ts");
@@ -215,6 +218,7 @@ test("S232H.2 is a narrow exact-head PR2 and fixed-PR1 Preview gate", () => {
   assert.match(workflow, /contents: read/);
   assert.match(workflow, /deployments: read/);
   assert.match(workflow, /pull-requests: read/);
+  assert.match(workflow, /tests\/screenshot-boundary-policy\.test\.mjs/);
   assert.doesNotMatch(workflow, /#624|s232g|workflow_dispatch|rerun|re-run/i);
   assert.doesNotMatch(
     workflow,
@@ -633,12 +637,96 @@ test("S232H.2 evidence is privacy-bounded synthetic data and directly compared w
   assert.doesNotMatch(spec, /syntheticAccountOnly|syntheticFixtureOnly/);
   assert.doesNotMatch(spec, /privateLearnerContentCaptured:\s*false/);
   assert.match(spec, /createScreenshotDataBoundary/);
+  assert.match(spec, /provenanceBoundaryScalarPath\(value, keyPath\)/);
+  assert.match(spec, /typeof value === "number" && Number\.isFinite\(value\)/);
+  assert.match(boundaryPolicy, /"<number>"/);
   assert.match(spec, /const unclassifiedItems = listedItems\.filter/);
   assert.match(spec, /NodeFilter\.SHOW_TEXT/);
   assert.match(spec, /Array\.from\(element\.attributes\)/);
   assert.match(spec, /HTMLInputElement/);
   assert.match(spec, /"::before", "::after"/);
   assert.match(spec, /visibleUninspectableSurfaceCount/);
+  assert.match(spec, /provenanceBoundDirectAnswer/);
+  assert.match(spec, /classifyProvenanceBoundDirectAnswer/);
+  assert.match(spec, /hasCompleteExactMirroredDirectAnswerPaths/);
+  assert.match(spec, /buildProvenanceBoundPolicyTable/);
+  assert.match(spec, /provenanceBoundArbitraryPresentationUtilityTokens/);
+  assert.match(spec, /exactContentAttributeNames\.has/);
+  assert.match(spec, /!unrestrictedFragments\.has\(value\)/);
+  assert.match(spec, /relation: "unclassified-account-choice-digit"/);
+  assert.match(spec, /referencesAnyItemId\(window\.location\.href/);
+  assert.match(
+    spec,
+    /Array\.from\(current\.attributes\)[\s\S]*?referencesAnyItemId\(attribute\.value, sourceItemIds\)/,
+  );
+  assert.match(
+    spec,
+    /const policyDecision = provenanceBoundPolicyTable\[policyKey\]/,
+  );
+  assert.match(spec, /if \(policyDecision !== false\)/);
+  assert.match(spec, /"semantic-text"/);
+  assert.match(spec, /"content-attribute"/);
+  assert.match(spec, /"structural-reference"/);
+  assert.match(spec, /"form-value"/);
+  assert.match(spec, /"generated-content"/);
+  assert.match(spec, /"background-reference"/);
+  assert.match(spec, /name === "tabindex"/);
+  assert.match(spec, /name === "rows"/);
+  assert.match(spec, /data-s232e3-answer-review-entry/);
+  assert.match(spec, /aria-valuetext/);
+  assert.match(spec, /aria-valuenow/);
+  assert.match(
+    spec,
+    /attribute\.name\.toLowerCase\(\) === "aria-valuenow"[\s\S]*?"progressbar"[\s\S]*?\? "structural-reference"/,
+  );
+  assert.match(spec, /semanticAnswerLabel/);
+  assert.match(spec, /for \(const identitySurface of await identity\.all\(\)\)/);
+  assert.doesNotMatch(spec, /identity\.count\(\)\) === 1/);
+  assert.match(
+    spec,
+    /element\.closest\(semanticTextSurfaceSelector\)/,
+  );
+  assert.match(
+    spec,
+    /channel === "semantic-text"[\s\S]*?semanticTextSurface\(element\)[\s\S]*?: normalized/,
+  );
+  assert.match(
+    spec,
+    /\[role="group"\],\[role="radiogroup"\],\[role="listbox"\]/,
+  );
+  assert.match(
+    spec,
+    /addElementSemanticContext\(element\)[\s\S]*?semanticContextParts\.push\(normalized\)/,
+  );
+  assert.match(spec, /semanticContextParts\.push\(semanticSurfaceText\)/);
+  assert.match(spec, /root instanceof ShadowRoot[\s\S]*?CSS\.escape\(id\)/);
+  assert.match(spec, /structuralCollisionSchema/);
+  assert.match(spec, /return "instrumentation"/);
+  assert.match(spec, /return "none"/);
+  assert.match(spec, /incidentalOrdinalOrCounter/);
+  assert.match(spec, /exactSyntheticCalculatorFormSelector/);
+  assert.match(spec, /exactSyntheticFormFixtures/);
+  assert.match(spec, /normalizedSyntheticFormFixtures\.some/);
+  assert.match(spec, /fixture\.values\.has\(normalized\)/);
+  assert.match(spec, /\[element\.value, selectedText\]/);
+  const testUseBlock = spec.slice(
+    spec.indexOf("test.use({"),
+    spec.indexOf("});", spec.indexOf("test.use({")) + 3,
+  );
+  assert.match(testUseBlock, /video: "off"/);
+  assert.match(testUseBlock, /screenshot: "off"/);
+  assert.match(testUseBlock, /trace: "off"/);
+  assert.match(spec, /test\.describe\.configure\(\{ timeout: 1_500_000, retries: 0 \}\)/);
+  assert.match(spec, /metadata-only-observation=/);
+  assert.match(spec, /S232H2_SCREENSHOT_BOUNDARY_OPEN/);
+  assert.match(spec, /blockingBuckets/);
+  assert.match(spec, /fragmentFamily/);
+  assert.match(spec, /maskedLength/);
+  assert.match(spec, /attributeFamily/);
+  assert.match(spec, /provenanceFilteredTextHitCount/);
+  assert.match(spec, /provenanceFilteredReferenceHitCount/);
+  assert.doesNotMatch(spec, /normalizedFragments\.filter\([^)]*length/);
+  assert.doesNotMatch(spec, /unknown-key.*(?:allow|ignore)/i);
   assert.match(
     spec,
     /await assertScreenshotDataBoundary\(\);\s*const buffer = await page\.screenshot\([\s\S]*?await assertScreenshotDataBoundary\(\);\s*boundary\.captureCount/,
@@ -744,6 +832,8 @@ test("S232H.2 evidence is privacy-bounded synthetic data and directly compared w
   assert.match(spec, /calculatorCasioInputVisible:\s*initialAuditRows\.some/);
   assert.match(workflow, /screenshotDataBoundaryClosed/);
   assert.match(workflow, /visibleUnclassifiedTextHitCount/);
+  assert.match(workflow, /provenanceFilteredTextHitCount/);
+  assert.match(workflow, /provenanceFilteredReferenceHitCount/);
   assert.match(workflow, /strictOwnershipContract/);
   assert.match(workflow, /edgeGridCorrelation/);
   assert.match(workflow, /figmaComparisonCount !== 3/);

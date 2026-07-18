@@ -26,6 +26,16 @@ import {
   summarizeSyntheticPayloadFailurePaths,
 } from "./support/synthetic-payload-diagnostics";
 import {
+  buildProvenanceBoundPolicyTable,
+  classifyProvenanceBoundDirectAnswer,
+  hasCompleteExactMirroredDirectAnswerPaths,
+  provenanceBoundaryScalarPath,
+  provenanceBoundArbitraryPresentationUtilityTokens,
+  provenanceBoundContentAttributeNames,
+  provenanceBoundInstrumentationSchemas,
+  provenanceBoundPresentationUtilityPattern,
+} from "./support/screenshot-boundary-policy";
+import {
   historicalS232gRewriteFailureFields,
   historicalS232gRewriteParagraph,
   historicalS232gSourceFailureFields,
@@ -50,6 +60,39 @@ const viewports = [
   { label: "768", width: 768, height: 1024 },
   { label: "1440", width: 1440, height: 1024 },
 ] as const;
+
+const provenanceBoundSemanticTextSurfaceSelector =
+  "button,a,label,li,p,h1,h2,h3,h4,h5,h6,dt,dd,td,th,option,summary,legend,[role]";
+const exactSyntheticCalculatorFormSelector =
+  '[data-calculator-routine-trainer] [data-calculator-routine-active-step] textarea[data-v3-typography-role]';
+const calculatorCasioFixtureEntries = {
+  conditions: "합성 조건: 원문 숫자와 단위를 먼저 확인합니다.",
+  formula: "합성 산식: V = I ÷ R",
+  numbers_units: "합성 대입: 120,000원 ÷ 0.06",
+} as const;
+const calculatorCasioFixtureInput =
+  "120000 ÷ 0.06 EXE · 합성 입력을 실제 기기에서 직접 대조합니다.";
+const calculatorCompletionFixtureEntries = {
+  display_value: "2,000,000 · 합성 화면값",
+  answer_value: "2,000,000원 · 합성 기재값",
+  unit_rounding: "원 단위로 합성 반올림을 확인했습니다.",
+} as const;
+const syntheticCaptureReviewDate = "2026-07-18";
+const exactSyntheticFormFixtures = [
+  {
+    selector: exactSyntheticCalculatorFormSelector,
+    values: [
+      ...Object.values(calculatorCasioFixtureEntries),
+      calculatorCasioFixtureInput,
+      ...Object.values(calculatorCompletionFixtureEntries),
+    ],
+  },
+  {
+    selector:
+      '[data-s232e-capture-stage="preview"] input[type="date"]',
+    values: [syntheticCaptureReviewDate],
+  },
+];
 
 type RouteDefinition = {
   id: string;
@@ -240,6 +283,10 @@ type PrivacyAudit = {
   visibleUnclassifiedFormValueHitCount: number;
   visibleUnclassifiedGeneratedContentHitCount: number;
   visibleUninspectableSurfaceCount: number;
+  provenanceFilteredTextHitCount: number;
+  provenanceFilteredReferenceHitCount: number;
+  provenanceFilteredFormValueHitCount: number;
+  provenanceFilteredGeneratedContentHitCount: number;
   accountSnapshotStable: boolean;
   screenshotDataBoundaryClosed: boolean;
   privateLearnerContentCaptured: boolean;
@@ -502,6 +549,13 @@ type SyntheticAccountAudit = {
 type ScreenshotDataBoundary = {
   unclassifiedItemIds: string[];
   sensitiveFragments: string[];
+  provenanceBoundFragments: Array<{
+    value: string;
+    sourceItemIds: string[];
+    fieldFamilies: Array<"correctAnswer" | "userAnswer">;
+    maskedLength: 1;
+    relation: "unclassified-account-choice-digit";
+  }>;
   unclassifiedItemCount: number;
   checkCount: number;
   captureCount: number;
@@ -510,6 +564,10 @@ type ScreenshotDataBoundary = {
   visibleFormValueHitCount: number;
   visibleGeneratedContentHitCount: number;
   visibleUninspectableSurfaceCount: number;
+  provenanceFilteredTextHitCount: number;
+  provenanceFilteredReferenceHitCount: number;
+  provenanceFilteredFormValueHitCount: number;
+  provenanceFilteredGeneratedContentHitCount: number;
 };
 
 function resolveSyntheticItemId(item: SyntheticItem) {
@@ -540,9 +598,11 @@ function collectNestedLearnerContent(
   value: unknown,
   keyPath: readonly string[],
   output: Set<string>,
+  pathsByValue: Map<string, Array<readonly string[]>>,
 ) {
-  if (typeof value === "string") {
-    const normalized = normalizeBoundaryText(value);
+  const scalarPath = provenanceBoundaryScalarPath(value, keyPath);
+  if (scalarPath) {
+    const normalized = normalizeBoundaryText(String(value));
     const key = (keyPath.at(-1) ?? "").replace(
       /([a-z0-9])([A-Z])/g,
       "$1_$2",
@@ -554,17 +614,25 @@ function collectNestedLearnerContent(
         !nestedMachineMetadataKey.test(key))
     ) {
       output.add(normalized);
+      const paths = pathsByValue.get(normalized) ?? [];
+      paths.push(scalarPath);
+      pathsByValue.set(normalized, paths);
     }
     return;
   }
   if (Array.isArray(value)) {
     for (const entry of value)
-      collectNestedLearnerContent(entry, keyPath, output);
+      collectNestedLearnerContent(
+        entry,
+        [...keyPath, "[]"],
+        output,
+        pathsByValue,
+      );
     return;
   }
   if (!value || typeof value !== "object") return;
   for (const [key, entry] of Object.entries(value))
-    collectNestedLearnerContent(entry, [...keyPath, key], output);
+    collectNestedLearnerContent(entry, [...keyPath, key], output, pathsByValue);
 }
 
 function createScreenshotDataBoundary(
@@ -578,23 +646,100 @@ function createScreenshotDataBoundary(
     ),
   ];
   const fragments = new Set<string>();
+  const unrestrictedFragments = new Set<string>();
+  const provenanceCandidates = new Map<
+    string,
+    {
+      sourceItemIds: Set<string>;
+      fieldFamilies: Set<"correctAnswer" | "userAnswer">;
+    }
+  >();
   for (const item of unclassifiedItems) {
+    const sourceItemId = resolveSyntheticItemId(item);
+    const itemCandidateFieldsByValue = new Map<
+      string,
+      Set<"correctAnswer" | "userAnswer">
+    >();
     for (const field of directLearnerContentFields) {
       const value = item[field];
+      if (typeof value === "number" && Number.isFinite(value)) {
+        const normalized = normalizeBoundaryText(String(value));
+        if (normalized && normalized !== "-") {
+          fragments.add(normalized);
+          unrestrictedFragments.add(normalized);
+        }
+        continue;
+      }
       if (typeof value !== "string") continue;
       const normalized = normalizeBoundaryText(value);
-      if (normalized && normalized !== "-") fragments.add(normalized);
+      if (!normalized || normalized === "-") continue;
+      fragments.add(normalized);
+      const provenanceBoundDirectAnswer =
+        classifyProvenanceBoundDirectAnswer(field, normalized);
+      if (!provenanceBoundDirectAnswer || sourceItemId.length === 0) {
+        unrestrictedFragments.add(normalized);
+        continue;
+      }
+      const candidate = provenanceCandidates.get(normalized) ?? {
+        sourceItemIds: new Set<string>(),
+        fieldFamilies: new Set<"correctAnswer" | "userAnswer">(),
+      };
+      candidate.sourceItemIds.add(sourceItemId);
+      candidate.fieldFamilies.add(provenanceBoundDirectAnswer);
+      provenanceCandidates.set(normalized, candidate);
+      const itemFields =
+        itemCandidateFieldsByValue.get(normalized) ??
+        new Set<"correctAnswer" | "userAnswer">();
+      itemFields.add(provenanceBoundDirectAnswer);
+      itemCandidateFieldsByValue.set(normalized, itemFields);
     }
-    collectNestedLearnerContent(item.rawPayload, ["rawPayload"], fragments);
+    const nestedFragments = new Set<string>();
+    const nestedPathsByValue = new Map<
+      string,
+      Array<readonly string[]>
+    >();
+    collectNestedLearnerContent(
+      item.rawPayload,
+      ["rawPayload"],
+      nestedFragments,
+      nestedPathsByValue,
+    );
     collectNestedLearnerContent(
       item.derivedPayload,
       ["derivedPayload"],
-      fragments,
+      nestedFragments,
+      nestedPathsByValue,
     );
+    const itemFragments = new Set([
+      ...nestedFragments,
+      ...itemCandidateFieldsByValue.keys(),
+    ]);
+    for (const fragment of itemFragments) {
+      fragments.add(fragment);
+      const candidateFields = itemCandidateFieldsByValue.get(fragment);
+      const nestedPaths = nestedPathsByValue.get(fragment) ?? [];
+      const exactSameItemMirror =
+        candidateFields !== undefined &&
+        hasCompleteExactMirroredDirectAnswerPaths(
+          [...candidateFields],
+          nestedPaths,
+        );
+      if (!exactSameItemMirror) unrestrictedFragments.add(fragment);
+    }
   }
+  const provenanceBoundFragments = [...provenanceCandidates]
+    .filter(([value]) => !unrestrictedFragments.has(value))
+    .map(([value, candidate]) => ({
+      value,
+      sourceItemIds: [...candidate.sourceItemIds],
+      fieldFamilies: [...candidate.fieldFamilies].sort(),
+      maskedLength: 1 as const,
+      relation: "unclassified-account-choice-digit" as const,
+    }));
   return {
     unclassifiedItemIds,
     sensitiveFragments: [...fragments],
+    provenanceBoundFragments,
     unclassifiedItemCount: unclassifiedItems.length,
     checkCount: 0,
     captureCount: 0,
@@ -603,6 +748,10 @@ function createScreenshotDataBoundary(
     visibleFormValueHitCount: 0,
     visibleGeneratedContentHitCount: 0,
     visibleUninspectableSurfaceCount: 0,
+    provenanceFilteredTextHitCount: 0,
+    provenanceFilteredReferenceHitCount: 0,
+    provenanceFilteredFormValueHitCount: 0,
+    provenanceFilteredGeneratedContentHitCount: 0,
   };
 }
 
@@ -612,6 +761,13 @@ function screenshotDataBoundaryFingerprint(boundary: ScreenshotDataBoundary) {
       JSON.stringify({
         itemIds: [...boundary.unclassifiedItemIds].sort(),
         fragments: [...boundary.sensitiveFragments].sort(),
+        provenanceBoundFragments: boundary.provenanceBoundFragments
+          .map((fragment) => ({
+            value: fragment.value,
+            sourceItemIds: [...fragment.sourceItemIds].sort(),
+            fieldFamilies: [...fragment.fieldFamilies].sort(),
+          }))
+          .sort((left, right) => left.value.localeCompare(right.value)),
       }),
     )
     .digest("hex");
@@ -1850,6 +2006,10 @@ async function auditSyntheticAccount(
       visibleUnclassifiedFormValueHitCount: 0,
       visibleUnclassifiedGeneratedContentHitCount: 0,
       visibleUninspectableSurfaceCount: 0,
+      provenanceFilteredTextHitCount: 0,
+      provenanceFilteredReferenceHitCount: 0,
+      provenanceFilteredFormValueHitCount: 0,
+      provenanceFilteredGeneratedContentHitCount: 0,
       accountSnapshotStable: false,
       screenshotDataBoundaryClosed: false,
       privateLearnerContentCaptured: true,
@@ -2865,24 +3025,53 @@ async function captureSyntheticScreenshot(
   fileName: string,
   options: { fullPage?: boolean } = {},
 ): Promise<ScreenshotEvidence> {
+  const provenanceBoundPolicyTable = buildProvenanceBoundPolicyTable();
   const assertScreenshotDataBoundary = async () => {
     const observation = await page.evaluate(
-      ({ itemIds, fragments, captureFullPage }) => {
+      ({
+        itemIds,
+        fragments,
+        provenanceBoundFragments,
+        provenanceBoundPolicyTable,
+        instrumentationSchemas,
+        contentAttributeNames,
+        arbitraryPresentationUtilityTokens,
+        presentationUtilityPatternSource,
+        semanticTextSurfaceSelector,
+        syntheticFormFixtures,
+        captureFullPage,
+      }) => {
         const normalize = (value: string) =>
           value.normalize("NFKC").replace(/\s+/g, " ").trim();
         const normalizedItemIds = itemIds.map(normalize).filter(Boolean);
         const normalizedFragments = fragments.map(normalize).filter(Boolean);
-        const matchesSensitiveFragment = (value: string) => {
-          const normalized = normalize(value);
-          if (!normalized) return false;
-          return normalizedFragments.some(
-            (fragment) =>
-              normalized === fragment ||
-              normalized.includes(fragment) ||
-              (normalized.length >= 12 && fragment.includes(normalized)),
-          );
-        };
-        const matchesUnclassifiedReference = (value: string) => {
+        const normalizedSyntheticFormFixtures = syntheticFormFixtures.map(
+          (fixture) => ({
+            selector: fixture.selector,
+            values: new Set(fixture.values.map(normalize).filter(Boolean)),
+          }),
+        );
+        const exactInstrumentationPatterns = new Map(
+          instrumentationSchemas.map((schema) => [
+            schema.attributeName,
+            new RegExp(schema.valuePatternSource, "u"),
+          ]),
+        );
+        const exactContentAttributeNames = new Set(contentAttributeNames);
+        const exactArbitraryPresentationUtilityTokens = new Set(
+          arbitraryPresentationUtilityTokens,
+        );
+        const presentationUtility = new RegExp(
+          presentationUtilityPatternSource,
+          "i",
+        );
+        const normalizedProvenanceBoundFragments = new Map(
+          provenanceBoundFragments.map((fragment) => [
+            normalize(fragment.value),
+            fragment.sourceItemIds.map(normalize).filter(Boolean),
+          ]),
+        );
+        const normalizedCandidates = (value: string) => {
           const normalized = normalize(value);
           const candidates = [normalized];
           try {
@@ -2891,11 +3080,512 @@ async function captureSyntheticScreenshot(
           } catch {
             // Invalid percent-encoding is compared in its original form.
           }
-          return candidates.some(
-            (candidate) =>
-              normalizedItemIds.some((itemId) => candidate.includes(itemId)) ||
-              matchesSensitiveFragment(candidate),
+          return candidates;
+        };
+        const referencesAnyItemId = (
+          value: string,
+          candidateItemIds: readonly string[] = normalizedItemIds,
+        ) =>
+          normalizedCandidates(value).some((candidate) =>
+            candidateItemIds.some((itemId) => candidate.includes(itemId)),
           );
+        const elementReferencesSourceItem = (
+          element: Element | null,
+          sourceItemIds: readonly string[],
+        ) => {
+          if (referencesAnyItemId(window.location.href, sourceItemIds))
+            return true;
+          let current = element;
+          while (current) {
+            if (
+              Array.from(current.attributes).some((attribute) =>
+                referencesAnyItemId(attribute.value, sourceItemIds),
+              )
+            )
+              return true;
+            const root = current.getRootNode();
+            current =
+              current.parentElement ??
+              (root instanceof ShadowRoot ? root.host : null);
+          }
+          return false;
+        };
+        const semanticTextSurfaceElement = (element: Element | null) =>
+          element
+            ? (element.closest(semanticTextSurfaceSelector) ?? element)
+            : null;
+        const semanticTextSurface = (element: Element | null) => {
+          const surface = semanticTextSurfaceElement(element);
+          if (!surface) return "";
+          return normalize(
+            surface instanceof HTMLElement
+              ? surface.innerText
+              : (surface.textContent ?? ""),
+          );
+        };
+        const resolveElementId = (element: Element, id: string) => {
+          const root = element.getRootNode();
+          if (root instanceof Document) return root.getElementById(id);
+          if (root instanceof ShadowRoot)
+            return root.querySelector(`#${CSS.escape(id)}`);
+          return null;
+        };
+        const resolvesIdReference = (
+          attributeName: string,
+          normalizedValue: string,
+          element: Element | null,
+        ) => {
+          if (!element || !normalizedValue) return false;
+          const name = attributeName.toLowerCase();
+          const referenceAttributes = [
+            "for",
+            "aria-controls",
+            "aria-labelledby",
+            "aria-describedby",
+            "aria-owns",
+            "aria-activedescendant",
+          ];
+          if (referenceAttributes.includes(name)) {
+            const ids = normalizedValue.split(/\s+/).filter(Boolean);
+            return (
+              ids.length > 0 &&
+              ids.every((id) => resolveElementId(element, id) !== null)
+            );
+          }
+          if (name !== "id") return false;
+          const root = element.getRootNode();
+          if (!(root instanceof Document || root instanceof ShadowRoot))
+            return false;
+          return Array.from(
+            root.querySelectorAll(
+              "[for],[aria-controls],[aria-labelledby],[aria-describedby],[aria-owns],[aria-activedescendant]",
+            ),
+          ).some((candidate) =>
+            referenceAttributes.some((referenceAttribute) =>
+              (candidate.getAttribute(referenceAttribute)?.split(/\s+/) ?? [])
+                .filter(Boolean)
+                .includes(normalizedValue),
+            ),
+          );
+        };
+        const structuralCollisionSchema = (
+          attributeName: string | null,
+          normalizedValue: string,
+          normalizedFragment: string,
+          element: Element | null,
+        ): "none" | "presentation" | "instrumentation" => {
+          if (!attributeName || !element) return "none";
+          const name = attributeName.toLowerCase();
+          if (exactInstrumentationPatterns.get(name)?.test(normalizedValue))
+            return "instrumentation";
+          if (
+            /^aria-value(?:min|max|now)$/i.test(name) &&
+            element.getAttribute("role")?.toLowerCase() === "progressbar"
+          )
+            return "presentation";
+          if (name === "tabindex" && /^(?:-1|0)$/u.test(normalizedValue))
+            return "presentation";
+          if (
+            name === "rows" &&
+            element.localName === "textarea" &&
+            normalizedValue === "3"
+          )
+            return "presentation";
+          if (name === "class" && normalizedValue !== normalizedFragment) {
+            const matchingTokens = normalizedValue
+              .split(/\s+/)
+              .filter((token) => token.includes(normalizedFragment));
+            if (
+              matchingTokens.length > 0 &&
+              matchingTokens.every((token) =>
+                token.includes("[")
+                  ? exactArbitraryPresentationUtilityTokens.has(token)
+                  : presentationUtility.test(token),
+              )
+            )
+              return "presentation";
+          }
+          if (
+            name === "style" &&
+            element.parentElement?.getAttribute("role")?.toLowerCase() ===
+              "progressbar" &&
+            normalizedValue !== normalizedFragment &&
+            /^width:\s*(?:0|[1-9]\d?|100)%;?$/u.test(normalizedValue)
+          )
+            return "presentation";
+          if (
+            name === "style" &&
+            element.closest(
+              'main[data-s232e3-answer-review-entry="learner-first"]',
+            )
+          ) {
+            const matchingDeclarations = normalizedValue
+              .split(";")
+              .map((declaration) => declaration.trim())
+              .filter(
+                (declaration) =>
+                  declaration.length > 0 &&
+                  declaration.includes(normalizedFragment),
+              );
+            if (
+              matchingDeclarations.length > 0 &&
+              matchingDeclarations.every((declaration) => {
+                const separator = declaration.indexOf(":");
+                if (separator < 1) return false;
+                const property = declaration
+                  .slice(0, separator)
+                  .trim()
+                  .toLowerCase();
+                const value = declaration.slice(separator + 1).trim();
+                if (property === "opacity")
+                  return /^(?:0(?:\.\d+)?|1(?:\.0+)?)$/u.test(value);
+                if (property === "height")
+                  return /^(?:auto|0|(?:0|[1-9]\d*)(?:\.\d+)?(?:px|%))$/u.test(
+                    value,
+                  );
+                if (property === "transform-origin")
+                  return /^(?:-?\d+(?:\.\d+)?(?:px|%))(?:\s+-?\d+(?:\.\d+)?(?:px|%)){1,2}$/u.test(
+                    value,
+                  );
+                if (property === "transform")
+                  return /^(?:none|(?:(?:translate(?:x|y|3d)?|scale(?:x|y|3d)?|rotate(?:x|y|z)?|matrix(?:3d)?)\([-+0-9.eE,%pxdeg\s]+\)\s*)+)$/iu.test(
+                    value,
+                  );
+                return false;
+              })
+            )
+              return "presentation";
+          }
+          if (
+            [
+              "id",
+              "for",
+              "aria-controls",
+              "aria-labelledby",
+              "aria-describedby",
+              "aria-owns",
+              "aria-activedescendant",
+            ].includes(name) &&
+            normalizedValue !== normalizedFragment &&
+            resolvesIdReference(name, normalizedValue, element)
+          )
+            return "presentation";
+          const graphic = element.closest("svg");
+          const graphicContainer = graphic?.closest("button,a");
+          const decorativeGraphic =
+            graphic !== null &&
+            (graphic.matches(
+              'svg[aria-hidden="true"],svg[role="presentation"],svg[role="none"]',
+            ) ||
+              (!graphic.hasAttribute("aria-label") &&
+                !graphic.hasAttribute("aria-labelledby") &&
+                !graphic.querySelector("title") &&
+                normalize(graphicContainer?.textContent ?? "").length > 0));
+          if (
+            decorativeGraphic &&
+            [
+              "width",
+              "height",
+              "x",
+              "y",
+              "x1",
+              "x2",
+              "y1",
+              "y2",
+              "cx",
+              "cy",
+              "r",
+              "rx",
+              "ry",
+              "d",
+              "points",
+              "viewbox",
+              "transform",
+              "stroke-width",
+              "stroke-dasharray",
+              "stroke-dashoffset",
+            ].includes(name)
+          )
+            return "presentation";
+          return "none";
+        };
+        const incidentalOrdinalOrCounter = (
+          normalizedValue: string,
+          normalizedFragment: string,
+          element: Element | null,
+        ) => {
+          if (
+            !normalizedFragment ||
+            normalizedValue === normalizedFragment ||
+            !normalizedValue.includes(normalizedFragment)
+          )
+            return false;
+          const semanticSurface = semanticTextSurfaceElement(element);
+          const orderedListItem =
+            semanticSurface?.tagName.toLowerCase() === "li" &&
+            semanticSurface.parentElement?.tagName.toLowerCase() === "ol";
+          const occurrences: number[] = [];
+          for (
+            let index = normalizedValue.indexOf(normalizedFragment);
+            index >= 0;
+            index = normalizedValue.indexOf(normalizedFragment, index + 1)
+          )
+            occurrences.push(index);
+          return occurrences.every((index) => {
+            const before = normalizedValue.slice(0, index);
+            const after = normalizedValue.slice(
+              index + normalizedFragment.length,
+            );
+            const previous = before.at(-1) ?? "";
+            const next = after.at(0) ?? "";
+            const adjacentNumber =
+              /\d/u.test(previous) ||
+              /\d/u.test(next) ||
+              ((/[.,/%:+-]/u.test(previous) ||
+                /[.,/%:+-]/u.test(next)) &&
+                /\d/u.test(`${before.slice(-2)}${after.slice(0, 2)}`));
+            const counterSuffix =
+                /^\s*(?:개|단계|차|줄|분|회|가지|문장|문단|페이지|항목|초|점|%)/u.test(
+                  after,
+                );
+            const ordinalPunctuation = /^[.)]/u.test(after);
+            const labelledOrdinal =
+                /(?:제|단계|순서|항목|페이지|문항|문제|step|stage|page|item|question|phase|level|week)\s*$/iu.test(
+                  before,
+                );
+            const orderedListOrdinal =
+              orderedListItem &&
+              before.trim().length === 0 &&
+              /^(?:\s|[.)])/u.test(after);
+            return (
+              adjacentNumber ||
+              counterSuffix ||
+              ordinalPunctuation ||
+              labelledOrdinal ||
+              orderedListOrdinal
+            );
+          });
+        };
+        const maskedLengthFamily = (value: string) => {
+          const length = Array.from(value).length;
+          if (length === 1) return "1";
+          if (length <= 7) return "2-7";
+          if (length <= 31) return "8-31";
+          return "32+";
+        };
+        const matchSensitiveFragment = (
+          value: string,
+          element: Element | null,
+          channel:
+            | "semantic-text"
+            | "content-attribute"
+            | "structural-reference"
+            | "form-value"
+            | "generated-content"
+            | "background-reference",
+          structuralAttributeName: string | null = null,
+        ) => {
+          const normalized = normalize(value);
+          if (!normalized)
+            return {
+              matched: false,
+              provenanceFiltered: false,
+              hitMetadata: null,
+            };
+          let provenanceFiltered = false;
+          for (const fragment of normalizedFragments) {
+            const exact =
+              (channel === "semantic-text"
+                ? semanticTextSurface(element)
+                : normalized) === fragment;
+            const substring =
+              normalized.includes(fragment) ||
+              (normalized.length >= 12 && fragment.includes(normalized));
+            if (!exact && !substring) continue;
+            const sourceItemIds =
+              normalizedProvenanceBoundFragments.get(fragment);
+            if (!sourceItemIds)
+              return {
+                matched: true,
+                provenanceFiltered: false,
+                hitMetadata: {
+                  fragmentFamily: "unrestricted-account-content",
+                  maskedLength: maskedLengthFamily(fragment),
+                  relation: "unclassified-dom",
+                },
+              };
+            const sourceReferenced = elementReferencesSourceItem(
+              element,
+              sourceItemIds,
+            );
+            const escapedFragment = fragment.replace(
+              /[.*+?^${}()|[\]\\]/g,
+              "\\$&",
+            );
+            const semanticContextParts: string[] = [];
+            if (element) {
+              const addElementSemanticContext = (
+                semanticElement: Element,
+              ) => {
+                for (const attributeName of [
+                  "aria-label",
+                  "aria-description",
+                  "aria-valuetext",
+                  "aria-valuenow",
+                  "aria-placeholder",
+                  "title",
+                  "placeholder",
+                  "alt",
+                ]) {
+                  const attributeValue =
+                    semanticElement.getAttribute(attributeName);
+                  if (attributeValue)
+                    semanticContextParts.push(attributeValue);
+                }
+                for (const referenceAttribute of [
+                  "aria-labelledby",
+                  "aria-describedby",
+                ]) {
+                  const referencedIds =
+                    semanticElement
+                      .getAttribute(referenceAttribute)
+                      ?.split(/\s+/) ?? [];
+                  for (const referencedId of referencedIds) {
+                    const referencedText = resolveElementId(
+                      semanticElement,
+                      referencedId,
+                    )?.textContent;
+                    if (referencedText)
+                      semanticContextParts.push(referencedText);
+                  }
+                }
+              };
+              addElementSemanticContext(element);
+              const semanticSurface = semanticTextSurfaceElement(element);
+              if (semanticSurface && semanticSurface !== element)
+                addElementSemanticContext(semanticSurface);
+              const semanticSurfaceText = semanticTextSurface(element);
+              if (semanticSurfaceText)
+                semanticContextParts.push(semanticSurfaceText);
+              if (structuralAttributeName)
+                semanticContextParts.push(structuralAttributeName);
+              if (
+                element instanceof HTMLInputElement ||
+                element instanceof HTMLTextAreaElement ||
+                element instanceof HTMLSelectElement
+              ) {
+                for (const label of Array.from(element.labels ?? []))
+                  semanticContextParts.push(label.innerText);
+              }
+              const wrappingLabel = element.closest("label");
+              if (wrappingLabel)
+                semanticContextParts.push(wrappingLabel.innerText);
+              const fieldset = element.closest("fieldset");
+              const legend = fieldset?.querySelector(":scope > legend");
+              if (legend?.textContent)
+                semanticContextParts.push(legend.textContent);
+              const labelledGroup = element.closest<HTMLElement>(
+                '[role="group"],[role="radiogroup"],[role="listbox"]',
+              );
+              if (labelledGroup && labelledGroup !== element)
+                addElementSemanticContext(labelledGroup);
+            }
+            semanticContextParts.push(normalized);
+            const semanticContext = normalize(semanticContextParts.join(" "));
+            const semanticAnswerLabel = new RegExp(
+              `(?:(?:내\\s*답(?:안)?|정답|응답|답안|선택지|선지|보기|고른\\s*번호|선택(?:한\\s*번호)?|(?:^|\\s)답)(?:은|는|이|가)?\\s*[:=：]?\\s*${escapedFragment}(?:\\s*번)?(?![\\p{L}\\p{N}_])|(?:\\banswer\\b|\\bchoice\\b|\\boption\\b|\\bselected\\b|\\bselection\\b|\\bresponse\\b|(?:user|correct)[_-]?answer)\\s*[:=：#-]?\\s*${escapedFragment}(?![\\p{L}\\p{N}_])|${escapedFragment}\\s*번\\s*(?:내\\s*답(?:안)?|정답|응답|선택지|선지|고른\\s*번호|선택|제출))`,
+              "iu",
+            ).test(semanticContext);
+            const structuralSchema = structuralCollisionSchema(
+              structuralAttributeName,
+              normalized,
+              fragment,
+              element,
+            );
+            const incidentalTextValue =
+              channel === "semantic-text"
+                ? semanticTextSurface(element)
+                : normalized;
+            const incidentalTextSchema = incidentalOrdinalOrCounter(
+              incidentalTextValue,
+              fragment,
+              element,
+            );
+            const exactSyntheticFixtureFormValue =
+              channel === "form-value" &&
+              element instanceof HTMLElement &&
+              normalizedSyntheticFormFixtures.some(
+                (fixture) =>
+                  element.matches(fixture.selector) &&
+                  fixture.values.has(normalized),
+              );
+            const policyKey = [
+              channel,
+              exact ? "exact" : "substring",
+              sourceReferenced ? "source" : "unlinked",
+              semanticAnswerLabel ? "answer-label" : "unlabelled",
+              structuralSchema,
+              incidentalTextSchema
+                ? "incidental-text"
+                : "unclassified-text",
+              exactSyntheticFixtureFormValue
+                ? "synthetic-form"
+                : "unclassified-form",
+            ].join(":");
+            const policyDecision = provenanceBoundPolicyTable[policyKey];
+            if (policyDecision !== false)
+              return {
+                matched: true,
+                provenanceFiltered: false,
+                hitMetadata: {
+                  fragmentFamily: "provenance-choice-digit",
+                  maskedLength: "1",
+                  relation: sourceReferenced
+                    ? "source-reference"
+                    : policyDecision === undefined
+                      ? "missing-policy"
+                      : "unclassified-dom",
+                },
+              };
+            provenanceFiltered = true;
+          }
+          return { matched: false, provenanceFiltered, hitMetadata: null };
+        };
+        const matchUnclassifiedReference = (
+          value: string,
+          element: Element | null,
+          channel:
+            | "content-attribute"
+            | "structural-reference"
+            | "generated-content"
+            | "background-reference",
+          structuralAttributeName: string | null = null,
+        ) => {
+          let provenanceFiltered = false;
+          for (const candidate of normalizedCandidates(value)) {
+            const referencedItemId = normalizedItemIds.find((itemId) =>
+              candidate.includes(itemId),
+            );
+            if (referencedItemId)
+              return {
+                matched: true,
+                provenanceFiltered: false,
+                hitMetadata: {
+                  fragmentFamily: "account-item-id",
+                  maskedLength: maskedLengthFamily(referencedItemId),
+                  relation: "source-reference",
+                },
+              };
+            const fragmentMatch = matchSensitiveFragment(
+              candidate,
+              element,
+              channel,
+              structuralAttributeName,
+            );
+            if (fragmentMatch.matched) return fragmentMatch;
+            provenanceFiltered ||= fragmentMatch.provenanceFiltered;
+          }
+          return { matched: false, provenanceFiltered, hitMetadata: null };
         };
         const isRendered = (element: Element) => {
           if (!(element instanceof HTMLElement || element instanceof SVGElement))
@@ -2926,11 +3616,182 @@ async function captureSyntheticScreenshot(
             );
           });
         };
+        const standardTags = new Set([
+          "a",
+          "article",
+          "button",
+          "div",
+          "fieldset",
+          "form",
+          "h1",
+          "h2",
+          "h3",
+          "h4",
+          "h5",
+          "h6",
+          "input",
+          "label",
+          "legend",
+          "li",
+          "main",
+          "nav",
+          "ol",
+          "option",
+          "p",
+          "path",
+          "section",
+          "select",
+          "span",
+          "summary",
+          "svg",
+          "textarea",
+          "ul",
+        ]);
+        const standardRoles = new Set([
+          "alert",
+          "button",
+          "checkbox",
+          "group",
+          "heading",
+          "link",
+          "list",
+          "listbox",
+          "listitem",
+          "main",
+          "navigation",
+          "none",
+          "option",
+          "presentation",
+          "progressbar",
+          "radio",
+          "radiogroup",
+          "region",
+          "slider",
+          "spinbutton",
+          "status",
+          "textbox",
+        ]);
+        const safeElementType = (element: Element | null) => {
+          if (!element) return { tag: "document", role: "none" };
+          const rawTag = element.tagName.toLowerCase();
+          const rawRole = element.getAttribute("role")?.toLowerCase() ?? "";
+          return {
+            tag: standardTags.has(rawTag)
+              ? rawTag
+              : rawTag.includes("-")
+                ? "custom-element"
+                : "other",
+            role: standardRoles.has(rawRole) ? rawRole : "none",
+          };
+        };
+        const safeAttributeFamily = (
+          channel: string,
+          attributeName: string | null,
+        ) => {
+          if (!attributeName) {
+            if (channel === "semantic-text") return "text";
+            if (channel === "form-value") return "form-property";
+            if (channel === "generated-content") return "pseudo-content";
+            if (channel === "background-reference")
+              return "background-image";
+            return "none";
+          }
+          const name = attributeName.toLowerCase();
+          if (name === "class" || name === "style") return name;
+          if (/^data-(?:testid|v3-|s\d|calculator-routine-)/i.test(name))
+            return "instrumentation-data";
+          if (name.startsWith("data-")) return "other-data";
+          if (
+            [
+              "id",
+              "for",
+              "aria-controls",
+              "aria-labelledby",
+              "aria-describedby",
+              "aria-owns",
+              "aria-activedescendant",
+            ].includes(name)
+          )
+            return "id-reference";
+          if (name.startsWith("aria-")) return "aria";
+          if (["href", "src", "srcset", "action", "formaction"].includes(name))
+            return "url-reference";
+          if (["value", "title", "alt", "placeholder"].includes(name))
+            return "content";
+          if (
+            [
+              "width",
+              "height",
+              "x",
+              "y",
+              "x1",
+              "x2",
+              "y1",
+              "y2",
+              "cx",
+              "cy",
+              "r",
+              "rx",
+              "ry",
+              "d",
+              "points",
+              "viewbox",
+              "transform",
+              "stroke-width",
+            ].includes(name)
+          )
+            return "graphic-geometry";
+          return "other-attribute";
+        };
+        const blockingBucketCounts = new Map<string, number>();
+        const recordBlockingHit = (
+          channel: string,
+          element: Element | null,
+          attributeName: string | null,
+          hitMetadata: {
+            fragmentFamily: string;
+            maskedLength: string;
+            relation: string;
+          } | null,
+        ) => {
+          if (!hitMetadata) return;
+          const elementType = safeElementType(element);
+          const bucket = {
+            channel,
+            element: `${elementType.tag}:${elementType.role}`,
+            attributeFamily: safeAttributeFamily(channel, attributeName),
+            fragmentFamily: hitMetadata.fragmentFamily,
+            maskedLength: hitMetadata.maskedLength,
+            relation: hitMetadata.relation,
+          };
+          const key = JSON.stringify(bucket);
+          blockingBucketCounts.set(
+            key,
+            (blockingBucketCounts.get(key) ?? 0) + 1,
+          );
+        };
         let textHits = 0;
         let referenceHits = 0;
         let formValueHits = 0;
         let generatedContentHits = 0;
+        let provenanceFilteredTextHits = 0;
+        let provenanceFilteredReferenceHits = 0;
+        let provenanceFilteredFormValueHits = 0;
+        let provenanceFilteredGeneratedContentHits = 0;
         const uninspectable = new Set<Element>();
+        const pageReferencedItemId = normalizedItemIds.find((itemId) =>
+          normalizedCandidates(window.location.href).some((candidate) =>
+            candidate.includes(itemId),
+          ),
+        );
+        if (pageReferencedItemId) {
+          referenceHits += 1;
+          recordBlockingHit("structural-reference", null, null, {
+            fragmentFamily: "account-item-id",
+            maskedLength: maskedLengthFamily(pageReferencedItemId),
+            relation: "source-reference",
+          });
+        }
         const roots: Array<Document | ShadowRoot> = [document];
         for (let rootIndex = 0; rootIndex < roots.length; rootIndex += 1) {
           const root = roots[rootIndex];
@@ -2945,49 +3806,156 @@ async function captureSyntheticScreenshot(
                   getComputedStyle(child).display,
                 ),
             );
-            if (
-              element instanceof HTMLElement &&
-              !hasBlockChild &&
-              matchesSensitiveFragment(element.innerText)
-            )
-              textHits += 1;
+            if (element instanceof HTMLElement && !hasBlockChild) {
+              const textMatch = matchSensitiveFragment(
+                element.innerText,
+                element,
+                "semantic-text",
+              );
+              if (textMatch.matched) {
+                textHits += 1;
+                recordBlockingHit(
+                  "semantic-text",
+                  element,
+                  null,
+                  textMatch.hitMetadata,
+                );
+              }
+              else if (textMatch.provenanceFiltered)
+                provenanceFilteredTextHits += 1;
+            }
 
+            let attributeMatched = false;
+            let attributeProvenanceFiltered = false;
             for (const attribute of Array.from(element.attributes)) {
-              if (matchesUnclassifiedReference(attribute.value)) {
+              const attributeChannel =
+                attribute.name.toLowerCase() === "aria-valuenow" &&
+                element.getAttribute("role")?.toLowerCase() === "progressbar"
+                  ? "structural-reference"
+                  : exactContentAttributeNames.has(attribute.name.toLowerCase())
+                    ? "content-attribute"
+                    : "structural-reference";
+              const attributeMatch = matchUnclassifiedReference(
+                attribute.value,
+                element,
+                attributeChannel,
+                attribute.name,
+              );
+              if (attributeMatch.matched) {
                 referenceHits += 1;
+                recordBlockingHit(
+                  attributeChannel,
+                  element,
+                  attribute.name,
+                  attributeMatch.hitMetadata,
+                );
+                attributeMatched = true;
                 break;
               }
+              attributeProvenanceFiltered ||=
+                attributeMatch.provenanceFiltered;
             }
+            if (!attributeMatched && attributeProvenanceFiltered)
+              provenanceFilteredReferenceHits += 1;
 
             if (
               element instanceof HTMLInputElement ||
               element instanceof HTMLTextAreaElement
             ) {
-              if (matchesSensitiveFragment(element.value)) formValueHits += 1;
+              const formMatch = matchSensitiveFragment(
+                element.value,
+                element,
+                "form-value",
+              );
+              if (formMatch.matched) {
+                formValueHits += 1;
+                recordBlockingHit(
+                  "form-value",
+                  element,
+                  null,
+                  formMatch.hitMetadata,
+                );
+              }
+              else if (formMatch.provenanceFiltered)
+                provenanceFilteredFormValueHits += 1;
             } else if (element instanceof HTMLSelectElement) {
               const selectedText = Array.from(element.selectedOptions)
                 .map((option) => option.textContent ?? "")
                 .join(" ");
-              if (matchesSensitiveFragment(selectedText)) formValueHits += 1;
+              let selectMatched = false;
+              let selectProvenanceFiltered = false;
+              let selectHitMetadata: {
+                fragmentFamily: string;
+                maskedLength: string;
+                relation: string;
+              } | null = null;
+              for (const selectSurface of [element.value, selectedText]) {
+                const formMatch = matchSensitiveFragment(
+                  selectSurface,
+                  element,
+                  "form-value",
+                );
+                if (formMatch.matched) {
+                  selectMatched = true;
+                  selectHitMetadata = formMatch.hitMetadata;
+                  break;
+                }
+                selectProvenanceFiltered ||= formMatch.provenanceFiltered;
+              }
+              if (selectMatched) {
+                formValueHits += 1;
+                recordBlockingHit(
+                  "form-value",
+                  element,
+                  null,
+                  selectHitMetadata,
+                );
+              }
+              else if (selectProvenanceFiltered)
+                provenanceFilteredFormValueHits += 1;
             }
 
             for (const pseudo of ["::before", "::after"] as const) {
               const content = getComputedStyle(element, pseudo).content;
-              if (
-                content &&
-                content !== "none" &&
-                content !== "normal" &&
-                matchesUnclassifiedReference(content)
-              )
+              if (!content || content === "none" || content === "normal")
+                continue;
+              const generatedMatch = matchUnclassifiedReference(
+                content,
+                element,
+                "generated-content",
+              );
+              if (generatedMatch.matched) {
                 generatedContentHits += 1;
+                recordBlockingHit(
+                  "generated-content",
+                  element,
+                  null,
+                  generatedMatch.hitMetadata,
+                );
+              }
+              else if (generatedMatch.provenanceFiltered)
+                provenanceFilteredGeneratedContentHits += 1;
             }
 
             const backgroundImage = getComputedStyle(element).backgroundImage;
-            if (
-              backgroundImage !== "none" &&
-              matchesUnclassifiedReference(backgroundImage)
-            )
-              referenceHits += 1;
+            if (backgroundImage !== "none") {
+              const backgroundMatch = matchUnclassifiedReference(
+                backgroundImage,
+                element,
+                "background-reference",
+              );
+              if (backgroundMatch.matched) {
+                referenceHits += 1;
+                recordBlockingHit(
+                  "background-reference",
+                  element,
+                  null,
+                  backgroundMatch.hitMetadata,
+                );
+              }
+              else if (backgroundMatch.provenanceFiltered)
+                provenanceFilteredReferenceHits += 1;
+            }
 
             const maskImage = getComputedStyle(element).maskImage;
             if (
@@ -3011,26 +3979,81 @@ async function captureSyntheticScreenshot(
           let node = walker.nextNode();
           while (node) {
             const parent = node.parentElement;
-            if (
-              parent &&
-              isRendered(parent) &&
-              matchesSensitiveFragment(node.textContent ?? "")
-            )
-              textHits += 1;
+            if (parent && isRendered(parent)) {
+              const textMatch = matchSensitiveFragment(
+                node.textContent ?? "",
+                parent,
+                "semantic-text",
+              );
+              if (textMatch.matched) {
+                textHits += 1;
+                recordBlockingHit(
+                  "semantic-text",
+                  parent,
+                  null,
+                  textMatch.hitMetadata,
+                );
+              }
+              else if (textMatch.provenanceFiltered)
+                provenanceFilteredTextHits += 1;
+            }
             node = walker.nextNode();
           }
         }
+        for (const element of uninspectable)
+          recordBlockingHit("uninspectable-surface", element, null, {
+            fragmentFamily: "opaque-surface",
+            maskedLength: "n/a",
+            relation: "uninspectable",
+          });
+        const blockingBuckets = [...blockingBucketCounts]
+          .map(([key, count]) => ({
+            ...(JSON.parse(key) as {
+              channel: string;
+              element: string;
+              attributeFamily: string;
+              fragmentFamily: string;
+              maskedLength: string;
+              relation: string;
+            }),
+            count,
+          }))
+          .sort((left, right) =>
+            JSON.stringify(left).localeCompare(JSON.stringify(right)),
+          );
         return {
           textHits,
           referenceHits,
           formValueHits,
           generatedContentHits,
           uninspectableSurfaceCount: uninspectable.size,
+          provenanceFilteredTextHits,
+          provenanceFilteredReferenceHits,
+          provenanceFilteredFormValueHits,
+          provenanceFilteredGeneratedContentHits,
+          blockingBuckets,
         };
       },
       {
         itemIds: boundary.unclassifiedItemIds,
         fragments: boundary.sensitiveFragments,
+        provenanceBoundFragments: boundary.provenanceBoundFragments,
+        provenanceBoundPolicyTable,
+        instrumentationSchemas: provenanceBoundInstrumentationSchemas.map(
+          (schema) => ({
+            attributeName: schema.attributeName,
+            valuePatternSource: schema.valuePatternSource,
+          }),
+        ),
+        contentAttributeNames: [...provenanceBoundContentAttributeNames],
+        arbitraryPresentationUtilityTokens: [
+          ...provenanceBoundArbitraryPresentationUtilityTokens,
+        ],
+        presentationUtilityPatternSource:
+          provenanceBoundPresentationUtilityPattern.source,
+        semanticTextSurfaceSelector:
+          provenanceBoundSemanticTextSurfaceSelector,
+        syntheticFormFixtures: exactSyntheticFormFixtures,
         captureFullPage: options.fullPage ?? true,
       },
     );
@@ -3041,6 +4064,14 @@ async function captureSyntheticScreenshot(
     boundary.visibleGeneratedContentHitCount += observation.generatedContentHits;
     boundary.visibleUninspectableSurfaceCount +=
       observation.uninspectableSurfaceCount;
+    boundary.provenanceFilteredTextHitCount +=
+      observation.provenanceFilteredTextHits;
+    boundary.provenanceFilteredReferenceHitCount +=
+      observation.provenanceFilteredReferenceHits;
+    boundary.provenanceFilteredFormValueHitCount +=
+      observation.provenanceFilteredFormValueHits;
+    boundary.provenanceFilteredGeneratedContentHitCount +=
+      observation.provenanceFilteredGeneratedContentHits;
     const blockingHitCount =
       observation.textHits +
       observation.referenceHits +
@@ -3049,7 +4080,7 @@ async function captureSyntheticScreenshot(
       observation.uninspectableSurfaceCount;
     expect(
       blockingHitCount,
-      `Screenshot data boundary must close before any PNG is retained; count-only-observation=${JSON.stringify(observation)}.`,
+      `Screenshot data boundary must close before any PNG is retained; metadata-only-observation=${JSON.stringify({ failureCode: "S232H2_SCREENSHOT_BOUNDARY_OPEN", capture: fileName.replace(/[^a-z0-9-]/gi, "-").slice(0, 80), channels: { text: observation.textHits, reference: observation.referenceHits, formValue: observation.formValueHits, generatedContent: observation.generatedContentHits, uninspectableSurface: observation.uninspectableSurfaceCount }, provenanceFiltered: { text: observation.provenanceFilteredTextHits, reference: observation.provenanceFilteredReferenceHits, formValue: observation.provenanceFilteredFormValueHits, generatedContent: observation.provenanceFilteredGeneratedContentHits }, buckets: observation.blockingBuckets })}.`,
     ).toBe(0);
   };
 
@@ -3098,9 +4129,9 @@ async function captureSyntheticScreenshot(
     `${fileName} must be captured from the canonical top position.`,
   ).toBe(0);
 
-  const identity = page.locator(
-    '[data-s224v-learner-mode-entry="second-only"] > span:last-child',
-  );
+  const identitySelector =
+    '[data-s224v-learner-mode-entry="second-only"] > span:last-child';
+  const identity = page.locator(identitySelector);
   const visibleEmailOutsideMask = await page
     .locator("body *")
     .evaluateAll((elements, identitySelector) => {
@@ -3126,15 +4157,15 @@ async function captureSyntheticScreenshot(
           style.visibility !== "hidden"
         );
       }).length;
-    }, '[data-s224v-learner-mode-entry="second-only"] > span:last-child');
+    }, identitySelector);
   expect(
     visibleEmailOutsideMask,
     "No visible email may escape the deterministic identity mask.",
   ).toBe(0);
 
   const masks: Locator[] = [];
-  if ((await identity.count()) === 1 && (await identity.isVisible()))
-    masks.push(identity);
+  for (const identitySurface of await identity.all())
+    if (await identitySurface.isVisible()) masks.push(identitySurface);
   await assertScreenshotDataBoundary();
   const buffer = await page.screenshot({
     fullPage: options.fullPage ?? true,
@@ -3169,17 +4200,12 @@ async function advanceCalculatorToCasioInput(page: Page) {
       .click();
   }
 
-  const entries: Record<string, string> = {
-    conditions: "합성 조건: 원문 숫자와 단위를 먼저 확인합니다.",
-    formula: "합성 산식: V = I ÷ R",
-    numbers_units: "합성 대입: 120,000원 ÷ 0.06",
-  };
   for (const stepId of ["conditions", "formula", "numbers_units"] as const) {
     const active = trainer.locator(
       `[data-calculator-routine-active-step="${stepId}"]`,
     );
     await expect(active).toBeVisible();
-    await active.locator("textarea").fill(entries[stepId]);
+    await active.locator("textarea").fill(calculatorCasioFixtureEntries[stepId]);
 
     const focusNext = page.getByTestId("calculator-focus-action-control");
     if ((await focusNext.count()) === 1 && (await focusNext.isVisible())) {
@@ -3198,7 +4224,7 @@ async function advanceCalculatorToCasioInput(page: Page) {
   await expect(casio).toBeVisible();
   await casio
     .locator("textarea")
-    .fill("120000 ÷ 0.06 EXE · 합성 입력을 실제 기기에서 직접 대조합니다.");
+    .fill(calculatorCasioFixtureInput);
   await expect(
     casio.locator('[data-v3-component="CalculatorStep"]'),
   ).toBeVisible();
@@ -3774,7 +4800,7 @@ async function prepareCaptureExtractionPreview(page: Page) {
           weak_sentence: "적용 문장을 보강합니다.",
           weak_structure_point: "요건과 사실을 같은 순서로 연결",
           rewrite_instruction: "연결 문장 한 문단을 다시 씁니다.",
-          review_date_suggestion: "2026-07-18",
+          review_date_suggestion: syntheticCaptureReviewDate,
           needs_review: false,
         },
       }),
@@ -3868,11 +4894,6 @@ async function clickCalculatorFocusAction(page: Page) {
 async function completeCalculatorRoutine(page: Page) {
   const trainer = page.locator("[data-calculator-routine-trainer]");
   await clickCalculatorFocusAction(page);
-  const textEntries: Record<string, string> = {
-    display_value: "2,000,000 · 합성 화면값",
-    answer_value: "2,000,000원 · 합성 기재값",
-    unit_rounding: "원 단위로 합성 반올림을 확인했습니다.",
-  };
   for (const stepId of [
     "display_value",
     "answer_value",
@@ -3882,7 +4903,9 @@ async function completeCalculatorRoutine(page: Page) {
       `[data-calculator-routine-active-step="${stepId}"]`,
     );
     await expect(active).toBeVisible();
-    await active.locator("textarea").fill(textEntries[stepId]);
+    await active
+      .locator("textarea")
+      .fill(calculatorCompletionFixtureEntries[stepId]);
     await clickCalculatorFocusAction(page);
   }
   const verification = trainer.locator(
@@ -4297,6 +5320,14 @@ test("S232H.2 adopts V3 across the production learner routes with direct before/
       screenshotBoundary.visibleGeneratedContentHitCount,
     visibleUninspectableSurfaceCount:
       screenshotBoundary.visibleUninspectableSurfaceCount,
+    provenanceFilteredTextHitCount:
+      screenshotBoundary.provenanceFilteredTextHitCount,
+    provenanceFilteredReferenceHitCount:
+      screenshotBoundary.provenanceFilteredReferenceHitCount,
+    provenanceFilteredFormValueHitCount:
+      screenshotBoundary.provenanceFilteredFormValueHitCount,
+    provenanceFilteredGeneratedContentHitCount:
+      screenshotBoundary.provenanceFilteredGeneratedContentHitCount,
     accountSnapshotStable,
     screenshotDataBoundaryClosed,
     privateLearnerContentCaptured: !screenshotDataBoundaryClosed,
