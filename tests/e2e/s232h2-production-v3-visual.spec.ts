@@ -2539,6 +2539,10 @@ async function stabilizeCanonicalTop(
           current.hash === auditHash &&
           original.hash !== auditHash,
       );
+      const previousScrollBehavior = {
+        value: root.style.getPropertyValue("scroll-behavior"),
+        priority: root.style.getPropertyPriority("scroll-behavior"),
+      };
       const metadata = {
         originalHashPresent: original ? original.hash.length > 0 : null,
         auditHashPresent: Boolean(auditHash),
@@ -2548,73 +2552,142 @@ async function stabilizeCanonicalTop(
         hashAfterRecoveryPresent: current.hash.length > 0,
         activeElementBeforeBlur: describeActiveElement(),
         activeElementAfterBlur: "unknown",
-        scrollSequence: [] as Array<{
+        quiescentSequence: [] as Array<{
+          frame: number;
+          windowScrollY: number;
+          scrollingElementScrollTop: number;
+        }>,
+        immediateAfterReset: null as {
+          windowScrollY: number;
+          scrollingElementScrollTop: number;
+        } | null,
+        postResetSequence: [] as Array<{
           frame: number;
           windowScrollY: number;
           scrollingElementScrollTop: number;
         }>,
       };
 
-      if (hashCreatedByAudit && original) {
-        history.replaceState(
-          history.state,
-          "",
-          `${original.pathname}${original.search}${original.hash}`,
-        );
-        metadata.hashRestored = true;
-      }
-      metadata.hashAfterRecoveryPresent = window.location.hash.length > 0;
-
       if (document.activeElement instanceof HTMLElement)
         document.activeElement.blur();
       metadata.activeElementAfterBlur = describeActiveElement();
 
-      const previousScrollBehavior = {
-        value: root.style.getPropertyValue("scroll-behavior"),
-        priority: root.style.getPropertyPriority("scroll-behavior"),
-      };
-      root.style.setProperty("scroll-behavior", "auto", "important");
-      void root.offsetHeight;
-      const instantTop = {
-        top: 0,
-        left: 0,
-        behavior: "instant" as ScrollBehavior,
-      };
-      document.scrollingElement?.scrollTo(instantTop);
-      window.scrollTo(instantTop);
+      try {
+        root.style.setProperty("scroll-behavior", "auto", "important");
+        void root.offsetHeight;
 
-      let consecutiveZeroFrames = 0;
-      await new Promise<void>((resolve) => {
-        const observe = () => {
-          const windowScrollY = window.scrollY;
-          const scrollingElementScrollTop =
-            document.scrollingElement?.scrollTop ?? 0;
-          metadata.scrollSequence.push({
-            frame: metadata.scrollSequence.length + 1,
-            windowScrollY,
-            scrollingElementScrollTop,
-          });
-          if (windowScrollY === 0 && scrollingElementScrollTop === 0)
-            consecutiveZeroFrames += 1;
-          else consecutiveZeroFrames = 0;
+        if (hashCreatedByAudit && original) {
+          history.replaceState(
+            history.state,
+            "",
+            `${original.pathname}${original.search}${original.hash}`,
+          );
+          metadata.hashRestored = true;
+        }
+        metadata.hashAfterRecoveryPresent = window.location.hash.length > 0;
 
-          if (
-            consecutiveZeroFrames >= 3 ||
-            metadata.scrollSequence.length >= 60
-          ) {
-            resolve();
-            return;
-          }
-          requestAnimationFrame(observe);
+        let identicalQuiescentFrames = 0;
+        let previousSample: {
+          windowScrollY: number;
+          scrollingElementScrollTop: number;
+        } | null = null;
+        await new Promise<void>((resolve) => {
+          const observeQuiescence = () => {
+            const sample = {
+              windowScrollY: window.scrollY,
+              scrollingElementScrollTop:
+                document.scrollingElement?.scrollTop ?? 0,
+            };
+            metadata.quiescentSequence.push({
+              frame: metadata.quiescentSequence.length + 1,
+              ...sample,
+            });
+            identicalQuiescentFrames =
+              previousSample &&
+              previousSample.windowScrollY === sample.windowScrollY &&
+              previousSample.scrollingElementScrollTop ===
+                sample.scrollingElementScrollTop
+                ? identicalQuiescentFrames + 1
+                : 1;
+            previousSample = sample;
+            if (
+              identicalQuiescentFrames >= 3 ||
+              metadata.quiescentSequence.length >= 60
+            ) {
+              resolve();
+              return;
+            }
+            requestAnimationFrame(observeQuiescence);
+          };
+          requestAnimationFrame(observeQuiescence);
+        });
+
+        const quiescent = identicalQuiescentFrames >= 3;
+        if (!quiescent) {
+          return {
+            ...metadata,
+            quiescent,
+            identicalQuiescentFrames,
+            stable: false,
+            failureCode: "S232H2_SCROLL_NOT_QUIESCENT" as const,
+            finalWindowScrollY: window.scrollY,
+            finalScrollingElementScrollTop:
+              document.scrollingElement?.scrollTop ?? 0,
+          };
+        }
+
+        const instantTop = {
+          top: 0,
+          left: 0,
+          behavior: "instant" as ScrollBehavior,
         };
-        requestAnimationFrame(observe);
-      });
+        window.scrollTo(instantTop);
+        metadata.immediateAfterReset = {
+          windowScrollY: window.scrollY,
+          scrollingElementScrollTop:
+            document.scrollingElement?.scrollTop ?? 0,
+        };
+        await new Promise<void>((resolve) => {
+          const observePostReset = () => {
+            metadata.postResetSequence.push({
+              frame: metadata.postResetSequence.length + 1,
+              windowScrollY: window.scrollY,
+              scrollingElementScrollTop:
+                document.scrollingElement?.scrollTop ?? 0,
+            });
+            if (metadata.postResetSequence.length >= 3) {
+              resolve();
+              return;
+            }
+            requestAnimationFrame(observePostReset);
+          };
+          requestAnimationFrame(observePostReset);
+        });
 
-      const stable = consecutiveZeroFrames >= 3;
-      const finalWindowScrollY = window.scrollY;
-      const finalScrollingElementScrollTop =
-        document.scrollingElement?.scrollTop ?? 0;
-      if (stable) {
+        const immediateAtTop =
+          metadata.immediateAfterReset.windowScrollY === 0 &&
+          metadata.immediateAfterReset.scrollingElementScrollTop === 0;
+        const postResetAtTop = metadata.postResetSequence.every(
+          (sample) =>
+            sample.windowScrollY === 0 &&
+            sample.scrollingElementScrollTop === 0,
+        );
+        const stable = immediateAtTop && postResetAtTop;
+        return {
+          ...metadata,
+          quiescent,
+          identicalQuiescentFrames,
+          immediateAtTop,
+          postResetAtTop,
+          stable,
+          failureCode: stable
+            ? null
+            : ("S232H2_CANONICAL_TOP_UNSTABLE" as const),
+          finalWindowScrollY: window.scrollY,
+          finalScrollingElementScrollTop:
+            document.scrollingElement?.scrollTop ?? 0,
+        };
+      } finally {
         if (previousScrollBehavior.value) {
           root.style.setProperty(
             "scroll-behavior",
@@ -2625,14 +2698,6 @@ async function stabilizeCanonicalTop(
           root.style.removeProperty("scroll-behavior");
         }
       }
-
-      return {
-        ...metadata,
-        stable,
-        consecutiveZeroFrames,
-        finalWindowScrollY,
-        finalScrollingElementScrollTop,
-      };
     },
     options,
   );
@@ -2640,11 +2705,7 @@ async function stabilizeCanonicalTop(
 
 async function verifyKeyboardFocus(page: Page, primaryActionCount: number) {
   const focusAuditStartUrl = page.url();
-  await page.evaluate(() => {
-    if (document.activeElement instanceof HTMLElement)
-      document.activeElement.blur();
-    window.scrollTo(0, 0);
-  });
+  const preFocusControl = await stabilizeCanonicalTop(page);
 
   let completedFocusTraversal = false;
   let everyFocusVisible = true;
@@ -2800,15 +2861,14 @@ async function verifyKeyboardFocus(page: Page, primaryActionCount: number) {
     originalUrl: focusAuditStartUrl,
     auditHash: activatedAuditHash,
   });
-  const passed =
+  const keyboardFocusPassed =
     completedFocusTraversal &&
     visitedFocusIndexes.size > 0 &&
     everyFocusVisible &&
     enabledPrimaryReached &&
-    skipLinkActivated &&
-    scrollRecovery.stable;
+    skipLinkActivated;
   return {
-    passed,
+    passed: keyboardFocusPassed,
     completedFocusTraversal,
     completionKind,
     focusStopCount,
@@ -2816,12 +2876,8 @@ async function verifyKeyboardFocus(page: Page, primaryActionCount: number) {
     everyFocusVisible,
     enabledPrimaryReached,
     skipLinkActivated,
-    scrollRecovery: {
-      ...scrollRecovery,
-      failureCode: scrollRecovery.stable
-        ? null
-        : "S232H2_FOCUS_AUDIT_SCROLL_UNSTABLE",
-    },
+    preFocusControl,
+    scrollRecovery,
   };
 }
 
@@ -2973,14 +3029,11 @@ async function auditRoute(
   ) {
     await advanceCalculatorToCasioInput(page);
   }
-  await page.evaluate(async () => {
-    if (document.activeElement instanceof HTMLElement)
-      document.activeElement.blur();
-    window.scrollTo(0, 0);
-    await new Promise<void>((resolve) =>
-      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-    );
-  });
+  const navigationControl = await stabilizeCanonicalTop(page);
+  expect(
+    navigationControl.failureCode,
+    `${route.label} navigation control must establish canonical top without product auto-scroll; metadata-only-observation=${JSON.stringify({ phase: "navigation-control", route: route.id, viewport: viewport.width, control: navigationControl })}.`,
+  ).toBeNull();
 
   const main = page.locator("main");
   await expect(
@@ -3126,6 +3179,14 @@ async function auditRoute(
     keyboardFocusVisible,
     `${route.label} must expose visible keyboard focus: ${JSON.stringify(keyboardFocusAudit)}.`,
   ).toBe(true);
+  expect(
+    keyboardFocusAudit.preFocusControl.failureCode,
+    `${route.label} pre-focus canonical-top control must pass independently of keyboard accessibility; metadata-only-observation=${JSON.stringify({ phase: "pre-focus-control", route: route.id, viewport: viewport.width, navigationControl, preFocusControl: keyboardFocusAudit.preFocusControl })}.`,
+  ).toBeNull();
+  expect(
+    keyboardFocusAudit.scrollRecovery.failureCode,
+    `${route.label} post-focus scroll cleanup must restore canonical top independently of keyboard accessibility; metadata-only-observation=${JSON.stringify({ phase: "post-focus-recovery", route: route.id, viewport: viewport.width, navigationControl, preFocusControl: keyboardFocusAudit.preFocusControl, postFocusRecovery: keyboardFocusAudit.scrollRecovery })}.`,
+  ).toBeNull();
 
   return {
     auditKind: options.navigate === false ? "dynamic-state" : "initial-route",
@@ -4226,9 +4287,9 @@ async function captureSyntheticScreenshot(
 
   const canonicalTop = await stabilizeCanonicalTop(page);
   expect(
-    canonicalTop.stable,
-    `Canonical top must remain stable before any PNG is retained; metadata-only-observation=${JSON.stringify({ failureCode: "S232H2_CANONICAL_TOP_UNSTABLE", capture: fileName.replace(/[^a-z0-9-]/gi, "-").slice(0, 80), hash: { originalPresent: canonicalTop.originalHashPresent, auditPresent: canonicalTop.auditHashPresent, beforeRecoveryPresent: canonicalTop.hashBeforeRecoveryPresent, createdByAudit: canonicalTop.hashCreatedByAudit, restored: canonicalTop.hashRestored, afterRecoveryPresent: canonicalTop.hashAfterRecoveryPresent }, activeElement: { beforeBlur: canonicalTop.activeElementBeforeBlur, afterBlur: canonicalTop.activeElementAfterBlur }, scrollSequence: canonicalTop.scrollSequence, consecutiveZeroFrames: canonicalTop.consecutiveZeroFrames, finalWindowScrollY: canonicalTop.finalWindowScrollY, finalScrollingElementScrollTop: canonicalTop.finalScrollingElementScrollTop })}.`,
-  ).toBe(true);
+    canonicalTop.failureCode,
+    `Canonical top must remain stable before any PNG is retained; metadata-only-observation=${JSON.stringify({ phase: "pre-png-canonical-top", capture: fileName.replace(/[^a-z0-9-]/gi, "-").slice(0, 80), recovery: canonicalTop })}.`,
+  ).toBeNull();
   const screenshotScrollY = canonicalTop.finalWindowScrollY;
   expect(
     screenshotScrollY,

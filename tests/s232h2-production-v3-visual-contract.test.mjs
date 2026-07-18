@@ -450,25 +450,71 @@ test("S232H.2 produces the fixed initial, dynamic, before, and Figma evidence se
     /if \(hashCreatedByAudit && original\)[\s\S]*?history\.replaceState\([\s\S]*?original\.pathname[\s\S]*?original\.search[\s\S]*?original\.hash/,
   );
   assert.doesNotMatch(scrollHelper, /history\.pushState/);
-  assert.match(
-    scrollHelper,
-    /activeElement\.blur\(\)[\s\S]*?setProperty\("scroll-behavior", "auto", "important"\)[\s\S]*?document\.scrollingElement\?\.scrollTo\(instantTop\)[\s\S]*?window\.scrollTo\(instantTop\)[\s\S]*?requestAnimationFrame\(observe\)/,
+  const blurIndex = scrollHelper.indexOf("document.activeElement.blur()");
+  const autoIndex = scrollHelper.indexOf(
+    'setProperty("scroll-behavior", "auto", "important")',
+  );
+  const quiescenceIndex = scrollHelper.indexOf("observeQuiescence");
+  const quiescenceFailureIndex = scrollHelper.indexOf(
+    "S232H2_SCROLL_NOT_QUIESCENT",
+  );
+  const resetIndex = scrollHelper.indexOf("window.scrollTo(instantTop)");
+  const immediateIndex = scrollHelper.indexOf("immediateAfterReset =");
+  const postResetIndex = scrollHelper.indexOf("observePostReset");
+  const finallyIndex = scrollHelper.indexOf("} finally {");
+  assert.ok(
+    blurIndex >= 0 &&
+      autoIndex > blurIndex &&
+      quiescenceIndex > autoIndex &&
+      quiescenceFailureIndex > quiescenceIndex &&
+      resetIndex > quiescenceFailureIndex &&
+      immediateIndex > resetIndex &&
+      postResetIndex > immediateIndex &&
+      finallyIndex > postResetIndex,
   );
   assert.equal(
     scrollHelper.match(/window\.scrollTo\(instantTop\)/g)?.length,
     1,
   );
+  assert.doesNotMatch(
+    scrollHelper,
+    /document\.scrollingElement\?\.scrollTo\(|setTimeout|waitForTimeout/,
+  );
   assert.match(
     scrollHelper,
-    /windowScrollY === 0 && scrollingElementScrollTop === 0[\s\S]*?consecutiveZeroFrames >= 3[\s\S]*?const stable = consecutiveZeroFrames >= 3[\s\S]*?if \(stable\)[\s\S]*?removeProperty\("scroll-behavior"\)/,
+    /identicalQuiescentFrames >= 3[\s\S]*?quiescentSequence\.length >= 60[\s\S]*?const quiescent = identicalQuiescentFrames >= 3/,
+  );
+  assert.match(
+    scrollHelper,
+    /immediateAfterReset\.windowScrollY === 0[\s\S]*?immediateAfterReset\.scrollingElementScrollTop === 0[\s\S]*?postResetSequence\.every[\s\S]*?S232H2_CANONICAL_TOP_UNSTABLE/,
+  );
+  assert.match(
+    scrollHelper,
+    /finally \{[\s\S]*?previousScrollBehavior\.value[\s\S]*?removeProperty\("scroll-behavior"\)/,
   );
   assert.match(
     focusAudit,
-    /const focusAuditStartUrl = page\.url\(\)[\s\S]*?activatedAuditHash = expectedHash[\s\S]*?stabilizeCanonicalTop\(page, \{[\s\S]*?originalUrl: focusAuditStartUrl[\s\S]*?auditHash: activatedAuditHash/,
+    /const focusAuditStartUrl = page\.url\(\)[\s\S]*?const preFocusControl = await stabilizeCanonicalTop\(page\)[\s\S]*?activatedAuditHash = expectedHash[\s\S]*?stabilizeCanonicalTop\(page, \{[\s\S]*?originalUrl: focusAuditStartUrl[\s\S]*?auditHash: activatedAuditHash/,
+  );
+  assert.match(
+    focusAudit,
+    /const keyboardFocusPassed =[\s\S]*?completedFocusTraversal[\s\S]*?visitedFocusIndexes\.size > 0[\s\S]*?everyFocusVisible[\s\S]*?enabledPrimaryReached[\s\S]*?skipLinkActivated;/,
+  );
+  const keyboardFocusPassedBlock = focusAudit.slice(
+    focusAudit.indexOf("const keyboardFocusPassed ="),
+    focusAudit.indexOf("return {", focusAudit.indexOf("const keyboardFocusPassed =")),
+  );
+  assert.doesNotMatch(
+    keyboardFocusPassedBlock,
+    /scrollRecovery|preFocusControl|stable/,
+  );
+  assert.match(
+    focusAudit,
+    /navigation control must establish canonical top[\s\S]*?must expose visible keyboard focus[\s\S]*?pre-focus canonical-top control must pass independently[\s\S]*?post-focus scroll cleanup must restore canonical top independently/,
   );
   assert.match(
     capture,
-    /const canonicalTop = await stabilizeCanonicalTop\(page\)[\s\S]*?S232H2_CANONICAL_TOP_UNSTABLE[\s\S]*?const screenshotScrollY = canonicalTop\.finalWindowScrollY[\s\S]*?canonical top position[\s\S]*?\.toBe\(0\)/,
+    /const canonicalTop = await stabilizeCanonicalTop\(page\)[\s\S]*?canonicalTop\.failureCode[\s\S]*?\.toBeNull\(\)[\s\S]*?const screenshotScrollY = canonicalTop\.finalWindowScrollY[\s\S]*?canonical top position[\s\S]*?\.toBe\(0\)/,
   );
   assert.doesNotMatch(capture, /\.toBe\(31\)|toBeCloseTo|tolerance/i);
   for (const state of [
