@@ -26,14 +26,23 @@ import {
   summarizeSyntheticPayloadFailurePaths,
 } from "./support/synthetic-payload-diagnostics";
 import {
-  buildProvenanceBoundPolicyTable,
-  classifyProvenanceBoundDirectAnswer,
-  hasCompleteExactMirroredDirectAnswerPaths,
+  buildScreenshotBoundaryPolicyTable,
   provenanceBoundaryScalarPath,
-  provenanceBoundArbitraryPresentationUtilityTokens,
+  provenanceBoundArbitraryPresentationUtilityPattern,
   provenanceBoundContentAttributeNames,
   provenanceBoundInstrumentationSchemas,
   provenanceBoundPresentationUtilityPattern,
+  screenshotBoundaryContentKinds,
+  screenshotBoundaryLengthFamilies,
+  screenshotBoundaryLengthFamily,
+  screenshotBoundaryOriginClasses,
+  screenshotBoundaryOriginPathFamilyPatternSource,
+  screenshotBoundaryPolicySchema,
+  screenshotBoundaryRiskClasses,
+  screenshotBoundarySemanticLabelPatternSources,
+  type ScreenshotBoundaryContentKind,
+  type ScreenshotBoundaryFragmentDescriptor,
+  type ScreenshotBoundaryFragmentOrigin,
 } from "./support/screenshot-boundary-policy";
 import {
   historicalS232gRewriteFailureFields,
@@ -86,11 +95,6 @@ const exactSyntheticFormFixtures = [
       calculatorCasioFixtureInput,
       ...Object.values(calculatorCompletionFixtureEntries),
     ],
-  },
-  {
-    selector:
-      '[data-s232e-capture-stage="preview"] input[type="date"]',
-    values: [syntheticCaptureReviewDate],
   },
 ];
 
@@ -276,6 +280,10 @@ type PrivacyAudit = {
   todayDetailsAudited: boolean;
   weeklyTaskDetailsAudited: boolean;
   syntheticFixtureReady: boolean;
+  privacyPreflightCandidateCount: number;
+  privacyPreflightCheckCount: number;
+  privacyPreflightBlockerCount: number;
+  privacyPreflightAccountSnapshotStable: boolean;
   screenshotBoundaryCheckCount: number;
   screenshotCaptureCount: number;
   visibleUnclassifiedTextHitCount: number;
@@ -548,15 +556,22 @@ type SyntheticAccountAudit = {
 
 type ScreenshotDataBoundary = {
   unclassifiedItemIds: string[];
-  sensitiveFragments: string[];
-  provenanceBoundFragments: Array<{
-    value: string;
-    sourceItemIds: string[];
-    fieldFamilies: Array<"correctAnswer" | "userAnswer">;
-    maskedLength: 1;
-    relation: "unclassified-account-choice-digit";
-  }>;
+  fragmentDescriptors: ScreenshotBoundaryFragmentDescriptor[];
   unclassifiedItemCount: number;
+  preflightCandidateCount: number;
+  preflightCheckCount: number;
+  preflightBlockerCount: number;
+  preflightBlockingBuckets: Array<{
+    routeStateAlias: string;
+    viewport: string;
+    channel: string;
+    lengthFamily: string;
+    originPathFamily: string;
+    decision: "block";
+    reason: string;
+    count: number;
+  }>;
+  preflightAccountSnapshotStable: boolean;
   checkCount: number;
   captureCount: number;
   visibleTextHitCount: number;
@@ -594,29 +609,109 @@ function normalizeBoundaryText(value: string) {
   return value.normalize("NFKC").replace(/\s+/g, " ").trim();
 }
 
+const directLearnerContentKind = {
+  sourceLabel: "label",
+  problemTitle: "title",
+  problemIdentifier: "identifier",
+  rawQuestionText: "question",
+  rawAnswerText: "answer",
+  correctAnswer: "answer",
+  userAnswer: "answer",
+  userReasonText: "reason",
+} as const satisfies Record<
+  (typeof directLearnerContentFields)[number],
+  ScreenshotBoundaryContentKind
+>;
+
+function nestedContentKind(key: string): ScreenshotBoundaryContentKind {
+  if (/(?:question|problem[_-]?(?:text|body)|prompt)/i.test(key))
+    return "question";
+  if (/(?:reason|gap|issue|weak|missing|feedback|rationale|basis)/i.test(key))
+    return "reason";
+  if (/(?:title|heading)/i.test(key)) return "title";
+  if (/(?:identifier|reference[_-]?number)/i.test(key)) return "identifier";
+  if (/(?:label|caption)/i.test(key)) return "label";
+  if (
+    /(?:answer|outline|rewrite|summary|concept|formula|comparison|ocr|draft|sentence|evidence|excerpt|memo|note|retrieval|content|body|paragraph)/i.test(
+      key,
+    )
+  )
+    return "answer";
+  return "unknown";
+}
+
+type MutableScreenshotBoundaryDescriptor = {
+  sourceItemIds: Set<string>;
+  origins: Map<string, ScreenshotBoundaryFragmentOrigin>;
+};
+
+function addScreenshotBoundaryFragment(
+  descriptors: Map<string, MutableScreenshotBoundaryDescriptor>,
+  rawValue: string | number,
+  sourceItemId: string,
+  origin: ScreenshotBoundaryFragmentOrigin,
+) {
+  const normalized = normalizeBoundaryText(String(rawValue));
+  if (!normalized || normalized === "-") return;
+  const descriptor = descriptors.get(normalized) ?? {
+    sourceItemIds: new Set<string>(),
+    origins: new Map<string, ScreenshotBoundaryFragmentOrigin>(),
+  };
+  if (sourceItemId) descriptor.sourceItemIds.add(sourceItemId);
+  descriptor.origins.set(
+    [
+      origin.fieldOrPathFamily,
+      origin.originClass,
+      origin.riskClass,
+      origin.contentKind,
+    ].join(":"),
+    origin,
+  );
+  descriptors.set(normalized, descriptor);
+}
+
 function collectNestedLearnerContent(
   value: unknown,
   keyPath: readonly string[],
-  output: Set<string>,
-  pathsByValue: Map<string, Array<readonly string[]>>,
+  sourceItemId: string,
+  descriptors: Map<string, MutableScreenshotBoundaryDescriptor>,
 ) {
   const scalarPath = provenanceBoundaryScalarPath(value, keyPath);
   if (scalarPath) {
-    const normalized = normalizeBoundaryText(String(value));
     const key = (keyPath.at(-1) ?? "").replace(
       /([a-z0-9])([A-Z])/g,
       "$1_$2",
     );
+    const knownNestedField = nestedLearnerContentKey.test(key);
     if (
-      normalized &&
-      normalized !== "-" &&
-      (nestedLearnerContentKey.test(key) ||
-        !nestedMachineMetadataKey.test(key))
+      (typeof value === "string" ||
+        (typeof value === "number" && Number.isFinite(value))) &&
+      (knownNestedField || !nestedMachineMetadataKey.test(key))
     ) {
-      output.add(normalized);
-      const paths = pathsByValue.get(normalized) ?? [];
-      paths.push(scalarPath);
-      pathsByValue.set(normalized, paths);
+      const contentKind = knownNestedField
+        ? nestedContentKind(key)
+        : "unknown";
+      const rootFamily = keyPath[0] === "rawPayload" ? "raw" : "derived";
+      addScreenshotBoundaryFragment(
+        descriptors,
+        value,
+        sourceItemId,
+        {
+          fieldOrPathFamily: knownNestedField
+            ? `${rootFamily}.known.${contentKind}`
+            : `${rootFamily}.unknown`,
+          originClass: knownNestedField
+            ? "known-nested-field"
+            : "unknown-nested-field",
+          riskClass:
+            contentKind === "identifier"
+              ? "identifier"
+              : knownNestedField
+                ? "learner-content"
+                : "unknown-content",
+          contentKind,
+        },
+      );
     }
     return;
   }
@@ -625,14 +720,19 @@ function collectNestedLearnerContent(
       collectNestedLearnerContent(
         entry,
         [...keyPath, "[]"],
-        output,
-        pathsByValue,
+        sourceItemId,
+        descriptors,
       );
     return;
   }
   if (!value || typeof value !== "object") return;
   for (const [key, entry] of Object.entries(value))
-    collectNestedLearnerContent(entry, [...keyPath, key], output, pathsByValue);
+    collectNestedLearnerContent(
+      entry,
+      [...keyPath, key],
+      sourceItemId,
+      descriptors,
+    );
 }
 
 function createScreenshotDataBoundary(
@@ -645,102 +745,57 @@ function createScreenshotDataBoundary(
         .filter((itemId) => itemId.length > 0),
     ),
   ];
-  const fragments = new Set<string>();
-  const unrestrictedFragments = new Set<string>();
-  const provenanceCandidates = new Map<
-    string,
-    {
-      sourceItemIds: Set<string>;
-      fieldFamilies: Set<"correctAnswer" | "userAnswer">;
-    }
-  >();
+  const descriptors = new Map<string, MutableScreenshotBoundaryDescriptor>();
   for (const item of unclassifiedItems) {
     const sourceItemId = resolveSyntheticItemId(item);
-    const itemCandidateFieldsByValue = new Map<
-      string,
-      Set<"correctAnswer" | "userAnswer">
-    >();
     for (const field of directLearnerContentFields) {
       const value = item[field];
-      if (typeof value === "number" && Number.isFinite(value)) {
-        const normalized = normalizeBoundaryText(String(value));
-        if (normalized && normalized !== "-") {
-          fragments.add(normalized);
-          unrestrictedFragments.add(normalized);
-        }
+      if (
+        typeof value !== "string" &&
+        !(typeof value === "number" && Number.isFinite(value))
+      )
         continue;
-      }
-      if (typeof value !== "string") continue;
-      const normalized = normalizeBoundaryText(value);
-      if (!normalized || normalized === "-") continue;
-      fragments.add(normalized);
-      const provenanceBoundDirectAnswer =
-        classifyProvenanceBoundDirectAnswer(field, normalized);
-      if (!provenanceBoundDirectAnswer || sourceItemId.length === 0) {
-        unrestrictedFragments.add(normalized);
-        continue;
-      }
-      const candidate = provenanceCandidates.get(normalized) ?? {
-        sourceItemIds: new Set<string>(),
-        fieldFamilies: new Set<"correctAnswer" | "userAnswer">(),
-      };
-      candidate.sourceItemIds.add(sourceItemId);
-      candidate.fieldFamilies.add(provenanceBoundDirectAnswer);
-      provenanceCandidates.set(normalized, candidate);
-      const itemFields =
-        itemCandidateFieldsByValue.get(normalized) ??
-        new Set<"correctAnswer" | "userAnswer">();
-      itemFields.add(provenanceBoundDirectAnswer);
-      itemCandidateFieldsByValue.set(normalized, itemFields);
+      const contentKind = directLearnerContentKind[field];
+      addScreenshotBoundaryFragment(descriptors, value, sourceItemId, {
+        fieldOrPathFamily: `direct.${contentKind}`,
+        originClass: "direct-field",
+        riskClass:
+          contentKind === "identifier" ? "identifier" : "learner-content",
+        contentKind,
+      });
     }
-    const nestedFragments = new Set<string>();
-    const nestedPathsByValue = new Map<
-      string,
-      Array<readonly string[]>
-    >();
     collectNestedLearnerContent(
       item.rawPayload,
       ["rawPayload"],
-      nestedFragments,
-      nestedPathsByValue,
+      sourceItemId,
+      descriptors,
     );
     collectNestedLearnerContent(
       item.derivedPayload,
       ["derivedPayload"],
-      nestedFragments,
-      nestedPathsByValue,
+      sourceItemId,
+      descriptors,
     );
-    const itemFragments = new Set([
-      ...nestedFragments,
-      ...itemCandidateFieldsByValue.keys(),
-    ]);
-    for (const fragment of itemFragments) {
-      fragments.add(fragment);
-      const candidateFields = itemCandidateFieldsByValue.get(fragment);
-      const nestedPaths = nestedPathsByValue.get(fragment) ?? [];
-      const exactSameItemMirror =
-        candidateFields !== undefined &&
-        hasCompleteExactMirroredDirectAnswerPaths(
-          [...candidateFields],
-          nestedPaths,
-        );
-      if (!exactSameItemMirror) unrestrictedFragments.add(fragment);
-    }
   }
-  const provenanceBoundFragments = [...provenanceCandidates]
-    .filter(([value]) => !unrestrictedFragments.has(value))
-    .map(([value, candidate]) => ({
+  const fragmentDescriptors = [...descriptors]
+    .map(([value, descriptor]) => ({
       value,
-      sourceItemIds: [...candidate.sourceItemIds],
-      fieldFamilies: [...candidate.fieldFamilies].sort(),
-      maskedLength: 1 as const,
-      relation: "unclassified-account-choice-digit" as const,
-    }));
+      sourceItemIds: [...descriptor.sourceItemIds].sort(),
+      origins: [...descriptor.origins.values()].sort((left, right) =>
+        JSON.stringify(left).localeCompare(JSON.stringify(right)),
+      ),
+      lengthFamily: screenshotBoundaryLengthFamily(value),
+    } satisfies ScreenshotBoundaryFragmentDescriptor))
+    .sort((left, right) => left.value.localeCompare(right.value));
   return {
     unclassifiedItemIds,
-    sensitiveFragments: [...fragments],
-    provenanceBoundFragments,
+    fragmentDescriptors,
     unclassifiedItemCount: unclassifiedItems.length,
+    preflightCandidateCount: 0,
+    preflightCheckCount: 0,
+    preflightBlockerCount: 0,
+    preflightBlockingBuckets: [],
+    preflightAccountSnapshotStable: false,
     checkCount: 0,
     captureCount: 0,
     visibleTextHitCount: 0,
@@ -760,12 +815,14 @@ function screenshotDataBoundaryFingerprint(boundary: ScreenshotDataBoundary) {
     .update(
       JSON.stringify({
         itemIds: [...boundary.unclassifiedItemIds].sort(),
-        fragments: [...boundary.sensitiveFragments].sort(),
-        provenanceBoundFragments: boundary.provenanceBoundFragments
-          .map((fragment) => ({
-            value: fragment.value,
-            sourceItemIds: [...fragment.sourceItemIds].sort(),
-            fieldFamilies: [...fragment.fieldFamilies].sort(),
+        fragmentDescriptors: boundary.fragmentDescriptors
+          .map((descriptor) => ({
+            value: descriptor.value,
+            sourceItemIds: [...descriptor.sourceItemIds].sort(),
+            origins: [...descriptor.origins].sort((left, right) =>
+              JSON.stringify(left).localeCompare(JSON.stringify(right)),
+            ),
+            lengthFamily: descriptor.lengthFamily,
           }))
           .sort((left, right) => left.value.localeCompare(right.value)),
       }),
@@ -1999,6 +2056,10 @@ async function auditSyntheticAccount(
       todayDetailsAudited,
       weeklyTaskDetailsAudited,
       syntheticFixtureReady,
+      privacyPreflightCandidateCount: 0,
+      privacyPreflightCheckCount: 0,
+      privacyPreflightBlockerCount: 0,
+      privacyPreflightAccountSnapshotStable: false,
       screenshotBoundaryCheckCount: 0,
       screenshotCaptureCount: 0,
       visibleUnclassifiedTextHitCount: 0,
@@ -3220,57 +3281,133 @@ async function auditRoute(
   };
 }
 
+type ScreenshotCaptureOptions = { fullPage?: boolean; preflight?: false };
+type ScreenshotPreflightOptions = {
+  fullPage?: boolean;
+  preflight: true;
+  routeStateAlias: string;
+  viewport: string;
+};
+
 async function captureSyntheticScreenshot(
   page: Page,
   boundary: ScreenshotDataBoundary,
   fileName: string,
-  options: { fullPage?: boolean } = {},
-): Promise<ScreenshotEvidence> {
-  const provenanceBoundPolicyTable = buildProvenanceBoundPolicyTable();
+  options: ScreenshotPreflightOptions,
+): Promise<null>;
+async function captureSyntheticScreenshot(
+  page: Page,
+  boundary: ScreenshotDataBoundary,
+  fileName: string,
+  options?: ScreenshotCaptureOptions,
+): Promise<ScreenshotEvidence>;
+async function captureSyntheticScreenshot(
+  page: Page,
+  boundary: ScreenshotDataBoundary,
+  fileName: string,
+  options: ScreenshotCaptureOptions | ScreenshotPreflightOptions = {},
+): Promise<ScreenshotEvidence | null> {
+  const screenshotBoundaryPolicyTable = buildScreenshotBoundaryPolicyTable();
   const assertScreenshotDataBoundary = async () => {
     const observation = await page.evaluate(
       ({
         itemIds,
-        fragments,
-        provenanceBoundFragments,
-        provenanceBoundPolicyTable,
+        fragmentDescriptors,
+        screenshotBoundaryPolicyTable,
+        serializedPolicySchema,
         instrumentationSchemas,
         contentAttributeNames,
-        arbitraryPresentationUtilityTokens,
+        arbitraryPresentationUtilityPatternSource,
         presentationUtilityPatternSource,
         semanticTextSurfaceSelector,
+        allowedLengthFamilies,
+        allowedOriginClasses,
+        allowedRiskClasses,
+        allowedContentKinds,
+        originPathFamilyPatternSource,
+        semanticLabelPatternSources,
         syntheticFormFixtures,
         captureFullPage,
       }) => {
         const normalize = (value: string) =>
           value.normalize("NFKC").replace(/\s+/g, " ").trim();
         const normalizedItemIds = itemIds.map(normalize).filter(Boolean);
-        const normalizedFragments = fragments.map(normalize).filter(Boolean);
+        const lengthFamily = (value: string) => {
+          const length = Array.from(value).length;
+          if (length === 1) return "1";
+          if (length <= 7) return "2-7";
+          if (length <= 31) return "8-31";
+          return "32+";
+        };
+        const allowedLengths = new Set(allowedLengthFamilies);
+        const allowedOrigins = new Set(allowedOriginClasses);
+        const allowedRisks = new Set(allowedRiskClasses);
+        const allowedKinds = new Set(allowedContentKinds);
+        const originPathFamilyPattern = new RegExp(
+          originPathFamilyPatternSource,
+          "u",
+        );
+        const normalizedFragmentDescriptors = fragmentDescriptors.map(
+          (descriptor) => {
+            const value = normalize(descriptor.value);
+            const sourceItemIds = Array.isArray(descriptor.sourceItemIds)
+              ? descriptor.sourceItemIds.map(normalize).filter(Boolean)
+              : [];
+            const origins = Array.isArray(descriptor.origins)
+              ? descriptor.origins
+              : [];
+            const descriptorLengthFamily = descriptor.lengthFamily;
+            const validOrigins = origins.every(
+              (origin) =>
+                origin !== null &&
+                typeof origin === "object" &&
+                originPathFamilyPattern.test(origin.fieldOrPathFamily) &&
+                allowedOrigins.has(origin.originClass) &&
+                allowedRisks.has(origin.riskClass) &&
+                allowedKinds.has(origin.contentKind),
+            );
+            const provenanceState =
+              !value || sourceItemIds.length === 0 || origins.length === 0
+                ? "missing"
+                : !allowedLengths.has(descriptorLengthFamily) ||
+                    descriptorLengthFamily !== lengthFamily(value) ||
+                    !validOrigins
+                  ? "malformed"
+                  : "valid";
+            return {
+              value,
+              sourceItemIds,
+              origins,
+              lengthFamily: descriptorLengthFamily,
+              provenanceState,
+            };
+          },
+        );
         const normalizedSyntheticFormFixtures = syntheticFormFixtures.map(
           (fixture) => ({
             selector: fixture.selector,
             values: new Set(fixture.values.map(normalize).filter(Boolean)),
           }),
         );
-        const exactInstrumentationPatterns = new Map(
-          instrumentationSchemas.map((schema) => [
-            schema.attributeName,
-            new RegExp(schema.valuePatternSource, "u"),
-          ]),
+        const exactInstrumentationPatterns = instrumentationSchemas.map(
+          (schema) => ({
+            attributeName: new RegExp(
+              schema.attributeNamePatternSource,
+              "u",
+            ),
+            value: new RegExp(schema.valuePatternSource, "u"),
+          }),
         );
-        const exactContentAttributeNames = new Set(contentAttributeNames);
-        const exactArbitraryPresentationUtilityTokens = new Set(
-          arbitraryPresentationUtilityTokens,
+        const exactContentAttributeNames = new Set<string>(
+          contentAttributeNames,
+        );
+        const arbitraryPresentationUtility = new RegExp(
+          arbitraryPresentationUtilityPatternSource,
+          "i",
         );
         const presentationUtility = new RegExp(
           presentationUtilityPatternSource,
           "i",
-        );
-        const normalizedProvenanceBoundFragments = new Map(
-          provenanceBoundFragments.map((fragment) => [
-            normalize(fragment.value),
-            fragment.sourceItemIds.map(normalize).filter(Boolean),
-          ]),
         );
         const normalizedCandidates = (value: string) => {
           const normalized = normalize(value);
@@ -3374,24 +3511,36 @@ async function captureSyntheticScreenshot(
           normalizedValue: string,
           normalizedFragment: string,
           element: Element | null,
-        ): "none" | "presentation" | "instrumentation" => {
+        ):
+          | "none"
+          | "presentation-syntax"
+          | "instrumentation-syntax"
+          | "progress-aria-syntax"
+          | "id-reference-syntax"
+          | "svg-geometry" => {
           if (!attributeName || !element) return "none";
           const name = attributeName.toLowerCase();
-          if (exactInstrumentationPatterns.get(name)?.test(normalizedValue))
-            return "instrumentation";
+          if (
+            exactInstrumentationPatterns.some(
+              (schema) =>
+                schema.attributeName.test(name) &&
+                schema.value.test(normalizedValue),
+            )
+          )
+            return "instrumentation-syntax";
           if (
             /^aria-value(?:min|max|now)$/i.test(name) &&
             element.getAttribute("role")?.toLowerCase() === "progressbar"
           )
-            return "presentation";
+            return "progress-aria-syntax";
           if (name === "tabindex" && /^(?:-1|0)$/u.test(normalizedValue))
-            return "presentation";
+            return "presentation-syntax";
           if (
             name === "rows" &&
             element.localName === "textarea" &&
             normalizedValue === "3"
           )
-            return "presentation";
+            return "presentation-syntax";
           if (name === "class" && normalizedValue !== normalizedFragment) {
             const matchingTokens = normalizedValue
               .split(/\s+/)
@@ -3400,11 +3549,11 @@ async function captureSyntheticScreenshot(
               matchingTokens.length > 0 &&
               matchingTokens.every((token) =>
                 token.includes("[")
-                  ? exactArbitraryPresentationUtilityTokens.has(token)
+                  ? arbitraryPresentationUtility.test(token)
                   : presentationUtility.test(token),
               )
             )
-              return "presentation";
+              return "presentation-syntax";
           }
           if (
             name === "style" &&
@@ -3413,13 +3562,8 @@ async function captureSyntheticScreenshot(
             normalizedValue !== normalizedFragment &&
             /^width:\s*(?:0|[1-9]\d?|100)%;?$/u.test(normalizedValue)
           )
-            return "presentation";
-          if (
-            name === "style" &&
-            element.closest(
-              'main[data-s232e3-answer-review-entry="learner-first"]',
-            )
-          ) {
+            return "presentation-syntax";
+          if (name === "style") {
             const matchingDeclarations = normalizedValue
               .split(";")
               .map((declaration) => declaration.trim())
@@ -3455,7 +3599,7 @@ async function captureSyntheticScreenshot(
                 return false;
               })
             )
-              return "presentation";
+              return "presentation-syntax";
           }
           if (
             [
@@ -3470,7 +3614,7 @@ async function captureSyntheticScreenshot(
             normalizedValue !== normalizedFragment &&
             resolvesIdReference(name, normalizedValue, element)
           )
-            return "presentation";
+            return "id-reference-syntax";
           const graphic = element.closest("svg");
           const graphicContainer = graphic?.closest("button,a");
           const decorativeGraphic =
@@ -3507,7 +3651,7 @@ async function captureSyntheticScreenshot(
               "stroke-dashoffset",
             ].includes(name)
           )
-            return "presentation";
+            return "svg-geometry";
           return "none";
         };
         const incidentalOrdinalOrCounter = (
@@ -3546,7 +3690,7 @@ async function captureSyntheticScreenshot(
                 /[.,/%:+-]/u.test(next)) &&
                 /\d/u.test(`${before.slice(-2)}${after.slice(0, 2)}`));
             const counterSuffix =
-                /^\s*(?:개|단계|차|줄|분|회|가지|문장|문단|페이지|항목|초|점|%)/u.test(
+                /^\s*(?:개|단계|차|줄|분|회|가지|문장|문단|페이지|항목|초|점|%)(?![\p{L}\p{N}_])/u.test(
                   after,
                 );
             const ordinalPunctuation = /^[.)]/u.test(after);
@@ -3567,13 +3711,6 @@ async function captureSyntheticScreenshot(
             );
           });
         };
-        const maskedLengthFamily = (value: string) => {
-          const length = Array.from(value).length;
-          if (length === 1) return "1";
-          if (length <= 7) return "2-7";
-          if (length <= 31) return "8-31";
-          return "32+";
-        };
         const matchSensitiveFragment = (
           value: string,
           element: Element | null,
@@ -3585,6 +3722,7 @@ async function captureSyntheticScreenshot(
             | "generated-content"
             | "background-reference",
           structuralAttributeName: string | null = null,
+          surfaceKind: "default" | "select-value" = "default",
         ) => {
           const normalized = normalize(value);
           if (!normalized)
@@ -3594,30 +3732,21 @@ async function captureSyntheticScreenshot(
               hitMetadata: null,
             };
           let provenanceFiltered = false;
-          for (const fragment of normalizedFragments) {
+          for (const descriptor of normalizedFragmentDescriptors) {
+            const fragment = descriptor.value;
+            if (!fragment) continue;
+            const normalizedSemanticSurface = semanticTextSurface(element);
             const exact =
               (channel === "semantic-text"
-                ? semanticTextSurface(element)
+                ? normalizedSemanticSurface
                 : normalized) === fragment;
             const substring =
               normalized.includes(fragment) ||
               (normalized.length >= 12 && fragment.includes(normalized));
             if (!exact && !substring) continue;
-            const sourceItemIds =
-              normalizedProvenanceBoundFragments.get(fragment);
-            if (!sourceItemIds)
-              return {
-                matched: true,
-                provenanceFiltered: false,
-                hitMetadata: {
-                  fragmentFamily: "unrestricted-account-content",
-                  maskedLength: maskedLengthFamily(fragment),
-                  relation: "unclassified-dom",
-                },
-              };
             const sourceReferenced = elementReferencesSourceItem(
               element,
-              sourceItemIds,
+              descriptor.sourceItemIds,
             );
             const escapedFragment = fragment.replace(
               /[.*+?^${}()|[\]\\]/g,
@@ -3693,10 +3822,23 @@ async function captureSyntheticScreenshot(
             }
             semanticContextParts.push(normalized);
             const semanticContext = normalize(semanticContextParts.join(" "));
-            const semanticAnswerLabel = new RegExp(
-              `(?:(?:내\\s*답(?:안)?|정답|응답|답안|선택지|선지|보기|고른\\s*번호|선택(?:한\\s*번호)?|(?:^|\\s)답)(?:은|는|이|가)?\\s*[:=：]?\\s*${escapedFragment}(?:\\s*번)?(?![\\p{L}\\p{N}_])|(?:\\banswer\\b|\\bchoice\\b|\\boption\\b|\\bselected\\b|\\bselection\\b|\\bresponse\\b|(?:user|correct)[_-]?answer)\\s*[:=：#-]?\\s*${escapedFragment}(?![\\p{L}\\p{N}_])|${escapedFragment}\\s*번\\s*(?:내\\s*답(?:안)?|정답|응답|선택지|선지|고른\\s*번호|선택|제출))`,
-              "iu",
-            ).test(semanticContext);
+            const contentKinds = new Set(
+              descriptor.origins.map((origin) => origin.contentKind),
+            );
+            const semanticKinds = contentKinds.has("unknown")
+              ? (["answer", "reason", "question"] as const)
+              : (["answer", "reason", "question"] as const).filter((kind) =>
+                  contentKinds.has(kind),
+                );
+            const semanticLabel = semanticKinds.some((kind) =>
+              new RegExp(
+                semanticLabelPatternSources[kind].replaceAll(
+                  "__FRAGMENT__",
+                  escapedFragment,
+                ),
+                "iu",
+              ).test(semanticContext),
+            );
             const structuralSchema = structuralCollisionSchema(
               structuralAttributeName,
               normalized,
@@ -3720,34 +3862,95 @@ async function captureSyntheticScreenshot(
                   element.matches(fixture.selector) &&
                   fixture.values.has(normalized),
               );
+            const attributeName = structuralAttributeName?.toLowerCase() ?? "";
+            const shadowDom = element?.getRootNode() instanceof ShadowRoot;
+            const ariaReference = [
+              "aria-controls",
+              "aria-labelledby",
+              "aria-describedby",
+              "aria-owns",
+              "aria-activedescendant",
+            ].includes(attributeName);
+            const hardBlockFacts: Record<string, boolean> = {
+              "source-reference": sourceReferenced,
+              "exact-surface":
+                exact &&
+                (channel === "semantic-text" ||
+                  channel === "content-attribute"),
+              "semantic-label": semanticLabel,
+              "form-value":
+                channel === "form-value" &&
+                !exactSyntheticFixtureFormValue,
+              "generated-content": channel === "generated-content",
+              "background-reference": channel === "background-reference",
+              "shadow-aria-reference": shadowDom || ariaReference,
+              "select-value": surfaceKind === "select-value",
+              "unknown-surface":
+                channel === "structural-reference" &&
+                structuralSchema === "none",
+            };
+            const positiveEvidenceFacts: Record<string, boolean> = {
+              "presentation-syntax":
+                structuralSchema === "presentation-syntax",
+              "instrumentation-syntax":
+                structuralSchema === "instrumentation-syntax",
+              "progress-aria-syntax":
+                structuralSchema === "progress-aria-syntax",
+              "id-reference-syntax":
+                structuralSchema === "id-reference-syntax" && !ariaReference,
+              "svg-geometry": structuralSchema === "svg-geometry",
+              "ordinal-counter": incidentalTextSchema,
+              "public-semantic-substring":
+                channel === "semantic-text" &&
+                !exact &&
+                normalizedSemanticSurface.includes(fragment),
+              "synthetic-form-value": exactSyntheticFixtureFormValue,
+            };
+            const hardBlockReason =
+              serializedPolicySchema.hardBlockPriority.find(
+                (reason) => hardBlockFacts[reason],
+              ) ?? "none";
+            const positiveEvidence =
+              serializedPolicySchema.positiveEvidencePriority.find(
+                (evidence) => positiveEvidenceFacts[evidence],
+              ) ?? "none";
             const policyKey = [
-              channel,
-              exact ? "exact" : "substring",
-              sourceReferenced ? "source" : "unlinked",
-              semanticAnswerLabel ? "answer-label" : "unlabelled",
-              structuralSchema,
-              incidentalTextSchema
-                ? "incidental-text"
-                : "unclassified-text",
-              exactSyntheticFixtureFormValue
-                ? "synthetic-form"
-                : "unclassified-form",
+              descriptor.provenanceState,
+              descriptor.lengthFamily,
+              hardBlockReason,
+              positiveEvidence,
             ].join(":");
-            const policyDecision = provenanceBoundPolicyTable[policyKey];
-            if (policyDecision !== false)
+            const policyDecision =
+              screenshotBoundaryPolicyTable[policyKey];
+            if (policyDecision?.block !== false) {
+              const originFamilies = [
+                ...new Set(
+                  descriptor.origins.map(
+                    (origin) => origin.fieldOrPathFamily,
+                  ),
+                ),
+              ];
+              const riskClasses = [
+                ...new Set(
+                  descriptor.origins.map((origin) => origin.riskClass),
+                ),
+              ];
               return {
                 matched: true,
                 provenanceFiltered: false,
                 hitMetadata: {
-                  fragmentFamily: "provenance-choice-digit",
-                  maskedLength: "1",
-                  relation: sourceReferenced
-                    ? "source-reference"
-                    : policyDecision === undefined
-                      ? "missing-policy"
-                      : "unclassified-dom",
+                  fragmentFamily:
+                    riskClasses.length === 1 ? riskClasses[0] : "mixed",
+                  maskedLength: descriptor.lengthFamily,
+                  relation: policyDecision?.reason ?? "missing-policy",
+                  originPathFamily:
+                    originFamilies.length === 1
+                      ? originFamilies[0]
+                      : "multiple",
+                  policyDecision: "block" as const,
                 },
               };
+            }
             provenanceFiltered = true;
           }
           return { matched: false, provenanceFiltered, hitMetadata: null };
@@ -3773,8 +3976,10 @@ async function captureSyntheticScreenshot(
                 provenanceFiltered: false,
                 hitMetadata: {
                   fragmentFamily: "account-item-id",
-                  maskedLength: maskedLengthFamily(referencedItemId),
+                  maskedLength: lengthFamily(referencedItemId),
                   relation: "source-reference",
+                  originPathFamily: "item-id",
+                  policyDecision: "block" as const,
                 },
               };
             const fragmentMatch = matchSensitiveFragment(
@@ -3953,6 +4158,8 @@ async function captureSyntheticScreenshot(
             fragmentFamily: string;
             maskedLength: string;
             relation: string;
+            originPathFamily: string;
+            policyDecision: "block";
           } | null,
         ) => {
           if (!hitMetadata) return;
@@ -3964,6 +4171,8 @@ async function captureSyntheticScreenshot(
             fragmentFamily: hitMetadata.fragmentFamily,
             maskedLength: hitMetadata.maskedLength,
             relation: hitMetadata.relation,
+            originPathFamily: hitMetadata.originPathFamily,
+            policyDecision: hitMetadata.policyDecision,
           };
           const key = JSON.stringify(bucket);
           blockingBucketCounts.set(
@@ -3989,8 +4198,10 @@ async function captureSyntheticScreenshot(
           referenceHits += 1;
           recordBlockingHit("structural-reference", null, null, {
             fragmentFamily: "account-item-id",
-            maskedLength: maskedLengthFamily(pageReferencedItemId),
+            maskedLength: lengthFamily(pageReferencedItemId),
             relation: "source-reference",
+            originPathFamily: "item-id",
+            policyDecision: "block" as const,
           });
         }
         const roots: Array<Document | ShadowRoot> = [document];
@@ -4089,12 +4300,19 @@ async function captureSyntheticScreenshot(
                 fragmentFamily: string;
                 maskedLength: string;
                 relation: string;
+                originPathFamily: string;
+                policyDecision: "block";
               } | null = null;
-              for (const selectSurface of [element.value, selectedText]) {
+              for (const selectSurface of [
+                { value: element.value, kind: "select-value" as const },
+                { value: selectedText, kind: "default" as const },
+              ]) {
                 const formMatch = matchSensitiveFragment(
-                  selectSurface,
+                  selectSurface.value,
                   element,
                   "form-value",
+                  null,
+                  selectSurface.kind,
                 );
                 if (formMatch.matched) {
                   selectMatched = true;
@@ -4206,6 +4424,8 @@ async function captureSyntheticScreenshot(
             fragmentFamily: "opaque-surface",
             maskedLength: "n/a",
             relation: "uninspectable",
+            originPathFamily: "opaque-surface",
+            policyDecision: "block",
           });
         const blockingBuckets = [...blockingBucketCounts]
           .map(([key, count]) => ({
@@ -4216,6 +4436,8 @@ async function captureSyntheticScreenshot(
               fragmentFamily: string;
               maskedLength: string;
               relation: string;
+              originPathFamily: string;
+              policyDecision: "block";
             }),
             count,
           }))
@@ -4237,27 +4459,90 @@ async function captureSyntheticScreenshot(
       },
       {
         itemIds: boundary.unclassifiedItemIds,
-        fragments: boundary.sensitiveFragments,
-        provenanceBoundFragments: boundary.provenanceBoundFragments,
-        provenanceBoundPolicyTable,
+        fragmentDescriptors: boundary.fragmentDescriptors,
+        screenshotBoundaryPolicyTable,
+        serializedPolicySchema: screenshotBoundaryPolicySchema,
         instrumentationSchemas: provenanceBoundInstrumentationSchemas.map(
           (schema) => ({
-            attributeName: schema.attributeName,
+            attributeNamePatternSource: schema.attributeNamePatternSource,
             valuePatternSource: schema.valuePatternSource,
           }),
         ),
         contentAttributeNames: [...provenanceBoundContentAttributeNames],
-        arbitraryPresentationUtilityTokens: [
-          ...provenanceBoundArbitraryPresentationUtilityTokens,
-        ],
+        arbitraryPresentationUtilityPatternSource:
+          provenanceBoundArbitraryPresentationUtilityPattern.source,
         presentationUtilityPatternSource:
           provenanceBoundPresentationUtilityPattern.source,
         semanticTextSurfaceSelector:
           provenanceBoundSemanticTextSurfaceSelector,
+        allowedLengthFamilies: [...screenshotBoundaryLengthFamilies],
+        allowedOriginClasses: [...screenshotBoundaryOriginClasses],
+        allowedRiskClasses: [...screenshotBoundaryRiskClasses],
+        allowedContentKinds: [...screenshotBoundaryContentKinds],
+        originPathFamilyPatternSource:
+          screenshotBoundaryOriginPathFamilyPatternSource,
+        semanticLabelPatternSources:
+          screenshotBoundarySemanticLabelPatternSources,
         syntheticFormFixtures: exactSyntheticFormFixtures,
         captureFullPage: options.fullPage ?? true,
       },
     );
+    const blockingHitCount =
+      observation.textHits +
+      observation.referenceHits +
+      observation.formValueHits +
+      observation.generatedContentHits +
+      observation.uninspectableSurfaceCount;
+    if (options.preflight) {
+      boundary.preflightCheckCount += 1;
+      boundary.preflightCandidateCount += 1;
+      boundary.preflightBlockerCount += blockingHitCount;
+      const routeStateAlias = options.routeStateAlias
+        .replace(/[^a-z0-9-]/gi, "-")
+        .slice(0, 80);
+      const viewport = options.viewport
+        .replace(/[^a-z0-9x-]/gi, "-")
+        .slice(0, 32);
+      const bucketCounts = new Map(
+        boundary.preflightBlockingBuckets.map((bucket) => [
+          JSON.stringify({
+            routeStateAlias: bucket.routeStateAlias,
+            viewport: bucket.viewport,
+            channel: bucket.channel,
+            lengthFamily: bucket.lengthFamily,
+            originPathFamily: bucket.originPathFamily,
+            decision: bucket.decision,
+            reason: bucket.reason,
+          }),
+          bucket.count,
+        ]),
+      );
+      for (const bucket of observation.blockingBuckets) {
+        const safeBucket = {
+          routeStateAlias,
+          viewport,
+          channel: bucket.channel,
+          lengthFamily: bucket.maskedLength,
+          originPathFamily: bucket.originPathFamily,
+          decision: "block" as const,
+          reason: bucket.relation,
+        };
+        const key = JSON.stringify(safeBucket);
+        bucketCounts.set(key, (bucketCounts.get(key) ?? 0) + bucket.count);
+      }
+      boundary.preflightBlockingBuckets = [...bucketCounts]
+        .map(([key, count]) => ({
+          ...(JSON.parse(key) as Omit<
+            (typeof boundary.preflightBlockingBuckets)[number],
+            "count"
+          >),
+          count,
+        }))
+        .sort((left, right) =>
+          JSON.stringify(left).localeCompare(JSON.stringify(right)),
+        );
+      return blockingHitCount;
+    }
     boundary.checkCount += 1;
     boundary.visibleTextHitCount += observation.textHits;
     boundary.visibleReferenceHitCount += observation.referenceHits;
@@ -4273,16 +4558,11 @@ async function captureSyntheticScreenshot(
       observation.provenanceFilteredFormValueHits;
     boundary.provenanceFilteredGeneratedContentHitCount +=
       observation.provenanceFilteredGeneratedContentHits;
-    const blockingHitCount =
-      observation.textHits +
-      observation.referenceHits +
-      observation.formValueHits +
-      observation.generatedContentHits +
-      observation.uninspectableSurfaceCount;
     expect(
       blockingHitCount,
       `Screenshot data boundary must close before any PNG is retained; metadata-only-observation=${JSON.stringify({ failureCode: "S232H2_SCREENSHOT_BOUNDARY_OPEN", capture: fileName.replace(/[^a-z0-9-]/gi, "-").slice(0, 80), channels: { text: observation.textHits, reference: observation.referenceHits, formValue: observation.formValueHits, generatedContent: observation.generatedContentHits, uninspectableSurface: observation.uninspectableSurfaceCount }, provenanceFiltered: { text: observation.provenanceFilteredTextHits, reference: observation.provenanceFilteredReferenceHits, formValue: observation.provenanceFilteredFormValueHits, generatedContent: observation.provenanceFilteredGeneratedContentHits }, buckets: observation.blockingBuckets })}.`,
     ).toBe(0);
+    return blockingHitCount;
   };
 
   const canonicalTop = await stabilizeCanonicalTop(page);
@@ -4334,6 +4614,7 @@ async function captureSyntheticScreenshot(
   for (const identitySurface of await identity.all())
     if (await identitySurface.isVisible()) masks.push(identitySurface);
   await assertScreenshotDataBoundary();
+  if (options.preflight) return null;
   const buffer = await page.screenshot({
     fullPage: options.fullPage ?? true,
     animations: "disabled",
@@ -5165,6 +5446,267 @@ test("S232H.2 adopts V3 across the production learner routes with direct before/
     new URL(runtimeBaseUrl).origin,
   );
 
+  const baselineContext: BrowserContext = await newPreviewContext(
+    browser,
+    baselineUrl,
+  );
+  const baselinePage = await baselineContext.newPage();
+  const baselineErrors = monitorPageRuntime(
+    baselinePage,
+    new URL(baselineUrl).origin,
+  );
+  const baselineLogin = await loginWithDedicatedTestAccount(
+    baselinePage,
+    "second",
+  );
+  await verifyRuntimeVersion(baselinePage, baselineSha);
+
+  for (const viewport of viewports) {
+    for (const route of requiredRoutes) {
+      const routePage = route.authenticated ? page : publicPage;
+      const requestedPath = resolveRoutePath(route, syntheticItemId);
+      await auditRoute(routePage, route, requestedPath, viewport);
+      const isAllRouteMobileEvidence = viewport.width === 390;
+      const isRequiredReflowEvidence =
+        viewport.width === 768 &&
+        (route.id === "today" || route.id === "ledger");
+      const isRequiredDesktopEvidence =
+        viewport.width === 1440 && route.id === "ledger";
+      if (
+        isAllRouteMobileEvidence ||
+        isRequiredReflowEvidence ||
+        isRequiredDesktopEvidence
+      ) {
+        if (route.id === "calculator" && viewport.width === 390) {
+          await expect(
+            routePage.locator(
+              '[data-calculator-routine-active-step="casio_input"] [data-v3-component="CalculatorStep"]',
+            ),
+          ).toBeVisible();
+        }
+        const isRepresentativeViewport =
+          (route.id === "ledger" &&
+            (viewport.width === 390 || viewport.width === 1440)) ||
+          (route.id === "calculator" && viewport.width === 390);
+        await captureSyntheticScreenshot(
+          routePage,
+          dataBoundary,
+          `s232h2-after-${route.id}-${viewport.label}.png`,
+          {
+            fullPage: !isRepresentativeViewport,
+            preflight: true,
+            routeStateAlias: `${route.id}-initial`,
+            viewport: `${viewport.width}x${viewport.height}`,
+          },
+        );
+      }
+    }
+  }
+
+  await prepareCaptureExtractionPreview(page);
+  await auditDynamicState(
+    page,
+    "capture",
+    "extraction-preview",
+    "/app/capture?mode=second",
+  );
+  await captureSyntheticScreenshot(
+    page,
+    dataBoundary,
+    "s232h2-after-capture-extraction-preview-390.png",
+    {
+      preflight: true,
+      routeStateAlias: "capture-extraction-preview",
+      viewport: "390x844",
+    },
+  );
+  await page.unroute("**/api/inverge/ocr");
+
+  await prepareAnswerReviewResult(page);
+  await auditDynamicState(
+    page,
+    "answer-review",
+    "result",
+    "/answer-review?mode=second",
+  );
+  await captureSyntheticScreenshot(
+    page,
+    dataBoundary,
+    "s232h2-after-answer-review-result-390.png",
+    {
+      preflight: true,
+      routeStateAlias: "answer-review-result",
+      viewport: "390x844",
+    },
+  );
+  await page.locator("[data-s232e4-rewrite-entry]").click();
+  await expect(
+    page.locator('[data-s232e4-answer-review-rewrite="single-paragraph"]'),
+  ).toBeVisible();
+  await auditDynamicState(
+    page,
+    "answer-review",
+    "rewrite",
+    "/answer-review?mode=second",
+  );
+  await captureSyntheticScreenshot(
+    page,
+    dataBoundary,
+    "s232h2-after-answer-review-rewrite-390.png",
+    {
+      preflight: true,
+      routeStateAlias: "answer-review-rewrite",
+      viewport: "390x844",
+    },
+  );
+  await page.unroute("**/api/answer-review/structure");
+
+  await prepareReviewSelectedState(page, postMutationAudit.primaryQueueTitle!);
+  await auditDynamicState(
+    page,
+    "review",
+    "revealed-selected",
+    "/app/review?mode=second",
+  );
+  await captureSyntheticScreenshot(
+    page,
+    dataBoundary,
+    "s232h2-after-review-revealed-selected-390.png",
+    {
+      preflight: true,
+      routeStateAlias: "review-revealed-selected",
+      viewport: "390x844",
+    },
+  );
+
+  const preflightSavedCapturePath = `/app/session?mode=second&savedCapture=1&itemId=${encodeURIComponent(syntheticItemId)}`;
+  await gotoRequiredRoute(page, preflightSavedCapturePath);
+  await expect(
+    page.getByText("오늘 계획에 반영했습니다.", { exact: true }),
+  ).toBeVisible();
+  await auditDynamicState(
+    page,
+    "session",
+    "saved-capture",
+    "/app/session?mode=second&savedCapture=1&itemId=[itemId]",
+  );
+  await captureSyntheticScreenshot(
+    page,
+    dataBoundary,
+    "s232h2-after-session-saved-capture-390.png",
+    {
+      preflight: true,
+      routeStateAlias: "session-saved-capture",
+      viewport: "390x844",
+    },
+  );
+
+  await page.route("**/api/os/calculator-routine/complete", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        status: "saved",
+        learningRecordSaved: true,
+        learningRecordId: "11111111-1111-4111-8111-111111111111",
+        deduped: false,
+      }),
+    });
+  });
+  const preflightCalculatorPath =
+    "/app/calculator?mode=second&context=practice&focus=casio";
+  await gotoRequiredRoute(page, preflightCalculatorPath);
+  await advanceCalculatorToCasioInput(page);
+  await completeCalculatorRoutine(page);
+  await auditDynamicState(
+    page,
+    "calculator",
+    "completed-saved",
+    preflightCalculatorPath,
+  );
+  await captureSyntheticScreenshot(
+    page,
+    dataBoundary,
+    "s232h2-after-calculator-completed-saved-390.png",
+    {
+      preflight: true,
+      routeStateAlias: "calculator-completed-saved",
+      viewport: "390x844",
+    },
+  );
+  await page.unroute("**/api/os/calculator-routine/complete");
+
+  for (const viewport of [viewports[0], viewports[2]]) {
+    await baselinePage.setViewportSize({
+      width: viewport.width,
+      height: viewport.height,
+    });
+    await gotoRequiredRoute(
+      baselinePage,
+      `/app/items/${encodeURIComponent(syntheticItemId)}?mode=second`,
+    );
+    await captureSyntheticScreenshot(
+      baselinePage,
+      dataBoundary,
+      `s232h2-before-ledger-${viewport.label}.png`,
+      {
+        fullPage: false,
+        preflight: true,
+        routeStateAlias: "before-ledger",
+        viewport: `${viewport.width}x${viewport.height}`,
+      },
+    );
+  }
+  await baselinePage.setViewportSize({ width: 390, height: 844 });
+  await gotoRequiredRoute(
+    baselinePage,
+    "/app/calculator?mode=second&context=practice&focus=casio",
+  );
+  await advanceCalculatorToCasioInput(baselinePage);
+  await captureSyntheticScreenshot(
+    baselinePage,
+    dataBoundary,
+    "s232h2-before-calculator-390.png",
+    {
+      fullPage: false,
+      preflight: true,
+      routeStateAlias: "before-calculator",
+      viewport: "390x844",
+    },
+  );
+
+  const preflightFinalAccountAudit = await auditSyntheticAccount(page, {
+    expectedItemId: syntheticItemId,
+    includePlanning: true,
+  });
+  dataBoundary.preflightAccountSnapshotStable =
+    screenshotDataBoundaryFingerprint(
+      preflightFinalAccountAudit.screenshotBoundary,
+    ) === initialBoundaryFingerprint;
+  if (!dataBoundary.preflightAccountSnapshotStable) {
+    dataBoundary.preflightBlockerCount += 1;
+    dataBoundary.preflightBlockingBuckets.push({
+      routeStateAlias: "account-snapshot",
+      viewport: "all",
+      channel: "account-snapshot",
+      lengthFamily: "n-a",
+      originPathFamily: "account-boundary",
+      decision: "block",
+      reason: "snapshot-drift",
+      count: 1,
+    });
+  }
+  const privacyPreflightClosed =
+    dataBoundary.preflightCandidateCount === 25 &&
+    dataBoundary.preflightCheckCount === 25 &&
+    dataBoundary.preflightAccountSnapshotStable &&
+    dataBoundary.preflightBlockerCount === 0;
+  expect(
+    privacyPreflightClosed,
+    `Privacy preflight must close across every capture candidate before any PNG buffer is created; metadata-only-observation=${JSON.stringify({ failureCode: "S232H2_PRIVACY_PREFLIGHT_OPEN", candidateCount: dataBoundary.preflightCandidateCount, checkCount: dataBoundary.preflightCheckCount, accountSnapshotStable: dataBoundary.preflightAccountSnapshotStable, blockerCount: dataBoundary.preflightBlockerCount, buckets: dataBoundary.preflightBlockingBuckets })}.`,
+  ).toBe(true);
+
   const initialAuditRows: AuditRow[] = [];
   const initialAfterScreenshots: ScreenshotEvidence[] = [];
   for (const viewport of viewports) {
@@ -5373,21 +5915,6 @@ test("S232H.2 adopts V3 across the production learner routes with direct before/
   expect(auditRows).toHaveLength(45);
   expect(afterScreenshots).toHaveLength(22);
 
-  const baselineContext: BrowserContext = await newPreviewContext(
-    browser,
-    baselineUrl,
-  );
-  const baselinePage = await baselineContext.newPage();
-  const baselineErrors = monitorPageRuntime(
-    baselinePage,
-    new URL(baselineUrl).origin,
-  );
-  const baselineLogin = await loginWithDedicatedTestAccount(
-    baselinePage,
-    "second",
-  );
-  await verifyRuntimeVersion(baselinePage, baselineSha);
-
   const baselineScreenshots: ScreenshotEvidence[] = [];
   for (const viewport of [viewports[0], viewports[2]]) {
     await baselinePage.setViewportSize({
@@ -5469,12 +5996,22 @@ test("S232H.2 adopts V3 across the production learner routes with direct before/
     screenshotBoundary.visibleGeneratedContentHitCount +
     screenshotBoundary.visibleUninspectableSurfaceCount;
   const screenshotDataBoundaryClosed =
+    screenshotBoundary.preflightCandidateCount === 25 &&
+    screenshotBoundary.preflightCheckCount === 25 &&
+    screenshotBoundary.preflightBlockerCount === 0 &&
+    screenshotBoundary.preflightAccountSnapshotStable &&
     screenshotBoundary.captureCount === 25 &&
     screenshotBoundary.checkCount === 50 &&
     accountSnapshotStable &&
     screenshotBoundaryHitCount === 0;
   const privacyAudit: PrivacyAudit = {
     ...finalAccountAudit.privacyAudit,
+    privacyPreflightCandidateCount:
+      screenshotBoundary.preflightCandidateCount,
+    privacyPreflightCheckCount: screenshotBoundary.preflightCheckCount,
+    privacyPreflightBlockerCount: screenshotBoundary.preflightBlockerCount,
+    privacyPreflightAccountSnapshotStable:
+      screenshotBoundary.preflightAccountSnapshotStable,
     screenshotBoundaryCheckCount: screenshotBoundary.checkCount,
     screenshotCaptureCount: screenshotBoundary.captureCount,
     visibleUnclassifiedTextHitCount:
@@ -5518,6 +6055,10 @@ test("S232H.2 adopts V3 across the production learner routes with direct before/
     privacyAudit.syntheticFixtureReady,
     privacyAudit.accountSnapshotStable,
     privacyAudit.screenshotDataBoundaryClosed,
+    privacyAudit.privacyPreflightCandidateCount === 25,
+    privacyAudit.privacyPreflightCheckCount === 25,
+    privacyAudit.privacyPreflightBlockerCount === 0,
+    privacyAudit.privacyPreflightAccountSnapshotStable,
     privacyAudit.screenshotBoundaryCheckCount === 50,
     privacyAudit.screenshotCaptureCount === 25,
     privacyAudit.visibleUnclassifiedTextHitCount === 0,

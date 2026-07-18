@@ -734,14 +734,29 @@ test("S232H.2 evidence is privacy-bounded synthetic data and directly compared w
   assert.match(spec, /HTMLInputElement/);
   assert.match(spec, /"::before", "::after"/);
   assert.match(spec, /visibleUninspectableSurfaceCount/);
-  assert.match(spec, /provenanceBoundDirectAnswer/);
-  assert.match(spec, /classifyProvenanceBoundDirectAnswer/);
-  assert.match(spec, /hasCompleteExactMirroredDirectAnswerPaths/);
-  assert.match(spec, /buildProvenanceBoundPolicyTable/);
-  assert.match(spec, /provenanceBoundArbitraryPresentationUtilityTokens/);
+  assert.match(spec, /fragmentDescriptors: ScreenshotBoundaryFragmentDescriptor\[\]/);
+  assert.match(spec, /sourceItemIds: Set<string>/);
+  assert.match(spec, /origins: Map<string, ScreenshotBoundaryFragmentOrigin>/);
+  assert.match(spec, /originClass: "direct-field"/);
+  assert.match(spec, /"known-nested-field"/);
+  assert.match(spec, /"unknown-nested-field"/);
+  assert.match(spec, /fieldOrPathFamily/);
+  assert.match(spec, /riskClass/);
+  assert.match(spec, /contentKind/);
+  assert.match(spec, /screenshotBoundaryLengthFamily\(value\)/);
+  assert.match(spec, /buildScreenshotBoundaryPolicyTable/);
+  assert.match(boundaryPolicy, /decideScreenshotBoundaryPolicy/);
+  assert.match(boundaryPolicy, /buildScreenshotBoundaryPolicyTable/);
+  assert.match(spec, /provenanceBoundArbitraryPresentationUtilityPattern/);
+  assert.match(boundaryPolicy, /attributeNamePatternSource/);
+  assert.doesNotMatch(boundaryPolicy, /exactArbitraryPresentationUtilityTokens/);
+  assert.doesNotMatch(
+    spec,
+    /element\.closest\(\s*['"]main\[data-s232e3-answer-review-entry/,
+  );
   assert.match(spec, /exactContentAttributeNames\.has/);
-  assert.match(spec, /!unrestrictedFragments\.has\(value\)/);
-  assert.match(spec, /relation: "unclassified-account-choice-digit"/);
+  assert.doesNotMatch(spec, /unrestrictedFragments|sensitiveFragments/);
+  assert.doesNotMatch(spec, /unrestricted-account-content/);
   assert.match(spec, /referencesAnyItemId\(window\.location\.href/);
   assert.match(
     spec,
@@ -749,9 +764,12 @@ test("S232H.2 evidence is privacy-bounded synthetic data and directly compared w
   );
   assert.match(
     spec,
-    /const policyDecision = provenanceBoundPolicyTable\[policyKey\]/,
+    /const policyDecision =\s*screenshotBoundaryPolicyTable\[policyKey\]/,
   );
-  assert.match(spec, /if \(policyDecision !== false\)/);
+  assert.match(spec, /if \(policyDecision\?\.block !== false\)/);
+  assert.match(spec, /serializedPolicySchema\.hardBlockPriority\.find/);
+  assert.match(spec, /serializedPolicySchema\.positiveEvidencePriority\.find/);
+  assert.doesNotMatch(spec, /if \(!sourceItemIds\)\s*return/);
   assert.match(spec, /"semantic-text"/);
   assert.match(spec, /"content-attribute"/);
   assert.match(spec, /"structural-reference"/);
@@ -760,14 +778,14 @@ test("S232H.2 evidence is privacy-bounded synthetic data and directly compared w
   assert.match(spec, /"background-reference"/);
   assert.match(spec, /name === "tabindex"/);
   assert.match(spec, /name === "rows"/);
-  assert.match(spec, /data-s232e3-answer-review-entry/);
   assert.match(spec, /aria-valuetext/);
   assert.match(spec, /aria-valuenow/);
   assert.match(
     spec,
     /attribute\.name\.toLowerCase\(\) === "aria-valuenow"[\s\S]*?"progressbar"[\s\S]*?\? "structural-reference"/,
   );
-  assert.match(spec, /semanticAnswerLabel/);
+  assert.match(spec, /semanticLabelPatternSources/);
+  assert.match(spec, /const semanticLabel =/);
   assert.match(spec, /for \(const identitySurface of await identity\.all\(\)\)/);
   assert.doesNotMatch(spec, /identity\.count\(\)\) === 1/);
   assert.match(
@@ -789,14 +807,23 @@ test("S232H.2 evidence is privacy-bounded synthetic data and directly compared w
   assert.match(spec, /semanticContextParts\.push\(semanticSurfaceText\)/);
   assert.match(spec, /root instanceof ShadowRoot[\s\S]*?CSS\.escape\(id\)/);
   assert.match(spec, /structuralCollisionSchema/);
-  assert.match(spec, /return "instrumentation"/);
+  assert.match(spec, /return "instrumentation-syntax"/);
+  assert.match(spec, /return "progress-aria-syntax"/);
+  assert.match(spec, /return "id-reference-syntax"/);
+  assert.match(spec, /return "svg-geometry"/);
   assert.match(spec, /return "none"/);
   assert.match(spec, /incidentalOrdinalOrCounter/);
   assert.match(spec, /exactSyntheticCalculatorFormSelector/);
   assert.match(spec, /exactSyntheticFormFixtures/);
+  const syntheticFormFixtureBlock = spec.slice(
+    spec.indexOf("const exactSyntheticFormFixtures"),
+    spec.indexOf("];", spec.indexOf("const exactSyntheticFormFixtures")) + 2,
+  );
+  assert.match(syntheticFormFixtureBlock, /exactSyntheticCalculatorFormSelector/);
+  assert.doesNotMatch(syntheticFormFixtureBlock, /input\[type="date"\]/);
   assert.match(spec, /normalizedSyntheticFormFixtures\.some/);
   assert.match(spec, /fixture\.values\.has\(normalized\)/);
-  assert.match(spec, /\[element\.value, selectedText\]/);
+  assert.match(spec, /\{ value: element\.value, kind: "select-value" as const \}/);
   const testUseBlock = spec.slice(
     spec.indexOf("test.use({"),
     spec.indexOf("});", spec.indexOf("test.use({")) + 3,
@@ -807,6 +834,11 @@ test("S232H.2 evidence is privacy-bounded synthetic data and directly compared w
   assert.match(spec, /test\.describe\.configure\(\{ timeout: 1_500_000, retries: 0 \}\)/);
   assert.match(spec, /metadata-only-observation=/);
   assert.match(spec, /S232H2_SCREENSHOT_BOUNDARY_OPEN/);
+  assert.match(spec, /S232H2_PRIVACY_PREFLIGHT_OPEN/);
+  assert.match(spec, /preflightCandidateCount === 25/);
+  assert.match(spec, /preflightCheckCount === 25/);
+  assert.match(spec, /preflightBlockerCount === 0/);
+  assert.match(spec, /preflightAccountSnapshotStable/);
   assert.match(spec, /blockingBuckets/);
   assert.match(spec, /fragmentFamily/);
   assert.match(spec, /maskedLength/);
@@ -814,11 +846,16 @@ test("S232H.2 evidence is privacy-bounded synthetic data and directly compared w
   assert.match(spec, /provenanceFilteredTextHitCount/);
   assert.match(spec, /provenanceFilteredReferenceHitCount/);
   assert.doesNotMatch(spec, /normalizedFragments\.filter\([^)]*length/);
+  assert.doesNotMatch(
+    boundaryPolicy,
+    /if\s*\([^)]*(?:length|lengthFamily)[^)]*<=\s*7[^)]*\)\s*return\s*\{\s*block:\s*false/i,
+  );
   assert.doesNotMatch(spec, /unknown-key.*(?:allow|ignore)/i);
   assert.match(
     spec,
-    /await assertScreenshotDataBoundary\(\);\s*const buffer = await page\.screenshot\([\s\S]*?await assertScreenshotDataBoundary\(\);\s*boundary\.captureCount/,
+    /await assertScreenshotDataBoundary\(\);\s*if \(options\.preflight\) return null;\s*const buffer = await page\.screenshot\([\s\S]*?await assertScreenshotDataBoundary\(\);\s*boundary\.captureCount/,
   );
+  assert.equal([...spec.matchAll(/page\.screenshot\(/g)].length, 1);
   assert.match(
     spec,
     /const finalAccountAudit = await auditSyntheticAccount[\s\S]*?accountSnapshotStable[\s\S]*?for \(const screenshot of \[\.\.\.baselineScreenshots, \.\.\.afterScreenshots\]\)[\s\S]*?await writeFile/,
