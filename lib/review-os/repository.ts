@@ -2,7 +2,10 @@ import "server-only";
 
 import crypto from "node:crypto";
 
-import { DEV_SMOKE_AUTH_EMAIL, isDevSmokeAuthEnabled } from "@/lib/auth/session";
+import {
+  DEV_SMOKE_AUTH_EMAIL,
+  isDevSmokeAuthEnabled,
+} from "@/lib/auth/session";
 import {
   assertSupabaseOperation,
   getSupabasePersistenceClient,
@@ -34,9 +37,15 @@ import type {
   TaxonomyClassificationCandidate,
 } from "@/lib/review-os/types";
 import type { AppraisalMode } from "@/lib/review-os/appraisal";
-import { sanitizeDerivedMetadata, sanitizeLearningSignalMetadata } from "@/lib/review-os/data-boundary";
+import {
+  sanitizeDerivedMetadata,
+  sanitizeLearningSignalMetadata,
+} from "@/lib/review-os/data-boundary";
 import { isConceptNodeCandidate } from "@/lib/review-os/concept-node-mapping";
-import { toStringArray, toTaxonomyCandidates } from "@/lib/review-os/taxonomy-candidates";
+import {
+  toStringArray,
+  toTaxonomyCandidates,
+} from "@/lib/review-os/taxonomy-candidates";
 
 function createUuid() {
   return crypto.randomUUID();
@@ -49,27 +58,45 @@ function hashPayload(value: string) {
 export function normalizePostgrestTimestamp(value: unknown): string {
   const rawValue = String(value);
   const timestamp = Date.parse(rawValue);
-  return Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : rawValue;
+  return Number.isFinite(timestamp)
+    ? new Date(timestamp).toISOString()
+    : rawValue;
 }
 
-function toConceptReviewCard(value: unknown): ConceptReviewCardPayload | undefined {
+function toConceptReviewCard(
+  value: unknown,
+): ConceptReviewCardPayload | undefined {
   if (!value || typeof value !== "object") return undefined;
   const row = value as Record<string, unknown>;
   if (typeof row.coreRule !== "string") return undefined;
   return {
-    sourceType: typeof row.sourceType === "string" ? row.sourceType : "first_ox",
-    examMode: typeof row.examMode === "string" ? row.examMode : "감정평가사 1차",
+    sourceType:
+      typeof row.sourceType === "string" ? row.sourceType : "first_ox",
+    examMode:
+      typeof row.examMode === "string" ? row.examMode : "감정평가사 1차",
     subject: typeof row.subject === "string" ? row.subject : "감정평가사 1차",
-    statement_id: typeof row.statement_id === "string" ? row.statement_id : null,
+    statement_id:
+      typeof row.statement_id === "string" ? row.statement_id : null,
     trapWords: toStringArray(row.trapWords),
     coreRule: row.coreRule,
-    minimalExplanation: typeof row.minimalExplanation === "string" ? row.minimalExplanation : "헷갈린 지점 1개를 확인합니다.",
-    examTrapExplanation: typeof row.examTrapExplanation === "string" ? row.examTrapExplanation : "표현 하나가 바뀌면 판단이 달라질 수 있습니다.",
-    nextReviewAction: typeof row.nextReviewAction === "string" ? row.nextReviewAction : "근거 1줄로 다시 판단합니다.",
+    minimalExplanation:
+      typeof row.minimalExplanation === "string"
+        ? row.minimalExplanation
+        : "헷갈린 지점 1개를 확인합니다.",
+    examTrapExplanation:
+      typeof row.examTrapExplanation === "string"
+        ? row.examTrapExplanation
+        : "표현 하나가 바뀌면 판단이 달라질 수 있습니다.",
+    nextReviewAction:
+      typeof row.nextReviewAction === "string"
+        ? row.nextReviewAction
+        : "근거 1줄로 다시 판단합니다.",
     reviewStage: typeof row.reviewStage === "string" ? row.reviewStage : "O/X",
     dueAt: typeof row.dueAt === "string" ? row.dueAt : new Date().toISOString(),
-    topic_candidate: typeof row.topic_candidate === "string" ? row.topic_candidate : null,
-    concept_candidate: typeof row.concept_candidate === "string" ? row.concept_candidate : null,
+    topic_candidate:
+      typeof row.topic_candidate === "string" ? row.topic_candidate : null,
+    concept_candidate:
+      typeof row.concept_candidate === "string" ? row.concept_candidate : null,
     official_answer_authority: false,
   };
 }
@@ -82,14 +109,22 @@ function toConceptNodeCandidateFromPayload(...payloads: unknown[]) {
   for (const payload of payloads) {
     if (isConceptNodeCandidate(payload)) return payload;
     if (!isRecord(payload)) continue;
-    if (isConceptNodeCandidate(payload.concept_node_candidate)) return payload.concept_node_candidate;
-    if (isConceptNodeCandidate(payload.conceptNodeCandidate)) return payload.conceptNodeCandidate;
+    if (isConceptNodeCandidate(payload.concept_node_candidate))
+      return payload.concept_node_candidate;
+    if (isConceptNodeCandidate(payload.conceptNodeCandidate))
+      return payload.conceptNodeCandidate;
     const captureNoteV2 = payload.capture_note_engine_v2;
-    if (isRecord(captureNoteV2) && isConceptNodeCandidate(captureNoteV2.concept_node_candidate)) {
+    if (
+      isRecord(captureNoteV2) &&
+      isConceptNodeCandidate(captureNoteV2.concept_node_candidate)
+    ) {
       return captureNoteV2.concept_node_candidate;
     }
     const captureNoteV1 = payload.capture_note_engine_v1;
-    if (isRecord(captureNoteV1) && isConceptNodeCandidate(captureNoteV1.concept_node_candidate)) {
+    if (
+      isRecord(captureNoteV1) &&
+      isConceptNodeCandidate(captureNoteV1.concept_node_candidate)
+    ) {
       return captureNoteV1.concept_node_candidate;
     }
   }
@@ -135,9 +170,17 @@ function isAllowlisted(email: string | null) {
   return allowList.includes(email.toLowerCase());
 }
 
-function mapAccess(row: Record<string, unknown> | null, email: string | null): AccessState {
-  const inviteStatus = (typeof row?.invite_status === "string" ? row.invite_status : "pending") as InviteStatus;
-  const entitlementTier = typeof row?.entitlement_tier === "string" ? row.entitlement_tier : "free_trial";
+function mapAccess(
+  row: Record<string, unknown> | null,
+  email: string | null,
+): AccessState {
+  const inviteStatus = (
+    typeof row?.invite_status === "string" ? row.invite_status : "pending"
+  ) as InviteStatus;
+  const entitlementTier =
+    typeof row?.entitlement_tier === "string"
+      ? row.entitlement_tier
+      : "free_trial";
   return {
     allowed: inviteStatus === "invited" || inviteStatus === "active",
     inviteStatus,
@@ -146,7 +189,9 @@ function mapAccess(row: Record<string, unknown> | null, email: string | null): A
   };
 }
 
-function mapStudyProfile(row: Record<string, unknown> | null): StudyProfile | null {
+function mapStudyProfile(
+  row: Record<string, unknown> | null,
+): StudyProfile | null {
   if (!row) return null;
   return {
     userId: String(row.user_id),
@@ -158,27 +203,52 @@ function mapStudyProfile(row: Record<string, unknown> | null): StudyProfile | nu
   };
 }
 
-function mapWrongAnswerItem(row: Record<string, unknown>): WrongAnswerItemRecord {
+function mapWrongAnswerItem(
+  row: Record<string, unknown>,
+): WrongAnswerItemRecord {
   return {
     id: String(row.id),
     userId: String(row.user_id),
     examName: String(row.exam_name),
     subjectLabel: String(row.subject_label),
     sourceType: String(row.source_type) as WrongAnswerItemRecord["sourceType"],
-    sourceLabel: typeof row.source_label === "string" ? row.source_label : undefined,
-    problemTitle: typeof row.problem_title === "string" ? row.problem_title : undefined,
-    problemIdentifier: typeof row.problem_identifier === "string" ? row.problem_identifier : undefined,
-    rawQuestionText: typeof row.raw_question_text === "string" ? row.raw_question_text : undefined,
-    rawAnswerText: typeof row.raw_answer_text === "string" ? row.raw_answer_text : undefined,
+    sourceLabel:
+      typeof row.source_label === "string" ? row.source_label : undefined,
+    problemTitle:
+      typeof row.problem_title === "string" ? row.problem_title : undefined,
+    problemIdentifier:
+      typeof row.problem_identifier === "string"
+        ? row.problem_identifier
+        : undefined,
+    rawQuestionText:
+      typeof row.raw_question_text === "string"
+        ? row.raw_question_text
+        : undefined,
+    rawAnswerText:
+      typeof row.raw_answer_text === "string" ? row.raw_answer_text : undefined,
     correctAnswer: String(row.correct_answer),
     userAnswer: String(row.user_answer),
-    userReasonText: typeof row.user_reason_text === "string" ? row.user_reason_text : undefined,
-    userReasonPreset: typeof row.user_reason_preset === "string" ? row.user_reason_preset : undefined,
+    userReasonText:
+      typeof row.user_reason_text === "string"
+        ? row.user_reason_text
+        : undefined,
+    userReasonPreset:
+      typeof row.user_reason_preset === "string"
+        ? row.user_reason_preset
+        : undefined,
     confidence: String(row.confidence) as WrongAnswerItemRecord["confidence"],
-    timeSpentSeconds: typeof row.time_spent_seconds === "number" ? row.time_spent_seconds : null,
+    timeSpentSeconds:
+      typeof row.time_spent_seconds === "number"
+        ? row.time_spent_seconds
+        : null,
     dedupeKey: String(row.dedupe_key),
-    processingStatus: String(row.processing_status) as WrongAnswerItemRecord["processingStatus"],
-    rawPayload: typeof row.raw_payload === "object" && row.raw_payload ? (row.raw_payload as Record<string, unknown>) : {},
+    processingStatus: String(
+      row.processing_status,
+    ) as WrongAnswerItemRecord["processingStatus"],
+    rawPayload:
+      typeof row.raw_payload === "object" && row.raw_payload
+        ? (row.raw_payload as Record<string, unknown>)
+        : {},
     derivedPayload:
       typeof row.derived_payload === "object" && row.derived_payload
         ? (row.derived_payload as Record<string, unknown>)
@@ -188,7 +258,9 @@ function mapWrongAnswerItem(row: Record<string, unknown>): WrongAnswerItemRecord
   };
 }
 
-function mapWrongAnswerNote(row: Record<string, unknown> | null): WrongAnswerNoteRecord | null {
+function mapWrongAnswerNote(
+  row: Record<string, unknown> | null,
+): WrongAnswerNoteRecord | null {
   if (!row) return null;
   return {
     id: String(row.id),
@@ -197,7 +269,9 @@ function mapWrongAnswerNote(row: Record<string, unknown> | null): WrongAnswerNot
     keyDistinction: String(row.key_distinction),
     reviewCheckpoint: String(row.review_checkpoint),
     nextTryTip: String(row.next_try_tip),
-    generationSource: String(row.generation_source) as WrongAnswerNoteRecord["generationSource"],
+    generationSource: String(
+      row.generation_source,
+    ) as WrongAnswerNoteRecord["generationSource"],
     createdAt: String(row.created_at),
   };
 }
@@ -209,14 +283,18 @@ function mapWrongAnswerTag(row: Record<string, unknown>): WrongAnswerTagRecord {
     topicTag: String(row.topic_tag),
     mistakeType: String(row.mistake_type),
     taskType: String(row.task_type),
-    classifierSource: String(row.classifier_source) as WrongAnswerTagRecord["classifierSource"],
+    classifierSource: String(
+      row.classifier_source,
+    ) as WrongAnswerTagRecord["classifierSource"],
     confidence: Number(row.confidence ?? 0),
     recurrenceCandidate: Boolean(row.recurrence_candidate),
     createdAt: String(row.created_at),
   };
 }
 
-function mapRecurrence(row: Record<string, unknown> | null): RecurrenceFeatureRecord | null {
+function mapRecurrence(
+  row: Record<string, unknown> | null,
+): RecurrenceFeatureRecord | null {
   if (!row) return null;
   return {
     id: String(row.id),
@@ -242,12 +320,16 @@ function mapActionSeed(row: Record<string, unknown>): ActionSeedRecord {
     priorityScore: Number(row.priority_score ?? 0),
     renderedText: String(row.rendered_text),
     rawPayload:
-      typeof row.raw_payload === "object" && row.raw_payload ? (row.raw_payload as Record<string, unknown>) : {},
+      typeof row.raw_payload === "object" && row.raw_payload
+        ? (row.raw_payload as Record<string, unknown>)
+        : {},
     createdAt: String(row.created_at),
   };
 }
 
-function mapWeeklySummary(row: Record<string, unknown> | null): WeeklyLearningSummaryRecord | null {
+function mapWeeklySummary(
+  row: Record<string, unknown> | null,
+): WeeklyLearningSummaryRecord | null {
   if (!row) return null;
   return {
     id: String(row.id),
@@ -271,18 +353,24 @@ function mapStudyLog(row: Record<string, unknown>): StudyLogRecord {
     subject: String(row.subject),
     studyType: String(row.study_type) as StudyLogRecord["studyType"],
     sourceLabel: String(row.source_label),
-    timeSpentMinutes: typeof row.time_spent_minutes === "number" ? row.time_spent_minutes : null,
+    timeSpentMinutes:
+      typeof row.time_spent_minutes === "number"
+        ? row.time_spent_minutes
+        : null,
     notUnderstood: String(row.not_understood),
     revisitNeeded: String(row.revisit_needed),
     confidence: String(row.confidence) as StudyLogRecord["confidence"],
-    taxonomyNodeId: typeof row.taxonomy_node_id === "string" ? row.taxonomy_node_id : null,
+    taxonomyNodeId:
+      typeof row.taxonomy_node_id === "string" ? row.taxonomy_node_id : null,
     taxonomyCandidates,
     taxonomyClassificationStatus:
-      row.taxonomy_classification_status === "ai_suggested" || row.taxonomy_classification_status === "human_verified"
+      row.taxonomy_classification_status === "ai_suggested" ||
+      row.taxonomy_classification_status === "human_verified"
         ? row.taxonomy_classification_status
         : "needs_review",
-    taxonomyClassificationConfidence:
-      toNullableNumber(row.taxonomy_classification_confidence),
+    taxonomyClassificationConfidence: toNullableNumber(
+      row.taxonomy_classification_confidence,
+    ),
     createdAt: String(row.created_at),
     updatedAt: String(row.updated_at),
   };
@@ -296,7 +384,9 @@ function mapUsageEvent(row: Record<string, unknown>): UsageEventRecord {
     entityType: typeof row.entity_type === "string" ? row.entity_type : null,
     entityId: typeof row.entity_id === "string" ? row.entity_id : null,
     metadataJson:
-      typeof row.metadata_json === "object" && row.metadata_json ? (row.metadata_json as Record<string, unknown>) : {},
+      typeof row.metadata_json === "object" && row.metadata_json
+        ? (row.metadata_json as Record<string, unknown>)
+        : {},
     createdAt: String(row.created_at),
   };
 }
@@ -307,7 +397,9 @@ function mapFeedbackItem(row: Record<string, unknown>): FeedbackItemRecord {
     userId: String(row.user_id),
     route: String(row.route),
     pageContext:
-      typeof row.page_context === "object" && row.page_context ? (row.page_context as Record<string, unknown>) : {},
+      typeof row.page_context === "object" && row.page_context
+        ? (row.page_context as Record<string, unknown>)
+        : {},
     message: String(row.message),
     createdAt: String(row.created_at),
   };
@@ -326,7 +418,9 @@ function mapReviewQueueCard(
     typeof queueRow.derived_payload === "object" && queueRow.derived_payload
       ? (queueRow.derived_payload as Record<string, unknown>)
       : {};
-  const conceptCard = toConceptReviewCard(item.derivedPayload?.concept_card ?? item.rawPayload?.concept_card);
+  const conceptCard = toConceptReviewCard(
+    item.derivedPayload?.concept_card ?? item.rawPayload?.concept_card,
+  );
   const conceptNodeCandidate = toConceptNodeCandidateFromPayload(
     derivedPayload,
     item.derivedPayload,
@@ -338,10 +432,15 @@ function mapReviewQueueCard(
     itemId: item.id,
     examName: item.examName,
     subjectLabel: item.subjectLabel,
-    problemTitle: item.problemTitle ?? item.problemIdentifier ?? "감평 기록 항목",
-    topicTag: tag?.topicTag ?? String(derivedPayload.topicTag ?? item.subjectLabel),
-    mistakeType: tag?.mistakeType ?? String(derivedPayload.mistakeType ?? "반복 실수"),
-    reviewReason: String(rawPayload.reviewReason ?? "오늘 다시 볼 필요가 큰 감평 항목입니다."),
+    problemTitle:
+      item.problemTitle ?? item.problemIdentifier ?? "감평 기록 항목",
+    topicTag:
+      tag?.topicTag ?? String(derivedPayload.topicTag ?? item.subjectLabel),
+    mistakeType:
+      tag?.mistakeType ?? String(derivedPayload.mistakeType ?? "반복 실수"),
+    reviewReason: String(
+      rawPayload.reviewReason ?? "오늘 다시 볼 필요가 큰 감평 항목입니다.",
+    ),
     priorityScore: Number(queueRow.priority_score ?? 0),
     dueAt: String(rawPayload.dueAt ?? queueRow.created_at),
     recurrenceCount: Number(derivedPayload.recurrenceCount ?? 1),
@@ -355,12 +454,17 @@ function mapReviewQueueCard(
     itemCreatedAt: item.createdAt,
     conceptCard,
     conceptNodeCandidate,
-    clozeCandidate: typeof item.derivedPayload?.cloze_candidate === "string" ? item.derivedPayload.cloze_candidate : conceptCard?.trapWords[0] ?? null,
+    clozeCandidate:
+      typeof item.derivedPayload?.cloze_candidate === "string"
+        ? item.derivedPayload.cloze_candidate
+        : (conceptCard?.trapWords[0] ?? null),
     rawQuestionText: item.rawQuestionText ?? null,
   };
 }
 
-function mapLearningSignalEvent(row: Record<string, unknown>): LearningSignalEventRecord {
+function mapLearningSignalEvent(
+  row: Record<string, unknown>,
+): LearningSignalEventRecord {
   return {
     id: String(row.id),
     userId: String(row.user_id),
@@ -371,12 +475,17 @@ function mapLearningSignalEvent(row: Record<string, unknown>): LearningSignalEve
     relatedFormulas: toStringArray(row.related_formulas),
     nextTaskType: String(row.next_task_type),
     nextTask: String(row.next_task),
-    metadataJson: typeof row.metadata_json === "object" && row.metadata_json ? (row.metadata_json as Record<string, unknown>) : {},
+    metadataJson:
+      typeof row.metadata_json === "object" && row.metadata_json
+        ? (row.metadata_json as Record<string, unknown>)
+        : {},
     createdAt: String(row.created_at),
   };
 }
 
-function getExamModeLabel(mode: AppraisalMode): LearningSignalEventRecord["examMode"] {
+function getExamModeLabel(
+  mode: AppraisalMode,
+): LearningSignalEventRecord["examMode"] {
   return mode === "second" ? "감정평가사 2차" : "감정평가사 1차";
 }
 
@@ -390,12 +499,18 @@ export class ReviewOsRepository {
       .eq("id", queueId)
       .eq("exam_id", "wrong_answer_os")
       .maybeSingle();
-    assertSupabaseOperation("review-os.getReviewQueueItemContext.queue", queueResult);
+    assertSupabaseOperation(
+      "review-os.getReviewQueueItemContext.queue",
+      queueResult,
+    );
 
     const queueRow = queueResult.data as Record<string, unknown> | null;
     if (!queueRow) return null;
 
-    const itemId = typeof queueRow.source_submission_id === "string" ? queueRow.source_submission_id : null;
+    const itemId =
+      typeof queueRow.source_submission_id === "string"
+        ? queueRow.source_submission_id
+        : null;
     if (!itemId) return null;
 
     const item = await this.getWrongAnswerItem(userId, itemId);
@@ -425,7 +540,10 @@ export class ReviewOsRepository {
       .eq("source_submission_id", item.id)
       .eq("status", "pending")
       .limit(1);
-    assertSupabaseOperation("review-os.createFollowUpReviewQueueEntry.selectPending", existingPendingResult);
+    assertSupabaseOperation(
+      "review-os.createFollowUpReviewQueueEntry.selectPending",
+      existingPendingResult,
+    );
     if ((existingPendingResult.data ?? []).length > 0) return;
 
     const now = new Date().toISOString();
@@ -452,20 +570,32 @@ export class ReviewOsRepository {
       created_at: now,
       updated_at: now,
     });
-    assertSupabaseOperation("review-os.createFollowUpReviewQueueEntry.insert", result);
+    assertSupabaseOperation(
+      "review-os.createFollowUpReviewQueueEntry.insert",
+      result,
+    );
   }
 
-  async ensureAccess(userId: string, email: string | null): Promise<AccessState> {
+  async ensureAccess(
+    userId: string,
+    email: string | null,
+  ): Promise<AccessState> {
     const client = getUserClient(userId);
     const existingProfileResult = await client
       .from("profiles")
       .select("user_id, email, invite_status, entitlement_tier")
       .eq("user_id", userId)
       .maybeSingle();
-    assertSupabaseOperation("review-os.ensureAccess.selectExistingProfile", existingProfileResult);
+    assertSupabaseOperation(
+      "review-os.ensureAccess.selectExistingProfile",
+      existingProfileResult,
+    );
 
     const now = new Date().toISOString();
-    const existingProfile = existingProfileResult.data as Record<string, unknown> | null;
+    const existingProfile = existingProfileResult.data as Record<
+      string,
+      unknown
+    > | null;
 
     if (existingProfile) {
       // Routine access checks must never reset invite/entitlement state for existing users.
@@ -476,7 +606,10 @@ export class ReviewOsRepository {
           updated_at: now,
         })
         .eq("user_id", userId);
-      assertSupabaseOperation("review-os.ensureAccess.updateExistingProfile", updateResult);
+      assertSupabaseOperation(
+        "review-os.ensureAccess.updateExistingProfile",
+        updateResult,
+      );
     } else {
       // First insert decides initial entitlement; later ensureAccess calls only refresh email/updated_at.
       const insertResult = await client.from("profiles").insert({
@@ -488,7 +621,10 @@ export class ReviewOsRepository {
       });
       // Concurrent first-time requests can race on user_id uniqueness; keep existing row and continue.
       if (insertResult.error && insertResult.error.code !== "23505") {
-        assertSupabaseOperation("review-os.ensureAccess.insertProfile", insertResult);
+        assertSupabaseOperation(
+          "review-os.ensureAccess.insertProfile",
+          insertResult,
+        );
       }
     }
 
@@ -497,8 +633,31 @@ export class ReviewOsRepository {
       .select("user_id, email, invite_status, entitlement_tier")
       .eq("user_id", userId)
       .maybeSingle();
-    assertSupabaseOperation("review-os.ensureAccess.selectProfile", profileResult);
-    return mapAccess(profileResult.data as Record<string, unknown> | null, email);
+    assertSupabaseOperation(
+      "review-os.ensureAccess.selectProfile",
+      profileResult,
+    );
+    return mapAccess(
+      profileResult.data as Record<string, unknown> | null,
+      email,
+    );
+  }
+
+  async readAccess(userId: string, email: string | null): Promise<AccessState> {
+    const client = getUserClient(userId);
+    const profileResult = await client
+      .from("profiles")
+      .select("user_id, email, invite_status, entitlement_tier")
+      .eq("user_id", userId)
+      .maybeSingle();
+    assertSupabaseOperation(
+      "review-os.readAccess.selectProfile",
+      profileResult,
+    );
+    return mapAccess(
+      profileResult.data as Record<string, unknown> | null,
+      email,
+    );
   }
 
   async getStudyProfile(userId: string) {
@@ -512,7 +671,10 @@ export class ReviewOsRepository {
     return mapStudyProfile(result.data as Record<string, unknown> | null);
   }
 
-  async upsertStudyProfile(userId: string, input: Omit<StudyProfile, "userId" | "createdAt" | "updatedAt">) {
+  async upsertStudyProfile(
+    userId: string,
+    input: Omit<StudyProfile, "userId" | "createdAt" | "updatedAt">,
+  ) {
     const client = getUserClient(userId);
     const result = await client.from("study_profiles").upsert(
       {
@@ -536,7 +698,9 @@ export class ReviewOsRepository {
       .eq("user_id", userId)
       .maybeSingle();
     assertSupabaseOperation("review-os.getProfileTier", result);
-    return (result.data?.entitlement_tier as string | undefined) ?? "free_trial";
+    return (
+      (result.data?.entitlement_tier as string | undefined) ?? "free_trial"
+    );
   }
 
   async countMonthlyWrongAnswers(userId: string, monthStartIso: string) {
@@ -573,7 +737,9 @@ export class ReviewOsRepository {
       .eq("dedupe_key", dedupeKey)
       .maybeSingle();
     assertSupabaseOperation("review-os.findExistingByDedupe", result);
-    return result.data ? mapWrongAnswerItem(result.data as Record<string, unknown>) : null;
+    return result.data
+      ? mapWrongAnswerItem(result.data as Record<string, unknown>)
+      : null;
   }
 
   async insertWrongAnswerItem(
@@ -621,7 +787,9 @@ export class ReviewOsRepository {
       .eq("id", itemId)
       .maybeSingle();
     assertSupabaseOperation("review-os.getWrongAnswerItem", result);
-    return result.data ? mapWrongAnswerItem(result.data as Record<string, unknown>) : null;
+    return result.data
+      ? mapWrongAnswerItem(result.data as Record<string, unknown>)
+      : null;
   }
 
   async listWrongAnswerItems(userId: string, limit = 20) {
@@ -633,7 +801,9 @@ export class ReviewOsRepository {
       .order("created_at", { ascending: false })
       .limit(limit);
     assertSupabaseOperation("review-os.listWrongAnswerItems", result);
-    return ((result.data ?? []) as Record<string, unknown>[]).map(mapWrongAnswerItem);
+    return ((result.data ?? []) as Record<string, unknown>[]).map(
+      mapWrongAnswerItem,
+    );
   }
 
   async insertWrongAnswerNote(
@@ -694,12 +864,17 @@ export class ReviewOsRepository {
       .eq("wrong_answer_item_id", itemId)
       .order("created_at", { ascending: false });
     assertSupabaseOperation("review-os.listWrongAnswerTags", result);
-    return ((result.data ?? []) as Record<string, unknown>[]).map(mapWrongAnswerTag);
+    return ((result.data ?? []) as Record<string, unknown>[]).map(
+      mapWrongAnswerTag,
+    );
   }
 
   async upsertRecurrenceFeature(
     userId: string,
-    input: Pick<RecurrenceFeatureRecord, "examName" | "subjectLabel" | "topicTag" | "mistakeType">,
+    input: Pick<
+      RecurrenceFeatureRecord,
+      "examName" | "subjectLabel" | "topicTag" | "mistakeType"
+    >,
   ) {
     const client = getUserClient(userId);
     const existingResult = await client
@@ -711,7 +886,10 @@ export class ReviewOsRepository {
       .eq("topic_tag", input.topicTag)
       .eq("mistake_type", input.mistakeType)
       .maybeSingle();
-    assertSupabaseOperation("review-os.upsertRecurrenceFeature.select", existingResult);
+    assertSupabaseOperation(
+      "review-os.upsertRecurrenceFeature.select",
+      existingResult,
+    );
 
     const now = new Date().toISOString();
     if (existingResult.data) {
@@ -721,12 +899,16 @@ export class ReviewOsRepository {
         .update({
           recurrence_count: nextCount,
           last_seen_at: now,
-          risk_level: nextCount >= 3 ? "high" : nextCount >= 2 ? "watch" : "stable",
+          risk_level:
+            nextCount >= 3 ? "high" : nextCount >= 2 ? "watch" : "stable",
           updated_at: now,
         })
         .eq("id", existingResult.data.id)
         .eq("user_id", userId);
-      assertSupabaseOperation("review-os.upsertRecurrenceFeature.update", updateResult);
+      assertSupabaseOperation(
+        "review-os.upsertRecurrenceFeature.update",
+        updateResult,
+      );
     } else {
       const insertResult = await client.from("recurrence_features").insert({
         id: createUuid(),
@@ -741,10 +923,19 @@ export class ReviewOsRepository {
         created_at: now,
         updated_at: now,
       });
-      assertSupabaseOperation("review-os.upsertRecurrenceFeature.insert", insertResult);
+      assertSupabaseOperation(
+        "review-os.upsertRecurrenceFeature.insert",
+        insertResult,
+      );
     }
 
-    return this.getRecurrenceFeature(userId, input.examName, input.subjectLabel, input.topicTag, input.mistakeType);
+    return this.getRecurrenceFeature(
+      userId,
+      input.examName,
+      input.subjectLabel,
+      input.topicTag,
+      input.mistakeType,
+    );
   }
 
   async getRecurrenceFeature(
@@ -816,10 +1007,7 @@ export class ReviewOsRepository {
       offset < maxScannedRows && cards.length < requestedLimit;
       offset += scanPageSize
     ) {
-      const rangeEnd = Math.min(
-        offset + scanPageSize - 1,
-        maxScannedRows - 1,
-      );
+      const rangeEnd = Math.min(offset + scanPageSize - 1, maxScannedRows - 1);
       const queueResult = await client
         .from("review_queue_items")
         .select("*")
@@ -869,12 +1057,14 @@ export class ReviewOsRepository {
           .in("wrong_answer_item_id", itemIds);
         assertSupabaseOperation("review-os.listReviewQueue.tags", tagsResult);
         const primaryTagByItemId = new Map<string, WrongAnswerTagRecord>();
-        ((tagsResult.data ?? []) as Record<string, unknown>[]).forEach((row) => {
-          const tag = mapWrongAnswerTag(row);
-          if (!primaryTagByItemId.has(tag.wrongAnswerItemId)) {
-            primaryTagByItemId.set(tag.wrongAnswerItemId, tag);
-          }
-        });
+        ((tagsResult.data ?? []) as Record<string, unknown>[]).forEach(
+          (row) => {
+            const tag = mapWrongAnswerTag(row);
+            if (!primaryTagByItemId.has(tag.wrongAnswerItemId)) {
+              primaryTagByItemId.set(tag.wrongAnswerItemId, tag);
+            }
+          },
+        );
 
         for (const row of queueRows) {
           const itemId =
@@ -927,7 +1117,10 @@ export class ReviewOsRepository {
     assertSupabaseOperation("review-os.completeReviewQueueItem", result);
   }
 
-  async getWrongAnswerDetail(userId: string, itemId: string): Promise<WrongAnswerDetail | null> {
+  async getWrongAnswerDetail(
+    userId: string,
+    itemId: string,
+  ): Promise<WrongAnswerDetail | null> {
     const item = await this.getWrongAnswerItem(userId, itemId);
     if (!item) return null;
     const [note, tags, reviewQueue] = await Promise.all([
@@ -939,7 +1132,13 @@ export class ReviewOsRepository {
     const recurrence =
       primaryTag === null
         ? null
-        : await this.getRecurrenceFeature(userId, item.examName, item.subjectLabel, primaryTag.topicTag, primaryTag.mistakeType);
+        : await this.getRecurrenceFeature(
+            userId,
+            item.examName,
+            item.subjectLabel,
+            primaryTag.topicTag,
+            primaryTag.mistakeType,
+          );
 
     return {
       item,
@@ -1013,8 +1212,10 @@ export class ReviewOsRepository {
       confidence: input.confidence,
       taxonomy_node_id: taxonomy?.taxonomyNodeId ?? null,
       taxonomy_candidates: taxonomy?.taxonomyCandidates ?? [],
-      taxonomy_classification_status: taxonomy?.taxonomyClassificationStatus ?? "needs_review",
-      taxonomy_classification_confidence: taxonomy?.taxonomyClassificationConfidence ?? null,
+      taxonomy_classification_status:
+        taxonomy?.taxonomyClassificationStatus ?? "needs_review",
+      taxonomy_classification_confidence:
+        taxonomy?.taxonomyClassificationConfidence ?? null,
       created_at: now,
       updated_at: now,
     });
@@ -1024,14 +1225,26 @@ export class ReviewOsRepository {
 
   async getStudyLog(userId: string, logId: string) {
     const client = getUserClient(userId);
-    const result = await client.from("study_logs").select("*").eq("user_id", userId).eq("id", logId).maybeSingle();
+    const result = await client
+      .from("study_logs")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("id", logId)
+      .maybeSingle();
     assertSupabaseOperation("review-os.getStudyLog", result);
-    return result.data ? mapStudyLog(result.data as Record<string, unknown>) : null;
+    return result.data
+      ? mapStudyLog(result.data as Record<string, unknown>)
+      : null;
   }
 
   async listStudyLogs(userId: string, mode?: "first" | "second", limit = 10) {
     const client = getUserClient(userId);
-    let query = client.from("study_logs").select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(limit);
+    let query = client
+      .from("study_logs")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(limit);
     if (mode) {
       query = query.eq("mode", mode);
     }
@@ -1040,7 +1253,10 @@ export class ReviewOsRepository {
     return ((result.data ?? []) as Record<string, unknown>[]).map(mapStudyLog);
   }
 
-  async insertActionSeed(userId: string, input: Omit<ActionSeedRecord, "id" | "userId" | "createdAt">) {
+  async insertActionSeed(
+    userId: string,
+    input: Omit<ActionSeedRecord, "id" | "userId" | "createdAt">,
+  ) {
     const client = getUserClient(userId);
     const result = await client.from("action_seeds").insert({
       id: createUuid(),
@@ -1054,7 +1270,11 @@ export class ReviewOsRepository {
     assertSupabaseOperation("review-os.insertActionSeed", result);
   }
 
-  async listActionSeeds(userId: string, sourceType?: ActionSeedRecord["sourceType"], limit = 10) {
+  async listActionSeeds(
+    userId: string,
+    sourceType?: ActionSeedRecord["sourceType"],
+    limit = 10,
+  ) {
     const client = getUserClient(userId);
     let query = client
       .from("action_seeds")
@@ -1069,10 +1289,15 @@ export class ReviewOsRepository {
 
     const result = await query;
     assertSupabaseOperation("review-os.listActionSeeds", result);
-    return ((result.data ?? []) as Record<string, unknown>[]).map(mapActionSeed);
+    return ((result.data ?? []) as Record<string, unknown>[]).map(
+      mapActionSeed,
+    );
   }
 
-  async createLearningSignalEvent(userId: string, input: LearningSignalEventInput) {
+  async createLearningSignalEvent(
+    userId: string,
+    input: LearningSignalEventInput,
+  ) {
     const client = getUserClient(userId);
     const result = await client.from("learning_signal_events").insert({
       id: createUuid(),
@@ -1089,7 +1314,11 @@ export class ReviewOsRepository {
     assertSupabaseOperation("review-os.createLearningSignalEvent", result);
   }
 
-  async createLearningSignalEventWithId(userId: string, id: string, input: LearningSignalEventInput) {
+  async createLearningSignalEventWithId(
+    userId: string,
+    id: string,
+    input: LearningSignalEventInput,
+  ) {
     const client = getUserClient(userId);
     const payload = {
       id,
@@ -1103,7 +1332,11 @@ export class ReviewOsRepository {
       next_task: input.nextTask,
       metadata_json: sanitizeLearningSignalMetadata(input.metadataJson ?? {}),
     };
-    const result = await client.from("learning_signal_events").insert(payload).select("*").maybeSingle();
+    const result = await client
+      .from("learning_signal_events")
+      .insert(payload)
+      .select("*")
+      .maybeSingle();
     if (result.error?.code === "23505") {
       const existingResult = await client
         .from("learning_signal_events")
@@ -1111,18 +1344,33 @@ export class ReviewOsRepository {
         .eq("user_id", userId)
         .eq("id", id)
         .maybeSingle();
-      assertSupabaseOperation("review-os.createLearningSignalEventWithId.selectExisting", existingResult);
+      assertSupabaseOperation(
+        "review-os.createLearningSignalEventWithId.selectExisting",
+        existingResult,
+      );
       const existing = existingResult.data as Record<string, unknown> | null;
-      if (!existing) throw new Error("calculator-routine-learning-event-dedupe-missing");
-      return { status: "deduped" as const, record: mapLearningSignalEvent(existing) };
+      if (!existing)
+        throw new Error("calculator-routine-learning-event-dedupe-missing");
+      return {
+        status: "deduped" as const,
+        record: mapLearningSignalEvent(existing),
+      };
     }
-    assertSupabaseOperation("review-os.createLearningSignalEventWithId", result);
+    assertSupabaseOperation(
+      "review-os.createLearningSignalEventWithId",
+      result,
+    );
     const record = result.data as Record<string, unknown> | null;
-    if (!record) throw new Error("calculator-routine-learning-event-insert-missing");
+    if (!record)
+      throw new Error("calculator-routine-learning-event-insert-missing");
     return { status: "saved" as const, record: mapLearningSignalEvent(record) };
   }
 
-  async listLearningSignalEvents(userId: string, mode: AppraisalMode, limit = 30) {
+  async listLearningSignalEvents(
+    userId: string,
+    mode: AppraisalMode,
+    limit = 30,
+  ) {
     const client = getUserClient(userId);
     const result = await client
       .from("learning_signal_events")
@@ -1132,7 +1380,9 @@ export class ReviewOsRepository {
       .order("created_at", { ascending: false })
       .limit(limit);
     assertSupabaseOperation("review-os.listLearningSignalEvents", result);
-    return ((result.data ?? []) as Record<string, unknown>[]).map(mapLearningSignalEvent);
+    return ((result.data ?? []) as Record<string, unknown>[]).map(
+      mapLearningSignalEvent,
+    );
   }
 
   async countLearningSignalEvents(userId: string, mode: AppraisalMode) {
@@ -1146,7 +1396,12 @@ export class ReviewOsRepository {
     return result.count ?? 0;
   }
 
-  async listRecentUsageEventsByNames(userId: string, eventNames: string[], sinceIso: string, limit = 60) {
+  async listRecentUsageEventsByNames(
+    userId: string,
+    eventNames: string[],
+    sinceIso: string,
+    limit = 60,
+  ) {
     const client = getUserClient(userId);
     const result = await client
       .from("usage_events")
@@ -1157,7 +1412,9 @@ export class ReviewOsRepository {
       .order("created_at", { ascending: false })
       .limit(limit);
     assertSupabaseOperation("review-os.listRecentUsageEventsByNames", result);
-    return ((result.data ?? []) as Record<string, unknown>[]).map(mapUsageEvent);
+    return ((result.data ?? []) as Record<string, unknown>[]).map(
+      mapUsageEvent,
+    );
   }
 
   async logUsageEvent(
@@ -1193,16 +1450,28 @@ export class ReviewOsRepository {
 
   async listRecentUsageEvents(limit = 100) {
     const client = getAdminClient();
-    const result = await client.from("usage_events").select("*").order("created_at", { ascending: false }).limit(limit);
+    const result = await client
+      .from("usage_events")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(limit);
     assertSupabaseOperation("review-os.listRecentUsageEvents", result);
-    return ((result.data ?? []) as Record<string, unknown>[]).map(mapUsageEvent);
+    return ((result.data ?? []) as Record<string, unknown>[]).map(
+      mapUsageEvent,
+    );
   }
 
   async listRecentFeedback(limit = 100) {
     const client = getAdminClient();
-    const result = await client.from("feedback_items").select("*").order("created_at", { ascending: false }).limit(limit);
+    const result = await client
+      .from("feedback_items")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(limit);
     assertSupabaseOperation("review-os.listRecentFeedback", result);
-    return ((result.data ?? []) as Record<string, unknown>[]).map(mapFeedbackItem);
+    return ((result.data ?? []) as Record<string, unknown>[]).map(
+      mapFeedbackItem,
+    );
   }
 
   async getAdminAlphaFeed(limit = 50): Promise<AdminAlphaFeed> {

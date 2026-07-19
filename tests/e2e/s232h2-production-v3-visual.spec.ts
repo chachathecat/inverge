@@ -4,55 +4,35 @@ import {
   test,
   type Browser,
   type BrowserContext,
-  type Locator,
   type Page,
+  type Route,
   type TestInfo,
 } from "@playwright/test";
 import { createHash } from "node:crypto";
-import { readFile, writeFile } from "node:fs/promises";
+import { chmod, readFile, unlink, writeFile } from "node:fs/promises";
+import { isAbsolute } from "node:path";
+
+import { buildCaptureLearningSignal } from "../../lib/review-os/capture-learning-signals";
+import {
+  buildLearnerAnswerSubmissionDerivedMetadata,
+  buildLearnerAnswerSubmissionPersistenceContract,
+} from "../../lib/review-os/answer-submission-contract";
+import {
+  buildCaptureNoteSignals,
+  structureCaptureNote,
+} from "../../lib/review-os/capture-note-engine";
+import { classifyWrongAnswerTaxonomy } from "../../lib/review-os/taxonomy-classification";
+import type { WrongAnswerItemInput } from "../../lib/review-os/types";
 
 import {
   establishProtectedPreviewSession,
-  loginWithDedicatedTestAccount,
+  loginWithExplicitTestAccountSession,
   protectionHeaders,
-  requireSafeAuthenticatedRuntime,
   runtimeBaseUrl,
   runtimeRunnerSha,
   runtimeTargetSha,
+  type ExplicitTestCredential,
 } from "./support/authenticated-runtime";
-import {
-  collectSyntheticPayloadFailurePaths,
-  isAllowedExactSyntheticTaxonomyString,
-  summarizeSyntheticPayloadFailurePaths,
-} from "./support/synthetic-payload-diagnostics";
-import {
-  buildScreenshotBoundaryPolicyTable,
-  provenanceBoundaryScalarPath,
-  provenanceBoundArbitraryPresentationUtilityPattern,
-  provenanceBoundContentAttributeNames,
-  provenanceBoundInstrumentationSchemas,
-  provenanceBoundPresentationUtilityPattern,
-  screenshotBoundaryContentKinds,
-  screenshotBoundaryLengthFamilies,
-  screenshotBoundaryLengthFamily,
-  screenshotBoundaryOriginClasses,
-  screenshotBoundaryOriginPathFamilyPatternSource,
-  screenshotBoundaryPolicySchema,
-  screenshotBoundaryRiskClasses,
-  screenshotBoundarySemanticLabelPatternSources,
-  type ScreenshotBoundaryContentKind,
-  type ScreenshotBoundaryFragmentDescriptor,
-  type ScreenshotBoundaryFragmentOrigin,
-} from "./support/screenshot-boundary-policy";
-import {
-  historicalS232gRewriteFailureFields,
-  historicalS232gRewriteParagraph,
-  historicalS232gSourceFailureFields,
-  isHistoricalS232gAggregateSource,
-  isHistoricalS232gAggregateRewrite,
-  isHistoricalS232gRewriteCandidate,
-  isHistoricalS232gSourceCandidate,
-} from "./support/historical-synthetic-fixtures";
 
 const runtimeEnabled = process.env.S232H2_VISUAL_RUNTIME === "1";
 const baselineUrl = process.env.E2E_BASELINE_URL?.trim() ?? "";
@@ -61,42 +41,40 @@ const baselineHost =
 const baselineSha = process.env.E2E_BASELINE_SHA?.trim() ?? "";
 const mergeBaseSha = process.env.E2E_MERGE_BASE_SHA?.trim() ?? "";
 const baselineTreeSha = process.env.E2E_BASELINE_TREE_SHA?.trim() ?? "";
-const testEmail = process.env.E2E_USER_EMAIL?.trim() ?? "";
+const visualProofPath = process.env.S232H2_VISUAL_PROOF_PATH?.trim() ?? "";
 const fixedBaselineSha = "35836d419161d7cfe55e3e3c088fcc4d66376a7d";
+
+type VisualCredentialSlot = "visual" | "user-a" | "user-b";
+type VisualCredentialCandidate = ExplicitTestCredential & {
+  slot: VisualCredentialSlot;
+};
+
+const visualCredentialCandidates = [
+  {
+    slot: "visual" as const,
+    email: process.env.E2E_VISUAL_USER_EMAIL?.trim() ?? "",
+    password: process.env.E2E_VISUAL_USER_PASSWORD ?? "",
+  },
+  {
+    slot: "user-a" as const,
+    email: process.env.E2E_USER_A_EMAIL?.trim() ?? "",
+    password: process.env.E2E_USER_A_PASSWORD ?? "",
+  },
+  {
+    slot: "user-b" as const,
+    email: process.env.E2E_USER_B_EMAIL?.trim() ?? "",
+    password: process.env.E2E_USER_B_PASSWORD ?? "",
+  },
+].filter(
+  (candidate): candidate is VisualCredentialCandidate =>
+    candidate.email.length > 0 && candidate.password.length > 0,
+);
 
 const viewports = [
   { label: "390", width: 390, height: 844 },
   { label: "768", width: 768, height: 1024 },
   { label: "1440", width: 1440, height: 1024 },
 ] as const;
-
-const provenanceBoundSemanticTextSurfaceSelector =
-  "button,a,label,li,p,h1,h2,h3,h4,h5,h6,dt,dd,td,th,option,summary,legend,[role]";
-const exactSyntheticCalculatorFormSelector =
-  '[data-calculator-routine-trainer] [data-calculator-routine-active-step] textarea[data-v3-typography-role]';
-const calculatorCasioFixtureEntries = {
-  conditions: "합성 조건: 원문 숫자와 단위를 먼저 확인합니다.",
-  formula: "합성 산식: V = I ÷ R",
-  numbers_units: "합성 대입: 120,000원 ÷ 0.06",
-} as const;
-const calculatorCasioFixtureInput =
-  "120000 ÷ 0.06 EXE · 합성 입력을 실제 기기에서 직접 대조합니다.";
-const calculatorCompletionFixtureEntries = {
-  display_value: "2,000,000 · 합성 화면값",
-  answer_value: "2,000,000원 · 합성 기재값",
-  unit_rounding: "원 단위로 합성 반올림을 확인했습니다.",
-} as const;
-const syntheticCaptureReviewDate = "2026-07-18";
-const exactSyntheticFormFixtures = [
-  {
-    selector: exactSyntheticCalculatorFormSelector,
-    values: [
-      ...Object.values(calculatorCasioFixtureEntries),
-      calculatorCasioFixtureInput,
-      ...Object.values(calculatorCompletionFixtureEntries),
-    ],
-  },
-];
 
 type RouteDefinition = {
   id: string;
@@ -137,7 +115,8 @@ const requiredRoutes: readonly RouteDefinition[] = [
     id: "ledger",
     label: "학습 원장 상세",
     authenticated: true,
-    path: (itemId) => `/app/items/${encodeURIComponent(itemId)}?mode=second`,
+    path: (itemId) =>
+      "/app/items/" + encodeURIComponent(itemId) + "?mode=second",
   },
   {
     id: "session",
@@ -176,15 +155,7 @@ const routeContractNodes: Record<string, string[]> = {
   login: ["43:2", "44:9", "45:2", "61:2", "61:80"],
   today: ["43:2", "44:9", "45:2", "61:2", "61:80"],
   capture: ["43:2", "44:9", "45:2", "48:75", "50:59", "61:2", "61:80"],
-  "answer-review": [
-    "43:2",
-    "44:9",
-    "45:2",
-    "48:75",
-    "50:59",
-    "61:2",
-    "61:80",
-  ],
+  "answer-review": ["43:2", "44:9", "45:2", "48:75", "50:59", "61:2", "61:80"],
   review: ["43:2", "44:9", "45:2", "61:2", "61:80"],
   notes: ["43:2", "44:9", "45:2", "50:59", "61:2", "61:80"],
   ledger: [
@@ -224,8 +195,11 @@ type RuntimeErrorEvidence = {
   sameOriginRequestFailures: string[];
 };
 
+type AuditProfile = "mobile-full" | "geometry";
+
 type AuditRow = {
   auditKind: "initial-route" | "dynamic-state";
+  auditProfile: AuditProfile;
   state: string;
   route: string;
   requestedPath: string;
@@ -236,11 +210,11 @@ type AuditRow = {
   mainLeft: number;
   mainWidth: number;
   horizontalOverflow: number;
-  visiblePrimaryActionCount: number;
-  undersizedTargetCount: number;
+  visiblePrimaryActionCount: number | null;
+  undersizedTargetCount: number | null;
   viewportBoundsFailureCount: number;
-  axeSeriousOrCritical: number;
-  keyboardFocusVisible: boolean;
+  axeSeriousOrCritical: number | null;
+  keyboardFocusVisible: boolean | null;
   gradientCount: number;
   shadowCount: number;
   fixedDockCount: number;
@@ -254,129 +228,47 @@ type AuditRow = {
   contentMax: number;
 };
 
-type PreflightCheckFamily =
-  | "preparation"
-  | "canonical-top"
-  | "target-size"
-  | "skip-link"
-  | "viewport-bounds"
-  | "primary-action"
-  | "axe"
-  | "keyboard-focus"
-  | "scroll-recovery"
-  | "privacy-boundary"
-  | "account-snapshot"
-  | "privacy-not-run"
-  | "visual-contract";
-
-type PreflightBlocker = {
-  phase: "initial" | "dynamic" | "baseline" | "closure";
+type StableGateFailure = {
+  phase: "privacy" | "a11y" | "visual" | "baseline" | "closure";
   routeStateAlias: string;
   viewport: string;
-  checkFamily: PreflightCheckFamily;
-  failureCode: string;
+  stableStep:
+    | "configuration"
+    | "login"
+    | "source-read"
+    | "cross-account"
+    | "preparation"
+    | "audit"
+    | "cleanup"
+    | "privacy"
+    | "screenshot"
+    | "snapshot-read"
+    | "snapshot-drift"
+    | "figma";
+  errorFamily:
+    | "configuration"
+    | "authentication"
+    | "http-status"
+    | "timeout"
+    | "assertion"
+    | "unexpected"
+    | "unknown-endpoint"
+    | "unknown-row"
+    | "mutation-blocked"
+    | "identity"
+    | "canary"
+    | "opaque-surface"
+    | "snapshot-read-failed"
+    | "snapshot-drift";
   count: number;
 };
-
-type PreflightCollector = {
-  visualAuditCandidateCount: number;
-  privacyCandidateCount: number;
-  privacyCheckCount: number;
-  privacyNotRunCount: number;
-  screenshotCallCount: number;
-  retainedPngCount: number;
-  blockers: PreflightBlocker[];
-};
-
-type AuditCollectionContext = Pick<
-  PreflightBlocker,
-  "phase" | "routeStateAlias" | "viewport"
-> & {
-  collector: PreflightCollector;
-};
-
-function createPreflightCollector(): PreflightCollector {
-  return {
-    visualAuditCandidateCount: 0,
-    privacyCandidateCount: 0,
-    privacyCheckCount: 0,
-    privacyNotRunCount: 0,
-    screenshotCallCount: 0,
-    retainedPngCount: 0,
-    blockers: [],
-  };
-}
-
-function recordPreflightBlocker(
-  collector: PreflightCollector,
-  blocker: Omit<PreflightBlocker, "count"> & { count?: number },
-) {
-  const count = blocker.count ?? 1;
-  const existing = collector.blockers.find(
-    (candidate) =>
-      candidate.phase === blocker.phase &&
-      candidate.routeStateAlias === blocker.routeStateAlias &&
-      candidate.viewport === blocker.viewport &&
-      candidate.checkFamily === blocker.checkFamily &&
-      candidate.failureCode === blocker.failureCode,
-  );
-  if (existing) {
-    existing.count += count;
-    return;
-  }
-  collector.blockers.push({ ...blocker, count });
-}
-
-function sortedPreflightBlockers(collector: PreflightCollector) {
-  return [...collector.blockers].sort((left, right) =>
-    JSON.stringify(left).localeCompare(JSON.stringify(right)),
-  );
-}
 
 type ScreenshotEvidence = {
   fileName: string;
   buffer: Buffer;
-};
-
-type PrivacyAudit = {
-  accountItemCount: number;
-  accountOwnedItemCount: number;
-  exactFixtureItemCount: number;
-  unclassifiedAccountItemCount: number;
-  accountStudyLogCount: number;
-  queueItemCount: number;
-  syntheticQueueItemCount: number;
-  todayItemCount: number;
-  syntheticTodayItemCount: number;
-  itemListingComplete: boolean;
-  studyLogListingComplete: boolean;
-  sessionBound: boolean;
-  governedTestAccount: boolean;
-  strictOwnershipContract: boolean;
-  detailOwnershipClosed: boolean;
-  pendingOwnedQueue: boolean;
-  queueDetailsAudited: boolean;
-  todayDetailsAudited: boolean;
-  weeklyTaskDetailsAudited: boolean;
-  syntheticFixtureReady: boolean;
-  privacyPreflightCandidateCount: number;
-  privacyPreflightCheckCount: number;
-  privacyPreflightBlockerCount: number;
-  privacyPreflightAccountSnapshotStable: boolean;
-  screenshotBoundaryCheckCount: number;
-  screenshotCaptureCount: number;
-  visibleUnclassifiedTextHitCount: number;
-  visibleUnclassifiedReferenceHitCount: number;
-  visibleUnclassifiedFormValueHitCount: number;
-  visibleUnclassifiedGeneratedContentHitCount: number;
-  visibleUninspectableSurfaceCount: number;
-  provenanceFilteredTextHitCount: number;
-  provenanceFilteredReferenceHitCount: number;
-  provenanceFilteredFormValueHitCount: number;
-  provenanceFilteredGeneratedContentHitCount: number;
-  accountSnapshotStable: boolean;
-  screenshotDataBoundaryClosed: boolean;
-  privateLearnerContentCaptured: boolean;
+  boundary: ArtifactBoundaryObservation;
+  guard: EndpointGuardEvidence;
+  identityMaskRequired: boolean;
 };
 
 type FigmaComparison = {
@@ -418,18 +310,26 @@ const syntheticLedgerCorrectAnswer =
   "사업인정은 특정 사업에 수용권을 설정하여 국민의 권리·의무에 직접 영향을 미친다.";
 const syntheticLedgerGap =
   "처분성 판단 기준과 수용권 발생의 연결이 빠졌습니다.";
-const historicalSyntheticFixtureTitle = "S232H2 합성 학습 원장";
-const historicalSyntheticFixtureProblemIdentifier =
-  "s232h2:v3-visual:ledger:v1";
-const historicalSyntheticFixtureQuestion =
-  "신뢰보호원칙의 요건을 검토하시오. 시각 검증용 합성 문제입니다.";
 const syntheticFixtureAnswer =
   "행정청의 공적 견해표명과 보호가치 있는 신뢰를 차례로 검토합니다. 이 문장은 시각 검증용 합성 기록입니다.";
 const syntheticFixtureCorrectAnswer =
   "공적 견해표명, 귀책사유 부재, 신뢰에 따른 행위, 보호가치를 순서대로 확인합니다.";
 const syntheticFixtureGap =
   "요건과 대응 사실을 잇는 문장 하나가 빠져 있습니다.";
-const syntheticQueueAnchorSource = `${syntheticFixtureSource} · queue anchor`;
+const syntheticQueueAnchorSource = syntheticFixtureSource + " · queue anchor";
+const syntheticCaptureReviewDate = "2026-07-18";
+const calculatorCasioFixtureEntries = {
+  conditions: "합성 조건: 원문 숫자와 단위를 먼저 확인합니다.",
+  formula: "합성 산식: V = I ÷ R",
+  numbers_units: "합성 대입: 120,000원 ÷ 0.06",
+} as const;
+const calculatorCasioFixtureInput =
+  "120000 ÷ 0.06 EXE · 합성 입력을 실제 기기에서 직접 대조합니다.";
+const calculatorCompletionFixtureEntries = {
+  display_value: "2,000,000 · 합성 화면값",
+  answer_value: "2,000,000원 · 합성 기재값",
+  unit_rounding: "원 단위로 합성 반올림을 확인했습니다.",
+} as const;
 
 const figmaReferences = [
   {
@@ -455,6 +355,15 @@ const figmaReferences = [
   },
 ] as const;
 
+const dynamicScreenshotNames = new Set([
+  "s232h2-after-capture-extraction-preview-390.png",
+  "s232h2-after-answer-review-result-390.png",
+  "s232h2-after-answer-review-rewrite-390.png",
+  "s232h2-after-review-revealed-selected-390.png",
+  "s232h2-after-session-saved-capture-390.png",
+  "s232h2-after-calculator-completed-saved-390.png",
+]);
+
 test.use({
   extraHTTPHeaders: protectionHeaders,
   screenshot: "off",
@@ -466,46 +375,56 @@ test.skip(
   !runtimeEnabled,
   "Set S232H2_VISUAL_RUNTIME=1 for the exact-head V3 visual gate.",
 );
-test.describe.configure({ timeout: 1_500_000, retries: 0 });
+test.describe.configure({ retries: 0 });
 
-function requireSafeBaselineRuntime() {
-  if (baselineSha !== fixedBaselineSha) {
-    throw new Error("S232H.2 must use the fixed PR1 baseline SHA.");
+function requireSafeVisualRuntime() {
+  if (
+    runtimeRunnerSha !== runtimeTargetSha ||
+    !/^[0-9a-f]{40}$/i.test(runtimeRunnerSha)
+  ) {
+    throw new Error("S232H2 exact-head runtime configuration is invalid.");
   }
   if (
+    baselineSha !== fixedBaselineSha ||
     !/^[0-9a-f]{40}$/i.test(mergeBaseSha) ||
     !/^[0-9a-f]{40}$/i.test(baselineTreeSha)
   ) {
-    throw new Error(
-      "S232H.2 requires the workflow-proven merge-base and baseline tree SHAs.",
-    );
+    throw new Error("S232H2 fixed-baseline runtime configuration is invalid.");
   }
-  if (!baselineUrl || !baselineHost || !testEmail) {
-    throw new Error(
-      "S232H.2 baseline runtime or dedicated test-account configuration is missing.",
-    );
+  if (!runtimeBaseUrl || !baselineUrl || !baselineHost) {
+    throw new Error("S232H2 Preview configuration is incomplete.");
   }
-
-  const url = new URL(baselineUrl);
-  const productionHosts = new Set([
-    "inverge.vercel.app",
-    "inverge.ai",
-    "www.inverge.ai",
-    "inverge.app",
-    "www.inverge.app",
-  ]);
+  const current = new URL(runtimeBaseUrl);
+  const baseline = new URL(baselineUrl);
+  const approved = (url: URL) =>
+    url.protocol === "https:" &&
+    /^inverge-[a-z0-9-]+-chachathecats-projects\.vercel\.app$/i.test(
+      url.hostname,
+    );
   if (
-    url.protocol !== "https:" ||
-    url.hostname.toLowerCase() !== baselineHost ||
-    productionHosts.has(baselineHost) ||
-    !/^inverge-[a-z0-9-]+-chachathecats-projects\.vercel\.app$/i.test(
-      baselineHost,
-    )
+    !approved(current) ||
+    !approved(baseline) ||
+    baseline.hostname.toLowerCase() !== baselineHost
   ) {
-    throw new Error(
-      "S232H.2 refuses a baseline outside the exact approved non-production Preview.",
-    );
+    throw new Error("S232H2 refuses an unapproved runtime host.");
   }
+  if (
+    !visualProofPath ||
+    !isAbsolute(visualProofPath) ||
+    !visualProofPath.endsWith("s232h2-visual-proof.json")
+  ) {
+    throw new Error("S232H2 visual proof path must be runner-temporary.");
+  }
+}
+
+function cleanVisualAccountRequired(): never {
+  throw new Error(
+    "S232H2_CLEAN_VISUAL_ACCOUNT_REQUIRED E2E_VISUAL_USER_EMAIL E2E_VISUAL_USER_PASSWORD",
+  );
+}
+
+function visualProofContractRequired(): never {
+  throw new Error("S232H2_VISUAL_PROOF_CONTRACT_REQUIRED");
 }
 
 function monitorPageRuntime(
@@ -554,6 +473,14 @@ function monitorPageRuntime(
   return evidence;
 }
 
+function visualAuditRequestHeaders(baseUrl = runtimeBaseUrl) {
+  return {
+    ...protectionHeaders,
+    "x-s232h2-audit-sha":
+      baseUrl === baselineUrl ? baselineSha : runtimeRunnerSha,
+  };
+}
+
 async function settleRuntimeMonitors(...pages: Page[]) {
   for (const page of pages) {
     if (page.isClosed()) continue;
@@ -569,23 +496,32 @@ async function settleRuntimeMonitors(...pages: Page[]) {
   }
 }
 
-async function verifyRuntimeVersion(page: Page, expectedSha: string) {
-  const observed = await page.evaluate(async () => {
-    const response = await fetch("/api/runtime/version", {
-      cache: "no-store",
-      credentials: "same-origin",
+async function verifyRuntimeVersion(
+  page: Page,
+  expectedSha: string,
+  expectedBaseUrl = runtimeBaseUrl,
+) {
+  const expectedOrigin = new URL(expectedBaseUrl).origin;
+  const response = await page
+    .context()
+    .request.get(new URL("/api/runtime/version", expectedOrigin).toString(), {
+      headers: visualAuditRequestHeaders(expectedBaseUrl),
+      maxRedirects: 0,
+      timeout: 30_000,
     });
-    const body = (await response.json()) as {
-      ready?: boolean;
-      deploymentSha?: string;
-    };
-    return {
-      status: response.status,
-      ready: body.ready,
-      deploymentSha: body.deploymentSha,
-    };
-  });
+  const responseUrl = new URL(response.url());
+  const body = (await response.json().catch(() => null)) as {
+    ready?: unknown;
+    deploymentSha?: unknown;
+  } | null;
+  const observed = {
+    origin: responseUrl.origin,
+    status: response.status(),
+    ready: body?.ready,
+    deploymentSha: body?.deploymentSha,
+  };
   expect(observed).toEqual({
+    origin: expectedOrigin,
     status: 200,
     ready: true,
     deploymentSha: expectedSha,
@@ -609,466 +545,193 @@ type SyntheticItem = {
   userReasonText?: string;
   userReasonPreset?: string;
   confidence?: string;
+  timeSpentSeconds?: number | null;
+  createdAt?: string;
   rawPayload?: Record<string, unknown>;
   derivedPayload?: Record<string, unknown>;
+  [key: string]: unknown;
 };
 
-type SyntheticQueueCard = { itemId?: string; problemTitle?: string };
-type JsonRead = { status: number; body: Record<string, unknown> };
-type SyntheticAccountData = {
-  session: JsonRead;
-  items: JsonRead;
-  logs: JsonRead;
-  queue: JsonRead;
-  today: JsonRead | null;
-  weekly: JsonRead | null;
-  details: Array<{ itemId: string; read: JsonRead }>;
+type VisualSourceName =
+  | "items"
+  | "notes"
+  | "tags"
+  | "recurrence"
+  | "reviewQueue"
+  | "studyLogs"
+  | "weeklySummaries"
+  | "learningSignals"
+  | "agendaUsage"
+  | "todaySeeds"
+  | "studyProfiles"
+  | "conceptNodes";
+
+type VisualSourceSnapshot = {
+  sessionUserId: string;
+  sources: Record<VisualSourceName, Array<Record<string, unknown>>>;
+  truncated: Record<VisualSourceName, boolean>;
 };
-type SyntheticAccountAudit = {
-  privacyAudit: PrivacyAudit;
-  items: SyntheticItem[];
-  queue: SyntheticQueueCard[];
-  ownedItemIds: Set<string>;
-  screenshotBoundary: ScreenshotDataBoundary;
+
+type VisualAccountAudit = {
+  clean: boolean;
+  sessionBound: boolean;
+  endpointReadSucceeded: boolean;
+  sessionFingerprint: string;
+  snapshotReadSucceeded: boolean;
+  fingerprint: string;
+  itemIds: string[];
+  exactFixtureIds: string[];
+  ledgerItemId: string | null;
+  primaryQueueTitle: string | null;
+  itemCount: number;
+  studyLogCount: number;
+  queueCount: number;
+  todayReferenceCount: number;
+  weeklyReferenceCount: number;
+  nonFixtureRowCount: number;
+  unknownReferenceCount: number;
+};
+
+type VisualEndpointAudit = {
+  readSucceeded: boolean;
+  unknownReferenceCount: number;
   primaryQueueTitle: string | null;
 };
 
-type ScreenshotDataBoundary = {
-  unclassifiedItemIds: string[];
-  fragmentDescriptors: ScreenshotBoundaryFragmentDescriptor[];
-  unclassifiedItemCount: number;
-  preflightCandidateCount: number;
-  preflightCheckCount: number;
-  preflightBlockerCount: number;
-  preflightBlockingBuckets: Array<{
-    routeStateAlias: string;
-    viewport: string;
-    channel: string;
-    lengthFamily: string;
-    originPathFamily: string;
-    decision: "block";
-    reason: string;
-    count: number;
-  }>;
-  preflightAccountSnapshotStable: boolean;
-  screenshotCallCount: number;
-  checkCount: number;
-  captureCount: number;
-  visibleTextHitCount: number;
-  visibleReferenceHitCount: number;
-  visibleFormValueHitCount: number;
-  visibleGeneratedContentHitCount: number;
-  visibleUninspectableSurfaceCount: number;
-  provenanceFilteredTextHitCount: number;
-  provenanceFilteredReferenceHitCount: number;
-  provenanceFilteredFormValueHitCount: number;
-  provenanceFilteredGeneratedContentHitCount: number;
+type CandidateAuditHandle = {
+  credential: VisualCredentialCandidate;
+  context: BrowserContext | null;
+  page: Page | null;
+  audit: VisualAccountAudit | null;
+  completed: boolean;
+  failureStep: "login" | "source-read" | null;
 };
+
+type PrivacyGateSummary = {
+  scheduledCandidates: number;
+  completedAudits: number;
+  notRunCount: number;
+  blockerCount: number;
+  screenshotCallCount: number;
+  endpointReadSucceeded: boolean;
+  snapshotReadSucceeded: boolean;
+  snapshotStable: boolean;
+  crossAccountDenied: boolean;
+  deniedCanaryDomCount: number;
+  selectedAccountItemCount: number;
+  selectedExactFixtureCount: number;
+  fixtureOwnershipClosed: boolean;
+  unknownLearnerEndpointCount: number;
+  unknownLearnerRowCount: number;
+  rawIdentityArtifactCount: number;
+  targetSessionBound: boolean;
+  baselineSessionBound: boolean;
+  baselineUsesSelectedFixture: boolean;
+};
+
+type A11yGateSummary = {
+  scheduledCandidates: number;
+  completedAudits: number;
+  blockerCount: number;
+  mobileFullScheduled: number;
+  mobileFullCompleted: number;
+  geometryScheduled: number;
+  geometryCompleted: number;
+  keyboardScheduled: number;
+  keyboardCompleted: number;
+};
+
+type VisualGateSummary = {
+  scheduledCandidates: number;
+  completedAudits: number;
+  preparationBlockerCount: number;
+  cleanupBlockerCount: number;
+  visualBlockerCount: number;
+  privacyBlockerCount: number;
+  screenshotCallCount: number;
+  snapshotReadSucceeded: boolean;
+  snapshotStable: boolean;
+};
+
+type VisualProof = {
+  schemaVersion: 4;
+  selectedSlot: VisualCredentialSlot;
+  selectedFingerprint: string;
+  selectedSessionFingerprint: string;
+  fixtureIds: string[];
+  ledgerItemId: string;
+  primaryQueueTitle: string;
+  deniedCanary: string;
+  privacyGate: PrivacyGateSummary;
+  a11yGate?: A11yGateSummary;
+  auditRows?: AuditRow[];
+};
+
+function recordStableGateFailure(
+  failures: StableGateFailure[],
+  failure: Omit<StableGateFailure, "count"> & { count?: number },
+) {
+  const count = failure.count ?? 1;
+  const existing = failures.find(
+    (candidate) =>
+      candidate.phase === failure.phase &&
+      candidate.routeStateAlias === failure.routeStateAlias &&
+      candidate.viewport === failure.viewport &&
+      candidate.stableStep === failure.stableStep &&
+      candidate.errorFamily === failure.errorFamily,
+  );
+  if (existing) {
+    existing.count += count;
+    return;
+  }
+  failures.push({ ...failure, count });
+}
+
+function stableErrorFamily(error: unknown): StableGateFailure["errorFamily"] {
+  if (error instanceof Error && /timeout/i.test(error.name)) return "timeout";
+  if (error instanceof Error && /assert/i.test(error.name)) return "assertion";
+  return "unexpected";
+}
+
+function resolveCredential(slot: VisualCredentialSlot) {
+  return visualCredentialCandidates.find(
+    (candidate) => candidate.slot === slot,
+  );
+}
+
+async function writeVisualProof(proof: VisualProof) {
+  await writeFile(visualProofPath, JSON.stringify(proof), {
+    encoding: "utf8",
+    mode: 0o600,
+  });
+  await chmod(visualProofPath, 0o600);
+}
+
+async function readVisualProof(): Promise<VisualProof> {
+  const parsed = JSON.parse(
+    await readFile(visualProofPath, "utf8"),
+  ) as VisualProof;
+  if (
+    parsed.schemaVersion !== 4 ||
+    !resolveCredential(parsed.selectedSlot) ||
+    !/^[0-9a-f]{64}$/.test(parsed.selectedFingerprint) ||
+    !/^[0-9a-f]{64}$/.test(parsed.selectedSessionFingerprint) ||
+    !Array.isArray(parsed.fixtureIds) ||
+    parsed.fixtureIds.length < 1 ||
+    !parsed.ledgerItemId ||
+    !parsed.primaryQueueTitle ||
+    !parsed.deniedCanary
+  ) {
+    throw new Error("S232H2 visual proof is invalid.");
+  }
+  return parsed;
+}
 
 function resolveSyntheticItemId(item: SyntheticItem) {
   return item.id ?? item.itemId ?? "";
 }
 
-const directLearnerContentFields = [
-  "sourceLabel",
-  "problemTitle",
-  "problemIdentifier",
-  "rawQuestionText",
-  "rawAnswerText",
-  "correctAnswer",
-  "userAnswer",
-  "userReasonText",
-] as const satisfies readonly (keyof SyntheticItem)[];
-
-const nestedLearnerContentKey =
-  /(?:question|answer|reason|gap|issue|outline|rewrite|summary|concept|formula|comparison|ocr|draft|sentence|evidence|excerpt|feedback|memo|note|weak|missing|retrieval|problem[_-]?(?:title|text)|source[_-]?label|image|attachment|upload|file[_-]?(?:url|uri)|content|body|paragraph)/i;
-const nestedMachineMetadataKey =
-  /(?:^|_)(?:id|uuid|timestamp|created|updated|deleted|version|schema|status|state|mode|type|role|index|count|seconds|deduped|confidence|exam|subject|owner|user|source|acceptance|runtime|provider)(?:$|_)/i;
-
-function normalizeBoundaryText(value: string) {
-  return value.normalize("NFKC").replace(/\s+/g, " ").trim();
-}
-
-const directLearnerContentKind = {
-  sourceLabel: "label",
-  problemTitle: "title",
-  problemIdentifier: "identifier",
-  rawQuestionText: "question",
-  rawAnswerText: "answer",
-  correctAnswer: "answer",
-  userAnswer: "answer",
-  userReasonText: "reason",
-} as const satisfies Record<
-  (typeof directLearnerContentFields)[number],
-  ScreenshotBoundaryContentKind
->;
-
-function nestedContentKind(key: string): ScreenshotBoundaryContentKind {
-  if (/(?:question|problem[_-]?(?:text|body)|prompt)/i.test(key))
-    return "question";
-  if (/(?:reason|gap|issue|weak|missing|feedback|rationale|basis)/i.test(key))
-    return "reason";
-  if (/(?:title|heading)/i.test(key)) return "title";
-  if (/(?:identifier|reference[_-]?number)/i.test(key)) return "identifier";
-  if (/(?:label|caption)/i.test(key)) return "label";
-  if (
-    /(?:answer|outline|rewrite|summary|concept|formula|comparison|ocr|draft|sentence|evidence|excerpt|memo|note|retrieval|content|body|paragraph)/i.test(
-      key,
-    )
-  )
-    return "answer";
-  return "unknown";
-}
-
-type MutableScreenshotBoundaryDescriptor = {
-  sourceItemIds: Set<string>;
-  origins: Map<string, ScreenshotBoundaryFragmentOrigin>;
-};
-
-function addScreenshotBoundaryFragment(
-  descriptors: Map<string, MutableScreenshotBoundaryDescriptor>,
-  rawValue: string | number,
-  sourceItemId: string,
-  origin: ScreenshotBoundaryFragmentOrigin,
-) {
-  const normalized = normalizeBoundaryText(String(rawValue));
-  if (!normalized || normalized === "-") return;
-  const descriptor = descriptors.get(normalized) ?? {
-    sourceItemIds: new Set<string>(),
-    origins: new Map<string, ScreenshotBoundaryFragmentOrigin>(),
-  };
-  if (sourceItemId) descriptor.sourceItemIds.add(sourceItemId);
-  descriptor.origins.set(
-    [
-      origin.fieldOrPathFamily,
-      origin.originClass,
-      origin.riskClass,
-      origin.contentKind,
-    ].join(":"),
-    origin,
-  );
-  descriptors.set(normalized, descriptor);
-}
-
-function collectNestedLearnerContent(
-  value: unknown,
-  keyPath: readonly string[],
-  sourceItemId: string,
-  descriptors: Map<string, MutableScreenshotBoundaryDescriptor>,
-) {
-  const scalarPath = provenanceBoundaryScalarPath(value, keyPath);
-  if (scalarPath) {
-    const key = (keyPath.at(-1) ?? "").replace(
-      /([a-z0-9])([A-Z])/g,
-      "$1_$2",
-    );
-    const knownNestedField = nestedLearnerContentKey.test(key);
-    if (
-      (typeof value === "string" ||
-        (typeof value === "number" && Number.isFinite(value))) &&
-      (knownNestedField || !nestedMachineMetadataKey.test(key))
-    ) {
-      const contentKind = knownNestedField
-        ? nestedContentKind(key)
-        : "unknown";
-      const rootFamily = keyPath[0] === "rawPayload" ? "raw" : "derived";
-      addScreenshotBoundaryFragment(
-        descriptors,
-        value,
-        sourceItemId,
-        {
-          fieldOrPathFamily: knownNestedField
-            ? `${rootFamily}.known.${contentKind}`
-            : `${rootFamily}.unknown`,
-          originClass: knownNestedField
-            ? "known-nested-field"
-            : "unknown-nested-field",
-          riskClass:
-            contentKind === "identifier"
-              ? "identifier"
-              : knownNestedField
-                ? "learner-content"
-                : "unknown-content",
-          contentKind,
-        },
-      );
-    }
-    return;
-  }
-  if (Array.isArray(value)) {
-    for (const entry of value)
-      collectNestedLearnerContent(
-        entry,
-        [...keyPath, "[]"],
-        sourceItemId,
-        descriptors,
-      );
-    return;
-  }
-  if (!value || typeof value !== "object") return;
-  for (const [key, entry] of Object.entries(value))
-    collectNestedLearnerContent(
-      entry,
-      [...keyPath, key],
-      sourceItemId,
-      descriptors,
-    );
-}
-
-function createScreenshotDataBoundary(
-  unclassifiedItems: readonly SyntheticItem[],
-): ScreenshotDataBoundary {
-  const unclassifiedItemIds = [
-    ...new Set(
-      unclassifiedItems
-        .map(resolveSyntheticItemId)
-        .filter((itemId) => itemId.length > 0),
-    ),
-  ];
-  const descriptors = new Map<string, MutableScreenshotBoundaryDescriptor>();
-  for (const item of unclassifiedItems) {
-    const sourceItemId = resolveSyntheticItemId(item);
-    for (const field of directLearnerContentFields) {
-      const value = item[field];
-      if (
-        typeof value !== "string" &&
-        !(typeof value === "number" && Number.isFinite(value))
-      )
-        continue;
-      const contentKind = directLearnerContentKind[field];
-      addScreenshotBoundaryFragment(descriptors, value, sourceItemId, {
-        fieldOrPathFamily: `direct.${contentKind}`,
-        originClass: "direct-field",
-        riskClass:
-          contentKind === "identifier" ? "identifier" : "learner-content",
-        contentKind,
-      });
-    }
-    collectNestedLearnerContent(
-      item.rawPayload,
-      ["rawPayload"],
-      sourceItemId,
-      descriptors,
-    );
-    collectNestedLearnerContent(
-      item.derivedPayload,
-      ["derivedPayload"],
-      sourceItemId,
-      descriptors,
-    );
-  }
-  const fragmentDescriptors = [...descriptors]
-    .map(([value, descriptor]) => ({
-      value,
-      sourceItemIds: [...descriptor.sourceItemIds].sort(),
-      origins: [...descriptor.origins.values()].sort((left, right) =>
-        JSON.stringify(left).localeCompare(JSON.stringify(right)),
-      ),
-      lengthFamily: screenshotBoundaryLengthFamily(value),
-    } satisfies ScreenshotBoundaryFragmentDescriptor))
-    .sort((left, right) => left.value.localeCompare(right.value));
-  return {
-    unclassifiedItemIds,
-    fragmentDescriptors,
-    unclassifiedItemCount: unclassifiedItems.length,
-    preflightCandidateCount: 0,
-    preflightCheckCount: 0,
-    preflightBlockerCount: 0,
-    preflightBlockingBuckets: [],
-    preflightAccountSnapshotStable: false,
-    screenshotCallCount: 0,
-    checkCount: 0,
-    captureCount: 0,
-    visibleTextHitCount: 0,
-    visibleReferenceHitCount: 0,
-    visibleFormValueHitCount: 0,
-    visibleGeneratedContentHitCount: 0,
-    visibleUninspectableSurfaceCount: 0,
-    provenanceFilteredTextHitCount: 0,
-    provenanceFilteredReferenceHitCount: 0,
-    provenanceFilteredFormValueHitCount: 0,
-    provenanceFilteredGeneratedContentHitCount: 0,
-  };
-}
-
-function screenshotDataBoundaryFingerprint(boundary: ScreenshotDataBoundary) {
-  return createHash("sha256")
-    .update(
-      JSON.stringify({
-        itemIds: [...boundary.unclassifiedItemIds].sort(),
-        fragmentDescriptors: boundary.fragmentDescriptors
-          .map((descriptor) => ({
-            value: descriptor.value,
-            sourceItemIds: [...descriptor.sourceItemIds].sort(),
-            origins: [...descriptor.origins].sort((left, right) =>
-              JSON.stringify(left).localeCompare(JSON.stringify(right)),
-            ),
-            lengthFamily: descriptor.lengthFamily,
-          }))
-          .sort((left, right) => left.value.localeCompare(right.value)),
-      }),
-    )
-    .digest("hex");
-}
-
-async function readSyntheticAccountData(
-  page: Page,
-  { includePlanning }: { includePlanning: boolean },
-): Promise<SyntheticAccountData> {
-  return page.evaluate(
-    async ({ includePlanning }) => {
-      const readJson = async (path: string) => {
-        const response = await fetch(path, {
-          cache: "no-store",
-          credentials: "same-origin",
-        });
-        const body = (await response.json().catch(() => ({}))) as Record<
-          string,
-          unknown
-        >;
-        return { status: response.status, body };
-      };
-      const [session, items, logs, queue] = await Promise.all([
-        readJson("/api/auth/session"),
-        readJson("/api/os/items?limit=501"),
-        readJson("/api/os/study-logs?mode=second&limit=501"),
-        readJson("/api/os/review-queue"),
-      ]);
-      const [today, weekly] = includePlanning
-        ? await Promise.all([
-            readJson("/api/os/today-focus?mode=second"),
-            readJson("/api/os/weekly-summary?mode=second"),
-          ])
-        : [null, null];
-
-      const queueItems = Array.isArray(queue.body.items)
-        ? queue.body.items
-        : [];
-      const todayFocus =
-        today?.body.focus && typeof today.body.focus === "object"
-          ? (today.body.focus as Record<string, unknown>)
-          : {};
-      const todayQueue = Array.isArray(todayFocus.queue)
-        ? todayFocus.queue
-        : [];
-      const weeklyPlan =
-        weekly?.body.plan && typeof weekly.body.plan === "object"
-          ? (weekly.body.plan as Record<string, unknown>)
-          : {};
-      const weeklyTasks = Array.isArray(weeklyPlan.tasks)
-        ? weeklyPlan.tasks
-        : [];
-      const recovery =
-        weeklyPlan.recovery && typeof weeklyPlan.recovery === "object"
-          ? (weeklyPlan.recovery as Record<string, unknown>)
-          : null;
-      const recoveryTask =
-        recovery?.task && typeof recovery.task === "object"
-          ? (recovery.task as Record<string, unknown>)
-          : null;
-      const candidateIds = [
-        ...queueItems.map((item) =>
-          item && typeof item === "object"
-            ? (item as Record<string, unknown>).itemId
-            : null,
-        ),
-        ...todayQueue.map((item) =>
-          item && typeof item === "object"
-            ? (item as Record<string, unknown>).itemId
-            : null,
-        ),
-        todayFocus.sourceItemId,
-        ...weeklyTasks.map((task) =>
-          task && typeof task === "object"
-            ? (task as Record<string, unknown>).itemId
-            : null,
-        ),
-        recoveryTask?.itemId,
-      ].filter(
-        (value): value is string =>
-          typeof value === "string" && value.length > 0,
-      );
-
-      const details: Array<{
-        itemId: string;
-        read: { status: number; body: Record<string, unknown> };
-      }> = [];
-      const queuedIds = [...new Set(candidateIds)];
-      const visited = new Set<string>();
-      while (queuedIds.length > 0) {
-        const itemId = queuedIds.shift()!;
-        if (visited.has(itemId)) continue;
-        if (visited.size >= 100)
-          throw new Error(
-            "Synthetic ownership ancestry exceeded its fail-closed bound.",
-          );
-        visited.add(itemId);
-        const read = await readJson(
-          `/api/os/items/${encodeURIComponent(itemId)}`,
-        );
-        details.push({ itemId, read });
-        const detail =
-          read.body.detail && typeof read.body.detail === "object"
-            ? (read.body.detail as Record<string, unknown>)
-            : null;
-        const item =
-          detail?.item && typeof detail.item === "object"
-            ? (detail.item as Record<string, unknown>)
-            : null;
-        const rawPayload =
-          item?.rawPayload && typeof item.rawPayload === "object"
-            ? (item.rawPayload as Record<string, unknown>)
-            : null;
-        const sourceId = rawPayload?.rewrite_source_item_id;
-        if (
-          typeof sourceId === "string" &&
-          sourceId.length > 0 &&
-          !visited.has(sourceId)
-        ) {
-          queuedIds.push(sourceId);
-        }
-      }
-      return { session, items, logs, queue, today, weekly, details };
-    },
-    { includePlanning },
-  );
-}
-
-function exactItemFields(
-  item: SyntheticItem,
-  expected: {
-    subjectLabel: string;
-    sourceLabel: string;
-    problemTitle: string | RegExp;
-    rawQuestionText?: string;
-    rawAnswerText?: string;
-    correctAnswer: string;
-    userAnswer: string;
-    userReasonText: string;
-  },
-) {
-  const titleMatches =
-    expected.problemTitle instanceof RegExp
-      ? expected.problemTitle.test(item.problemTitle ?? "")
-      : item.problemTitle === expected.problemTitle;
-  return (
-    item.examName === "감정평가사 2차" &&
-    item.subjectLabel === expected.subjectLabel &&
-    item.sourceType === "text" &&
-    item.sourceLabel === expected.sourceLabel &&
-    titleMatches &&
-    (item.problemIdentifier === undefined || item.problemIdentifier === "") &&
-    item.rawQuestionText === expected.rawQuestionText &&
-    item.rawAnswerText === expected.rawAnswerText &&
-    item.correctAnswer === expected.correctAnswer &&
-    item.userAnswer === expected.userAnswer &&
-    item.userReasonText === expected.userReasonText &&
-    (item.userReasonPreset === undefined || item.userReasonPreset === "") &&
-    item.confidence === "중간"
-  );
-}
-
-function h2AcceptanceMarkers(
+function exactFixtureMarkers(
   item: SyntheticItem,
   role: "ledger" | "queue-anchor",
 ) {
@@ -1089,27 +752,573 @@ function h2AcceptanceMarkers(
   );
 }
 
-function hasExplicitUnconfirmedFields(item: SyntheticItem) {
-  const confirmed = item.rawPayload?.user_confirmed_fields;
+function exactFixtureRole(
+  item: SyntheticItem,
+): "ledger" | "queue-anchor" | null {
+  if (isExactVisualLedger(item)) return "ledger";
+  if (isExactVisualQueueAnchor(item)) return "queue-anchor";
+  return null;
+}
+
+function exactFixtureMistakeType(item: SyntheticItem) {
+  const reason = item.userReasonText ?? "";
+  if (/무효|취소/.test(reason)) return "무효와 취소 구분 / 개념 혼동";
+  if (/함정|표현|선지|오독/.test(reason)) return "trap_word";
+  if (/예외|원칙/.test(reason)) return "rule_exception_confusion";
+  if (/계산|숫자|산식|템플릿/.test(reason)) {
+    return "calculation_template_error";
+  }
+  if (/조건|누락/.test(reason)) return "조건 누락";
+  return reason.length <= 32 ? reason : "concept_confusion";
+}
+
+function exactFixtureGeneratedArtifacts(item: SyntheticItem) {
+  const topicTag = item.problemTitle ?? "";
+  const mistakeType = exactFixtureMistakeType(item);
+  return {
+    note: {
+      ai_summary: `${item.subjectLabel} 답안에서 먼저 보강할 지점은 ${mistakeType}입니다. 전체를 다시 쓰기보다 핵심 논점 하나를 고정해 다시 작성하세요.`,
+      key_distinction:
+        "참고 정리와 내 답안의 차이는 점수보다 누락된 논점과 답안 구조에서 먼저 봐야 합니다.",
+      review_checkpoint: `${topicTag}를 다시 볼 때 목차, 핵심 논점, 사례 적용 문장을 각각 한 번씩 확인하세요.`,
+      next_try_tip: `다음 rewrite에서는 ${mistakeType} 하나만 고쳐서 8~10줄로 다시 작성하세요.`,
+      generation_source: "fallback",
+    },
+    tag: {
+      topic_tag: topicTag,
+      mistake_type: mistakeType,
+      task_type: "2차 답안 보강",
+      classifier_source: "rules",
+      confidence: 0.58,
+      recurrence_candidate: true,
+    },
+  };
+}
+
+function exactFixtureInput(
+  item: SyntheticItem,
+  role: "ledger" | "queue-anchor",
+): WrongAnswerItemInput {
+  const answer =
+    role === "ledger" ? syntheticLedgerAnswer : syntheticFixtureAnswer;
+  const correctAnswer =
+    role === "ledger"
+      ? syntheticLedgerCorrectAnswer
+      : syntheticFixtureCorrectAnswer;
+  const gap = role === "ledger" ? syntheticLedgerGap : syntheticFixtureGap;
+  const keyConcepts =
+    role === "ledger"
+      ? ["사업인정", "처분성", "수용권"]
+      : ["신뢰보호", "공적 견해표명", "보호가치"];
+  const weakStructurePoint =
+    role === "ledger"
+      ? "법률효과와 권리구제 필요성을 같은 순서로 연결해야 합니다."
+      : "요건과 사실 적용을 같은 순서로 연결해야 합니다.";
+  const weakApplicationSentence =
+    role === "ledger"
+      ? "사업인정으로 발생하는 구체적 법률효과를 적어야 합니다."
+      : "공적 견해표명에 해당하는 합성 사실을 구체적으로 연결해야 합니다.";
+  const rewriteInstruction =
+    role === "ledger"
+      ? "처분의 법률효과와 권리구제 필요성을 한 문단에 연결합니다."
+      : "요건, 대응 사실, 소결론을 한 문단에 연결합니다.";
+  const referenceStructure =
+    role === "ledger"
+      ? syntheticLedgerCorrectAnswer
+      : "I. 공적 견해표명 II. 신뢰와 귀책 III. 보호가치 IV. 결론";
+  const issueRecall =
+    role === "ledger"
+      ? "사업인정의 처분성을 법률효과 중심으로 검토합니다."
+      : "신뢰보호 요건을 순서대로 검토합니다.";
+  const outlineDraft =
+    role === "ledger"
+      ? "I. 사업인정의 성격 II. 수용권 설정 III. 권리구제 IV. 결론"
+      : referenceStructure;
+  const confirmedFields = {
+    subjectLabel: "감정평가 및 보상법규",
+    userAnswer: answer,
+    production_before_comparison: true,
+    reference_answer_added_after_production: true,
+    biggest_gap: gap,
+    sourceType: "text",
+    examMode: "second",
+    hasManualCorrection: false,
+    ocrConfirmedByLearner: false,
+    acceptance_fixture_id: syntheticOwnerId,
+    acceptance_fixture_role: role,
+  };
+  return {
+    examName: "감정평가사 2차",
+    subjectLabel: "감정평가 및 보상법규",
+    sourceType: "text",
+    sourceLabel:
+      role === "ledger" ? syntheticFixtureSource : syntheticQueueAnchorSource,
+    problemTitle: item.problemTitle,
+    problemIdentifier: item.problemIdentifier,
+    rawQuestionText: item.rawQuestionText,
+    rawAnswerText: answer,
+    correctAnswer,
+    userAnswer: answer,
+    userReasonText: gap,
+    confidence: role === "ledger" ? "중간" : "낮음",
+    timeSpentSeconds: role === "queue-anchor" ? 180 : undefined,
+    keyConcepts,
+    missingIssue: gap,
+    weakStructurePoint,
+    weakApplicationSentence,
+    rewriteInstruction,
+    referenceStructure,
+    myAnswerSummary: answer,
+    issueRecall,
+    outlineDraft,
+    productionBeforeComparison: true,
+    referenceAnswerAddedAfterProduction: true,
+    biggestGap: gap,
+    rewriteCompleted: false,
+    captureIntent: "save",
+    createdFromCapture: true,
+    extractionPayload: {
+      raw_ocr_text: answer,
+      raw_extraction_json: {
+        acceptance_fixture_id: syntheticOwnerId,
+        acceptance_fixture_role: role,
+      },
+      normalized_draft: null,
+      user_confirmed_fields: confirmedFields,
+    },
+  };
+}
+
+function exactFixtureProductionMetadata(
+  item: SyntheticItem,
+  role: "ledger" | "queue-anchor",
+) {
+  const input = exactFixtureInput(item, role);
+  const taxonomy = classifyWrongAnswerTaxonomy({
+    examName: input.examName,
+    mode: "second",
+    subjectLabel: input.subjectLabel,
+    problemTitle: input.problemTitle,
+    rawQuestionText: input.rawQuestionText,
+    userReasonText: input.userReasonText,
+    userReasonPreset: input.userReasonPreset,
+    keyConcepts: input.keyConcepts,
+    coreFormula: input.coreFormula,
+    comparisonPoint: input.comparisonPoint,
+    missingIssue: input.missingIssue,
+    weakStructurePoint: input.weakStructurePoint,
+    weakApplicationSentence: input.weakApplicationSentence,
+  });
+  const taxonomyClassification = {
+    primaryNodeId: taxonomy.primary?.taxonomyNodeId ?? null,
+    candidates: taxonomy.candidates,
+    classificationStatus: taxonomy.classificationStatus,
+    classificationConfidence: taxonomy.classificationConfidence,
+    classifierSource: "local_taxonomy_v1",
+  };
+  const captureNoteV1 = buildCaptureNoteSignals("second", input);
+  const captureNoteV2 = structureCaptureNote({
+    mode: "second",
+    subject: input.subjectLabel,
+    confirmedText: input.rawQuestionText ?? input.userAnswer,
+    problemText: input.rawQuestionText,
+    userAnswerText: input.userAnswer,
+    existingNormalizedDraft: input.extractionPayload?.normalized_draft ?? null,
+    userConfirmedFields: input.extractionPayload?.user_confirmed_fields,
+    itemInput: input,
+  });
+  const answerSubmission = buildLearnerAnswerSubmissionPersistenceContract({
+    userId: item.userId ?? "",
+    mode: "second",
+    subject: input.subjectLabel,
+    sourceType: input.sourceType,
+    pageCount: null,
+    lowConfidenceFlag: false,
+    captureQualityIssue: null,
+    hasManualCorrection: false,
+    ocrConfirmedByLearner: false,
+    confirmedText: input.rawQuestionText ?? input.userAnswer,
+  });
+  return {
+    taxonomyClassification,
+    captureNoteV1,
+    captureNoteV2,
+    answerSubmission,
+    answerSubmissionDerived:
+      buildLearnerAnswerSubmissionDerivedMetadata(answerSubmission),
+  };
+}
+
+function isCanonicalIsoTimestamp(value: unknown): value is string {
+  if (typeof value !== "string") return false;
+  const timestamp = Date.parse(value);
   return (
-    confirmed !== null &&
-    typeof confirmed === "object" &&
-    (confirmed as Record<string, unknown>).hasManualCorrection === false &&
-    (confirmed as Record<string, unknown>).ocrConfirmedByLearner === false
+    Number.isFinite(timestamp) && new Date(timestamp).toISOString() === value
   );
 }
 
-function hasHistoricalAbsentConfirmationFields(item: SyntheticItem) {
-  const confirmed = item.rawPayload?.user_confirmed_fields;
+function captureFixtureTimingClosed(value: unknown, createdAt: unknown) {
+  if (
+    !isCanonicalIsoTimestamp(createdAt) ||
+    value === null ||
+    typeof value !== "object" ||
+    Array.isArray(value)
+  ) {
+    return false;
+  }
+  const captureSignal = (value as Record<string, unknown>)
+    .curriculum_anchored_capture_signal;
+  if (
+    captureSignal === null ||
+    typeof captureSignal !== "object" ||
+    Array.isArray(captureSignal)
+  ) {
+    return false;
+  }
+  const signal = captureSignal as Record<string, unknown>;
+  const queue = signal.reviewQueueCandidate;
+  const learning = signal.learningStateUpdateCandidate;
+  if (
+    queue === null ||
+    typeof queue !== "object" ||
+    Array.isArray(queue)
+  ) {
+    return false;
+  }
+  if (learning === null) {
+    return !Object.hasOwn(
+      queue as Record<string, unknown>,
+      "dueAtCandidate",
+    );
+  }
+  if (typeof learning !== "object" || Array.isArray(learning)) return false;
+  const dueAt = (queue as Record<string, unknown>).dueAtCandidate;
+  const nextReviewAt = (learning as Record<string, unknown>)
+    .nextReviewAtCandidate;
+  if (
+    !isCanonicalIsoTimestamp(dueAt) ||
+    !isCanonicalIsoTimestamp(nextReviewAt)
+  ) {
+    return false;
+  }
+  const created = Date.parse(createdAt);
+  const dueDelta = Date.parse(dueAt) - created;
+  const reviewDelta = Date.parse(nextReviewAt) - created;
+  const tolerance = 5 * 60_000;
   return (
-    confirmed !== null &&
-    typeof confirmed === "object" &&
-    !("hasManualCorrection" in confirmed) &&
-    !("ocrConfirmedByLearner" in confirmed)
+    Math.abs(dueDelta - 2 * 86_400_000) <= tolerance &&
+    Math.abs(reviewDelta - 3 * 86_400_000) <= tolerance &&
+    Math.abs(reviewDelta - dueDelta - 86_400_000) <= tolerance
   );
 }
 
-function isCurrentH2Ledger(item: SyntheticItem) {
+function canonicalCaptureFixtureProjection(value: unknown) {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  const clone = JSON.parse(JSON.stringify(value)) as Record<string, unknown>;
+  const captureSignal = clone.curriculum_anchored_capture_signal;
+  if (
+    captureSignal === null ||
+    typeof captureSignal !== "object" ||
+    Array.isArray(captureSignal)
+  ) {
+    return null;
+  }
+  const signal = captureSignal as Record<string, unknown>;
+  const queue = signal.reviewQueueCandidate;
+  const learning = signal.learningStateUpdateCandidate;
+  if (
+    queue === null ||
+    typeof queue !== "object" ||
+    Array.isArray(queue)
+  ) {
+    return null;
+  }
+  if (learning === null) {
+    return Object.hasOwn(
+      queue as Record<string, unknown>,
+      "dueAtCandidate",
+    )
+      ? null
+      : canonicalJson(clone);
+  }
+  if (
+    typeof learning !== "object" ||
+    Array.isArray(learning) ||
+    !isCanonicalIsoTimestamp(
+      (queue as Record<string, unknown>).dueAtCandidate,
+    ) ||
+    !isCanonicalIsoTimestamp(
+      (learning as Record<string, unknown>).nextReviewAtCandidate,
+    )
+  ) {
+    return null;
+  }
+  (queue as Record<string, unknown>).dueAtCandidate = "fixture-plus-two-days";
+  (learning as Record<string, unknown>).nextReviewAtCandidate =
+    "fixture-plus-three-days";
+  return canonicalJson(clone);
+}
+
+function exactFixtureLearningSignal(item: SyntheticItem) {
+  const role = exactFixtureRole(item);
+  if (!role) return null;
+  const itemId = resolveSyntheticItemId(item);
+  const gap = role === "ledger" ? syntheticLedgerGap : syntheticFixtureGap;
+  const keyConcepts =
+    role === "ledger"
+      ? ["사업인정", "처분성", "수용권"]
+      : ["신뢰보호", "공적 견해표명", "보호가치"];
+  const weakStructurePoint =
+    role === "ledger"
+      ? "법률효과와 권리구제 필요성을 같은 순서로 연결해야 합니다."
+      : "요건과 사실 적용을 같은 순서로 연결해야 합니다.";
+  const rewriteInstruction =
+    role === "ledger"
+      ? "처분의 법률효과와 권리구제 필요성을 한 문단에 연결합니다."
+      : "요건, 대응 사실, 소결론을 한 문단에 연결합니다.";
+  return buildCaptureLearningSignal({
+    itemId,
+    examName: "감정평가사 2차",
+    subject: "감정평가 및 보상법규",
+    sourceType: "text",
+    confidence: role === "ledger" ? "중간" : "낮음",
+    timeSpentSeconds: role === "queue-anchor" ? 180 : undefined,
+    biggestGap: gap,
+    mistakeReason: exactFixtureMistakeType(item),
+    keyConcepts,
+    weakStructurePoint,
+    missingIssue: gap,
+    rewriteInstruction,
+    createdFromCapture: true,
+  });
+}
+
+function exactGeneratedRow(
+  row: Record<string, unknown>,
+  expected: Record<string, unknown>,
+) {
+  return Object.entries(expected).every(([key, value]) => row[key] === value);
+}
+
+function exactFixturePayloadClosed(
+  item: SyntheticItem,
+  role: "ledger" | "queue-anchor",
+) {
+  const raw = item.rawPayload;
+  const derived = item.derivedPayload;
+  const answer =
+    role === "ledger" ? syntheticLedgerAnswer : syntheticFixtureAnswer;
+  const gap = role === "ledger" ? syntheticLedgerGap : syntheticFixtureGap;
+  const keyConcepts =
+    role === "ledger"
+      ? ["사업인정", "처분성", "수용권"]
+      : ["신뢰보호", "공적 견해표명", "보호가치"];
+  const weakStructurePoint =
+    role === "ledger"
+      ? "법률효과와 권리구제 필요성을 같은 순서로 연결해야 합니다."
+      : "요건과 사실 적용을 같은 순서로 연결해야 합니다.";
+  const weakApplicationSentence =
+    role === "ledger"
+      ? "사업인정으로 발생하는 구체적 법률효과를 적어야 합니다."
+      : "공적 견해표명에 해당하는 합성 사실을 구체적으로 연결해야 합니다.";
+  const rewriteInstruction =
+    role === "ledger"
+      ? "처분의 법률효과와 권리구제 필요성을 한 문단에 연결합니다."
+      : "요건, 대응 사실, 소결론을 한 문단에 연결합니다.";
+  const referenceStructure =
+    role === "ledger"
+      ? syntheticLedgerCorrectAnswer
+      : "I. 공적 견해표명 II. 신뢰와 귀책 III. 보호가치 IV. 결론";
+  const aiDraft = raw?.aiDraft;
+  const productionMetadata = exactFixtureProductionMetadata(item, role);
+  const expectedAiDraft = {
+    keyConcepts,
+    coreFormula: null,
+    comparisonPoint: null,
+    missingIssue: gap,
+    weakStructurePoint,
+    weakApplicationSentence,
+    rewriteInstruction,
+    calculationRisk: null,
+    unitRisk: null,
+    rewriteTaskType: "second_answer_rewrite",
+    supportedCalculatorTemplateId: null,
+    referenceStructure,
+    myAnswerSummary: answer,
+    caseSummary: null,
+  };
+  const expectedRawKeys = [
+    "aiDraft",
+    "artifactType",
+    "biggest_gap",
+    "captureMethod",
+    "capture_intent",
+    "concept_card",
+    "created_from_capture",
+    "due_at",
+    "issue_recall",
+    "learner_answer_submission",
+    "mode",
+    "nextReviewDate",
+    "normalized_draft",
+    "noteKind",
+    "outline_draft",
+    "produced_answer_before_reference",
+    "production_before_comparison",
+    "raw_extraction_json",
+    "raw_ocr_text",
+    "reference_answer_added_after_production",
+    "review_stage",
+    "rewrite_completed",
+    "rewrite_instruction",
+    "rewrite_paragraph",
+    "rewrite_source_gap",
+    "rewrite_source_item_id",
+    "subjectLabel",
+    "taxonomyClassification",
+    "user_confirmed_fields",
+  ];
+  const expectedDerivedKeys = [
+    "calculationRisk",
+    "capture_note_engine_v1",
+    "capture_note_engine_v2",
+    "cloze_candidate",
+    "conceptFamily",
+    "conceptNextTaskType",
+    "conceptNodeId",
+    "concept_card",
+    "concept_node_candidate",
+    "created_from_capture",
+    "learner_answer_submission",
+    "missingIssueCandidate",
+    "mistakeType",
+    "recurrenceCount",
+    "retrievalPrompt",
+    "review_stage",
+    "rewriteTaskType",
+    "supportedCalculatorTemplateId",
+    "taxonomyClassification",
+    "topicTag",
+    "unitRisk",
+    "weakStructurePoint",
+  ];
+  const expectedConfirmed = {
+    subjectLabel: "감정평가 및 보상법규",
+    userAnswer: answer,
+    production_before_comparison: true,
+    reference_answer_added_after_production: true,
+    biggest_gap: gap,
+    sourceType: "text",
+    examMode: "second",
+    hasManualCorrection: false,
+    ocrConfirmedByLearner: false,
+    acceptance_fixture_id: syntheticOwnerId,
+    acceptance_fixture_role: role,
+  };
+  const expectedIssueRecall =
+    role === "ledger"
+      ? "사업인정의 처분성을 법률효과 중심으로 검토합니다."
+      : "신뢰보호 요건을 순서대로 검토합니다.";
+  const expectedOutline =
+    role === "ledger"
+      ? "I. 사업인정의 성격 II. 수용권 설정 III. 권리구제 IV. 결론"
+      : referenceStructure;
+  return (
+    raw !== undefined &&
+    derived !== undefined &&
+    hasExactObjectKeys(raw, expectedRawKeys) &&
+    hasExactObjectKeys(derived, expectedDerivedKeys) &&
+    raw.captureMethod === "text" &&
+    raw.raw_ocr_text === answer &&
+    JSON.stringify(canonicalJson(raw.raw_extraction_json)) ===
+      JSON.stringify(
+        canonicalJson({
+          acceptance_fixture_id: syntheticOwnerId,
+          acceptance_fixture_role: role,
+        }),
+      ) &&
+    JSON.stringify(canonicalJson(raw.user_confirmed_fields)) ===
+      JSON.stringify(canonicalJson(expectedConfirmed)) &&
+    raw.normalized_draft === null &&
+    raw.mode === "second" &&
+    raw.artifactType === "second_correction" &&
+    raw.noteKind === "교정노트" &&
+    raw.subjectLabel === "감정평가 및 보상법규" &&
+    canonicalJson(aiDraft) !== null &&
+    JSON.stringify(canonicalJson(aiDraft)) ===
+      JSON.stringify(canonicalJson(expectedAiDraft)) &&
+    raw.rewrite_source_item_id === null &&
+    raw.rewrite_source_gap === null &&
+    raw.rewrite_instruction === rewriteInstruction &&
+    raw.rewrite_paragraph === null &&
+    raw.rewrite_completed === false &&
+    raw.concept_card === null &&
+    raw.review_stage === null &&
+    raw.due_at === null &&
+    raw.issue_recall === expectedIssueRecall &&
+    raw.outline_draft === expectedOutline &&
+    raw.biggest_gap === gap &&
+    raw.created_from_capture === true &&
+    raw.capture_intent === "save" &&
+    typeof raw.nextReviewDate === "string" &&
+    /^\d{4}-\d{2}-\d{2}$/.test(raw.nextReviewDate) &&
+    JSON.stringify(canonicalJson(raw.taxonomyClassification)) ===
+      JSON.stringify(
+        canonicalJson(productionMetadata.taxonomyClassification),
+      ) &&
+    JSON.stringify(canonicalJson(raw.learner_answer_submission)) ===
+      JSON.stringify(canonicalJson(productionMetadata.answerSubmission)) &&
+    raw.production_before_comparison === true &&
+    raw.produced_answer_before_reference === true &&
+    raw.reference_answer_added_after_production === true &&
+    derived.topicTag === item.problemTitle &&
+    derived.mistakeType === exactFixtureMistakeType(item) &&
+    derived.created_from_capture === true &&
+    JSON.stringify(canonicalJson(derived.taxonomyClassification)) ===
+      JSON.stringify(
+        canonicalJson(productionMetadata.taxonomyClassification),
+      ) &&
+    captureFixtureTimingClosed(
+      derived.capture_note_engine_v1,
+      item.createdAt,
+    ) &&
+    captureFixtureTimingClosed(
+      derived.capture_note_engine_v2,
+      item.createdAt,
+    ) &&
+    JSON.stringify(
+      canonicalCaptureFixtureProjection(derived.capture_note_engine_v1),
+    ) ===
+      JSON.stringify(
+        canonicalCaptureFixtureProjection(productionMetadata.captureNoteV1),
+      ) &&
+    JSON.stringify(
+      canonicalCaptureFixtureProjection(derived.capture_note_engine_v2),
+    ) ===
+      JSON.stringify(
+        canonicalCaptureFixtureProjection(productionMetadata.captureNoteV2),
+      ) &&
+    JSON.stringify(canonicalJson(derived.learner_answer_submission)) ===
+      JSON.stringify(
+        canonicalJson(productionMetadata.answerSubmissionDerived),
+      ) &&
+    typeof derived.recurrenceCount === "number" &&
+    derived.recurrenceCount === 1 &&
+    derived.concept_card === null &&
+    derived.review_stage === null &&
+    derived.cloze_candidate === keyConcepts[0] &&
+    derived.rewriteTaskType === "second_answer_rewrite" &&
+    derived.missingIssueCandidate === gap &&
+    derived.weakStructurePoint === weakStructurePoint &&
+    derived.calculationRisk === null &&
+    derived.unitRisk === null &&
+    derived.supportedCalculatorTemplateId === null
+  );
+}
+
+function isExactVisualLedger(item: SyntheticItem) {
   return (
     item.examName === "감정평가사 2차" &&
     item.subjectLabel === "감정평가 및 보상법규" &&
@@ -1122,1239 +1331,942 @@ function isCurrentH2Ledger(item: SyntheticItem) {
     item.correctAnswer === syntheticLedgerCorrectAnswer &&
     item.userAnswer === syntheticLedgerAnswer &&
     item.userReasonText === syntheticLedgerGap &&
+    item.userReasonPreset === undefined &&
+    item.user_reason_preset === null &&
     item.confidence === "중간" &&
-    h2AcceptanceMarkers(item, "ledger") &&
-    hasExplicitUnconfirmedFields(item)
+    item.timeSpentSeconds === null &&
+    exactFixtureMarkers(item, "ledger") &&
+    exactFixturePayloadClosed(item, "ledger")
   );
 }
 
-function isHistoricalH2LedgerV1(item: SyntheticItem) {
-  return (
-    item.examName === "감정평가사 2차" &&
-    item.subjectLabel === "감정평가 및 보상법규" &&
-    item.sourceType === "text" &&
-    item.sourceLabel === syntheticFixtureSource &&
-    item.problemTitle === historicalSyntheticFixtureTitle &&
-    item.problemIdentifier === historicalSyntheticFixtureProblemIdentifier &&
-    item.rawQuestionText === historicalSyntheticFixtureQuestion &&
-    item.rawAnswerText === syntheticFixtureAnswer &&
-    item.correctAnswer === syntheticFixtureCorrectAnswer &&
-    item.userAnswer === syntheticFixtureAnswer &&
-    item.userReasonText === syntheticFixtureGap &&
-    item.confidence === "중간" &&
-    h2AcceptanceMarkers(item, "ledger") &&
-    hasHistoricalAbsentConfirmationFields(item)
-  );
-}
-
-function isLegacyH2Ledger(item: SyntheticItem) {
-  return exactItemFields(item, {
-    subjectLabel: "감정평가 및 보상법규",
-    sourceLabel: syntheticFixtureSource,
-    problemTitle: historicalSyntheticFixtureTitle,
-    rawQuestionText: historicalSyntheticFixtureQuestion,
-    rawAnswerText: syntheticFixtureAnswer,
-    correctAnswer: syntheticFixtureCorrectAnswer,
-    userAnswer: syntheticFixtureAnswer,
-    userReasonText: syntheticFixtureGap,
-  });
-}
-
-function matchesH2QueueAnchorFields(item: SyntheticItem) {
+function isExactVisualQueueAnchor(item: SyntheticItem) {
   const identifier = item.problemIdentifier?.match(
     /^s232h2:v3-visual:queue:(\d{3})$/,
   );
   if (!identifier) return false;
-  const generation = identifier[1];
+  const serial = identifier[1];
   return (
     item.examName === "감정평가사 2차" &&
     item.subjectLabel === "감정평가 및 보상법규" &&
     item.sourceType === "text" &&
     item.sourceLabel === syntheticQueueAnchorSource &&
-    item.problemTitle === `S232H2 합성 복습 앵커 ${generation}` &&
+    item.problemTitle === "S232H2 합성 복습 앵커 " + serial &&
     item.rawQuestionText ===
-      `S232H2 합성 복습 앵커 ${generation}: 신뢰보호 요건을 다시 연결합니다.` &&
+      "S232H2 합성 복습 앵커 " +
+        serial +
+        ": 신뢰보호 요건을 다시 연결합니다." &&
     item.rawAnswerText === syntheticFixtureAnswer &&
     item.correctAnswer === syntheticFixtureCorrectAnswer &&
     item.userAnswer === syntheticFixtureAnswer &&
     item.userReasonText === syntheticFixtureGap &&
+    item.userReasonPreset === undefined &&
+    item.user_reason_preset === null &&
     item.confidence === "낮음" &&
-    h2AcceptanceMarkers(item, "queue-anchor")
+    item.timeSpentSeconds === 180 &&
+    exactFixtureMarkers(item, "queue-anchor") &&
+    exactFixturePayloadClosed(item, "queue-anchor")
   );
 }
 
-function isH2QueueAnchor(item: SyntheticItem) {
-  return matchesH2QueueAnchorFields(item) && hasExplicitUnconfirmedFields(item);
-}
-
-function isHistoricalH2QueueAnchor(item: SyntheticItem) {
-  return (
-    matchesH2QueueAnchorFields(item) &&
-    hasHistoricalAbsentConfirmationFields(item)
-  );
-}
-
-const historicalSyntheticContracts = [
-  (item: SyntheticItem) =>
-    exactItemFields(item, {
-      subjectLabel: "감정평가 및 보상법규",
-      sourceLabel: "S228 synthetic runtime acceptance",
-      problemTitle: /^S228 synthetic Study Ledger [0-9a-f]{10}$/,
-      rawQuestionText:
-        "신뢰보호원칙의 적용 요건을 검토하시오. 합성 테스트 데이터입니다.",
-      rawAnswerText:
-        "합리적 기대 가능성은 행정청의 공적 견해표명과 보호가치 있는 신뢰를 중심으로 검토합니다. 다만 이 문단은 비교를 위한 합성 테스트 기록입니다.",
-      correctAnswer:
-        "공적 견해표명, 귀책사유 부재, 신뢰에 따른 행위, 보호가치를 순서대로 확인합니다.",
-      userAnswer:
-        "합리적 기대 가능성은 행정청의 공적 견해표명과 보호가치 있는 신뢰를 중심으로 검토합니다. 다만 이 문단은 비교를 위한 합성 테스트 기록입니다.",
-      userReasonText: "신뢰보호 요건과 사실관계의 대응 문장이 빠져 있습니다.",
-    }),
-  (item: SyntheticItem) =>
-    exactItemFields(item, {
-      subjectLabel: "감정평가실무",
-      sourceLabel: "S232B.1 synthetic runtime acceptance",
-      problemTitle: /^S232B\.1 synthetic confirmed detail [0-9a-f]{10}$/,
-      rawQuestionText:
-        "보상액 산정의 기준시점과 적용 근거를 설명하시오. 합성 테스트 데이터입니다.",
-      rawAnswerText:
-        "보상액 산정의 기준시점과 적용 근거를 순서대로 연결합니다. S232B.1 합성 테스트 기록입니다.",
-      correctAnswer: "기준시점과 적용 근거를 순서대로 설명합니다.",
-      userAnswer:
-        "보상액 산정의 기준시점과 적용 근거를 순서대로 연결합니다. S232B.1 합성 테스트 기록입니다.",
-      userReasonText:
-        "기준시점과 적용 근거 사이의 연결 문장을 한 번 더 확인합니다.",
-    }),
-  (item: SyntheticItem) =>
-    exactItemFields(item, {
-      subjectLabel: "감정평가실무",
-      sourceLabel: "S232B.2 synthetic runtime acceptance",
-      problemTitle: /^S232B\.2 synthetic StickyAction detail [0-9a-f]{10}$/,
-      rawQuestionText:
-        "보상액 산정 기준과 적용 근거를 설명하시오. 합성 테스트 데이터입니다.",
-      rawAnswerText:
-        "보상액 산정 기준과 적용 근거를 순서대로 연결합니다. S232B.2 합성 테스트 기록입니다.",
-      correctAnswer: "기준과 적용 근거를 순서대로 설명합니다.",
-      userAnswer:
-        "보상액 산정 기준과 적용 근거를 순서대로 연결합니다. S232B.2 합성 테스트 기록입니다.",
-      userReasonText: "기준과 근거 사이의 연결 문장을 한 번 더 확인합니다.",
-    }),
-  (item: SyntheticItem) =>
-    exactItemFields(item, {
-      subjectLabel: "감정평가 및 보상법규",
-      sourceLabel: "S227 synthetic invited-account runtime",
-      problemTitle: /^S227 합성 학습 기록 [0-9a-f]{10}$/,
-      rawQuestionText:
-        "사업인정의 처분성을 검토하시오. 합성 테스트 데이터입니다.",
-      rawAnswerText:
-        "사업인정은 공익사업의 시행을 확정하고 수용권을 설정하는 처분으로 검토합니다. 이 문장은 초대 계정 흐름 검증만을 위한 합성 기록입니다.",
-      correctAnswer:
-        "사업인정의 공익사업 확정, 수용권 설정, 권리구제 필요성을 순서대로 확인합니다.",
-      userAnswer:
-        "사업인정은 공익사업의 시행을 확정하고 수용권을 설정하는 처분으로 검토합니다. 이 문장은 초대 계정 흐름 검증만을 위한 합성 기록입니다.",
-      userReasonText:
-        "처분성의 근거와 구체적 법률효과를 연결하는 문장이 빠져 있습니다.",
-    }),
-  (item: SyntheticItem) =>
-    exactItemFields(item, {
-      subjectLabel: "감정평가이론",
-      sourceLabel: "S227 synthetic empty-evidence runtime",
-      problemTitle: /^S227 합성 빈 근거 기록 [0-9a-f]{10}$/,
-      correctAnswer: "",
-      userAnswer: "",
-      userReasonText: "비교 근거를 추가하기 전의 정직한 빈 상태를 확인합니다.",
-    }),
-] as const;
-
-function matchesExactSyntheticRootFields(item: SyntheticItem) {
-  return (
-    isCurrentH2Ledger(item) ||
-    isHistoricalH2LedgerV1(item) ||
-    isLegacyH2Ledger(item) ||
-    isH2QueueAnchor(item) ||
-    isHistoricalH2QueueAnchor(item) ||
-    isHistoricalS232gAggregateSource(item) ||
-    historicalSyntheticContracts.some((contract) => contract(item))
-  );
-}
-
-const exactSyntheticRewriteParagraphs = new Set([
-  "행정청의 공적 견해표명이 있었고 학습자에게 귀책사유가 없으며, 그 신뢰에 따른 행위와 보호가치를 사실관계에 대응해 검토하므로 신뢰보호원칙의 적용 가능성을 인정할 수 있습니다. 합성 테스트 문단입니다.",
-  "사업인정은 공익사업 시행을 확정하면서 수용권을 설정하여 국민의 권리관계에 직접 영향을 주고, 그 법률효과에 대한 권리구제가 필요하므로 처분성을 인정할 수 있습니다. 합성 테스트 문단입니다.",
-  historicalS232gRewriteParagraph,
-]);
-
-const exactSyntheticPayloadSystemStrings = new Set([
-  "",
-  "text",
-  "second",
-  "save",
-  "capture",
-  "capture-note",
-  "second_correction",
-  "교정노트",
-  "rewrite",
-  "paragraph_rewrite",
-  "second_answer_rewrite",
-  "legal_application",
-  "legal_issue_recall",
-  "requirement_subsumption",
-  "theory_keyword",
-  "keyword_recall",
-  "outline_recall",
-  "calculation_template",
-  "formula_check",
-  "casio_step",
-  "curriculum_capture",
-  "captured_unchecked_concept",
-  "draft",
-  "unknown",
-  "confused",
-  "low",
-  "medium",
-  "high",
-  "critical",
-  "ai_suggested",
-  "needs_review",
-  "rules",
-  "fallback",
-  "concept_confusion",
-  "2차 답안 보강",
-  "s204.learner_answer_submission.v1",
-  "user_owned_service_data",
-  "authenticated_request_user",
-  "derived_learning_metadata",
-  "not_required_text_input",
-  "confirmed_by_learner",
-  "review_os_wrong_answer_item",
-  "server_record_after_save_local_draft_before_save",
-  "learning_support_draft",
-  "OCR 결과는 학습 보조 초안입니다. 저장 전 직접 수정할 수 있습니다.",
-  "사용자 확인 후 개인 노트에만 보관",
-  "사례 요약은 노트 세부에서 확인합니다.",
-  "내 답안 요약은 노트 세부에서 확인합니다.",
-  "10분 다시쓰기",
-  "10분 다시 쓰기",
-  "한 문단 설명 다시쓰기",
-  "처분성 판단 문단 보강",
-  "목차 3줄 회상 후 10분 다시쓰기",
-  "키워드 3개 회상 후 한 문단 설명",
-  "타건 순서는 지원되는 계산 템플릿에 한해 제공됩니다.",
-  "사업인정 처분성·권리구제 관계 구분",
-  "답안 구조 점검",
-  "답안 구조 점검(점검 필요)",
-  "구조",
-  "개념 확인 필요",
-  "구조 보강 필요",
-  "처분성 문단",
-  "산식 검산",
-  "키워드 논리",
-  "3방식",
-  "사업인정",
-  "토지보상법",
-  "행정법 기초",
-  "시장가치/공정가치",
-  "10초 확인",
-  "일치하는 커리큘럼 노드를 찾지 못해 과목 기반 안전 후보로 유지합니다.",
-  "s232h2:v3-visual:v1",
-  "ledger",
-  "queue-anchor",
-  "감정평가 및 보상법규",
-  "감정평가실무",
-  "감정평가이론",
-  "개념",
-  "조건",
-  "평가",
-  "부족",
-  "개념 -> 조건 -> 적용",
-  "해설 전에 기준 1개를 먼저 떠올립니다.",
-  "조문·요건과 사안 포섭 연결 부족",
-  "요건 1개와 사안 포섭 문장 1개를 다시 써보기",
-  "문제 요구 → 평가 근거 → 계산 → 결론",
-  "문제 요구 → 평가 근거 → 계산 → 결론(점검 필요)",
-  "수익환원법 적용과 검산 산식 검산 12분",
-  "실무 수익환원법 적용과 검산 산식 검산 12분",
-  "오늘은 간극 1개만 문단으로 보강합니다. 계산 근거와 결론 수치를 분리해 확인합니다.",
-  "이 과목은 먼저 이 구조로 답안을 잡습니다. 문제 요구 → 평가 근거 → 계산 → 결론",
-  "신뢰보호",
-  "공적 견해표명",
-  "보호가치",
-  "기준시점",
-  "적용 근거",
-  "산정 기준",
-  "사업인정",
-  "처분성",
-  "수용권",
-  "시장가치",
-  "가치다원성",
-  "요건과 사실 적용을 같은 순서로 연결해야 합니다.",
-  "공적 견해표명에 해당하는 사실을 구체적으로 연결해야 합니다.",
-  "공적 견해표명에 해당하는 합성 사실을 구체적으로 연결해야 합니다.",
-  "요건, 대응 사실, 소결론을 한 문단에 연결합니다.",
-  "I. 공적 견해표명 II. 신뢰와 귀책 III. 보호가치 IV. 결론",
-  "신뢰보호 요건을 순서대로 검토합니다.",
-  "법률효과와 권리구제 필요성을 같은 순서로 연결해야 합니다.",
-  "사업인정으로 발생하는 구체적 법률효과를 적어야 합니다.",
-  "처분의 법률효과와 권리구제 필요성을 한 문단에 연결합니다.",
-  "사업인정의 처분성을 법률효과 중심으로 검토합니다.",
-  "I. 사업인정의 성격 II. 수용권 설정 III. 권리구제 IV. 결론",
-  "근거를 확인한 뒤 구조를 보강합니다.",
-  "확인되지 않은 근거는 단정하지 않습니다.",
-  "근거를 확인한 뒤 한 문단을 작성합니다.",
-  "시장가치와 가치다원성의 관계를 확인합니다.",
-  "I. 시장가치 II. 가치다원성 III. 관계",
-  "기준시점과 적용 근거를 한 문단에 연결합니다.",
-  "기준과 근거를 한 문단에 연결합니다.",
-  "요건을 먼저 쓰고 대응 사실과 소결론을 한 문단에 연결합니다.",
-  // Exact public metadata produced by the current taxonomy and curriculum
-  // builders for the six allowlisted synthetic fixture families. Never add
-  // observed payload values or AI output here.
-  "요건",
-  "공익사업 요건",
-  "요건식별",
-  "필수요건 누락",
-  "요건 충족 판단 근거 부족",
-  "감정평가",
-  "보상법규",
-  "요건을",
-  "요건과",
-  "조문",
-  "핵심 조문 구조",
-  "조문인용 정확도",
-  "조문 번호 혼동",
-  "요건-효과 연결 누락",
-  "사안포섭",
-  "쟁점 구조화",
-  "포섭 논증",
-  "쟁점 누락",
-  "규범-사실 연결 부족",
-  "판례/법리",
-  "쟁점별 판례법리",
-  "판례 적용",
-  "사실관계와 법리 분리 실패",
-  "판례 취지 오독",
-  "적용",
-  "사실",
-  "적용을",
-  "local_taxonomy_v1",
-  "행정법 기초에서 쟁점/조문/요건/사안 포섭/결론 중 하나를 먼저 떠올려 보세요.",
-  "감정평가 및 보상법규 문단 12분 다시쓰기",
-  "1타 쉬운풀이",
-  "합격 한 줄",
-  "출제자 함정",
-  "curriculum-capture-capture-note-second-감정평가-및-보상법규-fallback",
-  "감정평가 및 보상법규 감정평가 및 보상법규 12분 다시쓰기",
-  "curriculum-review-capture-note-second-감정평가-및-보상법규-fallback",
-  "요건과 사실 적용을 같은 순서로 연결해야 합니다.(점검 필요)",
-  "토지보상법에서 쟁점/조문/요건/사안 포섭/결론 중 하나를 먼저 떠올려 보세요.",
-  "평가방법 선택",
-  "방법 적용 판단",
-  "방법선택 논증",
-  "대상물 특성 미반영",
-  "방법 선택 근거 부족",
-  "근거",
-  "결론 수치",
-  "시산가액 조정",
-  "결론 정합성 검토",
-  "시산가액 조정근거 부족",
-  "결론-근거 불일치",
-  "합성",
-  "수익방식",
-  "환원/할인",
-  "수익가치 산정",
-  "현금흐름 가정 불명확",
-  "환원율 적용 오류",
-  "3방식에서 산식/단위/계산과정/결론 기재값 중 하나를 먼저 적어 보세요.",
-  "second_practice_income_approach",
-  "수익환원법 적용과 검산",
-  "issue_spotting",
-  "수익환원법 적용과 검산 15분 다시쓰기",
-  "outline_recall → calculation_template → casio_step → 7일 뒤 paragraph_rewrite",
-  "retrieval_check_then_1_3",
-  "감정평가실무 개념 상태: unknown → confused",
-  "curriculum-capture-capture-note-second_practice_income_approach",
-  "실무 수익환원법 적용과 검산 산식 검산 15분",
-  "curriculum-review-capture-note-second_practice_income_approach",
-  "수익환원법 적용과 검산 산식 검산 재시도 예약",
-  "보정",
-  "개별요인 보정",
-  "보정근거 제시",
-  "보정항목 누락",
-  "보정률 근거 부족",
-  "second_practice_compensation_amount",
-  "보상액 산정 구조",
-  "절차",
-  "절차 단계 서술",
-  "절차 선후 누락",
-  "주체별 권한 혼동",
-  "사업인정의",
-  "사업인정으로",
-  "효과",
-  "법률효과를",
-  "법률효과와",
-  "결론",
-  "최종 결론 구성",
-  "결론 압축",
-  "근거 없는 단정",
-  "주문형 결론 누락",
-  "사업인정에서 쟁점/조문/요건/사안 포섭/결론 중 하나를 먼저 떠올려 보세요.",
-  "second_law_project_approval_disposition",
-  "사업인정의 처분성과 권리구제",
-  "사업인정의 처분성과 권리구제 문단 10분 다시쓰기",
-  "issue_spotting → legal_application → 4일 뒤 outline_recall → 14일 뒤 paragraph_rewrite",
-  "감정평가 및 보상법규 개념 상태: unknown → confused",
-  "curriculum-capture-capture-note-second_law_project_approval_disposition",
-  "법규 사업인정 처분성 문단 10분 다시쓰기",
-  "curriculum-review-capture-note-second_law_project_approval_disposition",
-  "사업인정의 처분성과 권리구제 처분성 문단 재시도 예약",
-  "법률효과와 권리구제 필요성을 같은 순서로 연결해야 합니다.(점검 필요)",
-  "평가방식 논리",
-  "방식 간 정합성",
-  "논리 전개",
-  "방식별 전제 누락",
-  "논리 비약",
-  "가치이론",
-  "가치개념 구분",
-  "개념 정합성",
-  "가치개념 혼용",
-  "정의 반복형 서술",
-  "최고최선이용",
-  "법적·물리적·경제적 검토",
-  "판단기준 적용",
-  "검토순서 혼동",
-  "실현가능성 검토 누락",
-  "시장가치/공정가치에서 정의/논거/비교/사례 적용 키워드를 먼저 떠올려 보세요.",
-  ...exactSyntheticRewriteParagraphs,
-]);
-
-const exactSyntheticSystemValuePatterns = [
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
-  /^\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z)?$/,
-  /^s232h2:v3-visual:(?:ledger:v[12]|queue:\d{3})$/,
-  /^S232G aggregate synthetic Study Ledger source [1-9]\d*-[1-9]\d*(?:\n| )내 답안: 합성 원본 문단은 요건과 사실 대응을 확인하기 위한 비민감 테스트 기록입니다\.$/,
-  /^concept:second:(?:감정평가실무:(?:3방식|원가방식|비교방식|수익방식|토지평가|건물평가|임대료평가|보상평가|특수물건|검산-CASIO)|감정평가이론:(?:감정평가의-본질|가치이론|시장분석|최고최선이용|3방식-이론|시장가치-공정가치|감정평가-절차|평가윤리)|감정평가-및-보상법규:(?:행정법-기초|토지보상법|사업인정|수용재결|손실보상-원칙|보상항목|행정쟁송|감정평가법령))$/,
-  /^curriculum-(?:capture|review)-capture-note-second-(?:practice-(?:method-selection|adjustment|income-approach|cost-approach|sales-comparison|final-value)|theory-(?:value-theory|price-principle|approach-logic|market-analysis|highest-best-use)|comp-law-(?:requirements|statute|procedure-project-approval|precedent-principles|issue-subsumption|conclusion))$/,
-  /^second-(?:practice-(?:method-selection|adjustment|income-approach|cost-approach|sales-comparison|final-value)|theory-(?:value-theory|price-principle|approach-logic|market-analysis|highest-best-use)|comp-law-(?:requirements|statute|procedure-project-approval|precedent-principles|issue-subsumption|conclusion))$/,
-] as const;
-
-function isAllowedExactSyntheticPayloadString(
-  value: string,
-  path: string,
-  allowed: ReadonlySet<string>,
-) {
-  return (
-    allowed.has(value) ||
-    exactSyntheticSystemValuePatterns.some((pattern) => pattern.test(value)) ||
-    isAllowedExactSyntheticTaxonomyString(value, path)
-  );
-}
-
-function exactSyntheticPayloadValues(
-  item: SyntheticItem,
-  parent?: SyntheticItem,
-) {
-  const allowed = new Set(exactSyntheticPayloadSystemStrings);
-  const trustedRecords = [item, parent].filter(
-    (value): value is SyntheticItem => Boolean(value),
-  );
-  for (const trusted of trustedRecords) {
-    for (const value of [
-      trusted.id,
-      trusted.itemId,
-      trusted.userId,
-      trusted.examName,
-      trusted.subjectLabel,
-      trusted.sourceType,
-      trusted.sourceLabel,
-      trusted.problemTitle,
-      trusted.problemIdentifier,
-      trusted.rawQuestionText,
-      trusted.rawAnswerText,
-      trusted.correctAnswer,
-      trusted.userAnswer,
-      trusted.userReasonText,
-      trusted.userReasonPreset,
-      trusted.confidence,
-    ]) {
-      if (typeof value !== "string") continue;
-      allowed.add(value);
-      allowed.add(`${value}(후보)`);
-      allowed.add(`${value}(점검 필요)`);
-      allowed.add(`${value}(다시 확인할 부분)`);
-    }
-  }
-  return allowed;
-}
-
-function hasExactSyntheticPayloadContract(
-  item: SyntheticItem,
-  parent?: SyntheticItem,
-) {
-  const allowed = exactSyntheticPayloadValues(item, parent);
-  return exactSyntheticPayloadFailurePaths(item, allowed).length === 0;
-}
-
-function exactSyntheticPayloadFailurePaths(
-  item: SyntheticItem,
-  allowed = exactSyntheticPayloadValues(item),
-) {
-  return collectSyntheticPayloadFailurePaths(
-    item,
-    (value, path) =>
-      isAllowedExactSyntheticPayloadString(value, path, allowed),
-  );
-}
-
-function isExactSyntheticRoot(item: SyntheticItem) {
-  return (
-    matchesExactSyntheticRootFields(item) &&
-    hasExactSyntheticPayloadContract(item)
-  );
-}
-
-function isOwnedSyntheticRewrite(item: SyntheticItem, parent: SyntheticItem) {
-  const rawPayload = item.rawPayload ?? {};
-  const parentRawPayload = parent.rawPayload ?? {};
-  const parentAiDraft =
-    parentRawPayload.aiDraft !== null &&
-    typeof parentRawPayload.aiDraft === "object" &&
-    !Array.isArray(parentRawPayload.aiDraft)
-      ? (parentRawPayload.aiDraft as Record<string, unknown>)
-      : {};
-  if (
-    item.examName !== parent.examName ||
-    item.subjectLabel !== parent.subjectLabel ||
-    item.sourceType !== parent.sourceType ||
-    item.confidence !== parent.confidence ||
-    rawPayload.rewrite_completed !== true ||
-    item.problemTitle !== parent.problemTitle ||
-    rawPayload.rewrite_source_item_id !== resolveSyntheticItemId(parent)
-  )
-    return false;
-  if (
-    isHistoricalS232gAggregateSource(parent) &&
-    !isHistoricalS232gAggregateRewrite(
-      item,
-      resolveSyntheticItemId(parent),
-      parent.problemTitle ?? "",
-    )
-  )
-    return false;
-  const rewriteParagraph = rawPayload.rewrite_paragraph;
-  if (
-    typeof rewriteParagraph !== "string" ||
-    !exactSyntheticRewriteParagraphs.has(rewriteParagraph)
-  )
-    return false;
-  const parentValues = new Set([
-    parent.sourceLabel,
-    parent.problemTitle,
-    parent.problemIdentifier,
-    parent.rawQuestionText,
-    parent.rawAnswerText,
-    parent.correctAnswer,
-    parent.userAnswer,
-    parent.userReasonText,
-    parent.userReasonPreset,
-    parent.confidence,
-    parentRawPayload.rewrite_instruction,
-    parentAiDraft.rewriteInstruction,
-    rewriteParagraph,
-    undefined,
-    null,
-    "",
-  ]);
-  const visibleValues = [
-    item.sourceLabel,
-    item.problemTitle,
-    item.problemIdentifier,
-    item.rawQuestionText,
-    item.rawAnswerText,
-    item.correctAnswer,
-    item.userAnswer,
-    item.userReasonText,
-    item.userReasonPreset,
-    rawPayload.rewrite_source_gap,
-    rawPayload.rewrite_instruction,
-    rawPayload.rewrite_paragraph,
-  ];
-  return (
-    visibleValues.every((value) => parentValues.has(value)) &&
-    hasExactSyntheticPayloadContract(item, parent)
-  );
-}
-
-function classifyOwnedSyntheticItems(
+function classifyExactFixtureGraph(
   items: SyntheticItem[],
   sessionUserId: string,
 ) {
   const byId = new Map(
-    items.map((item) => [resolveSyntheticItemId(item), item] as const),
+    items
+      .map((item) => [resolveSyntheticItemId(item), item] as const)
+      .filter(([itemId]) => itemId.length > 0),
   );
   const owned = new Set<string>();
   for (const [itemId, item] of byId) {
-    if (itemId && item.userId === sessionUserId && isExactSyntheticRoot(item))
+    if (
+      item.userId === sessionUserId &&
+      (isExactVisualLedger(item) || isExactVisualQueueAnchor(item))
+    ) {
       owned.add(itemId);
-  }
-  let changed = true;
-  while (changed) {
-    changed = false;
-    for (const [itemId, item] of byId) {
-      if (!itemId || owned.has(itemId) || item.userId !== sessionUserId)
-        continue;
-      const sourceId =
-        typeof item.rawPayload?.rewrite_source_item_id === "string"
-          ? item.rawPayload.rewrite_source_item_id
-          : "";
-      const parent = byId.get(sourceId);
-      if (
-        sourceId &&
-        parent &&
-        owned.has(sourceId) &&
-        isOwnedSyntheticRewrite(item, parent)
-      ) {
-        owned.add(itemId);
-        changed = true;
-      }
     }
   }
   return { byId, owned };
 }
 
-function planningItemIds(observed: SyntheticAccountData) {
-  const todayFocus =
-    observed.today?.body.focus && typeof observed.today.body.focus === "object"
-      ? (observed.today.body.focus as Record<string, unknown>)
-      : {};
-  const todayQueue = Array.isArray(todayFocus.queue) ? todayFocus.queue : [];
-  const weeklyPlan =
-    observed.weekly?.body.plan && typeof observed.weekly.body.plan === "object"
-      ? (observed.weekly.body.plan as Record<string, unknown>)
-      : {};
-  const weeklyTasks = Array.isArray(weeklyPlan.tasks) ? weeklyPlan.tasks : [];
-  const recovery =
-    weeklyPlan.recovery && typeof weeklyPlan.recovery === "object"
-      ? (weeklyPlan.recovery as Record<string, unknown>)
-      : null;
+function canonicalJson(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonicalJson);
+  if (!value || typeof value !== "object") return value;
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, entry]) => [key, canonicalJson(entry)]),
+  );
+}
+
+const visualSourceNames: readonly VisualSourceName[] = [
+  "items",
+  "notes",
+  "tags",
+  "recurrence",
+  "reviewQueue",
+  "studyLogs",
+  "weeklySummaries",
+  "learningSignals",
+  "agendaUsage",
+  "todaySeeds",
+  "studyProfiles",
+  "conceptNodes",
+];
+
+function canonicalSourceRows(rows: Array<Record<string, unknown>>) {
+  return rows.map((row) => JSON.stringify(canonicalJson(row))).sort();
+}
+
+function sameStringSequenceMembers(
+  left: readonly string[],
+  right: readonly string[],
+) {
+  const sortedLeft = [...left].sort();
+  const sortedRight = [...right].sort();
+  return (
+    sortedLeft.length === sortedRight.length &&
+    sortedLeft.every((value, index) => value === sortedRight[index])
+  );
+}
+
+function sourceFingerprint(snapshot: VisualSourceSnapshot) {
+  return createHash("sha256")
+    .update(
+      JSON.stringify({
+        sessionUserId: snapshot.sessionUserId,
+        items: canonicalSourceRows(snapshot.sources.items),
+        notes: canonicalSourceRows(snapshot.sources.notes),
+        tags: canonicalSourceRows(snapshot.sources.tags),
+        recurrence: canonicalSourceRows(snapshot.sources.recurrence),
+        reviewQueue: canonicalSourceRows(snapshot.sources.reviewQueue),
+        studyLogs: canonicalSourceRows(snapshot.sources.studyLogs),
+        weeklySummaries: canonicalSourceRows(snapshot.sources.weeklySummaries),
+        learningSignals: canonicalSourceRows(snapshot.sources.learningSignals),
+        agendaUsage: canonicalSourceRows(snapshot.sources.agendaUsage),
+        todaySeeds: canonicalSourceRows(snapshot.sources.todaySeeds),
+        studyProfiles: canonicalSourceRows(snapshot.sources.studyProfiles),
+        conceptNodes: canonicalSourceRows(snapshot.sources.conceptNodes),
+      }),
+    )
+    .digest("hex");
+}
+
+async function readVisualSourceSnapshot(
+  page: Page,
+  credential: VisualCredentialCandidate,
+): Promise<VisualSourceSnapshot> {
+  const [sessionResponse, auditResponse] = await Promise.all([
+    page
+      .context()
+      .request.get(new URL("/api/auth/session", runtimeBaseUrl).toString(), {
+        headers: visualAuditRequestHeaders(),
+      }),
+    page
+      .context()
+      .request.get(
+        new URL("/api/os/visual-source-audit", runtimeBaseUrl).toString(),
+        { headers: visualAuditRequestHeaders() },
+      ),
+  ]);
+  const sessionBody = (await sessionResponse.json().catch(() => null)) as {
+    ok?: unknown;
+    session?: {
+      userId?: unknown;
+      email?: unknown;
+      isAuthenticated?: unknown;
+      isDemo?: unknown;
+    };
+  } | null;
+  const auditBody = (await auditResponse.json().catch(() => null)) as {
+    ok?: unknown;
+    sessionUserId?: unknown;
+    sources?: Partial<Record<VisualSourceName, Array<Record<string, unknown>>>>;
+    truncated?: Partial<Record<VisualSourceName, unknown>>;
+  } | null;
+  const sessionUserId = sessionBody?.session?.userId;
+  if (
+    sessionResponse.status() !== 200 ||
+    auditResponse.status() !== 200 ||
+    sessionBody?.ok !== true ||
+    sessionBody.session?.isAuthenticated !== true ||
+    sessionBody.session?.isDemo !== false ||
+    typeof sessionUserId !== "string" ||
+    typeof sessionBody.session.email !== "string" ||
+    sessionBody.session.email.toLowerCase() !==
+      credential.email.toLowerCase() ||
+    auditBody?.ok !== true ||
+    auditBody.sessionUserId !== sessionUserId ||
+    !auditBody.sources ||
+    !auditBody.truncated
+  ) {
+    throw new Error("S232H2 source audit read failed.");
+  }
+  for (const name of visualSourceNames) {
+    if (
+      !Array.isArray(auditBody.sources[name]) ||
+      typeof auditBody.truncated[name] !== "boolean"
+    ) {
+      throw new Error("S232H2 source audit shape failed.");
+    }
+  }
+  return {
+    sessionUserId,
+    sources: auditBody.sources as VisualSourceSnapshot["sources"],
+    truncated: auditBody.truncated as VisualSourceSnapshot["truncated"],
+  };
+}
+
+function hasExactObjectKeys(
+  value: unknown,
+  expectedKeys: readonly string[],
+): value is Record<string, unknown> {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    Object.keys(value as Record<string, unknown>)
+      .sort()
+      .join(",") === [...expectedKeys].sort().join(",")
+  );
+}
+
+async function readVisualEndpointAudit(
+  page: Page,
+  ownedItemIds: ReadonlySet<string>,
+  rawSnapshot: VisualSourceSnapshot,
+): Promise<VisualEndpointAudit> {
+  const paths = [
+    "/api/os/items?limit=501",
+    "/api/os/study-logs?mode=second&limit=501",
+    "/api/os/review-queue",
+    "/api/os/today-focus?mode=second",
+    "/api/os/weekly-summary?mode=second",
+  ] as const;
+  const responses = await Promise.all(
+    paths.map((path) =>
+      page.context().request.get(new URL(path, runtimeBaseUrl).toString(), {
+        headers: visualAuditRequestHeaders(),
+        maxRedirects: 0,
+        timeout: 30_000,
+      }),
+    ),
+  );
+  const bodies = await Promise.all(
+    responses.map((response) => response.json().catch(() => null)),
+  );
+  if (
+    responses.some(
+      (response) =>
+        response.status() !== 200 ||
+        new URL(response.url()).origin !== new URL(runtimeBaseUrl).origin,
+    ) ||
+    !hasExactObjectKeys(bodies[0], ["ok", "items"]) ||
+    !hasExactObjectKeys(bodies[1], ["ok", "logs"]) ||
+    !hasExactObjectKeys(bodies[2], ["ok", "items"]) ||
+    !hasExactObjectKeys(bodies[3], ["ok", "focus"]) ||
+    !hasExactObjectKeys(bodies[4], ["ok", "summary", "plan"]) ||
+    bodies.some((body) => (body as Record<string, unknown>).ok !== true)
+  ) {
+    return {
+      readSucceeded: false,
+      unknownReferenceCount: 1,
+      primaryQueueTitle: null,
+    };
+  }
+
+  const endpointItems = bodies[0].items;
+  const endpointLogs = bodies[1].logs;
+  const endpointQueue = bodies[2].items;
+  const focus = bodies[3].focus;
+  const weeklySummary = bodies[4].summary;
+  const weeklyPlan = bodies[4].plan;
+  if (
+    !Array.isArray(endpointItems) ||
+    !Array.isArray(endpointLogs) ||
+    !Array.isArray(endpointQueue) ||
+    !hasExactObjectKeys(focus, [
+      "lines",
+      "nextAction",
+      "nextActionType",
+      "primaryTaskLabel",
+      "reason",
+      "estimatedDurationMinutes",
+      "priorityScore",
+      "sourceQueueId",
+      "sourceItemId",
+      "queue",
+    ]) ||
+    !Array.isArray(focus.queue) ||
+    !hasExactObjectKeys(weeklyPlan, [
+      "mode",
+      "summary",
+      "primaryActionLabel",
+      "tasks",
+      "recovery",
+      "secondaryRecords",
+    ]) ||
+    !Array.isArray(weeklyPlan.tasks)
+  ) {
+    return {
+      readSucceeded: false,
+      unknownReferenceCount: 1,
+      primaryQueueTitle: null,
+    };
+  }
+
+  const rawItemIds = rawSnapshot.sources.items
+    .map((row) => row.id)
+    .filter((value): value is string => typeof value === "string");
+  const endpointItemIds = endpointItems
+    .map((row) =>
+      row && typeof row === "object"
+        ? (row as Record<string, unknown>).id
+        : null,
+    )
+    .filter((value): value is string => typeof value === "string");
+  const pendingQueueIds = new Set(
+    rawSnapshot.sources.reviewQueue
+      .filter((row) => row.status === "pending")
+      .map((row) => row.id)
+      .filter((value): value is string => typeof value === "string"),
+  );
+  const queueCards = endpointQueue.filter(
+    (row): row is Record<string, unknown> =>
+      row !== null && typeof row === "object" && !Array.isArray(row),
+  );
+  const focusQueue = focus.queue.filter(
+    (row): row is Record<string, unknown> =>
+      row !== null && typeof row === "object" && !Array.isArray(row),
+  );
+  const planTasks = weeklyPlan.tasks.filter(
+    (row): row is Record<string, unknown> =>
+      row !== null && typeof row === "object" && !Array.isArray(row),
+  );
+  const recovery = weeklyPlan.recovery;
   const recoveryTask =
-    recovery?.task && typeof recovery.task === "object"
-      ? (recovery.task as Record<string, unknown>)
+    recovery !== null &&
+    typeof recovery === "object" &&
+    !Array.isArray(recovery) &&
+    (recovery as Record<string, unknown>).task !== null &&
+    typeof (recovery as Record<string, unknown>).task === "object" &&
+    !Array.isArray((recovery as Record<string, unknown>).task)
+      ? ((recovery as Record<string, unknown>).task as Record<string, unknown>)
+      : null;
+  const knownQueueCard = (row: Record<string, unknown>) =>
+    typeof row.queueId === "string" &&
+    pendingQueueIds.has(row.queueId) &&
+    typeof row.itemId === "string" &&
+    ownedItemIds.has(row.itemId);
+  const unknownReferenceCount =
+    (endpointItems.length === endpointItemIds.length ? 0 : 1) +
+    (sameStringSequenceMembers(rawItemIds, endpointItemIds) ? 0 : 1) +
+    endpointItemIds.filter((itemId) => !ownedItemIds.has(itemId)).length +
+    endpointLogs.length +
+    (queueCards.length === endpointQueue.length ? 0 : 1) +
+    queueCards.filter((row) => !knownQueueCard(row)).length +
+    (focusQueue.length === focus.queue.length ? 0 : 1) +
+    focusQueue.filter((row) => !knownQueueCard(row)).length +
+    (focus.sourceQueueId === null ||
+    (typeof focus.sourceQueueId === "string" &&
+      pendingQueueIds.has(focus.sourceQueueId))
+      ? 0
+      : 1) +
+    (focus.sourceItemId === null ||
+    (typeof focus.sourceItemId === "string" &&
+      ownedItemIds.has(focus.sourceItemId))
+      ? 0
+      : 1) +
+    (planTasks.length === weeklyPlan.tasks.length ? 0 : 1) +
+    planTasks.filter(
+      (row) =>
+        typeof row.queueId !== "string" ||
+        !pendingQueueIds.has(row.queueId) ||
+        typeof row.itemId !== "string" ||
+        !ownedItemIds.has(row.itemId),
+    ).length +
+    (recovery === null || (recoveryTask && knownQueueCard(recoveryTask))
+      ? 0
+      : 1) +
+    (weeklySummary === null ? 0 : 1);
+  const primaryQueueTitle =
+    typeof queueCards[0]?.problemTitle === "string"
+      ? queueCards[0].problemTitle
       : null;
   return {
-    today: [
-      ...todayQueue.map((item) =>
-        item && typeof item === "object"
-          ? (item as Record<string, unknown>).itemId
-          : null,
-      ),
-      todayFocus.sourceItemId,
-    ].filter(
-      (value): value is string => typeof value === "string" && value.length > 0,
-    ),
-    weekly: [
-      ...weeklyTasks.map((task) =>
-        task && typeof task === "object"
-          ? (task as Record<string, unknown>).itemId
-          : null,
-      ),
-      recoveryTask?.itemId,
-    ].filter(
-      (value): value is string => typeof value === "string" && value.length > 0,
-    ),
+    readSucceeded: unknownReferenceCount === 0,
+    unknownReferenceCount,
+    primaryQueueTitle,
   };
 }
 
-function summarizeFailureFields(groups: readonly (readonly string[])[]) {
-  const counts = new Map<string, number>();
-  for (const fields of groups) {
-    for (const field of fields)
-      counts.set(field, (counts.get(field) ?? 0) + 1);
-  }
-  return [...counts]
-    .map(([field, count]) => ({ field, count }))
-    .sort((left, right) => left.field.localeCompare(right.field));
-}
-
-async function auditSyntheticAccount(
+async function verifySessionBinding(
   page: Page,
-  {
-    expectedItemId,
-    includePlanning,
-  }: { expectedItemId?: string; includePlanning: boolean },
-): Promise<SyntheticAccountAudit> {
-  const observed = await readSyntheticAccountData(page, { includePlanning });
-  const requiredReads = [
-    observed.session,
-    observed.items,
-    observed.logs,
-    observed.queue,
-  ];
-  if (includePlanning) requiredReads.push(observed.today!, observed.weekly!);
-  for (const value of requiredReads) {
-    expect(
-      value.status,
-      "Every privacy-audit API must be readable before screenshot capture.",
-    ).toBe(200);
-    expect(
-      value.body.ok,
-      "Every privacy-audit API must explicitly report ok=true.",
-    ).toBe(true);
-  }
-
-  const session =
-    observed.session.body.session &&
-    typeof observed.session.body.session === "object"
-      ? (observed.session.body.session as Record<string, unknown>)
-      : {};
-  const sessionUserId =
-    typeof session.userId === "string" ? session.userId : "";
-  const sessionBound =
-    session.isAuthenticated === true &&
-    session.isDemo === false &&
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-      sessionUserId,
-    ) &&
-    typeof session.email === "string" &&
-    session.email.toLowerCase() === testEmail.toLowerCase();
-  // The operator runbook defines E2E_USER_EMAIL/E2E_USER_PASSWORD as a
-  // test-only account. Those values are owner-controlled protected secrets;
-  // the exact secret/session match above is the runtime trust root. The
-  // account is not assumed to contain only synthetic rows.
-  const governedTestAccount = sessionBound;
-  expect(
-    sessionBound,
-    "The visual audit must be bound to the exact dedicated non-demo account.",
-  ).toBe(true);
-  expect(
-    governedTestAccount,
-    "The protected test-only account secret must bind to the runtime session.",
-  ).toBe(true);
-
-  const listedItems = Array.isArray(observed.items.body.items)
-    ? (observed.items.body.items as SyntheticItem[])
-    : [];
-  const logs = Array.isArray(observed.logs.body.logs)
-    ? observed.logs.body.logs
-    : [];
-  const queue = Array.isArray(observed.queue.body.items)
-    ? (observed.queue.body.items as SyntheticQueueCard[])
-    : [];
-  expect(Array.isArray(observed.items.body.items)).toBe(true);
-  expect(Array.isArray(observed.logs.body.logs)).toBe(true);
-  expect(Array.isArray(observed.queue.body.items)).toBe(true);
-
-  const detailItems: SyntheticItem[] = [];
-  for (const [detailIndex, detailRead] of observed.details.entries()) {
-    expect(
-      detailRead.read.status,
-      `Account ownership detail ${detailIndex} must be readable.`,
-    ).toBe(200);
-    expect(detailRead.read.body.ok).toBe(true);
-    const detail =
-      detailRead.read.body.detail &&
-      typeof detailRead.read.body.detail === "object"
-        ? (detailRead.read.body.detail as Record<string, unknown>)
-        : null;
-    const item =
-      detail?.item && typeof detail.item === "object"
-        ? (detail.item as SyntheticItem)
-        : null;
-    expect(
-      item,
-      `Account ownership detail ${detailIndex} must contain an item.`,
-    ).not.toBeNull();
-    expect(
-      resolveSyntheticItemId(item!) === detailRead.itemId,
-      `Account ownership detail ${detailIndex} must match its requested row.`,
-    ).toBe(true);
-    detailItems.push(item!);
-  }
-  const mergedById = new Map<string, SyntheticItem>();
-  for (const item of [...listedItems, ...detailItems]) {
-    const itemId = resolveSyntheticItemId(item);
-    if (itemId) mergedById.set(itemId, item);
-  }
-  const mergedItems = [...mergedById.values()];
-  const rootPayloadFailures = summarizeSyntheticPayloadFailurePaths(
-    mergedItems
-      .filter(matchesExactSyntheticRootFields)
-      .map((item) => {
-        const allowed = exactSyntheticPayloadValues(item);
-        return {
-          item,
-          isAllowedString: (value, path) =>
-            isAllowedExactSyntheticPayloadString(value, path, allowed),
-        };
-      }),
-  );
-  const { owned } = classifyOwnedSyntheticItems(mergedItems, sessionUserId);
-  const listedAccountOwnedIds = new Set(
-    listedItems
-      .filter((item) => item.userId === sessionUserId)
-      .map(resolveSyntheticItemId)
-      .filter((itemId) => itemId.length > 0),
-  );
-  const listedAccountOwnedItems = listedItems.filter((item) =>
-    listedAccountOwnedIds.has(resolveSyntheticItemId(item)),
-  );
-  const listedExactFixtures = listedItems.filter((item) =>
-    owned.has(resolveSyntheticItemId(item)),
-  );
-  const unclassifiedItems = listedItems.filter(
-    (item) => !owned.has(resolveSyntheticItemId(item)),
-  );
-  const historicalS232gSourceCount = listedItems.filter((item) =>
-    isHistoricalS232gAggregateSource(item),
-  ).length;
-  const historicalS232gRewriteCount = listedItems.filter((item) => {
-    const sourceId =
-      typeof item.rawPayload?.rewrite_source_item_id === "string"
-        ? item.rawPayload.rewrite_source_item_id
-        : "";
-    const parent = mergedById.get(sourceId);
-    return Boolean(
-      parent &&
-        isHistoricalS232gAggregateSource(parent) &&
-        isOwnedSyntheticRewrite(item, parent),
-    );
-  }).length;
-  const historicalSourceCandidates = listedItems.filter(
-    isHistoricalS232gSourceCandidate,
-  );
-  const historicalRewriteCandidates = listedItems.filter(
-    isHistoricalS232gRewriteCandidate,
-  );
-  const historicalSourcePayloadFailurePaths =
-    summarizeSyntheticPayloadFailurePaths(
-      historicalSourceCandidates.map((item) => {
-        const allowed = exactSyntheticPayloadValues(item);
-        return {
-          item,
-          isAllowedString: (value, path) =>
-            isAllowedExactSyntheticPayloadString(value, path, allowed),
-        };
-      }),
-    );
-  let historicalRewriteParentIdMissing = 0;
-  let historicalRewriteParentLookupMissing = 0;
-  let historicalRewriteParentCandidateMismatch = 0;
-  const historicalRewriteParentFailureGroups: string[][] = [];
-  const historicalRewriteFailureGroups: string[][] = [];
-  const historicalRewritePayloadEntries: Array<{
-    item: SyntheticItem;
-    isAllowedString: (value: string, path: string) => boolean;
-  }> = [];
-  for (const item of historicalRewriteCandidates) {
-    const sourceId =
-      typeof item.rawPayload?.rewrite_source_item_id === "string"
-        ? item.rawPayload.rewrite_source_item_id
-        : "";
-    if (!sourceId) {
-      historicalRewriteParentIdMissing += 1;
-      continue;
-    }
-    const parent = mergedById.get(sourceId);
-    if (!parent) {
-      historicalRewriteParentLookupMissing += 1;
-      continue;
-    }
-    if (!isHistoricalS232gSourceCandidate(parent)) {
-      historicalRewriteParentCandidateMismatch += 1;
-      continue;
-    }
-    historicalRewriteParentFailureGroups.push(
-      historicalS232gSourceFailureFields(parent),
-    );
-    historicalRewriteFailureGroups.push(
-      historicalS232gRewriteFailureFields(
-        item,
-        sourceId,
-        parent.problemTitle ?? "",
-      ),
-    );
-    const allowed = exactSyntheticPayloadValues(item, parent);
-    historicalRewritePayloadEntries.push({
-      item,
-      isAllowedString: (value, path) =>
-        isAllowedExactSyntheticPayloadString(value, path, allowed),
-    });
-  }
-  const historicalDiagnostics = {
-    source: {
-      candidates: historicalSourceCandidates.length,
-      exact: historicalS232gSourceCount,
-      predicateFailureFields: summarizeFailureFields(
-        historicalSourceCandidates.map(historicalS232gSourceFailureFields),
-      ),
-      payloadFailurePaths: historicalSourcePayloadFailurePaths,
-    },
-    rewrite: {
-      candidates: historicalRewriteCandidates.length,
-      parentIdMissing: historicalRewriteParentIdMissing,
-      parentLookupMissing: historicalRewriteParentLookupMissing,
-      parentCandidateMismatch: historicalRewriteParentCandidateMismatch,
-      parentPredicateFailureFields: summarizeFailureFields(
-        historicalRewriteParentFailureGroups,
-      ),
-      exact: historicalS232gRewriteCount,
-      predicateFailureFields: summarizeFailureFields(
-        historicalRewriteFailureGroups,
-      ),
-      payloadFailurePaths: summarizeSyntheticPayloadFailurePaths(
-        historicalRewritePayloadEntries,
-      ),
-    },
-  };
-  const fixtureFamilyCounts = {
-    historicalS232gSource: historicalS232gSourceCount,
-    historicalS232gRewrite: historicalS232gRewriteCount,
-    otherExact: Math.max(
-      0,
-      listedExactFixtures.length -
-        historicalS232gSourceCount -
-        historicalS232gRewriteCount,
-    ),
-    unmatched: Math.max(0, listedItems.length - listedExactFixtures.length),
-  };
-  const detailOwnershipClosed = detailItems.every(
-    (item) =>
-      item.userId === sessionUserId &&
-      listedAccountOwnedIds.has(resolveSyntheticItemId(item)),
-  );
-  const queueIds = queue
-    .map((item) => item.itemId)
-    .filter((value): value is string => Boolean(value));
-  const syntheticQueue = queue.filter((item) =>
-    Boolean(item.itemId && owned.has(item.itemId)),
-  );
-  const planningIds = planningItemIds(observed);
-  const syntheticTodayCount = planningIds.today.filter((itemId) =>
-    owned.has(itemId),
-  ).length;
-  const itemListingComplete = listedItems.length < 501;
-  const studyLogListingComplete = logs.length < 501;
-  const strictOwnershipContract =
-    listedAccountOwnedItems.length === listedItems.length &&
-    detailOwnershipClosed &&
-    logs.length === 0;
-  const queueDetailsAudited =
-    queueIds.every((itemId) =>
-      listedAccountOwnedIds.has(itemId) &&
-      observed.details.some((detail) => detail.itemId === itemId),
-    );
-  const todayDetailsAudited =
-    !includePlanning ||
-    planningIds.today.every(
-      (itemId) =>
-        listedAccountOwnedIds.has(itemId) &&
-        observed.details.some((detail) => detail.itemId === itemId),
-    );
-  const weeklyTaskDetailsAudited =
-    !includePlanning ||
-    planningIds.weekly.every(
-      (itemId) =>
-        listedAccountOwnedIds.has(itemId) &&
-        observed.details.some((detail) => detail.itemId === itemId),
-    );
-  const pendingOwnedQueue = queueIds.some((itemId) => owned.has(itemId));
-  const syntheticFixtureReady =
-    governedTestAccount &&
-    itemListingComplete &&
-    studyLogListingComplete &&
-    strictOwnershipContract &&
-    queueDetailsAudited &&
-    todayDetailsAudited &&
-    weeklyTaskDetailsAudited &&
-    (!expectedItemId || owned.has(expectedItemId)) &&
-    (!expectedItemId || pendingOwnedQueue);
-  const screenshotBoundary = createScreenshotDataBoundary(unclassifiedItems);
-
-  expect(
-    itemListingComplete,
-    "The dedicated account item listing must be complete before capture.",
-  ).toBe(true);
-  expect(
-    studyLogListingComplete,
-    "The dedicated account study-log listing must be complete before capture.",
-  ).toBe(true);
-  expect(
-    rootPayloadFailures,
-    "Synthetic payload diagnostics expose schema paths and counts only, never values.",
-  ).toEqual([]);
-  expect(
-    listedExactFixtures.length,
-    `At least one exact allowlisted synthetic fixture must be available; family-counts=${JSON.stringify(fixtureFamilyCounts)}; historical-diagnostics=${JSON.stringify(historicalDiagnostics)}.`,
-  ).toBeGreaterThan(0);
-  expect(
-    listedAccountOwnedItems.length,
-    "Every listed item must be owned by the authenticated test-account session.",
-  ).toBe(listedItems.length);
-  expect(
-    logs.length,
-    "The visual fixture creates no study logs; any study log makes capture fail closed.",
-  ).toBe(0);
-  expect(
-    queueIds.every((itemId) => listedAccountOwnedIds.has(itemId)),
-    "Every queue row must close to the authenticated test-account boundary.",
-  ).toBe(true);
-  expect(queueDetailsAudited).toBe(true);
-  if (includePlanning) {
-    expect(todayDetailsAudited).toBe(true);
-    expect(weeklyTaskDetailsAudited).toBe(true);
-  }
-  if (expectedItemId) {
-    expect(owned.has(expectedItemId)).toBe(true);
-    expect(pendingOwnedQueue).toBe(true);
-  }
-  expect(syntheticFixtureReady).toBe(true);
-
-  return {
-    items: listedItems,
-    queue,
-    ownedItemIds: owned,
-    screenshotBoundary,
-    primaryQueueTitle:
-      queue.find((item) => Boolean(item.itemId && owned.has(item.itemId)))
-        ?.problemTitle ?? null,
-    privacyAudit: {
-      accountItemCount: listedItems.length,
-      accountOwnedItemCount: listedAccountOwnedItems.length,
-      exactFixtureItemCount: listedExactFixtures.length,
-      unclassifiedAccountItemCount: unclassifiedItems.length,
-      accountStudyLogCount: logs.length,
-      queueItemCount: queue.length,
-      syntheticQueueItemCount: syntheticQueue.length,
-      todayItemCount: planningIds.today.length,
-      syntheticTodayItemCount: syntheticTodayCount,
-      itemListingComplete,
-      studyLogListingComplete,
-      sessionBound,
-      governedTestAccount,
-      strictOwnershipContract,
-      detailOwnershipClosed,
-      pendingOwnedQueue,
-      queueDetailsAudited,
-      todayDetailsAudited,
-      weeklyTaskDetailsAudited,
-      syntheticFixtureReady,
-      privacyPreflightCandidateCount: 0,
-      privacyPreflightCheckCount: 0,
-      privacyPreflightBlockerCount: 0,
-      privacyPreflightAccountSnapshotStable: false,
-      screenshotBoundaryCheckCount: 0,
-      screenshotCaptureCount: 0,
-      visibleUnclassifiedTextHitCount: 0,
-      visibleUnclassifiedReferenceHitCount: 0,
-      visibleUnclassifiedFormValueHitCount: 0,
-      visibleUnclassifiedGeneratedContentHitCount: 0,
-      visibleUninspectableSurfaceCount: 0,
-      provenanceFilteredTextHitCount: 0,
-      provenanceFilteredReferenceHitCount: 0,
-      provenanceFilteredFormValueHitCount: 0,
-      provenanceFilteredGeneratedContentHitCount: 0,
-      accountSnapshotStable: false,
-      screenshotDataBoundaryClosed: false,
-      privateLearnerContentCaptured: true,
-    },
-  };
-}
-
-function syntheticItemPayload({
-  role,
-  generation,
-}: {
-  role: "ledger" | "queue-anchor";
-  generation?: number;
-}) {
-  const serial = String(generation ?? 0).padStart(3, "0");
-  const queueAnchor = role === "queue-anchor";
-  const learnerAnswer = queueAnchor
-    ? syntheticFixtureAnswer
-    : syntheticLedgerAnswer;
-  const correctAnswer = queueAnchor
-    ? syntheticFixtureCorrectAnswer
-    : syntheticLedgerCorrectAnswer;
-  const biggestGap = queueAnchor ? syntheticFixtureGap : syntheticLedgerGap;
-  const keyConcepts = queueAnchor
-    ? ["신뢰보호", "공적 견해표명", "보호가치"]
-    : ["사업인정", "처분성", "수용권"];
-  const weakStructurePoint = queueAnchor
-    ? "요건과 사실 적용을 같은 순서로 연결해야 합니다."
-    : "법률효과와 권리구제 필요성을 같은 순서로 연결해야 합니다.";
-  const weakApplicationSentence = queueAnchor
-    ? "공적 견해표명에 해당하는 합성 사실을 구체적으로 연결해야 합니다."
-    : "사업인정으로 발생하는 구체적 법률효과를 적어야 합니다.";
-  const rewriteInstruction = queueAnchor
-    ? "요건, 대응 사실, 소결론을 한 문단에 연결합니다."
-    : "처분의 법률효과와 권리구제 필요성을 한 문단에 연결합니다.";
-  const referenceStructure = queueAnchor
-    ? "I. 공적 견해표명 II. 신뢰와 귀책 III. 보호가치 IV. 결론"
-    : syntheticLedgerCorrectAnswer;
-  const outlineDraft = queueAnchor
-    ? referenceStructure
-    : "I. 사업인정의 성격 II. 수용권 설정 III. 권리구제 IV. 결론";
-  const issueRecall = queueAnchor
-    ? "신뢰보호 요건을 순서대로 검토합니다."
-    : "사업인정의 처분성을 법률효과 중심으로 검토합니다.";
-  return {
-    examName: "감정평가사 2차",
-    subjectLabel: "감정평가 및 보상법규",
-    sourceType: "text",
-    sourceLabel: queueAnchor
-      ? syntheticQueueAnchorSource
-      : syntheticFixtureSource,
-    problemTitle: queueAnchor
-      ? `S232H2 합성 복습 앵커 ${serial}`
-      : syntheticFixtureTitle,
-    problemIdentifier: queueAnchor
-      ? `s232h2:v3-visual:queue:${serial}`
-      : syntheticFixtureProblemIdentifier,
-    rawQuestionText: queueAnchor
-      ? `S232H2 합성 복습 앵커 ${serial}: 신뢰보호 요건을 다시 연결합니다.`
-      : syntheticFixtureQuestion,
-    rawAnswerText: learnerAnswer,
-    correctAnswer,
-    userAnswer: learnerAnswer,
-    userReasonText: biggestGap,
-    confidence: queueAnchor ? "낮음" : "중간",
-    timeSpentSeconds: queueAnchor ? 180 : undefined,
-    keyConcepts,
-    missingIssue: biggestGap,
-    weakStructurePoint,
-    weakApplicationSentence,
-    rewriteInstruction,
-    referenceStructure,
-    myAnswerSummary: learnerAnswer,
-    issueRecall,
-    outlineDraft,
-    productionBeforeComparison: true,
-    referenceAnswerAddedAfterProduction: true,
-    biggestGap,
-    rewriteCompleted: false,
-    captureIntent: "save",
-    createdFromCapture: true,
-    extractionPayload: {
-      raw_ocr_text: learnerAnswer,
-      raw_extraction_json: {
-        acceptance_fixture_id: syntheticOwnerId,
-        acceptance_fixture_role: role,
-      },
-      normalized_draft: null,
-      user_confirmed_fields: {
-        subjectLabel: "감정평가 및 보상법규",
-        userAnswer: learnerAnswer,
-        production_before_comparison: true,
-        reference_answer_added_after_production: true,
-        biggest_gap: biggestGap,
-        sourceType: "text",
-        examMode: "second",
-        hasManualCorrection: false,
-        ocrConfirmedByLearner: false,
-        acceptance_fixture_id: syntheticOwnerId,
-        acceptance_fixture_role: role,
-      },
-    },
-  };
-}
-
-async function postSyntheticItem(
-  page: Page,
-  payload: ReturnType<typeof syntheticItemPayload>,
+  credential: VisualCredentialCandidate,
+  baseUrl: string,
+  expectedFingerprint: string,
 ) {
   const response = await page
     .context()
-    .request.post("/api/os/items", { data: payload });
-  const value = (await response.json().catch(() => ({}))) as {
-    ok?: boolean;
-    item?: { id?: string };
-    deduped?: boolean;
-    error?: string;
-  };
+    .request.get(new URL("/api/auth/session", baseUrl).toString(), {
+      headers: visualAuditRequestHeaders(baseUrl),
+    });
+  const body = (await response.json().catch(() => null)) as {
+    ok?: unknown;
+    session?: {
+      userId?: unknown;
+      email?: unknown;
+      isAuthenticated?: unknown;
+      isDemo?: unknown;
+    };
+  } | null;
+  const userId = body?.session?.userId;
+  return (
+    response.status() === 200 &&
+    body?.ok === true &&
+    body.session?.isAuthenticated === true &&
+    body.session.isDemo === false &&
+    typeof userId === "string" &&
+    typeof body.session.email === "string" &&
+    body.session.email.toLowerCase() === credential.email.toLowerCase() &&
+    createHash("sha256")
+      .update("s232h2-session:" + userId)
+      .digest("hex") === expectedFingerprint
+  );
+}
+
+function normalizeAuditItem(row: Record<string, unknown>): SyntheticItem {
   return {
-    status: response.status(),
-    ok: response.ok() && value.ok === true,
-    value,
+    ...row,
+    id: typeof row.id === "string" ? row.id : undefined,
+    userId: typeof row.user_id === "string" ? row.user_id : undefined,
+    examName: typeof row.exam_name === "string" ? row.exam_name : undefined,
+    subjectLabel:
+      typeof row.subject_label === "string" ? row.subject_label : undefined,
+    sourceType:
+      typeof row.source_type === "string" ? row.source_type : undefined,
+    sourceLabel:
+      typeof row.source_label === "string" ? row.source_label : undefined,
+    problemTitle:
+      typeof row.problem_title === "string" ? row.problem_title : undefined,
+    problemIdentifier:
+      typeof row.problem_identifier === "string"
+        ? row.problem_identifier
+        : undefined,
+    rawQuestionText:
+      typeof row.raw_question_text === "string"
+        ? row.raw_question_text
+        : undefined,
+    rawAnswerText:
+      typeof row.raw_answer_text === "string" ? row.raw_answer_text : undefined,
+    correctAnswer:
+      typeof row.correct_answer === "string" ? row.correct_answer : undefined,
+    userAnswer:
+      typeof row.user_answer === "string" ? row.user_answer : undefined,
+    userReasonText:
+      typeof row.user_reason_text === "string"
+        ? row.user_reason_text
+        : undefined,
+    userReasonPreset:
+      typeof row.user_reason_preset === "string"
+        ? row.user_reason_preset
+        : undefined,
+    confidence: typeof row.confidence === "string" ? row.confidence : undefined,
+    timeSpentSeconds:
+      typeof row.time_spent_seconds === "number"
+        ? row.time_spent_seconds
+        : row.time_spent_seconds === null
+          ? null
+          : undefined,
+    createdAt:
+      typeof row.created_at === "string" &&
+      Number.isFinite(Date.parse(row.created_at))
+        ? new Date(Date.parse(row.created_at)).toISOString()
+        : undefined,
+    rawPayload:
+      row.raw_payload && typeof row.raw_payload === "object"
+        ? (row.raw_payload as Record<string, unknown>)
+        : undefined,
+    derivedPayload:
+      row.derived_payload && typeof row.derived_payload === "object"
+        ? (row.derived_payload as Record<string, unknown>)
+        : undefined,
   };
 }
 
-async function ensureSyntheticLedgerFixture(
+async function auditVisualAccountCandidate(
   page: Page,
-  initialAudit: SyntheticAccountAudit,
-) {
-  let audit = initialAudit;
-  let ledger = audit.items.find(isCurrentH2Ledger);
-  if (!ledger) {
-    const created = await postSyntheticItem(
-      page,
-      syntheticItemPayload({ role: "ledger" }),
+  credential: VisualCredentialCandidate,
+): Promise<VisualAccountAudit> {
+  const observed = await readVisualSourceSnapshot(page, credential);
+  const readsClosed = visualSourceNames.every(
+    (name) => observed.truncated[name] === false,
+  );
+  const sessionUserId = observed.sessionUserId;
+  const sessionBound =
+    readsClosed && /^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(sessionUserId);
+  const sessionFingerprint = createHash("sha256")
+    .update("s232h2-session:" + sessionUserId)
+    .digest("hex");
+  const listedItems = observed.sources.items.map(normalizeAuditItem);
+  const logs = observed.sources.studyLogs;
+  const queueRows = observed.sources.reviewQueue;
+  const { byId, owned } = classifyExactFixtureGraph(listedItems, sessionUserId);
+  const invalidOwnedItemDerivedRows = listedItems.filter((item) => {
+    const itemId = resolveSyntheticItemId(item);
+    if (!owned.has(itemId)) return false;
+    const expectedSignal = exactFixtureLearningSignal(item);
+    const expectedMetadata = expectedSignal?.metadataJson as
+      Record<string, unknown> | undefined;
+    return (
+      !expectedSignal ||
+      JSON.stringify(
+        canonicalJson(item.derivedPayload?.concept_node_candidate),
+      ) !==
+        JSON.stringify(
+          canonicalJson(expectedMetadata?.concept_node_candidate),
+        ) ||
+      item.derivedPayload?.conceptNodeId !== expectedMetadata?.conceptNodeId ||
+      item.derivedPayload?.conceptFamily !== expectedMetadata?.conceptFamily ||
+      item.derivedPayload?.retrievalPrompt !==
+        expectedMetadata?.retrievalPrompt ||
+      item.derivedPayload?.conceptNextTaskType !==
+        expectedMetadata?.conceptNextTaskType
     );
-    expect(
-      created.ok,
-      created.value.error ??
-        "The exact synthetic ledger fixture must be created.",
-    ).toBe(true);
-    expect(created.value.item?.id).toBeTruthy();
-    audit = await auditSyntheticAccount(page, { includePlanning: false });
-    ledger = audit.items.find(
-      (item) => resolveSyntheticItemId(item) === created.value.item?.id,
+  }).length;
+  const listedIds = listedItems
+    .map(resolveSyntheticItemId)
+    .filter((itemId) => itemId.length > 0);
+  let nonFixtureRowCount = listedIds.filter(
+    (itemId) => !owned.has(itemId),
+  ).length;
+  const ownedUserRow = (row: Record<string, unknown>) =>
+    row.user_id === sessionUserId;
+  const invalidNoteRows = observed.sources.notes.filter((row) => {
+    const itemId = row.wrong_answer_item_id;
+    const item = typeof itemId === "string" ? byId.get(itemId) : null;
+    return (
+      !item ||
+      !owned.has(itemId as string) ||
+      !exactGeneratedRow(row, exactFixtureGeneratedArtifacts(item).note)
     );
-  }
-  expect(
-    ledger,
-    "The exact synthetic ledger fixture must be present after preparation.",
-  ).toBeDefined();
-  const ledgerItemId = resolveSyntheticItemId(ledger!);
-  expect(ledgerItemId).toBeTruthy();
-
-  if (
-    !audit.queue.some((item) =>
-      Boolean(item.itemId && audit.ownedItemIds.has(item.itemId)),
-    )
-  ) {
-    const existingGenerations = audit.items.flatMap((item) => {
-      const match = item.problemIdentifier?.match(
-        /^s232h2:v3-visual:queue:(\d{3})$/,
+  }).length;
+  const invalidTagRows = observed.sources.tags.filter((row) => {
+    const itemId = row.wrong_answer_item_id;
+    const item = typeof itemId === "string" ? byId.get(itemId) : null;
+    return (
+      !item ||
+      !owned.has(itemId as string) ||
+      !exactGeneratedRow(row, exactFixtureGeneratedArtifacts(item).tag)
+    );
+  }).length;
+  const invalidAttachedRows = invalidNoteRows + invalidTagRows;
+  const invalidQueueRows = queueRows.filter((row) => {
+    const itemId = row.source_submission_id;
+    const item = typeof itemId === "string" ? byId.get(itemId) : null;
+    const artifacts = item ? exactFixtureGeneratedArtifacts(item) : null;
+    const role = item ? exactFixtureRole(item) : null;
+    const rawPayload =
+      row.raw_payload && typeof row.raw_payload === "object"
+        ? (row.raw_payload as Record<string, unknown>)
+        : null;
+    const derivedPayload =
+      row.derived_payload && typeof row.derived_payload === "object"
+        ? (row.derived_payload as Record<string, unknown>)
+        : null;
+    return (
+      !ownedUserRow(row) ||
+      row.exam_id !== "wrong_answer_os" ||
+      row.subject_id !== "감정평가 및 보상법규" ||
+      row.stage !== "alpha" ||
+      row.source_kind !== "wrong_answer" ||
+      row.status !== "pending" ||
+      !item ||
+      !owned.has(itemId as string) ||
+      !artifacts ||
+      !role ||
+      row.priority_score !== (role === "ledger" ? 75 : 95) ||
+      !rawPayload ||
+      !hasExactObjectKeys(rawPayload, ["dueAt", "reviewReason"]) ||
+      typeof rawPayload.dueAt !== "string" ||
+      !isCanonicalIsoTimestamp(rawPayload.dueAt) ||
+      rawPayload.reviewReason !==
+        "누락 논점 후보가 있어 짧게 다시 써야 합니다." ||
+      !derivedPayload ||
+      !hasExactObjectKeys(derivedPayload, [
+        "topicTag",
+        "mistakeType",
+        "recurrenceCount",
+        "concept_node_candidate",
+        "conceptNodeId",
+        "conceptFamily",
+        "retrievalPrompt",
+        "conceptNextTaskType",
+        "schedulingPolicy",
+        "retryDueAt",
+        "followUpReviewAt",
+        "nextReviewDate",
+      ]) ||
+      derivedPayload.topicTag !== artifacts.tag.topic_tag ||
+      derivedPayload.mistakeType !== artifacts.tag.mistake_type ||
+      derivedPayload.recurrenceCount !== 1 ||
+      JSON.stringify(canonicalJson(derivedPayload.concept_node_candidate)) !==
+        JSON.stringify(
+          canonicalJson(item.derivedPayload?.concept_node_candidate),
+        ) ||
+      derivedPayload.conceptNodeId !== item.derivedPayload?.conceptNodeId ||
+      derivedPayload.conceptFamily !== item.derivedPayload?.conceptFamily ||
+      derivedPayload.retrievalPrompt !== item.derivedPayload?.retrievalPrompt ||
+      derivedPayload.conceptNextTaskType !==
+        item.derivedPayload?.conceptNextTaskType ||
+      typeof derivedPayload.conceptNodeId !== "string" ||
+      typeof derivedPayload.conceptFamily !== "string" ||
+      typeof derivedPayload.retrievalPrompt !== "string" ||
+      typeof derivedPayload.conceptNextTaskType !== "string" ||
+      derivedPayload.schedulingPolicy !== "second_stage_weak_paragraph_48h" ||
+      derivedPayload.retryDueAt !== null ||
+      derivedPayload.followUpReviewAt !== null ||
+      derivedPayload.nextReviewDate !== item.rawPayload?.nextReviewDate ||
+      rawPayload.dueAt.slice(0, 10) !== derivedPayload.nextReviewDate
+    );
+  }).length;
+  const tagSignatures = new Set(
+    observed.sources.tags.flatMap((tag) => {
+      const itemId = tag.wrong_answer_item_id;
+      const item = typeof itemId === "string" ? byId.get(itemId) : null;
+      if (!item || !owned.has(itemId as string)) return [];
+      return [
+        JSON.stringify([
+          item.examName,
+          item.subjectLabel,
+          tag.topic_tag,
+          tag.mistake_type,
+        ]),
+      ];
+    }),
+  );
+  const invalidRecurrenceRows = observed.sources.recurrence.filter(
+    (row) =>
+      !ownedUserRow(row) ||
+      row.exam_name !== "감정평가사 2차" ||
+      row.subject_label !== "감정평가 및 보상법규" ||
+      row.recurrence_count !== 1 ||
+      row.risk_level !== "stable" ||
+      !tagSignatures.has(
+        JSON.stringify([
+          row.exam_name,
+          row.subject_label,
+          row.topic_tag,
+          row.mistake_type,
+        ]),
+      ),
+  ).length;
+  const invalidWeeklyRows = observed.sources.weeklySummaries.length;
+  const invalidLearningSignalRows = observed.sources.learningSignals.filter(
+    (row) => {
+      const sourceItemId =
+        row.metadata_json && typeof row.metadata_json === "object"
+          ? (row.metadata_json as Record<string, unknown>).sourceItemId
+          : null;
+      const item =
+        typeof sourceItemId === "string" ? byId.get(sourceItemId) : null;
+      const expected = item ? exactFixtureLearningSignal(item) : null;
+      return (
+        !ownedUserRow(row) ||
+        !item ||
+        !owned.has(sourceItemId as string) ||
+        !expected ||
+        row.exam_mode !== expected.examMode ||
+        row.subject !== expected.subject ||
+        row.source_type !== expected.sourceType ||
+        JSON.stringify(canonicalJson(row.derived_tags)) !==
+          JSON.stringify(canonicalJson(expected.derivedTags)) ||
+        JSON.stringify(canonicalJson(row.related_formulas)) !==
+          JSON.stringify(canonicalJson(expected.relatedFormulas)) ||
+        row.next_task_type !== expected.nextTaskType ||
+        row.next_task !== expected.nextTask ||
+        JSON.stringify(canonicalJson(row.metadata_json)) !==
+          JSON.stringify(canonicalJson(expected.metadataJson))
       );
-      return match ? [Number(match[1])] : [];
-    });
-    let generation = Math.max(0, ...existingGenerations) + 1;
-    let pendingQueueReady = false;
-    const attemptEvidence: Array<{
-      status: number;
-      ok: boolean;
-      deduped: boolean;
-    }> = [];
-    for (
-      let attempt = 0;
-      attempt < 2 && !pendingQueueReady;
-      attempt += 1, generation += 1
+    },
+  ).length;
+  const allowedUsageEvents = new Set([
+    "capture_saved",
+    "post_save_execution_started",
+    "post_save_execution_completed",
+    "review_followup_scheduled",
+  ]);
+  const invalidUsageRows = observed.sources.agendaUsage.filter((row) => {
+    const itemId = row.entity_id;
+    const item = typeof itemId === "string" ? byId.get(itemId) : null;
+    if (
+      !ownedUserRow(row) ||
+      !item ||
+      !owned.has(itemId as string) ||
+      typeof row.event_name !== "string" ||
+      !allowedUsageEvents.has(row.event_name)
     ) {
-      const created = await postSyntheticItem(
-        page,
-        syntheticItemPayload({ role: "queue-anchor", generation }),
-      );
-      attemptEvidence.push({
-        status: created.status,
-        ok: created.ok,
-        deduped: created.value.deduped === true,
-      });
-      if (!created.ok && created.status !== 409 && created.status !== 429) {
-        expect(
-          created.ok,
-          created.value.error ?? "The synthetic queue anchor must be created.",
-        ).toBe(true);
-      }
-      audit = await auditSyntheticAccount(page, { includePlanning: false });
-      pendingQueueReady = audit.queue.some((item) =>
-        Boolean(item.itemId && audit.ownedItemIds.has(item.itemId)),
-      );
+      return true;
     }
-    expect(
-      pendingQueueReady,
-      `A bounded exact-owned pending review queue must exist; creation attempts=${JSON.stringify(attemptEvidence)}.`,
-    ).toBe(true);
+    const metadata = row.metadata_json;
+    if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+      return true;
+    }
+    const tag = exactFixtureGeneratedArtifacts(item).tag;
+    const role = exactFixtureRole(item);
+    const expectedMetadata =
+      row.event_name === "capture_saved"
+        ? {
+            mode: "second",
+            subject: "감정평가 및 보상법규",
+            sourceType: "text",
+            confidence: role === "ledger" ? "중간" : "낮음",
+            nextTaskType: "rewrite",
+            topicCandidate: tag.topic_tag,
+            mistakeType: tag.mistake_type,
+            weakStructurePoint:
+              role === "ledger"
+                ? "법률효과와 권리구제 필요성을 같은 순서로 연결해야 합니다."
+                : "요건과 사실 적용을 같은 순서로 연결해야 합니다.",
+            missingIssue:
+              role === "ledger" ? syntheticLedgerGap : syntheticFixtureGap,
+            createdFromCapture: true,
+          }
+        : row.event_name === "post_save_execution_started" ||
+            row.event_name === "review_followup_scheduled"
+          ? {
+              mode: "second",
+              nextTaskType: "rewrite",
+              createdFromCapture: true,
+            }
+          : { mode: "second", createdFromCapture: true };
+    const expectedEntityType =
+      row.event_name === "review_followup_scheduled"
+        ? "review_queue_item"
+        : "wrong_answer_item";
+    return (
+      row.entity_type !== expectedEntityType ||
+      JSON.stringify(canonicalJson(metadata)) !==
+        JSON.stringify(canonicalJson(expectedMetadata))
+    );
+  }).length;
+  const usageMultiplicityClosed = [...owned].every((itemId) =>
+    [...allowedUsageEvents].every(
+      (eventName) =>
+        observed.sources.agendaUsage.filter(
+          (row) => row.entity_id === itemId && row.event_name === eventName,
+        ).length === 1,
+    ),
+  );
+  const fixtureMultiplicityClosed = [...owned].every((itemId) => {
+    const item = byId.get(itemId);
+    if (!item) return false;
+    const artifacts = exactFixtureGeneratedArtifacts(item);
+    return (
+      observed.sources.notes.filter(
+        (row) => row.wrong_answer_item_id === itemId,
+      ).length === 1 &&
+      observed.sources.tags.filter((row) => row.wrong_answer_item_id === itemId)
+        .length === 1 &&
+      observed.sources.recurrence.filter(
+        (row) =>
+          row.topic_tag === artifacts.tag.topic_tag &&
+          row.mistake_type === artifacts.tag.mistake_type,
+      ).length === 1 &&
+      observed.sources.reviewQueue.filter(
+        (row) => row.source_submission_id === itemId,
+      ).length === 1 &&
+      observed.sources.learningSignals.filter(
+        (row) =>
+          row.metadata_json &&
+          typeof row.metadata_json === "object" &&
+          (row.metadata_json as Record<string, unknown>).sourceItemId ===
+            itemId,
+      ).length === 1
+    );
+  });
+  const invalidDerivedRows =
+    invalidWeeklyRows +
+    invalidLearningSignalRows +
+    invalidUsageRows +
+    (usageMultiplicityClosed ? 0 : 1) +
+    (fixtureMultiplicityClosed ? 0 : 1) +
+    observed.sources.todaySeeds.length +
+    observed.sources.conceptNodes.length;
+  const invalidStudyProfiles = observed.sources.studyProfiles.filter(
+    (row) =>
+      row.user_id !== sessionUserId ||
+      row.exam_name !== "감정평가사 2차" ||
+      row.exam_date !== null ||
+      !Array.isArray(row.preferred_subjects) ||
+      row.preferred_subjects.length > 1 ||
+      row.preferred_subjects.some(
+        (subject) => subject !== "감정평가 및 보상법규",
+      ),
+  ).length;
+  nonFixtureRowCount +=
+    invalidOwnedItemDerivedRows +
+    invalidAttachedRows +
+    invalidQueueRows +
+    invalidRecurrenceRows +
+    invalidDerivedRows +
+    invalidStudyProfiles +
+    logs.length;
+  const unknownReferenceCount =
+    invalidOwnedItemDerivedRows +
+    invalidAttachedRows +
+    invalidQueueRows +
+    invalidRecurrenceRows +
+    invalidDerivedRows +
+    invalidStudyProfiles;
+  const ledger = listedItems.find(
+    (item) =>
+      owned.has(resolveSyntheticItemId(item)) && isExactVisualLedger(item),
+  );
+  const endpointAudit = await readVisualEndpointAudit(page, owned, observed);
+  const afterEndpointSnapshot = await readVisualSourceSnapshot(
+    page,
+    credential,
+  );
+  const endpointSnapshotStable =
+    sourceFingerprint(afterEndpointSnapshot) === sourceFingerprint(observed);
+  nonFixtureRowCount += endpointAudit.unknownReferenceCount;
+  const allRowsOwned = listedItems.every(
+    (item) =>
+      item.userId === sessionUserId && owned.has(resolveSyntheticItemId(item)),
+  );
+  const clean =
+    sessionBound &&
+    readsClosed &&
+    visualSourceNames.every(
+      (name) => afterEndpointSnapshot.truncated[name] === false,
+    ) &&
+    endpointAudit.readSucceeded &&
+    endpointSnapshotStable &&
+    listedItems.length > 0 &&
+    listedItems.length < 501 &&
+    logs.length === 0 &&
+    logs.length < 501 &&
+    nonFixtureRowCount === 0 &&
+    unknownReferenceCount === 0 &&
+    allRowsOwned &&
+    Boolean(ledger) &&
+    Boolean(endpointAudit.primaryQueueTitle);
+  return {
+    clean,
+    sessionBound,
+    endpointReadSucceeded:
+      endpointAudit.readSucceeded && endpointSnapshotStable,
+    sessionFingerprint,
+    snapshotReadSucceeded:
+      readsClosed &&
+      visualSourceNames.every(
+        (name) => afterEndpointSnapshot.truncated[name] === false,
+      ),
+    fingerprint: sourceFingerprint(observed),
+    itemIds: listedIds,
+    exactFixtureIds: listedIds.filter((itemId) => owned.has(itemId)),
+    ledgerItemId: ledger ? resolveSyntheticItemId(ledger) : null,
+    primaryQueueTitle: endpointAudit.primaryQueueTitle,
+    itemCount: listedItems.length,
+    studyLogCount: logs.length,
+    queueCount: queueRows.length,
+    todayReferenceCount: observed.sources.todaySeeds.length,
+    weeklyReferenceCount: observed.sources.weeklySummaries.length,
+    nonFixtureRowCount,
+    unknownReferenceCount:
+      unknownReferenceCount + endpointAudit.unknownReferenceCount,
+  };
+}
+
+async function openCandidateHandle(
+  browser: Browser,
+  credential: VisualCredentialCandidate,
+): Promise<CandidateAuditHandle> {
+  let context: BrowserContext | null = null;
+  let page: Page | null = null;
+  let failureStep: CandidateAuditHandle["failureStep"] = "login";
+  try {
+    context = await newPreviewContext(browser, runtimeBaseUrl);
+    page = await context.newPage();
+    await establishProtectedPreviewSession(page, "S232H2 visual source gate");
+    await loginWithExplicitTestAccountSession(
+      page,
+      credential,
+      runtimeBaseUrl,
+      "second",
+    );
+    failureStep = "source-read";
+    await verifyRuntimeVersion(page, runtimeRunnerSha);
+    const audit = await auditVisualAccountCandidate(page, credential);
+    return {
+      credential,
+      context,
+      page,
+      audit,
+      completed: true,
+      failureStep: null,
+    };
+  } catch {
+    return {
+      credential,
+      context,
+      page,
+      audit: null,
+      completed: false,
+      failureStep,
+    };
   }
-  return { ledgerItemId };
+}
+
+async function readRlsProbe(page: Page, itemId: string) {
+  const url = new URL("/api/os/visual-source-audit", runtimeBaseUrl);
+  url.searchParams.set("probeItemId", itemId);
+  const response = await page.context().request.get(url.toString(), {
+    headers: visualAuditRequestHeaders(),
+  });
+  const body = (await response.json().catch(() => null)) as {
+    ok?: unknown;
+    rlsProbeVisible?: unknown;
+  } | null;
+  return {
+    status: response.status(),
+    exactShape:
+      body !== null &&
+      Object.keys(body).sort().join(",") === "ok,rlsProbeVisible",
+    visible: body?.rlsProbeVisible === true,
+    hidden: body?.rlsProbeVisible === false,
+  };
+}
+
+function selectCleanVisualAccount(handles: CandidateAuditHandle[]) {
+  for (const credential of visualCredentialCandidates) {
+    const handle = handles.find(
+      (candidate) => candidate.credential.slot === credential.slot,
+    );
+    if (handle?.audit?.clean && handle.context && handle.page) return handle;
+  }
+  return null;
+}
+
+function safeProofIds(proof: VisualProof) {
+  return [
+    ...proof.fixtureIds,
+    proof.ledgerItemId,
+    proof.deniedCanary,
+    proof.selectedFingerprint,
+    proof.selectedSessionFingerprint,
+  ];
+}
+
+function sameStringSet(left: readonly string[], right: readonly string[]) {
+  const leftSet = new Set(left);
+  const rightSet = new Set(right);
+  return (
+    leftSet.size === rightSet.size &&
+    [...leftSet].every((value) => rightSet.has(value))
+  );
 }
 
 function resolveRoutePath(route: RouteDefinition, itemId: string) {
@@ -2533,9 +2445,7 @@ async function beginKeyboardTraversalAtDocumentStart(
     await page.keyboard.press("Tab");
     measurement = await page.evaluate(async () => {
       const links = Array.from(
-        document.querySelectorAll<HTMLAnchorElement>(
-          "a[data-v3-skip-link]",
-        ),
+        document.querySelectorAll<HTMLAnchorElement>("a[data-v3-skip-link]"),
       );
       const link = links.length === 1 ? links[0] : null;
       const reachedByKeyboard = Boolean(
@@ -2781,195 +2691,186 @@ async function stabilizeCanonicalTop(
   page: Page,
   options: CanonicalTopRecoveryOptions = {},
 ) {
-  return page.evaluate(
-    async ({ originalUrl, auditHash }) => {
-      const describeActiveElement = () => {
-        const element = document.activeElement;
-        if (!(element instanceof HTMLElement)) return "non-html";
-        const tag = element.tagName.toLowerCase();
-        const role = element.getAttribute("role");
-        return role && /^[a-z][a-z0-9-]*$/i.test(role)
-          ? `${tag}:${role}`
-          : tag;
-      };
-      const root = document.documentElement;
-      const original = originalUrl ? new URL(originalUrl) : null;
-      const current = new URL(window.location.href);
-      const sameDocument = Boolean(
-        original &&
-          original.origin === current.origin &&
-          original.pathname === current.pathname &&
-          original.search === current.search,
-      );
-      const hashCreatedByAudit = Boolean(
-        auditHash &&
-          original &&
-          sameDocument &&
-          current.hash === auditHash &&
-          original.hash !== auditHash,
-      );
-      const previousScrollBehavior = {
-        value: root.style.getPropertyValue("scroll-behavior"),
-        priority: root.style.getPropertyPriority("scroll-behavior"),
-      };
-      const metadata = {
-        originalHashPresent: original ? original.hash.length > 0 : null,
-        auditHashPresent: Boolean(auditHash),
-        hashBeforeRecoveryPresent: current.hash.length > 0,
-        hashCreatedByAudit,
-        hashRestored: false,
-        hashAfterRecoveryPresent: current.hash.length > 0,
-        activeElementBeforeBlur: describeActiveElement(),
-        activeElementAfterBlur: "unknown",
-        quiescentSequence: [] as Array<{
-          frame: number;
-          windowScrollY: number;
-          scrollingElementScrollTop: number;
-        }>,
-        immediateAfterReset: null as {
-          windowScrollY: number;
-          scrollingElementScrollTop: number;
-        } | null,
-        postResetSequence: [] as Array<{
-          frame: number;
-          windowScrollY: number;
-          scrollingElementScrollTop: number;
-        }>,
-      };
+  return page.evaluate(async ({ originalUrl, auditHash }) => {
+    const describeActiveElement = () => {
+      const element = document.activeElement;
+      if (!(element instanceof HTMLElement)) return "non-html";
+      const tag = element.tagName.toLowerCase();
+      const role = element.getAttribute("role");
+      return role && /^[a-z][a-z0-9-]*$/i.test(role) ? `${tag}:${role}` : tag;
+    };
+    const root = document.documentElement;
+    const original = originalUrl ? new URL(originalUrl) : null;
+    const current = new URL(window.location.href);
+    const sameDocument = Boolean(
+      original &&
+      original.origin === current.origin &&
+      original.pathname === current.pathname &&
+      original.search === current.search,
+    );
+    const hashCreatedByAudit = Boolean(
+      auditHash &&
+      original &&
+      sameDocument &&
+      current.hash === auditHash &&
+      original.hash !== auditHash,
+    );
+    const previousScrollBehavior = {
+      value: root.style.getPropertyValue("scroll-behavior"),
+      priority: root.style.getPropertyPriority("scroll-behavior"),
+    };
+    const metadata = {
+      originalHashPresent: original ? original.hash.length > 0 : null,
+      auditHashPresent: Boolean(auditHash),
+      hashBeforeRecoveryPresent: current.hash.length > 0,
+      hashCreatedByAudit,
+      hashRestored: false,
+      hashAfterRecoveryPresent: current.hash.length > 0,
+      activeElementBeforeBlur: describeActiveElement(),
+      activeElementAfterBlur: "unknown",
+      quiescentSequence: [] as Array<{
+        frame: number;
+        windowScrollY: number;
+        scrollingElementScrollTop: number;
+      }>,
+      immediateAfterReset: null as {
+        windowScrollY: number;
+        scrollingElementScrollTop: number;
+      } | null,
+      postResetSequence: [] as Array<{
+        frame: number;
+        windowScrollY: number;
+        scrollingElementScrollTop: number;
+      }>,
+    };
 
-      if (document.activeElement instanceof HTMLElement)
-        document.activeElement.blur();
-      metadata.activeElementAfterBlur = describeActiveElement();
+    if (document.activeElement instanceof HTMLElement)
+      document.activeElement.blur();
+    metadata.activeElementAfterBlur = describeActiveElement();
 
-      try {
-        root.style.setProperty("scroll-behavior", "auto", "important");
-        void root.offsetHeight;
+    try {
+      root.style.setProperty("scroll-behavior", "auto", "important");
+      void root.offsetHeight;
 
-        if (hashCreatedByAudit && original) {
-          history.replaceState(
-            history.state,
-            "",
-            `${original.pathname}${original.search}${original.hash}`,
-          );
-          metadata.hashRestored = true;
-        }
-        metadata.hashAfterRecoveryPresent = window.location.hash.length > 0;
+      if (hashCreatedByAudit && original) {
+        history.replaceState(
+          history.state,
+          "",
+          `${original.pathname}${original.search}${original.hash}`,
+        );
+        metadata.hashRestored = true;
+      }
+      metadata.hashAfterRecoveryPresent = window.location.hash.length > 0;
 
-        let identicalQuiescentFrames = 0;
-        let previousSample: {
-          windowScrollY: number;
-          scrollingElementScrollTop: number;
-        } | null = null;
-        await new Promise<void>((resolve) => {
-          const observeQuiescence = () => {
-            const sample = {
-              windowScrollY: window.scrollY,
-              scrollingElementScrollTop:
-                document.scrollingElement?.scrollTop ?? 0,
-            };
-            metadata.quiescentSequence.push({
-              frame: metadata.quiescentSequence.length + 1,
-              ...sample,
-            });
-            identicalQuiescentFrames =
-              previousSample &&
-              previousSample.windowScrollY === sample.windowScrollY &&
-              previousSample.scrollingElementScrollTop ===
-                sample.scrollingElementScrollTop
-                ? identicalQuiescentFrames + 1
-                : 1;
-            previousSample = sample;
-            if (
-              identicalQuiescentFrames >= 3 ||
-              metadata.quiescentSequence.length >= 60
-            ) {
-              resolve();
-              return;
-            }
-            requestAnimationFrame(observeQuiescence);
-          };
-          requestAnimationFrame(observeQuiescence);
-        });
-
-        const quiescent = identicalQuiescentFrames >= 3;
-        if (!quiescent) {
-          return {
-            ...metadata,
-            quiescent,
-            identicalQuiescentFrames,
-            stable: false,
-            failureCode: "S232H2_SCROLL_NOT_QUIESCENT" as const,
-            finalWindowScrollY: window.scrollY,
-            finalScrollingElementScrollTop:
+      let identicalQuiescentFrames = 0;
+      let previousSample: {
+        windowScrollY: number;
+        scrollingElementScrollTop: number;
+      } | null = null;
+      await new Promise<void>((resolve) => {
+        const observeQuiescence = () => {
+          const sample = {
+            windowScrollY: window.scrollY,
+            scrollingElementScrollTop:
               document.scrollingElement?.scrollTop ?? 0,
           };
-        }
-
-        const instantTop = {
-          top: 0,
-          left: 0,
-          behavior: "instant" as ScrollBehavior,
+          metadata.quiescentSequence.push({
+            frame: metadata.quiescentSequence.length + 1,
+            ...sample,
+          });
+          identicalQuiescentFrames =
+            previousSample &&
+            previousSample.windowScrollY === sample.windowScrollY &&
+            previousSample.scrollingElementScrollTop ===
+              sample.scrollingElementScrollTop
+              ? identicalQuiescentFrames + 1
+              : 1;
+          previousSample = sample;
+          if (
+            identicalQuiescentFrames >= 3 ||
+            metadata.quiescentSequence.length >= 60
+          ) {
+            resolve();
+            return;
+          }
+          requestAnimationFrame(observeQuiescence);
         };
-        window.scrollTo(instantTop);
-        metadata.immediateAfterReset = {
-          windowScrollY: window.scrollY,
-          scrollingElementScrollTop:
-            document.scrollingElement?.scrollTop ?? 0,
-        };
-        await new Promise<void>((resolve) => {
-          const observePostReset = () => {
-            metadata.postResetSequence.push({
-              frame: metadata.postResetSequence.length + 1,
-              windowScrollY: window.scrollY,
-              scrollingElementScrollTop:
-                document.scrollingElement?.scrollTop ?? 0,
-            });
-            if (metadata.postResetSequence.length >= 3) {
-              resolve();
-              return;
-            }
-            requestAnimationFrame(observePostReset);
-          };
-          requestAnimationFrame(observePostReset);
-        });
+        requestAnimationFrame(observeQuiescence);
+      });
 
-        const immediateAtTop =
-          metadata.immediateAfterReset.windowScrollY === 0 &&
-          metadata.immediateAfterReset.scrollingElementScrollTop === 0;
-        const postResetAtTop = metadata.postResetSequence.every(
-          (sample) =>
-            sample.windowScrollY === 0 &&
-            sample.scrollingElementScrollTop === 0,
-        );
-        const stable = immediateAtTop && postResetAtTop;
+      const quiescent = identicalQuiescentFrames >= 3;
+      if (!quiescent) {
         return {
           ...metadata,
           quiescent,
           identicalQuiescentFrames,
-          immediateAtTop,
-          postResetAtTop,
-          stable,
-          failureCode: stable
-            ? null
-            : ("S232H2_CANONICAL_TOP_UNSTABLE" as const),
+          stable: false,
+          failureCode: "S232H2_SCROLL_NOT_QUIESCENT" as const,
           finalWindowScrollY: window.scrollY,
           finalScrollingElementScrollTop:
             document.scrollingElement?.scrollTop ?? 0,
         };
-      } finally {
-        if (previousScrollBehavior.value) {
-          root.style.setProperty(
-            "scroll-behavior",
-            previousScrollBehavior.value,
-            previousScrollBehavior.priority,
-          );
-        } else {
-          root.style.removeProperty("scroll-behavior");
-        }
       }
-    },
-    options,
-  );
+
+      const instantTop = {
+        top: 0,
+        left: 0,
+        behavior: "instant" as ScrollBehavior,
+      };
+      window.scrollTo(instantTop);
+      metadata.immediateAfterReset = {
+        windowScrollY: window.scrollY,
+        scrollingElementScrollTop: document.scrollingElement?.scrollTop ?? 0,
+      };
+      await new Promise<void>((resolve) => {
+        const observePostReset = () => {
+          metadata.postResetSequence.push({
+            frame: metadata.postResetSequence.length + 1,
+            windowScrollY: window.scrollY,
+            scrollingElementScrollTop:
+              document.scrollingElement?.scrollTop ?? 0,
+          });
+          if (metadata.postResetSequence.length >= 3) {
+            resolve();
+            return;
+          }
+          requestAnimationFrame(observePostReset);
+        };
+        requestAnimationFrame(observePostReset);
+      });
+
+      const immediateAtTop =
+        metadata.immediateAfterReset.windowScrollY === 0 &&
+        metadata.immediateAfterReset.scrollingElementScrollTop === 0;
+      const postResetAtTop = metadata.postResetSequence.every(
+        (sample) =>
+          sample.windowScrollY === 0 && sample.scrollingElementScrollTop === 0,
+      );
+      const stable = immediateAtTop && postResetAtTop;
+      return {
+        ...metadata,
+        quiescent,
+        identicalQuiescentFrames,
+        immediateAtTop,
+        postResetAtTop,
+        stable,
+        failureCode: stable ? null : ("S232H2_CANONICAL_TOP_UNSTABLE" as const),
+        finalWindowScrollY: window.scrollY,
+        finalScrollingElementScrollTop:
+          document.scrollingElement?.scrollTop ?? 0,
+      };
+    } finally {
+      if (previousScrollBehavior.value) {
+        root.style.setProperty(
+          "scroll-behavior",
+          previousScrollBehavior.value,
+          previousScrollBehavior.priority,
+        );
+      } else {
+        root.style.removeProperty("scroll-behavior");
+      }
+    }
+  }, options);
 }
 
 async function waitForFocusedElementReveal(page: Page) {
@@ -3022,7 +2923,8 @@ async function activeKeyboardFocusState(page: Page) {
     const style = getComputedStyle(element);
     const rect = element.getBoundingClientRect();
     const hasOutline =
-      style.outlineStyle !== "none" && Number.parseFloat(style.outlineWidth) > 0;
+      style.outlineStyle !== "none" &&
+      Number.parseFloat(style.outlineWidth) > 0;
     const hasRing = style.boxShadow !== "none";
     const brandProbe = document.createElement("span");
     brandProbe.style.backgroundColor = "var(--color-background-brand)";
@@ -3067,10 +2969,7 @@ async function verifyKeyboardFocus(page: Page, primaryActionCount: number) {
   let enabledPrimaryReached = primaryActionCount === 0;
   let firstFocusIndex: number | null = null;
   let completionKind:
-    | "enumerated-stops"
-    | "browser-cycle"
-    | "document-exit"
-    | null = null;
+    "enumerated-stops" | "browser-cycle" | "document-exit" | null = null;
   const visitedFocusIndexes = new Set<number>();
 
   const skipLinkStart = await beginKeyboardTraversalAtDocumentStart(page);
@@ -3088,10 +2987,7 @@ async function verifyKeyboardFocus(page: Page, primaryActionCount: number) {
     return true;
   };
   visitFocusState(focusState);
-  if (
-    focusStopCount > 0 &&
-    visitedFocusIndexes.size >= focusStopCount
-  ) {
+  if (focusStopCount > 0 && visitedFocusIndexes.size >= focusStopCount) {
     completedFocusTraversal = true;
     completionKind = "enumerated-stops";
   }
@@ -3216,12 +3112,16 @@ async function verifyRepresentativeFigmaStructure(
       const nodes = selectors.map((selector) =>
         reading?.querySelector(selector),
       );
-      return nodes.every(Boolean) && nodes.every((node, index) =>
-        index === 0 ||
-        Boolean(
-          nodes[index - 1]!.compareDocumentPosition(node!) &
-            Node.DOCUMENT_POSITION_FOLLOWING,
-        ),
+      return (
+        nodes.every(Boolean) &&
+        nodes.every(
+          (node, index) =>
+            index === 0 ||
+            Boolean(
+              nodes[index - 1]!.compareDocumentPosition(node!) &
+              Node.DOCUMENT_POSITION_FOLLOWING,
+            ),
+        )
       );
     });
     expect(canonicalOrder).toBe(true);
@@ -3242,7 +3142,9 @@ async function verifyRepresentativeFigmaStructure(
         .locator("[data-s232d2-evidence-rail]")
         .boundingBox();
       await expect(
-        page.locator("[data-s232d2-evidence-rail] [data-s232d2-recovery-context]"),
+        page.locator(
+          "[data-s232d2-evidence-rail] [data-s232d2-recovery-context]",
+        ),
       ).toBeVisible();
       expect(rail).not.toBeNull();
       expect(reading!.x).toBeCloseTo(220, 0);
@@ -3289,54 +3191,167 @@ async function verifyRepresentativeFigmaStructure(
   }
 }
 
+type ShellCapabilities = {
+  kind: "learner-shell" | "standalone-tool" | "login-form" | "public";
+  requiresSkipLink: boolean;
+  skipLinkCount: number;
+  loginControlCount: number;
+  structureValid: boolean;
+};
+
+type EndpointGuardEvidence = {
+  unknownEndpointCount: number;
+  unknownRowCount: number;
+  blockedMutationCount: number;
+};
+
+function recordEndpointGuardFailures(
+  failures: StableGateFailure[],
+  phase: StableGateFailure["phase"],
+  routeStateAlias: string,
+  viewport: string,
+  guard: EndpointGuardEvidence,
+) {
+  for (const [errorFamily, count] of [
+    ["unknown-endpoint", guard.unknownEndpointCount],
+    ["unknown-row", guard.unknownRowCount],
+    ["mutation-blocked", guard.blockedMutationCount],
+  ] as const) {
+    if (count === 0) continue;
+    recordStableGateFailure(failures, {
+      phase,
+      routeStateAlias,
+      viewport,
+      stableStep: "privacy",
+      errorFamily,
+      count,
+    });
+  }
+}
+
+type ArtifactBoundaryObservation = {
+  visibleEmailOutsideMask: number;
+  rawCredentialArtifactCount: number;
+  rawIdentifierArtifactCount: number;
+  deniedCanaryDomCount: number;
+  opaqueSurfaceCount: number;
+  identityMaskCount: number;
+};
+
+async function inspectShellCapabilities(
+  page: Page,
+): Promise<ShellCapabilities> {
+  return page.evaluate(() => {
+    const learnerShell = document.querySelectorAll(
+      "[data-learner-shell]",
+    ).length;
+    const standaloneTool = document.querySelectorAll(
+      "[data-standalone-learner-tool-nav]",
+    ).length;
+    const answerReviewShell = document.querySelectorAll(
+      '[data-answer-review-stage="answer-review-shell"]',
+    ).length;
+    const loginControls = [
+      document.querySelector('input[type="email"]'),
+      document.querySelector('input[type="password"]'),
+      document.querySelector('button[type="submit"]'),
+    ].filter(Boolean).length;
+    const skipLinkCount = document.querySelectorAll(
+      "a[data-v3-skip-link]",
+    ).length;
+    if (learnerShell > 0 || answerReviewShell > 0) {
+      return {
+        kind: "learner-shell" as const,
+        requiresSkipLink: true,
+        skipLinkCount,
+        loginControlCount: loginControls,
+        structureValid:
+          learnerShell + answerReviewShell === 1 && standaloneTool === 0,
+      };
+    }
+    if (standaloneTool > 0) {
+      return {
+        kind: "standalone-tool" as const,
+        requiresSkipLink: true,
+        skipLinkCount,
+        loginControlCount: loginControls,
+        structureValid: standaloneTool === 1,
+      };
+    }
+    if (loginControls === 3) {
+      return {
+        kind: "login-form" as const,
+        requiresSkipLink: false,
+        skipLinkCount,
+        loginControlCount: loginControls,
+        structureValid: true,
+      };
+    }
+    return {
+      kind: "public" as const,
+      requiresSkipLink: false,
+      skipLinkCount,
+      loginControlCount: loginControls,
+      structureValid: true,
+    };
+  });
+}
+
+async function auditLoginFormFocus(page: Page) {
+  const controls = [
+    page.locator('input[type="email"]'),
+    page.locator('input[type="password"]'),
+    page.locator('button[type="submit"]'),
+  ];
+  let completed = 0;
+  for (const control of controls) {
+    if ((await control.count()) !== 1 || !(await control.isVisible())) continue;
+    await control.focus();
+    if (
+      await control.evaluate((element) => document.activeElement === element)
+    ) {
+      completed += 1;
+    }
+  }
+  await page.evaluate(() => {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+  });
+  return completed;
+}
+
 async function auditRoute(
   page: Page,
   route: RouteDefinition,
   requestedPath: string,
   viewport: (typeof viewports)[number],
   options: {
-    navigate?: boolean;
+    profile: AuditProfile;
+    keyboard: boolean;
     state?: string;
-    expectedCanonicalDock?: boolean;
     auditKind?: AuditRow["auditKind"];
-    collection?: AuditCollectionContext;
-  } = {},
+    navigate?: boolean;
+    failures: StableGateFailure[];
+    phase: StableGateFailure["phase"];
+    routeStateAlias: string;
+  },
 ): Promise<AuditRow> {
-  const collection = options.collection;
-  if (collection) collection.collector.visualAuditCandidateCount += 1;
-  const recordFailure = (
-    checkFamily: PreflightCheckFamily,
-    failureCode: string,
+  const viewportLabel = viewport.width + "x" + viewport.height;
+  const fail = (
+    stableStep: StableGateFailure["stableStep"],
+    errorFamily: StableGateFailure["errorFamily"],
     count = 1,
   ) => {
     if (count <= 0) return;
-    if (!collection) {
-      expect(
-        count,
-        `${route.label} failed ${failureCode}.`,
-      ).toBe(0);
-      return;
-    }
-    recordPreflightBlocker(collection.collector, {
-      phase: collection.phase,
-      routeStateAlias: collection.routeStateAlias,
-      viewport: collection.viewport,
-      checkFamily,
-      failureCode,
+    recordStableGateFailure(options.failures, {
+      phase: options.phase,
+      routeStateAlias: options.routeStateAlias,
+      viewport: viewportLabel,
+      stableStep,
+      errorFamily,
       count,
     });
-  };
-  const observe = async (
-    checkFamily: PreflightCheckFamily,
-    failureCode: string,
-    operation: () => Promise<void>,
-  ) => {
-    try {
-      await operation();
-    } catch (error) {
-      if (!collection) throw error;
-      recordFailure(checkFamily, failureCode);
-    }
   };
 
   await page.setViewportSize({
@@ -3348,35 +3363,26 @@ async function auditRoute(
   } else {
     await waitForStableRender(page);
   }
-  if (
-    options.navigate !== false &&
-    route.id === "calculator" &&
-    viewport.width === 390
-  ) {
-    await advanceCalculatorToCasioInput(page);
-  }
-  const navigationControl = await stabilizeCanonicalTop(page);
-  if (navigationControl.failureCode)
-    recordFailure("canonical-top", navigationControl.failureCode);
+
+  const canonicalTop = await stabilizeCanonicalTop(page);
+  if (canonicalTop.failureCode) fail("audit", "assertion");
 
   const main = page.locator("main");
   const mainCount = await main.count();
   const mainVisible = mainCount === 1 && (await main.isVisible());
   const mainBox = mainCount === 1 ? await main.boundingBox() : null;
   if (
-    mainCount !== 1 ||
     !mainVisible ||
     !mainBox ||
     mainBox.width <= 0 ||
     mainBox.x < -1 ||
     mainBox.x + mainBox.width > viewport.width + 1
   ) {
-    recordFailure("viewport-bounds", "S232H2_MAIN_LANDMARK_INVALID");
+    fail("audit", "assertion");
   }
 
   const visibleH1Count = await page.locator("h1:visible").count();
-  if (visibleH1Count !== 1)
-    recordFailure("visual-contract", "S232H2_SCREEN_TITLE_INVALID");
+  if (visibleH1Count !== 1) fail("audit", "assertion");
 
   const foundation = await page.evaluate(() => ({
     horizontalOverflow: Math.max(
@@ -3412,12 +3418,9 @@ async function auditRoute(
       ),
     ),
   }));
-  if (foundation.horizontalOverflow !== 0)
-    recordFailure(
-      "viewport-bounds",
-      "S232H2_HORIZONTAL_OVERFLOW",
-      foundation.horizontalOverflow,
-    );
+  if (foundation.horizontalOverflow !== 0) {
+    fail("audit", "assertion", foundation.horizontalOverflow);
+  }
   if (
     foundation.canvasColor !== "rgb(247, 246, 243)" ||
     !/Noto Sans KR/i.test(foundation.bodyFontFamily) ||
@@ -3427,152 +3430,122 @@ async function auditRoute(
     foundation.readingColumn !== 680 ||
     foundation.contentMax !== 1120
   ) {
-    recordFailure("visual-contract", "S232H2_FOUNDATION_MISMATCH");
+    fail("audit", "assertion");
   }
 
-  await observe(
-    "visual-contract",
-    "S232H2_FIGMA_STRUCTURE_MISMATCH",
-    () => verifyRepresentativeFigmaStructure(page, route.id, viewport.width),
-  );
+  try {
+    await verifyRepresentativeFigmaStructure(page, route.id, viewport.width);
+  } catch {
+    fail("audit", "assertion");
+  }
 
-  const primaryActions = await visiblePrimaryActions(page);
-  const visiblePrimaryActionCount = primaryActions.length;
-  if (visiblePrimaryActionCount > 1)
-    recordFailure(
-      "primary-action",
-      "S232H2_PRIMARY_ACTION_COUNT_INVALID",
-      visiblePrimaryActionCount - 1,
-    );
-
-  const targetFailures = await visibleTargetFailures(page);
-  if (targetFailures.length > 0)
-    recordFailure(
-      "target-size",
-      "S232H2_POINTER_TARGET_BELOW_44",
-      targetFailures.length,
-    );
   const viewportBoundsFailures = await visibleViewportBoundsFailures(page);
-  if (viewportBoundsFailures.length > 0)
-    recordFailure(
-      "viewport-bounds",
-      "S232H2_VISIBLE_CONTENT_OUT_OF_BOUNDS",
-      viewportBoundsFailures.length,
-    );
+  if (viewportBoundsFailures.length > 0) {
+    fail("audit", "assertion", viewportBoundsFailures.length);
+  }
 
-  await page.evaluate(() => {
-    if (document.activeElement instanceof HTMLElement)
-      document.activeElement.blur();
-  });
+  const capabilities = await inspectShellCapabilities(page);
+  if (
+    !capabilities.structureValid ||
+    (capabilities.requiresSkipLink && capabilities.skipLinkCount !== 1) ||
+    (!capabilities.requiresSkipLink && capabilities.skipLinkCount > 1)
+  ) {
+    fail("audit", "assertion");
+  }
+  if (capabilities.kind === "login-form") {
+    const focused = await auditLoginFormFocus(page);
+    if (focused !== 3) fail("audit", "assertion");
+  }
+
   const styles = await visualStyleMetrics(page);
-  if (styles.gradientCount > 0)
-    recordFailure(
-      "visual-contract",
-      "S232H2_GRADIENT_PRESENT",
-      styles.gradientCount,
-    );
-  if (viewport.width === 1440 && styles.shadowCount > 0)
-    recordFailure(
-      "visual-contract",
-      "S232H2_DESKTOP_SHADOW_PRESENT",
-      styles.shadowCount,
-    );
-
+  if (styles.gradientCount > 0) {
+    fail("audit", "assertion", styles.gradientCount);
+  }
+  if (viewport.width === 1440 && styles.shadowCount > 0) {
+    fail("audit", "assertion", styles.shadowCount);
+  }
   const expectsCanonicalDock =
-    options.expectedCanonicalDock ??
-    (viewport.width < 1024 &&
-      (route.id === "ledger" || route.id === "calculator"));
+    viewport.width < 1024 &&
+    (route.id === "ledger" || route.id === "calculator");
   if (expectsCanonicalDock) {
     if (
       styles.fixedDocks.length !== 1 ||
       styles.fixedDocks[0]?.component !== "StickyAction" ||
       (styles.fixedDocks[0]?.height ?? 0) < 84
-    )
-      recordFailure("visual-contract", "S232H2_CANONICAL_DOCK_INVALID");
+    ) {
+      fail("audit", "assertion");
+    }
   } else if (styles.fixedDocks.length !== 0) {
-    recordFailure(
-      "visual-contract",
-      "S232H2_UNEXPECTED_FIXED_DOCK",
-      styles.fixedDocks.length,
-    );
+    fail("audit", "assertion", styles.fixedDocks.length);
   }
 
-  let blockingAxeCount = 0;
-  await observe("axe", "S232H2_AXE_AUDIT_ERROR", async () => {
-    const axe = await new AxeBuilder({ page })
-      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
-      .analyze();
-    blockingAxeCount = axe.violations.filter(
-      (violation) =>
-        violation.impact === "serious" || violation.impact === "critical",
-    ).length;
-  });
-  if (blockingAxeCount > 0)
-    recordFailure(
-      "axe",
-      "S232H2_AXE_SERIOUS_CRITICAL",
-      blockingAxeCount,
-    );
+  let visiblePrimaryActionCount: number | null = null;
+  let undersizedTargetCount: number | null = null;
+  let axeSeriousOrCritical: number | null = null;
+  let keyboardFocusVisible: boolean | null = null;
+  if (options.profile === "mobile-full") {
+    const primaryActions = await visiblePrimaryActions(page);
+    visiblePrimaryActionCount = primaryActions.length;
+    if (visiblePrimaryActionCount > 1) {
+      fail("audit", "assertion", visiblePrimaryActionCount - 1);
+    }
+    const targetFailures = await visibleTargetFailures(page);
+    undersizedTargetCount = targetFailures.length;
+    if (undersizedTargetCount > 0) {
+      fail("audit", "assertion", undersizedTargetCount);
+    }
+    try {
+      const axe = await new AxeBuilder({ page })
+        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
+        .analyze();
+      axeSeriousOrCritical = axe.violations.filter(
+        (violation) =>
+          violation.impact === "serious" || violation.impact === "critical",
+      ).length;
+      if (axeSeriousOrCritical > 0) {
+        fail("audit", "assertion", axeSeriousOrCritical);
+      }
+    } catch {
+      fail("audit", "unexpected");
+    }
 
-  const enabledPrimaryActionCount = primaryActions.filter(
-    (action) => !action.disabled,
-  ).length;
-  let keyboardFocusAudit: Awaited<ReturnType<typeof verifyKeyboardFocus>> | null =
-    null;
-  try {
-    keyboardFocusAudit = await verifyKeyboardFocus(
-      page,
-      enabledPrimaryActionCount,
-    );
-  } catch (error) {
-    if (!collection) throw error;
-    recordFailure(
-      "keyboard-focus",
-      "S232H2_KEYBOARD_FOCUS_AUDIT_ERROR",
-    );
-  }
-  const keyboardFocusVisible = keyboardFocusAudit?.passed ?? false;
-  if (keyboardFocusAudit) {
-    for (const failureCode of keyboardFocusAudit.skipLinkFailures)
-      recordFailure("skip-link", failureCode);
-    if (!keyboardFocusAudit.skipLink.originRemoved)
-      recordFailure(
-        "keyboard-focus",
-        "S232H2_FOCUS_ORIGIN_RETAINED",
-      );
-    if (
-      !keyboardFocusAudit.completedFocusTraversal ||
-      keyboardFocusAudit.visitedFocusStopCount === 0
-    )
-      recordFailure(
-        "keyboard-focus",
-        "S232H2_FOCUS_TRAVERSAL_INCOMPLETE",
-      );
-    if (!keyboardFocusAudit.everyFocusVisible)
-      recordFailure("keyboard-focus", "S232H2_FOCUS_NOT_VISIBLE");
-    if (!keyboardFocusAudit.enabledPrimaryReached)
-      recordFailure("primary-action", "S232H2_PRIMARY_NOT_REACHED");
-    if (keyboardFocusAudit.preFocusControl.failureCode)
-      recordFailure(
-        "canonical-top",
-        keyboardFocusAudit.preFocusControl.failureCode,
-      );
-    if (keyboardFocusAudit.scrollRecovery.failureCode)
-      recordFailure(
-        "scroll-recovery",
-        keyboardFocusAudit.scrollRecovery.failureCode,
-      );
+    if (options.keyboard) {
+      if (!capabilities.requiresSkipLink) {
+        fail("audit", "assertion");
+        keyboardFocusVisible = false;
+      } else {
+        try {
+          const enabledPrimaryActionCount = primaryActions.filter(
+            (action) => !action.disabled,
+          ).length;
+          const keyboard = await verifyKeyboardFocus(
+            page,
+            enabledPrimaryActionCount,
+          );
+          keyboardFocusVisible = keyboard.passed;
+          if (
+            !keyboard.passed ||
+            keyboard.skipLinkFailures.length > 0 ||
+            !keyboard.skipLink.originRemoved
+          ) {
+            fail("audit", "assertion");
+          }
+        } catch {
+          keyboardFocusVisible = false;
+          fail("audit", "unexpected");
+        }
+      }
+    }
   }
 
   return {
-    auditKind:
-      options.auditKind ??
-      (options.navigate === false ? "dynamic-state" : "initial-route"),
+    auditKind: options.auditKind ?? "initial-route",
+    auditProfile: options.profile,
     state: options.state ?? "initial",
     route: route.id,
     requestedPath:
       route.id === "ledger" ? "/app/items/[itemId]?mode=second" : requestedPath,
-    viewport: `${viewport.width}x${viewport.height}`,
+    viewport: viewportLabel,
     viewportWidth: viewport.width,
     mainCount,
     visibleH1Count,
@@ -3580,9 +3553,9 @@ async function auditRoute(
     mainWidth: Math.round((mainBox?.width ?? 0) * 10) / 10,
     horizontalOverflow: foundation.horizontalOverflow,
     visiblePrimaryActionCount,
-    undersizedTargetCount: targetFailures.length,
+    undersizedTargetCount,
     viewportBoundsFailureCount: viewportBoundsFailures.length,
-    axeSeriousOrCritical: blockingAxeCount,
+    axeSeriousOrCritical,
     keyboardFocusVisible,
     gradientCount: styles.gradientCount,
     shadowCount: styles.shadowCount,
@@ -3598,1326 +3571,280 @@ async function auditRoute(
   };
 }
 
-type ScreenshotCaptureOptions = { fullPage?: boolean; preflight?: false };
-type ScreenshotPreflightOptions = {
-  fullPage?: boolean;
-  preflight: true;
-  routeStateAlias: string;
-  viewport: string;
-};
-type ScreenshotPreflightObservation = {
-  canonicalTopFailureCode: string | null;
-  canonicalTopAtZero: boolean;
-  focusOriginCount: number;
-  visibleEmailOutsideMask: number;
-  blockingHitCount: number;
-};
-
-async function captureSyntheticScreenshot(
-  page: Page,
-  boundary: ScreenshotDataBoundary,
-  fileName: string,
-  options: ScreenshotPreflightOptions,
-): Promise<ScreenshotPreflightObservation>;
-async function captureSyntheticScreenshot(
-  page: Page,
-  boundary: ScreenshotDataBoundary,
-  fileName: string,
-  options?: ScreenshotCaptureOptions,
-): Promise<ScreenshotEvidence>;
-async function captureSyntheticScreenshot(
-  page: Page,
-  boundary: ScreenshotDataBoundary,
-  fileName: string,
-  options: ScreenshotCaptureOptions | ScreenshotPreflightOptions = {},
-): Promise<ScreenshotEvidence | ScreenshotPreflightObservation> {
-  const screenshotBoundaryPolicyTable = buildScreenshotBoundaryPolicyTable();
-  const assertScreenshotDataBoundary = async () => {
-    const observation = await page.evaluate(
-      ({
-        itemIds,
-        fragmentDescriptors,
-        screenshotBoundaryPolicyTable,
-        serializedPolicySchema,
-        instrumentationSchemas,
-        contentAttributeNames,
-        arbitraryPresentationUtilityPatternSource,
-        presentationUtilityPatternSource,
-        semanticTextSurfaceSelector,
-        allowedLengthFamilies,
-        allowedOriginClasses,
-        allowedRiskClasses,
-        allowedContentKinds,
-        originPathFamilyPatternSource,
-        semanticLabelPatternSources,
-        syntheticFormFixtures,
-        captureFullPage,
-      }) => {
-        const normalize = (value: string) =>
-          value.normalize("NFKC").replace(/\s+/g, " ").trim();
-        const normalizedItemIds = itemIds.map(normalize).filter(Boolean);
-        const lengthFamily = (value: string) => {
-          const length = Array.from(value).length;
-          if (length === 1) return "1";
-          if (length <= 7) return "2-7";
-          if (length <= 31) return "8-31";
-          return "32+";
-        };
-        const allowedLengths = new Set(allowedLengthFamilies);
-        const allowedOrigins = new Set(allowedOriginClasses);
-        const allowedRisks = new Set(allowedRiskClasses);
-        const allowedKinds = new Set(allowedContentKinds);
-        const originPathFamilyPattern = new RegExp(
-          originPathFamilyPatternSource,
-          "u",
-        );
-        const normalizedFragmentDescriptors = fragmentDescriptors.map(
-          (descriptor) => {
-            const value = normalize(descriptor.value);
-            const sourceItemIds = Array.isArray(descriptor.sourceItemIds)
-              ? descriptor.sourceItemIds.map(normalize).filter(Boolean)
-              : [];
-            const origins = Array.isArray(descriptor.origins)
-              ? descriptor.origins
-              : [];
-            const descriptorLengthFamily = descriptor.lengthFamily;
-            const validOrigins = origins.every(
-              (origin) =>
-                origin !== null &&
-                typeof origin === "object" &&
-                originPathFamilyPattern.test(origin.fieldOrPathFamily) &&
-                allowedOrigins.has(origin.originClass) &&
-                allowedRisks.has(origin.riskClass) &&
-                allowedKinds.has(origin.contentKind),
-            );
-            const provenanceState =
-              !value || sourceItemIds.length === 0 || origins.length === 0
-                ? "missing"
-                : !allowedLengths.has(descriptorLengthFamily) ||
-                    descriptorLengthFamily !== lengthFamily(value) ||
-                    !validOrigins
-                  ? "malformed"
-                  : "valid";
-            return {
-              value,
-              sourceItemIds,
-              origins,
-              lengthFamily: descriptorLengthFamily,
-              provenanceState,
-            };
-          },
-        );
-        const normalizedSyntheticFormFixtures = syntheticFormFixtures.map(
-          (fixture) => ({
-            selector: fixture.selector,
-            values: new Set(fixture.values.map(normalize).filter(Boolean)),
-          }),
-        );
-        const exactInstrumentationPatterns = instrumentationSchemas.map(
-          (schema) => ({
-            attributeName: new RegExp(
-              schema.attributeNamePatternSource,
-              "u",
-            ),
-            value: new RegExp(schema.valuePatternSource, "u"),
-          }),
-        );
-        const exactContentAttributeNames = new Set<string>(
-          contentAttributeNames,
-        );
-        const arbitraryPresentationUtility = new RegExp(
-          arbitraryPresentationUtilityPatternSource,
-          "i",
-        );
-        const presentationUtility = new RegExp(
-          presentationUtilityPatternSource,
-          "i",
-        );
-        const normalizedCandidates = (value: string) => {
-          const normalized = normalize(value);
-          const candidates = [normalized];
-          try {
-            const decoded = normalize(decodeURIComponent(normalized));
-            if (decoded !== normalized) candidates.push(decoded);
-          } catch {
-            // Invalid percent-encoding is compared in its original form.
-          }
-          return candidates;
-        };
-        const referencesAnyItemId = (
-          value: string,
-          candidateItemIds: readonly string[] = normalizedItemIds,
-        ) =>
-          normalizedCandidates(value).some((candidate) =>
-            candidateItemIds.some((itemId) => candidate.includes(itemId)),
-          );
-        const elementReferencesSourceItem = (
-          element: Element | null,
-          sourceItemIds: readonly string[],
-        ) => {
-          if (referencesAnyItemId(window.location.href, sourceItemIds))
-            return true;
-          let current = element;
-          while (current) {
-            if (
-              Array.from(current.attributes).some((attribute) =>
-                referencesAnyItemId(attribute.value, sourceItemIds),
-              )
-            )
-              return true;
-            const root = current.getRootNode();
-            current =
-              current.parentElement ??
-              (root instanceof ShadowRoot ? root.host : null);
-          }
-          return false;
-        };
-        const semanticTextSurfaceElement = (element: Element | null) =>
-          element
-            ? (element.closest(semanticTextSurfaceSelector) ?? element)
-            : null;
-        const semanticTextSurface = (element: Element | null) => {
-          const surface = semanticTextSurfaceElement(element);
-          if (!surface) return "";
-          return normalize(
-            surface instanceof HTMLElement
-              ? surface.innerText
-              : (surface.textContent ?? ""),
-          );
-        };
-        const resolveElementId = (element: Element, id: string) => {
-          const root = element.getRootNode();
-          if (root instanceof Document) return root.getElementById(id);
-          if (root instanceof ShadowRoot)
-            return root.querySelector(`#${CSS.escape(id)}`);
-          return null;
-        };
-        const resolvesIdReference = (
-          attributeName: string,
-          normalizedValue: string,
-          element: Element | null,
-        ) => {
-          if (!element || !normalizedValue) return false;
-          const name = attributeName.toLowerCase();
-          const referenceAttributes = [
-            "for",
-            "aria-controls",
-            "aria-labelledby",
-            "aria-describedby",
-            "aria-owns",
-            "aria-activedescendant",
-          ];
-          if (referenceAttributes.includes(name)) {
-            const ids = normalizedValue.split(/\s+/).filter(Boolean);
-            return (
-              ids.length > 0 &&
-              ids.every((id) => resolveElementId(element, id) !== null)
-            );
-          }
-          if (name !== "id") return false;
-          const root = element.getRootNode();
-          if (!(root instanceof Document || root instanceof ShadowRoot))
-            return false;
-          return Array.from(
-            root.querySelectorAll(
-              "[for],[aria-controls],[aria-labelledby],[aria-describedby],[aria-owns],[aria-activedescendant]",
-            ),
-          ).some((candidate) =>
-            referenceAttributes.some((referenceAttribute) =>
-              (candidate.getAttribute(referenceAttribute)?.split(/\s+/) ?? [])
-                .filter(Boolean)
-                .includes(normalizedValue),
-            ),
-          );
-        };
-        const structuralCollisionSchema = (
-          attributeName: string | null,
-          normalizedValue: string,
-          normalizedFragment: string,
-          element: Element | null,
-        ):
-          | "none"
-          | "presentation-syntax"
-          | "instrumentation-syntax"
-          | "progress-aria-syntax"
-          | "id-reference-syntax"
-          | "svg-geometry" => {
-          if (!attributeName || !element) return "none";
-          const name = attributeName.toLowerCase();
-          if (
-            exactInstrumentationPatterns.some(
-              (schema) =>
-                schema.attributeName.test(name) &&
-                schema.value.test(normalizedValue),
-            )
-          )
-            return "instrumentation-syntax";
-          if (
-            /^aria-value(?:min|max|now)$/i.test(name) &&
-            element.getAttribute("role")?.toLowerCase() === "progressbar"
-          )
-            return "progress-aria-syntax";
-          if (name === "tabindex" && /^(?:-1|0)$/u.test(normalizedValue))
-            return "presentation-syntax";
-          if (
-            name === "rows" &&
-            element.localName === "textarea" &&
-            normalizedValue === "3"
-          )
-            return "presentation-syntax";
-          if (name === "class" && normalizedValue !== normalizedFragment) {
-            const matchingTokens = normalizedValue
-              .split(/\s+/)
-              .filter((token) => token.includes(normalizedFragment));
-            if (
-              matchingTokens.length > 0 &&
-              matchingTokens.every((token) =>
-                token.includes("[")
-                  ? arbitraryPresentationUtility.test(token)
-                  : presentationUtility.test(token),
-              )
-            )
-              return "presentation-syntax";
-          }
-          if (
-            name === "style" &&
-            element.parentElement?.getAttribute("role")?.toLowerCase() ===
-              "progressbar" &&
-            normalizedValue !== normalizedFragment &&
-            /^width:\s*(?:0|[1-9]\d?|100)%;?$/u.test(normalizedValue)
-          )
-            return "presentation-syntax";
-          if (name === "style") {
-            const matchingDeclarations = normalizedValue
-              .split(";")
-              .map((declaration) => declaration.trim())
-              .filter(
-                (declaration) =>
-                  declaration.length > 0 &&
-                  declaration.includes(normalizedFragment),
-              );
-            if (
-              matchingDeclarations.length > 0 &&
-              matchingDeclarations.every((declaration) => {
-                const separator = declaration.indexOf(":");
-                if (separator < 1) return false;
-                const property = declaration
-                  .slice(0, separator)
-                  .trim()
-                  .toLowerCase();
-                const value = declaration.slice(separator + 1).trim();
-                if (property === "opacity")
-                  return /^(?:0(?:\.\d+)?|1(?:\.0+)?)$/u.test(value);
-                if (property === "height")
-                  return /^(?:auto|0|(?:0|[1-9]\d*)(?:\.\d+)?(?:px|%))$/u.test(
-                    value,
-                  );
-                if (property === "transform-origin")
-                  return /^(?:-?\d+(?:\.\d+)?(?:px|%))(?:\s+-?\d+(?:\.\d+)?(?:px|%)){1,2}$/u.test(
-                    value,
-                  );
-                if (property === "transform")
-                  return /^(?:none|(?:(?:translate(?:x|y|3d)?|scale(?:x|y|3d)?|rotate(?:x|y|z)?|matrix(?:3d)?)\([-+0-9.eE,%pxdeg\s]+\)\s*)+)$/iu.test(
-                    value,
-                  );
-                return false;
-              })
-            )
-              return "presentation-syntax";
-          }
-          if (
-            [
-              "id",
-              "for",
-              "aria-controls",
-              "aria-labelledby",
-              "aria-describedby",
-              "aria-owns",
-              "aria-activedescendant",
-            ].includes(name) &&
-            normalizedValue !== normalizedFragment &&
-            resolvesIdReference(name, normalizedValue, element)
-          )
-            return "id-reference-syntax";
-          const graphic = element.closest("svg");
-          const graphicContainer = graphic?.closest("button,a");
-          const decorativeGraphic =
-            graphic !== null &&
-            (graphic.matches(
-              'svg[aria-hidden="true"],svg[role="presentation"],svg[role="none"]',
-            ) ||
-              (!graphic.hasAttribute("aria-label") &&
-                !graphic.hasAttribute("aria-labelledby") &&
-                !graphic.querySelector("title") &&
-                normalize(graphicContainer?.textContent ?? "").length > 0));
-          if (
-            decorativeGraphic &&
-            [
-              "width",
-              "height",
-              "x",
-              "y",
-              "x1",
-              "x2",
-              "y1",
-              "y2",
-              "cx",
-              "cy",
-              "r",
-              "rx",
-              "ry",
-              "d",
-              "points",
-              "viewbox",
-              "transform",
-              "stroke-width",
-              "stroke-dasharray",
-              "stroke-dashoffset",
-            ].includes(name)
-          )
-            return "svg-geometry";
-          return "none";
-        };
-        const incidentalOrdinalOrCounter = (
-          normalizedValue: string,
-          normalizedFragment: string,
-          element: Element | null,
-        ) => {
-          if (
-            !normalizedFragment ||
-            normalizedValue === normalizedFragment ||
-            !normalizedValue.includes(normalizedFragment)
-          )
-            return false;
-          const semanticSurface = semanticTextSurfaceElement(element);
-          const orderedListItem =
-            semanticSurface?.tagName.toLowerCase() === "li" &&
-            semanticSurface.parentElement?.tagName.toLowerCase() === "ol";
-          const occurrences: number[] = [];
-          for (
-            let index = normalizedValue.indexOf(normalizedFragment);
-            index >= 0;
-            index = normalizedValue.indexOf(normalizedFragment, index + 1)
-          )
-            occurrences.push(index);
-          return occurrences.every((index) => {
-            const before = normalizedValue.slice(0, index);
-            const after = normalizedValue.slice(
-              index + normalizedFragment.length,
-            );
-            const previous = before.at(-1) ?? "";
-            const next = after.at(0) ?? "";
-            const adjacentNumber =
-              /\d/u.test(previous) ||
-              /\d/u.test(next) ||
-              ((/[.,/%:+-]/u.test(previous) ||
-                /[.,/%:+-]/u.test(next)) &&
-                /\d/u.test(`${before.slice(-2)}${after.slice(0, 2)}`));
-            const counterSuffix =
-                /^\s*(?:개|단계|차|줄|분|회|가지|문장|문단|페이지|항목|초|점|%)(?![\p{L}\p{N}_])/u.test(
-                  after,
-                );
-            const ordinalPunctuation = /^[.)]/u.test(after);
-            const labelledOrdinal =
-                /(?:제|단계|순서|항목|페이지|문항|문제|step|stage|page|item|question|phase|level|week)\s*$/iu.test(
-                  before,
-                );
-            const orderedListOrdinal =
-              orderedListItem &&
-              before.trim().length === 0 &&
-              /^(?:\s|[.)])/u.test(after);
-            return (
-              adjacentNumber ||
-              counterSuffix ||
-              ordinalPunctuation ||
-              labelledOrdinal ||
-              orderedListOrdinal
-            );
-          });
-        };
-        const matchSensitiveFragment = (
-          value: string,
-          element: Element | null,
-          channel:
-            | "semantic-text"
-            | "content-attribute"
-            | "structural-reference"
-            | "form-value"
-            | "generated-content"
-            | "background-reference",
-          structuralAttributeName: string | null = null,
-          surfaceKind: "default" | "select-value" = "default",
-        ) => {
-          const normalized = normalize(value);
-          if (!normalized)
-            return {
-              matched: false,
-              provenanceFiltered: false,
-              hitMetadata: null,
-            };
-          let provenanceFiltered = false;
-          for (const descriptor of normalizedFragmentDescriptors) {
-            const fragment = descriptor.value;
-            if (!fragment) continue;
-            const normalizedSemanticSurface = semanticTextSurface(element);
-            const exact =
-              (channel === "semantic-text"
-                ? normalizedSemanticSurface
-                : normalized) === fragment;
-            const substring =
-              normalized.includes(fragment) ||
-              (normalized.length >= 12 && fragment.includes(normalized));
-            if (!exact && !substring) continue;
-            const sourceReferenced = elementReferencesSourceItem(
-              element,
-              descriptor.sourceItemIds,
-            );
-            const escapedFragment = fragment.replace(
-              /[.*+?^${}()|[\]\\]/g,
-              "\\$&",
-            );
-            const semanticContextParts: string[] = [];
-            if (element) {
-              const addElementSemanticContext = (
-                semanticElement: Element,
-              ) => {
-                for (const attributeName of [
-                  "aria-label",
-                  "aria-description",
-                  "aria-valuetext",
-                  "aria-valuenow",
-                  "aria-placeholder",
-                  "title",
-                  "placeholder",
-                  "alt",
-                ]) {
-                  const attributeValue =
-                    semanticElement.getAttribute(attributeName);
-                  if (attributeValue)
-                    semanticContextParts.push(attributeValue);
-                }
-                for (const referenceAttribute of [
-                  "aria-labelledby",
-                  "aria-describedby",
-                ]) {
-                  const referencedIds =
-                    semanticElement
-                      .getAttribute(referenceAttribute)
-                      ?.split(/\s+/) ?? [];
-                  for (const referencedId of referencedIds) {
-                    const referencedText = resolveElementId(
-                      semanticElement,
-                      referencedId,
-                    )?.textContent;
-                    if (referencedText)
-                      semanticContextParts.push(referencedText);
-                  }
-                }
-              };
-              addElementSemanticContext(element);
-              const semanticSurface = semanticTextSurfaceElement(element);
-              if (semanticSurface && semanticSurface !== element)
-                addElementSemanticContext(semanticSurface);
-              const semanticSurfaceText = semanticTextSurface(element);
-              if (semanticSurfaceText)
-                semanticContextParts.push(semanticSurfaceText);
-              if (structuralAttributeName)
-                semanticContextParts.push(structuralAttributeName);
-              if (
-                element instanceof HTMLInputElement ||
-                element instanceof HTMLTextAreaElement ||
-                element instanceof HTMLSelectElement
-              ) {
-                for (const label of Array.from(element.labels ?? []))
-                  semanticContextParts.push(label.innerText);
-              }
-              const wrappingLabel = element.closest("label");
-              if (wrappingLabel)
-                semanticContextParts.push(wrappingLabel.innerText);
-              const fieldset = element.closest("fieldset");
-              const legend = fieldset?.querySelector(":scope > legend");
-              if (legend?.textContent)
-                semanticContextParts.push(legend.textContent);
-              const labelledGroup = element.closest<HTMLElement>(
-                '[role="group"],[role="radiogroup"],[role="listbox"]',
-              );
-              if (labelledGroup && labelledGroup !== element)
-                addElementSemanticContext(labelledGroup);
-            }
-            semanticContextParts.push(normalized);
-            const semanticContext = normalize(semanticContextParts.join(" "));
-            const contentKinds = new Set(
-              descriptor.origins.map((origin) => origin.contentKind),
-            );
-            const semanticKinds = contentKinds.has("unknown")
-              ? (["answer", "reason", "question"] as const)
-              : (["answer", "reason", "question"] as const).filter((kind) =>
-                  contentKinds.has(kind),
-                );
-            const semanticLabel = semanticKinds.some((kind) =>
-              new RegExp(
-                semanticLabelPatternSources[kind].replaceAll(
-                  "__FRAGMENT__",
-                  escapedFragment,
-                ),
-                "iu",
-              ).test(semanticContext),
-            );
-            const structuralSchema = structuralCollisionSchema(
-              structuralAttributeName,
-              normalized,
-              fragment,
-              element,
-            );
-            const incidentalTextValue =
-              channel === "semantic-text"
-                ? semanticTextSurface(element)
-                : normalized;
-            const incidentalTextSchema = incidentalOrdinalOrCounter(
-              incidentalTextValue,
-              fragment,
-              element,
-            );
-            const exactSyntheticFixtureFormValue =
-              channel === "form-value" &&
-              element instanceof HTMLElement &&
-              normalizedSyntheticFormFixtures.some(
-                (fixture) =>
-                  element.matches(fixture.selector) &&
-                  fixture.values.has(normalized),
-              );
-            const attributeName = structuralAttributeName?.toLowerCase() ?? "";
-            const shadowDom = element?.getRootNode() instanceof ShadowRoot;
-            const ariaReference = [
-              "aria-controls",
-              "aria-labelledby",
-              "aria-describedby",
-              "aria-owns",
-              "aria-activedescendant",
-            ].includes(attributeName);
-            const hardBlockFacts: Record<string, boolean> = {
-              "source-reference": sourceReferenced,
-              "exact-surface":
-                exact &&
-                (channel === "semantic-text" ||
-                  channel === "content-attribute"),
-              "semantic-label": semanticLabel,
-              "form-value":
-                channel === "form-value" &&
-                !exactSyntheticFixtureFormValue,
-              "generated-content": channel === "generated-content",
-              "background-reference": channel === "background-reference",
-              "shadow-aria-reference": shadowDom || ariaReference,
-              "select-value": surfaceKind === "select-value",
-              "unknown-surface":
-                channel === "structural-reference" &&
-                structuralSchema === "none",
-            };
-            const positiveEvidenceFacts: Record<string, boolean> = {
-              "presentation-syntax":
-                structuralSchema === "presentation-syntax",
-              "instrumentation-syntax":
-                structuralSchema === "instrumentation-syntax",
-              "progress-aria-syntax":
-                structuralSchema === "progress-aria-syntax",
-              "id-reference-syntax":
-                structuralSchema === "id-reference-syntax" && !ariaReference,
-              "svg-geometry": structuralSchema === "svg-geometry",
-              "ordinal-counter": incidentalTextSchema,
-              "public-semantic-substring":
-                channel === "semantic-text" &&
-                !exact &&
-                normalizedSemanticSurface.includes(fragment),
-              "synthetic-form-value": exactSyntheticFixtureFormValue,
-            };
-            const hardBlockReason =
-              serializedPolicySchema.hardBlockPriority.find(
-                (reason) => hardBlockFacts[reason],
-              ) ?? "none";
-            const positiveEvidence =
-              serializedPolicySchema.positiveEvidencePriority.find(
-                (evidence) => positiveEvidenceFacts[evidence],
-              ) ?? "none";
-            const policyKey = [
-              descriptor.provenanceState,
-              descriptor.lengthFamily,
-              hardBlockReason,
-              positiveEvidence,
-            ].join(":");
-            const policyDecision =
-              screenshotBoundaryPolicyTable[policyKey];
-            if (policyDecision?.block !== false) {
-              const originFamilies = [
-                ...new Set(
-                  descriptor.origins.map(
-                    (origin) => origin.fieldOrPathFamily,
-                  ),
-                ),
-              ];
-              const riskClasses = [
-                ...new Set(
-                  descriptor.origins.map((origin) => origin.riskClass),
-                ),
-              ];
-              return {
-                matched: true,
-                provenanceFiltered: false,
-                hitMetadata: {
-                  fragmentFamily:
-                    riskClasses.length === 1 ? riskClasses[0] : "mixed",
-                  maskedLength: descriptor.lengthFamily,
-                  relation: policyDecision?.reason ?? "missing-policy",
-                  originPathFamily:
-                    originFamilies.length === 1
-                      ? originFamilies[0]
-                      : "multiple",
-                  policyDecision: "block" as const,
-                },
-              };
-            }
-            provenanceFiltered = true;
-          }
-          return { matched: false, provenanceFiltered, hitMetadata: null };
-        };
-        const matchUnclassifiedReference = (
-          value: string,
-          element: Element | null,
-          channel:
-            | "content-attribute"
-            | "structural-reference"
-            | "generated-content"
-            | "background-reference",
-          structuralAttributeName: string | null = null,
-        ) => {
-          let provenanceFiltered = false;
-          for (const candidate of normalizedCandidates(value)) {
-            const referencedItemId = normalizedItemIds.find((itemId) =>
-              candidate.includes(itemId),
-            );
-            if (referencedItemId)
-              return {
-                matched: true,
-                provenanceFiltered: false,
-                hitMetadata: {
-                  fragmentFamily: "account-item-id",
-                  maskedLength: lengthFamily(referencedItemId),
-                  relation: "source-reference",
-                  originPathFamily: "item-id",
-                  policyDecision: "block" as const,
-                },
-              };
-            const fragmentMatch = matchSensitiveFragment(
-              candidate,
-              element,
-              channel,
-              structuralAttributeName,
-            );
-            if (fragmentMatch.matched) return fragmentMatch;
-            provenanceFiltered ||= fragmentMatch.provenanceFiltered;
-          }
-          return { matched: false, provenanceFiltered, hitMetadata: null };
-        };
-        const isRendered = (element: Element) => {
-          if (!(element instanceof HTMLElement || element instanceof SVGElement))
-            return false;
-          let current: Element | null = element;
-          while (current) {
-            const style = getComputedStyle(current);
-            if (
-              style.display === "none" ||
-              style.visibility === "hidden" ||
-              style.visibility === "collapse" ||
-              Number(style.opacity) === 0
-            )
-              return false;
-            const root = current.getRootNode();
-            current =
-              current.parentElement ??
-              (root instanceof ShadowRoot ? root.host : null);
-          }
-          return Array.from(element.getClientRects()).some((rect) => {
-            if (rect.width <= 0 || rect.height <= 0) return false;
-            return (
-              captureFullPage ||
-              (rect.bottom > 0 &&
-                rect.right > 0 &&
-                rect.top < window.innerHeight &&
-                rect.left < window.innerWidth)
-            );
-          });
-        };
-        const standardTags = new Set([
-          "a",
-          "article",
-          "button",
-          "div",
-          "fieldset",
-          "form",
-          "h1",
-          "h2",
-          "h3",
-          "h4",
-          "h5",
-          "h6",
-          "input",
-          "label",
-          "legend",
-          "li",
-          "main",
-          "nav",
-          "ol",
-          "option",
-          "p",
-          "path",
-          "section",
-          "select",
-          "span",
-          "summary",
-          "svg",
-          "textarea",
-          "ul",
-        ]);
-        const standardRoles = new Set([
-          "alert",
-          "button",
-          "checkbox",
-          "group",
-          "heading",
-          "link",
-          "list",
-          "listbox",
-          "listitem",
-          "main",
-          "navigation",
-          "none",
-          "option",
-          "presentation",
-          "progressbar",
-          "radio",
-          "radiogroup",
-          "region",
-          "slider",
-          "spinbutton",
-          "status",
-          "textbox",
-        ]);
-        const safeElementType = (element: Element | null) => {
-          if (!element) return { tag: "document", role: "none" };
-          const rawTag = element.tagName.toLowerCase();
-          const rawRole = element.getAttribute("role")?.toLowerCase() ?? "";
-          return {
-            tag: standardTags.has(rawTag)
-              ? rawTag
-              : rawTag.includes("-")
-                ? "custom-element"
-                : "other",
-            role: standardRoles.has(rawRole) ? rawRole : "none",
-          };
-        };
-        const safeAttributeFamily = (
-          channel: string,
-          attributeName: string | null,
-        ) => {
-          if (!attributeName) {
-            if (channel === "semantic-text") return "text";
-            if (channel === "form-value") return "form-property";
-            if (channel === "generated-content") return "pseudo-content";
-            if (channel === "background-reference")
-              return "background-image";
-            return "none";
-          }
-          const name = attributeName.toLowerCase();
-          if (name === "class" || name === "style") return name;
-          if (/^data-(?:testid|v3-|s\d|calculator-routine-)/i.test(name))
-            return "instrumentation-data";
-          if (name.startsWith("data-")) return "other-data";
-          if (
-            [
-              "id",
-              "for",
-              "aria-controls",
-              "aria-labelledby",
-              "aria-describedby",
-              "aria-owns",
-              "aria-activedescendant",
-            ].includes(name)
-          )
-            return "id-reference";
-          if (name.startsWith("aria-")) return "aria";
-          if (["href", "src", "srcset", "action", "formaction"].includes(name))
-            return "url-reference";
-          if (["value", "title", "alt", "placeholder"].includes(name))
-            return "content";
-          if (
-            [
-              "width",
-              "height",
-              "x",
-              "y",
-              "x1",
-              "x2",
-              "y1",
-              "y2",
-              "cx",
-              "cy",
-              "r",
-              "rx",
-              "ry",
-              "d",
-              "points",
-              "viewbox",
-              "transform",
-              "stroke-width",
-            ].includes(name)
-          )
-            return "graphic-geometry";
-          return "other-attribute";
-        };
-        const blockingBucketCounts = new Map<string, number>();
-        const recordBlockingHit = (
-          channel: string,
-          element: Element | null,
-          attributeName: string | null,
-          hitMetadata: {
-            fragmentFamily: string;
-            maskedLength: string;
-            relation: string;
-            originPathFamily: string;
-            policyDecision: "block";
-          } | null,
-        ) => {
-          if (!hitMetadata) return;
-          const elementType = safeElementType(element);
-          const bucket = {
-            channel,
-            element: `${elementType.tag}:${elementType.role}`,
-            attributeFamily: safeAttributeFamily(channel, attributeName),
-            fragmentFamily: hitMetadata.fragmentFamily,
-            maskedLength: hitMetadata.maskedLength,
-            relation: hitMetadata.relation,
-            originPathFamily: hitMetadata.originPathFamily,
-            policyDecision: hitMetadata.policyDecision,
-          };
-          const key = JSON.stringify(bucket);
-          blockingBucketCounts.set(
-            key,
-            (blockingBucketCounts.get(key) ?? 0) + 1,
-          );
-        };
-        let textHits = 0;
-        let referenceHits = 0;
-        let formValueHits = 0;
-        let generatedContentHits = 0;
-        let provenanceFilteredTextHits = 0;
-        let provenanceFilteredReferenceHits = 0;
-        let provenanceFilteredFormValueHits = 0;
-        let provenanceFilteredGeneratedContentHits = 0;
-        const uninspectable = new Set<Element>();
-        const pageReferencedItemId = normalizedItemIds.find((itemId) =>
-          normalizedCandidates(window.location.href).some((candidate) =>
-            candidate.includes(itemId),
-          ),
-        );
-        if (pageReferencedItemId) {
-          referenceHits += 1;
-          recordBlockingHit("structural-reference", null, null, {
-            fragmentFamily: "account-item-id",
-            maskedLength: lengthFamily(pageReferencedItemId),
-            relation: "source-reference",
-            originPathFamily: "item-id",
-            policyDecision: "block" as const,
-          });
-        }
-        const roots: Array<Document | ShadowRoot> = [document];
-        for (let rootIndex = 0; rootIndex < roots.length; rootIndex += 1) {
-          const root = roots[rootIndex];
-          const elements = Array.from(root.querySelectorAll("*"));
-          for (const element of elements) {
-            if (element.shadowRoot) roots.push(element.shadowRoot);
-            if (!isRendered(element)) continue;
-
-            const hasBlockChild = Array.from(element.children).some(
-              (child) =>
-                !["inline", "inline-block", "contents"].includes(
-                  getComputedStyle(child).display,
-                ),
-            );
-            if (element instanceof HTMLElement && !hasBlockChild) {
-              const textMatch = matchSensitiveFragment(
-                element.innerText,
-                element,
-                "semantic-text",
-              );
-              if (textMatch.matched) {
-                textHits += 1;
-                recordBlockingHit(
-                  "semantic-text",
-                  element,
-                  null,
-                  textMatch.hitMetadata,
-                );
-              }
-              else if (textMatch.provenanceFiltered)
-                provenanceFilteredTextHits += 1;
-            }
-
-            let attributeMatched = false;
-            let attributeProvenanceFiltered = false;
-            for (const attribute of Array.from(element.attributes)) {
-              const attributeChannel =
-                attribute.name.toLowerCase() === "aria-valuenow" &&
-                element.getAttribute("role")?.toLowerCase() === "progressbar"
-                  ? "structural-reference"
-                  : exactContentAttributeNames.has(attribute.name.toLowerCase())
-                    ? "content-attribute"
-                    : "structural-reference";
-              const attributeMatch = matchUnclassifiedReference(
-                attribute.value,
-                element,
-                attributeChannel,
-                attribute.name,
-              );
-              if (attributeMatch.matched) {
-                referenceHits += 1;
-                recordBlockingHit(
-                  attributeChannel,
-                  element,
-                  attribute.name,
-                  attributeMatch.hitMetadata,
-                );
-                attributeMatched = true;
-                break;
-              }
-              attributeProvenanceFiltered ||=
-                attributeMatch.provenanceFiltered;
-            }
-            if (!attributeMatched && attributeProvenanceFiltered)
-              provenanceFilteredReferenceHits += 1;
-
-            if (
-              element instanceof HTMLInputElement ||
-              element instanceof HTMLTextAreaElement
-            ) {
-              const formMatch = matchSensitiveFragment(
-                element.value,
-                element,
-                "form-value",
-              );
-              if (formMatch.matched) {
-                formValueHits += 1;
-                recordBlockingHit(
-                  "form-value",
-                  element,
-                  null,
-                  formMatch.hitMetadata,
-                );
-              }
-              else if (formMatch.provenanceFiltered)
-                provenanceFilteredFormValueHits += 1;
-            } else if (element instanceof HTMLSelectElement) {
-              const selectedText = Array.from(element.selectedOptions)
-                .map((option) => option.textContent ?? "")
-                .join(" ");
-              let selectMatched = false;
-              let selectProvenanceFiltered = false;
-              let selectHitMetadata: {
-                fragmentFamily: string;
-                maskedLength: string;
-                relation: string;
-                originPathFamily: string;
-                policyDecision: "block";
-              } | null = null;
-              for (const selectSurface of [
-                { value: element.value, kind: "select-value" as const },
-                { value: selectedText, kind: "default" as const },
-              ]) {
-                const formMatch = matchSensitiveFragment(
-                  selectSurface.value,
-                  element,
-                  "form-value",
-                  null,
-                  selectSurface.kind,
-                );
-                if (formMatch.matched) {
-                  selectMatched = true;
-                  selectHitMetadata = formMatch.hitMetadata;
-                  break;
-                }
-                selectProvenanceFiltered ||= formMatch.provenanceFiltered;
-              }
-              if (selectMatched) {
-                formValueHits += 1;
-                recordBlockingHit(
-                  "form-value",
-                  element,
-                  null,
-                  selectHitMetadata,
-                );
-              }
-              else if (selectProvenanceFiltered)
-                provenanceFilteredFormValueHits += 1;
-            }
-
-            for (const pseudo of ["::before", "::after"] as const) {
-              const content = getComputedStyle(element, pseudo).content;
-              if (!content || content === "none" || content === "normal")
-                continue;
-              const generatedMatch = matchUnclassifiedReference(
-                content,
-                element,
-                "generated-content",
-              );
-              if (generatedMatch.matched) {
-                generatedContentHits += 1;
-                recordBlockingHit(
-                  "generated-content",
-                  element,
-                  null,
-                  generatedMatch.hitMetadata,
-                );
-              }
-              else if (generatedMatch.provenanceFiltered)
-                provenanceFilteredGeneratedContentHits += 1;
-            }
-
-            const backgroundImage = getComputedStyle(element).backgroundImage;
-            if (backgroundImage !== "none") {
-              const backgroundMatch = matchUnclassifiedReference(
-                backgroundImage,
-                element,
-                "background-reference",
-              );
-              if (backgroundMatch.matched) {
-                referenceHits += 1;
-                recordBlockingHit(
-                  "background-reference",
-                  element,
-                  null,
-                  backgroundMatch.hitMetadata,
-                );
-              }
-              else if (backgroundMatch.provenanceFiltered)
-                provenanceFilteredReferenceHits += 1;
-            }
-
-            const maskImage = getComputedStyle(element).maskImage;
-            if (
-              /url\(/i.test(backgroundImage) ||
-              /url\(/i.test(maskImage)
-            )
-              uninspectable.add(element);
-
-            if (
-              element instanceof HTMLIFrameElement ||
-              element instanceof HTMLCanvasElement ||
-              element instanceof HTMLObjectElement ||
-              element instanceof HTMLEmbedElement ||
-              element instanceof HTMLImageElement ||
-              element instanceof HTMLVideoElement
-            )
-              uninspectable.add(element);
-          }
-
-          const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-          let node = walker.nextNode();
-          while (node) {
-            const parent = node.parentElement;
-            if (parent && isRendered(parent)) {
-              const textMatch = matchSensitiveFragment(
-                node.textContent ?? "",
-                parent,
-                "semantic-text",
-              );
-              if (textMatch.matched) {
-                textHits += 1;
-                recordBlockingHit(
-                  "semantic-text",
-                  parent,
-                  null,
-                  textMatch.hitMetadata,
-                );
-              }
-              else if (textMatch.provenanceFiltered)
-                provenanceFilteredTextHits += 1;
-            }
-            node = walker.nextNode();
-          }
-        }
-        for (const element of uninspectable)
-          recordBlockingHit("uninspectable-surface", element, null, {
-            fragmentFamily: "opaque-surface",
-            maskedLength: "n/a",
-            relation: "uninspectable",
-            originPathFamily: "opaque-surface",
-            policyDecision: "block",
-          });
-        const blockingBuckets = [...blockingBucketCounts]
-          .map(([key, count]) => ({
-            ...(JSON.parse(key) as {
-              channel: string;
-              element: string;
-              attributeFamily: string;
-              fragmentFamily: string;
-              maskedLength: string;
-              relation: string;
-              originPathFamily: string;
-              policyDecision: "block";
-            }),
-            count,
-          }))
-          .sort((left, right) =>
-            JSON.stringify(left).localeCompare(JSON.stringify(right)),
-          );
-        return {
-          textHits,
-          referenceHits,
-          formValueHits,
-          generatedContentHits,
-          uninspectableSurfaceCount: uninspectable.size,
-          provenanceFilteredTextHits,
-          provenanceFilteredReferenceHits,
-          provenanceFilteredFormValueHits,
-          provenanceFilteredGeneratedContentHits,
-          blockingBuckets,
-        };
-      },
-      {
-        itemIds: boundary.unclassifiedItemIds,
-        fragmentDescriptors: boundary.fragmentDescriptors,
-        screenshotBoundaryPolicyTable,
-        serializedPolicySchema: screenshotBoundaryPolicySchema,
-        instrumentationSchemas: provenanceBoundInstrumentationSchemas.map(
-          (schema) => ({
-            attributeNamePatternSource: schema.attributeNamePatternSource,
-            valuePatternSource: schema.valuePatternSource,
-          }),
-        ),
-        contentAttributeNames: [...provenanceBoundContentAttributeNames],
-        arbitraryPresentationUtilityPatternSource:
-          provenanceBoundArbitraryPresentationUtilityPattern.source,
-        presentationUtilityPatternSource:
-          provenanceBoundPresentationUtilityPattern.source,
-        semanticTextSurfaceSelector:
-          provenanceBoundSemanticTextSurfaceSelector,
-        allowedLengthFamilies: [...screenshotBoundaryLengthFamilies],
-        allowedOriginClasses: [...screenshotBoundaryOriginClasses],
-        allowedRiskClasses: [...screenshotBoundaryRiskClasses],
-        allowedContentKinds: [...screenshotBoundaryContentKinds],
-        originPathFamilyPatternSource:
-          screenshotBoundaryOriginPathFamilyPatternSource,
-        semanticLabelPatternSources:
-          screenshotBoundarySemanticLabelPatternSources,
-        syntheticFormFixtures: exactSyntheticFormFixtures,
-        captureFullPage: options.fullPage ?? true,
-      },
+function hasExactQuery(
+  url: URL,
+  expected: Readonly<Record<string, readonly string[]>>,
+) {
+  const keys = [...url.searchParams.keys()];
+  if (keys.length !== Object.keys(expected).length) return false;
+  return Object.entries(expected).every(([key, values]) => {
+    const actual = url.searchParams.getAll(key);
+    return (
+      actual.length === values.length &&
+      actual.every((value, index) => value === values[index])
     );
-    const blockingHitCount =
-      observation.textHits +
-      observation.referenceHits +
-      observation.formValueHits +
-      observation.generatedContentHits +
-      observation.uninspectableSurfaceCount;
-    if (options.preflight) {
-      boundary.preflightCheckCount += 1;
-      boundary.preflightCandidateCount += 1;
-      boundary.preflightBlockerCount += blockingHitCount;
-      const routeStateAlias = options.routeStateAlias
-        .replace(/[^a-z0-9-]/gi, "-")
-        .slice(0, 80);
-      const viewport = options.viewport
-        .replace(/[^a-z0-9x-]/gi, "-")
-        .slice(0, 32);
-      const bucketCounts = new Map(
-        boundary.preflightBlockingBuckets.map((bucket) => [
-          JSON.stringify({
-            routeStateAlias: bucket.routeStateAlias,
-            viewport: bucket.viewport,
-            channel: bucket.channel,
-            lengthFamily: bucket.lengthFamily,
-            originPathFamily: bucket.originPathFamily,
-            decision: bucket.decision,
-            reason: bucket.reason,
-          }),
-          bucket.count,
-        ]),
-      );
-      for (const bucket of observation.blockingBuckets) {
-        const safeBucket = {
-          routeStateAlias,
-          viewport,
-          channel: bucket.channel,
-          lengthFamily: bucket.maskedLength,
-          originPathFamily: bucket.originPathFamily,
-          decision: "block" as const,
-          reason: bucket.relation,
-        };
-        const key = JSON.stringify(safeBucket);
-        bucketCounts.set(key, (bucketCounts.get(key) ?? 0) + bucket.count);
-      }
-      boundary.preflightBlockingBuckets = [...bucketCounts]
-        .map(([key, count]) => ({
-          ...(JSON.parse(key) as Omit<
-            (typeof boundary.preflightBlockingBuckets)[number],
-            "count"
-          >),
-          count,
-        }))
-        .sort((left, right) =>
-          JSON.stringify(left).localeCompare(JSON.stringify(right)),
-        );
-      return blockingHitCount;
+  });
+}
+
+function isKnownLearnerRead(url: URL, allowedItemIds: Set<string>) {
+  const pathname = url.pathname;
+  if (
+    (pathname === "/api/os/items" &&
+      (hasExactQuery(url, {}) || hasExactQuery(url, { limit: ["501"] }))) ||
+    (pathname === "/api/os/study-logs" &&
+      hasExactQuery(url, { mode: ["second"], limit: ["501"] })) ||
+    (pathname === "/api/os/review-queue" && hasExactQuery(url, {})) ||
+    (pathname === "/api/os/today-focus" &&
+      hasExactQuery(url, { mode: ["second"] })) ||
+    (pathname === "/api/os/weekly-summary" &&
+      hasExactQuery(url, { mode: ["second"] }))
+  ) {
+    return { known: true, rowKnown: true };
+  }
+  const item = pathname.match(/^\/api\/os\/items\/([^/]+)$/);
+  if (item) {
+    let decoded = "";
+    try {
+      decoded = decodeURIComponent(item[1]);
+    } catch {
+      return { known: true, rowKnown: false };
     }
-    boundary.checkCount += 1;
-    boundary.visibleTextHitCount += observation.textHits;
-    boundary.visibleReferenceHitCount += observation.referenceHits;
-    boundary.visibleFormValueHitCount += observation.formValueHits;
-    boundary.visibleGeneratedContentHitCount += observation.generatedContentHits;
-    boundary.visibleUninspectableSurfaceCount +=
-      observation.uninspectableSurfaceCount;
-    boundary.provenanceFilteredTextHitCount +=
-      observation.provenanceFilteredTextHits;
-    boundary.provenanceFilteredReferenceHitCount +=
-      observation.provenanceFilteredReferenceHits;
-    boundary.provenanceFilteredFormValueHitCount +=
-      observation.provenanceFilteredFormValueHits;
-    boundary.provenanceFilteredGeneratedContentHitCount +=
-      observation.provenanceFilteredGeneratedContentHits;
-    expect(
-      blockingHitCount,
-      `Screenshot data boundary must close before any PNG is retained; metadata-only-observation=${JSON.stringify({ failureCode: "S232H2_SCREENSHOT_BOUNDARY_OPEN", capture: fileName.replace(/[^a-z0-9-]/gi, "-").slice(0, 80), channels: { text: observation.textHits, reference: observation.referenceHits, formValue: observation.formValueHits, generatedContent: observation.generatedContentHits, uninspectableSurface: observation.uninspectableSurfaceCount }, provenanceFiltered: { text: observation.provenanceFilteredTextHits, reference: observation.provenanceFilteredReferenceHits, formValue: observation.provenanceFilteredFormValueHits, generatedContent: observation.provenanceFilteredGeneratedContentHits }, buckets: observation.blockingBuckets })}.`,
-    ).toBe(0);
-    return blockingHitCount;
+    return { known: true, rowKnown: allowedItemIds.has(decoded) };
+  }
+  return { known: false, rowKnown: false };
+}
+
+async function blockUnexpectedLearnerMutation(
+  context: BrowserContext,
+  fixtureIds: readonly string[],
+) {
+  const evidence: EndpointGuardEvidence = {
+    unknownEndpointCount: 0,
+    unknownRowCount: 0,
+    blockedMutationCount: 0,
+  };
+  const allowedItemIds = new Set(fixtureIds);
+  await context.route("**/api/**", async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    const pathname = url.pathname;
+    const learnerDataEndpoint =
+      pathname.startsWith("/api/os/") ||
+      pathname === "/api/inverge/ocr" ||
+      pathname === "/api/answer-review/structure";
+    if (!learnerDataEndpoint) {
+      await route.continue();
+      return;
+    }
+    if (request.method() !== "GET") {
+      evidence.blockedMutationCount += 1;
+      await route.fulfill({
+        status: 409,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: false, error: "S232H2_MUTATION_BLOCKED" }),
+      });
+      return;
+    }
+    const known = isKnownLearnerRead(url, allowedItemIds);
+    if (!known.known) {
+      evidence.unknownEndpointCount += 1;
+      await route.fulfill({
+        status: 404,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: false, error: "S232H2_UNKNOWN_ENDPOINT" }),
+      });
+      return;
+    }
+    if (!known.rowKnown) {
+      evidence.unknownRowCount += 1;
+      await route.fulfill({
+        status: 404,
+        contentType: "application/json",
+        body: JSON.stringify({ ok: false, error: "S232H2_UNKNOWN_ROW" }),
+      });
+      return;
+    }
+    await route.continue();
+  });
+  return evidence;
+}
+
+async function installDeterministicVisualMocks(context: BrowserContext) {
+  const exactSyntheticPost = async (
+    route: Route,
+    kind: "ocr" | "answer-review" | "calculator",
+  ) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    const contentType = request.headers()["content-type"] ?? "";
+    const body = request.postDataBuffer();
+    if (
+      request.method() !== "POST" ||
+      [...url.searchParams.keys()].length !== 0 ||
+      !body ||
+      body.byteLength === 0 ||
+      body.byteLength > 65_536
+    ) {
+      await route.fallback();
+      return false;
+    }
+    if (kind === "calculator") {
+      if (!contentType.startsWith("application/json")) {
+        await route.fallback();
+        return false;
+      }
+      const parsed = (() => {
+        try {
+          return JSON.parse(body.toString("utf8")) as Record<string, unknown>;
+        } catch {
+          return null;
+        }
+      })();
+      if (
+        !parsed ||
+        parsed.metadataOnly !== true ||
+        parsed.version !== 1 ||
+        parsed.routineType !== "calculator_routine" ||
+        parsed.examMode !== "second" ||
+        parsed.subject !== "감정평가실무" ||
+        parsed.sourceStatus !== "draft" ||
+        parsed.needsOfficialVerification !== true ||
+        !Array.isArray(parsed.completedStepIds) ||
+        !Array.isArray(parsed.verificationMethods) ||
+        !parsed.verificationMethods.includes("reverse_calculation") ||
+        !Array.isArray(parsed.mistakeTypes) ||
+        parsed.mistakeTypes.length !== 1 ||
+        parsed.mistakeTypes[0] !== "none"
+      ) {
+        await route.fallback();
+        return false;
+      }
+      return true;
+    }
+    if (!contentType.startsWith("multipart/form-data; boundary=")) {
+      await route.fallback();
+      return false;
+    }
+    const serialized = body.toString("utf8");
+    const rawIdentity =
+      /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(serialized) ||
+      /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/i.test(
+        serialized,
+      );
+    const exactFixtureInput =
+      kind === "ocr"
+        ? serialized.includes("합성 사례 메모입니다.") &&
+          serialized.includes("신뢰보호 요건과 대응 사실")
+        : serialized.includes(
+            "합성 답안입니다. 논점, 기준, 적용, 결론 순서로 직접 작성했습니다.",
+          ) && serialized.includes("second");
+    if (rawIdentity || !exactFixtureInput) {
+      await route.fallback();
+      return false;
+    }
+    return true;
   };
 
-  const canonicalTop = await stabilizeCanonicalTop(page);
-  const screenshotScrollY = canonicalTop.finalWindowScrollY;
-  const canonicalTopAtZero =
-    canonicalTop.failureCode === null && screenshotScrollY === 0;
-  const focusOriginCount = await page
-    .locator(`[${focusOriginAttribute}]`)
-    .count();
+  await context.route("**/api/inverge/ocr", async (route) => {
+    if (!(await exactSyntheticPost(route, "ocr"))) return;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        mode: "second",
+        raw_ocr_text: "합성 사례에서 신뢰보호 요건과 대응 사실을 연결합니다.",
+        raw_extraction_json: { source_status: "synthetic_fixture" },
+        normalized_draft: {
+          subject_guess: "감정평가 및 보상법규",
+          case_title: "합성 신뢰보호 답안",
+          case_summary: "합성 사례",
+          reference_outline: "요건과 사실 적용",
+          user_answer_summary: "합성 답안 요약",
+          missing_issue: "요건과 대응 사실 연결",
+          weak_sentence: "적용 문장을 보강합니다.",
+          weak_structure_point: "요건과 사실을 같은 순서로 연결",
+          rewrite_instruction: "연결 문장 한 문단을 다시 씁니다.",
+          review_date_suggestion: syntheticCaptureReviewDate,
+          needs_review: false,
+        },
+      }),
+    });
+  });
+  await context.route("**/api/answer-review/structure", async (route) => {
+    if (!(await exactSyntheticPost(route, "answer-review"))) return;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ok: true,
+        draft: {
+          questionSummary: "합성 브라우저 전용 문제",
+          coreConcepts: ["합성 논점", "합성 기준"],
+          strengths: ["논점 순서를 유지했습니다."],
+          missingIssueCandidates: ["요건과 대응 사실의 연결"],
+          requiredIssues: "신뢰보호 요건과 보호가치",
+          userAnswerStructure: "논점에서 결론까지의 합성 구조",
+          referenceStructure: "요건, 적용, 결론의 합성 참고 구조",
+          weakLogicPoint: "대응 사실의 연결 근거",
+          weakParagraphPoint: "적용 문단의 연결 문장",
+          rewriteTarget: "요건과 대응 사실을 잇는 한 문단",
+          rewriteDraftSuggestion:
+            "합성 사실은 공적 견해표명에 대한 신뢰와 직접 연결됩니다.",
+          nextAction: "연결 문장 한 문단을 직접 다시 씁니다.",
+          caution: "공식 채점이나 합격 판단이 아닌 합성 학습 보조 결과입니다.",
+        },
+        learningSignalStatus: "skipped",
+        referenceGrounding: { used: false, displayLabel: "", references: [] },
+      }),
+    });
+  });
+  await context.route(
+    "**/api/os/calculator-routine/complete",
+    async (route) => {
+      if (!(await exactSyntheticPost(route, "calculator"))) return;
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          ok: true,
+          status: "saved",
+          learningRecordSaved: true,
+          learningRecordId: "11111111-1111-4111-8111-111111111111",
+          deduped: false,
+        }),
+      });
+    },
+  );
+}
 
+async function inspectSyntheticArtifactBoundary(
+  page: Page,
+  credential: VisualCredentialCandidate,
+  proof: VisualProof,
+): Promise<ArtifactBoundaryObservation> {
   const identitySelector =
     '[data-s224v-learner-mode-entry="second-only"] > span:last-child';
-  const identity = page.locator(identitySelector);
-  const visibleEmailOutsideMask = await page
-    .locator("body *")
-    .evaluateAll((elements, identitySelector) => {
-      const pattern = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i;
-      return elements.filter((element) => {
-        if (
-          !(element instanceof HTMLElement) ||
-          element.matches(identitySelector)
-        )
-          return false;
+  const observation = await page.evaluate(
+    ({ email, password, deniedCanary, identitySelector }) => {
+      const emailPattern = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i;
+      const uuidPattern =
+        /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/i;
+      const insideIdentityMask = (element: Element) =>
+        element.matches(identitySelector) ||
+        Boolean(element.closest(identitySelector));
+      const visibleEmailOutsideMask = Array.from(
+        document.querySelectorAll<HTMLElement>("body *"),
+      ).filter((element) => {
+        if (insideIdentityMask(element)) return false;
         const directText = Array.from(element.childNodes)
           .filter((node) => node.nodeType === Node.TEXT_NODE)
           .map((node) => node.textContent ?? "")
           .join(" ")
           .trim();
-        if (!pattern.test(directText)) return false;
-        const style = getComputedStyle(element);
+        if (!emailPattern.test(directText)) return false;
         const rect = element.getBoundingClientRect();
+        const style = getComputedStyle(element);
         return (
           rect.width > 0 &&
           rect.height > 0 &&
@@ -4925,47 +3852,440 @@ async function captureSyntheticScreenshot(
           style.visibility !== "hidden"
         );
       }).length;
-    }, identitySelector);
-  const masks: Locator[] = [];
-  for (const identitySurface of await identity.all())
-    if (await identitySurface.isVisible()) masks.push(identitySurface);
-  const blockingHitCount = await assertScreenshotDataBoundary();
-  if (options.preflight) {
-    return {
-      canonicalTopFailureCode: canonicalTop.failureCode,
-      canonicalTopAtZero,
-      focusOriginCount,
-      visibleEmailOutsideMask,
-      blockingHitCount,
-    };
+      const serializedValues = Array.from(
+        document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
+          "input,textarea",
+        ),
+      )
+        .map((control) => control.value)
+        .join("\n");
+      const html = document.documentElement.innerHTML;
+      const rawEmailOutsideMask = Array.from(
+        document.querySelectorAll<HTMLElement>("body *"),
+      ).some((element) => {
+        if (insideIdentityMask(element)) return false;
+        const attributeText = Array.from(element.attributes)
+          .map((attribute) => attribute.value)
+          .join("\n");
+        const ownText = Array.from(element.childNodes)
+          .filter((node) => node.nodeType === Node.TEXT_NODE)
+          .map((node) => node.textContent ?? "")
+          .join("\n");
+        const value =
+          element instanceof HTMLInputElement ||
+          element instanceof HTMLTextAreaElement
+            ? element.value
+            : "";
+        return [attributeText, ownText, value].some((entry) =>
+          entry.includes(email),
+        );
+      });
+      const rawCredentialArtifactCount =
+        (password &&
+        (html.includes(password) || serializedValues.includes(password))
+          ? 1
+          : 0) + (email && rawEmailOutsideMask ? 1 : 0);
+      const visibleArtifactText = Array.from(
+        document.querySelectorAll<HTMLElement>("body *"),
+      )
+        .filter((element) => {
+          if (insideIdentityMask(element)) return false;
+          const rect = element.getBoundingClientRect();
+          const style = getComputedStyle(element);
+          return (
+            rect.width > 0 &&
+            rect.height > 0 &&
+            style.display !== "none" &&
+            style.visibility !== "hidden"
+          );
+        })
+        .flatMap((element) => {
+          const ownText = Array.from(element.childNodes)
+            .filter((node) => node.nodeType === Node.TEXT_NODE)
+            .map((node) => node.textContent ?? "");
+          const value =
+            element instanceof HTMLInputElement ||
+            element instanceof HTMLTextAreaElement
+              ? [element.value]
+              : [];
+          return [...ownText, ...value];
+        })
+        .join("\n");
+      const rawIdentifierArtifactCount = uuidPattern.test(visibleArtifactText)
+        ? 1
+        : 0;
+      const deniedCanaryDomCount =
+        (html.includes(deniedCanary) ? 1 : 0) +
+        (serializedValues.includes(deniedCanary) ? 1 : 0);
+      const opaqueSurfaceCount = Array.from(
+        document.querySelectorAll<HTMLElement>("canvas,iframe,object,embed"),
+      ).filter((element) => {
+        const rect = element.getBoundingClientRect();
+        const style = getComputedStyle(element);
+        return (
+          rect.width > 0 &&
+          rect.height > 0 &&
+          style.display !== "none" &&
+          style.visibility !== "hidden"
+        );
+      }).length;
+      const identityMaskCount = Array.from(
+        document.querySelectorAll<HTMLElement>(identitySelector),
+      ).filter((element) => {
+        const rect = element.getBoundingClientRect();
+        return (
+          rect.width > 0 &&
+          rect.height > 0 &&
+          element.textContent?.includes(email)
+        );
+      }).length;
+      return {
+        visibleEmailOutsideMask,
+        rawCredentialArtifactCount,
+        rawIdentifierArtifactCount,
+        deniedCanaryDomCount,
+        opaqueSurfaceCount,
+        identityMaskCount,
+      };
+    },
+    {
+      email: credential.email,
+      password: credential.password,
+      deniedCanary: proof.deniedCanary,
+      identitySelector,
+    },
+  );
+  return observation;
+}
+
+async function captureSyntheticScreenshot(
+  page: Page,
+  credential: VisualCredentialCandidate,
+  proof: VisualProof,
+  guard: EndpointGuardEvidence,
+  failures: StableGateFailure[],
+  metadata: {
+    phase: StableGateFailure["phase"];
+    routeStateAlias: string;
+    viewport: string;
+    fileName: string;
+    fullPage?: boolean;
+    identityMaskRequired: boolean;
+  },
+): Promise<ScreenshotEvidence | null> {
+  const fail = (
+    stableStep: StableGateFailure["stableStep"],
+    errorFamily: StableGateFailure["errorFamily"],
+    count = 1,
+  ) =>
+    recordStableGateFailure(failures, {
+      phase: metadata.phase,
+      routeStateAlias: metadata.routeStateAlias,
+      viewport: metadata.viewport,
+      stableStep,
+      errorFamily,
+      count,
+    });
+  const canonicalTop = await stabilizeCanonicalTop(page);
+  if (canonicalTop.failureCode || canonicalTop.finalWindowScrollY !== 0) {
+    fail("screenshot", "assertion");
+    return null;
   }
-  expect(
-    canonicalTop.failureCode,
-    `Canonical top must remain stable before any PNG is retained; metadata-only-observation=${JSON.stringify({ phase: "pre-png-canonical-top", capture: fileName.replace(/[^a-z0-9-]/gi, "-").slice(0, 80), recovery: canonicalTop })}.`,
-  ).toBeNull();
-  expect(
-    screenshotScrollY,
-    `${fileName} must be captured from the canonical top position.`,
-  ).toBe(0);
-  expect(
-    focusOriginCount,
-    "The test-only keyboard traversal origin must be absent before PNG capture.",
-  ).toBe(0);
-  expect(
-    visibleEmailOutsideMask,
-    "No visible email may escape the deterministic identity mask.",
-  ).toBe(0);
-  expect(blockingHitCount).toBe(0);
-  boundary.screenshotCallCount += 1;
+  await removeKeyboardTraversalOrigin(page);
+  const boundary = await inspectSyntheticArtifactBoundary(
+    page,
+    credential,
+    proof,
+  );
+  if (boundary.visibleEmailOutsideMask > 0) {
+    fail("privacy", "identity", boundary.visibleEmailOutsideMask);
+  }
+  if (boundary.rawCredentialArtifactCount > 0) {
+    fail("privacy", "identity", boundary.rawCredentialArtifactCount);
+  }
+  if (boundary.rawIdentifierArtifactCount > 0) {
+    fail("privacy", "identity", boundary.rawIdentifierArtifactCount);
+  }
+  if (boundary.deniedCanaryDomCount > 0) {
+    fail("privacy", "canary", boundary.deniedCanaryDomCount);
+  }
+  if (boundary.opaqueSurfaceCount > 0) {
+    fail("privacy", "opaque-surface", boundary.opaqueSurfaceCount);
+  }
+  if (metadata.identityMaskRequired && boundary.identityMaskCount === 0) {
+    fail("privacy", "identity");
+  }
+  recordEndpointGuardFailures(
+    failures,
+    metadata.phase,
+    metadata.routeStateAlias,
+    metadata.viewport,
+    guard,
+  );
+  if (
+    guard.unknownEndpointCount > 0 ||
+    guard.unknownRowCount > 0 ||
+    guard.blockedMutationCount > 0
+  ) {
+    return null;
+  }
+  if (
+    boundary.visibleEmailOutsideMask > 0 ||
+    boundary.rawCredentialArtifactCount > 0 ||
+    boundary.rawIdentifierArtifactCount > 0 ||
+    boundary.deniedCanaryDomCount > 0 ||
+    boundary.opaqueSurfaceCount > 0 ||
+    (metadata.identityMaskRequired && boundary.identityMaskCount === 0)
+  ) {
+    return null;
+  }
+
+  const masks = [];
+  const identity = page.locator(
+    '[data-s224v-learner-mode-entry="second-only"] > span:last-child',
+  );
+  for (const surface of await identity.all()) {
+    if (await surface.isVisible()) masks.push(surface);
+  }
   const buffer = await page.screenshot({
-    fullPage: options.fullPage ?? true,
+    fullPage: metadata.fullPage ?? true,
     animations: "disabled",
     mask: masks,
     maskColor: "#000000",
   });
-  await assertScreenshotDataBoundary();
-  boundary.captureCount += 1;
-  return { fileName, buffer };
+  return {
+    fileName: metadata.fileName,
+    buffer,
+    boundary,
+    guard: { ...guard },
+    identityMaskRequired: metadata.identityMaskRequired,
+  };
+}
+
+async function prepareInitialRoute(
+  page: Page,
+  route: RouteDefinition,
+  requestedPath: string,
+  viewport: (typeof viewports)[number],
+) {
+  await page.setViewportSize({
+    width: viewport.width,
+    height: viewport.height,
+  });
+  await gotoRequiredRoute(page, requestedPath);
+  if (route.id === "calculator" && viewport.width === 390) {
+    await advanceCalculatorToCasioInput(page);
+  }
+}
+
+async function runIsolatedDynamicCandidate<T>({
+  browser,
+  credential,
+  proof,
+  failures,
+  phase,
+  routeStateAlias,
+  run,
+}: {
+  browser: Browser;
+  credential: VisualCredentialCandidate;
+  proof: VisualProof;
+  failures: StableGateFailure[];
+  phase: "a11y" | "visual";
+  routeStateAlias: string;
+  run: (
+    page: Page,
+    guard: EndpointGuardEvidence,
+    markAudit: () => void,
+  ) => Promise<T>;
+}): Promise<T | null> {
+  let context: BrowserContext | null = null;
+  let activeStep: StableGateFailure["stableStep"] = "preparation";
+  try {
+    context = await newPreviewContext(browser, runtimeBaseUrl);
+    const page = await context.newPage();
+    await establishProtectedPreviewSession(page, "S232H2 isolated dynamic");
+    await loginWithExplicitTestAccountSession(
+      page,
+      credential,
+      runtimeBaseUrl,
+      "second",
+    );
+    await verifyRuntimeVersion(page, runtimeRunnerSha);
+    const guard = await blockUnexpectedLearnerMutation(
+      context,
+      proof.fixtureIds,
+    );
+    await installDeterministicVisualMocks(context);
+    const runtimeErrors = monitorPageRuntime(
+      page,
+      new URL(runtimeBaseUrl).origin,
+    );
+    const result = await run(page, guard, () => {
+      activeStep = "audit";
+    });
+    await settleRuntimeMonitors(page);
+    const errorCount =
+      runtimeErrors.consoleErrors.length +
+      runtimeErrors.pageErrors.length +
+      runtimeErrors.sameOriginRequestFailures.length;
+    if (errorCount > 0) {
+      recordStableGateFailure(failures, {
+        phase,
+        routeStateAlias,
+        viewport: "390x844",
+        stableStep: "audit",
+        errorFamily: "unexpected",
+        count: errorCount,
+      });
+    }
+    return result;
+  } catch (error) {
+    recordStableGateFailure(failures, {
+      phase,
+      routeStateAlias,
+      viewport: "390x844",
+      stableStep: activeStep,
+      errorFamily: stableErrorFamily(error),
+    });
+    return null;
+  } finally {
+    if (context) {
+      try {
+        await context.unrouteAll({ behavior: "wait" });
+      } catch (error) {
+        recordStableGateFailure(failures, {
+          phase,
+          routeStateAlias,
+          viewport: "390x844",
+          stableStep: "cleanup",
+          errorFamily: stableErrorFamily(error),
+        });
+      }
+      try {
+        await context.close();
+      } catch (error) {
+        recordStableGateFailure(failures, {
+          phase,
+          routeStateAlias,
+          viewport: "390x844",
+          stableStep: "cleanup",
+          errorFamily: stableErrorFamily(error),
+        });
+      }
+    }
+  }
+}
+
+async function runVisualCandidate({
+  page,
+  credential,
+  proof,
+  guard,
+  failures,
+  phase,
+  routeStateAlias,
+  viewport,
+  fileName,
+  fullPage,
+  identityMaskRequired,
+  prepare,
+  cleanup,
+}: {
+  page: Page;
+  credential: VisualCredentialCandidate;
+  proof: VisualProof;
+  guard: EndpointGuardEvidence;
+  failures: StableGateFailure[];
+  phase: StableGateFailure["phase"];
+  routeStateAlias: string;
+  viewport: string;
+  fileName: string;
+  fullPage?: boolean;
+  identityMaskRequired: boolean;
+  prepare: () => Promise<void>;
+  cleanup?: () => Promise<void>;
+}) {
+  let screenshot: ScreenshotEvidence | null = null;
+  let prepared = false;
+  try {
+    await prepare();
+    prepared = true;
+    screenshot = await captureSyntheticScreenshot(
+      page,
+      credential,
+      proof,
+      guard,
+      failures,
+      {
+        phase,
+        routeStateAlias,
+        viewport,
+        fileName,
+        fullPage,
+        identityMaskRequired,
+      },
+    );
+  } catch (error) {
+    recordStableGateFailure(failures, {
+      phase,
+      routeStateAlias,
+      viewport,
+      stableStep: prepared ? "screenshot" : "preparation",
+      errorFamily: stableErrorFamily(error),
+    });
+  } finally {
+    try {
+      await removeKeyboardTraversalOrigin(page);
+    } catch (error) {
+      recordStableGateFailure(failures, {
+        phase,
+        routeStateAlias,
+        viewport,
+        stableStep: "cleanup",
+        errorFamily: stableErrorFamily(error),
+      });
+    }
+    if (cleanup) {
+      try {
+        await cleanup();
+      } catch (error) {
+        recordStableGateFailure(failures, {
+          phase,
+          routeStateAlias,
+          viewport,
+          stableStep: "cleanup",
+          errorFamily: stableErrorFamily(error),
+        });
+      }
+    }
+  }
+  return screenshot;
+}
+
+async function closeSharedContext(
+  context: BrowserContext | null,
+  failures: StableGateFailure[],
+  phase: StableGateFailure["phase"],
+  routeStateAlias: string,
+) {
+  if (!context) return;
+  for (const closeStep of [
+    () => context.unrouteAll({ behavior: "wait" }),
+    () => context.close(),
+  ]) {
+    try {
+      await closeStep();
+    } catch (error) {
+      recordStableGateFailure(failures, {
+        phase,
+        routeStateAlias,
+        viewport: "all",
+        stableStep: "cleanup",
+        errorFamily: stableErrorFamily(error),
+      });
+    }
+  }
 }
 
 async function advanceCalculatorToCasioInput(page: Page) {
@@ -4995,7 +4315,9 @@ async function advanceCalculatorToCasioInput(page: Page) {
       `[data-calculator-routine-active-step="${stepId}"]`,
     );
     await expect(active).toBeVisible();
-    await active.locator("textarea").fill(calculatorCasioFixtureEntries[stepId]);
+    await active
+      .locator("textarea")
+      .fill(calculatorCasioFixtureEntries[stepId]);
 
     const focusNext = page.getByTestId("calculator-focus-action-control");
     if ((await focusNext.count()) === 1 && (await focusNext.isVisible())) {
@@ -5012,9 +4334,7 @@ async function advanceCalculatorToCasioInput(page: Page) {
     '[data-calculator-routine-active-step="casio_input"]',
   );
   await expect(casio).toBeVisible();
-  await casio
-    .locator("textarea")
-    .fill(calculatorCasioFixtureInput);
+  await casio.locator("textarea").fill(calculatorCasioFixtureInput);
   await expect(
     casio.locator('[data-v3-component="CalculatorStep"]'),
   ).toBeVisible();
@@ -5428,76 +4748,99 @@ async function compareScreenshotToFigmaReference(
     },
   );
 
-  expect.soft(metrics.actualWidth, `${reference.node} actual width`).toBe(
-    metrics.referenceWidth,
-  );
-  expect.soft(metrics.actualHeight, `${reference.node} actual height`).toBe(
-    metrics.referenceHeight,
-  );
-  expect.soft(
-    metrics.meanColorDelta,
-    `${reference.node} mean canonical-pixel delta`,
-  ).toBeLessThanOrEqual(0.18);
-  expect.soft(
-    metrics.nearPixelRatio,
-    `${reference.node} near-canonical pixel ratio`,
-  ).toBeGreaterThanOrEqual(0.5);
-  expect.soft(
-    metrics.darkPixelRatioDelta,
-    `${reference.node} quiet-navy distribution`,
-  ).toBeLessThanOrEqual(0.09);
-  expect.soft(
-    metrics.warmPixelRatioDelta,
-    `${reference.node} recovery-cue distribution`,
-  ).toBeLessThanOrEqual(0.09);
-  expect.soft(
-    metrics.bluePixelRatioDelta,
-    `${reference.node} evidence-blue distribution`,
-  ).toBeLessThanOrEqual(0.12);
-  expect.soft(
-    metrics.cellRgbMeanAbsoluteError,
-    `${reference.node} spatial RGB grid`,
-  ).toBeLessThanOrEqual(0.1);
-  expect.soft(
-    metrics.cellOccupancyMeanAbsoluteError,
-    `${reference.node} spatial semantic-color grid`,
-  ).toBeLessThanOrEqual(0.12);
-  expect.soft(
-    metrics.edgeGridCorrelation,
-    `${reference.node} spatial edge-grid correlation`,
-  ).toBeGreaterThanOrEqual(0.5);
-  expect.soft(
-    metrics.edgeEnergyRatio,
-    `${reference.node} edge-energy lower bound`,
-  ).toBeGreaterThanOrEqual(0.4);
-  expect.soft(
-    metrics.edgeEnergyRatio,
-    `${reference.node} edge-energy upper bound`,
-  ).toBeLessThanOrEqual(2.2);
-  expect.soft(
-    metrics.dilatedEdgeF1,
-    `${reference.node} spatial edge overlap`,
-  ).toBeGreaterThanOrEqual(0.25);
-  expect.soft(
-    metrics.anchorMaxRgbMeanDelta,
-    `${reference.node} anchor RGB geometry`,
-  ).toBeLessThanOrEqual(0.18);
-  expect.soft(
-    metrics.anchorMaxLuminanceStdDelta,
-    `${reference.node} anchor contrast geometry`,
-  ).toBeLessThanOrEqual(0.18);
-  expect.soft(
-    metrics.anchorMaxDarkRatioDelta,
-    `${reference.node} anchor dark occupancy`,
-  ).toBeLessThanOrEqual(0.2);
-  expect.soft(
-    metrics.anchorMinEdgeDensityRatio,
-    `${reference.node} anchor edge lower bound`,
-  ).toBeGreaterThanOrEqual(0.2);
-  expect.soft(
-    metrics.anchorMaxEdgeDensityRatio,
-    `${reference.node} anchor edge upper bound`,
-  ).toBeLessThanOrEqual(3.5);
+  expect
+    .soft(metrics.actualWidth, `${reference.node} actual width`)
+    .toBe(metrics.referenceWidth);
+  expect
+    .soft(metrics.actualHeight, `${reference.node} actual height`)
+    .toBe(metrics.referenceHeight);
+  expect
+    .soft(
+      metrics.meanColorDelta,
+      `${reference.node} mean canonical-pixel delta`,
+    )
+    .toBeLessThanOrEqual(0.18);
+  expect
+    .soft(
+      metrics.nearPixelRatio,
+      `${reference.node} near-canonical pixel ratio`,
+    )
+    .toBeGreaterThanOrEqual(0.5);
+  expect
+    .soft(
+      metrics.darkPixelRatioDelta,
+      `${reference.node} quiet-navy distribution`,
+    )
+    .toBeLessThanOrEqual(0.09);
+  expect
+    .soft(
+      metrics.warmPixelRatioDelta,
+      `${reference.node} recovery-cue distribution`,
+    )
+    .toBeLessThanOrEqual(0.09);
+  expect
+    .soft(
+      metrics.bluePixelRatioDelta,
+      `${reference.node} evidence-blue distribution`,
+    )
+    .toBeLessThanOrEqual(0.12);
+  expect
+    .soft(
+      metrics.cellRgbMeanAbsoluteError,
+      `${reference.node} spatial RGB grid`,
+    )
+    .toBeLessThanOrEqual(0.1);
+  expect
+    .soft(
+      metrics.cellOccupancyMeanAbsoluteError,
+      `${reference.node} spatial semantic-color grid`,
+    )
+    .toBeLessThanOrEqual(0.12);
+  expect
+    .soft(
+      metrics.edgeGridCorrelation,
+      `${reference.node} spatial edge-grid correlation`,
+    )
+    .toBeGreaterThanOrEqual(0.5);
+  expect
+    .soft(metrics.edgeEnergyRatio, `${reference.node} edge-energy lower bound`)
+    .toBeGreaterThanOrEqual(0.4);
+  expect
+    .soft(metrics.edgeEnergyRatio, `${reference.node} edge-energy upper bound`)
+    .toBeLessThanOrEqual(2.2);
+  expect
+    .soft(metrics.dilatedEdgeF1, `${reference.node} spatial edge overlap`)
+    .toBeGreaterThanOrEqual(0.25);
+  expect
+    .soft(
+      metrics.anchorMaxRgbMeanDelta,
+      `${reference.node} anchor RGB geometry`,
+    )
+    .toBeLessThanOrEqual(0.18);
+  expect
+    .soft(
+      metrics.anchorMaxLuminanceStdDelta,
+      `${reference.node} anchor contrast geometry`,
+    )
+    .toBeLessThanOrEqual(0.18);
+  expect
+    .soft(
+      metrics.anchorMaxDarkRatioDelta,
+      `${reference.node} anchor dark occupancy`,
+    )
+    .toBeLessThanOrEqual(0.2);
+  expect
+    .soft(
+      metrics.anchorMinEdgeDensityRatio,
+      `${reference.node} anchor edge lower bound`,
+    )
+    .toBeGreaterThanOrEqual(0.2);
+  expect
+    .soft(
+      metrics.anchorMaxEdgeDensityRatio,
+      `${reference.node} anchor edge upper bound`,
+    )
+    .toBeLessThanOrEqual(3.5);
   const passed =
     metrics.actualWidth === metrics.referenceWidth &&
     metrics.actualHeight === metrics.referenceHeight &&
@@ -5517,10 +4860,12 @@ async function compareScreenshotToFigmaReference(
     metrics.anchorMaxDarkRatioDelta <= 0.2 &&
     metrics.anchorMinEdgeDensityRatio >= 0.2 &&
     metrics.anchorMaxEdgeDensityRatio <= 3.5;
-  expect.soft(
-    passed,
-    `${reference.node} must satisfy every direct Figma comparison threshold.`,
-  ).toBe(true);
+  expect
+    .soft(
+      passed,
+      `${reference.node} must satisfy every direct Figma comparison threshold.`,
+    )
+    .toBe(true);
 
   return {
     node: reference.node,
@@ -5530,197 +4875,6 @@ async function compareScreenshotToFigmaReference(
     ...metrics,
     passed,
   };
-}
-
-function routeDefinition(id: string) {
-  const route = requiredRoutes.find((candidate) => candidate.id === id);
-  if (!route) throw new Error(`Missing required route definition: ${id}`);
-  return route;
-}
-
-async function prepareInitialRoute(
-  page: Page,
-  route: RouteDefinition,
-  requestedPath: string,
-  viewport: (typeof viewports)[number],
-) {
-  await page.setViewportSize({ width: viewport.width, height: viewport.height });
-  await gotoRequiredRoute(page, requestedPath);
-  if (route.id === "calculator" && viewport.width === 390)
-    await advanceCalculatorToCasioInput(page);
-}
-
-type PreflightCandidateOptions = {
-  page: Page;
-  boundary: ScreenshotDataBoundary;
-  collector: PreflightCollector;
-  phase: PreflightBlocker["phase"];
-  routeStateAlias: string;
-  viewport: string;
-  prepare: () => Promise<void>;
-  audit?: () => Promise<AuditRow>;
-  privacy?: {
-    fileName: string;
-    fullPage?: boolean;
-  };
-  cleanup?: () => Promise<void>;
-};
-
-async function runPreflightCandidate({
-  page,
-  boundary,
-  collector,
-  phase,
-  routeStateAlias,
-  viewport,
-  prepare,
-  audit,
-  privacy,
-  cleanup,
-}: PreflightCandidateOptions): Promise<AuditRow | null> {
-  const candidateMetadata = { phase, routeStateAlias, viewport } as const;
-  let prepared = false;
-  let auditAttempted = false;
-  let auditRow: AuditRow | null = null;
-  try {
-    try {
-      await prepare();
-      prepared = true;
-    } catch {
-      recordPreflightBlocker(collector, {
-        ...candidateMetadata,
-        checkFamily: "preparation",
-        failureCode: "S232H2_CANDIDATE_PREPARATION_FAILED",
-      });
-    }
-
-    if (prepared && privacy) {
-      const checksBefore = boundary.preflightCheckCount;
-      try {
-        const observation = await captureSyntheticScreenshot(
-          page,
-          boundary,
-          privacy.fileName,
-          {
-            fullPage: privacy.fullPage,
-            preflight: true,
-            routeStateAlias,
-            viewport,
-          },
-        );
-        if (observation.canonicalTopFailureCode)
-          recordPreflightBlocker(collector, {
-            ...candidateMetadata,
-            checkFamily: "canonical-top",
-            failureCode: observation.canonicalTopFailureCode,
-          });
-        if (!observation.canonicalTopAtZero)
-          recordPreflightBlocker(collector, {
-            ...candidateMetadata,
-            checkFamily: "canonical-top",
-            failureCode: "S232H2_PREFLIGHT_CANONICAL_TOP_UNSTABLE",
-          });
-        if (observation.focusOriginCount > 0)
-          recordPreflightBlocker(collector, {
-            ...candidateMetadata,
-            checkFamily: "keyboard-focus",
-            failureCode: "S232H2_FOCUS_ORIGIN_RETAINED",
-            count: observation.focusOriginCount,
-          });
-        if (observation.visibleEmailOutsideMask > 0)
-          recordPreflightBlocker(collector, {
-            ...candidateMetadata,
-            checkFamily: "privacy-boundary",
-            failureCode: "S232H2_VISIBLE_IDENTITY_OUTSIDE_MASK",
-            count: observation.visibleEmailOutsideMask,
-          });
-        if (observation.blockingHitCount > 0)
-          recordPreflightBlocker(collector, {
-            ...candidateMetadata,
-            checkFamily: "privacy-boundary",
-            failureCode: "S232H2_SCREENSHOT_BOUNDARY_OPEN",
-            count: observation.blockingHitCount,
-          });
-      } catch {
-        if (boundary.preflightCheckCount === checksBefore)
-          recordPreflightBlocker(collector, {
-            ...candidateMetadata,
-            checkFamily: "privacy-not-run",
-            failureCode: "S232H2_PRIVACY_CHECK_NOT_RUN",
-          });
-        else
-          recordPreflightBlocker(collector, {
-            ...candidateMetadata,
-            checkFamily: "privacy-boundary",
-            failureCode: "S232H2_PRIVACY_OBSERVATION_FAILED",
-          });
-      }
-      if (boundary.preflightCheckCount === checksBefore) {
-        collector.privacyNotRunCount += 1;
-      }
-    } else if (privacy) {
-      collector.privacyNotRunCount += 1;
-      recordPreflightBlocker(collector, {
-        ...candidateMetadata,
-        checkFamily: "privacy-not-run",
-        failureCode: "S232H2_PRIVACY_CHECK_NOT_RUN",
-      });
-    }
-
-    if (prepared && audit) {
-      auditAttempted = true;
-      try {
-        auditRow = await audit();
-      } catch {
-        recordPreflightBlocker(collector, {
-          ...candidateMetadata,
-          checkFamily: "visual-contract",
-          failureCode: "S232H2_VISUAL_A11Y_OBSERVATION_FAILED",
-        });
-      }
-    }
-    if (audit && !auditAttempted)
-      collector.visualAuditCandidateCount += 1;
-  } finally {
-    await removeKeyboardTraversalOrigin(page);
-    if (cleanup) {
-      try {
-        await cleanup();
-      } catch {
-        recordPreflightBlocker(collector, {
-          ...candidateMetadata,
-          checkFamily: "preparation",
-          failureCode: "S232H2_CANDIDATE_CLEANUP_FAILED",
-        });
-      }
-    }
-  }
-  collector.privacyCandidateCount = boundary.preflightCandidateCount;
-  collector.privacyCheckCount = boundary.preflightCheckCount;
-  collector.screenshotCallCount = boundary.screenshotCallCount;
-  return auditRow;
-}
-
-async function auditDynamicState(
-  page: Page,
-  routeId: string,
-  state: string,
-  requestedPath: string,
-  collection?: AuditCollectionContext,
-) {
-  return auditRoute(
-    page,
-    routeDefinition(routeId),
-    requestedPath,
-    viewports[0],
-    {
-      navigate: false,
-      state,
-      expectedCanonicalDock: false,
-      auditKind: "dynamic-state",
-      collection,
-    },
-  );
 }
 
 async function prepareCaptureExtractionPreview(page: Page) {
@@ -5737,31 +4891,6 @@ async function prepareCaptureExtractionPreview(page: Page) {
   });
   await page.reload({ waitUntil: "domcontentloaded" });
   await waitForStableRender(page);
-  await page.route("**/api/inverge/ocr", async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
-        ok: true,
-        mode: "second",
-        raw_ocr_text: "합성 사례에서 신뢰보호 요건과 대응 사실을 연결합니다.",
-        raw_extraction_json: { source_status: "synthetic_fixture" },
-        normalized_draft: {
-          subject_guess: "감정평가 및 보상법규",
-          case_title: "합성 신뢰보호 답안",
-          case_summary: "합성 사례",
-          reference_outline: "요건과 사실 적용",
-          user_answer_summary: "합성 답안 요약",
-          missing_issue: "요건과 대응 사실 연결",
-          weak_sentence: "적용 문장을 보강합니다.",
-          weak_structure_point: "요건과 사실을 같은 순서로 연결",
-          rewrite_instruction: "연결 문장 한 문단을 다시 씁니다.",
-          review_date_suggestion: syntheticCaptureReviewDate,
-          needs_review: false,
-        },
-      }),
-    });
-  });
   await page.getByText("다른 입력 방식", { exact: true }).click();
   await page
     .getByRole("button", { name: "텍스트 붙여넣기", exact: true })
@@ -5781,33 +4910,6 @@ async function prepareCaptureExtractionPreview(page: Page) {
 }
 
 async function prepareAnswerReviewResult(page: Page) {
-  await page.route("**/api/answer-review/structure", async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
-        ok: true,
-        draft: {
-          questionSummary: "합성 브라우저 전용 문제",
-          coreConcepts: ["합성 논점", "합성 기준"],
-          strengths: ["논점 순서를 유지했습니다."],
-          missingIssueCandidates: ["요건과 대응 사실의 연결"],
-          requiredIssues: "신뢰보호 요건과 보호가치",
-          userAnswerStructure: "논점에서 결론까지의 합성 구조",
-          referenceStructure: "요건, 적용, 결론의 합성 참고 구조",
-          weakLogicPoint: "대응 사실의 연결 근거",
-          weakParagraphPoint: "적용 문단의 연결 문장",
-          rewriteTarget: "요건과 대응 사실을 잇는 한 문단",
-          rewriteDraftSuggestion:
-            "합성 사실은 공적 견해표명에 대한 신뢰와 직접 연결됩니다.",
-          nextAction: "연결 문장 한 문단을 직접 다시 씁니다.",
-          caution: "공식 채점이나 합격 판단이 아닌 합성 학습 보조 결과입니다.",
-        },
-        learningSignalStatus: "skipped",
-        referenceGrounding: { used: false, displayLabel: "", references: [] },
-      }),
-    });
-  });
   await gotoRequiredRoute(page, "/answer-review?mode=second");
   await page
     .getByTestId("answer-review-my-answer-input")
@@ -5889,7 +4991,11 @@ async function completeCalculatorRoutine(page: Page) {
 async function newPreviewContext(browser: Browser, baseURL: string) {
   return browser.newContext({
     baseURL,
-    extraHTTPHeaders: protectionHeaders,
+    extraHTTPHeaders: {
+      ...protectionHeaders,
+      "x-s232h2-audit-sha":
+        baseURL === baselineUrl ? baselineSha : runtimeRunnerSha,
+    },
     viewport: { width: 390, height: 844 },
     recordVideo: undefined,
   });
@@ -5905,7 +5011,10 @@ function allErrorCounts(...groups: RuntimeErrorEvidence[]) {
   };
 }
 
-test("S232H.2 deterministic focus-origin micro-fixture", async ({ page }) => {
+test("@a11y S232H.2 deterministic focus-origin micro-fixture", async ({
+  page,
+}) => {
+  test.setTimeout(15_000);
   const fixture = async ({
     skipCount = 1,
     beforeControl = false,
@@ -6054,768 +5163,1182 @@ test("S232H.2 deterministic focus-origin micro-fixture", async ({ page }) => {
   }
 });
 
-test("S232H.2 adopts V3 across the production learner routes with direct before/after evidence", async ({
-  browser,
-  page,
-}, testInfo) => {
-  requireSafeAuthenticatedRuntime("S232H.2", {
-    requireTargetSha: true,
-    requireExactHead: true,
-  });
-  requireSafeBaselineRuntime();
-  expect(requiredRoutes).toHaveLength(13);
-  expect(runtimeRunnerSha).toBe(runtimeTargetSha);
+test("@privacy S232H.2 privacy/auth source gate", async ({ browser }) => {
+  test.setTimeout(170_000);
+  requireSafeVisualRuntime();
+  if (visualCredentialCandidates.length === 0) cleanVisualAccountRequired();
 
-  await establishProtectedPreviewSession(page, "S232H.2 PR2");
-  const afterAuthenticatedErrors = monitorPageRuntime(
-    page,
-    new URL(runtimeBaseUrl).origin,
+  const handles = await Promise.all(
+    visualCredentialCandidates.map((credential) =>
+      openCandidateHandle(browser, credential),
+    ),
   );
-  const { signInAttempts } = await loginWithDedicatedTestAccount(
-    page,
-    "second",
-  );
-  await verifyRuntimeVersion(page, runtimeRunnerSha);
-  const preMutationAudit = await auditSyntheticAccount(page, {
-    includePlanning: false,
-  });
-  const { ledgerItemId: syntheticItemId } = await ensureSyntheticLedgerFixture(
-    page,
-    preMutationAudit,
-  );
-  const postMutationAudit = await auditSyntheticAccount(page, {
-    expectedItemId: syntheticItemId,
-    includePlanning: true,
-  });
-  const accountPrivacyAudit = postMutationAudit.privacyAudit;
-  const dataBoundary = postMutationAudit.screenshotBoundary;
-  const initialBoundaryFingerprint =
-    screenshotDataBoundaryFingerprint(dataBoundary);
-  expect(dataBoundary.unclassifiedItemCount).toBe(
-    accountPrivacyAudit.unclassifiedAccountItemCount,
-  );
-  expect(postMutationAudit.primaryQueueTitle).toBeTruthy();
-
-  const publicContext = await newPreviewContext(browser, runtimeBaseUrl);
-  const publicPage = await publicContext.newPage();
-  const afterPublicErrors = monitorPageRuntime(
-    publicPage,
-    new URL(runtimeBaseUrl).origin,
-  );
-
-  const baselineContext: BrowserContext = await newPreviewContext(
-    browser,
-    baselineUrl,
-  );
-  const baselinePage = await baselineContext.newPage();
-  const baselineErrors = monitorPageRuntime(
-    baselinePage,
-    new URL(baselineUrl).origin,
-  );
-  const baselineLogin = await loginWithDedicatedTestAccount(
-    baselinePage,
-    "second",
-  );
-  await verifyRuntimeVersion(baselinePage, baselineSha);
-
-  const preflight = createPreflightCollector();
-  const initialAuditRows: AuditRow[] = [];
-  const dynamicAuditRows: AuditRow[] = [];
-  for (const viewport of viewports) {
-    for (const route of requiredRoutes) {
-      const routePage = route.authenticated ? page : publicPage;
-      const requestedPath = resolveRoutePath(route, syntheticItemId);
-      const isAllRouteMobileEvidence = viewport.width === 390;
-      const isRequiredReflowEvidence =
-        viewport.width === 768 &&
-        (route.id === "today" || route.id === "ledger");
-      const isRequiredDesktopEvidence =
-        viewport.width === 1440 && route.id === "ledger";
-      const isPrivacyCandidate =
-        isAllRouteMobileEvidence ||
-        isRequiredReflowEvidence ||
-        isRequiredDesktopEvidence;
-      const isRepresentativeViewport =
-        (route.id === "ledger" &&
-          (viewport.width === 390 || viewport.width === 1440)) ||
-        (route.id === "calculator" && viewport.width === 390);
-      const routeStateAlias = `${route.id}-initial`;
-      const viewportLabel = `${viewport.width}x${viewport.height}`;
-      const row = await runPreflightCandidate({
-        page: routePage,
-        boundary: dataBoundary,
-        collector: preflight,
-        phase: "initial",
-        routeStateAlias,
-        viewport: viewportLabel,
-        prepare: () =>
-          prepareInitialRoute(routePage, route, requestedPath, viewport),
-        privacy: isPrivacyCandidate
-          ? {
-              fileName: `s232h2-after-${route.id}-${viewport.label}.png`,
-              fullPage: !isRepresentativeViewport,
-            }
-          : undefined,
-        audit: () =>
-          auditRoute(routePage, route, requestedPath, viewport, {
-            navigate: false,
-            auditKind: "initial-route",
-            collection: {
-              collector: preflight,
-              phase: "initial",
-              routeStateAlias,
-              viewport: viewportLabel,
-            },
-          }),
-      });
-      if (row) initialAuditRows.push(row);
-    }
-  }
-
-  const runDynamicPreflight = async (
-    routeId: string,
-    state: string,
-    requestedPath: string,
-    fileName: string,
-    prepare: () => Promise<void>,
-    cleanup?: () => Promise<void>,
-  ) => {
-    const routeStateAlias = `${routeId}-${state}`;
-    const row = await runPreflightCandidate({
-      page,
-      boundary: dataBoundary,
-      collector: preflight,
-      phase: "dynamic",
-      routeStateAlias,
-      viewport: "390x844",
-      prepare,
-      privacy: { fileName },
-      audit: () =>
-        auditDynamicState(page, routeId, state, requestedPath, {
-          collector: preflight,
-          phase: "dynamic",
-          routeStateAlias,
-          viewport: "390x844",
-        }),
-      cleanup,
-    });
-    if (row) dynamicAuditRows.push(row);
-  };
-
-  await runDynamicPreflight(
-    "capture",
-    "extraction-preview",
-    "/app/capture?mode=second",
-    "s232h2-after-capture-extraction-preview-390.png",
-    () => prepareCaptureExtractionPreview(page),
-    () => page.unroute("**/api/inverge/ocr"),
-  );
-  await runDynamicPreflight(
-    "answer-review",
-    "result",
-    "/answer-review?mode=second",
-    "s232h2-after-answer-review-result-390.png",
-    () => prepareAnswerReviewResult(page),
-    () => page.unroute("**/api/answer-review/structure"),
-  );
-  await runDynamicPreflight(
-    "answer-review",
-    "rewrite",
-    "/answer-review?mode=second",
-    "s232h2-after-answer-review-rewrite-390.png",
-    async () => {
-      await prepareAnswerReviewResult(page);
-      await page.locator("[data-s232e4-rewrite-entry]").click();
-      await expect(
-        page.locator(
-          '[data-s232e4-answer-review-rewrite="single-paragraph"]',
-        ),
-      ).toBeVisible();
-    },
-    () => page.unroute("**/api/answer-review/structure"),
-  );
-  await runDynamicPreflight(
-    "review",
-    "revealed-selected",
-    "/app/review?mode=second",
-    "s232h2-after-review-revealed-selected-390.png",
-    () =>
-      prepareReviewSelectedState(
-        page,
-        postMutationAudit.primaryQueueTitle!,
-      ),
-  );
-  const preflightSavedCapturePath = `/app/session?mode=second&savedCapture=1&itemId=${encodeURIComponent(syntheticItemId)}`;
-  await runDynamicPreflight(
-    "session",
-    "saved-capture",
-    "/app/session?mode=second&savedCapture=1&itemId=[itemId]",
-    "s232h2-after-session-saved-capture-390.png",
-    async () => {
-      await gotoRequiredRoute(page, preflightSavedCapturePath);
-      await expect(
-        page.getByText("오늘 계획에 반영했습니다.", { exact: true }),
-      ).toBeVisible();
-    },
-  );
-  const preflightCalculatorPath =
-    "/app/calculator?mode=second&context=practice&focus=casio";
-  await runDynamicPreflight(
-    "calculator",
-    "completed-saved",
-    preflightCalculatorPath,
-    "s232h2-after-calculator-completed-saved-390.png",
-    async () => {
-      await page.route(
-        "**/api/os/calculator-routine/complete",
-        async (route) => {
-          await route.fulfill({
-            status: 200,
-            contentType: "application/json",
-            body: JSON.stringify({
-              ok: true,
-              status: "saved",
-              learningRecordSaved: true,
-              learningRecordId: "11111111-1111-4111-8111-111111111111",
-              deduped: false,
-            }),
-          });
-        },
-      );
-      await gotoRequiredRoute(page, preflightCalculatorPath);
-      await advanceCalculatorToCasioInput(page);
-      await completeCalculatorRoutine(page);
-    },
-    () => page.unroute("**/api/os/calculator-routine/complete"),
-  );
-
-  for (const viewport of [viewports[0], viewports[2]]) {
-    await runPreflightCandidate({
-      page: baselinePage,
-      boundary: dataBoundary,
-      collector: preflight,
-      phase: "baseline",
-      routeStateAlias: "before-ledger",
-      viewport: `${viewport.width}x${viewport.height}`,
-      prepare: async () => {
-        await baselinePage.setViewportSize({
-          width: viewport.width,
-          height: viewport.height,
-        });
-        await gotoRequiredRoute(
-          baselinePage,
-          `/app/items/${encodeURIComponent(syntheticItemId)}?mode=second`,
-        );
-      },
-      privacy: {
-        fileName: `s232h2-before-ledger-${viewport.label}.png`,
-        fullPage: false,
-      },
-    });
-  }
-  await runPreflightCandidate({
-    page: baselinePage,
-    boundary: dataBoundary,
-    collector: preflight,
-    phase: "baseline",
-    routeStateAlias: "before-calculator",
-    viewport: "390x844",
-    prepare: async () => {
-      await baselinePage.setViewportSize({ width: 390, height: 844 });
-      await gotoRequiredRoute(
-        baselinePage,
-        "/app/calculator?mode=second&context=practice&focus=casio",
-      );
-      await advanceCalculatorToCasioInput(baselinePage);
-    },
-    privacy: {
-      fileName: "s232h2-before-calculator-390.png",
-      fullPage: false,
-    },
-  });
-
+  const cleanupFailures: StableGateFailure[] = [];
+  let proof: VisualProof | null = null;
   try {
-    const preflightFinalAccountAudit = await auditSyntheticAccount(page, {
-      expectedItemId: syntheticItemId,
-      includePlanning: true,
-    });
-    dataBoundary.preflightAccountSnapshotStable =
-      screenshotDataBoundaryFingerprint(
-        preflightFinalAccountAudit.screenshotBoundary,
-      ) === initialBoundaryFingerprint;
-  } catch {
-    dataBoundary.preflightAccountSnapshotStable = false;
+    if (handles.some((handle) => !handle.completed)) {
+      throw new Error("S232H2_PRIVACY_SOURCE_AUDIT_INCOMPLETE");
+    }
+    const selected = selectCleanVisualAccount(handles);
+    if (!selected?.audit || !selected.page) cleanVisualAccountRequired();
+    const denied = handles.find(
+      (candidate) =>
+        candidate.credential.slot !== selected.credential.slot &&
+        candidate.page &&
+        candidate.audit?.sessionBound &&
+        candidate.audit.sessionFingerprint !==
+          selected.audit.sessionFingerprint &&
+        candidate.audit.itemIds.some((itemId) =>
+          /^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(itemId),
+        ),
+    );
+    if (!denied?.page || !denied.audit) {
+      throw new Error("S232H2_CROSS_ACCOUNT_GATE_OPEN");
+    }
+    const deniedCanary = denied.audit.itemIds.find((itemId) =>
+      /^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(itemId),
+    );
+    if (!deniedCanary) {
+      throw new Error("S232H2_CROSS_ACCOUNT_GATE_OPEN");
+    }
+
+    const ownerRead = await readRlsProbe(denied.page, deniedCanary);
+    const deniedRead = await readRlsProbe(selected.page, deniedCanary);
+    let deniedCanaryDomCount = 0;
+    try {
+      await gotoRequiredRoute(selected.page, "/app?mode=second");
+      deniedCanaryDomCount = await selected.page.evaluate(
+        (canary) =>
+          document.documentElement.innerHTML.includes(canary) ||
+          Array.from(
+            document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
+              "input,textarea",
+            ),
+          ).some((control) => control.value.includes(canary))
+            ? 1
+            : 0,
+        deniedCanary,
+      );
+    } catch {
+      throw new Error("S232H2_CROSS_ACCOUNT_GATE_OPEN");
+    }
+    const ownerReadAgain = await readRlsProbe(denied.page, deniedCanary);
+    let finalAudit: VisualAccountAudit;
+    try {
+      finalAudit = await auditVisualAccountCandidate(
+        selected.page,
+        selected.credential,
+      );
+    } catch {
+      throw new Error("S232H2_PRIVACY_SNAPSHOT_READ_FAILED");
+    }
+    const crossAccountDenied =
+      ownerRead.status === 200 &&
+      ownerRead.exactShape &&
+      ownerRead.visible &&
+      ownerReadAgain.status === 200 &&
+      ownerReadAgain.exactShape &&
+      ownerReadAgain.visible &&
+      deniedRead.status === 200 &&
+      deniedRead.exactShape &&
+      deniedRead.hidden;
+    const snapshotStable =
+      finalAudit.snapshotReadSucceeded &&
+      finalAudit.fingerprint === selected.audit.fingerprint;
+    if (!finalAudit.snapshotReadSucceeded) {
+      throw new Error("S232H2_PRIVACY_SNAPSHOT_READ_FAILED");
+    }
+    if (!snapshotStable) {
+      throw new Error("S232H2_PRIVACY_SNAPSHOT_DRIFT");
+    }
+    if (!crossAccountDenied || deniedCanaryDomCount !== 0) {
+      throw new Error("S232H2_CROSS_ACCOUNT_GATE_OPEN");
+    }
+
+    proof = {
+      schemaVersion: 4,
+      selectedSlot: selected.credential.slot,
+      selectedFingerprint: selected.audit.fingerprint,
+      selectedSessionFingerprint: selected.audit.sessionFingerprint,
+      fixtureIds: selected.audit.exactFixtureIds,
+      ledgerItemId: selected.audit.ledgerItemId!,
+      primaryQueueTitle: selected.audit.primaryQueueTitle!,
+      deniedCanary,
+      privacyGate: {
+        scheduledCandidates: visualCredentialCandidates.length,
+        completedAudits: handles.filter((handle) => handle.completed).length,
+        notRunCount: 0,
+        blockerCount: 0,
+        screenshotCallCount: 0,
+        endpointReadSucceeded:
+          selected.audit.endpointReadSucceeded &&
+          finalAudit.endpointReadSucceeded,
+        snapshotReadSucceeded: finalAudit.snapshotReadSucceeded,
+        snapshotStable,
+        crossAccountDenied,
+        deniedCanaryDomCount,
+        selectedAccountItemCount: selected.audit.itemCount,
+        selectedExactFixtureCount: selected.audit.exactFixtureIds.length,
+        fixtureOwnershipClosed:
+          selected.audit.nonFixtureRowCount === 0 &&
+          selected.audit.unknownReferenceCount === 0,
+        unknownLearnerEndpointCount: 0,
+        unknownLearnerRowCount: 0,
+        rawIdentityArtifactCount: 0,
+        targetSessionBound: selected.audit.sessionBound,
+        baselineSessionBound: false,
+        baselineUsesSelectedFixture: false,
+      },
+    };
+  } finally {
+    await Promise.all(
+      handles.map(async (handle) => {
+        if (!handle.context) return;
+        try {
+          await handle.context.close();
+        } catch (error) {
+          recordStableGateFailure(cleanupFailures, {
+            phase: "privacy",
+            routeStateAlias: "candidate-" + handle.credential.slot,
+            viewport: "source-only",
+            stableStep: "cleanup",
+            errorFamily: stableErrorFamily(error),
+          });
+        }
+      }),
+    );
   }
-  if (!dataBoundary.preflightAccountSnapshotStable)
-    recordPreflightBlocker(preflight, {
-      phase: "closure",
-      routeStateAlias: "account-snapshot",
-      viewport: "all",
-      checkFamily: "account-snapshot",
-      failureCode: "S232H2_ACCOUNT_SNAPSHOT_DRIFT",
-    });
+  if (cleanupFailures.length > 0) {
+    await unlink(visualProofPath).catch(() => undefined);
+    throw new Error(
+      "S232H2_PRIVACY_GATE_OPEN " +
+        JSON.stringify({ blockers: cleanupFailures }),
+    );
+  }
+  if (!proof) {
+    throw new Error("S232H2_PRIVACY_GATE_OPEN");
+  }
+  await writeVisualProof(proof);
+  expect(proof.privacyGate.scheduledCandidates).toBe(
+    proof.privacyGate.completedAudits,
+  );
+  expect(proof.privacyGate.notRunCount).toBe(0);
+  expect(proof.privacyGate.blockerCount).toBe(0);
+  expect(proof.privacyGate.screenshotCallCount).toBe(0);
+  expect(proof.privacyGate.endpointReadSucceeded).toBe(true);
+});
 
-  preflight.privacyCheckCount = dataBoundary.preflightCheckCount;
-  preflight.screenshotCallCount = dataBoundary.screenshotCallCount;
-  const preparationBlockerCount = preflight.blockers
-    .filter((blocker) => blocker.checkFamily === "preparation")
-    .reduce((sum, blocker) => sum + blocker.count, 0);
-  const privacyBlockerCount = preflight.blockers
-    .filter((blocker) => blocker.checkFamily === "privacy-boundary")
-    .reduce((sum, blocker) => sum + blocker.count, 0);
-  const visualA11yBlockerCount = preflight.blockers
-    .filter(
-      (blocker) =>
-        blocker.phase !== "baseline" &&
-        ![
-          "preparation",
-          "privacy-boundary",
-          "privacy-not-run",
-          "account-snapshot",
-        ].includes(blocker.checkFamily),
-    )
-    .reduce((sum, blocker) => sum + blocker.count, 0);
-  const preflightClosure = {
-    visualAuditCandidateCount: preflight.visualAuditCandidateCount,
-    privacyCandidateCount: preflight.privacyCandidateCount,
-    privacyCheckCount: preflight.privacyCheckCount,
-    privacyNotRunCount: preflight.privacyNotRunCount,
-    preparationBlockerCount,
-    visualA11yBlockerCount,
-    privacyBlockerCount,
-    finalAccountSnapshotStable:
-      dataBoundary.preflightAccountSnapshotStable,
-    screenshotCallCount: preflight.screenshotCallCount,
-    retainedPngCount: preflight.retainedPngCount,
-  };
-  const preflightClosed =
-    preflightClosure.visualAuditCandidateCount === 45 &&
-    preflightClosure.privacyCandidateCount === 25 &&
-    preflightClosure.privacyCheckCount === 25 &&
-    preflightClosure.privacyNotRunCount === 0 &&
-    preflightClosure.preparationBlockerCount === 0 &&
-    preflightClosure.visualA11yBlockerCount === 0 &&
-    preflightClosure.privacyBlockerCount === 0 &&
-    preflightClosure.finalAccountSnapshotStable === true &&
-    preflightClosure.screenshotCallCount === 0 &&
-    preflightClosure.retainedPngCount === 0;
-  expect(
-    preflightClosed,
-    `S232H2 pre-PNG closure must pass; metadata-only-observation=${JSON.stringify({ failureCode: "S232H2_PREFLIGHT_OPEN", coverage: { visualAuditCandidateCount: preflightClosure.visualAuditCandidateCount, privacyCandidateCount: preflightClosure.privacyCandidateCount, privacyCheckCount: preflightClosure.privacyCheckCount }, counts: preflightClosure, blockers: sortedPreflightBlockers(preflight) })}.`,
-  ).toBe(true);
+test("@a11y S232H.2 split accessibility gate", async ({ browser }) => {
+  test.setTimeout(680_000);
+  requireSafeVisualRuntime();
+  const proof = await readVisualProof();
+  const credential = resolveCredential(proof.selectedSlot);
+  if (!credential) visualProofContractRequired();
 
-  expect(initialAuditRows).toHaveLength(39);
-  expect(dynamicAuditRows).toHaveLength(6);
-  const initialAfterScreenshots: ScreenshotEvidence[] = [];
-  for (const viewport of viewports) {
-    for (const route of requiredRoutes) {
-      const routePage = route.authenticated ? page : publicPage;
-      const requestedPath = resolveRoutePath(route, syntheticItemId);
-      const isAllRouteMobileEvidence = viewport.width === 390;
-      const isRequiredReflowEvidence =
-        viewport.width === 768 &&
-        (route.id === "today" || route.id === "ledger");
-      const isRequiredDesktopEvidence =
-        viewport.width === 1440 && route.id === "ledger";
-      if (
-        isAllRouteMobileEvidence ||
-        isRequiredReflowEvidence ||
-        isRequiredDesktopEvidence
-      ) {
-        await prepareInitialRoute(
-          routePage,
-          route,
-          requestedPath,
-          viewport,
-        );
-        if (route.id === "calculator" && viewport.width === 390) {
+  const failures: StableGateFailure[] = [];
+  const auditRows: AuditRow[] = [];
+  let completedAudits = 0;
+  let mobileFullCompleted = 0;
+  let geometryCompleted = 0;
+  let keyboardCompleted = 0;
+  let authenticatedContext: BrowserContext | null = null;
+  let publicContext: BrowserContext | null = null;
+  try {
+    authenticatedContext = await newPreviewContext(browser, runtimeBaseUrl);
+    const authenticatedPage = await authenticatedContext.newPage();
+    await establishProtectedPreviewSession(
+      authenticatedPage,
+      "S232H2 accessibility target",
+    );
+    await loginWithExplicitTestAccountSession(
+      authenticatedPage,
+      credential,
+      runtimeBaseUrl,
+      "second",
+    );
+    await verifyRuntimeVersion(authenticatedPage, runtimeRunnerSha);
+    const sourceAudit = await auditVisualAccountCandidate(
+      authenticatedPage,
+      credential,
+    );
+    if (
+      !sourceAudit.snapshotReadSucceeded ||
+      sourceAudit.fingerprint !== proof.selectedFingerprint ||
+      !sourceAudit.clean
+    ) {
+      recordStableGateFailure(failures, {
+        phase: "a11y",
+        routeStateAlias: "account-snapshot",
+        viewport: "all",
+        stableStep: "snapshot-drift",
+        errorFamily: "snapshot-drift",
+      });
+    }
+    const authenticatedGuard = await blockUnexpectedLearnerMutation(
+      authenticatedContext,
+      proof.fixtureIds,
+    );
+    await installDeterministicVisualMocks(authenticatedContext);
+    const authenticatedErrors = monitorPageRuntime(
+      authenticatedPage,
+      new URL(runtimeBaseUrl).origin,
+    );
+
+    publicContext = await newPreviewContext(browser, runtimeBaseUrl);
+    const publicPage = await publicContext.newPage();
+    const publicGuard = await blockUnexpectedLearnerMutation(
+      publicContext,
+      proof.fixtureIds,
+    );
+    await installDeterministicVisualMocks(publicContext);
+    const publicErrors = monitorPageRuntime(
+      publicPage,
+      new URL(runtimeBaseUrl).origin,
+    );
+
+    for (const viewport of viewports) {
+      for (const route of requiredRoutes) {
+        const routePage = route.authenticated ? authenticatedPage : publicPage;
+        const routeStateAlias = route.id + "-initial";
+        const requestedPath = resolveRoutePath(route, proof.ledgerItemId);
+        const profile: AuditProfile =
+          viewport.width === 390 ? "mobile-full" : "geometry";
+        const keyboard =
+          viewport.width === 390 &&
+          (route.id === "today" || route.id === "ledger");
+        let activeStep: StableGateFailure["stableStep"] = "preparation";
+        try {
+          await prepareInitialRoute(routePage, route, requestedPath, viewport);
+          activeStep = "audit";
+          const row = await auditRoute(
+            routePage,
+            route,
+            requestedPath,
+            viewport,
+            {
+              profile,
+              keyboard,
+              navigate: false,
+              failures,
+              phase: "a11y",
+              routeStateAlias,
+            },
+          );
+          const boundary = await inspectSyntheticArtifactBoundary(
+            routePage,
+            credential,
+            proof,
+          );
+          recordEndpointGuardFailures(
+            failures,
+            "a11y",
+            routeStateAlias,
+            viewport.width + "x" + viewport.height,
+            route.authenticated ? authenticatedGuard : publicGuard,
+          );
+          const privacyCount =
+            boundary.visibleEmailOutsideMask +
+            boundary.rawCredentialArtifactCount +
+            boundary.rawIdentifierArtifactCount +
+            boundary.deniedCanaryDomCount +
+            boundary.opaqueSurfaceCount;
+          if (privacyCount > 0) {
+            recordStableGateFailure(failures, {
+              phase: "a11y",
+              routeStateAlias,
+              viewport: viewport.width + "x" + viewport.height,
+              stableStep: "privacy",
+              errorFamily: "identity",
+              count: privacyCount,
+            });
+          }
+          auditRows.push(row);
+          completedAudits += 1;
+          if (profile === "mobile-full") mobileFullCompleted += 1;
+          else geometryCompleted += 1;
+          if (keyboard) keyboardCompleted += 1;
+        } catch (error) {
+          recordStableGateFailure(failures, {
+            phase: "a11y",
+            routeStateAlias,
+            viewport: viewport.width + "x" + viewport.height,
+            stableStep: activeStep,
+            errorFamily: stableErrorFamily(error),
+          });
+        } finally {
+          try {
+            await removeKeyboardTraversalOrigin(routePage);
+          } catch (error) {
+            recordStableGateFailure(failures, {
+              phase: "a11y",
+              routeStateAlias,
+              viewport: viewport.width + "x" + viewport.height,
+              stableStep: "cleanup",
+              errorFamily: stableErrorFamily(error),
+            });
+          }
+        }
+      }
+    }
+
+    const dynamicCandidates = [
+      {
+        routeId: "capture",
+        state: "extraction-preview",
+        requestedPath: "/app/capture?mode=second",
+        prepare: (page: Page) => prepareCaptureExtractionPreview(page),
+      },
+      {
+        routeId: "answer-review",
+        state: "result",
+        requestedPath: "/answer-review?mode=second",
+        prepare: (page: Page) => prepareAnswerReviewResult(page),
+      },
+      {
+        routeId: "answer-review",
+        state: "rewrite",
+        requestedPath: "/answer-review?mode=second",
+        prepare: async (page: Page) => {
+          await prepareAnswerReviewResult(page);
+          await page.locator("[data-s232e4-rewrite-entry]").click();
           await expect(
-            routePage.locator(
-              '[data-calculator-routine-active-step="casio_input"] [data-v3-component="CalculatorStep"]',
+            page.locator(
+              '[data-s232e4-answer-review-rewrite="single-paragraph"]',
             ),
           ).toBeVisible();
+        },
+      },
+      {
+        routeId: "review",
+        state: "revealed-selected",
+        requestedPath: "/app/review?mode=second",
+        prepare: (page: Page) =>
+          prepareReviewSelectedState(page, proof.primaryQueueTitle),
+      },
+      {
+        routeId: "session",
+        state: "saved-capture",
+        requestedPath:
+          "/app/session?mode=second&savedCapture=1&itemId=[itemId]",
+        prepare: async (page: Page) => {
+          await gotoRequiredRoute(
+            page,
+            "/app/session?mode=second&savedCapture=1&itemId=" +
+              encodeURIComponent(proof.ledgerItemId),
+          );
+          await expect(
+            page.getByText("오늘 계획에 반영했습니다.", { exact: true }),
+          ).toBeVisible();
+        },
+      },
+      {
+        routeId: "calculator",
+        state: "completed-saved",
+        requestedPath:
+          "/app/calculator?mode=second&context=practice&focus=casio",
+        prepare: async (page: Page) => {
+          await gotoRequiredRoute(
+            page,
+            "/app/calculator?mode=second&context=practice&focus=casio",
+          );
+          await advanceCalculatorToCasioInput(page);
+          await completeCalculatorRoutine(page);
+        },
+      },
+    ] as const;
+
+    for (const dynamic of dynamicCandidates) {
+      const routeStateAlias = dynamic.routeId + "-" + dynamic.state;
+      const row = await runIsolatedDynamicCandidate({
+        browser,
+        credential,
+        proof,
+        failures,
+        phase: "a11y",
+        routeStateAlias,
+        run: async (page, guard, markAudit) => {
+          await dynamic.prepare(page);
+          markAudit();
+          const audited = await auditRoute(
+            page,
+            requiredRoutes.find((route) => route.id === dynamic.routeId)!,
+            dynamic.requestedPath,
+            viewports[0],
+            {
+              profile: "mobile-full",
+              keyboard:
+                dynamic.routeId === "answer-review" &&
+                dynamic.state === "rewrite",
+              state: dynamic.state,
+              auditKind: "dynamic-state",
+              navigate: false,
+              failures,
+              phase: "a11y",
+              routeStateAlias,
+            },
+          );
+          const boundary = await inspectSyntheticArtifactBoundary(
+            page,
+            credential,
+            proof,
+          );
+          recordEndpointGuardFailures(
+            failures,
+            "a11y",
+            routeStateAlias,
+            "390x844",
+            guard,
+          );
+          const privacyCount =
+            boundary.visibleEmailOutsideMask +
+            boundary.rawCredentialArtifactCount +
+            boundary.rawIdentifierArtifactCount +
+            boundary.deniedCanaryDomCount +
+            boundary.opaqueSurfaceCount;
+          if (privacyCount > 0) {
+            recordStableGateFailure(failures, {
+              phase: "a11y",
+              routeStateAlias,
+              viewport: "390x844",
+              stableStep: "privacy",
+              errorFamily: "identity",
+              count: privacyCount,
+            });
+          }
+          return audited;
+        },
+      });
+      if (row) {
+        auditRows.push(row);
+        completedAudits += 1;
+        mobileFullCompleted += 1;
+        if (
+          dynamic.routeId === "answer-review" &&
+          dynamic.state === "rewrite"
+        ) {
+          keyboardCompleted += 1;
         }
-        const isRepresentativeViewport =
+      }
+    }
+
+    await settleRuntimeMonitors(authenticatedPage, publicPage);
+    const runtimeErrorCount =
+      authenticatedErrors.consoleErrors.length +
+      authenticatedErrors.pageErrors.length +
+      authenticatedErrors.sameOriginRequestFailures.length +
+      publicErrors.consoleErrors.length +
+      publicErrors.pageErrors.length +
+      publicErrors.sameOriginRequestFailures.length;
+    if (runtimeErrorCount > 0) {
+      recordStableGateFailure(failures, {
+        phase: "a11y",
+        routeStateAlias: "runtime-errors",
+        viewport: "all",
+        stableStep: "audit",
+        errorFamily: "unexpected",
+        count: runtimeErrorCount,
+      });
+    }
+  } catch (error) {
+    recordStableGateFailure(failures, {
+      phase: "a11y",
+      routeStateAlias: "gate-setup",
+      viewport: "all",
+      stableStep: "preparation",
+      errorFamily: stableErrorFamily(error),
+    });
+  } finally {
+    await closeSharedContext(
+      authenticatedContext,
+      failures,
+      "a11y",
+      "authenticated-context",
+    );
+    await closeSharedContext(publicContext, failures, "a11y", "public-context");
+  }
+
+  const a11yGate: A11yGateSummary = {
+    scheduledCandidates: 45,
+    completedAudits,
+    blockerCount: failures.reduce((sum, failure) => sum + failure.count, 0),
+    mobileFullScheduled: 19,
+    mobileFullCompleted,
+    geometryScheduled: 26,
+    geometryCompleted,
+    keyboardScheduled: 3,
+    keyboardCompleted,
+  };
+  expect(
+    a11yGate,
+    "S232H2_A11Y_GATE_OPEN " + JSON.stringify({ a11yGate, blockers: failures }),
+  ).toEqual({
+    scheduledCandidates: 45,
+    completedAudits: 45,
+    blockerCount: 0,
+    mobileFullScheduled: 19,
+    mobileFullCompleted: 19,
+    geometryScheduled: 26,
+    geometryCompleted: 26,
+    keyboardScheduled: 3,
+    keyboardCompleted: 3,
+  });
+  proof.a11yGate = a11yGate;
+  proof.auditRows = auditRows;
+  await writeVisualProof(proof);
+});
+
+test("@visual S232H.2 one-pass visual and Figma gate", async ({
+  browser,
+}, testInfo) => {
+  test.setTimeout(870_000);
+  requireSafeVisualRuntime();
+  const proof = await readVisualProof();
+  const credential = resolveCredential(proof.selectedSlot);
+  if (!credential || !proof.a11yGate || !proof.auditRows) {
+    visualProofContractRequired();
+  }
+
+  const failures: StableGateFailure[] = [];
+  const afterScreenshots: ScreenshotEvidence[] = [];
+  const baselineScreenshots: ScreenshotEvidence[] = [];
+  const runtimeErrorGroups: RuntimeErrorEvidence[] = [];
+  let screenshotCallCount = 0;
+  let completedAudits = 0;
+  let targetContext: BrowserContext | null = null;
+  let publicContext: BrowserContext | null = null;
+  let baselineContext: BrowserContext | null = null;
+  let targetAudit: VisualAccountAudit | null = null;
+  let baselineSessionBound = false;
+  let targetPage: Page | null = null;
+  try {
+    targetContext = await newPreviewContext(browser, runtimeBaseUrl);
+    targetPage = await targetContext.newPage();
+    await establishProtectedPreviewSession(targetPage, "S232H2 visual target");
+    await loginWithExplicitTestAccountSession(
+      targetPage,
+      credential,
+      runtimeBaseUrl,
+      "second",
+    );
+    await verifyRuntimeVersion(targetPage, runtimeRunnerSha);
+    targetAudit = await auditVisualAccountCandidate(targetPage, credential);
+    if (
+      !targetAudit.clean ||
+      targetAudit.fingerprint !== proof.selectedFingerprint
+    ) {
+      recordStableGateFailure(failures, {
+        phase: "closure",
+        routeStateAlias: "target-account",
+        viewport: "all",
+        stableStep: "snapshot-drift",
+        errorFamily: "snapshot-drift",
+      });
+    }
+    const targetGuard = await blockUnexpectedLearnerMutation(
+      targetContext,
+      proof.fixtureIds,
+    );
+    await installDeterministicVisualMocks(targetContext);
+    const targetErrors = monitorPageRuntime(
+      targetPage,
+      new URL(runtimeBaseUrl).origin,
+    );
+    runtimeErrorGroups.push(targetErrors);
+
+    publicContext = await newPreviewContext(browser, runtimeBaseUrl);
+    const publicPage = await publicContext.newPage();
+    const publicGuard = await blockUnexpectedLearnerMutation(
+      publicContext,
+      proof.fixtureIds,
+    );
+    await installDeterministicVisualMocks(publicContext);
+    const publicErrors = monitorPageRuntime(
+      publicPage,
+      new URL(runtimeBaseUrl).origin,
+    );
+    runtimeErrorGroups.push(publicErrors);
+
+    baselineContext = await newPreviewContext(browser, baselineUrl);
+    const baselinePage = await baselineContext.newPage();
+    await loginWithExplicitTestAccountSession(
+      baselinePage,
+      credential,
+      baselineUrl,
+      "second",
+    );
+    await verifyRuntimeVersion(baselinePage, baselineSha, baselineUrl);
+    baselineSessionBound = await verifySessionBinding(
+      baselinePage,
+      credential,
+      baselineUrl,
+      proof.selectedSessionFingerprint,
+    );
+    if (!baselineSessionBound) {
+      recordStableGateFailure(failures, {
+        phase: "baseline",
+        routeStateAlias: "baseline-account",
+        viewport: "all",
+        stableStep: "login",
+        errorFamily: "authentication",
+      });
+    }
+    const baselineGuard = await blockUnexpectedLearnerMutation(
+      baselineContext,
+      proof.fixtureIds,
+    );
+    await installDeterministicVisualMocks(baselineContext);
+    const baselineErrors = monitorPageRuntime(
+      baselinePage,
+      new URL(baselineUrl).origin,
+    );
+    runtimeErrorGroups.push(baselineErrors);
+
+    for (const viewport of viewports) {
+      for (const route of requiredRoutes) {
+        const include =
+          viewport.width === 390 ||
+          (viewport.width === 768 &&
+            (route.id === "today" || route.id === "ledger")) ||
+          (viewport.width === 1440 && route.id === "ledger");
+        if (!include) continue;
+        const routePage = route.authenticated ? targetPage : publicPage;
+        const routeGuard = route.authenticated ? targetGuard : publicGuard;
+        const requestedPath = resolveRoutePath(route, proof.ledgerItemId);
+        const representative =
           (route.id === "ledger" &&
             (viewport.width === 390 || viewport.width === 1440)) ||
           (route.id === "calculator" && viewport.width === 390);
-        initialAfterScreenshots.push(
-          await captureSyntheticScreenshot(
-            routePage,
-            dataBoundary,
-            `s232h2-after-${route.id}-${viewport.label}.png`,
-            { fullPage: !isRepresentativeViewport },
-          ),
-        );
+        const screenshot = await runVisualCandidate({
+          page: routePage,
+          credential,
+          proof,
+          guard: routeGuard,
+          failures,
+          phase: "visual",
+          routeStateAlias: route.id + "-initial",
+          viewport: viewport.width + "x" + viewport.height,
+          fileName: "s232h2-after-" + route.id + "-" + viewport.label + ".png",
+          fullPage: !representative,
+          identityMaskRequired:
+            route.authenticated && route.id !== "answer-review",
+          prepare: () =>
+            prepareInitialRoute(routePage, route, requestedPath, viewport),
+        });
+        screenshotCallCount += screenshot ? 1 : 0;
+        if (screenshot) {
+          afterScreenshots.push(screenshot);
+          completedAudits += 1;
+        }
       }
     }
+
+    const dynamicVisuals = [
+      {
+        routeId: "capture",
+        state: "extraction-preview",
+        fileName: "s232h2-after-capture-extraction-preview-390.png",
+        prepare: (page: Page) => prepareCaptureExtractionPreview(page),
+      },
+      {
+        routeId: "answer-review",
+        state: "result",
+        fileName: "s232h2-after-answer-review-result-390.png",
+        prepare: (page: Page) => prepareAnswerReviewResult(page),
+      },
+      {
+        routeId: "answer-review",
+        state: "rewrite",
+        fileName: "s232h2-after-answer-review-rewrite-390.png",
+        prepare: async (page: Page) => {
+          await prepareAnswerReviewResult(page);
+          await page.locator("[data-s232e4-rewrite-entry]").click();
+          await expect(
+            page.locator(
+              '[data-s232e4-answer-review-rewrite="single-paragraph"]',
+            ),
+          ).toBeVisible();
+        },
+      },
+      {
+        routeId: "review",
+        state: "revealed-selected",
+        fileName: "s232h2-after-review-revealed-selected-390.png",
+        prepare: (page: Page) =>
+          prepareReviewSelectedState(page, proof.primaryQueueTitle),
+      },
+      {
+        routeId: "session",
+        state: "saved-capture",
+        fileName: "s232h2-after-session-saved-capture-390.png",
+        prepare: async (page: Page) => {
+          await gotoRequiredRoute(
+            page,
+            "/app/session?mode=second&savedCapture=1&itemId=" +
+              encodeURIComponent(proof.ledgerItemId),
+          );
+          await expect(
+            page.getByText("오늘 계획에 반영했습니다.", { exact: true }),
+          ).toBeVisible();
+        },
+      },
+      {
+        routeId: "calculator",
+        state: "completed-saved",
+        fileName: "s232h2-after-calculator-completed-saved-390.png",
+        prepare: async (page: Page) => {
+          await gotoRequiredRoute(
+            page,
+            "/app/calculator?mode=second&context=practice&focus=casio",
+          );
+          await advanceCalculatorToCasioInput(page);
+          await completeCalculatorRoutine(page);
+        },
+      },
+    ] as const;
+
+    for (const dynamic of dynamicVisuals) {
+      const routeStateAlias = dynamic.routeId + "-" + dynamic.state;
+      const screenshot = await runIsolatedDynamicCandidate({
+        browser,
+        credential,
+        proof,
+        failures,
+        phase: "visual",
+        routeStateAlias,
+        run: async (page, guard) =>
+          runVisualCandidate({
+            page,
+            credential,
+            proof,
+            guard,
+            failures,
+            phase: "visual",
+            routeStateAlias,
+            viewport: "390x844",
+            fileName: dynamic.fileName,
+            identityMaskRequired: dynamic.routeId !== "answer-review",
+            prepare: () => dynamic.prepare(page),
+          }),
+      });
+      if (screenshot) {
+        afterScreenshots.push(screenshot);
+        screenshotCallCount += 1;
+        completedAudits += 1;
+      }
+    }
+
+    for (const viewport of [viewports[0], viewports[2]]) {
+      const screenshot = await runVisualCandidate({
+        page: baselinePage,
+        credential,
+        proof,
+        guard: baselineGuard,
+        failures,
+        phase: "baseline",
+        routeStateAlias: "before-ledger",
+        viewport: viewport.width + "x" + viewport.height,
+        fileName: "s232h2-before-ledger-" + viewport.label + ".png",
+        fullPage: false,
+        identityMaskRequired: true,
+        prepare: async () => {
+          await baselinePage.setViewportSize({
+            width: viewport.width,
+            height: viewport.height,
+          });
+          await gotoRequiredRoute(
+            baselinePage,
+            "/app/items/" +
+              encodeURIComponent(proof.ledgerItemId) +
+              "?mode=second",
+          );
+          await expect(
+            baselinePage.getByRole("heading", {
+              level: 1,
+              name: syntheticFixtureTitle,
+            }),
+          ).toBeVisible();
+        },
+      });
+      if (screenshot) {
+        baselineScreenshots.push(screenshot);
+        screenshotCallCount += 1;
+        completedAudits += 1;
+      }
+    }
+    const beforeCalculator = await runVisualCandidate({
+      page: baselinePage,
+      credential,
+      proof,
+      guard: baselineGuard,
+      failures,
+      phase: "baseline",
+      routeStateAlias: "before-calculator",
+      viewport: "390x844",
+      fileName: "s232h2-before-calculator-390.png",
+      fullPage: false,
+      identityMaskRequired: true,
+      prepare: async () => {
+        await baselinePage.setViewportSize({ width: 390, height: 844 });
+        await gotoRequiredRoute(
+          baselinePage,
+          "/app/calculator?mode=second&context=practice&focus=casio",
+        );
+        await advanceCalculatorToCasioInput(baselinePage);
+      },
+    });
+    if (beforeCalculator) {
+      baselineScreenshots.push(beforeCalculator);
+      screenshotCallCount += 1;
+      completedAudits += 1;
+    }
+
+    await verifyRuntimeVersion(targetPage, runtimeRunnerSha);
+    await verifyRuntimeVersion(baselinePage, baselineSha, baselineUrl);
+    await settleRuntimeMonitors(targetPage, publicPage, baselinePage);
+    const runtimeErrorCount =
+      targetErrors.consoleErrors.length +
+      targetErrors.pageErrors.length +
+      targetErrors.sameOriginRequestFailures.length +
+      publicErrors.consoleErrors.length +
+      publicErrors.pageErrors.length +
+      publicErrors.sameOriginRequestFailures.length +
+      baselineErrors.consoleErrors.length +
+      baselineErrors.pageErrors.length +
+      baselineErrors.sameOriginRequestFailures.length;
+    if (runtimeErrorCount > 0) {
+      recordStableGateFailure(failures, {
+        phase: "visual",
+        routeStateAlias: "runtime-errors",
+        viewport: "all",
+        stableStep: "audit",
+        errorFamily: "unexpected",
+        count: runtimeErrorCount,
+      });
+    }
+  } catch (error) {
+    recordStableGateFailure(failures, {
+      phase: "visual",
+      routeStateAlias: "gate-setup",
+      viewport: "all",
+      stableStep: "preparation",
+      errorFamily: stableErrorFamily(error),
+    });
   }
-  expect(initialAuditRows).toHaveLength(39);
-  expect(initialAfterScreenshots).toHaveLength(16);
+
+  let finalAudit: VisualAccountAudit | null = null;
+  if (targetPage) {
+    try {
+      finalAudit = await auditVisualAccountCandidate(targetPage, credential);
+    } catch {
+      recordStableGateFailure(failures, {
+        phase: "closure",
+        routeStateAlias: "account-snapshot",
+        viewport: "all",
+        stableStep: "snapshot-read",
+        errorFamily: "snapshot-read-failed",
+      });
+    }
+  }
+  const snapshotReadSucceeded = Boolean(finalAudit?.snapshotReadSucceeded);
+  const snapshotStable =
+    snapshotReadSucceeded &&
+    finalAudit?.fingerprint === proof.selectedFingerprint;
+  if (!snapshotReadSucceeded) {
+    recordStableGateFailure(failures, {
+      phase: "closure",
+      routeStateAlias: "account-snapshot",
+      viewport: "all",
+      stableStep: "snapshot-read",
+      errorFamily: "snapshot-read-failed",
+    });
+  } else if (!snapshotStable) {
+    recordStableGateFailure(failures, {
+      phase: "closure",
+      routeStateAlias: "account-snapshot",
+      viewport: "all",
+      stableStep: "snapshot-drift",
+      errorFamily: "snapshot-drift",
+    });
+  }
+
+  const privacyClosureOpen = failures.some((failure) =>
+    ["privacy", "snapshot-read", "snapshot-drift"].includes(failure.stableStep),
+  );
+  const diagnosticActualNames = new Set([
+    "s232h2-after-ledger-390.png",
+    "s232h2-after-ledger-1440.png",
+    "s232h2-after-calculator-390.png",
+  ]);
+  if (!privacyClosureOpen) {
+    for (const screenshot of afterScreenshots) {
+      if (!diagnosticActualNames.has(screenshot.fileName)) continue;
+      await writeFile(
+        testInfo.outputPath(screenshot.fileName),
+        screenshot.buffer,
+      );
+    }
+  }
 
   const figmaComparisons: FigmaComparison[] = [];
   for (const reference of figmaReferences) {
-    const actual = initialAfterScreenshots.find(
+    const actual = afterScreenshots.find(
       (screenshot) => screenshot.fileName === reference.actualFileName,
     );
-    expect(
-      actual,
-      `Missing actual screenshot for Figma ${reference.node}.`,
-    ).toBeDefined();
-    figmaComparisons.push(
-      await compareScreenshotToFigmaReference(
-        page,
+    if (!targetPage || !actual || privacyClosureOpen) {
+      recordStableGateFailure(failures, {
+        phase: "visual",
+        routeStateAlias: "figma-" + reference.node.replace(":", "-"),
+        viewport: "representative",
+        stableStep: "figma",
+        errorFamily: "assertion",
+      });
+      continue;
+    }
+    try {
+      const comparison = await compareScreenshotToFigmaReference(
+        targetPage,
         testInfo,
-        actual!,
+        actual,
         reference,
-      ),
-    );
+      );
+      figmaComparisons.push(comparison);
+      if (!comparison.passed) {
+        recordStableGateFailure(failures, {
+          phase: "visual",
+          routeStateAlias: "figma-" + reference.node.replace(":", "-"),
+          viewport: "representative",
+          stableStep: "figma",
+          errorFamily: "assertion",
+        });
+      }
+    } catch (error) {
+      recordStableGateFailure(failures, {
+        phase: "visual",
+        routeStateAlias: "figma-" + reference.node.replace(":", "-"),
+        viewport: "representative",
+        stableStep: "figma",
+        errorFamily: stableErrorFamily(error),
+      });
+    }
   }
-  expect(figmaComparisons).toHaveLength(3);
-  expect.soft(figmaComparisons.every((comparison) => comparison.passed)).toBe(true);
   const figmaReferenceScreenshots = figmaReferences.map(
     (reference) => reference.referenceFileName,
   );
 
-  const dynamicScreenshots: ScreenshotEvidence[] = [];
-
-  await prepareCaptureExtractionPreview(page);
-  dynamicScreenshots.push(
-    await captureSyntheticScreenshot(
-      page,
-      dataBoundary,
-      "s232h2-after-capture-extraction-preview-390.png",
-    ),
-  );
-  await page.unroute("**/api/inverge/ocr");
-
-  await prepareAnswerReviewResult(page);
-  dynamicScreenshots.push(
-    await captureSyntheticScreenshot(
-      page,
-      dataBoundary,
-      "s232h2-after-answer-review-result-390.png",
-    ),
-  );
-  await page.locator("[data-s232e4-rewrite-entry]").click();
-  await expect(
-    page.locator('[data-s232e4-answer-review-rewrite="single-paragraph"]'),
-  ).toBeVisible();
-  dynamicScreenshots.push(
-    await captureSyntheticScreenshot(
-      page,
-      dataBoundary,
-      "s232h2-after-answer-review-rewrite-390.png",
-    ),
-  );
-  await page.unroute("**/api/answer-review/structure");
-
-  await prepareReviewSelectedState(page, postMutationAudit.primaryQueueTitle!);
-  dynamicScreenshots.push(
-    await captureSyntheticScreenshot(
-      page,
-      dataBoundary,
-      "s232h2-after-review-revealed-selected-390.png",
-    ),
+  await closeSharedContext(targetContext, failures, "visual", "target-context");
+  await closeSharedContext(publicContext, failures, "visual", "public-context");
+  await closeSharedContext(
+    baselineContext,
+    failures,
+    "baseline",
+    "baseline-context",
   );
 
-  const savedCapturePath = `/app/session?mode=second&savedCapture=1&itemId=${encodeURIComponent(syntheticItemId)}`;
-  await gotoRequiredRoute(page, savedCapturePath);
-  await expect(
-    page.getByText("오늘 계획에 반영했습니다.", { exact: true }),
-  ).toBeVisible();
-  dynamicScreenshots.push(
-    await captureSyntheticScreenshot(
-      page,
-      dataBoundary,
-      "s232h2-after-session-saved-capture-390.png",
-    ),
-  );
-
-  await page.route("**/api/os/calculator-routine/complete", async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({
-        ok: true,
-        status: "saved",
-        learningRecordSaved: true,
-        learningRecordId: "11111111-1111-4111-8111-111111111111",
-        deduped: false,
-      }),
-    });
+  const preparationBlockerCount = failures
+    .filter((failure) => failure.stableStep === "preparation")
+    .reduce((sum, failure) => sum + failure.count, 0);
+  const cleanupBlockerCount = failures
+    .filter((failure) => failure.stableStep === "cleanup")
+    .reduce((sum, failure) => sum + failure.count, 0);
+  const privacyBlockerCount = failures
+    .filter(
+      (failure) =>
+        failure.stableStep === "privacy" ||
+        failure.stableStep === "snapshot-read" ||
+        failure.stableStep === "snapshot-drift",
+    )
+    .reduce((sum, failure) => sum + failure.count, 0);
+  const visualBlockerCount = failures
+    .filter(
+      (failure) =>
+        ![
+          "preparation",
+          "cleanup",
+          "privacy",
+          "snapshot-read",
+          "snapshot-drift",
+        ].includes(failure.stableStep),
+    )
+    .reduce((sum, failure) => sum + failure.count, 0);
+  const visualGate: VisualGateSummary = {
+    scheduledCandidates: 25,
+    completedAudits,
+    preparationBlockerCount,
+    cleanupBlockerCount,
+    visualBlockerCount,
+    privacyBlockerCount,
+    screenshotCallCount,
+    snapshotReadSucceeded,
+    snapshotStable,
+  };
+  expect(
+    visualGate,
+    "S232H2_VISUAL_GATE_OPEN " +
+      JSON.stringify({ visualGate, blockers: failures }),
+  ).toEqual({
+    scheduledCandidates: 25,
+    completedAudits: 25,
+    preparationBlockerCount: 0,
+    cleanupBlockerCount: 0,
+    visualBlockerCount: 0,
+    privacyBlockerCount: 0,
+    screenshotCallCount: 25,
+    snapshotReadSucceeded: true,
+    snapshotStable: true,
   });
-  const calculatorPath =
-    "/app/calculator?mode=second&context=practice&focus=casio";
-  await gotoRequiredRoute(page, calculatorPath);
-  await advanceCalculatorToCasioInput(page);
-  await completeCalculatorRoutine(page);
-  dynamicScreenshots.push(
-    await captureSyntheticScreenshot(
-      page,
-      dataBoundary,
-      "s232h2-after-calculator-completed-saved-390.png",
+  expect(afterScreenshots).toHaveLength(22);
+  expect(baselineScreenshots).toHaveLength(3);
+  expect(targetPage).not.toBeNull();
+  expect(targetAudit?.sessionBound).toBe(true);
+  expect(baselineSessionBound).toBe(true);
+
+  const capturedScreenshots = [...baselineScreenshots, ...afterScreenshots];
+  const rawIdentityArtifactCount = capturedScreenshots.reduce(
+    (sum, screenshot) =>
+      sum +
+      screenshot.boundary.visibleEmailOutsideMask +
+      screenshot.boundary.rawCredentialArtifactCount +
+      screenshot.boundary.rawIdentifierArtifactCount,
+    0,
+  );
+  const deniedCanaryArtifactCount = capturedScreenshots.reduce(
+    (sum, screenshot) => sum + screenshot.boundary.deniedCanaryDomCount,
+    0,
+  );
+  const opaqueSurfaceArtifactCount = capturedScreenshots.reduce(
+    (sum, screenshot) => sum + screenshot.boundary.opaqueSurfaceCount,
+    0,
+  );
+  const unknownLearnerEndpointCount = Math.max(
+    0,
+    ...capturedScreenshots.map(
+      (screenshot) => screenshot.guard.unknownEndpointCount,
     ),
   );
-  await page.unroute("**/api/os/calculator-routine/complete");
-
-  expect(dynamicAuditRows).toHaveLength(6);
-  expect(dynamicScreenshots).toHaveLength(6);
-  const auditRows = [...initialAuditRows, ...dynamicAuditRows];
-  const afterScreenshots = [...initialAfterScreenshots, ...dynamicScreenshots];
-  expect(auditRows).toHaveLength(45);
-  expect(afterScreenshots).toHaveLength(22);
-
-  const baselineScreenshots: ScreenshotEvidence[] = [];
-  for (const viewport of [viewports[0], viewports[2]]) {
-    await baselinePage.setViewportSize({
-      width: viewport.width,
-      height: viewport.height,
-    });
-    await gotoRequiredRoute(
-      baselinePage,
-      `/app/items/${encodeURIComponent(syntheticItemId)}?mode=second`,
+  const unknownLearnerRowCount = Math.max(
+    0,
+    ...capturedScreenshots.map(
+      (screenshot) => screenshot.guard.unknownRowCount,
+    ),
+  );
+  const blockedLearnerMutationCount = Math.max(
+    0,
+    ...capturedScreenshots.map(
+      (screenshot) => screenshot.guard.blockedMutationCount,
+    ),
+  );
+  const identityMasked =
+    capturedScreenshots.some((screenshot) => screenshot.identityMaskRequired) &&
+    capturedScreenshots.every(
+      (screenshot) =>
+        !screenshot.identityMaskRequired ||
+        screenshot.boundary.identityMaskCount > 0,
     );
-    baselineScreenshots.push(
-      await captureSyntheticScreenshot(
-        baselinePage,
-        dataBoundary,
-        `s232h2-before-ledger-${viewport.label}.png`,
-        { fullPage: false },
-      ),
+  const actualAccountArtifactCount =
+    rawIdentityArtifactCount +
+    deniedCanaryArtifactCount +
+    opaqueSurfaceArtifactCount +
+    unknownLearnerEndpointCount +
+    unknownLearnerRowCount +
+    blockedLearnerMutationCount;
+  expect({
+    rawIdentityArtifactCount,
+    deniedCanaryArtifactCount,
+    opaqueSurfaceArtifactCount,
+    unknownLearnerEndpointCount,
+    unknownLearnerRowCount,
+    blockedLearnerMutationCount,
+    identityMasked,
+    actualAccountArtifactCount,
+  }).toEqual({
+    rawIdentityArtifactCount: 0,
+    deniedCanaryArtifactCount: 0,
+    opaqueSurfaceArtifactCount: 0,
+    unknownLearnerEndpointCount: 0,
+    unknownLearnerRowCount: 0,
+    blockedLearnerMutationCount: 0,
+    identityMasked: true,
+    actualAccountArtifactCount: 0,
+  });
+
+  for (const screenshot of capturedScreenshots) {
+    await writeFile(
+      testInfo.outputPath(screenshot.fileName),
+      screenshot.buffer,
     );
   }
-  await baselinePage.setViewportSize({ width: 390, height: 844 });
-  await gotoRequiredRoute(
-    baselinePage,
-    "/app/calculator?mode=second&context=practice&focus=casio",
-  );
-  await advanceCalculatorToCasioInput(baselinePage);
-  baselineScreenshots.push(
-    await captureSyntheticScreenshot(
-      baselinePage,
-      dataBoundary,
-      "s232h2-before-calculator-390.png",
-      { fullPage: false },
-    ),
-  );
-  expect(baselineScreenshots).toHaveLength(3);
 
-  await verifyRuntimeVersion(page, runtimeRunnerSha);
-  await verifyRuntimeVersion(baselinePage, baselineSha);
-  const finalAccountAudit = await auditSyntheticAccount(page, {
-    expectedItemId: syntheticItemId,
-    includePlanning: true,
-  });
-  const accountSnapshotStable =
-    screenshotDataBoundaryFingerprint(finalAccountAudit.screenshotBoundary) ===
-    initialBoundaryFingerprint;
-  expect(
-    accountSnapshotStable,
-    "The unclassified account boundary must remain unchanged until every in-memory PNG has been audited.",
-  ).toBe(true);
-  await settleRuntimeMonitors(page, publicPage, baselinePage);
-
-  const afterErrors = allErrorCounts(
-    afterAuthenticatedErrors,
-    afterPublicErrors,
-  );
-  expect(afterErrors.consoleErrors).toEqual([]);
-  expect(afterErrors.pageErrors).toEqual([]);
-  expect(afterErrors.sameOriginRequestFailures).toEqual([]);
-  expect(baselineErrors.consoleErrors).toEqual([]);
-  expect(baselineErrors.pageErrors).toEqual([]);
-  expect(baselineErrors.sameOriginRequestFailures).toEqual([]);
-
-  for (const screenshot of [...baselineScreenshots, ...afterScreenshots])
-    await writeFile(testInfo.outputPath(screenshot.fileName), screenshot.buffer);
+  proof.privacyGate.rawIdentityArtifactCount = rawIdentityArtifactCount;
+  proof.privacyGate.deniedCanaryDomCount = deniedCanaryArtifactCount;
+  proof.privacyGate.unknownLearnerEndpointCount = unknownLearnerEndpointCount;
+  proof.privacyGate.unknownLearnerRowCount = unknownLearnerRowCount;
+  proof.privacyGate.targetSessionBound = targetAudit?.sessionBound === true;
+  proof.privacyGate.baselineSessionBound = baselineSessionBound;
+  proof.privacyGate.baselineUsesSelectedFixture =
+    baselineSessionBound &&
+    baselineScreenshots.filter((screenshot) =>
+      screenshot.fileName.startsWith("s232h2-before-ledger-"),
+    ).length === 2 &&
+    targetAudit?.fingerprint === proof.selectedFingerprint &&
+    sameStringSet(targetAudit?.exactFixtureIds ?? [], proof.fixtureIds);
 
   const screenshotNames = [
     ...baselineScreenshots.map((screenshot) => screenshot.fileName),
     ...afterScreenshots.map((screenshot) => screenshot.fileName),
     ...figmaReferenceScreenshots,
   ];
-  expect(screenshotNames).toHaveLength(28);
-  expect(new Set(screenshotNames).size).toBe(screenshotNames.length);
-  const credentialsRedacted =
-    testEmail.length > 0 && screenshotNames.every((name) => !/@/i.test(name));
-  const screenshotBoundary = dataBoundary;
-  const screenshotBoundaryHitCount =
-    screenshotBoundary.visibleTextHitCount +
-    screenshotBoundary.visibleReferenceHitCount +
-    screenshotBoundary.visibleFormValueHitCount +
-    screenshotBoundary.visibleGeneratedContentHitCount +
-    screenshotBoundary.visibleUninspectableSurfaceCount;
-  const screenshotDataBoundaryClosed =
-    screenshotBoundary.preflightCandidateCount === 25 &&
-    screenshotBoundary.preflightCheckCount === 25 &&
-    screenshotBoundary.preflightBlockerCount === 0 &&
-    screenshotBoundary.preflightAccountSnapshotStable &&
-    screenshotBoundary.screenshotCallCount === 25 &&
-    screenshotBoundary.captureCount === 25 &&
-    screenshotBoundary.checkCount === 50 &&
-    accountSnapshotStable &&
-    screenshotBoundaryHitCount === 0;
-  const privacyAudit: PrivacyAudit = {
-    ...finalAccountAudit.privacyAudit,
-    privacyPreflightCandidateCount:
-      screenshotBoundary.preflightCandidateCount,
-    privacyPreflightCheckCount: screenshotBoundary.preflightCheckCount,
-    privacyPreflightBlockerCount: screenshotBoundary.preflightBlockerCount,
-    privacyPreflightAccountSnapshotStable:
-      screenshotBoundary.preflightAccountSnapshotStable,
-    screenshotBoundaryCheckCount: screenshotBoundary.checkCount,
-    screenshotCaptureCount: screenshotBoundary.captureCount,
-    visibleUnclassifiedTextHitCount:
-      screenshotBoundary.visibleTextHitCount,
-    visibleUnclassifiedReferenceHitCount:
-      screenshotBoundary.visibleReferenceHitCount,
-    visibleUnclassifiedFormValueHitCount:
-      screenshotBoundary.visibleFormValueHitCount,
-    visibleUnclassifiedGeneratedContentHitCount:
-      screenshotBoundary.visibleGeneratedContentHitCount,
-    visibleUninspectableSurfaceCount:
-      screenshotBoundary.visibleUninspectableSurfaceCount,
-    provenanceFilteredTextHitCount:
-      screenshotBoundary.provenanceFilteredTextHitCount,
-    provenanceFilteredReferenceHitCount:
-      screenshotBoundary.provenanceFilteredReferenceHitCount,
-    provenanceFilteredFormValueHitCount:
-      screenshotBoundary.provenanceFilteredFormValueHitCount,
-    provenanceFilteredGeneratedContentHitCount:
-      screenshotBoundary.provenanceFilteredGeneratedContentHitCount,
-    accountSnapshotStable,
-    screenshotDataBoundaryClosed,
-    privateLearnerContentCaptured: !screenshotDataBoundaryClosed,
-  };
-  const syntheticContentCaptured =
-    privacyAudit.syntheticFixtureReady &&
-    privacyAudit.screenshotDataBoundaryClosed &&
-    afterScreenshots.length === 22;
-  const acceptanceSignals = [
-    initialAuditRows.length === 39,
-    dynamicAuditRows.length === 6,
-    auditRows.length === 45,
-    baselineScreenshots.length === 3,
-    initialAfterScreenshots.length === 16,
-    dynamicScreenshots.length === 6,
-    afterScreenshots.length === 22,
-    figmaComparisons.length === 3,
-    figmaComparisons.every((comparison) => comparison.passed),
-    screenshotNames.length === 28,
-    privacyAudit.governedTestAccount,
-    privacyAudit.syntheticFixtureReady,
-    privacyAudit.accountSnapshotStable,
-    privacyAudit.screenshotDataBoundaryClosed,
-    privacyAudit.privacyPreflightCandidateCount === 25,
-    privacyAudit.privacyPreflightCheckCount === 25,
-    privacyAudit.privacyPreflightBlockerCount === 0,
-    privacyAudit.privacyPreflightAccountSnapshotStable,
-    privacyAudit.screenshotBoundaryCheckCount === 50,
-    privacyAudit.screenshotCaptureCount === 25,
-    screenshotBoundary.screenshotCallCount === 25,
-    privacyAudit.visibleUnclassifiedTextHitCount === 0,
-    privacyAudit.visibleUnclassifiedReferenceHitCount === 0,
-    privacyAudit.visibleUnclassifiedFormValueHitCount === 0,
-    privacyAudit.visibleUnclassifiedGeneratedContentHitCount === 0,
-    privacyAudit.visibleUninspectableSurfaceCount === 0,
-    privacyAudit.sessionBound,
-    privacyAudit.strictOwnershipContract,
-    privacyAudit.pendingOwnedQueue,
-    privacyAudit.queueDetailsAudited,
-    privacyAudit.todayDetailsAudited,
-    privacyAudit.weeklyTaskDetailsAudited,
-    !privacyAudit.privateLearnerContentCaptured,
-    credentialsRedacted,
-    afterErrors.consoleErrors.length === 0,
-    afterErrors.pageErrors.length === 0,
-    afterErrors.sameOriginRequestFailures.length === 0,
-    baselineErrors.consoleErrors.length === 0,
-    baselineErrors.pageErrors.length === 0,
-    baselineErrors.sameOriginRequestFailures.length === 0,
-    auditRows.every(
-      (row) =>
-        row.mainCount === 1 &&
-        row.visibleH1Count === 1 &&
-        row.horizontalOverflow === 0 &&
-        row.visiblePrimaryActionCount <= 1 &&
-        row.undersizedTargetCount === 0 &&
-        row.viewportBoundsFailureCount === 0 &&
-        row.axeSeriousOrCritical === 0 &&
-        row.keyboardFocusVisible &&
-        row.gradientCount === 0,
-    ),
-  ];
-  const result = acceptanceSignals.every(Boolean) ? "pass" : "fail";
-  expect(result).toBe("pass");
-
+  const dynamicAfterScreenshotCount = afterScreenshots.filter((screenshot) =>
+    dynamicScreenshotNames.has(screenshot.fileName),
+  ).length;
+  const initialAfterScreenshotCount =
+    afterScreenshots.length - dynamicAfterScreenshotCount;
+  const allErrors = allErrorCounts(...runtimeErrorGroups);
   const manifest = {
-    schemaVersion: 3,
-    result,
+    schemaVersion: 4,
+    result: figmaComparisons.every((comparison) => comparison.passed)
+      ? "pass"
+      : "fail",
     runnerSha: runtimeRunnerSha,
     targetDeploymentSha: runtimeTargetSha,
     baselineDeploymentSha: baselineSha,
     mergeBaseSha,
     baselineTreeSha,
-    signInAttempts,
-    baselineSignInAttempts: baselineLogin.signInAttempts,
     routeCount: requiredRoutes.length,
     viewportCount: viewports.length,
-    initialAuditRowCount: initialAuditRows.length,
-    dynamicAuditRowCount: dynamicAuditRows.length,
-    auditRowCount: auditRows.length,
-    auditRows,
+    initialAuditRowCount: proof.auditRows!.filter(
+      (row) => row.auditKind === "initial-route",
+    ).length,
+    dynamicAuditRowCount: proof.auditRows!.filter(
+      (row) => row.auditKind === "dynamic-state",
+    ).length,
+    auditRowCount: proof.auditRows!.length,
+    auditRows: proof.auditRows,
     beforeScreenshotCount: baselineScreenshots.length,
-    initialAfterScreenshotCount: initialAfterScreenshots.length,
-    dynamicScreenshotCount: dynamicScreenshots.length,
+    initialAfterScreenshotCount,
+    dynamicScreenshotCount: dynamicAfterScreenshotCount,
     afterScreenshotCount: afterScreenshots.length,
     figmaReferenceScreenshotCount: figmaReferenceScreenshots.length,
     figmaComparisonCount: figmaComparisons.length,
     screenshotCount: screenshotNames.length,
-    screenshotCallCount: screenshotBoundary.screenshotCallCount,
+    screenshotCallCount,
     screenshots: screenshotNames,
-    preflightClosure,
+    privacyGate: proof.privacyGate,
+    a11yGate: proof.a11yGate,
+    visualGate,
     figmaComparisons,
-    consoleErrorCount: afterErrors.consoleErrors.length,
-    pageErrorCount: afterErrors.pageErrors.length,
-    sameOriginRequestFailureCount: afterErrors.sameOriginRequestFailures.length,
-    baselineConsoleErrorCount: baselineErrors.consoleErrors.length,
-    baselinePageErrorCount: baselineErrors.pageErrors.length,
-    baselineSameOriginRequestFailureCount:
-      baselineErrors.sameOriginRequestFailures.length,
     figmaMapping: {
-      foundations: [
-        { node: "43:2", contract: "Color & Theme" },
-        { node: "44:9", contract: "Typography" },
-        { node: "45:2", contract: "Layout & Spacing" },
-      ],
-      componentOverview: { node: "61:2", contract: "V3 component contracts" },
+      foundations: ["43:2", "44:9", "45:2"],
+      componentOverview: "61:2",
       componentContracts: [
-        { node: "47:28", contract: "StateChip" },
-        { node: "48:75", contract: "TrustEvidenceBar" },
-        { node: "50:59", contract: "BiggestGap" },
-        { node: "51:44", contract: "StickyAction" },
-        { node: "52:42", contract: "EvidenceExcerpt" },
-        { node: "53:129", contract: "CalculatorStep" },
-        { node: "61:80", contract: "Utilities & States" },
+        "47:28",
+        "48:75",
+        "50:59",
+        "51:44",
+        "52:42",
+        "53:129",
+        "61:80",
       ],
-      representatives: [
-        {
-          node: "56:2",
-          route: "/app/items/[itemId]?mode=second",
-          viewport: 390,
-        },
-        {
-          node: "59:62",
-          route: "/app/items/[itemId]?mode=second",
-          viewport: 1440,
-        },
-        {
-          node: "57:34",
-          route: "/app/calculator?mode=second&context=practice&focus=casio",
-          viewport: 390,
-        },
-      ],
+      representatives: ["56:2", "59:62", "57:34"],
       routeContracts: requiredRoutes.map((route) => ({
         route:
           route.id === "ledger"
@@ -6824,44 +6347,46 @@ test("S232H.2 adopts V3 across the production learner routes with direct before/
         nodes: routeContractNodes[route.id],
       })),
     },
-    calculatorCasioInputVisible: initialAuditRows.some(
-      (row) => row.route === "calculator" && row.viewportWidth === 390,
-    ),
-    horizontalOverflowMaximum: Math.max(
-      ...auditRows.map((row) => row.horizontalOverflow),
-    ),
-    axeSeriousOrCritical: auditRows.reduce(
-      (sum, row) => sum + row.axeSeriousOrCritical,
-      0,
-    ),
-    undersizedTargetCount: auditRows.reduce(
-      (sum, row) => sum + row.undersizedTargetCount,
-      0,
-    ),
-    viewportBoundsFailureCount: auditRows.reduce(
-      (sum, row) => sum + row.viewportBoundsFailureCount,
-      0,
-    ),
-    privacyAudit,
-    syntheticFixtureReady: privacyAudit.syntheticFixtureReady,
-    screenshotDataBoundaryClosed: privacyAudit.screenshotDataBoundaryClosed,
-    syntheticContentCaptured,
-    privateLearnerContentCaptured: privacyAudit.privateLearnerContentCaptured,
-    credentialsRedacted,
+    syntheticFixtureReady: targetAudit?.clean === true,
+    fixtureOwnershipClosed:
+      proof.privacyGate.fixtureOwnershipClosed &&
+      finalAudit?.nonFixtureRowCount === 0 &&
+      finalAudit?.unknownReferenceCount === 0,
+    credentialsRedacted: rawIdentityArtifactCount === 0,
+    identityMasked,
+    privateLearnerContentCaptured: actualAccountArtifactCount !== 0,
+    actualAccountArtifactCount,
+    syntheticContentCaptured:
+      targetAudit?.clean === true && capturedScreenshots.length === 25,
     rawInputArtifactCaptured: false,
     domCaptured: false,
     traceCaptured: false,
     videoCaptured: false,
+    consoleErrorCount: allErrors.consoleErrors.length,
+    pageErrorCount: allErrors.pageErrors.length,
+    sameOriginRequestFailureCount: allErrors.sameOriginRequestFailures.length,
   };
-  const serialized = JSON.stringify(manifest, null, 2);
-  expect(serialized).not.toContain(testEmail);
-  expect(serialized).not.toMatch(/@[a-z0-9.-]+\.[a-z]{2,}/i);
+  let serialized = JSON.stringify(manifest, null, 2);
+  const forbiddenArtifactValues = [
+    ...visualCredentialCandidates.flatMap((candidate) => [
+      candidate.email,
+      candidate.password,
+    ]),
+    ...safeProofIds(proof),
+  ].filter((value) => value.length > 0);
+  const leaked = forbiddenArtifactValues.some((value) =>
+    serialized.includes(value),
+  );
+  const rawEmail = /@[a-z0-9.-]+\.[a-z]{2,}/i.test(serialized);
+  if (leaked || rawEmail) {
+    throw new Error("S232H2 manifest redaction failed.");
+  }
+  serialized = JSON.stringify(manifest, null, 2);
   await writeFile(
     testInfo.outputPath("s232h2-visual-manifest.json"),
     serialized,
     "utf8",
   );
 
-  await baselineContext.close();
-  await publicContext.close();
+  await unlink(visualProofPath).catch(() => undefined);
 });

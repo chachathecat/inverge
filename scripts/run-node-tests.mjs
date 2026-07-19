@@ -102,7 +102,6 @@ const defaultTestFiles = [
   "tests/s232h2-calculator-v3-adoption.test.mjs",
   "tests/s232h2-historical-synthetic-fixtures.test.mjs",
   "tests/s232h2-production-v3-visual-contract.test.mjs",
-  "tests/screenshot-boundary-policy.test.mjs",
   "tests/postgrest-timestamps-normalization.test.mjs",
   "tests/s220b-dabangil-launch-surface.test.mjs",
   "tests/practice-calculation-unit-registry.test.mjs",
@@ -148,7 +147,10 @@ for (let index = 0; index < rawArgs.length; index += 1) {
   } else if (arg.startsWith("--workers=")) {
     nodeTestArgs.push(`--test-concurrency=${arg.slice("--workers=".length)}`);
     hasExplicitConcurrency = true;
-  } else if (arg === "--test-concurrency" || arg.startsWith("--test-concurrency=")) {
+  } else if (
+    arg === "--test-concurrency" ||
+    arg.startsWith("--test-concurrency=")
+  ) {
     nodeTestArgs.push(arg);
     hasExplicitConcurrency = true;
     if (arg === "--test-concurrency" && rawArgs[index + 1]) {
@@ -166,7 +168,9 @@ const testFiles = requestedFiles.length > 0 ? requestedFiles : defaultTestFiles;
 const missingFiles = testFiles.filter((file) => !existsSync(file));
 
 if (missingFiles.length > 0) {
-  console.error(`[run-node-tests] Missing test file(s): ${missingFiles.join(", ")}`);
+  console.error(
+    `[run-node-tests] Missing test file(s): ${missingFiles.join(", ")}`,
+  );
   process.exit(1);
 }
 

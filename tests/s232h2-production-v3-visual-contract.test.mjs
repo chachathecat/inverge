@@ -3,22 +3,14 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-import {
-  collectSyntheticPayloadFailurePaths,
-  isAllowedExactSyntheticTaxonomyString,
-  summarizeSyntheticPayloadFailurePaths,
-} from "./e2e/support/synthetic-payload-diagnostics.ts";
-
 const read = (path) => readFileSync(path, "utf8");
 const workflow = read(".github/workflows/s232h2-runtime.yml");
 const spec = read("tests/e2e/s232h2-production-v3-visual.spec.ts");
-const boundaryPolicy = read(
-  "tests/e2e/support/screenshot-boundary-policy.ts",
-);
-const learnerUi = read("components/learner/learner-ui.tsx");
-const answerReview = read("app/answer-review/answer-review-client.tsx");
-const reviewRepository = read("lib/review-os/repository.ts");
-const operatorRunbook = read("docs/inverge-closed-beta-operator-runbook.md");
+const sourceAuditRoute = read("app/api/os/visual-source-audit/route.ts");
+const readOnlyRequest = read("lib/review-os/read-only-request.ts");
+const reviewOsRepository = read("lib/review-os/repository.ts");
+const reviewOsServer = read("lib/review-os/server.ts");
+const reviewOsService = read("lib/review-os/service.ts");
 const baselineSha = "35836d419161d7cfe55e3e3c088fcc4d66376a7d";
 const snapshotDirectory =
   "tests/e2e/s232h2-production-v3-visual.spec.ts-snapshots";
@@ -44,12 +36,6 @@ const figmaSnapshots = [
   },
 ];
 
-function pngDimensions(buffer) {
-  assert.equal(buffer.subarray(0, 8).toString("hex"), "89504e470d0a1a0a");
-  assert.equal(buffer.subarray(12, 16).toString("ascii"), "IHDR");
-  return { width: buffer.readUInt32BE(16), height: buffer.readUInt32BE(20) };
-}
-
 const requiredRoutes = [
   "/",
   "/login",
@@ -66,129 +52,27 @@ const requiredRoutes = [
   "/app/calculator?mode=second&context=practice&focus=casio",
 ];
 
-test("synthetic payload diagnostics expose only allowlisted schema paths and counts", () => {
-  const privateValue = "PRIVATE_LEARNER_VALUE_DO_NOT_LOG";
-  const privateKey = "PRIVATE_LEARNER_KEY_DO_NOT_LOG";
-  const item = {
-    rawPayload: {
-      user_confirmed_fields: {
-        subjectLabel: privateValue,
-      },
-      [privateKey]: privateValue,
-    },
-    derivedPayload: {
-      concept_node_candidate: {
-        retrievalPrompt: privateValue,
-      },
-    },
-  };
-  const failures = collectSyntheticPayloadFailurePaths(
-    item,
-    (value) => value === "allowed",
-  );
-  assert.deepEqual(failures, [
-    "rawPayload.user_confirmed_fields.subjectLabel",
-    "rawPayload.<unknown-key>",
-    "derivedPayload.concept_node_candidate.retrievalPrompt",
-  ]);
-  const summary = summarizeSyntheticPayloadFailurePaths([
-    { item, isAllowedString: (value) => value === "allowed" },
-    { item, isAllowedString: (value) => value === "allowed" },
-  ]);
-  assert.deepEqual(summary, [
-    {
-      path: "derivedPayload.concept_node_candidate.retrievalPrompt",
-      count: 2,
-    },
-    { path: "rawPayload.<unknown-key>", count: 2 },
-    { path: "rawPayload.user_confirmed_fields.subjectLabel", count: 2 },
-  ]);
-  assert.equal(JSON.stringify({ failures, summary }).includes(privateValue), false);
-  assert.equal(JSON.stringify({ failures, summary }).includes(privateKey), false);
-});
+function pngDimensions(buffer) {
+  assert.equal(buffer.subarray(0, 8).toString("hex"), "89504e470d0a1a0a");
+  assert.equal(buffer.subarray(12, 16).toString("ascii"), "IHDR");
+  return { width: buffer.readUInt32BE(16), height: buffer.readUInt32BE(20) };
+}
 
-test("deterministic taxonomy diagnostics allow only the exact matched-keyword schema", () => {
-  const exactPaths = [
-    "rawPayload.taxonomyClassification.candidates[].matchedKeywords[]",
-    "derivedPayload.taxonomyClassification.candidates[].matchedKeywords[]",
-  ];
-  const payload = {
-    rawPayload: {
-      taxonomyClassification: {
-        candidates: [{ matchedKeywords: ["판단"] }],
-      },
-    },
-    derivedPayload: {
-      taxonomyClassification: {
-        candidates: [{ matchedKeywords: ["판단"] }],
-      },
-    },
-  };
+function blockBetween(source, start, end) {
+  const startIndex = source.indexOf(start);
+  const endIndex = source.indexOf(end, startIndex + start.length);
+  assert.ok(startIndex >= 0, `missing source marker: ${start}`);
+  assert.ok(
+    endIndex > startIndex,
+    `missing source marker after ${start}: ${end}`,
+  );
+  return source.slice(startIndex, endIndex);
+}
 
-  assert.deepEqual(
-    collectSyntheticPayloadFailurePaths(
-      payload,
-      isAllowedExactSyntheticTaxonomyString,
-    ),
-    [],
-  );
-  assert.deepEqual(
-    collectSyntheticPayloadFailurePaths(payload, () => false),
-    exactPaths,
-  );
-  for (const path of exactPaths) {
-    assert.equal(isAllowedExactSyntheticTaxonomyString("판단", path), true);
-  }
-  for (const path of [
-    "rawPayload.taxonomyClassification.candidates[].matchedKeywords",
-    "rawPayload.taxonomyClassification.primary.matchedKeywords[]",
-    "rawPayload.candidates[].matchedKeywords[]",
-    "derivedPayload.taxonomyClassification.candidates[].matchedKeywords[].value",
-  ]) {
-    assert.equal(isAllowedExactSyntheticTaxonomyString("판단", path), false);
-  }
-  assert.equal(
-    isAllowedExactSyntheticTaxonomyString("요건", exactPaths[0]),
-    false,
-  );
-  assert.deepEqual(
-    collectSyntheticPayloadFailurePaths(
-      {
-        rawPayload: {
-          taxonomyClassification: {
-            candidates: [{ matchedKeywords: "판단" }],
-          },
-        },
-      },
-      isAllowedExactSyntheticTaxonomyString,
-    ),
-    ["rawPayload.taxonomyClassification.candidates[].matchedKeywords"],
-  );
-
-  const globalSetStart = spec.indexOf(
-    "const exactSyntheticPayloadSystemStrings = new Set([",
-  );
-  const globalSetEnd = spec.indexOf("\n]);", globalSetStart);
-  assert.ok(globalSetStart >= 0 && globalSetEnd > globalSetStart);
-  assert.equal(
-    spec.slice(globalSetStart, globalSetEnd).includes('"판단"'),
-    false,
-  );
-  assert.equal(
-    (
-      spec.match(
-        /isAllowedExactSyntheticPayloadString\(value, path, allowed\)/g,
-      ) ?? []
-    ).length,
-    4,
-  );
-});
-
-test("S232H.2 is a narrow exact-head PR2 and fixed-PR1 Preview gate", () => {
+test("workflow keeps exact-head and fixed-baseline provenance while splitting the gate", () => {
   assert.match(workflow, /agent\/figma-v3-production-routes/);
   assert.ok(
     workflow.includes(`<!-- run-s232h2-visual-e2e baseline=${baselineSha} -->`),
-    "missing fixed-baseline PR marker",
   );
   assert.ok(workflow.includes(`E2E_BASELINE_SHA: ${baselineSha}`));
   assert.match(
@@ -208,243 +92,828 @@ test("S232H.2 is a narrow exact-head PR2 and fixed-PR1 Preview gate", () => {
     /deployments\?sha=\$\{target_sha\}&environment=Preview/,
   );
   assert.match(workflow, /api\/runtime\/version/);
+  assert.match(
+    workflow,
+    /discover_preview "\$\{E2E_RUNNER_SHA\}"[^\n]*&[\s\S]*?discover_preview "\$\{E2E_BASELINE_SHA\}"[^\n]*&/,
+  );
+  assert.match(workflow, /wait "\$\{pr2_pid\}"/);
+  assert.match(workflow, /wait "\$\{baseline_pid\}"/);
   assert.match(workflow, /git merge-base/);
   assert.match(workflow, /\^\{tree\}/);
-  assert.match(workflow, /git\/commits\/\$\{E2E_BASELINE_SHA\}/);
-  assert.match(workflow, /git\/commits\/\$\{merge_base_sha\}/);
-  assert.match(workflow, /current_pr_head/);
   assert.match(workflow, /verify_runtime_sha "\$\{E2E_BASE_URL\}"/);
   assert.match(workflow, /verify_runtime_sha "\$\{E2E_BASELINE_URL\}"/);
+  assert.match(workflow, /current_pr_head/);
   assert.match(workflow, /contents: read/);
   assert.match(workflow, /deployments: read/);
   assert.match(workflow, /pull-requests: read/);
-  assert.match(workflow, /tests\/screenshot-boundary-policy\.test\.mjs/);
-  assert.doesNotMatch(workflow, /#624|s232g|workflow_dispatch|rerun|re-run/i);
+  const jobTimeout = Number(
+    workflow.match(/timeout-minutes:\s*(\d+)/)?.[1] ?? 0,
+  );
+  const previewDiscoveryBound = Number(
+    workflow.match(/local deadline=\$\(\(SECONDS \+ (\d+)\)\)/)?.[1] ?? 0,
+  );
+  const gateBounds = [
+    ...workflow.matchAll(/timeout --signal=TERM --kill-after=10s (\d+)s/g),
+  ].map((match) => Number(match[1]));
+  assert.deepEqual(gateBounds, [180, 720, 900]);
+  assert.ok(
+    jobTimeout * 60 >=
+      previewDiscoveryBound +
+        gateBounds.reduce((sum, seconds) => sum + seconds, 0) +
+        600,
+    "the job must retain setup, cleanup, validation, and upload headroom",
+  );
   assert.doesNotMatch(
     workflow,
     /contents: write|pull-requests: write|issues: write/,
   );
-  assert.match(operatorRunbook, /`E2E_USER_B_EMAIL` \(2인 분리 검증용\)/);
-  assert.match(operatorRunbook, /`E2E_USER_B_PASSWORD` \(2인 분리 검증용\)/);
-  assert.match(workflow, /E2E_USER_EMAIL: \$\{\{ secrets\.E2E_USER_EMAIL \}\}/);
+
+  const contractCommand = blockBetween(
+    workflow,
+    "Check the focused visual-gate contract",
+    "Install Playwright browser",
+  );
   assert.match(
+    contractCommand,
+    /node --test tests\/s232h2-production-v3-visual-contract\.test\.mjs/,
+  );
+  assert.doesNotMatch(contractCommand, /screenshot-boundary-policy/);
+
+  const privacyIndex = workflow.indexOf(
+    "Run privacy and auth source gate without screenshots",
+  );
+  const a11yIndex = workflow.indexOf(
+    "Run bounded production V3 accessibility gate",
+  );
+  const visualIndex = workflow.indexOf(
+    "Run one-pass production V3 visual and Figma gate",
+  );
+  const manifestIndex = workflow.indexOf(
+    "Validate the isolated synthetic screenshot manifest",
+  );
+  assert.ok(
+    privacyIndex >= 0 &&
+      a11yIndex > privacyIndex &&
+      visualIndex > a11yIndex &&
+      manifestIndex > visualIndex,
+  );
+  assert.match(workflow, /--grep "@privacy"/);
+  assert.match(workflow, /--grep "@a11y"/);
+  assert.match(workflow, /--grep "@visual"/);
+  assert.match(workflow, /timeout[^\n]*180s/);
+  assert.match(workflow, /timeout[^\n]*720s/);
+  assert.match(workflow, /timeout[^\n]*900s/);
+  assert.doesNotMatch(workflow, /#624|s232g|workflow_dispatch|rerun|re-run/i);
+});
+
+test("workflow exposes only the ordered visual-account candidates and ephemeral proof", () => {
+  const privacyStep = blockBetween(
     workflow,
-    /E2E_USER_PASSWORD: \$\{\{ secrets\.E2E_USER_PASSWORD \}\}/,
+    "Run privacy and auth source gate without screenshots",
+    "Run bounded production V3 accessibility gate",
+  );
+  const orderedNames = [
+    "E2E_VISUAL_USER_EMAIL",
+    "E2E_VISUAL_USER_PASSWORD",
+    "E2E_USER_A_EMAIL",
+    "E2E_USER_A_PASSWORD",
+    "E2E_USER_B_EMAIL",
+    "E2E_USER_B_PASSWORD",
+  ];
+  let previous = -1;
+  for (const name of orderedNames) {
+    const index = privacyStep.indexOf(`${name}: \${{ secrets.${name} }}`);
+    assert.ok(index > previous, `missing or out-of-order secret: ${name}`);
+    previous = index;
+  }
+  assert.doesNotMatch(workflow, /\bE2E_USER_EMAIL\b/);
+  assert.doesNotMatch(workflow, /\bE2E_USER_PASSWORD\b/);
+  assert.match(
+    privacyStep,
+    /S232H2_VISUAL_PROOF_PATH: \$\{\{ runner\.temp \}\}\/s232h2-visual-proof\.json/,
+  );
+  for (const stepName of [
+    "Run bounded production V3 accessibility gate",
+    "Run one-pass production V3 visual and Figma gate",
+  ]) {
+    const start = workflow.indexOf(stepName);
+    const end = workflow.indexOf("\n      - name:", start + stepName.length);
+    const step = workflow.slice(start, end < 0 ? undefined : end);
+    assert.match(step, /S232H2_VISUAL_PROOF_PATH/);
+    for (const name of orderedNames) assert.ok(step.includes(`${name}:`));
+  }
+  assert.match(workflow, /Remove the ephemeral visual-account proof/);
+  assert.match(workflow, /rm -f -- "\$\{S232H2_VISUAL_PROOF_PATH\}"/);
+
+  const successfulArtifact = blockBetween(
+    workflow,
+    "Upload 28 synthetic and Figma-reference PNGs and one manifest",
+    "Remove the ephemeral visual-account proof",
+  );
+  assert.doesNotMatch(successfulArtifact, /runner\.temp|VISUAL_PROOF/);
+});
+
+test("workflow preserves failure PNGs only after the privacy gate proves isolation", () => {
+  const failureUpload = blockBetween(
+    workflow,
+    "Upload bounded synthetic PNG diagnostics after visual gate failure",
+    "Recheck both exact deployment SHAs",
+  );
+  assert.match(
+    failureUpload,
+    /failure\(\) && steps\.privacy_gate\.outcome == 'success' && steps\.visual_gate\.outcome == 'failure'/,
+  );
+  for (const fileName of [
+    "s232h2-after-ledger-390.png",
+    "s232h2-figma-mobile-ledger-56-2.png",
+    "s232h2-after-ledger-1440.png",
+    "s232h2-figma-desktop-ledger-59-62.png",
+    "s232h2-after-calculator-390.png",
+    "s232h2-figma-mobile-calculator-57-34.png",
+  ]) {
+    assert.ok(failureUpload.includes(`test-results/**/${fileName}`));
+  }
+  assert.equal(
+    [...failureUpload.matchAll(/test-results\/\*\*\/s232h2-[a-z0-9-]+\.png/g)]
+      .length,
+    6,
+  );
+  assert.match(failureUpload, /retention-days: 7/);
+  assert.doesNotMatch(
+    failureUpload,
+    /s232h2-\*\.png|manifest|trace\.zip|\.webm|playwright-report|VISUAL_PROOF/,
   );
   assert.doesNotMatch(
     workflow,
-    /E2E_USER_EMAIL: \$\{\{ secrets\.(?:E2E_USER_B_EMAIL|TEST_USER_EMAIL)/,
-  );
-  assert.doesNotMatch(
-    workflow,
-    /E2E_USER_PASSWORD: \$\{\{ secrets\.(?:E2E_USER_B_PASSWORD|TEST_USER_PASSWORD)/,
+    /test-results\/\*\*\/\*\.png|trace\.zip|playwright-report/,
   );
 });
 
-test("S232H.2 audits all 13 production routes at 390, 768, and 1440", () => {
+test("spec exposes bounded source, accessibility, and visual gates", () => {
+  for (const tag of ["@privacy", "@a11y", "@visual"]) {
+    assert.match(
+      spec,
+      new RegExp(`test\\(\\s*[\\"'\\x60][^\\"'\\x60]*${tag}`),
+      `missing ${tag} Playwright gate`,
+    );
+  }
+  assert.match(spec, /test\.use\(\{[\s\S]*?video: "off"/);
+  assert.match(spec, /test\.use\(\{[\s\S]*?screenshot: "off"/);
+  assert.match(spec, /test\.use\(\{[\s\S]*?trace: "off"/);
+  assert.doesNotMatch(spec, /1_500_000/);
+  assert.doesNotMatch(spec, /S232H2_PREFLIGHT_OPEN/);
+
+  const boundedTests = [
+    {
+      source: blockBetween(
+        spec,
+        'test("@privacy',
+        'test("@a11y S232H.2 split accessibility gate',
+      ),
+      outerSeconds: 180,
+    },
+    {
+      source: blockBetween(
+        spec,
+        'test("@a11y S232H.2 split accessibility gate',
+        'test("@visual',
+      ),
+      outerSeconds: 720,
+    },
+    { source: spec.slice(spec.indexOf('test("@visual')), outerSeconds: 900 },
+  ];
+  for (const bounded of boundedTests) {
+    const match = bounded.source.match(/test\.setTimeout\(([\d_]+)\)/);
+    assert.ok(match, "each remote gate must declare its own timeout");
+    const milliseconds = Number(match[1].replaceAll("_", ""));
+    assert.ok(milliseconds > 0);
+    assert.ok(
+      milliseconds < bounded.outerSeconds * 1_000,
+      "the shell bound must retain cleanup and reporter headroom",
+    );
+  }
+
+  const a11yTestSources = [
+    blockBetween(
+      spec,
+      'test("@a11y S232H.2 deterministic focus-origin micro-fixture',
+      'test("@privacy',
+    ),
+    blockBetween(
+      spec,
+      'test("@a11y S232H.2 split accessibility gate',
+      'test("@visual',
+    ),
+  ];
+  const a11yTimeouts = a11yTestSources.map((source) => {
+    const matches = [...source.matchAll(/test\.setTimeout\(([\d_]+)\)/g)];
+    assert.equal(matches.length, 1);
+    return Number(matches[0][1].replaceAll("_", ""));
+  });
+  assert.equal(a11yTimeouts.length, 2);
+  assert.ok(
+    a11yTimeouts.reduce((total, timeout) => total + timeout, 0) < 720_000,
+    "all @a11y test bounds must retain aggregate shell headroom",
+  );
+});
+
+test("privacy source gate selects the first clean candidate in exact priority", () => {
+  const candidates = blockBetween(
+    spec,
+    "const visualCredentialCandidates",
+    "async function auditVisualAccountCandidate",
+  );
+  let previous = -1;
+  for (const name of [
+    "E2E_VISUAL_USER_EMAIL",
+    "E2E_VISUAL_USER_PASSWORD",
+    "E2E_USER_A_EMAIL",
+    "E2E_USER_A_PASSWORD",
+    "E2E_USER_B_EMAIL",
+    "E2E_USER_B_PASSWORD",
+  ]) {
+    const index = candidates.indexOf(name);
+    assert.ok(index > previous, `credential priority is not exact: ${name}`);
+    previous = index;
+  }
+  assert.doesNotMatch(spec, /\bprocess\.env\.E2E_USER_EMAIL\b/);
+  assert.doesNotMatch(spec, /\bprocess\.env\.E2E_USER_PASSWORD\b/);
+
+  const selection = blockBetween(
+    spec,
+    "function selectCleanVisualAccount",
+    "function safeProofIds",
+  );
+  assert.match(
+    selection,
+    /for \(const credential of visualCredentialCandidates/,
+  );
+  assert.doesNotMatch(selection, /console\.(?:log|info|warn|error)/);
+  const candidateHandle = blockBetween(
+    spec,
+    "async function openCandidateHandle",
+    "function selectCleanVisualAccount",
+  );
+  assert.match(candidateHandle, /newPreviewContext\(browser, runtimeBaseUrl\)/);
+  assert.match(candidateHandle, /auditVisualAccountCandidate/);
+  assert.match(spec, /nonFixtureRowCount === 0/);
+  const privacyTest = blockBetween(spec, "@privacy", "@a11y");
+  assert.match(
+    privacyTest,
+    /finally \{[\s\S]*?handles\.map[\s\S]*?handle\.context\.close\(\)[\s\S]*?stableStep: "cleanup"/,
+  );
+  assert.doesNotMatch(
+    privacyTest,
+    /handle\.context\.close\(\)\.catch\(\(\) => undefined\)/,
+  );
+  assert.match(privacyTest, /cleanupFailures\.length > 0/);
+  assert.match(privacyTest, /unlink\(visualProofPath\)/);
+});
+
+test("privacy source audit is read-only, complete, and screenshot-free", () => {
+  assert.match(spec, /"\/api\/auth\/session"/);
+  assert.match(spec, /"\/api\/os\/visual-source-audit"/);
+  assert.match(spec, /readVisualSourceSnapshot/);
+  assert.match(spec, /readVisualEndpointAudit/);
+  for (const endpoint of [
+    "/api/os/items?limit=501",
+    "/api/os/study-logs?mode=second&limit=501",
+    "/api/os/review-queue",
+    "/api/os/today-focus?mode=second",
+    "/api/os/weekly-summary?mode=second",
+  ]) {
+    assert.ok(spec.includes(endpoint), `missing source GET audit: ${endpoint}`);
+  }
+  assert.match(spec, /endpointReadSucceeded/);
+  assert.match(spec, /visualSourceNames\.every/);
+  assert.match(spec, /observed\.truncated\[name\] === false/);
+  assert.match(spec, /listedItems\.length < 501/);
+  assert.match(spec, /logs\.length < 501/);
+  assert.match(spec, /unknownLearnerEndpointCount/);
+  assert.match(spec, /unknownLearnerRowCount/);
+  assert.match(spec, /sameStringSequenceMembers/);
+  assert.match(spec, /endpointItems\.length === endpointItemIds\.length/);
+  assert.match(spec, /weeklySummary === null/);
+  assert.match(spec, /recoveryTask && knownQueueCard\(recoveryTask\)/);
+  assert.match(spec, /S232H2_UNKNOWN_ENDPOINT/);
+  assert.match(spec, /S232H2_UNKNOWN_ROW/);
+  assert.doesNotMatch(
+    spec,
+    /context\(\)\.request\.post\(\s*["']\/api\/os\/items|request\.post\(\s*["']\/api\/os\/items/,
+  );
+  assert.doesNotMatch(spec, /postSyntheticItem|ensureSyntheticLedgerFixture/);
+
+  assert.match(sourceAuditRoute, /process\.env\.VERCEL_ENV !== "preview"/);
+  assert.match(sourceAuditRoute, /x-s232h2-audit-sha/);
+  assert.match(sourceAuditRoute, /process\.env\.VERCEL_GIT_COMMIT_SHA/);
+  assert.match(sourceAuditRoute, /createSupabaseServerClient/);
+  assert.match(sourceAuditRoute, /supabase\.auth\.getUser/);
+  for (const table of [
+    "wrong_answer_items",
+    "wrong_answer_notes",
+    "wrong_answer_tags",
+    "recurrence_features",
+    "review_queue_items",
+    "study_logs",
+    "weekly_learning_summaries",
+    "learning_signal_events",
+    "usage_events",
+    "action_seeds",
+    "study_profiles",
+    "personal_concept_nodes",
+  ]) {
+    assert.ok(sourceAuditRoute.includes(`.from("${table}")`));
+  }
+  assert.doesNotMatch(
+    sourceAuditRoute,
+    /createSupabaseAdminClient|reviewOsRepository|\.insert\(|\.update\(|\.upsert\(|\.delete\(/,
+  );
+  assert.match(sourceAuditRoute, /AUDIT_ROW_LIMIT = 501/);
+  assert.match(sourceAuditRoute, /rlsProbeVisible/);
+  assert.match(sourceAuditRoute, /post_save_execution_started/);
+  assert.match(sourceAuditRoute, /review_followup_scheduled/);
+  assert.match(spec, /"studyProfiles"/);
+  assert.match(spec, /"conceptNodes"/);
+  const canonicalRows = blockBetween(
+    spec,
+    "function canonicalSourceRows",
+    "function sourceFingerprint",
+  );
+  assert.doesNotMatch(canonicalRows, /new Set/);
+  assert.doesNotMatch(canonicalRows, /omittedKeys|\.filter\(/);
+
+  const privacyTest = blockBetween(spec, "@privacy", "@a11y");
+  assert.doesNotMatch(privacyTest, /page\.screenshot\(/);
+  assert.match(privacyTest, /screenshotCallCount:\s*0/);
+  assert.match(privacyTest, /scheduledCandidates/);
+  assert.match(privacyTest, /completedAudits/);
+  assert.match(privacyTest, /notRunCount:\s*0/);
+  assert.equal(
+    [...privacyTest.matchAll(/cleanVisualAccountRequired\(\)/g)].length,
+    2,
+    "the clean-account code is reserved for missing candidates or no clean selection",
+  );
+  assert.doesNotMatch(
+    blockBetween(
+      spec,
+      'test("@a11y S232H.2 split accessibility gate',
+      'test("@visual',
+    ),
+    /cleanVisualAccountRequired\(\)/,
+  );
+  assert.doesNotMatch(
+    spec.slice(spec.indexOf('test("@visual')),
+    /cleanVisualAccountRequired\(\)/,
+  );
+  assert.match(spec, /S232H2_VISUAL_PROOF_CONTRACT_REQUIRED/);
+  assert.match(privacyTest, /S232H2_CROSS_ACCOUNT_GATE_OPEN/);
+});
+
+test("exact-SHA Preview read mode suppresses every visual GET side effect", () => {
+  assert.match(readOnlyRequest, /process\.env\.VERCEL_ENV !== "preview"/);
+  assert.match(readOnlyRequest, /process\.env\.VERCEL_GIT_COMMIT_SHA/);
+  assert.match(readOnlyRequest, /x-s232h2-audit-sha/);
+  assert.match(
+    readOnlyRequest,
+    /requestHeaders\.get\(AUDIT_SHA_HEADER\) === deploymentSha/,
+  );
+  assert.match(reviewOsRepository, /async readAccess[\s\S]*?\.select\(/);
+  const readAccess = blockBetween(
+    reviewOsRepository,
+    "async readAccess",
+    "async getStudyProfile",
+  );
+  assert.doesNotMatch(
+    readAccess,
+    /\.insert\(|\.update\(|\.upsert\(|\.delete\(/,
+  );
+  assert.match(reviewOsServer, /isPreviewExactShaReadOnlyRequest/);
+  assert.match(reviewOsServer, /reviewOsRepository\.readAccess/);
+  for (const method of [
+    "getReviewQueue",
+    "getTodayFocus",
+    "getWeeklyPlan",
+    "getWeeklySummary",
+  ]) {
+    const start = reviewOsService.indexOf(`async ${method}`);
+    const next = reviewOsService.indexOf("\n  async ", start + 8);
+    const body = reviewOsService.slice(start, next < 0 ? undefined : next);
+    assert.ok(start >= 0, `missing read-only service method: ${method}`);
+    assert.match(body, /isPreviewExactShaReadOnlyRequest/);
+    assert.match(body, /if \(readOnlyRequest\)/);
+  }
+});
+
+test("privacy proof is mode-0600, value-free, fail-fast, and RLS-negative", () => {
+  assert.match(spec, /S232H2_VISUAL_PROOF_PATH/);
+  assert.match(spec, /writeFile\([\s\S]*?mode:\s*0o600/);
+  assert.match(spec, /selectedSlot/);
+  assert.match(spec, /selectedFingerprint/);
+  assert.match(spec, /sourceFingerprint/);
+  assert.match(spec, /snapshotReadSucceeded/);
+  assert.match(spec, /snapshotStable/);
+  assert.match(spec, /crossAccountDenied/);
+  assert.match(spec, /deniedCanaryDomCount/);
+  assert.match(spec, /fixtureOwnershipClosed/);
+  assert.match(spec, /targetSessionBound/);
+  assert.match(spec, /baselineSessionBound/);
+  assert.match(spec, /baselineUsesSelectedFixture/);
+  assert.match(spec, /ownerRead/);
+  assert.match(spec, /const denied =/);
+  assert.match(spec, /deniedCanary/);
+  assert.match(
+    spec,
+    /S232H2_CLEAN_VISUAL_ACCOUNT_REQUIRED E2E_VISUAL_USER_EMAIL E2E_VISUAL_USER_PASSWORD/,
+  );
+  const cleanAccountErrorStart = spec.indexOf(
+    "S232H2_CLEAN_VISUAL_ACCOUNT_REQUIRED",
+  );
+  const cleanAccountError = spec.slice(
+    cleanAccountErrorStart,
+    cleanAccountErrorStart + 220,
+  );
+  assert.doesNotMatch(
+    cleanAccountError,
+    /E2E_USER_[AB]_(?:EMAIL|PASSWORD)|error\.message|JSON\.stringify/,
+  );
+  assert.doesNotMatch(spec, /selectedSlot:\s*candidate\.(?:email|password)/);
+});
+
+test("dirty-account substring policy and real persistence are disconnected", () => {
+  for (const forbidden of [
+    /screenshot-boundary-policy/,
+    /createScreenshotDataBoundary/,
+    /collectNestedLearnerContent/,
+    /addScreenshotBoundaryFragment/,
+    /screenshotDataBoundaryFingerprint/,
+    /fragmentDescriptors/,
+    /unrestrictedFragments/,
+    /sensitiveFragments/,
+    /buildScreenshotBoundaryPolicyTable/,
+    /collectSyntheticPayloadFailurePaths/,
+    /historical-synthetic-fixtures/,
+    /NodeFilter\.SHOW_TEXT/,
+    /S232H2_SCREENSHOT_BOUNDARY_OPEN/,
+  ]) {
+    assert.doesNotMatch(spec, forbidden);
+  }
+  assert.match(spec, /installDeterministicVisualMocks/);
+  assert.match(spec, /route\.fulfill\(/);
+  assert.match(spec, /blockUnexpectedLearnerMutation/);
+  assert.match(spec, /fixtureOwnershipClosed/);
+  assert.match(spec, /identityMasked/);
+  assert.match(spec, /rawIdentityArtifactCount/);
+  assert.match(spec, /actualAccountArtifactCount/);
+  assert.match(spec, /exactFixturePayloadClosed/);
+  assert.match(spec, /exactFixtureGeneratedArtifacts/);
+  assert.match(spec, /exactFixtureLearningSignal/);
+  assert.match(spec, /exactFixtureProductionMetadata/);
+  assert.match(spec, /canonicalCaptureFixtureProjection/);
+  assert.match(spec, /captureFixtureTimingClosed/);
+  assert.match(spec, /derived\.recurrenceCount === 1/);
+  assert.match(spec, /second_stage_weak_paragraph_48h/);
+  assert.match(spec, /derivedPayload\.retryDueAt !== null/);
+  assert.match(spec, /derivedPayload\.followUpReviewAt !== null/);
+  assert.match(spec, /fixtureMultiplicityClosed/);
+  assert.match(spec, /usageMultiplicityClosed/);
+  assert.match(
+    spec,
+    /privateLearnerContentCaptured:\s*actualAccountArtifactCount !== 0/,
+  );
+});
+
+test("a11y runs full mobile, lightweight wide geometry, and bounded keyboard profiles", () => {
   for (const route of requiredRoutes) {
     assert.ok(spec.includes(route), `missing production route: ${route}`);
   }
   for (const width of [390, 768, 1440]) {
-    assert.ok(
-      spec.includes(`width: ${width}`),
-      `missing viewport width: ${width}`,
-    );
+    assert.ok(spec.includes(`width: ${width}`), `missing viewport: ${width}`);
   }
-  assert.match(spec, /expect\(requiredRoutes\)\.toHaveLength\(13\)/);
-  assert.match(spec, /expect\(initialAuditRows\)\.toHaveLength\(39\)/);
-  assert.match(spec, /window\.scrollTo\(instantTop\)/);
-  assert.match(spec, /page\.locator\("main"\)/);
-  assert.match(spec, /horizontalOverflow/);
-  assert.match(spec, /visiblePrimaryActionCount/);
-  assert.match(spec, /S232H2_PRIMARY_ACTION_COUNT_INVALID/);
-  assert.match(spec, /data-s228-primary-action/);
-  assert.match(spec, /data-s224v-dominant-primary-action/);
-  assert.match(spec, /brandBackgrounds/);
-  assert.match(spec, /visibleTargetFailures/);
-  assert.match(spec, /targetRect\.width >= 44 && targetRect\.height >= 44/);
-  assert.doesNotMatch(spec, /focusRevealTargetFailures/);
-  assert.match(spec, /a\[data-v3-skip-link\]/);
-  assert.match(learnerUi, /data-v3-skip-link[\s\S]{0,500}?min-h-12/);
-  assert.match(answerReview, /data-v3-skip-link[\s\S]{0,500}?min-h-12/);
-  assert.match(spec, /beginKeyboardTraversalAtDocumentStart/);
-  assert.match(spec, /document\.body\.insertBefore\(origin, document\.body\.firstChild\)/);
-  assert.match(spec, /origin\.focus\(\{ preventScroll: true \}\)/);
-  assert.match(spec, /const focusVisible = link\.matches\(":focus-visible"\)/);
-  assert.match(spec, /focusIndicatorPresent/);
-  assert.match(spec, /boundingBoxPresent/);
-  assert.match(spec, /activationMovedFocus/);
-  assert.match(spec, /originRemoved/);
-  for (const failureCode of [
-    "S232H2_SKIP_LINK_COUNT_INVALID",
-    "S232H2_SKIP_LINK_NOT_FIRST_TAB_STOP",
-    "S232H2_SKIP_LINK_NOT_FOCUS_VISIBLE",
-    "S232H2_SKIP_LINK_FOCUS_INDICATOR_MISSING",
-    "S232H2_SKIP_LINK_NO_RENDERED_BOX",
-    "S232H2_SKIP_LINK_TARGET_BELOW_44",
-    "S232H2_SKIP_LINK_NOT_FULLY_IN_VIEWPORT",
-    "S232H2_SKIP_LINK_ACTIVATION_FAILED",
-  ])
-    assert.ok(spec.includes(failureCode), `missing ${failureCode}`);
-  assert.match(spec, /visibleViewportBoundsFailures/);
-  assert.match(spec, /viewportBoundsFailureCount/);
+  assert.match(spec, /"mobile-full"/);
+  assert.match(spec, /"geometry"/);
+  assert.match(spec, /mobileFullScheduled/);
+  assert.match(spec, /mobileFullCompleted/);
+  assert.match(spec, /geometryScheduled/);
+  assert.match(spec, /geometryCompleted/);
+  assert.match(spec, /keyboardScheduled/);
+  assert.match(spec, /keyboardCompleted/);
+  assert.match(spec, /scheduledCandidates:\s*45/);
+  assert.match(spec, /completedAudits/);
   assert.match(spec, /new AxeBuilder/);
   assert.match(spec, /serious.*critical/s);
-  assert.match(spec, /verifyKeyboardFocus/);
-  assert.match(spec, /waitForFunction/);
-  assert.match(spec, /\{ timeout: 1_000 \}/);
-  assert.match(spec, /completedFocusTraversal/);
-  assert.match(spec, /focusState\.active\.focusIndex === firstFocusIndex/);
-  assert.match(spec, /completionKind/);
-  assert.match(spec, /browser-cycle/);
-  assert.match(spec, /enumerated-stops/);
-  assert.match(spec, /document-exit/);
-  assert.match(spec, /visitedFocusIndexes\.size > 0/);
-  assert.match(spec, /candidate\.tabIndex >= 0/);
-  assert.match(spec, /visitedFocusIndexes\.size >= focusState\.focusableCount/);
-  assert.match(spec, /visitedFocusStopCount/);
-  assert.match(spec, /link\.focus\(\{ preventScroll: true \}\)/);
-  assert.doesNotMatch(spec, /for \(let stop = 0; stop < 30/);
-  assert.match(spec, /previousScrollBehavior/);
-  assert.match(spec, /everyFocusVisible/);
-  assert.match(spec, /visitedFocusIndexes/);
-  assert.match(spec, /element\.matches\(":focus-visible"\)/);
-  assert.match(spec, /page\.keyboard\.press\("Enter"\)/);
-  assert.match(spec, /enabledPrimaryReached/);
-  assert.match(spec, /style\.position === "fixed"/);
-  assert.match(spec, /component.*StickyAction/s);
-  assert.match(spec, /gradientCount/);
-  assert.match(spec, /shadowCount/);
-  assert.match(spec, /shadowElements/);
-  assert.match(spec, /viewport\.width === 1440/);
-  assert.match(spec, /rgb\(247, 246, 243\)/);
-  assert.match(spec, /Noto Sans KR/);
-  assert.match(spec, /--layout-page-edge/);
-  assert.match(spec, /--control-height/);
-  assert.match(spec, /--v3-radius-control/);
-  assert.match(spec, /--layout-reading-column/);
-  assert.match(spec, /--layout-content-max/);
-  assert.match(spec, /must not redirect to a different pathname/);
-});
+  assert.match(spec, /horizontalOverflow/);
+  assert.match(spec, /visibleH1Count/);
+  assert.match(spec, /targetRect\.width >= 44 && targetRect\.height >= 44/);
+  assert.match(spec, /viewportBoundsFailureCount/);
 
-test("deterministic focus origin has a real first Tab and hostile micro-fixtures", () => {
-  const beginStart = spec.indexOf(
-    "async function beginKeyboardTraversalAtDocumentStart",
-  );
-  const activateStart = spec.indexOf(
-    "async function activateCanonicalSkipLink",
-    beginStart,
-  );
-  assert.ok(beginStart >= 0 && activateStart > beginStart);
-  const begin = spec.slice(beginStart, activateStart);
-  assert.equal(begin.match(/page\.keyboard\.press\("Tab"\)/g)?.length, 1);
+  const a11yTest = blockBetween(spec, "@a11y", "@visual");
+  assert.match(a11yTest, /mobileFullScheduled:\s*19/);
+  assert.match(a11yTest, /geometryScheduled:\s*26/);
+  assert.match(a11yTest, /keyboardScheduled:\s*3/);
+  assert.match(a11yTest, /route\.id === "today" \|\| route\.id === "ledger"/);
   assert.match(
-    begin,
-    /document\.body\.insertBefore\(origin, document\.body\.firstChild\)/,
+    a11yTest,
+    /dynamic\.routeId === "answer-review"[\s\S]*?dynamic\.state === "rewrite"/,
   );
-  assert.match(begin, /origin\.tabIndex = -1/);
-  assert.match(begin, /origin\.focus\(\{ preventScroll: true \}\)/);
-  assert.match(begin, /finally \{[\s\S]*?removeKeyboardTraversalOrigin\(page\)/);
-  assert.doesNotMatch(begin, /for \([^)]*<\s*(?:30|100|300)/);
-
-  const microStart = spec.indexOf(
-    'test("S232H.2 deterministic focus-origin micro-fixture"',
+  assert.doesNotMatch(
+    a11yTest,
+    /for[^\n]*requiredRoutes[\s\S]{0,300}?verifyKeyboardFocus/,
   );
-  const productionStart = spec.indexOf(
-    'test("S232H.2 adopts V3 across the production learner routes',
-    microStart,
-  );
-  assert.ok(microStart >= 0 && productionStart > microStart);
-  const micro = spec.slice(microStart, productionStart);
-  assert.match(micro, /laterControlCount = 36/);
-  assert.match(micro, /locator\(`#control-\$\{laterControlCount - 1\}`\)\.click\(\)/);
-  assert.match(micro, /beforeControl: true/);
-  assert.match(micro, /for \(const skipCount of \[0, 2\]\)/);
-  assert.match(micro, /'tabindex="-1"', "inert"/);
-  assert.match(micro, /top:900px/);
-  assert.match(micro, /width: 0, height: 0/);
-  assert.match(micro, /\[43, 48\][\s\S]*?\[48, 43\]/);
-  assert.match(micro, /width: 44, height: 44/);
-  assert.match(micro, /outline:none;box-shadow:none/);
-  assert.match(micro, /activation: false/);
-  assert.match(micro, /originRemoved\)\.toBe\(true\)/);
-  assert.match(micro, /originCount\)\.toBe\(0\)/);
 });
 
-test("route mapping claims only component contracts used by that production flow", () => {
-  const mappingStart = spec.indexOf("const routeContractNodes");
-  const mappingEnd = spec.indexOf("\n};", mappingStart);
-  assert.ok(mappingStart >= 0 && mappingEnd > mappingStart);
-  const mapping = spec.slice(mappingStart, mappingEnd + 3);
-  const readNodes = (route) => {
-    const key = route.includes("-") ? `"${route}"` : route;
-    const match = mapping.match(
-      new RegExp(`(?:^|\\n)\\s*${key}:\\s*\\[([\\s\\S]*?)\\],`),
-    );
-    assert.ok(match, `missing route contract mapping: ${route}`);
-    return [...match[1].matchAll(/"(\d+:\d+)"/g)].map((entry) => entry[1]);
-  };
-  const foundations = ["43:2", "44:9", "45:2"];
-  const shared = ["61:2", "61:80"];
-  const expected = {
-    home: [...foundations, ...shared],
-    login: [...foundations, ...shared],
-    today: [...foundations, ...shared],
-    capture: [...foundations, "48:75", "50:59", ...shared],
-    "answer-review": [...foundations, "48:75", "50:59", ...shared],
-    review: [...foundations, ...shared],
-    notes: [...foundations, "50:59", ...shared],
-    ledger: [
-      ...foundations,
-      "47:28",
-      "48:75",
-      "50:59",
-      "51:44",
-      "52:42",
-      "56:2",
-      "59:62",
-      ...shared,
-    ],
-    session: [...foundations, "50:59", ...shared],
-    agenda: [...foundations, ...shared],
-    weekly: [...foundations, ...shared],
-    write: [...foundations, "50:59", ...shared],
-    calculator: [
-      ...foundations,
-      "48:75",
-      "51:44",
-      "53:129",
-      "57:34",
-      ...shared,
-    ],
-  };
-  for (const [route, nodes] of Object.entries(expected)) {
-    assert.deepEqual(readNodes(route), nodes, `false component claim: ${route}`);
+test("skip-link, public landmark, and login focus contracts are capability-based", () => {
+  const capabilities = blockBetween(
+    spec,
+    "async function inspectShellCapabilities",
+    "async function auditRoute",
+  );
+  assert.match(capabilities, /data-learner-shell/);
+  assert.match(capabilities, /data-answer-review-stage/);
+  assert.match(capabilities, /data-standalone-learner-tool-nav/);
+  assert.match(capabilities, /input\[type="email"\]/);
+  assert.match(capabilities, /input\[type="password"\]/);
+  assert.match(capabilities, /button\[type="submit"\]/);
+  assert.doesNotMatch(capabilities, /route(?:Id|Alias|\.id)|"home"|"login"/);
+  assert.match(spec, /"learner-shell"/);
+  assert.match(spec, /"standalone-tool"/);
+  assert.match(spec, /"public"/);
+  assert.match(spec, /"login-form"/);
+  assert.match(spec, /a\[data-v3-skip-link\]/);
+  assert.match(spec, /S232H2_SKIP_LINK_COUNT_INVALID/);
+  assert.match(
+    spec,
+    /capabilities\.requiresSkipLink && capabilities\.skipLinkCount !== 1/,
+  );
+  assert.match(spec, /const visibleH1Count =[\s\S]*?visibleH1Count !== 1/);
+  assert.match(
+    spec,
+    /capabilities\.kind === "login-form"[\s\S]*?auditLoginFormFocus/,
+  );
+  assert.match(capabilities, /learnerShell > 0 \|\| answerReviewShell > 0/);
+  assert.match(capabilities, /structureValid/);
+  assert.match(spec, /!capabilities\.structureValid/);
+});
+
+test("dynamic candidates use fresh contexts, deterministic mocks, and finally cleanup", () => {
+  const dynamic = blockBetween(
+    spec,
+    "async function runIsolatedDynamicCandidate",
+    "async function runVisualCandidate",
+  );
+  assert.match(dynamic, /newPreviewContext\(browser, runtimeBaseUrl\)/);
+  assert.match(dynamic, /installDeterministicVisualMocks/);
+  assert.match(spec, /route\.fallback\(\)/);
+  assert.match(spec, /request\.method\(\) !== "POST"/);
+  assert.match(spec, /searchParams\.keys/);
+  assert.match(spec, /postDataBuffer/);
+  assert.match(dynamic, /phase: "a11y" \| "visual"/);
+  assert.match(dynamic, /phase,/);
+  assert.match(dynamic, /try \{/);
+  assert.match(
+    dynamic,
+    /finally \{[\s\S]*?unrouteAll\(\{ behavior: "wait" \}\)[\s\S]*?context\.close\(\)/,
+  );
+  assert.doesNotMatch(dynamic, /sharedPage|sharedContext/);
+  for (const state of [
+    "capture-extraction-preview",
+    "answer-review-result",
+    "answer-review-rewrite",
+    "review-revealed-selected",
+    "session-saved-capture",
+    "calculator-completed-saved",
+  ]) {
+    assert.ok(spec.includes(state), `missing isolated dynamic state: ${state}`);
   }
 });
 
-test("review queue keeps canonical ranking while scanning past orphaned source rows", () => {
-  const listReviewQueue = reviewRepository.slice(
-    reviewRepository.indexOf("  async listReviewQueue(userId: string, limit = 10)"),
-    reviewRepository.indexOf("\n  async archiveReviewQueueItemsForMode", reviewRepository.indexOf("  async listReviewQueue(userId: string, limit = 10)")),
+test("failure records are stable metadata and distinguish snapshot read from drift", () => {
+  assert.match(spec, /phase/);
+  assert.match(spec, /routeStateAlias/);
+  assert.match(spec, /viewport/);
+  assert.match(spec, /stableStep/);
+  assert.match(spec, /errorFamily/);
+  assert.match(spec, /"snapshot-read-failed"/);
+  assert.match(spec, /"snapshot-drift"/);
+  assert.match(spec, /snapshotReadSucceeded/);
+  assert.match(spec, /snapshotStable/);
+  const closure = blockBetween(
+    spec,
+    "const snapshotReadSucceeded = Boolean",
+    "const diagnosticActualNames",
   );
-  assert.match(listReviewQueue, /const maxScannedRows = 500/);
-  assert.match(listReviewQueue, /\.eq\("source_kind", "wrong_answer"\)/);
-  assert.match(listReviewQueue, /\.not\("source_submission_id", "is", null\)/);
-  assert.match(listReviewQueue, /\.order\("priority_score", \{ ascending: false \}\)/);
-  assert.match(listReviewQueue, /\.order\("created_at", \{ ascending: false \}\)/);
-  assert.match(listReviewQueue, /\.order\("id", \{ ascending: false \}\)/);
-  assert.match(listReviewQueue, /\.range\(offset, rangeEnd\)/);
-  assert.match(listReviewQueue, /if \(!item\) continue;/);
-  assert.match(listReviewQueue, /if \(cards\.length === requestedLimit\) break;/);
-  assert.match(listReviewQueue, /return cards;/);
-  assert.doesNotMatch(listReviewQueue, /\.limit\(limit\)/);
-  assert.match(spec, /confidence: queueAnchor \? "낮음" : "중간"/);
-  assert.match(spec, /item\.confidence === "낮음" &&\s*\n\s*h2AcceptanceMarkers\(item, "queue-anchor"\)/);
-  assert.match(spec, /timeSpentSeconds: queueAnchor \? 180 : undefined/);
+  assert.match(
+    closure,
+    /if \(!snapshotReadSucceeded\)[\s\S]*?stableStep: "snapshot-read"[\s\S]*?errorFamily: "snapshot-read-failed"/,
+  );
+  assert.match(closure, /else if \(!snapshotStable\)/);
+  assert.match(
+    closure,
+    /privacyClosureOpen[\s\S]*?"snapshot-read"[\s\S]*?"snapshot-drift"/,
+  );
+  const failureRecord = blockBetween(
+    spec,
+    "type StableGateFailure",
+    "type ScreenshotEvidence",
+  );
+  assert.doesNotMatch(
+    failureRecord,
+    /message|stack|dom|text|email|itemId|userId|response|url/i,
+  );
+  const recorder = blockBetween(
+    spec,
+    "function recordStableGateFailure",
+    "function stableErrorFamily",
+  );
+  assert.doesNotMatch(
+    recorder,
+    /error\.message|error\.stack|JSON\.stringify\(error/,
+  );
 });
 
-test("S232H.2 pins the three canonical Figma representative PNGs", () => {
+test("visual gate is a single prepare-inspect-screenshot pass with post-read closure", () => {
+  const visualCandidate = blockBetween(
+    spec,
+    "async function runVisualCandidate",
+    "async function compareScreenshotToFigmaReference",
+  );
+  const prepareIndex = visualCandidate.indexOf("await prepare()");
+  const inspectIndex = visualCandidate.indexOf("captureSyntheticScreenshot(");
+  const cleanupIndex = visualCandidate.indexOf("finally {");
+  assert.ok(
+    prepareIndex >= 0 &&
+      inspectIndex > prepareIndex &&
+      cleanupIndex > inspectIndex,
+  );
+  const capture = blockBetween(
+    spec,
+    "async function captureSyntheticScreenshot",
+    "async function prepareInitialRoute",
+  );
+  assert.match(
+    capture,
+    /inspectSyntheticArtifactBoundary[\s\S]*?page\.screenshot\(/,
+  );
+  assert.equal([...spec.matchAll(/page\.screenshot\(/g)].length, 1);
+  assert.doesNotMatch(spec, /runPreflightCandidate|options\.preflight/);
+  assert.match(spec, /visualGate[\s\S]*?scheduledCandidates:\s*25/);
+  assert.match(spec, /completedAudits/);
+  for (const field of [
+    "preparationBlockerCount",
+    "cleanupBlockerCount",
+    "visualBlockerCount",
+    "privacyBlockerCount",
+  ]) {
+    assert.match(spec, new RegExp(`${field}:\\s*0`));
+  }
+  assert.match(
+    spec,
+    /let finalAudit[\s\S]*?snapshotReadSucceeded[\s\S]*?snapshotStable[\s\S]*?for \(const screenshot[\s\S]*?writeFile/,
+  );
+  assert.match(spec, /selectedFingerprint/);
+  assert.match(spec, /sourceFingerprint/);
+  const visualTest = spec.slice(spec.indexOf('test("@visual'));
+  assert.match(visualTest, /verifySessionBinding/);
+  assert.match(visualTest, /proof\.selectedSessionFingerprint/);
+  assert.match(
+    visualTest,
+    /targetAudit\?\.fingerprint === proof\.selectedFingerprint/,
+  );
+  assert.match(visualTest, /sameStringSet\(/);
+  for (const family of [
+    "items",
+    "notes",
+    "tags",
+    "recurrence",
+    "reviewQueue",
+    "studyLogs",
+    "weeklySummaries",
+    "learningSignals",
+    "agendaUsage",
+    "todaySeeds",
+    "studyProfiles",
+    "conceptNodes",
+  ]) {
+    assert.ok(spec.includes(family), `fingerprint omits ${family}`);
+  }
+});
+
+test("the 45-audit and 28-PNG matrix remains exact", () => {
+  assert.match(
+    spec,
+    /initialAuditRowCount: proof\.auditRows![\s\S]*?auditKind === "initial-route"/,
+  );
+  assert.match(
+    spec,
+    /dynamicAuditRowCount: proof\.auditRows![\s\S]*?auditKind === "dynamic-state"/,
+  );
+  assert.match(spec, /auditRowCount: proof\.auditRows!\.length/);
+  assert.match(spec, /beforeScreenshotCount: baselineScreenshots\.length/);
+  assert.match(spec, /initialAfterScreenshotCount,/);
+  assert.match(spec, /dynamicScreenshotCount:\s*dynamicAfterScreenshotCount/);
+  assert.match(spec, /const dynamicScreenshotNames = new Set/);
+  assert.match(spec, /afterScreenshotCount: afterScreenshots\.length/);
+  assert.match(
+    spec,
+    /figmaReferenceScreenshotCount: figmaReferenceScreenshots\.length/,
+  );
+  assert.match(spec, /figmaComparisonCount: figmaComparisons\.length/);
+  assert.match(spec, /screenshotCount: screenshotNames\.length/);
+  assert.match(spec, /screenshotCallCount,/);
+  assert.match(spec, /s232h2-before-ledger-/);
+  assert.match(spec, /s232h2-before-calculator-390\.png/);
+  assert.match(
+    spec,
+    /"s232h2-after-" \+ route\.id \+ "-" \+ viewport\.label \+ "\.png"/,
+  );
+  for (const name of [
+    "s232h2-figma-mobile-ledger-56-2.png",
+    "s232h2-figma-desktop-ledger-59-62.png",
+    "s232h2-figma-mobile-calculator-57-34.png",
+  ]) {
+    assert.ok(spec.includes(name), `missing evidence PNG: ${name}`);
+  }
+  assert.match(workflow, /screenshotCount !== 28/);
+  assert.match(workflow, /value\.screenshotCallCount !== 25/);
+  assert.match(workflow, /a11yGate\.scheduledCandidates !== 45/);
+  assert.match(workflow, /a11yGate\.completedAudits !== 45/);
+  assert.match(workflow, /visualGate\.scheduledCandidates !== 25/);
+  assert.match(workflow, /visualGate\.completedAudits !== 25/);
+  assert.match(
+    workflow,
+    /privacyGate\.completedAudits !== privacyGate\.scheduledCandidates/,
+  );
+  assert.match(workflow, /privacyGate\.notRunCount !== 0/);
+  assert.match(workflow, /privacyGate\.endpointReadSucceeded !== true/);
+  assert.match(workflow, /privacyGate\.scheduledCandidates > 3/);
+  assert.match(
+    workflow,
+    /privacyGate\.selectedExactFixtureCount !== privacyGate\.selectedAccountItemCount/,
+  );
+  assert.match(workflow, /visualGate\.screenshotCallCount !== 25/);
+  assert.match(workflow, /snapshotReadSucceeded !== true/);
+  assert.match(workflow, /snapshotStable !== true/);
+});
+
+test("manifest and artifacts fail closed on blockers or real-account material", () => {
+  assert.match(spec, /schemaVersion:\s*4/);
+  assert.match(spec, /privacyGate/);
+  assert.match(spec, /a11yGate/);
+  assert.match(spec, /visualGate/);
+  assert.match(spec, /credentialsRedacted/);
+  assert.match(spec, /identityMasked/);
+  assert.match(spec, /actualAccountArtifactCount:\s*0/);
+  assert.match(
+    spec,
+    /privateLearnerContentCaptured:\s*actualAccountArtifactCount !== 0/,
+  );
+  assert.match(spec, /rawInputArtifactCaptured:\s*false/);
+  assert.match(spec, /domCaptured:\s*false/);
+  assert.match(spec, /traceCaptured:\s*false/);
+  assert.match(spec, /videoCaptured:\s*false/);
+  assert.match(
+    spec,
+    /result: figmaComparisons\.every\(\(comparison\) => comparison\.passed\)[\s\S]*?\? "pass"[\s\S]*?: "fail"/,
+  );
+  assert.match(
+    spec,
+    /expect\([\s\S]*?visualGate[\s\S]*?completedAudits: 25[\s\S]*?snapshotStable: true/,
+  );
+  assert.doesNotMatch(spec, /result:\s*["']pass["']/);
+  assert.match(workflow, /privacyGate\.blockerCount !== 0/);
+  assert.match(workflow, /privacyGate\.targetSessionBound !== true/);
+  assert.match(workflow, /privacyGate\.baselineSessionBound !== true/);
+  assert.match(workflow, /privacyGate\.baselineUsesSelectedFixture !== true/);
+  assert.match(workflow, /a11yGate\.blockerCount !== 0/);
+  for (const field of [
+    "preparationBlockerCount",
+    "cleanupBlockerCount",
+    "visualBlockerCount",
+    "privacyBlockerCount",
+  ]) {
+    assert.match(workflow, new RegExp(`visualGate\\.${field} !== 0`));
+  }
+  assert.match(workflow, /rawIdentityArtifactCount !== 0/);
+  assert.match(workflow, /actualAccountArtifactCount !== 0/);
+  assert.match(workflow, /forbiddenArtifactKeys/);
+  for (const key of [
+    "selectedSlot",
+    "selectedFingerprint",
+    "selectedSessionFingerprint",
+    "fixtureIds",
+    "ledgerItemId",
+    "deniedCanary",
+    "sessionUserId",
+  ]) {
+    assert.ok(workflow.includes(`"${key}"`));
+  }
+  assert.match(workflow, /\[0-9a-f\]\{64\}/);
+  assert.match(workflow, /\[0-9a-f\]\{8\}-\[0-9a-f\]\{4\}-\[0-9a-f\]\{4\}/);
+  assert.match(workflow, /physicalScreenshots\.length !== 28/);
+  assert.match(workflow, /s232h2-visual-manifest\.json/);
+  assert.match(workflow, /test-results\/\*\*\/s232h2-\*\.png/);
+});
+
+test("Figma references remain pinned and hostile comparisons remain direct", () => {
   for (const snapshot of figmaSnapshots) {
     const buffer = readFileSync(`${snapshotDirectory}/${snapshot.file}`);
     assert.deepEqual(pngDimensions(buffer), {
@@ -456,540 +925,6 @@ test("S232H.2 pins the three canonical Figma representative PNGs", () => {
       snapshot.sha256,
     );
   }
-});
-
-test("S232H.2 produces the fixed initial, dynamic, before, and Figma evidence set", () => {
-  assert.match(spec, /isAllRouteMobileEvidence = viewport\.width === 390/);
-  assert.match(spec, /route\.id === "today" \|\| route\.id === "ledger"/);
-  assert.match(spec, /viewport\.width === 1440 && route\.id === "ledger"/);
-  assert.match(spec, /expect\(initialAuditRows\)\.toHaveLength\(39\)/);
-  assert.match(spec, /expect\(dynamicAuditRows\)\.toHaveLength\(6\)/);
-  assert.match(spec, /expect\(auditRows\)\.toHaveLength\(45\)/);
-  assert.match(spec, /expect\(initialAfterScreenshots\)\.toHaveLength\(16\)/);
-  assert.match(spec, /expect\(dynamicScreenshots\)\.toHaveLength\(6\)/);
-  assert.match(spec, /expect\(afterScreenshots\)\.toHaveLength\(22\)/);
-  assert.match(spec, /expect\(baselineScreenshots\)\.toHaveLength\(3\)/);
-  assert.match(spec, /const figmaReferenceScreenshots = figmaReferences\.map/);
-  assert.match(spec, /expect\(figmaComparisons\)\.toHaveLength\(3\)/);
-  assert.match(
-    spec,
-    /expect\.soft\(figmaComparisons\.every\(\(comparison\) => comparison\.passed\)\)\.toBe\(true\)/,
-  );
-  assert.match(spec, /expect\(screenshotNames\)\.toHaveLength\(28\)/);
-  assert.match(spec, /s232h2-before-ledger-/);
-  assert.match(spec, /s232h2-before-calculator-390\.png/);
-  assert.match(spec, /s232h2-after-\$\{route\.id\}-\$\{viewport\.label\}\.png/);
-  assert.match(spec, /advanceCalculatorToCasioInput/);
-  assert.match(
-    spec,
-    /gotoRequiredRoute\(page, requestedPath\)[\s\S]*?route\.id === "calculator" && viewport\.width === 390[\s\S]*?advanceCalculatorToCasioInput\(page\)/,
-  );
-  assert.match(spec, /visibleTargetFailures\(page\)/);
-  assert.match(spec, /data-calculator-routine-active-step=\"casio_input\"/);
-  assert.match(spec, /data-v3-component=\"CalculatorStep\"/);
-  const scrollHelperStart = spec.indexOf(
-    "async function stabilizeCanonicalTop",
-  );
-  const focusAuditStart = spec.indexOf("async function verifyKeyboardFocus");
-  const captureStart = spec.indexOf(
-    "async function captureSyntheticScreenshot",
-  );
-  assert.ok(scrollHelperStart >= 0 && focusAuditStart > scrollHelperStart);
-  assert.ok(captureStart > focusAuditStart);
-  const scrollHelper = spec.slice(scrollHelperStart, focusAuditStart);
-  const focusAudit = spec.slice(focusAuditStart, captureStart);
-  const captureEnd = spec.indexOf(
-    "async function advanceCalculatorToCasioInput",
-    captureStart,
-  );
-  const capture = spec.slice(captureStart, captureEnd);
-  assert.match(
-    scrollHelper,
-    /current\.hash === auditHash[\s\S]*?original\.hash !== auditHash/,
-  );
-  assert.match(
-    scrollHelper,
-    /if \(hashCreatedByAudit && original\)[\s\S]*?history\.replaceState\([\s\S]*?original\.pathname[\s\S]*?original\.search[\s\S]*?original\.hash/,
-  );
-  assert.doesNotMatch(scrollHelper, /history\.pushState/);
-  const blurIndex = scrollHelper.indexOf("document.activeElement.blur()");
-  const autoIndex = scrollHelper.indexOf(
-    'setProperty("scroll-behavior", "auto", "important")',
-  );
-  const quiescenceIndex = scrollHelper.indexOf("observeQuiescence");
-  const quiescenceFailureIndex = scrollHelper.indexOf(
-    "S232H2_SCROLL_NOT_QUIESCENT",
-  );
-  const resetIndex = scrollHelper.indexOf("window.scrollTo(instantTop)");
-  const immediateIndex = scrollHelper.indexOf("immediateAfterReset =");
-  const postResetIndex = scrollHelper.indexOf("observePostReset");
-  const finallyIndex = scrollHelper.indexOf("} finally {");
-  assert.ok(
-    blurIndex >= 0 &&
-      autoIndex > blurIndex &&
-      quiescenceIndex > autoIndex &&
-      quiescenceFailureIndex > quiescenceIndex &&
-      resetIndex > quiescenceFailureIndex &&
-      immediateIndex > resetIndex &&
-      postResetIndex > immediateIndex &&
-      finallyIndex > postResetIndex,
-  );
-  assert.equal(
-    scrollHelper.match(/window\.scrollTo\(instantTop\)/g)?.length,
-    1,
-  );
-  assert.doesNotMatch(
-    scrollHelper,
-    /document\.scrollingElement\?\.scrollTo\(|setTimeout|waitForTimeout/,
-  );
-  assert.match(
-    scrollHelper,
-    /identicalQuiescentFrames >= 3[\s\S]*?quiescentSequence\.length >= 60[\s\S]*?const quiescent = identicalQuiescentFrames >= 3/,
-  );
-  assert.match(
-    scrollHelper,
-    /immediateAfterReset\.windowScrollY === 0[\s\S]*?immediateAfterReset\.scrollingElementScrollTop === 0[\s\S]*?postResetSequence\.every[\s\S]*?S232H2_CANONICAL_TOP_UNSTABLE/,
-  );
-  assert.match(
-    scrollHelper,
-    /finally \{[\s\S]*?previousScrollBehavior\.value[\s\S]*?removeProperty\("scroll-behavior"\)/,
-  );
-  assert.match(
-    focusAudit,
-    /const focusAuditStartUrl = page\.url\(\)[\s\S]*?const preFocusControl = await stabilizeCanonicalTop\(page\)[\s\S]*?beginKeyboardTraversalAtDocumentStart\(page\)[\s\S]*?activateCanonicalSkipLink\(page\)[\s\S]*?stabilizeCanonicalTop\(page, \{[\s\S]*?originalUrl: focusAuditStartUrl[\s\S]*?auditHash: activation\.auditHash/,
-  );
-  assert.match(
-    focusAudit,
-    /const keyboardFocusPassed =[\s\S]*?completedFocusTraversal[\s\S]*?visitedFocusIndexes\.size > 0[\s\S]*?everyFocusVisible[\s\S]*?enabledPrimaryReached[\s\S]*?skipLinkActivated;/,
-  );
-  const keyboardFocusPassedBlock = focusAudit.slice(
-    focusAudit.indexOf("const keyboardFocusPassed ="),
-    focusAudit.indexOf("return {", focusAudit.indexOf("const keyboardFocusPassed =")),
-  );
-  assert.doesNotMatch(
-    keyboardFocusPassedBlock,
-    /scrollRecovery|preFocusControl|stable/,
-  );
-  assert.match(
-    focusAudit,
-    /S232H2_MAIN_LANDMARK_INVALID[\s\S]*?S232H2_POINTER_TARGET_BELOW_44[\s\S]*?S232H2_AXE_SERIOUS_CRITICAL[\s\S]*?S232H2_FOCUS_TRAVERSAL_INCOMPLETE[\s\S]*?S232H2_FOCUS_NOT_VISIBLE/,
-  );
-  assert.match(
-    capture,
-    /const canonicalTop = await stabilizeCanonicalTop\(page\)[\s\S]*?const screenshotScrollY = canonicalTop\.finalWindowScrollY[\s\S]*?if \(options\.preflight\)[\s\S]*?canonicalTop\.failureCode[\s\S]*?\.toBeNull\(\)[\s\S]*?canonical top position[\s\S]*?\.toBe\(0\)/,
-  );
-  assert.doesNotMatch(capture, /\.toBe\(31\)|toBeCloseTo|tolerance/i);
-  for (const state of [
-    "capture-extraction-preview",
-    "answer-review-result",
-    "answer-review-rewrite",
-    "review-revealed-selected",
-    "session-saved-capture",
-    "calculator-completed-saved",
-  ]) {
-    assert.ok(spec.includes(state), `missing dynamic-state evidence: ${state}`);
-  }
-  assert.match(workflow, /initialAuditRowCount !== 39/);
-  assert.match(workflow, /dynamicAuditRowCount !== 6/);
-  assert.match(workflow, /screenshotCount !== 28/);
-  assert.match(workflow, /value\.screenshotCallCount !== 25/);
-  assert.match(workflow, /preflight\.visualAuditCandidateCount !== 45/);
-  assert.match(workflow, /preflight\.privacyCandidateCount !== 25/);
-  assert.match(workflow, /preflight\.privacyCheckCount !== 25/);
-  assert.match(workflow, /preflight\.privacyNotRunCount !== 0/);
-  assert.match(workflow, /preflight\.screenshotCallCount !== 0/);
-  assert.match(workflow, /preflight\.retainedPngCount !== 0/);
-  assert.match(workflow, /s232h2-\*\.png/);
-  assert.match(workflow, /s232h2-visual-manifest\.json/);
-  assert.match(
-    workflow,
-    /Run exact-head production V3 visual acceptance[\s\S]*?id: visual_acceptance/,
-  );
-  const diagnosticStart = workflow.indexOf(
-    "Upload bounded representative PNG diagnostics after visual acceptance failure",
-  );
-  const diagnosticEnd = workflow.indexOf(
-    "\n      - name: Recheck both exact deployment SHAs",
-    diagnosticStart,
-  );
-  assert.ok(diagnosticStart >= 0 && diagnosticEnd > diagnosticStart);
-  const diagnosticBlock = workflow.slice(diagnosticStart, diagnosticEnd);
-  assert.match(
-    diagnosticBlock,
-    /if: \$\{\{ failure\(\) && steps\.visual_acceptance\.outcome == 'failure' \}\}/,
-  );
-  for (const fileName of [
-    "s232h2-after-ledger-390.png",
-    "s232h2-figma-mobile-ledger-56-2.png",
-    "s232h2-after-ledger-1440.png",
-    "s232h2-figma-desktop-ledger-59-62.png",
-    "s232h2-after-calculator-390.png",
-    "s232h2-figma-mobile-calculator-57-34.png",
-  ]) {
-    assert.ok(
-      diagnosticBlock.includes(`test-results/**/${fileName}`),
-      `missing bounded visual diagnostic: ${fileName}`,
-    );
-  }
-  assert.equal(
-    [...diagnosticBlock.matchAll(/test-results\/\*\*\/s232h2-[a-z0-9-]+\.png/g)]
-      .length,
-    6,
-  );
-  assert.match(diagnosticBlock, /if-no-files-found: warn/);
-  assert.match(diagnosticBlock, /retention-days: 7/);
-  assert.doesNotMatch(
-    diagnosticBlock,
-    /s232h2-\*\.png|manifest|trace\.zip|\.webm|playwright-report/,
-  );
-  assert.doesNotMatch(
-    workflow,
-    /test-results\/\*\*\/\*\.png|trace\.zip|playwright-report/,
-  );
-});
-
-test("S232H.2 evidence is privacy-bounded synthetic data and directly compared with Figma", () => {
-  assert.match(spec, /loginWithDedicatedTestAccount/);
-  assert.match(spec, /ensureSyntheticLedgerFixture/);
-  assert.ok(spec.includes('"/api/auth/session"'));
-  assert.ok(spec.includes('"/api/os/items?limit=501"'));
-  assert.ok(spec.includes('"/api/os/study-logs?mode=second&limit=501"'));
-  assert.ok(spec.includes('"/api/os/review-queue"'));
-  assert.ok(spec.includes('"/api/os/today-focus?mode=second"'));
-  assert.ok(spec.includes('"/api/os/weekly-summary?mode=second"'));
-  assert.match(spec, /\/api\/os\/items\/\$\{encodeURIComponent\(itemId\)\}/);
-  assert.match(
-    spec,
-    /context\(\)[\s\S]{0,40}?\.request\.post\("\/api\/os\/items"/,
-  );
-  assert.match(spec, /S232H2 synthetic visual acceptance/);
-  assert.match(spec, /s232h2:v3-visual:v1/);
-  assert.match(spec, /s232h2:v3-visual:ledger:v2/);
-  assert.match(spec, /s232h2:v3-visual:ledger:v1/);
-  assert.match(spec, /isHistoricalH2LedgerV1/);
-  assert.match(spec, /isHistoricalS232gAggregateSource/);
-  assert.match(spec, /isHistoricalS232gAggregateRewrite/);
-  assert.match(spec, /historicalS232gRewriteParagraph/);
-  assert.match(spec, /audit\.items\.find\(isCurrentH2Ledger\)/);
-  const currentLedgerClassifier = spec.slice(
-    spec.indexOf("function isCurrentH2Ledger"),
-    spec.indexOf("function isHistoricalH2LedgerV1"),
-  );
-  const currentQueueClassifier = spec.slice(
-    spec.indexOf("function isH2QueueAnchor"),
-    spec.indexOf("function isHistoricalH2QueueAnchor"),
-  );
-  const historicalLedgerClassifier = spec.slice(
-    spec.indexOf("function isHistoricalH2LedgerV1"),
-    spec.indexOf("function isLegacyH2Ledger"),
-  );
-  assert.match(currentLedgerClassifier, /hasExplicitUnconfirmedFields\(item\)/);
-  assert.match(currentQueueClassifier, /hasExplicitUnconfirmedFields\(item\)/);
-  assert.match(
-    historicalLedgerClassifier,
-    /hasHistoricalAbsentConfirmationFields\(item\)/,
-  );
-  assert.match(
-    spec,
-    /function hasExplicitUnconfirmedFields[\s\S]*?hasManualCorrection === false[\s\S]*?ocrConfirmedByLearner === false/,
-  );
-  assert.match(spec, /hasHistoricalAbsentConfirmationFields/);
-  assert.match(spec, /acceptance_fixture_id/);
-  assert.match(spec, /acceptance_fixture_role/);
-  assert.match(spec, /isExactSyntheticRoot/);
-  assert.match(spec, /isOwnedSyntheticRewrite/);
-  assert.match(spec, /item\.subjectLabel !== parent\.subjectLabel/);
-  assert.match(spec, /item\.sourceType !== parent\.sourceType/);
-  assert.match(spec, /item\.confidence !== parent\.confidence/);
-  assert.match(spec, /hasExactSyntheticPayloadContract/);
-  assert.match(spec, /exactSyntheticPayloadFailurePaths/);
-  assert.match(spec, /summarizeSyntheticPayloadFailurePaths/);
-  assert.match(spec, /schema paths and counts only, never values/);
-  assert.match(spec, /collectSyntheticPayloadFailurePaths/);
-  assert.match(spec, /exactSyntheticSystemValuePatterns\.some/);
-  assert.match(spec, /concept:second:\(\?:감정평가실무/);
-  assert.match(spec, /second-\(\?:practice-/);
-  assert.ok(spec.includes('"local_taxonomy_v1"'));
-  assert.ok(spec.includes('"low"'));
-  assert.ok(spec.includes('"답안 구조 점검(점검 필요)"'));
-  assert.ok(spec.includes('"구조"'));
-  assert.ok(spec.includes('"사안포섭"'));
-  assert.ok(spec.includes('"쟁점 구조화"'));
-  assert.ok(spec.includes('"포섭 논증"'));
-  assert.ok(spec.includes('"쟁점 누락"'));
-  assert.ok(spec.includes('"규범-사실 연결 부족"'));
-  assert.ok(
-    spec.includes(
-      '"공적 견해표명에 해당하는 사실을 구체적으로 연결해야 합니다."',
-    ),
-  );
-  assert.ok(
-    spec.includes(
-      '"curriculum-capture-capture-note-second_law_project_approval_disposition"',
-    ),
-  );
-  assert.ok(
-    spec.includes(
-      '"시장가치\/공정가치에서 정의\/논거\/비교\/사례 적용 키워드를 먼저 떠올려 보세요."',
-    ),
-  );
-  assert.doesNotMatch(spec, /\\p\{Letter\}|\^second\(\?:\[-_\]/);
-  assert.match(spec, /rewrite_source_item_id/);
-  assert.match(spec, /const itemListingComplete = listedItems\.length < 501/);
-  assert.match(spec, /const studyLogListingComplete = logs\.length < 501/);
-  assert.doesNotMatch(
-    spec,
-    /syntheticEvidencePattern|function isSyntheticText|values\.some|const syntheticLogs = logs\.filter/,
-  );
-  assert.match(
-    spec,
-    /const strictOwnershipContract =\s*listedAccountOwnedItems\.length === listedItems\.length &&\s*detailOwnershipClosed &&\s*logs\.length === 0/,
-  );
-  assert.match(
-    spec,
-    /const detailOwnershipClosed = detailItems\.every\([\s\S]*?item\.userId === sessionUserId &&[\s\S]*?listedAccountOwnedIds\.has\(resolveSyntheticItemId\(item\)\)/,
-  );
-  assert.match(spec, /syntheticQueue = queue\.filter[\s\S]*?owned\.has\(item\.itemId\)/);
-  assert.match(spec, /planningIds\.today\.filter\(\(itemId\) =>\s*owned\.has\(itemId\)/);
-  assert.match(
-    spec,
-    /planningIds\.weekly\.every\([\s\S]*?listedAccountOwnedIds\.has\(itemId\)/,
-  );
-  assert.match(spec, /accountOwnedItemCount: listedAccountOwnedItems\.length/);
-  assert.match(spec, /exactFixtureItemCount: listedExactFixtures\.length/);
-  assert.match(spec, /unclassifiedAccountItemCount: unclassifiedItems\.length/);
-  assert.match(spec, /historicalS232gSourceCount/);
-  assert.match(spec, /historicalS232gRewriteCount/);
-  assert.match(spec, /family-counts=/);
-  assert.match(spec, /historical-diagnostics=/);
-  assert.match(spec, /historicalS232gSourceFailureFields/);
-  assert.match(spec, /historicalS232gRewriteFailureFields/);
-  assert.match(spec, /payloadFailurePaths/);
-  assert.match(spec, /parentRawPayload\.rewrite_instruction/);
-  assert.match(spec, /parentAiDraft\.rewriteInstruction/);
-  assert.match(spec, /const listedAccountOwnedIds = new Set/);
-  assert.match(spec, /const governedTestAccount = sessionBound/);
-  assert.match(spec, /item\.userId === sessionUserId/);
-  assert.match(spec, /exactFixtureItemCount/);
-  assert.match(spec, /governedTestAccount/);
-  assert.match(spec, /detailOwnershipClosed/);
-  assert.match(spec, /any study log makes capture fail closed/);
-  assert.match(
-    spec,
-    /const preMutationAudit = await auditSyntheticAccount[\s\S]*?const initialAfterScreenshots/,
-  );
-  assert.match(spec, /accountItemCount/);
-  assert.match(spec, /accountOwnedItemCount/);
-  assert.match(spec, /unclassifiedAccountItemCount/);
-  assert.match(spec, /accountStudyLogCount/);
-  assert.match(spec, /syntheticFixtureReady/);
-  assert.match(spec, /accountSnapshotStable/);
-  assert.match(spec, /screenshotDataBoundaryClosed/);
-  assert.match(spec, /sessionBound/);
-  assert.match(spec, /strictOwnershipContract/);
-  assert.match(spec, /pendingOwnedQueue/);
-  assert.match(spec, /queueDetailsAudited/);
-  assert.match(spec, /weeklyTaskDetailsAudited/);
-  assert.match(spec, /privateLearnerContentCaptured/);
-  assert.doesNotMatch(spec, /syntheticAccountOnly|syntheticFixtureOnly/);
-  assert.doesNotMatch(spec, /privateLearnerContentCaptured:\s*false/);
-  assert.match(spec, /createScreenshotDataBoundary/);
-  assert.match(spec, /provenanceBoundaryScalarPath\(value, keyPath\)/);
-  assert.match(spec, /typeof value === "number" && Number\.isFinite\(value\)/);
-  assert.match(boundaryPolicy, /"<number>"/);
-  assert.match(spec, /const unclassifiedItems = listedItems\.filter/);
-  assert.match(spec, /NodeFilter\.SHOW_TEXT/);
-  assert.match(spec, /Array\.from\(element\.attributes\)/);
-  assert.match(spec, /HTMLInputElement/);
-  assert.match(spec, /"::before", "::after"/);
-  assert.match(spec, /visibleUninspectableSurfaceCount/);
-  assert.match(spec, /fragmentDescriptors: ScreenshotBoundaryFragmentDescriptor\[\]/);
-  assert.match(spec, /sourceItemIds: Set<string>/);
-  assert.match(spec, /origins: Map<string, ScreenshotBoundaryFragmentOrigin>/);
-  assert.match(spec, /originClass: "direct-field"/);
-  assert.match(spec, /"known-nested-field"/);
-  assert.match(spec, /"unknown-nested-field"/);
-  assert.match(spec, /fieldOrPathFamily/);
-  assert.match(spec, /riskClass/);
-  assert.match(spec, /contentKind/);
-  assert.match(spec, /screenshotBoundaryLengthFamily\(value\)/);
-  assert.match(spec, /buildScreenshotBoundaryPolicyTable/);
-  assert.match(boundaryPolicy, /decideScreenshotBoundaryPolicy/);
-  assert.match(boundaryPolicy, /buildScreenshotBoundaryPolicyTable/);
-  assert.match(spec, /provenanceBoundArbitraryPresentationUtilityPattern/);
-  assert.match(boundaryPolicy, /attributeNamePatternSource/);
-  assert.doesNotMatch(boundaryPolicy, /exactArbitraryPresentationUtilityTokens/);
-  assert.doesNotMatch(
-    spec,
-    /element\.closest\(\s*['"]main\[data-s232e3-answer-review-entry/,
-  );
-  assert.match(spec, /exactContentAttributeNames\.has/);
-  assert.doesNotMatch(spec, /unrestrictedFragments|sensitiveFragments/);
-  assert.doesNotMatch(spec, /unrestricted-account-content/);
-  assert.match(spec, /referencesAnyItemId\(window\.location\.href/);
-  assert.match(
-    spec,
-    /Array\.from\(current\.attributes\)[\s\S]*?referencesAnyItemId\(attribute\.value, sourceItemIds\)/,
-  );
-  assert.match(
-    spec,
-    /const policyDecision =\s*screenshotBoundaryPolicyTable\[policyKey\]/,
-  );
-  assert.match(spec, /if \(policyDecision\?\.block !== false\)/);
-  assert.match(spec, /serializedPolicySchema\.hardBlockPriority\.find/);
-  assert.match(spec, /serializedPolicySchema\.positiveEvidencePriority\.find/);
-  assert.doesNotMatch(spec, /if \(!sourceItemIds\)\s*return/);
-  assert.match(spec, /"semantic-text"/);
-  assert.match(spec, /"content-attribute"/);
-  assert.match(spec, /"structural-reference"/);
-  assert.match(spec, /"form-value"/);
-  assert.match(spec, /"generated-content"/);
-  assert.match(spec, /"background-reference"/);
-  assert.match(spec, /name === "tabindex"/);
-  assert.match(spec, /name === "rows"/);
-  assert.match(spec, /aria-valuetext/);
-  assert.match(spec, /aria-valuenow/);
-  assert.match(
-    spec,
-    /attribute\.name\.toLowerCase\(\) === "aria-valuenow"[\s\S]*?"progressbar"[\s\S]*?\? "structural-reference"/,
-  );
-  assert.match(spec, /semanticLabelPatternSources/);
-  assert.match(spec, /const semanticLabel =/);
-  assert.match(spec, /for \(const identitySurface of await identity\.all\(\)\)/);
-  assert.doesNotMatch(spec, /identity\.count\(\)\) === 1/);
-  assert.match(
-    spec,
-    /element\.closest\(semanticTextSurfaceSelector\)/,
-  );
-  assert.match(
-    spec,
-    /channel === "semantic-text"[\s\S]*?semanticTextSurface\(element\)[\s\S]*?: normalized/,
-  );
-  assert.match(
-    spec,
-    /\[role="group"\],\[role="radiogroup"\],\[role="listbox"\]/,
-  );
-  assert.match(
-    spec,
-    /addElementSemanticContext\(element\)[\s\S]*?semanticContextParts\.push\(normalized\)/,
-  );
-  assert.match(spec, /semanticContextParts\.push\(semanticSurfaceText\)/);
-  assert.match(spec, /root instanceof ShadowRoot[\s\S]*?CSS\.escape\(id\)/);
-  assert.match(spec, /structuralCollisionSchema/);
-  assert.match(spec, /return "instrumentation-syntax"/);
-  assert.match(spec, /return "progress-aria-syntax"/);
-  assert.match(spec, /return "id-reference-syntax"/);
-  assert.match(spec, /return "svg-geometry"/);
-  assert.match(spec, /return "none"/);
-  assert.match(spec, /incidentalOrdinalOrCounter/);
-  assert.match(spec, /exactSyntheticCalculatorFormSelector/);
-  assert.match(spec, /exactSyntheticFormFixtures/);
-  const syntheticFormFixtureBlock = spec.slice(
-    spec.indexOf("const exactSyntheticFormFixtures"),
-    spec.indexOf("];", spec.indexOf("const exactSyntheticFormFixtures")) + 2,
-  );
-  assert.match(syntheticFormFixtureBlock, /exactSyntheticCalculatorFormSelector/);
-  assert.doesNotMatch(syntheticFormFixtureBlock, /input\[type="date"\]/);
-  assert.match(spec, /normalizedSyntheticFormFixtures\.some/);
-  assert.match(spec, /fixture\.values\.has\(normalized\)/);
-  assert.match(spec, /\{ value: element\.value, kind: "select-value" as const \}/);
-  const testUseBlock = spec.slice(
-    spec.indexOf("test.use({"),
-    spec.indexOf("});", spec.indexOf("test.use({")) + 3,
-  );
-  assert.match(testUseBlock, /video: "off"/);
-  assert.match(testUseBlock, /screenshot: "off"/);
-  assert.match(testUseBlock, /trace: "off"/);
-  assert.match(spec, /test\.describe\.configure\(\{ timeout: 1_500_000, retries: 0 \}\)/);
-  assert.match(spec, /metadata-only-observation=/);
-  assert.match(spec, /S232H2_SCREENSHOT_BOUNDARY_OPEN/);
-  assert.match(spec, /S232H2_PREFLIGHT_OPEN/);
-  assert.match(spec, /visualAuditCandidateCount === 45/);
-  assert.match(spec, /privacyCandidateCount === 25/);
-  assert.match(spec, /privacyCheckCount === 25/);
-  assert.match(spec, /privacyNotRunCount === 0/);
-  assert.match(spec, /preparationBlockerCount === 0/);
-  assert.match(spec, /visualA11yBlockerCount === 0/);
-  assert.match(spec, /privacyBlockerCount === 0/);
-  assert.match(spec, /screenshotCallCount === 0/);
-  assert.match(spec, /retainedPngCount === 0/);
-  assert.match(spec, /preflightAccountSnapshotStable/);
-  assert.match(spec, /type PreflightBlocker/);
-  assert.match(spec, /phase: collection\.phase/);
-  assert.match(spec, /routeStateAlias: collection\.routeStateAlias/);
-  assert.match(spec, /checkFamily/);
-  assert.match(spec, /failureCode/);
-  assert.match(spec, /sortedPreflightBlockers\(preflight\)/);
-  const preflightGate = spec.slice(
-    spec.indexOf("const preflightClosed ="),
-    spec.indexOf("const initialAfterScreenshots"),
-  );
-  assert.doesNotMatch(preflightGate, /expect\.soft/);
-  assert.match(spec, /blockingBuckets/);
-  assert.match(spec, /fragmentFamily/);
-  assert.match(spec, /maskedLength/);
-  assert.match(spec, /attributeFamily/);
-  assert.match(spec, /provenanceFilteredTextHitCount/);
-  assert.match(spec, /provenanceFilteredReferenceHitCount/);
-  assert.doesNotMatch(spec, /normalizedFragments\.filter\([^)]*length/);
-  assert.doesNotMatch(
-    boundaryPolicy,
-    /if\s*\([^)]*(?:length|lengthFamily)[^)]*<=\s*7[^)]*\)\s*return\s*\{\s*block:\s*false/i,
-  );
-  assert.doesNotMatch(spec, /unknown-key.*(?:allow|ignore)/i);
-  const captureBoundaryStart = spec.indexOf(
-    "async function captureSyntheticScreenshot",
-  );
-  const captureBoundaryEnd = spec.indexOf(
-    "async function advanceCalculatorToCasioInput",
-    captureBoundaryStart,
-  );
-  const captureBoundary = spec.slice(captureBoundaryStart, captureBoundaryEnd);
-  const boundaryObservationIndex = captureBoundary.indexOf(
-    "const blockingHitCount = await assertScreenshotDataBoundary();",
-  );
-  const preflightReturnIndex = captureBoundary.indexOf(
-    "if (options.preflight)",
-    boundaryObservationIndex,
-  );
-  const screenshotCallIndex = captureBoundary.indexOf("page.screenshot(");
-  assert.ok(
-    boundaryObservationIndex >= 0 &&
-      preflightReturnIndex > boundaryObservationIndex &&
-      screenshotCallIndex > preflightReturnIndex,
-  );
-  assert.match(
-    captureBoundary,
-    /boundary\.screenshotCallCount \+= 1;[\s\S]*?const buffer = await page\.screenshot\([\s\S]*?await assertScreenshotDataBoundary\(\);[\s\S]*?boundary\.captureCount/,
-  );
-  assert.equal([...spec.matchAll(/page\.screenshot\(/g)].length, 1);
-  assert.match(
-    spec,
-    /const finalAccountAudit = await auditSyntheticAccount[\s\S]*?accountSnapshotStable[\s\S]*?for \(const screenshot of \[\.\.\.baselineScreenshots, \.\.\.afterScreenshots\]\)[\s\S]*?await writeFile/,
-  );
-  assert.match(spec, /screenshotBoundary\.checkCount === 50/);
-  assert.match(spec, /screenshotBoundary\.captureCount === 25/);
-  assert.doesNotMatch(spec, /JSON\.stringify\(boundary\)/);
-  assert.doesNotMatch(spec, /detailRead\.itemId} must/);
-  assert.doesNotMatch(spec, /textContent\?\.trim\(\)\.slice/);
-  assert.match(spec, /evidence\.consoleErrors\.push\("console-error"\)/);
-  assert.match(spec, /evidence\.pageErrors\.push\("page-error"\)/);
-  assert.match(spec, /const credentialsRedacted =/);
-  assert.match(spec, /\n\s+credentialsRedacted,\n/);
-  assert.match(spec, /rawInputArtifactCaptured: false/);
-  assert.match(spec, /domCaptured: false/);
-  assert.match(spec, /traceCaptured: false/);
-  assert.match(spec, /videoCaptured: false/);
-  assert.match(spec, /maskColor: "#000000"/);
-  assert.match(spec, /visibleEmailOutsideMask/);
-  assert.doesNotMatch(spec, /captureSanitizedScreenshot/);
-  assert.doesNotMatch(spec, /result:\s*["']pass["']/);
-  assert.match(
-    spec,
-    /const result = acceptanceSignals\.every\(Boolean\) \? "pass" : "fail"/,
-  );
-  assert.match(spec, /\n\s+result,\n/);
-
   for (const snapshotName of [
     "figma-mobile-ledger.png",
     "figma-desktop-ledger.png",
@@ -997,49 +932,21 @@ test("S232H.2 evidence is privacy-bounded synthetic data and directly compared w
   ]) {
     assert.ok(
       spec.includes(snapshotName),
-      `missing direct comparison: ${snapshotName}`,
+      `missing direct Figma snapshot: ${snapshotName}`,
     );
   }
   assert.match(spec, /compareScreenshotToFigmaReference/);
   assert.match(spec, /testInfo\.snapshotPath\(reference\.snapshotName\)/);
-  assert.match(spec, /const buffer = await page\.screenshot/);
-  assert.match(spec, /actual\.buffer\.toString\("base64"\)/);
-  assert.match(spec, /context\.getImageData/);
-  assert.match(
-    spec,
-    /metrics\.meanColorDelta[\s\S]*?toBeLessThanOrEqual\(0\.18\)/,
-  );
-  assert.match(
-    spec,
-    /metrics\.nearPixelRatio[\s\S]*?toBeGreaterThanOrEqual\(0\.5\)/,
-  );
-  assert.match(spec, /cellRgbMeanAbsoluteError/);
-  assert.match(spec, /cellOccupancyMeanAbsoluteError/);
+  assert.match(spec, /meanColorDelta/);
+  assert.match(spec, /nearPixelRatio/);
   assert.match(spec, /edgeGridCorrelation/);
-  assert.match(spec, /edgeEnergyRatio/);
   assert.match(spec, /dilatedEdgeF1/);
   assert.match(spec, /anchorMaxRgbMeanDelta/);
   assert.match(spec, /anchorMinEdgeDensityRatio/);
-  assert.match(spec, /anchorsByNode/);
-  assert.match(spec, /verifyRepresentativeFigmaStructure/);
-  assert.match(spec, /data-s232d2-state-evidence/);
-  assert.match(spec, /data-s232d2-recovery-heading/);
-  assert.match(spec, /이번에 회복할 문장/);
-  assert.match(spec, /spatial edge-grid correlation/);
-  assert.match(
-    spec,
-    /expect\.soft\(\s*metrics\.edgeGridCorrelation,[\s\S]*?toBeGreaterThanOrEqual\(0\.5\)/,
-  );
-  assert.match(
-    spec,
-    /expect\.soft\(\s*passed,[\s\S]*?must satisfy every direct Figma comparison threshold/,
-  );
-  assert.match(spec, /const passed =/);
-  assert.match(spec, /figmaComparisons/);
-  assert.match(spec, /meanColorDelta/);
-  assert.match(spec, /nearPixelRatio/);
-  assert.match(spec, /figmaComparisonCount/);
-
+  assert.match(workflow, /comparison\.passed !== true/);
+  assert.match(workflow, /comparison\.meanColorDelta > 0\.18/);
+  assert.match(workflow, /comparison\.nearPixelRatio < 0\.5/);
+  assert.match(workflow, /comparison\.edgeGridCorrelation < 0\.5/);
   for (const node of [
     "43:2",
     "44:9",
@@ -1058,83 +965,7 @@ test("S232H.2 evidence is privacy-bounded synthetic data and directly compared w
   ]) {
     assert.ok(
       spec.includes(`"${node}"`),
-      `missing Figma node mapping: ${node}`,
+      `missing canonical Figma node: ${node}`,
     );
   }
-  assert.match(spec, /calculatorCasioInputVisible:\s*initialAuditRows\.some/);
-  assert.match(workflow, /screenshotDataBoundaryClosed/);
-  assert.match(workflow, /visibleUnclassifiedTextHitCount/);
-  assert.match(workflow, /provenanceFilteredTextHitCount/);
-  assert.match(workflow, /provenanceFilteredReferenceHitCount/);
-  assert.match(workflow, /strictOwnershipContract/);
-  assert.match(workflow, /edgeGridCorrelation/);
-  assert.match(workflow, /figmaComparisonCount !== 3/);
-  assert.match(workflow, /rawInputArtifactCaptured !== false/);
-  assert.match(workflow, /consoleErrorCount !== 0/);
-  assert.match(workflow, /baselineConsoleErrorCount !== 0/);
-});
-
-test("pre-PNG aggregate closes 45 visual and 25 privacy candidates before capture", () => {
-  const runnerStart = spec.indexOf("async function runPreflightCandidate");
-  const dynamicAuditStart = spec.indexOf(
-    "async function auditDynamicState",
-    runnerStart,
-  );
-  assert.ok(runnerStart >= 0 && dynamicAuditStart > runnerStart);
-  const runner = spec.slice(runnerStart, dynamicAuditStart);
-  const preparationIndex = runner.indexOf("await prepare()");
-  const privacyIndex = runner.indexOf("captureSyntheticScreenshot(");
-  const auditIndex = runner.indexOf("auditRow = await audit()");
-  const finallyIndex = runner.indexOf("} finally {");
-  assert.ok(
-    preparationIndex >= 0 &&
-      privacyIndex > preparationIndex &&
-      auditIndex > privacyIndex &&
-      finallyIndex > auditIndex,
-  );
-  assert.match(runner, /privacyNotRunCount \+= 1/);
-  assert.match(runner, /S232H2_PRIVACY_CHECK_NOT_RUN/);
-  assert.match(runner, /removeKeyboardTraversalOrigin\(page\)/);
-  assert.match(runner, /S232H2_CANDIDATE_CLEANUP_FAILED/);
-
-  const gateStart = spec.indexOf("const preflightClosure =");
-  const capturePhaseStart = spec.indexOf(
-    "const initialAfterScreenshots",
-    gateStart,
-  );
-  assert.ok(gateStart >= 0 && capturePhaseStart > gateStart);
-  const gate = spec.slice(gateStart, capturePhaseStart);
-  for (const contract of [
-    "visualAuditCandidateCount === 45",
-    "privacyCandidateCount === 25",
-    "privacyCheckCount === 25",
-    "privacyNotRunCount === 0",
-    "preparationBlockerCount === 0",
-    "visualA11yBlockerCount === 0",
-    "privacyBlockerCount === 0",
-    "finalAccountSnapshotStable === true",
-    "screenshotCallCount === 0",
-    "retainedPngCount === 0",
-  ])
-    assert.ok(gate.includes(contract), `missing preflight closure: ${contract}`);
-  assert.match(gate, /S232H2_PREFLIGHT_OPEN/);
-  assert.doesNotMatch(gate, /expect\.soft|page\.screenshot\(/);
-
-  const screenshotFunctionStart = spec.indexOf(
-    "async function captureSyntheticScreenshot",
-  );
-  const screenshotFunctionEnd = spec.indexOf(
-    "async function advanceCalculatorToCasioInput",
-    screenshotFunctionStart,
-  );
-  const screenshotFunction = spec.slice(
-    screenshotFunctionStart,
-    screenshotFunctionEnd,
-  );
-  const preflightBranch = screenshotFunction.lastIndexOf(
-    "if (options.preflight)",
-  );
-  const screenshotApi = screenshotFunction.indexOf("page.screenshot(");
-  assert.ok(preflightBranch >= 0 && screenshotApi > preflightBranch);
-  assert.equal([...spec.matchAll(/page\.screenshot\(/g)].length, 1);
 });

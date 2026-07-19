@@ -10,11 +10,13 @@ import {
 export const runtimeBaseUrl = process.env.E2E_BASE_URL?.trim() ?? "";
 export const runtimeTargetSha = process.env.E2E_TARGET_SHA?.trim() ?? "";
 export const runtimeRunnerSha = process.env.E2E_RUNNER_SHA?.trim() ?? "";
-const expectedRuntimeHost = process.env.E2E_EXPECTED_HOST?.trim().toLowerCase() ?? "";
+const expectedRuntimeHost =
+  process.env.E2E_EXPECTED_HOST?.trim().toLowerCase() ?? "";
 
 const testEmail = process.env.E2E_USER_EMAIL?.trim() ?? "";
 const testPassword = process.env.E2E_USER_PASSWORD ?? "";
-const vercelBypassSecret = process.env.VERCEL_AUTOMATION_BYPASS_SECRET?.trim() ?? "";
+const vercelBypassSecret =
+  process.env.VERCEL_AUTOMATION_BYPASS_SECRET?.trim() ?? "";
 
 export const protectionHeaders: Record<string, string> = vercelBypassSecret
   ? {
@@ -31,7 +33,8 @@ export async function establishProtectedPreviewSession(
   if (!previewUrl.hostname.toLowerCase().endsWith(".vercel.app")) return;
   if (
     previewUrl.protocol !== "https:" ||
-    (expectedRuntimeHost && previewUrl.hostname.toLowerCase() !== expectedRuntimeHost)
+    (expectedRuntimeHost &&
+      previewUrl.hostname.toLowerCase() !== expectedRuntimeHost)
   ) {
     throw new Error(
       `${suiteLabel} Vercel protection bootstrap target is not the owner-approved HTTPS Preview.`,
@@ -44,11 +47,13 @@ export async function establishProtectedPreviewSession(
   }
 
   const versionUrl = new URL("/api/runtime/version", previewUrl);
-  const bootstrapResponse = await page.context().request.get(versionUrl.toString(), {
-    headers: protectionHeaders,
-    maxRedirects: 0,
-    timeout: 30_000,
-  });
+  const bootstrapResponse = await page
+    .context()
+    .request.get(versionUrl.toString(), {
+      headers: protectionHeaders,
+      maxRedirects: 0,
+      timeout: 30_000,
+    });
   const bootstrapUrl = new URL(bootstrapResponse.url());
   const bootstrapStatus = bootstrapResponse.status();
 
@@ -65,7 +70,11 @@ export async function establishProtectedPreviewSession(
       .headersArray()
       .filter(({ name }) => name.toLowerCase() === "set-cookie");
     const location = bootstrapHeaders["location"];
-    if (!cookieRedirectStatuses.has(bootstrapStatus) || !location || setCookieHeaders.length < 1) {
+    if (
+      !cookieRedirectStatuses.has(bootstrapStatus) ||
+      !location ||
+      setCookieHeaders.length < 1
+    ) {
       throw new Error(
         `${suiteLabel} Vercel protection bootstrap returned HTTP ${bootstrapStatus} without a valid cookie redirect.`,
       );
@@ -96,9 +105,9 @@ export async function establishProtectedPreviewSession(
         })
         .filter(Boolean),
     );
-    const storedBypassCookie = (await page.context().cookies(versionUrl.toString())).find(
-      (cookie) => setCookieNames.has(cookie.name),
-    );
+    const storedBypassCookie = (
+      await page.context().cookies(versionUrl.toString())
+    ).find((cookie) => setCookieNames.has(cookie.name));
     if (
       !storedBypassCookie ||
       storedBypassCookie.domain.replace(/^\./, "").toLowerCase() !==
@@ -117,10 +126,12 @@ export async function establishProtectedPreviewSession(
   // APIRequestContext shares cookies with this BrowserContext. The redirect response
   // installs the bypass cookie; prove it works with a second same-origin request that
   // deliberately carries no protection secret header.
-  const cookieProofResponse = await page.context().request.get(cookieProofTarget.toString(), {
-    maxRedirects: 0,
-    timeout: 30_000,
-  });
+  const cookieProofResponse = await page
+    .context()
+    .request.get(cookieProofTarget.toString(), {
+      maxRedirects: 0,
+      timeout: 30_000,
+    });
   const observedCookieProofUrl = new URL(cookieProofResponse.url());
   if (
     observedCookieProofUrl.origin !== previewUrl.origin ||
@@ -162,7 +173,9 @@ export function requireSafeAuthenticatedRuntime(
     .map(([name]) => name);
 
   if (missing.length > 0) {
-    throw new Error(`${suiteLabel} runtime acceptance missing required env: ${missing.join(", ")}`);
+    throw new Error(
+      `${suiteLabel} runtime acceptance missing required env: ${missing.join(", ")}`,
+    );
   }
 
   const url = new URL(runtimeBaseUrl);
@@ -182,7 +195,9 @@ export function requireSafeAuthenticatedRuntime(
   }
 
   if (url.protocol !== "https:") {
-    throw new Error(`${suiteLabel} runtime acceptance requires an HTTPS target.`);
+    throw new Error(
+      `${suiteLabel} runtime acceptance requires an HTTPS target.`,
+    );
   }
 
   if (expectedRuntimeHost && host !== expectedRuntimeHost) {
@@ -203,7 +218,6 @@ export function requireSafeAuthenticatedRuntime(
     );
   }
 
-
   if (options.requireExactHead) {
     if (!/^[0-9a-f]{40}$/i.test(runtimeRunnerSha)) {
       throw new Error(
@@ -220,10 +234,14 @@ export function requireSafeAuthenticatedRuntime(
 
 export function sanitizeRuntimeEvidence(value: string) {
   let sanitized = value;
-  if (testEmail) sanitized = sanitized.replaceAll(testEmail, "[redacted-email]");
-  if (testPassword) sanitized = sanitized.replaceAll(testPassword, "[redacted-password]");
-  if (vercelBypassSecret) sanitized = sanitized.replaceAll(vercelBypassSecret, "[redacted-bypass]");
-  if (runtimeBaseUrl) sanitized = sanitized.replaceAll(runtimeBaseUrl, "[redacted-runtime-url]");
+  if (testEmail)
+    sanitized = sanitized.replaceAll(testEmail, "[redacted-email]");
+  if (testPassword)
+    sanitized = sanitized.replaceAll(testPassword, "[redacted-password]");
+  if (vercelBypassSecret)
+    sanitized = sanitized.replaceAll(vercelBypassSecret, "[redacted-bypass]");
+  if (runtimeBaseUrl)
+    sanitized = sanitized.replaceAll(runtimeBaseUrl, "[redacted-runtime-url]");
   return sanitized;
 }
 
@@ -236,7 +254,15 @@ function isSignInResponse(candidate: Response) {
   return isSignInRequest(candidate.request());
 }
 
-async function waitForHydratedLoginForm(page: Page) {
+export type ExplicitTestCredential = Readonly<{
+  email: string;
+  password: string;
+}>;
+
+async function waitForHydratedLoginForm(
+  page: Page,
+  credential: ExplicitTestCredential,
+) {
   const emailInput = page.getByLabel("이메일");
   const passwordInput = page.getByLabel("비밀번호");
   const submit = page.getByTestId("login-submit");
@@ -249,7 +275,9 @@ async function waitForHydratedLoginForm(page: Page) {
       () =>
         submit.evaluate((element) =>
           Object.keys(element).some(
-            (key) => key.startsWith("__reactProps$") || key.startsWith("__reactFiber$"),
+            (key) =>
+              key.startsWith("__reactProps$") ||
+              key.startsWith("__reactFiber$"),
           ),
         ),
       {
@@ -262,19 +290,30 @@ async function waitForHydratedLoginForm(page: Page) {
   // Exercise React's controlled handlers with a public sentinel before restoring secrets.
   await emailInput.fill("hydration-check@inverge.invalid");
   await expect(emailInput).toHaveValue("hydration-check@inverge.invalid");
-  await emailInput.fill(testEmail);
-  await passwordInput.fill(testPassword);
+  await emailInput.fill(credential.email);
+  await passwordInput.fill(credential.password);
   await expect
-    .poll(() => emailInput.inputValue().then((value) => value === testEmail), {
-      timeout: 20_000,
-      message: "The hydrated email control must retain its secret-backed value.",
-    })
+    .poll(
+      () => emailInput.inputValue().then((value) => value === credential.email),
+      {
+        timeout: 20_000,
+        message:
+          "The hydrated email control must retain its secret-backed value.",
+      },
+    )
     .toBe(true);
   await expect
-    .poll(() => passwordInput.inputValue().then((value) => value === testPassword), {
-      timeout: 20_000,
-      message: "The hydrated password control must retain its secret-backed value.",
-    })
+    .poll(
+      () =>
+        passwordInput
+          .inputValue()
+          .then((value) => value === credential.password),
+      {
+        timeout: 20_000,
+        message:
+          "The hydrated password control must retain its secret-backed value.",
+      },
+    )
     .toBe(true);
   await expect(submit).toBeEnabled({ timeout: 20_000 });
 
@@ -292,7 +331,8 @@ async function clickForSignInResponse(page: Page, submit: Locator) {
     const responsePromise = page
       .waitForResponse(isSignInResponse, { timeout: 20_000 })
       .catch((error: unknown) => {
-        if (error instanceof Error && error.name === "TimeoutError") return null;
+        if (error instanceof Error && error.name === "TimeoutError")
+          return null;
         throw error;
       });
     await submit.click({ timeout: 20_000 });
@@ -307,6 +347,69 @@ export async function loginWithDedicatedTestAccount(
   page: Page,
   mode: "first" | "second" = "second",
 ) {
+  return loginWithExplicitTestAccount(
+    page,
+    { email: testEmail, password: testPassword },
+    mode,
+  );
+}
+
+export async function loginWithExplicitTestAccountSession(
+  page: Page,
+  credential: ExplicitTestCredential,
+  baseUrl = runtimeBaseUrl,
+  mode: "first" | "second" = "second",
+) {
+  if (!credential.email || !credential.password || !baseUrl) {
+    throw new Error(
+      "Explicit test-account session configuration is incomplete.",
+    );
+  }
+  const signIn = await page
+    .context()
+    .request.post(new URL("/api/auth/sign-in", baseUrl).toString(), {
+      data: {
+        email: credential.email,
+        password: credential.password,
+        mode,
+      },
+      headers: protectionHeaders,
+      timeout: 30_000,
+    });
+  if (signIn.status() !== 200) {
+    throw new Error("Explicit test-account session authentication failed.");
+  }
+  const session = await page
+    .context()
+    .request.get(new URL("/api/auth/session", baseUrl).toString(), {
+      headers: protectionHeaders,
+      timeout: 30_000,
+    });
+  const body = (await session.json().catch(() => null)) as {
+    ok?: unknown;
+    session?: {
+      isAuthenticated?: unknown;
+      isDemo?: unknown;
+    };
+  } | null;
+  if (
+    session.status() !== 200 ||
+    body?.ok !== true ||
+    body.session?.isAuthenticated !== true ||
+    body.session?.isDemo !== false
+  ) {
+    throw new Error("Explicit test-account session binding failed.");
+  }
+}
+
+export async function loginWithExplicitTestAccount(
+  page: Page,
+  credential: ExplicitTestCredential,
+  mode: "first" | "second" = "second",
+) {
+  if (!credential.email || !credential.password) {
+    throw new Error("Explicit test-account credentials are incomplete.");
+  }
   await page.goto(`/login?mode=${mode}`, {
     waitUntil: "domcontentloaded",
     timeout: 30_000,
@@ -318,13 +421,13 @@ export async function loginWithDedicatedTestAccount(
   }
 
   let signInAttempts = 1;
-  let submit = await waitForHydratedLoginForm(page);
+  let submit = await waitForHydratedLoginForm(page, credential);
   let attempt = await clickForSignInResponse(page, submit);
 
   // Retry once only when the hydrated click emitted no authentication request.
   if (!attempt.response && !attempt.requestEmitted) {
     signInAttempts += 1;
-    submit = await waitForHydratedLoginForm(page);
+    submit = await waitForHydratedLoginForm(page, credential);
     attempt = await clickForSignInResponse(page, submit);
   }
 
@@ -346,10 +449,14 @@ export async function loginWithDedicatedTestAccount(
     );
   }
   if (!attempt.response.ok()) {
-    throw new Error(`The dedicated test account sign-in returned HTTP ${status}.`);
+    throw new Error(
+      `The dedicated test account sign-in returned HTTP ${status}.`,
+    );
   }
 
-  await expect(page).toHaveURL((url) => url.pathname === "/app", { timeout: 20_000 });
+  await expect(page).toHaveURL((url) => url.pathname === "/app", {
+    timeout: 20_000,
+  });
   await expect(appSurface).toBeVisible({ timeout: 20_000 });
   return { signInAttempts };
 }
@@ -375,7 +482,9 @@ export function monitorRuntimeErrors(page: Page): RuntimeErrors {
     const failure = request.failure()?.errorText ?? "unknown";
     if (url.origin !== runtimeOrigin || failure.includes("ERR_ABORTED")) return;
     errors.sameOriginRequestFailures.push(
-      sanitizeRuntimeEvidence(request.method() + " " + url.pathname + " " + failure),
+      sanitizeRuntimeEvidence(
+        request.method() + " " + url.pathname + " " + failure,
+      ),
     );
   });
   page.on("response", (response) => {
@@ -383,7 +492,11 @@ export function monitorRuntimeErrors(page: Page): RuntimeErrors {
     if (url.origin !== runtimeOrigin || response.status() < 400) return;
     errors.sameOriginRequestFailures.push(
       sanitizeRuntimeEvidence(
-        response.request().method() + " " + url.pathname + " HTTP " + response.status(),
+        response.request().method() +
+          " " +
+          url.pathname +
+          " HTTP " +
+          response.status(),
       ),
     );
   });
@@ -405,11 +518,16 @@ export async function captureSanitizedScreenshot(
   ).toHaveCount(1);
   await expect(accountIdentity).toBeVisible();
 
-  const unmaskedVisibleEmailCount = await page.locator("body *").evaluateAll(
-    (elements, maskedSelector) => {
+  const unmaskedVisibleEmailCount = await page
+    .locator("body *")
+    .evaluateAll((elements, maskedSelector) => {
       const emailPattern = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i;
       return elements.filter((element) => {
-        if (!(element instanceof HTMLElement) || element.matches(maskedSelector)) return false;
+        if (
+          !(element instanceof HTMLElement) ||
+          element.matches(maskedSelector)
+        )
+          return false;
         const directText = Array.from(element.childNodes)
           .filter((node) => node.nodeType === Node.TEXT_NODE)
           .map((node) => node.textContent ?? "")
@@ -425,9 +543,7 @@ export async function captureSanitizedScreenshot(
           style.display !== "none"
         );
       }).length;
-    },
-    accountIdentitySelector,
-  );
+    }, accountIdentitySelector);
   expect(
     unmaskedVisibleEmailCount,
     "Every visible email-like identity must be inside the masked account region.",

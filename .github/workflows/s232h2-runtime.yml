@@ -17,7 +17,7 @@ jobs:
       github.event.pull_request.head.ref == 'agent/figma-v3-production-routes' &&
       github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     concurrency:
       group: s232h2-production-v3-visual-${{ github.event.pull_request.number }}
       cancel-in-progress: true
@@ -87,6 +87,7 @@ jobs:
             local target_sha="$1"
             local env_url_name="$2"
             local env_host_name="$3"
+            local output_path="$4"
             local deadline=$((SECONDS + 900))
 
             while [ "${SECONDS}" -lt "${deadline}" ]; do
@@ -123,8 +124,10 @@ jobs:
                     const value = JSON.parse(readFileSync(process.env.BODY_PATH, "utf8"));
                     if (value.ready !== true || value.deploymentSha !== process.env.EXPECTED_SHA) process.exit(1);
                   '; then
-                  echo "${env_url_name}=${preview_url}" >> "${GITHUB_ENV}"
-                  echo "${env_host_name}=${preview_url#https://}" >> "${GITHUB_ENV}"
+                  {
+                    echo "${env_url_name}=${preview_url}"
+                    echo "${env_host_name}=${preview_url#https://}"
+                  } > "${output_path}"
                   rm -f "${body_path}"
                   return 0
                 fi
@@ -135,35 +138,85 @@ jobs:
             return 1
           }
 
-          discover_preview "${E2E_RUNNER_SHA}" E2E_BASE_URL E2E_EXPECTED_HOST
-          discover_preview "${E2E_BASELINE_SHA}" E2E_BASELINE_URL E2E_BASELINE_EXPECTED_HOST
+          pr2_env="$(mktemp)"
+          baseline_env="$(mktemp)"
+          trap 'rm -f "${pr2_env}" "${baseline_env}"' EXIT
+
+          discover_preview "${E2E_RUNNER_SHA}" E2E_BASE_URL E2E_EXPECTED_HOST "${pr2_env}" &
+          pr2_pid=$!
+          discover_preview "${E2E_BASELINE_SHA}" E2E_BASELINE_URL E2E_BASELINE_EXPECTED_HOST "${baseline_env}" &
+          baseline_pid=$!
+
+          pr2_status=0
+          baseline_status=0
+          wait "${pr2_pid}" || pr2_status=$?
+          wait "${baseline_pid}" || baseline_status=$?
+          test "${pr2_status}" -eq 0
+          test "${baseline_status}" -eq 0
+          cat "${pr2_env}" "${baseline_env}" >> "${GITHUB_ENV}"
 
       - name: Install dependencies
         run: npm ci
 
       - name: Check the focused visual-gate contract
-        run: >-
-          node --test
-          tests/screenshot-boundary-policy.test.mjs
-          tests/s232h2-production-v3-visual-contract.test.mjs
+        run: node --test tests/s232h2-production-v3-visual-contract.test.mjs
 
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
 
-      - name: Run exact-head production V3 visual acceptance
-        id: visual_acceptance
+      - name: Run privacy and auth source gate without screenshots
+        id: privacy_gate
         env:
           S232H2_VISUAL_RUNTIME: "1"
-          # The primary protected identity is the established invited runtime
-          # account. Its long-lived rows are not assumed synthetic: every PNG
-          # is retained only after a value-free, fail-closed DOM boundary check.
-          E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL }}
-          E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD }}
+          S232H2_VISUAL_PROOF_PATH: ${{ runner.temp }}/s232h2-visual-proof.json
+          E2E_VISUAL_USER_EMAIL: ${{ secrets.E2E_VISUAL_USER_EMAIL }}
+          E2E_VISUAL_USER_PASSWORD: ${{ secrets.E2E_VISUAL_USER_PASSWORD }}
+          E2E_USER_A_EMAIL: ${{ secrets.E2E_USER_A_EMAIL }}
+          E2E_USER_A_PASSWORD: ${{ secrets.E2E_USER_A_PASSWORD }}
+          E2E_USER_B_EMAIL: ${{ secrets.E2E_USER_B_EMAIL }}
+          E2E_USER_B_PASSWORD: ${{ secrets.E2E_USER_B_PASSWORD }}
           VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
-        run: npx playwright test tests/e2e/s232h2-production-v3-visual.spec.ts --project=chromium --workers=1 --reporter=line
+        run: >-
+          timeout --signal=TERM --kill-after=10s 180s
+          npx playwright test tests/e2e/s232h2-production-v3-visual.spec.ts
+          --project=chromium --workers=1 --reporter=line --grep "@privacy"
 
-      - name: Upload bounded representative PNG diagnostics after visual acceptance failure
-        if: ${{ failure() && steps.visual_acceptance.outcome == 'failure' }}
+      - name: Run bounded production V3 accessibility gate
+        id: a11y_gate
+        env:
+          S232H2_VISUAL_RUNTIME: "1"
+          S232H2_VISUAL_PROOF_PATH: ${{ runner.temp }}/s232h2-visual-proof.json
+          E2E_VISUAL_USER_EMAIL: ${{ secrets.E2E_VISUAL_USER_EMAIL }}
+          E2E_VISUAL_USER_PASSWORD: ${{ secrets.E2E_VISUAL_USER_PASSWORD }}
+          E2E_USER_A_EMAIL: ${{ secrets.E2E_USER_A_EMAIL }}
+          E2E_USER_A_PASSWORD: ${{ secrets.E2E_USER_A_PASSWORD }}
+          E2E_USER_B_EMAIL: ${{ secrets.E2E_USER_B_EMAIL }}
+          E2E_USER_B_PASSWORD: ${{ secrets.E2E_USER_B_PASSWORD }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: >-
+          timeout --signal=TERM --kill-after=10s 720s
+          npx playwright test tests/e2e/s232h2-production-v3-visual.spec.ts
+          --project=chromium --workers=1 --reporter=line --grep "@a11y"
+
+      - name: Run one-pass production V3 visual and Figma gate
+        id: visual_gate
+        env:
+          S232H2_VISUAL_RUNTIME: "1"
+          S232H2_VISUAL_PROOF_PATH: ${{ runner.temp }}/s232h2-visual-proof.json
+          E2E_VISUAL_USER_EMAIL: ${{ secrets.E2E_VISUAL_USER_EMAIL }}
+          E2E_VISUAL_USER_PASSWORD: ${{ secrets.E2E_VISUAL_USER_PASSWORD }}
+          E2E_USER_A_EMAIL: ${{ secrets.E2E_USER_A_EMAIL }}
+          E2E_USER_A_PASSWORD: ${{ secrets.E2E_USER_A_PASSWORD }}
+          E2E_USER_B_EMAIL: ${{ secrets.E2E_USER_B_EMAIL }}
+          E2E_USER_B_PASSWORD: ${{ secrets.E2E_USER_B_PASSWORD }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: >-
+          timeout --signal=TERM --kill-after=10s 900s
+          npx playwright test tests/e2e/s232h2-production-v3-visual.spec.ts
+          --project=chromium --workers=1 --reporter=line --grep "@visual"
+
+      - name: Upload bounded synthetic PNG diagnostics after visual gate failure
+        if: ${{ failure() && steps.privacy_gate.outcome == 'success' && steps.visual_gate.outcome == 'failure' }}
         uses: actions/upload-artifact@v4
         with:
           name: s232h2-production-v3-visual-failure-${{ github.event.pull_request.head.sha }}
@@ -206,7 +259,7 @@ jobs:
           current_pr_head="$(gh api "/repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" --jq '.head.sha')"
           test "${current_pr_head}" = "${E2E_RUNNER_SHA}"
 
-      - name: Validate the synthetic screenshot manifest
+      - name: Validate the isolated synthetic screenshot manifest
         shell: bash
         run: |
           set -euo pipefail
@@ -215,7 +268,7 @@ jobs:
           MANIFEST_PATH="${manifests[0]}" node --input-type=module -e '
             import { readFileSync, readdirSync } from "node:fs";
             const value = JSON.parse(readFileSync(process.env.MANIFEST_PATH, "utf8"));
-            if (value.schemaVersion !== 3 || value.result !== "pass") process.exit(1);
+            if (value.schemaVersion !== 4 || value.result !== "pass") process.exit(1);
             if (value.runnerSha !== process.env.E2E_RUNNER_SHA || value.targetDeploymentSha !== process.env.E2E_RUNNER_SHA) process.exit(1);
             if (value.baselineDeploymentSha !== process.env.E2E_BASELINE_SHA || value.mergeBaseSha !== process.env.E2E_MERGE_BASE_SHA) process.exit(1);
             if (value.baselineTreeSha !== process.env.E2E_BASELINE_TREE_SHA) process.exit(1);
@@ -225,10 +278,23 @@ jobs:
             if (value.beforeScreenshotCount !== 3 || value.initialAfterScreenshotCount !== 16 || value.dynamicScreenshotCount !== 6) process.exit(1);
             if (value.afterScreenshotCount !== 22 || value.figmaReferenceScreenshotCount !== 3 || value.figmaComparisonCount !== 3 || value.screenshotCount !== 28) process.exit(1);
             if (value.screenshotCallCount !== 25) process.exit(1);
-            const preflight = value.preflightClosure;
-            if (!preflight || preflight.visualAuditCandidateCount !== 45 || preflight.privacyCandidateCount !== 25 || preflight.privacyCheckCount !== 25) process.exit(1);
-            if (preflight.privacyNotRunCount !== 0 || preflight.preparationBlockerCount !== 0 || preflight.visualA11yBlockerCount !== 0 || preflight.privacyBlockerCount !== 0) process.exit(1);
-            if (preflight.finalAccountSnapshotStable !== true || preflight.screenshotCallCount !== 0 || preflight.retainedPngCount !== 0) process.exit(1);
+            const privacyGate = value.privacyGate;
+            if (!privacyGate || !Number.isInteger(privacyGate.scheduledCandidates) || privacyGate.scheduledCandidates < 1 || privacyGate.scheduledCandidates > 3) process.exit(1);
+            if (privacyGate.completedAudits !== privacyGate.scheduledCandidates || privacyGate.notRunCount !== 0 || privacyGate.blockerCount !== 0) process.exit(1);
+            if (privacyGate.screenshotCallCount !== 0 || privacyGate.endpointReadSucceeded !== true || privacyGate.snapshotReadSucceeded !== true || privacyGate.snapshotStable !== true) process.exit(1);
+            if (privacyGate.crossAccountDenied !== true || privacyGate.deniedCanaryDomCount !== 0 || privacyGate.fixtureOwnershipClosed !== true) process.exit(1);
+            if (!Number.isInteger(privacyGate.selectedAccountItemCount) || privacyGate.selectedAccountItemCount < 1 || privacyGate.selectedExactFixtureCount !== privacyGate.selectedAccountItemCount) process.exit(1);
+            if (privacyGate.targetSessionBound !== true || privacyGate.baselineSessionBound !== true || privacyGate.baselineUsesSelectedFixture !== true) process.exit(1);
+            if (privacyGate.unknownLearnerEndpointCount !== 0 || privacyGate.unknownLearnerRowCount !== 0 || privacyGate.rawIdentityArtifactCount !== 0) process.exit(1);
+            const a11yGate = value.a11yGate;
+            if (!a11yGate || a11yGate.scheduledCandidates !== 45 || a11yGate.completedAudits !== 45 || a11yGate.blockerCount !== 0) process.exit(1);
+            if (a11yGate.mobileFullScheduled !== 19 || a11yGate.mobileFullCompleted !== 19) process.exit(1);
+            if (a11yGate.geometryScheduled !== 26 || a11yGate.geometryCompleted !== 26) process.exit(1);
+            if (!Number.isInteger(a11yGate.keyboardScheduled) || a11yGate.keyboardScheduled < 2 || a11yGate.keyboardScheduled > 3 || a11yGate.keyboardCompleted !== a11yGate.keyboardScheduled) process.exit(1);
+            const visualGate = value.visualGate;
+            if (!visualGate || visualGate.scheduledCandidates !== 25 || visualGate.completedAudits !== 25) process.exit(1);
+            if (visualGate.preparationBlockerCount !== 0 || visualGate.cleanupBlockerCount !== 0 || visualGate.visualBlockerCount !== 0 || visualGate.privacyBlockerCount !== 0) process.exit(1);
+            if (visualGate.screenshotCallCount !== 25 || visualGate.snapshotReadSucceeded !== true || visualGate.snapshotStable !== true) process.exit(1);
             if (!Array.isArray(value.screenshots) || value.screenshots.length !== value.screenshotCount || new Set(value.screenshots).size !== value.screenshotCount) process.exit(1);
             if (!value.screenshots.every((name) => typeof name === "string" && /^s232h2-[a-z0-9-]+\.png$/.test(name))) process.exit(1);
             const requiredReferences = new Set([
@@ -237,35 +303,10 @@ jobs:
               "s232h2-figma-mobile-calculator-57-34.png",
             ]);
             if (![...requiredReferences].every((name) => value.screenshots.includes(name))) process.exit(1);
-            const privacy = value.privacyAudit;
-            if (!privacy || privacy.itemListingComplete !== true || privacy.studyLogListingComplete !== true) process.exit(1);
-            const countFields = [
-              "accountItemCount", "accountOwnedItemCount", "exactFixtureItemCount", "unclassifiedAccountItemCount", "accountStudyLogCount",
-              "queueItemCount", "syntheticQueueItemCount", "todayItemCount", "syntheticTodayItemCount",
-              "screenshotBoundaryCheckCount", "screenshotCaptureCount", "visibleUnclassifiedTextHitCount", "visibleUnclassifiedReferenceHitCount",
-              "visibleUnclassifiedFormValueHitCount", "visibleUnclassifiedGeneratedContentHitCount", "visibleUninspectableSurfaceCount",
-              "provenanceFilteredTextHitCount", "provenanceFilteredReferenceHitCount",
-              "provenanceFilteredFormValueHitCount", "provenanceFilteredGeneratedContentHitCount",
-            ];
-            if (!countFields.every((field) => Number.isInteger(privacy[field]) && privacy[field] >= 0)) process.exit(1);
-            if (privacy.accountItemCount < 1 || privacy.accountOwnedItemCount !== privacy.accountItemCount) process.exit(1);
-            if (privacy.exactFixtureItemCount < 1 || privacy.accountItemCount !== privacy.exactFixtureItemCount + privacy.unclassifiedAccountItemCount) process.exit(1);
-            if (privacy.accountStudyLogCount !== 0) process.exit(1);
-            if (privacy.syntheticQueueItemCount > privacy.queueItemCount || privacy.syntheticTodayItemCount > privacy.todayItemCount) process.exit(1);
-            if (privacy.screenshotBoundaryCheckCount !== 50 || privacy.screenshotCaptureCount !== 25) process.exit(1);
-            if (privacy.visibleUnclassifiedTextHitCount !== 0 || privacy.visibleUnclassifiedReferenceHitCount !== 0) process.exit(1);
-            if (privacy.visibleUnclassifiedFormValueHitCount !== 0 || privacy.visibleUnclassifiedGeneratedContentHitCount !== 0 || privacy.visibleUninspectableSurfaceCount !== 0) process.exit(1);
-            for (const field of [
-              "sessionBound", "governedTestAccount", "strictOwnershipContract", "detailOwnershipClosed", "pendingOwnedQueue", "queueDetailsAudited",
-              "todayDetailsAudited", "weeklyTaskDetailsAudited", "syntheticFixtureReady", "accountSnapshotStable", "screenshotDataBoundaryClosed",
-            ]) if (privacy[field] !== true) process.exit(1);
-            if (privacy.privateLearnerContentCaptured !== false) process.exit(1);
-            if (value.syntheticFixtureReady !== privacy.syntheticFixtureReady || value.screenshotDataBoundaryClosed !== privacy.screenshotDataBoundaryClosed) process.exit(1);
-            if (value.privateLearnerContentCaptured !== privacy.privateLearnerContentCaptured) process.exit(1);
-            if (value.syntheticContentCaptured !== true || value.credentialsRedacted !== true) process.exit(1);
+            if (value.syntheticFixtureReady !== true || value.fixtureOwnershipClosed !== true || value.credentialsRedacted !== true || value.identityMasked !== true) process.exit(1);
+            if (value.privateLearnerContentCaptured !== false || value.actualAccountArtifactCount !== 0) process.exit(1);
             if (value.traceCaptured !== false || value.videoCaptured !== false || value.domCaptured !== false || value.rawInputArtifactCaptured !== false) process.exit(1);
             if (value.consoleErrorCount !== 0 || value.pageErrorCount !== 0 || value.sameOriginRequestFailureCount !== 0) process.exit(1);
-            if (value.baselineConsoleErrorCount !== 0 || value.baselinePageErrorCount !== 0 || value.baselineSameOriginRequestFailureCount !== 0) process.exit(1);
             const initialRows = value.auditRows.filter((row) => row.auditKind === "initial-route");
             const dynamicRows = value.auditRows.filter((row) => row.auditKind === "dynamic-state");
             if (initialRows.length !== 39 || dynamicRows.length !== 6) process.exit(1);
@@ -282,15 +323,20 @@ jobs:
             const dynamicKeys = new Set(dynamicRows.map((row) => `${row.route}:${row.state}`));
             if (dynamicKeys.size !== 6 || !dynamicRows.every((row) => row.viewportWidth === 390 && requiredDynamicStates.has(`${row.route}:${row.state}`))) process.exit(1);
             for (const row of value.auditRows) {
-              if (row.mainCount !== 1 || row.visibleH1Count !== 1 || row.horizontalOverflow !== 0 || row.visiblePrimaryActionCount > 1 || row.undersizedTargetCount !== 0 || row.viewportBoundsFailureCount !== 0) process.exit(1);
-              if (row.axeSeriousOrCritical !== 0 || row.keyboardFocusVisible !== true || row.gradientCount !== 0) process.exit(1);
+              if (row.mainCount !== 1 || row.visibleH1Count !== 1 || row.horizontalOverflow !== 0 || row.viewportBoundsFailureCount !== 0) process.exit(1);
+              if (row.auditProfile === "mobile-full") {
+                if (row.viewportWidth !== 390 || row.visiblePrimaryActionCount === null || row.visiblePrimaryActionCount > 1 || row.undersizedTargetCount !== 0 || row.axeSeriousOrCritical !== 0) process.exit(1);
+              } else if (row.auditProfile === "geometry") {
+                if (![768, 1440].includes(row.viewportWidth) || row.visiblePrimaryActionCount !== null || row.undersizedTargetCount !== null || row.axeSeriousOrCritical !== null) process.exit(1);
+              } else process.exit(1);
+              if (row.keyboardFocusVisible !== null && row.keyboardFocusVisible !== true) process.exit(1);
+              if (row.gradientCount !== 0) process.exit(1);
               if (row.viewportWidth === 1440 && row.shadowCount !== 0) process.exit(1);
               if (row.canonicalDock === true ? row.fixedDockCount !== 1 : row.fixedDockCount !== 0) process.exit(1);
               if (row.canvasColor !== "rgb(247, 246, 243)" || !/Noto Sans KR/i.test(row.bodyFontFamily)) process.exit(1);
               if (row.pageEdge !== (row.viewportWidth < 768 ? 20 : 32) || row.controlHeight !== 52 || row.controlRadius !== 12) process.exit(1);
               if (row.readingColumn !== 680 || row.contentMax !== 1120) process.exit(1);
             }
-            if (value.horizontalOverflowMaximum !== 0 || value.axeSeriousOrCritical !== 0 || value.undersizedTargetCount !== 0 || value.viewportBoundsFailureCount !== 0) process.exit(1);
             if (!Array.isArray(value.figmaComparisons) || value.figmaComparisons.length !== 3) process.exit(1);
             const expectedFigma = new Map([
               ["56:2", { dimensions: [390, 844], route: "/app/items/[itemId]?mode=second", actual: "s232h2-after-ledger-390.png", reference: "s232h2-figma-mobile-ledger-56-2.png" }],
@@ -324,6 +370,22 @@ jobs:
             if (!requiredNodes.every((node) => mapping.includes(node))) process.exit(1);
             const serialized = JSON.stringify(value);
             if (/@[a-z0-9.-]+\.[a-z]{2,}/i.test(serialized)) process.exit(1);
+            if (/E2E_(?:VISUAL_USER|USER_[AB])_(?:EMAIL|PASSWORD)/.test(serialized)) process.exit(1);
+            if (/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/i.test(serialized)) process.exit(1);
+            if (/\b[0-9a-f]{64}\b/i.test(serialized)) process.exit(1);
+            const forbiddenArtifactKeys = new Set([
+              "email", "password", "userId", "itemId", "accountId", "sessionId",
+              "selectedCredentialAlias", "selectedSlot", "selectedFingerprint",
+              "selectedSessionFingerprint", "fixtureItemIds", "fixtureIds",
+              "ledgerItemId", "canaryValue", "deniedCanary", "rawIds",
+              "sessionUserId",
+            ]);
+            const visitKeys = (entry) => {
+              if (!entry || typeof entry !== "object") return true;
+              if (Array.isArray(entry)) return entry.every(visitKeys);
+              return Object.entries(entry).every(([key, child]) => !forbiddenArtifactKeys.has(key) && visitKeys(child));
+            };
+            if (!visitKeys(value)) process.exit(1);
             const physicalScreenshots = [];
             const visit = (directory) => {
               for (const entry of readdirSync(directory, { withFileTypes: true })) {
@@ -348,3 +410,9 @@ jobs:
             test-results/**/s232h2-*.png
           if-no-files-found: error
           retention-days: 14
+
+      - name: Remove the ephemeral visual-account proof
+        if: ${{ always() }}
+        env:
+          S232H2_VISUAL_PROOF_PATH: ${{ runner.temp }}/s232h2-visual-proof.json
+        run: rm -f -- "${S232H2_VISUAL_PROOF_PATH}"

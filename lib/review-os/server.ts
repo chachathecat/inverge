@@ -11,8 +11,16 @@ import {
   type ReviewOsAccessResult,
   type ReviewOsAccessUnavailableReason,
 } from "@/lib/review-os/access-result";
-import { isSupabasePersistenceOperationError, isSupabasePersistenceUnavailableError } from "@/lib/supabase/persistence";
-import type { AccessState, StudyProfile, UsageSummary } from "@/lib/review-os/types";
+import {
+  isSupabasePersistenceOperationError,
+  isSupabasePersistenceUnavailableError,
+} from "@/lib/supabase/persistence";
+import type {
+  AccessState,
+  StudyProfile,
+  UsageSummary,
+} from "@/lib/review-os/types";
+import { isPreviewExactShaReadOnlyRequest } from "@/lib/review-os/read-only-request";
 import { reviewOsRepository } from "@/lib/review-os/repository";
 import { reviewOsService } from "@/lib/review-os/service";
 
@@ -32,10 +40,15 @@ export async function getReviewOsServerContext(
   returnTo = "/app",
   options: ReviewOsServerContextOptions = {},
 ): Promise<ReviewOsServerContext> {
-  const session = await requireServerSession(await resolveReviewOsReturnTo(returnTo));
+  const session = await requireServerSession(
+    await resolveReviewOsReturnTo(returnTo),
+  );
 
   if (!session.authEnabled) {
-    const demoSession = { ...session, email: session.email ?? "demo@inverge.local" };
+    const demoSession = {
+      ...session,
+      email: session.email ?? "demo@inverge.local",
+    };
     return {
       session: demoSession,
       access: buildReviewOsAccessResult(buildDemoAccess(demoSession.email)),
@@ -59,7 +72,10 @@ export async function getReviewOsServerContext(
       : null;
   const usage =
     options.includeUsage !== false && session.email
-      ? await reviewOsService.getUsageSummaryAfterAccessCheck(session.userId, access)
+      ? await reviewOsService.getUsageSummaryAfterAccessCheck(
+          session.userId,
+          access,
+        )
       : null;
   return { session, access, profile, usage };
 }
@@ -115,9 +131,11 @@ const resolveReviewOsAccess = cache(async function resolveReviewOsAccess(
   email: string | null,
 ): Promise<ReviewOsAccessResult> {
   try {
-    return buildReviewOsAccessResult(
-      await reviewOsRepository.ensureAccess(userId, email),
-    );
+    const readOnlyRequest = await isPreviewExactShaReadOnlyRequest();
+    const access = readOnlyRequest
+      ? await reviewOsRepository.readAccess(userId, email)
+      : await reviewOsRepository.ensureAccess(userId, email);
+    return buildReviewOsAccessResult(access);
   } catch (error) {
     const reason = getAccessUnavailableReason(error);
     if (!reason) throw error;
