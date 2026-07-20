@@ -543,6 +543,89 @@ test("Preview response validation is request-specific, value-safe, and privacy-s
   assert.match(rlsCalls, /"rls-cross-account-probe"/);
 });
 
+test("artifact identity and network quiescence stay privacy-safe and fail-closed", () => {
+  const runtimeMonitor = blockBetween(
+    spec,
+    "function monitorPageRuntime",
+    "function visualAuditRequestHeaders",
+  );
+  assert.match(runtimeMonitor, /headers\["next-router-prefetch"\] === "1"/);
+  assert.doesNotMatch(runtimeMonitor, /next-router-prefetch[\s\S]*?=== "2"/);
+  assert.match(runtimeMonitor, /same-origin-request-failure/);
+  assert.match(runtimeMonitor, /same-origin-http-error/);
+
+  const boundary = blockBetween(
+    spec,
+    "async function inspectSyntheticArtifactBoundary",
+    "async function captureSyntheticScreenshot",
+  );
+  const rawEmail = blockBetween(
+    boundary,
+    "const rawEmailOutsideMask",
+    "const rawCredentialArtifactCount",
+  );
+  assert.match(
+    rawEmail,
+    /element instanceof HTMLScriptElement &&\s*!element\.hasAttribute\("src"\)/,
+  );
+  assert.match(
+    rawEmail,
+    /normalizedOwnText\.startsWith\(\s*"\(self\.__next_f=self\.__next_f\|\|\[\]\)\.push\("/,
+  );
+  assert.match(
+    rawEmail,
+    /normalizedOwnText\.startsWith\("self\.__next_f\.push\("\)/,
+  );
+  assert.match(
+    rawEmail,
+    /const ownText = isInlineNextFlightTransport \? "" : directOwnText/,
+  );
+  assert.doesNotMatch(rawEmail, /HTMLScriptElement\s*\? ""/);
+  assert.match(rawEmail, /Array\.from\(element\.attributes\)/);
+  assert.match(rawEmail, /element instanceof HTMLInputElement/);
+  assert.match(rawEmail, /\[attributeText, ownText, value\]/);
+  assert.match(
+    boundary,
+    /html\.includes\(password\) \|\| serializedValues\.includes\(password\)/,
+  );
+  assert.doesNotMatch(rawEmail, /querySelectorAll<HTMLElement>\("(?!body \*)/);
+
+  const settle = blockBetween(
+    spec,
+    "async function settleRuntimeMonitors",
+    "async function verifyRuntimeVersion",
+  );
+  assert.match(
+    settle,
+    /waitForLoadState\("networkidle", \{ timeout: 10_000 \}\)/,
+  );
+  assert.doesNotMatch(settle, /\.catch\(/);
+  const requiredRoute = blockBetween(
+    spec,
+    "async function gotoRequiredRoute",
+    "async function visibleTargetFailures",
+  );
+  assert.match(requiredRoute, /await settleRuntimeMonitors\(page\)/);
+  const calculatorReload = blockBetween(
+    spec,
+    "async function advanceCalculatorToCasioInput",
+    "async function completeCalculatorRoutine",
+  );
+  assert.match(
+    calculatorReload,
+    /page\.reload[\s\S]*?waitForStableRender[\s\S]*?settleRuntimeMonitors/,
+  );
+  const captureReload = blockBetween(
+    spec,
+    "async function prepareCaptureExtractionPreview",
+    "async function prepareAnswerReviewResult",
+  );
+  assert.match(
+    captureReload,
+    /page\.reload[\s\S]*?waitForStableRender[\s\S]*?settleRuntimeMonitors/,
+  );
+});
+
 test("ephemeral runner is pinned to the exact project, repository, PR, and head", () => {
   for (const contract of [
     /S232H2_EPHEMERAL_PROJECT_REF = "vajcduseyicjhyhrclax"/,
@@ -1317,6 +1400,40 @@ test("a11y runs full mobile, lightweight wide geometry, and bounded keyboard pro
   assert.match(spec, /viewportBoundsFailureCount/);
 
   const a11yTest = blockBetween(spec, "@a11y", "@visual");
+  const initialMatrix = blockBetween(
+    a11yTest,
+    "for (const route of requiredRoutes)",
+    "const dynamicCandidates",
+  );
+  assert.ok(
+    initialMatrix.indexOf("for (const route of requiredRoutes)") <
+      initialMatrix.indexOf("for (const viewport of viewports)"),
+  );
+  assert.match(
+    initialMatrix,
+    /let routePrepared = false[\s\S]*?const requiresRouteNavigation =\s*!routePrepared \|\| requiresCalculatorWideReset/,
+  );
+  assert.match(
+    initialMatrix,
+    /requiresCalculatorWideReset[\s\S]*?CALCULATOR_ROUTINE_SESSION_STORAGE_PREFIX/,
+  );
+  assert.match(
+    initialMatrix,
+    /routePrepared = false;[\s\S]*?await prepareInitialRoute[\s\S]*?routePrepared = true/,
+  );
+  assert.match(
+    initialMatrix,
+    /else \{[\s\S]*?setViewportSize[\s\S]*?waitForStableRender/,
+  );
+  assert.match(
+    initialMatrix,
+    /await settleRuntimeMonitors\(routePage\);[\s\S]*?auditRows\.push\(row\)/,
+  );
+  const initialFinally = initialMatrix.slice(
+    initialMatrix.lastIndexOf("} finally {"),
+  );
+  assert.doesNotMatch(initialFinally, /settleRuntimeMonitors/);
+  assert.match(initialFinally, /removeKeyboardTraversalOrigin/);
   assert.match(a11yTest, /mobileFullScheduled:\s*19/);
   assert.match(a11yTest, /geometryScheduled:\s*26/);
   assert.match(a11yTest, /keyboardScheduled:\s*3/);

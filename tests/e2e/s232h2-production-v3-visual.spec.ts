@@ -12,6 +12,7 @@ import { createHash } from "node:crypto";
 import { chmod, readFile, unlink, writeFile } from "node:fs/promises";
 import { isAbsolute } from "node:path";
 
+import { CALCULATOR_ROUTINE_SESSION_STORAGE_PREFIX } from "../../lib/review-os/calculator-routine";
 import {
   buildExactFixtureLearningSignal,
   exactFixtureGeneratedArtifacts,
@@ -469,9 +470,7 @@ function visualAuditRequestHeaders(baseUrl = runtimeBaseUrl) {
 async function settleRuntimeMonitors(...pages: Page[]) {
   for (const page of pages) {
     if (page.isClosed()) continue;
-    await page
-      .waitForLoadState("networkidle", { timeout: 5_000 })
-      .catch(() => undefined);
+    await page.waitForLoadState("networkidle", { timeout: 10_000 });
     await page.evaluate(async () => {
       await new Promise<void>((resolve) =>
         requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
@@ -2028,6 +2027,7 @@ async function gotoRequiredRoute(page: Page, requestedPath: string) {
     timeout: 45_000,
   });
   await waitForStableRender(page);
+  await settleRuntimeMonitors(page);
   const expected = new URL(requestedPath, "https://s232h2.invalid");
   const observed = new URL(page.url());
   expect(
@@ -3606,10 +3606,18 @@ async function inspectSyntheticArtifactBoundary(
         const attributeText = Array.from(element.attributes)
           .map((attribute) => attribute.value)
           .join("\n");
-        const ownText = Array.from(element.childNodes)
+        const directOwnText = Array.from(element.childNodes)
           .filter((node) => node.nodeType === Node.TEXT_NODE)
           .map((node) => node.textContent ?? "")
           .join("\n");
+        const normalizedOwnText = directOwnText.trimStart();
+        const isInlineNextFlightTransport =
+          element instanceof HTMLScriptElement &&
+          !element.hasAttribute("src") &&
+          (normalizedOwnText.startsWith(
+            "(self.__next_f=self.__next_f||[]).push(",
+          ) || normalizedOwnText.startsWith("self.__next_f.push("));
+        const ownText = isInlineNextFlightTransport ? "" : directOwnText;
         const value =
           element instanceof HTMLInputElement ||
           element instanceof HTMLTextAreaElement
@@ -4031,6 +4039,7 @@ async function advanceCalculatorToCasioInput(page: Page) {
   await page.evaluate(() => window.sessionStorage.clear());
   await page.reload({ waitUntil: "domcontentloaded" });
   await waitForStableRender(page);
+  await settleRuntimeMonitors(page);
 
   const trainer = page.locator("[data-calculator-routine-trainer]");
   await expect(trainer).toBeVisible();
@@ -4630,6 +4639,7 @@ async function prepareCaptureExtractionPreview(page: Page) {
   });
   await page.reload({ waitUntil: "domcontentloaded" });
   await waitForStableRender(page);
+  await settleRuntimeMonitors(page);
   await page.getByText("다른 입력 방식", { exact: true }).click();
   await page
     .getByRole("button", { name: "텍스트 붙여넣기", exact: true })
@@ -5135,8 +5145,9 @@ test("@a11y S232H.2 split accessibility gate", async ({ browser }) => {
       new URL(runtimeBaseUrl).origin,
     );
 
-    for (const viewport of viewports) {
-      for (const route of requiredRoutes) {
+    for (const route of requiredRoutes) {
+      let routePrepared = false;
+      for (const viewport of viewports) {
         const routePage = route.authenticated ? authenticatedPage : publicPage;
         const routeStateAlias = route.id + "-initial";
         const requestedPath = resolveRoutePath(route, proof.ledgerItemId);
@@ -5147,7 +5158,37 @@ test("@a11y S232H.2 split accessibility gate", async ({ browser }) => {
           (route.id === "today" || route.id === "ledger");
         let activeStep: StableGateFailure["stableStep"] = "preparation";
         try {
-          await prepareInitialRoute(routePage, route, requestedPath, viewport);
+          const requiresCalculatorWideReset =
+            route.id === "calculator" &&
+            viewport.width >= 768 &&
+            (viewport.width === 768 || !routePrepared);
+          const requiresRouteNavigation =
+            !routePrepared || requiresCalculatorWideReset;
+          if (requiresRouteNavigation) {
+            routePrepared = false;
+            if (requiresCalculatorWideReset) {
+              await routePage.evaluate((storagePrefix) => {
+                for (const key of Object.keys(window.sessionStorage)) {
+                  if (key.startsWith(storagePrefix)) {
+                    window.sessionStorage.removeItem(key);
+                  }
+                }
+              }, CALCULATOR_ROUTINE_SESSION_STORAGE_PREFIX);
+            }
+            await prepareInitialRoute(
+              routePage,
+              route,
+              requestedPath,
+              viewport,
+            );
+            routePrepared = true;
+          } else {
+            await routePage.setViewportSize({
+              width: viewport.width,
+              height: viewport.height,
+            });
+            await waitForStableRender(routePage);
+          }
           activeStep = "audit";
           const row = await auditRoute(
             routePage,
@@ -5191,6 +5232,7 @@ test("@a11y S232H.2 split accessibility gate", async ({ browser }) => {
               count: privacyCount,
             });
           }
+          await settleRuntimeMonitors(routePage);
           auditRows.push(row);
           completedAudits += 1;
           if (profile === "mobile-full") mobileFullCompleted += 1;
