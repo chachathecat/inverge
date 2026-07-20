@@ -97,6 +97,17 @@ export function isPreviewJsonObject(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/**
+ * @param {string | null} primaryFailureCode
+ * @param {string | null} cleanupFailureCode
+ */
+export function retainFirstStableFailureCode(
+  primaryFailureCode,
+  cleanupFailureCode,
+) {
+  return primaryFailureCode ?? cleanupFailureCode;
+}
+
 /** @param {{ dispose(): Promise<void> }} response */
 export async function disposePreviewResponse(response) {
   await response.dispose().catch(() => undefined);

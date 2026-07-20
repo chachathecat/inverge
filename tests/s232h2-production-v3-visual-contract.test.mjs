@@ -9,6 +9,7 @@ import {
   PREVIEW_REQUEST_CODE_PREFIXES,
   previewRequestFailureCode,
   previewResponseMetadataFailureCode,
+  retainFirstStableFailureCode,
 } from "../scripts/support/s232h2-preview-response.mjs";
 
 const read = (path) => readFileSync(path, "utf8");
@@ -19,9 +20,7 @@ const previewResponseSupport = read(
   "scripts/support/s232h2-preview-response.mjs",
 );
 const spec = read("tests/e2e/s232h2-production-v3-visual.spec.ts");
-const authenticatedRuntime = read(
-  "tests/e2e/support/authenticated-runtime.ts",
-);
+const authenticatedRuntime = read("tests/e2e/support/authenticated-runtime.ts");
 const sourceAuditRoute = read("app/api/os/visual-source-audit/route.ts");
 const readOnlyRequest = read("lib/review-os/read-only-request.ts");
 const reviewOsRepository = read("lib/review-os/repository.ts");
@@ -91,10 +90,7 @@ function readSourceTree(directory) {
     const path = `${directory}/${entry.name}`;
     if (entry.isDirectory()) {
       sources.push(readSourceTree(path));
-    } else if (
-      entry.isFile() &&
-      /\.(?:js|mjs|sql|ts|tsx)$/.test(entry.name)
-    ) {
+    } else if (entry.isFile() && /\.(?:js|mjs|sql|ts|tsx)$/.test(entry.name)) {
       sources.push(read(path));
     }
   }
@@ -293,11 +289,14 @@ test("workflow provisions exactly two runner-only candidates and always cleans t
   assert.doesNotMatch(cleanupStep, /continue-on-error/);
   assert.ok(
     workflow.indexOf("Upload 28 synthetic and Figma-reference PNGs") <
-      workflow.indexOf("Revoke and delete runner-only ephemeral S232H2 accounts"),
+      workflow.indexOf(
+        "Revoke and delete runner-only ephemeral S232H2 accounts",
+      ),
   );
   assert.ok(
-    workflow.indexOf("Revoke and delete runner-only ephemeral S232H2 accounts") <
-      workflow.indexOf("Remove the ephemeral visual-account proof"),
+    workflow.indexOf(
+      "Revoke and delete runner-only ephemeral S232H2 accounts",
+    ) < workflow.indexOf("Remove the ephemeral visual-account proof"),
   );
   assert.match(workflow, /Remove the ephemeral visual-account proof/);
   assert.match(workflow, /rm -f -- "\$\{S232H2_VISUAL_PROOF_PATH\}"/);
@@ -366,10 +365,7 @@ test("runner API audit and browser visual contexts keep distinct bypass behavior
     browserHeaders,
     /"x-vercel-protection-bypass": vercelBypassSecret/,
   );
-  assert.match(
-    browserHeaders,
-    /"x-vercel-set-bypass-cookie": "true"/,
-  );
+  assert.match(browserHeaders, /"x-vercel-set-bypass-cookie": "true"/);
   const browserBootstrap = blockBetween(
     authenticatedRuntime,
     "export async function establishProtectedPreviewSession",
@@ -406,10 +402,7 @@ test("Preview response validation is request-specific, value-safe, and privacy-s
     ["session", "S232H2_PREVIEW_SESSION"],
     ["source-audit", "S232H2_PREVIEW_SOURCE_AUDIT"],
     ["rls-owner-probe", "S232H2_PREVIEW_RLS_OWNER_PROBE"],
-    [
-      "rls-cross-account-probe",
-      "S232H2_PREVIEW_RLS_CROSS_ACCOUNT_PROBE",
-    ],
+    ["rls-cross-account-probe", "S232H2_PREVIEW_RLS_CROSS_ACCOUNT_PROBE"],
   ];
   assert.deepEqual(
     Object.entries(PREVIEW_REQUEST_CODE_PREFIXES),
@@ -455,16 +448,37 @@ test("Preview response validation is request-specific, value-safe, and privacy-s
   assert.equal(isPreviewJsonObject(null), false);
   assert.equal(isPreviewJsonObject([]), false);
   assert.equal(isPreviewJsonObject("json"), false);
+  assert.equal(
+    retainFirstStableFailureCode(
+      "S232H2_PRIVACY_RLS_OWNER_INITIAL_HTTP_SERVER_ERROR",
+      "S232H2_PRIVACY_RLS_OWNER_INITIAL_DISPOSE_FAILED",
+    ),
+    "S232H2_PRIVACY_RLS_OWNER_INITIAL_HTTP_SERVER_ERROR",
+  );
+  assert.equal(
+    retainFirstStableFailureCode(
+      null,
+      "S232H2_PRIVACY_RLS_OWNER_INITIAL_DISPOSE_FAILED",
+    ),
+    "S232H2_PRIVACY_RLS_OWNER_INITIAL_DISPOSE_FAILED",
+  );
+  const retainedFailure = blockBetween(
+    previewResponseSupport,
+    "export function retainFirstStableFailureCode",
+    "/** @param {{ dispose(): Promise<void> }} response */",
+  );
+  assert.match(
+    retainedFailure,
+    /return primaryFailureCode \?\? cleanupFailureCode/,
+  );
+  assert.doesNotMatch(retainedFailure, /console\.|JSON\.stringify|throw/);
 
   const failureFactory = blockBetween(
     previewResponseSupport,
     "export function previewRequestFailureCode",
     "/**\n * @param {PreviewRequestLabel} requestLabel\n * @param {number} status",
   );
-  assert.match(
-    failureFactory,
-    /PREVIEW_REQUEST_CODE_PREFIXES\[requestLabel\]/,
-  );
+  assert.match(failureFactory, /PREVIEW_REQUEST_CODE_PREFIXES\[requestLabel\]/);
   assert.doesNotMatch(
     failureFactory,
     /error|status|contentType|response|body|headers|location|url|email|password|cookie|jwt|account|supabase/i,
@@ -520,18 +534,9 @@ test("Preview response validation is request-specific, value-safe, and privacy-s
     runnerSession,
     /readPreviewJson\(\s*versionResponse,\s*"runtime-version"/,
   );
-  assert.match(
-    runnerSession,
-    /readPreviewJson\(signInResponse, "sign-in"\)/,
-  );
-  assert.match(
-    runnerSession,
-    /readPreviewJson\(sessionResponse, "session"\)/,
-  );
-  assert.match(
-    sourceAudit,
-    /readPreviewJson\(response, "source-audit"\)/,
-  );
+  assert.match(runnerSession, /readPreviewJson\(signInResponse, "sign-in"\)/);
+  assert.match(runnerSession, /readPreviewJson\(sessionResponse, "session"\)/);
+  assert.match(sourceAudit, /readPreviewJson\(response, "source-audit"\)/);
   assert.match(sourceAudit, /readPreviewJson\(response, requestLabel\)/);
 
   const rlsCalls = blockBetween(
@@ -553,6 +558,31 @@ test("artifact identity and network quiescence stay privacy-safe and fail-closed
   assert.doesNotMatch(runtimeMonitor, /next-router-prefetch[\s\S]*?=== "2"/);
   assert.match(runtimeMonitor, /same-origin-request-failure/);
   assert.match(runtimeMonitor, /same-origin-http-error/);
+  assert.match(
+    runtimeMonitor,
+    /const trackedRequests = new WeakSet<Request>\(\)/,
+  );
+  const requestTracking = blockBetween(
+    runtimeMonitor,
+    'page.on("request",',
+    'page.on("requestfinished"',
+  );
+  assert.match(
+    requestTracking,
+    /if \(url\.origin !== expectedOrigin\) return;[\s\S]*?trackedRequests\.add\(request\)/,
+  );
+  assert.doesNotMatch(
+    requestTracking,
+    /pathname|resourceType|isNavigationRequest|isExplicitPrefetch/,
+  );
+  assert.match(
+    runtimeMonitor,
+    /page\.on\("requestfinished", finishTrackedRequest\)/,
+  );
+  assert.match(
+    runtimeMonitor,
+    /page\.on\("requestfailed"[\s\S]*?finally \{[\s\S]*?finishTrackedRequest\(request\)/,
+  );
 
   const boundary = blockBetween(
     spec,
@@ -595,10 +625,27 @@ test("artifact identity and network quiescence stay privacy-safe and fail-closed
     "async function settleRuntimeMonitors",
     "async function verifyRuntimeVersion",
   );
-  assert.match(
-    settle,
-    /waitForLoadState\("networkidle", \{ timeout: 10_000 \}\)/,
+  const monitorFailure = blockBetween(
+    spec,
+    "function throwRuntimeMonitorFailure",
+    "async function settleRuntimeMonitors",
   );
+  assert.doesNotMatch(settle, /waitForLoadState\("networkidle"/);
+  assert.match(settle, /requireHealthyRuntimeMonitor\(page\)/);
+  assert.match(settle, /pendingAuditRequestCount > 0/);
+  assert.match(settle, /lastAuditRequestActivityAt < 250/);
+  assert.match(settle, /const deadline = Date\.now\(\) \+ 10_000/);
+  assert.match(settle, /S232H2_RUNTIME_REQUEST_QUIESCENCE_TIMEOUT/);
+  assert.match(monitorFailure, /S232H2_RUNTIME_MONITOR_REQUIRED/);
+  assert.match(monitorFailure, /S232H2_RUNTIME_MONITOR_PAGE_CLOSED/);
+  assert.match(settle, /S232H2_RUNTIME_RENDER_SETTLE_FAILED/);
+  assert.match(monitorFailure, /state\.failureCode \?\?= failureCode/);
+  assert.match(
+    monitorFailure,
+    /if \(state\.failureCode\)[\s\S]*?throwRuntimeMonitorFailure\(state, state\.failureCode\)/,
+  );
+  assert.match(monitorFailure, /error\.name = "TimeoutError"/);
+  assert.doesNotMatch(settle, /page\.isClosed\(\)\) continue/);
   assert.doesNotMatch(settle, /\.catch\(/);
   const routeAssertion = blockBetween(
     spec,
@@ -623,7 +670,7 @@ test("artifact identity and network quiescence stay privacy-safe and fail-closed
   );
   assert.match(
     requiredAuditRoute,
-    /await gotoRequiredRoute\(page, requestedPath\);[\s\S]*?await settleRuntimeMonitors\(page\);[\s\S]*?assertRequiredRoute\(page, requestedPath\)/,
+    /requireHealthyRuntimeMonitor\(page\);[\s\S]*?await gotoRequiredRoute\(page, requestedPath\);[\s\S]*?await settleRuntimeMonitors\(page\);[\s\S]*?assertRequiredRoute\(page, requestedPath\)/,
   );
   assert.doesNotMatch(requiredAuditRoute, /\bcatch\b/);
 
@@ -637,19 +684,117 @@ test("artifact identity and network quiescence stay privacy-safe and fail-closed
     /gotoRequiredRoute\(selected\.page, "\/app\?mode=second"\)/,
   );
   assert.doesNotMatch(privacyRouteProbe, /gotoRequiredAuditRoute/);
-  assert.match(
-    privacyRouteProbe,
-    /S232H2_PRIVACY_DOM_NAVIGATION_FAILED/,
-  );
+  assert.match(privacyRouteProbe, /S232H2_PRIVACY_DOM_NAVIGATION_FAILED/);
   assert.match(
     privacyRouteProbe,
     /data-s224v-surface="\/app"[\s\S]*?data-s232d5-today-page="single-priority"/,
   );
-  assert.match(privacyRouteProbe, /expectedSurface\.waitFor\(\{ state: "visible" \}\)/);
-  assert.match(privacyRouteProbe, /await expectedSurface\.count\(\)[\s\S]*?\.toBe\(1\)/);
+  assert.match(
+    privacyRouteProbe,
+    /expectedSurface\.waitFor\(\{ state: "visible" \}\)/,
+  );
+  assert.match(
+    privacyRouteProbe,
+    /await expectedSurface\.count\(\)[\s\S]*?\.toBe\(1\)/,
+  );
   assert.match(privacyRouteProbe, /S232H2_PRIVACY_DOM_SURFACE_INVALID/);
   assert.match(privacyRouteProbe, /S232H2_PRIVACY_DOM_CANARY_READ_FAILED/);
-  assert.doesNotMatch(privacyRouteProbe, /console\.|response\.body|page\.url\(\)/);
+  assert.doesNotMatch(
+    privacyRouteProbe,
+    /console\.|response\.body|page\.url\(\)/,
+  );
+
+  const privacyRlsProbe = blockBetween(
+    spec,
+    "type PrivacyRlsProbeLabel",
+    "function selectCleanVisualAccount",
+  );
+  for (const [label, prefix] of [
+    ["owner-initial", "S232H2_PRIVACY_RLS_OWNER_INITIAL"],
+    ["cross-account", "S232H2_PRIVACY_RLS_CROSS_ACCOUNT"],
+    ["owner-repeat", "S232H2_PRIVACY_RLS_OWNER_REPEAT"],
+  ]) {
+    assert.match(privacyRlsProbe, new RegExp(`"${label}": "${prefix}"`));
+  }
+  const privacyRlsFailure = blockBetween(
+    privacyRlsProbe,
+    "function privacyRlsProbeFailureCode",
+    "async function readRlsProbe",
+  );
+  assert.match(
+    privacyRlsFailure,
+    /privacyRlsProbeCodePrefixes\[requestLabel\][\s\S]*?failureKind[\s\S]*?PrivacyRlsProbeFailure/,
+  );
+  assert.doesNotMatch(
+    privacyRlsFailure,
+    /itemId|url|query|response|body|header|cookie|jwt|email|supabase|console/i,
+  );
+  const privacyRlsRead = privacyRlsProbe.slice(
+    privacyRlsProbe.indexOf("async function readRlsProbe"),
+  );
+  const rlsStatusIndex = privacyRlsRead.indexOf(
+    "const status = response.status()",
+  );
+  const rlsContentTypeIndex = privacyRlsRead.indexOf(
+    'response.headers()["content-type"]',
+  );
+  const rlsJsonIndex = privacyRlsRead.indexOf("body = await response.json()");
+  const rlsDisposeIndex = privacyRlsRead.indexOf("await response.dispose()");
+  assert.ok(
+    rlsStatusIndex >= 0 &&
+      rlsContentTypeIndex > rlsStatusIndex &&
+      rlsJsonIndex > rlsContentTypeIndex &&
+      rlsDisposeIndex > rlsJsonIndex,
+  );
+  assert.match(privacyRlsRead, /maxRedirects: 0/);
+  assert.match(privacyRlsRead, /timeout: 30_000/);
+  for (const kind of [
+    "REQUEST_FAILED",
+    "HTTP_REDIRECT",
+    "HTTP_CLIENT_ERROR",
+    "HTTP_SERVER_ERROR",
+    "HTTP_UNEXPECTED_STATUS",
+    "CONTENT_TYPE_INVALID",
+    "JSON_INVALID",
+    "JSON_VALUE_INVALID",
+    "RESPONSE_VALIDATION_FAILED",
+    "DISPOSE_FAILED",
+  ]) {
+    assert.match(privacyRlsRead, new RegExp(`"${kind}"`));
+  }
+  assert.match(privacyRlsRead, /contentType !== "application\/json"/);
+  assert.match(
+    privacyRlsRead,
+    /hasExactObjectKeys\(body, \["ok", "rlsProbeVisible"\]\)/,
+  );
+  assert.match(
+    privacyRlsRead,
+    /finally \{[\s\S]*?await response\.dispose\(\)[\s\S]*?disposalFailureCode = privacyRlsProbeFailureCode\([\s\S]*?DISPOSE_FAILED/,
+  );
+  assert.match(
+    privacyRlsRead,
+    /const failureCode = retainFirstStableFailureCode\([\s\S]*?primaryFailureCode,[\s\S]*?disposalFailureCode[\s\S]*?if \(failureCode\) throw new Error\(failureCode\)/,
+  );
+  assert.match(
+    privacyRlsRead,
+    /error instanceof PrivacyRlsProbeFailure[\s\S]*?error\.stableCode[\s\S]*?RESPONSE_VALIDATION_FAILED/,
+  );
+  assert.doesNotMatch(
+    privacyRlsRead,
+    /console\.|error\.(?:message|stack|cause)|String\(error\)|throw error|response\.(?:body|text|url|statusText)\(|headersArray\(|\blocation\b|set-cookie/i,
+  );
+  const completePrivacyGate = blockBetween(
+    spec,
+    'test("@privacy S232H.2 privacy/auth source gate"',
+    'test("@a11y S232H.2 split accessibility gate"',
+  );
+  for (const label of ["owner-initial", "cross-account", "owner-repeat"]) {
+    assert.equal(
+      [...completePrivacyGate.matchAll(new RegExp(`"${label}"`, "g"))].length,
+      1,
+      `privacy RLS request label must be used exactly once: ${label}`,
+    );
+  }
 
   assert.equal(
     [...spec.matchAll(/\bgotoRequiredRoute\(/g)].length,
@@ -661,6 +806,117 @@ test("artifact identity and network quiescence stay privacy-safe and fail-closed
     12,
     "all eleven audited navigation sites must retain strict quiescence",
   );
+
+  const exactAuditNavigationBlocks = [
+    ["auditRoute", "async function auditRoute(", "function hasExactQuery"],
+    [
+      "prepareInitialRoute",
+      "async function prepareInitialRoute",
+      "async function runIsolatedDynamicCandidate",
+    ],
+    [
+      "capture",
+      "async function prepareCaptureExtractionPreview",
+      "async function prepareAnswerReviewResult",
+    ],
+    [
+      "answer-review",
+      "async function prepareAnswerReviewResult",
+      "async function prepareReviewSelectedState",
+    ],
+    [
+      "review",
+      "async function prepareReviewSelectedState",
+      "async function clickCalculatorFocusAction",
+    ],
+  ];
+  for (const [label, start, end] of exactAuditNavigationBlocks) {
+    const source = blockBetween(spec, start, end);
+    assert.equal(
+      [...source.matchAll(/\bgotoRequiredAuditRoute\(/g)].length,
+      1,
+      `${label} must use exactly one audit navigation`,
+    );
+    assert.doesNotMatch(
+      source,
+      /\bgotoRequiredRoute\(/,
+      `${label} must not bypass audit quiescence`,
+    );
+  }
+
+  const a11yDynamicNavigation = blockBetween(
+    spec,
+    "const dynamicCandidates = [",
+    "for (const dynamic of dynamicCandidates)",
+  );
+  const visualDynamicNavigation = blockBetween(
+    spec,
+    "const dynamicVisuals = [",
+    "for (const dynamic of dynamicVisuals)",
+  );
+  const assertExactAuditCandidate = (source, label, expectedPath) => {
+    assert.equal(
+      [...source.matchAll(/\bgotoRequiredAuditRoute\(/g)].length,
+      1,
+      `${label} must use exactly one audit navigation`,
+    );
+    assert.match(source, expectedPath);
+    assert.doesNotMatch(source, /\bgotoRequiredRoute\(/);
+  };
+  for (const [label, source] of [
+    ["a11y", a11yDynamicNavigation],
+    ["visual", visualDynamicNavigation],
+  ]) {
+    const sessionCandidate = blockBetween(
+      source,
+      'routeId: "session"',
+      'routeId: "calculator"',
+    );
+    const calculatorCandidate = source.slice(
+      source.lastIndexOf('routeId: "calculator"'),
+    );
+    assertExactAuditCandidate(
+      sessionCandidate,
+      `${label} dynamic session`,
+      /\/app\/session\?mode=second/,
+    );
+    assertExactAuditCandidate(
+      calculatorCandidate,
+      `${label} dynamic calculator`,
+      /\/app\/calculator\?mode=second/,
+    );
+  }
+
+  const baselineNavigation = blockBetween(
+    spec,
+    "for (const viewport of [viewports[0], viewports[2]])",
+    "await verifyRuntimeVersion(targetPage, runtimeRunnerSha)",
+  );
+  const baselineLedger = blockBetween(
+    baselineNavigation,
+    "for (const viewport of [viewports[0], viewports[2]])",
+    "const beforeCalculator",
+  );
+  const baselineCalculator = baselineNavigation.slice(
+    baselineNavigation.indexOf("const beforeCalculator"),
+  );
+  assertExactAuditCandidate(
+    baselineLedger,
+    "baseline ledger",
+    /\/app\/items\//,
+  );
+  assertExactAuditCandidate(
+    baselineCalculator,
+    "baseline calculator",
+    /\/app\/calculator\?mode=second/,
+  );
+
+  assert.equal(
+    [...spec.matchAll(/page\.reload\(\{ waitUntil: "domcontentloaded" \}\)/g)]
+      .length,
+    2,
+    "only the calculator and capture recovery reloads are permitted",
+  );
   const calculatorReload = blockBetween(
     spec,
     "async function advanceCalculatorToCasioInput",
@@ -670,6 +926,7 @@ test("artifact identity and network quiescence stay privacy-safe and fail-closed
     calculatorReload,
     /page\.reload[\s\S]*?waitForStableRender[\s\S]*?settleRuntimeMonitors/,
   );
+  assert.doesNotMatch(calculatorReload, /page\.reload[\s\S]*?\bcatch\b/);
   const captureReload = blockBetween(
     spec,
     "async function prepareCaptureExtractionPreview",
@@ -679,6 +936,7 @@ test("artifact identity and network quiescence stay privacy-safe and fail-closed
     captureReload,
     /page\.reload[\s\S]*?waitForStableRender[\s\S]*?settleRuntimeMonitors/,
   );
+  assert.doesNotMatch(captureReload, /page\.reload[\s\S]*?\bcatch\b/);
 });
 
 test("ephemeral runner is pinned to the exact project, repository, PR, and head", () => {
@@ -758,10 +1016,7 @@ test("ephemeral credentials are random, masked first, and published only to job 
       passwordMaskIndex > passwordIndex,
   );
   assert.match(credentialBuilder, /randomBytes\(8\)\.toString\("hex"\)/);
-  assert.match(
-    credentialBuilder,
-    /randomBytes\(36\)\.toString\("base64url"\)/,
-  );
+  assert.match(credentialBuilder, /randomBytes\(36\)\.toString\("base64url"\)/);
 
   const publisher = blockBetween(
     ephemeralAccounts,
@@ -985,10 +1240,10 @@ test("provisioning and cleanup prove the exact graph, JWT boundary, and deletion
     "async function cleanupStaleMarkedUsers",
   );
   const deleteOrder = [
-    "deleteItemChildren(client, \"wrong_answer_notes\"",
-    "deleteItemChildren(client, \"wrong_answer_tags\"",
+    'deleteItemChildren(client, "wrong_answer_notes"',
+    'deleteItemChildren(client, "wrong_answer_tags"',
     "USER_TABLES_IN_SAFE_DELETE_ORDER",
-    "deleteByUser(client, \"profiles\"",
+    'deleteByUser(client, "profiles"',
     "auth.admin.deleteUser(user.id, false)",
     "confirmAccountCleanup(client, user.id)",
   ];
@@ -1041,10 +1296,7 @@ test("browser and provisioner reuse one exact synthetic fixture grammar", () => 
     spec,
     /from "\.\.\/\.\.\/scripts\/support\/s232h2-exact-fixture"/,
   );
-  assert.match(
-    ephemeralAccounts,
-    /from "\.\/support\/s232h2-exact-fixture"/,
-  );
+  assert.match(ephemeralAccounts, /from "\.\/support\/s232h2-exact-fixture"/);
   for (const contract of [
     /export function exactFixtureGeneratedArtifacts/,
     /export function exactFixtureInput/,

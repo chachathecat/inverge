@@ -2,9 +2,11 @@ import AxeBuilder from "@axe-core/playwright";
 import {
   expect,
   test,
+  type APIResponse,
   type Browser,
   type BrowserContext,
   type Page,
+  type Request,
   type Route,
   type TestInfo,
 } from "@playwright/test";
@@ -34,6 +36,7 @@ import {
   syntheticQueueAnchorSource,
   type SyntheticItem,
 } from "../../scripts/support/s232h2-exact-fixture";
+import { retainFirstStableFailureCode } from "../../scripts/support/s232h2-preview-response.mjs";
 
 import {
   establishProtectedPreviewSession,
@@ -200,6 +203,14 @@ type RuntimeErrorEvidence = {
   pageErrors: string[];
   sameOriginRequestFailures: string[];
 };
+
+type RuntimeMonitorState = {
+  pendingAuditRequestCount: number;
+  lastAuditRequestActivityAt: number;
+  failureCode: string | null;
+};
+
+const runtimeMonitorStates = new WeakMap<Page, RuntimeMonitorState>();
 
 type AuditProfile = "mobile-full" | "geometry";
 
@@ -422,6 +433,22 @@ function monitorPageRuntime(
     pageErrors: [],
     sameOriginRequestFailures: [],
   };
+  const state: RuntimeMonitorState = {
+    pendingAuditRequestCount: 0,
+    lastAuditRequestActivityAt: Date.now(),
+    failureCode: null,
+  };
+  const trackedRequests = new WeakSet<Request>();
+  const finishTrackedRequest = (request: Request) => {
+    if (!trackedRequests.has(request)) return;
+    trackedRequests.delete(request);
+    state.pendingAuditRequestCount = Math.max(
+      0,
+      state.pendingAuditRequestCount - 1,
+    );
+    state.lastAuditRequestActivityAt = Date.now();
+  };
+  runtimeMonitorStates.set(page, state);
   page.on("console", (message) => {
     if (message.type() === "error") {
       evidence.consoleErrors.push("console-error");
@@ -430,26 +457,38 @@ function monitorPageRuntime(
   page.on("pageerror", () => {
     evidence.pageErrors.push("page-error");
   });
-  page.on("requestfailed", (request) => {
+  page.on("request", (request) => {
     const url = new URL(request.url());
-    const failure = request.failure()?.errorText ?? "unknown";
     if (url.origin !== expectedOrigin) return;
-    const headers = request.headers();
-    const isExplicitPrefetch =
-      headers["next-router-prefetch"] === "1" ||
-      headers.purpose === "prefetch" ||
-      headers["sec-purpose"]?.includes("prefetch") === true;
-    const isSupersededDocumentNavigation =
-      failure === "net::ERR_ABORTED" &&
-      request.method() === "GET" &&
-      request.isNavigationRequest() &&
-      request.resourceType() === "document";
-    const isCancelledExplicitPrefetch =
-      failure === "net::ERR_ABORTED" &&
-      request.method() === "GET" &&
-      isExplicitPrefetch;
-    if (isSupersededDocumentNavigation || isCancelledExplicitPrefetch) return;
-    evidence.sameOriginRequestFailures.push("same-origin-request-failure");
+    trackedRequests.add(request);
+    state.pendingAuditRequestCount += 1;
+    state.lastAuditRequestActivityAt = Date.now();
+  });
+  page.on("requestfinished", finishTrackedRequest);
+  page.on("requestfailed", (request) => {
+    try {
+      const url = new URL(request.url());
+      const failure = request.failure()?.errorText ?? "unknown";
+      if (url.origin !== expectedOrigin) return;
+      const headers = request.headers();
+      const isExplicitPrefetch =
+        headers["next-router-prefetch"] === "1" ||
+        headers.purpose === "prefetch" ||
+        headers["sec-purpose"]?.includes("prefetch") === true;
+      const isSupersededDocumentNavigation =
+        failure === "net::ERR_ABORTED" &&
+        request.method() === "GET" &&
+        request.isNavigationRequest() &&
+        request.resourceType() === "document";
+      const isCancelledExplicitPrefetch =
+        failure === "net::ERR_ABORTED" &&
+        request.method() === "GET" &&
+        isExplicitPrefetch;
+      if (isSupersededDocumentNavigation || isCancelledExplicitPrefetch) return;
+      evidence.sameOriginRequestFailures.push("same-origin-request-failure");
+    } finally {
+      finishTrackedRequest(request);
+    }
   });
   page.on("response", (response) => {
     const url = new URL(response.url());
@@ -467,16 +506,71 @@ function visualAuditRequestHeaders(baseUrl = runtimeBaseUrl) {
   };
 }
 
+function throwRuntimeMonitorFailure(
+  state: RuntimeMonitorState,
+  failureCode: string,
+): never {
+  state.failureCode ??= failureCode;
+  const error = new Error(state.failureCode);
+  if (state.failureCode === "S232H2_RUNTIME_REQUEST_QUIESCENCE_TIMEOUT") {
+    error.name = "TimeoutError";
+  }
+  throw error;
+}
+
+function requireHealthyRuntimeMonitor(page: Page) {
+  const state = runtimeMonitorStates.get(page);
+  if (!state) throw new Error("S232H2_RUNTIME_MONITOR_REQUIRED");
+  if (state.failureCode) throwRuntimeMonitorFailure(state, state.failureCode);
+  if (page.isClosed()) {
+    throwRuntimeMonitorFailure(state, "S232H2_RUNTIME_MONITOR_PAGE_CLOSED");
+  }
+  return state;
+}
+
 async function settleRuntimeMonitors(...pages: Page[]) {
   for (const page of pages) {
-    if (page.isClosed()) continue;
-    await page.waitForLoadState("networkidle", { timeout: 10_000 });
-    await page.evaluate(async () => {
-      await new Promise<void>((resolve) =>
-        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-      );
-      await new Promise<void>((resolve) => window.setTimeout(resolve, 100));
-    });
+    const state = requireHealthyRuntimeMonitor(page);
+    const deadline = Date.now() + 10_000;
+    while (true) {
+      while (
+        state.pendingAuditRequestCount > 0 ||
+        Date.now() - state.lastAuditRequestActivityAt < 250
+      ) {
+        if (Date.now() >= deadline) {
+          throwRuntimeMonitorFailure(
+            state,
+            "S232H2_RUNTIME_REQUEST_QUIESCENCE_TIMEOUT",
+          );
+        }
+        if (page.isClosed()) {
+          throwRuntimeMonitorFailure(
+            state,
+            "S232H2_RUNTIME_MONITOR_PAGE_CLOSED",
+          );
+        }
+        await new Promise<void>((resolve) => setTimeout(resolve, 50));
+      }
+      try {
+        await page.evaluate(async () => {
+          await new Promise<void>((resolve) =>
+            requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+          );
+          await new Promise<void>((resolve) => window.setTimeout(resolve, 100));
+        });
+      } catch {
+        throwRuntimeMonitorFailure(
+          state,
+          "S232H2_RUNTIME_RENDER_SETTLE_FAILED",
+        );
+      }
+      if (
+        state.pendingAuditRequestCount === 0 &&
+        Date.now() - state.lastAuditRequestActivityAt >= 100
+      ) {
+        break;
+      }
+    }
   }
 }
 
@@ -745,18 +839,11 @@ function captureFixtureTimingClosed(value: unknown, createdAt: unknown) {
   const signal = captureSignal as Record<string, unknown>;
   const queue = signal.reviewQueueCandidate;
   const learning = signal.learningStateUpdateCandidate;
-  if (
-    queue === null ||
-    typeof queue !== "object" ||
-    Array.isArray(queue)
-  ) {
+  if (queue === null || typeof queue !== "object" || Array.isArray(queue)) {
     return false;
   }
   if (learning === null) {
-    return !Object.hasOwn(
-      queue as Record<string, unknown>,
-      "dueAtCandidate",
-    );
+    return !Object.hasOwn(queue as Record<string, unknown>, "dueAtCandidate");
   }
   if (typeof learning !== "object" || Array.isArray(learning)) return false;
   const dueAt = (queue as Record<string, unknown>).dueAtCandidate;
@@ -795,18 +882,11 @@ function canonicalCaptureFixtureProjection(value: unknown) {
   const signal = captureSignal as Record<string, unknown>;
   const queue = signal.reviewQueueCandidate;
   const learning = signal.learningStateUpdateCandidate;
-  if (
-    queue === null ||
-    typeof queue !== "object" ||
-    Array.isArray(queue)
-  ) {
+  if (queue === null || typeof queue !== "object" || Array.isArray(queue)) {
     return null;
   }
   if (learning === null) {
-    return Object.hasOwn(
-      queue as Record<string, unknown>,
-      "dueAtCandidate",
-    )
+    return Object.hasOwn(queue as Record<string, unknown>, "dueAtCandidate")
       ? null
       : canonicalJson(clone);
   }
@@ -1958,24 +2038,152 @@ async function openCandidateHandle(
   }
 }
 
-async function readRlsProbe(page: Page, itemId: string) {
-  const url = new URL("/api/os/visual-source-audit", runtimeBaseUrl);
-  url.searchParams.set("probeItemId", itemId);
-  const response = await page.context().request.get(url.toString(), {
-    headers: visualAuditRequestHeaders(),
-  });
-  const body = (await response.json().catch(() => null)) as {
-    ok?: unknown;
-    rlsProbeVisible?: unknown;
-  } | null;
-  return {
-    status: response.status(),
-    exactShape:
-      body !== null &&
-      Object.keys(body).sort().join(",") === "ok,rlsProbeVisible",
-    visible: body?.rlsProbeVisible === true,
-    hidden: body?.rlsProbeVisible === false,
-  };
+type PrivacyRlsProbeLabel = "owner-initial" | "cross-account" | "owner-repeat";
+
+type PrivacyRlsProbeFailureKind =
+  | "REQUEST_FAILED"
+  | "HTTP_REDIRECT"
+  | "HTTP_CLIENT_ERROR"
+  | "HTTP_SERVER_ERROR"
+  | "HTTP_UNEXPECTED_STATUS"
+  | "CONTENT_TYPE_INVALID"
+  | "JSON_INVALID"
+  | "JSON_VALUE_INVALID"
+  | "RESPONSE_VALIDATION_FAILED"
+  | "DISPOSE_FAILED";
+
+const privacyRlsProbeCodePrefixes: Record<PrivacyRlsProbeLabel, string> = {
+  "owner-initial": "S232H2_PRIVACY_RLS_OWNER_INITIAL",
+  "cross-account": "S232H2_PRIVACY_RLS_CROSS_ACCOUNT",
+  "owner-repeat": "S232H2_PRIVACY_RLS_OWNER_REPEAT",
+};
+
+function privacyRlsProbeFailureCode(
+  requestLabel: PrivacyRlsProbeLabel,
+  failureKind: PrivacyRlsProbeFailureKind,
+): string {
+  return `${privacyRlsProbeCodePrefixes[requestLabel]}_${failureKind}`;
+}
+
+class PrivacyRlsProbeFailure extends Error {
+  readonly stableCode: string;
+
+  constructor(stableCode: string) {
+    super(stableCode);
+    this.name = "PrivacyRlsProbeFailure";
+    this.stableCode = stableCode;
+  }
+}
+
+function failPrivacyRlsProbe(
+  requestLabel: PrivacyRlsProbeLabel,
+  failureKind: PrivacyRlsProbeFailureKind,
+): never {
+  throw new PrivacyRlsProbeFailure(
+    privacyRlsProbeFailureCode(requestLabel, failureKind),
+  );
+}
+
+async function readRlsProbe(
+  page: Page,
+  itemId: string,
+  requestLabel: PrivacyRlsProbeLabel,
+) {
+  let response: APIResponse | null = null;
+  let result: {
+    status: number;
+    exactShape: true;
+    visible: boolean;
+    hidden: boolean;
+  } | null = null;
+  let primaryFailureCode: string | null = null;
+  let disposalFailureCode: string | null = null;
+  try {
+    const url = new URL("/api/os/visual-source-audit", runtimeBaseUrl);
+    url.searchParams.set("probeItemId", itemId);
+    try {
+      response = await page.context().request.get(url.toString(), {
+        headers: visualAuditRequestHeaders(),
+        maxRedirects: 0,
+        timeout: 30_000,
+      });
+    } catch {
+      failPrivacyRlsProbe(requestLabel, "REQUEST_FAILED");
+    }
+    if (!response) failPrivacyRlsProbe(requestLabel, "REQUEST_FAILED");
+
+    const status = response.status();
+    if (status >= 300 && status < 400) {
+      failPrivacyRlsProbe(requestLabel, "HTTP_REDIRECT");
+    }
+    if (status >= 400 && status < 500) {
+      failPrivacyRlsProbe(requestLabel, "HTTP_CLIENT_ERROR");
+    }
+    if (status >= 500) {
+      failPrivacyRlsProbe(requestLabel, "HTTP_SERVER_ERROR");
+    }
+    if (status !== 200) {
+      failPrivacyRlsProbe(requestLabel, "HTTP_UNEXPECTED_STATUS");
+    }
+
+    const contentType = (response.headers()["content-type"] ?? "")
+      .split(";", 1)[0]
+      ?.trim()
+      .toLowerCase();
+    if (contentType !== "application/json") {
+      failPrivacyRlsProbe(requestLabel, "CONTENT_TYPE_INVALID");
+    }
+
+    let body: unknown;
+    try {
+      body = await response.json();
+    } catch {
+      failPrivacyRlsProbe(requestLabel, "JSON_INVALID");
+    }
+    if (
+      !hasExactObjectKeys(body, ["ok", "rlsProbeVisible"]) ||
+      body.ok !== true ||
+      typeof body.rlsProbeVisible !== "boolean"
+    ) {
+      failPrivacyRlsProbe(requestLabel, "JSON_VALUE_INVALID");
+    }
+    result = {
+      status,
+      exactShape: true,
+      visible: body.rlsProbeVisible,
+      hidden: !body.rlsProbeVisible,
+    };
+  } catch (error) {
+    primaryFailureCode =
+      error instanceof PrivacyRlsProbeFailure
+        ? error.stableCode
+        : privacyRlsProbeFailureCode(
+            requestLabel,
+            "RESPONSE_VALIDATION_FAILED",
+          );
+  } finally {
+    if (response) {
+      try {
+        await response.dispose();
+      } catch {
+        disposalFailureCode = privacyRlsProbeFailureCode(
+          requestLabel,
+          "DISPOSE_FAILED",
+        );
+      }
+    }
+  }
+  const failureCode = retainFirstStableFailureCode(
+    primaryFailureCode,
+    disposalFailureCode,
+  );
+  if (failureCode) throw new Error(failureCode);
+  if (!result) {
+    throw new Error(
+      privacyRlsProbeFailureCode(requestLabel, "RESPONSE_VALIDATION_FAILED"),
+    );
+  }
+  return result;
 }
 
 function selectCleanVisualAccount(handles: CandidateAuditHandle[]) {
@@ -2046,6 +2254,7 @@ async function gotoRequiredRoute(page: Page, requestedPath: string) {
 }
 
 async function gotoRequiredAuditRoute(page: Page, requestedPath: string) {
+  requireHealthyRuntimeMonitor(page);
   await gotoRequiredRoute(page, requestedPath);
   await settleRuntimeMonitors(page);
   assertRequiredRoute(page, requestedPath);
@@ -3625,7 +3834,8 @@ async function inspectSyntheticArtifactBoundary(
           !element.hasAttribute("src") &&
           (normalizedOwnText.startsWith(
             "(self.__next_f=self.__next_f||[]).push(",
-          ) || normalizedOwnText.startsWith("self.__next_f.push("));
+          ) ||
+            normalizedOwnText.startsWith("self.__next_f.push("));
         const ownText = isInlineNextFlightTransport ? "" : directOwnText;
         const value =
           element instanceof HTMLInputElement ||
@@ -4960,8 +5170,16 @@ test("@privacy S232H.2 privacy/auth source gate", async ({ browser }) => {
       throw new Error("S232H2_CROSS_ACCOUNT_GATE_OPEN");
     }
 
-    const ownerRead = await readRlsProbe(denied.page, deniedCanary);
-    const deniedRead = await readRlsProbe(selected.page, deniedCanary);
+    const ownerRead = await readRlsProbe(
+      denied.page,
+      deniedCanary,
+      "owner-initial",
+    );
+    const deniedRead = await readRlsProbe(
+      selected.page,
+      deniedCanary,
+      "cross-account",
+    );
     let deniedCanaryDomCount = 0;
     try {
       await gotoRequiredRoute(selected.page, "/app?mode=second");
@@ -4996,7 +5214,11 @@ test("@privacy S232H.2 privacy/auth source gate", async ({ browser }) => {
     } catch {
       throw new Error("S232H2_PRIVACY_DOM_CANARY_READ_FAILED");
     }
-    const ownerReadAgain = await readRlsProbe(denied.page, deniedCanary);
+    const ownerReadAgain = await readRlsProbe(
+      denied.page,
+      deniedCanary,
+      "owner-repeat",
+    );
     let finalAudit: VisualAccountAudit;
     try {
       finalAudit = await auditVisualAccountCandidate(
