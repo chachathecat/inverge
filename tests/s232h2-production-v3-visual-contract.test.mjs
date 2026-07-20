@@ -622,6 +622,38 @@ test("provisioning and cleanup prove the exact graph, JWT boundary, and deletion
   assert.match(ephemeralAccounts, /if \(!stateMatches\)/);
 });
 
+test("provision failure preserves only its first stable stage and code", () => {
+  const stableCode = blockBetween(
+    ephemeralAccounts,
+    "function stableFailureCode",
+    "function assertSafeScalar",
+  );
+  assert.match(stableCode, /error instanceof SafeFailure/);
+  assert.match(stableCode, /\^S232H2_\[A-Z0-9_\]\+\$/);
+  assert.match(stableCode, /S232H2_UNEXPECTED_FAILURE/);
+  assert.doesNotMatch(stableCode, /stack|cause|response|url|email|password/i);
+
+  const cli = blockBetween(
+    ephemeralAccounts,
+    "async function runCli",
+    "const isDirectExecution",
+  );
+  assert.match(cli, /catch \(error\)/);
+  assert.match(cli, /const failedStage = activeStage/);
+  assert.match(cli, /activeStage = "provision-failure-cleanup"/);
+  assert.match(cli, /activeStage = failedStage;\s*throw error/);
+  assert.doesNotMatch(cli, /S232H2_PROVISION_FAILED/);
+
+  const directExecution = ephemeralAccounts.slice(
+    ephemeralAccounts.indexOf("const isDirectExecution"),
+  );
+  assert.match(directExecution, /catch\(\(error: unknown\) =>/);
+  assert.match(
+    directExecution,
+    /S232H2_EPHEMERAL_FAILED:\$\{activeStage\}:\$\{stableFailureCode\(error\)\}/,
+  );
+});
+
 test("browser and provisioner reuse one exact synthetic fixture grammar", () => {
   assert.match(
     spec,

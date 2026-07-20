@@ -154,6 +154,12 @@ function fail(code: string): never {
   throw new SafeFailure(code);
 }
 
+function stableFailureCode(error: unknown) {
+  return error instanceof SafeFailure && /^S232H2_[A-Z0-9_]+$/.test(error.message)
+    ? error.message
+    : "S232H2_UNEXPECTED_FAILURE";
+}
+
 function assertSafeScalar(value: string, code: string) {
   if (!value || /[\r\n]/.test(value)) fail(code);
   return value;
@@ -1304,7 +1310,8 @@ async function runCli() {
   }
   try {
     await provision(config);
-  } catch {
+  } catch (error) {
+    const failedStage = activeStage;
     activeStage = "provision-failure-cleanup";
     try {
       const client = createAdminClient(config.adminKey);
@@ -1315,7 +1322,8 @@ async function runCli() {
     } catch {
       // The workflow's independent always() cleanup step retries fail-closed cleanup.
     }
-    fail("S232H2_PROVISION_FAILED");
+    activeStage = failedStage;
+    throw error;
   }
 }
 
@@ -1324,8 +1332,10 @@ const isDirectExecution =
   import.meta.url === pathToFileURL(process.argv[1]).href;
 
 if (isDirectExecution) {
-  runCli().catch(() => {
-    process.stderr.write(`S232H2_EPHEMERAL_FAILED:${activeStage}\n`);
+  runCli().catch((error: unknown) => {
+    process.stderr.write(
+      `S232H2_EPHEMERAL_FAILED:${activeStage}:${stableFailureCode(error)}\n`,
+    );
     process.exitCode = 1;
   });
 }
