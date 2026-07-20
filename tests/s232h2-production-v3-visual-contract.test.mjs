@@ -3,11 +3,25 @@ import { createHash } from "node:crypto";
 import { readFileSync, readdirSync } from "node:fs";
 import test from "node:test";
 
+import {
+  disposePreviewResponse,
+  isPreviewJsonObject,
+  PREVIEW_REQUEST_CODE_PREFIXES,
+  previewRequestFailureCode,
+  previewResponseMetadataFailureCode,
+} from "../scripts/support/s232h2-preview-response.mjs";
+
 const read = (path) => readFileSync(path, "utf8");
 const workflow = read(".github/workflows/s232h2-runtime.yml");
 const ephemeralAccounts = read("scripts/s232h2-ephemeral-accounts.ts");
 const exactFixture = read("scripts/support/s232h2-exact-fixture.ts");
+const previewResponseSupport = read(
+  "scripts/support/s232h2-preview-response.mjs",
+);
 const spec = read("tests/e2e/s232h2-production-v3-visual.spec.ts");
+const authenticatedRuntime = read(
+  "tests/e2e/support/authenticated-runtime.ts",
+);
 const sourceAuditRoute = read("app/api/os/visual-source-audit/route.ts");
 const readOnlyRequest = read("lib/review-os/read-only-request.ts");
 const reviewOsRepository = read("lib/review-os/repository.ts");
@@ -297,6 +311,236 @@ test("workflow provisions exactly two runner-only candidates and always cleans t
     successfulArtifact,
     /runner\.temp|VISUAL_PROOF|EPHEMERAL_STATE|GITHUB_ENV|SUPABASE|EMAIL|PASSWORD/,
   );
+});
+
+test("runner API audit and browser visual contexts keep distinct bypass behavior", () => {
+  const runnerSession = blockBetween(
+    ephemeralAccounts,
+    "async function createPreviewSession",
+    "async function readPreviewSnapshot",
+  );
+  const runnerContext = blockBetween(
+    runnerSession,
+    "request.newContext({",
+    "  });\n  try {",
+  );
+  assert.match(
+    runnerContext,
+    /"x-vercel-protection-bypass": preview\.bypassSecret/,
+  );
+  assert.doesNotMatch(runnerContext, /x-vercel-set-bypass-cookie/);
+  assert.doesNotMatch(ephemeralAccounts, /x-vercel-set-bypass-cookie/);
+
+  for (const request of [
+    /runPreviewRequest\("runtime-version", \(\) =>\s*context\.get\("\/api\/runtime\/version"/,
+    /runPreviewRequest\("sign-in", \(\) =>\s*context\.post\("\/api\/auth\/sign-in"/,
+    /runPreviewRequest\("session", \(\) =>\s*context\.get\("\/api\/auth\/session"/,
+  ]) {
+    assert.match(runnerSession, request);
+  }
+  assert.match(
+    runnerSession,
+    /context\.get\("\/api\/auth\/session", \{\s*maxRedirects: 0/,
+  );
+
+  const sourceAudit = blockBetween(
+    ephemeralAccounts,
+    "async function readPreviewSnapshot",
+    "function assertPreviewPrimaryExact",
+  );
+  assert.match(
+    sourceAudit,
+    /runPreviewRequest\("source-audit", \(\) =>\s*context\.get/,
+  );
+  assert.match(
+    sourceAudit,
+    /runPreviewRequest\(requestLabel, \(\) =>\s*context\.get/,
+  );
+
+  const browserHeaders = blockBetween(
+    authenticatedRuntime,
+    "export const protectionHeaders",
+    "export async function establishProtectedPreviewSession",
+  );
+  assert.match(
+    browserHeaders,
+    /"x-vercel-protection-bypass": vercelBypassSecret/,
+  );
+  assert.match(
+    browserHeaders,
+    /"x-vercel-set-bypass-cookie": "true"/,
+  );
+  const browserBootstrap = blockBetween(
+    authenticatedRuntime,
+    "export async function establishProtectedPreviewSession",
+    "type RuntimeSafetyOptions",
+  );
+  assert.match(browserBootstrap, /headers: protectionHeaders/);
+  assert.match(browserBootstrap, /cookieRedirectStatuses/);
+  assert.match(browserBootstrap, /headersArray\(\)/);
+  assert.match(browserBootstrap, /page\.context\(\)\.cookies/);
+  assert.match(browserBootstrap, /const cookieProofResponse/);
+
+  const visualContext = blockBetween(
+    spec,
+    "async function newPreviewContext",
+    "function allErrorCounts",
+  );
+  assert.match(visualContext, /extraHTTPHeaders: \{\s*\.\.\.protectionHeaders/);
+});
+
+test("Preview response validation is request-specific, value-safe, and privacy-safe", async () => {
+  const runnerSession = blockBetween(
+    ephemeralAccounts,
+    "async function createPreviewSession",
+    "async function readPreviewSnapshot",
+  );
+  const sourceAudit = blockBetween(
+    ephemeralAccounts,
+    "async function readPreviewSnapshot",
+    "function assertPreviewPrimaryExact",
+  );
+  const requestContracts = [
+    ["runtime-version", "S232H2_PREVIEW_RUNTIME_VERSION"],
+    ["sign-in", "S232H2_PREVIEW_SIGN_IN"],
+    ["session", "S232H2_PREVIEW_SESSION"],
+    ["source-audit", "S232H2_PREVIEW_SOURCE_AUDIT"],
+    ["rls-owner-probe", "S232H2_PREVIEW_RLS_OWNER_PROBE"],
+    [
+      "rls-cross-account-probe",
+      "S232H2_PREVIEW_RLS_CROSS_ACCOUNT_PROBE",
+    ],
+  ];
+  assert.deepEqual(
+    Object.entries(PREVIEW_REQUEST_CODE_PREFIXES),
+    requestContracts,
+  );
+  for (const [label, prefix] of requestContracts) {
+    for (const [status, contentType, kind] of [
+      [302, "text/html", "HTTP_REDIRECT"],
+      [401, "application/json", "HTTP_CLIENT_ERROR"],
+      [503, "application/json", "HTTP_SERVER_ERROR"],
+      [204, "application/json", "HTTP_UNEXPECTED_STATUS"],
+      [200, undefined, "CONTENT_TYPE_MISSING"],
+      [200, "text/html", "CONTENT_TYPE_NON_JSON"],
+      [200, "application/problem+json", "CONTENT_TYPE_NON_JSON"],
+    ]) {
+      assert.equal(
+        previewResponseMetadataFailureCode(label, status, contentType),
+        `${prefix}_${kind}`,
+      );
+    }
+    assert.equal(
+      previewResponseMetadataFailureCode(
+        label,
+        200,
+        " Application/JSON ; charset=utf-8",
+      ),
+      null,
+    );
+    assert.equal(
+      previewRequestFailureCode(label, "REQUEST_FAILED"),
+      `${prefix}_REQUEST_FAILED`,
+    );
+    assert.equal(
+      previewRequestFailureCode(label, "JSON_INVALID"),
+      `${prefix}_JSON_INVALID`,
+    );
+    assert.equal(
+      previewRequestFailureCode(label, "JSON_VALUE_INVALID"),
+      `${prefix}_JSON_VALUE_INVALID`,
+    );
+  }
+  assert.equal(isPreviewJsonObject({ ok: true }), true);
+  assert.equal(isPreviewJsonObject(null), false);
+  assert.equal(isPreviewJsonObject([]), false);
+  assert.equal(isPreviewJsonObject("json"), false);
+
+  const failureFactory = blockBetween(
+    previewResponseSupport,
+    "export function previewRequestFailureCode",
+    "/**\n * @param {PreviewRequestLabel} requestLabel\n * @param {number} status",
+  );
+  assert.match(
+    failureFactory,
+    /PREVIEW_REQUEST_CODE_PREFIXES\[requestLabel\]/,
+  );
+  assert.doesNotMatch(
+    failureFactory,
+    /error|status|contentType|response|body|headers|location|url|email|password|cookie|jwt|account|supabase/i,
+  );
+
+  const responseValidation = blockBetween(
+    ephemeralAccounts,
+    "async function runPreviewRequest",
+    "async function createPreviewSession",
+  );
+  const metadataIndex = responseValidation.indexOf(
+    "previewResponseMetadataFailureCode(",
+  );
+  const contentTypeIndex = responseValidation.indexOf(
+    'response.headers()["content-type"]',
+  );
+  const jsonIndex = responseValidation.indexOf("value = await response.json()");
+  const finallyIndex = responseValidation.indexOf("} finally {");
+  const disposeIndex = responseValidation.indexOf(
+    "await disposePreviewResponse(response)",
+  );
+  assert.ok(
+    metadataIndex >= 0 &&
+      contentTypeIndex > metadataIndex &&
+      jsonIndex > contentTypeIndex &&
+      finallyIndex > jsonIndex &&
+      disposeIndex > finallyIndex,
+  );
+  assert.match(responseValidation, /if \(!isPreviewJsonObject\(value\)\)/);
+  assert.match(responseValidation, /catch \{\s*fail\(/);
+  assert.doesNotMatch(
+    responseValidation,
+    /response\.(?:body|text|url|statusText)\(|headersArray\(|\blocation\b|set-cookie|console\.|process\.(?:stdout|stderr)|JSON\.stringify/i,
+  );
+  assert.doesNotMatch(ephemeralAccounts, /S232H2_PREVIEW_JSON_INVALID/);
+
+  let disposeCalls = 0;
+  await disposePreviewResponse({
+    async dispose() {
+      disposeCalls += 1;
+    },
+  });
+  assert.equal(disposeCalls, 1);
+  await assert.doesNotReject(() =>
+    disposePreviewResponse({
+      async dispose() {
+        throw new Error("bounded disposal failure");
+      },
+    }),
+  );
+
+  assert.match(
+    runnerSession,
+    /readPreviewJson\(\s*versionResponse,\s*"runtime-version"/,
+  );
+  assert.match(
+    runnerSession,
+    /readPreviewJson\(signInResponse, "sign-in"\)/,
+  );
+  assert.match(
+    runnerSession,
+    /readPreviewJson\(sessionResponse, "session"\)/,
+  );
+  assert.match(
+    sourceAudit,
+    /readPreviewJson\(response, "source-audit"\)/,
+  );
+  assert.match(sourceAudit, /readPreviewJson\(response, requestLabel\)/);
+
+  const rlsCalls = blockBetween(
+    ephemeralAccounts,
+    "async function verifyPreviewJwtAndRls",
+    "async function writeRunnerState",
+  );
+  assert.match(rlsCalls, /"rls-owner-probe"/);
+  assert.match(rlsCalls, /"rls-cross-account-probe"/);
 });
 
 test("ephemeral runner is pinned to the exact project, repository, PR, and head", () => {

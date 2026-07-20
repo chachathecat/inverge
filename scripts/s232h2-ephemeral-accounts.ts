@@ -9,7 +9,11 @@ import {
 import { isAbsolute, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import { request, type APIRequestContext } from "@playwright/test";
+import {
+  request,
+  type APIRequestContext,
+  type APIResponse,
+} from "@playwright/test";
 import {
   createClient,
   type SupabaseClient,
@@ -20,6 +24,13 @@ import {
   buildExactPrimaryFixtureGraph,
   type ExactPrimaryFixtureGraph,
 } from "./support/s232h2-exact-fixture";
+import {
+  disposePreviewResponse,
+  isPreviewJsonObject,
+  PREVIEW_REQUEST_CODE_PREFIXES,
+  previewRequestFailureCode,
+  previewResponseMetadataFailureCode,
+} from "./support/s232h2-preview-response.mjs";
 
 export const S232H2_EPHEMERAL_PROJECT_REF = "vajcduseyicjhyhrclax";
 export const S232H2_EPHEMERAL_PROJECT_URL =
@@ -36,6 +47,11 @@ export const S232H2_EXPECTED_PR_NUMBER = 627;
 
 type FixtureRole = "primary" | "isolation";
 type RunnerCommand = "provision" | "cleanup";
+type PreviewRequestLabel = keyof typeof PREVIEW_REQUEST_CODE_PREFIXES;
+type PreviewRlsRequestLabel = Extract<
+  PreviewRequestLabel,
+  "rls-owner-probe" | "rls-cross-account-probe"
+>;
 
 type RunnerConfig = {
   adminKey: string;
@@ -751,14 +767,40 @@ function requirePreviewConfig() {
   return { baseUrl: url.origin, runnerSha, bypassSecret };
 }
 
-async function readJson(response: {
-  json(): Promise<unknown>;
-  status(): number;
-}) {
+async function runPreviewRequest(
+  requestLabel: PreviewRequestLabel,
+  operation: () => Promise<APIResponse>,
+) {
   try {
-    return await response.json();
+    return await operation();
   } catch {
-    fail("S232H2_PREVIEW_JSON_INVALID");
+    fail(previewRequestFailureCode(requestLabel, "REQUEST_FAILED"));
+  }
+}
+
+async function readPreviewJson(
+  response: APIResponse,
+  requestLabel: PreviewRequestLabel,
+) {
+  try {
+    const metadataFailureCode = previewResponseMetadataFailureCode(
+      requestLabel,
+      response.status(),
+      response.headers()["content-type"],
+    );
+    if (metadataFailureCode) fail(metadataFailureCode);
+    let value: unknown;
+    try {
+      value = await response.json();
+    } catch {
+      fail(previewRequestFailureCode(requestLabel, "JSON_INVALID"));
+    }
+    if (!isPreviewJsonObject(value)) {
+      fail(previewRequestFailureCode(requestLabel, "JSON_VALUE_INVALID"));
+    }
+    return value as Record<string, unknown>;
+  } finally {
+    await disposePreviewResponse(response);
   }
 }
 
@@ -771,50 +813,51 @@ async function createPreviewSession(
     baseURL: preview.baseUrl,
     extraHTTPHeaders: {
       "x-vercel-protection-bypass": preview.bypassSecret,
-      "x-vercel-set-bypass-cookie": "true",
     },
   });
   try {
-    const versionResponse = await context.get("/api/runtime/version", {
-      maxRedirects: 0,
-      timeout: 30_000,
-    });
-    const versionBody = (await readJson(versionResponse)) as Record<
-      string,
-      unknown
-    >;
+    const versionResponse = await runPreviewRequest("runtime-version", () =>
+      context.get("/api/runtime/version", {
+        maxRedirects: 0,
+        timeout: 30_000,
+      }),
+    );
+    const versionBody = await readPreviewJson(
+      versionResponse,
+      "runtime-version",
+    );
     if (
-      versionResponse.status() !== 200 ||
       versionBody.ready !== true ||
       versionBody.deploymentSha !== preview.runnerSha
     ) {
       fail("S232H2_PREVIEW_EXACT_HEAD_FAILED");
     }
-    const signInResponse = await context.post("/api/auth/sign-in", {
-      data: {
-        email: credential.email,
-        password: credential.password,
-        mode: "second",
-      },
-      maxRedirects: 0,
-      timeout: 30_000,
-    });
-    const signInBody = (await readJson(signInResponse)) as Record<
-      string,
-      unknown
-    >;
-    if (signInResponse.status() !== 200 || signInBody.ok !== true) {
+    const signInResponse = await runPreviewRequest("sign-in", () =>
+      context.post("/api/auth/sign-in", {
+        data: {
+          email: credential.email,
+          password: credential.password,
+          mode: "second",
+        },
+        maxRedirects: 0,
+        timeout: 30_000,
+      }),
+    );
+    const signInBody = await readPreviewJson(signInResponse, "sign-in");
+    if (signInBody.ok !== true) {
       fail("S232H2_PREVIEW_SIGN_IN_FAILED");
     }
-    const sessionResponse = await context.get("/api/auth/session", {
-      timeout: 30_000,
-    });
-    const sessionBody = (await readJson(sessionResponse)) as {
+    const sessionResponse = await runPreviewRequest("session", () =>
+      context.get("/api/auth/session", {
+        maxRedirects: 0,
+        timeout: 30_000,
+      }),
+    );
+    const sessionBody = (await readPreviewJson(sessionResponse, "session")) as {
       ok?: unknown;
       session?: Record<string, unknown>;
     };
     if (
-      sessionResponse.status() !== 200 ||
       sessionBody.ok !== true ||
       sessionBody.session?.userId !== expectedUserId ||
       sessionBody.session?.email !== credential.email ||
@@ -834,19 +877,20 @@ async function readPreviewSnapshot(
   context: APIRequestContext,
   runnerSha: string,
 ): Promise<PreviewSnapshot> {
-  const response = await context.get("/api/os/visual-source-audit", {
-    headers: { "x-s232h2-audit-sha": runnerSha },
-    maxRedirects: 0,
-    timeout: 30_000,
-  });
-  const body = (await readJson(response)) as {
+  const response = await runPreviewRequest("source-audit", () =>
+    context.get("/api/os/visual-source-audit", {
+      headers: { "x-s232h2-audit-sha": runnerSha },
+      maxRedirects: 0,
+      timeout: 30_000,
+    }),
+  );
+  const body = (await readPreviewJson(response, "source-audit")) as {
     ok?: unknown;
     sessionUserId?: unknown;
     sources?: Partial<PreviewSnapshot["sources"]>;
     truncated?: Partial<PreviewSnapshot["truncated"]>;
   };
   if (
-    response.status() !== 200 ||
     body.ok !== true ||
     typeof body.sessionUserId !== "string" ||
     !body.sources ||
@@ -873,18 +917,20 @@ async function readRlsProbe(
   context: APIRequestContext,
   runnerSha: string,
   itemId: string,
+  requestLabel: PreviewRlsRequestLabel,
 ) {
-  const response = await context.get(
-    "/api/os/visual-source-audit?probeItemId=" + encodeURIComponent(itemId),
-    {
-      headers: { "x-s232h2-audit-sha": runnerSha },
-      maxRedirects: 0,
-      timeout: 30_000,
-    },
+  const response = await runPreviewRequest(requestLabel, () =>
+    context.get(
+      "/api/os/visual-source-audit?probeItemId=" + encodeURIComponent(itemId),
+      {
+        headers: { "x-s232h2-audit-sha": runnerSha },
+        maxRedirects: 0,
+        timeout: 30_000,
+      },
+    ),
   );
-  const body = (await readJson(response)) as Record<string, unknown>;
+  const body = await readPreviewJson(response, requestLabel);
   if (
-    response.status() !== 200 ||
     !hasExactKeys(body, ["ok", "rlsProbeVisible"]) ||
     body.ok !== true ||
     typeof body.rlsProbeVisible !== "boolean"
@@ -954,11 +1000,13 @@ async function verifyPreviewJwtAndRls(
       isolationSession.context,
       isolationSession.runnerSha,
       isolationCanaryId,
+      "rls-owner-probe",
     );
     const primaryHidden = await readRlsProbe(
       primarySession.context,
       primarySession.runnerSha,
       isolationCanaryId,
+      "rls-cross-account-probe",
     );
     if (!ownerVisible || primaryHidden) fail("S232H2_PREVIEW_RLS_FAILED");
     const primaryAfter = await readPreviewSnapshot(
