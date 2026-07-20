@@ -741,6 +741,11 @@ test("artifact identity and network quiescence stay privacy-safe and fail-closed
     "function throwRuntimeMonitorFailure",
     "async function settleRuntimeMonitors",
   );
+  const terminalMonitorFailure = blockBetween(
+    spec,
+    "function runtimeMonitorHasTerminalFailure",
+    "async function settleRuntimeMonitors",
+  );
   assert.doesNotMatch(settle, /waitForLoadState\("networkidle"/);
   assert.match(settle, /requireHealthyRuntimeMonitor\(page\)/);
   assert.match(settle, /pendingAuditRequestCount > 0/);
@@ -765,6 +770,19 @@ test("artifact identity and network quiescence stay privacy-safe and fail-closed
     /if \(state\.failureCode\)[\s\S]*?throwRuntimeMonitorFailure\(state, state\.failureCode\)/,
   );
   assert.match(monitorFailure, /error\.name = "TimeoutError"/);
+  assert.match(terminalMonitorFailure, /runtimeMonitorStates\.get\(page\)/);
+  assert.match(
+    terminalMonitorFailure,
+    /S232H2_RUNTIME_MONITOR_REQUIRED/,
+  );
+  assert.match(
+    terminalMonitorFailure,
+    /return state\.failureCode !== null/,
+  );
+  assert.doesNotMatch(
+    terminalMonitorFailure,
+    /failureCode\s*=|\.clear\(|\.delete\(|\bcatch\b|setTimeout|url|path|query|header|body|location|cookie|console|JSON\.stringify/i,
+  );
   assert.doesNotMatch(settle, /page\.isClosed\(\)\) continue/);
   assert.doesNotMatch(settle, /\.catch\(/);
 
@@ -949,6 +967,25 @@ test("artifact identity and network quiescence stay privacy-safe and fail-closed
     12,
     "all eleven audited navigation sites must retain strict quiescence",
   );
+  const existingAuditRoute = blockBetween(
+    spec,
+    "async function settleExistingAuditRoute",
+    "async function visibleTargetFailures",
+  );
+  assert.match(existingAuditRoute, /requireHealthyRuntimeMonitor\(page\)/);
+  assert.equal(
+    [...existingAuditRoute.matchAll(/assertRequiredRoute\(page, requestedPath\)/g)]
+      .length,
+    2,
+  );
+  assert.match(
+    existingAuditRoute,
+    /waitForStableRender\(page\)[\s\S]*?settleRuntimeMonitors\(page\)/,
+  );
+  assert.doesNotMatch(
+    existingAuditRoute,
+    /gotoRequiredRoute|page\.goto|\.catch\(/,
+  );
 
   const exactAuditNavigationBlocks = [
     ["auditRoute", "async function auditRoute(", "function hasExactQuery"],
@@ -1032,12 +1069,12 @@ test("artifact identity and network quiescence stay privacy-safe and fail-closed
 
   const baselineNavigation = blockBetween(
     spec,
-    "for (const viewport of [viewports[0], viewports[2]])",
+    "const baselineLedgerPath =",
     "await verifyRuntimeVersion(targetPage, runtimeRunnerSha)",
   );
   const baselineLedger = blockBetween(
     baselineNavigation,
-    "for (const viewport of [viewports[0], viewports[2]])",
+    "const baselineLedgerPath =",
     "const beforeCalculator",
   );
   const baselineCalculator = baselineNavigation.slice(
@@ -1053,6 +1090,114 @@ test("artifact identity and network quiescence stay privacy-safe and fail-closed
     "baseline calculator",
     /\/app\/calculator\?mode=second/,
   );
+  assert.match(
+    baselineLedger,
+    /let baselineLedgerNavigationAttempted = false/,
+  );
+  const baselineLedgerAttemptDeclaration = baselineLedger.indexOf(
+    "let baselineLedgerNavigationAttempted = false",
+  );
+  const baselineLedgerViewportLoop = baselineLedger.indexOf(
+    "for (const viewport of [viewports[0], viewports[2]])",
+  );
+  assert.ok(
+    baselineLedgerAttemptDeclaration >= 0 &&
+      baselineLedgerAttemptDeclaration < baselineLedgerViewportLoop,
+  );
+  assert.equal(
+    [
+      ...baselineLedger.matchAll(
+        /baselineLedgerNavigationAttempted\s*=\s*false/g,
+      ),
+    ].length,
+    1,
+  );
+  assert.equal(
+    [
+      ...baselineLedger.matchAll(
+        /for \(const viewport of \[viewports\[0\], viewports\[2\]\]\)/g,
+      ),
+    ].length,
+    1,
+  );
+  assert.match(
+    baselineLedger,
+    /if \(baselineLedgerNavigationAttempted\) \{[\s\S]*?settleExistingAuditRoute\([\s\S]*?baselinePage,[\s\S]*?baselineLedgerPath,[\s\S]*?\)[\s\S]*?\} else \{[\s\S]*?baselineLedgerNavigationAttempted = true;[\s\S]*?gotoRequiredAuditRoute\(baselinePage, baselineLedgerPath\)/,
+  );
+  assert.equal(
+    [...baselineLedger.matchAll(/\bgotoRequiredAuditRoute\(/g)].length,
+    1,
+  );
+  assert.equal(
+    [...baselineLedger.matchAll(/\bsettleExistingAuditRoute\(/g)].length,
+    1,
+  );
+  assert.match(
+    baselineNavigation,
+    /const baselineCalculatorPage = await baselineContext\.newPage\(\)[\s\S]*?monitorPageRuntime\([\s\S]*?baselineCalculatorPage,[\s\S]*?new URL\(baselineUrl\)\.origin/,
+  );
+  assert.match(
+    baselineNavigation,
+    /runtimeErrorGroups\.push\(baselineCalculatorErrors\)/,
+  );
+  assert.match(baselineCalculator, /page: baselineCalculatorPage/);
+  assert.match(
+    baselineCalculator,
+    /gotoRequiredAuditRoute\([\s\S]*?baselineCalculatorPage,[\s\S]*?\/app\/calculator/,
+  );
+  assert.doesNotMatch(baselineCalculator, /page: baselinePage/);
+  const baselinePostflightSettle = blockBetween(
+    spec,
+    "if (!runtimeMonitorHasTerminalFailure(baselinePage))",
+    "await settleRuntimeMonitors(\n      targetPage,",
+  );
+  assert.equal(
+    [
+      ...baselinePostflightSettle.matchAll(
+        /await settleRuntimeMonitors\(baselinePage\)/g,
+      ),
+    ].length,
+    1,
+  );
+  assert.doesNotMatch(
+    baselinePostflightSettle,
+    /gotoRequired|\.goto\(|\.reload\(|\bcatch\b/,
+  );
+  const finalRuntimeSettle = blockBetween(
+    spec,
+    "await settleRuntimeMonitors(\n      targetPage,",
+    "const runtimeErrorCount =",
+  );
+  assert.match(finalRuntimeSettle, /baselineCalculatorPage/);
+  assert.doesNotMatch(finalRuntimeSettle, /baselinePage/);
+  assert.equal(
+    [
+      ...spec.matchAll(
+        /runtimeMonitorHasTerminalFailure\(baselinePage\)/g,
+      ),
+    ].length,
+    1,
+  );
+  const visualRuntimePostflight = blockBetween(
+    spec,
+    'test("@visual S232H.2 one-pass visual and Figma gate"',
+    "let finalAudit: VisualAccountAudit | null = null",
+  );
+  const finalRuntimeErrorCount = blockBetween(
+    visualRuntimePostflight,
+    "const runtimeErrorCount =",
+    "if (runtimeErrorCount > 0)",
+  );
+  for (const evidence of [
+    "consoleErrors",
+    "pageErrors",
+    "sameOriginRequestFailures",
+  ]) {
+    assert.match(
+      finalRuntimeErrorCount,
+      new RegExp(`baselineCalculatorErrors\\.${evidence}\\.length`),
+    );
+  }
 
   assert.equal(
     [...spec.matchAll(/page\.reload\(\{ waitUntil: "domcontentloaded" \}\)/g)]
@@ -1322,13 +1467,13 @@ test("direct Figma calculator capture preserves the truthful Current state only"
   );
   const baselineVisuals = blockBetween(
     spec,
-    "for (const viewport of [viewports[0], viewports[2]])",
+    "const baselineLedgerPath =",
     "await verifyRuntimeVersion(targetPage, runtimeRunnerSha)",
   );
   assert.doesNotMatch(baselineVisuals, /current-stuck/);
   assert.match(
     baselineVisuals,
-    /advanceCalculatorToCasioInput\(baselinePage, "complete"\)/,
+    /advanceCalculatorToCasioInput\(baselineCalculatorPage, "complete"\)/,
   );
   assert.equal(
     [...spec.matchAll(/advanceCalculatorToCasioInput\([^,]+, "complete"\)/g)]
@@ -2286,7 +2431,7 @@ test("screenshot identity policy is exact, fail-closed, and value-safe", () => {
 
   const baselinePolicies = blockBetween(
     spec,
-    "for (const viewport of [viewports[0], viewports[2]])",
+    "const baselineLedgerPath =",
     "await verifyRuntimeVersion(targetPage",
   );
   assert.match(

@@ -798,6 +798,12 @@ function requireHealthyRuntimeMonitor(page: Page) {
   return state;
 }
 
+function runtimeMonitorHasTerminalFailure(page: Page) {
+  const state = runtimeMonitorStates.get(page);
+  if (!state) throw new Error("S232H2_RUNTIME_MONITOR_REQUIRED");
+  return state.failureCode !== null;
+}
+
 async function settleRuntimeMonitors(...pages: Page[]) {
   for (const page of pages) {
     const state = requireHealthyRuntimeMonitor(page);
@@ -2565,6 +2571,14 @@ async function gotoRequiredRoute(page: Page, requestedPath: string) {
 async function gotoRequiredAuditRoute(page: Page, requestedPath: string) {
   requireHealthyRuntimeMonitor(page);
   await gotoRequiredRoute(page, requestedPath);
+  await settleRuntimeMonitors(page);
+  assertRequiredRoute(page, requestedPath);
+}
+
+async function settleExistingAuditRoute(page: Page, requestedPath: string) {
+  requireHealthyRuntimeMonitor(page);
+  assertRequiredRoute(page, requestedPath);
+  await waitForStableRender(page);
   await settleRuntimeMonitors(page);
   assertRequiredRoute(page, requestedPath);
 }
@@ -6436,6 +6450,11 @@ test("@visual S232H.2 one-pass visual and Figma gate", async ({
       }
     }
 
+    const baselineLedgerPath =
+      "/app/items/" +
+      encodeURIComponent(proof.ledgerItemId) +
+      "?mode=second";
+    let baselineLedgerNavigationAttempted = false;
     for (const viewport of [viewports[0], viewports[2]]) {
       const screenshot = await runVisualCandidate({
         page: baselinePage,
@@ -6454,12 +6473,15 @@ test("@visual S232H.2 one-pass visual and Figma gate", async ({
             width: viewport.width,
             height: viewport.height,
           });
-          await gotoRequiredAuditRoute(
-            baselinePage,
-            "/app/items/" +
-              encodeURIComponent(proof.ledgerItemId) +
-              "?mode=second",
-          );
+          if (baselineLedgerNavigationAttempted) {
+            await settleExistingAuditRoute(
+              baselinePage,
+              baselineLedgerPath,
+            );
+          } else {
+            baselineLedgerNavigationAttempted = true;
+            await gotoRequiredAuditRoute(baselinePage, baselineLedgerPath);
+          }
           await expect(
             baselinePage.getByRole("heading", {
               level: 1,
@@ -6474,8 +6496,14 @@ test("@visual S232H.2 one-pass visual and Figma gate", async ({
         completedAudits += 1;
       }
     }
+    const baselineCalculatorPage = await baselineContext.newPage();
+    const baselineCalculatorErrors = monitorPageRuntime(
+      baselineCalculatorPage,
+      new URL(baselineUrl).origin,
+    );
+    runtimeErrorGroups.push(baselineCalculatorErrors);
     const beforeCalculator = await runVisualCandidate({
-      page: baselinePage,
+      page: baselineCalculatorPage,
       credential,
       proof,
       guard: baselineGuard,
@@ -6487,12 +6515,15 @@ test("@visual S232H.2 one-pass visual and Figma gate", async ({
       fullPage: false,
       identityPolicy: "masked-shell",
       prepare: async () => {
-        await baselinePage.setViewportSize({ width: 390, height: 844 });
+        await baselineCalculatorPage.setViewportSize({
+          width: 390,
+          height: 844,
+        });
         await gotoRequiredAuditRoute(
-          baselinePage,
+          baselineCalculatorPage,
           "/app/calculator?mode=second&context=practice&focus=casio",
         );
-        await advanceCalculatorToCasioInput(baselinePage, "complete");
+        await advanceCalculatorToCasioInput(baselineCalculatorPage, "complete");
       },
     });
     if (beforeCalculator) {
@@ -6502,8 +6533,19 @@ test("@visual S232H.2 one-pass visual and Figma gate", async ({
     }
 
     await verifyRuntimeVersion(targetPage, runtimeRunnerSha);
-    await verifyRuntimeVersion(baselinePage, baselineSha, baselineUrl);
-    await settleRuntimeMonitors(targetPage, publicPage, baselinePage);
+    await verifyRuntimeVersion(
+      baselineCalculatorPage,
+      baselineSha,
+      baselineUrl,
+    );
+    if (!runtimeMonitorHasTerminalFailure(baselinePage)) {
+      await settleRuntimeMonitors(baselinePage);
+    }
+    await settleRuntimeMonitors(
+      targetPage,
+      publicPage,
+      baselineCalculatorPage,
+    );
     const runtimeErrorCount =
       targetErrors.consoleErrors.length +
       targetErrors.pageErrors.length +
@@ -6513,7 +6555,10 @@ test("@visual S232H.2 one-pass visual and Figma gate", async ({
       publicErrors.sameOriginRequestFailures.length +
       baselineErrors.consoleErrors.length +
       baselineErrors.pageErrors.length +
-      baselineErrors.sameOriginRequestFailures.length;
+      baselineErrors.sameOriginRequestFailures.length +
+      baselineCalculatorErrors.consoleErrors.length +
+      baselineCalculatorErrors.pageErrors.length +
+      baselineCalculatorErrors.sameOriginRequestFailures.length;
     if (runtimeErrorCount > 0) {
       recordStableGateFailure(failures, {
         phase: "visual",
