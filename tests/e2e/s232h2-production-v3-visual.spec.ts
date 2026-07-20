@@ -2021,13 +2021,7 @@ async function waitForStableRender(page: Page) {
   });
 }
 
-async function gotoRequiredRoute(page: Page, requestedPath: string) {
-  await page.goto(requestedPath, {
-    waitUntil: "domcontentloaded",
-    timeout: 45_000,
-  });
-  await waitForStableRender(page);
-  await settleRuntimeMonitors(page);
+function assertRequiredRoute(page: Page, requestedPath: string) {
   const expected = new URL(requestedPath, "https://s232h2.invalid");
   const observed = new URL(page.url());
   expect(
@@ -2040,6 +2034,21 @@ async function gotoRequiredRoute(page: Page, requestedPath: string) {
       `The required production route must preserve its ${key} query contract.`,
     ).toBe(true);
   }
+}
+
+async function gotoRequiredRoute(page: Page, requestedPath: string) {
+  await page.goto(requestedPath, {
+    waitUntil: "domcontentloaded",
+    timeout: 45_000,
+  });
+  await waitForStableRender(page);
+  assertRequiredRoute(page, requestedPath);
+}
+
+async function gotoRequiredAuditRoute(page: Page, requestedPath: string) {
+  await gotoRequiredRoute(page, requestedPath);
+  await settleRuntimeMonitors(page);
+  assertRequiredRoute(page, requestedPath);
 }
 
 async function visibleTargetFailures(page: Page) {
@@ -3098,7 +3107,7 @@ async function auditRoute(
     height: viewport.height,
   });
   if (options.navigate !== false) {
-    await gotoRequiredRoute(page, requestedPath);
+    await gotoRequiredAuditRoute(page, requestedPath);
   } else {
     await waitForStableRender(page);
   }
@@ -3819,7 +3828,7 @@ async function prepareInitialRoute(
     width: viewport.width,
     height: viewport.height,
   });
-  await gotoRequiredRoute(page, requestedPath);
+  await gotoRequiredAuditRoute(page, requestedPath);
   if (route.id === "calculator" && viewport.width === 390) {
     await advanceCalculatorToCasioInput(page);
   }
@@ -4626,7 +4635,7 @@ async function compareScreenshotToFigmaReference(
 }
 
 async function prepareCaptureExtractionPreview(page: Page) {
-  await gotoRequiredRoute(page, "/app/capture?mode=second");
+  await gotoRequiredAuditRoute(page, "/app/capture?mode=second");
   await page.evaluate(() => {
     for (const key of Object.keys(window.localStorage)) {
       if (
@@ -4659,7 +4668,7 @@ async function prepareCaptureExtractionPreview(page: Page) {
 }
 
 async function prepareAnswerReviewResult(page: Page) {
-  await gotoRequiredRoute(page, "/answer-review?mode=second");
+  await gotoRequiredAuditRoute(page, "/answer-review?mode=second");
   await page
     .getByTestId("answer-review-my-answer-input")
     .fill("합성 답안입니다. 논점, 기준, 적용, 결론 순서로 직접 작성했습니다.");
@@ -4673,7 +4682,7 @@ async function prepareReviewSelectedState(
   page: Page,
   expectedPrimaryTitle: string,
 ) {
-  await gotoRequiredRoute(page, "/app/review?mode=second");
+  await gotoRequiredAuditRoute(page, "/app/review?mode=second");
   const queue = page.locator("[data-s232d4-review-queue]");
   await expect(queue).toBeVisible({ timeout: 20_000 });
   await expect(queue.locator("[data-s232d4-review-meta] h2")).toHaveText(
@@ -4956,6 +4965,22 @@ test("@privacy S232H.2 privacy/auth source gate", async ({ browser }) => {
     let deniedCanaryDomCount = 0;
     try {
       await gotoRequiredRoute(selected.page, "/app?mode=second");
+    } catch {
+      throw new Error("S232H2_PRIVACY_DOM_NAVIGATION_FAILED");
+    }
+    const expectedSurface = selected.page.locator(
+      '[data-s224v-surface="/app"][data-s232d5-today-page="single-priority"]',
+    );
+    try {
+      await expectedSurface.waitFor({ state: "visible" });
+      expect(
+        await expectedSurface.count(),
+        "The privacy probe must inspect exactly one expected learner surface.",
+      ).toBe(1);
+    } catch {
+      throw new Error("S232H2_PRIVACY_DOM_SURFACE_INVALID");
+    }
+    try {
       deniedCanaryDomCount = await selected.page.evaluate(
         (canary) =>
           document.documentElement.innerHTML.includes(canary) ||
@@ -4969,7 +4994,7 @@ test("@privacy S232H.2 privacy/auth source gate", async ({ browser }) => {
         deniedCanary,
       );
     } catch {
-      throw new Error("S232H2_CROSS_ACCOUNT_GATE_OPEN");
+      throw new Error("S232H2_PRIVACY_DOM_CANARY_READ_FAILED");
     }
     const ownerReadAgain = await readRlsProbe(denied.page, deniedCanary);
     let finalAudit: VisualAccountAudit;
@@ -5302,7 +5327,7 @@ test("@a11y S232H.2 split accessibility gate", async ({ browser }) => {
         requestedPath:
           "/app/session?mode=second&savedCapture=1&itemId=[itemId]",
         prepare: async (page: Page) => {
-          await gotoRequiredRoute(
+          await gotoRequiredAuditRoute(
             page,
             "/app/session?mode=second&savedCapture=1&itemId=" +
               encodeURIComponent(proof.ledgerItemId),
@@ -5318,7 +5343,7 @@ test("@a11y S232H.2 split accessibility gate", async ({ browser }) => {
         requestedPath:
           "/app/calculator?mode=second&context=practice&focus=casio",
         prepare: async (page: Page) => {
-          await gotoRequiredRoute(
+          await gotoRequiredAuditRoute(
             page,
             "/app/calculator?mode=second&context=practice&focus=casio",
           );
@@ -5652,7 +5677,7 @@ test("@visual S232H.2 one-pass visual and Figma gate", async ({
         state: "saved-capture",
         fileName: "s232h2-after-session-saved-capture-390.png",
         prepare: async (page: Page) => {
-          await gotoRequiredRoute(
+          await gotoRequiredAuditRoute(
             page,
             "/app/session?mode=second&savedCapture=1&itemId=" +
               encodeURIComponent(proof.ledgerItemId),
@@ -5667,7 +5692,7 @@ test("@visual S232H.2 one-pass visual and Figma gate", async ({
         state: "completed-saved",
         fileName: "s232h2-after-calculator-completed-saved-390.png",
         prepare: async (page: Page) => {
-          await gotoRequiredRoute(
+          await gotoRequiredAuditRoute(
             page,
             "/app/calculator?mode=second&context=practice&focus=casio",
           );
@@ -5726,7 +5751,7 @@ test("@visual S232H.2 one-pass visual and Figma gate", async ({
             width: viewport.width,
             height: viewport.height,
           });
-          await gotoRequiredRoute(
+          await gotoRequiredAuditRoute(
             baselinePage,
             "/app/items/" +
               encodeURIComponent(proof.ledgerItemId) +
@@ -5760,7 +5785,7 @@ test("@visual S232H.2 one-pass visual and Figma gate", async ({
       identityMaskRequired: true,
       prepare: async () => {
         await baselinePage.setViewportSize({ width: 390, height: 844 });
-        await gotoRequiredRoute(
+        await gotoRequiredAuditRoute(
           baselinePage,
           "/app/calculator?mode=second&context=practice&focus=casio",
         );

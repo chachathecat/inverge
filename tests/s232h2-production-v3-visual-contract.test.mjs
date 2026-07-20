@@ -600,12 +600,67 @@ test("artifact identity and network quiescence stay privacy-safe and fail-closed
     /waitForLoadState\("networkidle", \{ timeout: 10_000 \}\)/,
   );
   assert.doesNotMatch(settle, /\.catch\(/);
+  const routeAssertion = blockBetween(
+    spec,
+    "function assertRequiredRoute",
+    "async function gotoRequiredRoute",
+  );
+  assert.match(routeAssertion, /observed\.pathname === expected\.pathname/);
+  assert.match(routeAssertion, /observed\.searchParams\.get\(key\) === value/);
   const requiredRoute = blockBetween(
     spec,
     "async function gotoRequiredRoute",
+    "async function gotoRequiredAuditRoute",
+  );
+  assert.match(requiredRoute, /await page\.goto\(requestedPath/);
+  assert.match(requiredRoute, /await waitForStableRender\(page\)/);
+  assert.match(requiredRoute, /assertRequiredRoute\(page, requestedPath\)/);
+  assert.doesNotMatch(requiredRoute, /settleRuntimeMonitors/);
+  const requiredAuditRoute = blockBetween(
+    spec,
+    "async function gotoRequiredAuditRoute",
     "async function visibleTargetFailures",
   );
-  assert.match(requiredRoute, /await settleRuntimeMonitors\(page\)/);
+  assert.match(
+    requiredAuditRoute,
+    /await gotoRequiredRoute\(page, requestedPath\);[\s\S]*?await settleRuntimeMonitors\(page\);[\s\S]*?assertRequiredRoute\(page, requestedPath\)/,
+  );
+  assert.doesNotMatch(requiredAuditRoute, /\bcatch\b/);
+
+  const privacyRouteProbe = blockBetween(
+    spec,
+    "const ownerRead = await readRlsProbe",
+    "const ownerReadAgain = await readRlsProbe",
+  );
+  assert.match(
+    privacyRouteProbe,
+    /gotoRequiredRoute\(selected\.page, "\/app\?mode=second"\)/,
+  );
+  assert.doesNotMatch(privacyRouteProbe, /gotoRequiredAuditRoute/);
+  assert.match(
+    privacyRouteProbe,
+    /S232H2_PRIVACY_DOM_NAVIGATION_FAILED/,
+  );
+  assert.match(
+    privacyRouteProbe,
+    /data-s224v-surface="\/app"[\s\S]*?data-s232d5-today-page="single-priority"/,
+  );
+  assert.match(privacyRouteProbe, /expectedSurface\.waitFor\(\{ state: "visible" \}\)/);
+  assert.match(privacyRouteProbe, /await expectedSurface\.count\(\)[\s\S]*?\.toBe\(1\)/);
+  assert.match(privacyRouteProbe, /S232H2_PRIVACY_DOM_SURFACE_INVALID/);
+  assert.match(privacyRouteProbe, /S232H2_PRIVACY_DOM_CANARY_READ_FAILED/);
+  assert.doesNotMatch(privacyRouteProbe, /console\.|response\.body|page\.url\(\)/);
+
+  assert.equal(
+    [...spec.matchAll(/\bgotoRequiredRoute\(/g)].length,
+    3,
+    "base navigation is limited to its definition, the audit wrapper, and the privacy probe",
+  );
+  assert.equal(
+    [...spec.matchAll(/\bgotoRequiredAuditRoute\(/g)].length,
+    12,
+    "all eleven audited navigation sites must retain strict quiescence",
+  );
   const calculatorReload = blockBetween(
     spec,
     "async function advanceCalculatorToCasioInput",
