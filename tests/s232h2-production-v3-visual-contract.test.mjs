@@ -1215,6 +1215,128 @@ test("review selected-state preparation follows the bounded fill-triggered revea
   );
 });
 
+test("direct Figma calculator capture preserves the truthful Current state only", () => {
+  assert.match(
+    spec,
+    /type CalculatorCasioPreparation = "complete" \| "current-stuck";/,
+  );
+  assert.match(
+    spec,
+    /type InitialRoutePreparationOptions = \{[\s\S]*?calculatorCasioPreparation: CalculatorCasioPreparation;[\s\S]*?\};/,
+  );
+  const preparation = blockBetween(
+    spec,
+    "async function advanceCalculatorToCasioInput",
+    "async function compareScreenshotToFigmaReference",
+  );
+  assert.match(
+    preparation,
+    /preparation: CalculatorCasioPreparation,[\s\S]*?if \(preparation === "current-stuck"\)/,
+  );
+  const currentStuck = blockBetween(
+    preparation,
+    'if (preparation === "current-stuck") {',
+    "} else {",
+  );
+  assert.match(currentStuck, /expect\(casioInput\)\.toHaveValue\(""\)/);
+  assert.match(currentStuck, /name: "이 단계에서 막힘"/);
+  assert.match(
+    spec,
+    /const CALCULATOR_PREPARATION_ACTION_TIMEOUT_MS = 20_000;/,
+  );
+  assert.match(
+    currentStuck,
+    /stuckAction\.click\(\{[\s\S]*?timeout: CALCULATOR_PREPARATION_ACTION_TIMEOUT_MS,[\s\S]*?\}\)/,
+  );
+  assert.match(
+    currentStuck,
+    /expect\(calculatorStep\)\.toHaveAttribute\("data-v3-state", "Current"\)/,
+  );
+  assert.match(
+    currentStuck,
+    /expect\(focusAction\)\.toHaveAttribute\("data-v3-state", "Ready"\)/,
+  );
+  assert.match(currentStuck, /calculator-focus-action-control/);
+  assert.match(currentStuck, /toBeEnabled\(\)/);
+  assert.doesNotMatch(currentStuck, /calculatorCasioFixtureInput|\.fill\(/);
+
+  const currentStuckStart = preparation.indexOf(
+    'if (preparation === "current-stuck") {',
+  );
+  const completeStart = preparation.indexOf("} else {", currentStuckStart);
+  assert.ok(currentStuckStart >= 0 && completeStart > currentStuckStart);
+  const complete = preparation.slice(completeStart);
+  assert.match(complete, /casioInput\.fill\(calculatorCasioFixtureInput\)/);
+  assert.match(
+    complete,
+    /expect\(calculatorStep\)\.toHaveAttribute\("data-v3-state", "Complete"\)/,
+  );
+
+  const a11yInitial = blockBetween(
+    spec,
+    "for (const route of requiredRoutes) {",
+    "const dynamicCandidates = [",
+  );
+  assert.doesNotMatch(a11yInitial, /current-stuck/);
+  assert.match(
+    a11yInitial,
+    /prepareInitialRoute\([\s\S]*?\{ calculatorCasioPreparation: "complete" \},[\s\S]*?\)/,
+  );
+  const initialPreparation = blockBetween(
+    spec,
+    "async function prepareInitialRoute",
+    "async function runIsolatedDynamicCandidate",
+  );
+  assert.match(
+    initialPreparation,
+    /advanceCalculatorToCasioInput\([\s\S]*?page,[\s\S]*?options\.calculatorCasioPreparation,[\s\S]*?\)/,
+  );
+  const directFigmaInitial = blockBetween(
+    spec,
+    "for (const viewport of viewports) {\n      for (const route of requiredRoutes) {",
+    "const dynamicVisuals = [",
+  );
+  assert.match(
+    directFigmaInitial,
+    /calculatorCasioPreparation:[\s\S]*?route\.id === "calculator" \? "current-stuck" : "complete"/,
+  );
+  const dynamicVisuals = blockBetween(
+    spec,
+    "const dynamicVisuals = [",
+    "for (const dynamic of dynamicVisuals)",
+  );
+  assert.doesNotMatch(dynamicVisuals, /current-stuck/);
+  assert.match(
+    dynamicVisuals,
+    /advanceCalculatorToCasioInput\(page, "complete"\)/,
+  );
+  const dynamicA11y = blockBetween(
+    spec,
+    "const dynamicCandidates = [",
+    "for (const dynamic of dynamicCandidates)",
+  );
+  assert.doesNotMatch(dynamicA11y, /current-stuck/);
+  assert.match(
+    dynamicA11y,
+    /advanceCalculatorToCasioInput\(page, "complete"\)/,
+  );
+  const baselineVisuals = blockBetween(
+    spec,
+    "for (const viewport of [viewports[0], viewports[2]])",
+    "await verifyRuntimeVersion(targetPage, runtimeRunnerSha)",
+  );
+  assert.doesNotMatch(baselineVisuals, /current-stuck/);
+  assert.match(
+    baselineVisuals,
+    /advanceCalculatorToCasioInput\(baselinePage, "complete"\)/,
+  );
+  assert.equal(
+    [...spec.matchAll(/advanceCalculatorToCasioInput\([^,]+, "complete"\)/g)]
+      .length,
+    3,
+  );
+});
+
 test("calculator completed-state geometry is strict, state-aware, and bounded", () => {
   assert.match(
     calculatorRoutineTrainer,
@@ -2702,6 +2824,42 @@ test("Figma references remain pinned and hostile comparisons remain direct", () 
   assert.match(spec, /dilatedEdgeF1/);
   assert.match(spec, /anchorMaxRgbMeanDelta/);
   assert.match(spec, /anchorMinEdgeDensityRatio/);
+  const desktopLedgerAnchors = blockBetween(
+    spec,
+    '"59:62": [',
+    '"57:34": [',
+  );
+  const parsedDesktopLedgerAnchors = [
+    ...desktopLedgerAnchors.matchAll(
+      /\[(\d+), (\d+), (\d+), (\d+)\]/g,
+    ),
+  ].map((match) => match.slice(1).map(Number));
+  assert.deepEqual(parsedDesktopLedgerAnchors, [
+    [0, 0, 1440, 73],
+    [220, 258, 900, 330],
+    [220, 351, 900, 481],
+    [220, 551, 900, 741],
+    [932, 112, 1220, 292],
+    [932, 312, 1220, 572],
+    [932, 592, 1220, 847],
+    [220, 771, 520, 838],
+  ]);
+  assert.doesNotMatch(desktopLedgerAnchors, /\[220, 786, 520, 838\]/);
+  const directComparison = blockBetween(
+    spec,
+    "async function compareScreenshotToFigmaReference",
+    "async function prepareCaptureExtractionPreview",
+  );
+  for (const threshold of [
+    /metrics\.bluePixelRatioDelta <= 0\.12/,
+    /metrics\.anchorMaxRgbMeanDelta <= 0\.18/,
+    /metrics\.anchorMaxLuminanceStdDelta <= 0\.18/,
+    /metrics\.anchorMaxDarkRatioDelta <= 0\.2/,
+    /metrics\.anchorMinEdgeDensityRatio >= 0\.2/,
+    /metrics\.anchorMaxEdgeDensityRatio <= 3\.5/,
+  ]) {
+    assert.match(directComparison, threshold);
+  }
   assert.match(workflow, /comparison\.passed !== true/);
   assert.match(workflow, /comparison\.meanColorDelta > 0\.18/);
   assert.match(workflow, /comparison\.nearPixelRatio < 0\.5/);

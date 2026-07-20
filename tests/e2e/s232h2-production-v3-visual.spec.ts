@@ -59,6 +59,7 @@ const baselineTreeSha = process.env.E2E_BASELINE_TREE_SHA?.trim() ?? "";
 const visualProofPath = process.env.S232H2_VISUAL_PROOF_PATH?.trim() ?? "";
 const fixedBaselineSha = "35836d419161d7cfe55e3e3c088fcc4d66376a7d";
 const REVIEW_PREPARATION_ACTION_TIMEOUT_MS = 20_000;
+const CALCULATOR_PREPARATION_ACTION_TIMEOUT_MS = 20_000;
 const REPRESENTATIVE_STRUCTURE_TIMEOUT_MS = 20_000;
 
 type VisualCredentialSlot = "visual" | "user-b";
@@ -100,6 +101,10 @@ type ScreenshotIdentityPolicyError =
   | "identity-mask-missing"
   | "identity-mask-mismatch"
   | "unexpected-identity-surface";
+type CalculatorCasioPreparation = "complete" | "current-stuck";
+type InitialRoutePreparationOptions = {
+  calculatorCasioPreparation: CalculatorCasioPreparation;
+};
 
 const requiredRoutes = [
   { id: "home", label: "홈", authenticated: false, path: "/" },
@@ -4460,6 +4465,7 @@ async function prepareInitialRoute(
   route: RouteDefinition,
   requestedPath: string,
   viewport: (typeof viewports)[number],
+  options: InitialRoutePreparationOptions,
 ) {
   await page.setViewportSize({
     width: viewport.width,
@@ -4467,7 +4473,10 @@ async function prepareInitialRoute(
   });
   await gotoRequiredAuditRoute(page, requestedPath);
   if (route.id === "calculator" && viewport.width === 390) {
-    await advanceCalculatorToCasioInput(page);
+    await advanceCalculatorToCasioInput(
+      page,
+      options.calculatorCasioPreparation,
+    );
   }
 }
 
@@ -4681,7 +4690,10 @@ async function closeSharedContext(
   }
 }
 
-async function advanceCalculatorToCasioInput(page: Page) {
+async function advanceCalculatorToCasioInput(
+  page: Page,
+  preparation: CalculatorCasioPreparation,
+) {
   await page.evaluate(() => window.sessionStorage.clear());
   await page.reload({ waitUntil: "domcontentloaded" });
   await waitForStableRender(page);
@@ -4728,10 +4740,31 @@ async function advanceCalculatorToCasioInput(page: Page) {
     '[data-calculator-routine-active-step="casio_input"]',
   );
   await expect(casio).toBeVisible();
-  await casio.locator("textarea").fill(calculatorCasioFixtureInput);
-  await expect(
-    casio.locator('[data-v3-component="CalculatorStep"]'),
-  ).toBeVisible();
+  const casioInput = casio.locator("textarea");
+  const calculatorStep = casio.locator(
+    '[data-v3-component="CalculatorStep"]',
+  );
+  await expect(calculatorStep).toBeVisible();
+  if (preparation === "current-stuck") {
+    await expect(casioInput).toHaveValue("");
+    const stuckAction = trainer.getByRole("button", {
+      name: "이 단계에서 막힘",
+      exact: true,
+    });
+    await expect(stuckAction).toBeVisible();
+    await stuckAction.click({
+      timeout: CALCULATOR_PREPARATION_ACTION_TIMEOUT_MS,
+    });
+    await expect(calculatorStep).toHaveAttribute("data-v3-state", "Current");
+    const focusAction = page.getByTestId("calculator-focus-action");
+    await expect(focusAction).toHaveAttribute("data-v3-state", "Ready");
+    await expect(
+      page.getByTestId("calculator-focus-action-control"),
+    ).toBeEnabled();
+  } else {
+    await casioInput.fill(calculatorCasioFixtureInput);
+    await expect(calculatorStep).toHaveAttribute("data-v3-state", "Complete");
+  }
 }
 
 async function compareScreenshotToFigmaReference(
@@ -5042,7 +5075,7 @@ async function compareScreenshotToFigmaReference(
           [932, 112, 1220, 292],
           [932, 312, 1220, 572],
           [932, 592, 1220, 847],
-          [220, 786, 520, 838],
+          [220, 771, 520, 838],
         ],
         "57:34": [
           [0, 0, 390, 56],
@@ -5884,6 +5917,7 @@ test("@a11y S232H.2 split accessibility gate", async ({ browser }) => {
               route,
               requestedPath,
               viewport,
+              { calculatorCasioPreparation: "complete" },
             );
             routePrepared = true;
           } else {
@@ -6017,7 +6051,7 @@ test("@a11y S232H.2 split accessibility gate", async ({ browser }) => {
             page,
             "/app/calculator?mode=second&context=practice&focus=casio",
           );
-          await advanceCalculatorToCasioInput(page);
+          await advanceCalculatorToCasioInput(page, "complete");
           await completeCalculatorRoutine(page);
         },
       },
@@ -6288,7 +6322,10 @@ test("@visual S232H.2 one-pass visual and Figma gate", async ({
           fullPage: !representative,
           identityPolicy: initialIdentityPolicyByRoute[route.id],
           prepare: () =>
-            prepareInitialRoute(routePage, route, requestedPath, viewport),
+            prepareInitialRoute(routePage, route, requestedPath, viewport, {
+              calculatorCasioPreparation:
+                route.id === "calculator" ? "current-stuck" : "complete",
+            }),
         });
         screenshotCallCount += screenshot ? 1 : 0;
         if (screenshot) {
@@ -6362,7 +6399,7 @@ test("@visual S232H.2 one-pass visual and Figma gate", async ({
             page,
             "/app/calculator?mode=second&context=practice&focus=casio",
           );
-          await advanceCalculatorToCasioInput(page);
+          await advanceCalculatorToCasioInput(page, "complete");
           await completeCalculatorRoutine(page);
         },
       },
@@ -6455,7 +6492,7 @@ test("@visual S232H.2 one-pass visual and Figma gate", async ({
           baselinePage,
           "/app/calculator?mode=second&context=practice&focus=casio",
         );
-        await advanceCalculatorToCasioInput(baselinePage);
+        await advanceCalculatorToCasioInput(baselinePage, "complete");
       },
     });
     if (beforeCalculator) {
