@@ -328,7 +328,9 @@ test("runner API audit and browser visual contexts keep distinct bypass behavior
     /"x-vercel-protection-bypass": preview\.bypassSecret/,
   );
   assert.doesNotMatch(runnerContext, /x-vercel-set-bypass-cookie/);
+  assert.doesNotMatch(runnerContext, /x-vercel-skip-toolbar/);
   assert.doesNotMatch(ephemeralAccounts, /x-vercel-set-bypass-cookie/);
+  assert.doesNotMatch(ephemeralAccounts, /x-vercel-skip-toolbar/);
 
   for (const request of [
     /runPreviewRequest\("runtime-version", \(\) =>\s*context\.get\("\/api\/runtime\/version"/,
@@ -366,6 +368,7 @@ test("runner API audit and browser visual contexts keep distinct bypass behavior
     /"x-vercel-protection-bypass": vercelBypassSecret/,
   );
   assert.match(browserHeaders, /"x-vercel-set-bypass-cookie": "true"/);
+  assert.doesNotMatch(browserHeaders, /x-vercel-skip-toolbar/);
   const browserBootstrap = blockBetween(
     authenticatedRuntime,
     "export async function establishProtectedPreviewSession",
@@ -377,12 +380,44 @@ test("runner API audit and browser visual contexts keep distinct bypass behavior
   assert.match(browserBootstrap, /page\.context\(\)\.cookies/);
   assert.match(browserBootstrap, /const cookieProofResponse/);
 
+  const visualBrowserHeaders = blockBetween(
+    spec,
+    "const visualBrowserHeaders",
+    "test.use({",
+  );
+  assert.match(visualBrowserHeaders, /\.\.\.protectionHeaders/);
+  assert.match(
+    visualBrowserHeaders,
+    /"x-vercel-skip-toolbar": "1"/,
+  );
+  assert.equal(
+    (spec.match(/"x-vercel-skip-toolbar": "1"/g) ?? []).length,
+    1,
+  );
+  const defaultVisualContext = blockBetween(spec, "test.use({", "test.skip(");
+  assert.match(
+    defaultVisualContext,
+    /extraHTTPHeaders: visualBrowserHeaders/,
+  );
+
   const visualContext = blockBetween(
     spec,
     "async function newPreviewContext",
     "function allErrorCounts",
   );
-  assert.match(visualContext, /extraHTTPHeaders: \{\s*\.\.\.protectionHeaders/);
+  assert.equal((spec.match(/browser\.newContext\(/g) ?? []).length, 1);
+  assert.match(
+    visualContext,
+    /extraHTTPHeaders: \{\s*\.\.\.visualBrowserHeaders/,
+  );
+
+  const visualAuditHeaders = blockBetween(
+    spec,
+    "function visualAuditRequestHeaders",
+    "function throwRuntimeMonitorFailure",
+  );
+  assert.match(visualAuditHeaders, /\.\.\.protectionHeaders/);
+  assert.doesNotMatch(visualAuditHeaders, /visualBrowserHeaders/);
 });
 
 test("Preview response validation is request-specific, value-safe, and privacy-safe", async () => {
@@ -549,6 +584,62 @@ test("Preview response validation is request-specific, value-safe, and privacy-s
 });
 
 test("artifact identity and network quiescence stay privacy-safe and fail-closed", () => {
+  const runtimeRequestClassification = blockBetween(
+    spec,
+    "function normalizeRuntimeRequestResourceClass",
+    "function monitorPageRuntime",
+  );
+  for (const resourceClass of [
+    "document",
+    "stylesheet",
+    "image",
+    "media",
+    "font",
+    "script",
+    "texttrack",
+    "xhr",
+    "fetch",
+    "eventsource",
+    "websocket",
+    "manifest",
+    "other",
+  ]) {
+    assert.match(runtimeRequestClassification, new RegExp(`"${resourceClass}"`));
+  }
+  for (const statusClass of [
+    "informational",
+    "success",
+    "redirect",
+    "client-error",
+    "server-error",
+    "invalid",
+  ]) {
+    assert.match(runtimeRequestClassification, new RegExp(`"${statusClass}"`));
+  }
+  for (const contentClass of [
+    "missing",
+    "json",
+    "html",
+    "javascript",
+    "css",
+    "image",
+    "font",
+    "event-stream",
+    "other",
+  ]) {
+    assert.match(runtimeRequestClassification, new RegExp(`"${contentClass}"`));
+  }
+  assert.match(
+    runtimeRequestClassification,
+    /response\.headers\(\)\["content-type"\]/,
+  );
+  assert.match(runtimeRequestClassification, /response\.status\(\)/);
+  assert.match(runtimeRequestClassification, /:no-response/);
+  assert.doesNotMatch(
+    runtimeRequestClassification,
+    /request\.url|response\.(?:url|body|text|statusText)|pathname|searchParams|headersArray|\blocation\b|console\.|JSON\.stringify/i,
+  );
+
   const runtimeMonitor = blockBetween(
     spec,
     "function monitorPageRuntime",
@@ -558,9 +649,23 @@ test("artifact identity and network quiescence stay privacy-safe and fail-closed
   assert.doesNotMatch(runtimeMonitor, /next-router-prefetch[\s\S]*?=== "2"/);
   assert.match(runtimeMonitor, /same-origin-request-failure/);
   assert.match(runtimeMonitor, /same-origin-http-error/);
+  assert.doesNotMatch(runtimeMonitor, /toolbar|x-vercel-skip-toolbar/i);
   assert.match(
     runtimeMonitor,
     /const trackedRequests = new WeakSet<Request>\(\)/,
+  );
+  assert.match(
+    runtimeMonitor,
+    /const trackedRequestClasses = new WeakMap</,
+  );
+  assert.match(runtimeMonitor, /pendingRequestClassCounts: new Map\(\)/);
+  assert.match(
+    runtimeMonitor,
+    /updateTrackedRequestClass\([\s\S]*?respondedRuntimeRequestClass/,
+  );
+  assert.match(
+    runtimeMonitor,
+    /trackedRequestClasses\.delete\(request\)/,
   );
   const requestTracking = blockBetween(
     runtimeMonitor,
@@ -636,10 +741,19 @@ test("artifact identity and network quiescence stay privacy-safe and fail-closed
   assert.match(settle, /lastAuditRequestActivityAt < 250/);
   assert.match(settle, /const deadline = Date\.now\(\) \+ 10_000/);
   assert.match(settle, /S232H2_RUNTIME_REQUEST_QUIESCENCE_TIMEOUT/);
+  assert.match(settle, /currentPendingRequestClasses\(state\)/);
   assert.match(monitorFailure, /S232H2_RUNTIME_MONITOR_REQUIRED/);
   assert.match(monitorFailure, /S232H2_RUNTIME_MONITOR_PAGE_CLOSED/);
   assert.match(settle, /S232H2_RUNTIME_RENDER_SETTLE_FAILED/);
   assert.match(monitorFailure, /state\.failureCode \?\?= failureCode/);
+  assert.match(
+    monitorFailure,
+    /state\.failureRequestClasses \?\?= \[\.\.\.requestClasses\]/,
+  );
+  assert.match(
+    monitorFailure,
+    /error\[runtimePendingRequestClasses\] = state\.failureRequestClasses/,
+  );
   assert.match(
     monitorFailure,
     /if \(state\.failureCode\)[\s\S]*?throwRuntimeMonitorFailure\(state, state\.failureCode\)/,
@@ -647,6 +761,29 @@ test("artifact identity and network quiescence stay privacy-safe and fail-closed
   assert.match(monitorFailure, /error\.name = "TimeoutError"/);
   assert.doesNotMatch(settle, /page\.isClosed\(\)\) continue/);
   assert.doesNotMatch(settle, /\.catch\(/);
+
+  const stableFailureClassification = blockBetween(
+    spec,
+    "function stableErrorFamily",
+    "function resolveCredential",
+  );
+  assert.match(
+    stableFailureClassification,
+    /requestClasses: \[\.\.\.requestClasses\]/,
+  );
+  assert.doesNotMatch(
+    stableFailureClassification,
+    /url|path|query|header|body|location|cookie|jwt|email|account|console\.|JSON\.stringify/i,
+  );
+  assert.match(spec, /requestClasses\?: RuntimePendingRequestClass\[\]/);
+  assert.match(
+    spec,
+    /\(candidate\.requestClasses \?\? \[\]\)\.join\("\|"\)/,
+  );
+  assert.equal((spec.match(/stableErrorFamily\(error\)/g) ?? []).length, 1);
+  assert.ok(
+    (spec.match(/\.\.\.stableFailureFields\(error\)/g) ?? []).length >= 13,
+  );
   const routeAssertion = blockBetween(
     spec,
     "function assertRequiredRoute",

@@ -204,10 +204,58 @@ type RuntimeErrorEvidence = {
   sameOriginRequestFailures: string[];
 };
 
+type RuntimeRequestResourceClass =
+  | "document"
+  | "stylesheet"
+  | "image"
+  | "media"
+  | "font"
+  | "script"
+  | "texttrack"
+  | "xhr"
+  | "fetch"
+  | "eventsource"
+  | "websocket"
+  | "manifest"
+  | "other";
+
+type RuntimeResponseStatusClass =
+  | "informational"
+  | "success"
+  | "redirect"
+  | "client-error"
+  | "server-error"
+  | "invalid";
+
+type RuntimeResponseContentClass =
+  | "missing"
+  | "json"
+  | "html"
+  | "javascript"
+  | "css"
+  | "image"
+  | "font"
+  | "event-stream"
+  | "other";
+
+type RuntimePendingRequestClass =
+  | `${RuntimeRequestResourceClass}:no-response`
+  | `${RuntimeRequestResourceClass}:${RuntimeResponseStatusClass}:${RuntimeResponseContentClass}`;
+
+const runtimePendingRequestClasses = Symbol(
+  "s232h2-runtime-pending-request-classes",
+);
+
+type RuntimeMonitorError = Error & {
+  [runtimePendingRequestClasses]?: readonly RuntimePendingRequestClass[];
+};
+
 type RuntimeMonitorState = {
   pendingAuditRequestCount: number;
+  pendingRequestClassCounts: Map<RuntimePendingRequestClass, number>;
   lastAuditRequestActivityAt: number;
   failureCode: string | null;
+  failureRequestClasses: RuntimePendingRequestClass[] | null;
 };
 
 const runtimeMonitorStates = new WeakMap<Page, RuntimeMonitorState>();
@@ -277,6 +325,7 @@ type StableGateFailure = {
     | "opaque-surface"
     | "snapshot-read-failed"
     | "snapshot-drift";
+  requestClasses?: RuntimePendingRequestClass[];
   count: number;
 };
 
@@ -361,8 +410,13 @@ const dynamicScreenshotNames = new Set([
   "s232h2-after-calculator-completed-saved-390.png",
 ]);
 
+const visualBrowserHeaders: Record<string, string> = {
+  ...protectionHeaders,
+  "x-vercel-skip-toolbar": "1",
+};
+
 test.use({
-  extraHTTPHeaders: protectionHeaders,
+  extraHTTPHeaders: visualBrowserHeaders,
   screenshot: "off",
   trace: "off",
   video: "off",
@@ -424,6 +478,117 @@ function visualProofContractRequired(): never {
   throw new Error("S232H2_VISUAL_PROOF_CONTRACT_REQUIRED");
 }
 
+function normalizeRuntimeRequestResourceClass(
+  request: Request,
+): RuntimeRequestResourceClass {
+  const resourceType = request.resourceType();
+  switch (resourceType) {
+    case "document":
+    case "stylesheet":
+    case "image":
+    case "media":
+    case "font":
+    case "script":
+    case "texttrack":
+    case "xhr":
+    case "fetch":
+    case "eventsource":
+    case "websocket":
+    case "manifest":
+      return resourceType;
+    default:
+      return "other";
+  }
+}
+
+function normalizeRuntimeResponseStatusClass(
+  status: number,
+): RuntimeResponseStatusClass {
+  if (status >= 100 && status < 200) return "informational";
+  if (status >= 200 && status < 300) return "success";
+  if (status >= 300 && status < 400) return "redirect";
+  if (status >= 400 && status < 500) return "client-error";
+  if (status >= 500 && status < 600) return "server-error";
+  return "invalid";
+}
+
+function normalizeRuntimeResponseContentClass(
+  contentType: string | undefined,
+): RuntimeResponseContentClass {
+  const normalizedContentType = contentType
+    ?.split(";", 1)[0]
+    ?.trim()
+    .toLowerCase();
+  if (!normalizedContentType) return "missing";
+  if (
+    normalizedContentType === "application/json" ||
+    normalizedContentType.endsWith("+json")
+  ) {
+    return "json";
+  }
+  if (
+    normalizedContentType === "text/html" ||
+    normalizedContentType === "application/xhtml+xml"
+  ) {
+    return "html";
+  }
+  if (
+    normalizedContentType === "text/javascript" ||
+    normalizedContentType === "application/javascript"
+  ) {
+    return "javascript";
+  }
+  if (normalizedContentType === "text/css") return "css";
+  if (normalizedContentType.startsWith("image/")) return "image";
+  if (
+    normalizedContentType.startsWith("font/") ||
+    normalizedContentType === "application/font-woff" ||
+    normalizedContentType === "application/vnd.ms-fontobject"
+  ) {
+    return "font";
+  }
+  if (normalizedContentType === "text/event-stream") return "event-stream";
+  return "other";
+}
+
+function pendingRuntimeRequestClass(
+  request: Request,
+): RuntimePendingRequestClass {
+  return `${normalizeRuntimeRequestResourceClass(request)}:no-response`;
+}
+
+function respondedRuntimeRequestClass(
+  request: Request,
+  response: Response,
+): RuntimePendingRequestClass {
+  const resourceClass = normalizeRuntimeRequestResourceClass(request);
+  const statusClass = normalizeRuntimeResponseStatusClass(response.status());
+  const contentClass = normalizeRuntimeResponseContentClass(
+    response.headers()["content-type"],
+  );
+  return `${resourceClass}:${statusClass}:${contentClass}`;
+}
+
+function adjustPendingRequestClassCount(
+  state: RuntimeMonitorState,
+  requestClass: RuntimePendingRequestClass,
+  delta: 1 | -1,
+) {
+  const nextCount =
+    (state.pendingRequestClassCounts.get(requestClass) ?? 0) + delta;
+  if (nextCount > 0) {
+    state.pendingRequestClassCounts.set(requestClass, nextCount);
+  } else {
+    state.pendingRequestClassCounts.delete(requestClass);
+  }
+}
+
+function currentPendingRequestClasses(
+  state: RuntimeMonitorState,
+): RuntimePendingRequestClass[] {
+  return [...state.pendingRequestClassCounts.keys()].sort();
+}
+
 function monitorPageRuntime(
   page: Page,
   expectedOrigin: string,
@@ -435,13 +600,34 @@ function monitorPageRuntime(
   };
   const state: RuntimeMonitorState = {
     pendingAuditRequestCount: 0,
+    pendingRequestClassCounts: new Map(),
     lastAuditRequestActivityAt: Date.now(),
     failureCode: null,
+    failureRequestClasses: null,
   };
   const trackedRequests = new WeakSet<Request>();
+  const trackedRequestClasses = new WeakMap<
+    Request,
+    RuntimePendingRequestClass
+  >();
+  const updateTrackedRequestClass = (
+    request: Request,
+    requestClass: RuntimePendingRequestClass,
+  ) => {
+    const previousClass = trackedRequestClasses.get(request);
+    if (!previousClass || previousClass === requestClass) return;
+    adjustPendingRequestClassCount(state, previousClass, -1);
+    trackedRequestClasses.set(request, requestClass);
+    adjustPendingRequestClassCount(state, requestClass, 1);
+  };
   const finishTrackedRequest = (request: Request) => {
     if (!trackedRequests.has(request)) return;
     trackedRequests.delete(request);
+    const requestClass = trackedRequestClasses.get(request);
+    trackedRequestClasses.delete(request);
+    if (requestClass) {
+      adjustPendingRequestClassCount(state, requestClass, -1);
+    }
     state.pendingAuditRequestCount = Math.max(
       0,
       state.pendingAuditRequestCount - 1,
@@ -460,7 +646,11 @@ function monitorPageRuntime(
   page.on("request", (request) => {
     const url = new URL(request.url());
     if (url.origin !== expectedOrigin) return;
+    if (trackedRequests.has(request)) return;
+    const requestClass = pendingRuntimeRequestClass(request);
     trackedRequests.add(request);
+    trackedRequestClasses.set(request, requestClass);
+    adjustPendingRequestClassCount(state, requestClass, 1);
     state.pendingAuditRequestCount += 1;
     state.lastAuditRequestActivityAt = Date.now();
   });
@@ -492,8 +682,14 @@ function monitorPageRuntime(
   });
   page.on("response", (response) => {
     const url = new URL(response.url());
-    if (url.origin !== expectedOrigin || response.status() < 400) return;
-    evidence.sameOriginRequestFailures.push("same-origin-http-error");
+    if (url.origin !== expectedOrigin) return;
+    updateTrackedRequestClass(
+      response.request(),
+      respondedRuntimeRequestClass(response.request(), response),
+    );
+    if (response.status() >= 400) {
+      evidence.sameOriginRequestFailures.push("same-origin-http-error");
+    }
   });
   return evidence;
 }
@@ -509,9 +705,14 @@ function visualAuditRequestHeaders(baseUrl = runtimeBaseUrl) {
 function throwRuntimeMonitorFailure(
   state: RuntimeMonitorState,
   failureCode: string,
+  requestClasses: readonly RuntimePendingRequestClass[] = [],
 ): never {
   state.failureCode ??= failureCode;
-  const error = new Error(state.failureCode);
+  state.failureRequestClasses ??= [...requestClasses];
+  const error = new Error(state.failureCode) as RuntimeMonitorError;
+  if (state.failureRequestClasses.length > 0) {
+    error[runtimePendingRequestClasses] = state.failureRequestClasses;
+  }
   if (state.failureCode === "S232H2_RUNTIME_REQUEST_QUIESCENCE_TIMEOUT") {
     error.name = "TimeoutError";
   }
@@ -541,6 +742,7 @@ async function settleRuntimeMonitors(...pages: Page[]) {
           throwRuntimeMonitorFailure(
             state,
             "S232H2_RUNTIME_REQUEST_QUIESCENCE_TIMEOUT",
+            currentPendingRequestClasses(state),
           );
         }
         if (page.isClosed()) {
@@ -732,7 +934,9 @@ function recordStableGateFailure(
       candidate.routeStateAlias === failure.routeStateAlias &&
       candidate.viewport === failure.viewport &&
       candidate.stableStep === failure.stableStep &&
-      candidate.errorFamily === failure.errorFamily,
+      candidate.errorFamily === failure.errorFamily &&
+      (candidate.requestClasses ?? []).join("|") ===
+        (failure.requestClasses ?? []).join("|"),
   );
   if (existing) {
     existing.count += count;
@@ -745,6 +949,19 @@ function stableErrorFamily(error: unknown): StableGateFailure["errorFamily"] {
   if (error instanceof Error && /timeout/i.test(error.name)) return "timeout";
   if (error instanceof Error && /assert/i.test(error.name)) return "assertion";
   return "unexpected";
+}
+
+function stableFailureFields(error: unknown): Pick<
+  StableGateFailure,
+  "errorFamily" | "requestClasses"
+> {
+  const errorFamily = stableErrorFamily(error);
+  if (!(error instanceof Error)) return { errorFamily };
+  const requestClasses = (error as RuntimeMonitorError)[
+    runtimePendingRequestClasses
+  ];
+  if (!requestClasses || requestClasses.length === 0) return { errorFamily };
+  return { errorFamily, requestClasses: [...requestClasses] };
 }
 
 function resolveCredential(slot: VisualCredentialSlot) {
@@ -4112,7 +4329,7 @@ async function runIsolatedDynamicCandidate<T>({
       routeStateAlias,
       viewport: "390x844",
       stableStep: activeStep,
-      errorFamily: stableErrorFamily(error),
+      ...stableFailureFields(error),
     });
     return null;
   } finally {
@@ -4125,7 +4342,7 @@ async function runIsolatedDynamicCandidate<T>({
           routeStateAlias,
           viewport: "390x844",
           stableStep: "cleanup",
-          errorFamily: stableErrorFamily(error),
+          ...stableFailureFields(error),
         });
       }
       try {
@@ -4136,7 +4353,7 @@ async function runIsolatedDynamicCandidate<T>({
           routeStateAlias,
           viewport: "390x844",
           stableStep: "cleanup",
-          errorFamily: stableErrorFamily(error),
+          ...stableFailureFields(error),
         });
       }
     }
@@ -4198,7 +4415,7 @@ async function runVisualCandidate({
       routeStateAlias,
       viewport,
       stableStep: prepared ? "screenshot" : "preparation",
-      errorFamily: stableErrorFamily(error),
+      ...stableFailureFields(error),
     });
   } finally {
     try {
@@ -4209,7 +4426,7 @@ async function runVisualCandidate({
         routeStateAlias,
         viewport,
         stableStep: "cleanup",
-        errorFamily: stableErrorFamily(error),
+        ...stableFailureFields(error),
       });
     }
     if (cleanup) {
@@ -4221,7 +4438,7 @@ async function runVisualCandidate({
           routeStateAlias,
           viewport,
           stableStep: "cleanup",
-          errorFamily: stableErrorFamily(error),
+          ...stableFailureFields(error),
         });
       }
     }
@@ -4248,7 +4465,7 @@ async function closeSharedContext(
         routeStateAlias,
         viewport: "all",
         stableStep: "cleanup",
-        errorFamily: stableErrorFamily(error),
+        ...stableFailureFields(error),
       });
     }
   }
@@ -4960,7 +5177,7 @@ async function newPreviewContext(browser: Browser, baseURL: string) {
   return browser.newContext({
     baseURL,
     extraHTTPHeaders: {
-      ...protectionHeaders,
+      ...visualBrowserHeaders,
       "x-s232h2-audit-sha":
         baseURL === baselineUrl ? baselineSha : runtimeRunnerSha,
     },
@@ -5298,7 +5515,7 @@ test("@privacy S232H.2 privacy/auth source gate", async ({ browser }) => {
             routeStateAlias: "candidate-" + handle.credential.slot,
             viewport: "source-only",
             stableStep: "cleanup",
-            errorFamily: stableErrorFamily(error),
+            ...stableFailureFields(error),
           });
         }
       }),
@@ -5491,7 +5708,7 @@ test("@a11y S232H.2 split accessibility gate", async ({ browser }) => {
             routeStateAlias,
             viewport: viewport.width + "x" + viewport.height,
             stableStep: activeStep,
-            errorFamily: stableErrorFamily(error),
+            ...stableFailureFields(error),
           });
         } finally {
           try {
@@ -5502,7 +5719,7 @@ test("@a11y S232H.2 split accessibility gate", async ({ browser }) => {
               routeStateAlias,
               viewport: viewport.width + "x" + viewport.height,
               stableStep: "cleanup",
-              errorFamily: stableErrorFamily(error),
+              ...stableFailureFields(error),
             });
           }
         }
@@ -5673,7 +5890,7 @@ test("@a11y S232H.2 split accessibility gate", async ({ browser }) => {
       routeStateAlias: "gate-setup",
       viewport: "all",
       stableStep: "preparation",
-      errorFamily: stableErrorFamily(error),
+      ...stableFailureFields(error),
     });
   } finally {
     await closeSharedContext(
@@ -6049,7 +6266,7 @@ test("@visual S232H.2 one-pass visual and Figma gate", async ({
       routeStateAlias: "gate-setup",
       viewport: "all",
       stableStep: "preparation",
-      errorFamily: stableErrorFamily(error),
+      ...stableFailureFields(error),
     });
   }
 
@@ -6145,7 +6362,7 @@ test("@visual S232H.2 one-pass visual and Figma gate", async ({
         routeStateAlias: "figma-" + reference.node.replace(":", "-"),
         viewport: "representative",
         stableStep: "figma",
-        errorFamily: stableErrorFamily(error),
+        ...stableFailureFields(error),
       });
     }
   }
