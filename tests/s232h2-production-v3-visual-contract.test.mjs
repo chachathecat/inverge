@@ -24,6 +24,9 @@ const authenticatedRuntime = read("tests/e2e/support/authenticated-runtime.ts");
 const reviewQueueClient = read(
   "components/review-os/review-queue-client.tsx",
 );
+const calculatorRoutineTrainer = read(
+  "components/review-os/calculator-routine-trainer.tsx",
+);
 const sourceAuditRoute = read("app/api/os/visual-source-audit/route.ts");
 const readOnlyRequest = read("lib/review-os/read-only-request.ts");
 const reviewOsRepository = read("lib/review-os/repository.ts");
@@ -1208,6 +1211,138 @@ test("review selected-state preparation follows the bounded fill-triggered revea
   assert.match(
     recorder,
     /candidate\.preparationStage === failure\.preparationStage/,
+  );
+});
+
+test("calculator completed-state geometry is strict, state-aware, and bounded", () => {
+  assert.match(
+    calculatorRoutineTrainer,
+    /isFocusPresentation && trainerState !== "completed"/,
+    "the product must keep the completed state free of an active StickyAction",
+  );
+  assert.match(
+    calculatorRoutineTrainer,
+    /trainerState === "completed"[\s\S]*?<RoutineCompletedSurface/,
+  );
+
+  const timeoutMatch = spec.match(
+    /const REPRESENTATIVE_STRUCTURE_TIMEOUT_MS = ([\d_]+);/,
+  );
+  assert.ok(timeoutMatch, "representative structure reads must be bounded");
+  const structureTimeout = Number(timeoutMatch[1].replaceAll("_", ""));
+  assert.ok(structureTimeout > 0 && structureTimeout <= 20_000);
+
+  const boxHelper = blockBetween(
+    spec,
+    "async function requiredRepresentativeBox",
+    "async function verifyRepresentativeFigmaStructure",
+  );
+  assert.match(
+    boxHelper,
+    /locator\.boundingBox\(\{[\s\S]*?timeout: REPRESENTATIVE_STRUCTURE_TIMEOUT_MS/,
+  );
+  assert.match(boxHelper, /expect\(box\)\.not\.toBeNull\(\)/);
+
+  const representative = blockBetween(
+    spec,
+    "async function verifyRepresentativeFigmaStructure",
+    "type ShellCapabilities",
+  );
+  assert.match(representative, /state: string/);
+  assert.doesNotMatch(
+    representative,
+    /\.boundingBox\(/,
+    "all representative box reads must flow through the bounded helper",
+  );
+  const contentIndex = representative.indexOf(
+    'page.locator("#calculator-routine-content")',
+  );
+  const trustIndex = representative.indexOf(
+    'page.getByTestId("calculator-focus-trust")',
+  );
+  const completedIndex = representative.indexOf(
+    'if (state === "completed-saved")',
+  );
+  assert.ok(
+    contentIndex >= 0 &&
+      trustIndex > contentIndex &&
+      completedIndex > trustIndex,
+    "calculator shell geometry must remain common to active and completed states",
+  );
+
+  const completed = blockBetween(
+    representative,
+    'if (state === "completed-saved")',
+    "const step = await requiredRepresentativeBox",
+  );
+  assert.match(
+    completed,
+    /data-calculator-routine-state=\"completed\"\]\[data-calculator-routine-view-state=\"completed\"/,
+  );
+  assert.match(
+    completed,
+    /data-v3-component=\"Surface\"\]\[data-v3-tone=\"stable\"/,
+  );
+  assert.match(
+    completed,
+    /data-calculator-routine-sync-state=\"saved\"\]\[data-v3-system-state=\"completed\"/,
+  );
+  assert.match(completed, /name: "입력 수정", exact: true/);
+  assert.match(
+    completed,
+    /data-v3-component=\"CalculatorStep\"[\s\S]*?toHaveCount\(0, \{ timeout: REPRESENTATIVE_STRUCTURE_TIMEOUT_MS \}\)/,
+  );
+  assert.match(
+    completed,
+    /data-v3-component=\"StickyAction\"[\s\S]*?toHaveCount\(0, \{ timeout: REPRESENTATIVE_STRUCTURE_TIMEOUT_MS \}\)/,
+  );
+  assert.match(completed, /expect\(edit\.height\)\.toBeGreaterThanOrEqual\(44\)/);
+  assert.match(completed, /return;/);
+
+  const active = representative.slice(
+    representative.indexOf("const step = await requiredRepresentativeBox"),
+  );
+  for (const selector of [
+    'data-v3-component="CalculatorStep"',
+    "data-calculator-step-display",
+    'data-v3-component="StickyAction"',
+  ]) {
+    assert.ok(active.includes(selector), `active geometry lost: ${selector}`);
+  }
+
+  const audit = blockBetween(
+    spec,
+    "async function auditRoute",
+    "function hasExactQuery",
+  );
+  assert.match(
+    audit,
+    /verifyRepresentativeFigmaStructure\([\s\S]*?options\.state \?\? "initial"/,
+  );
+  assert.match(
+    audit,
+    /route\.id === "calculator" && options\.state !== "completed-saved"/,
+  );
+  assert.match(
+    audit,
+    /else if \(styles\.fixedDocks\.length !== 0\)/,
+    "the completed state must still fail if any fixed dock remains",
+  );
+  assert.match(audit, /visibleTargetFailures\(page\)/);
+  assert.match(audit, /new AxeBuilder\(\{ page \}\)/);
+
+  const completion = blockBetween(
+    spec,
+    "async function completeCalculatorRoutine",
+    "async function newPreviewContext",
+  );
+  assert.match(
+    completion,
+    /toHaveAttribute\([\s\S]*?"data-calculator-routine-state",[\s\S]*?"completed"/,
+  );
+  assert.match(
+    completion,
+    /data-calculator-routine-sync-state=\"saved\"/,
   );
 });
 

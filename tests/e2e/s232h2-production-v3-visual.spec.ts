@@ -5,6 +5,7 @@ import {
   type APIResponse,
   type Browser,
   type BrowserContext,
+  type Locator,
   type Page,
   type Request,
   type Route,
@@ -58,6 +59,7 @@ const baselineTreeSha = process.env.E2E_BASELINE_TREE_SHA?.trim() ?? "";
 const visualProofPath = process.env.S232H2_VISUAL_PROOF_PATH?.trim() ?? "";
 const fixedBaselineSha = "35836d419161d7cfe55e3e3c088fcc4d66376a7d";
 const REVIEW_PREPARATION_ACTION_TIMEOUT_MS = 20_000;
+const REPRESENTATIVE_STRUCTURE_TIMEOUT_MS = 20_000;
 
 type VisualCredentialSlot = "visual" | "user-b";
 type VisualCredentialCandidate = ExplicitTestCredential & {
@@ -3296,10 +3298,19 @@ async function verifyKeyboardFocus(page: Page, primaryActionCount: number) {
   };
 }
 
+async function requiredRepresentativeBox(locator: Locator) {
+  const box = await locator.boundingBox({
+    timeout: REPRESENTATIVE_STRUCTURE_TIMEOUT_MS,
+  });
+  expect(box).not.toBeNull();
+  return box!;
+}
+
 async function verifyRepresentativeFigmaStructure(
   page: Page,
   routeId: string,
   viewportWidth: number,
+  state: string,
 ) {
   if (
     routeId === "ledger" &&
@@ -3308,27 +3319,24 @@ async function verifyRepresentativeFigmaStructure(
     const readingHeader = page.locator("[data-s232d2-reading-header]");
     const stateEvidence = readingHeader.locator("[data-s232d2-state-evidence]");
     const recoveryHeading = page.locator("[data-s232d2-recovery-heading]");
-    const chrome = await page
-      .locator("[data-s232d1-ledger-chrome]")
-      .boundingBox();
-    const reading = await page
-      .locator("[data-s232d2-reading-column]")
-      .boundingBox();
-    const trust = await page
-      .locator('[data-v3-component="TrustEvidenceBar"]')
-      .first()
-      .boundingBox();
-    const gap = await page
-      .locator('[data-v3-component="BiggestGap"]')
-      .first()
-      .boundingBox();
-    const excerpt = await page
-      .locator('[data-v3-component="EvidenceExcerpt"]')
-      .first()
-      .boundingBox();
-    const sticky = await page
-      .locator('[data-v3-component="StickyAction"]')
-      .boundingBox();
+    const chrome = await requiredRepresentativeBox(
+      page.locator("[data-s232d1-ledger-chrome]"),
+    );
+    const reading = await requiredRepresentativeBox(
+      page.locator("[data-s232d2-reading-column]"),
+    );
+    const trust = await requiredRepresentativeBox(
+      page.locator('[data-v3-component="TrustEvidenceBar"]').first(),
+    );
+    const gap = await requiredRepresentativeBox(
+      page.locator('[data-v3-component="BiggestGap"]').first(),
+    );
+    const excerpt = await requiredRepresentativeBox(
+      page.locator('[data-v3-component="EvidenceExcerpt"]').first(),
+    );
+    const sticky = await requiredRepresentativeBox(
+      page.locator('[data-v3-component="StickyAction"]'),
+    );
     await expect(stateEvidence).toBeVisible();
     await expect(readingHeader).toHaveCSS("border-bottom-width", "0px");
     await expect(recoveryHeading).toContainText("이번에 회복할 문장");
@@ -3357,69 +3365,102 @@ async function verifyRepresentativeFigmaStructure(
       );
     });
     expect(canonicalOrder).toBe(true);
-    for (const box of [chrome, reading, trust, gap, excerpt, sticky])
-      expect(box).not.toBeNull();
-    expect(chrome!.y).toBeCloseTo(0, 0);
-    expect(chrome!.height).toBeCloseTo(viewportWidth === 390 ? 56 : 72, 0);
-    expect(trust!.y).toBeLessThan(gap!.y);
-    expect(gap!.y).toBeLessThan(excerpt!.y);
+    expect(chrome.y).toBeCloseTo(0, 0);
+    expect(chrome.height).toBeCloseTo(viewportWidth === 390 ? 56 : 72, 0);
+    expect(trust.y).toBeLessThan(gap.y);
+    expect(gap.y).toBeLessThan(excerpt.y);
     if (viewportWidth === 390) {
-      expect(reading!.x).toBeCloseTo(20, 0);
-      expect(reading!.width).toBeCloseTo(350, 0);
-      expect(sticky!.x).toBeCloseTo(0, 0);
-      expect(sticky!.width).toBeCloseTo(390, 0);
-      expect(sticky!.y + sticky!.height).toBeCloseTo(844, 0);
+      expect(reading.x).toBeCloseTo(20, 0);
+      expect(reading.width).toBeCloseTo(350, 0);
+      expect(sticky.x).toBeCloseTo(0, 0);
+      expect(sticky.width).toBeCloseTo(390, 0);
+      expect(sticky.y + sticky.height).toBeCloseTo(844, 0);
     } else {
-      const rail = await page
-        .locator("[data-s232d2-evidence-rail]")
-        .boundingBox();
+      const rail = await requiredRepresentativeBox(
+        page.locator("[data-s232d2-evidence-rail]"),
+      );
       await expect(
         page.locator(
           "[data-s232d2-evidence-rail] [data-s232d2-recovery-context]",
         ),
       ).toBeVisible();
-      expect(rail).not.toBeNull();
-      expect(reading!.x).toBeCloseTo(220, 0);
-      expect(reading!.width).toBeGreaterThanOrEqual(640);
-      expect(reading!.width).toBeLessThanOrEqual(700);
-      expect(rail!.x).toBeGreaterThan(reading!.x + reading!.width);
-      expect(rail!.width).toBeGreaterThanOrEqual(260);
-      expect(rail!.width).toBeLessThanOrEqual(320);
-      expect(sticky!.width).toBeCloseTo(300, 0);
+      expect(reading.x).toBeCloseTo(220, 0);
+      expect(reading.width).toBeGreaterThanOrEqual(640);
+      expect(reading.width).toBeLessThanOrEqual(700);
+      expect(rail.x).toBeGreaterThan(reading.x + reading.width);
+      expect(rail.width).toBeGreaterThanOrEqual(260);
+      expect(rail.width).toBeLessThanOrEqual(320);
+      expect(sticky.width).toBeCloseTo(300, 0);
     }
   }
   if (routeId === "calculator" && viewportWidth === 390) {
-    const content = await page
-      .locator("#calculator-routine-content")
-      .boundingBox();
-    const trust = await page
-      .getByTestId("calculator-focus-trust")
-      .boundingBox();
-    const step = await page
-      .locator('[data-v3-component="CalculatorStep"]')
-      .boundingBox();
-    const display = await page
-      .locator("[data-calculator-step-display]")
-      .boundingBox();
-    const sticky = await page
-      .locator('[data-v3-component="StickyAction"]')
-      .boundingBox();
-    for (const box of [content, trust, step, display, sticky])
-      expect(box).not.toBeNull();
-    expect(content!.x).toBeCloseTo(0, 0);
-    expect(content!.width).toBeCloseTo(390, 0);
-    expect(trust!.x).toBeCloseTo(20, 0);
-    expect(trust!.width).toBeCloseTo(350, 0);
-    expect(trust!.y).toBeLessThan(step!.y);
-    expect(step!.x).toBeCloseTo(20, 0);
-    expect(step!.width).toBeCloseTo(350, 0);
-    expect(display!.x).toBeGreaterThanOrEqual(step!.x + 20);
-    expect(display!.x + display!.width).toBeLessThanOrEqual(
-      step!.x + step!.width - 20,
+    const content = await requiredRepresentativeBox(
+      page.locator("#calculator-routine-content"),
     );
-    expect(sticky!.x).toBeCloseTo(0, 0);
-    expect(sticky!.width).toBeCloseTo(390, 0);
-    expect(sticky!.y + sticky!.height).toBeCloseTo(844, 0);
+    const trust = await requiredRepresentativeBox(
+      page.getByTestId("calculator-focus-trust"),
+    );
+    expect(content.x).toBeCloseTo(0, 0);
+    expect(content.width).toBeCloseTo(390, 0);
+    expect(trust.x).toBeCloseTo(20, 0);
+    expect(trust.width).toBeCloseTo(350, 0);
+
+    if (state === "completed-saved") {
+      const trainer = page.locator(
+        '[data-calculator-routine-trainer][data-calculator-routine-state="completed"][data-calculator-routine-view-state="completed"]',
+      );
+      const completed = await requiredRepresentativeBox(
+        trainer.locator(
+          '[data-v3-component="Surface"][data-v3-tone="stable"]',
+        ),
+      );
+      const sync = await requiredRepresentativeBox(
+        page.locator(
+          '[data-calculator-routine-sync-state="saved"][data-v3-system-state="completed"]',
+        ),
+      );
+      const edit = await requiredRepresentativeBox(
+        trainer.getByRole("button", { name: "입력 수정", exact: true }),
+      );
+      await expect(
+        page.locator('[data-v3-component="CalculatorStep"]'),
+      ).toHaveCount(0, { timeout: REPRESENTATIVE_STRUCTURE_TIMEOUT_MS });
+      await expect(
+        page.locator('[data-v3-component="StickyAction"]'),
+      ).toHaveCount(0, { timeout: REPRESENTATIVE_STRUCTURE_TIMEOUT_MS });
+      expect(trust.y).toBeLessThan(completed.y);
+      expect(completed.x).toBeCloseTo(20, 0);
+      expect(completed.width).toBeCloseTo(350, 0);
+      expect(completed.y).toBeLessThan(sync.y);
+      expect(sync.x).toBeCloseTo(20, 0);
+      expect(sync.width).toBeCloseTo(350, 0);
+      expect(edit.x).toBeGreaterThanOrEqual(completed.x);
+      expect(edit.x + edit.width).toBeLessThanOrEqual(
+        completed.x + completed.width,
+      );
+      expect(edit.height).toBeGreaterThanOrEqual(44);
+      return;
+    }
+
+    const step = await requiredRepresentativeBox(
+      page.locator('[data-v3-component="CalculatorStep"]'),
+    );
+    const display = await requiredRepresentativeBox(
+      page.locator("[data-calculator-step-display]"),
+    );
+    const sticky = await requiredRepresentativeBox(
+      page.locator('[data-v3-component="StickyAction"]'),
+    );
+    expect(trust.y).toBeLessThan(step.y);
+    expect(step.x).toBeCloseTo(20, 0);
+    expect(step.width).toBeCloseTo(350, 0);
+    expect(display.x).toBeGreaterThanOrEqual(step.x + 20);
+    expect(display.x + display.width).toBeLessThanOrEqual(
+      step.x + step.width - 20,
+    );
+    expect(sticky.x).toBeCloseTo(0, 0);
+    expect(sticky.width).toBeCloseTo(390, 0);
+    expect(sticky.y + sticky.height).toBeCloseTo(844, 0);
   }
 }
 
@@ -3666,7 +3707,12 @@ async function auditRoute(
   }
 
   try {
-    await verifyRepresentativeFigmaStructure(page, route.id, viewport.width);
+    await verifyRepresentativeFigmaStructure(
+      page,
+      route.id,
+      viewport.width,
+      options.state ?? "initial",
+    );
   } catch {
     fail("audit", "assertion");
   }
@@ -3698,7 +3744,8 @@ async function auditRoute(
   }
   const expectsCanonicalDock =
     viewport.width < 1024 &&
-    (route.id === "ledger" || route.id === "calculator");
+    (route.id === "ledger" ||
+      (route.id === "calculator" && options.state !== "completed-saved"));
   if (expectsCanonicalDock) {
     if (
       styles.fixedDocks.length !== 1 ||
