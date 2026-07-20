@@ -94,7 +94,10 @@ test("low-confidence OCR remains an ocr_confirmation candidate before practice",
   assert.match(form, /OCR 확인 필요: 숫자\/용어를 직접 확인하거나 수정한 뒤 O\/X 연습으로 나눌 수 있습니다\./);
   assert.match(form, /lowConfidenceFlag && !form\.ocrConfirmedByLearner\s*\? null\s*: getCalculatorWorkflowForSubject/);
   assert.match(svc, /rawLowConfidenceCapture/);
-  assert.match(svc, /lowConfidenceCapture = rawLowConfidenceCapture && confirmedFields\?\.ocrConfirmedByLearner !== true/);
+  assert.match(
+    svc,
+    /const\s+lowConfidenceCapture\s*=\s*rawLowConfidenceCapture\s*&&\s*confirmedFields\?\.ocrConfirmedByLearner\s*!==\s*true\s*;/,
+  );
   assert.match(svc, /OCR 숫자\/용어 확인 필요/);
   const todayPlanEngine = read("lib/review-os/today-plan-engine.ts");
   assert.match(todayPlanEngine, /taskType = "ocr_confirmation"/);

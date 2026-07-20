@@ -12,17 +12,27 @@ import { createHash } from "node:crypto";
 import { chmod, readFile, unlink, writeFile } from "node:fs/promises";
 import { isAbsolute } from "node:path";
 
-import { buildCaptureLearningSignal } from "../../lib/review-os/capture-learning-signals";
 import {
-  buildLearnerAnswerSubmissionDerivedMetadata,
-  buildLearnerAnswerSubmissionPersistenceContract,
-} from "../../lib/review-os/answer-submission-contract";
-import {
-  buildCaptureNoteSignals,
-  structureCaptureNote,
-} from "../../lib/review-os/capture-note-engine";
-import { classifyWrongAnswerTaxonomy } from "../../lib/review-os/taxonomy-classification";
-import type { WrongAnswerItemInput } from "../../lib/review-os/types";
+  buildExactFixtureLearningSignal,
+  exactFixtureGeneratedArtifacts,
+  exactFixtureMistakeType,
+  exactFixtureProductionMetadata,
+  resolveSyntheticItemId,
+  syntheticCaptureReviewDate,
+  syntheticFixtureAnswer,
+  syntheticFixtureCorrectAnswer,
+  syntheticFixtureGap,
+  syntheticFixtureProblemIdentifier,
+  syntheticFixtureQuestion,
+  syntheticFixtureSource,
+  syntheticFixtureTitle,
+  syntheticLedgerAnswer,
+  syntheticLedgerCorrectAnswer,
+  syntheticLedgerGap,
+  syntheticOwnerId,
+  syntheticQueueAnchorSource,
+  type SyntheticItem,
+} from "../../scripts/support/s232h2-exact-fixture";
 
 import {
   establishProtectedPreviewSession,
@@ -44,7 +54,7 @@ const baselineTreeSha = process.env.E2E_BASELINE_TREE_SHA?.trim() ?? "";
 const visualProofPath = process.env.S232H2_VISUAL_PROOF_PATH?.trim() ?? "";
 const fixedBaselineSha = "35836d419161d7cfe55e3e3c088fcc4d66376a7d";
 
-type VisualCredentialSlot = "visual" | "user-a" | "user-b";
+type VisualCredentialSlot = "visual" | "user-b";
 type VisualCredentialCandidate = ExplicitTestCredential & {
   slot: VisualCredentialSlot;
 };
@@ -54,11 +64,6 @@ const visualCredentialCandidates = [
     slot: "visual" as const,
     email: process.env.E2E_VISUAL_USER_EMAIL?.trim() ?? "",
     password: process.env.E2E_VISUAL_USER_PASSWORD ?? "",
-  },
-  {
-    slot: "user-a" as const,
-    email: process.env.E2E_USER_A_EMAIL?.trim() ?? "",
-    password: process.env.E2E_USER_A_PASSWORD ?? "",
   },
   {
     slot: "user-b" as const,
@@ -298,26 +303,6 @@ type FigmaComparison = {
   passed: boolean;
 };
 
-const syntheticOwnerId = "s232h2:v3-visual:v1";
-const syntheticFixtureSource = "S232H2 synthetic visual acceptance";
-const syntheticFixtureTitle = "사업인정의 처분성";
-const syntheticFixtureProblemIdentifier = "s232h2:v3-visual:ledger:v2";
-const syntheticFixtureQuestion =
-  "사업인정의 처분성을 검토하시오. 시각 검증용 합성 문제입니다.";
-const syntheticLedgerAnswer =
-  "사업인정은 수용권을 발생시키므로 처분성이 인정된다.";
-const syntheticLedgerCorrectAnswer =
-  "사업인정은 특정 사업에 수용권을 설정하여 국민의 권리·의무에 직접 영향을 미친다.";
-const syntheticLedgerGap =
-  "처분성 판단 기준과 수용권 발생의 연결이 빠졌습니다.";
-const syntheticFixtureAnswer =
-  "행정청의 공적 견해표명과 보호가치 있는 신뢰를 차례로 검토합니다. 이 문장은 시각 검증용 합성 기록입니다.";
-const syntheticFixtureCorrectAnswer =
-  "공적 견해표명, 귀책사유 부재, 신뢰에 따른 행위, 보호가치를 순서대로 확인합니다.";
-const syntheticFixtureGap =
-  "요건과 대응 사실을 잇는 문장 하나가 빠져 있습니다.";
-const syntheticQueueAnchorSource = syntheticFixtureSource + " · queue anchor";
-const syntheticCaptureReviewDate = "2026-07-18";
 const calculatorCasioFixtureEntries = {
   conditions: "합성 조건: 원문 숫자와 단위를 먼저 확인합니다.",
   formula: "합성 산식: V = I ÷ R",
@@ -528,30 +513,6 @@ async function verifyRuntimeVersion(
   });
 }
 
-type SyntheticItem = {
-  id?: string;
-  itemId?: string;
-  userId?: string;
-  examName?: string;
-  subjectLabel?: string;
-  sourceType?: string;
-  sourceLabel?: string;
-  problemTitle?: string;
-  problemIdentifier?: string;
-  rawQuestionText?: string;
-  rawAnswerText?: string;
-  correctAnswer?: string;
-  userAnswer?: string;
-  userReasonText?: string;
-  userReasonPreset?: string;
-  confidence?: string;
-  timeSpentSeconds?: number | null;
-  createdAt?: string;
-  rawPayload?: Record<string, unknown>;
-  derivedPayload?: Record<string, unknown>;
-  [key: string]: unknown;
-};
-
 type VisualSourceName =
   | "items"
   | "notes"
@@ -727,10 +688,6 @@ async function readVisualProof(): Promise<VisualProof> {
   return parsed;
 }
 
-function resolveSyntheticItemId(item: SyntheticItem) {
-  return item.id ?? item.itemId ?? "";
-}
-
 function exactFixtureMarkers(
   item: SyntheticItem,
   role: "ledger" | "queue-anchor",
@@ -758,195 +715,6 @@ function exactFixtureRole(
   if (isExactVisualLedger(item)) return "ledger";
   if (isExactVisualQueueAnchor(item)) return "queue-anchor";
   return null;
-}
-
-function exactFixtureMistakeType(item: SyntheticItem) {
-  const reason = item.userReasonText ?? "";
-  if (/무효|취소/.test(reason)) return "무효와 취소 구분 / 개념 혼동";
-  if (/함정|표현|선지|오독/.test(reason)) return "trap_word";
-  if (/예외|원칙/.test(reason)) return "rule_exception_confusion";
-  if (/계산|숫자|산식|템플릿/.test(reason)) {
-    return "calculation_template_error";
-  }
-  if (/조건|누락/.test(reason)) return "조건 누락";
-  return reason.length <= 32 ? reason : "concept_confusion";
-}
-
-function exactFixtureGeneratedArtifacts(item: SyntheticItem) {
-  const topicTag = item.problemTitle ?? "";
-  const mistakeType = exactFixtureMistakeType(item);
-  return {
-    note: {
-      ai_summary: `${item.subjectLabel} 답안에서 먼저 보강할 지점은 ${mistakeType}입니다. 전체를 다시 쓰기보다 핵심 논점 하나를 고정해 다시 작성하세요.`,
-      key_distinction:
-        "참고 정리와 내 답안의 차이는 점수보다 누락된 논점과 답안 구조에서 먼저 봐야 합니다.",
-      review_checkpoint: `${topicTag}를 다시 볼 때 목차, 핵심 논점, 사례 적용 문장을 각각 한 번씩 확인하세요.`,
-      next_try_tip: `다음 rewrite에서는 ${mistakeType} 하나만 고쳐서 8~10줄로 다시 작성하세요.`,
-      generation_source: "fallback",
-    },
-    tag: {
-      topic_tag: topicTag,
-      mistake_type: mistakeType,
-      task_type: "2차 답안 보강",
-      classifier_source: "rules",
-      confidence: 0.58,
-      recurrence_candidate: true,
-    },
-  };
-}
-
-function exactFixtureInput(
-  item: SyntheticItem,
-  role: "ledger" | "queue-anchor",
-): WrongAnswerItemInput {
-  const answer =
-    role === "ledger" ? syntheticLedgerAnswer : syntheticFixtureAnswer;
-  const correctAnswer =
-    role === "ledger"
-      ? syntheticLedgerCorrectAnswer
-      : syntheticFixtureCorrectAnswer;
-  const gap = role === "ledger" ? syntheticLedgerGap : syntheticFixtureGap;
-  const keyConcepts =
-    role === "ledger"
-      ? ["사업인정", "처분성", "수용권"]
-      : ["신뢰보호", "공적 견해표명", "보호가치"];
-  const weakStructurePoint =
-    role === "ledger"
-      ? "법률효과와 권리구제 필요성을 같은 순서로 연결해야 합니다."
-      : "요건과 사실 적용을 같은 순서로 연결해야 합니다.";
-  const weakApplicationSentence =
-    role === "ledger"
-      ? "사업인정으로 발생하는 구체적 법률효과를 적어야 합니다."
-      : "공적 견해표명에 해당하는 합성 사실을 구체적으로 연결해야 합니다.";
-  const rewriteInstruction =
-    role === "ledger"
-      ? "처분의 법률효과와 권리구제 필요성을 한 문단에 연결합니다."
-      : "요건, 대응 사실, 소결론을 한 문단에 연결합니다.";
-  const referenceStructure =
-    role === "ledger"
-      ? syntheticLedgerCorrectAnswer
-      : "I. 공적 견해표명 II. 신뢰와 귀책 III. 보호가치 IV. 결론";
-  const issueRecall =
-    role === "ledger"
-      ? "사업인정의 처분성을 법률효과 중심으로 검토합니다."
-      : "신뢰보호 요건을 순서대로 검토합니다.";
-  const outlineDraft =
-    role === "ledger"
-      ? "I. 사업인정의 성격 II. 수용권 설정 III. 권리구제 IV. 결론"
-      : referenceStructure;
-  const confirmedFields = {
-    subjectLabel: "감정평가 및 보상법규",
-    userAnswer: answer,
-    production_before_comparison: true,
-    reference_answer_added_after_production: true,
-    biggest_gap: gap,
-    sourceType: "text",
-    examMode: "second",
-    hasManualCorrection: false,
-    ocrConfirmedByLearner: false,
-    acceptance_fixture_id: syntheticOwnerId,
-    acceptance_fixture_role: role,
-  };
-  return {
-    examName: "감정평가사 2차",
-    subjectLabel: "감정평가 및 보상법규",
-    sourceType: "text",
-    sourceLabel:
-      role === "ledger" ? syntheticFixtureSource : syntheticQueueAnchorSource,
-    problemTitle: item.problemTitle,
-    problemIdentifier: item.problemIdentifier,
-    rawQuestionText: item.rawQuestionText,
-    rawAnswerText: answer,
-    correctAnswer,
-    userAnswer: answer,
-    userReasonText: gap,
-    confidence: role === "ledger" ? "중간" : "낮음",
-    timeSpentSeconds: role === "queue-anchor" ? 180 : undefined,
-    keyConcepts,
-    missingIssue: gap,
-    weakStructurePoint,
-    weakApplicationSentence,
-    rewriteInstruction,
-    referenceStructure,
-    myAnswerSummary: answer,
-    issueRecall,
-    outlineDraft,
-    productionBeforeComparison: true,
-    referenceAnswerAddedAfterProduction: true,
-    biggestGap: gap,
-    rewriteCompleted: false,
-    captureIntent: "save",
-    createdFromCapture: true,
-    extractionPayload: {
-      raw_ocr_text: answer,
-      raw_extraction_json: {
-        acceptance_fixture_id: syntheticOwnerId,
-        acceptance_fixture_role: role,
-      },
-      normalized_draft: null,
-      user_confirmed_fields: confirmedFields,
-    },
-  };
-}
-
-function exactFixtureProductionMetadata(
-  item: SyntheticItem,
-  role: "ledger" | "queue-anchor",
-) {
-  const input = exactFixtureInput(item, role);
-  const taxonomy = classifyWrongAnswerTaxonomy({
-    examName: input.examName,
-    mode: "second",
-    subjectLabel: input.subjectLabel,
-    problemTitle: input.problemTitle,
-    rawQuestionText: input.rawQuestionText,
-    userReasonText: input.userReasonText,
-    userReasonPreset: input.userReasonPreset,
-    keyConcepts: input.keyConcepts,
-    coreFormula: input.coreFormula,
-    comparisonPoint: input.comparisonPoint,
-    missingIssue: input.missingIssue,
-    weakStructurePoint: input.weakStructurePoint,
-    weakApplicationSentence: input.weakApplicationSentence,
-  });
-  const taxonomyClassification = {
-    primaryNodeId: taxonomy.primary?.taxonomyNodeId ?? null,
-    candidates: taxonomy.candidates,
-    classificationStatus: taxonomy.classificationStatus,
-    classificationConfidence: taxonomy.classificationConfidence,
-    classifierSource: "local_taxonomy_v1",
-  };
-  const captureNoteV1 = buildCaptureNoteSignals("second", input);
-  const captureNoteV2 = structureCaptureNote({
-    mode: "second",
-    subject: input.subjectLabel,
-    confirmedText: input.rawQuestionText ?? input.userAnswer,
-    problemText: input.rawQuestionText,
-    userAnswerText: input.userAnswer,
-    existingNormalizedDraft: input.extractionPayload?.normalized_draft ?? null,
-    userConfirmedFields: input.extractionPayload?.user_confirmed_fields,
-    itemInput: input,
-  });
-  const answerSubmission = buildLearnerAnswerSubmissionPersistenceContract({
-    userId: item.userId ?? "",
-    mode: "second",
-    subject: input.subjectLabel,
-    sourceType: input.sourceType,
-    pageCount: null,
-    lowConfidenceFlag: false,
-    captureQualityIssue: null,
-    hasManualCorrection: false,
-    ocrConfirmedByLearner: false,
-    confirmedText: input.rawQuestionText ?? input.userAnswer,
-  });
-  return {
-    taxonomyClassification,
-    captureNoteV1,
-    captureNoteV2,
-    answerSubmission,
-    answerSubmissionDerived:
-      buildLearnerAnswerSubmissionDerivedMetadata(answerSubmission),
-  };
 }
 
 function isCanonicalIsoTimestamp(value: unknown): value is string {
@@ -1063,36 +831,7 @@ function canonicalCaptureFixtureProjection(value: unknown) {
 
 function exactFixtureLearningSignal(item: SyntheticItem) {
   const role = exactFixtureRole(item);
-  if (!role) return null;
-  const itemId = resolveSyntheticItemId(item);
-  const gap = role === "ledger" ? syntheticLedgerGap : syntheticFixtureGap;
-  const keyConcepts =
-    role === "ledger"
-      ? ["사업인정", "처분성", "수용권"]
-      : ["신뢰보호", "공적 견해표명", "보호가치"];
-  const weakStructurePoint =
-    role === "ledger"
-      ? "법률효과와 권리구제 필요성을 같은 순서로 연결해야 합니다."
-      : "요건과 사실 적용을 같은 순서로 연결해야 합니다.";
-  const rewriteInstruction =
-    role === "ledger"
-      ? "처분의 법률효과와 권리구제 필요성을 한 문단에 연결합니다."
-      : "요건, 대응 사실, 소결론을 한 문단에 연결합니다.";
-  return buildCaptureLearningSignal({
-    itemId,
-    examName: "감정평가사 2차",
-    subject: "감정평가 및 보상법규",
-    sourceType: "text",
-    confidence: role === "ledger" ? "중간" : "낮음",
-    timeSpentSeconds: role === "queue-anchor" ? 180 : undefined,
-    biggestGap: gap,
-    mistakeReason: exactFixtureMistakeType(item),
-    keyConcepts,
-    weakStructurePoint,
-    missingIssue: gap,
-    rewriteInstruction,
-    createdFromCapture: true,
-  });
+  return role ? buildExactFixtureLearningSignal(item, role) : null;
 }
 
 function exactGeneratedRow(
@@ -5166,7 +4905,7 @@ test("@a11y S232H.2 deterministic focus-origin micro-fixture", async ({
 test("@privacy S232H.2 privacy/auth source gate", async ({ browser }) => {
   test.setTimeout(170_000);
   requireSafeVisualRuntime();
-  if (visualCredentialCandidates.length === 0) cleanVisualAccountRequired();
+  if (visualCredentialCandidates.length !== 2) cleanVisualAccountRequired();
 
   const handles = await Promise.all(
     visualCredentialCandidates.map((credential) =>

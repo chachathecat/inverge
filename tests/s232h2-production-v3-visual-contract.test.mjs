@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import test from "node:test";
 
 const read = (path) => readFileSync(path, "utf8");
 const workflow = read(".github/workflows/s232h2-runtime.yml");
+const ephemeralAccounts = read("scripts/s232h2-ephemeral-accounts.ts");
+const exactFixture = read("scripts/support/s232h2-exact-fixture.ts");
 const spec = read("tests/e2e/s232h2-production-v3-visual.spec.ts");
 const sourceAuditRoute = read("app/api/os/visual-source-audit/route.ts");
 const readOnlyRequest = read("lib/review-os/read-only-request.ts");
@@ -69,6 +71,22 @@ function blockBetween(source, start, end) {
   return source.slice(startIndex, endIndex);
 }
 
+function readSourceTree(directory) {
+  const sources = [];
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    const path = `${directory}/${entry.name}`;
+    if (entry.isDirectory()) {
+      sources.push(readSourceTree(path));
+    } else if (
+      entry.isFile() &&
+      /\.(?:js|mjs|sql|ts|tsx)$/.test(entry.name)
+    ) {
+      sources.push(read(path));
+    }
+  }
+  return sources.join("\n");
+}
+
 test("workflow keeps exact-head and fixed-baseline provenance while splitting the gate", () => {
   assert.match(workflow, /agent\/figma-v3-production-routes/);
   assert.ok(
@@ -131,7 +149,7 @@ test("workflow keeps exact-head and fixed-baseline provenance while splitting th
   const contractCommand = blockBetween(
     workflow,
     "Check the focused visual-gate contract",
-    "Install Playwright browser",
+    "Provision runner-only ephemeral S232H2 accounts",
   );
   assert.match(
     contractCommand,
@@ -139,6 +157,13 @@ test("workflow keeps exact-head and fixed-baseline provenance while splitting th
   );
   assert.doesNotMatch(contractCommand, /screenshot-boundary-policy/);
 
+  const contractIndex = workflow.indexOf(
+    "Check the focused visual-gate contract",
+  );
+  const provisionIndex = workflow.indexOf(
+    "Provision runner-only ephemeral S232H2 accounts",
+  );
+  const browserIndex = workflow.indexOf("Install Playwright browser");
   const privacyIndex = workflow.indexOf(
     "Run privacy and auth source gate without screenshots",
   );
@@ -152,7 +177,10 @@ test("workflow keeps exact-head and fixed-baseline provenance while splitting th
     "Validate the isolated synthetic screenshot manifest",
   );
   assert.ok(
-    privacyIndex >= 0 &&
+    contractIndex >= 0 &&
+      provisionIndex > contractIndex &&
+      browserIndex > provisionIndex &&
+      privacyIndex > browserIndex &&
       a11yIndex > privacyIndex &&
       visualIndex > a11yIndex &&
       manifestIndex > visualIndex,
@@ -166,31 +194,45 @@ test("workflow keeps exact-head and fixed-baseline provenance while splitting th
   assert.doesNotMatch(workflow, /#624|s232g|workflow_dispatch|rerun|re-run/i);
 });
 
-test("workflow exposes only the ordered visual-account candidates and ephemeral proof", () => {
+test("workflow provisions exactly two runner-only candidates and always cleans them", () => {
+  const provisionStep = blockBetween(
+    workflow,
+    "Provision runner-only ephemeral S232H2 accounts",
+    "Install Playwright browser",
+  );
   const privacyStep = blockBetween(
     workflow,
     "Run privacy and auth source gate without screenshots",
     "Run bounded production V3 accessibility gate",
   );
-  const orderedNames = [
+  const generatedCredentialNames = [
     "E2E_VISUAL_USER_EMAIL",
     "E2E_VISUAL_USER_PASSWORD",
-    "E2E_USER_A_EMAIL",
-    "E2E_USER_A_PASSWORD",
     "E2E_USER_B_EMAIL",
     "E2E_USER_B_PASSWORD",
   ];
-  let previous = -1;
-  for (const name of orderedNames) {
-    const index = privacyStep.indexOf(`${name}: \${{ secrets.${name} }}`);
-    assert.ok(index > previous, `missing or out-of-order secret: ${name}`);
-    previous = index;
-  }
+  assert.doesNotMatch(workflow, /\$\{\{\s*secrets\.E2E_/);
+  assert.doesNotMatch(workflow, /\bE2E_USER_A_(?:EMAIL|PASSWORD)\b/);
   assert.doesNotMatch(workflow, /\bE2E_USER_EMAIL\b/);
   assert.doesNotMatch(workflow, /\bE2E_USER_PASSWORD\b/);
+  for (const name of generatedCredentialNames) {
+    assert.doesNotMatch(workflow, new RegExp(`\\b${name}:`));
+  }
+  assert.match(
+    provisionStep,
+    /run: npx tsx scripts\/s232h2-ephemeral-accounts\.ts provision/,
+  );
+  assert.match(
+    provisionStep,
+    /S232H2_EPHEMERAL_STATE_PATH: \$\{\{ runner\.temp \}\}\/s232h2-ephemeral-state\.json/,
+  );
   assert.match(
     privacyStep,
     /S232H2_VISUAL_PROOF_PATH: \$\{\{ runner\.temp \}\}\/s232h2-visual-proof\.json/,
+  );
+  assert.doesNotMatch(
+    privacyStep,
+    /S232H2_SUPABASE_ADMIN_KEY|S232H2_EPHEMERAL_STATE_PATH/,
   );
   for (const stepName of [
     "Run bounded production V3 accessibility gate",
@@ -200,17 +242,409 @@ test("workflow exposes only the ordered visual-account candidates and ephemeral 
     const end = workflow.indexOf("\n      - name:", start + stepName.length);
     const step = workflow.slice(start, end < 0 ? undefined : end);
     assert.match(step, /S232H2_VISUAL_PROOF_PATH/);
-    for (const name of orderedNames) assert.ok(step.includes(`${name}:`));
+    for (const name of generatedCredentialNames) {
+      assert.doesNotMatch(step, new RegExp(`\\b${name}:`));
+    }
+    assert.doesNotMatch(
+      step,
+      /S232H2_SUPABASE_ADMIN_KEY|S232H2_EPHEMERAL_STATE_PATH/,
+    );
   }
+
+  const adminSecretExpression =
+    "${{ secrets.SUPABASE_SECRET_KEY || secrets.SUPABASE_SERVICE_ROLE_KEY }}";
+  assert.equal(workflow.split(adminSecretExpression).length - 1, 2);
+  const jobEnvironment = blockBetween(workflow, "    env:", "    steps:");
+  assert.doesNotMatch(
+    jobEnvironment,
+    /SUPABASE_SECRET_KEY|SUPABASE_SERVICE_ROLE_KEY|S232H2_SUPABASE_ADMIN_KEY/,
+  );
+  assert.ok(provisionStep.includes(adminSecretExpression));
+
+  const cleanupStep = blockBetween(
+    workflow,
+    "Revoke and delete runner-only ephemeral S232H2 accounts",
+    "Remove the ephemeral visual-account proof",
+  );
+  assert.match(cleanupStep, /if: \$\{\{ always\(\) \}\}/);
+  assert.ok(cleanupStep.includes(adminSecretExpression));
+  assert.match(
+    cleanupStep,
+    /S232H2_EPHEMERAL_STATE_PATH: \$\{\{ runner\.temp \}\}\/s232h2-ephemeral-state\.json/,
+  );
+  assert.match(
+    cleanupStep,
+    /run: npx tsx scripts\/s232h2-ephemeral-accounts\.ts cleanup/,
+  );
+  assert.doesNotMatch(cleanupStep, /continue-on-error/);
+  assert.ok(
+    workflow.indexOf("Upload 28 synthetic and Figma-reference PNGs") <
+      workflow.indexOf("Revoke and delete runner-only ephemeral S232H2 accounts"),
+  );
+  assert.ok(
+    workflow.indexOf("Revoke and delete runner-only ephemeral S232H2 accounts") <
+      workflow.indexOf("Remove the ephemeral visual-account proof"),
+  );
   assert.match(workflow, /Remove the ephemeral visual-account proof/);
   assert.match(workflow, /rm -f -- "\$\{S232H2_VISUAL_PROOF_PATH\}"/);
 
   const successfulArtifact = blockBetween(
     workflow,
     "Upload 28 synthetic and Figma-reference PNGs and one manifest",
-    "Remove the ephemeral visual-account proof",
+    "Revoke and delete runner-only ephemeral S232H2 accounts",
   );
-  assert.doesNotMatch(successfulArtifact, /runner\.temp|VISUAL_PROOF/);
+  assert.doesNotMatch(
+    successfulArtifact,
+    /runner\.temp|VISUAL_PROOF|EPHEMERAL_STATE|GITHUB_ENV|SUPABASE|EMAIL|PASSWORD/,
+  );
+});
+
+test("ephemeral runner is pinned to the exact project, repository, PR, and head", () => {
+  for (const contract of [
+    /S232H2_EPHEMERAL_PROJECT_REF = "vajcduseyicjhyhrclax"/,
+    /S232H2_EPHEMERAL_PROJECT_URL =\s*`https:\/\/\$\{S232H2_EPHEMERAL_PROJECT_REF\}\.supabase\.co`/,
+    /S232H2_EXPECTED_REPOSITORY = "chachathecat\/inverge"/,
+    /S232H2_EXPECTED_PR_NUMBER = 627/,
+  ]) {
+    assert.match(ephemeralAccounts, contract);
+  }
+  assert.match(
+    ephemeralAccounts,
+    /createClient\(S232H2_EPHEMERAL_PROJECT_URL, adminKey/,
+  );
+  assert.doesNotMatch(
+    ephemeralAccounts,
+    /process\.env\.(?:NEXT_PUBLIC_)?SUPABASE_(?:URL|PROJECT)|NEXT_PUBLIC_SUPABASE|S232H2_SUPABASE_URL/,
+  );
+
+  const config = blockBetween(
+    ephemeralAccounts,
+    "async function readRunnerConfig",
+    "function createAdminClient",
+  );
+  for (const name of [
+    "S232H2_SUPABASE_ADMIN_KEY",
+    "GITHUB_RUN_ID",
+    "GITHUB_RUN_ATTEMPT",
+    "GITHUB_REPOSITORY",
+    "GITHUB_EVENT_PATH",
+    "RUNNER_TEMP",
+    "E2E_RUNNER_SHA",
+    "S232H2_EPHEMERAL_STATE_PATH",
+  ]) {
+    assert.ok(config.includes(`requiredEnv("${name}")`), `missing ${name}`);
+  }
+  assert.match(
+    config,
+    /resolve\(statePath\) !== resolve\(runnerTemp, "s232h2-ephemeral-state\.json"\)/,
+  );
+  assert.match(config, /event\.repository\?\.full_name/);
+  assert.match(config, /event\.pull_request\?\.number/);
+  assert.match(config, /event\.pull_request\.head\?\.sha !== headSha/);
+  assert.match(config, /event\.pull_request\.head\.repo\?\.full_name/);
+
+  const productionSurfaces = [
+    readSourceTree("app/api"),
+    readSourceTree("supabase/migrations"),
+  ].join("\n");
+  assert.doesNotMatch(
+    productionSurfaces,
+    /S232H2_SUPABASE_ADMIN_KEY|S232H2_EPHEMERAL_STATE_PATH|s232h2-ephemeral-accounts|s232h2_test|s232h2-production-v3-visual/,
+  );
+  assert.doesNotMatch(
+    ephemeralAccounts,
+    /NextRequest|NextResponse|export\s+(?:async\s+)?function\s+(?:GET|POST|PUT|PATCH|DELETE)\b|auth\.users|\.rpc\(|\b(?:create|alter|drop)\s+policy\b|row level security/i,
+  );
+});
+
+test("ephemeral credentials are random, masked first, and published only to job env", () => {
+  const credentialBuilder = blockBetween(
+    ephemeralAccounts,
+    "function newCredential",
+    "function buildMarker",
+  );
+  const emailIndex = credentialBuilder.indexOf("const email =");
+  const emailMaskIndex = credentialBuilder.indexOf("maskImmediately(email)");
+  const passwordIndex = credentialBuilder.indexOf("const password =");
+  const passwordMaskIndex = credentialBuilder.indexOf(
+    "maskImmediately(password)",
+  );
+  assert.ok(
+    emailIndex >= 0 &&
+      emailMaskIndex > emailIndex &&
+      passwordIndex > emailMaskIndex &&
+      passwordMaskIndex > passwordIndex,
+  );
+  assert.match(credentialBuilder, /randomBytes\(8\)\.toString\("hex"\)/);
+  assert.match(
+    credentialBuilder,
+    /randomBytes\(36\)\.toString\("base64url"\)/,
+  );
+
+  const publisher = blockBetween(
+    ephemeralAccounts,
+    "export async function publishMaskedCredentials",
+    "async function deleteByUser",
+  );
+  assert.match(publisher, /requiredEnv\("GITHUB_ENV"\)/);
+  assert.ok(
+    publisher.indexOf("maskImmediately(value)") <
+      publisher.indexOf("await appendFile"),
+  );
+  assert.deepEqual(
+    [
+      ...publisher.matchAll(
+        /`(E2E_(?:VISUAL_USER|USER_B)_(?:EMAIL|PASSWORD))=\$\{/g,
+      ),
+    ].map((match) => match[1]),
+    [
+      "E2E_VISUAL_USER_EMAIL",
+      "E2E_VISUAL_USER_PASSWORD",
+      "E2E_USER_B_EMAIL",
+      "E2E_USER_B_PASSWORD",
+    ],
+  );
+  assert.doesNotMatch(publisher, /E2E_USER_A_|GITHUB_OUTPUT|set-output/);
+  assert.doesNotMatch(ephemeralAccounts, /GITHUB_OUTPUT|set-output/);
+
+  const stateType = blockBetween(
+    ephemeralAccounts,
+    "type RunnerState =",
+    "type VisualSourceName",
+  );
+  const stateWrite = blockBetween(
+    ephemeralAccounts,
+    'activeStage = "state-write"',
+    'activeStage = "credential-publish"',
+  );
+  for (const stateSource of [stateType, stateWrite]) {
+    assert.doesNotMatch(
+      stateSource,
+      /email|password|accessToken|refreshToken|adminKey|credential/i,
+    );
+  }
+  assert.match(ephemeralAccounts, /writeFile\([\s\S]*?mode: 0o600/);
+  assert.equal(
+    [...ephemeralAccounts.matchAll(/process\.stdout\.write\(/g)].length,
+    3,
+  );
+  assert.doesNotMatch(
+    ephemeralAccounts,
+    /process\.(?:stdout|stderr)\.write\([^\n]*(?:email|password|accessToken|refreshToken|adminKey)/i,
+  );
+});
+
+test("exact cleanup metadata is bounded and never participates in authorization", () => {
+  for (const contract of [
+    /S232H2_EPHEMERAL_SUITE = "s232h2-production-v3-visual"/,
+    /S232H2_EPHEMERAL_MARKER_VERSION = 1/,
+    /S232H2_AUTH_PAGE_SIZE = 100/,
+    /S232H2_AUTH_MAX_PAGES = 10/,
+    /S232H2_STALE_MAX_USERS = 20/,
+    /S232H2_STALE_AFTER_MS = 6 \* 60 \* 60 \* 1_000/,
+    /S232H2_CURRENT_MAX_USERS = 2/,
+  ]) {
+    assert.match(ephemeralAccounts, contract);
+  }
+  const markerParser = blockBetween(
+    ephemeralAccounts,
+    "function parseExactMarker",
+    "export function isExactS232h2MarkerUser",
+  );
+  for (const key of [
+    "version",
+    "suite",
+    "repository",
+    "pr_number",
+    "head_sha",
+    "run_id",
+    "run_attempt",
+    "role",
+    "created_at",
+  ]) {
+    assert.ok(markerParser.includes(`"${key}"`), `marker omits ${key}`);
+  }
+  assert.match(markerParser, /user\.app_metadata\?\.s232h2_test/);
+  assert.match(markerParser, /candidate\.repository/);
+  assert.match(markerParser, /candidate\.pr_number/);
+  assert.match(markerParser, /candidate\.head_sha/);
+  assert.match(markerParser, /candidate\.role !== "primary"/);
+  assert.match(markerParser, /candidate\.role !== "isolation"/);
+  assert.match(markerParser, /expectedEmail\.test\(user\.email\)/);
+  assert.match(markerParser, /Math\.abs\(authCreatedAt - markerCreatedAt\)/);
+
+  const authScan = blockBetween(
+    ephemeralAccounts,
+    "async function listBoundedAuthUsers",
+    "async function runReadOnlyCompatibilityProbe",
+  );
+  assert.match(
+    authScan,
+    /page <= S232H2_AUTH_MAX_PAGES[\s\S]*?perPage: S232H2_AUTH_PAGE_SIZE/,
+  );
+  assert.match(authScan, /S232H2_AUTH_SCAN_BOUND_EXHAUSTED/);
+  const staleCleanup = blockBetween(
+    ephemeralAccounts,
+    "async function cleanupStaleMarkedUsers",
+    "async function currentRunUsers",
+  );
+  assert.match(staleCleanup, /parseExactMarker\(user\)/);
+  assert.match(staleCleanup, /!isCurrentRunMarker\(marker, config\)/);
+  assert.match(staleCleanup, />= S232H2_STALE_AFTER_MS/);
+  assert.match(staleCleanup, /stale\.length > S232H2_STALE_MAX_USERS/);
+
+  const cleanupUser = blockBetween(
+    ephemeralAccounts,
+    "async function cleanupMarkedUser",
+    "async function cleanupStaleMarkedUsers",
+  );
+  assert.match(cleanupUser, /if \(!isExactS232h2MarkerUser\(user\)\)/);
+  assert.doesNotMatch(spec, /app_metadata|s232h2_test/);
+  assert.doesNotMatch(exactFixture, /app_metadata|s232h2_test/);
+});
+
+test("provisioning and cleanup prove the exact graph, JWT boundary, and deletion", () => {
+  const createUser = blockBetween(
+    ephemeralAccounts,
+    "async function createMarkedUser",
+    "async function insertRows",
+  );
+  assert.match(createUser, /auth\.admin\.createUser\(/);
+  assert.match(createUser, /email_confirm: true/);
+  assert.match(createUser, /app_metadata: \{ s232h2_test: marker \}/);
+  assert.match(createUser, /parseExactMarker\(result\.data\.user\)/);
+
+  const seed = blockBetween(
+    ephemeralAccounts,
+    "async function seedFixtureGraph",
+    "function canonicalJson",
+  );
+  assert.match(seed, /buildExactPrimaryFixtureGraph\(primary\.id, timestamp\)/);
+  assert.match(seed, /\[primary, isolation\]\.map/);
+  assert.match(seed, /invite_status: "active"/);
+  assert.match(seed, /entitlement_tier: "core"/);
+  assert.match(seed, /\[\.\.\.graph\.items, isolationCanary\.row\]/);
+
+  const adminVerify = blockBetween(
+    ephemeralAccounts,
+    "async function verifyAdminFixtureGraph",
+    "function requirePreviewConfig",
+  );
+  for (const family of [
+    "PRIMARY_ITEMS_NOT_EXACT",
+    "PRIMARY_NOTES_NOT_EXACT",
+    "PRIMARY_TAGS_NOT_EXACT",
+    "PRIMARY_RECURRENCE_NOT_EXACT",
+    "PRIMARY_QUEUE_NOT_EXACT",
+    "PRIMARY_SIGNALS_NOT_EXACT",
+    "PRIMARY_USAGE_NOT_EXACT",
+    "PRIMARY_UNRELATED_ROWS_PRESENT",
+    "ISOLATION_CANARY_NOT_EXACT",
+    "ISOLATION_GRAPH_OVERGROWN",
+  ]) {
+    assert.ok(adminVerify.includes(`S232H2_${family}`), `missing ${family}`);
+  }
+  const previewVerify = blockBetween(
+    ephemeralAccounts,
+    "async function createPreviewSession",
+    "async function writeRunnerState",
+  );
+  assert.match(previewVerify, /context\.post\("\/api\/auth\/sign-in"/);
+  assert.match(previewVerify, /context\.get\("\/api\/auth\/session"/);
+  assert.match(previewVerify, /"\/api\/os\/visual-source-audit"/);
+  assert.match(previewVerify, /body\.truncated\[name\] !== false/);
+  assert.match(previewVerify, /const ownerVisible = await readRlsProbe/);
+  assert.match(previewVerify, /const primaryHidden = await readRlsProbe/);
+  assert.match(previewVerify, /if \(!ownerVisible \|\| primaryHidden\)/);
+  assert.match(previewVerify, /canonicalStableSnapshot\(primaryBefore\)/);
+  assert.match(previewVerify, /canonicalStableSnapshot\(primaryAfter\)/);
+
+  const provision = blockBetween(
+    ephemeralAccounts,
+    "async function provision",
+    "async function cleanup",
+  );
+  const orderedStages = [
+    "compatibility-probe",
+    "stale-cleanup",
+    "account-create",
+    "fixture-seed",
+    "admin-fixture-verify",
+    "preview-jwt-audit",
+    "state-write",
+    "credential-publish",
+  ];
+  let previous = -1;
+  for (const stage of orderedStages) {
+    const index = provision.indexOf(`activeStage = "${stage}"`);
+    assert.ok(index > previous, `provision stage is out of order: ${stage}`);
+    previous = index;
+  }
+  assert.equal([...provision.matchAll(/newCredential\(/g)].length, 2);
+  assert.match(provision, /newCredential\("primary", config\)/);
+  assert.match(provision, /newCredential\("isolation", config\)/);
+
+  const revoke = blockBetween(
+    ephemeralAccounts,
+    "export async function revokeAllSessions",
+    "export async function confirmAccountCleanup",
+  );
+  assert.match(revoke, /auth\.admin\.updateUserById/);
+  assert.match(revoke, /auth\.signInWithPassword/);
+  assert.match(revoke, /maskImmediately\(accessToken\)/);
+  assert.match(revoke, /maskImmediately\(refreshToken\)/);
+  assert.match(revoke, /auth\.admin\.signOut\(accessToken, "global"\)/);
+  assert.match(revoke, /auth\.refreshSession/);
+  assert.match(revoke, /S232H2_SESSION_REVOCATION_UNCONFIRMED/);
+
+  const deleteUser = blockBetween(
+    ephemeralAccounts,
+    "async function cleanupMarkedUser",
+    "async function cleanupStaleMarkedUsers",
+  );
+  const deleteOrder = [
+    "deleteItemChildren(client, \"wrong_answer_notes\"",
+    "deleteItemChildren(client, \"wrong_answer_tags\"",
+    "USER_TABLES_IN_SAFE_DELETE_ORDER",
+    "deleteByUser(client, \"profiles\"",
+    "auth.admin.deleteUser(user.id, false)",
+    "confirmAccountCleanup(client, user.id)",
+  ];
+  previous = -1;
+  for (const operation of deleteOrder) {
+    const index = deleteUser.indexOf(operation);
+    assert.ok(index > previous, `cleanup is out of order: ${operation}`);
+    previous = index;
+  }
+  assert.match(ephemeralAccounts, /confirmed\.count !== 0/);
+  assert.match(ephemeralAccounts, /auth\.admin\.getUserById\(userId\)/);
+  assert.match(ephemeralAccounts, /remaining\.length !== 0/);
+  assert.match(ephemeralAccounts, /if \(!stateMatches\)/);
+});
+
+test("browser and provisioner reuse one exact synthetic fixture grammar", () => {
+  assert.match(
+    spec,
+    /from "\.\.\/\.\.\/scripts\/support\/s232h2-exact-fixture"/,
+  );
+  assert.match(
+    ephemeralAccounts,
+    /from "\.\/support\/s232h2-exact-fixture"/,
+  );
+  for (const contract of [
+    /export function exactFixtureGeneratedArtifacts/,
+    /export function exactFixtureInput/,
+    /export function exactFixtureProductionMetadata/,
+    /export function buildExactFixtureLearningSignal/,
+    /export function buildExactPrimaryFixtureGraph/,
+    /const ledger = buildFixtureItem\(userId, "ledger", now\)/,
+    /const queueAnchor = buildFixtureItem\(userId, "queue-anchor", now\)/,
+  ]) {
+    assert.match(exactFixture, contract);
+  }
+  assert.match(spec, /buildExactFixtureLearningSignal/);
+  assert.match(spec, /exactFixtureGeneratedArtifacts/);
+  assert.match(ephemeralAccounts, /buildExactPrimaryFixtureGraph/);
 });
 
 test("workflow preserves failure PNGs only after the privacy gate proves isolation", () => {
@@ -241,7 +675,7 @@ test("workflow preserves failure PNGs only after the privacy gate proves isolati
   assert.match(failureUpload, /retention-days: 7/);
   assert.doesNotMatch(
     failureUpload,
-    /s232h2-\*\.png|manifest|trace\.zip|\.webm|playwright-report|VISUAL_PROOF/,
+    /s232h2-\*\.png|manifest|trace\.zip|\.webm|playwright-report|VISUAL_PROOF|EPHEMERAL_STATE|GITHUB_ENV|SUPABASE|EMAIL|PASSWORD/,
   );
   assert.doesNotMatch(
     workflow,
@@ -327,8 +761,6 @@ test("privacy source gate selects the first clean candidate in exact priority", 
   for (const name of [
     "E2E_VISUAL_USER_EMAIL",
     "E2E_VISUAL_USER_PASSWORD",
-    "E2E_USER_A_EMAIL",
-    "E2E_USER_A_PASSWORD",
     "E2E_USER_B_EMAIL",
     "E2E_USER_B_PASSWORD",
   ]) {
@@ -336,6 +768,8 @@ test("privacy source gate selects the first clean candidate in exact priority", 
     assert.ok(index > previous, `credential priority is not exact: ${name}`);
     previous = index;
   }
+  assert.doesNotMatch(candidates, /E2E_USER_A_(?:EMAIL|PASSWORD)/);
+  assert.match(spec, /visualCredentialCandidates\.length !== 2/);
   assert.doesNotMatch(spec, /\bprocess\.env\.E2E_USER_EMAIL\b/);
   assert.doesNotMatch(spec, /\bprocess\.env\.E2E_USER_PASSWORD\b/);
 
@@ -565,9 +999,9 @@ test("dirty-account substring policy and real persistence are disconnected", () 
   assert.match(spec, /rawIdentityArtifactCount/);
   assert.match(spec, /actualAccountArtifactCount/);
   assert.match(spec, /exactFixturePayloadClosed/);
-  assert.match(spec, /exactFixtureGeneratedArtifacts/);
   assert.match(spec, /exactFixtureLearningSignal/);
-  assert.match(spec, /exactFixtureProductionMetadata/);
+  assert.match(exactFixture, /export function exactFixtureGeneratedArtifacts/);
+  assert.match(exactFixture, /export function exactFixtureProductionMetadata/);
   assert.match(spec, /canonicalCaptureFixtureProjection/);
   assert.match(spec, /captureFixtureTimingClosed/);
   assert.match(spec, /derived\.recurrenceCount === 1/);
@@ -844,7 +1278,7 @@ test("the 45-audit and 28-PNG matrix remains exact", () => {
   );
   assert.match(workflow, /privacyGate\.notRunCount !== 0/);
   assert.match(workflow, /privacyGate\.endpointReadSucceeded !== true/);
-  assert.match(workflow, /privacyGate\.scheduledCandidates > 3/);
+  assert.match(workflow, /privacyGate\.scheduledCandidates !== 2/);
   assert.match(
     workflow,
     /privacyGate\.selectedExactFixtureCount !== privacyGate\.selectedAccountItemCount/,

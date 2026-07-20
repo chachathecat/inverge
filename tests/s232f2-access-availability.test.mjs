@@ -105,7 +105,7 @@ test("S232F.2 server access resolution isolates access failures from later profi
 
   assert.match(
     server,
-    /requireServerSession\(await resolveReviewOsReturnTo\(returnTo\)\)/,
+    /requireServerSession\(\s*await\s+resolveReviewOsReturnTo\(\s*returnTo\s*,?\s*\)\s*,?\s*\)/,
     "unauthenticated sessions must keep the existing redirect boundary and returnTo",
   );
   assert.match(server, /await resolveReviewOsAccess\(session\.userId, session\.email\)/);
@@ -121,7 +121,10 @@ test("S232F.2 server access resolution isolates access failures from later profi
   assert.match(server, /console\.warn\("\[review-os\] access check unavailable", \{ reason \}\)/);
   assert.doesNotMatch(server, /console\.warn\([^\n]*error/);
   assert.doesNotMatch(server, /buildFallbackAccess|closed beta access fallback/);
-  assert.match(server, /getUsageSummaryAfterAccessCheck\(session\.userId, access\)/);
+  assert.match(
+    server,
+    /getUsageSummaryAfterAccessCheck\(\s*session\.userId\s*,\s*access\s*,?\s*\)/,
+  );
   assert.doesNotMatch(server, /getUsageSummary\(session\.userId, session\.email\)/);
   assert.match(service, /async getUsageSummaryAfterAccessCheck\(/);
   assert.match(service, /if \(access\.status !== "allowed" \|\| !access\.access\.allowed\)/);

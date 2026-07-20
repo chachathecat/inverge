@@ -379,10 +379,14 @@ test("daily activity loads recent usage events from yesterday KST day start", as
   const source = await readFile(new URL("../lib/review-os/service.ts", import.meta.url), "utf8");
   const methodStart = source.indexOf("async getDailyStudyActivity");
   const methodBody = source.slice(methodStart, source.indexOf("async hasMeaningfulLearningData"));
-  assert.ok(methodBody.includes("const yesterdayStartUtcIso = new Date(`${yesterdayKstDayKey}T00:00:00+09:00`).toISOString();"));
-  assert.ok(methodBody.includes("listRecentUsageEventsByNames"));
-  assert.ok(methodBody.includes("yesterdayStartUtcIso"));
-  assert.equal(methodBody.includes("dayStartUtcIso,\n        80"), false);
+  assert.match(
+    methodBody,
+    /const\s+yesterdayStartUtcIso\s*=\s*new\s+Date\(\s*`\$\{yesterdayKstDayKey\}T00:00:00\+09:00`\s*,?\s*\)\s*\.toISOString\(\s*\)\s*;/,
+  );
+  assert.match(
+    methodBody,
+    /listRecentUsageEventsByNames\(\s*userId\s*,\s*\[[\s\S]*?\]\s*,\s*yesterdayStartUtcIso\s*,\s*120\s*,?\s*\)/,
+  );
 });
 
 test("missed recently derives from yesterday-only review activity", async () => {

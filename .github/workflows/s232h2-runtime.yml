@@ -161,6 +161,14 @@ jobs:
       - name: Check the focused visual-gate contract
         run: node --test tests/s232h2-production-v3-visual-contract.test.mjs
 
+      - name: Provision runner-only ephemeral S232H2 accounts
+        shell: bash
+        env:
+          S232H2_SUPABASE_ADMIN_KEY: ${{ secrets.SUPABASE_SECRET_KEY || secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          S232H2_EPHEMERAL_STATE_PATH: ${{ runner.temp }}/s232h2-ephemeral-state.json
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: npx tsx scripts/s232h2-ephemeral-accounts.ts provision
+
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
 
@@ -169,12 +177,6 @@ jobs:
         env:
           S232H2_VISUAL_RUNTIME: "1"
           S232H2_VISUAL_PROOF_PATH: ${{ runner.temp }}/s232h2-visual-proof.json
-          E2E_VISUAL_USER_EMAIL: ${{ secrets.E2E_VISUAL_USER_EMAIL }}
-          E2E_VISUAL_USER_PASSWORD: ${{ secrets.E2E_VISUAL_USER_PASSWORD }}
-          E2E_USER_A_EMAIL: ${{ secrets.E2E_USER_A_EMAIL }}
-          E2E_USER_A_PASSWORD: ${{ secrets.E2E_USER_A_PASSWORD }}
-          E2E_USER_B_EMAIL: ${{ secrets.E2E_USER_B_EMAIL }}
-          E2E_USER_B_PASSWORD: ${{ secrets.E2E_USER_B_PASSWORD }}
           VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
         run: >-
           timeout --signal=TERM --kill-after=10s 180s
@@ -186,12 +188,6 @@ jobs:
         env:
           S232H2_VISUAL_RUNTIME: "1"
           S232H2_VISUAL_PROOF_PATH: ${{ runner.temp }}/s232h2-visual-proof.json
-          E2E_VISUAL_USER_EMAIL: ${{ secrets.E2E_VISUAL_USER_EMAIL }}
-          E2E_VISUAL_USER_PASSWORD: ${{ secrets.E2E_VISUAL_USER_PASSWORD }}
-          E2E_USER_A_EMAIL: ${{ secrets.E2E_USER_A_EMAIL }}
-          E2E_USER_A_PASSWORD: ${{ secrets.E2E_USER_A_PASSWORD }}
-          E2E_USER_B_EMAIL: ${{ secrets.E2E_USER_B_EMAIL }}
-          E2E_USER_B_PASSWORD: ${{ secrets.E2E_USER_B_PASSWORD }}
           VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
         run: >-
           timeout --signal=TERM --kill-after=10s 720s
@@ -203,12 +199,6 @@ jobs:
         env:
           S232H2_VISUAL_RUNTIME: "1"
           S232H2_VISUAL_PROOF_PATH: ${{ runner.temp }}/s232h2-visual-proof.json
-          E2E_VISUAL_USER_EMAIL: ${{ secrets.E2E_VISUAL_USER_EMAIL }}
-          E2E_VISUAL_USER_PASSWORD: ${{ secrets.E2E_VISUAL_USER_PASSWORD }}
-          E2E_USER_A_EMAIL: ${{ secrets.E2E_USER_A_EMAIL }}
-          E2E_USER_A_PASSWORD: ${{ secrets.E2E_USER_A_PASSWORD }}
-          E2E_USER_B_EMAIL: ${{ secrets.E2E_USER_B_EMAIL }}
-          E2E_USER_B_PASSWORD: ${{ secrets.E2E_USER_B_PASSWORD }}
           VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
         run: >-
           timeout --signal=TERM --kill-after=10s 900s
@@ -279,7 +269,7 @@ jobs:
             if (value.afterScreenshotCount !== 22 || value.figmaReferenceScreenshotCount !== 3 || value.figmaComparisonCount !== 3 || value.screenshotCount !== 28) process.exit(1);
             if (value.screenshotCallCount !== 25) process.exit(1);
             const privacyGate = value.privacyGate;
-            if (!privacyGate || !Number.isInteger(privacyGate.scheduledCandidates) || privacyGate.scheduledCandidates < 1 || privacyGate.scheduledCandidates > 3) process.exit(1);
+            if (!privacyGate || privacyGate.scheduledCandidates !== 2) process.exit(1);
             if (privacyGate.completedAudits !== privacyGate.scheduledCandidates || privacyGate.notRunCount !== 0 || privacyGate.blockerCount !== 0) process.exit(1);
             if (privacyGate.screenshotCallCount !== 0 || privacyGate.endpointReadSucceeded !== true || privacyGate.snapshotReadSucceeded !== true || privacyGate.snapshotStable !== true) process.exit(1);
             if (privacyGate.crossAccountDenied !== true || privacyGate.deniedCanaryDomCount !== 0 || privacyGate.fixtureOwnershipClosed !== true) process.exit(1);
@@ -410,6 +400,14 @@ jobs:
             test-results/**/s232h2-*.png
           if-no-files-found: error
           retention-days: 14
+
+      - name: Revoke and delete runner-only ephemeral S232H2 accounts
+        if: ${{ always() }}
+        shell: bash
+        env:
+          S232H2_SUPABASE_ADMIN_KEY: ${{ secrets.SUPABASE_SECRET_KEY || secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          S232H2_EPHEMERAL_STATE_PATH: ${{ runner.temp }}/s232h2-ephemeral-state.json
+        run: npx tsx scripts/s232h2-ephemeral-accounts.ts cleanup
 
       - name: Remove the ephemeral visual-account proof
         if: ${{ always() }}

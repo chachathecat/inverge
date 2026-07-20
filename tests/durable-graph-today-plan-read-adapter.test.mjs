@@ -61,6 +61,53 @@ async function collectSourceFiles(root, base = root) {
   return files;
 }
 
+function isPreviewExactShaAuthenticatedReadOnlyGraphGet(source) {
+  const executableSource = source
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^\s*\/\/.*$/gm, "");
+  const getStart = executableSource.search(
+    /export\s+async\s+function\s+GET\s*\(\s*request\s*:\s*Request\s*\)/,
+  );
+  if (getStart < 0) return false;
+
+  const getSource = executableSource.slice(getStart);
+  const previewGateIndex = getSource.search(
+    /if\s*\(\s*process\.env\.VERCEL_ENV\s*!==\s*["']preview["']\s*\)\s*\{\s*return\s+unavailable\(\s*\)\s*;?\s*\}/,
+  );
+  const deploymentShaIndex = getSource.search(
+    /const\s+deploymentSha\s*=\s*process\.env\.VERCEL_GIT_COMMIT_SHA\s*;/,
+  );
+  const shaGateIndex = getSource.search(
+    /if\s*\(\s*!\s*deploymentSha\s*\|\|\s*request\.headers\.get\(\s*AUDIT_SHA_HEADER\s*\)\s*!==\s*deploymentSha\s*\)\s*\{\s*return\s+unavailable\(\s*\)\s*;?\s*\}/,
+  );
+  const authenticatedUserIndex = getSource.search(
+    /await\s+supabase\.auth\.getUser\(\s*\)/,
+  );
+  const authenticatedUserGateIndex = getSource.search(
+    /const\s+sessionUser\s*=\s*authResult\?\.data\.user\s*;[\s\S]{0,200}?if\s*\(\s*authResult\?\.error\s*\|\|\s*!\s*sessionUser\?\.id\s*\)\s*\{\s*return\s+unavailable\(\s*\)/,
+  );
+  const ownedGraphReadIndex = getSource.search(
+    /\.from\(\s*["'`]personal_concept_nodes["'`]\s*\)[^;]*?\.select\(\s*["'`]\*["'`]\s*\)[^;]*?\.eq\(\s*["'`]user_id["'`]\s*,\s*sessionUser\.id\s*\)/,
+  );
+  const writesGraph =
+    /\.from\(\s*["'`]personal_concept_nodes["'`]\s*\)[^;]*?\.(?:insert|upsert|update|delete)\s*\(/.test(
+      getSource,
+    );
+  const exportsMutation =
+    /export\s+async\s+function\s+(?:POST|PUT|PATCH|DELETE)\s*\(/.test(getSource);
+
+  return (
+    previewGateIndex >= 0 &&
+    previewGateIndex < deploymentShaIndex &&
+    deploymentShaIndex < shaGateIndex &&
+    shaGateIndex < authenticatedUserIndex &&
+    authenticatedUserIndex < authenticatedUserGateIndex &&
+    authenticatedUserGateIndex < ownedGraphReadIndex &&
+    !writesGraph &&
+    !exportsMutation
+  );
+}
+
 test("durable read feature flags require both Supabase repository mode and durable reads", () => {
   assert.equal(arePersonalConceptGraphDurableReadsEnabled({}), false);
   assert.deepEqual(getPersonalConceptGraphFeatureFlagState({}), {
@@ -243,7 +290,13 @@ test("no live route reads durable graph unless explicit durable read flags are c
   const matches = [];
   for (const file of files) {
     const source = await readFile(join(repoRoot, file), "utf8");
-    if (/maybeBuildTodayPlanActionsFromDurableConceptGraph|listPersonalConceptNodesForTodayFromSupabase|personal_concept_nodes/.test(source) && !/PERSONAL_CONCEPT_GRAPH_DURABLE_READS/.test(source)) {
+    if (
+      /maybeBuildTodayPlanActionsFromDurableConceptGraph|listPersonalConceptNodesForTodayFromSupabase|personal_concept_nodes/.test(
+        source,
+      ) &&
+      !/PERSONAL_CONCEPT_GRAPH_DURABLE_READS/.test(source) &&
+      !isPreviewExactShaAuthenticatedReadOnlyGraphGet(source)
+    ) {
       matches.push(file);
     }
   }

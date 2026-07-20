@@ -174,7 +174,11 @@ test("S231B runtime fixtures and deployment proof are preview-only and metadata-
     runtimeSupport.indexOf("export async function establishProtectedPreviewSession"),
     runtimeSupport.indexOf("type RuntimeSafetyOptions"),
   );
-  assert.equal((protectionBootstrap.match(/page\.context\(\)\.request\.get/g) ?? []).length, 2);
+  assert.equal(
+    (protectionBootstrap.match(/page\s*\.context\(\)\s*\.request\s*\.get\s*\(/g) ?? [])
+      .length,
+    2,
+  );
   assert.equal((protectionBootstrap.match(/headers: protectionHeaders/g) ?? []).length, 1);
   assert.match(protectionBootstrap, /previewUrl\.hostname\.toLowerCase\(\) !== expectedRuntimeHost/);
   assert.match(runtimeSupport, /const bootstrapStatus = bootstrapResponse\.status\(\)/);
