@@ -27,6 +27,7 @@ const reviewQueueClient = read(
 const calculatorRoutineTrainer = read(
   "components/review-os/calculator-routine-trainer.tsx",
 );
+const learnerUi = read("components/learner/learner-ui.tsx");
 const sourceAuditRoute = read("app/api/os/visual-source-audit/route.ts");
 const readOnlyRequest = read("lib/review-os/read-only-request.ts");
 const reviewOsRepository = read("lib/review-os/repository.ts");
@@ -2087,6 +2088,223 @@ test("dirty-account substring policy and real persistence are disconnected", () 
     spec,
     /privateLearnerContentCaptured:\s*actualAccountArtifactCount !== 0/,
   );
+});
+
+test("screenshot identity policy is exact, fail-closed, and value-safe", () => {
+  const policyType = blockBetween(
+    spec,
+    "type ScreenshotIdentityPolicy",
+    "const requiredRoutes",
+  );
+  assert.match(policyType, /"masked-shell" \| "identity-absent"/);
+  assert.doesNotMatch(spec, /identityMaskRequired/);
+
+  const initialPolicies = blockBetween(
+    spec,
+    "const initialIdentityPolicyByRoute",
+    "const routeContractNodes",
+  );
+  const expectedInitialPolicies = {
+    home: "identity-absent",
+    login: "identity-absent",
+    today: "masked-shell",
+    capture: "masked-shell",
+    "answer-review": "identity-absent",
+    review: "masked-shell",
+    notes: "masked-shell",
+    ledger: "identity-absent",
+    session: "masked-shell",
+    agenda: "masked-shell",
+    weekly: "masked-shell",
+    write: "masked-shell",
+    calculator: "identity-absent",
+  };
+  for (const [routeId, policy] of Object.entries(expectedInitialPolicies)) {
+    const key = routeId === "answer-review" ? `"${routeId}"` : routeId;
+    const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    assert.match(
+      initialPolicies,
+      new RegExp(`${escapedKey}: "${policy}"`),
+      `wrong initial identity policy for ${routeId}`,
+    );
+  }
+  assert.equal([...initialPolicies.matchAll(/: "masked-shell"/g)].length, 8);
+  assert.equal([...initialPolicies.matchAll(/: "identity-absent"/g)].length, 5);
+
+  const dynamicPolicies = blockBetween(
+    spec,
+    "const dynamicVisuals = [",
+    "for (const dynamic of dynamicVisuals)",
+  );
+  const expectedDynamicPolicies = [
+    ["capture", "extraction-preview", "masked-shell"],
+    ["answer-review", "result", "identity-absent"],
+    ["answer-review", "rewrite", "identity-absent"],
+    ["review", "revealed-selected", "masked-shell"],
+    ["session", "saved-capture", "masked-shell"],
+    ["calculator", "completed-saved", "identity-absent"],
+  ];
+  for (const [routeId, state, policy] of expectedDynamicPolicies) {
+    assert.match(
+      dynamicPolicies,
+      new RegExp(
+        `routeId: "${routeId}"[\\s\\S]*?state: "${state}"[\\s\\S]*?identityPolicy: "${policy}"`,
+      ),
+      `wrong dynamic identity policy for ${routeId}-${state}`,
+    );
+  }
+  assert.equal(
+    [...dynamicPolicies.matchAll(/identityPolicy: "masked-shell"/g)].length,
+    3,
+  );
+  assert.equal(
+    [...dynamicPolicies.matchAll(/identityPolicy: "identity-absent"/g)].length,
+    3,
+  );
+
+  const baselinePolicies = blockBetween(
+    spec,
+    "for (const viewport of [viewports[0], viewports[2]])",
+    "await verifyRuntimeVersion(targetPage",
+  );
+  assert.match(
+    baselinePolicies,
+    /routeStateAlias: "before-ledger"[\s\S]*?identityPolicy: "identity-absent"/,
+  );
+  assert.match(
+    baselinePolicies,
+    /routeStateAlias: "before-calculator"[\s\S]*?identityPolicy: "masked-shell"/,
+  );
+  const candidatePolicies = [
+    ...Object.values(expectedInitialPolicies),
+    expectedInitialPolicies.today,
+    expectedInitialPolicies.ledger,
+    expectedInitialPolicies.ledger,
+    ...expectedDynamicPolicies.map(([, , policy]) => policy),
+    "identity-absent",
+    "identity-absent",
+    "masked-shell",
+  ];
+  assert.equal(candidatePolicies.length, 25);
+  assert.equal(
+    candidatePolicies.filter((policy) => policy === "masked-shell").length,
+    13,
+  );
+  assert.equal(
+    candidatePolicies.filter((policy) => policy === "identity-absent").length,
+    12,
+  );
+
+  const boundary = blockBetween(
+    spec,
+    "async function inspectSyntheticArtifactBoundary",
+    "async function captureSyntheticScreenshot",
+  );
+  for (const field of [
+    "identitySurfaceCount",
+    "visibleIdentitySurfaceCount",
+    "identityMaskCount",
+  ]) {
+    assert.match(boundary, new RegExp(field));
+  }
+  const identityPolicyValidator = blockBetween(
+    spec,
+    "function screenshotIdentityPolicyError",
+    "function recordArtifactBoundaryFailures",
+  );
+  assert.match(identityPolicyValidator, /policy === "masked-shell"/);
+  assert.match(identityPolicyValidator, /boundary\.identitySurfaceCount !== 1/);
+  assert.match(
+    identityPolicyValidator,
+    /boundary\.visibleIdentitySurfaceCount !== 1/,
+  );
+  assert.match(identityPolicyValidator, /boundary\.identityMaskCount !== 1/);
+  assert.match(identityPolicyValidator, /boundary\.identitySurfaceCount !== 0/);
+  assert.match(
+    identityPolicyValidator,
+    /boundary\.visibleIdentitySurfaceCount !== 0/,
+  );
+  assert.match(identityPolicyValidator, /boundary\.identityMaskCount !== 0/);
+  const capture = blockBetween(
+    spec,
+    "async function captureSyntheticScreenshot",
+    "async function prepareInitialRoute",
+  );
+  assert.match(capture, /recordArtifactBoundaryFailures\(/);
+  for (const field of [
+    "visibleEmailOutsideMask",
+    "rawCredentialArtifactCount",
+    "rawIdentifierArtifactCount",
+    "deniedCanaryDomCount",
+    "opaqueSurfaceCount",
+  ]) {
+    assert.match(capture, new RegExp(`boundary\\.${field} > 0`));
+    assert.match(capture, new RegExp(`postCaptureBoundary\\.${field} > 0`));
+  }
+  assert.equal(
+    [...capture.matchAll(/inspectSyntheticArtifactBoundary\(/g)].length,
+    2,
+  );
+  assert.equal(
+    [...capture.matchAll(/screenshotIdentityPolicyError\(/g)].length,
+    2,
+  );
+  const screenshotIndex = capture.indexOf("page.screenshot(");
+  assert.ok(
+    capture.indexOf("inspectSyntheticArtifactBoundary(") < screenshotIndex &&
+      capture.lastIndexOf("inspectSyntheticArtifactBoundary(") >
+        screenshotIndex,
+  );
+  assert.match(capture, /page\.locator\(screenshotIdentitySelector\)/);
+  assert.match(capture, /mask: \[identity\]/);
+  assert.match(capture, /style: screenshotIdentityPrivacyStyle/);
+  assert.doesNotMatch(capture, /identity\.all\(\)/);
+  assert.match(capture, /boundary: postCaptureBoundary/);
+  assert.match(
+    spec,
+    /screenshotIdentityPrivacyStyle[\s\S]*?color: transparent !important[\s\S]*?-webkit-text-fill-color: transparent !important/,
+  );
+  for (const family of [
+    "visible-identity-outside-mask",
+    "raw-credential-artifact",
+    "visible-identifier-artifact",
+    "identity-mask-missing",
+    "identity-mask-mismatch",
+    "unexpected-identity-surface",
+  ]) {
+    assert.ok(spec.includes(`"${family}"`), `missing safe family ${family}`);
+  }
+  assert.doesNotMatch(spec, /errorFamily: "identity"/);
+
+  const identityClosure = blockBetween(
+    spec,
+    "const identityMasked =",
+    "const actualAccountArtifactCount",
+  );
+  assert.match(identityClosure, /identityPolicy === "masked-shell"/);
+  assert.match(identityClosure, /identityPolicy === "identity-absent"/);
+  assert.match(identityClosure, /identitySurfaceCount === 1/);
+  assert.match(identityClosure, /visibleIdentitySurfaceCount === 1/);
+  assert.match(identityClosure, /identityMaskCount === 1/);
+  assert.match(identityClosure, /identitySurfaceCount === 0/);
+  assert.match(identityClosure, /visibleIdentitySurfaceCount === 0/);
+  assert.match(identityClosure, /identityMaskCount === 0/);
+
+  assert.match(
+    learnerUi,
+    /const focusMode = ledgerFocusMode \|\| calculatorFocusMode/,
+  );
+  const focusShell = blockBetween(
+    learnerUi,
+    "if (focusMode) {",
+    "\n  return (\n    <div",
+  );
+  assert.match(focusShell, /data-learner-shell-mode="focus"/);
+  assert.doesNotMatch(focusShell, /data-s224v-learner-mode-entry/);
+  const defaultShell = learnerUi.slice(
+    learnerUi.indexOf('data-learner-shell-mode="default"'),
+  );
+  assert.match(defaultShell, /data-s224v-learner-mode-entry="second-only"/);
 });
 
 test("a11y runs full mobile, lightweight wide geometry, and bounded keyboard profiles", () => {

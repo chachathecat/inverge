@@ -95,7 +95,13 @@ type RouteDefinition = {
   path: string | ((itemId: string) => string);
 };
 
-const requiredRoutes: readonly RouteDefinition[] = [
+type ScreenshotIdentityPolicy = "masked-shell" | "identity-absent";
+type ScreenshotIdentityPolicyError =
+  | "identity-mask-missing"
+  | "identity-mask-mismatch"
+  | "unexpected-identity-surface";
+
+const requiredRoutes = [
   { id: "home", label: "홈", authenticated: false, path: "/" },
   { id: "login", label: "로그인", authenticated: false, path: "/login" },
   { id: "today", label: "오늘", authenticated: true, path: "/app?mode=second" },
@@ -160,7 +166,25 @@ const requiredRoutes: readonly RouteDefinition[] = [
     authenticated: true,
     path: "/app/calculator?mode=second&context=practice&focus=casio",
   },
-] as const;
+] as const satisfies readonly RouteDefinition[];
+
+type RequiredRouteId = (typeof requiredRoutes)[number]["id"];
+
+const initialIdentityPolicyByRoute = {
+  home: "identity-absent",
+  login: "identity-absent",
+  today: "masked-shell",
+  capture: "masked-shell",
+  "answer-review": "identity-absent",
+  review: "masked-shell",
+  notes: "masked-shell",
+  ledger: "identity-absent",
+  session: "masked-shell",
+  agenda: "masked-shell",
+  weekly: "masked-shell",
+  write: "masked-shell",
+  calculator: "identity-absent",
+} as const satisfies Record<RequiredRouteId, ScreenshotIdentityPolicy>;
 
 const routeContractNodes: Record<string, string[]> = {
   home: ["43:2", "44:9", "45:2", "61:2", "61:80"],
@@ -323,7 +347,10 @@ type StableGateFailure = {
     | "unknown-endpoint"
     | "unknown-row"
     | "mutation-blocked"
-    | "identity"
+    | "visible-identity-outside-mask"
+    | "raw-credential-artifact"
+    | "visible-identifier-artifact"
+    | ScreenshotIdentityPolicyError
     | "canary"
     | "opaque-surface"
     | "snapshot-read-failed"
@@ -349,7 +376,7 @@ type ScreenshotEvidence = {
   buffer: Buffer;
   boundary: ArtifactBoundaryObservation;
   guard: EndpointGuardEvidence;
-  identityMaskRequired: boolean;
+  identityPolicy: ScreenshotIdentityPolicy;
 };
 
 const reviewPreparationStage = Symbol("reviewPreparationStage");
@@ -3508,8 +3535,62 @@ type ArtifactBoundaryObservation = {
   rawIdentifierArtifactCount: number;
   deniedCanaryDomCount: number;
   opaqueSurfaceCount: number;
+  identitySurfaceCount: number;
+  visibleIdentitySurfaceCount: number;
   identityMaskCount: number;
 };
+
+const screenshotIdentitySelector =
+  '[data-s224v-learner-mode-entry="second-only"] > span:last-child';
+const screenshotIdentityPrivacyStyle = `${screenshotIdentitySelector}, ${screenshotIdentitySelector} * { color: transparent !important; -webkit-text-fill-color: transparent !important; text-shadow: none !important; }`;
+
+function screenshotIdentityPolicyError(
+  policy: ScreenshotIdentityPolicy,
+  boundary: ArtifactBoundaryObservation,
+): ScreenshotIdentityPolicyError | null {
+  if (policy === "masked-shell") {
+    if (boundary.identitySurfaceCount === 0) return "identity-mask-missing";
+    if (
+      boundary.identitySurfaceCount !== 1 ||
+      boundary.visibleIdentitySurfaceCount !== 1 ||
+      boundary.identityMaskCount !== 1
+    ) {
+      return "identity-mask-mismatch";
+    }
+    return null;
+  }
+  return boundary.identitySurfaceCount !== 0 ||
+    boundary.visibleIdentitySurfaceCount !== 0 ||
+    boundary.identityMaskCount !== 0
+    ? "unexpected-identity-surface"
+    : null;
+}
+
+function recordArtifactBoundaryFailures(
+  failures: StableGateFailure[],
+  phase: StableGateFailure["phase"],
+  routeStateAlias: string,
+  viewport: string,
+  boundary: ArtifactBoundaryObservation,
+) {
+  for (const [errorFamily, count] of [
+    ["visible-identity-outside-mask", boundary.visibleEmailOutsideMask],
+    ["raw-credential-artifact", boundary.rawCredentialArtifactCount],
+    ["visible-identifier-artifact", boundary.rawIdentifierArtifactCount],
+    ["canary", boundary.deniedCanaryDomCount],
+    ["opaque-surface", boundary.opaqueSurfaceCount],
+  ] as const) {
+    if (count === 0) continue;
+    recordStableGateFailure(failures, {
+      phase,
+      routeStateAlias,
+      viewport,
+      stableStep: "privacy",
+      errorFamily,
+      count,
+    });
+  }
+}
 
 async function inspectShellCapabilities(
   page: Page,
@@ -4102,8 +4183,6 @@ async function inspectSyntheticArtifactBoundary(
   credential: VisualCredentialCandidate,
   proof: VisualProof,
 ): Promise<ArtifactBoundaryObservation> {
-  const identitySelector =
-    '[data-s224v-learner-mode-entry="second-only"] > span:last-child';
   const observation = await page.evaluate(
     ({ email, password, deniedCanary, identitySelector }) => {
       const emailPattern = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i;
@@ -4217,22 +4296,30 @@ async function inspectSyntheticArtifactBoundary(
           style.visibility !== "hidden"
         );
       }).length;
-      const identityMaskCount = Array.from(
+      const identitySurfaces = Array.from(
         document.querySelectorAll<HTMLElement>(identitySelector),
-      ).filter((element) => {
+      );
+      const visibleIdentitySurfaces = identitySurfaces.filter((element) => {
         const rect = element.getBoundingClientRect();
+        const style = getComputedStyle(element);
         return (
           rect.width > 0 &&
           rect.height > 0 &&
-          element.textContent?.includes(email)
+          style.display !== "none" &&
+          style.visibility !== "hidden"
         );
-      }).length;
+      });
+      const identityMaskCount = visibleIdentitySurfaces.filter((element) =>
+        element.textContent?.includes(email),
+      ).length;
       return {
         visibleEmailOutsideMask,
         rawCredentialArtifactCount,
         rawIdentifierArtifactCount,
         deniedCanaryDomCount,
         opaqueSurfaceCount,
+        identitySurfaceCount: identitySurfaces.length,
+        visibleIdentitySurfaceCount: visibleIdentitySurfaces.length,
         identityMaskCount,
       };
     },
@@ -4240,7 +4327,7 @@ async function inspectSyntheticArtifactBoundary(
       email: credential.email,
       password: credential.password,
       deniedCanary: proof.deniedCanary,
-      identitySelector,
+      identitySelector: screenshotIdentitySelector,
     },
   );
   return observation;
@@ -4258,7 +4345,7 @@ async function captureSyntheticScreenshot(
     viewport: string;
     fileName: string;
     fullPage?: boolean;
-    identityMaskRequired: boolean;
+    identityPolicy: ScreenshotIdentityPolicy;
   },
 ): Promise<ScreenshotEvidence | null> {
   const fail = (
@@ -4285,24 +4372,18 @@ async function captureSyntheticScreenshot(
     credential,
     proof,
   );
-  if (boundary.visibleEmailOutsideMask > 0) {
-    fail("privacy", "identity", boundary.visibleEmailOutsideMask);
-  }
-  if (boundary.rawCredentialArtifactCount > 0) {
-    fail("privacy", "identity", boundary.rawCredentialArtifactCount);
-  }
-  if (boundary.rawIdentifierArtifactCount > 0) {
-    fail("privacy", "identity", boundary.rawIdentifierArtifactCount);
-  }
-  if (boundary.deniedCanaryDomCount > 0) {
-    fail("privacy", "canary", boundary.deniedCanaryDomCount);
-  }
-  if (boundary.opaqueSurfaceCount > 0) {
-    fail("privacy", "opaque-surface", boundary.opaqueSurfaceCount);
-  }
-  if (metadata.identityMaskRequired && boundary.identityMaskCount === 0) {
-    fail("privacy", "identity");
-  }
+  recordArtifactBoundaryFailures(
+    failures,
+    metadata.phase,
+    metadata.routeStateAlias,
+    metadata.viewport,
+    boundary,
+  );
+  const identityPolicyError = screenshotIdentityPolicyError(
+    metadata.identityPolicy,
+    boundary,
+  );
+  if (identityPolicyError) fail("privacy", identityPolicyError);
   recordEndpointGuardFailures(
     failures,
     metadata.phase,
@@ -4323,30 +4404,54 @@ async function captureSyntheticScreenshot(
     boundary.rawIdentifierArtifactCount > 0 ||
     boundary.deniedCanaryDomCount > 0 ||
     boundary.opaqueSurfaceCount > 0 ||
-    (metadata.identityMaskRequired && boundary.identityMaskCount === 0)
+    identityPolicyError !== null
   ) {
     return null;
   }
 
-  const masks = [];
-  const identity = page.locator(
-    '[data-s224v-learner-mode-entry="second-only"] > span:last-child',
-  );
-  for (const surface of await identity.all()) {
-    if (await surface.isVisible()) masks.push(surface);
-  }
+  const identity = page.locator(screenshotIdentitySelector);
   const buffer = await page.screenshot({
     fullPage: metadata.fullPage ?? true,
     animations: "disabled",
-    mask: masks,
+    mask: [identity],
     maskColor: "#000000",
+    style: screenshotIdentityPrivacyStyle,
   });
+  const postCaptureBoundary = await inspectSyntheticArtifactBoundary(
+    page,
+    credential,
+    proof,
+  );
+  recordArtifactBoundaryFailures(
+    failures,
+    metadata.phase,
+    metadata.routeStateAlias,
+    metadata.viewport,
+    postCaptureBoundary,
+  );
+  const postCaptureIdentityPolicyError = screenshotIdentityPolicyError(
+    metadata.identityPolicy,
+    postCaptureBoundary,
+  );
+  if (postCaptureIdentityPolicyError) {
+    fail("privacy", postCaptureIdentityPolicyError);
+  }
+  if (
+    postCaptureBoundary.visibleEmailOutsideMask > 0 ||
+    postCaptureBoundary.rawCredentialArtifactCount > 0 ||
+    postCaptureBoundary.rawIdentifierArtifactCount > 0 ||
+    postCaptureBoundary.deniedCanaryDomCount > 0 ||
+    postCaptureBoundary.opaqueSurfaceCount > 0 ||
+    postCaptureIdentityPolicyError !== null
+  ) {
+    return null;
+  }
   return {
     fileName: metadata.fileName,
     buffer,
-    boundary,
+    boundary: postCaptureBoundary,
     guard: { ...guard },
-    identityMaskRequired: metadata.identityMaskRequired,
+    identityPolicy: metadata.identityPolicy,
   };
 }
 
@@ -4476,7 +4581,7 @@ async function runVisualCandidate({
   viewport,
   fileName,
   fullPage,
-  identityMaskRequired,
+  identityPolicy,
   prepare,
   cleanup,
 }: {
@@ -4490,7 +4595,7 @@ async function runVisualCandidate({
   viewport: string;
   fileName: string;
   fullPage?: boolean;
-  identityMaskRequired: boolean;
+  identityPolicy: ScreenshotIdentityPolicy;
   prepare: () => Promise<void>;
   cleanup?: () => Promise<void>;
 }) {
@@ -4511,7 +4616,7 @@ async function runVisualCandidate({
         viewport,
         fileName,
         fullPage,
-        identityMaskRequired,
+        identityPolicy,
       },
     );
   } catch (error) {
@@ -5815,22 +5920,13 @@ test("@a11y S232H.2 split accessibility gate", async ({ browser }) => {
             viewport.width + "x" + viewport.height,
             route.authenticated ? authenticatedGuard : publicGuard,
           );
-          const privacyCount =
-            boundary.visibleEmailOutsideMask +
-            boundary.rawCredentialArtifactCount +
-            boundary.rawIdentifierArtifactCount +
-            boundary.deniedCanaryDomCount +
-            boundary.opaqueSurfaceCount;
-          if (privacyCount > 0) {
-            recordStableGateFailure(failures, {
-              phase: "a11y",
-              routeStateAlias,
-              viewport: viewport.width + "x" + viewport.height,
-              stableStep: "privacy",
-              errorFamily: "identity",
-              count: privacyCount,
-            });
-          }
+          recordArtifactBoundaryFailures(
+            failures,
+            "a11y",
+            routeStateAlias,
+            viewport.width + "x" + viewport.height,
+            boundary,
+          );
           await settleRuntimeMonitors(routePage);
           auditRows.push(row);
           completedAudits += 1;
@@ -5969,22 +6065,13 @@ test("@a11y S232H.2 split accessibility gate", async ({ browser }) => {
             "390x844",
             guard,
           );
-          const privacyCount =
-            boundary.visibleEmailOutsideMask +
-            boundary.rawCredentialArtifactCount +
-            boundary.rawIdentifierArtifactCount +
-            boundary.deniedCanaryDomCount +
-            boundary.opaqueSurfaceCount;
-          if (privacyCount > 0) {
-            recordStableGateFailure(failures, {
-              phase: "a11y",
-              routeStateAlias,
-              viewport: "390x844",
-              stableStep: "privacy",
-              errorFamily: "identity",
-              count: privacyCount,
-            });
-          }
+          recordArtifactBoundaryFailures(
+            failures,
+            "a11y",
+            routeStateAlias,
+            "390x844",
+            boundary,
+          );
           return audited;
         },
       });
@@ -6199,8 +6286,7 @@ test("@visual S232H.2 one-pass visual and Figma gate", async ({
           viewport: viewport.width + "x" + viewport.height,
           fileName: "s232h2-after-" + route.id + "-" + viewport.label + ".png",
           fullPage: !representative,
-          identityMaskRequired:
-            route.authenticated && route.id !== "answer-review",
+          identityPolicy: initialIdentityPolicyByRoute[route.id],
           prepare: () =>
             prepareInitialRoute(routePage, route, requestedPath, viewport),
         });
@@ -6217,18 +6303,21 @@ test("@visual S232H.2 one-pass visual and Figma gate", async ({
         routeId: "capture",
         state: "extraction-preview",
         fileName: "s232h2-after-capture-extraction-preview-390.png",
+        identityPolicy: "masked-shell",
         prepare: (page: Page) => prepareCaptureExtractionPreview(page),
       },
       {
         routeId: "answer-review",
         state: "result",
         fileName: "s232h2-after-answer-review-result-390.png",
+        identityPolicy: "identity-absent",
         prepare: (page: Page) => prepareAnswerReviewResult(page),
       },
       {
         routeId: "answer-review",
         state: "rewrite",
         fileName: "s232h2-after-answer-review-rewrite-390.png",
+        identityPolicy: "identity-absent",
         prepare: async (page: Page) => {
           await prepareAnswerReviewResult(page);
           await page.locator("[data-s232e4-rewrite-entry]").click();
@@ -6243,6 +6332,7 @@ test("@visual S232H.2 one-pass visual and Figma gate", async ({
         routeId: "review",
         state: "revealed-selected",
         fileName: "s232h2-after-review-revealed-selected-390.png",
+        identityPolicy: "masked-shell",
         prepare: (page: Page) =>
           prepareReviewSelectedState(page, proof.primaryQueueTitle),
       },
@@ -6250,6 +6340,7 @@ test("@visual S232H.2 one-pass visual and Figma gate", async ({
         routeId: "session",
         state: "saved-capture",
         fileName: "s232h2-after-session-saved-capture-390.png",
+        identityPolicy: "masked-shell",
         prepare: async (page: Page) => {
           await gotoRequiredAuditRoute(
             page,
@@ -6265,6 +6356,7 @@ test("@visual S232H.2 one-pass visual and Figma gate", async ({
         routeId: "calculator",
         state: "completed-saved",
         fileName: "s232h2-after-calculator-completed-saved-390.png",
+        identityPolicy: "identity-absent",
         prepare: async (page: Page) => {
           await gotoRequiredAuditRoute(
             page,
@@ -6296,7 +6388,7 @@ test("@visual S232H.2 one-pass visual and Figma gate", async ({
             routeStateAlias,
             viewport: "390x844",
             fileName: dynamic.fileName,
-            identityMaskRequired: dynamic.routeId !== "answer-review",
+            identityPolicy: dynamic.identityPolicy,
             prepare: () => dynamic.prepare(page),
           }),
       });
@@ -6319,7 +6411,7 @@ test("@visual S232H.2 one-pass visual and Figma gate", async ({
         viewport: viewport.width + "x" + viewport.height,
         fileName: "s232h2-before-ledger-" + viewport.label + ".png",
         fullPage: false,
-        identityMaskRequired: true,
+        identityPolicy: "identity-absent",
         prepare: async () => {
           await baselinePage.setViewportSize({
             width: viewport.width,
@@ -6356,7 +6448,7 @@ test("@visual S232H.2 one-pass visual and Figma gate", async ({
       viewport: "390x844",
       fileName: "s232h2-before-calculator-390.png",
       fullPage: false,
-      identityMaskRequired: true,
+      identityPolicy: "masked-shell",
       prepare: async () => {
         await baselinePage.setViewportSize({ width: 390, height: 844 });
         await gotoRequiredAuditRoute(
@@ -6608,12 +6700,22 @@ test("@visual S232H.2 one-pass visual and Figma gate", async ({
     ),
   );
   const identityMasked =
-    capturedScreenshots.some((screenshot) => screenshot.identityMaskRequired) &&
-    capturedScreenshots.every(
-      (screenshot) =>
-        !screenshot.identityMaskRequired ||
-        screenshot.boundary.identityMaskCount > 0,
-    );
+    capturedScreenshots.some(
+      (screenshot) => screenshot.identityPolicy === "masked-shell",
+    ) &&
+    capturedScreenshots.some(
+      (screenshot) => screenshot.identityPolicy === "identity-absent",
+    ) &&
+    capturedScreenshots.every((screenshot) => {
+      const boundary = screenshot.boundary;
+      return screenshot.identityPolicy === "masked-shell"
+        ? boundary.identitySurfaceCount === 1 &&
+            boundary.visibleIdentitySurfaceCount === 1 &&
+            boundary.identityMaskCount === 1
+        : boundary.identitySurfaceCount === 0 &&
+            boundary.visibleIdentitySurfaceCount === 0 &&
+            boundary.identityMaskCount === 0;
+    });
   const actualAccountArtifactCount =
     rawIdentityArtifactCount +
     deniedCanaryArtifactCount +
