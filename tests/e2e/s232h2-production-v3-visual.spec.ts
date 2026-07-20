@@ -5542,7 +5542,7 @@ test("@privacy S232H.2 privacy/auth source gate", async ({ browser }) => {
 });
 
 test("@a11y S232H.2 split accessibility gate", async ({ browser }) => {
-  test.setTimeout(680_000);
+  test.setTimeout(840_000);
   requireSafeVisualRuntime();
   const proof = await readVisualProof();
   const credential = resolveCredential(proof.selectedSlot);

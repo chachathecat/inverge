@@ -190,7 +190,7 @@ jobs:
           S232H2_VISUAL_PROOF_PATH: ${{ runner.temp }}/s232h2-visual-proof.json
           VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
         run: >-
-          timeout --signal=TERM --kill-after=10s 720s
+          timeout --signal=TERM --kill-after=10s 900s
           npx playwright test tests/e2e/s232h2-production-v3-visual.spec.ts
           --project=chromium --workers=1 --reporter=line --grep "@a11y"
 

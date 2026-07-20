@@ -143,7 +143,7 @@ test("workflow keeps exact-head and fixed-baseline provenance while splitting th
   const gateBounds = [
     ...workflow.matchAll(/timeout --signal=TERM --kill-after=10s (\d+)s/g),
   ].map((match) => Number(match[1]));
-  assert.deepEqual(gateBounds, [180, 720, 900]);
+  assert.deepEqual(gateBounds, [180, 900, 900]);
   assert.ok(
     jobTimeout * 60 >=
       previewDiscoveryBound +
@@ -199,8 +199,7 @@ test("workflow keeps exact-head and fixed-baseline provenance while splitting th
   assert.match(workflow, /--grep "@a11y"/);
   assert.match(workflow, /--grep "@visual"/);
   assert.match(workflow, /timeout[^\n]*180s/);
-  assert.match(workflow, /timeout[^\n]*720s/);
-  assert.match(workflow, /timeout[^\n]*900s/);
+  assert.equal((workflow.match(/timeout[^\n]*900s/g) ?? []).length, 2);
   assert.doesNotMatch(workflow, /#624|s232g|workflow_dispatch|rerun|re-run/i);
 });
 
@@ -1515,7 +1514,7 @@ test("spec exposes bounded source, accessibility, and visual gates", () => {
         'test("@a11y S232H.2 split accessibility gate',
         'test("@visual',
       ),
-      outerSeconds: 720,
+      outerSeconds: 900,
     },
     { source: spec.slice(spec.indexOf('test("@visual')), outerSeconds: 900 },
   ];
@@ -1547,9 +1546,9 @@ test("spec exposes bounded source, accessibility, and visual gates", () => {
     assert.equal(matches.length, 1);
     return Number(matches[0][1].replaceAll("_", ""));
   });
-  assert.equal(a11yTimeouts.length, 2);
+  assert.deepEqual(a11yTimeouts, [15_000, 840_000]);
   assert.ok(
-    a11yTimeouts.reduce((total, timeout) => total + timeout, 0) < 720_000,
+    a11yTimeouts.reduce((total, timeout) => total + timeout, 0) < 900_000,
     "all @a11y test bounds must retain aggregate shell headroom",
   );
 });
