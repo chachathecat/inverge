@@ -21,6 +21,9 @@ const previewResponseSupport = read(
 );
 const spec = read("tests/e2e/s232h2-production-v3-visual.spec.ts");
 const authenticatedRuntime = read("tests/e2e/support/authenticated-runtime.ts");
+const reviewQueueClient = read(
+  "components/review-os/review-queue-client.tsx",
+);
 const sourceAuditRoute = read("app/api/os/visual-source-audit/route.ts");
 const readOnlyRequest = read("lib/review-os/read-only-request.ts");
 const reviewOsRepository = read("lib/review-os/repository.ts");
@@ -1073,6 +1076,139 @@ test("artifact identity and network quiescence stay privacy-safe and fail-closed
     /page\.reload[\s\S]*?waitForStableRender[\s\S]*?settleRuntimeMonitors/,
   );
   assert.doesNotMatch(captureReload, /page\.reload[\s\S]*?\bcatch\b/);
+});
+
+test("review selected-state preparation follows the bounded fill-triggered reveal", () => {
+  assert.match(
+    reviewQueueClient,
+    /const hasRevealedHint =[^;]*primaryRecallText\.trim\(\)\.length > 0/s,
+    "non-empty recall text must remain the reveal trigger",
+  );
+
+  const timeoutMatch = spec.match(
+    /const REVIEW_PREPARATION_ACTION_TIMEOUT_MS = ([\d_]+);/,
+  );
+  assert.ok(timeoutMatch, "review preparation must declare an action bound");
+  const actionTimeout = Number(timeoutMatch[1].replaceAll("_", ""));
+  assert.ok(actionTimeout > 0 && actionTimeout <= 20_000);
+
+  const preparation = blockBetween(
+    spec,
+    "async function prepareReviewSelectedState",
+    "async function clickCalculatorFocusAction",
+  );
+  assert.doesNotMatch(
+    preparation,
+    /확인하기|force:\s*true|dispatchEvent|page\.evaluate|waitForTimeout|Promise\.race/,
+    "review preparation must not revive or bypass the removed confirm button",
+  );
+  assert.equal(
+    [...preparation.matchAll(/runReviewPreparationStage\(/g)].length,
+    9,
+  );
+  assert.equal(
+    [
+      ...preparation.matchAll(
+        /timeout: REVIEW_PREPARATION_ACTION_TIMEOUT_MS/g,
+      ),
+    ].length,
+    8,
+    "every Review locator action and assertion must carry the finite bound",
+  );
+
+  const orderedStages = [
+    "review-route",
+    "review-queue-visible",
+    "review-title-match",
+    "review-recall-fill",
+    "review-check-visible",
+    "review-rating-visible",
+    "review-outcome-select",
+    "review-outcome-selected",
+    "review-interval-visible",
+  ];
+  let previousStageIndex = -1;
+  for (const stage of orderedStages) {
+    const stageIndex = preparation.indexOf(`"${stage}"`);
+    assert.ok(
+      stageIndex > previousStageIndex,
+      `review stage is out of order: ${stage}`,
+    );
+    previousStageIndex = stageIndex;
+  }
+  assert.ok(
+    preparation.indexOf(".fill(") <
+      preparation.indexOf('[data-s232d4-review-check]'),
+  );
+  assert.ok(
+    preparation.indexOf('[data-s232d4-review-check]') <
+      preparation.indexOf('[data-s232d4-review-self-rating]'),
+  );
+  assert.ok(
+    preparation.indexOf('[data-s232d4-review-self-rating]') <
+      preparation.indexOf('selected.click({ timeout:'),
+  );
+  assert.match(
+    preparation,
+    /toHaveAttribute\("data-v3-selected", "true", \{/,
+  );
+  assert.match(preparation, /\[data-review-interval-suggestion\]/);
+
+  const stageType = blockBetween(
+    spec,
+    "type ReviewPreparationStage",
+    "type ScreenshotEvidence",
+  );
+  assert.deepEqual(
+    [...stageType.matchAll(/\| "([a-z-]+)"/g)].map((match) => match[1]),
+    orderedStages,
+  );
+  const sanitizedError = blockBetween(
+    spec,
+    "class ReviewPreparationError",
+    "type FigmaComparison",
+  );
+  assert.match(sanitizedError, /S232H2_DYNAMIC_PREPARATION_FAILED/);
+  assert.match(
+    sanitizedError,
+    /this\[runtimePendingRequestClasses\] = \[\.\.\.fields\.requestClasses\]/,
+  );
+  assert.doesNotMatch(
+    sanitizedError,
+    /cause|\.message|\.stack|JSON\.stringify|console\.|url|query|header|body|location|cookie|jwt|email|account/i,
+  );
+  const stageWrapper = blockBetween(
+    spec,
+    "async function runReviewPreparationStage",
+    "async function writeVisualProof",
+  );
+  assert.match(stageWrapper, /stableFailureFields\(error\)/);
+  assert.doesNotMatch(
+    stageWrapper,
+    /cause|error\.message|error\.stack|JSON\.stringify\(error\)|console\./,
+  );
+  const failureFields = blockBetween(
+    spec,
+    "function stableFailureFields",
+    "function resolveCredential",
+  );
+  assert.match(
+    failureFields,
+    /preparationStage: error\[reviewPreparationStage\]/,
+  );
+  assert.match(
+    failureFields,
+    /fields\.requestClasses = \[\.\.\.requestClasses\]/,
+  );
+  const recorder = blockBetween(
+    spec,
+    "function recordStableGateFailure",
+    "function stableErrorFamily",
+  );
+  assert.match(
+    recorder,
+    /candidate\.preparationStage === failure\.preparationStage/,
+  );
 });
 
 test("ephemeral runner is pinned to the exact project, repository, PR, and head", () => {

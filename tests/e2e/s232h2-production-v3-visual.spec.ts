@@ -57,6 +57,7 @@ const mergeBaseSha = process.env.E2E_MERGE_BASE_SHA?.trim() ?? "";
 const baselineTreeSha = process.env.E2E_BASELINE_TREE_SHA?.trim() ?? "";
 const visualProofPath = process.env.S232H2_VISUAL_PROOF_PATH?.trim() ?? "";
 const fixedBaselineSha = "35836d419161d7cfe55e3e3c088fcc4d66376a7d";
+const REVIEW_PREPARATION_ACTION_TIMEOUT_MS = 20_000;
 
 type VisualCredentialSlot = "visual" | "user-b";
 type VisualCredentialCandidate = ExplicitTestCredential & {
@@ -326,8 +327,20 @@ type StableGateFailure = {
     | "snapshot-read-failed"
     | "snapshot-drift";
   requestClasses?: RuntimePendingRequestClass[];
+  preparationStage?: ReviewPreparationStage;
   count: number;
 };
+
+type ReviewPreparationStage =
+  | "review-route"
+  | "review-queue-visible"
+  | "review-title-match"
+  | "review-recall-fill"
+  | "review-check-visible"
+  | "review-rating-visible"
+  | "review-outcome-select"
+  | "review-outcome-selected"
+  | "review-interval-visible";
 
 type ScreenshotEvidence = {
   fileName: string;
@@ -336,6 +349,28 @@ type ScreenshotEvidence = {
   guard: EndpointGuardEvidence;
   identityMaskRequired: boolean;
 };
+
+const reviewPreparationStage = Symbol("reviewPreparationStage");
+const reviewPreparationErrorFamily = Symbol("reviewPreparationErrorFamily");
+
+class ReviewPreparationError extends Error {
+  readonly [reviewPreparationStage]: ReviewPreparationStage;
+  readonly [reviewPreparationErrorFamily]: StableGateFailure["errorFamily"];
+  readonly [runtimePendingRequestClasses]?: readonly RuntimePendingRequestClass[];
+
+  constructor(
+    stage: ReviewPreparationStage,
+    fields: Pick<StableGateFailure, "errorFamily" | "requestClasses">,
+  ) {
+    super("S232H2_DYNAMIC_PREPARATION_FAILED");
+    this.name = "ReviewPreparationError";
+    this[reviewPreparationStage] = stage;
+    this[reviewPreparationErrorFamily] = fields.errorFamily;
+    if (fields.requestClasses && fields.requestClasses.length > 0) {
+      this[runtimePendingRequestClasses] = [...fields.requestClasses];
+    }
+  }
+}
 
 type FigmaComparison = {
   node: "56:2" | "57:34" | "59:62";
@@ -935,6 +970,7 @@ function recordStableGateFailure(
       candidate.viewport === failure.viewport &&
       candidate.stableStep === failure.stableStep &&
       candidate.errorFamily === failure.errorFamily &&
+      candidate.preparationStage === failure.preparationStage &&
       (candidate.requestClasses ?? []).join("|") ===
         (failure.requestClasses ?? []).join("|"),
   );
@@ -953,8 +989,19 @@ function stableErrorFamily(error: unknown): StableGateFailure["errorFamily"] {
 
 function stableFailureFields(error: unknown): Pick<
   StableGateFailure,
-  "errorFamily" | "requestClasses"
+  "errorFamily" | "requestClasses" | "preparationStage"
 > {
+  if (error instanceof ReviewPreparationError) {
+    const fields: ReturnType<typeof stableFailureFields> = {
+      errorFamily: error[reviewPreparationErrorFamily],
+      preparationStage: error[reviewPreparationStage],
+    };
+    const requestClasses = error[runtimePendingRequestClasses];
+    if (requestClasses && requestClasses.length > 0) {
+      fields.requestClasses = [...requestClasses];
+    }
+    return fields;
+  }
   const errorFamily = stableErrorFamily(error);
   if (!(error instanceof Error)) return { errorFamily };
   const requestClasses = (error as RuntimeMonitorError)[
@@ -968,6 +1015,17 @@ function resolveCredential(slot: VisualCredentialSlot) {
   return visualCredentialCandidates.find(
     (candidate) => candidate.slot === slot,
   );
+}
+
+async function runReviewPreparationStage<T>(
+  stage: ReviewPreparationStage,
+  action: () => Promise<T>,
+): Promise<T> {
+  try {
+    return await action();
+  } catch (error) {
+    throw new ReviewPreparationError(stage, stableFailureFields(error));
+  }
 }
 
 async function writeVisualProof(proof: VisualProof) {
@@ -5109,22 +5167,52 @@ async function prepareReviewSelectedState(
   page: Page,
   expectedPrimaryTitle: string,
 ) {
-  await gotoRequiredAuditRoute(page, "/app/review?mode=second");
-  const queue = page.locator("[data-s232d4-review-queue]");
-  await expect(queue).toBeVisible({ timeout: 20_000 });
-  await expect(queue.locator("[data-s232d4-review-meta] h2")).toHaveText(
-    expectedPrimaryTitle,
+  await runReviewPreparationStage("review-route", () =>
+    gotoRequiredAuditRoute(page, "/app/review?mode=second"),
   );
-  await queue
-    .getByLabel("복습 전 먼저 떠올린 내용")
-    .fill("합성 회상: 요건과 대응 사실을 먼저 연결합니다.");
-  await queue.getByRole("button", { name: "확인하기", exact: true }).click();
+  const queue = page.locator("[data-s232d4-review-queue]");
+  await runReviewPreparationStage("review-queue-visible", () =>
+    expect(queue).toBeVisible({
+      timeout: REVIEW_PREPARATION_ACTION_TIMEOUT_MS,
+    }),
+  );
+  await runReviewPreparationStage("review-title-match", () =>
+    expect(queue.locator("[data-s232d4-review-meta] h2")).toHaveText(
+      expectedPrimaryTitle,
+      { timeout: REVIEW_PREPARATION_ACTION_TIMEOUT_MS },
+    ),
+  );
+  await runReviewPreparationStage("review-recall-fill", () =>
+    queue
+      .getByLabel("복습 전 먼저 떠올린 내용")
+      .fill("합성 회상: 요건과 대응 사실을 먼저 연결합니다.", {
+        timeout: REVIEW_PREPARATION_ACTION_TIMEOUT_MS,
+      }),
+  );
+  await runReviewPreparationStage("review-check-visible", () =>
+    expect(queue.locator("[data-s232d4-review-check]")).toBeVisible({
+      timeout: REVIEW_PREPARATION_ACTION_TIMEOUT_MS,
+    }),
+  );
+  await runReviewPreparationStage("review-rating-visible", () =>
+    expect(queue.locator("[data-s232d4-review-self-rating]")).toBeVisible({
+      timeout: REVIEW_PREPARATION_ACTION_TIMEOUT_MS,
+    }),
+  );
   const selected = queue.locator('[data-review-recall-outcome="fuzzy"]');
-  await selected.click();
-  await expect(selected).toHaveAttribute("data-v3-selected", "true");
-  await expect(
-    queue.locator("[data-review-interval-suggestion]"),
-  ).toBeVisible();
+  await runReviewPreparationStage("review-outcome-select", () =>
+    selected.click({ timeout: REVIEW_PREPARATION_ACTION_TIMEOUT_MS }),
+  );
+  await runReviewPreparationStage("review-outcome-selected", () =>
+    expect(selected).toHaveAttribute("data-v3-selected", "true", {
+      timeout: REVIEW_PREPARATION_ACTION_TIMEOUT_MS,
+    }),
+  );
+  await runReviewPreparationStage("review-interval-visible", () =>
+    expect(queue.locator("[data-review-interval-suggestion]")).toBeVisible({
+      timeout: REVIEW_PREPARATION_ACTION_TIMEOUT_MS,
+    }),
+  );
 }
 
 async function clickCalculatorFocusAction(page: Page) {
