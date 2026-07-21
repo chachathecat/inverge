@@ -20,7 +20,6 @@ import type {
   StudyProfile,
   UsageSummary,
 } from "@/lib/review-os/types";
-import { isPreviewExactShaReadOnlyRequest } from "@/lib/review-os/read-only-request";
 import { reviewOsRepository } from "@/lib/review-os/repository";
 import { reviewOsService } from "@/lib/review-os/service";
 
@@ -131,10 +130,7 @@ const resolveReviewOsAccess = cache(async function resolveReviewOsAccess(
   email: string | null,
 ): Promise<ReviewOsAccessResult> {
   try {
-    const readOnlyRequest = await isPreviewExactShaReadOnlyRequest();
-    const access = readOnlyRequest
-      ? await reviewOsRepository.readAccess(userId, email)
-      : await reviewOsRepository.ensureAccess(userId, email);
+    const access = await reviewOsRepository.ensureAccess(userId, email);
     return buildReviewOsAccessResult(access);
   } catch (error) {
     const reason = getAccessUnavailableReason(error);
