@@ -5,25 +5,9 @@ import path from "node:path";
 import process from "node:process";
 import { execFileSync } from "node:child_process";
 import { firstMatchingGlob } from "./glob-match.mjs";
+import { runtimeRequiredPathRecords } from "./runtime-risk-contract.mjs";
 
 const RISK_ORDER = { low: 0, medium: 1, high: 2 };
-
-const RUNTIME_REQUIRED_PATTERNS = [
-  "supabase/migrations/**",
-  "app/api/auth/**",
-  "lib/auth/**",
-  "middleware.ts",
-  "app/api/notifications/**",
-  "lib/notifications/**",
-  "app/api/billing/**",
-  "lib/billing/**",
-  "app/api/payments/**",
-  "lib/payments/**",
-  "app/api/entitlements/**",
-  "lib/entitlements/**",
-  "config/paid-launch-readiness.json",
-  "vercel.json",
-];
 
 function parsePolicy(filePath) {
   const text = fs.readFileSync(filePath, "utf8");
@@ -145,11 +129,7 @@ function classify(files, signals, policy) {
     risk = "medium";
   }
 
-  const runtimeReasons = [];
-  for (const file of files) {
-    const pattern = firstMatchingGlob(RUNTIME_REQUIRED_PATTERNS, file);
-    if (pattern) runtimeReasons.push({ path: file, pattern });
-  }
+  const runtimeReasons = runtimeRequiredPathRecords(files);
 
   return {
     risk,
