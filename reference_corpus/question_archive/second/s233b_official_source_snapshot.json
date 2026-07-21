@@ -1,0 +1,826 @@
+{
+  "schemaVersion": "s233b.official_second_round_acquisition.v1",
+  "registryVersion": "s233b.qnet.second_round.2024-2026.2dce86154b001005",
+  "acquiredAt": "2026-07-21T12:00:00.000Z",
+  "officialOrigin": "https://www.q-net.or.kr",
+  "qualificationId": "gId=60",
+  "rightsEvidence": {
+    "rightsDecisionId": "qnet-kogl-type-1-2014-onward",
+    "noticeArticleId": "5259147",
+    "canonicalNoticeUrl": "https://www.q-net.or.kr/cst003.do?id=cst00302&gSite=L&gId=60&artlSeq=5259147",
+    "noticeContentHashSha256": "7d6b086afb50fe0ca580b0f57ceb8d572af100b21850ca81810ec2171c72ddb2",
+    "acquiredAt": "2026-07-21T12:00:00.000Z",
+    "licenseId": "KOGL-TYPE-1",
+    "rightsStatus": "redistribution_allowed",
+    "permittedDisplayMode": "full_text_with_attribution",
+    "attributionRequired": true,
+    "commercialUseAllowed": true,
+    "modificationAllowed": true,
+    "authorityStatus": "official_rights_notice",
+    "ambiguityConvertedToPermission": false
+  },
+  "examDateEvidence": {
+    "examYear": 2026,
+    "examRound": "second",
+    "examDate": "2026-07-04",
+    "canonicalUrl": "https://www.q-net.or.kr/rcv003.do?gId=60&gSite=L&id=rcv00305",
+    "contentHashSha256": "78fb4b31723d329cb31d0d19fd37789ec7ad11222bbd4cf34bec2883f410c514",
+    "acquiredAt": "2026-07-21T12:00:00.000Z",
+    "authorityStatus": "official_primary_source"
+  },
+  "sources": [
+    {
+      "sourceId": "qnet-appraiser-second-2024-combined",
+      "sourceVersion": "5213532.2210215.5421700ebd58e8aa",
+      "authorityStatus": "official_primary_source",
+      "examRound": "second",
+      "examYear": 2024,
+      "subjectCoverage": [],
+      "coverage": "unsegmented_second_round_combined_paper",
+      "canonicalDetailUrl": "https://www.q-net.or.kr/cst003.do?id=cst00302&gSite=L&gId=60&artlSeq=5213532",
+      "canonicalDownloadUrl": "https://www.q-net.or.kr/cst003.do?id=cst00302s01&gSite=L&gId=60&fileCode=R001&filePath=bbs%2FQ004%2FQ004_2210215&fileName=2024%EB%85%84+%EC%A0%9C35%ED%9A%8C+%EA%B0%90%EC%A0%95%ED%8F%89%EA%B0%80%EC%82%AC+2%EC%B0%A8%EC%8B%9C%ED%97%98+%EB%AC%B8%EC%A0%9C%EC%A7%80.pdf&fileSeq=2210215&artlSeq=5213532&href=0",
+      "articleId": "5213532",
+      "fileSeq": "2210215",
+      "officialTitle": "2024년 제35회 감정평가사 2차시험 기출문제",
+      "officialFileName": "2024년 제35회 감정평가사 2차시험 문제지.pdf",
+      "postedAt": null,
+      "acquiredAt": "2026-07-21T12:00:00.000Z",
+      "contentHashSha256": "5421700ebd58e8aa18346e52d2580ea4c4b020492df158d70c5af91e5968655d",
+      "byteLength": 6267120,
+      "pageCount": 23,
+      "coverageEvidence": {
+        "method": "official_combined_paper_identity_unsegmented",
+        "detectedSubjects": [],
+        "declaredSubjects": [],
+        "textLayerHashSha256": "36a9e7f1c95b82ffb99743e0c5c4ce95d83c9a430aac59f84ef3cbfab6145068",
+        "rawTextStored": false
+      },
+      "canonicalQuestionMetadata": [],
+      "headerDateCandidates": [],
+      "rightsDecisionId": "qnet-kogl-type-1-2014-onward",
+      "transformationProvenance": {
+        "method": "deterministic_https_download_and_sha256",
+        "rawAssetStored": false,
+        "sourceExcerptStored": false,
+        "ocrUsed": false,
+        "llmUsed": false,
+        "learnerContentUsed": false
+      }
+    },
+    {
+      "sourceId": "qnet-appraiser-second-2025-practice",
+      "sourceVersion": "5239325.2238216.e13e5dc35df8f36a",
+      "authorityStatus": "official_primary_source",
+      "examRound": "second",
+      "examYear": 2025,
+      "subjectCoverage": [
+        "practice"
+      ],
+      "coverage": "complete_subject_paper",
+      "canonicalDetailUrl": "https://www.q-net.or.kr/cst003.do?id=cst00302&gSite=L&gId=60&artlSeq=5239325",
+      "canonicalDownloadUrl": "https://www.q-net.or.kr/cst003.do?id=cst00302s01&gSite=L&gId=60&fileCode=R001&filePath=bbs%2FQ004%2FQ004_2238216&fileName=2025%EB%85%84+%EC%A0%9C36%ED%9A%8C+%EA%B0%90%EC%A0%95%ED%8F%89%EA%B0%80%EC%82%AC+2%EC%B0%A8+%EA%B0%90%EC%A0%95%ED%8F%89%EA%B0%80%EC%8B%A4%EB%AC%B4.pdf&fileSeq=2238216&artlSeq=5239325&href=0",
+      "articleId": "5239325",
+      "fileSeq": "2238216",
+      "officialTitle": "2025년 제36회 감정평가사 2차시험 기출문제",
+      "officialFileName": "2025년 제36회 감정평가사 2차 감정평가실무.pdf",
+      "postedAt": null,
+      "acquiredAt": "2026-07-21T12:00:00.000Z",
+      "contentHashSha256": "e13e5dc35df8f36a9183730cdb598ade4b523d303bdeb81e6c88da87c5e54e68",
+      "byteLength": 385089,
+      "pageCount": 18,
+      "coverageEvidence": {
+        "method": "deterministic_pdf_text_layer_subject_heading_match",
+        "detectedSubjects": [
+          "practice"
+        ],
+        "declaredSubjects": [
+          "practice"
+        ],
+        "textLayerHashSha256": "3a29f076716bbc9145ad1c7fe8a87242f12bee2e8ba2d454781de6c5693828dc",
+        "rawTextStored": false
+      },
+      "canonicalQuestionMetadata": [
+        {
+          "questionNo": 1,
+          "points": null,
+          "structuralAnchorSha256": "8d622cc62efc20f56ba9ef26b9651e9845d373ae99357fe37378ab0eaf7a5012",
+          "lawSourceIds": []
+        },
+        {
+          "questionNo": 2,
+          "points": null,
+          "structuralAnchorSha256": "e3ae78e5ca0086a9e6122c099424b0af2a3c392350a80cabb864dfa7e508907b",
+          "lawSourceIds": []
+        },
+        {
+          "questionNo": 3,
+          "points": null,
+          "structuralAnchorSha256": "f19994add9de9b385ae1fdf41b5e32947f05ae5a6fc3d7530d47c49f48bc36b1",
+          "lawSourceIds": []
+        },
+        {
+          "questionNo": 4,
+          "points": null,
+          "structuralAnchorSha256": "19496c0bddef36cb2727fbaed07881f11a2cc6c81c0da9b2253d0ecba83f2d8c",
+          "lawSourceIds": []
+        }
+      ],
+      "headerDateCandidates": [
+        "2025-07-12",
+        "2026-07-12"
+      ],
+      "rightsDecisionId": "qnet-kogl-type-1-2014-onward",
+      "transformationProvenance": {
+        "method": "deterministic_https_download_and_sha256",
+        "rawAssetStored": false,
+        "sourceExcerptStored": false,
+        "ocrUsed": false,
+        "llmUsed": false,
+        "learnerContentUsed": false
+      }
+    },
+    {
+      "sourceId": "qnet-appraiser-second-2025-theory",
+      "sourceVersion": "5239325.2238217.baa2e981454d8e10",
+      "authorityStatus": "official_primary_source",
+      "examRound": "second",
+      "examYear": 2025,
+      "subjectCoverage": [
+        "theory"
+      ],
+      "coverage": "complete_subject_paper",
+      "canonicalDetailUrl": "https://www.q-net.or.kr/cst003.do?id=cst00302&gSite=L&gId=60&artlSeq=5239325",
+      "canonicalDownloadUrl": "https://www.q-net.or.kr/cst003.do?id=cst00302s01&gSite=L&gId=60&fileCode=R001&filePath=bbs%2FQ004%2FQ004_2238217&fileName=2025%EB%85%84+%EC%A0%9C36%ED%9A%8C+%EA%B0%90%EC%A0%95%ED%8F%89%EA%B0%80%EC%82%AC+2%EC%B0%A8+%EA%B0%90%EC%A0%95%ED%8F%89%EA%B0%80%EC%9D%B4%EB%A1%A0.pdf&fileSeq=2238217&artlSeq=5239325&href=0",
+      "articleId": "5239325",
+      "fileSeq": "2238217",
+      "officialTitle": "2025년 제36회 감정평가사 2차시험 기출문제",
+      "officialFileName": "2025년 제36회 감정평가사 2차 감정평가이론.pdf",
+      "postedAt": null,
+      "acquiredAt": "2026-07-21T12:00:00.000Z",
+      "contentHashSha256": "baa2e981454d8e10f30e0edbe8e0cb963e1359d3ff624a47167f2d4593c72ce6",
+      "byteLength": 182283,
+      "pageCount": 3,
+      "coverageEvidence": {
+        "method": "deterministic_pdf_text_layer_subject_heading_match",
+        "detectedSubjects": [
+          "theory"
+        ],
+        "declaredSubjects": [
+          "theory"
+        ],
+        "textLayerHashSha256": "a67024884c2748789113433f566b3c30124bee8ce5efa896bcb60b78d6c9c493",
+        "rawTextStored": false
+      },
+      "canonicalQuestionMetadata": [
+        {
+          "questionNo": 1,
+          "points": null,
+          "structuralAnchorSha256": "1ff3359c9d9ef5b50f51cbb43a8a0a779ae1c17028d06d9a02a68eec0ef62a36",
+          "lawSourceIds": []
+        },
+        {
+          "questionNo": 2,
+          "points": null,
+          "structuralAnchorSha256": "1b464e9738066369b62f35d4b97b339008c0b9a2d0b31d4f9a171d921f2450a8",
+          "lawSourceIds": [
+            "law-source-land-compensation-act",
+            "law-source-real-estate-price-disclosure-act"
+          ]
+        },
+        {
+          "questionNo": 3,
+          "points": null,
+          "structuralAnchorSha256": "012f9da942d596a765635c545a366e5430215a6fc3984e2b15538f6cb932d9fd",
+          "lawSourceIds": []
+        },
+        {
+          "questionNo": 4,
+          "points": null,
+          "structuralAnchorSha256": "8397002dccb2dcba45474dc447ebe74a9880742f072b7d2f55aac0af22324e8b",
+          "lawSourceIds": []
+        }
+      ],
+      "headerDateCandidates": [
+        "2024-06-01",
+        "2025-06-01",
+        "2023-12-01",
+        "2025-07-01"
+      ],
+      "rightsDecisionId": "qnet-kogl-type-1-2014-onward",
+      "transformationProvenance": {
+        "method": "deterministic_https_download_and_sha256",
+        "rawAssetStored": false,
+        "sourceExcerptStored": false,
+        "ocrUsed": false,
+        "llmUsed": false,
+        "learnerContentUsed": false
+      }
+    },
+    {
+      "sourceId": "qnet-appraiser-second-2025-law",
+      "sourceVersion": "5239325.2238218.602ecc18ce350442",
+      "authorityStatus": "official_primary_source",
+      "examRound": "second",
+      "examYear": 2025,
+      "subjectCoverage": [
+        "law"
+      ],
+      "coverage": "complete_subject_paper",
+      "canonicalDetailUrl": "https://www.q-net.or.kr/cst003.do?id=cst00302&gSite=L&gId=60&artlSeq=5239325",
+      "canonicalDownloadUrl": "https://www.q-net.or.kr/cst003.do?id=cst00302s01&gSite=L&gId=60&fileCode=R001&filePath=bbs%2FQ004%2FQ004_2238218&fileName=2025%EB%85%84+%EC%A0%9C36%ED%9A%8C+%EA%B0%90%EC%A0%95%ED%8F%89%EA%B0%80%EC%82%AC+2%EC%B0%A8+%EA%B0%90%EC%A0%95%ED%8F%89%EA%B0%80+%EB%B0%8F+%EB%B3%B4%EC%83%81%EB%B2%95%EA%B7%9C.pdf&fileSeq=2238218&artlSeq=5239325&href=0",
+      "articleId": "5239325",
+      "fileSeq": "2238218",
+      "officialTitle": "2025년 제36회 감정평가사 2차시험 기출문제",
+      "officialFileName": "2025년 제36회 감정평가사 2차 감정평가 및 보상법규.pdf",
+      "postedAt": null,
+      "acquiredAt": "2026-07-21T12:00:00.000Z",
+      "contentHashSha256": "602ecc18ce35044246efee2613c091b3ca456ef644feffddc5c9722613cfd302",
+      "byteLength": 257931,
+      "pageCount": 5,
+      "coverageEvidence": {
+        "method": "deterministic_pdf_text_layer_subject_heading_match",
+        "detectedSubjects": [
+          "law"
+        ],
+        "declaredSubjects": [
+          "law"
+        ],
+        "textLayerHashSha256": "3439559de1e11d37eb1f596bcebd9a99a5628ac57e69d8ba6d887250ef1f0f3a",
+        "rawTextStored": false
+      },
+      "canonicalQuestionMetadata": [
+        {
+          "questionNo": 1,
+          "points": null,
+          "structuralAnchorSha256": "8a92c7460b988915b8f8365c490ddacaef6b4ca8ad9ae0d416a26eaf5bda0ea8",
+          "lawSourceIds": [
+            "law-source-land-compensation-act",
+            "law-source-land-compensation-act-enforcement-rule"
+          ]
+        },
+        {
+          "questionNo": 2,
+          "points": null,
+          "structuralAnchorSha256": "1718f5d80a182adf429b7e5d1528adab578099726a63f4e1058b08f2dbda9381",
+          "lawSourceIds": [
+            "law-source-admin-appeals-act",
+            "law-source-admin-litigation-act",
+            "law-source-land-compensation-act",
+            "law-source-real-estate-price-disclosure-act"
+          ]
+        },
+        {
+          "questionNo": 3,
+          "points": null,
+          "structuralAnchorSha256": "195e45e547fedbb7262b81792d1c62fbd42ee1de8bc3668bbf5f1ac227446e02",
+          "lawSourceIds": [
+            "law-source-appraiser-act"
+          ]
+        },
+        {
+          "questionNo": 4,
+          "points": null,
+          "structuralAnchorSha256": "20da78c5b3aa393f8c2d28c7eea19b3ced9e4145b40dfbde2ab7f2d399342e93",
+          "lawSourceIds": [
+            "law-source-appraiser-act"
+          ]
+        }
+      ],
+      "headerDateCandidates": [],
+      "rightsDecisionId": "qnet-kogl-type-1-2014-onward",
+      "transformationProvenance": {
+        "method": "deterministic_https_download_and_sha256",
+        "rawAssetStored": false,
+        "sourceExcerptStored": false,
+        "ocrUsed": false,
+        "llmUsed": false,
+        "learnerContentUsed": false
+      }
+    },
+    {
+      "sourceId": "qnet-appraiser-second-2026-practice",
+      "sourceVersion": "5268128.2261215.9c6a4fbf1d06f1d8",
+      "authorityStatus": "official_primary_source",
+      "examRound": "second",
+      "examYear": 2026,
+      "subjectCoverage": [
+        "practice"
+      ],
+      "coverage": "complete_subject_paper",
+      "canonicalDetailUrl": "https://www.q-net.or.kr/cst003.do?id=cst00302&gSite=L&gId=60&artlSeq=5268128",
+      "canonicalDownloadUrl": "https://www.q-net.or.kr/cst003.do?id=cst00302s01&gSite=L&gId=60&fileCode=R001&filePath=bbs%2FQ004%2FQ004_2261215&fileName=%6026%EB%85%84+%EC%A0%9C37%ED%9A%8C+%EA%B0%90%EC%A0%95%ED%8F%89%EA%B0%80%EC%82%AC+2%EC%B0%A8+%281%EA%B5%90%EC%8B%9C_%EA%B0%90%EC%A0%95%ED%8F%89%EA%B0%80%EC%8B%A4%EB%AC%B4%29.pdf&fileSeq=2261215&artlSeq=5268128&href=0",
+      "articleId": "5268128",
+      "fileSeq": "2261215",
+      "officialTitle": "2026년 제37회 감정평가사 2차시험 기출문제",
+      "officialFileName": "26년 제37회 감정평가사 2차 (1교시_감정평가실무).pdf",
+      "postedAt": null,
+      "acquiredAt": "2026-07-21T12:00:00.000Z",
+      "contentHashSha256": "9c6a4fbf1d06f1d827bb8c8ddc6eb7cfb4c9218208540c95e62e772f4bc466c2",
+      "byteLength": 330108,
+      "pageCount": 17,
+      "coverageEvidence": {
+        "method": "deterministic_pdf_text_layer_subject_heading_match",
+        "detectedSubjects": [
+          "practice"
+        ],
+        "declaredSubjects": [
+          "practice"
+        ],
+        "textLayerHashSha256": "668378becfbe4e0761f745dfd90daa52b569661ddfd8b115f2121f7950d9ea0c",
+        "rawTextStored": false
+      },
+      "canonicalQuestionMetadata": [
+        {
+          "questionNo": 1,
+          "points": null,
+          "structuralAnchorSha256": "c4d56b5d603f3b8c7815e67dd1e79e940202aeaca0def85cac56063813c59c71",
+          "lawSourceIds": []
+        },
+        {
+          "questionNo": 2,
+          "points": null,
+          "structuralAnchorSha256": "e3ce56d0cb1f85a4678bb69507614f16b3ac3f642938ed495db70f27e2991837",
+          "lawSourceIds": []
+        },
+        {
+          "questionNo": 3,
+          "points": null,
+          "structuralAnchorSha256": "8a726d8d05d5c857db926490cce65552b6759680fbae2b8f093082a01242601e",
+          "lawSourceIds": []
+        },
+        {
+          "questionNo": 4,
+          "points": null,
+          "structuralAnchorSha256": "e4e1a15cddff49c76264067a4ed888f6bc854bc2a897ab3585db23e0688626e4",
+          "lawSourceIds": []
+        }
+      ],
+      "headerDateCandidates": [
+        "2026-02-20",
+        "2025-01-01"
+      ],
+      "rightsDecisionId": "qnet-kogl-type-1-2014-onward",
+      "transformationProvenance": {
+        "method": "deterministic_https_download_and_sha256",
+        "rawAssetStored": false,
+        "sourceExcerptStored": false,
+        "ocrUsed": false,
+        "llmUsed": false,
+        "learnerContentUsed": false
+      }
+    },
+    {
+      "sourceId": "qnet-appraiser-second-2026-theory",
+      "sourceVersion": "5268128.2261216.5b10f1ffb2e39b82",
+      "authorityStatus": "official_primary_source",
+      "examRound": "second",
+      "examYear": 2026,
+      "subjectCoverage": [
+        "theory"
+      ],
+      "coverage": "complete_subject_paper",
+      "canonicalDetailUrl": "https://www.q-net.or.kr/cst003.do?id=cst00302&gSite=L&gId=60&artlSeq=5268128",
+      "canonicalDownloadUrl": "https://www.q-net.or.kr/cst003.do?id=cst00302s01&gSite=L&gId=60&fileCode=R001&filePath=bbs%2FQ004%2FQ004_2261216&fileName=%6026%EB%85%84+%EC%A0%9C37%ED%9A%8C+%EA%B0%90%EC%A0%95%ED%8F%89%EA%B0%80%EC%82%AC+2%EC%B0%A8+%282%EA%B5%90%EC%8B%9C_%EA%B0%90%EC%A0%95%ED%8F%89%EA%B0%80%EC%9D%B4%EB%A1%A0%29.pdf&fileSeq=2261216&artlSeq=5268128&href=0",
+      "articleId": "5268128",
+      "fileSeq": "2261216",
+      "officialTitle": "2026년 제37회 감정평가사 2차시험 기출문제",
+      "officialFileName": "26년 제37회 감정평가사 2차 (2교시_감정평가이론).pdf",
+      "postedAt": null,
+      "acquiredAt": "2026-07-21T12:00:00.000Z",
+      "contentHashSha256": "5b10f1ffb2e39b82260d0d6cad3631ab7429cf80716ad0c1b39b44252d65b32c",
+      "byteLength": 176169,
+      "pageCount": 3,
+      "coverageEvidence": {
+        "method": "deterministic_pdf_text_layer_subject_heading_match",
+        "detectedSubjects": [
+          "theory"
+        ],
+        "declaredSubjects": [
+          "theory"
+        ],
+        "textLayerHashSha256": "9b7ee053d202eca7e30d07efa207aed72de23a9f1a7b8a2844d85796b494ea98",
+        "rawTextStored": false
+      },
+      "canonicalQuestionMetadata": [
+        {
+          "questionNo": 1,
+          "points": null,
+          "structuralAnchorSha256": "bb3bff8a64d7d74a0f9cbdfbdb0e8d88bd9d402fe582c3fc5e0b2bcfe3673764",
+          "lawSourceIds": []
+        },
+        {
+          "questionNo": 2,
+          "points": null,
+          "structuralAnchorSha256": "42abab14c646ddc45a02fbda0ba19b1028192cdebac1aa3bfe0d0aeafc1d47c0",
+          "lawSourceIds": []
+        },
+        {
+          "questionNo": 3,
+          "points": null,
+          "structuralAnchorSha256": "53875552f625a43796455c519990b28a6259a53d555e4b22e3085bee8c0eb8a9",
+          "lawSourceIds": []
+        },
+        {
+          "questionNo": 4,
+          "points": null,
+          "structuralAnchorSha256": "9fcbdcdfb5d6e0f01cfdeafb7868f59c7de84bd21e04857a837e729612449202",
+          "lawSourceIds": []
+        }
+      ],
+      "headerDateCandidates": [
+        "2010-07-07",
+        "2020-03-03",
+        "2030-03-02",
+        "2000-07-07",
+        "2026-03-03",
+        "2026-07-01"
+      ],
+      "rightsDecisionId": "qnet-kogl-type-1-2014-onward",
+      "transformationProvenance": {
+        "method": "deterministic_https_download_and_sha256",
+        "rawAssetStored": false,
+        "sourceExcerptStored": false,
+        "ocrUsed": false,
+        "llmUsed": false,
+        "learnerContentUsed": false
+      }
+    },
+    {
+      "sourceId": "qnet-appraiser-second-2026-law",
+      "sourceVersion": "5268128.2261217.8e1ae7faa097ea7f",
+      "authorityStatus": "official_primary_source",
+      "examRound": "second",
+      "examYear": 2026,
+      "subjectCoverage": [
+        "law"
+      ],
+      "coverage": "complete_subject_paper",
+      "canonicalDetailUrl": "https://www.q-net.or.kr/cst003.do?id=cst00302&gSite=L&gId=60&artlSeq=5268128",
+      "canonicalDownloadUrl": "https://www.q-net.or.kr/cst003.do?id=cst00302s01&gSite=L&gId=60&fileCode=R001&filePath=bbs%2FQ004%2FQ004_2261217&fileName=%6026%EB%85%84+%EC%A0%9C37%ED%9A%8C+%EA%B0%90%EC%A0%95%ED%8F%89%EA%B0%80%EC%82%AC+2%EC%B0%A8+%283%EA%B5%90%EC%8B%9C_%EA%B0%90%EC%A0%95%ED%8F%89%EA%B0%80+%EB%B0%8F+%EB%B3%B4%EC%83%81+%EB%B2%95%EA%B7%9C%29.pdf&fileSeq=2261217&artlSeq=5268128&href=0",
+      "articleId": "5268128",
+      "fileSeq": "2261217",
+      "officialTitle": "2026년 제37회 감정평가사 2차시험 기출문제",
+      "officialFileName": "26년 제37회 감정평가사 2차 (3교시_감정평가 및 보상 법규).pdf",
+      "postedAt": null,
+      "acquiredAt": "2026-07-21T12:00:00.000Z",
+      "contentHashSha256": "8e1ae7faa097ea7fb6de300208188992032e44ade9ca767179fedf234f69249a",
+      "byteLength": 251109,
+      "pageCount": 5,
+      "coverageEvidence": {
+        "method": "deterministic_pdf_text_layer_subject_heading_match",
+        "detectedSubjects": [
+          "law"
+        ],
+        "declaredSubjects": [
+          "law"
+        ],
+        "textLayerHashSha256": "862cdad3e85c884a24d8b29624656d6c62d4bc42fe5fb1dee966b23b3f4f38be",
+        "rawTextStored": false
+      },
+      "canonicalQuestionMetadata": [
+        {
+          "questionNo": 1,
+          "points": null,
+          "structuralAnchorSha256": "dd577a6d54e0eb6d104e67d746d1ef63baaf938cd99ff4cf027337017b26b3d7",
+          "lawSourceIds": [
+            "law-source-land-compensation-act"
+          ]
+        },
+        {
+          "questionNo": 2,
+          "points": null,
+          "structuralAnchorSha256": "908f3a994d77eaf3a71990e1c8a77181e85a09873f229cb5931980e265d04e76",
+          "lawSourceIds": [
+            "law-source-admin-litigation-act",
+            "law-source-appraiser-act",
+            "law-source-real-estate-price-disclosure-act"
+          ]
+        },
+        {
+          "questionNo": 3,
+          "points": null,
+          "structuralAnchorSha256": "6b2b1e1c5281780b2b42d4036f2048b3f3684610e6b78d8ec0bbe06bb2e6934b",
+          "lawSourceIds": [
+            "law-source-real-estate-price-disclosure-act"
+          ]
+        },
+        {
+          "questionNo": 4,
+          "points": null,
+          "structuralAnchorSha256": "5b277b43316f7f5796d2481fb9200d9c2526c7bf72c595d8dc222c64ad40318c",
+          "lawSourceIds": [
+            "law-source-appraiser-act"
+          ]
+        }
+      ],
+      "headerDateCandidates": [],
+      "rightsDecisionId": "qnet-kogl-type-1-2014-onward",
+      "transformationProvenance": {
+        "method": "deterministic_https_download_and_sha256",
+        "rawAssetStored": false,
+        "sourceExcerptStored": false,
+        "ocrUsed": false,
+        "llmUsed": false,
+        "learnerContentUsed": false
+      }
+    }
+  ],
+  "coverageUnits": [
+    {
+      "coverageId": "qnet-appraiser-second-2025-practice",
+      "sourceId": "qnet-appraiser-second-2025-practice",
+      "sourceVersion": "5239325.2238216.e13e5dc35df8f36a",
+      "contentHashSha256": "e13e5dc35df8f36a9183730cdb598ade4b523d303bdeb81e6c88da87c5e54e68",
+      "examYear": 2025,
+      "subject": "practice",
+      "coverage": "complete_subject_paper",
+      "canonicalQuestionMetadata": [
+        {
+          "questionNo": 1,
+          "points": null,
+          "structuralAnchorSha256": "8d622cc62efc20f56ba9ef26b9651e9845d373ae99357fe37378ab0eaf7a5012",
+          "lawSourceIds": []
+        },
+        {
+          "questionNo": 2,
+          "points": null,
+          "structuralAnchorSha256": "e3ae78e5ca0086a9e6122c099424b0af2a3c392350a80cabb864dfa7e508907b",
+          "lawSourceIds": []
+        },
+        {
+          "questionNo": 3,
+          "points": null,
+          "structuralAnchorSha256": "f19994add9de9b385ae1fdf41b5e32947f05ae5a6fc3d7530d47c49f48bc36b1",
+          "lawSourceIds": []
+        },
+        {
+          "questionNo": 4,
+          "points": null,
+          "structuralAnchorSha256": "19496c0bddef36cb2727fbaed07881f11a2cc6c81c0da9b2253d0ecba83f2d8c",
+          "lawSourceIds": []
+        }
+      ],
+      "headerDateCandidates": [
+        "2025-07-12",
+        "2026-07-12"
+      ]
+    },
+    {
+      "coverageId": "qnet-appraiser-second-2025-theory",
+      "sourceId": "qnet-appraiser-second-2025-theory",
+      "sourceVersion": "5239325.2238217.baa2e981454d8e10",
+      "contentHashSha256": "baa2e981454d8e10f30e0edbe8e0cb963e1359d3ff624a47167f2d4593c72ce6",
+      "examYear": 2025,
+      "subject": "theory",
+      "coverage": "complete_subject_paper",
+      "canonicalQuestionMetadata": [
+        {
+          "questionNo": 1,
+          "points": null,
+          "structuralAnchorSha256": "1ff3359c9d9ef5b50f51cbb43a8a0a779ae1c17028d06d9a02a68eec0ef62a36",
+          "lawSourceIds": []
+        },
+        {
+          "questionNo": 2,
+          "points": null,
+          "structuralAnchorSha256": "1b464e9738066369b62f35d4b97b339008c0b9a2d0b31d4f9a171d921f2450a8",
+          "lawSourceIds": [
+            "law-source-land-compensation-act",
+            "law-source-real-estate-price-disclosure-act"
+          ]
+        },
+        {
+          "questionNo": 3,
+          "points": null,
+          "structuralAnchorSha256": "012f9da942d596a765635c545a366e5430215a6fc3984e2b15538f6cb932d9fd",
+          "lawSourceIds": []
+        },
+        {
+          "questionNo": 4,
+          "points": null,
+          "structuralAnchorSha256": "8397002dccb2dcba45474dc447ebe74a9880742f072b7d2f55aac0af22324e8b",
+          "lawSourceIds": []
+        }
+      ],
+      "headerDateCandidates": [
+        "2024-06-01",
+        "2025-06-01",
+        "2023-12-01",
+        "2025-07-01"
+      ]
+    },
+    {
+      "coverageId": "qnet-appraiser-second-2025-law",
+      "sourceId": "qnet-appraiser-second-2025-law",
+      "sourceVersion": "5239325.2238218.602ecc18ce350442",
+      "contentHashSha256": "602ecc18ce35044246efee2613c091b3ca456ef644feffddc5c9722613cfd302",
+      "examYear": 2025,
+      "subject": "law",
+      "coverage": "complete_subject_paper",
+      "canonicalQuestionMetadata": [
+        {
+          "questionNo": 1,
+          "points": null,
+          "structuralAnchorSha256": "8a92c7460b988915b8f8365c490ddacaef6b4ca8ad9ae0d416a26eaf5bda0ea8",
+          "lawSourceIds": [
+            "law-source-land-compensation-act",
+            "law-source-land-compensation-act-enforcement-rule"
+          ]
+        },
+        {
+          "questionNo": 2,
+          "points": null,
+          "structuralAnchorSha256": "1718f5d80a182adf429b7e5d1528adab578099726a63f4e1058b08f2dbda9381",
+          "lawSourceIds": [
+            "law-source-admin-appeals-act",
+            "law-source-admin-litigation-act",
+            "law-source-land-compensation-act",
+            "law-source-real-estate-price-disclosure-act"
+          ]
+        },
+        {
+          "questionNo": 3,
+          "points": null,
+          "structuralAnchorSha256": "195e45e547fedbb7262b81792d1c62fbd42ee1de8bc3668bbf5f1ac227446e02",
+          "lawSourceIds": [
+            "law-source-appraiser-act"
+          ]
+        },
+        {
+          "questionNo": 4,
+          "points": null,
+          "structuralAnchorSha256": "20da78c5b3aa393f8c2d28c7eea19b3ced9e4145b40dfbde2ab7f2d399342e93",
+          "lawSourceIds": [
+            "law-source-appraiser-act"
+          ]
+        }
+      ],
+      "headerDateCandidates": []
+    },
+    {
+      "coverageId": "qnet-appraiser-second-2026-practice",
+      "sourceId": "qnet-appraiser-second-2026-practice",
+      "sourceVersion": "5268128.2261215.9c6a4fbf1d06f1d8",
+      "contentHashSha256": "9c6a4fbf1d06f1d827bb8c8ddc6eb7cfb4c9218208540c95e62e772f4bc466c2",
+      "examYear": 2026,
+      "subject": "practice",
+      "coverage": "complete_subject_paper",
+      "canonicalQuestionMetadata": [
+        {
+          "questionNo": 1,
+          "points": null,
+          "structuralAnchorSha256": "c4d56b5d603f3b8c7815e67dd1e79e940202aeaca0def85cac56063813c59c71",
+          "lawSourceIds": []
+        },
+        {
+          "questionNo": 2,
+          "points": null,
+          "structuralAnchorSha256": "e3ce56d0cb1f85a4678bb69507614f16b3ac3f642938ed495db70f27e2991837",
+          "lawSourceIds": []
+        },
+        {
+          "questionNo": 3,
+          "points": null,
+          "structuralAnchorSha256": "8a726d8d05d5c857db926490cce65552b6759680fbae2b8f093082a01242601e",
+          "lawSourceIds": []
+        },
+        {
+          "questionNo": 4,
+          "points": null,
+          "structuralAnchorSha256": "e4e1a15cddff49c76264067a4ed888f6bc854bc2a897ab3585db23e0688626e4",
+          "lawSourceIds": []
+        }
+      ],
+      "headerDateCandidates": [
+        "2026-02-20",
+        "2025-01-01"
+      ]
+    },
+    {
+      "coverageId": "qnet-appraiser-second-2026-theory",
+      "sourceId": "qnet-appraiser-second-2026-theory",
+      "sourceVersion": "5268128.2261216.5b10f1ffb2e39b82",
+      "contentHashSha256": "5b10f1ffb2e39b82260d0d6cad3631ab7429cf80716ad0c1b39b44252d65b32c",
+      "examYear": 2026,
+      "subject": "theory",
+      "coverage": "complete_subject_paper",
+      "canonicalQuestionMetadata": [
+        {
+          "questionNo": 1,
+          "points": null,
+          "structuralAnchorSha256": "bb3bff8a64d7d74a0f9cbdfbdb0e8d88bd9d402fe582c3fc5e0b2bcfe3673764",
+          "lawSourceIds": []
+        },
+        {
+          "questionNo": 2,
+          "points": null,
+          "structuralAnchorSha256": "42abab14c646ddc45a02fbda0ba19b1028192cdebac1aa3bfe0d0aeafc1d47c0",
+          "lawSourceIds": []
+        },
+        {
+          "questionNo": 3,
+          "points": null,
+          "structuralAnchorSha256": "53875552f625a43796455c519990b28a6259a53d555e4b22e3085bee8c0eb8a9",
+          "lawSourceIds": []
+        },
+        {
+          "questionNo": 4,
+          "points": null,
+          "structuralAnchorSha256": "9fcbdcdfb5d6e0f01cfdeafb7868f59c7de84bd21e04857a837e729612449202",
+          "lawSourceIds": []
+        }
+      ],
+      "headerDateCandidates": [
+        "2010-07-07",
+        "2020-03-03",
+        "2030-03-02",
+        "2000-07-07",
+        "2026-03-03",
+        "2026-07-01"
+      ]
+    },
+    {
+      "coverageId": "qnet-appraiser-second-2026-law",
+      "sourceId": "qnet-appraiser-second-2026-law",
+      "sourceVersion": "5268128.2261217.8e1ae7faa097ea7f",
+      "contentHashSha256": "8e1ae7faa097ea7fb6de300208188992032e44ade9ca767179fedf234f69249a",
+      "examYear": 2026,
+      "subject": "law",
+      "coverage": "complete_subject_paper",
+      "canonicalQuestionMetadata": [
+        {
+          "questionNo": 1,
+          "points": null,
+          "structuralAnchorSha256": "dd577a6d54e0eb6d104e67d746d1ef63baaf938cd99ff4cf027337017b26b3d7",
+          "lawSourceIds": [
+            "law-source-land-compensation-act"
+          ]
+        },
+        {
+          "questionNo": 2,
+          "points": null,
+          "structuralAnchorSha256": "908f3a994d77eaf3a71990e1c8a77181e85a09873f229cb5931980e265d04e76",
+          "lawSourceIds": [
+            "law-source-admin-litigation-act",
+            "law-source-appraiser-act",
+            "law-source-real-estate-price-disclosure-act"
+          ]
+        },
+        {
+          "questionNo": 3,
+          "points": null,
+          "structuralAnchorSha256": "6b2b1e1c5281780b2b42d4036f2048b3f3684610e6b78d8ec0bbe06bb2e6934b",
+          "lawSourceIds": [
+            "law-source-real-estate-price-disclosure-act"
+          ]
+        },
+        {
+          "questionNo": 4,
+          "points": null,
+          "structuralAnchorSha256": "5b277b43316f7f5796d2481fb9200d9c2526c7bf72c595d8dc222c64ad40318c",
+          "lawSourceIds": [
+            "law-source-appraiser-act"
+          ]
+        }
+      ],
+      "headerDateCandidates": []
+    }
+  ],
+  "coverage": {
+    "examYears": [
+      2024,
+      2025,
+      2026
+    ],
+    "subjects": [
+      "practice",
+      "theory",
+      "law"
+    ],
+    "completeYearSubjectPairs": 6,
+    "missingYearSubjectPairs": [
+      {
+        "examYear": 2024,
+        "subject": "practice",
+        "blocker": "official_combined_paper_not_deterministically_segmented"
+      },
+      {
+        "examYear": 2024,
+        "subject": "theory",
+        "blocker": "official_combined_paper_not_deterministically_segmented"
+      },
+      {
+        "examYear": 2024,
+        "subject": "law",
+        "blocker": "official_combined_paper_not_deterministically_segmented"
+      }
+    ]
+  },
+  "acquisition": {
+    "fetchCount": 12,
+    "expectedFetchCount": 12,
+    "rawAssetsStored": false,
+    "sourceExcerptsStored": false,
+    "learnerContentIncluded": false
+  }
+}
