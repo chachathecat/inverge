@@ -60,6 +60,7 @@ const defaultTestFiles = [
   "tests/s216-error-notebook-gap-taxonomy.test.mjs",
   "tests/s217-personal-core-concept-graph.test.mjs",
   "tests/s218-similar-question-review-scheduler.test.mjs",
+  "tests/s233-parallel-execution-contract.test.mjs",
   "tests/s219-learner-catalog-usage-ledger.test.mjs",
   "tests/s220-billing-entitlement-credit-usage.test.mjs",
   "tests/s221-paid-trust-privacy-cost-guardrails.test.mjs",
