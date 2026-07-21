@@ -635,6 +635,9 @@ export class OwnerAlphaPracticeRuntime {
     if (session.aiReference) {
       const next = { ...session, assistance, questionChain };
       const saved = await this.deps.repository.save(next, input.recordVersion);
+      if (saved.providerState.reference === "succeeded") {
+        await this.deps.repository.recordReferenceUsage(saved);
+      }
       return { view: toOwnerAlphaPracticeView(saved), providerFailed: false };
     }
 
@@ -743,13 +746,15 @@ export class OwnerAlphaPracticeRuntime {
     };
     const recent = await this.deps.repository.listRecentSessions();
     prepared.questionReplayLinks = buildReplayLinks(prepared, recent, now);
-    if (referenceReleased) {
-      await this.deps.repository.recordReferenceUsage(prepared);
-    }
     const saved = await this.deps.repository.save(
       prepared,
       claimed.recordVersion,
     );
+    // The learner-owned native session is canonical. A stale provider response
+    // must fail its CAS before it can create a success usage event.
+    if (referenceReleased) {
+      await this.deps.repository.recordReferenceUsage(saved);
+    }
     return { view: toOwnerAlphaPracticeView(saved), providerFailed: false };
   }
 

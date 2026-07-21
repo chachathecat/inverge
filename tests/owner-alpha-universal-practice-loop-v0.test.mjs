@@ -66,10 +66,15 @@ function memoryRepository() {
       evidence.rewrites.push({ sessionId: session.sessionId, rewrite: clone(session.rewrite) });
     },
     async recordReferenceUsage(session) {
-      evidence.referenceUsage.push({
+      const row = {
         sessionId: session.sessionId,
         providerState: session.providerState.reference,
-      });
+      };
+      const existing = evidence.referenceUsage.findIndex(
+        (item) => item.sessionId === session.sessionId,
+      );
+      if (existing === -1) evidence.referenceUsage.push(row);
+      else evidence.referenceUsage[existing] = row;
     },
     async projectCompletion(session, projection) {
       evidence.completions.push({
@@ -588,6 +593,60 @@ test("a visible in-flight provider lease blocks an updated-version hostile retry
   assert.equal(providerCalls, 1);
   releaseProvider();
   await first;
+});
+
+test("a stale provider completion cannot commit usage before canonical session CAS", async () => {
+  const repository = memoryRepository();
+  let releaseFirstProvider;
+  let providerCalls = 0;
+  const staleProvider = provider();
+  staleProvider.generateReference = async (input) => {
+    providerCalls += 1;
+    if (providerCalls === 1) {
+      await new Promise((resolve) => {
+        releaseFirstProvider = resolve;
+      });
+      return referenceDraft(input.problemModel.methodFamily);
+    }
+    throw new OwnerAlphaProviderError("timeout");
+  };
+  let id = 0;
+  let now = new Date("2026-07-22T00:00:00.000Z");
+  const runtime = new OwnerAlphaPracticeRuntime({
+    repository,
+    provider: staleProvider,
+    assertReferenceEntitlement: async () => {},
+    now: () => new Date(now),
+    createId: () => `stale-provider-${++id}`,
+    userId: "11111111-1111-4111-8111-111111111111",
+  });
+  const view = await prepareAttempt(
+    runtime,
+    "수익방식으로 순수익 1억원을 환원이율 5%로 환원하시오.",
+  );
+  const first = runtime.requestAssistance({
+    sessionId: view.sessionId,
+    recordVersion: view.recordVersion,
+    questionText: "첫 요청",
+    revealFull: false,
+  });
+  while (!releaseFirstProvider) await new Promise((resolve) => setImmediate(resolve));
+
+  now = new Date("2026-07-22T00:01:01.000Z");
+  const expiredLease = await repository.load(view.sessionId);
+  const retry = await runtime.requestAssistance({
+    sessionId: view.sessionId,
+    recordVersion: expiredLease.recordVersion,
+    questionText: "만료 후 재시도",
+    revealFull: false,
+  });
+  assert.equal(retry.providerFailed, true);
+  assert.equal(retry.view.providerState.failureCode, "timeout");
+
+  releaseFirstProvider();
+  await assert.rejects(first, /CAS record version/);
+  assert.equal(repository.evidence.referenceUsage.length, 0);
+  assert.equal((await repository.load(view.sessionId)).providerState.reference, "failed_retryable");
 });
 
 test("completion CAS is claimed before Queue, Today, Record, or rewrite projections", async () => {
