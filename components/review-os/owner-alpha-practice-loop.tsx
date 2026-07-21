@@ -41,7 +41,11 @@ function statusLabel(session: OwnerAlphaPracticeView | null) {
   if (session.status === "problem_confirmed") return "먼저 풀기";
   if (session.status === "attempt_saved") return "힌트";
   if (session.status === "reference_generating") return "힌트 생성 중";
-  if (session.status === "reference_ready") return "AI 학습용 기준안";
+  if (session.status === "reference_ready") {
+    return session.assistance.assistanceLevel === 5
+      ? "AI 학습용 기준안"
+      : "힌트";
+  }
   if (session.status === "reference_withheld") return "계산·근거 확인";
   if (session.status === "completion_pending") return "연결 저장 복구";
   if (session.status === "completed") return "다음 복습";
