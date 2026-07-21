@@ -318,3 +318,17 @@ test("workflow statically enforces same-job generation, cleanup, validation, and
   const producer = fs.readFileSync(path.join(WORKSPACE_ROOT, "scripts/automation/produce-runtime-evidence.mjs"), "utf8");
   assert.match(producer, /"--network",\s*"none"/);
 });
+
+test("producer forces PostgreSQL readiness and statements through loopback TCP", () => {
+  const producer = fs.readFileSync(path.join(WORKSPACE_ROOT, "scripts/automation/produce-runtime-evidence.mjs"), "utf8");
+  const readinessProbe = producer.match(/const ready = docker\(\[[\s\S]*?\]\);/)?.[0] ?? "";
+  const psqlHelper = producer.match(/function psql\([\s\S]*?\n}/)?.[0] ?? "";
+
+  assert.match(
+    readinessProbe,
+    /"pg_isready",\s*"--host",\s*"127\.0\.0\.1",\s*"--username",\s*"postgres",\s*"--dbname",\s*"postgres"/,
+  );
+  assert.match(psqlHelper, /"psql",\s*"--host",\s*"127\.0\.0\.1"/);
+  assert.equal((producer.match(/"pg_isready"/g) ?? []).length, 1);
+  assert.equal((producer.match(/"psql"/g) ?? []).length, 1);
+});

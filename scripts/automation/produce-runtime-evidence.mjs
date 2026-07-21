@@ -137,7 +137,17 @@ function startContainer(containerName) {
   if (started.status !== 0) throw new Error("isolated Postgres failed to start.");
 
   for (let attempt = 0; attempt < 60; attempt += 1) {
-    const ready = docker(["exec", containerName, "pg_isready", "--username", "postgres"]);
+    const ready = docker([
+      "exec",
+      containerName,
+      "pg_isready",
+      "--host",
+      "127.0.0.1",
+      "--username",
+      "postgres",
+      "--dbname",
+      "postgres",
+    ]);
     if (ready.status === 0) return;
     Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 500);
   }
@@ -151,6 +161,8 @@ function psql(containerName, sql, { allowFailure = false } = {}) {
       "--interactive",
       containerName,
       "psql",
+      "--host",
+      "127.0.0.1",
       "--no-psqlrc",
       "--quiet",
       "--tuples-only",
