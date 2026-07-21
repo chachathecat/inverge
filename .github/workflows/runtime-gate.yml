@@ -15,6 +15,9 @@ jobs:
   runtime-gate:
     name: runtime-gate
     runs-on: ubuntu-latest
+    env:
+      PR_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      RUNTIME_EVIDENCE_PATH: ${{ github.workspace }}/.agent-factory/runtime-evidence.json
     steps:
       - uses: actions/checkout@v4
         with:
@@ -23,8 +26,26 @@ jobs:
         with:
           node-version: 20
       - name: Classify risk
+        id: risk
         env:
           RISK_OUTPUT_PATH: .agent-factory/risk.json
         run: node scripts/automation/classify-risk.mjs
+      - name: Generate isolated runtime evidence
+        if: steps.risk.outputs.runtime_evidence_required == 'true'
+        run: node scripts/automation/produce-runtime-evidence.mjs --risk-file .agent-factory/risk.json
+      - name: Verify isolated runtime cleanup
+        if: always() && steps.risk.outputs.runtime_evidence_required == 'true'
+        run: node scripts/automation/produce-runtime-evidence.mjs --cleanup --require-complete
       - name: Runtime gate
+        id: runtime_gate
+        if: always()
         run: node scripts/automation/runtime-gate.mjs --risk-file .agent-factory/risk.json
+      - name: Upload metadata-only runtime evidence
+        if: steps.risk.outputs.runtime_evidence_required == 'true' && steps.runtime_gate.outcome == 'success'
+        uses: actions/upload-artifact@v4
+        with:
+          name: runtime-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.RUNTIME_EVIDENCE_PATH }}
+          if-no-files-found: ignore
+          include-hidden-files: true
+          retention-days: 7
