@@ -643,23 +643,6 @@ export class ReviewOsRepository {
     );
   }
 
-  async readAccess(userId: string, email: string | null): Promise<AccessState> {
-    const client = getUserClient(userId);
-    const profileResult = await client
-      .from("profiles")
-      .select("user_id, email, invite_status, entitlement_tier")
-      .eq("user_id", userId)
-      .maybeSingle();
-    assertSupabaseOperation(
-      "review-os.readAccess.selectProfile",
-      profileResult,
-    );
-    return mapAccess(
-      profileResult.data as Record<string, unknown> | null,
-      email,
-    );
-  }
-
   async getStudyProfile(userId: string) {
     const client = getUserClient(userId);
     const result = await client

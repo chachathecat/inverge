@@ -49,7 +49,6 @@ import {
   isSameKstDay,
   isOverdueDueAt,
 } from "@/lib/review-os/daily-study-state";
-import { isPreviewExactShaReadOnlyRequest } from "@/lib/review-os/read-only-request";
 import { reviewOsRepository } from "@/lib/review-os/repository";
 import {
   resolveReviewSchedule,
@@ -1037,10 +1036,7 @@ export class ReviewOsService {
     userId: string,
     email: string | null,
   ): Promise<AccessState> {
-    const readOnlyRequest = await isPreviewExactShaReadOnlyRequest();
-    const access = readOnlyRequest
-      ? await reviewOsRepository.readAccess(userId, email)
-      : await reviewOsRepository.ensureAccess(userId, email);
+    const access = await reviewOsRepository.ensureAccess(userId, email);
     if (!access.allowed) throw new ReviewOsInviteRequiredError();
     return access;
   }
@@ -1783,7 +1779,6 @@ export class ReviewOsService {
   }
 
   async getReviewQueue(userId: string, email: string | null) {
-    const readOnlyRequest = await isPreviewExactShaReadOnlyRequest();
     await this.ensureAccess(userId, email);
     const queue = await reviewOsRepository.listReviewQueue(userId, 10);
     const now = Date.now();
@@ -1815,7 +1810,6 @@ export class ReviewOsService {
         (left.priorityScore + leftRecentCaptureBoost)
       );
     });
-    if (readOnlyRequest) return prioritizedQueue;
     await reviewOsRepository.logUsageEvent(
       userId,
       "review_queue_view",
@@ -2003,7 +1997,6 @@ export class ReviewOsService {
     email: string | null,
     preferredMode?: "first" | "second",
   ): Promise<TodayFocus> {
-    const readOnlyRequest = await isPreviewExactShaReadOnlyRequest();
     await this.ensureAccess(userId, email);
     const [rawQueue, rawRecentItems] = await Promise.all([
       reviewOsRepository.listReviewQueue(userId, 30),
@@ -2025,7 +2018,6 @@ export class ReviewOsService {
       visibleRecentItems,
       preferredMode,
     );
-    if (readOnlyRequest) return focus;
     await reviewOsRepository.insertActionSeed(userId, {
       sourceType: "today_focus",
       seedType: "summary",
@@ -2066,7 +2058,6 @@ export class ReviewOsService {
     email: string | null,
     preferredMode: "first" | "second",
   ): Promise<WeeklyPlan> {
-    const readOnlyRequest = await isPreviewExactShaReadOnlyRequest();
     await this.ensureAccess(userId, email);
     const targetExamName = getModeLabel(preferredMode);
     const [rawQueue, rawItems] = await Promise.all([
@@ -2078,7 +2069,6 @@ export class ReviewOsService {
       (item) => item.examName === targetExamName,
     );
     const plan = buildWeeklyPlan(queue, recentItems, preferredMode);
-    if (readOnlyRequest) return plan;
     await reviewOsRepository.insertActionSeed(userId, {
       sourceType: "weekly_focus",
       seedType: "summary",
@@ -2126,13 +2116,9 @@ export class ReviewOsService {
     userId: string,
     email: string | null,
   ): Promise<WeeklyLearningSummaryRecord | null> {
-    const readOnlyRequest = await isPreviewExactShaReadOnlyRequest();
     await this.ensureAccess(userId, email);
     const weekKey = getWeekKey();
     const existing = await reviewOsRepository.getWeeklySummary(userId, weekKey);
-    if (readOnlyRequest) {
-      return existing && !isSmokeSeedWeeklySummary(existing) ? existing : null;
-    }
     if (existing && !isSmokeSeedWeeklySummary(existing)) {
       await reviewOsRepository.logUsageEvent(
         userId,

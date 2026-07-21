@@ -354,54 +354,6 @@ export async function loginWithDedicatedTestAccount(
   );
 }
 
-export async function loginWithExplicitTestAccountSession(
-  page: Page,
-  credential: ExplicitTestCredential,
-  baseUrl = runtimeBaseUrl,
-  mode: "first" | "second" = "second",
-) {
-  if (!credential.email || !credential.password || !baseUrl) {
-    throw new Error(
-      "Explicit test-account session configuration is incomplete.",
-    );
-  }
-  const signIn = await page
-    .context()
-    .request.post(new URL("/api/auth/sign-in", baseUrl).toString(), {
-      data: {
-        email: credential.email,
-        password: credential.password,
-        mode,
-      },
-      headers: protectionHeaders,
-      timeout: 30_000,
-    });
-  if (signIn.status() !== 200) {
-    throw new Error("Explicit test-account session authentication failed.");
-  }
-  const session = await page
-    .context()
-    .request.get(new URL("/api/auth/session", baseUrl).toString(), {
-      headers: protectionHeaders,
-      timeout: 30_000,
-    });
-  const body = (await session.json().catch(() => null)) as {
-    ok?: unknown;
-    session?: {
-      isAuthenticated?: unknown;
-      isDemo?: unknown;
-    };
-  } | null;
-  if (
-    session.status() !== 200 ||
-    body?.ok !== true ||
-    body.session?.isAuthenticated !== true ||
-    body.session?.isDemo !== false
-  ) {
-    throw new Error("Explicit test-account session binding failed.");
-  }
-}
-
 export async function loginWithExplicitTestAccount(
   page: Page,
   credential: ExplicitTestCredential,
