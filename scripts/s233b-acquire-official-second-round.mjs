@@ -129,11 +129,19 @@ export function parseQnetDetailHtml(html, examYear) {
 }
 
 export function parseQnetRightsNotice(html) {
-  const normalized = decodeHtml(html).replace(/\s+/gu, " ");
+  const normalized = compactText(html).normalize("NFC");
+  const scopedStatements = decodeHtml(html)
+    .replace(/<\/(?:p|div|li|tr|h[1-6])>/giu, "\n")
+    .replace(/<[^>]*>/gu, " ")
+    .split(/\n+/u)
+    .map((value) => value.replace(/\s+/gu, " ").trim())
+    .filter(Boolean);
   const hasTypeOne = /공공누리\s*(?:제)?1유형/u.test(normalized) || /open\s*type\s*0?1/iu.test(normalized);
-  const hasAttribution = hasTypeOne || /출처표시/u.test(normalized);
-  if (!hasTypeOne || !hasAttribution) {
-    throw new Error("Official Q-Net rights notice does not establish KOGL Type 1 attribution terms");
+  const hasAttribution = /출처\s*표시/u.test(normalized);
+  const hasBoundPastQuestionScope = scopedStatements.some((statement) => /기출\s*문제/u.test(statement)
+    && /2014\s*(?:년|\.)[^.\n]{0,120}(?:이후|부터)/u.test(statement));
+  if (!hasTypeOne || !hasAttribution || !hasBoundPastQuestionScope) {
+    throw new Error("Official Q-Net rights notice does not establish scoped 2014-onward KOGL Type 1 attribution terms for past questions");
   }
   return {
     licenseId: "KOGL-TYPE-1",
@@ -142,6 +150,9 @@ export function parseQnetRightsNotice(html) {
     attributionRequired: true,
     commercialUseAllowed: true,
     modificationAllowed: true,
+    scopeMaterialKind: "qnet_past_questions",
+    scopeStartYear: 2014,
+    noticeScopeValidated: true,
   };
 }
 

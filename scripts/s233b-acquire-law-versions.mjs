@@ -8,38 +8,41 @@ const LAW_GO_ORIGIN = "https://www.law.go.kr";
 const LAW_OPEN_API_OC_ENV = "LAW_OPEN_API_OC";
 const APPROVED_OFFICIAL_HOSTS = new Set(["law.go.kr", "www.law.go.kr", "open.law.go.kr"]);
 const TRANSIENT_STATUS = 502;
-const MAX_TRANSIENT_RETRIES = 3;
+const MAX_TRANSIENT_RETRIES = 1;
 const REQUEST_TIMEOUT_MS = 15_000;
 const POLITE_INTERVAL_MS = 750;
-const RETRY_BACKOFF_MS = Object.freeze([750, 1_500, 3_000]);
-const MAX_REDIRECTS = 5;
+const RETRY_BACKOFF_MS = Object.freeze([1_500]);
 const MAX_BODY_BYTES = 16 * 1024 * 1024;
-const MIN_NORMALIZED_BODY_LENGTH = 2_000;
-const TARGETS = Object.freeze([
-  {
+const MIN_RESOLVER_BODY_LENGTH = 500;
+const MIN_NORMALIZED_LAW_BODY_LENGTH = 2_000;
+const XML_CONTENT_TYPE_PATTERN = /^(?:application\/(?:[a-z0-9.+-]+\+)?xml|text\/xml)(?:;|$)/u;
+const HTML_CONTENT_TYPE_PATTERN = /^(?:text\/html|application\/xhtml\+xml)(?:;|$)/u;
+
+export const S233B_LAW_TARGETS = Object.freeze([
+  Object.freeze({
     lawSourceId: "law-source-land-compensation-act",
     officialTitleKo: "공익사업을 위한 토지 등의 취득 및 보상에 관한 법률",
     officialLsId: "009295",
-    requiredProvisionMarkers: ["제1조"],
-  },
-  {
+    requiredProvisionMarkers: Object.freeze(["제1조"]),
+  }),
+  Object.freeze({
     lawSourceId: "law-source-admin-litigation-act",
     officialTitleKo: "행정소송법",
     officialLsId: "001218",
-    requiredProvisionMarkers: ["제1조"],
-  },
-  {
+    requiredProvisionMarkers: Object.freeze(["제1조"]),
+  }),
+  Object.freeze({
     lawSourceId: "law-source-appraiser-act",
     officialTitleKo: "감정평가 및 감정평가사에 관한 법률",
     officialLsId: "012651",
-    requiredProvisionMarkers: ["제1조"],
-  },
-  {
+    requiredProvisionMarkers: Object.freeze(["제1조"]),
+  }),
+  Object.freeze({
     lawSourceId: "law-source-real-estate-price-disclosure-act",
     officialTitleKo: "부동산 가격공시에 관한 법률",
     officialLsId: "001827",
-    requiredProvisionMarkers: ["제1조"],
-  },
+    requiredProvisionMarkers: Object.freeze(["제1조"]),
+  }),
 ]);
 
 export class S233BLawAcquisitionError extends Error {
@@ -55,20 +58,25 @@ function sha256(value) {
   return createHash("sha256").update(value).digest("hex");
 }
 
-function compactText(value) {
-  return value
+function compactVisibleText(value) {
+  return decodeXmlEntities(value
     .replace(/<script\b[^>]*>[\s\S]*?<\/script>/giu, " ")
     .replace(/<style\b[^>]*>[\s\S]*?<\/style>/giu, " ")
-    .replace(/<[^>]*>/gu, " ")
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/gu, "$1")
+    .replace(/<[^>]*>/gu, " "))
+    .normalize("NFC")
+    .replace(/\s+/gu, " ")
+    .trim();
+}
+
+function decodeXmlEntities(value) {
+  return value
     .replace(/&nbsp;|&#160;/giu, " ")
     .replace(/&amp;/giu, "&")
     .replace(/&lt;/giu, "<")
     .replace(/&gt;/giu, ">")
     .replace(/&quot;/giu, "\"")
-    .replace(/&#39;|&apos;/giu, "'")
-    .normalize("NFC")
-    .replace(/\s+/gu, " ")
-    .trim();
+    .replace(/&#39;|&apos;/giu, "'");
 }
 
 function escapeRegExp(value) {
@@ -77,6 +85,23 @@ function escapeRegExp(value) {
 
 function isoDate(year, month, day) {
   return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+}
+
+function compactDate(value) {
+  const digits = String(value ?? "").replace(/[^0-9]/gu, "");
+  if (!/^\d{8}$/u.test(digits)) return null;
+  return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6, 8)}`;
+}
+
+function normalizedNumericIdentifier(value) {
+  const digits = String(value ?? "").match(/\d+/u)?.[0];
+  return digits ? digits.replace(/^0+(?=\d)/u, "") : null;
+}
+
+function sameNumericIdentifier(left, right) {
+  const normalizedLeft = normalizedNumericIdentifier(left);
+  const normalizedRight = normalizedNumericIdentifier(right);
+  return normalizedLeft !== null && normalizedLeft === normalizedRight;
 }
 
 function canonicalPublicResolverUrl(target, effectiveDate) {
@@ -95,35 +120,40 @@ function canonicalPublicVersionUrl(lsiSeq, effectiveDate) {
   return url;
 }
 
-function openApiVersionUrl(target, effectiveDate, oc, lsiSeq = null) {
+export function buildOpenApiEffectiveDateUrl({ target, effectiveDate, oc, lsiSeq }) {
+  if (!/^\d+$/u.test(String(lsiSeq ?? ""))) {
+    throw new S233BLawAcquisitionError(
+      "S233B_LAW_GO_KR_MST_REQUIRED",
+      `Official MST is required for ${target.lawSourceId}`,
+    );
+  }
   const url = new URL("/DRF/lawService.do", LAW_GO_ORIGIN);
-  url.searchParams.set(lsiSeq ? "MST" : "ID", lsiSeq ?? target.officialLsId);
-  url.searchParams.set("OC", oc);
+  url.searchParams.set("target", "eflaw");
+  url.searchParams.set("type", "XML");
+  url.searchParams.set("MST", String(lsiSeq));
   url.searchParams.set("efYd", effectiveDate.replaceAll("-", ""));
-  url.searchParams.set("mobileYn", "Y");
-  url.searchParams.set("target", "law");
-  url.searchParams.set("type", "HTML");
+  url.searchParams.set("chrClsCd", "010202");
+  url.searchParams.set("OC", oc);
   return url;
 }
 
 function approvedOcFromEnvironment(environment = process.env) {
-  const oc = environment[LAW_OPEN_API_OC_ENV]?.trim();
-  if (!oc) return null;
-  if (/^(?:test|demo|sample|placeholder|changeme)$/iu.test(oc) || oc.length > 200 || /[\s/?#&=]/u.test(oc)) {
+  const value = environment[LAW_OPEN_API_OC_ENV];
+  if (typeof value !== "string" || value.trim() === "") {
     throw new S233BLawAcquisitionError(
       "S233B_LAW_GO_KR_OC_REQUIRED",
-      `${LAW_OPEN_API_OC_ENV} is present but is not an approved National Law Information Center OC`,
+      "The official National Law Information Center OC is required",
       { validOcAvailable: false, secretName: LAW_OPEN_API_OC_ENV },
     );
   }
-  return oc;
+  return value;
 }
 
 function validateOfficialUrl(value) {
   const url = value instanceof URL ? new URL(value) : new URL(value);
   if (url.protocol !== "https:" || !APPROVED_OFFICIAL_HOSTS.has(url.hostname)) {
     throw new S233BLawAcquisitionError(
-      "S233B_LAW_GO_KR_UNAPPROVED_REDIRECT",
+      "S233B_LAW_GO_KR_UNAPPROVED_ORIGIN",
       "National Law Information Center request left the approved HTTPS origins",
       { finalOfficialHostname: APPROVED_OFFICIAL_HOSTS.has(url.hostname) ? url.hostname : "unapproved" },
     );
@@ -132,9 +162,8 @@ function validateOfficialUrl(value) {
 }
 
 function endpointFamily(url) {
-  return url.pathname.startsWith("/DRF/")
-    ? "DRF/lawService.do"
-    : `LSW/${url.pathname.split("/").at(-1)}`;
+  if (url.pathname === "/DRF/lawService.do") return "/DRF/lawService.do";
+  return `/LSW/${url.pathname.split("/").at(-1)}`;
 }
 
 function delay(ms) {
@@ -151,10 +180,8 @@ function safeDiagnostics(transport, url, overrides = {}) {
     endpointFamily: endpointFamily(url),
     initialScheme: url.protocol.slice(0, -1),
     finalOfficialHostname: transport.lastFinalOfficialHostname ?? url.hostname,
-    redirectCount: transport.lastRedirectCount ?? 0,
     attempts: transport.attemptCount,
     statusCounts: { ...transport.statusCounts },
-    validOcAvailable: transport.validOcAvailable,
     ...overrides,
   };
 }
@@ -171,247 +198,225 @@ async function readBoundedBody(response, target, contentType) {
   return new TextDecoder(charset === "euc-kr" ? "euc-kr" : "utf-8", { fatal: false }).decode(bytes);
 }
 
-async function requestOfficialHtml({ fetchImpl, sleepImpl, transport, initialUrl, target, requireLawBody = true }) {
+async function requestOfficialDocument({
+  fetchImpl,
+  sleepImpl,
+  transport,
+  initialUrl,
+  target,
+  expectedResponseType,
+  credentialBearing,
+}) {
   const requestUrl = validateOfficialUrl(initialUrl);
   const statusCountsForRequest = {};
   transport.logicalRequestCount += 1;
+  if (credentialBearing) transport.credentialBearingLogicalRequestCount += 1;
 
   for (let retry = 0; retry <= MAX_TRANSIENT_RETRIES; retry += 1) {
     const waitForRateLimit = Math.max(0, POLITE_INTERVAL_MS - (Date.now() - transport.lastRequestAt));
     if (waitForRateLimit > 0) await sleepImpl(waitForRateLimit);
     transport.lastRequestAt = Date.now();
     transport.attemptCount += 1;
+    if (credentialBearing) transport.credentialBearingAttemptCount += 1;
+    transport.httpRequestCount += 1;
 
-    let currentUrl = requestUrl;
-    let redirectCount = 0;
-    while (true) {
-      transport.httpRequestCount += 1;
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-      let response;
-      try {
-        response = await fetchImpl(currentUrl, {
-          method: "GET",
-          redirect: "manual",
-          headers: {
-            accept: "text/html,application/xhtml+xml",
-            "accept-encoding": "gzip, deflate, br",
-            "user-agent": "Inverge-S233B-Official-Source-Acquirer/2.0",
-          },
-          signal: controller.signal,
-        });
-      } catch (error) {
-        clearTimeout(timeout);
-        throw new S233BLawAcquisitionError(
-          "S233B_LAW_GO_KR_TRANSPORT_FAILURE",
-          `Official law transport failed for ${target.lawSourceId}`,
-          safeDiagnostics(transport, requestUrl, { failureKind: error?.name === "AbortError" ? "timeout" : "network" }),
-        );
-      }
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    let response;
+    try {
+      response = await fetchImpl(requestUrl, {
+        method: "GET",
+        redirect: "manual",
+        headers: {
+          accept: expectedResponseType === "xml" ? "application/xml,text/xml" : "text/html,application/xhtml+xml",
+          "accept-encoding": "gzip, deflate, br",
+          "user-agent": "Inverge-S233B-Official-Source-Acquirer/3.0",
+        },
+        signal: controller.signal,
+      });
+    } catch (error) {
       clearTimeout(timeout);
-
-      incrementStatus(transport.statusCounts, response.status);
-      incrementStatus(statusCountsForRequest, response.status);
-      transport.lastFinalOfficialHostname = currentUrl.hostname;
-      transport.lastRedirectCount = redirectCount;
-
-      if ([301, 302, 303, 307, 308].includes(response.status)) {
-        await response.body?.cancel();
-        const location = response.headers.get("location");
-        if (!location || redirectCount >= MAX_REDIRECTS) {
-          throw new S233BLawAcquisitionError(
-            "S233B_LAW_GO_KR_REDIRECT_FAILURE",
-            `Official law redirect chain is invalid for ${target.lawSourceId}`,
-            safeDiagnostics(transport, requestUrl),
-          );
-        }
-        currentUrl = validateOfficialUrl(new URL(location, currentUrl));
-        redirectCount += 1;
-        continue;
-      }
-
-      if (response.status === TRANSIENT_STATUS && retry < MAX_TRANSIENT_RETRIES) {
-        await response.body?.cancel();
-        await sleepImpl(RETRY_BACKOFF_MS[retry]);
-        break;
-      }
-
-      if (response.status === TRANSIENT_STATUS) {
-        await response.body?.cancel();
-        throw new S233BLawAcquisitionError(
-          "S233B_LAW_GO_KR_OFFICIAL_ORIGIN_UNAVAILABLE",
-          `Official law origin returned repeated HTTP ${TRANSIENT_STATUS} for ${target.lawSourceId}`,
-          safeDiagnostics(transport, requestUrl, { statusCountsForRequest }),
-        );
-      }
-
-      if (!response.ok) {
-        await response.body?.cancel();
-        throw new S233BLawAcquisitionError(
-          "S233B_LAW_GO_KR_HTTP_FAILURE",
-          `Official law request failed with HTTP ${response.status} for ${target.lawSourceId}`,
-          safeDiagnostics(transport, requestUrl, { statusCountsForRequest }),
-        );
-      }
-
-      const contentType = response.headers.get("content-type")?.toLowerCase() ?? "";
-      if (!/^(?:text\/html|application\/xhtml\+xml)(?:;|$)/u.test(contentType)) {
-        await response.body?.cancel();
-        throw new S233BLawAcquisitionError(
-          "S233B_LAW_GO_KR_UNEXPECTED_CONTENT_TYPE",
-          `Official law response has an unexpected content type for ${target.lawSourceId}`,
-          safeDiagnostics(transport, requestUrl, { contentType: contentType.split(";")[0] || "missing" }),
-        );
-      }
-
-      const html = await readBoundedBody(response, target, contentType);
-      const normalizedBody = compactText(html);
-      const loginPage = /<form[^>]+(?:login|usrLogin)/iu.test(html);
-      if (normalizedBody.length < (requireLawBody ? MIN_NORMALIZED_BODY_LENGTH : 500)
-        || /(?:페이지를\s*찾을\s*수\s*없|서비스\s*오류|시스템\s*오류|접근이\s*제한)/u.test(normalizedBody)
-        || loginPage) {
-        throw new S233BLawAcquisitionError(
-          "S233B_LAW_GO_KR_INVALID_BODY",
-          `Official law response is empty, partial, an error page, or a login page for ${target.lawSourceId}`,
-          safeDiagnostics(transport, requestUrl, { failureKind: loginPage ? "credential_gate" : "invalid_body" }),
-        );
-      }
-
-      transport.successfulResponseCount += 1;
-      return {
-        html,
-        normalizedBody,
-        contentHashSha256: sha256(normalizedBody),
-        redirectCount,
-        finalOfficialHostname: currentUrl.hostname,
-        contentType: contentType.split(";")[0],
-      };
+      throw new S233BLawAcquisitionError(
+        "S233B_LAW_GO_KR_TRANSPORT_FAILURE",
+        `Official law transport failed for ${target.lawSourceId}`,
+        safeDiagnostics(transport, requestUrl, { failureKind: error?.name === "AbortError" ? "timeout" : "network" }),
+      );
     }
+    clearTimeout(timeout);
+
+    incrementStatus(transport.statusCounts, response.status);
+    incrementStatus(statusCountsForRequest, response.status);
+    transport.lastFinalOfficialHostname = requestUrl.hostname;
+
+    if ([301, 302, 303, 307, 308].includes(response.status)) {
+      await response.body?.cancel();
+      throw new S233BLawAcquisitionError(
+        "S233B_LAW_GO_KR_REDIRECT_REJECTED",
+        `Official law redirect was rejected for ${target.lawSourceId}`,
+        safeDiagnostics(transport, requestUrl, { statusCountsForRequest, redirectCount: 1 }),
+      );
+    }
+
+    if (response.status === TRANSIENT_STATUS && retry < MAX_TRANSIENT_RETRIES) {
+      await response.body?.cancel();
+      await sleepImpl(RETRY_BACKOFF_MS[retry]);
+      continue;
+    }
+    if (!response.ok) {
+      await response.body?.cancel();
+      throw new S233BLawAcquisitionError(
+        response.status === TRANSIENT_STATUS
+          ? "S233B_LAW_GO_KR_OFFICIAL_ORIGIN_UNAVAILABLE"
+          : "S233B_LAW_GO_KR_HTTP_FAILURE",
+        `Official law request failed with HTTP ${response.status} for ${target.lawSourceId}`,
+        safeDiagnostics(transport, requestUrl, { statusCountsForRequest }),
+      );
+    }
+
+    const contentType = response.headers.get("content-type")?.toLowerCase() ?? "";
+    const contentTypeAllowed = expectedResponseType === "xml"
+      ? XML_CONTENT_TYPE_PATTERN.test(contentType)
+      : HTML_CONTENT_TYPE_PATTERN.test(contentType);
+    if (!contentTypeAllowed) {
+      await response.body?.cancel();
+      throw new S233BLawAcquisitionError(
+        "S233B_LAW_GO_KR_UNEXPECTED_CONTENT_TYPE",
+        `Official law response has an unexpected content type for ${target.lawSourceId}`,
+        safeDiagnostics(transport, requestUrl, { expectedResponseType, contentType: contentType.split(";")[0] || "missing" }),
+      );
+    }
+
+    const body = await readBoundedBody(response, target, contentType);
+    transport.successfulResponseCount += 1;
+    return {
+      body,
+      contentType: contentType.split(";")[0],
+      finalOfficialHostname: requestUrl.hostname,
+    };
   }
   throw new Error("unreachable");
 }
 
-function sameOfficialVersion(left, right) {
-  return left.lsiSeq === right.lsiSeq
-    && left.lsId === right.lsId
-    && left.effectiveDate === right.effectiveDate
-    && left.promulgatedAt === right.promulgatedAt
-    && left.promulgationNumber === right.promulgationNumber;
+function extractTagValue(xml, tagNames) {
+  for (const tagName of tagNames) {
+    const tag = escapeRegExp(tagName);
+    const match = xml.match(new RegExp(`<${tag}(?:\\s[^>]*)?>(?:<!\\[CDATA\\[)?([\\s\\S]*?)(?:\\]\\]>)?<\\/${tag}>`, "iu"));
+    if (match) return compactVisibleText(match[1]);
+  }
+  return null;
 }
 
-function assertResolvedForDate(version, target, requestedDate) {
-  if (version.lsId !== target.officialLsId) {
-    throw new Error(`${target.lawSourceId} resolved to an unexpected official law ID`);
-  }
-  if (version.effectiveDate > requestedDate || version.promulgatedAt > requestedDate) {
-    throw new Error(`${target.lawSourceId} resolved to a version not yet in force on ${requestedDate}`);
-  }
+function extractAllTagValues(xml, tagName) {
+  const tag = escapeRegExp(tagName);
+  const pattern = new RegExp(`<${tag}(?:\\s[^>]*)?>(?:<!\\[CDATA\\[)?([\\s\\S]*?)(?:\\]\\]>)?<\\/${tag}>`, "giu");
+  return [...xml.matchAll(pattern)].map((match) => compactVisibleText(match[1])).filter(Boolean);
 }
 
-function credentialRequired(error, transport) {
-  const credentialStatus = error?.diagnostics?.statusCountsForRequest?.["401"]
-    || error?.diagnostics?.statusCountsForRequest?.["403"];
-  if (!transport.ocConfigured && (credentialStatus || error?.diagnostics?.failureKind === "credential_gate")) {
-    return new S233BLawAcquisitionError(
-      "S233B_LAW_GO_KR_OC_REQUIRED",
-      "The official National Law Information Center route requires an approved OC and no verified OC is configured",
-      {
-        validOcAvailable: false,
-        secretName: LAW_OPEN_API_OC_ENV,
-        applicationUrl: "https://open.law.go.kr/LSO/main.do",
-        resumesWithoutCodeChanges: true,
-      },
-    );
-  }
-  return error;
+function failClosedParse(code, target, failureKind) {
+  throw new S233BLawAcquisitionError(
+    code,
+    `Official law response identity or completeness validation failed for ${target.lawSourceId}`,
+    { failureKind },
+  );
 }
 
-function publicHistoricalBodyRequiresOc(error, transport) {
-  if (!transport.ocConfigured && error instanceof S233BLawAcquisitionError
-    && error.code === "S233B_LAW_GO_KR_INVALID_BODY") {
-    return new S233BLawAcquisitionError(
-      "S233B_LAW_GO_KR_OC_REQUIRED",
-      "The public official resolver exposes the exact historical identity, but its complete law body is unavailable without the approved Open API path",
-      {
-        endpointFamily: error.diagnostics?.endpointFamily ?? "LSW/lsInfoR.do",
-        validOcAvailable: false,
-        secretName: LAW_OPEN_API_OC_ENV,
-        applicationUrl: "https://open.law.go.kr/LSO/main.do",
-        resumesWithoutCodeChanges: true,
-      },
-    );
+export function parseOfficialResolverHtml(html, target) {
+  const text = compactVisibleText(html);
+  if (text.length < MIN_RESOLVER_BODY_LENGTH
+    || /(?:페이지를\s*찾을\s*수\s*없|서비스\s*오류|시스템\s*오류|접근이\s*제한)/u.test(text)
+    || /<form[^>]+(?:login|usrLogin)/iu.test(html)) {
+    failClosedParse("S233B_LAW_GO_KR_INVALID_RESOLVER", target, "invalid_resolver_body");
   }
-  return error;
-}
-
-async function resolveVersionAtDate({ target, requestedDate, oc, fetchImpl, sleepImpl, transport }) {
-  const resolverUrl = oc
-    ? openApiVersionUrl(target, requestedDate, oc)
-    : canonicalPublicResolverUrl(target, requestedDate);
-  let response;
-  try {
-    response = await requestOfficialHtml({
-      fetchImpl,
-      sleepImpl,
-      transport,
-      initialUrl: resolverUrl,
-      target,
-      requireLawBody: Boolean(oc),
-    });
-  } catch (error) {
-    throw credentialRequired(error, transport);
-  }
-  const version = parseOfficialLawPage(response.html, target, { requireProvisionMarkers: Boolean(oc) });
-  assertResolvedForDate(version, target, requestedDate);
-  if (oc) transport.validOcAvailable = true;
-  return { version, response };
-}
-
-async function fetchImmutableVersion({ target, requestedDate, version, oc, fetchImpl, sleepImpl, transport }) {
-  const immutableUrl = oc
-    ? openApiVersionUrl(target, requestedDate, oc, version.lsiSeq)
-    : canonicalPublicVersionUrl(version.lsiSeq, requestedDate);
-  let response;
-  try {
-    response = await requestOfficialHtml({ fetchImpl, sleepImpl, transport, initialUrl: immutableUrl, target });
-  } catch (error) {
-    throw publicHistoricalBodyRequiresOc(error, transport);
-  }
-  const immutable = parseOfficialLawPage(response.html, target);
-  if (!sameOfficialVersion(version, immutable)) {
-    throw new Error(`${target.lawSourceId} immutable historical identifier does not match the effective-date resolver`);
-  }
-  return { version: immutable, response };
-}
-
-export function parseOfficialLawPage(html, target, { requireProvisionMarkers = true } = {}) {
-  const text = compactText(html);
   const title = escapeRegExp(target.officialTitleKo);
   const header = text.match(new RegExp(`${title}(?:\\s*\\(\\s*약칭\\s*:[^)]+\\))?\\s*\\[시행\\s+(\\d{4})\\.\\s*(\\d{1,2})\\.\\s*(\\d{1,2})\\.\\]\\s*\\[법률\\s+제(\\d+)호,\\s*(\\d{4})\\.\\s*(\\d{1,2})\\.\\s*(\\d{1,2})\\.,\\s*([^\\]]+)\\]`, "u"));
-  if (!header) throw new Error(`Official law page does not expose the pinned header for ${target.lawSourceId}`);
-  const lsiSeq = html.match(/[?&]lsiSeq=(\d+)/u)?.[1]
-    ?? html.match(/(?:name|id)=["']lsiSeq["'][^>]*value=["'](\d+)["']/iu)?.[1]
-    ?? html.match(/lsiSeq\s*[:=]\s*["']?(\d+)/iu)?.[1];
+  const lsiSeq = html.match(/[?&](?:lsiSeq|MST)=(\d+)/iu)?.[1]
+    ?? html.match(/(?:name|id)=["'](?:lsiSeq|MST)["'][^>]*value=["'](\d+)["']/iu)?.[1]
+    ?? html.match(/(?:lsiSeq|MST)\s*[:=]\s*["']?(\d+)/iu)?.[1];
   const lsId = html.match(/[?&]lsId=([0-9]+)/u)?.[1]
     ?? html.match(/(?:name|id)=["']lsId["'][^>]*value=["']([0-9]+)["']/iu)?.[1]
     ?? html.match(/lsId\s*[:=]\s*["']?([0-9]+)/iu)?.[1];
-  if (!lsiSeq) throw new Error(`Official law page does not expose lsiSeq for ${target.lawSourceId}`);
-  if (requireProvisionMarkers) {
-    for (const marker of target.requiredProvisionMarkers) {
-      if (!text.includes(marker)) {
-        throw new Error(`Official law page does not expose required provision marker ${marker} for ${target.lawSourceId}`);
-      }
-    }
+  if (!header || !lsiSeq || !lsId || !sameNumericIdentifier(lsId, target.officialLsId)) {
+    failClosedParse("S233B_LAW_GO_KR_AMBIGUOUS_VERSION", target, "resolver_identity_mismatch");
   }
   return {
+    officialTitleKo: target.officialTitleKo,
     effectiveDate: isoDate(header[1], header[2], header[3]),
     promulgationNumber: header[4],
     promulgatedAt: isoDate(header[5], header[6], header[7]),
     amendmentKindKo: header[8].trim(),
     lsiSeq,
-    lsId: lsId ?? target.officialLsId,
-    requiredProvisionMarkers: requireProvisionMarkers ? [...target.requiredProvisionMarkers] : [],
+    lsId: target.officialLsId,
   };
+}
+
+export function parseOfficialLawXml(xml, target, { expectedMst, requestedDate }) {
+  if (/<!DOCTYPE|<!ENTITY/iu.test(xml)
+    || /<(?:html|script)\b/iu.test(xml)
+    || !/<(?:법령|Law)(?:\s|>)/u.test(xml)) {
+    failClosedParse("S233B_LAW_GO_KR_XML_MASQUERADE", target, "xml_masquerade");
+  }
+  const normalizedBody = compactVisibleText(xml);
+  const title = extractTagValue(xml, ["법령명_한글", "법령명한글", "법령명"]);
+  const lsId = extractTagValue(xml, ["법령ID", "ID"]);
+  const effectiveDate = compactDate(extractTagValue(xml, ["시행일자"]));
+  const promulgatedAt = compactDate(extractTagValue(xml, ["공포일자"]));
+  const promulgationNumber = normalizedNumericIdentifier(extractTagValue(xml, ["공포번호"]));
+  const amendmentKindKo = extractTagValue(xml, ["제개정구분"]);
+  const mstCandidates = [
+    extractTagValue(xml, ["법령일련번호", "MST", "lsi_seq", "법령키"]),
+    xml.match(/<법령\b[^>]*\b(?:법령키|MST|lsi_seq)=["'](\d+)["']/iu)?.[1] ?? null,
+  ].filter(Boolean);
+  const mstMatched = mstCandidates.some((candidate) => sameNumericIdentifier(candidate, expectedMst));
+  const articleBodies = extractAllTagValues(xml, "조문내용");
+
+  if (title?.replace(/\s+/gu, "") !== target.officialTitleKo.replace(/\s+/gu, "")) {
+    failClosedParse("S233B_LAW_GO_KR_IDENTITY_MISMATCH", target, "law_title_mismatch");
+  }
+  if (!sameNumericIdentifier(lsId, target.officialLsId)) {
+    failClosedParse("S233B_LAW_GO_KR_IDENTITY_MISMATCH", target, "law_id_mismatch");
+  }
+  if (!mstMatched) {
+    failClosedParse("S233B_LAW_GO_KR_IDENTITY_MISMATCH", target, "mst_mismatch_or_missing");
+  }
+  if (!effectiveDate || !promulgatedAt || !promulgationNumber || !amendmentKindKo
+    || effectiveDate > requestedDate || promulgatedAt > requestedDate) {
+    failClosedParse("S233B_LAW_GO_KR_AMBIGUOUS_VERSION", target, "effective_version_mismatch");
+  }
+  if (normalizedBody.length < MIN_NORMALIZED_LAW_BODY_LENGTH || articleBodies.length === 0) {
+    failClosedParse("S233B_LAW_GO_KR_INCOMPLETE_BODY", target, "incomplete_law_body");
+  }
+  for (const marker of target.requiredProvisionMarkers) {
+    if (!normalizedBody.includes(marker)) {
+      failClosedParse("S233B_LAW_GO_KR_INCOMPLETE_BODY", target, "required_provision_missing");
+    }
+  }
+  return {
+    officialTitleKo: target.officialTitleKo,
+    effectiveDate,
+    promulgatedAt,
+    promulgationNumber,
+    amendmentKindKo,
+    lsiSeq: String(expectedMst),
+    lsId: target.officialLsId,
+    normalizedBody,
+    requiredProvisionMarkers: [...target.requiredProvisionMarkers],
+  };
+}
+
+function sameOfficialVersion(left, right) {
+  return sameNumericIdentifier(left.lsiSeq, right.lsiSeq)
+    && sameNumericIdentifier(left.lsId, right.lsId)
+    && left.effectiveDate === right.effectiveDate
+    && left.promulgatedAt === right.promulgatedAt
+    && sameNumericIdentifier(left.promulgationNumber, right.promulgationNumber);
+}
+
+function assertResolvedForDate(version, target, requestedDate) {
+  if (!sameNumericIdentifier(version.lsId, target.officialLsId)
+    || version.effectiveDate > requestedDate
+    || version.promulgatedAt > requestedDate) {
+    failClosedParse("S233B_LAW_GO_KR_AMBIGUOUS_VERSION", target, "not_applicable_to_requested_date");
+  }
 }
 
 function collectSelectedLawBindings(sourceSnapshot) {
@@ -427,12 +432,51 @@ function collectSelectedLawBindings(sourceSnapshot) {
       bindings.set(lawSourceId, list);
     }
   }
-  const expected = TARGETS.map((target) => target.lawSourceId).sort();
+  const expected = S233B_LAW_TARGETS.map((target) => target.lawSourceId).sort();
   const actual = [...bindings.keys()].sort();
   if (JSON.stringify(actual) !== JSON.stringify(expected)) {
     throw new Error(`Official law-question extraction changed; expected ${expected.join(",")}, received ${actual.join(",")}`);
   }
   return bindings;
+}
+
+async function resolveAndAcquireExamDateVersion({ target, oc, fetchImpl, sleepImpl, transport }) {
+  const resolverUrl = canonicalPublicResolverUrl(target, S233B_EXAM_DATE);
+  const resolverResponse = await requestOfficialDocument({
+    fetchImpl,
+    sleepImpl,
+    transport,
+    initialUrl: resolverUrl,
+    target,
+    expectedResponseType: "html",
+    credentialBearing: false,
+  });
+  const resolverVersion = parseOfficialResolverHtml(resolverResponse.body, target);
+  assertResolvedForDate(resolverVersion, target, S233B_EXAM_DATE);
+
+  const openApiUrl = buildOpenApiEffectiveDateUrl({
+    target,
+    effectiveDate: S233B_EXAM_DATE,
+    oc,
+    lsiSeq: resolverVersion.lsiSeq,
+  });
+  const apiResponse = await requestOfficialDocument({
+    fetchImpl,
+    sleepImpl,
+    transport,
+    initialUrl: openApiUrl,
+    target,
+    expectedResponseType: "xml",
+    credentialBearing: true,
+  });
+  const apiVersion = parseOfficialLawXml(apiResponse.body, target, {
+    expectedMst: resolverVersion.lsiSeq,
+    requestedDate: S233B_EXAM_DATE,
+  });
+  if (!sameOfficialVersion(resolverVersion, apiVersion)) {
+    failClosedParse("S233B_LAW_GO_KR_IDENTITY_MISMATCH", target, "resolver_api_version_mismatch");
+  }
+  return { version: apiVersion, response: apiResponse };
 }
 
 export async function acquireS233BLawVersions({
@@ -446,12 +490,9 @@ export async function acquireS233BLawVersions({
   if (sourceSnapshot?.examDateEvidence?.examDate !== S233B_EXAM_DATE) {
     throw new Error(`Law acquisition requires official S233B exam date ${S233B_EXAM_DATE}`);
   }
-  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u.test(acquiredAt)) {
-    throw new Error("acquiredAt must be a canonical UTC ISO-8601 timestamp");
-  }
-  const acquisitionDate = acquiredAt.slice(0, 10);
-  if (acquisitionDate < S233B_EXAM_DATE) {
-    throw new Error("acquiredAt cannot precede the S233B exam date");
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u.test(acquiredAt)
+    || acquiredAt.slice(0, 10) < S233B_EXAM_DATE) {
+    throw new Error("acquiredAt must be a canonical UTC timestamp on or after the S233B exam date");
   }
   if (typeof fetchImpl !== "function" || typeof sleepImpl !== "function") {
     throw new Error("fetchImpl and sleepImpl must be functions");
@@ -459,58 +500,31 @@ export async function acquireS233BLawVersions({
   const questionBindings = collectSelectedLawBindings(sourceSnapshot);
   const oc = approvedOcFromEnvironment(environment);
   const transport = {
-    mode: oc ? "open_api_with_configured_oc" : "public_html_no_credential",
-    ocConfigured: Boolean(oc),
-    validOcAvailable: false,
+    mode: "public_mst_resolver_then_effective_date_open_api_xml",
     logicalRequestCount: 0,
+    credentialBearingLogicalRequestCount: 0,
     httpRequestCount: 0,
     attemptCount: 0,
+    credentialBearingAttemptCount: 0,
     successfulResponseCount: 0,
     statusCounts: {},
     lastRequestAt: 0,
     lastFinalOfficialHostname: null,
-    lastRedirectCount: 0,
   };
   const versions = [];
 
-  for (const target of TARGETS) {
-    const examResolved = await resolveVersionAtDate({
-      target, requestedDate: S233B_EXAM_DATE, oc, fetchImpl, sleepImpl, transport,
-    });
-    const examImmutable = await fetchImmutableVersion({
+  for (const target of S233B_LAW_TARGETS) {
+    const acquired = await resolveAndAcquireExamDateVersion({
       target,
-      requestedDate: S233B_EXAM_DATE,
-      version: examResolved.version,
       oc,
       fetchImpl,
       sleepImpl,
       transport,
     });
-    const applicable = examImmutable.version;
-
-    const currentResolved = acquisitionDate === S233B_EXAM_DATE
-      ? examResolved
-      : await resolveVersionAtDate({
-        target, requestedDate: acquisitionDate, oc, fetchImpl, sleepImpl, transport,
-      });
-    const currentImmutable = currentResolved.version.lsiSeq === applicable.lsiSeq
-      ? examImmutable
-      : await fetchImmutableVersion({
-        target,
-        requestedDate: acquisitionDate,
-        version: currentResolved.version,
-        oc,
-        fetchImpl,
-        sleepImpl,
-        transport,
-      });
-    const current = currentImmutable.version;
-    const applicableLawVersionId = `${target.lawSourceId}@${applicable.effectiveDate}#${applicable.promulgationNumber}`;
-    const currentLawVersionId = `${target.lawSourceId}@${current.effectiveDate}#${current.promulgationNumber}`;
-    const sameAsCurrent = applicableLawVersionId === currentLawVersionId && applicable.lsiSeq === current.lsiSeq;
-
+    const version = acquired.version;
+    const lawVersionId = `${target.lawSourceId}:${version.effectiveDate}:${version.promulgationNumber}`;
     versions.push({
-      lawVersionId: applicableLawVersionId,
+      lawVersionId,
       lawSourceId: target.lawSourceId,
       officialTitleKo: target.officialTitleKo,
       jurisdiction: "KR",
@@ -518,28 +532,21 @@ export async function acquireS233BLawVersions({
       versionStatus: "verified",
       examDateApplicability: "applicable_to_exam_date",
       examDate: S233B_EXAM_DATE,
-      effectiveDate: applicable.effectiveDate,
-      promulgatedAt: applicable.promulgatedAt,
-      promulgationNumber: applicable.promulgationNumber,
-      amendmentKindKo: applicable.amendmentKindKo,
-      officialLsiSeq: applicable.lsiSeq,
+      effectiveDate: version.effectiveDate,
+      promulgatedAt: version.promulgatedAt,
+      promulgationNumber: version.promulgationNumber,
+      amendmentKindKo: version.amendmentKindKo,
+      officialLsiSeq: version.lsiSeq,
+      officialMst: version.lsiSeq,
       officialLsId: target.officialLsId,
-      canonicalVersionUrl: canonicalPublicVersionUrl(applicable.lsiSeq, S233B_EXAM_DATE).toString(),
+      canonicalVersionUrl: canonicalPublicVersionUrl(version.lsiSeq, S233B_EXAM_DATE).toString(),
       effectiveDateResolverUrl: canonicalPublicResolverUrl(target, S233B_EXAM_DATE).toString(),
-      contentHashSha256: examImmutable.response.contentHashSha256,
-      contentNormalizationVersion: "s233b.law_html_visible_text_nfc_whitespace.v1",
-      requiredProvisionMarkersValidated: applicable.requiredProvisionMarkers,
+      responseType: "XML",
+      responseContentType: acquired.response.contentType,
+      contentHashSha256: sha256(version.normalizedBody),
+      contentNormalizationVersion: "s233b.law_xml_visible_text_nfc_whitespace.v1",
+      requiredProvisionMarkersValidated: version.requiredProvisionMarkers,
       acquiredAt,
-      currentRelationship: {
-        relationshipStatus: sameAsCurrent ? "current_at_exam_date_and_acquisition" : "superseded_after_exam_date",
-        supersedesLawVersionId: null,
-        supersededByLawVersionId: sameAsCurrent ? null : currentLawVersionId,
-        currentLawVersionId,
-        currentEffectiveDate: current.effectiveDate,
-        currentPromulgationNumber: current.promulgationNumber,
-        currentOfficialLsiSeq: current.lsiSeq,
-        currentContentHashSha256: currentImmutable.response.contentHashSha256,
-      },
       rightsDecision: {
         status: "display_by_deep_link",
         authoritySeparatedFromRights: true,
@@ -549,11 +556,10 @@ export async function acquireS233BLawVersions({
       },
       usedByQuestionIds: questionBindings.get(target.lawSourceId),
       transformationProvenance: {
-        method: oc
-          ? "deterministic_official_open_api_effective_date_and_immutable_version_validation"
-          : "deterministic_public_official_html_effective_date_and_immutable_version_validation",
+        method: "deterministic_public_mst_resolution_then_official_eflaw_xml_validation",
         rawStatuteTextStored: false,
         sourceExcerptStored: false,
+        providerPayloadStored: false,
         llmUsed: false,
         learnerContentUsed: false,
       },
@@ -566,31 +572,46 @@ export async function acquireS233BLawVersions({
     acquiredAt,
     examDate: S233B_EXAM_DATE,
     sourceRegistryVersion: sourceSnapshot.registryVersion,
+    requestContract: {
+      endpointFamily: "/DRF/lawService.do",
+      target: "eflaw",
+      responseType: "XML",
+      historicalIdentifierParameter: "MST",
+      mstMeaning: "official_lsi_seq",
+      effectiveDateParameter: "efYd",
+      effectiveDateValue: "20260704",
+      idWithEffectiveDateUsed: false,
+      redirectPolicy: "reject_all",
+    },
     versions,
     supersessionPolicy: {
       exactEffectiveDateSnapshotsRequired: true,
       currentLawSubstitutionForHistoricalQuestionAllowed: false,
-      supersededAndCurrentRelationshipsPreserved: true,
+      supersededAndCurrentRelationshipsPreserved: false,
     },
     acquisition: {
       transportMode: transport.mode,
       logicalRequestCount: transport.logicalRequestCount,
+      credentialBearingLogicalRequestCount: transport.credentialBearingLogicalRequestCount,
       httpRequestCount: transport.httpRequestCount,
       attemptCount: transport.attemptCount,
+      credentialBearingAttemptCount: transport.credentialBearingAttemptCount,
       successfulResponseCount: transport.successfulResponseCount,
       statusCounts: transport.statusCounts,
       approvedOfficialHosts: [...APPROVED_OFFICIAL_HOSTS].sort(),
       initialScheme: "https",
       boundedTimeoutMs: REQUEST_TIMEOUT_MS,
-      maximumRedirects: MAX_REDIRECTS,
+      maximumRedirects: 0,
       transient502MaximumRetries: MAX_TRANSIENT_RETRIES,
       politeMinimumIntervalMs: POLITE_INTERVAL_MS,
       decompressionAccepted: ["br", "deflate", "gzip"],
-      validOcAvailable: transport.validOcAvailable,
-      ocConfigured: transport.ocConfigured,
+      validOcAvailable: true,
       ocValuesLoggedOrPersisted: false,
+      credentialBearingUrlsLoggedOrPersisted: false,
+      rawErrorBodiesLoggedOrPersisted: false,
       rawStatuteTextStored: false,
       sourceExcerptsStored: false,
+      providerPayloadStored: false,
       learnerContentIncluded: false,
     },
   };
@@ -599,7 +620,11 @@ export async function acquireS233BLawVersions({
 }
 
 function parseArguments(argv) {
-  const args = { sourceSnapshotPath: null, outputPath: null, acquiredAt: process.env.S233B_ACQUIRED_AT ?? new Date().toISOString() };
+  const args = {
+    sourceSnapshotPath: null,
+    outputPath: null,
+    acquiredAt: process.env.S233B_ACQUIRED_AT ?? new Date().toISOString(),
+  };
   for (let index = 0; index < argv.length; index += 1) {
     if (argv[index] === "--source-snapshot") args.sourceSnapshotPath = argv[++index];
     else if (argv[index] === "--output") args.outputPath = argv[++index];
@@ -614,11 +639,18 @@ if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).
   const args = parseArguments(process.argv.slice(2));
   const sourceSnapshot = JSON.parse(await readFile(args.sourceSnapshotPath, "utf8"));
   try {
-    const result = await acquireS233BLawVersions({ sourceSnapshot, acquiredAt: args.acquiredAt, outputPath: args.outputPath });
+    const result = await acquireS233BLawVersions({
+      sourceSnapshot,
+      acquiredAt: args.acquiredAt,
+      outputPath: args.outputPath,
+    });
     process.stdout.write(`${JSON.stringify({
       output: args.outputPath,
       logicalRequestCount: result.acquisition.logicalRequestCount,
+      credentialBearingLogicalRequestCount: result.acquisition.credentialBearingLogicalRequestCount,
       httpRequestCount: result.acquisition.httpRequestCount,
+      attemptCount: result.acquisition.attemptCount,
+      credentialBearingAttemptCount: result.acquisition.credentialBearingAttemptCount,
       registryVersion: result.registryVersion,
     })}\n`);
   } catch (error) {
@@ -626,7 +658,11 @@ if (process.argv[1] && import.meta.url === new URL(`file://${process.argv[1]}`).
       process.stderr.write(`${JSON.stringify({ code: error.code, message: error.message, ...error.diagnostics })}\n`);
       process.exitCode = 1;
     } else {
-      throw error;
+      process.stderr.write(`${JSON.stringify({
+        code: "S233B_LAW_GO_KR_VALIDATION_FAILURE",
+        message: "Official law acquisition failed closed before retention",
+      })}\n`);
+      process.exitCode = 1;
     }
   }
 }
