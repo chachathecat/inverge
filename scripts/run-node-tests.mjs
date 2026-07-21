@@ -105,6 +105,7 @@ const defaultTestFiles = [
   "tests/postgrest-timestamps-normalization.test.mjs",
   "tests/s220b-dabangil-launch-surface.test.mjs",
   "tests/practice-calculation-unit-registry.test.mjs",
+  "tests/owner-alpha-universal-practice-loop-v0.test.mjs",
   "tests/rewrite-regrade-history-contract.test.mjs",
   "tests/agent-factory-contract-validation.test.mjs",
   "tests/agent-factory-risk-classification.test.mjs",
