@@ -12,6 +12,7 @@ import {
   ownerAlphaCalculationReleaseBlockers,
   validateOwnerAlphaCalculationGraph,
 } from "../lib/review-os/owner-alpha-calculation-validator.ts";
+import { compileOwnerAlphaPracticeProblem } from "../lib/review-os/owner-alpha-practice-compiler.ts";
 import {
   OwnerAlphaPracticeRuntime,
 } from "../lib/review-os/owner-alpha-practice-runtime.ts";
@@ -738,6 +739,28 @@ test("all reusable deterministic primitives reproduce supported arithmetic outsi
   });
   assert.equal(invalid[0].status, "invalid");
   assert.equal(ownerAlphaCalculationReleaseBlockers(invalid).length, 1);
+
+  const unsupportedCritical = validateOwnerAlphaCalculationGraph({
+    nodes: [{ nodeId: "unsupported-unit", claimId: null, label: "unsupported unit", primitive: "unit_conversion", value: 1, fromUnit: "acre", toUnit: "㎡", claimedResult: 4046.8564224, resultUnit: "㎡", critical: true }],
+  });
+  assert.equal(unsupportedCritical[0].status, "unsupported");
+  assert.equal(ownerAlphaCalculationReleaseBlockers(unsupportedCritical).length, 1);
+});
+
+test("generic problem compilation preserves Korean currency scales", () => {
+  const model = compileOwnerAlphaPracticeProblem({
+    problemId: "currency-scale-smoke",
+    problemText:
+      "원가방식으로 공사비 5백만원, 부대비용 2천만원, 총액 1억원을 적용하여 가격을 산정하시오.",
+  });
+  assert.deepEqual(
+    model.givenNumbers.map((number) => number.value).sort((left, right) => left - right),
+    [5_000_000, 20_000_000, 100_000_000],
+  );
+  assert.equal(
+    model.givenNumbers.find((number) => number.unit === "백만원")?.value,
+    5_000_000,
+  );
 });
 
 test("native contract, owner gate, RLS-bound repository, and private existing-route UI remain explicit", async () => {

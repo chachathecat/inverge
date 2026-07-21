@@ -25,7 +25,7 @@ function normalizeNumericValue(raw: string, unit: string | null) {
   const value = Number(raw.replaceAll(",", ""));
   if (!Number.isFinite(value)) return null;
   if (unit === "억원") return value * 100_000_000;
-  if (unit === "백만원") return value * 100_000_000;
+  if (unit === "백만원") return value * 1_000_000;
   if (unit === "천만원") return value * 10_000_000;
   if (unit === "만원") return value * 10_000;
   if (unit === "천원") return value * 1_000;

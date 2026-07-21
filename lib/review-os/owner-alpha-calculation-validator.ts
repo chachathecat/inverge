@@ -292,7 +292,9 @@ export function ownerAlphaCalculationReleaseBlockers(
     .filter(
       (check) =>
         check.critical &&
-        (check.status === "conflict" || check.status === "invalid"),
+        (check.status === "conflict" ||
+          check.status === "invalid" ||
+          check.status === "unsupported"),
     )
     .map((check) => `calculation:${check.nodeId}:${check.errorCode ?? check.status}`);
 }
