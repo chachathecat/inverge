@@ -46,6 +46,10 @@ import {
   toStringArray,
   toTaxonomyCandidates,
 } from "@/lib/review-os/taxonomy-candidates";
+import { s233aSupabaseRepository } from "@/lib/review-os/s233a-supabase-repository";
+import type {
+  S233aReviewRepositoryPort,
+} from "@/lib/review-os/s233a-types";
 
 function createUuid() {
   return crypto.randomUUID();
@@ -490,6 +494,15 @@ function getExamModeLabel(
 }
 
 export class ReviewOsRepository {
+  claimS233aReview: S233aReviewRepositoryPort["claim"] =
+    s233aSupabaseRepository.claim;
+
+  transitionS233aReview: S233aReviewRepositoryPort["transition"] =
+    s233aSupabaseRepository.transition;
+
+  loadS233aReview: S233aReviewRepositoryPort["loadReview"] =
+    s233aSupabaseRepository.loadReview;
+
   async getReviewQueueItemContext(userId: string, queueId: string) {
     const client = getUserClient(userId);
     const queueResult = await client
