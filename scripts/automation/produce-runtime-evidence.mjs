@@ -329,6 +329,7 @@ function bootstrapSql() {
     create schema auth;
     create schema extensions;
     create extension pgcrypto with schema extensions;
+    grant usage on schema extensions to service_role;
     create table auth.users (id uuid primary key);
     create function auth.uid() returns uuid
       language sql stable

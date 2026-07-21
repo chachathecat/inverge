@@ -332,3 +332,14 @@ test("producer forces PostgreSQL readiness and statements through loopback TCP",
   assert.equal((producer.match(/"pg_isready"/g) ?? []).length, 1);
   assert.equal((producer.match(/"psql"/g) ?? []).length, 1);
 });
+
+test("producer grants the synthetic service role access to the isolated extension schema", () => {
+  const producer = fs.readFileSync(path.join(WORKSPACE_ROOT, "scripts/automation/produce-runtime-evidence.mjs"), "utf8");
+  const bootstrap = producer.match(/function bootstrapSql\(\)[\s\S]*?\n}/)?.[0] ?? "";
+
+  assert.match(
+    bootstrap,
+    /create extension pgcrypto with schema extensions;\s+grant usage on schema extensions to service_role;/,
+  );
+  assert.equal((bootstrap.match(/grant usage on schema extensions to service_role;/g) ?? []).length, 1);
+});
