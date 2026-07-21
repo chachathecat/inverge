@@ -199,7 +199,7 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
           supportingEvidence={supportingEvidence}
         />
         <div className="mx-auto mt-6 w-full max-w-[1000px] px-5 pb-[calc(136px+env(safe-area-inset-bottom))] lg:px-0 lg:pb-10">
-          <ReviewOsFeedbackButton route={`/app/items/${itemId}`} pageContext={{ itemId, isSecond }} />
+          <ReviewOsFeedbackButton route={`/app/items/${itemId}`} pageContext={{ itemId, isSecond }} presentation={isSecond ? "v3" : "legacy"} />
         </div>
       </>
     );
@@ -663,7 +663,7 @@ export default async function ReviewOsItemDetailPage({ params, searchParams }: P
         </div>
       ) : null}
 
-      <ReviewOsFeedbackButton route={`/app/items/${itemId}`} pageContext={{ itemId, isSecond }} />
+      <ReviewOsFeedbackButton route={`/app/items/${itemId}`} pageContext={{ itemId, isSecond }} presentation={isSecond ? "v3" : "legacy"} />
     </div>
   );
 }

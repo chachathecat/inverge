@@ -61,7 +61,9 @@ test("learner capture failure copy is calm and draft-preserving", async () => {
   const learnerCapture = await readFile(new URL("../components/review-os/capture-form.tsx", import.meta.url), "utf8");
   assert.ok(learnerCapture.includes("텍스트 추출에 실패했습니다. 직접 붙여넣거나 다시 시도해 주세요."));
   assert.ok(learnerCapture.includes("현재 PDF는 내용 확인 후 직접 붙여넣을 수 있습니다."));
-  assert.ok(learnerCapture.includes("rawQuestionText: extractedText || form.rawQuestionText"));
+  assert.ok(learnerCapture.includes("const learnerText = prev.hasManualCorrection && prev.rawQuestionText.trim()"));
+  assert.ok(learnerCapture.includes("? prev.rawQuestionText"));
+  assert.ok(learnerCapture.includes(": extractedText;"));
 });
 
 test("learner capture does not auto-save or auto-grade after OCR/PDF", async () => {

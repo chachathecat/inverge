@@ -3,6 +3,12 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
+import {
+  V3ActionLink,
+  V3QuietDisclosure,
+  V3SectionHeader,
+  V3Surface,
+} from "@/components/learner";
 import { Button } from "@/components/ui/button";
 import { getModeConfig, normalizeSubjectForMode, type AppraisalMode } from "@/lib/review-os/appraisal";
 
@@ -61,6 +67,81 @@ export function TodaySubjectSelector({
     [primaryHref, captureHref, reviewHref, notesHref, setHref, studyLogHref, subject],
   );
   const showCaptureLink = links.capture !== links.primary;
+
+  if (mode === "second") {
+    return (
+      <V3Surface
+        density="compact"
+        className="space-y-5"
+      >
+        <div data-today-subject-selector={mode}>
+          <V3SectionHeader
+            eyebrow="과목 선택"
+            title={config.subjectLabel}
+            description={helperCopy}
+          />
+          <div
+            className="mt-4 grid gap-2 lg:grid-cols-3"
+            role="group"
+            aria-label={config.subjectLabel}
+          >
+            {config.subjects.map((option) => (
+              <button
+                key={option}
+                type="button"
+                onClick={() => setSubject(option)}
+                className={`v3-type-label-strong min-h-11 rounded-[var(--v3-radius-control)] border px-4 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 ${
+                  option === subject
+                    ? "border-[var(--color-border-focus)] bg-[var(--color-background-brand-soft)] text-[var(--color-text-brand)]"
+                    : "border-[var(--color-border-default)] bg-[var(--color-background-surface)] text-[var(--color-text-primary)] hover:bg-[var(--color-background-subtle)]"
+                }`}
+                aria-pressed={option === subject}
+              >
+                {option}
+              </button>
+            ))}
+          </div>
+
+          <V3ActionLink
+            href={links.primary}
+            tone={quietPrimary ? "secondary" : "primary"}
+            className="mt-5"
+            data-primary-learner-action
+            data-s224v-dominant-primary-action={quietPrimary ? undefined : true}
+          >
+            {resolvedPrimaryLabel}
+          </V3ActionLink>
+
+          <V3QuietDisclosure
+            summary="다른 작업 보기"
+            className="mt-4"
+          >
+            <nav
+              aria-label="과목별 다른 작업"
+              className="flex flex-col divide-y divide-[var(--color-border-default)]"
+              data-secondary-action-surface={`${mode}-mode-input-options`}
+              data-s224v-secondary-diagnostics
+            >
+              {showCaptureLink ? (
+                <Link href={links.capture} className="inline-flex min-h-11 items-center py-2 underline-offset-4 hover:underline">
+                  오늘 한 것 올리기
+                </Link>
+              ) : null}
+              <Link href={links.notes} className="inline-flex min-h-11 items-center py-2 underline-offset-4 hover:underline">
+                학습 노트 보기
+              </Link>
+              <Link href={links.review} className="inline-flex min-h-11 items-center py-2 underline-offset-4 hover:underline">
+                복습 큐 보기
+              </Link>
+              <Link href={`/app/weekly?mode=${mode}&subject=${encodeURIComponent(subject)}`} className="inline-flex min-h-11 items-center py-2 underline-offset-4 hover:underline">
+                주간 정리
+              </Link>
+            </nav>
+          </V3QuietDisclosure>
+        </div>
+      </V3Surface>
+    );
+  }
 
   return (
     <div className="space-y-3" data-today-subject-selector={mode}>

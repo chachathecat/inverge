@@ -1,6 +1,12 @@
 import Link from "next/link";
 
-import { BiggestGap } from "@/components/learner";
+import {
+  BiggestGap,
+  V3ActionLink,
+  V3RouteFrame,
+  V3RouteHeader,
+  V3Surface,
+} from "@/components/learner";
 import { LocalBetaNotesSection } from "@/components/review-os/local-beta-note-reflection";
 import {
   CoreRouteReadEmptyShell,
@@ -117,27 +123,31 @@ function NoteBridgeFields({
   topic,
   biggestGap,
   nextAction,
+  v3 = false,
 }: {
   subject: string;
   topic: string;
   biggestGap: string;
   nextAction: string;
+  v3?: boolean;
 }) {
   return (
-    <dl className="grid gap-3 text-sm md:grid-cols-2">
-      <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-3">
+    <dl className={v3
+      ? "v3-type-compact divide-y divide-[var(--color-border-default)] border-y border-[var(--color-border-default)] text-[var(--color-text-secondary)]"
+      : "grid gap-3 text-sm md:grid-cols-2"}>
+      <div className={v3 ? "py-3" : "rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-3"}>
         <dt className="text-xs text-[color:var(--muted)]">과목</dt>
         <dd className="mt-1 text-[color:var(--foreground-strong)]">{subject}</dd>
       </div>
-      <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-3">
+      <div className={v3 ? "py-3" : "rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-3"}>
         <dt className="text-xs text-[color:var(--muted)]">논점 후보</dt>
         <dd className="mt-1 text-[color:var(--foreground-strong)]">{topic}</dd>
       </div>
-      <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-3">
+      <div className={v3 ? "py-3" : "rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-3"}>
         <dt className="text-xs text-[color:var(--muted)]">가장 큰 약점</dt>
         <dd className="mt-1 text-[color:var(--foreground-strong)]">{biggestGap}</dd>
       </div>
-      <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-3">
+      <div className={v3 ? "py-3" : "rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-3"}>
         <dt className="text-xs text-[color:var(--muted)]">다음 행동</dt>
         <dd className="mt-1 text-[color:var(--foreground-strong)]">{nextAction || EMPTY_ACTION_COPY}</dd>
       </div>
@@ -179,6 +189,7 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
   const visibleItems = isNotesRoute ? items.slice(0, 3) : items;
   const foldedItems = isNotesRoute ? items.slice(3) : [];
   const visibleLearningSignals = isNotesRoute ? learningSignals.slice(0, 3) : learningSignals.slice(0, 8);
+  const isSecondRound = mode === "second";
 
   if (!hasItems && !hasLearningSignals) {
     return (
@@ -199,13 +210,19 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
                 오늘 한 것을 하나 올리면 가장 큰 약점과 다음 행동이 만들어집니다.
               </p>
             </div>
-            <Link
-              href={`/app/capture?mode=${mode}`}
-              className={buttonVariants({ className: "primary-action w-full sm:w-auto" })}
-              data-s224v-dominant-primary-action
-            >
-              오늘 한 것 올리기
-            </Link>
+            {isSecondRound ? (
+              <V3ActionLink href="/app/capture?mode=second" data-s224v-dominant-primary-action>
+                오늘 한 것 올리기
+              </V3ActionLink>
+            ) : (
+              <Link
+                href={`/app/capture?mode=${mode}`}
+                className={buttonVariants({ className: "primary-action w-full sm:w-auto" })}
+                data-s224v-dominant-primary-action
+              >
+                오늘 한 것 올리기
+              </Link>
+            )}
           </section>
         )}
       >
@@ -218,9 +235,11 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
     );
   }
 
-  return (
+  const RecordsSurface = isSecondRound ? V3Surface : Card;
+  const RecordsBody = isSecondRound ? "div" : CardContent;
+  const itemsPage = (
     <div
-      className="space-y-6"
+      className={isSecondRound ? "space-y-7" : "space-y-6"}
       data-s224v-surface={isNotesRoute ? "/app/notes" : "/app/items"}
       data-s224v-primary-cta-count-above-fold="1"
       data-s224v-visible-trust-layer-count="0"
@@ -230,19 +249,32 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
       data-s224v-repeated-warning-copy="absent"
       data-s232d3-notes-list={isNotesRoute ? "recent-first" : undefined}
     >
-      <Card className="border-[var(--border)] bg-[color:var(--surface)] shadow-none">
-        <CardHeader className="space-y-2">
-          <h1 className="text-title text-[color:var(--foreground-strong)]">{pageTitle}</h1>
-          <CardDescription>{helperCopy}</CardDescription>
-          {isNotesRoute ? (
-            <p className="text-xs leading-5 text-[color:var(--muted)]" data-notes-record-context>
-              최근 3개 기록만 먼저 봅니다. 오래된 기록은 접어 두고, 가장 큰 약점과 다음 행동을 우선 확인합니다.
-            </p>
-          ) : null}
-        </CardHeader>
-        <CardContent className="space-y-4">
+      {isSecondRound ? (
+        <V3RouteHeader
+          eyebrow={isNotesRoute ? "최근 기록 3개" : "학습 기록"}
+          title={pageTitle}
+          description={helperCopy}
+        />
+      ) : null}
+      <RecordsSurface className={isSecondRound ? "space-y-6" : "border-[var(--border)] bg-[color:var(--surface)] shadow-none"}>
+        {!isSecondRound ? (
+          <CardHeader className="space-y-2">
+            <h1 className="text-title text-[color:var(--foreground-strong)]">{pageTitle}</h1>
+            <CardDescription>{helperCopy}</CardDescription>
+          </CardHeader>
+        ) : null}
+        {isNotesRoute ? (
+          <p className={isSecondRound
+            ? "v3-type-caption text-[var(--color-text-secondary)]"
+            : "px-6 text-xs leading-5 text-[color:var(--muted)]"} data-notes-record-context>
+            최근 3개 기록만 먼저 봅니다. 오래된 기록은 접어 두고, 가장 큰 약점과 다음 행동을 우선 확인합니다.
+          </p>
+        ) : null}
+        <RecordsBody className={isSecondRound ? "space-y-5" : "space-y-4"}>
           {savedParam ? (
-            <div className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] px-4 py-3">
+            <div className={isSecondRound
+              ? "rounded-[var(--v3-radius-control)] border border-[var(--color-border-focus)] bg-[var(--color-background-focus)] px-4 py-4"
+              : "rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-elevated)] px-4 py-3"}>
               <p className="text-sm font-medium text-[color:var(--foreground-strong)]">방금 저장한 학습 노트가 반영되었습니다.</p>
               <p className="mt-1 text-sm text-[color:var(--muted)]">
                 가장 큰 약점 1개와 다음 행동 1개를 먼저 확인하고, 오늘 계획에 반영합니다.
@@ -269,7 +301,9 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
                   return (
                     <section
                       key={item.id}
-                      className="review-reason-card rounded-[var(--radius-lg)] border border-[var(--border)] px-4 py-4"
+                      className={isSecondRound
+                        ? "border-b border-[var(--color-border-default)] py-6 first:pt-0 last:border-b-0 last:pb-0"
+                        : "review-reason-card rounded-[var(--radius-lg)] border border-[var(--border)] px-4 py-4"}
                       aria-labelledby={`notes-title-${item.id}`}
                       data-notes-record-context
                       data-s232d3-note-card
@@ -293,7 +327,9 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
                         />
 
                         <div
-                          className="rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-3"
+                          className={isSecondRound
+                            ? "border-t border-[var(--color-border-default)] pt-4"
+                            : "rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] bg-[color:var(--bg-surface)] p-3"}
                           data-s232d3-next-action
                         >
                           <p className="text-xs font-medium text-[color:var(--muted)]">다음 행동</p>
@@ -325,14 +361,20 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
                 }
 
                 return (
-                  <section key={item.id} className="review-reason-card rounded-[var(--radius-lg)] border border-[var(--border)] px-4 py-4" data-notes-record-context>
+                  <section key={item.id} className={isSecondRound
+                    ? "border-b border-[var(--color-border-default)] py-6 first:pt-0 last:border-b-0 last:pb-0"
+                    : "review-reason-card rounded-[var(--radius-lg)] border border-[var(--border)] px-4 py-4"} data-notes-record-context>
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div className="min-w-0 space-y-2">
-                        <div className="flex flex-wrap gap-2">
-                          <span className="rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--bg-subtle)] px-3 py-1 text-xs text-[color:var(--muted)]">
+                        <div className="flex flex-wrap gap-x-3 gap-y-1">
+                          <span className={isSecondRound
+                            ? "v3-type-caption text-[var(--color-text-secondary)]"
+                            : "rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--bg-subtle)] px-3 py-1 text-xs text-[color:var(--muted)]"}>
                             학습 노트
                           </span>
-                          <span className="rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--bg-subtle)] px-3 py-1 text-xs text-[color:var(--muted)]">
+                          <span className={isSecondRound
+                            ? "v3-type-caption text-[var(--color-text-secondary)]"
+                            : "rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--bg-subtle)] px-3 py-1 text-xs text-[color:var(--muted)]"}>
                             복습 연결: 복습 예정
                           </span>
                         </div>
@@ -350,7 +392,7 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
                     </div>
 
                     <div className="mt-4">
-                      <NoteBridgeFields subject={item.subjectLabel} topic={topic} biggestGap={biggestGap} nextAction={nextAction} />
+                      <NoteBridgeFields subject={item.subjectLabel} topic={topic} biggestGap={biggestGap} nextAction={nextAction} v3={isSecondRound} />
                     </div>
 
                     <div className="mt-3 flex flex-wrap gap-2 text-xs text-[color:var(--muted)]">
@@ -365,8 +407,12 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
           ) : null}
 
           {foldedItems.length > 0 ? (
-            <details className="quiet-disclosure rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--bg-surface)] p-4" data-s224v-secondary-diagnostics>
-              <summary className="cursor-pointer list-none text-sm font-medium text-[color:var(--foreground-strong)]">
+            <details className={isSecondRound
+              ? "group rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-elevated)] p-4"
+              : "quiet-disclosure rounded-[var(--radius-lg)] border border-[var(--border)] bg-[color:var(--bg-surface)] p-4"} data-v3-component={isSecondRound ? "QuietDisclosure" : undefined} data-s224v-secondary-diagnostics>
+              <summary className={isSecondRound
+                ? "v3-type-label-strong flex min-h-11 cursor-pointer list-none items-center text-[var(--color-text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+                : "cursor-pointer list-none text-sm font-medium text-[color:var(--foreground-strong)]"}>
                 이전 학습 노트 {foldedItems.length}개 보기
               </summary>
               <div className="mt-3 divide-y divide-[color:var(--border-subtle)]">
@@ -392,11 +438,13 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
                 const cta = signalCta(signal, mode);
 
                 return (
-                  <section key={signal.id} className="review-reason-card rounded-[var(--radius-lg)] border border-[var(--border)] px-4 py-4" data-notes-record-context>
+                  <section key={signal.id} className={isSecondRound
+                    ? "border-b border-[var(--color-border-default)] py-6 first:pt-0 last:border-b-0 last:pb-0"
+                    : "review-reason-card rounded-[var(--radius-lg)] border border-[var(--border)] px-4 py-4"} data-notes-record-context>
                     <p className="text-xs font-medium text-[color:var(--muted)]">{sourceTypeLabel(signal.sourceType)}</p>
                     <h2 className="mt-1 text-sm font-medium text-[color:var(--foreground-strong)]">{signal.subject}</h2>
                     <div className="mt-3">
-                      <NoteBridgeFields subject={signal.subject} topic={signal.derivedTags[1] ?? EMPTY_TOPIC_COPY} biggestGap={biggestGap} nextAction={nextAction} />
+                      <NoteBridgeFields subject={signal.subject} topic={signal.derivedTags[1] ?? EMPTY_TOPIC_COPY} biggestGap={biggestGap} nextAction={nextAction} v3={isSecondRound} />
                     </div>
                     {createdAt ? <p className="mt-2 text-xs text-[color:var(--muted)]">{createdAt}</p> : null}
                     <Link href={cta.href} className="mt-3 inline-flex text-sm font-medium text-[color:var(--foreground-strong)] underline-offset-4 hover:underline">
@@ -407,12 +455,18 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
               })}
             </div>
           ) : null}
-        </CardContent>
-      </Card>
+        </RecordsBody>
+      </RecordsSurface>
 
       <LocalBetaNotesSection mode={mode} showEmptyMessage={false} />
     </div>
   );
+
+  return isSecondRound ? (
+    <V3RouteFrame width="reading">
+      {itemsPage}
+    </V3RouteFrame>
+  ) : itemsPage;
 }
 
 export default async function ReviewOsItemsPage({ searchParams }: PageProps) {

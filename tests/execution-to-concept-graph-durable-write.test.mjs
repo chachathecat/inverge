@@ -93,6 +93,15 @@ async function collectSourceFiles(root, base = root) {
   return files;
 }
 
+function containsPersonalConceptGraphWrite(source) {
+  return (
+    /maybeWriteExecutionSignalToConceptGraph/.test(source) ||
+    /\.from\(\s*["'`]personal_concept_nodes["'`]\s*\)[^;]*?\.(?:insert|upsert|update|delete)\s*\(/.test(
+      source,
+    )
+  );
+}
+
 test("durable write feature flags require both Supabase repository mode and durable writes", () => {
   assert.equal(arePersonalConceptGraphDurableWritesEnabled({}), false);
   assert.deepEqual(getPersonalConceptGraphFeatureFlagState({}), {
@@ -326,7 +335,10 @@ test("no route writes durable graph rows unless explicit durable flags are check
   const matches = [];
   for (const file of files) {
     const source = await readFile(join(repoRoot, file), "utf8");
-    if (/maybeWriteExecutionSignalToConceptGraph|personal_concept_nodes/.test(source) && !/PERSONAL_CONCEPT_GRAPH_DURABLE_WRITES/.test(source)) {
+    if (
+      containsPersonalConceptGraphWrite(source) &&
+      !/PERSONAL_CONCEPT_GRAPH_DURABLE_WRITES/.test(source)
+    ) {
       matches.push(file);
     }
   }

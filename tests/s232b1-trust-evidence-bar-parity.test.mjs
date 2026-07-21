@@ -100,9 +100,9 @@ test("S232B.1 places one trust bar in the reading column before BiggestGap and r
   assert.ok(readingBarIndex < biggestGapIndex);
   assert.equal((detail.match(/<TrustEvidenceBar/g) ?? []).length, 1);
   assert.doesNotMatch(rail, /<StudyLedgerTrustBar|<TrustEvidenceBar/);
-  assert.match(detail, /className="space-y-5"/);
+  assert.match(detail, /data-s232b1-trust-gap-stack className="space-y-4"/);
   assert.match(detail, /max-w-\[1000px\] px-5 pb-28 pt-6[^\n]*lg:px-0/);
-  assert.match(detail, /grid gap-8/);
+  assert.match(detail, /grid gap-5[^"\n]*lg:gap-8/);
   assert.match(detail, /adaptLegacyTrustSignals\(\{[\s\S]*conflictRecorded: evidenceConflict,[\s\S]*learnerConfirmed,[\s\S]*\}\)/);
   assert.doesNotMatch(detail, /reviewRequired:\s*!learnerConfirmed|reviewRequired=\{!learnerConfirmed\}/);
   assert.match(detail, /data-s228-evidence-rail/);

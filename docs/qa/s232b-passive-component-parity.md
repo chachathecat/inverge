@@ -32,7 +32,7 @@ The existing `scheduled | attention | ready | completed` value is workflow state
 
 It never infers `Weak` from an unconfirmed record or `Stable` from one completed rewrite. `Weak` requires an explicit incorrect retrieval outcome. `Stable` requires successful retrieval evidence on at least two distinct days; that evidence is not currently present in the Study Ledger view model.
 
-BiggestGap remains exactly one signature annotation. The existing next action stays immediately after it in a separate labelled semantic section, rather than being folded into or lost from the strict Figma component.
+BiggestGap remains exactly one signature annotation. The Study Ledger body places the learner EvidenceExcerpt after its recovery-task heading and keeps the detailed next action in the secondary rail, rather than folding either meaning into the strict Figma component.
 
 EvidenceExcerpt supports the exact `Learner | Official | AI` and `Default | Confirmed` matrix. Production adopts the Learner/Default variant for learner-authored text. The current reference excerpt has no typed official/AI source or confirmation flag, so it deliberately remains a neutral disclosure labelled `참고용 근거 · 원 출처 확인`; it is not auto-promoted to Official, AI, or Confirmed.
 

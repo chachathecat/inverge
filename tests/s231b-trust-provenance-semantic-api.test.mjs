@@ -100,7 +100,7 @@ test("S231B legacy adapters use strict priority and missing data becomes unavail
   );
 });
 
-test("S231B uses one semantic renderer while preserving narrow public adapters", async () => {
+test("S231B preserves one trust model across legacy adapters and canonical V3 bars", async () => {
   const [renderer, legacy, capture, ledger, preview, answerReview, itemDetail] = await Promise.all([
     read("components/review-os/trust-provenance-layer.tsx"),
     read("components/review-os/trust-status-card.tsx"),
@@ -123,13 +123,15 @@ test("S231B uses one semantic renderer while preserving narrow public adapters",
   assert.match(legacy, /sources=\{evidenceUnavailable \? \["none"\]/);
   assert.match(capture, /<TrustEvidenceBar/);
   assert.match(capture, /CAPTURE_TRUST_SOURCE_LABELS/);
-  assert.match(capture, /manual: "수동 입력"/);
+  assert.match(capture, /manual: "manual_entry"/);
   assert.equal((capture.match(/data-trust-layer="capture-intake"/g) ?? []).length, 1);
   assert.match(ledger, /<TrustProvenanceLayer/);
   assert.match(preview, /<TrustStatusCard/);
-  assert.match(answerReview, /<TrustProvenanceLayer/);
+  assert.match(answerReview, /<TrustEvidenceBar/);
+  assert.match(answerReview, /evidence=\{trustEvidence\}/);
+  assert.match(answerReview, /sources=\{trustSources\}/);
+  assert.match(answerReview, /testId="answer-review-trust-layer-v3"/);
   assert.doesNotMatch(answerReview, /<section[^>]+data-trust-layer="answer-review-shell"/);
-  assert.equal((answerReview.match(/trustLayerMarker="answer-review-shell"/g) ?? []).length, 1);
   assert.match(itemDetail, /confirmedFields\?\.ocrConfirmedByLearner === true/);
   assert.match(itemDetail, /confirmedFields\?\.hasManualCorrection === true/);
   assert.doesNotMatch(itemDetail, /Object\.keys\(confirmedFields\)\.length > 0/);
@@ -172,7 +174,11 @@ test("S231B runtime fixtures and deployment proof are preview-only and metadata-
     runtimeSupport.indexOf("export async function establishProtectedPreviewSession"),
     runtimeSupport.indexOf("type RuntimeSafetyOptions"),
   );
-  assert.equal((protectionBootstrap.match(/page\.context\(\)\.request\.get/g) ?? []).length, 2);
+  assert.equal(
+    (protectionBootstrap.match(/page\s*\.context\(\)\s*\.request\s*\.get\s*\(/g) ?? [])
+      .length,
+    2,
+  );
   assert.equal((protectionBootstrap.match(/headers: protectionHeaders/g) ?? []).length, 1);
   assert.match(protectionBootstrap, /previewUrl\.hostname\.toLowerCase\(\) !== expectedRuntimeHost/);
   assert.match(runtimeSupport, /const bootstrapStatus = bootstrapResponse\.status\(\)/);
@@ -204,9 +210,10 @@ test("S231B keeps repeated visual authority caveats out of Answer Review child c
   const answerReview = await read("app/answer-review/answer-review-client.tsx");
   assert.equal(
     (answerReview.match(/공식 채점이나 합격 판정이 아닙니다/g) ?? []).length,
-    2,
-    "one visible trust layer and one copied-output boundary should own the caveat",
+    1,
+    "the copied-output boundary should own the exact caveat without repeating it in child cards",
   );
+  assert.match(answerReview, /detail="결과는 학습 보조 초안이며 채점 결과나 합격 여부를 확정하지 않습니다\./);
   assert.doesNotMatch(answerReview, /<p[^>]*>학습 보조 초안입니다\. 저장 전 직접 수정할 수 있습니다\.<\/p>/);
 });
 

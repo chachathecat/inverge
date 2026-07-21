@@ -1,3 +1,4 @@
+import { V3RouteFrame, V3RouteHeader } from "@/components/learner";
 import { ReviewOsFeedbackButton } from "@/components/review-os/feedback-button";
 import { ClosedBetaBanner } from "@/components/shared/closed-beta-banner";
 import { LocalBetaReviewCandidateSection } from "@/components/review-os/local-beta-note-reflection";
@@ -87,14 +88,14 @@ export default async function ReviewOsReviewPage({ searchParams }: PageProps) {
           showEmptyMessage={false}
           showReadUnavailableNotice={false}
         />
-        <ReviewOsFeedbackButton route="/app/review" pageContext={{ itemCount: 0, mode }} />
+        <ReviewOsFeedbackButton route="/app/review" pageContext={{ itemCount: 0, mode }} presentation={mode === "second" ? "v3" : "legacy"} />
       </CoreRouteReadEmptyShell>
     );
   }
 
-  return (
+  const reviewPage = (
     <div
-      className="space-y-6"
+      className={mode === "second" ? "space-y-7" : "space-y-6"}
       data-s224v-surface="/app/review"
       data-s224v-primary-cta-count-above-fold="1"
       data-s224v-visible-trust-layer-count="0"
@@ -106,17 +107,25 @@ export default async function ReviewOsReviewPage({ searchParams }: PageProps) {
     >
       <ClosedBetaBanner />
 
-      <header className="space-y-3" data-s232d4-review-header>
-        <p className="text-caption font-medium text-[color:var(--muted)]">우선 복습</p>
-        <h1 className="v3-type-screen ko-keep text-[color:var(--foreground-strong)]">
-          복습
-        </h1>
-        <p className="max-w-[680px] text-sm leading-7 text-[color:var(--textBody)]">
-          {mode === "second"
-            ? "학습 노트에서 만든 다시쓰기 후보를 오늘 복습으로 이어갑니다."
-            : "학습 노트에서 만든 회상 후보를 오늘 복습으로 이어갑니다."}
-        </p>
-      </header>
+      <div data-s232d4-review-header>
+        {mode === "second" ? (
+          <V3RouteHeader
+            eyebrow="우선 복습"
+            title="복습"
+            description="학습 노트에서 만든 다시쓰기 후보를 오늘 복습으로 이어갑니다."
+          />
+        ) : (
+          <header className="space-y-3">
+            <p className="text-caption font-medium text-[color:var(--muted)]">우선 복습</p>
+            <h1 className="v3-type-screen ko-keep text-[color:var(--foreground-strong)]">
+              복습
+            </h1>
+            <p className="max-w-[680px] text-sm leading-7 text-[color:var(--textBody)]">
+              학습 노트에서 만든 회상 후보를 오늘 복습으로 이어갑니다.
+            </p>
+          </header>
+        )}
+      </div>
 
       <CoreRouteReadDegradedNotice count={degradedReadCount} />
 
@@ -132,7 +141,13 @@ export default async function ReviewOsReviewPage({ searchParams }: PageProps) {
 
       <CalculatorRoutineReviewCandidates candidates={calculatorRoutineCandidates} />
       <LocalBetaReviewCandidateSection mode={mode} hasDurableQueue={items.length > 0} showEmptyMessage={false} />
-      <ReviewOsFeedbackButton route="/app/review" pageContext={{ itemCount: items.length, mode }} />
+      <ReviewOsFeedbackButton route="/app/review" pageContext={{ itemCount: items.length, mode }} presentation={mode === "second" ? "v3" : "legacy"} />
     </div>
   );
+
+  return mode === "second" ? (
+    <V3RouteFrame className="space-y-7" width="reading">
+      {reviewPage}
+    </V3RouteFrame>
+  ) : reviewPage;
 }

@@ -830,10 +830,19 @@ test("Problem Snap and Answer Review integrate the reusable trainer without pass
   assert.equal(answerReview.includes("data-answer-review-calculation-check"), false);
   assert.ok(answerReview.includes("problemSnapRoutineReference"));
   assert.ok(answerReview.includes("hasProblemSnapRoutineHandoff"));
-  assert.ok(answerReview.includes('answerReviewRoutineRunId || "answer-review-calculator-routine"'));
+  assert.match(
+    answerReview,
+    /answerReviewRoutineRunId\s*\|\|\s*"answer-review-calculator-routine"/,
+  );
   assert.ok(answerReview.includes("getCalculatorRoutineIdFromDraftStorageKey"));
-  assert.ok(answerReview.includes('setAnswerReviewRoutineRunId(createCalculatorRoutineRunId("answer-review"));'));
-  assert.ok(answerReview.includes("resumeDraftKey={hasProblemSnapRoutineHandoff ? problemSnapRoutineReference?.draftKey || undefined : undefined}"));
+  assert.match(
+    answerReview,
+    /setAnswerReviewRoutineRunId\(\s*createCalculatorRoutineRunId\("answer-review"\),?\s*\);/,
+  );
+  assert.match(
+    answerReview,
+    /resumeDraftKey=\{\s*hasProblemSnapRoutineHandoff\s*\?\s*problemSnapRoutineReference\?\.draftKey\s*\|\|\s*undefined\s*:\s*undefined\s*\}/,
+  );
   assert.ok(answerReview.includes("setRevisionParagraph(normalizedDraft.rewriteDraftSuggestion)"));
   assert.equal(answerReview.includes("/instructor"), false);
 });

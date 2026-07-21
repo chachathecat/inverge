@@ -386,7 +386,10 @@ test("S232F.5 derives every remote owner from the authenticated request and expo
 
   assert.match(route, /const userId = await requireRequestUserId\(request\)/);
   assert.match(route, /completeCalculatorRoutine\(userId, session\.email, body\)/);
-  assert.match(service, /completeCalculatorRoutine\(userId: string[\s\S]*?ensureAccess\(userId, email\)/);
+  assert.match(
+    service,
+    /async\s+completeCalculatorRoutine\(\s*userId:\s*string\s*,\s*email:\s*string\s*\|\s*null\s*,\s*input:\s*unknown\s*,?\s*\)\s*\{[\s\S]*?await\s+this\.ensureAccess\(\s*userId\s*,\s*email\s*,?\s*\)/,
+  );
   assert.match(service, /createLearningSignalEventWithId\([\s\S]*?userId,/);
   assert.doesNotMatch(signalContract, /(?:target|owner|account)UserId/);
   assert.doesNotMatch(outbox, /(?:target|owner|account)UserId/);

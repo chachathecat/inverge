@@ -25,7 +25,8 @@ test("S232E.1 exposes one semantic four-stage Capture shell", () => {
   assert.match(capture, /data-s232e-capture-step=\{currentCaptureStep\}/);
   assert.match(capture, /data-s232e-capture-stage=\{stage\}/);
   assert.match(capture, /data-capture-stage-flow/);
-  assert.match(capture, /className="sr-only[^\"]*sm:not-sr-only sm:grid/);
+  assert.match(capture, /v3-type-caption sr-only[^\"]*sm:not-sr-only sm:grid/);
+  assert.match(capture, /"sr-only[^\"]*sm:not-sr-only sm:grid/);
   assert.match(capture, /aria-label="Capture 4단계 흐름"/);
   assert.match(capture, /aria-current=\{currentCaptureStep === step \? "step" : undefined\}/);
   assert.match(capture, /const SECOND_CAPTURE_FLOW_STEPS = \[/);
@@ -38,7 +39,7 @@ test("S232E.1 exposes one semantic four-stage Capture shell", () => {
   assert.equal((capture.match(/<h1\b/g) ?? []).length, 0);
   assert.match(capturePage, /<h1 id="capture-page-title" className="v3-type-screen/);
   assert.match(capture, /aria-labelledby=\{labelledBy\}/);
-  assert.match(capture, /<h2 className="v3-type-section[^>]*>입력 방식 선택<\/h2>/);
+  assert.match(capture, /<h2 className=\{mode === "second" \? "v3-type-section[^\"]*color-text-primary[^\"]*" : "v3-type-section[^\"]*foreground-strong[^\"]*"\}>입력 방식 선택<\/h2>/);
   assert.match(capture, /ref=\{captureStageHeadingRef\}/);
   assert.match(capture, /tabIndex=\{-1\}/);
   assert.match(capture, /captureStageHeadingRef\.current\?\.focus\(\)/);

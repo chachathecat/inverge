@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import type { ComponentPropsWithoutRef } from "react";
 
+import { V3ActionLink, V3RouteFrame, V3Surface } from "@/components/learner";
 import { ReviewOsFeedbackButton } from "@/components/review-os/feedback-button";
 import {
   CoreRouteReadDegradedNotice,
@@ -42,6 +44,22 @@ const TASK_TYPE_LABELS: Record<TodayPlanTaskKind, string> = {
 
 function resolveTaskTypeLabel(taskType: TodayPlanTaskKind) {
   return TASK_TYPE_LABELS[taskType];
+}
+
+function TodayActionLink({
+  mode,
+  tone = "primary",
+  legacyClassName,
+  ...props
+}: ComponentPropsWithoutRef<typeof Link> & {
+  mode: "first" | "second";
+  tone?: "primary" | "secondary" | "quiet";
+  legacyClassName: string;
+}) {
+  if (mode === "second") {
+    return <V3ActionLink tone={tone} {...props} />;
+  }
+  return <Link className={legacyClassName} {...props} />;
 }
 
 type PageProps = {
@@ -224,7 +242,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
           showEmptyMessage={false}
           showReadUnavailableNotice={false}
         />
-        <ReviewOsFeedbackButton route="/app" pageContext={{ section: "today", firstUse: true, mode }} />
+        <ReviewOsFeedbackButton route="/app" pageContext={{ section: "today", firstUse: true, mode }} presentation={mode === "second" ? "v3" : "legacy"} />
       </CoreRouteReadEmptyShell>
     );
   }
@@ -314,9 +332,9 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
   const missionPrimaryLabel = missionTask?.display_primary_cta ?? missionTask?.primary_cta.label ?? (todayPlan.hasPlan ? primaryCtaLabel : fallbackMissionPrimaryLabel);
   const learnerLoopSummary = "오늘 한 것 올리기 → 학습 노트 → 오늘 할 일 → 복습 → 학습 기록";
 
-  return (
+  const todayPage = (
     <div
-      className="space-y-6 md:space-y-7"
+      className={mode === "second" ? "space-y-7" : "space-y-6 md:space-y-7"}
       data-s224v-surface="/app"
       data-s224v-primary-cta-count-above-fold="1"
       data-s224v-visible-trust-layer-count="0"
@@ -333,7 +351,10 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
       <CoreRouteReadDegradedNotice count={degradedReadCount} />
 
       <section
-        className="mission-surface p-5 sm:p-7"
+        className={mode === "second"
+          ? `rounded-[var(--v3-radius-panel)] border p-5 sm:p-6 ${homeState === "overdue_recovery" ? "border-[var(--color-border-attention)] bg-[var(--color-background-attention)]" : "border-[var(--color-border-focus)] bg-[var(--color-background-focus)]"}`
+          : "mission-surface p-5 sm:p-7"}
+        data-v3-component={mode === "second" ? "Surface" : undefined}
         aria-labelledby="s232d5-today-title"
         data-ux-surface-reset-primary-card
         data-today-plan-primary-surface
@@ -349,47 +370,59 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                 {missionTitle}
               </h1>
             </header>
-            <dl className="mt-5 grid gap-4 sm:grid-cols-3" data-s232d5-today-context>
-              <div data-s232d5-today-reason>
+            <dl className={mode === "second"
+              ? "mt-5 divide-y divide-[var(--color-border-default)] border-y border-[var(--color-border-default)]"
+              : "mt-5 grid gap-4 sm:grid-cols-3"} data-s232d5-today-context>
+              <div className={mode === "second" ? "py-3" : undefined} data-s232d5-today-reason>
                 <dt className="v3-type-caption text-[color:var(--muted)]">왜 이걸 하나요</dt>
                 <dd className="v3-type-compact mt-1 text-[color:var(--foreground-strong)]">{missionWhy}</dd>
               </div>
-              <div data-s232d5-today-duration>
+              <div className={mode === "second" ? "py-3" : undefined} data-s232d5-today-duration>
                 <dt className="v3-type-caption text-[color:var(--muted)]">예상 시간</dt>
                 <dd className="v3-type-compact mt-1 tabular-nums text-[color:var(--foreground-strong)]">{missionMinutes}</dd>
               </div>
-              <div data-s232d5-today-continuation>
+              <div className={mode === "second" ? "py-3" : undefined} data-s232d5-today-continuation>
                 <dt className="v3-type-caption text-[color:var(--muted)]">끝나면 이어질 것</dt>
                 <dd className="v3-type-compact mt-1 text-[color:var(--foreground-strong)]">{missionAfter}</dd>
               </div>
             </dl>
           </div>
-          <Link
+          <TodayActionLink
+            mode={mode}
             href={heroPrimaryHref}
-            className="primary-action inline-flex min-h-12 w-full items-center justify-center px-6 text-sm font-semibold transition hover:bg-[color:var(--brand-800)] sm:w-auto"
+            legacyClassName="primary-action inline-flex min-h-12 w-full items-center justify-center px-6 text-sm font-semibold transition hover:bg-[color:var(--brand-800)] sm:w-auto"
             data-s226-primary-cta
             data-s232d5-today-primary-cta
           >
             {missionPrimaryLabel}
-          </Link>
+          </TodayActionLink>
         </div>
       </section>
 
       {savedParam ? (
-        <section className="evidence-bar px-4 py-3">
-          <EvidenceLine>저장한 내용은 학습 노트에서 확인할 수 있습니다.</EvidenceLine>
-          <OneActionFooter>
-            <Link href={`/app/notes?mode=${mode}`} className="inline-flex min-h-11 items-center rounded-full border border-[color:var(--border-subtle)] px-4 py-2 text-xs font-medium text-[color:var(--foreground-strong)]">
+        mode === "second" ? (
+          <V3Surface tone="focus" density="compact" className="space-y-4">
+            <EvidenceLine>저장한 내용은 학습 노트에서 확인할 수 있습니다.</EvidenceLine>
+            <V3ActionLink href="/app/notes?mode=second" tone="secondary">
               학습 노트 보기
-            </Link>
-          </OneActionFooter>
-        </section>
+            </V3ActionLink>
+          </V3Surface>
+        ) : (
+          <section className="evidence-bar px-4 py-3">
+            <EvidenceLine>저장한 내용은 학습 노트에서 확인할 수 있습니다.</EvidenceLine>
+            <OneActionFooter>
+              <Link href={`/app/notes?mode=${mode}`} className="inline-flex min-h-11 items-center rounded-full border border-[color:var(--border-subtle)] px-4 py-2 text-xs font-medium text-[color:var(--foreground-strong)]">
+                학습 노트 보기
+              </Link>
+            </OneActionFooter>
+          </section>
+        )
       ) : null}
 
       {migratedParam && mode === "second" ? (
-        <section className="evidence-bar px-4 py-3">
+        <V3Surface tone="focus" density="compact">
           <EvidenceLine>이전 기록은 보관되었고, 오늘 할 일은 2차 답안 운영 중심으로 정리되었습니다.</EvidenceLine>
-        </section>
+        </V3Surface>
       ) : null}
 
       <LocalBetaTodayReflection
@@ -398,10 +431,13 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
         showEmptyMessage={false}
       />
 
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
+      <div className={mode === "second" ? "space-y-4" : "grid gap-5 lg:grid-cols-[minmax(0,1fr)_300px]"}>
         <section className="space-y-4">
           <details
-            className="operating-surface"
+            className={mode === "second"
+              ? "group rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-elevated)]"
+              : "operating-surface"}
+            data-v3-component={mode === "second" ? "QuietDisclosure" : undefined}
             data-learning-loop-summary
             data-s224v-secondary-diagnostics
             data-s232d5-today-secondary
@@ -410,7 +446,7 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
               다른 작업 · 오늘 기록 근거 보기
             </summary>
             <div className="space-y-4 border-t border-[color:var(--border-subtle)] px-4 py-5 sm:px-5">
-              <div className="today-priority-card rounded-[var(--radius-md)] border border-[color:var(--border-hairline)] bg-[color:var(--bg-elevated)] px-4 py-3">
+              <div className={mode === "second" ? "min-w-0" : "today-priority-card rounded-[var(--radius-md)] border border-[color:var(--border-hairline)] bg-[color:var(--bg-elevated)] px-4 py-3"}>
                 <p className="text-caption text-[color:var(--muted)]">오늘의 우선순위 · 최대 3개</p>
                 <div className="mt-3 space-y-3">
                   {todayPlanTasks.length === 0 ? (
@@ -421,24 +457,37 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                     </div>
                   ) : (
                     visibleTodayPlanTasks.map((task, index) => (
-                      <article key={task.itemId} className="rounded-[var(--radius-sm)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3" data-today-plan-primary-task data-s232d5-today-task>
+                      <article key={task.itemId} className={mode === "second"
+                        ? "border-b border-[var(--color-border-default)] py-4 first:pt-0 last:border-b-0 last:pb-0"
+                        : "rounded-[var(--radius-sm)] border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3"} data-today-plan-primary-task data-s232d5-today-task>
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                           <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-2">
                               <p className="text-sm font-medium leading-6 text-[color:var(--foreground-strong)]">{index + 1}. {task.title}</p>
                               {task.display_source_label ? (
-                                <span className="rounded-full border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)] px-2 py-0.5 text-xs font-medium text-[color:var(--muted)]">{task.display_source_label}</span>
+                                <span className={mode === "second"
+                                  ? "v3-type-caption text-[var(--color-text-secondary)]"
+                                  : "rounded-full border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)] px-2 py-0.5 text-xs font-medium text-[color:var(--muted)]"}>{task.display_source_label}</span>
                               ) : null}
                             </div>
                             <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">{task.subject} · {task.estimated_minutes}분</p>
                             <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]"><span className="font-medium text-[color:var(--foreground-strong)]">왜 지금?</span> {task.display_reason ?? task.reason}</p>
                           </div>
-                          <Link href={resolveTaskHref(task)} className="secondary-action inline-flex min-h-11 w-full shrink-0 items-center justify-center px-3 py-2 text-xs font-medium sm:w-auto">
+                          <TodayActionLink
+                            mode={mode}
+                            tone="secondary"
+                            href={resolveTaskHref(task)}
+                            legacyClassName="secondary-action inline-flex min-h-11 w-full shrink-0 items-center justify-center px-3 py-2 text-xs font-medium sm:w-auto"
+                          >
                             {task.display_primary_cta ?? task.primary_cta.label}
-                          </Link>
+                          </TodayActionLink>
                         </div>
-                        <details className="quiet-disclosure mt-3 rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)]" data-s224v-secondary-diagnostics>
-                          <summary className="cursor-pointer list-none px-3 py-2 text-xs font-medium text-[color:var(--muted)]">세부 내용 보기</summary>
+                        <details className={mode === "second"
+                          ? "group mt-3 rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-subtle)]"
+                          : "quiet-disclosure mt-3 rounded-[var(--radius-sm)] border border-[color:var(--border-hairline)] bg-[color:var(--surface-soft)]"} data-v3-component={mode === "second" ? "QuietDisclosure" : undefined} data-s224v-secondary-diagnostics>
+                          <summary className={mode === "second"
+                            ? "v3-type-label-strong flex min-h-11 cursor-pointer list-none items-center px-3 py-2 text-[var(--color-text-secondary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--focus-ring)]"
+                            : "cursor-pointer list-none px-3 py-2 text-xs font-medium text-[color:var(--muted)]"}>세부 내용 보기</summary>
                           <div className="grid gap-2 border-t border-[color:var(--border-hairline)] px-3 py-3 text-xs leading-5 text-[color:var(--muted)]">
                             <p><span className="font-medium text-[color:var(--foreground-strong)]">가장 큰 약점:</span> {task.one_biggest_gap}</p>
                             <p><span className="font-medium text-[color:var(--foreground-strong)]">다음 행동:</span> {task.one_next_action}</p>
@@ -509,7 +558,10 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
           </details>
 
           <details
-            className="operating-surface"
+            className={mode === "second"
+              ? "group rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-elevated)]"
+              : "operating-surface"}
+            data-v3-component={mode === "second" ? "QuietDisclosure" : undefined}
             data-learning-loop-summary
             data-s224v-secondary-diagnostics
           >
@@ -546,14 +598,18 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
                     <Link
                       key={`${note.title}-${index}`}
                       href={`/app/items/${items[index].id}?mode=${mode}`}
-                      className="block rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] px-4 py-4 text-sm transition duration-150 hover:bg-[color:var(--bg-subtle)]"
+                      className={mode === "second"
+                        ? "block border-b border-[var(--color-border-default)] py-4 text-sm last:border-b-0"
+                        : "block rounded-[var(--radius-md)] border border-[color:var(--border-subtle)] px-4 py-4 text-sm transition duration-150 hover:bg-[color:var(--bg-subtle)]"}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <p className="font-medium text-[color:var(--foreground-strong)]">{note.title}</p>
                           <p className="mt-1 text-xs leading-5 text-[color:var(--muted)]">{note.summaryLine}</p>
                         </div>
-                        <span className="rounded-full border border-[color:var(--border-subtle)] px-2 py-1 text-xs text-[color:var(--muted)]">
+                        <span className={mode === "second"
+                          ? "v3-type-caption text-[var(--color-text-secondary)]"
+                          : "rounded-full border border-[color:var(--border-subtle)] px-2 py-1 text-xs text-[color:var(--muted)]"}>
                           {note.noteLabel}
                         </span>
                       </div>
@@ -567,7 +623,9 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
         </section>
 
         <aside>
-          <details className="quiet-disclosure operating-surface" data-s226-diagnostics-disclosure data-s224v-secondary-diagnostics>
+          <details className={mode === "second"
+            ? "group rounded-[var(--v3-radius-control)] border border-[var(--color-border-default)] bg-[var(--color-background-elevated)]"
+            : "quiet-disclosure operating-surface"} data-v3-component={mode === "second" ? "QuietDisclosure" : undefined} data-s226-diagnostics-disclosure data-s224v-secondary-diagnostics>
             <summary className="cursor-pointer list-none px-4 py-4 text-sm font-medium text-[color:var(--foreground-strong)]">
               오늘 기록 신호 보기
             </summary>
@@ -605,7 +663,13 @@ export default async function ReviewOsDashboardPage({ searchParams }: PageProps)
         </aside>
       </div>
 
-      <ReviewOsFeedbackButton route="/app" pageContext={{ section: "today", firstUse, mode }} />
+      <ReviewOsFeedbackButton route="/app" pageContext={{ section: "today", firstUse, mode }} presentation={mode === "second" ? "v3" : "legacy"} />
     </div>
   );
+
+  return mode === "second" ? (
+    <V3RouteFrame width="content">
+      {todayPage}
+    </V3RouteFrame>
+  ) : todayPage;
 }

@@ -15,20 +15,22 @@ Figma V3 does not provide product screens for Today, Notes list, Review, Capture
 
 The 680px reading column owns the record identity and learner task flow:
 
-1. persisted subject/date and conservative StateChip
+1. persisted subject/date, conservative StateChip, and an evidence-backed state subtitle
 2. TrustEvidenceBar
 3. BiggestGap
-4. persisted recovery context
+4. the `이번에 회복할 문장` task heading
 5. learner-authored EvidenceExcerpt, or an independent learner-empty state
-6. persisted comparison/completion and application context
-7. the single StickyAction
+6. the single StickyAction immediately after learner evidence
+7. persisted comparison/completion when present
 
 The 288px evidence rail owns secondary context:
 
 1. persisted next-review date and queue count
-2. reference text as a neutral, untyped disclosure
-3. already-present supporting evidence
-4. already-present review, write, and calculator links
+2. reference text as a visible, untyped disclosure
+3. persisted recurrence, save, and queue context
+4. one default-closed supplemental disclosure inside that same context surface; it preserves the detailed next action, application sentence, key terms, supporting evidence, and review/write/calculator links
+
+The initial desktop rail therefore renders exactly the three V3 surfaces above. Existing secondary context remains available only after the learner opens the third surface disclosure.
 
 Below 1024px the workspace remains one column. At 768px there is no tablet split.
 
@@ -36,7 +38,7 @@ Below 1024px the workspace remains one column. At 768px there is no tablet split
 
 `referenceExcerpt` has no verified source-type contract. It remains `참고용 근거 · 원 출처 확인` and is never rendered as an Official or Confirmed EvidenceExcerpt. When it is absent, the rail shows a neutral reference-empty state. Learner and reference empty states are independent.
 
-No recovery-history rows are rendered because the detail contract has no persisted recovery-event list. No Figma sample date, relative time, official-evidence count, OCR status, or device result is fabricated.
+No recovery-history rows are rendered because the detail contract has no persisted recovery-event list. The rail says `복습 맥락` and uses only the actual recurrence text, save date, queue count, and next action. No Figma sample date, relative time, official-evidence count, OCR status, or device result is fabricated.
 
 ## Safety boundary
 
@@ -48,8 +50,10 @@ No recovery-history rows are rendered because the detail contract has no persist
 ## Acceptance
 
 - learner EvidenceExcerpt occurs once in the reading column and never in the rail
-- TrustEvidenceBar → BiggestGap → recovery context → learner evidence → StickyAction document order
+- TrustEvidenceBar → BiggestGap → recovery task heading → learner evidence → StickyAction document order
 - next-review context occurs once in the rail and never in the reading column
+- persisted recurrence context occurs once in the rail and never in the reading column
+- the initial rail has exactly three surfaces; supporting evidence and linked-learning navigation are inside the default-closed third-surface disclosure
 - untyped reference is neutral; Official/Confirmed promotion count is zero
 - 390px and 768px use one column with horizontal overflow at most 1px
 - 1440px resolves to 680px + 32px + 288px

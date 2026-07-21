@@ -133,14 +133,13 @@ test("Today Plan second_answer_rewrite routes to 10분 다시 쓰기 and stays c
 
 test("learner UI remains collapsed, mobile-first, and separated from instructor/grading claims", async () => {
   const source = await readFile(new URL("../components/review-os/today-session-runner.tsx", import.meta.url), "utf8");
-  ["가장 큰 누락/위험 1개", "약한 답안 구조 1개", "다시쓰기 지시 1개", "10분 다시 쓰기", "계산/CASIO 세부 보기"].forEach((token) => {
+  ["가장 큰 간극 1개", "약한 구조 ·", "문단 1개 다시쓰기", "10분 다시 쓰기", "계산/CASIO 세부 보기"].forEach((token) => {
     assert.ok(source.includes(token), `missing UI token: ${token}`);
   });
-  assert.ok(source.includes("details"));
-  assert.ok(source.includes("w-full sm:w-auto"));
+  assert.ok(source.includes("V3QuietDisclosure"));
+  assert.ok(source.includes("SessionActionButton"));
   assert.equal(source.includes("overflow-x-auto"), false);
   ["/instructor", "학원용", "공식 채점", "공식 모범답안", "공식 점수", "pass/fail", "합격/불합격"].forEach((token) => {
     assert.equal(source.includes(token), false, `forbidden UI token: ${token}`);
   });
 });
-

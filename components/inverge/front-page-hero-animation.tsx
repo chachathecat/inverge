@@ -2,6 +2,8 @@
 
 import { motion, useReducedMotion } from "framer-motion";
 
+import { V3Surface } from "@/components/learner";
+
 const PREVIEW_ROWS = [
   {
     label: "가장 큰 약점",
@@ -17,32 +19,32 @@ export function FrontPageHeroAnimation() {
   const reduceMotion = useReducedMotion();
 
   return (
-    <div className="relative overflow-hidden rounded-[var(--radius-card)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-elevated)] p-4 sm:p-5">
+    <V3Surface tone="focus" density="compact" className="overflow-hidden">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="rounded-full bg-[color:var(--brand-050)] px-3 py-1 text-caption font-medium text-[color:var(--brand-900)]">
+        <p className="v3-type-caption text-[var(--color-text-link)]">
           답안길 미리보기
         </p>
-        <p className="text-caption text-[color:var(--muted)]">공식 채점 아님</p>
+        <p className="v3-type-caption text-[var(--color-text-secondary)]">공식 채점 아님</p>
       </div>
 
-      <div className="mt-5 space-y-3">
+      <div className="mt-4 divide-y divide-[var(--color-border-default)] border-y border-[var(--color-border-default)]">
         {PREVIEW_ROWS.map((row, index) => (
           <motion.article
             key={row.label}
-            className="rounded-[var(--radius-md)] border border-[color:var(--border)] bg-[color:var(--surface-soft)] p-4"
+            className="py-4"
             initial={reduceMotion ? { opacity: 1 } : { opacity: 0, y: 8 }}
             animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
             transition={{ duration: 0.28, delay: reduceMotion ? 0 : index * 0.08, ease: "easeOut" }}
           >
-            <p className="text-caption font-medium text-[color:var(--muted)]">{row.label}</p>
-            <p className="ko-keep mt-1.5 text-sm leading-6 text-[color:var(--foreground-strong)]">{row.value}</p>
+            <p className="v3-type-caption text-[var(--color-text-secondary)]">{row.label}</p>
+            <p className="v3-type-compact ko-keep mt-1 text-[var(--color-text-primary)]">{row.value}</p>
           </motion.article>
         ))}
       </div>
 
-      <p className="ko-keep mt-4 text-xs leading-5 text-[color:var(--muted)]">
+      <p className="v3-type-caption ko-keep mt-4 text-[var(--color-text-secondary)]">
         예시는 학습 흐름을 보여주기 위한 샘플입니다.
       </p>
-    </div>
+    </V3Surface>
   );
 }

@@ -6,34 +6,34 @@ test("first capture save shows reflected today-plan message with one gap and nex
   const source = await readFile(new URL("../app/app/session/page.tsx", import.meta.url), "utf8");
   assert.ok(source.includes("오늘 계획에 반영했습니다."));
   assert.ok(source.includes("학습 보조 결과입니다."));
-  assert.ok(source.includes("복습 큐 보기"));
+  assert.ok(source.includes("복습 보기"));
   assert.ok(source.includes("가장 큰 간극:"));
   assert.ok(source.includes("다음 행동:"));
   assert.ok(source.includes("savedCaptureItemId"));
-  assert.ok(source.includes("getWrongAnswerDetail(session.userId, session.email, savedCaptureItemId)"));
+  assert.match(source, /getWrongAnswerDetail\([\s\S]*?session\.userId!?[\s\S]*?session\.email,[\s\S]*?savedCaptureItemId/);
 });
 
 test("second capture save keeps rewrite action and review queue CTA", async () => {
   const source = await readFile(new URL("../components/review-os/today-session-runner.tsx", import.meta.url), "utf8");
   assert.ok(source.includes("rewrite 저장하러 이동"));
-  assert.ok(source.includes("/app/review?mode=${mode}"));
+  assert.ok(source.includes("/app/review?mode=second"));
+  assert.ok(source.includes("/app/review?mode=first"));
 });
 
 test("review queue marks only capture-originated items", async () => {
   const source = await readFile(new URL("../components/review-os/review-queue-client.tsx", import.meta.url), "utf8");
   assert.ok(source.includes("item.createdFromCapture"));
   assert.ok(source.includes("오늘 한 것"));
-  assert.ok(source.includes("반복 신호와 최근 기록 기준"));
-  assert.ok(source.includes("다시 보기"));
+  assert.ok(source.includes("captureReferenceLineByItemId"));
+  assert.ok(source.includes("다음 복습 보기"));
 });
 
 test("today plan surfaces capture-origin task labels and fallback copy", async () => {
   const source = await readFile(new URL("../app/app/page.tsx", import.meta.url), "utf8");
-  assert.ok(source.includes("created_from_capture"));
+  assert.ok(source.includes("task.display_source_label"));
   assert.ok(source.includes("one_next_action"));
   assert.ok(source.includes("오늘 기록 근거 보기"));
-  assert.ok(source.includes("source_label ?? \"학습 노트에서 생성됨\""));
-  assert.ok(source.includes("이유:"));
+  assert.ok(source.includes("왜 지금?"));
   assert.ok(source.includes("다음 행동:"));
   assert.ok(source.includes("오늘 할 일이 아직 없습니다."));
   assert.ok(source.includes("오늘 한 것을 하나 올리면 다음 행동이 만들어집니다."));
