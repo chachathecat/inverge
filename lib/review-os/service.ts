@@ -82,6 +82,8 @@ import type {
   WrongAnswerItemRecord,
   StudyLogInput,
 } from "@/lib/review-os/types";
+import { buildS233aQueueTodayLinkage } from "@/lib/review-os/s233a-queue-today";
+import type { S233aReviewRuntimeDependencies } from "@/lib/review-os/s233a-types";
 
 const globalCache = globalThis as typeof globalThis & {
   __reviewOsGenerationLocks?: Map<string, boolean>;
@@ -725,6 +727,9 @@ export const DEFAULT_DAILY_STUDY_ACTIVITY: DailyStudyActivity = {
 };
 
 export class ReviewOsService {
+  prepareS233aQueueTodayLinkage: S233aReviewRuntimeDependencies["prepareQueueTodayLinkage"] =
+    buildS233aQueueTodayLinkage;
+
   async createLearningSignalEvent(
     userId: string,
     email: string | null,
