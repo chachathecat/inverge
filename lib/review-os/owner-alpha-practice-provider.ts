@@ -1,5 +1,7 @@
 import "server-only";
 
+import crypto from "node:crypto";
+
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 import {
@@ -19,6 +21,14 @@ import {
   type OwnerAlphaProviderFile,
   type OwnerAlphaReferenceDraft,
 } from "./owner-alpha-practice-provider-contract";
+import {
+  ownerAlphaSubjectProviderInstructions,
+} from "./owner-alpha-practice-subject-adapters";
+import {
+  ownerAlphaGapTypeForSubject,
+  ownerAlphaSubjectLabel,
+  type OwnerAlphaPracticeSubject,
+} from "./owner-alpha-subject-adapter-contract";
 
 const DEFAULT_MODEL = "gemini-2.5-flash";
 const PROVIDER_TIMEOUT_MS = 25_000;
@@ -36,11 +46,12 @@ function textValue(value: unknown, fallback: string, limit = 800) {
 }
 
 function identifier(value: unknown, fallback: string) {
-  const normalized = textValue(value, fallback, 120)
+  const normalized = textValue(value, "", 120)
     .toLowerCase()
     .replace(/[^a-z0-9가-힣_-]+/g, "-")
     .replace(/^-+|-+$/g, "");
-  return normalized || fallback;
+  if (!normalized) return fallback;
+  return `provider-${crypto.createHash("sha256").update(normalized).digest("hex").slice(0, 24)}`;
 }
 
 function stringArray(value: unknown, limit: number, itemLimit = 800) {
@@ -285,7 +296,12 @@ function normalizeCalculationNode(
 
 function normalizeReferenceDraft(
   value: unknown,
-  input: { sessionId: string; generatedAt: string; modelProfileId: string },
+  input: {
+    sessionId: string;
+    generatedAt: string;
+    modelProfileId: string;
+    problemModel: OwnerAlphaPracticeProblemModel;
+  },
 ): OwnerAlphaReferenceDraft {
   if (!isRecord(value)) throw new OwnerAlphaProviderError("invalid_output");
   const rawReference = isRecord(value.reference) ? value.reference : value;
@@ -321,6 +337,8 @@ function normalizeReferenceDraft(
 
   const rawGap = isRecord(value.biggestGap) ? value.biggestGap : {};
   const conceptIds = stringArray(rawGap.conceptIds, 8, 120);
+  const subject =
+    input.problemModel.subjectAdapter?.subject ?? "appraisal_practical";
   const biggestGap: OwnerAlphaBiggestGap = {
     gapId: identifier(rawGap.gapId, `${input.sessionId}-gap-1`),
     title: textValue(rawGap.title, "가장 큰 간극 확인 필요", 240),
@@ -341,6 +359,7 @@ function normalizeReferenceDraft(
     ),
     conceptIds,
     state: "ai_candidate",
+    gapType: ownerAlphaGapTypeForSubject(subject, rawGap.gapType),
   };
 
   const rawMisconception = isRecord(value.misconceptionGraph)
@@ -427,15 +446,25 @@ function normalizeReferenceDraft(
       generatedAt: input.generatedAt,
       hints,
       l1: {
-        title: "L1 · 최소 득점 요소와 회상 뼈대",
+        title:
+          subject === "appraisal_practical"
+            ? "L1 · 방법과 답안 뼈대"
+            : subject === "appraisal_theory"
+              ? "L1 · 쟁점과 목차"
+              : "L1 · 쟁점과 법적 근거 후보",
         sections: normalizeSections(rawReference.l1, "L1 회상 뼈대"),
       },
       l2: {
-        title: "L2 · 시험 분량 학습 답안",
+        title:
+          subject === "appraisal_practical"
+            ? "L2 · 계산·답안 경로"
+            : subject === "appraisal_theory"
+              ? "L2 · 논증 지도"
+              : "L2 · 요건·포섭 구조",
         sections: normalizeSections(rawReference.l2, "L2 학습 답안"),
       },
       l3: {
-        title: "L3 · 개념·산식 이유·대안 주석",
+        title: "L3 · 전체 구조화 학습 기준안",
         sections: normalizeSections(rawReference.l3, "L3 개념 주석"),
       },
       claims,
@@ -538,6 +567,7 @@ export class GeminiOwnerAlphaPracticeProvider
   async extractProblem(input: {
     problemText: string;
     files: OwnerAlphaProviderFile[];
+    subject: OwnerAlphaPracticeSubject;
   }) {
     try {
       const response = await withTimeout(
@@ -548,7 +578,7 @@ export class GeminiOwnerAlphaPracticeProvider
               parts: [
                 {
                   text: [
-                    "감정평가실무 연습문제의 원문을 OCR·정리한다.",
+                    `${ownerAlphaSubjectLabel(input.subject)} 연습문제의 원문을 OCR·정리한다.`,
                     "문제, 제시 자료, 표, 수치, 단위, 날짜, 요구사항을 빠뜨리지 않는다.",
                     "풀이·정답·추론을 추가하지 않는다.",
                     "JSON만 출력: {\"extractedText\":\"...\"}",
@@ -597,17 +627,18 @@ export class GeminiOwnerAlphaPracticeProvider
               parts: [
                 {
                   text: [
-                    "너는 감정평가실무 학습 코치다. 모든 출력은 한국어 JSON이다.",
+                    `너는 ${ownerAlphaSubjectLabel(input.problemModel.subjectAdapter?.subject ?? "appraisal_practical")} 학습 코치다. 모든 출력은 한국어 JSON이다.`,
                     `표시는 반드시 '${OWNER_ALPHA_AI_REFERENCE_LABEL}'이며 공식 정답·확정 채점기준·합격 보장이 아니다.`,
                     "제3자 답안은 전제하지 않는다. 독립 시도와 문제 문언을 비교해 학습용 기준안을 만든다.",
-                    "L1은 최소 득점 요소와 회상 뼈대, L2는 시험 분량 학습 답안, L3는 개념·산식 이유·대안을 설명한다.",
+                    "L1/L2/L3의 역할은 전달된 subject adapter 계약을 따르며 모두 AI 학습용 기준안이다.",
+                    ...ownerAlphaSubjectProviderInstructions(input.problemModel),
                     "method choice나 핵심 개념이 불확실하면 단정하지 말고 state=unresolved_needs_review, resolutionCode=multiple_reasonable_approaches로 둔다.",
                     "claim state는 ai_inference 또는 unresolved_needs_review만 출력한다. 공식 출처를 꾸며내지 않는다.",
                     "계산은 지원 primitive만 구조화한다: expression_order, sum, subtraction, ratio, percentage_direction, unit_conversion, elapsed_period, rounding, significant_digits, area_times_unit_price, allocation, residual, index_ratio, present_value, annuity_factor, capitalization, remaining_life_ratio.",
                     "calculation node에는 primitive 입력값과 claimedResult를 모두 넣는다. 검증 불가능한 계산은 node로 만들지 않고 claim을 unresolved로 둔다.",
                     "가장 큰 간극은 정확히 하나만 고른다. 오개념 그래프와 근본 원인 후보는 관찰 근거가 있을 때만 suspected/observed로 둔다.",
                     "변형은 숫자 또는 조건 딱 하나만 바꾼다.",
-                    "출력 키: reference{referenceId,hints[{hintId,level,text}],l1[],l2[],l3[],claims[],calculationGraph{nodes[]}}, biggestGap, misconceptionGraph{nodes[],edges[]}, rootCauseCandidates[], variant.",
+                    "출력 키: reference{referenceId,hints[{hintId,level,text}],l1[],l2[],l3[],claims[],calculationGraph{nodes[]}}, biggestGap{gapType 포함}, misconceptionGraph{nodes[],edges[]}, rootCauseCandidates[], variant.",
                     `문제 원문:\n${input.problemText.slice(0, MAX_TEXT_LENGTH)}`,
                     `구조화 모델:\n${JSON.stringify(input.problemModel)}`,
                     `학습자 독립 시도:\n${input.independentAttempt.slice(0, 12_000)}`,
@@ -627,6 +658,7 @@ export class GeminiOwnerAlphaPracticeProvider
         sessionId: input.sessionId,
         generatedAt: input.generatedAt,
         modelProfileId: modelProfileId(),
+        problemModel: input.problemModel,
       });
     } catch (error) {
       throw classifyProviderError(error);

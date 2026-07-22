@@ -15,6 +15,11 @@ import {
   type OwnerAlphaPracticeSession,
 } from "./owner-alpha-practice-contract";
 import {
+  ownerAlphaSubjectFromSession,
+  ownerAlphaSubjectLabel,
+} from "./owner-alpha-subject-adapter-contract";
+import { ownerAlphaPracticeMetadataProjection } from "./owner-alpha-practice-metadata";
+import {
   ownerAlphaStableUuid,
   type OwnerAlphaCompletionProjection,
 } from "./owner-alpha-practice-ids";
@@ -23,7 +28,6 @@ const SESSION_EXAM_ID = "appraiser_second";
 const SESSION_KIND = "universal_appraisal_practice";
 const QUEUE_EXAM_ID = "wrong_answer_os";
 const APPRAISAL_EXAM_NAME = "감정평가사 2차";
-const APPRAISAL_SUBJECT = "감정평가실무";
 
 type StoredSessionRow = {
   id: string;
@@ -83,23 +87,14 @@ function nextUpdatedAt(previous: string) {
   return new Date(Math.max(now, Number.isFinite(previousMs) ? previousMs + 1 : now)).toISOString();
 }
 
-function sessionDerivedPayload(session: OwnerAlphaPracticeSession) {
-  return {
-    contractVersion: session.contractVersion,
-    recordVersion: session.recordVersion,
-    status: session.status,
-    methodFamily: session.problemModel.methodFamily,
-    topicCandidates: session.problemModel.topicCandidates.slice(0, 8),
-    claimVerificationStates: session.problemModel.claimVerificationStates.map(
-      (claim) => ({ claimId: claim.claimId, state: claim.state, critical: claim.critical }),
-    ),
-    questionChainId: session.questionChain.chainId,
-    misconceptionGraphId: session.misconceptionGraph.graphId,
-    rootCauseCandidateIds: session.rootCauseCandidates.map((item) => item.rootCauseId),
-    replayLinkIds: session.questionReplayLinks.map((item) => item.replayLinkId),
-    fixedD1DueAt: session.fixedD1DueAt,
-    containsRawContent: false,
-  };
+function subjectLabel(session: OwnerAlphaPracticeSession) {
+  return ownerAlphaSubjectLabel(ownerAlphaSubjectFromSession(session));
+}
+
+function sourceLabel(session: OwnerAlphaPracticeSession) {
+  return session.problemModel.subjectAdapter
+    ? "Universal Practice v0 · Subject Adapter v1"
+    : "Universal Practice v0";
 }
 
 function sessionRow(userId: string, session: OwnerAlphaPracticeSession) {
@@ -107,12 +102,12 @@ function sessionRow(userId: string, session: OwnerAlphaPracticeSession) {
     id: session.sessionId,
     user_id: userId,
     exam_id: SESSION_EXAM_ID,
-    subject_id: APPRAISAL_SUBJECT,
+    subject_id: subjectLabel(session),
     stage: OWNER_ALPHA_PRACTICE_STAGE,
     session_kind: SESSION_KIND,
-    source_label: "Universal Practice v0",
+    source_label: sourceLabel(session),
     raw_payload: { nativeContract: session },
-    derived_payload: sessionDerivedPayload(session),
+    derived_payload: ownerAlphaPracticeMetadataProjection(session),
     created_at: session.createdAt,
     updated_at: session.updatedAt,
   };
@@ -237,14 +232,17 @@ export class SupabaseOwnerAlphaPracticeRepository
         id: attempt.attemptId,
         user_id: this.userId,
         exam_id: SESSION_EXAM_ID,
-        subject_id: APPRAISAL_SUBJECT,
+        subject_id: subjectLabel(session),
         stage: OWNER_ALPHA_PRACTICE_STAGE,
         session_id: session.sessionId,
         submission_kind: "independent_attempt",
-        source_label: "Universal Practice v0",
+        source_label: sourceLabel(session),
         raw_payload: { answerText: attempt.text },
         derived_payload: {
           contractVersion: session.contractVersion,
+          subject: ownerAlphaSubjectFromSession(session),
+          subjectAdapterContractVersion:
+            session.problemModel.subjectAdapter?.contractVersion ?? null,
           elapsedTimeMs: attempt.elapsedTimeMs,
           confidence: attempt.confidence,
           assistanceLevel: 0,
@@ -270,13 +268,15 @@ export class SupabaseOwnerAlphaPracticeRepository
         id: rewrite.rewriteId,
         user_id: this.userId,
         exam_id: SESSION_EXAM_ID,
-        subject_id: APPRAISAL_SUBJECT,
+        subject_id: subjectLabel(session),
         stage: OWNER_ALPHA_PRACTICE_STAGE,
         source_submission_id: session.independentAttempt.attemptId,
         rewrite_kind: rewrite.mode,
         raw_payload: { rewriteText: rewrite.text },
         derived_payload: {
           contractVersion: session.contractVersion,
+          subject: ownerAlphaSubjectFromSession(session),
+          subjectRewriteMode: rewrite.subjectMode ?? null,
           biggestGapId: session.biggestGap?.gapId ?? null,
           successCriteria: session.biggestGap?.successCriteria ?? null,
           containsRawContent: false,
@@ -308,6 +308,7 @@ export class SupabaseOwnerAlphaPracticeRepository
           contractVersion: session.contractVersion,
           modelProfileId: session.providerState.modelProfileId,
           methodFamily: session.problemModel.methodFamily,
+          subject: ownerAlphaSubjectFromSession(session),
           assistanceLevel: session.assistance.assistanceLevel,
           containsRawContent: false,
         },
@@ -339,10 +340,12 @@ export class SupabaseOwnerAlphaPracticeRepository
         id: projection.wrongAnswerItemId,
         user_id: this.userId,
         exam_name: APPRAISAL_EXAM_NAME,
-        subject_label: APPRAISAL_SUBJECT,
+        subject_label: subjectLabel(session),
         source_type: "manual",
-        source_label: "Universal Practice v0",
-        problem_title: session.problemModel.requirements[0]?.text.slice(0, 180) ?? "감정평가실무 연습문제",
+        source_label: sourceLabel(session),
+        problem_title:
+          session.problemModel.requirements[0]?.text.slice(0, 180) ??
+          `${subjectLabel(session)} 연습문제`,
         problem_identifier: session.sessionId,
         raw_question_text: session.confirmedProblemText,
         raw_answer_text: firstL1Text(session),
@@ -362,6 +365,9 @@ export class SupabaseOwnerAlphaPracticeRepository
         },
         derived_payload: {
           contractVersion: session.contractVersion,
+          subject: ownerAlphaSubjectFromSession(session),
+          subjectAdapterContractVersion:
+            session.problemModel.subjectAdapter?.contractVersion ?? null,
           ownerAlphaPracticeSessionId: session.sessionId,
           topicTag,
           mistakeType,
@@ -385,7 +391,7 @@ export class SupabaseOwnerAlphaPracticeRepository
         id: projection.reviewQueueItemId,
         user_id: this.userId,
         exam_id: QUEUE_EXAM_ID,
-        subject_id: APPRAISAL_SUBJECT,
+        subject_id: subjectLabel(session),
         stage: "alpha",
         source_submission_id: projection.wrongAnswerItemId,
         source_kind: "wrong_answer",
@@ -397,6 +403,8 @@ export class SupabaseOwnerAlphaPracticeRepository
         },
         derived_payload: {
           contractVersion: session.contractVersion,
+          subject: ownerAlphaSubjectFromSession(session),
+          subjectRewriteMode: session.rewrite.subjectMode ?? null,
           ownerAlphaPracticeSessionId: session.sessionId,
           topicTag,
           mistakeType,
@@ -440,6 +448,7 @@ export class SupabaseOwnerAlphaPracticeRepository
         entity_id: session.sessionId,
         metadata_json: {
           contractVersion: session.contractVersion,
+          subject: ownerAlphaSubjectFromSession(session),
           methodFamily: session.problemModel.methodFamily,
           rewriteMode: session.rewrite.mode,
           containsRawContent: false,

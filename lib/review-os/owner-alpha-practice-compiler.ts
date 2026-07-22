@@ -5,6 +5,11 @@ import {
   type OwnerAlphaPracticeProblemModel,
   type OwnerAlphaRoleType,
 } from "./owner-alpha-practice-contract";
+import {
+  compileOwnerAlphaSubjectAdapter,
+  routeOwnerAlphaPracticeSubject,
+} from "./owner-alpha-practice-subject-adapters";
+import type { OwnerAlphaPracticeSubject } from "./owner-alpha-subject-adapter-contract";
 
 const NUMBER_WITH_UNIT =
   /(-?\d{1,3}(?:,\d{3})*(?:\.\d+)?|-?\d+(?:\.\d+)?)\s*(억원|백만원|천만원|만원|천원|원|㎡|m²|m2|평|ha|%|년|개월|일|개)?/g;
@@ -73,6 +78,38 @@ function topicCandidates(text: string, family: OwnerAlphaMethodFamily) {
     if (pattern.test(text)) candidates.push(label);
   }
   return compact(candidates.length > 0 ? candidates : ["방법 확인 필요"], 8);
+}
+
+function subjectTopicCandidates(
+  text: string,
+  subject: OwnerAlphaPracticeSubject,
+  family: OwnerAlphaMethodFamily,
+) {
+  if (subject === "appraisal_practical") return topicCandidates(text, family);
+  const candidates: string[] = [];
+  if (subject === "appraisal_theory") {
+    for (const [pattern, label] of [
+      [/가치론|가치의\s*본질/i, "가치론"],
+      [/시장가치/i, "시장가치"],
+      [/최유효이용/i, "최유효이용"],
+      [/정당보상|완전보상/i, "정당보상"],
+      [/비교|대비/i, "개념 비교"],
+    ] as const) {
+      if (pattern.test(text)) candidates.push(label);
+    }
+    return compact(candidates.length > 0 ? candidates : ["이론 쟁점 확인"], 8);
+  }
+  for (const [pattern, label] of [
+    [/사업인정/i, "사업인정"],
+    [/수용재결|재결/i, "수용·재결"],
+    [/보상액/i, "보상액 결정"],
+    [/절차/i, "보상 절차"],
+    [/요건|포섭/i, "요건·포섭"],
+    [/판례|대법원/i, "판례 적용"],
+  ] as const) {
+    if (pattern.test(text)) candidates.push(label);
+  }
+  return compact(candidates.length > 0 ? candidates : ["법적 쟁점 확인"], 8);
 }
 
 function subMethodCandidates(text: string) {
@@ -260,12 +297,17 @@ function methodClaim(
 export function compileOwnerAlphaPracticeProblem(input: {
   problemId: string;
   problemText: string;
+  subject?: OwnerAlphaPracticeSubject | null;
 }): OwnerAlphaPracticeProblemModel {
   const normalized = input.problemText
     .normalize("NFKC")
     .replace(/\r\n?/g, "\n")
     .trim();
   const family = methodFamilyFromText(normalized);
+  const routing = routeOwnerAlphaPracticeSubject({
+    problemText: normalized,
+    requestedSubject: input.subject,
+  });
   const compiledRequirements = requirements(normalized);
   const resolvedRequirements =
     compiledRequirements.length > 0
@@ -278,11 +320,15 @@ export function compileOwnerAlphaPracticeProblem(input: {
         ];
   const numbers = givenNumbers(normalized);
   const dates = datesAndTimePoints(normalized);
-  return {
+  const model: Omit<OwnerAlphaPracticeProblemModel, "subjectAdapter"> = {
     contractVersion: OWNER_ALPHA_PRACTICE_CONTRACT_VERSION,
     problemId: input.problemId,
-    subject: "감정평가실무",
-    topicCandidates: topicCandidates(normalized, family),
+    subject: routing.primarySubject,
+    topicCandidates: subjectTopicCandidates(
+      normalized,
+      routing.primarySubject,
+      family,
+    ),
     methodFamily: family,
     subMethodCandidates: subMethodCandidates(normalized),
     requirements: resolvedRequirements,
@@ -301,20 +347,24 @@ export function compileOwnerAlphaPracticeProblem(input: {
     units: compact(numbers.map((number) => number.unit ?? ""), 20),
     datesAndTimePoints: dates,
     assumptions: assumptions(normalized),
-    methodCandidates: [
-      {
-        methodId: family,
-        label:
-          family === "mixed_or_uncertain"
-            ? "방법 확인 필요"
-            : family,
-        state:
-          family === "mixed_or_uncertain"
-            ? "unresolved_needs_review"
-            : "ai_inference",
-        confidence: family === "mixed_or_uncertain" ? "low" : "medium",
-      },
-    ],
+    methodCandidates:
+      routing.primarySubject === "appraisal_practical"
+        ? [
+            {
+              methodId: family,
+              label:
+                family === "mixed_or_uncertain"
+                  ? "방법 확인 필요"
+                  : family,
+              state:
+                family === "mixed_or_uncertain"
+                  ? "unresolved_needs_review"
+                  : "ai_inference",
+              confidence:
+                family === "mixed_or_uncertain" ? "low" : "medium",
+            },
+          ]
+        : [],
     rejectionReasons: [],
     calculationGraph: { nodes: [] },
     sourceStates: [
@@ -328,7 +378,9 @@ export function compileOwnerAlphaPracticeProblem(input: {
       },
     ],
     claimVerificationStates: [
-      methodClaim(family),
+      ...(routing.primarySubject === "appraisal_practical"
+        ? [methodClaim(family)]
+        : []),
       ...numbers.map((number) => ({
         claimId: `claim-${number.numberId}`,
         claimType: "number" as const,
@@ -350,5 +402,13 @@ export function compileOwnerAlphaPracticeProblem(input: {
         resolutionCode: "supported" as const,
       })),
     ],
+  };
+  return {
+    ...model,
+    subjectAdapter: compileOwnerAlphaSubjectAdapter({
+      problemText: normalized,
+      routing,
+      model,
+    }),
   };
 }

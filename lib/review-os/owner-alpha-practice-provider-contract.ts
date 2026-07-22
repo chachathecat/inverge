@@ -6,6 +6,7 @@ import type {
   OwnerAlphaPracticeVariant,
   OwnerAlphaRootCauseCandidate,
 } from "./owner-alpha-practice-contract";
+import type { OwnerAlphaPracticeSubject } from "./owner-alpha-subject-adapter-contract";
 
 export type OwnerAlphaProviderFile = {
   mimeType: string;
@@ -24,6 +25,7 @@ export interface OwnerAlphaPracticeProviderPort {
   extractProblem(input: {
     problemText: string;
     files: OwnerAlphaProviderFile[];
+    subject: OwnerAlphaPracticeSubject;
   }): Promise<{ extractedText: string; modelProfileId: string }>;
   generateReference(input: {
     sessionId: string;

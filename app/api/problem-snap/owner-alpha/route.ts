@@ -14,6 +14,9 @@ import {
 } from "@/lib/review-os/owner-alpha-practice-repository";
 import type { OwnerAlphaProviderFile } from "@/lib/review-os/owner-alpha-practice-provider-contract";
 import { EntitlementBlockedError } from "@/lib/review-os/entitlement-enforcement";
+import {
+  parseOwnerAlphaPracticeSubject,
+} from "@/lib/review-os/owner-alpha-subject-adapter-contract";
 
 export const dynamic = "force-dynamic";
 
@@ -130,6 +133,11 @@ async function createFromFormData(request: Request) {
   const runtime = await ownerRuntime();
   const formData = await request.formData();
   const problemText = formData.get("problemText")?.toString() ?? "";
+  const rawSubject = formData.get("subject")?.toString() ?? "";
+  const subject = rawSubject
+    ? parseOwnerAlphaPracticeSubject(rawSubject)
+    : "appraisal_practical";
+  if (!subject) throw new OwnerAlphaPracticeRuntimeError("invalid_input");
   const files = formData
     .getAll("problemFiles")
     .filter((value): value is File => value instanceof File && value.size > 0);
@@ -156,7 +164,12 @@ async function createFromFormData(request: Request) {
         : ("file_upload" as const);
   return NextResponse.json({
     ok: true,
-    session: await runtime.create({ problemText, files: providerFiles, inputModality }),
+    session: await runtime.create({
+      problemText,
+      files: providerFiles,
+      inputModality,
+      subject,
+    }),
   });
 }
 
@@ -218,6 +231,8 @@ async function runCommand(request: Request) {
         sessionId,
         recordVersion: version,
         mode,
+        subjectMode:
+          typeof body.subjectMode === "string" ? body.subjectMode : null,
         rewriteText: requiredString(body.rewriteText),
         inferredMisunderstanding: requiredString(body.inferredMisunderstanding),
         successCriteria: requiredString(body.successCriteria),
