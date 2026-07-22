@@ -1526,6 +1526,77 @@ test("Law problem legal dates aggregate by canonical value and conflicts fail cl
     "problem_given",
   );
 
+  const adjacentBareDate = compileLaw(
+    "law-bare-date-same-sentence",
+    "공익사업법 제10조의 기준일자는 2026.07.04이다.",
+  );
+  assert.equal(
+    adjacentBareDate.subjectAdapter.effectiveDateRequirement.effectiveAt,
+    "2026.07.04",
+  );
+  assert.equal(
+    adjacentBareDate.subjectAdapter.effectiveDateRequirement.state,
+    "problem_given",
+  );
+  assert.deepEqual(
+    ownerAlphaSubjectReferenceReleaseBlockers({
+      problemModel: adjacentBareDate,
+      claims: [],
+      generatedReferenceText:
+        "2026.07.04 기준 공익사업법 제10조를 적용한다.",
+    }),
+    [],
+  );
+
+  for (const [problemId, problemText] of [
+    [
+      "law-bare-date-after-sentence",
+      "공익사업법 제10조. 기준일자는 2026.07.04이다.",
+    ],
+    [
+      "law-bare-date-after-tight-sentence",
+      "공익사업법 제10조.기준일자는 2026.07.04이다.",
+    ],
+    [
+      "law-bare-date-after-cjk-sentence",
+      "공익사업법 제10조。기준일자는 2026.07.04이다.",
+    ],
+    [
+      "law-bare-date-after-reverse-sentence",
+      "공익사업법 제10조의 기준일자. 2026.07.04이다.",
+    ],
+    [
+      "law-bare-date-after-tight-reverse-sentence",
+      "공익사업법 제10조의 기준일자.2026.07.04이다.",
+    ],
+    [
+      "law-bare-date-before-article-reverse-sentence",
+      "기준일자. 2026.07.04 공익사업법 제10조를 적용한다.",
+    ],
+  ]) {
+    const model = compileLaw(problemId, problemText);
+    assert.equal(
+      model.subjectAdapter.effectiveDateRequirement.effectiveAt,
+      null,
+      problemText,
+    );
+    assert.equal(
+      model.subjectAdapter.effectiveDateRequirement.state,
+      "unresolved_needs_review",
+      problemText,
+    );
+    assert.deepEqual(
+      ownerAlphaSubjectReferenceReleaseBlockers({
+        problemModel: model,
+        claims: [],
+        generatedReferenceText:
+          "2026.07.04 기준 공익사업법 제10조를 적용한다.",
+      }),
+      ["law:effective_date_unknown", "law:unbound_effective_date_reference"],
+      problemText,
+    );
+  }
+
   for (const [problemId, problemText] of [
     ["law-date-absent", "공익사업법 제10조를 검토하라."],
     [

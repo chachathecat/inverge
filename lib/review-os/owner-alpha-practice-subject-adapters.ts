@@ -447,15 +447,57 @@ function hasAdjacentLawArticle(
   );
 }
 
+function legalSentenceSegments(
+  text: string,
+  splitLineBreaks = true,
+) {
+  const normalized = text.normalize("NFKC");
+  const dateRanges = [...normalized.matchAll(
+    /(?:19|20)\d{2}\s*[.\-/년]\s*\d{1,2}\s*[.\-/월]\s*\d{1,2}\s*일?/gu,
+  )].map((match) => [match.index ?? 0, (match.index ?? 0) + match[0].length]);
+  const isProtectedPeriodAt = (index: number) =>
+    normalized[index] === "." &&
+    (dateRanges.some(([rangeStart, rangeEnd]) =>
+      index >= rangeStart && index < rangeEnd
+    ) ||
+      (dateRanges.some(([, rangeEnd]) => index === rangeEnd) &&
+        /^\s{0,8}[\p{P}\p{S}]{0,1}\s{0,8}(?:(?:은|는|이|가|을|를)\s{0,4})?(?:(?:법령|법률|조문)(?:상|의)?\s{0,4})?기준/u.test(
+          normalized.slice(index + 1),
+        )));
+  const segments: string[] = [];
+  let start = 0;
+  for (let index = 0; index < normalized.length; index += 1) {
+    const character = normalized[index];
+    const isLineBreak = character === "\r" || character === "\n";
+    const isLineBreakBoundary =
+      splitLineBreaks && isLineBreak;
+    const isPunctuationBoundary =
+      /[.!?。！？]/u.test(character) && !isProtectedPeriodAt(index);
+    if (!isLineBreakBoundary && !isPunctuationBoundary) {
+      continue;
+    }
+    const segment = normalized.slice(start, index);
+    if (segment.trim()) segments.push(segment);
+    while (
+      index + 1 < normalized.length &&
+      ((splitLineBreaks && /[\r\n]/u.test(normalized[index + 1])) ||
+        (/[.!?。！？]/u.test(normalized[index + 1]) &&
+          !isProtectedPeriodAt(index + 1)))
+    ) {
+      index += 1;
+    }
+    start = index + 1;
+  }
+  const finalSegment = normalized.slice(start);
+  if (finalSegment.trim()) segments.push(finalSegment);
+  return segments;
+}
+
 function hasBareAdjacentUnknownLegalEffectiveVersion(
   text: string,
   allowedStatuteReferences: ReadonlySet<string>,
 ) {
-  const normalized = text.normalize("NFKC");
-  const segments = normalized.split(
-    /(?:\r?\n+|(?<!\d)[.!?。！？]+|[.!?。！？]+(?!\d))/u,
-  );
-  for (const segment of segments) {
+  for (const segment of legalSentenceSegments(text)) {
     for (const match of segment.matchAll(
       /(?<![가-힣])기준\s{0,4}일(?:\s{0,4}자)?(?:\s{0,4}(?:로서|로써|로|이며|이고|이므로|이지만|은|는|이|가|을|를|인|상|에서|에|의|도|만|:|=)){0,2}\s{0,8}[\p{P}\p{S}]{0,3}\s{0,8}(알려지지\s{0,4}않|알\s{0,4}수\s{0,4}없|미상(?!환)|불명(?!확|예|료)|불확실|미확인|별도\s{0,4}확인|확인(?:이)?\s{0,4}(?:필요|되지(?:\s{0,4}않)?|하라))/giu,
     )) {
@@ -497,48 +539,49 @@ function adjacentLawEffectiveDateValues(
   allowedStatuteReferences: ReadonlySet<string>,
 ) {
   const values = new Map<string, string>();
-  const normalized = text.normalize("NFKC");
-  for (const match of normalized.matchAll(
-    /((?:19|20)\d{2}\s{0,8}[.\-/년]\s{0,8}\d{1,2}\s{0,8}[.\-/월]\s{0,8}\d{1,2}\s{0,8}일?)\s{0,8}[\p{P}\p{S}]{0,2}\s{0,8}(?:(?:은|는|이|가|을|를)\s{0,4})?(?:(?:법령|법률|조문)(?:상|의)?\s{0,4})?기준(?:일(?:자)?(?:로서|로써|로)?|으로서|으로써|으로)?(?:\s{0,4}(?:현재|당시|이며|이고|이므로|이지만|이어서|이라서|이라면|이라고|인데|이되|이자|이니|인바|인즉|이라|은|는|이|가|을|를|인|상|에서|에|의|도|만)){0,2}(?![가-힣])/giu,
-  )) {
-    const dateStart = (match.index ?? 0) + match[0].indexOf(match[1]);
-    const basisEnd = (match.index ?? 0) + match[0].length;
-    if (
-      hasOrdinaryAppraisalDateContext(normalized, dateStart) ||
-      !hasAdjacentLawArticle(
-        normalized,
-        dateStart,
-        basisEnd,
-        allowedStatuteReferences,
-      )
-    ) {
-      continue;
+  for (const segment of legalSentenceSegments(text, false)) {
+    for (const match of segment.matchAll(
+      /((?:19|20)\d{2}\s{0,8}[.\-/년]\s{0,8}\d{1,2}\s{0,8}[.\-/월]\s{0,8}\d{1,2}\s{0,8}일?)\s{0,8}[\p{P}\p{S}]{0,2}\s{0,8}(?:(?:은|는|이|가|을|를)\s{0,4})?(?:(?:법령|법률|조문)(?:상|의)?\s{0,4})?기준(?:일(?:자)?(?:로서|로써|로)?|으로서|으로써|으로)?(?:\s{0,4}(?:현재|당시|이며|이고|이므로|이지만|이어서|이라서|이라면|이라고|인데|이되|이자|이니|인바|인즉|이라|은|는|이|가|을|를|인|상|에서|에|의|도|만)){0,2}(?![가-힣])/giu,
+    )) {
+      const dateStart = (match.index ?? 0) + match[0].indexOf(match[1]);
+      const basisEnd = (match.index ?? 0) + match[0].length;
+      if (
+        hasOrdinaryAppraisalDateContext(segment, dateStart) ||
+        !hasAdjacentLawArticle(
+          segment,
+          dateStart,
+          basisEnd,
+          allowedStatuteReferences,
+        )
+      ) {
+        continue;
+      }
+      const key = canonicalFullDate(match[1]);
+      if (key && !values.has(key)) {
+        values.set(key, match[1].replace(/\s+/g, ""));
+      }
     }
-    const key = canonicalFullDate(match[1]);
-    if (key && !values.has(key)) {
-      values.set(key, match[1].replace(/\s+/g, ""));
-    }
-  }
-  for (const match of normalized.matchAll(
-    /(?<![가-힣])기준(?:일(?:자)?(?:로서|로써|로)?|으로서|으로써|으로)?(?:\s{0,4}(?:현재|당시|이며|이고|이므로|이지만|이어서|이라서|이라면|이라고|인데|이되|이자|이니|인바|인즉|이라|은|는|이|가|을|를|인|상|에서|에|의|도|만)){0,2}(?![가-힣])(?:\s{0,8}[\p{P}\p{S}]){0,3}\s{0,8}((?:19|20)\d{2}\s{0,8}[.\-/년]\s{0,8}\d{1,2}\s{0,8}[.\-/월]\s{0,8}\d{1,2}\s{0,8}일?)/giu,
-  )) {
-    const basisStart = match.index ?? 0;
-    const dateStart = basisStart + match[0].indexOf(match[1]);
-    const dateEnd = dateStart + match[1].length;
-    if (
-      hasOrdinaryAppraisalDateContext(normalized, dateStart) ||
-      !hasAdjacentLawArticle(
-        normalized,
-        basisStart,
-        dateEnd,
-        allowedStatuteReferences,
-      )
-    ) {
-      continue;
-    }
-    const key = canonicalFullDate(match[1]);
-    if (key && !values.has(key)) {
-      values.set(key, match[1].replace(/\s+/g, ""));
+    for (const match of segment.matchAll(
+      /(?<![가-힣])기준(?:일(?:자)?(?:로서|로써|로)?|으로서|으로써|으로)?(?:\s{0,4}(?:현재|당시|이며|이고|이므로|이지만|이어서|이라서|이라면|이라고|인데|이되|이자|이니|인바|인즉|이라|은|는|이|가|을|를|인|상|에서|에|의|도|만)){0,2}(?![가-힣])(?:\s{0,8}[\p{P}\p{S}]){0,3}\s{0,8}((?:19|20)\d{2}\s{0,8}[.\-/년]\s{0,8}\d{1,2}\s{0,8}[.\-/월]\s{0,8}\d{1,2}\s{0,8}일?)/giu,
+    )) {
+      const basisStart = match.index ?? 0;
+      const dateStart = basisStart + match[0].indexOf(match[1]);
+      const dateEnd = dateStart + match[1].length;
+      if (
+        hasOrdinaryAppraisalDateContext(segment, dateStart) ||
+        !hasAdjacentLawArticle(
+          segment,
+          basisStart,
+          dateEnd,
+          allowedStatuteReferences,
+        )
+      ) {
+        continue;
+      }
+      const key = canonicalFullDate(match[1]);
+      if (key && !values.has(key)) {
+        values.set(key, match[1].replace(/\s+/g, ""));
+      }
     }
   }
   return values;
