@@ -14,7 +14,8 @@ jobs:
     if: >-
       (
         github.event.pull_request.head.ref == 'agent/owner-alpha-universal-practice-loop-v0' ||
-        github.event.pull_request.head.ref == 'agent/three-subject-practice-adapter-contract'
+        github.event.pull_request.head.ref == 'agent/three-subject-practice-adapter-contract' ||
+        github.event.pull_request.head.ref == 'agent/three-subject-explanation-ladder-v1'
       ) &&
       github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
@@ -54,6 +55,7 @@ jobs:
           npm run test --
           tests/owner-alpha-universal-practice-loop-v0.test.mjs
           tests/owner-alpha-three-subject-practice-adapter-contract.test.mjs
+          tests/owner-alpha-explanation-ladder-v1.test.mjs
           --workers=1
 
       - name: Verify exact-head learner RLS in isolated Postgres

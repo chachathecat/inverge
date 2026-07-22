@@ -5,6 +5,12 @@ import crypto from "node:crypto";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 import {
+  OWNER_ALPHA_EXPLANATION_LADDER_CONTRACT_VERSION,
+  isOwnerAlphaExplanationLadderV1,
+  ownerAlphaExpectedExplanationBlocks,
+  type OwnerAlphaExplanationLadderV1,
+} from "./owner-alpha-explanation-ladder-contract";
+import {
   OWNER_ALPHA_AI_REFERENCE_DISCLAIMER,
   OWNER_ALPHA_AI_REFERENCE_LABEL,
   type OwnerAlphaBiggestGap,
@@ -61,6 +67,37 @@ function stringArray(value: unknown, limit: number, itemLimit = 800) {
     .map((item) => item.trim().slice(0, itemLimit))
     .filter(Boolean)
     .slice(0, limit);
+}
+
+function identifierArray(value: unknown, limit: number) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => identifier(item, ""))
+    .filter(Boolean)
+    .slice(0, limit);
+}
+
+function normalizeExplanationLadder(
+  value: unknown,
+): OwnerAlphaExplanationLadderV1 | undefined {
+  if (value === undefined) return undefined;
+  if (!isOwnerAlphaExplanationLadderV1(value)) {
+    throw new OwnerAlphaProviderError("invalid_output");
+  }
+  const normalized = {
+    ...value,
+    parentReferenceId: identifier(value.parentReferenceId, ""),
+    blocks: value.blocks.map((block) => ({
+      ...block,
+      claimIds: identifierArray(block.claimIds, 40),
+      calculationNodeIds: identifierArray(block.calculationNodeIds, 60),
+      checkQuestionId: block.checkQuestionId,
+    })),
+  };
+  if (!isOwnerAlphaExplanationLadderV1(normalized)) {
+    throw new OwnerAlphaProviderError("invalid_output");
+  }
+  return normalized;
 }
 
 function finiteNumber(value: unknown): number | null {
@@ -317,6 +354,13 @@ function normalizeReferenceDraft(
     .map(normalizeCalculationNode)
     .filter((node): node is OwnerAlphaCalculationNode => Boolean(node))
     .slice(0, 60);
+  const referenceId = identifier(
+    rawReference.referenceId,
+    `${input.sessionId}-reference`,
+  );
+  const explanationLadder = normalizeExplanationLadder(
+    rawReference.explanationLadder,
+  );
 
   const hints = (Array.isArray(rawReference.hints) ? rawReference.hints : [])
     .filter(isRecord)
@@ -437,11 +481,11 @@ function normalizeReferenceDraft(
 
   return {
     reference: {
-      referenceId: identifier(rawReference.referenceId, `${input.sessionId}-reference`),
+      referenceId,
       label: OWNER_ALPHA_AI_REFERENCE_LABEL,
       disclaimer: OWNER_ALPHA_AI_REFERENCE_DISCLAIMER,
       modelProfileId: input.modelProfileId,
-      promptVersion: "owner-alpha-practice-reference.v0",
+      promptVersion: "owner-alpha-practice-reference.v1",
       schemaVersion: "owner-alpha-practice-reference.v0",
       generatedAt: input.generatedAt,
       hints,
@@ -469,6 +513,7 @@ function normalizeReferenceDraft(
       },
       claims,
       calculationGraph: { nodes },
+      ...(explanationLadder ? { explanationLadder } : {}),
       releaseStatus: "released",
       blockerCodes: [],
     },
@@ -616,9 +661,25 @@ export class GeminiOwnerAlphaPracticeProvider
     problemModel: OwnerAlphaPracticeProblemModel;
     independentAttempt: string;
     questionText: string | null;
+    checkQuestionIds: string[];
     generatedAt: string;
   }) {
     try {
+      const subjectAdapter = input.problemModel.subjectAdapter;
+      const explanationLadderInstructions = subjectAdapter
+        ? [
+            `reference.explanationLadder는 ${OWNER_ALPHA_EXPLANATION_LADDER_CONTRACT_VERSION}이며 기존 L1/L2/L3를 가리키는 metadata-only projection이다.`,
+            `explanationLadder.blocks는 이 순서의 정확히 네 개만 쓴다: ${ownerAlphaExpectedExplanationBlocks(subjectAdapter.subject).join(", ")}.`,
+            "각 block은 blockType, level(l1/l2/l3), sectionIndex(0부터), 기존 reference.claims의 claimIds, 해당 시 기존 calculationNodeIds, 기존 checkQuestionId 또는 null만 담는다.",
+            "explanationLadder에 L1/L2/L3 body, 문제, 답안, 새 원문, releaseStatus를 복사하지 않는다. 공개 여부는 부모 reference.releaseStatus만 따른다.",
+            `허용 checkQuestionId: ${JSON.stringify(input.checkQuestionIds)}`,
+          ]
+        : [
+            "subjectAdapter가 없는 기존 v0 세션이므로 reference.explanationLadder를 출력하지 않는다.",
+          ];
+      const explanationLadderOutputShape = subjectAdapter
+        ? ",explanationLadder{contractVersion,parentReferenceId,subject,blocks[]}"
+        : "";
       const response = await withTimeout(
         createModel().generateContent({
           contents: [
@@ -631,6 +692,7 @@ export class GeminiOwnerAlphaPracticeProvider
                     `표시는 반드시 '${OWNER_ALPHA_AI_REFERENCE_LABEL}'이며 공식 정답·확정 채점기준·합격 보장이 아니다.`,
                     "제3자 답안은 전제하지 않는다. 독립 시도와 문제 문언을 비교해 학습용 기준안을 만든다.",
                     "L1/L2/L3의 역할은 전달된 subject adapter 계약을 따르며 모두 AI 학습용 기준안이다.",
+                    ...explanationLadderInstructions,
                     ...ownerAlphaSubjectProviderInstructions(input.problemModel),
                     "method choice나 핵심 개념이 불확실하면 단정하지 말고 state=unresolved_needs_review, resolutionCode=multiple_reasonable_approaches로 둔다.",
                     "claim state는 ai_inference 또는 unresolved_needs_review만 출력한다. 공식 출처를 꾸며내지 않는다.",
@@ -638,7 +700,7 @@ export class GeminiOwnerAlphaPracticeProvider
                     "calculation node에는 primitive 입력값과 claimedResult를 모두 넣는다. 검증 불가능한 계산은 node로 만들지 않고 claim을 unresolved로 둔다.",
                     "가장 큰 간극은 정확히 하나만 고른다. 오개념 그래프와 근본 원인 후보는 관찰 근거가 있을 때만 suspected/observed로 둔다.",
                     "변형은 숫자 또는 조건 딱 하나만 바꾼다.",
-                    "출력 키: reference{referenceId,hints[{hintId,level,text}],l1[],l2[],l3[],claims[],calculationGraph{nodes[]}}, biggestGap{gapType 포함}, misconceptionGraph{nodes[],edges[]}, rootCauseCandidates[], variant.",
+                    `출력 키: reference{referenceId,hints[{hintId,level,text}],l1[],l2[],l3[],claims[],calculationGraph{nodes[]}${explanationLadderOutputShape}}, biggestGap{gapType 포함}, misconceptionGraph{nodes[],edges[]}, rootCauseCandidates[], variant.`,
                     `문제 원문:\n${input.problemText.slice(0, MAX_TEXT_LENGTH)}`,
                     `구조화 모델:\n${JSON.stringify(input.problemModel)}`,
                     `학습자 독립 시도:\n${input.independentAttempt.slice(0, 12_000)}`,

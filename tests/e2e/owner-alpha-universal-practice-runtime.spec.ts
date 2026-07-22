@@ -50,12 +50,13 @@ function memoryRepository(): OwnerAlphaPracticeRepositoryPort {
   };
 }
 
-function fakeProvider(): OwnerAlphaPracticeProviderPort {
+function fakeProvider(calls: { reference: number }): OwnerAlphaPracticeProviderPort {
   return {
     async extractProblem() {
       throw new Error("file OCR is not used in this synthetic UI runtime");
     },
     async generateReference(input): Promise<OwnerAlphaReferenceDraft> {
+      calls.reference += 1;
       const node = {
         nodeId: "calc-cost-area",
         claimId: "claim-cost-area",
@@ -93,8 +94,56 @@ function fakeProvider(): OwnerAlphaPracticeProviderPort {
             evidenceRefIds: [],
             calculationNodeId: node.nodeId,
             resolutionCode: "provider_only" as const,
+          }, {
+            claimId: "claim-method",
+            claimType: "method" as const,
+            summary: "원가방식 적용 순서",
+            state: "ai_inference" as const,
+            critical: true,
+            evidenceRefIds: [],
+            calculationNodeId: null,
+            resolutionCode: "provider_only" as const,
           }],
           calculationGraph: { nodes: [node] },
+          explanationLadder: {
+            contractVersion: "owner_alpha_explanation_ladder.v1" as const,
+            parentReferenceId: `${input.sessionId}-reference`,
+            subject: "appraisal_practical" as const,
+            blocks: [
+              {
+                blockType: "solution_direction" as const,
+                level: "l1" as const,
+                sectionIndex: 0,
+                claimIds: ["claim-method"],
+                calculationNodeIds: [],
+                checkQuestionId: null,
+              },
+              {
+                blockType: "exam_core" as const,
+                level: "l2" as const,
+                sectionIndex: 0,
+                claimIds: ["claim-method"],
+                calculationNodeIds: [],
+                checkQuestionId: null,
+              },
+              {
+                blockType: "calculation_or_method_trap" as const,
+                level: "l2" as const,
+                sectionIndex: 0,
+                claimIds: ["claim-cost-area"],
+                calculationNodeIds: [node.nodeId],
+                checkQuestionId: null,
+              },
+              {
+                blockType: "ten_second_calculation_or_method_check" as const,
+                level: "l3" as const,
+                sectionIndex: 0,
+                claimIds: ["claim-cost-area"],
+                calculationNodeIds: [node.nodeId],
+                checkQuestionId: input.checkQuestionIds.at(-1) ?? null,
+              },
+            ],
+          },
           releaseStatus: "released" as const,
           blockerCodes: [],
         },
@@ -156,14 +205,15 @@ type RuntimeCommand = {
 
 function createRuntime() {
   let id = 0;
-  return new OwnerAlphaPracticeRuntime({
+  const calls = { reference: 0 };
+  return { runtime: new OwnerAlphaPracticeRuntime({
     repository: memoryRepository(),
-    provider: fakeProvider(),
+    provider: fakeProvider(calls),
     assertReferenceEntitlement: async () => {},
     now: () => new Date("2026-07-22T00:00:00.000Z"),
     createId: () => `runtime-id-${++id}`,
     userId,
-  });
+  }), calls };
 }
 
 async function assertAccessible(page: Page, label: string) {
@@ -175,9 +225,13 @@ async function assertAccessible(page: Page, label: string) {
   );
   expect(blocking, `${label}: ${blocking.map((item) => item.id).join(", ")}`).toEqual([]);
   const overflow = await page.evaluate(
-    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    () =>
+      Math.max(
+        document.documentElement.scrollWidth,
+        document.body.scrollWidth,
+      ) - window.innerWidth,
   );
-  expect(overflow, `${label}: horizontal overflow`).toBeLessThanOrEqual(2);
+  expect(overflow, `${label}: horizontal overflow`).toBe(0);
 }
 
 test.describe("owner alpha universal practice exact-head runtime", () => {
@@ -185,7 +239,7 @@ test.describe("owner alpha universal practice exact-head runtime", () => {
 
   test("keeps one primary action through capture, attempt, bounded reveal, rewrite, and D+1", async ({ page, context }) => {
     expect(expectedSha).toMatch(/^[0-9a-f]{40}$/);
-    const runtime = createRuntime();
+    const { runtime, calls } = createRuntime();
     let latestSessionId: string | null = null;
     const consoleErrors: string[] = [];
     page.on("console", (message) => {
@@ -264,6 +318,7 @@ test.describe("owner alpha universal practice exact-head runtime", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/problem-snap?ownerAlpha=universal-practice-v0");
     await expect(page.getByRole("heading", { name: "감정평가실무 범용 학습 루프" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "과목별 설명 사다리" })).toHaveCount(0);
     await assertAccessible(page, "capture");
 
     const version = await page.evaluate(async () => {
@@ -283,6 +338,7 @@ test.describe("owner alpha universal practice exact-head runtime", () => {
     await expect(page.getByText("아직 AI 기준안은 생성·노출되지 않았습니다.", { exact: false })).toBeVisible();
     await page.getByLabel("내 독립 시도").fill("면적과 단가를 곱한 뒤 감가수정 순서를 적용하겠습니다.");
     await page.getByRole("button", { name: "독립 시도 저장" }).click();
+    await expect(page.getByRole("region", { name: "과목별 설명 사다리" })).toHaveCount(0);
 
     for (let level = 1; level <= 4; level += 1) {
       await expect(page.getByRole("button", { name: `힌트 ${level} 요청` })).toBeVisible();
@@ -290,9 +346,20 @@ test.describe("owner alpha universal practice exact-head runtime", () => {
       await page.getByRole("button", { name: `힌트 ${level} 요청` }).click();
       await expect(page.getByText(`자료 역할과 단위를 확인하는 힌트 ${level}`)).toBeVisible();
       await expect(page.getByText(OWNER_ALPHA_AI_REFERENCE_LABEL, { exact: true })).toHaveCount(0);
+      await expect(page.getByRole("region", { name: "과목별 설명 사다리" })).toHaveCount(0);
     }
     await page.getByRole("button", { name: `${OWNER_ALPHA_AI_REFERENCE_LABEL} L1/L2/L3 열기` }).click();
     await expect(page.getByRole("heading", { name: OWNER_ALPHA_AI_REFERENCE_LABEL })).toBeVisible();
+    const ladder = page.getByRole("region", { name: "과목별 설명 사다리" });
+    await expect(ladder).toBeVisible();
+    await expect(ladder.locator("ol > li > p:first-child")).toHaveText([
+      "풀이 방향",
+      "시험용 핵심",
+      "계산·방법 선택 함정",
+      "10초 계산·방법 확인",
+    ]);
+    await expect(page.getByText("합격 한 줄", { exact: false })).toHaveCount(0);
+    expect(calls.reference).toBe(1);
     await expect(page.getByText("결정론 검증 완료", { exact: true })).toBeVisible();
     await expect(page.getByRole("heading", { name: "6. 가장 큰 간극 하나 → 다시 풀기" })).toBeVisible();
     await assertAccessible(page, "reference and rewrite");

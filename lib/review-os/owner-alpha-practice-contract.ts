@@ -4,6 +4,11 @@ import {
   type OwnerAlphaSubjectGapType,
   type OwnerAlphaSubjectRewriteMode,
 } from "./owner-alpha-subject-adapter-contract";
+import {
+  isOwnerAlphaExplanationLadderV1,
+  ownerAlphaExplanationLadderReleaseBlockers,
+  type OwnerAlphaExplanationLadderV1,
+} from "./owner-alpha-explanation-ladder-contract";
 
 export const OWNER_ALPHA_PRACTICE_CONTRACT_VERSION =
   "owner_alpha_universal_appraisal_practice.v0" as const;
@@ -362,6 +367,11 @@ export type OwnerAlphaAiLearningReference = {
   l3: OwnerAlphaLearningReferenceLevel;
   claims: OwnerAlphaClaimState[];
   calculationGraph: { nodes: OwnerAlphaCalculationNode[] };
+  /**
+   * Optional metadata-only projection over the existing L1/L2/L3 sections.
+   * The parent reference remains the only release authority.
+   */
+  explanationLadder?: OwnerAlphaExplanationLadderV1;
   releaseStatus: "released" | "withheld";
   blockerCodes: string[];
 };
@@ -555,6 +565,45 @@ export function isOwnerAlphaPracticeSession(
     ].includes(String(value.providerState.reference))
   ) {
     return false;
+  }
+  if (value.aiReference !== null && value.aiReference !== undefined) {
+    if (!isRecord(value.aiReference)) return false;
+    const reference = value.aiReference;
+    if (reference.explanationLadder !== undefined) {
+      if (
+        !value.problemModel.subjectAdapter ||
+        !isOwnerAlphaExplanationLadderV1(reference.explanationLadder) ||
+        typeof reference.referenceId !== "string" ||
+        !isRecord(reference.l1) ||
+        !Array.isArray(reference.l1.sections) ||
+        !isRecord(reference.l2) ||
+        !Array.isArray(reference.l2.sections) ||
+        !isRecord(reference.l3) ||
+        !Array.isArray(reference.l3.sections) ||
+        !Array.isArray(reference.claims) ||
+        !isRecord(reference.calculationGraph) ||
+        !Array.isArray(reference.calculationGraph.nodes)
+      ) {
+        return false;
+      }
+      const checkQuestionIds = value.questionChain.entries
+        .filter(isRecord)
+        .map((entry) => entry.questionId)
+        .filter(
+          (questionId): questionId is string =>
+            typeof questionId === "string" && questionId.length > 0,
+        );
+      if (
+        ownerAlphaExplanationLadderReleaseBlockers({
+          ladder: reference.explanationLadder,
+          parentReference: reference as OwnerAlphaAiLearningReference,
+          subject: value.problemModel.subjectAdapter.subject,
+          checkQuestionIds,
+        }).length > 0
+      ) {
+        return false;
+      }
+    }
   }
   return true;
 }

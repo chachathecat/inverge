@@ -20,6 +20,9 @@ import {
 } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  ownerAlphaExplanationBlockLabel,
+} from "@/lib/review-os/owner-alpha-explanation-ladder-contract";
+import {
   OWNER_ALPHA_AI_REFERENCE_LABEL,
   OWNER_ALPHA_PRACTICE_ROUTE_KEY,
   ownerAlphaMethodFamilyLabel,
@@ -693,6 +696,7 @@ function ProblemStructure({ session }: { session: OwnerAlphaPracticeView }) {
 function AiReferencePanel({ session }: { session: OwnerAlphaPracticeView }) {
   const reference = session.aiReference;
   if (!reference) return null;
+  const ladder = reference.explanationLadder;
   return (
     <Card>
       <CardHeader>
@@ -700,6 +704,38 @@ function AiReferencePanel({ session }: { session: OwnerAlphaPracticeView }) {
         <CardDescription>{reference.disclaimer}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {ladder ? (
+          <section
+            aria-labelledby="owner-alpha-explanation-ladder-title"
+            className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[color:var(--surface-soft)] p-4"
+          >
+            <h3
+              id="owner-alpha-explanation-ladder-title"
+              className="text-sm font-medium"
+            >
+              과목별 설명 사다리
+            </h3>
+            <ol className="mt-4 grid gap-3 sm:grid-cols-2">
+              {ladder.blocks.map((block) => {
+                const section = reference[block.level].sections[block.sectionIndex];
+                return (
+                  <li
+                    key={block.blockType}
+                    className="min-w-0 rounded-[var(--radius-md)] bg-[color:var(--surface)] p-4"
+                  >
+                    <p className="text-xs font-medium text-[color:var(--muted)]">
+                      {ownerAlphaExplanationBlockLabel(block.blockType)}
+                    </p>
+                    <h4 className="mt-2 text-sm font-medium">{section.heading}</h4>
+                    <p className="mt-1 whitespace-pre-wrap break-words text-sm leading-7">
+                      {section.body}
+                    </p>
+                  </li>
+                );
+              })}
+            </ol>
+          </section>
+        ) : null}
         {[reference.l1, reference.l2, reference.l3].map((level, index) => (
           <details key={level.title} open={index === 0} className="rounded-[var(--radius-md)] border border-[var(--border)] p-4">
             <summary className="cursor-pointer font-medium">{level.title}</summary>

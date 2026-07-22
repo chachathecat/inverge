@@ -340,11 +340,79 @@ function legalCitations(text: string) {
   return compact(matches ?? [], 16);
 }
 
+function legalStatuteReferenceKeys(text: string) {
+  const keys = new Set<string>();
+  const nonStatuteLabels = new Set([
+    "가감법",
+    "계산방법",
+    "기법",
+    "문법",
+    "방법",
+    "수법",
+    "어법",
+    "용법",
+    "적용법",
+    "평가방법",
+    "해법",
+    "해석법",
+  ]);
+  for (const match of text.normalize("NFKC").matchAll(
+    /[가-힣·]{3,30}(?:법률|시행령|시행규칙|법)(?=\s*(?:상|의|에|은|는|이|가|을|를|과|와|에서|제|[,.;:)]|$))/g,
+  )) {
+    const label = match[0].replace(/\s+/g, "");
+    if (!nonStatuteLabels.has(label)) keys.add(label);
+  }
+  for (const pattern of [
+    /[가-힣·]{2,30}\s+법(?=\s*(?:상|의|에|은|는|이|가|을|를|과|와|에서|제|[,.;:)]|$))/g,
+    /[가-힣·]{1,20}(?:\s+[가-힣·]{1,20}){0,6}에\s+관한\s+법률(?=\s*(?:상|의|에|은|는|이|가|을|를|과|와|에서|제|[,.;:)]|$))/g,
+  ]) {
+    for (const match of text.normalize("NFKC").matchAll(pattern)) {
+      const label = match[0].replace(/\s+/g, "");
+      if (!nonStatuteLabels.has(label)) keys.add(label);
+    }
+  }
+  return keys;
+}
+
 function applicableLaws(text: string) {
-  const matches = text.match(
-    /[가-힣·]{2,30}(?:법률|시행령|시행규칙|법)(?=\s|제|에|의|상|$)/g,
+  return [...legalStatuteReferenceKeys(text)].slice(0, 12);
+}
+
+function canonicalFullDate(value: string) {
+  const parts = value.match(
+    /((?:19|20)\d{2})\s*[.\-/년]\s*(\d{1,2})\s*[.\-/월]\s*(\d{1,2})/,
   );
-  return compact(matches ?? [], 12);
+  if (!parts) return null;
+  const year = Number(parts[1]);
+  const month = Number(parts[2]);
+  const day = Number(parts[3]);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  return parsed.getUTCFullYear() === year &&
+    parsed.getUTCMonth() === month - 1 &&
+    parsed.getUTCDate() === day
+    ? `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`
+    : null;
+}
+
+function hasUnknownLegalEffectiveVersion(text: string) {
+  return /(?:시행일|유효일|법령\s*버전(?:일)?|법령\s*기준일|적용\s*기준일)[^.\n]{0,40}(?:알려지지\s*않|알\s*수\s*없|미상|불명|불확실|미확인|별도\s*확인|확인(?:이)?\s*(?:필요|되지|하라))/i.test(
+    text,
+  );
+}
+
+function legalEffectiveDateReferenceKeys(text: string) {
+  const keys = new Set<string>();
+  const normalized = text.normalize("NFKC");
+  for (const pattern of [
+    /(?:시행일|유효일|법령\s*버전(?:일)?|법령\s*기준일|적용\s*기준일)\s*(?:은|는|이|가|을|를|:|=)?\s*((?:19|20)\d{2}\s*[.\-/년]\s*\d{1,2}\s*[.\-/월]\s*\d{1,2}\s*일?)/gi,
+    /((?:19|20)\d{2}\s*[.\-/년]\s*\d{1,2}\s*[.\-/월]\s*\d{1,2}\s*일?)\s*(?:현재\s*)?(?:시행\s*(?:법령|법률)|법령\s*버전(?:일)?|시행일|유효일|법령\s*기준일|적용\s*기준일)/gi,
+  ]) {
+    for (const match of normalized.matchAll(pattern)) {
+      const key = canonicalFullDate(match[1]);
+      if (key) keys.add(key);
+    }
+  }
+  return keys;
 }
 
 function legalEffectiveDate(text: string) {
@@ -357,10 +425,16 @@ function legalEffectiveDate(text: string) {
     ) {
       continue;
     }
+    if (hasUnknownLegalEffectiveVersion(sentence)) {
+      continue;
+    }
     const date = sentence.match(
-      /\b(?:19|20)\d{2}[.\-/년]\s*\d{1,2}(?:[.\-/월]\s*\d{1,2}일?)?\b/,
+      /(?:시행일|유효일|법령\s*버전(?:일)?|법령\s*기준일|적용\s*기준일)\s*(?:은|는|이|가|을|를|:|=)?\s*((?:19|20)\d{2}\s*[.\-/년]\s*\d{1,2}\s*[.\-/월]\s*\d{1,2}\s*일?)/i,
     );
-    if (date) return date[0];
+    if (!date) continue;
+    if (canonicalFullDate(date[1])) {
+      return date[1].replace(/\s+/g, "");
+    }
   }
   return null;
 }
@@ -375,6 +449,78 @@ function legalArticleReferenceKeys(text: string) {
     if (match[3]) keys.add(`${article}:제${match[3]}항`);
   }
   return keys;
+}
+
+function legalCaseOrAdjudicationReferenceKeys(text: string) {
+  const keys = new Set<string>();
+  const normalized = text.normalize("NFKC");
+  const authorityKey = (authority: string) => {
+    if (/대법원/.test(authority)) return "supreme_court";
+    if (/헌법재판소|헌재/.test(authority)) return "constitutional_court";
+    if (/중앙토지수용위원회|중토위/.test(authority)) {
+      return "central_land_tribunal";
+    }
+    return "local_land_tribunal";
+  };
+  for (const match of normalized.matchAll(
+    /(?:대법원|헌법재판소|헌재)?\s*((?:\d{2}|\d{4}))\s*(가합|가단|구합|구단|헌가|헌나|헌다|헌라|헌마|헌바|헌사|헌아|나|다|라|마|므|두|누|도)\s*(\d{1,10})/g,
+  )) {
+    keys.add(`${match[1]}${match[2]}${match[3]}`);
+  }
+  for (const match of normalized.matchAll(
+    /(대법원|헌법재판소|헌재|중앙토지수용위원회|지방토지수용위원회|중토위|지토위)\s*((?:19|20)\d{2})\s*[.\-/년]\s*(\d{1,2})\s*[.\-/월]\s*(\d{1,2})\s*일?(?:\s*제\s*(\d{1,10})\s*차)?/g,
+  )) {
+    const dateKey = `${match[2]}-${Number(match[3])}-${Number(match[4])}`;
+    keys.add(`${authorityKey(match[1])}:date:${dateKey}`);
+    if (match[5]) {
+      keys.add(`${authorityKey(match[1])}:date:${dateKey}:sequence:${match[5]}`);
+    }
+  }
+  for (const match of normalized.matchAll(
+    /(중앙토지수용위원회|지방토지수용위원회|중토위|지토위)\s*((?:19|20)\d{2})\s*(?:년\s*|[-–]\s*)(?:제\s*)?(\d{1,10})\s*(?:호|차)?/g,
+  )) {
+    keys.add(`${authorityKey(match[1])}:docket:${match[2]}-${match[3]}`);
+  }
+  for (const [key, pattern] of [
+    ["authority:supreme_court", /대법원/],
+    ["authority:constitutional_court", /헌법재판소|헌재/],
+    ["authority:central_land_tribunal", /중앙토지수용위원회|중토위/],
+    ["authority:local_land_tribunal", /지방토지수용위원회|지토위/],
+    ["kind:precedent", /판례/],
+    ["kind:adjudication", /재결례/],
+    ["kind:decision", /결정례/],
+  ] as const) {
+    if (pattern.test(normalized)) keys.add(key);
+  }
+  return keys;
+}
+
+function hasTheorySubstantiveScoringClaim(text: string) {
+  const normalized = text.normalize("NFKC");
+  return (
+    /(?:정답|오답|점수|채점|합격|등급|모범\s*답안|공식\s*답안|전문가\s*검증)/.test(
+      normalized,
+    ) ||
+    /(?:학습자|답안|점수|채점)[^.\n]{0,80}\d{1,3}(?:\.\d+)?\s*점\s*(?:이다|입니다|이며|이고|으로|을|를|이라고|[.,!?]|$)/.test(
+      normalized,
+    ) ||
+    /(?:공식\s*정답|모범\s*답안|전문가\s*검증\s*답안)\s*(?:이다|입니다|로\s*확정(?:한다|합니다|된다|됩니다))/.test(
+      normalized,
+    ) ||
+    /(?:유일한\s*정답|정답으로\s*확정)\s*(?:이다|입니다|한다|합니다|된다|됩니다)?/.test(
+      normalized,
+    ) ||
+    /\d{1,3}(?:\.\d+)?\s*점짜리\s*답안[^.\n]{0,40}(?:확정|판정|평가)/.test(
+      normalized,
+    ) ||
+    /답안(?:은|는|이|가)\s*정답(?:이다|입니다|으로\s*(?:확정|판정))/.test(
+      normalized,
+    ) ||
+    /답안\s*등급(?:은|는|이|가)?\s*[A-F가-힣0-9+\-]+\s*(?:로|으로)\s*(?:확정|판정)/i.test(
+      normalized,
+    ) ||
+    /합격\s*(?:을\s*)?보장\s*(?:한다|합니다|된다|됩니다)/.test(normalized)
+  );
 }
 
 export const LawAdapter: OwnerAlphaSubjectAdapterPort<OwnerAlphaLawAdapterModel> = {
@@ -465,7 +611,7 @@ export const LawAdapter: OwnerAlphaSubjectAdapterPort<OwnerAlphaLawAdapterModel>
       ),
       precedentOrAdjudicationReference: matchingSentences(
         problemText,
-        /대법원|헌법재판소|판례|재결례|결정례/,
+        /대법원|헌법재판소|헌재|중앙토지수용위원회|지방토지수용위원회|중토위|지토위|판례|재결례|결정례/,
       ).map((citation) => ({
         citation,
         state: "problem_given" as const,
@@ -511,14 +657,28 @@ export function ownerAlphaSubjectReferenceReleaseBlockers(input: {
   const adapter = input.problemModel.subjectAdapter;
   if (!adapter) return [];
   const blockers: string[] = [];
+  if (adapter.adapter === "PracticalAdapter") {
+    for (const claim of input.claims) {
+      if (claim.resolutionCode === "deterministic_conflict") {
+        blockers.push(
+          claim.claimType === "method"
+            ? `practical:method_conflict:${claim.claimId}`
+            : `practical:calculation_conflict:${claim.claimId}`,
+        );
+      }
+    }
+  }
   if (adapter.adapter === "TheoryAdapter") {
     for (const claim of input.claims) {
       if (
-        ["concept", "method", "source"].includes(claim.claimType) &&
-        claim.state === "deterministically_validated"
+        claim.state === "deterministically_validated" ||
+        claim.calculationNodeId !== null
       ) {
         blockers.push(`theory:substantive_claim_not_deterministic:${claim.claimId}`);
       }
+    }
+    if (hasTheorySubstantiveScoringClaim(input.generatedReferenceText ?? "")) {
+      blockers.push("theory:substantive_scoring_claim");
     }
   }
   if (adapter.adapter === "LawAdapter") {
@@ -527,6 +687,19 @@ export function ownerAlphaSubjectReferenceReleaseBlockers(input: {
       !adapter.effectiveDateRequirement.effectiveAt
     ) {
       blockers.push("law:effective_date_unknown");
+    }
+    if (hasUnknownLegalEffectiveVersion(input.generatedReferenceText ?? "")) {
+      blockers.push("law:effective_date_unknown");
+    }
+    const allowedEffectiveDate = adapter.effectiveDateRequirement.effectiveAt
+      ? canonicalFullDate(adapter.effectiveDateRequirement.effectiveAt)
+      : null;
+    for (const reference of legalEffectiveDateReferenceKeys(
+      input.generatedReferenceText ?? "",
+    )) {
+      if (!allowedEffectiveDate || reference !== allowedEffectiveDate) {
+        blockers.push("law:unbound_effective_date_reference");
+      }
     }
     const officialRefs = new Set(
       [
@@ -542,6 +715,9 @@ export function ownerAlphaSubjectReferenceReleaseBlockers(input: {
         .map((reference) => reference.officialSourceRefId as string),
     );
     for (const claim of input.claims) {
+      if (claim.state === "deterministically_validated") {
+        blockers.push(`law:candidate_only_claim_required:${claim.claimId}`);
+      }
       if (
         claim.state === "official_source_grounded" &&
         !claim.evidenceRefIds.some((reference) => officialRefs.has(reference))
@@ -571,6 +747,30 @@ export function ownerAlphaSubjectReferenceReleaseBlockers(input: {
     )) {
       if (!allowedArticleReferences.has(reference)) {
         blockers.push("law:unbound_article_reference");
+      }
+    }
+    const allowedStatuteReferences = new Set(
+      adapter.applicableLawCandidates.flatMap((reference) => [
+        ...legalStatuteReferenceKeys(reference.label),
+      ]),
+    );
+    for (const reference of legalStatuteReferenceKeys(
+      input.generatedReferenceText ?? "",
+    )) {
+      if (!allowedStatuteReferences.has(reference)) {
+        blockers.push("law:unbound_article_reference");
+      }
+    }
+    const allowedCaseOrAdjudicationReferences = new Set(
+      adapter.precedentOrAdjudicationReference.flatMap((reference) => [
+        ...legalCaseOrAdjudicationReferenceKeys(reference.citation),
+      ]),
+    );
+    for (const reference of legalCaseOrAdjudicationReferenceKeys(
+      input.generatedReferenceText ?? "",
+    )) {
+      if (!allowedCaseOrAdjudicationReferences.has(reference)) {
+        blockers.push("law:unbound_case_or_adjudication_reference");
       }
     }
   }
