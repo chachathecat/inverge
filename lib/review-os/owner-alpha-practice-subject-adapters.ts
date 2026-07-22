@@ -410,11 +410,16 @@ export const LawAdapter: OwnerAlphaSubjectAdapterPort<OwnerAlphaLawAdapterModel>
       legalIssueCandidates: model.requirements.map((item) => item.text),
       applicableLawCandidates:
         laws.length > 0
-          ? laws.map((label) => ({ label, state: "problem_given" as const }))
+          ? laws.map((label) => ({
+              label,
+              state: "problem_given" as const,
+              officialSourceRefId: null,
+            }))
           : [
               {
                 label: "적용 법령 후보 확인 필요",
                 state: "unresolved_needs_review" as const,
+                officialSourceRefId: null,
               },
             ],
       articleAndParagraphReferences: citations.map((citation) => ({
@@ -512,13 +517,14 @@ export function ownerAlphaSubjectReferenceReleaseBlockers(input: {
     }
     const officialRefs = new Set(
       [
+        ...adapter.applicableLawCandidates,
         ...adapter.articleAndParagraphReferences,
         ...adapter.precedentOrAdjudicationReference,
       ]
         .filter(
           (reference) =>
             reference.state === "official_source_grounded" &&
-            reference.officialSourceRefId,
+            reference.officialSourceRefId?.trim(),
         )
         .map((reference) => reference.officialSourceRefId as string),
     );
@@ -531,12 +537,13 @@ export function ownerAlphaSubjectReferenceReleaseBlockers(input: {
       }
     }
     for (const reference of [
+      ...adapter.applicableLawCandidates,
       ...adapter.articleAndParagraphReferences,
       ...adapter.precedentOrAdjudicationReference,
     ]) {
       if (
         reference.state === "official_source_grounded" &&
-        !reference.officialSourceRefId
+        !reference.officialSourceRefId?.trim()
       ) {
         blockers.push("law:official_source_promotion_without_reference");
       }

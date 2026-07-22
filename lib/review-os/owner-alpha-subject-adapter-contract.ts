@@ -245,6 +245,7 @@ export type OwnerAlphaLawAdapterModel = SubjectAdapterCommon & {
   applicableLawCandidates: Array<{
     label: string;
     state: OwnerAlphaClaimVerificationState;
+    officialSourceRefId: string | null;
   }>;
   articleAndParagraphReferences: Array<{
     citation: string;
@@ -361,6 +362,13 @@ function hasValidAnswerPlan(value: unknown) {
       (item.pointWeight === null ||
         (typeof item.pointWeight === "number" &&
           Number.isFinite(item.pointWeight))),
+  );
+}
+
+function isStoredReferenceOrNull(value: unknown) {
+  return (
+    value === null ||
+    (typeof value === "string" && value.trim().length > 0)
   );
 }
 
@@ -513,6 +521,7 @@ export function isOwnerAlphaSubjectAdapterModel(
     return false;
   }
   const articleAndParagraphReferences = value.articleAndParagraphReferences;
+  const applicableLawCandidates = value.applicableLawCandidates;
   const precedentOrAdjudicationReference =
     value.precedentOrAdjudicationReference;
   for (const field of [
@@ -532,10 +541,26 @@ export function isOwnerAlphaSubjectAdapterModel(
     if (!Array.isArray(value[field])) return false;
   }
   if (
+    !Array.isArray(applicableLawCandidates) ||
     !Array.isArray(articleAndParagraphReferences) ||
     !Array.isArray(precedentOrAdjudicationReference)
   ) {
     return false;
+  }
+  for (const candidate of applicableLawCandidates) {
+    if (
+      !isRecord(candidate) ||
+      typeof candidate.label !== "string" ||
+      !candidate.label.trim() ||
+      !SUBJECT_EVIDENCE_STATES.includes(
+        candidate.state as OwnerAlphaClaimVerificationState,
+      ) ||
+      !isStoredReferenceOrNull(candidate.officialSourceRefId) ||
+      (candidate.state === "official_source_grounded" &&
+        !candidate.officialSourceRefId)
+    ) {
+      return false;
+    }
   }
   const effectiveDate = value.effectiveDateRequirement;
   if (
@@ -548,10 +573,7 @@ export function isOwnerAlphaSubjectAdapterModel(
       effectiveDate.effectiveAt === null ||
       typeof effectiveDate.effectiveAt === "string"
     ) ||
-    !(
-      effectiveDate.officialSourceRefId === null ||
-      typeof effectiveDate.officialSourceRefId === "string"
-    ) ||
+    !isStoredReferenceOrNull(effectiveDate.officialSourceRefId) ||
     (effectiveDate.state === "official_source_grounded" &&
       !effectiveDate.officialSourceRefId)
   ) {
@@ -566,10 +588,7 @@ export function isOwnerAlphaSubjectAdapterModel(
       !SUBJECT_EVIDENCE_STATES.includes(
         reference.state as OwnerAlphaClaimVerificationState,
       ) ||
-      !(
-        reference.officialSourceRefId === null ||
-        typeof reference.officialSourceRefId === "string"
-      ) ||
+      !isStoredReferenceOrNull(reference.officialSourceRefId) ||
       (reference.state === "official_source_grounded" &&
         !reference.officialSourceRefId)
     ) {

@@ -502,6 +502,20 @@ test("LawAdapter rejects hostile AI self-promotion to official-source grounding"
     ),
     false,
   );
+  const hostileNativePromotion = clone(view);
+  hostileNativePromotion.problemModel.subjectAdapter.applicableLawCandidates[0] = {
+    ...hostileNativePromotion.problemModel.subjectAdapter
+      .applicableLawCandidates[0],
+    state: "official_source_grounded",
+    officialSourceRefId: " ",
+  };
+  assert.equal(isOwnerAlphaPracticeSession(hostileNativePromotion), false);
+  assert.ok(
+    ownerAlphaSubjectReferenceReleaseBlockers({
+      problemModel: hostileNativePromotion.problemModel,
+      claims: hostileNativePromotion.problemModel.claimVerificationStates,
+    }).includes("law:official_source_promotion_without_reference"),
+  );
 });
 
 test("LawAdapter fails closed when the legal effective date is unknown", async () => {
