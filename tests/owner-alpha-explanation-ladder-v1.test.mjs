@@ -1548,6 +1548,72 @@ test("Law problem legal dates aggregate by canonical value and conflicts fail cl
     [],
   );
 
+  for (const [separatorName, separator] of [
+    ["spaces", " "],
+    ["tabs", "\t"],
+    ["line-breaks", "\n"],
+  ]) {
+    const boundedModel = compileLaw(
+      `law-bare-date-bounded-${separatorName}`,
+      `기준일자 2026.07.04${separator.repeat(8)}공익사업법 제10조를 적용한다.`,
+    );
+    assert.equal(
+      boundedModel.subjectAdapter.effectiveDateRequirement.effectiveAt,
+      "2026.07.04",
+      separatorName,
+    );
+    assert.equal(
+      boundedModel.subjectAdapter.effectiveDateRequirement.state,
+      "problem_given",
+      separatorName,
+    );
+    assert.deepEqual(
+      ownerAlphaSubjectReferenceReleaseBlockers({
+        problemModel: boundedModel,
+        claims: [],
+        generatedReferenceText:
+          `기준일자 2099.01.01${separator.repeat(8)}공익사업법 제10조를 적용한다.`,
+      }),
+      ["law:unbound_effective_date_reference"],
+      separatorName,
+    );
+
+    const excessiveModel = compileLaw(
+      `law-bare-date-excessive-${separatorName}`,
+      `기준일자 2026.07.04${separator.repeat(9)}공익사업법 제10조를 적용한다.`,
+    );
+    assert.equal(
+      excessiveModel.subjectAdapter.effectiveDateRequirement.effectiveAt,
+      null,
+      separatorName,
+    );
+    assert.equal(
+      excessiveModel.subjectAdapter.effectiveDateRequirement.state,
+      "unresolved_needs_review",
+      separatorName,
+    );
+    assert.deepEqual(
+      ownerAlphaSubjectReferenceReleaseBlockers({
+        problemModel: excessiveModel,
+        claims: [],
+        generatedReferenceText:
+          "2026.07.04 기준 공익사업법 제10조를 적용한다.",
+      }),
+      ["law:effective_date_unknown", "law:unbound_effective_date_reference"],
+      separatorName,
+    );
+    assert.deepEqual(
+      ownerAlphaSubjectReferenceReleaseBlockers({
+        problemModel: boundedModel,
+        claims: [],
+        generatedReferenceText:
+          `기준일자 2099.01.01${separator.repeat(9)}공익사업법 제10조를 적용한다.`,
+      }),
+      [],
+      separatorName,
+    );
+  }
+
   for (const [problemId, problemText] of [
     [
       "law-bare-date-after-sentence",
@@ -1698,6 +1764,9 @@ test("Law bare adjacent unknown versions fail closed without ordinary-date false
     "공익사업법의 기준일자는 미확인이다.",
     "공익사업법 제１０조［기준일자：미상］.",
     "공익사업법 제 10 조의 기준 일 자 는 별도 확인이 필요하다.",
+    `공익사업법 제10조${" ".repeat(8)}기준일자는 미상이다.`,
+    "공익사업법 제10조의\n기준일자는 미상이다.",
+    "공익사업법 제10조의 기준일자는\n미상이다.",
   ]) {
     assert.deepEqual(
       blockersFor(generatedReferenceText),
@@ -1779,7 +1848,10 @@ test("Law bare adjacent unknown versions fail closed without ordinary-date false
     "공익사업법 제10조.\n기준일자는 미상이다.",
     "공익사업법 제10조.기준일자는 미상이다.",
     "공익사업법 제10조。기준일자는 미상이다.",
+    `공익사업법 제10조${" ".repeat(9)}기준일자는 미상이다.`,
+    `공익사업법 제10조${"\t".repeat(9)}기준일자는 미상이다.`,
     `공익사업법 제10조${" ".repeat(20)}기준일자는 미상이다.`,
+    `공익사업법 제10조${"\n".repeat(9)}기준일자는 미상이다.`,
     "기준일자는 미상이며 보상액을 산정하고 공익사업법 제10조를 검토한다.",
     "공익사업법 제10조의 기준일자는 2026.07.04이다.",
     "공익사업법 제10조의 평가기준일자는 미상이다.",
