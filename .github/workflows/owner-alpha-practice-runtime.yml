@@ -12,7 +12,10 @@ jobs:
   owner-alpha-practice-runtime:
     name: owner-alpha-practice-runtime
     if: >-
-      github.event.pull_request.head.ref == 'agent/owner-alpha-universal-practice-loop-v0' &&
+      (
+        github.event.pull_request.head.ref == 'agent/owner-alpha-universal-practice-loop-v0' ||
+        github.event.pull_request.head.ref == 'agent/three-subject-practice-adapter-contract'
+      ) &&
       github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 35
@@ -47,7 +50,11 @@ jobs:
         run: npm ci
 
       - name: Run generic and hostile owner-alpha tests
-        run: npm run test -- tests/owner-alpha-universal-practice-loop-v0.test.mjs --workers=1
+        run: >-
+          npm run test --
+          tests/owner-alpha-universal-practice-loop-v0.test.mjs
+          tests/owner-alpha-three-subject-practice-adapter-contract.test.mjs
+          --workers=1
 
       - name: Verify exact-head learner RLS in isolated Postgres
         env:

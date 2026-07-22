@@ -29,6 +29,15 @@ import {
   ownerAlphaStableUuid,
 } from "./owner-alpha-practice-ids";
 import type { OwnerAlphaPracticeRepositoryPort } from "./owner-alpha-practice-repository";
+import {
+  ownerAlphaSubjectReferenceReleaseBlockers,
+} from "./owner-alpha-practice-subject-adapters";
+import {
+  ownerAlphaGapTypeForSubject,
+  ownerAlphaRewriteModeForSubject,
+  ownerAlphaSubjectFromSession,
+  type OwnerAlphaPracticeSubject,
+} from "./owner-alpha-subject-adapter-contract";
 
 const MAX_PROBLEM_TEXT = 24_000;
 const MAX_ATTEMPT_TEXT = 16_000;
@@ -114,23 +123,44 @@ function fallbackLearningEvidence(
   rootCauseCandidates: OwnerAlphaRootCauseCandidate[];
   variant: OwnerAlphaPracticeVariant;
 } {
-  const conceptId = `method-${session.problemModel.methodFamily}`;
+  const subject = ownerAlphaSubjectFromSession(session);
+  const practical = subject === "appraisal_practical";
+  const theory = subject === "appraisal_theory";
+  const conceptId = practical
+    ? `method-${session.problemModel.methodFamily}`
+    : `subject-${subject}-structure`;
+  const title = practical
+    ? "방법·산식 선택 근거 확인"
+    : theory
+      ? "정의·전제·논증 연결 확인"
+      : "법적 근거·요건·포섭 연결 확인";
+  const successCriteria = practical
+    ? "적용 방법, 산식 선택 이유, 단위와 계산 순서를 자신의 말로 다시 설명합니다."
+    : theory
+      ? "정의에서 전제·논증·비교·평가·결론까지의 연결을 자신의 문장으로 다시 씁니다."
+      : "쟁점, 법적 근거 후보, 요건별 사실, 포섭, 효과와 결론을 출처 상태와 함께 다시 씁니다.";
+  const variantPrompt = practical
+    ? "문제의 핵심 조건 하나가 반대로 바뀌었다고 가정하고, 적용 방법과 계산 순서가 어떻게 달라지는지 설명하세요."
+    : theory
+      ? "비교 대상 또는 전제 하나만 바꾸고 논증과 평가가 어떻게 달라지는지 빈 화면에서 다시 쓰세요."
+      : "사실 또는 절차 조건 하나만 바꾸고 쟁점·근거·요건·포섭·결론을 다시 연결하세요.";
   return {
     biggestGap: {
       gapId: `${session.sessionId}-gap-unresolved`,
-      title: "방법·산식 선택 근거 확인",
+      title,
       reasonSelected: "AI 기준안 없이도 독립 시도에서 가장 불확실한 한 지점을 직접 확인합니다.",
       inferredMisunderstanding: "현재 근거만으로 실제 혼동 개념을 확정하지 않습니다.",
-      successCriteria: "적용 방법, 산식 선택 이유, 단위와 계산 순서를 자신의 말로 다시 설명합니다.",
+      successCriteria,
       conceptIds: [conceptId],
       state: "fallback_unresolved",
+      gapType: ownerAlphaGapTypeForSubject(subject, null),
     },
     misconceptionGraph: {
       graphId: `${session.sessionId}-misconception`,
       nodes: [
         {
           conceptId,
-          label: "방법·산식 선택 근거",
+          label: title,
           state: "unresolved",
           evidenceRefIds: [session.independentAttempt?.attemptId ?? session.sessionId],
         },
@@ -152,7 +182,7 @@ function fallbackLearningEvidence(
       variantId: `${session.sessionId}-variant-1`,
       kind: "condition",
       changedOneThing: "핵심 조건 하나를 반대로 바꿈",
-      prompt: "문제의 핵심 조건 하나가 반대로 바뀌었다고 가정하고, 적용 방법과 계산 순서가 어떻게 달라지는지 설명하세요.",
+      prompt: variantPrompt,
       verificationState: "unresolved_needs_review",
       calculationGraph: { nodes: [] },
     },
@@ -163,8 +193,9 @@ function checksAppliedClaims(
   claims: OwnerAlphaClaimState[],
   checks: ReturnType<typeof validateOwnerAlphaCalculationGraph>,
   nodes: OwnerAlphaPracticeSession["problemModel"]["calculationGraph"]["nodes"],
-  methodFamily: OwnerAlphaPracticeSession["problemModel"]["methodFamily"],
+  problemModel: OwnerAlphaPracticeSession["problemModel"],
 ) {
+  const subject = problemModel.subjectAdapter?.subject ?? "appraisal_practical";
   const byNode = new Map(checks.map((check) => [check.nodeId, check]));
   const nodeByClaim = new Map(
     nodes
@@ -173,7 +204,11 @@ function checksAppliedClaims(
   );
   const dedupedClaims = [...new Map(claims.map((claim) => [claim.claimId, claim])).values()];
   const normalized = dedupedClaims.map((claim): OwnerAlphaClaimState => {
-    if (methodFamily === "mixed_or_uncertain" && claim.claimType === "method") {
+    if (
+      subject === "appraisal_practical" &&
+      problemModel.methodFamily === "mixed_or_uncertain" &&
+      claim.claimType === "method"
+    ) {
       return {
         ...claim,
         state: "unresolved_needs_review",
@@ -206,6 +241,17 @@ function checksAppliedClaims(
       };
     }
     if (check.status === "validated") {
+      if (
+        subject === "appraisal_theory" &&
+        ["concept", "method", "source"].includes(claim.claimType)
+      ) {
+        return {
+          ...claim,
+          calculationNodeId,
+          state: "ai_inference",
+          resolutionCode: "provider_only",
+        };
+      }
       return {
         ...claim,
         calculationNodeId,
@@ -253,7 +299,7 @@ function checksAppliedClaims(
 
 function normalizeDraftWithChecks(
   draft: OwnerAlphaReferenceDraft,
-  methodFamily: OwnerAlphaPracticeSession["problemModel"]["methodFamily"],
+  problemModel: OwnerAlphaPracticeSession["problemModel"],
 ) {
   const checks = validateOwnerAlphaCalculationGraph(
     draft.reference.calculationGraph,
@@ -262,10 +308,11 @@ function normalizeDraftWithChecks(
     draft.reference.claims,
     checks,
     draft.reference.calculationGraph.nodes,
-    methodFamily,
+    problemModel,
   );
   const blockerCodes = [
     ...ownerAlphaCalculationReleaseBlockers(checks),
+    ...ownerAlphaSubjectReferenceReleaseBlockers({ problemModel, claims }),
     ...(claims.length === 0 ? ["reference:missing_claim_verification"] : []),
   ];
   const variantChecks = validateOwnerAlphaCalculationGraph(
@@ -321,6 +368,9 @@ function buildReplayLinks(
   const links: OwnerAlphaQuestionReplayLink[] = [];
   for (const prior of recent) {
     if (prior.sessionId === current.sessionId) continue;
+    if (ownerAlphaSubjectFromSession(prior) !== ownerAlphaSubjectFromSession(current)) {
+      continue;
+    }
     const sharedConcepts = [...evidenceConceptIds(prior)].filter((conceptId) =>
       currentConcepts.has(conceptId),
     );
@@ -387,6 +437,7 @@ export class OwnerAlphaPracticeRuntime {
     problemText: string;
     files: OwnerAlphaProviderFile[];
     inputModality: OwnerAlphaPracticeSession["assistance"]["inputModality"];
+    subject?: OwnerAlphaPracticeSubject | null;
   }): Promise<OwnerAlphaPracticeView> {
     const suppliedText = input.problemText.trim().slice(0, MAX_PROBLEM_TEXT);
     if (!suppliedText && input.files.length === 0) {
@@ -403,6 +454,7 @@ export class OwnerAlphaPracticeRuntime {
         const extracted = await this.deps.provider.extractProblem({
           problemText: suppliedText,
           files: input.files,
+          subject: input.subject ?? "appraisal_practical",
         });
         confirmedProblemText = extracted.extractedText;
         compileState = "succeeded";
@@ -428,6 +480,7 @@ export class OwnerAlphaPracticeRuntime {
     const problemModel = compileOwnerAlphaPracticeProblem({
       problemId: sessionId,
       problemText: confirmedProblemText,
+      subject: input.subject ?? "appraisal_practical",
     });
     const initialQuestion =
       problemModel.requirements.map((item) => item.text).join(" / ") ||
@@ -437,7 +490,7 @@ export class OwnerAlphaPracticeRuntime {
       sessionId,
       recordVersion: 1,
       status: "problem_compiled",
-      subject: "감정평가실무",
+      subject: problemModel.subject,
       createdAt: now,
       updatedAt: now,
       problemModel,
@@ -530,6 +583,9 @@ export class OwnerAlphaPracticeRuntime {
       problemModel: compileOwnerAlphaPracticeProblem({
         problemId: session.sessionId,
         problemText: confirmedProblemText,
+        subject:
+          session.problemModel.subjectAdapter?.subject ??
+          ownerAlphaSubjectFromSession(session),
       }),
     };
     return toOwnerAlphaPracticeView(
@@ -704,7 +760,7 @@ export class OwnerAlphaPracticeRuntime {
 
     const checked = normalizeDraftWithChecks(
       draft,
-      claimed.problemModel.methodFamily,
+      claimed.problemModel,
     );
     const isolatedClaims = isolateProviderClaimIds(
       claimed.problemModel.claimVerificationStates,
@@ -715,6 +771,16 @@ export class OwnerAlphaPracticeRuntime {
       claims: isolatedClaims,
     };
     const referenceReleased = checkedReference.releaseStatus === "released";
+    const subjectAdapter = claimed.problemModel.subjectAdapter;
+    const synchronizedSubjectAdapter =
+      subjectAdapter?.adapter === "PracticalAdapter"
+        ? {
+            ...subjectAdapter,
+            calculationGraphNodeIds: checkedReference.calculationGraph.nodes.map(
+              (node) => node.nodeId,
+            ),
+          }
+        : subjectAdapter;
     const prepared: OwnerAlphaPracticeSession = {
       ...claimed,
       status: referenceReleased ? "reference_ready" : "reference_withheld",
@@ -730,6 +796,7 @@ export class OwnerAlphaPracticeRuntime {
       problemModel: {
         ...claimed.problemModel,
         calculationGraph: checked.reference.calculationGraph,
+        subjectAdapter: synchronizedSubjectAdapter,
         claimVerificationStates: [
           ...claimed.problemModel.claimVerificationStates,
           ...isolatedClaims,
@@ -762,6 +829,7 @@ export class OwnerAlphaPracticeRuntime {
     sessionId: string;
     recordVersion: number;
     mode: "rewrite" | "recalculate";
+    subjectMode?: string | null;
     rewriteText: string;
     inferredMisunderstanding: string;
     successCriteria: string;
@@ -786,6 +854,18 @@ export class OwnerAlphaPracticeRuntime {
       const withoutDuplicateVariant = session.questionChain.entries.filter(
         (entry) => entry.questionId !== variantQuestionId,
       );
+      const adapter = session.problemModel.subjectAdapter;
+      const canonicalMode =
+        adapter && adapter.subject !== "appraisal_practical"
+          ? ("rewrite" as const)
+          : input.mode;
+      const subjectMode = adapter
+        ? ownerAlphaRewriteModeForSubject(
+            adapter,
+            input.subjectMode,
+            canonicalMode,
+          )
+        : undefined;
       const claimed: OwnerAlphaPracticeSession = {
         ...session,
         status: "completion_pending",
@@ -801,7 +881,8 @@ export class OwnerAlphaPracticeRuntime {
         },
         rewrite: {
           rewriteId: `${session.sessionId}:rewrite`,
-          mode: input.mode,
+          mode: canonicalMode,
+          subjectMode,
           text: boundedText(input.rewriteText, MAX_REWRITE_TEXT, 10),
           savedAt,
         },

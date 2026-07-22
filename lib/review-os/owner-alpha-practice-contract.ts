@@ -1,3 +1,10 @@
+import {
+  isOwnerAlphaSubjectAdapterModel,
+  type OwnerAlphaSubjectAdapterModel,
+  type OwnerAlphaSubjectGapType,
+  type OwnerAlphaSubjectRewriteMode,
+} from "./owner-alpha-subject-adapter-contract";
+
 export const OWNER_ALPHA_PRACTICE_CONTRACT_VERSION =
   "owner_alpha_universal_appraisal_practice.v0" as const;
 export const OWNER_ALPHA_PRACTICE_FLAG =
@@ -245,6 +252,11 @@ export type OwnerAlphaPracticeProblemModel = {
   calculationGraph: { nodes: OwnerAlphaCalculationNode[] };
   sourceStates: OwnerAlphaSourceState[];
   claimVerificationStates: OwnerAlphaClaimState[];
+  /**
+   * Optional v1 projection. Sessions created before the three-subject contract
+   * remain valid without this field and continue to use the v0 kernel shape.
+   */
+  subjectAdapter?: OwnerAlphaSubjectAdapterModel;
 };
 
 export type OwnerAlphaAssistanceLevel = 0 | 1 | 2 | 3 | 4 | 5;
@@ -374,6 +386,7 @@ export type OwnerAlphaBiggestGap = {
   successCriteria: string;
   conceptIds: string[];
   state: "ai_candidate" | "learner_confirmed" | "fallback_unresolved";
+  gapType?: OwnerAlphaSubjectGapType;
 };
 
 export type OwnerAlphaPracticeVariant = {
@@ -443,6 +456,7 @@ export type OwnerAlphaPracticeSession = {
   rewrite: {
     rewriteId: string;
     mode: "rewrite" | "recalculate";
+    subjectMode?: OwnerAlphaSubjectRewriteMode;
     text: string;
     savedAt: string;
   } | null;
@@ -512,6 +526,17 @@ export function isOwnerAlphaPracticeSession(
   }
   if (!isRecord(value.problemModel.calculationGraph)) return false;
   if (!Array.isArray(value.problemModel.calculationGraph.nodes)) return false;
+  if (value.problemModel.subjectAdapter !== undefined) {
+    if (!isOwnerAlphaSubjectAdapterModel(value.problemModel.subjectAdapter)) {
+      return false;
+    }
+    if (
+      value.problemModel.subject !== value.problemModel.subjectAdapter.subject ||
+      value.subject !== value.problemModel.subjectAdapter.subject
+    ) {
+      return false;
+    }
+  }
   if (typeof value.confirmedProblemText !== "string") return false;
   if (typeof value.criticalOcrConfirmed !== "boolean") return false;
   if (!isRecord(value.assistance) || !Array.isArray(value.assistance.revealHistory)) return false;

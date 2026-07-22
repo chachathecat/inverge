@@ -96,36 +96,36 @@ function authenticated(userId, statements, terminal = "commit") {
   `;
 }
 
-function ownerRows(userId, suffix) {
+function ownerRows(userId, suffix, subject) {
   return `
     insert into public.exam_sessions (
       id,user_id,exam_id,subject_id,stage,session_kind,source_label,raw_payload,derived_payload
     ) values (
-      '${suffix}-session','${userId}','appraiser_second','감정평가실무','owner_alpha_practice_v0',
+      '${suffix}-session','${userId}','appraiser_second','${subject}','owner_alpha_practice_v0',
       'universal_appraisal_practice','Universal Practice v0','{}','{}'
     );
     insert into public.answer_submissions (
       id,user_id,exam_id,subject_id,stage,session_id,submission_kind,raw_payload,derived_payload
     ) values (
-      '${suffix}-attempt','${userId}','appraiser_second','감정평가실무','owner_alpha_practice_v0',
+      '${suffix}-attempt','${userId}','appraiser_second','${subject}','owner_alpha_practice_v0',
       '${suffix}-session','independent_attempt','{}','{}'
     );
     insert into public.rewrite_submissions (
       id,user_id,exam_id,subject_id,stage,source_submission_id,rewrite_kind,raw_payload,derived_payload
     ) values (
-      '${suffix}-rewrite','${userId}','appraiser_second','감정평가실무','owner_alpha_practice_v0',
+      '${suffix}-rewrite','${userId}','appraiser_second','${subject}','owner_alpha_practice_v0',
       '${suffix}-attempt','recalculate','{}','{}'
     );
     insert into public.wrong_answer_items (
       id,user_id,exam_name,subject_label,source_type,correct_answer,user_answer,confidence,dedupe_key,raw_payload,derived_payload
     ) values (
       '${suffix === "a" ? "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" : "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"}',
-      '${userId}','감정평가사 2차','감정평가실무','manual','synthetic','synthetic','중간','${suffix}-dedupe','{}','{}'
+      '${userId}','감정평가사 2차','${subject}','manual','synthetic','synthetic','중간','${suffix}-dedupe','{}','{}'
     );
     insert into public.review_queue_items (
       id,user_id,exam_id,subject_id,stage,source_submission_id,source_kind,status,raw_payload,derived_payload
     ) values (
-      '${suffix}-queue','${userId}','wrong_answer_os','감정평가실무','alpha',
+      '${suffix}-queue','${userId}','wrong_answer_os','${subject}','alpha',
       '${suffix === "a" ? "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" : "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"}',
       'wrong_answer','pending','{}','{}'
     );
@@ -215,8 +215,20 @@ function main() {
       psql(container, fs.readFileSync(migration, "utf8"));
     }
     psql(container, `insert into auth.users(id) values ('${USER_A}'), ('${USER_B}');`);
-    psql(container, authenticated(USER_A, ownerRows(USER_A, "a")));
-    psql(container, authenticated(USER_B, ownerRows(USER_B, "b")));
+    psql(container, authenticated(USER_A, ownerRows(USER_A, "a", "감정평가이론")));
+    psql(container, authenticated(USER_B, ownerRows(USER_B, "b", "감정평가 및 보상법규")));
+    psql(
+      container,
+      authenticated(
+        USER_A,
+        `insert into public.exam_sessions (
+          id,user_id,exam_id,subject_id,stage,session_kind,source_label,raw_payload,derived_payload
+        ) values (
+          'a-practical-session','${USER_A}','appraiser_second','감정평가실무','owner_alpha_practice_v0',
+          'universal_appraisal_practice','Universal Practice v0 · Subject Adapter v1','{}','{}'
+        );`,
+      ),
+    );
 
     assertScalar(container, crossUserCountSql(USER_A, USER_B), "0", "A cannot read B");
     assertScalar(container, crossUserCountSql(USER_B, USER_A), "0", "B cannot read A");
@@ -297,7 +309,7 @@ function main() {
   }
 
   const evidence = {
-    schemaVersion: "owner_alpha_practice_runtime.v0",
+    schemaVersion: "owner_alpha_practice_runtime.v1",
     status: "verified",
     pullRequestHeadSha: headSha,
     githubRunId: runId,
@@ -307,11 +319,22 @@ function main() {
       engine: "postgresql_15",
       networkExposure: "none",
       syntheticUserCount: 2,
+      syntheticSubjectCount: 3,
+    },
+    contractCoverage: {
+      kernelContractVersion: "owner_alpha_universal_appraisal_practice.v0",
+      subjectAdapterContractVersion: "owner_alpha_subject_adapter.v1",
+      subjects: [
+        "appraisal_practical",
+        "appraisal_theory",
+        "appraisal_compensation_law",
+      ],
     },
     assertions: [
       "exact_head_checkout",
       "current_native_and_s233a_migrations_applied",
       "seven_table_owner_rls_insert",
+      "three_subject_ids_share_native_rls_tables",
       "two_user_cross_read_denied",
       "seven_table_cross_user_update_denied",
       "cross_user_insert_denied",

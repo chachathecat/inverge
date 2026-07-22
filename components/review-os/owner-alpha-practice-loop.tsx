@@ -26,6 +26,15 @@ import {
   ownerAlphaVerificationLabel,
   type OwnerAlphaPracticeView,
 } from "@/lib/review-os/owner-alpha-practice-contract";
+import {
+  ownerAlphaSubjectHeading,
+  ownerAlphaSubjectRewriteModeLabel,
+} from "@/lib/review-os/owner-alpha-practice-subject-adapters";
+import {
+  OWNER_ALPHA_PRACTICE_SUBJECTS,
+  ownerAlphaSubjectLabel,
+  type OwnerAlphaPracticeSubject,
+} from "@/lib/review-os/owner-alpha-subject-adapter-contract";
 
 type ApiPayload = {
   ok?: boolean;
@@ -126,6 +135,10 @@ export function OwnerAlphaPracticeLoop({
   initialSession: OwnerAlphaPracticeView | null;
 }) {
   const [session, setSession] = useState(initialSession);
+  const [subject, setSubject] = useState<OwnerAlphaPracticeSubject>(
+    initialSession?.problemModel.subjectAdapter?.subject ??
+      "appraisal_practical",
+  );
   const [problemText, setProblemText] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [confirmedProblemText, setConfirmedProblemText] = useState(
@@ -147,6 +160,11 @@ export function OwnerAlphaPracticeLoop({
   const [rewriteText, setRewriteText] = useState(
     initialSession?.rewrite?.text ?? "",
   );
+  const [subjectRewriteMode, setSubjectRewriteMode] = useState<string>(
+    initialSession?.rewrite?.subjectMode ??
+      initialSession?.problemModel.subjectAdapter?.defaultRewriteMode ??
+      "recalculation",
+  );
   const [inferredMisunderstanding, setInferredMisunderstanding] = useState(
     initialSession?.biggestGap?.inferredMisunderstanding ?? "",
   );
@@ -160,6 +178,16 @@ export function OwnerAlphaPracticeLoop({
 
   function applySession(next: OwnerAlphaPracticeView) {
     setSession(next);
+    if (next.problemModel.subjectAdapter) {
+      setSubject(next.problemModel.subjectAdapter.subject);
+      if (next.problemModel.subjectAdapter.subject !== "appraisal_practical") {
+        setRewriteMode("rewrite");
+      }
+      setSubjectRewriteMode(
+        next.rewrite?.subjectMode ??
+          next.problemModel.subjectAdapter.defaultRewriteMode,
+      );
+    }
     setConfirmedProblemText(next.confirmedProblemText);
     if (next.biggestGap) {
       setInferredMisunderstanding((current) =>
@@ -225,6 +253,7 @@ export function OwnerAlphaPracticeLoop({
     setError("");
     try {
       const formData = new FormData();
+      formData.set("subject", subject);
       formData.set("problemText", problemText);
       files.forEach((file) => formData.append("problemFiles", file));
       const response = await fetch("/api/problem-snap/owner-alpha", {
@@ -279,6 +308,7 @@ export function OwnerAlphaPracticeLoop({
     event.preventDefault();
     await sendCommand("complete_rewrite", {
       mode: rewriteMode,
+      subjectMode: subjectRewriteMode,
       rewriteText,
       inferredMisunderstanding,
       successCriteria,
@@ -296,14 +326,20 @@ export function OwnerAlphaPracticeLoop({
   const nextAssistanceLevel = session
     ? Math.min(4, Math.max(1, session.assistance.assistanceLevel + 1))
     : 1;
+  const activeAdapter = session?.problemModel.subjectAdapter ?? null;
+  const activeSubject = activeAdapter?.subject ?? subject;
 
   return (
     <main id="main-content">
       <RefinedShell className="space-y-6" data-owner-alpha-practice>
         <SectionHeading
           eyebrow="OWNER ALPHA · PRIVATE"
-          title="감정평가실무 범용 학습 루프"
-          description="원가·비교·수익·혼합 문제를 같은 흐름으로 학습합니다. 외부 AI가 아니라 확인된 문제와 learner-owned 기록이 원장입니다."
+          title={
+            session
+              ? ownerAlphaSubjectHeading(session.problemModel)
+              : `${ownerAlphaSubjectLabel(activeSubject)} 범용 학습 루프`
+          }
+          description="실무·이론·법규가 하나의 learner-owned 흐름을 사용하되, 과목별 답안 구조·검증·전이 기준은 분리합니다."
           action={<RefinedBadge tone="amber">{statusLabel(session)}</RefinedBadge>}
         />
 
@@ -344,6 +380,26 @@ export function OwnerAlphaPracticeLoop({
             </CardHeader>
             <CardContent>
               <form onSubmit={createProblem} className="space-y-5">
+                <fieldset>
+                  <legend className="text-sm font-medium">과목</legend>
+                  <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                    {OWNER_ALPHA_PRACTICE_SUBJECTS.map((value) => (
+                      <label
+                        key={value}
+                        className="inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-input)] border border-[var(--border)] px-3 py-2 text-sm"
+                      >
+                        <input
+                          type="radio"
+                          name="owner-alpha-subject"
+                          value={value}
+                          checked={subject === value}
+                          onChange={() => setSubject(value)}
+                        />
+                        {ownerAlphaSubjectLabel(value)}
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
                 <div>
                   <label htmlFor="owner-alpha-problem-text" className="text-sm font-medium">문제 텍스트</label>
                   <Textarea
@@ -525,13 +581,29 @@ export function OwnerAlphaPracticeLoop({
                   <label htmlFor="owner-alpha-success" className="text-sm font-medium">성공 기준</label>
                   <Textarea id="owner-alpha-success" value={successCriteria} onChange={(event) => setSuccessCriteria(event.target.value)} className="min-h-24" maxLength={1_200} required />
                 </div>
-                <fieldset>
-                  <legend className="text-sm font-medium">직접 수행 방식</legend>
-                  <div className="mt-2 flex flex-wrap gap-4">
-                    <label className="inline-flex min-h-11 items-center gap-2"><input type="radio" name="rewrite-mode" checked={rewriteMode === "recalculate"} onChange={() => setRewriteMode("recalculate")} />재계산</label>
-                    <label className="inline-flex min-h-11 items-center gap-2"><input type="radio" name="rewrite-mode" checked={rewriteMode === "rewrite"} onChange={() => setRewriteMode("rewrite")} />재작성</label>
+                {activeAdapter?.subject === "appraisal_practical" ? (
+                  <fieldset>
+                    <legend className="text-sm font-medium">직접 수행 방식</legend>
+                    <div className="mt-2 flex flex-wrap gap-4">
+                      <label className="inline-flex min-h-11 items-center gap-2"><input type="radio" name="rewrite-mode" checked={rewriteMode === "recalculate"} onChange={() => { setRewriteMode("recalculate"); setSubjectRewriteMode("recalculation"); }} />재계산</label>
+                      <label className="inline-flex min-h-11 items-center gap-2"><input type="radio" name="rewrite-mode" checked={rewriteMode === "rewrite"} onChange={() => { setRewriteMode("rewrite"); setSubjectRewriteMode("answer_structure_rewrite"); }} />재작성</label>
+                    </div>
+                  </fieldset>
+                ) : activeAdapter ? (
+                  <div>
+                    <label htmlFor="owner-alpha-subject-rewrite-mode" className="text-sm font-medium">과목별 재작성 방식</label>
+                    <select
+                      id="owner-alpha-subject-rewrite-mode"
+                      value={subjectRewriteMode}
+                      onChange={(event) => setSubjectRewriteMode(event.target.value)}
+                      className="mt-2 min-h-11 w-full rounded-[var(--radius-input)] border border-[var(--border)] bg-[color:var(--surface)] px-3 text-sm sm:w-auto"
+                    >
+                      {activeAdapter.rewriteModes.map((mode) => (
+                        <option key={mode} value={mode}>{ownerAlphaSubjectRewriteModeLabel(mode)}</option>
+                      ))}
+                    </select>
                   </div>
-                </fieldset>
+                ) : null}
                 <div>
                   <label htmlFor="owner-alpha-rewrite" className="text-sm font-medium">내 재작성·재계산</label>
                   <Textarea id="owner-alpha-rewrite" value={rewriteText} onChange={(event) => setRewriteText(event.target.value)} maxLength={16_000} required />
@@ -580,17 +652,40 @@ export function OwnerAlphaPracticeLoop({
 }
 
 function ProblemStructure({ session }: { session: OwnerAlphaPracticeView }) {
+  const adapter = session.problemModel.subjectAdapter;
   return (
     <QuietSection className="p-4 sm:p-5">
       <div className="flex flex-wrap items-center gap-2">
-        <RefinedBadge>{ownerAlphaMethodFamilyLabel(session.problemModel.methodFamily)}</RefinedBadge>
+        {adapter ? <RefinedBadge tone="amber">{ownerAlphaSubjectLabel(adapter.subject)}</RefinedBadge> : null}
+        {!adapter || adapter.adapter === "PracticalAdapter" ? (
+          <RefinedBadge>{ownerAlphaMethodFamilyLabel(session.problemModel.methodFamily)}</RefinedBadge>
+        ) : null}
         {session.problemModel.topicCandidates.map((topic) => <RefinedBadge key={topic}>{topic}</RefinedBadge>)}
       </div>
-      <div className="mt-4 grid gap-5 md:grid-cols-3">
-        <div><h3 className="text-sm font-medium">요구사항</h3><ul className="mt-2 space-y-1 text-sm">{session.problemModel.requirements.map((item) => <li key={item.requirementId}>• {item.text}</li>)}</ul></div>
-        <div><h3 className="text-sm font-medium">자료 역할</h3><ul className="mt-2 space-y-1 text-sm">{session.problemModel.entitiesAndRoles.length > 0 ? session.problemModel.entitiesAndRoles.map((item) => <li key={item.entityId}>• {item.label} · {item.role}</li>) : <li>• 직접 확인 필요</li>}</ul></div>
-        <div><h3 className="text-sm font-medium">수치·단위</h3><ul className="mt-2 space-y-1 text-sm">{session.problemModel.givenNumbers.length > 0 ? session.problemModel.givenNumbers.slice(0, 12).map((item) => <li key={item.numberId}>• {item.value.toLocaleString("ko-KR")} {item.unit}</li>) : <li>• 직접 확인 필요</li>}</ul></div>
-      </div>
+      {!adapter || adapter.adapter === "PracticalAdapter" ? (
+        <div className="mt-4 grid gap-5 md:grid-cols-3">
+          <div><h3 className="text-sm font-medium">요구사항</h3><ul className="mt-2 space-y-1 text-sm">{session.problemModel.requirements.map((item) => <li key={item.requirementId}>• {item.text}</li>)}</ul></div>
+          <div><h3 className="text-sm font-medium">자료 역할</h3><ul className="mt-2 space-y-1 text-sm">{session.problemModel.entitiesAndRoles.length > 0 ? session.problemModel.entitiesAndRoles.map((item) => <li key={item.entityId}>• {item.label} · {item.role}</li>) : <li>• 직접 확인 필요</li>}</ul></div>
+          <div><h3 className="text-sm font-medium">수치·단위</h3><ul className="mt-2 space-y-1 text-sm">{session.problemModel.givenNumbers.length > 0 ? session.problemModel.givenNumbers.slice(0, 12).map((item) => <li key={item.numberId}>• {item.value.toLocaleString("ko-KR")} {item.unit}</li>) : <li>• 직접 확인 필요</li>}</ul></div>
+        </div>
+      ) : adapter.adapter === "TheoryAdapter" ? (
+        <div className="mt-4 grid gap-5 md:grid-cols-3">
+          <div><h3 className="text-sm font-medium">쟁점 후보</h3><ul className="mt-2 space-y-1 text-sm">{adapter.issueCandidates.map((item) => <li key={item}>• {item}</li>)}</ul></div>
+          <div><h3 className="text-sm font-medium">예상 목차</h3><ol className="mt-2 space-y-1 text-sm">{adapter.expectedOutlineHierarchy.map((item, index) => <li key={item}>{index + 1}. {item}</li>)}</ol></div>
+          <div><h3 className="text-sm font-medium">검증 범위</h3><p className="mt-2 text-sm leading-6">구조·관계·모순·포괄성·근거 상태만 확인합니다. 이론 내용을 결정론적으로 채점하지 않습니다.</p></div>
+        </div>
+      ) : (
+        <div className="mt-4 grid gap-5 md:grid-cols-3">
+          <div><h3 className="text-sm font-medium">법적 쟁점 후보</h3><ul className="mt-2 space-y-1 text-sm">{adapter.legalIssueCandidates.map((item) => <li key={item}>• {item}</li>)}</ul></div>
+          <div><h3 className="text-sm font-medium">법적 근거·유효일</h3><ul className="mt-2 space-y-1 text-sm">{adapter.articleAndParagraphReferences.length > 0 ? adapter.articleAndParagraphReferences.map((item) => <li key={item.citation}>• {item.citation} · {ownerAlphaVerificationLabel(item.state)}</li>) : <li>• 조문·항 공식 원문 확인 필요</li>}<li>• 유효일: {adapter.effectiveDateRequirement.effectiveAt ?? "검토 필요"}</li></ul></div>
+          <div><h3 className="text-sm font-medium">검증 원칙</h3><p className="mt-2 text-sm leading-6">공식 원문 참조 없이 AI 법적 진술을 공식 근거로 승격하지 않으며, 유효일 미상은 검토 필요로 닫습니다.</p></div>
+        </div>
+      )}
+      {adapter && adapter.secondaryDomains.length > 0 ? (
+        <p className="mt-4 border-t border-[var(--border)] pt-4 text-xs text-[color:var(--muted)]">
+          보조 도메인: {adapter.secondaryDomains.map(ownerAlphaSubjectLabel).join(" · ")}
+        </p>
+      ) : null}
     </QuietSection>
   );
 }
