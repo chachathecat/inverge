@@ -13,6 +13,13 @@ export function ownerAlphaPracticeMetadataProjection(
     contractVersion: session.contractVersion,
     subjectAdapterContractVersion:
       session.problemModel.subjectAdapter?.contractVersion ?? null,
+    explanationLadderContractVersion:
+      session.aiReference?.explanationLadder?.contractVersion ?? null,
+    explanationLadderPresent: Boolean(
+      session.aiReference?.explanationLadder,
+    ),
+    explanationLadderBlockCount:
+      session.aiReference?.explanationLadder?.blocks.length ?? 0,
     subject: ownerAlphaSubjectFromSession(session),
     secondaryDomains:
       session.problemModel.subjectAdapter?.secondaryDomains ?? [],

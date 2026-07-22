@@ -102,7 +102,8 @@ function ownerRows(userId, suffix, subject) {
       id,user_id,exam_id,subject_id,stage,session_kind,source_label,raw_payload,derived_payload
     ) values (
       '${suffix}-session','${userId}','appraiser_second','${subject}','owner_alpha_practice_v0',
-      'universal_appraisal_practice','Universal Practice v0','{}','{}'
+      'universal_appraisal_practice','Universal Practice v0','{}',
+      '{"explanationLadderContractVersion":"owner_alpha_explanation_ladder.v1","explanationLadderPresent":true,"explanationLadderBlockCount":4,"containsRawContent":false}'
     );
     insert into public.answer_submissions (
       id,user_id,exam_id,subject_id,stage,session_id,submission_kind,raw_payload,derived_payload
@@ -225,9 +226,21 @@ function main() {
           id,user_id,exam_id,subject_id,stage,session_kind,source_label,raw_payload,derived_payload
         ) values (
           'a-practical-session','${USER_A}','appraiser_second','감정평가실무','owner_alpha_practice_v0',
-          'universal_appraisal_practice','Universal Practice v0 · Subject Adapter v1','{}','{}'
+          'universal_appraisal_practice','Universal Practice v0 · Subject Adapter v1 · Explanation Ladder v1','{}',
+          '{"explanationLadderContractVersion":"owner_alpha_explanation_ladder.v1","explanationLadderPresent":true,"explanationLadderBlockCount":4,"containsRawContent":false}'
         );`,
       ),
+    );
+
+    assertScalar(
+      container,
+      `select count(*) from public.exam_sessions
+       where derived_payload ->> 'explanationLadderContractVersion' = 'owner_alpha_explanation_ladder.v1'
+         and derived_payload ->> 'explanationLadderPresent' = 'true'
+         and derived_payload ->> 'explanationLadderBlockCount' = '4'
+         and derived_payload ->> 'containsRawContent' = 'false';`,
+      "3",
+      "three-subject ladder metadata projection",
     );
 
     assertScalar(container, crossUserCountSql(USER_A, USER_B), "0", "A cannot read B");
@@ -324,6 +337,8 @@ function main() {
     contractCoverage: {
       kernelContractVersion: "owner_alpha_universal_appraisal_practice.v0",
       subjectAdapterContractVersion: "owner_alpha_subject_adapter.v1",
+      explanationLadderContractVersion: "owner_alpha_explanation_ladder.v1",
+      explanationLadderOptionalProjection: true,
       subjects: [
         "appraisal_practical",
         "appraisal_theory",
@@ -335,6 +350,7 @@ function main() {
       "current_native_and_s233a_migrations_applied",
       "seven_table_owner_rls_insert",
       "three_subject_ids_share_native_rls_tables",
+      "three_subject_ladder_metadata_projection",
       "two_user_cross_read_denied",
       "seven_table_cross_user_update_denied",
       "cross_user_insert_denied",
@@ -346,7 +362,16 @@ function main() {
       rowBodiesPersisted: false,
       learnerTextPersisted: false,
       providerBodiesPersisted: false,
+      problemBodiesPersisted: false,
+      referenceBodiesPersisted: false,
       credentialMaterialPersisted: false,
+      persistedBodyCounts: {
+        learner: 0,
+        problem: 0,
+        reference: 0,
+        provider: 0,
+        credential: 0,
+      },
     },
   };
   fs.mkdirSync(path.dirname(EVIDENCE_PATH), { recursive: true });

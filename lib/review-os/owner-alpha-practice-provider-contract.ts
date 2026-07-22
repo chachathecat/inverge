@@ -33,6 +33,7 @@ export interface OwnerAlphaPracticeProviderPort {
     problemModel: OwnerAlphaPracticeProblemModel;
     independentAttempt: string;
     questionText: string | null;
+    checkQuestionIds: string[];
     generatedAt: string;
   }): Promise<OwnerAlphaReferenceDraft>;
 }

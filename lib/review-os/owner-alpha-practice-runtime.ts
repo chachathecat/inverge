@@ -4,6 +4,10 @@ import {
   ownerAlphaCalculationReleaseBlockers,
   validateOwnerAlphaCalculationGraph,
 } from "./owner-alpha-calculation-validator";
+import {
+  ownerAlphaExplanationLadderReleaseBlockers,
+  remapOwnerAlphaExplanationLadderClaimIds,
+} from "./owner-alpha-explanation-ladder-contract";
 import { compileOwnerAlphaPracticeProblem } from "./owner-alpha-practice-compiler";
 import {
   OWNER_ALPHA_PRACTICE_CONTRACT_VERSION,
@@ -242,8 +246,8 @@ function checksAppliedClaims(
     }
     if (check.status === "validated") {
       if (
-        subject === "appraisal_theory" &&
-        ["concept", "method", "source"].includes(claim.claimType)
+        subject === "appraisal_theory" ||
+        subject === "appraisal_compensation_law"
       ) {
         return {
           ...claim,
@@ -280,14 +284,20 @@ function checksAppliedClaims(
       claimType: "formula",
       summary: node.label,
       state:
-        check?.status === "validated"
+        subject === "appraisal_theory" ||
+        subject === "appraisal_compensation_law"
+          ? "ai_inference"
+          : check?.status === "validated"
           ? "deterministically_validated"
           : "unresolved_needs_review",
       critical: node.critical,
       evidenceRefIds: [],
       calculationNodeId: node.nodeId,
       resolutionCode:
-        check?.status === "validated"
+        subject === "appraisal_theory" ||
+        subject === "appraisal_compensation_law"
+          ? "provider_only"
+          : check?.status === "validated"
           ? "supported"
           : check?.status === "conflict"
             ? "deterministic_conflict"
@@ -310,12 +320,24 @@ function normalizeDraftWithChecks(
     draft.reference.calculationGraph.nodes,
     problemModel,
   );
+  const generatedReferenceText = JSON.stringify({
+    hints: draft.reference.hints,
+    l1: draft.reference.l1,
+    l2: draft.reference.l2,
+    l3: draft.reference.l3,
+    claims: draft.reference.claims,
+    calculationGraph: draft.reference.calculationGraph,
+    biggestGap: draft.biggestGap,
+    misconceptionGraph: draft.misconceptionGraph,
+    rootCauseCandidates: draft.rootCauseCandidates,
+    variant: draft.variant,
+  });
   const blockerCodes = [
     ...ownerAlphaCalculationReleaseBlockers(checks),
     ...ownerAlphaSubjectReferenceReleaseBlockers({
       problemModel,
       claims,
-      generatedReferenceText: JSON.stringify(draft),
+      generatedReferenceText,
     }),
     ...(claims.length === 0 ? ["reference:missing_claim_verification"] : []),
   ];
@@ -323,6 +345,7 @@ function normalizeDraftWithChecks(
     draft.variant.calculationGraph,
   );
   const variantVerificationState: OwnerAlphaPracticeVariant["verificationState"] =
+    problemModel.subjectAdapter?.subject === "appraisal_practical" &&
     variantChecks.length > 0 &&
     variantChecks.every((check) => check.status === "validated")
       ? "deterministically_validated"
@@ -348,12 +371,15 @@ function isolateProviderClaimIds(
   providerClaims: OwnerAlphaClaimState[],
 ) {
   const seen = new Set(nativeClaims.map((claim) => claim.claimId));
-  return providerClaims.map((claim, index) => {
+  const claimIdMap = new Map<string, string>();
+  const claims = providerClaims.map((claim, index) => {
     let claimId = claim.claimId;
     while (seen.has(claimId)) claimId = `ai-${index + 1}-${claimId}`;
     seen.add(claimId);
+    claimIdMap.set(claim.claimId, claimId);
     return claimId === claim.claimId ? claim : { ...claim, claimId };
   });
+  return { claims, claimIdMap };
 }
 
 function evidenceConceptIds(session: OwnerAlphaPracticeSession) {
@@ -738,6 +764,9 @@ export class OwnerAlphaPracticeRuntime {
         problemModel: claimed.problemModel,
         independentAttempt: claimed.independentAttempt!.text,
         questionText: input.questionText,
+        checkQuestionIds: claimed.questionChain.entries.map(
+          (entry) => entry.questionId,
+        ),
         generatedAt: now,
       });
     } catch (error) {
@@ -774,13 +803,47 @@ export class OwnerAlphaPracticeRuntime {
       draft,
       claimed.problemModel,
     );
-    const isolatedClaims = isolateProviderClaimIds(
+    const isolated = isolateProviderClaimIds(
       claimed.problemModel.claimVerificationStates,
       checked.reference.claims,
     );
+    const isolatedClaims = isolated.claims;
+    const remappedExplanationLadder = checked.reference.explanationLadder
+      ? remapOwnerAlphaExplanationLadderClaimIds(
+          checked.reference.explanationLadder,
+          isolated.claimIdMap,
+        )
+      : undefined;
+    const ladderBlockers = remappedExplanationLadder
+      ? claimed.problemModel.subjectAdapter
+        ? ownerAlphaExplanationLadderReleaseBlockers({
+            ladder: remappedExplanationLadder,
+            parentReference: {
+              ...checked.reference,
+              claims: isolatedClaims,
+              explanationLadder: remappedExplanationLadder,
+            },
+            subject: ownerAlphaSubjectFromSession(claimed),
+            checkQuestionIds: claimed.questionChain.entries.map(
+              (entry) => entry.questionId,
+            ),
+          })
+        : ["explanation_ladder:adapter_required"]
+      : [];
+    const blockerCodes = [
+      ...new Set([...checked.reference.blockerCodes, ...ladderBlockers]),
+    ];
+    const referenceCore = { ...checked.reference };
+    delete referenceCore.explanationLadder;
     const checkedReference = {
-      ...checked.reference,
+      ...referenceCore,
       claims: isolatedClaims,
+      ...(remappedExplanationLadder && ladderBlockers.length === 0
+        ? { explanationLadder: remappedExplanationLadder }
+        : {}),
+      releaseStatus:
+        blockerCodes.length > 0 ? ("withheld" as const) : ("released" as const),
+      blockerCodes,
     };
     const referenceReleased = checkedReference.releaseStatus === "released";
     const subjectAdapter = claimed.problemModel.subjectAdapter;
@@ -797,7 +860,10 @@ export class OwnerAlphaPracticeRuntime {
       ...claimed,
       status: referenceReleased ? "reference_ready" : "reference_withheld",
       aiReference: checkedReference,
-      calculationChecks: checked.checks,
+      calculationChecks:
+        ownerAlphaSubjectFromSession(claimed) === "appraisal_theory"
+          ? []
+          : checked.checks,
       biggestGap: checked.biggestGap,
       misconceptionGraph:
         checked.misconceptionGraph.nodes.length > 0
