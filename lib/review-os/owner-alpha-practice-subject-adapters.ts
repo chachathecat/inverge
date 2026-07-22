@@ -365,6 +365,18 @@ function legalEffectiveDate(text: string) {
   return null;
 }
 
+function legalArticleReferenceKeys(text: string) {
+  const keys = new Set<string>();
+  for (const match of text.normalize("NFKC").matchAll(
+    /제\s*(\d+)\s*조(?:의\s*(\d+))?(?:\s*제\s*(\d+)\s*항)?/g,
+  )) {
+    const article = `제${match[1]}조${match[2] ? `의${match[2]}` : ""}`;
+    keys.add(article);
+    if (match[3]) keys.add(`${article}:제${match[3]}항`);
+  }
+  return keys;
+}
+
 export const LawAdapter: OwnerAlphaSubjectAdapterPort<OwnerAlphaLawAdapterModel> = {
   subject: "appraisal_compensation_law",
   name: "LawAdapter",
@@ -494,6 +506,7 @@ export function compileOwnerAlphaSubjectAdapter(
 export function ownerAlphaSubjectReferenceReleaseBlockers(input: {
   problemModel: OwnerAlphaPracticeProblemModel;
   claims: OwnerAlphaClaimState[];
+  generatedReferenceText?: string;
 }) {
   const adapter = input.problemModel.subjectAdapter;
   if (!adapter) return [];
@@ -546,6 +559,18 @@ export function ownerAlphaSubjectReferenceReleaseBlockers(input: {
         !reference.officialSourceRefId?.trim()
       ) {
         blockers.push("law:official_source_promotion_without_reference");
+      }
+    }
+    const allowedArticleReferences = new Set(
+      adapter.articleAndParagraphReferences.flatMap((reference) => [
+        ...legalArticleReferenceKeys(reference.citation),
+      ]),
+    );
+    for (const reference of legalArticleReferenceKeys(
+      input.generatedReferenceText ?? "",
+    )) {
+      if (!allowedArticleReferences.has(reference)) {
+        blockers.push("law:unbound_article_reference");
       }
     }
   }

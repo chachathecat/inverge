@@ -312,7 +312,11 @@ function normalizeDraftWithChecks(
   );
   const blockerCodes = [
     ...ownerAlphaCalculationReleaseBlockers(checks),
-    ...ownerAlphaSubjectReferenceReleaseBlockers({ problemModel, claims }),
+    ...ownerAlphaSubjectReferenceReleaseBlockers({
+      problemModel,
+      claims,
+      generatedReferenceText: JSON.stringify(draft),
+    }),
     ...(claims.length === 0 ? ["reference:missing_claim_verification"] : []),
   ];
   const variantChecks = validateOwnerAlphaCalculationGraph(
@@ -575,18 +579,26 @@ export class OwnerAlphaPracticeRuntime {
       MAX_PROBLEM_TEXT,
       10,
     );
+    const recompiledProblemModel = compileOwnerAlphaPracticeProblem({
+      problemId: session.sessionId,
+      problemText: confirmedProblemText,
+      subject:
+        session.problemModel.subjectAdapter?.subject ??
+        ownerAlphaSubjectFromSession(session),
+    });
+    const problemModel = session.problemModel.subjectAdapter
+      ? recompiledProblemModel
+      : {
+          ...recompiledProblemModel,
+          subject: session.problemModel.subject,
+          subjectAdapter: undefined,
+        };
     const next: OwnerAlphaPracticeSession = {
       ...session,
       status: "problem_confirmed",
       criticalOcrConfirmed: true,
       confirmedProblemText,
-      problemModel: compileOwnerAlphaPracticeProblem({
-        problemId: session.sessionId,
-        problemText: confirmedProblemText,
-        subject:
-          session.problemModel.subjectAdapter?.subject ??
-          ownerAlphaSubjectFromSession(session),
-      }),
+      problemModel,
     };
     return toOwnerAlphaPracticeView(
       await this.deps.repository.save(next, input.recordVersion),

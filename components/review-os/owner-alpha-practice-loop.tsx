@@ -581,7 +581,7 @@ export function OwnerAlphaPracticeLoop({
                   <label htmlFor="owner-alpha-success" className="text-sm font-medium">성공 기준</label>
                   <Textarea id="owner-alpha-success" value={successCriteria} onChange={(event) => setSuccessCriteria(event.target.value)} className="min-h-24" maxLength={1_200} required />
                 </div>
-                {activeAdapter?.subject === "appraisal_practical" ? (
+                {!activeAdapter || activeAdapter.subject === "appraisal_practical" ? (
                   <fieldset>
                     <legend className="text-sm font-medium">직접 수행 방식</legend>
                     <div className="mt-2 flex flex-wrap gap-4">

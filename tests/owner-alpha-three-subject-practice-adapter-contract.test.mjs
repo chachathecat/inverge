@@ -404,8 +404,8 @@ for (const fixture of fixtures) {
   });
 }
 
-test("existing v0 practical sessions remain readable without a subject adapter projection", async () => {
-  const { runtime } = harness();
+test("existing v0 practical sessions remain readable, resumable, and completable without an adapter projection", async () => {
+  const { runtime, repository } = harness();
   const current = await runtime.create({
     problemText: fixtures[0].text,
     files: [],
@@ -417,9 +417,48 @@ test("existing v0 practical sessions remain readable without a subject adapter p
   delete legacy.problemModel.subjectAdapter;
   legacy.subject = "감정평가실무";
   legacy.problemModel.subject = "감정평가실무";
+  repository.rows.set(legacy.sessionId, clone(legacy));
   assert.equal(isOwnerAlphaPracticeSession(legacy), true);
   assert.equal(projectOwnerAlphaSubjectPracticeContract(legacy), null);
   assert.equal(legacy.problemModel.methodFamily, "comparison_approach");
+
+  let resumed = await runtime.get(legacy.sessionId);
+  resumed = await runtime.confirmProblem({
+    sessionId: resumed.sessionId,
+    recordVersion: resumed.recordVersion,
+    confirmedProblemText: resumed.confirmedProblemText,
+  });
+  assert.equal(resumed.subject, "감정평가실무");
+  assert.equal(resumed.problemModel.subject, "감정평가실무");
+  assert.equal(resumed.problemModel.subjectAdapter, undefined);
+  assert.equal(isOwnerAlphaPracticeSession(resumed), true);
+
+  resumed = await runtime.saveIndependentAttempt({
+    sessionId: resumed.sessionId,
+    recordVersion: resumed.recordVersion,
+    attemptText: "기존 v0 실무 세션에서 독립 시도를 계속합니다.",
+    elapsedTimeMs: 120_000,
+    confidence: "medium",
+  });
+  resumed = (
+    await runtime.requestAssistance({
+      sessionId: resumed.sessionId,
+      recordVersion: resumed.recordVersion,
+      questionText: null,
+      revealFull: true,
+    })
+  ).view;
+  const completed = await runtime.completeRewrite({
+    sessionId: resumed.sessionId,
+    recordVersion: resumed.recordVersion,
+    mode: "recalculate",
+    rewriteText: "기존 v0 계산과 답안 구조를 직접 다시 완성했습니다.",
+    inferredMisunderstanding: "자료 역할과 계산 순서를 다시 확인했습니다.",
+    successCriteria: "같은 문제를 도움 없이 다시 계산합니다.",
+  });
+  assert.equal(completed.status, "completed");
+  assert.equal(completed.problemModel.subjectAdapter, undefined);
+  assert.equal(projectOwnerAlphaSubjectPracticeContract(completed), null);
 });
 
 test("v1 persistence rejects a mismatched subject or incomplete adapter contract", async () => {
@@ -437,6 +476,47 @@ test("v1 persistence rejects a mismatched subject or incomplete adapter contract
   const incomplete = clone(current);
   incomplete.problemModel.subjectAdapter.rewriteModes = ["paragraph_rewrite"];
   assert.equal(isOwnerAlphaPracticeSession(incomplete), false);
+});
+
+test("v1 persistence rejects malformed versions, unknown subjects, illegal modes, and contradictory routing", async () => {
+  const { runtime } = harness();
+  const current = await runtime.create({
+    problemText: fixtures[1].text,
+    files: [],
+    inputModality: "typed",
+    subject: "appraisal_theory",
+  });
+
+  const malformedVersion = clone(current);
+  malformedVersion.problemModel.subjectAdapter.contractVersion =
+    "owner_alpha_subject_adapter.v999";
+  assert.equal(isOwnerAlphaPracticeSession(malformedVersion), false);
+
+  const unknownSubject = clone(current);
+  unknownSubject.subject = "unknown_subject";
+  unknownSubject.problemModel.subject = "unknown_subject";
+  unknownSubject.problemModel.subjectAdapter.subject = "unknown_subject";
+  assert.equal(isOwnerAlphaPracticeSession(unknownSubject), false);
+
+  const illegalGap = clone(current);
+  illegalGap.problemModel.subjectAdapter.gapTypes = [
+    ...illegalGap.problemModel.subjectAdapter.gapTypes.slice(0, -1),
+    "illegal_gap",
+  ];
+  assert.equal(isOwnerAlphaPracticeSession(illegalGap), false);
+
+  const illegalRewrite = clone(current);
+  illegalRewrite.problemModel.subjectAdapter.rewriteModes = [
+    ...illegalRewrite.problemModel.subjectAdapter.rewriteModes.slice(0, -1),
+    "illegal_rewrite",
+  ];
+  assert.equal(isOwnerAlphaPracticeSession(illegalRewrite), false);
+
+  const contradictoryRouting = clone(current);
+  contradictoryRouting.problemModel.subjectAdapter.secondaryDomains = [
+    "appraisal_theory",
+  ];
+  assert.equal(isOwnerAlphaPracticeSession(contradictoryRouting), false);
 });
 
 test("TheoryAdapter never treats a validated arithmetic node as deterministic theory scoring", async () => {
@@ -544,6 +624,33 @@ test("LawAdapter fails closed when the legal effective date is unknown", async (
   assert.equal(repository.evidence.referenceUsage.size, 0);
 });
 
+test("LawAdapter withholds a provider-invented article reference absent from the problem", async () => {
+  const { runtime, repository } = harness({
+    mutate(draft) {
+      draft.reference.l1.sections[0].body =
+        "공익사업법 제999조 제1항이 적용된다는 조문을 새로 만들어 냅니다.";
+    },
+  });
+  let view = await prepareAttempt(runtime, fixtures[2]);
+  view = (
+    await runtime.requestAssistance({
+      sessionId: view.sessionId,
+      recordVersion: view.recordVersion,
+      questionText: null,
+      revealFull: true,
+    })
+  ).view;
+  assert.equal(view.status, "reference_withheld");
+  assert.equal(view.aiReference, null);
+  const stored = await repository.load(view.sessionId);
+  assert.ok(
+    stored.aiReference.blockerCodes.includes(
+      "law:unbound_article_reference",
+    ),
+  );
+  assert.equal(repository.evidence.referenceUsage.size, 0);
+});
+
 test("compensation mixed-domain routing retains one primary subject and explicit secondary domains", () => {
   const routing = routeOwnerAlphaPracticeSubject({
     requestedSubject: "appraisal_compensation_law",
@@ -586,6 +693,26 @@ test("provider timeout preserves the native TheoryAdapter rewrite and D+1 fallba
   });
   assert.equal(completed.status, "completed");
   assert.equal(completed.rewrite.subjectMode, "argument_bridge");
+  assert.equal(repository.evidence.referenceUsage.size, 0);
+});
+
+test("invalid provider output fails closed into the same native LawAdapter fallback", async () => {
+  const { runtime, repository } = harness({
+    error: new OwnerAlphaProviderError("invalid_output"),
+  });
+  let view = await prepareAttempt(runtime, fixtures[2]);
+  const failed = await runtime.requestAssistance({
+    sessionId: view.sessionId,
+    recordVersion: view.recordVersion,
+    questionText: null,
+    revealFull: true,
+  });
+  view = failed.view;
+  assert.equal(failed.providerFailed, true);
+  assert.equal(view.providerState.failureCode, "invalid_output");
+  assert.equal(view.status, "reference_withheld");
+  assert.equal(view.aiReference, null);
+  assert.equal(view.biggestGap.gapType, "fact_requirement_mapping_gap");
   assert.equal(repository.evidence.referenceUsage.size, 0);
 });
 
@@ -730,6 +857,17 @@ test("metadata and exact-head RLS evidence contain no raw learner or provider bo
   assert.match(verifier, /learnerTextPersisted:\s*false/);
   assert.match(verifier, /providerBodiesPersisted:\s*false/);
   assert.match(verifier, /credentialMaterialPersisted:\s*false/);
+});
+
+test("the private UI preserves the v0 practical rewrite and recalculation choice", async () => {
+  const component = await readFile(
+    "components/review-os/owner-alpha-practice-loop.tsx",
+    "utf8",
+  );
+  assert.match(
+    component,
+    /!activeAdapter \|\| activeAdapter\.subject === "appraisal_practical"/,
+  );
 });
 
 test("the versioned contract exposes every required theory and law mode without automated correctness scoring", () => {
