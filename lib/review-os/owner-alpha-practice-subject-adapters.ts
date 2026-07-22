@@ -395,15 +395,15 @@ function canonicalFullDate(value: string) {
     : null;
 }
 
-function hasUnknownLegalEffectiveVersion(text: string) {
-  return /(?:시행일|유효일|법령\s*버전(?:일)?|(?:법령|법률|조문)(?:상|의)?\s*기준일(?:자)?|적용\s*기준일(?:자)?)[^.\n]{0,40}(?:알려지지\s*않|알\s*수\s*없|미상|불명|불확실|미확인|별도\s*확인|확인(?:이)?\s*(?:필요|되지|하라))/i.test(
+function hasExplicitUnknownLegalEffectiveVersion(text: string) {
+  return /(?:시행일|유효일|법령\s*버전(?:일)?|(?:법령|법률|조문)(?:상|의)?\s*기준일(?:자)?|적용\s*기준일(?:자)?)[^.\n]{0,40}(?:알려지지\s{0,4}않|알\s{0,4}수\s{0,4}없|미상(?!환)|불명(?!확|예|료)|불확실|미확인|별도\s{0,4}확인|확인(?:이)?\s{0,4}(?:필요|되지(?:\s{0,4}않)?|하라))/i.test(
     text,
   );
 }
 
 function hasOrdinaryAppraisalDateContext(text: string, dateStart: number) {
   const prefix = text.slice(Math.max(0, dateStart - 48), dateStart);
-  return /(?:사례\s{0,4}거래\s{0,4}일|감정\s{0,4}평가\s{0,4}기준\s{0,4}일|감정\s{0,4}평가\s{0,4}일|평가\s{0,4}기준\s{0,4}일|거래\s{0,4}일|평가\s{0,4}일|사업\s{0,4}일|기준\s{0,4}시점|가격\s{0,4}시점|자료\s{0,4}시점|시점\s{0,4}수정\s{0,4}일)(?:\s*(?:[([{]\s*(?:사례\s{0,4}거래\s{0,4}일|감정\s{0,4}평가\s{0,4}기준\s{0,4}일|감정\s{0,4}평가\s{0,4}일|평가\s{0,4}기준\s{0,4}일|거래\s{0,4}일|평가\s{0,4}일|사업\s{0,4}일|기준\s{0,4}시점|가격\s{0,4}시점|자료\s{0,4}시점|시점\s{0,4}수정\s{0,4}일)\s*[)\]}]|기준일|따른|의한|따라|근거한|기초한|정한|규정한|규정된|은|는|이|가|을|를|인|상|에서|에|의|도|만|으로서|로서|으로|로|현재|당시|:|=)){0,4}\s*[([{]?\s*$/i.test(
+  return /(?:사례\s{0,4}거래\s{0,4}일|감정\s{0,4}평가\s{0,4}기준\s{0,4}일(?:\s{0,4}자)?|감정\s{0,4}평가\s{0,4}일|평가\s{0,4}기준\s{0,4}일(?:\s{0,4}자)?|거래\s{0,4}일|평가\s{0,4}일|사업\s{0,4}일|기준\s{0,4}시점|가격\s{0,4}시점|자료\s{0,4}시점|시점\s{0,4}수정\s{0,4}일)(?:\s*(?:[([{]\s*(?:사례\s{0,4}거래\s{0,4}일|감정\s{0,4}평가\s{0,4}기준\s{0,4}일(?:\s{0,4}자)?|감정\s{0,4}평가\s{0,4}일|평가\s{0,4}기준\s{0,4}일(?:\s{0,4}자)?|거래\s{0,4}일|평가\s{0,4}일|사업\s{0,4}일|기준\s{0,4}시점|가격\s{0,4}시점|자료\s{0,4}시점|시점\s{0,4}수정\s{0,4}일)\s*[)\]}]|기준일|따른|의한|따라|근거한|기초한|정한|규정한|규정된|은|는|이|가|을|를|인|상|에서|에|의|도|만|으로서|로서|으로|로|현재|당시|:|=)){0,4}\s*[([{]?\s*$/i.test(
     prefix,
   );
 }
@@ -447,21 +447,57 @@ function hasAdjacentLawArticle(
   );
 }
 
-function legalEffectiveDateReferenceKeys(
+function hasBareAdjacentUnknownLegalEffectiveVersion(
   text: string,
   allowedStatuteReferences: ReadonlySet<string>,
 ) {
-  const keys = new Set<string>();
   const normalized = text.normalize("NFKC");
-  for (const pattern of [
-    /(?:시행일|유효일|법령\s*버전(?:일)?|(?:법령|법률|조문)(?:상|의)?\s*기준일(?:자)?|적용\s*기준일(?:자)?)\s{0,8}(?:(?:로서|로써|로|이며|이고|이므로|이지만|이어서|이라서|이라면|이라고|인데|이되|이자|이니|인바|인즉|이라|은|는|이|가|을|를|인|상|에서|에|의|도|만|:|=)\s{0,4}){0,2}[\p{P}\p{S}]{0,2}\s{0,8}(?:현재\s{0,4})?((?:19|20)\d{2}\s*[.\-/년]\s*\d{1,2}\s*[.\-/월]\s*\d{1,2}\s*일?)/giu,
-    /((?:19|20)\d{2}\s*[.\-/년]\s*\d{1,2}\s*[.\-/월]\s*\d{1,2}\s*일?)\s{0,8}(?:(?:은|는|이|가|을|를)\s{0,4})?[\p{P}\p{S}]{0,2}\s{0,8}(?:현재\s*)?(?:시행\s*(?:법령|법률)|법령\s*버전(?:일)?|시행일|유효일|(?:법령|법률|조문)(?:상|의)?\s*기준일(?:자)?|적용\s*기준일(?:자)?)/giu,
-  ]) {
-    for (const match of normalized.matchAll(pattern)) {
-      const key = canonicalFullDate(match[1]);
-      if (key) keys.add(key);
+  const segments = normalized.split(
+    /(?:\r?\n+|(?<!\d)[.!?。！？]+|[.!?。！？]+(?!\d))/u,
+  );
+  for (const segment of segments) {
+    for (const match of segment.matchAll(
+      /(?<![가-힣])기준\s{0,4}일(?:\s{0,4}자)?(?:\s{0,4}(?:로서|로써|로|이며|이고|이므로|이지만|은|는|이|가|을|를|인|상|에서|에|의|도|만|:|=)){0,2}\s{0,8}[\p{P}\p{S}]{0,3}\s{0,8}(알려지지\s{0,4}않|알\s{0,4}수\s{0,4}없|미상(?!환)|불명(?!확|예|료)|불확실|미확인|별도\s{0,4}확인|확인(?:이)?\s{0,4}(?:필요|되지(?:\s{0,4}않)?|하라))/giu,
+    )) {
+      const basisStart = match.index ?? 0;
+      const unknownStart = basisStart + match[0].lastIndexOf(match[1]);
+      const unknownEnd = basisStart + match[0].length;
+      if (
+        hasOrdinaryAppraisalDateContext(segment, unknownStart) ||
+        !hasAdjacentLawArticle(
+          segment,
+          basisStart,
+          unknownEnd,
+          allowedStatuteReferences,
+        )
+      ) {
+        continue;
+      }
+      return true;
     }
   }
+  return false;
+}
+
+function hasUnknownLegalEffectiveVersion(
+  text: string,
+  allowedStatuteReferences: ReadonlySet<string>,
+) {
+  return (
+    hasExplicitUnknownLegalEffectiveVersion(text.normalize("NFKC")) ||
+    hasBareAdjacentUnknownLegalEffectiveVersion(
+      text,
+      allowedStatuteReferences,
+    )
+  );
+}
+
+function adjacentLawEffectiveDateValues(
+  text: string,
+  allowedStatuteReferences: ReadonlySet<string>,
+) {
+  const values = new Map<string, string>();
+  const normalized = text.normalize("NFKC");
   for (const match of normalized.matchAll(
     /((?:19|20)\d{2}\s{0,8}[.\-/년]\s{0,8}\d{1,2}\s{0,8}[.\-/월]\s{0,8}\d{1,2}\s{0,8}일?)\s{0,8}[\p{P}\p{S}]{0,2}\s{0,8}(?:(?:은|는|이|가|을|를)\s{0,4})?(?:(?:법령|법률|조문)(?:상|의)?\s{0,4})?기준(?:일(?:자)?(?:로서|로써|로)?|으로서|으로써|으로)?(?:\s{0,4}(?:현재|당시|이며|이고|이므로|이지만|이어서|이라서|이라면|이라고|인데|이되|이자|이니|인바|인즉|이라|은|는|이|가|을|를|인|상|에서|에|의|도|만)){0,2}(?![가-힣])/giu,
   )) {
@@ -479,7 +515,9 @@ function legalEffectiveDateReferenceKeys(
       continue;
     }
     const key = canonicalFullDate(match[1]);
-    if (key) keys.add(key);
+    if (key && !values.has(key)) {
+      values.set(key, match[1].replace(/\s+/g, ""));
+    }
   }
   for (const match of normalized.matchAll(
     /(?<![가-힣])기준(?:일(?:자)?(?:로서|로써|로)?|으로서|으로써|으로)?(?:\s{0,4}(?:현재|당시|이며|이고|이므로|이지만|이어서|이라서|이라면|이라고|인데|이되|이자|이니|인바|인즉|이라|은|는|이|가|을|를|인|상|에서|에|의|도|만)){0,2}(?![가-힣])(?:\s{0,8}[\p{P}\p{S}]){0,3}\s{0,8}((?:19|20)\d{2}\s{0,8}[.\-/년]\s{0,8}\d{1,2}\s{0,8}[.\-/월]\s{0,8}\d{1,2}\s{0,8}일?)/giu,
@@ -499,42 +537,80 @@ function legalEffectiveDateReferenceKeys(
       continue;
     }
     const key = canonicalFullDate(match[1]);
-    if (key) keys.add(key);
+    if (key && !values.has(key)) {
+      values.set(key, match[1].replace(/\s+/g, ""));
+    }
+  }
+  return values;
+}
+
+function legalEffectiveDateReferenceKeys(
+  text: string,
+  allowedStatuteReferences: ReadonlySet<string>,
+) {
+  const keys = new Set<string>();
+  const normalized = text.normalize("NFKC");
+  for (const pattern of [
+    /(?:시행일|유효일|법령\s*버전(?:일)?|(?:법령|법률|조문)(?:상|의)?\s*기준일(?:자)?|적용\s*기준일(?:자)?)\s{0,8}(?:(?:로서|로써|로|이며|이고|이므로|이지만|이어서|이라서|이라면|이라고|인데|이되|이자|이니|인바|인즉|이라|은|는|이|가|을|를|인|상|에서|에|의|도|만|:|=)\s{0,4}){0,2}[\p{P}\p{S}]{0,2}\s{0,8}(?:현재\s{0,4})?((?:19|20)\d{2}\s*[.\-/년]\s*\d{1,2}\s*[.\-/월]\s*\d{1,2}\s*일?)/giu,
+    /((?:19|20)\d{2}\s*[.\-/년]\s*\d{1,2}\s*[.\-/월]\s*\d{1,2}\s*일?)\s{0,8}(?:(?:은|는|이|가|을|를)\s{0,4})?[\p{P}\p{S}]{0,2}\s{0,8}(?:현재\s*)?(?:시행\s*(?:법령|법률)|법령\s*버전(?:일)?|시행일|유효일|(?:법령|법률|조문)(?:상|의)?\s*기준일(?:자)?|적용\s*기준일(?:자)?)/giu,
+  ]) {
+    for (const match of normalized.matchAll(pattern)) {
+      const key = canonicalFullDate(match[1]);
+      if (key) keys.add(key);
+    }
+  }
+  for (const key of adjacentLawEffectiveDateValues(
+    normalized,
+    allowedStatuteReferences,
+  ).keys()) {
+    keys.add(key);
   }
   return keys;
 }
 
 function legalEffectiveDate(text: string) {
-  for (const sentence of sentences(text.normalize("NFKC"))) {
-    const hasExplicitLegalVersionLabel =
-      /(?:법령\s*버전|(?:법령|법률|조문)(?:상|의)?\s*기준일(?:자)?|적용\s*기준일(?:자)?)/i.test(
-        sentence,
-      );
-    const hasGenericEffectiveDateLabel = /(?:시행일|유효일)/i.test(sentence);
-    const hasSameSentenceLawContext =
-      /(?:법령|법률|조문|시행령|시행규칙)/i.test(sentence);
-    if (
-      !hasExplicitLegalVersionLabel &&
-      !(hasGenericEffectiveDateLabel && hasSameSentenceLawContext)
-    ) {
-      continue;
-    }
-    if (hasUnknownLegalEffectiveVersion(sentence)) {
-      continue;
-    }
-    const date =
-      sentence.match(
-        /(?:시행일|유효일|법령\s*버전(?:일)?|(?:법령|법률|조문)(?:상|의)?\s*기준일(?:자)?|적용\s*기준일(?:자)?)\s{0,8}(?:(?:로서|로써|로|이며|이고|이므로|이지만|이어서|이라서|이라면|이라고|인데|이되|이자|이니|인바|인즉|이라|은|는|이|가|을|를|인|상|에서|에|의|도|만|:|=)\s{0,4}){0,2}[\p{P}\p{S}]{0,2}\s{0,8}((?:19|20)\d{2}\s*[.\-/년]\s*\d{1,2}\s*[.\-/월]\s*\d{1,2}\s*일?)/iu,
-      ) ??
-      sentence.match(
-        /((?:19|20)\d{2}\s*[.\-/년]\s*\d{1,2}\s*[.\-/월]\s*\d{1,2}\s*일?)\s{0,8}(?:(?:은|는|이|가|을|를)\s{0,4})?[\p{P}\p{S}]{0,2}\s{0,8}(?:시행\s*(?:법령|법률)|법령\s*버전(?:일)?|시행일|유효일|(?:법령|법률|조문)(?:상|의)?\s*기준일(?:자)?|적용\s*기준일(?:자)?)/iu,
-      );
-    if (!date) continue;
-    if (canonicalFullDate(date[1])) {
-      return date[1].replace(/\s+/g, "");
+  const dates = new Map<string, string>();
+  const normalized = text.normalize("NFKC");
+  const clauses = normalized
+    .split(/(?<=[가-힣)\]}])[.!?]+\s+|[\r\n]{2,}/u)
+    .filter((value) => value.trim());
+  for (const clause of clauses) {
+    if (hasExplicitUnknownLegalEffectiveVersion(clause)) continue;
+    const hasSameClauseLawContext =
+      /(?:법령|법률|조문|시행령|시행규칙)/i.test(clause);
+    for (const pattern of [
+      /(?:시행일|유효일|법령\s*버전(?:일)?|(?:법령|법률|조문)(?:상|의)?\s*기준일(?:자)?|적용\s*기준일(?:자)?)\s{0,8}(?:(?:로서|로써|로|이며|이고|이므로|이지만|이어서|이라서|이라면|이라고|인데|이되|이자|이니|인바|인즉|이라|은|는|이|가|을|를|인|상|에서|에|의|도|만|:|=)\s{0,4}){0,2}[\p{P}\p{S}]{0,2}\s{0,8}((?:19|20)\d{2}\s*[.\-/년]\s*\d{1,2}\s*[.\-/월]\s*\d{1,2}\s*일?)/giu,
+      /((?:19|20)\d{2}\s*[.\-/년]\s*\d{1,2}\s*[.\-/월]\s*\d{1,2}\s*일?)\s{0,8}(?:(?:은|는|이|가|을|를)\s{0,4})?[\p{P}\p{S}]{0,2}\s{0,8}(?:시행\s*(?:법령|법률)|법령\s*버전(?:일)?|시행일|유효일|(?:법령|법률|조문)(?:상|의)?\s*기준일(?:자)?|적용\s*기준일(?:자)?)/giu,
+    ]) {
+      for (const match of clause.matchAll(pattern)) {
+        const hasGenericEffectiveDateLabel = /(?:시행일|유효일)/i.test(
+          match[0],
+        );
+        const hasSpecificLegalVersionLabel =
+          /(?:시행\s*(?:법령|법률)|법령\s*버전|(?:법령|법률|조문)(?:상|의)?\s*기준일(?:자)?|적용\s*기준일(?:자)?)/i.test(
+            match[0],
+          );
+        if (
+          hasGenericEffectiveDateLabel &&
+          !hasSpecificLegalVersionLabel &&
+          !hasSameClauseLawContext
+        ) {
+          continue;
+        }
+        const key = canonicalFullDate(match[1]);
+        if (key && !dates.has(key)) {
+          dates.set(key, match[1].replace(/\s+/g, ""));
+        }
+      }
     }
   }
-  return null;
+  for (const [key, value] of adjacentLawEffectiveDateValues(
+    normalized,
+    legalStatuteReferenceKeys(normalized),
+  )) {
+    if (!dates.has(key)) dates.set(key, value);
+  }
+  return dates.size === 1 ? (dates.values().next().value ?? null) : null;
 }
 
 function legalArticleReferenceKeys(text: string) {
@@ -799,7 +875,12 @@ export function ownerAlphaSubjectReferenceReleaseBlockers(input: {
     ) {
       blockers.push("law:effective_date_unknown");
     }
-    if (hasUnknownLegalEffectiveVersion(input.generatedReferenceText ?? "")) {
+    if (
+      hasUnknownLegalEffectiveVersion(
+        input.generatedReferenceText ?? "",
+        allowedStatuteReferences,
+      )
+    ) {
       blockers.push("law:effective_date_unknown");
     }
     const allowedEffectiveDate = adapter.effectiveDateRequirement.effectiveAt
