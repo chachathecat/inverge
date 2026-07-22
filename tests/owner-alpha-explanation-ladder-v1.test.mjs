@@ -1063,6 +1063,332 @@ test("Law stays candidate-only and blocks fabricated articles, cases, empty sour
   assert.equal(storedLaw.variant.verificationState, "unresolved_needs_review");
 });
 
+test("Law basis-form statute dates are version-bound without promoting ordinary appraisal dates", () => {
+  const problemModel = compileOwnerAlphaPracticeProblem({
+    problemId: "synthetic-law-basis-version-reference",
+    problemText:
+      "전적으로 가상인 사례이다. 문제에서 제공하는 법률 조문의 유효일은 2026.07.04이다. 공익사업법 제10조 제1항을 검토하라.",
+    subject: "appraisal_compensation_law",
+  });
+  const blockersFor = (generatedReferenceText) =>
+    ownerAlphaSubjectReferenceReleaseBlockers({
+      problemModel,
+      claims: [],
+      generatedReferenceText,
+    });
+
+  for (const generatedReferenceText of [
+    "2099.01.01 기준 공익사업법 제10조를 적용한다.",
+    "공익사업법 제10조(2099.01.01 기준)를 적용한다.",
+    "２０９９．０１．０１　기준，공익사업법 제１０조를 적용한다.",
+    "공익사업법 제１０조［２０９９／０１／０１ 기준］을 적용한다.",
+    "2099 . 01 . 01 기준 — 공익사업법 제 10 조를 적용한다.",
+    "공익사업법 제10조 : 2099년 1월 1일을 기준으로 적용한다.",
+    "2099.01.01. 기준 「공익사업법」 제10조를 적용한다.",
+    "「공익사업법」 제10조【2099.01.01, 기준】을 적용한다.",
+    "공익사업법 제10조는 2099.01.01 기준으로 적용한다.",
+    "공익사업법 제10조를 2099.01.01 기준으로 적용한다.",
+    "제10조는 2099.01.01 기준으로 적용한다.",
+    "제10조상 2099.01.01 기준으로 적용한다.",
+    "제10조에 2099.01.01 기준으로 적용한다.",
+    "2099.01.01 기준 제10조를 적용한다.",
+    "2099.01.01 기준으로 공익사업법상 제10조를 적용한다.",
+    "2099.01.01 기준으로 공익사업법의 제10조를 적용한다.",
+    "2099.01.01 기준으로는 공익사업법 제10조를 적용한다.",
+    "2099.01.01 기준은 공익사업법 제10조를 적용한다.",
+    "2099.01.01 기준일에는 공익사업법 제10조를 적용한다.",
+    "2099.01.01을 기준일로 공익사업법 제10조를 적용한다.",
+    "2099.01.01을 기준일로서 공익사업법 제10조를 적용한다.",
+    "2099.01.01을 기준일자로 공익사업법 제10조를 적용한다.",
+    "2099.01.01을 법령 기준일자로 공익사업법 제10조를 적용한다.",
+    "2099.01.01을 법률의 기준일자로 공익사업법 제10조를 적용한다.",
+    "2099.01.01은 조문 기준일자이며 공익사업법 제10조를 적용한다.",
+    "2099.01.01을 적용 기준일자로 공익사업법 제10조를 적용한다.",
+    "2099.01.01 기준이며 공익사업법 제10조를 적용한다.",
+    "2099.01.01 기준이고 공익사업법 제10조를 적용한다.",
+    "2099.01.01 기준이므로 공익사업법 제10조를 적용한다.",
+    "2099.01.01 기준이지만 공익사업법 제10조를 적용한다.",
+    "2099.01.01 기준으로서 공익사업법 제10조를 적용한다.",
+    "2099.01.01을 법령 기준일로서 공익사업법 제10조를 적용한다.",
+    "2099.01.01을 법령상 기준일로써 공익사업법 제10조를 적용한다.",
+    "2099.01.01은 법령 기준일이며 공익사업법 제10조를 적용한다.",
+    "2099.01.01이 법령 기준일인 공익사업법 제10조를 적용한다.",
+    "2099.01.01 기준일 현재 공익사업법 제10조를 적용한다.",
+    "2099.01.01 기준일 당시의 공익사업법 제10조를 적용한다.",
+    "법령 기준일로서 2099.01.01 공익사업법 제10조를 적용한다.",
+    "법령 기준일로써 2099.01.01 공익사업법 제10조를 적용한다.",
+    "법령 기준일로 ２０９９／０１／０１，공익사업법 제１０조를 적용한다.",
+    "법령 기준일이며 2099.01.01 공익사업법 제10조를 적용한다.",
+    "법령 기준일로서：(２０９９／０１／０１） 공익사업법 제１０조를 적용한다.",
+    "법령 기준일자는 2099.01.01이다. 공익사업법 제10조를 적용한다.",
+    "법령 기준일자로는 2099.01.01이다. 공익사업법 제10조를 적용한다.",
+    "법령 기준일자에는 2099.01.01이다. 공익사업법 제10조를 적용한다.",
+    "법령상 기준일자는 2099.01.01이다. 공익사업법 제10조를 적용한다.",
+    "법률의 기준일자: 2099.01.01, 공익사업법 제10조를 적용한다.",
+    "조문 기준일자는 2099.01.01이다. 공익사업법 제10조를 적용한다.",
+    "공익사업법 제10조 법령 기준일자는 2099.01.01이다.",
+    "적용 기준일자: 2099.01.01, 공익사업법 제10조를 적용한다.",
+    "공익사업법 제10조(기준일: 2099.01.01)를 적용한다.",
+    "제10조의 기준일은 2099.01.01이다.",
+    "공익사업법 제10조에 따른 기준일은 2099.01.01이다.",
+    "공익사업법 제10조에 의한 기준일은 2099.01.01이다.",
+    "공익사업법 제10조에서 정한 기준일은 2099.01.01이다.",
+    "공익사업법 기준일은 2099.01.01이다.",
+    "공익사업법의 기준일: 2099.01.01이다.",
+    "공익사업법은 2099.01.01 기준으로 적용한다.",
+    "2099.01.01 기준 공익사업법을 적용한다.",
+    "기준일: 2099.01.01 공익사업법을 적용한다.",
+    "기준일: (2099.01.01) 공익사업법 제10조를 적용한다.",
+    "공익사업법 제１０조［기준일：（２０９９／０１／０１）］을 적용한다.",
+    "2099.01.01 기준 공 익 사 업 법 상 제 10 조를 적용한다.",
+    "2099.01.01\n기준:\n공익사업법 제10조를 적용한다.",
+  ]) {
+    assert.deepEqual(
+      blockersFor(generatedReferenceText),
+      ["law:unbound_effective_date_reference"],
+      generatedReferenceText,
+    );
+  }
+
+  for (const generatedReferenceText of [
+    "2026.07.04 기준 공익사업법 제10조를 적용한다.",
+    "공익사업법 제10조(2026.07.04 기준)를 적용한다.",
+    "２０２６．０７．０４　기준，공익사업법 제１０조를 적용한다.",
+    "공익사업법 제１０조［２０２６／０７／０４ 기준］을 적용한다.",
+    "2026 . 07 . 04 기준 — 공익사업법 제 10 조를 적용한다.",
+    "2026.07.04. 기준 「공익사업법」 제10조를 적용한다.",
+    "「공익사업법」 제10조【2026.07.04, 기준】을 적용한다.",
+    "공익사업법 제10조는 2026.07.04 기준으로 적용한다.",
+    "공익사업법 제10조를 2026.07.04 기준으로 적용한다.",
+    "제10조는 2026.07.04 기준으로 적용한다.",
+    "제10조상 2026.07.04 기준으로 적용한다.",
+    "제10조에 2026.07.04 기준으로 적용한다.",
+    "2026.07.04 기준 제10조를 적용한다.",
+    "2026.07.04 기준으로 공익사업법상 제10조를 적용한다.",
+    "2026.07.04 기준으로 공익사업법의 제10조를 적용한다.",
+    "2026.07.04 기준으로는 공익사업법 제10조를 적용한다.",
+    "2026.07.04 기준은 공익사업법 제10조를 적용한다.",
+    "2026.07.04 기준일에는 공익사업법 제10조를 적용한다.",
+    "2026.07.04을 기준일로 공익사업법 제10조를 적용한다.",
+    "2026.07.04을 기준일로서 공익사업법 제10조를 적용한다.",
+    "2026.07.04을 기준일자로 공익사업법 제10조를 적용한다.",
+    "2026.07.04을 법령 기준일자로 공익사업법 제10조를 적용한다.",
+    "2026.07.04을 법률의 기준일자로 공익사업법 제10조를 적용한다.",
+    "2026.07.04은 조문 기준일자이며 공익사업법 제10조를 적용한다.",
+    "2026.07.04을 적용 기준일자로 공익사업법 제10조를 적용한다.",
+    "2026.07.04 기준이며 공익사업법 제10조를 적용한다.",
+    "2026.07.04 기준이고 공익사업법 제10조를 적용한다.",
+    "2026.07.04 기준이므로 공익사업법 제10조를 적용한다.",
+    "2026.07.04 기준이지만 공익사업법 제10조를 적용한다.",
+    "2026.07.04 기준으로서 공익사업법 제10조를 적용한다.",
+    "2026.07.04을 법령 기준일로서 공익사업법 제10조를 적용한다.",
+    "2026.07.04을 법령상 기준일로써 공익사업법 제10조를 적용한다.",
+    "2026.07.04은 법령 기준일이며 공익사업법 제10조를 적용한다.",
+    "2026.07.04이 법령 기준일인 공익사업법 제10조를 적용한다.",
+    "2026.07.04 기준일 현재 공익사업법 제10조를 적용한다.",
+    "2026.07.04 기준일 당시의 공익사업법 제10조를 적용한다.",
+    "법령 기준일로서 2026.07.04 공익사업법 제10조를 적용한다.",
+    "법령 기준일로써 2026.07.04 공익사업법 제10조를 적용한다.",
+    "법령 기준일로 ２０２６／０７／０４，공익사업법 제１０조를 적용한다.",
+    "법령 기준일이며 2026.07.04 공익사업법 제10조를 적용한다.",
+    "법령 기준일로서：(２０２６／０７／０４） 공익사업법 제１０조를 적용한다.",
+    "법령 기준일자는 2026.07.04이다. 공익사업법 제10조를 적용한다.",
+    "법령 기준일자로는 2026.07.04이다. 공익사업법 제10조를 적용한다.",
+    "법령 기준일자에는 2026.07.04이다. 공익사업법 제10조를 적용한다.",
+    "법령상 기준일자는 2026.07.04이다. 공익사업법 제10조를 적용한다.",
+    "법률의 기준일자: 2026.07.04, 공익사업법 제10조를 적용한다.",
+    "조문 기준일자는 2026.07.04이다. 공익사업법 제10조를 적용한다.",
+    "공익사업법 제10조 법령 기준일자는 2026.07.04이다.",
+    "적용 기준일자: 2026.07.04, 공익사업법 제10조를 적용한다.",
+    "공익사업법 제10조(기준일: 2026.07.04)를 적용한다.",
+    "제10조의 기준일은 2026.07.04이다.",
+    "공익사업법 제10조에 따른 기준일은 2026.07.04이다.",
+    "공익사업법 제10조에 의한 기준일은 2026.07.04이다.",
+    "공익사업법 제10조에서 정한 기준일은 2026.07.04이다.",
+    "공익사업법 기준일은 2026.07.04이다.",
+    "공익사업법의 기준일: 2026.07.04이다.",
+    "공익사업법은 2026.07.04 기준으로 적용한다.",
+    "2026.07.04 기준 공익사업법을 적용한다.",
+    "기준일: 2026.07.04 공익사업법을 적용한다.",
+    "기준일: (2026.07.04) 공익사업법 제10조를 적용한다.",
+    "공익사업법 제１０조［기준일：（２０２６／０７／０４）］을 적용한다.",
+    "2026.07.04 기준 공 익 사 업 법 상 제 10 조를 적용한다.",
+    "2026.07.04\n기준:\n공익사업법 제10조를 적용한다.",
+  ]) {
+    assert.deepEqual(
+      blockersFor(generatedReferenceText),
+      [],
+      generatedReferenceText,
+    );
+  }
+
+  for (const shortStatute of ["민법", "헌법"]) {
+    const shortStatuteModel = compileOwnerAlphaPracticeProblem({
+      problemId: `synthetic-short-statute-${shortStatute}`,
+      problemText: `법률 조문의 유효일은 2026.07.04이다. ${shortStatute} 제10조를 검토하라.`,
+      subject: "appraisal_compensation_law",
+    });
+    const shortStatuteBlockersFor = (generatedReferenceText) =>
+      ownerAlphaSubjectReferenceReleaseBlockers({
+        problemModel: shortStatuteModel,
+        claims: [],
+        generatedReferenceText,
+      });
+    assert.deepEqual(
+      shortStatuteBlockersFor(
+        `2099.01.01 기준 ${shortStatute} 제10조를 적용한다.`,
+      ),
+      ["law:unbound_effective_date_reference"],
+    );
+    assert.deepEqual(
+      shortStatuteBlockersFor(
+        `${shortStatute} 제10조(2099.01.01 기준)를 적용한다.`,
+      ),
+      ["law:unbound_effective_date_reference"],
+    );
+    assert.deepEqual(
+      shortStatuteBlockersFor(
+        `2026.07.04 기준 ${shortStatute} 제10조를 적용한다.`,
+      ),
+      [],
+    );
+    assert.deepEqual(
+      shortStatuteBlockersFor(
+        `${shortStatute} 제10조(2026.07.04 기준)를 적용한다.`,
+      ),
+      [],
+    );
+  }
+
+  const legalBasisDateProblemModel = compileOwnerAlphaPracticeProblem({
+    problemId: "synthetic-law-label-first-basis-date",
+    problemText:
+      "법령 기준일자는 2026.07.04이다. 공익사업법 제10조를 검토하라.",
+    subject: "appraisal_compensation_law",
+  });
+  assert.equal(
+    legalBasisDateProblemModel.subjectAdapter.effectiveDateRequirement
+      .effectiveAt,
+    "2026.07.04",
+  );
+  assert.deepEqual(
+    ownerAlphaSubjectReferenceReleaseBlockers({
+      problemModel: legalBasisDateProblemModel,
+      claims: [],
+      generatedReferenceText:
+        "공익사업법 제10조의 법령 기준일자는 2099.01.01이다.",
+    }),
+    ["law:unbound_effective_date_reference"],
+  );
+  assert.deepEqual(
+    ownerAlphaSubjectReferenceReleaseBlockers({
+      problemModel: legalBasisDateProblemModel,
+      claims: [],
+      generatedReferenceText:
+        "공익사업법 제10조의 법령 기준일자는 2026.07.04이다.",
+    }),
+    [],
+  );
+  assert.ok(
+    blockersFor(
+      "공익사업법 제10조의 법령 기준일자는 미상이며 별도 확인이 필요하다.",
+    ).includes("law:effective_date_unknown"),
+  );
+
+  for (const problemText of [
+    "2026.07.04을 법령 기준일자로 공익사업법 제10조를 검토하라.",
+    "2026.07.04 법률의 기준일자이다. 공익사업법 제10조를 검토하라.",
+    "２０２６．０７．０４을 조문 기준일자로 공익사업법 제１０조를 검토하라.",
+    "법령 기준일자로는 2026.07.04이다. 공익사업법 제10조를 검토하라.",
+    "적용 기준일자는 2026.07.04이다. 공익사업법 제10조를 검토하라.",
+  ]) {
+    const dateFirstProblemModel = compileOwnerAlphaPracticeProblem({
+      problemId: "synthetic-law-date-first-basis-date",
+      problemText,
+      subject: "appraisal_compensation_law",
+    });
+    assert.equal(
+      dateFirstProblemModel.subjectAdapter.effectiveDateRequirement.effectiveAt,
+      "2026.07.04",
+      problemText,
+    );
+    assert.deepEqual(
+      ownerAlphaSubjectReferenceReleaseBlockers({
+        problemModel: dateFirstProblemModel,
+        claims: [],
+        generatedReferenceText:
+          "2026.07.04 기준 공익사업법 제10조를 적용한다.",
+      }),
+      [],
+      problemText,
+    );
+  }
+
+  for (const problemText of [
+    "평가일인 2026.07.04을 기준일자로 정하고 공익사업법 제10조를 검토하라.",
+    "2026.99.99을 법령 기준일자로 공익사업법 제10조를 검토하라.",
+  ]) {
+    const unboundProblemModel = compileOwnerAlphaPracticeProblem({
+      problemId: "synthetic-unbound-date-first-basis-date",
+      problemText,
+      subject: "appraisal_compensation_law",
+    });
+    assert.equal(
+      unboundProblemModel.subjectAdapter.effectiveDateRequirement.effectiveAt,
+      null,
+      problemText,
+    );
+  }
+
+  for (const generatedReferenceText of [
+    "거래일은 2099.01.01 기준이고 공익사업법 제10조를 검토한다.",
+    "평가일은 2099.01.01 기준이며 공익사업법 제10조를 검토한다.",
+    "평가일인 2099.01.01은 기준일이고 공익사업법 제10조를 검토한다.",
+    "평가일은 2099.01.01 기준일 현재 공익사업법 제10조를 검토한다.",
+    "평가기준일로서 2099.01.01 공익사업법 제10조를 검토한다.",
+    "평가기준일이며 2099.01.01 공익사업법 제10조를 검토한다.",
+    "평가기준일: 2099.01.01 공익사업법 제10조를 검토한다.",
+    "평가일의 기준일: 2099.01.01 공익사업법 제10조를 검토한다.",
+    "거래일 기준일: 2099.01.01 공익사업법 제10조를 검토한다.",
+    "평가일에 따른 기준일: 2099.01.01 공익사업법 제10조를 검토한다.",
+    "공익사업법의 평가기준일: 2099.01.01을 검토한다.",
+    "공익사업법 거래일은 2099.01.01 기준으로 검토한다.",
+    "평가일은 2099.01.01 기준 공익사업법을 검토한다.",
+    "평가 기준일: 2099.01.01 공익사업법을 검토한다.",
+    "감정평가 기준일은 2099.01.01 공익사업법을 검토한다.",
+    "기준 시점은 2099.01.01 기준 공익사업법을 검토한다.",
+    "거래일은 2099.01.01 기준, 공익사업법 제10조를 검토한다.",
+    "평가일은 2099.01.01 기준 — 공익사업법 제10조를 검토한다.",
+    "평가일인 2025.07.01 기준 공익사업법 제10조를 검토한다.",
+    "제10조는 평가일인 2025.07.01 기준을 참조한다.",
+    "평가일 현재 2099.01.01 기준, 공익사업법 제10조를 검토한다.",
+    "평가일(가격시점)은 2099.01.01 기준, 공익사업법 제10조를 검토한다.",
+    "제10조는 평가일 현재 2099.01.01 기준을 참조한다.",
+    "평가일 현재의 2099.01.01 기준, 공익사업법 제10조를 검토한다.",
+    "가격시점으로서 2099.01.01 기준, 공익사업법 제10조를 검토한다.",
+    "평가일은 2099.01.01 기준으로는 공익사업법 제10조를 검토한다.",
+    "평가일은 2099.01.01을 기준일로 공익사업법 제10조를 검토한다.",
+    "2099.01.01 기준 보상액을 산정하고 공익사업법 제10조를 검토한다.",
+    "2099.01.01 기준이며 보상액을 산정하고 공익사업법 제10조를 검토한다.",
+    "2099.01.01 기준일 현재 보상액을 산정하고 공익사업법 제10조를 검토한다.",
+    "기준일: 2099.01.01 보상액을 산정하고 공익사업법 제10조를 검토한다.",
+    "공익사업법 제10조에 따른 요건을 검토하고 기준일: 2099.01.01이다.",
+    "공익사업법 관련 기준일: 2099.01.01이다.",
+    "사업일은 2099.01.01 기준 공익사업법 제10조를 검토한다.",
+    "기준시점은 2099.01.01 기준, 공익사업법 제10조를 검토한다.",
+    "감정평가일은 2099.01.01이다. 공익사업법 제10조를 검토한다.",
+    "자료시점은 2099.01.01이고 공익사업법 제10조를 검토한다.",
+    `2099.01.01 기준${" ".repeat(200)}공익사업법 제10조를 검토한다.`,
+    `공익사업법 제10조${" ".repeat(200)}2099.01.01 기준을 검토한다.`,
+  ]) {
+    assert.deepEqual(
+      blockersFor(generatedReferenceText),
+      [],
+      generatedReferenceText,
+    );
+  }
+});
+
 test("timeout and invalid output preserve the native fallback while partial projection withholds the parent", async () => {
   const fixture = SYNTHETIC_FIXTURES[1];
   for (const code of ["timeout", "invalid_output"]) {
@@ -1281,6 +1607,7 @@ test("Owner Alpha wording, Node runner, exact-head workflow, RLS, privacy, and a
   }
   assert.match(runner, /owner-alpha-explanation-ladder-v1\.test\.mjs/);
   assert.match(workflow, /agent\/three-subject-explanation-ladder-v1/);
+  assert.match(workflow, /agent\/owner-alpha-law-version-basis-repair/);
   assert.match(workflow, /owner-alpha-explanation-ladder-v1\.test\.mjs/);
   assert.match(workflow, /Check out exact PR head/);
   assert.match(workflow, /Recheck exact head/);
