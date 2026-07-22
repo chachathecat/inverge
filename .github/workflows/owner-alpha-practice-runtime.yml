@@ -15,7 +15,8 @@ jobs:
       (
         github.event.pull_request.head.ref == 'agent/owner-alpha-universal-practice-loop-v0' ||
         github.event.pull_request.head.ref == 'agent/three-subject-practice-adapter-contract' ||
-        github.event.pull_request.head.ref == 'agent/three-subject-explanation-ladder-v1'
+        github.event.pull_request.head.ref == 'agent/three-subject-explanation-ladder-v1' ||
+        github.event.pull_request.head.ref == 'agent/owner-alpha-law-version-basis-repair'
       ) &&
       github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
