@@ -36,7 +36,15 @@ The evidence binds:
 - the past-question scope beginning in 2014;
 - exact source post `5268128`;
 - exact attachment identities and hashes for the three selected files; and
-- a fresh 2026-07-23 composite notice/detail marker check.
+- a fresh 2026-07-23 exact-post attachment-identity check.
+
+The positive rights basis is the parsed official notice snapshot acquired on
+2026-07-21. The 2026-07-23 exact-post response parsed successfully and
+reconfirmed all three attachment identities. The separate 2026-07-23 notice
+refresh was access-blocked: its response hash is retained only as a negative
+freshness receipt, its rights markers are explicitly unconfirmed, and it is
+not used as positive rights evidence. No permission is inferred from that
+blocked response.
 
 The underlying licensed status is recorded as `redistribution_allowed`, but
 S235A deliberately applies the more restrictive operational decision

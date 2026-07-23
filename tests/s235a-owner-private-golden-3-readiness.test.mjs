@@ -153,6 +153,30 @@ test("source, rights, independent audit, Law version, and private package eviden
   const manifest = await loadJson(MANIFEST_PATH);
 
   assert.deepEqual(manifest.rightsEvidence, S235A_EXPECTED_RIGHTS_EVIDENCE);
+  assert.equal(
+    manifest.rightsEvidence.freshDetailVerificationStatus,
+    "parsed_exact_attachment_identity_passed",
+  );
+  assert.equal(
+    manifest.rightsEvidence.freshNoticeVerificationStatus,
+    "access_blocked_no_rights_reverification",
+  );
+  assert.equal(
+    manifest.rightsEvidence.freshNoticeAccessBlockDetected,
+    true,
+  );
+  assert.equal(
+    manifest.rightsEvidence.freshNoticeRightsMarkersConfirmed,
+    false,
+  );
+  assert.equal(
+    manifest.rightsEvidence.freshNoticeResponseUse,
+    "negative_freshness_receipt_only",
+  );
+  assert.equal(
+    manifest.rightsEvidence.historicalNoticeScopeEvidenceUsed,
+    true,
+  );
   assert.deepEqual(
     manifest.lawVersionEvidence,
     S235A_EXPECTED_LAW_VERSION_EVIDENCE,
@@ -295,6 +319,11 @@ test("hostile rights, Law-version, and private-package mutations fail closed", a
   const assetUnbound = clone(manifest);
   assetUnbound.rightsEvidence.boundSourceIds.pop();
   assertRejected(assetUnbound, "s235a_rights_scope_mismatch");
+
+  const blockedNoticePromoted = clone(manifest);
+  blockedNoticePromoted.rightsEvidence.freshNoticeRightsMarkersConfirmed =
+    true;
+  assertRejected(blockedNoticePromoted, "s235a_rights_scope_mismatch");
 
   const lawEffectiveAfterExam = clone(manifest);
   lawEffectiveAfterExam.lawVersionEvidence.effectiveFrom = "2026-07-05";
