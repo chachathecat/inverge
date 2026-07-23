@@ -191,15 +191,19 @@ test("historical S200-S224 completion does not assert current readiness", async 
   assert.equal(roadmap.byId.get("S224").status, "completed");
 });
 
-test("S235A readiness closeout leaves O3A pending and S236A queued", async () => {
+test("S235B closeout leaves O3A and first-round downstream work queued", async () => {
   const roadmap = parseActiveProgram(await read("roadmap/active-program.yml"));
 
   assert.equal(roadmap.byId.get("S235A").status, "completed");
-  assert.equal(roadmap.byId.get("S235B").status, "queued");
+  assert.equal(roadmap.byId.get("S235B").status, "completed");
   assert.equal(roadmap.byId.get("O3A").status, "queued");
   assert.deepEqual(roadmap.byId.get("O3A").dependencies, ["S235A"]);
   assert.equal(roadmap.byId.get("S236A").status, "queued");
   assert.deepEqual(roadmap.byId.get("S236A").dependencies, ["O3A"]);
+  assert.equal(roadmap.byId.get("S236B").status, "queued");
+  assert.deepEqual(roadmap.byId.get("S236B").dependencies, ["S235B"]);
+  assert.equal(roadmap.byId.get("O3B").status, "queued");
+  assert.deepEqual(roadmap.byId.get("O3B").dependencies, ["S236B"]);
 });
 
 test("active program dependency graph has no missing dependencies or self-dependencies", async () => {

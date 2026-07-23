@@ -835,5 +835,5 @@ test("S216 docs, roadmap, source, and safe derived keys are wired", async () => 
   assert.equal(s224?.statusCategory, "completed");
   assert.equal(s225?.readinessStatus, "blocked");
   assert.deepEqual(s225?.missingDependencies, ["O4D"]);
-  assert.deepEqual(plan.selectedItemIds, ["S235B", "O3A"]);
+  assert.deepEqual(plan.selectedItemIds, ["O3A", "S236B"]);
 });

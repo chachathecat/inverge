@@ -162,7 +162,7 @@ test("unsupported pseudo-statuses stay unknown and cannot encode future gates", 
   assert.equal(byId(plan, "S101").readinessStatus, "unknown");
 });
 
-test("live post-650 roadmap exposes S235B and pending O3A after S235A readiness closeout", () => {
+test("live post-650 roadmap exposes pending O3A and S236B after S235B closeout", () => {
   const source = readFileSync("roadmap/active-program.yml", "utf8");
   const plan = createRoadmapRunnerPlanFromYaml(source);
   const supported = new Set(["completed", "active", "queued", "blocked"]);
@@ -172,8 +172,8 @@ test("live post-650 roadmap exposes S235B and pending O3A after S235A readiness 
   assert.equal(plan.wipLimit, 2);
   assert.equal(plan.wipOccupiedCount, 0);
   assert.equal(plan.availableSlots, 2);
-  assert.deepEqual(plan.readyItemIds, ["S235B", "O3A"]);
-  assert.deepEqual(plan.selectedItemIds, ["S235B", "O3A"]);
+  assert.deepEqual(plan.readyItemIds, ["O3A", "S236B"]);
+  assert.deepEqual(plan.selectedItemIds, ["O3A", "S236B"]);
   assert.deepEqual([...new Set(plan.analyses.map((analysis) => analysis.status))], [
     "completed",
     "queued",
@@ -185,13 +185,18 @@ test("live post-650 roadmap exposes S235B and pending O3A after S235A readiness 
   assert.equal(s235a.readinessStatus, "completed");
 
   const s235b = byId(plan, "S235B");
-  assert.equal(s235b.status, "queued");
-  assert.equal(s235b.readinessStatus, "ready");
+  assert.equal(s235b.status, "completed");
+  assert.equal(s235b.readinessStatus, "completed");
 
   const o3a = byId(plan, "O3A");
   assert.equal(o3a.status, "queued");
   assert.equal(o3a.readinessStatus, "ready");
   assert.deepEqual(o3a.dependencies, ["S235A"]);
+
+  const s236b = byId(plan, "S236B");
+  assert.equal(s236b.status, "queued");
+  assert.equal(s236b.readinessStatus, "ready");
+  assert.deepEqual(s236b.dependencies, ["S235B"]);
 
   const s236a = byId(plan, "S236A");
   assert.equal(s236a.status, "queued");
@@ -206,7 +211,6 @@ test("live post-650 roadmap exposes S235B and pending O3A after S235A readiness 
   for (const id of [
     "S236A",
     "O3C",
-    "S236B",
     "O4D",
     "S250",
     "S260",
@@ -252,7 +256,7 @@ test("live TypeScript runner and post-merge selector agree without starting work
       postMerge.selected.map((item) => item.id),
       plan.selectedItemIds,
     );
-    assert.deepEqual(plan.selectedItemIds, ["S235B", "O3A"]);
+    assert.deepEqual(plan.selectedItemIds, ["O3A", "S236B"]);
     assert.deepEqual(postMerge.active, []);
   } finally {
     rmSync(directory, { recursive: true, force: true });
