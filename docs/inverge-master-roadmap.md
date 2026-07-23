@@ -3,6 +3,9 @@
 - 결정일: 2026-06-25
 - 상세 제품 기준: `docs/inverge-second-round-final-product-spec.md`
 - 실행 상태와 의존성 기준: `roadmap/active-program.yml`
+- Post-#650 authority: `docs/dabangil-unified-program-contract.md` supersedes
+  historical ordering in this document; this file remains phase history and
+  second-round detail.
 
 ## 1. Final Product Definition
 
@@ -30,7 +33,9 @@ Premium product는 **답안길 2차 합격관제 OS**다.
 - 결제·개인정보·비용 통제
 - 세 과목 통합 E2E
 
-감정평가사 1차는 신규 개발·노출·유료 범위에서 동결한다.
+감정평가사 1차 legacy runtime과 compatibility metadata는 신규 노출·유료
+범위에서 동결한다. 별도의 Adaptive MCQ Foundation contract lane만 queued
+상태로 허용되며 learner runtime과 공개 노출은 승인하지 않는다.
 
 ## 2. Public Launch Rule
 
@@ -280,6 +285,10 @@ Premium product는 **답안길 2차 합격관제 OS**다.
 
 ## 11. Phase H — Academy Console
 
+This phase sequence is historical. S222 is source-contract evidence only;
+Academy now proceeds in a separate named-partner/O4C lane and is not an S225
+dependency.
+
 ### S222 Academy Answer Operations Console
 
 - tenant and role boundary
@@ -423,24 +432,38 @@ Canonical compatibility string:
 
 `input → diagnosis → tracking → prediction → recommendation → execution → retry/rewrite`
 
-이 호환 계층은 감정평가사 1차 신규 개발을 다시 활성화하지 않는다. 감정평가사 1차는 동결 상태이며, 활성 learner product는 감정평가사 2차 전과목이다.
+이 호환 계층은 감정평가사 1차 learner runtime을 다시 활성화하지 않는다.
+기존 1차 metadata는 동결된 compatibility layer이고, 새 Foundation은
+official-rule/taxonomy/rights/version/contracts만 소유한다. 활성
+learner-facing product는 감정평가사 2차 전과목이다.
 
-## 2026-07-01 Product Constitution Transition
+## 2026-07-23 Post-#650 Unified Program Transition
 
 AF010 through AF016 are complete as the first Agent Factory automation evidence chain. AF016 proves a report-only, metadata-only planning chain; it does not authorize execution automation, source mutation, GitHub mutation, workflow reruns, or learner/runtime/provider/billing/auth/payment/OCR/instructor/production changes.
 
-Product roadmap work now resumes from the current 감정평가사 2차 source of truth:
+Product roadmap authority is now:
 
-1. `docs/inverge-product-constitution.md`;
-2. `docs/inverge-second-round-final-product-spec.md`;
-3. `docs/dabangil-second-exam-premium-os.md`;
+1. `docs/decisions/2026-07-23-post-650-unified-program-reset.md`;
+2. `docs/dabangil-unified-program-contract.md`;
+3. second-round detail and executable domain contracts;
 4. `roadmap/active-program.yml`;
-5. `AGENTS.md`.
+5. `AGENTS.md` and risk policy.
 
-Dabangil (답안길) is the learner-facing premium 감정평가사 2차 합격관제 OS. The active learner-facing scope is only 감정평가실무, 감정평가이론, and 감정평가 및 보상법규. First-round references remain frozen compatibility metadata and must not re-enter landing, onboarding, navigation, pricing, active-program scheduling, public launch framing, or commercial product copy.
+Product roadmap work now resumes under that authority and the dependency
+state in `roadmap/active-program.yml`.
+
+Dabangil (답안길) is the learner-facing premium 감정평가사 2차 합격관제
+OS. Invitation-only Founding Beta is the critical predecessor to S225 public
+self-serve launch. First-round Foundation proceeds only as a bounded parallel
+contract lane; it does not authorize landing, onboarding, navigation,
+pricing, learner runtime, or public claims.
 
 Capture-to-Note and Capture-to-Plan remain the learner-loop quality standard: learner-owned capture or answer review becomes a note, safe concept candidate, one biggest gap, one next action, Today Plan max 3, Review Queue, Learning Record, and Personal Concept State. Capture-to-Note is prioritized before any public historical archive or passive question-bank front door.
 
-The near roadmap follows `roadmap/active-program.yml`: S209 theory concept corpus, S210 practice validation, S211-S213 subject answer engines, S214-S215 reference-answer pipeline and release gate, S216-S218 error notebook/concept graph/review scheduler, then S219-S225 commercial, trust, academy, acceptance, and launch gates.
+The near roadmap follows `roadmap/active-program.yml`. Exactly two items are
+ready after this reset: S235A second-round owner-private Golden 3 readiness
+and S235B first-round Adaptive MCQ Foundation contracts. Golden execution,
+Founding Beta waves, first-round runtime, both-track, Academy, shared-signal
+activation, and S225 remain queued behind unmet dependencies and Owner gates.
 
 Raw historical corpus expansion, public archive UX, Quick Solve acquisition experiments, billing, usage ledger, official-source ingestion, and execution automation are deferred until explicit source, rights, private-storage, data-boundary, runtime, and cost gates exist.

@@ -2,11 +2,16 @@
 
 ## 2026-07-01 Product Constitution Transition
 
-The active learner product is 감정평가사 2차 Dabangil only. Existing 1차 schedule templates are frozen compatibility metadata and do not reopen first-round learner-facing work, first-round commercial products, or first-round active-program scheduling.
+The active learner product is 감정평가사 2차 Dabangil only. Existing 1차
+schedule templates are frozen compatibility metadata; they do not authorize
+first-round learner runtime, commercial products, navigation, or public
+exposure. The Post-#650 Adaptive MCQ Foundation lane owns new contracts only
+and must not treat these templates as verified runtime authority.
 
 Planning distinction:
 
-- 1차: frozen compatibility metadata only;
+- 1차 legacy templates: frozen compatibility metadata only; new Foundation
+  contracts require fresh official/rule/version evidence;
 - 2차: active Dabangil learner operating scope for 실무, 이론, 법규;
 - 동차: not a current learner-facing product or commercial catalog; any future treatment requires a separate source, rights, billing, privacy, and roadmap decision.
 

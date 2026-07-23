@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readdir, readFile } from "node:fs/promises";
 
 const requiredDocs = [
+  "docs/dabangil-unified-program-contract.md",
   "docs/inverge-master-roadmap.md",
   "docs/inverge-curriculum-system.md",
   "docs/inverge-study-schedule-system.md",
@@ -160,6 +161,26 @@ test("study tracks include 1차 and 2차 track templates", async () => {
   }
   assert.ok(Object.values(data.tracks).some((track) => track.examMode === "first"));
   assert.ok(Object.values(data.tracks).some((track) => track.examMode === "second"));
+});
+
+test("legacy first-round templates stay frozen while Foundation contracts are separately queued", async () => {
+  const curriculum = await read("docs/inverge-curriculum-system.md");
+  const schedule = await read("docs/inverge-study-schedule-system.md");
+  const roadmap = await read("docs/inverge-master-roadmap.md");
+  const unified = await read("docs/dabangil-unified-program-contract.md");
+
+  assert.match(curriculum, /legacy metadata[\s\S]{0,180}Foundation/i);
+  assert.match(curriculum, /does not authorize[\s\S]{0,160}learner runtime/i);
+  assert.match(curriculum, /historical PR covered first\/second compatibility metadata[\s\S]{0,180}does not\s+authorize current first-round learner-facing scope or runtime/i);
+  assert.match(curriculum, /unpromoted curriculum material[\s\S]{0,300}approved Cleared Content Bank promotion[\s\S]{0,120}does not authorize that path/i);
+  assert.match(schedule, /frozen compatibility metadata[\s\S]{0,260}Foundation lane owns new contracts only/i);
+  assert.match(roadmap, /S235A[\s\S]{0,180}S235B/);
+  assert.match(roadmap, /first-round runtime[\s\S]{0,180}queued behind unmet dependencies/i);
+  assert.match(unified, /Q-Net rights evidence per post and per attached asset/i);
+  assert.match(unified, /rapid answer grid/i);
+  assert.match(unified, /five-choice true\/false correction and explanation/i);
+  assert.match(unified, /`K\/C\/A\/R\/T\/G`/);
+  assert.match(unified, /timed\/OMR readiness contracts/i);
 });
 
 test("docs mention Today Plan max 3 and official verification requirements", async () => {

@@ -1,4 +1,8 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { test } from "node:test";
 import {
   createRoadmapRunnerPlanFromYaml,
@@ -112,6 +116,129 @@ test("active lock group blocks queued items in the same group", () => {
   assert.deepEqual(plan.blockedItemIds, ["S101"]);
   assert.equal(byId(plan, "S101").blockedReasons[0].code, "lock_group_in_use");
   assert.equal(byId(plan, "S101").blockedReasons[0].occupyingItemId, "S100");
+});
+
+test("flat lock selection permits one ready item per exact lock group", () => {
+  const plan = createRoadmapRunnerPlanFromYaml(
+    roadmap([
+      item({ id: "S100", lockGroup: "shared-lock", priority: 1 }),
+      item({ id: "S101", lockGroup: "shared-lock", priority: 2 }),
+      item({ id: "S102", lockGroup: "other-lock", priority: 3 }),
+    ]),
+  );
+
+  assert.deepEqual(plan.readyItemIds, ["S100", "S101", "S102"]);
+  assert.deepEqual(plan.selectedItemIds, ["S100", "S102"]);
+});
+
+test("blocked and human_decision statuses consume WIP", () => {
+  const plan = createRoadmapRunnerPlanFromYaml(
+    roadmap([
+      item({ id: "S100", status: "blocked", priority: 1 }),
+      item({ id: "S101", status: "human_decision", priority: 2 }),
+      item({ id: "S102", status: "queued", priority: 3 }),
+    ]),
+  );
+
+  assert.equal(plan.wipOccupiedCount, 2);
+  assert.equal(plan.availableSlots, 0);
+  assert.deepEqual(plan.selectedItemIds, []);
+  assert.equal(byId(plan, "S100").statusCategory, "blocked");
+  assert.equal(byId(plan, "S101").statusCategory, "blocked");
+});
+
+test("unsupported pseudo-statuses stay unknown and cannot encode future gates", () => {
+  const plan = createRoadmapRunnerPlanFromYaml(
+    roadmap([
+      item({ id: "S100", status: "foundation_queued", priority: 1 }),
+      item({ id: "S101", status: "runtime_blocked_until_gate", priority: 2 }),
+    ]),
+  );
+
+  assert.equal(plan.wipOccupiedCount, 0);
+  assert.deepEqual(plan.readyItemIds, []);
+  assert.deepEqual(plan.selectedItemIds, []);
+  assert.equal(byId(plan, "S100").readinessStatus, "unknown");
+  assert.equal(byId(plan, "S101").readinessStatus, "unknown");
+});
+
+test("live post-650 roadmap exposes exactly two WIP-free contract slices", () => {
+  const source = readFileSync("roadmap/active-program.yml", "utf8");
+  const plan = createRoadmapRunnerPlanFromYaml(source);
+  const supported = new Set(["completed", "active", "queued", "blocked"]);
+
+  assert.equal(plan.programId, "post-650-unified-program-v1");
+  assert.equal(plan.completionItem, "S299");
+  assert.equal(plan.wipLimit, 2);
+  assert.equal(plan.wipOccupiedCount, 0);
+  assert.equal(plan.availableSlots, 2);
+  assert.deepEqual(plan.readyItemIds, ["S235A", "S235B"]);
+  assert.deepEqual(plan.selectedItemIds, ["S235A", "S235B"]);
+  assert.deepEqual([...new Set(plan.analyses.map((analysis) => analysis.status))], [
+    "completed",
+    "queued",
+  ]);
+  assert.ok(plan.analyses.every((analysis) => supported.has(analysis.statusCategory)));
+
+  const s225 = byId(plan, "S225");
+  assert.equal(s225.status, "queued");
+  assert.equal(s225.readinessStatus, "blocked");
+  assert.deepEqual(s225.missingDependencies, ["O4D"]);
+
+  for (const id of [
+    "S236A",
+    "O3C",
+    "S236B",
+    "O4D",
+    "S250",
+    "S260",
+    "O2",
+    "S270",
+    "O4E",
+    "S271",
+    "O5",
+    "S299",
+  ]) {
+    const analysis = byId(plan, id);
+    assert.equal(analysis.status, "queued", `${id} must remain WIP-free queued work`);
+    assert.equal(analysis.readinessStatus, "blocked", `${id} must retain an unmet dependency`);
+  }
+
+  assert.deepEqual(byId(plan, "S239A").dependencies, ["O3C"]);
+  assert.deepEqual(byId(plan, "O4D").dependencies, ["S241A", "S242V"]);
+  assert.deepEqual(byId(plan, "S270").dependencies, ["O2"]);
+  assert.deepEqual(byId(plan, "O4E").dependencies, ["S270"]);
+  assert.deepEqual(byId(plan, "S271").dependencies, ["O4E"]);
+});
+
+test("live TypeScript runner and post-merge selector agree without starting work", () => {
+  const source = readFileSync("roadmap/active-program.yml", "utf8");
+  const plan = createRoadmapRunnerPlanFromYaml(source);
+  const directory = mkdtempSync(join(tmpdir(), "inverge-next-task-"));
+  const artifactPath = join(directory, "next-task.json");
+
+  try {
+    execFileSync(process.execPath, ["scripts/automation/determine-next-task.mjs"], {
+      cwd: process.cwd(),
+      env: {
+        ...process.env,
+        NEXT_TASK_OUTPUT: artifactPath,
+      },
+      stdio: "pipe",
+    });
+    const postMerge = JSON.parse(readFileSync(artifactPath, "utf8"));
+
+    assert.equal(postMerge.activeCount, plan.wipOccupiedCount);
+    assert.equal(postMerge.availableSlots, plan.availableSlots);
+    assert.deepEqual(
+      postMerge.selected.map((item) => item.id),
+      plan.selectedItemIds,
+    );
+    assert.deepEqual(plan.selectedItemIds, ["S235A", "S235B"]);
+    assert.deepEqual(postMerge.active, []);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });
 
 test("priority order is deterministic", () => {

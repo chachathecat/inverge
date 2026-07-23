@@ -1,5 +1,44 @@
 # Inverge Data Governance
 
+## Post-#650 authority
+
+The canonical plane model is Personal Raw Vault, Academy Tenant Vault, Shared
+Signal Plane, Cleared Content Bank, and Model/Eval Registry as defined by
+`docs/dabangil-unified-program-contract.md`. The older layers below remain
+implementation guidance only where they map without loss to those five
+planes.
+
+- Private raw content has no automatic path to a shared corpus.
+- Q-Net rights are decided per source post and per attached asset; content
+  inherits the most restrictive decision.
+- Private/Academy fingerprints are domain-separated and vault-scoped.
+- Those fingerprints are keyed/one-way with vault-specific non-exportable
+  domain keys and never return an equality oracle.
+- Global dedup requires material already promoted into the Cleared Content
+  Bank. The basis is rights-cleared official/owner-created/contracted
+  content, or a separately authored, actually rights-owned user contribution
+  object; O3/review and quarantine always apply. It cannot reclassify a raw
+  service answer, note, handwriting artifact, or OCR extraction.
+  Pseudonymous-signal consent alone is insufficient.
+- After applicable rights prerequisites and user-owned contribution consent
+  where required, promotion quarantine may compare a candidate to the
+  Cleared Content Bank with an access-controlled, domain-separated,
+  least-privilege internal fingerprint. It emits only decision metadata, no
+  equality signal outside quarantine, and creates no global identifier before
+  promotion.
+- Promotion requires rights/version/reviewer evidence plus
+  conflicting-answer, poisoning/anomaly, fingerprint/dedup, and
+  held-out-contamination quarantine.
+- Consent/opt-out purposes are separate for service processing,
+  pseudonymous signals, Academy sharing, user-owned content contribution, and
+  offline model training.
+- Revocation stops future use for the revoked purpose, including Academy
+  sharing, promotion, and offline training/dataset refresh; deletion and
+  retention remain purpose-scoped.
+- Academy instructor approval alone does not create shared Gold.
+- Online model-weight updates from any input are prohibited. All permitted
+  training is offline and requires an exact-scope O5 gate.
+
 ## 1) Governance Objective
 본 문서는 learner-facing Inverge와 별도 instructor-facing B2B 콘솔을 포함한 데이터 처리 원칙을 정의한다.
 
@@ -33,7 +72,16 @@
 원칙:
 - 기본 목적: 서비스 전달/운영
 - raw student answer text/images는 원칙적으로 서비스 전달 외 목적 사용 금지
-- 추가 활용은 명시적 동의 또는 계약 근거가 있을 때만 허용
+- service processing은 해당 목적의 lawful basis 범위에서만 허용
+- Shared Signal에는 exact-purpose grant를 받은 pseudonymous
+  non-reconstructive derived output만 들어가며 raw body는 들어가지 않음
+- raw service 답안·필기·note·OCR은 content promotion 대상이 아님
+- 사용자가 실제 권리를 가진 별도 창작물의 distinct contribution object만
+  contribution consent, rights, O3, quarantine을 거쳐 Cleared Content
+  Bank로 이동 가능
+- offline training은 O5 아래 consented pseudonymous signal 또는 promoted
+  Cleared Content Bank material만 사용하며 direct raw body는 사용하지 않음
+- tenant 계약만으로 필요한 learner consent를 대체하지 않음
 
 ### Layer B: Derived Product Features
 정의:
@@ -57,32 +105,49 @@
 - 재식별 위험 평가 및 주기적 검토
 
 금지:
-- 동의/계약/정책 근거 없이 raw 제출물을 연구/학습용으로 직접 전환
+- raw 제출물을 연구/학습용 dataset으로 직접 전환
+- exact-purpose grant와 O5 없이 offline training 또는 dataset refresh
 
-### Layer D: Instructor-Approved Gold Dataset
+### Layer D: Tenant Instructor-Approved Candidate Dataset
 정의:
-- 강사 검수를 통과한 고품질 기준 데이터셋
+- 강사 검수를 통과했지만 Academy Tenant Vault에 남는 고품질 후보
 - 예: 강사 승인 점수, 강사 승인 코멘트, 강사 승인 모범답안 초안의 확정본
 
 필수 조건:
 - 강사 승인 이력(승인자, 시각, 변경 근거) 저장
 - 출처/권리 상태와 결합된 lineage 관리
 - 사용 목적별 접근통제
+- 강사 승인은 tenant 내부 후보 품질만 뜻하며 shared Gold 승격을 뜻하지 않음
+- Cleared Content Bank 승격 전 별도 콘텐츠 권리, tenant 계약, 필요한
+  learner consent, promotion review, quarantine 통과
 
 ## 3) Reuse and Rights Rules
 1. Raw student answer text/images:
    - 기본: 서비스 전달 목적 전용
-   - 예외: 명시적 동의/계약/법적 근거가 있을 때만 추가 재사용
+   - Shared Signal: pseudonymous non-reconstructive derived output만 허용
+   - content promotion 대상이 아니며 Cleared Content Bank로 재분류 금지
+   - 실제 권리를 가진 별도 창작물은 raw answer와 다른 distinct
+     contribution object로만 제출 가능
+   - offline training: O5 아래 consented pseudonymous signal 또는 promoted
+     Cleared Content Bank material만 허용; direct raw body 금지
+   - tenant 계약 또는 일반 service consent만으로 필요한 learner
+     consent를 대체하지 않음
 
 2. Model improvement:
-   - 반드시 가명처리 데이터셋 사용
+   - O5와 offline-model-training exact-purpose grant 필수
+   - consented pseudonymous signal 또는 promoted Cleared Content Bank
+     material만 사용
+   - raw service/Academy body 직접 사용 금지
    - 목적 제한, 접근통제, 보관기간 준수
    - 무기한/포괄적 재사용 금지
 
 3. Third-party materials (문제지, 학원 자료, 모범답안):
    - 권리 없이 글로벌 재사용 금지
    - 계약 범위를 벗어나는 학습/배포 금지
-   - 저작권 있는 문제 원문은 글로벌 학습 코퍼스로 사용 금지
+   - rights-uncleared, 계약 범위 밖, 또는 pre-promotion 저작권 문제
+     원문은 글로벌 학습 코퍼스로 사용 금지
+   - 권리/계약과 O3/review/quarantine을 모두 통과한 material의 유일한
+     shared content-body 경로는 approved Cleared Content Bank promotion
 
 4. Consent and flags:
    - consent/reuse flags 저장 및 정책 집행에 사용

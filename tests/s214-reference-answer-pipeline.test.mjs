@@ -179,8 +179,9 @@ test("active roadmap marks S214 and S215 completed while advancing the next read
   assert.equal(s220?.statusCategory, "completed");
   assert.equal(s221?.statusCategory, "completed");
   assert.equal(s224?.statusCategory, "completed");
-  assert.equal(s225?.readinessStatus, "ready");
-  assert.deepEqual(plan.selectedItemIds, ["S225"]);
+  assert.equal(s225?.readinessStatus, "blocked");
+  assert.deepEqual(s225?.missingDependencies, ["O4D"]);
+  assert.deepEqual(plan.selectedItemIds, ["S235A", "S235B"]);
   assert.equal(s215?.missingDependencies.includes("S213"), false);
   assert.equal(s215?.missingDependencies.includes("S214"), false);
 });
