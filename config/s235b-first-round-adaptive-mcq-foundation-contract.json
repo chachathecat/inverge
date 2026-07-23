@@ -10067,6 +10067,8 @@
           "reviewed_at_gte_committed_at",
           "decision_equals_verified_pre_session_event_log_sources"
         ],
+        "reviewerClass": "named_owner_authorized_human_readiness_reviewer",
+        "modelMayIssueOrReviewReceipt": false,
         "requiredDecision": "verified_pre_session_event_log_sources",
         "receiptCreatedByS235B": false
       },

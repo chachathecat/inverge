@@ -967,6 +967,12 @@ function collectContractErrors(candidate) {
     privacyPrecommitSpecs[privacyPrecommitSpecIds[privacyInputName]];
   const privacyPrecommitPersonalSpec =
     privacyPrecommitSpecs[privacyPrecommitSpecIds[personalLogInputName]];
+  const privacyPrecommitSourceReference =
+    privacySupport.sourceReferenceContractsExactly.find(
+      ({ sourceRole }) => sourceRole === "timed_session_precommit",
+    );
+  const personalSessionPrecommitShape =
+    omr.personalSessionEventLogPrecommitReceiptShape;
   const expectedPrivacyReferencePointers = {
     evidence_id:
       "/typed_payload/timed_session_precommit_reference/evidence_id",
@@ -996,6 +1002,11 @@ function collectContractErrors(candidate) {
       privacyPrecommitDimension?.derivationSpecIdByInputExactly,
       privacyPrecommitSpecIds,
     ) ||
+    privacyPrecommitSourceReference?.requiredAuthorityClass !==
+      "named_owner_authorized_human_readiness_reviewer" ||
+    personalSessionPrecommitShape?.reviewerClass !==
+      privacyPrecommitSourceReference?.requiredAuthorityClass ||
+    personalSessionPrecommitShape?.modelMayIssueOrReviewReceipt !== false ||
     privacyPrecommitFields.some((field) => {
       const privacyRow =
         privacyPrecommitPrivacySpec?.canonicalFieldSourceByNameExactly[
@@ -1257,6 +1268,16 @@ function collectContractErrors(candidate) {
       );
       if (!target) {
         add(`support_source_target:${shapeId}:${index}`);
+      }
+      if (
+        target?.kind === "direct" &&
+        (supportReceipt.sourceShapeKindResolutionContract.direct_domain_receipt
+          .authorityClassResolution !==
+          "the_resolved_shape_reviewerClass" ||
+          target.value.reviewerClass !==
+            sourceContract.requiredAuthorityClass)
+      ) {
+        add(`support_source_authority_class:${shapeId}:${index}`);
       }
       for (const binding of sourceContract.payloadBindingsExactly ?? []) {
         if (!bindingOperators.has(binding.operator)) {
@@ -3183,6 +3204,51 @@ test("hostile mutations are rejected by the same mechanical validator", () => {
   assert.equal(
     collectContractErrors(wrongOwnerAnchorDigestBinding).includes(
       "owner_scope_root_anchor_gate_binding",
+    ),
+    true,
+  );
+
+  const missingPrivacyPrecommitReviewerClass = structuredClone(contract);
+  delete missingPrivacyPrecommitReviewerClass.timedOmrReadinessContract
+    .omrShape.personalSessionEventLogPrecommitReceiptShape.reviewerClass;
+  assert.equal(
+    collectContractErrors(missingPrivacyPrecommitReviewerClass).includes(
+      "support_source_authority_class:privacy-lifecycle-source.v1:1",
+    ),
+    true,
+  );
+
+  const wrongPrivacyPrecommitReviewerClass = structuredClone(contract);
+  wrongPrivacyPrecommitReviewerClass.timedOmrReadinessContract
+    .omrShape.personalSessionEventLogPrecommitReceiptShape.reviewerClass =
+      "named_owner_authorized_human_privacy_reviewer";
+  assert.equal(
+    collectContractErrors(wrongPrivacyPrecommitReviewerClass).includes(
+      "support_source_authority_class:privacy-lifecycle-source.v1:1",
+    ),
+    true,
+  );
+
+  const wrongDirectAuthorityResolver = structuredClone(contract);
+  wrongDirectAuthorityResolver.laterGateEvidence
+    .authoritativeSupportingEvidenceReceiptShape
+    .sourceShapeKindResolutionContract.direct_domain_receipt
+    .authorityClassResolution =
+      "the_resolved_receipt_reviewer_or_workload_identity";
+  assert.equal(
+    collectContractErrors(wrongDirectAuthorityResolver).includes(
+      "support_source_authority_class:privacy-lifecycle-source.v1:1",
+    ),
+    true,
+  );
+
+  const modelIssuedPrivacyPrecommit = structuredClone(contract);
+  modelIssuedPrivacyPrecommit.timedOmrReadinessContract
+    .omrShape.personalSessionEventLogPrecommitReceiptShape
+    .modelMayIssueOrReviewReceipt = true;
+  assert.equal(
+    collectContractErrors(modelIssuedPrivacyPrecommit).includes(
+      "privacy_timed_session_precommit_identity",
     ),
     true,
   );
