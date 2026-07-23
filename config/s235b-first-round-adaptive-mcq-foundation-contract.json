@@ -10067,6 +10067,8 @@
           "reviewed_at_gte_committed_at",
           "decision_equals_verified_pre_session_event_log_sources"
         ],
+        "reviewerClass": "named_owner_authorized_human_readiness_reviewer",
+        "modelMayIssueOrReviewReceipt": false,
         "requiredDecision": "verified_pre_session_event_log_sources",
         "receiptCreatedByS235B": false
       },
@@ -14009,7 +14011,51 @@
           "decisionJsonPointer": "/decision",
           "authorityClassResolution": "the_resolved_shape_reviewerClass",
           "expiryResolution": "the_resolved_receipt_decision_scope.expires_at_or_null_or_a_nonnull_currentness_receipt_expiry",
-          "expiryMustBeNonNull": true
+          "expiryMustBeNonNull": true,
+          "requiredSourceReferenceTuplesExactly": [
+            {
+              "supportingEvidenceShapeId": "official-source-asset-source.v1",
+              "sourceRole": "asset_rights",
+              "requiredSourceShapeKind": "direct_domain_receipt",
+              "requiredShapeOrContractId": "sourceRightsManifest.futureO3BReceiptContract.assetRightsReceiptShape",
+              "requiredSignedPayloadSchemaId": "qnet.post_asset.rights_receipt.v1",
+              "requiredDecision": "the_exact_current_asset_domain_rights_decision",
+              "requiredAuthorityClass": "named_owner_authorized_human_rights_reviewer"
+            },
+            {
+              "supportingEvidenceShapeId": "privacy-lifecycle-source.v1",
+              "sourceRole": "timed_session_precommit",
+              "requiredSourceShapeKind": "direct_domain_receipt",
+              "requiredShapeOrContractId": "timedOmrReadinessContract.omrShape.personalSessionEventLogPrecommitReceiptShape",
+              "requiredSignedPayloadSchemaId": "appraiser.first.personal-session-event-log-precommit.v1",
+              "requiredDecision": "verified_pre_session_event_log_sources",
+              "requiredAuthorityClass": "named_owner_authorized_human_readiness_reviewer"
+            },
+            {
+              "supportingEvidenceShapeId": "post-s236b-benchmark-execution-source.v1",
+              "sourceRole": "passing_S236B_gate_packet",
+              "requiredSourceShapeKind": "direct_domain_receipt",
+              "requiredShapeOrContractId": "laterGateEvidence.gateEvidencePacketReceiptShape",
+              "requiredSignedPayloadSchemaId": "appraiser.first.gate-evidence-packet.v1",
+              "requiredDecision": "verified_complete_current_S236B_gate_packet",
+              "requiredAuthorityClass": "named_owner_authorized_human_gate_reviewer"
+            },
+            {
+              "supportingEvidenceShapeId": "post-s236b-benchmark-execution-source.v1",
+              "sourceRole": "passing_S236B_cross_input_coherence",
+              "requiredSourceShapeKind": "direct_domain_receipt",
+              "requiredShapeOrContractId": "laterGateEvidence.gateCrossInputCoherenceReceiptShape",
+              "requiredSignedPayloadSchemaId": "appraiser.first.gate-cross-input-coherence.v2",
+              "requiredDecision": "verified_cross_input_coherence",
+              "requiredAuthorityClass": "named_owner_authorized_human_gate_reviewer"
+            }
+          ],
+          "tupleKeyFieldsExactly": [
+            "supportingEvidenceShapeId",
+            "sourceRole"
+          ],
+          "requiredResolvedBranchExactly": "direct_domain_receipt",
+          "missingExtraDuplicateReclassifiedOrChangedTupleFailsClosed": true
         },
         "exactlyOneBranchMustMatch": true,
         "unknownAmbiguousOrMissingBranchFailsClosed": true,

@@ -1047,6 +1047,19 @@ identity dimension then binds that Personal-log precommit to the timed,
 evaluation, and cross-plane chains. Privacy for session A therefore cannot be
 combined with timed/evaluation evidence for session B.
 
+The privacy source resolves that precommit as a direct-domain receipt, so its
+closed target shape pins `reviewerClass` to
+`named_owner_authorized_human_readiness_reviewer`, exactly matching the source
+contract's required authority class, and forbids model issuance or review.
+The instance field `reviewer_or_workload_identity` is not an authority-class
+substitute. A closed four-row registry pins every direct-domain source by
+supporting shape, source role, direct branch, exact target path, signed-payload
+schema, decision, and authority class. Reclassifying any row as root,
+supporting, or virtual evidence, changing any tuple field, adding or removing a
+direct row, or omitting its target ID or direct-branch resolver fails
+deterministically without throwing. A missing or different target-shape class
+makes the privacy source, five-phase bundle, and O3B bridge fail closed.
+
 O3B benchmark evidence is post-S236 only. It must reference a current passing
 S236B gate packet, that packet's exact coherence receipt, and a trusted
 merged-S236B Git snapshot whose commit/tree equal the packet evaluation
