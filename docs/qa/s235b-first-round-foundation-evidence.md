@@ -393,10 +393,15 @@ evaluation chain. The direct target shape exposes the exact
 `named_owner_authorized_human_readiness_reviewer` class required by the privacy
 source resolver and forbids model issuance or review; the instance
 `reviewer_or_workload_identity` never substitutes for that shape authority.
-Missing projection membership, a changed pointer or anchor digest, a missing
-or wrong target reviewer class, a mismatched anchor reference or privacy
-session, a mismatched participant, a missing or altered nested currentness or
-digest contract, a stale action-time decision, or an enclosing-receipt/
+The four allowed direct-domain references are closed over supporting shape,
+source role, direct branch, exact target path, schema, decision, and authority
+class. Root/support/virtual reclassification, an unregistered direct row, a
+missing target ID or direct resolver, or any tuple change returns a
+deterministic fail-closed validation error rather than throwing. Missing
+projection membership, a changed pointer or anchor digest, a missing or wrong
+target reviewer class, a mismatched anchor reference or privacy session, a
+mismatched participant, a missing or altered nested currentness or digest
+contract, a stale action-time decision, or an enclosing-receipt/
 self-referential derivation fails closed.
 
 The future trust chain pins an Owner-approved key registry and gate-specific

@@ -81,15 +81,70 @@ function topPointerField(pointer) {
 }
 
 function resolveDottedPath(candidate, dottedPath) {
+  if (typeof dottedPath !== "string" || dottedPath.length === 0) {
+    return undefined;
+  }
   let value = candidate;
   for (const segment of dottedPath.split(".")) {
-    if (value === null || typeof value !== "object" || !(segment in value)) {
+    if (
+      value === null ||
+      typeof value !== "object" ||
+      !Object.hasOwn(value, segment)
+    ) {
       return undefined;
     }
     value = value[segment];
   }
   return value;
 }
+
+const expectedDirectSourceReferenceTuplesExactly = [
+  {
+    supportingEvidenceShapeId: "official-source-asset-source.v1",
+    sourceRole: "asset_rights",
+    requiredSourceShapeKind: "direct_domain_receipt",
+    requiredShapeOrContractId:
+      "sourceRightsManifest.futureO3BReceiptContract.assetRightsReceiptShape",
+    requiredSignedPayloadSchemaId: "qnet.post_asset.rights_receipt.v1",
+    requiredDecision: "the_exact_current_asset_domain_rights_decision",
+    requiredAuthorityClass:
+      "named_owner_authorized_human_rights_reviewer",
+  },
+  {
+    supportingEvidenceShapeId: "privacy-lifecycle-source.v1",
+    sourceRole: "timed_session_precommit",
+    requiredSourceShapeKind: "direct_domain_receipt",
+    requiredShapeOrContractId:
+      "timedOmrReadinessContract.omrShape.personalSessionEventLogPrecommitReceiptShape",
+    requiredSignedPayloadSchemaId:
+      "appraiser.first.personal-session-event-log-precommit.v1",
+    requiredDecision: "verified_pre_session_event_log_sources",
+    requiredAuthorityClass:
+      "named_owner_authorized_human_readiness_reviewer",
+  },
+  {
+    supportingEvidenceShapeId: "post-s236b-benchmark-execution-source.v1",
+    sourceRole: "passing_S236B_gate_packet",
+    requiredSourceShapeKind: "direct_domain_receipt",
+    requiredShapeOrContractId:
+      "laterGateEvidence.gateEvidencePacketReceiptShape",
+    requiredSignedPayloadSchemaId:
+      "appraiser.first.gate-evidence-packet.v1",
+    requiredDecision: "verified_complete_current_S236B_gate_packet",
+    requiredAuthorityClass: "named_owner_authorized_human_gate_reviewer",
+  },
+  {
+    supportingEvidenceShapeId: "post-s236b-benchmark-execution-source.v1",
+    sourceRole: "passing_S236B_cross_input_coherence",
+    requiredSourceShapeKind: "direct_domain_receipt",
+    requiredShapeOrContractId:
+      "laterGateEvidence.gateCrossInputCoherenceReceiptShape",
+    requiredSignedPayloadSchemaId:
+      "appraiser.first.gate-cross-input-coherence.v2",
+    requiredDecision: "verified_cross_input_coherence",
+    requiredAuthorityClass: "named_owner_authorized_human_gate_reviewer",
+  },
+];
 
 function expectedRightsBasisCrosswalkRows(candidate) {
   const scope =
@@ -1234,11 +1289,47 @@ function collectContractErrors(candidate) {
     if (id === "laterGateEvidence.rootAuthorityEvidenceReceiptShape") {
       return { kind: "root", value: later.rootAuthorityEvidenceReceiptShape };
     }
-    if (supports[id]) return { kind: "support", value: supports[id] };
-    if (virtuals[id]) return { kind: "virtual", value: virtuals[id] };
+    if (typeof id === "string" && Object.hasOwn(supports, id)) {
+      return { kind: "support", value: supports[id] };
+    }
+    if (typeof id === "string" && Object.hasOwn(virtuals, id)) {
+      return { kind: "virtual", value: virtuals[id] };
+    }
     const direct = resolveDottedPath(candidate, id);
     return direct ? { kind: "direct", value: direct } : null;
   };
+
+  const directResolution =
+    supportReceipt.sourceShapeKindResolutionContract?.direct_domain_receipt;
+  if (
+    !jsonEqual(
+      directResolution?.requiredSourceReferenceTuplesExactly,
+      expectedDirectSourceReferenceTuplesExactly,
+    ) ||
+    !jsonEqual(directResolution?.tupleKeyFieldsExactly, [
+      "supportingEvidenceShapeId",
+      "sourceRole",
+    ]) ||
+    directResolution?.requiredResolvedBranchExactly !==
+      "direct_domain_receipt" ||
+    directResolution
+      ?.missingExtraDuplicateReclassifiedOrChangedTupleFailsClosed !== true
+  ) {
+    add("support_source_direct_tuple_registry");
+  }
+  const expectedDirectTupleBySource = new Map(
+    expectedDirectSourceReferenceTuplesExactly.map((tuple) => [
+      `${tuple.supportingEvidenceShapeId}\u0000${tuple.sourceRole}`,
+      tuple,
+    ]),
+  );
+  const resolvedSourceKindByTargetKind = {
+    root: "root_authority",
+    support: "supporting_evidence",
+    virtual: "virtual_underlying_evidence",
+    direct: "direct_domain_receipt",
+  };
+  const observedDirectSourceReferenceTuples = [];
 
   for (const [shapeId, shape] of Object.entries(supports)) {
     const referenceFields = shape.referenceFields ?? [];
@@ -1269,12 +1360,37 @@ function collectContractErrors(candidate) {
       if (!target) {
         add(`support_source_target:${shapeId}:${index}`);
       }
+      const expectedDirectTuple = expectedDirectTupleBySource.get(
+        `${shapeId}\u0000${sourceContract.sourceRole}`,
+      );
+      const observedDirectTuple = {
+        supportingEvidenceShapeId: shapeId,
+        sourceRole: sourceContract.sourceRole,
+        requiredSourceShapeKind:
+          resolvedSourceKindByTargetKind[target?.kind] ?? "unresolved",
+        requiredShapeOrContractId:
+          sourceContract.requiredShapeOrContractId,
+        requiredSignedPayloadSchemaId:
+          sourceContract.requiredSignedPayloadSchemaId,
+        requiredDecision: sourceContract.requiredDecision,
+        requiredAuthorityClass: sourceContract.requiredAuthorityClass,
+      };
+      if (expectedDirectTuple || target?.kind === "direct") {
+        observedDirectSourceReferenceTuples.push(observedDirectTuple);
+      }
+      if (
+        expectedDirectTuple &&
+        !jsonEqual(observedDirectTuple, expectedDirectTuple)
+      ) {
+        add(`support_source_direct_tuple:${shapeId}:${index}`);
+      } else if (target?.kind === "direct" && !expectedDirectTuple) {
+        add(`support_source_direct_tuple_unregistered:${shapeId}:${index}`);
+      }
       if (
         target?.kind === "direct" &&
-        (supportReceipt.sourceShapeKindResolutionContract.direct_domain_receipt
-          .authorityClassResolution !==
+        (directResolution?.authorityClassResolution !==
           "the_resolved_shape_reviewerClass" ||
-          target.value.reviewerClass !==
+          target.value?.reviewerClass !==
             sourceContract.requiredAuthorityClass)
       ) {
         add(`support_source_authority_class:${shapeId}:${index}`);
@@ -1328,6 +1444,15 @@ function collectContractErrors(candidate) {
         add(`support_validation_profile:${shapeId}`);
       }
     }
+  }
+
+  if (
+    !jsonEqual(
+      observedDirectSourceReferenceTuples,
+      expectedDirectSourceReferenceTuplesExactly,
+    )
+  ) {
+    add("support_source_direct_tuple_set");
   }
 
   for (const [profileId, profile] of Object.entries(globalProfiles)) {
@@ -3238,6 +3363,176 @@ test("hostile mutations are rejected by the same mechanical validator", () => {
   assert.equal(
     collectContractErrors(wrongDirectAuthorityResolver).includes(
       "support_source_authority_class:privacy-lifecycle-source.v1:1",
+    ),
+    true,
+  );
+
+  for (const tuple of expectedDirectSourceReferenceTuplesExactly) {
+    const reclassifiedAsRoot = structuredClone(contract);
+    const sourceContracts =
+      reclassifiedAsRoot.laterGateEvidence
+        .authoritativeSupportingEvidenceShapeRegistry[
+        tuple.supportingEvidenceShapeId
+      ].sourceReferenceContractsExactly;
+    const sourceIndex = sourceContracts.findIndex(
+      ({ sourceRole }) => sourceRole === tuple.sourceRole,
+    );
+    sourceContracts[sourceIndex].requiredShapeOrContractId =
+      "laterGateEvidence.rootAuthorityEvidenceReceiptShape";
+    assert.equal(
+      collectContractErrors(reclassifiedAsRoot).includes(
+        `support_source_direct_tuple:${tuple.supportingEvidenceShapeId}:${sourceIndex}`,
+      ),
+      true,
+      `${tuple.sourceRole} must not reclassify as root authority`,
+    );
+  }
+
+  for (const [branchName, replacementTarget] of [
+    ["supporting", "trusted-git-snapshot-source.v1"],
+    ["virtual", "owner-scope-decision-evidence.v1"],
+  ]) {
+    const reclassifiedPrivacySource = structuredClone(contract);
+    reclassifiedPrivacySource.laterGateEvidence
+      .authoritativeSupportingEvidenceShapeRegistry[
+      "privacy-lifecycle-source.v1"
+    ].sourceReferenceContractsExactly[1].requiredShapeOrContractId =
+      replacementTarget;
+    assert.equal(
+      collectContractErrors(reclassifiedPrivacySource).includes(
+        "support_source_direct_tuple:privacy-lifecycle-source.v1:1",
+      ),
+      true,
+      `privacy precommit must not reclassify as ${branchName} evidence`,
+    );
+  }
+
+  const missingDirectTargetId = structuredClone(contract);
+  delete missingDirectTargetId.laterGateEvidence
+    .authoritativeSupportingEvidenceShapeRegistry[
+    "privacy-lifecycle-source.v1"
+  ].sourceReferenceContractsExactly[1].requiredShapeOrContractId;
+  let missingDirectTargetIdErrors;
+  assert.doesNotThrow(() => {
+    missingDirectTargetIdErrors =
+      collectContractErrors(missingDirectTargetId);
+  });
+  assert.equal(
+    missingDirectTargetIdErrors.includes(
+      "support_source_direct_tuple:privacy-lifecycle-source.v1:1",
+    ) &&
+      missingDirectTargetIdErrors.includes(
+        "support_source_target:privacy-lifecycle-source.v1:1",
+      ),
+    true,
+  );
+
+  const unknownDirectTargetId = structuredClone(contract);
+  unknownDirectTargetId.laterGateEvidence
+    .authoritativeSupportingEvidenceShapeRegistry[
+    "privacy-lifecycle-source.v1"
+  ].sourceReferenceContractsExactly[1].requiredShapeOrContractId =
+    "timedOmrReadinessContract.omrShape.unknownPrecommitReceiptShape";
+  let unknownDirectTargetIdErrors;
+  assert.doesNotThrow(() => {
+    unknownDirectTargetIdErrors =
+      collectContractErrors(unknownDirectTargetId);
+  });
+  assert.equal(
+    unknownDirectTargetIdErrors.includes(
+      "support_source_direct_tuple:privacy-lifecycle-source.v1:1",
+    ) &&
+      unknownDirectTargetIdErrors.includes(
+        "support_source_target:privacy-lifecycle-source.v1:1",
+      ),
+    true,
+  );
+
+  for (const inheritedObjectKey of [
+    "__proto__",
+    "constructor",
+    "toString",
+  ]) {
+    const inheritedKeyTargetId = structuredClone(contract);
+    inheritedKeyTargetId.laterGateEvidence
+      .authoritativeSupportingEvidenceShapeRegistry[
+      "privacy-lifecycle-source.v1"
+    ].sourceReferenceContractsExactly[1].requiredShapeOrContractId =
+      inheritedObjectKey;
+    let inheritedKeyTargetIdErrors;
+    assert.doesNotThrow(() => {
+      inheritedKeyTargetIdErrors =
+        collectContractErrors(inheritedKeyTargetId);
+    });
+    assert.equal(
+      inheritedKeyTargetIdErrors.includes(
+        "support_source_direct_tuple:privacy-lifecycle-source.v1:1",
+      ) &&
+        inheritedKeyTargetIdErrors.includes(
+          "support_source_target:privacy-lifecycle-source.v1:1",
+        ),
+      true,
+      `${inheritedObjectKey} must remain an unknown target ID`,
+    );
+  }
+
+  const missingDirectResolver = structuredClone(contract);
+  delete missingDirectResolver.laterGateEvidence
+    .authoritativeSupportingEvidenceReceiptShape
+    .sourceShapeKindResolutionContract.direct_domain_receipt;
+  let missingDirectResolverErrors;
+  assert.doesNotThrow(() => {
+    missingDirectResolverErrors =
+      collectContractErrors(missingDirectResolver);
+  });
+  assert.equal(
+    missingDirectResolverErrors.includes(
+      "support_source_direct_tuple_registry",
+    ) &&
+      missingDirectResolverErrors.includes(
+        "support_source_authority_class:privacy-lifecycle-source.v1:1",
+      ),
+    true,
+  );
+
+  const alteredDirectTupleRegistry = structuredClone(contract);
+  alteredDirectTupleRegistry.laterGateEvidence
+    .authoritativeSupportingEvidenceReceiptShape
+    .sourceShapeKindResolutionContract.direct_domain_receipt
+    .requiredSourceReferenceTuplesExactly[1].requiredAuthorityClass =
+      "named_owner_authorized_human_privacy_reviewer";
+  assert.equal(
+    collectContractErrors(alteredDirectTupleRegistry).includes(
+      "support_source_direct_tuple_registry",
+    ),
+    true,
+  );
+
+  const coordinatedWrongDirectAuthority = structuredClone(contract);
+  coordinatedWrongDirectAuthority.laterGateEvidence
+    .authoritativeSupportingEvidenceShapeRegistry[
+    "privacy-lifecycle-source.v1"
+  ].sourceReferenceContractsExactly[1].requiredAuthorityClass =
+    "named_owner_authorized_human_privacy_reviewer";
+  coordinatedWrongDirectAuthority.timedOmrReadinessContract
+    .omrShape.personalSessionEventLogPrecommitReceiptShape.reviewerClass =
+      "named_owner_authorized_human_privacy_reviewer";
+  assert.equal(
+    collectContractErrors(coordinatedWrongDirectAuthority).includes(
+      "support_source_direct_tuple:privacy-lifecycle-source.v1:1",
+    ),
+    true,
+  );
+
+  const unregisteredDirectReference = structuredClone(contract);
+  unregisteredDirectReference.laterGateEvidence
+    .authoritativeSupportingEvidenceShapeRegistry[
+    "trusted-git-snapshot-source.v1"
+  ].sourceReferenceContractsExactly[0].requiredShapeOrContractId =
+    "laterGateEvidence.gateEvidencePacketReceiptShape";
+  assert.equal(
+    collectContractErrors(unregisteredDirectReference).includes(
+      "support_source_direct_tuple_unregistered:trusted-git-snapshot-source.v1:0",
     ),
     true,
   );
