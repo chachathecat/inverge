@@ -445,6 +445,47 @@ function collectContractErrors(candidate) {
     add("qti_content_attribution_projection");
   }
 
+  const occurredAtField = standards.internalSchema.fields.find(
+    ({ field }) => field === "occurred_at",
+  );
+  const occurredAtContract = standards.internalSchema.occurredAtContract;
+  const xapiTimestampContract = standards.xapi.statementTimestampContract;
+  const xapiTimestampMapping = standards.xapi.mappingRecords.find(
+    ({ targetField }) => targetField === "Statement.timestamp",
+  );
+  if (
+    occurredAtField?.type !== "rfc3339_utc_z_millisecond_timestamp" ||
+    occurredAtContract?.exactRegex !==
+      "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$" ||
+    occurredAtContract?.timezoneRule !==
+      "uppercase_Z_only_nonzero_offsets_and_plus00:00_or_minus00:00_spellings_are_rejected_for_this_canonical_internal_shape" ||
+    occurredAtContract?.futureTimeRule !==
+      "occurred_at_must_be_lte_adapter_emitted_at_from_the_trusted_adapter_clock_at_mapping_time" ||
+    occurredAtContract?.futureTimeHandling !==
+      "reject_mapping_do_not_clamp_coerce_rewrite_or_replace_with_adapter_time" ||
+    occurredAtContract?.invalidOffsetPrecisionCalendarFutureOrUntrustedClockFailsClosed !==
+      true ||
+    xapiTimestampContract?.sourceContract !==
+      "standardsMappingContracts.internalSchema.occurredAtContract" ||
+    xapiTimestampContract?.requiredFormat !==
+      "RFC_3339_UTC_Z_with_exactly_three_fractional_second_digits" ||
+    xapiTimestampContract?.sourceBytesCopiedExactly !== true ||
+    xapiTimestampContract?.trustedAdapterClockComparisonRequired !== true ||
+    xapiTimestampContract?.futureTimestampAllowed !== false ||
+    xapiTimestampContract
+      ?.clampCoerceRewriteOrLrsSuppliedSubstitutionAllowed !== false ||
+    xapiTimestampContract?.adapterImplemented !== false ||
+    xapiTimestampContract?.conformanceClaimed !== false ||
+    !xapiTimestampMapping?.constraint.includes(
+      "occurred_at not later than trusted adapter_emitted_at",
+    ) ||
+    !xapiTimestampMapping?.constraint.includes(
+      "invalid offset future clamp coercion rewrite or substitution rejected",
+    )
+  ) {
+    add("xapi_timestamp_contract");
+  }
+
   const later = candidate.laterGateEvidence;
   const packetShape = later.gateEvidencePacketReceiptShape;
   const supportReceipt = later.authoritativeSupportingEvidenceReceiptShape;
@@ -453,6 +494,50 @@ function collectContractErrors(candidate) {
   const derivation = later.gateAssertionDerivationReceiptShape;
   const predicates = derivation.predicateOperatorContractRegistry;
   const globalProfiles = derivation.predicateValidationProfileRegistry;
+  const timedOmr = candidate.timedOmrReadinessContract;
+  const omr = timedOmr.omrShape;
+  const dataBoundary = timedOmr.dataBoundary;
+  const ownerScope = later.O3B.ownerScopeContract;
+  const ownerAuthorization = ownerScope.crossPlaneAuthorizationBoundary;
+  const ownerSourceNestedContracts =
+    supports["o3b-owner-scope-decision-source.v1"]
+      .typedPayloadNestedContracts;
+  const ownerAuthorizationNestedContract =
+    ownerSourceNestedContracts.crossPlaneAuthorizationBoundaryContract;
+  const ownerCurrentnessNestedContract =
+    ownerSourceNestedContracts.approvalActionTimeCurrentnessContract;
+  const ownerDecision = "owner_approved_exact_O3B_scope_and_exclusions";
+  const ownerEvidenceInput = "exact_scope_and_excluded_actions";
+  const ownerEvidenceShape = "owner-scope-decision-evidence.v1";
+  const ownerReferenceField = "owner_scope_decision_receipt_reference";
+  const ownerDecisionField = "owner_scope_decision";
+  const ownerApprovalFields = [ownerReferenceField, ownerDecisionField];
+  const ownerCurrentnessFieldsExactly = [
+    "requiredResolvedStatus",
+    "requiredDecision",
+    "revokedOrSupersededAllowed",
+    "nonnullExpiryRequired",
+    "reResolveImmediatelyBeforeEveryAction",
+    "reviewedAtAloneIsSufficient",
+    "requiredCurrentBeforeActionNamesExactly",
+    "actionTimestampComparisonRule",
+    "missingInvalidStaleFutureDatedExpiredRevokedSupersededOrMismatchedEvidenceFailsClosed",
+  ];
+  const ownerCurrentnessFieldContracts = {
+    requiredResolvedStatus: "literal_verified_current",
+    requiredDecision:
+      "literal_owner_approved_exact_O3B_scope_and_exclusions",
+    revokedOrSupersededAllowed: "literal_false",
+    nonnullExpiryRequired: "literal_true",
+    reResolveImmediatelyBeforeEveryAction: "literal_true",
+    reviewedAtAloneIsSufficient: "literal_false",
+    requiredCurrentBeforeActionNamesExactly:
+      "closed_array_exactly_matching_parent_crossPlaneAuthorizationBoundary.authorizationRequiredBeforeExactly_in_the_same_order",
+    actionTimestampComparisonRule:
+      "literal_resolved_owner_evidence_observed_at_lte_action_instant_lt_resolved_owner_evidence_expires_at_and_latest_status_at_action_is_verified_current_not_revoked_or_superseded",
+    missingInvalidStaleFutureDatedExpiredRevokedSupersededOrMismatchedEvidenceFailsClosed:
+      "literal_true",
+  };
   const bindingOperators = new Set(
     supportReceipt.payloadBindingShape.operatorVocabulary,
   );
@@ -460,6 +545,458 @@ function collectContractErrors(candidate) {
     ...supportReceipt.sourceReferenceContractShape.requiredFields,
     ...(supportReceipt.sourceReferenceContractShape.optionalFields ?? []),
   ]);
+
+  if (
+    dataBoundary.crossPlaneApprovalRequired !== ownerDecision ||
+    dataBoundary.crossPlaneApprovalEvidenceInputName !== ownerEvidenceInput ||
+    dataBoundary.crossPlaneApprovalEvidenceContractId !==
+      ownerEvidenceShape ||
+    dataBoundary.crossPlaneApprovalScopeContractJsonPointer !==
+      "/laterGateEvidence/O3B/ownerScopeContract" ||
+    dataBoundary.missingStaleMismatchedOrUnboundCrossPlaneApprovalFailsClosed !==
+      true ||
+    !jsonEqual(
+      dataBoundary.crossPlaneApprovalMustBeCurrentBeforeExactly,
+      ownerAuthorization.authorizationRequiredBeforeExactly,
+    ) ||
+    ownerAuthorization.approvalDecision !== ownerDecision ||
+    ownerAuthorization.approvalEvidenceInputName !== ownerEvidenceInput ||
+    ownerAuthorization.approvalEvidenceContractId !== ownerEvidenceShape ||
+    ownerAuthorization.onlyAllowedOutput !==
+      dataBoundary.onlyCrossPlaneOutputAllowed ||
+    ownerAuthorization
+      .rawResponseOpeningSaltActorIdentityOrHeldoutMembershipExportAllowed !==
+      false ||
+    ownerAuthorization.missingStaleMismatchedOrUnboundApprovalFailsClosed !==
+      true ||
+    !virtuals[ownerEvidenceShape]?.allowedDecisions.includes(ownerDecision) ||
+    !later.O3B.requiredInputs.includes(ownerEvidenceInput) ||
+    later.O3B.requiredInputEvidenceContractRegistry[ownerEvidenceInput]
+      ?.requiredPayloadSchemaVersion !== ownerEvidenceShape ||
+    later.O3B.requiredInputEvidenceContractRegistry[ownerEvidenceInput]
+      ?.requiredUnderlyingDecision !== ownerDecision ||
+    !later.O3B.requiredInputProjectionContractRegistry[
+      ownerEvidenceInput
+    ]?.requiredEvidenceProjection.requiredShapeOrContractIds.includes(
+      ownerEvidenceShape,
+    )
+  ) {
+    add("cross_plane_owner_approval_contract");
+  }
+  if (
+    !ownerAuthorizationNestedContract.requiredFieldsExactly.includes(
+      "approvalActionTimeCurrentnessContract",
+    ) ||
+    ownerAuthorizationNestedContract.additionalFieldsAllowed !== false ||
+    !jsonEqual(
+      ownerCurrentnessNestedContract?.requiredFieldsExactly,
+      ownerCurrentnessFieldsExactly,
+    ) ||
+    !jsonEqual(
+      ownerCurrentnessNestedContract?.fieldContracts,
+      ownerCurrentnessFieldContracts,
+    ) ||
+    ownerCurrentnessNestedContract?.additionalFieldsAllowed !== false ||
+    ownerCurrentnessNestedContract
+      ?.requiredCurrentBeforeActionNamesOrderSource !==
+      "laterGateEvidence.O3B.ownerScopeContract.crossPlaneAuthorizationBoundary.authorizationRequiredBeforeExactly" ||
+    ownerCurrentnessNestedContract
+      ?.requiredCurrentBeforeActionNamesMustEqualOrderSource !== true ||
+    !jsonEqual(
+      ownerAuthorization.approvalActionTimeCurrentnessContract
+        .requiredCurrentBeforeActionNamesExactly,
+      ownerAuthorization.authorizationRequiredBeforeExactly,
+    ) ||
+    !jsonEqual(
+      Object.keys(
+        ownerAuthorization.approvalActionTimeCurrentnessContract,
+      ),
+      ownerCurrentnessFieldsExactly,
+    )
+  ) {
+    add("cross_plane_owner_approval_nested_currentness_schema");
+  }
+
+  const ownerApprovalReceiptShapes = {
+    personal_session_precommit:
+      omr.personalSessionEventLogPrecommitReceiptShape,
+    evaluation_precommit: omr.evaluationBindingPrecommitReceiptShape,
+    commitment_policy: omr.commitmentPolicyReceiptShape,
+    ephemeral_bridge_policy: omr.ephemeralBridgePolicyReceiptShape,
+    final_cross_plane_binding:
+      omr.crossPlaneEvaluationBindingReceiptShape,
+  };
+  for (const [shapeName, shape] of Object.entries(
+    ownerApprovalReceiptShapes,
+  )) {
+    if (
+      !includesAll(shape.requiredFields, ownerApprovalFields) ||
+      !includesAll(
+        shape.receiptDigestContract.coveredFieldsExactly,
+        ownerApprovalFields,
+      ) ||
+      !shape.bindingInvariants.some((invariant) =>
+        invariant.includes("owner_scope_decision_receipt_reference"),
+      ) ||
+      !shape.bindingInvariants.some((invariant) =>
+        invariant.includes(
+          "owner_scope_decision_equals_timedOmrReadinessContract.dataBoundary.crossPlaneApprovalRequired",
+        ),
+      )
+    ) {
+      add(`cross_plane_owner_approval_receipt:${shapeName}`);
+    }
+  }
+  if (omr.crossPlaneEvaluationBindingReceiptShape.bodyless !== true) {
+    add("cross_plane_owner_approval_bodyless");
+  }
+
+  const privacySupport = supports["privacy-lifecycle-source.v1"];
+  const privacyOwnerReference = privacySupport.sourceReferenceContractsExactly
+    .find(({ sourceRole }) => sourceRole === "owner_cross_plane_scope_decision");
+  const privacyProfile = globalProfiles["privacy-lifecycle-five-phase.v1"];
+  const privacyMatcher = predicates.privacy_lifecycle_matches_data_boundary;
+  if (
+    !includesAll(
+      privacySupport.requiredTypedPayloadFieldsExactly,
+      ownerApprovalFields,
+    ) ||
+    !privacySupport.referenceFields.includes(ownerReferenceField) ||
+    privacySupport.sourceReferenceCardinality !== "exactly_4" ||
+    privacyOwnerReference?.typedPayloadReferenceField !==
+      ownerReferenceField ||
+    privacyOwnerReference?.requiredShapeOrContractId !== ownerEvidenceShape ||
+    privacyOwnerReference?.requiredDecision !== ownerDecision ||
+    !includesAll(privacyProfile.rowRequiredFieldsExactly, ownerApprovalFields) ||
+    !privacyProfile.crossRowEqualityFieldsExactly.includes(
+      `/${ownerReferenceField}`,
+    ) ||
+    !privacyProfile.crossRowEqualityFieldsExactly.includes(
+      `/${ownerDecisionField}`,
+    ) ||
+    !privacyProfile.typedConditionsExactly.some(
+      ({ conditionId, literalJsonValue }) =>
+        conditionId === "owner_scope_decision_exact" &&
+        literalJsonValue === ownerDecision,
+    ) ||
+    !privacyMatcher.evaluation.includes(
+      "every_row_owner_scope_decision_equals_right.crossPlaneApprovalRequired",
+    ) ||
+    !privacyMatcher.evaluation.includes(
+      "observed_before_session_collection_processing_opening_evaluation_and_cross_plane_output",
+    )
+  ) {
+    add("privacy_owner_approval_binding");
+  }
+
+  const crossPlaneInput =
+    later.O3B.requiredInputProjectionContractRegistry
+      .cross_plane_evaluation_binding_and_nonidentifying_comparison_receipt_set;
+  const crossPlaneOwnerBinding = crossPlaneInput.ownerApprovalBindingContract;
+  if (
+    !includesAll(crossPlaneInput.contractJsonPointers, [
+      "/laterGateEvidence/O3B/ownerScopeContract",
+      "/timedOmrReadinessContract/dataBoundary",
+    ]) ||
+    !crossPlaneInput.requiredEvidenceProjection.requiredShapeOrContractIds
+      .includes(ownerEvidenceShape) ||
+    crossPlaneOwnerBinding.ownerEvidenceInputName !== ownerEvidenceInput ||
+    crossPlaneOwnerBinding.ownerEvidenceShapeId !== ownerEvidenceShape ||
+    crossPlaneOwnerBinding.requiredDecision !== ownerDecision ||
+    !jsonEqual(
+      crossPlaneOwnerBinding.referencingReceiptFieldsExactly,
+      {
+        personal_session_precommit: ownerReferenceField,
+        privacy_lifecycle_phase: ownerReferenceField,
+        evaluation_precommit: ownerReferenceField,
+        commitment_policy: ownerReferenceField,
+        ephemeral_bridge_policy: ownerReferenceField,
+        final_cross_plane_binding: ownerReferenceField,
+      },
+    ) ||
+    crossPlaneOwnerBinding
+      .everyReferenceIdentityMustEqualExactScopeInputEvidenceIdVersionAndSha256 !==
+      true ||
+    crossPlaneOwnerBinding
+      .approvalMustBeCurrentBeforeCollectionProcessingOpeningEvaluationAndOutput !==
+      true ||
+    !later.O3B.expiryTriggers.includes(
+      "owner_scope_decision_identity_status_decision_reviewer_time_or_expiry_changes",
+    ) ||
+    !later.O3B.requiredInputExpiryCoverage
+      .cross_plane_evaluation_binding_and_nonidentifying_comparison_receipt_set
+      .includes(
+        "owner_scope_decision_identity_status_decision_reviewer_time_or_expiry_changes",
+      )
+  ) {
+    add("cross_plane_owner_approval_gate_projection");
+  }
+
+  const ownerApprovalPointerRows = [
+    "/timedOmrReadinessContract/dataBoundary",
+    "/goldHeldOutSeparationContract/heldOutIngressReceiptShape",
+    "/goldHeldOutSeparationContract/crossBoundaryRules",
+  ];
+  const ownerSource =
+    supports["o3b-owner-scope-decision-source.v1"];
+  const ownerSourceReference = ownerSource.sourceReferenceContractsExactly
+    .find(
+      ({ requiredSignedPayloadSchemaId }) =>
+        requiredSignedPayloadSchemaId ===
+        "owner-o3b-scope-decision-attestation.v1",
+    );
+  const ownerSignedSchema =
+    later.rootAuthorityEvidenceReceiptShape.signedPayloadSchemaDefinitions[
+      "owner-o3b-scope-decision-attestation.v1"
+    ];
+  const ownerSignedFields = [
+    "owner_identity",
+    "program_scope_id",
+    "decision_type",
+    "included_values",
+    "excluded_values",
+    "cross_plane_authorization_boundary",
+    "owner_scope_contract_sha256",
+    "ordered_authorization_contract_pointer_digest_rows",
+    "ordered_authorization_contract_pointer_digest_rows_digest",
+    "root_trust_anchor_projection_reference",
+    "root_trust_anchor_projection_sha256",
+    "decision_payload_sha256",
+    "decided_at",
+  ];
+  if (
+    !jsonEqual(
+      ownerAuthorization.approvalBoundContractJsonPointersExactly,
+      ownerApprovalPointerRows,
+    ) ||
+    !jsonEqual(
+      ownerAuthorization.approvalBoundContractPointerDigestRowFieldsExactly,
+      ["json_pointer", "resolved_value_sha256"],
+    ) ||
+    ownerAuthorization.approvalBoundContractPointerDigestContract
+      ?.resolvedValueRule !==
+      "resolved_value_sha256_equals_SHA256_RFC8785_of_the_exact_pointer_value_at_the_O3B_evaluation_head_and_tree" ||
+    ownerSource?.typedPayloadNestedContracts
+      ?.authorizationContractPointerDigestRowContract
+      ?.jsonPointerOrderSource !==
+      "laterGateEvidence.O3B.ownerScopeContract.crossPlaneAuthorizationBoundary.approvalBoundContractJsonPointersExactly" ||
+    ownerSource?.typedPayloadNestedContracts
+      ?.authorizationContractPointerDigestRowContract
+      ?.missingExtraDuplicateReorderedUnresolvableOrMismatchedRowFailsClosed !==
+      true ||
+    ownerSourceReference?.payloadBindingsExactly
+      ?.filter(({ supportingPayloadJsonPointer }) =>
+        [
+          "/cross_plane_authorization_boundary",
+          "/owner_scope_contract_sha256",
+          "/ordered_authorization_contract_pointer_digest_rows",
+          "/ordered_authorization_contract_pointer_digest_rows_digest",
+        ].includes(supportingPayloadJsonPointer),
+      ).length !== 4
+  ) {
+    add("owner_scope_bound_contract_digest");
+  }
+  if (
+    ownerSignedSchema?.denyUnknownFields !== true ||
+    !jsonEqual(ownerSignedSchema?.requiredFieldsExactly, ownerSignedFields) ||
+    !jsonEqual(
+      Object.keys(ownerSignedSchema?.fieldTypesExactly ?? {}),
+      ownerSignedFields,
+    ) ||
+    ownerSignedSchema?.fieldTypesExactly?.program_scope_id !==
+      "literal_s235b_s236b_to_o3b_owner_gate_v1" ||
+    ownerSignedSchema?.fieldTypesExactly?.decision_type !==
+      "literal_exact_O3B_scope_and_exclusions" ||
+    ownerSignedSchema?.fieldTypesExactly?.included_values !==
+      "closed_array_exactly_matching_laterGateEvidence.O3B.ownerScopeContract.includedActions" ||
+    ownerSignedSchema?.fieldTypesExactly?.excluded_values !==
+      "closed_array_exactly_matching_laterGateEvidence.O3B.ownerScopeContract.excludedActions" ||
+    ownerSourceReference?.requiredShapeOrContractId !==
+      "laterGateEvidence.rootAuthorityEvidenceReceiptShape" ||
+    ownerSourceReference?.requiredDecision !==
+      "verified_owner_identity_attestation" ||
+    !jsonEqual(
+      ownerSourceNestedContracts?.decisionPayloadDigestContract
+        ?.preimageFieldsCoveredExactly,
+      ownerSignedFields.filter(
+        (field) => field !== "decision_payload_sha256",
+      ),
+    ) ||
+    ownerSourceNestedContracts?.decisionPayloadDigestContract
+      ?.receiptFieldMustEqualComputedDigest !== "decision_payload_sha256" ||
+    ownerSourceNestedContracts?.decisionPayloadDigestContract?.algorithm !==
+      "sha256" ||
+    ownerSourceNestedContracts?.decisionPayloadDigestContract?.hexEncoding !==
+      "lowercase_64" ||
+    ownerSourceNestedContracts?.decisionPayloadDigestContract
+      ?.canonicalization !== "RFC_8785_JSON_Canonicalization_Scheme" ||
+    ownerSourceNestedContracts?.decisionPayloadDigestContract
+      ?.unknownMissingExtraReorderedOrSelfFieldFailsClosed !== true
+  ) {
+    add("owner_scope_root_attestation_schema");
+  }
+
+  const ownerParticipants = [
+    "exact_scope_and_excluded_actions",
+    "privacy_consent_purpose_retention_revocation_and_deletion_receipt_bundle",
+    "personal_event_log_inception_lineage_precommit_source_segment_head_and_completeness_receipt_set",
+    "response_record_timed_session_evaluation_precommit_scoring_and_final_binding_receipt_set",
+    "cross_plane_evaluation_binding_and_nonidentifying_comparison_receipt_set",
+  ];
+  const ownerExpiryParticipants = ownerParticipants.slice(1);
+  const ownerEvidenceContractPrefix =
+    "laterGateEvidence.virtualUnderlyingEvidenceShapeRegistry.owner-scope-decision-evidence.v1";
+  for (const inputName of ownerParticipants) {
+    const projection =
+      later.O3B.requiredInputProjectionContractRegistry[inputName];
+    const evidence =
+      later.O3B.requiredInputEvidenceContractRegistry[inputName];
+    if (
+      projection.requiredEvidenceProjection.requiredShapeOrContractIds[0] !==
+        ownerEvidenceShape ||
+      !evidence.contractId.includes(ownerEvidenceContractPrefix)
+    ) {
+      add(`owner_scope_projection:${inputName}`);
+    }
+  }
+  for (const inputName of ownerExpiryParticipants) {
+    const coverage = later.O3B.requiredInputExpiryCoverage[inputName];
+    if (
+      !Array.isArray(coverage) ||
+      !coverage.includes(
+        "owner_scope_decision_identity_status_decision_reviewer_time_or_expiry_changes",
+      )
+    ) {
+      add(`owner_scope_expiry:${inputName}`);
+    }
+  }
+
+  const ownerDimension =
+    later.gateCrossInputCoherenceReceiptShape.crossInputCoherenceMatrix.O3B
+      .find(({ dimensionId }) => dimensionId === "owner_scope_decision_identity");
+  const ownerRootFields = [
+    "evidence_id",
+    "evidence_version",
+    "evidence_sha256",
+  ];
+  const ownerSpecIds = ownerDimension
+    ? Object.values(ownerDimension.derivationSpecIdByInputExactly)
+    : [];
+  const ownerSpecs = ownerSpecIds.map(
+    (specId) =>
+      later.gateCrossInputCoherenceReceiptShape
+        .canonicalRootDerivationSpecRegistry[specId],
+  );
+  if (
+    !jsonEqual(ownerDimension?.participatingInputsExactly, ownerParticipants) ||
+    !jsonEqual(
+      ownerDimension?.canonicalRootPreimage.orderedFieldsExactly,
+      ownerRootFields,
+    ) ||
+    ownerSpecs.length !== 5 ||
+    ownerSpecs.some(
+      (spec) =>
+        !spec ||
+        !jsonEqual(
+          Object.keys(spec.canonicalFieldSourceByNameExactly),
+          ownerRootFields,
+        ) ||
+        Object.values(spec.canonicalFieldSourceByNameExactly).some(
+          ({ sourceRowsExactly }) =>
+            sourceRowsExactly.length !== 1 ||
+            sourceRowsExactly[0].sourceKind !==
+              "resolved_virtual_underlying_evidence_receipt" ||
+            sourceRowsExactly[0].requiredShapeOrContractIdOrNull !==
+              ownerEvidenceShape ||
+            !["/receipt_id", "/receipt_version", "/receipt_sha256"].includes(
+              sourceRowsExactly[0].absoluteJsonPointer,
+            ),
+        ),
+    )
+  ) {
+    add("owner_scope_coherence_contract");
+  }
+
+  const gateInputShape = later.gateInputEvidenceReceiptShape;
+  const coherenceDerivation =
+    later.gateCoherenceRootDerivationReceiptShape;
+  const ownerCarrier =
+    gateInputShape.ownerScopeDecisionCoherenceCarrierContract;
+  if (
+    ownerCarrier.directProjectionMembershipRequiredForEveryNonNullCarrier !==
+      true ||
+    ownerCarrier.ownerVirtualProjectionMustBeFirstForEveryParticipant !==
+      true ||
+    ownerCarrier.selfReferenceOrDigestCycleAllowed !== false ||
+    !ownerCarrier.coherenceDerivationSource.includes(
+      "never_this_carrier_field_or_the_enclosing_gate_input_receipt",
+    ) ||
+    gateInputShape.coherenceRootSourceKindVocabulary.includes(
+      "selected_gate_input_evidence_receipt",
+    ) ||
+    !gateInputShape.coherenceRootSourceKindVocabulary.includes(
+      "resolved_virtual_underlying_evidence_receipt",
+    ) ||
+    gateInputShape.coherenceRootClaimDerivationContract
+      .selfReferenceOrDigestCycleAllowed !== false ||
+    coherenceDerivation.sourceKindVocabulary.includes(
+      "selected_gate_input_evidence_receipt",
+    ) ||
+    !coherenceDerivation.sourceKindVocabulary.includes(
+      "resolved_virtual_underlying_evidence_receipt",
+    ) ||
+    coherenceDerivation.sourceRowSourceKindConditionalContract
+      ?.enclosingGateInputReceiptOrAnyDigestDependentReceiptMayBeASource !==
+      false ||
+    !coherenceDerivation.bindingInvariants.some((invariant) =>
+      invariant.includes("self_reference_or_digest_cycle_fails_closed"),
+    )
+  ) {
+    add("owner_scope_coherence_non_circular");
+  }
+
+  const actionCurrentness =
+    dataBoundary.crossPlaneApprovalActionTimeCurrentnessContract;
+  const ownerActionCurrentness =
+    ownerAuthorization.approvalActionTimeCurrentnessContract;
+  const privacyActionCurrentness =
+    privacySupport.ownerScopeDecisionActionTimeCurrentnessContract;
+  if (
+    !jsonEqual(
+      actionCurrentness?.requiredCurrentBeforeActionNamesExactly,
+      dataBoundary.crossPlaneApprovalMustBeCurrentBeforeExactly,
+    ) ||
+    !jsonEqual(actionCurrentness, ownerActionCurrentness) ||
+    actionCurrentness?.reResolveImmediatelyBeforeEveryAction !== true ||
+    actionCurrentness?.reviewedAtAloneIsSufficient !== false ||
+    privacyActionCurrentness
+      ?.resolvedExpiryMustBeNonNullAndStrictlyAfterEveryNonNullActionTimestamp !==
+      true ||
+    privacyActionCurrentness
+      ?.reResolveImmediatelyBeforeSessionCollectionProcessingRevocationDeletionAndOutput !==
+      true ||
+    privacyActionCurrentness?.reviewedAtAloneIsSufficient !== false ||
+    privacyProfile.ownerScopeDecisionActionTimeCurrentnessContract
+      ?.everyNonNullActionTimestampMustPass !== true ||
+    !privacyMatcher.evaluation.includes(
+      "owner_scope_decision_is_re_resolved_immediately_before_every_nonnull_action_timestamp",
+    ) ||
+    Object.values(ownerApprovalReceiptShapes).some(
+      (shape) =>
+        !shape.bindingInvariants.some(
+          (invariant) =>
+            invariant.includes("expires_at_is_nonnull") ||
+            invariant.includes("nonnull_expiry"),
+        ),
+    ) ||
+    !omr.comparisonEvidenceReceiptShape.bindingInvariants.some((invariant) =>
+      invariant.includes(
+        "re_resolved_immediately_before_opening_bridge_activation_and_comparison",
+      ),
+    )
+  ) {
+    add("owner_scope_action_time_currentness");
+  }
 
   for (const gateId of ["S236B", "O3B"]) {
     const gate = later[gateId];
@@ -624,6 +1161,12 @@ function collectContractErrors(candidate) {
   const matrix = coherence.crossInputCoherenceMatrix;
   const specs = coherence.canonicalRootDerivationSpecRegistry;
   const transforms = coherence.canonicalSourceTransformationRegistry;
+  const derivationSourceKinds = new Set(
+    later.gateCoherenceRootDerivationReceiptShape.sourceKindVocabulary,
+  );
+  const derivationSourceKindContracts =
+    later.gateCoherenceRootDerivationReceiptShape
+      .sourceRowSourceKindConditionalContract ?? {};
   const matrixLocations = [];
   const transformationIds = [];
   const transformationRows = new Map();
@@ -698,6 +1241,22 @@ function collectContractErrors(candidate) {
     )) {
       for (const sourceRow of fieldSource.sourceRowsExactly) {
         const transformationId = sourceRow.transformationId;
+        if (
+          !derivationSourceKinds.has(sourceRow.sourceKind) ||
+          !Object.hasOwn(
+            derivationSourceKindContracts,
+            sourceRow.sourceKind,
+          )
+        ) {
+          add(`source_kind:${transformationId}`);
+        }
+        if (
+          sourceRow.sourceKind === "selected_gate_input_evidence_receipt" ||
+          sourceRow.requiredShapeOrContractIdOrNull ===
+            "laterGateEvidence.gateInputEvidenceReceiptShape"
+        ) {
+          add(`derivation_self_reference:${transformationId}`);
+        }
         transformationIds.push(transformationId);
         if (!transformationRows.has(transformationId)) {
           transformationRows.set(transformationId, []);
@@ -1682,6 +2241,8 @@ test("comparison contamination evidence is authoritative, extracted, and replaye
 
 test("Personal event logs, exposure lineage, timing, and OMR are precommitted", () => {
   const omr = contract.timedOmrReadinessContract.omrShape;
+  const boundary = contract.timedOmrReadinessContract.dataBoundary;
+  const ownerDecision = "owner_approved_exact_O3B_scope_and_exclusions";
 
   for (const key of [
     "personalEventLogPolicyReceiptShape",
@@ -1709,6 +2270,30 @@ test("Personal event logs, exposure lineage, timing, and OMR are precommitted", 
     omr.personalSessionEventLogPrecommitReceiptShape,
     "committed_at_lte_session_started_at",
   );
+  assert.equal(boundary.crossPlaneApprovalRequired, ownerDecision);
+  assert.equal(
+    boundary.crossPlaneApprovalEvidenceContractId,
+    "owner-scope-decision-evidence.v1",
+  );
+  for (const shape of [
+    omr.personalSessionEventLogPrecommitReceiptShape,
+    omr.evaluationBindingPrecommitReceiptShape,
+    omr.commitmentPolicyReceiptShape,
+    omr.ephemeralBridgePolicyReceiptShape,
+    omr.crossPlaneEvaluationBindingReceiptShape,
+  ]) {
+    assert.equal(
+      shape.requiredFields.includes(
+        "owner_scope_decision_receipt_reference",
+      ),
+      true,
+    );
+    assert.equal(shape.requiredFields.includes("owner_scope_decision"), true);
+    assertIncludesInvariant(
+      shape,
+      "owner_scope_decision_equals_timedOmrReadinessContract.dataBoundary.crossPlaneApprovalRequired",
+    );
+  }
   assertIncludesInvariant(
     omr.personalLineageKeyRotationChainReceiptShape,
     "epoch_count_equals_one",
@@ -1754,7 +2339,24 @@ test("Personal event logs, exposure lineage, timing, and OMR are precommitted", 
     omr.crossPlaneEvaluationBindingReceiptShape,
     "evaluation_started_at_lte_every_bound_scoring_receipt",
   );
-  assert.equal(contract.timedOmrReadinessContract.runtimeImplementedByThisWork, false);
+  assert.equal(omr.crossPlaneEvaluationBindingReceiptShape.bodyless, true);
+  const crossPlaneProjection =
+    contract.laterGateEvidence.O3B.requiredInputProjectionContractRegistry
+      .cross_plane_evaluation_binding_and_nonidentifying_comparison_receipt_set;
+  assert.equal(
+    crossPlaneProjection.requiredEvidenceProjection.requiredShapeOrContractIds
+      .includes("owner-scope-decision-evidence.v1"),
+    true,
+  );
+  assert.equal(
+    crossPlaneProjection.ownerApprovalBindingContract
+      .everyReferenceIdentityMustEqualExactScopeInputEvidenceIdVersionAndSha256,
+    true,
+  );
+  assert.equal(
+    contract.timedOmrReadinessContract.runtimeImplementedByThisWork,
+    false,
+  );
 });
 
 test("S236B and O3B packets are exact, current, accepted, and non-automatic", () => {
@@ -1838,7 +2440,21 @@ test("gate registries, source references, predicates, specs, and transforms clos
   );
   assert.equal(
     Object.keys(coherence.canonicalRootDerivationSpecRegistry).length,
-    81,
+    86,
+  );
+  const ownerScopeDimension = coherence.crossInputCoherenceMatrix.O3B.find(
+    ({ dimensionId }) => dimensionId === "owner_scope_decision_identity",
+  );
+  assert.deepEqual(
+    ownerScopeDimension.canonicalRootPreimage.orderedFieldsExactly,
+    ["evidence_id", "evidence_version", "evidence_sha256"],
+  );
+  assert.equal(
+    Object.keys(coherence.canonicalSourceTransformationRegistry)
+      .filter((key) =>
+        key.startsWith("O3B.owner_scope_decision_identity."),
+      ).length,
+    15,
   );
 
   const candidateSetDimension =
@@ -1922,7 +2538,7 @@ test("applicability, population, privacy, supply-chain, and signature evidence i
   const privacyProfile =
     later.gateAssertionDerivationReceiptShape
       .predicateValidationProfileRegistry["privacy-lifecycle-five-phase.v1"];
-  assert.equal(privacyProfile.rowRequiredFieldsExactly.length, 17);
+  assert.equal(privacyProfile.rowRequiredFieldsExactly.length, 19);
   assert.deepEqual(
     privacyProfile.positionalFieldValuesExactly
       .filter(({ jsonPointer }) => jsonPointer === "/phase_sequence_ordinal")
@@ -2016,6 +2632,7 @@ test("applicability, population, privacy, supply-chain, and signature evidence i
     [
       "github.merged-pr-ancestry-snapshot.v1",
       "program-lane-merge-owner-review.v1",
+      "owner-o3b-scope-decision-attestation.v1",
     ],
   );
   for (const shapeName of [
@@ -2135,6 +2752,238 @@ test("hostile mutations are rejected by the same mechanical validator", () => {
     .canonicalRootPreimage.schemaVersion = "wrong-root.v1";
   assert.equal(
     collectContractErrors(wrongRoot).includes(`spec_preimage:${firstSpecId}`),
+    true,
+  );
+
+  const undefinedOwnerApproval = structuredClone(contract);
+  undefinedOwnerApproval.timedOmrReadinessContract.dataBoundary
+    .crossPlaneApprovalRequired = "undefined_owner_approval";
+  assert.equal(
+    collectContractErrors(undefinedOwnerApproval).includes(
+      "cross_plane_owner_approval_contract",
+    ),
+    true,
+  );
+
+  const missingOwnerProjection = structuredClone(contract);
+  missingOwnerProjection.laterGateEvidence.O3B
+    .requiredInputProjectionContractRegistry
+    .privacy_consent_purpose_retention_revocation_and_deletion_receipt_bundle
+    .requiredEvidenceProjection.requiredShapeOrContractIds.shift();
+  assert.equal(
+    collectContractErrors(missingOwnerProjection).some(
+      (error) =>
+        error.startsWith("owner_scope_projection:") ||
+        error.startsWith("spec_input_registry:"),
+    ),
+    true,
+  );
+
+  const missingOwnerReceiptReference = structuredClone(contract);
+  const missingOwnerPrecommit =
+    missingOwnerReceiptReference.timedOmrReadinessContract.omrShape
+      .personalSessionEventLogPrecommitReceiptShape;
+  missingOwnerPrecommit.requiredFields =
+    missingOwnerPrecommit.requiredFields.filter(
+      (field) => field !== "owner_scope_decision_receipt_reference",
+    );
+  assert.equal(
+    collectContractErrors(missingOwnerReceiptReference).some((error) =>
+      error.startsWith("cross_plane_owner_approval_receipt:"),
+    ),
+    true,
+  );
+
+  const missingPrivacyOwnerSource = structuredClone(contract);
+  missingPrivacyOwnerSource.laterGateEvidence
+    .authoritativeSupportingEvidenceShapeRegistry[
+      "privacy-lifecycle-source.v1"
+    ].sourceReferenceContractsExactly =
+      missingPrivacyOwnerSource.laterGateEvidence
+        .authoritativeSupportingEvidenceShapeRegistry[
+          "privacy-lifecycle-source.v1"
+        ].sourceReferenceContractsExactly.filter(
+          ({ sourceRole }) =>
+            sourceRole !== "owner_cross_plane_scope_decision",
+        );
+  assert.equal(
+    collectContractErrors(missingPrivacyOwnerSource).some(
+      (error) =>
+        error === "privacy_owner_approval_binding" ||
+        error.startsWith("support_reference_order:"),
+    ),
+    true,
+  );
+
+  const changedOwnerBoundPointer = structuredClone(contract);
+  changedOwnerBoundPointer.laterGateEvidence.O3B.ownerScopeContract
+    .crossPlaneAuthorizationBoundary
+    .approvalBoundContractJsonPointersExactly[1] =
+      "/goldHeldOutSeparationContract/goldIngressReceiptShape";
+  assert.equal(
+    collectContractErrors(changedOwnerBoundPointer).includes(
+      "owner_scope_bound_contract_digest",
+    ),
+    true,
+  );
+
+  const missingOwnerCurrentnessNestedSchema = structuredClone(contract);
+  const missingOwnerCurrentnessNestedContracts =
+    missingOwnerCurrentnessNestedSchema.laterGateEvidence
+      .authoritativeSupportingEvidenceShapeRegistry[
+        "o3b-owner-scope-decision-source.v1"
+      ].typedPayloadNestedContracts;
+  missingOwnerCurrentnessNestedContracts
+    .crossPlaneAuthorizationBoundaryContract.requiredFieldsExactly =
+      missingOwnerCurrentnessNestedContracts
+        .crossPlaneAuthorizationBoundaryContract.requiredFieldsExactly.filter(
+          (field) => field !== "approvalActionTimeCurrentnessContract",
+        );
+  delete missingOwnerCurrentnessNestedContracts
+    .approvalActionTimeCurrentnessContract;
+  assert.equal(
+    collectContractErrors(missingOwnerCurrentnessNestedSchema).includes(
+      "cross_plane_owner_approval_nested_currentness_schema",
+    ),
+    true,
+  );
+
+  const alteredOwnerCurrentnessNestedSchema = structuredClone(contract);
+  alteredOwnerCurrentnessNestedSchema.laterGateEvidence
+    .authoritativeSupportingEvidenceShapeRegistry[
+      "o3b-owner-scope-decision-source.v1"
+    ].typedPayloadNestedContracts.approvalActionTimeCurrentnessContract
+    .fieldContracts.reResolveImmediatelyBeforeEveryAction = "literal_false";
+  assert.equal(
+    collectContractErrors(alteredOwnerCurrentnessNestedSchema).includes(
+      "cross_plane_owner_approval_nested_currentness_schema",
+    ),
+    true,
+  );
+
+  const mismatchedOwnerParticipant = structuredClone(contract);
+  mismatchedOwnerParticipant.laterGateEvidence
+    .gateCrossInputCoherenceReceiptShape.crossInputCoherenceMatrix.O3B
+    .find(
+      ({ dimensionId }) => dimensionId === "owner_scope_decision_identity",
+    ).participatingInputsExactly.pop();
+  assert.equal(
+    collectContractErrors(mismatchedOwnerParticipant).includes(
+      "owner_scope_coherence_contract",
+    ),
+    true,
+  );
+
+  const missingOwnerExpiryCoverage = structuredClone(contract);
+  missingOwnerExpiryCoverage.laterGateEvidence.O3B
+    .requiredInputExpiryCoverage
+    .personal_event_log_inception_lineage_precommit_source_segment_head_and_completeness_receipt_set =
+      "personal_log_inception_lineage_precommit_source_segment_head_or_completeness_changes";
+  assert.equal(
+    collectContractErrors(missingOwnerExpiryCoverage).some((error) =>
+      error.startsWith("owner_scope_expiry:"),
+    ),
+    true,
+  );
+
+  const missingOwnerSignedSchema = structuredClone(contract);
+  delete missingOwnerSignedSchema.laterGateEvidence
+    .rootAuthorityEvidenceReceiptShape.signedPayloadSchemaDefinitions[
+      "owner-o3b-scope-decision-attestation.v1"
+    ];
+  assert.equal(
+    collectContractErrors(missingOwnerSignedSchema).includes(
+      "owner_scope_root_attestation_schema",
+    ),
+    true,
+  );
+
+  const wrongOwnerSignedLiteral = structuredClone(contract);
+  wrongOwnerSignedLiteral.laterGateEvidence.rootAuthorityEvidenceReceiptShape
+    .signedPayloadSchemaDefinitions[
+      "owner-o3b-scope-decision-attestation.v1"
+    ].fieldTypesExactly.decision_type =
+      "literal_owner_approved_exact_O3B_scope_and_exclusions";
+  assert.equal(
+    collectContractErrors(wrongOwnerSignedLiteral).includes(
+      "owner_scope_root_attestation_schema",
+    ),
+    true,
+  );
+
+  const missingOwnerDecisionDigestRecomputation = structuredClone(contract);
+  delete missingOwnerDecisionDigestRecomputation.laterGateEvidence
+    .authoritativeSupportingEvidenceShapeRegistry[
+      "o3b-owner-scope-decision-source.v1"
+    ].typedPayloadNestedContracts.decisionPayloadDigestContract;
+  assert.equal(
+    collectContractErrors(missingOwnerDecisionDigestRecomputation).includes(
+      "owner_scope_root_attestation_schema",
+    ),
+    true,
+  );
+
+  const alteredOwnerDecisionDigestRecomputation = structuredClone(contract);
+  alteredOwnerDecisionDigestRecomputation.laterGateEvidence
+    .authoritativeSupportingEvidenceShapeRegistry[
+      "o3b-owner-scope-decision-source.v1"
+    ].typedPayloadNestedContracts.decisionPayloadDigestContract.algorithm =
+      "sha512";
+  assert.equal(
+    collectContractErrors(alteredOwnerDecisionDigestRecomputation).includes(
+      "owner_scope_root_attestation_schema",
+    ),
+    true,
+  );
+
+  const cyclicOwnerDerivation = structuredClone(contract);
+  const cyclicOwnerDimension =
+    cyclicOwnerDerivation.laterGateEvidence
+      .gateCrossInputCoherenceReceiptShape.crossInputCoherenceMatrix.O3B
+      .find(
+        ({ dimensionId }) => dimensionId === "owner_scope_decision_identity",
+      );
+  const cyclicOwnerSpecId =
+    cyclicOwnerDimension.derivationSpecIdByInputExactly[
+      cyclicOwnerDimension.participatingInputsExactly[0]
+    ];
+  const cyclicOwnerSpec =
+    cyclicOwnerDerivation.laterGateEvidence
+      .gateCrossInputCoherenceReceiptShape
+      .canonicalRootDerivationSpecRegistry[cyclicOwnerSpecId];
+  cyclicOwnerSpec.canonicalFieldSourceByNameExactly
+    .evidence_id.sourceRowsExactly[0].sourceKind =
+      "selected_gate_input_evidence_receipt";
+  cyclicOwnerSpec.canonicalFieldSourceByNameExactly
+    .evidence_id.sourceRowsExactly[0].requiredShapeOrContractIdOrNull =
+      "laterGateEvidence.gateInputEvidenceReceiptShape";
+  assert.equal(
+    collectContractErrors(cyclicOwnerDerivation).some(
+      (error) =>
+        error.startsWith("source_kind:") ||
+        error.startsWith("derivation_self_reference:"),
+    ),
+    true,
+  );
+
+  const offsetXapiTimestamp = structuredClone(contract);
+  offsetXapiTimestamp.standardsMappingContracts.internalSchema
+    .occurredAtContract.exactRegex =
+      "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{3})?(?:Z|[+-]\\d{2}:\\d{2})$";
+  assert.equal(
+    collectContractErrors(offsetXapiTimestamp).includes(
+      "xapi_timestamp_contract",
+    ),
+    true,
+  );
+
+  const futureXapiTimestamp = structuredClone(contract);
+  futureXapiTimestamp.standardsMappingContracts.xapi
+    .statementTimestampContract.futureTimestampAllowed = true;
+  assert.equal(
+    collectContractErrors(futureXapiTimestamp).includes(
+      "xapi_timestamp_contract",
+    ),
     true,
   );
 
@@ -2448,12 +3297,32 @@ test("docs, evidence, roadmap, and post-merge safe state preserve queued boundar
   assert.match(doc, /static QTI item\/content-package mapping shape/i);
   assert.match(doc, /target-vault specific/i);
   assert.match(doc, /read-after-write\s+receipt/i);
+  assert.match(
+    doc,
+    /canonical UTC-`Z` millisecond event time/i,
+  );
+  assert.match(
+    doc,
+    /never reads the enclosing gate-input receipt/i,
+  );
+  assert.match(
+    doc,
+    /A policy\s+`reviewed_at`\s+value alone is insufficient/i,
+  );
   assert.match(doc, /S236B remains queued/i);
   assert.match(doc, /O3B remains queued and unapproved/i);
   assert.match(doc, /no passing-gate, benchmark, runtime, or Production/i);
   assert.match(evidence, /OCR benchmark: not executed/i);
   assert.match(evidence, /No raw asset body was retained, imported, committed, or hashed/i);
   assert.match(evidence, /Neither gate is started or approved/i);
+  assert.match(
+    evidence,
+    /five-input coherence root compares the receipt's exact/i,
+  );
+  assert.match(
+    evidence,
+    /rejects an offset spelling, invalid calendar instant/i,
+  );
   assert.match(evidence, /explicit squash merge/i);
   assert.match(evidence, /no PR-level auto-merge was enabled/i);
   assert.doesNotMatch(doc, /Secondary cause codes may be retained/i);

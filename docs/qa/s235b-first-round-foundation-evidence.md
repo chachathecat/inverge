@@ -270,12 +270,25 @@ Independently signed raw-choice destruction evidence covers
 session/form/position, timestamps, and zero residual memory, buffer, log,
 cache, and backup counts. None was executed by S235B.
 
+The Owner authorization reference is not a policy-time assertion. The same
+immutable Owner receipt is projected directly into the scope, privacy,
+Personal-log, timed/evaluation, and cross-plane O3B inputs. It is re-resolved
+as current and not revoked or superseded immediately before every collection,
+processing, opening/bridge, evaluation/scoring, and output action; its
+non-null expiry must be strictly later than the corresponding action
+timestamp. The five-input coherence root compares the receipt's exact
+`evidence_id`, `evidence_version`, and `evidence_sha256` from the projection,
+not from the enclosing gate-input receipt, which prevents a digest cycle.
+The signed Owner payload is closed and binds the exact data-boundary,
+held-out-ingress, and cross-boundary-rule values through ordered RFC 8785
+SHA-256 rows.
+
 ## Standards claim check
 
 | Target | Pinned mapping shape | Explicitly absent |
 |---|---|---|
 | QTI 3.0.1 | pinned assessment-item namespaces/schema, identifier/title, adaptive/time-dependent false, five-choice single response, authorized item body, immutable release-attribution reference/row digest/ordered unique values/digest with separate verbatim blocks in item body and modal, mutually exclusive custom inline processing with exact correct→1/other submitted→0 SCORE branches and FEEDBACK in both, one combined modal-feedback shape, Content Package metadata extension | conformance, certification, import/export, player, CAT |
-| IEEE 9274.1.1-2023 xAPI | exact Statement fields/verbs, item-vs-assessment object rule, actor and authority Agent Account IFIs, context-extension cause placement, provenance | LRS, transport, storage, query, Production collection |
+| IEEE 9274.1.1-2023 xAPI | exact Statement fields/verbs, item-vs-assessment object rule, actor and authority Agent Account IFIs, context-extension cause placement, provenance, canonical RFC 3339 UTC `Z` timestamp with exactly millisecond precision and trusted-clock future-time rejection | adapter, LRS, transport, storage, query, conformance, Production collection |
 | Caliper Analytics 1.2 | AssessmentProfile, mandatory v1p2 context, exact event/action/entity records, item-vs-assessment object rule, generated references, absolute-IRI Event extensions | Sensor, Envelope transport, delivery, analytics efficacy, Production collection |
 
 Each machine mapping record supplies source, target, type, cardinality,
@@ -286,6 +299,11 @@ O2-approved closed, nonreconstructive adapter.
 The ten shared project-extension definitions each pin source field, absolute
 IRI, value type, cardinality, null encoding, and distinct xAPI/Caliper
 placement; no wildcard extension key is authorized.
+The xAPI timestamp mapping copies the validated source bytes exactly and
+rejects an offset spelling, invalid calendar instant, non-millisecond
+precision, or a timestamp later than the trusted adapter clock. It never
+clamps or substitutes the time. No adapter or standards conformance is
+claimed.
 
 ## Gold, held-out, timed, and OMR state
 
@@ -355,6 +373,21 @@ O3B requires an exact future packet containing:
 - official-key, Law, and K-IFRS status;
 - Gold reviewer and held-out contamination evidence;
 - unresolved counts, safe deferred state, and expiry triggers.
+
+One closed Owner root-attestation schema signs the exact O3B scope ID,
+decision type, included/excluded actions, authorization boundary, Owner-scope
+digest, ordered digests of the timed/OMR data boundary, held-out ingress
+shape, and held-out cross-boundary rules, trust-anchor projection, decision
+payload digest, and decision time. Its closed nested authorization-boundary
+schema requires the exact action-time currentness object, including all
+fixed decisions, booleans, action names, and timestamp rule; the decision
+payload digest contract is also inside that mechanically recomputed nested
+registry. All five authorization-dependent O3B inputs directly project that
+same virtual receipt first and compare its immutable three-field identity.
+Missing projection membership, a changed pointer digest, a mismatched
+participant, a missing or altered nested currentness or digest contract, a
+stale action-time decision, or an enclosing-receipt/self-referential
+derivation fails closed.
 
 The future trust chain pins an Owner-approved key registry and gate-specific
 root-authority anchors. Root signatures use domain-separated canonical bytes

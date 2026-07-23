@@ -5843,10 +5843,22 @@
         },
         {
           "field": "occurred_at",
-          "type": "rfc3339_timestamp",
+          "type": "rfc3339_utc_z_millisecond_timestamp",
           "cardinality": "exactly_one"
         }
-      ]
+      ],
+      "occurredAtContract": {
+        "canonicalFormat": "RFC_3339_UTC_Z_with_exactly_three_fractional_second_digits",
+        "exactRegex": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$",
+        "calendarAndInstantValidation": "valid_Gregorian_calendar_date_time_and_RFC3339_instant_required_in_addition_to_regex",
+        "timezoneRule": "uppercase_Z_only_nonzero_offsets_and_plus00:00_or_minus00:00_spellings_are_rejected_for_this_canonical_internal_shape",
+        "precisionRule": "exactly_millisecond_precision_three_fractional_digits",
+        "futureTimeRule": "occurred_at_must_be_lte_adapter_emitted_at_from_the_trusted_adapter_clock_at_mapping_time",
+        "futureTimeHandling": "reject_mapping_do_not_clamp_coerce_rewrite_or_replace_with_adapter_time",
+        "bytePreservationRule": "the_exact_validated_occurred_at_UTF8_string_is_emitted_as_Statement.timestamp",
+        "scope": "mapping_contract_only_no_adapter_transport_LRS_storage_query_conformance_or_production_telemetry_implemented",
+        "invalidOffsetPrecisionCalendarFutureOrUntrustedClockFailsClosed": true
+      }
     },
     "qti": {
       "target": "QTI 3.0.1",
@@ -6546,9 +6558,9 @@
           "targetField": "Statement.timestamp",
           "targetType": "timestamp",
           "cardinality": "exactly_one",
-          "constraint": "RFC 3339",
+          "constraint": "must satisfy standardsMappingContracts.xapi.statementTimestampContract: valid RFC 3339 UTC uppercase-Z instant with exactly millisecond precision, occurred_at not later than trusted adapter_emitted_at, exact source bytes copied, and invalid offset future clamp coercion rewrite or substitution rejected",
           "extensionPlacement": null,
-          "futureEnrichment": null
+          "futureEnrichment": "mapping-only adapter remains unimplemented"
         },
         {
           "sourceField": "authority_reference, authority_account_home_page, authority_account_name",
@@ -6566,7 +6578,20 @@
           "futureEnrichment": null
         }
       ],
-      "lrsTransportStorageQueryImplemented": false
+      "lrsTransportStorageQueryImplemented": false,
+      "statementTimestampContract": {
+        "sourceSchema": "dabangil.first_round.bodyless_event.v1",
+        "sourceField": "occurred_at",
+        "sourceContract": "standardsMappingContracts.internalSchema.occurredAtContract",
+        "targetField": "Statement.timestamp",
+        "requiredFormat": "RFC_3339_UTC_Z_with_exactly_three_fractional_second_digits",
+        "sourceBytesCopiedExactly": true,
+        "trustedAdapterClockComparisonRequired": true,
+        "futureTimestampAllowed": false,
+        "clampCoerceRewriteOrLrsSuppliedSubstitutionAllowed": false,
+        "adapterImplemented": false,
+        "conformanceClaimed": false
+      }
     },
     "caliper": {
       "target": "Caliper Analytics 1.2",
@@ -9610,7 +9635,35 @@
       "learnerResponseStorageInHeldoutItemVaultAllowed": false,
       "heldoutActorIdentityStorageAllowed": false,
       "onlyCrossPlaneOutputAllowed": "separately_approved_bodyless_nonidentifying_readiness_evaluation_receipt",
-      "crossPlaneApprovalRequired": "O3B_exact_privacy_and_heldout_ingress_evaluation_binding_decision"
+      "crossPlaneApprovalRequired": "owner_approved_exact_O3B_scope_and_exclusions",
+      "crossPlaneApprovalEvidenceInputName": "exact_scope_and_excluded_actions",
+      "crossPlaneApprovalEvidenceContractId": "owner-scope-decision-evidence.v1",
+      "crossPlaneApprovalScopeContractJsonPointer": "/laterGateEvidence/O3B/ownerScopeContract",
+      "crossPlaneApprovalMustBeCurrentBeforeExactly": [
+        "personal_response_or_session_event_collection",
+        "personal_readiness_processing_start",
+        "commitment_opening_or_ephemeral_bridge_activation",
+        "heldout_evaluation_binding_or_scoring",
+        "cross_plane_output_creation"
+      ],
+      "missingStaleMismatchedOrUnboundCrossPlaneApprovalFailsClosed": true,
+      "crossPlaneApprovalActionTimeCurrentnessContract": {
+        "requiredResolvedStatus": "verified_current",
+        "requiredDecision": "owner_approved_exact_O3B_scope_and_exclusions",
+        "revokedOrSupersededAllowed": false,
+        "nonnullExpiryRequired": true,
+        "reResolveImmediatelyBeforeEveryAction": true,
+        "reviewedAtAloneIsSufficient": false,
+        "requiredCurrentBeforeActionNamesExactly": [
+          "personal_response_or_session_event_collection",
+          "personal_readiness_processing_start",
+          "commitment_opening_or_ephemeral_bridge_activation",
+          "heldout_evaluation_binding_or_scoring",
+          "cross_plane_output_creation"
+        ],
+        "actionTimestampComparisonRule": "resolved_owner_evidence_observed_at_lte_action_instant_lt_resolved_owner_evidence_expires_at_and_latest_status_at_action_is_verified_current_not_revoked_or_superseded",
+        "missingInvalidStaleFutureDatedExpiredRevokedSupersededOrMismatchedEvidenceFailsClosed": true
+      }
     },
     "profile": {
       "session1": {
@@ -9963,6 +10016,8 @@
           "origin_sequence",
           "canonical_empty_event_log_digest",
           "trusted_pre_session_reservation_receipt_reference",
+          "owner_scope_decision_receipt_reference",
+          "owner_scope_decision",
           "committed_at",
           "session_started_at",
           "reviewer_or_workload_identity",
@@ -9988,6 +10043,8 @@
             "origin_sequence",
             "canonical_empty_event_log_digest",
             "trusted_pre_session_reservation_receipt_reference",
+            "owner_scope_decision_receipt_reference",
+            "owner_scope_decision",
             "committed_at",
             "session_started_at",
             "reviewer_or_workload_identity",
@@ -10002,6 +10059,9 @@
           "assistance_and_timing_log_source_ids_are_distinct_nonempty_and_reserved_for_this_actor_and_timed_session_before_any_session_event",
           "assistance_configuration_digest_and_clock_configuration_digest_equal_the_exact_session_policies_and_timed_session_configuration",
           "origin_sequence_equals_zero_and_canonical_empty_event_log_digest_equals_the_RFC8785_SHA256_digest_of_an_empty_event_array_for_both_sources",
+          "owner_scope_decision_receipt_reference_conforms_to_immutableEvidenceReferenceContract_resolves_to_current_owner-scope-decision-evidence.v1_and_equals_the_O3B_exact_scope_and_excluded_actions_input_identity",
+          "owner_scope_decision_equals_timedOmrReadinessContract.dataBoundary.crossPlaneApprovalRequired_and_laterGateEvidence.O3B.ownerScopeContract.crossPlaneAuthorizationBoundary.approvalDecision",
+          "resolved_owner_scope_decision_scope_and_exclusions_match_laterGateEvidence.O3B.ownerScopeContract_exactly_status_is_verified_current_not_revoked_or_superseded_observed_at_lte_committed_at_lte_session_started_at_and_expires_at_is_nonnull_and_strictly_after_both_committed_at_and_session_started_at_with_re_resolution_immediately_before_each_action",
           "committed_at_lte_session_started_at_and_both_equal_or_precede_the_first_assistance_or_timing_event",
           "late_backdated_retroactive_unreserved_or_reused_log_source_precommit_fails_closed_for_independent_attempt_and_readiness",
           "reviewed_at_gte_committed_at",
@@ -10902,6 +10962,8 @@
           "form_manifest_receipt_reference",
           "subject_position_map_receipt_reference",
           "heldout_split_receipt_reference",
+          "owner_scope_decision_receipt_reference",
+          "owner_scope_decision",
           "position_count",
           "ordered_position_precommits",
           "ordered_position_precommits_digest",
@@ -10960,6 +11022,8 @@
             "form_manifest_receipt_reference",
             "subject_position_map_receipt_reference",
             "heldout_split_receipt_reference",
+            "owner_scope_decision_receipt_reference",
+            "owner_scope_decision",
             "position_count",
             "ordered_position_precommits",
             "ordered_position_precommits_digest",
@@ -10972,6 +11036,9 @@
         },
         "bindingInvariants": [
           "all_receipt_references_conform_to_immutableEvidenceReferenceContract",
+          "owner_scope_decision_receipt_reference_resolves_to_current_owner-scope-decision-evidence.v1_equals_the_O3B_exact_scope_and_excluded_actions_input_identity_and_matches_the_pre_session_precommit_owner_scope_reference",
+          "owner_scope_decision_equals_timedOmrReadinessContract.dataBoundary.crossPlaneApprovalRequired_and_the_resolved_owner_scope_decision",
+          "resolved_owner_scope_decision_matches_laterGateEvidence.O3B.ownerScopeContract_exactly_status_is_verified_current_not_revoked_or_superseded_observed_at_lte_issued_at_lte_evaluation_started_at_and_expires_at_is_nonnull_and_strictly_after_both_issued_at_and_evaluation_started_at_with_re_resolution_immediately_before_evaluation",
           "timed_session_receipt_is_finalized_and_commits_the_exact_response_record_reference_set_before_this_precommit_is_issued",
           "personal_sealed_handles_equal_the_timed_session_and_response_record_handles",
           "position_count_and_positions_equal_the_form_manifest_and_session_profile_exactly",
@@ -10988,6 +11055,7 @@
       },
       "crossPlaneEvaluationBindingReceiptShape": {
         "storagePlane": "first-round-heldout-vault-v1_evaluator_control_plane",
+        "bodyless": true,
         "denyUnknownFields": true,
         "requiredFields": [
           "receipt_id",
@@ -11005,6 +11073,8 @@
           "form_manifest_receipt_reference",
           "subject_position_map_receipt_reference",
           "heldout_split_receipt_reference",
+          "owner_scope_decision_receipt_reference",
+          "owner_scope_decision",
           "position_bindings",
           "position_bindings_digest",
           "position_count",
@@ -11036,6 +11106,8 @@
             "form_manifest_receipt_reference",
             "subject_position_map_receipt_reference",
             "heldout_split_receipt_reference",
+            "owner_scope_decision_receipt_reference",
+            "owner_scope_decision",
             "position_bindings",
             "position_bindings_digest",
             "position_count",
@@ -11090,6 +11162,9 @@
           "personal_handles_equal_response_and_session_handles",
           "timed_session_receipt_reference_conforms_to_immutableEvidenceReferenceContract_and_matches_personal_session_id_profile_form_handle_and_session_finalized_at",
           "evaluation_binding_precommit_reference_conforms_to_immutableEvidenceReferenceContract_resolves_to_evaluationBindingPrecommitReceiptShape_and_matches_handle_session_form_split_workload_and_every_position_precommit",
+          "owner_scope_decision_receipt_reference_conforms_to_immutableEvidenceReferenceContract_resolves_to_current_owner-scope-decision-evidence.v1_equals_the_O3B_exact_scope_and_excluded_actions_input_identity_and_equals_the_pre_session_and_evaluation_precommit_owner_scope_reference",
+          "owner_scope_decision_equals_timedOmrReadinessContract.dataBoundary.crossPlaneApprovalRequired_and_the_resolved_owner_scope_decision",
+          "resolved_owner_scope_decision_matches_laterGateEvidence.O3B.ownerScopeContract_exactly_status_is_verified_current_not_revoked_or_superseded_observed_at_lte_evaluation_started_at_and_expires_at_is_nonnull_and_strictly_after_evaluation_started_at_every_bound_comparison_observed_at_every_raw_choice_destroyed_at_evaluation_finalized_at_and_reviewed_at_with_re_resolution_before_evaluation_scoring_finalization_review_and_output",
           "evaluation_started_at_equals_the_precommit_evaluation_started_at",
           "form_and_split_references_conform_to_immutableEvidenceReferenceContract",
           "subject_position_map_reference_conforms_to_immutableEvidenceReferenceContract_and_matches_personal_sealed_handle",
@@ -12053,9 +12128,12 @@
           "decision_equals_verified_nonidentifying_exact_comparison",
           "commitment_policy_receipt_reference_resolves_to_commitmentPolicyReceiptShape_with_required_decision_and_matches_commitment_contract_algorithm_domain_required_personal_vault_opening_salt_ephemeral_bridge_scope_zero_evaluator_retention_and_ephemeral_lifetime",
           "bridge_policy_reference_resolves_to_ephemeralBridgePolicyReceiptShape_with_required_decision_and_matches_scoring_workload_and_maximum_lifetime",
+          "commitment_policy_bridge_policy_and_evaluation_precommit_owner_scope_decision_receipt_references_are_byte_equal_and_resolve_to_the_exact_O3B_exact_scope_and_excluded_actions_input_identity",
+          "commitment_policy_bridge_policy_and_evaluation_precommit_owner_scope_decisions_equal_timedOmrReadinessContract.dataBoundary.crossPlaneApprovalRequired",
           "comparison_subject_sha256_matches_comparisonSubjectDigestContract",
           "raw_choice_destruction_receipt_reference_resolves_to_rawChoiceDestructionReceiptShape_with_required_decision_and_matches_exact_session_form_position_precommit_subject_bridge_workload_and_raw_choice_destroyed_at",
-          "raw_choice_retained_is_false_opening_salt_retained_in_receipt_is_false_and_destruction_completion_precedes_issued_at"
+          "raw_choice_retained_is_false_opening_salt_retained_in_receipt_is_false_and_destruction_completion_precedes_issued_at",
+          "commitment_policy_bridge_policy_and_evaluation_precommit_owner_scope_evidence_is_re_resolved_immediately_before_opening_bridge_activation_and_comparison_status_is_verified_current_not_revoked_or_superseded_and_nonnull_expiry_is_strictly_after_observed_at_raw_choice_destroyed_at_and_issued_at"
         ],
         "requiredDecision": "verified_nonidentifying_exact_comparison",
         "comparisonBranchVocabulary": [
@@ -13034,6 +13112,8 @@
           "opening_material_class",
           "maximum_opening_lifetime_ms",
           "raw_opening_persistence_allowed",
+          "owner_scope_decision_receipt_reference",
+          "owner_scope_decision",
           "reviewer",
           "reviewed_at",
           "decision"
@@ -13055,6 +13135,8 @@
             "opening_material_class",
             "maximum_opening_lifetime_ms",
             "raw_opening_persistence_allowed",
+            "owner_scope_decision_receipt_reference",
+            "owner_scope_decision",
             "reviewer",
             "reviewed_at",
             "decision"
@@ -13068,6 +13150,9 @@
           "opening_material_class_equals_ephemeral_workload_memory_only",
           "maximum_opening_lifetime_ms_is_positive_and_bounded_by_comparison_completion",
           "raw_opening_persistence_allowed_is_false",
+          "owner_scope_decision_receipt_reference_conforms_to_immutableEvidenceReferenceContract_resolves_to_current_owner-scope-decision-evidence.v1_equals_the_O3B_exact_scope_and_excluded_actions_input_identity_and_matches_the_evaluation_precommit_reference",
+          "owner_scope_decision_equals_timedOmrReadinessContract.dataBoundary.crossPlaneApprovalRequired_and_the_resolved_owner_scope_decision",
+          "resolved_owner_scope_decision_is_re_resolved_immediately_before_every_commitment_opening_status_is_verified_current_not_revoked_or_superseded_observed_at_lte_comparison_observed_at_and_expires_at_is_nonnull_and_strictly_after_comparison_observed_at_raw_choice_destroyed_at_and_issued_at_reviewed_at_alone_is_not_sufficient",
           "decision_equals_approved_nonidentifying_choice_commitment_policy"
         ],
         "requiredDecision": "approved_nonidentifying_choice_commitment_policy",
@@ -13088,6 +13173,8 @@
           "backup_allowed",
           "maximum_lifetime_ms",
           "destruction_receipt_required",
+          "owner_scope_decision_receipt_reference",
+          "owner_scope_decision",
           "reviewer",
           "reviewed_at",
           "decision"
@@ -13107,6 +13194,8 @@
             "backup_allowed",
             "maximum_lifetime_ms",
             "destruction_receipt_required",
+            "owner_scope_decision_receipt_reference",
+            "owner_scope_decision",
             "reviewer",
             "reviewed_at",
             "decision"
@@ -13117,6 +13206,9 @@
           "allowed_workload_class_equals_nonidentifying_scoring_workload",
           "memory_only_and_destruction_receipt_required_are_true",
           "logging_cache_and_backup_allowed_are_false",
+          "owner_scope_decision_receipt_reference_conforms_to_immutableEvidenceReferenceContract_resolves_to_current_owner-scope-decision-evidence.v1_equals_the_O3B_exact_scope_and_excluded_actions_input_identity_and_matches_the_evaluation_precommit_and_commitment_policy_references",
+          "owner_scope_decision_equals_timedOmrReadinessContract.dataBoundary.crossPlaneApprovalRequired_and_the_resolved_owner_scope_decision",
+          "resolved_owner_scope_decision_is_re_resolved_immediately_before_every_bridge_activation_status_is_verified_current_not_revoked_or_superseded_observed_at_lte_comparison_observed_at_and_expires_at_is_nonnull_and_strictly_after_comparison_observed_at_raw_choice_destroyed_at_and_issued_at_reviewed_at_alone_is_not_sufficient",
           "decision_equals_approved_ephemeral_choice_opening_bridge"
         ],
         "requiredDecision": "approved_ephemeral_choice_opening_bridge",
@@ -13717,7 +13809,40 @@
             "changed_file_manifest_sha256": "lowercase_sha256_hex_64"
           }
         },
-        "applicationRule": "when_signed_payload_schema_id_is_one_of_the_two_named_definitions_signed_payload_fields_and_types_equal_that_definition_exactly_before_digest_or_signature_verification",
+        "owner-o3b-scope-decision-attestation.v1": {
+          "denyUnknownFields": true,
+          "requiredFieldsExactly": [
+            "owner_identity",
+            "program_scope_id",
+            "decision_type",
+            "included_values",
+            "excluded_values",
+            "cross_plane_authorization_boundary",
+            "owner_scope_contract_sha256",
+            "ordered_authorization_contract_pointer_digest_rows",
+            "ordered_authorization_contract_pointer_digest_rows_digest",
+            "root_trust_anchor_projection_reference",
+            "root_trust_anchor_projection_sha256",
+            "decision_payload_sha256",
+            "decided_at"
+          ],
+          "fieldTypesExactly": {
+            "owner_identity": "nonempty_named_human_owner_identity",
+          "program_scope_id": "literal_s235b_s236b_to_o3b_owner_gate_v1",
+          "decision_type": "literal_exact_O3B_scope_and_exclusions",
+          "included_values": "closed_array_exactly_matching_laterGateEvidence.O3B.ownerScopeContract.includedActions",
+          "excluded_values": "closed_array_exactly_matching_laterGateEvidence.O3B.ownerScopeContract.excludedActions",
+            "cross_plane_authorization_boundary": "closed_object_exactly_matching_laterGateEvidence.O3B.ownerScopeContract.crossPlaneAuthorizationBoundary",
+            "owner_scope_contract_sha256": "lowercase_sha256_hex_64",
+            "ordered_authorization_contract_pointer_digest_rows": "closed_ordered_array_exactly_matching_crossPlaneAuthorizationBoundary.approvalBoundContractJsonPointersExactly_with_json_pointer_and_resolved_value_sha256_fields",
+            "ordered_authorization_contract_pointer_digest_rows_digest": "lowercase_sha256_hex_64",
+            "root_trust_anchor_projection_reference": "immutableEvidenceReferenceContract",
+            "root_trust_anchor_projection_sha256": "lowercase_sha256_hex_64",
+            "decision_payload_sha256": "lowercase_sha256_hex_64",
+            "decided_at": "RFC3339_UTC_instant"
+          }
+        },
+        "applicationRule": "when_signed_payload_schema_id_is_one_of_the_three_named_definitions_signed_payload_fields_and_types_equal_that_definition_exactly_before_digest_or_signature_verification",
         "unknownExtraMissingWrongTypeOrNoncanonicalFieldFailsClosed": true
       },
       "receiptDigestContract": {
@@ -13859,6 +13984,17 @@
           "decisionJsonPointer": "/decision",
           "authorityClassJsonPointer": "/issuer_or_reviewer_class",
           "expiryJsonPointer": "/native_expires_at_or_null",
+          "expiryMustBeNonNull": true
+        },
+        "virtual_underlying_evidence": {
+          "matchRule": "requiredShapeOrContractId_is_an_ID_in_virtualUnderlyingEvidenceShapeRegistry",
+          "payloadRootJsonPointer": "",
+          "schemaVersionJsonPointer": "/payload_schema_version",
+          "decisionJsonPointer": "/decision",
+          "authorityClassJsonPointer": "/issuer_or_reviewer_class",
+          "expiryJsonPointer": "/native_expires_at_or_null",
+          "requiredReceiptShape": "laterGateEvidence.virtualUnderlyingEvidenceReceiptShape",
+          "virtualShapeIdJsonPointer": "/virtual_shape_or_contract_id",
           "expiryMustBeNonNull": true
         },
         "direct_domain_receipt": {
@@ -14350,6 +14486,202 @@
             ]
           }
         ]
+      },
+      "o3b-owner-scope-decision-source.v1": {
+        "payloadSchemaVersion": "o3b-owner-scope-decision-source.v1",
+        "requiredTypedPayloadFieldsExactly": [
+          "owner_identity",
+          "program_scope_id",
+          "decision_type",
+          "included_values",
+          "excluded_values",
+          "cross_plane_authorization_boundary",
+          "owner_scope_contract_sha256",
+          "ordered_authorization_contract_pointer_digest_rows",
+          "ordered_authorization_contract_pointer_digest_rows_digest",
+          "root_trust_anchor_projection_reference",
+          "root_trust_anchor_projection_sha256",
+          "decision_payload_sha256",
+          "decided_at",
+          "owner_signature_or_platform_attestation_reference"
+        ],
+        "referenceFields": [
+          "owner_signature_or_platform_attestation_reference"
+        ],
+        "sourceReferenceCardinality": "exactly_1",
+        "sourceReferenceOrder": "owner_signature_or_platform_attestation_reference",
+        "requiredSourceAuthorityClass": "named_human_owner_identity_provider",
+        "allowedIssuerOrReviewerClasses": [
+          "named_human_owner"
+        ],
+        "allowedDecisions": [
+          "verified_owner_decision"
+        ],
+        "sourceReferenceContractsExactly": [
+          {
+            "sourceRole": "owner_O3B_scope_identity_attestation",
+            "typedPayloadReferenceField": "owner_signature_or_platform_attestation_reference",
+            "requiredShapeOrContractId": "laterGateEvidence.rootAuthorityEvidenceReceiptShape",
+            "requiredSignedPayloadSchemaId": "owner-o3b-scope-decision-attestation.v1",
+            "requiredDecision": "verified_owner_identity_attestation",
+            "requiredAuthorityClass": "named_human_owner_identity_provider",
+            "exactCardinality": "exactly_1",
+            "recordOrder": "owner_signature_or_platform_attestation_reference",
+            "payloadBindingsExactly": [
+              {
+                "supportingPayloadJsonPointer": "/owner_identity",
+                "sourceSignedPayloadJsonPointer": "/owner_identity",
+                "operator": "equals"
+              },
+              {
+                "supportingPayloadJsonPointer": "/program_scope_id",
+                "sourceSignedPayloadJsonPointer": "/program_scope_id",
+                "operator": "equals"
+              },
+              {
+                "supportingPayloadJsonPointer": "/decision_type",
+                "sourceSignedPayloadJsonPointer": "/decision_type",
+                "operator": "equals"
+              },
+              {
+                "supportingPayloadJsonPointer": "/included_values",
+                "sourceSignedPayloadJsonPointer": "/included_values",
+                "operator": "equals"
+              },
+              {
+                "supportingPayloadJsonPointer": "/excluded_values",
+                "sourceSignedPayloadJsonPointer": "/excluded_values",
+                "operator": "equals"
+              },
+              {
+                "supportingPayloadJsonPointer": "/cross_plane_authorization_boundary",
+                "sourceSignedPayloadJsonPointer": "/cross_plane_authorization_boundary",
+                "operator": "equals"
+              },
+              {
+                "supportingPayloadJsonPointer": "/owner_scope_contract_sha256",
+                "sourceSignedPayloadJsonPointer": "/owner_scope_contract_sha256",
+                "operator": "equals"
+              },
+              {
+                "supportingPayloadJsonPointer": "/ordered_authorization_contract_pointer_digest_rows",
+                "sourceSignedPayloadJsonPointer": "/ordered_authorization_contract_pointer_digest_rows",
+                "operator": "equals"
+              },
+              {
+                "supportingPayloadJsonPointer": "/ordered_authorization_contract_pointer_digest_rows_digest",
+                "sourceSignedPayloadJsonPointer": "/ordered_authorization_contract_pointer_digest_rows_digest",
+                "operator": "equals"
+              },
+              {
+                "supportingPayloadJsonPointer": "/root_trust_anchor_projection_reference",
+                "sourceSignedPayloadJsonPointer": "/root_trust_anchor_projection_reference",
+                "operator": "equals"
+              },
+              {
+                "supportingPayloadJsonPointer": "/root_trust_anchor_projection_sha256",
+                "sourceSignedPayloadJsonPointer": "/root_trust_anchor_projection_sha256",
+                "operator": "equals"
+              },
+              {
+                "supportingPayloadJsonPointer": "/decision_payload_sha256",
+                "sourceSignedPayloadJsonPointer": "/decision_payload_sha256",
+                "operator": "equals"
+              },
+              {
+                "supportingPayloadJsonPointer": "/decided_at",
+                "sourceSignedPayloadJsonPointer": "/decided_at",
+                "operator": "equals"
+              }
+            ]
+          }
+        ],
+        "typedPayloadNestedContracts": {
+          "crossPlaneAuthorizationBoundaryContract": {
+            "requiredFieldsExactly": [
+              "approvalDecision",
+              "approvalEvidenceInputName",
+              "approvalEvidenceContractId",
+              "onlyAllowedOutput",
+              "authorizationRequiredBeforeExactly",
+              "approvalBoundContractJsonPointersExactly",
+              "approvalBoundContractPointerDigestRowFieldsExactly",
+              "approvalBoundContractPointerDigestContract",
+              "approvalActionTimeCurrentnessContract",
+              "rawResponseOpeningSaltActorIdentityOrHeldoutMembershipExportAllowed",
+              "missingStaleMismatchedOrUnboundApprovalFailsClosed"
+            ],
+            "additionalFieldsAllowed": false,
+            "authorizationRequiredBeforeOrderExact": true
+          },
+          "approvalActionTimeCurrentnessContract": {
+            "requiredFieldsExactly": [
+              "requiredResolvedStatus",
+              "requiredDecision",
+              "revokedOrSupersededAllowed",
+              "nonnullExpiryRequired",
+              "reResolveImmediatelyBeforeEveryAction",
+              "reviewedAtAloneIsSufficient",
+              "requiredCurrentBeforeActionNamesExactly",
+              "actionTimestampComparisonRule",
+              "missingInvalidStaleFutureDatedExpiredRevokedSupersededOrMismatchedEvidenceFailsClosed"
+            ],
+            "fieldContracts": {
+              "requiredResolvedStatus": "literal_verified_current",
+              "requiredDecision": "literal_owner_approved_exact_O3B_scope_and_exclusions",
+              "revokedOrSupersededAllowed": "literal_false",
+              "nonnullExpiryRequired": "literal_true",
+              "reResolveImmediatelyBeforeEveryAction": "literal_true",
+              "reviewedAtAloneIsSufficient": "literal_false",
+              "requiredCurrentBeforeActionNamesExactly": "closed_array_exactly_matching_parent_crossPlaneAuthorizationBoundary.authorizationRequiredBeforeExactly_in_the_same_order",
+              "actionTimestampComparisonRule": "literal_resolved_owner_evidence_observed_at_lte_action_instant_lt_resolved_owner_evidence_expires_at_and_latest_status_at_action_is_verified_current_not_revoked_or_superseded",
+              "missingInvalidStaleFutureDatedExpiredRevokedSupersededOrMismatchedEvidenceFailsClosed": "literal_true"
+            },
+            "additionalFieldsAllowed": false,
+            "requiredCurrentBeforeActionNamesOrderSource": "laterGateEvidence.O3B.ownerScopeContract.crossPlaneAuthorizationBoundary.authorizationRequiredBeforeExactly",
+            "requiredCurrentBeforeActionNamesMustEqualOrderSource": true
+          },
+          "authorizationContractPointerDigestRowContract": {
+            "requiredFieldsExactly": [
+              "json_pointer",
+              "resolved_value_sha256"
+            ],
+            "additionalFieldsAllowed": false,
+            "jsonPointerOrderSource": "laterGateEvidence.O3B.ownerScopeContract.crossPlaneAuthorizationBoundary.approvalBoundContractJsonPointersExactly",
+            "resolvedValueDigestAlgorithm": "sha256",
+            "resolvedValueCanonicalization": "RFC_8785_JSON_Canonicalization_Scheme",
+            "rowsDigestField": "ordered_authorization_contract_pointer_digest_rows_digest",
+            "missingExtraDuplicateReorderedUnresolvableOrMismatchedRowFailsClosed": true
+          },
+          "ownerScopeContractDigestContract": {
+            "algorithm": "sha256",
+            "hexEncoding": "lowercase_64",
+            "canonicalization": "RFC_8785_JSON_Canonicalization_Scheme",
+            "preimage": "the_exact_laterGateEvidence.O3B.ownerScopeContract_JSON_value",
+            "receiptFieldMustEqualComputedDigest": "owner_scope_contract_sha256"
+          },
+          "decisionPayloadDigestContract": {
+            "algorithm": "sha256",
+            "hexEncoding": "lowercase_64",
+            "canonicalization": "RFC_8785_JSON_Canonicalization_Scheme",
+            "preimageFieldsCoveredExactly": [
+              "owner_identity",
+              "program_scope_id",
+              "decision_type",
+              "included_values",
+              "excluded_values",
+              "cross_plane_authorization_boundary",
+              "owner_scope_contract_sha256",
+              "ordered_authorization_contract_pointer_digest_rows",
+              "ordered_authorization_contract_pointer_digest_rows_digest",
+              "root_trust_anchor_projection_reference",
+              "root_trust_anchor_projection_sha256",
+              "decided_at"
+            ],
+            "receiptFieldMustEqualComputedDigest": "decision_payload_sha256",
+            "unknownMissingExtraReorderedOrSelfFieldFailsClosed": true
+          }
+        }
       },
       "fixture-manifest-source.v1": {
         "payloadSchemaVersion": "fixture-manifest-source.v1",
@@ -16374,6 +16706,8 @@
           "decision",
           "phase_sequence_ordinal",
           "timed_session_precommit_reference",
+          "owner_scope_decision_receipt_reference",
+          "owner_scope_decision",
           "session_started_at",
           "processing_started_at_or_null",
           "retention_cutoff_at_or_null",
@@ -16385,10 +16719,11 @@
         "referenceFields": [
           "subject_receipt_reference",
           "timed_session_precommit_reference",
+          "owner_scope_decision_receipt_reference",
           "execution_evidence_reference"
         ],
-        "sourceReferenceCardinality": "exactly_3",
-        "sourceReferenceOrder": "subject_receipt_reference_then_timed_session_precommit_reference_then_execution_evidence_reference",
+        "sourceReferenceCardinality": "exactly_4",
+        "sourceReferenceOrder": "subject_receipt_reference_then_timed_session_precommit_reference_then_owner_scope_decision_receipt_reference_then_execution_evidence_reference",
         "requiredSourceAuthorityClass": "authoritative_personal_data_control_plane",
         "allowedIssuerOrReviewerClasses": [
           "named_owner_authorized_privacy_reviewer"
@@ -16498,8 +16833,38 @@
                 "supportingPayloadJsonPointer": "/session_started_at",
                 "sourceSignedPayloadJsonPointer": "/session_started_at",
                 "operator": "equals"
+              },
+              {
+                "supportingPayloadJsonPointer": "/owner_scope_decision_receipt_reference",
+                "sourceSignedPayloadJsonPointer": "/owner_scope_decision_receipt_reference",
+                "operator": "equals"
+              },
+              {
+                "supportingPayloadJsonPointer": "/owner_scope_decision",
+                "sourceSignedPayloadJsonPointer": "/owner_scope_decision",
+                "operator": "equals"
               }
             ]
+          },
+          {
+            "sourceRole": "owner_cross_plane_scope_decision",
+            "typedPayloadReferenceField": "owner_scope_decision_receipt_reference",
+            "requiredShapeOrContractId": "owner-scope-decision-evidence.v1",
+            "requiredSignedPayloadSchemaId": "owner-scope-decision-evidence.v1",
+            "requiredDecision": "owner_approved_exact_O3B_scope_and_exclusions",
+            "requiredAuthorityClass": "named_human_owner",
+            "exactCardinality": "exactly_1",
+            "recordOrder": "owner_scope_decision_receipt_reference",
+            "payloadBindingsExactly": [
+              {
+                "supportingPayloadJsonPointer": "/owner_scope_decision",
+                "sourceSignedPayloadJsonPointer": "/decision",
+                "operator": "equals"
+              }
+            ],
+            "literalSourceFieldRequirementsExactly": {
+              "/decision": "owner_approved_exact_O3B_scope_and_exclusions"
+            }
           },
           {
             "sourceRole": "privacy_phase_execution",
@@ -16591,6 +16956,8 @@
             "purpose_id",
             "policy_version",
             "timed_session_precommit_reference",
+            "owner_scope_decision_receipt_reference",
+            "owner_scope_decision",
             "session_started_at"
           ],
           "consent": {
@@ -16627,6 +16994,25 @@
           },
           "allTimesRFC3339UTC": true,
           "unknownPhaseFieldStateOrTemporalOrderAllowed": false
+        },
+        "ownerScopeDecisionActionTimeCurrentnessContract": {
+          "ownerReferenceField": "owner_scope_decision_receipt_reference",
+          "requiredCurrentAtTimestampFieldsExactly": [
+            "effective_at",
+            "session_started_at",
+            "processing_started_at_or_null",
+            "retention_cutoff_at_or_null",
+            "revocation_effective_at_or_null",
+            "deletion_completed_at_or_null"
+          ],
+          "nullTimestampFieldsAreSkippedButNotInvented": true,
+          "resolvedStatusRequired": "verified_current",
+          "resolvedDecisionRequired": "owner_approved_exact_O3B_scope_and_exclusions",
+          "revokedOrSupersededAllowed": false,
+          "resolvedExpiryMustBeNonNullAndStrictlyAfterEveryNonNullActionTimestamp": true,
+          "reResolveImmediatelyBeforeSessionCollectionProcessingRevocationDeletionAndOutput": true,
+          "reviewedAtAloneIsSufficient": false,
+          "missingStaleFutureDatedExpiredRevokedSupersededOrMismatchedReferenceFailsClosed": true
         }
       },
       "safe-state-source.v1": {
@@ -17627,7 +18013,7 @@
           "acceptedTypes": [
             "object"
           ],
-          "evaluation": "true_iff_left.included_values_is_exactly_right.includedActions_in_order_and_left.excluded_values_is_exactly_right.excludedActions_in_order_with_no_missing_extra_or_duplicate_value_and_right.contractVersion_is_nonempty"
+          "evaluation": "true_iff_left.included_values_is_exactly_right.includedActions_in_order_left.excluded_values_is_exactly_right.excludedActions_in_order_left.cross_plane_authorization_boundary_is_RFC8785_byte_equal_to_right.crossPlaneAuthorizationBoundary_left.owner_scope_contract_sha256_equals_SHA256_RFC8785_of_the_exact_right_object_left.ordered_authorization_contract_pointer_digest_rows_has_exactly_one_closed_row_per_right.crossPlaneAuthorizationBoundary.approvalBoundContractJsonPointersExactly_in_that_order_each_row.json_pointer_equals_its_corresponding_pointer_each_resolved_value_sha256_is_lowercase_hex_64_and_left.ordered_authorization_contract_pointer_digest_rows_digest_equals_SHA256_RFC8785_of_the_exact_rows_left.decision_type_equals_exact_O3B_scope_and_exclusions_with_no_missing_extra_duplicate_or_unknown_value_and_right.contractVersion_is_nonempty"
         },
         "candidate_rows_match_benchmark_contract": {
           "leftOperand": "ordered_candidate_rows",
@@ -17903,7 +18289,7 @@
           "acceptedRightTypes": [
             "object"
           ],
-          "evaluation": "true_iff_every_row_purpose_id_equals_right.processingPurpose_actor_scope_is_owner_scoped_response_and_session_plane_equals_Personal_Raw_Vault_consent_retention_revocation_deletion_requirements_are_true_and_no_shared_signal_model_or_telemetry_export_is_authorized"
+          "evaluation": "true_iff_every_row_purpose_id_equals_right.processingPurpose_actor_scope_is_owner_scoped_response_and_session_plane_equals_Personal_Raw_Vault_consent_retention_revocation_deletion_requirements_are_true_no_shared_signal_model_or_telemetry_export_is_authorized_every_row_owner_scope_decision_equals_right.crossPlaneApprovalRequired_every_owner_scope_decision_receipt_reference_resolves_current_to_right.crossPlaneApprovalEvidenceContractId_and_equals_the_O3B_right.crossPlaneApprovalEvidenceInputName_identity_all_rows_and_their_timed_session_precommit_share_that_exact_reference_and_the_resolved_decision_matches_right.crossPlaneApprovalScopeContractJsonPointer_and_is_observed_before_session_collection_processing_opening_evaluation_and_cross_plane_output_and_owner_scope_decision_is_re_resolved_immediately_before_every_nonnull_action_timestamp_with_verified_current_not_revoked_or_superseded_status_and_nonnull_expiry_strictly_after_that_action_reviewed_at_alone_is_not_sufficient"
         },
         "privacy_lifecycle_temporal_chain_valid": {
           "leftOperand": "five_phase_privacy_rows",
@@ -18065,6 +18451,8 @@
             "decision",
             "phase_sequence_ordinal",
             "timed_session_precommit_reference",
+            "owner_scope_decision_receipt_reference",
+            "owner_scope_decision",
             "session_started_at",
             "processing_started_at_or_null",
             "retention_cutoff_at_or_null",
@@ -18131,6 +18519,8 @@
             "/purpose_id",
             "/policy_version",
             "/timed_session_precommit_reference",
+            "/owner_scope_decision_receipt_reference",
+            "/owner_scope_decision",
             "/session_started_at"
           ],
           "typedConditionsExactly": [
@@ -18153,6 +18543,18 @@
               "literalJsonValue": null
             },
             {
+              "conditionId": "owner_scope_decision_reference_current",
+              "operator": "all_references_current",
+              "leftJsonPointer": "/owner_scope_decision_receipt_reference",
+              "literalJsonValue": null
+            },
+            {
+              "conditionId": "owner_scope_decision_exact",
+              "operator": "equals",
+              "leftJsonPointer": "/owner_scope_decision",
+              "literalJsonValue": "owner_approved_exact_O3B_scope_and_exclusions"
+            },
+            {
               "conditionId": "execution_evidence_reference_current",
               "operator": "all_references_current",
               "leftJsonPointer": "/execution_evidence_reference",
@@ -18173,7 +18575,14 @@
               "literalJsonValue": 0
             }
           ],
-          "missingExtraDuplicateUnknownExpiredOrCrossActorRowFailsClosed": true
+          "missingExtraDuplicateUnknownExpiredOrCrossActorRowFailsClosed": true,
+          "ownerScopeDecisionActionTimeCurrentnessContract": {
+            "sourceContract": "authoritativeSupportingEvidenceShapeRegistry.privacy-lifecycle-source.v1.ownerScopeDecisionActionTimeCurrentnessContract",
+            "applyToEveryRow": true,
+            "everyRowReferenceIdVersionAndSha256MustBeEqual": true,
+            "everyNonNullActionTimestampMustPass": true,
+            "failClosed": true
+          }
         },
         "count-population-member-row.v1": {
           "appliesTo": "every_ordered_population_member_row",
@@ -21036,7 +21445,7 @@
                 "sourceRole": "owner_O3B_scope_decision",
                 "sourceKind": "immutable_evidence_field",
                 "absoluteJsonPointer": "/typed_payload",
-                "requiredShapeOrContractIdOrNull": "owner-decision-source.v1",
+                "requiredShapeOrContractIdOrNull": "o3b-owner-scope-decision-source.v1",
                 "requiredDecisionOrNull": "verified_owner_decision",
                 "requiredIssuerOrReviewerClassOrNull": "named_human_owner",
                 "exactCardinality": "exactly_1",
@@ -21056,6 +21465,36 @@
                 "sourceRole": "O3B_owner_scope_contract",
                 "sourceKind": "contract_json_pointer",
                 "absoluteJsonPointer": "/laterGateEvidence/O3B/ownerScopeContract",
+                "requiredShapeOrContractIdOrNull": null,
+                "requiredDecisionOrNull": null,
+                "requiredIssuerOrReviewerClassOrNull": null,
+                "exactCardinality": "exactly_1",
+                "recordOrder": "single_contract_value"
+              },
+              {
+                "sourceRole": "O3B_timed_omr_data_boundary",
+                "sourceKind": "contract_json_pointer",
+                "absoluteJsonPointer": "/timedOmrReadinessContract/dataBoundary",
+                "requiredShapeOrContractIdOrNull": null,
+                "requiredDecisionOrNull": null,
+                "requiredIssuerOrReviewerClassOrNull": null,
+                "exactCardinality": "exactly_1",
+                "recordOrder": "single_contract_value"
+              },
+              {
+                "sourceRole": "O3B_heldout_ingress_contract",
+                "sourceKind": "contract_json_pointer",
+                "absoluteJsonPointer": "/goldHeldOutSeparationContract/heldOutIngressReceiptShape",
+                "requiredShapeOrContractIdOrNull": null,
+                "requiredDecisionOrNull": null,
+                "requiredIssuerOrReviewerClassOrNull": null,
+                "exactCardinality": "exactly_1",
+                "recordOrder": "single_contract_value"
+              },
+              {
+                "sourceRole": "O3B_heldout_cross_boundary_rules",
+                "sourceKind": "contract_json_pointer",
+                "absoluteJsonPointer": "/goldHeldOutSeparationContract/crossBoundaryRules",
                 "requiredShapeOrContractIdOrNull": null,
                 "requiredDecisionOrNull": null,
                 "requiredIssuerOrReviewerClassOrNull": null,
@@ -21101,6 +21540,58 @@
                   "right": {
                     "sourceRole": "O3B_owner_scope_contract",
                     "jsonPointer": "/laterGateEvidence/O3B/ownerScopeContract"
+                  },
+                  "quantifierOrNull": null
+                },
+                {
+                  "conditionId": "O3B_owner_bound_data_boundary_digest_exact",
+                  "operator": "digest_matches",
+                  "left": {
+                    "sourceRole": "owner_O3B_scope_decision",
+                    "jsonPointer": "/typed_payload/ordered_authorization_contract_pointer_digest_rows/0/resolved_value_sha256"
+                  },
+                  "right": {
+                    "sourceRole": "O3B_timed_omr_data_boundary",
+                    "jsonPointer": "/timedOmrReadinessContract/dataBoundary"
+                  },
+                  "quantifierOrNull": null
+                },
+                {
+                  "conditionId": "O3B_owner_bound_heldout_ingress_digest_exact",
+                  "operator": "digest_matches",
+                  "left": {
+                    "sourceRole": "owner_O3B_scope_decision",
+                    "jsonPointer": "/typed_payload/ordered_authorization_contract_pointer_digest_rows/1/resolved_value_sha256"
+                  },
+                  "right": {
+                    "sourceRole": "O3B_heldout_ingress_contract",
+                    "jsonPointer": "/goldHeldOutSeparationContract/heldOutIngressReceiptShape"
+                  },
+                  "quantifierOrNull": null
+                },
+                {
+                  "conditionId": "O3B_owner_bound_heldout_cross_boundary_digest_exact",
+                  "operator": "digest_matches",
+                  "left": {
+                    "sourceRole": "owner_O3B_scope_decision",
+                    "jsonPointer": "/typed_payload/ordered_authorization_contract_pointer_digest_rows/2/resolved_value_sha256"
+                  },
+                  "right": {
+                    "sourceRole": "O3B_heldout_cross_boundary_rules",
+                    "jsonPointer": "/goldHeldOutSeparationContract/crossBoundaryRules"
+                  },
+                  "quantifierOrNull": null
+                },
+                {
+                  "conditionId": "O3B_owner_bound_contract_pointer_rows_digest_exact",
+                  "operator": "digest_matches",
+                  "left": {
+                    "sourceRole": "owner_O3B_scope_decision",
+                    "jsonPointer": "/typed_payload/ordered_authorization_contract_pointer_digest_rows_digest"
+                  },
+                  "right": {
+                    "sourceRole": "owner_O3B_scope_decision",
+                    "jsonPointer": "/typed_payload/ordered_authorization_contract_pointer_digest_rows"
                   },
                   "quantifierOrNull": null
                 },
@@ -21768,6 +22259,7 @@
       "sourceKindVocabulary": [
         "exact_contract_value_at_evaluation_head_tree",
         "transitive_authoritative_supporting_evidence",
+        "resolved_virtual_underlying_evidence_receipt",
         "resolved_direct_domain_receipt"
       ],
       "sourceRowsDigestContract": {
@@ -21887,7 +22379,8 @@
         "source_row_count_rows_order_fields_and_digest_equal_the_exact_selected_spec_canonicalFieldSourceByNameExactly_source_rows_with_no_missing_extra_duplicate_unknown_or_fallback_row",
         "every_source_row_source_kind_shape_or_contract_id_transitive_virtual_shape_exact_pointer_alias_cardinality_order_and_transformation_id_equals_the_selected_spec_and_transformation_registry",
         "contract_source_rows_resolve_the_exact_declared_pointer_at_the_exact_head_tree_and_have_null_evidence_and_currentness_references",
-        "supporting_and_direct_evidence_source_rows_resolve_only_from_the_selected_gate_input_projection_and_have_current_nonnull_evidence_and_currentness_references",
+        "supporting_virtual_and_direct_evidence_source_rows_resolve_only_from_the_selected_gate_input_projection_with_current_nonnull_evidence_and_currentness_references_and_the_virtual_branch_matches_virtualUnderlyingEvidenceShapeRegistry_exactly",
+        "no_source_row_may_reference_the_enclosing_gateInputEvidenceReceiptShape_or_any_payload_digest_coherence_claim_or_derivation_receipt_that_transitively_covers_this_derivation_and_any_self_reference_or_digest_cycle_fails_closed",
         "every_absolute_json_pointer_is_literal_and_resolves_to_the_declared_scalar_or_array_and_each_array_field_projection_rowFieldJsonPointerOrNull_resolves_once_in_every_row_and_every_resolved_value_sha256_is_recomputed_then_aliases_values_and_order_reconstruct_the_exact_selected_spec_canonicalRootPreimage",
         "a_signed_scalar_carrier_is_compared_as_a_complete_root_only_never_inverted_and_the_dimension_has_at_least_one_independent_noncarrier_preimage_derivation",
         "canonical_preimage_schema_version_value_digest_and_normalized_root_digest_match_their_computation_contracts_and_not_a_reviewer_supplied_summary",
@@ -21918,6 +22411,15 @@
           "additionalObjectFieldsAllowed": false
         },
         "unknownAssemblyEncodingAllowed": false
+      },
+      "sourceRowSourceKindConditionalContract": {
+        "exact_contract_value_at_evaluation_head_tree": "evidence_reference_or_null_and_currentness_receipt_reference_or_null_must_be_null",
+        "transitive_authoritative_supporting_evidence": "both_references_are_nonnull_and_resolve_through_the_selected_virtual_receipt_to_the_named_supporting_shape",
+        "resolved_virtual_underlying_evidence_receipt": "both_references_are_nonnull_and_resolve_the_exact_selected_projection_virtual_receipt_and_currentness_at_same_gate_input_scope_head_tree",
+        "resolved_direct_domain_receipt": "both_references_are_nonnull_and_resolve_the_exact_selected_projection_direct_receipt_and_currentness_at_same_gate_input_scope_head_tree",
+        "exactlyOneSourceKindBranchMustMatch": true,
+        "enclosingGateInputReceiptOrAnyDigestDependentReceiptMayBeASource": false,
+        "unknownMissingAmbiguousOrCyclicBranchFailsClosed": true
       }
     },
     "gateInputEvidenceReceiptShape": {
@@ -21947,6 +22449,7 @@
         "payload_digest",
         "ordered_evidence_references",
         "ordered_evidence_references_digest",
+        "owner_scope_decision_reference_or_null",
         "underlying_status",
         "underlying_decision",
         "issuer_or_reviewer",
@@ -22036,17 +22539,19 @@
       "coherenceRootSourceKindVocabulary": [
         "exact_contract_value_at_evaluation_head_tree",
         "transitive_authoritative_supporting_evidence",
+        "resolved_virtual_underlying_evidence_receipt",
         "resolved_direct_domain_receipt"
       ],
       "coherenceRootClaimDerivationContract": {
         "applicability": "one_claim_for_each_selected_gate_crossInputCoherenceMatrix_dimension_whose_participatingInputsExactly_contains_this_input_name",
         "derivationSpecIdFormula": "exact_lookup_of_crossInputCoherenceMatrix[selected_gate][selected_dimension].derivationSpecIdByInputExactly[selected_input_name]",
-        "sourceReferenceRule": "evidence_source_rows_have_a_nonnull_reference_that_is_an_exact_member_of_this_input_ordered_evidence_references_or_a_transitively_resolved_authoritative_source_reference_bound_by_it_contract_source_rows_have_null_evidence_reference_and_resolve_only_the_exact_contract_dependency_named_by_the_selected_derivation_spec_at_this_input_head_tree",
+        "sourceReferenceRule": "virtual_and_direct_evidence_source_rows_have_nonnull_evidence_and_currentness_references_that_are_exact_members_of_this_input_projection_and_ordered_evidence_references; transitive_supporting_rows_resolve_only_through_a_projection_bound_virtual_receipt; contract_rows_have_null_references and resolve only the exact contract dependency; no row may reference the enclosing gate input receipt or any coherence claim or derivation receipt that its digest covers",
         "sourcePointerRule": "each_absolute_json_pointer_resolves_inside_the_named_source_at_this_input_evaluation_head_and_tree_and_each_resolved_value_sha256_is_recomputed_under_RFC8785",
         "sourceProjectionClosure": "the_rows_are_the_exact_no_missing_extra_duplicate_identity_and_scope_fields_required_to_derive_this_dimension_for_this_input_under_the_selected_matrix_derivation_spec",
         "rootFormula": "normalized_root_sha256_equals_SHA256_RFC8785_of_exact_object_with_fields_canonical_preimage_schema_version_and_canonical_preimage_value_as_defined_by_the_selected_derivation_spec",
         "minimumSourceProjectionRows": 1,
-        "emptyUnknownSelfDeclaredUnreferencedOrReviewerSuppliedRootAllowed": false
+        "emptyUnknownSelfDeclaredUnreferencedOrReviewerSuppliedRootAllowed": false,
+        "selfReferenceOrDigestCycleAllowed": false
       },
       "coherenceRootClaimsDigestContract": {
         "algorithm": "sha256",
@@ -22084,6 +22589,7 @@
           "coherence_root_claim_count",
           "ordered_coherence_root_claims_digest",
           "ordered_evidence_references_digest",
+          "owner_scope_decision_reference_or_null",
           "underlying_status",
           "underlying_decision",
           "issuer_or_reviewer",
@@ -22129,6 +22635,7 @@
           "payload_digest",
           "ordered_evidence_references",
           "ordered_evidence_references_digest",
+          "owner_scope_decision_reference_or_null",
           "underlying_status",
           "underlying_decision",
           "issuer_or_reviewer",
@@ -22168,6 +22675,28 @@
           "payloadMustBindExactHeadAndTree": true
         }
       },
+      "ownerScopeDecisionCoherenceCarrierContract": {
+        "referenceShape": "immutableEvidenceReferenceContract",
+        "requiredNonNullForGateAndInputsExactly": {
+          "gateId": "O3B",
+          "inputNamesExactly": [
+            "exact_scope_and_excluded_actions",
+            "privacy_consent_purpose_retention_revocation_and_deletion_receipt_bundle",
+            "personal_event_log_inception_lineage_precommit_source_segment_head_and_completeness_receipt_set",
+            "response_record_timed_session_evaluation_precommit_scoring_and_final_binding_receipt_set",
+            "cross_plane_evaluation_binding_and_nonidentifying_comparison_receipt_set"
+          ]
+        },
+        "exactScopeInputRule": "for_exact_scope_and_excluded_actions_the_reference_equals_the_owner-scope-decision-evidence.v1_projection_reference",
+        "dependentInputRule": "for_each_other_named_input_the_reference_equals_its_first_direct_owner-scope-decision-evidence.v1_projection_reference_and_every_owner_scope_decision_receipt_reference_carried_by_nested_privacy_precommit_policy_comparison_or_final_binding_evidence",
+        "allOtherGateAndInputRowsValue": null,
+        "sameIdVersionAndSha256Required": true,
+        "missingNullExtraStaleMismatchedOrUnboundReferenceFailsClosed": true,
+        "directProjectionMembershipRequiredForEveryNonNullCarrier": true,
+        "ownerVirtualProjectionMustBeFirstForEveryParticipant": true,
+        "coherenceDerivationSource": "the_direct_owner_virtual_projection_receipt_id_receipt_version_and_receipt_sha256_never_this_carrier_field_or_the_enclosing_gate_input_receipt",
+        "selfReferenceOrDigestCycleAllowed": false
+      },
       "expiryComputationContract": {
         "registryDurationSource": "the_selected_requiredInputProjectionContractRegistry_entry.maximumValiditySeconds",
         "anchorField": "reviewed_at",
@@ -22198,6 +22727,7 @@
         "every_row_resolved_status_equals_the_currentness_receipt_requiredStatus_resolved_decision_equals_its_subject_decision_and_resolved_expires_at_or_null_equals_its_nonnull_expires_at",
         "every_currentness_receipt_evaluated_at_lte_reviewed_at_lte_issued_at_lte_this_gate_input_reviewed_at_and_none_is_future_dated_relative_to_the_referencing_gate_packet_evaluated_at",
         "ordered_evidence_references_equal_the_unique_canonical_union_of_every_row_evidence_reference_and_currentness_receipt_reference_and_both_digests_match",
+        "owner_scope_decision_reference_or_null_matches_ownerScopeDecisionCoherenceCarrierContract_exactly_and_when_nonnull_is_an_exact_member_of_ordered_evidence_references",
         "payload_digest_matches_payloadDigestContract_over_the_exact_contract_pointer_and_evidence_projection_digests_not_a_self_declared_summary",
         "the_registry_required_gate_evidence_status_and_decision_are_met_and_missing_failed_rejected_unresolved_stale_or_expired_gate_evidence_fails_closed",
         "a_nested_domain_rights_decision_named_rejected_is_not_a_rejected_gate_evidence_decision_it_is_valid_only_as_a_current_resolved_fail_closed_rights_outcome_with_empty_allowed_scope_tuples_and_zero_content_use_target_projections",
@@ -22228,6 +22758,14 @@
           "transformation_id"
         ],
         "additionalFieldsAllowed": false
+      },
+      "coherenceRootSourceProjectionRowContract": {
+        "exact_contract_value_at_evaluation_head_tree": "evidence_reference_or_null_and_currentness_receipt_reference_or_null_are_null_and_the_exact_contract_pointer_resolves_at_the_evaluation_head_tree",
+        "transitive_authoritative_supporting_evidence": "evidence_reference_or_null_and_currentness_receipt_reference_or_null_are_nonnull_and_resolve_through_the_selected_virtual_receipt_to_the_named_supporting_shape",
+        "resolved_virtual_underlying_evidence_receipt": "evidence_reference_or_null_and_currentness_receipt_reference_or_null_are_nonnull_exact_members_of_the_selected_input_projection_row_for_the_named_virtual_shape_and_resolve_current_at_the_same_gate_input_scope_head_tree",
+        "resolved_direct_domain_receipt": "evidence_reference_or_null_and_currentness_receipt_reference_or_null_are_nonnull_exact_members_of_the_selected_input_projection_row_for_the_named_direct_contract_shape_and_resolve_current_at_the_same_gate_input_scope_head_tree",
+        "exactlyOneSourceKindBranchMustMatch": true,
+        "unknownMissingAmbiguousSelfReferentialOrCyclicBranchFailsClosed": true
       }
     },
     "gateCrossInputCoherenceReceiptShape": {
@@ -22935,6 +23473,35 @@
             "derivationSpecIdByInputExactly": {
               "privacy_consent_purpose_retention_revocation_and_deletion_receipt_bundle": "O3B.privacy_actor_scope.privacy_consent_purpose_retention_revocation_and_deletion_receipt_bundle.v1",
               "personal_event_log_inception_lineage_precommit_source_segment_head_and_completeness_receipt_set": "O3B.privacy_actor_scope.personal_event_log_inception_lineage_precommit_source_segment_head_and_completeness_receipt_set.v1"
+            }
+          },
+          {
+            "dimensionId": "owner_scope_decision_identity",
+            "comparisonOperator": "all_equal",
+            "participatingInputsExactly": [
+              "exact_scope_and_excluded_actions",
+              "privacy_consent_purpose_retention_revocation_and_deletion_receipt_bundle",
+              "personal_event_log_inception_lineage_precommit_source_segment_head_and_completeness_receipt_set",
+              "response_record_timed_session_evaluation_precommit_scoring_and_final_binding_receipt_set",
+              "cross_plane_evaluation_binding_and_nonidentifying_comparison_receipt_set"
+            ],
+            "canonicalRootPreimage": {
+              "schemaVersion": "o3b.owner-scope-decision-evidence-identity-root.v1",
+              "orderedFieldsExactly": [
+                "evidence_id",
+                "evidence_version",
+                "evidence_sha256"
+              ],
+              "recordOrder": "single_projected_owner_scope_decision_evidence",
+              "referenceShape": "immutableEvidenceReferenceContract",
+              "allThreeIdentityFieldsRequired": true
+            },
+            "derivationSpecIdByInputExactly": {
+              "exact_scope_and_excluded_actions": "O3B.owner_scope_decision_identity.exact_scope_and_excluded_actions.v1",
+              "privacy_consent_purpose_retention_revocation_and_deletion_receipt_bundle": "O3B.owner_scope_decision_identity.privacy_consent_purpose_retention_revocation_and_deletion_receipt_bundle.v1",
+              "personal_event_log_inception_lineage_precommit_source_segment_head_and_completeness_receipt_set": "O3B.owner_scope_decision_identity.personal_event_log_inception_lineage_precommit_source_segment_head_and_completeness_receipt_set.v1",
+              "response_record_timed_session_evaluation_precommit_scoring_and_final_binding_receipt_set": "O3B.owner_scope_decision_identity.response_record_timed_session_evaluation_precommit_scoring_and_final_binding_receipt_set.v1",
+              "cross_plane_evaluation_binding_and_nonidentifying_comparison_receipt_set": "O3B.owner_scope_decision_identity.cross_plane_evaluation_binding_and_nonidentifying_comparison_receipt_set.v1"
             }
           },
           {
@@ -25461,8 +26028,10 @@
           "gateId": "O3B",
           "dimensionId": "heldout_form_id",
           "inputName": "response_record_timed_session_evaluation_precommit_scoring_and_final_binding_receipt_set",
-          "requiredInputContractId": "timedOmrReadinessContract.omrShape.responseRecordDigestContract+timedSessionReceiptShape+evaluationBindingPrecommitReceiptShape+scoringReceiptShape+crossPlaneEvaluationBindingReceiptShape",
+          "requiredInputContractId": "laterGateEvidence.virtualUnderlyingEvidenceShapeRegistry.owner-scope-decision-evidence.v1+timedOmrReadinessContract.omrShape.responseRecordDigestContract+timedSessionReceiptShape+evaluationBindingPrecommitReceiptShape+scoringReceiptShape+crossPlaneEvaluationBindingReceiptShape",
           "requiredContractJsonPointersExactly": [
+            "/laterGateEvidence/O3B/ownerScopeContract",
+            "/timedOmrReadinessContract/dataBoundary",
             "/timedOmrReadinessContract/omrShape/responseRecordDigestContract",
             "/timedOmrReadinessContract/omrShape/timedSessionReceiptShape",
             "/timedOmrReadinessContract/omrShape/responseRecordVerificationReceiptShape",
@@ -25472,6 +26041,7 @@
             "/timedOmrReadinessContract/omrShape/crossPlaneEvaluationBindingReceiptShape"
           ],
           "requiredEvidenceShapeOrContractIdsExactly": [
+            "owner-scope-decision-evidence.v1",
             "timedOmrReadinessContract.omrShape.responseRecordVerificationReceiptShape",
             "timedOmrReadinessContract.omrShape.timedSessionVerificationReceiptShape",
             "timedOmrReadinessContract.omrShape.evaluationBindingPrecommitReceiptShape",
@@ -25527,8 +26097,10 @@
           "gateId": "O3B",
           "dimensionId": "heldout_form_id",
           "inputName": "cross_plane_evaluation_binding_and_nonidentifying_comparison_receipt_set",
-          "requiredInputContractId": "timedOmrReadinessContract.omrShape.evaluationBindingPrecommitReceiptShape+comparisonEvidenceReceiptShape+crossPlaneEvaluationBindingReceiptShape+timedOmrReadinessContract.omrShape.commitmentPolicyReceiptShape+ephemeralBridgePolicyReceiptShape+rawChoiceDestructionReceiptShape",
+          "requiredInputContractId": "laterGateEvidence.virtualUnderlyingEvidenceShapeRegistry.owner-scope-decision-evidence.v1+timedOmrReadinessContract.omrShape.evaluationBindingPrecommitReceiptShape+comparisonEvidenceReceiptShape+crossPlaneEvaluationBindingReceiptShape+timedOmrReadinessContract.omrShape.commitmentPolicyReceiptShape+ephemeralBridgePolicyReceiptShape+rawChoiceDestructionReceiptShape",
           "requiredContractJsonPointersExactly": [
+            "/laterGateEvidence/O3B/ownerScopeContract",
+            "/timedOmrReadinessContract/dataBoundary",
             "/timedOmrReadinessContract/omrShape/evaluationBindingPrecommitReceiptShape",
             "/timedOmrReadinessContract/omrShape/comparisonEvidenceReceiptShape",
             "/timedOmrReadinessContract/omrShape/crossPlaneEvaluationBindingReceiptShape",
@@ -25537,6 +26109,7 @@
             "/timedOmrReadinessContract/omrShape/rawChoiceDestructionReceiptShape"
           ],
           "requiredEvidenceShapeOrContractIdsExactly": [
+            "owner-scope-decision-evidence.v1",
             "timedOmrReadinessContract.omrShape.evaluationBindingPrecommitReceiptShape",
             "timedOmrReadinessContract.omrShape.comparisonEvidenceReceiptShape",
             "timedOmrReadinessContract.omrShape.crossPlaneEvaluationBindingReceiptShape",
@@ -25789,8 +26362,10 @@
           "gateId": "O3B",
           "dimensionId": "heldout_split_provenance_identity",
           "inputName": "response_record_timed_session_evaluation_precommit_scoring_and_final_binding_receipt_set",
-          "requiredInputContractId": "timedOmrReadinessContract.omrShape.responseRecordDigestContract+timedSessionReceiptShape+evaluationBindingPrecommitReceiptShape+scoringReceiptShape+crossPlaneEvaluationBindingReceiptShape",
+          "requiredInputContractId": "laterGateEvidence.virtualUnderlyingEvidenceShapeRegistry.owner-scope-decision-evidence.v1+timedOmrReadinessContract.omrShape.responseRecordDigestContract+timedSessionReceiptShape+evaluationBindingPrecommitReceiptShape+scoringReceiptShape+crossPlaneEvaluationBindingReceiptShape",
           "requiredContractJsonPointersExactly": [
+            "/laterGateEvidence/O3B/ownerScopeContract",
+            "/timedOmrReadinessContract/dataBoundary",
             "/timedOmrReadinessContract/omrShape/responseRecordDigestContract",
             "/timedOmrReadinessContract/omrShape/timedSessionReceiptShape",
             "/timedOmrReadinessContract/omrShape/responseRecordVerificationReceiptShape",
@@ -25800,6 +26375,7 @@
             "/timedOmrReadinessContract/omrShape/crossPlaneEvaluationBindingReceiptShape"
           ],
           "requiredEvidenceShapeOrContractIdsExactly": [
+            "owner-scope-decision-evidence.v1",
             "timedOmrReadinessContract.omrShape.responseRecordVerificationReceiptShape",
             "timedOmrReadinessContract.omrShape.timedSessionVerificationReceiptShape",
             "timedOmrReadinessContract.omrShape.evaluationBindingPrecommitReceiptShape",
@@ -25897,8 +26473,10 @@
           "gateId": "O3B",
           "dimensionId": "heldout_split_provenance_identity",
           "inputName": "cross_plane_evaluation_binding_and_nonidentifying_comparison_receipt_set",
-          "requiredInputContractId": "timedOmrReadinessContract.omrShape.evaluationBindingPrecommitReceiptShape+comparisonEvidenceReceiptShape+crossPlaneEvaluationBindingReceiptShape+timedOmrReadinessContract.omrShape.commitmentPolicyReceiptShape+ephemeralBridgePolicyReceiptShape+rawChoiceDestructionReceiptShape",
+          "requiredInputContractId": "laterGateEvidence.virtualUnderlyingEvidenceShapeRegistry.owner-scope-decision-evidence.v1+timedOmrReadinessContract.omrShape.evaluationBindingPrecommitReceiptShape+comparisonEvidenceReceiptShape+crossPlaneEvaluationBindingReceiptShape+timedOmrReadinessContract.omrShape.commitmentPolicyReceiptShape+ephemeralBridgePolicyReceiptShape+rawChoiceDestructionReceiptShape",
           "requiredContractJsonPointersExactly": [
+            "/laterGateEvidence/O3B/ownerScopeContract",
+            "/timedOmrReadinessContract/dataBoundary",
             "/timedOmrReadinessContract/omrShape/evaluationBindingPrecommitReceiptShape",
             "/timedOmrReadinessContract/omrShape/comparisonEvidenceReceiptShape",
             "/timedOmrReadinessContract/omrShape/crossPlaneEvaluationBindingReceiptShape",
@@ -25907,6 +26485,7 @@
             "/timedOmrReadinessContract/omrShape/rawChoiceDestructionReceiptShape"
           ],
           "requiredEvidenceShapeOrContractIdsExactly": [
+            "owner-scope-decision-evidence.v1",
             "timedOmrReadinessContract.omrShape.evaluationBindingPrecommitReceiptShape",
             "timedOmrReadinessContract.omrShape.comparisonEvidenceReceiptShape",
             "timedOmrReadinessContract.omrShape.crossPlaneEvaluationBindingReceiptShape",
@@ -26317,8 +26896,10 @@
           "gateId": "O3B",
           "dimensionId": "form_manifest_identity",
           "inputName": "response_record_timed_session_evaluation_precommit_scoring_and_final_binding_receipt_set",
-          "requiredInputContractId": "timedOmrReadinessContract.omrShape.responseRecordDigestContract+timedSessionReceiptShape+evaluationBindingPrecommitReceiptShape+scoringReceiptShape+crossPlaneEvaluationBindingReceiptShape",
+          "requiredInputContractId": "laterGateEvidence.virtualUnderlyingEvidenceShapeRegistry.owner-scope-decision-evidence.v1+timedOmrReadinessContract.omrShape.responseRecordDigestContract+timedSessionReceiptShape+evaluationBindingPrecommitReceiptShape+scoringReceiptShape+crossPlaneEvaluationBindingReceiptShape",
           "requiredContractJsonPointersExactly": [
+            "/laterGateEvidence/O3B/ownerScopeContract",
+            "/timedOmrReadinessContract/dataBoundary",
             "/timedOmrReadinessContract/omrShape/responseRecordDigestContract",
             "/timedOmrReadinessContract/omrShape/timedSessionReceiptShape",
             "/timedOmrReadinessContract/omrShape/responseRecordVerificationReceiptShape",
@@ -26328,6 +26909,7 @@
             "/timedOmrReadinessContract/omrShape/crossPlaneEvaluationBindingReceiptShape"
           ],
           "requiredEvidenceShapeOrContractIdsExactly": [
+            "owner-scope-decision-evidence.v1",
             "timedOmrReadinessContract.omrShape.responseRecordVerificationReceiptShape",
             "timedOmrReadinessContract.omrShape.timedSessionVerificationReceiptShape",
             "timedOmrReadinessContract.omrShape.evaluationBindingPrecommitReceiptShape",
@@ -26425,8 +27007,10 @@
           "gateId": "O3B",
           "dimensionId": "form_manifest_identity",
           "inputName": "cross_plane_evaluation_binding_and_nonidentifying_comparison_receipt_set",
-          "requiredInputContractId": "timedOmrReadinessContract.omrShape.evaluationBindingPrecommitReceiptShape+comparisonEvidenceReceiptShape+crossPlaneEvaluationBindingReceiptShape+timedOmrReadinessContract.omrShape.commitmentPolicyReceiptShape+ephemeralBridgePolicyReceiptShape+rawChoiceDestructionReceiptShape",
+          "requiredInputContractId": "laterGateEvidence.virtualUnderlyingEvidenceShapeRegistry.owner-scope-decision-evidence.v1+timedOmrReadinessContract.omrShape.evaluationBindingPrecommitReceiptShape+comparisonEvidenceReceiptShape+crossPlaneEvaluationBindingReceiptShape+timedOmrReadinessContract.omrShape.commitmentPolicyReceiptShape+ephemeralBridgePolicyReceiptShape+rawChoiceDestructionReceiptShape",
           "requiredContractJsonPointersExactly": [
+            "/laterGateEvidence/O3B/ownerScopeContract",
+            "/timedOmrReadinessContract/dataBoundary",
             "/timedOmrReadinessContract/omrShape/evaluationBindingPrecommitReceiptShape",
             "/timedOmrReadinessContract/omrShape/comparisonEvidenceReceiptShape",
             "/timedOmrReadinessContract/omrShape/crossPlaneEvaluationBindingReceiptShape",
@@ -26435,6 +27019,7 @@
             "/timedOmrReadinessContract/omrShape/rawChoiceDestructionReceiptShape"
           ],
           "requiredEvidenceShapeOrContractIdsExactly": [
+            "owner-scope-decision-evidence.v1",
             "timedOmrReadinessContract.omrShape.evaluationBindingPrecommitReceiptShape",
             "timedOmrReadinessContract.omrShape.comparisonEvidenceReceiptShape",
             "timedOmrReadinessContract.omrShape.crossPlaneEvaluationBindingReceiptShape",
@@ -26834,8 +27419,10 @@
           "gateId": "O3B",
           "dimensionId": "selected_form_items_are_released",
           "inputName": "response_record_timed_session_evaluation_precommit_scoring_and_final_binding_receipt_set",
-          "requiredInputContractId": "timedOmrReadinessContract.omrShape.responseRecordDigestContract+timedSessionReceiptShape+evaluationBindingPrecommitReceiptShape+scoringReceiptShape+crossPlaneEvaluationBindingReceiptShape",
+          "requiredInputContractId": "laterGateEvidence.virtualUnderlyingEvidenceShapeRegistry.owner-scope-decision-evidence.v1+timedOmrReadinessContract.omrShape.responseRecordDigestContract+timedSessionReceiptShape+evaluationBindingPrecommitReceiptShape+scoringReceiptShape+crossPlaneEvaluationBindingReceiptShape",
           "requiredContractJsonPointersExactly": [
+            "/laterGateEvidence/O3B/ownerScopeContract",
+            "/timedOmrReadinessContract/dataBoundary",
             "/timedOmrReadinessContract/omrShape/responseRecordDigestContract",
             "/timedOmrReadinessContract/omrShape/timedSessionReceiptShape",
             "/timedOmrReadinessContract/omrShape/responseRecordVerificationReceiptShape",
@@ -26845,6 +27432,7 @@
             "/timedOmrReadinessContract/omrShape/crossPlaneEvaluationBindingReceiptShape"
           ],
           "requiredEvidenceShapeOrContractIdsExactly": [
+            "owner-scope-decision-evidence.v1",
             "timedOmrReadinessContract.omrShape.responseRecordVerificationReceiptShape",
             "timedOmrReadinessContract.omrShape.timedSessionVerificationReceiptShape",
             "timedOmrReadinessContract.omrShape.evaluationBindingPrecommitReceiptShape",
@@ -27282,8 +27870,10 @@
           "gateId": "O3B",
           "dimensionId": "timed_session_identity",
           "inputName": "response_record_timed_session_evaluation_precommit_scoring_and_final_binding_receipt_set",
-          "requiredInputContractId": "timedOmrReadinessContract.omrShape.responseRecordDigestContract+timedSessionReceiptShape+evaluationBindingPrecommitReceiptShape+scoringReceiptShape+crossPlaneEvaluationBindingReceiptShape",
+          "requiredInputContractId": "laterGateEvidence.virtualUnderlyingEvidenceShapeRegistry.owner-scope-decision-evidence.v1+timedOmrReadinessContract.omrShape.responseRecordDigestContract+timedSessionReceiptShape+evaluationBindingPrecommitReceiptShape+scoringReceiptShape+crossPlaneEvaluationBindingReceiptShape",
           "requiredContractJsonPointersExactly": [
+            "/laterGateEvidence/O3B/ownerScopeContract",
+            "/timedOmrReadinessContract/dataBoundary",
             "/timedOmrReadinessContract/omrShape/responseRecordDigestContract",
             "/timedOmrReadinessContract/omrShape/timedSessionReceiptShape",
             "/timedOmrReadinessContract/omrShape/responseRecordVerificationReceiptShape",
@@ -27293,6 +27883,7 @@
             "/timedOmrReadinessContract/omrShape/crossPlaneEvaluationBindingReceiptShape"
           ],
           "requiredEvidenceShapeOrContractIdsExactly": [
+            "owner-scope-decision-evidence.v1",
             "timedOmrReadinessContract.omrShape.responseRecordVerificationReceiptShape",
             "timedOmrReadinessContract.omrShape.timedSessionVerificationReceiptShape",
             "timedOmrReadinessContract.omrShape.evaluationBindingPrecommitReceiptShape",
@@ -27348,8 +27939,10 @@
           "gateId": "O3B",
           "dimensionId": "timed_session_identity",
           "inputName": "personal_event_log_inception_lineage_precommit_source_segment_head_and_completeness_receipt_set",
-          "requiredInputContractId": "timedOmrReadinessContract.omrShape.personalExposureTrackingInceptionReceiptShape+personalLineageKeyRotationChainReceiptShape+personalStableLineageDerivationReceiptShape+personalSessionEventLogPrecommitReceiptShape+personalEventLogSourceReceiptShape+personalEventLogSegmentReceiptShape+personalEventLogHeadCheckpointReceiptShape+personalEventLogCompletenessReceiptShape",
+          "requiredInputContractId": "laterGateEvidence.virtualUnderlyingEvidenceShapeRegistry.owner-scope-decision-evidence.v1+timedOmrReadinessContract.omrShape.personalExposureTrackingInceptionReceiptShape+personalLineageKeyRotationChainReceiptShape+personalStableLineageDerivationReceiptShape+personalSessionEventLogPrecommitReceiptShape+personalEventLogSourceReceiptShape+personalEventLogSegmentReceiptShape+personalEventLogHeadCheckpointReceiptShape+personalEventLogCompletenessReceiptShape",
           "requiredContractJsonPointersExactly": [
+            "/laterGateEvidence/O3B/ownerScopeContract",
+            "/timedOmrReadinessContract/dataBoundary",
             "/timedOmrReadinessContract/omrShape/personalExposureTrackingInceptionReceiptShape",
             "/timedOmrReadinessContract/omrShape/personalSessionLogSourceReservationReceiptShape",
             "/timedOmrReadinessContract/omrShape/personalSessionEventLogPrecommitReceiptShape",
@@ -27365,6 +27958,7 @@
             "/timedOmrReadinessContract/omrShape/personalEventLogCompletenessReceiptShape"
           ],
           "requiredEvidenceShapeOrContractIdsExactly": [
+            "owner-scope-decision-evidence.v1",
             "timedOmrReadinessContract.omrShape.personalExposureTrackingInceptionReceiptShape",
             "timedOmrReadinessContract.omrShape.personalSessionLogSourceReservationReceiptShape",
             "timedOmrReadinessContract.omrShape.personalSessionEventLogPrecommitReceiptShape",
@@ -27428,8 +28022,10 @@
           "gateId": "O3B",
           "dimensionId": "timed_session_identity",
           "inputName": "cross_plane_evaluation_binding_and_nonidentifying_comparison_receipt_set",
-          "requiredInputContractId": "timedOmrReadinessContract.omrShape.evaluationBindingPrecommitReceiptShape+comparisonEvidenceReceiptShape+crossPlaneEvaluationBindingReceiptShape+timedOmrReadinessContract.omrShape.commitmentPolicyReceiptShape+ephemeralBridgePolicyReceiptShape+rawChoiceDestructionReceiptShape",
+          "requiredInputContractId": "laterGateEvidence.virtualUnderlyingEvidenceShapeRegistry.owner-scope-decision-evidence.v1+timedOmrReadinessContract.omrShape.evaluationBindingPrecommitReceiptShape+comparisonEvidenceReceiptShape+crossPlaneEvaluationBindingReceiptShape+timedOmrReadinessContract.omrShape.commitmentPolicyReceiptShape+ephemeralBridgePolicyReceiptShape+rawChoiceDestructionReceiptShape",
           "requiredContractJsonPointersExactly": [
+            "/laterGateEvidence/O3B/ownerScopeContract",
+            "/timedOmrReadinessContract/dataBoundary",
             "/timedOmrReadinessContract/omrShape/evaluationBindingPrecommitReceiptShape",
             "/timedOmrReadinessContract/omrShape/comparisonEvidenceReceiptShape",
             "/timedOmrReadinessContract/omrShape/crossPlaneEvaluationBindingReceiptShape",
@@ -27438,6 +28034,7 @@
             "/timedOmrReadinessContract/omrShape/rawChoiceDestructionReceiptShape"
           ],
           "requiredEvidenceShapeOrContractIdsExactly": [
+            "owner-scope-decision-evidence.v1",
             "timedOmrReadinessContract.omrShape.evaluationBindingPrecommitReceiptShape",
             "timedOmrReadinessContract.omrShape.comparisonEvidenceReceiptShape",
             "timedOmrReadinessContract.omrShape.crossPlaneEvaluationBindingReceiptShape",
@@ -27596,8 +28193,10 @@
           "gateId": "O3B",
           "dimensionId": "finalized_timed_session_receipt_identity",
           "inputName": "response_record_timed_session_evaluation_precommit_scoring_and_final_binding_receipt_set",
-          "requiredInputContractId": "timedOmrReadinessContract.omrShape.responseRecordDigestContract+timedSessionReceiptShape+evaluationBindingPrecommitReceiptShape+scoringReceiptShape+crossPlaneEvaluationBindingReceiptShape",
+          "requiredInputContractId": "laterGateEvidence.virtualUnderlyingEvidenceShapeRegistry.owner-scope-decision-evidence.v1+timedOmrReadinessContract.omrShape.responseRecordDigestContract+timedSessionReceiptShape+evaluationBindingPrecommitReceiptShape+scoringReceiptShape+crossPlaneEvaluationBindingReceiptShape",
           "requiredContractJsonPointersExactly": [
+            "/laterGateEvidence/O3B/ownerScopeContract",
+            "/timedOmrReadinessContract/dataBoundary",
             "/timedOmrReadinessContract/omrShape/responseRecordDigestContract",
             "/timedOmrReadinessContract/omrShape/timedSessionReceiptShape",
             "/timedOmrReadinessContract/omrShape/responseRecordVerificationReceiptShape",
@@ -27607,6 +28206,7 @@
             "/timedOmrReadinessContract/omrShape/crossPlaneEvaluationBindingReceiptShape"
           ],
           "requiredEvidenceShapeOrContractIdsExactly": [
+            "owner-scope-decision-evidence.v1",
             "timedOmrReadinessContract.omrShape.responseRecordVerificationReceiptShape",
             "timedOmrReadinessContract.omrShape.timedSessionVerificationReceiptShape",
             "timedOmrReadinessContract.omrShape.evaluationBindingPrecommitReceiptShape",
@@ -27704,8 +28304,10 @@
           "gateId": "O3B",
           "dimensionId": "finalized_timed_session_receipt_identity",
           "inputName": "cross_plane_evaluation_binding_and_nonidentifying_comparison_receipt_set",
-          "requiredInputContractId": "timedOmrReadinessContract.omrShape.evaluationBindingPrecommitReceiptShape+comparisonEvidenceReceiptShape+crossPlaneEvaluationBindingReceiptShape+timedOmrReadinessContract.omrShape.commitmentPolicyReceiptShape+ephemeralBridgePolicyReceiptShape+rawChoiceDestructionReceiptShape",
+          "requiredInputContractId": "laterGateEvidence.virtualUnderlyingEvidenceShapeRegistry.owner-scope-decision-evidence.v1+timedOmrReadinessContract.omrShape.evaluationBindingPrecommitReceiptShape+comparisonEvidenceReceiptShape+crossPlaneEvaluationBindingReceiptShape+timedOmrReadinessContract.omrShape.commitmentPolicyReceiptShape+ephemeralBridgePolicyReceiptShape+rawChoiceDestructionReceiptShape",
           "requiredContractJsonPointersExactly": [
+            "/laterGateEvidence/O3B/ownerScopeContract",
+            "/timedOmrReadinessContract/dataBoundary",
             "/timedOmrReadinessContract/omrShape/evaluationBindingPrecommitReceiptShape",
             "/timedOmrReadinessContract/omrShape/comparisonEvidenceReceiptShape",
             "/timedOmrReadinessContract/omrShape/crossPlaneEvaluationBindingReceiptShape",
@@ -27714,6 +28316,7 @@
             "/timedOmrReadinessContract/omrShape/rawChoiceDestructionReceiptShape"
           ],
           "requiredEvidenceShapeOrContractIdsExactly": [
+            "owner-scope-decision-evidence.v1",
             "timedOmrReadinessContract.omrShape.evaluationBindingPrecommitReceiptShape",
             "timedOmrReadinessContract.omrShape.comparisonEvidenceReceiptShape",
             "timedOmrReadinessContract.omrShape.crossPlaneEvaluationBindingReceiptShape",
@@ -27812,8 +28415,10 @@
           "gateId": "O3B",
           "dimensionId": "evaluation_precommit_identity",
           "inputName": "response_record_timed_session_evaluation_precommit_scoring_and_final_binding_receipt_set",
-          "requiredInputContractId": "timedOmrReadinessContract.omrShape.responseRecordDigestContract+timedSessionReceiptShape+evaluationBindingPrecommitReceiptShape+scoringReceiptShape+crossPlaneEvaluationBindingReceiptShape",
+          "requiredInputContractId": "laterGateEvidence.virtualUnderlyingEvidenceShapeRegistry.owner-scope-decision-evidence.v1+timedOmrReadinessContract.omrShape.responseRecordDigestContract+timedSessionReceiptShape+evaluationBindingPrecommitReceiptShape+scoringReceiptShape+crossPlaneEvaluationBindingReceiptShape",
           "requiredContractJsonPointersExactly": [
+            "/laterGateEvidence/O3B/ownerScopeContract",
+            "/timedOmrReadinessContract/dataBoundary",
             "/timedOmrReadinessContract/omrShape/responseRecordDigestContract",
             "/timedOmrReadinessContract/omrShape/timedSessionReceiptShape",
             "/timedOmrReadinessContract/omrShape/responseRecordVerificationReceiptShape",
@@ -27823,6 +28428,7 @@
             "/timedOmrReadinessContract/omrShape/crossPlaneEvaluationBindingReceiptShape"
           ],
           "requiredEvidenceShapeOrContractIdsExactly": [
+            "owner-scope-decision-evidence.v1",
             "timedOmrReadinessContract.omrShape.responseRecordVerificationReceiptShape",
             "timedOmrReadinessContract.omrShape.timedSessionVerificationReceiptShape",
             "timedOmrReadinessContract.omrShape.evaluationBindingPrecommitReceiptShape",
@@ -27920,8 +28526,10 @@
           "gateId": "O3B",
           "dimensionId": "evaluation_precommit_identity",
           "inputName": "cross_plane_evaluation_binding_and_nonidentifying_comparison_receipt_set",
-          "requiredInputContractId": "timedOmrReadinessContract.omrShape.evaluationBindingPrecommitReceiptShape+comparisonEvidenceReceiptShape+crossPlaneEvaluationBindingReceiptShape+timedOmrReadinessContract.omrShape.commitmentPolicyReceiptShape+ephemeralBridgePolicyReceiptShape+rawChoiceDestructionReceiptShape",
+          "requiredInputContractId": "laterGateEvidence.virtualUnderlyingEvidenceShapeRegistry.owner-scope-decision-evidence.v1+timedOmrReadinessContract.omrShape.evaluationBindingPrecommitReceiptShape+comparisonEvidenceReceiptShape+crossPlaneEvaluationBindingReceiptShape+timedOmrReadinessContract.omrShape.commitmentPolicyReceiptShape+ephemeralBridgePolicyReceiptShape+rawChoiceDestructionReceiptShape",
           "requiredContractJsonPointersExactly": [
+            "/laterGateEvidence/O3B/ownerScopeContract",
+            "/timedOmrReadinessContract/dataBoundary",
             "/timedOmrReadinessContract/omrShape/evaluationBindingPrecommitReceiptShape",
             "/timedOmrReadinessContract/omrShape/comparisonEvidenceReceiptShape",
             "/timedOmrReadinessContract/omrShape/crossPlaneEvaluationBindingReceiptShape",
@@ -27930,6 +28538,7 @@
             "/timedOmrReadinessContract/omrShape/rawChoiceDestructionReceiptShape"
           ],
           "requiredEvidenceShapeOrContractIdsExactly": [
+            "owner-scope-decision-evidence.v1",
             "timedOmrReadinessContract.omrShape.evaluationBindingPrecommitReceiptShape",
             "timedOmrReadinessContract.omrShape.comparisonEvidenceReceiptShape",
             "timedOmrReadinessContract.omrShape.crossPlaneEvaluationBindingReceiptShape",
@@ -28028,11 +28637,13 @@
           "gateId": "O3B",
           "dimensionId": "privacy_actor_scope",
           "inputName": "privacy_consent_purpose_retention_revocation_and_deletion_receipt_bundle",
-          "requiredInputContractId": "timedOmrReadinessContract.dataBoundary",
+          "requiredInputContractId": "laterGateEvidence.virtualUnderlyingEvidenceShapeRegistry.owner-scope-decision-evidence.v1+timedOmrReadinessContract.dataBoundary",
           "requiredContractJsonPointersExactly": [
+            "/laterGateEvidence/O3B/ownerScopeContract",
             "/timedOmrReadinessContract/dataBoundary"
           ],
           "requiredEvidenceShapeOrContractIdsExactly": [
+            "owner-scope-decision-evidence.v1",
             "privacy-lifecycle-receipt-bundle.v1"
           ],
           "canonicalRootPreimage": {
@@ -28086,8 +28697,10 @@
           "gateId": "O3B",
           "dimensionId": "privacy_actor_scope",
           "inputName": "personal_event_log_inception_lineage_precommit_source_segment_head_and_completeness_receipt_set",
-          "requiredInputContractId": "timedOmrReadinessContract.omrShape.personalExposureTrackingInceptionReceiptShape+personalLineageKeyRotationChainReceiptShape+personalStableLineageDerivationReceiptShape+personalSessionEventLogPrecommitReceiptShape+personalEventLogSourceReceiptShape+personalEventLogSegmentReceiptShape+personalEventLogHeadCheckpointReceiptShape+personalEventLogCompletenessReceiptShape",
+          "requiredInputContractId": "laterGateEvidence.virtualUnderlyingEvidenceShapeRegistry.owner-scope-decision-evidence.v1+timedOmrReadinessContract.omrShape.personalExposureTrackingInceptionReceiptShape+personalLineageKeyRotationChainReceiptShape+personalStableLineageDerivationReceiptShape+personalSessionEventLogPrecommitReceiptShape+personalEventLogSourceReceiptShape+personalEventLogSegmentReceiptShape+personalEventLogHeadCheckpointReceiptShape+personalEventLogCompletenessReceiptShape",
           "requiredContractJsonPointersExactly": [
+            "/laterGateEvidence/O3B/ownerScopeContract",
+            "/timedOmrReadinessContract/dataBoundary",
             "/timedOmrReadinessContract/omrShape/personalExposureTrackingInceptionReceiptShape",
             "/timedOmrReadinessContract/omrShape/personalSessionLogSourceReservationReceiptShape",
             "/timedOmrReadinessContract/omrShape/personalSessionEventLogPrecommitReceiptShape",
@@ -28103,6 +28716,7 @@
             "/timedOmrReadinessContract/omrShape/personalEventLogCompletenessReceiptShape"
           ],
           "requiredEvidenceShapeOrContractIdsExactly": [
+            "owner-scope-decision-evidence.v1",
             "timedOmrReadinessContract.omrShape.personalExposureTrackingInceptionReceiptShape",
             "timedOmrReadinessContract.omrShape.personalSessionLogSourceReservationReceiptShape",
             "timedOmrReadinessContract.omrShape.personalSessionEventLogPrecommitReceiptShape",
@@ -29846,6 +30460,561 @@
           },
           "requiredVerifierClass": "named_gate_root_derivation_verifier",
           "nullOrEmptyRootAllowed": false
+        },
+        "O3B.owner_scope_decision_identity.exact_scope_and_excluded_actions.v1": {
+          "specVersion": "gate-coherence-root-derivation-spec.v2",
+          "gateId": "O3B",
+          "dimensionId": "owner_scope_decision_identity",
+          "inputName": "exact_scope_and_excluded_actions",
+          "requiredInputContractId": "laterGateEvidence.virtualUnderlyingEvidenceShapeRegistry.owner-scope-decision-evidence.v1+laterGateEvidence.O3B.ownerScopeContract",
+          "requiredContractJsonPointersExactly": [
+            "/laterGateEvidence/O3B/ownerScopeContract"
+          ],
+          "requiredEvidenceShapeOrContractIdsExactly": [
+            "owner-scope-decision-evidence.v1"
+          ],
+          "canonicalRootPreimage": {
+            "schemaVersion": "o3b.owner-scope-decision-evidence-identity-root.v1",
+            "orderedFieldsExactly": [
+              "evidence_id",
+              "evidence_version",
+              "evidence_sha256"
+            ],
+            "recordOrder": "single_projected_owner_scope_decision_evidence",
+            "referenceShape": "immutableEvidenceReferenceContract",
+            "allThreeIdentityFieldsRequired": true
+          },
+          "canonicalFieldSourceByNameExactly": {
+            "evidence_id": {
+              "canonicalFieldName": "evidence_id",
+              "sourceRowsExactly": [
+                {
+                  "sourceOrdinal": 1,
+                  "sourceKind": "resolved_virtual_underlying_evidence_receipt",
+                  "requiredShapeOrContractIdOrNull": "owner-scope-decision-evidence.v1",
+                  "reachableThroughPayloadSchemaVersionOrNull": null,
+                  "absoluteJsonPointer": "/receipt_id",
+                  "canonicalAliasOrNull": "evidence_id",
+                  "exactCardinality": "exactly_1_projected_owner_scope_decision_evidence",
+                  "recordOrder": "owner_scope_decision_projection_row",
+                  "transformationId": "O3B.owner_scope_decision_identity.exact_scope_and_excluded_actions.v1.evidence_id.projection",
+                  "selectorKind": "direct_json_pointer",
+                  "rowFieldJsonPointerOrNull": null
+                }
+              ],
+              "sourceAgreementWithinInput": "single_exact_projected_owner_scope_decision_evidence",
+              "missingExtraDuplicateFallbackOrDescendantSearchAllowed": false
+            },
+            "evidence_version": {
+              "canonicalFieldName": "evidence_version",
+              "sourceRowsExactly": [
+                {
+                  "sourceOrdinal": 1,
+                  "sourceKind": "resolved_virtual_underlying_evidence_receipt",
+                  "requiredShapeOrContractIdOrNull": "owner-scope-decision-evidence.v1",
+                  "reachableThroughPayloadSchemaVersionOrNull": null,
+                  "absoluteJsonPointer": "/receipt_version",
+                  "canonicalAliasOrNull": "evidence_version",
+                  "exactCardinality": "exactly_1_projected_owner_scope_decision_evidence",
+                  "recordOrder": "owner_scope_decision_projection_row",
+                  "transformationId": "O3B.owner_scope_decision_identity.exact_scope_and_excluded_actions.v1.evidence_version.projection",
+                  "selectorKind": "direct_json_pointer",
+                  "rowFieldJsonPointerOrNull": null
+                }
+              ],
+              "sourceAgreementWithinInput": "single_exact_projected_owner_scope_decision_evidence",
+              "missingExtraDuplicateFallbackOrDescendantSearchAllowed": false
+            },
+            "evidence_sha256": {
+              "canonicalFieldName": "evidence_sha256",
+              "sourceRowsExactly": [
+                {
+                  "sourceOrdinal": 1,
+                  "sourceKind": "resolved_virtual_underlying_evidence_receipt",
+                  "requiredShapeOrContractIdOrNull": "owner-scope-decision-evidence.v1",
+                  "reachableThroughPayloadSchemaVersionOrNull": null,
+                  "absoluteJsonPointer": "/receipt_sha256",
+                  "canonicalAliasOrNull": "evidence_sha256",
+                  "exactCardinality": "exactly_1_projected_owner_scope_decision_evidence",
+                  "recordOrder": "owner_scope_decision_projection_row",
+                  "transformationId": "O3B.owner_scope_decision_identity.exact_scope_and_excluded_actions.v1.evidence_sha256.projection",
+                  "selectorKind": "direct_json_pointer",
+                  "rowFieldJsonPointerOrNull": null
+                }
+              ],
+              "sourceAgreementWithinInput": "single_exact_projected_owner_scope_decision_evidence",
+              "missingExtraDuplicateFallbackOrDescendantSearchAllowed": false
+            }
+          },
+          "canonicalFieldSourceKeySetRule": "keys_equal_canonicalRootPreimage.orderedFieldsExactly_with_no_missing_extra_or_duplicate_key",
+          "selectedSourceProjectionRule": "resolve_only_the_exact_owner-scope-decision-evidence.v1_projection_row_and_its_currentness_receipt_from_this_gate_input_at_the_same_scope_head_tree_then_project_the_virtual_receipt_identity_fields",
+          "noSelfReferenceOrDigestCycleRule": "the_derivation_reads_only_the_projected_owner_virtual_receipt_and_never_the_enclosing_gate_input_receipt_owner_scope_decision_reference_or_null_payload_digest_coherence_claim_or_derivation_reference",
+          "normalizationContract": {
+            "canonicalization": "RFC_8785_JSON_Canonicalization_Scheme",
+            "preimageFieldsExactly": [
+              "canonical_preimage_schema_version",
+              "canonical_preimage_value"
+            ],
+            "digestAlgorithm": "sha256_lowercase_hex_64",
+            "resultField": "normalized_root_sha256"
+          },
+          "requiredVerifierClass": "named_gate_root_derivation_verifier",
+          "nullOrEmptyRootAllowed": false
+        },
+        "O3B.owner_scope_decision_identity.privacy_consent_purpose_retention_revocation_and_deletion_receipt_bundle.v1": {
+          "specVersion": "gate-coherence-root-derivation-spec.v2",
+          "gateId": "O3B",
+          "dimensionId": "owner_scope_decision_identity",
+          "inputName": "privacy_consent_purpose_retention_revocation_and_deletion_receipt_bundle",
+          "requiredInputContractId": "laterGateEvidence.virtualUnderlyingEvidenceShapeRegistry.owner-scope-decision-evidence.v1+timedOmrReadinessContract.dataBoundary",
+          "requiredContractJsonPointersExactly": [
+            "/laterGateEvidence/O3B/ownerScopeContract",
+            "/timedOmrReadinessContract/dataBoundary"
+          ],
+          "requiredEvidenceShapeOrContractIdsExactly": [
+            "owner-scope-decision-evidence.v1",
+            "privacy-lifecycle-receipt-bundle.v1"
+          ],
+          "canonicalRootPreimage": {
+            "schemaVersion": "o3b.owner-scope-decision-evidence-identity-root.v1",
+            "orderedFieldsExactly": [
+              "evidence_id",
+              "evidence_version",
+              "evidence_sha256"
+            ],
+            "recordOrder": "single_projected_owner_scope_decision_evidence",
+            "referenceShape": "immutableEvidenceReferenceContract",
+            "allThreeIdentityFieldsRequired": true
+          },
+          "canonicalFieldSourceByNameExactly": {
+            "evidence_id": {
+              "canonicalFieldName": "evidence_id",
+              "sourceRowsExactly": [
+                {
+                  "sourceOrdinal": 1,
+                  "sourceKind": "resolved_virtual_underlying_evidence_receipt",
+                  "requiredShapeOrContractIdOrNull": "owner-scope-decision-evidence.v1",
+                  "reachableThroughPayloadSchemaVersionOrNull": null,
+                  "absoluteJsonPointer": "/receipt_id",
+                  "canonicalAliasOrNull": "evidence_id",
+                  "exactCardinality": "exactly_1_projected_owner_scope_decision_evidence",
+                  "recordOrder": "owner_scope_decision_projection_row",
+                  "transformationId": "O3B.owner_scope_decision_identity.privacy_consent_purpose_retention_revocation_and_deletion_receipt_bundle.v1.evidence_id.projection",
+                  "selectorKind": "direct_json_pointer",
+                  "rowFieldJsonPointerOrNull": null
+                }
+              ],
+              "sourceAgreementWithinInput": "single_exact_projected_owner_scope_decision_evidence",
+              "missingExtraDuplicateFallbackOrDescendantSearchAllowed": false
+            },
+            "evidence_version": {
+              "canonicalFieldName": "evidence_version",
+              "sourceRowsExactly": [
+                {
+                  "sourceOrdinal": 1,
+                  "sourceKind": "resolved_virtual_underlying_evidence_receipt",
+                  "requiredShapeOrContractIdOrNull": "owner-scope-decision-evidence.v1",
+                  "reachableThroughPayloadSchemaVersionOrNull": null,
+                  "absoluteJsonPointer": "/receipt_version",
+                  "canonicalAliasOrNull": "evidence_version",
+                  "exactCardinality": "exactly_1_projected_owner_scope_decision_evidence",
+                  "recordOrder": "owner_scope_decision_projection_row",
+                  "transformationId": "O3B.owner_scope_decision_identity.privacy_consent_purpose_retention_revocation_and_deletion_receipt_bundle.v1.evidence_version.projection",
+                  "selectorKind": "direct_json_pointer",
+                  "rowFieldJsonPointerOrNull": null
+                }
+              ],
+              "sourceAgreementWithinInput": "single_exact_projected_owner_scope_decision_evidence",
+              "missingExtraDuplicateFallbackOrDescendantSearchAllowed": false
+            },
+            "evidence_sha256": {
+              "canonicalFieldName": "evidence_sha256",
+              "sourceRowsExactly": [
+                {
+                  "sourceOrdinal": 1,
+                  "sourceKind": "resolved_virtual_underlying_evidence_receipt",
+                  "requiredShapeOrContractIdOrNull": "owner-scope-decision-evidence.v1",
+                  "reachableThroughPayloadSchemaVersionOrNull": null,
+                  "absoluteJsonPointer": "/receipt_sha256",
+                  "canonicalAliasOrNull": "evidence_sha256",
+                  "exactCardinality": "exactly_1_projected_owner_scope_decision_evidence",
+                  "recordOrder": "owner_scope_decision_projection_row",
+                  "transformationId": "O3B.owner_scope_decision_identity.privacy_consent_purpose_retention_revocation_and_deletion_receipt_bundle.v1.evidence_sha256.projection",
+                  "selectorKind": "direct_json_pointer",
+                  "rowFieldJsonPointerOrNull": null
+                }
+              ],
+              "sourceAgreementWithinInput": "single_exact_projected_owner_scope_decision_evidence",
+              "missingExtraDuplicateFallbackOrDescendantSearchAllowed": false
+            }
+          },
+          "canonicalFieldSourceKeySetRule": "keys_equal_canonicalRootPreimage.orderedFieldsExactly_with_no_missing_extra_or_duplicate_key",
+          "selectedSourceProjectionRule": "resolve_only_the_exact_owner-scope-decision-evidence.v1_projection_row_and_its_currentness_receipt_from_this_gate_input_at_the_same_scope_head_tree_then_project_the_virtual_receipt_identity_fields",
+          "noSelfReferenceOrDigestCycleRule": "the_derivation_reads_only_the_projected_owner_virtual_receipt_and_never_the_enclosing_gate_input_receipt_owner_scope_decision_reference_or_null_payload_digest_coherence_claim_or_derivation_reference",
+          "normalizationContract": {
+            "canonicalization": "RFC_8785_JSON_Canonicalization_Scheme",
+            "preimageFieldsExactly": [
+              "canonical_preimage_schema_version",
+              "canonical_preimage_value"
+            ],
+            "digestAlgorithm": "sha256_lowercase_hex_64",
+            "resultField": "normalized_root_sha256"
+          },
+          "requiredVerifierClass": "named_gate_root_derivation_verifier",
+          "nullOrEmptyRootAllowed": false
+        },
+        "O3B.owner_scope_decision_identity.personal_event_log_inception_lineage_precommit_source_segment_head_and_completeness_receipt_set.v1": {
+          "specVersion": "gate-coherence-root-derivation-spec.v2",
+          "gateId": "O3B",
+          "dimensionId": "owner_scope_decision_identity",
+          "inputName": "personal_event_log_inception_lineage_precommit_source_segment_head_and_completeness_receipt_set",
+          "requiredInputContractId": "laterGateEvidence.virtualUnderlyingEvidenceShapeRegistry.owner-scope-decision-evidence.v1+timedOmrReadinessContract.omrShape.personalExposureTrackingInceptionReceiptShape+personalLineageKeyRotationChainReceiptShape+personalStableLineageDerivationReceiptShape+personalSessionEventLogPrecommitReceiptShape+personalEventLogSourceReceiptShape+personalEventLogSegmentReceiptShape+personalEventLogHeadCheckpointReceiptShape+personalEventLogCompletenessReceiptShape",
+          "requiredContractJsonPointersExactly": [
+            "/laterGateEvidence/O3B/ownerScopeContract",
+            "/timedOmrReadinessContract/dataBoundary",
+            "/timedOmrReadinessContract/omrShape/personalExposureTrackingInceptionReceiptShape",
+            "/timedOmrReadinessContract/omrShape/personalSessionLogSourceReservationReceiptShape",
+            "/timedOmrReadinessContract/omrShape/personalSessionEventLogPrecommitReceiptShape",
+            "/timedOmrReadinessContract/omrShape/heldoutLineageCommitmentKeyStateReceiptShape",
+            "/timedOmrReadinessContract/omrShape/heldoutContentLineageCommitmentReceiptShape",
+            "/timedOmrReadinessContract/omrShape/personalContentLineageCommitmentBindingReceiptShape",
+            "/timedOmrReadinessContract/omrShape/personalAliasLineageBindingProofReceiptShape",
+            "/timedOmrReadinessContract/omrShape/personalLineageKeyRotationChainReceiptShape",
+            "/timedOmrReadinessContract/omrShape/personalStableLineageDerivationReceiptShape",
+            "/timedOmrReadinessContract/omrShape/personalEventLogSourceReceiptShape",
+            "/timedOmrReadinessContract/omrShape/personalEventLogSegmentReceiptShape",
+            "/timedOmrReadinessContract/omrShape/personalEventLogHeadCheckpointReceiptShape",
+            "/timedOmrReadinessContract/omrShape/personalEventLogCompletenessReceiptShape"
+          ],
+          "requiredEvidenceShapeOrContractIdsExactly": [
+            "owner-scope-decision-evidence.v1",
+            "timedOmrReadinessContract.omrShape.personalExposureTrackingInceptionReceiptShape",
+            "timedOmrReadinessContract.omrShape.personalSessionLogSourceReservationReceiptShape",
+            "timedOmrReadinessContract.omrShape.personalSessionEventLogPrecommitReceiptShape",
+            "timedOmrReadinessContract.omrShape.heldoutLineageCommitmentKeyStateReceiptShape",
+            "timedOmrReadinessContract.omrShape.heldoutContentLineageCommitmentReceiptShape",
+            "timedOmrReadinessContract.omrShape.personalContentLineageCommitmentBindingReceiptShape",
+            "timedOmrReadinessContract.omrShape.personalAliasLineageBindingProofReceiptShape",
+            "timedOmrReadinessContract.omrShape.personalLineageKeyRotationChainReceiptShape",
+            "timedOmrReadinessContract.omrShape.personalStableLineageDerivationReceiptShape",
+            "timedOmrReadinessContract.omrShape.personalEventLogSourceReceiptShape",
+            "timedOmrReadinessContract.omrShape.personalEventLogSegmentReceiptShape",
+            "timedOmrReadinessContract.omrShape.personalEventLogHeadCheckpointReceiptShape",
+            "timedOmrReadinessContract.omrShape.personalEventLogCompletenessReceiptShape"
+          ],
+          "canonicalRootPreimage": {
+            "schemaVersion": "o3b.owner-scope-decision-evidence-identity-root.v1",
+            "orderedFieldsExactly": [
+              "evidence_id",
+              "evidence_version",
+              "evidence_sha256"
+            ],
+            "recordOrder": "single_projected_owner_scope_decision_evidence",
+            "referenceShape": "immutableEvidenceReferenceContract",
+            "allThreeIdentityFieldsRequired": true
+          },
+          "canonicalFieldSourceByNameExactly": {
+            "evidence_id": {
+              "canonicalFieldName": "evidence_id",
+              "sourceRowsExactly": [
+                {
+                  "sourceOrdinal": 1,
+                  "sourceKind": "resolved_virtual_underlying_evidence_receipt",
+                  "requiredShapeOrContractIdOrNull": "owner-scope-decision-evidence.v1",
+                  "reachableThroughPayloadSchemaVersionOrNull": null,
+                  "absoluteJsonPointer": "/receipt_id",
+                  "canonicalAliasOrNull": "evidence_id",
+                  "exactCardinality": "exactly_1_projected_owner_scope_decision_evidence",
+                  "recordOrder": "owner_scope_decision_projection_row",
+                  "transformationId": "O3B.owner_scope_decision_identity.personal_event_log_inception_lineage_precommit_source_segment_head_and_completeness_receipt_set.v1.evidence_id.projection",
+                  "selectorKind": "direct_json_pointer",
+                  "rowFieldJsonPointerOrNull": null
+                }
+              ],
+              "sourceAgreementWithinInput": "single_exact_projected_owner_scope_decision_evidence",
+              "missingExtraDuplicateFallbackOrDescendantSearchAllowed": false
+            },
+            "evidence_version": {
+              "canonicalFieldName": "evidence_version",
+              "sourceRowsExactly": [
+                {
+                  "sourceOrdinal": 1,
+                  "sourceKind": "resolved_virtual_underlying_evidence_receipt",
+                  "requiredShapeOrContractIdOrNull": "owner-scope-decision-evidence.v1",
+                  "reachableThroughPayloadSchemaVersionOrNull": null,
+                  "absoluteJsonPointer": "/receipt_version",
+                  "canonicalAliasOrNull": "evidence_version",
+                  "exactCardinality": "exactly_1_projected_owner_scope_decision_evidence",
+                  "recordOrder": "owner_scope_decision_projection_row",
+                  "transformationId": "O3B.owner_scope_decision_identity.personal_event_log_inception_lineage_precommit_source_segment_head_and_completeness_receipt_set.v1.evidence_version.projection",
+                  "selectorKind": "direct_json_pointer",
+                  "rowFieldJsonPointerOrNull": null
+                }
+              ],
+              "sourceAgreementWithinInput": "single_exact_projected_owner_scope_decision_evidence",
+              "missingExtraDuplicateFallbackOrDescendantSearchAllowed": false
+            },
+            "evidence_sha256": {
+              "canonicalFieldName": "evidence_sha256",
+              "sourceRowsExactly": [
+                {
+                  "sourceOrdinal": 1,
+                  "sourceKind": "resolved_virtual_underlying_evidence_receipt",
+                  "requiredShapeOrContractIdOrNull": "owner-scope-decision-evidence.v1",
+                  "reachableThroughPayloadSchemaVersionOrNull": null,
+                  "absoluteJsonPointer": "/receipt_sha256",
+                  "canonicalAliasOrNull": "evidence_sha256",
+                  "exactCardinality": "exactly_1_projected_owner_scope_decision_evidence",
+                  "recordOrder": "owner_scope_decision_projection_row",
+                  "transformationId": "O3B.owner_scope_decision_identity.personal_event_log_inception_lineage_precommit_source_segment_head_and_completeness_receipt_set.v1.evidence_sha256.projection",
+                  "selectorKind": "direct_json_pointer",
+                  "rowFieldJsonPointerOrNull": null
+                }
+              ],
+              "sourceAgreementWithinInput": "single_exact_projected_owner_scope_decision_evidence",
+              "missingExtraDuplicateFallbackOrDescendantSearchAllowed": false
+            }
+          },
+          "canonicalFieldSourceKeySetRule": "keys_equal_canonicalRootPreimage.orderedFieldsExactly_with_no_missing_extra_or_duplicate_key",
+          "selectedSourceProjectionRule": "resolve_only_the_exact_owner-scope-decision-evidence.v1_projection_row_and_its_currentness_receipt_from_this_gate_input_at_the_same_scope_head_tree_then_project_the_virtual_receipt_identity_fields",
+          "noSelfReferenceOrDigestCycleRule": "the_derivation_reads_only_the_projected_owner_virtual_receipt_and_never_the_enclosing_gate_input_receipt_owner_scope_decision_reference_or_null_payload_digest_coherence_claim_or_derivation_reference",
+          "normalizationContract": {
+            "canonicalization": "RFC_8785_JSON_Canonicalization_Scheme",
+            "preimageFieldsExactly": [
+              "canonical_preimage_schema_version",
+              "canonical_preimage_value"
+            ],
+            "digestAlgorithm": "sha256_lowercase_hex_64",
+            "resultField": "normalized_root_sha256"
+          },
+          "requiredVerifierClass": "named_gate_root_derivation_verifier",
+          "nullOrEmptyRootAllowed": false
+        },
+        "O3B.owner_scope_decision_identity.response_record_timed_session_evaluation_precommit_scoring_and_final_binding_receipt_set.v1": {
+          "specVersion": "gate-coherence-root-derivation-spec.v2",
+          "gateId": "O3B",
+          "dimensionId": "owner_scope_decision_identity",
+          "inputName": "response_record_timed_session_evaluation_precommit_scoring_and_final_binding_receipt_set",
+          "requiredInputContractId": "laterGateEvidence.virtualUnderlyingEvidenceShapeRegistry.owner-scope-decision-evidence.v1+timedOmrReadinessContract.omrShape.responseRecordDigestContract+timedSessionReceiptShape+evaluationBindingPrecommitReceiptShape+scoringReceiptShape+crossPlaneEvaluationBindingReceiptShape",
+          "requiredContractJsonPointersExactly": [
+            "/laterGateEvidence/O3B/ownerScopeContract",
+            "/timedOmrReadinessContract/dataBoundary",
+            "/timedOmrReadinessContract/omrShape/responseRecordDigestContract",
+            "/timedOmrReadinessContract/omrShape/timedSessionReceiptShape",
+            "/timedOmrReadinessContract/omrShape/responseRecordVerificationReceiptShape",
+            "/timedOmrReadinessContract/omrShape/timedSessionVerificationReceiptShape",
+            "/timedOmrReadinessContract/omrShape/evaluationBindingPrecommitReceiptShape",
+            "/timedOmrReadinessContract/omrShape/scoringReceiptShape",
+            "/timedOmrReadinessContract/omrShape/crossPlaneEvaluationBindingReceiptShape"
+          ],
+          "requiredEvidenceShapeOrContractIdsExactly": [
+            "owner-scope-decision-evidence.v1",
+            "timedOmrReadinessContract.omrShape.responseRecordVerificationReceiptShape",
+            "timedOmrReadinessContract.omrShape.timedSessionVerificationReceiptShape",
+            "timedOmrReadinessContract.omrShape.evaluationBindingPrecommitReceiptShape",
+            "timedOmrReadinessContract.omrShape.scoringReceiptShape",
+            "timedOmrReadinessContract.omrShape.crossPlaneEvaluationBindingReceiptShape"
+          ],
+          "canonicalRootPreimage": {
+            "schemaVersion": "o3b.owner-scope-decision-evidence-identity-root.v1",
+            "orderedFieldsExactly": [
+              "evidence_id",
+              "evidence_version",
+              "evidence_sha256"
+            ],
+            "recordOrder": "single_projected_owner_scope_decision_evidence",
+            "referenceShape": "immutableEvidenceReferenceContract",
+            "allThreeIdentityFieldsRequired": true
+          },
+          "canonicalFieldSourceByNameExactly": {
+            "evidence_id": {
+              "canonicalFieldName": "evidence_id",
+              "sourceRowsExactly": [
+                {
+                  "sourceOrdinal": 1,
+                  "sourceKind": "resolved_virtual_underlying_evidence_receipt",
+                  "requiredShapeOrContractIdOrNull": "owner-scope-decision-evidence.v1",
+                  "reachableThroughPayloadSchemaVersionOrNull": null,
+                  "absoluteJsonPointer": "/receipt_id",
+                  "canonicalAliasOrNull": "evidence_id",
+                  "exactCardinality": "exactly_1_projected_owner_scope_decision_evidence",
+                  "recordOrder": "owner_scope_decision_projection_row",
+                  "transformationId": "O3B.owner_scope_decision_identity.response_record_timed_session_evaluation_precommit_scoring_and_final_binding_receipt_set.v1.evidence_id.projection",
+                  "selectorKind": "direct_json_pointer",
+                  "rowFieldJsonPointerOrNull": null
+                }
+              ],
+              "sourceAgreementWithinInput": "single_exact_projected_owner_scope_decision_evidence",
+              "missingExtraDuplicateFallbackOrDescendantSearchAllowed": false
+            },
+            "evidence_version": {
+              "canonicalFieldName": "evidence_version",
+              "sourceRowsExactly": [
+                {
+                  "sourceOrdinal": 1,
+                  "sourceKind": "resolved_virtual_underlying_evidence_receipt",
+                  "requiredShapeOrContractIdOrNull": "owner-scope-decision-evidence.v1",
+                  "reachableThroughPayloadSchemaVersionOrNull": null,
+                  "absoluteJsonPointer": "/receipt_version",
+                  "canonicalAliasOrNull": "evidence_version",
+                  "exactCardinality": "exactly_1_projected_owner_scope_decision_evidence",
+                  "recordOrder": "owner_scope_decision_projection_row",
+                  "transformationId": "O3B.owner_scope_decision_identity.response_record_timed_session_evaluation_precommit_scoring_and_final_binding_receipt_set.v1.evidence_version.projection",
+                  "selectorKind": "direct_json_pointer",
+                  "rowFieldJsonPointerOrNull": null
+                }
+              ],
+              "sourceAgreementWithinInput": "single_exact_projected_owner_scope_decision_evidence",
+              "missingExtraDuplicateFallbackOrDescendantSearchAllowed": false
+            },
+            "evidence_sha256": {
+              "canonicalFieldName": "evidence_sha256",
+              "sourceRowsExactly": [
+                {
+                  "sourceOrdinal": 1,
+                  "sourceKind": "resolved_virtual_underlying_evidence_receipt",
+                  "requiredShapeOrContractIdOrNull": "owner-scope-decision-evidence.v1",
+                  "reachableThroughPayloadSchemaVersionOrNull": null,
+                  "absoluteJsonPointer": "/receipt_sha256",
+                  "canonicalAliasOrNull": "evidence_sha256",
+                  "exactCardinality": "exactly_1_projected_owner_scope_decision_evidence",
+                  "recordOrder": "owner_scope_decision_projection_row",
+                  "transformationId": "O3B.owner_scope_decision_identity.response_record_timed_session_evaluation_precommit_scoring_and_final_binding_receipt_set.v1.evidence_sha256.projection",
+                  "selectorKind": "direct_json_pointer",
+                  "rowFieldJsonPointerOrNull": null
+                }
+              ],
+              "sourceAgreementWithinInput": "single_exact_projected_owner_scope_decision_evidence",
+              "missingExtraDuplicateFallbackOrDescendantSearchAllowed": false
+            }
+          },
+          "canonicalFieldSourceKeySetRule": "keys_equal_canonicalRootPreimage.orderedFieldsExactly_with_no_missing_extra_or_duplicate_key",
+          "selectedSourceProjectionRule": "resolve_only_the_exact_owner-scope-decision-evidence.v1_projection_row_and_its_currentness_receipt_from_this_gate_input_at_the_same_scope_head_tree_then_project_the_virtual_receipt_identity_fields",
+          "noSelfReferenceOrDigestCycleRule": "the_derivation_reads_only_the_projected_owner_virtual_receipt_and_never_the_enclosing_gate_input_receipt_owner_scope_decision_reference_or_null_payload_digest_coherence_claim_or_derivation_reference",
+          "normalizationContract": {
+            "canonicalization": "RFC_8785_JSON_Canonicalization_Scheme",
+            "preimageFieldsExactly": [
+              "canonical_preimage_schema_version",
+              "canonical_preimage_value"
+            ],
+            "digestAlgorithm": "sha256_lowercase_hex_64",
+            "resultField": "normalized_root_sha256"
+          },
+          "requiredVerifierClass": "named_gate_root_derivation_verifier",
+          "nullOrEmptyRootAllowed": false
+        },
+        "O3B.owner_scope_decision_identity.cross_plane_evaluation_binding_and_nonidentifying_comparison_receipt_set.v1": {
+          "specVersion": "gate-coherence-root-derivation-spec.v2",
+          "gateId": "O3B",
+          "dimensionId": "owner_scope_decision_identity",
+          "inputName": "cross_plane_evaluation_binding_and_nonidentifying_comparison_receipt_set",
+          "requiredInputContractId": "laterGateEvidence.virtualUnderlyingEvidenceShapeRegistry.owner-scope-decision-evidence.v1+timedOmrReadinessContract.omrShape.evaluationBindingPrecommitReceiptShape+comparisonEvidenceReceiptShape+crossPlaneEvaluationBindingReceiptShape+timedOmrReadinessContract.omrShape.commitmentPolicyReceiptShape+ephemeralBridgePolicyReceiptShape+rawChoiceDestructionReceiptShape",
+          "requiredContractJsonPointersExactly": [
+            "/laterGateEvidence/O3B/ownerScopeContract",
+            "/timedOmrReadinessContract/dataBoundary",
+            "/timedOmrReadinessContract/omrShape/evaluationBindingPrecommitReceiptShape",
+            "/timedOmrReadinessContract/omrShape/comparisonEvidenceReceiptShape",
+            "/timedOmrReadinessContract/omrShape/crossPlaneEvaluationBindingReceiptShape",
+            "/timedOmrReadinessContract/omrShape/commitmentPolicyReceiptShape",
+            "/timedOmrReadinessContract/omrShape/ephemeralBridgePolicyReceiptShape",
+            "/timedOmrReadinessContract/omrShape/rawChoiceDestructionReceiptShape"
+          ],
+          "requiredEvidenceShapeOrContractIdsExactly": [
+            "owner-scope-decision-evidence.v1",
+            "timedOmrReadinessContract.omrShape.evaluationBindingPrecommitReceiptShape",
+            "timedOmrReadinessContract.omrShape.comparisonEvidenceReceiptShape",
+            "timedOmrReadinessContract.omrShape.crossPlaneEvaluationBindingReceiptShape",
+            "timedOmrReadinessContract.omrShape.commitmentPolicyReceiptShape",
+            "timedOmrReadinessContract.omrShape.ephemeralBridgePolicyReceiptShape",
+            "timedOmrReadinessContract.omrShape.rawChoiceDestructionReceiptShape"
+          ],
+          "canonicalRootPreimage": {
+            "schemaVersion": "o3b.owner-scope-decision-evidence-identity-root.v1",
+            "orderedFieldsExactly": [
+              "evidence_id",
+              "evidence_version",
+              "evidence_sha256"
+            ],
+            "recordOrder": "single_projected_owner_scope_decision_evidence",
+            "referenceShape": "immutableEvidenceReferenceContract",
+            "allThreeIdentityFieldsRequired": true
+          },
+          "canonicalFieldSourceByNameExactly": {
+            "evidence_id": {
+              "canonicalFieldName": "evidence_id",
+              "sourceRowsExactly": [
+                {
+                  "sourceOrdinal": 1,
+                  "sourceKind": "resolved_virtual_underlying_evidence_receipt",
+                  "requiredShapeOrContractIdOrNull": "owner-scope-decision-evidence.v1",
+                  "reachableThroughPayloadSchemaVersionOrNull": null,
+                  "absoluteJsonPointer": "/receipt_id",
+                  "canonicalAliasOrNull": "evidence_id",
+                  "exactCardinality": "exactly_1_projected_owner_scope_decision_evidence",
+                  "recordOrder": "owner_scope_decision_projection_row",
+                  "transformationId": "O3B.owner_scope_decision_identity.cross_plane_evaluation_binding_and_nonidentifying_comparison_receipt_set.v1.evidence_id.projection",
+                  "selectorKind": "direct_json_pointer",
+                  "rowFieldJsonPointerOrNull": null
+                }
+              ],
+              "sourceAgreementWithinInput": "single_exact_projected_owner_scope_decision_evidence",
+              "missingExtraDuplicateFallbackOrDescendantSearchAllowed": false
+            },
+            "evidence_version": {
+              "canonicalFieldName": "evidence_version",
+              "sourceRowsExactly": [
+                {
+                  "sourceOrdinal": 1,
+                  "sourceKind": "resolved_virtual_underlying_evidence_receipt",
+                  "requiredShapeOrContractIdOrNull": "owner-scope-decision-evidence.v1",
+                  "reachableThroughPayloadSchemaVersionOrNull": null,
+                  "absoluteJsonPointer": "/receipt_version",
+                  "canonicalAliasOrNull": "evidence_version",
+                  "exactCardinality": "exactly_1_projected_owner_scope_decision_evidence",
+                  "recordOrder": "owner_scope_decision_projection_row",
+                  "transformationId": "O3B.owner_scope_decision_identity.cross_plane_evaluation_binding_and_nonidentifying_comparison_receipt_set.v1.evidence_version.projection",
+                  "selectorKind": "direct_json_pointer",
+                  "rowFieldJsonPointerOrNull": null
+                }
+              ],
+              "sourceAgreementWithinInput": "single_exact_projected_owner_scope_decision_evidence",
+              "missingExtraDuplicateFallbackOrDescendantSearchAllowed": false
+            },
+            "evidence_sha256": {
+              "canonicalFieldName": "evidence_sha256",
+              "sourceRowsExactly": [
+                {
+                  "sourceOrdinal": 1,
+                  "sourceKind": "resolved_virtual_underlying_evidence_receipt",
+                  "requiredShapeOrContractIdOrNull": "owner-scope-decision-evidence.v1",
+                  "reachableThroughPayloadSchemaVersionOrNull": null,
+                  "absoluteJsonPointer": "/receipt_sha256",
+                  "canonicalAliasOrNull": "evidence_sha256",
+                  "exactCardinality": "exactly_1_projected_owner_scope_decision_evidence",
+                  "recordOrder": "owner_scope_decision_projection_row",
+                  "transformationId": "O3B.owner_scope_decision_identity.cross_plane_evaluation_binding_and_nonidentifying_comparison_receipt_set.v1.evidence_sha256.projection",
+                  "selectorKind": "direct_json_pointer",
+                  "rowFieldJsonPointerOrNull": null
+                }
+              ],
+              "sourceAgreementWithinInput": "single_exact_projected_owner_scope_decision_evidence",
+              "missingExtraDuplicateFallbackOrDescendantSearchAllowed": false
+            }
+          },
+          "canonicalFieldSourceKeySetRule": "keys_equal_canonicalRootPreimage.orderedFieldsExactly_with_no_missing_extra_or_duplicate_key",
+          "selectedSourceProjectionRule": "resolve_only_the_exact_owner-scope-decision-evidence.v1_projection_row_and_its_currentness_receipt_from_this_gate_input_at_the_same_scope_head_tree_then_project_the_virtual_receipt_identity_fields",
+          "noSelfReferenceOrDigestCycleRule": "the_derivation_reads_only_the_projected_owner_virtual_receipt_and_never_the_enclosing_gate_input_receipt_owner_scope_decision_reference_or_null_payload_digest_coherence_claim_or_derivation_reference",
+          "normalizationContract": {
+            "canonicalization": "RFC_8785_JSON_Canonicalization_Scheme",
+            "preimageFieldsExactly": [
+              "canonical_preimage_schema_version",
+              "canonical_preimage_value"
+            ],
+            "digestAlgorithm": "sha256_lowercase_hex_64",
+            "resultField": "normalized_root_sha256"
+          },
+          "requiredVerifierClass": "named_gate_root_derivation_verifier",
+          "nullOrEmptyRootAllowed": false
         }
       },
       "canonicalRootDerivationSpecRegistryContract": {
@@ -29858,8 +31027,10 @@
         "transitiveSupportingRule": "transitive_authoritative_supporting_evidence_requires_the_exact_reachableThroughPayloadSchemaVersionOrNull_virtual_receipt_source_selector_to_resolve_the_named_supporting_shape",
         "directDomainRule": "resolved_direct_domain_receipt_requires_the_exact_selected_gate_input_projection_shape_and_current_immutable_receipt",
         "contractRule": "exact_contract_value_requires_the_declared_absolute_pointer_under_requiredContractJsonPointersExactly_at_the_same_evaluation_head_and_tree",
-        "carrierRule": "carrier_participants_compare_a_signed_complete_root_only_and_each_dimension_with_a_carrier_has_at_least_one_independent_noncarrier_preimage_derivation",
-        "unknownSpecSourceShapeContractPointerFieldAliasTransformOrderNormalizationOrVerifierAllowed": false
+        "carrierRule": "owner_scope_decision_reference_or_null_is_only_a_digest_covered_mirror_of_the_exact_direct_owner_virtual_projection_row_and_is_never_a_derivation_source",
+        "unknownSpecSourceShapeContractPointerFieldAliasTransformOrderNormalizationOrVerifierAllowed": false,
+        "virtualUnderlyingRule": "resolved_virtual_underlying_evidence_receipt_requires_the_exact_selected_gate_input_projection_owner-scope-decision-evidence.v1_row_and_currentness_receipt_and_may_project_only_receipt_id_receipt_version_or_receipt_sha256",
+        "noSelfReferenceOrDigestCycleRule": "no_derivation_spec_or_transformation_may_source_the_enclosing_gate_input_receipt_or_any_digest_claim_or_derivation_reference_that_depends_on_the_derivation"
       },
       "canonicalSourceTransformationRegistry": {
         "O3B.official_notice_pdf_asset_membership.official_rule_field_anchor_manifest_and_asset_digest.v1.post_id.projection": {
@@ -35784,6 +36955,501 @@
           "sourceCurrentnessRequired": true,
           "contractValueRequiresExactEvaluationHeadTree": false,
           "unknownFieldPointerAliasSelectorFilterSortDedupOrFallbackAllowed": false
+        },
+        "O3B.owner_scope_decision_identity.exact_scope_and_excluded_actions.v1.evidence_id.projection": {
+          "transformVersion": "gate-coherence-source-transformation.v2",
+          "gateId": "O3B",
+          "dimensionId": "owner_scope_decision_identity",
+          "inputName": "exact_scope_and_excluded_actions",
+          "canonicalFieldName": "evidence_id",
+          "orderedSourceRowsExactly": [
+            {
+              "sourceOrdinal": 1,
+              "sourceKind": "resolved_virtual_underlying_evidence_receipt",
+              "requiredShapeOrContractIdOrNull": "owner-scope-decision-evidence.v1",
+              "reachableThroughPayloadSchemaVersionOrNull": null,
+              "absoluteJsonPointer": "/receipt_id",
+              "canonicalAliasOrNull": "evidence_id",
+              "exactCardinality": "exactly_1_projected_owner_scope_decision_evidence",
+              "recordOrder": "owner_scope_decision_projection_row",
+              "selectorKind": "direct_json_pointer",
+              "rowFieldJsonPointerOrNull": null
+            }
+          ],
+          "selectorGrammar": {
+            "direct_json_pointer": "absoluteJsonPointer_must_resolve_one_value_in_the_exact_projected_virtual_underlying_evidence_receipt",
+            "array_field_projection": "not_used_for_this_transformation",
+            "allowedSelectorKindsExactly": [
+              "direct_json_pointer"
+            ]
+          },
+          "operation": "emit_the_single_exact_selected_value_under_canonicalFieldName",
+          "exactCardinalityAndOrderRequired": true,
+          "sourceCurrentnessRequired": true,
+          "contractValueRequiresExactEvaluationHeadTree": false,
+          "unknownFieldPointerAliasSelectorFilterSortDedupOrFallbackAllowed": false
+        },
+        "O3B.owner_scope_decision_identity.exact_scope_and_excluded_actions.v1.evidence_version.projection": {
+          "transformVersion": "gate-coherence-source-transformation.v2",
+          "gateId": "O3B",
+          "dimensionId": "owner_scope_decision_identity",
+          "inputName": "exact_scope_and_excluded_actions",
+          "canonicalFieldName": "evidence_version",
+          "orderedSourceRowsExactly": [
+            {
+              "sourceOrdinal": 1,
+              "sourceKind": "resolved_virtual_underlying_evidence_receipt",
+              "requiredShapeOrContractIdOrNull": "owner-scope-decision-evidence.v1",
+              "reachableThroughPayloadSchemaVersionOrNull": null,
+              "absoluteJsonPointer": "/receipt_version",
+              "canonicalAliasOrNull": "evidence_version",
+              "exactCardinality": "exactly_1_projected_owner_scope_decision_evidence",
+              "recordOrder": "owner_scope_decision_projection_row",
+              "selectorKind": "direct_json_pointer",
+              "rowFieldJsonPointerOrNull": null
+            }
+          ],
+          "selectorGrammar": {
+            "direct_json_pointer": "absoluteJsonPointer_must_resolve_one_value_in_the_exact_projected_virtual_underlying_evidence_receipt",
+            "array_field_projection": "not_used_for_this_transformation",
+            "allowedSelectorKindsExactly": [
+              "direct_json_pointer"
+            ]
+          },
+          "operation": "emit_the_single_exact_selected_value_under_canonicalFieldName",
+          "exactCardinalityAndOrderRequired": true,
+          "sourceCurrentnessRequired": true,
+          "contractValueRequiresExactEvaluationHeadTree": false,
+          "unknownFieldPointerAliasSelectorFilterSortDedupOrFallbackAllowed": false
+        },
+        "O3B.owner_scope_decision_identity.exact_scope_and_excluded_actions.v1.evidence_sha256.projection": {
+          "transformVersion": "gate-coherence-source-transformation.v2",
+          "gateId": "O3B",
+          "dimensionId": "owner_scope_decision_identity",
+          "inputName": "exact_scope_and_excluded_actions",
+          "canonicalFieldName": "evidence_sha256",
+          "orderedSourceRowsExactly": [
+            {
+              "sourceOrdinal": 1,
+              "sourceKind": "resolved_virtual_underlying_evidence_receipt",
+              "requiredShapeOrContractIdOrNull": "owner-scope-decision-evidence.v1",
+              "reachableThroughPayloadSchemaVersionOrNull": null,
+              "absoluteJsonPointer": "/receipt_sha256",
+              "canonicalAliasOrNull": "evidence_sha256",
+              "exactCardinality": "exactly_1_projected_owner_scope_decision_evidence",
+              "recordOrder": "owner_scope_decision_projection_row",
+              "selectorKind": "direct_json_pointer",
+              "rowFieldJsonPointerOrNull": null
+            }
+          ],
+          "selectorGrammar": {
+            "direct_json_pointer": "absoluteJsonPointer_must_resolve_one_value_in_the_exact_projected_virtual_underlying_evidence_receipt",
+            "array_field_projection": "not_used_for_this_transformation",
+            "allowedSelectorKindsExactly": [
+              "direct_json_pointer"
+            ]
+          },
+          "operation": "emit_the_single_exact_selected_value_under_canonicalFieldName",
+          "exactCardinalityAndOrderRequired": true,
+          "sourceCurrentnessRequired": true,
+          "contractValueRequiresExactEvaluationHeadTree": false,
+          "unknownFieldPointerAliasSelectorFilterSortDedupOrFallbackAllowed": false
+        },
+        "O3B.owner_scope_decision_identity.privacy_consent_purpose_retention_revocation_and_deletion_receipt_bundle.v1.evidence_id.projection": {
+          "transformVersion": "gate-coherence-source-transformation.v2",
+          "gateId": "O3B",
+          "dimensionId": "owner_scope_decision_identity",
+          "inputName": "privacy_consent_purpose_retention_revocation_and_deletion_receipt_bundle",
+          "canonicalFieldName": "evidence_id",
+          "orderedSourceRowsExactly": [
+            {
+              "sourceOrdinal": 1,
+              "sourceKind": "resolved_virtual_underlying_evidence_receipt",
+              "requiredShapeOrContractIdOrNull": "owner-scope-decision-evidence.v1",
+              "reachableThroughPayloadSchemaVersionOrNull": null,
+              "absoluteJsonPointer": "/receipt_id",
+              "canonicalAliasOrNull": "evidence_id",
+              "exactCardinality": "exactly_1_projected_owner_scope_decision_evidence",
+              "recordOrder": "owner_scope_decision_projection_row",
+              "selectorKind": "direct_json_pointer",
+              "rowFieldJsonPointerOrNull": null
+            }
+          ],
+          "selectorGrammar": {
+            "direct_json_pointer": "absoluteJsonPointer_must_resolve_one_value_in_the_exact_projected_virtual_underlying_evidence_receipt",
+            "array_field_projection": "not_used_for_this_transformation",
+            "allowedSelectorKindsExactly": [
+              "direct_json_pointer"
+            ]
+          },
+          "operation": "emit_the_single_exact_selected_value_under_canonicalFieldName",
+          "exactCardinalityAndOrderRequired": true,
+          "sourceCurrentnessRequired": true,
+          "contractValueRequiresExactEvaluationHeadTree": false,
+          "unknownFieldPointerAliasSelectorFilterSortDedupOrFallbackAllowed": false
+        },
+        "O3B.owner_scope_decision_identity.privacy_consent_purpose_retention_revocation_and_deletion_receipt_bundle.v1.evidence_version.projection": {
+          "transformVersion": "gate-coherence-source-transformation.v2",
+          "gateId": "O3B",
+          "dimensionId": "owner_scope_decision_identity",
+          "inputName": "privacy_consent_purpose_retention_revocation_and_deletion_receipt_bundle",
+          "canonicalFieldName": "evidence_version",
+          "orderedSourceRowsExactly": [
+            {
+              "sourceOrdinal": 1,
+              "sourceKind": "resolved_virtual_underlying_evidence_receipt",
+              "requiredShapeOrContractIdOrNull": "owner-scope-decision-evidence.v1",
+              "reachableThroughPayloadSchemaVersionOrNull": null,
+              "absoluteJsonPointer": "/receipt_version",
+              "canonicalAliasOrNull": "evidence_version",
+              "exactCardinality": "exactly_1_projected_owner_scope_decision_evidence",
+              "recordOrder": "owner_scope_decision_projection_row",
+              "selectorKind": "direct_json_pointer",
+              "rowFieldJsonPointerOrNull": null
+            }
+          ],
+          "selectorGrammar": {
+            "direct_json_pointer": "absoluteJsonPointer_must_resolve_one_value_in_the_exact_projected_virtual_underlying_evidence_receipt",
+            "array_field_projection": "not_used_for_this_transformation",
+            "allowedSelectorKindsExactly": [
+              "direct_json_pointer"
+            ]
+          },
+          "operation": "emit_the_single_exact_selected_value_under_canonicalFieldName",
+          "exactCardinalityAndOrderRequired": true,
+          "sourceCurrentnessRequired": true,
+          "contractValueRequiresExactEvaluationHeadTree": false,
+          "unknownFieldPointerAliasSelectorFilterSortDedupOrFallbackAllowed": false
+        },
+        "O3B.owner_scope_decision_identity.privacy_consent_purpose_retention_revocation_and_deletion_receipt_bundle.v1.evidence_sha256.projection": {
+          "transformVersion": "gate-coherence-source-transformation.v2",
+          "gateId": "O3B",
+          "dimensionId": "owner_scope_decision_identity",
+          "inputName": "privacy_consent_purpose_retention_revocation_and_deletion_receipt_bundle",
+          "canonicalFieldName": "evidence_sha256",
+          "orderedSourceRowsExactly": [
+            {
+              "sourceOrdinal": 1,
+              "sourceKind": "resolved_virtual_underlying_evidence_receipt",
+              "requiredShapeOrContractIdOrNull": "owner-scope-decision-evidence.v1",
+              "reachableThroughPayloadSchemaVersionOrNull": null,
+              "absoluteJsonPointer": "/receipt_sha256",
+              "canonicalAliasOrNull": "evidence_sha256",
+              "exactCardinality": "exactly_1_projected_owner_scope_decision_evidence",
+              "recordOrder": "owner_scope_decision_projection_row",
+              "selectorKind": "direct_json_pointer",
+              "rowFieldJsonPointerOrNull": null
+            }
+          ],
+          "selectorGrammar": {
+            "direct_json_pointer": "absoluteJsonPointer_must_resolve_one_value_in_the_exact_projected_virtual_underlying_evidence_receipt",
+            "array_field_projection": "not_used_for_this_transformation",
+            "allowedSelectorKindsExactly": [
+              "direct_json_pointer"
+            ]
+          },
+          "operation": "emit_the_single_exact_selected_value_under_canonicalFieldName",
+          "exactCardinalityAndOrderRequired": true,
+          "sourceCurrentnessRequired": true,
+          "contractValueRequiresExactEvaluationHeadTree": false,
+          "unknownFieldPointerAliasSelectorFilterSortDedupOrFallbackAllowed": false
+        },
+        "O3B.owner_scope_decision_identity.personal_event_log_inception_lineage_precommit_source_segment_head_and_completeness_receipt_set.v1.evidence_id.projection": {
+          "transformVersion": "gate-coherence-source-transformation.v2",
+          "gateId": "O3B",
+          "dimensionId": "owner_scope_decision_identity",
+          "inputName": "personal_event_log_inception_lineage_precommit_source_segment_head_and_completeness_receipt_set",
+          "canonicalFieldName": "evidence_id",
+          "orderedSourceRowsExactly": [
+            {
+              "sourceOrdinal": 1,
+              "sourceKind": "resolved_virtual_underlying_evidence_receipt",
+              "requiredShapeOrContractIdOrNull": "owner-scope-decision-evidence.v1",
+              "reachableThroughPayloadSchemaVersionOrNull": null,
+              "absoluteJsonPointer": "/receipt_id",
+              "canonicalAliasOrNull": "evidence_id",
+              "exactCardinality": "exactly_1_projected_owner_scope_decision_evidence",
+              "recordOrder": "owner_scope_decision_projection_row",
+              "selectorKind": "direct_json_pointer",
+              "rowFieldJsonPointerOrNull": null
+            }
+          ],
+          "selectorGrammar": {
+            "direct_json_pointer": "absoluteJsonPointer_must_resolve_one_value_in_the_exact_projected_virtual_underlying_evidence_receipt",
+            "array_field_projection": "not_used_for_this_transformation",
+            "allowedSelectorKindsExactly": [
+              "direct_json_pointer"
+            ]
+          },
+          "operation": "emit_the_single_exact_selected_value_under_canonicalFieldName",
+          "exactCardinalityAndOrderRequired": true,
+          "sourceCurrentnessRequired": true,
+          "contractValueRequiresExactEvaluationHeadTree": false,
+          "unknownFieldPointerAliasSelectorFilterSortDedupOrFallbackAllowed": false
+        },
+        "O3B.owner_scope_decision_identity.personal_event_log_inception_lineage_precommit_source_segment_head_and_completeness_receipt_set.v1.evidence_version.projection": {
+          "transformVersion": "gate-coherence-source-transformation.v2",
+          "gateId": "O3B",
+          "dimensionId": "owner_scope_decision_identity",
+          "inputName": "personal_event_log_inception_lineage_precommit_source_segment_head_and_completeness_receipt_set",
+          "canonicalFieldName": "evidence_version",
+          "orderedSourceRowsExactly": [
+            {
+              "sourceOrdinal": 1,
+              "sourceKind": "resolved_virtual_underlying_evidence_receipt",
+              "requiredShapeOrContractIdOrNull": "owner-scope-decision-evidence.v1",
+              "reachableThroughPayloadSchemaVersionOrNull": null,
+              "absoluteJsonPointer": "/receipt_version",
+              "canonicalAliasOrNull": "evidence_version",
+              "exactCardinality": "exactly_1_projected_owner_scope_decision_evidence",
+              "recordOrder": "owner_scope_decision_projection_row",
+              "selectorKind": "direct_json_pointer",
+              "rowFieldJsonPointerOrNull": null
+            }
+          ],
+          "selectorGrammar": {
+            "direct_json_pointer": "absoluteJsonPointer_must_resolve_one_value_in_the_exact_projected_virtual_underlying_evidence_receipt",
+            "array_field_projection": "not_used_for_this_transformation",
+            "allowedSelectorKindsExactly": [
+              "direct_json_pointer"
+            ]
+          },
+          "operation": "emit_the_single_exact_selected_value_under_canonicalFieldName",
+          "exactCardinalityAndOrderRequired": true,
+          "sourceCurrentnessRequired": true,
+          "contractValueRequiresExactEvaluationHeadTree": false,
+          "unknownFieldPointerAliasSelectorFilterSortDedupOrFallbackAllowed": false
+        },
+        "O3B.owner_scope_decision_identity.personal_event_log_inception_lineage_precommit_source_segment_head_and_completeness_receipt_set.v1.evidence_sha256.projection": {
+          "transformVersion": "gate-coherence-source-transformation.v2",
+          "gateId": "O3B",
+          "dimensionId": "owner_scope_decision_identity",
+          "inputName": "personal_event_log_inception_lineage_precommit_source_segment_head_and_completeness_receipt_set",
+          "canonicalFieldName": "evidence_sha256",
+          "orderedSourceRowsExactly": [
+            {
+              "sourceOrdinal": 1,
+              "sourceKind": "resolved_virtual_underlying_evidence_receipt",
+              "requiredShapeOrContractIdOrNull": "owner-scope-decision-evidence.v1",
+              "reachableThroughPayloadSchemaVersionOrNull": null,
+              "absoluteJsonPointer": "/receipt_sha256",
+              "canonicalAliasOrNull": "evidence_sha256",
+              "exactCardinality": "exactly_1_projected_owner_scope_decision_evidence",
+              "recordOrder": "owner_scope_decision_projection_row",
+              "selectorKind": "direct_json_pointer",
+              "rowFieldJsonPointerOrNull": null
+            }
+          ],
+          "selectorGrammar": {
+            "direct_json_pointer": "absoluteJsonPointer_must_resolve_one_value_in_the_exact_projected_virtual_underlying_evidence_receipt",
+            "array_field_projection": "not_used_for_this_transformation",
+            "allowedSelectorKindsExactly": [
+              "direct_json_pointer"
+            ]
+          },
+          "operation": "emit_the_single_exact_selected_value_under_canonicalFieldName",
+          "exactCardinalityAndOrderRequired": true,
+          "sourceCurrentnessRequired": true,
+          "contractValueRequiresExactEvaluationHeadTree": false,
+          "unknownFieldPointerAliasSelectorFilterSortDedupOrFallbackAllowed": false
+        },
+        "O3B.owner_scope_decision_identity.response_record_timed_session_evaluation_precommit_scoring_and_final_binding_receipt_set.v1.evidence_id.projection": {
+          "transformVersion": "gate-coherence-source-transformation.v2",
+          "gateId": "O3B",
+          "dimensionId": "owner_scope_decision_identity",
+          "inputName": "response_record_timed_session_evaluation_precommit_scoring_and_final_binding_receipt_set",
+          "canonicalFieldName": "evidence_id",
+          "orderedSourceRowsExactly": [
+            {
+              "sourceOrdinal": 1,
+              "sourceKind": "resolved_virtual_underlying_evidence_receipt",
+              "requiredShapeOrContractIdOrNull": "owner-scope-decision-evidence.v1",
+              "reachableThroughPayloadSchemaVersionOrNull": null,
+              "absoluteJsonPointer": "/receipt_id",
+              "canonicalAliasOrNull": "evidence_id",
+              "exactCardinality": "exactly_1_projected_owner_scope_decision_evidence",
+              "recordOrder": "owner_scope_decision_projection_row",
+              "selectorKind": "direct_json_pointer",
+              "rowFieldJsonPointerOrNull": null
+            }
+          ],
+          "selectorGrammar": {
+            "direct_json_pointer": "absoluteJsonPointer_must_resolve_one_value_in_the_exact_projected_virtual_underlying_evidence_receipt",
+            "array_field_projection": "not_used_for_this_transformation",
+            "allowedSelectorKindsExactly": [
+              "direct_json_pointer"
+            ]
+          },
+          "operation": "emit_the_single_exact_selected_value_under_canonicalFieldName",
+          "exactCardinalityAndOrderRequired": true,
+          "sourceCurrentnessRequired": true,
+          "contractValueRequiresExactEvaluationHeadTree": false,
+          "unknownFieldPointerAliasSelectorFilterSortDedupOrFallbackAllowed": false
+        },
+        "O3B.owner_scope_decision_identity.response_record_timed_session_evaluation_precommit_scoring_and_final_binding_receipt_set.v1.evidence_version.projection": {
+          "transformVersion": "gate-coherence-source-transformation.v2",
+          "gateId": "O3B",
+          "dimensionId": "owner_scope_decision_identity",
+          "inputName": "response_record_timed_session_evaluation_precommit_scoring_and_final_binding_receipt_set",
+          "canonicalFieldName": "evidence_version",
+          "orderedSourceRowsExactly": [
+            {
+              "sourceOrdinal": 1,
+              "sourceKind": "resolved_virtual_underlying_evidence_receipt",
+              "requiredShapeOrContractIdOrNull": "owner-scope-decision-evidence.v1",
+              "reachableThroughPayloadSchemaVersionOrNull": null,
+              "absoluteJsonPointer": "/receipt_version",
+              "canonicalAliasOrNull": "evidence_version",
+              "exactCardinality": "exactly_1_projected_owner_scope_decision_evidence",
+              "recordOrder": "owner_scope_decision_projection_row",
+              "selectorKind": "direct_json_pointer",
+              "rowFieldJsonPointerOrNull": null
+            }
+          ],
+          "selectorGrammar": {
+            "direct_json_pointer": "absoluteJsonPointer_must_resolve_one_value_in_the_exact_projected_virtual_underlying_evidence_receipt",
+            "array_field_projection": "not_used_for_this_transformation",
+            "allowedSelectorKindsExactly": [
+              "direct_json_pointer"
+            ]
+          },
+          "operation": "emit_the_single_exact_selected_value_under_canonicalFieldName",
+          "exactCardinalityAndOrderRequired": true,
+          "sourceCurrentnessRequired": true,
+          "contractValueRequiresExactEvaluationHeadTree": false,
+          "unknownFieldPointerAliasSelectorFilterSortDedupOrFallbackAllowed": false
+        },
+        "O3B.owner_scope_decision_identity.response_record_timed_session_evaluation_precommit_scoring_and_final_binding_receipt_set.v1.evidence_sha256.projection": {
+          "transformVersion": "gate-coherence-source-transformation.v2",
+          "gateId": "O3B",
+          "dimensionId": "owner_scope_decision_identity",
+          "inputName": "response_record_timed_session_evaluation_precommit_scoring_and_final_binding_receipt_set",
+          "canonicalFieldName": "evidence_sha256",
+          "orderedSourceRowsExactly": [
+            {
+              "sourceOrdinal": 1,
+              "sourceKind": "resolved_virtual_underlying_evidence_receipt",
+              "requiredShapeOrContractIdOrNull": "owner-scope-decision-evidence.v1",
+              "reachableThroughPayloadSchemaVersionOrNull": null,
+              "absoluteJsonPointer": "/receipt_sha256",
+              "canonicalAliasOrNull": "evidence_sha256",
+              "exactCardinality": "exactly_1_projected_owner_scope_decision_evidence",
+              "recordOrder": "owner_scope_decision_projection_row",
+              "selectorKind": "direct_json_pointer",
+              "rowFieldJsonPointerOrNull": null
+            }
+          ],
+          "selectorGrammar": {
+            "direct_json_pointer": "absoluteJsonPointer_must_resolve_one_value_in_the_exact_projected_virtual_underlying_evidence_receipt",
+            "array_field_projection": "not_used_for_this_transformation",
+            "allowedSelectorKindsExactly": [
+              "direct_json_pointer"
+            ]
+          },
+          "operation": "emit_the_single_exact_selected_value_under_canonicalFieldName",
+          "exactCardinalityAndOrderRequired": true,
+          "sourceCurrentnessRequired": true,
+          "contractValueRequiresExactEvaluationHeadTree": false,
+          "unknownFieldPointerAliasSelectorFilterSortDedupOrFallbackAllowed": false
+        },
+        "O3B.owner_scope_decision_identity.cross_plane_evaluation_binding_and_nonidentifying_comparison_receipt_set.v1.evidence_id.projection": {
+          "transformVersion": "gate-coherence-source-transformation.v2",
+          "gateId": "O3B",
+          "dimensionId": "owner_scope_decision_identity",
+          "inputName": "cross_plane_evaluation_binding_and_nonidentifying_comparison_receipt_set",
+          "canonicalFieldName": "evidence_id",
+          "orderedSourceRowsExactly": [
+            {
+              "sourceOrdinal": 1,
+              "sourceKind": "resolved_virtual_underlying_evidence_receipt",
+              "requiredShapeOrContractIdOrNull": "owner-scope-decision-evidence.v1",
+              "reachableThroughPayloadSchemaVersionOrNull": null,
+              "absoluteJsonPointer": "/receipt_id",
+              "canonicalAliasOrNull": "evidence_id",
+              "exactCardinality": "exactly_1_projected_owner_scope_decision_evidence",
+              "recordOrder": "owner_scope_decision_projection_row",
+              "selectorKind": "direct_json_pointer",
+              "rowFieldJsonPointerOrNull": null
+            }
+          ],
+          "selectorGrammar": {
+            "direct_json_pointer": "absoluteJsonPointer_must_resolve_one_value_in_the_exact_projected_virtual_underlying_evidence_receipt",
+            "array_field_projection": "not_used_for_this_transformation",
+            "allowedSelectorKindsExactly": [
+              "direct_json_pointer"
+            ]
+          },
+          "operation": "emit_the_single_exact_selected_value_under_canonicalFieldName",
+          "exactCardinalityAndOrderRequired": true,
+          "sourceCurrentnessRequired": true,
+          "contractValueRequiresExactEvaluationHeadTree": false,
+          "unknownFieldPointerAliasSelectorFilterSortDedupOrFallbackAllowed": false
+        },
+        "O3B.owner_scope_decision_identity.cross_plane_evaluation_binding_and_nonidentifying_comparison_receipt_set.v1.evidence_version.projection": {
+          "transformVersion": "gate-coherence-source-transformation.v2",
+          "gateId": "O3B",
+          "dimensionId": "owner_scope_decision_identity",
+          "inputName": "cross_plane_evaluation_binding_and_nonidentifying_comparison_receipt_set",
+          "canonicalFieldName": "evidence_version",
+          "orderedSourceRowsExactly": [
+            {
+              "sourceOrdinal": 1,
+              "sourceKind": "resolved_virtual_underlying_evidence_receipt",
+              "requiredShapeOrContractIdOrNull": "owner-scope-decision-evidence.v1",
+              "reachableThroughPayloadSchemaVersionOrNull": null,
+              "absoluteJsonPointer": "/receipt_version",
+              "canonicalAliasOrNull": "evidence_version",
+              "exactCardinality": "exactly_1_projected_owner_scope_decision_evidence",
+              "recordOrder": "owner_scope_decision_projection_row",
+              "selectorKind": "direct_json_pointer",
+              "rowFieldJsonPointerOrNull": null
+            }
+          ],
+          "selectorGrammar": {
+            "direct_json_pointer": "absoluteJsonPointer_must_resolve_one_value_in_the_exact_projected_virtual_underlying_evidence_receipt",
+            "array_field_projection": "not_used_for_this_transformation",
+            "allowedSelectorKindsExactly": [
+              "direct_json_pointer"
+            ]
+          },
+          "operation": "emit_the_single_exact_selected_value_under_canonicalFieldName",
+          "exactCardinalityAndOrderRequired": true,
+          "sourceCurrentnessRequired": true,
+          "contractValueRequiresExactEvaluationHeadTree": false,
+          "unknownFieldPointerAliasSelectorFilterSortDedupOrFallbackAllowed": false
+        },
+        "O3B.owner_scope_decision_identity.cross_plane_evaluation_binding_and_nonidentifying_comparison_receipt_set.v1.evidence_sha256.projection": {
+          "transformVersion": "gate-coherence-source-transformation.v2",
+          "gateId": "O3B",
+          "dimensionId": "owner_scope_decision_identity",
+          "inputName": "cross_plane_evaluation_binding_and_nonidentifying_comparison_receipt_set",
+          "canonicalFieldName": "evidence_sha256",
+          "orderedSourceRowsExactly": [
+            {
+              "sourceOrdinal": 1,
+              "sourceKind": "resolved_virtual_underlying_evidence_receipt",
+              "requiredShapeOrContractIdOrNull": "owner-scope-decision-evidence.v1",
+              "reachableThroughPayloadSchemaVersionOrNull": null,
+              "absoluteJsonPointer": "/receipt_sha256",
+              "canonicalAliasOrNull": "evidence_sha256",
+              "exactCardinality": "exactly_1_projected_owner_scope_decision_evidence",
+              "recordOrder": "owner_scope_decision_projection_row",
+              "selectorKind": "direct_json_pointer",
+              "rowFieldJsonPointerOrNull": null
+            }
+          ],
+          "selectorGrammar": {
+            "direct_json_pointer": "absoluteJsonPointer_must_resolve_one_value_in_the_exact_projected_virtual_underlying_evidence_receipt",
+            "array_field_projection": "not_used_for_this_transformation",
+            "allowedSelectorKindsExactly": [
+              "direct_json_pointer"
+            ]
+          },
+          "operation": "emit_the_single_exact_selected_value_under_canonicalFieldName",
+          "exactCardinalityAndOrderRequired": true,
+          "sourceCurrentnessRequired": true,
+          "contractValueRequiresExactEvaluationHeadTree": false,
+          "unknownFieldPointerAliasSelectorFilterSortDedupOrFallbackAllowed": false
         }
       },
       "comparisonOperatorContracts": {
@@ -36588,6 +38254,55 @@
           "Production_telemetry_or_performance_claims",
           "schema_persistence_RLS_auth_provider_model_prompt_dependency_environment_flag_allowlist_Preview_or_Production_changes"
         ],
+        "crossPlaneAuthorizationBoundary": {
+          "approvalDecision": "owner_approved_exact_O3B_scope_and_exclusions",
+          "approvalEvidenceInputName": "exact_scope_and_excluded_actions",
+          "approvalEvidenceContractId": "owner-scope-decision-evidence.v1",
+          "onlyAllowedOutput": "separately_approved_bodyless_nonidentifying_readiness_evaluation_receipt",
+          "authorizationRequiredBeforeExactly": [
+            "personal_response_or_session_event_collection",
+            "personal_readiness_processing_start",
+            "commitment_opening_or_ephemeral_bridge_activation",
+            "heldout_evaluation_binding_or_scoring",
+            "cross_plane_output_creation"
+          ],
+          "approvalBoundContractJsonPointersExactly": [
+            "/timedOmrReadinessContract/dataBoundary",
+            "/goldHeldOutSeparationContract/heldOutIngressReceiptShape",
+            "/goldHeldOutSeparationContract/crossBoundaryRules"
+          ],
+          "approvalBoundContractPointerDigestRowFieldsExactly": [
+            "json_pointer",
+            "resolved_value_sha256"
+          ],
+          "approvalBoundContractPointerDigestContract": {
+            "algorithm": "sha256",
+            "hexEncoding": "lowercase_64",
+            "canonicalization": "RFC_8785_JSON_Canonicalization_Scheme",
+            "recordOrder": "approvalBoundContractJsonPointersExactly_order",
+            "resolvedValueRule": "resolved_value_sha256_equals_SHA256_RFC8785_of_the_exact_pointer_value_at_the_O3B_evaluation_head_and_tree",
+            "rowsDigestRule": "ordered_authorization_contract_pointer_digest_rows_digest_equals_SHA256_RFC8785_of_the_exact_ordered_rows"
+          },
+          "rawResponseOpeningSaltActorIdentityOrHeldoutMembershipExportAllowed": false,
+          "missingStaleMismatchedOrUnboundApprovalFailsClosed": true,
+          "approvalActionTimeCurrentnessContract": {
+            "requiredResolvedStatus": "verified_current",
+            "requiredDecision": "owner_approved_exact_O3B_scope_and_exclusions",
+            "revokedOrSupersededAllowed": false,
+            "nonnullExpiryRequired": true,
+            "reResolveImmediatelyBeforeEveryAction": true,
+            "reviewedAtAloneIsSufficient": false,
+            "requiredCurrentBeforeActionNamesExactly": [
+              "personal_response_or_session_event_collection",
+              "personal_readiness_processing_start",
+              "commitment_opening_or_ephemeral_bridge_activation",
+              "heldout_evaluation_binding_or_scoring",
+              "cross_plane_output_creation"
+            ],
+            "actionTimestampComparisonRule": "resolved_owner_evidence_observed_at_lte_action_instant_lt_resolved_owner_evidence_expires_at_and_latest_status_at_action_is_verified_current_not_revoked_or_superseded",
+            "missingInvalidStaleFutureDatedExpiredRevokedSupersededOrMismatchedEvidenceFailsClosed": true
+          }
+        },
         "exactOrderRequired": true,
         "unknownActionAllowed": false
       },
@@ -36683,7 +38398,7 @@
       "requiredInputEvidenceContractRegistry": {
         "exact_scope_and_excluded_actions": {
           "inputEvidenceClass": "manual_owner_decision",
-          "contractId": "laterGateEvidence.O3B.ownerScopeContract",
+          "contractId": "laterGateEvidence.virtualUnderlyingEvidenceShapeRegistry.owner-scope-decision-evidence.v1+laterGateEvidence.O3B.ownerScopeContract",
           "requiredPayloadSchemaVersion": "owner-scope-decision-evidence.v1",
           "requiredUnderlyingStatus": "verified_current",
           "requiredUnderlyingDecision": "owner_approved_exact_O3B_scope_and_exclusions",
@@ -36881,7 +38596,7 @@
         },
         "response_record_timed_session_evaluation_precommit_scoring_and_final_binding_receipt_set": {
           "inputEvidenceClass": "typed_receipt_or_receipt_set",
-          "contractId": "timedOmrReadinessContract.omrShape.responseRecordDigestContract+timedSessionReceiptShape+evaluationBindingPrecommitReceiptShape+scoringReceiptShape+crossPlaneEvaluationBindingReceiptShape",
+          "contractId": "laterGateEvidence.virtualUnderlyingEvidenceShapeRegistry.owner-scope-decision-evidence.v1+timedOmrReadinessContract.omrShape.responseRecordDigestContract+timedSessionReceiptShape+evaluationBindingPrecommitReceiptShape+scoringReceiptShape+crossPlaneEvaluationBindingReceiptShape",
           "requiredPayloadSchemaVersion": "timed-evaluation-receipt-chain.v1",
           "requiredUnderlyingStatus": "verified_current",
           "requiredUnderlyingDecision": "verified_complete_timed_evaluation_receipt_chain",
@@ -36890,7 +38605,7 @@
         },
         "privacy_consent_purpose_retention_revocation_and_deletion_receipt_bundle": {
           "inputEvidenceClass": "typed_receipt_or_receipt_set",
-          "contractId": "timedOmrReadinessContract.dataBoundary",
+          "contractId": "laterGateEvidence.virtualUnderlyingEvidenceShapeRegistry.owner-scope-decision-evidence.v1+timedOmrReadinessContract.dataBoundary",
           "requiredPayloadSchemaVersion": "privacy-lifecycle-receipt-bundle.v1",
           "requiredUnderlyingStatus": "verified_current",
           "requiredUnderlyingDecision": "verified_complete_privacy_lifecycle_receipt_bundle",
@@ -36899,7 +38614,7 @@
         },
         "personal_event_log_inception_lineage_precommit_source_segment_head_and_completeness_receipt_set": {
           "inputEvidenceClass": "typed_receipt_or_receipt_set",
-          "contractId": "timedOmrReadinessContract.omrShape.personalExposureTrackingInceptionReceiptShape+personalLineageKeyRotationChainReceiptShape+personalStableLineageDerivationReceiptShape+personalSessionEventLogPrecommitReceiptShape+personalEventLogSourceReceiptShape+personalEventLogSegmentReceiptShape+personalEventLogHeadCheckpointReceiptShape+personalEventLogCompletenessReceiptShape",
+          "contractId": "laterGateEvidence.virtualUnderlyingEvidenceShapeRegistry.owner-scope-decision-evidence.v1+timedOmrReadinessContract.omrShape.personalExposureTrackingInceptionReceiptShape+personalLineageKeyRotationChainReceiptShape+personalStableLineageDerivationReceiptShape+personalSessionEventLogPrecommitReceiptShape+personalEventLogSourceReceiptShape+personalEventLogSegmentReceiptShape+personalEventLogHeadCheckpointReceiptShape+personalEventLogCompletenessReceiptShape",
           "requiredPayloadSchemaVersion": "personal-event-lineage-chain-evidence.v1",
           "requiredUnderlyingStatus": "verified_current",
           "requiredUnderlyingDecision": "verified_complete_personal_event_and_lineage_chain",
@@ -36908,7 +38623,7 @@
         },
         "cross_plane_evaluation_binding_and_nonidentifying_comparison_receipt_set": {
           "inputEvidenceClass": "typed_receipt_or_receipt_set",
-          "contractId": "timedOmrReadinessContract.omrShape.evaluationBindingPrecommitReceiptShape+comparisonEvidenceReceiptShape+crossPlaneEvaluationBindingReceiptShape+timedOmrReadinessContract.omrShape.commitmentPolicyReceiptShape+ephemeralBridgePolicyReceiptShape+rawChoiceDestructionReceiptShape",
+          "contractId": "laterGateEvidence.virtualUnderlyingEvidenceShapeRegistry.owner-scope-decision-evidence.v1+timedOmrReadinessContract.omrShape.evaluationBindingPrecommitReceiptShape+comparisonEvidenceReceiptShape+crossPlaneEvaluationBindingReceiptShape+timedOmrReadinessContract.omrShape.commitmentPolicyReceiptShape+ephemeralBridgePolicyReceiptShape+rawChoiceDestructionReceiptShape",
           "requiredPayloadSchemaVersion": "cross-plane-evaluation-evidence-set.v1",
           "requiredUnderlyingStatus": "verified_current",
           "requiredUnderlyingDecision": "verified_complete_nonidentifying_cross_plane_evaluation",
@@ -37405,6 +39120,8 @@
         },
         "response_record_timed_session_evaluation_precommit_scoring_and_final_binding_receipt_set": {
           "contractJsonPointers": [
+            "/laterGateEvidence/O3B/ownerScopeContract",
+            "/timedOmrReadinessContract/dataBoundary",
             "/timedOmrReadinessContract/omrShape/responseRecordDigestContract",
             "/timedOmrReadinessContract/omrShape/timedSessionReceiptShape",
             "/timedOmrReadinessContract/omrShape/responseRecordVerificationReceiptShape",
@@ -37414,9 +39131,10 @@
             "/timedOmrReadinessContract/omrShape/crossPlaneEvaluationBindingReceiptShape"
           ],
           "requiredEvidenceProjection": {
-            "cardinalityRule": "fact_derived_exactly_one_response_verification_per_session_position_one_timed_session_verification_one_precommit_one_scoring_per_position_and_one_final_binding",
-            "identityKeySource": "timed_session_ordered_response_record_reference_set",
+            "cardinalityRule": "exactly_one_current_owner_scope_decision_then_fact_derived_exactly_one_response_verification_per_session_position_one_timed_session_verification_one_precommit_one_scoring_per_position_and_one_final_binding",
+            "identityKeySource": "exact_O3B_scope_input_identity_plus_timed_session_ordered_response_record_reference_set",
             "requiredShapeOrContractIds": [
+              "owner-scope-decision-evidence.v1",
               "timedOmrReadinessContract.omrShape.responseRecordVerificationReceiptShape",
               "timedOmrReadinessContract.omrShape.timedSessionVerificationReceiptShape",
               "timedOmrReadinessContract.omrShape.evaluationBindingPrecommitReceiptShape",
@@ -37424,33 +39142,39 @@
               "timedOmrReadinessContract.omrShape.crossPlaneEvaluationBindingReceiptShape"
             ],
             "requiredResolvedDecisions": [
-              "each_corresponding_shape_requiredDecision"
+              "owner_approved_exact_O3B_scope_and_exclusions",
+              "each_remaining_corresponding_shape_requiredDecision"
             ],
-            "recordOrder": "response_verification_position_then_session_verification_then_precommit_then_scoring_position_then_final_binding",
+            "recordOrder": "owner_scope_decision_then_response_verification_position_then_session_verification_then_precommit_then_scoring_position_then_final_binding",
             "noMissingExtraDuplicate": true
           },
           "maximumValiditySeconds": 86400
         },
         "privacy_consent_purpose_retention_revocation_and_deletion_receipt_bundle": {
           "contractJsonPointers": [
+            "/laterGateEvidence/O3B/ownerScopeContract",
             "/timedOmrReadinessContract/dataBoundary"
           ],
           "requiredEvidenceProjection": {
-            "cardinalityRule": "exactly_1",
-            "identityKeySource": "privacy_lifecycle_completeness_bundle_receipt_identity",
+            "cardinalityRule": "exactly_1_current_owner_scope_decision_then_exactly_1_privacy_lifecycle_bundle",
+            "identityKeySource": "exact_O3B_scope_input_identity_plus_privacy_lifecycle_completeness_bundle_receipt_identity",
             "requiredShapeOrContractIds": [
+              "owner-scope-decision-evidence.v1",
               "privacy-lifecycle-receipt-bundle.v1"
             ],
             "requiredResolvedDecisions": [
+              "owner_approved_exact_O3B_scope_and_exclusions",
               "verified_complete_privacy_lifecycle_receipt_bundle"
             ],
-            "recordOrder": "single_completeness_bundle_whose_assertion_derivation_binds_exactly_five_phase_receipts_in_consent_purpose_limitation_retention_revocation_deletion_order",
+            "recordOrder": "owner_scope_decision_then_privacy_lifecycle_bundle",
             "noMissingExtraDuplicate": true
           },
           "maximumValiditySeconds": 86400
         },
         "personal_event_log_inception_lineage_precommit_source_segment_head_and_completeness_receipt_set": {
           "contractJsonPointers": [
+            "/laterGateEvidence/O3B/ownerScopeContract",
+            "/timedOmrReadinessContract/dataBoundary",
             "/timedOmrReadinessContract/omrShape/personalExposureTrackingInceptionReceiptShape",
             "/timedOmrReadinessContract/omrShape/personalSessionLogSourceReservationReceiptShape",
             "/timedOmrReadinessContract/omrShape/personalSessionEventLogPrecommitReceiptShape",
@@ -37466,9 +39190,10 @@
             "/timedOmrReadinessContract/omrShape/personalEventLogCompletenessReceiptShape"
           ],
           "requiredEvidenceProjection": {
-            "cardinalityRule": "fact_derived_exactly_all_inception_reservation_precommit_commitment_alias_lineage_and_three_purpose_origin_to_head_log_chain_receipts",
-            "identityKeySource": "actor_session_form_positions_lineages_and_exposure_assistance_timing_log_source_chains",
+            "cardinalityRule": "exactly_one_current_owner_scope_decision_then_fact_derived_exactly_all_inception_reservation_precommit_commitment_alias_lineage_and_three_purpose_origin_to_head_log_chain_receipts",
+            "identityKeySource": "exact_O3B_scope_input_identity_plus_actor_session_form_positions_lineages_and_exposure_assistance_timing_log_source_chains",
             "requiredShapeOrContractIds": [
+              "owner-scope-decision-evidence.v1",
               "timedOmrReadinessContract.omrShape.personalExposureTrackingInceptionReceiptShape",
               "timedOmrReadinessContract.omrShape.personalSessionLogSourceReservationReceiptShape",
               "timedOmrReadinessContract.omrShape.personalSessionEventLogPrecommitReceiptShape",
@@ -37484,15 +39209,18 @@
               "timedOmrReadinessContract.omrShape.personalEventLogCompletenessReceiptShape"
             ],
             "requiredResolvedDecisions": [
-              "each_corresponding_shape_requiredDecision"
+              "owner_approved_exact_O3B_scope_and_exclusions",
+              "each_remaining_corresponding_shape_requiredDecision"
             ],
-            "recordOrder": "inception_reservation_precommit_then_position_commitment_alias_lineage_then_purpose_source_segment_sequence_head_completeness",
+            "recordOrder": "owner_scope_decision_then_inception_reservation_precommit_then_position_commitment_alias_lineage_then_purpose_source_segment_sequence_head_completeness",
             "noMissingExtraDuplicate": true
           },
           "maximumValiditySeconds": 86400
         },
         "cross_plane_evaluation_binding_and_nonidentifying_comparison_receipt_set": {
           "contractJsonPointers": [
+            "/laterGateEvidence/O3B/ownerScopeContract",
+            "/timedOmrReadinessContract/dataBoundary",
             "/timedOmrReadinessContract/omrShape/evaluationBindingPrecommitReceiptShape",
             "/timedOmrReadinessContract/omrShape/comparisonEvidenceReceiptShape",
             "/timedOmrReadinessContract/omrShape/crossPlaneEvaluationBindingReceiptShape",
@@ -37501,9 +39229,10 @@
             "/timedOmrReadinessContract/omrShape/rawChoiceDestructionReceiptShape"
           ],
           "requiredEvidenceProjection": {
-            "cardinalityRule": "fact_derived_exactly_one_precommit_one_commitment_policy_one_bridge_policy_one_comparison_and_one_independent_destruction_receipt_per_position_and_one_final_binding",
-            "identityKeySource": "timed_session_precommitted_position_set",
+            "cardinalityRule": "exactly_one_current_owner_scope_decision_then_fact_derived_exactly_one_precommit_one_commitment_policy_one_bridge_policy_one_comparison_and_one_independent_destruction_receipt_per_position_and_one_final_binding",
+            "identityKeySource": "exact_O3B_scope_input_identity_plus_timed_session_precommitted_position_set",
             "requiredShapeOrContractIds": [
+              "owner-scope-decision-evidence.v1",
               "timedOmrReadinessContract.omrShape.evaluationBindingPrecommitReceiptShape",
               "timedOmrReadinessContract.omrShape.comparisonEvidenceReceiptShape",
               "timedOmrReadinessContract.omrShape.crossPlaneEvaluationBindingReceiptShape",
@@ -37512,10 +39241,28 @@
               "timedOmrReadinessContract.omrShape.rawChoiceDestructionReceiptShape"
             ],
             "requiredResolvedDecisions": [
-              "each_corresponding_shape_requiredDecision"
+              "owner_approved_exact_O3B_scope_and_exclusions_then_each_remaining_corresponding_shape_requiredDecision"
             ],
-            "recordOrder": "precommit_then_policies_then_position_comparison_then_destruction_then_final_binding",
+            "recordOrder": "owner_scope_decision_then_precommit_then_policies_then_position_comparison_then_destruction_then_final_binding",
             "noMissingExtraDuplicate": true
+          },
+          "ownerApprovalBindingContract": {
+            "ownerEvidenceInputName": "exact_scope_and_excluded_actions",
+            "ownerEvidenceShapeId": "owner-scope-decision-evidence.v1",
+            "requiredDecision": "owner_approved_exact_O3B_scope_and_exclusions",
+            "referencingReceiptFieldsExactly": {
+              "personal_session_precommit": "owner_scope_decision_receipt_reference",
+              "privacy_lifecycle_phase": "owner_scope_decision_receipt_reference",
+              "evaluation_precommit": "owner_scope_decision_receipt_reference",
+              "commitment_policy": "owner_scope_decision_receipt_reference",
+              "ephemeral_bridge_policy": "owner_scope_decision_receipt_reference",
+              "final_cross_plane_binding": "owner_scope_decision_receipt_reference"
+            },
+            "everyReferenceIdentityMustEqualExactScopeInputEvidenceIdVersionAndSha256": true,
+            "everyCarriedDecisionMustEqualRequiredDecision": true,
+            "ownerScopeContractMustMatchResolvedDecisionPayloadExactly": true,
+            "approvalMustBeCurrentBeforeCollectionProcessingOpeningEvaluationAndOutput": true,
+            "missingStaleMismatchedOrUnboundReferenceFailsClosed": true
           },
           "maximumValiditySeconds": 86400
         },
@@ -37598,6 +39345,7 @@
       "expiryTriggers": [
         "root_trust_anchor_registry_or_projection_changes",
         "scope_or_excluded_action_changes",
+        "owner_scope_decision_identity_status_decision_reviewer_time_or_expiry_changes",
         "s235b_or_s236b_sha_tree_changes",
         "official_rule_anchor_asset_digest_or_manifest_version_changes",
         "five_subject_taxonomy_changes",
@@ -37675,8 +39423,13 @@
           "gold_dataset_identity_reviewer_or_decision_changes",
           "reviewer_changes"
         ],
-        "privacy_consent_purpose_retention_revocation_and_deletion_receipt_bundle": "privacy_consent_purpose_retention_or_revocation_policy_changes",
+        "privacy_consent_purpose_retention_revocation_and_deletion_receipt_bundle": [
+          "privacy_consent_purpose_retention_or_revocation_policy_changes",
+          "owner_scope_decision_identity_status_decision_reviewer_time_or_expiry_changes"
+        ],
         "cross_plane_evaluation_binding_and_nonidentifying_comparison_receipt_set": [
+          "scope_or_excluded_action_changes",
+          "owner_scope_decision_identity_status_decision_reviewer_time_or_expiry_changes",
           "timed_omr_session_invariant_or_receipt_changes",
           "response_record_session_precommit_scoring_or_final_binding_changes"
         ],
@@ -37697,8 +39450,14 @@
         ],
         "question_object_provenance_and_deterministic_validator_receipt_set": "question_object_provenance_or_validator_definition_input_assertion_receipt_changes",
         "timed_omr_invalid_mark_and_transfer_resolution_evidence": "timed_omr_session_invariant_or_receipt_changes",
-        "response_record_timed_session_evaluation_precommit_scoring_and_final_binding_receipt_set": "response_record_session_precommit_scoring_or_final_binding_changes",
-        "personal_event_log_inception_lineage_precommit_source_segment_head_and_completeness_receipt_set": "personal_log_inception_lineage_precommit_source_segment_head_or_completeness_changes",
+        "response_record_timed_session_evaluation_precommit_scoring_and_final_binding_receipt_set": [
+          "response_record_session_precommit_scoring_or_final_binding_changes",
+          "owner_scope_decision_identity_status_decision_reviewer_time_or_expiry_changes"
+        ],
+        "personal_event_log_inception_lineage_precommit_source_segment_head_and_completeness_receipt_set": [
+          "personal_log_inception_lineage_precommit_source_segment_head_or_completeness_changes",
+          "owner_scope_decision_identity_status_decision_reviewer_time_or_expiry_changes"
+        ],
         "unresolved_rights_and_version_count": [
           "unresolved_count_or_safe_deferred_state_changes",
           "rights_label_terms_or_decision_scope_change",

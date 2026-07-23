@@ -721,6 +721,16 @@ answer-changed required plus zero to two optional confidence/elapsed keys.
 `Statement.context.extensions` is one exact union map with five required
 subject/exposure/assistance/contract-version/manifest keys plus optional
 cause. There are not two competing context maps, and no other key is allowed.
+The internal `occurred_at` value is a valid Gregorian/RFC 3339 UTC instant
+spelled with uppercase `Z` and exactly three fractional-second digits.
+The mapping compares it with a trusted adapter clock and rejects a future
+time; it does not clamp, coerce, rewrite, substitute, or normalize an offset.
+The exact validated source string becomes `Statement.timestamp`. This
+mapping-only rule follows the pinned
+[IEEE xAPI Content snapshot](https://opensource.ieee.org/xapi/xapi-base-standard-documentation/-/blob/24586e13b897697537fb73b9818d86ba403ab787/9274.1.1%20xAPI%20Base%20Standard%20for%20Content.md),
+which requires UTC formatting, prohibits a future Statement timestamp from
+an LRP, and recommends millisecond precision. It is not an adapter or
+conformance claim.
 S235B implements no LRS, transport, storage, query, delivery, or Production
 collection.
 
@@ -755,7 +765,8 @@ The contract-only internal event includes IDs, versions, vault-local actor and
 service-authority references, optional pre-adapter Account fields,
 subject/item/assessment/generated references, attempt kind, answer state,
 confidence and elapsed-time buckets, answer change, exposure, assistance,
-cause code, source/version provenance, pinned Caliper context, and event time.
+cause code, source/version provenance, pinned Caliper context, and the
+canonical UTC-`Z` millisecond event time described above.
 
 It contains no raw content, selected choice, official key, or free text. It
 remains in the Personal Raw Vault for personal-service processing only.
@@ -987,6 +998,40 @@ sign domain-separated RFC 8785 UTF-8 bytes with canonical Ed25519 or
 low-S P-256/P1363 encoding. A gate-specific trust-anchor projection, every
 input derivation, cross-input coherence result, and the final gate packet
 share the exact scope, head, tree, currentness horizon, and non-null expiry.
+
+The cross-plane readiness path additionally requires one current,
+non-revoked Owner decision for the exact O3B scope and exclusions. Its closed
+root-attestation schema signs the exact scope ID, decision type, included and
+excluded action arrays, cross-plane authorization boundary, Owner-scope
+contract digest, ordered contract-pointer digest rows, trust-anchor
+projection, decision-payload digest, and decision time; unknown or
+wrong-typed fields fail closed. The nested authorization-boundary schema also
+requires the action-time currentness object and closes its exact fields and
+literals, and its decision-payload digest contract is in the same mechanically
+recomputed nested registry. The signed object is invalid if either nested
+contract is absent, altered, or extended. The ordered digest rows bind exactly:
+
+1. `timedOmrReadinessContract.dataBoundary`;
+2. `goldHeldOutSeparationContract.heldOutIngressReceiptShape`;
+3. `goldHeldOutSeparationContract.crossBoundaryRules`.
+
+The exact Owner virtual receipt is the first evidence projection in all five
+relevant O3B inputs: scope/exclusions, privacy lifecycle, Personal event-log
+chain, timed/evaluation chain, and cross-plane comparison/final binding.
+Their `owner_scope_decision_identity` coherence dimension compares the same
+immutable `evidence_id`, `evidence_version`, and `evidence_sha256`. Each
+derivation reads that projected virtual receipt and its currentness receipt
+directly; it never reads the enclosing gate-input receipt or a digest that
+depends on itself. The digest-covered carrier field is only a mirror, so
+self-reference and digest cycles fail closed.
+
+Approval is re-resolved immediately before collection, processing, commitment
+opening or bridge activation, evaluation/scoring, and output. The resolved
+status must still be current and not revoked or superseded, and its non-null
+expiry must be later than each concrete action timestamp. A policy
+`reviewed_at` value alone is insufficient. Owner-decision identity, status,
+decision, reviewer/time, revocation, supersession, or expiry changes expire
+the privacy, Personal-log, timed/evaluation, and cross-plane O3B inputs.
 
 O3B benchmark evidence is post-S236 only. It must reference a current passing
 S236B gate packet, that packet's exact coherence receipt, and a trusted
