@@ -264,7 +264,7 @@ items:
     priority: 29
   - id: S235B
     title: First-Round Adaptive MCQ Foundation Contracts
-    status: queued
+    status: completed
     dependencies: [S234]
     lockGroup: first-foundation-contracts
     risk: high
