@@ -518,6 +518,13 @@ function hasImmediateLegalVersionLabelContext(
     precedingText.lastIndexOf("。"),
     precedingText.lastIndexOf("！"),
     precedingText.lastIndexOf("？"),
+    precedingText.lastIndexOf("‥"),
+    precedingText.lastIndexOf("…"),
+    precedingText.lastIndexOf("⋮"),
+    precedingText.lastIndexOf("⋯"),
+    precedingText.lastIndexOf("⋰"),
+    precedingText.lastIndexOf("⋱"),
+    precedingText.lastIndexOf("︙"),
     precedingText.lastIndexOf("\r"),
     precedingText.lastIndexOf("\n"),
   );
@@ -548,7 +555,7 @@ function hasExplicitUnknownLegalEffectiveVersion(
   const unknownSource =
     `(알려지지${unknownTokenGapSource}않|알${unknownTokenGapSource}수${unknownTokenGapSource}없|미상(?!환)|불명(?!확|예|료)|불확실|미확인|별도${unknownTokenGapSource}확인|확인(?:이)?${unknownTokenGapSource}(?:필요|되지(?:${unknownTokenGapSource}않)?|하라))`;
   const nonSentencePunctuationSource =
-    String.raw`(?:(?![.!?。！？…⋯\p{Pc}·])[\p{P}\p{S}])`;
+    String.raw`(?:(?![.!?。！？‥…⋮⋯⋰⋱︙\p{Pc}·])[\p{P}\p{S}])`;
   const particleSource =
     String.raw`(?:로서|로써|로|이며|이고|이므로|이지만|이어서|이라서|이라면|이라고|인데|이되|이자|이니|인바|인즉|이라|은|는|이|가|을|를|인|상|에서|에|의|도|만)`;
   const wrappedTailTokenSource =
@@ -694,6 +701,7 @@ function hasAdjacentLawArticle(
 function legalSentenceSegments(
   text: string,
   splitLineBreaks = true,
+  splitEllipsisBoundaries = false,
 ) {
   const normalized = text.normalize("NFKC");
   const dateRanges = [...normalized.matchAll(
@@ -716,7 +724,9 @@ function legalSentenceSegments(
     const isLineBreakBoundary =
       splitLineBreaks && isLineBreak;
     const isPunctuationBoundary =
-      /[.!?。！？]/u.test(character) && !isProtectedPeriodAt(index);
+      (/[.!?。！？]/u.test(character) ||
+        (splitEllipsisBoundaries && /[‥…⋮⋯⋰⋱︙]/u.test(character))) &&
+      !isProtectedPeriodAt(index);
     if (!isLineBreakBoundary && !isPunctuationBoundary) {
       continue;
     }
@@ -725,7 +735,9 @@ function legalSentenceSegments(
     while (
       index + 1 < normalized.length &&
       ((splitLineBreaks && /[\r\n]/u.test(normalized[index + 1])) ||
-        (/[.!?。！？]/u.test(normalized[index + 1]) &&
+        ((/[.!?。！？]/u.test(normalized[index + 1]) ||
+          (splitEllipsisBoundaries &&
+            /[‥…⋮⋯⋰⋱︙]/u.test(normalized[index + 1]))) &&
           !isProtectedPeriodAt(index + 1)))
     ) {
       index += 1;
@@ -741,7 +753,7 @@ function hasBareAdjacentUnknownLegalEffectiveVersion(
   text: string,
   allowedStatuteReferences: ReadonlySet<string>,
 ) {
-  for (const segment of legalSentenceSegments(text, false)) {
+  for (const segment of legalSentenceSegments(text, false, true)) {
     for (const match of segment.matchAll(
       /(?<![가-힣])기준\s{0,4}일(?:\s{0,4}자)?(?:\s{0,4}(?:로서|로써|로|이며|이고|이므로|이지만|은|는|이|가|을|를|인|상|에서|에|의|도|만|:|=)){0,2}(?!\s{9})\s{0,8}(?:(?![\p{Pc}·])[\p{P}\p{S}]){0,3}\s{0,8}(알려지지\s{0,4}않|알\s{0,4}수\s{0,4}없|미상(?!환)|불명(?!확|예|료)|불확실|미확인|별도\s{0,4}확인|확인(?:이)?\s{0,4}(?:필요|되지(?:\s{0,4}않)?|하라))/giu,
     )) {

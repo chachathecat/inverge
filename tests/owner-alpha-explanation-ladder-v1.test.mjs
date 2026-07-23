@@ -2119,6 +2119,8 @@ test("Law bare adjacent unknown versions fail closed without ordinary-date false
     "기준일자는 미상이며 보상액을 산정하고 공익사업법 제10조를 검토한다.",
     "법령 기준일자는.\n미상이다. 공익사업법 제10조를 검토한다.",
     "법령 기준일자는⋯\n미상이다. 공익사업법 제10조를 검토한다.",
+    "법령 기준일자는⋮\n미상이다. 공익사업법 제10조를 검토한다.",
+    "법령 기준일자는︙\n미상이다. 공익사업법 제10조를 검토한다.",
     "법령 기준일자는\n보상액을 산정하고 미상이다. 공익사업법 제10조를 검토한다.",
     "법령 기준일자는\n\n미상이다. 공익사업법 제10조를 검토한다.",
     `법령 기준일자는${" ".repeat(9)}\n미상이다. 공익사업법 제10조를 검토한다.`,
@@ -2138,6 +2140,13 @@ test("Law bare adjacent unknown versions fail closed without ordinary-date false
     "공익사업법 제10조! 시행일은\n미상이다.",
     "공익사업법 제10조? 시행일은\n미상이다.",
     "공익사업법 제10조。 시행일은\n미상이다.",
+    "공익사업법 제10조‥ 시행일은\n미상이다.",
+    "공익사업법 제10조… 시행일은\n미상이다.",
+    "공익사업법 제10조⋮ 시행일은\n미상이다.",
+    "공익사업법 제10조⋯ 시행일은\n미상이다.",
+    "공익사업법 제10조⋰ 시행일은\n미상이다.",
+    "공익사업법 제10조⋱ 시행일은\n미상이다.",
+    "공익사업법 제10조︙ 시행일은\n미상이다.",
     "공익사업법. 시행일은\n미상이다.",
     "법률\n유효일은\n미상이다.",
     "공익사업법\n시행일은\n미상이다.",
@@ -2191,6 +2200,21 @@ test("Law bare adjacent unknown versions fail closed without ordinary-date false
       [],
       generatedReferenceText,
     );
+  }
+
+  for (const sentenceBoundary of ["‥", "…", "⋮", "⋯", "⋰", "⋱", "︙"]) {
+    for (const generatedReferenceText of [
+      `공익사업법 제10조${sentenceBoundary} 기준일자는 미상이다.`,
+      `공익사업법${sentenceBoundary} 기준일자는 미상이다.`,
+      `기준일자는 미상${sentenceBoundary} 제10조를 검토한다.`,
+      `기준일자는 미상${sentenceBoundary} 공익사업법을 검토한다.`,
+    ]) {
+      assert.deepEqual(
+        blockersFor(generatedReferenceText),
+        [],
+        generatedReferenceText,
+      );
+    }
   }
 
   for (const nonStatuteLabel of [
