@@ -144,18 +144,21 @@ AF010 through AF016 completed the first report-only Agent Factory automation evi
 
 Future execution automation remains approval-gated and must be implemented in a separate issue with its own safety evidence.
 
-## Next Roadmap After The Post-#650 Reset
+## Current Roadmap After S235A Readiness
 
-The active program exposes exactly two metadata-ready items:
+The S234 reset snapshot exposed exactly two metadata-ready items:
 
 1. S235A: second-round owner-private Golden 3 rights/source/original-question,
    exam-date Law version, and private reference-package readiness only;
 2. S235B: first-round official rules, taxonomy, rights/version manifests, and
    Foundation contracts only.
 
-Selection does not start either item. Golden execution, first-round runtime,
-Founding Beta activation, public S225, both-track, Academy, billing, provider,
-shared signals, and Production remain queued behind dependencies and Owner
-gates.
+S235A readiness is now completed without Golden execution. The dynamic
+authority remains `roadmap/active-program.yml`: S235B and O3A are
+metadata-ready, O3A is still queued with Owner approval pending, and S236A is
+queued and blocked by O3A. Selection does not start work. First-round
+runtime, Founding Beta activation, public S225, both-track, Academy, billing,
+provider, shared signals, and Production remain queued behind dependencies
+and Owner gates.
 
 Capture-to-Note and Capture-to-Plan remain the learner-loop quality standard, but this PR does not implement runtime behavior. Raw historical corpus expansion, public archive behavior, billing, usage ledger, execution automation, and production source ingestion remain deferred until source, rights, private-storage, data-boundary, runtime, and cost gates exist.

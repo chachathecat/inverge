@@ -179,10 +179,7 @@ test("active program adds S200R, completes S201/S202, preserves WIP, and updates
 test("historical S200-S224 completion does not assert current readiness", async () => {
   const roadmap = parseActiveProgram(await read("roadmap/active-program.yml"));
   const historical = roadmap.items.filter(
-    (item) =>
-      item.status === "completed" &&
-      item.id !== "O1" &&
-      item.id !== "S234",
+    (item) => item.completionScope === "historical_contract_evidence",
   );
 
   assert.equal(historical.length, 26);
@@ -192,6 +189,17 @@ test("historical S200-S224 completion does not assert current readiness", async 
   }
   assert.equal(roadmap.byId.get("S222").status, "completed");
   assert.equal(roadmap.byId.get("S224").status, "completed");
+});
+
+test("S235A readiness closeout leaves O3A pending and S236A queued", async () => {
+  const roadmap = parseActiveProgram(await read("roadmap/active-program.yml"));
+
+  assert.equal(roadmap.byId.get("S235A").status, "completed");
+  assert.equal(roadmap.byId.get("S235B").status, "queued");
+  assert.equal(roadmap.byId.get("O3A").status, "queued");
+  assert.deepEqual(roadmap.byId.get("O3A").dependencies, ["S235A"]);
+  assert.equal(roadmap.byId.get("S236A").status, "queued");
+  assert.deepEqual(roadmap.byId.get("S236A").dependencies, ["O3A"]);
 });
 
 test("active program dependency graph has no missing dependencies or self-dependencies", async () => {
@@ -764,6 +772,17 @@ test("Post-650 data, consent, quarantine, OSS, and Owner gates remain non-active
     completionScope: "historical_contract_evidence",
     currentReadinessEstablished: false,
   });
+  assert.deepEqual(policy.roadmapContract.s234ResetReadyItemIdsSnapshot, [
+    "S235A",
+    "S235B",
+  ]);
+  assert.equal(
+    policy.roadmapContract.currentStateAuthority,
+    "roadmap/active-program.yml",
+  );
+  assert.equal(policy.roadmapContract.currentReadyItemIdsMirrored, false);
+  assert.equal(policy.roadmapContract.selectionAutomaticallyStartsWork, false);
+  assert.equal("readyAfterMerge" in policy.roadmapContract, false);
   assert.deepEqual(policy.roadmapContract.primaryStatusesUsed, ["completed", "queued"]);
   assert.deepEqual(policy.roadmapContract.runnerSupportedPrimaryStatuses.blocked, [
     "blocked",

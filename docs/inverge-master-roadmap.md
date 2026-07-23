@@ -460,10 +460,14 @@ pricing, learner runtime, or public claims.
 
 Capture-to-Note and Capture-to-Plan remain the learner-loop quality standard: learner-owned capture or answer review becomes a note, safe concept candidate, one biggest gap, one next action, Today Plan max 3, Review Queue, Learning Record, and Personal Concept State. Capture-to-Note is prioritized before any public historical archive or passive question-bank front door.
 
-The near roadmap follows `roadmap/active-program.yml`. Exactly two items are
-ready after this reset: S235A second-round owner-private Golden 3 readiness
-and S235B first-round Adaptive MCQ Foundation contracts. Golden execution,
-Founding Beta waves, first-round runtime, both-track, Academy, shared-signal
-activation, and S225 remain queued behind unmet dependencies and Owner gates.
+The near roadmap follows `roadmap/active-program.yml`. The S234 reset
+snapshot exposed S235A second-round owner-private Golden 3 readiness and
+S235B first-round Adaptive MCQ Foundation contracts. S235A readiness is now
+complete. S235B and the queued, pending-owner-decision O3A are
+metadata-ready; S236A Golden 3 execution remains queued and blocked by O3A.
+Selection does not start work. First-round runtime remains queued behind unmet
+dependencies. Founding Beta waves, both-track, Academy, shared-signal
+activation, and S225 also remain queued behind unmet dependencies and Owner
+gates.
 
 Raw historical corpus expansion, public archive UX, Quick Solve acquisition experiments, billing, usage ledger, official-source ingestion, and execution automation are deferred until explicit source, rights, private-storage, data-boundary, runtime, and cost gates exist.

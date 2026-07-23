@@ -16,7 +16,7 @@ AF009 metadata mutation is intentionally separate in `Agent Factory Mutate` and 
 
 - `mode`: `plan_only`, `watch_snapshot`, `watch_live`, `doctor_pr_body`, `doctor_pr_body_live`, `repair_plan`, `repair_plan_live`, `merge_plan`, or `merge_plan_live`.
 - `target`: `auto`, a roadmap item id such as `S225` (a currently blocked
-  example) or `S235A` (a currently ready example), a PR number such as `461`,
+  example) or `S235B` (a currently ready example), a PR number such as `461`,
   or a sanitized fixture path.
 - `pr_number`: required for `watch_live`, `doctor_pr_body_live`, `repair_plan_live`, and `merge_plan_live`; leave empty for non-live modes.
 - `max_tasks`: `1` or `2`; applies to `plan_only`.
@@ -25,7 +25,7 @@ AF009 metadata mutation is intentionally separate in `Agent Factory Mutate` and 
 
 Historical note: S224 once made S225 the next queued/ready example. The active
 roadmap has advanced; S225 now waits for private Founding Beta and
-visual/home dependencies. Use `auto`, S235A, or S235B for current plan-only
+visual/home dependencies. Use `auto`, `S235B`, or `O3A` for current plan-only
 selection. A blocked S225 target must fail closed.
 
 ## Modes

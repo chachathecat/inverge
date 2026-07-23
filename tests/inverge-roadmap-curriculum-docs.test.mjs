@@ -183,6 +183,19 @@ test("legacy first-round templates stay frozen while Foundation contracts are se
   assert.match(unified, /timed\/OMR readiness contracts/i);
 });
 
+test("roadmap docs distinguish the S234 snapshot from current S235A closeout state", async () => {
+  const roadmap = await read("docs/inverge-master-roadmap.md");
+  const unified = await read("docs/dabangil-unified-program-contract.md");
+
+  for (const source of [roadmap, unified]) {
+    assert.match(source, /S234 reset\s+snapshot/i);
+    assert.match(source, /S235A(?: readiness)? is now\s+complete/i);
+    assert.match(source, /S235B and (?:the queued, pending-owner-decision )?O3A are\s+metadata-ready/i);
+    assert.match(source, /S236A[\s\S]{0,100}queued and blocked by O3A/i);
+    assert.match(source, /does not\s+(?:approve O3A or )?start/i);
+  }
+});
+
 test("docs mention Today Plan max 3 and official verification requirements", async () => {
   const docs = await Promise.all(requiredDocs.map(read)).then((parts) => parts.join("\n"));
   assert.match(docs, /Today Plan(?:[^\n]{0,80})max 3|Today Plan(?:[^\n]{0,80})최대 3|Today Plan[\s\S]{0,120}max three/i);

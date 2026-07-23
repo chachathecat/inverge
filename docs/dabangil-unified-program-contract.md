@@ -497,12 +497,17 @@ resolved before mutation. Shared source-of-truth, schema, auth/RLS, billing,
 and control-plane mutation remain overall WIP one even when program WIP is
 two.
 
-After this reset, exactly these two items are ready:
+The S234 reset snapshot contained exactly:
 
 - `S235A`: second-round owner-private Golden 3 readiness only;
 - `S235B`: first-round Adaptive MCQ Foundation only.
 
-Selection is metadata-only. It does not start or reserve either item.
+S235A is now completed as metadata-only readiness evidence. The current
+authority is `roadmap/active-program.yml`; this contract deliberately does
+not mirror its dynamic ready-item list. At this closeout, S235B and O3A are
+metadata-ready, O3A remains queued with its Owner decision pending, and S236A
+remains queued and blocked by O3A. Selection is metadata-only: it does not
+approve O3A or start, reserve, or execute S236A.
 
 ## 13. Brand and home
 

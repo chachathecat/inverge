@@ -162,7 +162,7 @@ test("unsupported pseudo-statuses stay unknown and cannot encode future gates", 
   assert.equal(byId(plan, "S101").readinessStatus, "unknown");
 });
 
-test("live post-650 roadmap exposes exactly two WIP-free contract slices", () => {
+test("live post-650 roadmap exposes S235B and pending O3A after S235A readiness closeout", () => {
   const source = readFileSync("roadmap/active-program.yml", "utf8");
   const plan = createRoadmapRunnerPlanFromYaml(source);
   const supported = new Set(["completed", "active", "queued", "blocked"]);
@@ -172,13 +172,31 @@ test("live post-650 roadmap exposes exactly two WIP-free contract slices", () =>
   assert.equal(plan.wipLimit, 2);
   assert.equal(plan.wipOccupiedCount, 0);
   assert.equal(plan.availableSlots, 2);
-  assert.deepEqual(plan.readyItemIds, ["S235A", "S235B"]);
-  assert.deepEqual(plan.selectedItemIds, ["S235A", "S235B"]);
+  assert.deepEqual(plan.readyItemIds, ["S235B", "O3A"]);
+  assert.deepEqual(plan.selectedItemIds, ["S235B", "O3A"]);
   assert.deepEqual([...new Set(plan.analyses.map((analysis) => analysis.status))], [
     "completed",
     "queued",
   ]);
   assert.ok(plan.analyses.every((analysis) => supported.has(analysis.statusCategory)));
+
+  const s235a = byId(plan, "S235A");
+  assert.equal(s235a.status, "completed");
+  assert.equal(s235a.readinessStatus, "completed");
+
+  const s235b = byId(plan, "S235B");
+  assert.equal(s235b.status, "queued");
+  assert.equal(s235b.readinessStatus, "ready");
+
+  const o3a = byId(plan, "O3A");
+  assert.equal(o3a.status, "queued");
+  assert.equal(o3a.readinessStatus, "ready");
+  assert.deepEqual(o3a.dependencies, ["S235A"]);
+
+  const s236a = byId(plan, "S236A");
+  assert.equal(s236a.status, "queued");
+  assert.equal(s236a.readinessStatus, "blocked");
+  assert.deepEqual(s236a.missingDependencies, ["O3A"]);
 
   const s225 = byId(plan, "S225");
   assert.equal(s225.status, "queued");
@@ -234,7 +252,7 @@ test("live TypeScript runner and post-merge selector agree without starting work
       postMerge.selected.map((item) => item.id),
       plan.selectedItemIds,
     );
-    assert.deepEqual(plan.selectedItemIds, ["S235A", "S235B"]);
+    assert.deepEqual(plan.selectedItemIds, ["S235B", "O3A"]);
     assert.deepEqual(postMerge.active, []);
   } finally {
     rmSync(directory, { recursive: true, force: true });

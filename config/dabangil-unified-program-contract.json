@@ -613,10 +613,12 @@
       "publicSelfServe": "O4D",
       "sharedSignalOssLimitedActivation": "O4E"
     },
-    "readyAfterMerge": [
+    "s234ResetReadyItemIdsSnapshot": [
       "S235A",
       "S235B"
     ],
+    "currentStateAuthority": "roadmap/active-program.yml",
+    "currentReadyItemIdsMirrored": false,
     "selectionAutomaticallyStartsWork": false
   },
   "brand": {
