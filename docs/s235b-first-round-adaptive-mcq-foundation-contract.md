@@ -50,11 +50,15 @@ control-plane files during its priority lane. The four S235B lane files were
 disjoint. After that priority squash merge, S235B rebased onto exact main
 `dac5777dab76c95a1451e2adef147b976909c4bd`, tree
 `5bad82f70346adfaa7dbe71268c5cb07769756aa`, reread the governing sources, and
-confirmed the writer reservation was released. The only serialized shared
-mutation is `S235B.status: queued -> completed` in
-`roadmap/active-program.yml`; every downstream item stays queued. All
-pre-rebase test and review evidence is obsolete, so exact-head validation and
-a fresh hostile review are required.
+confirmed the writer reservation was released. The serialized shared mutation
+is `S235B.status: queued -> completed` in `roadmap/active-program.yml`; the 16
+existing source tests that asserted its live status, ready set, or report-only
+planner target are updated only to expect `O3A` and `S236B` as the next
+metadata-ready selections and to use queued `S236B` instead of completed
+`S235B` for that report-only target. Selection starts neither item, and every
+downstream item stays queued. All pre-rebase and earlier-head test/review
+evidence is obsolete, so exact-head validation and a fresh hostile review are
+required.
 
 ## 1. Verified 2026 official rule profile
 

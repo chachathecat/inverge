@@ -61,10 +61,15 @@ commit `dac5777dab76c95a1451e2adef147b976909c4bd`, tree
 
 S235B then fetched and rebased onto that exact `main`, reread the current
 governing sources, confirmed the S235A writer reservation was released, and
-serialized only `S235B.status: queued -> completed` in the shared roadmap.
-No S235A path other than that separately released roadmap is changed by this
-Work. Every pre-rebase test, CI, and hostile-review observation is discarded
-as merge-gating evidence.
+serialized `S235B.status: queued -> completed` in the shared roadmap. The
+first relevant-test run then proved the existing shared roadmap-runner
+expectation was stale. The next default-suite run exposed the other 15
+existing source tests that encoded the same prior live status/ready set or
+used S235B as the report-only target. Those 16 released test paths were added
+to the exact manifest and changed only for the resulting `O3A, S236B`
+metadata-ready selection and the queued S236B report-only target. Every
+pre-rebase or earlier-head test, CI, and hostile-review observation is
+discarded as merge-gating evidence.
 
 The post-S235A governing-source reconciliation is:
 
@@ -82,12 +87,32 @@ The post-S235A governing-source reconciliation is:
 2. `config/s235b-first-round-adaptive-mcq-foundation-contract.json`
 3. `docs/qa/s235b-first-round-foundation-evidence.md`
 4. `tests/s235b-first-round-adaptive-mcq-foundation-contract.test.mjs`
-5. `roadmap/active-program.yml`
+5. `tests/agent-factory-github-actions-button.test.mjs`
+6. `tests/agent-factory-roadmap-runner.test.mjs`
+7. `tests/dabangil-premium-alignment.test.mjs`
+8. `tests/practice-answer-review-engine.test.mjs`
+9. `tests/s214-reference-answer-pipeline.test.mjs`
+10. `tests/s215-reference-answer-release-gate.test.mjs`
+11. `tests/s216-error-notebook-gap-taxonomy.test.mjs`
+12. `tests/s217-personal-core-concept-graph.test.mjs`
+13. `tests/s218-similar-question-review-scheduler.test.mjs`
+14. `tests/s219-learner-catalog-usage-ledger.test.mjs`
+15. `tests/s220-billing-entitlement-credit-usage.test.mjs`
+16. `tests/s221-paid-trust-privacy-cost-guardrails.test.mjs`
+17. `tests/s222-academy-answer-operations-tenant-boundary.test.mjs`
+18. `tests/s223-three-subject-corpus-reference-quality-acceptance.test.mjs`
+19. `tests/s224-three-subject-learner-runtime-acceptance.test.mjs`
+20. `tests/theory-answer-review-engine.test.mjs`
+21. `roadmap/active-program.yml`
 
-The final diff must equal these five paths exactly. The first four are
-lane-specific. The roadmap was the sole reserved overlap and is mutated only
-after S235A priority-merged and S235B rebased; its exact change is the S235B
-status transition from `queued` to `completed`.
+The final diff must equal these 21 paths exactly. The first four are
+lane-specific. The roadmap and 16 existing source tests are serialized shared
+paths mutated only after S235A priority-merged and S235B rebased. The exact
+roadmap change is the S235B status transition from `queued` to `completed`;
+the source-test changes only update the resulting live status/ready/selected
+set from `S235B, O3A` to `O3A, S236B` and retarget one report-only planner
+test from completed `S235B` to queued `S236B`. They prove selection does not
+start work.
 
 No other path is owned.
 
@@ -334,7 +359,7 @@ location immediately before ready/merge.
 |---|---|---|
 | JSON parse and direct S235B contract test | pass against a clean checkout of the exact PR head | exact command transcript/receipt posted on the PR and naming the immutable SHA |
 | relevant source/doc tests and roadmap runner | pass against the exact PR head | exact command transcript/receipt posted on the PR, plus applicable default GitHub CI results |
-| `git diff --check` and owned-manifest equality | pass; final diff is exactly the five owned paths | local full-history base…head receipt plus GitHub PR changed-file list, both naming the immutable SHA |
+| `git diff --check` and owned-manifest equality | pass; final diff is exactly the 21 owned paths | local full-history base…head receipt plus GitHub PR changed-file list, both naming the immutable SHA |
 | fresh required CI | all required checks success | GitHub check suite anchored to the immutable PR head |
 | fresh hostile review | actionable P0 = 0 and P1 = 0 | GitHub review/comment anchored to the immutable PR head |
 | actionable review threads | 0 unresolved | GitHub PR conversation/thread state for the immutable PR head |

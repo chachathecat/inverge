@@ -605,6 +605,22 @@ test("S235B stays contract-only on the exact authorized start and owned files", 
     contractPath,
     evidencePath,
     "tests/s235b-first-round-adaptive-mcq-foundation-contract.test.mjs",
+    "tests/agent-factory-github-actions-button.test.mjs",
+    "tests/agent-factory-roadmap-runner.test.mjs",
+    "tests/dabangil-premium-alignment.test.mjs",
+    "tests/practice-answer-review-engine.test.mjs",
+    "tests/s214-reference-answer-pipeline.test.mjs",
+    "tests/s215-reference-answer-release-gate.test.mjs",
+    "tests/s216-error-notebook-gap-taxonomy.test.mjs",
+    "tests/s217-personal-core-concept-graph.test.mjs",
+    "tests/s218-similar-question-review-scheduler.test.mjs",
+    "tests/s219-learner-catalog-usage-ledger.test.mjs",
+    "tests/s220-billing-entitlement-credit-usage.test.mjs",
+    "tests/s221-paid-trust-privacy-cost-guardrails.test.mjs",
+    "tests/s222-academy-answer-operations-tenant-boundary.test.mjs",
+    "tests/s223-three-subject-corpus-reference-quality-acceptance.test.mjs",
+    "tests/s224-three-subject-learner-runtime-acceptance.test.mjs",
+    "tests/theory-answer-review-engine.test.mjs",
     roadmapPath,
   ]);
   assert.deepEqual(contract.closeout.s235aManifestOverlap, [roadmapPath]);
@@ -632,6 +648,33 @@ test("S235B stays contract-only on the exact authorized start and owned files", 
     allOtherRoadmapFieldsUnchanged: true,
     downstreamStatusMutationAllowed: false,
     automaticDownstreamStartAllowed: false,
+  });
+  assert.deepEqual(contract.closeout.serializedSharedTestMutations, {
+    paths: [
+      "tests/agent-factory-github-actions-button.test.mjs",
+      "tests/agent-factory-roadmap-runner.test.mjs",
+      "tests/dabangil-premium-alignment.test.mjs",
+      "tests/practice-answer-review-engine.test.mjs",
+      "tests/s214-reference-answer-pipeline.test.mjs",
+      "tests/s215-reference-answer-release-gate.test.mjs",
+      "tests/s216-error-notebook-gap-taxonomy.test.mjs",
+      "tests/s217-personal-core-concept-graph.test.mjs",
+      "tests/s218-similar-question-review-scheduler.test.mjs",
+      "tests/s219-learner-catalog-usage-ledger.test.mjs",
+      "tests/s220-billing-entitlement-credit-usage.test.mjs",
+      "tests/s221-paid-trust-privacy-cost-guardrails.test.mjs",
+      "tests/s222-academy-answer-operations-tenant-boundary.test.mjs",
+      "tests/s223-three-subject-corpus-reference-quality-acceptance.test.mjs",
+      "tests/s224-three-subject-learner-runtime-acceptance.test.mjs",
+      "tests/theory-answer-review-engine.test.mjs",
+    ],
+    scope:
+      "update_only_live_roadmap_status_ready_set_and_report_only_target_expectations_for_s235b_closeout",
+    expectedReadyItemIds: ["O3A", "S236B"],
+    reportOnlyPlannerTargetChangedFrom: "S235B",
+    reportOnlyPlannerTargetChangedTo: "S236B",
+    selectionAutomaticallyStartsWork: false,
+    allOtherSharedTestsUnchanged: true,
   });
 
   assert.equal(contract.authorizationBoundary.contractsOnly, true);
@@ -1528,7 +1571,6 @@ test("hostile mutations are rejected by the same mechanical validator", () => {
 test("contradiction examples are represented by fail-closed contract checks", () => {
   const five = contract.fiveChoiceCorrectionContract;
   const separation = contract.goldHeldOutSeparationContract;
-  const later = contract.laterGateEvidence;
 
   const definition =
     five.deterministicValidatorRegistry.definitions.economics_formula_check;
