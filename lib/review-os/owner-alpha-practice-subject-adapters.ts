@@ -545,7 +545,7 @@ function hasExplicitUnknownLegalEffectiveVersion(
     text,
   ),
 ) {
-  const normalized = text.normalize("NFKC");
+  const normalized = normalizeDecoratedLegalEllipsis(text);
   const horizontalWhitespaceSource =
     String.raw`[^\S\r\n\u2028\u2029\v\f]`;
   const lineBreakSource =
@@ -805,21 +805,62 @@ function unknownLegalVersionCandidateTexts(text: string) {
   return candidates;
 }
 
+const DECORATED_LEGAL_ELLIPSIS_BRACKET_PAIRS = [
+  ["[", "]"],
+  ["(", ")"],
+  ["{", "}"],
+  ["「", "」"],
+  ["『", "』"],
+  ["【", "】"],
+  ["〈", "〉"],
+  ["《", "》"],
+] as const;
+
+function normalizeDecoratedLegalEllipsis(text: string) {
+  let normalized = text.normalize("NFKC");
+  const boundedHorizontalWhitespace =
+    String.raw`[^\S\r\n\u2028\u2029\v\f]{0,8}`;
+  const normalizedEllipsis = String.raw`(?:\.{2,3}|[⋮⋯⋰⋱])`;
+  for (const [openingBracket, closingBracket] of
+    DECORATED_LEGAL_ELLIPSIS_BRACKET_PAIRS) {
+    const escapedOpening = openingBracket.replace(
+      /[.*+?^${}()|[\]\\]/g,
+      "\\$&",
+    );
+    const escapedClosing = closingBracket.replace(
+      /[.*+?^${}()|[\]\\]/g,
+      "\\$&",
+    );
+    normalized = normalized.replace(
+      new RegExp(
+        `${escapedOpening}${boundedHorizontalWhitespace}${normalizedEllipsis}${boundedHorizontalWhitespace}${escapedClosing}`,
+        "gu",
+      ),
+      `${openingBracket}:${closingBracket}`,
+    );
+  }
+  return normalized;
+}
+
 function hasUnknownLegalEffectiveVersion(
   text: string,
   allowedStatuteReferences: ReadonlySet<string>,
 ) {
-  return unknownLegalVersionCandidateTexts(text).some(
-    (candidate) =>
+  return unknownLegalVersionCandidateTexts(text).some((candidate) => {
+    // A paired, prose-free bracket makes the ellipsis a decoration token. Bare
+    // or malformed ellipses remain untouched sentence boundaries.
+    const normalizedCandidate = normalizeDecoratedLegalEllipsis(candidate);
+    return (
       hasExplicitUnknownLegalEffectiveVersion(
-        candidate,
+        normalizedCandidate,
         allowedStatuteReferences,
       ) ||
       hasBareAdjacentUnknownLegalEffectiveVersion(
-        candidate,
+        normalizedCandidate,
         allowedStatuteReferences,
-      ),
-  );
+      )
+    );
+  });
 }
 
 function analyzeAdjacentLawEffectiveDateCandidates(
@@ -932,7 +973,7 @@ function legalEffectiveDate(text: string) {
     .filter((value) => value.trim());
   for (const clause of clauses) {
     if (
-      hasExplicitUnknownLegalEffectiveVersion(
+      hasUnknownLegalEffectiveVersion(
         clause,
         problemStatuteReferences,
       )
