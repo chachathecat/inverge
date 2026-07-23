@@ -382,9 +382,15 @@ payload digest, and decision time. Its closed nested authorization-boundary
 schema requires the exact action-time currentness object, including all
 fixed decisions, booleans, action names, and timestamp rule; the decision
 payload digest contract is also inside that mechanically recomputed nested
-registry. All five authorization-dependent O3B inputs directly project that
-same virtual receipt first and compare its immutable three-field identity.
-Missing projection membership, a changed pointer digest, a mismatched
+registry. Two executed gate-context equality predicates bind the signed Owner
+root-anchor reference and digest to the packet-selected projection. All five
+authorization-dependent O3B inputs directly project that same virtual receipt
+first and compare its immutable three-field identity. A separate privacy
+timed-session precommit dimension compares the five privacy rows' common
+immutable precommit reference with the direct Personal-log precommit receipt;
+the existing timed-session dimension carries that receipt into the timed and
+evaluation chain. Missing projection membership, a changed pointer or anchor
+digest, a mismatched anchor reference or privacy session, a mismatched
 participant, a missing or altered nested currentness or digest contract, a
 stale action-time decision, or an enclosing-receipt/self-referential
 derivation fails closed.

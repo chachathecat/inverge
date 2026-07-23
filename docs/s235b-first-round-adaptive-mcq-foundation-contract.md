@@ -1009,7 +1009,11 @@ wrong-typed fields fail closed. The nested authorization-boundary schema also
 requires the action-time currentness object and closes its exact fields and
 literals, and its decision-payload digest contract is in the same mechanically
 recomputed nested registry. The signed object is invalid if either nested
-contract is absent, altered, or extended. The ordered digest rows bind exactly:
+contract is absent, altered, or extended. The executed Owner virtual assertion
+also reads the packet-selected root-anchor projection reference and digest as
+two closed gate-context sources and requires exact equality with the signed
+Owner values. A retained key cannot replay an approval across an anchor
+projection change. The ordered digest rows bind exactly:
 
 1. `timedOmrReadinessContract.dataBoundary`;
 2. `goldHeldOutSeparationContract.heldOutIngressReceiptShape`;
@@ -1032,6 +1036,16 @@ expiry must be later than each concrete action timestamp. A policy
 `reviewed_at` value alone is insufficient. Owner-decision identity, status,
 decision, reviewer/time, revocation, supersession, or expiry changes expire
 the privacy, Personal-log, timed/evaluation, and cross-plane O3B inputs.
+
+Privacy and timed-session evidence are joined by immutable precommit identity,
+not merely by actor scope. A dedicated O3B coherence dimension requires all
+five privacy lifecycle rows to carry one identical
+`timed_session_precommit_reference` and compares its exact `evidence_id`,
+`evidence_version`, and `evidence_sha256` with the directly projected
+Personal-session event-log precommit receipt. The existing timed-session
+identity dimension then binds that Personal-log precommit to the timed,
+evaluation, and cross-plane chains. Privacy for session A therefore cannot be
+combined with timed/evaluation evidence for session B.
 
 O3B benchmark evidence is post-S236 only. It must reference a current passing
 S236B gate packet, that packet's exact coherence receipt, and a trusted

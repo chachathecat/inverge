@@ -512,6 +512,64 @@ function collectContractErrors(candidate) {
   const ownerReferenceField = "owner_scope_decision_receipt_reference";
   const ownerDecisionField = "owner_scope_decision";
   const ownerApprovalFields = [ownerReferenceField, ownerDecisionField];
+  const ownerVirtualAssertion =
+    virtuals[ownerEvidenceShape].assertionContractsExactly.find(
+      ({ assertionId }) => assertionId === "complete_input_evidence",
+    );
+  const ownerAnchorConditionIds = [
+    "O3B_owner_root_anchor_reference_matches_gate",
+    "O3B_owner_root_anchor_digest_matches_gate",
+  ];
+  const expectedOwnerAnchorSelectors = [
+    {
+      sourceRole: "gate_root_trust_anchor_projection_reference",
+      sourceKind: "gate_context",
+      absoluteJsonPointer: "/root_trust_anchor_projection_reference",
+      requiredShapeOrContractIdOrNull: null,
+      requiredDecisionOrNull: null,
+      requiredIssuerOrReviewerClassOrNull: null,
+      exactCardinality: "exactly_1",
+      recordOrder: "single_gate_value",
+    },
+    {
+      sourceRole: "gate_root_trust_anchor_projection_sha256",
+      sourceKind: "gate_context",
+      absoluteJsonPointer: "/root_trust_anchor_projection_sha256",
+      requiredShapeOrContractIdOrNull: null,
+      requiredDecisionOrNull: null,
+      requiredIssuerOrReviewerClassOrNull: null,
+      exactCardinality: "exactly_1",
+      recordOrder: "single_gate_value",
+    },
+  ];
+  const expectedOwnerAnchorConditions = [
+    {
+      conditionId: "O3B_owner_root_anchor_reference_matches_gate",
+      operator: "equals",
+      left: {
+        sourceRole: "owner_O3B_scope_decision",
+        jsonPointer: "/typed_payload/root_trust_anchor_projection_reference",
+      },
+      right: {
+        sourceRole: "gate_root_trust_anchor_projection_reference",
+        jsonPointer: "/root_trust_anchor_projection_reference",
+      },
+      quantifierOrNull: null,
+    },
+    {
+      conditionId: "O3B_owner_root_anchor_digest_matches_gate",
+      operator: "equals",
+      left: {
+        sourceRole: "owner_O3B_scope_decision",
+        jsonPointer: "/typed_payload/root_trust_anchor_projection_sha256",
+      },
+      right: {
+        sourceRole: "gate_root_trust_anchor_projection_sha256",
+        jsonPointer: "/root_trust_anchor_projection_sha256",
+      },
+      quantifierOrNull: null,
+    },
+  ];
   const ownerCurrentnessFieldsExactly = [
     "requiredResolvedStatus",
     "requiredDecision",
@@ -834,6 +892,151 @@ function collectContractErrors(candidate) {
       ?.unknownMissingExtraReorderedOrSelfFieldFailsClosed !== true
   ) {
     add("owner_scope_root_attestation_schema");
+  }
+  const ownerAnchorSelectors =
+    ownerVirtualAssertion?.sourceSelectorsExactly.filter(({ sourceRole }) =>
+      expectedOwnerAnchorSelectors.some(
+        (expected) => expected.sourceRole === sourceRole,
+      ),
+    );
+  const ownerAnchorConditions =
+    ownerVirtualAssertion?.passPredicate.conditionsExactly.filter(
+      ({ conditionId }) => ownerAnchorConditionIds.includes(conditionId),
+    );
+  if (
+    !jsonEqual(
+      later.pinnedRootTrustAnchorContract
+        .ownerDecisionBindingConditionIdsExactly,
+      ownerAnchorConditionIds,
+    ) ||
+    later.pinnedRootTrustAnchorContract
+      .ownerDecisionAnchorMismatchFailsClosed !== true ||
+    !later.pinnedRootTrustAnchorContract.ownerDecisionBinding.includes(
+      "owner-scope-decision-evidence.v1_complete_input_evidence_gate_context_selectors_and_exact_equality_conditions",
+    ) ||
+    !jsonEqual(ownerAnchorSelectors, expectedOwnerAnchorSelectors) ||
+    !jsonEqual(ownerAnchorConditions, expectedOwnerAnchorConditions) ||
+    !jsonEqual(
+      later.underlyingEvidenceResolutionContract.gateContextContract
+        .gatePacketContextFieldsExactly,
+      [
+        "repository_identity",
+        "scope_id",
+        "evaluation_head_sha",
+        "evaluation_tree_sha",
+        "root_trust_anchor_projection_reference",
+        "root_trust_anchor_projection_sha256",
+        "ordered_contract_pointer_value_rows",
+        "ordered_contract_pointer_value_rows_digest",
+      ],
+    ) ||
+    later.underlyingEvidenceResolutionContract.gateContextContract
+      .unknownContextSourceOrFieldAllowed !== false
+  ) {
+    add("owner_scope_root_anchor_gate_binding");
+  }
+
+  const privacyInputName =
+    "privacy_consent_purpose_retention_revocation_and_deletion_receipt_bundle";
+  const personalLogInputName =
+    "personal_event_log_inception_lineage_precommit_source_segment_head_and_completeness_receipt_set";
+  const privacyPrecommitDimension =
+    later.gateCrossInputCoherenceReceiptShape.crossInputCoherenceMatrix.O3B
+      .find(
+        ({ dimensionId }) =>
+          dimensionId === "privacy_timed_session_precommit_identity",
+      );
+  const privacyPrecommitFields = [
+    "evidence_id",
+    "evidence_version",
+    "evidence_sha256",
+  ];
+  const privacyPrecommitSpecIds = {
+    [privacyInputName]:
+      `O3B.privacy_timed_session_precommit_identity.${privacyInputName}.v1`,
+    [personalLogInputName]:
+      `O3B.privacy_timed_session_precommit_identity.${personalLogInputName}.v1`,
+  };
+  const privacyPrecommitSpecs =
+    later.gateCrossInputCoherenceReceiptShape
+      .canonicalRootDerivationSpecRegistry;
+  const privacyPrecommitTransforms =
+    later.gateCrossInputCoherenceReceiptShape
+      .canonicalSourceTransformationRegistry;
+  const privacyPrecommitPrivacySpec =
+    privacyPrecommitSpecs[privacyPrecommitSpecIds[privacyInputName]];
+  const privacyPrecommitPersonalSpec =
+    privacyPrecommitSpecs[privacyPrecommitSpecIds[personalLogInputName]];
+  const expectedPrivacyReferencePointers = {
+    evidence_id:
+      "/typed_payload/timed_session_precommit_reference/evidence_id",
+    evidence_version:
+      "/typed_payload/timed_session_precommit_reference/evidence_version",
+    evidence_sha256:
+      "/typed_payload/timed_session_precommit_reference/evidence_sha256",
+  };
+  const expectedPersonalReceiptPointers = {
+    evidence_id: "/receipt_id",
+    evidence_version: "/receipt_version",
+    evidence_sha256: "/receipt_sha256",
+  };
+  if (
+    !jsonEqual(privacyPrecommitDimension?.participatingInputsExactly, [
+      privacyInputName,
+      personalLogInputName,
+    ]) ||
+    privacyPrecommitDimension?.comparisonOperator !== "all_equal" ||
+    !jsonEqual(privacyPrecommitDimension?.canonicalRootPreimage, {
+      schemaVersion:
+        "o3b.privacy-timed-session-precommit-reference-root.v1",
+      orderedFieldsExactly: privacyPrecommitFields,
+      recordOrder: "single",
+    }) ||
+    !jsonEqual(
+      privacyPrecommitDimension?.derivationSpecIdByInputExactly,
+      privacyPrecommitSpecIds,
+    ) ||
+    privacyPrecommitFields.some((field) => {
+      const privacyRow =
+        privacyPrecommitPrivacySpec?.canonicalFieldSourceByNameExactly[
+          field
+        ]?.sourceRowsExactly[0];
+      const personalRow =
+        privacyPrecommitPersonalSpec?.canonicalFieldSourceByNameExactly[
+          field
+        ]?.sourceRowsExactly[0];
+      return (
+        privacyRow?.sourceKind !==
+          "transitive_authoritative_supporting_evidence" ||
+        privacyRow?.requiredShapeOrContractIdOrNull !==
+          "privacy-lifecycle-source.v1" ||
+        privacyRow?.reachableThroughPayloadSchemaVersionOrNull !==
+          "privacy-lifecycle-receipt-bundle.v1" ||
+        privacyRow?.absoluteJsonPointer !==
+          expectedPrivacyReferencePointers[field] ||
+        privacyRow?.exactCardinality !==
+          "exactly_5_all_values_must_agree" ||
+        personalRow?.sourceKind !== "resolved_direct_domain_receipt" ||
+        personalRow?.requiredShapeOrContractIdOrNull !==
+          "timedOmrReadinessContract.omrShape.personalSessionEventLogPrecommitReceiptShape" ||
+        personalRow?.absoluteJsonPointer !==
+          expectedPersonalReceiptPointers[field]
+      );
+    }) ||
+    Object.values(privacyPrecommitTransforms).filter(
+      ({ dimensionId }) =>
+        dimensionId === "privacy_timed_session_precommit_identity",
+    ).length !== 6 ||
+    !globalProfiles[
+      "privacy-lifecycle-five-phase.v1"
+    ].crossRowEqualityFieldsExactly.includes(
+      "/timed_session_precommit_reference",
+    ) ||
+    !later.gateCrossInputCoherenceReceiptShape.crossInputCoherenceMatrix.O3B
+      .find(({ dimensionId }) => dimensionId === "timed_session_identity")
+      ?.participatingInputsExactly.includes(personalLogInputName)
+  ) {
+    add("privacy_timed_session_precommit_identity");
   }
 
   const ownerParticipants = [
@@ -2440,7 +2643,7 @@ test("gate registries, source references, predicates, specs, and transforms clos
   );
   assert.equal(
     Object.keys(coherence.canonicalRootDerivationSpecRegistry).length,
-    86,
+    88,
   );
   const ownerScopeDimension = coherence.crossInputCoherenceMatrix.O3B.find(
     ({ dimensionId }) => dimensionId === "owner_scope_decision_identity",
@@ -2455,6 +2658,24 @@ test("gate registries, source references, predicates, specs, and transforms clos
         key.startsWith("O3B.owner_scope_decision_identity."),
       ).length,
     15,
+  );
+  const privacyPrecommitDimension =
+    coherence.crossInputCoherenceMatrix.O3B.find(
+      ({ dimensionId }) =>
+        dimensionId === "privacy_timed_session_precommit_identity",
+    );
+  assert.deepEqual(
+    privacyPrecommitDimension.canonicalRootPreimage.orderedFieldsExactly,
+    ["evidence_id", "evidence_version", "evidence_sha256"],
+  );
+  assert.equal(
+    Object.keys(coherence.canonicalSourceTransformationRegistry)
+      .filter((key) =>
+        key.startsWith(
+          "O3B.privacy_timed_session_precommit_identity.",
+        ),
+      ).length,
+    6,
   );
 
   const candidateSetDimension =
@@ -2934,6 +3155,77 @@ test("hostile mutations are rejected by the same mechanical validator", () => {
       "owner_scope_root_attestation_schema",
     ),
     true,
+  );
+
+  const wrongOwnerAnchorReferenceBinding = structuredClone(contract);
+  wrongOwnerAnchorReferenceBinding.laterGateEvidence
+    .virtualUnderlyingEvidenceShapeRegistry["owner-scope-decision-evidence.v1"]
+    .assertionContractsExactly[0].passPredicate.conditionsExactly.find(
+      ({ conditionId }) =>
+        conditionId ===
+        "O3B_owner_root_anchor_reference_matches_gate",
+    ).right.jsonPointer = "/root_trust_anchor_projection_sha256";
+  assert.equal(
+    collectContractErrors(wrongOwnerAnchorReferenceBinding).includes(
+      "owner_scope_root_anchor_gate_binding",
+    ),
+    true,
+  );
+
+  const wrongOwnerAnchorDigestBinding = structuredClone(contract);
+  wrongOwnerAnchorDigestBinding.laterGateEvidence
+    .virtualUnderlyingEvidenceShapeRegistry["owner-scope-decision-evidence.v1"]
+    .assertionContractsExactly[0].passPredicate.conditionsExactly.find(
+      ({ conditionId }) =>
+        conditionId === "O3B_owner_root_anchor_digest_matches_gate",
+    ).left.jsonPointer =
+      "/typed_payload/root_trust_anchor_projection_reference";
+  assert.equal(
+    collectContractErrors(wrongOwnerAnchorDigestBinding).includes(
+      "owner_scope_root_anchor_gate_binding",
+    ),
+    true,
+  );
+
+  const mismatchedPrivacySessionBridge = structuredClone(contract);
+  const privacyBridgeSpec =
+    mismatchedPrivacySessionBridge.laterGateEvidence
+      .gateCrossInputCoherenceReceiptShape
+      .canonicalRootDerivationSpecRegistry[
+        "O3B.privacy_timed_session_precommit_identity.privacy_consent_purpose_retention_revocation_and_deletion_receipt_bundle.v1"
+      ];
+  privacyBridgeSpec.canonicalFieldSourceByNameExactly
+    .evidence_sha256.sourceRowsExactly[0].absoluteJsonPointer =
+      "/typed_payload/timed_session_precommit_reference/evidence_version";
+  assert.equal(
+    collectContractErrors(mismatchedPrivacySessionBridge).some(
+      (error) =>
+        error === "privacy_timed_session_precommit_identity" ||
+        error.startsWith("transform_mirror:"),
+    ),
+    true,
+  );
+  const privacySessionA = {
+    evidence_id: "privacy-session-a",
+    evidence_version: "precommit.v1",
+    evidence_sha256: "a".repeat(64),
+  };
+  const personalSessionB = {
+    evidence_id: "personal-session-b",
+    evidence_version: "precommit.v1",
+    evidence_sha256: "b".repeat(64),
+  };
+  const privacyBridgeFields = [
+    "evidence_id",
+    "evidence_version",
+    "evidence_sha256",
+  ];
+  assert.equal(
+    privacyBridgeFields.every(
+      (field) => privacySessionA[field] === personalSessionB[field],
+    ),
+    false,
+    "privacy session A must not cohere with Personal-log session B",
   );
 
   const cyclicOwnerDerivation = structuredClone(contract);
