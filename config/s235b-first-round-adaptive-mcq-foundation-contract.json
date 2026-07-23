@@ -71,8 +71,33 @@
     "s235aMergedCommit": "dac5777dab76c95a1451e2adef147b976909c4bd",
     "s235aMergedTree": "5bad82f70346adfaa7dbe71268c5cb07769756aa",
     "s235aManifestOverlap": [
+      "tests/agent-factory-github-actions-button.test.mjs",
+      "tests/agent-factory-roadmap-runner.test.mjs",
+      "tests/dabangil-premium-alignment.test.mjs",
+      "tests/practice-answer-review-engine.test.mjs",
+      "tests/s214-reference-answer-pipeline.test.mjs",
+      "tests/s215-reference-answer-release-gate.test.mjs",
+      "tests/s216-error-notebook-gap-taxonomy.test.mjs",
+      "tests/s217-personal-core-concept-graph.test.mjs",
+      "tests/s218-similar-question-review-scheduler.test.mjs",
+      "tests/s219-learner-catalog-usage-ledger.test.mjs",
+      "tests/s220-billing-entitlement-credit-usage.test.mjs",
+      "tests/s221-paid-trust-privacy-cost-guardrails.test.mjs",
+      "tests/s222-academy-answer-operations-tenant-boundary.test.mjs",
+      "tests/s223-three-subject-corpus-reference-quality-acceptance.test.mjs",
+      "tests/s224-three-subject-learner-runtime-acceptance.test.mjs",
+      "tests/theory-answer-review-engine.test.mjs",
       "roadmap/active-program.yml"
     ],
+    "s235aManifestOverlapPathCount": 17,
+    "s235aManifestOverlapDerivation": "exact_intersection_of_live_merged_PR_656_changed_file_manifest_and_ownedFileManifest",
+    "laneSpecificPathsDisjointFromS235A": [
+      "docs/s235b-first-round-adaptive-mcq-foundation-contract.md",
+      "config/s235b-first-round-adaptive-mcq-foundation-contract.json",
+      "docs/qa/s235b-first-round-foundation-evidence.md",
+      "tests/s235b-first-round-adaptive-mcq-foundation-contract.test.mjs"
+    ],
+    "allOverlapMutationsSerializedAfterS235AMerge": true,
     "overlapReleasedAfterPriorityMerge": true,
     "sharedRoadmapMutationAllowedNow": true,
     "finalReconciledBaseMain": "dac5777dab76c95a1451e2adef147b976909c4bd",
@@ -1000,7 +1025,9 @@
           "asset_parent_post_rights_receipt_matches_source_post_id_and_its_current_basis_evidence_and_decision_scope",
           "asset_scope_can_authorize_use_only_when_asset_in_scope_determination_equals_parent_post_basis_explicitly_covers_this_asset",
           "reviewed_at_gte_observed_at_and_retrieved_at",
-          "decision_equals_verified_current_basis_evidence_or_rejected_basis_evidence"
+          "decision_equals_verified_current_basis_evidence_or_rejected_basis_evidence",
+          "an_evidence_receipt_can_back_a_primary_rights_basis_receipt_only_when_evidence_kind_evidence_decision_basis_type_and_basis_decision_select_exactly_one_rightsBasisEvidenceToPrimaryBasisCrosswalk_row",
+          "authoritative_no_basis_evidence_requires_rejected_basis_evidence_and_cannot_back_a_verified_primary_basis"
         ],
         "currentnessInvalidationTriggers": [
           "basis_evidence_reference_id_version_or_sha256_change",
@@ -1084,11 +1111,185 @@
           "cleared_basis_requires_nonempty_exact_attribution_and_official_label_or_terms_url",
           "expired_unknown_missing_or_rejected_basis_cannot_authorize_use",
           "basis_expires_immediately_when_any_rightsBasisEvidenceReceiptShape.currentnessInvalidationTriggers_value_changes",
-          "decision_equals_verified_exact_primary_rights_basis_or_rejected_no_basis"
+          "decision_equals_verified_exact_primary_rights_basis_or_rejected_no_basis",
+          "resolved_evidence_kind_evidence_decision_basis_type_and_basis_decision_select_exactly_one_rightsBasisEvidenceToPrimaryBasisCrosswalk_row",
+          "allowed_scope_tuples_final_decision_authoritative_representation_url_official_label_or_terms_url_label_or_terms_locator_and_exact_attribution_match_the_selected_crosswalk_row"
         ],
         "reviewerClass": "named_owner_authorized_human_rights_reviewer",
         "modelMayIssueOrReviewReceipt": false,
         "receiptCreatedByS235B": false
+      },
+      "rightsBasisEvidenceToPrimaryBasisCrosswalk": {
+        "contractVersion": "appraiser.first.rights-basis-crosswalk.v1",
+        "closedWorld": true,
+        "rowKeyFieldsExactly": [
+          "evidence_kind",
+          "evidence_decision",
+          "basis_type",
+          "basis_decision"
+        ],
+        "rowsExactly": [
+          {
+            "evidence_kind": "official_post_license_label_or_terms",
+            "evidence_decision": "verified_current_basis_evidence",
+            "basis_type": "official_license_label_and_terms",
+            "basis_decision": "verified_exact_primary_rights_basis",
+            "maximum_final_decisions_exactly": [
+              "metadata_and_link_only",
+              "approved_owner_private_use",
+              "approved_cleared_redistribution_with_attribution"
+            ],
+            "maximum_allowed_scope_tuples_exactly": [
+              {
+                "plane": "Personal Raw Vault",
+                "use": "personal_service_processing",
+                "audience": "owner_user_private"
+              },
+              {
+                "plane": "Cleared Content Bank",
+                "use": "cleared_redistribution",
+                "audience": "authorized_learner"
+              },
+              {
+                "plane": "first-round-gold-vault-v1",
+                "use": "reviewed_quality_and_deterministic_validation",
+                "audience": "gold_curator"
+              },
+              {
+                "plane": "first-round-gold-vault-v1",
+                "use": "reviewed_quality_and_deterministic_validation",
+                "audience": "gold_quality_validation"
+              },
+              {
+                "plane": "first-round-heldout-vault-v1",
+                "use": "readiness_heldout_evaluation",
+                "audience": "heldout_evaluator"
+              },
+              {
+                "plane": "first-round-heldout-vault-v1",
+                "use": "readiness_heldout_evaluation",
+                "audience": "heldout_readiness_runner"
+              }
+            ],
+            "authoritative_representation_url_shape": "nonempty_https_official_representation_bound_to_raw_evidence_sha256",
+            "official_label_or_terms_url_shape": "must_equal_authoritative_representation_url",
+            "label_or_terms_locator_shape": "nonempty_exact_label_section_or_clause_within_hashed_official_representation",
+            "exact_attribution_shape": "nonempty_exact_attribution_proved_by_hashed_official_evidence",
+            "scope_proof_requirement": "every_nonempty_allowed_scope_tuple_is_individually_and_explicitly_proved_by_the_hashed_official_evidence_at_the_exact_locator"
+          },
+          {
+            "evidence_kind": "official_terms_document",
+            "evidence_decision": "verified_current_basis_evidence",
+            "basis_type": "official_license_label_and_terms",
+            "basis_decision": "verified_exact_primary_rights_basis",
+            "maximum_final_decisions_exactly": [
+              "metadata_and_link_only",
+              "approved_owner_private_use",
+              "approved_cleared_redistribution_with_attribution"
+            ],
+            "maximum_allowed_scope_tuples_exactly": [
+              {
+                "plane": "Personal Raw Vault",
+                "use": "personal_service_processing",
+                "audience": "owner_user_private"
+              },
+              {
+                "plane": "Cleared Content Bank",
+                "use": "cleared_redistribution",
+                "audience": "authorized_learner"
+              },
+              {
+                "plane": "first-round-gold-vault-v1",
+                "use": "reviewed_quality_and_deterministic_validation",
+                "audience": "gold_curator"
+              },
+              {
+                "plane": "first-round-gold-vault-v1",
+                "use": "reviewed_quality_and_deterministic_validation",
+                "audience": "gold_quality_validation"
+              },
+              {
+                "plane": "first-round-heldout-vault-v1",
+                "use": "readiness_heldout_evaluation",
+                "audience": "heldout_evaluator"
+              },
+              {
+                "plane": "first-round-heldout-vault-v1",
+                "use": "readiness_heldout_evaluation",
+                "audience": "heldout_readiness_runner"
+              }
+            ],
+            "authoritative_representation_url_shape": "nonempty_https_official_terms_representation_bound_to_raw_evidence_sha256",
+            "official_label_or_terms_url_shape": "must_equal_authoritative_representation_url",
+            "label_or_terms_locator_shape": "nonempty_exact_terms_section_or_clause_within_hashed_official_representation",
+            "exact_attribution_shape": "nonempty_exact_attribution_proved_by_hashed_official_evidence",
+            "scope_proof_requirement": "every_nonempty_allowed_scope_tuple_is_individually_and_explicitly_proved_by_the_hashed_official_evidence_at_the_exact_locator"
+          },
+          {
+            "evidence_kind": "authoritative_owner_private_policy",
+            "evidence_decision": "verified_current_basis_evidence",
+            "basis_type": "owner_private_processing_basis",
+            "basis_decision": "verified_exact_primary_rights_basis",
+            "maximum_final_decisions_exactly": [
+              "metadata_and_link_only",
+              "approved_owner_private_use"
+            ],
+            "maximum_allowed_scope_tuples_exactly": [
+              {
+                "plane": "Personal Raw Vault",
+                "use": "personal_service_processing",
+                "audience": "owner_user_private"
+              }
+            ],
+            "authoritative_representation_url_shape": "nonempty_https_authoritative_owner_private_policy_bound_to_raw_evidence_sha256",
+            "official_label_or_terms_url_shape": "must_be_null",
+            "label_or_terms_locator_shape": "nonempty_exact_owner_private_policy_section_or_clause_within_hashed_representation",
+            "exact_attribution_shape": "nonempty_exact_owner_private_policy_citation",
+            "scope_proof_requirement": "allowed_scope_tuples_is_empty_or_exactly_the_single_personal_vault_owner_user_private_tuple_and_is_explicitly_proved_by_the_hashed_policy"
+          },
+          {
+            "evidence_kind": "authoritative_metadata_link_citation_policy",
+            "evidence_decision": "verified_current_basis_evidence",
+            "basis_type": "metadata_link_citation_basis",
+            "basis_decision": "verified_exact_primary_rights_basis",
+            "maximum_final_decisions_exactly": [
+              "metadata_and_link_only"
+            ],
+            "maximum_allowed_scope_tuples_exactly": [],
+            "authoritative_representation_url_shape": "nonempty_https_authoritative_metadata_link_citation_policy_bound_to_raw_evidence_sha256",
+            "official_label_or_terms_url_shape": "must_be_null",
+            "label_or_terms_locator_shape": "nonempty_exact_metadata_link_citation_policy_section_or_clause_within_hashed_representation",
+            "exact_attribution_shape": "nonempty_exact_source_citation",
+            "scope_proof_requirement": "allowed_scope_tuples_must_be_empty"
+          },
+          {
+            "evidence_kind": "authoritative_no_basis_evidence",
+            "evidence_decision": "rejected_basis_evidence",
+            "basis_type": "rejected_no_basis",
+            "basis_decision": "rejected_no_basis",
+            "maximum_final_decisions_exactly": [
+              "rejected"
+            ],
+            "maximum_allowed_scope_tuples_exactly": [],
+            "authoritative_representation_url_shape": "nonempty_https_authoritative_representation_bound_to_raw_evidence_sha256",
+            "official_label_or_terms_url_shape": "must_be_null",
+            "label_or_terms_locator_shape": "nonempty_exact_location_supporting_the_no_basis_determination_within_hashed_representation",
+            "exact_attribution_shape": "must_be_empty_string",
+            "scope_proof_requirement": "allowed_scope_tuples_must_be_empty"
+          }
+        ],
+        "bindingInvariants": [
+          "the_resolved_evidence_kind_evidence_decision_primary_basis_type_and_primary_basis_decision_must_select_exactly_one_row_by_rowKeyFieldsExactly",
+          "any_missing_unknown_duplicate_or_unlisted_combination_fails_closed_and_cannot_back_a_primary_basis_or_final_rights_decision",
+          "allowed_scope_tuples_are_unique_and_each_is_an_exact_member_of_the_selected_row_maximum_allowed_scope_tuples_exactly",
+          "the_final_rights_decision_is_an_exact_member_of_the_selected_row_maximum_final_decisions_exactly",
+          "authoritative_representation_url_official_label_or_terms_url_label_or_terms_locator_and_exact_attribution_satisfy_the_selected_row_shapes_exactly",
+          "official_license_rows_require_each_nonempty_scope_tuple_to_be_individually_and_explicitly_proved_by_the_hashed_official_evidence_at_the_exact_locator_and_public_availability_or_silence_is_never_proof",
+          "metadata_link_citation_and_rejected_no_basis_rows_require_empty_allowed_scope_tuples",
+          "owner_private_processing_basis_permits_at_most_the_single_personal_vault_personal_service_processing_owner_user_private_tuple",
+          "authoritative_no_basis_evidence_can_only_select_rejected_basis_evidence_rejected_no_basis_and_the_rejected_final_decision"
+        ],
+        "unknownMissingDuplicateOrUnlistedCombinationFailsClosed": true
       },
       "primaryRightsDecisionMatrix": {
         "metadata_and_link_only": {
@@ -1110,6 +1311,7 @@
       },
       "primaryRightsBindingInvariants": [
         "post_and_asset_primary_rights_basis_references_conform_to_primaryRightsBasisReceiptShape_and_match_exact_source",
+        "resolved_rights_basis_evidence_and_primary_basis_select_exactly_one_rightsBasisEvidenceToPrimaryBasisCrosswalk_row",
         "final_decision_scope_and_attribution_match_primaryRightsDecisionMatrix",
         "cleared_decision_requires_nonempty_exact_attribution_in_parent_receipt_decision_scope_and_primary_basis_receipt",
         "missing_unknown_expired_or_scope_mismatched_primary_basis_fails_closed",
@@ -4299,6 +4501,10 @@
         "model_assistance_provenance_or_null",
         "deterministic_validator_receipt_references",
         "attribution",
+        "ordered_content_attribution_rows",
+        "ordered_content_attribution_rows_digest",
+        "ordered_unique_attributions",
+        "ordered_unique_attributions_digest",
         "reviewer",
         "reviewed_at",
         "decision",
@@ -4338,6 +4544,10 @@
           "model_assistance_provenance_or_null",
           "deterministic_validator_receipt_references",
           "attribution",
+          "ordered_content_attribution_rows",
+          "ordered_content_attribution_rows_digest",
+          "ordered_unique_attributions",
+          "ordered_unique_attributions_digest",
           "reviewer",
           "reviewed_at",
           "decision",
@@ -4461,6 +4671,10 @@
           "key_post_rights_receipt_reference",
           "key_asset_rights_receipt_reference",
           "effective_key_rights_decision",
+          "key_post_exact_attribution",
+          "key_asset_exact_attribution",
+          "ordered_unique_key_attributions",
+          "ordered_unique_key_attributions_digest",
           "asset_transport_receipt_reference",
           "asset_content_identity_receipt_reference",
           "official_key_table_mapping_receipt_reference",
@@ -4495,6 +4709,10 @@
             "key_post_rights_receipt_reference",
             "key_asset_rights_receipt_reference",
             "effective_key_rights_decision",
+            "key_post_exact_attribution",
+            "key_asset_exact_attribution",
+            "ordered_unique_key_attributions",
+            "ordered_unique_key_attributions_digest",
             "asset_transport_receipt_reference",
             "asset_content_identity_receipt_reference",
             "official_key_table_mapping_receipt_reference",
@@ -4507,6 +4725,29 @@
             "decision"
           ],
           "excludedSelfField": "receipt_sha256"
+        },
+        "keyAttributionProjectionContract": {
+          "contractVersion": "appraiser.first.verified-key-attribution-projection.v1",
+          "orderedSourceFieldsExactly": [
+            "key_post_exact_attribution",
+            "key_asset_exact_attribution"
+          ],
+          "sourceBindingExactly": {
+            "key_post_exact_attribution": "resolved_key_post_rights_receipt.exact_attribution",
+            "key_asset_exact_attribution": "resolved_key_asset_rights_receipt.exact_attribution"
+          },
+          "normalizationAllowed": false,
+          "deduplicationRule": "retain_the_first_exact_UTF_8_byte_equal_string_in_order_and_drop_only_later_exact_byte_equal_duplicates",
+          "orderedUniqueOutputField": "ordered_unique_key_attributions",
+          "orderedUniqueDigestContract": {
+            "algorithm": "sha256",
+            "hexEncoding": "lowercase_64",
+            "canonicalization": "RFC_8785_JSON_Canonicalization_Scheme",
+            "document": "ordered_unique_key_attributions_exact_string_array",
+            "receiptFieldMustEqualComputedDigest": "ordered_unique_key_attributions_digest"
+          },
+          "approvedKeyRequiresEverySourceAttributionNonempty": true,
+          "missingEmptyNormalizedReorderedOrMismatchedAttributionFailsClosed": true
         },
         "officialKeyTableMappingReceiptShape": {
           "referenceSemantics": "official_key_table_mapping_receipt_reference_is_immutableEvidenceReferenceContract",
@@ -4605,6 +4846,8 @@
           "all_five_evidence_references_conform_to_immutableEvidenceReferenceContract",
           "key_post_and_asset_rights_receipts_match_qnet_post_asset_and_exact_asset_raw_sha256",
           "effective_key_rights_decision_equals_the_most_restrictive_final_decision_of_key_post_and_asset_rights_receipts",
+          "key_post_exact_attribution_and_key_asset_exact_attribution_equal_the_resolved_key_post_and_asset_rights_receipt_exact_attribution_fields_byte_for_byte",
+          "ordered_unique_key_attributions_and_digest_match_keyAttributionProjectionContract_without_normalization_or_unproved_substitution",
           "asset_transport_and_content_identity_receipts_match_key_asset_rights_receipt",
           "official_key_table_mapping_receipt_matches_officialKeyTableMappingReceiptShape_and_official_key_table_mapping_digest_equals_its_ordered_key_rows_digest",
           "exactly_one_mapping_row_matches_session_subject_question_source_question_anchor_and_final_answer_row_locator",
@@ -4626,7 +4869,8 @@
           "allowedKeyAssetDecisionsExactly": [
             "approved_cleared_redistribution_with_attribution"
           ],
-          "requiredEffectiveKeyDecision": "approved_cleared_redistribution_with_attribution"
+          "requiredEffectiveKeyDecision": "approved_cleared_redistribution_with_attribution",
+          "requiredKeyAttributionProjection": "both_exact_nonempty_key_rights_attributions_and_their_deterministic_ordered_unique_projection"
         },
         "approved_personal_only": {
           "allowedKeyPostDecisionsExactly": [
@@ -4637,12 +4881,125 @@
             "approved_owner_private_use",
             "approved_cleared_redistribution_with_attribution"
           ],
-          "requiredEffectiveKeyDecision": "most_restrictive_of_the_two_allowed_decisions"
+          "requiredEffectiveKeyDecision": "most_restrictive_of_the_two_allowed_decisions",
+          "requiredKeyAttributionProjection": "both_exact_nonempty_key_rights_attributions_and_their_deterministic_ordered_unique_projection"
         },
         "withheld_or_rejected": {
           "mayApproveRelease": false
         },
         "metadataOrRejectedKeyRightsMayApproveRelease": false
+      },
+      "contentRightsAttributionProjectionContract": {
+        "contractVersion": "appraiser.first.release-content-attribution-projection.v1",
+        "rowRequiredFields": [
+          "content_role",
+          "choice_position_or_null",
+          "source_object_reference_or_null",
+          "rights_receipt_reference",
+          "exact_attribution"
+        ],
+        "rowAdditionalFieldsAllowed": false,
+        "contentRoleVocabulary": [
+          "question_source_post",
+          "question_source_asset",
+          "question_item_object",
+          "official_key_source_post",
+          "official_key_source_asset",
+          "choice_correction_object",
+          "choice_explanation_object"
+        ],
+        "orderedSourceProjectionExactly": [
+          {
+            "content_role": "question_source_post",
+            "choice_position_or_null": null,
+            "source_object_reference_or_null": null,
+            "rights_receipt_reference": "release.source_post_rights_receipt_reference",
+            "exact_attribution": "resolved_release_source_post_rights_receipt.exact_attribution"
+          },
+          {
+            "content_role": "question_source_asset",
+            "choice_position_or_null": null,
+            "source_object_reference_or_null": null,
+            "rights_receipt_reference": "release.source_asset_rights_receipt_reference",
+            "exact_attribution": "resolved_release_source_asset_rights_receipt.exact_attribution"
+          },
+          {
+            "content_role": "question_item_object",
+            "choice_position_or_null": null,
+            "source_object_reference_or_null": "release.question_item_object_reference_or_null",
+            "rights_receipt_reference": "resolved_question_item_object_reference.rights_decision_reference",
+            "exact_attribution": "resolved_question_item_object_rights_receipt.exact_attribution"
+          },
+          {
+            "content_role": "official_key_source_post",
+            "choice_position_or_null": null,
+            "source_object_reference_or_null": null,
+            "rights_receipt_reference": "resolved_verified_official_key_receipt.key_post_rights_receipt_reference",
+            "exact_attribution": "resolved_verified_official_key_receipt.key_post_exact_attribution"
+          },
+          {
+            "content_role": "official_key_source_asset",
+            "choice_position_or_null": null,
+            "source_object_reference_or_null": null,
+            "rights_receipt_reference": "resolved_verified_official_key_receipt.key_asset_rights_receipt_reference",
+            "exact_attribution": "resolved_verified_official_key_receipt.key_asset_exact_attribution"
+          },
+          {
+            "content_role": "choice_correction_object",
+            "choice_position_or_null": "ascending_position_1_to_5",
+            "source_object_reference_or_null": "each_nonnull_correction_reference_in_resolved_feedback_bundle",
+            "rights_receipt_reference": "matching_feedback_attribution_row.rights_receipt_reference",
+            "exact_attribution": "matching_feedback_attribution_row.exact_attribution"
+          },
+          {
+            "content_role": "choice_explanation_object",
+            "choice_position_or_null": "ascending_position_1_to_5",
+            "source_object_reference_or_null": "each_nonnull_explanation_reference_in_resolved_feedback_bundle",
+            "rights_receipt_reference": "matching_feedback_attribution_row.rights_receipt_reference",
+            "exact_attribution": "matching_feedback_attribution_row.exact_attribution"
+          }
+        ],
+        "rowOrder": "five_fixed_question_and_key_rows_in_order_then_each_ascending_choice_position_with_correction_before_explanation_and_omission_only_for_null_references",
+        "rowDigestContract": {
+          "algorithm": "sha256",
+          "hexEncoding": "lowercase_64",
+          "canonicalization": "RFC_8785_JSON_Canonicalization_Scheme",
+          "recordOrder": "rowOrder",
+          "recordFieldsCoveredExactly": [
+            "content_role",
+            "choice_position_or_null",
+            "source_object_reference_or_null",
+            "rights_receipt_reference",
+            "exact_attribution"
+          ],
+          "receiptFieldMustEqualComputedDigest": "ordered_content_attribution_rows_digest"
+        },
+        "orderedUniqueAttributionContract": {
+          "sourceField": "ordered_content_attribution_rows.exact_attribution",
+          "normalizationAllowed": false,
+          "emptyStringAllowedForApprovedRelease": false,
+          "deduplicationRule": "retain_the_first_exact_UTF_8_byte_equal_string_in_row_order_and_drop_only_later_exact_byte_equal_duplicates",
+          "outputField": "ordered_unique_attributions",
+          "digestContract": {
+            "algorithm": "sha256",
+            "hexEncoding": "lowercase_64",
+            "canonicalization": "RFC_8785_JSON_Canonicalization_Scheme",
+            "document": "ordered_unique_attributions_exact_string_array",
+            "receiptFieldMustEqualComputedDigest": "ordered_unique_attributions_digest"
+          },
+          "deterministicDisplayRule": "render_each_ordered_unique_attributions_entry_verbatim_as_one_separate_attribution_block_in_order_without_concatenation_normalization_or_silent_omission"
+        },
+        "bindingInvariants": [
+          "ordered_content_attribution_rows_equal_the_exact_projection_of_every_content_bearing_rights_receipt_used_by_the_release_with_no_missing_extra_duplicate_or_wrong_role_row",
+          "the_question_item_row_is_required_for_approved_personal_or_cleared_release_and_omitted_only_when_question_item_object_reference_or_null_is_null_for_withheld_or_rejected_release",
+          "the_two_key_rows_equal_the_verified_key_receipt_exact_attributions_and_rights_references",
+          "feedback_rows_equal_the_resolved_fiveChoiceFeedbackBundleReceiptShape_ordered_feedback_attribution_rows_exactly",
+          "every_rights_receipt_reference_conforms_to_immutableEvidenceReferenceContract_is_current_and_its_exact_attribution_equals_the_row_value_byte_for_byte",
+          "ordered_content_attribution_rows_digest_equals_the_computed_row_digest",
+          "ordered_unique_attributions_and_digest_match_orderedUniqueAttributionContract",
+          "approved_personal_or_cleared_release_requires_every_projected_exact_attribution_to_be_nonempty",
+          "any_missing_empty_stale_mismatched_normalized_reordered_or_unproved_attribution_fails_closed"
+        ]
       },
       "choiceSetDigestContract": {
         "algorithm": "sha256",
@@ -4684,6 +5041,9 @@
         "approved_personal_only_or_approved_cleared_release_requires_both_source_post_and_asset_decision_scopes_to_be_current_unexpired_and_contain_the_exact_nonnull_requested_plane_use_and_audience",
         "approved_personal_only_or_approved_cleared_release_requires_the_verified_official_key_receipt_key_post_and_asset_rights_scopes_to_be_current_unexpired_and_contain_the_same_exact_nonnull_requested_plane_use_and_audience",
         "key_post_and_asset_final_decisions_and_verified_key_effective_key_rights_decision_match_verifiedKeyRightsReleaseMatrix_for_the_release_decision",
+        "attribution_equals_the_exact_question_post_and_asset_attribution_required_by_releaseDecisionRightsMatrix_while_ordered_content_attribution_rows_and_both_digests_match_contentRightsAttributionProjectionContract_for_question_question_object_key_and_every_nonnull_feedback_object",
+        "all_key_attribution_rows_match_the_verified_official_key_receipt_keyAttributionProjectionContract_and_all_feedback_attribution_rows_match_the_resolved_five_choice_feedback_bundle",
+        "ordered_unique_attributions_are_rendered_only_by_contentRightsAttributionProjectionContract.deterministicDisplayRule_and_different_exact_strings_are_never_collapsed",
         "metadata_and_link_only_or_rejected_key_post_or_asset_rights_cannot_approve_personal_or_cleared_release_even_when_scope_arrays_contain_the_requested_tuple",
         "withheld_or_rejected_release_requires_requested_plane_use_and_audience_all_null_and_cannot_assert_any_approval_scope",
         "every_nonnull_correction_or_explanation_reference_authorized_plane_equals_requested_plane_or_null",
@@ -4850,6 +5210,8 @@
         "authorized_plane",
         "ordered_choice_feedback_rows",
         "ordered_choice_feedback_rows_digest",
+        "ordered_feedback_attribution_rows",
+        "ordered_feedback_attribution_rows_digest",
         "reviewer",
         "reviewed_at",
         "decision"
@@ -4864,6 +5226,19 @@
         "explanation_reference_or_null"
       ],
       "feedbackRowAdditionalFieldsAllowed": false,
+      "feedbackAttributionRowRequiredFields": [
+        "choice_id",
+        "position_1_to_5",
+        "feedback_kind",
+        "source_object_reference",
+        "rights_receipt_reference",
+        "exact_attribution"
+      ],
+      "feedbackAttributionRowAdditionalFieldsAllowed": false,
+      "feedbackAttributionKindVocabulary": [
+        "correction_object",
+        "explanation_object"
+      ],
       "feedbackRowsDigestContract": {
         "algorithm": "sha256",
         "hexEncoding": "lowercase_64",
@@ -4880,6 +5255,21 @@
         ],
         "receiptFieldMustEqualComputedDigest": "ordered_choice_feedback_rows_digest"
       },
+      "feedbackAttributionRowsDigestContract": {
+        "algorithm": "sha256",
+        "hexEncoding": "lowercase_64",
+        "canonicalization": "RFC_8785_JSON_Canonicalization_Scheme",
+        "recordOrder": "ascending_position_1_to_5_then_correction_object_before_explanation_object_with_no_row_for_a_null_reference",
+        "recordFieldsCoveredExactly": [
+          "choice_id",
+          "position_1_to_5",
+          "feedback_kind",
+          "source_object_reference",
+          "rights_receipt_reference",
+          "exact_attribution"
+        ],
+        "receiptFieldMustEqualComputedDigest": "ordered_feedback_attribution_rows_digest"
+      },
       "receiptDigestContract": {
         "algorithm": "sha256",
         "hexEncoding": "lowercase_64",
@@ -4893,6 +5283,8 @@
           "authorized_plane",
           "ordered_choice_feedback_rows",
           "ordered_choice_feedback_rows_digest",
+          "ordered_feedback_attribution_rows",
+          "ordered_feedback_attribution_rows_digest",
           "reviewer",
           "reviewed_at",
           "decision"
@@ -4903,9 +5295,12 @@
         "exactly_five_rows_positions_one_to_five_and_choice_ids_verdicts_states_and_references_equal_the_choice_set_projection_exactly",
         "choice_set_digest_equals_choiceSetDigestContract_for_the_same_item_version",
         "every_nonnull_reference_matches_bodylessReferenceShape_and_authorized_plane",
+        "ordered_feedback_attribution_rows_contain_exactly_one_matching_row_for_every_nonnull_correction_or_explanation_reference_and_no_row_for_a_null_reference",
+        "every_feedback_attribution_row_source_object_reference_and_rights_receipt_reference_equal_the_matching_bodyless_reference_and_exact_attribution_equals_the_resolved_current_rights_receipt_exact_attribution_byte_for_byte",
         "all_rows_match_choiceSetInvariants.releasePerVerdictFeedbackMatrix_for_the_target_plane",
         "future_QTI_modal_resolves_this_single_bundle_as_an_all_five_choice_review_after_a_submitted_response_and_does_not_substitute_an_unrelated_generic_reference",
         "ordered_choice_feedback_rows_digest_equals_computed_digest",
+        "ordered_feedback_attribution_rows_digest_equals_computed_digest_and_missing_empty_mismatched_normalized_or_reordered_attribution_fails_closed",
         "decision_equals_verified_complete_five_choice_feedback_bundle"
       ],
       "requiredDecision": "verified_complete_five_choice_feedback_bundle",
@@ -5290,6 +5685,26 @@
           "cardinality": "zero_or_one"
         },
         {
+          "field": "five_choice_release_receipt_reference_or_null",
+          "type": "immutable_evidence_reference_or_null",
+          "cardinality": "zero_or_one"
+        },
+        {
+          "field": "ordered_content_attribution_rows_digest_or_null",
+          "type": "lowercase_sha256_or_null",
+          "cardinality": "zero_or_one"
+        },
+        {
+          "field": "ordered_unique_attributions_or_null",
+          "type": "nonempty_array_of_nonempty_exact_UTF_8_strings_or_null",
+          "cardinality": "zero_or_one_array"
+        },
+        {
+          "field": "ordered_unique_attributions_digest_or_null",
+          "type": "lowercase_sha256_or_null",
+          "cardinality": "zero_or_one"
+        },
+        {
           "field": "source_version_manifest_ids",
           "type": "array_of_manifest_identifiers",
           "cardinality": "one_or_more"
@@ -5302,6 +5717,10 @@
         "bundle_reference_evidence_sha256_equals_resolved_bundle_receipt_sha256",
         "bundle_choice_set_digest_equals_release_choice_set_digest_while_the_distinct_row_digest_covers_only_the_feedback_projection",
         "bundle_item_version_plane_and_all_five_choice_rows_equal_the_five_choice_release_receipt_exactly",
+        "release_receipt_reference_and_all_three_attribution_projection_fields_are_null_iff_feedback_modal_is_unavailable_and_are_nonnull_for_an_approved_personal_or_cleared_release",
+        "five_choice_release_receipt_reference_or_null_conforms_to_immutableEvidenceReferenceContract_and_resolves_to_the_exact_release_bound_by_the_feedback_bundle",
+        "ordered_content_attribution_rows_digest_or_null_ordered_unique_attributions_or_null_and_ordered_unique_attributions_digest_or_null_equal_the_resolved_release_fields_exactly",
+        "ordered_unique_attributions_or_null_is_rendered_verbatim_as_separate_attribution_blocks_without_normalization_collapse_reordering_or_omission_wherever_the_corresponding_item_or_feedback_content_is_resolved",
         "unknown_missing_stale_or_mismatched_bundle_fails_closed"
       ]
     },
@@ -5636,7 +6055,7 @@
             }
           ],
           "feedbackModalCardinality": "exactly_one_for_approved_personal_only_or_approved_cleared_release_zero_for_withheld_or_rejected",
-          "feedbackContentResolution": "single_modal_requires_the_verified_immutable_five_choice_feedback_bundle_and_renders_the_complete_ordered_five_row_review"
+          "feedbackContentResolution": "single_modal_requires_the_verified_immutable_five_choice_feedback_bundle_renders_the_complete_ordered_five_row_review_and_renders_every_resolved_release_ordered_unique_attribution_verbatim_as_a_separate_attribution_block"
         },
         "selectedInlineQNameAst": {
           "qname": "qti-response-processing",
@@ -5886,15 +6305,19 @@
           "futureEnrichment": "rights-cleared choice presentation supplied outside this contract"
         },
         {
-          "sourceField": "authorized_item_body_reference",
+          "sourceField": "authorized_item_body_reference, five_choice_release_receipt_reference_or_null, ordered_content_attribution_rows_digest_or_null, ordered_unique_attributions_or_null, ordered_unique_attributions_digest_or_null",
           "sourceSchema": "dabangil.first_round.bodyless_item.v1",
           "sourcePointers": [
-            "/authorized_item_body_reference"
+            "/authorized_item_body_reference",
+            "/five_choice_release_receipt_reference_or_null",
+            "/ordered_content_attribution_rows_digest_or_null",
+            "/ordered_unique_attributions_or_null",
+            "/ordered_unique_attributions_digest_or_null"
           ],
           "targetField": "qti-item-body",
           "targetType": "content_container",
           "cardinality": "exactly_one_when_released",
-          "constraint": "future adapter may resolve only an authorized rights-cleared object; S235B carries no item body",
+          "constraint": "future adapter may resolve only an authorized rights-cleared object; S235B carries no item body; an approved resolved item body must bind the exact immutable release attribution projection and render every ordered unique attribution value verbatim as its own separate attribution block without normalization collapse reordering or omission",
           "extensionPlacement": null,
           "futureEnrichment": "future authorized-content resolver"
         },
@@ -5956,19 +6379,23 @@
           "futureEnrichment": null
         },
         {
-          "sourceField": "feedback_identifiers, feedback_outcome_identifier, feedback_show_hide, five_choice_feedback_bundle_reference_or_null, five_choice_feedback_bundle_digest_or_null",
+          "sourceField": "feedback_identifiers, feedback_outcome_identifier, feedback_show_hide, five_choice_feedback_bundle_reference_or_null, five_choice_feedback_bundle_digest_or_null, five_choice_release_receipt_reference_or_null, ordered_content_attribution_rows_digest_or_null, ordered_unique_attributions_or_null, ordered_unique_attributions_digest_or_null",
           "sourceSchema": "dabangil.first_round.bodyless_item.v1",
           "sourcePointers": [
             "/feedback_identifiers",
             "/feedback_outcome_identifier",
             "/feedback_show_hide",
             "/five_choice_feedback_bundle_reference_or_null",
-            "/five_choice_feedback_bundle_digest_or_null"
+            "/five_choice_feedback_bundle_digest_or_null",
+            "/five_choice_release_receipt_reference_or_null",
+            "/ordered_content_attribution_rows_digest_or_null",
+            "/ordered_unique_attributions_or_null",
+            "/ordered_unique_attributions_digest_or_null"
           ],
           "targetField": "qti-modal-feedback@identifier, @outcome-identifier, @show-hide, qti-content-body",
           "targetType": "modal_feedback_with_authorized_content_resolution",
           "cardinality": "exactly_one_for_approved_personal_only_or_approved_cleared_release_zero_for_withheld_or_rejected",
-          "constraint": "single identifier=FEEDBACK_AVAILABLE, outcome-identifier=FEEDBACK, show-hide=show; after release one content body resolves exactly the immutable five-choice feedback bundle and renders the complete position-ordered five-choice review valid after any submitted response; bundle digest, item/version, plane, choice-set digest, and all five correction/explanation rows must match the release receipt",
+          "constraint": "single identifier=FEEDBACK_AVAILABLE, outcome-identifier=FEEDBACK, show-hide=show; after release one content body resolves exactly the immutable five-choice feedback bundle and renders the complete position-ordered five-choice review valid after any submitted response; bundle digest, item/version, plane, choice-set digest, and all five correction/explanation rows must match the release receipt; the release attribution row digest ordered unique values and ordered unique digest must match exactly and every distinct attribution string must render verbatim as its own separate attribution block without normalization collapse reordering or omission",
           "extensionPlacement": null,
           "futureEnrichment": "rights-cleared feedback resolver"
         },
@@ -6577,6 +7004,7 @@
         "source_object_reference",
         "source_content_sha256",
         "source_rights_receipt_references",
+        "source_exact_attributions",
         "target_object_reference",
         "target_write_content_identity_receipt_reference"
       ],
@@ -6588,6 +7016,11 @@
             "resolved_release.source_post_rights_receipt_reference",
             "resolved_release.source_asset_rights_receipt_reference",
             "source_question_item_object_reference.rights_decision_reference"
+          ],
+          "orderedAttributionSourceProjectionExactly": [
+            "resolved_release_source_post_rights_receipt.exact_attribution",
+            "resolved_release_source_asset_rights_receipt.exact_attribution",
+            "resolved_question_item_object_rights_receipt.exact_attribution"
           ]
         },
         "verified_official_key": {
@@ -6595,18 +7028,28 @@
           "orderedProjectionExactly": [
             "resolved_verified_official_key_receipt.key_post_rights_receipt_reference",
             "resolved_verified_official_key_receipt.key_asset_rights_receipt_reference"
+          ],
+          "orderedAttributionSourceProjectionExactly": [
+            "resolved_verified_official_key_receipt.key_post_exact_attribution",
+            "resolved_verified_official_key_receipt.key_asset_exact_attribution"
           ]
         },
         "correction_object": {
           "requiredReferenceCount": 1,
           "orderedProjectionExactly": [
             "exact_source_correction_bodyless_reference.rights_decision_reference"
+          ],
+          "orderedAttributionSourceProjectionExactly": [
+            "resolved_correction_object_rights_receipt.exact_attribution"
           ]
         },
         "explanation_object": {
           "requiredReferenceCount": 1,
           "orderedProjectionExactly": [
             "exact_source_explanation_bodyless_reference.rights_decision_reference"
+          ],
+          "orderedAttributionSourceProjectionExactly": [
+            "resolved_explanation_object_rights_receipt.exact_attribution"
           ]
         },
         "unknownContentClassAllowed": false
@@ -6615,7 +7058,9 @@
         "content_class_is_in_targetVaultObjectReferenceShape.contentClassVocabulary",
         "source_object_reference_and_source_content_sha256_match_the_resolved_release_question_key_or_nonnull_feedback_reference_exactly",
         "source_rights_receipt_references_is_nonempty_unique_and_equals_sourceRightsExactProjectionByContentClass_for_the_selected_content_class_in_exact_order_with_no_missing_extra_duplicate_or_wrong_class_reference",
+        "source_exact_attributions_is_nonempty_and_equals_the_order_preserving_exact_UTF_8_byte_deduplicated_projection_of_the_selected_content_class_orderedAttributionSourceProjectionExactly_with_no_normalization_omission_substitution_or_extra_value",
         "every_source_rights_receipt_reference_conforms_to_immutableEvidenceReferenceContract_is_current_and_matches_the_exact_source_object_post_asset_or_bodyless_object_rights_reference",
+        "every_source_exact_attribution_equals_the_corresponding_resolved_source_rights_receipt_exact_attribution_byte_for_byte_and_different_strings_remain_separate",
         "target_object_reference_matches_targetVaultObjectReferenceShape_and_target_write_content_identity_receipt_reference_resolves_to_targetVaultWriteContentIdentityReceiptShape_with_required_decision",
         "source_and_target_content_sha256_are_equal_and_the_target_write_receipt_matches_every_record_field",
         "every_source_rights_receipt_final_decision_is_approved_cleared_redistribution_with_attribution_and_contains_each_exact_target_plane_use_audience_tuple_required_for_every_target_allowed_principal_class",
@@ -6632,6 +7077,7 @@
         "source_object_reference",
         "source_content_sha256",
         "source_rights_receipt_references",
+        "source_exact_attributions",
         "target_object_reference",
         "target_write_content_identity_receipt_reference"
       ],
@@ -6655,6 +7101,10 @@
         "five_choice_feedback_bundle_receipt_reference",
         "effective_rights_decision",
         "decision_scope",
+        "ordered_content_attribution_rows",
+        "ordered_content_attribution_rows_digest",
+        "ordered_unique_attributions",
+        "ordered_unique_attributions_digest",
         "ingressed_content_classes",
         "excluded_content_classes",
         "ingressed_object_bindings",
@@ -6690,6 +7140,10 @@
           "five_choice_feedback_bundle_receipt_reference",
           "effective_rights_decision",
           "decision_scope",
+          "ordered_content_attribution_rows",
+          "ordered_content_attribution_rows_digest",
+          "ordered_unique_attributions",
+          "ordered_unique_attributions_digest",
           "ingressed_content_classes",
           "excluded_content_classes",
           "ingressed_object_bindings",
@@ -6739,9 +7193,11 @@
         "five_choice_release_receipt_reference_conforms_to_immutableEvidenceReferenceContract_resolves_to_an_approved_cleared_release_and_matches_item_source_rights_key_feedback_and_applicability",
         "source_question_item_object_reference_verified_official_key_receipt_reference_and_five_choice_feedback_bundle_receipt_reference_equal_the_resolved_release_references_exactly",
         "source_question_item_object_reference_matches_questionItemObjectReferenceShape_and_is_provenance_only_after_ingress",
+        "ordered_content_attribution_rows_ordered_content_attribution_rows_digest_ordered_unique_attributions_and_ordered_unique_attributions_digest_equal_the_resolved_release_fields_exactly_and_satisfy_contentRightsAttributionProjectionContract",
         "ingressed_content_classes_equal_question_item_verified_official_key_correction_object_and_explanation_object_exactly_and_excluded_content_classes_is_empty",
         "ingressed_object_bindings_contain_exactly_one_question_one_verified_key_and_one_record_for_every_nonnull_correction_and_explanation_reference_in_the_feedback_bundle_with_no_missing_extra_or_duplicate_source_object",
         "every_ingressed_object_binding_matches_ingressedObjectBindingRecordContract_and_ingressed_object_bindings_digest_matches_ingressedObjectBindingsDigestContract",
+        "the_exact_UTF_8_byte_string_set_union_of_every_ingressed_object_binding_source_exact_attributions_has_the_same_cardinality_and_members_as_ordered_unique_attributions_independent_of_binding_record_order_while_the_release_array_order_remains_authoritative_for_display_with_no_missing_extra_normalized_or_substituted_value",
         "every_source_question_key_correction_and_explanation_rights_receipt_contains_both_exact_gold_target_tuples_with_no_independent_component_or_Cartesian_matching",
         "gold_dataset_boundary_root_and_encryption_key_class_match_target_manifest_and_gold_contract",
         "allowed_principal_classes_equal_gold.allowedPrincipalClasses_and_each_principal_maps_to_one_required_target_audience_tuple",
@@ -6769,6 +7225,10 @@
         "five_choice_feedback_bundle_receipt_reference",
         "effective_rights_decision",
         "decision_scope",
+        "ordered_content_attribution_rows",
+        "ordered_content_attribution_rows_digest",
+        "ordered_unique_attributions",
+        "ordered_unique_attributions_digest",
         "ingressed_content_classes",
         "excluded_content_classes",
         "ingressed_object_bindings",
@@ -6806,6 +7266,10 @@
           "five_choice_feedback_bundle_receipt_reference",
           "effective_rights_decision",
           "decision_scope",
+          "ordered_content_attribution_rows",
+          "ordered_content_attribution_rows_digest",
+          "ordered_unique_attributions",
+          "ordered_unique_attributions_digest",
           "ingressed_content_classes",
           "excluded_content_classes",
           "ingressed_object_bindings",
@@ -6858,9 +7322,11 @@
         "five_choice_release_receipt_reference_conforms_to_immutableEvidenceReferenceContract_resolves_to_an_approved_cleared_release_and_matches_item_source_rights_key_feedback_and_applicability",
         "source_question_item_object_reference_verified_official_key_receipt_reference_and_five_choice_feedback_bundle_receipt_reference_equal_the_resolved_release_references_exactly",
         "source_question_item_object_reference_matches_questionItemObjectReferenceShape_and_is_provenance_only_after_ingress",
+        "ordered_content_attribution_rows_ordered_content_attribution_rows_digest_ordered_unique_attributions_and_ordered_unique_attributions_digest_equal_the_resolved_release_fields_exactly_and_satisfy_contentRightsAttributionProjectionContract",
         "ingressed_content_classes_equal_question_item_verified_official_key_correction_object_and_explanation_object_exactly_and_excluded_content_classes_is_empty",
         "ingressed_object_bindings_contain_exactly_one_question_one_verified_key_and_one_record_for_every_nonnull_correction_and_explanation_reference_in_the_feedback_bundle_with_no_missing_extra_or_duplicate_source_object",
         "every_ingressed_object_binding_matches_ingressedObjectBindingRecordContract_and_ingressed_object_bindings_digest_matches_ingressedObjectBindingsDigestContract",
+        "the_exact_UTF_8_byte_string_set_union_of_every_ingressed_object_binding_source_exact_attributions_has_the_same_cardinality_and_members_as_ordered_unique_attributions_independent_of_binding_record_order_while_the_release_array_order_remains_authoritative_for_display_with_no_missing_extra_normalized_or_substituted_value",
         "every_source_question_key_correction_and_explanation_rights_receipt_contains_both_exact_heldout_target_tuples_with_no_independent_component_or_Cartesian_matching",
         "heldout_dataset_boundary_root_encryption_key_class_split_and_form_match_target_manifest_and_form_receipt",
         "allowed_principal_classes_equal_heldOut.allowedPrincipalClasses_and_each_principal_maps_to_one_required_target_audience_tuple",
@@ -17257,7 +17723,6 @@
           "leftOperand": "count_computation_support_document",
           "rightOperand": "exact_contract_document_at_evaluation_head_and_tree",
           "acceptedTypes": [
-            "object",
             "object"
           ],
           "evaluation": "select_right.laterGateEvidence.gateAssertionDerivationReceiptShape.countDecisionSubjectSetMatrix_by_left.typed_payload.zero_count_proof_decision_then_require_left.typed_payload.subject_set_identity_and_count_query_or_derivation_equal_literals_and_subject_set_sha256_equals_SHA256_RFC8785_of_the_ordered_exact_right_contract_pointer_values_with_every_pointer_resolved_from_this_selected_right_document_and_no_implicit_or_unselected_operand"
@@ -17699,7 +18164,7 @@
               "conditionId": "five_phase_temporal_nullability_and_ordinal_chain",
               "operator": "privacy_lifecycle_temporal_chain_valid",
               "leftOperand": "entire_ordered_row_set",
-              "literalJsonValue": "privacy-lifecycle-five-phase.v2"
+              "literalJsonValue": "privacy-lifecycle-five-phase.v1"
             },
             {
               "conditionId": "deletion_execution_zero_residual",
@@ -20744,7 +21209,7 @@
                     "jsonPointer": "/typed_payload"
                   },
                   "right": {
-                    "literalJsonValue": "privacy-lifecycle-five-phase.v2"
+                    "literalJsonValue": "privacy-lifecycle-five-phase.v1"
                   },
                   "quantifierOrNull": "all"
                 },

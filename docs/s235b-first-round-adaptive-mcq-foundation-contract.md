@@ -14,8 +14,9 @@
 - Reconciled base after S235A priority merge:
   `dac5777dab76c95a1451e2adef147b976909c4bd`
 - Reconciled base tree: `5bad82f70346adfaa7dbe71268c5cb07769756aa`
-- Closeout state: S235A PR `#656` merged; the sole shared-path reservation
-  was released and the serialized S235B roadmap closeout is applied
+- Closeout state: S235A PR `#656` merged; the exact 17-path intersection
+  (roadmap plus 16 shared roadmap-status tests) was released before the
+  serialized S235B closeout was applied
 
 This Work defines a bounded first-round Foundation. It does not implement,
 expose, activate, or claim a learner runtime.
@@ -59,6 +60,11 @@ metadata-ready selections and to use queued `S236B` instead of completed
 downstream item stays queued. All pre-rebase and earlier-head test/review
 evidence is obsolete, so exact-head validation and a fresh hostile review are
 required.
+
+The machine closeout records the exact intersection of PR `#656`'s changed
+files and this Work's owned manifest: those 16 tests plus the roadmap, 17
+paths total. The four S235B contract/doc/test lane files are the exact
+disjoint set.
 
 ## 1. Verified 2026 official rule profile
 
@@ -271,6 +277,17 @@ Cartesian product. The requested tuple must be an exact member. Post and
 asset scopes are evaluated independently and the most restrictive result
 wins. Only a named Owner-authorized human rights reviewer may issue or review
 the receipt; a model may not do so.
+
+Evidence kind and primary-basis status are also one closed decision, not two
+independent vocabularies. The machine crosswalk binds the evidence kind,
+evidence decision, basis type, basis decision, maximum final decisions,
+maximum exact scope tuples, authoritative/official URL shapes, locator, and
+attribution. No-basis evidence can produce only a rejected basis with empty
+scope; metadata/citation policy can produce only metadata-and-link use with
+empty scope; owner-private policy can reach at most the single Personal Raw
+Vault tuple; and an official-license basis can use only tuples individually
+proved at the exact locator in the hashed official evidence. Any unlisted
+combination fails closed.
 
 Later source verification must also cover exactly seven official
 representations: the annual-notice HTML, stable execution-notice HTML,
@@ -505,6 +522,17 @@ decision IDs are not accepted. Both decisions must be current, unexpired,
 and authorize the exact object version, plane, use, and audience. A reference
 cannot contain body text or cross planes.
 
+An approved release also carries one closed attribution projection for every
+content-bearing rights receipt it uses: question post, question asset,
+question object, official-key post and asset, and every non-null correction
+or explanation. Each row binds the immutable rights reference and its exact
+attribution byte-for-byte. The release retains first occurrence order while
+deduplicating only byte-identical strings; differing question, key, or
+feedback attributions remain separate. Each string must render verbatim as
+its own attribution block. The verified-key receipt and feedback bundle carry
+their component projections and digests, so the question attribution cannot
+stand in for different key or feedback terms.
+
 A correction or explanation may resolve only in the Personal Raw Vault or
 the Cleared Content Bank. Release requires a verified official key, resolved
 source rights, resolved *applicable* exam-date Law/K-IFRS state, and an
@@ -631,6 +659,11 @@ The QTI mapping contract requires:
   may combine the correction and explanation references; the feedback array
   is exactly the ordered non-null projection of correction then explanation,
   so an inconsistent second content reference cannot be substituted;
+- an immutable release reference plus the exact attribution-row digest,
+  ordered unique attribution values, and their digest in the internal QTI
+  shape. Both the resolved item body and feedback modal must render each
+  distinct value verbatim as a separate attribution block; normalization,
+  collapse, reordering, or omission fails closed;
 - bodyless source-version-manifest metadata only in the QTI Content Package
   `imscp:resource/imscp:metadata/inverge:first-round-metadata`, where the
   manifest and resource identifiers are valid unique XML IDs/NCNames,
@@ -775,7 +808,12 @@ receipt proving that the exact target bytes, digest, boundary root, object
 version, and key class match the authorized source object. Question items,
 official keys, corrections, and explanations each carry their exact
 per-object rights projection; a manifest-level decision cannot substitute for
-one missing object receipt.
+one missing object receipt. Each per-object ingress binding also carries its
+exact byte-preserving attribution set. Gold and held-out receipts copy the
+release attribution rows, unique display order, and both digests exactly.
+The unordered set/cardinality union of per-object attributions must equal the
+release set; ingress record class order cannot contradict the release's
+authoritative display order.
 
 The Gold provenance receipt binds its actual dataset/version, manifest
 digest, storage root, key class and nonsecret key fingerprint, principal set,

@@ -16,7 +16,8 @@
 - Reconciled base after S235A priority merge:
   `dac5777dab76c95a1451e2adef147b976909c4bd`
 - Reconciled base tree: `5bad82f70346adfaa7dbe71268c5cb07769756aa`
-- Closeout: serialized roadmap mutation applied after S235A PR `#656`
+- Closeout: the exact 17-path shared intersection was serialized only after
+  S235A PR `#656` merged
 
 This is metadata, contract, and source-verification evidence. It is not
 learner-runtime, content-readiness, redistribution, or efficacy evidence.
@@ -48,7 +49,9 @@ After selection, S235A issue
 [`#654`](https://github.com/chachathecat/inverge/issues/654) was published
 with a 30-file manifest. It owns `roadmap/active-program.yml`, the unified
 contract and JSON mirror, and shared tests. The four current S235B lane files
-do not overlap that manifest. The roadmap is the sole reserved overlap.
+do not overlap that manifest. The exact later intersection with this Work is
+the roadmap plus all 16 shared roadmap-status tests, 17 paths total; every
+overlapping writer reservation remained with S235A until its priority merge.
 The reserved branch
 `agent/s235a-owner-private-golden-3-readiness` later appeared at the same
 initial main. That first observation had no content commit. A subsequent live
@@ -177,6 +180,15 @@ asset ID/filename/kind, positive byte count, lowercase SHA-256, and PDF,
 HWP, or HWPX magic. A post cannot broaden an asset decision; missing, stale,
 HTML-error, or unrelated-body evidence fails closed.
 
+Evidence kind and primary basis are joined by one closed five-row crosswalk.
+No-basis evidence maps only to rejected/empty scope; metadata policy maps
+only to metadata/link with empty scope; owner-private policy reaches at most
+the one Personal Raw Vault tuple; and official-license evidence reaches only
+exact tuples individually proved at the locator in the hashed official
+representation. The row also closes evidence/basis decisions, URL and locator
+shapes, exact attribution, and maximum final decisions. An unlisted pairing
+cannot back a rights receipt.
+
 O3B must cover exactly seven official representations: three Q-Net HTML/PDF
 representations, Law Article 9 and both Law annexes, and the qualification
 detail HTML. Each has separate transport, content identity, field extraction,
@@ -237,12 +249,20 @@ a model cannot assign not-applicable. Unresolved prerequisites withhold both
 body and reference. Every subject-matrix validator also needs one
 applicability receipt: applicable rows require a derived input and passing
 receipt, while verified-not-applicable rows require a closed reason and
-forbid pass evidence. No feedback body or runtime is present.
+forbid pass evidence. Approved release attribution is a deterministic
+byte-exact projection of the question post/asset/object, key post/asset, and
+each non-null correction/explanation rights receipt. Only byte-identical
+strings deduplicate; different strings remain separate display blocks. The
+key receipt, feedback bundle, release, QTI item/modal shape, and Gold/held-out
+ingress all bind the projection and digests. No feedback body or runtime is
+present.
 
 The future privacy bundle contains exactly five ordered lifecycle phases tied
 to the pre-session event-log precommit and one actor-vault scope. It
 recomputes phase ordinals, common fields, temporal/null rules, and zero-copy
-deletion. Choice comparison additionally requires a unique 32-byte salt in
+deletion. Every privacy-profile literal resolves to the single defined
+`privacy-lifecycle-five-phase.v1` registry entry. Choice comparison
+additionally requires a unique 32-byte salt in
 the Personal-vault commitment/opening. That opening salt may enter only the
 future Owner-approved memory-only bridge and is forbidden from every
 comparison/scoring receipt, evaluator store, log, cache, or backup.
@@ -254,7 +274,7 @@ cache, and backup counts. None was executed by S235B.
 
 | Target | Pinned mapping shape | Explicitly absent |
 |---|---|---|
-| QTI 3.0.1 | pinned assessment-item namespaces/schema, identifier/title, adaptive/time-dependent false, five-choice single response, authorized item body, mutually exclusive custom inline processing with exact correct→1/other submitted→0 SCORE branches and FEEDBACK in both, one combined modal-feedback shape, Content Package metadata extension | conformance, certification, import/export, player, CAT |
+| QTI 3.0.1 | pinned assessment-item namespaces/schema, identifier/title, adaptive/time-dependent false, five-choice single response, authorized item body, immutable release-attribution reference/row digest/ordered unique values/digest with separate verbatim blocks in item body and modal, mutually exclusive custom inline processing with exact correct→1/other submitted→0 SCORE branches and FEEDBACK in both, one combined modal-feedback shape, Content Package metadata extension | conformance, certification, import/export, player, CAT |
 | IEEE 9274.1.1-2023 xAPI | exact Statement fields/verbs, item-vs-assessment object rule, actor and authority Agent Account IFIs, context-extension cause placement, provenance | LRS, transport, storage, query, Production collection |
 | Caliper Analytics 1.2 | AssessmentProfile, mandatory v1p2 context, exact event/action/entity records, item-vs-assessment object rule, generated references, absolute-IRI Event extensions | Sensor, Envelope transport, delivery, analytics efficacy, Production collection |
 
@@ -286,7 +306,11 @@ mandatory. Current readiness is `insufficient_evidence`.
 Future Gold and held-out ingress is target-vault specific and requires exact
 per-object rights, write/content-identity, and read-after-write receipts.
 Question, key, correction, and explanation objects cannot inherit a
-manifest-only grant.
+manifest-only grant. Every object binding carries its exact attribution set;
+each ingress receipt copies the release rows, authoritative display order,
+and digests. The per-object union is compared by exact byte-string
+set/cardinality, so its class-grouped binding order cannot contradict the
+release's interleaved feedback display order.
 
 The bodyless timed/OMR record distinguishes `single`, `blank`, `multiple`,
 `ambiguous`, and `unreadable` mark states and records selected marks, form,

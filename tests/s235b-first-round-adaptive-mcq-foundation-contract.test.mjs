@@ -91,8 +91,360 @@ function resolveDottedPath(candidate, dottedPath) {
   return value;
 }
 
+function expectedRightsBasisCrosswalkRows(candidate) {
+  const scope =
+    candidate.sourceRightsManifest.futureO3BReceiptContract
+      .decisionScopeContract.finalDecisionScopeTupleCeilings;
+  const officialMaximum =
+    scope.approved_cleared_redistribution_with_attribution;
+  const ownerPrivateMaximum = scope.approved_owner_private_use;
+
+  return [
+    {
+      evidence_kind: "official_post_license_label_or_terms",
+      evidence_decision: "verified_current_basis_evidence",
+      basis_type: "official_license_label_and_terms",
+      basis_decision: "verified_exact_primary_rights_basis",
+      maximum_final_decisions_exactly: [
+        "metadata_and_link_only",
+        "approved_owner_private_use",
+        "approved_cleared_redistribution_with_attribution",
+      ],
+      maximum_allowed_scope_tuples_exactly: officialMaximum,
+      authoritative_representation_url_shape:
+        "nonempty_https_official_representation_bound_to_raw_evidence_sha256",
+      official_label_or_terms_url_shape:
+        "must_equal_authoritative_representation_url",
+      label_or_terms_locator_shape:
+        "nonempty_exact_label_section_or_clause_within_hashed_official_representation",
+      exact_attribution_shape:
+        "nonempty_exact_attribution_proved_by_hashed_official_evidence",
+      scope_proof_requirement:
+        "every_nonempty_allowed_scope_tuple_is_individually_and_explicitly_proved_by_the_hashed_official_evidence_at_the_exact_locator",
+    },
+    {
+      evidence_kind: "official_terms_document",
+      evidence_decision: "verified_current_basis_evidence",
+      basis_type: "official_license_label_and_terms",
+      basis_decision: "verified_exact_primary_rights_basis",
+      maximum_final_decisions_exactly: [
+        "metadata_and_link_only",
+        "approved_owner_private_use",
+        "approved_cleared_redistribution_with_attribution",
+      ],
+      maximum_allowed_scope_tuples_exactly: officialMaximum,
+      authoritative_representation_url_shape:
+        "nonempty_https_official_terms_representation_bound_to_raw_evidence_sha256",
+      official_label_or_terms_url_shape:
+        "must_equal_authoritative_representation_url",
+      label_or_terms_locator_shape:
+        "nonempty_exact_terms_section_or_clause_within_hashed_official_representation",
+      exact_attribution_shape:
+        "nonempty_exact_attribution_proved_by_hashed_official_evidence",
+      scope_proof_requirement:
+        "every_nonempty_allowed_scope_tuple_is_individually_and_explicitly_proved_by_the_hashed_official_evidence_at_the_exact_locator",
+    },
+    {
+      evidence_kind: "authoritative_owner_private_policy",
+      evidence_decision: "verified_current_basis_evidence",
+      basis_type: "owner_private_processing_basis",
+      basis_decision: "verified_exact_primary_rights_basis",
+      maximum_final_decisions_exactly: [
+        "metadata_and_link_only",
+        "approved_owner_private_use",
+      ],
+      maximum_allowed_scope_tuples_exactly: ownerPrivateMaximum,
+      authoritative_representation_url_shape:
+        "nonempty_https_authoritative_owner_private_policy_bound_to_raw_evidence_sha256",
+      official_label_or_terms_url_shape: "must_be_null",
+      label_or_terms_locator_shape:
+        "nonempty_exact_owner_private_policy_section_or_clause_within_hashed_representation",
+      exact_attribution_shape:
+        "nonempty_exact_owner_private_policy_citation",
+      scope_proof_requirement:
+        "allowed_scope_tuples_is_empty_or_exactly_the_single_personal_vault_owner_user_private_tuple_and_is_explicitly_proved_by_the_hashed_policy",
+    },
+    {
+      evidence_kind: "authoritative_metadata_link_citation_policy",
+      evidence_decision: "verified_current_basis_evidence",
+      basis_type: "metadata_link_citation_basis",
+      basis_decision: "verified_exact_primary_rights_basis",
+      maximum_final_decisions_exactly: ["metadata_and_link_only"],
+      maximum_allowed_scope_tuples_exactly: [],
+      authoritative_representation_url_shape:
+        "nonempty_https_authoritative_metadata_link_citation_policy_bound_to_raw_evidence_sha256",
+      official_label_or_terms_url_shape: "must_be_null",
+      label_or_terms_locator_shape:
+        "nonempty_exact_metadata_link_citation_policy_section_or_clause_within_hashed_representation",
+      exact_attribution_shape: "nonempty_exact_source_citation",
+      scope_proof_requirement: "allowed_scope_tuples_must_be_empty",
+    },
+    {
+      evidence_kind: "authoritative_no_basis_evidence",
+      evidence_decision: "rejected_basis_evidence",
+      basis_type: "rejected_no_basis",
+      basis_decision: "rejected_no_basis",
+      maximum_final_decisions_exactly: ["rejected"],
+      maximum_allowed_scope_tuples_exactly: [],
+      authoritative_representation_url_shape:
+        "nonempty_https_authoritative_representation_bound_to_raw_evidence_sha256",
+      official_label_or_terms_url_shape: "must_be_null",
+      label_or_terms_locator_shape:
+        "nonempty_exact_location_supporting_the_no_basis_determination_within_hashed_representation",
+      exact_attribution_shape: "must_be_empty_string",
+      scope_proof_requirement: "allowed_scope_tuples_must_be_empty",
+    },
+  ];
+}
+
 function collectContractErrors(candidate) {
   const errors = [];
+  const rights =
+    candidate.sourceRightsManifest.futureO3BReceiptContract;
+  const crosswalk = rights.rightsBasisEvidenceToPrimaryBasisCrosswalk;
+  const expectedCrosswalkRows = expectedRightsBasisCrosswalkRows(candidate);
+  const expectedCrosswalkKeys = [
+    "evidence_kind",
+    "evidence_decision",
+    "basis_type",
+    "basis_decision",
+  ];
+  const add = (code) => errors.push(code);
+
+  if (
+    crosswalk.contractVersion !==
+      "appraiser.first.rights-basis-crosswalk.v1" ||
+    crosswalk.closedWorld !== true ||
+    !jsonEqual(crosswalk.rowKeyFieldsExactly, expectedCrosswalkKeys) ||
+    !jsonEqual(crosswalk.rowsExactly, expectedCrosswalkRows) ||
+    crosswalk.unknownMissingDuplicateOrUnlistedCombinationFailsClosed !== true
+  ) {
+    add("rights_basis_crosswalk");
+  }
+  for (const fragment of [
+    "select_exactly_one_row",
+    "unlisted_combination_fails_closed",
+    "public_availability_or_silence_is_never_proof",
+    "metadata_link_citation_and_rejected_no_basis_rows_require_empty",
+    "single_personal_vault_personal_service_processing_owner_user_private_tuple",
+    "authoritative_no_basis_evidence_can_only_select_rejected",
+  ]) {
+    if (
+      !crosswalk.bindingInvariants.some((invariant) =>
+        invariant.includes(fragment),
+      )
+    ) {
+      add(`rights_basis_crosswalk_invariant:${fragment}`);
+    }
+  }
+
+  const closeout = candidate.closeout;
+  const expectedS235AOverlap = [
+    ...closeout.serializedSharedTestMutations.paths,
+    roadmapPath,
+  ];
+  if (
+    !jsonEqual(closeout.s235aManifestOverlap, expectedS235AOverlap) ||
+    closeout.s235aManifestOverlapPathCount !==
+      expectedS235AOverlap.length ||
+    closeout.s235aManifestOverlapDerivation !==
+      "exact_intersection_of_live_merged_PR_656_changed_file_manifest_and_ownedFileManifest" ||
+    closeout.allOverlapMutationsSerializedAfterS235AMerge !== true ||
+    !jsonEqual(
+      closeout.laneSpecificPathsDisjointFromS235A,
+      candidate.ownedFileManifest.slice(0, 4),
+    )
+  ) {
+    add("s235a_overlap_intersection");
+  }
+
+  const release =
+    candidate.fiveChoiceCorrectionContract.releaseReceiptContract;
+  const verifiedKey = release.verifiedOfficialKeyReceiptShape;
+  const feedback =
+    candidate.fiveChoiceCorrectionContract
+      .fiveChoiceFeedbackBundleReceiptShape;
+  const separation = candidate.goldHeldOutSeparationContract;
+  const attributionFields = [
+    "ordered_content_attribution_rows",
+    "ordered_content_attribution_rows_digest",
+    "ordered_unique_attributions",
+    "ordered_unique_attributions_digest",
+  ];
+  const keyAttributionFields = [
+    "key_post_exact_attribution",
+    "key_asset_exact_attribution",
+    "ordered_unique_key_attributions",
+    "ordered_unique_key_attributions_digest",
+  ];
+  const feedbackAttributionFields = [
+    "ordered_feedback_attribution_rows",
+    "ordered_feedback_attribution_rows_digest",
+  ];
+  const includesAll = (values, required) =>
+    required.every((value) => values.includes(value));
+
+  if (
+    !includesAll(release.requiredFields, attributionFields) ||
+    !includesAll(
+      release.receiptDigestContract.coveredFieldsExactly,
+      attributionFields,
+    ) ||
+    !includesAll(verifiedKey.requiredFields, keyAttributionFields) ||
+    !includesAll(
+      verifiedKey.receiptDigestContract.coveredFieldsExactly,
+      keyAttributionFields,
+    ) ||
+    !includesAll(feedback.requiredFields, feedbackAttributionFields) ||
+    !includesAll(
+      feedback.receiptDigestContract.coveredFieldsExactly,
+      feedbackAttributionFields,
+    )
+  ) {
+    add("content_attribution_receipt_fields");
+  }
+
+  const projection = release.contentRightsAttributionProjectionContract;
+  const expectedAttributionRoles = [
+    "question_source_post",
+    "question_source_asset",
+    "question_item_object",
+    "official_key_source_post",
+    "official_key_source_asset",
+    "choice_correction_object",
+    "choice_explanation_object",
+  ];
+  if (
+    !jsonEqual(
+      projection.orderedSourceProjectionExactly.map(
+        ({ content_role }) => content_role,
+      ),
+      expectedAttributionRoles,
+    ) ||
+    !jsonEqual(projection.contentRoleVocabulary, expectedAttributionRoles) ||
+    projection.orderedUniqueAttributionContract.normalizationAllowed !==
+      false ||
+    projection.orderedUniqueAttributionContract
+      .emptyStringAllowedForApprovedRelease !== false ||
+    !projection.orderedUniqueAttributionContract.deterministicDisplayRule
+      .includes("separate_attribution_block") ||
+    !projection.bindingInvariants.some((invariant) =>
+      invariant.includes("every_content_bearing_rights_receipt"),
+    )
+  ) {
+    add("content_attribution_projection");
+  }
+
+  if (
+    !jsonEqual(
+      verifiedKey.keyAttributionProjectionContract.orderedSourceFieldsExactly,
+      ["key_post_exact_attribution", "key_asset_exact_attribution"],
+    ) ||
+    verifiedKey.keyAttributionProjectionContract.normalizationAllowed !==
+      false ||
+    !jsonEqual(feedback.feedbackAttributionRowRequiredFields, [
+      "choice_id",
+      "position_1_to_5",
+      "feedback_kind",
+      "source_object_reference",
+      "rights_receipt_reference",
+      "exact_attribution",
+    ]) ||
+    feedback.feedbackAttributionRowAdditionalFieldsAllowed !== false
+  ) {
+    add("content_attribution_component_projection");
+  }
+
+  for (const ingress of [
+    separation.goldIngressReceiptShape,
+    separation.heldOutIngressReceiptShape,
+  ]) {
+    if (
+      !includesAll(ingress.requiredFields, attributionFields) ||
+      !includesAll(
+        ingress.receiptDigestContract.coveredFieldsExactly,
+        attributionFields,
+      ) ||
+      !ingress.bindingInvariants.some((invariant) =>
+        invariant.includes("equal_the_resolved_release_fields_exactly"),
+      ) ||
+      !ingress.bindingInvariants.some((invariant) =>
+        invariant.includes(
+          "same_cardinality_and_members_as_ordered_unique_attributions_independent_of_binding_record_order",
+        ),
+      )
+    ) {
+      add("content_attribution_ingress_projection");
+    }
+  }
+  const ingressBinding = separation.ingressedObjectBindingRecordContract;
+  if (
+    !ingressBinding.requiredFields.includes("source_exact_attributions") ||
+    !separation.ingressedObjectBindingsDigestContract
+      .recordFieldsCoveredExactly.includes("source_exact_attributions") ||
+    !jsonEqual(
+      ingressBinding.sourceRightsExactProjectionByContentClass
+        .verified_official_key.orderedAttributionSourceProjectionExactly,
+      [
+        "resolved_verified_official_key_receipt.key_post_exact_attribution",
+        "resolved_verified_official_key_receipt.key_asset_exact_attribution",
+      ],
+    ) ||
+    !jsonEqual(
+      ingressBinding.sourceRightsExactProjectionByContentClass
+        .correction_object.orderedAttributionSourceProjectionExactly,
+      ["resolved_correction_object_rights_receipt.exact_attribution"],
+    ) ||
+    !jsonEqual(
+      ingressBinding.sourceRightsExactProjectionByContentClass
+        .explanation_object.orderedAttributionSourceProjectionExactly,
+      ["resolved_explanation_object_rights_receipt.exact_attribution"],
+    )
+  ) {
+    add("content_attribution_object_binding");
+  }
+
+  const standards = candidate.standardsMappingContracts;
+  const qtiItemFields = standards.internalItemSchema.fields.map(
+    ({ field }) => field,
+  );
+  const qtiAttributionFields = [
+    "five_choice_release_receipt_reference_or_null",
+    "ordered_content_attribution_rows_digest_or_null",
+    "ordered_unique_attributions_or_null",
+    "ordered_unique_attributions_digest_or_null",
+  ];
+  const itemBodyMapping = standards.qti.mappingRecords.find(
+    ({ targetField }) => targetField === "qti-item-body",
+  );
+  const modalMapping = standards.qti.mappingRecords.find(
+    ({ targetField }) =>
+      targetField ===
+      "qti-modal-feedback@identifier, @outcome-identifier, @show-hide, qti-content-body",
+  );
+  if (
+    !includesAll(qtiItemFields, qtiAttributionFields) ||
+    !includesAll(itemBodyMapping.sourcePointers, [
+      "/five_choice_release_receipt_reference_or_null",
+      "/ordered_content_attribution_rows_digest_or_null",
+      "/ordered_unique_attributions_or_null",
+      "/ordered_unique_attributions_digest_or_null",
+    ]) ||
+    !includesAll(modalMapping.sourcePointers, [
+      "/five_choice_release_receipt_reference_or_null",
+      "/ordered_content_attribution_rows_digest_or_null",
+      "/ordered_unique_attributions_or_null",
+      "/ordered_unique_attributions_digest_or_null",
+    ]) ||
+    !itemBodyMapping.constraint.includes("separate attribution block") ||
+    !modalMapping.constraint.includes("separate attribution block") ||
+    !standards.internalItemSchema.crossFieldInvariants.some((invariant) =>
+      invariant.includes("equal_the_resolved_release_fields_exactly"),
+    )
+  ) {
+    add("qti_content_attribution_projection");
+  }
+
   const later = candidate.laterGateEvidence;
   const packetShape = later.gateEvidencePacketReceiptShape;
   const supportReceipt = later.authoritativeSupportingEvidenceReceiptShape;
@@ -108,8 +460,6 @@ function collectContractErrors(candidate) {
     ...supportReceipt.sourceReferenceContractShape.requiredFields,
     ...(supportReceipt.sourceReferenceContractShape.optionalFields ?? []),
   ]);
-
-  const add = (code) => errors.push(code);
 
   for (const gateId of ["S236B", "O3B"]) {
     const gate = later[gateId];
@@ -229,6 +579,20 @@ function collectContractErrors(candidate) {
       }
     }
   }
+  visitObjects(later, [], (value, path) => {
+    if (typeof value.operator !== "string") return;
+    const profileLiteral =
+      typeof value.literalJsonValue === "string"
+        ? value.literalJsonValue
+        : value.right?.literalJsonValue;
+    if (
+      typeof profileLiteral === "string" &&
+      profileLiteral.startsWith("privacy-lifecycle-") &&
+      !globalProfiles[profileLiteral]
+    ) {
+      add(`unresolved_privacy_profile_literal:${path.join(".")}`);
+    }
+  });
 
   for (const [virtualId, virtual] of Object.entries(virtuals)) {
     for (const assertion of virtual.assertionContractsExactly ?? []) {
@@ -623,7 +987,23 @@ test("S235B stays contract-only on the exact authorized start and owned files", 
     "tests/theory-answer-review-engine.test.mjs",
     roadmapPath,
   ]);
-  assert.deepEqual(contract.closeout.s235aManifestOverlap, [roadmapPath]);
+  assert.deepEqual(contract.closeout.s235aManifestOverlap, [
+    ...contract.closeout.serializedSharedTestMutations.paths,
+    roadmapPath,
+  ]);
+  assert.equal(contract.closeout.s235aManifestOverlapPathCount, 17);
+  assert.equal(
+    contract.closeout.s235aManifestOverlapDerivation,
+    "exact_intersection_of_live_merged_PR_656_changed_file_manifest_and_ownedFileManifest",
+  );
+  assert.deepEqual(
+    contract.closeout.laneSpecificPathsDisjointFromS235A,
+    contract.ownedFileManifest.slice(0, 4),
+  );
+  assert.equal(
+    contract.closeout.allOverlapMutationsSerializedAfterS235AMerge,
+    true,
+  );
   assert.equal(
     contract.closeout.state,
     "s235a_priority_merge_reconciled_roadmap_closeout_serialized",
@@ -832,6 +1212,43 @@ test("per-post and per-asset Q-Net rights require exact tuples and typed authori
     permission,
     "resolves_to_thirdPartyPermissionEvidenceReceiptShape",
   );
+
+  const crosswalk =
+    receipt.rightsBasisEvidenceToPrimaryBasisCrosswalk;
+  assert.equal(crosswalk.closedWorld, true);
+  assert.deepEqual(crosswalk.rowKeyFieldsExactly, [
+    "evidence_kind",
+    "evidence_decision",
+    "basis_type",
+    "basis_decision",
+  ]);
+  assert.deepEqual(
+    crosswalk.rowsExactly,
+    expectedRightsBasisCrosswalkRows(contract),
+  );
+  const byEvidenceKind = new Map(
+    crosswalk.rowsExactly.map((row) => [row.evidence_kind, row]),
+  );
+  assert.deepEqual(
+    byEvidenceKind.get("authoritative_no_basis_evidence"),
+    expectedRightsBasisCrosswalkRows(contract).at(-1),
+  );
+  assert.deepEqual(
+    byEvidenceKind.get("authoritative_metadata_link_citation_policy")
+      .maximum_allowed_scope_tuples_exactly,
+    [],
+  );
+  assert.deepEqual(
+    byEvidenceKind.get("authoritative_owner_private_policy")
+      .maximum_allowed_scope_tuples_exactly,
+    scope.finalDecisionScopeTupleCeilings.approved_owner_private_use,
+  );
+  assert.deepEqual(
+    byEvidenceKind.get("official_post_license_label_or_terms")
+      .maximum_allowed_scope_tuples_exactly,
+    scope.finalDecisionScopeTupleCeilings
+      .approved_cleared_redistribution_with_attribution,
+  );
 });
 
 test("Law and K-IFRS version evidence is raw-identity and extraction bound", () => {
@@ -937,6 +1354,71 @@ test("five-choice release is static while attempt feedback and validators are cl
     true,
   );
   assert.equal(release.requiredFields.includes("feedback_state"), false);
+  for (const field of [
+    "ordered_content_attribution_rows",
+    "ordered_content_attribution_rows_digest",
+    "ordered_unique_attributions",
+    "ordered_unique_attributions_digest",
+  ]) {
+    assert.equal(release.requiredFields.includes(field), true, field);
+  }
+  assert.deepEqual(
+    release.verifiedOfficialKeyReceiptShape
+      .keyAttributionProjectionContract.orderedSourceFieldsExactly,
+    ["key_post_exact_attribution", "key_asset_exact_attribution"],
+  );
+  assert.equal(
+    release.verifiedOfficialKeyReceiptShape
+      .keyAttributionProjectionContract.normalizationAllowed,
+    false,
+  );
+  assert.deepEqual(
+    release.contentRightsAttributionProjectionContract
+      .orderedSourceProjectionExactly.map(({ content_role }) => content_role),
+    [
+      "question_source_post",
+      "question_source_asset",
+      "question_item_object",
+      "official_key_source_post",
+      "official_key_source_asset",
+      "choice_correction_object",
+      "choice_explanation_object",
+    ],
+  );
+  assert.match(
+    release.contentRightsAttributionProjectionContract
+      .orderedUniqueAttributionContract.deterministicDisplayRule,
+    /separate_attribution_block/,
+  );
+  const unequalAttributionFixture = [
+    "Question attribution A",
+    "Key attribution B",
+    "Feedback attribution C",
+    "Key attribution B",
+    "question attribution a",
+  ];
+  assert.deepEqual(
+    unequalAttributionFixture.filter(
+      (value, index, values) => values.indexOf(value) === index,
+    ),
+    [
+      "Question attribution A",
+      "Key attribution B",
+      "Feedback attribution C",
+      "question attribution a",
+    ],
+  );
+  assert.deepEqual(
+    five.fiveChoiceFeedbackBundleReceiptShape
+      .feedbackAttributionKindVocabulary,
+    ["correction_object", "explanation_object"],
+  );
+  assert.equal(
+    five.fiveChoiceFeedbackBundleReceiptShape.requiredFields.includes(
+      "ordered_feedback_attribution_rows",
+    ),
+    true,
+  );
   assert.equal(
     release.receiptBindingInvariants.some((entry) =>
       entry.includes("attempt_scoped_feedback_cause_gap_action_and_retry"),
@@ -1004,6 +1486,35 @@ test("QTI stays static and mapping-only while xAPI and Caliper carry attempt cau
   );
   assert.equal(standards.qti.catOrAdaptiveRuntimeImplied, false);
   assert.equal(standards.qti.importerExporterImplemented, false);
+  for (const field of [
+    "five_choice_release_receipt_reference_or_null",
+    "ordered_content_attribution_rows_digest_or_null",
+    "ordered_unique_attributions_or_null",
+    "ordered_unique_attributions_digest_or_null",
+  ]) {
+    assert.equal(
+      standards.internalItemSchema.fields.some(
+        (definition) => definition.field === field,
+      ),
+      true,
+      field,
+    );
+  }
+  const itemBodyMapping = standards.qti.mappingRecords.find(
+    ({ targetField }) => targetField === "qti-item-body",
+  );
+  const modalMapping = standards.qti.mappingRecords.find(
+    ({ targetField }) =>
+      targetField ===
+      "qti-modal-feedback@identifier, @outcome-identifier, @show-hide, qti-content-body",
+  );
+  assert.match(itemBodyMapping.constraint, /separate attribution block/);
+  assert.match(modalMapping.constraint, /separate attribution block/);
+  assert.match(
+    standards.qti.responseProcessingContract.customInlineScoreAndFeedback
+      .feedbackContentResolution,
+    /ordered_unique_attribution.*separate_attribution_block/,
+  );
   assert.equal(
     standards.qti.contentPackageManifestContract.packageClaim,
     "mapping_ready_only_not_validated_or_conformant",
@@ -1038,9 +1549,54 @@ test("Gold and held-out ingress prove target bytes and exact per-object rights",
   assert.equal(rightsProjection.verified_official_key.requiredReferenceCount, 2);
   assert.equal(rightsProjection.correction_object.requiredReferenceCount, 1);
   assert.equal(rightsProjection.explanation_object.requiredReferenceCount, 1);
+  assert.deepEqual(
+    rightsProjection.verified_official_key
+      .orderedAttributionSourceProjectionExactly,
+    [
+      "resolved_verified_official_key_receipt.key_post_exact_attribution",
+      "resolved_verified_official_key_receipt.key_asset_exact_attribution",
+    ],
+  );
+  assert.deepEqual(
+    rightsProjection.correction_object
+      .orderedAttributionSourceProjectionExactly,
+    ["resolved_correction_object_rights_receipt.exact_attribution"],
+  );
+  assert.deepEqual(
+    rightsProjection.explanation_object
+      .orderedAttributionSourceProjectionExactly,
+    ["resolved_explanation_object_rights_receipt.exact_attribution"],
+  );
+  assert.equal(
+    separation.ingressedObjectBindingRecordContract.requiredFields.includes(
+      "source_exact_attributions",
+    ),
+    true,
+  );
+  for (const ingress of [
+    separation.goldIngressReceiptShape,
+    separation.heldOutIngressReceiptShape,
+  ]) {
+    for (const field of [
+      "ordered_content_attribution_rows",
+      "ordered_content_attribution_rows_digest",
+      "ordered_unique_attributions",
+      "ordered_unique_attributions_digest",
+    ]) {
+      assert.equal(ingress.requiredFields.includes(field), true, field);
+    }
+  }
   assertIncludesInvariant(
     separation.ingressedObjectBindingRecordContract,
     "is_nonempty_unique_and_equals_sourceRightsExactProjectionByContentClass",
+  );
+  assertIncludesInvariant(
+    separation.goldIngressReceiptShape,
+    "same_cardinality_and_members_as_ordered_unique_attributions_independent_of_binding_record_order",
+  );
+  assertIncludesInvariant(
+    separation.heldOutIngressReceiptShape,
+    "same_cardinality_and_members_as_ordered_unique_attributions_independent_of_binding_record_order",
   );
 
   const goldTuples =
@@ -1373,6 +1929,25 @@ test("applicability, population, privacy, supply-chain, and signature evidence i
       .map(({ literalJsonValue }) => literalJsonValue),
     [1, 2, 3, 4, 5],
   );
+  const privacyProfileLiterals = [];
+  visitObjects(later, [], (value) => {
+    if (typeof value.operator !== "string") return;
+    const literal =
+      typeof value.literalJsonValue === "string"
+        ? value.literalJsonValue
+        : value.right?.literalJsonValue;
+    if (
+      typeof literal === "string" &&
+      literal.startsWith("privacy-lifecycle-")
+    ) {
+      privacyProfileLiterals.push(literal);
+    }
+  });
+  assert.deepEqual(privacyProfileLiterals, [
+    "privacy-lifecycle-five-phase.v1",
+    "privacy-lifecycle-five-phase.v1",
+    "privacy-lifecycle-five-phase.v1",
+  ]);
   assertSameMembers(
     privacyProfile.rowSetConditionsExactly.map(({ operator }) => operator),
     [
@@ -1590,6 +2165,162 @@ test("hostile mutations are rejected by the same mechanical validator", () => {
     true,
   );
 
+  const noBasisEscalation = structuredClone(contract);
+  noBasisEscalation.sourceRightsManifest.futureO3BReceiptContract
+    .rightsBasisEvidenceToPrimaryBasisCrosswalk.rowsExactly.find(
+      ({ evidence_kind }) =>
+        evidence_kind === "authoritative_no_basis_evidence",
+    ).evidence_decision = "verified_current_basis_evidence";
+  assert.equal(
+    collectContractErrors(noBasisEscalation).includes(
+      "rights_basis_crosswalk",
+    ),
+    true,
+  );
+
+  const metadataScopeEscalation = structuredClone(contract);
+  metadataScopeEscalation.sourceRightsManifest.futureO3BReceiptContract
+    .rightsBasisEvidenceToPrimaryBasisCrosswalk.rowsExactly.find(
+      ({ evidence_kind }) =>
+        evidence_kind === "authoritative_metadata_link_citation_policy",
+    ).maximum_allowed_scope_tuples_exactly.push({
+      plane: "Personal Raw Vault",
+      use: "personal_service_processing",
+      audience: "owner_user_private",
+    });
+  assert.equal(
+    collectContractErrors(metadataScopeEscalation).includes(
+      "rights_basis_crosswalk",
+    ),
+    true,
+  );
+
+  const privateScopeEscalation = structuredClone(contract);
+  privateScopeEscalation.sourceRightsManifest.futureO3BReceiptContract
+    .rightsBasisEvidenceToPrimaryBasisCrosswalk.rowsExactly.find(
+      ({ evidence_kind }) =>
+        evidence_kind === "authoritative_owner_private_policy",
+    ).maximum_allowed_scope_tuples_exactly.push({
+      plane: "Cleared Content Bank",
+      use: "cleared_redistribution",
+      audience: "authorized_learner",
+    });
+  assert.equal(
+    collectContractErrors(privateScopeEscalation).includes(
+      "rights_basis_crosswalk",
+    ),
+    true,
+  );
+
+  const omittedKeyAttribution = structuredClone(contract);
+  const hostileKey =
+    omittedKeyAttribution.fiveChoiceCorrectionContract.releaseReceiptContract
+      .verifiedOfficialKeyReceiptShape;
+  hostileKey.requiredFields = hostileKey.requiredFields.filter(
+    (field) => field !== "key_asset_exact_attribution",
+  );
+  hostileKey.receiptDigestContract.coveredFieldsExactly =
+    hostileKey.receiptDigestContract.coveredFieldsExactly.filter(
+      (field) => field !== "key_asset_exact_attribution",
+    );
+  assert.equal(
+    collectContractErrors(omittedKeyAttribution).includes(
+      "content_attribution_receipt_fields",
+    ),
+    true,
+  );
+
+  const collapsedDifferentAttributions = structuredClone(contract);
+  collapsedDifferentAttributions.fiveChoiceCorrectionContract
+    .releaseReceiptContract.contentRightsAttributionProjectionContract
+    .orderedUniqueAttributionContract.normalizationAllowed = true;
+  assert.equal(
+    collectContractErrors(collapsedDifferentAttributions).includes(
+      "content_attribution_projection",
+    ),
+    true,
+  );
+
+  const omittedFeedbackAttribution = structuredClone(contract);
+  omittedFeedbackAttribution.fiveChoiceCorrectionContract
+    .releaseReceiptContract.contentRightsAttributionProjectionContract
+    .orderedSourceProjectionExactly.pop();
+  assert.equal(
+    collectContractErrors(omittedFeedbackAttribution).includes(
+      "content_attribution_projection",
+    ),
+    true,
+  );
+
+  const substitutedIngressAttribution = structuredClone(contract);
+  substitutedIngressAttribution.goldHeldOutSeparationContract
+    .ingressedObjectBindingRecordContract
+    .sourceRightsExactProjectionByContentClass.explanation_object
+    .orderedAttributionSourceProjectionExactly[0] =
+      "resolved_question_item_object_rights_receipt.exact_attribution";
+  assert.equal(
+    collectContractErrors(substitutedIngressAttribution).includes(
+      "content_attribution_object_binding",
+    ),
+    true,
+  );
+
+  const qtiAttributionOmitted = structuredClone(contract);
+  qtiAttributionOmitted.standardsMappingContracts.internalItemSchema.fields =
+    qtiAttributionOmitted.standardsMappingContracts.internalItemSchema.fields
+      .filter(
+        ({ field }) =>
+          field !== "ordered_unique_attributions_or_null",
+      );
+  assert.equal(
+    collectContractErrors(qtiAttributionOmitted).includes(
+      "qti_content_attribution_projection",
+    ),
+    true,
+  );
+
+  const incompatibleIngressOrder = structuredClone(contract);
+  const safeSetInvariant =
+    incompatibleIngressOrder.goldHeldOutSeparationContract
+      .goldIngressReceiptShape.bindingInvariants.findIndex((invariant) =>
+        invariant.includes(
+          "same_cardinality_and_members_as_ordered_unique_attributions_independent_of_binding_record_order",
+        ),
+      );
+  incompatibleIngressOrder.goldHeldOutSeparationContract
+    .goldIngressReceiptShape.bindingInvariants[safeSetInvariant] =
+      "the_order_preserving_union_must_equal_release_order";
+  assert.equal(
+    collectContractErrors(incompatibleIngressOrder).includes(
+      "content_attribution_ingress_projection",
+    ),
+    true,
+  );
+
+  const unresolvedPrivacyProfile = structuredClone(contract);
+  unresolvedPrivacyProfile.laterGateEvidence
+    .gateAssertionDerivationReceiptShape.predicateValidationProfileRegistry[
+      "privacy-lifecycle-five-phase.v1"
+    ].rowSetConditionsExactly.find(
+      ({ operator }) => operator === "privacy_lifecycle_temporal_chain_valid",
+    ).literalJsonValue = "privacy-lifecycle-five-phase.v2";
+  assert.equal(
+    collectContractErrors(unresolvedPrivacyProfile).some((error) =>
+      error.startsWith("unresolved_privacy_profile_literal:"),
+    ),
+    true,
+  );
+
+  const incompleteS235AOverlap = structuredClone(contract);
+  incompleteS235AOverlap.closeout.s235aManifestOverlap = [roadmapPath];
+  incompleteS235AOverlap.closeout.s235aManifestOverlapPathCount = 1;
+  assert.equal(
+    collectContractErrors(incompleteS235AOverlap).includes(
+      "s235a_overlap_intersection",
+    ),
+    true,
+  );
+
   const validGateSample = {
     scopeId: "s235b_to_s236b_ocr_benchmark_entry_v1",
     evaluationHeadSha: "1".repeat(40),
@@ -1699,7 +2430,8 @@ test("receipt fields are canonical-digest complete and declarative field sets ar
         Array.isArray(entry) &&
         (key.endsWith("RequiredFields") ||
           key.endsWith("FieldsExactly") ||
-          key.endsWith("Vocabulary"))
+          key.endsWith("Vocabulary") ||
+          /^accepted(?:Left|Right)?Types$/.test(key))
       ) {
         assert.equal(
           new Set(entry.map((item) => JSON.stringify(item))).size,
