@@ -277,13 +277,24 @@ test("watch_snapshot writes safe generated artifacts even when ignored input has
   assertNoUnsafeArtifactText(outputDir);
 });
 
-test("dispatcher writes summary and docs state report-only v1", () => {
+test("dispatcher rejects blocked S225 and writes a report-only summary for ready S235A", () => {
+  const blockedOutputDir = tempDir("af006-blocked-s225");
+  const blocked = runDispatcher([
+    "--mode",
+    "plan_only",
+    "--target",
+    "S225",
+    "--output-dir",
+    blockedOutputDir,
+    "--stdout",
+    "json",
+  ]);
   const outputDir = tempDir("af006-summary");
   const result = runDispatcher([
     "--mode",
     "plan_only",
     "--target",
-    "S225",
+    "S235A",
     "--output-dir",
     outputDir,
     "--stdout",
@@ -292,11 +303,14 @@ test("dispatcher writes summary and docs state report-only v1", () => {
   const docs = fs.readFileSync(DOC_PATH, "utf8");
   const summary = readSummary(outputDir);
 
+  assert.notEqual(blocked.status, 0);
+  assert.match(`${blocked.stdout}\n${blocked.stderr}`, /S225[\s\S]*(?:ready|blocked|dependency)/i);
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /"reportOnly": true/);
   assert.match(summary, /AF006 v1: read-only\/report-only/);
   assert.match(summary, /No branches, commits, pushes, PR updates/);
   assert.match(docs, /read-only\/report-only/);
+  assert.match(docs, /blocked S225 target must fail closed/i);
   assert.match(docs, /never recommends auto-merge/);
 });
 

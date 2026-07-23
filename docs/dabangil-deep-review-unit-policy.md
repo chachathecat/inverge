@@ -3,8 +3,15 @@
 - 문서 상태: S200R catalog policy
 - 적용 범위: future product catalog, entitlement, usage-ledger, provider-cost guardrails
 - Source provenance: GitHub issue #437, `docs/dabangil-second-exam-premium-os.md`, `docs/inverge-business-model.md`
+- Post-#650 boundary: `deep_review_unit` is the legacy S219/S220 meter. It is
+  not `usable_review_unit_v1` and is not the non-billable learning
+  `ReviewUnit`.
 
 This document is policy only. It does not implement billing, checkout, subscriptions, credit grants, debit logic, provider reservation, or usage ledger behavior.
+
+There is no alias, balance sharing, conversion, migration, fallback, or
+silent substitution among `deep_review_unit`, `usable_review_unit_v1`, and
+`ReviewUnit`.
 
 ## Unit Definition
 

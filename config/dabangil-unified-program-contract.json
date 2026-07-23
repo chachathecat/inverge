@@ -1,0 +1,441 @@
+{
+  "contractVersion": "dabangil.unified_program.v1",
+  "decision": {
+    "id": "owner_o1_post_650_reset_2026_07_23",
+    "status": "approved_for_contract_reset_only",
+    "runtimeActivationAuthorized": false,
+    "productionActivationAuthorized": false,
+    "dependencyActivationAuthorized": false,
+    "providerModelPromptActivationAuthorized": false
+  },
+  "resetExecutionBoundary": {
+    "workShape": "one_docs_contracts_roadmap_pr",
+    "globalExclusivity": "manual_owner_enforced",
+    "mutationWip": 1,
+    "mutationWriter": "root_owner_only",
+    "additionalAgents": "read_only_auditors",
+    "runnerAutomaticallyEnforcesGlobalExclusivity": false
+  },
+  "authorityOrder": [
+    "dated_owner_decision_for_owned_scope",
+    "dabangil_unified_program_contract",
+    "second_round_final_spec_and_s200r_detail",
+    "versioned_executable_domain_contracts",
+    "active_program_status_dependencies_locks_wip",
+    "agents_and_risk_operating_rules"
+  ],
+  "tracks": {
+    "secondRound": {
+      "criticalReleasePath": true,
+      "privateFoundingBetaBeforePublicS225": true,
+      "publicSelfServeActivated": false
+    },
+    "firstRound": {
+      "foundationState": "queued",
+      "legacyCompatibilityRuntime": "present_unaudited_not_newly_authorized",
+      "newRuntimeAuthorized": false,
+      "navigationAuthorized": false,
+      "pricingAuthorized": false,
+      "publicExposureAuthorized": false
+    },
+    "bothTrack": {
+      "requiresAuthenticatedFirstAcceptance": true,
+      "requiresAuthenticatedSecondAcceptance": true,
+      "masteryAutoTransferAllowed": false
+    },
+    "academy": {
+      "s222Meaning": "source_contract_history_only",
+      "namedPartnerRequired": true,
+      "instructorExplicitApprovalRequired": true,
+      "runtimeAuthorized": false
+    }
+  },
+  "learningContracts": {
+    "fullDay": {
+      "id": "Full-Day",
+      "state": "canonical_contract_only",
+      "minimumAvailableMinutes": 30,
+      "maximumAvailableMinutes": 720,
+      "overflowRequiresExplicitReductionDeferralOrDropReason": true,
+      "runtimeAuthorized": false
+    },
+    "personalStudyLedger": {
+      "id": "Personal Study Ledger",
+      "state": "canonical_contract_only",
+      "lineageObject": "LearningDocument",
+      "appendOnlyExposureAndAssistanceHistory": true,
+      "rawContentPlane": "Personal Raw Vault",
+      "runtimeAuthorized": false
+    },
+    "coreOutcome": {
+      "id": "CoreOutcome",
+      "minimum": 0,
+      "maximum": 3
+    },
+    "executionBlock": {
+      "id": "ExecutionBlock",
+      "minimum": 0,
+      "maximum": null,
+      "completionChangesMastery": false
+    },
+    "learningDocument": {
+      "id": "LearningDocument",
+      "learnerOwnedLineage": true,
+      "sharedRawContentAllowed": false
+    },
+    "reviewUnit": {
+      "id": "ReviewUnit",
+      "purpose": "minute_budget_learning_recovery",
+      "billable": false
+    },
+    "attemptFirst": {
+      "id": "attempt_first",
+      "independentAttemptBeforeReveal": true,
+      "exposureHistoryAppendOnly": true
+    },
+    "guidedStudy": {
+      "id": "guided_study",
+      "state": "canonical_contract_only",
+      "runtimeAuthorized": false,
+      "recordExposureBeforeReveal": true,
+      "mayRelabelAsIndependent": false,
+      "mayEstablishStableMastery": false,
+      "schedulesIndependentReview": true
+    },
+    "assistanceAwareMastery": {
+      "id": "assistance-aware mastery",
+      "state": "canonical_contract_only",
+      "runtimeAuthorized": false,
+      "assistanceExposureAndMasteryAreSeparateAxes": true,
+      "supportedSuccessMayEstablishStableMastery": false,
+      "stableCandidateRequiresDelayedIndependentEvidence": true
+    },
+    "goldHeldOutPhysicallySeparate": true
+  },
+  "commercialHypothesis": {
+    "id": "founding_beta_69000_30d_20_v1",
+    "status": "owner_hypothesis_not_active",
+    "invitationOnly": true,
+    "priceKrwVatIncluded": 69000,
+    "termDays": 30,
+    "automaticRenewal": false,
+    "includedMeter": "usable_review_unit_v1",
+    "includedUnits": 20,
+    "lifetimeFullValueFreeReviews": 1,
+    "paymentFirstProhibited": true,
+    "degradedFreeOutputProhibited": true,
+    "unitContracts": [
+      {
+        "id": "ReviewUnit",
+        "meter": "learning_schedule",
+        "balanceShared": false
+      },
+      {
+        "id": "usable_review_unit_v1",
+        "meter": "founding_beta_hypothesis",
+        "balanceShared": false
+      },
+      {
+        "id": "deep_review_unit",
+        "meter": "legacy_s219_s220",
+        "balanceShared": false
+      }
+    ],
+    "unitSeparation": {
+      "aliasAllowed": false,
+      "conversionAllowed": false,
+      "migrationAllowed": false,
+      "fallbackAllowed": false,
+      "balanceSharingAllowed": false
+    },
+    "usableReviewUnitBands": [
+      {
+        "pointsMinimum": 10,
+        "pointsMaximum": 25,
+        "units": 1
+      },
+      {
+        "pointsMinimum": 40,
+        "pointsMaximum": 50,
+        "units": 2
+      },
+      {
+        "pointsMinimum": 100,
+        "pointsMaximum": 100,
+        "units": 4
+      }
+    ],
+    "ambiguousPointsPolicy": "explicit_pre_submit_estimate_or_manual_decision_required",
+    "postResultIncreaseAllowed": false,
+    "activationGate": "O4"
+  },
+  "readinessAxes": [
+    "runtime_ready",
+    "content_ready",
+    "quality_ready",
+    "commercial_ready",
+    "observed_efficacy",
+    "causal_claim_ready"
+  ],
+  "firstRoundFoundation": {
+    "officialRuleVersioningRequired": true,
+    "fiveSubjectAdapterContractsOnly": true,
+    "qnetRightsGranularity": "per_post_and_per_attached_asset",
+    "qnetItemInheritsMostRestrictivePostAssetDecision": true,
+    "privateCaptureRights": "private_personal_use_only",
+    "privateCapturePromotionAllowed": false,
+    "rapidAnswerGridContract": true,
+    "fiveChoiceFeedbackContract": true,
+    "errorTaxonomy": [
+      "K",
+      "C",
+      "A",
+      "R",
+      "T",
+      "G"
+    ],
+    "qti3CompatibilityTargetOnly": true,
+    "xapiCaliperCompatibilityTargetOnly": true,
+    "timedOmrHeldOutContracts": true
+  },
+  "dataPlanes": [
+    {
+      "id": "Personal Raw Vault",
+      "rawContentAllowed": true,
+      "scope": "single_user"
+    },
+    {
+      "id": "Academy Tenant Vault",
+      "rawContentAllowed": true,
+      "scope": "single_tenant"
+    },
+    {
+      "id": "Shared Signal Plane",
+      "rawContentAllowed": false,
+      "scope": "consented_pseudonymous_non_reconstructive_signals"
+    },
+    {
+      "id": "Cleared Content Bank",
+      "rawContentAllowed": true,
+      "scope": "rights_cleared_promoted_content_only"
+    },
+    {
+      "id": "Model/Eval Registry",
+      "rawContentAllowed": false,
+      "scope": "version_and_evidence_metadata"
+    }
+  ],
+  "legacyDerivedSignalBoundary": {
+    "existingSafeDerivedSignalKeysSharedSignalEligible": false,
+    "existingLegacyTelemetrySharedSignalEligible": false,
+    "futureO2AdapterRequiresClosedValueLevelSchema": true,
+    "sharedSignalValueKinds": [
+      "approved_ids",
+      "enums",
+      "counts",
+      "buckets"
+    ],
+    "freeTextSharedSignalAllowed": false,
+    "reconstructivenessTestsRequired": true,
+    "purposeConsentRequired": true
+  },
+  "consentPurposes": [
+    "personal_service_processing",
+    "pseudonymous_product_signals",
+    "academy_sharing",
+    "user_owned_content_contribution",
+    "offline_model_training"
+  ],
+  "consentLedger": {
+    "revocationStopsFutureUseForRevokedPurpose": true,
+    "revocationCovers": [
+      "pseudonymous_product_signals",
+      "academy_sharing",
+      "user_owned_content_contribution",
+      "offline_model_training_and_dataset_refresh"
+    ],
+    "deletionAndRetentionArePurposeScoped": true
+  },
+  "promotion": {
+    "automaticPrivateToSharedPromotionAllowed": false,
+    "rightsClearedContentMayImproveSharedSystemThroughClearedBank": true,
+    "consentedPseudonymousSignalsMayImproveSharedSignalPlane": true,
+    "privateFingerprintScope": "domain_separated_vault_scoped",
+    "privateFingerprintProperties": {
+      "keyedOneWay": true,
+      "vaultSpecificNonExportableDomainKeys": true,
+      "returnsEqualityOracle": false
+    },
+    "globalFingerprintRequiresPromotedClearedContentBankMaterial": true,
+    "globalFingerprintAllowedPromotionBases": [
+      "rights_cleared_official_owner_created_or_contracted",
+      "separately_consented_user_owned_contribution"
+    ],
+    "userOwnedContributionBoundary": {
+      "separatelyAuthoredContributionObjectRequired": true,
+      "mayReclassifyPrivateServiceArtifact": false,
+      "rawServiceAnswersNotesHandwritingEligible": false,
+      "rawOcrEligible": false,
+      "actualRightsRequired": true
+    },
+    "pseudonymousSignalConsentAloneAllowsGlobalFingerprint": false,
+    "unscopedPrePromotionCrossVaultComparisonAllowed": false,
+    "authorizedPromotionQuarantinePreflightOnly": true,
+    "authorizedPromotionQuarantinePreflight": {
+      "allowed": true,
+      "comparisonTarget": "Cleared Content Bank",
+      "requiresRightsPrerequisites": true,
+      "requiresContentContributionConsentForUserOwnedMaterial": true,
+      "domainSeparatedAndAccessControlled": true,
+      "internalLeastPrivilegeOnly": true,
+      "emitsEqualitySignalToSourceVaultOrUser": false,
+      "emitsOnlyDecisionMetadata": true,
+      "createsGlobalIdentifierBeforePromotion": false
+    },
+    "privateCaptureResolutionChangesPrivateStatus": false,
+    "conflictingAnswerQuarantine": true,
+    "poisoningQuarantine": true,
+    "heldOutContaminationTest": true,
+    "onlineWeightUpdateAllowed": false
+  },
+  "ossLifecycle": [
+    "proposed",
+    "benchmark_only",
+    "shadow",
+    "limited_activation",
+    "active",
+    "rollback"
+  ],
+  "ossTransitions": {
+    "forward": [
+      "proposed_to_benchmark_only",
+      "benchmark_only_to_shadow",
+      "shadow_to_limited_activation",
+      "limited_activation_to_active"
+    ],
+    "rollbackAvailableFrom": [
+      "benchmark_only",
+      "shadow",
+      "limited_activation",
+      "active"
+    ],
+    "requiredSafetyPath": [
+      "benchmark_only",
+      "shadow",
+      "limited_activation",
+      "rollback"
+    ]
+  },
+  "ossOrder": {
+    "opencvPaddleOcr": "benchmark_only",
+    "qtiXapiCaliper": "compatibility_contract_only",
+    "tsFsrs": "shadow_after_beta_evidence",
+    "pyBkt": "learner_hidden_shadow_after_sufficient_skill_data",
+    "irtCat": "offline_after_sufficient_independent_attempts",
+    "ltiH5p": "named_academy_partner_only"
+  },
+  "ownerGates": {
+    "O1": "approved_for_this_reset_only",
+    "O2": "future_measurement_consent_retention_gate",
+    "O3": "future_content_rights_reviewer_publication_gate",
+    "O4": "future_migration_secret_provider_commercial_user_flag_gate",
+    "O5": "future_research_training_efficacy_claim_gate"
+  },
+  "roadmapContract": {
+    "wipLimit": 2,
+    "primaryStatusesUsed": [
+      "completed",
+      "queued"
+    ],
+    "runnerSupportedPrimaryStatuses": {
+      "completed": [
+        "completed",
+        "done",
+        "merged",
+        "released"
+      ],
+      "active": [
+        "active",
+        "in_progress",
+        "in_review",
+        "pr_open"
+      ],
+      "queued": [
+        "queued",
+        "ready"
+      ],
+      "blocked": [
+        "blocked",
+        "human_decision"
+      ]
+    },
+    "futureGatedPrimaryStatus": "queued",
+    "blockedFutureItemsConsumeWipProhibited": true,
+    "flatLockGroupOnly": true,
+    "globalExclusivityAutomaticallyEnforced": false,
+    "perLockGroupConcurrentWriterLimit": 1,
+    "additionalConcurrentWritersInSameLockGroup": 0,
+    "sharedControlPlaneOverallMutationWip": 1,
+    "historicalCompletionMetadata": {
+      "range": "S200_through_S224",
+      "completionScope": "historical_contract_evidence",
+      "currentReadinessEstablished": false
+    },
+    "scopedGateEdges": {
+      "golden3": "O3A",
+      "foundingBeta": "O4A",
+      "golden9": "O3C",
+      "firstRoundRights": "O3B",
+      "firstRoundPrivateRuntime": "O4B",
+      "academyPilot": "O4C",
+      "publicSelfServe": "O4D",
+      "sharedSignalOssLimitedActivation": "O4E"
+    },
+    "readyAfterMerge": [
+      "S235A",
+      "S235B"
+    ],
+    "selectionAutomaticallyStartsWork": false
+  },
+  "brand": {
+    "mineralCobalt": "#4653A6",
+    "figmaHomeState": "queued_not_completed"
+  },
+  "ownedFiles": [
+    "AGENTS.md",
+    "config/dabangil-unified-program-contract.json",
+    "docs/dabangil-unified-program-contract.md",
+    "docs/decisions/2026-07-23-post-650-unified-program-reset.md",
+    "docs/inverge-second-round-final-product-spec.md",
+    "docs/dabangil-second-exam-premium-os.md",
+    "docs/inverge-master-roadmap.md",
+    "docs/inverge-product-brief.md",
+    "docs/inverge-product-constitution.md",
+    "docs/inverge-data-boundary.md",
+    "docs/inverge-data-governance.md",
+    "docs/inverge-business-model.md",
+    "docs/dabangil-deep-review-unit-policy.md",
+    "docs/inverge-curriculum-system.md",
+    "docs/inverge-study-schedule-system.md",
+    "roadmap/active-program.yml",
+    "tests/agent-factory-roadmap-runner.test.mjs",
+    "tests/dabangil-premium-alignment.test.mjs",
+    "tests/inverge-product-constitution.test.mjs",
+    "tests/inverge-roadmap-curriculum-docs.test.mjs",
+    "tests/practice-answer-review-engine.test.mjs",
+    "tests/theory-answer-review-engine.test.mjs",
+    "tests/s214-reference-answer-pipeline.test.mjs",
+    "tests/s215-reference-answer-release-gate.test.mjs",
+    "tests/s216-error-notebook-gap-taxonomy.test.mjs",
+    "tests/s217-personal-core-concept-graph.test.mjs",
+    "tests/s218-similar-question-review-scheduler.test.mjs",
+    "tests/s219-learner-catalog-usage-ledger.test.mjs",
+    "tests/s220-billing-entitlement-credit-usage.test.mjs",
+    "tests/s221-paid-trust-privacy-cost-guardrails.test.mjs",
+    "tests/s222-academy-answer-operations-tenant-boundary.test.mjs",
+    "tests/s223-three-subject-corpus-reference-quality-acceptance.test.mjs",
+    "tests/s224-three-subject-learner-runtime-acceptance.test.mjs",
+    "docs/agent-factory-github-actions-button.md",
+    "tests/agent-factory-github-actions-button.test.mjs"
+  ]
+}

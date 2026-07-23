@@ -1,8 +1,8 @@
 version: 1
 
 program:
-  id: second-round-complete-paid-launch-v1
-  completionItem: S225
+  id: post-650-unified-program-v1
+  completionItem: S299
   wipLimit: 2
   maxRepairAttempts: 3
 
@@ -10,6 +10,8 @@ items:
   - id: S200
     title: Second-Round Product Constitution and Final Spec
     status: completed
+    completionScope: historical_contract_evidence
+    currentReadinessEstablished: false
     dependencies: []
     lockGroup: constitution
     risk: medium
@@ -17,6 +19,8 @@ items:
   - id: S201
     title: Official Second-Round Syllabus and Exam Rule Registry
     status: completed
+    completionScope: historical_contract_evidence
+    currentReadinessEstablished: false
     dependencies: [S200]
     lockGroup: official-curriculum
     risk: high
@@ -24,6 +28,8 @@ items:
   - id: S202
     title: Historical Question Source and Rights Registry
     status: completed
+    completionScope: historical_contract_evidence
+    currentReadinessEstablished: false
     dependencies: [S200]
     lockGroup: question-rights
     risk: high
@@ -31,6 +37,8 @@ items:
   - id: S200R
     title: Dabangil Premium Second-Round Control OS Alignment
     status: completed
+    completionScope: historical_contract_evidence
+    currentReadinessEstablished: false
     dependencies: [S201, S202]
     lockGroup: constitution
     risk: medium
@@ -38,6 +46,8 @@ items:
   - id: S203
     title: Canonical Second-Round Question Schema and Ingestion
     status: completed
+    completionScope: historical_contract_evidence
+    currentReadinessEstablished: false
     dependencies: [S200R, S201, S202]
     lockGroup: question-ingestion
     risk: high
@@ -45,6 +55,8 @@ items:
   - id: S204
     title: Answer Submission OCR Confirmation and Durable Save
     status: completed
+    completionScope: historical_contract_evidence
+    currentReadinessEstablished: false
     dependencies: [S200R]
     lockGroup: answer-capture
     risk: high
@@ -52,6 +64,8 @@ items:
   - id: S205
     title: Common Rubric Evidence and Practice Score Range Contract
     status: completed
+    completionScope: historical_contract_evidence
+    currentReadinessEstablished: false
     dependencies: [S200R, S201, S204]
     lockGroup: grading-contract
     risk: high
@@ -59,6 +73,8 @@ items:
   - id: S206
     title: Rewrite Regrade and Answer History Foundation
     status: completed
+    completionScope: historical_contract_evidence
+    currentReadinessEstablished: false
     dependencies: [S204, S205]
     lockGroup: rewrite-history
     risk: high
@@ -66,6 +82,8 @@ items:
   - id: S207
     title: Verified Reference Answer Package Schema
     status: completed
+    completionScope: historical_contract_evidence
+    currentReadinessEstablished: false
     dependencies: [S201, S203]
     lockGroup: reference-answer-schema
     risk: high
@@ -73,6 +91,8 @@ items:
   - id: S208
     title: Law Source Corpus and Exam-Date Version Validator
     status: completed
+    completionScope: historical_contract_evidence
+    currentReadinessEstablished: false
     dependencies: [S201, S203]
     lockGroup: law-grounding
     risk: high
@@ -80,6 +100,8 @@ items:
   - id: S209
     title: Theory Concept Corpus and Validator
     status: completed
+    completionScope: historical_contract_evidence
+    currentReadinessEstablished: false
     dependencies: [S201, S203]
     lockGroup: theory-grounding
     risk: high
@@ -87,6 +109,8 @@ items:
   - id: S210
     title: Practice Calculation Unit OCR and Supported-Type Validator
     status: completed
+    completionScope: historical_contract_evidence
+    currentReadinessEstablished: false
     dependencies: [S200R, S201, S203]
     lockGroup: practice-validation
     risk: high
@@ -94,6 +118,8 @@ items:
   - id: S211
     title: Law Answer Review and Grading Engine
     status: completed
+    completionScope: historical_contract_evidence
+    currentReadinessEstablished: false
     dependencies: [S205, S207, S208]
     lockGroup: law-answer-engine
     risk: high
@@ -101,6 +127,8 @@ items:
   - id: S212
     title: Theory Answer Review and Grading Engine
     status: completed
+    completionScope: historical_contract_evidence
+    currentReadinessEstablished: false
     dependencies: [S205, S207, S209]
     lockGroup: theory-answer-engine
     risk: high
@@ -108,6 +136,8 @@ items:
   - id: S213
     title: Practice Answer Review Calculation and Grading Engine
     status: completed
+    completionScope: historical_contract_evidence
+    currentReadinessEstablished: false
     dependencies: [S205, S207, S210]
     lockGroup: practice-answer-engine
     risk: high
@@ -115,6 +145,8 @@ items:
   - id: S214
     title: Multi-Candidate Historical Reference Answer Pipeline
     status: completed
+    completionScope: historical_contract_evidence
+    currentReadinessEstablished: false
     dependencies: [S207, S208, S209, S210]
     lockGroup: reference-answer-generation
     risk: high
@@ -122,6 +154,8 @@ items:
   - id: S215
     title: Reference Answer Critic Consensus and Release Gate
     status: completed
+    completionScope: historical_contract_evidence
+    currentReadinessEstablished: false
     dependencies: [S211, S212, S213, S214]
     lockGroup: reference-answer-release
     risk: high
@@ -129,6 +163,8 @@ items:
   - id: S216
     title: Automatic Error Notebook and Gap Taxonomy
     status: completed
+    completionScope: historical_contract_evidence
+    currentReadinessEstablished: false
     dependencies: [S206, S211, S212, S213]
     lockGroup: error-notebook
     risk: high
@@ -136,6 +172,8 @@ items:
   - id: S217
     title: Personal Core Concept Graph and Recovery State
     status: completed
+    completionScope: historical_contract_evidence
+    currentReadinessEstablished: false
     dependencies: [S216]
     lockGroup: concept-graph
     risk: high
@@ -143,6 +181,8 @@ items:
   - id: S218
     title: Similar Past Question Review and Rewrite Scheduler
     status: completed
+    completionScope: historical_contract_evidence
+    currentReadinessEstablished: false
     dependencies: [S203, S217]
     lockGroup: review-scheduler
     risk: high
@@ -150,6 +190,8 @@ items:
   - id: S219
     title: Dabangil Learner Catalog and Future Usage Ledger
     status: completed
+    completionScope: historical_contract_evidence
+    currentReadinessEstablished: false
     dependencies: [S200R]
     lockGroup: commercial-catalog
     risk: high
@@ -157,6 +199,8 @@ items:
   - id: S220
     title: Billing Entitlement Credit Packs and Idempotent Usage
     status: completed
+    completionScope: historical_contract_evidence
+    currentReadinessEstablished: false
     dependencies: [S219]
     lockGroup: billing
     risk: high
@@ -164,6 +208,8 @@ items:
   - id: S221
     title: Paid Trust Privacy Export Delete and Cost Guardrails
     status: completed
+    completionScope: historical_contract_evidence
+    currentReadinessEstablished: false
     dependencies: [S204, S220]
     lockGroup: paid-trust
     risk: high
@@ -171,6 +217,8 @@ items:
   - id: S222
     title: Academy Answer Operations Console and Tenant Boundary
     status: completed
+    completionScope: historical_contract_evidence
+    currentReadinessEstablished: false
     dependencies: [S211, S212, S213, S220, S221]
     lockGroup: academy-console
     risk: high
@@ -178,6 +226,8 @@ items:
   - id: S223
     title: Three-Subject Corpus Reference Answer and Quality Acceptance
     status: completed
+    completionScope: historical_contract_evidence
+    currentReadinessEstablished: false
     dependencies: [S203, S208, S209, S210, S215]
     lockGroup: content-acceptance
     risk: high
@@ -185,14 +235,226 @@ items:
   - id: S224
     title: Three-Subject Learner Dabangil Runtime Acceptance
     status: completed
+    completionScope: historical_contract_evidence
+    currentReadinessEstablished: false
     dependencies: [S206, S215, S217, S218, S220, S221]
     lockGroup: learner-acceptance
     risk: high
     priority: 26
-  - id: S225
-    title: Full Second-Round Public Paid Launch Acceptance
-    status: queued
-    dependencies: [S222, S223, S224]
-    lockGroup: release
+  - id: O1
+    title: Owner Unified Program Reset Approval
+    status: completed
+    dependencies: [S224]
+    lockGroup: owner-program-order
     risk: high
     priority: 27
+  - id: S234
+    title: Post-650 Unified Program Contract Reset
+    status: completed
+    dependencies: [O1]
+    lockGroup: unified-control-plane
+    risk: high
+    priority: 28
+  - id: S235A
+    title: Second-Round Owner-Private Golden 3 Readiness
+    status: queued
+    dependencies: [S234]
+    lockGroup: second-golden-readiness
+    risk: high
+    priority: 29
+  - id: S235B
+    title: First-Round Adaptive MCQ Foundation Contracts
+    status: queued
+    dependencies: [S234]
+    lockGroup: first-foundation-contracts
+    risk: high
+    priority: 30
+  - id: O3A
+    title: Owner Second-Round Golden 3 Rights and Private Execution Approval
+    status: queued
+    dependencies: [S235A]
+    lockGroup: owner-content-rights
+    risk: high
+    priority: 31
+  - id: S236A
+    title: Second-Round Owner-Private Golden 3
+    status: queued
+    dependencies: [O3A]
+    lockGroup: second-golden-private
+    risk: high
+    priority: 32
+  - id: S237A
+    title: Invitation-Only Founding Beta Core Readiness
+    status: queued
+    dependencies: [S236A]
+    lockGroup: founding-beta-core
+    risk: high
+    priority: 33
+  - id: O4A
+    title: Owner Founding Beta Activation Approval
+    status: queued
+    dependencies: [S237A]
+    lockGroup: owner-commercial-activation
+    risk: high
+    priority: 34
+  - id: S238A
+    title: Founding Beta Wave A
+    status: queued
+    dependencies: [O4A]
+    lockGroup: founding-beta-wave-a
+    risk: high
+    priority: 35
+  - id: O3C
+    title: Owner Second-Round Golden 9 Rights and Reviewer Approval
+    status: queued
+    dependencies: [S238A]
+    lockGroup: owner-golden-nine-rights
+    risk: high
+    priority: 36
+  - id: S239A
+    title: Second-Round Golden 9
+    status: queued
+    dependencies: [O3C]
+    lockGroup: second-golden-nine
+    risk: high
+    priority: 37
+  - id: S240A
+    title: Founding Beta Wave B and C
+    status: queued
+    dependencies: [S239A]
+    lockGroup: founding-beta-wave-bc
+    risk: high
+    priority: 38
+  - id: S241A
+    title: Second-Round Authenticated Acceptance
+    status: queued
+    dependencies: [S240A]
+    lockGroup: second-authenticated-acceptance
+    risk: high
+    priority: 39
+  - id: S236B
+    title: First-Round Capture and OCR Benchmark Contracts
+    status: queued
+    dependencies: [S235B]
+    lockGroup: first-capture-benchmark
+    risk: high
+    priority: 40
+  - id: O3B
+    title: Owner First-Round Rights and Version Approval
+    status: queued
+    dependencies: [S236B]
+    lockGroup: owner-first-rights
+    risk: high
+    priority: 41
+  - id: S237B
+    title: First-Round Adaptive MCQ Core Contracts
+    status: queued
+    dependencies: [O3B]
+    lockGroup: first-mcq-core
+    risk: high
+    priority: 42
+  - id: O4B
+    title: Owner First-Round Private Runtime Approval
+    status: queued
+    dependencies: [S237B]
+    lockGroup: owner-first-runtime
+    risk: high
+    priority: 43
+  - id: S238B
+    title: First-Round Authenticated Acceptance
+    status: queued
+    dependencies: [O4B]
+    lockGroup: first-authenticated-acceptance
+    risk: high
+    priority: 44
+  - id: S242V
+    title: Mineral Cobalt Figma and Home Contract Readiness
+    status: queued
+    dependencies: [S237A]
+    lockGroup: visual-home-contract
+    risk: medium
+    priority: 45
+  - id: O4D
+    title: Owner Second-Round Public Self-Serve Activation Approval
+    status: queued
+    dependencies: [S241A, S242V]
+    lockGroup: owner-public-activation
+    risk: high
+    priority: 46
+  - id: S225
+    title: Full Second-Round Public Self-Serve Launch Acceptance
+    status: queued
+    dependencies: [O4D]
+    lockGroup: second-public-release
+    risk: high
+    priority: 47
+  - id: S250
+    title: Authenticated Both-Track Acceptance
+    status: queued
+    dependencies: [S241A, S238B]
+    lockGroup: both-track-acceptance
+    risk: high
+    priority: 48
+  - id: S260
+    title: Named-Partner Academy Readiness
+    status: queued
+    dependencies: [S241A]
+    lockGroup: academy-named-partner
+    risk: high
+    priority: 49
+  - id: O4C
+    title: Owner Academy Pilot Activation Approval
+    status: queued
+    dependencies: [S260]
+    lockGroup: owner-academy-activation
+    risk: high
+    priority: 50
+  - id: S261
+    title: Named-Partner Academy Pilot
+    status: queued
+    dependencies: [O4C]
+    lockGroup: academy-pilot
+    risk: high
+    priority: 51
+  - id: O2
+    title: Owner Measurement Consent Retention and Telemetry Approval
+    status: queued
+    dependencies: [S241A, S238B]
+    lockGroup: owner-measurement-consent
+    risk: high
+    priority: 52
+  - id: S270
+    title: Shared Signal and OSS Benchmark and Shadow Evidence
+    status: queued
+    dependencies: [O2]
+    lockGroup: shared-signal-control-plane
+    risk: high
+    priority: 53
+  - id: O4E
+    title: Owner Shared Signal and OSS Limited Activation Approval
+    status: queued
+    dependencies: [S270]
+    lockGroup: owner-shared-signal-activation
+    risk: high
+    priority: 54
+  - id: S271
+    title: Shared Signal and OSS Limited Activation Evidence
+    status: queued
+    dependencies: [O4E]
+    lockGroup: shared-signal-control-plane
+    risk: high
+    priority: 55
+  - id: O5
+    title: Owner Research Training and Efficacy Claim Approval
+    status: queued
+    dependencies: [S271]
+    lockGroup: owner-research-efficacy
+    risk: high
+    priority: 56
+  - id: S299
+    title: Unified Program Terminal Acceptance
+    status: queued
+    dependencies: [S225, S250, S261, O5]
+    lockGroup: unified-terminal-acceptance
+    risk: high
+    priority: 57

@@ -7,6 +7,9 @@
 - Premium product: **답안길 2차 합격관제 OS**
 - Linked roadmap item: `S200R`
 - Source provenance: GitHub issue #437, S201 official syllabus registry, S202 source/rights registry, `docs/inverge-second-round-final-product-spec.md`
+- Post-#650 authority: `docs/dabangil-unified-program-contract.md` governs
+  cross-track sequencing, learning glossary, data planes, and Owner gates;
+  this document remains second-round detail.
 
 This document is policy and source-of-truth alignment only. It does not implement runtime features, billing, OCR, question ingestion, learner UI, or academy routes.
 
@@ -23,6 +26,13 @@ Preferred learner-facing positioning:
 > 감평 2차 실무·이론·법규 답안을 시험일까지 운영해주는 합격관제 OS
 
 The term `합격관제` means study-operation support through evidence, rewrite, recalculation, review queue, weakness map, and Today Plan. It must never be used as a pass guarantee.
+
+Invitation-only Founding Beta is the critical second-round predecessor to
+S225 public self-serve launch. The Owner-approved hypothesis is 69,000 KRW
+VAT included for 30 days, no automatic renewal, and 20
+`usable_review_unit_v1`; it is not active and requires a later O4 packet.
+Every account retains one lifetime full-value review, and payment-first or
+deliberately degraded free output is prohibited.
 
 ## What 답안길 Is
 
@@ -88,13 +98,16 @@ Avoid learner-facing terms that imply official authority:
 ## Final Target Catalog
 
 The final target learner plan taxonomy is:
+These rows are taxonomy and pricing hypotheses only; none is a current offer,
+entitlement, billing state, or learner activation. O4 and the applicable
+private/public acceptance gates remain required.
 
 | Catalog ID | Pricing hypothesis | Status | Notes |
 |---|---:|---|---|
-| `free` | 0 KRW | active target | One lifetime full-value review experience. |
-| `second_os_basic` | 59,000~69,000 KRW/month | active target | Primary operating loop, review queue, rewrite/recalculation, and GIII routine where relevant. |
-| `second_os_pro` | 119,000~149,000 KRW/month | active target | Higher review capacity, weekly weakness report, deeper evidence review, and version comparison. |
-| `second_control_premium` | 249,000~299,000 KRW/month | active target | High-cost premium control layer with Deep Review Unit access and stronger operations reporting. |
+| `free` | 0 KRW | target taxonomy only — inactive until O4/S225 | One lifetime full-value review experience. |
+| `second_os_basic` | 59,000~69,000 KRW/month | target taxonomy only — inactive until O4/S225 | Primary operating loop, review queue, rewrite/recalculation, and GIII routine where relevant. |
+| `second_os_pro` | 119,000~149,000 KRW/month | target taxonomy only — inactive until O4/S225 | Higher review capacity, weekly weakness report, deeper evidence review, and version comparison. |
+| `second_control_premium` | 249,000~299,000 KRW/month | target taxonomy only — inactive until O4/S225 | High-cost premium control layer with Deep Review Unit access and stronger operations reporting. |
 
 One-off SKUs:
 
@@ -126,6 +139,11 @@ Rules:
 
 Deep Review Unit policy is defined in `docs/dabangil-deep-review-unit-policy.md`.
 
+`deep_review_unit` is the legacy S219/S220 premium meter. It is not
+`usable_review_unit_v1`, and neither is the non-billable learning
+`ReviewUnit`; there is no alias, balance sharing, conversion, or fallback
+among them.
+
 Summary:
 
 - 1 unit = one 25~50 point sub-question or up to 5 answer pages.
@@ -150,12 +168,15 @@ Do not teach calculator program storage as an exam strategy.
 
 ## Academy Boundary
 
-The academy console remains separate B2B scope.
+The academy console remains separate B2B scope and is contract-only until a
+named-partner packet and explicit Owner approval exist.
 
 - It may provide AI grading/feedback drafts for instructor approval.
 - Learner UI must not expose academy routes or tools.
 - 답안길 must not sell human expert review as a B2C product.
 - If an academy publishes a final grade to a learner, academy approval is required.
+- Instructor approval does not promote tenant content into shared Gold or a
+  shared corpus.
 
 ## Source And Data Boundary
 

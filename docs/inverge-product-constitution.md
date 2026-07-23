@@ -4,6 +4,9 @@
 - Date: 2026-07-01
 - Runtime impact: none
 - Primary sources: `docs/inverge-second-round-final-product-spec.md`, `docs/dabangil-second-exam-premium-os.md`, `roadmap/active-program.yml`, `AGENTS.md`
+- Post-#650 status: historical product kernel subordinate to
+  `docs/dabangil-unified-program-contract.md` for cross-track order, glossary,
+  data planes, and Owner gates.
 
 ## One-Sentence Promise
 
@@ -92,6 +95,11 @@ The magic moment is when a learner's own answer, capture, or recalculation trace
 
 Learner-facing Dabangil and the academy console are separate products. Academy tools may support roster, assignment, batch answer operations, AI grading/feedback drafts, instructor approval, cohort analytics, and rewrite management, but they must not appear in learner navigation or learner UI.
 
+Academy runtime additionally requires a named partner packet and explicit
+Owner approval. Instructor approval alone cannot promote tenant content to
+shared Gold. Both-track begins only after separate authenticated acceptance
+for first and second rounds.
+
 If an academy publishes a final grade to a learner, academy approval is required. Inverge does not sell or supply human expert review as a B2C service.
 
 ## Official-Source Claim Policy
@@ -116,7 +124,17 @@ The data boundary has three product layers:
 - derived learning signal layer: sanitized concept, gap, task, confidence, and scheduling metadata;
 - aggregated product intelligence layer: aggregate metrics that contain no raw learner text, no OCR text, no answer text, and no raw problem text.
 
-Raw learner text, OCR text, answer text, rewrite text, raw problem text, provider payloads, secrets, and copyrighted source text must never become global reference data, telemetry, analytics, commercial metrics, or model-training material without explicit future consent and policy.
+Private service answers, notes, handwriting, raw OCR, rewrites, and raw
+problem text never enter global/shared content and are never reclassified or
+derived into a contribution object. Only a distinct, separately authored,
+actually rights-owned user contribution can follow the Cleared Content Bank
+promotion path.
+
+Raw service bodies, provider payloads, and secrets never enter telemetry,
+analytics, commercial metrics, or model training directly. Exact-purpose
+consent is necessary but not sufficient: O5 training input is limited to
+consented pseudonymous non-reconstructive signals or promoted Cleared Content
+Bank material.
 
 Official-source records must keep manifest, hash, source, provenance, rights status, verification status, and reviewed-at metadata separate from learner artifacts.
 
@@ -126,15 +144,18 @@ AF010 through AF016 completed the first report-only Agent Factory automation evi
 
 Future execution automation remains approval-gated and must be implemented in a separate issue with its own safety evidence.
 
-## Next Roadmap After This PR
+## Next Roadmap After The Post-#650 Reset
 
-This PR records the product transition after AF016. Product work resumes from the second-round active program, especially:
+The active program exposes exactly two metadata-ready items:
 
-1. theory concept corpus and validator;
-2. practice calculation, unit, OCR, and supported-type validator;
-3. law, theory, and practice answer review engines;
-4. multi-candidate reference-answer pipeline and critic/release gate;
-5. automatic error notebook, personal concept graph, and review scheduler;
-6. catalog, usage ledger, billing, trust, academy console, and integrated paid-launch gates later.
+1. S235A: second-round owner-private Golden 3 rights/source/original-question,
+   exam-date Law version, and private reference-package readiness only;
+2. S235B: first-round official rules, taxonomy, rights/version manifests, and
+   Foundation contracts only.
+
+Selection does not start either item. Golden execution, first-round runtime,
+Founding Beta activation, public S225, both-track, Academy, billing, provider,
+shared signals, and Production remain queued behind dependencies and Owner
+gates.
 
 Capture-to-Note and Capture-to-Plan remain the learner-loop quality standard, but this PR does not implement runtime behavior. Raw historical corpus expansion, public archive behavior, billing, usage ledger, execution automation, and production source ingestion remain deferred until source, rights, private-storage, data-boundary, runtime, and cost gates exist.

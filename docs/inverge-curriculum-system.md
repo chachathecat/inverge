@@ -4,6 +4,12 @@
 
 The learner-facing product scope is 감정평가사 2차 only: 감정평가실무, 감정평가이론, and 감정평가 및 보상법규. First-round curriculum data may remain for regression, rollback, and historical compatibility, but it is frozen compatibility metadata and is not active learner-facing product scope.
 
+The Post-#650 reset does not thaw that legacy metadata as production
+authority. A separate queued Adaptive MCQ Foundation may create newly
+verified official-rule, taxonomy, subject/version, Q-Net post/asset rights,
+QTI-compatible, event, and held-out contracts. It does not authorize
+first-round learner runtime, navigation, pricing, or content exposure.
+
 Frozen first-round compatibility subject labels include:
 
 - 민법
@@ -249,7 +255,9 @@ Quality requirements:
 - Raw learner text, raw problem text, raw answer text, OCR text, source text, and copyrighted text must not be stored in the reference corpus or emitted by the explanation evaluator.
 - The eval harness remains deterministic/static and does not call external APIs.
 
-This does not expand learner-facing scope beyond 감정평가사 1차 and 감정평가사 2차, does not add payment, and does not enable production durable rollout.
+This historical PR covered first/second compatibility metadata; it does not
+authorize current first-round learner-facing scope or runtime. It does not
+add payment or enable production durable rollout.
 
 ## PR #345 mobile Capture friction
 
@@ -266,7 +274,7 @@ PR #345 reduces learner mobile Capture friction while preserving the curriculum/
 
 PR #346 adds a static official-source verification layer for appraiser curriculum/reference metadata. The source registry lives in `reference_corpus/curriculum/appraiser/official_sources.json`, and curriculum nodes now distinguish `draft`, `verified`, `needs_update`, and `deprecated` source states.
 
-Production-facing curriculum use requires either verified metadata or an explicitly draft-safe guidance path. Closed beta may use draft nodes only as internal learning guidance, not as official syllabus authority. Inverge must not store raw copyrighted problem bodies, official answer text, model answers, score/pass-fail claims, or official grading claims.
+Production-facing curriculum use requires either verified metadata or an explicitly draft-safe guidance path. Closed beta may use draft nodes only as internal learning guidance, not as official syllabus authority. The PR #346 metadata registry and any unpromoted curriculum material must not store raw copyrighted problem bodies, official answer text, model answers, score/pass-fail claims, or official grading claims. Separately rights-cleared material can enter a shared content body only through approved Cleared Content Bank promotion; PR #346 does not authorize that path.
 
 ## S201 official second-round syllabus registry
 

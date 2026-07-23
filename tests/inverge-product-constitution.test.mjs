@@ -4,6 +4,8 @@ import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 
 const requiredDocs = [
+  "docs/decisions/2026-07-23-post-650-unified-program-reset.md",
+  "docs/dabangil-unified-program-contract.md",
   "docs/inverge-product-constitution.md",
   "docs/inverge-master-roadmap.md",
   "docs/inverge-curriculum-system.md",
@@ -63,6 +65,56 @@ test("product constitution locks the learning OS direction and non-goals", async
   assert.match(constitution, /Capture-to-Plan learning OS/i);
   assert.match(constitution, /learning OS/i);
   assert.match(constitution, /Today Plan max 3/i);
+  assert.match(constitution, /Private service answers, notes, handwriting, raw OCR[\s\S]{0,220}never reclassified or\s+derived into a contribution object/i);
+  assert.match(constitution, /distinct, separately authored,[\s\S]{0,160}Cleared Content Bank\s+promotion path/i);
+  assert.doesNotMatch(constitution, /global reference data,[\s\S]{0,120}model training directly/i);
+});
+
+test("Post-650 authority and supersession are explicit and bounded", async () => {
+  const decision = await read("docs/decisions/2026-07-23-post-650-unified-program-reset.md");
+  const contract = await read("docs/dabangil-unified-program-contract.md");
+
+  assert.match(decision, /Owner O1/);
+  assert.match(decision, /5fcc2f4ad8c44eadc0d31ed40c1c046550bb0035/);
+  assert.match(decision, /Activation status: not authorized/i);
+  assert.match(decision, /first-round learner runtime mutation or activation/i);
+  assert.match(decision, /exact owned-file manifest/i);
+  assert.match(contract, /Canonical authority/);
+  assert.match(contract, /Superseded and subordinate map/);
+  assert.match(contract, /July 16 control plane and execution prompt pack[\s\S]{0,80}Historical/);
+  assert.match(contract, /July 22 #644 handoff[\s\S]{0,80}Historical/);
+  assert.match(contract, /S223\/S224 completion[\s\S]{0,180}not current content, commercial, or efficacy readiness/i);
+});
+
+test("unified contract separates readiness, vaults, and learning assistance", async () => {
+  const contract = await read("docs/dabangil-unified-program-contract.md");
+
+  for (const term of [
+    "Full-Day",
+    "Personal Study Ledger",
+    "runtime_ready",
+    "content_ready",
+    "quality_ready",
+    "commercial_ready",
+    "observed_efficacy",
+    "causal_claim_ready",
+    "Personal Raw Vault",
+    "Academy Tenant Vault",
+    "Shared Signal Plane",
+    "Cleared Content Bank",
+    "Model/Eval Registry",
+    "LearningDocument",
+    "ReviewUnit",
+    "attempt_first",
+    "guided_study",
+    "assistance-aware mastery",
+  ]) {
+    assert.ok(contract.includes(term), `missing unified contract term: ${term}`);
+  }
+  assert.match(contract, /guided_study[\s\S]{0,500}cannot be relabeled[\s\S]{0,120}independent/i);
+  assert.match(contract, /Private raw content never automatically enters a shared plane/i);
+  assert.match(contract, /No\s+online model-weight update from any input is permitted[\s\S]{0,120}offline[\s\S]{0,80}O5 gate/i);
+  assert.doesNotMatch(contract, /online user-input weight update/i);
 });
 
 test("master roadmap records AF010 through AF016 completion and product transition", async () => {
@@ -120,9 +172,9 @@ test("study tracks include required compatibility templates", async () => {
 test("data boundary forbids raw user OCR answer and problem text in global reference data", async () => {
   const doc = await read("docs/inverge-data-boundary.md");
 
-  assert.match(doc, /no raw learner answer in global reference data/i);
-  assert.match(doc, /no raw OCR text in global reference data/i);
-  assert.match(doc, /no raw problem or copyrighted question text in global reference data/i);
+  assert.match(doc, /no raw learner answer, note, or handwriting in global reference data/i);
+  assert.match(doc, /no raw OCR extraction text in global reference data/i);
+  assert.match(doc, /no private, rights-uncleared, or pre-promotion raw problem\/copyrighted[\s\S]{0,160}approved Cleared Content Bank promotion/i);
   assert.match(doc, /Aggregated product intelligence layer/i);
 });
 

@@ -4,6 +4,8 @@
 - S200R 정렬일: 2026-06-26
 - 상세 기준: `docs/inverge-second-round-final-product-spec.md`
 - Premium OS brief: `docs/dabangil-second-exam-premium-os.md`
+- Post-#650 commercial authority:
+  `docs/dabangil-unified-program-contract.md`
 
 ## 1. Principle
 
@@ -20,14 +22,42 @@ Inverge는 내부 codename 및 repository name이다. Learner-facing brand는 **
 - 전문가 1:1 검수 또는 첨삭 중개는 B2C 상품으로 판매하지 않는다.
 - 가격은 configurable, versioned catalog로 관리하고 UI/API literal로 흩어 hard-code하지 않는다.
 
+## 1.1 Invitation-Only Founding Beta Hypothesis
+
+Owner O1 approved this hypothesis for later evidence gathering only:
+
+- 69,000 KRW VAT included;
+- 30 days with no automatic renewal;
+- 20 `usable_review_unit_v1`;
+- invitation-only private Founding Beta before S225 public self-serve;
+- one lifetime full-value free review per account;
+- no payment-first flow and no deliberately degraded free output.
+
+This is not an active price, checkout, entitlement, billing grant, learner
+offer, or Production activation. O4 remains required.
+
+`ReviewUnit`, `usable_review_unit_v1`, and legacy `deep_review_unit` are three
+separate contracts with no alias, balance sharing, conversion, migration, or
+fallback. The first is non-billable learning scheduling; the second is the
+Founding Beta hypothesis meter; the third is the S219/S220 premium meter.
+
+For `usable_review_unit_v1`, 10–25 points hypothesizes 1 unit, 40–50 points
+2, and 100 points 4. Missing points and 26–39 or 51–99 require an explicit
+pre-submit estimate/manual decision. The committed amount cannot increase
+after the result.
+
 ## 2. Final Target Learner Catalog
+
+These rows are taxonomy and pricing hypotheses only; none is a current offer,
+entitlement, billing state, or learner activation. O4 and the applicable
+private/public acceptance gates remain required.
 
 | Catalog ID | Pricing hypothesis | Status | Product role |
 |---|---:|---|---|
-| `free` | 0 KRW | active target | One lifetime full-value review experience. |
-| `second_os_basic` | 59,000~69,000 KRW/month | active target | Primary operating loop for Evidence Review, rewrite/recalculation, and review queue. |
-| `second_os_pro` | 119,000~149,000 KRW/month | active target | Higher review capacity, weekly weakness report, deeper evidence review, version comparison. |
-| `second_control_premium` | 249,000~299,000 KRW/month | active target | Premium control layer, Deep Review Unit access, stronger operations reporting. |
+| `free` | 0 KRW | target taxonomy only — inactive until O4/S225 | One lifetime full-value review experience. |
+| `second_os_basic` | 59,000~69,000 KRW/month | target taxonomy only — inactive until O4/S225 | Primary operating loop for Evidence Review, rewrite/recalculation, and review queue. |
+| `second_os_pro` | 119,000~149,000 KRW/month | target taxonomy only — inactive until O4/S225 | Higher review capacity, weekly weakness report, deeper evidence review, version comparison. |
+| `second_control_premium` | 249,000~299,000 KRW/month | target taxonomy only — inactive until O4/S225 | Premium control layer, Deep Review Unit access, stronger operations reporting. |
 
 Legacy labels `Core` and `Intensive` are not the final target taxonomy. They may appear only in historical or migration notes until later runtime catalog work removes old literals.
 
@@ -130,6 +160,10 @@ Founding/beta prices may be lower but must not replace the final target taxonomy
 ## 9. Academy Answer Operations Console
 
 학원 콘솔은 learner app과 분리된 B2B 제품이다.
+이 절은 historical target/catalog 가설이며 현재 Academy UI/API/DB/RLS,
+runtime, price를 활성화하지 않는다. Named partner, one-tenant packet,
+권리·DPA/privacy 조건, instructor approval, exact-scope O4C가 모두
+충족되어야 별도 pilot lane을 시작할 수 있고 S225와는 독립이다.
 
 ### Academy Team
 
@@ -215,7 +249,15 @@ Founding/beta prices may be lower but must not replace the final target taxonomy
 - error monitoring
 - AI cost guardrails
 - staging and mobile E2E
-- academy tenant boundary
+
+Academy is not an S225 public self-serve dependency.
+
+### Academy Pilot-Only Gates
+
+The separate named-partner Academy lane requires its own tenant boundary,
+one-tenant packet, rights and DPA/privacy conditions, explicit instructor
+approval, and exact-scope O4C before pilot activation. Those gates do not
+delay or authorize S225.
 
 ## 13. Metrics
 
@@ -256,7 +298,7 @@ Founding/beta prices may be lower but must not replace the final target taxonomy
 
 Commercial execution remains deferred in this PR. This document records product and catalog policy only; it does not add a payment provider, checkout, billing enforcement, entitlement enforcement, usage ledger, subscriptions, invoices, provider settings, or runtime pricing behavior.
 
-The current learner catalog source of truth is:
+The target learner catalog taxonomy source of truth (not active offers) is:
 
 - `free`
 - `second_os_basic`
@@ -266,4 +308,5 @@ The current learner catalog source of truth is:
 - `deep_review_15`
 - `deep_review_40`
 
+No item in the list above is activated by this policy.
 First-round OS, 동차 OS, generic multi-exam OS, and Quick packs are not active learner-facing catalog items in this repository. If legacy or exploratory labels exist in older documents, they are frozen or deferred and must not replace the second-round Dabangil taxonomy. Any future commercial expansion requires explicit source, billing, refund, privacy, retention, cost, entitlement, data-boundary, and runtime gates.

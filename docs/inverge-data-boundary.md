@@ -1,5 +1,57 @@
 # Inverge Data Boundary / Privacy Hardening v1
 
+## 2026-07-23 Post-#650 Unified Data Planes
+
+`docs/dabangil-unified-program-contract.md` governs five non-interchangeable
+planes:
+
+1. **Personal Raw Vault**: one user's raw captures, OCR, answers, notes,
+   rewrites, and AI bodies;
+2. **Academy Tenant Vault**: one tenant's problems, rubrics, submissions,
+   instructor edits, and approved prose;
+3. **Shared Signal Plane**: purpose-consented, pseudonymous,
+   non-reconstructive derived signals only;
+4. **Cleared Content Bank**: rights-cleared or separately authored,
+   actually rights-owned contribution objects after review only;
+5. **Model/Eval Registry**: version and evidence metadata, never raw content.
+
+Private raw content never automatically enters a shared corpus. Shared
+references to private or tenant material before approved promotion use opaque
+identifiers and safe metadata, not raw text, reconstructive embeddings,
+corrections, source excerpts, or cross-vault equality signals. Rights-cleared
+content or a separately authored, actually rights-owned contribution object
+may enter shared references only after approved Cleared Content Bank
+promotion. Private service answers, notes, handwriting, and raw OCR are not
+contribution objects and never use that path.
+
+Private and Academy fingerprints are domain-separated and vault-scoped.
+They are keyed/one-way with vault-specific non-exportable domain keys and
+never return an equality oracle.
+Global dedup identifiers require material already promoted into the Cleared
+Content Bank. The basis is rights-cleared official/owner-created/contracted
+content, or a separately authored, actually rights-owned user contribution
+object; O3/review and quarantine always apply. Pseudonymous-signal consent
+alone is insufficient.
+Rights promotion must record source post and attached asset,
+rights/version/reviewer evidence, and pass conflicting-answer,
+poisoning/anomaly, fingerprint/dedup, and held-out-contamination quarantine.
+Academy instructor approval alone never creates shared Gold.
+
+After applicable rights prerequisites and user-owned contribution consent
+where required, promotion quarantine may use an access-controlled,
+domain-separated, least-privilege internal fingerprint to compare a candidate
+with the Cleared Content Bank. It emits only decision metadata, no equality
+signal to the source vault, user, or tenant, and creates no global identifier
+before promotion.
+
+The Consent/Opt-out Ledger keeps separate purpose grants for personal service,
+pseudonymous product signals, Academy sharing, user-owned content
+contribution, and offline model training. Revocation stops future shared use.
+It also stops future Academy sharing, content promotion, or offline
+training/dataset refresh for the revoked purpose. Deletion and retention are
+purpose-scoped. Online model-weight updates from any input are prohibited;
+all permitted training is offline and requires an exact-scope O5 gate.
+
 ## 2026-07-01 Product Constitution Transition
 
 The product data boundary has three layers:
@@ -10,10 +62,16 @@ The product data boundary has three layers:
 
 Forbidden raw global corpus behavior:
 
-- no raw learner answer in global reference data;
-- no raw OCR text in global reference data;
-- no raw problem or copyrighted question text in global reference data;
-- no raw learner text in analytics, commercial metrics, telemetry, issue bodies, screenshots, test fixtures, provider logs, or model-training material without explicit future consent and policy.
+- no raw learner answer, note, or handwriting in global reference data;
+- no raw OCR extraction text in global reference data;
+- no private, rights-uncleared, or pre-promotion raw problem/copyrighted
+  question text in global reference data; the only content-body path is an
+  approved Cleared Content Bank promotion;
+- no private raw learner body directly in analytics, commercial metrics,
+  telemetry, issue bodies, screenshots, test fixtures, provider logs, or
+  model-training material. Exact-purpose consent is necessary but not
+  sufficient: O5 training input is limited to consented pseudonymous
+  non-reconstructive signals or promoted Cleared Content Bank material.
 
 Official-source records must use manifest, source URL, hash, provenance, rights status, verification status, law-effective date when relevant, and last verification metadata. Official-source manifests are not learner artifacts, and learner artifacts must never be merged into historical-question or reference-answer records.
 
@@ -26,6 +84,18 @@ Inverge keeps three data classes separate:
 3. **Product reference data**: trusted Inverge reference corpus entries and curated snippets used for grounding and context.
 
 These classes must not be mixed. Raw learner artifacts are not reference corpus, not telemetry, not aggregate analytics input, and not cache-key material.
+
+### Existing derived-signal runtime honesty
+
+Current `SAFE_DERIVED_SIGNAL_KEYS`, key-name sanitization, legacy usage-event
+metadata, and reference-cache metadata are personal-service/legacy contracts,
+not Shared Signal Plane eligibility. Several permitted keys can carry free
+text, so a safe key name does not prove pseudonymity or non-reconstructiveness.
+
+A future O2 adapter must define a closed value-level schema using approved
+IDs, enums, counts, and buckets; prohibit free text; enforce purpose consent;
+and pass reconstructiveness tests. This reset does not change or connect the
+legacy runtime.
 
 ## 1. Raw user-owned service data
 
