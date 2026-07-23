@@ -348,15 +348,96 @@ Rules:
   separate.
 - QTI 3 and xAPI/Caliper are compatibility targets, not certification claims.
 
-Dependency and model adapters use the forward path
-`proposed → benchmark_only → shadow → limited_activation → active`.
-`rollback` is directly available from benchmark, shadow, limited activation,
-and active; limited activation never has to advance before rollback.
-OpenCV/PaddleOCR begin as benchmarks, `ts-fsrs`/`pyBKT` as learner-hidden
-shadow only after evidence, and IRT/CAT as offline ordering only after
-sufficient independent attempts. Every transition requires license/SBOM,
-version, fallback, evidence, activation owner, and rollback. This contract
-does not activate a dependency, provider, prompt, model, or telemetry.
+Dependency and model adapters use the state vocabulary `proposed`,
+`benchmark_only`, `shadow`, `limited_activation`, `active`, and `rollback`.
+This reset schedules only
+`proposed → benchmark_only → shadow → limited_activation`; its required safety
+path then goes to `rollback`. `limited_activation → active` is unscheduled and
+not authorized. O4E authorizes limited activation only, never `active`; a
+future active transition requires that exact adapter/version/config's
+limited-activation evidence, a new roadmap item, and a separate exact-scope O4
+approval distinct from O4E. `rollback` is directly available from benchmark,
+shadow, limited activation, and active.
+OpenCV/PaddleOCR begin as benchmarks. `ts-fsrs`/`pyBKT` remain
+`benchmark_only`, with no learner-hidden instrumentation, until
+adapter-specific benchmark/comparison evidence exists and the exact-scope O2
+measurement/consent gate is approved. Only then may they enter learner-hidden
+`shadow`; `ts-fsrs` additionally requires beta evidence and `pyBKT` sufficient
+closed-schema skill-event data. IRT/CAT remains a contract-only offline
+analysis/simulation lane after sufficient independent attempts and
+contamination-safe held-out data; this reset authorizes no IRT/CAT execution.
+Synthetic or non-personal rights-cleared fixtures may be eligible for a
+separately authorized future offline analysis under their source rights; this
+reset does not authorize it. Any learner- or Academy-derived attempt signal
+instead requires an exact O2-approved purpose, purpose consent, a closed
+non-reconstructive value schema, purpose-scoped retention/revocation, and
+storage in the Shared Signal Plane; tenant contract alone is insufficient and
+raw content is prohibited.
+Any IRT/CAT fitting, training, or dataset refresh requires eligible inputs,
+separate exact-purpose consent, and an exact-scope O5. Any future runtime
+model/parameter/config output starts as a new `proposed` candidate.
+
+Transition requirements are edge-specific. `proposed → benchmark_only`
+requires a pinned version, license/SBOM, model-asset rights where relevant, an
+isolated benchmark environment, a fallback adapter, a named owner, and a
+tested rollback plan; it requires neither prior performance/comparison
+evidence nor an activation gate. Its named owner must still manually select
+the queued roadmap item; benchmark entry or execution is never automatic.
+`benchmark_only → shadow` requires stage-specific benchmark/comparison
+evidence, exact-scope O2 measurement/consent, and the adapter-specific
+prerequisites above. `shadow → limited_activation` requires shadow evidence
+from the same exact adapter, version, and configuration, plus an exact-scope
+O4E approval naming adapter, version/config, cohort, and purpose. Evidence
+cannot transfer across adapters, versions, or configurations, and no
+transition is automatic. Rollback is an immediate fail-safe transition and
+never waits for a new Owner gate or fresh comparison evidence; its tested plan
+must exist before entering any non-proposed stage. This contract does not
+activate a dependency, provider, prompt, model, or telemetry.
+
+`shadow` is observation/comparison only. The native fixed schedule and native
+rules remain the sole decision authority. Shadow output cannot change
+learner- or Academy-visible output, Today/Full-Day, Review Queue, mastery,
+scheduling, recommendations, entitlements, operational decisions, or
+persisted product state. The only permitted data write is to the Shared Signal
+Plane, and only after exact-scope O2 approval, purpose consent, a pseudonymous
+non-reconstructive transform, and an approved closed value-level schema with
+no raw content or free text. Purpose-scoped retention applies and revocation
+stops future use. The Model/Eval Registry may receive only aggregate, version,
+and evidence metadata, never a learner-level record or raw content. Shadow
+records cannot influence runtime product behavior. Aggregate, versioned
+evidence in the Model/Eval Registry may inform a human Owner gate, but it can
+never trigger an automatic transition.
+
+Runtime candidates stay frozen and versioned: `shadow`, `limited_activation`,
+and any future `active` candidate never fit, train, or refresh in place.
+Before O5, shadow and limited activation are inference/evaluation only and
+cannot authorize research use or ground an efficacy claim. O2 and O4E do not
+substitute for O5. Any separate offline training or dataset-refresh workflow
+requires eligible inputs—purpose-consented pseudonymous non-reconstructive
+Shared Signal or promoted Cleared Content Bank material only—separate
+exact-purpose consent, and a future exact-scope O5 gate. Direct Personal or
+Academy raw content is ineligible. O5 scopes are non-transferable:
+training/refresh approval does not authorize research opt-in or efficacy
+claims, and vice versa. Online model-weight updates remain prohibited for
+every stage and every input.
+
+O5 authorizes only its named offline work, not runtime use. A resulting
+model, parameter, or adapter configuration receives a new candidate identity
+at `proposed`, a new manually selected queued roadmap item, and no reuse of
+completed S270/O4E evidence or gates. It must independently clear
+held-out/benchmark evidence, `shadow`, and a new exact-candidate activation
+gate; hot-swapping into an existing limited or active adapter is prohibited.
+A refreshed dataset instead receives a new dataset identity and independently
+clears eligible-input, exact-consent, rights/lineage, quarantine, and held-out
+validation. It is a versioned logical manifest over eligible bodies that
+remain in the Shared Signal Plane or Cleared Content Bank, not a new durable
+body store. Model/Eval stores only version, lineage, and evidence manifest
+metadata, never row bodies. An exact-O5 offline workflow may make only a
+least-privilege ephemeral materialization with purpose-scoped
+retention/deletion; it is deleted when the workflow ends and is never retained
+outside the five canonical planes. The dataset has no runtime influence by
+itself, and every runtime artifact produced from it re-enters the adapter
+lifecycle at `proposed`.
 
 ## Nudge and ethics rules
 

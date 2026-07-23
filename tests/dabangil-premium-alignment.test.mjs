@@ -334,6 +334,7 @@ test("Post-650 data, consent, quarantine, OSS, and Owner gates remain non-active
   const agents = await read("AGENTS.md");
   const governance = await read("docs/inverge-data-governance.md");
   const dataBoundary = await read("docs/inverge-data-boundary.md");
+  const unified = await read("docs/dabangil-unified-program-contract.md");
   const legacyBoundarySource = await read("lib/review-os/data-boundary.ts");
 
   assert.deepEqual(
@@ -416,11 +417,341 @@ test("Post-650 data, consent, quarantine, OSS, and Owner gates remain non-active
   ]);
   assert.ok(policy.ossTransitions.rollbackAvailableFrom.includes("limited_activation"));
   assert.ok(policy.ossTransitions.rollbackAvailableFrom.includes("active"));
+  assert.deepEqual(policy.ossTransitions.forward, [
+    "proposed_to_benchmark_only",
+    "benchmark_only_to_shadow",
+    "shadow_to_limited_activation",
+  ]);
+  assert.deepEqual(policy.ossTransitions.unscheduled, [
+    "limited_activation_to_active",
+  ]);
+  assert.deepEqual(policy.ossTransitions.edgeRequirements, {
+    proposed_to_benchmark_only: {
+      requires: [
+        "pinned_version",
+        "license_and_SBOM",
+        "model_asset_rights_if_relevant",
+        "isolated_benchmark_environment",
+        "fallback_adapter",
+        "named_owner",
+        "tested_rollback_plan",
+      ],
+      priorPerformanceOrComparisonEvidenceRequired: false,
+      activationGateRequired: false,
+      manualQueuedRoadmapSelectionRequired: true,
+      automaticTransitionAllowed: false,
+    },
+    benchmark_only_to_shadow: {
+      requires: [
+        "stage_specific_benchmark_comparison_evidence",
+        "exact_scope_O2_measurement_consent",
+        "adapter_specific_shadow_prerequisites",
+      ],
+      automaticTransitionAllowed: false,
+    },
+    shadow_to_limited_activation: {
+      requires: [
+        "same_exact_adapter_version_config_shadow_evidence",
+        "exact_scope_O4E_naming_adapter_version_config_cohort_and_purpose",
+      ],
+      crossAdapterVersionConfigEvidenceSubstitutionAllowed: false,
+      automaticTransitionAllowed: false,
+    },
+  });
+  assert.deepEqual(policy.ossTransitions.rollbackTransition, {
+    immediateFailSafe: true,
+    newOwnerGateRequired: false,
+    freshComparisonEvidenceRequired: false,
+    testedPlanRequiredBeforeAnyNonProposedStage: true,
+  });
+  assert.deepEqual(policy.ossTransitions.activeTransition, {
+    authorizedByThisReset: false,
+    scheduledInRoadmap: false,
+    o4eAuthorizes: "limited_activation_only",
+    requires: [
+      "same_exact_adapter_version_config_limited_activation_evidence",
+      "new_roadmap_item",
+      "future_exact_scope_O4_distinct_from_O4E",
+    ],
+  });
   assert.equal(policy.ossOrder.opencvPaddleOcr, "benchmark_only");
   assert.equal(policy.ossOrder.qtiXapiCaliper, "compatibility_contract_only");
-  assert.equal(policy.ossOrder.tsFsrs, "shadow_after_beta_evidence");
-  assert.equal(policy.ossOrder.pyBkt, "learner_hidden_shadow_after_sufficient_skill_data");
-  assert.equal(policy.ossOrder.irtCat, "offline_after_sufficient_independent_attempts");
+  assert.equal(
+    policy.ossOrder.tsFsrs,
+    "benchmark_only_until_adapter_benchmark_comparison_evidence_o2_measurement_consent_and_beta_evidence_then_learner_hidden_shadow",
+  );
+  assert.equal(
+    policy.ossOrder.pyBkt,
+    "benchmark_only_until_adapter_benchmark_comparison_evidence_o2_measurement_consent_and_sufficient_closed_schema_skill_data_then_learner_hidden_shadow",
+  );
+  assert.equal(
+    policy.ossOrder.irtCat,
+    "contract_only_offline_analysis_simulation_after_attempts_and_held_out_no_execution_or_pre_O5_fitting",
+  );
+  assert.deepEqual(policy.ossIrtCatBoundary, {
+    state: "contract_only_offline_analysis_and_simulation",
+    executionAuthorizedByThisReset: false,
+    analysisPrerequisites: [
+      "sufficient_independent_attempts",
+      "contamination_safe_held_out_data",
+    ],
+    analysisInputCases: {
+      syntheticOrNonPersonalRightsClearedFixtures: {
+        futureOfflineAnalysisEligibility: true,
+        authorizedByThisReset: false,
+        sourceRightsRequired: true,
+        learnerOrAcademyDerived: false,
+      },
+      learnerOrAcademyDerivedAttemptSignals: {
+        requires: [
+          "exact_O2_approved_purpose",
+          "purpose_consent",
+          "closed_non_reconstructive_value_schema",
+          "purpose_scoped_retention_and_revocation",
+          "Shared Signal Plane",
+        ],
+        tenantContractMaySubstituteForLearnerConsent: false,
+        rawContentAllowed: false,
+      },
+    },
+    preO5FittingTrainingOrDatasetRefreshAllowed: false,
+    fittingTrainingOrDatasetRefreshRequires: [
+      "eligible_inputs_only",
+      "separate_exact_purpose_consent",
+      "future_exact_scope_O5",
+    ],
+    futureRuntimeModelParameterConfigInitialStage: "proposed",
+  });
+  assert.deepEqual(policy.ossShadowPrerequisites, {
+    appliesTo: ["ts-fsrs", "pyBKT"],
+    preShadowStage: "benchmark_only",
+    learnerHiddenInstrumentationAllowedBeforeShadow: false,
+    commonRequiredBeforeShadow: [
+      "adapter_specific_benchmark_comparison_evidence",
+      "exact_scope_O2_measurement_consent_approval",
+    ],
+    adapterSpecificRequiredBeforeShadow: {
+      "ts-fsrs": ["beta_evidence"],
+      pyBKT: ["sufficient_closed_schema_skill_event_data"],
+    },
+  });
+  assert.deepEqual(policy.ossShadowSemantics, {
+    mode: "observation_and_comparison_only",
+    baselineDecisionAuthority: "native_fixed_schedule_and_native_rules_only",
+    mayInfluenceRuntimeSurfaces: [],
+    prohibitedInfluence: [
+      "learner_visible_output",
+      "academy_visible_output",
+      "Today",
+      "Full-Day",
+      "Review Queue",
+      "mastery",
+      "scheduling",
+      "recommendations",
+      "entitlements",
+      "operational_decisions",
+      "persisted_product_state",
+    ],
+    permittedWrite: {
+      plane: "Shared Signal Plane",
+      requiresExactScopeO2Approval: true,
+      requiresPurposeConsent: true,
+      pseudonymous: true,
+      nonReconstructive: true,
+      approvedClosedValueLevelSchema: true,
+      freeTextAllowed: false,
+      rawContentAllowed: false,
+      purposeScopedRetentionRequired: true,
+      revocationStopsFutureUse: true,
+    },
+    modelEvalRegistryWrite: {
+      scope: "aggregate_version_and_evidence_metadata_only",
+      learnerLevelRecordAllowed: false,
+      rawContentAllowed: false,
+    },
+    rawContentAllowed: false,
+    mayInfluenceRuntimeProductBehavior: false,
+    aggregateVersionedEvidenceMayInformHumanOwnerGate: true,
+    automaticTransitionAllowed: false,
+    tsFsrsComparisonBaseline: "fixed_schedule",
+    pyBktLearnerVisibleProbabilityAllowed: false,
+  });
+  assert.deepEqual(policy.ossTrainingBoundary, {
+    runtimeCandidatePolicy: {
+      frozenAndVersioned: true,
+      inPlaceModelOrParameterFittingAllowed: false,
+      inPlaceTrainingAllowed: false,
+      inPlaceDatasetRefreshAllowed: false,
+    },
+    preO5ShadowAndLimitedActivation: {
+      mode: "inference_and_evaluation_only",
+      researchUseAllowed: false,
+      efficacyClaimsAllowed: false,
+    },
+    O2MaySubstituteForO5: false,
+    O4EMaySubstituteForO5: false,
+    O5ScopesNonTransferable: true,
+    eligibleOfflineInputs: [
+      "purpose_consented_pseudonymous_non_reconstructive_shared_signal",
+      "promoted_rights_cleared_content_bank_material",
+    ],
+    directPersonalOrAcademyRawContentAllowed: false,
+    offlineTrainingOrDatasetRefreshRequires: [
+      "eligible_inputs_only",
+      "separate_exact_purpose_consent",
+      "future_exact_scope_O5",
+    ],
+    trainingOrRefreshO5AuthorizesRuntimeUse: false,
+    trainingOrRefreshO5AuthorizesResearchOrEfficacyClaim: false,
+    researchOrEfficacyO5AuthorizesTrainingOrRefresh: false,
+    trainedRuntimeCandidate: {
+      covers: ["model", "parameter", "adapter_config"],
+      newCandidateIdentityRequired: true,
+      initialStage: "proposed",
+      newManualQueuedRoadmapItemRequired: true,
+      completedS270OrO4EEvidenceGateReuseAllowed: false,
+      mustIndependentlyClear: [
+        "held_out_and_benchmark_evidence",
+        "shadow",
+        "new_exact_candidate_activation_gate",
+      ],
+      priorAdapterVersionConfigEvidenceTransferAllowed: false,
+      hotSwapIntoExistingLimitedOrActiveAdapterAllowed: false,
+    },
+    refreshedDataset: {
+      newDatasetIdentityRequired: true,
+      mustIndependentlyClear: [
+        "eligible_input_validation",
+        "exact_purpose_consent",
+        "rights_and_lineage",
+        "quarantine",
+        "held_out_validation",
+      ],
+      privateRawContentAllowed: false,
+      runtimeInfluenceByItselfAllowed: false,
+      logicalForm: "versioned_manifest_over_existing_eligible_plane_inputs",
+      durableBodyStoreCreated: false,
+      materialPlanes: ["Shared Signal Plane", "Cleared Content Bank"],
+      modelEvalRegistryScope: "version_lineage_and_evidence_manifest_metadata_only",
+      materialCopyIntoModelEvalRegistryAllowed: false,
+      retainedOutsideFiveCanonicalPlanesAllowed: false,
+      exactO5EphemeralMaterialization: {
+        leastPrivilegeRequired: true,
+        purposeScopedRetentionAndDeletionRequired: true,
+        deleteWhenOfflineWorkflowEnds: true,
+        durableRetentionAllowed: false,
+      },
+      runtimeArtifactProducedFromDatasetInitialStage: "proposed",
+    },
+    onlineWeightUpdateAllowed: false,
+  });
+  for (const source of [agents, unified]) {
+    assert.match(
+      source,
+      /`ts-fsrs`\/`pyBKT` remain\s+`benchmark_only`, with no learner-hidden\s+instrumentation, until\s+adapter-specific benchmark\/comparison evidence\s+exists and the exact-scope O2\s+measurement\/consent gate is approved\./,
+    );
+    assert.match(
+      source,
+      /Only\s+then may they enter learner-hidden\s+`shadow`;/,
+    );
+    assert.doesNotMatch(source, /`ts-fsrs` and `pyBKT` start in learner-hidden shadow/);
+    assert.match(
+      source,
+      /O4E authorizes limited activation only, never `active`;/,
+    );
+    assert.match(
+      source,
+      /future active transition requires that exact adapter\/version\/config's\s+limited-activation evidence, a new roadmap item, and a separate exact-scope O4\s+approval distinct from O4E\./,
+    );
+    assert.match(
+      source,
+      /`proposed → benchmark_only`\s+requires a pinned version, license\/SBOM, model-asset rights where relevant, an\s+isolated benchmark environment, a fallback adapter, a named owner, and a\s+tested rollback plan; it requires neither prior performance\/comparison\s+evidence nor an activation gate\./,
+    );
+    assert.match(
+      source,
+      /named owner must still manually select\s+the queued roadmap item; benchmark entry or execution is never automatic\./,
+    );
+    assert.match(
+      source,
+      /`shadow → limited_activation` requires shadow evidence\s+from the same exact adapter, version, and configuration, plus an exact-scope\s+O4E approval naming adapter, version\/config, cohort, and purpose\. Evidence\s+cannot transfer across adapters, versions, or configurations, and no\s+transition is automatic\./,
+    );
+    assert.match(
+      source,
+      /Rollback is [^\n]*immediate[^\n]*fail-safe/,
+    );
+    assert.match(
+      source,
+      /never waits\s+for a new Owner\s+gate or fresh comparison evidence/,
+    );
+    assert.match(
+      source,
+      /`shadow` is observation\/comparison only\./,
+    );
+    assert.match(
+      source,
+      /native fixed schedule and native\s+rules remain the sole decision authority\./,
+    );
+    assert.match(
+      source,
+      /Shadow output cannot change\s+learner- or Academy-visible output, Today\/Full-Day, Review Queue, mastery,\s+scheduling, recommendations, entitlements, operational decisions, or\s+persisted product state\./,
+    );
+    assert.match(
+      source,
+      /only permitted data write is to the Shared Signal\s+Plane, and only after exact-scope O2 approval, purpose consent, a pseudonymous\s+non-reconstructive transform, and an approved closed value-level schema with\s+no raw content or free text\./,
+    );
+    assert.match(
+      source,
+      /Purpose-scoped retention applies and revocation\s+stops future use\./,
+    );
+    assert.match(
+      source,
+      /Model\/Eval Registry may receive only aggregate, version,\s+and evidence metadata, never a learner-level record or raw content\. Shadow\s+records cannot influence runtime product behavior\. Aggregate, versioned\s+evidence in the Model\/Eval Registry may inform a human Owner gate, but it can\s+never trigger an automatic transition\./,
+    );
+    assert.match(
+      source,
+      /Runtime candidates stay frozen and versioned: `shadow`, `limited_activation`,\s+and any future `active` candidate never fit, train, or refresh in place\./,
+    );
+    assert.match(
+      source,
+      /Before O5, shadow and limited activation are inference\/evaluation only and\s+cannot authorize research use or ground an efficacy claim\. O2 and O4E do not\s+substitute for O5\./,
+    );
+    assert.match(
+      source,
+      /separate offline training or dataset-refresh workflow\s+requires eligible inputs—purpose-consented pseudonymous non-reconstructive\s+Shared Signal or promoted Cleared Content Bank material only—separate\s+exact-purpose consent, and a future exact-scope O5 gate\. Direct Personal or\s+Academy raw content is ineligible\./,
+    );
+    assert.match(
+      source,
+      /O5 scopes are non-transferable:\s+training\/refresh approval does not authorize research opt-in or efficacy\s+claims, and vice versa\./,
+    );
+    assert.match(
+      source,
+      /resulting\s+model, parameter, or adapter configuration receives a new candidate identity\s+at `proposed`, a new manually selected queued roadmap item, and no reuse of\s+completed S270\/O4E evidence or gates\./,
+    );
+    assert.match(
+      source,
+      /refreshed dataset instead receives a new dataset identity and independently\s+clears eligible-input, exact-consent, rights\/lineage, quarantine, and held-out\s+validation\. It is a versioned logical manifest over eligible bodies that\s+remain in the Shared Signal Plane or Cleared Content Bank, not a new durable\s+body store\./,
+    );
+    assert.match(
+      source,
+      /Model\/Eval stores only version, lineage, and evidence manifest\s+metadata, never row bodies\. An exact-O5 offline workflow may make only a\s+least-privilege ephemeral materialization with purpose-scoped\s+retention\/deletion; it is deleted when the workflow ends and is never retained\s+outside the five canonical planes\./,
+    );
+    assert.match(
+      source,
+      /IRT\/CAT remains a contract-only offline\s+analysis\/simulation lane after\s+sufficient independent attempts and\s+contamination-safe held-out data;\s+this\s+reset authorizes no IRT\/CAT execution\./,
+    );
+    assert.match(
+      source,
+      /Any IRT\/CAT fitting, training, or\s+dataset refresh requires eligible inputs,\s+separate exact-purpose consent,\s+and an exact-scope O5\./,
+    );
+    assert.match(
+      source.replace(/\s+/g, " "),
+      /Synthetic or non-personal rights-cleared fixtures may be eligible for a separately authorized future offline analysis under their source rights; this reset does not authorize it\./,
+    );
+    assert.match(
+      source.replace(/\s+/g, " "),
+      /Any learner- or Academy-derived attempt signal instead requires an exact O2-approved purpose, purpose consent, a closed non-reconstructive value schema, purpose-scoped retention\/revocation, and storage in the Shared Signal Plane; tenant contract alone is insufficient and raw content is prohibited\./,
+    );
+  }
   assert.equal(policy.ownerGates.O1, "approved_for_this_reset_only");
   for (const gate of ["O2", "O3", "O4", "O5"]) {
     assert.match(policy.ownerGates[gate], /^future_/);

@@ -310,7 +310,9 @@
     "forward": [
       "proposed_to_benchmark_only",
       "benchmark_only_to_shadow",
-      "shadow_to_limited_activation",
+      "shadow_to_limited_activation"
+    ],
+    "unscheduled": [
       "limited_activation_to_active"
     ],
     "rollbackAvailableFrom": [
@@ -324,15 +326,235 @@
       "shadow",
       "limited_activation",
       "rollback"
-    ]
+    ],
+    "edgeRequirements": {
+      "proposed_to_benchmark_only": {
+        "requires": [
+          "pinned_version",
+          "license_and_SBOM",
+          "model_asset_rights_if_relevant",
+          "isolated_benchmark_environment",
+          "fallback_adapter",
+          "named_owner",
+          "tested_rollback_plan"
+        ],
+        "priorPerformanceOrComparisonEvidenceRequired": false,
+        "activationGateRequired": false,
+        "manualQueuedRoadmapSelectionRequired": true,
+        "automaticTransitionAllowed": false
+      },
+      "benchmark_only_to_shadow": {
+        "requires": [
+          "stage_specific_benchmark_comparison_evidence",
+          "exact_scope_O2_measurement_consent",
+          "adapter_specific_shadow_prerequisites"
+        ],
+        "automaticTransitionAllowed": false
+      },
+      "shadow_to_limited_activation": {
+        "requires": [
+          "same_exact_adapter_version_config_shadow_evidence",
+          "exact_scope_O4E_naming_adapter_version_config_cohort_and_purpose"
+        ],
+        "crossAdapterVersionConfigEvidenceSubstitutionAllowed": false,
+        "automaticTransitionAllowed": false
+      }
+    },
+    "rollbackTransition": {
+      "immediateFailSafe": true,
+      "newOwnerGateRequired": false,
+      "freshComparisonEvidenceRequired": false,
+      "testedPlanRequiredBeforeAnyNonProposedStage": true
+    },
+    "activeTransition": {
+      "authorizedByThisReset": false,
+      "scheduledInRoadmap": false,
+      "o4eAuthorizes": "limited_activation_only",
+      "requires": [
+        "same_exact_adapter_version_config_limited_activation_evidence",
+        "new_roadmap_item",
+        "future_exact_scope_O4_distinct_from_O4E"
+      ]
+    }
   },
   "ossOrder": {
     "opencvPaddleOcr": "benchmark_only",
     "qtiXapiCaliper": "compatibility_contract_only",
-    "tsFsrs": "shadow_after_beta_evidence",
-    "pyBkt": "learner_hidden_shadow_after_sufficient_skill_data",
-    "irtCat": "offline_after_sufficient_independent_attempts",
+    "tsFsrs": "benchmark_only_until_adapter_benchmark_comparison_evidence_o2_measurement_consent_and_beta_evidence_then_learner_hidden_shadow",
+    "pyBkt": "benchmark_only_until_adapter_benchmark_comparison_evidence_o2_measurement_consent_and_sufficient_closed_schema_skill_data_then_learner_hidden_shadow",
+    "irtCat": "contract_only_offline_analysis_simulation_after_attempts_and_held_out_no_execution_or_pre_O5_fitting",
     "ltiH5p": "named_academy_partner_only"
+  },
+  "ossIrtCatBoundary": {
+    "state": "contract_only_offline_analysis_and_simulation",
+    "executionAuthorizedByThisReset": false,
+    "analysisPrerequisites": [
+      "sufficient_independent_attempts",
+      "contamination_safe_held_out_data"
+    ],
+    "analysisInputCases": {
+      "syntheticOrNonPersonalRightsClearedFixtures": {
+        "futureOfflineAnalysisEligibility": true,
+        "authorizedByThisReset": false,
+        "sourceRightsRequired": true,
+        "learnerOrAcademyDerived": false
+      },
+      "learnerOrAcademyDerivedAttemptSignals": {
+        "requires": [
+          "exact_O2_approved_purpose",
+          "purpose_consent",
+          "closed_non_reconstructive_value_schema",
+          "purpose_scoped_retention_and_revocation",
+          "Shared Signal Plane"
+        ],
+        "tenantContractMaySubstituteForLearnerConsent": false,
+        "rawContentAllowed": false
+      }
+    },
+    "preO5FittingTrainingOrDatasetRefreshAllowed": false,
+    "fittingTrainingOrDatasetRefreshRequires": [
+      "eligible_inputs_only",
+      "separate_exact_purpose_consent",
+      "future_exact_scope_O5"
+    ],
+    "futureRuntimeModelParameterConfigInitialStage": "proposed"
+  },
+  "ossShadowPrerequisites": {
+    "appliesTo": [
+      "ts-fsrs",
+      "pyBKT"
+    ],
+    "preShadowStage": "benchmark_only",
+    "learnerHiddenInstrumentationAllowedBeforeShadow": false,
+    "commonRequiredBeforeShadow": [
+      "adapter_specific_benchmark_comparison_evidence",
+      "exact_scope_O2_measurement_consent_approval"
+    ],
+    "adapterSpecificRequiredBeforeShadow": {
+      "ts-fsrs": [
+        "beta_evidence"
+      ],
+      "pyBKT": [
+        "sufficient_closed_schema_skill_event_data"
+      ]
+    }
+  },
+  "ossShadowSemantics": {
+    "mode": "observation_and_comparison_only",
+    "baselineDecisionAuthority": "native_fixed_schedule_and_native_rules_only",
+    "mayInfluenceRuntimeSurfaces": [],
+    "prohibitedInfluence": [
+      "learner_visible_output",
+      "academy_visible_output",
+      "Today",
+      "Full-Day",
+      "Review Queue",
+      "mastery",
+      "scheduling",
+      "recommendations",
+      "entitlements",
+      "operational_decisions",
+      "persisted_product_state"
+    ],
+    "permittedWrite": {
+      "plane": "Shared Signal Plane",
+      "requiresExactScopeO2Approval": true,
+      "requiresPurposeConsent": true,
+      "pseudonymous": true,
+      "nonReconstructive": true,
+      "approvedClosedValueLevelSchema": true,
+      "freeTextAllowed": false,
+      "rawContentAllowed": false,
+      "purposeScopedRetentionRequired": true,
+      "revocationStopsFutureUse": true
+    },
+    "modelEvalRegistryWrite": {
+      "scope": "aggregate_version_and_evidence_metadata_only",
+      "learnerLevelRecordAllowed": false,
+      "rawContentAllowed": false
+    },
+    "rawContentAllowed": false,
+    "mayInfluenceRuntimeProductBehavior": false,
+    "aggregateVersionedEvidenceMayInformHumanOwnerGate": true,
+    "automaticTransitionAllowed": false,
+    "tsFsrsComparisonBaseline": "fixed_schedule",
+    "pyBktLearnerVisibleProbabilityAllowed": false
+  },
+  "ossTrainingBoundary": {
+    "runtimeCandidatePolicy": {
+      "frozenAndVersioned": true,
+      "inPlaceModelOrParameterFittingAllowed": false,
+      "inPlaceTrainingAllowed": false,
+      "inPlaceDatasetRefreshAllowed": false
+    },
+    "preO5ShadowAndLimitedActivation": {
+      "mode": "inference_and_evaluation_only",
+      "researchUseAllowed": false,
+      "efficacyClaimsAllowed": false
+    },
+    "O2MaySubstituteForO5": false,
+    "O4EMaySubstituteForO5": false,
+    "O5ScopesNonTransferable": true,
+    "eligibleOfflineInputs": [
+      "purpose_consented_pseudonymous_non_reconstructive_shared_signal",
+      "promoted_rights_cleared_content_bank_material"
+    ],
+    "directPersonalOrAcademyRawContentAllowed": false,
+    "offlineTrainingOrDatasetRefreshRequires": [
+      "eligible_inputs_only",
+      "separate_exact_purpose_consent",
+      "future_exact_scope_O5"
+    ],
+    "trainingOrRefreshO5AuthorizesRuntimeUse": false,
+    "trainingOrRefreshO5AuthorizesResearchOrEfficacyClaim": false,
+    "researchOrEfficacyO5AuthorizesTrainingOrRefresh": false,
+    "trainedRuntimeCandidate": {
+      "covers": [
+        "model",
+        "parameter",
+        "adapter_config"
+      ],
+      "newCandidateIdentityRequired": true,
+      "initialStage": "proposed",
+      "newManualQueuedRoadmapItemRequired": true,
+      "completedS270OrO4EEvidenceGateReuseAllowed": false,
+      "mustIndependentlyClear": [
+        "held_out_and_benchmark_evidence",
+        "shadow",
+        "new_exact_candidate_activation_gate"
+      ],
+      "priorAdapterVersionConfigEvidenceTransferAllowed": false,
+      "hotSwapIntoExistingLimitedOrActiveAdapterAllowed": false
+    },
+    "refreshedDataset": {
+      "newDatasetIdentityRequired": true,
+      "mustIndependentlyClear": [
+        "eligible_input_validation",
+        "exact_purpose_consent",
+        "rights_and_lineage",
+        "quarantine",
+        "held_out_validation"
+      ],
+      "privateRawContentAllowed": false,
+      "runtimeInfluenceByItselfAllowed": false,
+      "logicalForm": "versioned_manifest_over_existing_eligible_plane_inputs",
+      "durableBodyStoreCreated": false,
+      "materialPlanes": [
+        "Shared Signal Plane",
+        "Cleared Content Bank"
+      ],
+      "modelEvalRegistryScope": "version_lineage_and_evidence_manifest_metadata_only",
+      "materialCopyIntoModelEvalRegistryAllowed": false,
+      "retainedOutsideFiveCanonicalPlanesAllowed": false,
+      "exactO5EphemeralMaterialization": {
+        "leastPrivilegeRequired": true,
+        "purposeScopedRetentionAndDeletionRequired": true,
+        "deleteWhenOfflineWorkflowEnds": true,
+        "durableRetentionAllowed": false
+      },
+      "runtimeArtifactProducedFromDatasetInitialStage": "proposed"
+    },
+    "onlineWeightUpdateAllowed": false
   },
   "ownerGates": {
     "O1": "approved_for_this_reset_only",
