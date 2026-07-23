@@ -860,10 +860,14 @@ limitation, retention, revocation, and deletion evidence chain tied to the
 pre-session event-log precommit and one actor-vault scope. Phase ordinals,
 timestamps, nullability, and common fields are closed; deletion must be
 independently evidenced with zero residual copies across memory, buffers,
-logs, caches, and backups. Evaluation uses a nonidentifying choice commitment
-under a no-salt, short-lived policy, an approved memory-only scoring bridge,
-and a separately signed raw-choice destruction receipt. These are future
-receipt contracts, not a learner runtime or a claim that processing occurred.
+logs, caches, and backups. Evaluation uses a nonidentifying salted choice
+commitment: a unique 32-byte salt is required in the Personal-vault
+commitment and opening, and may enter only the future Owner-approved
+memory-only comparison bridge. Neither salt nor raw marks may be retained in
+an evaluator receipt, log, cache, backup, or store. The short-lived bridge
+and separately signed raw-choice destruction receipt must prove that boundary.
+These are future receipt contracts, not a learner runtime or a claim that
+processing occurred.
 
 It makes no pass-probability claim.
 

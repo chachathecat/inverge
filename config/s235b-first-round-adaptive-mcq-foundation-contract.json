@@ -11520,7 +11520,7 @@
           "raw_choice_destroyed_at",
           "issued_at",
           "raw_choice_retained",
-          "commitment_salt_present",
+          "opening_salt_retained_in_receipt",
           "decision",
           "comparison_subject_sha256",
           "raw_choice_destruction_receipt_reference"
@@ -11556,7 +11556,7 @@
             "raw_choice_destroyed_at",
             "issued_at",
             "raw_choice_retained",
-            "commitment_salt_present",
+            "opening_salt_retained_in_receipt",
             "decision",
             "comparison_subject_sha256",
             "raw_choice_destruction_receipt_reference"
@@ -11571,7 +11571,7 @@
           "personal_choice_commitment_matches_the_exact_personal_vault_committed_record_state_for_either_comparison_branch",
           "latest_nonnull_record_timestamp_equals_max_of_marked_at_transferred_at_or_null_and_finalized_at_or_null_after_record_timestamp_order_validation",
           "comparison_branch_is_finalized_single_choice_or_unscorable_record_state",
-          "commitment_opening_verified_is_true_against_choiceCommitmentContract",
+          "commitment_opening_verified_is_true_against_choiceCommitmentContract_using_the_required_32_byte_personal_vault_salt_inside_the_owner_approved_ephemeral_bridge",
           "finalized_single_choice_branch_requires_committed_choice_present_true_nonnull_record_finalized_at_and_correct_or_incorrect_outcome_derived_by_ephemeral_choice_comparison_against_bound_verified_key",
           "unscorable_record_state_branch_requires_committed_choice_present_false_or_nonfinalized_or_nonsingle_state_and_comparison_outcome_unscorable_without_key_comparison",
           "finalized_single_choice_observed_at_gte_record_finalized_at",
@@ -11581,15 +11581,15 @@
           "raw_choice_destroyed_at_gte_observed_at",
           "raw_choice_destroyed_at_lte_issued_at",
           "raw_choice_retained_is_false",
-          "commitment_salt_present_is_false",
+          "opening_salt_retained_in_receipt_is_false",
           "scoring_workload_identity_equals_workload:heldout_readiness_runner",
           "personal_actor_identity_is_absent",
           "decision_equals_verified_nonidentifying_exact_comparison",
-          "commitment_policy_receipt_reference_resolves_to_commitmentPolicyReceiptShape_with_required_decision_and_matches_commitment_contract_algorithm_domain_no_salt_and_ephemeral_lifetime",
+          "commitment_policy_receipt_reference_resolves_to_commitmentPolicyReceiptShape_with_required_decision_and_matches_commitment_contract_algorithm_domain_required_personal_vault_opening_salt_ephemeral_bridge_scope_zero_evaluator_retention_and_ephemeral_lifetime",
           "bridge_policy_reference_resolves_to_ephemeralBridgePolicyReceiptShape_with_required_decision_and_matches_scoring_workload_and_maximum_lifetime",
           "comparison_subject_sha256_matches_comparisonSubjectDigestContract",
           "raw_choice_destruction_receipt_reference_resolves_to_rawChoiceDestructionReceiptShape_with_required_decision_and_matches_exact_session_form_position_precommit_subject_bridge_workload_and_raw_choice_destroyed_at",
-          "raw_choice_retained_is_false_commitment_salt_present_is_false_and_destruction_completion_precedes_issued_at"
+          "raw_choice_retained_is_false_opening_salt_retained_in_receipt_is_false_and_destruction_completion_precedes_issued_at"
         ],
         "requiredDecision": "verified_nonidentifying_exact_comparison",
         "comparisonBranchVocabulary": [
@@ -11637,7 +11637,10 @@
           "decodedByteLength": 32,
           "generator": "cryptographically_secure_random_number_generator",
           "uniquePerSessionPosition": true,
-          "reuseAllowed": false
+          "reuseAllowed": false,
+          "creationAndDurableOpeningMaterialPlane": "Personal Raw Vault",
+          "ephemeralOpeningScope": "future_owner_approved_memory_only_comparison_bridge",
+          "retentionInEvaluatorReceiptLogCacheBackupOrStoreAllowed": false
         },
         "selectedMarksDigestContract": {
           "algorithm": "sha256",
@@ -12559,7 +12562,9 @@
           "commitment_algorithm_id",
           "commitment_algorithm_version",
           "domain_separator",
-          "salt_allowed",
+          "opening_salt_required",
+          "opening_salt_scope",
+          "opening_salt_retention_in_evaluator_receipt_allowed",
           "opening_material_class",
           "maximum_opening_lifetime_ms",
           "raw_opening_persistence_allowed",
@@ -12578,7 +12583,9 @@
             "commitment_algorithm_id",
             "commitment_algorithm_version",
             "domain_separator",
-            "salt_allowed",
+            "opening_salt_required",
+            "opening_salt_scope",
+            "opening_salt_retention_in_evaluator_receipt_allowed",
             "opening_material_class",
             "maximum_opening_lifetime_ms",
             "raw_opening_persistence_allowed",
@@ -12589,7 +12596,9 @@
           "excludedSelfField": "receipt_sha256"
         },
         "bindingInvariants": [
-          "salt_allowed_is_false",
+          "opening_salt_required_is_true_and_matches_choiceCommitmentContract_saltRequirements_decodedByteLength_32_unique_per_session_position_and_reuse_forbidden",
+          "opening_salt_scope_equals_personal_vault_commitment_and_future_owner_approved_ephemeral_bridge_only",
+          "opening_salt_retention_in_evaluator_receipt_allowed_is_false",
           "opening_material_class_equals_ephemeral_workload_memory_only",
           "maximum_opening_lifetime_ms_is_positive_and_bounded_by_comparison_completion",
           "raw_opening_persistence_allowed_is_false",

@@ -1454,6 +1454,58 @@ test("applicability, population, privacy, supply-chain, and signature evidence i
       shapeName,
     );
   }
+
+  const omr = contract.timedOmrReadinessContract.omrShape;
+  assert.deepEqual(omr.choiceCommitmentContract.saltRequirements, {
+    decodedByteLength: 32,
+    generator: "cryptographically_secure_random_number_generator",
+    uniquePerSessionPosition: true,
+    reuseAllowed: false,
+    creationAndDurableOpeningMaterialPlane: "Personal Raw Vault",
+    ephemeralOpeningScope:
+      "future_owner_approved_memory_only_comparison_bridge",
+    retentionInEvaluatorReceiptLogCacheBackupOrStoreAllowed: false,
+  });
+  assert.equal(
+    omr.comparisonEvidenceReceiptShape.requiredFields.includes(
+      "opening_salt_retained_in_receipt",
+    ),
+    true,
+  );
+  assert.equal(
+    omr.comparisonEvidenceReceiptShape.requiredFields.includes(
+      "commitment_salt_present",
+    ),
+    false,
+  );
+  assert.equal(
+    omr.commitmentPolicyReceiptShape.requiredFields.includes(
+      "opening_salt_required",
+    ),
+    true,
+  );
+  assert.equal(
+    omr.commitmentPolicyReceiptShape.requiredFields.includes(
+      "opening_salt_retention_in_evaluator_receipt_allowed",
+    ),
+    true,
+  );
+  assert.equal(
+    omr.commitmentPolicyReceiptShape.bindingInvariants.includes(
+      "opening_salt_retention_in_evaluator_receipt_allowed_is_false",
+    ),
+    true,
+  );
+  assert.match(
+    doc,
+    /unique 32-byte salt\s+is required in the Personal-vault\s+commitment and opening/i,
+  );
+  assert.match(
+    evidence,
+    /opening salt may enter only the\s+future Owner-approved memory-only bridge/i,
+  );
+  assert.doesNotMatch(doc, /no-salt, short-lived policy/i);
+  assert.doesNotMatch(evidence, /no-salt commitment policy/i);
 });
 
 test("hostile mutations are rejected by the same mechanical validator", () => {

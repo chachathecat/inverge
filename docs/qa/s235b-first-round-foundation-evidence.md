@@ -242,11 +242,13 @@ forbid pass evidence. No feedback body or runtime is present.
 The future privacy bundle contains exactly five ordered lifecycle phases tied
 to the pre-session event-log precommit and one actor-vault scope. It
 recomputes phase ordinals, common fields, temporal/null rules, and zero-copy
-deletion. Choice comparison additionally requires a no-salt commitment
-policy, memory-only bridge policy, and independently signed raw-choice
-destruction evidence covering session/form/position, timestamps, and zero
-residual memory, buffer, log, cache, and backup counts. None was executed by
-S235B.
+deletion. Choice comparison additionally requires a unique 32-byte salt in
+the Personal-vault commitment/opening. That opening salt may enter only the
+future Owner-approved memory-only bridge and is forbidden from every
+comparison/scoring receipt, evaluator store, log, cache, or backup.
+Independently signed raw-choice destruction evidence covers
+session/form/position, timestamps, and zero residual memory, buffer, log,
+cache, and backup counts. None was executed by S235B.
 
 ## Standards claim check
 
