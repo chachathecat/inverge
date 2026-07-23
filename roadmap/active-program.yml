@@ -257,7 +257,7 @@ items:
     priority: 28
   - id: S235A
     title: Second-Round Owner-Private Golden 3 Readiness
-    status: queued
+    status: completed
     dependencies: [S234]
     lockGroup: second-golden-readiness
     risk: high

@@ -1,0 +1,500 @@
+{
+  "schemaVersion": "s235a.owner_private_golden_3_readiness.v1",
+  "manifestId": "s235a-appraiser-second-2026-q1-owner-private-golden-3",
+  "generatedAt": "2026-07-23T07:35:00.000Z",
+  "readinessStatus": "evidence_complete_pending_o3a_owner_decision",
+  "examIdentity": {
+    "qualificationId": "qnet-gid-60-appraiser",
+    "examRound": "second",
+    "examYear": 2026,
+    "examDate": "2026-07-04",
+    "questionNo": 1,
+    "subjects": [
+      "practice",
+      "theory",
+      "law"
+    ]
+  },
+  "storagePolicy": {
+    "metadataOnly": true,
+    "officialMaterialCommitted": false,
+    "examMaterialBytesCommitted": false,
+    "referenceMaterialBytesCommitted": false,
+    "legalMaterialBytesCommitted": false,
+    "learnerMaterialBytesCommitted": false,
+    "privateLocatorCommitted": false,
+    "sharedCorpusWritten": false
+  },
+  "boundaryPolicy": {
+    "ownerPrivateReadinessOnly": true,
+    "publicUseAuthorized": false,
+    "sharedUseAuthorized": false,
+    "learnerUseAuthorized": false,
+    "executionAuthorized": false,
+    "evaluationConfigurationTouched": false,
+    "deploymentConfigurationTouched": false,
+    "billingEntitlementTouched": false,
+    "runtimeNavigationTelemetryTouched": false
+  },
+  "examDateEvidence": {
+    "evidenceId": "s235a-qnet-2026-second-exam-date",
+    "authority": "qnet",
+    "authorityHost": "www.q-net.or.kr",
+    "qualificationId": "qnet-gid-60-appraiser",
+    "examDate": "2026-07-04",
+    "acquiredAt": "2026-07-21T12:00:00.000Z",
+    "responseSha256": "78fb4b31723d329cb31d0d19fd37789ec7ad11222bbd4cf34bec2883f410c514",
+    "authorityStatus": "official_primary_source"
+  },
+  "rightsEvidence": {
+    "evidenceId": "s235a-qnet-rights-2026-q1-golden-3",
+    "authority": "qnet",
+    "authorityHost": "www.q-net.or.kr",
+    "noticeArticleId": "5259147",
+    "noticeSnapshotSha256": "7d6b086afb50fe0ca580b0f57ceb8d572af100b21850ca81810ec2171c72ddb2",
+    "noticeAcquiredAt": "2026-07-21T12:00:00.000Z",
+    "freshReconciledAt": "2026-07-23T07:30:00.000Z",
+    "freshDetailResponseSha256": "3bba9dd0cbdba41ce384d5f30e8b29341df0aff27155734e0428a82577816069",
+    "freshNoticeResponseSha256": "7c0973ea3997cfd3f5e968b3ad14b202f0327594956975f2527affebed674875",
+    "exactPostArticleId": "5268128",
+    "exactPostAttachmentIdentityPassed": true,
+    "freshDetailVerificationStatus": "parsed_exact_attachment_identity_passed",
+    "historicalScopedNoticeParsePassed": true,
+    "historicalNoticeScopeEvidenceUsed": true,
+    "freshNoticeVerificationStatus": "access_blocked_no_rights_reverification",
+    "freshNoticeAccessBlockDetected": true,
+    "freshNoticeRightsMarkersConfirmed": false,
+    "freshNoticeResponseUse": "negative_freshness_receipt_only",
+    "licenseId": "KOGL-TYPE-1",
+    "licensedRightsStatus": "redistribution_allowed",
+    "scopeMaterialKind": "qnet_past_questions",
+    "scopeStartYear": 2014,
+    "attributionRequired": true,
+    "commercialUseAllowed": true,
+    "modificationAllowed": true,
+    "boundSourceIds": [
+      "qnet-appraiser-second-2026-practice",
+      "qnet-appraiser-second-2026-theory",
+      "qnet-appraiser-second-2026-law"
+    ],
+    "mostRestrictiveDecision": {
+      "proposedUse": "owner_private_readiness_only_pending_o3a",
+      "o3aStatus": "pending_owner_decision",
+      "publicUseAllowed": false,
+      "sharedCorpusUseAllowed": false,
+      "learnerUseAllowed": false,
+      "executionAllowed": false,
+      "attributionRequired": true,
+      "ambiguityConvertedToPermission": false,
+      "blockerCodes": [
+        "o3a_owner_decision_pending"
+      ]
+    }
+  },
+  "selections": [
+    {
+      "selectionId": "s235a-practice-2026-q1",
+      "subject": "practice",
+      "examYear": 2026,
+      "questionNo": 1,
+      "source": {
+        "sourceId": "qnet-appraiser-second-2026-practice",
+        "sourceVersion": "5268128.2261215.9c6a4fbf1d06f1d8",
+        "authority": "qnet",
+        "authorityHost": "www.q-net.or.kr",
+        "articleId": "5268128",
+        "fileSequence": "2261215",
+        "examYear": 2026,
+        "subject": "practice",
+        "acquiredAt": "2026-07-21T12:00:00.000Z",
+        "freshVerifiedAt": "2026-07-23T07:15:00.000Z",
+        "responseStatus": 200,
+        "contentType": "application/octet-stream",
+        "byteLength": 330108,
+        "pageCount": 17,
+        "paperSha256": "9c6a4fbf1d06f1d827bb8c8ddc6eb7cfb4c9218208540c95e62e772f4bc466c2",
+        "pdfMagicVerified": true,
+        "sourceStatus": "official_primary_source_hash_verified"
+      },
+      "fidelity": {
+        "questionNo": 1,
+        "canonicalization": "s235a.q1_text_nfc_ws.v1",
+        "q1TextDigestSha256": "c39314d7669a77a4eaa1a07523041191c68200f1a84b5e154236a0b41408f108",
+        "q1TextCharacterCount": 7354,
+        "structuralAnchorSha256": "c4d56b5d603f3b8c7815e67dd1e79e940202aeaca0def85cac56063813c59c71",
+        "structuralAnchorRecomputed": true,
+        "pageRange": {
+          "startPage": 1,
+          "endPage": 9,
+          "q2BoundaryPage": 10,
+          "boundaryPageSharedWithQ2": false
+        },
+        "structureCounts": {
+          "koreanParenthesized": 20,
+          "circledNumerals": 0,
+          "numberedLines": 62,
+          "bracketedConditions": 4
+        },
+        "renderer": "ghostscript-10.02.1-png16m-144dpi",
+        "visualPageDigests": [
+          {
+            "page": 1,
+            "sha256": "80c416bc14ca8e2f82ee52f4847c7b6c368fa992805a696d85fc44552a9d351c",
+            "pngBytes": 52872
+          },
+          {
+            "page": 2,
+            "sha256": "8dfd34122d4461e07db9782d2f0ad92e59c79a784f8ed639aed496c4cd22e6c9",
+            "pngBytes": 42675
+          },
+          {
+            "page": 3,
+            "sha256": "3395c4c0992b15b612fdbb345aed7b995ea06d04ffb8ab9e661a9384f377c6e3",
+            "pngBytes": 50701
+          },
+          {
+            "page": 4,
+            "sha256": "d507fcb70e7c69682f443b496e6a73b2293837c6a5b2629029104bbe8f8ba83e",
+            "pngBytes": 50233
+          },
+          {
+            "page": 5,
+            "sha256": "11ae695b497e680613f89dc03c038af773cd10d965bbe6f45d13e62b8ec40976",
+            "pngBytes": 44112
+          },
+          {
+            "page": 6,
+            "sha256": "0c4d128d4a9d127deae60dbd85cd6a913819980e183fa024947dc38aee32a1c8",
+            "pngBytes": 47632
+          },
+          {
+            "page": 7,
+            "sha256": "9e18a22820dbf9ba03a3feb19edab265829222d6f9e57ea387f6a5fb9bf22f47",
+            "pngBytes": 55570
+          },
+          {
+            "page": 8,
+            "sha256": "b8dc3e11904fd66376585f49025f2e9e63e6edf3b969fe6654f838d296afbd3c",
+            "pngBytes": 46878
+          },
+          {
+            "page": 9,
+            "sha256": "c0767b97bd4d14baa5de378a749774cfcea506f6d6212ec7e2c90cc5e7a9b62b",
+            "pngBytes": 60648
+          }
+        ],
+        "independentAudit": {
+          "receiptId": "s235a-private-fidelity-review-20260723T072849Z-af5282021a88",
+          "auditedAt": "2026-07-23T07:28:49.000Z",
+          "privateAuditResultSha256": "af5282021a88bac66854215e0c5e20da4752a32303d09f13121a479b70e18ec0",
+          "status": "passed",
+          "q1BoundaryConfirmed": true,
+          "q2BoundaryExcluded": true,
+          "visualCompletenessConfirmed": true,
+          "sourceHashesConfirmed": true,
+          "contentTranscribed": false,
+          "o3aApproval": false
+        }
+      },
+      "lawVersionEvidenceRequired": false
+    },
+    {
+      "selectionId": "s235a-theory-2026-q1",
+      "subject": "theory",
+      "examYear": 2026,
+      "questionNo": 1,
+      "source": {
+        "sourceId": "qnet-appraiser-second-2026-theory",
+        "sourceVersion": "5268128.2261216.5b10f1ffb2e39b82",
+        "authority": "qnet",
+        "authorityHost": "www.q-net.or.kr",
+        "articleId": "5268128",
+        "fileSequence": "2261216",
+        "examYear": 2026,
+        "subject": "theory",
+        "acquiredAt": "2026-07-21T12:00:00.000Z",
+        "freshVerifiedAt": "2026-07-23T07:15:00.000Z",
+        "responseStatus": 200,
+        "contentType": "application/octet-stream",
+        "byteLength": 176169,
+        "pageCount": 3,
+        "paperSha256": "5b10f1ffb2e39b82260d0d6cad3631ab7429cf80716ad0c1b39b44252d65b32c",
+        "pdfMagicVerified": true,
+        "sourceStatus": "official_primary_source_hash_verified"
+      },
+      "fidelity": {
+        "questionNo": 1,
+        "canonicalization": "s235a.q1_text_nfc_ws.v1",
+        "q1TextDigestSha256": "a63f98242a1c79f4a6461430f7b18604ae5c0cb9862fba831962c117080d3872",
+        "q1TextCharacterCount": 889,
+        "structuralAnchorSha256": "bb3bff8a64d7d74a0f9cbdfbdb0e8d88bd9d402fe582c3fc5e0b2bcfe3673764",
+        "structuralAnchorRecomputed": true,
+        "pageRange": {
+          "startPage": 1,
+          "endPage": 1,
+          "q2BoundaryPage": 2,
+          "boundaryPageSharedWithQ2": false
+        },
+        "structureCounts": {
+          "koreanParenthesized": 0,
+          "circledNumerals": 0,
+          "numberedLines": 17,
+          "bracketedConditions": 1
+        },
+        "renderer": "ghostscript-10.02.1-png16m-144dpi",
+        "visualPageDigests": [
+          {
+            "page": 1,
+            "sha256": "887425901cfd133aa618f46e54d5cd3134700e6c457800df6963440f450defe1",
+            "pngBytes": 57369
+          }
+        ],
+        "independentAudit": {
+          "receiptId": "s235a-private-fidelity-review-20260723T072849Z-af5282021a88",
+          "auditedAt": "2026-07-23T07:28:49.000Z",
+          "privateAuditResultSha256": "af5282021a88bac66854215e0c5e20da4752a32303d09f13121a479b70e18ec0",
+          "status": "passed",
+          "q1BoundaryConfirmed": true,
+          "q2BoundaryExcluded": true,
+          "visualCompletenessConfirmed": true,
+          "sourceHashesConfirmed": true,
+          "contentTranscribed": false,
+          "o3aApproval": false
+        }
+      },
+      "lawVersionEvidenceRequired": false
+    },
+    {
+      "selectionId": "s235a-law-2026-q1",
+      "subject": "law",
+      "examYear": 2026,
+      "questionNo": 1,
+      "source": {
+        "sourceId": "qnet-appraiser-second-2026-law",
+        "sourceVersion": "5268128.2261217.8e1ae7faa097ea7f",
+        "authority": "qnet",
+        "authorityHost": "www.q-net.or.kr",
+        "articleId": "5268128",
+        "fileSequence": "2261217",
+        "examYear": 2026,
+        "subject": "law",
+        "acquiredAt": "2026-07-21T12:00:00.000Z",
+        "freshVerifiedAt": "2026-07-23T07:15:00.000Z",
+        "responseStatus": 200,
+        "contentType": "application/octet-stream",
+        "byteLength": 251109,
+        "pageCount": 5,
+        "paperSha256": "8e1ae7faa097ea7fb6de300208188992032e44ade9ca767179fedf234f69249a",
+        "pdfMagicVerified": true,
+        "sourceStatus": "official_primary_source_hash_verified"
+      },
+      "fidelity": {
+        "questionNo": 1,
+        "canonicalization": "s235a.q1_text_nfc_ws.v1",
+        "q1TextDigestSha256": "8092798a574ee3a88d1211cac6a7afb1eb65939dac18a271ef6e2f300bc97a47",
+        "q1TextCharacterCount": 1405,
+        "structuralAnchorSha256": "dd577a6d54e0eb6d104e67d746d1ef63baaf938cd99ff4cf027337017b26b3d7",
+        "structuralAnchorRecomputed": true,
+        "pageRange": {
+          "startPage": 1,
+          "endPage": 2,
+          "q2BoundaryPage": 3,
+          "boundaryPageSharedWithQ2": false
+        },
+        "structureCounts": {
+          "koreanParenthesized": 0,
+          "circledNumerals": 4,
+          "numberedLines": 5,
+          "bracketedConditions": 1
+        },
+        "renderer": "ghostscript-10.02.1-png16m-144dpi",
+        "visualPageDigests": [
+          {
+            "page": 1,
+            "sha256": "50df14004a2c3f30aa122e808718ef37301e9c9058b37c3323b1d1af8a4af166",
+            "pngBytes": 70775
+          },
+          {
+            "page": 2,
+            "sha256": "0ff431d23b85e4ccec65c32890020578cd2a9f312041d090df8db78189daa156",
+            "pngBytes": 25814
+          }
+        ],
+        "independentAudit": {
+          "receiptId": "s235a-private-fidelity-review-20260723T072849Z-af5282021a88",
+          "auditedAt": "2026-07-23T07:28:49.000Z",
+          "privateAuditResultSha256": "af5282021a88bac66854215e0c5e20da4752a32303d09f13121a479b70e18ec0",
+          "status": "passed",
+          "q1BoundaryConfirmed": true,
+          "q2BoundaryExcluded": true,
+          "visualCompletenessConfirmed": true,
+          "sourceHashesConfirmed": true,
+          "contentTranscribed": false,
+          "o3aApproval": false
+        }
+      },
+      "lawVersionEvidenceRequired": true
+    }
+  ],
+  "lawVersionEvidence": {
+    "evidenceId": "s235a-law-2026-q1-exam-date-version",
+    "selectionId": "s235a-law-2026-q1",
+    "lawSourceId": "law-source-land-compensation-act",
+    "authority": "national_law_information_center",
+    "authorityHost": "www.law.go.kr",
+    "officialLawId": "009295",
+    "lsiSeq": "286903",
+    "jurisdiction": "KR",
+    "examDate": "2026-07-04",
+    "effectiveFrom": "2026-06-16",
+    "promulgationNumber": "21798",
+    "versionIdentityReceiptSha256": "c8039823b548676cbc655ee6a26a1d3c878816b14bef120861de53913ebd4334",
+    "versionIdentityReceiptBytes": 146174,
+    "checkedAt": "2026-07-23T07:15:00.000Z",
+    "versionStatus": "applicable_to_exam_date",
+    "versionIdentityVerified": true,
+    "currentAtCheckedAt": true,
+    "principalStatuteBindingVerified": true,
+    "fullLegalSupportClosureDeferredToS236A": true,
+    "legalMaterialBytesCommitted": false,
+    "currentLawSubstitutedForExamDateLaw": false,
+    "unresolvedConflictCount": 0
+  },
+  "privatePackageReadiness": [
+    {
+      "packageId": "s236a-private-practice-2026-q1",
+      "selectionId": "s235a-practice-2026-q1",
+      "subject": "practice",
+      "targetSchemaVersion": "answer_pack.2.0",
+      "status": "private_schema_ready_not_generated",
+      "requiredCheckIds": [
+        "independent_recalculation",
+        "unit_consistency",
+        "rounding_consistency",
+        "giii_reset_safe"
+      ],
+      "privateVaultRequired": true,
+      "generated": false,
+      "bodyCommitted": false,
+      "s214Started": false,
+      "s215Started": false,
+      "released": false,
+      "learnerUseAllowed": false,
+      "publicUseAllowed": false,
+      "sharedCorpusUseAllowed": false
+    },
+    {
+      "packageId": "s236a-private-theory-2026-q1",
+      "selectionId": "s235a-theory-2026-q1",
+      "subject": "theory",
+      "targetSchemaVersion": "answer_pack.2.0",
+      "status": "private_schema_ready_not_generated",
+      "requiredCheckIds": [
+        "definition_coverage",
+        "logic_chain_coverage",
+        "source_coverage",
+        "unsupported_claim_rejection"
+      ],
+      "privateVaultRequired": true,
+      "generated": false,
+      "bodyCommitted": false,
+      "s214Started": false,
+      "s215Started": false,
+      "released": false,
+      "learnerUseAllowed": false,
+      "publicUseAllowed": false,
+      "sharedCorpusUseAllowed": false
+    },
+    {
+      "packageId": "s236a-private-law-2026-q1",
+      "selectionId": "s235a-law-2026-q1",
+      "subject": "law",
+      "targetSchemaVersion": "answer_pack.2.0",
+      "status": "private_schema_ready_not_generated",
+      "requiredCheckIds": [
+        "exam_date_version",
+        "principal_rule_source",
+        "article_citation",
+        "full_legal_support_closure",
+        "unsupported_legal_claim_rejection"
+      ],
+      "privateVaultRequired": true,
+      "generated": false,
+      "bodyCommitted": false,
+      "s214Started": false,
+      "s215Started": false,
+      "released": false,
+      "learnerUseAllowed": false,
+      "publicUseAllowed": false,
+      "sharedCorpusUseAllowed": false
+    }
+  ],
+  "o3aApprovalPacket": {
+    "packetId": "o3a-s235a-appraiser-second-2026-q1-owner-private-golden-3",
+    "status": "pending_owner_decision",
+    "ownerApproved": false,
+    "selectionIds": [
+      "s235a-practice-2026-q1",
+      "s235a-theory-2026-q1",
+      "s235a-law-2026-q1"
+    ],
+    "futurePackageIds": [
+      "s236a-private-practice-2026-q1",
+      "s236a-private-theory-2026-q1",
+      "s236a-private-law-2026-q1"
+    ],
+    "requestedScope": "approve_s236a_owner_private_golden_3_execution_only",
+    "allowedOperationIds": [
+      "s236a_private_reference_package_authoring",
+      "s236a_private_golden_3_execution"
+    ],
+    "excludedOperationIds": [
+      "golden_9",
+      "d0",
+      "d_plus_1",
+      "d_plus_7",
+      "real_learner",
+      "owner_alpha",
+      "preview",
+      "production",
+      "public_or_shared_exposure",
+      "environment_secret_flag_allowlist",
+      "provider_model_prompt",
+      "billing_entitlement",
+      "telemetry_navigation"
+    ],
+    "ownerAction": "approve_or_reject_exact_packet",
+    "evidenceIds": [
+      "s235a-qnet-rights-2026-q1-golden-3",
+      "s235a-private-fidelity-review-20260723T072849Z-af5282021a88",
+      "s235a-law-2026-q1-exam-date-version"
+    ],
+    "unapprovedSafeState": "remain_queued_no_execution",
+    "packetExpiresAt": "2026-07-30T14:59:59.000Z",
+    "wildcardScopeAllowed": false,
+    "automaticStartAllowed": false,
+    "manualS236AStartRequired": true,
+    "o3aStarted": false,
+    "s236aStarted": false
+  },
+  "controlPlaneState": {
+    "authority": "roadmap/active-program.yml",
+    "selectedItemIds": [
+      "S235B",
+      "O3A"
+    ],
+    "s235aStatus": "completed",
+    "s235bStatus": "queued",
+    "o3aStatus": "queued",
+    "o3aOwnerDecision": "pending",
+    "o3aStarted": false,
+    "s236aStatus": "queued",
+    "s236aMissingDependencies": [
+      "O3A"
+    ],
+    "s236aStarted": false,
+    "golden3Started": false,
+    "downstreamAutomaticStartAllowed": false,
+    "s235bMutatedByThisWork": false
+  }
+}

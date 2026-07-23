@@ -1,0 +1,56 @@
+{
+  "schemaVersion": "s235a.owner_private_golden_3_readiness_report.v1",
+  "manifestId": "s235a-appraiser-second-2026-q1-owner-private-golden-3",
+  "generatedAt": "2026-07-23T07:35:00.000Z",
+  "readinessStatus": "evidence_complete_pending_o3a_owner_decision",
+  "manifestDigestSha256": "5f8d0b1d5d36ae3f93863392b3ef6a488dbb3783ac30edae4fd3b4f370dbba44",
+  "o3aPacketDigestSha256": "8eeeefc4d5107bd24c31f42bc976a34da0153a7407e888868eafe7b601f59d77",
+  "counts": {
+    "selectionCount": 3,
+    "sourceHashVerifiedCount": 3,
+    "independentFidelityAuditPassedCount": 3,
+    "lawExamDateVersionEvidenceCount": 1,
+    "privatePackageSchemaReadyCount": 3,
+    "generatedPackageCount": 0,
+    "releasedPackageCount": 0,
+    "actionableValidationBlockerCount": 0
+  },
+  "subjectOrder": [
+    "practice",
+    "theory",
+    "law"
+  ],
+  "selectionIds": [
+    "s235a-practice-2026-q1",
+    "s235a-theory-2026-q1",
+    "s235a-law-2026-q1"
+  ],
+  "futurePackageIds": [
+    "s236a-private-practice-2026-q1",
+    "s236a-private-theory-2026-q1",
+    "s236a-private-law-2026-q1"
+  ],
+  "rightsEvidenceStatus": "official_notice_snapshot_2026_07_21_plus_fresh_exact_asset_identity",
+  "freshNoticeVerificationStatus": "access_blocked_no_rights_reverification",
+  "rightsUseDecision": "owner_private_readiness_only_pending_o3a",
+  "lawVersionStatus": "applicable_to_exam_date",
+  "executionStatus": "blocked_pending_o3a",
+  "approvalGateCodes": [
+    "o3a_owner_decision_pending"
+  ],
+  "controlPlane": {
+    "selectedItemIds": [
+      "S235B",
+      "O3A"
+    ],
+    "s235aStatus": "completed",
+    "o3aStatus": "queued_pending_owner_decision",
+    "o3aStarted": false,
+    "s236aStatus": "queued_blocked_by_o3a",
+    "s236aStarted": false,
+    "golden3Started": false,
+    "downstreamAutomaticStartAllowed": false
+  },
+  "metadataOnly": true,
+  "safeUse": "s235a_readiness_evidence_only"
+}

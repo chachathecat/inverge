@@ -70,6 +70,16 @@ test("product constitution locks the learning OS direction and non-goals", async
   assert.doesNotMatch(constitution, /global reference data,[\s\S]{0,120}model training directly/i);
 });
 
+test("product constitution records S235A readiness without approving or starting O3A or S236A", async () => {
+  const constitution = await read("docs/inverge-product-constitution.md");
+
+  assert.match(constitution, /S235A readiness is now completed without Golden execution/i);
+  assert.match(constitution, /S235B and O3A are\s+metadata-ready/i);
+  assert.match(constitution, /O3A is still queued with Owner approval pending/i);
+  assert.match(constitution, /S236A is\s+queued and blocked by O3A/i);
+  assert.match(constitution, /Selection does not start work/i);
+});
+
 test("Post-650 authority and supersession are explicit and bounded", async () => {
   const decision = await read("docs/decisions/2026-07-23-post-650-unified-program-reset.md");
   const contract = await read("docs/dabangil-unified-program-contract.md");

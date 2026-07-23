@@ -277,7 +277,7 @@ test("watch_snapshot writes safe generated artifacts even when ignored input has
   assertNoUnsafeArtifactText(outputDir);
 });
 
-test("dispatcher rejects blocked S225 and writes a report-only summary for ready S235A", () => {
+test("dispatcher rejects blocked S225 and writes a report-only summary for ready S235B", () => {
   const blockedOutputDir = tempDir("af006-blocked-s225");
   const blocked = runDispatcher([
     "--mode",
@@ -294,7 +294,7 @@ test("dispatcher rejects blocked S225 and writes a report-only summary for ready
     "--mode",
     "plan_only",
     "--target",
-    "S235A",
+    "S235B",
     "--output-dir",
     outputDir,
     "--stdout",
