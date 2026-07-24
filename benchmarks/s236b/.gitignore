@@ -1,0 +1,7 @@
+work/
+__pycache__/
+*.raw.json
+*.png
+*.trace
+*.core
+*.so

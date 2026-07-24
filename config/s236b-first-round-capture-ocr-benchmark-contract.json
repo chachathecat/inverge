@@ -1,0 +1,787 @@
+{
+  "schemaVersion": "s236b.first-round-capture-ocr-benchmark-contract.v3",
+  "title": "S236B First-Round Capture and OCR Benchmark Contracts and Evidence",
+  "selectedAt": "2026-07-24",
+  "contractState": "disposable_pre_entry_exploratory_evidence_complete_S236B_entry_gate_not_satisfied",
+  "liveStart": {
+    "mainCommitSha": "f28ef275d918c3b6ee2afcd0a393959fd4763fb3",
+    "mainTreeSha": "95d1efcf5e3eed12516fbd58da2dcc81bf604064",
+    "s235bMergedPullRequest": 657,
+    "s235bCorrectivePullRequest": 658,
+    "s235bMergedComposition": "merged_657_plus_corrective_658",
+    "s235bContractPath": "config/s235b-first-round-adaptive-mcq-foundation-contract.json",
+    "s235bContractSha256": "fcc8c806492e5f0f585fc64a68bf9dd5d11167cbf2c63de9a5ee28662eb224b6",
+    "trackingIssue": 659,
+    "ownerDecision": "docs/decisions/2026-07-23-post-650-unified-program-reset.md",
+    "ownerDecisionStatus": "bounded_metadata_only_first_round_foundation_authorized_activation_not_authorized"
+  },
+  "authorizationBoundary": {
+    "roadmapItem": "S236B",
+    "roadmapTitle": "First-Round Capture and OCR Benchmark Contracts",
+    "lockGroup": "first-capture-benchmark",
+    "lane": "B",
+    "maximumAuthorizedTarget": "disposable_pre_entry_exploratory_benchmark_contracts_and_bodyless_evidence_only",
+    "candidateLifecycleState": "proposed",
+    "firstRoundLearnerRuntimeImplementedOrActivated": false,
+    "firstRoundNavigationOnboardingPricingOrPublicClaimsExposed": false,
+    "productionDependenciesModelsTelemetryOrContentActivated": false,
+    "sharedSchemaPersistenceAuthRlsOrBillingChanged": false,
+    "qtiXapiOrCaliperConformanceClaimed": false,
+    "o3bStarted": false,
+    "s237bStarted": false,
+    "downstreamAutomaticStartAllowed": false
+  },
+  "laneSerialization": {
+    "overallMutationWipMaximum": 2,
+    "laneALockIndependent": true,
+    "laneAHasSharedRoadmapAndControlPlanePriority": true,
+    "sharedFilesChangedByThisContract": [],
+    "sharedFilesHeldForLaneAPriority": [
+      "roadmap/active-program.yml",
+      "scripts/run-node-tests.mjs",
+      "tests/agent-factory-github-actions-button.test.mjs",
+      "tests/agent-factory-roadmap-runner.test.mjs",
+      "tests/dabangil-premium-alignment.test.mjs",
+      "tests/practice-answer-review-engine.test.mjs",
+      "tests/s214-reference-answer-pipeline.test.mjs",
+      "tests/s215-reference-answer-release-gate.test.mjs",
+      "tests/s216-error-notebook-gap-taxonomy.test.mjs",
+      "tests/s217-personal-core-concept-graph.test.mjs",
+      "tests/s218-similar-question-review-scheduler.test.mjs",
+      "tests/s219-learner-catalog-usage-ledger.test.mjs",
+      "tests/s220-billing-entitlement-credit-usage.test.mjs",
+      "tests/s221-paid-trust-privacy-cost-guardrails.test.mjs",
+      "tests/s222-academy-answer-operations-tenant-boundary.test.mjs",
+      "tests/s223-three-subject-corpus-reference-quality-acceptance.test.mjs",
+      "tests/s224-three-subject-learner-runtime-acceptance.test.mjs",
+      "tests/s235b-first-round-adaptive-mcq-foundation-contract.test.mjs",
+      "tests/theory-answer-review-engine.test.mjs"
+    ],
+    "reconcileAfterLaneAMergeRequired": true,
+    "exactHeadEvidenceRegenerationAfterAnyRebaseOrMergeRequired": true
+  },
+  "ownedFileManifest": [
+    "benchmarks/s236b/.gitignore",
+    "benchmarks/s236b/README.md",
+    "benchmarks/s236b/bodyless-benchmark-result.json",
+    "benchmarks/s236b/candidate-lock.json",
+    "benchmarks/s236b/cleanup_ephemeral.py",
+    "benchmarks/s236b/evaluate_bodyless.py",
+    "benchmarks/s236b/exercise_rollback_fault.py",
+    "benchmarks/s236b/field-ground-truth-manifest.json",
+    "benchmarks/s236b/generate_synthetic.py",
+    "benchmarks/s236b/model-rights-review.json",
+    "benchmarks/s236b/network_deny.c",
+    "benchmarks/s236b/rollback-evidence.json",
+    "benchmarks/s236b/run_candidate.py",
+    "benchmarks/s236b/runtime-sbom.json",
+    "benchmarks/s236b/scan_runtime_sbom.py",
+    "config/s236b-first-round-capture-ocr-benchmark-contract.json",
+    "docs/qa/s236b-first-round-capture-ocr-benchmark-evidence.md",
+    "docs/s236b-first-round-capture-ocr-benchmark-contract.md",
+    "tests/s236b-first-round-capture-ocr-benchmark-contract.test.mjs"
+  ],
+  "benchmarkHarness": {
+    "executionWasOutsideGitWorktree": true,
+    "runnerAndExpectationAuthorityRootsWereDistinctAndNonNested": true,
+    "expectationAuthorityRootWasNotSuppliedToCandidateRunner": true,
+    "rawBodyOutputInsideGitWorktreeRefusedByCode": true,
+    "candidateStdoutAndStderrSuppressed": true,
+    "scriptIdentitiesAtExecution": [
+      {
+        "path": "benchmarks/s236b/generate_synthetic.py",
+        "sha256": "3b6d973567faec7b272f700ede21f4ade653ef6a127333621344dcdd64c1a718"
+      },
+      {
+        "path": "benchmarks/s236b/run_candidate.py",
+        "sha256": "b19fda61e284ccf913e78bd01a133b24a8b0543467395412cbc7bfb4fc89a4fd"
+      },
+      {
+        "path": "benchmarks/s236b/evaluate_bodyless.py",
+        "sha256": "0bff5e08576ad855a0e74bf845fdf88153f9003750aae5647315549eeb7e6139"
+      },
+      {
+        "path": "benchmarks/s236b/cleanup_ephemeral.py",
+        "sha256": "3710044d780932ef73356b4b397300972fcdfb18a1674268f91fb5bddef84620"
+      },
+      {
+        "path": "benchmarks/s236b/exercise_rollback_fault.py",
+        "sha256": "bda1d768537119e023176ecc9b39cd50b7bb3c480a0842f50c00c886a11da210"
+      },
+      {
+        "path": "benchmarks/s236b/scan_runtime_sbom.py",
+        "sha256": "c1e059f5a52d09585f743b9b8c65ead6fe1d7f0aed6ddc4b66a5c73ae21aabaf"
+      },
+      {
+        "path": "benchmarks/s236b/network_deny.c",
+        "sha256": "5c96a4825ffa0721c41bde31eb10569fb24616a918ad9cc74210336faeb75e1f"
+      }
+    ],
+    "bodylessBenchmarkResultPath": "benchmarks/s236b/bodyless-benchmark-result.json",
+    "bodylessBenchmarkResultFileSha256": "0ec8847df5c20a3714c2613fe5a65d7713d2bcc2bb145577c23ba4c586690ee6",
+    "fieldGroundTruthManifestPath": "benchmarks/s236b/field-ground-truth-manifest.json",
+    "fieldGroundTruthManifestFileSha256": "a9493e825e581f2873dacf4b7f7f1c350e3de95f1798bc6ce9c5ba9d355b6630",
+    "runtimeSbomPath": "benchmarks/s236b/runtime-sbom.json",
+    "runtimeSbomFileSha256": "bfa90857b835721b94c1d7fda8332a58aaf2b5cf4c71b8b920fc1af1bcb8e515",
+    "rollbackEvidencePath": "benchmarks/s236b/rollback-evidence.json",
+    "rollbackEvidenceFileSha256": "4e61d58567139b7ee3161530bb9542b3083921d182a41d4c65b729d0054ee3f3",
+    "preEntryExecutionAuthorization": {
+      "executionAuthorizedByS235B": false,
+      "entryPacketPresentBeforeExecution": false,
+      "classification": "disposable_unauthorized_pre_entry_exploratory_only",
+      "mayQualifyAsS236BAcceptanceEvidence": false,
+      "freshPostPacketExecutionRequired": true,
+      "ownerDeviationDispositionOrPassingEntryPacketRequiredBeforeAnyQualifyingRerun": true
+    }
+  },
+  "candidateContract": {
+    "sourceContractVersion": "appraiser.first.capture_benchmark.protocol.v1",
+    "candidateLockPath": "benchmarks/s236b/candidate-lock.json",
+    "candidateLockFileSha256": "2be5422b02e89d37cc1fb1c4cad7ca94d73b4e1282d77e7bd730777f59b20a93",
+    "canonicalization": "RFC_8785_JSON_Canonicalization_Scheme",
+    "candidateSetSha256": "68bed995d8e8bd1cb76ec59a8daacbb9423f4b71b69858c3146f07986d068993",
+    "candidateConfigurationSha256": "87e2db2aae8fc129d1104916bb83b0a80b23e2128e4eab325c5652782ddc1ee9",
+    "benchmarkConfigurationBundleSha256": "42b440d63b6ac2a7b81147bba3a03d5d4d76c5781abeccded68c8a94fe18107e",
+    "orderedCandidateRowsDigest": "66218a91b90f95d0282c006fb1107e0827065195bc7ba8d21f1fc2913aa8594e",
+    "componentSetSha256": "d1c80b368062b00a8afa1e18d049a11f1ddcbf6951bdbf4f79762cf7e42c8d8c",
+    "orderedCandidateNames": [
+      "OpenCV",
+      "PaddleOCR"
+    ],
+    "opencvPinnedVersion": "opencv-python-headless==4.13.0.92;cv2==4.13.0",
+    "paddlePinnedVersion": "PaddleOCR-family:korean_PP-OCRv5_mobile_rec@a6261f800ad335aa6ef77b6f7c4dcedfd5e11b95f4d70982d41ee31c2ace5e66;adapter@b19fda61e284ccf913e78bd01a133b24a8b0543467395412cbc7bfb4fc89a4fd;paddlepaddle==3.3.1",
+    "paddleOcrFamilyReferenceRepository": "PaddlePaddle/PaddleOCR",
+    "paddleOcrFamilyReferenceTag": "v3.7.0",
+    "paddleOcrFamilyReferenceCommitSha": "b03f46425e8ff4442b268ce449e3eef758146cd4",
+    "paddleOcrFamilySourceCodeExecuted": false,
+    "executedScope": "opencv_preprocessing_plus_repository_adapter_plus_exported_paddle_text_recognition_model_direct_inference",
+    "installedRuntimeAndModelBytesVerifiedBeforeExecution": false,
+    "perFixtureTimeoutSupervision": false,
+    "fullPageLayoutCoverageClaimed": false,
+    "structuralTableModelCoverageClaimed": false,
+    "formulaModelCoverageClaimed": false,
+    "productionFitnessClaimed": false,
+    "stockPaddleocrDistributionInstalled": false,
+    "paddlexDistributionInstalled": false,
+    "aistudioSdkDistributionInstalled": false,
+    "executionDependencyAndModelByteVerification": {
+      "allIsolatedPythonDistributionsInventoriedBeforeFixtureGeneration": true,
+      "generatorSelectedInstalledDistributionInventoriesMatched": [
+        "numpy",
+        "opencv-python-headless",
+        "pillow"
+      ],
+      "runnerSelectedInstalledDistributionInventoriesMatched": [
+        "numpy",
+        "opencv-python-headless",
+        "paddlepaddle",
+        "pyyaml"
+      ],
+      "importedModuleOriginsMatchedDistributionInventories": true,
+      "pythonVersionStringMatchedByScannerGeneratorRunnerAndEvaluator": true,
+      "pythonExecutableBytesVerified": false,
+      "nativeDependencyClosureVerified": false,
+      "sysPathAllowlisted": false,
+      "modelFilesHashVerifiedBeforeAndAfterCandidateInference": true,
+      "modelReadOnlyMountVerified": false,
+      "wheelPinsLinkedToInstalledArtifactsByReceipt": false
+    },
+    "preEntryExecutionQualifiesForS236BGate": false,
+    "performanceClaimAllowed": false
+  },
+  "fixtureAndGroundTruthContract": {
+    "fixtureSourceClass": "author_created_nondeterministic_synthetic_only",
+    "fixtureManifestSha256": "a9493e825e581f2873dacf4b7f7f1c350e3de95f1798bc6ce9c5ba9d355b6630",
+    "expectedResultManifestSha256": "7ffa8dad8986be38c2f7e33b32c467be55c9093fc4094aafb7f4954cb5ae11ba",
+    "outputCommitmentManifestSha256": "d3e593917aa3688c54c2534d8b77f7cf6ac6bdd2e8be116e0179082977351911",
+    "fixtureImageCount": 32,
+    "fieldCount": 60,
+    "syntheticFieldCount": 60,
+    "realLearnerContentCount": 0,
+    "copyrightedPrivateContentCount": 0,
+    "separatelyAuthorizedPrivateFixtureCount": 0,
+    "riskFieldsExactly": [
+      "negation",
+      "numbers",
+      "signs",
+      "percentages",
+      "choice_order",
+      "law_dates",
+      "tables",
+      "formulas"
+    ],
+    "groupedChoiceFixtureCount": 4,
+    "groupedTableFixtureCount": 4,
+    "groundTruthBodyPersistenceAllowed": false,
+    "bodylessGroundTruthFieldsExactly": [
+      "expected_value_hmac_sha256",
+      "field_id",
+      "fixture_id",
+      "group_id",
+      "height",
+      "image_sha256",
+      "risk_field",
+      "split_class_hmac_sha256",
+      "structure",
+      "width"
+    ],
+    "comparisonRules": {
+      "normalization": "Unicode_NFC_only",
+      "choice_order": "candidate_output_must_produce_exact_five_choice_ordinal_and_text_order",
+      "signs": "exact_sign_and_magnitude",
+      "percentages": "exact_percent_marker_and_scale",
+      "law_dates": "exact_label_and_yyyy_mm_dd_component_order",
+      "tables": "candidate_output_must_produce_exact_cell_value_row_column_and_2x2_structure",
+      "formulas": "exact_tokens_operators_parentheses_unicode_superscript_and_subscript_order"
+    }
+  },
+  "heldOutIntegrity": {
+    "hiddenSplitClass": "ocr_benchmark_hidden_test",
+    "readinessEligible": false,
+    "calibrationFieldCount": 15,
+    "hiddenFieldCount": 45,
+    "candidateConfigurationFrozenBeforeFixtureGeneration": true,
+    "runnerAndAuthorityRootsDistinct": true,
+    "expectationAuthorityRootSuppliedToCandidateRunner": false,
+    "outputCommittedBeforeEvaluatorExpectedOpen": true,
+    "priorExpectationOpenExclusionVerified": false,
+    "retryAfterExpectedOpenCountOrNull": null,
+    "tuningAfterExpectedOpenCountOrNull": null,
+    "trustedProviderAttestationStatus": "pending",
+    "futureFirstRoundReadinessHeldoutReused": false,
+    "decision": "not_verified_held_out_integrity_pre_entry_exploratory_run_only"
+  },
+  "benchmarkEvidence": {
+    "resultArtifactSha256": "6e28d55b9bedce369b622c9fd4d9cf0c5d087eaa51369df811ab303e8e913cb9",
+    "failureTaxonomySha256": "81eb5b496705bed357e38c04835cbb3f4c2e9971bd436e1d1bba906ea9771649",
+    "fieldAccuracyRowsSha256": "da08efc9f7bd195031eedef8b2c4ab97342841907019f2b3bb96bad6d8ddd49d",
+    "groupStructureRowsSha256": "929a3ecd0cc28e428042993a95a68764b3ca1662dfd58df639dae5d90a0be31a",
+    "fixtureCount": 32,
+    "fieldCount": 60,
+    "correctCount": 7,
+    "missCount": 17,
+    "abstainCount": 36,
+    "timeoutCount": 0,
+    "overallAccuracyPpm": 116666,
+    "candidateProducedChoiceStructureCount": 0,
+    "candidateProducedTableStructureCount": 0,
+    "processFailureCount": 0,
+    "unclassifiedFailureCount": 12,
+    "latencyClock": "time.perf_counter_ns_monotonic",
+    "latencySampleCount": 32,
+    "modelLoadNs": 89617707,
+    "endToEndP50Ns": 122884981,
+    "endToEndP95Ns": 178457496,
+    "endToEndP99Ns": 181393646,
+    "endToEndMaxNs": 181393646,
+    "peakRssKib": 389456,
+    "failureTaxonomyCompletenessStatus": "diagnosed_causes_only_ambiguous_mismatches_unclassified_and_per_fixture_timeout_supervision_absent",
+    "status": "exploratory_machine_run_gate_inputs_and_reviews_pending",
+    "decision": "not_accepted_S236B_benchmark_evidence"
+  },
+  "immutableOriginalAndRevisionBoundary": {
+    "machineOriginalImmutable": false,
+    "machineOriginalOriginalFileUnchangedDuringRevision": true,
+    "machineOriginalOsWriteOnceEnforced": false,
+    "revisionAppendOnly": false,
+    "revisionStorageAppendOnlyEnforced": false,
+    "revisionInProcessAuthenticatedHashChainValidated": true,
+    "revisionAtomicExpectedHeadLockUsed": true,
+    "validSecondAppendPassed": true,
+    "journalEditRejectedWithExpectedHead": true,
+    "journalTruncateRejectedWithExpectedHead": true,
+    "journalDeleteRejectedWithExpectedHead": true,
+    "editedRevisionUsedForAccuracy": false,
+    "candidateCallCountDuringManualRevision": 0,
+    "metricRootUnchangedByRevision": true,
+    "groundTruthOverwriteAllowed": false,
+    "machineOriginalOverwriteAllowedByContract": false,
+    "manualCorrectionTimeCountsAsOcrLatency": false,
+    "duplicateRevisionOrdinalRejected": true,
+    "predecessorMismatchRejected": true,
+    "candidateConfigurationOrFixtureChangeInvalidatesEvidence": true
+  },
+  "nativeManualFallback": {
+    "mode": "local_human_transcription_to_separate_locked_authenticated_revision_chain",
+    "machineOriginalRemainsImmutable": false,
+    "machineOriginalUnchangedDuringHarness": true,
+    "machineOriginalLogicalOverwriteProhibitedByContract": true,
+    "revisionStorageAppendOnlyEnforced": false,
+    "candidateCallDuringFallbackAllowed": false,
+    "editedRevisionMayImproveReportedOcrAccuracy": false,
+    "learnerRuntimeOrPublicUiCreated": false,
+    "machineHarnessTestPassed": true,
+    "namedHumanFallbackReceipt": null,
+    "status": "machine_boundary_tested_named_human_receipt_pending"
+  },
+  "privacyBoundary": {
+    "rawFixtureBodyAllowedInGitHub": false,
+    "rawExpectedBodyAllowedInGitHub": false,
+    "rawOcrBodyAllowedInGitHub": false,
+    "rawBodyAllowedInLogsTelemetryScreenshotsCachesOrSharedCorpora": false,
+    "localScannerVersion": "s236b.bound-repository-raw-value-and-decoded-git-blob-scanner.v4",
+    "gitWorktreeAndDotGitScannedMemberCount": 36534,
+    "localResidualCount": 0,
+    "localUnresolvedCount": 39,
+    "repositoryPathAndHeadTreeStatusBound": true,
+    "executionRepositoryIdentityBefore": {
+      "headSha": "96f9f356de2680fb6a0a1b98e0addaf3659e6c6c",
+      "treeSha": "47e38f1a393dbad1c7a04c984428adf08581486f",
+      "statusSha256": "ff65626e5a98348d0845dca4590e0ae045980ba4d76ca42bf03c7692c87979c1",
+      "worktreeStateSha256": "22c6b62cdd4404035aaf2779b0db35dcf1fa49b3fc04448654c8c68de63a5d0e"
+    },
+    "executionRepositoryIdentityUnchangedDuringScan": true,
+    "gitReplaceObjectsDisabled": true,
+    "protocolLogExecutionRedirectionBindingVerified": false,
+    "cacheEnvironmentBindingVerified": false,
+    "directRawTextValueScanPerformed": false,
+    "completeZeroResidualProof": false,
+    "ephemeralRollbackResidualFileCount": 0,
+    "ephemeralRollbackResidualByteCount": 0,
+    "requiredSinkIdsExactly": [
+      "git_worktree_index_untracked_ignored_and_new_blobs",
+      "github_issue_pr_review_and_comment_bodies",
+      "github_check_logs_and_uploaded_artifacts",
+      "stdout_stderr_and_exception_messages",
+      "telemetry_otel_error_reporting_spools",
+      "screenshots_dom_traces_and_video",
+      "temporary_files_core_dumps_swap_and_memory_buffers",
+      "ocr_model_and_application_caches",
+      "clipboard_thumbnail_and_recent_file_sinks",
+      "shared_corpora_reference_corpora_and_model_eval_body_storage",
+      "persistent_database_and_object_storage",
+      "post_merge_github_and_cache_rescan"
+    ],
+    "localMachineScanStatus": "zero_residual_observed_with_thirty_nine_unresolved_members_or_sink_proofs",
+    "remoteExactHeadScanStatus": "pending",
+    "postMergeScanStatus": "pending",
+    "completeSignedNoRealContentImportProofStatus": "pending",
+    "mergeBlockedUntilAllRequiredSinksHaveZeroResidualAndZeroUnresolved": true,
+    "decodedGitBlobCount": 4487
+  },
+  "supplyChainAndRights": {
+    "runtimeSbomSha256": "bfb6a8aa46fd7a5e45928797594dc5bcdc2e07e2e4ba81e5199d0cd5734a28bf",
+    "runtimeComponentCount": 17,
+    "inventoryScope": "isolated_python_distributions_only",
+    "nativeOsAndDriverInventoryStatus": "not_inventoried",
+    "unexpectedComponentCount": 0,
+    "missingComponentCount": 0,
+    "versionMismatchCount": 0,
+    "licenseFileMissingCount": 0,
+    "forbiddenLicenseCountOrNull": null,
+    "licensePolicyEvaluationStatus": "not_run_named_human_review_required",
+    "wheelHashCoverageCount": 2,
+    "wheelHashMissingCount": 15,
+    "wheelHashesAreDeclaredCandidatePinsNotVerifiedInstallReceipts": true,
+    "unresolvedRuntimeComponentCount": 17,
+    "offlineVulnerabilityScanStatus": "not_run_offline_database_snapshot_unavailable",
+    "unresolvedModelAndFixtureAssetRightsCount": 2,
+    "modelRightsReviewPath": "benchmarks/s236b/model-rights-review.json",
+    "modelRightsReviewFileSha256": "137fc477180c5ac2bc173ede2eb867b4127c9f1aaabcfd5876fc8f18b8fadfec",
+    "namedSupplyChainReviewer": null,
+    "namedRightsReviewer": null,
+    "status": "incomplete",
+    "decision": "not_a_verified_license_SBOM_or_model_asset_rights_receipt"
+  },
+  "environmentAndRollback": {
+    "evidencePath": "benchmarks/s236b/rollback-evidence.json",
+    "environmentIdentity": "27472ae2a56db64c43690a49426177cfb70e73eeb105e93b32413bb17d3023c8",
+    "environmentConfigurationSha256": "41f6321f3c6b96b0f260b15e5d477c1e91a8c1ff9213acef98ad5f1a85c24dd9",
+    "rollbackReceiptSetSha256": "e738ef265c498e3ba21e5cec570f5632e2a456abe00ac6fb626db1add0ec0e93",
+    "rollbackTargetPolicySha256": "e2bc96d556f7f04fadc705282f3e475caf9a31fb591ebbd1bd1b317ac9bbd2f2",
+    "rollbackTargetSha256": "84e9b2125391f4d68a6f50bac3d0b1d55c41764c464d47cba50ba5d8dada7aaa",
+    "rollbackStateSha256": "84e9b2125391f4d68a6f50bac3d0b1d55c41764c464d47cba50ba5d8dada7aaa",
+    "networkAbsenceProven": false,
+    "networkShimIpv4Ipv6AndDnsTestsPassed": true,
+    "isolationCompletenessStatus": "partial_process_shim_only",
+    "telemetryEnabledByHarness": false,
+    "scenarioCount": 6,
+    "scenarioIdsExactly": [
+      "missing_model_preload_failure",
+      "network_denial",
+      "mid_run_timeout",
+      "interrupted_execution",
+      "normal_completion_runner_root",
+      "normal_completion_authority_root"
+    ],
+    "receiptInsideTargetAttemptRejected": true,
+    "failedScenarioCount": 0,
+    "residualFileCount": 0,
+    "normalRunnerAndAuthorityRootCleanupProven": true,
+    "failureScenarioEvidenceUsesProxyFaultRoots": true,
+    "actualPreEvaluatorRunnerAndAuthorityFailureCleanupProven": false,
+    "qualifyingTestedRollbackReceipt": false,
+    "trustedExecutionEnvironmentProviderReference": null,
+    "namedEnvironmentReviewer": null,
+    "namedRollbackReviewer": null,
+    "status": "machine_cleanup_observed_isolation_and_human_review_incomplete",
+    "secretsMountedOrExposedProvenFalse": false,
+    "metadataReplayAndArbitraryTargetHostileTestsStatus": "focused_hostile_tests_passed_named_review_pending"
+  },
+  "s235bGatePacketContract": {
+    "scopeId": "s235b_to_s236b_ocr_benchmark_entry_v1",
+    "gateId": "S236B",
+    "packetSchemaVersion": "appraiser.first.gate-evidence-packet.v1",
+    "requiredDecision": "verified_complete_current_S236B_gate_packet",
+    "canonicalization": "RFC_8785_JSON_Canonicalization_Scheme",
+    "exactHeadAndTreeRequired": true,
+    "requiredInputCount": 16,
+    "requiredInputNamesExactly": [
+      "s235b_merged_sha_and_tree",
+      "ocr_benchmark_contract_version",
+      "private_capture_boundary",
+      "risk_field_taxonomy",
+      "synthetic_or_separately_authorized_private_fixture_manifest",
+      "proposed_candidate_lifecycle_and_benchmark_only_ceiling",
+      "pinned_candidate_versions",
+      "license_and_SBOM_receipt",
+      "model_asset_rights_receipt",
+      "isolated_benchmark_environment_receipt",
+      "native_manual_fallback_receipt",
+      "named_benchmark_owner",
+      "tested_rollback_receipt",
+      "source_and_rights_manifest_version",
+      "no_real_content_import_proof",
+      "explicit_manual_owner_selection"
+    ],
+    "orderedInputReadiness": [
+      {
+        "inputName": "s235b_merged_sha_and_tree",
+        "machineEvidenceStatus": "observed_at_live_start",
+        "gateReceiptStatus": "pending_final_exact_head_and_tree_review"
+      },
+      {
+        "inputName": "ocr_benchmark_contract_version",
+        "machineEvidenceStatus": "bound",
+        "gateReceiptStatus": "pending_named_contract_reviewer"
+      },
+      {
+        "inputName": "private_capture_boundary",
+        "machineEvidenceStatus": "local_zero_residual_scan_with_thirty_nine_unresolved_members_or_sink_proofs",
+        "gateReceiptStatus": "blocked_local_remote_and_provider_sink_proofs"
+      },
+      {
+        "inputName": "risk_field_taxonomy",
+        "machineEvidenceStatus": "complete_bodyless",
+        "gateReceiptStatus": "pending_named_contract_reviewer"
+      },
+      {
+        "inputName": "synthetic_or_separately_authorized_private_fixture_manifest",
+        "machineEvidenceStatus": "synthetic_field_manifest_committed_bodylessly",
+        "gateReceiptStatus": "pending_named_fixture_reviewer_and_heldout_attestation"
+      },
+      {
+        "inputName": "proposed_candidate_lifecycle_and_benchmark_only_ceiling",
+        "machineEvidenceStatus": "complete",
+        "gateReceiptStatus": "pending_named_contract_reviewer"
+      },
+      {
+        "inputName": "pinned_candidate_versions",
+        "machineEvidenceStatus": "selected_installed_distribution_inventories_and_imported_module_origins_matched_model_hashes_checked_full_runtime_provenance_incomplete",
+        "gateReceiptStatus": "pending_named_benchmark_reviewer"
+      },
+      {
+        "inputName": "license_and_SBOM_receipt",
+        "machineEvidenceStatus": "incomplete",
+        "gateReceiptStatus": "blocked_17_components_without_complete_license_artifact_and_vulnerability_review"
+      },
+      {
+        "inputName": "model_asset_rights_receipt",
+        "machineEvidenceStatus": "incomplete",
+        "gateReceiptStatus": "blocked_2_asset_rights_reviews"
+      },
+      {
+        "inputName": "isolated_benchmark_environment_receipt",
+        "machineEvidenceStatus": "partial_process_shim_only",
+        "gateReceiptStatus": "blocked_trusted_provider_and_named_environment_reviewer"
+      },
+      {
+        "inputName": "native_manual_fallback_receipt",
+        "machineEvidenceStatus": "in_process_authenticated_revision_boundary_passed_OS_write_once_and_storage_append_only_false",
+        "gateReceiptStatus": "pending_named_human_fallback_receipt"
+      },
+      {
+        "inputName": "named_benchmark_owner",
+        "machineEvidenceStatus": "missing",
+        "gateReceiptStatus": "blocked_named_human_owner_required"
+      },
+      {
+        "inputName": "tested_rollback_receipt",
+        "machineEvidenceStatus": "normal_actual_roots_cleaned_four_failure_probes_used_proxy_fault_roots_actual_pre_evaluator_failure_cleanup_unproven",
+        "gateReceiptStatus": "blocked_actual_root_failure_supervision_and_named_rollback_reviewer"
+      },
+      {
+        "inputName": "source_and_rights_manifest_version",
+        "machineEvidenceStatus": "bodyless_manifest_version_bound",
+        "gateReceiptStatus": "pending_named_rights_reviewer"
+      },
+      {
+        "inputName": "no_real_content_import_proof",
+        "machineEvidenceStatus": "local_zero_residual_with_thirty_nine_unresolved_and_remote_pending",
+        "gateReceiptStatus": "blocked_exact_head_remote_provider_and_post_merge_scans"
+      },
+      {
+        "inputName": "explicit_manual_owner_selection",
+        "machineEvidenceStatus": "request_scope_observed_not_a_signed_receipt",
+        "gateReceiptStatus": "blocked_named_human_signed_owner_selection_required"
+      }
+    ],
+    "modelMayIssueOrReviewReceipt": false,
+    "namedBenchmarkOwner": null,
+    "explicitManualOwnerSelectionReceipt": null,
+    "rootKeyRegistryReceipt": null,
+    "rootTrustAnchorProjectionReceipt": null,
+    "passingPacket": null,
+    "status": "not_constructed_fail_closed",
+    "decision": "required_human_rights_supply_chain_privacy_isolation_and_root_trust_evidence_absent",
+    "sourceContractBindings": {
+      "sourceContractPath": "config/s235b-first-round-adaptive-mcq-foundation-contract.json",
+      "sourceContractFileSha256": "fcc8c806492e5f0f585fc64a68bf9dd5d11167cbf2c63de9a5ee28662eb224b6",
+      "sourceContractCanonicalSha256": "9c25319bcec6597013e33a46f717260b7a627a4520414dfb21bace2284742da3",
+      "sourceGateCanonicalSha256": "55a24dd50fbaa8e901982652a69b1e424ae2f844850866787ef3575d07482b3a",
+      "immutableInputBindingContractCanonicalSha256": "dc40c0a763ebea1bcb1794a694c210e1f35498c576f49ce761909be0c1ffae8b",
+      "requiredInputAcceptanceContractCanonicalSha256": "fce9ccdfa494999f7bab3e3d244350c9eef776b874e974f82d3c22db9c54a5c5",
+      "requiredInputEvidenceContractRegistryCanonicalSha256": "144a61fe183af25c482fa9321c678c6f0815da0a191bcbd92927970a726eb4c0",
+      "requiredInputProjectionContractRegistryCanonicalSha256": "13dc90661ca095659fa8e0a81500cb13f8110d707f4f072617aba6893c998d40",
+      "expiryTriggersCanonicalSha256": "fe38c65b774e2893659f4a7bc57202567f805d4cec72d982ca3f0cf33794995f",
+      "crossInputCoherenceMatrixCanonicalSha256": "c3cb2d162bb15e5d562095746729b4fba41d0993f09edf65561ac78b60aca4a7"
+    },
+    "preEntryExecutionQualifies": false,
+    "qualifyingRerunRequiredAfterPassingPacket": true
+  },
+  "crossInputCoherence": {
+    "matrixVersion": "appraiser.first.gate-cross-input-coherence.v2",
+    "sourceMatrixCanonicalSha256": "c3cb2d162bb15e5d562095746729b4fba41d0993f09edf65561ac78b60aca4a7",
+    "dimensionCount": 7,
+    "orderedDimensions": [
+      {
+        "dimensionId": "candidate_set_preimage",
+        "comparisonOperator": "all_equal",
+        "participatingInputsExactly": [
+          "ocr_benchmark_contract_version",
+          "pinned_candidate_versions",
+          "license_and_SBOM_receipt",
+          "model_asset_rights_receipt"
+        ],
+        "canonicalRootPreimage": {
+          "schemaVersion": "s236b.candidate-set-preimage.v2",
+          "orderedFieldsExactly": [
+            "candidate_name",
+            "candidate_lifecycle_state"
+          ],
+          "recordOrder": "ocrBenchmarkContract.candidates_order",
+          "recordIdentityFieldsExactly": [
+            "candidate_name"
+          ]
+        },
+        "derivationSpecIdByInputExactly": {
+          "ocr_benchmark_contract_version": "S236B.candidate_set_preimage.ocr_benchmark_contract_version.v2",
+          "pinned_candidate_versions": "S236B.candidate_set_preimage.pinned_candidate_versions.v2",
+          "license_and_SBOM_receipt": "S236B.candidate_set_preimage.license_and_SBOM_receipt.v2",
+          "model_asset_rights_receipt": "S236B.candidate_set_preimage.model_asset_rights_receipt.v2"
+        },
+        "machineCommonValueOrNull": null,
+        "rawLocalObservationOrNull": "68bed995d8e8bd1cb76ec59a8daacbb9423f4b71b69858c3146f07986d068993",
+        "machineCarrierProjectionStatus": "raw_local_observation_not_current_signed_S235B_coherence",
+        "signedCoherenceStatus": "pending"
+      },
+      {
+        "dimensionId": "candidate_set_scalar_carriers",
+        "comparisonOperator": "all_equal",
+        "participatingInputsExactly": [
+          "pinned_candidate_versions",
+          "isolated_benchmark_environment_receipt",
+          "tested_rollback_receipt"
+        ],
+        "canonicalRootPreimage": {
+          "schemaVersion": "s236b.candidate-set-scalar-carrier.v1",
+          "orderedFieldsExactly": [
+            "candidate_set_sha256"
+          ],
+          "recordOrder": "single"
+        },
+        "derivationSpecIdByInputExactly": {
+          "pinned_candidate_versions": "S236B.candidate_set_scalar_carriers.pinned_candidate_versions.v2",
+          "isolated_benchmark_environment_receipt": "S236B.candidate_set_scalar_carriers.isolated_benchmark_environment_receipt.v2",
+          "tested_rollback_receipt": "S236B.candidate_set_scalar_carriers.tested_rollback_receipt.v2"
+        },
+        "machineCommonValueOrNull": null,
+        "rawLocalObservationOrNull": "68bed995d8e8bd1cb76ec59a8daacbb9423f4b71b69858c3146f07986d068993",
+        "machineCarrierProjectionStatus": "raw_local_observation_not_current_signed_S235B_coherence",
+        "signedCoherenceStatus": "pending"
+      },
+      {
+        "dimensionId": "candidate_configuration_preimage",
+        "comparisonOperator": "all_equal",
+        "participatingInputsExactly": [
+          "pinned_candidate_versions",
+          "license_and_SBOM_receipt",
+          "model_asset_rights_receipt"
+        ],
+        "canonicalRootPreimage": {
+          "schemaVersion": "s236b.candidate-configuration-preimage.v2",
+          "orderedFieldsExactly": [
+            "candidate_name",
+            "pinned_version",
+            "candidate_artifact_sha256",
+            "candidate_configuration_sha256",
+            "component_set_sha256",
+            "model_asset_set_sha256"
+          ],
+          "recordOrder": "ocrBenchmarkContract.candidates_order",
+          "recordIdentityFieldsExactly": [
+            "candidate_name"
+          ]
+        },
+        "derivationSpecIdByInputExactly": {
+          "pinned_candidate_versions": "S236B.candidate_configuration_preimage.pinned_candidate_versions.v2",
+          "license_and_SBOM_receipt": "S236B.candidate_configuration_preimage.license_and_SBOM_receipt.v2",
+          "model_asset_rights_receipt": "S236B.candidate_configuration_preimage.model_asset_rights_receipt.v2"
+        },
+        "machineCommonValueOrNull": null,
+        "rawLocalObservationOrNull": "87e2db2aae8fc129d1104916bb83b0a80b23e2128e4eab325c5652782ddc1ee9",
+        "machineCarrierProjectionStatus": "raw_local_observation_not_current_signed_S235B_coherence",
+        "signedCoherenceStatus": "pending"
+      },
+      {
+        "dimensionId": "candidate_configuration_scalar_carriers",
+        "comparisonOperator": "all_equal",
+        "participatingInputsExactly": [
+          "pinned_candidate_versions",
+          "isolated_benchmark_environment_receipt",
+          "tested_rollback_receipt"
+        ],
+        "canonicalRootPreimage": {
+          "schemaVersion": "s236b.candidate-configuration-scalar-carrier.v1",
+          "orderedFieldsExactly": [
+            "candidate_configuration_sha256"
+          ],
+          "recordOrder": "single"
+        },
+        "derivationSpecIdByInputExactly": {
+          "pinned_candidate_versions": "S236B.candidate_configuration_scalar_carriers.pinned_candidate_versions.v2",
+          "isolated_benchmark_environment_receipt": "S236B.candidate_configuration_scalar_carriers.isolated_benchmark_environment_receipt.v2",
+          "tested_rollback_receipt": "S236B.candidate_configuration_scalar_carriers.tested_rollback_receipt.v2"
+        },
+        "machineCommonValueOrNull": null,
+        "rawLocalObservationOrNull": "87e2db2aae8fc129d1104916bb83b0a80b23e2128e4eab325c5652782ddc1ee9",
+        "machineCarrierProjectionStatus": "raw_local_observation_not_current_signed_S235B_coherence",
+        "signedCoherenceStatus": "pending"
+      },
+      {
+        "dimensionId": "fixture_manifest_sha256",
+        "comparisonOperator": "all_equal",
+        "participatingInputsExactly": [
+          "synthetic_or_separately_authorized_private_fixture_manifest",
+          "isolated_benchmark_environment_receipt",
+          "tested_rollback_receipt"
+        ],
+        "canonicalRootPreimage": {
+          "schemaVersion": "s236b.fixture-manifest-sha-root.v1",
+          "orderedFieldsExactly": [
+            "fixture_manifest_sha256"
+          ],
+          "recordOrder": "single"
+        },
+        "derivationSpecIdByInputExactly": {
+          "synthetic_or_separately_authorized_private_fixture_manifest": "S236B.fixture_manifest_sha256.synthetic_or_separately_authorized_private_fixture_manifest.v1",
+          "isolated_benchmark_environment_receipt": "S236B.fixture_manifest_sha256.isolated_benchmark_environment_receipt.v1",
+          "tested_rollback_receipt": "S236B.fixture_manifest_sha256.tested_rollback_receipt.v1"
+        },
+        "machineCommonValueOrNull": null,
+        "rawLocalObservationOrNull": "a9493e825e581f2873dacf4b7f7f1c350e3de95f1798bc6ce9c5ba9d355b6630",
+        "machineCarrierProjectionStatus": "raw_local_observation_not_current_signed_S235B_coherence",
+        "signedCoherenceStatus": "pending"
+      },
+      {
+        "dimensionId": "environment_identity",
+        "comparisonOperator": "all_equal",
+        "participatingInputsExactly": [
+          "isolated_benchmark_environment_receipt",
+          "tested_rollback_receipt"
+        ],
+        "canonicalRootPreimage": {
+          "schemaVersion": "s236b.environment-identity-and-configuration-root.v2",
+          "orderedFieldsExactly": [
+            "environment_identity",
+            "environment_configuration_sha256"
+          ],
+          "recordOrder": "single"
+        },
+        "derivationSpecIdByInputExactly": {
+          "isolated_benchmark_environment_receipt": "S236B.environment_identity.isolated_benchmark_environment_receipt.v1",
+          "tested_rollback_receipt": "S236B.environment_identity.tested_rollback_receipt.v1"
+        },
+        "machineCommonValueOrNull": null,
+        "rawLocalObservationOrNull": {
+          "environment_identity": "27472ae2a56db64c43690a49426177cfb70e73eeb105e93b32413bb17d3023c8",
+          "environment_configuration_sha256": "41f6321f3c6b96b0f260b15e5d477c1e91a8c1ff9213acef98ad5f1a85c24dd9"
+        },
+        "machineCarrierProjectionStatus": "raw_local_observation_not_current_signed_S235B_coherence",
+        "signedCoherenceStatus": "pending"
+      },
+      {
+        "dimensionId": "rollback_state_sha256",
+        "comparisonOperator": "all_equal",
+        "participatingInputsExactly": [
+          "isolated_benchmark_environment_receipt",
+          "tested_rollback_receipt"
+        ],
+        "canonicalRootPreimage": {
+          "schemaVersion": "s236b.rollback-state-root.v1",
+          "orderedFieldsExactly": [
+            "rollback_state_sha256"
+          ],
+          "recordOrder": "single"
+        },
+        "derivationSpecIdByInputExactly": {
+          "isolated_benchmark_environment_receipt": "S236B.rollback_state_sha256.isolated_benchmark_environment_receipt.v1",
+          "tested_rollback_receipt": "S236B.rollback_state_sha256.tested_rollback_receipt.v1"
+        },
+        "machineCommonValueOrNull": null,
+        "rawLocalObservationOrNull": "84e9b2125391f4d68a6f50bac3d0b1d55c41764c464d47cba50ba5d8dada7aaa",
+        "machineCarrierProjectionStatus": "raw_local_observation_not_current_signed_S235B_coherence",
+        "signedCoherenceStatus": "pending"
+      }
+    ],
+    "signedCrossInputCoherenceReceipt": null,
+    "status": "not_constructed_fail_closed",
+    "decision": "not_verified_cross_input_coherence"
+  },
+  "blockingItems": [
+    "all 17 Python runtime components remain unresolved because license policy, complete install provenance, Python and native closure, artifact hashes, native inventory, and vulnerability review are incomplete",
+    "immutable exact-byte license receipt for korean_PP-OCRv5_mobile_rec is absent",
+    "source-commit and immutable license receipt for the synthetic rendering font are absent",
+    "trusted execution environment provider attestation and kernel-grade isolation proof are absent",
+    "prior held-out expectation access exclusion and post-open retry or tuning counts are not attested",
+    "per-fixture timeout supervision is absent, so failure-taxonomy completeness is not established",
+    "protocol-log execution redirection and cache-environment bindings are absent; local/provider privacy sink proofs, exact-head GitHub scans, and post-merge scans are unresolved",
+    "four failure cleanup observations use proxy fault roots; actual pre-evaluator runner and authority failure cleanup is not proven",
+    "named benchmark owner and named supply-chain, rights, environment, rollback, fallback, contract, fixture, and gate reviewers are absent",
+    "signed root-key registry, trust-anchor projection, per-input receipts, passing packet, and seven-dimension coherence receipt are absent",
+    "post-squash merged-main evidence cannot exist before merge",
+    "Lane A priority requires final shared-file and live-main reconciliation"
+  ],
+  "acceptanceAndMergePolicy": {
+    "focusedTestsRequired": true,
+    "fullTestsRequired": true,
+    "typecheckRequired": true,
+    "lintRequired": true,
+    "buildRequired": true,
+    "gitDiffCheckRequired": true,
+    "freshExactHeadHostileReviewP0P1Required": 0,
+    "finalLiveStateRereadRequired": true,
+    "autoMergeAllowed": false,
+    "mergeMethodIfEveryGatePasses": "explicit_squash_only",
+    "mergeApprovedNow": false,
+    "reason": "pre-entry exploratory execution plus absent human, rights, supply-chain, privacy, isolation, held-out, root-trust, Lane-A serialization, exact-head CI, and hostile-review gates"
+  },
+  "postMergeSafeState": {
+    "o3bStatusExpected": "queued_not_started",
+    "s237bStatusExpected": "queued_not_started",
+    "firstRoundLearnerRuntimeExpected": "not_started_not_activated",
+    "downstreamAutomaticStartExpected": false,
+    "nextOwnerGate": "resolve_S236B_rights_supply_chain_isolation_privacy_heldout_human_and_root_trust_inputs_then_regenerate_exact_head_evidence",
+    "nextOwnerGateAutomaticallyStarted": false
+  }
+}
