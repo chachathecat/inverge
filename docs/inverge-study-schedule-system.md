@@ -277,7 +277,10 @@ or duplicated; no new block may start before the cutoff. Only future
 placements are eligible for churn-aware replanning. The prior schedule cannot
 select CoreOutcomes or tasks, override current availability/fixed
 blocks/pins/native priority, or introduce a current candidate/window. A prior
-item missing from the current input is visible only as removal churn.
+placement whose candidate or window is absent from the current input fails
+closed to `blocked_manual_plan_required` before optimizer projection. Removal
+churn is measured only for prior placements whose candidate and window both
+resolve through the exact current-input bijections.
 The lookup also signs a monotonic, non-reusable per-scope generation, a
 cryptographically random request nonce, and the ref/digest of the latest
 signed authoritative-state checkpoint. The checkpoint is an append-only hash

@@ -6,7 +6,7 @@ import test from "node:test";
 const PRIVATE_CONTRACT_SHA256 =
   "ef017344b184b33f8e30dcde8f25089c3e814b2aa279645bbedbd326662dacb5";
 const SCHEDULER_CONTRACT_SHA256 =
-  "8cdee6186329e81dc223f217a338ad26139e3d64c948a01bca2448518539103f";
+  "81b69bec664342f6416a7a06742450d8bb4e2b52ee81b706e9a986162f9bc29b";
 const JCS_SERIALIZATION = "rfc_8785_json_canonicalization_scheme_utf8";
 
 const REQUIRED_RECEIPT_FIELDS = [
@@ -932,6 +932,32 @@ test("native acceptance is independent from the optional optimizer branch", asyn
       .solver_workers,
     "finite_integer_exact_1",
   );
+  assert.deepEqual(
+    scheduler.s237oBenchmarkAcceptanceContract.evidenceFieldSchemas
+      .license_identifier,
+    {
+      type: "spdx_identifier",
+      pattern: "^[A-Za-z0-9.+-]{1,80}$",
+      nullAllowed: false,
+    },
+  );
+  const materializedLicenseIdentifierSchema =
+    scheduler.s237oBenchmarkAcceptanceContract.evidenceFieldSchemas
+      .license_identifier;
+  const materializedLicenseIdentifierPattern = new RegExp(
+    materializedLicenseIdentifierSchema.pattern,
+  );
+  assert.equal(materializedLicenseIdentifierPattern.test("Apache-2.0"), true);
+  for (const malformed of [
+    "",
+    "Apache 2.0",
+    "Apache/2.0",
+    "arbitrary license text",
+    "a".repeat(81),
+  ]) {
+    assert.equal(materializedLicenseIdentifierPattern.test(malformed), false);
+  }
+  assert.equal(materializedLicenseIdentifierSchema.nullAllowed, false);
   assert.equal(
     scheduler.s237oBenchmarkAcceptanceContract
       .s237oAuthorizationDigestContract
@@ -943,6 +969,22 @@ test("native acceptance is independent from the optional optimizer branch", asyn
       .s237oAuthorizationDigestContract;
   const authorizationPacket =
     scheduler.s237oBenchmarkAcceptanceContract.s237oAuthorizationPacket;
+  assert.deepEqual(
+    scheduler.s237oBenchmarkAcceptanceContract.evidenceFieldSchemas
+      .license_identifier.pattern,
+    authorizationDigestContract.packetFieldSchemas.license_identifier.pattern,
+  );
+  assert.ok(
+    authorizationDigestContract
+      .overlappingPacketEvidenceReceiptAndAttestationFieldsMustMatchExactly
+      .includes("license_identifier"),
+  );
+  assert.ok(
+    scheduler.s237oBenchmarkAcceptanceContract.requiredReceiptOperationRules
+      .exact_dependency_license_and_sbom.requiredAssertions.includes(
+        "license_identifier_and_license_text_digest_match_authorized_source",
+      ),
+  );
   assert.deepEqual(
     Object.keys(authorizationDigestContract.packetFieldSchemas),
     authorizationDigestContract.packetFieldsExactly,
@@ -1338,6 +1380,47 @@ test("native acceptance is independent from the optional optimizer branch", asyn
   assert.equal(
     projection.identifierRemapContract.oneInvocationBijectionRequiredPerIdentifierClass,
     true,
+  );
+  assert.equal(
+    projection.identifierRemapContract
+      .allPriorPlacementCandidateAndWindowIdsMustResolveThroughExactBijections,
+    true,
+  );
+  assert.equal(
+    projection.identifierRemapContract
+      .unknownDanglingDuplicateOrCrossClassMappingAllowed,
+    false,
+  );
+  assert.equal(
+    scheduler.inputContract.priorAcceptedScheduleRules
+      .candidateOrWindowAbsentFromCurrentInputMayReachOptimizerProjection,
+    false,
+  );
+  assert.equal(
+    scheduler.inputContract.priorAcceptedScheduleRules
+      .candidateOrWindowAbsentFromCurrentInputResult,
+    "blocked_manual_plan_required",
+  );
+  assert.equal(
+    scheduler.inputContract.priorAcceptedScheduleRules
+      .removalChurnMeasuredOnlyForPriorPlacementsWhoseCandidateAndWindowResolveThroughExactCurrentInputBijections,
+    true,
+  );
+  assert.equal(
+    scheduler.inputContract.priorAcceptedScheduleRules
+      .absentPriorPlacementMayCreateCurrentCandidateOrWindow,
+    false,
+  );
+  assert.equal(
+    Object.hasOwn(
+      scheduler.inputContract.priorAcceptedScheduleRules,
+      "candidateOrWindowAbsentFromCurrentInputAllowedOnlyToMeasureRemovalChurn",
+    ),
+    false,
+  );
+  assert.equal(
+    projection.projectionRules.projectionFailureResult,
+    "blocked_manual_plan_required",
   );
   assert.equal(
     projection.identifierRemapContract

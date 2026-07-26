@@ -890,6 +890,11 @@
       "exact_tree_sha": "lowercase_hex_40",
       "all_digest_sha256_fields": "lowercase_hex_64",
       "all_version_fields": "closed_identifier_1_to_80",
+      "license_identifier": {
+        "type": "spdx_identifier",
+        "pattern": "^[A-Za-z0-9.+-]{1,80}$",
+        "nullAllowed": false
+      },
       "opaque_benchmark_result_artifact_ref": "^bra_[A-Za-z0-9_-]{16,64}$",
       "benchmark_run_id": "^obr_[A-Za-z0-9_-]{16,64}$",
       "benchmark_started_at": "iso_8601_utc_instant",
@@ -2354,7 +2359,9 @@
       "laterAcceptanceSequenceMustIncrementByOneAndPreviousDigestMustEqualImmediatelyPriorAcceptedScheduleDigest": true,
       "authoritativeStoreCompareAndSwapMustPreventMultipleLatestSchedulesForSameOwnerScopeAndStudyDate": true,
       "supersededSnapshotMayRemainPerRetentionPolicyButMayNotBeUsedForReplan": true,
-      "candidateOrWindowAbsentFromCurrentInputAllowedOnlyToMeasureRemovalChurn": true,
+      "candidateOrWindowAbsentFromCurrentInputMayReachOptimizerProjection": false,
+      "candidateOrWindowAbsentFromCurrentInputResult": "blocked_manual_plan_required",
+      "removalChurnMeasuredOnlyForPriorPlacementsWhoseCandidateAndWindowResolveThroughExactCurrentInputBijections": true,
       "absentPriorPlacementMayCreateCurrentCandidateOrWindow": false,
       "acceptedAtMustPrecedeServerScheduleContextReplanRequestedAt": true,
       "placementStateMustBeRecomputedFromSignedPlacementBoundsAndServerDerivedCutoff": true,
