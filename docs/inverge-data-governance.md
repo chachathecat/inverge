@@ -188,3 +188,44 @@ planes.
 - instructor approval log schema
 - tenant boundary integration tests
 - deletion/export 운영 플레이북
+
+## 7) 2026-07-26 Private Authoring/Review Governance
+
+`config/dabangil-private-authoring-review-plane-contract.json` is the
+closed-world contract for future Owner-private authoring and review. S234R
+does not provision or approve the plane.
+
+O3A, O4V, and S236P have non-substitutable scopes:
+
+- O3A decides only exact source, rights, version, selection, and purpose.
+- O4V decides an exact durable vault, vault-scoped commitment key class,
+  provider logging/retention controls, access model, retention, export,
+  deletion, backup expiry, rollback, and receipt scope.
+- S236P proves the approved binding using synthetic-only content and
+  metadata-only receipts.
+
+The dependency is `O4V -> S236P`; O3A is the parallel rights branch. S236A
+requires approved O3A and completed S236P. O3A does not substitute for
+private-plane approval or acceptance; O4V/S236P do not grant content rights.
+
+Governance requirements:
+
+- externally reusable plaintext content hashes and cross-plane equality
+  signals are prohibited;
+- any internal SHA-256 integrity value remains vault-local;
+- external references are opaque and vault-scoped;
+- keyed commitments and their key material remain inside the private
+  boundary and are never returned;
+- originals are immutable and edits are append-only revisions;
+- database, object, list, revision, export, deletion, receipt, and audit
+  access are least-privilege and Owner-isolated;
+- logs, telemetry, Git, CI artifacts, issues, and PRs contain no raw private
+  body or provider credential;
+- deletion records primary deletion, derivative cleanup, cache state, and any
+  time-bounded backup-pending state without claiming impossible immediate
+  backup erasure;
+- signed-access TTL/revocation semantics must match verified provider
+  behavior; key rotation alone is not assumed to revoke an already issued
+  URL;
+- failure receipts include cleanup and rollback, and successful synthetic
+  acceptance never authorizes real-content processing automatically.

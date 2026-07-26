@@ -5,7 +5,10 @@
 Use this authority order when sources conflict:
 
 1. a dated Owner decision for the exact decision it owns, currently
-   `docs/decisions/2026-07-23-post-650-unified-program-reset.md`;
+   `docs/decisions/2026-07-26-owner-dogfood-private-plane-schedule-amendment.md`,
+   with
+   `docs/decisions/2026-07-23-post-650-unified-program-reset.md`
+   remaining authoritative for unaffected scope;
 2. `docs/dabangil-unified-program-contract.md` and its machine-readable mirror
    `config/dabangil-unified-program-contract.json`;
 3. `docs/inverge-second-round-final-product-spec.md` and
@@ -19,7 +22,7 @@ Live GitHub and the current tree remain authoritative for implemented state.
 Attachments, old execution prompts, handoffs, issue prose, and historical plans
 are inputs, not live operational truth.
 
-## Product scope (Owner O1 reset on 2026-07-23)
+## Product scope (Owner O1R amendment on 2026-07-26)
 
 The currently exposed product remains focused ONLY on learner-facing 감정평가사 2차 for all three subjects:
 
@@ -27,9 +30,17 @@ The currently exposed product remains focused ONLY on learner-facing 감정평�
 - 감정평가이론
 - 감정평가 및 보상법규
 
-Invitation-only second-round Founding Beta is the critical release path and
-must precede S225 public self-serve launch. Private beta acceptance and public
-launch acceptance are separate.
+Owner-private dogfood is the current second-round acceptance path. It replaces
+external Wave A/B/C only as a prerequisite of Owner-private authenticated
+acceptance. External invitation cohorts, payment, pricing, refunds, capacity,
+commercial validation, and public self-serve remain a separate deferred
+commercial path and must precede S225 public self-serve launch. Owner-private,
+external-commercial, and public-launch acceptance are separate.
+
+Owner dogfood may establish `owner_dogfood_ready` and
+`owner_private_accepted` only. It cannot establish `commercial_ready`,
+`external_usability_validated`, `observed_efficacy`, or
+`causal_claim_ready`.
 
 The 2026-06-25 first-round hard freeze is superseded only for a bounded
 Adaptive MCQ Foundation contract lane. Existing first-round compatibility
@@ -179,6 +190,98 @@ Assistance, exposure, and mastery are separate axes. Gold and held-out
 datasets require separate identifiers, storage/access paths, and
 contamination checks.
 
+Full-Day has one mandatory native path and one optional optimizer path. The
+native learning policy alone selects `CoreOutcome`, decides what matters, and
+sets learning priority. A future Google OR-Tools CP-SAT adapter may only place
+already selected, metadata-only candidates into `ExecutionBlock` values.
+OR-Tools may not decide official answers, mastery, pass risk, learning value,
+Law status, feedback, or delayed recovery. It is not a prerequisite of
+S241A, and native fallback remains mandatory before and after any future
+limited activation.
+
+Optimizer inputs use ephemeral opaque request/candidate IDs and closed enums.
+They may include one closed, metadata-only prior accepted placement snapshot
+solely for midday replanning and schedule-churn measurement. The server must
+first load the exact latest non-superseded snapshot and monotonic lineage from
+the approved Owner-private authoritative store. If that lookup finds a
+snapshot, omission or substitution of an older snapshot fails closed; `null`
+is allowed only with a fresh signed authoritative absence result. Exact,
+separately signed native-validator and authenticated Owner receipts plus a
+signed provenance bundle bind the schedule, head/tree, versions, lineage,
+O4V/S236P private-plane acceptance, and the non-substitutable O4A runtime
+authorization. At replan, a fresh signed server lookup receipt rechecks every
+signature, trust path, expiry, and revocation status with evidence no more
+than 300 seconds old. The cutoff is the Asia/Seoul minute ceiling of the
+server request time, so elapsed and in-progress blocks are immutable; the
+snapshot never selects CoreOutcomes/tasks or overrides current native
+constraints.
+The signed lookup binds a single-use nonce, a monotonic non-reusable
+per-scope generation, an acceptance high-water mark, and the latest signed
+authoritative-state checkpoint ref/digest from an append-only
+rollback-resistant store outside the latest-pointer rollback domain. “No
+schedule” requires verified genesis plus high-water zero; restored historical
+genesis is invalid. Supersession happens only with atomic sequence+1
+acceptance; deletion retains a signed tombstone/checkpoint. Immediately
+before optimizer projection, the server atomically rechecks the complete
+decision/store/scope/date/generation/high-water/checkpoint/lineage/latest/
+receipt tuple and consumes the nonce within 300 seconds, otherwise it fails
+closed.
+This provenance-rich object terminates at the trusted native gateway. Before
+OR-Tools, the gateway freshly remaps ephemeral request/candidate/window IDs
+and projects only windows, fixed blocks, candidates, the cutoff, immutable
+elapsed/in-progress placements, and soft future-placement preferences.
+Store/scope/lineage references, head/tree/date, receipt/bundle references or
+digests, and O4V/S236P/O4A bindings are never sent to, logged by, or resolved
+by the optimizer; the remap is destroyed after the request.
+The projected top-level/nested schemas and source mapping are exact.
+Request/snapshot/window/fixed-block/candidate IDs use consistent per-request
+bijections across allowed-window, prerequisite, and prior-placement
+references; dangling, duplicate, reused, or cross-class mappings fail closed.
+They must not contain user/account IDs, `LearningDocument` or `ReviewUnit`
+IDs, filenames, titles, free-text reasons, content hashes, keyed commitments,
+or question/answer/OCR/Law/AI bodies. `OPTIMAL` and `FEASIBLE` remain
+candidates until the native validator accepts them. Timeout, unknown,
+infeasible, model-invalid, schema mismatch, stale response, or validator
+rejection uses native fallback; an invalid fallback must return
+`blocked_manual_plan_required`.
+
+S237O authorization separates a canonical proposal, an immutable signed
+Owner decision over that proposal, and the final approved-authorization
+digest; it does not place a decision receipt inside its own signed preimage.
+The proposal binds the authenticated Owner-private scope and exact opaque
+Owner decision actor. Approval-record decision/time/ref/digest must equal the
+resolved signed receipt; a signed rejection cannot satisfy approval.
+Ready/approved artifacts live in the approved metadata-only authorization
+store outside the Git head/tree they bind. S237O must bind exact
+Python/OR-Tools/dependency/license/SBOM, deterministic
+solver config, isolation/no-network, fixture/results, native fallback,
+rollback, and metadata-only evidence. Six exact receipts and their
+non-content-derived assertion digests form one canonical receipt set. A
+closed operation policy fixes every fixture/subassertion, including a
+single-worker three-cold/three-warm byte-identical replay gate. A distinct
+verifier must cryptographically validate a fresh, unrevoked signed attestation
+over the exact authorization, verifier/key/trust-root/time/revocation
+bindings, that receipt set, and the otherwise-complete evidence preimage; the
+verified artifact digest is part of the final evidence digest that O4T must
+reference. Canonical assertion-evidence and primary-attestor-provenance set
+digests map all six receipts into that payload, and an exact closed benchmark
+result reference resolves a content-addressed compound bundle whose projected
+input/config/replay/failure/rollback/metadata children are independently
+schema-validated and rehashed.
+The Owner decision receipt is re-resolved and cryptographically revalidated at
+benchmark start and acceptance; the final authorization digest alone grants
+nothing. No package or benchmark is authorized by the S234R source amendment.
+
+Owner-hidden shadow and Owner-visible comparison are separate states. An
+exact post-benchmark Owner threshold decision is required between benchmark
+and shadow. Thresholds are versioned with effective dates and evaluation
+windows; retroactive or silent weakening is prohibited. Native acceptance and
+optimizer acceptance evidence never substitute for one another.
+
+Between Golden D0 and D+1, Notebook, Full-Day, learning/assistance policy,
+model, prompt, rubric, and source-version runtime are frozen. A necessary
+security repair invalidates the paired evidence and restarts at D0.
+
 ## CASIO fx-9860GIII practical routine rules
 
 The practical calculator model is fixed as `casio_fx_9860giii`.
@@ -230,7 +333,10 @@ Guardrails:
 The Owner-approved Founding Beta hypothesis is invitation-only, 69,000 KRW
 VAT included for 30 days with no automatic renewal and 20
 `usable_review_unit_v1`. It is not an activation, entitlement, public offer,
-or permission to change billing. A later O4 packet is required.
+or permission to change billing. It belongs to the deferred external
+commercial track. A later exact external-commercial O4 packet is required,
+and Owner dogfood does not validate price, payment, refund, support, or
+capacity.
 
 Three unit contracts are disjoint:
 
@@ -310,6 +416,13 @@ Rules:
 - Keep private and Academy fingerprints domain-separated and vault-scoped;
   they must be keyed/one-way with vault-specific non-exportable domain keys
   and must not return an equality oracle.
+  Plaintext SHA-256 of private raw content is permitted only as vault-local
+  integrity metadata. It must not leave the vault or become an object key,
+  API/idempotency identifier, receipt, export field, log/telemetry value,
+  issue/PR field, shared identifier, or cross-plane comparison handle.
+  External private references are random opaque vault-scoped IDs. A private
+  keyed commitment is never returned to a client, receipt, export, log,
+  analytics, or lookup API.
   Global dedup identifiers require material already promoted into the Cleared
   Content Bank. Its basis is rights-cleared official/owner-created/contracted
   content, or a separately authored, actually rights-owned user contribution
@@ -332,6 +445,53 @@ Rules:
 - Never perform any online model-weight update from any input. All permitted
   training is offline and requires an exact-scope O5 gate.
 - Do not expose service-role keys or provider secrets.
+
+## Private Authoring/Review Plane
+
+O3A owns exact Golden rights, sources, effective versions, and Owner-private
+purpose. O4V separately owns the exact private vault, key, provider,
+environment, region, logging, retention, backup, cache, and rollback
+bindings. Neither approval substitutes for the other.
+O4V approval requires a resolved closed DSSE Owner decision receipt binding
+proposal/provider/head/tree, authenticated Owner scope/actor, decision store,
+key/trust root, expiry, and revocation. The final approved-packet digest
+includes the immutable approval record; proposal/provider digests or status
+flags never substitute for it.
+
+S236P follows O4V and proves the exact stack with synthetic data only. Its
+receipts are metadata-only and must cover read-after-write, bidirectional
+Owner A/B denial, immutable original plus append-only revision, signed-access
+failure cases when applicable, partial-failure cleanup, one-vault export,
+delete/backup-pending semantics, rollback/restore, and cross-surface canary
+absence. Real content remains off throughout S236P.
+Every receipt, assertion-evidence aggregate, and independent signed
+attestation binds that final O4V digest. S236P completion is a closed
+content-addressed artifact over the receipt/assertion/provenance sets,
+verified attestation, exact environment/vault, final O4V binding, and
+completion time; downstream use must resolve and recompute it.
+
+O4V also binds suppression of provider ETag/MD5/checksum/content validators,
+minimum TLS, private ACL, raw-object/metadata/backup encryption, a
+non-exportable storage key distinct from the commitment key, and either
+canonical no-content-processor mode or one exact immutable OCR/AI/model
+provider set. Every receipt operation has fixed subassertions/cleanup,
+freshness, exact approved digests, assertion-evidence/run/provenance, and an
+independent-verifier attestation. Aggregate `passed` is insufficient.
+
+S236A requires both a valid unexpired O3A packet and completed exact S236P.
+Any provider, environment, region, key, schema, policy, retention, or deployed
+head change makes the S236P receipts stale. No question, answer, OCR,
+reference-answer, Law, or AI body may enter Git, CI artifacts, logs,
+telemetry, PR/issue bodies, screenshots, queues, or an unapproved provider
+plane.
+
+The original is immutable; corrections and AI work are explicit append-only
+revisions. Database and object storage both enforce Owner isolation.
+Authenticated RLS access is preferred. Signed-access behavior must match the
+exact provider evidence; never claim immediate revocation when the provider
+only guarantees expiry or deletion propagation. Primary deletion is
+`backup_expiry_pending`, not `delete_complete`, while an approved backup copy
+remains.
 
 ## First-round source and standards rules
 
@@ -394,8 +554,44 @@ never waits for a new Owner gate or fresh comparison evidence; its tested plan
 must exist before entering any non-proposed stage. This contract does not
 activate a dependency, provider, prompt, model, or telemetry.
 
-`shadow` is observation/comparison only. The native fixed schedule and native
-rules remain the sole decision authority. Shadow output cannot change
+The exact Owner-private Full-Day optimizer is the only scoped gate mapping:
+O4T fixes benchmark thresholds; O2O permits only closed, no-free-text
+Owner-private comparison metadata and exact retention/deletion before shadow;
+and O4P, after completed native S240A, permits only exact Owner-only limited
+activation. O2O/O4P do not substitute for generic O2/O4E. Any Shared Signal,
+telemetry, external-learner, Academy, or other adapter measurement/activation
+still follows generic O2/O4E.
+The immutable approved O4T packet is stored under its final
+threshold-binding digest in the exact private packet store bound by the
+packet's Owner-decision store reference and policy digest. O2O and S238OH must
+resolve and canonically rehash that packet from the exact store at start and
+acceptance, then revalidate the exact approval record, current DSSE receipt,
+and revocation state. A bare digest, lookup miss, ambiguity, duplicate,
+store/policy mismatch, digest mismatch, or invalid receipt fails closed.
+The exact store coordinates must first come from a current, unrevoked,
+replay-protected signed O4T control-plane resolver binding; the unresolved
+packet cannot bootstrap its own lookup. The resolved packet must match those
+trusted coordinates. Each final digest maps to one immutable, append-only
+canonical packet with no alias, redirect, or mutable overwrite. O2O and S238OH
+start and acceptance each recheck approved state, approval-record/receipt
+equality, packet expiry, and receipt signature, trust path, expiry, and
+revocation; wrong resolver, mutable, redirected, stale, or expired objects fail
+closed.
+The resolver binding is a closed DSSE artifact and signed payload over the
+exact Owner-private scope, O2O/S238OH audience/purpose, store coordinates,
+final packet digest, external registry/key/root versions and algorithm,
+issue/expiry window, single-use nonce, monotonic generation, and revocation
+evidence. Its Owner-approved trust-anchor registry comes from authenticated
+O4T control-plane configuration before artifact verification; neither the
+artifact nor threshold packet can choose a verifier. Every start and
+acceptance recomputes outer/signed equality and all payload/envelope/artifact
+digests, revalidates signature/trust/scope/expiry/revocation, and atomically
+consumes nonce/generation state. Unknown-key, untrusted-root, unsigned,
+payload/scope mismatch, replay, expiry, or stale-revocation cases fail closed.
+
+For generic and non-specialized adapters, `shadow` is observation/comparison
+only. The native fixed schedule and native rules remain the sole decision
+authority. Shadow output cannot change
 learner- or Academy-visible output, Today/Full-Day, Review Queue, mastery,
 scheduling, recommendations, entitlements, operational decisions, or
 persisted product state. The only permitted data write is to the Shared Signal
@@ -407,6 +603,11 @@ and evidence metadata, never a learner-level record or raw content. Shadow
 records cannot influence runtime product behavior. Aggregate, versioned
 evidence in the Model/Eval Registry may inform a human Owner gate, but it can
 never trigger an automatic transition.
+
+The exact Owner-private Full-Day specialization instead writes only the
+closed O2O-approved comparison fields to the Owner-private metadata store;
+it writes no Shared Signal or telemetry, contains no free text, and still
+cannot influence canonical schedule or product state before O4P.
 
 Runtime candidates stay frozen and versioned: `shadow`, `limited_activation`,
 and any future `active` candidate never fit, train, or refresh in place.
@@ -592,8 +793,13 @@ Owner gates:
 - O4: migration, secret, provider, price/payment, real users, and flags;
 - O5: research opt-in, offline training, and efficacy claims.
 
-O1 is approved only for the Post-#650 reset. O2–O5 remain unmet until a
-separate exact-scope approval packet is accepted.
+O1R is approved only for the 2026-07-26 source amendment. O3A, O4V, O4A,
+O4T, O2O, O4P, external-commercial activation, public activation, and O2/O5
+remain unmet until their separate exact-scope packets are accepted. O4V is
+the private-plane binding gate, O4T is the post-benchmark threshold decision,
+O2O is the exact Owner-private comparison measurement/retention gate, and O4P
+is optimizer limited activation only. O2O cannot authorize Shared Signal,
+telemetry, external-learner, or Academy measurement; those retain generic O2.
 
 ## Review focus
 

@@ -4,9 +4,10 @@
 - Date: 2026-07-01
 - Runtime impact: none
 - Primary sources: `docs/inverge-second-round-final-product-spec.md`, `docs/dabangil-second-exam-premium-os.md`, `roadmap/active-program.yml`, `AGENTS.md`
-- Post-#650 status: historical product kernel subordinate to
-  `docs/dabangil-unified-program-contract.md` for cross-track order, glossary,
-  data planes, and Owner gates.
+- Current status: historical product kernel subordinate to
+  `docs/decisions/2026-07-26-owner-dogfood-private-plane-schedule-amendment.md`
+  and `docs/dabangil-unified-program-contract.md` for cross-track order,
+  glossary, data planes, scheduling, and Owner gates.
 
 ## One-Sentence Promise
 
@@ -144,7 +145,7 @@ AF010 through AF016 completed the first report-only Agent Factory automation evi
 
 Future execution automation remains approval-gated and must be implemented in a separate issue with its own safety evidence.
 
-## Current Roadmap After S235A Readiness
+## Current Roadmap After S234R
 
 The S234 reset snapshot exposed exactly two metadata-ready items:
 
@@ -153,12 +154,44 @@ The S234 reset snapshot exposed exactly two metadata-ready items:
 2. S235B: first-round official rules, taxonomy, rights/version manifests, and
    Foundation contracts only.
 
-S235A readiness is now completed without Golden execution. The dynamic
-authority remains `roadmap/active-program.yml`: S235B and O3A are
-metadata-ready, O3A is still queued with Owner approval pending, and S236A is
-queued and blocked by O3A. Selection does not start work. First-round
-runtime, Founding Beta activation, public S225, both-track, Academy, billing,
-provider, shared signals, and Production remain queued behind dependencies
+S235A and S235B are completed without Golden execution or first-round runtime.
+The dynamic authority remains `roadmap/active-program.yml`: O3A, S236B, and
+O4V are metadata-ready. O3A and O4V are still queued with Owner decisions
+pending; S236P is queued behind O4V; and S236A is queued and blocked by both
+O3A and S236P. Selection does not start work. PR #660 remains a separate
+blocked S236B Draft, not completion evidence. First-round runtime, external
+Founding Beta activation, public S225, both-track, Academy, billing, provider,
+shared signals, and Production remain queued behind their own dependencies
 and Owner gates.
 
 Capture-to-Note and Capture-to-Plan remain the learner-loop quality standard, but this PR does not implement runtime behavior. Raw historical corpus expansion, public archive behavior, billing, usage ledger, execution automation, and production source ingestion remain deferred until source, rights, private-storage, data-boundary, runtime, and cost gates exist.
+
+## Owner-Private Acceptance and Full-Day Planning
+
+The current native Owner-private path is:
+
+`S234R -> O3A; S234R -> O4V -> S236P; (O3A + S236P) -> S236A -> S237A -> S237P -> O4A -> S238A -> S240A -> S241A`
+
+O3A approves only the exact rights/source/version/purpose packet. O4V approves
+the exact private vault, key, provider, retention, deletion, rollback, and
+synthetic-receipt scope. S236P must prove that plane with synthetic material
+before S236A may author or execute real Golden material. O4A is required
+before runtime/dogfood activation.
+
+The native Full-Day planner is authoritative. OR-Tools CP-SAT is an optional
+metadata-only ExecutionBlock placement adapter after S237P and must never
+block the native S240A/S241A path. The exact optional path is
+`S237O -> O4T -> O2O -> S238OH -> S238OV -> O4P -> S239O -> S240O`.
+O2O permits only closed Owner-private comparison measurement with exact
+retention/deletion; shared or external measurement still requires generic
+O2. Owner-hidden shadow precedes Owner-visible comparison, and O4P requires
+completed native S240A before limited activation. Thresholds are versioned,
+non-retroactive, and cannot be silently weakened. Solver/candidate failure
+invokes a separately validated native fallback; an invalid fallback fails
+closed as `blocked_manual_plan_required`. Notebook, Full-Day, and
+learning-policy runtime changes freeze from D0 through D+1.
+
+Owner dogfood cannot establish efficacy, price, payment, refund, capacity,
+external-learner, invitation-cohort, external-commercial cohort
+retention/renewal, or public-readiness claims.
+Those remain in the deferred commercial track.

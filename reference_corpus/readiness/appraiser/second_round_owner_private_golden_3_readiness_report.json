@@ -1,20 +1,25 @@
 {
-  "schemaVersion": "s235a.owner_private_golden_3_readiness_report.v1",
+  "schemaVersion": "s235a.owner_private_golden_3_readiness_report.v2",
   "manifestId": "s235a-appraiser-second-2026-q1-owner-private-golden-3",
-  "generatedAt": "2026-07-23T07:35:00.000Z",
-  "readinessStatus": "evidence_complete_pending_o3a_owner_decision",
-  "manifestDigestSha256": "5f8d0b1d5d36ae3f93863392b3ef6a488dbb3783ac30edae4fd3b4f370dbba44",
-  "o3aPacketDigestSha256": "8eeeefc4d5107bd24c31f42bc976a34da0153a7407e888868eafe7b601f59d77",
+  "generatedAt": "2026-07-26T02:00:00.000Z",
+  "readinessStatus": "rights_evidence_complete_private_packages_blocked_pending_vault_safe_s236p",
+  "manifestDigestSha256": "de0e79159d8538d0e658bb9b0693ce27ed2bf7fcea3cf0d19198894cd7905b72",
+  "o3aPacketDigestSha256": "8189997e733eb0c8bef62c3ba5fa1cadac39a807c34d925b2e1a291fa30e654c",
   "counts": {
     "selectionCount": 3,
     "sourceHashVerifiedCount": 3,
     "independentFidelityAuditPassedCount": 3,
     "lawExamDateVersionEvidenceCount": 1,
-    "privatePackageSchemaReadyCount": 3,
+    "privatePackageSchemaReadyCount": 0,
+    "privatePackageVaultSafeBlockedCount": 3,
     "generatedPackageCount": 0,
     "releasedPackageCount": 0,
-    "actionableValidationBlockerCount": 0
+    "actionableValidationBlockerCount": 3
   },
+  "actionableValidationBlockerCodes": [
+    "answer_pack_2_0_private_hash_boundary",
+    "s236p_vault_safe_adapter_acceptance_pending"
+  ],
   "subjectOrder": [
     "practice",
     "theory",
@@ -32,21 +37,32 @@
   ],
   "rightsEvidenceStatus": "official_notice_snapshot_2026_07_21_plus_fresh_exact_asset_identity",
   "freshNoticeVerificationStatus": "access_blocked_no_rights_reverification",
-  "rightsUseDecision": "owner_private_readiness_only_pending_o3a",
+  "rightsUseDecision": "owner_private_readiness_only_pending_o3a_and_s236p",
   "lawVersionStatus": "applicable_to_exam_date",
-  "executionStatus": "blocked_pending_o3a",
+  "executionStatus": "blocked_pending_o3a_and_s236p",
   "approvalGateCodes": [
-    "o3a_owner_decision_pending"
+    "o3a_owner_decision_pending",
+    "o4v_owner_decision_pending",
+    "s236p_private_plane_acceptance_pending"
   ],
   "controlPlane": {
+    "readyItemIds": [
+      "O3A",
+      "S236B",
+      "O4V"
+    ],
     "selectedItemIds": [
-      "S235B",
-      "O3A"
+      "O3A",
+      "S236B"
     ],
     "s235aStatus": "completed",
+    "s235bStatus": "completed",
     "o3aStatus": "queued_pending_owner_decision",
     "o3aStarted": false,
-    "s236aStatus": "queued_blocked_by_o3a",
+    "o4vStatus": "queued_pending_owner_decision",
+    "s236pStatus": "queued_blocked_by_o4v",
+    "privatePlaneSatisfied": false,
+    "s236aStatus": "queued_blocked_by_o3a_and_s236p",
     "s236aStarted": false,
     "golden3Started": false,
     "downstreamAutomaticStartAllowed": false

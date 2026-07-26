@@ -4,7 +4,9 @@
 - S200R 정렬일: 2026-06-26
 - 상세 Source of Truth: `docs/inverge-second-round-final-product-spec.md`
 - Premium OS brief: `docs/dabangil-second-exam-premium-os.md`
-- Cross-track authority: `docs/dabangil-unified-program-contract.md`
+- Current cross-track authority:
+  `docs/decisions/2026-07-26-owner-dogfood-private-plane-schedule-amendment.md`
+  and `docs/dabangil-unified-program-contract.md`
 
 ## 1. Core Definition
 
@@ -232,9 +234,15 @@ No unlimited second-exam precision review, 전문가 첨삭 중개, 합격 보�
 
 ## 11. Documentation Map
 
+- Current Owner O1R amendment:
+  `docs/decisions/2026-07-26-owner-dogfood-private-plane-schedule-amendment.md`
 - Post-#650 unified contract: `docs/dabangil-unified-program-contract.md`
-- Owner O1 decision:
+- Prior Owner O1 decision for unaffected history:
   `docs/decisions/2026-07-23-post-650-unified-program-reset.md`
+- Private Authoring/Review Plane:
+  `docs/dabangil-private-authoring-review-plane-contract.md`
+- Full-Day native/optional scheduler:
+  `config/dabangil-full-day-scheduler-contract.json`
 - 최종 제품 명세: `docs/inverge-second-round-final-product-spec.md`
 - S200R premium OS brief: `docs/dabangil-second-exam-premium-os.md`
 - GIII 실무 루틴 정책: `docs/dabangil-giii-practical-routine.md`
@@ -246,3 +254,19 @@ No unlimited second-exam precision review, 전문가 첨삭 중개, 합격 보�
 - 데이터 거버넌스: `docs/inverge-data-governance.md`
 - 법령 source ingest: `docs/inverge-legal-source-ingest.md`
 - 디자인 시스템: `docs/inverge-design-system.md`
+
+## 12. Current Owner-Private Delivery Boundary
+
+The current delivery goal is Owner-private authenticated acceptance on the
+native path, not an external paid launch:
+
+`O3A + (O4V -> S236P) -> S236A -> S237A -> S237P -> O4A -> S238A -> S240A -> S241A`
+
+OR-Tools is an optional metadata-only comparison branch after S237P. It
+cannot gate S240A or S241A. Solver/candidate failure invokes the separately
+validated native fallback; an invalid fallback fails closed as
+`blocked_manual_plan_required`. Owner
+dogfood cannot establish price, payment, refund, invitation, capacity,
+external-commercial cohort retention/renewal, efficacy, external learner, or
+public-readiness claims. Those
+remain in the separate commercial track through O4F and S225.

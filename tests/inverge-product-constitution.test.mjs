@@ -4,8 +4,10 @@ import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 
 const requiredDocs = [
+  "docs/decisions/2026-07-26-owner-dogfood-private-plane-schedule-amendment.md",
   "docs/decisions/2026-07-23-post-650-unified-program-reset.md",
   "docs/dabangil-unified-program-contract.md",
+  "docs/dabangil-private-authoring-review-plane-contract.md",
   "docs/inverge-product-constitution.md",
   "docs/inverge-master-roadmap.md",
   "docs/inverge-curriculum-system.md",
@@ -70,18 +72,24 @@ test("product constitution locks the learning OS direction and non-goals", async
   assert.doesNotMatch(constitution, /global reference data,[\s\S]{0,120}model training directly/i);
 });
 
-test("product constitution records S235A readiness without approving or starting O3A or S236A", async () => {
+test("product constitution records S234R without approving or starting O3A, O4V, S236P, or S236A", async () => {
   const constitution = await read("docs/inverge-product-constitution.md");
 
-  assert.match(constitution, /S235A readiness is now completed without Golden execution/i);
-  assert.match(constitution, /S235B and O3A are\s+metadata-ready/i);
-  assert.match(constitution, /O3A is still queued with Owner approval pending/i);
-  assert.match(constitution, /S236A is\s+queued and blocked by O3A/i);
+  assert.match(constitution, /S235A and S235B are completed without Golden execution or first-round runtime/i);
+  assert.match(constitution, /O3A, S236B, and\s+O4V are metadata-ready/i);
+  assert.match(constitution, /O3A and O4V are still queued with Owner decisions\s+pending/i);
+  assert.match(constitution, /S236P is queued behind O4V/i);
+  assert.match(constitution, /S236A is queued and blocked by both\s+O3A and S236P/i);
   assert.match(constitution, /Selection does not start work/i);
+  assert.match(constitution, /OR-Tools CP-SAT is an optional\s+metadata-only ExecutionBlock placement adapter/i);
+  assert.match(constitution, /Owner dogfood cannot establish efficacy, price, payment/i);
 });
 
 test("Post-650 authority and supersession are explicit and bounded", async () => {
   const decision = await read("docs/decisions/2026-07-23-post-650-unified-program-reset.md");
+  const amendment = await read(
+    "docs/decisions/2026-07-26-owner-dogfood-private-plane-schedule-amendment.md",
+  );
   const contract = await read("docs/dabangil-unified-program-contract.md");
 
   assert.match(decision, /Owner O1/);
@@ -94,6 +102,9 @@ test("Post-650 authority and supersession are explicit and bounded", async () =>
   assert.match(contract, /July 16 control plane and execution prompt pack[\s\S]{0,80}Historical/);
   assert.match(contract, /July 22 #644 handoff[\s\S]{0,80}Historical/);
   assert.match(contract, /S223\/S224 completion[\s\S]{0,180}not current content, commercial, or efficacy readiness/i);
+  assert.match(amendment, /Owner O1R/i);
+  assert.match(amendment, /S236A requires both O3A and S236P/i);
+  assert.match(amendment, /PR #660 remains Draft and blocked/i);
 });
 
 test("unified contract separates readiness, vaults, and learning assistance", async () => {

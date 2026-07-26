@@ -195,3 +195,38 @@ Reference requests may include only safe derived fields such as subject, topic/c
 ## Future opt-in research layer rule
 
 No model-training or research reuse layer exists in this hardening pass. If Inverge later adds research use, it must be an explicit opt-in layer with separate consent, tenant/user separation, revocation/deletion controls, and a documented transform that keeps raw service data out of default product analytics and reference corpus storage.
+
+## 2026-07-26 Private Authoring/Review Plane
+
+The executable policy is
+`config/dabangil-private-authoring-review-plane-contract.json`. This amendment
+defines the contract only; no vault, key, provider, schema, secret, migration,
+or real-content flow is provisioned.
+
+- Externally visible references are randomly generated opaque, vault-scoped
+  identifiers. A plaintext SHA-256 of private content must never become an
+  external ID, cache key, telemetry field, receipt field, dedup token, or
+  cross-plane equality oracle.
+- A SHA-256 used only to verify bytes may exist inside the vault boundary, but
+  stays vault-local and is not returned or shared.
+- Private dedup uses a domain-separated vault-scoped keyed commitment. The
+  key and commitment are not returned to clients or other planes, and no API
+  answers whether two private bodies are equal.
+- Originals are immutable. Corrections create explicit append-only revisions
+  with opaque lineage metadata; they do not overwrite the original.
+- Owner A/B synthetic tenants must fail closed on database reads, object
+  reads, listing, revision access, commitments, exports, deletion jobs, and
+  receipts.
+- Authenticated RLS/object access is preferred. If time-limited signed access
+  is proposed, O4V must bind its TTL, audience, reuse, logging, and actual
+  provider revocation behavior. A key rotation must not be represented as
+  revoking an already issued URL unless provider evidence proves it.
+- Export contains the Owner's original/revisions and safe metadata, not
+  server keys, commitments, provider credentials, or internal equality
+  results. Deletion covers primary objects, rows, revisions, indexes, caches,
+  derived private artifacts, and pending backup-expiry state.
+- S236P uses synthetic-only bodies and emits metadata-only provisioning,
+  read-after-write, isolation, denied-access, revision, export, deletion,
+  failure, cleanup, and rollback receipts. Real question, answer, OCR,
+  reference-answer, Law, or AI bodies remain forbidden until the later exact
+  gates pass.

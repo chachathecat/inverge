@@ -4,8 +4,9 @@
 - S200R 정렬일: 2026-06-26
 - 상세 기준: `docs/inverge-second-round-final-product-spec.md`
 - Premium OS brief: `docs/dabangil-second-exam-premium-os.md`
-- Post-#650 commercial authority:
-  `docs/dabangil-unified-program-contract.md`
+- Current commercial authority:
+  `docs/decisions/2026-07-26-owner-dogfood-private-plane-schedule-amendment.md`
+  and `docs/dabangil-unified-program-contract.md`
 
 ## 1. Principle
 
@@ -24,7 +25,8 @@ Inverge는 내부 codename 및 repository name이다. Learner-facing brand는 **
 
 ## 1.1 Invitation-Only Founding Beta Hypothesis
 
-Owner O1 approved this hypothesis for later evidence gathering only:
+Owner O1 recorded this historical hypothesis for later evidence gathering
+only. O1R defers it to the separate commercial track:
 
 - 69,000 KRW VAT included;
 - 30 days with no automatic renewal;
@@ -34,7 +36,8 @@ Owner O1 approved this hypothesis for later evidence gathering only:
 - no payment-first flow and no deliberately degraded free output.
 
 This is not an active price, checkout, entitlement, billing grant, learner
-offer, or Production activation. O4 remains required.
+offer, or Production activation. It is not part of Owner-private dogfood.
+O4F and the external commercial dependencies remain required.
 
 `ReviewUnit`, `usable_review_unit_v1`, and legacy `deep_review_unit` are three
 separate contracts with no alias, balance sharing, conversion, migration, or
@@ -310,3 +313,22 @@ The target learner catalog taxonomy source of truth (not active offers) is:
 
 No item in the list above is activated by this policy.
 First-round OS, 동차 OS, generic multi-exam OS, and Quick packs are not active learner-facing catalog items in this repository. If legacy or exploratory labels exist in older documents, they are frozen or deferred and must not replace the second-round Dabangil taxonomy. Any future commercial expansion requires explicit source, billing, refund, privacy, retention, cost, entitlement, data-boundary, and runtime gates.
+
+## 2026-07-26 Commercial Track Separation
+
+Owner-private Golden work, native Full-Day dogfood, and S241A authenticated
+acceptance are product-operation validation, not paid-beta evidence. They
+cannot validate or activate price, payment, refund, entitlement, invitation
+cohorts, learner capacity, external usability, retention, efficacy, support
+load, or public self-serve.
+
+The deferred external commercial track is:
+
+`O3C -> S239A -> S242C -> O4F -> S243C Wave A -> S244C Wave B/C -> S245C -> S225`
+
+No deferred commercial step blocks or feeds back into the Owner-private
+acceptance path. After S241A, a one-way handoff may make O3C eligible; it does
+not turn Owner dogfood into commercial evidence. The historical catalog and
+price rows remain versioned hypotheses only. Activating any row requires an
+exact later Owner packet plus source, privacy, retention, refund, cost,
+entitlement, runtime, and external-acceptance evidence.

@@ -5,9 +5,11 @@
 - S200R 정렬일: 2026-06-26
 - 적용 범위: learner app, AI answer engine, reference corpus, pricing, academy console, Agent Factory roadmap
 - 관련 이슈: #431, #437
-- Post-#650 authority: cross-track ordering, glossary, gates, and supersession
-  are governed by `docs/dabangil-unified-program-contract.md`; this document
-  remains authoritative for second-round detail.
+- Current amendment authority: cross-track ordering, glossary, gates,
+  scheduling, and supersession are governed by
+  `docs/decisions/2026-07-26-owner-dogfood-private-plane-schedule-amendment.md`
+  and `docs/dabangil-unified-program-contract.md`; this document remains
+  authoritative for second-round detail.
 
 ---
 
@@ -1258,3 +1260,48 @@ WIP limit은 2다.
 ## 17. 최종 제품 한 문장
 
 > 답안길 2차 합격관제 OS는 감평 2차 실무·이론·법규 답안을 시험일까지 Evidence Review, GIII 실무 루틴, 재작성·다시 계산, 자동 오답노트, 핵심개념 추적, Review Queue, Today Plan으로 운영해주는 premium second-exam answer operating system이다.
+
+## 18. 2026-07-26 Owner-Private Native Acceptance Amendment
+
+The public-launch requirements in this specification still apply to the
+future commercial track. They do not gate the current Owner-private
+acceptance path.
+
+Current native path:
+
+`S234R -> O3A; S234R -> O4V -> S236P; (O3A + S236P) -> S236A -> S237A -> S237P -> O4A -> S238A -> S240A -> S241A`
+
+- O3A is an exact rights/source/version/purpose decision only.
+- O4V is an exact vault/key/provider/retention/deletion/rollback decision.
+- S236P uses synthetic-only material and emits metadata-only provisioning,
+  isolation, read-after-write, failure, cleanup, deletion, and rollback
+  receipts.
+- S236A requires both O3A and S236P.
+- O4A precedes any Owner-private runtime/dogfood activation.
+- S240A and S241A use the native planner and remain available without
+  OR-Tools.
+
+Optional optimizer path:
+
+`S237P -> S237O -> O4T -> O2O -> S238OH -> S238OV -> O4P -> S239O -> S240O`
+
+OR-Tools CP-SAT receives metadata-only ExecutionBlocks and returns only a
+candidate placement, solver status, version, seed, timing, objective
+components, violations, and fallback reason. Raw question, answer, OCR,
+reference-answer, Law or AI text; user/account/document identities; private
+locators; reusable plaintext hashes; and cross-plane equality signals are
+forbidden. Native validation remains authoritative and any invalid,
+infeasible, timeout, unavailable, or failed optimizer result falls back to
+native. Thresholds are versioned and cannot be weakened retroactively.
+O2O must bind closed, no-free-text Owner-private comparison measurement and
+retention before shadow. It does not authorize Shared Signal, telemetry,
+external-learner, or Academy measurement. Owner-hidden shadow precedes
+Owner-visible comparison, neither may mutate canonical state, and O4P also
+requires completed native S240A. Notebook, Full-Day, and learning-policy
+runtime mutations freeze from D0 through D+1.
+
+Invitation cohorts, Wave A/B/C, capacity, external learners, pricing,
+payment, refund, external-commercial retention claims/operations, efficacy,
+and S225 public self-serve remain
+deferred commercial evidence. Owner dogfood cannot satisfy or imply any of
+them.

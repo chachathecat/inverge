@@ -3,7 +3,9 @@ import assert from "node:assert/strict";
 import { readdir, readFile } from "node:fs/promises";
 
 const requiredDocs = [
+  "docs/decisions/2026-07-26-owner-dogfood-private-plane-schedule-amendment.md",
   "docs/dabangil-unified-program-contract.md",
+  "docs/dabangil-private-authoring-review-plane-contract.md",
   "docs/inverge-master-roadmap.md",
   "docs/inverge-curriculum-system.md",
   "docs/inverge-study-schedule-system.md",
@@ -175,7 +177,7 @@ test("legacy first-round templates stay frozen while Foundation contracts are se
   assert.match(curriculum, /unpromoted curriculum material[\s\S]{0,300}approved Cleared Content Bank promotion[\s\S]{0,120}does not authorize that path/i);
   assert.match(schedule, /frozen compatibility metadata[\s\S]{0,260}Foundation lane owns new contracts only/i);
   assert.match(roadmap, /S235A[\s\S]{0,180}S235B/);
-  assert.match(roadmap, /first-round runtime[\s\S]{0,180}queued behind unmet dependencies/i);
+  assert.match(roadmap, /First-round runtime[\s\S]{0,240}remain queued behind their own unmet\s+dependencies/i);
   assert.match(unified, /Q-Net rights evidence per post and per attached asset/i);
   assert.match(unified, /rapid answer grid/i);
   assert.match(unified, /five-choice true\/false correction and explanation/i);
@@ -183,17 +185,33 @@ test("legacy first-round templates stay frozen while Foundation contracts are se
   assert.match(unified, /timed\/OMR readiness contracts/i);
 });
 
-test("roadmap docs distinguish the S234 snapshot from current S235A closeout state", async () => {
+test("roadmap docs distinguish the S234 snapshot from current S234R state", async () => {
   const roadmap = await read("docs/inverge-master-roadmap.md");
   const unified = await read("docs/dabangil-unified-program-contract.md");
 
-  for (const source of [roadmap, unified]) {
-    assert.match(source, /S234 reset\s+snapshot/i);
-    assert.match(source, /S235A(?: readiness)? is now\s+complete/i);
-    assert.match(source, /S235B and (?:the queued, pending-owner-decision )?O3A are\s+metadata-ready/i);
-    assert.match(source, /S236A[\s\S]{0,100}queued and blocked by O3A/i);
-    assert.match(source, /does not\s+(?:approve O3A or )?start/i);
-  }
+  assert.match(roadmap, /S234(?: reset)?\s+snapshot/i);
+  assert.match(
+    roadmap,
+    /S235A[\s\S]{0,100}(?:is now\s+complete|are\s+complete|completed)/i,
+  );
+  assert.match(
+    roadmap,
+    /O3A, S236B, and O4V[\s\S]{0,100}(?:ready|metadata-ready)/i,
+  );
+  assert.match(
+    roadmap,
+    /S236A[\s\S]{0,140}(?:requires|blocked by)\s+(?:both\s+)?O3A[\s\S]{0,40}S236P/i,
+  );
+  assert.match(unified, /S234 reset snapshot/i);
+  assert.match(
+    unified,
+    /deliberately does\s+not mirror its dynamic ready-item list/i,
+  );
+  assert.match(
+    unified,
+    /S236A requires both a valid O3A decision and the exact completed S236P/i,
+  );
+  assert.match(unified, /does not\s+(?:approve|start|authorize)/i);
 });
 
 test("docs mention Today Plan max 3 and official verification requirements", async () => {

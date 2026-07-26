@@ -1,8 +1,8 @@
 {
-  "schemaVersion": "s235a.owner_private_golden_3_readiness.v1",
+  "schemaVersion": "s235a.owner_private_golden_3_readiness.v2",
   "manifestId": "s235a-appraiser-second-2026-q1-owner-private-golden-3",
-  "generatedAt": "2026-07-23T07:35:00.000Z",
-  "readinessStatus": "evidence_complete_pending_o3a_owner_decision",
+  "generatedAt": "2026-07-26T02:00:00.000Z",
+  "readinessStatus": "rights_evidence_complete_private_packages_blocked_pending_vault_safe_s236p",
   "examIdentity": {
     "qualificationId": "qnet-gid-60-appraiser",
     "examRound": "second",
@@ -366,7 +366,12 @@
       "selectionId": "s235a-practice-2026-q1",
       "subject": "practice",
       "targetSchemaVersion": "answer_pack.2.0",
-      "status": "private_schema_ready_not_generated",
+      "status": "blocked_answer_pack_2_0_private_hash_boundary",
+      "directLegacySchemaUseAllowed": false,
+      "externalEqualityHandleAllowed": false,
+      "vaultSafeAdapterOrReplacementRequired": true,
+      "vaultSafeAdapterAccepted": false,
+      "requiredAcceptanceRoadmapItem": "S236P",
       "requiredCheckIds": [
         "independent_recalculation",
         "unit_consistency",
@@ -388,7 +393,12 @@
       "selectionId": "s235a-theory-2026-q1",
       "subject": "theory",
       "targetSchemaVersion": "answer_pack.2.0",
-      "status": "private_schema_ready_not_generated",
+      "status": "blocked_answer_pack_2_0_private_hash_boundary",
+      "directLegacySchemaUseAllowed": false,
+      "externalEqualityHandleAllowed": false,
+      "vaultSafeAdapterOrReplacementRequired": true,
+      "vaultSafeAdapterAccepted": false,
+      "requiredAcceptanceRoadmapItem": "S236P",
       "requiredCheckIds": [
         "definition_coverage",
         "logic_chain_coverage",
@@ -410,7 +420,12 @@
       "selectionId": "s235a-law-2026-q1",
       "subject": "law",
       "targetSchemaVersion": "answer_pack.2.0",
-      "status": "private_schema_ready_not_generated",
+      "status": "blocked_answer_pack_2_0_private_hash_boundary",
+      "directLegacySchemaUseAllowed": false,
+      "externalEqualityHandleAllowed": false,
+      "vaultSafeAdapterOrReplacementRequired": true,
+      "vaultSafeAdapterAccepted": false,
+      "requiredAcceptanceRoadmapItem": "S236P",
       "requiredCheckIds": [
         "exam_date_version",
         "principal_rule_source",
@@ -430,7 +445,8 @@
     }
   ],
   "o3aApprovalPacket": {
-    "packetId": "o3a-s235a-appraiser-second-2026-q1-owner-private-golden-3",
+    "packetId": "o3a-s234r-appraiser-second-2026-q1-owner-private-golden-3-v2",
+    "supersedesPacketId": "o3a-s235a-appraiser-second-2026-q1-owner-private-golden-3",
     "status": "pending_owner_decision",
     "ownerApproved": false,
     "selectionIds": [
@@ -443,7 +459,11 @@
       "s236a-private-theory-2026-q1",
       "s236a-private-law-2026-q1"
     ],
-    "requestedScope": "approve_s236a_owner_private_golden_3_execution_only",
+    "requestedScope": "approve_exact_rights_source_version_purpose_for_future_s236a_only",
+    "privatePlaneContractVersion": "dabangil.private_authoring_review_plane.v1",
+    "requiredBeforeAllowedOperationRoadmapItemIds": [
+      "S236P"
+    ],
     "allowedOperationIds": [
       "s236a_private_reference_package_authoring",
       "s236a_private_golden_3_execution"
@@ -469,9 +489,11 @@
       "s235a-private-fidelity-review-20260723T072849Z-af5282021a88",
       "s235a-law-2026-q1-exam-date-version"
     ],
-    "unapprovedSafeState": "remain_queued_no_execution",
-    "packetExpiresAt": "2026-07-30T14:59:59.000Z",
+    "unapprovedSafeState": "remain_queued_no_authoring_or_execution_until_o3a_and_s236p",
+    "packetExpiresAt": "2026-08-09T14:59:59.000Z",
     "wildcardScopeAllowed": false,
+    "approvalAuthorizesImmediateOperation": false,
+    "o4vOrS236PSubstitutionAllowed": false,
     "automaticStartAllowed": false,
     "manualS236AStartRequired": true,
     "o3aStarted": false,
@@ -479,18 +501,31 @@
   },
   "controlPlaneState": {
     "authority": "roadmap/active-program.yml",
+    "readyItemIds": [
+      "O3A",
+      "S236B",
+      "O4V"
+    ],
     "selectedItemIds": [
-      "S235B",
-      "O3A"
+      "O3A",
+      "S236B"
     ],
     "s235aStatus": "completed",
-    "s235bStatus": "queued",
+    "s235bStatus": "completed",
     "o3aStatus": "queued",
     "o3aOwnerDecision": "pending",
     "o3aStarted": false,
+    "o4vStatus": "queued",
+    "o4vOwnerDecision": "pending",
+    "s236pStatus": "queued",
+    "s236pMissingDependencies": [
+      "O4V"
+    ],
+    "privatePlaneSatisfied": false,
     "s236aStatus": "queued",
     "s236aMissingDependencies": [
-      "O3A"
+      "O3A",
+      "S236P"
     ],
     "s236aStarted": false,
     "golden3Started": false,
