@@ -60,6 +60,24 @@ const annualOnlyFields = new Set([
   "resultAnnouncementEndDate",
 ]);
 const expectedSecondRoundSubjects = ["감정평가실무", "감정평가이론", "감정평가 및 보상법규"];
+const expectedQnetAppraiserSourceContracts = new Map([
+  [
+    "qnet_appraiser_qualification_detail",
+    {
+      sourceName: "Q-Net 감정평가사 자격상세정보",
+      sourceUrl: "https://www.q-net.or.kr/crf005.do?gId=60&gSite=L&gbnn=gbnSubtab2&id=crf00503",
+      sourceKind: "qualification_detail",
+    },
+  ],
+  [
+    "qnet_appraiser_exam_info",
+    {
+      sourceName: "Q-Net 감정평가사 시험정보",
+      sourceUrl: "https://www.q-net.or.kr/crf005.do?gId=60&gSite=L&gbnn=gbnSubtab1&id=crf00503",
+      sourceKind: "exam_info",
+    },
+  ],
+]);
 
 function readJson(path) {
   return JSON.parse(readFileSync(path, "utf8"));
@@ -78,6 +96,23 @@ function collectObjectsWithSourceStatus(value, path, output = []) {
   if ("sourceStatus" in value) output.push({ node: value, path });
   for (const [key, child] of Object.entries(value)) {
     collectObjectsWithSourceStatus(child, `${path}.${key}`, output);
+  }
+  return output;
+}
+
+function collectSourceReferences(value, path, output = []) {
+  if (Array.isArray(value)) {
+    value.forEach((child, index) => collectSourceReferences(child, `${path}[${index}]`, output));
+    return output;
+  }
+  if (!isRecord(value)) return output;
+  if (Array.isArray(value.sourceReferences)) {
+    value.sourceReferences.forEach((reference, index) => {
+      output.push({ reference, path: `${path}.sourceReferences[${index}]` });
+    });
+  }
+  for (const [key, child] of Object.entries(value)) {
+    if (key !== "sourceReferences") collectSourceReferences(child, `${path}.${key}`, output);
   }
   return output;
 }
@@ -115,6 +150,51 @@ function collectAnnualFieldErrors(value, path = "root", errors = []) {
 
 function requireCondition(condition, message, errors) {
   if (!condition) errors.push(message);
+}
+
+function validateCanonicalQnetAppraiserSources(sourcesById, errors) {
+  for (const [sourceId, expected] of expectedQnetAppraiserSourceContracts) {
+    const source = sourcesById.get(sourceId);
+    requireCondition(Boolean(source), `${sourceId} is missing`, errors);
+    if (!source) continue;
+    requireCondition(source.sourceName === expected.sourceName, `${sourceId} sourceName must remain ${expected.sourceName}`, errors);
+    requireCondition(source.sourceUrl === expected.sourceUrl, `${sourceId} sourceUrl must remain ${expected.sourceUrl}`, errors);
+    requireCondition(source.sourceKind === expected.sourceKind, `${sourceId} sourceKind must remain ${expected.sourceKind}`, errors);
+  }
+}
+
+function validateCopiedQnetSourceReferences(document, path, sourcesById, errors) {
+  let checkedReferenceCount = 0;
+  for (const { reference, path: referencePath } of collectSourceReferences(document, path)) {
+    if (!isRecord(reference)) continue;
+    const label = typeof reference.label === "string" ? reference.label : "";
+    const scope = typeof reference.scope === "string" ? reference.scope : "";
+    const semanticText = `${label} ${scope}`;
+    const hasExamInfoSemantics = /(시험정보|exam_info|exam_information)/i.test(semanticText);
+    const hasQualificationSemantics = /(자격상세정보|기본정보|qualification_detail|qualification_identity|basic_information)/i.test(semanticText);
+    if (!hasExamInfoSemantics && !hasQualificationSemantics) continue;
+
+    checkedReferenceCount += 1;
+    requireCondition(
+      !(hasExamInfoSemantics && hasQualificationSemantics),
+      `${referencePath} mixes exam-information and qualification-detail semantics`,
+      errors,
+    );
+    if (hasExamInfoSemantics && hasQualificationSemantics) continue;
+
+    const sourceId = hasExamInfoSemantics ? "qnet_appraiser_exam_info" : "qnet_appraiser_qualification_detail";
+    const canonicalSource = sourcesById.get(sourceId);
+    requireCondition(Boolean(canonicalSource), `${referencePath} cannot resolve canonical source ${sourceId}`, errors);
+    if (!canonicalSource) continue;
+    requireCondition(reference.label === canonicalSource.sourceName, `${referencePath} label must match canonical source ${sourceId}`, errors);
+    requireCondition(reference.url === canonicalSource.sourceUrl, `${referencePath} URL must match canonical source ${sourceId}`, errors);
+    requireCondition(
+      !String(reference.url ?? "").includes("gbnSubtab4"),
+      `${referencePath} cannot use the Q-Net job-information tab as ${canonicalSource.sourceKind}`,
+      errors,
+    );
+  }
+  return checkedReferenceCount;
 }
 
 function isDateString(value) {
@@ -313,6 +393,7 @@ requireCondition(existsSync(registryPath), "official_sources.json is missing", e
 const registry = existsSync(registryPath) ? readJson(registryPath) : { sources: [] };
 const sources = Array.isArray(registry.sources) ? registry.sources : [];
 const sourceIds = new Set(sources.map((source) => source.id));
+const sourcesById = new Map(sources.map((source) => [source.id, source]));
 const qnetIdentity = sources.find((source) => source.id === "qnet_appraiser_qualification_detail");
 
 for (const source of sources) {
@@ -327,6 +408,8 @@ for (const source of sources) {
   requireCondition(Array.isArray(source.disallowedUse) && source.disallowedUse.includes("raw_problem_text_copy") && source.disallowedUse.includes("copyrighted_question_body_storage") && source.disallowedUse.includes("official_score_claim") && source.disallowedUse.includes("pass_fail_claim"), `source ${source.id} disallowedUse is incomplete`, errors);
 }
 
+validateCanonicalQnetAppraiserSources(sourcesById, errors);
+
 requireCondition(Boolean(qnetIdentity), "qnet_appraiser_qualification_detail is missing", errors);
 if (qnetIdentity) {
   requireCondition(qnetIdentity.verifiedFacts?.qualificationNameKo === "감정평가사", "Q-Net qualificationNameKo is not verified", errors);
@@ -336,9 +419,11 @@ if (qnetIdentity) {
 }
 
 const sourceNodes = [];
+let copiedQnetReferenceCount = 0;
 for (const path of curriculumPaths) {
   const document = readJson(path);
   sourceNodes.push(...collectObjectsWithSourceStatus(document, path));
+  copiedQnetReferenceCount += validateCopiedQnetSourceReferences(document, path, sourcesById, errors);
   errors.push(...collectBoundaryErrors(document, path));
 }
 
@@ -381,6 +466,8 @@ const result = errors.length === 0
       verified: [
         "official_sources_registry_exists",
         "qnet_appraiser_identity_verified",
+        "qnet_appraiser_source_contracts_canonical",
+        "copied_qnet_source_references_match_registry",
         "curriculum_nodes_have_source_status",
         "verified_nodes_have_source_metadata",
         "draft_nodes_marked_needs_verification",
@@ -392,6 +479,7 @@ const result = errors.length === 0
       ],
       summary: {
         ...summary,
+        copiedQnetReferenceCount,
         s201: s201Summary,
       },
     }
@@ -400,6 +488,7 @@ const result = errors.length === 0
       errors,
       summary: {
         ...summary,
+        copiedQnetReferenceCount,
         s201: s201Summary,
       },
     };

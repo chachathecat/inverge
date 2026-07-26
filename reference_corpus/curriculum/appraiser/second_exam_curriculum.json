@@ -414,9 +414,9 @@
       "needsOfficialVerification": true
     },
     {
-      "label": "Q-Net 감정평가사 자격상세정보",
-      "url": "https://www.q-net.or.kr/crf005.do?gId=60&gSite=L&gbnn=gbnSubtab4&id=crf00503",
-      "reviewedAt": "2026-06-02",
+      "label": "Q-Net 감정평가사 시험정보",
+      "url": "https://www.q-net.or.kr/crf005.do?gId=60&gSite=L&gbnn=gbnSubtab1&id=crf00503",
+      "reviewedAt": "2026-07-26",
       "scope": "official_exam_administrator_and_public_exam_information_page",
       "sourceStatus": "draft",
       "needsOfficialVerification": true
