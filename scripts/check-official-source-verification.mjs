@@ -163,31 +163,59 @@ function validateCanonicalQnetAppraiserSources(sourcesById, errors) {
   }
 }
 
+function isQnetAppraiserDetailUrl(value) {
+  if (typeof value !== "string") return false;
+  try {
+    const url = new URL(value);
+    return (
+      url.protocol === "https:"
+      && ["q-net.or.kr", "www.q-net.or.kr"].includes(url.hostname)
+      && url.pathname === "/crf005.do"
+      && url.searchParams.get("gId") === "60"
+      && url.searchParams.get("gSite") === "L"
+      && url.searchParams.get("id") === "crf00503"
+    );
+  } catch {
+    return false;
+  }
+}
+
 function validateCopiedQnetSourceReferences(document, path, sourcesById, errors) {
   let checkedReferenceCount = 0;
   for (const { reference, path: referencePath } of collectSourceReferences(document, path)) {
     if (!isRecord(reference)) continue;
     const label = typeof reference.label === "string" ? reference.label : "";
     const scope = typeof reference.scope === "string" ? reference.scope : "";
+    const sourceId = typeof reference.sourceId === "string"
+      ? reference.sourceId
+      : reference.officialSourceId;
+    const isQnetAppraiserReference = /Q-Net\s*감정평가사/i.test(label)
+      || isQnetAppraiserDetailUrl(reference.url)
+      || expectedQnetAppraiserSourceContracts.has(sourceId);
+    if (!isQnetAppraiserReference) continue;
+
+    checkedReferenceCount += 1;
     const semanticText = `${label} ${scope}`;
     const hasExamInfoSemantics = /(시험정보|exam_info|exam_information)/i.test(semanticText);
     const hasQualificationSemantics = /(자격상세정보|기본정보|qualification_detail|qualification_identity|basic_information)/i.test(semanticText);
-    if (!hasExamInfoSemantics && !hasQualificationSemantics) continue;
-
-    checkedReferenceCount += 1;
+    requireCondition(
+      hasExamInfoSemantics || hasQualificationSemantics,
+      `${referencePath} must declare exam-information or qualification-detail semantics`,
+      errors,
+    );
     requireCondition(
       !(hasExamInfoSemantics && hasQualificationSemantics),
       `${referencePath} mixes exam-information and qualification-detail semantics`,
       errors,
     );
-    if (hasExamInfoSemantics && hasQualificationSemantics) continue;
+    if ((!hasExamInfoSemantics && !hasQualificationSemantics) || (hasExamInfoSemantics && hasQualificationSemantics)) continue;
 
-    const sourceId = hasExamInfoSemantics ? "qnet_appraiser_exam_info" : "qnet_appraiser_qualification_detail";
-    const canonicalSource = sourcesById.get(sourceId);
-    requireCondition(Boolean(canonicalSource), `${referencePath} cannot resolve canonical source ${sourceId}`, errors);
+    const canonicalSourceId = hasExamInfoSemantics ? "qnet_appraiser_exam_info" : "qnet_appraiser_qualification_detail";
+    const canonicalSource = sourcesById.get(canonicalSourceId);
+    requireCondition(Boolean(canonicalSource), `${referencePath} cannot resolve canonical source ${canonicalSourceId}`, errors);
     if (!canonicalSource) continue;
-    requireCondition(reference.label === canonicalSource.sourceName, `${referencePath} label must match canonical source ${sourceId}`, errors);
-    requireCondition(reference.url === canonicalSource.sourceUrl, `${referencePath} URL must match canonical source ${sourceId}`, errors);
+    requireCondition(reference.label === canonicalSource.sourceName, `${referencePath} label must match canonical source ${canonicalSourceId}`, errors);
+    requireCondition(reference.url === canonicalSource.sourceUrl, `${referencePath} URL must match canonical source ${canonicalSourceId}`, errors);
     requireCondition(
       !String(reference.url ?? "").includes("gbnSubtab4"),
       `${referencePath} cannot use the Q-Net job-information tab as ${canonicalSource.sourceKind}`,
@@ -209,17 +237,38 @@ function isNonEmptyString(value) {
   return typeof value === "string" && value.trim().length > 0;
 }
 
-function validateVerifiedSourceMetadata(node, path, sourceIds, errors) {
+function validateVerifiedSourceMetadata(node, path, sourcesById, errors) {
   for (const field of ["officialSourceId", "officialSourceUrl", "officialSourceName", "officialSourceKind", "lastOfficialVerifiedAt", "verifiedBy"]) {
     requireCondition(field in node, `${path} verified node missing ${field}`, errors);
   }
   requireCondition(node.needsOfficialVerification === false, `${path} verified node must set needsOfficialVerification false`, errors);
-  requireCondition(typeof node.officialSourceId === "string" && sourceIds.has(node.officialSourceId), `${path} uses unknown officialSourceId ${node.officialSourceId}`, errors);
+  const canonicalSource = typeof node.officialSourceId === "string"
+    ? sourcesById.get(node.officialSourceId)
+    : undefined;
+  requireCondition(Boolean(canonicalSource), `${path} uses unknown officialSourceId ${node.officialSourceId}`, errors);
   requireCondition(isHttpsUrl(node.officialSourceUrl), `${path} verified node officialSourceUrl must be an https URL`, errors);
   requireCondition(isNonEmptyString(node.officialSourceName), `${path} verified node officialSourceName must be a non-empty string`, errors);
   requireCondition(sourceKindValues.has(node.officialSourceKind), `${path} uses invalid officialSourceKind`, errors);
   requireCondition(isDateString(node.lastOfficialVerifiedAt), `${path} verified node lastOfficialVerifiedAt must be YYYY-MM-DD`, errors);
   requireCondition(isNonEmptyString(node.verifiedBy), `${path} verified node verifiedBy must be a non-empty string`, errors);
+
+  if (canonicalSource?.owner === "Q-Net") {
+    requireCondition(
+      node.officialSourceName === canonicalSource.sourceName,
+      `${path} officialSourceName must match canonical source ${node.officialSourceId}`,
+      errors,
+    );
+    requireCondition(
+      node.officialSourceUrl === canonicalSource.sourceUrl,
+      `${path} officialSourceUrl must match canonical source ${node.officialSourceId}`,
+      errors,
+    );
+    requireCondition(
+      node.officialSourceKind === canonicalSource.sourceKind,
+      `${path} officialSourceKind must match canonical source ${node.officialSourceId}`,
+      errors,
+    );
+  }
 }
 
 function validateMetadataOnlyStoragePolicy(document, path, errors) {
@@ -434,7 +483,7 @@ for (const { node, path } of sourceNodes) {
   requireCondition(statusValues.has(node.sourceStatus), `${path} has invalid sourceStatus`, errors);
   if (node.sourceStatus === "verified") {
     summary.verifiedNodes += 1;
-    validateVerifiedSourceMetadata(node, path, sourceIds, errors);
+    validateVerifiedSourceMetadata(node, path, sourcesById, errors);
   }
   if (node.sourceStatus === "draft") {
     summary.draftNodes += 1;
@@ -468,6 +517,7 @@ const result = errors.length === 0
         "qnet_appraiser_identity_verified",
         "qnet_appraiser_source_contracts_canonical",
         "copied_qnet_source_references_match_registry",
+        "verified_qnet_curriculum_nodes_match_registry",
         "curriculum_nodes_have_source_status",
         "verified_nodes_have_source_metadata",
         "draft_nodes_marked_needs_verification",

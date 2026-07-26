@@ -138,8 +138,8 @@ function makeValidVerifiedNode(overrides = {}) {
     sourceStatus: "verified",
     needsOfficialVerification: false,
     officialSourceId: "qnet_appraiser_qualification_detail",
-    officialSourceUrl: "https://www.q-net.or.kr/",
-    officialSourceName: "Q-Net 감정평가사 자격 상세",
+    officialSourceUrl: qnetQualificationDetailUrl,
+    officialSourceName: "Q-Net 감정평가사 자격상세정보",
     officialSourceKind: "qualification_detail",
     lastOfficialVerifiedAt: "2026-06-08",
     verifiedBy: "official-source-fixture",
@@ -344,23 +344,28 @@ test("copied Q-Net curriculum references match canonical exam-info semantics whi
   assert.equal(qnetQualificationDetail.sourceUrl, qnetQualificationDetailUrl);
 
   let checkedReferenceCount = 0;
-  for (const path of curriculumPaths.slice(0, 3)) {
+  let checkedIdentityCount = 0;
+  for (const [index, path] of curriculumPaths.entries()) {
     const document = readJson(path);
-    const qnetReferences = document.sourceReferences.filter((source) => source.label.startsWith("Q-Net 감정평가사"));
-    assert.equal(qnetReferences.length, 1, `${path} should expose one copied Q-Net curriculum reference`);
-    const [reference] = qnetReferences;
-    assert.equal(reference.label, qnetExamInfo.sourceName, `${path} copied Q-Net label drifted`);
-    assert.equal(reference.url, qnetExamInfo.sourceUrl, `${path} copied Q-Net URL drifted`);
-    assert.match(reference.scope, /exam_information/, `${path} copied Q-Net scope must remain exam information`);
-    assert.doesNotMatch(reference.url, /gbnSubtab4/, `${path} cannot treat job information as exam information`);
+    if (index < 3) {
+      const qnetReferences = document.sourceReferences.filter((source) => source.label.startsWith("Q-Net 감정평가사"));
+      assert.equal(qnetReferences.length, 1, `${path} should expose one copied Q-Net curriculum reference`);
+      const [reference] = qnetReferences;
+      assert.equal(reference.label, qnetExamInfo.sourceName, `${path} copied Q-Net label drifted`);
+      assert.equal(reference.url, qnetExamInfo.sourceUrl, `${path} copied Q-Net URL drifted`);
+      assert.match(reference.scope, /exam_information/, `${path} copied Q-Net scope must remain exam information`);
+      assert.doesNotMatch(reference.url, /gbnSubtab4/, `${path} cannot treat job information as exam information`);
+      checkedReferenceCount += 1;
+    }
 
     const identity = document.officialQualificationIdentity;
     assert.equal(identity.officialSourceId, qnetQualificationDetail.id, `${path} qualification source id drifted`);
     assert.equal(identity.officialSourceUrl, qnetQualificationDetail.sourceUrl, `${path} qualification URL drifted`);
     assert.equal(identity.officialSourceKind, qnetQualificationDetail.sourceKind, `${path} qualification kind drifted`);
-    checkedReferenceCount += 1;
+    checkedIdentityCount += 1;
   }
   assert.equal(checkedReferenceCount, 3);
+  assert.equal(checkedIdentityCount, 4);
 });
 
 test("curriculum and reference nodes include official-source status metadata", () => {
@@ -477,6 +482,33 @@ test("official-source verification script rejects canonical and copied Q-Net tab
   assert.notEqual(mixedSemanticsResult.status, 0);
   assert.match(`${mixedSemanticsResult.stdout}\n${mixedSemanticsResult.stderr}`, /mixes exam-information and qualification-detail semantics/);
 
+  const ambiguousSemanticsResult = runOfficialSourceCheckWithFixture(
+    [makeValidVerifiedNode(), makeDraftNode()],
+    {
+      sourceReferences: [
+        makeValidQnetExamInfoReference({
+          label: "Q-Net 감정평가사",
+          scope: "official_public_information_page",
+        }),
+      ],
+    },
+  );
+  assert.notEqual(ambiguousSemanticsResult.status, 0);
+  assert.match(`${ambiguousSemanticsResult.stdout}\n${ambiguousSemanticsResult.stderr}`, /must declare exam-information or qualification-detail semantics/);
+
+  const verifiedNodeDriftResult = runOfficialSourceCheckWithFixture([
+    makeValidVerifiedNode({
+      officialSourceUrl: qnetExamInfoUrl,
+      officialSourceName: "Q-Net 감정평가사 시험정보",
+      officialSourceKind: "exam_info",
+    }),
+    makeDraftNode(),
+  ]);
+  assert.notEqual(verifiedNodeDriftResult.status, 0);
+  assert.match(`${verifiedNodeDriftResult.stdout}\n${verifiedNodeDriftResult.stderr}`, /officialSourceUrl must match canonical source qnet_appraiser_qualification_detail/);
+  assert.match(`${verifiedNodeDriftResult.stdout}\n${verifiedNodeDriftResult.stderr}`, /officialSourceName must match canonical source qnet_appraiser_qualification_detail/);
+  assert.match(`${verifiedNodeDriftResult.stdout}\n${verifiedNodeDriftResult.stderr}`, /officialSourceKind must match canonical source qnet_appraiser_qualification_detail/);
+
   const registryTabDrift = makeValidRegistry();
   registryTabDrift.sources.find((source) => source.id === "qnet_appraiser_exam_info").sourceUrl =
     "https://www.q-net.or.kr/crf005.do?gId=60&gSite=L&gbnn=gbnSubtab4&id=crf00503";
@@ -488,6 +520,23 @@ test("official-source verification script rejects canonical and copied Q-Net tab
   assert.match(`${registryTabDriftResult.stdout}\n${registryTabDriftResult.stderr}`, /qnet_appraiser_exam_info sourceUrl must remain/);
 });
 
+test("official-source verification script ignores generic non-Q-Net source-reference semantics", () => {
+  const nonQnetReferenceResult = runOfficialSourceCheckWithFixture(
+    [makeValidVerifiedNode(), makeDraftNode()],
+    {
+      sourceReferences: [
+        {
+          label: "국가법령정보센터 시험정보",
+          url: "https://www.law.go.kr/",
+          scope: "official_exam_information_page",
+        },
+      ],
+    },
+  );
+  assert.equal(nonQnetReferenceResult.status, 0, nonQnetReferenceResult.stderr);
+  assert.match(nonQnetReferenceResult.stdout, /passed_official_source_verification/);
+});
+
 test("official-source verification script prints expected JSON contract", () => {
   const output = execFileSync("node", ["scripts/check-official-source-verification.mjs"], { encoding: "utf8" });
   const parsed = JSON.parse(output);
@@ -497,6 +546,7 @@ test("official-source verification script prints expected JSON contract", () => 
     "qnet_appraiser_identity_verified",
     "qnet_appraiser_source_contracts_canonical",
     "copied_qnet_source_references_match_registry",
+    "verified_qnet_curriculum_nodes_match_registry",
     "curriculum_nodes_have_source_status",
     "verified_nodes_have_source_metadata",
     "draft_nodes_marked_needs_verification",
