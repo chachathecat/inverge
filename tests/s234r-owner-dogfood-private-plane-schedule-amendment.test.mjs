@@ -6,7 +6,21 @@ import test from "node:test";
 const PRIVATE_CONTRACT_SHA256 =
   "ef017344b184b33f8e30dcde8f25089c3e814b2aa279645bbedbd326662dacb5";
 const SCHEDULER_CONTRACT_SHA256 =
-  "5b531ab6970b080ade85b5fe3a011b002500ec65134a4e70ca64ba625feca06d";
+  "bb6e3245825a62ab18376a5d273cd6e885862841189d69c7d19e24db8dc15989";
+const S237O_EVIDENCE_TEMPLATE_SHA256 =
+  "9e965a84944b7610898d953a39743b2e436a39c19ca3eeb7d7ebbb9ff78b523c";
+const S237O_PROPOSAL_SHA256 =
+  "c72b60bb0543589673a26d177e762aca8eccd794c4b4c3bd58062329352a9662";
+const RECEIPT_ASSERTION_POLICY_SHA256 =
+  "d1616bbc8c7681c19b42bdffc86e0d5e34a62710bf9ba727fe5355ca0ad69da8";
+const O4T_PROPOSAL_SHA256 =
+  "60d62b97c50771402f70a88275d58a385ed7ee7bd2a6de28db48066f99b59a63";
+const O4V_PROPOSAL_SHA256 =
+  "59c6762c2dbe6519cefeef864b8d8f5f14402c3256d23ed8708ca18bb6fc4236";
+const O4V_PROVIDER_BINDING_SHA256 =
+  "d161f4f52c1f155e383246edd36dec6f1d56fd89aaf272f5087c2d4ba3105ee3";
+const O3A_PACKET_SHA256 =
+  "8189997e733eb0c8bef62c3ba5fa1cadac39a807c34d925b2e1a291fa30e654c";
 const JCS_SERIALIZATION = "rfc_8785_json_canonicalization_scheme_utf8";
 const PROJECTED_RESULT_ID_PATHS = [
   "request_id",
@@ -27,6 +41,99 @@ const PROJECTED_RESULT_PROCESSING_ORDER = [
   "destroy_mapping_projected_input_and_projected_response_identifier_material",
   "verify_no_projected_identifier_in_gateway_output_logs_artifacts_caches_errors_telemetry_or_persisted_temp",
   "release_only_canonical_result_validated_native_fallback_or_manual_block_from_gateway",
+];
+const PROJECTED_RESULT_CONTROL_KEYS = [
+  "purpose",
+  "identifierDomain",
+  "canonicalResultContractPath",
+  "projectedInvocationContractPath",
+  "requestCorrelationEqualityTargets",
+  "allNonIdentifierSchemasEnumsRulesCardinalitiesAndOrderingMustEqualCanonicalResultContractExactly",
+  "canonicalResultContractMayAcceptProjectedIdentifierDomain",
+  "projectedResultContractMayAcceptOriginalIdentifierDomain",
+  "completeProjectedResponseValidationRequiredBeforeInverseMapping",
+  "inverseMappingContract",
+  "processingOrderExactly",
+  "failureRouting",
+  "mappingLifecycleContract",
+];
+const RESULT_CONTRACT_KEYS = [
+  "allowedFieldsExactly",
+  "additionalFieldsAllowed",
+  "nestedAdditionalFieldsAllowed",
+  "freeTextAllowed",
+  "executionBlockFieldsExactly",
+  "unassignedCandidateFieldsExactly",
+  "fallbackFieldsExactly",
+  "fallbackReasonValues",
+  "fallbackValueRules",
+  "candidateAccountingRules",
+  "executionBlockDurationRules",
+  "versionInfoFieldsExactly",
+  "versionInfoFieldSchemas",
+  "objectiveComponentFieldsExactly",
+  "violationFieldsExactly",
+  "forbiddenFields",
+  "identifierSchemas",
+  "closedEnumValues",
+  "scalarSchemas",
+  "cardinalityLimits",
+  "statuses",
+  "candidateStatusesAllowedBeforeNativeValidation",
+  "fallbackStatuses",
+  "nativeFallbackInvalidResult",
+  "everyUnassignedCandidateRequiresReason",
+  "unassignedReasons",
+  "requestCorrelationFieldsRequired",
+  "requestIdEchoRequired",
+  "inputSnapshotVersionEchoRequired",
+  "versionFieldsRequired",
+];
+const FALLBACK_STATUSES = [
+  "infeasible",
+  "model_invalid",
+  "unknown",
+  "timeout",
+  "dependency_unavailable",
+  "adapter_error",
+  "schema_mismatch",
+  "stale_response",
+  "validator_rejected",
+];
+const C3_RESULT_CONSTRAINT_CODES = [
+  "candidate_accounting_exact_partition",
+  "execution_block_candidate_resolves_exact_current_invocation",
+  "execution_block_duration_equals_end_minus_start",
+  "execution_block_duration_respects_candidate_shortening_bounds",
+  "immutable_prior_placement_incompatibility_fails_closed",
+];
+const NATIVE_FALLBACK_REJECTION_CODES = [
+  "missing_fallback",
+  "fallback_unused",
+  "fallback_reason_mismatch",
+  "fallback_status_mismatch",
+  "native_plan_version_invalid",
+  "native_plan_unresolved_or_mutable",
+  "canonical_result_contract_invalid",
+  "candidate_accounting_invalid",
+  "execution_block_duration_invalid",
+  "hard_constraint_invalid",
+  "immutable_placement_incompatible",
+];
+const RESULT_HARD_CONSTRAINTS = [
+  "core_outcome_maximum_three",
+  "all_blocks_within_available_windows",
+  "fixed_and_pinned_blocks_do_not_move",
+  "prior_accepted_elapsed_and_in_progress_blocks_immutable",
+  "block_overlap_zero",
+  "prerequisite_order_violations_zero",
+  "planned_minutes_do_not_exceed_declared_availability",
+  "candidate_duplicate_placement_zero",
+  ...C3_RESULT_CONSTRAINT_CODES,
+  "law_blocker_never_becomes_verified_completion",
+  "attempt_first_rewrite_after_attempt_and_review_only",
+  "guided_exposure_never_becomes_independent_review",
+  "owner_forbidden_windows_never_used",
 ];
 
 const REQUIRED_RECEIPT_FIELDS = [
@@ -180,6 +287,10 @@ function projectedResultGatewayContractIsClosed(scheduler) {
   const canonicalSharedKeys = Object.keys(canonical).filter(
     (key) => key !== "identifierSchemas",
   );
+  const canonicalKeys = new Set(Object.keys(canonical));
+  const projectedOnlyKeys = Object.keys(projected).filter(
+    (key) => !canonicalKeys.has(key),
+  );
   const allCanonicalNonIdContractValuesAreExact =
     canonicalSharedKeys.every(
       (key) =>
@@ -242,6 +353,20 @@ function projectedResultGatewayContractIsClosed(scheduler) {
     "warm_2",
     "warm_3",
   ];
+  const exactFailureRouting = {
+    missingUnknownDanglingDuplicateCrossClassOriginalDomainNonBijectiveOrPreservationFailureStatus:
+      "schema_mismatch",
+    wrongRequestOrSnapshotCorrelationStatus: "stale_response",
+    schemaMismatchAndStaleResponseMustUseSeparatelyValidatedNativeFallback:
+      true,
+    everyFallbackStatusesMemberMustUseSeparatelyValidatedNativeFallback:
+      true,
+    projectedFailureEnvelopeMaySelfAuthorizeCanonicalRelease: false,
+    separatelyValidatedNativeFallbackPreparedAndValidatedOnlyInCanonicalIdentifierDomain:
+      true,
+    invalidNativeFallbackResult: "blocked_manual_plan_required",
+    failedProjectedResponseMayReachNativeValidationOrGatewayOutput: false,
+  };
 
   return (
     projected.purpose ===
@@ -254,6 +379,8 @@ function projectedResultGatewayContractIsClosed(scheduler) {
     projected.additionalFieldsAllowed === false &&
     projected.nestedAdditionalFieldsAllowed === false &&
     projected.freeTextAllowed === false &&
+    canonicalJson(projectedOnlyKeys) ===
+      canonicalJson(PROJECTED_RESULT_CONTROL_KEYS) &&
     allCanonicalNonIdContractValuesAreExact &&
     canonicalJson(canonical.identifierSchemas) ===
       canonicalJson(exactCanonicalIdentifierSchemas) &&
@@ -300,11 +427,19 @@ function projectedResultGatewayContractIsClosed(scheduler) {
       false &&
     canonicalJson(projected.processingOrderExactly) ===
       canonicalJson(PROJECTED_RESULT_PROCESSING_ORDER) &&
+    canonicalJson(failure) === canonicalJson(exactFailureRouting) &&
     failure
       .missingUnknownDanglingDuplicateCrossClassOriginalDomainNonBijectiveOrPreservationFailureStatus ===
       "schema_mismatch" &&
     failure.wrongRequestOrSnapshotCorrelationStatus === "stale_response" &&
     failure.schemaMismatchAndStaleResponseMustUseSeparatelyValidatedNativeFallback ===
+      true &&
+    failure.everyFallbackStatusesMemberMustUseSeparatelyValidatedNativeFallback ===
+      true &&
+    failure.projectedFailureEnvelopeMaySelfAuthorizeCanonicalRelease ===
+      false &&
+    failure
+      .separatelyValidatedNativeFallbackPreparedAndValidatedOnlyInCanonicalIdentifierDomain ===
       true &&
     failure.invalidNativeFallbackResult ===
       "blocked_manual_plan_required" &&
@@ -381,6 +516,705 @@ function projectedResultGatewayContractIsClosed(scheduler) {
       false &&
     identifierFreeInput.digestReceiptMayMaterializeOnlyAfterMappingAndProjectedIdentifierMaterialAreDestroyed ===
       true
+  );
+}
+
+function c3ResultValidationContractsAreClosed(scheduler) {
+  const canonical = scheduler.resultContract;
+  const projected = scheduler.optimizerProjectedResultContract;
+  if (!canonical || !projected) return false;
+
+  const exactFallbackValueRules = {
+    usedFalseRequiresReasonNotUsedAndNativePlanVersionNull: true,
+    usedTrueRequiresTriggerReasonAndClosedNativePlanVersion: true,
+    fallbackStatusRequiresUsedTrue: true,
+    optimalOrFeasibleRequiresUsedFalse: true,
+    blockedManualPlanRequiredMayFollowOnlyInvalidNativeFallback: true,
+    everyFallbackStatusesMemberRequiresUsedTrue: true,
+    everyFallbackStatusesMemberRequiresReasonEnumEqualTriggeringStatus: true,
+    everyFallbackStatusesMemberRequiresNonNullClosedNativePlanVersion: true,
+    literalFallbackStatusRequiresUsedTrue: true,
+    literalFallbackStatusRequiresReasonEnumInFallbackStatuses: true,
+    literalFallbackStatusRequiresNonNullClosedNativePlanVersion: true,
+    literalFallbackStatusRequiresReasonInFallbackStatusesAndNonNullClosedNativePlanVersion:
+      true,
+    nativePlanVersionMustResolveOneExactImmutableCanonicalNativeFallbackPlan:
+      true,
+    failureStatusEnvelopeMaySelfAuthorizeReferencedNativeFallbackRelease:
+      false,
+    trustedNativeGatewayMustResolveOrPrepareExactImmutableCanonicalNativeFallbackIndependentlyOfOptimizerResponse:
+      true,
+    referencedNativeFallbackMustBeSeparatelyValidatedAgainstCanonicalCandidateAccountingExecutionBlockDurationAndAllHardConstraintsBeforeRelease:
+      true,
+    missingFallbackMismatchedReasonInvalidVersionOrInvalidNativePlanResult:
+      "blocked_manual_plan_required",
+    missingFallbackMismatchedReasonInvalidVersionOrInvalidNativePlanMayReleaseCandidatePlan:
+      false,
+    blockedManualPlanRequiredRequiresUsedFalseReasonNotUsedAndNativePlanVersionNull:
+      true,
+    blockedManualPlanRequiredMayCarryTriggerReasonOrNativePlanVersion:
+      false,
+    blockedManualPlanRequiredMayReleaseExecutionBlocksOrReferencedNativePlan:
+      false,
+  };
+  const exactCandidateAccountingRules = {
+    directCandidatePlanStatusesExactly: ["optimal", "feasible"],
+    validatedNativeFallbackTriggerStatusesExactly: FALLBACK_STATUSES,
+    validatedNativeFallbackEnvelopeStatusesExactly: [
+      ...FALLBACK_STATUSES,
+      "fallback",
+    ],
+    literalFallbackStatusPlanMustBeValidatedNativeFallback: true,
+    allReleasableValidatedNativeFallbackPlansMustSatisfyTheseSameRules: true,
+    exactCorrelatedInvocationCandidateSetSource:
+      "exact_current_correlated_invocation.candidates[].ephemeral_opaque_candidate_id",
+    exactCorrelatedInvocationCandidateIdsUnique: true,
+    candidateIdentifiersMustUseActiveContainingContractDomain: true,
+    executionBlockCandidateIdsMustEachResolveExactlyOnceThroughExactCurrentInvocation:
+      true,
+    unassignedCandidateIdsMustEachResolveExactlyOnceThroughExactCurrentInvocation:
+      true,
+    executionBlockCandidateIdsUnique: true,
+    unassignedCandidateIdsUnique: true,
+    executionBlockAndUnassignedCandidateIdSetsDisjoint: true,
+    executionBlockAndUnassignedCandidateIdSetUnionMustEqualExactCorrelatedInvocationCandidateSet:
+      true,
+    everyInvocationCandidateMustAppearExactlyOnce: true,
+    missingUnknownExtraDuplicateOmittedOrPlacedAndUnassignedCandidateAllowed:
+      false,
+    violationCandidateIdsAreDiagnosticOnlyAndCannotSatisfyAccounting: true,
+    directOrProjectedCandidateAccountingFailureStatus: "schema_mismatch",
+    directOrProjectedCandidateAccountingFailureMustAttemptExactlyOneSeparatelyValidatedNativeFallback:
+      true,
+    validatedNativeFallbackCandidateAccountingFailureResult:
+      "blocked_manual_plan_required",
+    validatedNativeFallbackCandidateAccountingFailureMayTriggerAnotherFallback:
+      false,
+    invalidNativeFallbackResult: "blocked_manual_plan_required",
+  };
+  const exactExecutionBlockDurationRules = {
+    appliesToEveryExecutionBlockInOptimalFeasibleAndEveryReleasableValidatedNativeFallbackPlan:
+      true,
+    candidateResolutionSource:
+      "exact_current_correlated_invocation.candidates",
+    eachExecutionBlockCandidateMustResolveExactlyOnceThroughExactCurrentInvocation:
+      true,
+    durationMinutesMustEqualEndMinuteKstMinusStartMinuteKst: true,
+    canShortenFalseRequiresDurationMinutesEqualEstimatedMinutes: true,
+    canShortenTrueRequiresMinimumMinutesLessThanOrEqualDurationMinutesLessThanOrEqualEstimatedMinutes:
+      true,
+    durationMinutesMayExceedEstimatedMinutes: false,
+    elapsedAndInProgressPriorPlacementFieldsRemainImmutableExactly: [
+      "ephemeral_opaque_candidate_id",
+      "ephemeral_opaque_window_id",
+      "start_minute_kst",
+      "end_minute_kst",
+      "duration_minutes",
+    ],
+    immutableElapsedOrInProgressPlacementMayBeMovedShortenedExtendedOrRewrittenToSatisfyCurrentCandidate:
+      false,
+    preProjectionImmutablePlacementCandidateDurationIncompatibilityMayReachOptimizer:
+      false,
+    preProjectionImmutablePlacementCandidateDurationIncompatibilityFallbackTriggerStatus:
+      "validator_rejected",
+    preProjectionImmutablePlacementCandidateDurationIncompatibilityFallbackReasonEnumMustEqualTriggerStatus:
+      true,
+    preProjectionImmutablePlacementCandidateDurationIncompatibilityMustAttemptExactlyOneSeparatelyValidatedNativeFallback:
+      true,
+    preProjectionImmutablePlacementCandidateDurationIncompatibilityMustEnterSeparatelyValidatedNativeFallbackWithoutRewritingPlacementOrCandidatePolicy:
+      true,
+    preProjectionImmutablePlacementCandidateDurationIncompatibilityInvalidNativeFallbackResult:
+      "blocked_manual_plan_required",
+    preProjectionImmutablePlacementCandidateDurationIncompatibilityInvalidNativeFallbackMayTriggerAnotherFallback:
+      false,
+    optimizerResultDurationOrImmutablePlacementMutationFailureStatus:
+      "validator_rejected",
+    optimizerResultDurationOrImmutablePlacementMutationMustAttemptExactlyOneSeparatelyValidatedNativeFallback:
+      true,
+    optimizerResultDurationOrImmutablePlacementMutationMustUseSeparatelyValidatedNativeFallbackThatPreservesTheOriginalImmutablePlacement:
+      true,
+    optimizerResultDurationOrImmutablePlacementMutationInvalidNativeFallbackMayTriggerAnotherFallback:
+      false,
+    invalidNativeFallbackResult: "blocked_manual_plan_required",
+  };
+  const exactNativeValidator = {
+    requiredForOptimalAndFeasible: true,
+    requiredForEveryReleasableValidatedNativeFallback: true,
+    validatedNativeFallbackMustSatisfyCanonicalCandidateAccountingExecutionBlockDurationAndAllHardConstraints:
+      true,
+    invalidOrUnavailableValidatedNativeFallbackResult:
+      "blocked_manual_plan_required",
+    immutableElapsedOrInProgressPlacementMayBeRewrittenDuringValidationOrFallback:
+      false,
+    hardConstraintMayBeOverriddenBySoftObjective: false,
+    falseSuccessAllowed: false,
+    canonicalStateMutationBeforeOwnerChoiceAllowed: false,
+  };
+  const exactAllowedFields = [
+    "request_id",
+    "input_snapshot_version",
+    "status",
+    "execution_blocks",
+    "unassigned_candidates",
+    "fallback",
+    "version_info",
+    "objective_components",
+    "violations",
+    "elapsed_ms",
+  ];
+  const exactExecutionBlockFields = [
+    "ephemeral_opaque_candidate_id",
+    "ephemeral_opaque_window_id",
+    "start_minute_kst",
+    "end_minute_kst",
+    "duration_minutes",
+  ];
+  const exactUnassignedCandidateFields = [
+    "ephemeral_opaque_candidate_id",
+    "reason_enum",
+  ];
+  const exactFallbackFields = [
+    "used",
+    "reason_enum",
+    "native_plan_version",
+  ];
+  const exactFallbackReasonValues = ["not_used", ...FALLBACK_STATUSES];
+  const exactObjectiveComponentFields = [
+    "objective_code_enum",
+    "integer_value",
+  ];
+  const exactViolationFields = [
+    "constraint_code_enum",
+    "ephemeral_opaque_candidate_ids",
+    "severity_enum",
+  ];
+  const exactScalarSchemas = {
+    start_minute_kst: "integer_0_to_1439",
+    end_minute_kst: "integer_1_to_1440",
+    duration_minutes: "integer_1_to_1440",
+    integer_value: "finite_integer",
+    elapsed_ms: "finite_integer_0_to_60000",
+    fallback_used: "boolean",
+  };
+  const exactCardinalityLimits = {
+    execution_blocks_maximum: 256,
+    unassigned_candidates_maximum: 256,
+    objective_components_maximum: 11,
+    violations_maximum: 256,
+    candidate_ids_per_violation_maximum: 32,
+    allIdentifierArraysUnique: true,
+  };
+  const priorRules = scheduler.inputContract.priorAcceptedScheduleRules;
+  const projectionRules =
+    scheduler.inputContract.optimizerInvocationProjectionContract
+      .projectionRules;
+  const failureFixture =
+    scheduler.s237oBenchmarkAcceptanceContract.benchmarkResultDigestContract
+      .failureStatusFixtureResultSetDigestContract;
+  const resolvedArtifactMembers =
+    scheduler.s237oBenchmarkAcceptanceContract.benchmarkResultDigestContract
+      .resolvedArtifactMembersContract;
+  const exactCanonicalNativeFallbackProjectionContract = {
+    source: "failure_status_fixture_result_set",
+    projectionFieldsExactly: [
+      "expected_status",
+      "native_fallback_result_digest_sha256",
+      "manual_block_result_digest_sha256_or_null",
+    ],
+    entryOrdering: "ascending_lexicographic_expected_status",
+    exactEntryCountMustEqualFallbackStatusCount: true,
+    projectedSetDigestField:
+      "benchmark_result_artifact.canonical_native_fallback_result_set_digest_sha256",
+    sourceNativeFallbackDigestMustResolveToExactResultContractArtifactInSameAuthorizationStoreWhenManualBlockDigestIsNull:
+      true,
+    sourceNativeFallbackDigestMustResolveToRejectedNativeFallbackAttemptValidationRecordInSameAuthorizationStoreWhenManualBlockDigestIsNonNull:
+      true,
+    manualBlockDigestMustResolveToExactBlockedManualPlanRequiredResultContractArtifactInSameAuthorizationStoreWhenNonNull:
+      true,
+    manualBlockNullabilityMustMatchValidatedNativeFallbackOutcome: true,
+    additionalFieldsAllowed: false,
+  };
+  const exactRejectedNativeFallbackAttemptValidationRecordContract = {
+    purpose:
+      "closed_identifier_free_evidence_for_rejected_native_fallback_attempts",
+    fieldsExactly: [
+      "artifact_contract_version",
+      "exact_head_sha",
+      "exact_tree_sha",
+      "s237o_authorization_digest_sha256",
+      "adapter_config_digest_sha256",
+      "benchmark_run_id",
+      "synthetic_fixture_id",
+      "expected_status",
+      "observed_status",
+      "rejection_code_enum",
+      "validation_result",
+      "candidate_plan_released",
+    ],
+    fieldSchemas: {
+      artifact_contract_version: [
+        "dabangil.s237o.rejected_native_fallback_attempt_validation_record.v1",
+      ],
+      exact_head_sha: "lowercase_hex_40",
+      exact_tree_sha: "lowercase_hex_40",
+      s237o_authorization_digest_sha256: "lowercase_hex_64",
+      adapter_config_digest_sha256: "lowercase_hex_64",
+      benchmark_run_id: "^obr_[A-Za-z0-9_-]{16,64}$",
+      synthetic_fixture_id: "^syn_s237o_[A-Za-z0-9_-]{8,80}$",
+      expected_status:
+        "closed_enum_exact_result_contract_fallback_statuses",
+      observed_status:
+        "closed_enum_exact_result_contract_fallback_statuses",
+      rejection_code_enum: NATIVE_FALLBACK_REJECTION_CODES,
+      validation_result: ["rejected"],
+      candidate_plan_released: [false],
+    },
+    additionalFieldsAllowed: false,
+    freeTextAllowed: false,
+    expectedAndObservedStatusMustEqualExactFailureFixtureExpectedStatus:
+      true,
+    headTreeAuthorizationConfigRunAndFixtureMustMatchParentBenchmarkAndFailureFixtureEntry:
+      true,
+    rejectionValidationOrderExactly: [
+      "result_status",
+      "fallback_presence",
+      "fallback_used",
+      "fallback_reason",
+      "native_plan_version_schema",
+      "native_plan_resolution_and_immutability",
+      "candidate_accounting",
+      "execution_block_duration",
+      "hard_constraints",
+      "immutable_placement_compatibility",
+      "canonical_result_contract_schema_and_correlation_catch_all",
+    ],
+    rejectionCodeMustEqualFirstApplicableFailedValidationInExactOrder:
+      true,
+    canonicalResultContractInvalidCodeMayBeUsedOnlyWhenNoMoreSpecificRejectionCodeMatches:
+      true,
+    rawRejectedNativeFallbackOutputMayAppearInRecordLogsArtifactsCachesErrorsTelemetryOrPersistedTemp:
+      false,
+    projectedOrCanonicalCandidateAndWindowIdentifiersMayAppearInRecord:
+      false,
+    recordMaySubstituteForCanonicalResultOrExactManualBlock: false,
+  };
+  const resolvedVerificationRules =
+    resolvedArtifactMembers.verificationRules;
+  const exactFailureFixtureContractKeys = [
+    "algorithm",
+    "serialization",
+    "expectedStatuses",
+    "entryOrdering",
+    "entryFieldsExactly",
+    "entryFieldSchemas",
+    "entryAdditionalFieldsAllowed",
+    "exactEntryCountMustEqualFallbackStatusCount",
+    "observedStatusMustEqualExpectedStatus",
+    "assertionResultMustEqualPassed",
+    "validNativeFallbackOrExactManualBlockRequired",
+    "validNativeFallbackResultDigestMustResolveOneExactCanonicalResultWhenManualBlockDigestIsNull",
+    "validNativeFallbackResultStatusMustEqualExpectedStatusOrLiteralFallbackWhenManualBlockDigestIsNull",
+    "validNativeFallbackResultFallbackUsedMustBeTrueWhenManualBlockDigestIsNull",
+    "validNativeFallbackResultFallbackReasonMustEqualExpectedStatusWhenManualBlockDigestIsNull",
+    "validNativeFallbackResultNativePlanVersionMustBeClosedAndNonNullWhenManualBlockDigestIsNull",
+    "validNativeFallbackResultMustSatisfyCanonicalCandidateAccountingExecutionBlockDurationAndAllHardConstraintsWhenManualBlockDigestIsNull",
+    "oneNativeFallbackResultDigestMaySatisfyMultipleExpectedStatuses",
+    "invalidNativeFallbackAttemptDigestMustResolveOneExactClosedRejectionValidationRecordWhenManualBlockDigestIsNonNull",
+    "invalidNativeFallbackAttemptFailureMustBeCrossBoundToExpectedStatus",
+    "invalidNativeFallbackManualBlockDigestMustResolveOneExactCanonicalBlockedManualPlanRequiredResult",
+    "invalidNativeFallbackManualBlockResultMayContainExecutionBlocksOrReferencedNativePlan",
+    "invalidNativeFallbackManualBlockResultFallbackMustEqualUsedFalseNotUsedAndNull",
+    "invalidNativeFallbackResultMayReleaseCandidatePlan",
+    "manualBlockDigestMustBeNullIffNativeFallbackIsValidAndNonNullIffNativeFallbackIsInvalid",
+    "missingUnknownDuplicateOrReorderedEntryAllowed",
+  ];
+
+  return (
+    canonicalJson(Object.keys(canonical)) ===
+      canonicalJson(RESULT_CONTRACT_KEYS) &&
+    canonicalJson(
+      Object.keys(projected).filter(
+        (key) => !RESULT_CONTRACT_KEYS.includes(key),
+      ),
+    ) === canonicalJson(PROJECTED_RESULT_CONTROL_KEYS) &&
+    canonicalJson(canonical.allowedFieldsExactly) ===
+      canonicalJson(exactAllowedFields) &&
+    canonicalJson(projected.allowedFieldsExactly) ===
+      canonicalJson(exactAllowedFields) &&
+    canonicalJson(canonical.executionBlockFieldsExactly) ===
+      canonicalJson(exactExecutionBlockFields) &&
+    canonicalJson(projected.executionBlockFieldsExactly) ===
+      canonicalJson(exactExecutionBlockFields) &&
+    canonicalJson(canonical.unassignedCandidateFieldsExactly) ===
+      canonicalJson(exactUnassignedCandidateFields) &&
+    canonicalJson(projected.unassignedCandidateFieldsExactly) ===
+      canonicalJson(exactUnassignedCandidateFields) &&
+    canonicalJson(canonical.fallbackFieldsExactly) ===
+      canonicalJson(exactFallbackFields) &&
+    canonicalJson(projected.fallbackFieldsExactly) ===
+      canonicalJson(exactFallbackFields) &&
+    canonicalJson(canonical.fallbackReasonValues) ===
+      canonicalJson(exactFallbackReasonValues) &&
+    canonicalJson(projected.fallbackReasonValues) ===
+      canonicalJson(exactFallbackReasonValues) &&
+    canonicalJson(canonical.objectiveComponentFieldsExactly) ===
+      canonicalJson(exactObjectiveComponentFields) &&
+    canonicalJson(projected.objectiveComponentFieldsExactly) ===
+      canonicalJson(exactObjectiveComponentFields) &&
+    canonicalJson(canonical.violationFieldsExactly) ===
+      canonicalJson(exactViolationFields) &&
+    canonicalJson(projected.violationFieldsExactly) ===
+      canonicalJson(exactViolationFields) &&
+    canonicalJson(canonical.scalarSchemas) ===
+      canonicalJson(exactScalarSchemas) &&
+    canonicalJson(projected.scalarSchemas) ===
+      canonicalJson(exactScalarSchemas) &&
+    canonicalJson(canonical.cardinalityLimits) ===
+      canonicalJson(exactCardinalityLimits) &&
+    canonicalJson(projected.cardinalityLimits) ===
+      canonicalJson(exactCardinalityLimits) &&
+    canonicalJson(canonical.fallbackStatuses) ===
+      canonicalJson(FALLBACK_STATUSES) &&
+    canonicalJson(projected.fallbackStatuses) ===
+      canonicalJson(FALLBACK_STATUSES) &&
+    canonicalJson(canonical.fallbackValueRules) ===
+      canonicalJson(exactFallbackValueRules) &&
+    canonicalJson(projected.fallbackValueRules) ===
+      canonicalJson(exactFallbackValueRules) &&
+    canonicalJson(canonical.candidateAccountingRules) ===
+      canonicalJson(exactCandidateAccountingRules) &&
+    canonicalJson(projected.candidateAccountingRules) ===
+      canonicalJson(exactCandidateAccountingRules) &&
+    canonicalJson(canonical.executionBlockDurationRules) ===
+      canonicalJson(exactExecutionBlockDurationRules) &&
+    canonicalJson(projected.executionBlockDurationRules) ===
+      canonicalJson(exactExecutionBlockDurationRules) &&
+    canonicalJson(scheduler.hardConstraints) ===
+      canonicalJson(RESULT_HARD_CONSTRAINTS) &&
+    canonicalJson(canonical.closedEnumValues.constraint_code_enum) ===
+      canonicalJson(RESULT_HARD_CONSTRAINTS) &&
+    canonicalJson(projected.closedEnumValues.constraint_code_enum) ===
+      canonicalJson(RESULT_HARD_CONSTRAINTS) &&
+    priorRules
+      .elapsedAndInProgressPlacementMustResolveExactlyOneCurrentInvocationCandidateBeforeProjection ===
+      true &&
+    priorRules
+      .elapsedAndInProgressPlacementMustSatisfyResolvedCurrentCandidateDurationAndShorteningRulesBeforeProjection ===
+      true &&
+    priorRules
+      .immutablePlacementCandidateDurationIncompatibilityMayReachOptimizer ===
+      false &&
+    priorRules
+      .immutablePlacementCandidateDurationIncompatibilityFallbackTriggerStatus ===
+      "validator_rejected" &&
+    priorRules
+      .immutablePlacementCandidateDurationIncompatibilityFallbackReasonEnumMustEqualTriggerStatus ===
+      true &&
+    priorRules
+      .immutablePlacementCandidateDurationIncompatibilityMustAttemptExactlyOneSeparatelyValidatedNativeFallback ===
+      true &&
+    priorRules
+      .immutablePlacementCandidateDurationIncompatibilityMustEnterSeparatelyValidatedNativeFallbackWithoutRewritingPlacementOrCandidatePolicy ===
+      true &&
+    priorRules
+      .immutablePlacementCandidateDurationIncompatibilityInvalidNativeFallbackResult ===
+      "blocked_manual_plan_required" &&
+    priorRules
+      .immutablePlacementCandidateDurationIncompatibilityInvalidNativeFallbackMayTriggerAnotherFallback ===
+      false &&
+    priorRules
+      .immutablePlacementOrCurrentCandidatePolicyMayBeRewrittenToRepairIncompatibility ===
+      false &&
+    projectionRules
+      .immutablePriorPlacementsMustPassExactCurrentCandidateDurationCompatibilityBeforeProjection ===
+      true &&
+    projectionRules
+      .immutablePriorPlacementCandidateDurationIncompatibilityMayReachOptimizer ===
+      false &&
+    projectionRules
+      .immutablePriorPlacementCandidateDurationIncompatibilityFallbackTriggerStatus ===
+      "validator_rejected" &&
+    projectionRules
+      .immutablePriorPlacementCandidateDurationIncompatibilityFallbackReasonEnumMustEqualTriggerStatus ===
+      true &&
+    projectionRules
+      .immutablePriorPlacementCandidateDurationIncompatibilityMustAttemptExactlyOneSeparatelyValidatedNativeFallback ===
+      true &&
+    projectionRules
+      .immutablePriorPlacementCandidateDurationIncompatibilityMustEnterSeparatelyValidatedNativeFallbackWithoutRewritingPlacementOrCandidatePolicy ===
+      true &&
+    projectionRules
+      .immutablePriorPlacementCandidateDurationIncompatibilityInvalidNativeFallbackResult ===
+      "blocked_manual_plan_required" &&
+    projectionRules
+      .immutablePriorPlacementCandidateDurationIncompatibilityInvalidNativeFallbackMayTriggerAnotherFallback ===
+      false &&
+    failureFixture.expectedStatuses === "resultContract.fallbackStatuses" &&
+    canonicalJson(Object.keys(failureFixture)) ===
+      canonicalJson(exactFailureFixtureContractKeys) &&
+    canonicalJson(failureFixture.entryFieldsExactly) ===
+      canonicalJson([
+        "synthetic_fixture_id",
+        "expected_status",
+        "observed_status",
+        "native_fallback_result_digest_sha256",
+        "manual_block_result_digest_sha256_or_null",
+        "assertion_result",
+      ]) &&
+    failureFixture.entryAdditionalFieldsAllowed === false &&
+    failureFixture.validNativeFallbackOrExactManualBlockRequired === true &&
+    failureFixture
+      .validNativeFallbackResultDigestMustResolveOneExactCanonicalResultWhenManualBlockDigestIsNull ===
+      true &&
+    failureFixture
+      .validNativeFallbackResultStatusMustEqualExpectedStatusOrLiteralFallbackWhenManualBlockDigestIsNull ===
+      true &&
+    failureFixture
+      .validNativeFallbackResultFallbackUsedMustBeTrueWhenManualBlockDigestIsNull ===
+      true &&
+    failureFixture
+      .validNativeFallbackResultFallbackReasonMustEqualExpectedStatusWhenManualBlockDigestIsNull ===
+      true &&
+    failureFixture
+      .validNativeFallbackResultNativePlanVersionMustBeClosedAndNonNullWhenManualBlockDigestIsNull ===
+      true &&
+    failureFixture
+      .validNativeFallbackResultMustSatisfyCanonicalCandidateAccountingExecutionBlockDurationAndAllHardConstraintsWhenManualBlockDigestIsNull ===
+      true &&
+    failureFixture
+      .oneNativeFallbackResultDigestMaySatisfyMultipleExpectedStatuses ===
+      false &&
+    failureFixture
+      .invalidNativeFallbackAttemptDigestMustResolveOneExactClosedRejectionValidationRecordWhenManualBlockDigestIsNonNull ===
+      true &&
+    failureFixture
+      .invalidNativeFallbackAttemptFailureMustBeCrossBoundToExpectedStatus ===
+      true &&
+    failureFixture
+      .invalidNativeFallbackManualBlockDigestMustResolveOneExactCanonicalBlockedManualPlanRequiredResult ===
+      true &&
+    failureFixture
+      .invalidNativeFallbackManualBlockResultMayContainExecutionBlocksOrReferencedNativePlan ===
+      false &&
+    failureFixture
+      .invalidNativeFallbackManualBlockResultFallbackMustEqualUsedFalseNotUsedAndNull ===
+      true &&
+    failureFixture.invalidNativeFallbackResultMayReleaseCandidatePlan ===
+      false &&
+    failureFixture
+      .manualBlockDigestMustBeNullIffNativeFallbackIsValidAndNonNullIffNativeFallbackIsInvalid ===
+      true &&
+    failureFixture.missingUnknownDuplicateOrReorderedEntryAllowed ===
+      false &&
+    canonicalJson(
+      resolvedArtifactMembers.canonicalNativeFallbackProjectionContract,
+    ) ===
+      canonicalJson(exactCanonicalNativeFallbackProjectionContract) &&
+    canonicalJson(
+      resolvedArtifactMembers
+        .rejectedNativeFallbackAttemptValidationRecordContract,
+    ) ===
+      canonicalJson(
+        exactRejectedNativeFallbackAttemptValidationRecordContract,
+      ) &&
+    resolvedVerificationRules
+      .validFailureFallbackDigestsMustResolveToExactResultContractWhenManualBlockDigestIsNull ===
+      true &&
+    resolvedVerificationRules
+      .invalidFailureFallbackAttemptDigestsMustResolveToExactRejectedAttemptValidationRecordWhenManualBlockDigestIsNonNull ===
+      true &&
+    resolvedVerificationRules
+      .nonNullManualBlockDigestsMustResolveToExactBlockedManualPlanRequiredResultContract ===
+      true &&
+    !Object.hasOwn(
+      resolvedVerificationRules,
+      "failureFallbackAndManualBlockDigestsMustResolveToExactResultContract",
+    ) &&
+    canonicalJson(scheduler.nativeValidator) ===
+      canonicalJson(exactNativeValidator)
+  );
+}
+
+function candidateAccountingIsExact(
+  invocationCandidateIds,
+  executionBlocks,
+  unassignedCandidates,
+) {
+  const placedIds = executionBlocks.map(
+    (block) => block.ephemeral_opaque_candidate_id,
+  );
+  const unassignedIds = unassignedCandidates.map(
+    (candidate) => candidate.ephemeral_opaque_candidate_id,
+  );
+  const invocationSet = new Set(invocationCandidateIds);
+  const placedSet = new Set(placedIds);
+  const unassignedSet = new Set(unassignedIds);
+  if (invocationSet.size !== invocationCandidateIds.length) return false;
+  if (placedSet.size !== placedIds.length) return false;
+  if (unassignedSet.size !== unassignedIds.length) return false;
+  if ([...placedSet].some((candidateId) => unassignedSet.has(candidateId))) {
+    return false;
+  }
+  const accountedSet = new Set([...placedSet, ...unassignedSet]);
+  return (
+    accountedSet.size === invocationSet.size &&
+    [...accountedSet].every((candidateId) => invocationSet.has(candidateId)) &&
+    [...invocationSet].every((candidateId) => accountedSet.has(candidateId))
+  );
+}
+
+function executionBlockDurationIsValid(candidates, block) {
+  const matchingCandidates = candidates.filter(
+    (candidate) =>
+      candidate.ephemeral_opaque_candidate_id ===
+      block.ephemeral_opaque_candidate_id,
+  );
+  if (matchingCandidates.length !== 1) return false;
+  const [candidate] = matchingCandidates;
+  if (
+    block.duration_minutes !==
+    block.end_minute_kst - block.start_minute_kst
+  ) {
+    return false;
+  }
+  if (block.duration_minutes > candidate.estimated_minutes) return false;
+  if (!candidate.can_shorten) {
+    return block.duration_minutes === candidate.estimated_minutes;
+  }
+  return (
+    block.duration_minutes >= candidate.minimum_minutes &&
+    block.duration_minutes <= candidate.estimated_minutes
+  );
+}
+
+function fallbackEnvelopeRequirementsSatisfied(
+  contract,
+  status,
+  fallback,
+  {
+    canonicalResultSchemaValid = true,
+    nativePlanVersionSchemaValid = true,
+    nativePlanValid = true,
+  } = {},
+) {
+  if (["optimal", "feasible"].includes(status)) {
+    return (
+      canonicalResultSchemaValid &&
+      fallback?.used === false &&
+      fallback.reason_enum === "not_used" &&
+      fallback.native_plan_version === null
+    );
+  }
+  if (
+    !contract.fallbackStatuses.includes(status) &&
+    status !== "fallback"
+  ) {
+    return false;
+  }
+  return (
+    canonicalResultSchemaValid &&
+    fallback?.used === true &&
+    (status === "fallback"
+      ? contract.fallbackStatuses.includes(fallback.reason_enum)
+      : fallback.reason_enum === status) &&
+    fallback.native_plan_version !== null &&
+    nativePlanVersionSchemaValid &&
+    nativePlanValid
+  );
+}
+
+function failureFixtureEntryIsValid(
+  contract,
+  entry,
+  nativeFallbackAttempt,
+  {
+    canonicalResultSchemaValid = true,
+    nativePlanVersionSchemaValid = true,
+    nativePlanValid = true,
+    nativePlanFailureCode = null,
+    rejectionCode = null,
+    manualBlockResultStatus = null,
+    manualBlockExecutionBlockCount = 0,
+    manualBlockReferencesNativePlan = false,
+    manualBlockFallback = null,
+    previouslyUsedNativeFallbackDigests = new Set(),
+  } = {},
+) {
+  const exactEntryFields = [
+    "synthetic_fixture_id",
+    "expected_status",
+    "observed_status",
+    "native_fallback_result_digest_sha256",
+    "manual_block_result_digest_sha256_or_null",
+    "assertion_result",
+  ];
+  const digestPattern = /^[a-f0-9]{64}$/;
+  const entryIsClosedAndCrossBound =
+    canonicalJson(Object.keys(entry)) === canonicalJson(exactEntryFields) &&
+    /^syn_s237o_[A-Za-z0-9_-]{8,80}$/.test(entry.synthetic_fixture_id) &&
+    contract.fallbackStatuses.includes(entry.expected_status) &&
+    entry.observed_status === entry.expected_status &&
+    digestPattern.test(entry.native_fallback_result_digest_sha256) &&
+    (entry.manual_block_result_digest_sha256_or_null === null ||
+      digestPattern.test(
+        entry.manual_block_result_digest_sha256_or_null,
+      )) &&
+    entry.assertion_result === "passed" &&
+    !previouslyUsedNativeFallbackDigests.has(
+      entry.native_fallback_result_digest_sha256,
+    );
+  if (!entryIsClosedAndCrossBound) return false;
+
+  let expectedRejectionCode = null;
+  if (
+    ![entry.expected_status, "fallback"].includes(
+      nativeFallbackAttempt?.status,
+    )
+  ) {
+    expectedRejectionCode = "fallback_status_mismatch";
+  } else if (!nativeFallbackAttempt?.fallback) {
+    expectedRejectionCode = "missing_fallback";
+  } else if (nativeFallbackAttempt.fallback.used !== true) {
+    expectedRejectionCode = "fallback_unused";
+  } else if (
+    nativeFallbackAttempt.fallback.reason_enum !== entry.expected_status
+  ) {
+    expectedRejectionCode = "fallback_reason_mismatch";
+  } else if (
+    nativeFallbackAttempt.fallback.native_plan_version === null ||
+    !nativePlanVersionSchemaValid
+  ) {
+    expectedRejectionCode = "native_plan_version_invalid";
+  } else if (!nativePlanValid) {
+    expectedRejectionCode = nativePlanFailureCode;
+  } else if (!canonicalResultSchemaValid) {
+    expectedRejectionCode = "canonical_result_contract_invalid";
+  }
+
+  const fallbackIsValid =
+    expectedRejectionCode === null && nativePlanValid;
+  if (fallbackIsValid) {
+    return (
+      entry.manual_block_result_digest_sha256_or_null === null &&
+      manualBlockResultStatus === null &&
+      manualBlockExecutionBlockCount === 0 &&
+      manualBlockReferencesNativePlan === false &&
+      manualBlockFallback === null &&
+      rejectionCode === null
+    );
+  }
+  return (
+    digestPattern.test(
+      entry.manual_block_result_digest_sha256_or_null ?? "",
+    ) &&
+    manualBlockResultStatus === "blocked_manual_plan_required" &&
+    manualBlockExecutionBlockCount === 0 &&
+    manualBlockReferencesNativePlan === false &&
+    manualBlockFallback?.used === false &&
+    manualBlockFallback.reason_enum === "not_used" &&
+    manualBlockFallback.native_plan_version === null &&
+    NATIVE_FALLBACK_REJECTION_CODES.includes(rejectionCode) &&
+    rejectionCode === expectedRejectionCode
   );
 }
 
@@ -945,6 +1779,10 @@ test("private plane forbids a plaintext equality oracle and requires synthetic a
     proposalSha256(contract.o4vDecisionPacket),
     contract.o4vPacketDigestContract.pendingProposalDigestSha256,
   );
+  assert.equal(
+    contract.o4vPacketDigestContract.pendingProposalDigestSha256,
+    O4V_PROPOSAL_SHA256,
+  );
   assert.deepEqual(
     contract.o4vPacketDigestContract.packetFieldsExactly,
     Object.keys(contract.o4vDecisionPacket),
@@ -994,6 +1832,10 @@ test("private plane forbids a plaintext equality oracle and requires synthetic a
   assert.equal(
     canonicalSha256(contract.o4vDecisionPacket.providerBinding),
     contract.providerBindingDigestContract.pendingTemplateDigestSha256,
+  );
+  assert.equal(
+    contract.providerBindingDigestContract.pendingTemplateDigestSha256,
+    O4V_PROVIDER_BINDING_SHA256,
   );
   assert.deepEqual(
     contract.o4vDecisionPacket.providerBindingFieldsExactly,
@@ -1119,6 +1961,11 @@ test("native acceptance is independent from the optional optimizer branch", asyn
       .pendingTemplateDigestSha256,
   );
   assert.equal(
+    scheduler.s237oBenchmarkAcceptanceContract.evidenceDigestContract
+      .pendingTemplateDigestSha256,
+    S237O_EVIDENCE_TEMPLATE_SHA256,
+  );
+  assert.equal(
     scheduler.s237oBenchmarkAcceptanceContract.receiptSetRules
       .allRequiredReceiptIdsExactlyOnce,
     true,
@@ -1140,6 +1987,11 @@ test("native acceptance is independent from the optional optimizer branch", asyn
     ),
     scheduler.s237oBenchmarkAcceptanceContract
       .receiptAssertionPolicyDigestContract.digestSha256,
+  );
+  assert.equal(
+    scheduler.s237oBenchmarkAcceptanceContract
+      .receiptAssertionPolicyDigestContract.digestSha256,
+    RECEIPT_ASSERTION_POLICY_SHA256,
   );
   const deterministicReplay =
     scheduler.s237oBenchmarkAcceptanceContract.requiredReceiptOperationRules
@@ -1241,6 +2093,11 @@ test("native acceptance is independent from the optional optimizer branch", asyn
     s237oProposalSha256(authorizationPacket),
     authorizationDigestContract.proposalDigestContract
       .pendingTemplateProposalDigestSha256,
+  );
+  assert.equal(
+    authorizationDigestContract.proposalDigestContract
+      .pendingTemplateProposalDigestSha256,
+    S237O_PROPOSAL_SHA256,
   );
   assert.ok(
     !authorizationDigestContract.packetFieldsExactly.includes(
@@ -2037,6 +2894,7 @@ test("native acceptance is independent from the optional optimizer branch", asyn
     "stale_response",
     "validator_rejected",
   ]);
+  assert.equal(c3ResultValidationContractsAreClosed(scheduler), true);
   for (const forbidden of [
     "calendar_title",
     "calendar_location",
@@ -2074,6 +2932,10 @@ test("native acceptance is independent from the optional optimizer branch", asyn
   assert.equal(
     proposalSha256(scheduler.o4tThresholdDecisionPacket),
     scheduler.o4tPacketDigestContract.pendingProposalDigestSha256,
+  );
+  assert.equal(
+    scheduler.o4tPacketDigestContract.pendingProposalDigestSha256,
+    O4T_PROPOSAL_SHA256,
   );
   assert.deepEqual(
     scheduler.o4tPacketDigestContract.packetFieldsExactly,
@@ -2406,6 +3268,12 @@ test("projected optimizer results validate and inverse-map fail closed before ca
           "^(?:req|oreq)_[A-Za-z0-9_-]{16,64}$";
       },
     ],
+    [
+      "projected-only semantic override",
+      (value) => {
+        value.optimizerProjectedResultContract.allowDurationOverflow = true;
+      },
+    ],
   ];
   for (const [name, mutate] of hostileMutations) {
     const hostile = clone(scheduler);
@@ -2416,6 +3284,1081 @@ test("projected optimizer results validate and inverse-map fail closed before ca
       `${name} must fail closed`,
     );
   }
+});
+
+test("C3 result accounting is an exact invocation partition and hostile candidate sets fail closed", async () => {
+  const scheduler = await json(
+    "config/dabangil-full-day-scheduler-contract.json",
+  );
+  assert.equal(c3ResultValidationContractsAreClosed(scheduler), true);
+  assert.equal(projectedResultGatewayContractIsClosed(scheduler), true);
+
+  const canonicalCandidateIds = [
+    `cand_${"a".repeat(16)}`,
+    `cand_${"b".repeat(16)}`,
+    `cand_${"c".repeat(16)}`,
+  ];
+  const projectedCandidateIds = [
+    `ocand_${"a".repeat(16)}`,
+    `ocand_${"b".repeat(16)}`,
+    `ocand_${"c".repeat(16)}`,
+  ];
+  const blocksFor = (candidateIds) => [
+    { ephemeral_opaque_candidate_id: candidateIds[0] },
+    { ephemeral_opaque_candidate_id: candidateIds[1] },
+  ];
+  const unassignedFor = (candidateIds) => [
+    { ephemeral_opaque_candidate_id: candidateIds[2] },
+  ];
+
+  for (const candidateIds of [canonicalCandidateIds, projectedCandidateIds]) {
+    assert.equal(
+      candidateAccountingIsExact(
+        candidateIds,
+        blocksFor(candidateIds),
+        unassignedFor(candidateIds),
+      ),
+      true,
+    );
+    assert.equal(
+      candidateAccountingIsExact(
+        [candidateIds[0], candidateIds[1], candidateIds[1]],
+        blocksFor(candidateIds),
+        unassignedFor(candidateIds),
+      ),
+      false,
+      "duplicate invocation candidate rows must fail before set accounting",
+    );
+
+    const hostilePartitions = [
+      [
+        "omitted candidate",
+        blocksFor(candidateIds).slice(0, 1),
+        unassignedFor(candidateIds),
+      ],
+      [
+        "unknown extra candidate",
+        [
+          ...blocksFor(candidateIds),
+          {
+            ephemeral_opaque_candidate_id: candidateIds[0].startsWith("ocand_")
+              ? `ocand_${"z".repeat(16)}`
+              : `cand_${"z".repeat(16)}`,
+          },
+        ],
+        unassignedFor(candidateIds),
+      ],
+      [
+        "equal counts but one omitted and one unknown",
+        blocksFor(candidateIds),
+        [
+          {
+            ephemeral_opaque_candidate_id: candidateIds[0].startsWith("ocand_")
+              ? `ocand_${"z".repeat(16)}`
+              : `cand_${"z".repeat(16)}`,
+          },
+        ],
+      ],
+      [
+        "duplicate execution candidate",
+        [...blocksFor(candidateIds), blocksFor(candidateIds)[0]],
+        unassignedFor(candidateIds),
+      ],
+      [
+        "duplicate unassigned candidate",
+        blocksFor(candidateIds),
+        [...unassignedFor(candidateIds), unassignedFor(candidateIds)[0]],
+      ],
+      [
+        "placed and unassigned overlap",
+        blocksFor(candidateIds),
+        [
+          ...unassignedFor(candidateIds),
+          { ephemeral_opaque_candidate_id: candidateIds[0] },
+        ],
+      ],
+    ];
+    for (const [name, blocks, unassigned] of hostilePartitions) {
+      assert.equal(
+        candidateAccountingIsExact(candidateIds, blocks, unassigned),
+        false,
+        `${name} must fail exact accounting`,
+      );
+    }
+
+    const diagnosticViolationCandidateIds = [candidateIds[1]];
+    assert.equal(diagnosticViolationCandidateIds.length, 1);
+    assert.equal(
+      candidateAccountingIsExact(
+        candidateIds,
+        [{ ephemeral_opaque_candidate_id: candidateIds[0] }],
+        [{ ephemeral_opaque_candidate_id: candidateIds[2] }],
+      ),
+      false,
+      "a candidate appearing only in violations remains omitted",
+    );
+  }
+
+  const jointlyWeakenedMutations = [
+    [
+      "union may omit candidates",
+      (contract) => {
+        contract.candidateAccountingRules
+          .executionBlockAndUnassignedCandidateIdSetUnionMustEqualExactCorrelatedInvocationCandidateSet =
+          false;
+      },
+    ],
+    [
+      "placed and unassigned overlap allowed",
+      (contract) => {
+        contract.candidateAccountingRules
+          .executionBlockAndUnassignedCandidateIdSetsDisjoint = false;
+      },
+    ],
+    [
+      "violation IDs satisfy accounting",
+      (contract) => {
+        contract.candidateAccountingRules
+          .violationCandidateIdsAreDiagnosticOnlyAndCannotSatisfyAccounting =
+          false;
+      },
+    ],
+  ];
+  for (const [name, mutate] of jointlyWeakenedMutations) {
+    const hostile = clone(scheduler);
+    mutate(hostile.resultContract);
+    mutate(hostile.optimizerProjectedResultContract);
+    assert.equal(
+      c3ResultValidationContractsAreClosed(hostile),
+      false,
+      `${name} must fail even when both result contracts are weakened equally`,
+    );
+  }
+  for (const ruleKey of Object.keys(
+    scheduler.resultContract.candidateAccountingRules,
+  )) {
+    const missingAccountingRule = clone(scheduler);
+    delete missingAccountingRule.resultContract.candidateAccountingRules[
+      ruleKey
+    ];
+    delete missingAccountingRule.optimizerProjectedResultContract
+      .candidateAccountingRules[ruleKey];
+    assert.equal(
+      c3ResultValidationContractsAreClosed(missingAccountingRule),
+      false,
+      `coordinated removal of accounting rule ${ruleKey} must fail closed`,
+    );
+  }
+  const jointTopLevelOverride = clone(scheduler);
+  jointTopLevelOverride.resultContract.allowDurationOverflow = true;
+  jointTopLevelOverride.optimizerProjectedResultContract.allowDurationOverflow =
+    true;
+  assert.equal(
+    c3ResultValidationContractsAreClosed(jointTopLevelOverride),
+    false,
+  );
+  const jointExecutionBlockSurfaceWidening = clone(scheduler);
+  for (const contract of [
+    jointExecutionBlockSurfaceWidening.resultContract,
+    jointExecutionBlockSurfaceWidening.optimizerProjectedResultContract,
+  ]) {
+    contract.executionBlockFieldsExactly.push("estimated_minutes");
+    contract.scalarSchemas.estimated_minutes = "integer_1_to_1440";
+  }
+  assert.equal(
+    c3ResultValidationContractsAreClosed(
+      jointExecutionBlockSurfaceWidening,
+    ),
+    false,
+  );
+
+  for (const constraintCode of C3_RESULT_CONSTRAINT_CODES) {
+    const missingConstraint = clone(scheduler);
+    for (const constraints of [
+      missingConstraint.hardConstraints,
+      missingConstraint.resultContract.closedEnumValues.constraint_code_enum,
+      missingConstraint.optimizerProjectedResultContract.closedEnumValues
+        .constraint_code_enum,
+    ]) {
+      constraints.splice(constraints.indexOf(constraintCode), 1);
+    }
+    assert.equal(
+      c3ResultValidationContractsAreClosed(missingConstraint),
+      false,
+      `${constraintCode} must stay in both closed violation enums and hard constraints`,
+    );
+  }
+});
+
+test("C3 execution-block duration and shortening bounds reject incompatible immutable placements", async () => {
+  const scheduler = await json(
+    "config/dabangil-full-day-scheduler-contract.json",
+  );
+  assert.equal(c3ResultValidationContractsAreClosed(scheduler), true);
+
+  const block = (candidateId, start, end, duration) => ({
+    ephemeral_opaque_candidate_id: candidateId,
+    start_minute_kst: start,
+    end_minute_kst: end,
+    duration_minutes: duration,
+  });
+
+  for (const prefix of ["cand_", "ocand_"]) {
+    const fixedCandidateId = `${prefix}${"d".repeat(16)}`;
+    const shortenableCandidateId = `${prefix}${"e".repeat(16)}`;
+    const candidates = [
+      {
+        ephemeral_opaque_candidate_id: fixedCandidateId,
+        estimated_minutes: 60,
+        minimum_minutes: 30,
+        can_shorten: false,
+      },
+      {
+        ephemeral_opaque_candidate_id: shortenableCandidateId,
+        estimated_minutes: 120,
+        minimum_minutes: 60,
+        can_shorten: true,
+      },
+    ];
+    for (const valid of [
+      block(fixedCandidateId, 60, 120, 60),
+      block(shortenableCandidateId, 120, 180, 60),
+      block(shortenableCandidateId, 180, 270, 90),
+      block(shortenableCandidateId, 300, 420, 120),
+    ]) {
+      assert.equal(executionBlockDurationIsValid(candidates, valid), true);
+    }
+
+    const hostileDurations = [
+      [
+        "duration differs from end minus start",
+        block(fixedCandidateId, 60, 120, 59),
+      ],
+      [
+        "non-shortenable candidate is shortened",
+        block(fixedCandidateId, 60, 105, 45),
+      ],
+      [
+        "non-shortenable candidate exceeds estimate",
+        block(fixedCandidateId, 60, 121, 61),
+      ],
+      [
+        "shortenable candidate falls below minimum",
+        block(shortenableCandidateId, 120, 179, 59),
+      ],
+      [
+        "shortenable candidate exceeds estimate",
+        block(shortenableCandidateId, 120, 241, 121),
+      ],
+      [
+        "execution block uses an unknown current-invocation candidate",
+        block(`${prefix}${"z".repeat(16)}`, 60, 120, 60),
+      ],
+    ];
+    for (const [name, hostile] of hostileDurations) {
+      assert.equal(
+        executionBlockDurationIsValid(candidates, hostile),
+        false,
+        `${prefix}: ${name} must fail duration validation`,
+      );
+    }
+
+    const duplicateCandidateRows = [...candidates, clone(candidates[0])];
+    assert.equal(
+      executionBlockDurationIsValid(
+        duplicateCandidateRows,
+        block(fixedCandidateId, 60, 120, 60),
+      ),
+      false,
+      `${prefix}: duplicate current-invocation candidates must not collapse`,
+    );
+
+    const immutableIncompatiblePlacement = block(
+      fixedCandidateId,
+      60,
+      105,
+      45,
+    );
+    assert.equal(
+      executionBlockDurationIsValid(
+        candidates,
+        immutableIncompatiblePlacement,
+      ),
+      false,
+    );
+  }
+  assert.equal(
+    scheduler.resultContract.executionBlockDurationRules
+      .immutableElapsedOrInProgressPlacementMayBeMovedShortenedExtendedOrRewrittenToSatisfyCurrentCandidate,
+    false,
+  );
+  assert.equal(
+    scheduler.resultContract.executionBlockDurationRules
+      .preProjectionImmutablePlacementCandidateDurationIncompatibilityInvalidNativeFallbackResult,
+    "blocked_manual_plan_required",
+  );
+  assert.equal(
+    scheduler.resultContract.executionBlockDurationRules
+      .preProjectionImmutablePlacementCandidateDurationIncompatibilityFallbackTriggerStatus,
+    "validator_rejected",
+  );
+  assert.equal(
+    scheduler.resultContract.executionBlockDurationRules
+      .preProjectionImmutablePlacementCandidateDurationIncompatibilityFallbackReasonEnumMustEqualTriggerStatus,
+    true,
+  );
+  assert.equal(
+    scheduler.inputContract.priorAcceptedScheduleRules
+      .immutablePlacementCandidateDurationIncompatibilityInvalidNativeFallbackResult,
+    "blocked_manual_plan_required",
+  );
+  assert.equal(
+    scheduler.inputContract.optimizerInvocationProjectionContract
+      .projectionRules
+      .immutablePriorPlacementCandidateDurationIncompatibilityMayReachOptimizer,
+    false,
+  );
+  assert.equal(
+    scheduler.inputContract.optimizerInvocationProjectionContract
+      .projectionRules
+      .immutablePriorPlacementCandidateDurationIncompatibilityMustEnterSeparatelyValidatedNativeFallbackWithoutRewritingPlacementOrCandidatePolicy,
+    true,
+  );
+  assert.equal(
+    scheduler.inputContract.optimizerInvocationProjectionContract
+      .projectionRules
+      .immutablePriorPlacementCandidateDurationIncompatibilityInvalidNativeFallbackResult,
+    "blocked_manual_plan_required",
+  );
+
+  const jointlyWeakenedDuration = clone(scheduler);
+  for (const contract of [
+    jointlyWeakenedDuration.resultContract,
+    jointlyWeakenedDuration.optimizerProjectedResultContract,
+  ]) {
+    contract.executionBlockDurationRules
+      .canShortenTrueRequiresMinimumMinutesLessThanOrEqualDurationMinutesLessThanOrEqualEstimatedMinutes =
+      false;
+  }
+  assert.equal(
+    c3ResultValidationContractsAreClosed(jointlyWeakenedDuration),
+    false,
+  );
+
+  for (const ruleKey of Object.keys(
+    scheduler.resultContract.executionBlockDurationRules,
+  )) {
+    const missingDurationRule = clone(scheduler);
+    delete missingDurationRule.resultContract.executionBlockDurationRules[
+      ruleKey
+    ];
+    delete missingDurationRule.optimizerProjectedResultContract
+      .executionBlockDurationRules[ruleKey];
+    assert.equal(
+      c3ResultValidationContractsAreClosed(missingDurationRule),
+      false,
+      `coordinated removal of duration rule ${ruleKey} must fail closed`,
+    );
+  }
+
+  const hostileInputPreflightMutations = [
+    (value) => {
+      value.inputContract.priorAcceptedScheduleRules
+        .elapsedAndInProgressPlacementMustResolveExactlyOneCurrentInvocationCandidateBeforeProjection =
+        false;
+    },
+    (value) => {
+      value.inputContract.priorAcceptedScheduleRules
+        .elapsedAndInProgressPlacementMustSatisfyResolvedCurrentCandidateDurationAndShorteningRulesBeforeProjection =
+        false;
+    },
+    (value) => {
+      value.inputContract.priorAcceptedScheduleRules
+        .immutablePlacementCandidateDurationIncompatibilityMayReachOptimizer =
+        true;
+    },
+    (value) => {
+      value.inputContract.priorAcceptedScheduleRules
+        .immutablePlacementCandidateDurationIncompatibilityFallbackTriggerStatus =
+        "schema_mismatch";
+    },
+    (value) => {
+      value.inputContract.priorAcceptedScheduleRules
+        .immutablePlacementCandidateDurationIncompatibilityFallbackReasonEnumMustEqualTriggerStatus =
+        false;
+    },
+    (value) => {
+      value.inputContract.priorAcceptedScheduleRules
+        .immutablePlacementCandidateDurationIncompatibilityMustAttemptExactlyOneSeparatelyValidatedNativeFallback =
+        false;
+    },
+    (value) => {
+      value.inputContract.priorAcceptedScheduleRules
+        .immutablePlacementCandidateDurationIncompatibilityMustEnterSeparatelyValidatedNativeFallbackWithoutRewritingPlacementOrCandidatePolicy =
+        false;
+    },
+    (value) => {
+      value.inputContract.priorAcceptedScheduleRules
+        .immutablePlacementCandidateDurationIncompatibilityInvalidNativeFallbackResult =
+        "validator_rejected";
+    },
+    (value) => {
+      value.inputContract.priorAcceptedScheduleRules
+        .immutablePlacementCandidateDurationIncompatibilityInvalidNativeFallbackMayTriggerAnotherFallback =
+        true;
+    },
+    (value) => {
+      value.inputContract.priorAcceptedScheduleRules
+        .immutablePlacementOrCurrentCandidatePolicyMayBeRewrittenToRepairIncompatibility =
+        true;
+    },
+    (value) => {
+      value.inputContract.optimizerInvocationProjectionContract.projectionRules
+        .immutablePriorPlacementsMustPassExactCurrentCandidateDurationCompatibilityBeforeProjection =
+        false;
+    },
+    (value) => {
+      value.inputContract.optimizerInvocationProjectionContract.projectionRules
+        .immutablePriorPlacementCandidateDurationIncompatibilityMayReachOptimizer =
+        true;
+    },
+    (value) => {
+      value.inputContract.optimizerInvocationProjectionContract.projectionRules
+        .immutablePriorPlacementCandidateDurationIncompatibilityFallbackTriggerStatus =
+        "schema_mismatch";
+    },
+    (value) => {
+      value.inputContract.optimizerInvocationProjectionContract.projectionRules
+        .immutablePriorPlacementCandidateDurationIncompatibilityFallbackReasonEnumMustEqualTriggerStatus =
+        false;
+    },
+    (value) => {
+      value.inputContract.optimizerInvocationProjectionContract.projectionRules
+        .immutablePriorPlacementCandidateDurationIncompatibilityMustAttemptExactlyOneSeparatelyValidatedNativeFallback =
+        false;
+    },
+    (value) => {
+      value.inputContract.optimizerInvocationProjectionContract.projectionRules
+        .immutablePriorPlacementCandidateDurationIncompatibilityMustEnterSeparatelyValidatedNativeFallbackWithoutRewritingPlacementOrCandidatePolicy =
+        false;
+    },
+    (value) => {
+      value.inputContract.optimizerInvocationProjectionContract.projectionRules
+        .immutablePriorPlacementCandidateDurationIncompatibilityInvalidNativeFallbackResult =
+        "validator_rejected";
+    },
+    (value) => {
+      value.inputContract.optimizerInvocationProjectionContract.projectionRules
+        .immutablePriorPlacementCandidateDurationIncompatibilityInvalidNativeFallbackMayTriggerAnotherFallback =
+        true;
+    },
+  ];
+  for (const mutate of hostileInputPreflightMutations) {
+    const hostilePreflight = clone(scheduler);
+    mutate(hostilePreflight);
+    assert.equal(
+      c3ResultValidationContractsAreClosed(hostilePreflight),
+      false,
+      "immutable placement preflight weakening must fail closed",
+    );
+  }
+
+  const immutableRewriteAllowed = clone(scheduler);
+  for (const contract of [
+    immutableRewriteAllowed.resultContract,
+    immutableRewriteAllowed.optimizerProjectedResultContract,
+  ]) {
+    contract.executionBlockDurationRules
+      .immutableElapsedOrInProgressPlacementMayBeMovedShortenedExtendedOrRewrittenToSatisfyCurrentCandidate =
+      true;
+  }
+  immutableRewriteAllowed.nativeValidator
+    .immutableElapsedOrInProgressPlacementMayBeRewrittenDuringValidationOrFallback =
+    true;
+  assert.equal(
+    c3ResultValidationContractsAreClosed(immutableRewriteAllowed),
+    false,
+  );
+});
+
+test("C3 every failure status requires one matching separately validated native fallback", async () => {
+  const scheduler = await json(
+    "config/dabangil-full-day-scheduler-contract.json",
+  );
+  assert.equal(c3ResultValidationContractsAreClosed(scheduler), true);
+  assert.equal(
+    scheduler.optimizerProjectedResultContract.failureRouting
+      .everyFallbackStatusesMemberMustUseSeparatelyValidatedNativeFallback,
+    true,
+  );
+  assert.equal(
+    scheduler.optimizerProjectedResultContract.failureRouting
+      .projectedFailureEnvelopeMaySelfAuthorizeCanonicalRelease,
+    false,
+  );
+  assert.equal(
+    scheduler.optimizerProjectedResultContract.failureRouting
+      .separatelyValidatedNativeFallbackPreparedAndValidatedOnlyInCanonicalIdentifierDomain,
+    true,
+  );
+
+  for (const contract of [
+    scheduler.resultContract,
+    scheduler.optimizerProjectedResultContract,
+  ]) {
+    const usedFixtureDigests = new Set();
+    for (const status of FALLBACK_STATUSES) {
+      const validFallback = {
+        used: true,
+        reason_enum: status,
+        native_plan_version: "native_plan_v1",
+      };
+      assert.equal(
+        fallbackEnvelopeRequirementsSatisfied(contract, status, validFallback, {
+          nativePlanVersionSchemaValid: true,
+          nativePlanValid: true,
+        }),
+        true,
+      );
+      assert.equal(
+        contract.fallbackValueRules
+          .failureStatusEnvelopeMaySelfAuthorizeReferencedNativeFallbackRelease,
+        false,
+        "a valid-looking failure envelope remains only a trigger claim",
+      );
+      assert.equal(
+        contract.fallbackValueRules
+          .trustedNativeGatewayMustResolveOrPrepareExactImmutableCanonicalNativeFallbackIndependentlyOfOptimizerResponse,
+        true,
+      );
+      assert.equal(
+        fallbackEnvelopeRequirementsSatisfied(
+          contract,
+          "fallback",
+          validFallback,
+          {
+            nativePlanVersionSchemaValid: true,
+            nativePlanValid: true,
+          },
+        ),
+        true,
+        `literal fallback status must use the validated ${status} trigger envelope`,
+      );
+      const nativeFallbackDigest = createHash("sha256")
+        .update(`valid-native-fallback:${status}`)
+        .digest("hex");
+      const fixtureEntry = {
+        synthetic_fixture_id: `syn_s237o_${status}_fixture`,
+        expected_status: status,
+        observed_status: status,
+        native_fallback_result_digest_sha256: nativeFallbackDigest,
+        manual_block_result_digest_sha256_or_null: null,
+        assertion_result: "passed",
+      };
+      assert.equal(
+        failureFixtureEntryIsValid(
+          contract,
+          fixtureEntry,
+          { status, fallback: validFallback },
+          { previouslyUsedNativeFallbackDigests: usedFixtureDigests },
+        ),
+        true,
+      );
+      assert.equal(
+        failureFixtureEntryIsValid(
+          contract,
+          fixtureEntry,
+          { status: "fallback", fallback: validFallback },
+          { previouslyUsedNativeFallbackDigests: usedFixtureDigests },
+        ),
+        true,
+      );
+      usedFixtureDigests.add(nativeFallbackDigest);
+
+      const otherStatus =
+        FALLBACK_STATUSES.find((candidate) => candidate !== status);
+      const exactManualBlockFallback = {
+        used: false,
+        reason_enum: "not_used",
+        native_plan_version: null,
+      };
+      const hostileFallbacks = [
+        [
+          "missing fallback",
+          undefined,
+          { rejectionCode: "missing_fallback" },
+        ],
+        [
+          "unused fallback",
+          { used: false, reason_enum: "not_used", native_plan_version: null },
+          { rejectionCode: "fallback_unused" },
+        ],
+        [
+          "mismatched reason",
+          { ...validFallback, reason_enum: otherStatus },
+          { rejectionCode: "fallback_reason_mismatch" },
+        ],
+        [
+          "mismatched result status",
+          validFallback,
+          {
+            attemptStatus: otherStatus,
+            rejectionCode: "fallback_status_mismatch",
+          },
+        ],
+        [
+          "null native version",
+          { ...validFallback, native_plan_version: null },
+          { rejectionCode: "native_plan_version_invalid" },
+        ],
+        [
+          "invalid native version schema",
+          validFallback,
+          {
+            nativePlanVersionSchemaValid: false,
+            rejectionCode: "native_plan_version_invalid",
+          },
+        ],
+        [
+          "invalid native plan",
+          validFallback,
+          {
+            nativePlanValid: false,
+            rejectionCode: "native_plan_unresolved_or_mutable",
+            nativePlanFailureCode:
+              "native_plan_unresolved_or_mutable",
+          },
+        ],
+        [
+          "invalid candidate accounting",
+          validFallback,
+          {
+            nativePlanValid: false,
+            rejectionCode: "candidate_accounting_invalid",
+            nativePlanFailureCode: "candidate_accounting_invalid",
+          },
+        ],
+        [
+          "invalid execution-block duration",
+          validFallback,
+          {
+            nativePlanValid: false,
+            rejectionCode: "execution_block_duration_invalid",
+            nativePlanFailureCode:
+              "execution_block_duration_invalid",
+          },
+        ],
+        [
+          "invalid hard constraint",
+          validFallback,
+          {
+            nativePlanValid: false,
+            rejectionCode: "hard_constraint_invalid",
+            nativePlanFailureCode: "hard_constraint_invalid",
+          },
+        ],
+        [
+          "canonical result has an extra field",
+          validFallback,
+          {
+            canonicalResultSchemaValid: false,
+            rejectionCode: "canonical_result_contract_invalid",
+          },
+        ],
+        [
+          "canonical result has wrong request correlation",
+          validFallback,
+          {
+            canonicalResultSchemaValid: false,
+            rejectionCode: "canonical_result_contract_invalid",
+          },
+        ],
+        [
+          "canonical result has an extra field and incomplete accounting",
+          validFallback,
+          {
+            canonicalResultSchemaValid: false,
+            nativePlanValid: false,
+            rejectionCode: "candidate_accounting_invalid",
+            nativePlanFailureCode: "candidate_accounting_invalid",
+          },
+        ],
+        [
+          "immutable placement is incompatible",
+          validFallback,
+          {
+            nativePlanValid: false,
+            rejectionCode: "immutable_placement_incompatible",
+            nativePlanFailureCode:
+              "immutable_placement_incompatible",
+          },
+        ],
+      ];
+      for (const [
+        hostileIndex,
+        [name, fallback, validation],
+      ] of hostileFallbacks.entries()) {
+        assert.equal(
+          fallbackEnvelopeRequirementsSatisfied(
+            contract,
+            validation.attemptStatus ?? status,
+            fallback,
+            validation,
+          ),
+          false,
+          `${status}: ${name} must not release a candidate plan`,
+        );
+        assert.equal(
+          contract.fallbackValueRules
+            .missingFallbackMismatchedReasonInvalidVersionOrInvalidNativePlanResult,
+          "blocked_manual_plan_required",
+        );
+        assert.equal(
+          contract.fallbackValueRules
+            .missingFallbackMismatchedReasonInvalidVersionOrInvalidNativePlanMayReleaseCandidatePlan,
+          false,
+        );
+        const invalidFixtureEntry = {
+          synthetic_fixture_id: `syn_s237o_${status}_${hostileIndex}_invalid`,
+          expected_status: status,
+          observed_status: status,
+          native_fallback_result_digest_sha256: createHash("sha256")
+            .update(`invalid-native-fallback:${status}:${name}`)
+            .digest("hex"),
+          manual_block_result_digest_sha256_or_null: createHash("sha256")
+            .update(`manual-block:${status}:${name}`)
+            .digest("hex"),
+          assertion_result: "passed",
+        };
+        const invalidAttempt = {
+          status: validation.attemptStatus ?? status,
+          fallback,
+        };
+        assert.equal(
+          failureFixtureEntryIsValid(
+            contract,
+            invalidFixtureEntry,
+            invalidAttempt,
+            {
+              ...validation,
+              manualBlockResultStatus:
+                "blocked_manual_plan_required",
+              manualBlockExecutionBlockCount: 0,
+              manualBlockReferencesNativePlan: false,
+              manualBlockFallback: exactManualBlockFallback,
+            },
+          ),
+          true,
+          `${status}: ${name} must resolve only through the exact manual block branch`,
+        );
+        const swappedRejectionCode = NATIVE_FALLBACK_REJECTION_CODES.find(
+          (code) => code !== validation.rejectionCode,
+        );
+        assert.equal(
+          failureFixtureEntryIsValid(
+            contract,
+            invalidFixtureEntry,
+            invalidAttempt,
+            {
+              ...validation,
+              rejectionCode: swappedRejectionCode,
+              manualBlockResultStatus:
+                "blocked_manual_plan_required",
+              manualBlockFallback: exactManualBlockFallback,
+            },
+          ),
+          false,
+          `${status}: ${name} cannot be mislabeled with another valid rejection code`,
+        );
+        assert.equal(
+          failureFixtureEntryIsValid(
+            contract,
+            {
+              ...invalidFixtureEntry,
+              manual_block_result_digest_sha256_or_null: null,
+            },
+            invalidAttempt,
+            validation,
+          ),
+          false,
+          `${status}: ${name} cannot pass without a manual block digest`,
+        );
+        assert.equal(
+          failureFixtureEntryIsValid(
+            contract,
+            invalidFixtureEntry,
+            invalidAttempt,
+            {
+              ...validation,
+              manualBlockResultStatus:
+                "blocked_manual_plan_required",
+              manualBlockExecutionBlockCount: 1,
+              manualBlockFallback: exactManualBlockFallback,
+            },
+          ),
+          false,
+          `${status}: ${name} manual block cannot contain execution blocks`,
+        );
+        assert.equal(
+          failureFixtureEntryIsValid(
+            contract,
+            invalidFixtureEntry,
+            invalidAttempt,
+            {
+              ...validation,
+              manualBlockResultStatus:
+                "blocked_manual_plan_required",
+              manualBlockReferencesNativePlan: true,
+              manualBlockFallback: exactManualBlockFallback,
+            },
+          ),
+          false,
+          `${status}: ${name} manual block cannot release a referenced native plan`,
+        );
+        for (const hostileManualBlockFallback of [
+          {
+            used: true,
+            reason_enum: status,
+            native_plan_version: "native_plan_v1",
+          },
+          {
+            used: false,
+            reason_enum: status,
+            native_plan_version: null,
+          },
+          {
+            used: false,
+            reason_enum: "not_used",
+            native_plan_version: "native_plan_v1",
+          },
+        ]) {
+          assert.equal(
+            failureFixtureEntryIsValid(
+              contract,
+              invalidFixtureEntry,
+              invalidAttempt,
+              {
+                ...validation,
+                manualBlockResultStatus:
+                  "blocked_manual_plan_required",
+                manualBlockFallback: hostileManualBlockFallback,
+              },
+            ),
+            false,
+            `${status}: ${name} manual block fallback tuple must be used=false/not_used/null`,
+          );
+        }
+      }
+
+      const incompleteNativeFallbackCandidateIds = [
+        `cand_${"f".repeat(16)}`,
+        `cand_${"g".repeat(16)}`,
+      ];
+      assert.equal(
+        fallbackEnvelopeRequirementsSatisfied(
+          contract,
+          status,
+          validFallback,
+          {
+            nativePlanVersionSchemaValid: true,
+            nativePlanValid: true,
+          },
+        ) &&
+          candidateAccountingIsExact(
+            incompleteNativeFallbackCandidateIds,
+            [
+              {
+                ephemeral_opaque_candidate_id:
+                  incompleteNativeFallbackCandidateIds[0],
+              },
+            ],
+            [],
+          ),
+        false,
+        `${status}: valid-looking fallback metadata cannot release incomplete accounting`,
+      );
+    }
+
+    assert.equal(
+      fallbackEnvelopeRequirementsSatisfied(contract, "fallback", {
+        used: true,
+        reason_enum: "fallback",
+        native_plan_version: "native_plan_v1",
+      }),
+      false,
+      "literal fallback is not itself an allowed trigger reason",
+    );
+    const reusedDigest = "b".repeat(64);
+    const firstStatus = FALLBACK_STATUSES[0];
+    const secondStatus = FALLBACK_STATUSES[1];
+    const firstEntry = {
+      synthetic_fixture_id: `syn_s237o_${firstStatus}_reuse`,
+      expected_status: firstStatus,
+      observed_status: firstStatus,
+      native_fallback_result_digest_sha256: reusedDigest,
+      manual_block_result_digest_sha256_or_null: null,
+      assertion_result: "passed",
+    };
+    const secondEntry = {
+      synthetic_fixture_id: `syn_s237o_${secondStatus}_reuse`,
+      expected_status: secondStatus,
+      observed_status: secondStatus,
+      native_fallback_result_digest_sha256: reusedDigest,
+      manual_block_result_digest_sha256_or_null: null,
+      assertion_result: "passed",
+    };
+    assert.equal(
+      failureFixtureEntryIsValid(
+        contract,
+        firstEntry,
+        {
+          status: "fallback",
+          fallback: {
+            used: true,
+            reason_enum: firstStatus,
+            native_plan_version: "native_plan_v1",
+          },
+        },
+      ),
+      true,
+    );
+    assert.equal(
+      failureFixtureEntryIsValid(
+        contract,
+        secondEntry,
+        {
+          status: "fallback",
+          fallback: {
+            used: true,
+            reason_enum: secondStatus,
+            native_plan_version: "native_plan_v1",
+          },
+        },
+        { previouslyUsedNativeFallbackDigests: new Set([reusedDigest]) },
+      ),
+      false,
+      "one native fallback result digest cannot satisfy two triggers",
+    );
+
+    for (const status of ["optimal", "feasible"]) {
+      assert.equal(
+        fallbackEnvelopeRequirementsSatisfied(contract, status, {
+          used: false,
+          reason_enum: "not_used",
+          native_plan_version: null,
+        }),
+        true,
+      );
+      assert.equal(
+        fallbackEnvelopeRequirementsSatisfied(contract, status, {
+          used: true,
+          reason_enum: "timeout",
+          native_plan_version: "native_plan_v1",
+        }),
+        false,
+      );
+      assert.equal(
+        fallbackEnvelopeRequirementsSatisfied(contract, status, {
+          used: false,
+          reason_enum: "timeout",
+          native_plan_version: null,
+        }),
+        false,
+      );
+      assert.equal(
+        fallbackEnvelopeRequirementsSatisfied(contract, status, {
+          used: false,
+          reason_enum: "not_used",
+          native_plan_version: "native_plan_v1",
+        }),
+        false,
+      );
+      assert.equal(
+        fallbackEnvelopeRequirementsSatisfied(
+          contract,
+          status,
+          undefined,
+        ),
+        false,
+      );
+    }
+  }
+
+  const jointlyOptionalFailureFallback = clone(scheduler);
+  for (const contract of [
+    jointlyOptionalFailureFallback.resultContract,
+    jointlyOptionalFailureFallback.optimizerProjectedResultContract,
+  ]) {
+    contract.fallbackValueRules
+      .everyFallbackStatusesMemberRequiresUsedTrue = false;
+  }
+  assert.equal(
+    c3ResultValidationContractsAreClosed(jointlyOptionalFailureFallback),
+    false,
+  );
+
+  for (const ruleKey of Object.keys(
+    scheduler.resultContract.fallbackValueRules,
+  )) {
+    const missingFallbackRule = clone(scheduler);
+    delete missingFallbackRule.resultContract.fallbackValueRules[ruleKey];
+    delete missingFallbackRule.optimizerProjectedResultContract
+      .fallbackValueRules[ruleKey];
+    assert.equal(
+      c3ResultValidationContractsAreClosed(missingFallbackRule),
+      false,
+      `coordinated removal of fallback rule ${ruleKey} must fail closed`,
+    );
+  }
+
+  const projectedSelfAuthorization = clone(scheduler);
+  projectedSelfAuthorization.optimizerProjectedResultContract.failureRouting
+    .projectedFailureEnvelopeMaySelfAuthorizeCanonicalRelease = true;
+  assert.equal(
+    projectedResultGatewayContractIsClosed(projectedSelfAuthorization),
+    false,
+  );
+
+  const invalidAttemptResolverBypass = clone(scheduler);
+  invalidAttemptResolverBypass.s237oBenchmarkAcceptanceContract
+    .benchmarkResultDigestContract.resolvedArtifactMembersContract
+    .canonicalNativeFallbackProjectionContract
+    .sourceNativeFallbackDigestMustResolveToRejectedNativeFallbackAttemptValidationRecordInSameAuthorizationStoreWhenManualBlockDigestIsNonNull =
+    false;
+  assert.equal(
+    c3ResultValidationContractsAreClosed(invalidAttemptResolverBypass),
+    false,
+  );
+
+  const rejectedAttemptRecordMayLeak = clone(scheduler);
+  rejectedAttemptRecordMayLeak.s237oBenchmarkAcceptanceContract
+    .benchmarkResultDigestContract.resolvedArtifactMembersContract
+    .rejectedNativeFallbackAttemptValidationRecordContract
+    .rawRejectedNativeFallbackOutputMayAppearInRecordLogsArtifactsCachesErrorsTelemetryOrPersistedTemp =
+    true;
+  assert.equal(
+    c3ResultValidationContractsAreClosed(rejectedAttemptRecordMayLeak),
+    false,
+  );
+
+  const rejectionCodeWidened = clone(scheduler);
+  rejectionCodeWidened.s237oBenchmarkAcceptanceContract
+    .benchmarkResultDigestContract.resolvedArtifactMembersContract
+    .rejectedNativeFallbackAttemptValidationRecordContract.fieldSchemas
+    .rejection_code_enum.push("unreviewed_rejection");
+  assert.equal(
+    c3ResultValidationContractsAreClosed(rejectionCodeWidened),
+    false,
+  );
+
+  const fallbackValidationSkipped = clone(scheduler);
+  fallbackValidationSkipped.nativeValidator
+    .validatedNativeFallbackMustSatisfyCanonicalCandidateAccountingExecutionBlockDurationAndAllHardConstraints =
+    false;
+  assert.equal(
+    c3ResultValidationContractsAreClosed(fallbackValidationSkipped),
+    false,
+  );
 });
 
 test("O4T approved packets resolve by final digest and hostile locator mutations fail closed", async () => {
@@ -2669,7 +4612,7 @@ test("new O3A packet remains pending and cannot bypass S236P", async () => {
     "O3A",
     "S236P",
   ]);
-  assert.match(report.o3aPacketDigestSha256, /^[a-f0-9]{64}$/);
+  assert.equal(report.o3aPacketDigestSha256, O3A_PACKET_SHA256);
   assert.equal(report.executionStatus, "blocked_pending_o3a_and_s236p");
 });
 
