@@ -25,13 +25,13 @@
     {
       "id": "qnet_appraiser_exam_info",
       "sourceName": "Q-Net 감정평가사 시험정보",
-      "sourceUrl": "https://www.q-net.or.kr/crf005.do?gId=60&gSite=L&gbnn=gbnSubtab4&id=crf00503",
+      "sourceUrl": "https://www.q-net.or.kr/crf005.do?gId=60&gSite=L&gbnn=gbnSubtab1&id=crf00503",
       "sourceKind": "exam_info",
       "authorityLevel": "primary",
       "owner": "Q-Net",
       "verifiedFacts": {},
-      "lastCheckedAt": "2026-06-08",
-      "needsManualRecheckBy": "2026-09-08",
+      "lastCheckedAt": "2026-07-26",
+      "needsManualRecheckBy": "2026-08-25",
       "allowedUse": ["metadata_only", "link_reference"],
       "disallowedUse": ["raw_problem_text_copy", "copyrighted_question_body_storage", "official_score_claim", "pass_fail_claim"],
       "notes": "Use for linking and manual exam-info verification. Do not copy question, answer, or copyrighted source bodies."
@@ -62,8 +62,8 @@
         "examYear": 2026,
         "examRound": 37
       },
-      "lastCheckedAt": "2026-06-25",
-      "needsManualRecheckBy": "2026-07-25",
+      "lastCheckedAt": "2026-07-26",
+      "needsManualRecheckBy": "2026-08-25",
       "allowedUse": ["metadata_only", "link_reference"],
       "disallowedUse": ["raw_problem_text_copy", "copyrighted_question_body_storage", "official_score_claim", "pass_fail_claim"],
       "notes": "Use only for annual notice metadata such as dates and links. Do not commit notice body or attached official file contents."
