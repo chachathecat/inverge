@@ -1255,12 +1255,43 @@
         },
         "memberSchemaContracts": {
           "benchmark_result_artifact": "benchmarkResultDigestContract.artifactFieldsExactly_and_artifactFieldSchemas",
-          "deterministic_replay_input_artifact": "inputContract.optimizerInvocationProjectionContract",
+          "deterministic_replay_input_artifact": "benchmarkResultDigestContract.resolvedArtifactMembersContract.identifierFreeDeterministicReplayInputArtifactContract",
           "deterministic_replay_config_artifact": "benchmarkResultDigestContract.resolvedArtifactMembersContract.deterministicReplayConfigArtifactContract",
           "deterministic_replay_result_set": "benchmarkResultDigestContract.deterministicReplayResultSetDigestContract",
           "failure_status_fixture_result_set": "benchmarkResultDigestContract.failureStatusFixtureResultSetDigestContract",
           "rollback_result_artifact": "benchmarkResultDigestContract.resolvedArtifactMembersContract.closedOperationAssertionResultArtifactContract.rollback",
           "metadata_boundary_result_artifact": "benchmarkResultDigestContract.resolvedArtifactMembersContract.closedOperationAssertionResultArtifactContract.metadata_boundary"
+        },
+        "identifierFreeDeterministicReplayInputArtifactContract": {
+          "fieldsExactly": [
+            "artifact_contract_version",
+            "canonical_projected_input_digest_sha256",
+            "six_process_projected_input_digests_sha256"
+          ],
+          "fieldSchemas": {
+            "artifact_contract_version": [
+              "dabangil.s237o.identifier_free_replay_input_digest_receipt.v1"
+            ],
+            "canonical_projected_input_digest_sha256": "lowercase_hex_64",
+            "six_process_projected_input_digests_sha256": "exact_ordered_array_of_six_lowercase_hex_64"
+          },
+          "additionalFieldsAllowed": false,
+          "freeTextAllowed": false,
+          "processOrderingExactly": [
+            "cold_1",
+            "cold_2",
+            "cold_3",
+            "warm_1",
+            "warm_2",
+            "warm_3"
+          ],
+          "exactProcessDigestCount": 6,
+          "allSixProcessDigestsMustEqualCanonicalProjectedInputDigest": true,
+          "canonicalProjectedInputDigestComputedInsideTrustedNativeGatewayFromExactValidatedProjectedInputBytes": true,
+          "projectedInputBytesMayLeaveTrustedNativeGateway": false,
+          "projectedIdentifierValuesMayAppearInArtifact": false,
+          "projectedIdentifierValuesMayAppearInLogsCachesErrorsTelemetryOrPersistedTempSurfaces": false,
+          "digestReceiptMayMaterializeOnlyAfterMappingAndProjectedIdentifierMaterialAreDestroyed": true
         },
         "deterministicReplayConfigArtifactContract": {
           "fieldsExactly": [
@@ -2137,7 +2168,9 @@
           "sameCanonicalProjectedInputBytesAndIdentifierBijectionMustBeReusedForAllSixReplayProcesses": true,
           "projectedIdentifiersMayBeReusedOutsideTheExactSixProcessReplaySession": false,
           "sessionMayContainAnyNonReplaySolverUse": false,
-          "mappingAndProjectedInputMustBeDestroyedImmediatelyAfterSixthReplayOrAnyFailure": true,
+          "mappingAndProjectedInputMustRemainThroughAllSixCompleteProjectedResponseValidationsAndInverseMappingsOnSuccess": true,
+          "mappingMayBeDestroyedBeforeTheSixthProjectedResponseValidationAndInverseMappingCompletesOnSuccess": false,
+          "mappingAndProjectedIdentifierMaterialMustBeDestroyedAfterTheSixthCompleteCanonicalAndNativeValidationPathOrAfterAnyFailureIsClassifiedAndValidatedNativeFallbackIsPreparedAndBeforeGatewayExit": true,
           "newReplaySessionRequiresFreshNonEqualProjectedIdentifiers": true
         },
         "allAllowedWindowIdsMustResolveThroughExactWindowBijection": true,
@@ -2145,7 +2178,8 @@
         "allFixedBlockWindowIdsMustResolveThroughExactWindowBijection": true,
         "allPriorPlacementCandidateAndWindowIdsMustResolveThroughExactBijections": true,
         "unknownDanglingDuplicateOrCrossClassMappingAllowed": false,
-        "mappingDestroyedBeforeResultLeavesTrustedNativeGateway": true
+        "mappingDestroyedBeforeResultLeavesTrustedNativeGateway": true,
+        "mappingRetainedAfterTrustedNativeGatewayExit": false
       },
       "forbiddenGatewayFieldsExactly": [
         "study_date_kst",
@@ -2179,12 +2213,15 @@
         "allNonIdentifierScalarAndEnumValuesMustEqualExactSourceValues": true,
         "replanCutoffMustBeNullIffVerifiedGenesisNoScheduleDecisionOtherwiseEqualSignedServerCutoff": true,
         "ephemeralIdsMustBeFreshlyRemappedPerOptimizerInvocation": true,
-        "ephemeralIdMappingMustRemainInsideTrustedNativeGatewayMemoryAndBeDestroyedAfterRequest": true,
+        "isolatedOptimizerProcessAndTransientIpcAreInsideTrustedNativeGatewayBoundary": true,
+        "ephemeralIdMappingMustRemainInsideTrustedNativeGatewayMemoryUntilProjectedResponseValidationAndRequiredInverseMappingFinish": true,
+        "ephemeralIdMappingMayBeDestroyedBeforeProjectedResponseValidationAndRequiredInverseMappingFinish": false,
         "elapsedAndInProgressPlacementsBecomeImmutablePriorPlacements": true,
         "futurePlacementsBecomeSoftPreferencesOnly": true,
         "derivedPlacementStateIsNotSent": true,
         "optimizerMayResolveOrAccessAuthoritativeStoreReceiptBundleAuthorizationOrIdentityPlane": false,
-        "optimizerLogsArtifactsCachesAndErrorsMayContainOnlyExactProjectedFields": true,
+        "optimizerLogsArtifactsCachesErrorsTelemetryAndPersistedTempSurfacesMayContainProjectedIdentifiers": false,
+        "onlyCanonicalInverseMappedResultsOrIdentifierFreeDigestReceiptsMayLeaveTrustedNativeGateway": true,
         "projectionFailureResult": "blocked_manual_plan_required"
       }
     },
@@ -3455,6 +3492,306 @@
       "keyed_commitment"
     ],
     "metadataOnly": true
+  },
+  "optimizerProjectedResultContract": {
+    "purpose": "validate_complete_optimizer_projected_response_before_inverse_mapping",
+    "identifierDomain": "projected_oreq_osnp_owin_ocand_only",
+    "canonicalResultContractPath": "resultContract",
+    "projectedInvocationContractPath": "inputContract.optimizerInvocationProjectionContract",
+    "allowedFieldsExactly": [
+      "request_id",
+      "input_snapshot_version",
+      "status",
+      "execution_blocks",
+      "unassigned_candidates",
+      "fallback",
+      "version_info",
+      "objective_components",
+      "violations",
+      "elapsed_ms"
+    ],
+    "additionalFieldsAllowed": false,
+    "nestedAdditionalFieldsAllowed": false,
+    "freeTextAllowed": false,
+    "executionBlockFieldsExactly": [
+      "ephemeral_opaque_candidate_id",
+      "ephemeral_opaque_window_id",
+      "start_minute_kst",
+      "end_minute_kst",
+      "duration_minutes"
+    ],
+    "unassignedCandidateFieldsExactly": [
+      "ephemeral_opaque_candidate_id",
+      "reason_enum"
+    ],
+    "fallbackFieldsExactly": [
+      "used",
+      "reason_enum",
+      "native_plan_version"
+    ],
+    "fallbackReasonValues": [
+      "not_used",
+      "infeasible",
+      "model_invalid",
+      "unknown",
+      "timeout",
+      "dependency_unavailable",
+      "adapter_error",
+      "schema_mismatch",
+      "stale_response",
+      "validator_rejected"
+    ],
+    "fallbackValueRules": {
+      "usedFalseRequiresReasonNotUsedAndNativePlanVersionNull": true,
+      "usedTrueRequiresTriggerReasonAndClosedNativePlanVersion": true,
+      "fallbackStatusRequiresUsedTrue": true,
+      "optimalOrFeasibleRequiresUsedFalse": true,
+      "blockedManualPlanRequiredMayFollowOnlyInvalidNativeFallback": true
+    },
+    "versionInfoFieldsExactly": [
+      "contract_version",
+      "native_policy_version",
+      "adapter_version",
+      "optimizer_version",
+      "objective_version",
+      "threshold_version",
+      "solver_seed",
+      "solver_workers",
+      "time_limit_ms",
+      "integer_scaling_version"
+    ],
+    "versionInfoFieldSchemas": {
+      "contract_version": {
+        "type": "closed_enum",
+        "values": [
+          "dabangil.full_day_scheduler.v1"
+        ]
+      },
+      "native_policy_version": "closed_identifier_1_to_80",
+      "adapter_version": "closed_identifier_1_to_80",
+      "optimizer_version": "closed_identifier_1_to_80",
+      "objective_version": "closed_identifier_1_to_80",
+      "threshold_version": "closed_identifier_1_to_80",
+      "solver_seed": "finite_integer",
+      "solver_workers": "finite_integer_1_to_64",
+      "time_limit_ms": "finite_integer_1_to_60000",
+      "integer_scaling_version": "closed_identifier_1_to_80"
+    },
+    "objectiveComponentFieldsExactly": [
+      "objective_code_enum",
+      "integer_value"
+    ],
+    "violationFieldsExactly": [
+      "constraint_code_enum",
+      "ephemeral_opaque_candidate_ids",
+      "severity_enum"
+    ],
+    "forbiddenFields": [
+      "user_id",
+      "account_id",
+      "learning_document_id",
+      "review_unit_id",
+      "question_title",
+      "question_body",
+      "answer_body",
+      "ocr_body",
+      "reference_answer_body",
+      "law_body",
+      "ai_body",
+      "free_text_reason",
+      "filename",
+      "content_hash",
+      "keyed_commitment",
+      "calendar_title",
+      "calendar_location",
+      "private_locator"
+    ],
+    "identifierSchemas": {
+      "request_id": "^oreq_[A-Za-z0-9_-]{16,64}$",
+      "input_snapshot_version": "^osnp_[A-Za-z0-9_-]{16,64}$",
+      "ephemeral_opaque_window_id": "^owin_[A-Za-z0-9_-]{16,64}$",
+      "ephemeral_opaque_candidate_id": "^ocand_[A-Za-z0-9_-]{16,64}$",
+      "native_plan_version": "closed_identifier_1_to_80_or_null"
+    },
+    "closedEnumValues": {
+      "severity_enum": [
+        "warning",
+        "error"
+      ],
+      "objective_code_enum": [
+        "maximize_native_priority_value",
+        "maximize_overdue_review_recovery",
+        "maximize_core_outcome_coverage",
+        "preserve_high_risk_subject_minimum_exposure",
+        "maximize_energy_window_fit",
+        "minimize_deadline_lateness",
+        "minimize_context_switches",
+        "minimize_accepted_schedule_churn",
+        "minimize_idle_fragmentation",
+        "minimize_optional_overload",
+        "minimize_unassigned_core_and_support_blocks"
+      ],
+      "constraint_code_enum": [
+        "core_outcome_maximum_three",
+        "all_blocks_within_available_windows",
+        "fixed_and_pinned_blocks_do_not_move",
+        "prior_accepted_elapsed_and_in_progress_blocks_immutable",
+        "block_overlap_zero",
+        "prerequisite_order_violations_zero",
+        "planned_minutes_do_not_exceed_declared_availability",
+        "candidate_duplicate_placement_zero",
+        "law_blocker_never_becomes_verified_completion",
+        "attempt_first_rewrite_after_attempt_and_review_only",
+        "guided_exposure_never_becomes_independent_review",
+        "owner_forbidden_windows_never_used"
+      ]
+    },
+    "scalarSchemas": {
+      "start_minute_kst": "integer_0_to_1439",
+      "end_minute_kst": "integer_1_to_1440",
+      "duration_minutes": "integer_1_to_1440",
+      "integer_value": "finite_integer",
+      "elapsed_ms": "finite_integer_0_to_60000",
+      "fallback_used": "boolean"
+    },
+    "cardinalityLimits": {
+      "execution_blocks_maximum": 256,
+      "unassigned_candidates_maximum": 256,
+      "objective_components_maximum": 11,
+      "violations_maximum": 256,
+      "candidate_ids_per_violation_maximum": 32,
+      "allIdentifierArraysUnique": true
+    },
+    "statuses": [
+      "optimal",
+      "feasible",
+      "infeasible",
+      "model_invalid",
+      "unknown",
+      "timeout",
+      "dependency_unavailable",
+      "adapter_error",
+      "schema_mismatch",
+      "stale_response",
+      "validator_rejected",
+      "fallback",
+      "blocked_manual_plan_required"
+    ],
+    "candidateStatusesAllowedBeforeNativeValidation": [
+      "optimal",
+      "feasible"
+    ],
+    "fallbackStatuses": [
+      "infeasible",
+      "model_invalid",
+      "unknown",
+      "timeout",
+      "dependency_unavailable",
+      "adapter_error",
+      "schema_mismatch",
+      "stale_response",
+      "validator_rejected"
+    ],
+    "nativeFallbackInvalidResult": "blocked_manual_plan_required",
+    "everyUnassignedCandidateRequiresReason": true,
+    "unassignedReasons": [
+      "capacity_exceeded",
+      "fixed_window_conflict",
+      "prerequisite_unavailable",
+      "deadline_conflict",
+      "lower_value_than_selected",
+      "owner_pinned_conflict",
+      "solver_timeout",
+      "dependency_unavailable",
+      "adapter_error",
+      "model_invalid",
+      "native_validator_rejected"
+    ],
+    "requestCorrelationFieldsRequired": [
+      "request_id",
+      "input_snapshot_version"
+    ],
+    "requestIdEchoRequired": true,
+    "inputSnapshotVersionEchoRequired": true,
+    "requestCorrelationEqualityTargets": {
+      "request_id": "exact_projected_invocation.ephemeral_request_id",
+      "input_snapshot_version": "exact_projected_invocation.ephemeral_input_snapshot_version"
+    },
+    "versionFieldsRequired": [
+      "contract_version",
+      "native_policy_version",
+      "adapter_version",
+      "optimizer_version",
+      "objective_version",
+      "threshold_version",
+      "solver_seed",
+      "solver_workers",
+      "time_limit_ms",
+      "integer_scaling_version"
+    ],
+    "allNonIdentifierSchemasEnumsRulesCardinalitiesAndOrderingMustEqualCanonicalResultContractExactly": true,
+    "canonicalResultContractMayAcceptProjectedIdentifierDomain": false,
+    "projectedResultContractMayAcceptOriginalIdentifierDomain": false,
+    "completeProjectedResponseValidationRequiredBeforeInverseMapping": true,
+    "inverseMappingContract": {
+      "identifierBearingPathsExactly": [
+        "request_id",
+        "input_snapshot_version",
+        "execution_blocks[].ephemeral_opaque_candidate_id",
+        "execution_blocks[].ephemeral_opaque_window_id",
+        "unassigned_candidates[].ephemeral_opaque_candidate_id",
+        "violations[].ephemeral_opaque_candidate_ids[]"
+      ],
+      "pathIdentifierClasses": {
+        "request_id": "request_id",
+        "input_snapshot_version": "input_snapshot_version",
+        "execution_blocks[].ephemeral_opaque_candidate_id": "ephemeral_opaque_candidate_id",
+        "execution_blocks[].ephemeral_opaque_window_id": "ephemeral_opaque_window_id",
+        "unassigned_candidates[].ephemeral_opaque_candidate_id": "ephemeral_opaque_candidate_id",
+        "violations[].ephemeral_opaque_candidate_ids[]": "ephemeral_opaque_candidate_id"
+      },
+      "bijectionSource": "inputContract.optimizerInvocationProjectionContract.identifierRemapContract",
+      "samePerInvocationBijectionsUsedForProjectionAndInverseMapping": true,
+      "allNonIdentifierValuesPreservedExactly": true,
+      "allArrayCardinalitiesAndOrderingPreservedExactly": true,
+      "inverseMappingMayFilterSortDeduplicateInsertOrDropArrayEntries": false,
+      "inverseMappedResultMustValidateAgainstCanonicalResultContractBeforeNativeValidation": true,
+      "duplicateMappingDefinition": "duplicate_source_entry_duplicate_projected_entry_one_to_many_or_many_to_one_within_any_identifier_class_not_repeated_valid_reference_use",
+      "missingUnknownDanglingDuplicateCrossClassOriginalDomainOrNonBijectiveMappingAllowed": false,
+      "partialInverseMappingOrReleaseOfInvalidProjectedResponseAllowed": false
+    },
+    "processingOrderExactly": [
+      "validate_complete_projected_response_against_optimizerProjectedResultContract",
+      "require_request_and_snapshot_correlation_equal_exact_projected_invocation_ids",
+      "validate_complete_per_class_bijections",
+      "inverse_map_exactly_the_six_identifier_bearing_paths",
+      "verify_all_non_id_values_and_array_cardinality_and_order_are_unchanged",
+      "validate_complete_inverse_mapped_object_against_canonical_resultContract",
+      "native_validate_canonical_candidate_or_prepare_separately_validated_native_fallback",
+      "destroy_mapping_projected_input_and_projected_response_identifier_material",
+      "verify_no_projected_identifier_in_gateway_output_logs_artifacts_caches_errors_telemetry_or_persisted_temp",
+      "release_only_canonical_result_validated_native_fallback_or_manual_block_from_gateway"
+    ],
+    "failureRouting": {
+      "missingUnknownDanglingDuplicateCrossClassOriginalDomainNonBijectiveOrPreservationFailureStatus": "schema_mismatch",
+      "wrongRequestOrSnapshotCorrelationStatus": "stale_response",
+      "schemaMismatchAndStaleResponseMustUseSeparatelyValidatedNativeFallback": true,
+      "invalidNativeFallbackResult": "blocked_manual_plan_required",
+      "failedProjectedResponseMayReachNativeValidationOrGatewayOutput": false
+    },
+    "mappingLifecycleContract": {
+      "mappingExistsOnlyInsideTrustedNativeGateway": true,
+      "mappingMustRemainUntilCompleteProjectedResponseValidationAndRequiredInverseMappingFinish": true,
+      "mappingMayBeDestroyedBeforeCompleteProjectedResponseValidationAndRequiredInverseMappingFinish": false,
+      "singleInvocationSuccessDestroysMappingAfterCanonicalAndNativeValidationBeforeGatewayOutput": true,
+      "singleInvocationFailureDestroysMappingAfterFailureClassificationAndValidatedNativeFallbackPreparationBeforeGatewayOutput": true,
+      "sixProcessBenchmarkRetainsSameMappingThroughAllSixProjectedResponseValidationsInverseMappingsCanonicalValidationsAndNativeValidations": true,
+      "sixProcessBenchmarkSuccessDestroysMappingOnlyAfterSixthCompleteValidationPathAndBeforeAnyCanonicalResultSetLeavesGateway": true,
+      "sixProcessBenchmarkFailureDestroysMappingAfterFailureClassificationAndValidatedNativeFallbackPreparationBeforeGatewayExit": true,
+      "mappingDestroyedOnEverySuccessAndFailurePath": true,
+      "mappingRetainedAfterGatewayExit": false,
+      "projectedIdentifierMayLeaveGatewayOrEnterLogsArtifactsCachesErrorsTelemetryOrPersistedTemp": false
+    }
   },
   "resultContract": {
     "allowedFieldsExactly": [

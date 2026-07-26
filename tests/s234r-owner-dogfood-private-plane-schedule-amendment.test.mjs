@@ -6,8 +6,28 @@ import test from "node:test";
 const PRIVATE_CONTRACT_SHA256 =
   "ef017344b184b33f8e30dcde8f25089c3e814b2aa279645bbedbd326662dacb5";
 const SCHEDULER_CONTRACT_SHA256 =
-  "81b69bec664342f6416a7a06742450d8bb4e2b52ee81b706e9a986162f9bc29b";
+  "5b531ab6970b080ade85b5fe3a011b002500ec65134a4e70ca64ba625feca06d";
 const JCS_SERIALIZATION = "rfc_8785_json_canonicalization_scheme_utf8";
+const PROJECTED_RESULT_ID_PATHS = [
+  "request_id",
+  "input_snapshot_version",
+  "execution_blocks[].ephemeral_opaque_candidate_id",
+  "execution_blocks[].ephemeral_opaque_window_id",
+  "unassigned_candidates[].ephemeral_opaque_candidate_id",
+  "violations[].ephemeral_opaque_candidate_ids[]",
+];
+const PROJECTED_RESULT_PROCESSING_ORDER = [
+  "validate_complete_projected_response_against_optimizerProjectedResultContract",
+  "require_request_and_snapshot_correlation_equal_exact_projected_invocation_ids",
+  "validate_complete_per_class_bijections",
+  "inverse_map_exactly_the_six_identifier_bearing_paths",
+  "verify_all_non_id_values_and_array_cardinality_and_order_are_unchanged",
+  "validate_complete_inverse_mapped_object_against_canonical_resultContract",
+  "native_validate_canonical_candidate_or_prepare_separately_validated_native_fallback",
+  "destroy_mapping_projected_input_and_projected_response_identifier_material",
+  "verify_no_projected_identifier_in_gateway_output_logs_artifacts_caches_errors_telemetry_or_persisted_temp",
+  "release_only_canonical_result_validated_native_fallback_or_manual_block_from_gateway",
+];
 
 const REQUIRED_RECEIPT_FIELDS = [
   "contract_version",
@@ -148,6 +168,220 @@ function s237oProposalSha256(packet) {
   normalized.owner_approved = null;
   normalized.approval_record = null;
   return canonicalSha256(normalized);
+}
+
+function projectedResultGatewayContractIsClosed(scheduler) {
+  const projected = scheduler.optimizerProjectedResultContract;
+  const canonical = scheduler.resultContract;
+  const projection =
+    scheduler.inputContract.optimizerInvocationProjectionContract;
+  if (!projected || !canonical || !projection) return false;
+
+  const canonicalSharedKeys = Object.keys(canonical).filter(
+    (key) => key !== "identifierSchemas",
+  );
+  const allCanonicalNonIdContractValuesAreExact =
+    canonicalSharedKeys.every(
+      (key) =>
+        Object.hasOwn(projected, key) &&
+        canonicalJson(projected[key]) === canonicalJson(canonical[key]),
+    );
+  const exactCanonicalIdentifierSchemas = {
+    request_id: "^req_[A-Za-z0-9_-]{16,64}$",
+    input_snapshot_version: "^snp_[A-Za-z0-9_-]{16,64}$",
+    ephemeral_opaque_window_id: "^win_[A-Za-z0-9_-]{16,64}$",
+    ephemeral_opaque_candidate_id: "^cand_[A-Za-z0-9_-]{16,64}$",
+    native_plan_version: "closed_identifier_1_to_80_or_null",
+  };
+  const exactProjectedIdentifierSchemas = {
+    request_id: "^oreq_[A-Za-z0-9_-]{16,64}$",
+    input_snapshot_version: "^osnp_[A-Za-z0-9_-]{16,64}$",
+    ephemeral_opaque_window_id: "^owin_[A-Za-z0-9_-]{16,64}$",
+    ephemeral_opaque_candidate_id: "^ocand_[A-Za-z0-9_-]{16,64}$",
+    native_plan_version: "closed_identifier_1_to_80_or_null",
+  };
+  const inverse = projected.inverseMappingContract;
+  const lifecycle = projected.mappingLifecycleContract;
+  const failure = projected.failureRouting;
+  const expectedPathClasses = {
+    request_id: "request_id",
+    input_snapshot_version: "input_snapshot_version",
+    "execution_blocks[].ephemeral_opaque_candidate_id":
+      "ephemeral_opaque_candidate_id",
+    "execution_blocks[].ephemeral_opaque_window_id":
+      "ephemeral_opaque_window_id",
+    "unassigned_candidates[].ephemeral_opaque_candidate_id":
+      "ephemeral_opaque_candidate_id",
+    "violations[].ephemeral_opaque_candidate_ids[]":
+      "ephemeral_opaque_candidate_id",
+  };
+  const replay = projection.identifierRemapContract.benchmarkReplaySessionContract;
+  const replayArtifact =
+    scheduler.s237oBenchmarkAcceptanceContract.benchmarkResultDigestContract
+      .resolvedArtifactMembersContract;
+  const identifierFreeInput =
+    replayArtifact.identifierFreeDeterministicReplayInputArtifactContract;
+  const exactIdentifierFreeInputFields = [
+    "artifact_contract_version",
+    "canonical_projected_input_digest_sha256",
+    "six_process_projected_input_digests_sha256",
+  ];
+  const exactIdentifierFreeInputFieldSchemas = {
+    artifact_contract_version: [
+      "dabangil.s237o.identifier_free_replay_input_digest_receipt.v1",
+    ],
+    canonical_projected_input_digest_sha256: "lowercase_hex_64",
+    six_process_projected_input_digests_sha256:
+      "exact_ordered_array_of_six_lowercase_hex_64",
+  };
+  const exactBenchmarkProcessOrder = [
+    "cold_1",
+    "cold_2",
+    "cold_3",
+    "warm_1",
+    "warm_2",
+    "warm_3",
+  ];
+
+  return (
+    projected.purpose ===
+      "validate_complete_optimizer_projected_response_before_inverse_mapping" &&
+    projected.identifierDomain ===
+      "projected_oreq_osnp_owin_ocand_only" &&
+    projected.canonicalResultContractPath === "resultContract" &&
+    projected.projectedInvocationContractPath ===
+      "inputContract.optimizerInvocationProjectionContract" &&
+    projected.additionalFieldsAllowed === false &&
+    projected.nestedAdditionalFieldsAllowed === false &&
+    projected.freeTextAllowed === false &&
+    allCanonicalNonIdContractValuesAreExact &&
+    canonicalJson(canonical.identifierSchemas) ===
+      canonicalJson(exactCanonicalIdentifierSchemas) &&
+    canonicalJson(projected.identifierSchemas) ===
+      canonicalJson(exactProjectedIdentifierSchemas) &&
+    projected
+      .allNonIdentifierSchemasEnumsRulesCardinalitiesAndOrderingMustEqualCanonicalResultContractExactly ===
+      true &&
+    projected.canonicalResultContractMayAcceptProjectedIdentifierDomain ===
+      false &&
+    projected.projectedResultContractMayAcceptOriginalIdentifierDomain ===
+      false &&
+    projected.completeProjectedResponseValidationRequiredBeforeInverseMapping ===
+      true &&
+    canonicalJson(projected.requestCorrelationEqualityTargets) ===
+      canonicalJson({
+        request_id: "exact_projected_invocation.ephemeral_request_id",
+        input_snapshot_version:
+          "exact_projected_invocation.ephemeral_input_snapshot_version",
+      }) &&
+    canonicalJson(inverse.identifierBearingPathsExactly) ===
+      canonicalJson(PROJECTED_RESULT_ID_PATHS) &&
+    new Set(inverse.identifierBearingPathsExactly).size ===
+      PROJECTED_RESULT_ID_PATHS.length &&
+    canonicalJson(inverse.pathIdentifierClasses) ===
+      canonicalJson(expectedPathClasses) &&
+    inverse.bijectionSource ===
+      "inputContract.optimizerInvocationProjectionContract.identifierRemapContract" &&
+    inverse.samePerInvocationBijectionsUsedForProjectionAndInverseMapping ===
+      true &&
+    inverse.allNonIdentifierValuesPreservedExactly === true &&
+    inverse.allArrayCardinalitiesAndOrderingPreservedExactly === true &&
+    inverse.inverseMappingMayFilterSortDeduplicateInsertOrDropArrayEntries ===
+      false &&
+    inverse
+      .inverseMappedResultMustValidateAgainstCanonicalResultContractBeforeNativeValidation ===
+      true &&
+    inverse.duplicateMappingDefinition ===
+      "duplicate_source_entry_duplicate_projected_entry_one_to_many_or_many_to_one_within_any_identifier_class_not_repeated_valid_reference_use" &&
+    inverse
+      .missingUnknownDanglingDuplicateCrossClassOriginalDomainOrNonBijectiveMappingAllowed ===
+      false &&
+    inverse.partialInverseMappingOrReleaseOfInvalidProjectedResponseAllowed ===
+      false &&
+    canonicalJson(projected.processingOrderExactly) ===
+      canonicalJson(PROJECTED_RESULT_PROCESSING_ORDER) &&
+    failure
+      .missingUnknownDanglingDuplicateCrossClassOriginalDomainNonBijectiveOrPreservationFailureStatus ===
+      "schema_mismatch" &&
+    failure.wrongRequestOrSnapshotCorrelationStatus === "stale_response" &&
+    failure.schemaMismatchAndStaleResponseMustUseSeparatelyValidatedNativeFallback ===
+      true &&
+    failure.invalidNativeFallbackResult ===
+      "blocked_manual_plan_required" &&
+    failure.failedProjectedResponseMayReachNativeValidationOrGatewayOutput ===
+      false &&
+    lifecycle.mappingExistsOnlyInsideTrustedNativeGateway === true &&
+    lifecycle.mappingMustRemainUntilCompleteProjectedResponseValidationAndRequiredInverseMappingFinish ===
+      true &&
+    lifecycle.mappingMayBeDestroyedBeforeCompleteProjectedResponseValidationAndRequiredInverseMappingFinish ===
+      false &&
+    lifecycle.singleInvocationSuccessDestroysMappingAfterCanonicalAndNativeValidationBeforeGatewayOutput ===
+      true &&
+    lifecycle.singleInvocationFailureDestroysMappingAfterFailureClassificationAndValidatedNativeFallbackPreparationBeforeGatewayOutput ===
+      true &&
+    lifecycle.sixProcessBenchmarkRetainsSameMappingThroughAllSixProjectedResponseValidationsInverseMappingsCanonicalValidationsAndNativeValidations ===
+      true &&
+    lifecycle.sixProcessBenchmarkSuccessDestroysMappingOnlyAfterSixthCompleteValidationPathAndBeforeAnyCanonicalResultSetLeavesGateway ===
+      true &&
+    lifecycle.sixProcessBenchmarkFailureDestroysMappingAfterFailureClassificationAndValidatedNativeFallbackPreparationBeforeGatewayExit ===
+      true &&
+    lifecycle.mappingDestroyedOnEverySuccessAndFailurePath === true &&
+    lifecycle.mappingRetainedAfterGatewayExit === false &&
+    lifecycle.projectedIdentifierMayLeaveGatewayOrEnterLogsArtifactsCachesErrorsTelemetryOrPersistedTemp ===
+      false &&
+    replay
+      .mappingAndProjectedInputMustRemainThroughAllSixCompleteProjectedResponseValidationsAndInverseMappingsOnSuccess ===
+      true &&
+    replay
+      .mappingMayBeDestroyedBeforeTheSixthProjectedResponseValidationAndInverseMappingCompletesOnSuccess ===
+      false &&
+    replay
+      .mappingAndProjectedIdentifierMaterialMustBeDestroyedAfterTheSixthCompleteCanonicalAndNativeValidationPathOrAfterAnyFailureIsClassifiedAndValidatedNativeFallbackIsPreparedAndBeforeGatewayExit ===
+      true &&
+    !Object.hasOwn(
+      replay,
+      "mappingAndProjectedInputMustBeDestroyedImmediatelyAfterSixthReplayOrAnyFailure",
+    ) &&
+    projection.projectionRules
+      .ephemeralIdMappingMustRemainInsideTrustedNativeGatewayMemoryUntilProjectedResponseValidationAndRequiredInverseMappingFinish ===
+      true &&
+    projection.projectionRules
+      .ephemeralIdMappingMayBeDestroyedBeforeProjectedResponseValidationAndRequiredInverseMappingFinish ===
+      false &&
+    !Object.hasOwn(
+      projection.projectionRules,
+      "ephemeralIdMappingMustRemainInsideTrustedNativeGatewayMemoryAndBeDestroyedAfterRequest",
+    ) &&
+    projection.projectionRules
+      .optimizerLogsArtifactsCachesErrorsTelemetryAndPersistedTempSurfacesMayContainProjectedIdentifiers ===
+      false &&
+    projection.projectionRules
+      .onlyCanonicalInverseMappedResultsOrIdentifierFreeDigestReceiptsMayLeaveTrustedNativeGateway ===
+      true &&
+    replayArtifact.memberSchemaContracts.deterministic_replay_input_artifact ===
+      "benchmarkResultDigestContract.resolvedArtifactMembersContract.identifierFreeDeterministicReplayInputArtifactContract" &&
+    canonicalJson(identifierFreeInput.fieldsExactly) ===
+      canonicalJson(exactIdentifierFreeInputFields) &&
+    canonicalJson(identifierFreeInput.fieldSchemas) ===
+      canonicalJson(exactIdentifierFreeInputFieldSchemas) &&
+    identifierFreeInput.additionalFieldsAllowed === false &&
+    identifierFreeInput.freeTextAllowed === false &&
+    canonicalJson(identifierFreeInput.processOrderingExactly) ===
+      canonicalJson(exactBenchmarkProcessOrder) &&
+    identifierFreeInput.exactProcessDigestCount === 6 &&
+    identifierFreeInput.allSixProcessDigestsMustEqualCanonicalProjectedInputDigest ===
+      true &&
+    identifierFreeInput.canonicalProjectedInputDigestComputedInsideTrustedNativeGatewayFromExactValidatedProjectedInputBytes ===
+      true &&
+    identifierFreeInput.projectedInputBytesMayLeaveTrustedNativeGateway ===
+      false &&
+    identifierFreeInput.projectedIdentifierValuesMayAppearInArtifact === false &&
+    identifierFreeInput
+      .projectedIdentifierValuesMayAppearInLogsCachesErrorsTelemetryOrPersistedTempSurfaces ===
+      false &&
+    identifierFreeInput.digestReceiptMayMaterializeOnlyAfterMappingAndProjectedIdentifierMaterialAreDestroyed ===
+      true
+  );
 }
 
 function o4tApprovedPacketResolutionContractIsClosed(scheduler) {
@@ -1948,6 +2182,240 @@ test("native acceptance is independent from the optional optimizer branch", asyn
   canonicalMutation.comparisonModes.ownerVisibleComparison
     .productStateMutationAllowed = true;
   assert.notEqual(canonicalSha256(canonicalMutation), SCHEDULER_CONTRACT_SHA256);
+});
+
+test("projected optimizer results validate and inverse-map fail closed before canonical gateway exit", async () => {
+  const scheduler = await json(
+    "config/dabangil-full-day-scheduler-contract.json",
+  );
+  const agents = await text("AGENTS.md");
+  const scheduleSystem = await text(
+    "docs/inverge-study-schedule-system.md",
+  );
+  const projected = scheduler.optimizerProjectedResultContract;
+  const canonical = scheduler.resultContract;
+
+  assert.equal(projectedResultGatewayContractIsClosed(scheduler), true);
+  assert.deepEqual(
+    projected.inverseMappingContract.identifierBearingPathsExactly,
+    PROJECTED_RESULT_ID_PATHS,
+  );
+  assert.deepEqual(
+    projected.processingOrderExactly,
+    PROJECTED_RESULT_PROCESSING_ORDER,
+  );
+  assert.deepEqual(
+    Object.keys(projected.inverseMappingContract.pathIdentifierClasses),
+    PROJECTED_RESULT_ID_PATHS,
+  );
+
+  const identifierDomainFixtures = [
+    ["request_id", `req_${"a".repeat(16)}`, `oreq_${"a".repeat(16)}`],
+    [
+      "input_snapshot_version",
+      `snp_${"a".repeat(16)}`,
+      `osnp_${"a".repeat(16)}`,
+    ],
+    [
+      "ephemeral_opaque_window_id",
+      `win_${"a".repeat(16)}`,
+      `owin_${"a".repeat(16)}`,
+    ],
+    [
+      "ephemeral_opaque_candidate_id",
+      `cand_${"a".repeat(16)}`,
+      `ocand_${"a".repeat(16)}`,
+    ],
+  ];
+  for (const [identifierClass, originalId, projectedId] of identifierDomainFixtures) {
+    const canonicalPattern = new RegExp(
+      canonical.identifierSchemas[identifierClass],
+    );
+    const projectedPattern = new RegExp(
+      projected.identifierSchemas[identifierClass],
+    );
+    assert.equal(canonicalPattern.test(originalId), true);
+    assert.equal(canonicalPattern.test(projectedId), false);
+    assert.equal(projectedPattern.test(projectedId), true);
+    assert.equal(projectedPattern.test(originalId), false);
+  }
+  assert.equal(
+    canonical.identifierSchemas.request_id.includes("oreq_"),
+    false,
+  );
+  assert.equal(
+    canonical.identifierSchemas.input_snapshot_version.includes("osnp_"),
+    false,
+  );
+  assert.equal(
+    canonical.identifierSchemas.ephemeral_opaque_window_id.includes("owin_"),
+    false,
+  );
+  assert.equal(
+    canonical.identifierSchemas.ephemeral_opaque_candidate_id.includes(
+      "ocand_",
+    ),
+    false,
+  );
+
+  const policy =
+    scheduler.s237oBenchmarkAcceptanceContract
+      .receiptAssertionPolicyDigestContract;
+  assert.equal(
+    canonicalSha256(
+      scheduler.s237oBenchmarkAcceptanceContract.requiredReceiptOperationRules,
+    ),
+    "d1616bbc8c7681c19b42bdffc86e0d5e34a62710bf9ba727fe5355ca0ad69da8",
+  );
+  assert.equal(
+    policy.digestSha256,
+    "d1616bbc8c7681c19b42bdffc86e0d5e34a62710bf9ba727fe5355ca0ad69da8",
+  );
+  assert.match(
+    agents,
+    /validates the complete[\s\S]*projected response[\s\S]*Only then may it inverse-map[\s\S]*validate against the unchanged canonical[\s\S]*destroyed on every success[\s\S]*or failure[\s\S]*before any[\s\S]*canonical result leaves the gateway/,
+  );
+  assert.doesNotMatch(agents, /remap is destroyed after the request/);
+  assert.match(
+    scheduleSystem,
+    /retains it through all[\s\S]*six complete projected-response validations[\s\S]*destroys the mapping[\s\S]*before any canonical result set leaves the gateway/,
+  );
+  assert.match(
+    scheduleSystem,
+    /Projected IDs may not enter logs or artifacts/,
+  );
+  assert.match(
+    scheduleSystem,
+    /identifier-free[\s\S]*digest receipt/,
+  );
+  assert.doesNotMatch(
+    scheduleSystem,
+    /the in-memory remap is destroyed afterward/,
+  );
+
+  const hostileMutations = [
+    [
+      "missing inverse-map path",
+      (value) => {
+        value.optimizerProjectedResultContract.inverseMappingContract
+          .identifierBearingPathsExactly.pop();
+      },
+    ],
+    [
+      "validation after inverse mapping",
+      (value) => {
+        const order =
+          value.optimizerProjectedResultContract.processingOrderExactly;
+        [order[0], order[3]] = [order[3], order[0]];
+      },
+    ],
+    [
+      "unknown or dangling mapping accepted",
+      (value) => {
+        value.optimizerProjectedResultContract.inverseMappingContract
+          .missingUnknownDanglingDuplicateCrossClassOriginalDomainOrNonBijectiveMappingAllowed =
+          true;
+      },
+    ],
+    [
+      "cross-class mapping",
+      (value) => {
+        value.optimizerProjectedResultContract.inverseMappingContract
+          .pathIdentifierClasses[
+            "execution_blocks[].ephemeral_opaque_window_id"
+          ] = "ephemeral_opaque_candidate_id";
+      },
+    ],
+    [
+      "original domain accepted",
+      (value) => {
+        value.optimizerProjectedResultContract
+          .projectedResultContractMayAcceptOriginalIdentifierDomain = true;
+      },
+    ],
+    [
+      "wrong request may correlate",
+      (value) => {
+        value.optimizerProjectedResultContract.requestCorrelationEqualityTargets
+          .request_id = "any_projected_request_id";
+      },
+    ],
+    [
+      "non-ID value may change",
+      (value) => {
+        value.optimizerProjectedResultContract.inverseMappingContract
+          .allNonIdentifierValuesPreservedExactly = false;
+      },
+    ],
+    [
+      "array may reorder",
+      (value) => {
+        value.optimizerProjectedResultContract.inverseMappingContract
+          .allArrayCardinalitiesAndOrderingPreservedExactly = false;
+      },
+    ],
+    [
+      "mapping destroyed early",
+      (value) => {
+        value.optimizerProjectedResultContract.mappingLifecycleContract
+          .mappingMayBeDestroyedBeforeCompleteProjectedResponseValidationAndRequiredInverseMappingFinish =
+          true;
+      },
+    ],
+    [
+      "benchmark mapping destroyed before sixth native validation",
+      (value) => {
+        value.inputContract.optimizerInvocationProjectionContract
+          .identifierRemapContract.benchmarkReplaySessionContract
+          .mappingAndProjectedIdentifierMaterialMustBeDestroyedAfterTheSixthCompleteCanonicalAndNativeValidationPathOrAfterAnyFailureIsClassifiedAndValidatedNativeFallbackIsPreparedAndBeforeGatewayExit =
+          false;
+      },
+    ],
+    [
+      "mapping retained after exit",
+      (value) => {
+        value.optimizerProjectedResultContract.mappingLifecycleContract
+          .mappingRetainedAfterGatewayExit = true;
+      },
+    ],
+    [
+      "projected ID enters logs or artifacts",
+      (value) => {
+        value.s237oBenchmarkAcceptanceContract.benchmarkResultDigestContract
+          .resolvedArtifactMembersContract
+          .identifierFreeDeterministicReplayInputArtifactContract
+          .projectedIdentifierValuesMayAppearInArtifact = true;
+      },
+    ],
+    [
+      "identifier-free artifact schema widened with projected ID",
+      (value) => {
+        const artifact =
+          value.s237oBenchmarkAcceptanceContract.benchmarkResultDigestContract
+            .resolvedArtifactMembersContract
+            .identifierFreeDeterministicReplayInputArtifactContract;
+        artifact.fieldsExactly.push("projected_request_id");
+        artifact.fieldSchemas.projected_request_id =
+          "^oreq_[A-Za-z0-9_-]{16,64}$";
+      },
+    ],
+    [
+      "canonical schema widened to both ID domains",
+      (value) => {
+        value.resultContract.identifierSchemas.request_id =
+          "^(?:req|oreq)_[A-Za-z0-9_-]{16,64}$";
+      },
+    ],
+  ];
+  for (const [name, mutate] of hostileMutations) {
+    const hostile = clone(scheduler);
+    mutate(hostile);
+    assert.equal(
+      projectedResultGatewayContractIsClosed(hostile),
+      false,
+      `${name} must fail closed`,
+    );
+  }
 });
 
 test("O4T approved packets resolve by final digest and hostile locator mutations fail closed", async () => {

@@ -232,7 +232,24 @@ and projects only windows, fixed blocks, candidates, the cutoff, immutable
 elapsed/in-progress placements, and soft future-placement preferences.
 Store/scope/lineage references, head/tree/date, receipt/bundle references or
 digests, and O4V/S236P/O4A bindings are never sent to, logged by, or resolved
-by the optimizer; the remap is destroyed after the request.
+by the optimizer. The isolated solver process and its transient IPC remain
+inside the trusted native gateway. The gateway first validates the complete
+projected response against a separate closed `oreq_`/`osnp_`/`owin_`/`ocand_`
+result contract and requires its request/snapshot IDs to equal the exact
+projected invocation IDs. Only then may it inverse-map the six declared
+request, snapshot, execution-block candidate/window, unassigned-candidate, and
+violation-candidate paths through the same per-invocation bijections while
+preserving every non-ID value and array cardinality/order. The complete
+inverse-mapped object must validate against the unchanged canonical
+`req_`/`snp_`/`win_`/`cand_` result contract before native validation or the
+validated-native-fallback path. The mapping remains in gateway memory through
+that validation and inverse mapping; the exact six-process benchmark retains
+it through all six complete response paths. It is destroyed on every success
+or failure after the applicable native/fallback validation and before any
+canonical result leaves the gateway, and it is never retained after gateway
+exit. No projected identifier may enter logs, caches, errors, telemetry,
+persisted temporary state, or artifacts; benchmark replay-input evidence is
+an identifier-free digest receipt, never projected input bytes or IDs.
 The projected top-level/nested schemas and source mapping are exact.
 Request/snapshot/window/fixed-block/candidate IDs use consistent per-request
 bijections across allowed-window, prerequisite, and prior-placement

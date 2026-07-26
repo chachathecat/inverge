@@ -217,8 +217,21 @@ candidate/window IDs, windows, fixed blocks, candidates, cutoff, immutable
 elapsed/in-progress placements, and soft future-placement preferences.
 Store/scope/lineage references, acceptance sequence, head/tree/date,
 receipt/bundle references or digests, and O4V/S236P/O4A bindings are stripped
-before optimizer invocation; the in-memory remap is destroyed afterward.
-The adapter cannot resolve or access the authoritative, identity, receipt,
+before optimizer invocation. The isolated solver and transient IPC stay
+inside the trusted native gateway. The gateway validates the complete
+projected response against the separate closed projected-ID result contract
+and exact invocation request/snapshot IDs before inverse-mapping only the six
+declared request, snapshot, execution-block candidate/window,
+unassigned-candidate, and violation-candidate paths through the same
+bijections. It preserves every non-ID value and array cardinality/order,
+validates the complete inverse-mapped object against the unchanged canonical
+result contract, and then performs native validation or the validated native
+fallback. The mapping remains in gateway memory until those response
+validation and inverse-mapping steps finish, is destroyed on every success or
+failure before a canonical result leaves, and is never retained after gateway
+exit. Projected IDs may not enter logs or artifacts; only an identifier-free
+replay-input digest receipt may be materialized after destruction. The
+adapter cannot resolve or access the authoritative, identity, receipt,
 authorization, or provenance planes.
 The projection contract has exact top-level and nested field schemas plus an
 exact source-field map. Request, snapshot, window, fixed-block, and candidate
@@ -331,9 +344,16 @@ The deterministic receipt requires a fixed seed, exactly one worker, three
 cold and three warm replays over byte-identical input/config inside one
 explicit six-process benchmark projection session, and
 byte-identical canonical status/placements/unassigned/objectives/violations/
-fallback after excluding only `elapsed_ms`; the session reuses one fresh
-in-memory ID bijection only for those six processes, destroys it afterward,
-and never reuses it in another session. Any mismatch fails S237O. The current
+fallback after excluding only `elapsed_ms`. The session reuses one fresh
+in-memory ID bijection only for those six processes and retains it through all
+six complete projected-response validations, exact inverse mappings,
+canonical-result validations, and native validations. It destroys the mapping
+and projected identifier material after the sixth complete path on success or
+after failure classification and validated fallback preparation on failure,
+always before any canonical result set leaves the gateway, and never reuses
+the mapping in another session. The later bundle's projected replay-input
+child is an identifier-free digest receipt; projected bytes and IDs never
+enter the artifact. Any mismatch fails S237O. The current
 assertion-policy digest is
 `d1616bbc8c7681c19b42bdffc86e0d5e34a62710bf9ba727fe5355ca0ad69da8`.
 Two additional canonical projections bind the six per-receipt assertion
