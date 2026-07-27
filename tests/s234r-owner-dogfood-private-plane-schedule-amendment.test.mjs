@@ -6,7 +6,7 @@ import test from "node:test";
 const PRIVATE_CONTRACT_SHA256 =
   "ef017344b184b33f8e30dcde8f25089c3e814b2aa279645bbedbd326662dacb5";
 const SCHEDULER_CONTRACT_SHA256 =
-  "547814f6633dabca6d46c27acb0ade91670c59c11b6cfe0485f996ebd3c64d29";
+  "f8caa8e2fee1f3b7943f41cf8d17b32ce6451d03afd1330ecde8e757b5490691";
 const S237O_EVIDENCE_TEMPLATE_SHA256 =
   "9e965a84944b7610898d953a39743b2e436a39c19ca3eeb7d7ebbb9ff78b523c";
 const S237O_PROPOSAL_SHA256 =
@@ -33,7 +33,10 @@ const PROJECTED_RESULT_ID_PATHS = [
 const PROJECTED_RESULT_PROCESSING_ORDER = [
   "establish_solver_response_or_trusted_gateway_classification_origin_without_accepting_gateway_status_from_solver",
   "enter_optimal_or_feasible_branch_or_solver_or_gateway_failure_branch_with_exactly_one_allowed_success_to_failure_transition_on_canonical_or_native_validator_rejection",
-  "construct_canonical_fallback_tuple_and_state_only_inside_trusted_gateway_after_projected_validation_or_failure_classification",
+  "validate_complete_raw_projected_response_exact_correlation_and_required_bijections_before_any_canonical_version_info_construction",
+  "inverse_map_only_the_exact_six_identifier_bearing_paths_when_a_projected_candidate_plan_exists",
+  "construct_exact_canonical_ten_field_version_info_only_inside_trusted_gateway_from_exact_trusted_correlated_configuration",
+  "construct_canonical_fallback_tuple_and_state_only_inside_trusted_gateway_after_raw_projected_validation_or_failure_classification",
   "validate_complete_canonical_result_contract_and_every_native_hard_constraint",
   "destroy_mapping_projected_input_and_projected_response_identifier_material",
   "verify_no_projected_identifier_in_gateway_output_logs_artifacts_caches_errors_telemetry_or_persisted_temp",
@@ -47,7 +50,7 @@ const PROJECTED_RESULT_CONTROL_KEYS = [
   "statusOriginBoundary",
   "canonicalGatewayConstructionContract",
   "requestCorrelationEqualityTargets",
-  "allSolverOwnedNonIdentifierValuesSchemasEnumsRulesCardinalitiesAndOrderingMustEqualCanonicalResultContractExceptExactStatusOriginAndGatewayConstructedFallbackTupleAndState",
+  "allSolverOwnedNonIdentifierValuesSchemasEnumsRulesCardinalitiesAndOrderingMustEqualCanonicalResultContractExceptExactStatusOriginAndGatewayConstructedFallbackTupleStateAndCanonicalVersionInfo",
   "canonicalResultContractMayAcceptProjectedIdentifierDomain",
   "projectedResultContractMayAcceptOriginalIdentifierDomain",
   "completeProjectedResponseValidationRequiredBeforeInverseMapping",
@@ -73,8 +76,7 @@ const PROJECTED_RESULT_CONTRACT_KEYS = [
   "executionBlockDurationRules",
   "nonDroppableCandidateRules",
   "candidateWindowFeasibilityRules",
-  "versionInfoFieldsExactly",
-  "versionInfoFieldSchemas",
+  "hardDeadlineFeasibilityRules",
   "objectiveComponentFieldsExactly",
   "violationFieldsExactly",
   "forbiddenFields",
@@ -90,8 +92,7 @@ const PROJECTED_RESULT_CONTRACT_KEYS = [
   "requestIdEchoRequired",
   "inputSnapshotVersionEchoRequired",
   "requestCorrelationEqualityTargets",
-  "versionFieldsRequired",
-  "allSolverOwnedNonIdentifierValuesSchemasEnumsRulesCardinalitiesAndOrderingMustEqualCanonicalResultContractExceptExactStatusOriginAndGatewayConstructedFallbackTupleAndState",
+  "allSolverOwnedNonIdentifierValuesSchemasEnumsRulesCardinalitiesAndOrderingMustEqualCanonicalResultContractExceptExactStatusOriginAndGatewayConstructedFallbackTupleStateAndCanonicalVersionInfo",
   "canonicalResultContractMayAcceptProjectedIdentifierDomain",
   "projectedResultContractMayAcceptOriginalIdentifierDomain",
   "completeProjectedResponseValidationRequiredBeforeInverseMapping",
@@ -114,8 +115,10 @@ const RESULT_CONTRACT_KEYS = [
   "executionBlockDurationRules",
   "nonDroppableCandidateRules",
   "candidateWindowFeasibilityRules",
+  "hardDeadlineFeasibilityRules",
   "versionInfoFieldsExactly",
   "versionInfoFieldSchemas",
+  "versionInfoConstructionRules",
   "objectiveComponentFieldsExactly",
   "violationFieldsExactly",
   "forbiddenFields",
@@ -179,6 +182,7 @@ const C4_RESULT_CONSTRAINT_CODES = [
   "execution_block_window_available",
   "execution_block_contained_in_single_referenced_window",
   "immutable_prior_placement_candidate_window_incompatibility_fails_closed",
+  "execution_block_hard_deadline_not_exceeded",
 ];
 const NATIVE_FALLBACK_REJECTION_CODES = [
   "missing_fallback",
@@ -363,8 +367,6 @@ function projectedResultGatewayContractIsClosed(scheduler) {
   const canonicalSharedKeys = [
     "executionBlockFieldsExactly",
     "unassignedCandidateFieldsExactly",
-    "versionInfoFieldsExactly",
-    "versionInfoFieldSchemas",
     "objectiveComponentFieldsExactly",
     "violationFieldsExactly",
     "closedEnumValues",
@@ -375,7 +377,6 @@ function projectedResultGatewayContractIsClosed(scheduler) {
     "requestCorrelationFieldsRequired",
     "requestIdEchoRequired",
     "inputSnapshotVersionEchoRequired",
-    "versionFieldsRequired",
   ];
   const canonicalKeys = new Set(Object.keys(canonical));
   const projectedOnlyKeys = Object.keys(projected).filter(
@@ -448,6 +449,13 @@ function projectedResultGatewayContractIsClosed(scheduler) {
     wrongRequestOrSnapshotCorrelationStatus: "stale_response",
     knownNonDroppableDisallowedUnavailableOrOutOfBoundsRelationStatus:
       "validator_rejected",
+    knownHardDeadlineBreachStatus: "validator_rejected",
+    rawProjectedVersionInfoOrGatewayOwnedVersionConfigurationInjectionStatus:
+      "schema_mismatch",
+    missingAmbiguousStaleUntrustedOrMismatchedCanonicalVersionMetadataStatus:
+      "validator_rejected",
+    canonicalVersionMetadataFailureMustAttemptExactlyOneIndependentlyPreparedCanonicalNativeFallback:
+      true,
     optimalOrFeasibleLateCanonicalOrNativeValidationFailureStatus:
       "validator_rejected",
     optimalOrFeasibleLateCanonicalOrNativeValidationFailureMustDiscardCandidatePlanAndUsedFalseTupleAndTransitionExactlyOnceToIndependentCanonicalNativeFallback:
@@ -488,27 +496,100 @@ function projectedResultGatewayContractIsClosed(scheduler) {
     projectedResponseMayContainFallback: false,
     projectedResponseMayContainNativePlanVersion: false,
     projectedResponseMayContainCanonicalNativeFallbackPlanOrReference: false,
+    projectedResponseMayContainVersionInfoOrGatewayOwnedVersionConfigurationFields:
+      false,
   };
   const exactGatewayConstructionContract = {
     gatewayAloneOwnsCanonicalFallbackTupleAndState: true,
-    gatewayConstructionIsSoleAllowedExceptionToFormerBlanketProjectedCanonicalNonIdentifierEquality:
+    gatewayAloneConstructsCanonicalVersionInfoFromExactTrustedCorrelatedConfiguration:
+      true,
+    gatewayConstructedFallbackStateAndCanonicalVersionInfoAreTheOnlyAllowedExceptionsToFormerBlanketProjectedCanonicalNonIdentifierEquality:
+      true,
+    gatewayConstructedProjectedCanonicalNonIdentifierExceptionsExactly: [
+      "canonical_fallback_tuple_and_state",
+      "canonical_version_info",
+    ],
+    canonicalVersionInfoFieldsExactly: [
+      "contract_version",
+      "native_policy_version",
+      "adapter_version",
+      "optimizer_version",
+      "objective_version",
+      "threshold_version",
+      "solver_seed",
+      "solver_workers",
+      "time_limit_ms",
+      "integer_scaling_version",
+    ],
+    canonicalVersionInfoTrustedSourceExact:
+      "exact_trusted_correlated_gateway_configuration_for_the_same_validated_invocation",
+    completeRawResponseExactCorrelationAndRequiredBijectionValidationMustFinishBeforeCanonicalVersionInfoConstruction:
+      true,
+    rawProjectedResponseMayContainAcceptRequireOrAuthorCanonicalVersionInfoOrAnyGatewayOwnedVersionConfigurationField:
+      false,
+    constructedCanonicalVersionInfoMustMatchExactTrustedCorrelatedConfigurationFieldForField:
+      true,
+    missingAmbiguousStaleUntrustedOrMismatchedCanonicalVersionMetadataTrustedGatewayClassification:
+      "validator_rejected",
+    missingAmbiguousStaleUntrustedOrMismatchedCanonicalVersionMetadataMustAttemptExactlyOneIndependentlyPreparedCanonicalNativeFallback:
+      true,
+    missingAmbiguousStaleUntrustedOrMismatchedCanonicalVersionMetadataInvalidFallbackResult:
+      "blocked_manual_plan_required",
+    canonicalVersionInfoConstructionContract: {
+      fieldsExactlySource: "resultContract.versionInfoFieldsExactly",
+      fieldSchemasSource: "resultContract.versionInfoFieldSchemas",
+      requiredFieldsSource: "resultContract.versionFieldsRequired",
+      trustedConfigurationSource:
+        "exact_trusted_correlated_gateway_configuration_for_the_same_validated_invocation",
+      fieldSourceMappingExactly: {
+        contract_version: "trusted_configuration.contract_version",
+        native_policy_version: "trusted_configuration.native_policy_version",
+        adapter_version: "trusted_configuration.adapter_version",
+        optimizer_version: "trusted_configuration.optimizer_version",
+        objective_version: "trusted_configuration.objective_version",
+        threshold_version: "trusted_configuration.threshold_version",
+        solver_seed: "trusted_configuration.solver_seed",
+        solver_workers: "trusted_configuration.solver_workers",
+        time_limit_ms: "trusted_configuration.time_limit_ms",
+        integer_scaling_version:
+          "trusted_configuration.integer_scaling_version",
+      },
+      rawProjectedResponseMaySourceOverrideSelectOrAuthorAnyField: false,
+      trustedConfigurationMustBeCurrentTrustedUnambiguousAndBoundToExactInvocation:
+        true,
+      constructedValuesMustMatchActualInvocationConfigurationFieldForField:
+        true,
+      constructionMayOccurBeforeCompleteRawResponseExactCorrelationAndRequiredBijectionValidation:
+        false,
+      missingAmbiguousStaleUntrustedOrMismatchMayReleasePartialVersionInfoOrCandidatePlan:
+        false,
+      failureMustEnterExistingSingleNativeFallbackBranchExactlyOnce: true,
+      invalidFallbackResult: "blocked_manual_plan_required",
+      fallbackMayBeAttemptedMoreThanOnceOrRecursively: false,
+    },
+    directGatewayFailureWithoutRawSolverResponseMayFabricateAProjectedResponse:
+      false,
+    directGatewayFailureMustValidateRetainedExactInvocationAndTrustedConfigurationBindingBeforeCanonicalVersionInfoConstruction:
       true,
     optimalOrFeasibleBranchOrderExactly: [
-      "validate_complete_projected_candidate_plan_response",
+      "validate_complete_raw_projected_candidate_plan_response_without_version_info_or_gateway_owned_version_configuration_fields",
       "validate_exact_request_snapshot_correlation_and_per_class_bijections",
-      "validate_projected_candidate_accounting_duration_non_droppable_and_candidate_window_rules",
+      "validate_projected_candidate_accounting_duration_non_droppable_candidate_window_and_hard_deadline_rules_using_trusted_gateway_context",
       "inverse_map_exactly_the_existing_six_identifier_bearing_paths",
       "preserve_every_solver_owned_non_id_value_and_array_cardinality_and_order",
+      "trusted_gateway_constructs_exact_canonical_ten_field_version_info_from_exact_trusted_correlated_configuration",
       "trusted_gateway_constructs_canonical_fallback_used_false_reason_not_used_native_plan_version_null",
       "validate_complete_canonical_result_contract_and_every_native_hard_constraint",
       "on_canonical_or_native_rejection_discard_candidate_plan_and_used_false_tuple_classify_validator_rejected_and_transition_exactly_once_to_failure_branch",
       "release_only_when_complete_canonical_and_native_validation_succeeds",
     ],
     solverOrTrustedGatewayFailureBranchOrderExactly: [
-      "validate_or_classify_projected_attempt_without_trusting_it_as_canonical_fallback",
+      "validate_or_classify_raw_projected_attempt_without_accepting_version_info_gateway_owned_version_configuration_or_canonical_fallback_state",
+      "validate_exact_request_snapshot_correlation_and_required_bijections_before_any_canonical_version_info_construction",
       "independently_resolve_or_prepare_exactly_one_immutable_native_fallback_in_canonical_original_id_domain",
+      "trusted_gateway_constructs_exact_canonical_ten_field_version_info_from_exact_trusted_correlated_configuration",
       "trusted_gateway_constructs_canonical_fallback_used_true_exact_trigger_reason_and_non_null_closed_native_plan_version",
-      "validate_complete_canonical_result_contract_candidate_accounting_duration_non_droppable_candidate_window_and_every_hard_constraint",
+      "validate_complete_canonical_result_contract_candidate_accounting_duration_non_droppable_candidate_window_hard_deadline_and_every_hard_constraint",
       "return_only_blocked_manual_plan_required_when_canonical_fallback_is_missing_unavailable_or_invalid",
     ],
     optimalOrFeasibleCanonicalFallbackTupleExactly: {
@@ -534,7 +615,19 @@ function projectedResultGatewayContractIsClosed(scheduler) {
       fallbackMayBeAttemptedMoreThanOnceOrRecursively: false,
       invalidFallbackResult: "blocked_manual_plan_required",
     },
+    canonicalVersionInfoConstructionFailureTransition: {
+      trustedGatewayClassification: "validator_rejected",
+      canonicalVersionInfoMayBePartiallyConstructedOrReleased: false,
+      projectedCandidatePlanMayBeReleased: false,
+      transitionExactlyOnceToSolverOrTrustedGatewayFailureBranch: true,
+      canonicalFallbackMustBePreparedIndependentlyInOriginalIdentifierDomain:
+        true,
+      fallbackMayBeAttemptedMoreThanOnceOrRecursively: false,
+      invalidFallbackResult: "blocked_manual_plan_required",
+    },
     projectedFailureEnvelopeMayReferenceAuthorizeOrReleaseCanonicalFallback:
+      false,
+    projectedFailureEnvelopeMayContainVersionInfoOrGatewayOwnedVersionConfigurationFields:
       false,
     canonicalFallbackMustBePreparedIndependentlyOfProjectedResponse: true,
     canonicalFallbackMayBeAttemptedMoreThanOnceOrRecursively: false,
@@ -565,7 +658,6 @@ function projectedResultGatewayContractIsClosed(scheduler) {
         "status",
         "execution_blocks",
         "unassigned_candidates",
-        "version_info",
         "objective_components",
         "violations",
         "elapsed_ms",
@@ -576,9 +668,23 @@ function projectedResultGatewayContractIsClosed(scheduler) {
     !Object.hasOwn(projected, "fallbackValueRules") &&
     !Object.hasOwn(projected, "fallbackStatuses") &&
     !Object.hasOwn(projected, "nativeFallbackInvalidResult") &&
+    !Object.hasOwn(projected, "versionInfoFieldsExactly") &&
+    !Object.hasOwn(projected, "versionInfoFieldSchemas") &&
+    !Object.hasOwn(projected, "versionFieldsRequired") &&
     !Object.hasOwn(projected.identifierSchemas, "native_plan_version") &&
     !Object.hasOwn(projected.scalarSchemas, "fallback_used") &&
     [
+      "version_info",
+      "contract_version",
+      "native_policy_version",
+      "adapter_version",
+      "optimizer_version",
+      "objective_version",
+      "threshold_version",
+      "solver_seed",
+      "solver_workers",
+      "time_limit_ms",
+      "integer_scaling_version",
       "fallback",
       "fallback_reason_enum",
       "native_plan_version",
@@ -595,7 +701,7 @@ function projectedResultGatewayContractIsClosed(scheduler) {
     canonicalJson(projected.identifierSchemas) ===
       canonicalJson(exactProjectedIdentifierSchemas) &&
     projected
-      .allSolverOwnedNonIdentifierValuesSchemasEnumsRulesCardinalitiesAndOrderingMustEqualCanonicalResultContractExceptExactStatusOriginAndGatewayConstructedFallbackTupleAndState ===
+      .allSolverOwnedNonIdentifierValuesSchemasEnumsRulesCardinalitiesAndOrderingMustEqualCanonicalResultContractExceptExactStatusOriginAndGatewayConstructedFallbackTupleStateAndCanonicalVersionInfo ===
       true &&
     projected.canonicalResultContractMayAcceptProjectedIdentifierDomain ===
       false &&
@@ -763,13 +869,19 @@ function c3ResultValidationContractsAreClosed(scheduler) {
       true,
     projectedSolverResponseMaySupplyFallbackNativePlanVersionCanonicalPlanOrCanonicalPlanReference:
       false,
+    projectedSolverResponseMaySupplyVersionInfoOrGatewayOwnedVersionConfigurationFields:
+      false,
+    canonicalVersionInfoMustBeConstructedByTrustedGatewayFromExactTrustedCorrelatedConfigurationAfterRawResponseCorrelationAndBijectionValidation:
+      true,
     referencedNativeFallbackMustBeSeparatelyValidatedAgainstCanonicalCandidateAccountingExecutionBlockDurationAndAllHardConstraintsBeforeRelease:
       true,
     referencedNativeFallbackMustBeSeparatelyValidatedAgainstCanonicalCandidateAccountingExecutionBlockDurationNonDroppableCandidateWindowAndAllHardConstraintsBeforeRelease:
       true,
+    referencedNativeFallbackMustBeSeparatelyValidatedAgainstCanonicalTenFieldVersionInfoAndHardDeadlineFeasibilityBeforeRelease:
+      true,
     missingFallbackMismatchedReasonInvalidVersionOrInvalidNativePlanResult:
       "blocked_manual_plan_required",
-    missingUnavailableNonDroppableInvalidCandidateWindowInvalidOrHardConstraintInvalidNativePlanResult:
+    missingUnavailableNonDroppableInvalidCandidateWindowInvalidHardDeadlineInvalidCanonicalVersionInfoOrHardConstraintInvalidNativePlanResult:
       "blocked_manual_plan_required",
     missingFallbackMismatchedReasonInvalidVersionOrInvalidNativePlanMayReleaseCandidatePlan:
       false,
@@ -1015,6 +1127,103 @@ function c3ResultValidationContractsAreClosed(scheduler) {
     projectedResponseMaySelectReferenceAuthorizeOrReleaseCanonicalNativeFallback:
       false,
   };
+  const exactCanonicalHardDeadlineRules = {
+    appliesToEveryExecutionBlockInOptimalFeasibleCompleteCanonicalAndEveryReleasableSeparatelyValidatedCanonicalNativeFallbackPlan:
+      true,
+    candidateResolutionSource:
+      "exact_current_correlated_invocation.candidates",
+    eachExecutionBlockCandidateMustResolveExactlyOnceThroughExactCurrentInvocation:
+      true,
+    trustedCanonicalStudyDateSource:
+      "inputContract.study_date_kst_retained_by_trusted_gateway",
+    studyDateMayEnterOptimizerProjection: false,
+    timeZoneIanaExact: "Asia/Seoul",
+    endMinuteKstOneThrough1439UsesSameStudyDate: true,
+    endMinuteKst1440MeansNextDayMidnightAsiaSeoul: true,
+    blockEndUtcDerivationExact:
+      "trusted_canonical_study_date_kst_plus_execution_block.end_minute_kst_interpreted_in_iana_asia_seoul",
+    nonNullHardDeadlinePredicateExact:
+      "derived_block_end_utc <= candidate.hard_deadline_or_null_exact_iso_8601_utc_instant",
+    nullHardDeadlineMeansNoHardCutoff: true,
+    hardDeadlineEqualityIsFeasible: true,
+    unknownDanglingDuplicateCrossDomainOrNonBijectiveCandidateRelationStatus:
+      "schema_mismatch",
+    knownHardDeadlineBreachStatus: "validator_rejected",
+    knownHardDeadlineBreachMustAttemptExactlyOneSeparatelyPreparedCanonicalNativeFallback:
+      true,
+    releasableNativeFallbackMustSatisfyEveryHardDeadlinePredicate: true,
+    preProjectionElapsedAndInProgressPlacementMustSatisfyExactCurrentCandidateHardDeadlinePredicate:
+      true,
+    preProjectionImmutableHardDeadlineIncompatibilityMayReachOptimizer: false,
+    preProjectionImmutableHardDeadlineIncompatibilityMayBeRepairedByMovingDroppingUnassigningShorteningExtendingOrRewriting:
+      false,
+    preProjectionImmutableHardDeadlineIncompatibilityMustAttemptExactlyOneSeparatelyPreparedCanonicalNativeFallbackPreservingTheImmutablePlacement:
+      true,
+    minimizeDeadlineLatenessAppliesOnlyToSoftDeadlineOrNull: true,
+    softDeadlineObjectiveMayOverrideHardDeadline: false,
+    invalidNativeFallbackResult: "blocked_manual_plan_required",
+    invalidNativeFallbackMayTriggerAnotherFallback: false,
+    invalidNativeFallbackMayReleaseCandidatePlan: false,
+  };
+  const exactProjectedHardDeadlineRules = {
+    appliesToEveryExecutionBlockInOptimalAndFeasibleProjectedCandidatePlans:
+      true,
+    candidateResolutionSource:
+      "exact_current_correlated_invocation.candidates",
+    eachExecutionBlockCandidateMustResolveExactlyOnceThroughExactCurrentInvocation:
+      true,
+    trustedCanonicalStudyDateSource:
+      "inputContract.study_date_kst_retained_by_trusted_gateway",
+    studyDateMayEnterOptimizerProjection: false,
+    timeZoneIanaExact: "Asia/Seoul",
+    endMinuteKstOneThrough1439UsesSameStudyDate: true,
+    endMinuteKst1440MeansNextDayMidnightAsiaSeoul: true,
+    blockEndUtcDerivationExact:
+      "trusted_canonical_study_date_kst_plus_execution_block.end_minute_kst_interpreted_in_iana_asia_seoul",
+    nonNullHardDeadlinePredicateExact:
+      "derived_block_end_utc <= candidate.hard_deadline_or_null_exact_iso_8601_utc_instant",
+    nullHardDeadlineMeansNoHardCutoff: true,
+    hardDeadlineEqualityIsFeasible: true,
+    knownHardDeadlineBreachTrustedGatewayClassification:
+      "validator_rejected",
+    unknownDuplicateCrossDomainOrNonBijectiveCandidateRelationTrustedGatewayClassification:
+      "schema_mismatch",
+    preProjectionElapsedAndInProgressPlacementMustSatisfyExactCurrentCandidateHardDeadlinePredicate:
+      true,
+    preProjectionImmutableHardDeadlineIncompatibilityMayReachOptimizer: false,
+    preProjectionImmutableHardDeadlineIncompatibilityMayBeRepairedByMovingDroppingUnassigningShorteningExtendingOrRewriting:
+      false,
+    preProjectionImmutableHardDeadlineIncompatibilityTrustedGatewayClassification:
+      "validator_rejected",
+    minimizeDeadlineLatenessAppliesOnlyToSoftDeadlineOrNull: true,
+    softDeadlineObjectiveMayOverrideHardDeadline: false,
+    invalidProjectedCandidatePlanMayReleaseCandidatePlan: false,
+    projectedResponseMaySelectReferenceAuthorizeOrReleaseCanonicalNativeFallback:
+      false,
+  };
+  const exactVersionInfoConstructionRules = {
+    canonicalVersionInfoRequiredForEveryCompleteCanonicalResultAndReleasableCanonicalNativeFallback:
+      true,
+    canonicalVersionInfoFieldsExactlyMustEqualVersionFieldsRequired: true,
+    trustedGatewayAloneMayConstructAndAttachCanonicalVersionInfo: true,
+    sourceExact:
+      "exact_trusted_correlated_gateway_configuration_for_the_same_validated_invocation",
+    completeRawResponseExactCorrelationAndRequiredBijectionValidationMustFinishBeforeConstruction:
+      true,
+    rawProjectedResponseMayContainAcceptRequireOrAuthorVersionInfoOrGatewayOwnedVersionConfigurationFields:
+      false,
+    allTenFieldsMustMatchExactTrustedCorrelatedConfigurationFieldForField:
+      true,
+    missingAmbiguousStaleUntrustedOrMismatchedMetadataStatus:
+      "validator_rejected",
+    metadataFailureMustAttemptExactlyOneIndependentlyPreparedCanonicalNativeFallback:
+      true,
+    releasableNativeFallbackMustCarryExactGatewayConstructedCanonicalTenFieldVersionInfo:
+      true,
+    invalidFallbackVersionInfoResult: "blocked_manual_plan_required",
+    invalidFallbackVersionInfoMayTriggerAnotherFallback: false,
+    invalidFallbackVersionInfoMayReleaseCandidatePlan: false,
+  };
   const exactNativeValidator = {
     requiredForOptimalAndFeasible: true,
     requiredForEveryReleasableValidatedNativeFallback: true,
@@ -1022,14 +1231,21 @@ function c3ResultValidationContractsAreClosed(scheduler) {
       true,
     validatedNativeFallbackMustSatisfyCanonicalCandidateAccountingExecutionBlockDurationNonDroppableCandidateWindowAndAllHardConstraints:
       true,
+    validatedNativeFallbackMustSatisfyCanonicalTenFieldVersionInfoAndHardDeadlineFeasibilityAndAllHardConstraints:
+      true,
     everyOptimalFeasibleAndReleasableValidatedNativeFallbackPlanMustPlaceEveryNonDroppableCandidateExactlyOnceAndNeverUnassignIt:
       true,
     everyExecutionBlockMustResolveExactCurrentInvocationCandidateAndWindowAndSatisfyAllowedMembershipAvailabilityAndSingleWindowBounds:
+      true,
+    everyExecutionBlockInOptimalFeasibleAndReleasableValidatedNativeFallbackMustSatisfyCandidateHardDeadlinePredicateUsingTrustedCanonicalStudyDateKst:
+      true,
+    canonicalVersionInfoMustBeGatewayConstructedFromExactTrustedCorrelatedConfigurationAfterCompleteRawResponseCorrelationAndRequiredBijectionValidation:
       true,
     unknownDanglingDuplicateCrossDomainOrNonBijectiveCandidateOrWindowRelationStatus:
       "schema_mismatch",
     knownDisallowedUnavailableOrOutOfBoundsCandidateWindowRelationStatus:
       "validator_rejected",
+    knownHardDeadlineBreachStatus: "validator_rejected",
     canonicalFallbackTupleAndStateMustBeGatewayConstructed: true,
     nativeFallbackMayBeAttemptedMoreThanOnceOrRecursively: false,
     invalidOrUnavailableValidatedNativeFallbackResult:
@@ -1037,7 +1253,11 @@ function c3ResultValidationContractsAreClosed(scheduler) {
     invalidOrUnavailableValidatedNativeFallbackMayReleaseCandidatePlan: false,
     immutableElapsedOrInProgressPlacementMayBeRewrittenDuringValidationOrFallback:
       false,
+    immutableElapsedOrInProgressPlacementMustPassHardDeadlineBeforeProjectionAndMayNotBeMovedDroppedUnassignedShortenedExtendedOrRewrittenDuringValidationOrFallback:
+      true,
     hardConstraintMayBeOverriddenBySoftObjective: false,
+    minimizeDeadlineLatenessMayReadOnlySoftDeadlineOrNullAndMayNotOverrideHardDeadline:
+      true,
     falseSuccessAllowed: false,
     canonicalStateMutationBeforeOwnerChoiceAllowed: false,
   };
@@ -1054,7 +1274,7 @@ function c3ResultValidationContractsAreClosed(scheduler) {
     "elapsed_ms",
   ];
   const exactProjectedAllowedFields = exactAllowedFields.filter(
-    (field) => field !== "fallback",
+    (field) => !["fallback", "version_info"].includes(field),
   );
   const exactExecutionBlockFields = [
     "ephemeral_opaque_candidate_id",
@@ -1082,6 +1302,33 @@ function c3ResultValidationContractsAreClosed(scheduler) {
     "ephemeral_opaque_candidate_ids",
     "severity_enum",
   ];
+  const exactVersionInfoFields = [
+    "contract_version",
+    "native_policy_version",
+    "adapter_version",
+    "optimizer_version",
+    "objective_version",
+    "threshold_version",
+    "solver_seed",
+    "solver_workers",
+    "time_limit_ms",
+    "integer_scaling_version",
+  ];
+  const exactVersionInfoFieldSchemas = {
+    contract_version: {
+      type: "closed_enum",
+      values: ["dabangil.full_day_scheduler.v1"],
+    },
+    native_policy_version: "closed_identifier_1_to_80",
+    adapter_version: "closed_identifier_1_to_80",
+    optimizer_version: "closed_identifier_1_to_80",
+    objective_version: "closed_identifier_1_to_80",
+    threshold_version: "closed_identifier_1_to_80",
+    solver_seed: "finite_integer",
+    solver_workers: "finite_integer_1_to_64",
+    time_limit_ms: "finite_integer_1_to_60000",
+    integer_scaling_version: "closed_identifier_1_to_80",
+  };
   const exactScalarSchemas = {
     start_minute_kst: "integer_0_to_1439",
     end_minute_kst: "integer_1_to_1440",
@@ -1109,6 +1356,19 @@ function c3ResultValidationContractsAreClosed(scheduler) {
   const projectionRules =
     scheduler.inputContract.optimizerInvocationProjectionContract
       .projectionRules;
+  const exactHardDeadlineValidationContext = {
+    trustedCanonicalStudyDateSource: "inputContract.study_date_kst",
+    studyDateMayEnterOptimizerProjection: false,
+    trustedGatewayRetainsStudyDateForProjectedResultValidation: true,
+    timeZoneIanaExact: "Asia/Seoul",
+    endMinuteKstOneThrough1439UsesSameStudyDate: true,
+    endMinuteKst1440MeansNextDayMidnightAsiaSeoul: true,
+    blockEndUtcDerivation:
+      "exact_trusted_canonical_study_date_kst_plus_end_minute_kst_interpreted_in_iana_asia_seoul",
+    hardDeadlineComparisonExact:
+      "derived_block_end_utc_less_than_or_equal_exact_iso_8601_utc_hard_deadline",
+    nullHardDeadlineMeansNoHardCutoff: true,
+  };
   const failureFixture =
     scheduler.s237oBenchmarkAcceptanceContract.benchmarkResultDigestContract
       .failureStatusFixtureResultSetDigestContract;
@@ -1298,6 +1558,27 @@ function c3ResultValidationContractsAreClosed(scheduler) {
       canonicalJson(exactCanonicalCandidateWindowRules) &&
     canonicalJson(projected.candidateWindowFeasibilityRules) ===
       canonicalJson(exactProjectedCandidateWindowRules) &&
+    canonicalJson(canonical.hardDeadlineFeasibilityRules) ===
+      canonicalJson(exactCanonicalHardDeadlineRules) &&
+    canonicalJson(projected.hardDeadlineFeasibilityRules) ===
+      canonicalJson(exactProjectedHardDeadlineRules) &&
+    canonicalJson(canonical.versionInfoFieldsExactly) ===
+      canonicalJson(exactVersionInfoFields) &&
+    canonicalJson(canonical.versionFieldsRequired) ===
+      canonicalJson(exactVersionInfoFields) &&
+    canonicalJson(canonical.versionInfoFieldSchemas) ===
+      canonicalJson(exactVersionInfoFieldSchemas) &&
+    canonicalJson(canonical.versionInfoConstructionRules) ===
+      canonicalJson(exactVersionInfoConstructionRules) &&
+    !Object.hasOwn(projected, "versionInfoFieldsExactly") &&
+    !Object.hasOwn(projected, "versionInfoFieldSchemas") &&
+    !Object.hasOwn(projected, "versionInfoConstructionRules") &&
+    !Object.hasOwn(projected, "versionFieldsRequired") &&
+    canonicalJson(scheduler.inputContract.hardDeadlineValidationContext) ===
+      canonicalJson(exactHardDeadlineValidationContext) &&
+    scheduler.inputContract.optimizerInvocationProjectionContract
+      .fieldsExactly.includes("study_date_kst") ===
+      false &&
     canonicalJson(scheduler.hardConstraints) ===
       canonicalJson(RESULT_HARD_CONSTRAINTS) &&
     canonicalJson(canonical.closedEnumValues.constraint_code_enum) ===
@@ -1367,6 +1648,30 @@ function c3ResultValidationContractsAreClosed(scheduler) {
       .immutablePlacementCandidateWindowIncompatibilityInvalidNativeFallbackMayTriggerAnotherFallback ===
       false &&
     priorRules
+      .elapsedAndInProgressPlacementMustSatisfyResolvedCurrentCandidateHardDeadlineBeforeProjection ===
+      true &&
+    priorRules
+      .immutablePlacementHardDeadlineIncompatibilityMayReachOptimizer ===
+      false &&
+    priorRules
+      .immutablePlacementHardDeadlineIncompatibilityFallbackTriggerStatus ===
+      "validator_rejected" &&
+    priorRules
+      .immutablePlacementHardDeadlineIncompatibilityFallbackReasonEnumMustEqualTriggerStatus ===
+      true &&
+    priorRules
+      .immutablePlacementHardDeadlineIncompatibilityMustAttemptExactlyOneSeparatelyValidatedNativeFallback ===
+      true &&
+    priorRules
+      .immutablePlacementHardDeadlineIncompatibilityMustEnterSeparatelyValidatedNativeFallbackWithoutMovingDroppingUnassigningShorteningExtendingOrRewritingPlacementOrCandidatePolicy ===
+      true &&
+    priorRules
+      .immutablePlacementHardDeadlineIncompatibilityInvalidNativeFallbackResult ===
+      "blocked_manual_plan_required" &&
+    priorRules
+      .immutablePlacementHardDeadlineIncompatibilityInvalidNativeFallbackMayTriggerAnotherFallback ===
+      false &&
+    priorRules
       .immutablePlacementOrCurrentCandidatePolicyMayBeRewrittenToRepairIncompatibility ===
       false &&
     projectionRules
@@ -1429,6 +1734,36 @@ function c3ResultValidationContractsAreClosed(scheduler) {
       "blocked_manual_plan_required" &&
     projectionRules
       .immutablePriorPlacementCandidateWindowIncompatibilityInvalidNativeFallbackMayTriggerAnotherFallback ===
+      false &&
+    projectionRules
+      .studyDateKstMustRemainInTrustedGatewayAndMustNotEnterOptimizerProjection ===
+      true &&
+    projectionRules
+      .trustedGatewayMustRetainExactCanonicalStudyDateKstForProjectedResultHardDeadlineValidation ===
+      true &&
+    projectionRules
+      .immutablePriorPlacementsMustPassExactCurrentCandidateHardDeadlinePredicateBeforeProjection ===
+      true &&
+    projectionRules
+      .immutablePriorPlacementHardDeadlineIncompatibilityMayReachOptimizer ===
+      false &&
+    projectionRules
+      .immutablePriorPlacementHardDeadlineIncompatibilityFallbackTriggerStatus ===
+      "validator_rejected" &&
+    projectionRules
+      .immutablePriorPlacementHardDeadlineIncompatibilityFallbackReasonEnumMustEqualTriggerStatus ===
+      true &&
+    projectionRules
+      .immutablePriorPlacementHardDeadlineIncompatibilityMustAttemptExactlyOneSeparatelyValidatedNativeFallback ===
+      true &&
+    projectionRules
+      .immutablePriorPlacementHardDeadlineIncompatibilityMustEnterSeparatelyValidatedNativeFallbackWithoutMovingDroppingUnassigningShorteningExtendingOrRewritingPlacementOrCandidatePolicy ===
+      true &&
+    projectionRules
+      .immutablePriorPlacementHardDeadlineIncompatibilityInvalidNativeFallbackResult ===
+      "blocked_manual_plan_required" &&
+    projectionRules
+      .immutablePriorPlacementHardDeadlineIncompatibilityInvalidNativeFallbackMayTriggerAnotherFallback ===
       false &&
     failureFixture.expectedStatuses === "resultContract.fallbackStatuses" &&
     canonicalJson(Object.keys(failureFixture)) ===
@@ -1625,7 +1960,7 @@ function containsForbiddenFieldRecursively(value, forbiddenFields) {
   );
 }
 
-function projectedVersionFieldIsValid(schema, value) {
+function canonicalVersionFieldIsValid(schema, value) {
   if (isPlainRecord(schema) && schema.type === "closed_enum") {
     return schema.values.includes(value);
   }
@@ -1643,6 +1978,116 @@ function projectedVersionFieldIsValid(schema, value) {
     return Number.isInteger(value) && value >= 1 && value <= 60000;
   }
   return false;
+}
+
+function canonicalVersionInfoIsExact(contract, versionInfo) {
+  return (
+    hasExactFields(versionInfo, contract.versionInfoFieldsExactly) &&
+    canonicalJson(contract.versionFieldsRequired) ===
+      canonicalJson(contract.versionInfoFieldsExactly) &&
+    contract.versionInfoFieldsExactly.every((field) =>
+      canonicalVersionFieldIsValid(
+        contract.versionInfoFieldSchemas[field],
+        versionInfo[field],
+      ),
+    )
+  );
+}
+
+function gatewayCanonicalVersionOutcome(
+  canonicalContract,
+  trustedConfiguration,
+  {
+    rawResponseValidated,
+    exactCorrelationValidated,
+    requiredBijectionsValidated,
+    trustedConfigurationIsCurrentAndBound,
+    nativeFallbackValid,
+    nativeFallbackTrustedConfiguration = null,
+    actualInvocationConfiguration = trustedConfiguration,
+    nativeFallbackTrustedConfigurationIsCurrentAndBound = true,
+    nativeFallbackActualInvocationConfiguration =
+      nativeFallbackTrustedConfiguration,
+  },
+) {
+  const prerequisiteFailureClassification = !rawResponseValidated
+    ? "schema_mismatch"
+    : !exactCorrelationValidated
+      ? "stale_response"
+      : !requiredBijectionsValidated
+        ? "schema_mismatch"
+        : null;
+  const prerequisiteValidationPassed =
+    prerequisiteFailureClassification === null &&
+    trustedConfigurationIsCurrentAndBound;
+  if (
+    prerequisiteValidationPassed &&
+    canonicalVersionInfoIsExact(
+      canonicalContract,
+      trustedConfiguration,
+    ) &&
+    canonicalVersionInfoIsExact(
+      canonicalContract,
+      actualInvocationConfiguration,
+    ) &&
+    canonicalContract.versionInfoFieldsExactly.every(
+      (field) =>
+        trustedConfiguration[field] === actualInvocationConfiguration[field],
+    )
+  ) {
+    return {
+      status: "constructed",
+      version_info: Object.fromEntries(
+        canonicalContract.versionInfoFieldsExactly.map((field) => [
+          field,
+          trustedConfiguration[field],
+        ]),
+      ),
+      nativeFallbackAttempts: 0,
+      candidatePlanReleased: true,
+      canonicalNativeFallbackReleased: false,
+    };
+  }
+  const validFallbackVersionInfo =
+    nativeFallbackValid &&
+    nativeFallbackTrustedConfigurationIsCurrentAndBound &&
+    canonicalVersionInfoIsExact(
+      canonicalContract,
+      nativeFallbackTrustedConfiguration,
+    ) &&
+    canonicalVersionInfoIsExact(
+      canonicalContract,
+      nativeFallbackActualInvocationConfiguration,
+    ) &&
+    canonicalContract.versionInfoFieldsExactly.every(
+      (field) =>
+        nativeFallbackTrustedConfiguration[field] ===
+        nativeFallbackActualInvocationConfiguration[field],
+    );
+  const triggeringClassification =
+    prerequisiteFailureClassification ?? "validator_rejected";
+  return validFallbackVersionInfo
+    ? {
+        status: "fallback",
+        triggeringClassification,
+        version_info: Object.fromEntries(
+          canonicalContract.versionInfoFieldsExactly.map((field) => [
+            field,
+            nativeFallbackTrustedConfiguration[field],
+          ]),
+        ),
+        nativeFallbackAttempts: 1,
+        candidatePlanReleased: false,
+        canonicalNativeFallbackReleased: true,
+      }
+    : {
+        status: "blocked_manual_plan_required",
+        triggeringClassification,
+        version_info: null,
+        nativeFallbackAttempts: 1,
+        candidatePlanReleased: false,
+        canonicalNativeFallbackReleased: false,
+      };
 }
 
 function projectedScalarIsValid(schema, value) {
@@ -1709,20 +2154,6 @@ function projectedSolverResponseIsClosed(
       contract,
       "input_snapshot_version",
       response.input_snapshot_version,
-    )
-  ) {
-    return false;
-  }
-
-  if (
-    !hasExactFields(response.version_info, contract.versionInfoFieldsExactly) ||
-    canonicalJson(contract.versionFieldsRequired) !==
-      canonicalJson(contract.versionInfoFieldsExactly) ||
-    !contract.versionInfoFieldsExactly.every((field) =>
-      projectedVersionFieldIsValid(
-        contract.versionInfoFieldSchemas[field],
-        response.version_info[field],
-      ),
     )
   ) {
     return false;
@@ -1910,12 +2341,145 @@ function gatewayOutcomeAfterOptimalOrFeasibleNativeValidation(
     triggeringClassification: "validator_rejected",
     discardedProjectedCandidatePlan: true,
     nativeFallbackAttempts: 1,
-      fallback: {
-        used: false,
-        reason_enum: "not_used",
-        native_plan_version: null,
-      },
+    fallback: {
+      used: false,
+      reason_enum: "not_used",
+      native_plan_version: null,
+    },
     projectedCandidatePlanReleased: false,
+    canonicalNativeFallbackReleased: false,
+  };
+}
+
+function blockEndUtcFromStudyDateKst(studyDateKst, endMinuteKst) {
+  if (
+    typeof studyDateKst !== "string" ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(studyDateKst) ||
+    !Number.isInteger(endMinuteKst) ||
+    endMinuteKst < 1 ||
+    endMinuteKst > 1440
+  ) {
+    return null;
+  }
+  const [year, month, day] = studyDateKst.split("-").map(Number);
+  const originalDate = new Date(Date.UTC(year, month - 1, day));
+  if (originalDate.toISOString().slice(0, 10) !== studyDateKst) {
+    return null;
+  }
+  const nextDay = endMinuteKst === 1440 ? 1 : 0;
+  const minuteOfDay = endMinuteKst === 1440 ? 0 : endMinuteKst;
+  const hour = Math.floor(minuteOfDay / 60);
+  const minute = minuteOfDay % 60;
+  const targetWallClockMs = Date.UTC(
+    year,
+    month - 1,
+    day + nextDay,
+    hour,
+    minute,
+  );
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  });
+  let candidateUtcMs = targetWallClockMs;
+  for (let iteration = 0; iteration < 4; iteration += 1) {
+    const parts = Object.fromEntries(
+      formatter
+        .formatToParts(new Date(candidateUtcMs))
+        .filter((part) => part.type !== "literal")
+        .map((part) => [part.type, Number(part.value)]),
+    );
+    const observedWallClockMs = Date.UTC(
+      parts.year,
+      parts.month - 1,
+      parts.day,
+      parts.hour,
+      parts.minute,
+      parts.second,
+    );
+    const correctionMs = targetWallClockMs - observedWallClockMs;
+    candidateUtcMs += correctionMs;
+    if (correctionMs === 0) return new Date(candidateUtcMs).toISOString();
+  }
+  return null;
+}
+
+function hardDeadlineClassification(candidates, block, studyDateKst) {
+  if (
+    !Array.isArray(candidates) ||
+    !isPlainRecord(block) ||
+    typeof block.ephemeral_opaque_candidate_id !== "string"
+  ) {
+    return "schema_mismatch";
+  }
+  const matches = candidates.filter(
+    (candidate) =>
+      isPlainRecord(candidate) &&
+      typeof candidate.ephemeral_opaque_candidate_id === "string" &&
+      candidate.ephemeral_opaque_candidate_id ===
+        block.ephemeral_opaque_candidate_id,
+  );
+  if (matches.length !== 1) return "schema_mismatch";
+  const hardDeadline = matches[0].hard_deadline_or_null;
+  if (hardDeadline === null) return "feasible";
+  if (
+    typeof hardDeadline !== "string" ||
+    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(
+      hardDeadline,
+    ) ||
+    !Number.isFinite(Date.parse(hardDeadline))
+  ) {
+    return "schema_mismatch";
+  }
+  const blockEndUtc = blockEndUtcFromStudyDateKst(
+    studyDateKst,
+    block.end_minute_kst,
+  );
+  if (blockEndUtc === null) return "schema_mismatch";
+  return Date.parse(blockEndUtc) <= Date.parse(hardDeadline)
+    ? "feasible"
+    : "validator_rejected";
+}
+
+function gatewayOutcomeAfterHardDeadlineValidation(
+  triggeringClassification,
+  nativeFallbackClassification,
+) {
+  if (triggeringClassification === "feasible") {
+    return {
+      status: "released",
+      nativeFallbackAttempts: 0,
+      candidatePlanReleased: true,
+      canonicalNativeFallbackReleased: false,
+    };
+  }
+  if (
+    !["schema_mismatch", "validator_rejected"].includes(
+      triggeringClassification,
+    )
+  ) {
+    return null;
+  }
+  if (nativeFallbackClassification === "feasible") {
+    return {
+      status: "fallback",
+      triggeringClassification,
+      nativeFallbackAttempts: 1,
+      candidatePlanReleased: false,
+      canonicalNativeFallbackReleased: true,
+    };
+  }
+  return {
+    status: "blocked_manual_plan_required",
+    triggeringClassification,
+    nativeFallbackAttempts: 1,
+    candidatePlanReleased: false,
     canonicalNativeFallbackReleased: false,
   };
 }
@@ -4073,11 +4637,15 @@ test("projected optimizer results validate and inverse-map fail closed before ca
   );
   assert.match(
     agents,
-    /Only the[\s\S]*gateway then attaches canonical[\s\S]*complete canonical[\s\S]*result[\s\S]*must validate before release/,
+    /Only\s+after complete raw-response[\s\S]{0,240}validation does the gateway construct canonical `version_info`/,
   );
   assert.match(
     agents,
-    /independently resolves or prepares[\s\S]*exactly one immutable native fallback[\s\S]*Missing, unavailable, or invalid[\s\S]*blocked_manual_plan_required[\s\S]*recursive fallback is[\s\S]*forbidden/,
+    /gateway\s+then attaches canonical `fallback[\s\S]{0,300}complete canonical[\s\S]{0,120}result[\s\S]{0,180}must\s+validate before release/i,
+  );
+  assert.match(
+    agents,
+    /independently\s+resolves\s+or\s+prepares[\s\S]{0,200}exactly\s+one immutable native fallback[\s\S]{0,700}Missing,\s+unavailable,\s+or\s+invalid fallback[\s\S]{0,220}blocked_manual_plan_required[\s\S]{0,120}recursive fallback is forbidden/,
   );
   assert.doesNotMatch(agents, /remap is destroyed after the request/);
   assert.match(
@@ -4228,7 +4796,7 @@ test("projected optimizer results validate and inverse-map fail closed before ca
   }
 });
 
-test("C4 projected solver responses exclude canonical fallback state and only the gateway constructs it", async () => {
+test("post-ready projected responses exclude gateway state and only the gateway constructs canonical fallback and version metadata", async () => {
   const scheduler = await json(
     "config/dabangil-full-day-scheduler-contract.json",
   );
@@ -4266,7 +4834,7 @@ test("C4 projected solver responses exclude canonical fallback state and only th
     request_id: `oreq_${"a".repeat(16)}`,
     input_snapshot_version: `osnp_${"b".repeat(16)}`,
   };
-  const projectedVersionInfo = {
+  const trustedCanonicalVersionInfo = {
     contract_version: "dabangil.full_day_scheduler.v1",
     native_policy_version: "native_policy_v1",
     adapter_version: "adapter_v1",
@@ -4290,7 +4858,6 @@ test("C4 projected solver responses exclude canonical fallback state and only th
     status: "optimal",
     execution_blocks: [],
     unassigned_candidates: [],
-    version_info: projectedVersionInfo,
     objective_components: [],
     violations: [],
     elapsed_ms: 1,
@@ -4315,6 +4882,7 @@ test("C4 projected solver responses exclude canonical fallback state and only th
     { canonical_native_fallback_plan: {} },
     { canonical_native_fallback_plan_ref: "native_plan_v1" },
     { canonical_plan_reference: "native_plan_v1" },
+    { version_info: trustedCanonicalVersionInfo },
   ]) {
     assert.equal(
       projectedSolverResponseIsClosed(projected, {
@@ -4325,25 +4893,93 @@ test("C4 projected solver responses exclude canonical fallback state and only th
       `${Object.keys(forbiddenMutation)[0]} must be rejected from projected output`,
     );
   }
-  for (const [name, hostileResponse] of [
-    [
-      "nested native plan version",
+  for (const versionField of canonical.versionInfoFieldsExactly) {
+    const value = trustedCanonicalVersionInfo[versionField];
+    for (const [location, hostileResponse] of [
+      [
+        "top-level",
+        {
+          ...projectedOptimal,
+          [versionField]: value,
+        },
+      ],
+      [
+        "nested",
+        {
+          ...projectedOptimal,
+          objective_components: [
+            {
+              objective_code_enum: "maximize_native_priority_value",
+              integer_value: 1,
+              diagnostics: { [versionField]: value },
+            },
+          ],
+        },
+      ],
+    ]) {
+      assert.equal(
+        projectedSolverResponseIsClosed(
+          projected,
+          hostileResponse,
+          expectedCorrelation,
+        ),
+        false,
+        `${location} ${versionField} injection must be rejected from raw projected output`,
+      );
+    }
+  }
+  const coordinatedVersionEnforcementRemoval = clone(projected);
+  coordinatedVersionEnforcementRemoval.forbiddenFields =
+    coordinatedVersionEnforcementRemoval.forbiddenFields.filter(
+      (field) => field !== "solver_seed",
+    );
+  coordinatedVersionEnforcementRemoval.objectiveComponentFieldsExactly.push(
+    "solver_seed",
+  );
+  assert.equal(
+    projectedSolverResponseIsClosed(
+      coordinatedVersionEnforcementRemoval,
       {
         ...projectedOptimal,
-        version_info: {
-          ...projectedVersionInfo,
-          native_plan_version: "native_plan_v1",
-        },
+        objective_components: [
+          {
+            objective_code_enum: "maximize_native_priority_value",
+            integer_value: 1,
+            solver_seed: trustedCanonicalVersionInfo.solver_seed,
+          },
+        ],
+      },
+      expectedCorrelation,
+    ),
+    true,
+    "the hostile fixture must prove coordinated schema widening would admit a gateway-owned field without the closed contract",
+  );
+  for (const [name, hostileResponse] of [
+    [
+      "nested version info",
+      {
+        ...projectedOptimal,
+        objective_components: [
+          {
+            objective_code_enum: "maximize_native_priority_value",
+            integer_value: 1,
+            version_info: trustedCanonicalVersionInfo,
+          },
+        ],
       },
     ],
     [
       "nested canonical plan reference",
       {
         ...projectedOptimal,
-        version_info: {
-          ...projectedVersionInfo,
-          canonical_plan_reference: "native_plan_v1",
-        },
+        violations: [
+          {
+            constraint_code_enum: "candidate_accounting_exact_partition",
+            ephemeral_opaque_candidate_ids: [],
+            severity_enum: "error",
+            canonical_plan_reference: "native_plan_v1",
+          },
+        ],
       },
     ],
     [
@@ -4360,17 +4996,6 @@ test("C4 projected solver responses exclude canonical fallback state and only th
             },
           },
         ],
-      },
-    ],
-    [
-      "missing required version field",
-      {
-        ...projectedOptimal,
-        version_info: Object.fromEntries(
-          Object.entries(projectedVersionInfo).filter(
-            ([field]) => field !== "optimizer_version",
-          ),
-        ),
       },
     ],
     [
@@ -4482,7 +5107,6 @@ test("C4 projected solver responses exclude canonical fallback state and only th
       request_id: projectedOptimal.request_id,
       input_snapshot_version: projectedOptimal.input_snapshot_version,
       status,
-      version_info: projectedVersionInfo,
       objective_components: [],
       violations: [],
       elapsed_ms: 1,
@@ -4519,6 +5143,180 @@ test("C4 projected solver responses exclude canonical fallback state and only th
       `${status} cannot be authored by the isolated solver`,
     );
   }
+
+  const validConstructionOptions = {
+    rawResponseValidated: true,
+    exactCorrelationValidated: true,
+    requiredBijectionsValidated: true,
+    trustedConfigurationIsCurrentAndBound: true,
+    nativeFallbackValid: false,
+  };
+  assert.equal(
+    canonicalVersionInfoIsExact(
+      canonical,
+      trustedCanonicalVersionInfo,
+    ),
+    true,
+  );
+  assert.deepEqual(
+    gatewayCanonicalVersionOutcome(
+      canonical,
+      trustedCanonicalVersionInfo,
+      validConstructionOptions,
+    ),
+    {
+      status: "constructed",
+      version_info: trustedCanonicalVersionInfo,
+      nativeFallbackAttempts: 0,
+      candidatePlanReleased: true,
+      canonicalNativeFallbackReleased: false,
+    },
+  );
+  const missingVersionField = {
+    ...trustedCanonicalVersionInfo,
+  };
+  delete missingVersionField.threshold_version;
+  const extraVersionField = {
+    ...trustedCanonicalVersionInfo,
+    solver_build_host: "forbidden",
+  };
+  const schemaInvalidVersionInfo = {
+    ...trustedCanonicalVersionInfo,
+    solver_workers: 0,
+  };
+  const mismatchedActualInvocationConfiguration = {
+    ...trustedCanonicalVersionInfo,
+    solver_seed: trustedCanonicalVersionInfo.solver_seed + 1,
+  };
+  for (const [
+    name,
+    trustedConfiguration,
+    optionOverrides,
+    expectedClassification,
+  ] of [
+    ["missing field", missingVersionField, {}, "validator_rejected"],
+    ["extra field", extraVersionField, {}, "validator_rejected"],
+    [
+      "schema-invalid field",
+      schemaInvalidVersionInfo,
+      {},
+      "validator_rejected",
+    ],
+    [
+      "stale or untrusted binding",
+      trustedCanonicalVersionInfo,
+      { trustedConfigurationIsCurrentAndBound: false },
+      "validator_rejected",
+    ],
+    [
+      "mismatch with actual invocation",
+      trustedCanonicalVersionInfo,
+      {
+        actualInvocationConfiguration:
+          mismatchedActualInvocationConfiguration,
+      },
+      "validator_rejected",
+    ],
+    [
+      "construction before raw validation",
+      trustedCanonicalVersionInfo,
+      { rawResponseValidated: false },
+      "schema_mismatch",
+    ],
+    [
+      "construction before exact correlation",
+      trustedCanonicalVersionInfo,
+      { exactCorrelationValidated: false },
+      "stale_response",
+    ],
+    [
+      "construction before required bijections",
+      trustedCanonicalVersionInfo,
+      { requiredBijectionsValidated: false },
+      "schema_mismatch",
+    ],
+  ]) {
+    assert.deepEqual(
+      gatewayCanonicalVersionOutcome(canonical, trustedConfiguration, {
+        ...validConstructionOptions,
+        ...optionOverrides,
+        nativeFallbackValid: true,
+        nativeFallbackTrustedConfiguration:
+          trustedCanonicalVersionInfo,
+      }),
+      {
+        status: "fallback",
+        triggeringClassification: expectedClassification,
+        version_info: trustedCanonicalVersionInfo,
+        nativeFallbackAttempts: 1,
+        candidatePlanReleased: false,
+        canonicalNativeFallbackReleased: true,
+      },
+      `${name} must discard the candidate and enter exactly one independently prepared valid canonical fallback`,
+    );
+    assert.deepEqual(
+      gatewayCanonicalVersionOutcome(canonical, trustedConfiguration, {
+        ...validConstructionOptions,
+        ...optionOverrides,
+        nativeFallbackValid: true,
+        nativeFallbackTrustedConfiguration: missingVersionField,
+      }),
+      {
+        status: "blocked_manual_plan_required",
+        triggeringClassification: expectedClassification,
+        version_info: null,
+        nativeFallbackAttempts: 1,
+        candidatePlanReleased: false,
+        canonicalNativeFallbackReleased: false,
+      },
+      `${name} with invalid fallback metadata must release only the manual block`,
+    );
+  }
+  assert.deepEqual(
+    gatewayCanonicalVersionOutcome(canonical, missingVersionField, {
+      ...validConstructionOptions,
+      nativeFallbackValid: true,
+      nativeFallbackTrustedConfiguration: trustedCanonicalVersionInfo,
+      nativeFallbackActualInvocationConfiguration:
+        mismatchedActualInvocationConfiguration,
+    }),
+    {
+      status: "blocked_manual_plan_required",
+      triggeringClassification: "validator_rejected",
+      version_info: null,
+      nativeFallbackAttempts: 1,
+      candidatePlanReleased: false,
+      canonicalNativeFallbackReleased: false,
+    },
+    "a schema-valid but mismatched fallback version configuration cannot be released",
+  );
+  assert.deepEqual(
+    gatewayCanonicalVersionOutcome(canonical, missingVersionField, {
+      ...validConstructionOptions,
+      nativeFallbackValid: true,
+      nativeFallbackTrustedConfiguration: trustedCanonicalVersionInfo,
+      nativeFallbackTrustedConfigurationIsCurrentAndBound: false,
+    }),
+    {
+      status: "blocked_manual_plan_required",
+      triggeringClassification: "validator_rejected",
+      version_info: null,
+      nativeFallbackAttempts: 1,
+      candidatePlanReleased: false,
+      canonicalNativeFallbackReleased: false,
+    },
+    "a stale or untrusted fallback version binding cannot be released",
+  );
+  assert.equal(
+    projected.failureRouting
+      .rawProjectedVersionInfoOrGatewayOwnedVersionConfigurationInjectionStatus,
+    "schema_mismatch",
+  );
+  assert.equal(
+    projected.failureRouting
+      .missingAmbiguousStaleUntrustedOrMismatchedCanonicalVersionMetadataStatus,
+    "validator_rejected",
+  );
 
   for (const status of ["optimal", "feasible"]) {
     assert.deepEqual(gatewayConstructedCanonicalFallbackTuple(status), {
@@ -4642,11 +5440,11 @@ test("C4 projected solver responses exclude canonical fallback state and only th
 
   assert.match(
     unified,
-    /projected response[\s\S]*never contains[\s\S]*fallback[\s\S]*Only the trusted gateway[\s\S]*constructs the canonical[\s\S]*fallback tuple/,
+    /projected response[\s\S]*never contains[\s\S]*`fallback`[\s\S]*only the trusted gateway[\s\S]*constructs canonical `version_info`[\s\S]*constructs canonical fallback state/i,
   );
   assert.match(
     productSpec,
-    /never returns a fallback reason[\s\S]*trusted gateway[\s\S]*constructs the canonical fallback tuple/,
+    /never returns a fallback reason[\s\S]*trusted gateway[\s\S]*constructs canonical fallback state/,
   );
   assert.match(
     scheduleSystem,
@@ -4659,11 +5457,11 @@ test("C4 projected solver responses exclude canonical fallback state and only th
     );
     assert.match(
       authoritativeProse,
-      /classif(?:ies|ication)[\s\S]*while validating[\s\S]*(?:OPTIMAL|optimal)[\s\S]*(?:FEASIBLE|feasible)[\s\S]*discards[\s\S]*without release/,
+      /classif[\s\S]{0,100}while[\s\S]{0,40}validating[\s\S]{0,100}(?:OPTIMAL|optimal)[\s\S]{0,80}(?:FEASIBLE|feasible)[\s\S]{0,160}discards[\s\S]{0,180}without release/,
     );
     assert.match(
       authoritativeProse,
-      /late canonical\/native[\s\S]*rejection[\s\S]*validator_rejected/,
+      /late\s+canonical\/native[\s\S]{0,80}rejection[\s\S]{0,80}validator_rejected/,
     );
     assert.match(
       authoritativeProse,
@@ -4674,8 +5472,98 @@ test("C4 projected solver responses exclude canonical fallback state and only th
     productSpec,
     /OR-Tools CP-SAT[\s\S]{0,240}returns[\s\S]{0,120}fallback reason\./,
   );
+  for (const [name, authoritativeProse] of [
+    ["AGENTS", agents],
+    ["unified contract", unified],
+    ["product spec", productSpec],
+    ["schedule system", scheduleSystem],
+  ]) {
+    assert.match(
+      authoritativeProse,
+      /projected response[\s\S]{0,900}`version_info`/,
+      `${name} must forbid raw projected version_info`,
+    );
+    assert.match(
+      authoritativeProse,
+      /complete raw-response[\s\S]{0,240}exact-correlation[\s\S]{0,240}required-bijection[\s\S]{0,300}constructs? canonical `version_info`/,
+      `${name} must delay gateway canonical version construction until all prerequisite validation finishes`,
+    );
+    assert.match(
+      authoritativeProse,
+      /`contract_version`[\s\S]{0,600}`integer_scaling_version`/,
+      `${name} must enumerate the canonical ten-field version_info`,
+    );
+    assert.match(
+      authoritativeProse,
+      /Missing,\s+ambiguous,\s+stale,\s+untrusted,\s+or\s+mismatched[\s\S]{0,220}`validator_rejected`/i,
+      `${name} must classify canonical metadata failures as validator_rejected`,
+    );
+    assert.match(
+      authoritativeProse,
+      /invalid fallback[\s\S]{0,220}`blocked_manual_plan_required`/i,
+      `${name} must keep an invalid fallback on the manual-block path`,
+    );
+  }
 
   const hostileMutations = [
+    [
+      "projected version info restored",
+      (value) => {
+        value.optimizerProjectedResultContract.allowedFieldsExactly.push(
+          "version_info",
+        );
+        value.optimizerProjectedResultContract.forbiddenFields =
+          value.optimizerProjectedResultContract.forbiddenFields.filter(
+            (field) => field !== "version_info",
+          );
+        value.optimizerProjectedResultContract.versionInfoFieldsExactly = [
+          ...value.resultContract.versionInfoFieldsExactly,
+        ];
+        value.optimizerProjectedResultContract.versionInfoFieldSchemas =
+          clone(value.resultContract.versionInfoFieldSchemas);
+        value.optimizerProjectedResultContract.versionFieldsRequired = [
+          ...value.resultContract.versionFieldsRequired,
+        ];
+      },
+      projectedResultGatewayContractIsClosed,
+    ],
+    [
+      "gateway-owned version field removed from recursive prohibition",
+      (value) => {
+        value.optimizerProjectedResultContract.forbiddenFields =
+          value.optimizerProjectedResultContract.forbiddenFields.filter(
+            (field) => field !== "solver_seed",
+          );
+      },
+      projectedResultGatewayContractIsClosed,
+    ],
+    [
+      "gateway version construction allowed before bijection validation",
+      (value) => {
+        value.optimizerProjectedResultContract
+          .canonicalGatewayConstructionContract
+          .canonicalVersionInfoConstructionContract
+          .constructionMayOccurBeforeCompleteRawResponseExactCorrelationAndRequiredBijectionValidation =
+          true;
+      },
+      projectedResultGatewayContractIsClosed,
+    ],
+    [
+      "canonical ten-field requirement weakened",
+      (value) => {
+        value.resultContract.versionFieldsRequired.pop();
+      },
+      c3ResultValidationContractsAreClosed,
+    ],
+    [
+      "native fallback canonical version validation removed",
+      (value) => {
+        value.nativeValidator
+          .validatedNativeFallbackMustSatisfyCanonicalTenFieldVersionInfoAndHardDeadlineFeasibilityAndAllHardConstraints =
+          false;
+      },
+      c3ResultValidationContractsAreClosed,
+    ],
     [
       "projected fallback field restored",
       (value) => {
@@ -4752,6 +5640,428 @@ test("C4 projected solver responses exclude canonical fallback state and only th
     const hostile = clone(scheduler);
     mutate(hostile);
     assert.equal(validator(hostile), false, `${name} must fail closed`);
+  }
+});
+
+test("post-ready hard deadlines are closed KST-to-UTC feasibility predicates for both ID domains and every release path", async () => {
+  const scheduler = await json(
+    "config/dabangil-full-day-scheduler-contract.json",
+  );
+  assert.equal(c3ResultValidationContractsAreClosed(scheduler), true);
+  assert.equal(projectedResultGatewayContractIsClosed(scheduler), true);
+  const deadlineAuthorityProse = await Promise.all([
+    text("AGENTS.md"),
+    text("docs/dabangil-unified-program-contract.md"),
+    text("docs/inverge-second-round-final-product-spec.md"),
+    text("docs/inverge-study-schedule-system.md"),
+  ]);
+  for (const authoritativeProse of deadlineAuthorityProse) {
+    assert.match(
+      authoritativeProse,
+      /`study_date_kst`[\s\S]{0,220}(?:never projects?|not projected|without projecting|never enters)/i,
+    );
+    assert.match(
+      authoritativeProse,
+      /IANA\s+`Asia\/Seoul`[\s\S]{0,180}`?(?:end_minute_kst=)?1440`?[\s\S]{0,180}next-day/i,
+    );
+    assert.match(
+      authoritativeProse,
+      /block_end_utc/i,
+    );
+    assert.match(
+      authoritativeProse,
+      /(?:<=|less than or equal)[\s\S]{0,300}hard_deadline/i,
+    );
+    assert.match(
+      authoritativeProse,
+      /`null`[\s\S]{0,80}no hard cutoff/i,
+    );
+    assert.match(
+      authoritativeProse,
+      /`minimize_deadline_lateness`[\s\S]{0,180}(?:only|reads only)[\s\S]{0,180}(?:cannot override|hard)/i,
+    );
+    assert.match(
+      authoritativeProse,
+      /Elapsed[\s\S]{0,120}in-progress[\s\S]{0,400}before projection[\s\S]{0,300}(?:moved|moving)[\s\S]{0,300}(?:rewritten|rewriting)/i,
+    );
+  }
+  assert.equal(
+    blockEndUtcFromStudyDateKst("2026-07-26", 60),
+    "2026-07-25T16:00:00.000Z",
+  );
+  assert.equal(
+    blockEndUtcFromStudyDateKst("2026-07-26", 1440),
+    "2026-07-26T15:00:00.000Z",
+  );
+
+  for (const [candidateId, windowId] of [
+    [`cand_${"h".repeat(16)}`, `win_${"w".repeat(16)}`],
+    [`ocand_${"h".repeat(16)}`, `owin_${"w".repeat(16)}`],
+  ]) {
+    const block = {
+      ephemeral_opaque_candidate_id: candidateId,
+      ephemeral_opaque_window_id: windowId,
+      start_minute_kst: 30,
+      end_minute_kst: 60,
+      duration_minutes: 30,
+    };
+    for (const status of ["optimal", "feasible"]) {
+      assert.equal(
+        hardDeadlineClassification(
+          [
+            {
+              ephemeral_opaque_candidate_id: candidateId,
+              hard_deadline_or_null: null,
+              soft_deadline_or_null: "2026-07-25T15:59:59.999Z",
+            },
+          ],
+          block,
+          "2026-07-26",
+        ),
+        "feasible",
+        `${status} ${candidateId} null hard deadline must have no cutoff even when the soft deadline is earlier`,
+      );
+      assert.equal(
+        hardDeadlineClassification(
+          [
+            {
+              ephemeral_opaque_candidate_id: candidateId,
+              hard_deadline_or_null: "2026-07-25T16:00:00Z",
+              soft_deadline_or_null: null,
+            },
+          ],
+          block,
+          "2026-07-26",
+        ),
+        "feasible",
+        `${status} ${candidateId} exact UTC equality must be feasible`,
+      );
+      assert.equal(
+        hardDeadlineClassification(
+          [
+            {
+              ephemeral_opaque_candidate_id: candidateId,
+              hard_deadline_or_null: "2026-07-25T15:59:59.999Z",
+              soft_deadline_or_null: "2026-07-27T00:00:00Z",
+            },
+          ],
+          block,
+          "2026-07-26",
+        ),
+        "validator_rejected",
+        `${status} ${candidateId} one-millisecond hard breach cannot be overridden by a later soft deadline`,
+      );
+    }
+    const midnightBlock = {
+      ...block,
+      start_minute_kst: 1410,
+      end_minute_kst: 1440,
+    };
+    assert.equal(
+      hardDeadlineClassification(
+        [
+          {
+            ephemeral_opaque_candidate_id: candidateId,
+            hard_deadline_or_null: "2026-07-26T15:00:00Z",
+            soft_deadline_or_null: null,
+          },
+        ],
+        midnightBlock,
+        "2026-07-26",
+      ),
+      "feasible",
+      `${candidateId} end_minute_kst=1440 must equal next-day midnight Asia/Seoul`,
+    );
+    assert.equal(
+      hardDeadlineClassification(
+        [
+          {
+            ephemeral_opaque_candidate_id: candidateId,
+            hard_deadline_or_null: "2026-07-26T14:59:59.999Z",
+            soft_deadline_or_null: null,
+          },
+        ],
+        midnightBlock,
+        "2026-07-26",
+      ),
+      "validator_rejected",
+    );
+    assert.equal(
+      hardDeadlineClassification(
+        [
+          {
+            ephemeral_opaque_candidate_id: candidateId,
+            hard_deadline_or_null: null,
+          },
+          {
+            ephemeral_opaque_candidate_id: candidateId,
+            hard_deadline_or_null: null,
+          },
+        ],
+        block,
+        "2026-07-26",
+      ),
+      "schema_mismatch",
+      `${candidateId} must resolve exactly once`,
+    );
+    assert.equal(
+      hardDeadlineClassification(
+        [
+          {
+            ephemeral_opaque_candidate_id: candidateId.startsWith("ocand_")
+              ? `cand_${"h".repeat(16)}`
+              : `ocand_${"h".repeat(16)}`,
+            hard_deadline_or_null: null,
+          },
+        ],
+        block,
+        "2026-07-26",
+      ),
+      "schema_mismatch",
+      `${candidateId} cannot cross identifier domains`,
+    );
+  }
+
+  const canonicalFallbackBlock = {
+    ephemeral_opaque_candidate_id: `cand_${"f".repeat(16)}`,
+    ephemeral_opaque_window_id: `win_${"g".repeat(16)}`,
+    start_minute_kst: 30,
+    end_minute_kst: 60,
+    duration_minutes: 30,
+  };
+  const validNativeFallbackDeadlineClassification =
+    hardDeadlineClassification(
+      [
+        {
+          ephemeral_opaque_candidate_id:
+            canonicalFallbackBlock.ephemeral_opaque_candidate_id,
+          hard_deadline_or_null: "2026-07-25T16:00:00Z",
+        },
+      ],
+      canonicalFallbackBlock,
+      "2026-07-26",
+    );
+  const invalidNativeFallbackDeadlineClassification =
+    hardDeadlineClassification(
+      [
+        {
+          ephemeral_opaque_candidate_id:
+            canonicalFallbackBlock.ephemeral_opaque_candidate_id,
+          hard_deadline_or_null: "2026-07-25T15:59:59.999Z",
+        },
+      ],
+      canonicalFallbackBlock,
+      "2026-07-26",
+    );
+  assert.equal(validNativeFallbackDeadlineClassification, "feasible");
+  assert.equal(
+    invalidNativeFallbackDeadlineClassification,
+    "validator_rejected",
+  );
+  assert.deepEqual(
+    gatewayOutcomeAfterHardDeadlineValidation(
+      "validator_rejected",
+      validNativeFallbackDeadlineClassification,
+    ),
+    {
+      status: "fallback",
+      triggeringClassification: "validator_rejected",
+      nativeFallbackAttempts: 1,
+      candidatePlanReleased: false,
+      canonicalNativeFallbackReleased: true,
+    },
+  );
+  assert.deepEqual(
+    gatewayOutcomeAfterHardDeadlineValidation(
+      "validator_rejected",
+      invalidNativeFallbackDeadlineClassification,
+    ),
+    {
+      status: "blocked_manual_plan_required",
+      triggeringClassification: "validator_rejected",
+      nativeFallbackAttempts: 1,
+      candidatePlanReleased: false,
+      canonicalNativeFallbackReleased: false,
+    },
+  );
+  assert.deepEqual(
+    gatewayOutcomeAfterHardDeadlineValidation(
+      "schema_mismatch",
+      "feasible",
+    ),
+    {
+      status: "fallback",
+      triggeringClassification: "schema_mismatch",
+      nativeFallbackAttempts: 1,
+      candidatePlanReleased: false,
+      canonicalNativeFallbackReleased: true,
+    },
+  );
+
+  const immutableBlock = {
+    ephemeral_opaque_candidate_id: `cand_${"i".repeat(16)}`,
+    ephemeral_opaque_window_id: `win_${"j".repeat(16)}`,
+    start_minute_kst: 30,
+    end_minute_kst: 60,
+    duration_minutes: 30,
+  };
+  const immutableSnapshot = clone(immutableBlock);
+  assert.equal(
+    hardDeadlineClassification(
+      [
+        {
+          ephemeral_opaque_candidate_id:
+            immutableBlock.ephemeral_opaque_candidate_id,
+          hard_deadline_or_null: "2026-07-25T15:59:59.999Z",
+        },
+      ],
+      immutableBlock,
+      "2026-07-26",
+    ),
+    "validator_rejected",
+  );
+  assert.deepEqual(
+    immutableBlock,
+    immutableSnapshot,
+    "immutable preflight cannot move, drop, unassign, shorten, extend, or rewrite the placement",
+  );
+
+  const projection =
+    scheduler.inputContract.optimizerInvocationProjectionContract;
+  assert.equal(projection.fieldsExactly.includes("study_date_kst"), false);
+  assert.equal(
+    scheduler.resultContract.closedEnumValues.constraint_code_enum.includes(
+      "execution_block_hard_deadline_not_exceeded",
+    ),
+    true,
+  );
+  for (const fixtureId of [
+    "hard_deadline_null",
+    "hard_deadline_exact_equality",
+    "hard_deadline_one_millisecond_late",
+    "hard_deadline_end_minute_1440_kst_utc_boundary",
+    "immutable_prior_placement_hard_deadline_incompatible",
+  ]) {
+    assert.equal(
+      scheduler.fixtureMatrix.scenarioFixtureIds.includes(fixtureId),
+      true,
+      `${fixtureId} must remain in the closed fixture matrix`,
+    );
+  }
+  const hostileMutations = [
+    [
+      "projected hard deadline enforcement removed",
+      (value) => {
+        value.optimizerProjectedResultContract
+          .hardDeadlineFeasibilityRules
+          .knownHardDeadlineBreachTrustedGatewayClassification =
+          "feasible";
+      },
+    ],
+    [
+      "canonical hard deadline enforcement removed",
+      (value) => {
+        value.resultContract.hardDeadlineFeasibilityRules
+          .knownHardDeadlineBreachStatus = "optimal";
+      },
+    ],
+    [
+      "hard constraint code removed",
+      (value) => {
+        value.hardConstraints = value.hardConstraints.filter(
+          (code) => code !== "execution_block_hard_deadline_not_exceeded",
+        );
+      },
+    ],
+    [
+      "native fallback deadline enforcement removed",
+      (value) => {
+        value.nativeValidator
+          .everyExecutionBlockInOptimalFeasibleAndReleasableValidatedNativeFallbackMustSatisfyCandidateHardDeadlinePredicateUsingTrustedCanonicalStudyDateKst =
+          false;
+      },
+    ],
+    [
+      "immutable preflight deadline enforcement removed",
+      (value) => {
+        value.inputContract.priorAcceptedScheduleRules
+          .elapsedAndInProgressPlacementMustSatisfyResolvedCurrentCandidateHardDeadlineBeforeProjection =
+          false;
+      },
+    ],
+    [
+      "study date projected to optimizer",
+      (value) => {
+        value.inputContract.optimizerInvocationProjectionContract
+          .fieldsExactly.push("study_date_kst");
+      },
+    ],
+    [
+      "soft objective allowed to override hard deadline",
+      (value) => {
+        value.resultContract.hardDeadlineFeasibilityRules
+          .softDeadlineObjectiveMayOverrideHardDeadline = true;
+      },
+    ],
+    [
+      "coordinated hard-deadline enforcement removal",
+      (value) => {
+        delete value.optimizerProjectedResultContract
+          .hardDeadlineFeasibilityRules;
+        delete value.resultContract.hardDeadlineFeasibilityRules;
+        const withoutHardDeadlineCode = (codes) =>
+          codes.filter(
+            (code) =>
+              code !== "execution_block_hard_deadline_not_exceeded",
+          );
+        value.hardConstraints = withoutHardDeadlineCode(
+          value.hardConstraints,
+        );
+        value.optimizerProjectedResultContract.closedEnumValues.constraint_code_enum =
+          withoutHardDeadlineCode(
+            value.optimizerProjectedResultContract.closedEnumValues
+              .constraint_code_enum,
+          );
+        value.resultContract.closedEnumValues.constraint_code_enum =
+          withoutHardDeadlineCode(
+            value.resultContract.closedEnumValues.constraint_code_enum,
+          );
+        value.nativeValidator
+          .everyExecutionBlockInOptimalFeasibleAndReleasableValidatedNativeFallbackMustSatisfyCandidateHardDeadlinePredicateUsingTrustedCanonicalStudyDateKst =
+          false;
+        value.nativeValidator
+          .validatedNativeFallbackMustSatisfyCanonicalTenFieldVersionInfoAndHardDeadlineFeasibilityAndAllHardConstraints =
+          false;
+        value.nativeValidator
+          .immutableElapsedOrInProgressPlacementMustPassHardDeadlineBeforeProjectionAndMayNotBeMovedDroppedUnassignedShortenedExtendedOrRewrittenDuringValidationOrFallback =
+          false;
+        value.nativeValidator
+          .minimizeDeadlineLatenessMayReadOnlySoftDeadlineOrNullAndMayNotOverrideHardDeadline =
+          false;
+        value.inputContract.priorAcceptedScheduleRules
+          .elapsedAndInProgressPlacementMustSatisfyResolvedCurrentCandidateHardDeadlineBeforeProjection =
+          false;
+        value.inputContract.optimizerInvocationProjectionContract
+          .projectionRules
+          .immutablePriorPlacementsMustPassExactCurrentCandidateHardDeadlinePredicateBeforeProjection =
+          false;
+        value.inputContract.optimizerInvocationProjectionContract
+          .projectionRules
+          .studyDateKstMustRemainInTrustedGatewayAndMustNotEnterOptimizerProjection =
+          false;
+        value.inputContract.optimizerInvocationProjectionContract
+          .fieldsExactly.push("study_date_kst");
+      },
+    ],
+  ];
+  for (const [name, mutate] of hostileMutations) {
+    const hostile = clone(scheduler);
+    mutate(hostile);
+    assert.equal(
+      c3ResultValidationContractsAreClosed(hostile),
+      false,
+      `${name} must fail coordinated contract validation`,
+    );
   }
 });
 

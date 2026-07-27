@@ -219,12 +219,14 @@ Store/scope/lineage references, acceptance sequence, head/tree/date,
 receipt/bundle references or digests, and O4V/S236P/O4A bindings are stripped
 before optimizer invocation. The isolated solver and transient IPC stay
 inside the trusted native gateway. A solver-originated projected response
-contains only a raw solver-owned status, solver-owned diagnostics, and
-candidate-plan fields for `OPTIMAL` or `FEASIBLE`. It cannot contain, select,
+contains only exact request/snapshot correlation echoes, a raw solver-owned
+status, objective/violation diagnostics, elapsed timing, and candidate-plan
+fields for `OPTIMAL` or `FEASIBLE`. It cannot contain, accept, require, select,
 reference, authorize, or release fallback state, `native_plan_version`, a
-canonical native plan, or a canonical plan reference. Timeout/dependency/
-adapter/schema/correlation/validator classifications and all canonical
-fallback state are trusted-gateway-owned.
+canonical native plan, a canonical plan reference, `version_info`, or any
+gateway-owned version/configuration field. Timeout/dependency/adapter/schema/
+correlation/validator classifications, canonical fallback state, and canonical
+version metadata are trusted-gateway-owned.
 
 For `OPTIMAL` or `FEASIBLE`, the gateway validates the complete projected
 candidate-plan response against the separate closed projected-ID result
@@ -232,20 +234,34 @@ contract and exact invocation request/snapshot IDs, validates the per-class
 bijections, and inverse-maps only the six declared request, snapshot,
 execution-block candidate/window, unassigned-candidate, and
 violation-candidate paths. It preserves every solver-owned non-ID value and
-array cardinality/order, constructs canonical
-`used=false/reason_enum=not_used/native_plan_version=null`, and validates the
+array cardinality/order. Only after complete raw-response, exact-correlation,
+and required-bijection validation does it construct canonical `version_info`
+field-for-field from exact trusted correlated configuration, using exactly
+`contract_version`, `native_policy_version`, `adapter_version`,
+`optimizer_version`, `objective_version`, `threshold_version`, `solver_seed`,
+`solver_workers`, `time_limit_ms`, and `integer_scaling_version`. It then
+constructs canonical
+`used=false/reason_enum=not_used/native_plan_version=null` and validates the
 complete canonical result and native hard constraints before release.
+Canonical fallback state and canonical `version_info` are exactly the two
+gateway-constructed exceptions to projected/canonical non-ID equality.
 For a projected solver failure envelope or a direct gateway failure classified
 before a candidate plan exists, the projected attempt carries no candidate plan
-or canonical fallback state. A gateway classification raised while validating
-an `optimal` or `feasible` candidate-plan attempt instead discards that plan and
-any constructed `used=false` tuple without release; late canonical/native
-rejection is `validator_rejected`. Either path enters the same failure branch
-exactly once. The gateway independently resolves or prepares exactly one
-immutable native fallback in the canonical original-ID domain, constructs the
-`used=true` exact-trigger/non-null-version tuple, and separately validates the
-complete canonical result. A missing, unavailable, or invalid fallback yields
-only `blocked_manual_plan_required`; recursive fallback is forbidden.
+or canonical fallback/version state. A direct gateway failure cannot fabricate
+a projected response and must validate its retained exact
+invocation/configuration binding. A gateway classification raised while
+validating an `optimal` or `feasible` candidate-plan attempt instead discards
+that plan and any constructed `used=false` tuple without release; late
+canonical/native rejection is `validator_rejected`. Missing, ambiguous, stale,
+untrusted, or mismatched canonical version metadata is also
+`validator_rejected`. Every path enters the same failure branch exactly once.
+The gateway independently resolves or prepares exactly one immutable native
+fallback in the canonical original-ID domain, constructs its exact trusted
+canonical ten-field `version_info` and `used=true`
+exact-trigger/non-null-version tuple, and separately validates the complete
+canonical result. A missing, unavailable, or invalid fallback, including
+invalid canonical version metadata, yields only
+`blocked_manual_plan_required`; recursive fallback is forbidden.
 
 The mapping remains in gateway memory until every required projected-response
 validation and inverse mapping finishes, is destroyed on every success or
@@ -262,16 +278,29 @@ dangling, duplicate, or cross-class ID. Non-ID values and array cardinality/
 ordering remain equal to the validated gateway input. The cutoff is `null`
 only for a verified genesis/no-schedule checkpoint and otherwise equals the
 signed server cutoff. Any mapping or schema failure blocks manual planning
-before OR-Tools sees a payload.
+before OR-Tools sees a payload. The gateway retains canonical
+`study_date_kst`, which never enters the optimizer projection. For every block
+in a projected `optimal`/`feasible` candidate, complete canonical result, or
+releasable canonical native fallback, it resolves the candidate exactly once
+and derives `block_end_utc` from `study_date_kst + end_minute_kst` in IANA
+`Asia/Seoul`; `end_minute_kst=1440` means next-day 00:00. A non-null exact
+ISO-8601 UTC `hard_deadline_or_null` requires
+`block_end_utc <= hard_deadline`, while `null` means no hard cutoff. Candidate
+mapping faults remain `schema_mismatch`; a known late block is
+`validator_rejected` and attempts the same single independent canonical native
+fallback. `minimize_deadline_lateness` reads only `soft_deadline_or_null` and
+cannot override the hard constraint. Elapsed and in-progress placements must
+pass this predicate before projection and may not be moved, dropped,
+unassigned, shortened, extended, or rewritten to repair a breach.
 
 Gateway input, optimizer projection, projected solver response, and canonical
 gateway result are distinct closed-world schemas. Top-level request/result,
 candidate, available-window, fixed-block, execution-block, unassigned,
-version, objective, and violation fields are exact allowlists; fallback fields
-exist only in the canonical gateway result. Unknown or nested extra fields
-fail closed. Window/block identifiers are ephemeral, minute bounds are
-numeric, enums are closed, and calendar titles, locations, filenames,
-free-text reasons, or stable identities are forbidden.
+objective, and violation fields are exact allowlists in every applicable
+schema; version and fallback fields exist only in the canonical gateway result.
+Unknown or nested extra fields fail closed. Window/block identifiers are
+ephemeral, minute bounds are numeric, enums are closed, and calendar titles,
+locations, filenames, free-text reasons, or stable identities are forbidden.
 Input may carry one metadata-only prior accepted schedule for midday
 replanning and churn measurement, but it is not client-optional when the
 Owner-private authoritative store has an accepted schedule for that study
@@ -411,9 +440,13 @@ signature, trust path, expiry, and fresh revocation evidence are revalidated
 at benchmark start and again at acceptance. Packet expiry cannot outlive that
 receipt.
 
-The isolated solver returns only its raw status and diagnostics, plus a
-candidate placement for `OPTIMAL` or `FEASIBLE`; it returns no fallback reason
-or canonical fallback state. Native validation is authoritative. A
+The isolated solver returns only exact correlation echoes, its raw status,
+objective/violation diagnostics, elapsed timing, and a candidate placement for
+`OPTIMAL` or `FEASIBLE`; it returns no fallback reason, canonical fallback
+state, `version_info`, or gateway-owned version/configuration field. After
+complete raw-response, exact-correlation, and required-bijection validation,
+the gateway alone constructs the canonical exact ten-field `version_info` from
+the trusted correlated configuration. Native validation is authoritative. A
 non-droppable candidate is exactly one with `pinned === true` or
 `can_drop === false`; it must occur exactly once in execution blocks and never
 in unassigned candidates, regardless of reason or `requiredness_enum`. Every
@@ -428,11 +461,21 @@ fail as `schema_mismatch`. Known disallowed, unavailable, or out-of-bounds
 relations fail as `validator_rejected`. Elapsed and in-progress prior
 placements must pass the same current relation before projection and cannot be
 moved, dropped, unassigned, shortened, extended, or rewritten to repair an
-incompatibility. Dependency-unavailable, invalid input/output, timeout,
-infeasible, error, or failed native validation invokes exactly one separately
-prepared and validated canonical native fallback and never makes OR-Tools a
-native-path dependency. If that fallback is invalid, the result fails closed
-as `blocked_manual_plan_required`.
+incompatibility. They must also pass the hard-deadline predicate before
+projection without repair. Using retained, unprojected canonical
+`study_date_kst`, every projected optimal/feasible, complete canonical, and
+releasable fallback block derives its UTC end from `end_minute_kst` in IANA
+`Asia/Seoul`, with `1440` as next-day midnight. Every non-null UTC hard
+deadline requires end-at-or-before equality; `null` has no cutoff. A known
+breach is `validator_rejected`, while resolution/mapping faults are
+`schema_mismatch`; soft deadline lateness cannot override either result.
+Dependency-unavailable, invalid input/output, timeout, infeasible, error,
+failed version construction, or failed native validation invokes exactly one
+separately prepared and validated canonical native fallback and never makes
+OR-Tools a native-path dependency. The fallback must carry gateway-constructed
+canonical ten-field version metadata and satisfy the same hard deadline. If
+that fallback is invalid, the result fails closed as
+`blocked_manual_plan_required`.
 
 Contract fixtures cover 30, 60, 90, 180, 600, and 720 available minutes plus
 zero capacity, partial windows, rollover, over-capacity, unsatisfiable

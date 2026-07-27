@@ -1286,23 +1286,44 @@ Optional optimizer path:
 `S237P -> S237O -> O4T -> O2O -> S238OH -> S238OV -> O4P -> S239O -> S240O`
 
 OR-Tools CP-SAT receives metadata-only ExecutionBlocks. Its projected response
-returns only a raw solver-owned status, solver-owned version/seed/timing/
-objective/violation diagnostics, and candidate-plan fields for `OPTIMAL` or
-`FEASIBLE`; it never returns a fallback reason, `native_plan_version`,
-canonical fallback state, or a canonical plan reference. The trusted gateway
-alone classifies timeout/dependency/adapter/schema/correlation/validator
-failures, constructs the canonical fallback tuple, and independently resolves
-or prepares and validates exactly one immutable native fallback. Raw question,
-answer, OCR, reference-answer, Law or AI text; user/account/document
-identities; private locators; reusable plaintext hashes; and cross-plane
-equality signals are forbidden.
+returns only exact request/snapshot correlation echoes, a raw solver-owned
+status, objective/violation diagnostics, elapsed timing, and candidate-plan
+fields for `OPTIMAL` or `FEASIBLE`; it never returns a fallback reason,
+`native_plan_version`, canonical fallback state, a canonical plan reference,
+`version_info`, or any gateway-owned version/configuration field. Only after
+complete raw-response, exact-correlation, and required-bijection validation
+does the trusted gateway construct canonical `version_info` from exact trusted
+correlated configuration. Its exact fields are `contract_version`,
+`native_policy_version`, `adapter_version`, `optimizer_version`,
+`objective_version`, `threshold_version`, `solver_seed`, `solver_workers`,
+`time_limit_ms`, and `integer_scaling_version`. The trusted gateway alone also
+classifies timeout/dependency/adapter/schema/correlation/validator failures,
+constructs canonical fallback state, and independently resolves or prepares
+and validates exactly one immutable native fallback. These canonical version
+and fallback constructions are the only two gateway-owned non-ID differences
+from a valid projected response. Missing, ambiguous, stale, untrusted, or
+mismatched canonical metadata is `validator_rejected`; an invalid fallback
+releases only `blocked_manual_plan_required`. Raw question, answer, OCR,
+reference-answer, Law or AI text; user/account/document identities; private
+locators; reusable plaintext hashes; and cross-plane equality signals are
+forbidden.
 
 Native validation remains authoritative. Every non-droppable candidate
 (`pinned === true || can_drop === false`) must be placed exactly once and never
 unassigned. Every block must resolve one exact-invocation candidate and one
 allowed available window and remain completely inside that single window.
-Invalid candidate plans enter one gateway-owned canonical fallback attempt;
-an invalid fallback returns only `blocked_manual_plan_required`. Thresholds are
+The gateway retains canonical `study_date_kst` without projecting it and
+derives each block end in UTC from `study_date_kst + end_minute_kst` in IANA
+`Asia/Seoul`; `1440` is next-day 00:00. Each non-null exact ISO-8601 UTC hard
+deadline requires `block_end_utc <= hard_deadline_or_null`, while `null`
+means no hard cutoff. Candidate mapping faults remain `schema_mismatch`, and a
+known late block is `validator_rejected`. Invalid candidate plans enter one
+gateway-owned canonical fallback attempt; every releasable fallback must pass
+the same predicate, while an invalid fallback returns only
+`blocked_manual_plan_required`. `minimize_deadline_lateness` applies only to
+`soft_deadline_or_null` and cannot override a hard deadline. Elapsed or
+in-progress immutable placements must pass before projection and cannot be
+moved, dropped, unassigned, shortened, extended, or rewritten. Thresholds are
 versioned and cannot be weakened retroactively.
 O2O must bind closed, no-free-text Owner-private comparison measurement and
 retention before shadow. It does not authorize Shared Signal, telemetry,

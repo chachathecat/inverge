@@ -552,17 +552,29 @@ fixtures are eligible.
 
 Adapter requests and solver-originated projected responses are separate
 closed-world shapes. The projected response contains only a raw solver-owned
-status, solver-owned diagnostics, and candidate-plan fields when applicable;
-it never contains, selects, references, authorizes, or releases `fallback`,
-`native_plan_version`, a canonical native fallback plan, or a canonical plan
-reference. Only the trusted gateway classifies adapter/schema/correlation/
-validator failures, independently resolves or prepares one immutable native
-fallback in the canonical original-ID domain, constructs the canonical
-fallback tuple and state, and releases it after separate complete canonical
-and native validation. Exact top-level and nested allowlists otherwise cover
-candidates, windows, fixed/execution blocks, unassigned reasons, versions,
-objectives, and violations. Unknown fields, stable identities, calendar
-titles/locations, filenames, bodies, and free text fail closed.
+status, exact request/snapshot correlation echoes, objective/violation
+diagnostics, elapsed timing, and candidate-plan fields when applicable. It
+never contains, accepts, requires, selects, references, authorizes, or releases
+`fallback`, `native_plan_version`, a canonical native fallback plan, a
+canonical plan reference, `version_info`, or gateway-owned version/configuration
+fields. After complete raw-response, exact-correlation, and required-bijection
+validation, only the trusted gateway constructs canonical `version_info` from
+the exact trusted correlated configuration, with exactly
+`contract_version`, `native_policy_version`, `adapter_version`,
+`optimizer_version`, `objective_version`, `threshold_version`, `solver_seed`,
+`solver_workers`, `time_limit_ms`, and `integer_scaling_version`. It also
+classifies adapter/schema/correlation/validator failures, independently
+resolves or prepares one immutable native fallback in the canonical original-ID
+domain, constructs canonical fallback state, and releases it only after
+separate complete canonical and native validation. Canonical fallback state
+and canonical `version_info` are exactly the two gateway-constructed
+exceptions to projected/canonical non-ID equality. Missing, ambiguous, stale,
+untrusted, or mismatched canonical metadata is `validator_rejected` and enters
+the same single independent fallback path; an invalid fallback releases only
+`blocked_manual_plan_required`. Exact top-level and nested allowlists cover
+each schema separately. Unknown fields, stable identities, calendar
+titles/locations, filenames, bodies, free text, or raw projected version
+fields fail closed.
 One prior accepted placement snapshot is eligible only as closed, ephemeral
 metadata for midday replanning and schedule-churn measurement. The server
 must load the latest non-superseded monotonic lineage from the authoritative
@@ -579,7 +591,21 @@ This object terminates at the trusted native gateway. OR-Tools receives only
 a fresh ephemeral projection of windows, candidates, fixed blocks, cutoff,
 immutable past/in-progress placements, and soft future-placement preferences;
 all store/scope/lineage/receipt/bundle/authorization references and digests
-are stripped and cannot be resolved by the optimizer.
+are stripped and cannot be resolved by the optimizer. The gateway retains
+trusted canonical `study_date_kst`; it is not projected. Every execution block
+in a projected optimal/feasible candidate, complete canonical result, and
+releasable canonical native fallback resolves its candidate exactly once.
+The gateway derives `block_end_utc` from `study_date_kst` and
+`end_minute_kst` in IANA `Asia/Seoul`, treating `1440` as next-day 00:00, and
+requires it to be less than or equal to each non-null exact ISO-8601 UTC
+`hard_deadline_or_null`; `null` means no hard cutoff. Candidate
+mapping/correlation faults are `schema_mismatch`; a known breach is
+`validator_rejected` and attempts exactly one independently prepared canonical
+native fallback. `minimize_deadline_lateness` uses only
+`soft_deadline_or_null` and cannot override the hard deadline. Elapsed and
+in-progress immutable placements must pass this predicate before projection
+and cannot be moved, dropped, unassigned, shortened, extended, or rewritten
+to repair a breach.
 The lookup binds a single-use nonce, monotonic non-reusable scope generation,
 and acceptance high-water mark. Absence requires high-water zero;
 supersession requires atomic sequence+1 acceptance and deletion leaves a
