@@ -6,7 +6,7 @@ import test from "node:test";
 const PRIVATE_CONTRACT_SHA256 =
   "ef017344b184b33f8e30dcde8f25089c3e814b2aa279645bbedbd326662dacb5";
 const SCHEDULER_CONTRACT_SHA256 =
-  "f8caa8e2fee1f3b7943f41cf8d17b32ce6451d03afd1330ecde8e757b5490691";
+  "d598708aa138bad7f9e97847c0e47485d639926eda3d61b637b48d6dba6b5236";
 const S237O_EVIDENCE_TEMPLATE_SHA256 =
   "9e965a84944b7610898d953a39743b2e436a39c19ca3eeb7d7ebbb9ff78b523c";
 const S237O_PROPOSAL_SHA256 =
@@ -37,7 +37,7 @@ const PROJECTED_RESULT_PROCESSING_ORDER = [
   "inverse_map_only_the_exact_six_identifier_bearing_paths_when_a_projected_candidate_plan_exists",
   "construct_exact_canonical_ten_field_version_info_only_inside_trusted_gateway_from_exact_trusted_correlated_configuration",
   "construct_canonical_fallback_tuple_and_state_only_inside_trusted_gateway_after_raw_projected_validation_or_failure_classification",
-  "validate_complete_canonical_result_contract_and_every_native_hard_constraint",
+  "validate_complete_canonical_result_contract_replan_cutoff_pairwise_block_non_overlap_prerequisite_ordering_and_every_native_hard_constraint",
   "destroy_mapping_projected_input_and_projected_response_identifier_material",
   "verify_no_projected_identifier_in_gateway_output_logs_artifacts_caches_errors_telemetry_or_persisted_temp",
   "release_only_canonical_result_validated_native_fallback_or_manual_block_from_gateway",
@@ -77,6 +77,9 @@ const PROJECTED_RESULT_CONTRACT_KEYS = [
   "nonDroppableCandidateRules",
   "candidateWindowFeasibilityRules",
   "hardDeadlineFeasibilityRules",
+  "replanCutoffFeasibilityRules",
+  "pairwiseBlockNonOverlapRules",
+  "prerequisiteOrderingRules",
   "objectiveComponentFieldsExactly",
   "violationFieldsExactly",
   "forbiddenFields",
@@ -116,6 +119,9 @@ const RESULT_CONTRACT_KEYS = [
   "nonDroppableCandidateRules",
   "candidateWindowFeasibilityRules",
   "hardDeadlineFeasibilityRules",
+  "replanCutoffFeasibilityRules",
+  "pairwiseBlockNonOverlapRules",
+  "prerequisiteOrderingRules",
   "versionInfoFieldsExactly",
   "versionInfoFieldSchemas",
   "versionInfoConstructionRules",
@@ -184,6 +190,9 @@ const C4_RESULT_CONSTRAINT_CODES = [
   "immutable_prior_placement_candidate_window_incompatibility_fails_closed",
   "execution_block_hard_deadline_not_exceeded",
 ];
+const SECOND_CORRECTIVE_RESULT_CONSTRAINT_CODES = [
+  "new_or_moved_execution_block_starts_at_or_after_replan_cutoff",
+];
 const NATIVE_FALLBACK_REJECTION_CODES = [
   "missing_fallback",
   "fallback_unused",
@@ -196,6 +205,9 @@ const NATIVE_FALLBACK_REJECTION_CODES = [
   "execution_block_duration_invalid",
   "non_droppable_candidate_invalid",
   "candidate_window_relation_invalid",
+  "replan_cutoff_invalid",
+  "block_overlap_invalid",
+  "prerequisite_order_invalid",
   "hard_constraint_invalid",
   "immutable_placement_incompatible",
 ];
@@ -210,6 +222,7 @@ const RESULT_HARD_CONSTRAINTS = [
   "candidate_duplicate_placement_zero",
   ...C3_RESULT_CONSTRAINT_CODES,
   ...C4_RESULT_CONSTRAINT_CODES,
+  ...SECOND_CORRECTIVE_RESULT_CONSTRAINT_CODES,
   "law_blocker_never_becomes_verified_completion",
   "attempt_first_rewrite_after_attempt_and_review_only",
   "guided_exposure_never_becomes_independent_review",
@@ -450,6 +463,20 @@ function projectedResultGatewayContractIsClosed(scheduler) {
     knownNonDroppableDisallowedUnavailableOrOutOfBoundsRelationStatus:
       "validator_rejected",
     knownHardDeadlineBreachStatus: "validator_rejected",
+    replanCutoffStructuralMappingCorrelationOrAmbiguousImmutableMatchingFailureStatus:
+      "schema_mismatch",
+    knownBeforeCutoffPlacementStatus: "validator_rejected",
+    pairwiseNonOverlapStructuralMappingCorrelationOrAmbiguousImmutableSelfMatchingFailureStatus:
+      "schema_mismatch",
+    knownBlockOverlapStatus: "validator_rejected",
+    prerequisiteUnknownDanglingDuplicateCrossDomainOrNonBijectiveRelationStatus:
+      "schema_mismatch",
+    knownMissingUnassignedOrReversedPrerequisitePlacementStatus:
+      "validator_rejected",
+    knownPrerequisitePlacementFailureClassificationPrecedesGenericCandidateAccountingOmissionClassification:
+      true,
+    everyKnownCutoffOverlapOrPrerequisiteFailureMustAttemptExactlyOneIndependentlyPreparedCanonicalNativeFallback:
+      true,
     rawProjectedVersionInfoOrGatewayOwnedVersionConfigurationInjectionStatus:
       "schema_mismatch",
     missingAmbiguousStaleUntrustedOrMismatchedCanonicalVersionMetadataStatus:
@@ -574,12 +601,12 @@ function projectedResultGatewayContractIsClosed(scheduler) {
     optimalOrFeasibleBranchOrderExactly: [
       "validate_complete_raw_projected_candidate_plan_response_without_version_info_or_gateway_owned_version_configuration_fields",
       "validate_exact_request_snapshot_correlation_and_per_class_bijections",
-      "validate_projected_candidate_accounting_duration_non_droppable_candidate_window_and_hard_deadline_rules_using_trusted_gateway_context",
+      "validate_projected_candidate_accounting_duration_non_droppable_candidate_window_hard_deadline_replan_cutoff_pairwise_block_non_overlap_and_prerequisite_ordering_rules_using_trusted_gateway_context",
       "inverse_map_exactly_the_existing_six_identifier_bearing_paths",
       "preserve_every_solver_owned_non_id_value_and_array_cardinality_and_order",
       "trusted_gateway_constructs_exact_canonical_ten_field_version_info_from_exact_trusted_correlated_configuration",
       "trusted_gateway_constructs_canonical_fallback_used_false_reason_not_used_native_plan_version_null",
-      "validate_complete_canonical_result_contract_and_every_native_hard_constraint",
+      "validate_complete_canonical_result_contract_replan_cutoff_pairwise_block_non_overlap_prerequisite_ordering_and_every_native_hard_constraint",
       "on_canonical_or_native_rejection_discard_candidate_plan_and_used_false_tuple_classify_validator_rejected_and_transition_exactly_once_to_failure_branch",
       "release_only_when_complete_canonical_and_native_validation_succeeds",
     ],
@@ -589,7 +616,7 @@ function projectedResultGatewayContractIsClosed(scheduler) {
       "independently_resolve_or_prepare_exactly_one_immutable_native_fallback_in_canonical_original_id_domain",
       "trusted_gateway_constructs_exact_canonical_ten_field_version_info_from_exact_trusted_correlated_configuration",
       "trusted_gateway_constructs_canonical_fallback_used_true_exact_trigger_reason_and_non_null_closed_native_plan_version",
-      "validate_complete_canonical_result_contract_candidate_accounting_duration_non_droppable_candidate_window_hard_deadline_and_every_hard_constraint",
+      "validate_complete_canonical_result_contract_candidate_accounting_duration_non_droppable_candidate_window_hard_deadline_replan_cutoff_pairwise_block_non_overlap_prerequisite_ordering_and_every_hard_constraint",
       "return_only_blocked_manual_plan_required_when_canonical_fallback_is_missing_unavailable_or_invalid",
     ],
     optimalOrFeasibleCanonicalFallbackTupleExactly: {
@@ -879,9 +906,11 @@ function c3ResultValidationContractsAreClosed(scheduler) {
       true,
     referencedNativeFallbackMustBeSeparatelyValidatedAgainstCanonicalTenFieldVersionInfoAndHardDeadlineFeasibilityBeforeRelease:
       true,
+    referencedNativeFallbackMustBeSeparatelyValidatedAgainstCanonicalReplanCutoffPairwiseBlockNonOverlapAndPrerequisiteOrderingBeforeRelease:
+      true,
     missingFallbackMismatchedReasonInvalidVersionOrInvalidNativePlanResult:
       "blocked_manual_plan_required",
-    missingUnavailableNonDroppableInvalidCandidateWindowInvalidHardDeadlineInvalidCanonicalVersionInfoOrHardConstraintInvalidNativePlanResult:
+    missingUnavailableNonDroppableInvalidCandidateWindowInvalidHardDeadlineInvalidReplanCutoffOverlappingInvalidPrerequisiteInvalidCanonicalVersionInfoOrHardConstraintInvalidNativePlanResult:
       "blocked_manual_plan_required",
     missingFallbackMismatchedReasonInvalidVersionOrInvalidNativePlanMayReleaseCandidatePlan:
       false,
@@ -1201,6 +1230,166 @@ function c3ResultValidationContractsAreClosed(scheduler) {
     projectedResponseMaySelectReferenceAuthorizeOrReleaseCanonicalNativeFallback:
       false,
   };
+  const exactReplanCutoffCoreRules = {
+    replanCutoffSourceExact:
+      "exact_same_trusted_correlated_invocation.replan_cutoff_minute_kst_or_null",
+    replanCutoffMustEqualExactSameTrustedCorrelatedInvocationValue: true,
+    candidateWindowAndImmutableIdentifiersMustUseActiveContainingContractDomain:
+      true,
+    nullReplanCutoffMeansNoReplanLowerBound: true,
+    nullReplanCutoffDoesNotBypassStructuralMappingCorrelationOrImmutableMatchValidation:
+      true,
+    immutableExemptionEligiblePriorPlacementStatesExactly: [
+      "elapsed",
+      "in_progress",
+    ],
+    exactImmutableExemptionFields: [
+      "ephemeral_opaque_candidate_id",
+      "ephemeral_opaque_window_id",
+      "start_minute_kst",
+      "end_minute_kst",
+      "duration_minutes",
+    ],
+    immutableExemptionRequiresExactUnchangedFieldForFieldMatchToExactlyOneEligiblePriorPlacementThroughSameCorrelatedInvocation:
+      true,
+    nonExemptExecutionBlockPredicateExact:
+      "replan_cutoff_minute_kst_or_null === null || block.start_minute_kst >= replan_cutoff_minute_kst_or_null",
+    replanCutoffEqualityIsFeasible: true,
+    executionBlockStartingOneMinuteBeforeNonNullCutoffIsRejected: true,
+    replanCutoff1440AllowsNoNewOrMovedExecutionBlock: true,
+    preProjectionElapsedAndInProgressImmutablePlacementMustResolveExactExemptionOnce:
+      true,
+    immutablePlacementMayBeMovedDroppedUnassignedShortenedExtendedOrRewrittenToRepairCutoffBreach:
+      false,
+  };
+  const exactCanonicalReplanCutoffRules = {
+    appliesToEveryExecutionBlockInOptimalFeasibleCompleteCanonicalAndEveryReleasableSeparatelyValidatedCanonicalNativeFallbackPlan:
+      true,
+    ...exactReplanCutoffCoreRules,
+    unknownDanglingDuplicateCrossDomainNonBijectiveOrAmbiguousImmutableExemptionRelationStatus:
+      "schema_mismatch",
+    knownBeforeCutoffPlacementStatus: "validator_rejected",
+    knownBeforeCutoffPlacementMustAttemptExactlyOneIndependentlyPreparedCanonicalNativeFallback:
+      true,
+    releasableNativeFallbackMustSatisfyEveryReplanCutoffPredicate: true,
+    invalidNativeFallbackResult: "blocked_manual_plan_required",
+    invalidNativeFallbackMayTriggerAnotherFallback: false,
+    invalidNativeFallbackMayReleaseCandidatePlan: false,
+  };
+  const exactProjectedReplanCutoffRules = {
+    appliesToEveryExecutionBlockInOptimalAndFeasibleProjectedCandidatePlans:
+      true,
+    ...exactReplanCutoffCoreRules,
+    unknownDanglingDuplicateCrossDomainNonBijectiveOrAmbiguousImmutableExemptionRelationTrustedGatewayClassification:
+      "schema_mismatch",
+    knownBeforeCutoffPlacementTrustedGatewayClassification:
+      "validator_rejected",
+    invalidProjectedCandidatePlanMayReleaseCandidatePlan: false,
+    projectedResponseMaySelectReferenceAuthorizeOrReleaseCanonicalNativeFallback:
+      false,
+  };
+  const exactPairwiseBlockNonOverlapCoreRules = {
+    intervalSemanticsExact: "[start_minute_kst, end_minute_kst)",
+    distinctPairNonOverlapPredicateExact:
+      "a.end_minute_kst <= b.start_minute_kst || b.end_minute_kst <= a.start_minute_kst",
+    boundaryEqualityIsFeasible: true,
+    validateEveryPairOfDistinctExecutionBlocks: true,
+    validateEveryExecutionBlockAgainstEveryFixedBlockFromSameCorrelatedInvocation:
+      true,
+    validateEveryNewOrMovedExecutionBlockAgainstEveryImmutablePriorPlacementFromSameCorrelatedInvocation:
+      true,
+    newOrMovedDeterminationUsesExactImmutableMatchFields: [
+      "ephemeral_opaque_candidate_id",
+      "ephemeral_opaque_window_id",
+      "start_minute_kst",
+      "end_minute_kst",
+      "duration_minutes",
+    ],
+    exactUnchangedRepresentationOfSameImmutablePriorPlacementIsOneLogicalBlockAndDoesNotConflictWithItself:
+      true,
+    immutableSelfRepresentationMustResolveExactlyOnceThroughSameCorrelatedInvocation:
+      true,
+    preProjectionImmutablePriorPlacementsMustBePairwiseNonOverlappingWithEveryFixedBlock:
+      true,
+    immutablePriorPlacementsMustRemainPairwiseNonOverlappingBeforeProjection:
+      true,
+    fixedOrImmutablePlacementMayBeRewrittenToRepairOverlap: false,
+  };
+  const exactCanonicalPairwiseBlockNonOverlapRules = {
+    appliesBeforeReleaseToEveryOptimalFeasibleCompleteCanonicalAndEveryReleasableSeparatelyValidatedCanonicalNativeFallbackPlan:
+      true,
+    ...exactPairwiseBlockNonOverlapCoreRules,
+    unknownDanglingDuplicateCrossDomainNonBijectiveOrAmbiguousImmutableSelfRelationStatus:
+      "schema_mismatch",
+    knownOverlapStatus: "validator_rejected",
+    knownOverlapMustAttemptExactlyOneIndependentlyPreparedCanonicalNativeFallback:
+      true,
+    releasableNativeFallbackMustSatisfyEveryPairwiseNonOverlapPredicate:
+      true,
+    invalidNativeFallbackResult: "blocked_manual_plan_required",
+    invalidNativeFallbackMayTriggerAnotherFallback: false,
+    invalidNativeFallbackMayReleaseCandidatePlan: false,
+  };
+  const exactProjectedPairwiseBlockNonOverlapRules = {
+    appliesBeforeReleaseToEveryOptimalAndFeasibleProjectedCandidatePlan:
+      true,
+    ...exactPairwiseBlockNonOverlapCoreRules,
+    unknownDanglingDuplicateCrossDomainNonBijectiveOrAmbiguousImmutableSelfRelationTrustedGatewayClassification:
+      "schema_mismatch",
+    knownOverlapTrustedGatewayClassification: "validator_rejected",
+    invalidProjectedCandidatePlanMayReleaseCandidatePlan: false,
+    projectedResponseMaySelectReferenceAuthorizeOrReleaseCanonicalNativeFallback:
+      false,
+  };
+  const exactPrerequisiteOrderingCoreRules = {
+    candidateAndPrerequisiteRelationSourceExact:
+      "exact_same_trusted_correlated_invocation.candidates[].prerequisite_candidate_ids",
+    dependentAndEveryPrerequisiteMustResolveExactlyOnceThroughSameCorrelatedInvocationAndActiveContainingContractDomain:
+      true,
+    emptyPrerequisiteListMeansNoOrderingConstraint: true,
+    multiplePrerequisiteSetRequiresEveryMemberToPass: true,
+    everyPrerequisiteMustBePlacedExactlyOnce: true,
+    placedDependentMayRelyOnUnassignedPrerequisite: false,
+    prerequisiteOrderingPredicateExact:
+      "prerequisite.end_minute_kst <= dependent.start_minute_kst",
+    prerequisiteBoundaryEqualityIsFeasible: true,
+    knownPrerequisitePlacementFailureClassificationPrecedesGenericCandidateAccountingOmissionClassification:
+      true,
+    preProjectionElapsedAndInProgressImmutableDependentMustSatisfyEveryPrerequisiteOrderingPredicate:
+      true,
+    immutablePlacementMayBeMovedDroppedUnassignedShortenedExtendedOrRewrittenToRepairPrerequisiteBreach:
+      false,
+    projectionFieldsOrResultInverseMapPathsMayBeAddedForPrerequisiteValidation:
+      false,
+  };
+  const exactCanonicalPrerequisiteOrderingRules = {
+    appliesToEveryPlacedDependentInOptimalFeasibleCompleteCanonicalAndEveryReleasableSeparatelyValidatedCanonicalNativeFallbackPlan:
+      true,
+    ...exactPrerequisiteOrderingCoreRules,
+    unknownDanglingDuplicateCrossDomainOrNonBijectivePrerequisiteRelationStatus:
+      "schema_mismatch",
+    knownMissingUnassignedOrReversedPrerequisitePlacementStatus:
+      "validator_rejected",
+    knownPrerequisitePlacementFailureMustAttemptExactlyOneIndependentlyPreparedCanonicalNativeFallback:
+      true,
+    releasableNativeFallbackMustSatisfyEveryPrerequisiteOrderingPredicate:
+      true,
+    invalidNativeFallbackResult: "blocked_manual_plan_required",
+    invalidNativeFallbackMayTriggerAnotherFallback: false,
+    invalidNativeFallbackMayReleaseCandidatePlan: false,
+  };
+  const exactProjectedPrerequisiteOrderingRules = {
+    appliesToEveryPlacedDependentInOptimalAndFeasibleProjectedCandidatePlans:
+      true,
+    ...exactPrerequisiteOrderingCoreRules,
+    unknownDanglingDuplicateCrossDomainOrNonBijectivePrerequisiteRelationTrustedGatewayClassification:
+      "schema_mismatch",
+    knownMissingUnassignedOrReversedPrerequisitePlacementTrustedGatewayClassification:
+      "validator_rejected",
+    invalidProjectedCandidatePlanMayReleaseCandidatePlan: false,
+    projectedResponseMaySelectReferenceAuthorizeOrReleaseCanonicalNativeFallback:
+      false,
+  };
   const exactVersionInfoConstructionRules = {
     canonicalVersionInfoRequiredForEveryCompleteCanonicalResultAndReleasableCanonicalNativeFallback:
       true,
@@ -1233,11 +1422,19 @@ function c3ResultValidationContractsAreClosed(scheduler) {
       true,
     validatedNativeFallbackMustSatisfyCanonicalTenFieldVersionInfoAndHardDeadlineFeasibilityAndAllHardConstraints:
       true,
+    validatedNativeFallbackMustSatisfyCanonicalReplanCutoffPairwiseBlockNonOverlapAndPrerequisiteOrderingAndAllHardConstraints:
+      true,
     everyOptimalFeasibleAndReleasableValidatedNativeFallbackPlanMustPlaceEveryNonDroppableCandidateExactlyOnceAndNeverUnassignIt:
       true,
     everyExecutionBlockMustResolveExactCurrentInvocationCandidateAndWindowAndSatisfyAllowedMembershipAvailabilityAndSingleWindowBounds:
       true,
     everyExecutionBlockInOptimalFeasibleAndReleasableValidatedNativeFallbackMustSatisfyCandidateHardDeadlinePredicateUsingTrustedCanonicalStudyDateKst:
+      true,
+    everyNewOrMovedExecutionBlockInOptimalFeasibleAndReleasableValidatedNativeFallbackMustStartAtOrAfterNonNullReplanCutoffUnlessItIsTheUniqueExactImmutableElapsedOrInProgressSelfRepresentation:
+      true,
+    everyOptimalFeasibleAndReleasableValidatedNativeFallbackPlanMustSatisfyHalfOpenPairwiseNonOverlapForExecutionExecutionExecutionFixedAndNewOrMovedExecutionImmutablePairs:
+      true,
+    everyPlacedDependentInOptimalFeasibleAndReleasableValidatedNativeFallbackMustHaveEveryPrerequisitePlacedExactlyOnceAndEndingAtOrBeforeDependentStart:
       true,
     canonicalVersionInfoMustBeGatewayConstructedFromExactTrustedCorrelatedConfigurationAfterCompleteRawResponseCorrelationAndRequiredBijectionValidation:
       true,
@@ -1246,6 +1443,12 @@ function c3ResultValidationContractsAreClosed(scheduler) {
     knownDisallowedUnavailableOrOutOfBoundsCandidateWindowRelationStatus:
       "validator_rejected",
     knownHardDeadlineBreachStatus: "validator_rejected",
+    cutoffOverlapOrPrerequisiteStructuralMappingCorrelationAmbiguityStatus:
+      "schema_mismatch",
+    knownBeforeCutoffOverlapMissingUnassignedOrReversedPrerequisiteStatus:
+      "validator_rejected",
+    knownPrerequisitePlacementFailureClassificationPrecedesGenericCandidateAccountingOmissionClassification:
+      true,
     canonicalFallbackTupleAndStateMustBeGatewayConstructed: true,
     nativeFallbackMayBeAttemptedMoreThanOnceOrRecursively: false,
     invalidOrUnavailableValidatedNativeFallbackResult:
@@ -1255,6 +1458,9 @@ function c3ResultValidationContractsAreClosed(scheduler) {
       false,
     immutableElapsedOrInProgressPlacementMustPassHardDeadlineBeforeProjectionAndMayNotBeMovedDroppedUnassignedShortenedExtendedOrRewrittenDuringValidationOrFallback:
       true,
+    immutableElapsedOrInProgressPlacementMustPassUniqueExactCutoffExemptionPairwiseNonOverlapAndPrerequisiteOrderingPreflightAndMayNotBeMovedDroppedUnassignedShortenedExtendedOrRewrittenDuringValidationOrFallback:
+      true,
+    fixedBlockMayBeRewrittenToRepairOverlap: false,
     hardConstraintMayBeOverriddenBySoftObjective: false,
     minimizeDeadlineLatenessMayReadOnlySoftDeadlineOrNullAndMayNotOverrideHardDeadline:
       true,
@@ -1356,6 +1562,78 @@ function c3ResultValidationContractsAreClosed(scheduler) {
   const projectionRules =
     scheduler.inputContract.optimizerInvocationProjectionContract
       .projectionRules;
+  const exactProjectionSecondCorrectivePreflightRules = {
+    immutablePriorPlacementsMustPassExactReplanCutoffExemptionResolutionBeforeProjection:
+      true,
+    exactImmutableReplanCutoffExemptionFields: [
+      "ephemeral_opaque_candidate_id",
+      "ephemeral_opaque_window_id",
+      "start_minute_kst",
+      "end_minute_kst",
+      "duration_minutes",
+    ],
+    exactImmutableReplanCutoffExemptionMustMatchExactlyOneElapsedOrInProgressPriorPlacementThroughSameCorrelatedInvocation:
+      true,
+    ambiguousImmutableReplanCutoffExemptionMatchingStatus:
+      "schema_mismatch",
+    nonExemptPlacementMustStartAtOrAfterNonNullReplanCutoff: true,
+    nullReplanCutoffMeansNoReplanLowerBound: true,
+    replanCutoffEqualityIsFeasible: true,
+    replanCutoff1440AllowsNoNewOrMovedExecutionBlock: true,
+    immutablePriorPlacementsMustBePairwiseNonOverlappingWithEveryCurrentFixedBlockBeforeProjection:
+      true,
+    immutablePriorPlacementsMustRemainPairwiseNonOverlappingBeforeProjection:
+      true,
+    exactUnchangedImmutableSelfRepresentationIsOneLogicalBlockAndDoesNotOverlapItself:
+      true,
+    ambiguousImmutableSelfRepresentationMatchingStatus: "schema_mismatch",
+    placedImmutableDependentMustHaveEveryPrerequisitePlacedExactlyOnceAndEndingAtOrBeforeDependentStartBeforeProjection:
+      true,
+    immutablePrerequisiteUnknownDanglingDuplicateCrossDomainOrNonBijectiveRelationStatus:
+      "schema_mismatch",
+    immutablePrerequisiteKnownMissingUnassignedOrReversedPlacementStatus:
+      "validator_rejected",
+    immutableCutoffOverlapOrPrerequisiteIncompatibilityMayReachOptimizer:
+      false,
+    immutableCutoffOverlapOrPrerequisiteIncompatibilityMustAttemptExactlyOneSeparatelyValidatedNativeFallbackWithoutRewritingImmutableOrFixedPlacements:
+      true,
+    immutableCutoffOverlapOrPrerequisiteIncompatibilityInvalidNativeFallbackResult:
+      "blocked_manual_plan_required",
+    immutableCutoffOverlapOrPrerequisiteIncompatibilityInvalidNativeFallbackMayTriggerAnotherFallback:
+      false,
+  };
+  const exactPriorSecondCorrectivePreflightRules = {
+    elapsedAndInProgressPlacementMustResolveExactlyOneImmutableReplanCutoffExemptionByCandidateWindowStartEndAndDurationBeforeProjection:
+      true,
+    ambiguousImmutableReplanCutoffExemptionMatchingStatus:
+      "schema_mismatch",
+    nonExemptNewOrMovedPlacementMustStartAtOrAfterNonNullReplanCutoff:
+      true,
+    nullReplanCutoffMeansNoReplanLowerBound: true,
+    replanCutoffEqualityIsFeasible: true,
+    replanCutoff1440AllowsNoNewOrMovedExecutionBlock: true,
+    elapsedAndInProgressPlacementMustBePairwiseNonOverlappingWithEveryCurrentFixedBlockBeforeProjection:
+      true,
+    elapsedAndInProgressPlacementsMustRemainPairwiseNonOverlappingBeforeProjection:
+      true,
+    exactUnchangedImmutableSelfRepresentationIsOneLogicalBlockAndDoesNotOverlapItself:
+      true,
+    ambiguousImmutableSelfRepresentationMatchingStatus: "schema_mismatch",
+    placedElapsedOrInProgressDependentMustHaveEveryPrerequisitePlacedExactlyOnceAndEndingAtOrBeforeDependentStartBeforeProjection:
+      true,
+    immutablePrerequisiteUnknownDanglingDuplicateCrossDomainOrNonBijectiveRelationStatus:
+      "schema_mismatch",
+    immutablePrerequisiteKnownMissingUnassignedOrReversedPlacementStatus:
+      "validator_rejected",
+    immutableCutoffOverlapOrPrerequisiteIncompatibilityMayReachOptimizer:
+      false,
+    immutableCutoffOverlapOrPrerequisiteIncompatibilityMustAttemptExactlyOneSeparatelyValidatedNativeFallbackWithoutMovingDroppingUnassigningShorteningExtendingOrRewritingImmutableOrFixedPlacements:
+      true,
+    immutableCutoffOverlapOrPrerequisiteIncompatibilityInvalidNativeFallbackResult:
+      "blocked_manual_plan_required",
+    immutableCutoffOverlapOrPrerequisiteIncompatibilityInvalidNativeFallbackMayTriggerAnotherFallback:
+      false,
+  };
   const exactHardDeadlineValidationContext = {
     trustedCanonicalStudyDateSource: "inputContract.study_date_kst",
     studyDateMayEnterOptimizerProjection: false,
@@ -1447,6 +1725,9 @@ function c3ResultValidationContractsAreClosed(scheduler) {
       "execution_block_duration",
       "non_droppable_candidate_placement",
       "candidate_window_membership_availability_and_bounds",
+      "replan_cutoff_feasibility",
+      "pairwise_block_non_overlap",
+      "prerequisite_ordering",
       "hard_constraints",
       "immutable_placement_compatibility",
       "canonical_result_contract_schema_and_correlation_catch_all",
@@ -1485,6 +1766,7 @@ function c3ResultValidationContractsAreClosed(scheduler) {
     "validNativeFallbackResultNativePlanVersionMustBeClosedAndNonNullWhenManualBlockDigestIsNull",
     "validNativeFallbackResultMustSatisfyCanonicalCandidateAccountingExecutionBlockDurationAndAllHardConstraintsWhenManualBlockDigestIsNull",
     "validNativeFallbackResultMustSatisfyCanonicalNonDroppableCandidateWindowAndAllC4HardConstraintsWhenManualBlockDigestIsNull",
+    "validNativeFallbackResultMustSatisfyCanonicalReplanCutoffPairwiseBlockNonOverlapAndPrerequisiteOrderingWhenManualBlockDigestIsNull",
     "oneNativeFallbackResultDigestMaySatisfyMultipleExpectedStatuses",
     "invalidNativeFallbackAttemptDigestMustResolveOneExactClosedRejectionValidationRecordWhenManualBlockDigestIsNonNull",
     "invalidNativeFallbackAttemptFailureMustBeCrossBoundToExpectedStatus",
@@ -1562,6 +1844,18 @@ function c3ResultValidationContractsAreClosed(scheduler) {
       canonicalJson(exactCanonicalHardDeadlineRules) &&
     canonicalJson(projected.hardDeadlineFeasibilityRules) ===
       canonicalJson(exactProjectedHardDeadlineRules) &&
+    canonicalJson(canonical.replanCutoffFeasibilityRules) ===
+      canonicalJson(exactCanonicalReplanCutoffRules) &&
+    canonicalJson(projected.replanCutoffFeasibilityRules) ===
+      canonicalJson(exactProjectedReplanCutoffRules) &&
+    canonicalJson(canonical.pairwiseBlockNonOverlapRules) ===
+      canonicalJson(exactCanonicalPairwiseBlockNonOverlapRules) &&
+    canonicalJson(projected.pairwiseBlockNonOverlapRules) ===
+      canonicalJson(exactProjectedPairwiseBlockNonOverlapRules) &&
+    canonicalJson(canonical.prerequisiteOrderingRules) ===
+      canonicalJson(exactCanonicalPrerequisiteOrderingRules) &&
+    canonicalJson(projected.prerequisiteOrderingRules) ===
+      canonicalJson(exactProjectedPrerequisiteOrderingRules) &&
     canonicalJson(canonical.versionInfoFieldsExactly) ===
       canonicalJson(exactVersionInfoFields) &&
     canonicalJson(canonical.versionFieldsRequired) ===
@@ -1765,6 +2059,14 @@ function c3ResultValidationContractsAreClosed(scheduler) {
     projectionRules
       .immutablePriorPlacementHardDeadlineIncompatibilityInvalidNativeFallbackMayTriggerAnotherFallback ===
       false &&
+    Object.entries(exactProjectionSecondCorrectivePreflightRules).every(
+      ([field, expected]) =>
+        canonicalJson(projectionRules[field]) === canonicalJson(expected),
+    ) &&
+    Object.entries(exactPriorSecondCorrectivePreflightRules).every(
+      ([field, expected]) =>
+        canonicalJson(priorRules[field]) === canonicalJson(expected),
+    ) &&
     failureFixture.expectedStatuses === "resultContract.fallbackStatuses" &&
     canonicalJson(Object.keys(failureFixture)) ===
       canonicalJson(exactFailureFixtureContractKeys) &&
@@ -1817,6 +2119,9 @@ function c3ResultValidationContractsAreClosed(scheduler) {
       .validNativeFallbackResultMustSatisfyCanonicalNonDroppableCandidateWindowAndAllC4HardConstraintsWhenManualBlockDigestIsNull ===
       true &&
     failureFixture
+      .validNativeFallbackResultMustSatisfyCanonicalReplanCutoffPairwiseBlockNonOverlapAndPrerequisiteOrderingWhenManualBlockDigestIsNull ===
+      true &&
+    failureFixture
       .oneNativeFallbackResultDigestMaySatisfyMultipleExpectedStatuses ===
       false &&
     failureFixture
@@ -1860,6 +2165,9 @@ function c3ResultValidationContractsAreClosed(scheduler) {
       true &&
     resolvedVerificationRules
       .validFailureFallbackMustSatisfyCanonicalNonDroppableCandidateWindowAndAllC4HardConstraints ===
+      true &&
+    resolvedVerificationRules
+      .validFailureFallbackMustSatisfyCanonicalReplanCutoffPairwiseBlockNonOverlapAndPrerequisiteOrdering ===
       true &&
     resolvedVerificationRules
       .invalidFailureFallbackAttemptDigestsMustResolveToExactRejectedAttemptValidationRecordWhenManualBlockDigestIsNonNull ===
@@ -2482,6 +2790,424 @@ function gatewayOutcomeAfterHardDeadlineValidation(
     candidatePlanReleased: false,
     canonicalNativeFallbackReleased: false,
   };
+}
+
+const IMMUTABLE_PLACEMENT_IDENTITY_FIELDS = [
+  "ephemeral_opaque_candidate_id",
+  "ephemeral_opaque_window_id",
+  "start_minute_kst",
+  "end_minute_kst",
+  "duration_minutes",
+];
+
+function executionPlacementIsStructurallyValid(contract, placement) {
+  return (
+    hasExactFields(placement, IMMUTABLE_PLACEMENT_IDENTITY_FIELDS) &&
+    projectedIdentifierIsValid(
+      contract,
+      "ephemeral_opaque_candidate_id",
+      placement.ephemeral_opaque_candidate_id,
+    ) &&
+    projectedIdentifierIsValid(
+      contract,
+      "ephemeral_opaque_window_id",
+      placement.ephemeral_opaque_window_id,
+    ) &&
+    projectedScalarIsValid(
+      contract.scalarSchemas.start_minute_kst,
+      placement.start_minute_kst,
+    ) &&
+    projectedScalarIsValid(
+      contract.scalarSchemas.end_minute_kst,
+      placement.end_minute_kst,
+    ) &&
+    projectedScalarIsValid(
+      contract.scalarSchemas.duration_minutes,
+      placement.duration_minutes,
+    ) &&
+    placement.start_minute_kst < placement.end_minute_kst &&
+    placement.duration_minutes ===
+      placement.end_minute_kst - placement.start_minute_kst
+  );
+}
+
+function placementIdentityMatches(left, right) {
+  return IMMUTABLE_PLACEMENT_IDENTITY_FIELDS.every(
+    (field) => left[field] === right[field],
+  );
+}
+
+function replanCutoffClassification(
+  contract,
+  releasePathStatus,
+  block,
+  correlatedInvocation,
+  immutablePriorPlacements,
+  expectedCorrelation,
+) {
+  const invocationFields = [
+    "request_id",
+    "input_snapshot_version",
+    "candidates",
+    "available_windows",
+    "replan_cutoff_minute_kst_or_null",
+  ];
+  const correlationFields = [
+    "request_id",
+    "input_snapshot_version",
+    "replan_cutoff_minute_kst_or_null",
+  ];
+  const replanCutoffMinuteKstOrNull =
+    correlatedInvocation?.replan_cutoff_minute_kst_or_null;
+  if (
+    !isPlainRecord(contract) ||
+    ![
+      "optimal",
+      "feasible",
+      "canonical_native_fallback",
+      "immutable_preflight",
+    ].includes(releasePathStatus) ||
+    !executionPlacementIsStructurallyValid(contract, block) ||
+    !hasExactFields(correlatedInvocation, invocationFields) ||
+    !hasExactFields(expectedCorrelation, correlationFields) ||
+    !projectedIdentifierIsValid(
+      contract,
+      "request_id",
+      correlatedInvocation.request_id,
+    ) ||
+    !projectedIdentifierIsValid(
+      contract,
+      "input_snapshot_version",
+      correlatedInvocation.input_snapshot_version,
+    ) ||
+    correlatedInvocation.request_id !== expectedCorrelation.request_id ||
+    correlatedInvocation.input_snapshot_version !==
+      expectedCorrelation.input_snapshot_version ||
+    correlatedInvocation.replan_cutoff_minute_kst_or_null !==
+      expectedCorrelation.replan_cutoff_minute_kst_or_null ||
+    !Array.isArray(correlatedInvocation.candidates) ||
+    !Array.isArray(correlatedInvocation.available_windows) ||
+    !Array.isArray(immutablePriorPlacements) ||
+    !immutablePriorPlacements.every((placement) =>
+      executionPlacementIsStructurallyValid(contract, placement),
+    ) ||
+    (replanCutoffMinuteKstOrNull !== null &&
+      (!Number.isInteger(replanCutoffMinuteKstOrNull) ||
+        replanCutoffMinuteKstOrNull < 0 ||
+        replanCutoffMinuteKstOrNull > 1440)) ||
+    (expectedCorrelation.replan_cutoff_minute_kst_or_null !== null &&
+      (!Number.isInteger(
+        expectedCorrelation.replan_cutoff_minute_kst_or_null,
+      ) ||
+        expectedCorrelation.replan_cutoff_minute_kst_or_null < 0 ||
+        expectedCorrelation.replan_cutoff_minute_kst_or_null > 1440))
+  ) {
+    return "schema_mismatch";
+  }
+  const candidateIds = correlatedInvocation.candidates.map(
+    (candidate) => candidate?.ephemeral_opaque_candidate_id,
+  );
+  const windowIds = correlatedInvocation.available_windows.map(
+    (window) => window?.ephemeral_opaque_window_id,
+  );
+  if (
+    candidateIds.some(
+      (candidateId) =>
+        !projectedIdentifierIsValid(
+          contract,
+          "ephemeral_opaque_candidate_id",
+          candidateId,
+        ),
+    ) ||
+    windowIds.some(
+      (windowId) =>
+        !projectedIdentifierIsValid(
+          contract,
+          "ephemeral_opaque_window_id",
+          windowId,
+        ),
+    ) ||
+    new Set(candidateIds).size !== candidateIds.length ||
+    new Set(windowIds).size !== windowIds.length
+  ) {
+    return "schema_mismatch";
+  }
+  const candidateResolvesExactlyOnce = (candidateId) =>
+    candidateIds.filter((id) => id === candidateId).length === 1;
+  const windowResolvesExactlyOnce = (windowId) =>
+    windowIds.filter((id) => id === windowId).length === 1;
+  if (
+    !candidateResolvesExactlyOnce(
+      block.ephemeral_opaque_candidate_id,
+    ) ||
+    !windowResolvesExactlyOnce(block.ephemeral_opaque_window_id) ||
+    immutablePriorPlacements.some(
+      (placement) =>
+        !candidateResolvesExactlyOnce(
+          placement.ephemeral_opaque_candidate_id,
+        ) ||
+        !windowResolvesExactlyOnce(
+          placement.ephemeral_opaque_window_id,
+        ),
+    )
+  ) {
+    return "schema_mismatch";
+  }
+  const immutableCandidateIds = immutablePriorPlacements.map(
+    (placement) => placement.ephemeral_opaque_candidate_id,
+  );
+  if (
+    new Set(immutableCandidateIds).size !== immutableCandidateIds.length
+  ) {
+    return "schema_mismatch";
+  }
+  const exactImmutableMatches = immutablePriorPlacements.filter(
+    (placement) => placementIdentityMatches(block, placement),
+  );
+  if (exactImmutableMatches.length > 1) return "schema_mismatch";
+  if (exactImmutableMatches.length === 1) return "feasible";
+  if (replanCutoffMinuteKstOrNull === null) return "feasible";
+  return block.start_minute_kst >= replanCutoffMinuteKstOrNull
+    ? "feasible"
+    : "validator_rejected";
+}
+
+function halfOpenIntervalsDoNotOverlap(left, right) {
+  return (
+    left.end_minute_kst <= right.start_minute_kst ||
+    right.end_minute_kst <= left.start_minute_kst
+  );
+}
+
+function intervalIsStructurallyValid(interval) {
+  return (
+    isPlainRecord(interval) &&
+    Number.isInteger(interval.start_minute_kst) &&
+    Number.isInteger(interval.end_minute_kst) &&
+    interval.start_minute_kst >= 0 &&
+    interval.start_minute_kst <= 1439 &&
+    interval.end_minute_kst >= 1 &&
+    interval.end_minute_kst <= 1440 &&
+    interval.start_minute_kst < interval.end_minute_kst
+  );
+}
+
+function pairwiseBlockNonOverlapClassification(
+  contract,
+  releasePathStatus,
+  executionBlocks,
+  fixedBlocks,
+  immutablePriorPlacements,
+) {
+  if (
+    ![
+      "optimal",
+      "feasible",
+      "canonical_native_fallback",
+      "immutable_preflight",
+    ].includes(releasePathStatus) ||
+    !Array.isArray(executionBlocks) ||
+    !Array.isArray(fixedBlocks) ||
+    !Array.isArray(immutablePriorPlacements) ||
+    !executionBlocks.every((block) =>
+      executionPlacementIsStructurallyValid(contract, block),
+    ) ||
+    !fixedBlocks.every(intervalIsStructurallyValid) ||
+    !immutablePriorPlacements.every((placement) =>
+      executionPlacementIsStructurallyValid(contract, placement),
+    )
+  ) {
+    return "schema_mismatch";
+  }
+  for (const block of executionBlocks) {
+    const exactImmutableMatches = immutablePriorPlacements.filter(
+      (placement) => placementIdentityMatches(block, placement),
+    );
+    if (exactImmutableMatches.length > 1) return "schema_mismatch";
+  }
+  for (
+    let leftIndex = 0;
+    leftIndex < immutablePriorPlacements.length;
+    leftIndex += 1
+  ) {
+    for (
+      let rightIndex = leftIndex + 1;
+      rightIndex < immutablePriorPlacements.length;
+      rightIndex += 1
+    ) {
+      if (
+        placementIdentityMatches(
+          immutablePriorPlacements[leftIndex],
+          immutablePriorPlacements[rightIndex],
+        )
+      ) {
+        return "schema_mismatch";
+      }
+      if (
+        !halfOpenIntervalsDoNotOverlap(
+          immutablePriorPlacements[leftIndex],
+          immutablePriorPlacements[rightIndex],
+        )
+      ) {
+        return "validator_rejected";
+      }
+    }
+  }
+  for (const immutablePlacement of immutablePriorPlacements) {
+    if (
+      fixedBlocks.some(
+        (fixedBlock) =>
+          !halfOpenIntervalsDoNotOverlap(
+            immutablePlacement,
+            fixedBlock,
+          ),
+      )
+    ) {
+      return "validator_rejected";
+    }
+  }
+  for (let leftIndex = 0; leftIndex < executionBlocks.length; leftIndex += 1) {
+    for (
+      let rightIndex = leftIndex + 1;
+      rightIndex < executionBlocks.length;
+      rightIndex += 1
+    ) {
+      if (
+        !halfOpenIntervalsDoNotOverlap(
+          executionBlocks[leftIndex],
+          executionBlocks[rightIndex],
+        )
+      ) {
+        return "validator_rejected";
+      }
+    }
+  }
+  for (const block of executionBlocks) {
+    if (
+      fixedBlocks.some(
+        (fixedBlock) => !halfOpenIntervalsDoNotOverlap(block, fixedBlock),
+      )
+    ) {
+      return "validator_rejected";
+    }
+    for (const immutablePlacement of immutablePriorPlacements) {
+      if (placementIdentityMatches(block, immutablePlacement)) continue;
+      if (!halfOpenIntervalsDoNotOverlap(block, immutablePlacement)) {
+        return "validator_rejected";
+      }
+    }
+  }
+  return "feasible";
+}
+
+function prerequisiteOrderingClassification(
+  contract,
+  releasePathStatus,
+  candidates,
+  executionBlocks,
+  unassignedCandidates = [],
+) {
+  if (
+    ![
+      "optimal",
+      "feasible",
+      "canonical_native_fallback",
+      "immutable_preflight",
+    ].includes(releasePathStatus) ||
+    !Array.isArray(candidates) ||
+    !Array.isArray(executionBlocks) ||
+    !Array.isArray(unassignedCandidates) ||
+    !executionBlocks.every((block) =>
+      executionPlacementIsStructurallyValid(contract, block),
+    )
+  ) {
+    return "schema_mismatch";
+  }
+  const candidateIds = candidates.map(
+    (candidate) => candidate?.ephemeral_opaque_candidate_id,
+  );
+  if (
+    candidates.some(
+      (candidate) =>
+        !isPlainRecord(candidate) ||
+        !projectedIdentifierIsValid(
+          contract,
+          "ephemeral_opaque_candidate_id",
+          candidate.ephemeral_opaque_candidate_id,
+        ) ||
+        !Array.isArray(candidate.prerequisite_candidate_ids) ||
+        new Set(candidate.prerequisite_candidate_ids).size !==
+          candidate.prerequisite_candidate_ids.length,
+    ) ||
+    new Set(candidateIds).size !== candidateIds.length
+  ) {
+    return "schema_mismatch";
+  }
+  const candidateSet = new Set(candidateIds);
+  for (const candidate of candidates) {
+    if (
+      candidate.prerequisite_candidate_ids.some(
+        (prerequisiteId) =>
+          !projectedIdentifierIsValid(
+            contract,
+            "ephemeral_opaque_candidate_id",
+            prerequisiteId,
+          ) || !candidateSet.has(prerequisiteId),
+      )
+    ) {
+      return "schema_mismatch";
+    }
+  }
+  const unassignedIds = unassignedCandidates.map(
+    (candidate) => candidate?.ephemeral_opaque_candidate_id,
+  );
+  if (
+    unassignedIds.some(
+      (candidateId) =>
+        !projectedIdentifierIsValid(
+          contract,
+          "ephemeral_opaque_candidate_id",
+          candidateId,
+        ) || !candidateSet.has(candidateId),
+    ) ||
+    new Set(unassignedIds).size !== unassignedIds.length
+  ) {
+    return "schema_mismatch";
+  }
+  const placedByCandidateId = new Map();
+  for (const block of executionBlocks) {
+    if (!candidateSet.has(block.ephemeral_opaque_candidate_id)) {
+      return "schema_mismatch";
+    }
+    const blocks =
+      placedByCandidateId.get(block.ephemeral_opaque_candidate_id) ?? [];
+    blocks.push(block);
+    placedByCandidateId.set(block.ephemeral_opaque_candidate_id, blocks);
+  }
+  if ([...placedByCandidateId.values()].some((blocks) => blocks.length > 1)) {
+    return "schema_mismatch";
+  }
+  const unassignedSet = new Set(unassignedIds);
+  for (const dependentBlock of executionBlocks) {
+    const dependent = candidates.find(
+      (candidate) =>
+        candidate.ephemeral_opaque_candidate_id ===
+        dependentBlock.ephemeral_opaque_candidate_id,
+    );
+    for (const prerequisiteId of dependent.prerequisite_candidate_ids) {
+      const prerequisiteBlocks =
+        placedByCandidateId.get(prerequisiteId) ?? [];
+      if (
+        unassignedSet.has(prerequisiteId) ||
+        prerequisiteBlocks.length !== 1 ||
+        prerequisiteBlocks[0].end_minute_kst >
+          dependentBlock.start_minute_kst
+      ) {
+        return "validator_rejected";
+      }
+    }
+  }
+  return "feasible";
 }
 
 function nonDroppablePlacementIsValid(
@@ -6065,6 +6791,941 @@ test("post-ready hard deadlines are closed KST-to-UTC feasibility predicates for
   }
 });
 
+test("second post-ready corrective closes cutoff, half-open overlap, and prerequisite ordering on every release path", async () => {
+  const scheduler = await json(
+    "config/dabangil-full-day-scheduler-contract.json",
+  );
+  assert.equal(c3ResultValidationContractsAreClosed(scheduler), true);
+  assert.equal(projectedResultGatewayContractIsClosed(scheduler), true);
+
+  for (const prose of await Promise.all([
+    text("AGENTS.md"),
+    text("docs/dabangil-unified-program-contract.md"),
+    text("docs/inverge-second-round-final-product-spec.md"),
+    text("docs/inverge-study-schedule-system.md"),
+  ])) {
+    assert.match(
+      prose,
+      /`replan_cutoff_minute_kst_or_null`[\s\S]{0,1000}(?:start_minute_kst\s*>=|at or after)[\s\S]{0,600}(?:1440|1,440)/i,
+    );
+    assert.match(
+      prose,
+      /exact[\s\S]{0,250}immutable[\s\S]{0,500}(?:candidate|window)[\s\S]{0,500}(?:exactly once|unique)/i,
+    );
+    assert.match(
+      prose,
+      /\[start_minute_kst,\s*end_minute_kst\)[\s\S]{0,800}a\.end_minute_kst\s*<=\s*b\.start_minute_kst[\s\S]{0,250}b\.end_minute_kst\s*<=\s*a\.start_minute_kst/i,
+    );
+    assert.match(
+      prose,
+      /prerequisite_candidate_ids[\s\S]{0,900}prerequisite\.end_minute_kst\s*<=\s*dependent\.start_minute_kst/i,
+    );
+    assert.match(
+      prose,
+      /(?:mapping|correlation|ambiguous|cross-domain)[\s\S]{0,600}`schema_mismatch`[\s\S]{0,900}known[\s\S]{0,500}`validator_rejected`/i,
+    );
+  }
+
+  const placement = (candidateId, windowId, start, end) => ({
+    ephemeral_opaque_candidate_id: candidateId,
+    ephemeral_opaque_window_id: windowId,
+    start_minute_kst: start,
+    end_minute_kst: end,
+    duration_minutes: end - start,
+  });
+  const domains = [
+    {
+      name: "canonical",
+      contract: scheduler.resultContract,
+      candidate: (token) => `cand_${token.repeat(16)}`,
+      window: (token) => `win_${token.repeat(16)}`,
+    },
+    {
+      name: "projected",
+      contract: scheduler.optimizerProjectedResultContract,
+      candidate: (token) => `ocand_${token.repeat(16)}`,
+      window: (token) => `owin_${token.repeat(16)}`,
+    },
+  ];
+  const correlationFor = (domain, cutoff) => ({
+    request_id:
+      domain.name === "canonical"
+        ? `req_${"r".repeat(16)}`
+        : `oreq_${"r".repeat(16)}`,
+    input_snapshot_version:
+      domain.name === "canonical"
+        ? `snp_${"s".repeat(16)}`
+        : `osnp_${"s".repeat(16)}`,
+    replan_cutoff_minute_kst_or_null: cutoff,
+  });
+  const invocationFor = (
+    domain,
+    candidateIds,
+    windowIds,
+    cutoff,
+  ) => ({
+    ...correlationFor(domain, cutoff),
+    candidates: candidateIds.map((candidateId) => ({
+      ephemeral_opaque_candidate_id: candidateId,
+    })),
+    available_windows: windowIds.map((windowId) => ({
+      ephemeral_opaque_window_id: windowId,
+    })),
+  });
+
+  for (const domain of domains) {
+    const ids = ["a", "b", "c", "d"].map(domain.candidate);
+    const windowId = domain.window("w");
+    const first = placement(ids[0], windowId, 60, 90);
+    const adjacent = placement(ids[1], windowId, 90, 120);
+    const overlapping = placement(ids[1], windowId, 89, 119);
+    for (const status of ["optimal", "feasible"]) {
+      for (const [cutoff, immutables, block, expected, label] of [
+        [null, [], first, "feasible", "null"],
+        [
+          null,
+          [clone(first), clone(first)],
+          first,
+          "schema_mismatch",
+          "null-still-validates-ambiguous-match",
+        ],
+        [0, [], first, "feasible", "zero"],
+        [60, [], first, "feasible", "equality"],
+        [61, [], first, "validator_rejected", "one-minute-early"],
+        [1440, [], first, "validator_rejected", "1440-new"],
+        [1440, [clone(first)], first, "feasible", "immutable-exempt"],
+        [
+          1440,
+          [clone(first), clone(first)],
+          first,
+          "schema_mismatch",
+          "immutable-ambiguous",
+        ],
+        [
+          60,
+          [clone(first)],
+          { ...first, start_minute_kst: 59, duration_minutes: 31 },
+          "validator_rejected",
+          "immutable-moved",
+        ],
+      ]) {
+        assert.equal(
+          replanCutoffClassification(
+            domain.contract,
+            status,
+            block,
+            invocationFor(domain, ids, [windowId], cutoff),
+            immutables,
+            correlationFor(domain, cutoff),
+          ),
+          expected,
+          `${domain.name} ${status} cutoff ${label}`,
+        );
+      }
+      const correlatedAt60 = invocationFor(
+        domain,
+        ids,
+        [windowId],
+        60,
+      );
+      const otherDomainCandidate =
+        domain.name === "canonical"
+          ? `ocand_${"z".repeat(16)}`
+          : `cand_${"z".repeat(16)}`;
+      const duplicateCandidateInvocation = clone(correlatedAt60);
+      duplicateCandidateInvocation.candidates.push(
+        clone(duplicateCandidateInvocation.candidates[0]),
+      );
+      const duplicateWindowInvocation = clone(correlatedAt60);
+      duplicateWindowInvocation.available_windows.push(
+        clone(duplicateWindowInvocation.available_windows[0]),
+      );
+      for (const [block, invocation, immutables, expectedBinding, label] of [
+        [
+          placement(domain.candidate("z"), windowId, 60, 90),
+          correlatedAt60,
+          [],
+          correlationFor(domain, 60),
+          "unknown-candidate",
+        ],
+        [
+          placement(ids[0], domain.window("z"), 60, 90),
+          correlatedAt60,
+          [],
+          correlationFor(domain, 60),
+          "unknown-window",
+        ],
+        [
+          placement(otherDomainCandidate, windowId, 60, 90),
+          correlatedAt60,
+          [],
+          correlationFor(domain, 60),
+          "cross-domain",
+        ],
+        [
+          first,
+          duplicateCandidateInvocation,
+          [],
+          correlationFor(domain, 60),
+          "duplicate-candidate-map",
+        ],
+        [
+          first,
+          duplicateWindowInvocation,
+          [],
+          correlationFor(domain, 60),
+          "duplicate-window-map",
+        ],
+        [
+          first,
+          invocationFor(domain, ids, [windowId], 61),
+          [],
+          correlationFor(domain, 60),
+          "wrong-cutoff-correlation",
+        ],
+        [
+          first,
+          correlatedAt60,
+          [
+            clone(first),
+            placement(ids[0], windowId, 30, 60),
+          ],
+          correlationFor(domain, 60),
+          "conflicting-immutable-relation",
+        ],
+        [
+          first,
+          correlatedAt60,
+          [
+            placement(
+              domain.candidate("z"),
+              windowId,
+              30,
+              60,
+            ),
+          ],
+          correlationFor(domain, 60),
+          "dangling-immutable-candidate",
+        ],
+      ]) {
+        assert.equal(
+          replanCutoffClassification(
+            domain.contract,
+            status,
+            block,
+            invocation,
+            immutables,
+            expectedBinding,
+          ),
+          "schema_mismatch",
+          `${domain.name} ${status} cutoff ${label}`,
+        );
+      }
+
+      for (const [blocks, fixed, immutables, expected, label] of [
+        [[first, adjacent], [], [], "feasible", "adjacent"],
+        [
+          [first, overlapping],
+          [],
+          [],
+          "validator_rejected",
+          "execution-execution",
+        ],
+        [
+          [first],
+          [{ start_minute_kst: 89, end_minute_kst: 100 }],
+          [],
+          "validator_rejected",
+          "execution-fixed",
+        ],
+        [
+          [first],
+          [],
+          [placement(ids[1], windowId, 80, 100)],
+          "validator_rejected",
+          "execution-immutable",
+        ],
+        [[first], [], [clone(first)], "feasible", "immutable-self"],
+        [
+          [first],
+          [],
+          [clone(first), clone(first)],
+          "schema_mismatch",
+          "immutable-self-ambiguous",
+        ],
+        [
+          [],
+          [],
+          [first, placement(ids[1], windowId, 80, 100)],
+          "validator_rejected",
+          "immutable-immutable-preflight",
+        ],
+        [
+          [],
+          [{ start_minute_kst: 89, end_minute_kst: 100 }],
+          [first],
+          "validator_rejected",
+          "immutable-fixed-preflight",
+        ],
+      ]) {
+        assert.equal(
+          pairwiseBlockNonOverlapClassification(
+            domain.contract,
+            status,
+            blocks,
+            fixed,
+            immutables,
+          ),
+          expected,
+          `${domain.name} ${status} overlap ${label}`,
+        );
+      }
+
+      const prerequisiteCandidates = [
+        {
+          ephemeral_opaque_candidate_id: ids[0],
+          prerequisite_candidate_ids: [],
+        },
+        {
+          ephemeral_opaque_candidate_id: ids[1],
+          prerequisite_candidate_ids: [],
+        },
+        {
+          ephemeral_opaque_candidate_id: ids[3],
+          prerequisite_candidate_ids: [ids[0], ids[1]],
+        },
+      ];
+      const prerequisiteOne = placement(ids[0], windowId, 30, 60);
+      const prerequisiteTwo = placement(ids[1], windowId, 60, 90);
+      const dependent = placement(ids[3], windowId, 90, 120);
+      assert.equal(
+        prerequisiteOrderingClassification(
+          domain.contract,
+          status,
+          [prerequisiteCandidates[0]],
+          [prerequisiteOne],
+        ),
+        "feasible",
+        `${domain.name} ${status} empty prerequisite`,
+      );
+      assert.equal(
+        prerequisiteOrderingClassification(
+          domain.contract,
+          status,
+          prerequisiteCandidates,
+          [prerequisiteOne, prerequisiteTwo, dependent],
+        ),
+        "feasible",
+        `${domain.name} ${status} multiple prerequisites and equality`,
+      );
+      assert.equal(
+        prerequisiteOrderingClassification(
+          domain.contract,
+          status,
+          prerequisiteCandidates,
+          [
+            prerequisiteOne,
+            placement(ids[1], windowId, 61, 91),
+            dependent,
+          ],
+        ),
+        "validator_rejected",
+        `${domain.name} ${status} reversed prerequisite`,
+      );
+      assert.equal(
+        prerequisiteOrderingClassification(
+          domain.contract,
+          status,
+          prerequisiteCandidates,
+          [prerequisiteOne, dependent],
+          [{ ephemeral_opaque_candidate_id: ids[1] }],
+        ),
+        "validator_rejected",
+        `${domain.name} ${status} unassigned prerequisite`,
+      );
+      assert.equal(
+        prerequisiteOrderingClassification(
+          domain.contract,
+          status,
+          prerequisiteCandidates,
+          [dependent],
+        ),
+        "validator_rejected",
+        `${domain.name} ${status} known missing prerequisite`,
+      );
+      const crossDomainId =
+        domain.name === "canonical"
+          ? `ocand_${"x".repeat(16)}`
+          : `cand_${"x".repeat(16)}`;
+      assert.equal(
+        prerequisiteOrderingClassification(
+          domain.contract,
+          status,
+          [
+            {
+              ephemeral_opaque_candidate_id: ids[2],
+              prerequisite_candidate_ids: [crossDomainId],
+            },
+          ],
+          [placement(ids[2], windowId, 120, 150)],
+        ),
+        "schema_mismatch",
+        `${domain.name} ${status} cross-domain prerequisite`,
+      );
+      assert.equal(
+        prerequisiteOrderingClassification(
+          domain.contract,
+          status,
+          [
+            {
+              ephemeral_opaque_candidate_id: ids[2],
+              prerequisite_candidate_ids: [domain.candidate("z")],
+            },
+          ],
+          [placement(ids[2], windowId, 120, 150)],
+        ),
+        "schema_mismatch",
+        `${domain.name} ${status} dangling prerequisite`,
+      );
+      assert.equal(
+        prerequisiteOrderingClassification(
+          domain.contract,
+          status,
+          [
+            prerequisiteCandidates[0],
+            {
+              ephemeral_opaque_candidate_id: ids[2],
+              prerequisite_candidate_ids: [ids[0], ids[0]],
+            },
+          ],
+          [prerequisiteOne, placement(ids[2], windowId, 60, 90)],
+        ),
+        "schema_mismatch",
+        `${domain.name} ${status} duplicate prerequisite relation`,
+      );
+      assert.equal(
+        prerequisiteOrderingClassification(
+          domain.contract,
+          status,
+          [
+            prerequisiteCandidates[0],
+            clone(prerequisiteCandidates[0]),
+          ],
+          [prerequisiteOne],
+        ),
+        "schema_mismatch",
+        `${domain.name} ${status} non-bijective dependent resolution`,
+      );
+
+      const immutablePrerequisitePlacements = [
+        clone(prerequisiteOne),
+        clone(prerequisiteTwo),
+        clone(dependent),
+      ];
+      const immutablePrerequisiteSnapshot = clone(
+        immutablePrerequisitePlacements,
+      );
+      assert.equal(
+        prerequisiteOrderingClassification(
+          domain.contract,
+          "immutable_preflight",
+          prerequisiteCandidates,
+          immutablePrerequisitePlacements,
+        ),
+        "feasible",
+        `${domain.name} immutable preflight equality`,
+      );
+      assert.equal(
+        prerequisiteOrderingClassification(
+          domain.contract,
+          "immutable_preflight",
+          prerequisiteCandidates,
+          [
+            prerequisiteOne,
+            placement(ids[1], windowId, 61, 91),
+            dependent,
+          ],
+        ),
+        "validator_rejected",
+        `${domain.name} immutable preflight reversed prerequisite`,
+      );
+      assert.equal(
+        prerequisiteOrderingClassification(
+          domain.contract,
+          "immutable_preflight",
+          prerequisiteCandidates,
+          [dependent],
+        ),
+        "validator_rejected",
+        `${domain.name} immutable preflight missing prerequisite`,
+      );
+      assert.equal(
+        prerequisiteOrderingClassification(
+          domain.contract,
+          "immutable_preflight",
+          prerequisiteCandidates,
+          [prerequisiteOne, dependent],
+          [{ ephemeral_opaque_candidate_id: ids[1] }],
+        ),
+        "validator_rejected",
+        `${domain.name} immutable preflight unassigned prerequisite`,
+      );
+      assert.equal(
+        prerequisiteOrderingClassification(
+          domain.contract,
+          "immutable_preflight",
+          [
+            {
+              ephemeral_opaque_candidate_id: ids[2],
+              prerequisite_candidate_ids: [domain.candidate("z")],
+            },
+          ],
+          [placement(ids[2], windowId, 120, 150)],
+        ),
+        "schema_mismatch",
+        `${domain.name} immutable preflight dangling relation`,
+      );
+      assert.deepEqual(
+        immutablePrerequisitePlacements,
+        immutablePrerequisiteSnapshot,
+        `${domain.name} immutable prerequisite preflight cannot mutate placements`,
+      );
+    }
+  }
+
+  const canonical = domains[0];
+  const fallbackWindow = canonical.window("f");
+  const earlyBlock = placement(
+    canonical.candidate("p"),
+    fallbackWindow,
+    59,
+    89,
+  );
+  const validFallback = placement(
+    canonical.candidate("q"),
+    fallbackWindow,
+    60,
+    90,
+  );
+  assert.deepEqual(
+    gatewayOutcomeAfterHardDeadlineValidation(
+      replanCutoffClassification(
+        canonical.contract,
+        "optimal",
+        earlyBlock,
+        invocationFor(
+          canonical,
+          [
+            earlyBlock.ephemeral_opaque_candidate_id,
+            validFallback.ephemeral_opaque_candidate_id,
+          ],
+          [fallbackWindow],
+          60,
+        ),
+        [],
+        correlationFor(canonical, 60),
+      ),
+      replanCutoffClassification(
+        canonical.contract,
+        "canonical_native_fallback",
+        validFallback,
+        invocationFor(
+          canonical,
+          [
+            earlyBlock.ephemeral_opaque_candidate_id,
+            validFallback.ephemeral_opaque_candidate_id,
+          ],
+          [fallbackWindow],
+          60,
+        ),
+        [],
+        correlationFor(canonical, 60),
+      ),
+    ),
+    {
+      status: "fallback",
+      triggeringClassification: "validator_rejected",
+      nativeFallbackAttempts: 1,
+      candidatePlanReleased: false,
+      canonicalNativeFallbackReleased: true,
+    },
+  );
+  assert.deepEqual(
+    gatewayOutcomeAfterHardDeadlineValidation(
+      "validator_rejected",
+      pairwiseBlockNonOverlapClassification(
+        canonical.contract,
+        "canonical_native_fallback",
+        [validFallback],
+        [{ start_minute_kst: 89, end_minute_kst: 100 }],
+        [],
+      ),
+    ),
+    {
+      status: "blocked_manual_plan_required",
+      triggeringClassification: "validator_rejected",
+      nativeFallbackAttempts: 1,
+      candidatePlanReleased: false,
+      canonicalNativeFallbackReleased: false,
+    },
+  );
+  assert.deepEqual(
+    gatewayOutcomeAfterHardDeadlineValidation(
+      "validator_rejected",
+      replanCutoffClassification(
+        canonical.contract,
+        "canonical_native_fallback",
+        earlyBlock,
+        invocationFor(
+          canonical,
+          [earlyBlock.ephemeral_opaque_candidate_id],
+          [fallbackWindow],
+          60,
+        ),
+        [],
+        correlationFor(canonical, 60),
+      ),
+    ),
+    {
+      status: "blocked_manual_plan_required",
+      triggeringClassification: "validator_rejected",
+      nativeFallbackAttempts: 1,
+      candidatePlanReleased: false,
+      canonicalNativeFallbackReleased: false,
+    },
+    "a before-cutoff fallback releases no plan",
+  );
+  const prerequisiteId = canonical.candidate("r");
+  const dependentId = canonical.candidate("s");
+  const fallbackPrerequisiteCandidates = [
+    {
+      ephemeral_opaque_candidate_id: prerequisiteId,
+      prerequisite_candidate_ids: [],
+    },
+    {
+      ephemeral_opaque_candidate_id: dependentId,
+      prerequisite_candidate_ids: [prerequisiteId],
+    },
+  ];
+  const fallbackPrerequisite = placement(
+    prerequisiteId,
+    fallbackWindow,
+    30,
+    60,
+  );
+  const fallbackDependent = placement(
+    dependentId,
+    fallbackWindow,
+    60,
+    90,
+  );
+  assert.deepEqual(
+    gatewayOutcomeAfterHardDeadlineValidation(
+      "validator_rejected",
+      prerequisiteOrderingClassification(
+        canonical.contract,
+        "canonical_native_fallback",
+        fallbackPrerequisiteCandidates,
+        [fallbackPrerequisite, fallbackDependent],
+      ),
+    ),
+    {
+      status: "fallback",
+      triggeringClassification: "validator_rejected",
+      nativeFallbackAttempts: 1,
+      candidatePlanReleased: false,
+      canonicalNativeFallbackReleased: true,
+    },
+  );
+  assert.deepEqual(
+    gatewayOutcomeAfterHardDeadlineValidation(
+      "validator_rejected",
+      prerequisiteOrderingClassification(
+        canonical.contract,
+        "canonical_native_fallback",
+        fallbackPrerequisiteCandidates,
+        [fallbackDependent],
+      ),
+    ),
+    {
+      status: "blocked_manual_plan_required",
+      triggeringClassification: "validator_rejected",
+      nativeFallbackAttempts: 1,
+      candidatePlanReleased: false,
+      canonicalNativeFallbackReleased: false,
+    },
+    "a prerequisite-invalid fallback releases no plan",
+  );
+  const immutableSnapshot = clone(validFallback);
+  replanCutoffClassification(
+    canonical.contract,
+    "canonical_native_fallback",
+    validFallback,
+    invocationFor(
+      canonical,
+      [validFallback.ephemeral_opaque_candidate_id],
+      [fallbackWindow],
+      1440,
+    ),
+    [clone(validFallback)],
+    correlationFor(canonical, 1440),
+  );
+  assert.deepEqual(validFallback, immutableSnapshot);
+
+  const requiredFixtureIds = [
+    "replan_cutoff_null",
+    "replan_cutoff_zero",
+    "replan_cutoff_exact_equality",
+    "replan_cutoff_one_minute_early",
+    "replan_cutoff_1440_no_new_or_moved_block",
+    "replan_cutoff_exact_immutable_exemption",
+    "replan_cutoff_ambiguous_immutable_matching",
+    "half_open_adjacent_intervals",
+    "execution_execution_overlap",
+    "execution_fixed_overlap",
+    "execution_immutable_overlap",
+    "exact_immutable_self_representation",
+    "prerequisite_empty",
+    "prerequisite_exact_equality",
+    "prerequisite_reversed",
+    "prerequisite_unassigned",
+    "prerequisite_multiple_all_required",
+    "relational_projected_identifier_domain_optimal",
+    "relational_projected_identifier_domain_feasible",
+    "relational_canonical_identifier_domain_optimal",
+    "relational_canonical_identifier_domain_feasible",
+    "relational_canonical_native_fallback_valid",
+    "relational_canonical_native_fallback_invalid",
+    "relational_immutable_preflight",
+    "relational_coordinated_enforcement_removal",
+  ];
+  const secondCorrectiveContractIsClosed = (value) =>
+    c3ResultValidationContractsAreClosed(value) &&
+    projectedResultGatewayContractIsClosed(value) &&
+    requiredFixtureIds.every((fixtureId) =>
+      value.fixtureMatrix.scenarioFixtureIds.includes(fixtureId),
+    );
+  assert.equal(secondCorrectiveContractIsClosed(scheduler), true);
+  assert.deepEqual(
+    scheduler.optimizerProjectedResultContract.inverseMappingContract
+      .identifierBearingPathsExactly,
+    PROJECTED_RESULT_ID_PATHS,
+  );
+
+  const hostileMutations = [
+    (value) => {
+      delete value.optimizerProjectedResultContract
+        .replanCutoffFeasibilityRules;
+    },
+    (value) => {
+      delete value.resultContract.pairwiseBlockNonOverlapRules;
+    },
+    (value) => {
+      delete value.optimizerProjectedResultContract
+        .prerequisiteOrderingRules;
+    },
+    (value) => {
+      value.hardConstraints = value.hardConstraints.filter(
+        (code) =>
+          code !==
+          "new_or_moved_execution_block_starts_at_or_after_replan_cutoff",
+      );
+    },
+    (value) => {
+      value.nativeValidator
+        .validatedNativeFallbackMustSatisfyCanonicalReplanCutoffPairwiseBlockNonOverlapAndPrerequisiteOrderingAndAllHardConstraints =
+        false;
+    },
+    (value) => {
+      value.inputContract.optimizerInvocationProjectionContract
+        .projectionRules
+        .immutableCutoffOverlapOrPrerequisiteIncompatibilityMayReachOptimizer =
+        true;
+    },
+    (value) => {
+      value.s237oBenchmarkAcceptanceContract.benchmarkResultDigestContract
+        .failureStatusFixtureResultSetDigestContract
+        .validNativeFallbackResultMustSatisfyCanonicalReplanCutoffPairwiseBlockNonOverlapAndPrerequisiteOrderingWhenManualBlockDigestIsNull =
+        false;
+    },
+    (value) => {
+      value.fixtureMatrix.scenarioFixtureIds =
+        value.fixtureMatrix.scenarioFixtureIds.filter(
+          (fixtureId) =>
+            fixtureId !== "relational_coordinated_enforcement_removal",
+        );
+    },
+    (value) => {
+      delete value.optimizerProjectedResultContract
+        .replanCutoffFeasibilityRules;
+      delete value.optimizerProjectedResultContract
+        .pairwiseBlockNonOverlapRules;
+      delete value.optimizerProjectedResultContract
+        .prerequisiteOrderingRules;
+      delete value.resultContract.replanCutoffFeasibilityRules;
+      delete value.resultContract.pairwiseBlockNonOverlapRules;
+      delete value.resultContract.prerequisiteOrderingRules;
+      const removedCodes = new Set([
+        "new_or_moved_execution_block_starts_at_or_after_replan_cutoff",
+        "block_overlap_zero",
+        "prerequisite_order_violations_zero",
+      ]);
+      const retained = (code) => !removedCodes.has(code);
+      value.hardConstraints = value.hardConstraints.filter(retained);
+      value.optimizerProjectedResultContract.closedEnumValues.constraint_code_enum =
+        value.optimizerProjectedResultContract.closedEnumValues.constraint_code_enum.filter(
+          retained,
+        );
+      value.resultContract.closedEnumValues.constraint_code_enum =
+        value.resultContract.closedEnumValues.constraint_code_enum.filter(
+          retained,
+        );
+      const projectionRules =
+        value.inputContract.optimizerInvocationProjectionContract
+          .projectionRules;
+      for (const field of [
+        "immutablePriorPlacementsMustPassExactReplanCutoffExemptionResolutionBeforeProjection",
+        "exactImmutableReplanCutoffExemptionFields",
+        "exactImmutableReplanCutoffExemptionMustMatchExactlyOneElapsedOrInProgressPriorPlacementThroughSameCorrelatedInvocation",
+        "ambiguousImmutableReplanCutoffExemptionMatchingStatus",
+        "nonExemptPlacementMustStartAtOrAfterNonNullReplanCutoff",
+        "nullReplanCutoffMeansNoReplanLowerBound",
+        "replanCutoffEqualityIsFeasible",
+        "replanCutoff1440AllowsNoNewOrMovedExecutionBlock",
+        "immutablePriorPlacementsMustBePairwiseNonOverlappingWithEveryCurrentFixedBlockBeforeProjection",
+        "immutablePriorPlacementsMustRemainPairwiseNonOverlappingBeforeProjection",
+        "exactUnchangedImmutableSelfRepresentationIsOneLogicalBlockAndDoesNotOverlapItself",
+        "ambiguousImmutableSelfRepresentationMatchingStatus",
+        "placedImmutableDependentMustHaveEveryPrerequisitePlacedExactlyOnceAndEndingAtOrBeforeDependentStartBeforeProjection",
+        "immutablePrerequisiteUnknownDanglingDuplicateCrossDomainOrNonBijectiveRelationStatus",
+        "immutablePrerequisiteKnownMissingUnassignedOrReversedPlacementStatus",
+        "immutableCutoffOverlapOrPrerequisiteIncompatibilityMayReachOptimizer",
+        "immutableCutoffOverlapOrPrerequisiteIncompatibilityMustAttemptExactlyOneSeparatelyValidatedNativeFallbackWithoutRewritingImmutableOrFixedPlacements",
+        "immutableCutoffOverlapOrPrerequisiteIncompatibilityInvalidNativeFallbackResult",
+        "immutableCutoffOverlapOrPrerequisiteIncompatibilityInvalidNativeFallbackMayTriggerAnotherFallback",
+      ]) {
+        delete projectionRules[field];
+      }
+      projectionRules.elapsedAndInProgressPlacementsBecomeImmutablePriorPlacements =
+        false;
+
+      const priorRules =
+        value.inputContract.priorAcceptedScheduleRules;
+      for (const field of [
+        "elapsedAndInProgressPlacementMustResolveExactlyOneImmutableReplanCutoffExemptionByCandidateWindowStartEndAndDurationBeforeProjection",
+        "ambiguousImmutableReplanCutoffExemptionMatchingStatus",
+        "nonExemptNewOrMovedPlacementMustStartAtOrAfterNonNullReplanCutoff",
+        "nullReplanCutoffMeansNoReplanLowerBound",
+        "replanCutoffEqualityIsFeasible",
+        "replanCutoff1440AllowsNoNewOrMovedExecutionBlock",
+        "elapsedAndInProgressPlacementMustBePairwiseNonOverlappingWithEveryCurrentFixedBlockBeforeProjection",
+        "elapsedAndInProgressPlacementsMustRemainPairwiseNonOverlappingBeforeProjection",
+        "exactUnchangedImmutableSelfRepresentationIsOneLogicalBlockAndDoesNotOverlapItself",
+        "ambiguousImmutableSelfRepresentationMatchingStatus",
+        "placedElapsedOrInProgressDependentMustHaveEveryPrerequisitePlacedExactlyOnceAndEndingAtOrBeforeDependentStartBeforeProjection",
+        "immutablePrerequisiteUnknownDanglingDuplicateCrossDomainOrNonBijectiveRelationStatus",
+        "immutablePrerequisiteKnownMissingUnassignedOrReversedPlacementStatus",
+        "immutableCutoffOverlapOrPrerequisiteIncompatibilityMayReachOptimizer",
+        "immutableCutoffOverlapOrPrerequisiteIncompatibilityMustAttemptExactlyOneSeparatelyValidatedNativeFallbackWithoutMovingDroppingUnassigningShorteningExtendingOrRewritingImmutableOrFixedPlacements",
+        "immutableCutoffOverlapOrPrerequisiteIncompatibilityInvalidNativeFallbackResult",
+        "immutableCutoffOverlapOrPrerequisiteIncompatibilityInvalidNativeFallbackMayTriggerAnotherFallback",
+      ]) {
+        delete priorRules[field];
+      }
+      priorRules.newOrMovedPlacementMayStartBeforeCutoff = true;
+      priorRules.placementsMustBeNonOverlappingAndWithinPriorDayBounds =
+        false;
+      priorRules.elapsedOrInProgressPlacementMayBeDroppedShortenedMovedOrDuplicated =
+        true;
+      priorRules.immutablePlacementOrCurrentCandidatePolicyMayBeRewrittenToRepairIncompatibility =
+        true;
+
+      const gateway =
+        value.optimizerProjectedResultContract
+          .canonicalGatewayConstructionContract;
+      gateway.optimalOrFeasibleBranchOrderExactly[2] =
+        "validate_projected_candidate_accounting_duration_non_droppable_candidate_window_and_hard_deadline_rules_using_trusted_gateway_context";
+      gateway.optimalOrFeasibleBranchOrderExactly[7] =
+        "validate_complete_canonical_result_contract_and_every_native_hard_constraint";
+      gateway.solverOrTrustedGatewayFailureBranchOrderExactly[5] =
+        "validate_complete_canonical_result_contract_candidate_accounting_duration_non_droppable_candidate_window_hard_deadline_and_every_hard_constraint";
+      value.optimizerProjectedResultContract.processingOrderExactly[6] =
+        "validate_complete_canonical_result_contract_and_every_native_hard_constraint";
+      for (const field of [
+        "replanCutoffStructuralMappingCorrelationOrAmbiguousImmutableMatchingFailureStatus",
+        "knownBeforeCutoffPlacementStatus",
+        "pairwiseNonOverlapStructuralMappingCorrelationOrAmbiguousImmutableSelfMatchingFailureStatus",
+        "knownBlockOverlapStatus",
+        "prerequisiteUnknownDanglingDuplicateCrossDomainOrNonBijectiveRelationStatus",
+        "knownMissingUnassignedOrReversedPrerequisitePlacementStatus",
+        "knownPrerequisitePlacementFailureClassificationPrecedesGenericCandidateAccountingOmissionClassification",
+        "everyKnownCutoffOverlapOrPrerequisiteFailureMustAttemptExactlyOneIndependentlyPreparedCanonicalNativeFallback",
+      ]) {
+        delete value.optimizerProjectedResultContract.failureRouting[field];
+      }
+
+      delete value.resultContract.fallbackValueRules
+        .referencedNativeFallbackMustBeSeparatelyValidatedAgainstCanonicalReplanCutoffPairwiseBlockNonOverlapAndPrerequisiteOrderingBeforeRelease;
+      delete value.resultContract.fallbackValueRules
+        .missingUnavailableNonDroppableInvalidCandidateWindowInvalidHardDeadlineInvalidReplanCutoffOverlappingInvalidPrerequisiteInvalidCanonicalVersionInfoOrHardConstraintInvalidNativePlanResult;
+      for (const field of [
+        "validatedNativeFallbackMustSatisfyCanonicalReplanCutoffPairwiseBlockNonOverlapAndPrerequisiteOrderingAndAllHardConstraints",
+        "everyNewOrMovedExecutionBlockInOptimalFeasibleAndReleasableValidatedNativeFallbackMustStartAtOrAfterNonNullReplanCutoffUnlessItIsTheUniqueExactImmutableElapsedOrInProgressSelfRepresentation",
+        "everyOptimalFeasibleAndReleasableValidatedNativeFallbackPlanMustSatisfyHalfOpenPairwiseNonOverlapForExecutionExecutionExecutionFixedAndNewOrMovedExecutionImmutablePairs",
+        "everyPlacedDependentInOptimalFeasibleAndReleasableValidatedNativeFallbackMustHaveEveryPrerequisitePlacedExactlyOnceAndEndingAtOrBeforeDependentStart",
+        "cutoffOverlapOrPrerequisiteStructuralMappingCorrelationAmbiguityStatus",
+        "knownBeforeCutoffOverlapMissingUnassignedOrReversedPrerequisiteStatus",
+        "knownPrerequisitePlacementFailureClassificationPrecedesGenericCandidateAccountingOmissionClassification",
+        "immutableElapsedOrInProgressPlacementMustPassUniqueExactCutoffExemptionPairwiseNonOverlapAndPrerequisiteOrderingPreflightAndMayNotBeMovedDroppedUnassignedShortenedExtendedOrRewrittenDuringValidationOrFallback",
+        "fixedBlockMayBeRewrittenToRepairOverlap",
+      ]) {
+        delete value.nativeValidator[field];
+      }
+
+      const resolvedMembers =
+        value.s237oBenchmarkAcceptanceContract
+          .benchmarkResultDigestContract.resolvedArtifactMembersContract;
+      const rejectedAttempt =
+        resolvedMembers.rejectedNativeFallbackAttemptValidationRecordContract;
+      rejectedAttempt.fieldSchemas.rejection_code_enum =
+        rejectedAttempt.fieldSchemas.rejection_code_enum.filter(
+          (code) =>
+            ![
+              "replan_cutoff_invalid",
+              "block_overlap_invalid",
+              "prerequisite_order_invalid",
+            ].includes(code),
+        );
+      rejectedAttempt.rejectionValidationOrderExactly =
+        rejectedAttempt.rejectionValidationOrderExactly.filter(
+          (step) =>
+            ![
+              "replan_cutoff_feasibility",
+              "pairwise_block_non_overlap",
+              "prerequisite_ordering",
+            ].includes(step),
+        );
+      delete resolvedMembers.verificationRules
+        .validFailureFallbackMustSatisfyCanonicalReplanCutoffPairwiseBlockNonOverlapAndPrerequisiteOrdering;
+      delete value.s237oBenchmarkAcceptanceContract
+        .benchmarkResultDigestContract
+        .failureStatusFixtureResultSetDigestContract
+        .validNativeFallbackResultMustSatisfyCanonicalReplanCutoffPairwiseBlockNonOverlapAndPrerequisiteOrderingWhenManualBlockDigestIsNull;
+
+      const allSecondCorrectiveFixtureIds = new Set(requiredFixtureIds);
+      value.fixtureMatrix.scenarioFixtureIds =
+        value.fixtureMatrix.scenarioFixtureIds.filter(
+          (fixtureId) => !allSecondCorrectiveFixtureIds.has(fixtureId),
+        );
+    },
+  ];
+  for (const mutate of hostileMutations) {
+    const hostile = clone(scheduler);
+    mutate(hostile);
+    assert.equal(secondCorrectiveContractIsClosed(hostile), false);
+  }
+});
+
 test("C3 result accounting is an exact invocation partition and hostile candidate sets fail closed", async () => {
   const scheduler = await json(
     "config/dabangil-full-day-scheduler-contract.json",
@@ -7280,6 +8941,33 @@ test("C3 every failure status requires one matching separately validated native 
             rejectionCode: "candidate_window_relation_invalid",
             nativePlanFailureCode:
               "candidate_window_relation_invalid",
+          },
+        ],
+        [
+          "invalid replan cutoff",
+          validFallback,
+          {
+            nativePlanValid: false,
+            rejectionCode: "replan_cutoff_invalid",
+            nativePlanFailureCode: "replan_cutoff_invalid",
+          },
+        ],
+        [
+          "invalid block overlap",
+          validFallback,
+          {
+            nativePlanValid: false,
+            rejectionCode: "block_overlap_invalid",
+            nativePlanFailureCode: "block_overlap_invalid",
+          },
+        ],
+        [
+          "invalid prerequisite ordering",
+          validFallback,
+          {
+            nativePlanValid: false,
+            rejectionCode: "prerequisite_order_invalid",
+            nativePlanFailureCode: "prerequisite_order_invalid",
           },
         ],
         [

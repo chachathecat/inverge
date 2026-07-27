@@ -1325,6 +1325,46 @@ the same predicate, while an invalid fallback returns only
 in-progress immutable placements must pass before projection and cannot be
 moved, dropped, unassigned, shortened, extended, or rewritten. Thresholds are
 versioned and cannot be weakened retroactively.
+The same pre-release gate applies three closed relational predicates in both
+projected and canonical identifier domains to every optimal/feasible
+candidate, complete canonical result, and releasable canonical native
+fallback. For cutoff feasibility, it reads the exact
+`replan_cutoff_minute_kst_or_null` from the same trusted correlated invocation;
+`null` means no lower bound. Only an exact immutable elapsed/in-progress prior
+placement whose candidate, window, `start_minute_kst`, `end_minute_kst`, and
+`duration_minutes` match field-for-field and resolve exactly once is exempt.
+Every other new or moved block requires
+`start_minute_kst >= replan_cutoff_minute_kst_or_null`; equality is feasible, a
+one-minute-early start is rejected, and cutoff `1440` releases no new or moved
+block.
+
+Intervals are half-open, `[start_minute_kst, end_minute_kst)`. Every applicable
+distinct pair requires
+`a.end_minute_kst <= b.start_minute_kst || b.end_minute_kst <= a.start_minute_kst`,
+so boundary equality is feasible. Validate every execution-block pair, every
+execution block against every fixed block, and every new or moved execution
+block against every immutable prior placement. The unique exact unchanged
+representation of an immutable placement is one logical block and does not
+overlap itself. For each placed dependent, resolve it and every
+`prerequisite_candidate_ids` member exactly once through that invocation and
+active domain, place every prerequisite exactly once, and require
+`prerequisite.end_minute_kst <= dependent.start_minute_kst`. An empty list is
+unconstrained; every member of a multiple-prerequisite set must pass, and an
+unassigned prerequisite cannot support a placed dependent.
+
+Unknown, dangling, duplicate, cross-domain, non-bijective mapping/correlation,
+or ambiguous immutable matching remains `schema_mismatch`. A known
+before-cutoff start, overlap, or missing, unassigned, or reversed prerequisite
+placement is `validator_rejected` and attempts exactly one independently
+prepared canonical native fallback. That fallback must satisfy all three
+predicates; an invalid fallback releases no plan and returns only
+`blocked_manual_plan_required`. Immutable and fixed placements cannot be
+moved, dropped, unassigned, shortened, extended, or rewritten to repair a
+breach, and elapsed/in-progress immutable placements pass these predicates
+before projection. Bind cutoff to
+`new_or_moved_execution_block_starts_at_or_after_replan_cutoff`, overlap to
+`block_overlap_zero`, and ordering to `prerequisite_order_violations_zero`.
+Add no projection field or result inverse-map path.
 O2O must bind closed, no-free-text Owner-private comparison measurement and
 retention before shadow. It does not authorize Shared Signal, telemetry,
 external-learner, or Academy measurement. Owner-hidden shadow precedes
