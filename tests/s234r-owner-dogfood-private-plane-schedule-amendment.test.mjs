@@ -6,7 +6,7 @@ import test from "node:test";
 const PRIVATE_CONTRACT_SHA256 =
   "ef017344b184b33f8e30dcde8f25089c3e814b2aa279645bbedbd326662dacb5";
 const SCHEDULER_CONTRACT_SHA256 =
-  "bb6e3245825a62ab18376a5d273cd6e885862841189d69c7d19e24db8dc15989";
+  "547814f6633dabca6d46c27acb0ade91670c59c11b6cfe0485f996ebd3c64d29";
 const S237O_EVIDENCE_TEMPLATE_SHA256 =
   "9e965a84944b7610898d953a39743b2e436a39c19ca3eeb7d7ebbb9ff78b523c";
 const S237O_PROPOSAL_SHA256 =
@@ -31,13 +31,10 @@ const PROJECTED_RESULT_ID_PATHS = [
   "violations[].ephemeral_opaque_candidate_ids[]",
 ];
 const PROJECTED_RESULT_PROCESSING_ORDER = [
-  "validate_complete_projected_response_against_optimizerProjectedResultContract",
-  "require_request_and_snapshot_correlation_equal_exact_projected_invocation_ids",
-  "validate_complete_per_class_bijections",
-  "inverse_map_exactly_the_six_identifier_bearing_paths",
-  "verify_all_non_id_values_and_array_cardinality_and_order_are_unchanged",
-  "validate_complete_inverse_mapped_object_against_canonical_resultContract",
-  "native_validate_canonical_candidate_or_prepare_separately_validated_native_fallback",
+  "establish_solver_response_or_trusted_gateway_classification_origin_without_accepting_gateway_status_from_solver",
+  "enter_optimal_or_feasible_branch_or_solver_or_gateway_failure_branch_with_exactly_one_allowed_success_to_failure_transition_on_canonical_or_native_validator_rejection",
+  "construct_canonical_fallback_tuple_and_state_only_inside_trusted_gateway_after_projected_validation_or_failure_classification",
+  "validate_complete_canonical_result_contract_and_every_native_hard_constraint",
   "destroy_mapping_projected_input_and_projected_response_identifier_material",
   "verify_no_projected_identifier_in_gateway_output_logs_artifacts_caches_errors_telemetry_or_persisted_temp",
   "release_only_canonical_result_validated_native_fallback_or_manual_block_from_gateway",
@@ -47,8 +44,54 @@ const PROJECTED_RESULT_CONTROL_KEYS = [
   "identifierDomain",
   "canonicalResultContractPath",
   "projectedInvocationContractPath",
+  "statusOriginBoundary",
+  "canonicalGatewayConstructionContract",
   "requestCorrelationEqualityTargets",
-  "allNonIdentifierSchemasEnumsRulesCardinalitiesAndOrderingMustEqualCanonicalResultContractExactly",
+  "allSolverOwnedNonIdentifierValuesSchemasEnumsRulesCardinalitiesAndOrderingMustEqualCanonicalResultContractExceptExactStatusOriginAndGatewayConstructedFallbackTupleAndState",
+  "canonicalResultContractMayAcceptProjectedIdentifierDomain",
+  "projectedResultContractMayAcceptOriginalIdentifierDomain",
+  "completeProjectedResponseValidationRequiredBeforeInverseMapping",
+  "inverseMappingContract",
+  "processingOrderExactly",
+  "failureRouting",
+  "mappingLifecycleContract",
+];
+const PROJECTED_RESULT_CONTRACT_KEYS = [
+  "purpose",
+  "identifierDomain",
+  "canonicalResultContractPath",
+  "projectedInvocationContractPath",
+  "allowedFieldsExactly",
+  "additionalFieldsAllowed",
+  "nestedAdditionalFieldsAllowed",
+  "freeTextAllowed",
+  "executionBlockFieldsExactly",
+  "unassignedCandidateFieldsExactly",
+  "statusOriginBoundary",
+  "canonicalGatewayConstructionContract",
+  "candidateAccountingRules",
+  "executionBlockDurationRules",
+  "nonDroppableCandidateRules",
+  "candidateWindowFeasibilityRules",
+  "versionInfoFieldsExactly",
+  "versionInfoFieldSchemas",
+  "objectiveComponentFieldsExactly",
+  "violationFieldsExactly",
+  "forbiddenFields",
+  "identifierSchemas",
+  "closedEnumValues",
+  "scalarSchemas",
+  "cardinalityLimits",
+  "statuses",
+  "candidateStatusesAllowedBeforeNativeValidation",
+  "everyUnassignedCandidateRequiresReason",
+  "unassignedReasons",
+  "requestCorrelationFieldsRequired",
+  "requestIdEchoRequired",
+  "inputSnapshotVersionEchoRequired",
+  "requestCorrelationEqualityTargets",
+  "versionFieldsRequired",
+  "allSolverOwnedNonIdentifierValuesSchemasEnumsRulesCardinalitiesAndOrderingMustEqualCanonicalResultContractExceptExactStatusOriginAndGatewayConstructedFallbackTupleAndState",
   "canonicalResultContractMayAcceptProjectedIdentifierDomain",
   "projectedResultContractMayAcceptOriginalIdentifierDomain",
   "completeProjectedResponseValidationRequiredBeforeInverseMapping",
@@ -69,6 +112,8 @@ const RESULT_CONTRACT_KEYS = [
   "fallbackValueRules",
   "candidateAccountingRules",
   "executionBlockDurationRules",
+  "nonDroppableCandidateRules",
+  "candidateWindowFeasibilityRules",
   "versionInfoFieldsExactly",
   "versionInfoFieldSchemas",
   "objectiveComponentFieldsExactly",
@@ -100,12 +145,40 @@ const FALLBACK_STATUSES = [
   "stale_response",
   "validator_rejected",
 ];
+const SOLVER_STATUSES = [
+  "optimal",
+  "feasible",
+  "infeasible",
+  "model_invalid",
+  "unknown",
+];
+const SOLVER_FAILURE_STATUSES = [
+  "infeasible",
+  "model_invalid",
+  "unknown",
+];
+const GATEWAY_CLASSIFICATION_STATUSES = [
+  "timeout",
+  "dependency_unavailable",
+  "adapter_error",
+  "schema_mismatch",
+  "stale_response",
+  "validator_rejected",
+];
 const C3_RESULT_CONSTRAINT_CODES = [
   "candidate_accounting_exact_partition",
   "execution_block_candidate_resolves_exact_current_invocation",
   "execution_block_duration_equals_end_minus_start",
   "execution_block_duration_respects_candidate_shortening_bounds",
   "immutable_prior_placement_incompatibility_fails_closed",
+];
+const C4_RESULT_CONSTRAINT_CODES = [
+  "non_droppable_candidates_placed_exactly_once",
+  "execution_block_window_resolves_exact_current_invocation",
+  "execution_block_window_allowed_for_candidate",
+  "execution_block_window_available",
+  "execution_block_contained_in_single_referenced_window",
+  "immutable_prior_placement_candidate_window_incompatibility_fails_closed",
 ];
 const NATIVE_FALLBACK_REJECTION_CODES = [
   "missing_fallback",
@@ -117,6 +190,8 @@ const NATIVE_FALLBACK_REJECTION_CODES = [
   "canonical_result_contract_invalid",
   "candidate_accounting_invalid",
   "execution_block_duration_invalid",
+  "non_droppable_candidate_invalid",
+  "candidate_window_relation_invalid",
   "hard_constraint_invalid",
   "immutable_placement_incompatible",
 ];
@@ -130,6 +205,7 @@ const RESULT_HARD_CONSTRAINTS = [
   "planned_minutes_do_not_exceed_declared_availability",
   "candidate_duplicate_placement_zero",
   ...C3_RESULT_CONSTRAINT_CODES,
+  ...C4_RESULT_CONSTRAINT_CODES,
   "law_blocker_never_becomes_verified_completion",
   "attempt_first_rewrite_after_attempt_and_review_only",
   "guided_exposure_never_becomes_independent_review",
@@ -284,14 +360,28 @@ function projectedResultGatewayContractIsClosed(scheduler) {
     scheduler.inputContract.optimizerInvocationProjectionContract;
   if (!projected || !canonical || !projection) return false;
 
-  const canonicalSharedKeys = Object.keys(canonical).filter(
-    (key) => key !== "identifierSchemas",
-  );
+  const canonicalSharedKeys = [
+    "executionBlockFieldsExactly",
+    "unassignedCandidateFieldsExactly",
+    "versionInfoFieldsExactly",
+    "versionInfoFieldSchemas",
+    "objectiveComponentFieldsExactly",
+    "violationFieldsExactly",
+    "closedEnumValues",
+    "cardinalityLimits",
+    "candidateStatusesAllowedBeforeNativeValidation",
+    "everyUnassignedCandidateRequiresReason",
+    "unassignedReasons",
+    "requestCorrelationFieldsRequired",
+    "requestIdEchoRequired",
+    "inputSnapshotVersionEchoRequired",
+    "versionFieldsRequired",
+  ];
   const canonicalKeys = new Set(Object.keys(canonical));
   const projectedOnlyKeys = Object.keys(projected).filter(
     (key) => !canonicalKeys.has(key),
   );
-  const allCanonicalNonIdContractValuesAreExact =
+  const allSolverOwnedSharedContractValuesAreExact =
     canonicalSharedKeys.every(
       (key) =>
         Object.hasOwn(projected, key) &&
@@ -309,7 +399,6 @@ function projectedResultGatewayContractIsClosed(scheduler) {
     input_snapshot_version: "^osnp_[A-Za-z0-9_-]{16,64}$",
     ephemeral_opaque_window_id: "^owin_[A-Za-z0-9_-]{16,64}$",
     ephemeral_opaque_candidate_id: "^ocand_[A-Za-z0-9_-]{16,64}$",
-    native_plan_version: "closed_identifier_1_to_80_or_null",
   };
   const inverse = projected.inverseMappingContract;
   const lifecycle = projected.mappingLifecycleContract;
@@ -357,20 +446,105 @@ function projectedResultGatewayContractIsClosed(scheduler) {
     missingUnknownDanglingDuplicateCrossClassOriginalDomainNonBijectiveOrPreservationFailureStatus:
       "schema_mismatch",
     wrongRequestOrSnapshotCorrelationStatus: "stale_response",
-    schemaMismatchAndStaleResponseMustUseSeparatelyValidatedNativeFallback:
+    knownNonDroppableDisallowedUnavailableOrOutOfBoundsRelationStatus:
+      "validator_rejected",
+    optimalOrFeasibleLateCanonicalOrNativeValidationFailureStatus:
+      "validator_rejected",
+    optimalOrFeasibleLateCanonicalOrNativeValidationFailureMustDiscardCandidatePlanAndUsedFalseTupleAndTransitionExactlyOnceToIndependentCanonicalNativeFallback:
       true,
-    everyFallbackStatusesMemberMustUseSeparatelyValidatedNativeFallback:
+    everySolverFailureOrTrustedGatewayClassificationMustAttemptExactlyOneIndependentlyPreparedCanonicalNativeFallback:
       true,
-    projectedFailureEnvelopeMaySelfAuthorizeCanonicalRelease: false,
-    separatelyValidatedNativeFallbackPreparedAndValidatedOnlyInCanonicalIdentifierDomain:
+    projectedFailureEnvelopeMayContainReferenceAuthorizeOrReleaseCanonicalFallback:
+      false,
+    canonicalFallbackTupleAndStateConstructedOnlyByTrustedGateway: true,
+    canonicalNativeFallbackPreparedAndValidatedOnlyInOriginalIdentifierDomain:
       true,
     invalidNativeFallbackResult: "blocked_manual_plan_required",
-    failedProjectedResponseMayReachNativeValidationOrGatewayOutput: false,
+    invalidNativeFallbackMayTriggerAnotherFallback: false,
+    invalidProjectedCandidatePlanOrFailureEnvelopeMayReachNativeValidationOrGatewayOutput:
+      false,
+  };
+  const exactStatusOriginBoundary = {
+    solverOwnedStatusesExactly: SOLVER_STATUSES,
+    solverCandidatePlanStatusesExactly: ["optimal", "feasible"],
+    solverFailureStatusesExactly: SOLVER_FAILURE_STATUSES,
+    trustedGatewayClassificationStatusesExactly:
+      GATEWAY_CLASSIFICATION_STATUSES,
+    canonicalGatewayOnlyStatusesExactly: [
+      "fallback",
+      "blocked_manual_plan_required",
+    ],
+    projectedResponseStatusMustBeSolverOwned: true,
+    timeoutDependencyUnavailableAndAdapterErrorAreTrustedGatewayClassificationsNotSolverAuthoredStatuses:
+      true,
+    isolatedSolverMayAuthorTrustedGatewayClassificationOrCanonicalGatewayOnlyStatus:
+      false,
+    projectedCandidatePlanFieldsExactly: [
+      "execution_blocks",
+      "unassigned_candidates",
+    ],
+    projectedCandidatePlanFieldsMayAppearOnlyForOptimalOrFeasible: true,
+    projectedFailureMayContainOrReleaseCandidatePlan: false,
+    projectedResponseMayContainFallback: false,
+    projectedResponseMayContainNativePlanVersion: false,
+    projectedResponseMayContainCanonicalNativeFallbackPlanOrReference: false,
+  };
+  const exactGatewayConstructionContract = {
+    gatewayAloneOwnsCanonicalFallbackTupleAndState: true,
+    gatewayConstructionIsSoleAllowedExceptionToFormerBlanketProjectedCanonicalNonIdentifierEquality:
+      true,
+    optimalOrFeasibleBranchOrderExactly: [
+      "validate_complete_projected_candidate_plan_response",
+      "validate_exact_request_snapshot_correlation_and_per_class_bijections",
+      "validate_projected_candidate_accounting_duration_non_droppable_and_candidate_window_rules",
+      "inverse_map_exactly_the_existing_six_identifier_bearing_paths",
+      "preserve_every_solver_owned_non_id_value_and_array_cardinality_and_order",
+      "trusted_gateway_constructs_canonical_fallback_used_false_reason_not_used_native_plan_version_null",
+      "validate_complete_canonical_result_contract_and_every_native_hard_constraint",
+      "on_canonical_or_native_rejection_discard_candidate_plan_and_used_false_tuple_classify_validator_rejected_and_transition_exactly_once_to_failure_branch",
+      "release_only_when_complete_canonical_and_native_validation_succeeds",
+    ],
+    solverOrTrustedGatewayFailureBranchOrderExactly: [
+      "validate_or_classify_projected_attempt_without_trusting_it_as_canonical_fallback",
+      "independently_resolve_or_prepare_exactly_one_immutable_native_fallback_in_canonical_original_id_domain",
+      "trusted_gateway_constructs_canonical_fallback_used_true_exact_trigger_reason_and_non_null_closed_native_plan_version",
+      "validate_complete_canonical_result_contract_candidate_accounting_duration_non_droppable_candidate_window_and_every_hard_constraint",
+      "return_only_blocked_manual_plan_required_when_canonical_fallback_is_missing_unavailable_or_invalid",
+    ],
+    optimalOrFeasibleCanonicalFallbackTupleExactly: {
+      used: false,
+      reason_enum: "not_used",
+      native_plan_version: null,
+    },
+    failureCanonicalFallbackTupleRules: {
+      used: true,
+      reason_enum: "exact_solver_failure_or_trusted_gateway_classification",
+      native_plan_version:
+        "non_null_closed_identifier_resolving_exact_immutable_canonical_native_fallback",
+    },
+    lateCanonicalOrNativeValidationRejectionTransition: {
+      appliesWhen:
+        "projected_optimal_or_feasible_passes_projected_validation_correlation_and_inverse_mapping_but_complete_canonical_result_or_native_hard_constraint_validation_rejects",
+      trustedGatewayClassification: "validator_rejected",
+      discardCandidatePlanAndUsedFalseTupleWithoutRelease: true,
+      transitionExactlyOnceToSolverOrTrustedGatewayFailureBranch: true,
+      canonicalFallbackMustBePreparedIndependentlyInOriginalIdentifierDomain:
+        true,
+      projectedOrRejectedCandidatePlanMayBeReusedAsCanonicalFallback: false,
+      fallbackMayBeAttemptedMoreThanOnceOrRecursively: false,
+      invalidFallbackResult: "blocked_manual_plan_required",
+    },
+    projectedFailureEnvelopeMayReferenceAuthorizeOrReleaseCanonicalFallback:
+      false,
+    canonicalFallbackMustBePreparedIndependentlyOfProjectedResponse: true,
+    canonicalFallbackMayBeAttemptedMoreThanOnceOrRecursively: false,
+    invalidCanonicalFallbackResult: "blocked_manual_plan_required",
+    invalidCanonicalFallbackMayReleaseCandidatePlan: false,
   };
 
   return (
     projected.purpose ===
-      "validate_complete_optimizer_projected_response_before_inverse_mapping" &&
+      "validate_solver_owned_projected_response_without_canonical_fallback_state_before_trusted_gateway_construction" &&
     projected.identifierDomain ===
       "projected_oreq_osnp_owin_ocand_only" &&
     projected.canonicalResultContractPath === "resultContract" &&
@@ -379,15 +553,49 @@ function projectedResultGatewayContractIsClosed(scheduler) {
     projected.additionalFieldsAllowed === false &&
     projected.nestedAdditionalFieldsAllowed === false &&
     projected.freeTextAllowed === false &&
+    canonicalJson(Object.keys(projected)) ===
+      canonicalJson(PROJECTED_RESULT_CONTRACT_KEYS) &&
     canonicalJson(projectedOnlyKeys) ===
       canonicalJson(PROJECTED_RESULT_CONTROL_KEYS) &&
-    allCanonicalNonIdContractValuesAreExact &&
+    allSolverOwnedSharedContractValuesAreExact &&
+    canonicalJson(projected.allowedFieldsExactly) ===
+      canonicalJson([
+        "request_id",
+        "input_snapshot_version",
+        "status",
+        "execution_blocks",
+        "unassigned_candidates",
+        "version_info",
+        "objective_components",
+        "violations",
+        "elapsed_ms",
+      ]) &&
+    canonicalJson(projected.statuses) === canonicalJson(SOLVER_STATUSES) &&
+    !Object.hasOwn(projected, "fallbackFieldsExactly") &&
+    !Object.hasOwn(projected, "fallbackReasonValues") &&
+    !Object.hasOwn(projected, "fallbackValueRules") &&
+    !Object.hasOwn(projected, "fallbackStatuses") &&
+    !Object.hasOwn(projected, "nativeFallbackInvalidResult") &&
+    !Object.hasOwn(projected.identifierSchemas, "native_plan_version") &&
+    !Object.hasOwn(projected.scalarSchemas, "fallback_used") &&
+    [
+      "fallback",
+      "fallback_reason_enum",
+      "native_plan_version",
+      "canonical_native_fallback_plan",
+      "canonical_native_fallback_plan_ref",
+      "canonical_plan_reference",
+    ].every((field) => projected.forbiddenFields.includes(field)) &&
+    canonicalJson(projected.statusOriginBoundary) ===
+      canonicalJson(exactStatusOriginBoundary) &&
+    canonicalJson(projected.canonicalGatewayConstructionContract) ===
+      canonicalJson(exactGatewayConstructionContract) &&
     canonicalJson(canonical.identifierSchemas) ===
       canonicalJson(exactCanonicalIdentifierSchemas) &&
     canonicalJson(projected.identifierSchemas) ===
       canonicalJson(exactProjectedIdentifierSchemas) &&
     projected
-      .allNonIdentifierSchemasEnumsRulesCardinalitiesAndOrderingMustEqualCanonicalResultContractExactly ===
+      .allSolverOwnedNonIdentifierValuesSchemasEnumsRulesCardinalitiesAndOrderingMustEqualCanonicalResultContractExceptExactStatusOriginAndGatewayConstructedFallbackTupleAndState ===
       true &&
     projected.canonicalResultContractMayAcceptProjectedIdentifierDomain ===
       false &&
@@ -432,18 +640,25 @@ function projectedResultGatewayContractIsClosed(scheduler) {
       .missingUnknownDanglingDuplicateCrossClassOriginalDomainNonBijectiveOrPreservationFailureStatus ===
       "schema_mismatch" &&
     failure.wrongRequestOrSnapshotCorrelationStatus === "stale_response" &&
-    failure.schemaMismatchAndStaleResponseMustUseSeparatelyValidatedNativeFallback ===
-      true &&
-    failure.everyFallbackStatusesMemberMustUseSeparatelyValidatedNativeFallback ===
-      true &&
-    failure.projectedFailureEnvelopeMaySelfAuthorizeCanonicalRelease ===
-      false &&
     failure
-      .separatelyValidatedNativeFallbackPreparedAndValidatedOnlyInCanonicalIdentifierDomain ===
+      .knownNonDroppableDisallowedUnavailableOrOutOfBoundsRelationStatus ===
+      "validator_rejected" &&
+    failure
+      .everySolverFailureOrTrustedGatewayClassificationMustAttemptExactlyOneIndependentlyPreparedCanonicalNativeFallback ===
+      true &&
+    failure
+      .projectedFailureEnvelopeMayContainReferenceAuthorizeOrReleaseCanonicalFallback ===
+      false &&
+    failure.canonicalFallbackTupleAndStateConstructedOnlyByTrustedGateway ===
+      true &&
+    failure
+      .canonicalNativeFallbackPreparedAndValidatedOnlyInOriginalIdentifierDomain ===
       true &&
     failure.invalidNativeFallbackResult ===
       "blocked_manual_plan_required" &&
-    failure.failedProjectedResponseMayReachNativeValidationOrGatewayOutput ===
+    failure.invalidNativeFallbackMayTriggerAnotherFallback === false &&
+    failure
+      .invalidProjectedCandidatePlanOrFailureEnvelopeMayReachNativeValidationOrGatewayOutput ===
       false &&
     lifecycle.mappingExistsOnlyInsideTrustedNativeGateway === true &&
     lifecycle.mappingMustRemainUntilCompleteProjectedResponseValidationAndRequiredInverseMappingFinish ===
@@ -544,12 +759,21 @@ function c3ResultValidationContractsAreClosed(scheduler) {
       false,
     trustedNativeGatewayMustResolveOrPrepareExactImmutableCanonicalNativeFallbackIndependentlyOfOptimizerResponse:
       true,
+    canonicalFallbackTupleAndStateMayBeConstructedAndAttachedOnlyByTrustedGateway:
+      true,
+    projectedSolverResponseMaySupplyFallbackNativePlanVersionCanonicalPlanOrCanonicalPlanReference:
+      false,
     referencedNativeFallbackMustBeSeparatelyValidatedAgainstCanonicalCandidateAccountingExecutionBlockDurationAndAllHardConstraintsBeforeRelease:
+      true,
+    referencedNativeFallbackMustBeSeparatelyValidatedAgainstCanonicalCandidateAccountingExecutionBlockDurationNonDroppableCandidateWindowAndAllHardConstraintsBeforeRelease:
       true,
     missingFallbackMismatchedReasonInvalidVersionOrInvalidNativePlanResult:
       "blocked_manual_plan_required",
+    missingUnavailableNonDroppableInvalidCandidateWindowInvalidOrHardConstraintInvalidNativePlanResult:
+      "blocked_manual_plan_required",
     missingFallbackMismatchedReasonInvalidVersionOrInvalidNativePlanMayReleaseCandidatePlan:
       false,
+    canonicalNativeFallbackMayBeAttemptedMoreThanOnceOrRecursively: false,
     blockedManualPlanRequiredRequiresUsedFalseReasonNotUsedAndNativePlanVersionNull:
       true,
     blockedManualPlanRequiredMayCarryTriggerReasonOrNativePlanVersion:
@@ -637,13 +861,180 @@ function c3ResultValidationContractsAreClosed(scheduler) {
       false,
     invalidNativeFallbackResult: "blocked_manual_plan_required",
   };
+  const exactProjectedCandidateAccountingRules = {
+    directCandidatePlanStatusesExactly: ["optimal", "feasible"],
+    exactCorrelatedInvocationCandidateSetSource:
+      "exact_current_correlated_invocation.candidates[].ephemeral_opaque_candidate_id",
+    exactCorrelatedInvocationCandidateIdsUnique: true,
+    candidateIdentifiersMustUseActiveContainingContractDomain: true,
+    executionBlockCandidateIdsMustEachResolveExactlyOnceThroughExactCurrentInvocation:
+      true,
+    unassignedCandidateIdsMustEachResolveExactlyOnceThroughExactCurrentInvocation:
+      true,
+    executionBlockCandidateIdsUnique: true,
+    unassignedCandidateIdsUnique: true,
+    executionBlockAndUnassignedCandidateIdSetsDisjoint: true,
+    executionBlockAndUnassignedCandidateIdSetUnionMustEqualExactCorrelatedInvocationCandidateSet:
+      true,
+    everyInvocationCandidateMustAppearExactlyOnce: true,
+    missingUnknownExtraDuplicateOmittedOrPlacedAndUnassignedCandidateAllowed:
+      false,
+    violationCandidateIdsAreDiagnosticOnlyAndCannotSatisfyAccounting: true,
+    projectedCandidateAccountingFailureTrustedGatewayClassification:
+      "schema_mismatch",
+    projectedCandidateAccountingFailureMayReleaseCandidatePlan: false,
+    projectedResponseMaySelectReferenceAuthorizeOrReleaseCanonicalNativeFallback:
+      false,
+  };
+  const exactProjectedExecutionBlockDurationRules = {
+    appliesToEveryExecutionBlockInOptimalAndFeasibleProjectedCandidatePlans:
+      true,
+    candidateResolutionSource:
+      "exact_current_correlated_invocation.candidates",
+    eachExecutionBlockCandidateMustResolveExactlyOnceThroughExactCurrentInvocation:
+      true,
+    durationMinutesMustEqualEndMinuteKstMinusStartMinuteKst: true,
+    canShortenFalseRequiresDurationMinutesEqualEstimatedMinutes: true,
+    canShortenTrueRequiresMinimumMinutesLessThanOrEqualDurationMinutesLessThanOrEqualEstimatedMinutes:
+      true,
+    durationMinutesMayExceedEstimatedMinutes: false,
+    elapsedAndInProgressPriorPlacementFieldsRemainImmutableExactly: [
+      "ephemeral_opaque_candidate_id",
+      "ephemeral_opaque_window_id",
+      "start_minute_kst",
+      "end_minute_kst",
+      "duration_minutes",
+    ],
+    immutableElapsedOrInProgressPlacementMayBeMovedShortenedExtendedOrRewrittenToSatisfyCurrentCandidate:
+      false,
+    preProjectionImmutablePlacementCandidateDurationIncompatibilityMayReachOptimizer:
+      false,
+    preProjectionImmutablePlacementCandidateDurationIncompatibilityTrustedGatewayClassification:
+      "validator_rejected",
+    preProjectionImmutablePlacementCandidateDurationIncompatibilityMayBeRepairedByOptimizerOrProjectedResponse:
+      false,
+    optimizerResultDurationOrImmutablePlacementMutationTrustedGatewayClassification:
+      "validator_rejected",
+    invalidProjectedCandidatePlanMayReleaseCandidatePlan: false,
+    projectedResponseMaySelectReferenceAuthorizeOrReleaseCanonicalNativeFallback:
+      false,
+  };
+  const exactNonDroppableCoreRules = {
+    nonDroppableDefinitionExact:
+      "candidate.pinned === true || candidate.can_drop === false",
+    pinnedAndCanDropTruthTableExactly: [
+      { pinned: false, can_drop: true, non_droppable: false },
+      { pinned: false, can_drop: false, non_droppable: true },
+      { pinned: true, can_drop: true, non_droppable: true },
+      { pinned: true, can_drop: false, non_droppable: true },
+    ],
+    everyNonDroppableCandidateMustOccurExactlyOnceInExecutionBlocks: true,
+    everyNonDroppableCandidateMustOccurZeroTimesInUnassignedCandidates: true,
+    onlyPinnedFalseAndCanDropTrueCandidateMayBeUnassigned: true,
+    unassignedReasonMayOverrideNonDroppability: false,
+    ownerPinnedConflictReasonMayOverrideNonDroppability: false,
+    lowerValueThanSelectedReasonMayOverrideNonDroppability: false,
+    requirednessEnumMayRedefineNonDroppability: false,
+  };
+  const exactCanonicalNonDroppableRules = {
+    appliesToEveryOptimalFeasibleAndReleasableSeparatelyValidatedCanonicalNativeFallbackPlan:
+      true,
+    ...exactNonDroppableCoreRules,
+    knownNonDroppableViolationStatus: "validator_rejected",
+    knownNonDroppableViolationMustAttemptExactlyOneSeparatelyPreparedCanonicalNativeFallback:
+      true,
+    releasableNativeFallbackMustPlaceEveryNonDroppableCandidateExactlyOnce:
+      true,
+    invalidNativeFallbackResult: "blocked_manual_plan_required",
+    invalidNativeFallbackMayTriggerAnotherFallback: false,
+    invalidNativeFallbackMayReleaseCandidatePlan: false,
+  };
+  const exactProjectedNonDroppableRules = {
+    appliesToEveryOptimalAndFeasibleProjectedCandidatePlan: true,
+    ...exactNonDroppableCoreRules,
+    knownNonDroppableViolationTrustedGatewayClassification:
+      "validator_rejected",
+    invalidProjectedCandidatePlanMayReleaseCandidatePlan: false,
+    projectedResponseMaySelectReferenceAuthorizeOrReleaseCanonicalNativeFallback:
+      false,
+  };
+  const exactCandidateWindowCoreRules = {
+    candidateResolutionSource:
+      "exact_current_correlated_invocation.candidates",
+    windowResolutionSource:
+      "exact_current_correlated_invocation.available_windows",
+    eachExecutionBlockCandidateMustResolveExactlyOnceThroughExactCurrentInvocation:
+      true,
+    eachExecutionBlockWindowMustResolveExactlyOnceThroughSameExactCurrentInvocation:
+      true,
+    executionBlockWindowIdMustBelongToResolvedCandidateAllowedWindowIds:
+      true,
+    resolvedWindowAvailableMustEqualTrue: true,
+    singleReferencedWindowContainmentPredicateExact:
+      "window.start_minute_kst <= block.start_minute_kst < block.end_minute_kst <= window.end_minute_kst",
+    blockMustBeCompletelyContainedInsideSingleReferencedWindow: true,
+    blockMayStitchOrSpanAdjacentWindows: false,
+    preProjectionElapsedAndInProgressPlacementMustSatisfyExactCurrentCandidateWindowRelation:
+      true,
+    preProjectionImmutableCandidateWindowIncompatibilityMayReachOptimizer:
+      false,
+    preProjectionImmutableCandidateWindowIncompatibilityMayBeRepairedByMovingDroppingUnassigningShorteningExtendingOrRewriting:
+      false,
+    futurePriorPlacementRemainsSoftPreferenceOnly: true,
+    everyEmittedFuturePriorPlacementBlockMustSatisfyEveryCandidateWindowPredicate:
+      true,
+  };
+  const exactCanonicalCandidateWindowRules = {
+    appliesToEveryExecutionBlockInOptimalFeasibleAndEveryReleasableSeparatelyValidatedCanonicalNativeFallbackPlan:
+      true,
+    ...exactCandidateWindowCoreRules,
+    unknownDanglingDuplicateCrossDomainOrNonBijectiveCandidateOrWindowRelationStatus:
+      "schema_mismatch",
+    knownDisallowedUnavailableOrOutOfBoundsRelationStatus:
+      "validator_rejected",
+    knownCandidateWindowViolationMustAttemptExactlyOneSeparatelyPreparedCanonicalNativeFallback:
+      true,
+    releasableNativeFallbackMustSatisfyEveryCandidateWindowPredicate: true,
+    preProjectionImmutableCandidateWindowIncompatibilityMustAttemptExactlyOneSeparatelyPreparedCanonicalNativeFallbackPreservingTheImmutablePlacement:
+      true,
+    invalidNativeFallbackResult: "blocked_manual_plan_required",
+    invalidNativeFallbackMayTriggerAnotherFallback: false,
+    invalidNativeFallbackMayReleaseCandidatePlan: false,
+  };
+  const exactProjectedCandidateWindowRules = {
+    appliesToEveryExecutionBlockInOptimalAndFeasibleProjectedCandidatePlans:
+      true,
+    ...exactCandidateWindowCoreRules,
+    unknownDanglingDuplicateCrossDomainOrNonBijectiveCandidateOrWindowRelationTrustedGatewayClassification:
+      "schema_mismatch",
+    knownDisallowedUnavailableOrOutOfBoundsRelationTrustedGatewayClassification:
+      "validator_rejected",
+    preProjectionImmutableCandidateWindowIncompatibilityTrustedGatewayClassification:
+      "validator_rejected",
+    invalidProjectedCandidatePlanMayReleaseCandidatePlan: false,
+    projectedResponseMaySelectReferenceAuthorizeOrReleaseCanonicalNativeFallback:
+      false,
+  };
   const exactNativeValidator = {
     requiredForOptimalAndFeasible: true,
     requiredForEveryReleasableValidatedNativeFallback: true,
     validatedNativeFallbackMustSatisfyCanonicalCandidateAccountingExecutionBlockDurationAndAllHardConstraints:
       true,
+    validatedNativeFallbackMustSatisfyCanonicalCandidateAccountingExecutionBlockDurationNonDroppableCandidateWindowAndAllHardConstraints:
+      true,
+    everyOptimalFeasibleAndReleasableValidatedNativeFallbackPlanMustPlaceEveryNonDroppableCandidateExactlyOnceAndNeverUnassignIt:
+      true,
+    everyExecutionBlockMustResolveExactCurrentInvocationCandidateAndWindowAndSatisfyAllowedMembershipAvailabilityAndSingleWindowBounds:
+      true,
+    unknownDanglingDuplicateCrossDomainOrNonBijectiveCandidateOrWindowRelationStatus:
+      "schema_mismatch",
+    knownDisallowedUnavailableOrOutOfBoundsCandidateWindowRelationStatus:
+      "validator_rejected",
+    canonicalFallbackTupleAndStateMustBeGatewayConstructed: true,
+    nativeFallbackMayBeAttemptedMoreThanOnceOrRecursively: false,
     invalidOrUnavailableValidatedNativeFallbackResult:
       "blocked_manual_plan_required",
+    invalidOrUnavailableValidatedNativeFallbackMayReleaseCandidatePlan: false,
     immutableElapsedOrInProgressPlacementMayBeRewrittenDuringValidationOrFallback:
       false,
     hardConstraintMayBeOverriddenBySoftObjective: false,
@@ -662,6 +1053,9 @@ function c3ResultValidationContractsAreClosed(scheduler) {
     "violations",
     "elapsed_ms",
   ];
+  const exactProjectedAllowedFields = exactAllowedFields.filter(
+    (field) => field !== "fallback",
+  );
   const exactExecutionBlockFields = [
     "ephemeral_opaque_candidate_id",
     "ephemeral_opaque_window_id",
@@ -695,6 +1089,13 @@ function c3ResultValidationContractsAreClosed(scheduler) {
     integer_value: "finite_integer",
     elapsed_ms: "finite_integer_0_to_60000",
     fallback_used: "boolean",
+  };
+  const exactProjectedScalarSchemas = {
+    start_minute_kst: "integer_0_to_1439",
+    end_minute_kst: "integer_1_to_1440",
+    duration_minutes: "integer_1_to_1440",
+    integer_value: "finite_integer",
+    elapsed_ms: "finite_integer_0_to_60000",
   };
   const exactCardinalityLimits = {
     execution_blocks_maximum: 256,
@@ -784,6 +1185,8 @@ function c3ResultValidationContractsAreClosed(scheduler) {
       "native_plan_resolution_and_immutability",
       "candidate_accounting",
       "execution_block_duration",
+      "non_droppable_candidate_placement",
+      "candidate_window_membership_availability_and_bounds",
       "hard_constraints",
       "immutable_placement_compatibility",
       "canonical_result_contract_schema_and_correlation_catch_all",
@@ -810,6 +1213,9 @@ function c3ResultValidationContractsAreClosed(scheduler) {
     "entryAdditionalFieldsAllowed",
     "exactEntryCountMustEqualFallbackStatusCount",
     "observedStatusMustEqualExpectedStatus",
+    "triggerOriginMustEqualSolverFailureExactlyForInfeasibleModelInvalidOrUnknown",
+    "triggerOriginMustEqualTrustedGatewayClassificationExactlyForTimeoutDependencyUnavailableAdapterErrorSchemaMismatchStaleResponseOrValidatorRejected",
+    "isolatedSolverMayAuthorTrustedGatewayClassification",
     "assertionResultMustEqualPassed",
     "validNativeFallbackOrExactManualBlockRequired",
     "validNativeFallbackResultDigestMustResolveOneExactCanonicalResultWhenManualBlockDigestIsNull",
@@ -818,6 +1224,7 @@ function c3ResultValidationContractsAreClosed(scheduler) {
     "validNativeFallbackResultFallbackReasonMustEqualExpectedStatusWhenManualBlockDigestIsNull",
     "validNativeFallbackResultNativePlanVersionMustBeClosedAndNonNullWhenManualBlockDigestIsNull",
     "validNativeFallbackResultMustSatisfyCanonicalCandidateAccountingExecutionBlockDurationAndAllHardConstraintsWhenManualBlockDigestIsNull",
+    "validNativeFallbackResultMustSatisfyCanonicalNonDroppableCandidateWindowAndAllC4HardConstraintsWhenManualBlockDigestIsNull",
     "oneNativeFallbackResultDigestMaySatisfyMultipleExpectedStatuses",
     "invalidNativeFallbackAttemptDigestMustResolveOneExactClosedRejectionValidationRecordWhenManualBlockDigestIsNonNull",
     "invalidNativeFallbackAttemptFailureMustBeCrossBoundToExpectedStatus",
@@ -832,15 +1239,12 @@ function c3ResultValidationContractsAreClosed(scheduler) {
   return (
     canonicalJson(Object.keys(canonical)) ===
       canonicalJson(RESULT_CONTRACT_KEYS) &&
-    canonicalJson(
-      Object.keys(projected).filter(
-        (key) => !RESULT_CONTRACT_KEYS.includes(key),
-      ),
-    ) === canonicalJson(PROJECTED_RESULT_CONTROL_KEYS) &&
+    canonicalJson(Object.keys(projected)) ===
+      canonicalJson(PROJECTED_RESULT_CONTRACT_KEYS) &&
     canonicalJson(canonical.allowedFieldsExactly) ===
       canonicalJson(exactAllowedFields) &&
     canonicalJson(projected.allowedFieldsExactly) ===
-      canonicalJson(exactAllowedFields) &&
+      canonicalJson(exactProjectedAllowedFields) &&
     canonicalJson(canonical.executionBlockFieldsExactly) ===
       canonicalJson(exactExecutionBlockFields) &&
     canonicalJson(projected.executionBlockFieldsExactly) ===
@@ -851,12 +1255,13 @@ function c3ResultValidationContractsAreClosed(scheduler) {
       canonicalJson(exactUnassignedCandidateFields) &&
     canonicalJson(canonical.fallbackFieldsExactly) ===
       canonicalJson(exactFallbackFields) &&
-    canonicalJson(projected.fallbackFieldsExactly) ===
-      canonicalJson(exactFallbackFields) &&
     canonicalJson(canonical.fallbackReasonValues) ===
       canonicalJson(exactFallbackReasonValues) &&
-    canonicalJson(projected.fallbackReasonValues) ===
-      canonicalJson(exactFallbackReasonValues) &&
+    !Object.hasOwn(projected, "fallbackFieldsExactly") &&
+    !Object.hasOwn(projected, "fallbackReasonValues") &&
+    !Object.hasOwn(projected, "fallbackValueRules") &&
+    !Object.hasOwn(projected, "fallbackStatuses") &&
+    !Object.hasOwn(projected, "nativeFallbackInvalidResult") &&
     canonicalJson(canonical.objectiveComponentFieldsExactly) ===
       canonicalJson(exactObjectiveComponentFields) &&
     canonicalJson(projected.objectiveComponentFieldsExactly) ===
@@ -868,27 +1273,31 @@ function c3ResultValidationContractsAreClosed(scheduler) {
     canonicalJson(canonical.scalarSchemas) ===
       canonicalJson(exactScalarSchemas) &&
     canonicalJson(projected.scalarSchemas) ===
-      canonicalJson(exactScalarSchemas) &&
+      canonicalJson(exactProjectedScalarSchemas) &&
     canonicalJson(canonical.cardinalityLimits) ===
       canonicalJson(exactCardinalityLimits) &&
     canonicalJson(projected.cardinalityLimits) ===
       canonicalJson(exactCardinalityLimits) &&
     canonicalJson(canonical.fallbackStatuses) ===
       canonicalJson(FALLBACK_STATUSES) &&
-    canonicalJson(projected.fallbackStatuses) ===
-      canonicalJson(FALLBACK_STATUSES) &&
     canonicalJson(canonical.fallbackValueRules) ===
-      canonicalJson(exactFallbackValueRules) &&
-    canonicalJson(projected.fallbackValueRules) ===
       canonicalJson(exactFallbackValueRules) &&
     canonicalJson(canonical.candidateAccountingRules) ===
       canonicalJson(exactCandidateAccountingRules) &&
     canonicalJson(projected.candidateAccountingRules) ===
-      canonicalJson(exactCandidateAccountingRules) &&
+      canonicalJson(exactProjectedCandidateAccountingRules) &&
     canonicalJson(canonical.executionBlockDurationRules) ===
       canonicalJson(exactExecutionBlockDurationRules) &&
     canonicalJson(projected.executionBlockDurationRules) ===
-      canonicalJson(exactExecutionBlockDurationRules) &&
+      canonicalJson(exactProjectedExecutionBlockDurationRules) &&
+    canonicalJson(canonical.nonDroppableCandidateRules) ===
+      canonicalJson(exactCanonicalNonDroppableRules) &&
+    canonicalJson(projected.nonDroppableCandidateRules) ===
+      canonicalJson(exactProjectedNonDroppableRules) &&
+    canonicalJson(canonical.candidateWindowFeasibilityRules) ===
+      canonicalJson(exactCanonicalCandidateWindowRules) &&
+    canonicalJson(projected.candidateWindowFeasibilityRules) ===
+      canonicalJson(exactProjectedCandidateWindowRules) &&
     canonicalJson(scheduler.hardConstraints) ===
       canonicalJson(RESULT_HARD_CONSTRAINTS) &&
     canonicalJson(canonical.closedEnumValues.constraint_code_enum) ===
@@ -923,6 +1332,41 @@ function c3ResultValidationContractsAreClosed(scheduler) {
       .immutablePlacementCandidateDurationIncompatibilityInvalidNativeFallbackMayTriggerAnotherFallback ===
       false &&
     priorRules
+      .elapsedAndInProgressPlacementMustResolveExactlyOneCurrentInvocationWindowBeforeProjection ===
+      true &&
+    priorRules
+      .elapsedAndInProgressPlacementWindowMustBelongToResolvedCurrentCandidateAllowedWindowIdsBeforeProjection ===
+      true &&
+    priorRules
+      .elapsedAndInProgressPlacementResolvedCurrentWindowAvailableMustEqualTrueBeforeProjection ===
+      true &&
+    priorRules
+      .elapsedAndInProgressPlacementMustSatisfyCurrentWindowStartLessThanOrEqualBlockStartLessThanBlockEndLessThanOrEqualWindowEndInsideOneReferencedWindowBeforeProjection ===
+      true &&
+    priorRules.elapsedAndInProgressPlacementMaySpanOrStitchAdjacentCurrentWindows ===
+      false &&
+    priorRules
+      .immutablePlacementCandidateWindowIncompatibilityMayReachOptimizer ===
+      false &&
+    priorRules
+      .immutablePlacementCandidateWindowIncompatibilityFallbackTriggerStatus ===
+      "validator_rejected" &&
+    priorRules
+      .immutablePlacementCandidateWindowIncompatibilityFallbackReasonEnumMustEqualTriggerStatus ===
+      true &&
+    priorRules
+      .immutablePlacementCandidateWindowIncompatibilityMustAttemptExactlyOneSeparatelyValidatedNativeFallback ===
+      true &&
+    priorRules
+      .immutablePlacementCandidateWindowIncompatibilityMustEnterSeparatelyValidatedNativeFallbackWithoutMovingDroppingUnassigningShorteningExtendingOrRewritingPlacementOrCandidatePolicy ===
+      true &&
+    priorRules
+      .immutablePlacementCandidateWindowIncompatibilityInvalidNativeFallbackResult ===
+      "blocked_manual_plan_required" &&
+    priorRules
+      .immutablePlacementCandidateWindowIncompatibilityInvalidNativeFallbackMayTriggerAnotherFallback ===
+      false &&
+    priorRules
       .immutablePlacementOrCurrentCandidatePolicyMayBeRewrittenToRepairIncompatibility ===
       false &&
     projectionRules
@@ -949,6 +1393,43 @@ function c3ResultValidationContractsAreClosed(scheduler) {
     projectionRules
       .immutablePriorPlacementCandidateDurationIncompatibilityInvalidNativeFallbackMayTriggerAnotherFallback ===
       false &&
+    projectionRules
+      .immutablePriorPlacementsMustPassExactCurrentCandidateWindowMembershipAvailabilityAndBoundsBeforeProjection ===
+      true &&
+    projectionRules
+      .immutablePriorPlacementCandidateAndWindowMustEachResolveExactlyOnceThroughExactCurrentInvocation ===
+      true &&
+    projectionRules
+      .immutablePriorPlacementWindowMustBelongToResolvedCandidateAllowedWindowIds ===
+      true &&
+    projectionRules.immutablePriorPlacementResolvedWindowAvailableMustEqualTrue ===
+      true &&
+    projectionRules
+      .immutablePriorPlacementMustSatisfyWindowStartLessThanOrEqualBlockStartLessThanBlockEndLessThanOrEqualWindowEndInsideOneReferencedWindow ===
+      true &&
+    projectionRules.immutablePriorPlacementMaySpanOrStitchAdjacentWindows ===
+      false &&
+    projectionRules
+      .immutablePriorPlacementCandidateWindowIncompatibilityMayReachOptimizer ===
+      false &&
+    projectionRules
+      .immutablePriorPlacementCandidateWindowIncompatibilityFallbackTriggerStatus ===
+      "validator_rejected" &&
+    projectionRules
+      .immutablePriorPlacementCandidateWindowIncompatibilityFallbackReasonEnumMustEqualTriggerStatus ===
+      true &&
+    projectionRules
+      .immutablePriorPlacementCandidateWindowIncompatibilityMustAttemptExactlyOneSeparatelyValidatedNativeFallback ===
+      true &&
+    projectionRules
+      .immutablePriorPlacementCandidateWindowIncompatibilityMustEnterSeparatelyValidatedNativeFallbackWithoutMovingDroppingUnassigningShorteningExtendingOrRewritingPlacementOrCandidatePolicy ===
+      true &&
+    projectionRules
+      .immutablePriorPlacementCandidateWindowIncompatibilityInvalidNativeFallbackResult ===
+      "blocked_manual_plan_required" &&
+    projectionRules
+      .immutablePriorPlacementCandidateWindowIncompatibilityInvalidNativeFallbackMayTriggerAnotherFallback ===
+      false &&
     failureFixture.expectedStatuses === "resultContract.fallbackStatuses" &&
     canonicalJson(Object.keys(failureFixture)) ===
       canonicalJson(exactFailureFixtureContractKeys) &&
@@ -957,11 +1438,27 @@ function c3ResultValidationContractsAreClosed(scheduler) {
         "synthetic_fixture_id",
         "expected_status",
         "observed_status",
+        "trigger_origin_enum",
         "native_fallback_result_digest_sha256",
         "manual_block_result_digest_sha256_or_null",
         "assertion_result",
       ]) &&
+    canonicalJson(
+      failureFixture.entryFieldSchemas.trigger_origin_enum.values,
+    ) ===
+      canonicalJson([
+        "solver_failure",
+        "trusted_gateway_classification",
+      ]) &&
     failureFixture.entryAdditionalFieldsAllowed === false &&
+    failureFixture
+      .triggerOriginMustEqualSolverFailureExactlyForInfeasibleModelInvalidOrUnknown ===
+      true &&
+    failureFixture
+      .triggerOriginMustEqualTrustedGatewayClassificationExactlyForTimeoutDependencyUnavailableAdapterErrorSchemaMismatchStaleResponseOrValidatorRejected ===
+      true &&
+    failureFixture.isolatedSolverMayAuthorTrustedGatewayClassification ===
+      false &&
     failureFixture.validNativeFallbackOrExactManualBlockRequired === true &&
     failureFixture
       .validNativeFallbackResultDigestMustResolveOneExactCanonicalResultWhenManualBlockDigestIsNull ===
@@ -980,6 +1477,9 @@ function c3ResultValidationContractsAreClosed(scheduler) {
       true &&
     failureFixture
       .validNativeFallbackResultMustSatisfyCanonicalCandidateAccountingExecutionBlockDurationAndAllHardConstraintsWhenManualBlockDigestIsNull ===
+      true &&
+    failureFixture
+      .validNativeFallbackResultMustSatisfyCanonicalNonDroppableCandidateWindowAndAllC4HardConstraintsWhenManualBlockDigestIsNull ===
       true &&
     failureFixture
       .oneNativeFallbackResultDigestMaySatisfyMultipleExpectedStatuses ===
@@ -1019,6 +1519,12 @@ function c3ResultValidationContractsAreClosed(scheduler) {
       ) &&
     resolvedVerificationRules
       .validFailureFallbackDigestsMustResolveToExactResultContractWhenManualBlockDigestIsNull ===
+      true &&
+    resolvedVerificationRules
+      .failureFixtureTriggerOriginMustDistinguishSolverFailureFromTrustedGatewayClassificationExactly ===
+      true &&
+    resolvedVerificationRules
+      .validFailureFallbackMustSatisfyCanonicalNonDroppableCandidateWindowAndAllC4HardConstraints ===
       true &&
     resolvedVerificationRules
       .invalidFailureFallbackAttemptDigestsMustResolveToExactRejectedAttemptValidationRecordWhenManualBlockDigestIsNonNull ===
@@ -1087,6 +1593,425 @@ function executionBlockDurationIsValid(candidates, block) {
   );
 }
 
+function isPlainRecord(value) {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    Object.getPrototypeOf(value) === Object.prototype
+  );
+}
+
+function hasExactFields(value, fields) {
+  if (!isPlainRecord(value)) return false;
+  const keys = Object.keys(value);
+  return (
+    keys.length === fields.length &&
+    fields.every((field) => Object.hasOwn(value, field))
+  );
+}
+
+function containsForbiddenFieldRecursively(value, forbiddenFields) {
+  if (Array.isArray(value)) {
+    return value.some((entry) =>
+      containsForbiddenFieldRecursively(entry, forbiddenFields),
+    );
+  }
+  if (!isPlainRecord(value)) return false;
+  return Object.entries(value).some(
+    ([key, nested]) =>
+      forbiddenFields.has(key) ||
+      containsForbiddenFieldRecursively(nested, forbiddenFields),
+  );
+}
+
+function projectedVersionFieldIsValid(schema, value) {
+  if (isPlainRecord(schema) && schema.type === "closed_enum") {
+    return schema.values.includes(value);
+  }
+  if (schema === "closed_identifier_1_to_80") {
+    return (
+      typeof value === "string" &&
+      /^[A-Za-z0-9._:-]{1,80}$/.test(value)
+    );
+  }
+  if (schema === "finite_integer") return Number.isInteger(value);
+  if (schema === "finite_integer_1_to_64") {
+    return Number.isInteger(value) && value >= 1 && value <= 64;
+  }
+  if (schema === "finite_integer_1_to_60000") {
+    return Number.isInteger(value) && value >= 1 && value <= 60000;
+  }
+  return false;
+}
+
+function projectedScalarIsValid(schema, value) {
+  if (!Number.isInteger(value)) return false;
+  if (schema === "finite_integer") return true;
+  if (schema === "finite_integer_0_to_60000") {
+    return value >= 0 && value <= 60000;
+  }
+  if (schema === "integer_0_to_1439") {
+    return value >= 0 && value <= 1439;
+  }
+  if (schema === "integer_1_to_1440") {
+    return value >= 1 && value <= 1440;
+  }
+  return false;
+}
+
+function projectedIdentifierIsValid(contract, identifierClass, value) {
+  const pattern = contract.identifierSchemas[identifierClass];
+  return (
+    typeof value === "string" &&
+    typeof pattern === "string" &&
+    new RegExp(pattern).test(value)
+  );
+}
+
+function projectedSolverResponseIsClosed(
+  contract,
+  response,
+  expectedCorrelation,
+) {
+  if (!isPlainRecord(response) || !isPlainRecord(expectedCorrelation)) {
+    return false;
+  }
+  if (
+    containsForbiddenFieldRecursively(
+      response,
+      new Set(contract.forbiddenFields),
+    )
+  ) {
+    return false;
+  }
+  if (!contract.statuses.includes(response.status)) return false;
+
+  const candidatePlanFields =
+    contract.statusOriginBoundary.projectedCandidatePlanFieldsExactly;
+  const carriesCandidatePlan = ["optimal", "feasible"].includes(
+    response.status,
+  );
+  const requiredTopLevelFields = contract.allowedFieldsExactly.filter(
+    (field) => carriesCandidatePlan || !candidatePlanFields.includes(field),
+  );
+  if (!hasExactFields(response, requiredTopLevelFields)) return false;
+  if (
+    response.request_id !== expectedCorrelation.request_id ||
+    response.input_snapshot_version !==
+      expectedCorrelation.input_snapshot_version ||
+    !projectedIdentifierIsValid(
+      contract,
+      "request_id",
+      response.request_id,
+    ) ||
+    !projectedIdentifierIsValid(
+      contract,
+      "input_snapshot_version",
+      response.input_snapshot_version,
+    )
+  ) {
+    return false;
+  }
+
+  if (
+    !hasExactFields(response.version_info, contract.versionInfoFieldsExactly) ||
+    canonicalJson(contract.versionFieldsRequired) !==
+      canonicalJson(contract.versionInfoFieldsExactly) ||
+    !contract.versionInfoFieldsExactly.every((field) =>
+      projectedVersionFieldIsValid(
+        contract.versionInfoFieldSchemas[field],
+        response.version_info[field],
+      ),
+    )
+  ) {
+    return false;
+  }
+
+  const limits = contract.cardinalityLimits;
+  if (
+    !Array.isArray(response.objective_components) ||
+    response.objective_components.length >
+      limits.objective_components_maximum ||
+    !response.objective_components.every(
+      (component) =>
+        hasExactFields(
+          component,
+          contract.objectiveComponentFieldsExactly,
+        ) &&
+        contract.closedEnumValues.objective_code_enum.includes(
+          component.objective_code_enum,
+        ) &&
+        projectedScalarIsValid(
+          contract.scalarSchemas.integer_value,
+          component.integer_value,
+        ),
+    ) ||
+    !Array.isArray(response.violations) ||
+    response.violations.length > limits.violations_maximum ||
+    !response.violations.every(
+      (violation) =>
+        hasExactFields(violation, contract.violationFieldsExactly) &&
+        contract.closedEnumValues.constraint_code_enum.includes(
+          violation.constraint_code_enum,
+        ) &&
+        contract.closedEnumValues.severity_enum.includes(
+          violation.severity_enum,
+        ) &&
+        Array.isArray(violation.ephemeral_opaque_candidate_ids) &&
+        violation.ephemeral_opaque_candidate_ids.length <=
+          limits.candidate_ids_per_violation_maximum &&
+        new Set(violation.ephemeral_opaque_candidate_ids).size ===
+          violation.ephemeral_opaque_candidate_ids.length &&
+        violation.ephemeral_opaque_candidate_ids.every((candidateId) =>
+          projectedIdentifierIsValid(
+            contract,
+            "ephemeral_opaque_candidate_id",
+            candidateId,
+          ),
+        ),
+    ) ||
+    !projectedScalarIsValid(
+      contract.scalarSchemas.elapsed_ms,
+      response.elapsed_ms,
+    )
+  ) {
+    return false;
+  }
+
+  if (!carriesCandidatePlan) {
+    return (
+      !Object.hasOwn(response, "execution_blocks") &&
+      !Object.hasOwn(response, "unassigned_candidates")
+    );
+  }
+  if (
+    !Array.isArray(response.execution_blocks) ||
+    response.execution_blocks.length > limits.execution_blocks_maximum ||
+    !Array.isArray(response.unassigned_candidates) ||
+    response.unassigned_candidates.length >
+      limits.unassigned_candidates_maximum
+  ) {
+    return false;
+  }
+  const executionCandidateIds = response.execution_blocks.map(
+    (block) => block.ephemeral_opaque_candidate_id,
+  );
+  const unassignedCandidateIds = response.unassigned_candidates.map(
+    (candidate) => candidate.ephemeral_opaque_candidate_id,
+  );
+  return (
+    new Set(executionCandidateIds).size === executionCandidateIds.length &&
+    new Set(unassignedCandidateIds).size === unassignedCandidateIds.length &&
+    response.execution_blocks.every(
+      (block) =>
+        hasExactFields(block, contract.executionBlockFieldsExactly) &&
+        projectedIdentifierIsValid(
+          contract,
+          "ephemeral_opaque_candidate_id",
+          block.ephemeral_opaque_candidate_id,
+        ) &&
+        projectedIdentifierIsValid(
+          contract,
+          "ephemeral_opaque_window_id",
+          block.ephemeral_opaque_window_id,
+        ) &&
+        projectedScalarIsValid(
+          contract.scalarSchemas.start_minute_kst,
+          block.start_minute_kst,
+        ) &&
+        projectedScalarIsValid(
+          contract.scalarSchemas.end_minute_kst,
+          block.end_minute_kst,
+        ) &&
+        projectedScalarIsValid(
+          contract.scalarSchemas.duration_minutes,
+          block.duration_minutes,
+        ),
+    ) &&
+    response.unassigned_candidates.every(
+      (candidate) =>
+        hasExactFields(
+          candidate,
+          contract.unassignedCandidateFieldsExactly,
+        ) &&
+        projectedIdentifierIsValid(
+          contract,
+          "ephemeral_opaque_candidate_id",
+          candidate.ephemeral_opaque_candidate_id,
+        ) &&
+        contract.unassignedReasons.includes(candidate.reason_enum),
+    )
+  );
+}
+
+function gatewayConstructedCanonicalFallbackTuple(
+  triggerStatus,
+  nativePlanVersion = null,
+) {
+  if (["optimal", "feasible"].includes(triggerStatus)) {
+    return {
+      used: false,
+      reason_enum: "not_used",
+      native_plan_version: null,
+    };
+  }
+  if (
+    ![
+      ...SOLVER_FAILURE_STATUSES,
+      ...GATEWAY_CLASSIFICATION_STATUSES,
+    ].includes(triggerStatus) ||
+    typeof nativePlanVersion !== "string" ||
+    nativePlanVersion.length === 0
+  ) {
+    return null;
+  }
+  return {
+    used: true,
+    reason_enum: triggerStatus,
+    native_plan_version: nativePlanVersion,
+  };
+}
+
+function gatewayOutcomeAfterOptimalOrFeasibleNativeValidation(
+  projectedStatus,
+  {
+    canonicalAndNativeValidationValid,
+    nativeFallbackValid,
+  },
+) {
+  if (!["optimal", "feasible"].includes(projectedStatus)) return null;
+  if (canonicalAndNativeValidationValid) {
+    return {
+      status: projectedStatus,
+      discardedProjectedCandidatePlan: false,
+      nativeFallbackAttempts: 0,
+      fallback: gatewayConstructedCanonicalFallbackTuple(projectedStatus),
+      projectedCandidatePlanReleased: true,
+      canonicalNativeFallbackReleased: false,
+    };
+  }
+  if (nativeFallbackValid) {
+    return {
+      status: "fallback",
+      triggeringClassification: "validator_rejected",
+      discardedProjectedCandidatePlan: true,
+      nativeFallbackAttempts: 1,
+      fallback: gatewayConstructedCanonicalFallbackTuple(
+        "validator_rejected",
+        "native_plan_v1",
+      ),
+      projectedCandidatePlanReleased: false,
+      canonicalNativeFallbackReleased: true,
+    };
+  }
+  return {
+    status: "blocked_manual_plan_required",
+    triggeringClassification: "validator_rejected",
+    discardedProjectedCandidatePlan: true,
+    nativeFallbackAttempts: 1,
+      fallback: {
+        used: false,
+        reason_enum: "not_used",
+        native_plan_version: null,
+      },
+    projectedCandidatePlanReleased: false,
+    canonicalNativeFallbackReleased: false,
+  };
+}
+
+function nonDroppablePlacementIsValid(
+  candidates,
+  executionBlocks,
+  unassignedCandidates,
+) {
+  const candidateMatches = (candidateId) =>
+    candidates.filter(
+      (candidate) =>
+        candidate.ephemeral_opaque_candidate_id === candidateId,
+    );
+  for (const candidate of candidates) {
+    const candidateId = candidate.ephemeral_opaque_candidate_id;
+    const placedCount = executionBlocks.filter(
+      (block) => block.ephemeral_opaque_candidate_id === candidateId,
+    ).length;
+    const unassignedCount = unassignedCandidates.filter(
+      (entry) => entry.ephemeral_opaque_candidate_id === candidateId,
+    ).length;
+    const nonDroppable =
+      candidate.pinned === true || candidate.can_drop === false;
+    if (nonDroppable && (placedCount !== 1 || unassignedCount !== 0)) {
+      return false;
+    }
+  }
+  return unassignedCandidates.every((entry) => {
+    const matches = candidateMatches(entry.ephemeral_opaque_candidate_id);
+    return (
+      matches.length === 1 &&
+      matches[0].pinned === false &&
+      matches[0].can_drop === true
+    );
+  });
+}
+
+function candidateWindowRelationClassification(candidates, windows, block) {
+  const candidateMatches = candidates.filter(
+    (candidate) =>
+      candidate.ephemeral_opaque_candidate_id ===
+      block.ephemeral_opaque_candidate_id,
+  );
+  const windowMatches = windows.filter(
+    (window) =>
+      window.ephemeral_opaque_window_id ===
+      block.ephemeral_opaque_window_id,
+  );
+  if (candidateMatches.length !== 1 || windowMatches.length !== 1) {
+    return "schema_mismatch";
+  }
+  const [candidate] = candidateMatches;
+  const [window] = windowMatches;
+  if (
+    !Array.isArray(candidate.allowed_window_ids) ||
+    new Set(candidate.allowed_window_ids).size !==
+      candidate.allowed_window_ids.length ||
+    candidate.allowed_window_ids.some(
+      (windowId) =>
+        windows.filter(
+          (candidateWindow) =>
+            candidateWindow.ephemeral_opaque_window_id === windowId,
+        ).length !== 1,
+    )
+  ) {
+    return "schema_mismatch";
+  }
+  const numericFields = [
+    block.start_minute_kst,
+    block.end_minute_kst,
+    window.start_minute_kst,
+    window.end_minute_kst,
+  ];
+  if (
+    numericFields.some((value) => !Number.isInteger(value)) ||
+    typeof window.available !== "boolean"
+  ) {
+    return "schema_mismatch";
+  }
+  if (
+    !candidate.allowed_window_ids.includes(
+      block.ephemeral_opaque_window_id,
+    ) ||
+    window.available !== true ||
+    !(
+      window.start_minute_kst <= block.start_minute_kst &&
+      block.start_minute_kst < block.end_minute_kst &&
+      block.end_minute_kst <= window.end_minute_kst
+    )
+  ) {
+    return "validator_rejected";
+  }
+  return "valid";
+}
+
 function fallbackEnvelopeRequirementsSatisfied(
   contract,
   status,
@@ -1144,16 +2069,25 @@ function failureFixtureEntryIsValid(
     "synthetic_fixture_id",
     "expected_status",
     "observed_status",
+    "trigger_origin_enum",
     "native_fallback_result_digest_sha256",
     "manual_block_result_digest_sha256_or_null",
     "assertion_result",
   ];
   const digestPattern = /^[a-f0-9]{64}$/;
+  const expectedTriggerOrigin = SOLVER_FAILURE_STATUSES.includes(
+    entry.expected_status,
+  )
+    ? "solver_failure"
+    : GATEWAY_CLASSIFICATION_STATUSES.includes(entry.expected_status)
+      ? "trusted_gateway_classification"
+      : null;
   const entryIsClosedAndCrossBound =
     canonicalJson(Object.keys(entry)) === canonicalJson(exactEntryFields) &&
     /^syn_s237o_[A-Za-z0-9_-]{8,80}$/.test(entry.synthetic_fixture_id) &&
     contract.fallbackStatuses.includes(entry.expected_status) &&
     entry.observed_status === entry.expected_status &&
+    entry.trigger_origin_enum === expectedTriggerOrigin &&
     digestPattern.test(entry.native_fallback_result_digest_sha256) &&
     (entry.manual_block_result_digest_sha256_or_null === null ||
       digestPattern.test(
@@ -3135,7 +4069,15 @@ test("projected optimizer results validate and inverse-map fail closed before ca
   );
   assert.match(
     agents,
-    /validates the complete[\s\S]*projected response[\s\S]*Only then may it inverse-map[\s\S]*validate against the unchanged canonical[\s\S]*destroyed on every success[\s\S]*or failure[\s\S]*before any[\s\S]*canonical result leaves the gateway/,
+    /solver-originated projected response[\s\S]*may not contain[\s\S]*fallback/,
+  );
+  assert.match(
+    agents,
+    /Only the[\s\S]*gateway then attaches canonical[\s\S]*complete canonical[\s\S]*result[\s\S]*must validate before release/,
+  );
+  assert.match(
+    agents,
+    /independently resolves or prepares[\s\S]*exactly one immutable native fallback[\s\S]*Missing, unavailable, or invalid[\s\S]*blocked_manual_plan_required[\s\S]*recursive fallback is[\s\S]*forbidden/,
   );
   assert.doesNotMatch(agents, /remap is destroyed after the request/);
   assert.match(
@@ -3144,7 +4086,7 @@ test("projected optimizer results validate and inverse-map fail closed before ca
   );
   assert.match(
     scheduleSystem,
-    /Projected IDs may not enter logs or artifacts/,
+    /Projected IDs may not[\s\S]*enter logs or artifacts/,
   );
   assert.match(
     scheduleSystem,
@@ -3283,6 +4225,533 @@ test("projected optimizer results validate and inverse-map fail closed before ca
       false,
       `${name} must fail closed`,
     );
+  }
+});
+
+test("C4 projected solver responses exclude canonical fallback state and only the gateway constructs it", async () => {
+  const scheduler = await json(
+    "config/dabangil-full-day-scheduler-contract.json",
+  );
+  const projected = scheduler.optimizerProjectedResultContract;
+  const canonical = scheduler.resultContract;
+  const unified = await text("docs/dabangil-unified-program-contract.md");
+  const productSpec = await text(
+    "docs/inverge-second-round-final-product-spec.md",
+  );
+  const scheduleSystem = await text(
+    "docs/inverge-study-schedule-system.md",
+  );
+  const agents = await text("AGENTS.md");
+
+  assert.equal(projectedResultGatewayContractIsClosed(scheduler), true);
+  assert.equal(c3ResultValidationContractsAreClosed(scheduler), true);
+  assert.deepEqual(projected.statuses, SOLVER_STATUSES);
+  assert.deepEqual(
+    projected.statusOriginBoundary.trustedGatewayClassificationStatusesExactly,
+    GATEWAY_CLASSIFICATION_STATUSES,
+  );
+  assert.equal(Object.hasOwn(projected, "fallbackFieldsExactly"), false);
+  assert.equal(Object.hasOwn(projected, "fallbackStatuses"), false);
+  assert.equal(
+    Object.hasOwn(projected.identifierSchemas, "native_plan_version"),
+    false,
+  );
+  assert.equal(
+    canonical.fallbackValueRules
+      .canonicalFallbackTupleAndStateMayBeConstructedAndAttachedOnlyByTrustedGateway,
+    true,
+  );
+
+  const expectedCorrelation = {
+    request_id: `oreq_${"a".repeat(16)}`,
+    input_snapshot_version: `osnp_${"b".repeat(16)}`,
+  };
+  const projectedVersionInfo = {
+    contract_version: "dabangil.full_day_scheduler.v1",
+    native_policy_version: "native_policy_v1",
+    adapter_version: "adapter_v1",
+    optimizer_version: "optimizer_v1",
+    objective_version: "objective_v1",
+    threshold_version: "threshold_v1",
+    solver_seed: 1,
+    solver_workers: 1,
+    time_limit_ms: 1000,
+    integer_scaling_version: "integer_scaling_v1",
+  };
+  const projectedExecutionBlock = {
+    ephemeral_opaque_candidate_id: `ocand_${"c".repeat(16)}`,
+    ephemeral_opaque_window_id: `owin_${"d".repeat(16)}`,
+    start_minute_kst: 0,
+    end_minute_kst: 30,
+    duration_minutes: 30,
+  };
+  const projectedOptimal = {
+    ...expectedCorrelation,
+    status: "optimal",
+    execution_blocks: [],
+    unassigned_candidates: [],
+    version_info: projectedVersionInfo,
+    objective_components: [],
+    violations: [],
+    elapsed_ms: 1,
+  };
+  assert.equal(
+    projectedSolverResponseIsClosed(
+      projected,
+      projectedOptimal,
+      expectedCorrelation,
+    ),
+    true,
+  );
+  for (const forbiddenMutation of [
+    {
+      fallback: {
+        used: false,
+        reason_enum: "not_used",
+        native_plan_version: null,
+      },
+    },
+    { native_plan_version: "native_plan_v1" },
+    { canonical_native_fallback_plan: {} },
+    { canonical_native_fallback_plan_ref: "native_plan_v1" },
+    { canonical_plan_reference: "native_plan_v1" },
+  ]) {
+    assert.equal(
+      projectedSolverResponseIsClosed(projected, {
+        ...projectedOptimal,
+        ...forbiddenMutation,
+      }, expectedCorrelation),
+      false,
+      `${Object.keys(forbiddenMutation)[0]} must be rejected from projected output`,
+    );
+  }
+  for (const [name, hostileResponse] of [
+    [
+      "nested native plan version",
+      {
+        ...projectedOptimal,
+        version_info: {
+          ...projectedVersionInfo,
+          native_plan_version: "native_plan_v1",
+        },
+      },
+    ],
+    [
+      "nested canonical plan reference",
+      {
+        ...projectedOptimal,
+        version_info: {
+          ...projectedVersionInfo,
+          canonical_plan_reference: "native_plan_v1",
+        },
+      },
+    ],
+    [
+      "execution block nested fallback",
+      {
+        ...projectedOptimal,
+        execution_blocks: [
+          {
+            ...projectedExecutionBlock,
+            fallback: {
+              used: true,
+              reason_enum: "validator_rejected",
+              native_plan_version: "native_plan_v1",
+            },
+          },
+        ],
+      },
+    ],
+    [
+      "missing required version field",
+      {
+        ...projectedOptimal,
+        version_info: Object.fromEntries(
+          Object.entries(projectedVersionInfo).filter(
+            ([field]) => field !== "optimizer_version",
+          ),
+        ),
+      },
+    ],
+    [
+      "wrong correlated request",
+      {
+        ...projectedOptimal,
+        request_id: `oreq_${"e".repeat(16)}`,
+      },
+    ],
+    [
+      "non-string request identifier",
+      {
+        ...projectedOptimal,
+        request_id: [projectedOptimal.request_id],
+      },
+    ],
+    [
+      "non-string snapshot identifier",
+      {
+        ...projectedOptimal,
+        input_snapshot_version: [
+          projectedOptimal.input_snapshot_version,
+        ],
+      },
+    ],
+    [
+      "non-string execution candidate identifier",
+      {
+        ...projectedOptimal,
+        execution_blocks: [
+          {
+            ...projectedExecutionBlock,
+            ephemeral_opaque_candidate_id: [
+              projectedExecutionBlock.ephemeral_opaque_candidate_id,
+            ],
+          },
+        ],
+      },
+    ],
+    [
+      "non-string execution window identifier",
+      {
+        ...projectedOptimal,
+        execution_blocks: [
+          {
+            ...projectedExecutionBlock,
+            ephemeral_opaque_window_id: [
+              projectedExecutionBlock.ephemeral_opaque_window_id,
+            ],
+          },
+        ],
+      },
+    ],
+    [
+      "non-string unassigned candidate identifier",
+      {
+        ...projectedOptimal,
+        unassigned_candidates: [
+          {
+            ephemeral_opaque_candidate_id: [
+              projectedExecutionBlock.ephemeral_opaque_candidate_id,
+            ],
+            reason_enum: "capacity_exceeded",
+          },
+        ],
+      },
+    ],
+    [
+      "non-string violation candidate identifier",
+      {
+        ...projectedOptimal,
+        violations: [
+          {
+            constraint_code_enum: "candidate_accounting_exact_partition",
+            ephemeral_opaque_candidate_ids: [
+              [projectedExecutionBlock.ephemeral_opaque_candidate_id],
+            ],
+            severity_enum: "error",
+          },
+        ],
+      },
+    ],
+    [
+      "original-domain nested candidate identifier",
+      {
+        ...projectedOptimal,
+        execution_blocks: [
+          {
+            ...projectedExecutionBlock,
+            ephemeral_opaque_candidate_id: `cand_${"c".repeat(16)}`,
+          },
+        ],
+      },
+    ],
+  ]) {
+    assert.equal(
+      projectedSolverResponseIsClosed(
+        projected,
+        hostileResponse,
+        expectedCorrelation,
+      ),
+      false,
+      `${name} must fail the complete projected response schema`,
+    );
+  }
+
+  for (const status of SOLVER_FAILURE_STATUSES) {
+    const projectedFailure = {
+      request_id: projectedOptimal.request_id,
+      input_snapshot_version: projectedOptimal.input_snapshot_version,
+      status,
+      version_info: projectedVersionInfo,
+      objective_components: [],
+      violations: [],
+      elapsed_ms: 1,
+    };
+    assert.equal(
+      projectedSolverResponseIsClosed(
+        projected,
+        projectedFailure,
+        expectedCorrelation,
+      ),
+      true,
+    );
+    assert.equal(
+      projectedSolverResponseIsClosed(projected, {
+        ...projectedFailure,
+        execution_blocks: [],
+        unassigned_candidates: [],
+      }, expectedCorrelation),
+      false,
+      `${status} projected failure cannot carry or release a candidate plan`,
+    );
+  }
+  for (const status of [
+    ...GATEWAY_CLASSIFICATION_STATUSES,
+    "fallback",
+    "blocked_manual_plan_required",
+  ]) {
+    assert.equal(
+      projectedSolverResponseIsClosed(projected, {
+        ...projectedOptimal,
+        status,
+      }, expectedCorrelation),
+      false,
+      `${status} cannot be authored by the isolated solver`,
+    );
+  }
+
+  for (const status of ["optimal", "feasible"]) {
+    assert.deepEqual(gatewayConstructedCanonicalFallbackTuple(status), {
+      used: false,
+      reason_enum: "not_used",
+      native_plan_version: null,
+    });
+  }
+  for (const triggerStatus of [
+    ...SOLVER_FAILURE_STATUSES,
+    ...GATEWAY_CLASSIFICATION_STATUSES,
+  ]) {
+    assert.deepEqual(
+      gatewayConstructedCanonicalFallbackTuple(
+        triggerStatus,
+        "native_plan_v1",
+      ),
+      {
+        used: true,
+        reason_enum: triggerStatus,
+        native_plan_version: "native_plan_v1",
+      },
+    );
+    assert.equal(
+      gatewayConstructedCanonicalFallbackTuple(triggerStatus),
+      null,
+      `${triggerStatus} cannot release a missing canonical fallback`,
+    );
+  }
+  const lateRejectionTransition =
+    projected.canonicalGatewayConstructionContract
+      .lateCanonicalOrNativeValidationRejectionTransition;
+  assert.equal(
+    lateRejectionTransition.trustedGatewayClassification,
+    "validator_rejected",
+  );
+  assert.equal(
+    lateRejectionTransition
+      .discardCandidatePlanAndUsedFalseTupleWithoutRelease,
+    true,
+  );
+  assert.equal(
+    lateRejectionTransition
+      .transitionExactlyOnceToSolverOrTrustedGatewayFailureBranch,
+    true,
+  );
+  assert.equal(
+    projected.failureRouting
+      .optimalOrFeasibleLateCanonicalOrNativeValidationFailureStatus,
+    "validator_rejected",
+  );
+  for (const projectedStatus of ["optimal", "feasible"]) {
+    assert.deepEqual(
+      gatewayOutcomeAfterOptimalOrFeasibleNativeValidation(
+        projectedStatus,
+        {
+          canonicalAndNativeValidationValid: true,
+          nativeFallbackValid: false,
+        },
+      ),
+      {
+        status: projectedStatus,
+        discardedProjectedCandidatePlan: false,
+        nativeFallbackAttempts: 0,
+        fallback: {
+          used: false,
+          reason_enum: "not_used",
+          native_plan_version: null,
+        },
+        projectedCandidatePlanReleased: true,
+        canonicalNativeFallbackReleased: false,
+      },
+    );
+    assert.deepEqual(
+      gatewayOutcomeAfterOptimalOrFeasibleNativeValidation(
+        projectedStatus,
+        {
+          canonicalAndNativeValidationValid: false,
+          nativeFallbackValid: true,
+        },
+      ),
+      {
+        status: "fallback",
+        triggeringClassification: "validator_rejected",
+        discardedProjectedCandidatePlan: true,
+        nativeFallbackAttempts: 1,
+        fallback: {
+          used: true,
+          reason_enum: "validator_rejected",
+          native_plan_version: "native_plan_v1",
+        },
+        projectedCandidatePlanReleased: false,
+        canonicalNativeFallbackReleased: true,
+      },
+      `${projectedStatus} rejected by native validation must transition once to the independent gateway fallback`,
+    );
+    assert.deepEqual(
+      gatewayOutcomeAfterOptimalOrFeasibleNativeValidation(
+        projectedStatus,
+        {
+          canonicalAndNativeValidationValid: false,
+          nativeFallbackValid: false,
+        },
+      ),
+      {
+        status: "blocked_manual_plan_required",
+        triggeringClassification: "validator_rejected",
+        discardedProjectedCandidatePlan: true,
+        nativeFallbackAttempts: 1,
+        fallback: {
+          used: false,
+          reason_enum: "not_used",
+          native_plan_version: null,
+        },
+        projectedCandidatePlanReleased: false,
+        canonicalNativeFallbackReleased: false,
+      },
+      `${projectedStatus} rejected by native validation cannot release an invalid fallback or recurse`,
+    );
+  }
+
+  assert.match(
+    unified,
+    /projected response[\s\S]*never contains[\s\S]*fallback[\s\S]*Only the trusted gateway[\s\S]*constructs the canonical[\s\S]*fallback tuple/,
+  );
+  assert.match(
+    productSpec,
+    /never returns a fallback reason[\s\S]*trusted gateway[\s\S]*constructs the canonical fallback tuple/,
+  );
+  assert.match(
+    scheduleSystem,
+    /solver-originated projected response[\s\S]*cannot contain[\s\S]*fallback state[\s\S]*gateway[\s\S]*constructs canonical/,
+  );
+  for (const authoritativeProse of [agents, scheduleSystem]) {
+    assert.match(
+      authoritativeProse,
+      /before a candidate plan[\s\S]*exists[\s\S]*carries no candidate plan/,
+    );
+    assert.match(
+      authoritativeProse,
+      /classif(?:ies|ication)[\s\S]*while validating[\s\S]*(?:OPTIMAL|optimal)[\s\S]*(?:FEASIBLE|feasible)[\s\S]*discards[\s\S]*without release/,
+    );
+    assert.match(
+      authoritativeProse,
+      /late canonical\/native[\s\S]*rejection[\s\S]*validator_rejected/,
+    );
+    assert.match(
+      authoritativeProse,
+      /same failure branch[\s\S]*exactly once/,
+    );
+  }
+  assert.doesNotMatch(
+    productSpec,
+    /OR-Tools CP-SAT[\s\S]{0,240}returns[\s\S]{0,120}fallback reason\./,
+  );
+
+  const hostileMutations = [
+    [
+      "projected fallback field restored",
+      (value) => {
+        value.optimizerProjectedResultContract.allowedFieldsExactly.push(
+          "fallback",
+        );
+        value.optimizerProjectedResultContract.forbiddenFields =
+          value.optimizerProjectedResultContract.forbiddenFields.filter(
+            (field) => field !== "fallback",
+          );
+      },
+      projectedResultGatewayContractIsClosed,
+    ],
+    [
+      "gateway classification made solver-owned",
+      (value) => {
+        value.optimizerProjectedResultContract.statuses.push("timeout");
+        value.optimizerProjectedResultContract.statusOriginBoundary
+          .solverOwnedStatusesExactly.push("timeout");
+      },
+      projectedResultGatewayContractIsClosed,
+    ],
+    [
+      "projected failure self-authorizes fallback",
+      (value) => {
+        value.optimizerProjectedResultContract
+          .canonicalGatewayConstructionContract
+          .projectedFailureEnvelopeMayReferenceAuthorizeOrReleaseCanonicalFallback =
+          true;
+      },
+      projectedResultGatewayContractIsClosed,
+    ],
+    [
+      "canonical gateway ownership weakened",
+      (value) => {
+        value.resultContract.fallbackValueRules
+          .canonicalFallbackTupleAndStateMayBeConstructedAndAttachedOnlyByTrustedGateway =
+          false;
+      },
+      c3ResultValidationContractsAreClosed,
+    ],
+    [
+      "native validator accepts solver fallback state",
+      (value) => {
+        value.nativeValidator
+          .canonicalFallbackTupleAndStateMustBeGatewayConstructed = false;
+      },
+      c3ResultValidationContractsAreClosed,
+    ],
+    [
+      "late native rejection remains in the success branch",
+      (value) => {
+        value.optimizerProjectedResultContract
+          .canonicalGatewayConstructionContract
+          .lateCanonicalOrNativeValidationRejectionTransition
+          .transitionExactlyOnceToSolverOrTrustedGatewayFailureBranch =
+          false;
+      },
+      projectedResultGatewayContractIsClosed,
+    ],
+    [
+      "late native rejection reuses the rejected projected plan",
+      (value) => {
+        value.optimizerProjectedResultContract
+          .canonicalGatewayConstructionContract
+          .lateCanonicalOrNativeValidationRejectionTransition
+          .projectedOrRejectedCandidatePlanMayBeReusedAsCanonicalFallback =
+          true;
+      },
+      projectedResultGatewayContractIsClosed,
+    ],
+  ];
+  for (const [name, mutate, validator] of hostileMutations) {
+    const hostile = clone(scheduler);
+    mutate(hostile);
+    assert.equal(validator(hostile), false, `${name} must fail closed`);
   }
 });
 
@@ -3488,6 +4957,212 @@ test("C3 result accounting is an exact invocation partition and hostile candidat
       `${constraintCode} must stay in both closed violation enums and hard constraints`,
     );
   }
+});
+
+test("C4 non-droppable candidates obey the exact pinned and can-drop truth table", async () => {
+  const scheduler = await json(
+    "config/dabangil-full-day-scheduler-contract.json",
+  );
+  assert.equal(c3ResultValidationContractsAreClosed(scheduler), true);
+
+  const buildCandidates = (prefix) => [
+    {
+      ephemeral_opaque_candidate_id: `${prefix}_${"a".repeat(16)}`,
+      pinned: false,
+      can_drop: true,
+      requiredness_enum: "core",
+    },
+    {
+      ephemeral_opaque_candidate_id: `${prefix}_${"b".repeat(16)}`,
+      pinned: false,
+      can_drop: false,
+      requiredness_enum: "optional",
+    },
+    {
+      ephemeral_opaque_candidate_id: `${prefix}_${"c".repeat(16)}`,
+      pinned: true,
+      can_drop: true,
+      requiredness_enum: "optional",
+    },
+    {
+      ephemeral_opaque_candidate_id: `${prefix}_${"d".repeat(16)}`,
+      pinned: true,
+      can_drop: false,
+      requiredness_enum: "optional",
+    },
+  ];
+  for (const prefix of ["cand", "ocand"]) {
+    const candidates = buildCandidates(prefix);
+    const executionBlocks = candidates.slice(1).map((candidate) => ({
+      ephemeral_opaque_candidate_id:
+        candidate.ephemeral_opaque_candidate_id,
+    }));
+    for (const reason_enum of scheduler.resultContract.unassignedReasons) {
+      const unassigned = [
+        {
+          ephemeral_opaque_candidate_id:
+            candidates[0].ephemeral_opaque_candidate_id,
+          reason_enum,
+        },
+      ];
+      assert.equal(
+        nonDroppablePlacementIsValid(
+          candidates,
+          executionBlocks,
+          unassigned,
+        ),
+        true,
+        `${prefix}: pinned=false/can_drop=true may be unassigned for ${reason_enum}`,
+      );
+      assert.equal(
+        candidateAccountingIsExact(
+          candidates.map(
+            (candidate) => candidate.ephemeral_opaque_candidate_id,
+          ),
+          executionBlocks,
+          unassigned,
+        ),
+        true,
+      );
+    }
+
+    for (const nonDroppable of candidates.slice(1)) {
+      const remainingBlocks = executionBlocks.filter(
+        (block) =>
+          block.ephemeral_opaque_candidate_id !==
+          nonDroppable.ephemeral_opaque_candidate_id,
+      );
+      for (const reason_enum of scheduler.resultContract.unassignedReasons) {
+        assert.equal(
+          nonDroppablePlacementIsValid(candidates, remainingBlocks, [
+            {
+              ephemeral_opaque_candidate_id:
+                candidates[0].ephemeral_opaque_candidate_id,
+              reason_enum: "capacity_exceeded",
+            },
+            {
+              ephemeral_opaque_candidate_id:
+                nonDroppable.ephemeral_opaque_candidate_id,
+              reason_enum,
+            },
+          ]),
+          false,
+          `${prefix}: ${reason_enum} cannot override non-droppability`,
+        );
+      }
+    }
+
+    assert.equal(
+      nonDroppablePlacementIsValid(
+        candidates,
+        [...executionBlocks, executionBlocks[0]],
+        [
+          {
+            ephemeral_opaque_candidate_id:
+              candidates[0].ephemeral_opaque_candidate_id,
+            reason_enum: "capacity_exceeded",
+          },
+        ],
+      ),
+      false,
+      `${prefix}: a non-droppable candidate cannot be placed twice`,
+    );
+    assert.equal(
+      nonDroppablePlacementIsValid(candidates, executionBlocks, [
+        {
+          ephemeral_opaque_candidate_id:
+            candidates[0].ephemeral_opaque_candidate_id,
+          reason_enum: "capacity_exceeded",
+        },
+        {
+          ephemeral_opaque_candidate_id:
+            candidates[1].ephemeral_opaque_candidate_id,
+          reason_enum: "owner_pinned_conflict",
+        },
+      ]),
+      false,
+      `${prefix}: placed-and-unassigned non-droppable candidate must fail`,
+    );
+  }
+
+  const sharedRuleKeys = [
+    "nonDroppableDefinitionExact",
+    "pinnedAndCanDropTruthTableExactly",
+    "everyNonDroppableCandidateMustOccurExactlyOnceInExecutionBlocks",
+    "everyNonDroppableCandidateMustOccurZeroTimesInUnassignedCandidates",
+    "onlyPinnedFalseAndCanDropTrueCandidateMayBeUnassigned",
+    "unassignedReasonMayOverrideNonDroppability",
+    "ownerPinnedConflictReasonMayOverrideNonDroppability",
+    "lowerValueThanSelectedReasonMayOverrideNonDroppability",
+    "requirednessEnumMayRedefineNonDroppability",
+  ];
+  for (const ruleKey of sharedRuleKeys) {
+    assert.deepEqual(
+      scheduler.resultContract.nonDroppableCandidateRules[ruleKey],
+      scheduler.optimizerProjectedResultContract
+        .nonDroppableCandidateRules[ruleKey],
+    );
+    const coordinatedRemoval = clone(scheduler);
+    delete coordinatedRemoval.resultContract.nonDroppableCandidateRules[
+      ruleKey
+    ];
+    delete coordinatedRemoval.optimizerProjectedResultContract
+      .nonDroppableCandidateRules[ruleKey];
+    assert.equal(
+      c3ResultValidationContractsAreClosed(coordinatedRemoval),
+      false,
+      `coordinated removal of ${ruleKey} must fail closed`,
+    );
+  }
+  assert.equal(
+    scheduler.resultContract.nonDroppableCandidateRules
+      .knownNonDroppableViolationStatus,
+    "validator_rejected",
+  );
+  assert.equal(
+    scheduler.resultContract.nonDroppableCandidateRules
+      .releasableNativeFallbackMustPlaceEveryNonDroppableCandidateExactlyOnce,
+    true,
+  );
+  assert.equal(
+    scheduler.optimizerProjectedResultContract.nonDroppableCandidateRules
+      .projectedResponseMaySelectReferenceAuthorizeOrReleaseCanonicalNativeFallback,
+    false,
+  );
+
+  const missingHardConstraint = clone(scheduler);
+  for (const constraints of [
+    missingHardConstraint.hardConstraints,
+    missingHardConstraint.resultContract.closedEnumValues.constraint_code_enum,
+    missingHardConstraint.optimizerProjectedResultContract.closedEnumValues
+      .constraint_code_enum,
+  ]) {
+    constraints.splice(
+      constraints.indexOf("non_droppable_candidates_placed_exactly_once"),
+      1,
+    );
+  }
+  assert.equal(
+    c3ResultValidationContractsAreClosed(missingHardConstraint),
+    false,
+  );
+  const weakenedNativeValidator = clone(scheduler);
+  weakenedNativeValidator.nativeValidator
+    .everyOptimalFeasibleAndReleasableValidatedNativeFallbackPlanMustPlaceEveryNonDroppableCandidateExactlyOnceAndNeverUnassignIt =
+    false;
+  assert.equal(
+    c3ResultValidationContractsAreClosed(weakenedNativeValidator),
+    false,
+  );
+  const weakenedFallbackFixture = clone(scheduler);
+  weakenedFallbackFixture.s237oBenchmarkAcceptanceContract
+    .benchmarkResultDigestContract.failureStatusFixtureResultSetDigestContract
+    .validNativeFallbackResultMustSatisfyCanonicalNonDroppableCandidateWindowAndAllC4HardConstraintsWhenManualBlockDigestIsNull =
+    false;
+  assert.equal(
+    c3ResultValidationContractsAreClosed(weakenedFallbackFixture),
+    false,
+  );
 });
 
 test("C3 execution-block duration and shortening bounds reject incompatible immutable placements", async () => {
@@ -3781,6 +5456,335 @@ test("C3 execution-block duration and shortening bounds reject incompatible immu
   );
 });
 
+test("C4 candidate-window membership availability bounds and immutable preflight fail closed", async () => {
+  const scheduler = await json(
+    "config/dabangil-full-day-scheduler-contract.json",
+  );
+  const agents = await text("AGENTS.md");
+  assert.equal(c3ResultValidationContractsAreClosed(scheduler), true);
+
+  const fixtureFor = (candidatePrefix, windowPrefix) => {
+    const windowIds = ["a", "b", "c", "d"].map(
+      (suffix) => `${windowPrefix}_${suffix.repeat(16)}`,
+    );
+    const candidate = {
+      ephemeral_opaque_candidate_id:
+        `${candidatePrefix}_${"a".repeat(16)}`,
+      allowed_window_ids: windowIds.slice(0, 3),
+    };
+    const windows = [
+      {
+        ephemeral_opaque_window_id: windowIds[0],
+        start_minute_kst: 100,
+        end_minute_kst: 160,
+        available: true,
+      },
+      {
+        ephemeral_opaque_window_id: windowIds[1],
+        start_minute_kst: 160,
+        end_minute_kst: 220,
+        available: true,
+      },
+      {
+        ephemeral_opaque_window_id: windowIds[2],
+        start_minute_kst: 300,
+        end_minute_kst: 360,
+        available: false,
+      },
+      {
+        ephemeral_opaque_window_id: windowIds[3],
+        start_minute_kst: 400,
+        end_minute_kst: 460,
+        available: true,
+      },
+    ];
+    const block = (windowId, start, end, candidateId = null) => ({
+      ephemeral_opaque_candidate_id:
+        candidateId ?? candidate.ephemeral_opaque_candidate_id,
+      ephemeral_opaque_window_id: windowId,
+      start_minute_kst: start,
+      end_minute_kst: end,
+    });
+    return { candidate, windows, windowIds, block };
+  };
+
+  for (const [candidatePrefix, windowPrefix] of [
+    ["cand", "win"],
+    ["ocand", "owin"],
+  ]) {
+    const { candidate, windows, windowIds, block } = fixtureFor(
+      candidatePrefix,
+      windowPrefix,
+    );
+    assert.equal(
+      candidateWindowRelationClassification(
+        [candidate],
+        windows,
+        block(windowIds[0], 100, 160),
+      ),
+      "valid",
+      `${candidatePrefix}: exact outer-boundary containment must pass`,
+    );
+    for (const [name, hostileBlock] of [
+      ["known disallowed window", block(windowIds[3], 400, 430)],
+      ["unavailable allowed window", block(windowIds[2], 300, 330)],
+      ["start before window", block(windowIds[0], 99, 120)],
+      ["end after window", block(windowIds[0], 140, 161)],
+      ["adjacent-window spanning", block(windowIds[0], 130, 190)],
+      ["non-positive block", block(windowIds[0], 120, 120)],
+    ]) {
+      assert.equal(
+        candidateWindowRelationClassification(
+          [candidate],
+          windows,
+          hostileBlock,
+        ),
+        "validator_rejected",
+        `${candidatePrefix}: ${name} is a known invalid relation`,
+      );
+    }
+    assert.equal(
+      candidateWindowRelationClassification(
+        [candidate],
+        windows,
+        block(
+          windowIds[0],
+          100,
+          130,
+          `${candidatePrefix}_${"z".repeat(16)}`,
+        ),
+      ),
+      "schema_mismatch",
+      `${candidatePrefix}: unknown candidate must fail structurally`,
+    );
+    assert.equal(
+      candidateWindowRelationClassification(
+        [candidate],
+        windows,
+        block(`${windowPrefix}_${"z".repeat(16)}`, 100, 130),
+      ),
+      "schema_mismatch",
+      `${candidatePrefix}: unknown window must fail structurally`,
+    );
+    assert.equal(
+      candidateWindowRelationClassification(
+        [candidate, clone(candidate)],
+        windows,
+        block(windowIds[0], 100, 130),
+      ),
+      "schema_mismatch",
+      `${candidatePrefix}: duplicate candidate relation must fail structurally`,
+    );
+    assert.equal(
+      candidateWindowRelationClassification(
+        [candidate],
+        [...windows, clone(windows[0])],
+        block(windowIds[0], 100, 130),
+      ),
+      "schema_mismatch",
+      `${candidatePrefix}: duplicate window relation must fail structurally`,
+    );
+    const duplicateAllowedRelation = clone(candidate);
+    duplicateAllowedRelation.allowed_window_ids.push(windowIds[0]);
+    assert.equal(
+      candidateWindowRelationClassification(
+        [duplicateAllowedRelation],
+        windows,
+        block(windowIds[0], 100, 130),
+      ),
+      "schema_mismatch",
+      `${candidatePrefix}: duplicate allowed-window relation must fail structurally`,
+    );
+    const danglingAllowedRelation = clone(candidate);
+    danglingAllowedRelation.allowed_window_ids.push(
+      `${windowPrefix}_${"z".repeat(16)}`,
+    );
+    assert.equal(
+      candidateWindowRelationClassification(
+        [danglingAllowedRelation],
+        windows,
+        block(windowIds[0], 100, 130),
+      ),
+      "schema_mismatch",
+      `${candidatePrefix}: dangling allowed-window relation must fail structurally`,
+    );
+    const crossDomainCandidate =
+      candidatePrefix === "cand"
+        ? `ocand_${"a".repeat(16)}`
+        : `cand_${"a".repeat(16)}`;
+    const crossDomainWindow =
+      windowPrefix === "win"
+        ? `owin_${"a".repeat(16)}`
+        : `win_${"a".repeat(16)}`;
+    assert.equal(
+      candidateWindowRelationClassification(
+        [candidate],
+        windows,
+        block(crossDomainWindow, 100, 130, crossDomainCandidate),
+      ),
+      "schema_mismatch",
+      `${candidatePrefix}: cross-domain candidate/window IDs must fail structurally`,
+    );
+  }
+
+  const sharedRuleKeys = [
+    "candidateResolutionSource",
+    "windowResolutionSource",
+    "eachExecutionBlockCandidateMustResolveExactlyOnceThroughExactCurrentInvocation",
+    "eachExecutionBlockWindowMustResolveExactlyOnceThroughSameExactCurrentInvocation",
+    "executionBlockWindowIdMustBelongToResolvedCandidateAllowedWindowIds",
+    "resolvedWindowAvailableMustEqualTrue",
+    "singleReferencedWindowContainmentPredicateExact",
+    "blockMustBeCompletelyContainedInsideSingleReferencedWindow",
+    "blockMayStitchOrSpanAdjacentWindows",
+    "preProjectionElapsedAndInProgressPlacementMustSatisfyExactCurrentCandidateWindowRelation",
+    "preProjectionImmutableCandidateWindowIncompatibilityMayReachOptimizer",
+    "preProjectionImmutableCandidateWindowIncompatibilityMayBeRepairedByMovingDroppingUnassigningShorteningExtendingOrRewriting",
+    "futurePriorPlacementRemainsSoftPreferenceOnly",
+    "everyEmittedFuturePriorPlacementBlockMustSatisfyEveryCandidateWindowPredicate",
+  ];
+  for (const ruleKey of sharedRuleKeys) {
+    assert.deepEqual(
+      scheduler.resultContract.candidateWindowFeasibilityRules[ruleKey],
+      scheduler.optimizerProjectedResultContract
+        .candidateWindowFeasibilityRules[ruleKey],
+    );
+    const coordinatedRemoval = clone(scheduler);
+    delete coordinatedRemoval.resultContract.candidateWindowFeasibilityRules[
+      ruleKey
+    ];
+    delete coordinatedRemoval.optimizerProjectedResultContract
+      .candidateWindowFeasibilityRules[ruleKey];
+    assert.equal(
+      c3ResultValidationContractsAreClosed(coordinatedRemoval),
+      false,
+      `coordinated removal of ${ruleKey} must fail closed`,
+    );
+  }
+  assert.equal(
+    scheduler.resultContract.candidateWindowFeasibilityRules
+      .unknownDanglingDuplicateCrossDomainOrNonBijectiveCandidateOrWindowRelationStatus,
+    "schema_mismatch",
+  );
+  assert.equal(
+    scheduler.resultContract.candidateWindowFeasibilityRules
+      .knownDisallowedUnavailableOrOutOfBoundsRelationStatus,
+    "validator_rejected",
+  );
+  assert.equal(
+    scheduler.resultContract.candidateWindowFeasibilityRules
+      .releasableNativeFallbackMustSatisfyEveryCandidateWindowPredicate,
+    true,
+  );
+  assert.match(
+    agents,
+    /Every emitted[\s\S]*block resolves one candidate and one window[\s\S]*allowed available window[\s\S]*inside that single[\s\S]*window/,
+  );
+  assert.match(
+    agents,
+    /Elapsed\/in-progress placements[\s\S]*before projection[\s\S]*may not be moved, dropped, unassigned,[\s\S]*shortened, extended, or rewritten/,
+  );
+
+  for (const constraintCode of C4_RESULT_CONSTRAINT_CODES) {
+    const missingConstraint = clone(scheduler);
+    for (const constraints of [
+      missingConstraint.hardConstraints,
+      missingConstraint.resultContract.closedEnumValues.constraint_code_enum,
+      missingConstraint.optimizerProjectedResultContract.closedEnumValues
+        .constraint_code_enum,
+    ]) {
+      constraints.splice(constraints.indexOf(constraintCode), 1);
+    }
+    assert.equal(
+      c3ResultValidationContractsAreClosed(missingConstraint),
+      false,
+      `${constraintCode} must stay in hard constraints and both closed enums`,
+    );
+  }
+
+  const hostileMutations = [
+    [
+      "native validator skips candidate-window rules",
+      (value) => {
+        value.nativeValidator
+          .everyExecutionBlockMustResolveExactCurrentInvocationCandidateAndWindowAndSatisfyAllowedMembershipAvailabilityAndSingleWindowBounds =
+          false;
+      },
+    ],
+    [
+      "canonical fallback skips candidate-window rules",
+      (value) => {
+        value.resultContract.candidateWindowFeasibilityRules
+          .releasableNativeFallbackMustSatisfyEveryCandidateWindowPredicate =
+          false;
+      },
+    ],
+    [
+      "immutable preflight may reach optimizer",
+      (value) => {
+        value.inputContract.priorAcceptedScheduleRules
+          .immutablePlacementCandidateWindowIncompatibilityMayReachOptimizer =
+          true;
+        value.inputContract.optimizerInvocationProjectionContract
+          .projectionRules
+          .immutablePriorPlacementCandidateWindowIncompatibilityMayReachOptimizer =
+          true;
+      },
+    ],
+    [
+      "immutable placement may be rewritten",
+      (value) => {
+        value.resultContract.candidateWindowFeasibilityRules
+          .preProjectionImmutableCandidateWindowIncompatibilityMayBeRepairedByMovingDroppingUnassigningShorteningExtendingOrRewriting =
+          true;
+        value.optimizerProjectedResultContract
+          .candidateWindowFeasibilityRules
+          .preProjectionImmutableCandidateWindowIncompatibilityMayBeRepairedByMovingDroppingUnassigningShorteningExtendingOrRewriting =
+          true;
+      },
+    ],
+    [
+      "fallback fixture skips C4 validation",
+      (value) => {
+        value.s237oBenchmarkAcceptanceContract.benchmarkResultDigestContract
+          .failureStatusFixtureResultSetDigestContract
+          .validNativeFallbackResultMustSatisfyCanonicalNonDroppableCandidateWindowAndAllC4HardConstraintsWhenManualBlockDigestIsNull =
+          false;
+      },
+    ],
+    [
+      "candidate-window rejection code removed",
+      (value) => {
+        const codes =
+          value.s237oBenchmarkAcceptanceContract
+            .benchmarkResultDigestContract.resolvedArtifactMembersContract
+            .rejectedNativeFallbackAttemptValidationRecordContract
+            .fieldSchemas.rejection_code_enum;
+        codes.splice(codes.indexOf("candidate_window_relation_invalid"), 1);
+      },
+    ],
+    [
+      "gateway failure branch skips C4 canonical validation",
+      (value) => {
+        value.optimizerProjectedResultContract
+          .canonicalGatewayConstructionContract
+          .solverOrTrustedGatewayFailureBranchOrderExactly[3] =
+          "validate_partial_canonical_result";
+      },
+    ],
+  ];
+  for (const [name, mutate] of hostileMutations) {
+    const hostile = clone(scheduler);
+    mutate(hostile);
+    assert.equal(
+      c3ResultValidationContractsAreClosed(hostile) &&
+        projectedResultGatewayContractIsClosed(hostile),
+      false,
+      `${name} must fail closed`,
+    );
+  }
+});
+
 test("C3 every failure status requires one matching separately validated native fallback", async () => {
   const scheduler = await json(
     "config/dabangil-full-day-scheduler-contract.json",
@@ -3788,24 +5792,21 @@ test("C3 every failure status requires one matching separately validated native 
   assert.equal(c3ResultValidationContractsAreClosed(scheduler), true);
   assert.equal(
     scheduler.optimizerProjectedResultContract.failureRouting
-      .everyFallbackStatusesMemberMustUseSeparatelyValidatedNativeFallback,
+      .everySolverFailureOrTrustedGatewayClassificationMustAttemptExactlyOneIndependentlyPreparedCanonicalNativeFallback,
     true,
   );
   assert.equal(
     scheduler.optimizerProjectedResultContract.failureRouting
-      .projectedFailureEnvelopeMaySelfAuthorizeCanonicalRelease,
+      .projectedFailureEnvelopeMayContainReferenceAuthorizeOrReleaseCanonicalFallback,
     false,
   );
   assert.equal(
     scheduler.optimizerProjectedResultContract.failureRouting
-      .separatelyValidatedNativeFallbackPreparedAndValidatedOnlyInCanonicalIdentifierDomain,
+      .canonicalNativeFallbackPreparedAndValidatedOnlyInOriginalIdentifierDomain,
     true,
   );
 
-  for (const contract of [
-    scheduler.resultContract,
-    scheduler.optimizerProjectedResultContract,
-  ]) {
+  for (const contract of [scheduler.resultContract]) {
     const usedFixtureDigests = new Set();
     for (const status of FALLBACK_STATUSES) {
       const validFallback = {
@@ -3851,6 +5852,9 @@ test("C3 every failure status requires one matching separately validated native 
         synthetic_fixture_id: `syn_s237o_${status}_fixture`,
         expected_status: status,
         observed_status: status,
+        trigger_origin_enum: SOLVER_FAILURE_STATUSES.includes(status)
+          ? "solver_failure"
+          : "trusted_gateway_classification",
         native_fallback_result_digest_sha256: nativeFallbackDigest,
         manual_block_result_digest_sha256_or_null: null,
         assertion_result: "passed",
@@ -3949,6 +5953,26 @@ test("C3 every failure status requires one matching separately validated native 
           },
         ],
         [
+          "invalid non-droppable placement",
+          validFallback,
+          {
+            nativePlanValid: false,
+            rejectionCode: "non_droppable_candidate_invalid",
+            nativePlanFailureCode:
+              "non_droppable_candidate_invalid",
+          },
+        ],
+        [
+          "invalid candidate-window relation",
+          validFallback,
+          {
+            nativePlanValid: false,
+            rejectionCode: "candidate_window_relation_invalid",
+            nativePlanFailureCode:
+              "candidate_window_relation_invalid",
+          },
+        ],
+        [
           "invalid hard constraint",
           validFallback,
           {
@@ -4022,6 +6046,9 @@ test("C3 every failure status requires one matching separately validated native 
           synthetic_fixture_id: `syn_s237o_${status}_${hostileIndex}_invalid`,
           expected_status: status,
           observed_status: status,
+          trigger_origin_enum: SOLVER_FAILURE_STATUSES.includes(status)
+            ? "solver_failure"
+            : "trusted_gateway_classification",
           native_fallback_result_digest_sha256: createHash("sha256")
             .update(`invalid-native-fallback:${status}:${name}`)
             .digest("hex"),
@@ -4195,6 +6222,9 @@ test("C3 every failure status requires one matching separately validated native 
       synthetic_fixture_id: `syn_s237o_${firstStatus}_reuse`,
       expected_status: firstStatus,
       observed_status: firstStatus,
+      trigger_origin_enum: SOLVER_FAILURE_STATUSES.includes(firstStatus)
+        ? "solver_failure"
+        : "trusted_gateway_classification",
       native_fallback_result_digest_sha256: reusedDigest,
       manual_block_result_digest_sha256_or_null: null,
       assertion_result: "passed",
@@ -4203,6 +6233,9 @@ test("C3 every failure status requires one matching separately validated native 
       synthetic_fixture_id: `syn_s237o_${secondStatus}_reuse`,
       expected_status: secondStatus,
       observed_status: secondStatus,
+      trigger_origin_enum: SOLVER_FAILURE_STATUSES.includes(secondStatus)
+        ? "solver_failure"
+        : "trusted_gateway_classification",
       native_fallback_result_digest_sha256: reusedDigest,
       manual_block_result_digest_sha256_or_null: null,
       assertion_result: "passed",
@@ -4285,13 +6318,8 @@ test("C3 every failure status requires one matching separately validated native 
   }
 
   const jointlyOptionalFailureFallback = clone(scheduler);
-  for (const contract of [
-    jointlyOptionalFailureFallback.resultContract,
-    jointlyOptionalFailureFallback.optimizerProjectedResultContract,
-  ]) {
-    contract.fallbackValueRules
-      .everyFallbackStatusesMemberRequiresUsedTrue = false;
-  }
+  jointlyOptionalFailureFallback.resultContract.fallbackValueRules
+    .everyFallbackStatusesMemberRequiresUsedTrue = false;
   assert.equal(
     c3ResultValidationContractsAreClosed(jointlyOptionalFailureFallback),
     false,
@@ -4302,8 +6330,6 @@ test("C3 every failure status requires one matching separately validated native 
   )) {
     const missingFallbackRule = clone(scheduler);
     delete missingFallbackRule.resultContract.fallbackValueRules[ruleKey];
-    delete missingFallbackRule.optimizerProjectedResultContract
-      .fallbackValueRules[ruleKey];
     assert.equal(
       c3ResultValidationContractsAreClosed(missingFallbackRule),
       false,
@@ -4313,7 +6339,8 @@ test("C3 every failure status requires one matching separately validated native 
 
   const projectedSelfAuthorization = clone(scheduler);
   projectedSelfAuthorization.optimizerProjectedResultContract.failureRouting
-    .projectedFailureEnvelopeMaySelfAuthorizeCanonicalRelease = true;
+    .projectedFailureEnvelopeMayContainReferenceAuthorizeOrReleaseCanonicalFallback =
+    true;
   assert.equal(
     projectedResultGatewayContractIsClosed(projectedSelfAuthorization),
     false,

@@ -218,21 +218,42 @@ elapsed/in-progress placements, and soft future-placement preferences.
 Store/scope/lineage references, acceptance sequence, head/tree/date,
 receipt/bundle references or digests, and O4V/S236P/O4A bindings are stripped
 before optimizer invocation. The isolated solver and transient IPC stay
-inside the trusted native gateway. The gateway validates the complete
-projected response against the separate closed projected-ID result contract
-and exact invocation request/snapshot IDs before inverse-mapping only the six
-declared request, snapshot, execution-block candidate/window,
-unassigned-candidate, and violation-candidate paths through the same
-bijections. It preserves every non-ID value and array cardinality/order,
-validates the complete inverse-mapped object against the unchanged canonical
-result contract, and then performs native validation or the validated native
-fallback. The mapping remains in gateway memory until those response
-validation and inverse-mapping steps finish, is destroyed on every success or
-failure before a canonical result leaves, and is never retained after gateway
-exit. Projected IDs may not enter logs or artifacts; only an identifier-free
-replay-input digest receipt may be materialized after destruction. The
-adapter cannot resolve or access the authoritative, identity, receipt,
-authorization, or provenance planes.
+inside the trusted native gateway. A solver-originated projected response
+contains only a raw solver-owned status, solver-owned diagnostics, and
+candidate-plan fields for `OPTIMAL` or `FEASIBLE`. It cannot contain, select,
+reference, authorize, or release fallback state, `native_plan_version`, a
+canonical native plan, or a canonical plan reference. Timeout/dependency/
+adapter/schema/correlation/validator classifications and all canonical
+fallback state are trusted-gateway-owned.
+
+For `OPTIMAL` or `FEASIBLE`, the gateway validates the complete projected
+candidate-plan response against the separate closed projected-ID result
+contract and exact invocation request/snapshot IDs, validates the per-class
+bijections, and inverse-maps only the six declared request, snapshot,
+execution-block candidate/window, unassigned-candidate, and
+violation-candidate paths. It preserves every solver-owned non-ID value and
+array cardinality/order, constructs canonical
+`used=false/reason_enum=not_used/native_plan_version=null`, and validates the
+complete canonical result and native hard constraints before release.
+For a projected solver failure envelope or a direct gateway failure classified
+before a candidate plan exists, the projected attempt carries no candidate plan
+or canonical fallback state. A gateway classification raised while validating
+an `optimal` or `feasible` candidate-plan attempt instead discards that plan and
+any constructed `used=false` tuple without release; late canonical/native
+rejection is `validator_rejected`. Either path enters the same failure branch
+exactly once. The gateway independently resolves or prepares exactly one
+immutable native fallback in the canonical original-ID domain, constructs the
+`used=true` exact-trigger/non-null-version tuple, and separately validates the
+complete canonical result. A missing, unavailable, or invalid fallback yields
+only `blocked_manual_plan_required`; recursive fallback is forbidden.
+
+The mapping remains in gateway memory until every required projected-response
+validation and inverse mapping finishes, is destroyed on every success or
+failure after applicable canonical/native validation and before a canonical
+result leaves, and is never retained after gateway exit. Projected IDs may not
+enter logs or artifacts; only an identifier-free replay-input digest receipt
+may be materialized after destruction. The adapter cannot resolve or access
+the authoritative, identity, receipt, authorization, or provenance planes.
 The projection contract has exact top-level and nested field schemas plus an
 exact source-field map. Request, snapshot, window, fixed-block, and candidate
 IDs use a per-request one-to-one remap; allowed-window, prerequisite, fixed
@@ -243,13 +264,14 @@ only for a verified genesis/no-schedule checkpoint and otherwise equals the
 signed server cutoff. Any mapping or schema failure blocks manual planning
 before OR-Tools sees a payload.
 
-Gateway input, optimizer projection, and output are closed-world schemas.
-Top-level request/result fields,
+Gateway input, optimizer projection, projected solver response, and canonical
+gateway result are distinct closed-world schemas. Top-level request/result,
 candidate, available-window, fixed-block, execution-block, unassigned,
-fallback, version, objective, and violation fields are exact allowlists;
-unknown or nested extra fields fail closed. Window/block identifiers are
-ephemeral, minute bounds are numeric, enums are closed, and calendar titles,
-locations, filenames, free-text reasons, or stable identities are forbidden.
+version, objective, and violation fields are exact allowlists; fallback fields
+exist only in the canonical gateway result. Unknown or nested extra fields
+fail closed. Window/block identifiers are ephemeral, minute bounds are
+numeric, enums are closed, and calendar titles, locations, filenames,
+free-text reasons, or stable identities are forbidden.
 Input may carry one metadata-only prior accepted schedule for midday
 replanning and churn measurement, but it is not client-optional when the
 Owner-private authoritative store has an accepted schedule for that study
@@ -389,13 +411,28 @@ signature, trust path, expiry, and fresh revocation evidence are revalidated
 at benchmark start and again at acceptance. Packet expiry cannot outlive that
 receipt.
 
-The adapter returns a candidate placement plus status, version, seed, timing,
-objective components, violations, and fallback reason. Native validation is
-authoritative. Dependency-unavailable, invalid input/output, timeout,
-infeasible, error, or failed native validation invokes the separately
-validated native fallback and never makes OR-Tools a native-path dependency.
-If that fallback is invalid, the result fails closed as
-`blocked_manual_plan_required`.
+The isolated solver returns only its raw status and diagnostics, plus a
+candidate placement for `OPTIMAL` or `FEASIBLE`; it returns no fallback reason
+or canonical fallback state. Native validation is authoritative. A
+non-droppable candidate is exactly one with `pinned === true` or
+`can_drop === false`; it must occur exactly once in execution blocks and never
+in unassigned candidates, regardless of reason or `requiredness_enum`. Every
+block must resolve one candidate and one window through the exact invocation,
+use a window in that candidate's `allowed_window_ids` whose `available` value
+is true, and satisfy
+`window.start <= block.start < block.end <= window.end` within that single
+referenced window. Adjacent-window stitching is forbidden.
+
+Unknown, duplicate, cross-domain, or non-bijective candidate/window relations
+fail as `schema_mismatch`. Known disallowed, unavailable, or out-of-bounds
+relations fail as `validator_rejected`. Elapsed and in-progress prior
+placements must pass the same current relation before projection and cannot be
+moved, dropped, unassigned, shortened, extended, or rewritten to repair an
+incompatibility. Dependency-unavailable, invalid input/output, timeout,
+infeasible, error, or failed native validation invokes exactly one separately
+prepared and validated canonical native fallback and never makes OR-Tools a
+native-path dependency. If that fallback is invalid, the result fails closed
+as `blocked_manual_plan_required`.
 
 Contract fixtures cover 30, 60, 90, 180, 600, and 720 available minutes plus
 zero capacity, partial windows, rollover, over-capacity, unsatisfiable

@@ -550,11 +550,19 @@ seed, workers, time limit, integer scaling, adapter/policy versions, isolated
 benchmark boundary, and tested native fallback. Only metadata-only synthetic
 fixtures are eligible.
 
-Adapter request/result shapes are closed-world: exact top-level and nested
-allowlists cover candidates, windows, fixed/execution blocks, unassigned
-reasons, fallback, versions, objectives, and violations. Unknown fields,
-stable identities, calendar titles/locations, filenames, bodies, and free
-text fail closed.
+Adapter requests and solver-originated projected responses are separate
+closed-world shapes. The projected response contains only a raw solver-owned
+status, solver-owned diagnostics, and candidate-plan fields when applicable;
+it never contains, selects, references, authorizes, or releases `fallback`,
+`native_plan_version`, a canonical native fallback plan, or a canonical plan
+reference. Only the trusted gateway classifies adapter/schema/correlation/
+validator failures, independently resolves or prepares one immutable native
+fallback in the canonical original-ID domain, constructs the canonical
+fallback tuple and state, and releases it after separate complete canonical
+and native validation. Exact top-level and nested allowlists otherwise cover
+candidates, windows, fixed/execution blocks, unassigned reasons, versions,
+objectives, and violations. Unknown fields, stable identities, calendar
+titles/locations, filenames, bodies, and free text fail closed.
 One prior accepted placement snapshot is eligible only as closed, ephemeral
 metadata for midday replanning and schedule-churn measurement. The server
 must load the latest non-superseded monotonic lineage from the authoritative

@@ -1285,14 +1285,25 @@ Optional optimizer path:
 
 `S237P -> S237O -> O4T -> O2O -> S238OH -> S238OV -> O4P -> S239O -> S240O`
 
-OR-Tools CP-SAT receives metadata-only ExecutionBlocks and returns only a
-candidate placement, solver status, version, seed, timing, objective
-components, violations, and fallback reason. Raw question, answer, OCR,
-reference-answer, Law or AI text; user/account/document identities; private
-locators; reusable plaintext hashes; and cross-plane equality signals are
-forbidden. Native validation remains authoritative and any invalid,
-infeasible, timeout, unavailable, or failed optimizer result falls back to
-native. Thresholds are versioned and cannot be weakened retroactively.
+OR-Tools CP-SAT receives metadata-only ExecutionBlocks. Its projected response
+returns only a raw solver-owned status, solver-owned version/seed/timing/
+objective/violation diagnostics, and candidate-plan fields for `OPTIMAL` or
+`FEASIBLE`; it never returns a fallback reason, `native_plan_version`,
+canonical fallback state, or a canonical plan reference. The trusted gateway
+alone classifies timeout/dependency/adapter/schema/correlation/validator
+failures, constructs the canonical fallback tuple, and independently resolves
+or prepares and validates exactly one immutable native fallback. Raw question,
+answer, OCR, reference-answer, Law or AI text; user/account/document
+identities; private locators; reusable plaintext hashes; and cross-plane
+equality signals are forbidden.
+
+Native validation remains authoritative. Every non-droppable candidate
+(`pinned === true || can_drop === false`) must be placed exactly once and never
+unassigned. Every block must resolve one exact-invocation candidate and one
+allowed available window and remain completely inside that single window.
+Invalid candidate plans enter one gateway-owned canonical fallback attempt;
+an invalid fallback returns only `blocked_manual_plan_required`. Thresholds are
+versioned and cannot be weakened retroactively.
 O2O must bind closed, no-free-text Owner-private comparison measurement and
 retention before shadow. It does not authorize Shared Signal, telemetry,
 external-learner, or Academy measurement. Owner-hidden shadow precedes

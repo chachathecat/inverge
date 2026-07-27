@@ -233,19 +233,40 @@ elapsed/in-progress placements, and soft future-placement preferences.
 Store/scope/lineage references, head/tree/date, receipt/bundle references or
 digests, and O4V/S236P/O4A bindings are never sent to, logged by, or resolved
 by the optimizer. The isolated solver process and its transient IPC remain
-inside the trusted native gateway. The gateway first validates the complete
-projected response against a separate closed `oreq_`/`osnp_`/`owin_`/`ocand_`
-result contract and requires its request/snapshot IDs to equal the exact
-projected invocation IDs. Only then may it inverse-map the six declared
-request, snapshot, execution-block candidate/window, unassigned-candidate, and
-violation-candidate paths through the same per-invocation bijections while
-preserving every non-ID value and array cardinality/order. The complete
-inverse-mapped object must validate against the unchanged canonical
-`req_`/`snp_`/`win_`/`cand_` result contract before native validation or the
-validated-native-fallback path. The mapping remains in gateway memory through
-that validation and inverse mapping; the exact six-process benchmark retains
-it through all six complete response paths. It is destroyed on every success
-or failure after the applicable native/fallback validation and before any
+inside the trusted native gateway. A solver-originated projected response uses
+only the closed raw solver status domain, solver-owned diagnostics, and, for
+`OPTIMAL` or `FEASIBLE`, candidate-plan fields. It may not contain, select,
+reference, authorize, or release `fallback`, `native_plan_version`, a canonical
+native plan, or a canonical plan reference. Timeout/dependency/adapter/schema/
+correlation/validator classifications and every canonical fallback tuple are
+trusted-gateway-owned.
+
+For `OPTIMAL` or `FEASIBLE`, the gateway validates the complete projected
+response against the separate closed `oreq_`/`osnp_`/`owin_`/`ocand_` contract,
+requires exact request/snapshot correlation and per-class bijections,
+inverse-maps only the six declared request, snapshot, execution-block
+candidate/window, unassigned-candidate, and violation-candidate paths, and
+preserves every solver-owned non-ID value and array cardinality/order. Only the
+gateway then attaches canonical `fallback.used=false`,
+`reason_enum=not_used`, and `native_plan_version=null`, after which the
+complete canonical `req_`/`snp_`/`win_`/`cand_` result and every native hard
+constraint must validate before release. A solver-originated projected failure
+envelope, or a direct gateway failure classified before a candidate plan
+exists, carries no candidate plan or canonical fallback state. If the gateway
+classifies a failure while validating an `OPTIMAL` or `FEASIBLE` candidate-plan
+attempt, it discards that candidate plan and any constructed `used=false` tuple
+without release; a late canonical/native rejection is `validator_rejected`.
+Either path enters the same failure branch exactly once: the gateway
+independently resolves or prepares exactly one immutable native fallback in the
+canonical original-ID domain, constructs the `used=true`
+exact-trigger/non-null-version tuple, and separately validates the complete
+canonical result. Missing, unavailable, or invalid fallback yields only
+`blocked_manual_plan_required`; recursive fallback is forbidden.
+
+The mapping remains in gateway memory through every required projected
+validation and inverse mapping; the exact six-process benchmark retains it
+through all six complete response paths. It is destroyed on every success or
+failure after the applicable canonical/native validation and before any
 canonical result leaves the gateway, and it is never retained after gateway
 exit. No projected identifier may enter logs, caches, errors, telemetry,
 persisted temporary state, or artifacts; benchmark replay-input evidence is
@@ -257,10 +278,18 @@ references; dangling, duplicate, reused, or cross-class mappings fail closed.
 They must not contain user/account IDs, `LearningDocument` or `ReviewUnit`
 IDs, filenames, titles, free-text reasons, content hashes, keyed commitments,
 or question/answer/OCR/Law/AI bodies. `OPTIMAL` and `FEASIBLE` remain
-candidates until the native validator accepts them. Timeout, unknown,
-infeasible, model-invalid, schema mismatch, stale response, or validator
-rejection uses native fallback; an invalid fallback must return
-`blocked_manual_plan_required`.
+candidates until the native validator accepts them. Every candidate is
+accounted for exactly once. A candidate is non-droppable exactly when
+`pinned === true || can_drop === false`; it must be placed exactly once and
+never unassigned, regardless of reason or `requiredness_enum`. Every emitted
+block resolves one candidate and one window through the exact invocation, uses
+an allowed available window, and satisfies
+`window.start <= block.start < block.end <= window.end` inside that single
+window. Unknown/cross-domain/non-bijective relations fail as `schema_mismatch`;
+known disallowed, unavailable, or out-of-bounds relations fail as
+`validator_rejected`. Elapsed/in-progress placements must satisfy the same
+current relation before projection and may not be moved, dropped, unassigned,
+shortened, extended, or rewritten to repair incompatibility.
 
 S237O authorization separates a canonical proposal, an immutable signed
 Owner decision over that proposal, and the final approved-authorization

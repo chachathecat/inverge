@@ -1429,6 +1429,8 @@
               "canonical_result_contract_invalid",
               "candidate_accounting_invalid",
               "execution_block_duration_invalid",
+              "non_droppable_candidate_invalid",
+              "candidate_window_relation_invalid",
               "hard_constraint_invalid",
               "immutable_placement_incompatible"
             ],
@@ -1452,6 +1454,8 @@
             "native_plan_resolution_and_immutability",
             "candidate_accounting",
             "execution_block_duration",
+            "non_droppable_candidate_placement",
+            "candidate_window_membership_availability_and_bounds",
             "hard_constraints",
             "immutable_placement_compatibility",
             "canonical_result_contract_schema_and_correlation_catch_all"
@@ -1469,8 +1473,10 @@
           "everyComputedMemberDigestMustEqualMappedOuterArtifactOrEvidenceDigest": true,
           "allChildHeadTreeAuthorizationConfigRunAndPolicyBindingsMustEqualOuterArtifactAndApprovedPacket": true,
           "replayFullResultDigestsMustResolveToExactResultContractAndDifferOnlyByElapsedMs": true,
-          "validFailureFallbackDigestsMustResolveToExactResultContractWhenManualBlockDigestIsNull": true,
-          "invalidFailureFallbackAttemptDigestsMustResolveToExactRejectedAttemptValidationRecordWhenManualBlockDigestIsNonNull": true,
+      "validFailureFallbackDigestsMustResolveToExactResultContractWhenManualBlockDigestIsNull": true,
+      "failureFixtureTriggerOriginMustDistinguishSolverFailureFromTrustedGatewayClassificationExactly": true,
+      "validFailureFallbackMustSatisfyCanonicalNonDroppableCandidateWindowAndAllC4HardConstraints": true,
+      "invalidFailureFallbackAttemptDigestsMustResolveToExactRejectedAttemptValidationRecordWhenManualBlockDigestIsNonNull": true,
           "nonNullManualBlockDigestsMustResolveToExactBlockedManualPlanRequiredResultContract": true,
           "canonicalNativeFallbackSetDigestMustBeRecomputedFromExactFailureSetProjection": true,
           "missingUnknownDuplicateMutableCrossRunCrossAuthorizationOrDigestMismatchedMemberFailsClosed": true,
@@ -1537,10 +1543,11 @@
         "expectedStatuses": "resultContract.fallbackStatuses",
         "entryOrdering": "ascending_lexicographic_expected_status",
         "entryFieldsExactly": [
-          "synthetic_fixture_id",
-          "expected_status",
-          "observed_status",
-          "native_fallback_result_digest_sha256",
+      "synthetic_fixture_id",
+      "expected_status",
+      "observed_status",
+      "trigger_origin_enum",
+      "native_fallback_result_digest_sha256",
           "manual_block_result_digest_sha256_or_null",
           "assertion_result"
         ],
@@ -1552,9 +1559,16 @@
           "expected_status": {
             "type": "closed_enum_exact_result_contract_fallback_statuses"
           },
-          "observed_status": {
-            "type": "closed_enum_exact_result_contract_fallback_statuses"
-          },
+      "observed_status": {
+        "type": "closed_enum_exact_result_contract_fallback_statuses"
+      },
+      "trigger_origin_enum": {
+        "type": "closed_enum",
+        "values": [
+          "solver_failure",
+          "trusted_gateway_classification"
+        ]
+      },
           "native_fallback_result_digest_sha256": {
             "type": "lowercase_hex",
             "length": 64
@@ -1570,16 +1584,20 @@
           }
         },
         "entryAdditionalFieldsAllowed": false,
-        "exactEntryCountMustEqualFallbackStatusCount": true,
-        "observedStatusMustEqualExpectedStatus": true,
-        "assertionResultMustEqualPassed": true,
+    "exactEntryCountMustEqualFallbackStatusCount": true,
+    "observedStatusMustEqualExpectedStatus": true,
+    "triggerOriginMustEqualSolverFailureExactlyForInfeasibleModelInvalidOrUnknown": true,
+    "triggerOriginMustEqualTrustedGatewayClassificationExactlyForTimeoutDependencyUnavailableAdapterErrorSchemaMismatchStaleResponseOrValidatorRejected": true,
+    "isolatedSolverMayAuthorTrustedGatewayClassification": false,
+    "assertionResultMustEqualPassed": true,
         "validNativeFallbackOrExactManualBlockRequired": true,
         "validNativeFallbackResultDigestMustResolveOneExactCanonicalResultWhenManualBlockDigestIsNull": true,
         "validNativeFallbackResultStatusMustEqualExpectedStatusOrLiteralFallbackWhenManualBlockDigestIsNull": true,
         "validNativeFallbackResultFallbackUsedMustBeTrueWhenManualBlockDigestIsNull": true,
         "validNativeFallbackResultFallbackReasonMustEqualExpectedStatusWhenManualBlockDigestIsNull": true,
-        "validNativeFallbackResultNativePlanVersionMustBeClosedAndNonNullWhenManualBlockDigestIsNull": true,
-        "validNativeFallbackResultMustSatisfyCanonicalCandidateAccountingExecutionBlockDurationAndAllHardConstraintsWhenManualBlockDigestIsNull": true,
+    "validNativeFallbackResultNativePlanVersionMustBeClosedAndNonNullWhenManualBlockDigestIsNull": true,
+    "validNativeFallbackResultMustSatisfyCanonicalCandidateAccountingExecutionBlockDurationAndAllHardConstraintsWhenManualBlockDigestIsNull": true,
+    "validNativeFallbackResultMustSatisfyCanonicalNonDroppableCandidateWindowAndAllC4HardConstraintsWhenManualBlockDigestIsNull": true,
         "oneNativeFallbackResultDigestMaySatisfyMultipleExpectedStatuses": false,
         "invalidNativeFallbackAttemptDigestMustResolveOneExactClosedRejectionValidationRecordWhenManualBlockDigestIsNonNull": true,
         "invalidNativeFallbackAttemptFailureMustBeCrossBoundToExpectedStatus": true,
@@ -2306,6 +2324,12 @@
         "ephemeralIdMappingMayBeDestroyedBeforeProjectedResponseValidationAndRequiredInverseMappingFinish": false,
         "elapsedAndInProgressPlacementsBecomeImmutablePriorPlacements": true,
         "immutablePriorPlacementsMustPassExactCurrentCandidateDurationCompatibilityBeforeProjection": true,
+        "immutablePriorPlacementsMustPassExactCurrentCandidateWindowMembershipAvailabilityAndBoundsBeforeProjection": true,
+        "immutablePriorPlacementCandidateAndWindowMustEachResolveExactlyOnceThroughExactCurrentInvocation": true,
+        "immutablePriorPlacementWindowMustBelongToResolvedCandidateAllowedWindowIds": true,
+        "immutablePriorPlacementResolvedWindowAvailableMustEqualTrue": true,
+        "immutablePriorPlacementMustSatisfyWindowStartLessThanOrEqualBlockStartLessThanBlockEndLessThanOrEqualWindowEndInsideOneReferencedWindow": true,
+        "immutablePriorPlacementMaySpanOrStitchAdjacentWindows": false,
         "immutablePriorPlacementCandidateDurationIncompatibilityMayReachOptimizer": false,
         "immutablePriorPlacementCandidateDurationIncompatibilityFallbackTriggerStatus": "validator_rejected",
         "immutablePriorPlacementCandidateDurationIncompatibilityFallbackReasonEnumMustEqualTriggerStatus": true,
@@ -2313,6 +2337,13 @@
         "immutablePriorPlacementCandidateDurationIncompatibilityMustEnterSeparatelyValidatedNativeFallbackWithoutRewritingPlacementOrCandidatePolicy": true,
         "immutablePriorPlacementCandidateDurationIncompatibilityInvalidNativeFallbackResult": "blocked_manual_plan_required",
         "immutablePriorPlacementCandidateDurationIncompatibilityInvalidNativeFallbackMayTriggerAnotherFallback": false,
+        "immutablePriorPlacementCandidateWindowIncompatibilityMayReachOptimizer": false,
+        "immutablePriorPlacementCandidateWindowIncompatibilityFallbackTriggerStatus": "validator_rejected",
+        "immutablePriorPlacementCandidateWindowIncompatibilityFallbackReasonEnumMustEqualTriggerStatus": true,
+        "immutablePriorPlacementCandidateWindowIncompatibilityMustAttemptExactlyOneSeparatelyValidatedNativeFallback": true,
+        "immutablePriorPlacementCandidateWindowIncompatibilityMustEnterSeparatelyValidatedNativeFallbackWithoutMovingDroppingUnassigningShorteningExtendingOrRewritingPlacementOrCandidatePolicy": true,
+        "immutablePriorPlacementCandidateWindowIncompatibilityInvalidNativeFallbackResult": "blocked_manual_plan_required",
+        "immutablePriorPlacementCandidateWindowIncompatibilityInvalidNativeFallbackMayTriggerAnotherFallback": false,
         "futurePlacementsBecomeSoftPreferencesOnly": true,
         "derivedPlacementStateIsNotSent": true,
         "optimizerMayResolveOrAccessAuthoritativeStoreReceiptBundleAuthorizationOrIdentityPlane": false,
@@ -2507,6 +2538,11 @@
       "elapsedOrInProgressPlacementMayBeDroppedShortenedMovedOrDuplicated": false,
       "elapsedAndInProgressPlacementMustResolveExactlyOneCurrentInvocationCandidateBeforeProjection": true,
       "elapsedAndInProgressPlacementMustSatisfyResolvedCurrentCandidateDurationAndShorteningRulesBeforeProjection": true,
+      "elapsedAndInProgressPlacementMustResolveExactlyOneCurrentInvocationWindowBeforeProjection": true,
+      "elapsedAndInProgressPlacementWindowMustBelongToResolvedCurrentCandidateAllowedWindowIdsBeforeProjection": true,
+      "elapsedAndInProgressPlacementResolvedCurrentWindowAvailableMustEqualTrueBeforeProjection": true,
+      "elapsedAndInProgressPlacementMustSatisfyCurrentWindowStartLessThanOrEqualBlockStartLessThanBlockEndLessThanOrEqualWindowEndInsideOneReferencedWindowBeforeProjection": true,
+      "elapsedAndInProgressPlacementMaySpanOrStitchAdjacentCurrentWindows": false,
       "immutablePlacementCandidateDurationIncompatibilityMayReachOptimizer": false,
       "immutablePlacementCandidateDurationIncompatibilityFallbackTriggerStatus": "validator_rejected",
       "immutablePlacementCandidateDurationIncompatibilityFallbackReasonEnumMustEqualTriggerStatus": true,
@@ -2514,6 +2550,13 @@
       "immutablePlacementCandidateDurationIncompatibilityMustEnterSeparatelyValidatedNativeFallbackWithoutRewritingPlacementOrCandidatePolicy": true,
       "immutablePlacementCandidateDurationIncompatibilityInvalidNativeFallbackResult": "blocked_manual_plan_required",
       "immutablePlacementCandidateDurationIncompatibilityInvalidNativeFallbackMayTriggerAnotherFallback": false,
+      "immutablePlacementCandidateWindowIncompatibilityMayReachOptimizer": false,
+      "immutablePlacementCandidateWindowIncompatibilityFallbackTriggerStatus": "validator_rejected",
+      "immutablePlacementCandidateWindowIncompatibilityFallbackReasonEnumMustEqualTriggerStatus": true,
+      "immutablePlacementCandidateWindowIncompatibilityMustAttemptExactlyOneSeparatelyValidatedNativeFallback": true,
+      "immutablePlacementCandidateWindowIncompatibilityMustEnterSeparatelyValidatedNativeFallbackWithoutMovingDroppingUnassigningShorteningExtendingOrRewritingPlacementOrCandidatePolicy": true,
+      "immutablePlacementCandidateWindowIncompatibilityInvalidNativeFallbackResult": "blocked_manual_plan_required",
+      "immutablePlacementCandidateWindowIncompatibilityInvalidNativeFallbackMayTriggerAnotherFallback": false,
       "immutablePlacementOrCurrentCandidatePolicyMayBeRewrittenToRepairIncompatibility": false,
       "newOrMovedPlacementMayStartBeforeCutoff": false,
       "ifAuthoritativeLatestExistsOmissionInvalidityOrProvenanceFailureMustFailClosedToBlockedManualPlanRequired": true,
@@ -3600,7 +3643,7 @@
     "metadataOnly": true
   },
   "optimizerProjectedResultContract": {
-    "purpose": "validate_complete_optimizer_projected_response_before_inverse_mapping",
+    "purpose": "validate_solver_owned_projected_response_without_canonical_fallback_state_before_trusted_gateway_construction",
     "identifierDomain": "projected_oreq_osnp_owin_ocand_only",
     "canonicalResultContractPath": "resultContract",
     "projectedInvocationContractPath": "inputContract.optimizerInvocationProjectionContract",
@@ -3610,7 +3653,6 @@
       "status",
       "execution_blocks",
       "unassigned_candidates",
-      "fallback",
       "version_info",
       "objective_components",
       "violations",
@@ -3630,55 +3672,24 @@
       "ephemeral_opaque_candidate_id",
       "reason_enum"
     ],
-    "fallbackFieldsExactly": [
-      "used",
-      "reason_enum",
-      "native_plan_version"
-    ],
-    "fallbackReasonValues": [
-      "not_used",
-      "infeasible",
-      "model_invalid",
-      "unknown",
-      "timeout",
-      "dependency_unavailable",
-      "adapter_error",
-      "schema_mismatch",
-      "stale_response",
-      "validator_rejected"
-    ],
-    "fallbackValueRules": {
-      "usedFalseRequiresReasonNotUsedAndNativePlanVersionNull": true,
-      "usedTrueRequiresTriggerReasonAndClosedNativePlanVersion": true,
-      "fallbackStatusRequiresUsedTrue": true,
-      "optimalOrFeasibleRequiresUsedFalse": true,
-      "blockedManualPlanRequiredMayFollowOnlyInvalidNativeFallback": true,
-      "everyFallbackStatusesMemberRequiresUsedTrue": true,
-      "everyFallbackStatusesMemberRequiresReasonEnumEqualTriggeringStatus": true,
-      "everyFallbackStatusesMemberRequiresNonNullClosedNativePlanVersion": true,
-      "literalFallbackStatusRequiresUsedTrue": true,
-      "literalFallbackStatusRequiresReasonEnumInFallbackStatuses": true,
-      "literalFallbackStatusRequiresNonNullClosedNativePlanVersion": true,
-      "literalFallbackStatusRequiresReasonInFallbackStatusesAndNonNullClosedNativePlanVersion": true,
-      "nativePlanVersionMustResolveOneExactImmutableCanonicalNativeFallbackPlan": true,
-      "failureStatusEnvelopeMaySelfAuthorizeReferencedNativeFallbackRelease": false,
-      "trustedNativeGatewayMustResolveOrPrepareExactImmutableCanonicalNativeFallbackIndependentlyOfOptimizerResponse": true,
-      "referencedNativeFallbackMustBeSeparatelyValidatedAgainstCanonicalCandidateAccountingExecutionBlockDurationAndAllHardConstraintsBeforeRelease": true,
-      "missingFallbackMismatchedReasonInvalidVersionOrInvalidNativePlanResult": "blocked_manual_plan_required",
-      "missingFallbackMismatchedReasonInvalidVersionOrInvalidNativePlanMayReleaseCandidatePlan": false,
-      "blockedManualPlanRequiredRequiresUsedFalseReasonNotUsedAndNativePlanVersionNull": true,
-      "blockedManualPlanRequiredMayCarryTriggerReasonOrNativePlanVersion": false,
-      "blockedManualPlanRequiredMayReleaseExecutionBlocksOrReferencedNativePlan": false
-    },
-    "candidateAccountingRules": {
-      "directCandidatePlanStatusesExactly": [
+    "statusOriginBoundary": {
+      "solverOwnedStatusesExactly": [
+        "optimal",
+        "feasible",
+        "infeasible",
+        "model_invalid",
+        "unknown"
+      ],
+      "solverCandidatePlanStatusesExactly": [
         "optimal",
         "feasible"
       ],
-      "validatedNativeFallbackTriggerStatusesExactly": [
+      "solverFailureStatusesExactly": [
         "infeasible",
         "model_invalid",
-        "unknown",
+        "unknown"
+      ],
+      "trustedGatewayClassificationStatusesExactly": [
         "timeout",
         "dependency_unavailable",
         "adapter_error",
@@ -3686,20 +3697,75 @@
         "stale_response",
         "validator_rejected"
       ],
-      "validatedNativeFallbackEnvelopeStatusesExactly": [
-        "infeasible",
-        "model_invalid",
-        "unknown",
-        "timeout",
-        "dependency_unavailable",
-        "adapter_error",
-        "schema_mismatch",
-        "stale_response",
-        "validator_rejected",
-        "fallback"
+      "canonicalGatewayOnlyStatusesExactly": [
+        "fallback",
+        "blocked_manual_plan_required"
       ],
-      "literalFallbackStatusPlanMustBeValidatedNativeFallback": true,
-      "allReleasableValidatedNativeFallbackPlansMustSatisfyTheseSameRules": true,
+      "projectedResponseStatusMustBeSolverOwned": true,
+      "timeoutDependencyUnavailableAndAdapterErrorAreTrustedGatewayClassificationsNotSolverAuthoredStatuses": true,
+      "isolatedSolverMayAuthorTrustedGatewayClassificationOrCanonicalGatewayOnlyStatus": false,
+      "projectedCandidatePlanFieldsExactly": [
+        "execution_blocks",
+        "unassigned_candidates"
+      ],
+      "projectedCandidatePlanFieldsMayAppearOnlyForOptimalOrFeasible": true,
+      "projectedFailureMayContainOrReleaseCandidatePlan": false,
+      "projectedResponseMayContainFallback": false,
+      "projectedResponseMayContainNativePlanVersion": false,
+      "projectedResponseMayContainCanonicalNativeFallbackPlanOrReference": false
+    },
+    "canonicalGatewayConstructionContract": {
+      "gatewayAloneOwnsCanonicalFallbackTupleAndState": true,
+      "gatewayConstructionIsSoleAllowedExceptionToFormerBlanketProjectedCanonicalNonIdentifierEquality": true,
+      "optimalOrFeasibleBranchOrderExactly": [
+        "validate_complete_projected_candidate_plan_response",
+        "validate_exact_request_snapshot_correlation_and_per_class_bijections",
+        "validate_projected_candidate_accounting_duration_non_droppable_and_candidate_window_rules",
+        "inverse_map_exactly_the_existing_six_identifier_bearing_paths",
+        "preserve_every_solver_owned_non_id_value_and_array_cardinality_and_order",
+        "trusted_gateway_constructs_canonical_fallback_used_false_reason_not_used_native_plan_version_null",
+        "validate_complete_canonical_result_contract_and_every_native_hard_constraint",
+        "on_canonical_or_native_rejection_discard_candidate_plan_and_used_false_tuple_classify_validator_rejected_and_transition_exactly_once_to_failure_branch",
+        "release_only_when_complete_canonical_and_native_validation_succeeds"
+      ],
+      "solverOrTrustedGatewayFailureBranchOrderExactly": [
+        "validate_or_classify_projected_attempt_without_trusting_it_as_canonical_fallback",
+        "independently_resolve_or_prepare_exactly_one_immutable_native_fallback_in_canonical_original_id_domain",
+        "trusted_gateway_constructs_canonical_fallback_used_true_exact_trigger_reason_and_non_null_closed_native_plan_version",
+        "validate_complete_canonical_result_contract_candidate_accounting_duration_non_droppable_candidate_window_and_every_hard_constraint",
+        "return_only_blocked_manual_plan_required_when_canonical_fallback_is_missing_unavailable_or_invalid"
+      ],
+      "optimalOrFeasibleCanonicalFallbackTupleExactly": {
+        "used": false,
+        "reason_enum": "not_used",
+        "native_plan_version": null
+      },
+      "failureCanonicalFallbackTupleRules": {
+        "used": true,
+        "reason_enum": "exact_solver_failure_or_trusted_gateway_classification",
+        "native_plan_version": "non_null_closed_identifier_resolving_exact_immutable_canonical_native_fallback"
+      },
+      "lateCanonicalOrNativeValidationRejectionTransition": {
+        "appliesWhen": "projected_optimal_or_feasible_passes_projected_validation_correlation_and_inverse_mapping_but_complete_canonical_result_or_native_hard_constraint_validation_rejects",
+        "trustedGatewayClassification": "validator_rejected",
+        "discardCandidatePlanAndUsedFalseTupleWithoutRelease": true,
+        "transitionExactlyOnceToSolverOrTrustedGatewayFailureBranch": true,
+        "canonicalFallbackMustBePreparedIndependentlyInOriginalIdentifierDomain": true,
+        "projectedOrRejectedCandidatePlanMayBeReusedAsCanonicalFallback": false,
+        "fallbackMayBeAttemptedMoreThanOnceOrRecursively": false,
+        "invalidFallbackResult": "blocked_manual_plan_required"
+      },
+      "projectedFailureEnvelopeMayReferenceAuthorizeOrReleaseCanonicalFallback": false,
+      "canonicalFallbackMustBePreparedIndependentlyOfProjectedResponse": true,
+      "canonicalFallbackMayBeAttemptedMoreThanOnceOrRecursively": false,
+      "invalidCanonicalFallbackResult": "blocked_manual_plan_required",
+      "invalidCanonicalFallbackMayReleaseCandidatePlan": false
+    },
+    "candidateAccountingRules": {
+      "directCandidatePlanStatusesExactly": [
+        "optimal",
+        "feasible"
+      ],
       "exactCorrelatedInvocationCandidateSetSource": "exact_current_correlated_invocation.candidates[].ephemeral_opaque_candidate_id",
       "exactCorrelatedInvocationCandidateIdsUnique": true,
       "candidateIdentifiersMustUseActiveContainingContractDomain": true,
@@ -3712,14 +3778,12 @@
       "everyInvocationCandidateMustAppearExactlyOnce": true,
       "missingUnknownExtraDuplicateOmittedOrPlacedAndUnassignedCandidateAllowed": false,
       "violationCandidateIdsAreDiagnosticOnlyAndCannotSatisfyAccounting": true,
-      "directOrProjectedCandidateAccountingFailureStatus": "schema_mismatch",
-      "directOrProjectedCandidateAccountingFailureMustAttemptExactlyOneSeparatelyValidatedNativeFallback": true,
-      "validatedNativeFallbackCandidateAccountingFailureResult": "blocked_manual_plan_required",
-      "validatedNativeFallbackCandidateAccountingFailureMayTriggerAnotherFallback": false,
-      "invalidNativeFallbackResult": "blocked_manual_plan_required"
+      "projectedCandidateAccountingFailureTrustedGatewayClassification": "schema_mismatch",
+      "projectedCandidateAccountingFailureMayReleaseCandidatePlan": false,
+      "projectedResponseMaySelectReferenceAuthorizeOrReleaseCanonicalNativeFallback": false
     },
     "executionBlockDurationRules": {
-      "appliesToEveryExecutionBlockInOptimalFeasibleAndEveryReleasableValidatedNativeFallbackPlan": true,
+      "appliesToEveryExecutionBlockInOptimalAndFeasibleProjectedCandidatePlans": true,
       "candidateResolutionSource": "exact_current_correlated_invocation.candidates",
       "eachExecutionBlockCandidateMustResolveExactlyOnceThroughExactCurrentInvocation": true,
       "durationMinutesMustEqualEndMinuteKstMinusStartMinuteKst": true,
@@ -3735,17 +3799,69 @@
       ],
       "immutableElapsedOrInProgressPlacementMayBeMovedShortenedExtendedOrRewrittenToSatisfyCurrentCandidate": false,
       "preProjectionImmutablePlacementCandidateDurationIncompatibilityMayReachOptimizer": false,
-      "preProjectionImmutablePlacementCandidateDurationIncompatibilityFallbackTriggerStatus": "validator_rejected",
-      "preProjectionImmutablePlacementCandidateDurationIncompatibilityFallbackReasonEnumMustEqualTriggerStatus": true,
-      "preProjectionImmutablePlacementCandidateDurationIncompatibilityMustAttemptExactlyOneSeparatelyValidatedNativeFallback": true,
-      "preProjectionImmutablePlacementCandidateDurationIncompatibilityMustEnterSeparatelyValidatedNativeFallbackWithoutRewritingPlacementOrCandidatePolicy": true,
-      "preProjectionImmutablePlacementCandidateDurationIncompatibilityInvalidNativeFallbackResult": "blocked_manual_plan_required",
-      "preProjectionImmutablePlacementCandidateDurationIncompatibilityInvalidNativeFallbackMayTriggerAnotherFallback": false,
-      "optimizerResultDurationOrImmutablePlacementMutationFailureStatus": "validator_rejected",
-      "optimizerResultDurationOrImmutablePlacementMutationMustAttemptExactlyOneSeparatelyValidatedNativeFallback": true,
-      "optimizerResultDurationOrImmutablePlacementMutationMustUseSeparatelyValidatedNativeFallbackThatPreservesTheOriginalImmutablePlacement": true,
-      "optimizerResultDurationOrImmutablePlacementMutationInvalidNativeFallbackMayTriggerAnotherFallback": false,
-      "invalidNativeFallbackResult": "blocked_manual_plan_required"
+      "preProjectionImmutablePlacementCandidateDurationIncompatibilityTrustedGatewayClassification": "validator_rejected",
+      "preProjectionImmutablePlacementCandidateDurationIncompatibilityMayBeRepairedByOptimizerOrProjectedResponse": false,
+      "optimizerResultDurationOrImmutablePlacementMutationTrustedGatewayClassification": "validator_rejected",
+      "invalidProjectedCandidatePlanMayReleaseCandidatePlan": false,
+      "projectedResponseMaySelectReferenceAuthorizeOrReleaseCanonicalNativeFallback": false
+    },
+    "nonDroppableCandidateRules": {
+      "appliesToEveryOptimalAndFeasibleProjectedCandidatePlan": true,
+      "nonDroppableDefinitionExact": "candidate.pinned === true || candidate.can_drop === false",
+      "pinnedAndCanDropTruthTableExactly": [
+        {
+          "pinned": false,
+          "can_drop": true,
+          "non_droppable": false
+        },
+        {
+          "pinned": false,
+          "can_drop": false,
+          "non_droppable": true
+        },
+        {
+          "pinned": true,
+          "can_drop": true,
+          "non_droppable": true
+        },
+        {
+          "pinned": true,
+          "can_drop": false,
+          "non_droppable": true
+        }
+      ],
+      "everyNonDroppableCandidateMustOccurExactlyOnceInExecutionBlocks": true,
+      "everyNonDroppableCandidateMustOccurZeroTimesInUnassignedCandidates": true,
+      "onlyPinnedFalseAndCanDropTrueCandidateMayBeUnassigned": true,
+      "unassignedReasonMayOverrideNonDroppability": false,
+      "ownerPinnedConflictReasonMayOverrideNonDroppability": false,
+      "lowerValueThanSelectedReasonMayOverrideNonDroppability": false,
+      "requirednessEnumMayRedefineNonDroppability": false,
+      "knownNonDroppableViolationTrustedGatewayClassification": "validator_rejected",
+      "invalidProjectedCandidatePlanMayReleaseCandidatePlan": false,
+      "projectedResponseMaySelectReferenceAuthorizeOrReleaseCanonicalNativeFallback": false
+    },
+    "candidateWindowFeasibilityRules": {
+      "appliesToEveryExecutionBlockInOptimalAndFeasibleProjectedCandidatePlans": true,
+      "candidateResolutionSource": "exact_current_correlated_invocation.candidates",
+      "windowResolutionSource": "exact_current_correlated_invocation.available_windows",
+      "eachExecutionBlockCandidateMustResolveExactlyOnceThroughExactCurrentInvocation": true,
+      "eachExecutionBlockWindowMustResolveExactlyOnceThroughSameExactCurrentInvocation": true,
+      "executionBlockWindowIdMustBelongToResolvedCandidateAllowedWindowIds": true,
+      "resolvedWindowAvailableMustEqualTrue": true,
+      "singleReferencedWindowContainmentPredicateExact": "window.start_minute_kst <= block.start_minute_kst < block.end_minute_kst <= window.end_minute_kst",
+      "blockMustBeCompletelyContainedInsideSingleReferencedWindow": true,
+      "blockMayStitchOrSpanAdjacentWindows": false,
+      "unknownDanglingDuplicateCrossDomainOrNonBijectiveCandidateOrWindowRelationTrustedGatewayClassification": "schema_mismatch",
+      "knownDisallowedUnavailableOrOutOfBoundsRelationTrustedGatewayClassification": "validator_rejected",
+      "preProjectionElapsedAndInProgressPlacementMustSatisfyExactCurrentCandidateWindowRelation": true,
+      "preProjectionImmutableCandidateWindowIncompatibilityMayReachOptimizer": false,
+      "preProjectionImmutableCandidateWindowIncompatibilityMayBeRepairedByMovingDroppingUnassigningShorteningExtendingOrRewriting": false,
+      "preProjectionImmutableCandidateWindowIncompatibilityTrustedGatewayClassification": "validator_rejected",
+      "futurePriorPlacementRemainsSoftPreferenceOnly": true,
+      "everyEmittedFuturePriorPlacementBlockMustSatisfyEveryCandidateWindowPredicate": true,
+      "invalidProjectedCandidatePlanMayReleaseCandidatePlan": false,
+      "projectedResponseMaySelectReferenceAuthorizeOrReleaseCanonicalNativeFallback": false
     },
     "versionInfoFieldsExactly": [
       "contract_version",
@@ -3803,14 +3919,19 @@
       "keyed_commitment",
       "calendar_title",
       "calendar_location",
-      "private_locator"
+      "private_locator",
+      "fallback",
+      "fallback_reason_enum",
+      "native_plan_version",
+      "canonical_native_fallback_plan",
+      "canonical_native_fallback_plan_ref",
+      "canonical_plan_reference"
     ],
     "identifierSchemas": {
       "request_id": "^oreq_[A-Za-z0-9_-]{16,64}$",
       "input_snapshot_version": "^osnp_[A-Za-z0-9_-]{16,64}$",
       "ephemeral_opaque_window_id": "^owin_[A-Za-z0-9_-]{16,64}$",
-      "ephemeral_opaque_candidate_id": "^ocand_[A-Za-z0-9_-]{16,64}$",
-      "native_plan_version": "closed_identifier_1_to_80_or_null"
+      "ephemeral_opaque_candidate_id": "^ocand_[A-Za-z0-9_-]{16,64}$"
     },
     "closedEnumValues": {
       "severity_enum": [
@@ -3844,6 +3965,12 @@
         "execution_block_duration_equals_end_minus_start",
         "execution_block_duration_respects_candidate_shortening_bounds",
         "immutable_prior_placement_incompatibility_fails_closed",
+        "non_droppable_candidates_placed_exactly_once",
+        "execution_block_window_resolves_exact_current_invocation",
+        "execution_block_window_allowed_for_candidate",
+        "execution_block_window_available",
+        "execution_block_contained_in_single_referenced_window",
+        "immutable_prior_placement_candidate_window_incompatibility_fails_closed",
         "law_blocker_never_becomes_verified_completion",
         "attempt_first_rewrite_after_attempt_and_review_only",
         "guided_exposure_never_becomes_independent_review",
@@ -3855,8 +3982,7 @@
       "end_minute_kst": "integer_1_to_1440",
       "duration_minutes": "integer_1_to_1440",
       "integer_value": "finite_integer",
-      "elapsed_ms": "finite_integer_0_to_60000",
-      "fallback_used": "boolean"
+      "elapsed_ms": "finite_integer_0_to_60000"
     },
     "cardinalityLimits": {
       "execution_blocks_maximum": 256,
@@ -3871,32 +3997,12 @@
       "feasible",
       "infeasible",
       "model_invalid",
-      "unknown",
-      "timeout",
-      "dependency_unavailable",
-      "adapter_error",
-      "schema_mismatch",
-      "stale_response",
-      "validator_rejected",
-      "fallback",
-      "blocked_manual_plan_required"
+      "unknown"
     ],
     "candidateStatusesAllowedBeforeNativeValidation": [
       "optimal",
       "feasible"
     ],
-    "fallbackStatuses": [
-      "infeasible",
-      "model_invalid",
-      "unknown",
-      "timeout",
-      "dependency_unavailable",
-      "adapter_error",
-      "schema_mismatch",
-      "stale_response",
-      "validator_rejected"
-    ],
-    "nativeFallbackInvalidResult": "blocked_manual_plan_required",
     "everyUnassignedCandidateRequiresReason": true,
     "unassignedReasons": [
       "capacity_exceeded",
@@ -3933,7 +4039,7 @@
       "time_limit_ms",
       "integer_scaling_version"
     ],
-    "allNonIdentifierSchemasEnumsRulesCardinalitiesAndOrderingMustEqualCanonicalResultContractExactly": true,
+    "allSolverOwnedNonIdentifierValuesSchemasEnumsRulesCardinalitiesAndOrderingMustEqualCanonicalResultContractExceptExactStatusOriginAndGatewayConstructedFallbackTupleAndState": true,
     "canonicalResultContractMayAcceptProjectedIdentifierDomain": false,
     "projectedResultContractMayAcceptOriginalIdentifierDomain": false,
     "completeProjectedResponseValidationRequiredBeforeInverseMapping": true,
@@ -3965,13 +4071,10 @@
       "partialInverseMappingOrReleaseOfInvalidProjectedResponseAllowed": false
     },
     "processingOrderExactly": [
-      "validate_complete_projected_response_against_optimizerProjectedResultContract",
-      "require_request_and_snapshot_correlation_equal_exact_projected_invocation_ids",
-      "validate_complete_per_class_bijections",
-      "inverse_map_exactly_the_six_identifier_bearing_paths",
-      "verify_all_non_id_values_and_array_cardinality_and_order_are_unchanged",
-      "validate_complete_inverse_mapped_object_against_canonical_resultContract",
-      "native_validate_canonical_candidate_or_prepare_separately_validated_native_fallback",
+      "establish_solver_response_or_trusted_gateway_classification_origin_without_accepting_gateway_status_from_solver",
+      "enter_optimal_or_feasible_branch_or_solver_or_gateway_failure_branch_with_exactly_one_allowed_success_to_failure_transition_on_canonical_or_native_validator_rejection",
+      "construct_canonical_fallback_tuple_and_state_only_inside_trusted_gateway_after_projected_validation_or_failure_classification",
+      "validate_complete_canonical_result_contract_and_every_native_hard_constraint",
       "destroy_mapping_projected_input_and_projected_response_identifier_material",
       "verify_no_projected_identifier_in_gateway_output_logs_artifacts_caches_errors_telemetry_or_persisted_temp",
       "release_only_canonical_result_validated_native_fallback_or_manual_block_from_gateway"
@@ -3979,12 +4082,16 @@
     "failureRouting": {
       "missingUnknownDanglingDuplicateCrossClassOriginalDomainNonBijectiveOrPreservationFailureStatus": "schema_mismatch",
       "wrongRequestOrSnapshotCorrelationStatus": "stale_response",
-      "schemaMismatchAndStaleResponseMustUseSeparatelyValidatedNativeFallback": true,
-      "everyFallbackStatusesMemberMustUseSeparatelyValidatedNativeFallback": true,
-      "projectedFailureEnvelopeMaySelfAuthorizeCanonicalRelease": false,
-      "separatelyValidatedNativeFallbackPreparedAndValidatedOnlyInCanonicalIdentifierDomain": true,
+      "knownNonDroppableDisallowedUnavailableOrOutOfBoundsRelationStatus": "validator_rejected",
+      "optimalOrFeasibleLateCanonicalOrNativeValidationFailureStatus": "validator_rejected",
+      "optimalOrFeasibleLateCanonicalOrNativeValidationFailureMustDiscardCandidatePlanAndUsedFalseTupleAndTransitionExactlyOnceToIndependentCanonicalNativeFallback": true,
+      "everySolverFailureOrTrustedGatewayClassificationMustAttemptExactlyOneIndependentlyPreparedCanonicalNativeFallback": true,
+      "projectedFailureEnvelopeMayContainReferenceAuthorizeOrReleaseCanonicalFallback": false,
+      "canonicalFallbackTupleAndStateConstructedOnlyByTrustedGateway": true,
+      "canonicalNativeFallbackPreparedAndValidatedOnlyInOriginalIdentifierDomain": true,
       "invalidNativeFallbackResult": "blocked_manual_plan_required",
-      "failedProjectedResponseMayReachNativeValidationOrGatewayOutput": false
+      "invalidNativeFallbackMayTriggerAnotherFallback": false,
+      "invalidProjectedCandidatePlanOrFailureEnvelopeMayReachNativeValidationOrGatewayOutput": false
     },
     "mappingLifecycleContract": {
       "mappingExistsOnlyInsideTrustedNativeGateway": true,
@@ -4060,9 +4167,14 @@
       "nativePlanVersionMustResolveOneExactImmutableCanonicalNativeFallbackPlan": true,
       "failureStatusEnvelopeMaySelfAuthorizeReferencedNativeFallbackRelease": false,
       "trustedNativeGatewayMustResolveOrPrepareExactImmutableCanonicalNativeFallbackIndependentlyOfOptimizerResponse": true,
+      "canonicalFallbackTupleAndStateMayBeConstructedAndAttachedOnlyByTrustedGateway": true,
+      "projectedSolverResponseMaySupplyFallbackNativePlanVersionCanonicalPlanOrCanonicalPlanReference": false,
       "referencedNativeFallbackMustBeSeparatelyValidatedAgainstCanonicalCandidateAccountingExecutionBlockDurationAndAllHardConstraintsBeforeRelease": true,
+      "referencedNativeFallbackMustBeSeparatelyValidatedAgainstCanonicalCandidateAccountingExecutionBlockDurationNonDroppableCandidateWindowAndAllHardConstraintsBeforeRelease": true,
       "missingFallbackMismatchedReasonInvalidVersionOrInvalidNativePlanResult": "blocked_manual_plan_required",
+      "missingUnavailableNonDroppableInvalidCandidateWindowInvalidOrHardConstraintInvalidNativePlanResult": "blocked_manual_plan_required",
       "missingFallbackMismatchedReasonInvalidVersionOrInvalidNativePlanMayReleaseCandidatePlan": false,
+      "canonicalNativeFallbackMayBeAttemptedMoreThanOnceOrRecursively": false,
       "blockedManualPlanRequiredRequiresUsedFalseReasonNotUsedAndNativePlanVersionNull": true,
       "blockedManualPlanRequiredMayCarryTriggerReasonOrNativePlanVersion": false,
       "blockedManualPlanRequiredMayReleaseExecutionBlocksOrReferencedNativePlan": false
@@ -4143,6 +4255,70 @@
       "optimizerResultDurationOrImmutablePlacementMutationMustUseSeparatelyValidatedNativeFallbackThatPreservesTheOriginalImmutablePlacement": true,
       "optimizerResultDurationOrImmutablePlacementMutationInvalidNativeFallbackMayTriggerAnotherFallback": false,
       "invalidNativeFallbackResult": "blocked_manual_plan_required"
+    },
+    "nonDroppableCandidateRules": {
+      "appliesToEveryOptimalFeasibleAndReleasableSeparatelyValidatedCanonicalNativeFallbackPlan": true,
+      "nonDroppableDefinitionExact": "candidate.pinned === true || candidate.can_drop === false",
+      "pinnedAndCanDropTruthTableExactly": [
+        {
+          "pinned": false,
+          "can_drop": true,
+          "non_droppable": false
+        },
+        {
+          "pinned": false,
+          "can_drop": false,
+          "non_droppable": true
+        },
+        {
+          "pinned": true,
+          "can_drop": true,
+          "non_droppable": true
+        },
+        {
+          "pinned": true,
+          "can_drop": false,
+          "non_droppable": true
+        }
+      ],
+      "everyNonDroppableCandidateMustOccurExactlyOnceInExecutionBlocks": true,
+      "everyNonDroppableCandidateMustOccurZeroTimesInUnassignedCandidates": true,
+      "onlyPinnedFalseAndCanDropTrueCandidateMayBeUnassigned": true,
+      "unassignedReasonMayOverrideNonDroppability": false,
+      "ownerPinnedConflictReasonMayOverrideNonDroppability": false,
+      "lowerValueThanSelectedReasonMayOverrideNonDroppability": false,
+      "requirednessEnumMayRedefineNonDroppability": false,
+      "knownNonDroppableViolationStatus": "validator_rejected",
+      "knownNonDroppableViolationMustAttemptExactlyOneSeparatelyPreparedCanonicalNativeFallback": true,
+      "releasableNativeFallbackMustPlaceEveryNonDroppableCandidateExactlyOnce": true,
+      "invalidNativeFallbackResult": "blocked_manual_plan_required",
+      "invalidNativeFallbackMayTriggerAnotherFallback": false,
+      "invalidNativeFallbackMayReleaseCandidatePlan": false
+    },
+    "candidateWindowFeasibilityRules": {
+      "appliesToEveryExecutionBlockInOptimalFeasibleAndEveryReleasableSeparatelyValidatedCanonicalNativeFallbackPlan": true,
+      "candidateResolutionSource": "exact_current_correlated_invocation.candidates",
+      "windowResolutionSource": "exact_current_correlated_invocation.available_windows",
+      "eachExecutionBlockCandidateMustResolveExactlyOnceThroughExactCurrentInvocation": true,
+      "eachExecutionBlockWindowMustResolveExactlyOnceThroughSameExactCurrentInvocation": true,
+      "executionBlockWindowIdMustBelongToResolvedCandidateAllowedWindowIds": true,
+      "resolvedWindowAvailableMustEqualTrue": true,
+      "singleReferencedWindowContainmentPredicateExact": "window.start_minute_kst <= block.start_minute_kst < block.end_minute_kst <= window.end_minute_kst",
+      "blockMustBeCompletelyContainedInsideSingleReferencedWindow": true,
+      "blockMayStitchOrSpanAdjacentWindows": false,
+      "unknownDanglingDuplicateCrossDomainOrNonBijectiveCandidateOrWindowRelationStatus": "schema_mismatch",
+      "knownDisallowedUnavailableOrOutOfBoundsRelationStatus": "validator_rejected",
+      "knownCandidateWindowViolationMustAttemptExactlyOneSeparatelyPreparedCanonicalNativeFallback": true,
+      "releasableNativeFallbackMustSatisfyEveryCandidateWindowPredicate": true,
+      "preProjectionElapsedAndInProgressPlacementMustSatisfyExactCurrentCandidateWindowRelation": true,
+      "preProjectionImmutableCandidateWindowIncompatibilityMayReachOptimizer": false,
+      "preProjectionImmutableCandidateWindowIncompatibilityMayBeRepairedByMovingDroppingUnassigningShorteningExtendingOrRewriting": false,
+      "preProjectionImmutableCandidateWindowIncompatibilityMustAttemptExactlyOneSeparatelyPreparedCanonicalNativeFallbackPreservingTheImmutablePlacement": true,
+      "futurePriorPlacementRemainsSoftPreferenceOnly": true,
+      "everyEmittedFuturePriorPlacementBlockMustSatisfyEveryCandidateWindowPredicate": true,
+      "invalidNativeFallbackResult": "blocked_manual_plan_required",
+      "invalidNativeFallbackMayTriggerAnotherFallback": false,
+      "invalidNativeFallbackMayReleaseCandidatePlan": false
     },
     "versionInfoFieldsExactly": [
       "contract_version",
@@ -4241,6 +4417,12 @@
         "execution_block_duration_equals_end_minus_start",
         "execution_block_duration_respects_candidate_shortening_bounds",
         "immutable_prior_placement_incompatibility_fails_closed",
+        "non_droppable_candidates_placed_exactly_once",
+        "execution_block_window_resolves_exact_current_invocation",
+        "execution_block_window_allowed_for_candidate",
+        "execution_block_window_available",
+        "execution_block_contained_in_single_referenced_window",
+        "immutable_prior_placement_candidate_window_incompatibility_fails_closed",
         "law_blocker_never_becomes_verified_completion",
         "attempt_first_rewrite_after_attempt_and_review_only",
         "guided_exposure_never_becomes_independent_review",
@@ -4341,6 +4523,12 @@
     "execution_block_duration_equals_end_minus_start",
     "execution_block_duration_respects_candidate_shortening_bounds",
     "immutable_prior_placement_incompatibility_fails_closed",
+    "non_droppable_candidates_placed_exactly_once",
+    "execution_block_window_resolves_exact_current_invocation",
+    "execution_block_window_allowed_for_candidate",
+    "execution_block_window_available",
+    "execution_block_contained_in_single_referenced_window",
+    "immutable_prior_placement_candidate_window_incompatibility_fails_closed",
     "law_blocker_never_becomes_verified_completion",
     "attempt_first_rewrite_after_attempt_and_review_only",
     "guided_exposure_never_becomes_independent_review",
@@ -4363,7 +4551,15 @@
     "requiredForOptimalAndFeasible": true,
     "requiredForEveryReleasableValidatedNativeFallback": true,
     "validatedNativeFallbackMustSatisfyCanonicalCandidateAccountingExecutionBlockDurationAndAllHardConstraints": true,
+    "validatedNativeFallbackMustSatisfyCanonicalCandidateAccountingExecutionBlockDurationNonDroppableCandidateWindowAndAllHardConstraints": true,
+    "everyOptimalFeasibleAndReleasableValidatedNativeFallbackPlanMustPlaceEveryNonDroppableCandidateExactlyOnceAndNeverUnassignIt": true,
+    "everyExecutionBlockMustResolveExactCurrentInvocationCandidateAndWindowAndSatisfyAllowedMembershipAvailabilityAndSingleWindowBounds": true,
+    "unknownDanglingDuplicateCrossDomainOrNonBijectiveCandidateOrWindowRelationStatus": "schema_mismatch",
+    "knownDisallowedUnavailableOrOutOfBoundsCandidateWindowRelationStatus": "validator_rejected",
+    "canonicalFallbackTupleAndStateMustBeGatewayConstructed": true,
+    "nativeFallbackMayBeAttemptedMoreThanOnceOrRecursively": false,
     "invalidOrUnavailableValidatedNativeFallbackResult": "blocked_manual_plan_required",
+    "invalidOrUnavailableValidatedNativeFallbackMayReleaseCandidatePlan": false,
     "immutableElapsedOrInProgressPlacementMayBeRewrittenDuringValidationOrFallback": false,
     "hardConstraintMayBeOverriddenBySoftObjective": false,
     "falseSuccessAllowed": false,
