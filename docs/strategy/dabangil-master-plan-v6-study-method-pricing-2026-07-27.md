@@ -115,7 +115,10 @@ v6의 제품 보강은 정확히 다섯 가지다.
 
 위 가격은 canonical 가격을 자동으로 바꾸지 않는다. 실제 제안,
 결제 또는 activation에는 별도 commercial source amendment와
-Owner 승인이 필요하다.
+commercial packet이 필요할 수 있지만, 그것과 generic Owner 승인만으로
+외부 결제를 열 수는 없다. 현재 외부 상용화는
+`S241A → O3C → S239A → S242C → O4F`를 선행 통과한 뒤 첫
+external payment를 승인된 `S243C` 안에서만 실행한다.
 
 Owner dogfood는 제품의 개인 가치와 안전성을 검증한다. 가격은 실제
 타인의 실제 구매 결정으로만 검증한다. 두 evidence ledger와 readiness
@@ -220,6 +223,10 @@ source-amendment Work가 필요하다.
 - 재작성·재계산
 - AI 학습용 기준안
 - Trust와 불확실성
+
+`AI 학습용 기준안` 라벨은 §4.1~§4.2의 required
+learner-reference caveat 계약을 충족할 때만 허용한다. 이 절의 일반
+제품 설명은 Workbench의 learner-visible notice를 대신하지 못한다.
 
 ---
 
@@ -344,7 +351,7 @@ type AttemptModeV1 =
 
 | 왼쪽 약 68% | 오른쪽 약 32% |
 | --- | --- |
-| AI 학습용 풀이 | 핵심개념 1~3개 |
+| AI 학습용 기준안 | 핵심개념 1~3개 |
 | 한 줄 방향 | 한 줄 정의 |
 | 단계별 풀이·답안 구조 | 이 문제에서의 적용 |
 | 산식·근거·검산 | 10초 회상 |
@@ -360,7 +367,9 @@ type AttemptModeV1 =
 모바일:
 
 ```text
-풀이
+AI 학습용 기준안
+→ 필수 learner-reference notice
+→ 풀이
 → 핵심개념
 → 평가 능력·함정
 → 보조 probe
@@ -370,6 +379,19 @@ type AttemptModeV1 =
 
 여섯 probe는 주 CTA가 아니다. 한 화면의 주 행동은 계속 하나다.
 
+Workbench의 `AI 학습용 기준안` heading에는 데스크톱과 모바일 모두
+다음 exact notice를 직접 인접하게 또는 바로 아래에 표시한다.
+
+> AI가 생성한 풀이·기준안은 학습 참고자료이며, 시험기관의 공식 답안·공식 모범답안 또는 공식 채점기준이 아닙니다.
+
+이 notice는 explanation, answer, scoring, `abilityAssessed`,
+`inferredExamPoint`를 포함한 packet body보다 먼저 normal accessible
+DOM과 screen-reader 읽기 순서에 있어야 한다. 최초 render와 reopen
+모두 동일하게 보이며, packet이나 내부 evidence가 `usable`,
+`supported` 또는 `verified`로 표시되어도 생략하지 않는다. tooltip,
+modal, footer, 접힌 panel 또는 약관 link만으로 대체하지 않는다.
+CSS의 시각 재배치도 heading → notice → body 순서를 뒤집지 못한다.
+
 ### 4.2 ExplanationPacketV2
 
 ```ts
@@ -377,6 +399,11 @@ type ContentScopeV1 =
   | "learner_private"
   | "tenant_private"
   | "cleared_shared";
+
+type LearnerReferenceCaveatV1 = {
+  kind: "learning_reference_not_official_answer_or_grading_criteria";
+  noticeVersion: "ko-KR.v1";
+};
 
 type ExplanationPacketV2 = {
   id: string;
@@ -388,6 +415,7 @@ type ExplanationPacketV2 = {
   sourceBundleChecksum?: string;
   subjectAdapter: string;
   status: "usable" | "partially_blocked" | "blocked" | "stale";
+  learnerReferenceCaveat: LearnerReferenceCaveatV1;
   questionAsking: string;
   solutionDirection: string;
   steps: ExplanationStepV2[];
@@ -406,6 +434,25 @@ type ExplanationPacketV2 = {
   schemaVersion: string;
 };
 ```
+
+`learnerReferenceCaveat`는 required, closed, non-optional field다.
+`ko-KR.v1`은 위 exact notice를 trusted product copy registry에서
+resolve하며 model-authored free text가 아니다. kind 또는 version이
+missing, unknown 또는 mismatched면 generated reference-answer와
+explanation body의 release와 rendering을 모두 차단한다.
+`verificationSummary`, `uncertainty`, Trust status와 이 caveat는 서로
+독립된 요구사항이며 어느 것도 다른 하나를 대체하지 않는다.
+
+이 presentation-layer `kind`는 기존 S214/S215 release gate의
+`requiredCaveatKey: "learning_reference_not_official_answer"`를 rename,
+replace 또는 alias하지 않는다. 별도 승인된 source amendment가
+구현할 trusted adapter는 upstream exact key를 먼저 요구한 뒤 그
+release state와 `ko-KR.v1` copy policy를 위 presentation
+kind/version tuple로 one-way deterministic mapping한다. 어느 값을
+상대 namespace의 alias로 accept하거나 persistent migration하지
+않는다. upstream key, presentation tuple 또는 trusted copy registry
+중 하나라도 missing, unknown 또는 mismatched면 body를 차단한다. 이
+전략 PR 자체는 기존 release-gate enum migration을 승인하지 않는다.
 
 공통 reference와 개인 diagnosis는 물리적으로 분리한다.
 
@@ -693,11 +740,15 @@ adopted 집합의 member여야 한다. usable result는 지원되는 문제에�
 최소 하나의 adopted method를 요구하고, 복수 방법 병용을 단수로
 축약하지 않는다.
 
-최종 권위:
+역할별 검증 책임:
 
 - AI: 쉬운 설명, 방법 후보, 비교, 문장화
 - deterministic validator: 숫자, 부호, 단위, 반올림, 역산
 - source registry: 공식 문제·자료·기준일·권리
+
+`usable`, `supported`, `verified`는 evidence, source와 계산 품질만
+설명한다. 어떤 상태도 AI 학습 참고자료를 시험기관의 공식 답안,
+공식 모범답안 또는 공식 채점기준으로 바꾸지 않는다.
 
 AI 계산과 deterministic 결과가 충돌하면 숫자 결과를 release하지
 않고 conflict를 표시한다. 설명 안에서 중간 숫자와 최종 숫자가
@@ -876,8 +927,10 @@ type TimedFullSolutionAttemptV1 = {
   100분을 하드코딩하지 않음
 - AI 점수보다 작성시간, blank/partial, 구조 누락,
   deterministic 오류와 biggest gap을 기록
-- Starter 첫 결제의 필수 blocker가 아니라 Complete Study OS 단계의
-  후속 기능
+- offer별 포함 여부는 비작동 가설이며 `S242C`의 exact manifest와
+  `O4F`가 결정한다. 이 문구는 첫 결제 gate나 alternate path를 만들지
+  않는다. `S241A → O3C → S239A → S242C → O4F`를 선행 통과한
+  뒤 첫 external payment는 승인된 `S243C` 안에서만 실행한다.
 
 감정평가사 2차 각 과목의 공식 시험시간 기준은 Q-Net registry에
 versioned source로 결합한다.
@@ -1134,6 +1187,12 @@ v6는 이를 몰래 덮어쓰지 않는다. 다음은 별도 commercial amendmen
 | `starter_v1` | 49,000원 | 30일·8단위 | Founder 종료 뒤 exact manifest |
 | `complete_study_os_v1` | 89,000원 | 30일·20단위 | D+7·timed·Full-Day acceptance 뒤 |
 
+이 가설을 기록하거나 commercial source amendment, commercial packet
+또는 generic Owner 승인을 마련하는 것만으로 외부 결제를 열 수 없다.
+현재 `S241A → O3C → S239A → S242C → O4F`의 exact
+prerequisite를 먼저 충족하고, 첫 external payment는 승인된
+`S243C` 안에서만 실행한다.
+
 무료 experience:
 
 - 평생 1회
@@ -1193,8 +1252,10 @@ plan, 표시가격, VAT, 기간과 retrievedAt을 다시 고정한다.
 1. `founder_canary_v1` 39,000원은 수량이 명확한 초기 offer다.
 2. 누적 cap에 도달하면 신규 판매를 멈추고 운영·원가·품질 gate를
    평가한다. 가격은 자동으로 오르지 않는다.
-3. 새 commercial packet과 Owner 승인이 있을 때만
-   `starter_v1` 49,000원을 별도 exact offer로 시험한다.
+3. 새 commercial packet은 현재 canonical external-commercial gate를
+   모두 통과한 `S243C` 안에서만 `starter_v1` 49,000원을 별도 exact
+   offer로 시험할 수 있다. commercial packet과 generic Owner 승인은
+   그 gate를 대체하지 않는다.
 4. Founder가 review 2회와 D+1을 경험한 뒤 49,000원 다음 pack을
    실제 구매 또는 paid reservation하는지도 별도 `starter_v1`
    decision으로 기록한다.
@@ -1300,12 +1361,29 @@ qualified decision:
 
 ### 11.5 외부 canary 시작 전
 
+commercial source amendment, commercial packet과 generic Owner 승인은
+필요할 수 있지만 외부 결제를 여는 충분조건은 아니다. 현재 controlling
+path는 다음과 같다.
+
+```text
+S241A
+→ O3C
+→ S239A
+→ S242C
+→ O4F
+→ S243C
+```
+
 다음을 모두 요구한다.
 
 - merged commercial source amendment
 - exact 상품 feature manifest
-- completed S236A와 허용된 S237A Starter subset
-- Owner five-day Early Value
+- completed `S241A`
+- approved `O3C`
+- completed `S239A`
+- completed `S242C`
+- exact-scope approved `O4F`
+- first paid canary only within authorized `S243C`
 - current-version Golden 3
 - 실무 deterministic Gold 100%
 - Law fail-closed 100%
@@ -1318,7 +1396,6 @@ qualified decision:
 - export/delete
 - cost cap과 kill switch
 - production runtime acceptance
-- explicit limited-paid-canary Owner approval
 
 초기 상한:
 
@@ -1394,9 +1471,10 @@ S236A completion과 live roadmap authorization 뒤 별도 PR에서만 다음
 | S237A.6 | search/resume/offline/conflict |
 | S237A.7 | exact-head integrated Owner acceptance |
 
-`timed_full_solution` runtime이 Starter의 첫 결제 blocker라는 뜻은
-아니다. 계약과 future-safe state를 정의하되 activation은 허용된
-milestone이 맡는다.
+`timed_full_solution` runtime은 독립된 첫 결제 gate도, 더 빠른
+상용화 경로도 아니다. 계약과 future-safe state를 정의하되 외부
+결제는 `S241A → O3C → S239A → S242C → O4F`를 선행 통과한 뒤
+승인된 `S243C` 안에서만 실행한다.
 
 ### 12.4 commercial source amendment
 
@@ -1414,34 +1492,40 @@ milestone이 맡는다.
 - activation dependency
 - kill switch와 rollback
 
-### 12.5 빠른 매출 bridge와 기본 경로
+이 amendment와 그 commercial packet은 offer 세부를 정할 뿐 외부
+결제나 계정을 열지 못하며, generic Owner 승인과 함께 있어도
+canonical gate를 대체하지 않는다.
 
-기본 경로:
+### 12.5 외부 상용화 기본 경로와 비실행 대안
+
+현재 controlling path:
 
 ```text
 S241A
-→ external Golden 9/readiness
-→ commercial beta core
-→ explicit activation
-→ limited paid canary
+→ O3C
+→ S239A
+→ S242C
+→ O4F
+→ S243C
 ```
 
-더 빠른 Starter bridge는 별도 amendment가 승인한 경우에만:
+`S239A`는 External-Readiness Second-Round Golden 9,
+`S242C`는 Invitation-Only External Commercial Beta Core Readiness,
+`O4F`는 exact Owner External Commercial Beta Activation Approval,
+`S243C`는 첫 external paid Wave A다.
 
-```text
-S236A completed
-+ exact S237A Starter subset
-→ Owner-only review-core activation
-→ five-day Owner Early Value
-→ commercial mechanics acceptance
-→ limited-paid-canary packet
-→ explicit Owner approval
-→ production acceptance
-→ first payment
-```
+현재 승인된 더 빠른 Starter bridge는 없다. `S236A`, `S237A`,
+`O4A`, Owner dogfood와 Owner Early Value는 외부 readiness나 상용화
+gate를 대체하지 않는다.
 
-이 bridge에는 Full-Day, OR-Tools, 1차, 동차, Academy를 광고하거나
-포함하지 않는다.
+미래의 더 짧은 경로는 새로 merge된 explicit dated Owner decision이
+`S241A`, `O3C`, `S239A`, `S242C`, `O4F`를 포함해 자신이
+supersede하는 모든 exact gate와 dependency edge를 이름으로 명시한
+뒤에만 재검토할 수 있다. 그 뒤에도 canonical Markdown, 그
+machine-readable mirror와 live roadmap을 별도 승인된 Work에서
+reconcile해야 한다. 그 모든 절차가 끝나기 전 alternate bridge는
+non-executable이며, external account, invitation, payment, price
+activation, refund, entitlement와 Production은 OFF다.
 
 ### 12.6 1차·동차·Academy
 
@@ -1485,7 +1569,8 @@ S236A completed
 4. S237A learning contract와 vertical slice
 5. S237P native planner
 6. O4A 뒤 Owner dogfood
-7. 별도 commercial amendment와 limited canary
+7. 외부 상용화는
+   `S241A → O3C → S239A → S242C → O4F → S243C`
 
 OR-Tools를 이 사이 critical path에 끼우지 않는다.
 
@@ -1504,6 +1589,7 @@ OR-Tools를 이 사이 critical path에 끼우지 않는다.
 | Guided | reveal 전 exposure commit | commit 실패 시 full solution 반환 금지 |
 | Mastery | view/save로 mastery 0, D+1 최대 recovering | verified D+7 전 stable 금지 |
 | Timed | no-reveal·timer·exposure·실패상태 보존 | proof 손실 시 독립 evidence 제외 |
+| Learner caveat | 기존 release key `learning_reference_not_official_answer`와 §4.1의 exact Korean copy를 `learning_reference_not_official_answer_or_grading_criteria` / `ko-KR.v1` presenter tuple로 one-way trusted mapping; desktop/mobile에서 heading 인접 또는 바로 아래, full packet body 전, first render/reopen과 normal DOM·screen-reader 순서 | upstream key, field·kind·version 또는 copy registry missing/unknown/mismatch면 generated reference-answer/explanation body release·render 차단 |
 
 ### 14.2 과목 품질
 
