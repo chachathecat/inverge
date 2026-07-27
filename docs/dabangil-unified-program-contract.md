@@ -1,7 +1,10 @@
 # 답안길 Post-#650 Unified Program Contract
 
-- Contract version: `dabangil.unified_program.v1`
-- Owner decision: `docs/decisions/2026-07-23-post-650-unified-program-reset.md`
+- Contract version: `dabangil.unified_program.v2`
+- Current Owner amendment:
+  `docs/decisions/2026-07-26-owner-dogfood-private-plane-schedule-amendment.md`
+- Prior Owner decision for unaffected scope:
+  `docs/decisions/2026-07-23-post-650-unified-program-reset.md`
 - Machine-readable mirror:
   `config/dabangil-unified-program-contract.json`
 - Live status and dependencies: `roadmap/active-program.yml`
@@ -32,6 +35,7 @@ Attachments, handoffs, issue prose, and old prompts are inputs, not live state.
 | July 22 #644 handoff | Historical; not operational truth |
 | Full-Day addendum and paid-beta plan | Inputs subsumed into this contract |
 | Attached Post-#650 v3 plan | Owner input; stale live snapshot and embedded prompt are not canonical |
+| Attached Owner-dogfood/OR-Tools v4 addendum | Owner input; only the bounded 2026-07-26 decision is canonical, and its accidental linear optimizer dependency is rejected |
 | `docs/inverge-master-roadmap.md` | Historical phase detail below this contract |
 | `docs/inverge-product-constitution.md` | Historical kernel detail below this contract |
 | `docs/inverge-curriculum-system.md` | Legacy compatibility metadata until a new verified Foundation registry exists |
@@ -45,23 +49,50 @@ rights, source, legal-version, calculation, privacy, or authority safeguards.
 
 ## 2. Product sequence
 
-The critical release path is:
+The current Owner-private path is:
 
 ```text
-second-round Golden 3 readiness
-→ Owner O3 content approval
-→ owner-private Golden 3
-→ Founding Beta core readiness
-→ Owner O4 activation approval
-→ Wave A (3–5)
-→ Owner O3 Golden 9 rights/reviewer approval
-→ Golden 9
-→ Wave B/C (10–15, then 20–30)
-→ second-round authenticated acceptance
- + separately queued Mineral Cobalt/Figma/home contract readiness
-→ Owner O4 public self-serve approval
-→ S225 public self-serve acceptance
+S234R program amendment
+├─ O3A exact Golden rights/source/version/purpose decision
+└─ O4V exact vault/key/provider/environment/retention decision
+   └─ S236P synthetic-only private-plane acceptance
+
+O3A + S236P
+→ S236A owner-private Golden 3
+→ S237A owner-private second-round Study OS core
+→ S237P Full-Day native planning contract
+→ O4A Owner-private runtime and dogfood activation approval
+→ S238A native planner baseline dogfood
+→ S240A native extended dogfood acceptance
+→ S241A Owner-private authenticated acceptance
 ```
+
+O3A and O4V are separate branches. O3A does not provision the private plane,
+O4V does not approve content rights, S236P uses synthetic data only, and
+S236A requires both a valid O3A decision and the exact completed S236P.
+
+The optional schedule-optimizer branch starts after S237P:
+
+```text
+S237P
+→ S237O isolated OR-Tools benchmark
+→ O4T exact threshold decision
+→ O2O exact Owner-private comparison measurement/retention decision
+→ S238OH Owner-hidden shadow
+→ S238OV Owner-visible comparison
+→ O4P limited-activation approval
+→ S239O Owner-only limited activation
+→ S240O optimizer dogfood acceptance
+```
+
+There is no optimizer dependency on S241A. Native acceptance can complete
+with OR-Tools uninstalled, failed, rolled back, or permanently disabled.
+
+External invitation cohorts, payment, pricing, refunds, capacity, support,
+Golden 9 external review, and commercial validation are a separate deferred
+track after Owner-private acceptance. That track remains a prerequisite of
+future O4D/S225 public self-serve; it is not a prerequisite of S241A and is
+not completed by Owner dogfood.
 
 First-round Foundation may proceed in a bounded parallel lane. First-round
 runtime, navigation, pricing, learner claims, and public exposure are not
@@ -85,6 +116,30 @@ reset does not implement either runtime.
 zero or more `ExecutionBlock` values. Planned minutes cannot silently exceed
 availability; overflow is reduced, deferred, or dropped with a reason, and
 illness/gaps cannot create an unbounded backlog.
+
+The native learning policy is the only authority for `CoreOutcome`, learning
+priority, and what should be studied. The native path remains authoritative
+and sufficient for S241A.
+
+Google OR-Tools CP-SAT is only a proposed metadata-only
+`ExecutionBlock` placement adapter. It may place, shorten, defer, or leave
+unassigned already selected candidates under the native contract. It may not
+decide official answers, mastery, pass risk, learning value, source/Law
+status, feedback, or D+1/D+7 recovery.
+
+Optimizer requests use ephemeral opaque request/candidate IDs and closed enum
+reason codes. User/account IDs, `LearningDocument`/`ReviewUnit` IDs,
+filenames, titles, free text, hashes, commitments, and question/answer/OCR/
+Law/AI bodies are prohibited.
+
+`OPTIMAL` and `FEASIBLE` outputs remain candidates until the native validator
+accepts them. Infeasible, invalid, unknown, timeout, schema mismatch, stale
+response, or validator rejection uses native fallback. If the fallback is
+also invalid, the result is `blocked_manual_plan_required`; there is no false
+success.
+
+The exact machine contract is
+`config/dabangil-full-day-scheduler-contract.json`.
 
 `Personal Study Ledger` is the append-only private index of
 `LearningDocument` lineage, attempt, assistance, exposure, review, rewrite or
@@ -147,9 +202,10 @@ the domain validator.
 Gold and held-out datasets have separate IDs, storage/access paths, and
 contamination tests.
 
-## 4. Founding Beta commercial hypothesis
+## 4. Deferred Founding Beta commercial hypothesis
 
-The following is an Owner-approved hypothesis, not an activation:
+The following remains an Owner-approved external-commercial hypothesis, not
+an activation and not an Owner-dogfood acceptance criterion:
 
 | Field | Hypothesis |
 |---|---|
@@ -190,6 +246,10 @@ failure, provider failure, release blockers, persistence failure, re-reading,
 scheduled review, export, and delete do not commit units. These rules remain
 contract-only until an O4-authorized implementation.
 
+Owner dogfood does not validate price, payment, refund, support, entitlement,
+external usability, or capacity. External Wave A/B/C and Golden 9 reviewer
+evidence remain queued in their own commercial path before S225.
+
 ## 5. Readiness axes
 
 These states never imply one another:
@@ -201,6 +261,15 @@ These states never imply one another:
   legal readiness;
 - `observed_efficacy`: repeated held-out improvement was observed;
 - `causal_claim_ready`: an O5-approved design supports a causal claim.
+
+Owner-private states are also separate:
+
+- `owner_dogfood_ready`: versioned Owner-only use evidence satisfies its
+  exact native or optimizer acceptance contract;
+- `owner_private_accepted`: S241A completed on the native path.
+
+Neither state implies `commercial_ready`, `external_usability_validated`,
+`observed_efficacy`, or `causal_claim_ready`.
 
 Historical completion of S202–S224 does not make any of these current states
 true without fresh evidence.
@@ -290,6 +359,12 @@ permission creates a path for private raw bodies to enter a shared plane.
 Private and Academy fingerprints are domain-separated and vault-scoped.
 They are keyed and one-way with vault-specific non-exportable domain keys and
 never expose an equality oracle.
+Plaintext SHA-256 for private raw content is vault-local integrity metadata
+only. It cannot leave the vault or become an object/API/idempotency key,
+receipt, export/log/telemetry/issue/PR field, shared identifier, or
+cross-plane comparison handle. External private references are random opaque
+vault-scoped IDs. A private keyed commitment cannot be returned to a client,
+receipt, export, log, analytics event, or lookup/equality endpoint.
 Global dedup identifiers are permitted only after material has been promoted
 into the Cleared Content Bank. The promotion basis is rights-cleared
 official/owner-created/contracted content, or a separately consented
@@ -326,6 +401,10 @@ authorizing a different purpose.
 Rights promotion records source/post/asset identifiers, rights tier, hash,
 attribution, answer status, effective version, reviewer, and decision.
 
+That rights-cleared provenance hash belongs to the Cleared Content Bank
+promotion record. It does not authorize a private-body plaintext hash outside
+the private vault.
+
 Fingerprint/dedup review, conflicting-answer quarantine, poisoning/anomaly
 quarantine, and held-out contamination checks occur before promotion. No
 online model-weight update from any input is permitted. All permitted
@@ -356,6 +435,14 @@ from the same exact adapter, version, and configuration, plus an exact-scope
 O4E approval naming adapter, version/config, cohort, and purpose. Evidence
 cannot transfer across adapters, versions, or configurations, and no
 transition is automatic.
+
+The exact Owner-private Full-Day optimizer is the only scoped gate mapping:
+O4T fixes benchmark thresholds; O2O permits only closed, no-free-text
+Owner-private comparison metadata and exact retention/deletion before shadow;
+and O4P, after completed native S240A, permits only exact Owner-only limited
+activation. O2O/O4P do not substitute for generic O2/O4E. Any Shared Signal,
+telemetry, external-learner, Academy, or other adapter measurement/activation
+still follows generic O2/O4E.
 
 This reset schedules only
 `proposed → benchmark_only → shadow → limited_activation`; its required safety
@@ -393,8 +480,9 @@ before entering any non-proposed stage. The minimum safety path is therefore
   model/parameter/config output starts as a new `proposed` candidate.
 - LTI 1.3/H5P waits for a named Academy partner.
 
-`shadow` is observation/comparison only. The native fixed schedule and native
-rules remain the sole decision authority. Shadow output cannot change
+For generic and non-specialized adapters, `shadow` is
+observation/comparison only. The native fixed schedule and native rules
+remain the sole decision authority. Shadow output cannot change
 learner- or Academy-visible output, Today/Full-Day, Review Queue, mastery,
 scheduling, recommendations, entitlements, operational decisions, or
 persisted product state. The only permitted data write is to the Shared Signal
@@ -406,6 +494,11 @@ and evidence metadata, never a learner-level record or raw content. Shadow
 records cannot influence runtime product behavior. Aggregate, versioned
 evidence in the Model/Eval Registry may inform a human Owner gate, but it can
 never trigger an automatic transition.
+
+The exact Owner-private Full-Day specialization instead writes only the
+closed O2O-approved comparison fields to the Owner-private metadata store;
+it writes no Shared Signal or telemetry, contains no free text, and still
+cannot influence canonical schedule or product state before O4P.
 
 Runtime candidates stay frozen and versioned: `shadow`, `limited_activation`,
 and any future `active` candidate never fit, train, or refresh in place.
@@ -446,7 +539,267 @@ Founding Beta O4 approval does not authorize S225 public self-serve.
 
 This reset adds no package, import, provider, model, prompt, or scheduler.
 
-## 10. Academy and both-track gates
+### OR-Tools schedule adapter
+
+The 2026-07-26 amendment adds only the source contract and queued roadmap
+branch for Google OR-Tools CP-SAT. Its lifecycle state is `proposed`; no
+package, Python service, provider, telemetry, or runtime dependency is added.
+
+S237O must pin the exact Python and OR-Tools versions, license/SBOM, solver
+seed, workers, time limit, integer scaling, adapter/policy versions, isolated
+benchmark boundary, and tested native fallback. Only metadata-only synthetic
+fixtures are eligible.
+
+Adapter requests and solver-originated projected responses are separate
+closed-world shapes. The projected response contains only a raw solver-owned
+status, exact request/snapshot correlation echoes, objective/violation
+diagnostics, elapsed timing, and candidate-plan fields when applicable. It
+never contains, accepts, requires, selects, references, authorizes, or releases
+`fallback`, `native_plan_version`, a canonical native fallback plan, a
+canonical plan reference, `version_info`, or gateway-owned version/configuration
+fields. After complete raw-response, exact-correlation, and required-bijection
+validation, only the trusted gateway constructs canonical `version_info` from
+the exact trusted correlated configuration, with exactly
+`contract_version`, `native_policy_version`, `adapter_version`,
+`optimizer_version`, `objective_version`, `threshold_version`, `solver_seed`,
+`solver_workers`, `time_limit_ms`, and `integer_scaling_version`. It also
+classifies adapter/schema/correlation/validator failures, independently
+resolves or prepares one immutable native fallback in the canonical original-ID
+domain, constructs canonical fallback state, and releases it only after
+separate complete canonical and native validation. Canonical fallback state
+and canonical `version_info` are exactly the two gateway-constructed
+exceptions to projected/canonical non-ID equality. Missing, ambiguous, stale,
+untrusted, or mismatched canonical metadata is `validator_rejected` and enters
+the same single independent fallback path; an invalid fallback releases only
+`blocked_manual_plan_required`. Exact top-level and nested allowlists cover
+each schema separately. Unknown fields, stable identities, calendar
+titles/locations, filenames, bodies, free text, or raw projected version
+fields fail closed.
+One prior accepted placement snapshot is eligible only as closed, ephemeral
+metadata for midday replanning and schedule-churn measurement. The server
+must load the latest non-superseded monotonic lineage from the authoritative
+Owner-private store; if it exists the exact signed snapshot is required, and
+`null` is allowed only with a fresh signed no-schedule lookup result. Separate
+closed signed native-validator and authenticated Owner receipts plus a signed
+provenance bundle bind the exact schedule/head/tree/versions/lineage. Approved
+O4V plus completed S236P bind the private store, while exact O4A separately
+binds issuance and runtime use. A fresh signed replan lookup rechecks trust,
+expiry, and revocation within 300 seconds. The server uses the Asia/Seoul
+minute ceiling cutoff, making elapsed/in-progress blocks immutable. The
+snapshot cannot select learning work or override current native constraints.
+This object terminates at the trusted native gateway. OR-Tools receives only
+a fresh ephemeral projection of windows, candidates, fixed blocks, cutoff,
+immutable past/in-progress placements, and soft future-placement preferences;
+all store/scope/lineage/receipt/bundle/authorization references and digests
+are stripped and cannot be resolved by the optimizer. The gateway retains
+trusted canonical `study_date_kst`; it is not projected. Every execution block
+in a projected optimal/feasible candidate, complete canonical result, and
+releasable canonical native fallback resolves its candidate exactly once.
+The gateway derives `block_end_utc` from `study_date_kst` and
+`end_minute_kst` in IANA `Asia/Seoul`, treating `1440` as next-day 00:00, and
+requires it to be less than or equal to each non-null exact ISO-8601 UTC
+`hard_deadline_or_null`; `null` means no hard cutoff. Candidate
+mapping/correlation faults are `schema_mismatch`; a known breach is
+`validator_rejected` and attempts exactly one independently prepared canonical
+native fallback. `minimize_deadline_lateness` uses only
+`soft_deadline_or_null` and cannot override the hard deadline. Elapsed and
+in-progress immutable placements must pass this predicate before projection
+and cannot be moved, dropped, unassigned, shortened, extended, or rewritten
+to repair a breach.
+The same pre-release gate applies three closed relational predicates in both
+projected and canonical identifier domains to every optimal/feasible
+candidate, complete canonical result, and releasable canonical native
+fallback. For cutoff feasibility, it reads the exact
+`replan_cutoff_minute_kst_or_null` from the same trusted correlated invocation;
+`null` means no lower bound. Only an exact immutable elapsed/in-progress prior
+placement whose candidate, window, `start_minute_kst`, `end_minute_kst`, and
+`duration_minutes` match field-for-field and resolve exactly once is exempt.
+Every other new or moved block requires
+`start_minute_kst >= replan_cutoff_minute_kst_or_null`; equality is feasible, a
+one-minute-early start is rejected, and cutoff `1440` releases no new or moved
+block.
+
+Intervals are half-open, `[start_minute_kst, end_minute_kst)`. Every applicable
+distinct pair requires
+`a.end_minute_kst <= b.start_minute_kst || b.end_minute_kst <= a.start_minute_kst`,
+so boundary equality is feasible. Validate every execution-block pair, every
+execution block against every fixed block, and every new or moved execution
+block against every immutable prior placement. The unique exact unchanged
+representation of an immutable placement is one logical block and does not
+overlap itself. For each placed dependent, resolve it and every
+`prerequisite_candidate_ids` member exactly once through that invocation and
+active domain, place every prerequisite exactly once, and require
+`prerequisite.end_minute_kst <= dependent.start_minute_kst`. An empty list is
+unconstrained; every member of a multiple-prerequisite set must pass, and an
+unassigned prerequisite cannot support a placed dependent.
+
+Unknown, dangling, duplicate, cross-domain, non-bijective mapping/correlation,
+or ambiguous immutable matching remains `schema_mismatch`. A known
+before-cutoff start, overlap, or missing, unassigned, or reversed prerequisite
+placement is `validator_rejected` and attempts exactly one independently
+prepared canonical native fallback. That fallback must satisfy all three
+predicates; an invalid fallback releases no plan and returns only
+`blocked_manual_plan_required`. Immutable and fixed placements cannot be
+moved, dropped, unassigned, shortened, extended, or rewritten to repair a
+breach, and elapsed/in-progress immutable placements pass these predicates
+before projection. Bind cutoff to
+`new_or_moved_execution_block_starts_at_or_after_replan_cutoff`, overlap to
+`block_overlap_zero`, and ordering to `prerequisite_order_violations_zero`.
+Add no projection field or result inverse-map path.
+The lookup binds a single-use nonce, monotonic non-reusable scope generation,
+and acceptance high-water mark. Absence requires high-water zero;
+supersession requires atomic sequence+1 acceptance and deletion leaves a
+signed tombstone. The complete latest-pointer tuple is atomically rechecked
+and the nonce consumed within 300 seconds immediately before projection.
+
+S237O authorization is computed without a signature cycle: canonical
+proposal, separate immutable signed Owner decision, then final approved
+authorization digest. Materialized ready/decided packets live in the exact
+metadata-only authorization store outside the Git head/tree they bind.
+The six S237O receipts form one canonically ordered digest after only their
+receipt-set and independent-attestation slots are normalized. A distinct
+verifier must cryptographically verify a fresh, unrevoked DSSE artifact over
+the exact authorization, verifier/key/trust-root/time/revocation bindings,
+that set, and the otherwise-complete evidence preimage. Each receipt has an
+exact fixture/subassertion policy; deterministic replay uses one worker and
+three cold plus three warm byte-identical canonical results. The final
+evidence digest includes the verified artifact digest.
+Canonical assertion-evidence and primary-attestor-provenance set digests
+project every receipt in operation order. A closed benchmark-result artifact
+binds replay, failure-status, fallback, rollback, metadata-boundary, and time
+outcomes; its ref/digest are signed. The S237O Owner decision receipt is
+re-resolved and revalidated at benchmark start and acceptance, so the final
+authorization digest is not a bearer token.
+
+O4T follows the exact S237O benchmark and fixes latency, native-validator
+candidate-schedule acceptance, edit, error, and regression thresholds with a
+version, effective date, and evaluation window. This rate measures candidate
+placements accepted by the native validator; it grants no CoreOutcome or task
+selection authority. Thresholds cannot be silently or retroactively weakened.
+
+The pending O4T packet
+`o4t-s237o-owner-private-schedule-thresholds-v1` remains unapproved and
+non-approvable while its S237O receipt/head/tree, adapter/optimizer/config,
+any threshold value/unit/comparator, effective date, evaluation window, or
+normalized canonical digest is null. O2O and S238OH must bind the exact
+approved packet. That immutable packet is content-addressed by its final
+threshold-binding digest in the exact private O4T store bound by the packet's
+Owner-decision store reference and policy digest. Both stages resolve and
+canonically rehash it at start and acceptance, then revalidate the exact
+approval record, DSSE receipt, and revocation state; lookup ambiguity, absence,
+duplication, binding mismatch, digest mismatch, or an invalid receipt fails
+closed. Wildcard or automatic shadow transition is forbidden.
+The exact store reference and policy digest are first obtained from a current,
+unrevoked, replay-protected signed O4T control-plane resolver binding, not from
+the unresolved packet. The resolved packet must match those trusted
+coordinates. One final digest maps to one immutable, append-only canonical
+packet; aliases, redirects, and mutable overwrites are forbidden. Start and
+acceptance each reject a wrong resolver binding, stale or expired packet,
+approval-record/receipt mismatch, or failed signature, trust-path, expiry, or
+revocation validation.
+That resolver is an exact closed DSSE artifact. Its signed payload binds the
+Owner-private scope, O2O/S238OH audience and purpose, store coordinates, final
+packet digest, externally trusted registry/key/root versions and algorithm,
+issue/expiry window, single-use nonce, monotonic generation, and revocation
+evidence. The Owner-approved O4T trust-anchor registry is resolved from
+authenticated control-plane configuration before the artifact, so neither it
+nor the packet can select its verifier. Outer-to-signed equality, all digests,
+signature and trust path, scope, replay state, expiry, and revocation are
+recomputed at every start and acceptance; unknown or untrusted keys, unsigned
+or mismatched payloads, cross-scope use, replay, or stale evidence fail closed.
+
+O2O is required before S238OH. Before O2O, comparison is ephemeral and writes
+no measurement. Exact O2O may authorize only closed, no-free-text
+Owner-private comparison metadata in the approved private metadata store,
+with exact retention/deletion. It does not authorize Shared Signal,
+telemetry, external-learner, or Academy measurement; those retain generic O2.
+
+S238OH is genuinely Owner-hidden: it cannot change or display the canonical
+schedule. S238OV may display a comparison to the Owner, but neither the
+comparison nor O2O-scoped preference evidence may change canonical schedule
+or product state. Native and optimizer acceptance evidence remain distinct.
+O4P requires completed native S240A and authorizes only the exact
+adapter/version/config for Owner-only limited activation.
+
+The D0-to-D+1 freeze covers Notebook, Full-Day, learning/assistance policy,
+model, prompt, rubric, and source version. A necessary security repair
+invalidates paired evidence and restarts at D0.
+
+## 10. Private Authoring/Review Plane
+
+The exact contract is
+`docs/dabangil-private-authoring-review-plane-contract.md` and
+`config/dabangil-private-authoring-review-plane-contract.json`.
+
+O4V must bind the exact environment, vault/metadata providers, region,
+bucket/schema equivalents, commitment-key provider/class, logging/training/
+retention behavior, backup window, cache/index behavior, and rollback/restore
+behavior, plus the independent-attestation store, verifier, verification key,
+trust root, signature algorithm, and revocation policy. Until those bindings
+and the Owner decision exist, provisioning and real content fail closed.
+
+Provider processing must be service-only. Training, research, or secondary
+use of raw private bodies is false, retention cannot exceed the exact O4V
+window, and evidence is required. An unresolved or noncompliant provider
+policy makes O4V unapprovable.
+
+Provider ETag/MD5/checksum/content-digest values are suppressed externally;
+opaque object versions are the only external cache validators. O4V separately
+binds minimum TLS, private ACL, raw-object/metadata/backup encryption, and a
+non-exportable storage-encryption key distinct from the commitment key.
+Content processing binds either canonical `none` or an exact immutable
+OCR/AI/model provider/config/model/prompt/policy set. S236P may exercise no
+other processor.
+
+The O4V access binding includes exact signed mode, TTL,
+method/object-version/audience/content-length scope, replay/single-use
+behavior, provider revocation/expiry/deletion propagation, and signed-access
+log redaction/retention. Its canonical proposal digest normalizes only
+`status`, `ownerApproved`, the proposal-digest slot, and the separate approval
+record to `null`. The approval record must reference that proposal digest.
+The distinct provider-binding digest covers the exact closed, non-secret
+provider/policy object. A closed DSSE Owner decision receipt then binds the
+proposal/provider, exact head/tree, authenticated Owner scope/actor, decision
+store, key/trust root, expiry, and revocation evidence. The final approved
+packet digest includes that immutable record. Every S236P receipt must match
+the proposal, final approved binding, and provider digests; neither earlier
+digest can substitute for final approval.
+
+S236P is synthetic-only. Its metadata receipts prove read-after-write,
+bidirectional Owner isolation, immutable original and append-only revisions,
+signed-access failure cases when applicable, false-success zero, orphan
+cleanup, one-vault export, full-surface delete, backup-pending semantics,
+rollback without resurrection, and canary absence from Git/CI/logs/telemetry/
+provider surfaces. Every required receipt has the exact closed binding field
+set and must assert `passed`; failed, blocked, incomplete, free-text, or
+unknown-field receipts cannot complete S236P. Any provider, environment,
+region, key, schema, policy, retention, or deployed-head change makes the
+receipts stale.
+
+The exact operation policy fixes each fixture, required subassertions, and
+cleanup state. Fresh exact-head receipts carry its digest, the approved O4V
+proposal/final-binding/provider digests, and non-content-derived assertion-evidence,
+attestor/run/provenance, and independent-verifier attestation digests. Each
+operation appears exactly once and receipts are not reusable across bindings.
+The exact 15 receipts form a canonical receipt-set digest carried by every
+receipt. A verifier distinct from the primary attestor must
+cryptographically verify a fresh, unrevoked DSSE artifact over that set and
+all exact O4V/provider/policy/head/tree/run bindings; an unchecked digest
+cannot complete S236P.
+Verifier/key/trust-root/signature/issue/expiry/revocation fields are themselves
+inside the signed payload and must match the outer artifact; acceptance
+recomputes the trust path and fresh authenticated revocation status.
+S236P completion is itself a closed content-addressed artifact binding the
+receipt set, assertion/provenance sets, independent attestation, final O4V
+binding, exact environment/vault, and completion time. Downstream S236A and
+scheduler use must resolve and recompute that exact artifact rather than
+trusting a 64-character claim.
+
+The regenerated O3A packet may be approved before or after O4V/S236P, but no
+allowed authoring or execution operation becomes executable until S236P is
+complete. O3A remains pending after this source amendment.
+
+## 11. Academy and both-track gates
 
 Academy requires a named partner, one tenant, named instructors, learner
 range, pilot dates, content rights, privacy/data-processing terms, support,
@@ -457,7 +810,7 @@ Both-track keeps first- and second-round states separate. Bridge concepts do
 not transfer mastery. It may begin only after separately proven authenticated
 acceptance for both tracks.
 
-## 11. Owner gates
+## 12. Owner gates
 
 | Gate | Owns |
 |---|---|
@@ -467,11 +820,22 @@ acceptance for both tracks.
 | O4 | migration, secret, provider, price, payment, real users, flags |
 | O5 | randomization, research opt-in, offline training, efficacy claims |
 
+Scoped O4-family gates are not interchangeable:
+
+- O4V: exact private vault/key/provider/environment/retention/rollback;
+- O4A: Owner-private runtime and native dogfood activation;
+- O4T: exact post-benchmark optimizer threshold decision;
+- O2O: exact Owner-private comparison measurement/retention only;
+- O4P: exact Owner-only optimizer limited activation;
+- O4F: future external commercial beta activation; and
+- O4D: future public self-serve activation.
+
 An approval packet states exact scope, non-goals, owner action, evidence,
-unapproved safe state, and expiry. O1 is approved only for this reset. O2–O5
+unapproved safe state, and expiry. O1R is approved only for this source
+amendment. O3A and every O4-family runtime/content/commercial gate above
 remain future gates.
 
-## 12. Roadmap, locks, and WIP
+## 13. Roadmap, locks, and WIP
 
 This reset itself is one global-exclusive docs/contracts/roadmap PR with
 mutation WIP one. The root/owner agent is the sole mutation writer and
@@ -502,14 +866,18 @@ The S234 reset snapshot contained exactly:
 - `S235A`: second-round owner-private Golden 3 readiness only;
 - `S235B`: first-round Adaptive MCQ Foundation only.
 
-S235A is now completed as metadata-only readiness evidence. The current
+S234R, S235A, and S235B are completed as source/contract evidence. The current
 authority is `roadmap/active-program.yml`; this contract deliberately does
-not mirror its dynamic ready-item list. At this closeout, S235B and O3A are
-metadata-ready, O3A remains queued with its Owner decision pending, and S236A
-remains queued and blocked by O3A. Selection is metadata-only: it does not
-approve O3A or start, reserve, or execute S236A.
+not mirror its dynamic ready-item list. O3A, O4V, and S236B are queued.
+S236P is blocked by O4V, and S236A is blocked by both O3A and S236P.
+Selection is metadata-only: it does not approve, start, reserve, provision,
+author, or execute work.
 
-## 13. Brand and home
+PR #660 remains Draft and blocked. Its current exploratory OCR evidence does
+not establish S236B. Any continuation must reconcile onto amended main and
+regenerate exact-head evidence.
+
+## 14. Brand and home
 
 Mineral Cobalt `#4653A6`, the approved Figma assets, and home work remain
 queued. They are not implemented or completed by this reset.

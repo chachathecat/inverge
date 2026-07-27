@@ -162,7 +162,7 @@ test("unsupported pseudo-statuses stay unknown and cannot encode future gates", 
   assert.equal(byId(plan, "S101").readinessStatus, "unknown");
 });
 
-test("live post-650 roadmap exposes pending O3A and S236B after S235B closeout", () => {
+test("live S234R roadmap exposes O3A, S236B, and O4V without starting gated work", () => {
   const source = readFileSync("roadmap/active-program.yml", "utf8");
   const plan = createRoadmapRunnerPlanFromYaml(source);
   const supported = new Set(["completed", "active", "queued", "blocked"]);
@@ -172,7 +172,7 @@ test("live post-650 roadmap exposes pending O3A and S236B after S235B closeout",
   assert.equal(plan.wipLimit, 2);
   assert.equal(plan.wipOccupiedCount, 0);
   assert.equal(plan.availableSlots, 2);
-  assert.deepEqual(plan.readyItemIds, ["O3A", "S236B"]);
+  assert.deepEqual(plan.readyItemIds, ["O3A", "S236B", "O4V"]);
   assert.deepEqual(plan.selectedItemIds, ["O3A", "S236B"]);
   assert.deepEqual([...new Set(plan.analyses.map((analysis) => analysis.status))], [
     "completed",
@@ -191,17 +191,27 @@ test("live post-650 roadmap exposes pending O3A and S236B after S235B closeout",
   const o3a = byId(plan, "O3A");
   assert.equal(o3a.status, "queued");
   assert.equal(o3a.readinessStatus, "ready");
-  assert.deepEqual(o3a.dependencies, ["S235A"]);
+  assert.deepEqual(o3a.dependencies, ["S235A", "S234R"]);
 
   const s236b = byId(plan, "S236B");
   assert.equal(s236b.status, "queued");
   assert.equal(s236b.readinessStatus, "ready");
-  assert.deepEqual(s236b.dependencies, ["S235B"]);
+  assert.deepEqual(s236b.dependencies, ["S235B", "S234R"]);
+
+  const o4v = byId(plan, "O4V");
+  assert.equal(o4v.status, "queued");
+  assert.equal(o4v.readinessStatus, "ready");
+  assert.deepEqual(o4v.dependencies, ["S234R"]);
+
+  const s236p = byId(plan, "S236P");
+  assert.equal(s236p.status, "queued");
+  assert.equal(s236p.readinessStatus, "blocked");
+  assert.deepEqual(s236p.missingDependencies, ["O4V"]);
 
   const s236a = byId(plan, "S236A");
   assert.equal(s236a.status, "queued");
   assert.equal(s236a.readinessStatus, "blocked");
-  assert.deepEqual(s236a.missingDependencies, ["O3A"]);
+  assert.deepEqual(s236a.missingDependencies, ["O3A", "S236P"]);
 
   const s225 = byId(plan, "S225");
   assert.equal(s225.status, "queued");
@@ -227,7 +237,10 @@ test("live post-650 roadmap exposes pending O3A and S236B after S235B closeout",
   }
 
   assert.deepEqual(byId(plan, "S239A").dependencies, ["O3C"]);
-  assert.deepEqual(byId(plan, "O4D").dependencies, ["S241A", "S242V"]);
+  assert.deepEqual(byId(plan, "O4D").dependencies, ["S245C", "S242V"]);
+  assert.deepEqual(byId(plan, "S241A").dependencies, ["S240A"]);
+  assert.deepEqual(byId(plan, "S237O").dependencies, ["S237P"]);
+  assert.deepEqual(byId(plan, "S240O").dependencies, ["S239O"]);
   assert.deepEqual(byId(plan, "S270").dependencies, ["O2"]);
   assert.deepEqual(byId(plan, "O4E").dependencies, ["S270"]);
   assert.deepEqual(byId(plan, "S271").dependencies, ["O4E"]);

@@ -277,7 +277,7 @@ test("watch_snapshot writes safe generated artifacts even when ignored input has
   assertNoUnsafeArtifactText(outputDir);
 });
 
-test("dispatcher rejects blocked S225 and writes a report-only summary for ready S236B", () => {
+test("dispatcher rejects blocked S225 and documents the S234R ready set without starting work", () => {
   const blockedOutputDir = tempDir("af006-blocked-s225");
   const blocked = runDispatcher([
     "--mode",
@@ -310,7 +310,10 @@ test("dispatcher rejects blocked S225 and writes a report-only summary for ready
   assert.match(summary, /AF006 v1: read-only\/report-only/);
   assert.match(summary, /No branches, commits, pushes, PR updates/);
   assert.match(docs, /read-only\/report-only/);
-  assert.match(docs, /blocked S225 target must fail closed/i);
+  assert.match(docs, /blocked S225 target must\s+fail closed/i);
+  assert.match(docs, /ready set is O3A, S236B,\s+and O4V/i);
+  assert.match(docs, /Selection does not approve O3A\/O4V/i);
+  assert.match(docs, /blocked Draft PR #660/i);
   assert.match(docs, /never recommends auto-merge/);
 });
 
@@ -324,6 +327,7 @@ test("AF001 through AF006 focused tests are wired into the default node test run
     "tests/agent-factory-safe-repair-loop.test.mjs",
     "tests/agent-factory-rebase-merge-orchestrator.test.mjs",
     "tests/agent-factory-github-actions-button.test.mjs",
+    "tests/s234r-owner-dogfood-private-plane-schedule-amendment.test.mjs",
   ]) {
     assert.match(runner, new RegExp(testFile.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   }

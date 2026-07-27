@@ -205,7 +205,13 @@ test("source, rights, independent audit, Law version, and private package eviden
   assert.ok(
     manifest.privatePackageReadiness.every(
       (candidate) =>
-        candidate.status === "private_schema_ready_not_generated" &&
+        candidate.status ===
+          "blocked_answer_pack_2_0_private_hash_boundary" &&
+        candidate.directLegacySchemaUseAllowed === false &&
+        candidate.externalEqualityHandleAllowed === false &&
+        candidate.vaultSafeAdapterOrReplacementRequired === true &&
+        candidate.vaultSafeAdapterAccepted === false &&
+        candidate.requiredAcceptanceRoadmapItem === "S236P" &&
         candidate.privateVaultRequired === true &&
         candidate.generated === false &&
         candidate.bodyCommitted === false &&
@@ -216,7 +222,7 @@ test("source, rights, independent audit, Law version, and private package eviden
   );
 });
 
-test("future O3A packet is exact, pending, narrow, expiring, and cannot start downstream work", async () => {
+test("future O3A packet is exact, pending, narrow, private-plane-gated, and cannot start downstream work", async () => {
   const manifest = await loadJson(MANIFEST_PATH);
   const report = await loadJson(REPORT_PATH);
 
@@ -225,19 +231,47 @@ test("future O3A packet is exact, pending, narrow, expiring, and cannot start do
     manifest.controlPlaneState,
     S235A_EXPECTED_CONTROL_PLANE_STATE,
   );
-  assert.deepEqual(manifest.controlPlaneState.selectedItemIds, [
-    "S235B",
+  assert.deepEqual(manifest.controlPlaneState.readyItemIds, [
     "O3A",
+    "S236B",
+    "O4V",
   ]);
+  assert.deepEqual(manifest.controlPlaneState.selectedItemIds, [
+    "O3A",
+    "S236B",
+  ]);
+  assert.equal(
+    manifest.o3aApprovalPacket.supersedesPacketId,
+    "o3a-s235a-appraiser-second-2026-q1-owner-private-golden-3",
+  );
+  assert.deepEqual(
+    manifest.o3aApprovalPacket.requiredBeforeAllowedOperationRoadmapItemIds,
+    ["S236P"],
+  );
   assert.equal(manifest.o3aApprovalPacket.ownerApproved, false);
   assert.equal(manifest.o3aApprovalPacket.wildcardScopeAllowed, false);
+  assert.equal(
+    manifest.o3aApprovalPacket.approvalAuthorizesImmediateOperation,
+    false,
+  );
+  assert.equal(
+    manifest.o3aApprovalPacket.o4vOrS236PSubstitutionAllowed,
+    false,
+  );
   assert.equal(manifest.o3aApprovalPacket.automaticStartAllowed, false);
   assert.equal(manifest.o3aApprovalPacket.manualS236AStartRequired, true);
   assert.equal(manifest.o3aApprovalPacket.o3aStarted, false);
   assert.equal(manifest.o3aApprovalPacket.s236aStarted, false);
-  assert.equal(report.executionStatus, "blocked_pending_o3a");
+  assert.deepEqual(manifest.controlPlaneState.s236aMissingDependencies, [
+    "O3A",
+    "S236P",
+  ]);
+  assert.equal(manifest.controlPlaneState.privatePlaneSatisfied, false);
+  assert.equal(report.executionStatus, "blocked_pending_o3a_and_s236p");
   assert.deepEqual(report.approvalGateCodes, [
     "o3a_owner_decision_pending",
+    "o4v_owner_decision_pending",
+    "s236p_private_plane_acceptance_pending",
   ]);
 });
 
@@ -361,6 +395,16 @@ test("hostile O3A approval, wildcard, auto-start, and control-plane mutations fa
   const autoStart = clone(manifest);
   autoStart.o3aApprovalPacket.automaticStartAllowed = true;
   assertRejected(autoStart, "s235a_o3a_packet_invalid");
+
+  const privatePlaneBypass = clone(manifest);
+  privatePlaneBypass.o3aApprovalPacket.approvalAuthorizesImmediateOperation =
+    true;
+  assertRejected(privatePlaneBypass, "s235a_o3a_packet_invalid");
+
+  const missingS236P = clone(manifest);
+  missingS236P.o3aApprovalPacket.requiredBeforeAllowedOperationRoadmapItemIds =
+    [];
+  assertRejected(missingS236P, "s235a_o3a_packet_invalid");
 
   const started = clone(manifest);
   started.controlPlaneState.o3aStarted = true;

@@ -180,3 +180,409 @@ PR #342 adds the adaptive study planner layer that turns personal learning state
 Study schedule metadata remains Inverge learning-operation guidance unless a schedule or exam metadata node is verified against Q-Net/current public notice or another registered official source. Production use requires verified or explicitly draft-safe nodes, while closed beta can use draft schedule nodes only as guidance.
 
 The schedule system must not imply official scoring, official answer status, pass/fail outcomes, score prediction, or 합격 보장. Time-sensitive public-notice and exam-calendar facts should move to `needs_update` when the manual recheck date passes.
+
+## 2026-07-26 Full-Day Native and Optional Optimizer Contract
+
+The executable source is
+`config/dabangil-full-day-scheduler-contract.json`. S234R adds contracts and
+validators only; it does not install OR-Tools, change schedule runtime, write
+learner data, or activate any flag.
+
+### Native path
+
+`S237A -> S237P -> O4A -> S238A -> S240A -> S241A`
+
+The native planner remains authoritative for Owner-private authenticated
+acceptance. It owns plan validity, max-three visible priorities, hard-window
+and availability compliance, deterministic fallback, explanation, manual
+edit/replan, and rollback. OR-Tools is not a dependency of S238A, S240A, or
+S241A.
+
+### Optional optimizer path
+
+`S237P -> S237O -> O4T -> O2O -> S238OH -> S238OV -> O4P -> S239O -> S240O`
+
+The optional CP-SAT adapter may receive only metadata-only ExecutionBlocks:
+ephemeral opaque block IDs, closed-enum type/subject/priority, durations,
+allowed windows, precedence edges, split rules, and hard/soft constraint
+metadata. It must not receive user/account/document IDs, raw question,
+answer, OCR, reference-answer, Law or AI bodies, free text, private locators,
+reusable plaintext digests, or cross-plane equality tokens.
+
+The prior-schedule/provenance object is a closed trusted-native-gateway input,
+not an OR-Tools payload. The gateway completes authoritative lookup and
+cryptographic validation, derives the cutoff, then creates a one-request
+projection containing only freshly remapped ephemeral request/snapshot/
+candidate/window IDs, windows, fixed blocks, candidates, cutoff, immutable
+elapsed/in-progress placements, and soft future-placement preferences.
+Store/scope/lineage references, acceptance sequence, head/tree/date,
+receipt/bundle references or digests, and O4V/S236P/O4A bindings are stripped
+before optimizer invocation. The isolated solver and transient IPC stay
+inside the trusted native gateway. A solver-originated projected response
+contains only exact request/snapshot correlation echoes, a raw solver-owned
+status, objective/violation diagnostics, elapsed timing, and candidate-plan
+fields for `OPTIMAL` or `FEASIBLE`. It cannot contain, accept, require, select,
+reference, authorize, or release fallback state, `native_plan_version`, a
+canonical native plan, a canonical plan reference, `version_info`, or any
+gateway-owned version/configuration field. Timeout/dependency/adapter/schema/
+correlation/validator classifications, canonical fallback state, and canonical
+version metadata are trusted-gateway-owned.
+
+For `OPTIMAL` or `FEASIBLE`, the gateway validates the complete projected
+candidate-plan response against the separate closed projected-ID result
+contract and exact invocation request/snapshot IDs, validates the per-class
+bijections, and inverse-maps only the six declared request, snapshot,
+execution-block candidate/window, unassigned-candidate, and
+violation-candidate paths. It preserves every solver-owned non-ID value and
+array cardinality/order. Only after complete raw-response, exact-correlation,
+and required-bijection validation does it construct canonical `version_info`
+field-for-field from exact trusted correlated configuration, using exactly
+`contract_version`, `native_policy_version`, `adapter_version`,
+`optimizer_version`, `objective_version`, `threshold_version`, `solver_seed`,
+`solver_workers`, `time_limit_ms`, and `integer_scaling_version`. It then
+constructs canonical
+`used=false/reason_enum=not_used/native_plan_version=null` and validates the
+complete canonical result and native hard constraints before release.
+Canonical fallback state and canonical `version_info` are exactly the two
+gateway-constructed exceptions to projected/canonical non-ID equality.
+For a projected solver failure envelope or a direct gateway failure classified
+before a candidate plan exists, the projected attempt carries no candidate plan
+or canonical fallback/version state. A direct gateway failure cannot fabricate
+a projected response and must validate its retained exact
+invocation/configuration binding. A gateway classification raised while
+validating an `optimal` or `feasible` candidate-plan attempt instead discards
+that plan and any constructed `used=false` tuple without release; late
+canonical/native rejection is `validator_rejected`. Missing, ambiguous, stale,
+untrusted, or mismatched canonical version metadata is also
+`validator_rejected`. Every path enters the same failure branch exactly once.
+The gateway independently resolves or prepares exactly one immutable native
+fallback in the canonical original-ID domain, constructs its exact trusted
+canonical ten-field `version_info` and `used=true`
+exact-trigger/non-null-version tuple, and separately validates the complete
+canonical result. A missing, unavailable, or invalid fallback, including
+invalid canonical version metadata, yields only
+`blocked_manual_plan_required`; recursive fallback is forbidden.
+
+The mapping remains in gateway memory until every required projected-response
+validation and inverse mapping finishes, is destroyed on every success or
+failure after applicable canonical/native validation and before a canonical
+result leaves, and is never retained after gateway exit. Projected IDs may not
+enter logs or artifacts; only an identifier-free replay-input digest receipt
+may be materialized after destruction. The adapter cannot resolve or access
+the authoritative, identity, receipt, authorization, or provenance planes.
+The projection contract has exact top-level and nested field schemas plus an
+exact source-field map. Request, snapshot, window, fixed-block, and candidate
+IDs use a per-request one-to-one remap; allowed-window, prerequisite, fixed
+block, and prior-placement references must use the same bijections with no
+dangling, duplicate, or cross-class ID. Non-ID values and array cardinality/
+ordering remain equal to the validated gateway input. The cutoff is `null`
+only for a verified genesis/no-schedule checkpoint and otherwise equals the
+signed server cutoff. Any mapping or schema failure blocks manual planning
+before OR-Tools sees a payload. The gateway retains canonical
+`study_date_kst`, which never enters the optimizer projection. For every block
+in a projected `optimal`/`feasible` candidate, complete canonical result, or
+releasable canonical native fallback, it resolves the candidate exactly once
+and derives `block_end_utc` from `study_date_kst + end_minute_kst` in IANA
+`Asia/Seoul`; `end_minute_kst=1440` means next-day 00:00. A non-null exact
+ISO-8601 UTC `hard_deadline_or_null` requires
+`block_end_utc <= hard_deadline`, while `null` means no hard cutoff. Candidate
+mapping faults remain `schema_mismatch`; a known late block is
+`validator_rejected` and attempts the same single independent canonical native
+fallback. `minimize_deadline_lateness` reads only `soft_deadline_or_null` and
+cannot override the hard constraint. Elapsed and in-progress placements must
+pass this predicate before projection and may not be moved, dropped,
+unassigned, shortened, extended, or rewritten to repair a breach.
+
+The same pre-release gate applies three closed relational predicates in both
+projected and canonical identifier domains to every `optimal`/`feasible`
+candidate, complete canonical result, and releasable canonical native
+fallback. For cutoff feasibility, it reads the exact
+`replan_cutoff_minute_kst_or_null` from the same trusted correlated invocation;
+`null` means no lower bound. Only an exact immutable elapsed/in-progress prior
+placement whose candidate, window, `start_minute_kst`, `end_minute_kst`, and
+`duration_minutes` match field-for-field and resolve exactly once is exempt.
+Every other new or moved block requires
+`start_minute_kst >= replan_cutoff_minute_kst_or_null`; equality is feasible, a
+one-minute-early start is rejected, and cutoff `1440` releases no new or moved
+block.
+
+Intervals are half-open, `[start_minute_kst, end_minute_kst)`. Every applicable
+distinct pair requires
+`a.end_minute_kst <= b.start_minute_kst || b.end_minute_kst <= a.start_minute_kst`,
+so boundary equality is feasible. Validate every execution-block pair, every
+execution block against every fixed block, and every new or moved execution
+block against every immutable prior placement. The unique exact unchanged
+representation of an immutable placement is one logical block and does not
+overlap itself. For each placed dependent, resolve it and every
+`prerequisite_candidate_ids` member exactly once through that invocation and
+active domain, place every prerequisite exactly once, and require
+`prerequisite.end_minute_kst <= dependent.start_minute_kst`. An empty list is
+unconstrained; every member of a multiple-prerequisite set must pass, and an
+unassigned prerequisite cannot support a placed dependent.
+
+Unknown, dangling, duplicate, cross-domain, non-bijective mapping/correlation,
+or ambiguous immutable matching remains `schema_mismatch`. A known
+before-cutoff start, overlap, or missing, unassigned, or reversed prerequisite
+placement is `validator_rejected` and attempts exactly one independently
+prepared canonical native fallback. That fallback must satisfy all three
+predicates; an invalid fallback releases no plan and returns only
+`blocked_manual_plan_required`. Immutable and fixed placements cannot be
+moved, dropped, unassigned, shortened, extended, or rewritten to repair a
+breach, and elapsed/in-progress immutable placements pass these predicates
+before projection. Bind cutoff to
+`new_or_moved_execution_block_starts_at_or_after_replan_cutoff`, overlap to
+`block_overlap_zero`, and ordering to `prerequisite_order_violations_zero`.
+Add no projection field or result inverse-map path.
+
+Gateway input, optimizer projection, projected solver response, and canonical
+gateway result are distinct closed-world schemas. Top-level request/result,
+candidate, available-window, fixed-block, execution-block, unassigned,
+objective, and violation fields are exact allowlists in every applicable
+schema; version and fallback fields exist only in the canonical gateway result.
+Unknown or nested extra fields fail closed. Window/block identifiers are
+ephemeral, minute bounds are numeric, enums are closed, and calendar titles,
+locations, filenames, free-text reasons, or stable identities are forbidden.
+Input may carry one metadata-only prior accepted schedule for midday
+replanning and churn measurement, but it is not client-optional when the
+Owner-private authoritative store has an accepted schedule for that study
+date. The server performs a fresh signed lookup, loads the exact latest
+non-superseded monotonic lineage, and rejects an omitted, older, superseded,
+invalid, expired, or revoked snapshot as `blocked_manual_plan_required`.
+`null` is accepted only when that same lookup cryptographically attests that
+no accepted schedule has ever existed: the signed acceptance high-water mark
+must be zero. Once positive, the high-water mark never returns to zero.
+Supersession is atomic only with acceptance of sequence+1; deletion retains a
+signed tombstone/high-water mark and an unresolvable latest snapshot blocks
+manual planning rather than becoming “no schedule.”
+
+The signed schedule binds exact accepted head/tree, native-plan and input
+versions, opaque store/scope/lineage references, acceptance sequence and
+previous digest, the same study date, and the immutable placement projection
+of candidate/window/start/end/duration. Derived placement state is not stored
+or signed. The canonical schedule digest excludes Owner acceptance time and
+lineage so the native validator can sign it before Owner acceptance; the
+subsequent Owner receipt and provenance bundle bind that digest together with
+acceptance time, authoritative store/scope, lineage and sequence. Separate
+closed DSSE native-validator and authenticated Owner receipts, plus a distinct
+signed provenance bundle, bind the resulting chain. The
+private store and trust material must match approved O4V and completed S236P;
+issuance and runtime use must separately match exact O4A. Neither authority
+substitutes for the other.
+
+The server derives `replan_requested_at` and converts it with IANA
+`Asia/Seoul`. The cutoff is the clamped minute-of-day ceiling: an exact-minute
+instant is unchanged, while any non-zero second or fractional second advances
+one minute, including a clamp to 1440 after 23:59. At replan, a fresh signed
+lookup/verification receipt rechecks the bundle and both receipts, their
+keys/trust roots/expiry, and authenticated revocation evidence no more than
+300 seconds from the request. Placement state is then recomputed from signed
+bounds. Elapsed and in-progress blocks retain the exact
+candidate/window/start/end/duration and cannot be moved, shortened, dropped,
+or duplicated; no new block may start before the cutoff. Only future
+placements are eligible for churn-aware replanning. The prior schedule cannot
+select CoreOutcomes or tasks, override current availability/fixed
+blocks/pins/native priority, or introduce a current candidate/window. A prior
+placement whose candidate or window is absent from the current input fails
+closed to `blocked_manual_plan_required` before optimizer projection. Removal
+churn is measured only for prior placements whose candidate and window both
+resolve through the exact current-input bijections.
+The lookup also signs a monotonic, non-reusable per-scope generation, a
+cryptographically random request nonce, and the ref/digest of the latest
+signed authoritative-state checkpoint. The checkpoint is an append-only hash
+chain in a rollback-resistant store outside the latest-pointer rollback
+domain. Genesis is valid only at generation/high-water zero with no lineage,
+latest schedule, or previous checkpoint; active and tombstoned checkpoints
+retain the exact high-water/lineage/latest tuple. Immediately before
+projection, the server atomically compares the full
+decision/store/scope/date/generation/high-water/checkpoint/lineage/latest/
+receipt tuple, consumes the nonce, and authorizes projection in the same
+transaction. A restored historical genesis, broken checkpoint chain, stale
+receipt, or mismatch fails closed. Every create, supersede, tombstone, delete,
+rollback, or restore latest-pointer mutation increments the generation and
+appends exactly one checkpoint.
+
+S237O authorization is a non-cyclic chain: a canonical exact proposal, a
+separate immutable signed Owner approval record over that proposal, then a
+final approved-authorization digest over the validated approved packet. The
+Owner receipt never signs the final digest. Ready, approved, or rejected
+artifacts are materialized in the exact metadata-only authorization store,
+not committed into the Git head/tree they bind. Authorization, attestation,
+revocation-evidence, and Owner-decision store references and policy digests
+are exact packet bindings.
+The proposal also binds the authenticated Owner-private scope digest and
+exact opaque Owner-decision actor ID. The approval record and resolved DSSE
+receipt must agree on decision, proposal, decision time, receipt reference,
+and receipt digest; a signed rejection can never satisfy an approved packet.
+The current pending proposal digest is
+`c72b60bb0543589673a26d177e762aca8eccd794c4b4c3bd58062329352a9662`.
+
+S237O itself has a closed acceptance envelope. It binds exact head/tree,
+Python and OR-Tools versions, dependency lock, license text and SBOM digests,
+adapter/config/policy/objective versions, deterministic seed/workers/time
+limit/scaling, isolation/no-network policy, fixture/result digests, native
+fallback proof, rollback proof, and metadata-only proof. Six exact receipts
+must pass once each with one run ID, exact head/tree/config, closed result,
+assertion-evidence digest, attestor/provenance, and independent-verifier
+attestation. The receipt-set digest is part of canonical S237O evidence and
+O4T must bind both the accepted evidence and receipt-set digests. This
+amendment installs no package and authorizes no benchmark execution.
+
+The receipt-set digest orders the exact six receipts by operation ID and
+canonicalizes their exact fields after normalizing only the receipt-set and
+independent-attestation digest slots to `null`. Each receipt and the evidence
+carry that result. Each operation also has an exact fixture, required
+subassertion list, assertion count, and canonical assertion-policy digest.
+The deterministic receipt requires a fixed seed, exactly one worker, three
+cold and three warm replays over byte-identical input/config inside one
+explicit six-process benchmark projection session, and
+byte-identical canonical status/placements/unassigned/objectives/violations/
+fallback after excluding only `elapsed_ms`. The session reuses one fresh
+in-memory ID bijection only for those six processes and retains it through all
+six complete projected-response validations, exact inverse mappings,
+canonical-result validations, and native validations. It destroys the mapping
+and projected identifier material after the sixth complete path on success or
+after failure classification and validated fallback preparation on failure,
+always before any canonical result set leaves the gateway, and never reuses
+the mapping in another session. The later bundle's projected replay-input
+child is an identifier-free digest receipt; projected bytes and IDs never
+enter the artifact. Any mismatch fails S237O. The current
+assertion-policy digest is
+`d1616bbc8c7681c19b42bdffc86e0d5e34a62710bf9ba727fe5355ca0ad69da8`.
+Two additional canonical projections bind the six per-receipt assertion
+evidence digests and primary-attestor provenance digests, in operation-ID
+order, to both evidence and the independent signed payload. The benchmark
+result reference resolves one immutable content-addressed compound bundle.
+It contains the exact closed outer result, projected replay input, authorized
+replay config, six-result set, complete failure-status set, rollback result,
+and metadata-boundary result. Every child is schema-validated and hashed from
+RFC 8785 bytes; the native-fallback set digest is recomputed as an exact
+projection of the failure set. Unresolved, missing, extra, cross-run, or
+digest-mismatched children fail closed. The outer reference and digest are
+also in evidence and the independent signed payload.
+
+Independent verification is a closed metadata-only DSSE
+signed artifact: its canonical payload binds head/tree, adapter config, run,
+exact S237O authorization, assertion policy, receipt set, evidence preimage,
+primary attestor, verifier identity, verification key/trust root/signature
+algorithm, issue/expiry time, revocation policy/evidence/status, provenance,
+and assertion evidence. These outer values must equal the signed payload. The
+verifier must differ from the primary attestor by class and opaque identity;
+the exact S237O authorization must bind its package/config plus attestation
+store, verification key, trust root, signature algorithm, and revocation
+policy. Acceptance independently recomputes the signature/trust path and
+fresh authenticated revocation status and requires an unexpired,
+unrevoked `signature_verified=true` artifact. The evidence preimage
+canonicalizes the otherwise-complete evidence with only the independent
+attestation slot set to `null`, avoiding a self-reference; the final evidence
+digest then includes the verified artifact digest.
+The final S237O authorization digest is not a bearer token: the exact signed
+Owner decision receipt is re-resolved from its approved store and its
+signature, trust path, expiry, and fresh revocation evidence are revalidated
+at benchmark start and again at acceptance. Packet expiry cannot outlive that
+receipt.
+
+The isolated solver returns only exact correlation echoes, its raw status,
+objective/violation diagnostics, elapsed timing, and a candidate placement for
+`OPTIMAL` or `FEASIBLE`; it returns no fallback reason, canonical fallback
+state, `version_info`, or gateway-owned version/configuration field. After
+complete raw-response, exact-correlation, and required-bijection validation,
+the gateway alone constructs the canonical exact ten-field `version_info` from
+the trusted correlated configuration. Native validation is authoritative. A
+non-droppable candidate is exactly one with `pinned === true` or
+`can_drop === false`; it must occur exactly once in execution blocks and never
+in unassigned candidates, regardless of reason or `requiredness_enum`. Every
+block must resolve one candidate and one window through the exact invocation,
+use a window in that candidate's `allowed_window_ids` whose `available` value
+is true, and satisfy
+`window.start <= block.start < block.end <= window.end` within that single
+referenced window. Adjacent-window stitching is forbidden.
+
+Unknown, duplicate, cross-domain, or non-bijective candidate/window relations
+fail as `schema_mismatch`. Known disallowed, unavailable, or out-of-bounds
+relations fail as `validator_rejected`. Elapsed and in-progress prior
+placements must pass the same current relation before projection and cannot be
+moved, dropped, unassigned, shortened, extended, or rewritten to repair an
+incompatibility. They must also pass the hard-deadline predicate before
+projection without repair. Using retained, unprojected canonical
+`study_date_kst`, every projected optimal/feasible, complete canonical, and
+releasable fallback block derives its UTC end from `end_minute_kst` in IANA
+`Asia/Seoul`, with `1440` as next-day midnight. Every non-null UTC hard
+deadline requires end-at-or-before equality; `null` has no cutoff. A known
+breach is `validator_rejected`, while resolution/mapping faults are
+`schema_mismatch`; soft deadline lateness cannot override either result.
+Dependency-unavailable, invalid input/output, timeout, infeasible, error,
+failed version construction, or failed native validation invokes exactly one
+separately prepared and validated canonical native fallback and never makes
+OR-Tools a native-path dependency. The fallback must carry gateway-constructed
+canonical ten-field version metadata and satisfy the same hard-deadline,
+replan-cutoff, half-open pairwise non-overlap, and prerequisite-ordering
+predicates. If that fallback is invalid, the result fails closed as
+`blocked_manual_plan_required`.
+
+Contract fixtures cover 30, 60, 90, 180, 600, and 720 available minutes plus
+zero capacity, partial windows, rollover, over-capacity, unsatisfiable
+precedence, locked blocks, conflicting windows, timeout, and malformed
+candidate output. O4T must approve an exact versioned threshold packet after
+the benchmark; native-validator candidate-schedule acceptance, latency,
+edit-distance, manual-edit, constraint, and fallback thresholds cannot be
+silently or retroactively weakened. Candidate-schedule acceptance measures
+placements accepted by the native validator and grants no CoreOutcome or task
+selection authority.
+The pending packet is
+`o4t-s237o-owner-private-schedule-thresholds-v1`. It is unapproved and
+non-approvable until exact S237O evidence/head/tree, adapter/optimizer/config
+versions, every value/unit/comparator, effective date, evaluation window, and
+canonical digest plus exact private Owner-decision store/scope/actor/key/
+trust-root/revocation bindings are populated. O2O and S238OH must bind the
+final approved threshold-binding digest and revalidate its closed DSSE Owner
+decision receipt at start and acceptance; a proposal digest, status flag, or
+bare 64-character receipt claim cannot authorize either stage. No wildcard
+or automatic shadow transition is allowed.
+Before either stage may start, the immutable approved packet must be written
+under that final digest in the exact private O4T packet store bound by the
+packet's Owner-decision store reference and policy digest. O2O and S238OH must
+resolve the packet from that exact store at both start and acceptance,
+recompute the canonical digest, validate the exact packet schema and approval
+record, and revalidate the current DSSE receipt and revocation state. A missing,
+ambiguous, duplicate, store- or policy-mismatched, digest-mismatched, or
+invalid-receipt lookup fails closed.
+The first store coordinates cannot come from the packet being looked up.
+Each stage first verifies a current, unrevoked, replay-protected signed O4T
+control-plane resolver binding that supplies the exact store reference, store
+policy digest, and final packet digest. The packet's own Owner-decision store
+values must equal those trusted coordinates. Each final-digest key has exactly
+one immutable, append-only canonical packet; aliases, redirects, and mutable
+overwrites are forbidden. Both start and acceptance recheck `approved` status,
+`ownerApproved=true`, approval-record/receipt equality, packet expiry, and the
+receipt signature, trust path, expiry, and revocation. A wrong resolver binding
+or mutable, redirected, stale, or expired object also fails closed.
+The resolver is itself a closed DSSE artifact and signed payload, not a status
+flag. It signs the exact Owner-private scope, O2O/S238OH audience and purpose,
+store coordinates, final digest, externally resolved registry/key/root
+versions and algorithm, issue/expiry times, single-use nonce, monotonic
+generation, and revocation evidence. Its trust-anchor registry is resolved
+from authenticated Owner-approved O4T control-plane configuration before the
+artifact; neither the artifact nor threshold packet may choose a key or root.
+Outer and signed fields, payload/envelope/artifact digests, registry bindings,
+signature, scope, nonce/generation, expiry, and revocation are recomputed at
+every start and acceptance. Unknown keys, untrusted roots, unsigned or
+mismatched payloads, cross-scope use, replay, or stale revocation evidence fail
+closed.
+Its current pending proposal digest is
+`60d62b97c50771402f70a88275d58a385ed7ee7bd2a6de28db48066f99b59a63`.
+The digest normalizes only status, `ownerApproved`, its own proposal-digest
+slot, and the separate approval record to `null`. Approval is valid only when
+that immutable record references the same digest, includes decision time and
+Owner decision-receipt reference/digest, is unexpired, exactly matches the
+signed decision/proposal/head/tree/S237O evidence/threshold/evaluation-window
+bindings, and every finite threshold value is complete.
+O2O is required before shadow and may authorize only closed, no-free-text
+Owner-private comparison metadata with exact retention/deletion. Shared
+Signal, telemetry, external-learner, and Academy measurement remain
+prohibited without generic O2. Owner-hidden shadow precedes Owner-visible
+comparison; neither changes canonical schedule or product state. O4P is
+required before limited Owner-only activation and additionally requires
+completed native S240A. Native and optimizer acceptance remain separate.
+
+Notebook, Full-Day, and learning-policy runtime mutations are frozen from D0
+through D+1 so acceptance evidence is not invalidated mid-window.
