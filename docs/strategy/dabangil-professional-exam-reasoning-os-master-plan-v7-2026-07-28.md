@@ -9,6 +9,9 @@ platform_architecture:
   internal_platform: "Professional Exam Reasoning OS"
   first_certification_vertical: "Dabangil Appraiser Second"
   expansion_rule: "vertical-first, adapter-gated, evidence-promoted"
+current_learner_facing_scope: "Dabangil Appraiser Second three subjects only"
+expansion_candidate_status: "internal contract candidate only until separately authorized"
+guided_study_runtime_authorization: "none"
 supersedes_for_strategy_only:
   - "dabangil-master-plan-v6-study-method-pricing-2026-07-27"
   - "dabangil-master-plan-v6-1-study-method-pricing-weakness-map-2026-07-27"
@@ -30,7 +33,7 @@ execution_rule: "Reconcile live state before every Work; never reuse embedded SH
 
 # 답안길 / Professional Exam Reasoning OS 통합 마스터플랜 v7
 
-## Vertical-first, kernel-driven Professional Exam Coaching Platform
+## Internal vertical-first, kernel-driven Professional Exam Coaching Platform
 
 이 문서는 답안길의 감정평가사 2차 제품을 버리고 범용 서비스를 새로
 만들자는 문서가 아니다.
@@ -75,27 +78,37 @@ review와 명시적 Owner 승인으로 수행한다.
 
 답안길의 목표는 AI가 답을 대신 잘 쓰는 것이 아니다.
 
-> **사용자가 AI 없이 처음 보는 문제를 제한시간 안에 더 정확하게
-> 해결하도록, 관찰 가능한 사고 행동을 순서대로 요구하고, 필요한 만큼만
-> 돕고, 지연된 독립 전이로 실제 학습을 검증하는 전문직 시험 코칭 OS**다.
+> **감정평가사 2차 사용자가 AI 없이 처음 보는 문제를 제한시간 안에 더
+> 정확하게 해결하도록, 관찰 가능한 사고 행동을 순서대로 요구하고,
+> 필요한 만큼만 돕고, 지연된 독립 전이로 실제 학습을 검증하는 코칭
+> OS**다.
 
-내부 플랫폼은 `Professional Exam Reasoning OS`다. 외부 제품은 시험별
-vertical 브랜드로 유지한다.
+내부 플랫폼 후보 이름은 `Professional Exam Reasoning OS`다. 현재
+learner-facing 제품은 **감정평가사 2차 세 과목의 답안길 하나뿐**이다.
+아래 확장 항목은 제품, 브랜드, route, navigation, pricing 또는 learner
+promise가 아니라 별도 승인을 기다리는 내부 contract candidate다.
 
 ```text
-Professional Exam Reasoning OS
+Professional Exam Reasoning OS — internal platform candidate
 ├─ Universal Reasoning Kernel
 ├─ Structured Tutor Protocol
 ├─ Exam Compiler + Adapter SDK
 ├─ Learner Evidence / Weakness / Intervention Engine
 ├─ Measurement & Evaluation Platform
-└─ Product verticals
-   ├─ 답안길 감정평가사 2차        ← 첫 인증 vertical·현재 우선순위
-   ├─ 답안길 감정평가사 1차        ← 다음 근접 adapter 후보
-   ├─ 답안길 동차                   ← 두 state를 연결하는 product mode
-   ├─ 답안길 Academy                ← tenant·instructor approval vertical
-   └─ 향후 다른 전문직 시험        ← adapter gate 통과 후에만 추가
+└─ Current learner product projection
+   └─ 답안길 감정평가사 2차        ← 유일한 learner-facing scope
+
+Internal non-product contract candidates — all OFF
+├─ candidate/appraiser-first
+├─ candidate/both-track
+├─ candidate/academy
+└─ candidate/future-profession
 ```
+
+후보 이름을 learner-facing `답안길` vertical로 선점하지 않는다. 각 후보는
+해당 live roadmap 의존성, exact dated Owner scope decision, canonical
+Markdown와 machine-readable mirror reconciliation을 모두 통과하기 전까지
+internal-only이며 구현·노출·판매할 수 없다.
 
 ### 0.2 “사고를 강제한다”의 정확한 뜻
 
@@ -238,35 +251,33 @@ rule baseline으로 고르고, adaptive policy는 별도 shadow 평가 뒤에만
 
 ### 0.7 현재 PR #667 처리 결론
 
-2026-07-28 00:03 KST terminal report와 이후 read-only live 확인에서 PR #667은
-첫 corrective까지 적용된 open Draft다. 기존 P2 두 건은 해결됐지만,
-`ExplanationPacketV2`가 정식 reference-answer release pipeline의 upstream
-release artifact에 결속되지 않은 채 `claims + verificationSummary`만으로
-`usable`이 될 수 있다는 새 P2 한 건이 unresolved·non-outdated로 남아 있다.
+2026-07-28 KST의 Ready 전환 뒤 exact head
+`1e3c4fb78bcab0e60d707483eba51fbbe2772473`에 대한 fresh review는 새 P1
+다섯 건을 만들었고 PR #667은 Draft로 안전 복귀했다.
 
-old v6를 또 한 번 좁게 수정해 병합한 뒤 v7로 바꾸는 우회로를 사용하지
-않는다. 현재 corrected head를 부모로 v7 단일 전략 파일로 직접 교체한다.
+이 corrective는 그 다섯 건만 source-of-truth에 맞춘다.
 
-```text
-current corrected-v6 Draft exact head 재검증
-→ 새 P2를 흡수한 frozen v7 artifact 검증
-→ 기존 PR #667 branch의 sole-child fast-forward corrective 1개
-→ corrected-v6 path 제거
-→ exact v7 path 하나만 aggregate에 남김
-→ title/body/integrity evidence 갱신
-→ 새 P2에 exact evidence로 답변·해결
-→ Draft 유지
-→ 별도 exact-head Ready/post-Ready review와 explicit merge
-```
+1. `guided_study`를 별도 dated Owner supersession 전까지 contract-only로
+   유지한다.
+2. Shared Signal intervention export의 kind/assistance 값을 closed enum과
+   approved-ID registry로 닫는다.
+3. 감정평가사 1차·동차·Academy·타 시험을 learner product가 아닌
+   internal non-product contract candidate로 유지한다.
+4. 1차의 exact `S236B → O3B → S237B → O4B → S238B`와
+   `S241A + S238B → S250` 의존성을 보존한다.
+5. 세 가격 가설 모두 exact `usable_review_unit_v1` meter와 canonical
+   charging rule에 결속한다.
 
-이 문서와 함께 제공되는 corrective Work prompt만 위 교체를 제안한다.
-그 Work도 Ready, merge, auto-merge 또는 후속 구현을 승인하지 않는다.
+허용 범위는 기존 v7 경로 한 파일의 sole-child docs-only corrective다.
+Ready, merge, auto-merge, runtime/schema/RLS, canonical contract, roadmap,
+billing, activation, 다른 시험 또는 후속 Work는 이 corrective가 승인하지
+않는다.
 
 ---
 
 ## 1. 작성 시점 live checkpoint와 현재 금지선
 
-2026-07-28 00:03 KST terminal report 기준 read-only 관측:
+2026-07-28 post-Ready fail-closed terminal report 기준 read-only 관측:
 
 | 대상 | 관측 상태 |
 | --- | --- |
@@ -275,15 +286,15 @@ current corrected-v6 Draft exact head 재검증
 | PR #662 | terminal squash-merged |
 | PR #662 final corrected tree | `2403f1f90de0fd8260fdd7485eee9b726cc0471c` |
 | PR #667 | open Draft, mergeable, unmerged, auto-merge OFF |
-| PR #667 head | `2354e30a7e1fc08ede2eda1bb78cf78fce88a3a7` |
-| PR #667 head tree | `d256711829444d11d7b5cd00c0d1dc044188436f` |
-| PR #667 head sole parent | `9d2960e2774dbf396fa6804aa34923eafda93e2c` |
+| PR #667 parent head | `1e3c4fb78bcab0e60d707483eba51fbbe2772473` |
+| PR #667 parent head tree | `3feda5f5b6faa3b040b631a85add041991a044dd` |
+| PR #667 parent head sole parent | `2354e30a7e1fc08ede2eda1bb78cf78fce88a3a7` |
 | PR #667 branch | `agent/dabangil-master-plan-v6-strategy` |
-| PR #667 aggregate | corrected v6 단일 added file, `+1683/-0`, main보다 2 commits ahead |
-| current artifact | SHA-256 `c3a8b5558b7d8b11791dcb61428f0e1af65477ef38376ff0dee85abec595bfa8`, 55,233 bytes, 1,683 lines |
+| PR #667 parent aggregate | v7 단일 added file, `+4271/-0`, main보다 3 commits ahead |
+| parent artifact | SHA-256 `222f2f22863c17e876843aab90d1d7f648a41bb741955fee2f0d15754e0f7e1a`, 143,821 bytes, 4,271 lines |
 | required checks | PR Contract, Risk Gate, Runtime Gate, Fast CI, Full CI, Learner Loop Health, Vercel 7/7 success |
-| resolved findings | learner-visible caveat P2, canonical commercial path P2 |
-| unresolved finding | `Bind packets to the reference-answer release artifact` P2 |
+| resolved findings | learner-visible caveat, canonical commercial path, release-artifact binding |
+| unresolved findings | guided runtime, Shared Signal values, product scope, first-round sequence, paid meter P1 다섯 건 |
 | PR #660 | open Draft at historical observation `4c5694e4c65a110aede39762421abb49afd653f5` |
 | public/billing/external learner | OFF |
 
@@ -297,7 +308,7 @@ exact auto-merge state를 다시 읽는다.
 전략 원장은 하나여야 한다.
 
 - main에는 corrected v6도 v6.1도 v7도 없다.
-- PR #667에는 corrected v6 경로 하나만 aggregate에 있다.
+- PR #667 parent에는 v7 경로 하나만 aggregate에 있다.
 - 첨부 v6.1은 repository source가 아니다.
 - v7이 v6·v6.1의 전략상 내용과 PR #667 corrective에서 확정된 caveat,
   canonical commercial path 및 새 release-artifact binding을 모두 승계한다.
@@ -401,8 +412,11 @@ Layer 4  Exam Compiler & Adapter SDK
 Layer 5  Learner Evidence & Intervention
          mastery · weakness · calibration · assistance dependence · next action
 
-Layer 6  Product Verticals
-         답안길 2차 · 1차 · 동차 · Academy · future professions
+Layer 6  Current Product Projection
+         답안길 감정평가사 2차 only
+
+Candidate registry — internal/non-product/OFF
+         appraiser-first · both-track · Academy · future professions
 ```
 
 상위 layer는 하위 layer의 권위를 역전하지 않는다.
@@ -431,15 +445,18 @@ Layer 6  Product Verticals
 
 ### 3.3 제품과 플랫폼의 이름
 
-- `답안길`: learner-facing product family
-- `답안길 감정평가사 2차`: 첫 vertical
+- `답안길`: 현재 감정평가사 2차 세 과목에만 쓰는 learner-facing brand
+- `답안길 감정평가사 2차`: 현재 유일한 learner product projection
 - `Professional Exam Reasoning OS`: 내부 platform/kernel 명칭
 - `ExamAdapterPackage`: 시험별 versioned package
 - `TutorProtocolProfile`: 시험·task type에 맞는 tutor behavior
 
-범용 platform 이름을 초기 소비자에게 전면 노출할 필요는 없다. 사용자는
-자신의 시험에 최적화된 답안길을 사용하고, 내부에서만 공통 kernel이
-재사용된다.
+`candidate/appraiser-first`, `candidate/both-track`, `candidate/academy`와
+`candidate/future-profession`은 내부 식별자일 뿐 제품명이나 출시 약속이
+아니다. 별도 exact-scope Owner decision 전에는 `답안길 1차`, `답안길
+동차`, 다른 전문직용 답안길 같은 learner-facing 이름을 만들거나 route,
+navigation, pricing, copy에 노출하지 않는다. 공통 kernel 재사용도 현재
+감정평가사 2차 제품 범위를 넓히지 않는다.
 
 ### 3.4 공통과 시험별 경계
 
@@ -632,6 +649,30 @@ server가 state, policy, evidence와 authority를 보고 계산한다.
 
 ## 5. Structured Tutor Protocol
 
+### 5.0 현재 authority overlay
+
+이 절의 `guided_study`, `guided_exit`, `guided_reference`와 관련 transition은
+미래 호환을 위한 **contract/test vocabulary일 뿐 현재 learner runtime이
+아니다**. 현재 authority는 guided-study runtime을 명시적으로 승인하지
+않는다.
+
+- S237A가 live dependency를 충족해 시작되더라도 source amendment와
+  `attempt_first` runtime 범위만으로 guided path를 활성화할 수 없다.
+- 현재 authority 아래의 구현 범위는 guided mode selector, guided
+  route/API, guided `ExecutionBlock`, guided event persistence 또는 guided
+  scheduling을 추가·수락할 수 없고 authority gate에서 fail closed해야
+  한다. 이 strategy 문서는 deployed enforcement evidence를 주장하지 않는다.
+- contract fixture는 비작동 schema semantics를 검증할 수 있지만 learner
+  account에 episode/event/credit/mastery를 만들지 않는다.
+- learner-facing guided runtime은 현재 제한을 exact하게 supersede하는
+  별도 dated Owner decision, canonical Markdown와 machine-readable mirror,
+  roadmap reconciliation, 필요한 runtime/schema/RLS/flag 검증과 exact O4
+  activation을 모두 요구한다.
+
+뒤 절의 “선택한다”, “보여준다”, “예약한다”는 guided symbol에 대해서는
+그 미래 승인 뒤의 contract semantics로만 읽는다. 이 overlay가 충돌하는
+문장보다 우선한다.
+
 ### 5.1 tutor episode state machine
 
 ```ts
@@ -666,7 +707,8 @@ intake
 ├─ correct-but-unverified → verify
 ├─ repairable gap         → scaffold → reconstruct → repair → verify
 ├─ boundary confusion     → contrast → repair → verify
-└─ explicit guided exit   → guided_exit → reconstruct → schedule
+└─ future contract-only guided exit
+                         → guided_exit → reconstruct → schedule
 
 verify
 → same-session near transfer when appropriate
@@ -752,8 +794,9 @@ type ProductiveStruggleBudgetV1 = {
 - 너무 빠른 answer request에는 먼저 commitment 또는 smallest cue를 요구한다.
 - budget 초과 뒤에도 무한 반복시키지 않는다.
 - 감정적 압박·수치심·강제 체류를 사용하지 않는다.
-- 사용자는 언제든 guided exit를 선택할 수 있지만, independent credit를 얻지
-  못한다.
+- 미래 §5.0 승인이 끝난 guided runtime에서만 사용자가 guided exit를
+  선택할 수 있으며, 그 경우에도 independent credit를 얻지 못한다. 현재
+  authority 아래의 implementation은 이 transition을 거부해야 한다.
 - timed measurement에서는 budget이 공식/assignment timer로 대체된다.
 
 ### 5.5 scaffold ladder
@@ -790,7 +833,8 @@ type ScaffoldDecisionV1 = {
 2. 같은 수준의 무의미한 반복을 하지 않는다.
 3. hint가 answer를 사실상 노출하면 실제 높은 assistance level로 분류한다.
 4. learner가 성공하면 다음 문제에서 scaffold를 한 단계 이상 fade한다.
-5. full solution은 최종 수단이거나 explicit guided path다.
+5. full solution은 현재 `attempt_first` reveal policy의 최종 수단이다.
+   explicit guided path 의미는 §5.0 승인 전 contract-only다.
 6. full solution 뒤에는 즉시 copy가 아니라 closed-book reconstruction을
    요구한다.
 7. full solution 뒤 같은 item 성공은 transfer가 아니다.
@@ -858,10 +902,13 @@ AI는 친절하지만 답을 쉽게 넘겨주지 않는다.
 질문 자체를 막지는 않지만 response policy는 현재 episode state를 따른다.
 
 - 현재 문제의 정답을 우회해 요구하면 허용된 scaffold level까지만 답한다.
-- full solution을 명시적으로 원하면 `explicit_guided_exit`를 선택하게 하고
-  assistance/exposure를 먼저 기록한다.
-- 현재 문제와 무관한 개념 질문은 별도 `guided_reference` episode로 열고
-  원래 Measurement Lane의 independence를 보존한다.
+- 현재 authority 아래에서 full solution을 명시적으로 원하면 승인된
+  `attempt_first` reveal policy 안에서만 처리한다. 미래 §5.0 승인 뒤의
+  `explicit_guided_exit`도 assistance/exposure를 먼저 기록한다.
+- `guided_reference` episode는 §5.0 승인 전 contract-only다. 현재 문제와
+  무관한 개념 질문을 별도 허용 surface에서 처리하더라도 원래
+  Measurement Lane의 independence를 보존하고 guided episode를 만들지
+  않는다.
 - 다른 learner·private source·system prompt·hidden answer를 요구하면 거부한다.
 - 자유 질문의 raw text는 기본 learner-private이며 shared analytics에는 closed
   intent code만 보낸다.
@@ -1505,14 +1552,17 @@ assistance, measurement와 privacy 불변식을 약화하지 않고 감정평가
 5. 가장 큰 간극 하나를 다시 쓰거나 계산한다.
 6. D+1과 D+7을 예약한다.
 
-`guided_study`는 초학자나 완전히 낯선 유형에 명시적으로 허용한다.
+`guided_study`는 초학자나 완전히 낯선 유형을 위한 future contract
+candidate로만 정의한다. **현재 learner runtime에서는 선택·실행할 수
+없다.** 아래 순서는 §5.0의 별도 dated Owner supersession과 후속 gate가
+모두 충족된 뒤에만 사용할 수 있는 비작동 semantics다.
 
 1. full solution을 보기 전에 exposure를 원자적으로 기록한다.
 2. 쉬운 상황, 왜, 그림, 비교, 체계, 조건 변화, 계산기 설명을 본다.
 3. 바로 10초 회상과 백지 재현을 한다.
 4. 다음 독립 ReviewUnit을 예약한다.
 
-`guided_study` 열람은 다음을 만들지 못한다.
+미래 승인 뒤의 `guided_study` 열람도 다음을 만들지 못한다.
 
 - independent attempt
 - 개인 오답에서 추론한 biggest gap
@@ -2830,7 +2880,7 @@ versioned source로 결합한다.
 ```text
 immutable source asset
 → editable OCR/problem revision
-→ attempt 또는 guided exposure
+→ attempt 또는 future contract-only guided exposure
 → ExplanationPacket revision
 → KeyConcept·DecisionPath·ContrastSet
 → gap/action
@@ -2874,11 +2924,18 @@ type ReviewTaskKindV1 =
 
 type ExecutionBlockKindV1 =
   | "learning_attempt"
-  | "guided_study"
+  | "guided_study" // reserved; current authority forbids runtime acceptance
   | "repair"
   | "review"
   | "timed_full_solution";
 ```
+
+`guided_study` member는 schema compatibility fixture를 위한 reserved
+contract value다. 별도 §5.0 승인이 완료되기 전의 어떤 implementation도
+native planner, optimizer projection, Today/Full-Day, queue, API와
+persistence에서 이 값을 생성·수락·배치할 수 없고 authority gate에서
+fail closed해야 한다. 이 문서는 현재 배포 상태의 runtime receipt를
+대신하지 않는다.
 
 assisted 완료는 학습 이력에는 남지만 independent due를 닫지 않는다.
 
@@ -3112,11 +3169,37 @@ Founder 구매·사용도 S238A/S240A Owner scheduler evidence 분자에 넣지
 v7은 이를 몰래 덮어쓰지 않는다. 다음은 별도 commercial amendment에서
 검토할 **새 offer hypotheses**다.
 
-| Offer version | 가격 | 기간·단위 | 조건 |
-| --- | ---: | --- | --- |
-| `founder_canary_v1` | 39,000원 | 30일·8단위 | 최초 누적 3~5명, 자동갱신 없음 |
-| `starter_v1` | 49,000원 | 30일·8단위 | Founder 종료 뒤 exact manifest |
-| `complete_study_os_v1` | 89,000원 | 30일·20단위 | D+7·timed·Full-Day acceptance 뒤 |
+| Offer version | 가격 | 기간 | exact included meter | 조건 |
+| --- | ---: | --- | --- | --- |
+| `founder_canary_v1` | 39,000원 | 30일 | 8 `usable_review_unit_v1` | 최초 누적 3~5명, 자동갱신 없음 |
+| `starter_v1` | 49,000원 | 30일 | 8 `usable_review_unit_v1` | Founder 종료 뒤 exact manifest |
+| `complete_study_os_v1` | 89,000원 | 30일 | 20 `usable_review_unit_v1` | D+7·timed·Full-Day acceptance 뒤 |
+
+세 offer의 숫자는 모두 exact `usable_review_unit_v1` balance만 뜻한다.
+`ReviewUnit` 또는 `deep_review_unit`을 과금하거나 그 balance로 fallback,
+alias, conversion, migration하지 않는다. 각 offer의 charging rule은
+canonical hypothesis와 동일하다.
+
+현재 canonical source가 승인한 offer-to-meter binding은 Founding Beta
+hypothesis뿐이다. 따라서 `starter_v1`과 `complete_study_os_v1`에서 같은
+meter를 쓰는 제안은 future commercial amendment가 exact offer version,
+meter, included balance와 charging rule을 함께 승인해야 유효하다. 그
+승인 전에는 두 offer 모두 blocked hypothesis이며 entitle하거나 판매하지
+않는다.
+
+| submitted question points | `usable_review_unit_v1` charge |
+| ---: | ---: |
+| 10~25 | 1 |
+| 40~50 | 2 |
+| 100 | 4 |
+
+배점 누락, 26~39, 51~99 또는 그 밖의 모호한 값은 제출 전에 명시적인
+estimate/manual decision을 받아야 하며 결과 뒤 사용량을 올리지 않는다.
+고비용 작업 전에 exact meter를 reserve하고, policy상 `usable` result가
+성공적으로 확정된 경우에만 commit한다. generation 실패, blocked/stale
+결과, provider 오류 또는 usable result 미생성은 reservation을 release하고
+0 unit을 소비한다. 이 표는 비운영 가설이며 billing/entitlement/checkout을
+활성화하지 않는다.
 
 무료 experience:
 
@@ -3375,6 +3458,11 @@ weakness map을 exact feature manifest에 포함했다면 추가로 다음을
 
 ### 18.1 “자가복제”가 아니라 certified compilation
 
+이 절 전체는 internal feasibility와 contract candidate 전략이다. 현재
+learner-facing scope는 감정평가사 2차 세 과목뿐이며, 이 절의 후보를 제품,
+브랜드, route, navigation, pricing, public claim 또는 runtime으로
+해석하지 않는다.
+
 새 전문직 시험은 UI와 과목명만 바꿔 복제하지 않는다. 재사용하는 것은
 kernel, evidence, tutor protocol, privacy, scheduling과 evaluation framework다.
 시험 내용과 채점은 adapter가 다시 증명한다.
@@ -3387,8 +3475,11 @@ kernel, evidence, tutor protocol, privacy, scheduling과 evaluation framework다
 + rubric/validator
 + item/variant rights
 + adapter certification
-= 새 vertical
+= certified internal adapter candidate
 ```
+
+이 결과도 별도 product-scope decision 없이는 learner-facing vertical이
+아니다.
 
 ### 18.2 확장 순서 원칙
 
@@ -3437,7 +3528,9 @@ kernel, evidence, tutor protocol, privacy, scheduling과 evaluation framework다
 
 ### 18.4 감정평가사 1차 adapter
 
-2차 state와 섞지 않는다.
+`candidate/appraiser-first`는 internal non-product contract candidate이며
+2차 state와 섞지 않는다. 아래 capability 목록은 실행 순서를 대체하지
+않는다.
 
 - five-choice selected response
 - rapid answer grid
@@ -3449,12 +3542,28 @@ kernel, evidence, tutor protocol, privacy, scheduling과 evaluation framework다
 - QTI-compatible item representation 후보
 - IRT/CAT는 data 충분 뒤 shadow
 
-동차 mode는 두 engine의 state를 별도로 유지하고 schedule candidate만 bounded
-bridge policy로 결합한다.
+live authorization sequence는 정확히 다음과 같다.
 
-### 18.5 Academy vertical
+```text
+S236B First-Round Capture/OCR Benchmark Contracts
+→ O3B Owner First-Round Rights and Version Approval
+→ S237B First-Round Adaptive MCQ Core Contracts
+→ O4B Owner First-Round Private Runtime Approval
+→ S238B First-Round Authenticated Acceptance
+```
 
-Academy는 단순 dashboard가 아니다.
+PR #660의 Draft source나 benchmark green만으로 S236B 이후 단계를
+충족하지 않는다. `candidate/both-track`도 제품 mode가 아니며
+`S241A + S238B → S250`을 통과하기 전에는 두 engine을 연결하거나
+learner-facing 동차 surface를 만들 수 없다. 이후에도 별도 dated Owner
+scope decision과 canonical/mirror/roadmap reconciliation이 필요하다.
+
+### 18.5 Academy internal/B2B contract candidate
+
+Academy는 learner product vertical이 아니며 현재 runtime도 승인되지 않은
+별도 internal/B2B contract candidate다. named partner packet과 exact Owner
+approval 전에는 route, role, tenant runtime 또는 learner surface를 만들지
+않는다. 미래 승인 뒤에도 단순 dashboard가 아니다.
 
 ```text
 learner attempt
@@ -3646,14 +3755,30 @@ exact-purpose consent와 closed bodyless event를 사용한다.
 ### 20.2 InterventionOutcomeEventV1
 
 ```ts
+type ApprovedSharedRegistryRefV1<
+  TDomain extends
+    | "exam_package"
+    | "shared_skill"
+    | "pre_state_class"
+    | "intervention_policy"
+    | "time_bucket"
+    | "source_eligibility_class",
+> = string & { readonly __approvedSharedRegistryDomain: TDomain };
+
+type O2PseudonymousSubjectKeyV1 =
+  string & { readonly __brand: "o2_pseudonymous_subject_key_v1" };
+
+type O2DomainSeparatedDedupeKeyV1 =
+  string & { readonly __brand: "o2_domain_separated_dedupe_key_v1" };
+
 type InterventionOutcomeEventV1 = {
-  pseudonymousSubjectKey?: string;
-  examPackageRef: string;
-  sharedSkillRef: string;
-  preStateClassRef: string;
-  interventionPolicyRef: string;
-  interventionKind: string;
-  assistanceLevel: string;
+  pseudonymousSubjectKey?: O2PseudonymousSubjectKeyV1;
+  examPackageRef: ApprovedSharedRegistryRefV1<"exam_package">;
+  sharedSkillRef: ApprovedSharedRegistryRefV1<"shared_skill">;
+  preStateClassRef: ApprovedSharedRegistryRefV1<"pre_state_class">;
+  interventionPolicyRef: ApprovedSharedRegistryRefV1<"intervention_policy">;
+  interventionKind: SharedInterventionKindV1;
+  assistanceLevel: SharedAssistanceLevelV1;
   outcomeHorizon:
     | "immediate"
     | "d1"
@@ -3666,14 +3791,78 @@ type InterventionOutcomeEventV1 = {
     | "qualifying_failure"
     | "abstained"
     | "ineligible";
-  timeBucketRef: string;
-  sourceEligibilityClassRef: string;
-  dedupeKey: string;
+  timeBucketRef: ApprovedSharedRegistryRefV1<"time_bucket">;
+  sourceEligibilityClassRef:
+    ApprovedSharedRegistryRefV1<"source_eligibility_class">;
+  dedupeKey: O2DomainSeparatedDedupeKeyV1;
 };
 ```
 
-real learner export는 O2/consent/legal-basis, pseudonymization, allowlist,
-retention, revocation와 approved batch가 먼저다.
+```ts
+type SharedInterventionKindV1 =
+  | "orient"
+  | "recall"
+  | "contrast"
+  | "rewrite"
+  | "recalculate"
+  | "verified_variant"
+  | "timed_set"
+  | "timed_full_solution";
+
+type SharedAssistanceLevelV1 =
+  | "none"
+  | "recall_cue"
+  | "concept_hint"
+  | "structural_hint"
+  | "partial_example"
+  | "full_solution_revealed";
+
+type SharedInterventionExportRegistryV1 = {
+  registryVersion: string;
+  purposeRef: string;
+  approvedExamPackageRefs:
+    readonly ApprovedSharedRegistryRefV1<"exam_package">[];
+  approvedSharedSkillRefs:
+    readonly ApprovedSharedRegistryRefV1<"shared_skill">[];
+  approvedPreStateClassRefs:
+    readonly ApprovedSharedRegistryRefV1<"pre_state_class">[];
+  approvedInterventionPolicyRefs:
+    readonly ApprovedSharedRegistryRefV1<"intervention_policy">[];
+  approvedTimeBucketRefs:
+    readonly ApprovedSharedRegistryRefV1<"time_bucket">[];
+  approvedSourceEligibilityClassRefs:
+    readonly ApprovedSharedRegistryRefV1<"source_eligibility_class">[];
+  approvedInterventionKinds: readonly SharedInterventionKindV1[];
+  approvedAssistanceLevels: readonly SharedAssistanceLevelV1[];
+  o2ApprovalRef: string;
+  effectiveAt: string;
+  expiresAt: string;
+  status: "approved" | "expired" | "revoked";
+  basisChecksum: string;
+};
+```
+
+이 두 enum에는 `other`, free text, learner-authored label, model-authored
+identifier와 passthrough 값이 없다. `guided_reconstruction`은 현재
+guided-study runtime이 승인되지 않았으므로 Shared Signal export domain에도
+없다.
+
+`examPackageRef`, `sharedSkillRef`, `preStateClassRef`,
+`interventionPolicyRef`, `timeBucketRef`와
+`sourceEligibilityClassRef`도 arbitrary string이 아니다. exact O2 packet이
+승인한 versioned `SharedInterventionExportRegistryV1`의 ID를 value-level로
+resolve한 경우에만 허용한다. `pseudonymousSubjectKey`와 `dedupeKey`는
+O2-approved domain-separated opaque keyed derivation이며 raw/content hash,
+stable account ID 또는 cross-purpose linkage key가 아니다.
+
+export validator는 field allowlist와 각 value의 enum/registry membership를
+batch release 전에 모두 검사한다. missing, unknown, expired, revoked,
+cross-version, cross-purpose, free-text, fallback, hash-then-accept 또는
+registry lookup 실패는 해당 event와 batch를 fail closed하며 Shared Signal,
+log, telemetry 또는 Model/Eval Registry에 값을 쓰지 않는다. real learner
+export는 그 위에 exact O2 purpose, consent/legal basis, pseudonymization,
+reconstructiveness test, retention, revocation와 approved batch를 모두
+요구한다.
 
 ### 20.3 experiment hierarchy
 
@@ -3815,7 +4004,7 @@ interaction surface다.
 
 사용자는 다음을 할 수 있다.
 
-- guided path 선택
+- 현재 승인된 `attempt_first` 안에서 허용된 hint/reveal 선택
 - 더 짧은 설명 선택
 - source/evidence 열기
 - AI 진단 이의제기
@@ -3824,7 +4013,8 @@ interaction surface다.
 - export/delete
 - graph 대신 list/table 사용
 
-다만 guided path 선택, hint와 full reveal의 evidence effect를 숨기거나
+현재 `guided_study` selector는 노출하지 않는다. 미래 §5.0 승인이 난
+뒤에도 guided path, hint와 full reveal의 evidence effect를 숨기거나
 independent로 바꾸지는 못한다.
 
 ### 21.5 accessibility
@@ -3871,24 +4061,30 @@ O3A + S236P
 ### 22.2 PR #667 strategy correction
 
 - existing branch only
-- exact current head의 sole-child fast-forward commit 하나
-- old v6 path 제거
-- exact v7 path 추가
-- final aggregate one added v7 file
-- no v6.1 intermediate repository artifact
+- exact parent head `1e3c4fb78bcab0e60d707483eba51fbbe2772473`가 live일
+  때 그 sole-child fast-forward docs-only corrective 하나
+- existing v7 path 한 파일만 수정
+- final aggregate는 계속 one added v7 file
+- corrected v6 또는 v6.1 artifact 재도입 금지
 - Draft 유지
 - auto-merge OFF
 - implementation 0
 
 ### 22.3 S237A v7 learning source amendment 제안
 
-S236A completion과 live authority 뒤의 별도 source amendment에서만
-operative하게 만든다.
+S236A completion과 live authority 뒤의 별도 S237A Work에서만 source와
+implementation contract를 다룬다. 그 Work도 runtime을 활성화하지 않으며
+Owner-private learner runtime은 S237P 뒤 별도 O4A까지 OFF다.
+
+S237A가 구현 후보로 다룰 수 있는 learner path는 현재 `attempt_first`뿐이다.
+`guided_study`, guided selector/route/API/event/ExecutionBlock/scheduling/
+mastery는 contract-only로 남고, §5.0의 별도 dated Owner supersession
+없이는 S237A 어느 slice도 이를 구현·출시·활성화하지 못한다.
 
 | slice | 산출물 |
 | --- | --- |
 | S237A.0 | runtime/schema/RLS/flags/live contract 재조사 |
-| S237A.1 | universal attempt/commitment/assistance/exposure event + tutor FSM |
+| S237A.1 | `attempt_first` commitment/assistance/exposure + tutor FSM; guided symbols는 contract fixture only |
 | S237A.2 | 감정평가사 2차 ExamPackage/TaskProfile projection |
 | S237A.3 | structured Workbench + struggle budget + scaffold/reveal/fading |
 | S237A.4 | ExplanationPacket/KeyConcept/probe/DecisionPath/Contrast |
@@ -3925,28 +4121,36 @@ refactor를 하지 않는다.
 2. compatibility fixture 동결
 3. universal interface extraction
 4. appraiser-second regression 100%
-5. appraiser-first adapter pilot
+5. live first-round authority sequence 뒤 internal appraiser-first compatibility candidate
 6. 두 번째 다른 modality adapter
 7. C6 cross-vertical promotion decision
 
 ### 22.6 감정평가사 1차
 
-2차 core와 병렬로 사고만 하지, shared schema/RLS mutation을 동시에
-충돌시키지 않는다.
+이 절은 `candidate/appraiser-first`의 internal projection이며 learner
+product나 runtime 승인이 아니다. 2차 core와 병렬로 사고만 하지, shared
+schema/RLS mutation을 동시에 충돌시키지 않는다.
 
 ```text
-official seed/rights
-→ selected-response package
-→ rapid grid/confidence/distractor
-→ calculation workpad
-→ held-out/timed/OMR
-→ owner diagnostic
-→ limited adapter acceptance
+S236B First-Round Capture/OCR Benchmark Contracts
+→ O3B Owner First-Round Rights and Version Approval
+→ S237B First-Round Adaptive MCQ Core Contracts
+→ O4B Owner First-Round Private Runtime Approval
+→ S238B First-Round Authenticated Acceptance
 ```
+
+이 sequence를 owner diagnostic, generic pilot, limited adapter acceptance,
+PR #660 또는 다른 source amendment로 단축하지 않는다. both-track은 별도로
+`S241A + S238B → S250`을 요구한다. S250 전에는 두 track의 mastery,
+readiness, navigation, pricing 또는 learner surface를 결합하지 않는다.
+그 뒤의 learner-facing 1차·동차 범위도 exact dated Owner scope decision과
+canonical/mirror/roadmap reconciliation 없이는 OFF다.
 
 ### 22.7 다른 전문직 시험
 
-appraiser-first 또는 두 번째 certified modality 뒤에만 시작한다.
+별도 exact Owner scope decision 뒤 internal feasibility로만 시작한다.
+appraiser-first 또는 두 번째 certified modality는 기술적 선행 증거일 뿐
+learner product 승인이 아니다.
 
 - exact exam selection decision
 - official source/rights feasibility
@@ -3983,24 +4187,19 @@ S241A → O3C → S239A → S242C → O4F → S243C
 
 ### 23.1 지금 실행할 하나
 
-현재 PR #667이 terminal checkpoint의 corrected-v6 Draft head
-`2354e30a7e1fc08ede2eda1bb78cf78fce88a3a7`에 그대로 있으면, 함께 제공된
-`correct-draft-pr-667-to-professional-exam-reasoning-os-v7-2026-07-28.md`를
-별도 Work에 이 exact v7 artifact와 첨부한다.
+PR #667의 post-Ready parent head
+`1e3c4fb78bcab0e60d707483eba51fbbe2772473`와 main이 live checkpoint에
+그대로 있을 때만, 별도 corrective Work가 다음을 수행한다.
 
-그 Work는 다음만 한다.
-
-1. live state, current artifact와 v7 artifact integrity 검증
-2. existing PR branch에 current head의 sole-child corrective 하나
-3. corrected v6 제거 + v7 exact bytes 추가
-4. mandatory caveat, exact release-artifact binding과 canonical commercial
-   path 보존 검증
-5. PR title/body 갱신
-6. exact unresolved release-artifact P2에 답변·해결
-7. 기존 해결 P2 두 건의 요구사항 보존 확인
-8. Draft 유지
-9. post-push exact-head 검증
-10. 자동 중단
+1. live authority, parent head/tree, artifact와 unresolved P1 다섯 건 검증
+2. existing PR branch에 parent head의 sole-child corrective 하나
+3. existing v7 경로 한 파일에서 exact 다섯 requirement만 교정
+4. caveat, release-artifact binding, commercial path와 aggregate 단일 경로
+   보존
+5. exact-head digest/manifest/checks/hostile review
+6. 명시적으로 승인된 경우에만 각 exact thread에 증거 답변·해결
+7. Draft 유지, Ready/merge/auto-merge/implementation 0
+8. 자동 중단
 
 ### 23.2 그 다음
 
@@ -4021,7 +4220,7 @@ S241A → O3C → S239A → S242C → O4F → S243C
 | --- | --- | --- |
 | state machine | 모든 transition server-derived·versioned | client/model state spoof 0 |
 | commitment | feedback 전 immutable | 사후 제출을 pre-feedback로 위장 0 |
-| struggle | bounded budget·guided exit | 무한 반복·answer 즉시 노출 0 |
+| struggle | `attempt_first` bounded budget; guided semantics는 contract fixture only | 무한 반복·미승인 guided runtime·answer 즉시 노출 0 |
 | scaffold | 최소 단계·fading | hint가 answer를 우회 누설 0 |
 | reveal | lane/state/transaction gate | measurement pre-submit reveal 0 |
 | reconstruction | learner 재수행 | view/save를 recovery로 계산 0 |
@@ -4119,7 +4318,7 @@ S241A → O3C → S239A → S242C → O4F → S243C
 7. uploaded OCR에 prompt injection 포함
 8. 법규 effective date missing인데 generic model fallback
 9. one mixed answer의 failure를 모든 skill에 복제
-10. guided view/save를 mastery로 승격
+10. contract-only guided value를 runtime에서 수락하거나 view/save를 mastery로 승격
 11. stale exam package로 new episode 생성
 12. appraiser evidence를 다른 exam mastery로 bridge
 13. revoked learner가 shadow export에 남음
@@ -4143,7 +4342,8 @@ S241A → O3C → S239A → S242C → O4F → S243C
 ### 25.1 답안길 감정평가사 2차 Owner product
 
 - structured tutor FSM 실제 동작
-- attempt_first/guided_study 분리
+- `attempt_first` runtime과 contract-only/non-operative `guided_study` 분리
+- 별도 §5.0 supersession 전 guided selector/route/API/event/block/schedule 0
 - commitment/confidence before feedback
 - bounded scaffold/reveal/fading
 - Explanation Workbench
@@ -4181,7 +4381,7 @@ S241A → O3C → S239A → S242C → O4F → S243C
 - certification report
 - package digest/deprecation/revocation
 
-### 25.4 두 번째 vertical
+### 25.4 두 번째 certified adapter candidate
 
 - kernel 수정 없이 또는 approved compatible extension으로 추가
 - exact official package
@@ -4189,6 +4389,7 @@ S241A → O3C → S239A → S242C → O4F → S243C
 - domain expert signoff
 - synthetic/private/limited external gate
 - no cross-adapter data contamination
+- separate product-scope decision 전 learner-facing brand/route/pricing 0
 
 ### 25.5 learning evidence
 
