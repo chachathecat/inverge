@@ -3498,6 +3498,8 @@ type VaultOnlyCommitmentV2<TName extends string> =
   string & { readonly __vaultOnlyCommitmentV2: TName };
 type VaultAuditTimeV2 =
   string & { readonly __brand: "vault_audit_rfc3339_utc_v2" };
+type VaultSharedSignalActiveSurfaceCommitmentV2 =
+  VaultOnlyCommitmentV2<"shared_signal_active_surface">;
 
 type VaultSharedSignalReconstructivenessPolicyV2 = {
   vaultOnly: true;
@@ -3590,8 +3592,16 @@ type VaultSharedSignalReconstructivenessAssessmentV2 = {
   compositionLedgerGeneration: FiniteNonNegativeSafeIntegerV2;
   compositionLedgerCommitment:
     VaultOnlyCommitmentV2<"release_composition_ledger">;
+  baseActiveSurfaceGeneration: FiniteNonNegativeSafeIntegerV2;
+  baseActiveSurfaceCommitment:
+    VaultSharedSignalActiveSurfaceCommitmentV2;
+  nextActiveSurfaceGeneration: FiniteNonNegativeSafeIntegerV2;
+  nextActiveSurfaceCommitment:
+    VaultSharedSignalActiveSurfaceCommitmentV2;
   preparedReservationRef:
     VaultOnlyRefV2<"shared_signal_release_reservation">;
+  preparedReservationCommitment:
+    VaultOnlyCommitmentV2<"shared_signal_release_reservation">;
   preparedReservationGeneration:
     FiniteNonNegativeSafeIntegerV2;
   preparedReservationState: "prepared";
@@ -3636,6 +3646,8 @@ type VaultSharedSignalReleaseCompositionLedgerV2 = {
   activeReleaseSurfaceRef:
     VaultOnlyRefV2<"active_release_surface">;
   activeSurfaceGeneration: FiniteNonNegativeSafeIntegerV2;
+  activeSurfaceCommitment:
+    VaultSharedSignalActiveSurfaceCommitmentV2;
   preparedReservationSetRef:
     VaultOnlyRefV2<"prepared_release_reservation_set">;
   historySufficiency:
@@ -3939,6 +3951,22 @@ type SharedSignalActiveSurfaceCertificationV2 = {
     RiskProjectionManifestVersionRefV2;
   activeSurfaceGeneration: FiniteNonNegativeSafeIntegerV2;
   certificationState: "current_pass" | "invalidated";
+};
+
+type VaultSharedSignalActiveSurfaceCertificationBasisV2 = {
+  vaultOnly: true;
+  certificationRef:
+    VaultOnlyRefV2<"shared_signal_active_surface_certification">;
+  certificationProjectionCommitment:
+    VaultOnlyCommitmentV2<"active_surface_certification_projection">;
+  activeSurfaceGeneration: FiniteNonNegativeSafeIntegerV2;
+  activeSurfaceCommitment:
+    VaultSharedSignalActiveSurfaceCommitmentV2;
+  reconstructivenessAssessmentRef:
+    VaultOnlyRefV2<"shared_signal_reconstructiveness_assessment">;
+  reconstructivenessAssessmentCommitment:
+    VaultOnlyCommitmentV2<"shared_signal_reconstructiveness_assessment">;
+  certificationState: "current_pass";
 };
 
 type SharedSignalDenyBarrierV2 = {
@@ -4338,7 +4366,8 @@ partial commit은 없다.
 `VaultSharedSignalReconstructivenessAssessmentV2`,
 `VaultSharedSignalReleaseCompositionLedgerV2`,
 `VaultSharedSignalReleaseReservationV2`와
-`VaultSharedSignalCommitGrantV2`는 Personal Raw Vault 내부의
+`VaultSharedSignalCommitGrantV2`,
+`VaultSharedSignalActiveSurfaceCertificationBasisV2`는 Personal Raw Vault 내부의
 least-privilege record다. serializer, client/API response, receipt, log,
 telemetry, analytics, issue/PR/CI artifact, Shared Signal 또는 Model/Eval
 Registry에 serialize·return·record하지 않는다. 그 record는 private event
@@ -4372,18 +4401,20 @@ c. exact typed payload를 freeze하고 supported profile의 canonical bytes와
 d. digest를 한 번 attach하고 completed canonical envelope와 vault-only
    commitment/octet length를 freeze한다.
 e. trusted O2 coordinator가 conservative joinable component를 정하고
-   prepared reservation을 만든 뒤 current visible reference population,
+   prepared reservation을 만든 뒤 authoritative `S_g`와 proposed exact row
+   set의 union인 `S_next`를 current visible reference population,
    irreversible disclosure history와 모든 competing reservation을 포함해
-   exact candidate를 평가한다.
-f. exact current pass, reservation, policy, registry와 composition
-   generation에 묶인 short-lived single-use grant를 준비한다.
+   평가한다.
+f. exact `S_g/g -> S_next/(g + 1)` pass, reservation, policy, registry와
+   composition generation에 묶인 short-lived single-use grant를 준비한다.
 g. first-write boundary에서 current registry/policy/assessment/
-   composition generation, consent/O2/grant/digest/envelope binding을
-   authoritative source에서 다시 resolve한다.
+   composition 및 active-surface generation/commitment,
+   consent/O2/grant/digest/envelope binding과 current gate를 authoritative
+   source에서 다시 resolve한다.
 h. 한 transaction 또는 equivalent linearizable boundary에서 exact
    reservation과 grant를 CAS-consume하고 disclosure accounting을 한 번
-   append하며 exact row set, complete lineage와 idempotent result를 함께
-   commit한다.
+   append하며 exact row set, complete lineage, `S_next/(g + 1)`, matching
+   certification과 idempotent result를 함께 commit한다.
 
 release preparation은 다음을 **Personal Raw Vault 안에서만** 수행한다.
 
@@ -4400,11 +4431,16 @@ release preparation은 다음을 **Personal Raw Vault 안에서만** 수행한�
    reference population, irreversible disclosure history와 같은 component의
    다른 모든 prepared reservation에 대해 평가한다.
 4. current exact `pass`인
-   `VaultSharedSignalReconstructivenessAssessmentV2`와 아직 Shared Signal에
+   `VaultSharedSignalReconstructivenessAssessmentV2`는 composition ledger의
+   exact `S_g`, generation `g`와 commitment, immutable reservation의 exact
+   proposed row IDs/payload/envelope를 묶고
+   `S_next = S_g union proposed row set`, exact successor `g + 1`과
+   post-state commitment를 평가한다. 그 assessment와 아직 Shared Signal에
    쓰지 않은 pending `VaultSharedSignalDownstreamLineageV2`를 만든다.
 5. exact proposed batch ID, profile, registry, ordering/partition policy,
    payload digest, final-envelope commitment/octet length, assessment,
-   reference population, joinable surface, composition ledger/reservation,
+   reference population, joinable surface, composition ledger/reservation과
+   assessment commitment가 transitively 묶은 exact base/next surface,
    exact O2 purpose/generation, rotation scope/vault generation, immutable
    subject-authorization manifest ref/commitment, exact consent-ledger
    resolution ref/commitment와 source-event-set commitment, 모든 included
@@ -4418,11 +4454,22 @@ consent, O2, notice/policy, retention, horizon, rotation scope/vault
 generation, included subject 또는 subject-authorization manifest
 ref/commitment, registry,
 reconstructiveness/attacker-model/ordering/partition policy, reference
-population, joinable surface, composition generation/reservation, payload
+population, joinable surface, composition generation/reservation,
+active-surface generation/commitment, payload
 profile/digest, completed canonical envelope commitment/octet length 또는
 authorization policy가 하나라도 바뀌면 assessment, reservation과 grant를
 `invalidated`로 만든다. grant와 reservation은 explicit expiry와 replay
 protection을 가지며 vault 밖으로 나가지 않는다.
+
+첫 batch 전에 authority provisioning은 purpose/horizon/rotation scope마다
+empty `S_0`, generation `0`, zero row/disclosure history, no deny barrier와
+그 exact empty surface/current policy에 맞는 exactly one `current_pass`
+certification을 atomic genesis로 이미 설치해야 한다. normal batch path는
+genesis를 synthesize·infer·repair·reset하지 않는다. missing/damaged history나
+missing certificate를 virgin empty scope로 해석하면 zero mutation이다.
+`activeSurfaceGeneration`은 purpose/horizon/rotation-scope authoritative,
+monotonic safe integer이며 retry, restore, delete 또는 rotation으로 reset,
+reuse, rollback할 수 없다.
 
 첫 Shared Signal write에는 하나의 logical linearization point가 있다.
 trusted gateway는 그 boundary에서 current, unexpired, unconsumed
@@ -4432,37 +4479,63 @@ canonical envelope bytes/commitment/octet length, registry/policy,
 assessment `pass`, reference population, joinable surface, composition
 ledger/reservation, subject-authorization manifest ref/commitment,
 consent-ledger resolution ref/commitment, source-event-set, rotation
-scope/generation과 grant binding을
-모두 비교한 뒤 다음을 하나의
+scope/generation, grant binding과 exact safe-integer successor `g + 1`을
+모두 비교한다. CAS base gate는 exactly one `current_pass` certification이
+current `g`, `S_g` commitment와 current registry/policy set에 일치하고
+covering deny barrier가 없는 상태뿐이다. missing, invalidated, duplicate,
+mismatched certificate, unsafe-integer overflow 또는 active barrier는
+zero mutation이다. normal batch는 barrier를 step over·clear·replace하거나
+residual surface recertification을 수행하지 않는다. 그 뒤 다음을 하나의
 authorized transaction 또는 동등
 coordinator/CAS boundary로 처리한다.
 
-1. exact prepared reservation과 grant를 함께 `consumed`로 CAS한다.
-2. irreversible disclosure accounting을 exact row set에 대해 정확히 한
+1. current surface/gate와 assessment, reservation, grant의 exact base/next
+   binding을 비교한다.
+2. exact prepared reservation과 grant를 함께 `consumed`로 CAS한다.
+3. irreversible disclosure accounting을 exact row set에 대해 정확히 한
    번 append한다.
-3. authorized Shared Signal row 전부를 처음으로 commit한다.
-4. 모든 active row와 private source observation의
+4. authorized Shared Signal row 전부를 처음으로 commit한다.
+5. 모든 active row와 private source observation의
    `VaultSharedSignalDownstreamLineageV2`를 `committed`로 전환한다.
-5. exact idempotent commit result를 고정한다.
+6. authoritative active surface를 exact `S_g`에서 `S_next`로 교체하고
+   generation을 정확히 `g -> g + 1`로 전진시킨다.
+7. assessment와 exact post-state commitment에 bound된 exactly one
+   `current_pass` certification/basis를 `g + 1`에 설치한다.
+8. committed surface generation을 포함한 exact idempotent result를 고정한다.
 
-consent/O2 invalidation, revocation과 commit은 같은 authorization-generation
-key 또는 동등한 linearizable serialization boundary를 사용한다.
-revocation이 먼저 이기면 Shared Signal write는 0건이다. commit이 먼저
-이기면 모든 row가 complete committed lineage를 가져 immediate
-revocation target이 된다. 첫 write 전에는 canonical payload, proposed
-row ID와 pending lineage를 vault 안에서만 stage한다. Shared Signal에
-`inactive_staged`, hidden, pending 또는 유사 row를 미리 쓰지 않는다.
+여덟 action은 모두 함께 성공하거나 모두 zero mutation이다. 따라서
+old certificate의 새 row, matching certificate 없는 `g + 1`, 다른
+surface/digest/assessment/policy/base generation의 certificate, 한
+scope/generation의 multiple current certificate, 같은 current
+scope/generation의 certificate/barrier 공존, 또는 reservation/grant/
+accounting/row/lineage/generation/certificate/result 중 일부만 committed인
+상태는 unrepresentable이다.
+
+consent/O2 invalidation, revocation/delete/quarantine과 commit은 같은
+surface-generation serialization key를 사용한다. 같은 `g`에서 assessed된
+두 candidate 중 하나만 `g + 1`을 만들 수 있고 loser는 cross-plane
+mutation 0으로 winner-inclusive surface에 새 payload/assessment/reservation/
+grant를 만들어야 `g + 2` 후보가 된다. revocation이 먼저 이기면 stale
+`g` batch write는 0건이다. commit이 먼저 이기면 `g + 1`, matching
+certification과 complete lineage가 모두 끝난 뒤 existing
+recertification-or-deny-barrier rule이 다음 generation을 전진시킨다.
+어느 순서에도 stale-certified 또는 uncertified readable window가 없다.
+첫 write 전에는 canonical payload, proposed row ID와 pending lineage를
+vault 안에서만 stage하며 Shared Signal에 `inactive_staged`, hidden,
+pending 또는 유사 row를 미리 쓰지 않는다.
 
 prepared reservation/grant consumption, disclosure-history append, 첫/all
-Shared Signal row commit, committed vault-lineage transition과 exact
-idempotent result의 logical linearization을 증명할 수 없으면 batch 전체를
-fail closed한다. crash/retry가 active Shared Signal row without exact
-one-time ledger append/committed lineage 또는 consumed authority without
-the exact row set/idempotent result를 남길 수 없다. exact retry는 같은
-idempotent result를 반환하고 row, ledger append, reservation/grant
-consumption을 두 번 만들지 않는다. 이 invariant를 세울 수 없으면
-active뿐 아니라 pending/hidden을 포함한 Shared Signal, log, telemetry와
-Model/Eval write가 모두 0건이다.
+Shared Signal row commit, committed vault-lineage, surface generation,
+certification/basis와 exact idempotent result의 logical linearization을
+증명할 수 없으면 batch 전체를 fail closed한다. crash/retry가 partial
+state를 남길 수 없다. response-loss exact retry는 기존 result와 같은
+historical `g + 1`을 반환하고 generation, certificate, history, row,
+reservation/grant consumption 또는 lineage를 두 번 만들지 않는다.
+revocation이나 later batch가 current surface를 전진시켰다면 retry result는
+old certificate를 복원하거나 generation을 rewind하거나 barrier를
+clear하지 못한다. 이 invariant를 세울 수 없으면 active/pending/hidden
+Shared Signal, grant, accounting, lineage, result, log, telemetry,
+analytics와 Model/Eval write가 모두 0건이다.
 
 concurrent duplicate commit, consumed-grant/reservation replay, stale
 composition generation, non-current assessment, payload
@@ -4492,11 +4565,12 @@ hash하지 않는다.
 `sourceEventSetCommitmentRef`의 alias, vault/private object ref, private
 keyed commitment, raw/private content hash·fingerprint, stable account ID,
 attestation·receipt·token·digest, commit grant/generation ref 또는 state,
-replay token, private downstream-lineage ref/digest 또는 Personal Raw Vault
-subject/event set으로 resolve·compare되는 equality handle을 포함하지
-않는다. 이 금지는 Shared Signal row, client/API output, receipt, log,
-telemetry, analytics, issue/PR/CI artifact와 Model/Eval Registry에도
-동일하다.
+replay token, private downstream-lineage ref/digest, active-surface
+commitment, assessment/grant/certification-basis ref 또는 comparable
+equality handle을 포함하지 않는다. generation-to-exact-surface mapping,
+assessment basis와 certification basis도 vault-only/non-exportable이다.
+이 금지는 Shared Signal row, client/API output, receipt, log, telemetry,
+analytics, issue/PR/CI artifact와 Model/Eval Registry에도 동일하다.
 
 export authorization metadata는 `consentPurpose`,
 `authorizationClass`, registry-resolved
@@ -4553,9 +4627,14 @@ linearization boundary에서
 `SharedSignalActiveSurfaceCertificationV2.activeSurfaceGeneration`을
 invalidate하고 changed surface를 expose하기 전 또는 그와 atomic하게
 all-consumer provisional `SharedSignalDenyBarrierV2`를 설치한다. query,
-cache/materialization builder, dataset job와 publisher는 current surface
-generation과 일치하는 `current_pass` certification 없이는 읽거나
-publish할 수 없다. residual surface가 current policy 아래 다시 pass한
+cache/materialization builder, dataset/calibration/evaluation job와
+publisher는 purpose/horizon/rotation scope별 authoritative current
+generation, exact active-surface commitment와 gate를 one consistent
+snapshot에서 읽는다. trusted gateway가 vault-only certification basis와
+current registry/policy set까지 비교해 exactly one matching
+`current_pass`를 확인하고 covering deny barrier가 없을 때만 consume할 수
+있다. CAS 뒤 `g` certificate는 historical evidence일 뿐 `g + 1`을
+authorize하지 못한다. residual surface가 current policy 아래 다시 pass한
 뒤에만 barrier를 제거한다. registry, reconstructiveness policy 또는
 attacker-model 변경에도 같은 generation invalidation/barrier를 적용한다.
 non-private rotation scope 또는 its vault authority generation 변경에도
@@ -4571,8 +4650,10 @@ cohort denominator를 보존하려고 subject의 required deletion을 지연하�
 sufficiency/calibration job와 dataset builder는 active,
 non-quarantined, non-tombstoned row만 읽는다. cache, feature snapshot,
 materialization, dataset, evaluation 또는 model publication은 publish
-boundary에서 모든 source row의 current active state를 다시 검증하고
-downstream lineage 등록을 완료할 때까지 inactive다. 그 boundary는
+boundary에서 current generation, exact certification/basis, no-barrier와
+모든 source row의 current active state를 다시 검증하고 downstream
+lineage 등록을 완료할 때까지 inactive다. CAS 전 snapshot을 읽은
+consumer/builder도 이 revalidation을 생략할 수 없다. 그 boundary는
 revocation과 같은 key로 serialize한다. builder가 active row를 먼저
 읽었더라도 그 뒤 revocation이 완료됐다면 stale read로 detached
 artifact를 publish할 수 없다. 이미 publish된 descendant는 acknowledge
@@ -6873,6 +6954,30 @@ transient positive matrix 13개도 요구한다.
     registry/common header/
     canonicalization/joinability component/gateway를 공유하고 two-way
     intervention/mixed ordering 일치
+
+active-surface correction은 기존 matrix를 대체하거나 대형 fixture를
+추가하지 않고 아래 focused transient assertions를 더 요구한다.
+
+1. `SSV2-AS-H01`: second-batch row가 old `g`/certificate로 committed
+2. `SSV2-AS-H02`: `g + 1`인데 exact matching certificate 없음
+3. `SSV2-AS-H03`: certificate가 다른 post-state surface/digest/policy에 bind
+4. `SSV2-AS-H04`: 같은 `g`에서 assessed된 concurrent commit 둘 다 win
+5. `SSV2-AS-H05`: response-loss retry가 generation/certificate/history 재추가
+6. `SSV2-AS-H06`: crash cut이 row-with-old-cert 또는 generation-without-cert 생성
+7. `SSV2-AS-H07`: commit/revocation race가 stale-readable/uncertified gap 생성
+8. `SSV2-AS-H08`: duplicate current certificate 또는 certificate/barrier 공존
+9. `SSV2-AS-H09`: normal batch가 active deny barrier를 step over/clear
+10. `SSV2-AS-H10`: missing certificate/history를 virgin scope로 보고 genesis 합성
+11. `SSV2-AS-P01`: second batch가 rows/accounting/lineage/result와 matching
+    certification을 포함해 exactly one complete `g -> g + 1` CAS
+12. `SSV2-AS-P02`: provisioned empty `S_0/g=0`의 first batch가 bootstrap
+    합성 없이 exactly `g=1`
+13. `SSV2-AS-P03`: concurrent loser mutation 0, winner-inclusive surface
+    reassessment 뒤에만 성공
+14. `SSV2-AS-P04`: exact retry가 same historical result/generation을
+    duplicate 또는 superseded authority 복원 없이 반환
+15. `SSV2-AS-P05`: commit/revocation 어느 winner ordering도 stale-readable
+    window 0
 
 모든 actionable P0/P1/P2는 0/0/0이어야 한다.
 
