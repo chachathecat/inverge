@@ -196,6 +196,17 @@ v7은 그 위에 다음을 새로 고정한다.
     gate를 통과한 upstream `ReferenceAnswerReleaseArtifact`와의 exact binding
 18. 외부 상용화의 현재 canonical path
     `S241A → O3C → S239A → S242C → O4F → S243C` 보존
+19. Shared Signal 첫 write와 exact O2·consent authorization generation
+    소비를 하나의 linearizable commit boundary로 묶는 vault-only
+    `VaultShadowCommitGrantV1`
+20. 이미 저장된 Shared Signal row부터 cache·materialization·dataset·
+    Model/Eval descendant까지 철회가 전파되는 vault-only downstream
+    lineage와 fail-conservative tombstone/quarantine
+21. guided runtime과 분리된 learner-confirmed
+    `confirmed_pre_attempt_learning_reveal` Learning Lane override
+22. 기존 `LearningGapRecord`와
+    `s216.error_notebook_gap_taxonomy.v1`을 유일한 metadata authority로
+    사용하는 다섯 필드 learner-visible automatic error-note projection
 
 ### 0.5 제품 최적화 목적함수
 
@@ -252,25 +263,33 @@ rule baseline으로 고르고, adaptive policy는 별도 shadow 평가 뒤에만
 ### 0.7 현재 PR #667 처리 결론
 
 2026-07-28 KST의 exact head
-`18893b26e2afbd5e4f853f9a81f5c059549e44e4`에 대한 fresh exact-head
+`46194ab113374ebb9f83805da55ba5c6427662dc`에 대한 fresh exact-head
 review는 terminal `COMMENTED`였지만 clean하지 않았고,
-`P0/P1/P2 = 0/2/0`의 신규 finding 두 건을 만들었다. PR #667은 계속
+`P0/P1/P2 = 0/3/1`의 신규 finding 네 건을 만들었다. PR #667은 계속
 Draft다.
 
-이 corrective는 그 두 건만 live source-of-truth에 맞춘다.
+이 corrective는 그 네 건만 live source-of-truth에 맞춘다.
 
-1. Shared Signal export는 exact O2와 active, granted, non-revoked
-   `pseudonymous_product_signal` exact-purpose consent를 모두 요구하고,
-   generic legal basis나 다른 목적의 consent가 이를 대체하지 못하게 한다.
-2. subject authorization manifest, consent-ledger resolution, private
-   source-event-set commitment와 revocation/delete lineage는 Personal Raw
-   Vault 안에만 두고, export에는 closed non-linkable authorization
-   metadata만 남긴다.
+1. release 직전의 timestamp check를 commit authority로 쓰지 않고,
+   exact batch bytes와 current O2·consent generation을 묶은 vault-only
+   single-use grant를 첫 Shared Signal write와 같은 linearizable
+   boundary에서 재검증·소비한다.
+2. vault-internal observation-to-row lineage로 이미 저장된 Shared Signal
+   row와 모든 cache·materialization·dataset·Model/Eval descendant를
+   철회·삭제·O2 invalidation 시 non-active로 만든다.
+3. attempt-before-reveal은 default로 유지하되, learner가 명확한 결과
+   고지를 affirmative confirmation한 경우 별도 Learning Lane에서만
+   full assistance·exposure·no-credit를 output 전에 원자적으로 기록하는
+   non-guided override를 둔다.
+4. accepted wrong/partial feedback마다 기존 S216/LearningGapRecord의
+   learner-private projection으로 `왜 틀렸는지`, `정확한 원리`,
+   `지금 바로 고칠 것`, `재발`, `다음 복습`을 모두 요구한다.
 
 허용 범위는 기존 v7 경로 한 파일의 sole-child docs-only corrective다.
 Ready, merge, auto-merge, runtime/schema/RLS, canonical contract, roadmap,
 billing, activation, 다른 시험 또는 후속 Work는 이 corrective가 승인하지
-않는다. 특히 product-signal consent나 O2는 fitting 권한이 아니며,
+않는다. 이 문서의 confirmed reveal은 guided-study runtime이나 mastery를
+활성화하지 않는다. 특히 product-signal consent나 O2는 fitting 권한이 아니며,
 `offline_model_training` exact-purpose consent와 별도 future exact-scope
 O5 없이 learner-derived fitting·training·refit·parameter update·dataset
 refresh를 수행하지 않는다.
@@ -288,17 +307,17 @@ read-only 관측:
 | `main` tree | `2403f1f90de0fd8260fdd7485eee9b726cc0471c` |
 | PR #662 | terminal squash-merged |
 | PR #662 final corrected tree | `2403f1f90de0fd8260fdd7485eee9b726cc0471c` |
-| PR #667 | open Draft, mergeable, unmerged, auto-merge OFF |
-| PR #667 corrective parent head | `18893b26e2afbd5e4f853f9a81f5c059549e44e4` |
-| PR #667 corrective parent tree | `40a6549abae49e3e144b2c543e78fe646023822e` |
-| PR #667 corrective parent sole parent | `52ffa09e1d08d8a7ad9ad7e05f91e7908d816442` |
+| PR #667 | open Draft, mergeable, unmerged, unlocked, auto-merge OFF |
+| PR #667 corrective parent head | `46194ab113374ebb9f83805da55ba5c6427662dc` |
+| PR #667 corrective parent tree | `8a44b92be636ae19a2876eff51931888fa737582` |
+| PR #667 corrective parent sole parent | `18893b26e2afbd5e4f853f9a81f5c059549e44e4` |
 | PR #667 branch | `agent/dabangil-master-plan-v6-strategy` |
-| PR #667 corrective parent aggregate | v7 단일 added file, `+4599/-0`, main보다 5 commits ahead / 0 behind |
-| corrective parent artifact | SHA-256 `672deec95dbcff854eb0545dd7898b5d8a95c899b9dca7c7c8fc7267f37b2872`, 163,895 bytes, 4,599 lines, blob `67006f49e720c9be14e763e28629f65f5bda3fd2` |
-| required corrective-parent checks | PR Contract 513, Risk Gate 513, Runtime Gate 513, Fast CI 640, Full CI 513, Learner Loop Health 1024, Vercel 7/7 success |
-| resolved findings | known thread 13개 중 prior 11개 resolved |
-| fresh exact-head review | `18893b26e2…`, terminal `COMMENTED`, `P0/P1/P2 = 0/2/0` |
-| exact unresolved findings | product-signal consent P1, vault-only commitment/lineage P1 |
+| PR #667 corrective parent aggregate | v7 단일 added file, `+4783/-0`, main보다 6 commits ahead / 0 behind |
+| corrective parent artifact | SHA-256 `b284565ff86e19cee5238f72f184bd59aac30a42f73cfdc742f21d1841c03fc1`, 174,938 bytes, 4,783 lines, blob `0b8b9b3557636c001eec0c16563228ac71e4a717` |
+| required corrective-parent checks | PR Contract 514, Risk Gate 514, Runtime Gate 514, Fast CI 641, Full CI 514, Learner Loop Health 1025, Vercel 7/7 success |
+| resolved findings | known thread 17개 중 prior 13개 resolved |
+| fresh exact-head review | `46194ab113…`, terminal `COMMENTED`, `P0/P1/P2 = 0/3/1` |
+| exact unresolved findings | atomic commit P1, persisted-row revocation P1, confirmed Learning Lane reveal P1, automatic error note P2 |
 | PR #660 | open Draft at historical observation `4c5694e4c65a110aede39762421abb49afd653f5` |
 | public/billing/external learner | OFF |
 
@@ -696,6 +715,7 @@ type TutorEpisodeStateV1 =
   | "schedule"
   | "completed"
   | "guided_exit"
+  | "abandoned_for_learning_reveal"
   | "blocked"
   | "stale";
 ```
@@ -722,6 +742,16 @@ verify
 → completed
 ```
 
+attempt 전 learner가 정답을 명시적으로 요구하는 현재-authority 예외는
+guided exit가 아니다. confirmation 화면을 보거나 요청·취소한 것만으로는
+state가 바뀌지 않는다. learner가 결과를 명확히 고지받고 affirmative
+confirmation한 뒤에만 하나의 trusted-server transaction이 active
+Measurement Lane episode를 `abandoned_for_learning_reveal`로 닫아
+ineligible·unresumable하게 만들고, **별도** Learning Lane episode를 열어
+`scaffold`의 `full_solution` output 전에 confirmation·assistance·exposure·
+no-credit qualification을 함께 commit한다. transaction 실패 시 state와
+output은 모두 0이다.
+
 ### 5.2 상태별 계약
 
 | State | learner가 해야 할 일 | AI가 보여줄 수 있는 것 | 금지 | evidence 최대 효과 |
@@ -739,6 +769,7 @@ verify
 | transfer | 새 variant 무도움 수행 | timer only | hint·답 | independent transfer 후보 |
 | reflect | confidence 재평가·한 줄 교훈 | calibration 비교 | 성격 추론 | metacognitive evidence |
 | schedule | 다음 행동 확인 | due/priority reason | mastery 직접 승격 | queue candidate |
+| abandoned_for_learning_reveal | confirmed override 뒤 별도 Learning Lane으로 이동 | 결과 고지와 새 episode ref | resume·measurement/독립 credit | 없음 |
 
 ### 5.3 state transition event
 
@@ -755,11 +786,16 @@ type TutorStateTransitionEventV1 = {
     | "validator_result"
     | "policy_decision"
     | "explicit_guided_exit"
+    | "confirmed_pre_attempt_learning_reveal"
     | "source_stale"
     | "authority_block";
   triggerEvidenceRefs: string[];
   assistanceSnapshotRef: string;
   exposureSnapshotRef: string;
+  lane: "learning" | "measurement";
+  relatedEpisodeRef?: string;
+  confirmedLearningAnswerRevealOverrideRef?: string;
+  transactionRef: string;
   transitionPolicyVersion: string;
   transitionIdempotencyKey: string;
   occurredAt: string;
@@ -788,6 +824,7 @@ type ProductiveStruggleBudgetV1 = {
     | "exam_timed_mode"
     | "cold_start"
     | "repeated_same_gap"
+    | "confirmed_pre_attempt_learning_reveal"
     | "learner_explicit_guided_exit";
   budgetBasisRefs: string[];
 };
@@ -798,6 +835,11 @@ type ProductiveStruggleBudgetV1 = {
 - 너무 빠른 answer request에는 먼저 commitment 또는 smallest cue를 요구한다.
 - budget 초과 뒤에도 무한 반복시키지 않는다.
 - 감정적 압박·수치심·강제 체류를 사용하지 않는다.
+- `confirmed_pre_attempt_learning_reveal`은 §5.6의 명확한 결과 고지와
+  affirmative confirmation이 끝난 Learning Lane에만 적용하는 별도
+  non-guided override reason이다. request, confirmation 화면 열람, cancel,
+  preselected/implicit state는 override가 아니며 어떤 episode·exposure·
+  credit도 바꾸지 않는다.
 - 미래 §5.0 승인이 끝난 guided runtime에서만 사용자가 guided exit를
   선택할 수 있으며, 그 경우에도 independent credit를 얻지 못한다. 현재
   authority 아래의 implementation은 이 transition을 거부해야 한다.
@@ -846,11 +888,20 @@ type ScaffoldDecisionV1 = {
 ### 5.6 answer reveal policy
 
 ```ts
+type AnswerRevealBasisV1 =
+  | "post_attempt"
+  | "confirmed_pre_attempt_learning_reveal"
+  | "future_guided_exit_contract_only";
+
 type AnswerRevealEligibilityV1 = {
   tutorEpisodeRef: string;
   state: TutorEpisodeStateV1;
+  lane: "learning" | "measurement";
+  revealBasis: AnswerRevealBasisV1;
   learnerCommitmentRef?: string;
   independentAttemptRef?: string;
+  immutablePreRevealAttemptSnapshotRef: string;
+  confirmedLearningAnswerRevealOverrideRef?: string;
   struggleBudgetRef: string;
   explicitGuidedExit: boolean;
   measurementLane: boolean;
@@ -860,15 +911,92 @@ type AnswerRevealEligibilityV1 = {
   reasonCodes: string[];
   eligibilityChecksum: string;
 };
+
+type ConfirmedLearningAnswerRevealOverrideV1 = {
+  id: string;
+  learnerScopeRef: string;
+  tutorEpisodeRef: string;
+  itemRef: string;
+  problemRevisionChecksum: string;
+  lane: "learning";
+  basis: "confirmed_pre_attempt_learning_reveal";
+  requestIntentCode: "answer_before_attempt";
+  confirmationEventRef: string;
+  confirmationOutcome: "affirmed";
+  confirmationCopyVersion: string;
+  confirmedAt: string;
+  preRevealAttemptState: "no_submitted_attempt";
+  preRevealEligibilitySnapshotRef: string;
+  referenceAnswerReleaseArtifactRef: string;
+  assistanceKind: "full_solution_revealed";
+  assistanceEventRef: string;
+  exposureEventRef: string;
+  resultingSolutionRevealState: "full_revealed";
+  guidedStudyCreditEligible: false;
+  independentAttemptEligible: false;
+  masteryCreditEligible: false;
+  weaknessCreditEligible: false;
+  recoveryCreditEligible: false;
+  measurementQualificationEligible: false;
+  policyVersion: string;
+  transactionRef: string;
+  transactionIdempotencyKey: string;
+  derivationAuthority: "trusted_server";
+};
 ```
 
 - Measurement Lane에서 제출·timeout 전 full answer는 항상 금지한다.
-- Learning Lane에서도 commitment 없는 answer reveal은 guided onboarding의
-  명시적 예외가 아니면 금지한다.
+- `post_attempt`는 exact submitted attempt와 commitment를 요구한다.
+- `confirmed_pre_attempt_learning_reveal`은 별도 현재-authority
+  Learning Lane path다. learner가 attempt 전에 answer를 deliberate하게
+  요청하고, `이 문항은 노출됨으로 기록되며 독립 시도나 숙달 근거로
+  계산되지 않습니다`라는 versioned learner-visible 결과 고지를
+  preselected·implicit하지 않은 방식으로 affirmative confirmation한
+  경우에만 허용한다.
+- `future_guided_exit_contract_only`는 §5.0의 비작동 fixture다.
+  confirmed override는 guided onboarding, `explicit_guided_exit`,
+  guided-study credit 또는 guided metric으로 분류하지 않는다.
+- `ConfirmedLearningAnswerRevealOverrideV1`은 기존 trusted-server
+  `AnswerRevealEligibilityV1`과 state transition이 소비하는 subordinate
+  evidence다. self-authorizing token이나 두 번째 reveal authority가 아니며
+  source/right/effective-version, exact upstream release artifact, caveat,
+  struggle와 release gateway를 우회하지 못한다.
+- request, confirmation UI 열람, cancel 또는 affirmative confirmation
+  실패는 authoritative lane, attempt, Measurement episode, exposure,
+  assistance, weakness, credit와 mastery를 전혀 바꾸지 않는다.
+- affirmative confirmation 뒤 answer body, cache entry, prefetch,
+  stream token 또는 동등 output을 하나라도 반환하기 전에 한
+  trusted-server transaction이 다음을 모두 commit한다.
+  1. active Measurement Lane episode가 있으면
+     `abandoned_for_learning_reveal`, measurement-ineligible,
+     unresumable로 닫는다.
+  2. 별도 Learning Lane episode를 연다.
+  3. exact confirmation record와 immutable
+     `no_submitted_attempt` snapshot을 묶는다.
+  4. `AssistanceKindV1 = "full_solution_revealed"`와 exact item 및 실제
+     노출된 surface/relation의
+     `solutionRevealState = "full_revealed"`를 기록한다.
+  5. guided, independent-attempt, mastery, weakness, recovery,
+     measurement qualification을 모두 false로 고정한다.
 - answer endpoint, probe endpoint, cache, prefetch, source map, telemetry와
   error message 어디에서도 우회 누설하지 않는다.
-- reveal 전에 assistance/exposure event를 같은 transaction에서 commit한다.
-- commit 실패 시 output을 반환하지 않는다.
+- direct API, retry, multi-tab, client flag와 model output은 confirmation
+  또는 fixed-false qualification을 만들거나 바꾸지 못한다.
+- reveal 전에 confirmation·lane transition·assistance·exposure·no-credit
+  event를 같은 transaction에서 commit한다. commit 실패 시 answer와
+  state mutation을 반환하지 않는다.
+- 이 override 자체는 submitted wrong/partial answer가 아니므로
+  diagnostic cause, biggest gap, repair 또는 automatic error note를
+  만들지 않는다. answer 열람·저장·복사·acknowledge도 recovery나
+  mastery를 만들지 않는다.
+- closed-book reconstruction과 future independent ReviewUnit은 예약할 수
+  있다. 이후 credit는 기존 immutable pre-presentation/exposure policy를
+  통과한 previously unseen, verified, non-same-surface variant의
+  no-assistance evidence에서만 생긴다. revealed item, retry와 실제 노출된
+  same-surface variant는 D+1/D+7/timed/transfer 독립 자격이 없다.
+- 현재 Owner dogfood와 canonical day/result/D+1/D+7 numerator는 계속
+  `attempt_first` only다. 이 override는 guided runtime activation이나
+  새 guided metric이 아니다.
 
 ### 5.7 reconstruct before consume
 
@@ -906,9 +1034,14 @@ AI는 친절하지만 답을 쉽게 넘겨주지 않는다.
 질문 자체를 막지는 않지만 response policy는 현재 episode state를 따른다.
 
 - 현재 문제의 정답을 우회해 요구하면 허용된 scaffold level까지만 답한다.
-- 현재 authority 아래에서 full solution을 명시적으로 원하면 승인된
-  `attempt_first` reveal policy 안에서만 처리한다. 미래 §5.0 승인 뒤의
-  `explicit_guided_exit`도 assistance/exposure를 먼저 기록한다.
+- 현재 authority 아래에서 full solution을 명시적으로 원하면 submitted
+  attempt 뒤의 `post_attempt` 또는 §5.6의 명확히 확인된
+  `confirmed_pre_attempt_learning_reveal` Learning Lane basis에서만
+  처리한다. 후자는 guided path가 아니며 answer보다 먼저 confirmation,
+  active Measurement abandonment, full assistance/exposure와 모든
+  no-credit state가 원자적으로 기록돼야 한다. 미래 §5.0 승인 뒤의
+  `explicit_guided_exit`도 이 current override와 합치지 않고 별도
+  contract로 assistance/exposure를 먼저 기록한다.
 - `guided_reference` episode는 §5.0 승인 전 contract-only다. 현재 문제와
   무관한 개념 질문을 별도 허용 surface에서 처리하더라도 원래
   Measurement Lane의 independence를 보존하고 guided episode를 만들지
@@ -1045,7 +1178,221 @@ PersonalWeaknessMap, pyBKT, FSRS 또는 OR-Tools가 이 decision을 직접 쓰�
 않는다. 모두 bounded input 후보일 뿐이며 canonical native policy가 최종
 eligibility와 selection을 계산한다.
 
-### 6.6 assistance dependence
+### 6.6 learner-visible automatic error note
+
+accepted wrong 또는 partially correct feedback state가 learner release에
+eligible하면 **하나의 learner-private, learner-visible automatic error
+note**가 필수다. score, gap badge, weakness node 또는 repair CTA만으로
+대체할 수 없다.
+
+이 note는 두 번째 error-note 원장이나 mastery state가 아니다.
+
+- canonical learning authority는 기존 `LearningGapRecord`다.
+- metadata contract authority는 기존
+  `s216.error_notebook_gap_taxonomy.v1`이다.
+- S216 entry는 safe ref, taxonomy, blocker, recurrence, recovery와
+  next-review metadata만 저장한다.
+- learner answer/OCR body, official question/answer body, generated
+  reference-answer prose, source excerpt, formula, extracted value와
+  calculation trace를 S216에 새로 저장하지 않는다.
+- learner-visible text는 existing record와 이미 release가 허용된
+  feedback/source artifact에서 만드는 bounded versioned view projection다.
+- save/reopen/resume는 prohibited body를 S216에 복제하지 않고 같은 safe
+  refs와 released artifact로 동일 projection을 재계산할 수 있다.
+- projection은 source `LearningGapRecord`, S216 entry, mastery, weakness,
+  recovery 또는 queue-completion authority를 mutate하지 않는다.
+
+learner-visible label과 순서는 다음 다섯 개로 고정한다.
+
+1. `왜 틀렸는지`
+2. `정확한 원리`
+3. `지금 바로 고칠 것`
+4. `재발`
+5. `다음 복습`
+
+```ts
+type ErrorNoteFieldV1<T> =
+  | {
+      status: "usable";
+      value: T;
+      basisRefs: string[];
+    }
+  | {
+      status: "blocked" | "stale";
+      reasonCodes: string[];
+    };
+
+type LearnerVisibleAutomaticErrorNoteProjectionV1 = {
+  id: string;
+  learnerScopeRef: string;
+  tutorEpisodeRef: string;
+  sourceLearningGapRecordRef: string;
+  sourceS216EntryRef: string;
+  sourceContractVersion: "s216.error_notebook_gap_taxonomy.v1";
+  sourceEvidenceUnitRef: string;
+  acceptedFeedbackRevisionRef: string;
+  answerRevisionRef: string;
+  problemRevisionChecksum: string;
+  sourceBundleChecksum?: string;
+  feedbackReleaseArtifactRef: string;
+  sourceQualification: "usable" | "blocked" | "stale";
+  primaryGapRef: string;
+  causeHypothesisRef?: string;
+  assistanceQualification: "independent" | "assisted";
+  whyWrong: ErrorNoteFieldV1<{
+    learnerVisibleText: string;
+    evidenceRefs: string[];
+    causeEpistemicStatus:
+      | "supported_hypothesis"
+      | "insufficient_evidence";
+  }>;
+  correctPrinciple: ErrorNoteFieldV1<{
+    learnerVisibleText: string;
+    claimRefs: string[];
+    sourceBundleRef: string;
+    effectiveVersionBinding: EffectiveVersionBindingV1;
+    referenceAnswerReleaseArtifactRef: string;
+  }>;
+  immediateFix: ErrorNoteFieldV1<{
+    learnerVisibleText: string;
+    taskKind:
+      | "rewrite"
+      | "recalculate"
+      | "recall"
+      | "contrast"
+      | "diagnostic";
+    interventionRef: string;
+    requiredLearnerActionRef: string;
+  }>;
+  recurrence: ErrorNoteFieldV1<{
+    learnerVisibleText: string;
+    recurrenceCount: number;
+    recurrenceState: "first_observed" | "repeated" | "unknown";
+    recoveryState:
+      | "new"
+      | "repeated"
+      | "improving"
+      | "recovered"
+      | "relapsed";
+    s216RecurrenceStatus:
+      | "first_seen"
+      | "recurring"
+      | "resolved_in_latest_attempt"
+      | "not_compared_yet"
+      | "withheld";
+    recurrenceEvidenceRefs: string[];
+    preventionCue: {
+      policyOrCueRef: string;
+      trigger: string;
+      ifThenCheck: string;
+    };
+  }>;
+  nextReview: ErrorNoteFieldV1<{
+    learnerVisibleText: string;
+    reviewQueueItemRef: string;
+    dueAt: string;
+    taskKind: ReviewTaskKindV1;
+    priorityReason: string;
+    independentRequired: boolean;
+  }>;
+  status: "usable" | "blocked" | "stale";
+  primaryCtaRef: string;
+  noteVersion: string;
+  basisChecksum: string;
+  idempotencyKey: string;
+  derivationAuthority: "trusted_server";
+};
+```
+
+다섯 field는 같은 exact learner, episode, accepted feedback revision,
+answer revision, problem/source version와 하나의 primary biggest gap에
+묶인다.
+
+- `왜 틀렸는지`는 learner answer와 요구 reasoning, calculation,
+  source/effective version, coverage 또는 structure 사이의
+  evidence-grounded mismatch를 설명한다.
+- `정확한 원리`는 usable current source/claim과 exact upstream
+  reference-answer release artifact에 묶인 원리·규칙·방법·구별 조건이다.
+- `지금 바로 고칠 것`은 learner가 지금 실행할 하나의 rewrite,
+  recalculation, recall, contrast 또는 bounded diagnostic action이다.
+- `재발`은 관찰된 recurrence state/count/evidence 또는
+  `아직 재발 여부가 확인되지 않았습니다`라는 explicit unknown을 보여주고,
+  그 truth와 분리된 nested prevention cue를 제공한다.
+- `다음 복습`은 learner-scope의 실제 canonical `ReviewUnit`과
+  task/due state로 resolve돼야 한다.
+
+recurrence는 두 authority를 임의로 섞지 않고 결정론적으로 reconcile한다.
+
+1. `recurrenceCount`와 `recoveryState`는 canonical
+   `LearningGapRecord`에서 온다.
+2. recurrence truth/status와 evidence refs는 S216 comparison metadata에서
+   온다.
+3. `recurringDeductionCandidateIds.length`를 occurrence count로
+   사용하지 않는다.
+4. S216 `recurring`은 matching qualifying recurrence evidence가 있을
+   때만 learner-visible `repeated`가 된다.
+5. `not_compared_yet`는 `unknown/not yet established`다.
+6. S216 `withheld`는 recurrence field를 `blocked`로 만든다.
+7. `resolved_in_latest_attempt`는 projected
+   `LearningGapRecord.recoveryState`와 일치해야 한다.
+8. count, state, evidence 또는 recovery가 충돌하면 한 source를 조용히
+   선택하지 않고 note를 fail closed한다.
+
+S216의 `reviewQueueCandidate`는 후보일 뿐이다.
+`nextReview.value.reviewQueueItemRef`는 exact learner scope의 실제
+canonical `ReviewUnit`을 resolve하고 task와 due state를 가져야 한다.
+missing, cross-learner, candidate-only 또는 존재하지 않는 target은
+field와 note의 usable state를 block한다. `ReviewTaskKindV1` 밖의 task를
+새로 만들지 않는다.
+
+trusted server가 assistance qualification, 각 field status, note
+`usable | blocked | stale`, next-review eligibility와 `primaryCtaRef`를
+파생한다. client와 model 값은 비권위다. usable note는 다섯 field가 모두
+non-empty, distinct, resolvable한 `usable`이어야 한다. generic·duplicated·
+score-only text, missing release artifact, stale basis 또는 unresolved
+source conflict를 숨긴 채 usable render하지 않는다.
+
+diagnostic uncertainty와 principle/source failure는 별도다.
+
+- supported answer mismatch가 있어도 root cause evidence가 부족하면
+  `whyWrong.causeEpistemicStatus = "insufficient_evidence"`로 표시하고
+  immediate fix를 bounded diagnostic action으로 만들 수 있다.
+- 그 status는 referenced `DiagnosticCauseHypothesisV1`과 일치해야 하며
+  note 안에 두 번째 모순된 uncertainty를 만들지 않는다.
+- correct principle의 source, `EffectiveVersionBindingV1` 또는 release
+  evidence가 missing/conflict/stale이면 uncertainty 뒤에 숨기지 않고
+  principle body와 note usable state를 block한다.
+
+추가 불변식:
+
+- one accepted feedback revision에는 current usable projection이 하나다.
+  retry는 source lineage를 append하지만 duplicate current note를 만들지
+  않는다.
+- generation/recompute는 versioned basis와 idempotency key로 결정론적이다.
+- save, Ledger, learner-scope search, resume와 reopen에서 같은 current
+  note revision을 복구한다.
+- projection access는 learner-private, learner-scope RLS와 purpose-scoped
+  retention/delete를 따른다. Shared Signal, Academy, Cleared Content 또는
+  model training으로 자동 promotion하지 않고 S216 body store를 늘리지
+  않는다.
+- generated reference-answer content가 포함되면 exact learner-visible
+  learning-reference caveat와 trusted release order를 그대로 적용한다.
+- pre-attempt confirmed answer reveal처럼 submitted wrong/partial answer가
+  없는 event에서 cause, biggest gap 또는 error note를 꾸며내지 않는다.
+- recurrence가 확정되지 않으면 bounded prevention cue는 줄 수 있지만
+  반복 pattern이나 learner trait를 발명하지 않는다.
+- immediate fix는 learner action을 요구하며 AI generation, note render,
+  view 또는 save만으로 complete하지 않는다.
+- immediate fix가 due인 동안 sole primary CTA는
+  `immediateFix.value.requiredLearnerActionRef`다. next review는 due 전에는
+  scheduled/informational이며 다섯 field가 다섯 competing CTA를 만들지
+  않는다.
+- note 생성·render·view·save만으로 mastery, recovery, weakness,
+  independent qualification 또는 queue completion을 바꾸지 않는다.
+- desktop/mobile과 screen reader에서 위 다섯 semantic field 순서를
+  보존한다.
+
+### 6.7 assistance dependence
 
 AI를 많이 썼다는 사실 자체가 나쁘지는 않지만, support가 사라졌을 때
 성능이 유지되는지 별도로 측정한다.
@@ -1374,6 +1721,16 @@ Measurement Lane
 한 UI 안에서 전환할 수 있어도 event, cache, route와 qualification을 분리한다.
 Learning Lane output이 Measurement Lane prefetch/cache에 나타나지 않게 한다.
 
+attempt 전 deliberate answer request는 Measurement Lane reveal 예외가
+아니다. confirmation screen의 request/view/cancel 동안 active
+Measurement episode를 그대로 두고 어떤 evidence도 만들지 않는다.
+affirmative confirmation 뒤 §5.6 transaction이 먼저 그 episode를
+abandoned·ineligible·unresumable하게 닫은 다음 distinct Learning Lane
+episode를 열어야 한다. 그 transaction이 full assistance, exact exposure와
+fixed no-credit qualification까지 모두 commit하기 전에는 어떤
+answer-bearing byte도 Learning Lane 또는 Measurement Lane에 release하지
+않는다.
+
 ### 8.2 measurement ladder
 
 ```text
@@ -1556,6 +1913,18 @@ assistance, measurement와 privacy 불변식을 약화하지 않고 감정평가
 5. 가장 큰 간극 하나를 다시 쓰거나 계산한다.
 6. D+1과 D+7을 예약한다.
 
+learner가 attempt 전에 정답을 deliberate하게 요구할 때의
+`confirmed_pre_attempt_learning_reveal`은 세 번째 learning path나
+guided onboarding이 아니다. §5.6의 learner-visible 결과 고지를
+affirmative confirmation한 뒤 별도 Learning Lane에서만 열리는 좁은
+override다. full solution보다 먼저 assistance/exposure/no-credit와 active
+Measurement abandonment를 원자적으로 기록하고, revealed item·retry·실제
+노출된 same-surface variant에는 independent, mastery, weakness, recovery,
+D+1/D+7/timed/transfer credit를 주지 않는다. submitted wrong/partial answer가
+없으므로 개인 gap·cause·automatic error note를 생성하지 않는다. 이후
+eligible한 unseen verified variant의 별도 독립 evidence만 기존 policy로
+평가한다.
+
 `guided_study`는 초학자나 완전히 낯선 유형을 위한 future contract
 candidate로만 정의한다. **현재 learner runtime에서는 선택·실행할 수
 없다.** 아래 순서는 §5.0의 별도 dated Owner supersession과 후속 gate가
@@ -1621,6 +1990,7 @@ type MasteryStateV1 =
 | 사건 | 최대 허용 결과 |
 | --- | --- |
 | AI 풀이 생성·열람·저장 | mastery 변화 없음 |
+| confirmed pre-attempt Learning Lane full reveal | exposure·assistance history와 future independent review만; gap/error note/credit 없음 |
 | 힌트 또는 full solution 뒤 성공 | `recovering` 후보 |
 | D+1 무도움 성공 | `recovering` 후보 |
 | 같은 문제 재정답 | unseen readiness 아님 |
@@ -2717,7 +3087,11 @@ type ShadowSourceEligibilityClassV1 =
   | "supported_theory"
   | "effective_version_bound_law";
 
+type SharedSignalLocalRowIdV1 =
+  string & { readonly __brand: "shared_signal_local_row_id_v1" };
+
 type ShadowObservationV1 = {
+  sharedSignalRowId: SharedSignalLocalRowIdV1;
   pseudonymousSubjectKey: string;
   sequenceIndex: number;
   sharedSkillId: string;
@@ -2753,11 +3127,17 @@ type VaultShadowExportPreflightV1 = {
   subjectAuthorizationManifestDigest: string;
   consentLedgerResolutionRefs: string[];
   vaultScopedSourceEventSetCommitmentRef: string;
+  proposedCanonicalExportDigest: string;
+  proposedSharedSignalRowIds: SharedSignalLocalRowIdV1[];
+  authorizationGenerationRef: string;
+  preparedCommitGrantRef: string;
   vaultInternalRevocationDeleteLineageRef: string;
+  vaultShadowDownstreamLineageRef: string;
   affectedDownstreamArtifactIds: string[];
   extractionAuthorizationCheckedAt: string;
   releaseAuthorizationCheckedAt: string;
-  authorizationInvariant: "verified";
+  checkedAtAuthority: "audit_evidence_only";
+  authorizationInvariant: "verified_preflight_not_commit_authority";
 };
 
 type ShadowExportBatchV1 = {
@@ -2782,6 +3162,60 @@ type ShadowExportBatchV1 = {
   observations: ShadowObservationV1[];
   exportDigest: string;
 };
+
+type VaultShadowCommitGrantV1 = {
+  vaultOnly: true;
+  grantRef: string;
+  proposedBatchId: string;
+  canonicalExportDigest: string;
+  authorizationGenerationRef: string;
+  exactO2PurposeRef: string;
+  exactO2ApprovalGeneration: string;
+  includedSubjectConsentGenerationSetDigest: string;
+  consentNoticeAndPolicyVersionRef: string;
+  retentionStateRef: string;
+  evaluationHorizonRef: string;
+  authorizationPolicyVersion: string;
+  state: "prepared" | "consumed" | "invalidated";
+  expiresAt: string;
+  replayProtectionRef: string;
+};
+
+type VaultShadowDownstreamLineageV1 = {
+  vaultOnly: true;
+  authorizationGenerationRef: string;
+  subjectScopeRef: string;
+  batchId: string;
+  exactPurposeRef: string;
+  evaluationHorizonRef: string;
+  pseudonymRotationPolicyVersion: string;
+  observationTargets: Array<{
+    vaultObservationRef: string;
+    sharedSignalRowId: SharedSignalLocalRowIdV1;
+    purposeHorizonRotationRetryDescendantRowIds:
+      SharedSignalLocalRowIdV1[];
+  }>;
+  downstreamCacheOrFeatureSnapshotIds: string[];
+  downstreamMaterializationIds: string[];
+  downstreamDatasetIds: string[];
+  downstreamModelEvalArtifactIds: string[];
+  lineageState: "pending" | "committed" | "quarantined" | "retired";
+};
+
+type SharedSignalRowTombstoneV1 = {
+  sharedSignalRowId: SharedSignalLocalRowIdV1;
+  state: "quarantined" | "tombstoned";
+  globalPolicyVersion: string;
+};
+
+type SharedSignalDenyBarrierV1 = {
+  batchId: string;
+  exactPurposeRef: string;
+  evaluationHorizonRef: string;
+  pseudonymRotationPolicyVersion: string;
+  state: "deny_all_consumption";
+  globalPolicyVersion: string;
+};
 ```
 
 `ShadowObservationV1`에는 production `learnerScopeRef`, private concept,
@@ -2791,6 +3225,14 @@ map에서만 사용하고 shadow export에서 제외한다. pseudonymous subject
 key와 item-family pseudonym은 exact purpose와 frozen evaluation
 horizon 안에서만 안정적이고, 다른 purpose/horizon/rotation과
 연결할 수 없다.
+
+`sharedSignalRowId`는 approved Shared Signal projection에서 새로 만든
+random/local tombstone target이다. exact purpose, horizon과 rotation에
+scope되며 private event ID, raw body, private hash·fingerprint,
+commitment, consent record 또는 vault lineage에서 파생하지 않는다.
+authorization proof가 아니고 Personal Raw Vault로 reverse resolve할 수
+없으며 다른 purpose/horizon/rotation에서 equality key로 재사용하지
+않는다.
 
 `VaultShadowExportPreflightV1`은 Personal Raw Vault 내부의
 least-privilege record다. serializer, client/API response, receipt, log,
@@ -2803,16 +3245,72 @@ manifest, ledger resolution, commitment와 lineage에는 vault 밖 lookup,
 membership 또는 equality API가 없다.
 
 Personal Raw Vault는 각 real-learner subject에 대해 extraction 또는
-pseudonymization 전에 한 번, batch release 직전에 다시 한 번 active,
-granted, non-revoked `pseudonymous_product_signal` exact-purpose consent를
-검증한다. 두 검사는 exact O2 purpose, consent notice/policy version,
-retention state와 frozen evaluation horizon을 모두 일치시킨다. missing,
-declined, revoked, expired/stale, wrong-purpose, wrong-notice/policy-version
-또는 unresolved consent는 해당 event를 제외한다. batch 전체의
-authorization invariant를 증명할 수 없거나 vault-local commitment,
-authorization 또는 lineage가 missing, stale, mismatched, invalid이면
-batch를 reject하고 Shared Signal, log, telemetry와 Model/Eval Registry에
-0건을 쓴다.
+pseudonymization 전에 한 번, release preparation 직전에 다시 한 번
+active, granted, non-revoked `pseudonymous_product_signal` exact-purpose
+consent를 검증한다. 두 검사는 exact O2 purpose, consent notice/policy
+version, retention state와 frozen evaluation horizon을 모두 일치시킨다.
+missing, declined, revoked, expired/stale, wrong-purpose,
+wrong-notice/policy-version 또는 unresolved consent는 해당 event를
+제외한다.
+
+`extractionAuthorizationCheckedAt`과 `releaseAuthorizationCheckedAt`은
+audit evidence일 뿐 commit authority가 아니다. stale read replica,
+cached ledger snapshot, exported metadata, retry token, prior successful
+check 또는 timestamp만으로 Shared Signal write를 승인할 수 없다.
+
+release preparation은 다음을 **Personal Raw Vault 안에서만** 수행한다.
+
+1. exact canonical export bytes와 digest를 동결한다.
+2. approved projection에서 purpose/horizon/rotation-scoped
+   `sharedSignalRowId`를 만든다.
+3. 아직 Shared Signal에 쓰지 않은 pending
+   `VaultShadowDownstreamLineageV1`을 만든다.
+4. exact proposed batch ID와 canonical bytes/digest, exact O2
+   purpose/generation, 모든 included subject의 current active consent
+   generation, notice/policy version, retention state, frozen horizon과
+   authorization policy version에 묶인 short-lived single-use
+   `VaultShadowCommitGrantV1`을 `prepared`로 만든다.
+
+consent, O2, notice/policy, retention, horizon, included subject,
+canonical batch bytes/digest 또는 authorization policy가 하나라도
+바뀌면 prepared generation을 `invalidated`로 만든다. grant는 explicit
+expiry와 replay protection을 가지며 vault 밖으로 나가지 않는다.
+
+첫 Shared Signal write에는 하나의 logical linearization point가 있다.
+trusted gateway는 그 boundary에서 current, unexpired, unconsumed
+generation을 authoritative ledger에서 다시 resolve하고, exact batch
+ID/digest/bytes를 비교한 뒤 다음을 하나의 authorized transaction 또는
+동등 coordinator/CAS boundary로 처리한다.
+
+1. prepared generation을 `consumed`로 CAS한다.
+2. authorized Shared Signal row를 처음으로 commit한다.
+3. 모든 active row와 private source observation의
+   `VaultShadowDownstreamLineageV1`을 `committed`로 전환한다.
+4. exact idempotent commit result를 고정한다.
+
+consent/O2 invalidation, revocation과 commit은 같은 authorization-generation
+key 또는 동등한 linearizable serialization boundary를 사용한다.
+revocation이 먼저 이기면 Shared Signal write는 0건이다. commit이 먼저
+이기면 모든 row가 complete committed lineage를 가져 immediate
+revocation target이 된다. 첫 write 전에는 canonical payload, proposed
+row ID와 pending lineage를 vault 안에서만 stage한다. Shared Signal에
+`inactive_staged`, hidden, pending 또는 유사 row를 미리 쓰지 않는다.
+
+prepared-to-consumed CAS, 첫 Shared Signal row commit과 committed
+vault-lineage transition의 logical linearization을 증명할 수 없으면 batch
+전체를 fail closed한다. crash/retry가 active Shared Signal row without
+committed lineage 또는 consumed authority without the exact idempotent
+commit result를 남길 수 없다. 이 invariant를 세울 수 없으면 active뿐
+아니라 pending/hidden을 포함한 Shared Signal, log, telemetry와 Model/Eval
+write가 모두 0건이다.
+
+concurrent duplicate commit, consumed-grant replay, digest/serialized-byte
+mismatch, expiry, invalidation 또는 한 subject라도 stale generation인
+mixed batch는 전체를 reject한다. partial commit하지 않고 새 generation과
+새 authorized batch를 만든다. batch 전체의 authorization invariant를
+증명할 수 없거나 vault-local commitment, grant, authorization 또는
+lineage가 missing, stale, mismatched, invalid이면 cross-plane write는
+0건이다.
 
 generic legal basis snapshot, contract, legitimate-interest theory, service
 necessity, terms acceptance, tenant agreement, research approval,
@@ -2830,8 +3328,12 @@ alias, nested injection 또는 unknown field를 발견하면 fail closed한다.
 `vaultScopedSourceEventSetCommitmentRef`,
 `sourceEventSetCommitmentRef`의 alias, vault/private object ref, private
 keyed commitment, raw/private content hash·fingerprint, stable account ID,
-attestation·receipt·token·digest 또는 Personal Raw Vault subject/event
-set으로 resolve·compare되는 equality handle을 포함하지 않는다.
+attestation·receipt·token·digest, commit grant/generation ref 또는 state,
+replay token, private downstream-lineage ref/digest 또는 Personal Raw Vault
+subject/event set으로 resolve·compare되는 equality handle을 포함하지
+않는다. 이 금지는 Shared Signal row, client/API output, receipt, log,
+telemetry, analytics, issue/PR/CI artifact와 Model/Eval Registry에도
+동일하다.
 
 export authorization metadata는 `consentPurpose`,
 `authorizationClass`, global/versioned `authorizationPolicyVersion`와
@@ -2847,14 +3349,71 @@ non-private fields에서 purpose/horizon/rotation별로 생성하며 private eve
 ID, raw content, private hash·fingerprint 또는 vault commitment에서
 파생하지 않는다.
 
-export 뒤 revocation/delete가 생기면 Consent Ledger가 future use를
-중단하고, Personal Raw Vault 안의 internal lineage map만 사용해 affected
-model/eval artifact를 quarantine하거나 retire한다. exported private
-handle을 fallback으로 요구하지 않는다. refit가 필요해도
-`pseudonymous_product_signal` consent와 O2는 fitting 권한이 아니다.
-active exact-purpose `offline_model_training` consent와 그 시점에 유효한
-별도 exact-scope O5 아래 새 frozen dataset/model/parameter version으로만
-수행하며, 유효한 두 gate 중 하나라도 없으면 refit하지 않는다.
+export 뒤 revocation/delete도 row와 모든 descendant까지 닫힌 lifecycle을
+따른다. Personal Raw Vault의 non-exportable
+`VaultShadowDownstreamLineageV1`은 각 authorized subject와 private source
+observation에서 해당 exported batch ID, Shared-Signal-local row ID,
+purpose/horizon/rotation/retry descendant, cache, feature snapshot,
+materialization, dataset와 Model/Eval artifact ID까지 정방향으로
+추적한다. 방향은 vault → Shared Signal target뿐이다. Shared Signal이나
+어떤 consumer도 row ID에서 subject, ledger entry, private event,
+commitment, grant/generation 또는 vault lineage로 reverse lookup할 수
+없고, exported private handle을 fallback으로 요구하지 않는다.
+
+`pseudonymous_product_signal` consent 철회, row-affecting purpose-scoped
+delete 또는 O2 invalidation은 먼저 같은 serialization key에서 모든
+unconsumed authorization generation을 invalidated로 만든다. 따라서
+racing commit이 먼저 이기면 complete committed lineage를 남기고,
+revocation이 먼저 이기면 새 Shared Signal write는 0건이다.
+`offline_model_training` 철회는 training/dataset/model use를 막는 별도
+purpose이며 product-signal authority를 대체·통합·암묵 변경하지 않는다.
+
+revocation/delete/O2 invalidation을 acknowledge하거나
+`revocationAppliedThroughRef`를 전진시키기 전에, vault lineage는 모든
+affected Shared Signal row, cache, feature snapshot, materialization,
+dataset와 Model/Eval artifact를 idempotent하게 non-active,
+quarantined 또는 retired로 전이해야 한다. 전체 targeted closure를
+동기적으로 증명할 수 없으면 acknowledge 전에 batch/purpose/horizon/
+rotation 전체 consumer와 provenance descendant를 덮는 enforced
+`SharedSignalDenyBarrierV1`를 설치한다. row 하나만 닫고 이미 파생된
+artifact를 usable로 두거나 all-surface barrier 없는 eventual
+best-effort는 금지한다.
+
+모든 Shared Signal query, cache, materialized view,
+sufficiency/calibration job와 dataset builder는 active,
+non-quarantined, non-tombstoned row만 읽는다. cache, feature snapshot,
+materialization, dataset, evaluation 또는 model publication은 publish
+boundary에서 모든 source row의 current active state를 다시 검증하고
+downstream lineage 등록을 완료할 때까지 inactive다. 그 boundary는
+revocation과 같은 key로 serialize한다. builder가 active row를 먼저
+읽었더라도 그 뒤 revocation이 완료됐다면 stale read로 detached
+artifact를 publish할 수 없다. 이미 publish된 descendant는 acknowledge
+전에 같은 vault lineage로 quarantine/retire하거나 all-surface deny
+barrier 아래 unusable이어야 한다.
+
+`SharedSignalRowTombstoneV1` serializer는 Shared-plane-local target,
+coarse `state`와 global policy version만 허용한다. detailed reason,
+exact withdrawal time, subject/ledger/grant/generation/commitment/lineage
+ref·digest와 open-ended operation metadata는 금지한다. lineage가
+missing, damaged 또는 incomplete면 알려진 row만 닫지 않는다. containing
+batch와 provenance-reachable descendant 전체를 quarantine하고, complete
+closure를 증명할 수 없으면 affected purpose/horizon/rotation pipeline
+또는 더 넓은 safe domain을 deny한 채 reconciliation한다. unknown
+descendant가 usable로 남을 수 없다.
+
+re-consent는 tombstoned old row를 resurrect하지 않는다. 새 authorization
+generation, 새 export와 새 row lifecycle이 필요하다. backup restore,
+cache replay, materialization rebuild와 disaster recovery도 quarantined/
+tombstoned row나 descendant를 되살리지 않는다. immediate non-active
+quarantine은 retention policy가 요구하는 이후 purpose-scoped physical
+delete/purge와 구분한다.
+
+quarantine/retirement는 automatic refit 권한이 아니다.
+`pseudonymous_product_signal` consent와 O2도 fitting 권한이 아니다.
+replacement fitting/training/dataset refresh는 active exact-purpose
+`offline_model_training` consent와 그 시점에 유효한 별도 exact-scope
+O5 아래 새 frozen dataset/model/parameter version으로만 수행한다. 유효한
+두 gate 중 하나라도 없으면 refit하지 않는다.
 
 shadow 평가는 다음을 요구한다.
 
@@ -2978,6 +3537,7 @@ immutable source asset
 → ExplanationPacket revision
 → KeyConcept·DecisionPath·ContrastSet
 → gap/action
+→ existing LearningGapRecord·S216 기반 automatic error-note projection
 → rewrite/recalculation revisions
 → D+1/D+7/timed evidence
 → versioned PersonalWeaknessMap projection
@@ -2991,6 +3551,11 @@ immutable source asset
 - problem/source/policy 변경 시 과거 판정을 `stale`로 만든다.
 - 원본, 사용자 수정, AI output, 개인 메모를 구조적으로 분리한다.
 - autosave, conflict recovery, version history, export, delete를 제공한다.
+- accepted wrong/partial feedback의 current automatic error note는 safe
+  source refs와 released artifact에서 결정론적으로 재계산하며
+  save/resume/reopen/Ledger/search에서 같은 projection revision을 복구한다.
+  S216에 learner-visible body를 저장하거나 note view/save를 evidence로
+  승격하지 않는다.
 - personal weakness snapshot은 원장을 덮어쓰지 않고 exact basis에서
   언제든 재계산할 수 있어야 한다.
 
@@ -3149,6 +3714,21 @@ declined, revoked, expired/stale, wrong-purpose, wrong-notice/policy-version
 일으키고 Shared Signal, log, telemetry와 Model/Eval Registry write는
 0건이다.
 
+두 `checkedAt`은 audit evidence일 뿐 commit authority가 아니다.
+vault는 exact batch ID와 canonical bytes/digest, O2 purpose/generation,
+included subject의 current product-signal consent generation,
+notice/policy, retention, horizon과 authorization policy에 결합된
+short-lived single-use generation을 prepared 상태로 만든다. 그 입력 중
+하나라도 바뀌거나 expire되면 invalidated다. 첫 Shared Signal write와
+prepared→consumed CAS, committed downstream row lineage는 같은 trusted
+transaction/coordinator linearization에서만 일어난다. consent/O2
+invalidation과 commit도 같은 generation key로 serialize한다. stale
+snapshot, timestamp, exported metadata, retry token 또는 과거 성공은
+commit을 승인하지 못한다. duplicate/replay, digest/byte mismatch,
+expiry/invalidation과 one-stale-subject mixed batch는 전체 reject한다.
+그 boundary 전 payload, local row ID와 pending lineage는 vault에만 있고
+Shared Signal의 staged/hidden/pending write는 0건이다.
+
 cohort parameter fitting, training, refit, parameter update 또는 dataset
 refresh는 그 요건에 더해 active exact-purpose
 `offline_model_training` consent와 별도 future exact-scope O5를
@@ -3164,19 +3744,35 @@ learner-derived observation은 train 또는 calibration-fitting partition에
 들어갈 수 없다.
 
 subject authorization manifest, consent-ledger resolution, vault-scoped
-source-event-set commitment와 revocation/delete lineage map은 Personal Raw
-Vault 내부 preflight에만 존재한다. exported batch, Shared Signal,
-client/API response, receipt, log, telemetry, analytics, issue/PR/CI
-artifact와 Model/Eval Registry에는 그 ref, digest, token, private hash,
-fingerprint, commitment 또는 equality handle을 넣지 않는다. serializer는
-closed allowlist와 nested unknown-field rejection을 적용한다.
+source-event-set commitment, commit grant/generation과 revocation/delete
+lineage map은 Personal Raw Vault 내부 preflight와 transaction에만
+존재한다. exported batch, Shared Signal, client/API response, receipt,
+log, telemetry, analytics, issue/PR/CI artifact와 Model/Eval Registry에는
+그 ref, digest, token, state, private hash, fingerprint, commitment 또는
+equality handle을 넣지 않는다. serializer는 closed allowlist와 nested
+unknown-field rejection을 적용한다.
 
 export에는 exact purpose/O2와 global policy version을 포함한 closed
 non-private, non-unique, non-resolvable authorization metadata만 남는다.
 subject/item-family pseudonym은 그 exact purpose와 horizon 밖에서
-unlinkable해야 한다. revocation/delete 뒤 Personal Raw Vault의 internal
-lineage만 사용해 affected artifact를 quarantine하거나 retire하며,
-exported private handle을 propagation fallback으로 요구하지 않는다.
+unlinkable해야 한다.
+
+revocation/delete/O2 invalidation은 먼저 unconsumed generation을
+invalidated로 만들고, Personal Raw Vault의 internal downstream lineage로
+affected persisted row와 purpose/horizon/rotation/retry descendant,
+cache, feature snapshot, materialization, dataset와 Model/Eval artifact를
+모두 non-active/quarantined/retired로 만든다. 이 전에는
+acknowledgement나 `revocationAppliedThroughRef` 전진이 없다. synchronous
+closure가 불완전하면 모든 consumer와 descendant를 덮는 enforced
+batch/purpose/horizon/rotation deny barrier를 먼저 설치한다. 각 builder는
+publish 직전에 source-row active state를 재검증하고 revocation과
+serialize된 boundary에서 lineage를 등록해야 한다. missing/damaged
+lineage는 containing batch와 reachable derivative 전체의 quarantine
+또는 더 넓은 pipeline deny를 일으킨다. re-consent, backup restore,
+cache/materialization rebuild는 old tombstone과 descendant를 resurrect하지
+않는다. exported private handle을 propagation fallback으로 요구하지
+않는다.
+
 refit는 active `offline_model_training` consent와 그 시점에 유효한 별도
 exact-scope O5 아래 새 frozen version으로만 허용하고 in-place refit는
 금지한다.
@@ -3198,8 +3794,18 @@ exact-scope O5 아래 새 frozen version으로만 허용하고 in-place refit는
 - BKT shadow prediction을 learner-facing probability로 노출
 - O2 전 real learner event를 pyBKT benchmark 또는 sufficiency audit에 export
 - subject authorization manifest, consent-ledger ref/digest, vault/private
-  object ref, source-event-set commitment, raw/private hash·fingerprint 또는
-  vault equality handle을 `ShadowExportBatchV1`이나 Shared Signal에 export
+  object ref, source-event-set commitment, commit grant/generation,
+  replay state, downstream lineage, raw/private hash·fingerprint 또는 vault
+  equality handle을 `ShadowExportBatchV1`이나 Shared Signal에 export
+- authorization generation consume 전 Shared Signal에 staged, hidden,
+  pending 또는 inactive row를 write
+- stale preflight timestamp/snapshot, exported metadata나 retry token으로
+  commit authority를 대체
+- revocation acknowledgement 뒤 affected row/cache/materialization/dataset/
+  Model-Eval descendant를 usable로 남기거나 all-surface deny barrier 없이
+  eventual best-effort propagation
+- re-consent, backup restore, cache replay 또는 materialization rebuild로
+  tombstoned row나 quarantined descendant를 resurrect
 - O2·approved export·O4만으로 learner-derived pyBKT fitting, training,
   refit, parameter update 또는 dataset refresh 수행
 - O5 전 learner-derived observation을 train 또는 calibration-fitting
@@ -3847,6 +4453,9 @@ apps/
 
 - attempt, commitment, assistance, exposure, timer와 answer revision은 append-only
 - mastery, weakness, readiness와 schedule은 projection
+- learner-visible automatic error note는 existing `LearningGapRecord`와
+  S216 metadata, accepted feedback/source release artifact의 recomputable
+  learner-private projection이며 별도 body 원장이나 state가 아님
 - source/taxonomy/policy 변경 시 stale 후 재계산
 - projection을 원장처럼 mutate하지 않음
 - replay/idempotency가 동일 state를 만들어야 함
@@ -3870,6 +4479,19 @@ request
 ```
 
 한 단계라도 실패하면 generic answer fallback을 하지 않는다.
+
+confirmed pre-attempt Learning Lane reveal에서는 bounded release 전에
+affirmative confirmation, active Measurement episode의 abandoned/
+ineligible·unresumable 전이, distinct Learning episode open,
+`full_solution_revealed` assistance, exact exposure와 모든 no-credit flag를
+한 trusted transaction으로 commit한다. request, confirmation-screen view,
+cancel 또는 failed affirmation은 authoritative state를 바꾸지 않는다.
+
+Shared Signal release에서는 gateway가 vault-only single-use generation을
+현재 authorization state에 대해 다시 검증하고 consumed CAS, 첫 row write와
+committed downstream lineage를 같은 revocation-serialized boundary에서
+완료한 뒤에만 release한다. preflight timestamp나 prior check는 이
+boundary를 대체하지 않는다.
 
 ### 19.4 model routing
 
@@ -4056,11 +4678,26 @@ consent, 다른 consent purpose, O2 approval, O4 또는 experiment tier는
 §12.1의 Personal Raw Vault preflight가 extraction 전과 release 직전에
 notice/policy version, retention state와 evaluation horizon까지 다시
 검증하고, serialized batch에는 closed non-linkable authorization metadata만
-남긴다. manifest, consent-ledger resolution, vault/private ref,
-source-event-set commitment, raw/private hash·fingerprint와 internal
-revocation/delete lineage는 export하지 않는다. alias, nested
-internal-only value 또는 unknown field가 주입되면 batch 전체를 reject하고
-cross-plane write는 0건이다. fitting·training·refit·parameter update 또는
+남긴다. 그 check timestamp는 audit evidence일 뿐이다. exact batch
+bytes/digest와 current O2/consent generation에 묶인 vault-only single-use
+commit grant의 consumed CAS, 첫 Shared Signal write와 committed row
+lineage가 같은 revocation-serialized linearization에서 성공해야 한다.
+그 전 Shared Signal staged write는 0건이다.
+
+manifest, consent-ledger resolution, vault/private ref,
+source-event-set commitment, commit grant/generation, raw/private
+hash·fingerprint와 internal revocation/delete lineage는 export하지 않는다.
+alias, nested internal-only value 또는 unknown field가 주입되면 batch
+전체를 reject하고 cross-plane write는 0건이다.
+
+post-export revocation/delete/O2 invalidation은 unconsumed generation을
+먼저 무효화하고 vault-only lineage로 persisted row와 모든 cache/
+materialization/dataset/Model-Eval descendant를 non-active,
+quarantined/retired로 만든 뒤에만 acknowledge한다. 불완전하면
+all-consumer deny barrier를 먼저 설치한다. 모든 builder는 publication
+직전 active source recheck와 lineage registration을 revocation과 같은
+boundary에서 완료한다. re-consent/rebuild/restore로 old row를
+resurrect하지 않는다. fitting·training·refit·parameter update 또는
 dataset refresh는 별도의 active `offline_model_training` consent와
 future exact-scope O5가 모두 필요하다.
 
@@ -4282,15 +4919,19 @@ O3A + S236P
 ### 22.2 PR #667 strategy correction
 
 - existing branch only
-- exact parent head `18893b26e2afbd5e4f853f9a81f5c059549e44e4`가 live일
+- exact parent head `46194ab113374ebb9f83805da55ba5c6427662dc`가 live일
   때 그 sole-child fast-forward docs-only corrective 하나
 - existing v7 path 한 파일만 수정
-- exact 신규 P1 finding 두 건만 교정:
-  product-signal consent 필수화와 vault-only commitment/lineage
-- existing 11 resolved thread를 reply/reopen/re-resolve하지 않음
-- exact 신규 2 thread만 독립 검증 뒤 evidence reply와 resolve
+- exact 신규 finding 네 건만 교정:
+  commit-time consent/O2 authorization atomicity P1,
+  persisted Shared Signal row revocation propagation P1,
+  confirmed Learning Lane answer reveal P1,
+  learner-visible automatic error note P2
+- existing 13 resolved thread를 reply/reopen/re-resolve하지 않음
+- exact 신규 4 thread만 독립 검증 뒤 evidence reply와 resolve
 - 새 exact head에서 모든 required check success와 fresh review terminal
   결과를 요구
+- known-thread target은 `17/17 resolved`
 - final aggregate는 계속 one added v7 file
 - corrected v6 또는 v6.1 artifact 재도입 금지
 - Draft 유지
@@ -4305,20 +4946,24 @@ S236A completion과 live authority 뒤의 별도 S237A Work에서만 source와
 implementation contract를 다룬다. 그 Work도 runtime을 활성화하지 않으며
 Owner-private learner runtime은 S237P 뒤 별도 O4A까지 OFF다.
 
-S237A가 구현 후보로 다룰 수 있는 learner path는 현재 `attempt_first`뿐이다.
-`guided_study`, guided selector/route/API/event/ExecutionBlock/scheduling/
-mastery는 contract-only로 남고, §5.0의 별도 dated Owner supersession
-없이는 S237A 어느 slice도 이를 구현·출시·활성화하지 못한다.
+S237A가 구현 후보로 다룰 수 있는 learner path는 current
+`attempt_first` Learning Lane과 그 안의 confirmed answer-reveal
+override다. override는 attempt-before-reveal default를 보존하는
+non-guided, no-credit exit이며 Owner dogfood result/D+1/D+7 numerator에는
+포함되지 않는다. `guided_study`, guided selector/route/API/event/
+ExecutionBlock/scheduling/mastery는 contract-only로 남고, §5.0의 별도
+dated Owner supersession 없이는 S237A 어느 slice도 이를
+구현·출시·활성화하지 못한다.
 
 | slice | 산출물 |
 | --- | --- |
 | S237A.0 | runtime/schema/RLS/flags/live contract 재조사 |
-| S237A.1 | `attempt_first` commitment/assistance/exposure + tutor FSM; guided symbols는 contract fixture only |
+| S237A.1 | `attempt_first` commitment/assistance/exposure + tutor FSM + confirmed Learning reveal의 atomic no-credit transition; guided symbols는 contract fixture only |
 | S237A.2 | 감정평가사 2차 ExamPackage/TaskProfile projection |
-| S237A.3 | structured Workbench + struggle budget + scaffold/reveal/fading |
+| S237A.3 | structured Workbench + struggle budget + scaffold/reveal/fading + deliberate confirmation |
 | S237A.4 | ExplanationPacket/KeyConcept/probe/DecisionPath/Contrast |
-| S237A.5 | DiagnosticCause/Gap/Repair/Verification |
-| S237A.6 | Learning Lane vs Measurement Lane + D+1/D+7/timed qualification |
+| S237A.5 | DiagnosticCause/Gap/Repair/Verification + existing S216 기반 five-field automatic error-note projection |
+| S237A.6 | Learning Lane vs Measurement Lane + confirmed override no-credit + D+1/D+7/timed qualification |
 | S237A.7 | rule PersonalWeaknessMap + calibration + assistance dependence |
 | S237A.8 | Ledger/search/resume/offline/conflict/accessibility |
 | S237A.9 | exact-head integrated Owner acceptance |
@@ -4417,25 +5062,28 @@ S241A → O3C → S239A → S242C → O4F → S243C
 ### 23.1 지금 실행할 하나
 
 PR #667의 fresh-review parent head
-`18893b26e2afbd5e4f853f9a81f5c059549e44e4`와 main이 live checkpoint에
+`46194ab113374ebb9f83805da55ba5c6427662dc`와 main이 live checkpoint에
 그대로 있을 때만, 별도 corrective Work가 다음을 수행한다.
 
 1. live authority, parent head/tree, artifact와 exact unresolved
-   P1/P1 두 건—
-   `PRRT_kwDOSMHn8M6UQ0tI` product-signal consent와
-   `PRRT_kwDOSMHn8M6UQ0tO` vault-only commitment/lineage—및
-   13-thread topology 검증
+   P1/P1/P1/P2 네 건—
+   `PRRT_kwDOSMHn8M6USMu6` commit-time authorization atomicity,
+   `PRRT_kwDOSMHn8M6USMu3` persisted-row revocation,
+   `PRRT_kwDOSMHn8M6USMu9` confirmed Learning Lane reveal,
+   `PRRT_kwDOSMHn8M6USMu-` automatic error note—및
+   17-thread topology 검증
 2. existing PR branch에 parent head의 sole-child corrective 하나
-3. existing v7 경로 한 파일에서 exact O2 + active product-signal consent와
-   vault-only commitment/manifest/lineage만 교정
-4. exported authorization metadata를 closed, non-private, non-unique,
-   non-resolvable shape로 고정하고 offline-training consent + O5 fitting
-   boundary를 보존
+3. existing v7 경로 한 파일에서 commit grant/row revocation lifecycle,
+   confirmed Learning reveal와 existing S216 기반 five-field automatic
+   error-note projection만 교정
+4. exact O2 + active product-signal consent, closed non-linkable export
+   metadata, vault-only manifest/commitment/grant/lineage와 separate
+   offline-training consent + O5 fitting boundary를 보존
 5. exact-head digest/manifest, focused authority audits와 newest-head
    required checks 고정
-6. 기존 11 resolved thread에는 mutation 없이 exact 신규 2 thread만
+6. 기존 13 resolved thread에는 mutation 없이 exact 신규 4 thread만
    독립 검증 뒤 각 1회 증거 답변·해결
-7. 13/13 resolved 뒤 exact new head에 fresh `@codex review` 1회 요청하고
+7. 17/17 resolved 뒤 exact new head에 fresh `@codex review` 1회 요청하고
    terminal 결과까지 대기
 8. prior caveat·release-artifact binding, exact first-round sequence,
    canonical commercial path와 aggregate 단일 경로 보존
@@ -4463,7 +5111,8 @@ PR #667의 fresh-review parent head
 | commitment | feedback 전 immutable | 사후 제출을 pre-feedback로 위장 0 |
 | struggle | `attempt_first` bounded budget; guided semantics는 contract fixture only | 무한 반복·미승인 guided runtime·answer 즉시 노출 0 |
 | scaffold | 최소 단계·fading | hint가 answer를 우회 누설 0 |
-| reveal | lane/state/transaction gate | measurement pre-submit reveal 0 |
+| reveal | default attempt-before-reveal; confirmed pre-attempt Learning override는 affirmative copy + trusted atomic lane/assistance/exposure/no-credit commit 뒤 output | request/view/cancel mutation·measurement pre-submit reveal·transaction 전 byte 0 |
+| reveal override | existing eligibility/state transition에 subordinate한 non-guided basis; active Measurement episode는 먼저 abandoned/ineligible·unresumable, distinct Learning episode open | guided exit 재사용·self-authorization·client fixed-false spoof·revealed/same-surface independent credit 0 |
 | reconstruction | learner 재수행 | view/save를 recovery로 계산 0 |
 | transfer | unseen family·no assistance | same-item/same-surface stable 0 |
 | caveat | exact `ko-KR.v1` copy가 heading 직후, body 전에 first render/reopen | missing/unknown/mismatch 시 body render 0 |
@@ -4493,10 +5142,35 @@ PR #667의 fresh-review parent head
 - same evidence duplicate priority contribution 0
 - weakness/mastery contradiction 0
 - assistance dependence가 learner 낙인으로 노출 0
+- accepted wrong/partial learner feedback마다 existing
+  `LearningGapRecord`/S216 metadata에서 하나의 learner-private automatic
+  error-note projection
+- `왜 틀렸는지`, `정확한 원리`, `지금 바로 고칠 것`, `재발`,
+  `다음 복습` 다섯 semantic field가 모두 non-empty, distinct, same
+  feedback revision/primary gap에 결합
+- correct principle은 usable claim/source/release artifact와
+  `EffectiveVersionBindingV1`에 결합; missing/conflict/stale면 usable
+  render 0
+- recurrence count/recovery는 LearningGapRecord, status/evidence는 S216에서
+  결정론적으로 reconcile; candidate-ID length 추론·conflict silent choice 0
+- next review는 same-learner real canonical `ReviewUnit`과 valid
+  `ReviewTaskKindV1`/due state에 resolve; candidate-only target 0
+- immediate learner action 하나만 due primary CTA; note 생성/view/save의
+  mastery·recovery·weakness·queue-completion credit 0
+- save/reopen/resume/Ledger/search에서 same current note revision;
+  S216 learner body persistence와 Shared/Academy/model promotion 0
 
 ### 24.4 measurement
 
 - Learning/Measurement cache·route separation
+- pre-attempt answer request, confirmation UI view와 cancel은 Measurement
+  episode, exposure, attempt와 credit state mutation 0
+- affirmative confirmed Learning reveal은 active Measurement episode를
+  atomic하게 abandoned/ineligible·unresumable로 닫고 distinct Learning
+  episode를 연 뒤 full assistance/exposure/no-credit를 output 전에 commit
+- confirmed override의 revealed item, retry와 actually exposed/
+  same-surface variant는 independent·D+1/D+7/timed/transfer qualification 0;
+  future eligible unseen non-same-surface review만 기존 policy로 재평가
 - presentation 전 eligibility snapshot
 - full solution/hint leakage 0
 - timer server authority
@@ -4548,10 +5222,33 @@ PR #667의 fresh-review parent head
 - direct API/multi-tab/retry reveal bypass 0
 - secret/system prompt exposure 0
 - export/delete/revocation propagation
+- commit authority는 exact batch bytes/digest와 current O2/consent
+  generations에 묶인 short-lived single-use vault grant뿐; checkedAt,
+  stale snapshot, exported metadata와 retry token authority 0
+- prepared→consumed CAS, first Shared Signal write와 committed vault row
+  lineage가 one revocation-serialized logical linearization; 그 전
+  Shared Signal staged/hidden/pending write 0
+- duplicate/replay, digest mismatch, expiry/invalidation과 mixed stale
+  subject batch는 partial 없이 whole-batch reject
+- revocation/delete/O2 invalidation은 racing unconsumed grant를 먼저
+  무효화하고 persisted row와 cache/feature/materialization/dataset/
+  Model-Eval descendant를 모두 non-active/quarantined/retired로 만든 뒤
+  acknowledge/applied-through 전진
+- targeted closure가 불완전하면 모든 consumer와 provenance descendant를
+  덮는 enforced batch/purpose/horizon/rotation deny barrier
+- consumer는 active/non-quarantined/non-tombstoned row만 읽고 builder는
+  publish 직전 source active recheck + lineage registration을 revocation과
+  serialize
+- missing/damaged/incomplete lineage는 containing batch와 reachable
+  descendant quarantine 또는 broader pipeline deny; unknown usable
+  descendant 0
+- re-consent, cache/materialization rebuild, backup restore의 old row/
+  descendant resurrection 0
 - pseudonym horizon linkage 0
 - subject authorization manifest, consent-ledger ref/digest,
-  vault/private object ref, source-event-set commitment, private hash·
-  fingerprint와 equality handle의 export 0
+  vault/private object ref, source-event-set commitment, grant/generation,
+  private downstream lineage, private hash·fingerprint와 equality handle의
+  export 0
 - authorization metadata는 closed, non-private, non-unique,
   non-resolvable global values만 허용
 - manifest, commitment와 revocation/delete lineage는 vault-internal only;
@@ -4621,6 +5318,82 @@ PR #667의 fresh-review parent head
 38. product-signal consent, O2와 approved export만으로
     `offline_model_training` consent와 exact O5 없이 fitting·training·
     refit·parameter update·dataset refresh 수행
+39. final consent check 뒤 commit 전 consent가 revoked됐는데 stale
+    prepared generation으로 첫 Shared Signal write
+40. vault-only staging/pre-commit validation 뒤 첫 row write 전 consent가
+    revoked됐는데 commit
+41. 같은 window에서 O2가 invalidated됐는데 prepared grant consume
+42. stale consent read replica, cached ledger snapshot 또는 checkedAt
+    timestamp로 commit authorize
+43. consumed grant replay 또는 concurrent duplicate commit을 두 번 반영
+44. authorized digest와 실제 canonical serialized bytes가 다른데 commit
+45. included subject 하나의 consent generation이 stale인 mixed batch를
+    부분 commit
+46. crash/retry가 committed vault lineage 없는 active Shared Signal row를
+    남김
+47. crash/retry가 exact active/traceable idempotent row result 없이
+    consumed authority를 남김
+48. old batch/horizon/rotation/retry의 persisted row가 revocation 뒤 active
+49. quarantined row를 query/cache/materialized view/dataset builder가 읽음
+50. builder가 active row를 읽은 뒤 revocation이 완료됐는데 detached
+    cache/feature snapshot/dataset/model을 publish
+51. missing/damaged lineage에서 containing row를 silently active로 유지
+52. incomplete lineage가 known descendant만 닫고 unknown
+    provenance-reachable derivative를 usable로 유지
+53. all-surface non-active 전이 또는 enforced deny barrier 전에 revocation
+    acknowledge나 `revocationAppliedThroughRef` 전진
+54. internal grant/generation/downstream lineage를 alias 또는 nested
+    export field로 주입
+55. re-consent로 old tombstoned row를 resurrect
+56. backup restore, cache replay 또는 materialization rebuild로 tombstoned
+    row/descendant를 resurrect
+57. explicit affirmative confirmation 없이 pre-attempt answer request만으로
+    reveal
+58. request, confirmation-screen view 또는 cancel이 Measurement episode,
+    exposure, attempt나 credit를 mutate
+59. `confirmationOutcome = "affirmed"` 전 lane transition
+60. submitted attempt 뒤 confirmed-override basis를 쓰거나 immutable
+    pre-reveal snapshot mismatch를 수락
+61. client가 spoof한 confirmation으로 reveal
+62. Measurement Lane에서 direct API, multi-tab, cache/prefetch로 answer reveal
+63. override 때 active Measurement episode를 atomic하게
+    abandoned/ineligible·unresumable로 만들지 않거나 나중에 resume
+64. confirmation은 commit됐지만 `full_solution_revealed` assistance 또는
+    exact exposed surface 기록이 누락
+65. answer-bearing output을 `full_solution_revealed`보다 약한 assistance로
+    기록
+66. client/model이 fixed no-credit field를 true로 변경
+67. no-credit transaction commit 전에 answer byte/token 반환
+68. revealed item, retry 또는 actually exposed/same-surface variant를
+    independent/D+1/D+7/timed/transfer로 계산
+69. confirmed override를 guided study 또는 guided exit로 분류
+70. override record가 existing `AnswerRevealEligibilityV1`와 trusted state
+    transition 없이 self-authorize
+71. submitted wrong/partial answer 없는 pre-attempt reveal에서 cause,
+    biggest gap, repair 또는 automatic error note 생성
+72. accepted wrong/partial feedback 뒤 automatic error note 누락
+73. 두 번째 competing error-note store/state를 만들거나 learner body를
+    metadata-only S216 record에 저장
+74. 다섯 required field 중 하나가 missing, empty, duplicated 또는 generic
+75. correct principle이 usable source/claim/release evidence에 unbound
+76. required `EffectiveVersionBindingV1`가 missing/conflict/stale인데
+    principle을 usable로 render
+77. recurrence state/count/evidence 없이 prevention cue가 반복 pattern을
+    발명
+78. recurrence count를 candidate-ID array length로 추론하거나
+    LearningGapRecord와 S216 conflict를 silent accept
+79. next-review text는 있지만 real queue/schedule target이 없음
+80. S216 `reviewQueueCandidate`를 real learner-scope canonical
+    `ReviewUnit` 없이 승격
+81. next review가 existing `ReviewTaskKindV1` 밖의 task kind 사용
+82. insufficient cause evidence를 certain learner fault로 render
+83. note-level uncertainty가 referenced cause hypothesis와 모순
+84. client/model field status·qualification 또는 arbitrary/multiple
+    primary CTA를 수락하거나 due 전 next review를 primary로 만듦
+85. note generation/render/view/save가 mastery, recovery, weakness 또는
+    queue-completion을 증가
+86. private error-note body를 Shared Signal, Academy 또는 model training으로
+    promotion
 
 모든 actionable P0/P1/P2는 0/0/0이어야 한다.
 
@@ -4634,12 +5407,17 @@ PR #667의 fresh-review parent head
 - `attempt_first` runtime과 contract-only/non-operative `guided_study` 분리
 - 별도 §5.0 supersession 전 guided selector/route/API/event/block/schedule 0
 - commitment/confidence before feedback
-- bounded scaffold/reveal/fading
+- bounded scaffold/reveal/fading과 non-guided confirmed Learning answer
+  override의 atomic assistance/exposure/no-credit transition
 - Explanation Workbench
 - exact learner-visible caveat와 upstream reference-answer release-artifact binding
 - KeyConcept/DecisionPath/Contrast/probe
 - deterministic Trust
 - cause hypothesis→gap→repair→verification
+- accepted wrong/partial feedback마다 existing LearningGapRecord/S216
+  metadata authority에서 파생된 five-field learner-visible automatic error
+  note; real next `ReviewUnit`, deterministic recurrence reconciliation,
+  save/reopen/resume와 field-level fail-closed
 - D+1/D+7
 - timed full solution
 - PersonalWeaknessMap
@@ -4650,7 +5428,10 @@ PR #667의 fresh-review parent head
 - Shared Signal export의 exact O2 + active exact-purpose product-signal
   consent 및 legal-basis substitution 0
 - closed non-linkable export metadata와 vault-only manifest/commitment/
-  revocation-delete lineage
+  single-use grant/revocation-delete lineage
+- first row commit의 atomic generation consume/lineage와 persisted row부터
+  cache/materialization/dataset/Model-Eval까지 revocation closure 또는
+  all-surface deny barrier
 - hard violation, raw leak, false mastery 0
 
 ### 25.2 universal kernel
@@ -4690,12 +5471,21 @@ PR #667의 fresh-review parent head
 - delayed retention 측정
 - assisted와 independent 분리
 - 현재 Owner dogfood day/result/D+1/D+7은 `attempt_first` only
+- confirmed pre-attempt Learning reveal은 non-guided/no-credit이고 current
+  Owner dogfood numerator 밖; future credit은 새 eligible independent
+  evidence에서만
 - guided-to-D+1은 exact future guided supersession·activation 뒤 별도 metric
 - intervention outcome lineage
+- automatic error note는 existing LearningGapRecord/S216의 learner-private
+  recomputable projection이고 다섯 field와 real ReviewUnit을 요구하며
+  generation/view/save credit 0
 - baseline comparison
 - O2 + active product-signal consent extraction/evaluation과
   offline-training consent + O5 fitting/training/refresh 권한 분리
 - Shared Signal/Model-Eval/client/log surface의 private vault linkage 0
+- product-signal revocation은 active row와 모든 provenance descendant를
+  acknowledgement 전에 non-active로 만들거나 enforced all-surface
+  barrier를 설치
 - efficacy claim은 evidence 수준에 맞음
 
 ### 25.6 사업
@@ -4746,14 +5536,25 @@ PR #667의 fresh-review parent head
 18. Shared Signal은 exact O2와 active exact-purpose product-signal
     consent가 모두 있을 때만 열리며 legal basis, service consent, 다른
     목적, O4 또는 experiment tier가 이를 대체하지 못한다.
-19. private manifest, consent-ledger resolution, commitment와
-    revocation/delete lineage는 Personal Raw Vault 밖으로 나가지 않으며,
+19. private manifest, consent-ledger resolution, commitment,
+    commit grant/generation과 revocation/delete lineage는 Personal Raw
+    Vault 밖으로 나가지 않으며,
     export에는 private plane으로 되돌아가는 ref·digest·equality handle을
     만들지 않는다.
 20. O2와 product-signal consent는 real-learner extraction·frozen
     evaluation 경계이고, offline-training consent + O5는 별도 offline
     fitting·training·refresh 경계다. 어느 O4도 둘을 합치지 못한다.
-21. 세계 최고 수준은 기능 수가 아니라 **잘못된 도움을 막고, 실제 독립
+21. Shared Signal의 첫 persisted row는 current single-use generation
+    consume와 complete vault lineage가 한 atomic boundary에서 성공한
+    뒤에만 존재하고, 철회된 row와 모든 descendant는 다시 usable해지지
+    않는다.
+22. attempt-before-reveal은 default지만 Learning Lane의 clear affirmative
+    override를 감금하지 않는다. 그 선택은 guided가 아니며 full
+    assistance/exposure/no-credit를 output 전에 함께 기록한다.
+23. accepted wrong/partial feedback는 기존 gap/S216 authority에서 다섯
+    field automatic error note로 보이되, note 자체가 새 evidence나
+    mastery authority가 되지 않는다.
+24. 세계 최고 수준은 기능 수가 아니라 **잘못된 도움을 막고, 실제 독립
     능력을 증명하며, 다른 시험에서도 같은 품질을 재현하는 구조**로 만든다.
 
 ---
