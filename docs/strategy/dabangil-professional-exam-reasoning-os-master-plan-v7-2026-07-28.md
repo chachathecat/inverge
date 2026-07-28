@@ -251,33 +251,36 @@ rule baseline으로 고르고, adaptive policy는 별도 shadow 평가 뒤에만
 
 ### 0.7 현재 PR #667 처리 결론
 
-2026-07-28 KST의 Ready 전환 뒤 exact head
-`1e3c4fb78bcab0e60d707483eba51fbbe2772473`에 대한 fresh review는 새 P1
-다섯 건을 만들었고 PR #667은 Draft로 안전 복귀했다.
+2026-07-28 KST의 exact head
+`52ffa09e1d08d8a7ad9ad7e05f91e7908d816442`에 대한 fresh exact-head
+review는 terminal `COMMENTED`였지만 clean하지 않았고,
+`P0/P1/P2 = 0/2/1`의 신규 finding 세 건을 만들었다. PR #667은 계속
+Draft다.
 
-이 corrective는 그 다섯 건만 source-of-truth에 맞춘다.
+이 corrective는 그 세 건만 live source-of-truth에 맞춘다.
 
-1. `guided_study`를 별도 dated Owner supersession 전까지 contract-only로
-   유지한다.
-2. Shared Signal intervention export의 kind/assistance 값을 closed enum과
-   approved-ID registry로 닫는다.
-3. 감정평가사 1차·동차·Academy·타 시험을 learner product가 아닌
-   internal non-product contract candidate로 유지한다.
-4. 1차의 exact `S236B → O3B → S237B → O4B → S238B`와
-   `S241A + S238B → S250` 의존성을 보존한다.
-5. 세 가격 가설 모두 exact `usable_review_unit_v1` meter와 canonical
-   charging rule에 결속한다.
+1. real-learner extraction·export·frozen/versioned inference·evaluation의
+   O2 경계와 fitting·training·refit·parameter update·dataset refresh의
+   별도 future exact-scope O5 경계를 분리한다.
+2. 현재 Owner dogfood와 그 day/result/D+1/D+7 numerator를
+   `attempt_first` 전용으로 고정하고 guided-to-D+1은 별도 미래 승인
+   뒤의 분리 metric으로만 남긴다.
+3. `founder_canary_v1`, `starter_v1`, `complete_study_os_v1` 세 신규
+   offer를 각각의 exact commercial amendment와 canonical
+   `O4F → S243C` 경로 전까지 모두 blocked로 고정한다.
 
 허용 범위는 기존 v7 경로 한 파일의 sole-child docs-only corrective다.
 Ready, merge, auto-merge, runtime/schema/RLS, canonical contract, roadmap,
 billing, activation, 다른 시험 또는 후속 Work는 이 corrective가 승인하지
+않는다. 특히 이 문서는 O5, guided runtime 또는 commercial O4를 부여하지
 않는다.
 
 ---
 
 ## 1. 작성 시점 live checkpoint와 현재 금지선
 
-2026-07-28 post-Ready fail-closed terminal report 기준 read-only 관측:
+2026-07-28 fresh exact-head review fail-closed terminal report 기준
+read-only 관측:
 
 | 대상 | 관측 상태 |
 | --- | --- |
@@ -286,15 +289,16 @@ billing, activation, 다른 시험 또는 후속 Work는 이 corrective가 승�
 | PR #662 | terminal squash-merged |
 | PR #662 final corrected tree | `2403f1f90de0fd8260fdd7485eee9b726cc0471c` |
 | PR #667 | open Draft, mergeable, unmerged, auto-merge OFF |
-| PR #667 parent head | `1e3c4fb78bcab0e60d707483eba51fbbe2772473` |
-| PR #667 parent head tree | `3feda5f5b6faa3b040b631a85add041991a044dd` |
-| PR #667 parent head sole parent | `2354e30a7e1fc08ede2eda1bb78cf78fce88a3a7` |
+| PR #667 parent head | `52ffa09e1d08d8a7ad9ad7e05f91e7908d816442` |
+| PR #667 parent head tree | `fd20693764ff8f75b362e017e7d5bfa5d53f7db5` |
+| PR #667 parent head sole parent | `1e3c4fb78bcab0e60d707483eba51fbbe2772473` |
 | PR #667 branch | `agent/dabangil-master-plan-v6-strategy` |
-| PR #667 parent aggregate | v7 단일 added file, `+4271/-0`, main보다 3 commits ahead |
-| parent artifact | SHA-256 `222f2f22863c17e876843aab90d1d7f648a41bb741955fee2f0d15754e0f7e1a`, 143,821 bytes, 4,271 lines |
-| required checks | PR Contract, Risk Gate, Runtime Gate, Fast CI, Full CI, Learner Loop Health, Vercel 7/7 success |
-| resolved findings | learner-visible caveat, canonical commercial path, release-artifact binding |
-| unresolved findings | guided runtime, Shared Signal values, product scope, first-round sequence, paid meter P1 다섯 건 |
+| PR #667 parent aggregate | v7 단일 added file, `+4472/-0`, main보다 4 commits ahead / 0 behind |
+| parent artifact | SHA-256 `d805d40b64ebc1c428e2565d025a93dd998a5beb8651a757b9b9662bb5cd46e8`, 155,478 bytes, 4,472 lines, blob `8226a1e8ab934d5fa0fcce472f7ab1246b2e5f0b` |
+| required parent-head checks | PR Contract 512, Risk Gate 512, Runtime Gate 512, Fast CI 639, Full CI 512, Learner Loop Health 1023, Vercel 7/7 success |
+| resolved findings | known thread 11개 중 기존 8개 resolved |
+| fresh exact-head review | `52ffa09e…`, terminal `COMMENTED`, `P0/P1/P2 = 0/2/1` |
+| exact unresolved findings | O2/O5 pyBKT split P1, attempt-only dogfood P1, all-three-offer block P2 |
 | PR #660 | open Draft at historical observation `4c5694e4c65a110aede39762421abb49afd653f5` |
 | public/billing/external learner | OFF |
 
@@ -2693,9 +2697,17 @@ pyBKT는 현재 canonical boundary대로 `benchmark_only`다.
 6. fixed/rule baseline과 pre-registered time-forward held-out target
 7. leakage, version, rollback, retention, deletion과 drift policy
 
-real learner extraction, export, fitting, prediction 또는 evaluation은
-O2와 export approval 전에 금지한다. O2 전 `benchmark_only`는
-synthetic/local non-personal fixture만 뜻한다.
+real learner event의 extraction, export, frozen/versioned prediction·inference
+또는 evaluation은 exact O2와 approved export 전에 금지한다. O2 전
+`benchmark_only`는 synthetic/local non-personal fixture만 뜻한다.
+
+O2와 approved export는 fitting 권한이 아니다. real-learner-derived
+observation을 사용한 parameter fitting, training, refit, parameter update
+또는 dataset refresh는 **별도 future exact-scope O5**를 추가로 요구한다.
+O2, export approval와 어떤 O4도 O5를 대체하지 않는다. O5 전에는
+learner-derived observation을 train 또는 calibration-fitting partition에
+넣을 수 없고, 승인된 frozen/versioned inference·evaluation partition에서만
+사용할 수 있다. 이 문서는 그 경계만 기록하며 O5를 부여하지 않는다.
 
 production event를 shadow dataset으로 직접 복사하지 않는다.
 
@@ -2762,8 +2774,10 @@ pseudonymous subject key가 active exact-purpose consent 또는 legal-basis
 snapshot을 가짐을 bodyless하게 증명한다. production ID는 export하지
 않는다. unauthorized/revoked subject는 batch에 들어갈 수 없다.
 export 뒤 revocation/delete가 생기면 lineage를 따라 affected
-model/eval artifact를 quarantine하고, policy에 따라 refit 또는
-retire한 뒤 deletion propagation을 기록한다.
+model/eval artifact를 quarantine하거나 retire하고 deletion propagation을
+기록한다. refit가 필요하면 in-place로 고치지 않고, 그 시점에 유효한
+별도 exact-scope O5 아래 새 frozen dataset/model/parameter version으로만
+수행한다. 유효한 O5가 없으면 refit하지 않는다.
 
 shadow 평가는 다음을 요구한다.
 
@@ -2776,7 +2790,10 @@ shadow 평가는 다음을 요구한다.
 - version별 reproducibility, drift와 rollback
 - 사전 등록된 temporal cutoff와 frozen taxonomy, mapping adapter,
   rule, label, model version
-- train/calibration/test 분리와 learner·content·item-family dedupe
+- O5 전 learner-derived observation의 train·calibration-fitting 편입 0;
+  frozen/versioned inference·evaluation partition만 허용
+- future exact-scope O5가 fitting을 승인한 경우에도
+  train/calibration/test 분리와 learner·content·item-family dedupe
 - test set으로 mapping, threshold, abstention 또는 model을 tune하지 않음
 
 shadow 동안 prediction은 다음을 바꾸지 못한다.
@@ -3033,22 +3050,30 @@ shared CurriculumGraph, 다른 learner, tenant 또는 공용 corpus로
 역승격하지 않는다.
 
 Academy가 개인 map을 읽으려면 별도의 tenant sharing purpose와 RLS가
-필요하다. cohort model fitting이나 pyBKT measurement에는 canonical
-O2 gate, exact-purpose consent 또는 적용 가능한 별도 법적 근거,
+필요하다. pyBKT measurement와 frozen/versioned inference·evaluation에는
+canonical O2 gate, exact-purpose consent 또는 적용 가능한 별도 법적 근거,
 pseudonymization, retention, revocation, export/delete와 rollback이
-모두 필요하다. `personal_service` consent를 measurement 또는
-`offline_model_training`으로 재사용하지 않는다.
+모두 필요하다. cohort parameter fitting, training, refit, parameter
+update 또는 dataset refresh는 그 요건에 더해 `offline_model_training`
+exact-purpose consent와 별도 future exact-scope O5를 요구한다. O2,
+approved export와 O4는 O5를 대체하지 않는다. `personal_service`
+consent를 measurement 또는 `offline_model_training`으로 재사용하지
+않는다.
 
 O2와 approved `ShadowExportBatchV1` 전에는 real learner event의 추출,
-export, fitting, prediction과 evaluation을 모두 금지한다. approved
-export는 rotating pseudonymous subject key와 allowlisted shared skill만
-포함하며 production scope, private concept와 root-cause identifier를
-포함하지 않는다.
+export, frozen/versioned prediction·inference와 evaluation을 모두
+금지한다. approved export는 rotating pseudonymous subject key와
+allowlisted shared skill만 포함하며 production scope, private concept와
+root-cause identifier를 포함하지 않는다. O5 전 approved export의
+learner-derived observation은 train 또는 calibration-fitting partition에
+들어갈 수 없다.
 
 각 export batch는 subject authorization manifest와 frozen evaluation
 horizon을 가져야 한다. subject/item-family pseudonym은 그 exact
 purpose와 horizon 밖에서 unlinkable해야 하며, revocation/delete 뒤
-affected artifact는 lineage에 따라 quarantine·refit·retire한다.
+affected artifact는 lineage에 따라 quarantine하거나 retire한다. refit는
+그 시점에 유효한 별도 exact-scope O5 아래 새 frozen version으로만
+허용하고 in-place refit는 금지한다.
 
 ### 15.2 금지
 
@@ -3062,6 +3087,10 @@ affected artifact는 lineage에 따라 quarantine·refit·retire한다.
 - raw learner body를 weakness graph label, telemetry 또는 pyBKT 입력으로 사용
 - BKT shadow prediction을 learner-facing probability로 노출
 - O2 전 real learner event를 pyBKT benchmark 또는 sufficiency audit에 export
+- O2·approved export·O4만으로 learner-derived pyBKT fitting, training,
+  refit, parameter update 또는 dataset refresh 수행
+- O5 전 learner-derived observation을 train 또는 calibration-fitting
+  partition에 편입
 
 ### 15.3 probe 원가
 
@@ -3091,7 +3120,7 @@ affected artifact는 lineage에 따라 quarantine·refit·retire한다.
 ```text
 아침 계획
 → 실제 학습
-→ attempt/guided
+→ attempt_first
 → 풀이·probe·repair
 → 중간 replan
 → 하루 마감
@@ -3100,6 +3129,10 @@ affected artifact는 lineage에 따라 quarantine·refit·retire한다.
 → timed full solution
 → rule-based weakness map 재계산·근거 확인
 ```
+
+현재 Owner dogfood acceptance path는 위 `attempt_first` flow만 사용한다.
+guided selector, route, API, event, `ExecutionBlock`, scheduling, mastery
+또는 runtime을 이 flow가 요구하거나 승인하지 않는다.
 
 Owner evidence가 검증할 수 있는 것:
 
@@ -3124,7 +3157,7 @@ Owner evidence가 검증할 수 없는 것:
 
 ### 16.2 Owner gate
 
-| Gate | 최소 가설 | 의미 |
+| Gate | 최소 가설 (`attempt_first` only) | 의미 |
 | --- | --- | --- |
 | Early Value | 서로 다른 5일, usable result 12+, D+1 6+ | 학습가치 방향 |
 | Owner-Private Core | 14일+, review 25~30+, D+1 10+, D+7 6+ | core 후보 |
@@ -3134,12 +3167,21 @@ Owner evidence가 검증할 수 없는 것:
 
 - 풀이 뒤 어떤 probe를 썼는가
 - probe가 repair를 도왔는가
-- guided 뒤 D+1 무도움 성공 여부
 - component repair 뒤 timed full solution에서 재발했는가
 - deterministic conflict와 blocked release
 - 동일 event/version에서 weakness snapshot이 재현되는가
 - top-3 후보의 근거를 다시 열 수 있고 Owner가 유용하다고 판단하는가
 - false weakness, assisted-only recovery와 stale 누락이 발생했는가
+
+현재 dogfood의 study day, usable result, D+1과 D+7 분자·분모는 모두
+현재 승인된 `attempt_first` flow에서만 계산한다. guided activity는 현재
+acceptance record 또는 numerator에 들어가지 않는다.
+
+guided-to-D+1은 현재 추가 기록이 아니다. 향후 exact guided-runtime
+supersession, canonical/mirror/roadmap reconciliation, runtime/schema/RLS/flag
+검증과 exact activation gate가 모두 별도로 승인된 뒤에만 별도 future
+flow의 분리 metric·분리 numerator로 정의할 수 있다. 그 전에는 이 metric을
+수집·요구·추정하지 않는다.
 
 ### 16.3 두 ledger를 합치지 않는다
 
@@ -3166,26 +3208,37 @@ Founder 구매·사용도 S238A/S240A Owner scheduler evidence 분자에 넣지
 - Pro: 119,000~149,000원/month 가설
 - Premium: 249,000~299,000원/month 가설
 
-v7은 이를 몰래 덮어쓰지 않는다. 다음은 별도 commercial amendment에서
-검토할 **새 offer hypotheses**다.
+이 중 Owner가 승인한 Founding Beta 가설은 정확히 invitation-only
+69,000원 / 30일 / 20 `usable_review_unit_v1`뿐이다. 이것도 activation,
+entitlement, public offer 또는 판매 승인이 아니며 별도 exact commercial
+O4와 canonical external-commercial path를 여전히 요구한다.
 
-| Offer version | 가격 | 기간 | exact included meter | 조건 |
+v7은 이를 몰래 덮어쓰지 않는다. 다음은 별도 commercial amendment에서
+검토할 **새 blocked offer hypotheses**다.
+
+| Offer version | 가격 | 기간 | proposed exact included meter | 현재 상태 |
 | --- | ---: | --- | --- | --- |
-| `founder_canary_v1` | 39,000원 | 30일 | 8 `usable_review_unit_v1` | 최초 누적 3~5명, 자동갱신 없음 |
-| `starter_v1` | 49,000원 | 30일 | 8 `usable_review_unit_v1` | Founder 종료 뒤 exact manifest |
-| `complete_study_os_v1` | 89,000원 | 30일 | 20 `usable_review_unit_v1` | D+7·timed·Full-Day acceptance 뒤 |
+| `founder_canary_v1` | 39,000원 | 30일 | 8 `usable_review_unit_v1` | own exact amendment 전 blocked |
+| `starter_v1` | 49,000원 | 30일 | 8 `usable_review_unit_v1` | own exact amendment 전 blocked |
+| `complete_study_os_v1` | 89,000원 | 30일 | 20 `usable_review_unit_v1` | own exact amendment 전 blocked |
 
 세 offer의 숫자는 모두 exact `usable_review_unit_v1` balance만 뜻한다.
 `ReviewUnit` 또는 `deep_review_unit`을 과금하거나 그 balance로 fallback,
-alias, conversion, migration하지 않는다. 각 offer의 charging rule은
-canonical hypothesis와 동일하다.
+alias, conversion, migration하지 않는다. `founder_canary_v1`은 승인된
+Founding Beta의 alias, discount 또는 smaller pack이 아니다.
 
-현재 canonical source가 승인한 offer-to-meter binding은 Founding Beta
-hypothesis뿐이다. 따라서 `starter_v1`과 `complete_study_os_v1`에서 같은
-meter를 쓰는 제안은 future commercial amendment가 exact offer version,
-meter, included balance와 charging rule을 함께 승인해야 유효하다. 그
-승인 전에는 두 offer 모두 blocked hypothesis이며 entitle하거나 판매하지
-않는다.
+현재 canonical source가 승인한 offer-to-meter binding은 위 historical
+Founding Beta hypothesis뿐이다. `founder_canary_v1`, `starter_v1`,
+`complete_study_os_v1`은 각각 자기 offer의 version, price, duration,
+exact meter, included balance와 charging rule을 함께 명명하는 별도 exact
+commercial amendment 전까지 모두 blocked다. 한 offer의 amendment나
+Founding Beta 승인을 다른 offer에 재사용하지 않는다.
+
+그 amendment가 승인된 뒤에도 entitlement, paid reservation, sale,
+checkout 또는 payment는 canonical
+`S241A → O3C → S239A → S242C → O4F → S243C`를 통과하고 exact-scope
+`O4F` 뒤 authorized `S243C` 안에 들어가기 전까지 금지한다. 이 문서는
+price나 commercial O4를 승인하지 않는다.
 
 | submitted question points | `usable_review_unit_v1` charge |
 | ---: | ---: |
@@ -3198,8 +3251,9 @@ estimate/manual decision을 받아야 하며 결과 뒤 사용량을 올리지 �
 고비용 작업 전에 exact meter를 reserve하고, policy상 `usable` result가
 성공적으로 확정된 경우에만 commit한다. generation 실패, blocked/stale
 결과, provider 오류 또는 usable result 미생성은 reservation을 release하고
-0 unit을 소비한다. 이 표는 비운영 가설이며 billing/entitlement/checkout을
-활성화하지 않는다.
+0 unit을 소비한다. 이 charging table은 세 신규 offer에 대한 비운영
+proposal일 뿐이며 각 own exact amendment가 다시 승인해야 한다.
+billing/entitlement/reservation/sale/checkout/payment를 활성화하지 않는다.
 
 무료 experience:
 
@@ -3261,24 +3315,38 @@ plan, 표시가격, VAT, 기간과 retrievedAt을 다시 고정한다.
 답안길은 범용 AI 구독과 인간 강의·첨삭 사이에서, 실제 검증된
 기능 manifest에 맞춰 가격을 시험한다.
 
-### 17.3 순차적 가격 검증
+### 17.3 미래 조건부 가격 검증 순서
 
-세 가격을 첫 3~5명에게 동시에 시험하지 않는다.
+아래는 현재 실행 가능한 launch 절차가 아니다. 세 신규 offer는 모두
+blocked이고, 각 단계는 해당 offer의 own exact amendment와 canonical
+`S241A → O3C → S239A → S242C → O4F → S243C`가 먼저 충족된 미래에만
+조건부 ordering으로 사용할 수 있다.
 
-1. `founder_canary_v1` 39,000원은 수량이 명확한 초기 offer다.
-2. 누적 cap에 도달하면 신규 판매를 멈추고 운영·원가·품질 gate를
-   평가한다. 가격은 자동으로 오르지 않는다.
-3. 새 commercial packet과 Owner 승인이 있을 때만
-   `starter_v1` 49,000원을 별도 exact offer로 시험한다.
-4. Founder가 review 2회와 D+1을 경험한 뒤 49,000원 다음 pack을
-   실제 구매 또는 paid reservation하는지도 별도 `starter_v1`
-   decision으로 기록한다.
-5. 39,000원 구매자는 그 자체로 49,000원 지불의사 증거가 아니다.
-6. 89,000원은 full product manifest가 완성된 뒤 별도 cohort에서
-   시험한다.
+1. `founder_canary_v1`의 own exact amendment와 exact-scope `O4F`,
+   authorized `S243C`가 모두 존재하는 경우에만 39,000원 / 8-unit
+   hypothesis를 첫 단계 후보로 검토한다.
+2. 그 미래 단계의 누적 cap에 도달하면 신규 판매를 멈추고
+   운영·원가·품질 gate를 평가한다. 가격은 자동으로 오르지 않는다.
+3. `starter_v1`은 자기 version/price/duration/meter/balance/charging
+   rule amendment와 해당 activation path가 별도로 승인된 경우에만
+   49,000원 exact offer 후보로 뒤이어 검토한다.
+4. pre-gate 구매나 paid reservation으로 수요를 미리 수집하지 않는다.
+   향후 authorized `starter_v1`에서 Founder가 review 2회와 D+1 뒤
+   다음 pack을 실제 구매 또는 paid reservation하는지는 그때의 별도
+   exact decision으로만 기록한다.
+5. 향후 39,000원 구매자가 생겨도 그 자체로 49,000원 지불의사 증거가
+   아니다.
+6. `complete_study_os_v1`도 own exact amendment, full product manifest와
+   canonical activation path 뒤 별도 cohort에서만 검토한다.
 7. 가짜 취소선 정가, 무기한 할인, 가짜 countdown을 금지한다.
 
 ### 17.4 QualifiedPriceDecisionV1
+
+이 schema는 미래 evidence contract일 뿐 현재 수집 절차가 아니다.
+`purchase`나 `paid_reservation` member는 어느 신규 offer의 entitlement,
+reservation, sale, checkout 또는 payment도 승인하지 않는다. 사용할 수
+있는 시점은 그 offer의 own exact amendment와 canonical
+`S241A → O3C → S239A → S242C → O4F → S243C`가 모두 충족된 뒤다.
 
 ```ts
 type PriceDecisionDeclineReasonV1 =
@@ -3419,6 +3487,11 @@ Dogfood 또는 Owner Early Value는 위 external-readiness/commercial gates를
 live roadmap을 함께 reconcile한 뒤에만 재검토할 수 있다. 그 전까지 external
 account, invitation, payment, active price/refund, entitlement와 Production은
 OFF다.
+
+또한 이 sequence만으로 세 신규 offer가 승인되는 것도 아니다.
+`founder_canary_v1`, `starter_v1`, `complete_study_os_v1`은 각각 자기
+exact commercial amendment까지 충족해야 하며, 현재는 세 offer 모두
+blocked다.
 
 weakness map을 exact feature manifest에 포함했다면 추가로 다음을
 요구한다.
@@ -3879,13 +3952,22 @@ E6 preregistered external efficacy study
 높은 단계로 갈수록 privacy, sample, ethics와 authority가 강화된다.
 E3 Owner 결과를 E5/E6 효능으로 포장하지 않는다.
 
+experiment tier는 data-operation authority가 아니다. real-learner-derived
+event를 E3/E4에서 추출·export하고 frozen/versioned inference·evaluation에
+쓰려면 exact O2와 approved export가 필요하다. parameter fitting,
+training, refit, parameter update, dataset refresh 또는 learner-derived
+train/calibration-fitting partition은 별도 future exact-scope O5 전에는
+금지한다. O2, export approval, E-tier와 O4는 O5를 대체하지 않는다.
+
 ### 20.4 model/policy promotion
 
 후보 policy는 다음을 모두 통과해야 한다.
 
 - frozen temporal cutoff
 - learner/item-family leakage 0
-- train/calibration/test 분리
+- O5 전 learner-derived train·calibration-fitting partition 0
+- future exact-scope O5가 fitting을 승인한 경우
+  train/calibration/test 분리
 - rule baseline 비교
 - coverage와 abstention
 - calibration/Brier/log loss when probabilistic
@@ -3895,12 +3977,24 @@ E3 Owner 결과를 E5/E6 효능으로 포장하지 않는다.
 - rollback
 - no learner-facing change during shadow
 
+O5가 승인한 offline fitting 결과도 기존 candidate를 in-place 갱신하지
+않는다. 새 frozen model/parameter/dataset version과 새 `proposed`
+candidate로 시작하며, inference/evaluation 및 activation evidence를 다시
+통과해야 한다. 이 promotion 목록은 O5를 부여하지 않는다.
+
 ### 20.5 no online self-training
 
 production learner interaction으로 model weight나 policy를 자동 갱신하지
 않는다.
 
 - raw body online fine-tuning 금지
+- offline이라는 이유만으로 허용되지 않음; learner-derived fitting,
+  training, refit, parameter update와 dataset refresh는 별도 future
+  exact-scope O5 필수
+- O2, approved export와 O4는 O5 대체 불가
+- O5 전 learner-derived observation의 train·calibration-fitting 편입 0
+- revocation/delete는 artifact quarantine·retire만 허용; refit는
+  then-valid O5 아래 새 frozen version으로만 수행하고 in-place update 금지
 - reward hacking 방지
 - session engagement를 learning reward로 사용 금지
 - 후보 생성과 production promotion 분리
@@ -4061,13 +4155,21 @@ O3A + S236P
 ### 22.2 PR #667 strategy correction
 
 - existing branch only
-- exact parent head `1e3c4fb78bcab0e60d707483eba51fbbe2772473`가 live일
+- exact parent head `52ffa09e1d08d8a7ad9ad7e05f91e7908d816442`가 live일
   때 그 sole-child fast-forward docs-only corrective 하나
 - existing v7 path 한 파일만 수정
+- exact 신규 finding 세 건만 교정:
+  O2/O5 pyBKT split, attempt-only current dogfood,
+  all-three-new-offer block
+- existing 8 resolved thread를 reply/reopen/re-resolve하지 않음
+- exact 신규 3 thread만 독립 검증 뒤 evidence reply와 resolve
+- 새 exact head에서 모든 required check success와 fresh review terminal
+  결과를 요구
 - final aggregate는 계속 one added v7 file
 - corrected v6 또는 v6.1 artifact 재도입 금지
 - Draft 유지
 - auto-merge OFF
+- O5, guided runtime, price 또는 commercial O4 승인 0
 - implementation 0
 
 ### 22.3 S237A v7 learning source amendment 제안
@@ -4187,19 +4289,25 @@ S241A → O3C → S239A → S242C → O4F → S243C
 
 ### 23.1 지금 실행할 하나
 
-PR #667의 post-Ready parent head
-`1e3c4fb78bcab0e60d707483eba51fbbe2772473`와 main이 live checkpoint에
+PR #667의 fresh-review parent head
+`52ffa09e1d08d8a7ad9ad7e05f91e7908d816442`와 main이 live checkpoint에
 그대로 있을 때만, 별도 corrective Work가 다음을 수행한다.
 
-1. live authority, parent head/tree, artifact와 unresolved P1 다섯 건 검증
+1. live authority, parent head/tree, artifact와 exact unresolved
+   P1/P1/P2 세 건 검증
 2. existing PR branch에 parent head의 sole-child corrective 하나
-3. existing v7 경로 한 파일에서 exact 다섯 requirement만 교정
-4. caveat, release-artifact binding, commercial path와 aggregate 단일 경로
-   보존
-5. exact-head digest/manifest/checks/hostile review
-6. 명시적으로 승인된 경우에만 각 exact thread에 증거 답변·해결
-7. Draft 유지, Ready/merge/auto-merge/implementation 0
-8. 자동 중단
+3. existing v7 경로 한 파일에서 O2/O5 split, attempt-only dogfood,
+   all-three-offer block만 교정
+4. prior caveat·release-artifact binding, exact first-round sequence,
+   canonical commercial path와 aggregate 단일 경로 보존
+5. exact-head digest/manifest, focused authority audits와 newest-head
+   required checks 고정
+6. 기존 8 resolved thread에는 mutation 없이 exact 신규 3 thread만
+   독립 검증 뒤 각 1회 증거 답변·해결
+7. 11/11 resolved 뒤 exact new head에 fresh `@codex review` 1회 요청하고
+   terminal 결과까지 대기
+8. Draft 유지, Ready/merge/auto-merge/O5/guided runtime/commercial O4/
+   implementation 0으로 자동 중단
 
 ### 23.2 그 다음
 
@@ -4264,6 +4372,11 @@ PR #667의 post-Ready parent head
 - held-out temporal leakage 0
 - primary metric unassisted
 - pass probability learner exposure 0
+- real-learner extraction·export·frozen/versioned inference·evaluation은
+  exact O2 + approved export에만 한정
+- O5 전 learner-derived fitting/training/refit/parameter update/
+  dataset refresh와 train·calibration-fitting partition 0
+- O2, export approval와 O4의 O5 대체 0
 
 ### 24.5 감정평가사 2차 vertical
 
@@ -4298,7 +4411,8 @@ PR #667의 post-Ready parent head
 ### 24.7 evaluation
 
 - frozen rule baseline
-- train/calibration/test separation
+- O5 전 learner-derived evaluation-only partition
+- future exact-scope O5 fitting에서만 train/calibration/test separation
 - item-family/learner leakage 0
 - coverage/abstention report
 - subgroup and device/accessibility slice
@@ -4332,6 +4446,11 @@ PR #667의 post-Ready parent head
 21. candidate set·critic·final gate 없이 `claims + verificationSummary`만으로 usable
 22. timer offline gap을 independent로 위장
 23. accessibility alternate input이 commitment evidence에서 누락
+24. O2와 export approval만으로 learner-derived observation을 pyBKT
+    train/calibration-fitting partition에 넣거나 fitting·refit·parameter
+    update·dataset refresh 수행
+25. revoked artifact를 유효한 exact-scope O5와 새 frozen version 없이
+    in-place refit
 
 모든 actionable P0/P1/P2는 0/0/0이어야 한다.
 
@@ -4396,8 +4515,11 @@ PR #667의 post-Ready parent head
 - primary KPI는 unassisted transfer
 - delayed retention 측정
 - assisted와 independent 분리
+- 현재 Owner dogfood day/result/D+1/D+7은 `attempt_first` only
+- guided-to-D+1은 exact future guided supersession·activation 뒤 별도 metric
 - intervention outcome lineage
 - baseline comparison
+- O2 extraction/evaluation과 O5 fitting/training/refresh 권한 분리
 - efficacy claim은 evidence 수준에 맞음
 
 ### 25.6 사업
@@ -4406,6 +4528,9 @@ PR #667의 post-Ready parent head
 - 시험별 exact feature manifest
 - 비용·support·refund·entitlement 안전
 - Owner와 external evidence 분리
+- historical Founding Beta 외 세 신규 offer는 own exact amendment 전 blocked
+- 모든 entitlement/reservation/sale/checkout/payment는
+  `S241A → O3C → S239A → S242C → O4F → S243C` 전 0
 - 다른 시험 가격 자동 복제 금지
 - generic AI가 아닌 검증·전이·개인 계보에 가격을 붙임
 
@@ -4442,7 +4567,9 @@ PR #667의 post-Ready parent head
 17. 생성된 학습 기준안은 exact upstream release artifact를 통과하기 전
     learner-facing usable body가 될 수 없고, 통과하더라도 공식 답안이나 공식
     채점기준이 되지 않는다.
-18. 세계 최고 수준은 기능 수가 아니라 **잘못된 도움을 막고, 실제 독립
+18. O2는 real-learner extraction·frozen evaluation 경계이고 O5는 별도
+    offline fitting·training·refresh 경계다. 어느 O4도 둘을 합치지 못한다.
+19. 세계 최고 수준은 기능 수가 아니라 **잘못된 도움을 막고, 실제 독립
     능력을 증명하며, 다른 시험에서도 같은 품질을 재현하는 구조**로 만든다.
 
 ---
