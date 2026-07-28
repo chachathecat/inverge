@@ -207,6 +207,9 @@ v7은 그 위에 다음을 새로 고정한다.
 22. 기존 `LearningGapRecord`와
     `s216.error_notebook_gap_taxonomy.v1`을 유일한 metadata authority로
     사용하는 다섯 필드 learner-visible automatic error-note projection
+23. self-containing envelope를 hash하지 않는 closed
+    `ShadowExportBatchDigestPayloadV1`, versioned RFC 8785 payload digest와
+    vault-only final-envelope commitment
 
 ### 0.5 제품 최적화 목적함수
 
@@ -263,27 +266,22 @@ rule baseline으로 고르고, adaptive policy는 별도 shadow 평가 뒤에만
 ### 0.7 현재 PR #667 처리 결론
 
 2026-07-28 KST의 exact head
-`46194ab113374ebb9f83805da55ba5c6427662dc`에 대한 fresh exact-head
+`afc229bbac57fb282fd1ce66f6cae145613d8089`에 대한 fresh exact-head
 review는 terminal `COMMENTED`였지만 clean하지 않았고,
-`P0/P1/P2 = 0/3/1`의 신규 finding 네 건을 만들었다. PR #667은 계속
+`P0/P1/P2 = 0/0/1`의 신규 finding 한 건을 만들었다. PR #667은 계속
 Draft다.
 
-이 corrective는 그 네 건만 live source-of-truth에 맞춘다.
+이 corrective는 그 한 건만 live source-of-truth에 맞춘다.
 
-1. release 직전의 timestamp check를 commit authority로 쓰지 않고,
-   exact batch bytes와 current O2·consent generation을 묶은 vault-only
-   single-use grant를 첫 Shared Signal write와 같은 linearizable
-   boundary에서 재검증·소비한다.
-2. vault-internal observation-to-row lineage로 이미 저장된 Shared Signal
-   row와 모든 cache·materialization·dataset·Model/Eval descendant를
-   철회·삭제·O2 invalidation 시 non-active로 만든다.
-3. attempt-before-reveal은 default로 유지하되, learner가 명확한 결과
-   고지를 affirmative confirmation한 경우 별도 Learning Lane에서만
-   full assistance·exposure·no-credit를 output 전에 원자적으로 기록하는
-   non-guided override를 둔다.
-4. accepted wrong/partial feedback마다 기존 S216/LearningGapRecord의
-   learner-private projection으로 `왜 틀렸는지`, `정확한 원리`,
-   `지금 바로 고칠 것`, `재발`, `다음 복습`을 모두 요구한다.
+1. `exportDigest`가 자신을 포함한 final envelope의 hash가 되지 않도록
+   digest preimage를 exact closed
+   `ShadowExportBatchDigestPayloadV1`으로 독립 선언한다.
+2. versioned RFC 8785/UTF-8/SHA-256 profile로 payload digest를 먼저 계산해
+   한 번 attach하고, 완성된 canonical envelope에는 별도의 vault-only
+   length-delimited commitment를 계산한다.
+3. preflight, single-use grant, validator와 commit boundary가 같은
+   acyclic payload digest·final-envelope commitment·octet length를
+   재계산하고 exact bytes까지 fail closed로 검증한다.
 
 허용 범위는 기존 v7 경로 한 파일의 sole-child docs-only corrective다.
 Ready, merge, auto-merge, runtime/schema/RLS, canonical contract, roadmap,
@@ -308,16 +306,16 @@ read-only 관측:
 | PR #662 | terminal squash-merged |
 | PR #662 final corrected tree | `2403f1f90de0fd8260fdd7485eee9b726cc0471c` |
 | PR #667 | open Draft, mergeable, unmerged, unlocked, auto-merge OFF |
-| PR #667 corrective parent head | `46194ab113374ebb9f83805da55ba5c6427662dc` |
-| PR #667 corrective parent tree | `8a44b92be636ae19a2876eff51931888fa737582` |
-| PR #667 corrective parent sole parent | `18893b26e2afbd5e4f853f9a81f5c059549e44e4` |
+| PR #667 corrective parent head | `afc229bbac57fb282fd1ce66f6cae145613d8089` |
+| PR #667 corrective parent tree | `8c33fc56edaf2c629fa86aa42909f8d1b4260f4f` |
+| PR #667 corrective parent sole parent | `46194ab113374ebb9f83805da55ba5c6427662dc` |
 | PR #667 branch | `agent/dabangil-master-plan-v6-strategy` |
-| PR #667 corrective parent aggregate | v7 단일 added file, `+4783/-0`, main보다 6 commits ahead / 0 behind |
-| corrective parent artifact | SHA-256 `b284565ff86e19cee5238f72f184bd59aac30a42f73cfdc742f21d1841c03fc1`, 174,938 bytes, 4,783 lines, blob `0b8b9b3557636c001eec0c16563228ac71e4a717` |
-| required corrective-parent checks | PR Contract 514, Risk Gate 514, Runtime Gate 514, Fast CI 641, Full CI 514, Learner Loop Health 1025, Vercel 7/7 success |
-| resolved findings | known thread 17개 중 prior 13개 resolved |
-| fresh exact-head review | `46194ab113…`, terminal `COMMENTED`, `P0/P1/P2 = 0/3/1` |
-| exact unresolved findings | atomic commit P1, persisted-row revocation P1, confirmed Learning Lane reveal P1, automatic error note P2 |
+| PR #667 corrective parent aggregate | v7 단일 added file, `+5584/-0`, main보다 7 commits ahead / 0 behind |
+| corrective parent artifact | SHA-256 `c18d4dc60ffdaaf3a3e37bb889fbc7b973466d5c994f9218c08b5c09cf19f962`, 218,161 bytes, 5,584 lines, blob `264a40d7844ee092b4f69d9cf796438d600699ca` |
+| required corrective-parent checks | PR Contract 515, Risk Gate 515, Runtime Gate 515, Fast CI 642, Full CI 515, Learner Loop Health 1026, Vercel 7/7 success |
+| resolved findings | known thread 18개 중 prior 17개 resolved |
+| fresh exact-head review | `afc229bbac57…`, terminal `COMMENTED`, `P0/P1/P2 = 0/0/1` |
+| exact unresolved finding | non-recursive export digest P2 |
 | PR #660 | open Draft at historical observation `4c5694e4c65a110aede39762421abb49afd653f5` |
 | public/billing/external learner | OFF |
 
@@ -3090,6 +3088,9 @@ type ShadowSourceEligibilityClassV1 =
 type SharedSignalLocalRowIdV1 =
   string & { readonly __brand: "shared_signal_local_row_id_v1" };
 
+type ShadowExportPayloadDigestProfileV1 =
+  "shadow_export_payload_rfc8785_sha256.v1";
+
 type ShadowObservationV1 = {
   sharedSignalRowId: SharedSignalLocalRowIdV1;
   pseudonymousSubjectKey: string;
@@ -3116,6 +3117,7 @@ type ShadowObservationV1 = {
 type VaultShadowExportPreflightV1 = {
   vaultOnly: true;
   proposedBatchId: string;
+  payloadDigestProfileVersion: ShadowExportPayloadDigestProfileV1;
   exactPurposeRef: string;
   o2ApprovalRef: string;
   consentPurpose: "pseudonymous_product_signal";
@@ -3127,7 +3129,10 @@ type VaultShadowExportPreflightV1 = {
   subjectAuthorizationManifestDigest: string;
   consentLedgerResolutionRefs: string[];
   vaultScopedSourceEventSetCommitmentRef: string;
-  proposedCanonicalExportDigest: string;
+  proposedPayloadDigest: ShadowExportPayloadDigestV1;
+  proposedCanonicalEnvelopeCommitment:
+    ShadowExportEnvelopeCommitmentV1;
+  proposedCanonicalEnvelopeOctetLength: number;
   proposedSharedSignalRowIds: SharedSignalLocalRowIdV1[];
   authorizationGenerationRef: string;
   preparedCommitGrantRef: string;
@@ -3140,8 +3145,15 @@ type VaultShadowExportPreflightV1 = {
   authorizationInvariant: "verified_preflight_not_commit_authority";
 };
 
-type ShadowExportBatchV1 = {
+type ShadowExportPayloadDigestV1 =
+  string & { readonly __brand: "shadow_export_payload_digest_v1" };
+
+type ShadowExportEnvelopeCommitmentV1 =
+  string & { readonly __brand: "shadow_export_envelope_commitment_v1" };
+
+type ShadowExportBatchDigestPayloadV1 = {
   id: string;
+  digestProfileVersion: ShadowExportPayloadDigestProfileV1;
   exactPurposeRef: string;
   o2ApprovalRef: string;
   consentPurpose: "pseudonymous_product_signal";
@@ -3160,14 +3172,20 @@ type ShadowExportBatchV1 = {
   deletePropagationPolicyVersion: string;
   artifactRevocationPolicyVersion: string;
   observations: ShadowObservationV1[];
-  exportDigest: string;
+};
+
+type ShadowExportBatchV1 = ShadowExportBatchDigestPayloadV1 & {
+  exportDigest: ShadowExportPayloadDigestV1;
 };
 
 type VaultShadowCommitGrantV1 = {
   vaultOnly: true;
   grantRef: string;
   proposedBatchId: string;
-  canonicalExportDigest: string;
+  payloadDigestProfileVersion: ShadowExportPayloadDigestProfileV1;
+  payloadDigest: ShadowExportPayloadDigestV1;
+  canonicalEnvelopeCommitment: ShadowExportEnvelopeCommitmentV1;
+  canonicalEnvelopeOctetLength: number;
   authorizationGenerationRef: string;
   exactO2PurposeRef: string;
   exactO2ApprovalGeneration: string;
@@ -3218,6 +3236,129 @@ type SharedSignalDenyBarrierV1 = {
 };
 ```
 
+#### non-recursive shadow export digest
+
+`ShadowExportBatchDigestPayloadV1`은
+`ShadowExportBatchV1`과 독립적으로 선언한 exact closed payload schema다.
+현재 batch의 모든 top-level field를 포함하되 `exportDigest`만 포함하지
+않는다. `Omit<ShadowExportBatchV1, "exportDigest">`, final envelope에서의
+reverse derivation, dynamic field deletion, digest sentinel, `null` 또는
+zero placeholder로 payload를 만들지 않는다. final
+`ShadowExportBatchV1`도 exact closed envelope이며 payload field 전부와
+정확히 하나의 `exportDigest` 외에는 어떤 top-level/nested field도
+허용하지 않는다.
+
+유일한 지원 profile은
+`shadow_export_payload_rfc8785_sha256.v1`이다. 이 profile은 다음을
+고정한다.
+
+- schema: exact `ShadowExportBatchDigestPayloadV1`
+- canonicalization: RFC 8785 JSON Canonicalization Scheme(JCS), valid I-JSON
+- character encoding: UTF-8, BOM 없음
+- number domain: finite safe integer만 허용하고 `-0`, fraction, non-finite,
+  safe-integer 범위 밖 수는 거부
+- hash: SHA-256
+- payload domain: `inverge.shadow_export_batch.v1.payload`
+- digest text: 정확히 `sha256:` 뒤 64개 lowercase hexadecimal
+
+unknown 또는 legacy profile은 fail closed한다. 향후 변경은 새 explicit
+payload type, profile version과 domain을 함께 정의해야 하며 기존
+`v1`의 의미를 바꾸지 않는다. object key order와 insignificant
+whitespace는 JCS가 정규화한다. array는 입력 순서가 의미이므로 sort,
+dedupe 또는 reorder하지 않는다. invalid UTF-8, BOM, invalid I-JSON,
+duplicate key, lone surrogate와 그 밖의 invalid Unicode는 거부하고
+Unicode normalization은 적용하지 않는다.
+
+digest 생성 순서는 고정한다.
+
+1. batch `id`, 모든 `sharedSignalRowId`, `observationDedupeKey`,
+   observation 순서와 값, exact purpose/O2, horizon, pseudonym·allowlist,
+   retention/revocation/delete/artifact policy 및 payload의 모든 값을 먼저
+   확정한다.
+2. payload 또는 final envelope의 어떤 field도 `exportDigest`나
+   final-envelope commitment에서 파생하지 않는다. batch/row/dedupe ID도
+   포함한다. digest 뒤 만들어지는 vault-only grant, idempotency 또는
+   lineage 값은 payload/envelope로 다시 들어갈 수 없다.
+3. exact closed payload schema로 strict decode한 뒤
+   `payloadCanonicalBytes = UTF8(JCS(payload))`를 만든다.
+4. 다음 length-delimited preimage를 SHA-256으로 hash한다.
+
+```text
+payloadDigestPreimage =
+  UTF8("inverge.shadow_export_batch.v1.payload")
+  || 0x00
+  || uint64_be(octetLength(payloadCanonicalBytes))
+  || payloadCanonicalBytes
+
+exportDigest = "sha256:" || lowercase_hex(SHA256(payloadDigestPreimage))
+```
+
+5. 계산한 `exportDigest`를 payload에 정확히 한 번 attach한다.
+6. completed `ShadowExportBatchV1`을 strict decode하고
+   `canonicalEnvelopeBytes = UTF8(JCS(envelope))`로 한 번 동결한다. 이후
+   어떤 field나 byte도 변경하지 않는다.
+
+`payloadCanonicalBytes`와 `canonicalEnvelopeBytes`는 서로 다른 named
+artifact다. `exportDigest`는 digest field가 없는 payload만 commit하며,
+자신을 포함한 final envelope의 hash가 아니다. 완성된 envelope byte
+identity는 Personal Raw Vault에만 남는 별도 commitment로 묶는다.
+
+```text
+canonicalEnvelopeCommitmentPreimage =
+  UTF8("inverge.shadow_export_batch.v1.envelope")
+  || 0x00
+  || uint64_be(octetLength(canonicalEnvelopeBytes))
+  || canonicalEnvelopeBytes
+
+canonicalEnvelopeCommitment =
+  "sha256:" ||
+  lowercase_hex(SHA256(canonicalEnvelopeCommitmentPreimage))
+```
+
+`octetLength`는 문자열 길이가 아니라 exact UTF-8 byte 수이며 unsigned
+64-bit big-endian으로 encode한다. `canonicalEnvelopeCommitment`와
+`canonicalEnvelopeOctetLength`는 vault preflight와 grant binding에만
+존재한다. exported/shared batch, client/API response, receipt, log,
+telemetry, analytics, issue/PR/CI artifact 또는 Model/Eval Registry에
+serialize하지 않으며 payload/envelope field로 되돌려 self-cycle을 만들지
+않는다.
+
+preflight와 `VaultShadowCommitGrantV1`은 exact batch ID, supported payload
+profile, recomputed payload digest, canonical final-envelope commitment와
+octet length에 더해 기존 exact O2 purpose/generation, current subject
+consent generations, notice/policy, retention, horizon과 authorization
+policy를 모두 bind한다.
+
+trusted validator와 commit gateway의 순서도 고정한다.
+
+1. raw input의 invalid UTF-8/BOM, invalid I-JSON, duplicate key를 먼저
+   거부한다.
+2. unknown, alias, nested injection, missing, extra field, coercion,
+   implicit default, non-finite, unsafe integer, fraction과 `-0`을 exact
+   payload/final-envelope schema에서 거부한다. final envelope에는
+   supported profile과 exactly one well-formed `exportDigest`가 있어야 한다.
+3. validated final envelope의 non-digest field를 static field-by-field
+   constructor에 넣어 독립 선언된 typed
+   `ShadowExportBatchDigestPayloadV1`을 구성하고 canonicalize한다.
+   arbitrary-object deletion이나 silent projection은 사용하지 않는다.
+4. payload digest를 재계산해 supplied `exportDigest`와 constant-time
+   compare한다.
+5. completed envelope를 canonicalize하고 실제 emitted/persisted bytes가
+   `canonicalEnvelopeBytes`와 byte-for-byte 동일한지 확인한다.
+6. vault-only final-envelope commitment와 exact octet length를 재계산하고
+   grant의 batch ID/profile/digest/commitment/length binding과 비교한다.
+   digest와 commitment 비교는 constant-time이다.
+7. 그 뒤에만 기존 current consent/O2/generation, grant expiry/replay,
+   atomic grant consumption, Shared Signal write와 complete lineage
+   invariant를 검증·실행한다.
+
+어느 mismatch든 grant consume, Shared Signal row, log, telemetry,
+analytics, Model/Eval 또는 downstream lineage side effect는 0건이다.
+payload digest와 envelope commitment는 byte integrity일 뿐 consent, O2,
+O5, grant, subject authorization 또는 private lineage API가 아니다. 기존
+authorization, pseudonym, atomicity, revocation/delete와 offline-training
+경계를 하나도 대체하지 않는다.
+
 `ShadowObservationV1`에는 production `learnerScopeRef`, private concept,
 problem/answer revision, private item ID, root-cause ref, raw body 또는
 free text가 없다. shared skill allowlist에 없는 개인 concept는 rule
@@ -3260,27 +3401,33 @@ check 또는 timestamp만으로 Shared Signal write를 승인할 수 없다.
 
 release preparation은 다음을 **Personal Raw Vault 안에서만** 수행한다.
 
-1. exact canonical export bytes와 digest를 동결한다.
-2. approved projection에서 purpose/horizon/rotation-scoped
-   `sharedSignalRowId`를 만든다.
+1. approved projection에서 purpose/horizon/rotation-scoped batch ID,
+   `sharedSignalRowId`, dedupe key와 payload field 전부를 먼저 동결한다.
+2. strict `ShadowExportBatchDigestPayloadV1`의 canonical bytes와
+   length-delimited payload digest를 계산하고 digest를 한 번 attach한 뒤
+   completed canonical envelope bytes, vault-only commitment와 octet length를
+   동결한다.
 3. 아직 Shared Signal에 쓰지 않은 pending
    `VaultShadowDownstreamLineageV1`을 만든다.
-4. exact proposed batch ID와 canonical bytes/digest, exact O2
-   purpose/generation, 모든 included subject의 current active consent
-   generation, notice/policy version, retention state, frozen horizon과
-   authorization policy version에 묶인 short-lived single-use
-   `VaultShadowCommitGrantV1`을 `prepared`로 만든다.
+4. exact proposed batch ID, profile, payload digest, final-envelope
+   commitment/octet length, exact O2 purpose/generation, 모든 included
+   subject의 current active consent generation, notice/policy version,
+   retention state, frozen horizon과 authorization policy version에 묶인
+   short-lived single-use `VaultShadowCommitGrantV1`을 `prepared`로 만든다.
 
 consent, O2, notice/policy, retention, horizon, included subject,
-canonical batch bytes/digest 또는 authorization policy가 하나라도
-바뀌면 prepared generation을 `invalidated`로 만든다. grant는 explicit
-expiry와 replay protection을 가지며 vault 밖으로 나가지 않는다.
+payload profile/digest, completed canonical envelope commitment/octet
+length 또는 authorization policy가 하나라도 바뀌면 prepared generation을
+`invalidated`로 만든다. grant는 explicit expiry와 replay protection을
+가지며 vault 밖으로 나가지 않는다.
 
 첫 Shared Signal write에는 하나의 logical linearization point가 있다.
 trusted gateway는 그 boundary에서 current, unexpired, unconsumed
-generation을 authoritative ledger에서 다시 resolve하고, exact batch
-ID/digest/bytes를 비교한 뒤 다음을 하나의 authorized transaction 또는
-동등 coordinator/CAS boundary로 처리한다.
+generation을 authoritative ledger에서 다시 resolve한다. strict validator
+순서로 exact batch ID/profile, recomputed payload digest, completed
+canonical envelope bytes/commitment/octet length와 grant binding을 모두
+비교한 뒤 다음을 하나의 authorized transaction 또는 동등
+coordinator/CAS boundary로 처리한다.
 
 1. prepared generation을 `consumed`로 CAS한다.
 2. authorized Shared Signal row를 처음으로 commit한다.
@@ -3304,13 +3451,13 @@ commit result를 남길 수 없다. 이 invariant를 세울 수 없으면 active
 아니라 pending/hidden을 포함한 Shared Signal, log, telemetry와 Model/Eval
 write가 모두 0건이다.
 
-concurrent duplicate commit, consumed-grant replay, digest/serialized-byte
-mismatch, expiry, invalidation 또는 한 subject라도 stale generation인
-mixed batch는 전체를 reject한다. partial commit하지 않고 새 generation과
-새 authorized batch를 만든다. batch 전체의 authorization invariant를
-증명할 수 없거나 vault-local commitment, grant, authorization 또는
-lineage가 missing, stale, mismatched, invalid이면 cross-plane write는
-0건이다.
+concurrent duplicate commit, consumed-grant replay, payload
+digest/canonical-envelope byte/commitment/octet-length mismatch, expiry,
+invalidation 또는 한 subject라도 stale generation인 mixed batch는 전체를
+reject한다. partial commit하지 않고 새 generation과 새 authorized batch를
+만든다. batch 전체의 authorization invariant를 증명할 수 없거나
+vault-local commitment, grant, authorization 또는 lineage가 missing,
+stale, mismatched, invalid이면 cross-plane write는 0건이다.
 
 generic legal basis snapshot, contract, legitimate-interest theory, service
 necessity, terms acceptance, tenant agreement, research approval,
@@ -3321,9 +3468,11 @@ experiment tier는 active exact-purpose product-signal consent를 대체하지
 compliance 또는 private-service operation에 기록할 수 있지만 Shared
 Signal export authority를 부여하지 않고 이 contract의 대안이 아니다.
 
-serialized `ShadowExportBatchV1` serializer와 validator는 위 field의
-closed allowlist를 exact nested shape까지 적용한다. internal-only field,
-alias, nested injection 또는 unknown field를 발견하면 fail closed한다.
+serialized `ShadowExportBatchV1` serializer와 validator는 위 exact closed
+profile과 field allowlist를 nested shape까지 적용한다. unknown, extra,
+missing, duplicate, alias, nested injection, coercion 또는 implicit
+default를 발견하면 hash 전 fail closed하며 unknown field를 제거한 뒤
+hash하지 않는다.
 특히 consent-ledger entry ref, subject authorization manifest ref/digest,
 `vaultScopedSourceEventSetCommitmentRef`,
 `sourceEventSetCommitmentRef`의 alias, vault/private object ref, private
@@ -3341,10 +3490,12 @@ export authorization metadata는 `consentPurpose`,
 consent-ledger entry, vault record, private event set 또는 internal lineage
 record를 식별하지 않고 batch·purpose·horizon·rotation 간 unique join key가
 아니다. 기존 `exactPurposeRef`, `o2ApprovalRef`, retention과 policy
-versions도 non-private global policy reference여야 한다. batch `id`와
-`exportDigest`는 exported batch bytes만 식별하며 authorization proof나
-private lineage handle이 아니고, vault subject/event-set lookup에 사용할
-수 없다. `observationDedupeKey`도 approved Shared Signal projection의
+versions도 non-private global policy reference여야 한다. batch `id`는
+frozen logical batch를, `exportDigest`는 exact digest payload bytes를
+식별한다. completed envelope bytes는 vault-only commitment로만 묶는다.
+어느 값도 authorization proof나 private lineage handle이 아니고, vault
+subject/event-set lookup에 사용할 수 없다. `observationDedupeKey`도
+approved Shared Signal projection의
 non-private fields에서 purpose/horizon/rotation별로 생성하며 private event
 ID, raw content, private hash·fingerprint 또는 vault commitment에서
 파생하지 않는다.
@@ -3715,19 +3866,23 @@ declined, revoked, expired/stale, wrong-purpose, wrong-notice/policy-version
 0건이다.
 
 두 `checkedAt`은 audit evidence일 뿐 commit authority가 아니다.
-vault는 exact batch ID와 canonical bytes/digest, O2 purpose/generation,
-included subject의 current product-signal consent generation,
-notice/policy, retention, horizon과 authorization policy에 결합된
-short-lived single-use generation을 prepared 상태로 만든다. 그 입력 중
-하나라도 바뀌거나 expire되면 invalidated다. 첫 Shared Signal write와
-prepared→consumed CAS, committed downstream row lineage는 같은 trusted
-transaction/coordinator linearization에서만 일어난다. consent/O2
-invalidation과 commit도 같은 generation key로 serialize한다. stale
-snapshot, timestamp, exported metadata, retry token 또는 과거 성공은
-commit을 승인하지 못한다. duplicate/replay, digest/byte mismatch,
-expiry/invalidation과 one-stale-subject mixed batch는 전체 reject한다.
-그 boundary 전 payload, local row ID와 pending lineage는 vault에만 있고
-Shared Signal의 staged/hidden/pending write는 0건이다.
+vault는 exact batch ID, supported digest profile, recomputed payload
+digest, completed canonical envelope commitment/octet length, O2
+purpose/generation, included subject의 current product-signal consent
+generation, notice/policy, retention, horizon과 authorization policy에
+결합된 short-lived single-use generation을 prepared 상태로 만든다. 그
+입력 중 하나라도 바뀌거나 expire되면 invalidated다. first row 전 strict
+validator는 payload digest, canonical emitted/persisted envelope bytes와
+vault commitment/length를 같은 acyclic rule로 다시 계산한다. 첫 Shared
+Signal write와 prepared→consumed CAS, committed downstream row lineage는
+같은 trusted transaction/coordinator linearization에서만 일어난다.
+consent/O2 invalidation과 commit도 같은 generation key로 serialize한다.
+stale snapshot, timestamp, exported metadata, retry token 또는 과거 성공은
+commit을 승인하지 못한다. duplicate/replay, digest/envelope-byte/
+commitment/length mismatch, expiry/invalidation과 one-stale-subject mixed
+batch는 전체 reject한다. 그 boundary 전 payload, local row ID와 pending
+lineage는 vault에만 있고 Shared Signal의 staged/hidden/pending write는
+0건이다.
 
 cohort parameter fitting, training, refit, parameter update 또는 dataset
 refresh는 그 요건에 더해 active exact-purpose
@@ -4678,11 +4833,12 @@ consent, 다른 consent purpose, O2 approval, O4 또는 experiment tier는
 §12.1의 Personal Raw Vault preflight가 extraction 전과 release 직전에
 notice/policy version, retention state와 evaluation horizon까지 다시
 검증하고, serialized batch에는 closed non-linkable authorization metadata만
-남긴다. 그 check timestamp는 audit evidence일 뿐이다. exact batch
-bytes/digest와 current O2/consent generation에 묶인 vault-only single-use
-commit grant의 consumed CAS, 첫 Shared Signal write와 committed row
-lineage가 같은 revocation-serialized linearization에서 성공해야 한다.
-그 전 Shared Signal staged write는 0건이다.
+남긴다. 그 check timestamp는 audit evidence일 뿐이다. exact batch ID와
+supported profile, recomputed acyclic payload digest, completed canonical
+envelope commitment/octet length 및 current O2/consent generation에 묶인
+vault-only single-use commit grant의 consumed CAS, 첫 Shared Signal write와
+committed row lineage가 같은 revocation-serialized linearization에서
+성공해야 한다. 그 전 Shared Signal staged write는 0건이다.
 
 manifest, consent-ledger resolution, vault/private ref,
 source-event-set commitment, commit grant/generation, raw/private
@@ -4919,19 +5075,18 @@ O3A + S236P
 ### 22.2 PR #667 strategy correction
 
 - existing branch only
-- exact parent head `46194ab113374ebb9f83805da55ba5c6427662dc`가 live일
+- exact parent head `afc229bbac57fb282fd1ce66f6cae145613d8089`가 live일
   때 그 sole-child fast-forward docs-only corrective 하나
 - existing v7 path 한 파일만 수정
-- exact 신규 finding 네 건만 교정:
-  commit-time consent/O2 authorization atomicity P1,
-  persisted Shared Signal row revocation propagation P1,
-  confirmed Learning Lane answer reveal P1,
-  learner-visible automatic error note P2
-- existing 13 resolved thread를 reply/reopen/re-resolve하지 않음
-- exact 신규 4 thread만 독립 검증 뒤 evidence reply와 resolve
+- exact 신규 finding 한 건, non-recursive shadow export digest P2만 교정
+- exact closed payload schema, versioned RFC 8785/SHA-256 profile,
+  length-delimited payload digest와 vault-only completed-envelope
+  commitment/length을 같은 acyclic validator/grant rule로 고정
+- existing 17 resolved thread를 reply/reopen/re-resolve하지 않음
+- exact target thread 하나만 독립 검증 뒤 evidence reply와 resolve
 - 새 exact head에서 모든 required check success와 fresh review terminal
   결과를 요구
-- known-thread target은 `17/17 resolved`
+- known-thread target은 `18/18 resolved`
 - final aggregate는 계속 one added v7 file
 - corrected v6 또는 v6.1 artifact 재도입 금지
 - Draft 유지
@@ -5062,28 +5217,24 @@ S241A → O3C → S239A → S242C → O4F → S243C
 ### 23.1 지금 실행할 하나
 
 PR #667의 fresh-review parent head
-`46194ab113374ebb9f83805da55ba5c6427662dc`와 main이 live checkpoint에
+`afc229bbac57fb282fd1ce66f6cae145613d8089`와 main이 live checkpoint에
 그대로 있을 때만, 별도 corrective Work가 다음을 수행한다.
 
-1. live authority, parent head/tree, artifact와 exact unresolved
-   P1/P1/P1/P2 네 건—
-   `PRRT_kwDOSMHn8M6USMu6` commit-time authorization atomicity,
-   `PRRT_kwDOSMHn8M6USMu3` persisted-row revocation,
-   `PRRT_kwDOSMHn8M6USMu9` confirmed Learning Lane reveal,
-   `PRRT_kwDOSMHn8M6USMu-` automatic error note—및
-   17-thread topology 검증
+1. live authority, parent head/tree, artifact와 exact unresolved P2 한 건,
+   `PRRT_kwDOSMHn8M6UTTMt` non-recursive export digest 및 18-thread
+   topology 검증
 2. existing PR branch에 parent head의 sole-child corrective 하나
-3. existing v7 경로 한 파일에서 commit grant/row revocation lifecycle,
-   confirmed Learning reveal와 existing S216 기반 five-field automatic
-   error-note projection만 교정
+3. existing v7 경로 한 파일에서 independent exact digest payload type,
+   supported canonicalization/hash profile, acyclic payload digest와
+   vault-only completed-envelope commitment/length만 교정
 4. exact O2 + active product-signal consent, closed non-linkable export
    metadata, vault-only manifest/commitment/grant/lineage와 separate
    offline-training consent + O5 fitting boundary를 보존
 5. exact-head digest/manifest, focused authority audits와 newest-head
    required checks 고정
-6. 기존 13 resolved thread에는 mutation 없이 exact 신규 4 thread만
-   독립 검증 뒤 각 1회 증거 답변·해결
-7. 17/17 resolved 뒤 exact new head에 fresh `@codex review` 1회 요청하고
+6. 기존 17 resolved thread에는 mutation 없이 exact target thread만
+   독립 검증 뒤 1회 증거 답변·해결
+7. 18/18 resolved 뒤 exact new head에 fresh `@codex review` 1회 요청하고
    terminal 결과까지 대기
 8. prior caveat·release-artifact binding, exact first-round sequence,
    canonical commercial path와 aggregate 단일 경로 보존
@@ -5187,6 +5338,15 @@ PR #667의 fresh-review parent head
 - missing·declined·revoked·expired/stale·wrong-purpose·wrong-policy·
   unresolved consent 또는 O2 mismatch에서 event 제외, invalid batch reject,
   Shared Signal/log/telemetry/Model-Eval write 0
+- independent exact `ShadowExportBatchDigestPayloadV1`이 final envelope의
+  `exportDigest`를 structurally exclude하고 모든 payload field/observation을
+  digest-visible하게 포함
+- supported `shadow_export_payload_rfc8785_sha256.v1` profile의 strict
+  I-JSON/RFC 8785/UTF-8, domain + NUL + uint64 byte-length + payload bytes
+  SHA-256 재현 100%
+- typed payload, actual digest preimage bytes, completed canonical envelope
+  bytes, payload digest와 vault-only envelope commitment/octet length의
+  two-independent-derivation golden vector 일치
 - legal basis, contract, service necessity, terms, tenant agreement,
   research approval, `personal_service`, 다른 consent, O2 단독, O4와
   experiment tier의 product-signal consent 대체 0
@@ -5222,14 +5382,20 @@ PR #667의 fresh-review parent head
 - direct API/multi-tab/retry reveal bypass 0
 - secret/system prompt exposure 0
 - export/delete/revocation propagation
-- commit authority는 exact batch bytes/digest와 current O2/consent
+- payload/final-envelope schema는 exact closed이고 duplicate/unknown/alias/
+  nested/missing/extra/coercion/default/invalid I-JSON·Unicode·number를
+  digest 전에 reject; unknown strip-then-hash 0
+- commit authority는 exact batch ID/profile, recomputed payload digest,
+  completed canonical envelope commitment/octet length와 current O2/consent
   generations에 묶인 short-lived single-use vault grant뿐; checkedAt,
-  stale snapshot, exported metadata와 retry token authority 0
+  digest/commitment, stale snapshot, exported metadata와 retry token
+  authority 0
 - prepared→consumed CAS, first Shared Signal write와 committed vault row
   lineage가 one revocation-serialized logical linearization; 그 전
   Shared Signal staged/hidden/pending write 0
-- duplicate/replay, digest mismatch, expiry/invalidation과 mixed stale
-  subject batch는 partial 없이 whole-batch reject
+- duplicate/replay, payload digest/canonical-envelope bytes/commitment/length
+  mismatch, expiry/invalidation과 mixed stale subject batch는 side effect나
+  partial 없이 whole-batch reject
 - revocation/delete/O2 invalidation은 racing unconsumed grant를 먼저
   무효화하고 persisted row와 cache/feature/materialization/dataset/
   Model-Eval descendant를 모두 non-active/quarantined/retired로 만든 뒤
@@ -5251,8 +5417,9 @@ PR #667의 fresh-review parent head
   export 0
 - authorization metadata는 closed, non-private, non-unique,
   non-resolvable global values만 허용
-- manifest, commitment와 revocation/delete lineage는 vault-internal only;
-  exported private handle fallback 0
+- final-envelope commitment/octet length, manifest, source-event-set
+  commitment와 revocation/delete lineage는 vault-internal only; exported
+  private handle 또는 digest/commitment lookup fallback 0
 - internal-only alias, nested injection과 unknown export field 0
 - supply-chain/SBOM/license review
 
@@ -5326,7 +5493,9 @@ PR #667의 fresh-review parent head
 42. stale consent read replica, cached ledger snapshot 또는 checkedAt
     timestamp로 commit authorize
 43. consumed grant replay 또는 concurrent duplicate commit을 두 번 반영
-44. authorized digest와 실제 canonical serialized bytes가 다른데 commit
+44. grant의 payload digest 또는 final-envelope commitment/octet length와
+    validator가 재계산한 payload/canonical envelope bytes가 mismatch인데
+    commit
 45. included subject 하나의 consent generation이 stale인 mixed batch를
     부분 commit
 46. crash/retry가 committed vault lineage 없는 active Shared Signal row를
@@ -5394,6 +5563,43 @@ PR #667의 fresh-review parent head
     queue-completion을 증가
 86. private error-note body를 Shared Signal, Academy 또는 model training으로
     promotion
+87. actual `exportDigest`를 포함한 completed envelope 자체를
+    `exportDigest` preimage로 hash
+88. hash fixed-point를 탐색하거나 self-referential serializer로 digest 생성
+89. `exportDigest = ""`, `null`, zero, sentinel 또는 provisional value를
+    payload preimage에 포함
+90. unvalidated arbitrary object에서 `exportDigest`를 dynamic delete한 뒤
+    payload로 간주
+91. final exported envelope에 `exportDigest`가 missing
+92. `ShadowExportBatchDigestPayloadV1`에 `exportDigest` property가 존재
+93. top-level `exportDigest`가 duplicate
+94. alias 또는 nested digest injection
+95. unknown field를 silently strip한 뒤 hash
+96. observations만 또는 payload 일부만 hash
+97. named canonical payload가 아니라 raw transport JSON을 hash
+98. object key order, whitespace, escape 또는 numeric spelling 차이를 서로
+    다른 valid digest input으로 인정
+99. wrong domain, schema/profile version, algorithm, prefix, case, digest
+    length 또는 encoding을 수락
+100. default insertion, coercion 또는 silent Unicode normalization으로
+     digest-visible value 변경
+101. digest attach 뒤 모든 top-level payload field 각각의 mutation
+102. digest attach 뒤 observation leaf mutation 또는 array reorder
+103. 다른 batch ID, purpose, horizon, rotation 또는 authorization
+     generation에 digest 재사용
+104. batch ID, row ID, dedupe key 또는 다른 field가 `exportDigest`에서
+     파생되거나 vault-only derived value가 payload/envelope로 되돌아오는
+     indirect cycle
+105. attached payload digest는 일치하지만 vault-only final-envelope
+     commitment 또는 byte length가 mismatch
+106. final-envelope commitment/octet length를 vault 밖에 serialize
+107. verifier가 supplied canonical bytes 또는 digest를 재구성 없이 신뢰
+108. digest는 valid지만 consent/O2/grant가 invalid인데 authorize
+109. 다른 consent/O2/grant가 valid한 digest mismatch에서 grant consume,
+     row 또는 다른 side effect 발생
+110. future V1 field가 payload preimage에서 누락
+111. digest 또는 envelope commitment를 authorization, membership 또는
+     private-lineage lookup evidence로 사용
 
 모든 actionable P0/P1/P2는 0/0/0이어야 한다.
 
@@ -5427,6 +5633,12 @@ PR #667의 fresh-review parent head
 - source/version/privacy/accessibility
 - Shared Signal export의 exact O2 + active exact-purpose product-signal
   consent 및 legal-basis substitution 0
+- self-containing envelope를 hash하지 않는 independent exact digest
+  payload, versioned RFC 8785/SHA-256 profile, strict validator와
+  payload-digest-attach-final-envelope의 acyclic construction
+- preflight/grant가 recomputed payload digest와 completed canonical
+  envelope의 vault-only commitment/octet length를 동일하게 bind하고 모든
+  mismatch에서 grant consume와 cross-plane side effect 0
 - closed non-linkable export metadata와 vault-only manifest/commitment/
   single-use grant/revocation-delete lineage
 - first row commit의 atomic generation consume/lineage와 persisted row부터
@@ -5482,6 +5694,9 @@ PR #667의 fresh-review parent head
 - baseline comparison
 - O2 + active product-signal consent extraction/evaluation과
   offline-training consent + O5 fitting/training/refresh 권한 분리
+- export digest는 named closed payload만 commit하고 completed envelope
+  bytes는 vault-only length-delimited commitment로 별도 bind; 둘 다
+  authorization 또는 private-lineage handle이 아님
 - Shared Signal/Model-Eval/client/log surface의 private vault linkage 0
 - product-signal revocation은 active row와 모든 provenance descendant를
   acknowledgement 전에 non-active로 만들거나 enforced all-surface
@@ -5554,7 +5769,12 @@ PR #667의 fresh-review parent head
 23. accepted wrong/partial feedback는 기존 gap/S216 authority에서 다섯
     field automatic error note로 보이되, note 자체가 새 evidence나
     mastery authority가 되지 않는다.
-24. 세계 최고 수준은 기능 수가 아니라 **잘못된 도움을 막고, 실제 독립
+24. Shared Signal `exportDigest`는 독립 선언된 exact closed payload를
+    RFC 8785/UTF-8, versioned domain과 length-delimited SHA-256으로 commit한
+    뒤 한 번 attach한다. completed envelope byte identity는 Personal Raw
+    Vault의 별도 commitment/length로만 묶으며 어느 digest도 권한이나
+    private lookup handle이 아니다.
+25. 세계 최고 수준은 기능 수가 아니라 **잘못된 도움을 막고, 실제 독립
     능력을 증명하며, 다른 시험에서도 같은 품질을 재현하는 구조**로 만든다.
 
 ---
