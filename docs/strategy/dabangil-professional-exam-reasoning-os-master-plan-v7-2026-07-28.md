@@ -1759,9 +1759,15 @@ Full mock / exam simulation
 시험·skill마다 모든 단계를 하드코딩하지 않는다. adapter measurement policy가
 necessary evidence를 정의한다.
 
-### 8.3 canonical mastery와 derived dimensions
+### 8.3 future-only mastery contract와 current derived dimensions
 
-`MasteryStateV1` 하나만 canonical mastery다. 다음은 별도 projection이다.
+현재 authority에는 canonical mastery runtime/state가 없다.
+`MasteryStateV1`은 future contract/test vocabulary일 뿐이며 current
+runtime이나 S237A가 persist·resolve·transition하거나 required dependency로
+사용할 수 없다. 별도 dated Owner decision, canonical contract/mirror,
+runtime/schema/RLS/flag 검증과 exact O4 activation 전에는 closed eligible
+attempt/gap/recovery evidence와 existing LearningGapRecord/S216 projection만
+아래 dimensions와 weakness priority를 계산한다.
 
 - retrieval stability
 - transfer breadth
@@ -1772,7 +1778,8 @@ necessary evidence를 정의한다.
 - PersonalWeaknessMap priority
 - source/effective-version freshness
 
-projection끼리 모순이 생기면 mastery를 임의로 바꾸지 않고 stale/recompute한다.
+projection끼리 모순이 생기면 evidence projection을 stale/recompute하며
+mastery state를 만들거나 바꾸지 않는다.
 
 ### 8.4 LearnerCapabilitySnapshotV1
 
@@ -1781,7 +1788,6 @@ type LearnerCapabilitySnapshotV1 = {
   learnerScopeRef: string;
   conceptNodeRef: string;
   evidenceThroughRef: string;
-  canonicalMasteryStateRef: string;
   retrievalStabilityState:
     | "unknown"
     | "fragile"
@@ -1809,6 +1815,11 @@ type LearnerCapabilitySnapshotV1 = {
   snapshotChecksum: string;
 };
 ```
+
+snapshot은 exact `evidenceThroughRef`, qualification, assistance/exposure와
+versioned rule만으로 재현 가능해야 한다. mastery ref를 조기 supplied,
+resolved 또는 required하면 snapshot 전체를 reject한다. future activation은
+이 V1을 암묵적으로 확장하지 않고 별도 versioned contract를 요구한다.
 
 percentage를 learner에게 보여주기 위한 객체가 아니다. closed state와 근거를
 통해 다음 action을 설명하기 위한 projection이다.
@@ -1959,7 +1970,7 @@ candidate로만 정의한다. **현재 learner runtime에서는 선택·실행�
 독립 시도 전에는 개인 gap을 꾸며내지 않고
 `무도움 재현 목표`만 보여준다.
 
-### 9.2 assistance, exposure, mastery 분리
+### 9.2 assistance, exposure, future mastery contract 분리
 
 Assistance event:
 
@@ -1986,7 +1997,7 @@ type ExposureStateV1 = {
 };
 ```
 
-Mastery:
+Future mastery contract:
 
 ```ts
 type MasteryStateV1 =
@@ -1998,7 +2009,12 @@ type MasteryStateV1 =
   | "stable";
 ```
 
-전이 불변식:
+이 declaration과 아래 transition은 별도 authority가 활성화한 future
+contract semantics다. current runtime/S237A는 이 state를 저장·전이하거나
+gap, weakness, queue, credit 또는 release의 prerequisite로 읽지 않는다.
+현재 결과는 immutable eligible evidence와 qualification뿐이다.
+
+미래 승인 뒤의 전이 불변식:
 
 | 사건 | 최대 허용 결과 |
 | --- | --- |
@@ -2594,9 +2610,9 @@ projection이다.
 
 ```text
 CurriculumGraph
-+ Personal Concept State / MasteryStateV1
 + Question Chain
 + GapFindingV2
++ existing LearningGapRecord / S216 qualification
 + Misconception Graph
 + Root Cause Candidate
 + RepairVerificationV2
@@ -2613,10 +2629,11 @@ CurriculumGraph
 - pyBKT 확률을 보기 좋게 포장한 화면
 - 개인 edge를 shared `CurriculumGraph`로 역승격하는 수단
 
-`MasteryStateV1`이 유일한 canonical mastery 상태다.
-`PersonalWeaknessStatusV1`은 현재 evidence의 충분성과 교정 우선순위를
-표현할 뿐이다. snapshot은 같은 event와 version에서 재생 가능한
-cache/projection이며 별도의 권위 원장이 아니다.
+현재 canonical mastery state는 없고 future `MasteryStateV1`도 이
+projection의 dependency나 authority가 아니다.
+`PersonalWeaknessStatusV1`은 closed eligible evidence의 충분성과 교정
+우선순위를 표현할 뿐이다. snapshot은 같은 event와 version에서 재생
+가능한 cache/projection이며 별도의 권위 원장이 아니다.
 
 #### closed evidence
 
@@ -2834,9 +2851,6 @@ type PersonalWeaknessStatusV1 =
 
 type PersonalWeaknessConceptSnapshotV1 = {
   conceptNodeId: string;
-  masteryStateRef: string;
-  masteryPolicyVersion: string;
-  masteryEvidenceThroughRef: string;
   weaknessStatus: PersonalWeaknessStatusV1;
   classificationConfidence: "not_estimated" | "low" | "medium" | "high";
   reasonCodes: string[];
@@ -2882,11 +2896,14 @@ taxonomy, mapping과 policy는 동일한 canonical content와 checksum을
 `generatedAt`을 제외한 canonical content와 exact input basis에서
 결정론적으로 계산한다.
 
-map은 같은 `evidenceThroughRef`에서 canonical mastery state를
-`masteryStateRef`로 resolve한다. mastery transition이 생기면 관련 map
-cache는 즉시 stale/recompute 대상이다. 허용 조합을 policy로 닫는다.
+current authority/S237A map은 같은 `evidenceThroughRef`의 exact
+`WeaknessEvidenceEventV1`과 versioned policy에서 직접 계산하며 mastery
+ref를 resolve하거나 요구하지 않는다. 별도 future mastery activation 뒤
+versioned extension으로 consistency check를 추가할 때만 아래 matrix를
+적용하며, 그 check는 weakness를 authorize하거나 evidence를 대체하지
+않는다.
 
-| same-cutoff canonical mastery | 허용 weakness status |
+| future-only same-cutoff mastery | 허용 weakness status |
 | --- | --- |
 | `unknown` | `insufficient_evidence`, `watch` |
 | `confused` | `watch`, `priority_candidate` |
@@ -2895,18 +2912,20 @@ cache는 즉시 stale/recompute 대상이다. 허용 조합을 policy로 닫는�
 | `recovering` | `watch`, `recovery_watch` |
 | `stable` | `watch`, `no_current_signal` |
 
-- `insufficient_evidence`는 `unknown`과
+- current `insufficient_evidence`는 qualifying evidence 0과
   `classificationConfidence=not_estimated` 조합만 허용
 - 다른 weakness status는 `not_estimated`를 허용하지 않고,
   classification confidence는 rule 분류의 근거 수준일 뿐 숙달률이 아님
-- canonical mastery state를 같은 cutoff에서 resolve하지 못하면 usable
-  concept snapshot을 release하지 않고 top-level map을
-  `stale | insufficient_evidence`로 처리
-- `wrong/confident_wrong + no_current_signal/recovery_watch`를 포함해
-  표에 없는 모든 조합 금지
-- 새 qualifying failure가 stable concept를 reopen하면 canonical mastery
-  전이를 먼저 commit한 뒤 같은 cutoff에서 map을 재계산
-- mastery와 weakness projection contradiction release 0
+- future authority 없이 mastery ref를 supplied/resolved/required하면
+  snapshot release 0; ref absence는 current evidence-derived map을 막지 않음
+- future contract가 별도 활성화된 경우에만 표 밖 조합과
+  mastery/weakness contradiction release 0
+- 새 qualifying failure는 current map을 evidence cutoff에서 즉시
+  recompute하며 mastery transition을 요구하거나 만들지 않음
+
+current acceptance는 mastery ref 없는 deterministic snapshot/map success,
+조기 ref·state persistence·transition·required lookup 각 reject, 그리고
+existing evidence/qualification만으로 identical checksum 재현을 요구한다.
 
 root cause와 graph edge도 닫힌 계약을 가진다.
 
@@ -6274,9 +6293,11 @@ S237A가 구현 후보로 다룰 수 있는 learner path는 current
 override다. override는 attempt-before-reveal default를 보존하는
 non-guided, no-credit exit이며 Owner dogfood result/D+1/D+7 numerator에는
 포함되지 않는다. `guided_study`, guided selector/route/API/event/
-ExecutionBlock/scheduling/mastery는 contract-only로 남고, §5.0의 별도
-dated Owner supersession 없이는 S237A 어느 slice도 이를
-구현·출시·활성화하지 못한다.
+ExecutionBlock/scheduling과 canonical `MasteryStateV1` runtime은
+contract-only로 남고, §5.0의 별도 dated Owner supersession 없이는 S237A
+어느 slice도 이를 구현·출시·활성화하지 못한다. S237A.7의 rule
+PersonalWeaknessMap은 existing closed evidence/qualification에서 직접
+계산하며 mastery ref·state·transition을 만들거나 요구하지 않는다.
 
 | slice | 산출물 |
 | --- | --- |
