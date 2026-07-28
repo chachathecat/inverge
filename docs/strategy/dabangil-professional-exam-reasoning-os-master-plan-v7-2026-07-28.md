@@ -196,9 +196,9 @@ v7은 그 위에 다음을 새로 고정한다.
     gate를 통과한 upstream `ReferenceAnswerReleaseArtifact`와의 exact binding
 18. 외부 상용화의 현재 canonical path
     `S241A → O3C → S239A → S242C → O4F → S243C` 보존
-19. Shared Signal 첫 write와 exact O2·consent authorization generation
-    소비를 하나의 linearizable commit boundary로 묶는 vault-only
-    `VaultShadowCommitGrantV1`
+19. Shared Signal 첫 write와 exact O2·consent authorization generation,
+    reconstructiveness reservation/ledger를 하나의 linearizable commit
+    boundary로 묶는 vault-only `VaultSharedSignalCommitGrantV2`
 20. 이미 저장된 Shared Signal row부터 cache·materialization·dataset·
     Model/Eval descendant까지 철회가 전파되는 vault-only downstream
     lineage와 fail-conservative tombstone/quarantine
@@ -208,8 +208,14 @@ v7은 그 위에 다음을 새로 고정한다.
     `s216.error_notebook_gap_taxonomy.v1`을 유일한 metadata authority로
     사용하는 다섯 필드 learner-visible automatic error-note projection
 23. self-containing envelope를 hash하지 않는 closed
-    `ShadowExportBatchDigestPayloadV1`, versioned RFC 8785 payload digest와
-    vault-only final-envelope commitment
+    `SharedSignalExportBatchDigestPayloadV2`, versioned RFC 8785 payload
+    digest와 vault-only final-envelope commitment
+24. shadow와 intervention outcome이 함께 사용하는 하나의 immutable
+    `SharedSignalExportValueRegistryV1`, closed value/opaque-ID/numeric
+    domain과 common `SharedSignalExportBatchV2` profile
+25. exact candidate payload와 prior/split/concurrent/cross-schema release
+    composition을 함께 평가하고 single-use grant에 bind하는 vault-only
+    reconstructiveness assessment·reservation·ledger gateway
 
 ### 0.5 제품 최적화 목적함수
 
@@ -266,22 +272,31 @@ rule baseline으로 고르고, adaptive policy는 별도 shadow 평가 뒤에만
 ### 0.7 현재 PR #667 처리 결론
 
 2026-07-28 KST의 exact head
-`afc229bbac57fb282fd1ce66f6cae145613d8089`에 대한 fresh exact-head
+`7a529a728f5690e9e2349d16e8c814213e3a93da`에 대한 fresh exact-head
 review는 terminal `COMMENTED`였지만 clean하지 않았고,
-`P0/P1/P2 = 0/0/1`의 신규 finding 한 건을 만들었다. PR #667은 계속
+`P0/P1/P2 = 0/0/2`의 신규 finding 두 건을 만들었다. PR #667은 계속
 Draft다.
 
-이 corrective는 그 한 건만 live source-of-truth에 맞춘다.
+이 corrective는 그 두 건만 live source-of-truth에 맞춘 하나의 coherent
+release contract다.
 
-1. `exportDigest`가 자신을 포함한 final envelope의 hash가 되지 않도록
-   digest preimage를 exact closed
-   `ShadowExportBatchDigestPayloadV1`으로 독립 선언한다.
-2. versioned RFC 8785/UTF-8/SHA-256 profile로 payload digest를 먼저 계산해
-   한 번 attach하고, 완성된 canonical envelope에는 별도의 vault-only
-   length-delimited commitment를 계산한다.
-3. preflight, single-use grant, validator와 commit boundary가 같은
-   acyclic payload digest·final-envelope commitment·octet length를
-   재계산하고 exact bytes까지 fail closed로 검증한다.
+1. shadow observation과 intervention outcome의 exported/shared semantic
+   value를 exact O2 purpose·approval class·horizon에 scoped된 하나의
+   immutable `SharedSignalExportValueRegistryV1`에서 value-by-value
+   resolve한다. bucket, adapter, taxonomy/mapping/label, skill, 모든
+   policy/version ref, opaque ID와 bounded number를 닫고 exact timestamp,
+   free text, custom/unknown/cross-version value를 거부한다.
+2. real-learner Shared Signal writer를 common
+   `SharedSignalExportBatchV2` gateway 하나로 통합하고, exact candidate
+   payload와 completed envelope를 current visible population, prior
+   irreversible disclosure history, split/retry release와 모든 concurrent
+   prepared reservation에 대해 fail-closed reconstructiveness 평가한다.
+3. current `pass`, authority-selected joinability component,
+   composition-ledger generation과 reservation을 single-use grant에 묶고,
+   first/all row write에서 grant/reservation consume, disclosure append,
+   rows, lineage와 idempotent result를 하나의 CAS linearization으로
+   commit한다. revocation은 disclosure budget을 되돌리지 않으며 residual
+   surface를 recertify하거나 all-consumer deny한다.
 
 허용 범위는 기존 v7 경로 한 파일의 sole-child docs-only corrective다.
 Ready, merge, auto-merge, runtime/schema/RLS, canonical contract, roadmap,
@@ -306,16 +321,16 @@ read-only 관측:
 | PR #662 | terminal squash-merged |
 | PR #662 final corrected tree | `2403f1f90de0fd8260fdd7485eee9b726cc0471c` |
 | PR #667 | open Draft, mergeable, unmerged, unlocked, auto-merge OFF |
-| PR #667 corrective parent head | `afc229bbac57fb282fd1ce66f6cae145613d8089` |
-| PR #667 corrective parent tree | `8c33fc56edaf2c629fa86aa42909f8d1b4260f4f` |
-| PR #667 corrective parent sole parent | `46194ab113374ebb9f83805da55ba5c6427662dc` |
+| PR #667 corrective parent head | `7a529a728f5690e9e2349d16e8c814213e3a93da` |
+| PR #667 corrective parent tree | `0cd6ea96e83d24ffa30a76a18b9bab3db1551a7a` |
+| PR #667 corrective parent sole parent | `afc229bbac57fb282fd1ce66f6cae145613d8089` |
 | PR #667 branch | `agent/dabangil-master-plan-v6-strategy` |
-| PR #667 corrective parent aggregate | v7 단일 added file, `+5584/-0`, main보다 7 commits ahead / 0 behind |
-| corrective parent artifact | SHA-256 `c18d4dc60ffdaaf3a3e37bb889fbc7b973466d5c994f9218c08b5c09cf19f962`, 218,161 bytes, 5,584 lines, blob `264a40d7844ee092b4f69d9cf796438d600699ca` |
-| required corrective-parent checks | PR Contract 515, Risk Gate 515, Runtime Gate 515, Fast CI 642, Full CI 515, Learner Loop Health 1026, Vercel 7/7 success |
-| resolved findings | known thread 18개 중 prior 17개 resolved |
-| fresh exact-head review | `afc229bbac57…`, terminal `COMMENTED`, `P0/P1/P2 = 0/0/1` |
-| exact unresolved finding | non-recursive export digest P2 |
+| PR #667 corrective parent aggregate | v7 단일 added file, `+5804/-0`, main보다 8 commits ahead / 0 behind |
+| corrective parent artifact | SHA-256 `ac9e081f618c87541dab225693ae1646c966a0672e64e1bbbe5f6d2d56e636ae`, 230,189 bytes, 5,804 lines, blob `621cdf825d908852c3adbe7956ef9da700e8d835` |
+| required corrective-parent checks | PR Contract 516, Risk Gate 516, Runtime Gate 516, Fast CI 643, Full CI 516, Learner Loop Health 1027, Vercel 7/7 success |
+| resolved findings | known thread 20개 중 prior 18개 resolved |
+| fresh exact-head review | `7a529a728f…`, terminal `COMMENTED`, `P0/P1/P2 = 0/0/2` |
+| exact unresolved findings | Shared Signal value-domain closure P2 + reconstructiveness/composition gate P2 |
 | PR #660 | open Draft at historical observation `4c5694e4c65a110aede39762421abb49afd653f5` |
 | public/billing/external learner | OFF |
 
@@ -3060,10 +3075,12 @@ pyBKT는 현재 canonical boundary대로 `benchmark_only`다.
    `qualifying_success | qualifying_failure | ineligible`로 바꾸는
    검증된 adapter
 4. exact O2 measurement purpose, consent/privacy와 export approval
-5. approved pseudonymous shadow export 뒤의 closed-schema event
-   sufficiency audit
-6. fixed/rule baseline과 pre-registered time-forward held-out target
-7. leakage, version, rollback, retention, deletion과 drift policy
+5. exact active value registry에 대한 closed value-domain 및
+   event-sufficiency validation
+6. exact candidate payload와 cumulative release composition에 대한
+   deterministic fail-closed reconstructiveness assessment
+7. fixed/rule baseline과 pre-registered time-forward held-out target
+8. leakage, version, rollback, retention, deletion과 drift policy
 
 real learner event의 extraction, export, frozen/versioned prediction·inference
 또는 evaluation은 exact O2와 approved export 전에 금지한다. O2 전
@@ -3077,201 +3094,1032 @@ learner-derived observation을 train 또는 calibration-fitting partition에
 넣을 수 없고, 승인된 frozen/versioned inference·evaluation partition에서만
 사용할 수 있다. 이 문서는 그 경계만 기록하며 O5를 부여하지 않는다.
 
-production event를 shadow dataset으로 직접 복사하지 않는다.
+production event를 Shared Signal dataset으로 직접 복사하지 않는다. 기존
+draft `ShadowObservationV1`, `ShadowExportBatchV1`,
+`VaultShadowExportPreflightV1`, `VaultShadowCommitGrantV1`과
+`InterventionOutcomeEventV1`은 value domain과 reconstructiveness
+composition을 닫지 못했으므로 real-learner release에서
+**unsupported/non-releaseable**이다. V1 golden vector는 과거 byte
+재현을 확인하는 preservation evidence일 뿐 grant, writer, fallback,
+automatic conversion 또는 mixed-version authority가 아니다.
+이 docs-only correction에는 runtime migration, data migration 또는
+activation이 없다.
+
+지원되는 real-learner profile은 아래 common V2 family 하나다.
 
 ```ts
-type ShadowSourceEligibilityClassV1 =
+type SharedSignalExportValueDomainV1 =
+  | "exact_o2_purpose"
+  | "global_o2_approval_ref"
+  | "global_o2_approval_class"
+  | "evaluation_horizon"
+  | "subject_adapter"
+  | "exam_package"
+  | "shared_skill"
+  | "pre_state_class"
+  | "intervention_policy"
+  | "time_bucket_policy_version"
+  | "time_bucket_value"
+  | "taxonomy_version"
+  | "mapping_adapter_version"
+  | "label_policy_version"
+  | "subject_pseudonym_policy_version"
+  | "item_family_pseudonym_policy_version"
+  | "pseudonym_rotation_policy_version"
+  | "pseudonym_rotation_scope"
+  | "shared_skill_allowlist_version"
+  | "source_eligibility_allowlist_version"
+  | "shadow_source_eligibility_class"
+  | "shadow_event_class"
+  | "shadow_outcome_class"
+  | "shadow_qualification_class"
+  | "intervention_kind"
+  | "assistance_level"
+  | "intervention_outcome_class"
+  | "reconstructiveness_policy_version"
+  | "risk_projection_manifest_version"
+  | "observation_ordering_policy_version"
+  | "batch_partition_policy_version"
+  | "retention_policy"
+  | "authorization_policy_version"
+  | "revocation_policy_version"
+  | "delete_propagation_policy_version"
+  | "artifact_revocation_policy_version";
+
+type ApprovedSharedSignalValueRefV2<
+  TDomain extends SharedSignalExportValueDomainV1,
+> = string & {
+  readonly __approvedSharedSignalValueDomainV2: TDomain;
+};
+
+type ExactO2PurposeRefV2 =
+  ApprovedSharedSignalValueRefV2<"exact_o2_purpose">;
+type GlobalO2ApprovalRefV2 =
+  ApprovedSharedSignalValueRefV2<"global_o2_approval_ref">;
+type GlobalO2ApprovalClassV2 =
+  ApprovedSharedSignalValueRefV2<"global_o2_approval_class">;
+type EvaluationHorizonRefV2 =
+  ApprovedSharedSignalValueRefV2<"evaluation_horizon">;
+type SubjectAdapterRefV2 =
+  ApprovedSharedSignalValueRefV2<"subject_adapter">;
+type ExamPackageRefV2 =
+  ApprovedSharedSignalValueRefV2<"exam_package">;
+type SharedSkillRefV2 =
+  ApprovedSharedSignalValueRefV2<"shared_skill">;
+type PreStateClassRefV2 =
+  ApprovedSharedSignalValueRefV2<"pre_state_class">;
+type InterventionPolicyRefV2 =
+  ApprovedSharedSignalValueRefV2<"intervention_policy">;
+type TimeBucketPolicyVersionRefV2 =
+  ApprovedSharedSignalValueRefV2<"time_bucket_policy_version">;
+type ApprovedCoarseTimeBucketRefV2 =
+  ApprovedSharedSignalValueRefV2<"time_bucket_value">;
+type TaxonomyVersionRefV2 =
+  ApprovedSharedSignalValueRefV2<"taxonomy_version">;
+type MappingAdapterVersionRefV2 =
+  ApprovedSharedSignalValueRefV2<"mapping_adapter_version">;
+type LabelPolicyVersionRefV2 =
+  ApprovedSharedSignalValueRefV2<"label_policy_version">;
+type SubjectPseudonymPolicyVersionRefV2 =
+  ApprovedSharedSignalValueRefV2<"subject_pseudonym_policy_version">;
+type ItemFamilyPseudonymPolicyVersionRefV2 =
+  ApprovedSharedSignalValueRefV2<"item_family_pseudonym_policy_version">;
+type PseudonymRotationPolicyVersionRefV2 =
+  ApprovedSharedSignalValueRefV2<"pseudonym_rotation_policy_version">;
+type PseudonymRotationScopeRefV2 =
+  ApprovedSharedSignalValueRefV2<"pseudonym_rotation_scope">;
+type SharedSkillAllowlistVersionRefV2 =
+  ApprovedSharedSignalValueRefV2<"shared_skill_allowlist_version">;
+type SourceEligibilityAllowlistVersionRefV2 =
+  ApprovedSharedSignalValueRefV2<
+    "source_eligibility_allowlist_version"
+  >;
+type ReconstructivenessPolicyVersionRefV2 =
+  ApprovedSharedSignalValueRefV2<"reconstructiveness_policy_version">;
+type RiskProjectionManifestVersionRefV2 =
+  ApprovedSharedSignalValueRefV2<"risk_projection_manifest_version">;
+type ObservationOrderingPolicyVersionRefV2 =
+  ApprovedSharedSignalValueRefV2<
+    "observation_ordering_policy_version"
+  >;
+type BatchPartitionPolicyVersionRefV2 =
+  ApprovedSharedSignalValueRefV2<"batch_partition_policy_version">;
+type RetentionPolicyRefV2 =
+  ApprovedSharedSignalValueRefV2<"retention_policy">;
+type AuthorizationPolicyVersionRefV2 =
+  ApprovedSharedSignalValueRefV2<"authorization_policy_version">;
+type RevocationPolicyVersionRefV2 =
+  ApprovedSharedSignalValueRefV2<"revocation_policy_version">;
+type DeletePropagationPolicyVersionRefV2 =
+  ApprovedSharedSignalValueRefV2<
+    "delete_propagation_policy_version"
+  >;
+type ArtifactRevocationPolicyVersionRefV2 =
+  ApprovedSharedSignalValueRefV2<
+    "artifact_revocation_policy_version"
+  >;
+
+type SharedSignalExportRegistryContractIdV1 =
+  "shared_signal_export_value_registry.v1";
+type SharedSignalExportRegistryContractVersionV1 = "1";
+type SharedSignalExportRegistrySnapshotIdV1 =
+  string & { readonly __brand: "shared_signal_registry_snapshot_id_v1" };
+type SharedSignalExportRegistrySnapshotVersionV1 =
+  string & {
+    readonly __brand: "shared_signal_registry_snapshot_version_v1";
+  };
+type NonPrivateRegistryBasisChecksumV1 =
+  string & { readonly __brand: "non_private_registry_basis_sha256_v1" };
+type TrustedRegistryControlTimeV1 =
+  string & { readonly __brand: "trusted_registry_control_rfc3339_utc_v1" };
+type FiniteNonNegativeSafeIntegerV2 =
+  number & { readonly __brand: "finite_non_negative_safe_integer_v2" };
+type PositiveSafeIntegerV2 =
+  number & { readonly __brand: "positive_safe_integer_v2" };
+type SharedSignalSequenceIndexV2 =
+  number & { readonly __brand: "zero_based_contiguous_sequence_index_v2" };
+
+type ShadowSourceEligibilityClassV2 =
   | "verified_practical"
   | "supported_theory"
   | "effective_version_bound_law";
+type ShadowEventClassV2 =
+  | "attempt"
+  | "repair"
+  | "d1_recall"
+  | "d7_transfer"
+  | "timed_full_solution";
+type ShadowOutcomeClassV2 =
+  | "qualifying_success"
+  | "qualifying_failure";
+type ShadowQualificationClassV2 = "independent_eligible";
+type SharedInterventionKindV2 =
+  | "orient"
+  | "recall"
+  | "contrast"
+  | "rewrite"
+  | "recalculate"
+  | "verified_variant"
+  | "timed_set"
+  | "timed_full_solution";
+type SharedAssistanceLevelV2 =
+  | "none"
+  | "recall_cue"
+  | "concept_hint"
+  | "structural_hint"
+  | "partial_example"
+  | "full_solution_revealed";
+type InterventionOutcomeClassV2 =
+  | "qualifying_success"
+  | "qualifying_failure"
+  | "abstained"
+  | "ineligible";
 
-type SharedSignalLocalRowIdV1 =
-  string & { readonly __brand: "shared_signal_local_row_id_v1" };
-
-type ShadowExportPayloadDigestProfileV1 =
-  "shadow_export_payload_rfc8785_sha256.v1";
-
-type ShadowObservationV1 = {
-  sharedSignalRowId: SharedSignalLocalRowIdV1;
-  pseudonymousSubjectKey: string;
-  sequenceIndex: number;
-  sharedSkillId: string;
-  sharedItemFamilyPseudonym: string;
-  eventKind:
-    | "attempt"
-    | "repair"
-    | "d1_recall"
-    | "d7_transfer"
-    | "timed_full_solution";
-  outcome: "qualifying_success" | "qualifying_failure";
-  qualification: "independent_eligible";
-  occurredAtBucket: string;
-  subjectAdapter: string;
-  taxonomyVersion: string;
-  mappingAdapterVersion: string;
-  labelPolicyVersion: string;
-  sourceEligibilityClass: ShadowSourceEligibilityClassV1;
-  observationDedupeKey: string;
+type SharedSignalExportValueRegistryV1 = {
+  registryContractId: SharedSignalExportRegistryContractIdV1;
+  registryContractVersion:
+    SharedSignalExportRegistryContractVersionV1;
+  snapshotId: SharedSignalExportRegistrySnapshotIdV1;
+  snapshotVersion: SharedSignalExportRegistrySnapshotVersionV1;
+  exactPurposeRef: ExactO2PurposeRefV2;
+  globalO2ApprovalRef: GlobalO2ApprovalRefV2;
+  globalO2ApprovalClass: GlobalO2ApprovalClassV2;
+  evaluationHorizonRef: EvaluationHorizonRefV2;
+  approvedSubjectAdapterRefs: readonly SubjectAdapterRefV2[];
+  approvedExamPackageRefs: readonly ExamPackageRefV2[];
+  approvedSharedSkillRefs: readonly SharedSkillRefV2[];
+  approvedPreStateClassRefs: readonly PreStateClassRefV2[];
+  approvedInterventionPolicyRefs:
+    readonly InterventionPolicyRefV2[];
+  approvedTimeBucketPolicyVersionRefs:
+    readonly TimeBucketPolicyVersionRefV2[];
+  approvedCoarseTimeBucketRefs:
+    readonly ApprovedCoarseTimeBucketRefV2[];
+  approvedTaxonomyVersionRefs: readonly TaxonomyVersionRefV2[];
+  approvedMappingAdapterVersionRefs:
+    readonly MappingAdapterVersionRefV2[];
+  approvedLabelPolicyVersionRefs:
+    readonly LabelPolicyVersionRefV2[];
+  approvedSubjectPseudonymPolicyVersionRefs:
+    readonly SubjectPseudonymPolicyVersionRefV2[];
+  approvedItemFamilyPseudonymPolicyVersionRefs:
+    readonly ItemFamilyPseudonymPolicyVersionRefV2[];
+  approvedPseudonymRotationPolicyVersionRefs:
+    readonly PseudonymRotationPolicyVersionRefV2[];
+  approvedPseudonymRotationScopeRefs:
+    readonly PseudonymRotationScopeRefV2[];
+  approvedSharedSkillAllowlistVersionRefs:
+    readonly SharedSkillAllowlistVersionRefV2[];
+  approvedSourceEligibilityAllowlistVersionRefs:
+    readonly SourceEligibilityAllowlistVersionRefV2[];
+  approvedReconstructivenessPolicyVersionRefs:
+    readonly ReconstructivenessPolicyVersionRefV2[];
+  approvedRiskProjectionManifestVersionRefs:
+    readonly RiskProjectionManifestVersionRefV2[];
+  approvedObservationOrderingPolicyVersionRefs:
+    readonly ObservationOrderingPolicyVersionRefV2[];
+  approvedBatchPartitionPolicyVersionRefs:
+    readonly BatchPartitionPolicyVersionRefV2[];
+  approvedRetentionPolicyRefs: readonly RetentionPolicyRefV2[];
+  approvedAuthorizationPolicyVersionRefs:
+    readonly AuthorizationPolicyVersionRefV2[];
+  approvedRevocationPolicyVersionRefs:
+    readonly RevocationPolicyVersionRefV2[];
+  approvedDeletePropagationPolicyVersionRefs:
+    readonly DeletePropagationPolicyVersionRefV2[];
+  approvedArtifactRevocationPolicyVersionRefs:
+    readonly ArtifactRevocationPolicyVersionRefV2[];
+  approvedSourceEligibilityClasses:
+    readonly ShadowSourceEligibilityClassV2[];
+  approvedShadowEventClasses: readonly ShadowEventClassV2[];
+  approvedShadowOutcomeClasses: readonly ShadowOutcomeClassV2[];
+  approvedShadowQualificationClasses:
+    readonly ShadowQualificationClassV2[];
+  approvedInterventionKinds: readonly SharedInterventionKindV2[];
+  approvedAssistanceLevels: readonly SharedAssistanceLevelV2[];
+  approvedInterventionOutcomeClasses:
+    readonly InterventionOutcomeClassV2[];
+  timeBucketDerivationPolicy: {
+    authority: "trusted_server";
+    source: "vault_authoritative_event_time";
+    output: "approved_coarse_time_bucket_ref_only";
+    rejectedTransportClasses: readonly [
+      "rfc3339_or_iso_timestamp",
+      "epoch_seconds_or_milliseconds",
+      "timezone_or_locale_date",
+      "exact_event_time",
+      "arbitrary_calendar_text",
+      "client_or_model_label",
+      "unknown_or_custom_bucket",
+      "finer_than_o2_approved_granularity",
+    ];
+  };
+  numericLimits: {
+    domainCardinalityLimits: {
+      [TDomain in SharedSignalExportValueDomainV1]:
+        PositiveSafeIntegerV2;
+    };
+    maximumEventsPerBatch: PositiveSafeIntegerV2;
+    maximumEventsPerSubjectPerBatch: PositiveSafeIntegerV2;
+    maximumCumulativeEventsPerSubjectLinkabilityWindow:
+      PositiveSafeIntegerV2;
+    maximumDistinctSubjectsPerBatch: PositiveSafeIntegerV2;
+  };
+  effectiveAt: TrustedRegistryControlTimeV1;
+  expiresAt: TrustedRegistryControlTimeV1;
+  status: "approved" | "expired" | "revoked";
+  trustedBasisChecksum: NonPrivateRegistryBasisChecksumV1;
 };
 
-type VaultShadowExportPreflightV1 = {
-  vaultOnly: true;
-  proposedBatchId: string;
-  payloadDigestProfileVersion: ShadowExportPayloadDigestProfileV1;
-  exactPurposeRef: string;
-  o2ApprovalRef: string;
+type SharedSignalLocalRowIdV2 =
+  string & { readonly __brand: "shared_signal_local_row_id_v2" };
+type SharedSignalLogicalBatchIdV2 =
+  string & { readonly __brand: "shared_signal_logical_batch_id_v2" };
+type O2PseudonymousSubjectKeyV2 =
+  string & { readonly __brand: "o2_pseudonymous_subject_key_v2" };
+type SharedItemFamilyPseudonymV2 =
+  string & { readonly __brand: "shared_item_family_pseudonym_v2" };
+type O2DomainSeparatedDedupeKeyV2 =
+  string & { readonly __brand: "o2_domain_separated_dedupe_key_v2" };
+
+type SharedSignalExportEventKindV2 =
+  | "shadow_observation"
+  | "intervention_outcome";
+type SharedSignalExportEventHeaderV2<
+  TEventKind extends SharedSignalExportEventKindV2,
+> = {
+  eventKind: TEventKind;
+  sharedSignalRowId: SharedSignalLocalRowIdV2;
+  pseudonymousSubjectKey: O2PseudonymousSubjectKeyV2;
+  sequenceIndex: SharedSignalSequenceIndexV2;
+  dedupeKey: O2DomainSeparatedDedupeKeyV2;
+};
+
+type ShadowObservationV2 =
+  SharedSignalExportEventHeaderV2<"shadow_observation"> & {
+  sharedSkillRef: SharedSkillRefV2;
+  sharedItemFamilyPseudonym: SharedItemFamilyPseudonymV2;
+  shadowEventClass: ShadowEventClassV2;
+  outcomeClass: ShadowOutcomeClassV2;
+  qualificationClass: ShadowQualificationClassV2;
+  occurredAtBucketRef: ApprovedCoarseTimeBucketRefV2;
+  subjectAdapterRef: SubjectAdapterRefV2;
+  sourceEligibilityClass: ShadowSourceEligibilityClassV2;
+};
+
+type InterventionOutcomeEventV2 =
+  SharedSignalExportEventHeaderV2<"intervention_outcome"> & {
+  examPackageRef: ExamPackageRefV2;
+  sharedSkillRef: SharedSkillRefV2;
+  sharedItemFamilyPseudonym: SharedItemFamilyPseudonymV2;
+  preStateClassRef: PreStateClassRefV2;
+  interventionPolicyRef: InterventionPolicyRefV2;
+  interventionKind: SharedInterventionKindV2;
+  assistanceLevel: SharedAssistanceLevelV2;
+  outcomeClass: InterventionOutcomeClassV2;
+  occurredAtBucketRef: ApprovedCoarseTimeBucketRefV2;
+  subjectAdapterRef: SubjectAdapterRefV2;
+  sourceEligibilityClass: ShadowSourceEligibilityClassV2;
+};
+
+type SharedSignalExportEventV2 =
+  | ShadowObservationV2
+  | InterventionOutcomeEventV2;
+
+type SharedSignalExportPayloadDigestProfileV2 =
+  "shared_signal_export_payload_rfc8785_sha256.v2";
+type SharedSignalExportPayloadDigestV2 =
+  string & { readonly __brand: "shared_signal_export_payload_digest_v2" };
+type SharedSignalExportEnvelopeCommitmentV2 =
+  string & {
+    readonly __brand: "shared_signal_export_envelope_commitment_v2";
+  };
+
+type SharedSignalExportBatchDigestPayloadV2 = {
+  id: SharedSignalLogicalBatchIdV2;
+  digestProfileVersion: SharedSignalExportPayloadDigestProfileV2;
+  registryContractId: SharedSignalExportRegistryContractIdV1;
+  registryContractVersion:
+    SharedSignalExportRegistryContractVersionV1;
+  registrySnapshotId: SharedSignalExportRegistrySnapshotIdV1;
+  registrySnapshotVersion:
+    SharedSignalExportRegistrySnapshotVersionV1;
+  registryBasisChecksum: NonPrivateRegistryBasisChecksumV1;
+  exactPurposeRef: ExactO2PurposeRefV2;
+  globalO2ApprovalRef: GlobalO2ApprovalRefV2;
+  globalO2ApprovalClass: GlobalO2ApprovalClassV2;
   consentPurpose: "pseudonymous_product_signal";
-  consentNoticeVersion: string;
-  authorizationPolicyVersion: string;
-  retentionPolicyRef: string;
-  evaluationHorizonRef: string;
-  subjectAuthorizationManifestRef: string;
-  subjectAuthorizationManifestDigest: string;
-  consentLedgerResolutionRefs: string[];
-  vaultScopedSourceEventSetCommitmentRef: string;
-  proposedPayloadDigest: ShadowExportPayloadDigestV1;
+  authorizationClass:
+    "o2_plus_active_exact_purpose_product_signal_consent";
+  authorizationDecision: "authorized";
+  evaluationHorizonRef: EvaluationHorizonRefV2;
+  timeBucketPolicyVersionRef: TimeBucketPolicyVersionRefV2;
+  taxonomyVersionRef: TaxonomyVersionRefV2;
+  mappingAdapterVersionRef: MappingAdapterVersionRefV2;
+  labelPolicyVersionRef: LabelPolicyVersionRefV2;
+  subjectPseudonymPolicyVersionRef:
+    SubjectPseudonymPolicyVersionRefV2;
+  itemFamilyPseudonymPolicyVersionRef:
+    ItemFamilyPseudonymPolicyVersionRefV2;
+  pseudonymRotationPolicyVersionRef:
+    PseudonymRotationPolicyVersionRefV2;
+  pseudonymRotationScopeRef: PseudonymRotationScopeRefV2;
+  sharedSkillAllowlistVersionRef:
+    SharedSkillAllowlistVersionRefV2;
+  sourceEligibilityAllowlistVersionRef:
+    SourceEligibilityAllowlistVersionRefV2;
+  reconstructivenessPolicyVersionRef:
+    ReconstructivenessPolicyVersionRefV2;
+  riskProjectionManifestVersionRef:
+    RiskProjectionManifestVersionRefV2;
+  observationOrderingPolicyVersionRef:
+    ObservationOrderingPolicyVersionRefV2;
+  batchPartitionPolicyVersionRef:
+    BatchPartitionPolicyVersionRefV2;
+  retentionPolicyRef: RetentionPolicyRefV2;
+  authorizationPolicyVersionRef:
+    AuthorizationPolicyVersionRefV2;
+  revocationPolicyVersionRef: RevocationPolicyVersionRefV2;
+  deletePropagationPolicyVersionRef:
+    DeletePropagationPolicyVersionRefV2;
+  artifactRevocationPolicyVersionRef:
+    ArtifactRevocationPolicyVersionRefV2;
+  events: readonly SharedSignalExportEventV2[];
+};
+
+type SharedSignalExportBatchV2 =
+  SharedSignalExportBatchDigestPayloadV2 & {
+    exportDigest: SharedSignalExportPayloadDigestV2;
+  };
+
+type VaultOnlyRefV2<TName extends string> =
+  string & { readonly __vaultOnlyRefV2: TName };
+type VaultOnlyCommitmentV2<TName extends string> =
+  string & { readonly __vaultOnlyCommitmentV2: TName };
+type VaultAuditTimeV2 =
+  string & { readonly __brand: "vault_audit_rfc3339_utc_v2" };
+
+type VaultSharedSignalReconstructivenessPolicyV2 = {
+  vaultOnly: true;
+  reconstructivenessPolicyVersionRef:
+    ReconstructivenessPolicyVersionRefV2;
+  riskProjectionManifestVersionRef:
+    RiskProjectionManifestVersionRefV2;
+  kMin: PositiveSafeIntegerV2;
+  maximumEventsPerBatch: PositiveSafeIntegerV2;
+  maximumEventsPerSubjectPerBatch: PositiveSafeIntegerV2;
+  maximumCumulativeEventsPerSubjectLinkabilityWindow:
+    PositiveSafeIntegerV2;
+  allowedTimeBucketPolicyVersionRef:
+    TimeBucketPolicyVersionRefV2;
+  exactQuasiIdentifierProjectionCatalogRef:
+    VaultOnlyRefV2<"exact_quasi_identifier_projection_catalog">;
+  exactAuxiliaryKnowledgeFixtureVersionRef:
+    VaultOnlyRefV2<"auxiliary_knowledge_fixture_version">;
+  exactJoinableSurfacePolicyRef:
+    VaultOnlyRefV2<"cross_domain_joinable_surface_policy">;
+  exactUniquenessAndCompositionLimitSetRef:
+    VaultOnlyRefV2<"uniqueness_linkability_composition_limits">;
+  exactAcceptedPreFreezeMitigationSetRef:
+    VaultOnlyRefV2<"accepted_pre_freeze_mitigation_set">;
+};
+
+type VaultSharedSignalReconstructivenessDecisionV2 =
+  | "pass"
+  | "reject"
+  | "indeterminate";
+type VaultSharedSignalReconstructivenessReasonCodeV2 =
+  | "all_required_projections_supported"
+  | "rare_or_unique_trace"
+  | "projection_support_below_k_min"
+  | "population_missing_or_insufficient"
+  | "joinable_surface_unknown"
+  | "composition_budget_exceeded"
+  | "prior_release_differencing_risk"
+  | "concurrent_reservation_conflict"
+  | "policy_or_registry_mismatch"
+  | "stale_generation"
+  | "evaluator_timeout_or_unavailable"
+  | "coverage_incomplete";
+
+type VaultSharedSignalReconstructivenessAssessmentV2 = {
+  vaultOnly: true;
+  assessmentRef:
+    VaultOnlyRefV2<"shared_signal_reconstructiveness_assessment">;
+  candidateBatchId: SharedSignalLogicalBatchIdV2;
+  payloadDigestProfileVersion:
+    SharedSignalExportPayloadDigestProfileV2;
+  recomputedPayloadDigest: SharedSignalExportPayloadDigestV2;
+  canonicalEnvelopeCommitment:
+    SharedSignalExportEnvelopeCommitmentV2;
+  canonicalEnvelopeOctetLength: PositiveSafeIntegerV2;
+  registryContractId: SharedSignalExportRegistryContractIdV1;
+  registryContractVersion:
+    SharedSignalExportRegistryContractVersionV1;
+  registrySnapshotId: SharedSignalExportRegistrySnapshotIdV1;
+  registrySnapshotVersion:
+    SharedSignalExportRegistrySnapshotVersionV1;
+  registryBasisChecksum: NonPrivateRegistryBasisChecksumV1;
+  reconstructivenessPolicyVersionRef:
+    ReconstructivenessPolicyVersionRefV2;
+  riskProjectionManifestVersionRef:
+    RiskProjectionManifestVersionRefV2;
+  observationOrderingPolicyVersionRef:
+    ObservationOrderingPolicyVersionRefV2;
+  batchPartitionPolicyVersionRef:
+    BatchPartitionPolicyVersionRefV2;
+  exactPurposeRef: ExactO2PurposeRefV2;
+  evaluationHorizonRef: EvaluationHorizonRefV2;
+  pseudonymRotationPolicyVersionRef:
+    PseudonymRotationPolicyVersionRefV2;
+  pseudonymRotationScopeRef: PseudonymRotationScopeRefV2;
+  pseudonymRotationGenerationRef:
+    VaultOnlyRefV2<"pseudonym_rotation_generation">;
+  eligibleReferencePopulationSnapshotRef:
+    VaultOnlyRefV2<"eligible_reference_population_snapshot">;
+  eligibleReferencePopulationSnapshotCommitment:
+    VaultOnlyCommitmentV2<"eligible_reference_population_snapshot">;
+  eligibleReferencePopulationGeneration:
+    FiniteNonNegativeSafeIntegerV2;
+  joinableDisclosureSurfaceScopeRef:
+    VaultOnlyRefV2<"authority_selected_joinable_surface_scope">;
+  joinableDisclosureSurfaceCommitment:
+    VaultOnlyCommitmentV2<"joinable_disclosure_surface">;
+  compositionLedgerScopeRef:
+    VaultOnlyRefV2<"release_composition_ledger_scope">;
+  compositionLedgerGeneration: FiniteNonNegativeSafeIntegerV2;
+  compositionLedgerCommitment:
+    VaultOnlyCommitmentV2<"release_composition_ledger">;
+  preparedReservationRef:
+    VaultOnlyRefV2<"shared_signal_release_reservation">;
+  preparedReservationGeneration:
+    FiniteNonNegativeSafeIntegerV2;
+  preparedReservationState: "prepared";
+  includedHumanSubjectScopeRef:
+    VaultOnlyRefV2<"included_distinct_human_subject_scope">;
+  includedHumanSubjectScopeCommitment:
+    VaultOnlyCommitmentV2<"included_distinct_human_subject_scope">;
+  includedObservationScopeRef:
+    VaultOnlyRefV2<"included_observation_scope">;
+  includedObservationScopeCommitment:
+    VaultOnlyCommitmentV2<"included_observation_scope">;
+  assessedAt: VaultAuditTimeV2;
+  expiresAt: VaultAuditTimeV2;
+  decision: VaultSharedSignalReconstructivenessDecisionV2;
+  reasonCodes:
+    readonly VaultSharedSignalReconstructivenessReasonCodeV2[];
+  coverageEvidenceRef:
+    VaultOnlyRefV2<"complete_risk_projection_coverage_evidence">;
+  evaluatorIdentityRef:
+    VaultOnlyRefV2<"trusted_reconstructiveness_evaluator">;
+  evaluatorVersionRef:
+    VaultOnlyRefV2<"trusted_reconstructiveness_evaluator_version">;
+};
+
+type VaultSharedSignalReleaseCompositionLedgerV2 = {
+  vaultOnly: true;
+  componentScopeRef:
+    VaultOnlyRefV2<"authority_selected_joinability_component">;
+  exactPurposeRef: ExactO2PurposeRefV2;
+  includedEvaluationHorizonRefs:
+    readonly EvaluationHorizonRefV2[];
+  includedPseudonymRotationPolicyVersionRefs:
+    readonly PseudonymRotationPolicyVersionRefV2[];
+  includedPseudonymRotationScopeRefs:
+    readonly PseudonymRotationScopeRefV2[];
+  includedPseudonymRotationGenerationRefs:
+    readonly VaultOnlyRefV2<"pseudonym_rotation_generation">[];
+  generation: FiniteNonNegativeSafeIntegerV2;
+  commitment: VaultOnlyCommitmentV2<"release_composition_ledger">;
+  irreversibleDisclosureHistoryRef:
+    VaultOnlyRefV2<"irreversible_disclosure_history">;
+  activeReleaseSurfaceRef:
+    VaultOnlyRefV2<"active_release_surface">;
+  activeSurfaceGeneration: FiniteNonNegativeSafeIntegerV2;
+  preparedReservationSetRef:
+    VaultOnlyRefV2<"prepared_release_reservation_set">;
+  historySufficiency:
+    | "sufficient"
+    | "missing"
+    | "damaged"
+    | "unsafe_to_reconcile";
+};
+
+type VaultSharedSignalReleaseReservationV2 = {
+  vaultOnly: true;
+  reservationRef:
+    VaultOnlyRefV2<"shared_signal_release_reservation">;
+  reservationGeneration: FiniteNonNegativeSafeIntegerV2;
+  candidateBatchId: SharedSignalLogicalBatchIdV2;
+  registrySnapshotVersion:
+    SharedSignalExportRegistrySnapshotVersionV1;
+  registryBasisChecksum: NonPrivateRegistryBasisChecksumV1;
+  reconstructivenessPolicyVersionRef:
+    ReconstructivenessPolicyVersionRefV2;
+  riskProjectionManifestVersionRef:
+    RiskProjectionManifestVersionRefV2;
+  observationOrderingPolicyVersionRef:
+    ObservationOrderingPolicyVersionRefV2;
+  batchPartitionPolicyVersionRef:
+    BatchPartitionPolicyVersionRefV2;
+  exactPurposeRef: ExactO2PurposeRefV2;
+  evaluationHorizonRef: EvaluationHorizonRefV2;
+  pseudonymRotationPolicyVersionRef:
+    PseudonymRotationPolicyVersionRefV2;
+  pseudonymRotationScopeRef: PseudonymRotationScopeRefV2;
+  pseudonymRotationGenerationRef:
+    VaultOnlyRefV2<"pseudonym_rotation_generation">;
+  componentScopeRef:
+    VaultOnlyRefV2<"authority_selected_joinability_component">;
+  compositionLedgerGeneration: FiniteNonNegativeSafeIntegerV2;
+  payloadDigest: SharedSignalExportPayloadDigestV2;
+  canonicalEnvelopeCommitment:
+    SharedSignalExportEnvelopeCommitmentV2;
+  canonicalEnvelopeOctetLength: PositiveSafeIntegerV2;
+  proposedSharedSignalRowIds: readonly SharedSignalLocalRowIdV2[];
+  state: "prepared" | "consumed" | "invalidated" | "expired";
+  expiresAt: VaultAuditTimeV2;
+};
+
+type VaultSharedSignalExportPreflightV2 = {
+  vaultOnly: true;
+  proposedBatchId: SharedSignalLogicalBatchIdV2;
+  payloadDigestProfileVersion:
+    SharedSignalExportPayloadDigestProfileV2;
+  exactPurposeRef: ExactO2PurposeRefV2;
+  globalO2ApprovalRef: GlobalO2ApprovalRefV2;
+  globalO2ApprovalClass: GlobalO2ApprovalClassV2;
+  consentPurpose: "pseudonymous_product_signal";
+  registryContractId: SharedSignalExportRegistryContractIdV1;
+  registryContractVersion:
+    SharedSignalExportRegistryContractVersionV1;
+  registrySnapshotId: SharedSignalExportRegistrySnapshotIdV1;
+  registrySnapshotVersion:
+    SharedSignalExportRegistrySnapshotVersionV1;
+  registryBasisChecksum: NonPrivateRegistryBasisChecksumV1;
+  reconstructivenessAssessmentRef:
+    VaultOnlyRefV2<"shared_signal_reconstructiveness_assessment">;
+  reconstructivenessAssessmentCommitment:
+    VaultOnlyCommitmentV2<"shared_signal_reconstructiveness_assessment">;
+  reconstructivenessDecision: "pass";
+  reconstructivenessPolicyVersionRef:
+    ReconstructivenessPolicyVersionRefV2;
+  riskProjectionManifestVersionRef:
+    RiskProjectionManifestVersionRefV2;
+  observationOrderingPolicyVersionRef:
+    ObservationOrderingPolicyVersionRefV2;
+  batchPartitionPolicyVersionRef:
+    BatchPartitionPolicyVersionRefV2;
+  eligibleReferencePopulationGeneration:
+    FiniteNonNegativeSafeIntegerV2;
+  joinableDisclosureSurfaceScopeRef:
+    VaultOnlyRefV2<"authority_selected_joinable_surface_scope">;
+  joinableDisclosureSurfaceCommitment:
+    VaultOnlyCommitmentV2<"joinable_disclosure_surface">;
+  compositionLedgerScopeRef:
+    VaultOnlyRefV2<"release_composition_ledger_scope">;
+  compositionLedgerGeneration: FiniteNonNegativeSafeIntegerV2;
+  compositionLedgerCommitment:
+    VaultOnlyCommitmentV2<"release_composition_ledger">;
+  preparedReservationRef:
+    VaultOnlyRefV2<"shared_signal_release_reservation">;
+  preparedReservationGeneration:
+    FiniteNonNegativeSafeIntegerV2;
+  preparedReservationState: "prepared";
+  proposedPayloadDigest: SharedSignalExportPayloadDigestV2;
   proposedCanonicalEnvelopeCommitment:
-    ShadowExportEnvelopeCommitmentV1;
-  proposedCanonicalEnvelopeOctetLength: number;
-  proposedSharedSignalRowIds: SharedSignalLocalRowIdV1[];
-  authorizationGenerationRef: string;
-  preparedCommitGrantRef: string;
-  vaultInternalRevocationDeleteLineageRef: string;
-  vaultShadowDownstreamLineageRef: string;
-  affectedDownstreamArtifactIds: string[];
-  extractionAuthorizationCheckedAt: string;
-  releaseAuthorizationCheckedAt: string;
+    SharedSignalExportEnvelopeCommitmentV2;
+  proposedCanonicalEnvelopeOctetLength: PositiveSafeIntegerV2;
+  proposedSharedSignalRowIds: readonly SharedSignalLocalRowIdV2[];
+  subjectAuthorizationManifestRef:
+    VaultOnlyRefV2<"subject_authorization_manifest">;
+  subjectAuthorizationManifestCommitment:
+    VaultOnlyCommitmentV2<"subject_authorization_manifest">;
+  consentLedgerResolutionRef:
+    VaultOnlyRefV2<"exact_consent_ledger_resolution">;
+  consentLedgerResolutionCommitment:
+    VaultOnlyCommitmentV2<"exact_consent_ledger_resolution">;
+  includedSubjectConsentGenerationSetDigest:
+    VaultOnlyCommitmentV2<"included_subject_consent_generation_set">;
+  vaultScopedSourceEventSetCommitment:
+    VaultOnlyCommitmentV2<"vault_scoped_source_event_set">;
+  authorizationGenerationRef:
+    VaultOnlyRefV2<"shared_signal_authorization_generation">;
+  exactO2ApprovalGeneration:
+    VaultOnlyRefV2<"exact_o2_approval_generation">;
+  consentNoticeAndPolicyVersionRef:
+    VaultOnlyRefV2<"consent_notice_and_policy_version">;
+  retentionPolicyRef: RetentionPolicyRefV2;
+  retentionStateRef: VaultOnlyRefV2<"current_retention_state">;
+  evaluationHorizonRef: EvaluationHorizonRefV2;
+  pseudonymRotationPolicyVersionRef:
+    PseudonymRotationPolicyVersionRefV2;
+  pseudonymRotationScopeRef: PseudonymRotationScopeRefV2;
+  pseudonymRotationGenerationRef:
+    VaultOnlyRefV2<"pseudonym_rotation_generation">;
+  authorizationPolicyVersionRef:
+    AuthorizationPolicyVersionRefV2;
+  downstreamLineageRef:
+    VaultOnlyRefV2<"shared_signal_downstream_lineage">;
+  downstreamLineageCommitment:
+    VaultOnlyCommitmentV2<"shared_signal_downstream_lineage">;
+  affectedDownstreamArtifactSetRef:
+    VaultOnlyRefV2<"affected_downstream_artifact_set">;
+  affectedDownstreamArtifactSetCommitment:
+    VaultOnlyCommitmentV2<"affected_downstream_artifact_set">;
+  preparedCommitGrantRef:
+    VaultOnlyRefV2<"shared_signal_single_use_commit_grant">;
+  preparedCommitGrantCommitment:
+    VaultOnlyCommitmentV2<"shared_signal_single_use_commit_grant">;
+  preparedCommitGrantState: "prepared";
+  preflightExpiresAt: VaultAuditTimeV2;
+  preparedCommitGrantExpiresAt: VaultAuditTimeV2;
+  replayProtectionRef:
+    VaultOnlyRefV2<"single_use_replay_protection">;
+  extractionAuthorizationCheckedAt: VaultAuditTimeV2;
+  releaseAuthorizationCheckedAt: VaultAuditTimeV2;
   checkedAtAuthority: "audit_evidence_only";
   authorizationInvariant: "verified_preflight_not_commit_authority";
 };
 
-type ShadowExportPayloadDigestV1 =
-  string & { readonly __brand: "shadow_export_payload_digest_v1" };
-
-type ShadowExportEnvelopeCommitmentV1 =
-  string & { readonly __brand: "shadow_export_envelope_commitment_v1" };
-
-type ShadowExportBatchDigestPayloadV1 = {
-  id: string;
-  digestProfileVersion: ShadowExportPayloadDigestProfileV1;
-  exactPurposeRef: string;
-  o2ApprovalRef: string;
+type VaultSharedSignalCommitGrantV2 = {
+  vaultOnly: true;
+  grantRef: VaultOnlyRefV2<"shared_signal_single_use_commit_grant">;
+  proposedBatchId: SharedSignalLogicalBatchIdV2;
+  payloadDigestProfileVersion:
+    SharedSignalExportPayloadDigestProfileV2;
+  payloadDigest: SharedSignalExportPayloadDigestV2;
+  canonicalEnvelopeCommitment:
+    SharedSignalExportEnvelopeCommitmentV2;
+  canonicalEnvelopeOctetLength: PositiveSafeIntegerV2;
+  proposedSharedSignalRowIds: readonly SharedSignalLocalRowIdV2[];
+  registryContractId: SharedSignalExportRegistryContractIdV1;
+  registryContractVersion:
+    SharedSignalExportRegistryContractVersionV1;
+  registrySnapshotId: SharedSignalExportRegistrySnapshotIdV1;
+  registrySnapshotVersion:
+    SharedSignalExportRegistrySnapshotVersionV1;
+  registryBasisChecksum: NonPrivateRegistryBasisChecksumV1;
+  reconstructivenessAssessmentRef:
+    VaultOnlyRefV2<"shared_signal_reconstructiveness_assessment">;
+  reconstructivenessAssessmentCommitment:
+    VaultOnlyCommitmentV2<"shared_signal_reconstructiveness_assessment">;
+  reconstructivenessDecision: "pass";
+  reconstructivenessPolicyVersionRef:
+    ReconstructivenessPolicyVersionRefV2;
+  riskProjectionManifestVersionRef:
+    RiskProjectionManifestVersionRefV2;
+  observationOrderingPolicyVersionRef:
+    ObservationOrderingPolicyVersionRefV2;
+  batchPartitionPolicyVersionRef:
+    BatchPartitionPolicyVersionRefV2;
+  eligibleReferencePopulationGeneration:
+    FiniteNonNegativeSafeIntegerV2;
+  joinableDisclosureSurfaceScopeRef:
+    VaultOnlyRefV2<"authority_selected_joinable_surface_scope">;
+  joinableDisclosureSurfaceCommitment:
+    VaultOnlyCommitmentV2<"joinable_disclosure_surface">;
+  compositionLedgerScopeRef:
+    VaultOnlyRefV2<"release_composition_ledger_scope">;
+  compositionLedgerGeneration: FiniteNonNegativeSafeIntegerV2;
+  compositionLedgerCommitment:
+    VaultOnlyCommitmentV2<"release_composition_ledger">;
+  preparedReservationRef:
+    VaultOnlyRefV2<"shared_signal_release_reservation">;
+  preparedReservationGeneration:
+    FiniteNonNegativeSafeIntegerV2;
+  preparedReservationState: "prepared";
+  authorizationGenerationRef:
+    VaultOnlyRefV2<"shared_signal_authorization_generation">;
+  exactPurposeRef: ExactO2PurposeRefV2;
+  globalO2ApprovalRef: GlobalO2ApprovalRefV2;
+  globalO2ApprovalClass: GlobalO2ApprovalClassV2;
+  exactO2ApprovalGeneration:
+    VaultOnlyRefV2<"exact_o2_approval_generation">;
   consentPurpose: "pseudonymous_product_signal";
-  authorizationClass:
-    "o2_plus_active_exact_purpose_product_signal_consent";
-  authorizationPolicyVersion: string;
-  authorizationDecision: "authorized";
-  evaluationHorizonRef: string;
-  pseudonymRotationPolicyVersion: string;
-  subjectPseudonymPolicyVersion: string;
-  itemFamilyPseudonymPolicyVersion: string;
-  sharedSkillAllowlistVersion: string;
-  sourceEligibilityAllowlistVersion: string;
-  retentionPolicyRef: string;
-  revocationPolicyVersion: string;
-  deletePropagationPolicyVersion: string;
-  artifactRevocationPolicyVersion: string;
-  observations: ShadowObservationV1[];
+  includedSubjectConsentGenerationSetDigest:
+    VaultOnlyCommitmentV2<"included_subject_consent_generation_set">;
+  subjectAuthorizationManifestRef:
+    VaultOnlyRefV2<"subject_authorization_manifest">;
+  subjectAuthorizationManifestCommitment:
+    VaultOnlyCommitmentV2<"subject_authorization_manifest">;
+  consentLedgerResolutionRef:
+    VaultOnlyRefV2<"exact_consent_ledger_resolution">;
+  consentLedgerResolutionCommitment:
+    VaultOnlyCommitmentV2<"exact_consent_ledger_resolution">;
+  vaultScopedSourceEventSetCommitment:
+    VaultOnlyCommitmentV2<"vault_scoped_source_event_set">;
+  consentNoticeAndPolicyVersionRef:
+    VaultOnlyRefV2<"consent_notice_and_policy_version">;
+  retentionPolicyRef: RetentionPolicyRefV2;
+  retentionStateRef: VaultOnlyRefV2<"current_retention_state">;
+  evaluationHorizonRef: EvaluationHorizonRefV2;
+  pseudonymRotationPolicyVersionRef:
+    PseudonymRotationPolicyVersionRefV2;
+  pseudonymRotationScopeRef: PseudonymRotationScopeRefV2;
+  pseudonymRotationGenerationRef:
+    VaultOnlyRefV2<"pseudonym_rotation_generation">;
+  authorizationPolicyVersionRef:
+    AuthorizationPolicyVersionRefV2;
+  downstreamLineageRef:
+    VaultOnlyRefV2<"shared_signal_downstream_lineage">;
+  downstreamLineageCommitment:
+    VaultOnlyCommitmentV2<"shared_signal_downstream_lineage">;
+  affectedDownstreamArtifactSetRef:
+    VaultOnlyRefV2<"affected_downstream_artifact_set">;
+  affectedDownstreamArtifactSetCommitment:
+    VaultOnlyCommitmentV2<"affected_downstream_artifact_set">;
+  state: "prepared" | "consumed" | "invalidated" | "expired";
+  expiresAt: VaultAuditTimeV2;
+  replayProtectionRef:
+    VaultOnlyRefV2<"single_use_replay_protection">;
 };
 
-type ShadowExportBatchV1 = ShadowExportBatchDigestPayloadV1 & {
-  exportDigest: ShadowExportPayloadDigestV1;
-};
-
-type VaultShadowCommitGrantV1 = {
+type VaultSharedSignalDownstreamLineageV2 = {
   vaultOnly: true;
-  grantRef: string;
-  proposedBatchId: string;
-  payloadDigestProfileVersion: ShadowExportPayloadDigestProfileV1;
-  payloadDigest: ShadowExportPayloadDigestV1;
-  canonicalEnvelopeCommitment: ShadowExportEnvelopeCommitmentV1;
-  canonicalEnvelopeOctetLength: number;
-  authorizationGenerationRef: string;
-  exactO2PurposeRef: string;
-  exactO2ApprovalGeneration: string;
-  includedSubjectConsentGenerationSetDigest: string;
-  consentNoticeAndPolicyVersionRef: string;
-  retentionStateRef: string;
-  evaluationHorizonRef: string;
-  authorizationPolicyVersion: string;
-  state: "prepared" | "consumed" | "invalidated";
-  expiresAt: string;
-  replayProtectionRef: string;
-};
-
-type VaultShadowDownstreamLineageV1 = {
-  vaultOnly: true;
-  authorizationGenerationRef: string;
-  subjectScopeRef: string;
-  batchId: string;
-  exactPurposeRef: string;
-  evaluationHorizonRef: string;
-  pseudonymRotationPolicyVersion: string;
-  observationTargets: Array<{
-    vaultObservationRef: string;
-    sharedSignalRowId: SharedSignalLocalRowIdV1;
-    purposeHorizonRotationRetryDescendantRowIds:
-      SharedSignalLocalRowIdV1[];
-  }>;
-  downstreamCacheOrFeatureSnapshotIds: string[];
-  downstreamMaterializationIds: string[];
-  downstreamDatasetIds: string[];
-  downstreamModelEvalArtifactIds: string[];
+  schemaVersion: "shared_signal_export_batch.v2";
+  payloadDigestProfileVersion:
+    SharedSignalExportPayloadDigestProfileV2;
+  registryContractId: SharedSignalExportRegistryContractIdV1;
+  registryContractVersion:
+    SharedSignalExportRegistryContractVersionV1;
+  registrySnapshotId: SharedSignalExportRegistrySnapshotIdV1;
+  registrySnapshotVersion:
+    SharedSignalExportRegistrySnapshotVersionV1;
+  registryBasisChecksum: NonPrivateRegistryBasisChecksumV1;
+  authorizationGenerationRef:
+    VaultOnlyRefV2<"shared_signal_authorization_generation">;
+  distinctHumanSubjectScopeRef:
+    VaultOnlyRefV2<"distinct_human_subject_scope">;
+  batchId: SharedSignalLogicalBatchIdV2;
+  exactPurposeRef: ExactO2PurposeRefV2;
+  evaluationHorizonRef: EvaluationHorizonRefV2;
+  pseudonymRotationPolicyVersionRef:
+    PseudonymRotationPolicyVersionRefV2;
+  pseudonymRotationScopeRef: PseudonymRotationScopeRefV2;
+  pseudonymRotationGenerationRef:
+    VaultOnlyRefV2<"pseudonym_rotation_generation">;
+  payloadDigest: SharedSignalExportPayloadDigestV2;
+  canonicalEnvelopeCommitment:
+    SharedSignalExportEnvelopeCommitmentV2;
+  eventTargets: readonly {
+    vaultObservationRef:
+      VaultOnlyRefV2<"vault_source_observation">;
+    sharedSignalRowId: SharedSignalLocalRowIdV2;
+    descendantRowIds: readonly SharedSignalLocalRowIdV2[];
+  }[];
+  downstreamArtifactSetRef:
+    VaultOnlyRefV2<"all_provenance_descendant_artifacts">;
   lineageState: "pending" | "committed" | "quarantined" | "retired";
 };
 
-type SharedSignalRowTombstoneV1 = {
-  sharedSignalRowId: SharedSignalLocalRowIdV1;
+type SharedSignalRowTombstoneV2 = {
+  schemaVersion: "shared_signal_export_batch.v2";
+  eventKind: "shadow_observation" | "intervention_outcome";
+  sourceBatchId: SharedSignalLogicalBatchIdV2;
+  sourcePayloadDigest: SharedSignalExportPayloadDigestV2;
+  sharedSignalRowId: SharedSignalLocalRowIdV2;
   state: "quarantined" | "tombstoned";
-  globalPolicyVersion: string;
+  revocationPolicyVersionRef: RevocationPolicyVersionRefV2;
+  deletePropagationPolicyVersionRef:
+    DeletePropagationPolicyVersionRefV2;
 };
 
-type SharedSignalDenyBarrierV1 = {
-  batchId: string;
-  exactPurposeRef: string;
-  evaluationHorizonRef: string;
-  pseudonymRotationPolicyVersion: string;
+type SharedSignalActiveSurfaceCertificationV2 = {
+  registrySnapshotVersion:
+    SharedSignalExportRegistrySnapshotVersionV1;
+  exactPurposeRef: ExactO2PurposeRefV2;
+  evaluationHorizonRef: EvaluationHorizonRefV2;
+  pseudonymRotationPolicyVersionRef:
+    PseudonymRotationPolicyVersionRefV2;
+  pseudonymRotationScopeRef: PseudonymRotationScopeRefV2;
+  reconstructivenessPolicyVersionRef:
+    ReconstructivenessPolicyVersionRefV2;
+  riskProjectionManifestVersionRef:
+    RiskProjectionManifestVersionRefV2;
+  activeSurfaceGeneration: FiniteNonNegativeSafeIntegerV2;
+  certificationState: "current_pass" | "invalidated";
+};
+
+type SharedSignalDenyBarrierV2 = {
+  schemaVersion: "shared_signal_export_batch.v2";
+  payloadDigestProfileVersion:
+    SharedSignalExportPayloadDigestProfileV2;
+  registrySnapshotVersion:
+    SharedSignalExportRegistrySnapshotVersionV1;
+  exactPurposeRef: ExactO2PurposeRefV2;
+  evaluationHorizonRef: EvaluationHorizonRefV2;
+  pseudonymRotationPolicyVersionRef:
+    PseudonymRotationPolicyVersionRefV2;
+  pseudonymRotationScopeRef: PseudonymRotationScopeRefV2;
+  reconstructivenessPolicyVersionRef:
+    ReconstructivenessPolicyVersionRefV2;
+  riskProjectionManifestVersionRef:
+    RiskProjectionManifestVersionRefV2;
+  blockedActiveSurfaceGeneration: FiniteNonNegativeSafeIntegerV2;
   state: "deny_all_consumption";
-  globalPolicyVersion: string;
+  revocationPolicyVersionRef: RevocationPolicyVersionRefV2;
 };
 ```
 
-#### non-recursive shadow export digest
+#### common Shared Signal V2 value resolver, reconstructiveness gate와 non-recursive digest
 
-`ShadowExportBatchDigestPayloadV1`은
-`ShadowExportBatchV1`과 독립적으로 선언한 exact closed payload schema다.
+`SharedSignalExportValueRegistryV1`은 shadow와 intervention이 공유하는
+유일한 value-level authority다. exact global O2 purpose, non-private
+approval ref/class와 horizon 하나에만 scoped된 immutable reusable
+non-private snapshot이며 snapshot 사이 union, inheritance, fallback,
+membership reuse가 없다. registry contract/ref 자체는 discovery
+metadata일 뿐 cross-purpose authority가 아니다. legacy
+`SharedInterventionExportRegistryV1`는 release authority가 아니며 별도
+status, allowlist, checksum 또는 approval decision을 가질 수 없다.
+
+trusted resolver는 payload freeze 전에 exported enum/ref/version을
+**value-by-value**로 exact active snapshot의 named domain에서 resolve한다.
+TypeScript brand, regex, key allowlist 또는 hash-then-accept는 membership
+evidence가 아니다. missing, unknown, expired, revoked, stale,
+cross-version, cross-purpose, cross-horizon, mismatched basis 또는
+unavailable lookup은 assessment나 digest 사용 전에 fail closed한다.
+source enum의 legal vocabulary와 registry membership도 둘 다 통과해야
+한다. every registry domain array는 exact
+`numericLimits.domainCardinalityLimits[domain]` 이하에서 unique,
+exact member UTF-8 bytes ascending canonical order, immutable이어야 한다.
+validator는 noncanonical array를 silent sort하지 않는다. missing limit,
+zero/negative/unsafe limit 또는 over-cap array는 reject한다. empty domain은 그
+domain의 release authority가 0이라는 뜻이며 fallback을 열지 않는다.
+effective/expiry는 trusted server가 semantic validation한 exact
+24-octet uppercase UTC grammar `YYYY-MM-DDTHH:mm:ss.SSSZ`다. exactly
+three fractional digits와 literal `T`/`Z`만 허용하고 offset, lowercase,
+omitted/extra fraction, leap second, invalid calendar/date/time 또는
+equivalent alternate encoding은 거부한다. `effectiveAt < expiresAt`이어야
+한다.
+`trustedBasisChecksum`은 정확히 `sha256:` 뒤 64 lowercase hexadecimal인
+trusted non-private snapshot-basis binding이다.
+per-tenant, per-subject, consent-generation, O2-authorization-generation,
+per-batch one-off snapshot/value는 exported bytes에 들어갈 수 없다.
+future exported semantic field는 먼저 named closed domain과 이 sole
+registry coverage를 추가하기 전 release할 수 없다.
+이 문서는 O2 packet, registry contents, threshold 또는 runtime
+implementation을 만들거나 승인하지 않는다. future exact approval가
+없으면 export는 OFF다.
+
+coarse bucket은 `timeBucketDerivationPolicy`에 따라 trusted server가
+vault-authoritative event time에서 payload freeze 전에 만든 approved
+bucket ref만 허용한다. RFC 3339/ISO timestamp, epoch seconds/milliseconds,
+timezone·locale date, exact event time, arbitrary date text, client/model
+label, unknown/custom bucket, approved policy보다 finer bucket을
+normatively reject한다. bucket membership만으로 non-reconstructiveness를
+증명하지 않는다.
+
+opaque validator 규칙도 exact하다.
+
+- `SharedSignalLocalRowIdV2`: trusted server CSPRNG 128-bit,
+  `ssr2_` + unpadded base64url 22 chars. exact purpose/horizon/rotation
+  안의 Shared-Signal-local tombstone target이며 private input에서
+  파생하지 않는다.
+- `SharedSignalLogicalBatchIdV2`: trusted coordinator CSPRNG 128-bit,
+  `ssb2_` + unpadded base64url 22 chars. logical candidate 하나에서만
+  사용한다.
+- `O2PseudonymousSubjectKeyV2`: non-exportable purpose key로
+  `KDF("inverge.shared-signal.v2.subject", purpose, horizon,
+  rotationScope, vaultRotationGeneration, vaultSubjectRef)`에서 얻은
+  256-bit output,
+  `ssp2_` + unpadded base64url 43 chars. trusted vault만 만든다.
+- `SharedItemFamilyPseudonymV2`: 별도 non-exportable key와
+  `KDF("inverge.shared-signal.v2.item-family", purpose, horizon,
+  rotationScope, vaultRotationGeneration, vaultItemFamilyRef)`의 256-bit
+  output,
+  `ssi2_` + unpadded base64url 43 chars. subject key와 key/domain을
+  공유하지 않는다.
+- `O2DomainSeparatedDedupeKeyV2`: trusted vault가 approved non-private
+  `pseudonymousSubjectKey`, `sequenceIndex`, `eventKind`, approved semantic
+  projection과 purpose/horizon/rotation scope/vault generation을
+  `KDF("inverge.shared-signal.v2.dedupe", ...)`로 묶은 256-bit output,
+  `ssd2_` + unpadded base64url 43 chars.
+
+validator는 prefix, alphabet, padding 부재, decoded byte length,
+trusted derivation proof와 exact scope를 모두 확인한다. stable account
+ID, private event ID, raw/private SHA-256·fingerprint, vault commitment,
+consent/grant/lineage ref 또는 cross-context equality handle은 모양이
+맞아도 거부한다. client/model은 syntax만 맞춰 값을 만들 수 없다. 모든
+opaque value는 non-authorizing이고 Personal Raw Vault reverse lookup
+API가 없다.
+
+모든 number는 finite non-negative safe integer이며 registry cap을
+초과할 수 없다. `-0`, fraction, non-finite, overflow, negative, gap,
+duplicate와 out-of-order index를 freeze 전에 reject한다. event 수,
+distinct subject 수, subject별 trace 수와 cumulative linkability-window
+수는 exact policy maximum 이하라야 한다. 각 vault-authoritative subject의
+`sequenceIndex`는 0에서 시작해 combined event-kind trace 전체에서
+contiguous하다. `(pseudonymousSubjectKey bytes, sequenceIndex)`, row ID,
+dedupe key는 각각 unique여야 하며 mixed-kind duplicate도 거부한다.
+trusted constructor는 subject-key UTF-8 bytes ascending, 그 subject의
+sequence ascending이라는 global order만 emit한다. random tie-breaker,
+ingestion order, client/model-controlled partition은 금지한다. partition은
+exact `batchPartitionPolicyVersionRef`가 결정한다. validator는
+noncanonical frozen input을 silent sort/split/repair하지 않는다.
+
+한 batch의 registry, taxonomy, mapping, label, bucket, subject/item
+pseudonym, rotation, shared-skill/source allowlist, reconstructiveness,
+risk-projection, ordering, partition, retention, authorization, revocation,
+delete와 artifact policy ref는 batch-wide다. event에 같은 의미의
+variant-local version을 중복하지 않는다. 다른 snapshot/version을
+silent mix한 batch는 reject한다. V2 두 event kind는 같은 mandatory
+`SharedSignalExportEventHeaderV2`, registry, batch, digest, assessment,
+reservation, common writer를 사용한다. intervention-only queue나
+schema-specific writer는 없다.
+payload의 non-private registry member
+`pseudonymRotationScopeRef`는 한 immutable global rotation epoch를
+식별하고 digest-visible하다. exact
+`pseudonymRotationGenerationRef`는 그 scope의 current vault authority
+generation이며 exported/shared bytes에 들어가지 않는다. trusted
+validator는 every subject/item/dedupe value가 payload의 exact scope와
+한 current vault generation에서 파생됐는지 확인하고 assessment,
+composition component, reservation, preflight, grant와 lineage에 그
+generation을 bind한다. stale/mixed scope나 generation은 policy version이
+같고 syntax가 맞아도 reject한다.
+
+`SharedSignalExportBatchDigestPayloadV2`는
+`SharedSignalExportBatchV2`와 독립적으로 선언한 exact closed payload
+schema다.
 현재 batch의 모든 top-level field를 포함하되 `exportDigest`만 포함하지
-않는다. `Omit<ShadowExportBatchV1, "exportDigest">`, final envelope에서의
+않는다. `Omit<SharedSignalExportBatchV2, "exportDigest">`, final
+envelope에서의
 reverse derivation, dynamic field deletion, digest sentinel, `null` 또는
 zero placeholder로 payload를 만들지 않는다. final
-`ShadowExportBatchV1`도 exact closed envelope이며 payload field 전부와
+`SharedSignalExportBatchV2`도 exact closed envelope이며 payload field 전부와
 정확히 하나의 `exportDigest` 외에는 어떤 top-level/nested field도
 허용하지 않는다.
 
 유일한 지원 profile은
-`shadow_export_payload_rfc8785_sha256.v1`이다. 이 profile은 다음을
+`shared_signal_export_payload_rfc8785_sha256.v2`이다. 이 profile은
+shadow-only, intervention-only, mixed-kind batch 모두에 쓰는 단 하나의
+serializer, validator, digest와 envelope route다. 이 profile은 다음을
 고정한다.
 
-- schema: exact `ShadowExportBatchDigestPayloadV1`
+- schema: exact `SharedSignalExportBatchDigestPayloadV2`
 - canonicalization: RFC 8785 JSON Canonicalization Scheme(JCS), valid I-JSON
 - character encoding: UTF-8, BOM 없음
 - number domain: finite safe integer만 허용하고 `-0`, fraction, non-finite,
   safe-integer 범위 밖 수는 거부
 - hash: SHA-256
-- payload domain: `inverge.shadow_export_batch.v1.payload`
+- payload domain: `inverge.shared_signal_export_batch.v2.payload`
 - digest text: 정확히 `sha256:` 뒤 64개 lowercase hexadecimal
 
 unknown 또는 legacy profile은 fail closed한다. 향후 변경은 새 explicit
 payload type, profile version과 domain을 함께 정의해야 하며 기존
-`v1`의 의미를 바꾸지 않는다. object key order와 insignificant
+`v2`의 의미를 바꾸지 않는다. object key order와 insignificant
 whitespace는 JCS가 정규화한다. array는 입력 순서가 의미이므로 sort,
-dedupe 또는 reorder하지 않는다. invalid UTF-8, BOM, invalid I-JSON,
+dedupe 또는 reorder하지 않는다. 다만 trusted constructor가 payload
+freeze 전에 exact subject-pseudonym UTF-8 bytes, 그 subject의 zero-based
+contiguous `sequenceIndex` 순서로만 events를 만들며 validator는 다른
+순서를 reject한다. frozen/digested envelope를 silent sort하지 않는다.
+invalid UTF-8, BOM, invalid I-JSON,
 duplicate key, lone surrogate와 그 밖의 invalid Unicode는 거부하고
 Unicode normalization은 적용하지 않는다.
 
 digest 생성 순서는 고정한다.
 
-1. batch `id`, 모든 `sharedSignalRowId`, `observationDedupeKey`,
+1. batch `id`, 모든 `sharedSignalRowId`, `dedupeKey`,
    observation 순서와 값, exact purpose/O2, horizon, pseudonym·allowlist,
    retention/revocation/delete/artifact policy 및 payload의 모든 값을 먼저
    확정한다.
@@ -3285,7 +4133,7 @@ digest 생성 순서는 고정한다.
 
 ```text
 payloadDigestPreimage =
-  UTF8("inverge.shadow_export_batch.v1.payload")
+  UTF8("inverge.shared_signal_export_batch.v2.payload")
   || 0x00
   || uint64_be(octetLength(payloadCanonicalBytes))
   || payloadCanonicalBytes
@@ -3294,7 +4142,7 @@ exportDigest = "sha256:" || lowercase_hex(SHA256(payloadDigestPreimage))
 ```
 
 5. 계산한 `exportDigest`를 payload에 정확히 한 번 attach한다.
-6. completed `ShadowExportBatchV1`을 strict decode하고
+6. completed `SharedSignalExportBatchV2`를 strict decode하고
    `canonicalEnvelopeBytes = UTF8(JCS(envelope))`로 한 번 동결한다. 이후
    어떤 field나 byte도 변경하지 않는다.
 
@@ -3305,7 +4153,7 @@ identity는 Personal Raw Vault에만 남는 별도 commitment로 묶는다.
 
 ```text
 canonicalEnvelopeCommitmentPreimage =
-  UTF8("inverge.shadow_export_batch.v1.envelope")
+  UTF8("inverge.shared_signal_export_batch.v2.envelope")
   || 0x00
   || uint64_be(octetLength(canonicalEnvelopeBytes))
   || canonicalEnvelopeBytes
@@ -3317,17 +4165,27 @@ canonicalEnvelopeCommitment =
 
 `octetLength`는 문자열 길이가 아니라 exact UTF-8 byte 수이며 unsigned
 64-bit big-endian으로 encode한다. `canonicalEnvelopeCommitment`와
-`canonicalEnvelopeOctetLength`는 vault preflight와 grant binding에만
-존재한다. exported/shared batch, client/API response, receipt, log,
+`canonicalEnvelopeOctetLength`는 vault assessment, reservation,
+preflight, grant와 exact commit/lineage evidence binding에만 존재한다.
+exported/shared batch, client/API response, receipt, log,
 telemetry, analytics, issue/PR/CI artifact 또는 Model/Eval Registry에
 serialize하지 않으며 payload/envelope field로 되돌려 self-cycle을 만들지
 않는다.
 
-preflight와 `VaultShadowCommitGrantV1`은 exact batch ID, supported payload
+`VaultSharedSignalExportPreflightV2`와
+`VaultSharedSignalCommitGrantV2`는 exact batch ID, supported payload
 profile, recomputed payload digest, canonical final-envelope commitment와
-octet length에 더해 기존 exact O2 purpose/generation, current subject
-consent generations, notice/policy, retention, horizon과 authorization
-policy를 모두 bind한다.
+octet length에 더해 exact active value-registry snapshot/version/basis,
+ordering/partition policy, current reconstructiveness assessment
+ref/commitment와 exact `pass`, reference
+population, authority-selected joinable surface, composition-ledger
+generation/commitment, prepared reservation, exact O2 purpose/generation,
+rotation scope/vault generation, immutable subject-authorization manifest
+ref/commitment, exact consent-ledger resolution ref/commitment,
+source-event-set commitment,
+current subject consent generations, notice/policy, retention, horizon,
+lineage/artifact-set ref/commitment, expiry/replay와 authorization policy를
+모두 bind하며 preflight는 prepared grant ref/commitment/state도 고정한다.
 
 trusted validator와 commit gateway의 순서도 고정한다.
 
@@ -3339,7 +4197,7 @@ trusted validator와 commit gateway의 순서도 고정한다.
    supported profile과 exactly one well-formed `exportDigest`가 있어야 한다.
 3. validated final envelope의 non-digest field를 static field-by-field
    constructor에 넣어 독립 선언된 typed
-   `ShadowExportBatchDigestPayloadV1`을 구성하고 canonicalize한다.
+   `SharedSignalExportBatchDigestPayloadV2`를 구성하고 canonicalize한다.
    arbitrary-object deletion이나 silent projection은 사용하지 않는다.
 4. payload digest를 재계산해 supplied `exportDigest`와 constant-time
    compare한다.
@@ -3348,9 +4206,10 @@ trusted validator와 commit gateway의 순서도 고정한다.
 6. vault-only final-envelope commitment와 exact octet length를 재계산하고
    grant의 batch ID/profile/digest/commitment/length binding과 비교한다.
    digest와 commitment 비교는 constant-time이다.
-7. 그 뒤에만 기존 current consent/O2/generation, grant expiry/replay,
-   atomic grant consumption, Shared Signal write와 complete lineage
-   invariant를 검증·실행한다.
+7. 그 뒤에만 current registry, policy, reconstructiveness assessment,
+   reference population, composition ledger/reservation, consent/O2/
+   generation, grant expiry/replay와 complete lineage invariant를 다시
+   검증하고 common first-write CAS를 실행한다.
 
 어느 mismatch든 grant consume, Shared Signal row, log, telemetry,
 analytics, Model/Eval 또는 downstream lineage side effect는 0건이다.
@@ -3359,23 +4218,127 @@ O5, grant, subject authorization 또는 private lineage API가 아니다. 기존
 authorization, pseudonym, atomicity, revocation/delete와 offline-training
 경계를 하나도 대체하지 않는다.
 
-`ShadowObservationV1`에는 production `learnerScopeRef`, private concept,
-problem/answer revision, private item ID, root-cause ref, raw body 또는
-free text가 없다. shared skill allowlist에 없는 개인 concept는 rule
-map에서만 사용하고 shadow export에서 제외한다. pseudonymous subject
-key와 item-family pseudonym은 exact purpose와 frozen evaluation
-horizon 안에서만 안정적이고, 다른 purpose/horizon/rotation과
-연결할 수 없다.
+`SharedSignalExportEventV2`의 어느 variant에도 production
+`learnerScopeRef`, private concept, problem/answer revision, private item
+ID, root-cause ref, raw body 또는 free text가 없다. shared skill
+allowlist에 없는 개인 concept는 rule map에서만 사용하고 export에서
+제외한다. pseudonymous subject key와 item-family pseudonym은 exact
+purpose, frozen evaluation horizon, non-private rotation scope와 current
+vault rotation generation 안에서만 안정적이고, 다른
+purpose/horizon/scope/generation과 연결할 수 없다.
 
 `sharedSignalRowId`는 approved Shared Signal projection에서 새로 만든
-random/local tombstone target이다. exact purpose, horizon과 rotation에
-scope되며 private event ID, raw body, private hash·fingerprint,
+random/local tombstone target이다. exact purpose, horizon과 non-private
+rotation scope에 scoped되며 current vault generation binding을 lineage에
+둔다. private event ID, raw body, private hash·fingerprint,
 commitment, consent record 또는 vault lineage에서 파생하지 않는다.
 authorization proof가 아니고 Personal Raw Vault로 reverse resolve할 수
 없으며 다른 purpose/horizon/rotation에서 equality key로 재사용하지
 않는다.
 
-`VaultShadowExportPreflightV1`은 Personal Raw Vault 내부의
+closed value/event sufficiency와 reconstructiveness는 서로 다른 mandatory
+gate다. 후자는 exact strict-decoded candidate payload와 completed
+envelope, cumulative release composition 전체에 대해 **write 전** 수행한다.
+`VaultSharedSignalReconstructivenessAssessmentV2.decision`의 current exact
+`pass`만 grant preparation 자격이 있다. `reject`, `indeterminate`,
+timeout, unavailable evaluator, missing dimension/population, insufficient
+sample, stale input, disagreement 또는 conflict는 모두 fail closed한다.
+failure surface는 closed coarse reason code만 vault에 남기며 rare trace,
+tuple, projection, subject/population/composition ref 또는 raw value를 log,
+telemetry나 analytics에 쓰지 않는다.
+field closure, pseudonymization, raw text 부재, checksum, per-field
+commonness 또는 schema sufficiency는 pass가 아니다.
+assessment 자체도 consent, O2/O5 approval, source/right/version
+eligibility, grant, anonymization certificate, learner-facing score,
+private-lineage/equality API 또는 fitting/training/refit/refresh authority가
+아니다.
+
+future exact O2 packet은
+`VaultSharedSignalReconstructivenessPolicyV2`의 `kMin`, batch/subject/
+linkability-window maximum, allowed bucket granularity, complete
+quasi-identifier projection catalog, auxiliary-knowledge fixture, joinable
+surface policy, uniqueness/linkability/composition limits와 accepted
+pre-freeze mitigation을 모두 explicit/non-defaulted 값으로 승인해야 한다.
+이 문서는 launch-ready 숫자나 absolute anonymization을 발명하지 않는다.
+generic/missing threshold이면 release OFF다. `kMin - 1`, unknown
+denominator, sampled-only evidence 또는 evaluator disagreement는 reject다.
+
+complete risk-projection manifest는 exact O2 non-joinability proof로
+제외되지 않은 모든 exported semantic field와 joint combination을
+포함한다. 각 vault-authoritative subject에 대해 다음 전부를 검사한다.
+
+- full ordered trace, every prefix/suffix, length `1..n`의 every contiguous
+  window
+- every non-empty semantic-field projection와 unordered presence/count
+  projection
+- sequence length, observation cardinality, deterministic order와 batch
+  partition
+- time-bucket, subject-adapter, shared-skill, item-family-pseudonym sequence
+- event kind, outcome, qualification, source class 및 그 intersections
+- rare value, sparse equivalence class, prior-release cohort overlap와
+  union/intersection/difference
+- cross-batch stitching, retry, replacement, split-batch, concurrent
+  candidate, purpose/horizon/adjacent-rotation linkage
+- exact policy가 고정한 auxiliary-information attacks
+
+각 required projection/window는 distinct authorized human subject support
+requirement를 통과해야 한다. vault-authoritative membership는 같은
+human의 rows/pseudonyms를 하나로 묶되 random subject literal 자체를
+semantic equivalence tuple에 넣어 인위적으로 unique하게 만들지 않는다.
+random batch/row/dedupe literal도 direct semantic quasi-identifier에서
+제외하되 reuse, derivation, scope와 cross-release linkability는 별도로
+검사한다. item-family pseudonym과 ordered repetition은 반드시 risk
+dimension으로 남는다.
+
+current denominator에는 그 exact release/access scope에서 authorized,
+visible한 distinct human만 정확히 한 번 센다. non-consenting/excluded
+private candidate, vault-only record, 다른 tenant/purpose, revoked/
+tombstoned row, duplicate pseudonym, synthetic identity 또는 Sybil은 cover가
+아니다. prior revoked/deleted disclosure는 current cohort member가
+아니지만 irreversible composition-attack history에는 남는다. V1의
+optional/missing subject key 같은 historical non-releaseable surface도
+vault-authoritative human grouping에서 보수적으로 accounting하며 V2
+release 자격을 얻지는 않는다.
+
+`VaultSharedSignalReleaseCompositionLedgerV2`는 prior active release,
+later revoked/tombstoned/deleted disclosure, shadow와 intervention을
+포함한 모든 policy-declared joinable schema, overlapping horizon,
+adjacent rotation, retry/replacement와 concurrent prepared reservation을
+포괄한다. O2 trusted coordinator만 conservative connected component를
+정한다. overlapping component는 한 generation과 CAS를 쓰고 unknown/
+disputed joinability는 component를 넓히거나 release를 deny한다.
+candidate/exporter/schema writer가 좁힐 수 없다.
+두 candidate가 같은 generation에서 individually pass해도 combined
+release가 fail이면 둘 다 commit할 수 없다. CAS loser는 새 composition
+generation에서 complete assessment를 다시 수행하며 prior pass/grant를
+재사용하지 않는다.
+
+prepared reservation은 competing candidate 평가에 보수적으로 포함하지만
+`kMin` cover, visible row 또는 irreversible history가 아니다. committed
+release만 history를 append한다. never-committed reservation만
+invalidate/expire할 수 있고 이미 공개된 budget은 deletion, revocation,
+re-consent, new batch ID, retry 또는 pseudonym rotation으로 복원되지
+않는다. ledger history가 missing, damaged, unsafe-to-reconcile 또는 safe
+replacement 없이 만료되면 empty로 간주하지 않고 affected
+purpose/horizon/rotation pipeline을 block한다. risk ledger는 exact-purpose,
+minimum, vault-only, non-exportable, non-reversible accounting만 보존하며
+raw body, stable account ID, client-resolvable lookup/API를 만들지 않는다.
+subject-linked material의 required deletion 뒤 aggregate proof가 부족하면
+release를 deny한다.
+
+failing frozen payload는 event/subject silent deletion, `other` 치환,
+bucket widening, reorder, pseudonym rotation, split, batch-ID change 또는
+stale-generation retry로 고치지 않는다. future O2-approved coarsening/
+suppression/minimization은 payload freeze 전에 exact version으로 실행하고
+새 payload, batch ID, digest, envelope commitment/length, assessment,
+reservation과 grant를 만들어 모든 gate를 처음부터 다시 수행한다.
+partial commit은 없다.
+
+`VaultSharedSignalExportPreflightV2`,
+`VaultSharedSignalReconstructivenessAssessmentV2`,
+`VaultSharedSignalReleaseCompositionLedgerV2`,
+`VaultSharedSignalReleaseReservationV2`와
+`VaultSharedSignalCommitGrantV2`는 Personal Raw Vault 내부의
 least-privilege record다. serializer, client/API response, receipt, log,
 telemetry, analytics, issue/PR/CI artifact, Shared Signal 또는 Model/Eval
 Registry에 serialize·return·record하지 않는다. 그 record는 private event
@@ -3399,41 +4362,88 @@ audit evidence일 뿐 commit authority가 아니다. stale read replica,
 cached ledger snapshot, exported metadata, retry token, prior successful
 check 또는 timestamp만으로 Shared Signal write를 승인할 수 없다.
 
+normative order는 바꿀 수 없다.
+
+a. current O2/consent/rights와 active immutable value registry 하나를
+   resolve한다.
+b. 모든 closed candidate value를 construct하고 strict validate한다.
+c. exact typed payload를 freeze하고 supported profile의 canonical bytes와
+   payload digest를 계산한다.
+d. digest를 한 번 attach하고 completed canonical envelope와 vault-only
+   commitment/octet length를 freeze한다.
+e. trusted O2 coordinator가 conservative joinable component를 정하고
+   prepared reservation을 만든 뒤 current visible reference population,
+   irreversible disclosure history와 모든 competing reservation을 포함해
+   exact candidate를 평가한다.
+f. exact current pass, reservation, policy, registry와 composition
+   generation에 묶인 short-lived single-use grant를 준비한다.
+g. first-write boundary에서 current registry/policy/assessment/
+   composition generation, consent/O2/grant/digest/envelope binding을
+   authoritative source에서 다시 resolve한다.
+h. 한 transaction 또는 equivalent linearizable boundary에서 exact
+   reservation과 grant를 CAS-consume하고 disclosure accounting을 한 번
+   append하며 exact row set, complete lineage와 idempotent result를 함께
+   commit한다.
+
 release preparation은 다음을 **Personal Raw Vault 안에서만** 수행한다.
 
-1. approved projection에서 purpose/horizon/rotation-scoped batch ID,
+1. approved projection에서 purpose/horizon/rotation-scope와 current vault
+   rotation-generation-scoped batch ID,
    `sharedSignalRowId`, dedupe key와 payload field 전부를 먼저 동결한다.
-2. strict `ShadowExportBatchDigestPayloadV1`의 canonical bytes와
+2. strict `SharedSignalExportBatchDigestPayloadV2`의 canonical bytes와
    length-delimited payload digest를 계산하고 digest를 한 번 attach한 뒤
    completed canonical envelope bytes, vault-only commitment와 octet length를
    동결한다.
-3. 아직 Shared Signal에 쓰지 않은 pending
-   `VaultShadowDownstreamLineageV1`을 만든다.
-4. exact proposed batch ID, profile, payload digest, final-envelope
-   commitment/octet length, exact O2 purpose/generation, 모든 included
-   subject의 current active consent generation, notice/policy version,
-   retention state, frozen horizon과 authorization policy version에 묶인
-   short-lived single-use `VaultShadowCommitGrantV1`을 `prepared`로 만든다.
+3. trusted O2 coordinator가 authority-selected conservative joinability
+   component를 구하고 `VaultSharedSignalReleaseReservationV2`를
+   `prepared`로 만든 뒤 exact payload와 envelope를 current visible
+   reference population, irreversible disclosure history와 같은 component의
+   다른 모든 prepared reservation에 대해 평가한다.
+4. current exact `pass`인
+   `VaultSharedSignalReconstructivenessAssessmentV2`와 아직 Shared Signal에
+   쓰지 않은 pending `VaultSharedSignalDownstreamLineageV2`를 만든다.
+5. exact proposed batch ID, profile, registry, ordering/partition policy,
+   payload digest, final-envelope commitment/octet length, assessment,
+   reference population, joinable surface, composition ledger/reservation,
+   exact O2 purpose/generation, rotation scope/vault generation, immutable
+   subject-authorization manifest ref/commitment, exact consent-ledger
+   resolution ref/commitment와 source-event-set commitment, 모든 included
+   active consent generation, notice/policy version, retention state, frozen
+   horizon, lineage/artifact-set ref/commitment, expiry/replay와
+   authorization policy
+   version에 묶인 short-lived single-use
+   `VaultSharedSignalCommitGrantV2`를 `prepared`로 만든다.
 
-consent, O2, notice/policy, retention, horizon, included subject,
-payload profile/digest, completed canonical envelope commitment/octet
-length 또는 authorization policy가 하나라도 바뀌면 prepared generation을
-`invalidated`로 만든다. grant는 explicit expiry와 replay protection을
-가지며 vault 밖으로 나가지 않는다.
+consent, O2, notice/policy, retention, horizon, rotation scope/vault
+generation, included subject 또는 subject-authorization manifest
+ref/commitment, registry,
+reconstructiveness/attacker-model/ordering/partition policy, reference
+population, joinable surface, composition generation/reservation, payload
+profile/digest, completed canonical envelope commitment/octet length 또는
+authorization policy가 하나라도 바뀌면 assessment, reservation과 grant를
+`invalidated`로 만든다. grant와 reservation은 explicit expiry와 replay
+protection을 가지며 vault 밖으로 나가지 않는다.
 
 첫 Shared Signal write에는 하나의 logical linearization point가 있다.
 trusted gateway는 그 boundary에서 current, unexpired, unconsumed
 generation을 authoritative ledger에서 다시 resolve한다. strict validator
 순서로 exact batch ID/profile, recomputed payload digest, completed
-canonical envelope bytes/commitment/octet length와 grant binding을 모두
-비교한 뒤 다음을 하나의 authorized transaction 또는 동등
+canonical envelope bytes/commitment/octet length, registry/policy,
+assessment `pass`, reference population, joinable surface, composition
+ledger/reservation, subject-authorization manifest ref/commitment,
+consent-ledger resolution ref/commitment, source-event-set, rotation
+scope/generation과 grant binding을
+모두 비교한 뒤 다음을 하나의
+authorized transaction 또는 동등
 coordinator/CAS boundary로 처리한다.
 
-1. prepared generation을 `consumed`로 CAS한다.
-2. authorized Shared Signal row를 처음으로 commit한다.
-3. 모든 active row와 private source observation의
-   `VaultShadowDownstreamLineageV1`을 `committed`로 전환한다.
-4. exact idempotent commit result를 고정한다.
+1. exact prepared reservation과 grant를 함께 `consumed`로 CAS한다.
+2. irreversible disclosure accounting을 exact row set에 대해 정확히 한
+   번 append한다.
+3. authorized Shared Signal row 전부를 처음으로 commit한다.
+4. 모든 active row와 private source observation의
+   `VaultSharedSignalDownstreamLineageV2`를 `committed`로 전환한다.
+5. exact idempotent commit result를 고정한다.
 
 consent/O2 invalidation, revocation과 commit은 같은 authorization-generation
 key 또는 동등한 linearizable serialization boundary를 사용한다.
@@ -3443,15 +4453,19 @@ revocation target이 된다. 첫 write 전에는 canonical payload, proposed
 row ID와 pending lineage를 vault 안에서만 stage한다. Shared Signal에
 `inactive_staged`, hidden, pending 또는 유사 row를 미리 쓰지 않는다.
 
-prepared-to-consumed CAS, 첫 Shared Signal row commit과 committed
-vault-lineage transition의 logical linearization을 증명할 수 없으면 batch
-전체를 fail closed한다. crash/retry가 active Shared Signal row without
-committed lineage 또는 consumed authority without the exact idempotent
-commit result를 남길 수 없다. 이 invariant를 세울 수 없으면 active뿐
-아니라 pending/hidden을 포함한 Shared Signal, log, telemetry와 Model/Eval
-write가 모두 0건이다.
+prepared reservation/grant consumption, disclosure-history append, 첫/all
+Shared Signal row commit, committed vault-lineage transition과 exact
+idempotent result의 logical linearization을 증명할 수 없으면 batch 전체를
+fail closed한다. crash/retry가 active Shared Signal row without exact
+one-time ledger append/committed lineage 또는 consumed authority without
+the exact row set/idempotent result를 남길 수 없다. exact retry는 같은
+idempotent result를 반환하고 row, ledger append, reservation/grant
+consumption을 두 번 만들지 않는다. 이 invariant를 세울 수 없으면
+active뿐 아니라 pending/hidden을 포함한 Shared Signal, log, telemetry와
+Model/Eval write가 모두 0건이다.
 
-concurrent duplicate commit, consumed-grant replay, payload
+concurrent duplicate commit, consumed-grant/reservation replay, stale
+composition generation, non-current assessment, payload
 digest/canonical-envelope byte/commitment/octet-length mismatch, expiry,
 invalidation 또는 한 subject라도 stale generation인 mixed batch는 전체를
 reject한다. partial commit하지 않고 새 generation과 새 authorized batch를
@@ -3468,7 +4482,7 @@ experiment tier는 active exact-purpose product-signal consent를 대체하지
 compliance 또는 private-service operation에 기록할 수 있지만 Shared
 Signal export authority를 부여하지 않고 이 contract의 대안이 아니다.
 
-serialized `ShadowExportBatchV1` serializer와 validator는 위 exact closed
+serialized `SharedSignalExportBatchV2` serializer와 validator는 위 exact closed
 profile과 field allowlist를 nested shape까지 적용한다. unknown, extra,
 missing, duplicate, alias, nested injection, coercion 또는 implicit
 default를 발견하면 hash 전 fail closed하며 unknown field를 제거한 뒤
@@ -3485,16 +4499,17 @@ telemetry, analytics, issue/PR/CI artifact와 Model/Eval Registry에도
 동일하다.
 
 export authorization metadata는 `consentPurpose`,
-`authorizationClass`, global/versioned `authorizationPolicyVersion`와
+`authorizationClass`, registry-resolved
+`authorizationPolicyVersionRef`와
 `authorizationDecision`의 closed values뿐이다. 이 값들은 subject,
 consent-ledger entry, vault record, private event set 또는 internal lineage
 record를 식별하지 않고 batch·purpose·horizon·rotation 간 unique join key가
-아니다. 기존 `exactPurposeRef`, `o2ApprovalRef`, retention과 policy
+아니다. `exactPurposeRef`, `globalO2ApprovalRef`, retention과 policy
 versions도 non-private global policy reference여야 한다. batch `id`는
 frozen logical batch를, `exportDigest`는 exact digest payload bytes를
 식별한다. completed envelope bytes는 vault-only commitment로만 묶는다.
 어느 값도 authorization proof나 private lineage handle이 아니고, vault
-subject/event-set lookup에 사용할 수 없다. `observationDedupeKey`도
+subject/event-set lookup에 사용할 수 없다. `dedupeKey`도
 approved Shared Signal projection의
 non-private fields에서 purpose/horizon/rotation별로 생성하며 private event
 ID, raw content, private hash·fingerprint 또는 vault commitment에서
@@ -3502,7 +4517,7 @@ ID, raw content, private hash·fingerprint 또는 vault commitment에서
 
 export 뒤 revocation/delete도 row와 모든 descendant까지 닫힌 lifecycle을
 따른다. Personal Raw Vault의 non-exportable
-`VaultShadowDownstreamLineageV1`은 각 authorized subject와 private source
+`VaultSharedSignalDownstreamLineageV2`는 각 authorized subject와 private source
 observation에서 해당 exported batch ID, Shared-Signal-local row ID,
 purpose/horizon/rotation/retry descendant, cache, feature snapshot,
 materialization, dataset와 Model/Eval artifact ID까지 정방향으로
@@ -3526,9 +4541,31 @@ dataset와 Model/Eval artifact를 idempotent하게 non-active,
 quarantined 또는 retired로 전이해야 한다. 전체 targeted closure를
 동기적으로 증명할 수 없으면 acknowledge 전에 batch/purpose/horizon/
 rotation 전체 consumer와 provenance descendant를 덮는 enforced
-`SharedSignalDenyBarrierV1`를 설치한다. row 하나만 닫고 이미 파생된
+`SharedSignalDenyBarrierV2`를 설치한다. row 하나만 닫고 이미 파생된
 artifact를 usable로 두거나 all-surface barrier 없는 eventual
 best-effort는 금지한다.
+
+revocation, delete, expiry 또는 quarantine은 과거 disclosure를 없던
+일로 만들거나 composition budget을 되돌리지 않고 replacement release를
+승인하지 않는다. removal로 residual active surface가 sparse/
+reconstructive해질 수 있으므로 같은 revocation-serialized
+linearization boundary에서
+`SharedSignalActiveSurfaceCertificationV2.activeSurfaceGeneration`을
+invalidate하고 changed surface를 expose하기 전 또는 그와 atomic하게
+all-consumer provisional `SharedSignalDenyBarrierV2`를 설치한다. query,
+cache/materialization builder, dataset job와 publisher는 current surface
+generation과 일치하는 `current_pass` certification 없이는 읽거나
+publish할 수 없다. residual surface가 current policy 아래 다시 pass한
+뒤에만 barrier를 제거한다. registry, reconstructiveness policy 또는
+attacker-model 변경에도 같은 generation invalidation/barrier를 적용한다.
+non-private rotation scope 또는 its vault authority generation 변경에도
+같은 rule을 적용한다. certification/barrier는 digest-visible
+`pseudonymRotationScopeRef`와 `activeSurfaceGeneration`만 공유하고 private
+rotation-generation ref는 serialize하지 않는다. trusted gateway가
+vault-only generation binding과 current active-surface generation의
+일치를 확인한다.
+cohort denominator를 보존하려고 subject의 required deletion을 지연하거나
+거부하지 않는다.
 
 모든 Shared Signal query, cache, materialized view,
 sufficiency/calibration job와 dataset builder는 active,
@@ -3542,8 +4579,10 @@ artifact를 publish할 수 없다. 이미 publish된 descendant는 acknowledge
 전에 같은 vault lineage로 quarantine/retire하거나 all-surface deny
 barrier 아래 unusable이어야 한다.
 
-`SharedSignalRowTombstoneV1` serializer는 Shared-plane-local target,
-coarse `state`와 global policy version만 허용한다. detailed reason,
+`SharedSignalRowTombstoneV2` serializer는 exact V2 schema/event kind,
+source batch/digest, Shared-plane-local target, coarse `state`,
+`revocationPolicyVersionRef`와 `deletePropagationPolicyVersionRef`만
+허용한다. detailed reason,
 exact withdrawal time, subject/ledger/grant/generation/commitment/lineage
 ref·digest와 open-ended operation metadata는 금지한다. lineage가
 missing, damaged 또는 incomplete면 알려진 row만 닫지 않는다. containing
@@ -3866,21 +4905,33 @@ declined, revoked, expired/stale, wrong-purpose, wrong-notice/policy-version
 0건이다.
 
 두 `checkedAt`은 audit evidence일 뿐 commit authority가 아니다.
-vault는 exact batch ID, supported digest profile, recomputed payload
-digest, completed canonical envelope commitment/octet length, O2
-purpose/generation, included subject의 current product-signal consent
-generation, notice/policy, retention, horizon과 authorization policy에
-결합된 short-lived single-use generation을 prepared 상태로 만든다. 그
-입력 중 하나라도 바뀌거나 expire되면 invalidated다. first row 전 strict
-validator는 payload digest, canonical emitted/persisted envelope bytes와
-vault commitment/length를 같은 acyclic rule로 다시 계산한다. 첫 Shared
-Signal write와 prepared→consumed CAS, committed downstream row lineage는
+vault는 §12.1의 sole `SharedSignalExportValueRegistryV1`로 모든 V2
+event value를 resolve하고 exact batch ID, common supported digest profile,
+recomputed payload digest, completed canonical envelope commitment/octet
+length, current reconstructiveness assessment `pass`, reference population,
+authority-selected joinable surface, composition-ledger generation/
+commitment와 prepared reservation, O2 purpose/generation, rotation
+scope/vault generation, immutable subject-authorization manifest와 exact
+consent-ledger resolution의 ref/commitment, source-event-set commitment,
+included subject의 current product-signal consent generation, notice/policy,
+retention, horizon, lineage/artifact-set ref/commitment, expiry/replay와
+authorization policy에 결합된 short-lived single-use
+`VaultSharedSignalCommitGrantV2`를 prepared 상태로 만든다. 그 입력 중
+하나라도 바뀌거나 expire되면 assessment/reservation/grant가
+invalidated다. first row 전 strict validator는 registry/policy,
+payload digest, canonical emitted/persisted envelope bytes, vault
+commitment/length, exact assessment와 composition generation을 같은
+acyclic rule로 다시 계산한다. 첫/all Shared Signal write,
+reservation/grant prepared→consumed CAS, exact one-time irreversible
+disclosure append, committed downstream row lineage와 idempotent result는
 같은 trusted transaction/coordinator linearization에서만 일어난다.
 consent/O2 invalidation과 commit도 같은 generation key로 serialize한다.
 stale snapshot, timestamp, exported metadata, retry token 또는 과거 성공은
 commit을 승인하지 못한다. duplicate/replay, digest/envelope-byte/
-commitment/length mismatch, expiry/invalidation과 one-stale-subject mixed
-batch는 전체 reject한다. 그 boundary 전 payload, local row ID와 pending
+commitment/length, registry/policy/assessment/composition mismatch,
+expiry/invalidation과 one-stale-subject mixed batch는 전체 reject한다.
+shadow와 intervention 모두 exact `SharedSignalExportBatchV2`의 common
+gateway만 사용한다. 그 boundary 전 payload, local row ID와 pending
 lineage는 vault에만 있고 Shared Signal의 staged/hidden/pending write는
 0건이다.
 
@@ -3890,11 +4941,14 @@ refresh는 그 요건에 더해 active exact-purpose
 요구한다. product-signal consent, O2, approved export와 O4는 O5나
 offline-training consent를 대체하지 않는다.
 
-O2와 approved `ShadowExportBatchV1` 전에는 real learner event의 추출,
+O2와 approved exact `SharedSignalExportBatchV2` 전에는 real learner
+event의 추출,
 export, frozen/versioned prediction·inference와 evaluation을 모두
 금지한다. approved export는 rotating pseudonymous subject key와
-allowlisted shared skill만 포함하며 production scope, private concept와
-root-cause identifier를 포함하지 않는다. O5 전 approved export의
+allowlisted/registry-resolved closed values만 포함하며 production scope,
+private concept와 root-cause identifier를 포함하지 않는다. V1 bytes,
+grant, fallback 또는 implicit migration은 real-learner release authority가
+아니다. O5 전 approved export의
 learner-derived observation은 train 또는 calibration-fitting partition에
 들어갈 수 없다.
 
@@ -3907,10 +4961,12 @@ log, telemetry, analytics, issue/PR/CI artifact와 Model/Eval Registry에는
 equality handle을 넣지 않는다. serializer는 closed allowlist와 nested
 unknown-field rejection을 적용한다.
 
-export에는 exact purpose/O2와 global policy version을 포함한 closed
-non-private, non-unique, non-resolvable authorization metadata만 남는다.
-subject/item-family pseudonym은 그 exact purpose와 horizon 밖에서
-unlinkable해야 한다.
+export에는 exact purpose/O2와 sole registry가 resolve한 named,
+batch-wide policy/version ref를 포함한 closed non-private, non-unique,
+non-resolvable authorization metadata만 남는다.
+subject/item-family pseudonym은 exact purpose, horizon, non-private
+rotation scope와 current vault rotation generation 밖에서 unlinkable해야
+한다. vault generation은 export하지 않는다.
 
 revocation/delete/O2 invalidation은 먼저 unconsumed generation을
 invalidated로 만들고, Personal Raw Vault의 internal downstream lineage로
@@ -3926,7 +4982,12 @@ lineage는 containing batch와 reachable derivative 전체의 quarantine
 또는 더 넓은 pipeline deny를 일으킨다. re-consent, backup restore,
 cache/materialization rebuild는 old tombstone과 descendant를 resurrect하지
 않는다. exported private handle을 propagation fallback으로 요구하지
-않는다.
+않는다. revocation/delete는 consumed disclosure budget을 복원하지 않는다.
+changed residual surface generation의 certification을 invalidate하고
+all-consumer deny barrier를 먼저 설치한 뒤 current
+reconstructiveness policy로 recertify해야 한다. registry/policy/
+attacker-model change에도 같은 barrier가 필요하며 deletion을 cohort
+보존 때문에 지연하지 않는다.
 
 refit는 active `offline_model_training` consent와 그 시점에 유효한 별도
 exact-scope O5 아래 새 frozen version으로만 허용하고 in-place refit는
@@ -3935,6 +4996,8 @@ exact-scope O5 아래 새 frozen version으로만 허용하고 in-place refit는
 ### 15.2 금지
 
 - raw body를 log, telemetry, issue, PR, CI artifact 또는 screenshot에 저장
+- raw learner body를 Shared Signal, Model/Eval dataset 또는
+  fitting/training/refit/refresh input으로 이동
 - 개인 업로드에서 공용 variant를 자동 생성·승격
 - global equality oracle
 - online model-weight update
@@ -3951,7 +5014,13 @@ exact-scope O5 아래 새 frozen version으로만 허용하고 in-place refit는
 - subject authorization manifest, consent-ledger ref/digest, vault/private
   object ref, source-event-set commitment, commit grant/generation,
   replay state, downstream lineage, raw/private hash·fingerprint 또는 vault
-  equality handle을 `ShadowExportBatchV1`이나 Shared Signal에 export
+  equality handle을 `SharedSignalExportBatchV2`나 Shared Signal에 export
+- open/free-text Shared Signal value, unresolved registry member,
+  noncanonical order/partition 또는 unbounded numeric value를 export
+- current exact reconstructiveness `pass`, composition reservation/ledger,
+  common grant/CAS를 거치지 않는 shadow/intervention writer
+- rejected/indeterminate/stale assessment, `kMin - 1`, unknown population
+  또는 prior/concurrent/cross-schema composition 누락을 pass로 취급
 - authorization generation consume 전 Shared Signal에 staged, hidden,
   pending 또는 inactive row를 write
 - stale preflight timestamp/snapshot, exported metadata나 retry token으로
@@ -3961,6 +5030,8 @@ exact-scope O5 아래 새 frozen version으로만 허용하고 in-place refit는
   eventual best-effort propagation
 - re-consent, backup restore, cache replay 또는 materialization rebuild로
   tombstoned row나 quarantined descendant를 resurrect
+- revocation/delete가 prior disclosure budget을 복원한다고 보거나
+  residual surface generation을 recertify/barrier 없이 읽기
 - O2·approved export·O4만으로 learner-derived pyBKT fitting, training,
   refit, parameter update 또는 dataset refresh 수행
 - O5 전 learner-derived observation을 train 또는 calibration-fitting
@@ -4642,11 +5713,14 @@ ineligible·unresumable 전이, distinct Learning episode open,
 한 trusted transaction으로 commit한다. request, confirmation-screen view,
 cancel 또는 failed affirmation은 authoritative state를 바꾸지 않는다.
 
-Shared Signal release에서는 gateway가 vault-only single-use generation을
-현재 authorization state에 대해 다시 검증하고 consumed CAS, 첫 row write와
-committed downstream lineage를 같은 revocation-serialized boundary에서
-완료한 뒤에만 release한다. preflight timestamp나 prior check는 이
-boundary를 대체하지 않는다.
+Shared Signal release에서는 shadow와 intervention이 한 common gateway를
+사용한다. gateway가 sole registry, exact payload/digest/envelope,
+current reconstructiveness pass, composition generation/reservation,
+vault-only single-use grant와 authorization state를 다시 검증하고
+reservation/grant consumed CAS, one-time disclosure append, exact row set,
+committed downstream lineage와 idempotent result를 같은
+revocation-serialized boundary에서 완료한 뒤에만 release한다. preflight
+timestamp나 prior check는 이 boundary를 대체하지 않는다.
 
 ### 19.4 model routing
 
@@ -4715,10 +5789,15 @@ performance, fallback, uninstallability와 data boundary를 먼저 검토한다.
 세 번째 graph가 가장 중요하지만, raw answer를 공유해 만드는 것이 아니다.
 exact-purpose consent와 closed bodyless event를 사용한다.
 
-### 20.2 InterventionOutcomeEventV1
+### 20.2 Common Shared Signal V2 intervention outcome
+
+아래 V1 declarations는 exact-head gap을 설명하는 historical,
+**unsupported/non-releaseable** evidence일 뿐 serializer, registry,
+validator, grant 또는 writer가 아니다. 그 open/optional 값과 별도
+registry를 real-learner data에 사용하는 경로는 없다.
 
 ```ts
-type ApprovedSharedRegistryRefV1<
+type HistoricalNonReleaseableApprovedSharedRegistryRefV1<
   TDomain extends
     | "exam_package"
     | "shared_skill"
@@ -4728,20 +5807,27 @@ type ApprovedSharedRegistryRefV1<
     | "source_eligibility_class",
 > = string & { readonly __approvedSharedRegistryDomain: TDomain };
 
-type O2PseudonymousSubjectKeyV1 =
+type HistoricalNonReleaseableO2PseudonymousSubjectKeyV1 =
   string & { readonly __brand: "o2_pseudonymous_subject_key_v1" };
 
-type O2DomainSeparatedDedupeKeyV1 =
+type HistoricalNonReleaseableO2DomainSeparatedDedupeKeyV1 =
   string & { readonly __brand: "o2_domain_separated_dedupe_key_v1" };
 
-type InterventionOutcomeEventV1 = {
-  pseudonymousSubjectKey?: O2PseudonymousSubjectKeyV1;
-  examPackageRef: ApprovedSharedRegistryRefV1<"exam_package">;
-  sharedSkillRef: ApprovedSharedRegistryRefV1<"shared_skill">;
-  preStateClassRef: ApprovedSharedRegistryRefV1<"pre_state_class">;
-  interventionPolicyRef: ApprovedSharedRegistryRefV1<"intervention_policy">;
-  interventionKind: SharedInterventionKindV1;
-  assistanceLevel: SharedAssistanceLevelV1;
+type HistoricalNonReleaseableInterventionOutcomeEventV1 = {
+  pseudonymousSubjectKey?:
+    HistoricalNonReleaseableO2PseudonymousSubjectKeyV1;
+  examPackageRef:
+    HistoricalNonReleaseableApprovedSharedRegistryRefV1<"exam_package">;
+  sharedSkillRef:
+    HistoricalNonReleaseableApprovedSharedRegistryRefV1<"shared_skill">;
+  preStateClassRef:
+    HistoricalNonReleaseableApprovedSharedRegistryRefV1<"pre_state_class">;
+  interventionPolicyRef:
+    HistoricalNonReleaseableApprovedSharedRegistryRefV1<
+      "intervention_policy"
+    >;
+  interventionKind: HistoricalNonReleaseableSharedInterventionKindV1;
+  assistanceLevel: HistoricalNonReleaseableSharedAssistanceLevelV1;
   outcomeHorizon:
     | "immediate"
     | "d1"
@@ -4754,15 +5840,18 @@ type InterventionOutcomeEventV1 = {
     | "qualifying_failure"
     | "abstained"
     | "ineligible";
-  timeBucketRef: ApprovedSharedRegistryRefV1<"time_bucket">;
+  timeBucketRef:
+    HistoricalNonReleaseableApprovedSharedRegistryRefV1<"time_bucket">;
   sourceEligibilityClassRef:
-    ApprovedSharedRegistryRefV1<"source_eligibility_class">;
-  dedupeKey: O2DomainSeparatedDedupeKeyV1;
+    HistoricalNonReleaseableApprovedSharedRegistryRefV1<
+      "source_eligibility_class"
+    >;
+  dedupeKey: HistoricalNonReleaseableO2DomainSeparatedDedupeKeyV1;
 };
 ```
 
 ```ts
-type SharedInterventionKindV1 =
+type HistoricalNonReleaseableSharedInterventionKindV1 =
   | "orient"
   | "recall"
   | "contrast"
@@ -4772,7 +5861,7 @@ type SharedInterventionKindV1 =
   | "timed_set"
   | "timed_full_solution";
 
-type SharedAssistanceLevelV1 =
+type HistoricalNonReleaseableSharedAssistanceLevelV1 =
   | "none"
   | "recall_cue"
   | "concept_hint"
@@ -4780,82 +5869,73 @@ type SharedAssistanceLevelV1 =
   | "partial_example"
   | "full_solution_revealed";
 
-type SharedInterventionExportRegistryV1 = {
-  registryVersion: string;
-  purposeRef: string;
-  approvedExamPackageRefs:
-    readonly ApprovedSharedRegistryRefV1<"exam_package">[];
-  approvedSharedSkillRefs:
-    readonly ApprovedSharedRegistryRefV1<"shared_skill">[];
-  approvedPreStateClassRefs:
-    readonly ApprovedSharedRegistryRefV1<"pre_state_class">[];
-  approvedInterventionPolicyRefs:
-    readonly ApprovedSharedRegistryRefV1<"intervention_policy">[];
-  approvedTimeBucketRefs:
-    readonly ApprovedSharedRegistryRefV1<"time_bucket">[];
-  approvedSourceEligibilityClassRefs:
-    readonly ApprovedSharedRegistryRefV1<"source_eligibility_class">[];
-  approvedInterventionKinds: readonly SharedInterventionKindV1[];
-  approvedAssistanceLevels: readonly SharedAssistanceLevelV1[];
-  o2ApprovalRef: string;
-  effectiveAt: string;
-  expiresAt: string;
-  status: "approved" | "expired" | "revoked";
-  basisChecksum: string;
-};
+type HistoricalNonAuthoritativeSharedInterventionRegistryViewV1 =
+  Readonly<SharedSignalExportValueRegistryV1>;
 ```
 
-이 두 enum에는 `other`, free text, learner-authored label, model-authored
-identifier와 passthrough 값이 없다. `guided_reconstruction`은 현재
-guided-study runtime이 승인되지 않았으므로 Shared Signal export domain에도
-없다.
+historical V1의 `other` 부재나 enum closure도 optional subject key, open
+registry 값, separate writer와 missing composition gate를 보완하지
+않는다. old cryptographic vector가 재현되어도 V1 bytes, grant 또는
+intervention event를 release하지 않는다. legacy registry view가 필요한
+경우 위처럼 exact immutable `SharedSignalExportValueRegistryV1` object의
+non-authoritative read-only view일 뿐 별도 status, allowlist, checksum,
+approval decision 또는 resolver를 갖지 않는다.
 
-`examPackageRef`, `sharedSkillRef`, `preStateClassRef`,
-`interventionPolicyRef`, `timeBucketRef`와
-`sourceEligibilityClassRef`도 arbitrary string이 아니다. exact O2 packet이
-승인한 versioned `SharedInterventionExportRegistryV1`의 ID를 value-level로
-resolve한 경우에만 허용한다. `pseudonymousSubjectKey`와 `dedupeKey`는
-O2-approved domain-separated opaque keyed derivation이며 raw/content hash,
-stable account ID 또는 cross-purpose linkage key가 아니다.
+지원되는 intervention contract는 §12.1에 한 번 선언된
+`InterventionOutcomeEventV2`다. 모든 intervention event는 exact
+`eventKind: "intervention_outcome"`와 common
+`SharedSignalExportEventHeaderV2`의 row ID, mandatory subject key,
+zero-based contiguous sequence index와 dedupe key를 가진다. event의
+exam package, shared skill, pre-state, intervention policy, horizon,
+coarse bucket, subject adapter, source class와 모든 batch policy/version은
+§12.1의 exact active `SharedSignalExportValueRegistryV1`에서
+value-by-value resolve한다. `SharedInterventionExportRegistryV1`라는
+별도 authority, implicit registry view, optional key 또는 variant-specific
+ordering은 없다. `guided_reconstruction`은 현재 runtime authority가
+없으므로 approved domain에 없다.
 
-export validator는 field allowlist와 각 value의 enum/registry membership를
-batch release 전에 모두 검사한다. missing, unknown, expired, revoked,
-cross-version, cross-purpose, free-text, fallback, hash-then-accept 또는
-registry lookup 실패는 해당 event와 batch를 fail closed하며 Shared Signal,
-log, telemetry 또는 Model/Eval Registry에 값을 쓰지 않는다. real learner
-export는 그 위에 exact O2 purpose와 active, granted, non-revoked
-`pseudonymous_product_signal` exact-purpose consent를 각각 요구한다.
-generic legal basis, contract, legitimate interest, service necessity,
-terms acceptance, tenant agreement, research approval, `personal_service`
-consent, 다른 consent purpose, O2 approval, O4 또는 experiment tier는
-그 consent를 대체하지 않는다.
+intervention-only와 mixed-kind candidate도 exact
+`SharedSignalExportBatchDigestPayloadV2`/`SharedSignalExportBatchV2`,
+`shared_signal_export_payload_rfc8785_sha256.v2`,
+`inverge.shared_signal_export_batch.v2.payload` 및
+`inverge.shared_signal_export_batch.v2.envelope` route만 사용한다.
+combined shadow/intervention trace의 canonical subject-bytes/sequence
+order, duplicate tuple/row/dedupe rejection, deterministic partition,
+batch-wide registry/policy binding과 finite bounded number rule도 같다.
+separate serializer/profile/digest/envelope, queue, grant, writer 또는
+direct Shared Signal row path는 금지한다.
 
-§12.1의 Personal Raw Vault preflight가 extraction 전과 release 직전에
-notice/policy version, retention state와 evaluation horizon까지 다시
-검증하고, serialized batch에는 closed non-linkable authorization metadata만
-남긴다. 그 check timestamp는 audit evidence일 뿐이다. exact batch ID와
-supported profile, recomputed acyclic payload digest, completed canonical
-envelope commitment/octet length 및 current O2/consent generation에 묶인
-vault-only single-use commit grant의 consumed CAS, 첫 Shared Signal write와
-committed row lineage가 같은 revocation-serialized linearization에서
-성공해야 한다. 그 전 Shared Signal staged write는 0건이다.
+common gateway는 exact O2와 active exact-purpose
+`pseudonymous_product_signal` consent를 확인한 뒤 exact candidate
+payload/digest/completed-envelope commitment에 대해 current visible
+population, prior active/removed disclosures, every joinable schema와
+concurrent reservation을 포함한 reconstructiveness assessment를 수행한다.
+current exact `pass`만
+`VaultSharedSignalExportPreflightV2`,
+`VaultSharedSignalReleaseReservationV2`와
+`VaultSharedSignalCommitGrantV2`를 준비할 수 있다. common first-write
+CAS는 reservation/grant를 consume하고 irreversible history를 정확히 한
+번 append하며 exact row set, `VaultSharedSignalDownstreamLineageV2`와
+idempotent result를 함께 commit한다. 그 전 staged/hidden/pending row는
+0건이다.
 
-manifest, consent-ledger resolution, vault/private ref,
-source-event-set commitment, commit grant/generation, raw/private
-hash·fingerprint와 internal revocation/delete lineage는 export하지 않는다.
-alias, nested internal-only value 또는 unknown field가 주입되면 batch
-전체를 reject하고 cross-plane write는 0건이다.
+manifest, assessment/reason/rare tuple, population/composition ref,
+consent-ledger resolution, vault/private ref, source-event-set commitment,
+grant/generation, raw/private hash·fingerprint와 internal
+revocation/delete lineage는 export/log/telemetry/analytics/Model-Eval에
+쓰지 않는다. alias, V1/V2 mix, nested internal-only value, unknown value,
+registry/policy/assessment/composition mismatch는 whole batch를
+fail closed하고 cross-plane side effect를 0건으로 만든다.
 
-post-export revocation/delete/O2 invalidation은 unconsumed generation을
-먼저 무효화하고 vault-only lineage로 persisted row와 모든 cache/
-materialization/dataset/Model-Eval descendant를 non-active,
-quarantined/retired로 만든 뒤에만 acknowledge한다. 불완전하면
-all-consumer deny barrier를 먼저 설치한다. 모든 builder는 publication
-직전 active source recheck와 lineage registration을 revocation과 같은
-boundary에서 완료한다. re-consent/rebuild/restore로 old row를
-resurrect하지 않는다. fitting·training·refit·parameter update 또는
-dataset refresh는 별도의 active `offline_model_training` consent와
-future exact-scope O5가 모두 필요하다.
+post-export revocation/delete/O2 invalidation은 common row ID와 lineage로
+모든 row/descendant를 닫거나 acknowledge 전 all-consumer deny barrier를
+설치한다. prior disclosure history/budget은 지우지 않는다. removal로
+바뀐 active-surface generation을 invalidate하고 current policy로
+recertify하기 전 모든 consumer를 deny한다. re-consent/rebuild/restore는
+old row를 resurrect하거나 composition accounting을 reset하지 않는다.
+fitting·training·refit·parameter update 또는 dataset refresh는 별도의
+active `offline_model_training` consent와 future exact-scope O5가 모두
+필요하다.
 
 ### 20.3 experiment hierarchy
 
@@ -5075,18 +6155,25 @@ O3A + S236P
 ### 22.2 PR #667 strategy correction
 
 - existing branch only
-- exact parent head `afc229bbac57fb282fd1ce66f6cae145613d8089`가 live일
+- exact parent head `7a529a728f5690e9e2349d16e8c814213e3a93da`가 live일
   때 그 sole-child fast-forward docs-only corrective 하나
 - existing v7 path 한 파일만 수정
-- exact 신규 finding 한 건, non-recursive shadow export digest P2만 교정
+- exact 신규 finding 두 건, Shared Signal value-domain closure P2와
+  reconstructiveness/composition P2만 교정
+- sole immutable `SharedSignalExportValueRegistryV1`, common V2
+  shadow/intervention event/batch, exact opaque/numeric/order/partition
+  domain과 value-by-value resolution을 고정
 - exact closed payload schema, versioned RFC 8785/SHA-256 profile,
   length-delimited payload digest와 vault-only completed-envelope
-  commitment/length을 같은 acyclic validator/grant rule로 고정
-- existing 17 resolved thread를 reply/reopen/re-resolve하지 않음
-- exact target thread 하나만 독립 검증 뒤 evidence reply와 resolve
+  commitment/length을 current assessment/reservation/ledger/grant와 같은
+  acyclic common writer rule로 고정
+- existing 18 resolved thread를 reply/reopen/re-resolve하지 않음
+- exact target thread
+  `PRRT_kwDOSMHn8M6UUmjc`,
+  `PRRT_kwDOSMHn8M6UUmjh`만 각각 독립 검증 뒤 evidence reply와 resolve
 - 새 exact head에서 모든 required check success와 fresh review terminal
   결과를 요구
-- known-thread target은 `18/18 resolved`
+- known-thread target은 `20/20 resolved`
 - final aggregate는 계속 one added v7 file
 - corrected v6 또는 v6.1 artifact 재도입 금지
 - Draft 유지
@@ -5217,28 +6304,35 @@ S241A → O3C → S239A → S242C → O4F → S243C
 ### 23.1 지금 실행할 하나
 
 PR #667의 fresh-review parent head
-`afc229bbac57fb282fd1ce66f6cae145613d8089`와 main이 live checkpoint에
+`7a529a728f5690e9e2349d16e8c814213e3a93da`와 main이 live checkpoint에
 그대로 있을 때만, 별도 corrective Work가 다음을 수행한다.
 
-1. live authority, parent head/tree, artifact와 exact unresolved P2 한 건,
-   `PRRT_kwDOSMHn8M6UTTMt` non-recursive export digest 및 18-thread
-   topology 검증
+1. live authority, parent head/tree, artifact와 exact unresolved P2 두 건,
+   `PRRT_kwDOSMHn8M6UUmjc`,
+   `PRRT_kwDOSMHn8M6UUmjh` 및 20-thread topology 검증
 2. existing PR branch에 parent head의 sole-child corrective 하나
-3. existing v7 경로 한 파일에서 independent exact digest payload type,
-   supported canonicalization/hash profile, acyclic payload digest와
-   vault-only completed-envelope commitment/length만 교정
-4. exact O2 + active product-signal consent, closed non-linkable export
-   metadata, vault-only manifest/commitment/grant/lineage와 separate
-   offline-training consent + O5 fitting boundary를 보존
-5. exact-head digest/manifest, focused authority audits와 newest-head
-   required checks 고정
-6. 기존 17 resolved thread에는 mutation 없이 exact target thread만
+3. existing v7 경로 한 파일에서 one immutable value registry, closed
+   value/opaque/numeric/order/partition domain, common V2 batch와
+   shadow/intervention writer를 교정
+4. exact candidate와 prior/split/concurrent/cross-schema composition에
+   대한 current reconstructiveness pass, prepared reservation, ledger와
+   first-write CAS binding을 교정
+5. independent exact digest payload type, supported common V2
+   canonicalization/hash profile, acyclic payload digest와 vault-only
+   completed-envelope commitment/length을 보존·reconcile
+6. exact O2 + active product-signal consent, vault-only
+   assessment/manifest/commitment/grant/lineage와 separate offline-training
+   consent + O5 fitting boundary를 보존
+7. exact-head digest/manifest, 98 focused hostile assertions, 13 positive
+   assertions, three two-way V2 golden vectors, authority audits와
+   newest-head required checks 고정
+8. 기존 18 resolved thread에는 mutation 없이 exact target threads만 각각
    독립 검증 뒤 1회 증거 답변·해결
-7. 18/18 resolved 뒤 exact new head에 fresh `@codex review` 1회 요청하고
+9. 20/20 resolved 뒤 exact new head에 fresh `@codex review` 1회 요청하고
    terminal 결과까지 대기
-8. prior caveat·release-artifact binding, exact first-round sequence,
+10. prior caveat·release-artifact binding, exact first-round sequence,
    canonical commercial path와 aggregate 단일 경로 보존
-9. Draft 유지, Ready/merge/auto-merge/O2/O5/data export/guided runtime/
+11. Draft 유지, Ready/merge/auto-merge/O2/O5/data export/guided runtime/
    commercial O4/implementation 0으로 자동 중단
 
 ### 23.2 그 다음
@@ -5338,15 +6432,30 @@ PR #667의 fresh-review parent head
 - missing·declined·revoked·expired/stale·wrong-purpose·wrong-policy·
   unresolved consent 또는 O2 mismatch에서 event 제외, invalid batch reject,
   Shared Signal/log/telemetry/Model-Eval write 0
-- independent exact `ShadowExportBatchDigestPayloadV1`이 final envelope의
+- sole active immutable `SharedSignalExportValueRegistryV1`에서 shadow와
+  intervention의 every exported enum/ref/version을 value-by-value resolve;
+  open/free-text/fallback/expired/mismatched/unavailable member 0
+- closed opaque-ID encoding/authority/scope, finite bounded number,
+  per-subject zero-contiguous index, canonical subject-bytes/sequence order와
+  deterministic partition 100%
+- independent exact `SharedSignalExportBatchDigestPayloadV2`가 final envelope의
   `exportDigest`를 structurally exclude하고 모든 payload field/observation을
   digest-visible하게 포함
-- supported `shadow_export_payload_rfc8785_sha256.v1` profile의 strict
+- supported `shared_signal_export_payload_rfc8785_sha256.v2` common profile의
+  strict
   I-JSON/RFC 8785/UTF-8, domain + NUL + uint64 byte-length + payload bytes
   SHA-256 재현 100%
-- typed payload, actual digest preimage bytes, completed canonical envelope
-  bytes, payload digest와 vault-only envelope commitment/octet length의
+- shadow-only, intervention-only, mixed-kind typed payload, actual digest
+  preimage bytes, completed canonical envelope bytes, payload digest와
+  vault-only envelope commitment/octet length의 3개
   two-independent-derivation golden vector 일치
+- exact candidate full/prefix/suffix/all contiguous windows/all non-empty
+  semantic projections 및 unordered presence/count가 future exact O2
+  threshold와 complete manifest를 통과한 current reconstructiveness
+  `pass`
+- current visible distinct-human `kMin`, prior active/revoked/deleted
+  history, split/retry/replacement, cross-schema and concurrent reservation
+  composition을 모두 포함; missing/generic threshold나 `kMin - 1` pass 0
 - legal basis, contract, service necessity, terms, tenant agreement,
   research approval, `personal_service`, 다른 consent, O2 단독, O4와
   experiment tier의 product-signal consent 대체 0
@@ -5386,13 +6495,16 @@ PR #667의 fresh-review parent head
   nested/missing/extra/coercion/default/invalid I-JSON·Unicode·number를
   digest 전에 reject; unknown strip-then-hash 0
 - commit authority는 exact batch ID/profile, recomputed payload digest,
-  completed canonical envelope commitment/octet length와 current O2/consent
-  generations에 묶인 short-lived single-use vault grant뿐; checkedAt,
-  digest/commitment, stale snapshot, exported metadata와 retry token
-  authority 0
-- prepared→consumed CAS, first Shared Signal write와 committed vault row
-  lineage가 one revocation-serialized logical linearization; 그 전
-  Shared Signal staged/hidden/pending write 0
+  completed canonical envelope commitment/octet length, sole registry,
+  ordering/partition policy, current exact assessment pass, reference
+  population, authority-selected joinable surface, composition generation/
+  commitment/reservation와 current O2/consent generations에 묶인
+  short-lived single-use vault grant뿐; checkedAt, digest/commitment, stale
+  snapshot, exported metadata와 retry token authority 0
+- reservation/grant prepared→consumed CAS, exact one-time irreversible
+  disclosure append, first/all Shared Signal rows, committed vault row
+  lineage와 exact idempotent result가 one revocation-serialized logical
+  linearization; 그 전 Shared Signal staged/hidden/pending write 0
 - duplicate/replay, payload digest/canonical-envelope bytes/commitment/length
   mismatch, expiry/invalidation과 mixed stale subject batch는 side effect나
   partial 없이 whole-batch reject
@@ -5410,6 +6522,9 @@ PR #667의 fresh-review parent head
   descendant 0
 - re-consent, cache/materialization rebuild, backup restore의 old row/
   descendant resurrection 0
+- revocation/delete/re-consent/rotation/retry의 consumed composition budget
+  reset 0; residual active-surface certification generation invalidation과
+  all-consumer barrier 뒤 current-policy recertification
 - pseudonym horizon linkage 0
 - subject authorization manifest, consent-ledger ref/digest,
   vault/private object ref, source-event-set commitment, grant/generation,
@@ -5418,8 +6533,11 @@ PR #667의 fresh-review parent head
 - authorization metadata는 closed, non-private, non-unique,
   non-resolvable global values만 허용
 - final-envelope commitment/octet length, manifest, source-event-set
-  commitment와 revocation/delete lineage는 vault-internal only; exported
-  private handle 또는 digest/commitment lookup fallback 0
+  commitment, assessment/reason/population/composition/reservation과
+  revocation/delete lineage는 vault-internal only; exported private handle
+  또는 digest/commitment lookup fallback 0
+- standalone intervention serializer/profile/registry/grant/writer 또는
+  common reconstructiveness gateway/CAS bypass 0
 - internal-only alias, nested injection과 unknown export field 0
 - supply-chain/SBOM/license review
 
@@ -5571,7 +6689,7 @@ PR #667의 fresh-review parent head
 90. unvalidated arbitrary object에서 `exportDigest`를 dynamic delete한 뒤
     payload로 간주
 91. final exported envelope에 `exportDigest`가 missing
-92. `ShadowExportBatchDigestPayloadV1`에 `exportDigest` property가 존재
+92. `SharedSignalExportBatchDigestPayloadV2`에 `exportDigest` property가 존재
 93. top-level `exportDigest`가 duplicate
 94. alias 또는 nested digest injection
 95. unknown field를 silently strip한 뒤 hash
@@ -5597,9 +6715,164 @@ PR #667의 fresh-review parent head
 108. digest는 valid지만 consent/O2/grant가 invalid인데 authorize
 109. 다른 consent/O2/grant가 valid한 digest mismatch에서 grant consume,
      row 또는 다른 side effect 발생
-110. future V1 field가 payload preimage에서 누락
+110. future V2 exported registry/value field가 payload preimage에서 누락
 111. digest 또는 envelope commitment를 authorization, membership 또는
      private-lineage lookup evidence로 사용
+
+Shared Signal V2 corrective hostile matrix는 transient validator에서 아래
+98개 hostile case를 모두 독립 assertion으로 실행한다. 이 목록은 test
+artifact나 golden bytes를 저장하는 곳이 아니라 required behavior의
+stable contract다.
+
+1. `SSV2-H01`: `occurredAtBucketRef`에 free text
+2. `SSV2-H02`: bucket field에 RFC 3339/ISO timestamp
+3. `SSV2-H03`: bucket field에 epoch seconds/milliseconds 또는 timezone
+   date
+4. `SSV2-H04`: unknown/custom/finer-than-approved bucket ID
+5. `SSV2-H05`: free-text/unknown subject adapter
+6. `SSV2-H06`: cross-purpose/cross-version subject adapter
+7. `SSV2-H07`: unknown/expired/revoked taxonomy version
+8. `SSV2-H08`: unknown/expired/revoked mapping-adapter version
+9. `SSV2-H09`: unknown/expired/revoked label-policy version
+10. `SSV2-H10`: private concept 또는 unknown shared-skill ID
+11. `SSV2-H11`: enum-valid but registry/version-invalid source class
+12. `SSV2-H12`: arbitrary string in any batch policy/version/ref
+13. `SSV2-H13`: `other`, passthrough, model/learner-authored fallback
+14. `SSV2-H14`: stable account ID disguised as subject pseudonym
+15. `SSV2-H15`: private event ID/raw-private hash disguised as item
+    pseudonym, row ID 또는 dedupe key
+16. `SSV2-H16`: cross-purpose/horizon/rotation pseudonym 또는 dedupe reuse
+17. `SSV2-H17`: invalid opaque encoding/length/derivation authority
+18. `SSV2-H18`: missing/unknown/expired/revoked/stale registry
+19. `SSV2-H19`: registry basis mismatch 또는 lookup unavailable
+20. `SSV2-H20`: shadow/intervention validator가 서로 다른 registry 사용
+21. `SSV2-H21`: brand만 맞고 trusted membership resolution 없음
+22. `SSV2-H22`: hash-then-accept, silent normalization/case-fold fallback
+23. `SSV2-H23`: unsafe/fractional/negative/out-of-range/gapped/duplicate
+    sequence index
+24. `SSV2-H24`: event/trace/batch count가 approved cap 초과
+25. `SSV2-H25`: future exported field에 closed domain/registry coverage 없음
+26. `SSV2-H26`: 한 subject의 unique full ordered trace
+27. `SSV2-H27`: full trace는 common이나 prefix/suffix가 unique
+28. `SSV2-H28`: bucket + adapter + skill joint tuple이 unique
+29. `SSV2-H29`: bucket + item pseudonym + outcome joint tuple이 unique
+30. `SSV2-H30`: rare sequence length 또는 sparse equivalence class
+31. `SSV2-H31`: each field common이나 joint tuple unique
+32. `SSV2-H32`: arbitrary order/partition covert identifier
+33. `SSV2-H33`: field closure/pseudonymization만으로 pass
+34. `SSV2-H34`: schema sufficiency만으로 pass
+35. `SSV2-H35`: missing exact future O2 threshold를 pass
+36. `SSV2-H36`: insufficient/unknown reference population을 pass
+37. `SSV2-H37`: non-consenting/excluded/vault-only/cross-purpose/revoked
+    subject를 current cover로 계산
+38. `SSV2-H38`: indeterminate/timeout/evaluator failure를 pass
+39. `SSV2-H39`: isolated batch는 pass지만 prior release와 함께 fail
+40. `SSV2-H40`: 두 batch가 한 reconstructive trace를 split해 각각 pass
+41. `SSV2-H41`: joinable intervention surface를 composition에서 누락
+42. `SSV2-H42`: overlapping-cohort differencing으로 membership 재구성
+43. `SSV2-H43`: retry/new batch ID가 composition을 reset
+44. `SSV2-H44`: rotation/re-consent가 prior budget을 reset
+45. `SSV2-H45`: revoked/deleted disclosure를 history에서 지운 unsafe
+    replacement
+46. `SSV2-H46`: same generation의 concurrent pass 둘이 combined fail인데
+    둘 다 commit
+47. `SSV2-H47`: stale composition generation/population snapshot
+48. `SSV2-H48`: assessment가 다른 digest/envelope/batch/purpose/horizon/
+    rotation/registry/policy에 bind
+49. `SSV2-H49`: copied/replayed prior pass
+50. `SSV2-H50`: assessment 뒤 payload/envelope mutation
+51. `SSV2-H51`: assessment 뒤 subject/event silent deletion, bucket
+    widening, rotation 또는 reorder
+52. `SSV2-H52`: failed payload split/partial commit
+53. `SSV2-H53`: grant에 assessment/joinable-surface/composition binding 누락
+54. `SSV2-H54`: commit이 composition generation을 CAS/append하지 않음
+55. `SSV2-H55`: Shared Signal staged/first write 뒤 assessment
+56. `SSV2-H56`: assessment/reason/rare tuple/population/composition ref를
+    vault 밖에 serialize
+57. `SSV2-H57`: rare trace가 failure log/telemetry/analytics에 노출
+58. `SSV2-H58`: raw learner body/private concept를 exported assessment
+    evidence로 사용
+59. `SSV2-H59`: ledger가 indefinite private store/reverse lookup API가 됨
+60. `SSV2-H60`: subject history purge 뒤 missing aggregate proof를 zero로
+    간주
+61. `SSV2-H61`: valid digest/consent/O2/grant이나 current exact pass 없음
+62. `SSV2-H62`: pass가 invalid consent/O2/grant를 대체
+63. `SSV2-H63`: revocation이 privacy budget 복원 또는 refit 자동 승인
+64. `SSV2-H64`: removal 뒤 sparse surface를 certification/barrier 없이
+    읽음
+65. `SSV2-H65`: cohort denominator 보존을 위해 deletion 지연/거부
+66. `SSV2-H66`: new registry field가 digest payload에서 누락
+67. `SSV2-H67`: V1/V2 observation/payload/grant mix
+68. `SSV2-H68`: old profile fallback/implicit migration
+69. `SSV2-H69`: assessment/composition ref를 exported payload에 주입
+70. `SSV2-H70`: registry/policy mutation 뒤 새 digest/assessment 없음
+71. `SSV2-H71`: valid payload digest이나 envelope commitment/length mismatch
+72. `SSV2-H72`: pass를 digest/consent/O2/O5/lineage evidence로 사용
+73. `SSV2-H73`: consent/O2 generation이 registry/payload/envelope/shared로
+    유출
+74. `SSV2-H74`: per-subject/per-batch one-off registry value
+75. `SSV2-H75`: duplicate/noncanonical/over-domain-cap registry array,
+    missing/unsafe domain cap 또는 invalid time order
+76. `SSV2-H76`: intervention event를 assessed batch와 다른 registry로 decode
+77. `SSV2-H77`: per-subject index는 valid이나 global order가 noncanonical
+78. `SSV2-H78`: ordering/partition ref 누락·mismatch·post-digest change
+79. `SSV2-H79`: standalone intervention/alternate writer가 common gateway,
+    reservation, ledger 또는 CAS 우회
+80. `SSV2-H80`: omitted/rotated/multiple subject pseudonym이 human grouping
+    또는 budget reset
+81. `SSV2-H81`: duplicate/synthetic/Sybil pseudonym으로 `kMin` 부풀림
+82. `SSV2-H82`: candidate가 conservative component를 좁힘
+83. `SSV2-H83`: unknown joinability를 non-joinable로 처리
+84. `SSV2-H84`: prepared reservation을 `kMin` 또는 permanent history로 계산
+85. `SSV2-H85`: exact ledger append/grant/lineage/idempotent result 없이 rows
+    commit
+86. `SSV2-H86`: exact rows 없이 ledger/grant/lineage commit
+87. `SSV2-H87`: exact retry가 history/budget/rows를 두 번 반영
+88. `SSV2-H88`: exact O2 proof 없이 semantic field/contiguous window를
+    manifest에서 누락
+89. `SSV2-H89`: removal과 matching-generation certification/barrier 사이
+    residual surface 관찰
+90. `SSV2-H90`: registry/policy/attacker-model change 뒤 old certification
+    readable
+91. `SSV2-H91`: old golden 재현을 이유로 V1 real-learner release
+92. `SSV2-H92`: tenant/subject/consent/O2-generation registry snapshot ID가
+    exported bytes에 존재
+93. `SSV2-H93`: intervention 전용 implicit/unversioned serializer/profile
+94. `SSV2-H94`: discriminator missing/unknown/alias/wrong schema decode
+95. `SSV2-H95`: 어느 V2 event든 common row/subject/sequence/dedupe header 누락
+96. `SSV2-H96`: intervention-only/mixed batch가 optional key,
+    variant-specific/ingestion order에 의존
+97. `SSV2-H97`: mixed-kind reorder/duplicate subject-sequence tuple이 accepted
+98. `SSV2-H98`: intervention row에 common tombstone/quarantine/lineage target
+    없음
+
+transient positive matrix 13개도 요구한다.
+
+1. `SSV2-P01`: every value/opaque ID/number가 one active immutable
+   registry에서 resolve
+2. `SSV2-P02`: exact timestamp transport reject 후 deterministic approved
+   coarse bucket
+3. `SSV2-P03`: independently reconstructed digest와 assessment binding 일치
+4. `SSV2-P04`: every projection이 exact `kMin`에서 pass,
+   `kMin - 1` reject
+5. `SSV2-P05`: exact maximum sequence/event/registry-domain count pass,
+   maximum + 1 reject
+6. `SSV2-P06`: pinned policy와 sufficient visible population의 whole-batch pass
+7. `SSV2-P07`: prior-release union/intersection/difference composition pass
+8. `SSV2-P08`: concurrent candidate 중 exactly one CAS, loser full
+   reassessment
+9. `SSV2-P09`: revocation row/descendant closure + residual recertify/deny +
+   budget 유지
+10. `SSV2-P10`: registry→digest→assessment→composition CAS→grant→rows→lineage
+    full commit
+11. `SSV2-P11`: independent two derivations의 trace signature와 pass/fail
+    일치
+12. `SSV2-P12`: exact retry는 row set, reservation/grant consumption, ledger
+    append 각 1회
+13. `SSV2-P13`: shadow-only/intervention-only/mixed batch가 one
+    registry/common header/
+    canonicalization/joinability component/gateway를 공유하고 two-way
+    intervention/mixed ordering 일치
 
 모든 actionable P0/P1/P2는 0/0/0이어야 한다.
 
@@ -5633,17 +6906,26 @@ PR #667의 fresh-review parent head
 - source/version/privacy/accessibility
 - Shared Signal export의 exact O2 + active exact-purpose product-signal
   consent 및 legal-basis substitution 0
+- shadow/intervention 공통 sole immutable value registry의 every
+  enum/ref/version value-by-value resolution, closed opaque/numeric/order/
+  partition domain과 unsupported V1 fallback 0
 - self-containing envelope를 hash하지 않는 independent exact digest
-  payload, versioned RFC 8785/SHA-256 profile, strict validator와
+  common V2 payload, versioned RFC 8785/SHA-256 profile, strict validator와
   payload-digest-attach-final-envelope의 acyclic construction
 - preflight/grant가 recomputed payload digest와 completed canonical
-  envelope의 vault-only commitment/octet length를 동일하게 bind하고 모든
-  mismatch에서 grant consume와 cross-plane side effect 0
+  envelope의 vault-only commitment/octet length, current registry/policy,
+  exact reconstructiveness pass, reference population, joinable surface와
+  composition reservation/ledger를 동일하게 bind하고 모든 mismatch에서
+  grant consume와 cross-plane side effect 0
 - closed non-linkable export metadata와 vault-only manifest/commitment/
-  single-use grant/revocation-delete lineage
-- first row commit의 atomic generation consume/lineage와 persisted row부터
+  assessment/reservation/ledger/single-use grant/revocation-delete lineage
+- first/all row commit의 atomic reservation/grant consume, one-time
+  irreversible disclosure append, lineage/idempotent result와 persisted row부터
   cache/materialization/dataset/Model-Eval까지 revocation closure 또는
   all-surface deny barrier
+- current active-surface generation certification; revocation/delete와
+  registry/policy/attacker-model change 뒤 residual pass 전 readable surface
+  0, prior disclosure budget reset 0
 - hard violation, raw leak, false mastery 0
 
 ### 25.2 universal kernel
@@ -5697,6 +6979,9 @@ PR #667의 fresh-review parent head
 - export digest는 named closed payload만 commit하고 completed envelope
   bytes는 vault-only length-delimited commitment로 별도 bind; 둘 다
   authorization 또는 private-lineage handle이 아님
+- exact current candidate와 prior/split/retry/concurrent/cross-schema
+  composition의 complete trace/projection/window가 future exact O2 policy를
+  통과하고 current `pass`가 common grant/CAS에 bound
 - Shared Signal/Model-Eval/client/log surface의 private vault linkage 0
 - product-signal revocation은 active row와 모든 provenance descendant를
   acknowledgement 전에 non-active로 만들거나 enforced all-surface
@@ -5760,9 +7045,10 @@ PR #667의 fresh-review parent head
     evaluation 경계이고, offline-training consent + O5는 별도 offline
     fitting·training·refresh 경계다. 어느 O4도 둘을 합치지 못한다.
 21. Shared Signal의 첫 persisted row는 current single-use generation
-    consume와 complete vault lineage가 한 atomic boundary에서 성공한
-    뒤에만 존재하고, 철회된 row와 모든 descendant는 다시 usable해지지
-    않는다.
+    및 composition reservation consume, irreversible disclosure append,
+    exact row set, complete vault lineage와 idempotent result가 한 atomic
+    boundary에서 성공한 뒤에만 존재하고, 철회된 row와 모든 descendant는
+    다시 usable해지지 않는다.
 22. attempt-before-reveal은 default지만 Learning Lane의 clear affirmative
     override를 감금하지 않는다. 그 선택은 guided가 아니며 full
     assistance/exposure/no-credit를 output 전에 함께 기록한다.
@@ -5774,7 +7060,14 @@ PR #667의 fresh-review parent head
     뒤 한 번 attach한다. completed envelope byte identity는 Personal Raw
     Vault의 별도 commitment/length로만 묶으며 어느 digest도 권한이나
     private lookup handle이 아니다.
-25. 세계 최고 수준은 기능 수가 아니라 **잘못된 도움을 막고, 실제 독립
+25. Shared Signal의 shadow와 intervention은 sole immutable value registry,
+    common V2 profile/header/batch/writer와 exact value-domain resolution을
+    공유하며 V1/fallback/alternate writer를 허용하지 않는다.
+26. exact candidate와 cumulative prior/split/concurrent/cross-schema
+    composition의 current reconstructiveness `pass` 없이는 row가 0건이며,
+    revocation은 disclosure budget을 복원하지 않고 residual surface를
+    barrier 아래 recertify한다.
+27. 세계 최고 수준은 기능 수가 아니라 **잘못된 도움을 막고, 실제 독립
     능력을 증명하며, 다른 시험에서도 같은 품질을 재현하는 구조**로 만든다.
 
 ---
