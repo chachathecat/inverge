@@ -252,28 +252,28 @@ rule baseline으로 고르고, adaptive policy는 별도 shadow 평가 뒤에만
 ### 0.7 현재 PR #667 처리 결론
 
 2026-07-28 KST의 exact head
-`52ffa09e1d08d8a7ad9ad7e05f91e7908d816442`에 대한 fresh exact-head
+`18893b26e2afbd5e4f853f9a81f5c059549e44e4`에 대한 fresh exact-head
 review는 terminal `COMMENTED`였지만 clean하지 않았고,
-`P0/P1/P2 = 0/2/1`의 신규 finding 세 건을 만들었다. PR #667은 계속
+`P0/P1/P2 = 0/2/0`의 신규 finding 두 건을 만들었다. PR #667은 계속
 Draft다.
 
-이 corrective는 그 세 건만 live source-of-truth에 맞춘다.
+이 corrective는 그 두 건만 live source-of-truth에 맞춘다.
 
-1. real-learner extraction·export·frozen/versioned inference·evaluation의
-   O2 경계와 fitting·training·refit·parameter update·dataset refresh의
-   별도 future exact-scope O5 경계를 분리한다.
-2. 현재 Owner dogfood와 그 day/result/D+1/D+7 numerator를
-   `attempt_first` 전용으로 고정하고 guided-to-D+1은 별도 미래 승인
-   뒤의 분리 metric으로만 남긴다.
-3. `founder_canary_v1`, `starter_v1`, `complete_study_os_v1` 세 신규
-   offer를 각각의 exact commercial amendment와 canonical
-   `O4F → S243C` 경로 전까지 모두 blocked로 고정한다.
+1. Shared Signal export는 exact O2와 active, granted, non-revoked
+   `pseudonymous_product_signal` exact-purpose consent를 모두 요구하고,
+   generic legal basis나 다른 목적의 consent가 이를 대체하지 못하게 한다.
+2. subject authorization manifest, consent-ledger resolution, private
+   source-event-set commitment와 revocation/delete lineage는 Personal Raw
+   Vault 안에만 두고, export에는 closed non-linkable authorization
+   metadata만 남긴다.
 
 허용 범위는 기존 v7 경로 한 파일의 sole-child docs-only corrective다.
 Ready, merge, auto-merge, runtime/schema/RLS, canonical contract, roadmap,
 billing, activation, 다른 시험 또는 후속 Work는 이 corrective가 승인하지
-않는다. 특히 이 문서는 O5, guided runtime 또는 commercial O4를 부여하지
-않는다.
+않는다. 특히 product-signal consent나 O2는 fitting 권한이 아니며,
+`offline_model_training` exact-purpose consent와 별도 future exact-scope
+O5 없이 learner-derived fitting·training·refit·parameter update·dataset
+refresh를 수행하지 않는다.
 
 ---
 
@@ -289,16 +289,16 @@ read-only 관측:
 | PR #662 | terminal squash-merged |
 | PR #662 final corrected tree | `2403f1f90de0fd8260fdd7485eee9b726cc0471c` |
 | PR #667 | open Draft, mergeable, unmerged, auto-merge OFF |
-| PR #667 parent head | `52ffa09e1d08d8a7ad9ad7e05f91e7908d816442` |
-| PR #667 parent head tree | `fd20693764ff8f75b362e017e7d5bfa5d53f7db5` |
-| PR #667 parent head sole parent | `1e3c4fb78bcab0e60d707483eba51fbbe2772473` |
+| PR #667 corrective parent head | `18893b26e2afbd5e4f853f9a81f5c059549e44e4` |
+| PR #667 corrective parent tree | `40a6549abae49e3e144b2c543e78fe646023822e` |
+| PR #667 corrective parent sole parent | `52ffa09e1d08d8a7ad9ad7e05f91e7908d816442` |
 | PR #667 branch | `agent/dabangil-master-plan-v6-strategy` |
-| PR #667 parent aggregate | v7 단일 added file, `+4472/-0`, main보다 4 commits ahead / 0 behind |
-| parent artifact | SHA-256 `d805d40b64ebc1c428e2565d025a93dd998a5beb8651a757b9b9662bb5cd46e8`, 155,478 bytes, 4,472 lines, blob `8226a1e8ab934d5fa0fcce472f7ab1246b2e5f0b` |
-| required parent-head checks | PR Contract 512, Risk Gate 512, Runtime Gate 512, Fast CI 639, Full CI 512, Learner Loop Health 1023, Vercel 7/7 success |
-| resolved findings | known thread 11개 중 기존 8개 resolved |
-| fresh exact-head review | `52ffa09e…`, terminal `COMMENTED`, `P0/P1/P2 = 0/2/1` |
-| exact unresolved findings | O2/O5 pyBKT split P1, attempt-only dogfood P1, all-three-offer block P2 |
+| PR #667 corrective parent aggregate | v7 단일 added file, `+4599/-0`, main보다 5 commits ahead / 0 behind |
+| corrective parent artifact | SHA-256 `672deec95dbcff854eb0545dd7898b5d8a95c899b9dca7c7c8fc7267f37b2872`, 163,895 bytes, 4,599 lines, blob `67006f49e720c9be14e763e28629f65f5bda3fd2` |
+| required corrective-parent checks | PR Contract 513, Risk Gate 513, Runtime Gate 513, Fast CI 640, Full CI 513, Learner Loop Health 1024, Vercel 7/7 success |
+| resolved findings | known thread 13개 중 prior 11개 resolved |
+| fresh exact-head review | `18893b26e2…`, terminal `COMMENTED`, `P0/P1/P2 = 0/2/0` |
+| exact unresolved findings | product-signal consent P1, vault-only commitment/lineage P1 |
 | PR #660 | open Draft at historical observation `4c5694e4c65a110aede39762421abb49afd653f5` |
 | public/billing/external learner | OFF |
 
@@ -2739,23 +2739,46 @@ type ShadowObservationV1 = {
   observationDedupeKey: string;
 };
 
+type VaultShadowExportPreflightV1 = {
+  vaultOnly: true;
+  proposedBatchId: string;
+  exactPurposeRef: string;
+  o2ApprovalRef: string;
+  consentPurpose: "pseudonymous_product_signal";
+  consentNoticeVersion: string;
+  authorizationPolicyVersion: string;
+  retentionPolicyRef: string;
+  evaluationHorizonRef: string;
+  subjectAuthorizationManifestRef: string;
+  subjectAuthorizationManifestDigest: string;
+  consentLedgerResolutionRefs: string[];
+  vaultScopedSourceEventSetCommitmentRef: string;
+  vaultInternalRevocationDeleteLineageRef: string;
+  affectedDownstreamArtifactIds: string[];
+  extractionAuthorizationCheckedAt: string;
+  releaseAuthorizationCheckedAt: string;
+  authorizationInvariant: "verified";
+};
+
 type ShadowExportBatchV1 = {
   id: string;
   exactPurposeRef: string;
   o2ApprovalRef: string;
-  consentOrLegalBasisRefs: string[];
+  consentPurpose: "pseudonymous_product_signal";
+  authorizationClass:
+    "o2_plus_active_exact_purpose_product_signal_consent";
+  authorizationPolicyVersion: string;
+  authorizationDecision: "authorized";
   evaluationHorizonRef: string;
-  subjectAuthorizationManifestRef: string;
-  subjectAuthorizationManifestDigest: string;
   pseudonymRotationPolicyVersion: string;
   subjectPseudonymPolicyVersion: string;
   itemFamilyPseudonymPolicyVersion: string;
   sharedSkillAllowlistVersion: string;
   sourceEligibilityAllowlistVersion: string;
   retentionPolicyRef: string;
-  revocationAndDeletePropagationRef: string;
+  revocationPolicyVersion: string;
+  deletePropagationPolicyVersion: string;
   artifactRevocationPolicyVersion: string;
-  vaultScopedSourceEventSetCommitmentRef: string;
   observations: ShadowObservationV1[];
   exportDigest: string;
 };
@@ -2769,15 +2792,69 @@ key와 item-family pseudonym은 exact purpose와 frozen evaluation
 horizon 안에서만 안정적이고, 다른 purpose/horizon/rotation과
 연결할 수 없다.
 
-`subjectAuthorizationManifestRef/digest`는 export 시점의 모든
-pseudonymous subject key가 active exact-purpose consent 또는 legal-basis
-snapshot을 가짐을 bodyless하게 증명한다. production ID는 export하지
-않는다. unauthorized/revoked subject는 batch에 들어갈 수 없다.
-export 뒤 revocation/delete가 생기면 lineage를 따라 affected
-model/eval artifact를 quarantine하거나 retire하고 deletion propagation을
-기록한다. refit가 필요하면 in-place로 고치지 않고, 그 시점에 유효한
+`VaultShadowExportPreflightV1`은 Personal Raw Vault 내부의
+least-privilege record다. serializer, client/API response, receipt, log,
+telemetry, analytics, issue/PR/CI artifact, Shared Signal 또는 Model/Eval
+Registry에 serialize·return·record하지 않는다. 그 record는 private event
+set, exact consent-ledger resolution, proposed batch와 affected downstream
+artifact ID를 vault-internal lineage로 묶고, domain-separated
+non-exportable key 아래 source-event-set commitment를 계산·검증한다.
+manifest, ledger resolution, commitment와 lineage에는 vault 밖 lookup,
+membership 또는 equality API가 없다.
+
+Personal Raw Vault는 각 real-learner subject에 대해 extraction 또는
+pseudonymization 전에 한 번, batch release 직전에 다시 한 번 active,
+granted, non-revoked `pseudonymous_product_signal` exact-purpose consent를
+검증한다. 두 검사는 exact O2 purpose, consent notice/policy version,
+retention state와 frozen evaluation horizon을 모두 일치시킨다. missing,
+declined, revoked, expired/stale, wrong-purpose, wrong-notice/policy-version
+또는 unresolved consent는 해당 event를 제외한다. batch 전체의
+authorization invariant를 증명할 수 없거나 vault-local commitment,
+authorization 또는 lineage가 missing, stale, mismatched, invalid이면
+batch를 reject하고 Shared Signal, log, telemetry와 Model/Eval Registry에
+0건을 쓴다.
+
+generic legal basis snapshot, contract, legitimate-interest theory, service
+necessity, terms acceptance, tenant agreement, research approval,
+`personal_service` consent, 다른 consent purpose, O2 approval, O4 또는
+experiment tier는 active exact-purpose product-signal consent를 대체하지
+않는다. O2와 product-signal consent는 둘 다 필요하며 어느 하나도 다른
+하나를 대체하지 않는다. 별도 legal/compliance basis는 unrelated
+compliance 또는 private-service operation에 기록할 수 있지만 Shared
+Signal export authority를 부여하지 않고 이 contract의 대안이 아니다.
+
+serialized `ShadowExportBatchV1` serializer와 validator는 위 field의
+closed allowlist를 exact nested shape까지 적용한다. internal-only field,
+alias, nested injection 또는 unknown field를 발견하면 fail closed한다.
+특히 consent-ledger entry ref, subject authorization manifest ref/digest,
+`vaultScopedSourceEventSetCommitmentRef`,
+`sourceEventSetCommitmentRef`의 alias, vault/private object ref, private
+keyed commitment, raw/private content hash·fingerprint, stable account ID,
+attestation·receipt·token·digest 또는 Personal Raw Vault subject/event
+set으로 resolve·compare되는 equality handle을 포함하지 않는다.
+
+export authorization metadata는 `consentPurpose`,
+`authorizationClass`, global/versioned `authorizationPolicyVersion`와
+`authorizationDecision`의 closed values뿐이다. 이 값들은 subject,
+consent-ledger entry, vault record, private event set 또는 internal lineage
+record를 식별하지 않고 batch·purpose·horizon·rotation 간 unique join key가
+아니다. 기존 `exactPurposeRef`, `o2ApprovalRef`, retention과 policy
+versions도 non-private global policy reference여야 한다. batch `id`와
+`exportDigest`는 exported batch bytes만 식별하며 authorization proof나
+private lineage handle이 아니고, vault subject/event-set lookup에 사용할
+수 없다. `observationDedupeKey`도 approved Shared Signal projection의
+non-private fields에서 purpose/horizon/rotation별로 생성하며 private event
+ID, raw content, private hash·fingerprint 또는 vault commitment에서
+파생하지 않는다.
+
+export 뒤 revocation/delete가 생기면 Consent Ledger가 future use를
+중단하고, Personal Raw Vault 안의 internal lineage map만 사용해 affected
+model/eval artifact를 quarantine하거나 retire한다. exported private
+handle을 fallback으로 요구하지 않는다. refit가 필요해도
+`pseudonymous_product_signal` consent와 O2는 fitting 권한이 아니다.
+active exact-purpose `offline_model_training` consent와 그 시점에 유효한
 별도 exact-scope O5 아래 새 frozen dataset/model/parameter version으로만
-수행한다. 유효한 O5가 없으면 refit하지 않는다.
+수행하며, 유효한 두 gate 중 하나라도 없으면 refit하지 않는다.
 
 shadow 평가는 다음을 요구한다.
 
@@ -3028,8 +3105,12 @@ type ConsentLedgerEntryV1 = {
   subjectScopeRef: string;
   purpose: ConsentPurposeV1;
   noticeVersion: string;
+  policyVersion: string;
+  purposeScopeRef: string;
   consentState: "granted" | "declined" | "revoked";
   retentionPolicyRef: string;
+  effectiveAt: string;
+  expiresAt?: string;
   grantedAt?: string;
   revokedAt?: string;
   revocationAppliedThroughRef?: string;
@@ -3050,15 +3131,29 @@ shared CurriculumGraph, 다른 learner, tenant 또는 공용 corpus로
 역승격하지 않는다.
 
 Academy가 개인 map을 읽으려면 별도의 tenant sharing purpose와 RLS가
-필요하다. pyBKT measurement와 frozen/versioned inference·evaluation에는
-canonical O2 gate, exact-purpose consent 또는 적용 가능한 별도 법적 근거,
-pseudonymization, retention, revocation, export/delete와 rollback이
-모두 필요하다. cohort parameter fitting, training, refit, parameter
-update 또는 dataset refresh는 그 요건에 더해 `offline_model_training`
-exact-purpose consent와 별도 future exact-scope O5를 요구한다. O2,
-approved export와 O4는 O5를 대체하지 않는다. `personal_service`
-consent를 measurement 또는 `offline_model_training`으로 재사용하지
-않는다.
+필요하다. real-learner pyBKT measurement와 frozen/versioned
+inference·evaluation에는 canonical exact O2와 active, granted,
+non-revoked `pseudonymous_product_signal` exact-purpose consent가 모두
+필요하다. generic legal basis, contract, legitimate interest, service
+necessity, terms acceptance, tenant agreement, research approval,
+`personal_service` consent, 다른 consent purpose, O2 단독, O4 또는
+experiment tier는 그 grant를 대체하지 않는다. 별도 legal/compliance
+basis는 unrelated compliance 또는 private-service operation에 기록할 수
+있지만 Shared Signal extraction/export authority가 아니다.
+
+각 real-learner subject의 consent는 Personal Raw Vault 안에서 extraction
+전과 batch release 직전에 exact O2 purpose, notice/policy version,
+retention state와 evaluation horizon에 대해 다시 resolve한다. missing,
+declined, revoked, expired/stale, wrong-purpose, wrong-notice/policy-version
+또는 unresolved 상태는 event 제외와 batch-invariant fail-closed를
+일으키고 Shared Signal, log, telemetry와 Model/Eval Registry write는
+0건이다.
+
+cohort parameter fitting, training, refit, parameter update 또는 dataset
+refresh는 그 요건에 더해 active exact-purpose
+`offline_model_training` consent와 별도 future exact-scope O5를
+요구한다. product-signal consent, O2, approved export와 O4는 O5나
+offline-training consent를 대체하지 않는다.
 
 O2와 approved `ShadowExportBatchV1` 전에는 real learner event의 추출,
 export, frozen/versioned prediction·inference와 evaluation을 모두
@@ -3068,12 +3163,23 @@ root-cause identifier를 포함하지 않는다. O5 전 approved export의
 learner-derived observation은 train 또는 calibration-fitting partition에
 들어갈 수 없다.
 
-각 export batch는 subject authorization manifest와 frozen evaluation
-horizon을 가져야 한다. subject/item-family pseudonym은 그 exact
-purpose와 horizon 밖에서 unlinkable해야 하며, revocation/delete 뒤
-affected artifact는 lineage에 따라 quarantine하거나 retire한다. refit는
-그 시점에 유효한 별도 exact-scope O5 아래 새 frozen version으로만
-허용하고 in-place refit는 금지한다.
+subject authorization manifest, consent-ledger resolution, vault-scoped
+source-event-set commitment와 revocation/delete lineage map은 Personal Raw
+Vault 내부 preflight에만 존재한다. exported batch, Shared Signal,
+client/API response, receipt, log, telemetry, analytics, issue/PR/CI
+artifact와 Model/Eval Registry에는 그 ref, digest, token, private hash,
+fingerprint, commitment 또는 equality handle을 넣지 않는다. serializer는
+closed allowlist와 nested unknown-field rejection을 적용한다.
+
+export에는 exact purpose/O2와 global policy version을 포함한 closed
+non-private, non-unique, non-resolvable authorization metadata만 남는다.
+subject/item-family pseudonym은 그 exact purpose와 horizon 밖에서
+unlinkable해야 한다. revocation/delete 뒤 Personal Raw Vault의 internal
+lineage만 사용해 affected artifact를 quarantine하거나 retire하며,
+exported private handle을 propagation fallback으로 요구하지 않는다.
+refit는 active `offline_model_training` consent와 그 시점에 유효한 별도
+exact-scope O5 아래 새 frozen version으로만 허용하고 in-place refit는
+금지한다.
 
 ### 15.2 금지
 
@@ -3082,11 +3188,18 @@ affected artifact는 lineage에 따라 quarantine하거나 retire한다. refit�
 - global equality oracle
 - online model-weight update
 - consent 하나로 모든 목적을 포괄
+- generic legal basis, contract, service necessity, terms acceptance,
+  tenant agreement, research approval, `personal_service` consent, 다른
+  목적 consent, O2 단독, O4 또는 experiment tier로
+  `pseudonymous_product_signal` consent를 대체
 - generated ContrastSet을 verified corpus로 자동 승격
 - personal weakness edge를 shared graph로 자동 승격
 - raw learner body를 weakness graph label, telemetry 또는 pyBKT 입력으로 사용
 - BKT shadow prediction을 learner-facing probability로 노출
 - O2 전 real learner event를 pyBKT benchmark 또는 sufficiency audit에 export
+- subject authorization manifest, consent-ledger ref/digest, vault/private
+  object ref, source-event-set commitment, raw/private hash·fingerprint 또는
+  vault equality handle을 `ShadowExportBatchV1`이나 Shared Signal에 export
 - O2·approved export·O4만으로 learner-derived pyBKT fitting, training,
   refit, parameter update 또는 dataset refresh 수행
 - O5 전 learner-derived observation을 train 또는 calibration-fitting
@@ -3933,9 +4046,23 @@ batch release 전에 모두 검사한다. missing, unknown, expired, revoked,
 cross-version, cross-purpose, free-text, fallback, hash-then-accept 또는
 registry lookup 실패는 해당 event와 batch를 fail closed하며 Shared Signal,
 log, telemetry 또는 Model/Eval Registry에 값을 쓰지 않는다. real learner
-export는 그 위에 exact O2 purpose, consent/legal basis, pseudonymization,
-reconstructiveness test, retention, revocation와 approved batch를 모두
-요구한다.
+export는 그 위에 exact O2 purpose와 active, granted, non-revoked
+`pseudonymous_product_signal` exact-purpose consent를 각각 요구한다.
+generic legal basis, contract, legitimate interest, service necessity,
+terms acceptance, tenant agreement, research approval, `personal_service`
+consent, 다른 consent purpose, O2 approval, O4 또는 experiment tier는
+그 consent를 대체하지 않는다.
+
+§12.1의 Personal Raw Vault preflight가 extraction 전과 release 직전에
+notice/policy version, retention state와 evaluation horizon까지 다시
+검증하고, serialized batch에는 closed non-linkable authorization metadata만
+남긴다. manifest, consent-ledger resolution, vault/private ref,
+source-event-set commitment, raw/private hash·fingerprint와 internal
+revocation/delete lineage는 export하지 않는다. alias, nested
+internal-only value 또는 unknown field가 주입되면 batch 전체를 reject하고
+cross-plane write는 0건이다. fitting·training·refit·parameter update 또는
+dataset refresh는 별도의 active `offline_model_training` consent와
+future exact-scope O5가 모두 필요하다.
 
 ### 20.3 experiment hierarchy
 
@@ -4155,21 +4282,21 @@ O3A + S236P
 ### 22.2 PR #667 strategy correction
 
 - existing branch only
-- exact parent head `52ffa09e1d08d8a7ad9ad7e05f91e7908d816442`가 live일
+- exact parent head `18893b26e2afbd5e4f853f9a81f5c059549e44e4`가 live일
   때 그 sole-child fast-forward docs-only corrective 하나
 - existing v7 path 한 파일만 수정
-- exact 신규 finding 세 건만 교정:
-  O2/O5 pyBKT split, attempt-only current dogfood,
-  all-three-new-offer block
-- existing 8 resolved thread를 reply/reopen/re-resolve하지 않음
-- exact 신규 3 thread만 독립 검증 뒤 evidence reply와 resolve
+- exact 신규 P1 finding 두 건만 교정:
+  product-signal consent 필수화와 vault-only commitment/lineage
+- existing 11 resolved thread를 reply/reopen/re-resolve하지 않음
+- exact 신규 2 thread만 독립 검증 뒤 evidence reply와 resolve
 - 새 exact head에서 모든 required check success와 fresh review terminal
   결과를 요구
 - final aggregate는 계속 one added v7 file
 - corrected v6 또는 v6.1 artifact 재도입 금지
 - Draft 유지
 - auto-merge OFF
-- O5, guided runtime, price 또는 commercial O4 승인 0
+- product-signal consent/O2 activation, O5, guided runtime, price 또는
+  commercial O4 승인 0
 - implementation 0
 
 ### 22.3 S237A v7 learning source amendment 제안
@@ -4290,24 +4417,30 @@ S241A → O3C → S239A → S242C → O4F → S243C
 ### 23.1 지금 실행할 하나
 
 PR #667의 fresh-review parent head
-`52ffa09e1d08d8a7ad9ad7e05f91e7908d816442`와 main이 live checkpoint에
+`18893b26e2afbd5e4f853f9a81f5c059549e44e4`와 main이 live checkpoint에
 그대로 있을 때만, 별도 corrective Work가 다음을 수행한다.
 
 1. live authority, parent head/tree, artifact와 exact unresolved
-   P1/P1/P2 세 건 검증
+   P1/P1 두 건—
+   `PRRT_kwDOSMHn8M6UQ0tI` product-signal consent와
+   `PRRT_kwDOSMHn8M6UQ0tO` vault-only commitment/lineage—및
+   13-thread topology 검증
 2. existing PR branch에 parent head의 sole-child corrective 하나
-3. existing v7 경로 한 파일에서 O2/O5 split, attempt-only dogfood,
-   all-three-offer block만 교정
-4. prior caveat·release-artifact binding, exact first-round sequence,
-   canonical commercial path와 aggregate 단일 경로 보존
+3. existing v7 경로 한 파일에서 exact O2 + active product-signal consent와
+   vault-only commitment/manifest/lineage만 교정
+4. exported authorization metadata를 closed, non-private, non-unique,
+   non-resolvable shape로 고정하고 offline-training consent + O5 fitting
+   boundary를 보존
 5. exact-head digest/manifest, focused authority audits와 newest-head
    required checks 고정
-6. 기존 8 resolved thread에는 mutation 없이 exact 신규 3 thread만
+6. 기존 11 resolved thread에는 mutation 없이 exact 신규 2 thread만
    독립 검증 뒤 각 1회 증거 답변·해결
-7. 11/11 resolved 뒤 exact new head에 fresh `@codex review` 1회 요청하고
+7. 13/13 resolved 뒤 exact new head에 fresh `@codex review` 1회 요청하고
    terminal 결과까지 대기
-8. Draft 유지, Ready/merge/auto-merge/O5/guided runtime/commercial O4/
-   implementation 0으로 자동 중단
+8. prior caveat·release-artifact binding, exact first-round sequence,
+   canonical commercial path와 aggregate 단일 경로 보존
+9. Draft 유지, Ready/merge/auto-merge/O2/O5/data export/guided runtime/
+   commercial O4/implementation 0으로 자동 중단
 
 ### 23.2 그 다음
 
@@ -4373,10 +4506,20 @@ PR #667의 fresh-review parent head
 - primary metric unassisted
 - pass probability learner exposure 0
 - real-learner extraction·export·frozen/versioned inference·evaluation은
-  exact O2 + approved export에만 한정
+  exact O2 + active exact-purpose `pseudonymous_product_signal` consent +
+  approved export에만 한정
+- extraction 전과 release 직전 consent/O2/notice-policy/retention/horizon
+  재검증
+- missing·declined·revoked·expired/stale·wrong-purpose·wrong-policy·
+  unresolved consent 또는 O2 mismatch에서 event 제외, invalid batch reject,
+  Shared Signal/log/telemetry/Model-Eval write 0
+- legal basis, contract, service necessity, terms, tenant agreement,
+  research approval, `personal_service`, 다른 consent, O2 단독, O4와
+  experiment tier의 product-signal consent 대체 0
 - O5 전 learner-derived fitting/training/refit/parameter update/
   dataset refresh와 train·calibration-fitting partition 0
-- O2, export approval와 O4의 O5 대체 0
+- product-signal consent, O2, export approval와 O4의
+  `offline_model_training` consent 또는 O5 대체 0
 
 ### 24.5 감정평가사 2차 vertical
 
@@ -4406,6 +4549,14 @@ PR #667의 fresh-review parent head
 - secret/system prompt exposure 0
 - export/delete/revocation propagation
 - pseudonym horizon linkage 0
+- subject authorization manifest, consent-ledger ref/digest,
+  vault/private object ref, source-event-set commitment, private hash·
+  fingerprint와 equality handle의 export 0
+- authorization metadata는 closed, non-private, non-unique,
+  non-resolvable global values만 허용
+- manifest, commitment와 revocation/delete lineage는 vault-internal only;
+  exported private handle fallback 0
+- internal-only alias, nested injection과 unknown export field 0
 - supply-chain/SBOM/license review
 
 ### 24.7 evaluation
@@ -4451,6 +4602,25 @@ PR #667의 fresh-review parent head
     update·dataset refresh 수행
 25. revoked artifact를 유효한 exact-scope O5와 새 frozen version 없이
     in-place refit
+26. generic legal-basis-only subject를 Shared Signal batch에 포함
+27. `personal_service` consent만 있는 subject를 product-signal consent로
+    재사용
+28. wrong-purpose consent를 `pseudonymous_product_signal` grant로 처리
+29. missing·declined·revoked·expired/stale consent subject를 포함
+30. O2만 있고 active product-signal consent가 없는 event를 export
+31. product-signal consent만 있고 matching exact O2가 없는 event를 export
+32. vault commitment/private ref/raw hash/fingerprint를 batch에 주입
+33. subject manifest 또는 consent-ledger ref/digest를 batch에 주입
+34. internal-only alias, nested internal field 또는 unknown field를 주입
+35. batch·purpose·horizon·rotation 사이 reusable/linkable authorization
+    handle을 주입
+36. vault-local preflight가 missing, stale, mismatched 또는 invalid인데
+    batch release
+37. revocation/delete propagation이 vault-internal lineage 대신 exported
+    private handle을 요구
+38. product-signal consent, O2와 approved export만으로
+    `offline_model_training` consent와 exact O5 없이 fitting·training·
+    refit·parameter update·dataset refresh 수행
 
 모든 actionable P0/P1/P2는 0/0/0이어야 한다.
 
@@ -4477,6 +4647,10 @@ PR #667의 fresh-review parent head
 - Ledger/search/resume
 - Native Full-Day
 - source/version/privacy/accessibility
+- Shared Signal export의 exact O2 + active exact-purpose product-signal
+  consent 및 legal-basis substitution 0
+- closed non-linkable export metadata와 vault-only manifest/commitment/
+  revocation-delete lineage
 - hard violation, raw leak, false mastery 0
 
 ### 25.2 universal kernel
@@ -4519,7 +4693,9 @@ PR #667의 fresh-review parent head
 - guided-to-D+1은 exact future guided supersession·activation 뒤 별도 metric
 - intervention outcome lineage
 - baseline comparison
-- O2 extraction/evaluation과 O5 fitting/training/refresh 권한 분리
+- O2 + active product-signal consent extraction/evaluation과
+  offline-training consent + O5 fitting/training/refresh 권한 분리
+- Shared Signal/Model-Eval/client/log surface의 private vault linkage 0
 - efficacy claim은 evidence 수준에 맞음
 
 ### 25.6 사업
@@ -4567,9 +4743,17 @@ PR #667의 fresh-review parent head
 17. 생성된 학습 기준안은 exact upstream release artifact를 통과하기 전
     learner-facing usable body가 될 수 없고, 통과하더라도 공식 답안이나 공식
     채점기준이 되지 않는다.
-18. O2는 real-learner extraction·frozen evaluation 경계이고 O5는 별도
-    offline fitting·training·refresh 경계다. 어느 O4도 둘을 합치지 못한다.
-19. 세계 최고 수준은 기능 수가 아니라 **잘못된 도움을 막고, 실제 독립
+18. Shared Signal은 exact O2와 active exact-purpose product-signal
+    consent가 모두 있을 때만 열리며 legal basis, service consent, 다른
+    목적, O4 또는 experiment tier가 이를 대체하지 못한다.
+19. private manifest, consent-ledger resolution, commitment와
+    revocation/delete lineage는 Personal Raw Vault 밖으로 나가지 않으며,
+    export에는 private plane으로 되돌아가는 ref·digest·equality handle을
+    만들지 않는다.
+20. O2와 product-signal consent는 real-learner extraction·frozen
+    evaluation 경계이고, offline-training consent + O5는 별도 offline
+    fitting·training·refresh 경계다. 어느 O4도 둘을 합치지 못한다.
+21. 세계 최고 수준은 기능 수가 아니라 **잘못된 도움을 막고, 실제 독립
     능력을 증명하며, 다른 시험에서도 같은 품질을 재현하는 구조**로 만든다.
 
 ---
