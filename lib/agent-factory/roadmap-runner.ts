@@ -403,6 +403,34 @@ function normalizeEvaluationInstant(evaluatedAt: Date): {
   };
 }
 
+function appendDependencyBlockedReasons(
+  item: RoadmapItem,
+  missingDependencies: string[],
+  expiredCompletedItems: Map<string, string>,
+  evaluatedAt: string,
+  blockedReasons: BlockedReason[],
+): void {
+  for (const dependency of missingDependencies) {
+    const dependencyExpiresAt = expiredCompletedItems.get(dependency);
+
+    if (dependencyExpiresAt) {
+      blockedReasons.push({
+        code: "expired_dependency",
+        dependencyId: dependency,
+        dependencyExpiresAt,
+        evaluatedAt,
+        message: `${item.id} is waiting for dependency ${dependency} because its completion approval expired at ${dependencyExpiresAt}.`,
+      });
+    } else {
+      blockedReasons.push({
+        code: "missing_dependency",
+        dependencyId: dependency,
+        message: `${item.id} is waiting for dependency ${dependency} to be completed.`,
+      });
+    }
+  }
+}
+
 export function validateRoadmap(roadmap: ActiveProgramRoadmap): void {
   if (!roadmap.program || typeof roadmap.program !== "object") {
     throw new Error("roadmap.program is required.");
@@ -502,33 +530,35 @@ function buildAnalysis(
   if (category === "completed") {
     readinessStatus = "completed";
   } else if (category === "active") {
-    readinessStatus = "active";
+    appendDependencyBlockedReasons(
+      item,
+      missingDependencies,
+      expiredCompletedItems,
+      evaluatedAt,
+      blockedReasons,
+    );
+    readinessStatus = blockedReasons.length === 0 ? "active" : "blocked";
   } else if (category === "blocked") {
+    appendDependencyBlockedReasons(
+      item,
+      missingDependencies,
+      expiredCompletedItems,
+      evaluatedAt,
+      blockedReasons,
+    );
     readinessStatus = "blocked";
     blockedReasons.push({
       code: "blocked_status",
       message: `${item.id} is marked ${normalizeStatus(item.status)} in the roadmap.`,
     });
   } else if (category === "queued") {
-    for (const dependency of missingDependencies) {
-      const dependencyExpiresAt = expiredCompletedItems.get(dependency);
-
-      if (dependencyExpiresAt) {
-        blockedReasons.push({
-          code: "expired_dependency",
-          dependencyId: dependency,
-          dependencyExpiresAt,
-          evaluatedAt,
-          message: `${item.id} is waiting for dependency ${dependency} because its completion approval expired at ${dependencyExpiresAt}.`,
-        });
-      } else {
-        blockedReasons.push({
-          code: "missing_dependency",
-          dependencyId: dependency,
-          message: `${item.id} is waiting for dependency ${dependency} to be completed.`,
-        });
-      }
-    }
+    appendDependencyBlockedReasons(
+      item,
+      missingDependencies,
+      expiredCompletedItems,
+      evaluatedAt,
+      blockedReasons,
+    );
 
     const lockGroupOccupant = item.lockGroup
       ? wipItems.find((wipItem) => wipItem.id !== item.id && wipItem.lockGroup === item.lockGroup)

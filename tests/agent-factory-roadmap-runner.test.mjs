@@ -107,6 +107,96 @@ function expiryRoadmap({
   ]);
 }
 
+function activeExpiryRoadmap({
+  activeStatus = "active",
+  activeDependencies = ["O3A", "S236P"],
+  approvalExpiresAt = O3A_EXPIRY,
+  includeExpiry = true,
+  s236pStatus = "completed",
+  activeLockGroup = "private-authoring",
+  extraItems = [],
+} = {}) {
+  return roadmap([
+    item({
+      id: "O3A",
+      status: "completed",
+      priority: 1,
+      approvalExpiresAt:
+        includeExpiry
+          ? approvalExpiresAt
+          : undefined,
+    }),
+    item({
+      id: "S236P",
+      status: s236pStatus,
+      priority: 2,
+    }),
+    item({
+      id: "S236A",
+      status: activeStatus,
+      dependencies: activeDependencies,
+      lockGroup: activeLockGroup,
+      priority: 3,
+    }),
+    item({
+      id: "S236B",
+      lockGroup: "first-round",
+      priority: 4,
+    }),
+    item({
+      id: "O4V",
+      lockGroup: "private-plane",
+      priority: 5,
+    }),
+    ...extraItems,
+  ]);
+}
+
+function dependencyBlockSurface(plan) {
+  return plan.analyses
+    .filter((analysis) =>
+      analysis.missingDependencies.length > 0 &&
+      analysis.blockedReasons.some((reason) =>
+        reason.code === "missing_dependency" ||
+        reason.code === "expired_dependency",
+      ),
+    )
+    .map((analysis) => ({
+      id: analysis.itemId,
+      missingDependencies: analysis.missingDependencies,
+      expiredDependencies: analysis.blockedReasons
+        .filter((reason) => reason.code === "expired_dependency")
+        .map((reason) => reason.dependencyId),
+    }));
+}
+
+function effectiveActiveIds(plan) {
+  return plan.analyses
+    .filter((analysis) =>
+      analysis.statusCategory === "active" &&
+      analysis.readinessStatus === "active",
+    )
+    .map((analysis) => analysis.itemId);
+}
+
+function assertRunnerSelectorParity(plan, selector) {
+  assert.equal(selector.generatedAt, plan.generatedAt);
+  assert.equal(selector.activeCount, plan.wipOccupiedCount);
+  assert.equal(selector.availableSlots, plan.availableSlots);
+  assert.deepEqual(
+    selector.selected.map((entry) => entry.id),
+    plan.selectedItemIds,
+  );
+  assert.deepEqual(
+    selector.blockedByDependency,
+    dependencyBlockSurface(plan),
+  );
+  assert.deepEqual(
+    selector.active.map((entry) => entry.id),
+    effectiveActiveIds(plan),
+  );
+}
+
 test("completed dependencies make an item ready", () => {
   const plan = createRoadmapRunnerPlanFromYaml(
     roadmap([
@@ -244,6 +334,376 @@ test("completed dependency expiry uses a strict instant boundary and preserves u
       );
     }
   }
+});
+
+test("active dependency expiry blocks effective execution without releasing WIP or selection capacity", () => {
+  const source = activeExpiryRoadmap();
+  const cases = [
+    {
+      name: "one millisecond before expiry",
+      evaluatedAt: "2026-08-09T14:59:58.999Z",
+      effective: true,
+    },
+    {
+      name: "exactly at expiry",
+      evaluatedAt: O3A_EXPIRY,
+      effective: false,
+    },
+    {
+      name: "one millisecond after expiry",
+      evaluatedAt: "2026-08-09T14:59:59.001Z",
+      effective: false,
+    },
+  ];
+
+  for (const candidate of cases) {
+    const evaluatedAt = new Date(candidate.evaluatedAt);
+    const plan = createRoadmapRunnerPlanFromYamlAt(
+      source,
+      evaluatedAt,
+    );
+    const selector = createNextTaskResultFromYaml(
+      source,
+      evaluatedAt,
+    );
+    const s236a = byId(plan, "S236A");
+
+    assert.equal(s236a.status, "active", candidate.name);
+    assert.equal(s236a.statusCategory, "active", candidate.name);
+    assert.equal(plan.wipOccupiedCount, 1, candidate.name);
+    assert.equal(plan.availableSlots, 1, candidate.name);
+    assert.equal(plan.selectionSlots, 1, candidate.name);
+    assert.equal(selector.activeCount, 1, candidate.name);
+    assert.equal(selector.availableSlots, 1, candidate.name);
+    assert.deepEqual(plan.selectedItemIds, ["S236B"], candidate.name);
+    assert.deepEqual(
+      selector.selected.map((entry) => entry.id),
+      ["S236B"],
+      candidate.name,
+    );
+    assert.ok(!plan.selectedItemIds.includes("O4V"), candidate.name);
+
+    if (candidate.effective) {
+      assert.equal(s236a.readinessStatus, "active", candidate.name);
+      assert.deepEqual(s236a.missingDependencies, [], candidate.name);
+      assert.deepEqual(s236a.blockedReasons, [], candidate.name);
+      assert.ok(!plan.blockedItemIds.includes("S236A"), candidate.name);
+      assert.deepEqual(
+        selector.active.map((entry) => entry.id),
+        ["S236A"],
+        candidate.name,
+      );
+      assert.equal(
+        selector.blockedByDependency.some(
+          (entry) => entry.id === "S236A",
+        ),
+        false,
+        candidate.name,
+      );
+    } else {
+      assert.equal(s236a.readinessStatus, "blocked", candidate.name);
+      assert.deepEqual(
+        s236a.missingDependencies,
+        ["O3A"],
+        candidate.name,
+      );
+      assert.deepEqual(
+        s236a.blockedReasons,
+        [
+          {
+            code: "expired_dependency",
+            dependencyId: "O3A",
+            dependencyExpiresAt: O3A_EXPIRY,
+            evaluatedAt: candidate.evaluatedAt,
+            message: `S236A is waiting for dependency O3A because its completion approval expired at ${O3A_EXPIRY}.`,
+          },
+        ],
+        candidate.name,
+      );
+      assert.ok(plan.blockedItemIds.includes("S236A"), candidate.name);
+      assert.deepEqual(selector.active, [], candidate.name);
+      assert.deepEqual(
+        selector.blockedByDependency.find(
+          (entry) => entry.id === "S236A",
+        ),
+        {
+          id: "S236A",
+          missingDependencies: ["O3A"],
+          expiredDependencies: ["O3A"],
+        },
+        candidate.name,
+      );
+    }
+
+    assertRunnerSelectorParity(plan, selector);
+  }
+});
+
+test("active items fail closed on ordinary incomplete dependencies", () => {
+  const source = activeExpiryRoadmap({
+    activeDependencies: ["S236P"],
+    includeExpiry: false,
+    s236pStatus: "queued",
+  });
+  const evaluatedAt = new Date(
+    "2026-07-29T01:00:00.000Z",
+  );
+  const plan = createRoadmapRunnerPlanFromYamlAt(
+    source,
+    evaluatedAt,
+  );
+  const selector = createNextTaskResultFromYaml(
+    source,
+    evaluatedAt,
+  );
+  const s236a = byId(plan, "S236A");
+
+  assert.equal(s236a.statusCategory, "active");
+  assert.equal(s236a.readinessStatus, "blocked");
+  assert.deepEqual(s236a.missingDependencies, ["S236P"]);
+  assert.deepEqual(
+    s236a.blockedReasons.map((reason) => ({
+      code: reason.code,
+      dependencyId: reason.dependencyId,
+    })),
+    [
+      {
+        code: "missing_dependency",
+        dependencyId: "S236P",
+      },
+    ],
+  );
+  assert.equal(plan.wipOccupiedCount, 1);
+  assert.equal(plan.availableSlots, 1);
+  assert.deepEqual(selector.active, []);
+  assertRunnerSelectorParity(plan, selector);
+});
+
+test("mixed expired and incomplete active dependencies emit one ordered reason per dependency", () => {
+  const source = activeExpiryRoadmap({
+    s236pStatus: "queued",
+  });
+  const evaluatedAt = new Date(O3A_EXPIRY);
+  const plan = createRoadmapRunnerPlanFromYamlAt(
+    source,
+    evaluatedAt,
+  );
+  const selector = createNextTaskResultFromYaml(
+    source,
+    evaluatedAt,
+  );
+  const s236a = byId(plan, "S236A");
+
+  assert.deepEqual(
+    s236a.missingDependencies,
+    ["O3A", "S236P"],
+  );
+  assert.deepEqual(
+    s236a.blockedReasons.map((reason) => ({
+      code: reason.code,
+      dependencyId: reason.dependencyId,
+    })),
+    [
+      {
+        code: "expired_dependency",
+        dependencyId: "O3A",
+      },
+      {
+        code: "missing_dependency",
+        dependencyId: "S236P",
+      },
+    ],
+  );
+  assert.deepEqual(
+    selector.blockedByDependency.find(
+      (entry) => entry.id === "S236A",
+    ),
+    {
+      id: "S236A",
+      missingDependencies: ["O3A", "S236P"],
+      expiredDependencies: ["O3A"],
+    },
+  );
+  assertRunnerSelectorParity(plan, selector);
+});
+
+test("blocked and human-decision items retain status reasons alongside dependency diagnostics", () => {
+  const source = roadmap(
+    [
+      item({
+        id: "S100",
+        status: "queued",
+        priority: 1,
+      }),
+      item({
+        id: "S101",
+        status: "blocked",
+        dependencies: ["S100"],
+        priority: 2,
+      }),
+      item({
+        id: "S102",
+        status: "human_decision",
+        dependencies: ["S100"],
+        priority: 3,
+      }),
+    ],
+    { wipLimit: 2 },
+  );
+  const evaluatedAt = new Date(
+    "2026-07-29T01:00:00.000Z",
+  );
+  const plan = createRoadmapRunnerPlanFromYamlAt(
+    source,
+    evaluatedAt,
+  );
+  const selector = createNextTaskResultFromYaml(
+    source,
+    evaluatedAt,
+  );
+
+  for (const id of ["S101", "S102"]) {
+    const analysis = byId(plan, id);
+
+    assert.equal(analysis.statusCategory, "blocked");
+    assert.equal(analysis.readinessStatus, "blocked");
+    assert.deepEqual(analysis.missingDependencies, ["S100"]);
+    assert.deepEqual(
+      analysis.blockedReasons.map((reason) => reason.code),
+      ["missing_dependency", "blocked_status"],
+    );
+  }
+
+  assert.equal(plan.wipOccupiedCount, 2);
+  assert.equal(plan.availableSlots, 0);
+  assert.equal(selector.activeCount, 2);
+  assert.deepEqual(selector.active, []);
+  assertRunnerSelectorParity(plan, selector);
+});
+
+test("all raw active aliases use the same dependency fail-closed rule", () => {
+  for (const activeStatus of [
+    "active",
+    "in_progress",
+    "in_review",
+    "pr_open",
+  ]) {
+    const source = activeExpiryRoadmap({
+      activeStatus,
+    });
+    const evaluatedAt = new Date(O3A_EXPIRY);
+    const plan = createRoadmapRunnerPlanFromYamlAt(
+      source,
+      evaluatedAt,
+    );
+    const selector = createNextTaskResultFromYaml(
+      source,
+      evaluatedAt,
+    );
+    const s236a = byId(plan, "S236A");
+
+    assert.equal(s236a.status, activeStatus);
+    assert.equal(s236a.statusCategory, "active");
+    assert.equal(s236a.readinessStatus, "blocked");
+    assert.deepEqual(s236a.missingDependencies, ["O3A"]);
+    assert.equal(
+      s236a.blockedReasons[0].code,
+      "expired_dependency",
+    );
+    assert.equal(plan.wipOccupiedCount, 1);
+    assert.equal(selector.activeCount, 1);
+    assert.deepEqual(selector.active, []);
+    assertRunnerSelectorParity(plan, selector);
+  }
+});
+
+test("active items with non-expiring completed dependencies retain active behavior", () => {
+  const source = activeExpiryRoadmap({
+    includeExpiry: false,
+  });
+  const evaluatedAt = new Date(
+    "2030-01-01T00:00:00.000Z",
+  );
+  const plan = createRoadmapRunnerPlanFromYamlAt(
+    source,
+    evaluatedAt,
+  );
+  const selector = createNextTaskResultFromYaml(
+    source,
+    evaluatedAt,
+  );
+  const s236a = byId(plan, "S236A");
+
+  assert.equal(s236a.statusCategory, "active");
+  assert.equal(s236a.readinessStatus, "active");
+  assert.deepEqual(s236a.missingDependencies, []);
+  assert.deepEqual(s236a.blockedReasons, []);
+  assert.deepEqual(
+    selector.active.map((entry) => entry.id),
+    ["S236A"],
+  );
+  assertRunnerSelectorParity(plan, selector);
+});
+
+test("dependency-blocked active items retain their raw lock and completed records stay terminal", () => {
+  const source = activeExpiryRoadmap({
+    extraItems: [
+      item({
+        id: "S236C",
+        lockGroup: "private-authoring",
+        priority: 6,
+      }),
+      item({
+        id: "S236D",
+        status: "completed",
+        dependencies: ["O3A"],
+        priority: 7,
+      }),
+    ],
+  });
+  const evaluatedAt = new Date(O3A_EXPIRY);
+  const plan = createRoadmapRunnerPlanFromYamlAt(
+    source,
+    evaluatedAt,
+  );
+  const selector = createNextTaskResultFromYaml(
+    source,
+    evaluatedAt,
+  );
+  const s236c = byId(plan, "S236C");
+  const o3a = byId(plan, "O3A");
+  const s236d = byId(plan, "S236D");
+
+  assert.equal(o3a.statusCategory, "completed");
+  assert.equal(o3a.readinessStatus, "completed");
+  assert.deepEqual(o3a.blockedReasons, []);
+  assert.ok(plan.completedItemIds.includes("O3A"));
+  assert.equal(s236d.statusCategory, "completed");
+  assert.equal(s236d.readinessStatus, "completed");
+  assert.deepEqual(s236d.blockedReasons, []);
+  assert.ok(plan.completedItemIds.includes("S236D"));
+  assert.equal(plan.wipOccupiedCount, 1);
+  assert.equal(plan.availableSlots, 1);
+  assert.equal(s236c.readinessStatus, "blocked");
+  assert.deepEqual(
+    s236c.blockedReasons.map((reason) => reason.code),
+    ["lock_group_in_use"],
+  );
+  assert.equal(
+    s236c.blockedReasons[0].occupyingItemId,
+    "S236A",
+  );
+  assert.deepEqual(
+    selector.blockedByLock.find(
+      (entry) => entry.id === "S236C",
+    ),
+    {
+      id: "S236C",
+      lockGroup: "private-authoring",
+    },
+  );
+  assert.deepEqual(plan.selectedItemIds, ["S236B"]);
+  assertRunnerSelectorParity(plan, selector);
 });
 
 test("completed dependency without expiry retains historical behavior", () => {
@@ -516,6 +976,7 @@ test("live TypeScript runner and post-merge selector agree without starting work
       postMerge.selected.map((item) => item.id),
       plan.selectedItemIds,
     );
+    assertRunnerSelectorParity(plan, postMerge);
     assert.deepEqual(plan.selectedItemIds, ["S236B", "O4V"]);
     assert.deepEqual(postMerge.active, []);
   } finally {

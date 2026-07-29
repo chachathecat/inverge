@@ -12,11 +12,15 @@ const COMPLETED_STATUSES = new Set([
   "released",
 ]);
 
-const ACTIVE_STATUSES = new Set([
+const EFFECTIVE_ACTIVE_STATUSES = new Set([
   "active",
   "in_progress",
   "in_review",
   "pr_open",
+]);
+
+const WIP_STATUSES = new Set([
+  ...EFFECTIVE_ACTIVE_STATUSES,
   "blocked",
   "human_decision",
 ]);
@@ -84,6 +88,38 @@ function normalizeEvaluationInstant(evaluatedAt) {
   return {
     epochMs: evaluatedAt.getTime(),
     iso: evaluatedAt.toISOString(),
+  };
+}
+
+function dependencyBlocker(
+  item,
+  effectiveCompletedIds,
+  expiredCompletedItems,
+) {
+  const dependencies = Array.isArray(
+    item.dependencies,
+  )
+    ? item.dependencies
+    : [];
+
+  const missingDependencies =
+    dependencies.filter(
+      (dependency) =>
+        !effectiveCompletedIds.has(dependency),
+    );
+
+  if (missingDependencies.length === 0) {
+    return null;
+  }
+
+  return {
+    id: item.id,
+    missingDependencies,
+    expiredDependencies:
+      missingDependencies.filter(
+        (dependency) =>
+          expiredCompletedItems.has(dependency),
+      ),
   };
 }
 
@@ -346,14 +382,51 @@ export function selectNextTasks(
     }
   }
 
-  const activeItems = items.filter((item) =>
-    ACTIVE_STATUSES.has(
+  const rawWipItems = items.filter((item) =>
+    WIP_STATUSES.has(
       normalizeStatus(item.status),
     ),
   );
 
+  const dependencyBlockersById = new Map();
+  const blockedByDependency = [];
+
+  for (const item of items) {
+    const status = normalizeStatus(item.status);
+
+    if (
+      !WIP_STATUSES.has(status) &&
+      !QUEUED_STATUSES.has(status)
+    ) {
+      continue;
+    }
+
+    const blocker = dependencyBlocker(
+      item,
+      effectiveCompletedIds,
+      expiredCompletedItems,
+    );
+
+    if (blocker) {
+      dependencyBlockersById.set(
+        item.id,
+        blocker,
+      );
+      blockedByDependency.push(blocker);
+    }
+  }
+
+  const effectiveActiveItems =
+    rawWipItems.filter(
+      (item) =>
+        EFFECTIVE_ACTIVE_STATUSES.has(
+          normalizeStatus(item.status),
+        ) &&
+        !dependencyBlockersById.has(item.id),
+    );
+
   const activeLockGroups = new Set(
-    activeItems
+    rawWipItems
       .map((item) => item.lockGroup)
       .filter(Boolean),
   );
@@ -365,11 +438,10 @@ export function selectNextTasks(
 
   const availableSlots = Math.max(
     0,
-    wipLimit - activeItems.length,
+    wipLimit - rawWipItems.length,
   );
 
   const eligible = [];
-  const blockedByDependency = [];
   const blockedByLock = [];
 
   for (const item of items) {
@@ -381,29 +453,7 @@ export function selectNextTasks(
       continue;
     }
 
-    const dependencies = Array.isArray(
-      item.dependencies,
-    )
-      ? item.dependencies
-      : [];
-
-    const missingDependencies =
-      dependencies.filter(
-        (dependency) =>
-          !effectiveCompletedIds.has(dependency),
-      );
-
-    if (missingDependencies.length > 0) {
-      blockedByDependency.push({
-        id: item.id,
-        missingDependencies,
-        expiredDependencies:
-          missingDependencies.filter(
-            (dependency) =>
-              expiredCompletedItems.has(dependency),
-          ),
-      });
-
+    if (dependencyBlockersById.has(item.id)) {
       continue;
     }
 
@@ -478,9 +528,9 @@ export function selectNextTasks(
     completionItem:
       roadmap.program.completionItem ?? null,
     wipLimit,
-    activeCount: activeItems.length,
+    activeCount: rawWipItems.length,
     availableSlots,
-    active: activeItems.map(
+    active: effectiveActiveItems.map(
       removeInternalFields,
     ),
     selected: selected.map(
