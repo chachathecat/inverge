@@ -280,11 +280,22 @@ items:
     priority: 31
   - id: O3A
     title: Owner Second-Round Golden 3 Rights Source Version and Purpose Approval
-    status: queued
+    status: completed
+    completionScope: exact_packet_owner_decision
+    decisionScope: exact_rights_source_version_purpose_for_future_s236a_only
+    decisionRecord: docs/decisions/2026-07-29-owner-o3a-golden-3-approval.md
+    decisionRecordSha256: 8841ff41dc4c9d3eb1e8bb57c2643964d4e9c54ed6825d763ccd7a6641cc987c
+    approvalPacketId: o3a-s234r-appraiser-second-2026-q1-owner-private-golden-3-v2
+    approvalPacketDigestSha256: 8189997e733eb0c8bef62c3ba5fa1cadac39a807c34d925b2e1a291fa30e654c
+    approvalAuthorizesImmediateOperation: false
+    automaticStartAllowed: false
+    manualS236AStartRequired: true
+    downstreamExecutionStarted: false
     dependencies: [S235A, S234R]
     lockGroup: owner-content-rights
     risk: high
     priority: 32
+    approvalExpiresAt: 2026-08-09T14:59:59.000Z
   - id: S236B
     title: First-Round Capture and OCR Benchmark Contracts
     status: queued

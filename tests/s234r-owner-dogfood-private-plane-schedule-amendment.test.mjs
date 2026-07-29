@@ -21,6 +21,12 @@ const O4V_PROVIDER_BINDING_SHA256 =
   "d161f4f52c1f155e383246edd36dec6f1d56fd89aaf272f5087c2d4ba3105ee3";
 const O3A_PACKET_SHA256 =
   "8189997e733eb0c8bef62c3ba5fa1cadac39a807c34d925b2e1a291fa30e654c";
+const O3A_DECISION_SHA256 =
+  "8841ff41dc4c9d3eb1e8bb57c2643964d4e9c54ed6825d763ccd7a6641cc987c";
+const O3A_MANIFEST_FILE_SHA256 =
+  "e32fda4c8753b167cced7bd6c0247aa6ef6602fd69fc7704b289fc0942858618";
+const O3A_REPORT_FILE_SHA256 =
+  "7493040aec03d9a0c93ac38dbcfa98041729446963d4ad5f6e36c281c338d9c2";
 const JCS_SERIALIZATION = "rfc_8785_json_canonicalization_scheme_utf8";
 const PROJECTED_RESULT_ID_PATHS = [
   "request_id",
@@ -334,6 +340,10 @@ function canonicalSha256(value) {
   return createHash("sha256")
     .update(canonicalJson(value))
     .digest("hex");
+}
+
+function fileSha256(value) {
+  return createHash("sha256").update(value).digest("hex");
 }
 
 function clone(value) {
@@ -3673,6 +3683,52 @@ test("S234R authority is source-only and keeps every activation false", async ()
     /does not approve O3A, O4V, O4A, O4T, O2O, O4P, O4F/i,
   );
   assert.match(decision, /PR #660 remains Draft and blocked/i);
+});
+
+test("exact O3A decision binds immutable evidence without authorizing immediate operation", async () => {
+  const unified = await json("config/dabangil-unified-program-contract.json");
+  const decision = await text(
+    "docs/decisions/2026-07-29-owner-o3a-golden-3-approval.md",
+  );
+  const manifest = await text(
+    "reference_corpus/readiness/appraiser/second_round_owner_private_golden_3_readiness.json",
+  );
+  const report = await text(
+    "reference_corpus/readiness/appraiser/second_round_owner_private_golden_3_readiness_report.json",
+  );
+  const scopeDecision = unified.scopeDecisions.O3A;
+
+  assert.equal(fileSha256(decision), O3A_DECISION_SHA256);
+  assert.equal(fileSha256(manifest), O3A_MANIFEST_FILE_SHA256);
+  assert.equal(fileSha256(report), O3A_REPORT_FILE_SHA256);
+  assert.equal(
+    scopeDecision.status,
+    "approved_exact_packet_only_subject_to_expiry_and_revocation",
+  );
+  assert.equal(scopeDecision.decisionRecordSha256, O3A_DECISION_SHA256);
+  assert.equal(scopeDecision.packetCanonicalSha256, O3A_PACKET_SHA256);
+  assert.equal(
+    scopeDecision.manifestCanonicalSha256,
+    "de0e79159d8538d0e658bb9b0693ce27ed2bf7fcea3cf0d19198894cd7905b72",
+  );
+  assert.equal(scopeDecision.packetProposalSelfState, "pending_owner_decision");
+  assert.equal(scopeDecision.packetProposalOwnerApproved, false);
+  assert.deepEqual(scopeDecision.requiredBeforeAllowedOperationRoadmapItemIds, [
+    "S236P",
+  ]);
+  assert.equal(scopeDecision.approvalAuthorizesImmediateOperation, false);
+  assert.equal(scopeDecision.automaticStartAllowed, false);
+  assert.equal(scopeDecision.manualS236AStartRequired, true);
+  assert.equal(scopeDecision.o4vOrS236PSubstitutionAllowed, false);
+  assert.equal(scopeDecision.s236aStarted, false);
+  assert.equal(scopeDecision.golden3Started, false);
+  assert.equal(
+    unified.ownerGates.O3A,
+    "approved_exact_golden_3_rights_source_version_purpose_packet_only_no_immediate_operation",
+  );
+  assert.match(decision, /APPROVE O3A/);
+  assert.match(decision, /S236A remains queued and unstarted/i);
+  assert.match(decision, /PR #660 remains open, Draft, blocked/i);
 });
 
 test("all cryptographic JSON preimages use one RFC 8785 serialization", async () => {
@@ -9577,7 +9633,7 @@ test("roadmap has the native fork, optional fork, and deferred commercial fork",
   assert.match(roadmapItem(roadmap, "S234R"), /status: completed/);
   assert.match(
     roadmapItem(roadmap, "O3A"),
-    /status: queued[\s\S]*dependencies: \[S235A, S234R\]/,
+    /status: completed[\s\S]*approvalAuthorizesImmediateOperation: false[\s\S]*automaticStartAllowed: false[\s\S]*manualS236AStartRequired: true[\s\S]*dependencies: \[S235A, S234R\]/,
   );
   assert.match(
     roadmapItem(roadmap, "S236P"),
@@ -9608,7 +9664,7 @@ test("roadmap has the native fork, optional fork, and deferred commercial fork",
   assert.match(roadmapItem(roadmap, "S225"), /status: queued/);
 });
 
-test("new O3A packet remains pending and cannot bypass S236P", async () => {
+test("approved O3A proposal preimage remains pending and cannot bypass S236P", async () => {
   const manifest = await json(
     "reference_corpus/readiness/appraiser/second_round_owner_private_golden_3_readiness.json",
   );

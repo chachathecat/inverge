@@ -25,11 +25,12 @@ AF009 metadata mutation is intentionally separate in `Agent Factory Mutate` and 
 
 Historical note: S224 once made S225 the next queued/ready example. The active
 roadmap has advanced; S225 now waits for the deferred external commercial
-track and visual/home dependencies. After S234R, the ready set is O3A, S236B,
-and O4V; max-two automatic selection is O3A and S236B. Use `auto`, `O3A`,
-`S236B`, or `O4V` for current plan-only inspection. A blocked S225 target must
-fail closed. Selection does not approve O3A/O4V, start S236B, provision
-S236P, or mutate blocked Draft PR #660.
+track and visual/home dependencies. After the exact 2026-07-29 O3A decision,
+the ready set is S236B and O4V; max-two automatic selection is S236B and O4V.
+Use `auto`, `S236B`, or `O4V` for current plan-only inspection. A completed
+O3A target and blocked S225 target must fail closed. Selection does not
+approve O4V, start S236B or S236A, provision S236P, or mutate blocked Draft
+PR #660.
 
 ## Modes
 

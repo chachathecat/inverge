@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 
 const sourceOfTruthDocs = [
   "AGENTS.md",
+  "docs/decisions/2026-07-29-owner-o3a-golden-3-approval.md",
   "docs/decisions/2026-07-26-owner-dogfood-private-plane-schedule-amendment.md",
   "docs/decisions/2026-07-23-post-650-unified-program-reset.md",
   "docs/dabangil-unified-program-contract.md",
@@ -195,13 +196,23 @@ test("historical S200-S224 completion does not assert current readiness", async 
   assert.equal(roadmap.byId.get("S224").status, "completed");
 });
 
-test("S234R leaves O3A, O4V, and downstream execution queued", async () => {
+test("O3A decision is completed while O4V and downstream execution stay queued", async () => {
   const roadmap = parseActiveProgram(await read("roadmap/active-program.yml"));
 
   assert.equal(roadmap.byId.get("S235A").status, "completed");
   assert.equal(roadmap.byId.get("S235B").status, "completed");
   assert.equal(roadmap.byId.get("S234R").status, "completed");
-  assert.equal(roadmap.byId.get("O3A").status, "queued");
+  assert.equal(roadmap.byId.get("O3A").status, "completed");
+  assert.equal(
+    roadmap.byId.get("O3A").decisionRecord,
+    "docs/decisions/2026-07-29-owner-o3a-golden-3-approval.md",
+  );
+  assert.equal(
+    roadmap.byId.get("O3A").approvalAuthorizesImmediateOperation,
+    false,
+  );
+  assert.equal(roadmap.byId.get("O3A").automaticStartAllowed, false);
+  assert.equal(roadmap.byId.get("O3A").manualS236AStartRequired, true);
   assert.deepEqual(roadmap.byId.get("O3A").dependencies, ["S235A", "S234R"]);
   assert.equal(roadmap.byId.get("O4V").status, "queued");
   assert.deepEqual(roadmap.byId.get("O4V").dependencies, ["S234R"]);
@@ -235,6 +246,17 @@ test("S234R contract fixes authority, native Owner path, and learning glossary",
 
   assert.equal(policy.contractVersion, "dabangil.unified_program.v2");
   assert.equal(policy.decision.status, "approved_for_source_amendment_only");
+  assert.equal(
+    policy.scopeDecisions.O3A.status,
+    "approved_exact_packet_only_subject_to_expiry_and_revocation",
+  );
+  assert.equal(
+    policy.scopeDecisions.O3A.packetCanonicalSha256,
+    "8189997e733eb0c8bef62c3ba5fa1cadac39a807c34d925b2e1a291fa30e654c",
+  );
+  assert.equal(policy.scopeDecisions.O3A.approvalAuthorizesImmediateOperation, false);
+  assert.equal(policy.scopeDecisions.O3A.automaticStartAllowed, false);
+  assert.equal(policy.scopeDecisions.O3A.s236aStarted, false);
   assert.equal(policy.decision.runtimeActivationAuthorized, false);
   assert.equal(policy.decision.dependencyActivationAuthorized, false);
   assert.equal(policy.decision.providerModelPromptActivationAuthorized, false);

@@ -162,7 +162,7 @@ test("unsupported pseudo-statuses stay unknown and cannot encode future gates", 
   assert.equal(byId(plan, "S101").readinessStatus, "unknown");
 });
 
-test("live S234R roadmap exposes O3A, S236B, and O4V without starting gated work", () => {
+test("live O3A-reconciled roadmap exposes S236B and O4V without starting gated work", () => {
   const source = readFileSync("roadmap/active-program.yml", "utf8");
   const plan = createRoadmapRunnerPlanFromYaml(source);
   const supported = new Set(["completed", "active", "queued", "blocked"]);
@@ -172,8 +172,8 @@ test("live S234R roadmap exposes O3A, S236B, and O4V without starting gated work
   assert.equal(plan.wipLimit, 2);
   assert.equal(plan.wipOccupiedCount, 0);
   assert.equal(plan.availableSlots, 2);
-  assert.deepEqual(plan.readyItemIds, ["O3A", "S236B", "O4V"]);
-  assert.deepEqual(plan.selectedItemIds, ["O3A", "S236B"]);
+  assert.deepEqual(plan.readyItemIds, ["S236B", "O4V"]);
+  assert.deepEqual(plan.selectedItemIds, ["S236B", "O4V"]);
   assert.deepEqual([...new Set(plan.analyses.map((analysis) => analysis.status))], [
     "completed",
     "queued",
@@ -189,8 +189,8 @@ test("live S234R roadmap exposes O3A, S236B, and O4V without starting gated work
   assert.equal(s235b.readinessStatus, "completed");
 
   const o3a = byId(plan, "O3A");
-  assert.equal(o3a.status, "queued");
-  assert.equal(o3a.readinessStatus, "ready");
+  assert.equal(o3a.status, "completed");
+  assert.equal(o3a.readinessStatus, "completed");
   assert.deepEqual(o3a.dependencies, ["S235A", "S234R"]);
 
   const s236b = byId(plan, "S236B");
@@ -211,7 +211,7 @@ test("live S234R roadmap exposes O3A, S236B, and O4V without starting gated work
   const s236a = byId(plan, "S236A");
   assert.equal(s236a.status, "queued");
   assert.equal(s236a.readinessStatus, "blocked");
-  assert.deepEqual(s236a.missingDependencies, ["O3A", "S236P"]);
+  assert.deepEqual(s236a.missingDependencies, ["S236P"]);
 
   const s225 = byId(plan, "S225");
   assert.equal(s225.status, "queued");
@@ -269,7 +269,7 @@ test("live TypeScript runner and post-merge selector agree without starting work
       postMerge.selected.map((item) => item.id),
       plan.selectedItemIds,
     );
-    assert.deepEqual(plan.selectedItemIds, ["O3A", "S236B"]);
+    assert.deepEqual(plan.selectedItemIds, ["S236B", "O4V"]);
     assert.deepEqual(postMerge.active, []);
   } finally {
     rmSync(directory, { recursive: true, force: true });

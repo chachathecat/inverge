@@ -5,8 +5,10 @@
 Use this authority order when sources conflict:
 
 1. a dated Owner decision for the exact decision it owns, currently
-   `docs/decisions/2026-07-26-owner-dogfood-private-plane-schedule-amendment.md`,
-   with
+   `docs/decisions/2026-07-29-owner-o3a-golden-3-approval.md` for the exact
+   O3A packet,
+   `docs/decisions/2026-07-26-owner-dogfood-private-plane-schedule-amendment.md`
+   for the source amendment, with
    `docs/decisions/2026-07-23-post-650-unified-program-reset.md`
    remaining authoritative for unaffected scope;
 2. `docs/dabangil-unified-program-contract.md` and its machine-readable mirror
@@ -914,13 +916,18 @@ Owner gates:
 - O4: migration, secret, provider, price/payment, real users, and flags;
 - O5: research opt-in, offline training, and efficacy claims.
 
-O1R is approved only for the 2026-07-26 source amendment. O3A, O4V, O4A,
-O4T, O2O, O4P, external-commercial activation, public activation, and O2/O5
-remain unmet until their separate exact-scope packets are accepted. O4V is
-the private-plane binding gate, O4T is the post-benchmark threshold decision,
-O2O is the exact Owner-private comparison measurement/retention gate, and O4P
-is optimizer limited activation only. O2O cannot authorize Shared Signal,
-telemetry, external-learner, or Academy measurement; those retain generic O2.
+O1R is approved only for the 2026-07-26 source amendment. O3A is approved
+only for exact packet
+`o3a-s234r-appraiser-second-2026-q1-owner-private-golden-3-v2` under the
+2026-07-29 dated decision; it authorizes no immediate operation, leaves S236A
+unstarted, and still requires completed exact S236P plus a manual S236A start.
+O4V, O4A, O4T, O2O, O4P, external-commercial activation, public activation,
+and O2/O5 remain unmet until their separate exact-scope packets are accepted.
+O4V is the private-plane binding gate, O4T is the post-benchmark threshold
+decision, O2O is the exact Owner-private comparison measurement/retention
+gate, and O4P is optimizer limited activation only. O2O cannot authorize
+Shared Signal, telemetry, external-learner, or Academy measurement; those
+retain generic O2.
 
 ## Review focus
 

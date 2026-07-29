@@ -5,9 +5,11 @@
 - Runtime impact: none
 - Primary sources: `docs/inverge-second-round-final-product-spec.md`, `docs/dabangil-second-exam-premium-os.md`, `roadmap/active-program.yml`, `AGENTS.md`
 - Current status: historical product kernel subordinate to
+  `docs/decisions/2026-07-29-owner-o3a-golden-3-approval.md` for the exact O3A
+  packet,
   `docs/decisions/2026-07-26-owner-dogfood-private-plane-schedule-amendment.md`
-  and `docs/dabangil-unified-program-contract.md` for cross-track order,
-  glossary, data planes, scheduling, and Owner gates.
+  for the program amendment, and `docs/dabangil-unified-program-contract.md`
+  for cross-track order, glossary, data planes, scheduling, and Owner gates.
 
 ## One-Sentence Promise
 
@@ -145,7 +147,7 @@ AF010 through AF016 completed the first report-only Agent Factory automation evi
 
 Future execution automation remains approval-gated and must be implemented in a separate issue with its own safety evidence.
 
-## Current Roadmap After S234R
+## Current Roadmap After O3A
 
 The S234 reset snapshot exposed exactly two metadata-ready items:
 
@@ -155,14 +157,14 @@ The S234 reset snapshot exposed exactly two metadata-ready items:
    Foundation contracts only.
 
 S235A and S235B are completed without Golden execution or first-round runtime.
-The dynamic authority remains `roadmap/active-program.yml`: O3A, S236B, and
-O4V are metadata-ready. O3A and O4V are still queued with Owner decisions
-pending; S236P is queued behind O4V; and S236A is queued and blocked by both
-O3A and S236P. Selection does not start work. PR #660 remains a separate
-blocked S236B Draft, not completion evidence. First-round runtime, external
-Founding Beta activation, public S225, both-track, Academy, billing, provider,
-shared signals, and Production remain queued behind their own dependencies
-and Owner gates.
+The dynamic authority remains `roadmap/active-program.yml`: O3A is completed
+only as the exact 2026-07-29 Owner decision; S236B and O4V are metadata-ready
+and queued. S236P is queued behind O4V, and S236A is queued with S236P as its
+sole unmet dependency. O3A authorizes no immediate operation, and selection
+does not start work. PR #660 remains a separate blocked S236B Draft, not
+completion evidence. First-round runtime, external Founding Beta activation,
+public S225, both-track, Academy, billing, provider, shared signals, and
+Production remain queued behind their own dependencies and Owner gates.
 
 Capture-to-Note and Capture-to-Plan remain the learner-loop quality standard, but this PR does not implement runtime behavior. Raw historical corpus expansion, public archive behavior, billing, usage ledger, execution automation, and production source ingestion remain deferred until source, rights, private-storage, data-boundary, runtime, and cost gates exist.
 
