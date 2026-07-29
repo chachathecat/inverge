@@ -16,6 +16,7 @@ export type ReadinessStatus =
 
 export type BlockedReasonCode =
   | "missing_dependency"
+  | "expired_dependency"
   | "lock_group_in_use"
   | "blocked_status"
   | "unknown_status";
@@ -56,6 +57,8 @@ export interface BlockedReason {
   code: BlockedReasonCode;
   message: string;
   dependencyId?: string;
+  dependencyExpiresAt?: string;
+  evaluatedAt?: string;
   lockGroup?: string;
   occupyingItemId?: string;
 }
@@ -87,6 +90,7 @@ export interface RoadmapSelectedItem {
 
 export interface RoadmapRunnerPlan {
   version: 1;
+  generatedAt: string;
   programId: string | null;
   completionItem: string | null;
   wipLimit: number;
@@ -107,6 +111,8 @@ const ACTIVE_STATUSES = new Set(["active", "in_progress", "in_review", "pr_open"
 const QUEUED_STATUSES = new Set(["queued", "ready"]);
 const BLOCKED_STATUSES = new Set(["blocked", "human_decision"]);
 const RISK_VALUES = new Set<RoadmapRisk>(["low", "medium", "high"]);
+const CANONICAL_UTC_INSTANT_PATTERN =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u;
 
 class RoadmapYamlError extends Error {
   readonly lineNumber: number;
@@ -350,6 +356,53 @@ function numericPriority(value: unknown): number {
   return Number.isFinite(priority) ? priority : 999999;
 }
 
+function approvalExpiryEpochMs(item: RoadmapItem): number | null {
+  if (!Object.prototype.hasOwnProperty.call(item, "approvalExpiresAt")) {
+    return null;
+  }
+
+  const value = item.approvalExpiresAt;
+
+  if (
+    typeof value !== "string" ||
+    !CANONICAL_UTC_INSTANT_PATTERN.test(value)
+  ) {
+    throw new Error(
+      `${item.id}.approvalExpiresAt must be a canonical UTC ISO instant with milliseconds.`,
+    );
+  }
+
+  const epochMs = Date.parse(value);
+
+  if (
+    !Number.isFinite(epochMs) ||
+    new Date(epochMs).toISOString() !== value
+  ) {
+    throw new Error(
+      `${item.id}.approvalExpiresAt must be a valid canonical UTC ISO instant.`,
+    );
+  }
+
+  return epochMs;
+}
+
+function normalizeEvaluationInstant(evaluatedAt: Date): {
+  epochMs: number;
+  iso: string;
+} {
+  if (
+    !(evaluatedAt instanceof Date) ||
+    !Number.isFinite(evaluatedAt.getTime())
+  ) {
+    throw new Error("evaluatedAt must be a valid Date.");
+  }
+
+  return {
+    epochMs: evaluatedAt.getTime(),
+    iso: evaluatedAt.toISOString(),
+  };
+}
+
 export function validateRoadmap(roadmap: ActiveProgramRoadmap): void {
   if (!roadmap.program || typeof roadmap.program !== "object") {
     throw new Error("roadmap.program is required.");
@@ -383,6 +436,7 @@ export function validateRoadmap(roadmap: ActiveProgramRoadmap): void {
     }
 
     assertStringArray(item.dependencies, `${item.id}.dependencies`);
+    approvalExpiryEpochMs(item);
     ids.add(item.id);
   }
 
@@ -431,12 +485,16 @@ export function validateRoadmap(roadmap: ActiveProgramRoadmap): void {
 
 function buildAnalysis(
   item: RoadmapItem,
-  completedIds: Set<string>,
+  effectiveCompletedIds: Set<string>,
+  expiredCompletedItems: Map<string, string>,
   wipItems: RoadmapItem[],
+  evaluatedAt: string,
 ): RoadmapItemAnalysis {
   const category = statusCategory(item.status);
   const dependencies = assertStringArray(item.dependencies, `${item.id}.dependencies`);
-  const missingDependencies = dependencies.filter((dependency) => !completedIds.has(dependency));
+  const missingDependencies = dependencies.filter(
+    (dependency) => !effectiveCompletedIds.has(dependency),
+  );
   const blockedReasons: BlockedReason[] = [];
 
   let readinessStatus: ReadinessStatus;
@@ -453,11 +511,23 @@ function buildAnalysis(
     });
   } else if (category === "queued") {
     for (const dependency of missingDependencies) {
-      blockedReasons.push({
-        code: "missing_dependency",
-        dependencyId: dependency,
-        message: `${item.id} is waiting for dependency ${dependency} to be completed.`,
-      });
+      const dependencyExpiresAt = expiredCompletedItems.get(dependency);
+
+      if (dependencyExpiresAt) {
+        blockedReasons.push({
+          code: "expired_dependency",
+          dependencyId: dependency,
+          dependencyExpiresAt,
+          evaluatedAt,
+          message: `${item.id} is waiting for dependency ${dependency} because its completion approval expired at ${dependencyExpiresAt}.`,
+        });
+      } else {
+        blockedReasons.push({
+          code: "missing_dependency",
+          dependencyId: dependency,
+          message: `${item.id} is waiting for dependency ${dependency} to be completed.`,
+        });
+      }
     }
 
     const lockGroupOccupant = item.lockGroup
@@ -514,15 +584,33 @@ function selectedFromAnalysis(analysis: RoadmapItemAnalysis): RoadmapSelectedIte
   };
 }
 
-export function createRoadmapRunnerPlan(roadmap: ActiveProgramRoadmap): RoadmapRunnerPlan {
+export function createRoadmapRunnerPlanAt(
+  roadmap: ActiveProgramRoadmap,
+  evaluatedAt: Date,
+): RoadmapRunnerPlan {
   validateRoadmap(roadmap);
 
+  const evaluation = normalizeEvaluationInstant(evaluatedAt);
   const orderedItems = roadmap.items.map((item, order) => ({ item, order }));
-  const completedIds = new Set(
-    orderedItems
-      .filter(({ item }) => statusCategory(item.status) === "completed")
-      .map(({ item }) => item.id),
+  const completedItems = orderedItems.filter(
+    ({ item }) => statusCategory(item.status) === "completed",
   );
+  const effectiveCompletedIds = new Set<string>();
+  const expiredCompletedItems = new Map<string, string>();
+
+  for (const { item } of completedItems) {
+    const expiryEpochMs = approvalExpiryEpochMs(item);
+
+    if (expiryEpochMs === null || evaluation.epochMs < expiryEpochMs) {
+      effectiveCompletedIds.add(item.id);
+    } else {
+      expiredCompletedItems.set(
+        item.id,
+        String(item.approvalExpiresAt),
+      );
+    }
+  }
+
   const wipItems = orderedItems
     .filter(({ item }) => {
       const category = statusCategory(item.status);
@@ -532,7 +620,16 @@ export function createRoadmapRunnerPlan(roadmap: ActiveProgramRoadmap): RoadmapR
 
   const analysesById = new Map<string, RoadmapItemAnalysis>();
   for (const { item } of orderedItems) {
-    analysesById.set(item.id, buildAnalysis(item, completedIds, wipItems));
+    analysesById.set(
+      item.id,
+      buildAnalysis(
+        item,
+        effectiveCompletedIds,
+        expiredCompletedItems,
+        wipItems,
+        evaluation.iso,
+      ),
+    );
   }
 
   const analyses = orderedItems.map(({ item }) => {
@@ -574,6 +671,7 @@ export function createRoadmapRunnerPlan(roadmap: ActiveProgramRoadmap): RoadmapR
 
   return {
     version: 1,
+    generatedAt: evaluation.iso,
     programId: typeof roadmap.program.id === "string" ? roadmap.program.id : null,
     completionItem:
       typeof roadmap.program.completionItem === "string" ? roadmap.program.completionItem : null,
@@ -597,6 +695,26 @@ export function createRoadmapRunnerPlan(roadmap: ActiveProgramRoadmap): RoadmapR
   };
 }
 
-export function createRoadmapRunnerPlanFromYaml(source: string): RoadmapRunnerPlan {
-  return createRoadmapRunnerPlan(parseActiveProgramYaml(source));
+export function createRoadmapRunnerPlan(
+  roadmap: ActiveProgramRoadmap,
+): RoadmapRunnerPlan {
+  const evaluatedAt = new Date();
+  return createRoadmapRunnerPlanAt(roadmap, evaluatedAt);
+}
+
+export function createRoadmapRunnerPlanFromYamlAt(
+  source: string,
+  evaluatedAt: Date,
+): RoadmapRunnerPlan {
+  return createRoadmapRunnerPlanAt(
+    parseActiveProgramYaml(source),
+    evaluatedAt,
+  );
+}
+
+export function createRoadmapRunnerPlanFromYaml(
+  source: string,
+): RoadmapRunnerPlan {
+  const evaluatedAt = new Date();
+  return createRoadmapRunnerPlanFromYamlAt(source, evaluatedAt);
 }

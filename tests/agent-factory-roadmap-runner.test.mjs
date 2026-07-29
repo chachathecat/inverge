@@ -6,12 +6,20 @@ import { join } from "node:path";
 import { test } from "node:test";
 import {
   createRoadmapRunnerPlanFromYaml,
+  createRoadmapRunnerPlanFromYamlAt,
 } from "../lib/agent-factory/roadmap-runner.ts";
 import {
   assertPlannerOutputSafe,
   createCodexTaskFactoryOutput,
   prBodyHeadings,
 } from "../lib/agent-factory/codex-task-package.ts";
+import {
+  createNextTaskResultFromYaml,
+} from "../scripts/automation/determine-next-task.mjs";
+
+const O3A_EXPIRY = "2026-08-09T14:59:59.000Z";
+const LIVE_PRE_EXPIRY_EVALUATED_AT =
+  "2026-07-29T01:00:00.000Z";
 
 function item({
   id,
@@ -21,6 +29,7 @@ function item({
   lockGroup = `group-${id}`,
   risk = "high",
   priority,
+  approvalExpiresAt,
 }) {
   return [
     `  - id: ${id}`,
@@ -30,6 +39,9 @@ function item({
     `    lockGroup: ${lockGroup}`,
     `    risk: ${risk}`,
     `    priority: ${priority}`,
+    ...(approvalExpiresAt === undefined
+      ? []
+      : [`    approvalExpiresAt: ${approvalExpiresAt}`]),
   ].join("\n");
 }
 
@@ -60,6 +72,41 @@ function factoryFrom(source) {
   });
 }
 
+function expiryRoadmap({
+  approvalExpiresAt = O3A_EXPIRY,
+  includeExpiry = true,
+} = {}) {
+  return roadmap([
+    item({
+      id: "O3A",
+      status: "completed",
+      priority: 1,
+      approvalExpiresAt:
+        includeExpiry
+          ? approvalExpiresAt
+          : undefined,
+    }),
+    item({
+      id: "S236P",
+      status: "completed",
+      priority: 2,
+    }),
+    item({
+      id: "S236A",
+      dependencies: ["O3A", "S236P"],
+      priority: 3,
+    }),
+    item({
+      id: "S236B",
+      priority: 4,
+    }),
+    item({
+      id: "O4V",
+      priority: 5,
+    }),
+  ]);
+}
+
 test("completed dependencies make an item ready", () => {
   const plan = createRoadmapRunnerPlanFromYaml(
     roadmap([
@@ -86,6 +133,180 @@ test("missing dependencies block an item", () => {
   assert.deepEqual(plan.blockedItemIds, ["S101"]);
   assert.deepEqual(byId(plan, "S101").missingDependencies, ["S100"]);
   assert.equal(byId(plan, "S101").blockedReasons[0].code, "missing_dependency");
+});
+
+test("completed dependency expiry uses a strict instant boundary and preserves unrelated planning", () => {
+  const source = expiryRoadmap();
+  const cases = [
+    {
+      name: "one millisecond before expiry",
+      evaluatedAt: "2026-08-09T14:59:58.999Z",
+      effective: true,
+      selectedItemIds: ["S236A", "S236B"],
+    },
+    {
+      name: "exactly at expiry",
+      evaluatedAt: O3A_EXPIRY,
+      effective: false,
+      selectedItemIds: ["S236B", "O4V"],
+    },
+    {
+      name: "one millisecond after expiry",
+      evaluatedAt: "2026-08-09T14:59:59.001Z",
+      effective: false,
+      selectedItemIds: ["S236B", "O4V"],
+    },
+  ];
+
+  for (const candidate of cases) {
+    const evaluatedAt = new Date(candidate.evaluatedAt);
+    const plan = createRoadmapRunnerPlanFromYamlAt(
+      source,
+      evaluatedAt,
+    );
+    const postMerge = createNextTaskResultFromYaml(
+      source,
+      evaluatedAt,
+    );
+    const o3a = byId(plan, "O3A");
+    const s236a = byId(plan, "S236A");
+
+    assert.equal(
+      plan.generatedAt,
+      candidate.evaluatedAt,
+      candidate.name,
+    );
+    assert.equal(
+      postMerge.generatedAt,
+      candidate.evaluatedAt,
+      candidate.name,
+    );
+    assert.equal(o3a.statusCategory, "completed", candidate.name);
+    assert.equal(o3a.readinessStatus, "completed", candidate.name);
+    assert.ok(plan.completedItemIds.includes("O3A"), candidate.name);
+    assert.deepEqual(
+      plan.selectedItemIds,
+      candidate.selectedItemIds,
+      candidate.name,
+    );
+    assert.deepEqual(
+      postMerge.selected.map((entry) => entry.id),
+      candidate.selectedItemIds,
+      candidate.name,
+    );
+
+    if (candidate.effective) {
+      assert.equal(s236a.readinessStatus, "ready", candidate.name);
+      assert.deepEqual(s236a.missingDependencies, [], candidate.name);
+      assert.equal(
+        postMerge.blockedByDependency.some(
+          (entry) => entry.id === "S236A",
+        ),
+        false,
+        candidate.name,
+      );
+    } else {
+      assert.equal(s236a.readinessStatus, "blocked", candidate.name);
+      assert.deepEqual(
+        s236a.missingDependencies,
+        ["O3A"],
+        candidate.name,
+      );
+      assert.equal(
+        s236a.blockedReasons[0].code,
+        "expired_dependency",
+        candidate.name,
+      );
+      assert.equal(
+        s236a.blockedReasons[0].dependencyExpiresAt,
+        O3A_EXPIRY,
+        candidate.name,
+      );
+      assert.equal(
+        s236a.blockedReasons[0].evaluatedAt,
+        candidate.evaluatedAt,
+        candidate.name,
+      );
+      assert.ok(
+        !plan.selectedItemIds.includes("S236A"),
+        candidate.name,
+      );
+      assert.deepEqual(
+        postMerge.blockedByDependency.find(
+          (entry) => entry.id === "S236A",
+        ),
+        {
+          id: "S236A",
+          missingDependencies: ["O3A"],
+          expiredDependencies: ["O3A"],
+        },
+        candidate.name,
+      );
+    }
+  }
+});
+
+test("completed dependency without expiry retains historical behavior", () => {
+  const source = expiryRoadmap({
+    includeExpiry: false,
+  });
+  const evaluatedAt = new Date(
+    "2030-01-01T00:00:00.000Z",
+  );
+  const plan = createRoadmapRunnerPlanFromYamlAt(
+    source,
+    evaluatedAt,
+  );
+  const postMerge = createNextTaskResultFromYaml(
+    source,
+    evaluatedAt,
+  );
+
+  assert.equal(byId(plan, "S236A").readinessStatus, "ready");
+  assert.deepEqual(byId(plan, "S236A").missingDependencies, []);
+  assert.deepEqual(plan.selectedItemIds, ["S236A", "S236B"]);
+  assert.deepEqual(
+    postMerge.selected.map((entry) => entry.id),
+    plan.selectedItemIds,
+  );
+});
+
+test("malformed explicit approval expiry fails the whole selection closed", () => {
+  const malformed = [
+    ["present but empty", ""],
+    ["non-string", 123],
+    ["timezone-less", "2026-08-09T14:59:59.000"],
+    ["invalid calendar instant", "2026-02-30T14:59:59.000Z"],
+    ["non-canonical UTC", "2026-08-09T14:59:59Z"],
+  ];
+  const evaluatedAt = new Date(
+    LIVE_PRE_EXPIRY_EVALUATED_AT,
+  );
+
+  for (const [name, approvalExpiresAt] of malformed) {
+    const source = expiryRoadmap({
+      approvalExpiresAt,
+    });
+
+    assert.throws(
+      () =>
+        createRoadmapRunnerPlanFromYamlAt(
+          source,
+          evaluatedAt,
+        ),
+      /approvalExpiresAt must be/,
+      name,
+    );
+    assert.throws(
+      () =>
+        createNextTaskResultFromYaml(
+          source,
+          evaluatedAt,
+        ),
+      /approvalExpiresAt must be/,
+      name,
+    );
+  }
 });
 
 test("wipLimit is honored", () => {
@@ -164,9 +385,27 @@ test("unsupported pseudo-statuses stay unknown and cannot encode future gates", 
 
 test("live O3A-reconciled roadmap exposes S236B and O4V without starting gated work", () => {
   const source = readFileSync("roadmap/active-program.yml", "utf8");
-  const plan = createRoadmapRunnerPlanFromYaml(source);
+  const evaluatedAt = new Date(
+    LIVE_PRE_EXPIRY_EVALUATED_AT,
+  );
+  const plan = createRoadmapRunnerPlanFromYamlAt(
+    source,
+    evaluatedAt,
+  );
+  const postMerge = createNextTaskResultFromYaml(
+    source,
+    evaluatedAt,
+  );
   const supported = new Set(["completed", "active", "queued", "blocked"]);
 
+  assert.equal(
+    plan.generatedAt,
+    LIVE_PRE_EXPIRY_EVALUATED_AT,
+  );
+  assert.equal(
+    postMerge.generatedAt,
+    LIVE_PRE_EXPIRY_EVALUATED_AT,
+  );
   assert.equal(plan.programId, "post-650-unified-program-v1");
   assert.equal(plan.completionItem, "S299");
   assert.equal(plan.wipLimit, 2);
@@ -174,6 +413,10 @@ test("live O3A-reconciled roadmap exposes S236B and O4V without starting gated w
   assert.equal(plan.availableSlots, 2);
   assert.deepEqual(plan.readyItemIds, ["S236B", "O4V"]);
   assert.deepEqual(plan.selectedItemIds, ["S236B", "O4V"]);
+  assert.deepEqual(
+    postMerge.selected.map((entry) => entry.id),
+    plan.selectedItemIds,
+  );
   assert.deepEqual([...new Set(plan.analyses.map((analysis) => analysis.status))], [
     "completed",
     "queued",
@@ -248,7 +491,6 @@ test("live O3A-reconciled roadmap exposes S236B and O4V without starting gated w
 
 test("live TypeScript runner and post-merge selector agree without starting work", () => {
   const source = readFileSync("roadmap/active-program.yml", "utf8");
-  const plan = createRoadmapRunnerPlanFromYaml(source);
   const directory = mkdtempSync(join(tmpdir(), "inverge-next-task-"));
   const artifactPath = join(directory, "next-task.json");
 
@@ -262,7 +504,12 @@ test("live TypeScript runner and post-merge selector agree without starting work
       stdio: "pipe",
     });
     const postMerge = JSON.parse(readFileSync(artifactPath, "utf8"));
+    const plan = createRoadmapRunnerPlanFromYamlAt(
+      source,
+      new Date(postMerge.generatedAt),
+    );
 
+    assert.equal(postMerge.generatedAt, plan.generatedAt);
     assert.equal(postMerge.activeCount, plan.wipOccupiedCount);
     assert.equal(postMerge.availableSlots, plan.availableSlots);
     assert.deepEqual(

@@ -3,6 +3,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
+import { pathToFileURL } from "node:url";
 
 const COMPLETED_STATUSES = new Set([
   "completed",
@@ -25,11 +26,65 @@ const QUEUED_STATUSES = new Set([
   "ready",
 ]);
 
+const CANONICAL_UTC_INSTANT_PATTERN =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u;
+
 function normalizeStatus(value) {
   return String(value ?? "")
     .trim()
     .toLowerCase()
     .replace(/[\s-]+/g, "_");
+}
+
+function approvalExpiryEpochMs(item) {
+  if (
+    !Object.prototype.hasOwnProperty.call(
+      item,
+      "approvalExpiresAt",
+    )
+  ) {
+    return null;
+  }
+
+  const value = item.approvalExpiresAt;
+
+  if (
+    typeof value !== "string" ||
+    !CANONICAL_UTC_INSTANT_PATTERN.test(value)
+  ) {
+    throw new Error(
+      `${item.id}.approvalExpiresAt must be a canonical UTC ISO instant with milliseconds.`,
+    );
+  }
+
+  const epochMs = Date.parse(value);
+
+  if (
+    !Number.isFinite(epochMs) ||
+    new Date(epochMs).toISOString() !== value
+  ) {
+    throw new Error(
+      `${item.id}.approvalExpiresAt must be a valid canonical UTC ISO instant.`,
+    );
+  }
+
+  return epochMs;
+}
+
+function normalizeEvaluationInstant(evaluatedAt) {
+  if (
+    !(evaluatedAt instanceof Date) ||
+    !Number.isFinite(evaluatedAt.getTime())
+  ) {
+    throw new Error(
+      "evaluatedAt must be a valid Date.",
+    );
+  }
+
+  return {
+    epochMs: evaluatedAt.getTime(),
+    iso: evaluatedAt.toISOString(),
+  };
 }
 
 function stripComment(line) {
@@ -195,6 +250,7 @@ function validateRoadmap(roadmap) {
     }
 
     ids.add(item.id);
+    approvalExpiryEpochMs(item);
   }
 
   for (const item of roadmap.items) {
@@ -252,7 +308,12 @@ function validateRoadmap(roadmap) {
   }
 }
 
-function selectNextTasks(roadmap) {
+export function selectNextTasks(
+  roadmap,
+  evaluatedAt,
+) {
+  const evaluation =
+    normalizeEvaluationInstant(evaluatedAt);
   const items = roadmap.items.map(
     (item, order) => ({
       ...item,
@@ -260,15 +321,30 @@ function selectNextTasks(roadmap) {
     }),
   );
 
-  const completedIds = new Set(
-    items
-      .filter((item) =>
-        COMPLETED_STATUSES.has(
-          normalizeStatus(item.status),
-        ),
-      )
-      .map((item) => item.id),
+  const completedItems = items.filter((item) =>
+    COMPLETED_STATUSES.has(
+      normalizeStatus(item.status),
+    ),
   );
+  const effectiveCompletedIds = new Set();
+  const expiredCompletedItems = new Map();
+
+  for (const item of completedItems) {
+    const expiryEpochMs =
+      approvalExpiryEpochMs(item);
+
+    if (
+      expiryEpochMs === null ||
+      evaluation.epochMs < expiryEpochMs
+    ) {
+      effectiveCompletedIds.add(item.id);
+    } else {
+      expiredCompletedItems.set(
+        item.id,
+        item.approvalExpiresAt,
+      );
+    }
+  }
 
   const activeItems = items.filter((item) =>
     ACTIVE_STATUSES.has(
@@ -314,13 +390,18 @@ function selectNextTasks(roadmap) {
     const missingDependencies =
       dependencies.filter(
         (dependency) =>
-          !completedIds.has(dependency),
+          !effectiveCompletedIds.has(dependency),
       );
 
     if (missingDependencies.length > 0) {
       blockedByDependency.push({
         id: item.id,
         missingDependencies,
+        expiredDependencies:
+          missingDependencies.filter(
+            (dependency) =>
+              expiredCompletedItems.has(dependency),
+          ),
       });
 
       continue;
@@ -362,9 +443,13 @@ function selectNextTasks(roadmap) {
 
   const selected = [];
   const selectedLockGroups = new Set();
+  const selectionSlots = Math.min(
+    2,
+    availableSlots,
+  );
 
   for (const item of eligible) {
-    if (selected.length >= availableSlots) {
+    if (selected.length >= selectionSlots) {
       break;
     }
 
@@ -388,6 +473,7 @@ function selectNextTasks(roadmap) {
   }
 
   return {
+    generatedAt: evaluation.iso,
     programId: roadmap.program.id ?? null,
     completionItem:
       roadmap.program.completionItem ?? null,
@@ -403,6 +489,20 @@ function selectNextTasks(roadmap) {
     blockedByDependency,
     blockedByLock,
   };
+}
+
+export function createNextTaskResultFromYaml(
+  source,
+  evaluatedAt,
+) {
+  const roadmap = parseActiveProgramYaml(source);
+
+  validateRoadmap(roadmap);
+
+  return selectNextTasks(
+    roadmap,
+    evaluatedAt,
+  );
 }
 
 function writeGitHubOutputs(
@@ -446,19 +546,16 @@ function main() {
     );
   }
 
-  const roadmap = parseActiveProgramYaml(
-    fs.readFileSync(roadmapPath, "utf8"),
-  );
-
-  validateRoadmap(roadmap);
-
+  const evaluatedAt = new Date();
   const result = {
-    generatedAt: new Date().toISOString(),
     roadmapPath: path.relative(
       process.cwd(),
       roadmapPath,
     ),
-    ...selectNextTasks(roadmap),
+    ...createNextTaskResultFromYaml(
+      fs.readFileSync(roadmapPath, "utf8"),
+      evaluatedAt,
+    ),
   };
 
   fs.mkdirSync(
@@ -485,14 +582,23 @@ function main() {
   );
 }
 
-try {
-  main();
-} catch (error) {
-  console.error(
-    error instanceof Error
-      ? error.stack
-      : error,
-  );
+const isDirectExecution =
+  typeof process.argv[1] === "string" &&
+  import.meta.url ===
+    pathToFileURL(
+      path.resolve(process.argv[1]),
+    ).href;
 
-  process.exitCode = 1;
+if (isDirectExecution) {
+  try {
+    main();
+  } catch (error) {
+    console.error(
+      error instanceof Error
+        ? error.stack
+        : error,
+    );
+
+    process.exitCode = 1;
+  }
 }
