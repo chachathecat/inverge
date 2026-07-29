@@ -186,23 +186,36 @@ jobs:
           gate_run_id=""
           deadline=$((SECONDS + 300))
           while [ "${SECONDS}" -lt "${deadline}" ]; do
-            runs="$(gh api -X GET "/repos/${GITHUB_REPOSITORY}/actions/runs?head_sha=${PR_HEAD_SHA}&event=pull_request&per_page=100")"
             gate_run_id="$(
-              RUNS="${runs}" EXPECTED_SHA="${PR_HEAD_SHA}" node --input-type=module -e '
-                const values = JSON.parse(process.env.RUNS ?? "{}").workflow_runs ?? [];
-                const matching = values.filter(
-                  (value) =>
-                    value?.name === "Runtime Gate" &&
-                    value.head_sha === process.env.EXPECTED_SHA &&
-                    value.event === "pull_request"
-                );
-                if (matching.some((value) => value.conclusion === "success")) process.exit(1);
-                const terminal = matching.filter(
-                  (value) => value.status === "completed" && value.conclusion === "failure"
-                );
-                if (terminal.length !== 1) process.exit(0);
-                process.stdout.write(String(terminal[0].id));
-              '
+              gh api -X GET \
+                "/repos/${GITHUB_REPOSITORY}/actions/runs?head_sha=${PR_HEAD_SHA}&event=pull_request&per_page=100" |
+                jq --raw-output --arg sha "${PR_HEAD_SHA}" '
+                  [
+                    .workflow_runs[] |
+                    select(
+                      .name == "Runtime Gate" and
+                      .head_sha == $sha and
+                      .event == "pull_request"
+                    )
+                  ] as $matching |
+                  if any($matching[]; .conclusion == "success") then
+                    error("central Runtime Gate unexpectedly passed")
+                  elif (
+                    [
+                      $matching[] |
+                      select(.status == "completed" and .conclusion == "failure")
+                    ] | length
+                  ) == 1 then
+                    (
+                      [
+                        $matching[] |
+                        select(.status == "completed" and .conclusion == "failure")
+                      ][0].id
+                    )
+                  else
+                    ""
+                  end
+                '
             )"
             if [ -n "${gate_run_id}" ]; then break; fi
             sleep 10
