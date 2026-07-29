@@ -11,7 +11,7 @@ export default async function ReviewOsLayout({ children }: { children: ReactNode
     "/app/acceptance/trust-provenance/",
   );
   const { session, access, usage } = await getReviewOsServerContext("/app", {
-    includeProfile: !isMetadataOnlyTrustAcceptance,
+    includeProfile: false,
     includeUsage: !isMetadataOnlyTrustAcceptance,
   });
 

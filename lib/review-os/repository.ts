@@ -1,6 +1,7 @@
 import "server-only";
 
 import crypto from "node:crypto";
+import { cache } from "react";
 
 import {
   DEV_SMOKE_AUTH_EMAIL,
@@ -192,6 +193,89 @@ function mapAccess(
     email,
   };
 }
+
+const ensureReviewOsAccessForRequest = cache(
+  async function ensureReviewOsAccessForRequest(
+    userId: string,
+    email: string | null,
+  ): Promise<AccessState> {
+    const client = getUserClient(userId);
+    const existingProfileResult = await client
+      .from("profiles")
+      .select("user_id, email, invite_status, entitlement_tier")
+      .eq("user_id", userId)
+      .maybeSingle();
+    assertSupabaseOperation(
+      "review-os.ensureAccess.selectExistingProfile",
+      existingProfileResult,
+    );
+
+    const existingProfile = existingProfileResult.data as Record<
+      string,
+      unknown
+    > | null;
+
+    if (existingProfile) {
+      const storedEmail =
+        typeof existingProfile.email === "string"
+          ? existingProfile.email
+          : null;
+      if (email && email !== storedEmail) {
+        const updateResult = await client
+          .from("profiles")
+          .update({
+            email,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("user_id", userId)
+          .select("user_id, email, invite_status, entitlement_tier")
+          .maybeSingle();
+        assertSupabaseOperation(
+          "review-os.ensureAccess.updateExistingProfile",
+          updateResult,
+        );
+        return mapAccess(
+          updateResult.data as Record<string, unknown> | null,
+          email,
+        );
+      }
+
+      // Routine access checks must never reset invite/entitlement state for existing users.
+      // A steady-state access read is intentionally read-only.
+      return mapAccess(existingProfile, email);
+    }
+
+    const insertResult = await client.from("profiles").insert({
+      user_id: userId,
+      email,
+      invite_status: isAllowlisted(email) ? "active" : "pending",
+      entitlement_tier: "free_trial",
+      updated_at: new Date().toISOString(),
+    });
+    // Concurrent first-time requests can race on user_id uniqueness; keep the
+    // winning row and resolve its authoritative access state below.
+    if (insertResult.error && insertResult.error.code !== "23505") {
+      assertSupabaseOperation(
+        "review-os.ensureAccess.insertProfile",
+        insertResult,
+      );
+    }
+
+    const profileResult = await client
+      .from("profiles")
+      .select("user_id, email, invite_status, entitlement_tier")
+      .eq("user_id", userId)
+      .maybeSingle();
+    assertSupabaseOperation(
+      "review-os.ensureAccess.selectProfile",
+      profileResult,
+    );
+    return mapAccess(
+      profileResult.data as Record<string, unknown> | null,
+      email,
+    );
+  },
+);
 
 function mapStudyProfile(
   row: Record<string, unknown> | null,
@@ -593,67 +677,7 @@ export class ReviewOsRepository {
     userId: string,
     email: string | null,
   ): Promise<AccessState> {
-    const client = getUserClient(userId);
-    const existingProfileResult = await client
-      .from("profiles")
-      .select("user_id, email, invite_status, entitlement_tier")
-      .eq("user_id", userId)
-      .maybeSingle();
-    assertSupabaseOperation(
-      "review-os.ensureAccess.selectExistingProfile",
-      existingProfileResult,
-    );
-
-    const now = new Date().toISOString();
-    const existingProfile = existingProfileResult.data as Record<
-      string,
-      unknown
-    > | null;
-
-    if (existingProfile) {
-      // Routine access checks must never reset invite/entitlement state for existing users.
-      const updateResult = await client
-        .from("profiles")
-        .update({
-          email,
-          updated_at: now,
-        })
-        .eq("user_id", userId);
-      assertSupabaseOperation(
-        "review-os.ensureAccess.updateExistingProfile",
-        updateResult,
-      );
-    } else {
-      // First insert decides initial entitlement; later ensureAccess calls only refresh email/updated_at.
-      const insertResult = await client.from("profiles").insert({
-        user_id: userId,
-        email,
-        invite_status: isAllowlisted(email) ? "active" : "pending",
-        entitlement_tier: "free_trial",
-        updated_at: now,
-      });
-      // Concurrent first-time requests can race on user_id uniqueness; keep existing row and continue.
-      if (insertResult.error && insertResult.error.code !== "23505") {
-        assertSupabaseOperation(
-          "review-os.ensureAccess.insertProfile",
-          insertResult,
-        );
-      }
-    }
-
-    const profileResult = await client
-      .from("profiles")
-      .select("user_id, email, invite_status, entitlement_tier")
-      .eq("user_id", userId)
-      .maybeSingle();
-    assertSupabaseOperation(
-      "review-os.ensureAccess.selectProfile",
-      profileResult,
-    );
-    return mapAccess(
-      profileResult.data as Record<string, unknown> | null,
-      email,
-    );
+    return ensureReviewOsAccessForRequest(userId, email);
   }
 
   async getStudyProfile(userId: string) {

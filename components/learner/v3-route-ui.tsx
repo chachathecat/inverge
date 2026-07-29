@@ -249,12 +249,14 @@ export function V3QuietDisclosure({
   children,
   className,
   defaultOpen,
+  onToggle,
 }: {
   summary: ReactNode;
   helper?: ReactNode;
   children: ReactNode;
   className?: string;
   defaultOpen?: boolean;
+  onToggle?: ComponentPropsWithoutRef<"details">["onToggle"];
 }) {
   return (
     <details
@@ -263,6 +265,7 @@ export function V3QuietDisclosure({
         className,
       )}
       open={defaultOpen || undefined}
+      onToggle={onToggle}
       data-v3-component="QuietDisclosure"
     >
       <summary className="v3-type-label-strong flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-[var(--color-text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--focus-ring)]">

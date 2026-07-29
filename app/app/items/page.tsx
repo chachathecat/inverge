@@ -15,7 +15,12 @@ import {
 import { ReviewOsAccessState } from "@/components/review-os/review-os-access-state";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
-import { getModeConfig, resolveAppraisalMode, type AppraisalMode } from "@/lib/review-os/appraisal";
+import {
+  getModeConfig,
+  parseAppraisalMode,
+  resolveAppraisalMode,
+  type AppraisalMode,
+} from "@/lib/review-os/appraisal";
 import { resolveEssentialCoreRouteRead } from "@/lib/review-os/core-route-read-outcome";
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
 import { reviewOsService } from "@/lib/review-os/service";
@@ -159,7 +164,13 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
   const query = await searchParams;
   const modeParam = query?.mode;
   const savedParam = query?.saved;
-  const { session, access, profile } = await getReviewOsServerContext(buildReviewOsReturnTo(routePath, modeParam));
+  const { session, access, profile } = await getReviewOsServerContext(
+    buildReviewOsReturnTo(routePath, modeParam),
+    {
+      includeProfile: parseAppraisalMode(modeParam) === null,
+      includeUsage: false,
+    },
+  );
   if (access.status !== "allowed") return <ReviewOsAccessState access={access} embedded />;
   if (!session.userId || !session.email) return null;
 

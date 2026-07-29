@@ -2,6 +2,7 @@ import "server-only";
 
 import { redirect } from "next/navigation";
 import { cookies, headers } from "next/headers";
+import { cache } from "react";
 
 import { createOptionalSupabaseServerClient, isSupabaseConfigured } from "@/lib/supabase/server";
 
@@ -85,7 +86,9 @@ async function getDevSmokeSession(): Promise<InvergeServerSession | null> {
   }
 }
 
-export async function getServerSessionUser(fallbackUserId = DEMO_USER_IDS.appraisalFirst): Promise<InvergeServerSession> {
+const getServerSessionUserForRequest = cache(async function getServerSessionUserForRequest(
+  fallbackUserId: string,
+): Promise<InvergeServerSession> {
   const smokeSession = await getDevSmokeSession();
   if (smokeSession) return smokeSession;
 
@@ -139,6 +142,12 @@ export async function getServerSessionUser(fallbackUserId = DEMO_USER_IDS.apprai
     authEnabled: true,
     source: "supabase",
   };
+});
+
+export async function getServerSessionUser(
+  fallbackUserId = DEMO_USER_IDS.appraisalFirst,
+): Promise<InvergeServerSession> {
+  return getServerSessionUserForRequest(fallbackUserId);
 }
 
 export async function getRequestUserId(request: Request, fallbackUserId = DEMO_USER_IDS.appraisalFirst) {

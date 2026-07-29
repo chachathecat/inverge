@@ -4,7 +4,11 @@ import { ReviewOsFeedbackButton } from "@/components/review-os/feedback-button";
 import { ReviewOsAccessState } from "@/components/review-os/review-os-access-state";
 import { ClosedBetaBanner } from "@/components/shared/closed-beta-banner";
 import { buildLearningAgendaEvents } from "@/lib/review-os/learning-agenda";
-import { getModeConfig, resolveAppraisalMode } from "@/lib/review-os/appraisal";
+import {
+  getModeConfig,
+  parseAppraisalMode,
+  resolveAppraisalMode,
+} from "@/lib/review-os/appraisal";
 import { resolveEssentialCoreRouteRead } from "@/lib/review-os/core-route-read-outcome";
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
 import { reviewOsService } from "@/lib/review-os/service";
@@ -16,7 +20,13 @@ type PageProps = {
 export default async function LearningAgendaPage({ searchParams }: PageProps) {
   const query = await searchParams;
   const modeParam = query?.mode;
-  const { session, access, profile } = await getReviewOsServerContext(buildReviewOsReturnTo("/app/agenda", modeParam));
+  const { session, access, profile } = await getReviewOsServerContext(
+    buildReviewOsReturnTo("/app/agenda", modeParam),
+    {
+      includeProfile: parseAppraisalMode(modeParam) === null,
+      includeUsage: false,
+    },
+  );
   if (access.status !== "allowed") return <ReviewOsAccessState access={access} embedded />;
   if (!session.userId || !session.email) return null;
 
