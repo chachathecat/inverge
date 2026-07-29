@@ -1,6 +1,8 @@
 # 답안길 Post-#650 Unified Program Contract
 
 - Contract version: `dabangil.unified_program.v2`
+- Current exact-scope Owner decision:
+  `docs/decisions/2026-07-29-owner-o3a-golden-3-approval.md`
 - Current Owner amendment:
   `docs/decisions/2026-07-26-owner-dogfood-private-plane-schedule-amendment.md`
 - Prior Owner decision for unaffected scope:
@@ -795,9 +797,16 @@ binding, exact environment/vault, and completion time. Downstream S236A and
 scheduler use must resolve and recompute that exact artifact rather than
 trusting a 64-character claim.
 
-The regenerated O3A packet may be approved before or after O4V/S236P, but no
-allowed authoring or execution operation becomes executable until S236P is
-complete. O3A remains pending after this source amendment.
+The regenerated O3A packet was approved by the exact-scope 2026-07-29 dated
+Owner decision. That decision binds canonical manifest SHA-256
+`de0e79159d8538d0e658bb9b0693ce27ed2bf7fcea3cf0d19198894cd7905b72`
+and packet SHA-256
+`8189997e733eb0c8bef62c3ba5fa1cadac39a807c34d925b2e1a291fa30e654c`,
+and expires with the packet at `2026-08-09T14:59:59.000Z`. The approved
+proposal preimage remains immutable, including its pre-decision
+`pending_owner_decision` and `ownerApproved: false` fields. No allowed
+authoring or execution operation becomes executable until completed exact
+S236P is revalidated, and S236A still requires a separate manual start.
 
 ## 11. Academy and both-track gates
 
@@ -820,8 +829,9 @@ acceptance for both tracks.
 | O4 | migration, secret, provider, price, payment, real users, flags |
 | O5 | randomization, research opt-in, offline training, efficacy claims |
 
-Scoped O4-family gates are not interchangeable:
+Scoped O3A and O4-family gates are not interchangeable:
 
+- O3A: exact Golden 3 rights/source/version/Owner-private purpose only;
 - O4V: exact private vault/key/provider/environment/retention/rollback;
 - O4A: Owner-private runtime and native dogfood activation;
 - O4T: exact post-benchmark optimizer threshold decision;
@@ -832,8 +842,9 @@ Scoped O4-family gates are not interchangeable:
 
 An approval packet states exact scope, non-goals, owner action, evidence,
 unapproved safe state, and expiry. O1R is approved only for this source
-amendment. O3A and every O4-family runtime/content/commercial gate above
-remain future gates.
+amendment. O3A is approved only for the exact immutable packet named by the
+2026-07-29 decision and authorizes no immediate operation. Every O4-family
+runtime/content/commercial gate above remains a future gate.
 
 ## 13. Roadmap, locks, and WIP
 
@@ -868,10 +879,11 @@ The S234 reset snapshot contained exactly:
 
 S234R, S235A, and S235B are completed as source/contract evidence. The current
 authority is `roadmap/active-program.yml`; this contract deliberately does
-not mirror its dynamic ready-item list. O3A, O4V, and S236B are queued.
-S236P is blocked by O4V, and S236A is blocked by both O3A and S236P.
-Selection is metadata-only: it does not approve, start, reserve, provision,
-author, or execute work.
+not mirror its dynamic ready-item list. O3A is completed as an exact Owner
+decision; O4V and S236B remain queued. S236P is blocked by O4V, and S236A
+remains queued with S236P as its sole unmet dependency. Selection is
+metadata-only: it does not start, reserve, provision, author, or execute
+work.
 
 PR #660 remains Draft and blocked. Its current exploratory OCR evidence does
 not establish S236B. Any continuation must reconcile onto amended main and

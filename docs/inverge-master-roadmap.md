@@ -3,11 +3,12 @@
 - 결정일: 2026-06-25
 - 상세 제품 기준: `docs/inverge-second-round-final-product-spec.md`
 - 실행 상태와 의존성 기준: `roadmap/active-program.yml`
-- Current amendment authority:
+- Current exact-scope authority:
+  `docs/decisions/2026-07-29-owner-o3a-golden-3-approval.md` for O3A,
   `docs/decisions/2026-07-26-owner-dogfood-private-plane-schedule-amendment.md`
-  and `docs/dabangil-unified-program-contract.md` supersede historical
-  ordering in this document; this file remains phase history and second-round
-  detail.
+  for the program amendment, and `docs/dabangil-unified-program-contract.md`
+  supersede historical ordering in this document; this file remains phase
+  history and second-round detail.
 
 ## 1. Final Product Definition
 
@@ -445,7 +446,8 @@ AF010 through AF016 are complete as the first Agent Factory automation evidence 
 
 Product roadmap authority is now:
 
-1. `docs/decisions/2026-07-23-post-650-unified-program-reset.md`;
+1. dated Owner decisions for their exact owned scope, including
+   `docs/decisions/2026-07-29-owner-o3a-golden-3-approval.md`;
 2. `docs/dabangil-unified-program-contract.md`;
 3. second-round detail and executable domain contracts;
 4. `roadmap/active-program.yml`;
@@ -465,13 +467,13 @@ Capture-to-Note and Capture-to-Plan remain the learner-loop quality standard: le
 
 The S234 reset snapshot is historical. The near roadmap follows
 `roadmap/active-program.yml`. S234, S235A, S235B,
-and the S234R amendment are complete. O3A, S236B, and O4V are ready in
-metadata only. O3A and O4V remain pending Owner decisions; S236P waits for
-O4V; S236A requires both approved O3A and completed S236P. Selection does not
-start work. PR #660 remains a blocked S236B Draft and is not benchmark
-acceptance. First-round runtime, Founding Beta waves, both-track, Academy,
-shared-signal activation, and S225 remain queued behind their own unmet
-dependencies and Owner gates.
+the S234R amendment, and exact O3A Owner decision are complete. S236B and O4V
+are ready in metadata only. O4V remains a pending Owner decision; S236P waits
+for O4V; S236A remains queued with S236P as its sole unmet dependency. O3A
+authorizes no immediate operation, and selection does not start work. PR #660
+remains a blocked S236B Draft and is not benchmark acceptance. First-round
+runtime, Founding Beta waves, both-track, Academy, shared-signal activation,
+and S225 remain queued behind their own unmet dependencies and Owner gates.
 
 Raw historical corpus expansion, public archive UX, Quick Solve acquisition experiments, billing, usage ledger, official-source ingestion, and execution automation are deferred until explicit source, rights, private-storage, data-boundary, runtime, and cost gates exist.
 
@@ -513,3 +515,21 @@ learners, and public self-serve remain in the separate commercial track:
 Owner dogfood is operational acceptance only. It is not evidence of
 commercial readiness, efficacy, pricing, retention, cohort capacity, or
 public-launch readiness.
+
+## 2026-07-29 Exact O3A Approval
+
+The Owner approved only packet
+`o3a-s234r-appraiser-second-2026-q1-owner-private-golden-3-v2`, with canonical
+packet SHA-256
+`8189997e733eb0c8bef62c3ba5fa1cadac39a807c34d925b2e1a291fa30e654c`
+and canonical manifest SHA-256
+`de0e79159d8538d0e658bb9b0693ce27ed2bf7fcea3cf0d19198894cd7905b72`.
+The packet expires at `2026-08-09T14:59:59.000Z`.
+
+The decision approves exact rights/source/version/Owner-private purpose for
+the three 2026 Q1 selections only. It does not author content, provision a
+private plane, satisfy O4V or S236P, start S236A, or authorize runtime,
+Production, public/shared exposure, real learners, Golden 9, billing,
+telemetry, navigation, models, prompts, secrets, or deployment changes.
+S236A remains queued until completed exact S236P and then requires a separate
+manual start.

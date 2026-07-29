@@ -277,7 +277,7 @@ test("watch_snapshot writes safe generated artifacts even when ignored input has
   assertNoUnsafeArtifactText(outputDir);
 });
 
-test("dispatcher rejects blocked S225 and documents the S234R ready set without starting work", () => {
+test("dispatcher rejects blocked S225 and documents the O3A-reconciled ready set without starting work", () => {
   const blockedOutputDir = tempDir("af006-blocked-s225");
   const blocked = runDispatcher([
     "--mode",
@@ -311,9 +311,10 @@ test("dispatcher rejects blocked S225 and documents the S234R ready set without 
   assert.match(summary, /No branches, commits, pushes, PR updates/);
   assert.match(docs, /read-only\/report-only/);
   assert.match(docs, /blocked S225 target must\s+fail closed/i);
-  assert.match(docs, /ready set is O3A, S236B,\s+and O4V/i);
-  assert.match(docs, /Selection does not approve O3A\/O4V/i);
-  assert.match(docs, /blocked Draft PR #660/i);
+  assert.match(docs, /ready set is S236B and O4V/i);
+  assert.match(docs, /Selection does not\s+approve O4V/i);
+  assert.match(docs, /start S236B or S236A/i);
+  assert.match(docs, /blocked Draft\s+PR #660/i);
   assert.match(docs, /never recommends auto-merge/);
 });
 
