@@ -1,0 +1,1835 @@
+{
+  "contractVersion": "dabangil.private_authoring_review_plane.v1",
+  "decision": "docs/decisions/2026-07-26-owner-dogfood-private-plane-schedule-amendment.md",
+  "status": "contract_only_pending_o4v",
+  "runtimeAuthorized": false,
+  "realContentAuthorized": false,
+  "provisioningAuthorized": false,
+  "scope": {
+    "exam": "appraiser_second_round",
+    "actorClass": "owner_private_only",
+    "contentClasses": [
+      "question",
+      "answer",
+      "ocr",
+      "reference_answer",
+      "law",
+      "ai_output"
+    ],
+    "sharedOrPublicExposureAllowed": false
+  },
+  "approvalSeparation": {
+    "O3A": "exact_golden_rights_source_effective_version_and_purpose_only",
+    "O4V": "exact_vault_key_provider_environment_logging_retention_and_rollback_only",
+    "S236P": "synthetic_only_provisioning_and_receipt_acceptance",
+    "O3AMaySubstituteForO4V": false,
+    "O4VMaySubstituteForO3A": false,
+    "S236ARequires": [
+      "valid_unexpired_O3A",
+      "completed_exact_S236P"
+    ]
+  },
+  "identifiers": {
+    "externalReferences": "random_opaque_vault_scoped_ids",
+    "contentDerivedExternalIdsAllowed": false,
+    "rawFilenameOutsideVaultAllowed": false,
+    "crossVaultStableHandleAllowed": false
+  },
+  "integrityAndCommitments": {
+    "plaintextSha256": {
+      "allowedScope": "vault_local_integrity_only",
+      "allowedOutsideVault": false,
+      "allowedAsObjectKey": false,
+      "allowedAsApiOrReceiptField": false,
+      "allowedAsLogTelemetryIssueOrPrField": false,
+      "allowedAsSharedIdentifier": false
+    },
+    "privateDedup": {
+      "algorithmClass": "vault_scoped_keyed_commitment",
+      "vaultSpecificDomainSeparationRequired": true,
+      "environmentSeparationRequired": true,
+      "canonicalizationVersionRequired": true,
+      "nonExportableKeyClassRequired": true,
+      "keyMaterialReadableByApplicationAllowed": false,
+      "rotationEpochRequired": true,
+      "destructionAndRollbackLifecycleBindingRequired": true,
+      "commitmentReturnedToClientOrReceipt": false,
+      "lookupOrEqualityOracleApiAllowed": false,
+      "crossVaultComparisonAllowed": false
+    },
+    "commitmentKeyLifecycle": {
+      "vaultAndEnvironmentScopedEpochRequired": true,
+      "rotationRequiresExactMigrationAndRollbackPlan": true,
+      "retiredEpochMayAuthorizeNewWrites": false,
+      "retiredEpochLookupRequiresApprovedDeletionOrMigrationPurpose": true,
+      "deletedVaultKeyDestructionRequiredAfterApprovedRetentionWindow": true,
+      "restoreMayReenableRetiredOrDestroyedEpoch": false
+    },
+    "providerContentValidators": {
+      "unkeyedEtagMd5ChecksumOrDedupValueAllowedOutsideVault": false,
+      "allowedInClientResponseReceiptLogTelemetryCacheOrExport": false,
+      "crossVaultStableContentValidatorAllowed": false,
+      "opaqueObjectVersionAsCacheValidatorRequired": true,
+      "providerGeneratedValidatorMustBeSuppressedOrKeptVaultLocal": true
+    },
+    "publicProvenanceHashAllowedOnlyFor": [
+      "promoted_rights_cleared_content_bank_material"
+    ]
+  },
+  "revisionModel": {
+    "originalImmutable": true,
+    "overwriteOriginalAllowed": false,
+    "editableRevisionsAppendOnly": true,
+    "requiredRevisionMetadata": [
+      "opaque_revision_id",
+      "opaque_parent_revision_id_or_null",
+      "actor_class",
+      "created_at",
+      "content_class",
+      "source_version",
+      "model_version_or_null",
+      "prompt_version_or_null"
+    ]
+  },
+  "answerPackCompatibility": {
+    "currentSchema": "answer_pack.2.0",
+    "directPrivateBodyUseAllowed": false,
+    "blockingReason": "required_plaintext_content_hash_would_violate_private_plane_external_hash_boundary",
+    "requiredResolution": "versioned_vault_safe_adapter_or_replacement_schema_with_no_plaintext_hash_outside_vault",
+    "acceptanceRoadmapItem": "S236P",
+    "accepted": false,
+    "realPackageGenerationBeforeAcceptanceAllowed": false
+  },
+  "accessControl": {
+    "databaseOwnerIsolationRequired": true,
+    "objectStorageOwnerIsolationRequired": true,
+    "ownerAToBDenialRequired": true,
+    "ownerBToADenialRequired": true,
+    "listExistenceTimingAndErrorOracleAllowed": false,
+    "leastPrivilegeAccess": {
+      "signedAuthorizationRequired": true,
+      "approvedModes": [
+        "authenticated_rls_with_short_lived_signed_session",
+        "short_lived_method_object_version_audience_scoped_capability"
+      ],
+      "preSignedObjectUrlOptional": true,
+      "shortTtlRequired": true,
+      "methodObjectVersionAudienceScopeRequired": true,
+      "contentTypeScopeRequiredForWrite": true,
+      "contentLengthScopeRequiredForWrite": true,
+      "replayAndSingleUseBehaviorBindingRequired": true,
+      "providerRevocationExpiryAndDeletionPropagationEvidenceRequired": true,
+      "signedAccessLoggingRedactionAndRetentionBindingRequired": true,
+      "signedUrlOrTokenInEvidenceAllowed": false,
+      "revocationClaimWithoutProviderEvidenceAllowed": false,
+      "authenticatedRlsDownloadPreferred": true
+    }
+  },
+  "providerBoundary": {
+    "exactBindingRequiredBeforeO4VApproval": true,
+    "requiredBindings": [
+      "environment",
+      "vault_provider",
+      "metadata_provider",
+      "region",
+      "bucket_or_equivalent",
+      "schema_or_metadata_contract_version",
+      "commitment_key_provider_and_key_class",
+      "commitment_algorithm_canonicalization_domain_encoding_and_rotation_migration",
+      "key_rotation_destruction_and_rollback_lifecycle",
+      "provider_content_digest_etag_checksum_and_dedup_exposure_policy",
+      "vault_transport_storage_metadata_and_backup_encryption_policy",
+      "content_processing_provider_set_and_policy",
+      "provider_logging_policy",
+      "provider_training_policy",
+      "provider_research_and_secondary_use_policy",
+      "provider_retention_policy",
+      "backup_policy",
+      "cache_and_index_policy",
+      "rollback_and_restore_policy",
+      "access_mode",
+      "session_or_capability_ttl_seconds",
+      "method_object_version_audience_content_type_and_content_length_scope",
+      "replay_prevention_and_single_use_behavior",
+      "provider_revocation_expiry_and_deletion_propagation",
+      "signed_access_logging_redaction_and_retention_policy",
+      "independent_attestation_store_verifier_key_trust_root_signature_and_revocation_policy"
+    ],
+    "unresolvedBindingFailsClosed": true,
+    "serviceOnlyProcessingRequired": true,
+    "rawBodyProviderTrainingResearchOrSecondaryUseAllowed": false,
+    "providerRetentionMayExceedExactO4VWindow": false,
+    "providerPolicyEvidenceRequired": true,
+    "unresolvedOrNoncompliantProviderPolicyMakesO4VUnapprovable": true,
+    "rawBodyInProviderLogsAllowed": false,
+    "rawBodyInAnalyticsApmCostOrExceptionLogsAllowed": false,
+    "rawBodyInQueueOrCiArtifactsAllowed": false
+  },
+  "encryptionBoundary": {
+    "privateBucketOrEquivalentRequired": true,
+    "publicAclAllowed": false,
+    "tlsRequired": true,
+    "exactMinimumTlsVersionRequiresO4V": true,
+    "rawObjectEncryptionAtRestRequired": true,
+    "metadataEncryptionAtRestRequired": true,
+    "backupEncryptionAtRestRequired": true,
+    "storageEncryptionKeyDistinctFromCommitmentKeyRequired": true,
+    "storageEncryptionKeyMaterialExportAllowed": false,
+    "regionRotationDestructionBindingRequired": true
+  },
+  "retentionExportDelete": {
+    "exactRetentionValuesRequireO4V": true,
+    "ownerExportRequired": true,
+    "exportScope": "one_owner_vault_only",
+    "exportMayContainSecretsOrCommitments": false,
+    "deleteCoverageRequired": [
+      "raw_object",
+      "ocr_revision",
+      "answer_revision",
+      "reference_revision",
+      "law_revision",
+      "ai_output",
+      "metadata_index",
+      "vault_local_plaintext_integrity_metadata",
+      "vault_scoped_keyed_commitment",
+      "private_dedup_index",
+      "commitment_key_epoch_reference",
+      "cache",
+      "temporary_copy",
+      "queue_copy",
+      "provider_copy"
+    ],
+    "primaryDeletionMayClaimDeleteComplete": false,
+    "backupPresentState": "backup_expiry_pending",
+    "deleteCompleteRequiresAllApprovedRetentionSurfacesExpiredOrPurged": true,
+    "restoreMayResurrectDeletedContent": false
+  },
+  "failureAndRollback": {
+    "partialFailureMayRecordSuccessMasteryOrUsage": false,
+    "orphanQuarantineRequired": true,
+    "idempotentCleanupRequired": true,
+    "providerOrPolicyChangeInvalidatesReceipt": true,
+    "regionOrKeyChangeInvalidatesReceipt": true,
+    "schemaOrDeployedHeadChangeInvalidatesReceipt": true,
+    "rollbackMustPreserveDeletionTombstones": true,
+    "realContentFlagRemainsOffThroughS236P": true
+  },
+  "syntheticReceiptContract": {
+    "roadmapItem": "S236P",
+    "syntheticOnly": true,
+    "realContentAllowed": false,
+    "allowedExternalFields": [
+      "contract_version",
+      "exact_head_sha",
+      "exact_tree_sha",
+      "opaque_environment_ref",
+      "opaque_vault_ref",
+      "policy_version",
+      "key_class_and_epoch",
+      "provider_config_version",
+      "synthetic_fixture_id",
+      "operation_id",
+      "observed_at",
+      "assertion_result",
+      "cleanup_state",
+      "o4v_proposal_digest_sha256",
+      "o4v_approved_binding_digest_sha256",
+      "provider_binding_digest_sha256",
+      "assertion_policy_digest_sha256",
+      "assertion_count",
+      "assertion_evidence_digest_sha256",
+      "attestation_run_id",
+      "opaque_primary_attestor_id",
+      "attestor_class",
+      "attestor_version",
+      "attestation_provenance_digest_sha256",
+      "receipt_set_digest_sha256",
+      "independent_verifier_attestation_digest_sha256"
+    ],
+    "allowedFieldSchemas": {
+      "contract_version": {
+        "type": "closed_version_enum",
+        "values": [
+          "dabangil.private_authoring_review_plane.v1"
+        ]
+      },
+      "exact_head_sha": {
+        "type": "lowercase_hex",
+        "length": 40
+      },
+      "exact_tree_sha": {
+        "type": "lowercase_hex",
+        "length": 40
+      },
+      "opaque_environment_ref": {
+        "type": "opaque_identifier",
+        "pattern": "^env_[A-Za-z0-9_-]{16,64}$"
+      },
+      "opaque_vault_ref": {
+        "type": "opaque_identifier",
+        "pattern": "^vlt_[A-Za-z0-9_-]{16,64}$"
+      },
+      "policy_version": {
+        "type": "closed_version_identifier",
+        "pattern": "^[a-z0-9._-]{1,80}$"
+      },
+      "key_class_and_epoch": {
+        "type": "closed_key_class_epoch",
+        "pattern": "^managed_(kms|hsm)_mac_v[0-9]+:epoch_[0-9]+$"
+      },
+      "provider_config_version": {
+        "type": "opaque_config_version",
+        "pattern": "^pcv_[A-Za-z0-9_-]{16,64}$"
+      },
+      "synthetic_fixture_id": {
+        "type": "closed_synthetic_fixture_identifier",
+        "pattern": "^syn_[a-z0-9_]{1,80}$"
+      },
+      "operation_id": {
+        "type": "required_receipt_id_enum"
+      },
+      "observed_at": {
+        "type": "iso_8601_utc_instant"
+      },
+      "assertion_result": {
+        "type": "closed_enum",
+        "values": [
+          "passed",
+          "failed",
+          "blocked"
+        ]
+      },
+      "cleanup_state": {
+        "type": "closed_enum",
+        "values": [
+          "not_required",
+          "complete",
+          "orphan_quarantined",
+          "backup_expiry_pending",
+          "delete_complete"
+        ]
+      },
+      "o4v_proposal_digest_sha256": {
+        "type": "lowercase_hex",
+        "length": 64
+      },
+      "o4v_approved_binding_digest_sha256": {
+        "type": "lowercase_hex",
+        "length": 64
+      },
+      "provider_binding_digest_sha256": {
+        "type": "lowercase_hex",
+        "length": 64
+      },
+      "assertion_policy_digest_sha256": {
+        "type": "lowercase_hex",
+        "length": 64
+      },
+      "assertion_count": {
+        "type": "finite_integer",
+        "minimum": 1,
+        "maximum": 32
+      },
+      "assertion_evidence_digest_sha256": {
+        "type": "lowercase_hex",
+        "length": 64
+      },
+      "attestation_run_id": {
+        "type": "opaque_identifier",
+        "pattern": "^atr_[A-Za-z0-9_-]{16,64}$"
+      },
+      "opaque_primary_attestor_id": {
+        "type": "opaque_identifier",
+        "pattern": "^pat_[A-Za-z0-9_-]{16,64}$"
+      },
+      "attestor_class": {
+        "type": "closed_enum",
+        "values": [
+          "approved_s236p_synthetic_test_harness_v1"
+        ]
+      },
+      "attestor_version": {
+        "type": "closed_version_identifier",
+        "pattern": "^[a-z0-9._-]{1,80}$"
+      },
+      "attestation_provenance_digest_sha256": {
+        "type": "lowercase_hex",
+        "length": 64
+      },
+      "receipt_set_digest_sha256": {
+        "type": "lowercase_hex",
+        "length": 64
+      },
+      "independent_verifier_attestation_digest_sha256": {
+        "type": "lowercase_hex",
+        "length": 64
+      }
+    },
+    "requiredFieldsExactly": [
+      "contract_version",
+      "exact_head_sha",
+      "exact_tree_sha",
+      "opaque_environment_ref",
+      "opaque_vault_ref",
+      "policy_version",
+      "key_class_and_epoch",
+      "provider_config_version",
+      "synthetic_fixture_id",
+      "operation_id",
+      "observed_at",
+      "assertion_result",
+      "cleanup_state",
+      "o4v_proposal_digest_sha256",
+      "o4v_approved_binding_digest_sha256",
+      "provider_binding_digest_sha256",
+      "assertion_policy_digest_sha256",
+      "assertion_count",
+      "assertion_evidence_digest_sha256",
+      "attestation_run_id",
+      "opaque_primary_attestor_id",
+      "attestor_class",
+      "attestor_version",
+      "attestation_provenance_digest_sha256",
+      "receipt_set_digest_sha256",
+      "independent_verifier_attestation_digest_sha256"
+    ],
+    "additionalFieldsAllowed": false,
+    "freeTextAllowed": false,
+    "allRequiredReceiptAssertionsMustPass": true,
+    "failedOrBlockedMayCompleteS236P": false,
+    "receiptO4VProposalDigestMustMatchApprovedDecision": true,
+    "receiptO4VApprovedBindingDigestMustMatchCurrentImmutableApprovedPacket": true,
+    "proposalDigestMayNotSubstituteForApprovedBindingDigest": true,
+    "receiptProviderBindingDigestMustMatchApprovedO4V": true,
+    "forbiddenExternalFields": [
+      "raw_body",
+      "plaintext_sha256",
+      "etag",
+      "md5",
+      "checksum",
+      "content_digest",
+      "keyed_commitment",
+      "secret",
+      "token",
+      "signed_url",
+      "provider_payload",
+      "private_locator"
+    ],
+    "requiredReceiptIds": [
+      "synthetic_write_read_after_write",
+      "owner_a_read_write",
+      "owner_b_read_write",
+      "owner_a_to_b_and_b_to_a_uniform_denial",
+      "cross_owner_list_revision_export_delete_receipt_uniform_denial",
+      "approved_access_mode_tamper_replay_expiry_wrong_method_denial",
+      "immutable_original_append_only_revision",
+      "vault_safe_answer_pack_adapter_no_plaintext_hash_externalization",
+      "timeout_and_partial_failure_no_false_success",
+      "orphan_quarantine_and_idempotent_cleanup",
+      "single_vault_export_without_secret_or_commitment",
+      "delete_all_approved_surfaces",
+      "backup_expiry_pending_distinct_from_delete_complete",
+      "rollback_restore_no_deleted_content_resurrection",
+      "synthetic_canary_absent_from_git_ci_logs_telemetry_provider_logs_analytics_and_support_surfaces_outside_authorized_vault"
+    ],
+    "requiredReceiptOperationRules": {
+      "synthetic_write_read_after_write": {
+        "syntheticFixtureId": "syn_read_after_write_v1",
+        "requiredAssertions": [
+          "write_succeeded",
+          "read_returned_same_opaque_object_version",
+          "external_receipt_contains_no_body_or_private_handle",
+          "provider_etag_md5_checksum_and_content_digest_absent_external"
+        ],
+        "allowedCleanupStates": [
+          "complete"
+        ]
+      },
+      "owner_a_read_write": {
+        "syntheticFixtureId": "syn_owner_a_own_vault_v1",
+        "requiredAssertions": [
+          "owner_a_write_succeeded",
+          "owner_a_read_succeeded"
+        ],
+        "allowedCleanupStates": [
+          "complete"
+        ]
+      },
+      "owner_b_read_write": {
+        "syntheticFixtureId": "syn_owner_b_own_vault_v1",
+        "requiredAssertions": [
+          "owner_b_write_succeeded",
+          "owner_b_read_succeeded"
+        ],
+        "allowedCleanupStates": [
+          "complete"
+        ]
+      },
+      "owner_a_to_b_and_b_to_a_uniform_denial": {
+        "syntheticFixtureId": "syn_bidirectional_owner_denial_v1",
+        "requiredAssertions": [
+          "owner_a_to_b_read_and_write_denied",
+          "owner_b_to_a_read_and_write_denied",
+          "both_directions_use_uniform_non_oracular_response"
+        ],
+        "allowedCleanupStates": [
+          "complete"
+        ]
+      },
+      "cross_owner_list_revision_export_delete_receipt_uniform_denial": {
+        "syntheticFixtureId": "syn_cross_owner_all_surfaces_denial_v1",
+        "requiredAssertions": [
+          "both_directions_list_denied",
+          "both_directions_revision_denied",
+          "both_directions_export_denied",
+          "both_directions_delete_denied",
+          "both_directions_receipt_read_denied"
+        ],
+        "allowedCleanupStates": [
+          "complete"
+        ]
+      },
+      "approved_access_mode_tamper_replay_expiry_wrong_method_denial": {
+        "syntheticFixtureId": "syn_access_mode_negative_matrix_v1",
+        "requiredAssertions": [
+          "tampered_authorization_denied",
+          "replay_denied",
+          "expired_authorization_denied",
+          "wrong_method_denied",
+          "wrong_object_version_audience_type_or_size_denied"
+        ],
+        "allowedCleanupStates": [
+          "complete"
+        ]
+      },
+      "immutable_original_append_only_revision": {
+        "syntheticFixtureId": "syn_immutable_revision_v1",
+        "requiredAssertions": [
+          "original_overwrite_denied",
+          "append_only_revision_succeeded",
+          "parent_lineage_preserved"
+        ],
+        "allowedCleanupStates": [
+          "complete"
+        ]
+      },
+      "vault_safe_answer_pack_adapter_no_plaintext_hash_externalization": {
+        "syntheticFixtureId": "syn_vault_safe_answer_pack_adapter_v1",
+        "requiredAssertions": [
+          "vault_safe_adapter_schema_accepted",
+          "plaintext_hash_absent_outside_vault",
+          "keyed_commitment_absent_from_external_surfaces"
+        ],
+        "allowedCleanupStates": [
+          "complete"
+        ]
+      },
+      "timeout_and_partial_failure_no_false_success": {
+        "syntheticFixtureId": "syn_timeout_partial_failure_v1",
+        "requiredAssertions": [
+          "timeout_records_no_success_mastery_or_usage",
+          "partial_failure_records_no_success_mastery_or_usage",
+          "partial_artifacts_cleaned_or_quarantined"
+        ],
+        "allowedCleanupStates": [
+          "complete"
+        ]
+      },
+      "orphan_quarantine_and_idempotent_cleanup": {
+        "syntheticFixtureId": "syn_orphan_cleanup_v1",
+        "requiredAssertions": [
+          "orphan_quarantine_observed",
+          "cleanup_completed",
+          "cleanup_retry_is_idempotent"
+        ],
+        "allowedCleanupStates": [
+          "complete"
+        ]
+      },
+      "single_vault_export_without_secret_or_commitment": {
+        "syntheticFixtureId": "syn_single_vault_export_v1",
+        "requiredAssertions": [
+          "only_requesting_owner_vault_exported",
+          "secret_token_key_and_commitment_absent",
+          "temporary_export_copy_cleaned"
+        ],
+        "allowedCleanupStates": [
+          "complete"
+        ]
+      },
+      "delete_all_approved_surfaces": {
+        "syntheticFixtureId": "syn_delete_all_surfaces_v1",
+        "requiredAssertions": [
+          "primary_and_derived_surfaces_deleted",
+          "content_handles_indexes_caches_and_temporary_copies_deleted",
+          "backup_state_not_mislabeled_delete_complete"
+        ],
+        "allowedCleanupStates": [
+          "backup_expiry_pending"
+        ]
+      },
+      "backup_expiry_pending_distinct_from_delete_complete": {
+        "syntheticFixtureId": "syn_backup_pending_semantics_v1",
+        "requiredAssertions": [
+          "backup_present_reports_backup_expiry_pending",
+          "delete_complete_not_reported_before_expiry_or_purge"
+        ],
+        "allowedCleanupStates": [
+          "backup_expiry_pending"
+        ]
+      },
+      "rollback_restore_no_deleted_content_resurrection": {
+        "syntheticFixtureId": "syn_rollback_restore_tombstone_v1",
+        "requiredAssertions": [
+          "rollback_preserves_tombstone",
+          "restore_does_not_resurrect_deleted_content",
+          "restore_does_not_reenable_retired_or_destroyed_key_epoch"
+        ],
+        "allowedCleanupStates": [
+          "complete"
+        ]
+      },
+      "synthetic_canary_absent_from_git_ci_logs_telemetry_provider_logs_analytics_and_support_surfaces_outside_authorized_vault": {
+        "syntheticFixtureId": "syn_external_surface_canary_v1",
+        "requiredAssertions": [
+          "canary_absent_from_git_ci_and_issue_pr_surfaces",
+          "canary_absent_from_logs_telemetry_analytics_apm_and_support",
+          "canary_absent_from_provider_logs_outside_authorized_vault",
+          "only_exact_o4v_content_processing_provider_set_exercised",
+          "none_mode_prevents_all_raw_body_processor_egress"
+        ],
+        "allowedCleanupStates": [
+          "complete"
+        ]
+      }
+    },
+    "receiptAssertionPolicyDigestContract": {
+      "algorithm": "sha256",
+      "serialization": "rfc_8785_json_canonicalization_scheme_utf8",
+      "preimagePath": "syntheticReceiptContract.requiredReceiptOperationRules",
+      "digestSha256": "354225a8ec3b1fc50616a61ca10d1917c303338bb6488a575a10a89e637ec047"
+    },
+    "assertionEvidenceDigestContract": {
+      "algorithm": "sha256",
+      "serialization": "rfc_8785_json_canonicalization_scheme_utf8",
+      "artifactLookup": "content_addressed_by_assertion_evidence_digest_sha256_in_exact_o4v_approved_independent_attestation_store",
+      "artifactFieldsExactly": [
+        "operation_id",
+        "synthetic_fixture_id",
+        "exact_head_sha",
+        "exact_tree_sha",
+        "opaque_environment_ref",
+        "opaque_vault_ref",
+        "policy_version",
+        "key_class_and_epoch",
+        "provider_config_version",
+        "o4v_proposal_digest_sha256",
+        "o4v_approved_binding_digest_sha256",
+        "provider_binding_digest_sha256",
+        "assertion_policy_digest_sha256",
+        "attestation_run_id",
+        "assertion_results"
+      ],
+      "artifactFieldSchemas": {
+        "operation_id": "required_receipt_id_enum",
+        "synthetic_fixture_id": "^syn_[a-z0-9_]{1,80}$",
+        "exact_head_sha": "lowercase_hex_40",
+        "exact_tree_sha": "lowercase_hex_40",
+        "opaque_environment_ref": "^env_[A-Za-z0-9_-]{16,64}$",
+        "opaque_vault_ref": "^vlt_[A-Za-z0-9_-]{16,64}$",
+        "policy_version": "closed_identifier_1_to_80",
+        "key_class_and_epoch": "^managed_(kms|hsm)_mac_v[0-9]+:epoch_[0-9]+$",
+        "provider_config_version": "^pcv_[A-Za-z0-9_-]{16,64}$",
+        "o4v_proposal_digest_sha256": "lowercase_hex_64",
+        "o4v_approved_binding_digest_sha256": "lowercase_hex_64",
+        "provider_binding_digest_sha256": "lowercase_hex_64",
+        "assertion_policy_digest_sha256": "lowercase_hex_64",
+        "attestation_run_id": "^atr_[A-Za-z0-9_-]{16,64}$",
+        "assertion_results": "exact_ordered_array_of_required_assertion_results"
+      },
+      "assertionResultFieldsExactly": [
+        "assertion_id",
+        "assertion_result"
+      ],
+      "assertionResultFieldSchemas": {
+        "assertion_id": "exact_required_assertion_string_for_operation",
+        "assertion_result": [
+          "passed"
+        ]
+      },
+      "artifactAdditionalFieldsAllowed": false,
+      "assertionResultAdditionalFieldsAllowed": false,
+      "artifactAndAssertionFreeTextAllowed": false,
+      "operationFixtureAssertionCountAndOrderingMustMatchExactOperationRule": true,
+      "allReceiptOverlapFieldsMustExactlyMatchArtifact": true,
+      "o4vApprovedBindingDigestMustMatchCurrentImmutableApprovedPacket": true,
+      "missingUnknownDuplicateReorderedFailedBlockedUnresolvableOrDigestMismatchedEvidenceFailsClosed": true,
+      "digestMayBeDerivedFromRawOrBodyBytes": false
+    },
+    "receiptSetDigestContract": {
+      "algorithm": "sha256",
+      "serialization": "rfc_8785_json_canonicalization_scheme_utf8",
+      "receiptOrdering": "ascending_lexicographic_operation_id",
+      "receiptIds": "syntheticReceiptContract.requiredReceiptIds",
+      "receiptFields": "syntheticReceiptContract.requiredFieldsExactly",
+      "normalizedToNullFields": [
+        "receipt_set_digest_sha256",
+        "independent_verifier_attestation_digest_sha256"
+      ],
+      "exactReceiptCount": 15,
+      "allReceiptsMustCarryComputedDigest": true,
+      "digestMayBeDerivedFromRawOrBodyBytes": false
+    },
+    "primaryAttestationProvenanceSetDigestContract": {
+      "algorithm": "sha256",
+      "serialization": "rfc_8785_json_canonicalization_scheme_utf8",
+      "sourceReceiptIds": "syntheticReceiptContract.requiredReceiptIds",
+      "receiptOrdering": "ascending_lexicographic_operation_id",
+      "entryFieldsExactly": [
+        "operation_id",
+        "opaque_primary_attestor_id",
+        "attestor_class",
+        "attestor_version",
+        "attestation_provenance_digest_sha256"
+      ],
+      "sourceReceiptFieldMapping": {
+        "operation_id": "operation_id",
+        "opaque_primary_attestor_id": "opaque_primary_attestor_id",
+        "attestor_class": "attestor_class",
+        "attestor_version": "attestor_version",
+        "attestation_provenance_digest_sha256": "attestation_provenance_digest_sha256"
+      },
+      "entryAdditionalFieldsAllowed": false,
+      "exactEntryCount": 15,
+      "missingUnknownDuplicateOrReorderedEntryAllowed": false,
+      "allEntriesMustShareExactPrimaryAttestorIdentityClassAndVersion": true,
+      "signedAttestationPayloadField": "primary_attestation_provenance_set_digest_sha256",
+      "digestMayBeDerivedFromRawOrBodyBytes": false
+    },
+    "assertionEvidenceSetDigestContract": {
+      "algorithm": "sha256",
+      "serialization": "rfc_8785_json_canonicalization_scheme_utf8",
+      "sourceReceiptIds": "syntheticReceiptContract.requiredReceiptIds",
+      "receiptOrdering": "ascending_lexicographic_operation_id",
+      "entryFieldsExactly": [
+        "operation_id",
+        "synthetic_fixture_id",
+        "o4v_approved_binding_digest_sha256",
+        "provider_binding_digest_sha256",
+        "assertion_policy_digest_sha256",
+        "assertion_count",
+        "assertion_evidence_digest_sha256"
+      ],
+      "sourceReceiptFieldMapping": {
+        "operation_id": "operation_id",
+        "synthetic_fixture_id": "synthetic_fixture_id",
+        "o4v_approved_binding_digest_sha256": "o4v_approved_binding_digest_sha256",
+        "provider_binding_digest_sha256": "provider_binding_digest_sha256",
+        "assertion_policy_digest_sha256": "assertion_policy_digest_sha256",
+        "assertion_count": "assertion_count",
+        "assertion_evidence_digest_sha256": "assertion_evidence_digest_sha256"
+      },
+      "entryAdditionalFieldsAllowed": false,
+      "exactEntryCount": 15,
+      "missingUnknownDuplicateOrReorderedEntryAllowed": false,
+      "fixturePolicyApprovedBindingProviderAndCountMustMatchExactOperationAndCurrentO4v": true,
+      "signedAttestationPayloadField": "assertion_evidence_set_digest_sha256",
+      "digestMayBeDerivedFromRawOrBodyBytes": false
+    },
+    "completedS236PAcceptanceContract": {
+      "artifactFieldsExactly": [
+        "acceptance_contract_version",
+        "status",
+        "opaque_s236p_acceptance_ref",
+        "exact_head_sha",
+        "exact_tree_sha",
+        "opaque_environment_ref",
+        "opaque_vault_ref",
+        "policy_version",
+        "key_class_and_epoch",
+        "provider_config_version",
+        "o4v_proposal_digest_sha256",
+        "o4v_approved_binding_digest_sha256",
+        "provider_binding_digest_sha256",
+        "assertion_policy_digest_sha256",
+        "attestation_run_id",
+        "receipt_set_digest_sha256",
+        "primary_attestation_provenance_set_digest_sha256",
+        "assertion_evidence_set_digest_sha256",
+        "independent_verifier_attestation_digest_sha256",
+        "completed_at",
+        "s236p_completed_acceptance_digest_sha256"
+      ],
+      "artifactFieldSchemas": {
+        "acceptance_contract_version": [
+          "dabangil.s236p.completed_synthetic_acceptance.v1"
+        ],
+        "status": [
+          "completed_all_synthetic_private_plane_gates"
+        ],
+        "opaque_s236p_acceptance_ref": "^spa_[A-Za-z0-9_-]{16,64}$",
+        "exact_head_sha": "lowercase_hex_40",
+        "exact_tree_sha": "lowercase_hex_40",
+        "opaque_environment_ref": "^env_[A-Za-z0-9_-]{16,64}$",
+        "opaque_vault_ref": "^vlt_[A-Za-z0-9_-]{16,64}$",
+        "policy_version": "closed_identifier_1_to_80",
+        "key_class_and_epoch": "^managed_(kms|hsm)_mac_v[0-9]+:epoch_[0-9]+$",
+        "provider_config_version": "^pcv_[A-Za-z0-9_-]{16,64}$",
+        "o4v_proposal_digest_sha256": "lowercase_hex_64",
+        "o4v_approved_binding_digest_sha256": "lowercase_hex_64",
+        "provider_binding_digest_sha256": "lowercase_hex_64",
+        "assertion_policy_digest_sha256": "lowercase_hex_64",
+        "attestation_run_id": "^atr_[A-Za-z0-9_-]{16,64}$",
+        "receipt_set_digest_sha256": "lowercase_hex_64",
+        "primary_attestation_provenance_set_digest_sha256": "lowercase_hex_64",
+        "assertion_evidence_set_digest_sha256": "lowercase_hex_64",
+        "independent_verifier_attestation_digest_sha256": "lowercase_hex_64",
+        "completed_at": "iso_8601_utc_instant",
+        "s236p_completed_acceptance_digest_sha256": "lowercase_hex_64"
+      },
+      "artifactAdditionalFieldsAllowed": false,
+      "artifactFreeTextAllowed": false,
+      "digestContract": {
+        "algorithm": "sha256",
+        "serialization": "rfc_8785_json_canonicalization_scheme_utf8",
+        "normalizedToNullFields": [
+          "s236p_completed_acceptance_digest_sha256"
+        ],
+        "contentAddressedStore": "exact_o4v_approved_independent_attestation_store",
+        "contentAddressLookupKey": "s236p_completed_acceptance_digest_sha256",
+        "allDownstreamS236aAndSchedulerUsesMustResolveExactArtifactByDigestAndRecomputeCanonicalDigest": true,
+        "opaqueAcceptanceRefIsArtifactInternalAndMayNotSubstituteForContentAddressDigest": true
+      },
+      "verificationRules": {
+        "allReceiptAssertionSetAndIndependentAttestationDigestsMustRecomputeAndMatch": true,
+        "o4vApprovedBindingDigestMustMatchCurrentImmutableApprovedPacket": true,
+        "o4vOwnerDecisionReceiptMustBeReResolvedAndCryptographicallyRevalidatedAtCompletionAndEveryDownstreamUse": true,
+        "proposalOrProviderBindingDigestMayNotSubstituteForApprovedBindingDigest": true,
+        "completedAtMustFollowEveryReceiptAndIndependentAttestationIssuedAt": true,
+        "missingFailedBlockedExpiredRevokedOrMismatchedEvidenceMayCompleteS236P": false
+      }
+    },
+    "independentSignedAttestationContract": {
+      "artifactFieldsExactly": [
+        "attestation_contract_version",
+        "opaque_attestation_id",
+        "opaque_dsse_envelope_ref",
+        "verifier_class",
+        "verifier_version",
+        "opaque_verifier_id",
+        "opaque_primary_attestor_id",
+        "primary_attestor_class",
+        "primary_attestor_version",
+        "verification_key_id",
+        "verification_key_version",
+        "trust_root_id",
+        "trust_root_version",
+        "revocation_policy_version",
+        "opaque_revocation_evidence_ref",
+        "revocation_evidence_digest_sha256",
+        "signature_algorithm",
+        "dsse_payload_type",
+        "signed_payload",
+        "signed_payload_digest_sha256",
+        "dsse_envelope_digest_sha256",
+        "issued_at",
+        "expires_at",
+        "revocation_checked_at",
+        "signature_verified",
+        "revoked"
+      ],
+      "artifactAdditionalFieldsAllowed": false,
+      "artifactFreeTextAllowed": false,
+      "artifactFieldSchemas": {
+        "attestation_contract_version": {
+          "type": "closed_enum",
+          "values": [
+            "dabangil.s236p.independent_signed_attestation.v1"
+          ]
+        },
+        "opaque_attestation_id": {
+          "type": "opaque_identifier",
+          "pattern": "^iva_[A-Za-z0-9_-]{16,64}$"
+        },
+        "opaque_dsse_envelope_ref": {
+          "type": "opaque_identifier",
+          "pattern": "^dse_[A-Za-z0-9_-]{16,64}$"
+        },
+        "verifier_class": {
+          "type": "closed_enum",
+          "values": [
+            "approved_independent_s236p_verifier_v1"
+          ]
+        },
+        "verifier_version": {
+          "type": "closed_version_identifier",
+          "pattern": "^[a-z0-9._-]{1,80}$"
+        },
+        "opaque_verifier_id": {
+          "type": "opaque_identifier",
+          "pattern": "^ivr_[A-Za-z0-9_-]{16,64}$"
+        },
+        "opaque_primary_attestor_id": {
+          "type": "opaque_identifier",
+          "pattern": "^pat_[A-Za-z0-9_-]{16,64}$"
+        },
+        "primary_attestor_class": {
+          "type": "closed_enum",
+          "values": [
+            "approved_s236p_synthetic_test_harness_v1"
+          ]
+        },
+        "primary_attestor_version": {
+          "type": "closed_version_identifier",
+          "pattern": "^[a-z0-9._-]{1,80}$"
+        },
+        "verification_key_id": {
+          "type": "opaque_identifier",
+          "pattern": "^ivk_[A-Za-z0-9_-]{16,64}$"
+        },
+        "verification_key_version": {
+          "type": "closed_version_identifier",
+          "pattern": "^[a-z0-9._-]{1,80}$"
+        },
+        "trust_root_id": {
+          "type": "opaque_identifier",
+          "pattern": "^itr_[A-Za-z0-9_-]{16,64}$"
+        },
+        "trust_root_version": {
+          "type": "closed_version_identifier",
+          "pattern": "^[a-z0-9._-]{1,80}$"
+        },
+        "revocation_policy_version": {
+          "type": "closed_version_identifier",
+          "pattern": "^[a-z0-9._-]{1,80}$"
+        },
+        "opaque_revocation_evidence_ref": {
+          "type": "opaque_identifier",
+          "pattern": "^rve_[A-Za-z0-9_-]{16,64}$"
+        },
+        "revocation_evidence_digest_sha256": {
+          "type": "lowercase_hex",
+          "length": 64
+        },
+        "signature_algorithm": {
+          "type": "closed_enum",
+          "values": [
+            "ed25519",
+            "ecdsa_p256_sha256"
+          ]
+        },
+        "dsse_payload_type": {
+          "type": "closed_enum",
+          "values": [
+            "application/vnd.inverge.s236p-receipt-set.v1+json"
+          ]
+        },
+        "signed_payload": {
+          "type": "closed_signed_payload"
+        },
+        "signed_payload_digest_sha256": {
+          "type": "lowercase_hex",
+          "length": 64
+        },
+        "dsse_envelope_digest_sha256": {
+          "type": "lowercase_hex",
+          "length": 64
+        },
+        "issued_at": {
+          "type": "iso_8601_utc_instant"
+        },
+        "expires_at": {
+          "type": "iso_8601_utc_instant"
+        },
+        "revocation_checked_at": {
+          "type": "iso_8601_utc_instant"
+        },
+        "signature_verified": {
+          "type": "boolean"
+        },
+        "revoked": {
+          "type": "boolean"
+        }
+      },
+      "signedPayloadFieldsExactly": [
+        "attestation_contract_version",
+        "opaque_attestation_id",
+        "opaque_dsse_envelope_ref",
+        "verifier_class",
+        "verifier_version",
+        "opaque_verifier_id",
+        "opaque_primary_attestor_id",
+        "primary_attestor_class",
+        "primary_attestor_version",
+        "verification_key_id",
+        "verification_key_version",
+        "trust_root_id",
+        "trust_root_version",
+        "revocation_policy_version",
+        "opaque_revocation_evidence_ref",
+        "revocation_evidence_digest_sha256",
+        "signature_algorithm",
+        "dsse_payload_type",
+        "issued_at",
+        "expires_at",
+        "revocation_checked_at",
+        "revoked",
+        "exact_head_sha",
+        "exact_tree_sha",
+        "opaque_environment_ref",
+        "opaque_vault_ref",
+        "policy_version",
+        "key_class_and_epoch",
+        "provider_config_version",
+        "o4v_proposal_digest_sha256",
+        "o4v_approved_binding_digest_sha256",
+        "provider_binding_digest_sha256",
+        "assertion_policy_digest_sha256",
+        "attestation_run_id",
+        "receipt_set_digest_sha256",
+        "primary_attestation_provenance_set_digest_sha256",
+        "assertion_evidence_set_digest_sha256"
+      ],
+      "signedPayloadFieldSchemas": {
+        "attestation_contract_version": {
+          "type": "closed_enum",
+          "values": [
+            "dabangil.s236p.independent_signed_attestation.v1"
+          ]
+        },
+        "opaque_attestation_id": {
+          "type": "opaque_identifier",
+          "pattern": "^iva_[A-Za-z0-9_-]{16,64}$"
+        },
+        "opaque_dsse_envelope_ref": {
+          "type": "opaque_identifier",
+          "pattern": "^dse_[A-Za-z0-9_-]{16,64}$"
+        },
+        "verifier_class": {
+          "type": "closed_enum",
+          "values": [
+            "approved_independent_s236p_verifier_v1"
+          ]
+        },
+        "verifier_version": {
+          "type": "closed_version_identifier",
+          "pattern": "^[a-z0-9._-]{1,80}$"
+        },
+        "opaque_verifier_id": {
+          "type": "opaque_identifier",
+          "pattern": "^ivr_[A-Za-z0-9_-]{16,64}$"
+        },
+        "opaque_primary_attestor_id": {
+          "type": "opaque_identifier",
+          "pattern": "^pat_[A-Za-z0-9_-]{16,64}$"
+        },
+        "primary_attestor_class": {
+          "type": "closed_enum",
+          "values": [
+            "approved_s236p_synthetic_test_harness_v1"
+          ]
+        },
+        "primary_attestor_version": {
+          "type": "closed_version_identifier",
+          "pattern": "^[a-z0-9._-]{1,80}$"
+        },
+        "verification_key_id": {
+          "type": "opaque_identifier",
+          "pattern": "^ivk_[A-Za-z0-9_-]{16,64}$"
+        },
+        "verification_key_version": {
+          "type": "closed_version_identifier",
+          "pattern": "^[a-z0-9._-]{1,80}$"
+        },
+        "trust_root_id": {
+          "type": "opaque_identifier",
+          "pattern": "^itr_[A-Za-z0-9_-]{16,64}$"
+        },
+        "trust_root_version": {
+          "type": "closed_version_identifier",
+          "pattern": "^[a-z0-9._-]{1,80}$"
+        },
+        "revocation_policy_version": {
+          "type": "closed_version_identifier",
+          "pattern": "^[a-z0-9._-]{1,80}$"
+        },
+        "opaque_revocation_evidence_ref": {
+          "type": "opaque_identifier",
+          "pattern": "^rve_[A-Za-z0-9_-]{16,64}$"
+        },
+        "revocation_evidence_digest_sha256": {
+          "type": "lowercase_hex",
+          "length": 64
+        },
+        "signature_algorithm": {
+          "type": "closed_enum",
+          "values": [
+            "ed25519",
+            "ecdsa_p256_sha256"
+          ]
+        },
+        "dsse_payload_type": {
+          "type": "closed_enum",
+          "values": [
+            "application/vnd.inverge.s236p-receipt-set.v1+json"
+          ]
+        },
+        "issued_at": {
+          "type": "iso_8601_utc_instant"
+        },
+        "expires_at": {
+          "type": "iso_8601_utc_instant"
+        },
+        "revocation_checked_at": {
+          "type": "iso_8601_utc_instant"
+        },
+        "revoked": {
+          "type": "boolean"
+        },
+        "exact_head_sha": {
+          "type": "lowercase_hex",
+          "length": 40
+        },
+        "exact_tree_sha": {
+          "type": "lowercase_hex",
+          "length": 40
+        },
+        "opaque_environment_ref": {
+          "type": "opaque_identifier",
+          "pattern": "^env_[A-Za-z0-9_-]{16,64}$"
+        },
+        "opaque_vault_ref": {
+          "type": "opaque_identifier",
+          "pattern": "^vlt_[A-Za-z0-9_-]{16,64}$"
+        },
+        "policy_version": {
+          "type": "closed_version_identifier",
+          "pattern": "^[a-z0-9._-]{1,80}$"
+        },
+        "key_class_and_epoch": {
+          "type": "closed_key_class_epoch",
+          "pattern": "^managed_(kms|hsm)_mac_v[0-9]+:epoch_[0-9]+$"
+        },
+        "provider_config_version": {
+          "type": "opaque_config_version",
+          "pattern": "^pcv_[A-Za-z0-9_-]{16,64}$"
+        },
+        "o4v_proposal_digest_sha256": {
+          "type": "lowercase_hex",
+          "length": 64
+        },
+        "o4v_approved_binding_digest_sha256": {
+          "type": "lowercase_hex",
+          "length": 64
+        },
+        "provider_binding_digest_sha256": {
+          "type": "lowercase_hex",
+          "length": 64
+        },
+        "assertion_policy_digest_sha256": {
+          "type": "lowercase_hex",
+          "length": 64
+        },
+        "attestation_run_id": {
+          "type": "opaque_identifier",
+          "pattern": "^atr_[A-Za-z0-9_-]{16,64}$"
+        },
+        "receipt_set_digest_sha256": {
+          "type": "lowercase_hex",
+          "length": 64
+        },
+        "primary_attestation_provenance_set_digest_sha256": {
+          "type": "lowercase_hex",
+          "length": 64
+        },
+        "assertion_evidence_set_digest_sha256": {
+          "type": "lowercase_hex",
+          "length": 64
+        }
+      },
+      "signedPayloadAdditionalFieldsAllowed": false,
+      "signedPayloadFreeTextAllowed": false,
+      "signedPayloadSerialization": "rfc_8785_json_canonicalization_scheme_utf8",
+      "artifactDigestContract": {
+        "algorithm": "sha256",
+        "serialization": "rfc_8785_json_canonicalization_scheme_utf8",
+        "preimage": "exact_validated_independent_signed_attestation_artifact",
+        "receiptField": "independent_verifier_attestation_digest_sha256",
+        "allReceiptsMustCarrySameArtifactDigest": true
+      },
+      "verificationRules": {
+        "opaqueDsseEnvelopeMustResolveInO4VApprovedMetadataOnlyAttestationStore": true,
+        "dsseSignatureCryptographicallyVerifiedAgainstExactEnvelope": true,
+        "signatureVerifiedMustBeTrue": true,
+        "revokedMustBeFalse": true,
+        "verifierAndPrimaryAttestorMustDifferByClassAndOpaqueIdentity": true,
+        "artifactPrimaryAttestorIdMustMatchEveryReceipt": true,
+        "verificationKeyAndTrustRootMustMatchExactO4VProviderBinding": true,
+        "verificationKeyOrTrustRootRawMaterialMayAppearInArtifactReceiptLogOrEvidence": false,
+        "signedPayloadDigestMustMatchCanonicalSignedPayload": true,
+        "artifactIdentityCredentialAlgorithmTimeAndRevocationFieldsMustExactlyMatchSignedPayload": true,
+        "receiptSetDigestMustMatchCanonicalExactReceiptSet": true,
+        "artifactDigestMustMatchEveryReceiptIndependentVerifierField": true,
+        "everyReceiptSetDigestMustMatchSignedPayloadReceiptSetDigest": true,
+        "allSignedPayloadBindingsMustMatchEveryReceipt": true,
+        "signedPayloadO4vApprovedBindingDigestMustMatchCurrentImmutableApprovedPacket": true,
+        "proposalOrProviderBindingDigestMayNotSubstituteForApprovedBindingDigest": true,
+        "issuedAtMustBeAfterReceiptSetCompleteAndBeforeAcceptance": true,
+        "expiresAtMustBeAfterIssuedAtAndAcceptance": true,
+        "revocationCheckedAtMustBeAtOrAfterIssuedAtAndWithin300SecondsOfAcceptance": true,
+        "revocationEvidenceMustResolveToFreshCryptographicallyAuthenticatedStatusProofAtAcceptance": true,
+        "revocationEvidenceKeyTrustRootAndPolicyMustMatchExactO4VProviderBinding": true,
+        "acceptanceMustRecomputeSignatureTrustPathExpiryAndRevocationWithoutTrustingOuterBooleans": true,
+        "o4vOwnerDecisionReceiptMustBeReResolvedAndCryptographicallyRevalidatedAtAcceptance": true,
+        "maximumAttestationAgeSecondsAtAcceptance": 3600,
+        "artifactSignedPayloadOrEnvelopeDigestMayBeDerivedFromRawOrBodyBytes": false,
+        "expiredRevokedUnverifiedUnknownKeyOrUntrustedRootMayCompleteS236P": false
+      }
+    },
+    "receiptSetAcceptanceRules": {
+      "allRequiredReceiptIdsExactlyOnce": true,
+      "duplicateOrUnknownOperationIdAllowed": false,
+      "fixtureIdMustMatchOperationRule": true,
+      "cleanupStateMustMatchOperationRule": true,
+      "assertionPolicyDigestMustMatchContract": true,
+      "assertionCountMustEqualOperationRuleRequiredAssertionsLength": true,
+      "assertionEvidenceDigestCoversOneClosedResultPerRequiredAssertion": true,
+      "assertionEvidenceDigestCoversHeadTreeEnvironmentProviderO4VPolicyAndRunProvenance": true,
+      "assertionEvidenceDigestMayBeDerivedFromRawOrBodyBytes": false,
+      "closedAttestorClassVersionAndUniqueRunIdRequired": true,
+      "canonicalReceiptSetDigestRequiredOnEveryReceipt": true,
+      "closedIndependentSignedAttestationRequired": true,
+      "allReceiptsMustShareExactHeadTreeEnvironmentPolicyKeyProviderAndApprovedDigests": true,
+      "observedAtAfterProvisioningStartAndBeforeAcceptance": true,
+      "maximumReceiptAgeSecondsAtAcceptance": 3600,
+      "receiptReuseAcrossEnvironmentVaultProviderOrPolicyAllowed": false,
+      "currentApprovedO4VProposalAndProviderBindingRequired": true,
+      "currentImmutableO4VApprovedBindingDigestRequiredOnEveryReceiptAssertionSetSignedAttestationAndCompletedAcceptance": true,
+      "o4vOwnerDecisionReceiptMustBeReResolvedAndCryptographicallyRevalidatedAtAcceptance": true,
+      "proposalOrProviderBindingDigestMayNotSubstituteForApprovedBindingDigest": true,
+      "completedS236PAcceptanceArtifactMustResolveAndMatchExactCanonicalDigest": true
+    }
+  },
+  "o4vPacketDigestContract": {
+    "algorithm": "sha256",
+    "serialization": "rfc_8785_json_canonicalization_scheme_utf8",
+    "preimagePath": "o4vDecisionPacket",
+    "normalizedToNullPaths": [
+      "status",
+      "ownerApproved",
+      "approvalBinding.proposalDigestSha256",
+      "approvalRecord"
+    ],
+    "proposalPayloadAndExactBindingsBound": true,
+    "approvalRecordSeparatelyRecorded": true,
+    "approvalRecordMustReferenceProposalDigest": true,
+    "packetFieldsExactly": [
+      "packetId",
+      "status",
+      "ownerApproved",
+      "requestedScope",
+      "candidateArchitecture",
+      "requiredBeforeApproval",
+      "providerBindingFieldsExactly",
+      "providerBinding",
+      "providerBindingValueRules",
+      "approvalBinding",
+      "ownerDecisionBinding",
+      "approvalRecord",
+      "approvalRecordFieldsExactly",
+      "approvalRecordDecisionValues",
+      "ownerAction",
+      "unapprovedSafeState",
+      "packetExpiresAt",
+      "wildcardScopeAllowed",
+      "automaticProvisioningAllowed",
+      "automaticS236PStartAllowed",
+      "automaticS236AStartAllowed"
+    ],
+    "packetFieldSchemas": {
+      "packetId": "o4v-s234r-owner-private-plane-binding-v1",
+      "status": [
+        "pending_exact_binding_and_owner_decision",
+        "approved",
+        "rejected"
+      ],
+      "ownerApproved": "boolean",
+      "requestedScope": "exact_closed_o4v_requested_scope",
+      "candidateArchitecture": "exact_closed_o4v_candidate_architecture",
+      "requiredBeforeApproval": "exact_closed_required_before_approval_array",
+      "providerBindingFieldsExactly": "exact_closed_provider_binding_field_array",
+      "providerBinding": "exact_provider_binding",
+      "providerBindingValueRules": "exact_closed_provider_binding_value_rules",
+      "approvalBinding": "exact_o4v_approval_binding",
+      "ownerDecisionBinding": "exact_o4v_owner_decision_binding",
+      "approvalRecord": "exact_o4v_owner_approval_record",
+      "approvalRecordFieldsExactly": "exact_closed_o4v_approval_record_field_array",
+      "approvalRecordDecisionValues": "exact_pending_approved_rejected_array",
+      "ownerAction": "exact_closed_owner_action",
+      "unapprovedSafeState": "exact_closed_unapproved_safe_state",
+      "packetExpiresAt": "iso_8601_utc_instant",
+      "wildcardScopeAllowed": "boolean_false",
+      "automaticProvisioningAllowed": "boolean_false",
+      "automaticS236PStartAllowed": "boolean_false",
+      "automaticS236AStartAllowed": "boolean_false"
+    },
+    "packetAdditionalFieldsAllowed": false,
+    "packetFreeTextAllowed": false,
+    "ownerDecisionBindingContract": {
+      "fieldsExactly": [
+        "opaqueOwnerDecisionStoreRef",
+        "ownerDecisionStorePolicyDigestSha256",
+        "authenticatedOwnerPrivateScopeDigestSha256",
+        "ownerActorClass",
+        "ownerActorVersion",
+        "opaqueOwnerDecisionActorId",
+        "verificationKeyId",
+        "verificationKeyVersion",
+        "trustRootId",
+        "trustRootVersion",
+        "signatureAlgorithm",
+        "revocationPolicyVersion"
+      ],
+      "fieldSchemas": {
+        "opaqueOwnerDecisionStoreRef": "^ods_[A-Za-z0-9_-]{16,64}$|null_while_pending",
+        "ownerDecisionStorePolicyDigestSha256": "lowercase_hex_64_or_null_while_pending",
+        "authenticatedOwnerPrivateScopeDigestSha256": "lowercase_hex_64_or_null_while_pending",
+        "ownerActorClass": [
+          "authenticated_owner_private_control_plane_approver_v1",
+          null
+        ],
+        "ownerActorVersion": "closed_identifier_1_to_80_or_null_while_pending",
+        "opaqueOwnerDecisionActorId": "^oaa_[A-Za-z0-9_-]{16,64}$|null_while_pending",
+        "verificationKeyId": "^oak_[A-Za-z0-9_-]{16,64}$|null_while_pending",
+        "verificationKeyVersion": "closed_identifier_1_to_80_or_null_while_pending",
+        "trustRootId": "^otr_[A-Za-z0-9_-]{16,64}$|null_while_pending",
+        "trustRootVersion": "closed_identifier_1_to_80_or_null_while_pending",
+        "signatureAlgorithm": [
+          "ed25519",
+          "ecdsa_p256_sha256",
+          null
+        ],
+        "revocationPolicyVersion": "closed_identifier_1_to_80_or_null_while_pending"
+      },
+      "additionalFieldsAllowed": false,
+      "allFieldsMustBeNonNullBeforeApprovedOrRejectedDecision": true
+    },
+    "approvalRecordContract": {
+      "fieldsExactly": [
+        "decision",
+        "proposalDigestSha256",
+        "decidedAt",
+        "opaqueOwnerDecisionReceiptRef",
+        "ownerDecisionReceiptSha256"
+      ],
+      "fieldSchemas": {
+        "decision": [
+          "pending",
+          "approved",
+          "rejected"
+        ],
+        "proposalDigestSha256": "lowercase_hex_64_or_null_while_pending",
+        "decidedAt": "iso_8601_utc_instant_or_null_while_pending",
+        "opaqueOwnerDecisionReceiptRef": "^odr_[A-Za-z0-9_-]{16,64}$|null_while_pending",
+        "ownerDecisionReceiptSha256": "lowercase_hex_64_or_null_while_pending"
+      },
+      "additionalFieldsAllowed": false,
+      "pendingRequiresAllOtherFieldsNull": true,
+      "approvedOrRejectedRequiresAllOtherFieldsNonNull": true,
+      "immutableAfterDecision": true
+    },
+    "ownerDecisionReceiptContract": {
+      "artifactFieldsExactly": [
+        "receipt_contract_version",
+        "decision",
+        "packet_id",
+        "proposal_digest_sha256",
+        "provider_binding_digest_sha256",
+        "exact_head_sha",
+        "exact_tree_sha",
+        "packet_expires_at",
+        "decided_at",
+        "opaque_receipt_id",
+        "opaque_dsse_envelope_ref",
+        "authenticated_owner_private_scope_digest_sha256",
+        "opaque_authentication_event_ref",
+        "authentication_assurance_class",
+        "owner_actor_class",
+        "owner_actor_version",
+        "opaque_owner_actor_id",
+        "verification_key_id",
+        "verification_key_version",
+        "trust_root_id",
+        "trust_root_version",
+        "signature_algorithm",
+        "dsse_payload_type",
+        "signed_payload",
+        "signed_payload_digest_sha256",
+        "dsse_envelope_digest_sha256",
+        "issued_at",
+        "expires_at",
+        "revocation_policy_version",
+        "opaque_revocation_evidence_ref",
+        "revocation_evidence_digest_sha256",
+        "revocation_checked_at",
+        "signature_verified",
+        "revoked"
+      ],
+      "artifactFieldSchemas": {
+        "receipt_contract_version": [
+          "dabangil.o4v.owner_private_plane_decision_receipt.v1"
+        ],
+        "decision": [
+          "approved",
+          "rejected"
+        ],
+        "packet_id": [
+          "o4v-s234r-owner-private-plane-binding-v1"
+        ],
+        "proposal_digest_sha256": "lowercase_hex_64",
+        "provider_binding_digest_sha256": "lowercase_hex_64",
+        "exact_head_sha": "lowercase_hex_40",
+        "exact_tree_sha": "lowercase_hex_40",
+        "packet_expires_at": "iso_8601_utc_instant",
+        "decided_at": "iso_8601_utc_instant",
+        "opaque_receipt_id": "^odr_[A-Za-z0-9_-]{16,64}$",
+        "opaque_dsse_envelope_ref": "^dse_[A-Za-z0-9_-]{16,64}$",
+        "authenticated_owner_private_scope_digest_sha256": "lowercase_hex_64",
+        "opaque_authentication_event_ref": "^aev_[A-Za-z0-9_-]{16,64}$",
+        "authentication_assurance_class": [
+          "owner_reauthentication_with_replay_protected_signed_decision_v1"
+        ],
+        "owner_actor_class": [
+          "authenticated_owner_private_control_plane_approver_v1"
+        ],
+        "owner_actor_version": "closed_identifier_1_to_80",
+        "opaque_owner_actor_id": "^oaa_[A-Za-z0-9_-]{16,64}$",
+        "verification_key_id": "^oak_[A-Za-z0-9_-]{16,64}$",
+        "verification_key_version": "closed_identifier_1_to_80",
+        "trust_root_id": "^otr_[A-Za-z0-9_-]{16,64}$",
+        "trust_root_version": "closed_identifier_1_to_80",
+        "signature_algorithm": [
+          "ed25519",
+          "ecdsa_p256_sha256"
+        ],
+        "dsse_payload_type": [
+          "application/vnd.inverge.o4v-owner-private-plane-decision.v1+json"
+        ],
+        "signed_payload": "closed_signed_payload",
+        "signed_payload_digest_sha256": "lowercase_hex_64",
+        "dsse_envelope_digest_sha256": "lowercase_hex_64",
+        "issued_at": "iso_8601_utc_instant",
+        "expires_at": "iso_8601_utc_instant",
+        "revocation_policy_version": "closed_identifier_1_to_80",
+        "opaque_revocation_evidence_ref": "^rve_[A-Za-z0-9_-]{16,64}$",
+        "revocation_evidence_digest_sha256": "lowercase_hex_64",
+        "revocation_checked_at": "iso_8601_utc_instant",
+        "signature_verified": "boolean",
+        "revoked": "boolean"
+      },
+      "signedPayloadFieldsExactly": [
+        "receipt_contract_version",
+        "decision",
+        "packet_id",
+        "proposal_digest_sha256",
+        "provider_binding_digest_sha256",
+        "exact_head_sha",
+        "exact_tree_sha",
+        "packet_expires_at",
+        "decided_at",
+        "opaque_receipt_id",
+        "opaque_dsse_envelope_ref",
+        "authenticated_owner_private_scope_digest_sha256",
+        "opaque_authentication_event_ref",
+        "authentication_assurance_class",
+        "owner_actor_class",
+        "owner_actor_version",
+        "opaque_owner_actor_id",
+        "verification_key_id",
+        "verification_key_version",
+        "trust_root_id",
+        "trust_root_version",
+        "signature_algorithm",
+        "dsse_payload_type",
+        "issued_at",
+        "expires_at",
+        "revocation_policy_version",
+        "opaque_revocation_evidence_ref",
+        "revocation_evidence_digest_sha256",
+        "revocation_checked_at",
+        "revoked"
+      ],
+      "artifactAdditionalFieldsAllowed": false,
+      "signedPayloadAdditionalFieldsAllowed": false,
+      "signedPayloadSchemasAreExactProjectionOfArtifactFieldSchemas": true,
+      "artifactAndSignedPayloadFreeTextAllowed": false,
+      "artifactDigestPreimage": "exact_validated_o4v_owner_decision_receipt_artifact",
+      "artifactReferenceField": "approvalRecord.opaqueOwnerDecisionReceiptRef",
+      "artifactDigestField": "approvalRecord.ownerDecisionReceiptSha256",
+      "verificationRules": {
+        "proposalDigestMustBeRecomputedFromExactPacketWithNormalizedApprovalState": true,
+        "receiptDecisionProposalDigestDecidedAtReferenceAndDigestMustExactlyMatchApprovalRecord": true,
+        "receiptProposalProviderBindingHeadTreeAndExpiryMustMatchExactPacket": true,
+        "receiptScopeActorVersionKeyTrustRootAlgorithmAndRevocationMustMatchExactOwnerDecisionBinding": true,
+        "approvedPacketRequiresReceiptDecisionApproved": true,
+        "rejectedPacketRequiresReceiptDecisionRejectedAndMayNotProduceApprovedDigest": true,
+        "decidedAtMustEqualIssuedAtAndPrecedePacketExpiry": true,
+        "receiptExpiryMustBeAtOrAfterPacketExpiry": true,
+        "receiptMustResolveFromExactPrivateDecisionStoreUnderExactPolicyDigest": true,
+        "signatureTrustExpiryAndRevocationMustBeRecomputedWithoutTrustingOuterBooleans": true,
+        "receiptMustBeReResolvedAndRevalidatedBeforeProvisioningEverySyntheticReceiptS236pAcceptanceAndS236aStart": true,
+        "expiredRevokedReplayedUnknownKeyUntrustedRootOrInvalidSignatureFailsClosed": true
+      }
+    },
+    "approvedBindingDigestContract": {
+      "algorithm": "sha256",
+      "serialization": "rfc_8785_json_canonicalization_scheme_utf8",
+      "preimage": "exact_validated_approved_packet_including_immutable_approval_record",
+      "receiptField": "o4v_approved_binding_digest_sha256",
+      "signedAttestationField": "o4v_approved_binding_digest_sha256",
+      "futureS236pAcceptanceField": "o4v_approved_binding_digest_sha256",
+      "contentAddressedStore": "ownerDecisionBinding.opaqueOwnerDecisionStoreRef_under_exact_ownerDecisionStorePolicyDigestSha256",
+      "contentAddressLookupKey": "o4v_approved_binding_digest_sha256",
+      "finalDigestIsNotAStandaloneBearerAuthorization": true,
+      "ownerDecisionReceiptMustBeCurrentValidAndRevalidatedAtEveryUse": true
+    },
+    "approvalStateInvariant": {
+      "approvedStatusAndOwnerApprovedTrueIffApprovalRecordDecisionApproved": true,
+      "approvedRecordProposalDigestMustEqualApprovalBindingProposalDigest": true,
+      "approvedRecordDecisionTimeReceiptReferenceAndReceiptDigestMustExactlyMatchResolvedApprovedReceipt": true,
+      "approvedRecordRequiresUnexpiredPacketAtDecision": true,
+      "approvedRecordRequiresAllExactBindingsComplete": true,
+      "approvedRecordRequiresAllOwnerDecisionBindingsComplete": true,
+      "approvalRecordImmutableAfterDecision": true
+    },
+  "pendingProposalDigestSha256": "59c6762c2dbe6519cefeef864b8d8f5f14402c3256d23ed8708ca18bb6fc4236"
+  },
+  "providerBindingDigestContract": {
+    "algorithm": "sha256",
+    "serialization": "rfc_8785_json_canonicalization_scheme_utf8",
+    "preimagePath": "o4vDecisionPacket.providerBinding",
+    "normalizedToNullPaths": [],
+    "allFieldsMustBeNonNullBeforeBindingComplete": true,
+    "secretsOrRawLocatorsAllowed": false,
+    "receiptDigestMustMatchApprovedBinding": true,
+    "pendingTemplateDigestSha256": "d161f4f52c1f155e383246edd36dec6f1d56fd89aaf272f5087c2d4ba3105ee3"
+  },
+  "o4vDecisionPacket": {
+    "packetId": "o4v-s234r-owner-private-plane-binding-v1",
+    "status": "pending_exact_binding_and_owner_decision",
+    "ownerApproved": false,
+    "requestedScope": "approve_exact_owner_private_vault_key_provider_environment_retention_rollback_independent_signed_attestation_and_s236p_synthetic_provisioning_only",
+    "candidateArchitecture": {
+      "rawVaultProviderClass": "existing_supabase_private_storage_candidate",
+      "metadataProviderClass": "existing_supabase_postgres_rls_candidate",
+      "commitmentKeyProviderClass": "managed_kms_or_hsm_vault_scoped_mac_key_nonexportable_outside_cryptographic_boundary_candidate",
+      "storageEncryptionKeyProviderClass": "provider_or_customer_managed_nonexportable_encryption_key_candidate_distinct_from_commitment_key",
+      "contentProcessingProviderMode": "none_by_default_pending_exact_o4v_binding",
+      "independentAttestationStoreAndVerifierClass": "metadata_only_dsse_store_plus_distinct_signed_verifier_pending_exact_o4v_binding",
+      "runtimeEnvironmentClass": "owner_private_non_production_candidate",
+      "bindingComplete": false
+    },
+    "requiredBeforeApproval": [
+      "all_provider_boundary_bindings",
+      "canonical_proposal_digest_exact_head_and_tree_binding",
+      "exact_retention_and_backup_values",
+      "exact_rollback_and_restore_behavior",
+      "provider_logging_training_and_retention_evidence",
+      "synthetic_receipt_execution_plan",
+      "real_content_flag_confirmed_off"
+    ],
+    "providerBindingFieldsExactly": [
+      "opaque_environment_ref",
+      "vault_provider_class",
+      "opaque_vault_config_ref",
+      "metadata_provider_class",
+      "opaque_metadata_config_ref",
+      "region_code",
+      "bucket_config_version",
+      "metadata_schema_version",
+      "commitment_key_provider_class",
+      "opaque_commitment_key_ref",
+      "commitment_key_epoch",
+      "commitment_mac_algorithm_version",
+      "commitment_canonicalization_version",
+      "commitment_domain_separation_version",
+      "opaque_commitment_domain_ref",
+      "commitment_encoding_version",
+      "commitment_truncation_bits",
+      "commitment_rotation_migration_policy_version",
+      "access_policy_version",
+      "provider_logging_policy_version",
+      "provider_training_policy_version",
+      "provider_research_secondary_use_policy_version",
+      "provider_retention_policy_version",
+      "backup_policy_version",
+      "cache_index_policy_version",
+      "rollback_restore_policy_version",
+      "signed_access_policy_version",
+      "provider_content_validator_policy_version",
+      "vault_encryption_policy_version",
+      "transport_security_policy_version",
+      "storage_encryption_key_class",
+      "opaque_storage_encryption_key_ref",
+      "storage_encryption_key_region",
+      "storage_encryption_key_rotation_period_days",
+      "storage_encryption_key_destruction_sla_seconds",
+      "metadata_encryption_policy_version",
+      "backup_encryption_policy_version",
+      "public_acl_policy_version",
+      "content_processing_provider_mode",
+      "content_processing_provider_count",
+      "content_processing_provider_set_digest_sha256",
+      "content_processing_provider_policy_document_sha256",
+      "content_processing_model_registry_digest_sha256",
+      "content_processing_prompt_registry_digest_sha256",
+      "content_processing_logging_policy_document_sha256",
+      "content_processing_training_policy_document_sha256",
+      "content_processing_research_secondary_use_policy_document_sha256",
+      "content_processing_retention_policy_document_sha256",
+      "session_or_capability_ttl_seconds",
+      "private_content_retention_days",
+      "provider_raw_body_log_retention_seconds",
+      "provider_metadata_log_retention_days",
+      "backup_expiry_days",
+      "cache_ttl_seconds",
+      "temporary_copy_ttl_seconds",
+      "deletion_completion_sla_seconds",
+      "key_rotation_period_days",
+      "destroyed_key_purge_sla_seconds",
+      "access_policy_document_sha256",
+      "provider_logging_policy_document_sha256",
+      "provider_training_policy_document_sha256",
+      "provider_research_secondary_use_policy_document_sha256",
+      "provider_retention_policy_document_sha256",
+      "backup_policy_document_sha256",
+      "cache_index_policy_document_sha256",
+      "deletion_policy_document_sha256",
+      "rollback_restore_policy_document_sha256",
+      "commitment_key_lifecycle_policy_document_sha256",
+      "commitment_rotation_migration_policy_document_sha256",
+      "provider_content_validator_policy_document_sha256",
+      "vault_encryption_policy_document_sha256",
+      "transport_security_policy_document_sha256",
+      "metadata_encryption_policy_document_sha256",
+      "backup_encryption_policy_document_sha256",
+      "public_acl_policy_document_sha256",
+      "independent_attestation_store_policy_version",
+      "opaque_independent_attestation_store_ref",
+      "independent_verifier_class",
+      "independent_verifier_version",
+      "opaque_independent_verification_key_ref",
+      "independent_verification_key_version",
+      "opaque_independent_trust_root_ref",
+      "independent_trust_root_version",
+      "independent_signature_algorithm",
+      "independent_attestation_revocation_policy_version",
+      "opaque_independent_revocation_evidence_store_ref",
+      "independent_attestation_store_policy_document_sha256",
+      "independent_attestation_revocation_policy_document_sha256"
+    ],
+    "providerBinding": {
+      "opaque_environment_ref": null,
+      "vault_provider_class": null,
+      "opaque_vault_config_ref": null,
+      "metadata_provider_class": null,
+      "opaque_metadata_config_ref": null,
+      "region_code": null,
+      "bucket_config_version": null,
+      "metadata_schema_version": null,
+      "commitment_key_provider_class": null,
+      "opaque_commitment_key_ref": null,
+      "commitment_key_epoch": null,
+      "commitment_mac_algorithm_version": null,
+      "commitment_canonicalization_version": null,
+      "commitment_domain_separation_version": null,
+      "opaque_commitment_domain_ref": null,
+      "commitment_encoding_version": null,
+      "commitment_truncation_bits": null,
+      "commitment_rotation_migration_policy_version": null,
+      "access_policy_version": null,
+      "provider_logging_policy_version": null,
+      "provider_training_policy_version": null,
+      "provider_research_secondary_use_policy_version": null,
+      "provider_retention_policy_version": null,
+      "backup_policy_version": null,
+      "cache_index_policy_version": null,
+      "rollback_restore_policy_version": null,
+      "signed_access_policy_version": null,
+      "provider_content_validator_policy_version": null,
+      "vault_encryption_policy_version": null,
+      "transport_security_policy_version": null,
+      "storage_encryption_key_class": null,
+      "opaque_storage_encryption_key_ref": null,
+      "storage_encryption_key_region": null,
+      "storage_encryption_key_rotation_period_days": null,
+      "storage_encryption_key_destruction_sla_seconds": null,
+      "metadata_encryption_policy_version": null,
+      "backup_encryption_policy_version": null,
+      "public_acl_policy_version": null,
+      "content_processing_provider_mode": null,
+      "content_processing_provider_count": null,
+      "content_processing_provider_set_digest_sha256": null,
+      "content_processing_provider_policy_document_sha256": null,
+      "content_processing_model_registry_digest_sha256": null,
+      "content_processing_prompt_registry_digest_sha256": null,
+      "content_processing_logging_policy_document_sha256": null,
+      "content_processing_training_policy_document_sha256": null,
+      "content_processing_research_secondary_use_policy_document_sha256": null,
+      "content_processing_retention_policy_document_sha256": null,
+      "session_or_capability_ttl_seconds": null,
+      "private_content_retention_days": null,
+      "provider_raw_body_log_retention_seconds": null,
+      "provider_metadata_log_retention_days": null,
+      "backup_expiry_days": null,
+      "cache_ttl_seconds": null,
+      "temporary_copy_ttl_seconds": null,
+      "deletion_completion_sla_seconds": null,
+      "key_rotation_period_days": null,
+      "destroyed_key_purge_sla_seconds": null,
+      "access_policy_document_sha256": null,
+      "provider_logging_policy_document_sha256": null,
+      "provider_training_policy_document_sha256": null,
+      "provider_research_secondary_use_policy_document_sha256": null,
+      "provider_retention_policy_document_sha256": null,
+      "backup_policy_document_sha256": null,
+      "cache_index_policy_document_sha256": null,
+      "deletion_policy_document_sha256": null,
+      "rollback_restore_policy_document_sha256": null,
+      "commitment_key_lifecycle_policy_document_sha256": null,
+      "commitment_rotation_migration_policy_document_sha256": null,
+      "provider_content_validator_policy_document_sha256": null,
+      "vault_encryption_policy_document_sha256": null,
+      "transport_security_policy_document_sha256": null,
+      "metadata_encryption_policy_document_sha256": null,
+      "backup_encryption_policy_document_sha256": null,
+      "public_acl_policy_document_sha256": null,
+      "independent_attestation_store_policy_version": null,
+      "opaque_independent_attestation_store_ref": null,
+      "independent_verifier_class": null,
+      "independent_verifier_version": null,
+      "opaque_independent_verification_key_ref": null,
+      "independent_verification_key_version": null,
+      "opaque_independent_trust_root_ref": null,
+      "independent_trust_root_version": null,
+      "independent_signature_algorithm": null,
+      "independent_attestation_revocation_policy_version": null,
+      "opaque_independent_revocation_evidence_store_ref": null,
+      "independent_attestation_store_policy_document_sha256": null,
+      "independent_attestation_revocation_policy_document_sha256": null
+    },
+    "providerBindingValueRules": {
+      "allPolicyDocumentDigests": "lowercase_sha256",
+      "allDurations": "finite_nonnegative_integer",
+      "sessionOrCapabilityTtlSecondsMaximum": 900,
+      "privateContentRetentionDaysRange": [
+        1,
+        3650
+      ],
+      "providerRawBodyLogRetentionSecondsExact": 0,
+      "providerMetadataLogRetentionDaysMaximum": 90,
+      "backupExpiryDaysRange": [
+        1,
+        90
+      ],
+      "cacheAndTemporaryCopyTtlSecondsMaximum": 3600,
+      "deletionAndDestroyedKeyPurgeSlaSecondsMaximum": 604800,
+      "keyRotationPeriodDaysRange": [
+        1,
+        365
+      ],
+      "storageEncryptionKeyRotationPeriodDaysRange": [
+        1,
+        365
+      ],
+      "storageEncryptionKeyDestructionSlaSecondsMaximum": 604800,
+      "storageEncryptionKeyMustDifferFromCommitmentKey": true,
+      "transportSecurityMinimumAllowed": "TLS_1_2",
+      "publicAclAllowedExact": false,
+      "contentProcessingProviderModesAllowed": [
+        "none",
+        "exact_approved_provider_set"
+      ],
+      "contentProcessingProviderCountRange": [
+        0,
+        10
+      ],
+      "noneModeRequiresZeroCountAndCanonicalEmptySetModelPromptDigests": true,
+      "exactProviderModeRequiresPositiveCountAndImmutableProviderPolicyDigests": true,
+      "contentProcessingProviderTrainingResearchSecondaryUseAllowed": false,
+      "contentProcessingProviderRetentionMayExceedExactO4VWindow": false,
+      "commitmentMacAlgorithmVersionsAllowed": [
+        "managed_kms_or_hsm_hmac_sha256_v1",
+        "managed_kms_or_hsm_aes_cmac_v1"
+      ],
+      "commitmentEncodingVersionsAllowed": [
+        "base64url_no_padding_v1"
+      ],
+      "commitmentTruncationBitsRange": [
+        128,
+        256
+      ],
+      "commitmentCanonicalizationDomainAndMigrationVersionsRequired": true,
+      "opaqueCommitmentDomainRefPattern": "^cmd_[A-Za-z0-9_-]{16,64}$",
+      "independentVerifierClassesAllowed": [
+        "approved_independent_s236p_verifier_v1"
+      ],
+      "independentSignatureAlgorithmsAllowed": [
+        "ed25519",
+        "ecdsa_p256_sha256"
+      ],
+      "independentVerificationKeyRefPattern": "^ivk_[A-Za-z0-9_-]{16,64}$",
+      "independentTrustRootRefPattern": "^itr_[A-Za-z0-9_-]{16,64}$",
+      "independentAttestationStoreRefPattern": "^ias_[A-Za-z0-9_-]{16,64}$",
+      "independentRevocationEvidenceStoreRefPattern": "^irs_[A-Za-z0-9_-]{16,64}$",
+      "independentVerifierKeyTrustRootAndRevocationPolicyMustBeImmutableAndNonNullBeforeO4VApproval": true
+    },
+    "approvalBinding": {
+      "exactHeadSha": null,
+      "exactTreeSha": null,
+      "proposalDigestSha256": null,
+      "providerBindingDigestSha256": null,
+      "bindingComplete": false
+    },
+    "ownerDecisionBinding": {
+      "opaqueOwnerDecisionStoreRef": null,
+      "ownerDecisionStorePolicyDigestSha256": null,
+      "authenticatedOwnerPrivateScopeDigestSha256": null,
+      "ownerActorClass": null,
+      "ownerActorVersion": null,
+      "opaqueOwnerDecisionActorId": null,
+      "verificationKeyId": null,
+      "verificationKeyVersion": null,
+      "trustRootId": null,
+      "trustRootVersion": null,
+      "signatureAlgorithm": null,
+      "revocationPolicyVersion": null
+    },
+    "approvalRecord": {
+      "decision": "pending",
+      "proposalDigestSha256": null,
+      "decidedAt": null,
+      "opaqueOwnerDecisionReceiptRef": null,
+      "ownerDecisionReceiptSha256": null
+    },
+    "approvalRecordFieldsExactly": [
+      "decision",
+      "proposalDigestSha256",
+      "decidedAt",
+      "opaqueOwnerDecisionReceiptRef",
+      "ownerDecisionReceiptSha256"
+    ],
+    "approvalRecordDecisionValues": [
+      "pending",
+      "approved",
+      "rejected"
+    ],
+    "ownerAction": "approve_or_reject_only_after_exact_bindings_are_materialized",
+    "unapprovedSafeState": "no_provisioning_no_real_content_no_s236p_completion",
+    "packetExpiresAt": "2026-08-09T14:59:59.000Z",
+    "wildcardScopeAllowed": false,
+    "automaticProvisioningAllowed": false,
+    "automaticS236PStartAllowed": false,
+    "automaticS236AStartAllowed": false
+  }
+}

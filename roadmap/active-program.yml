@@ -269,192 +269,324 @@ items:
     lockGroup: first-foundation-contracts
     risk: high
     priority: 30
-  - id: O3A
-    title: Owner Second-Round Golden 3 Rights and Private Execution Approval
-    status: queued
-    dependencies: [S235A]
-    lockGroup: owner-content-rights
+  - id: S234R
+    title: Owner Dogfood Private Plane and Schedule Program Amendment
+    status: completed
+    completionScope: program_amendment_contract_evidence
+    currentReadinessEstablished: false
+    dependencies: [S234, S235A, S235B]
+    lockGroup: unified-control-plane
     risk: high
     priority: 31
-  - id: S236A
-    title: Second-Round Owner-Private Golden 3
-    status: queued
-    dependencies: [O3A]
-    lockGroup: second-golden-private
+  - id: O3A
+    title: Owner Second-Round Golden 3 Rights Source Version and Purpose Approval
+    status: completed
+    completionScope: exact_packet_owner_decision
+    decisionScope: exact_rights_source_version_purpose_for_future_s236a_only
+    decisionRecord: docs/decisions/2026-07-29-owner-o3a-golden-3-approval.md
+    decisionRecordSha256: 8841ff41dc4c9d3eb1e8bb57c2643964d4e9c54ed6825d763ccd7a6641cc987c
+    approvalPacketId: o3a-s234r-appraiser-second-2026-q1-owner-private-golden-3-v2
+    approvalPacketDigestSha256: 8189997e733eb0c8bef62c3ba5fa1cadac39a807c34d925b2e1a291fa30e654c
+    approvalAuthorizesImmediateOperation: false
+    automaticStartAllowed: false
+    manualS236AStartRequired: true
+    downstreamExecutionStarted: false
+    dependencies: [S235A, S234R]
+    lockGroup: owner-content-rights
     risk: high
     priority: 32
-  - id: S237A
-    title: Invitation-Only Founding Beta Core Readiness
-    status: queued
-    dependencies: [S236A]
-    lockGroup: founding-beta-core
-    risk: high
-    priority: 33
-  - id: O4A
-    title: Owner Founding Beta Activation Approval
-    status: queued
-    dependencies: [S237A]
-    lockGroup: owner-commercial-activation
-    risk: high
-    priority: 34
-  - id: S238A
-    title: Founding Beta Wave A
-    status: queued
-    dependencies: [O4A]
-    lockGroup: founding-beta-wave-a
-    risk: high
-    priority: 35
-  - id: O3C
-    title: Owner Second-Round Golden 9 Rights and Reviewer Approval
-    status: queued
-    dependencies: [S238A]
-    lockGroup: owner-golden-nine-rights
-    risk: high
-    priority: 36
-  - id: S239A
-    title: Second-Round Golden 9
-    status: queued
-    dependencies: [O3C]
-    lockGroup: second-golden-nine
-    risk: high
-    priority: 37
-  - id: S240A
-    title: Founding Beta Wave B and C
-    status: queued
-    dependencies: [S239A]
-    lockGroup: founding-beta-wave-bc
-    risk: high
-    priority: 38
-  - id: S241A
-    title: Second-Round Authenticated Acceptance
-    status: queued
-    dependencies: [S240A]
-    lockGroup: second-authenticated-acceptance
-    risk: high
-    priority: 39
+    approvalExpiresAt: 2026-08-09T14:59:59.000Z
   - id: S236B
     title: First-Round Capture and OCR Benchmark Contracts
     status: queued
-    dependencies: [S235B]
+    dependencies: [S235B, S234R]
     lockGroup: first-capture-benchmark
     risk: high
+    priority: 33
+  - id: O4V
+    title: Owner Private Vault Key Provider Environment and Retention Approval
+    status: queued
+    dependencies: [S234R]
+    lockGroup: owner-private-plane
+    risk: high
+    priority: 34
+  - id: S236P
+    title: Private Authoring Review Plane Provisioning and Synthetic Receipt Acceptance
+    status: queued
+    dependencies: [O4V]
+    lockGroup: private-plane-provisioning
+    risk: high
+    priority: 35
+  - id: S236A
+    title: Second-Round Owner-Private Golden 3
+    status: queued
+    dependencies: [O3A, S236P]
+    lockGroup: second-golden-private
+    risk: high
+    priority: 36
+  - id: S237A
+    title: Owner-Private Second-Round Study OS Core
+    status: queued
+    dependencies: [S236A]
+    lockGroup: owner-private-study-os-core
+    risk: high
+    priority: 37
+  - id: S237P
+    title: Full-Day Native Planning Contract and Fixtures
+    status: queued
+    dependencies: [S237A]
+    lockGroup: full-day-native-planning
+    risk: high
+    priority: 38
+  - id: O4A
+    title: Owner-Private Runtime and Dogfood Activation Approval
+    status: queued
+    dependencies: [S237P]
+    lockGroup: owner-private-runtime-activation
+    risk: high
+    priority: 39
+  - id: S238A
+    title: Owner Dogfood Baseline Native Planner
+    status: queued
+    dependencies: [O4A]
+    lockGroup: owner-native-dogfood
+    risk: high
     priority: 40
+  - id: S240A
+    title: Owner Dogfood Extended Acceptance Native Planner
+    status: queued
+    dependencies: [S238A]
+    lockGroup: owner-native-dogfood
+    risk: high
+    priority: 41
+  - id: S241A
+    title: Owner-Private Second-Round Authenticated Acceptance
+    status: queued
+    dependencies: [S240A]
+    lockGroup: second-owner-private-acceptance
+    risk: high
+    priority: 42
+  - id: S237O
+    title: OR-Tools CP-SAT Isolated Schedule Benchmark Adapter
+    status: queued
+    dependencies: [S237P]
+    lockGroup: schedule-optimizer-benchmark
+    risk: high
+    priority: 43
+  - id: O4T
+    title: Owner Schedule Optimizer Threshold Decision
+    status: queued
+    dependencies: [S237O]
+    lockGroup: owner-schedule-thresholds
+    risk: high
+    priority: 44
+  - id: O2O
+    title: Owner Private Schedule Comparison Measurement and Retention Approval
+    status: queued
+    dependencies: [O4T]
+    lockGroup: owner-schedule-measurement-consent
+    risk: high
+    priority: 45
+  - id: S238OH
+    title: Owner-Hidden OR-Tools Shadow Comparison
+    status: queued
+    dependencies: [S238A, O2O]
+    lockGroup: schedule-optimizer-shadow
+    risk: high
+    priority: 46
+  - id: S238OV
+    title: Owner-Visible Native and Optimized Schedule Comparison
+    status: queued
+    dependencies: [S238OH]
+    lockGroup: schedule-optimizer-visible-compare
+    risk: high
+    priority: 47
+  - id: O4P
+    title: Owner Schedule Optimizer Limited Activation Approval
+    status: queued
+    dependencies: [S238OV, S240A]
+    lockGroup: owner-schedule-optimizer-activation
+    risk: high
+    priority: 48
+  - id: S239O
+    title: Owner-Only Schedule Optimizer Limited Activation
+    status: queued
+    dependencies: [O4P]
+    lockGroup: schedule-optimizer-limited
+    risk: high
+    priority: 49
+  - id: S240O
+    title: Owner Schedule Optimizer Dogfood Acceptance
+    status: queued
+    dependencies: [S239O]
+    lockGroup: schedule-optimizer-acceptance
+    risk: high
+    priority: 50
   - id: O3B
     title: Owner First-Round Rights and Version Approval
     status: queued
     dependencies: [S236B]
     lockGroup: owner-first-rights
     risk: high
-    priority: 41
+    priority: 51
   - id: S237B
     title: First-Round Adaptive MCQ Core Contracts
     status: queued
     dependencies: [O3B]
     lockGroup: first-mcq-core
     risk: high
-    priority: 42
+    priority: 52
   - id: O4B
     title: Owner First-Round Private Runtime Approval
     status: queued
     dependencies: [S237B]
     lockGroup: owner-first-runtime
     risk: high
-    priority: 43
+    priority: 53
   - id: S238B
     title: First-Round Authenticated Acceptance
     status: queued
     dependencies: [O4B]
     lockGroup: first-authenticated-acceptance
     risk: high
-    priority: 44
+    priority: 54
+  - id: O3C
+    title: Owner External Golden 9 Rights and Reviewer Approval
+    status: queued
+    dependencies: [S241A]
+    lockGroup: owner-external-golden-nine-rights
+    risk: high
+    priority: 55
+  - id: S239A
+    title: External-Readiness Second-Round Golden 9
+    status: queued
+    dependencies: [O3C]
+    lockGroup: external-golden-nine
+    risk: high
+    priority: 56
+  - id: S242C
+    title: Invitation-Only External Commercial Beta Core Readiness
+    status: queued
+    dependencies: [S241A, S239A]
+    lockGroup: external-commercial-beta-core
+    risk: high
+    priority: 57
+  - id: O4F
+    title: Owner External Commercial Beta Activation Approval
+    status: queued
+    dependencies: [S242C]
+    lockGroup: owner-external-commercial-activation
+    risk: high
+    priority: 58
+  - id: S243C
+    title: External Founding Beta Wave A
+    status: queued
+    dependencies: [O4F]
+    lockGroup: external-beta-wave-a
+    risk: high
+    priority: 59
+  - id: S244C
+    title: External Founding Beta Wave B and C
+    status: queued
+    dependencies: [S243C]
+    lockGroup: external-beta-wave-bc
+    risk: high
+    priority: 60
+  - id: S245C
+    title: Second-Round External Commercial Acceptance
+    status: queued
+    dependencies: [S244C]
+    lockGroup: external-commercial-acceptance
+    risk: high
+    priority: 61
   - id: S242V
     title: Mineral Cobalt Figma and Home Contract Readiness
     status: queued
     dependencies: [S237A]
     lockGroup: visual-home-contract
     risk: medium
-    priority: 45
+    priority: 62
   - id: O4D
     title: Owner Second-Round Public Self-Serve Activation Approval
     status: queued
-    dependencies: [S241A, S242V]
+    dependencies: [S245C, S242V]
     lockGroup: owner-public-activation
     risk: high
-    priority: 46
+    priority: 63
   - id: S225
     title: Full Second-Round Public Self-Serve Launch Acceptance
     status: queued
     dependencies: [O4D]
     lockGroup: second-public-release
     risk: high
-    priority: 47
+    priority: 64
   - id: S250
     title: Authenticated Both-Track Acceptance
     status: queued
     dependencies: [S241A, S238B]
     lockGroup: both-track-acceptance
     risk: high
-    priority: 48
+    priority: 65
   - id: S260
     title: Named-Partner Academy Readiness
     status: queued
     dependencies: [S241A]
     lockGroup: academy-named-partner
     risk: high
-    priority: 49
+    priority: 66
   - id: O4C
     title: Owner Academy Pilot Activation Approval
     status: queued
     dependencies: [S260]
     lockGroup: owner-academy-activation
     risk: high
-    priority: 50
+    priority: 67
   - id: S261
     title: Named-Partner Academy Pilot
     status: queued
     dependencies: [O4C]
     lockGroup: academy-pilot
     risk: high
-    priority: 51
+    priority: 68
   - id: O2
     title: Owner Measurement Consent Retention and Telemetry Approval
     status: queued
     dependencies: [S241A, S238B]
     lockGroup: owner-measurement-consent
     risk: high
-    priority: 52
+    priority: 69
   - id: S270
     title: Shared Signal and OSS Benchmark and Shadow Evidence
     status: queued
     dependencies: [O2]
     lockGroup: shared-signal-control-plane
     risk: high
-    priority: 53
+    priority: 70
   - id: O4E
     title: Owner Shared Signal and OSS Limited Activation Approval
     status: queued
     dependencies: [S270]
     lockGroup: owner-shared-signal-activation
     risk: high
-    priority: 54
+    priority: 71
   - id: S271
     title: Shared Signal and OSS Limited Activation Evidence
     status: queued
     dependencies: [O4E]
     lockGroup: shared-signal-control-plane
     risk: high
-    priority: 55
+    priority: 72
   - id: O5
     title: Owner Research Training and Efficacy Claim Approval
     status: queued
     dependencies: [S271]
     lockGroup: owner-research-efficacy
     risk: high
-    priority: 56
+    priority: 73
   - id: S299
     title: Unified Program Terminal Acceptance
     status: queued
     dependencies: [S225, S250, S261, O5]
     lockGroup: unified-terminal-acceptance
     risk: high
-    priority: 57
+    priority: 74

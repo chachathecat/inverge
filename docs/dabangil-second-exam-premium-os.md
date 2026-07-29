@@ -7,8 +7,10 @@
 - Premium product: **답안길 2차 합격관제 OS**
 - Linked roadmap item: `S200R`
 - Source provenance: GitHub issue #437, S201 official syllabus registry, S202 source/rights registry, `docs/inverge-second-round-final-product-spec.md`
-- Post-#650 authority: `docs/dabangil-unified-program-contract.md` governs
-  cross-track sequencing, learning glossary, data planes, and Owner gates;
+- Current amendment authority:
+  `docs/decisions/2026-07-26-owner-dogfood-private-plane-schedule-amendment.md`
+  and `docs/dabangil-unified-program-contract.md` govern cross-track
+  sequencing, learning glossary, data planes, scheduling, and Owner gates;
   this document remains second-round detail.
 
 This document is policy and source-of-truth alignment only. It does not implement runtime features, billing, OCR, question ingestion, learner UI, or academy routes.
@@ -27,12 +29,13 @@ Preferred learner-facing positioning:
 
 The term `합격관제` means study-operation support through evidence, rewrite, recalculation, review queue, weakness map, and Today Plan. It must never be used as a pass guarantee.
 
-Invitation-only Founding Beta is the critical second-round predecessor to
-S225 public self-serve launch. The Owner-approved hypothesis is 69,000 KRW
-VAT included for 30 days, no automatic renewal, and 20
-`usable_review_unit_v1`; it is not active and requires a later O4 packet.
-Every account retains one lifetime full-value review, and payment-first or
-deliberately degraded free output is prohibited.
+Invitation-only Founding Beta remains a future second-round predecessor to
+S225 public self-serve launch, but it is no longer a predecessor to current
+Owner-private dogfood or authenticated acceptance. The 69,000 KRW VAT
+included/30 days/no automatic renewal/20 `usable_review_unit_v1` hypothesis
+is deferred to the commercial track; it is not active and cannot be inferred
+from Owner dogfood. Every future account retains one lifetime full-value
+review, and payment-first or deliberately degraded free output is prohibited.
 
 ## What 답안길 Is
 
@@ -206,3 +209,29 @@ Rollback is a focused revert of the S200R PR. No DB/API/provider/billing/runtime
 - `합격관제` must continue to mean study-operation support, not pass guarantee.
 - Score-like summaries must stay secondary to evidence, issue gaps, and next actions.
 - CASIO fx-9860GIII routines need later validation against actual calculator behavior and current exam rules.
+
+## 2026-07-26 Owner-Private Amendment
+
+The current second-round acceptance path is Owner-private and native-first:
+
+`O3A + (O4V -> S236P) -> S236A -> S237A -> S237P -> O4A -> S238A -> S240A -> S241A`
+
+O3A cannot authorize storage or execution by itself. The Private
+Authoring/Review Plane must first bind and approve an exact durable vault,
+vault-scoped key/commitment design, provider controls, retention, export,
+deletion, rollback, and synthetic receipt scope under O4V, then pass S236P.
+Real question, answer, OCR, reference-answer, Law, or AI bodies cannot be used
+in S236P.
+
+Full-Day planning uses the native planner as the authoritative baseline.
+OR-Tools CP-SAT is an optional metadata-only placement adapter after S237P.
+It has a separate benchmark, threshold decision, hidden-shadow,
+visible-comparison, limited-activation approval, and acceptance branch. It
+does not gate native Owner-private acceptance. Solver/candidate failure
+invokes the separately validated native fallback; an invalid fallback fails
+closed as `blocked_manual_plan_required`.
+
+Owner dogfood is not a paid beta. It makes no commercial, pricing, refund,
+capacity, external-commercial cohort retention/renewal, efficacy, or
+public-launch claim. Wave A/B/C and S225
+remain deferred in the external commercial track.

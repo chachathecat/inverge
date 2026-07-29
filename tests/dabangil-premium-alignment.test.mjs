@@ -4,9 +4,14 @@ import { readFile } from "node:fs/promises";
 
 const sourceOfTruthDocs = [
   "AGENTS.md",
+  "docs/decisions/2026-07-29-owner-o3a-golden-3-approval.md",
+  "docs/decisions/2026-07-26-owner-dogfood-private-plane-schedule-amendment.md",
   "docs/decisions/2026-07-23-post-650-unified-program-reset.md",
   "docs/dabangil-unified-program-contract.md",
   "config/dabangil-unified-program-contract.json",
+  "docs/dabangil-private-authoring-review-plane-contract.md",
+  "config/dabangil-private-authoring-review-plane-contract.json",
+  "config/dabangil-full-day-scheduler-contract.json",
   "docs/inverge-second-round-final-product-spec.md",
   "docs/dabangil-second-exam-premium-os.md",
   "docs/dabangil-giii-practical-routine.md",
@@ -191,17 +196,32 @@ test("historical S200-S224 completion does not assert current readiness", async 
   assert.equal(roadmap.byId.get("S224").status, "completed");
 });
 
-test("S235B closeout leaves O3A and first-round downstream work queued", async () => {
+test("O3A decision is completed while O4V and downstream execution stay queued", async () => {
   const roadmap = parseActiveProgram(await read("roadmap/active-program.yml"));
 
   assert.equal(roadmap.byId.get("S235A").status, "completed");
   assert.equal(roadmap.byId.get("S235B").status, "completed");
-  assert.equal(roadmap.byId.get("O3A").status, "queued");
-  assert.deepEqual(roadmap.byId.get("O3A").dependencies, ["S235A"]);
+  assert.equal(roadmap.byId.get("S234R").status, "completed");
+  assert.equal(roadmap.byId.get("O3A").status, "completed");
+  assert.equal(
+    roadmap.byId.get("O3A").decisionRecord,
+    "docs/decisions/2026-07-29-owner-o3a-golden-3-approval.md",
+  );
+  assert.equal(
+    roadmap.byId.get("O3A").approvalAuthorizesImmediateOperation,
+    false,
+  );
+  assert.equal(roadmap.byId.get("O3A").automaticStartAllowed, false);
+  assert.equal(roadmap.byId.get("O3A").manualS236AStartRequired, true);
+  assert.deepEqual(roadmap.byId.get("O3A").dependencies, ["S235A", "S234R"]);
+  assert.equal(roadmap.byId.get("O4V").status, "queued");
+  assert.deepEqual(roadmap.byId.get("O4V").dependencies, ["S234R"]);
+  assert.equal(roadmap.byId.get("S236P").status, "queued");
+  assert.deepEqual(roadmap.byId.get("S236P").dependencies, ["O4V"]);
   assert.equal(roadmap.byId.get("S236A").status, "queued");
-  assert.deepEqual(roadmap.byId.get("S236A").dependencies, ["O3A"]);
+  assert.deepEqual(roadmap.byId.get("S236A").dependencies, ["O3A", "S236P"]);
   assert.equal(roadmap.byId.get("S236B").status, "queued");
-  assert.deepEqual(roadmap.byId.get("S236B").dependencies, ["S235B"]);
+  assert.deepEqual(roadmap.byId.get("S236B").dependencies, ["S235B", "S234R"]);
   assert.equal(roadmap.byId.get("O3B").status, "queued");
   assert.deepEqual(roadmap.byId.get("O3B").dependencies, ["S236B"]);
 });
@@ -219,17 +239,36 @@ test("active program dependency graph has no missing dependencies or self-depend
   }
 });
 
-test("Post-650 contract fixes authority, product sequence, and learning glossary", async () => {
+test("S234R contract fixes authority, native Owner path, and learning glossary", async () => {
   const policy = JSON.parse(await read("config/dabangil-unified-program-contract.json"));
   const contract = await read("docs/dabangil-unified-program-contract.md");
   const agents = await read("AGENTS.md");
 
-  assert.equal(policy.contractVersion, "dabangil.unified_program.v1");
-  assert.equal(policy.decision.status, "approved_for_contract_reset_only");
+  assert.equal(policy.contractVersion, "dabangil.unified_program.v2");
+  assert.equal(policy.decision.status, "approved_for_source_amendment_only");
+  assert.equal(
+    policy.scopeDecisions.O3A.status,
+    "approved_exact_packet_only_subject_to_expiry_and_revocation",
+  );
+  assert.equal(
+    policy.scopeDecisions.O3A.packetCanonicalSha256,
+    "8189997e733eb0c8bef62c3ba5fa1cadac39a807c34d925b2e1a291fa30e654c",
+  );
+  assert.equal(policy.scopeDecisions.O3A.approvalAuthorizesImmediateOperation, false);
+  assert.equal(policy.scopeDecisions.O3A.automaticStartAllowed, false);
+  assert.equal(policy.scopeDecisions.O3A.s236aStarted, false);
   assert.equal(policy.decision.runtimeActivationAuthorized, false);
   assert.equal(policy.decision.dependencyActivationAuthorized, false);
   assert.equal(policy.decision.providerModelPromptActivationAuthorized, false);
   assert.equal(policy.tracks.secondRound.privateFoundingBetaBeforePublicS225, true);
+  assert.equal(
+    policy.tracks.secondRound.externalWavesRequiredBeforeOwnerPrivateAcceptance,
+    false,
+  );
+  assert.equal(
+    policy.tracks.secondRound.currentAcceptancePath,
+    "owner_private_native_dogfood",
+  );
   assert.equal(policy.tracks.secondRound.publicSelfServeActivated, false);
   assert.equal(policy.tracks.firstRound.foundationState, "queued");
   assert.equal(policy.tracks.firstRound.legacyCompatibilityRuntime, "present_unaudited_not_newly_authorized");
@@ -244,6 +283,11 @@ test("Post-650 contract fixes authority, product sequence, and learning glossary
   assert.equal(policy.learningContracts.fullDay.state, "canonical_contract_only");
   assert.equal(policy.learningContracts.fullDay.runtimeAuthorized, false);
   assert.equal(policy.learningContracts.fullDay.maximumAvailableMinutes, 720);
+  assert.equal(policy.learningContracts.fullDay.nativePlannerAuthoritative, true);
+  assert.equal(
+    policy.learningContracts.fullDay.optimizerRequiredForOwnerPrivateAcceptance,
+    false,
+  );
   assert.equal(policy.learningContracts.personalStudyLedger.state, "canonical_contract_only");
   assert.equal(policy.learningContracts.personalStudyLedger.lineageObject, "LearningDocument");
   assert.equal(policy.learningContracts.personalStudyLedger.rawContentPlane, "Personal Raw Vault");
@@ -276,8 +320,11 @@ test("Post-650 contract fixes authority, product sequence, and learning glossary
     additionalAgents: "read_only_auditors",
     runnerAutomaticallyEnforcesGlobalExclusivity: false,
   });
-  assert.match(contract, /Golden 3[\s\S]*Wave A[\s\S]*Golden 9[\s\S]*Wave B\/C/);
-  assert.match(contract, /second-round authenticated acceptance[\s\S]{0,160}Mineral Cobalt\/Figma\/home contract readiness[\s\S]{0,160}Owner O4 public self-serve approval/);
+  assert.match(contract, /S236A[\s\S]{0,180}S237A[\s\S]{0,180}S237P[\s\S]{0,180}O4A[\s\S]{0,180}S240A[\s\S]{0,180}S241A/);
+  assert.match(
+    contract,
+    /External invitation cohorts[\s\S]{0,500}future O4D\/S225 public self-serve/i,
+  );
   assert.match(contract, /LearningDocument[\s\S]{0,900}service answers, notes, handwriting, and raw OCR[\s\S]{0,320}distinct contribution object[\s\S]{0,220}never converts, derives\s+from, or relocates the private `LearningDocument`/);
   assert.match(contract, /2026-06-25 first-round hard-freeze clauses[\s\S]*Superseded only for Foundation/);
 });
@@ -309,7 +356,10 @@ test("Founding Beta hypothesis preserves free value and three disjoint units", a
   const policy = JSON.parse(await read("config/dabangil-unified-program-contract.json"));
   const commercial = policy.commercialHypothesis;
 
-  assert.equal(commercial.status, "owner_hypothesis_not_active");
+  assert.equal(
+    commercial.status,
+    "deferred_external_commercial_hypothesis_not_active",
+  );
   assert.equal(commercial.invitationOnly, true);
   assert.equal(commercial.priceKrwVatIncluded, 69000);
   assert.equal(commercial.termDays, 30);
@@ -319,7 +369,8 @@ test("Founding Beta hypothesis preserves free value and three disjoint units", a
   assert.equal(commercial.lifetimeFullValueFreeReviews, 1);
   assert.equal(commercial.paymentFirstProhibited, true);
   assert.equal(commercial.degradedFreeOutputProhibited, true);
-  assert.equal(commercial.activationGate, "O4");
+  assert.equal(commercial.activationGate, "O4F");
+  assert.equal(commercial.ownerDogfoodValidatesCommercialHypothesis, false);
   assert.deepEqual(
     commercial.unitContracts.map((entry) => entry.id),
     ["ReviewUnit", "usable_review_unit_v1", "deep_review_unit"],
@@ -374,6 +425,7 @@ test("Post-650 data, consent, quarantine, OSS, and Owner gates remain non-active
     keyedOneWay: true,
     vaultSpecificNonExportableDomainKeys: true,
     returnsEqualityOracle: false,
+    returnedToClientReceiptExportLogOrAnalytics: false,
   });
   assert.equal(policy.promotion.globalFingerprintRequiresPromotedClearedContentBankMaterial, true);
   assert.deepEqual(policy.promotion.globalFingerprintAllowedPromotionBases, [
@@ -697,11 +749,15 @@ test("Post-650 data, consent, quarantine, OSS, and Owner gates remain non-active
     );
     assert.match(
       source,
-      /`shadow` is observation\/comparison only\./,
+      /For generic and non-specialized adapters, `shadow` is\s+observation\/comparison only\.|For generic and non-specialized adapters, `shadow` is observation\/comparison\s+only\./,
     );
     assert.match(
       source,
-      /native fixed schedule and native\s+rules remain the sole decision authority\./,
+      /exact Owner-private Full-Day specialization[\s\S]{0,260}closed O2O-approved comparison fields[\s\S]{0,220}no Shared Signal or telemetry/i,
+    );
+    assert.match(
+      source,
+      /native fixed schedule and native\s+rules\s+remain the sole decision\s+authority\./,
     );
     assert.match(
       source,
@@ -764,7 +820,10 @@ test("Post-650 data, consent, quarantine, OSS, and Owner gates remain non-active
       /Any learner- or Academy-derived attempt signal instead requires an exact O2-approved purpose, purpose consent, a closed non-reconstructive value schema, purpose-scoped retention\/revocation, and storage in the Shared Signal Plane; tenant contract alone is insufficient and raw content is prohibited\./,
     );
   }
-  assert.equal(policy.ownerGates.O1, "approved_for_this_reset_only");
+  assert.equal(
+    policy.ownerGates.O1R,
+    "approved_for_this_source_amendment_only",
+  );
   for (const gate of ["O2", "O3", "O4", "O5"]) {
     assert.match(policy.ownerGates[gate], /^future_/);
   }
@@ -793,6 +852,23 @@ test("Post-650 data, consent, quarantine, OSS, and Owner gates remain non-active
     "human_decision",
   ]);
   assert.equal(policy.roadmapContract.scopedGateEdges.golden9, "O3C");
+  assert.equal(policy.roadmapContract.scopedGateEdges.privatePlane, "O4V");
+  assert.equal(
+    policy.roadmapContract.scopedGateEdges.privatePlaneSyntheticAcceptance,
+    "S236P",
+  );
+  assert.equal(
+    policy.roadmapContract.scopedGateEdges.optimizerThresholds,
+    "O4T",
+  );
+  assert.equal(
+    policy.roadmapContract.scopedGateEdges.optimizerLimitedActivation,
+    "O4P",
+  );
+  assert.equal(
+    policy.roadmapContract.scopedGateEdges.externalCommercialBeta,
+    "O4F",
+  );
   assert.equal(policy.roadmapContract.scopedGateEdges.publicSelfServe, "O4D");
   assert.equal(policy.roadmapContract.scopedGateEdges.sharedSignalOssLimitedActivation, "O4E");
   assert.doesNotMatch(governance, /추가 활용은 명시적 동의 또는 계약 근거가 있을 때만 허용/);

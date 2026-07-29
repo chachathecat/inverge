@@ -1,11 +1,14 @@
 # S235A Owner-Private Golden 3 Readiness
 
-Status: `evidence_complete_pending_o3a_owner_decision`
+Status:
+`rights_evidence_complete_private_packages_blocked_pending_vault_safe_s236p`
 
 This is a metadata-only readiness record for exactly three 2026 second-round
 Q1 selections: one practice, one theory, and one Law. It prepares the future
-O3A decision. It does not approve rights, generate a reference answer, execute
-Golden 3, start S236A, or expose source material.
+O3A decision. S234R regenerates its pending packet because the earlier packet
+predated the Private Authoring/Review Plane. It does not approve rights,
+generate a reference answer, provision a vault, execute Golden 3, start
+S236A, or expose source material.
 
 The executable record is
 `reference_corpus/readiness/appraiser/second_round_owner_private_golden_3_readiness.json`.
@@ -110,25 +113,34 @@ future answer.
 
 ## Private package readiness
 
-Three future package identities target `answer_pack.2.0`:
+Three future package identities currently target `answer_pack.2.0`:
 
 - `s236a-private-practice-2026-q1`;
 - `s236a-private-theory-2026-q1`; and
 - `s236a-private-law-2026-q1`.
 
 They define only subject-specific validation checks and the requirement for a
-private vault. Every package is
-`private_schema_ready_not_generated`. Package bodies, S214, S215, release,
-learner use, public use, and shared-corpus use are all unstarted or false.
-No vault locator appears in GitHub.
+private vault. None is schema-ready for private body use:
+`answer_pack.2.0` requires a plaintext content hash that would violate the
+new vault boundary if it escaped as a reusable equality handle. Every package
+is therefore `blocked_answer_pack_2_0_private_hash_boundary`; direct legacy
+schema use and external equality handles are false.
+
+S236P must accept a versioned vault-safe adapter or replacement before any
+real package generation. Package bodies, S214, S215, release, learner use,
+public use, and shared-corpus use are all unstarted or false. No vault locator
+appears in GitHub.
 
 ## Exact future O3A packet
 
 Packet:
-`o3a-s235a-appraiser-second-2026-q1-owner-private-golden-3`
+`o3a-s234r-appraiser-second-2026-q1-owner-private-golden-3-v2`
+
+This supersedes the unapproved
+`o3a-s235a-appraiser-second-2026-q1-owner-private-golden-3` packet.
 
 Requested scope:
-`approve_s236a_owner_private_golden_3_execution_only`
+`approve_exact_rights_source_version_purpose_for_future_s236a_only`
 
 The packet asks the Owner to approve or reject only:
 
@@ -138,7 +150,7 @@ The packet asks the Owner to approve or reject only:
 It explicitly excludes Golden 9, D0, D+1, D+7, real learners, Owner Alpha,
 Preview, Production, public/shared exposure, deployment configuration,
 evaluation configuration, billing/entitlement, telemetry, and navigation.
-It expires at `2026-07-30T14:59:59.000Z`.
+It expires at `2026-08-09T14:59:59.000Z`.
 
 Current safe state:
 
@@ -146,20 +158,27 @@ Current safe state:
 - `o3aStarted: false`;
 - `s236aStarted: false`;
 - `automaticStartAllowed: false`;
+- `approvalAuthorizesImmediateOperation: false`;
+- `o4vOrS236PSubstitutionAllowed: false`;
+- allowed operations require S236P to be completed under
+  `dabangil.private_authoring_review_plane.v1`;
 - manual S236A start required after any future approval; and
-- `remain_queued_no_execution`.
+- `remain_queued_no_authoring_or_execution_until_o3a_and_s236p`.
 
 ## Roadmap closeout
 
 S235A completion means only that this readiness evidence and exact pending
-approval packet exist. The live planner then reports S235B and O3A as
-metadata-ready selections. O3A remains `queued` with the Owner decision
-pending. S236A remains `queued` and blocked by missing dependency O3A.
-Planner selection does not start, reserve, approve, or execute work.
+approval packet exist. The live planner reports O3A, S236B, and O4V as ready,
+while the max-two selection is O3A and S236B. S235B is completed; PR #660 is
+the separate blocked S236B exploratory Draft and is not acceptance evidence.
+O3A and O4V remain `queued` with Owner decisions pending. S236P is queued
+behind O4V. S236A remains `queued` and is blocked by both O3A and S236P.
+Planner selection does not start, reserve, approve, provision, author, or
+execute work.
 
-S235B owns a separate lane. This Work does not mutate its lane-specific
-files. Its deferred shared-roadmap closeout must reconcile onto the S235A
-merge before S235B can validate or merge.
+S236B owns the separate first-round benchmark lane. S234R does not mutate its
+lane-specific files. PR #660 stays Draft/blocked and must reconcile onto the
+amended main before any new evidence can be considered.
 
 ## Prohibited contents and effects
 

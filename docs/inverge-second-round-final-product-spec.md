@@ -5,9 +5,11 @@
 - S200R 정렬일: 2026-06-26
 - 적용 범위: learner app, AI answer engine, reference corpus, pricing, academy console, Agent Factory roadmap
 - 관련 이슈: #431, #437
-- Post-#650 authority: cross-track ordering, glossary, gates, and supersession
-  are governed by `docs/dabangil-unified-program-contract.md`; this document
-  remains authoritative for second-round detail.
+- Current amendment authority: cross-track ordering, glossary, gates,
+  scheduling, and supersession are governed by
+  `docs/decisions/2026-07-26-owner-dogfood-private-plane-schedule-amendment.md`
+  and `docs/dabangil-unified-program-contract.md`; this document remains
+  authoritative for second-round detail.
 
 ---
 
@@ -1258,3 +1260,120 @@ WIP limit은 2다.
 ## 17. 최종 제품 한 문장
 
 > 답안길 2차 합격관제 OS는 감평 2차 실무·이론·법규 답안을 시험일까지 Evidence Review, GIII 실무 루틴, 재작성·다시 계산, 자동 오답노트, 핵심개념 추적, Review Queue, Today Plan으로 운영해주는 premium second-exam answer operating system이다.
+
+## 18. 2026-07-26 Owner-Private Native Acceptance Amendment
+
+The public-launch requirements in this specification still apply to the
+future commercial track. They do not gate the current Owner-private
+acceptance path.
+
+Current native path:
+
+`S234R -> O3A; S234R -> O4V -> S236P; (O3A + S236P) -> S236A -> S237A -> S237P -> O4A -> S238A -> S240A -> S241A`
+
+- O3A is an exact rights/source/version/purpose decision only.
+- O4V is an exact vault/key/provider/retention/deletion/rollback decision.
+- S236P uses synthetic-only material and emits metadata-only provisioning,
+  isolation, read-after-write, failure, cleanup, deletion, and rollback
+  receipts.
+- S236A requires both O3A and S236P.
+- O4A precedes any Owner-private runtime/dogfood activation.
+- S240A and S241A use the native planner and remain available without
+  OR-Tools.
+
+Optional optimizer path:
+
+`S237P -> S237O -> O4T -> O2O -> S238OH -> S238OV -> O4P -> S239O -> S240O`
+
+OR-Tools CP-SAT receives metadata-only ExecutionBlocks. Its projected response
+returns only exact request/snapshot correlation echoes, a raw solver-owned
+status, objective/violation diagnostics, elapsed timing, and candidate-plan
+fields for `OPTIMAL` or `FEASIBLE`; it never returns a fallback reason,
+`native_plan_version`, canonical fallback state, a canonical plan reference,
+`version_info`, or any gateway-owned version/configuration field. Only after
+complete raw-response, exact-correlation, and required-bijection validation
+does the trusted gateway construct canonical `version_info` from exact trusted
+correlated configuration. Its exact fields are `contract_version`,
+`native_policy_version`, `adapter_version`, `optimizer_version`,
+`objective_version`, `threshold_version`, `solver_seed`, `solver_workers`,
+`time_limit_ms`, and `integer_scaling_version`. The trusted gateway alone also
+classifies timeout/dependency/adapter/schema/correlation/validator failures,
+constructs canonical fallback state, and independently resolves or prepares
+and validates exactly one immutable native fallback. These canonical version
+and fallback constructions are the only two gateway-owned non-ID differences
+from a valid projected response. Missing, ambiguous, stale, untrusted, or
+mismatched canonical metadata is `validator_rejected`; an invalid fallback
+releases only `blocked_manual_plan_required`. Raw question, answer, OCR,
+reference-answer, Law or AI text; user/account/document identities; private
+locators; reusable plaintext hashes; and cross-plane equality signals are
+forbidden.
+
+Native validation remains authoritative. Every non-droppable candidate
+(`pinned === true || can_drop === false`) must be placed exactly once and never
+unassigned. Every block must resolve one exact-invocation candidate and one
+allowed available window and remain completely inside that single window.
+The gateway retains canonical `study_date_kst` without projecting it and
+derives each block end in UTC from `study_date_kst + end_minute_kst` in IANA
+`Asia/Seoul`; `1440` is next-day 00:00. Each non-null exact ISO-8601 UTC hard
+deadline requires `block_end_utc <= hard_deadline_or_null`, while `null`
+means no hard cutoff. Candidate mapping faults remain `schema_mismatch`, and a
+known late block is `validator_rejected`. Invalid candidate plans enter one
+gateway-owned canonical fallback attempt; every releasable fallback must pass
+the same predicate, while an invalid fallback returns only
+`blocked_manual_plan_required`. `minimize_deadline_lateness` applies only to
+`soft_deadline_or_null` and cannot override a hard deadline. Elapsed or
+in-progress immutable placements must pass before projection and cannot be
+moved, dropped, unassigned, shortened, extended, or rewritten. Thresholds are
+versioned and cannot be weakened retroactively.
+The same pre-release gate applies three closed relational predicates in both
+projected and canonical identifier domains to every optimal/feasible
+candidate, complete canonical result, and releasable canonical native
+fallback. For cutoff feasibility, it reads the exact
+`replan_cutoff_minute_kst_or_null` from the same trusted correlated invocation;
+`null` means no lower bound. Only an exact immutable elapsed/in-progress prior
+placement whose candidate, window, `start_minute_kst`, `end_minute_kst`, and
+`duration_minutes` match field-for-field and resolve exactly once is exempt.
+Every other new or moved block requires
+`start_minute_kst >= replan_cutoff_minute_kst_or_null`; equality is feasible, a
+one-minute-early start is rejected, and cutoff `1440` releases no new or moved
+block.
+
+Intervals are half-open, `[start_minute_kst, end_minute_kst)`. Every applicable
+distinct pair requires
+`a.end_minute_kst <= b.start_minute_kst || b.end_minute_kst <= a.start_minute_kst`,
+so boundary equality is feasible. Validate every execution-block pair, every
+execution block against every fixed block, and every new or moved execution
+block against every immutable prior placement. The unique exact unchanged
+representation of an immutable placement is one logical block and does not
+overlap itself. For each placed dependent, resolve it and every
+`prerequisite_candidate_ids` member exactly once through that invocation and
+active domain, place every prerequisite exactly once, and require
+`prerequisite.end_minute_kst <= dependent.start_minute_kst`. An empty list is
+unconstrained; every member of a multiple-prerequisite set must pass, and an
+unassigned prerequisite cannot support a placed dependent.
+
+Unknown, dangling, duplicate, cross-domain, non-bijective mapping/correlation,
+or ambiguous immutable matching remains `schema_mismatch`. A known
+before-cutoff start, overlap, or missing, unassigned, or reversed prerequisite
+placement is `validator_rejected` and attempts exactly one independently
+prepared canonical native fallback. That fallback must satisfy all three
+predicates; an invalid fallback releases no plan and returns only
+`blocked_manual_plan_required`. Immutable and fixed placements cannot be
+moved, dropped, unassigned, shortened, extended, or rewritten to repair a
+breach, and elapsed/in-progress immutable placements pass these predicates
+before projection. Bind cutoff to
+`new_or_moved_execution_block_starts_at_or_after_replan_cutoff`, overlap to
+`block_overlap_zero`, and ordering to `prerequisite_order_violations_zero`.
+Add no projection field or result inverse-map path.
+O2O must bind closed, no-free-text Owner-private comparison measurement and
+retention before shadow. It does not authorize Shared Signal, telemetry,
+external-learner, or Academy measurement. Owner-hidden shadow precedes
+Owner-visible comparison, neither may mutate canonical state, and O4P also
+requires completed native S240A. Notebook, Full-Day, and learning-policy
+runtime mutations freeze from D0 through D+1.
+
+Invitation cohorts, Wave A/B/C, capacity, external learners, pricing,
+payment, refund, external-commercial retention claims/operations, efficacy,
+and S225 public self-serve remain
+deferred commercial evidence. Owner dogfood cannot satisfy or imply any of
+them.

@@ -3,6 +3,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
+import { pathToFileURL } from "node:url";
 
 const COMPLETED_STATUSES = new Set([
   "completed",
@@ -11,11 +12,15 @@ const COMPLETED_STATUSES = new Set([
   "released",
 ]);
 
-const ACTIVE_STATUSES = new Set([
+const EFFECTIVE_ACTIVE_STATUSES = new Set([
   "active",
   "in_progress",
   "in_review",
   "pr_open",
+]);
+
+const WIP_STATUSES = new Set([
+  ...EFFECTIVE_ACTIVE_STATUSES,
   "blocked",
   "human_decision",
 ]);
@@ -25,11 +30,249 @@ const QUEUED_STATUSES = new Set([
   "ready",
 ]);
 
+const CANONICAL_UTC_INSTANT_PATTERN =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u;
+
 function normalizeStatus(value) {
   return String(value ?? "")
     .trim()
     .toLowerCase()
     .replace(/[\s-]+/g, "_");
+}
+
+function approvalExpiryEpochMs(item) {
+  if (
+    !Object.prototype.hasOwnProperty.call(
+      item,
+      "approvalExpiresAt",
+    )
+  ) {
+    return null;
+  }
+
+  const value = item.approvalExpiresAt;
+
+  if (
+    typeof value !== "string" ||
+    !CANONICAL_UTC_INSTANT_PATTERN.test(value)
+  ) {
+    throw new Error(
+      `${item.id}.approvalExpiresAt must be a canonical UTC ISO instant with milliseconds.`,
+    );
+  }
+
+  const epochMs = Date.parse(value);
+
+  if (
+    !Number.isFinite(epochMs) ||
+    new Date(epochMs).toISOString() !== value
+  ) {
+    throw new Error(
+      `${item.id}.approvalExpiresAt must be a valid canonical UTC ISO instant.`,
+    );
+  }
+
+  return epochMs;
+}
+
+function normalizeEvaluationInstant(evaluatedAt) {
+  if (
+    !(evaluatedAt instanceof Date) ||
+    !Number.isFinite(evaluatedAt.getTime())
+  ) {
+    throw new Error(
+      "evaluatedAt must be a valid Date.",
+    );
+  }
+
+  return {
+    epochMs: evaluatedAt.getTime(),
+    iso: evaluatedAt.toISOString(),
+  };
+}
+
+function assertStringArray(value, label) {
+  if (value === undefined) return [];
+
+  if (
+    !Array.isArray(value) ||
+    value.some((entry) => typeof entry !== "string")
+  ) {
+    throw new Error(
+      `${label} must be an inline string array.`,
+    );
+  }
+
+  return value;
+}
+
+function resolveEffectiveCompletedItems(
+  items,
+  evaluatedAtEpochMs,
+) {
+  const itemsById = new Map(
+    items.map((item) => [item.id, item]),
+  );
+  const statesById = new Map();
+  const resolving = new Set();
+
+  function resolve(item) {
+    const cached = statesById.get(item.id);
+    if (cached) return cached;
+
+    if (resolving.has(item.id)) {
+      throw new Error(
+        `의존성 순환이 발견되었습니다: ${item.id}`,
+      );
+    }
+
+    if (
+      !COMPLETED_STATUSES.has(
+        normalizeStatus(item.status),
+      )
+    ) {
+      const incompleteState = {
+        effective: false,
+        expiryEpochMs: null,
+        expiryIso: null,
+      };
+
+      statesById.set(
+        item.id,
+        incompleteState,
+      );
+
+      return incompleteState;
+    }
+
+    resolving.add(item.id);
+
+    let expiryEpochMs =
+      approvalExpiryEpochMs(item);
+    let expiryIso =
+      expiryEpochMs === null
+        ? null
+        : String(item.approvalExpiresAt);
+    let dependenciesEffective = true;
+    const dependencies = assertStringArray(
+      item.dependencies,
+      `${item.id}.dependencies`,
+    );
+
+    for (const dependencyId of dependencies) {
+      const dependency =
+        itemsById.get(dependencyId);
+
+      if (!dependency) {
+        throw new Error(
+          `${item.id}의 알 수 없는 의존성: ${dependencyId}`,
+        );
+      }
+
+      const dependencyState =
+        resolve(dependency);
+
+      dependenciesEffective =
+        dependenciesEffective &&
+        dependencyState.effective;
+
+      if (
+        dependencyState.expiryEpochMs !== null &&
+        (
+          expiryEpochMs === null ||
+          dependencyState.expiryEpochMs <
+            expiryEpochMs
+        )
+      ) {
+        expiryEpochMs =
+          dependencyState.expiryEpochMs;
+        expiryIso =
+          dependencyState.expiryIso;
+      }
+    }
+
+    resolving.delete(item.id);
+
+    const expired =
+      expiryEpochMs !== null &&
+      evaluatedAtEpochMs >= expiryEpochMs;
+    const state = {
+      effective:
+        dependenciesEffective && !expired,
+      expiryEpochMs,
+      expiryIso,
+    };
+
+    statesById.set(item.id, state);
+    return state;
+  }
+
+  const effectiveCompletedIds = new Set();
+  const expiredCompletedItems = new Map();
+
+  for (const item of items) {
+    if (
+      !COMPLETED_STATUSES.has(
+        normalizeStatus(item.status),
+      )
+    ) {
+      continue;
+    }
+
+    const state = resolve(item);
+
+    if (state.effective) {
+      effectiveCompletedIds.add(item.id);
+      continue;
+    }
+
+    if (
+      state.expiryEpochMs !== null &&
+      state.expiryIso !== null &&
+      evaluatedAtEpochMs >= state.expiryEpochMs
+    ) {
+      expiredCompletedItems.set(
+        item.id,
+        state.expiryIso,
+      );
+    }
+  }
+
+  return {
+    effectiveCompletedIds,
+    expiredCompletedItems,
+  };
+}
+
+function dependencyBlocker(
+  item,
+  effectiveCompletedIds,
+  expiredCompletedItems,
+) {
+  const dependencies = assertStringArray(
+    item.dependencies,
+    `${item.id}.dependencies`,
+  );
+
+  const missingDependencies =
+    dependencies.filter(
+      (dependency) =>
+        !effectiveCompletedIds.has(dependency),
+    );
+
+  if (missingDependencies.length === 0) {
+    return null;
+  }
+
+  return {
+    id: item.id,
+    missingDependencies,
+    expiredDependencies:
+      missingDependencies.filter(
+        (dependency) =>
+          expiredCompletedItems.has(dependency),
+      ),
+  };
 }
 
 function stripComment(line) {
@@ -195,14 +438,18 @@ function validateRoadmap(roadmap) {
     }
 
     ids.add(item.id);
+    assertStringArray(
+      item.dependencies,
+      `${item.id}.dependencies`,
+    );
+    approvalExpiryEpochMs(item);
   }
 
   for (const item of roadmap.items) {
-    const dependencies = Array.isArray(
+    const dependencies = assertStringArray(
       item.dependencies,
-    )
-      ? item.dependencies
-      : [];
+      `${item.id}.dependencies`,
+    );
 
     for (const dependency of dependencies) {
       if (!ids.has(dependency)) {
@@ -239,7 +486,10 @@ function validateRoadmap(roadmap) {
 
     const item = byId.get(id);
 
-    for (const dependency of item.dependencies ?? []) {
+    for (const dependency of assertStringArray(
+      item.dependencies,
+      `${item.id}.dependencies`,
+    )) {
       visit(dependency);
     }
 
@@ -252,7 +502,12 @@ function validateRoadmap(roadmap) {
   }
 }
 
-function selectNextTasks(roadmap) {
+export function selectNextTasks(
+  roadmap,
+  evaluatedAt,
+) {
+  const evaluation =
+    normalizeEvaluationInstant(evaluatedAt);
   const items = roadmap.items.map(
     (item, order) => ({
       ...item,
@@ -260,24 +515,59 @@ function selectNextTasks(roadmap) {
     }),
   );
 
-  const completedIds = new Set(
-    items
-      .filter((item) =>
-        COMPLETED_STATUSES.has(
-          normalizeStatus(item.status),
-        ),
-      )
-      .map((item) => item.id),
+  const {
+    effectiveCompletedIds,
+    expiredCompletedItems,
+  } = resolveEffectiveCompletedItems(
+    items,
+    evaluation.epochMs,
   );
 
-  const activeItems = items.filter((item) =>
-    ACTIVE_STATUSES.has(
+  const rawWipItems = items.filter((item) =>
+    WIP_STATUSES.has(
       normalizeStatus(item.status),
     ),
   );
 
+  const dependencyBlockersById = new Map();
+  const blockedByDependency = [];
+
+  for (const item of items) {
+    const status = normalizeStatus(item.status);
+
+    if (
+      !WIP_STATUSES.has(status) &&
+      !QUEUED_STATUSES.has(status)
+    ) {
+      continue;
+    }
+
+    const blocker = dependencyBlocker(
+      item,
+      effectiveCompletedIds,
+      expiredCompletedItems,
+    );
+
+    if (blocker) {
+      dependencyBlockersById.set(
+        item.id,
+        blocker,
+      );
+      blockedByDependency.push(blocker);
+    }
+  }
+
+  const effectiveActiveItems =
+    rawWipItems.filter(
+      (item) =>
+        EFFECTIVE_ACTIVE_STATUSES.has(
+          normalizeStatus(item.status),
+        ) &&
+        !dependencyBlockersById.has(item.id),
+    );
+
   const activeLockGroups = new Set(
-    activeItems
+    rawWipItems
       .map((item) => item.lockGroup)
       .filter(Boolean),
   );
@@ -289,11 +579,10 @@ function selectNextTasks(roadmap) {
 
   const availableSlots = Math.max(
     0,
-    wipLimit - activeItems.length,
+    wipLimit - rawWipItems.length,
   );
 
   const eligible = [];
-  const blockedByDependency = [];
   const blockedByLock = [];
 
   for (const item of items) {
@@ -305,24 +594,7 @@ function selectNextTasks(roadmap) {
       continue;
     }
 
-    const dependencies = Array.isArray(
-      item.dependencies,
-    )
-      ? item.dependencies
-      : [];
-
-    const missingDependencies =
-      dependencies.filter(
-        (dependency) =>
-          !completedIds.has(dependency),
-      );
-
-    if (missingDependencies.length > 0) {
-      blockedByDependency.push({
-        id: item.id,
-        missingDependencies,
-      });
-
+    if (dependencyBlockersById.has(item.id)) {
       continue;
     }
 
@@ -362,9 +634,13 @@ function selectNextTasks(roadmap) {
 
   const selected = [];
   const selectedLockGroups = new Set();
+  const selectionSlots = Math.min(
+    2,
+    availableSlots,
+  );
 
   for (const item of eligible) {
-    if (selected.length >= availableSlots) {
+    if (selected.length >= selectionSlots) {
       break;
     }
 
@@ -388,13 +664,14 @@ function selectNextTasks(roadmap) {
   }
 
   return {
+    generatedAt: evaluation.iso,
     programId: roadmap.program.id ?? null,
     completionItem:
       roadmap.program.completionItem ?? null,
     wipLimit,
-    activeCount: activeItems.length,
+    activeCount: rawWipItems.length,
     availableSlots,
-    active: activeItems.map(
+    active: effectiveActiveItems.map(
       removeInternalFields,
     ),
     selected: selected.map(
@@ -403,6 +680,20 @@ function selectNextTasks(roadmap) {
     blockedByDependency,
     blockedByLock,
   };
+}
+
+export function createNextTaskResultFromYaml(
+  source,
+  evaluatedAt,
+) {
+  const roadmap = parseActiveProgramYaml(source);
+
+  validateRoadmap(roadmap);
+
+  return selectNextTasks(
+    roadmap,
+    evaluatedAt,
+  );
 }
 
 function writeGitHubOutputs(
@@ -446,19 +737,16 @@ function main() {
     );
   }
 
-  const roadmap = parseActiveProgramYaml(
-    fs.readFileSync(roadmapPath, "utf8"),
-  );
-
-  validateRoadmap(roadmap);
-
+  const evaluatedAt = new Date();
   const result = {
-    generatedAt: new Date().toISOString(),
     roadmapPath: path.relative(
       process.cwd(),
       roadmapPath,
     ),
-    ...selectNextTasks(roadmap),
+    ...createNextTaskResultFromYaml(
+      fs.readFileSync(roadmapPath, "utf8"),
+      evaluatedAt,
+    ),
   };
 
   fs.mkdirSync(
@@ -485,14 +773,23 @@ function main() {
   );
 }
 
-try {
-  main();
-} catch (error) {
-  console.error(
-    error instanceof Error
-      ? error.stack
-      : error,
-  );
+const isDirectExecution =
+  typeof process.argv[1] === "string" &&
+  import.meta.url ===
+    pathToFileURL(
+      path.resolve(process.argv[1]),
+    ).href;
 
-  process.exitCode = 1;
+if (isDirectExecution) {
+  try {
+    main();
+  } catch (error) {
+    console.error(
+      error instanceof Error
+        ? error.stack
+        : error,
+    );
+
+    process.exitCode = 1;
+  }
 }

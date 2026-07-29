@@ -3,14 +3,14 @@ import { createHash } from "node:crypto";
 import { assertNoRawUserDataInDerived } from "./data-boundary";
 
 export const S235A_READINESS_SCHEMA_VERSION =
-  "s235a.owner_private_golden_3_readiness.v1" as const;
+  "s235a.owner_private_golden_3_readiness.v2" as const;
 export const S235A_REPORT_SCHEMA_VERSION =
-  "s235a.owner_private_golden_3_readiness_report.v1" as const;
+  "s235a.owner_private_golden_3_readiness_report.v2" as const;
 export const S235A_MANIFEST_ID =
   "s235a-appraiser-second-2026-q1-owner-private-golden-3" as const;
-export const S235A_GENERATED_AT = "2026-07-23T07:35:00.000Z" as const;
+export const S235A_GENERATED_AT = "2026-07-26T02:00:00.000Z" as const;
 export const S235A_READINESS_STATUS =
-  "evidence_complete_pending_o3a_owner_decision" as const;
+  "rights_evidence_complete_private_packages_blocked_pending_vault_safe_s236p" as const;
 export const S235A_SUBJECT_ORDER = [
   "practice",
   "theory",
@@ -31,7 +31,7 @@ export const S235A_INDEPENDENT_AUDIT_RECEIPT_ID =
 export const S235A_INDEPENDENT_AUDIT_RESULT_SHA256 =
   "af5282021a88bac66854215e0c5e20da4752a32303d09f13121a479b70e18ec0" as const;
 export const S235A_O3A_PACKET_ID =
-  "o3a-s235a-appraiser-second-2026-q1-owner-private-golden-3" as const;
+  "o3a-s234r-appraiser-second-2026-q1-owner-private-golden-3-v2" as const;
 
 export type S235aValidationResult = {
   valid: boolean;
@@ -456,7 +456,12 @@ export const S235A_EXPECTED_PRIVATE_PACKAGES = S235A_SUBJECT_ORDER.map(
     selectionId: S235A_SELECTION_IDS[index],
     subject,
     targetSchemaVersion: "answer_pack.2.0",
-    status: "private_schema_ready_not_generated",
+    status: "blocked_answer_pack_2_0_private_hash_boundary",
+    directLegacySchemaUseAllowed: false,
+    externalEqualityHandleAllowed: false,
+    vaultSafeAdapterOrReplacementRequired: true,
+    vaultSafeAdapterAccepted: false,
+    requiredAcceptanceRoadmapItem: "S236P",
     requiredCheckIds: [...PACKAGE_CHECKS[subject]],
     privateVaultRequired: true,
     generated: false,
@@ -472,11 +477,17 @@ export const S235A_EXPECTED_PRIVATE_PACKAGES = S235A_SUBJECT_ORDER.map(
 
 export const S235A_EXPECTED_O3A_PACKET = {
   packetId: S235A_O3A_PACKET_ID,
+  supersedesPacketId:
+    "o3a-s235a-appraiser-second-2026-q1-owner-private-golden-3",
   status: "pending_owner_decision",
   ownerApproved: false,
   selectionIds: [...S235A_SELECTION_IDS],
   futurePackageIds: [...S235A_FUTURE_PACKAGE_IDS],
-  requestedScope: "approve_s236a_owner_private_golden_3_execution_only",
+  requestedScope:
+    "approve_exact_rights_source_version_purpose_for_future_s236a_only",
+  privatePlaneContractVersion:
+    "dabangil.private_authoring_review_plane.v1",
+  requiredBeforeAllowedOperationRoadmapItemIds: ["S236P"],
   allowedOperationIds: [
     "s236a_private_reference_package_authoring",
     "s236a_private_golden_3_execution",
@@ -502,9 +513,12 @@ export const S235A_EXPECTED_O3A_PACKET = {
     "s235a-private-fidelity-review-20260723T072849Z-af5282021a88",
     "s235a-law-2026-q1-exam-date-version",
   ],
-  unapprovedSafeState: "remain_queued_no_execution",
-  packetExpiresAt: "2026-07-30T14:59:59.000Z",
+  unapprovedSafeState:
+    "remain_queued_no_authoring_or_execution_until_o3a_and_s236p",
+  packetExpiresAt: "2026-08-09T14:59:59.000Z",
   wildcardScopeAllowed: false,
+  approvalAuthorizesImmediateOperation: false,
+  o4vOrS236PSubstitutionAllowed: false,
   automaticStartAllowed: false,
   manualS236AStartRequired: true,
   o3aStarted: false,
@@ -513,14 +527,20 @@ export const S235A_EXPECTED_O3A_PACKET = {
 
 export const S235A_EXPECTED_CONTROL_PLANE_STATE = {
   authority: "roadmap/active-program.yml",
-  selectedItemIds: ["S235B", "O3A"],
+  readyItemIds: ["O3A", "S236B", "O4V"],
+  selectedItemIds: ["O3A", "S236B"],
   s235aStatus: "completed",
-  s235bStatus: "queued",
+  s235bStatus: "completed",
   o3aStatus: "queued",
   o3aOwnerDecision: "pending",
   o3aStarted: false,
+  o4vStatus: "queued",
+  o4vOwnerDecision: "pending",
+  s236pStatus: "queued",
+  s236pMissingDependencies: ["O4V"],
+  privatePlaneSatisfied: false,
   s236aStatus: "queued",
-  s236aMissingDependencies: ["O3A"],
+  s236aMissingDependencies: ["O3A", "S236P"],
   s236aStarted: false,
   golden3Started: false,
   downstreamAutomaticStartAllowed: false,
@@ -1321,6 +1341,11 @@ function validatePrivatePackages(value: unknown, errors: string[]) {
         "subject",
         "targetSchemaVersion",
         "status",
+        "directLegacySchemaUseAllowed",
+        "externalEqualityHandleAllowed",
+        "vaultSafeAdapterOrReplacementRequired",
+        "vaultSafeAdapterAccepted",
+        "requiredAcceptanceRoadmapItem",
         "requiredCheckIds",
         "privateVaultRequired",
         "generated",
@@ -1366,11 +1391,14 @@ function validatePrivatePackages(value: unknown, errors: string[]) {
 function validateO3aPacket(value: unknown, errors: string[]) {
   const keys = [
     "packetId",
+    "supersedesPacketId",
     "status",
     "ownerApproved",
     "selectionIds",
     "futurePackageIds",
     "requestedScope",
+    "privatePlaneContractVersion",
+    "requiredBeforeAllowedOperationRoadmapItemIds",
     "allowedOperationIds",
     "excludedOperationIds",
     "ownerAction",
@@ -1378,6 +1406,8 @@ function validateO3aPacket(value: unknown, errors: string[]) {
     "unapprovedSafeState",
     "packetExpiresAt",
     "wildcardScopeAllowed",
+    "approvalAuthorizesImmediateOperation",
+    "o4vOrS236PSubstitutionAllowed",
     "automaticStartAllowed",
     "manualS236AStartRequired",
     "o3aStarted",
@@ -1400,6 +1430,13 @@ function validateO3aPacket(value: unknown, errors: string[]) {
     record.futurePackageIds,
     S235A_FUTURE_PACKAGE_IDS.length,
     "manifest.o3aApprovalPacket.futurePackageIds",
+    errors,
+  );
+  exactArray(
+    record.requiredBeforeAllowedOperationRoadmapItemIds,
+    S235A_EXPECTED_O3A_PACKET.requiredBeforeAllowedOperationRoadmapItemIds
+      .length,
+    "manifest.o3aApprovalPacket.requiredBeforeAllowedOperationRoadmapItemIds",
     errors,
   );
   exactArray(
@@ -1456,12 +1493,18 @@ function validateControlPlaneState(value: unknown, errors: string[]) {
     "manifest.controlPlaneState",
     [
       "authority",
+      "readyItemIds",
       "selectedItemIds",
       "s235aStatus",
       "s235bStatus",
       "o3aStatus",
       "o3aOwnerDecision",
       "o3aStarted",
+      "o4vStatus",
+      "o4vOwnerDecision",
+      "s236pStatus",
+      "s236pMissingDependencies",
+      "privatePlaneSatisfied",
       "s236aStatus",
       "s236aMissingDependencies",
       "s236aStarted",
@@ -1473,14 +1516,26 @@ function validateControlPlaneState(value: unknown, errors: string[]) {
   );
   if (!record) return;
   exactArray(
+    record.readyItemIds,
+    3,
+    "manifest.controlPlaneState.readyItemIds",
+    errors,
+  );
+  exactArray(
     record.selectedItemIds,
     2,
     "manifest.controlPlaneState.selectedItemIds",
     errors,
   );
   exactArray(
-    record.s236aMissingDependencies,
+    record.s236pMissingDependencies,
     1,
+    "manifest.controlPlaneState.s236pMissingDependencies",
+    errors,
+  );
+  exactArray(
+    record.s236aMissingDependencies,
+    2,
     "manifest.controlPlaneState.s236aMissingDependencies",
     errors,
   );
@@ -1595,15 +1650,28 @@ export function buildS235aReadinessReport(value: unknown) {
             .independentAudit as JsonRecord).status === "passed",
       ).length,
       lawExamDateVersionEvidenceCount: 1,
-      privatePackageSchemaReadyCount: packages.length,
+      privatePackageSchemaReadyCount: packages.filter(
+        (candidate) => candidate.vaultSafeAdapterAccepted === true,
+      ).length,
+      privatePackageVaultSafeBlockedCount: packages.filter(
+        (candidate) =>
+          candidate.status ===
+          "blocked_answer_pack_2_0_private_hash_boundary",
+      ).length,
       generatedPackageCount: packages.filter(
         (candidate) => candidate.generated === true,
       ).length,
       releasedPackageCount: packages.filter(
         (candidate) => candidate.released === true,
       ).length,
-      actionableValidationBlockerCount: 0,
+      actionableValidationBlockerCount: packages.filter(
+        (candidate) => candidate.vaultSafeAdapterAccepted !== true,
+      ).length,
     },
+    actionableValidationBlockerCodes: [
+      "answer_pack_2_0_private_hash_boundary",
+      "s236p_vault_safe_adapter_acceptance_pending",
+    ],
     subjectOrder: [...S235A_SUBJECT_ORDER],
     selectionIds: [...S235A_SELECTION_IDS],
     futurePackageIds: [...S235A_FUTURE_PACKAGE_IDS],
@@ -1611,16 +1679,25 @@ export function buildS235aReadinessReport(value: unknown) {
       "official_notice_snapshot_2026_07_21_plus_fresh_exact_asset_identity",
     freshNoticeVerificationStatus:
       "access_blocked_no_rights_reverification",
-    rightsUseDecision: "owner_private_readiness_only_pending_o3a",
+    rightsUseDecision: "owner_private_readiness_only_pending_o3a_and_s236p",
     lawVersionStatus: "applicable_to_exam_date",
-    executionStatus: "blocked_pending_o3a",
-    approvalGateCodes: ["o3a_owner_decision_pending"],
+    executionStatus: "blocked_pending_o3a_and_s236p",
+    approvalGateCodes: [
+      "o3a_owner_decision_pending",
+      "o4v_owner_decision_pending",
+      "s236p_private_plane_acceptance_pending",
+    ],
     controlPlane: {
-      selectedItemIds: ["S235B", "O3A"],
+      readyItemIds: ["O3A", "S236B", "O4V"],
+      selectedItemIds: ["O3A", "S236B"],
       s235aStatus: "completed",
+      s235bStatus: "completed",
       o3aStatus: "queued_pending_owner_decision",
       o3aStarted: false,
-      s236aStatus: "queued_blocked_by_o3a",
+      o4vStatus: "queued_pending_owner_decision",
+      s236pStatus: "queued_blocked_by_o4v",
+      privatePlaneSatisfied: false,
+      s236aStatus: "queued_blocked_by_o3a_and_s236p",
       s236aStarted: false,
       golden3Started: false,
       downstreamAutomaticStartAllowed: false,

@@ -13,8 +13,8 @@
     "rawAnswerTextStored": false,
     "rawLearnerTextStored": false
   },
-  "lastReviewedAt": "2026-06-25",
-  "currentAsOf": "2026-06-25",
+  "lastReviewedAt": "2026-07-26",
+  "currentAsOf": "2026-07-26",
   "generatedBy": "S201 manual Q-Net notice metadata verification",
   "sourceIds": [
     "qnet_appraiser_2026_public_notice",
@@ -26,7 +26,7 @@
     "officialNoticeUrl": "https://www.q-net.or.kr/crf002.do?gId=60&gSite=L&id=crf00201",
     "noticeBodyStored": false,
     "attachmentBodyStored": false,
-    "sourceNote": "Q-Net 시행공고 목록 and exam-info schedule metadata checked on 2026-06-25. Notice body and attached HWPX contents are not stored."
+    "sourceNote": "Q-Net 시행공고 목록 and exam-info schedule metadata checked on 2026-07-26. Notice body and attached HWPX contents are not stored."
   },
   "annualValues": [
     {
@@ -44,8 +44,8 @@
       "effectiveFrom": "2026-01-01",
       "effectiveTo": "2026-12-31",
       "status": "verified",
-      "lastOfficialVerifiedAt": "2026-06-25",
-      "needsManualRecheckBy": "2026-07-25",
+      "lastOfficialVerifiedAt": "2026-07-26",
+      "needsManualRecheckBy": "2026-08-25",
       "productionFacing": false
     },
     {
@@ -63,8 +63,8 @@
       "effectiveFrom": "2026-01-01",
       "effectiveTo": "2026-12-31",
       "status": "verified",
-      "lastOfficialVerifiedAt": "2026-06-25",
-      "needsManualRecheckBy": "2026-07-25",
+      "lastOfficialVerifiedAt": "2026-07-26",
+      "needsManualRecheckBy": "2026-08-25",
       "productionFacing": false
     },
     {
@@ -81,8 +81,8 @@
       "effectiveFrom": "2026-01-01",
       "effectiveTo": "2026-12-31",
       "status": "verified",
-      "lastOfficialVerifiedAt": "2026-06-25",
-      "needsManualRecheckBy": "2026-07-25",
+      "lastOfficialVerifiedAt": "2026-07-26",
+      "needsManualRecheckBy": "2026-08-25",
       "productionFacing": false
     },
     {
@@ -100,8 +100,8 @@
       "effectiveFrom": "2026-01-01",
       "effectiveTo": "2026-12-31",
       "status": "verified",
-      "lastOfficialVerifiedAt": "2026-06-25",
-      "needsManualRecheckBy": "2026-07-25",
+      "lastOfficialVerifiedAt": "2026-07-26",
+      "needsManualRecheckBy": "2026-08-25",
       "productionFacing": false
     }
   ],
