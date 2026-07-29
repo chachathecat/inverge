@@ -434,13 +434,38 @@ jobs:
           set -euo pipefail
           pull_request="$(gh api -X GET "/repos/${GITHUB_REPOSITORY}/pulls/${{ github.event.pull_request.number }}")"
           deployments="$(gh api -X GET "/repos/${GITHUB_REPOSITORY}/deployments?sha=${PR_HEAD_SHA}&per_page=20")"
-          runs="$(gh api -X GET "/repos/${GITHUB_REPOSITORY}/actions/runs?head_sha=${PR_HEAD_SHA}&event=pull_request&per_page=100")"
+          EXPECTED_GATE_RUN_ID="${FAST_OWNER_PREVIEW_CENTRAL_GATE_RUN_ID}"
+          gate_run_state="$(
+            gh api -X GET \
+              "/repos/${GITHUB_REPOSITORY}/actions/runs?head_sha=${PR_HEAD_SHA}&event=pull_request&per_page=100" |
+              jq --raw-output \
+                --arg sha "${PR_HEAD_SHA}" \
+                --arg id "${EXPECTED_GATE_RUN_ID}" '
+                  [
+                    .workflow_runs[] |
+                    select(
+                      .name == "Runtime Gate" and
+                      .head_sha == $sha and
+                      .event == "pull_request"
+                    )
+                  ] as $matching |
+                  if (
+                    ($matching | length) == 1 and
+                    ($matching[0].id | tostring) == $id and
+                    $matching[0].status == "completed" and
+                    $matching[0].conclusion == "failure"
+                  ) then
+                    "valid"
+                  else
+                    "invalid"
+                  end
+                '
+          )"
+          test "${gate_run_state}" = "valid"
           PULL_REQUEST="${pull_request}" \
           DEPLOYMENTS="${deployments}" \
-          RUNS="${runs}" \
           EXPECTED_SHA="${PR_HEAD_SHA}" \
           EXPECTED_DEPLOYMENT_ID="${FAST_OWNER_PREVIEW_DEPLOYMENT_ID}" \
-          EXPECTED_GATE_RUN_ID="${FAST_OWNER_PREVIEW_CENTRAL_GATE_RUN_ID}" \
           node --input-type=module -e '
             const pullRequest = JSON.parse(process.env.PULL_REQUEST ?? "{}");
             const body = pullRequest.body ?? "";
@@ -467,18 +492,6 @@ jobs:
                 value.production_environment === false
             );
             if (expectedDeployment.length !== 1) process.exit(1);
-
-            const workflowRuns = JSON.parse(process.env.RUNS ?? "{}").workflow_runs ?? [];
-            const gateRuns = workflowRuns.filter(
-              (value) =>
-                String(value?.id) === process.env.EXPECTED_GATE_RUN_ID &&
-                value?.name === "Runtime Gate" &&
-                value.head_sha === process.env.EXPECTED_SHA &&
-                value.event === "pull_request" &&
-                value.status === "completed" &&
-                value.conclusion === "failure"
-            );
-            if (gateRuns.length !== 1) process.exit(1);
           '
 
           body_path="$(mktemp)"
