@@ -91,6 +91,21 @@ function normalizeEvaluationInstant(evaluatedAt) {
   };
 }
 
+function assertStringArray(value, label) {
+  if (value === undefined) return [];
+
+  if (
+    !Array.isArray(value) ||
+    value.some((entry) => typeof entry !== "string")
+  ) {
+    throw new Error(
+      `${label} must be an inline string array.`,
+    );
+  }
+
+  return value;
+}
+
 function resolveEffectiveCompletedItems(
   items,
   evaluatedAtEpochMs,
@@ -139,11 +154,10 @@ function resolveEffectiveCompletedItems(
         ? null
         : String(item.approvalExpiresAt);
     let dependenciesEffective = true;
-    const dependencies = Array.isArray(
+    const dependencies = assertStringArray(
       item.dependencies,
-    )
-      ? item.dependencies
-      : [];
+      `${item.id}.dependencies`,
+    );
 
     for (const dependencyId of dependencies) {
       const dependency =
@@ -235,11 +249,10 @@ function dependencyBlocker(
   effectiveCompletedIds,
   expiredCompletedItems,
 ) {
-  const dependencies = Array.isArray(
+  const dependencies = assertStringArray(
     item.dependencies,
-  )
-    ? item.dependencies
-    : [];
+    `${item.id}.dependencies`,
+  );
 
   const missingDependencies =
     dependencies.filter(
@@ -425,15 +438,18 @@ function validateRoadmap(roadmap) {
     }
 
     ids.add(item.id);
+    assertStringArray(
+      item.dependencies,
+      `${item.id}.dependencies`,
+    );
     approvalExpiryEpochMs(item);
   }
 
   for (const item of roadmap.items) {
-    const dependencies = Array.isArray(
+    const dependencies = assertStringArray(
       item.dependencies,
-    )
-      ? item.dependencies
-      : [];
+      `${item.id}.dependencies`,
+    );
 
     for (const dependency of dependencies) {
       if (!ids.has(dependency)) {
@@ -470,7 +486,10 @@ function validateRoadmap(roadmap) {
 
     const item = byId.get(id);
 
-    for (const dependency of item.dependencies ?? []) {
+    for (const dependency of assertStringArray(
+      item.dependencies,
+      `${item.id}.dependencies`,
+    )) {
       visit(dependency);
     }
 

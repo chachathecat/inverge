@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -15,6 +21,7 @@ import {
 } from "../lib/agent-factory/codex-task-package.ts";
 import {
   createNextTaskResultFromYaml,
+  selectNextTasks,
 } from "../scripts/automation/determine-next-task.mjs";
 
 const O3A_EXPIRY = "2026-08-09T14:59:59.000Z";
@@ -42,6 +49,31 @@ function item({
     ...(approvalExpiresAt === undefined
       ? []
       : [`    approvalExpiresAt: ${approvalExpiresAt}`]),
+  ].join("\n");
+}
+
+function itemWithRawDependencies({
+  id,
+  status = "queued",
+  rawDependencies,
+  lockGroup = `group-${id}`,
+  risk = "high",
+  priority,
+}) {
+  return [
+    `  - id: ${id}`,
+    `    title: ${id} Title`,
+    `    status: ${status}`,
+    ...(rawDependencies === undefined
+      ? []
+      : [
+          rawDependencies === ""
+            ? "    dependencies:"
+            : `    dependencies: ${rawDependencies}`,
+        ]),
+    `    lockGroup: ${lockGroup}`,
+    `    risk: ${risk}`,
+    `    priority: ${priority}`,
   ].join("\n");
 }
 
@@ -223,6 +255,323 @@ test("missing dependencies block an item", () => {
   assert.deepEqual(plan.blockedItemIds, ["S101"]);
   assert.deepEqual(byId(plan, "S101").missingDependencies, ["S100"]);
   assert.equal(byId(plan, "S101").blockedReasons[0].code, "missing_dependency");
+});
+
+test("completed bridges cannot launder malformed dependency shapes", () => {
+  const evaluatedAt = new Date(
+    LIVE_PRE_EXPIRY_EVALUATED_AT,
+  );
+
+  for (const [name, rawDependencies] of [
+    ["empty scalar", ""],
+    ["explicit null", "null"],
+    ["scalar dependency", "O3A"],
+  ]) {
+    const source = roadmap([
+      item({
+        id: "O3A",
+        status: "completed",
+        priority: 1,
+      }),
+      itemWithRawDependencies({
+        id: "CompletedBridge",
+        status: "completed",
+        rawDependencies,
+        priority: 2,
+      }),
+      item({
+        id: "Consumer",
+        dependencies: ["CompletedBridge"],
+        priority: 3,
+      }),
+    ]);
+
+    for (const [runner, evaluate] of [
+      [
+        "TypeScript",
+        createRoadmapRunnerPlanFromYamlAt,
+      ],
+      [
+        "MJS",
+        createNextTaskResultFromYaml,
+      ],
+    ]) {
+      assert.throws(
+        () => evaluate(source, evaluatedAt),
+        /CompletedBridge\.dependencies must be an inline string array\./,
+        `${runner}: ${name}`,
+      );
+    }
+  }
+});
+
+test("every dependency-consuming status rejects malformed shapes before selection", () => {
+  const evaluatedAt = new Date(
+    LIVE_PRE_EXPIRY_EVALUATED_AT,
+  );
+
+  for (const status of [
+    "queued",
+    "active",
+    "in_progress",
+    "in_review",
+    "pr_open",
+    "blocked",
+    "human_decision",
+    "completed",
+  ]) {
+    const source = roadmap([
+      item({
+        id: "O3A",
+        status: "completed",
+        priority: 1,
+      }),
+      itemWithRawDependencies({
+        id: "MalformedConsumer",
+        status,
+        rawDependencies: "null",
+        priority: 2,
+      }),
+    ]);
+
+    for (const evaluate of [
+      createRoadmapRunnerPlanFromYamlAt,
+      createNextTaskResultFromYaml,
+    ]) {
+      assert.throws(
+        () => evaluate(source, evaluatedAt),
+        /MalformedConsumer\.dependencies must be an inline string array\./,
+        status,
+      );
+    }
+  }
+});
+
+test("MJS selection rejects every non-array dependency shape and non-string entries", () => {
+  const evaluatedAt = new Date(
+    LIVE_PRE_EXPIRY_EVALUATED_AT,
+  );
+
+  for (const [name, dependencies] of [
+    ["empty scalar", ""],
+    ["explicit null", null],
+    ["scalar string", "O3A"],
+    ["number", 1],
+    ["boolean", true],
+    ["object", {}],
+    ["non-string array entry", ["O3A", 1]],
+  ]) {
+    assert.throws(
+      () =>
+        selectNextTasks(
+          {
+            program: {
+              id: "dependency-shape-test",
+              wipLimit: 2,
+            },
+            items: [
+              {
+                id: "O3A",
+                status: "completed",
+                dependencies: [],
+                priority: 1,
+              },
+              {
+                id: "MalformedConsumer",
+                status: "queued",
+                dependencies,
+                priority: 2,
+              },
+            ],
+          },
+          evaluatedAt,
+        ),
+      /MalformedConsumer\.dependencies must be an inline string array\./,
+      name,
+    );
+  }
+});
+
+test("omitted, empty, and valid dependency arrays retain TS and MJS compatibility", () => {
+  const source = roadmap([
+    itemWithRawDependencies({
+      id: "OmittedDependencies",
+      status: "completed",
+      priority: 1,
+    }),
+    itemWithRawDependencies({
+      id: "ExplicitEmptyDependencies",
+      status: "completed",
+      rawDependencies: "[]",
+      priority: 2,
+    }),
+    itemWithRawDependencies({
+      id: "Consumer",
+      rawDependencies:
+        "[OmittedDependencies, ExplicitEmptyDependencies]",
+      priority: 3,
+    }),
+  ]);
+  const evaluatedAt = new Date(
+    LIVE_PRE_EXPIRY_EVALUATED_AT,
+  );
+  const plan = createRoadmapRunnerPlanFromYamlAt(
+    source,
+    evaluatedAt,
+  );
+  const selector = createNextTaskResultFromYaml(
+    source,
+    evaluatedAt,
+  );
+
+  assert.deepEqual(
+    plan.completedItemIds,
+    [
+      "OmittedDependencies",
+      "ExplicitEmptyDependencies",
+    ],
+  );
+  assert.deepEqual(
+    plan.selectedItemIds,
+    ["Consumer"],
+  );
+  assert.deepEqual(
+    selector.selected.map((entry) => entry.id),
+    ["Consumer"],
+  );
+  assertRunnerSelectorParity(plan, selector);
+});
+
+test("unknown, self, and cyclic dependencies remain fail-closed in both runners", () => {
+  const evaluatedAt = new Date(
+    LIVE_PRE_EXPIRY_EVALUATED_AT,
+  );
+  const cases = [
+    {
+      name: "unknown",
+      source: roadmap([
+        item({
+          id: "UnknownConsumer",
+          dependencies: ["Missing"],
+          priority: 1,
+        }),
+      ]),
+      pattern: /unknown|알 수 없는/u,
+    },
+    {
+      name: "self",
+      source: roadmap([
+        item({
+          id: "SelfConsumer",
+          dependencies: ["SelfConsumer"],
+          priority: 1,
+        }),
+      ]),
+      pattern: /itself|자기 자신/u,
+    },
+    {
+      name: "cycle",
+      source: roadmap([
+        item({
+          id: "CycleA",
+          dependencies: ["CycleB"],
+          priority: 1,
+        }),
+        item({
+          id: "CycleB",
+          dependencies: ["CycleA"],
+          priority: 2,
+        }),
+      ]),
+      pattern: /cycle|순환/u,
+    },
+  ];
+
+  for (const candidate of cases) {
+    for (const evaluate of [
+      createRoadmapRunnerPlanFromYamlAt,
+      createNextTaskResultFromYaml,
+    ]) {
+      assert.throws(
+        () =>
+          evaluate(
+            candidate.source,
+            evaluatedAt,
+          ),
+        candidate.pattern,
+        candidate.name,
+      );
+    }
+  }
+});
+
+test("CLI dependency-shape failures write neither artifact nor GitHub output", () => {
+  const directory = mkdtempSync(
+    join(tmpdir(), "inverge-dependency-shape-"),
+  );
+  const roadmapPath = join(
+    directory,
+    "active-program.yml",
+  );
+  const artifactPath = join(
+    directory,
+    "next-task.json",
+  );
+  const githubOutputPath = join(
+    directory,
+    "github-output.txt",
+  );
+  const source = roadmap([
+    item({
+      id: "O3A",
+      status: "completed",
+      priority: 1,
+    }),
+    itemWithRawDependencies({
+      id: "CompletedBridge",
+      status: "completed",
+      rawDependencies: "null",
+      priority: 2,
+    }),
+    item({
+      id: "Consumer",
+      dependencies: ["CompletedBridge"],
+      priority: 3,
+    }),
+  ]);
+
+  try {
+    writeFileSync(roadmapPath, source, "utf8");
+
+    assert.throws(() =>
+      execFileSync(
+        process.execPath,
+        [
+          "scripts/automation/determine-next-task.mjs",
+        ],
+        {
+          cwd: process.cwd(),
+          env: {
+            ...process.env,
+            ROADMAP_PATH: roadmapPath,
+            NEXT_TASK_OUTPUT: artifactPath,
+            GITHUB_OUTPUT: githubOutputPath,
+          },
+          stdio: "pipe",
+        },
+      ),
+    );
+    assert.equal(existsSync(artifactPath), false);
+    assert.equal(
+      existsSync(githubOutputPath),
+      false,
+    );
+  } finally {
+    rmSync(
+      directory,
+      { recursive: true, force: true },
+    );
+  }
 });
 
 test("completed dependency expiry uses a strict instant boundary and preserves unrelated planning", () => {
