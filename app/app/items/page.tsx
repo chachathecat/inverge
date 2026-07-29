@@ -24,7 +24,10 @@ import {
 import { resolveEssentialCoreRouteRead } from "@/lib/review-os/core-route-read-outcome";
 import { buildReviewOsReturnTo, getReviewOsServerContext } from "@/lib/review-os/server";
 import { reviewOsService } from "@/lib/review-os/service";
-import type { LearningSignalEventRecord, WrongAnswerItemRecord } from "@/lib/review-os/types";
+import type {
+  LearningNoteListItem,
+  LearningSignalEventRecord,
+} from "@/lib/review-os/types";
 
 type PageProps = {
   searchParams?: Promise<{ mode?: string; saved?: string }>;
@@ -45,7 +48,7 @@ function readString(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
-function readCaptureNoteSummary(item: WrongAnswerItemRecord): CaptureNoteSummary {
+function readCaptureNoteSummary(item: LearningNoteListItem): CaptureNoteSummary {
   const payload =
     typeof item.derivedPayload?.capture_note_engine_v2 === "object" && item.derivedPayload.capture_note_engine_v2
       ? (item.derivedPayload.capture_note_engine_v2 as Record<string, unknown>)
@@ -61,7 +64,7 @@ function readCaptureNoteSummary(item: WrongAnswerItemRecord): CaptureNoteSummary
   };
 }
 
-function resolveBiggestGap(item: WrongAnswerItemRecord) {
+function resolveBiggestGap(item: LearningNoteListItem) {
   const capture = readCaptureNoteSummary(item);
   return (
     capture.biggestGap ??
@@ -73,7 +76,7 @@ function resolveBiggestGap(item: WrongAnswerItemRecord) {
   );
 }
 
-function resolveNextAction(item: WrongAnswerItemRecord, mode: AppraisalMode) {
+function resolveNextAction(item: LearningNoteListItem, mode: AppraisalMode) {
   const capture = readCaptureNoteSummary(item);
   return (
     capture.nextAction ??
@@ -83,7 +86,7 @@ function resolveNextAction(item: WrongAnswerItemRecord, mode: AppraisalMode) {
   );
 }
 
-function resolveTopicCandidate(item: WrongAnswerItemRecord) {
+function resolveTopicCandidate(item: LearningNoteListItem) {
   const capture = readCaptureNoteSummary(item);
   return (
     capture.topicCandidate ??
@@ -177,21 +180,40 @@ export async function renderReviewOsItemsPage(searchParams: PageProps["searchPar
   const mode = resolveAppraisalMode(profile, modeParam);
   const config = getModeConfig(mode);
   const isNotesRoute = routePath === "/app/notes";
-  const [itemsRead, learningSignalsRead] = await Promise.all([
-    resolveEssentialCoreRouteRead("notes_items", () =>
-      reviewOsService.listWrongAnswerItems(session.userId!, session.email!, 60),
-    ),
-    resolveEssentialCoreRouteRead("notes_learning_signal_events", () =>
-      reviewOsService.listLearningSignalEvents(session.userId!, session.email!, mode, 20),
-    ),
-  ]);
-  if (itemsRead.status !== "ready" || learningSignalsRead.status !== "ready") {
+  const itemsRead = await resolveEssentialCoreRouteRead("notes_items", () =>
+    isNotesRoute
+      ? reviewOsService.listLearningNoteItems(
+          session.userId!,
+          session.email!,
+          mode,
+          60,
+        )
+      : reviewOsService.listWrongAnswerItems(
+          session.userId!,
+          session.email!,
+          60,
+        ),
+  );
+  if (itemsRead.status !== "ready") {
     return <CoreRouteReadErrorPage surface={isNotesRoute ? "notes" : "items"} />;
   }
 
   const items = itemsRead.value.filter((item) => item.examName === config.label);
-  const learningSignals = learningSignalsRead.value;
   const hasItems = items.length > 0;
+  const learningSignalsRead = hasItems
+    ? null
+    : await resolveEssentialCoreRouteRead("notes_learning_signal_events", () =>
+        reviewOsService.listLearningSignalEvents(
+          session.userId!,
+          session.email!,
+          mode,
+          20,
+        ),
+      );
+  if (learningSignalsRead && learningSignalsRead.status !== "ready") {
+    return <CoreRouteReadErrorPage surface={isNotesRoute ? "notes" : "items"} />;
+  }
+  const learningSignals = learningSignalsRead?.value ?? [];
   const hasLearningSignals = learningSignals.length > 0;
   const pageTitle = isNotesRoute ? "학습 노트" : "학습 기록";
   const helperCopy = isNotesRoute

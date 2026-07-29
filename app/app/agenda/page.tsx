@@ -37,10 +37,20 @@ export default async function LearningAgendaPage({ searchParams }: PageProps) {
 
   const [itemsRead, reviewQueueRead, usageEventsRead] = await Promise.all([
     resolveEssentialCoreRouteRead("agenda_items", () =>
-      reviewOsService.listWrongAnswerItems(session.userId!, session.email!, 80),
+      reviewOsService.listWrongAnswerItemsForAgenda(
+        session.userId!,
+        session.email!,
+        config.label,
+        80,
+      ),
     ),
     resolveEssentialCoreRouteRead("agenda_review_queue", () =>
-      reviewOsService.listReviewQueueForAgenda(session.userId!, session.email!, 40),
+      reviewOsService.listReviewQueueForAgenda(
+        session.userId!,
+        session.email!,
+        config.label,
+        40,
+      ),
     ),
     resolveEssentialCoreRouteRead("agenda_usage_events", () =>
       reviewOsService.listLearningAgendaUsageEvents(
@@ -61,8 +71,8 @@ export default async function LearningAgendaPage({ searchParams }: PageProps) {
 
   const agendaEvents = buildLearningAgendaEvents({
     mode,
-    items: itemsRead.value.filter((item) => item.examName === config.label),
-    reviewQueue: reviewQueueRead.value.filter((item) => item.examName === config.label),
+    items: itemsRead.value,
+    reviewQueue: reviewQueueRead.value,
     usageEvents: usageEventsRead.value,
   });
 

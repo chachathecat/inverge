@@ -16,6 +16,14 @@ const read = (path) => readFileSync(path, "utf8");
 
 const forbiddenCopy = /기준 답안|모범답안|공식답안|공식 채점|점수예측|합격예측|합격 가능성 확정|정답 확정|최종 판단|pass\/fail/i;
 
+function between(source, start, end) {
+  const startIndex = source.indexOf(start);
+  const endIndex = source.indexOf(end, startIndex + start.length);
+  assert.ok(startIndex >= 0, `missing start marker: ${start}`);
+  assert.ok(endIndex > startIndex, `missing end marker: ${end}`);
+  return source.slice(startIndex, endIndex);
+}
+
 test("/app/agenda route renders learner agenda shell and sections", () => {
   const page = read("app/app/agenda/page.tsx");
   const client = read("components/review-os/learning-agenda-client.tsx");
@@ -46,6 +54,97 @@ test("/app/agenda route renders learner agenda shell and sections", () => {
 
   assert.ok(shell.includes('href: "/app/agenda"'));
   assert.ok(shell.includes('label: "학습 기록"'));
+});
+
+test("agenda reads only bounded mode-scoped fields without the generic queue waterfall", () => {
+  const page = read("app/app/agenda/page.tsx");
+  const service = read("lib/review-os/service.ts");
+  const repository = read("lib/review-os/repository.ts");
+  const selectContracts = between(
+    repository,
+    "const LEARNING_AGENDA_ITEM_SELECT",
+    "function toConceptReviewCard",
+  );
+  const itemRead = between(
+    repository,
+    "async listWrongAnswerItemsForAgenda(",
+    "async insertWrongAnswerNote(",
+  );
+  const queueRead = between(
+    repository,
+    "async listReviewQueueForAgenda(",
+    "async archiveReviewQueueItemsForMode(",
+  );
+  const usageRead = between(
+    repository,
+    "async listUsageEventsForLearningAgenda(",
+    "async logUsageEvent(",
+  );
+  const itemService = between(
+    service,
+    "async listWrongAnswerItemsForAgenda(",
+    "async listReviewQueueForAgenda(",
+  );
+
+  assert.match(page, /Promise\.all\(\[/);
+  assert.match(page, /listWrongAnswerItemsForAgenda\([\s\S]*?config\.label,[\s\S]*?80/);
+  assert.match(page, /listReviewQueueForAgenda\([\s\S]*?config\.label,[\s\S]*?40/);
+  assert.match(page, /listLearningAgendaUsageEvents\([\s\S]*?160/);
+  for (const source of [
+    "agenda_items",
+    "agenda_review_queue",
+    "agenda_usage_events",
+  ]) {
+    assert.match(page, new RegExp(`resolveEssentialCoreRouteRead\\("${source}"`));
+  }
+
+  assert.match(selectContracts, /raw_created_from_capture:raw_payload->created_from_capture/);
+  assert.match(selectContracts, /raw_due_at:raw_payload->>dueAt/);
+  for (const field of [
+    "id",
+    "exam_name",
+    "subject_label",
+    "created_at",
+    "event_name",
+    "entity_type",
+    "entity_id",
+  ]) {
+    assert.match(selectContracts, new RegExp(`"${field}"`));
+  }
+  assert.doesNotMatch(
+    selectContracts,
+    /raw_payload"|derived_payload"|correct_answer|user_answer|metadata_json/,
+  );
+  assert.match(selectContracts, /"raw_question_text"/);
+  assert.match(selectContracts, /"raw_answer_text"/);
+
+  assert.match(itemRead, /\.select\(LEARNING_AGENDA_ITEM_SELECT\)/);
+  assert.match(itemRead, /\.eq\("user_id", userId\)/);
+  assert.match(itemRead, /\.eq\("exam_name", examName\)/);
+  assert.match(itemRead, /query = query\.gte\("created_at", cutoffIso\)/);
+  assert.doesNotMatch(itemRead, /\.select\("\*"\)/);
+  assert.match(itemService, /await this\.ensureAccess\(userId, email\)/);
+  assert.match(itemService, /getEntitlementLimit\(/);
+  assert.match(itemService, /Math\.max\(limit \+ 20, limit\)/);
+  assert.match(
+    itemRead,
+    /containsAgendaSmokeSeedText\([\s\S]*?row\.source_label,[\s\S]*?row\.problem_title,[\s\S]*?row\.raw_question_text,[\s\S]*?row\.raw_answer_text/,
+  );
+
+  assert.match(queueRead, /const scanPageSize = Math\.max\(25, Math\.min\(100, requestedLimit \* 5\)\)/);
+  assert.match(queueRead, /const maxScannedRows = 500/);
+  assert.match(queueRead, /\.select\(LEARNING_AGENDA_QUEUE_SELECT\)/);
+  assert.match(queueRead, /\.select\(LEARNING_AGENDA_QUEUE_ITEM_SELECT\)/);
+  assert.match(queueRead, /\.eq\("user_id", userId\)/);
+  assert.match(queueRead, /\.eq\("exam_name", examName\)/);
+  assert.match(queueRead, /dueAt: String\(row\.raw_due_at \?\? row\.created_at\)/);
+  assert.doesNotMatch(queueRead, /wrong_answer_tags|\.select\("\*"\)/);
+
+  assert.match(usageRead, /\.select\(LEARNING_AGENDA_USAGE_EVENT_SELECT\)/);
+  assert.match(usageRead, /\.eq\("user_id", userId\)/);
+  assert.match(usageRead, /\.in\("event_name", eventNames\)/);
+  assert.match(usageRead, /\.gte\("created_at", sinceIso\)/);
+  assert.doesNotMatch(usageRead, /\.select\("\*"\)|metadata_json/);
 });
 
 test("agenda empty state links learner back to capture", () => {

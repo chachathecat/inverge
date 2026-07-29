@@ -10,10 +10,9 @@ type BufferedSupabaseCookie = {
 };
 
 export async function updateSupabaseSession(request: NextRequest) {
-  const requestHeaders = new Headers(request.headers);
-  requestHeaders.set("x-inverge-current-path", `${request.nextUrl.pathname}${request.nextUrl.search}`);
-
   if (!isSupabaseConfigured()) {
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set("x-inverge-current-path", `${request.nextUrl.pathname}${request.nextUrl.search}`);
     return NextResponse.next({
       request: {
         headers: requestHeaders,
@@ -43,7 +42,15 @@ export async function updateSupabaseSession(request: NextRequest) {
     },
   });
 
-  await client.auth.getUser();
+  // Verify and refresh the request session using Supabase's SSR-recommended
+  // claims path. With asymmetric signing keys this avoids an Auth user lookup;
+  // symmetric projects still fail closed through Supabase's getUser fallback.
+  await client.auth.getClaims();
+
+  // Supabase may have refreshed request.cookies above. Clone the headers only
+  // after that refresh so Server Components receive the rotated cookie.
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-inverge-current-path", `${request.nextUrl.pathname}${request.nextUrl.search}`);
 
   const response = NextResponse.next({
     request: {

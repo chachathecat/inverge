@@ -19,6 +19,7 @@ import type {
   AdminAlphaFeed,
   FeedbackItemInput,
   FeedbackItemRecord,
+  LearningNoteReadCandidate,
   LearningSignalEventInput,
   LearningSignalEventRecord,
   InviteStatus,
@@ -68,6 +69,79 @@ export function normalizePostgrestTimestamp(value: unknown): string {
     : rawValue;
 }
 
+const LEARNING_AGENDA_ITEM_SELECT = [
+  "id",
+  "exam_name",
+  "subject_label",
+  "source_label",
+  "problem_title",
+  "raw_question_text",
+  "raw_answer_text",
+  "created_at",
+  "raw_created_from_capture:raw_payload->created_from_capture",
+  "derived_created_from_capture:derived_payload->created_from_capture",
+].join(",");
+
+const LEARNING_AGENDA_QUEUE_SELECT = [
+  "id",
+  "source_submission_id",
+  "raw_due_at:raw_payload->>dueAt",
+  "raw_review_reason:raw_payload->>reviewReason",
+  "derived_topic_tag:derived_payload->>topicTag",
+  "created_at",
+].join(",");
+
+const LEARNING_AGENDA_QUEUE_ITEM_SELECT = [
+  "id",
+  "exam_name",
+  "subject_label",
+  "problem_title",
+].join(",");
+
+const LEARNING_AGENDA_USAGE_EVENT_SELECT = [
+  "id",
+  "event_name",
+  "entity_type",
+  "entity_id",
+  "created_at",
+].join(",");
+
+const LEARNING_NOTE_CANDIDATE_SELECT = [
+  "id",
+  "exam_name",
+  "subject_label",
+  "source_label",
+  "problem_title",
+  "problem_identifier",
+  "raw_question_text",
+  "raw_answer_text",
+  "user_reason_preset",
+  "capture_v2_biggest_gap:derived_payload->capture_note_engine_v2->one_biggest_gap",
+  "capture_v2_next_action:derived_payload->capture_note_engine_v2->one_next_action",
+  "capture_v2_topic_candidate:derived_payload->capture_note_engine_v2->topic_candidate",
+  "capture_v2_mistake_type:derived_payload->capture_note_engine_v2->mistake_type",
+  "capture_v1_biggest_gap:derived_payload->capture_note_engine_v1->one_biggest_gap",
+  "capture_v1_next_action:derived_payload->capture_note_engine_v1->one_next_action",
+  "capture_v1_topic_candidate:derived_payload->capture_note_engine_v1->topic_candidate",
+  "capture_v1_mistake_type:derived_payload->capture_note_engine_v1->mistake_type",
+  "biggest_gap:derived_payload->biggestGap",
+  "comparison_point:derived_payload->comparisonPoint",
+  "mistake_type:derived_payload->mistakeType",
+  "next_action:derived_payload->nextAction",
+  "next_task:derived_payload->nextTask",
+  "topic_candidate:derived_payload->topicCandidate",
+  "topic_tag:derived_payload->topicTag",
+  "created_at",
+].join(",");
+
+function containsAgendaSmokeSeedText(...values: unknown[]) {
+  return values.some(
+    (value) =>
+      typeof value === "string" &&
+      /e2e|smoke|스모크|test-user|test[ -]?data|qa[ -]?seed/i.test(value),
+  );
+}
+
 function toConceptReviewCard(
   value: unknown,
 ): ConceptReviewCardPayload | undefined {
@@ -108,6 +182,10 @@ function toConceptReviewCard(
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function toRecordRows(value: unknown): Record<string, unknown>[] {
+  return Array.isArray(value) ? value.filter(isRecord) : [];
 }
 
 function toConceptNodeCandidateFromPayload(...payloads: unknown[]) {
@@ -343,6 +421,70 @@ function mapWrongAnswerItem(
         : {},
     createdAt: normalizePostgrestTimestamp(row.created_at),
     updatedAt: normalizePostgrestTimestamp(row.updated_at),
+  };
+}
+
+function mapLearningNoteReadCandidate(
+  row: Record<string, unknown>,
+): LearningNoteReadCandidate {
+  const derivedPayload: Record<string, unknown> = {};
+  for (const [version, target] of [
+    ["v2", "capture_note_engine_v2"],
+    ["v1", "capture_note_engine_v1"],
+  ] as const) {
+    const capturePayload: Record<string, unknown> = {};
+    for (const [source, field] of [
+      [`capture_${version}_biggest_gap`, "one_biggest_gap"],
+      [`capture_${version}_next_action`, "one_next_action"],
+      [`capture_${version}_topic_candidate`, "topic_candidate"],
+      [`capture_${version}_mistake_type`, "mistake_type"],
+    ] as const) {
+      if (typeof row[source] === "string") {
+        capturePayload[field] = row[source];
+      }
+    }
+    if (Object.keys(capturePayload).length > 0) {
+      derivedPayload[target] = capturePayload;
+    }
+  }
+  for (const [source, target] of [
+    ["biggest_gap", "biggestGap"],
+    ["comparison_point", "comparisonPoint"],
+    ["mistake_type", "mistakeType"],
+    ["next_action", "nextAction"],
+    ["next_task", "nextTask"],
+    ["topic_candidate", "topicCandidate"],
+    ["topic_tag", "topicTag"],
+  ] as const) {
+    if (typeof row[source] === "string") {
+      derivedPayload[target] = row[source];
+    }
+  }
+
+  return {
+    id: String(row.id),
+    examName: String(row.exam_name),
+    subjectLabel: String(row.subject_label),
+    sourceLabel:
+      typeof row.source_label === "string" ? row.source_label : undefined,
+    problemTitle:
+      typeof row.problem_title === "string" ? row.problem_title : undefined,
+    problemIdentifier:
+      typeof row.problem_identifier === "string"
+        ? row.problem_identifier
+        : undefined,
+    rawQuestionText:
+      typeof row.raw_question_text === "string"
+        ? row.raw_question_text
+        : undefined,
+    rawAnswerText:
+      typeof row.raw_answer_text === "string" ? row.raw_answer_text : undefined,
+    userReasonPreset:
+      typeof row.user_reason_preset === "string"
+        ? row.user_reason_preset
+        : undefined,
+    derivedPayload,
+    createdAt: normalizePostgrestTimestamp(row.created_at),
   };
 }
 
@@ -826,6 +968,74 @@ export class ReviewOsRepository {
     );
   }
 
+  async listLearningNoteCandidates(
+    userId: string,
+    examName: string,
+    cutoffIso: string | null,
+    limit = 60,
+  ): Promise<LearningNoteReadCandidate[]> {
+    const client = getUserClient(userId);
+    const requestedLimit = Math.max(0, Math.floor(limit));
+    if (requestedLimit === 0) return [];
+
+    let query = client
+      .from("wrong_answer_items")
+      .select(LEARNING_NOTE_CANDIDATE_SELECT)
+      .eq("user_id", userId)
+      .eq("exam_name", examName)
+      .order("created_at", { ascending: false });
+    if (cutoffIso) {
+      query = query.gte("created_at", cutoffIso);
+    }
+
+    const result = await query.limit(requestedLimit);
+    assertSupabaseOperation("review-os.listLearningNoteCandidates", result);
+    return toRecordRows(result.data).map(mapLearningNoteReadCandidate);
+  }
+
+  async listWrongAnswerItemsForAgenda(
+    userId: string,
+    examName: string,
+    cutoffIso: string | null,
+    limit = 20,
+  ) {
+    const client = getUserClient(userId);
+    const requestedLimit = Math.max(0, Math.floor(limit));
+    if (requestedLimit === 0) return [];
+
+    let query = client
+      .from("wrong_answer_items")
+      .select(LEARNING_AGENDA_ITEM_SELECT)
+      .eq("user_id", userId)
+      .eq("exam_name", examName)
+      .order("created_at", { ascending: false });
+    if (cutoffIso) {
+      query = query.gte("created_at", cutoffIso);
+    }
+
+    const result = await query.limit(requestedLimit);
+    assertSupabaseOperation("review-os.listWrongAnswerItemsForAgenda", result);
+    return toRecordRows(result.data).map((row) => {
+      return {
+        id: String(row.id),
+        examName: String(row.exam_name),
+        subjectLabel: String(row.subject_label),
+        createdAt: normalizePostgrestTimestamp(row.created_at),
+        createdFromCapture: Boolean(
+          typeof row.raw_created_from_capture === "boolean"
+            ? row.raw_created_from_capture
+            : row.derived_created_from_capture,
+        ),
+        smokeSeed: containsAgendaSmokeSeedText(
+          row.source_label,
+          row.problem_title,
+          row.raw_question_text,
+          row.raw_answer_text,
+        ),
+      };
+    });
+  }
+
   async insertWrongAnswerNote(
     userId: string,
     itemId: string,
@@ -1109,6 +1319,114 @@ export class ReviewOsRepository {
     }
 
     return cards;
+  }
+
+  async listReviewQueueForAgenda(
+    userId: string,
+    examName: string,
+    limit = 10,
+  ) {
+    const client = getUserClient(userId);
+    const requestedLimit = Math.max(0, Math.floor(limit));
+    if (requestedLimit === 0) return [];
+
+    // Preserve the generic queue's canonical order and bounded orphan scan,
+    // but load only the metadata required by the Agenda timeline.
+    const scanPageSize = Math.max(25, Math.min(100, requestedLimit * 5));
+    const maxScannedRows = 500;
+    const records: Array<{
+      queueId: string;
+      itemId: string;
+      examName: string;
+      subjectLabel: string;
+      dueAt: string;
+      smokeSeed: boolean;
+    }> = [];
+
+    for (
+      let offset = 0;
+      offset < maxScannedRows && records.length < requestedLimit;
+      offset += scanPageSize
+    ) {
+      const rangeEnd = Math.min(offset + scanPageSize - 1, maxScannedRows - 1);
+      const queueResult = await client
+        .from("review_queue_items")
+        .select(LEARNING_AGENDA_QUEUE_SELECT)
+        .eq("user_id", userId)
+        .eq("exam_id", "wrong_answer_os")
+        .eq("stage", "alpha")
+        .eq("status", "pending")
+        .eq("source_kind", "wrong_answer")
+        .not("source_submission_id", "is", null)
+        .order("priority_score", { ascending: false })
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .range(offset, rangeEnd);
+      assertSupabaseOperation(
+        "review-os.listReviewQueueForAgenda.queue",
+        queueResult,
+      );
+
+      const queueRows = toRecordRows(queueResult.data);
+      if (queueRows.length === 0) break;
+
+      const itemIds = [
+        ...new Set(
+          queueRows
+            .map((row) =>
+              typeof row.source_submission_id === "string"
+                ? row.source_submission_id
+                : null,
+            )
+            .filter((value): value is string => Boolean(value)),
+        ),
+      ];
+      if (itemIds.length > 0) {
+        const itemsResult = await client
+          .from("wrong_answer_items")
+          .select(LEARNING_AGENDA_QUEUE_ITEM_SELECT)
+          .eq("user_id", userId)
+          .eq("exam_name", examName)
+          .in("id", itemIds);
+        assertSupabaseOperation(
+          "review-os.listReviewQueueForAgenda.items",
+          itemsResult,
+        );
+        const itemsMap = new Map(
+          toRecordRows(itemsResult.data).map(
+            (row) => [String(row.id), row] as const,
+          ),
+        );
+
+        for (const row of queueRows) {
+          const itemId =
+            typeof row.source_submission_id === "string"
+              ? row.source_submission_id
+              : null;
+          if (!itemId) continue;
+          const item = itemsMap.get(itemId);
+          if (!item) continue;
+          records.push({
+            queueId: String(row.id),
+            itemId,
+            examName: String(item.exam_name),
+            subjectLabel: String(item.subject_label),
+            dueAt: String(row.raw_due_at ?? row.created_at),
+            smokeSeed: containsAgendaSmokeSeedText(
+              item.subject_label,
+              item.problem_title,
+              row.raw_review_reason,
+              row.derived_topic_tag,
+            ),
+          });
+          if (records.length === requestedLimit) break;
+        }
+      }
+
+      if (queueRows.length < rangeEnd - offset + 1) break;
+    }
+
+    return records;
   }
 
   async archiveReviewQueueItemsForMode(userId: string, queueIds: string[]) {
@@ -1435,6 +1753,35 @@ export class ReviewOsRepository {
     return ((result.data ?? []) as Record<string, unknown>[]).map(
       mapUsageEvent,
     );
+  }
+
+  async listUsageEventsForLearningAgenda(
+    userId: string,
+    eventNames: string[],
+    sinceIso: string,
+    limit = 60,
+  ) {
+    const client = getUserClient(userId);
+    const result = await client
+      .from("usage_events")
+      .select(LEARNING_AGENDA_USAGE_EVENT_SELECT)
+      .eq("user_id", userId)
+      .in("event_name", eventNames)
+      .gte("created_at", sinceIso)
+      .order("created_at", { ascending: false })
+      .limit(limit);
+    assertSupabaseOperation(
+      "review-os.listUsageEventsForLearningAgenda",
+      result,
+    );
+    return toRecordRows(result.data).map((row) => ({
+      id: String(row.id),
+      eventName: String(row.event_name),
+      entityType:
+        typeof row.entity_type === "string" ? row.entity_type : null,
+      entityId: typeof row.entity_id === "string" ? row.entity_id : null,
+      createdAt: String(row.created_at),
+    }));
   }
 
   async logUsageEvent(
