@@ -4,6 +4,7 @@ import { getServerSessionUser, isAuthRequiredError, requireRequestUserId } from 
 import { FREE_SUBSCRIPTION_STATE } from "@/lib/inverge/billing";
 import { appendInvergeEvent } from "@/lib/inverge/event-repository";
 import { createInvergeEventId } from "@/lib/inverge/events";
+import { isFastOwnerPreviewDeployment } from "@/lib/preview/fast-owner-preview";
 import {
   cancelServerCheckoutSession,
   confirmServerCheckoutSession,
@@ -38,6 +39,10 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  if (isFastOwnerPreviewDeployment()) {
+    return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
+  }
+
   try {
     const userId = await requireRequestUserId(request);
     const body = (await request.json()) as unknown;

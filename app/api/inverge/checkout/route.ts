@@ -5,10 +5,15 @@ import { createCheckoutSession } from "@/lib/inverge/checkout-provider";
 import { isPlanId, type CheckoutRequest } from "@/lib/inverge/billing";
 import { appendInvergeEvent } from "@/lib/inverge/event-repository";
 import { createInvergeEventId } from "@/lib/inverge/events";
+import { isFastOwnerPreviewDeployment } from "@/lib/preview/fast-owner-preview";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
+  if (isFastOwnerPreviewDeployment()) {
+    return NextResponse.json({ ok: false, error: "not_found" }, { status: 404 });
+  }
+
   try {
     const body = (await request.json()) as Partial<CheckoutRequest>;
     const session = await getServerSessionUser();
