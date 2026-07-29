@@ -91,6 +91,145 @@ function normalizeEvaluationInstant(evaluatedAt) {
   };
 }
 
+function resolveEffectiveCompletedItems(
+  items,
+  evaluatedAtEpochMs,
+) {
+  const itemsById = new Map(
+    items.map((item) => [item.id, item]),
+  );
+  const statesById = new Map();
+  const resolving = new Set();
+
+  function resolve(item) {
+    const cached = statesById.get(item.id);
+    if (cached) return cached;
+
+    if (resolving.has(item.id)) {
+      throw new Error(
+        `의존성 순환이 발견되었습니다: ${item.id}`,
+      );
+    }
+
+    if (
+      !COMPLETED_STATUSES.has(
+        normalizeStatus(item.status),
+      )
+    ) {
+      const incompleteState = {
+        effective: false,
+        expiryEpochMs: null,
+        expiryIso: null,
+      };
+
+      statesById.set(
+        item.id,
+        incompleteState,
+      );
+
+      return incompleteState;
+    }
+
+    resolving.add(item.id);
+
+    let expiryEpochMs =
+      approvalExpiryEpochMs(item);
+    let expiryIso =
+      expiryEpochMs === null
+        ? null
+        : String(item.approvalExpiresAt);
+    let dependenciesEffective = true;
+    const dependencies = Array.isArray(
+      item.dependencies,
+    )
+      ? item.dependencies
+      : [];
+
+    for (const dependencyId of dependencies) {
+      const dependency =
+        itemsById.get(dependencyId);
+
+      if (!dependency) {
+        throw new Error(
+          `${item.id}의 알 수 없는 의존성: ${dependencyId}`,
+        );
+      }
+
+      const dependencyState =
+        resolve(dependency);
+
+      dependenciesEffective =
+        dependenciesEffective &&
+        dependencyState.effective;
+
+      if (
+        dependencyState.expiryEpochMs !== null &&
+        (
+          expiryEpochMs === null ||
+          dependencyState.expiryEpochMs <
+            expiryEpochMs
+        )
+      ) {
+        expiryEpochMs =
+          dependencyState.expiryEpochMs;
+        expiryIso =
+          dependencyState.expiryIso;
+      }
+    }
+
+    resolving.delete(item.id);
+
+    const expired =
+      expiryEpochMs !== null &&
+      evaluatedAtEpochMs >= expiryEpochMs;
+    const state = {
+      effective:
+        dependenciesEffective && !expired,
+      expiryEpochMs,
+      expiryIso,
+    };
+
+    statesById.set(item.id, state);
+    return state;
+  }
+
+  const effectiveCompletedIds = new Set();
+  const expiredCompletedItems = new Map();
+
+  for (const item of items) {
+    if (
+      !COMPLETED_STATUSES.has(
+        normalizeStatus(item.status),
+      )
+    ) {
+      continue;
+    }
+
+    const state = resolve(item);
+
+    if (state.effective) {
+      effectiveCompletedIds.add(item.id);
+      continue;
+    }
+
+    if (
+      state.expiryEpochMs !== null &&
+      state.expiryIso !== null &&
+      evaluatedAtEpochMs >= state.expiryEpochMs
+    ) {
+      expiredCompletedItems.set(
+        item.id,
+        state.expiryIso,
+      );
+    }
+  }
+
+  return {
+    effectiveCompletedIds,
+    expiredCompletedItems,
+  };
+}
+
 function dependencyBlocker(
   item,
   effectiveCompletedIds,
@@ -357,30 +496,13 @@ export function selectNextTasks(
     }),
   );
 
-  const completedItems = items.filter((item) =>
-    COMPLETED_STATUSES.has(
-      normalizeStatus(item.status),
-    ),
+  const {
+    effectiveCompletedIds,
+    expiredCompletedItems,
+  } = resolveEffectiveCompletedItems(
+    items,
+    evaluation.epochMs,
   );
-  const effectiveCompletedIds = new Set();
-  const expiredCompletedItems = new Map();
-
-  for (const item of completedItems) {
-    const expiryEpochMs =
-      approvalExpiryEpochMs(item);
-
-    if (
-      expiryEpochMs === null ||
-      evaluation.epochMs < expiryEpochMs
-    ) {
-      effectiveCompletedIds.add(item.id);
-    } else {
-      expiredCompletedItems.set(
-        item.id,
-        item.approvalExpiresAt,
-      );
-    }
-  }
 
   const rawWipItems = items.filter((item) =>
     WIP_STATUSES.has(

@@ -63,6 +63,17 @@ export interface BlockedReason {
   occupyingItemId?: string;
 }
 
+interface EffectiveCompletionState {
+  effective: boolean;
+  expiryEpochMs: number | null;
+  expiryIso: string | null;
+}
+
+interface ExpiredCompletedItem {
+  expiresAt: string;
+  directApprovalExpired: boolean;
+}
+
 export interface RoadmapItemAnalysis {
   itemId: string;
   itemTitle: string;
@@ -403,23 +414,147 @@ function normalizeEvaluationInstant(evaluatedAt: Date): {
   };
 }
 
+function resolveEffectiveCompletedItems(
+  items: RoadmapItem[],
+  evaluatedAtEpochMs: number,
+): {
+  effectiveCompletedIds: Set<string>;
+  expiredCompletedItems: Map<string, ExpiredCompletedItem>;
+} {
+  const itemsById = new Map(items.map((item) => [item.id, item]));
+  const statesById = new Map<string, EffectiveCompletionState>();
+  const resolving = new Set<string>();
+
+  function resolve(item: RoadmapItem): EffectiveCompletionState {
+    const cached = statesById.get(item.id);
+    if (cached) return cached;
+
+    if (resolving.has(item.id)) {
+      throw new Error(`Roadmap dependency cycle detected at ${item.id}.`);
+    }
+
+    if (statusCategory(item.status) !== "completed") {
+      const incompleteState: EffectiveCompletionState = {
+        effective: false,
+        expiryEpochMs: null,
+        expiryIso: null,
+      };
+      statesById.set(item.id, incompleteState);
+      return incompleteState;
+    }
+
+    resolving.add(item.id);
+
+    let expiryEpochMs = approvalExpiryEpochMs(item);
+    let expiryIso =
+      expiryEpochMs === null
+        ? null
+        : String(item.approvalExpiresAt);
+    let dependenciesEffective = true;
+
+    for (const dependencyId of assertStringArray(
+      item.dependencies,
+      `${item.id}.dependencies`,
+    )) {
+      const dependency = itemsById.get(dependencyId);
+
+      if (!dependency) {
+        throw new Error(
+          `Roadmap dependency target is missing: ${dependencyId}.`,
+        );
+      }
+
+      const dependencyState = resolve(dependency);
+      dependenciesEffective =
+        dependenciesEffective &&
+        dependencyState.effective;
+
+      if (
+        dependencyState.expiryEpochMs !== null &&
+        (
+          expiryEpochMs === null ||
+          dependencyState.expiryEpochMs < expiryEpochMs
+        )
+      ) {
+        expiryEpochMs = dependencyState.expiryEpochMs;
+        expiryIso = dependencyState.expiryIso;
+      }
+    }
+
+    resolving.delete(item.id);
+
+    const expired =
+      expiryEpochMs !== null &&
+      evaluatedAtEpochMs >= expiryEpochMs;
+    const state: EffectiveCompletionState = {
+      effective: dependenciesEffective && !expired,
+      expiryEpochMs,
+      expiryIso,
+    };
+
+    statesById.set(item.id, state);
+    return state;
+  }
+
+  const effectiveCompletedIds = new Set<string>();
+  const expiredCompletedItems =
+    new Map<string, ExpiredCompletedItem>();
+
+  for (const item of items) {
+    if (statusCategory(item.status) !== "completed") {
+      continue;
+    }
+
+    const state = resolve(item);
+
+    if (state.effective) {
+      effectiveCompletedIds.add(item.id);
+      continue;
+    }
+
+    if (
+      state.expiryEpochMs !== null &&
+      state.expiryIso !== null &&
+      evaluatedAtEpochMs >= state.expiryEpochMs
+    ) {
+      expiredCompletedItems.set(item.id, {
+        expiresAt: state.expiryIso,
+        directApprovalExpired:
+          approvalExpiryEpochMs(item) ===
+          state.expiryEpochMs,
+      });
+    }
+  }
+
+  return {
+    effectiveCompletedIds,
+    expiredCompletedItems,
+  };
+}
+
 function appendDependencyBlockedReasons(
   item: RoadmapItem,
   missingDependencies: string[],
-  expiredCompletedItems: Map<string, string>,
+  expiredCompletedItems: Map<string, ExpiredCompletedItem>,
   evaluatedAt: string,
   blockedReasons: BlockedReason[],
 ): void {
   for (const dependency of missingDependencies) {
-    const dependencyExpiresAt = expiredCompletedItems.get(dependency);
+    const expiredCompletion =
+      expiredCompletedItems.get(dependency);
 
-    if (dependencyExpiresAt) {
+    if (expiredCompletion) {
+      const message = expiredCompletion.directApprovalExpired
+        ? `${item.id} is waiting for dependency ${dependency} because its completion approval expired at ${expiredCompletion.expiresAt}.`
+        : `${item.id} is waiting for dependency ${dependency} because its effective completion was invalidated by a prerequisite approval that expired at ${expiredCompletion.expiresAt}.`;
+
       blockedReasons.push({
         code: "expired_dependency",
         dependencyId: dependency,
-        dependencyExpiresAt,
+        dependencyExpiresAt:
+          expiredCompletion.expiresAt,
         evaluatedAt,
-        message: `${item.id} is waiting for dependency ${dependency} because its completion approval expired at ${dependencyExpiresAt}.`,
+        message,
       });
     } else {
       blockedReasons.push({
@@ -514,7 +649,7 @@ export function validateRoadmap(roadmap: ActiveProgramRoadmap): void {
 function buildAnalysis(
   item: RoadmapItem,
   effectiveCompletedIds: Set<string>,
-  expiredCompletedItems: Map<string, string>,
+  expiredCompletedItems: Map<string, ExpiredCompletedItem>,
   wipItems: RoadmapItem[],
   evaluatedAt: string,
 ): RoadmapItemAnalysis {
@@ -622,24 +757,13 @@ export function createRoadmapRunnerPlanAt(
 
   const evaluation = normalizeEvaluationInstant(evaluatedAt);
   const orderedItems = roadmap.items.map((item, order) => ({ item, order }));
-  const completedItems = orderedItems.filter(
-    ({ item }) => statusCategory(item.status) === "completed",
+  const {
+    effectiveCompletedIds,
+    expiredCompletedItems,
+  } = resolveEffectiveCompletedItems(
+    roadmap.items,
+    evaluation.epochMs,
   );
-  const effectiveCompletedIds = new Set<string>();
-  const expiredCompletedItems = new Map<string, string>();
-
-  for (const { item } of completedItems) {
-    const expiryEpochMs = approvalExpiryEpochMs(item);
-
-    if (expiryEpochMs === null || evaluation.epochMs < expiryEpochMs) {
-      effectiveCompletedIds.add(item.id);
-    } else {
-      expiredCompletedItems.set(
-        item.id,
-        String(item.approvalExpiresAt),
-      );
-    }
-  }
 
   const wipItems = orderedItems
     .filter(({ item }) => {

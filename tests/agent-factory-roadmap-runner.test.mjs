@@ -336,6 +336,794 @@ test("completed dependency expiry uses a strict instant boundary and preserves u
   }
 });
 
+test("transitive completion expiry is strict, source-order independent, and reports the direct bridge", () => {
+  const orderedItems = [
+    item({
+      id: "O3A",
+      status: "completed",
+      approvalExpiresAt: O3A_EXPIRY,
+      priority: 1,
+    }),
+    item({
+      id: "S236P",
+      status: "completed",
+      priority: 2,
+    }),
+    item({
+      id: "S236A",
+      status: "completed",
+      dependencies: ["O3A", "S236P"],
+      priority: 3,
+    }),
+    item({
+      id: "S237A",
+      dependencies: ["S236A"],
+      priority: 4,
+    }),
+    item({
+      id: "S236B",
+      priority: 5,
+    }),
+    item({
+      id: "O4V",
+      priority: 6,
+    }),
+  ];
+  const cases = [
+    {
+      name: "one millisecond before expiry",
+      evaluatedAt: "2026-08-09T14:59:58.999Z",
+      effective: true,
+    },
+    {
+      name: "exactly at expiry",
+      evaluatedAt: O3A_EXPIRY,
+      effective: false,
+    },
+    {
+      name: "one millisecond after expiry",
+      evaluatedAt: "2026-08-09T14:59:59.001Z",
+      effective: false,
+    },
+  ];
+
+  for (const [orderName, items] of [
+    ["ancestor first", orderedItems],
+    ["completed bridge first", [...orderedItems].reverse()],
+  ]) {
+    const source = roadmap(items);
+
+    for (const candidate of cases) {
+      const evaluatedAt = new Date(candidate.evaluatedAt);
+      const plan = createRoadmapRunnerPlanFromYamlAt(
+        source,
+        evaluatedAt,
+      );
+      const selector = createNextTaskResultFromYaml(
+        source,
+        evaluatedAt,
+      );
+      const o3a = byId(plan, "O3A");
+      const s236a = byId(plan, "S236A");
+      const s237a = byId(plan, "S237A");
+      const label = `${orderName}: ${candidate.name}`;
+
+      for (const completed of [o3a, s236a]) {
+        assert.equal(
+          completed.statusCategory,
+          "completed",
+          label,
+        );
+        assert.equal(
+          completed.readinessStatus,
+          "completed",
+          label,
+        );
+        assert.deepEqual(
+          completed.blockedReasons,
+          [],
+          label,
+        );
+        assert.ok(
+          plan.completedItemIds.includes(
+            completed.itemId,
+          ),
+          label,
+        );
+        assert.ok(
+          !plan.blockedItemIds.includes(
+            completed.itemId,
+          ),
+          label,
+        );
+      }
+
+      if (candidate.effective) {
+        assert.equal(
+          s237a.readinessStatus,
+          "ready",
+          label,
+        );
+        assert.deepEqual(
+          s237a.missingDependencies,
+          [],
+          label,
+        );
+        assert.deepEqual(
+          s237a.blockedReasons,
+          [],
+          label,
+        );
+        assert.ok(
+          plan.selectedItemIds.includes("S237A"),
+          label,
+        );
+        assert.equal(
+          selector.blockedByDependency.some(
+            (entry) => entry.id === "S237A",
+          ),
+          false,
+          label,
+        );
+      } else {
+        assert.equal(
+          s237a.readinessStatus,
+          "blocked",
+          label,
+        );
+        assert.deepEqual(
+          s237a.missingDependencies,
+          ["S236A"],
+          label,
+        );
+        assert.deepEqual(
+          s237a.blockedReasons,
+          [
+            {
+              code: "expired_dependency",
+              dependencyId: "S236A",
+              dependencyExpiresAt: O3A_EXPIRY,
+              evaluatedAt: candidate.evaluatedAt,
+              message: `S237A is waiting for dependency S236A because its effective completion was invalidated by a prerequisite approval that expired at ${O3A_EXPIRY}.`,
+            },
+          ],
+          label,
+        );
+        assert.ok(
+          plan.blockedItemIds.includes("S237A"),
+          label,
+        );
+        assert.ok(
+          !plan.selectedItemIds.includes("S237A"),
+          label,
+        );
+        assert.deepEqual(
+          plan.selectedItemIds,
+          ["S236B", "O4V"],
+          label,
+        );
+        assert.deepEqual(
+          selector.blockedByDependency.find(
+            (entry) => entry.id === "S237A",
+          ),
+          {
+            id: "S237A",
+            missingDependencies: ["S236A"],
+            expiredDependencies: ["S236A"],
+          },
+          label,
+        );
+      }
+
+      assertRunnerSelectorParity(
+        plan,
+        selector,
+      );
+    }
+  }
+});
+
+test("completed dependency closure uses the deterministic earliest approval expiry", () => {
+  const earlyExpiry =
+    "2026-08-09T14:59:58.000Z";
+  const lateExpiry =
+    "2026-08-09T14:59:59.000Z";
+  const evaluatedAt = new Date(earlyExpiry);
+
+  for (const [caseName, leftExpiry, rightExpiry] of [
+    ["different boundaries", lateExpiry, earlyExpiry],
+    ["tied boundaries", earlyExpiry, earlyExpiry],
+  ]) {
+    for (const dependencyOrder of [
+      ["ApprovalLeft", "ApprovalRight"],
+      ["ApprovalRight", "ApprovalLeft"],
+    ]) {
+      const source = roadmap([
+        item({
+          id: "ApprovalLeft",
+          status: "completed",
+          approvalExpiresAt: leftExpiry,
+          priority: 1,
+        }),
+        item({
+          id: "ApprovalRight",
+          status: "completed",
+          approvalExpiresAt: rightExpiry,
+          priority: 2,
+        }),
+        item({
+          id: "CompletedBridge",
+          status: "completed",
+          dependencies: dependencyOrder,
+          priority: 3,
+        }),
+        item({
+          id: "Consumer",
+          dependencies: ["CompletedBridge"],
+          priority: 4,
+        }),
+      ]);
+      const plan = createRoadmapRunnerPlanFromYamlAt(
+        source,
+        evaluatedAt,
+      );
+      const selector = createNextTaskResultFromYaml(
+        source,
+        evaluatedAt,
+      );
+      const consumer = byId(plan, "Consumer");
+      const label =
+        `${caseName}: ${dependencyOrder.join(",")}`;
+
+      assert.equal(
+        consumer.readinessStatus,
+        "blocked",
+        label,
+      );
+      assert.deepEqual(
+        consumer.missingDependencies,
+        ["CompletedBridge"],
+        label,
+      );
+      assert.deepEqual(
+        consumer.blockedReasons.map(
+          ({
+            code,
+            dependencyId,
+            dependencyExpiresAt,
+          }) => ({
+            code,
+            dependencyId,
+            dependencyExpiresAt,
+          }),
+        ),
+        [
+          {
+            code: "expired_dependency",
+            dependencyId: "CompletedBridge",
+            dependencyExpiresAt: earlyExpiry,
+          },
+        ],
+        label,
+      );
+      assert.deepEqual(
+        selector.blockedByDependency,
+        [
+          {
+            id: "Consumer",
+            missingDependencies: [
+              "CompletedBridge",
+            ],
+            expiredDependencies: [
+              "CompletedBridge",
+            ],
+          },
+        ],
+        label,
+      );
+      assertRunnerSelectorParity(
+        plan,
+        selector,
+      );
+    }
+  }
+});
+
+test("multi-hop and diamond completed chains propagate one direct expired blocker", () => {
+  const orderedItems = [
+    item({
+      id: "O3A",
+      status: "completed",
+      approvalExpiresAt: O3A_EXPIRY,
+      priority: 1,
+    }),
+    item({
+      id: "CompletedA",
+      status: "completed",
+      dependencies: ["O3A"],
+      priority: 2,
+    }),
+    item({
+      id: "CompletedB",
+      status: "completed",
+      dependencies: ["O3A"],
+      priority: 3,
+    }),
+    item({
+      id: "CompletedC",
+      status: "completed",
+      dependencies: [
+        "CompletedA",
+        "CompletedB",
+      ],
+      priority: 4,
+    }),
+    item({
+      id: "DiamondConsumer",
+      dependencies: ["CompletedC"],
+      priority: 5,
+    }),
+    item({
+      id: "S236A",
+      status: "completed",
+      dependencies: ["O3A"],
+      priority: 6,
+    }),
+    item({
+      id: "S237A",
+      status: "completed",
+      dependencies: ["S236A"],
+      priority: 7,
+    }),
+    item({
+      id: "S237P",
+      dependencies: ["S237A"],
+      priority: 8,
+    }),
+  ];
+
+  for (const items of [
+    orderedItems,
+    [...orderedItems].reverse(),
+  ]) {
+    const source = roadmap(items);
+    const before = createRoadmapRunnerPlanFromYamlAt(
+      source,
+      new Date("2026-08-09T14:59:58.999Z"),
+    );
+
+    assert.equal(
+      byId(before, "DiamondConsumer")
+        .readinessStatus,
+      "ready",
+    );
+    assert.equal(
+      byId(before, "S237P").readinessStatus,
+      "ready",
+    );
+
+    const evaluatedAt = new Date(O3A_EXPIRY);
+    const plan = createRoadmapRunnerPlanFromYamlAt(
+      source,
+      evaluatedAt,
+    );
+    const selector = createNextTaskResultFromYaml(
+      source,
+      evaluatedAt,
+    );
+
+    for (const id of [
+      "CompletedA",
+      "CompletedB",
+      "CompletedC",
+      "S236A",
+      "S237A",
+    ]) {
+      const completed = byId(plan, id);
+
+      assert.equal(
+        completed.statusCategory,
+        "completed",
+      );
+      assert.equal(
+        completed.readinessStatus,
+        "completed",
+      );
+      assert.ok(
+        plan.completedItemIds.includes(id),
+      );
+      assert.ok(
+        !plan.blockedItemIds.includes(id),
+      );
+    }
+
+    for (const [
+      consumerId,
+      directDependency,
+    ] of [
+      ["DiamondConsumer", "CompletedC"],
+      ["S237P", "S237A"],
+    ]) {
+      const consumer = byId(plan, consumerId);
+
+      assert.equal(
+        consumer.readinessStatus,
+        "blocked",
+      );
+      assert.deepEqual(
+        consumer.missingDependencies,
+        [directDependency],
+      );
+      assert.deepEqual(
+        consumer.blockedReasons.map(
+          ({
+            code,
+            dependencyId,
+            dependencyExpiresAt,
+          }) => ({
+            code,
+            dependencyId,
+            dependencyExpiresAt,
+          }),
+        ),
+        [
+          {
+            code: "expired_dependency",
+            dependencyId: directDependency,
+            dependencyExpiresAt: O3A_EXPIRY,
+          },
+        ],
+      );
+      assert.ok(
+        !consumer.missingDependencies.includes(
+          "O3A",
+        ),
+      );
+      assert.deepEqual(
+        selector.blockedByDependency.find(
+          (entry) => entry.id === consumerId,
+        ),
+        {
+          id: consumerId,
+          missingDependencies: [
+            directDependency,
+          ],
+          expiredDependencies: [
+            directDependency,
+          ],
+        },
+      );
+    }
+
+    assertRunnerSelectorParity(plan, selector);
+  }
+});
+
+test("transitive expiry blocks active execution while retaining raw WIP and locks", () => {
+  const source = roadmap(
+    [
+      item({
+        id: "O3A",
+        status: "completed",
+        approvalExpiresAt: O3A_EXPIRY,
+        priority: 1,
+      }),
+      item({
+        id: "S236A",
+        status: "completed",
+        dependencies: ["O3A"],
+        priority: 2,
+      }),
+      item({
+        id: "S237A",
+        status: "active",
+        dependencies: ["S236A"],
+        lockGroup: "private-authoring",
+        priority: 3,
+      }),
+      item({
+        id: "SameLockQueued",
+        lockGroup: "private-authoring",
+        priority: 4,
+      }),
+      item({
+        id: "UnrelatedFirst",
+        lockGroup: "unrelated-first",
+        priority: 5,
+      }),
+      item({
+        id: "UnrelatedSecond",
+        lockGroup: "unrelated-second",
+        priority: 6,
+      }),
+    ],
+    { wipLimit: 2 },
+  );
+
+  for (const evaluatedAtIso of [
+    O3A_EXPIRY,
+    "2026-08-09T14:59:59.001Z",
+  ]) {
+    const evaluatedAt = new Date(evaluatedAtIso);
+    const plan = createRoadmapRunnerPlanFromYamlAt(
+      source,
+      evaluatedAt,
+    );
+    const selector = createNextTaskResultFromYaml(
+      source,
+      evaluatedAt,
+    );
+    const active = byId(plan, "S237A");
+
+    assert.equal(active.status, "active");
+    assert.equal(
+      active.statusCategory,
+      "active",
+    );
+    assert.equal(
+      active.readinessStatus,
+      "blocked",
+    );
+    assert.deepEqual(
+      active.missingDependencies,
+      ["S236A"],
+    );
+    assert.deepEqual(
+      active.blockedReasons.map(
+        ({
+          code,
+          dependencyId,
+          dependencyExpiresAt,
+        }) => ({
+          code,
+          dependencyId,
+          dependencyExpiresAt,
+        }),
+      ),
+      [
+        {
+          code: "expired_dependency",
+          dependencyId: "S236A",
+          dependencyExpiresAt: O3A_EXPIRY,
+        },
+      ],
+    );
+    assert.ok(
+      plan.blockedItemIds.includes("S237A"),
+    );
+    assert.equal(plan.wipOccupiedCount, 1);
+    assert.equal(plan.availableSlots, 1);
+    assert.equal(plan.selectionSlots, 1);
+    assert.equal(selector.activeCount, 1);
+    assert.equal(selector.availableSlots, 1);
+    assert.deepEqual(selector.active, []);
+    assert.deepEqual(
+      selector.blockedByDependency.find(
+        (entry) => entry.id === "S237A",
+      ),
+      {
+        id: "S237A",
+        missingDependencies: ["S236A"],
+        expiredDependencies: ["S236A"],
+      },
+    );
+    assert.equal(
+      byId(plan, "SameLockQueued")
+        .readinessStatus,
+      "blocked",
+    );
+    assert.deepEqual(
+      selector.blockedByLock.find(
+        (entry) =>
+          entry.id === "SameLockQueued",
+      ),
+      {
+        id: "SameLockQueued",
+        lockGroup: "private-authoring",
+      },
+    );
+    assert.deepEqual(
+      plan.selectedItemIds,
+      ["UnrelatedFirst"],
+    );
+    assert.ok(
+      !plan.selectedItemIds.includes(
+        "UnrelatedSecond",
+      ),
+    );
+    assertRunnerSelectorParity(plan, selector);
+  }
+});
+
+test("incomplete and non-expiring completed closures retain generic compatibility", () => {
+  const evaluatedAt = new Date(
+    "2030-01-01T00:00:00.000Z",
+  );
+  const incompleteSource = roadmap([
+    item({
+      id: "IncompleteA",
+      status: "queued",
+      priority: 1,
+    }),
+    item({
+      id: "CompletedB",
+      status: "completed",
+      dependencies: ["IncompleteA"],
+      priority: 2,
+    }),
+    item({
+      id: "ConsumerC",
+      dependencies: ["CompletedB"],
+      priority: 3,
+    }),
+  ]);
+  const incompletePlan =
+    createRoadmapRunnerPlanFromYamlAt(
+      incompleteSource,
+      evaluatedAt,
+    );
+  const incompleteSelector =
+    createNextTaskResultFromYaml(
+      incompleteSource,
+      evaluatedAt,
+    );
+  const consumer =
+    byId(incompletePlan, "ConsumerC");
+
+  assert.equal(
+    byId(incompletePlan, "CompletedB")
+      .readinessStatus,
+    "completed",
+  );
+  assert.deepEqual(
+    consumer.missingDependencies,
+    ["CompletedB"],
+  );
+  assert.deepEqual(
+    consumer.blockedReasons.map(
+      (reason) => reason.code,
+    ),
+    ["missing_dependency"],
+  );
+  assert.deepEqual(
+    incompleteSelector.blockedByDependency.find(
+      (entry) => entry.id === "ConsumerC",
+    ),
+    {
+      id: "ConsumerC",
+      missingDependencies: ["CompletedB"],
+      expiredDependencies: [],
+    },
+  );
+  assertRunnerSelectorParity(
+    incompletePlan,
+    incompleteSelector,
+  );
+
+  const aliasSource = roadmap([
+    item({
+      id: "CompletedAlias",
+      status: "done",
+      priority: 1,
+    }),
+    item({
+      id: "MergedAlias",
+      status: "merged",
+      dependencies: ["CompletedAlias"],
+      priority: 2,
+    }),
+    item({
+      id: "ReleasedAlias",
+      status: "released",
+      dependencies: ["MergedAlias"],
+      priority: 3,
+    }),
+    item({
+      id: "CompletedFinal",
+      status: "completed",
+      dependencies: ["ReleasedAlias"],
+      priority: 4,
+    }),
+    item({
+      id: "FutureConsumer",
+      dependencies: ["CompletedFinal"],
+      priority: 5,
+    }),
+  ]);
+  const aliasPlan =
+    createRoadmapRunnerPlanFromYamlAt(
+      aliasSource,
+      evaluatedAt,
+    );
+  const aliasSelector =
+    createNextTaskResultFromYaml(
+      aliasSource,
+      evaluatedAt,
+    );
+
+  assert.equal(
+    byId(aliasPlan, "FutureConsumer")
+      .readinessStatus,
+    "ready",
+  );
+  assert.deepEqual(
+    byId(aliasPlan, "FutureConsumer")
+      .missingDependencies,
+    [],
+  );
+  assert.deepEqual(
+    aliasPlan.completedItemIds,
+    [
+      "CompletedAlias",
+      "MergedAlias",
+      "ReleasedAlias",
+      "CompletedFinal",
+    ],
+  );
+  assertRunnerSelectorParity(
+    aliasPlan,
+    aliasSelector,
+  );
+});
+
+test("malformed expiry behind a completed bridge and dependency cycles still fail closed", () => {
+  const malformedSource = roadmap([
+    item({
+      id: "MalformedApproval",
+      status: "completed",
+      approvalExpiresAt: "2026-08-09T14:59:59Z",
+      priority: 1,
+    }),
+    item({
+      id: "CompletedBridge",
+      status: "completed",
+      dependencies: ["MalformedApproval"],
+      priority: 2,
+    }),
+    item({
+      id: "Consumer",
+      dependencies: ["CompletedBridge"],
+      priority: 3,
+    }),
+  ]);
+  const cycleSource = roadmap([
+    item({
+      id: "CompletedA",
+      status: "completed",
+      dependencies: ["CompletedB"],
+      priority: 1,
+    }),
+    item({
+      id: "CompletedB",
+      status: "completed",
+      dependencies: ["CompletedA"],
+      priority: 2,
+    }),
+    item({
+      id: "Consumer",
+      dependencies: ["CompletedB"],
+      priority: 3,
+    }),
+  ]);
+  const evaluatedAt = new Date(
+    LIVE_PRE_EXPIRY_EVALUATED_AT,
+  );
+
+  for (const evaluate of [
+    createRoadmapRunnerPlanFromYamlAt,
+    createNextTaskResultFromYaml,
+  ]) {
+    assert.throws(
+      () => evaluate(malformedSource, evaluatedAt),
+      /approvalExpiresAt must be/,
+    );
+    assert.throws(
+      () => evaluate(cycleSource, evaluatedAt),
+      /cycle|순환/u,
+    );
+  }
+});
+
 test("active dependency expiry blocks effective execution without releasing WIP or selection capacity", () => {
   const source = activeExpiryRoadmap();
   const cases = [
