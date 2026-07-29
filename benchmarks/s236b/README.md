@@ -28,9 +28,9 @@ formula-model, Production-fitness, or PaddleOCR-source claim is made.
 | Identity | SHA-256 |
 |---|---|
 | Candidate set | `68bed995d8e8bd1cb76ec59a8daacbb9423f4b71b69858c3146f07986d068993` |
-| Candidate configuration | `f06aff888510e2a5cd71a93c6360a8b52386baa7ab9170927dbaeb9f8ff9b327` |
-| Benchmark configuration bundle | `b89a61d6938a51828b13c71585e13ac045dc58bc98559d2096002fa8d3bd82c6` |
-| Candidate lock file | `94baec6ce16f1979fb137e19e00b10cd41e526ea0bc323e6bd2d3a07a2f5bc94` |
+| Candidate configuration | `d9d5afe8aedaeb09955595f09afc4c2019311eb675f47ecda0d3a1ad38790e04` |
+| Benchmark configuration bundle | `10020f4f24b091ebb8203731527cfd2d32127843ee0eec635b65d58abda69972` |
+| Candidate lock file | `380851411bf6ba250a12b508c32932f4c6bb09d79a4877a26f5be4870ed72a86` |
 
 ## Safe execution boundary
 
@@ -48,16 +48,27 @@ dependency closure, wheel-to-install provenance, an allowlisted `sys.path`, or
 a read-only model mount. Those remain explicit supply-chain and isolation
 blockers.
 
-Current execution identities:
+Current source identities:
 
 ```text
-generator  995be9eac085be5062455484fbe137ee3f4bc801e62212c85fb4b083e2924952
-runner     bdbfbb2e3af2a3d64c041071ec424840aefe0c241707736508d0e7e08e691496
+generator  32b22bc90469cbc17efdb908a8f0acd5037cdea25255962a030d3522a1f10364
+runner     07ac87f1e7f5f3937e8dd6fff8c039cb6af36f5c651d4c7cac8cda0344e3565c
 evaluator  0bff5e08576ad855a0e74bf845fdf88153f9003750aae5647315549eeb7e6139
 cleanup    3710044d780932ef73356b4b397300972fcdfb18a1674268f91fb5bddef84620
 fault tool bda1d768537119e023176ecc9b39cd50b7bb3c480a0842f50c00c886a11da210
 SBOM scan  c1e059f5a52d09585f743b9b8c65ead6fe1d7f0aed6ddc4b66a5c73ae21aabaf
 ```
+
+The committed full benchmark result predates the Owner-impact iteration. It
+is bound to generator
+`995be9eac085be5062455484fbe137ee3f4bc801e62212c85fb4b083e2924952`,
+runner
+`bdbfbb2e3af2a3d64c041071ec424840aefe0c241707736508d0e7e08e691496`,
+candidate configuration
+`f06aff888510e2a5cd71a93c6360a8b52386baa7ab9170927dbaeb9f8ff9b327`,
+and benchmark bundle
+`b89a61d6938a51828b13c71585e13ac045dc58bc98559d2096002fa8d3bd82c6`.
+The SBOM, rights, and rollback rows remain historical rows for that adapter.
 
 Run `scan_runtime_sbom.py`, `generate_synthetic.py`, `run_candidate.py`, and
 `evaluate_bodyless.py` in that order. Every required digest and version is a
@@ -93,12 +104,43 @@ Mismatch causes are assigned only where the observed token difference supports
 the cause. Ambiguous mismatches are
 `unclassified_review_required`; fixture risk labels are not treated as causes.
 
-The recorded segmented run scored 33/60 fields (55%) with zero abstentions.
-On the exact same fixture set, the pre-change runner scored 12/60 (20%) with
-36 abstentions. Table fields reached 16/16 and choice fields reached 5/20.
-Signs and formulas remain 0/4, and p95 increased to 577.082 ms because
-multi-field images now run multiple recognition crops. These remain P2
-accuracy/performance follow-ups, not Production claims.
+The historical recorded segmented run scored 33/60 fields (55%) with zero
+abstentions. On its exact same fixture set, the earlier runner scored 12/60
+(20%) with 36 abstentions. Table fields reached 16/16 and choice fields
+reached 5/20. The historical result had signs 0/4, Law dates 1/4, and formulas
+0/4.
+
+## Owner-impact accuracy iteration
+
+The current generator renders canonical Unicode superscripts and subscripts
+as distinguishable smaller ASCII digit runs at explicit vertical offsets. This
+avoids the pinned font's identical missing-glyph boxes while leaving the
+sealed expected value canonical and editable. The runner uses only candidate
+text, image pixels, conservative component geometry, and separate digit-crop
+recognition. It does not receive fixture risk labels, expected values, or
+expected coordinates.
+
+The directly observed causes were:
+
+- ASCII hyphen confusion and a dropped final decimal digit in signed values;
+- spacing or a missing leading month/day digit in Law dates;
+- unsupported script digits in the model dictionary plus indistinguishable
+  missing-glyph rendering for formulas.
+
+A local synthetic same-fixture diagnostic changed overall accuracy from 40/60
+to 51/60 and the three in-scope groups from 1/12 to 12/12: signs 1/4 to 4/4,
+Law dates 0/4 to 4/4, and formulas 0/4 to 4/4. All 20 non-target fixture
+outputs, including all four table fixture outputs, were byte-identical before
+and after. The committed historical table result remains 16/16. Five
+additional synthetic robustness batches produced 60/60 in-scope fields with
+zero abstentions after the one corrective round.
+
+This diagnostic is not qualifying evidence. The historical exact installed
+inventory could not be reproduced byte-for-byte, so the current adapter did
+not regenerate the full inventory-bound artifact. Current SBOM, rights, and
+rollback projections remain pending. Five-choice ordering, multi-crop
+performance, and all other remaining accuracy work are P2 with no automatic
+follow-up.
 
 ## Native fallback and cleanup
 

@@ -798,9 +798,36 @@ test("RFC 8785-compatible candidate, artifact, component, and model roots reprod
   );
 });
 
-test("raw local candidate rows match while S235B coherence stays null", () => {
-  assert.deepEqual(sbom.ordered_candidate_rows, candidateLock.orderedCandidateRows);
-  assert.deepEqual(rights.orderedCandidateRows, candidateLock.orderedCandidateRows);
+test("historical SBOM and rights rows stay distinct from the current adapter", () => {
+  assert.deepEqual(sbom.ordered_candidate_rows, rights.orderedCandidateRows);
+  assert.notDeepEqual(
+    sbom.ordered_candidate_rows,
+    candidateLock.orderedCandidateRows,
+  );
+  const historicalPaddle = sbom.ordered_candidate_rows.find(
+    (row) => row.candidate_name === "PaddleOCR",
+  );
+  const currentPaddle = candidateLock.orderedCandidateRows.find(
+    (row) => row.candidate_name === "PaddleOCR",
+  );
+  assert.ok(historicalPaddle);
+  assert.ok(currentPaddle);
+  assert.notEqual(
+    historicalPaddle.candidate_artifact_sha256,
+    currentPaddle.candidate_artifact_sha256,
+  );
+  assert.notEqual(
+    historicalPaddle.candidate_configuration_sha256,
+    currentPaddle.candidate_configuration_sha256,
+  );
+  assert.equal(
+    historicalPaddle.component_set_sha256,
+    currentPaddle.component_set_sha256,
+  );
+  assert.equal(
+    historicalPaddle.model_asset_set_sha256,
+    currentPaddle.model_asset_set_sha256,
+  );
   assert.deepEqual(
     sbom.component_set_preimage,
     candidateLock.componentSetPreimage,
@@ -818,11 +845,11 @@ test("raw local candidate rows match while S235B coherence stays null", () => {
   );
   assert.equal(
     sbom.ordered_candidate_rows_digest,
-    candidateLock.orderedCandidateRowsDigest,
+    rights.orderedCandidateRowsDigest,
   );
   assert.equal(
-    rights.orderedCandidateRowsDigest,
-    candidateLock.orderedCandidateRowsDigest,
+    contract.supplyChainAndRights.currentCandidateProjectionStatus,
+    "historical_rows_not_regenerated_current_adapter_projection_pending",
   );
   assert.deepEqual(
     rights.candidateModelAssetSetSha256,
@@ -1636,12 +1663,190 @@ assert all(0xAC00 <= ord(character) <= 0xD7A3 for character in sample)
   assert.equal(child.status, 0, child.stderr || child.stdout);
 });
 
+test("Owner-impact signs, formulas, and Law dates recover without expectation access", () => {
+  const source = String.raw`
+import importlib.util
+import inspect
+import os
+
+runner_spec = importlib.util.spec_from_file_location(
+    "s236b_runner",
+    os.environ["RUNNER_PATH"],
+)
+runner = importlib.util.module_from_spec(runner_spec)
+runner_spec.loader.exec_module(runner)
+generator_spec = importlib.util.spec_from_file_location(
+    "s236b_generator",
+    os.environ["GENERATOR_PATH"],
+)
+generator = importlib.util.module_from_spec(generator_spec)
+generator_spec.loader.exec_module(generator)
+
+assert runner.normalize_signed_number("-12.3") == "\u221212.3"
+assert runner.normalize_signed_number("+12.3") == "+12.3"
+assert runner.normalize_signed_number("12.3") == "12.3"
+assert runner.normalize_signed_number("x-y") == "x-y"
+
+assert tuple(inspect.signature(runner.normalize_law_date).parameters) == (
+    "candidate",
+    "prediction",
+    "characters",
+)
+assert tuple(inspect.signature(runner.recover_formula).parameters) == (
+    "candidate",
+    "image",
+    "cv2",
+    "recognize_digit",
+)
+assert tuple(inspect.signature(runner.recover_signed_number).parameters) == (
+    "candidate",
+    "image",
+    "cv2",
+    "recognize_digit",
+)
+
+characters = [
+    "blank",
+    "\ubc95",
+    "\ub960",
+    " ",
+    ".",
+    *"0123456789",
+]
+target_without_space = "\ubc95\ub9602031.04.17"
+indices = {character: index for index, character in enumerate(characters)}
+paths = [0]
+for character in target_without_space:
+    paths.extend((indices[character], 0))
+
+class FakePrediction:
+    ndim = 2
+
+    def __init__(self, selected):
+        self.selected = selected
+        self.shape = (len(selected), len(characters))
+
+    def __getitem__(self, key):
+        timestep, character = key
+        return 0.999 if self.selected[timestep] == character else 1e-9
+
+prediction = FakePrediction(paths)
+assert runner.normalize_law_date(
+    "\ubc95\ub9602031.04.7",
+    prediction,
+    characters,
+) == "\ubc95\ub960 2031.04.17"
+assert runner.normalize_law_date(
+    "\ubc95\ub960 2031.04.17",
+    prediction,
+    characters,
+) == "\ubc95\ub960 2031.04.17"
+assert runner.normalize_law_date(
+    "\uba85\ub9602031.04.7",
+    prediction,
+    characters,
+) == "\uba85\ub9602031.04.7"
+
+for index, (superscript, subscript) in enumerate(
+    zip(generator.SUPERSCRIPT_DIGITS, generator.SUBSCRIPT_DIGITS),
+    start=1,
+):
+    value = f"(x{superscript}\u2212y\u00f7{index})+z{subscript}=0"
+    runs = generator.formula_render_runs(value)
+    assert "".join(text for text, _ in runs) == (
+        f"(x{index}\u2212y\u00f7{index})+z{index}=0"
+    )
+    assert [position for _, position in runs].count("superscript") == 1
+    assert [position for _, position in runs].count("subscript") == 1
+
+component_counts = (1, 1, 1, 1, 1, 3, 1, 1, 1, 1, 1, 2, 1)
+groups = [
+    {
+        "left": index * 20,
+        "top": 28,
+        "width": 10,
+        "height": 34,
+        "component_count": component_count,
+    }
+    for index, component_count in enumerate(component_counts)
+]
+groups[1].update(top=36, height=20)
+groups[2].update(top=24, height=17)
+groups[3].update(top=42, height=2)
+groups[7].update(top=28, height=34)
+groups[9].update(top=36, height=20)
+groups[10].update(top=49, height=17)
+assert runner.formula_component_geometry_is_safe(groups, 84) is True
+assert runner.formula_text_gate("(x8-y\u00f77)+z4=0") is True
+assert runner.formula_text_gate("(x8-y7)+z4=0") is True
+
+class FakeImage:
+    shape = (84, 280, 3)
+
+    def __getitem__(self, _):
+        return self
+
+original_grouping = runner.horizontal_component_groups
+runner.horizontal_component_groups = lambda _image, _cv2: groups
+digits = iter((("8", 0.91), ("7", 0.92), ("4", 0.93), ("0", 0.94)))
+recovered, confidences = runner.recover_formula(
+    "(x8-y\u00f77)+z4=0",
+    FakeImage(),
+    object(),
+    lambda _crop: next(digits),
+)
+runner.horizontal_component_groups = original_grouping
+assert recovered == "(x\u2078\u2212y\u00f77)+z\u2084=0"
+assert confidences == [0.91, 0.92, 0.93, 0.94]
+
+unsafe = [dict(group) for group in groups]
+unsafe[10]["top"] = 20
+assert runner.formula_component_geometry_is_safe(unsafe, 84) is False
+
+sign_groups = [
+    {
+        "left": index * 20,
+        "top": 29,
+        "width": 16,
+        "height": 25,
+        "component_count": 1,
+    }
+    for index in range(5)
+]
+sign_groups[0].update(top=40, width=17, height=3)
+sign_groups[3].update(top=50, width=5, height=4)
+assert runner.signed_number_component_geometry_is_safe(sign_groups, 84)
+runner.horizontal_component_groups = lambda _image, _cv2: sign_groups
+digits = iter((("1", 0.95), ("2", 0.96), ("3", 0.97)))
+recovered, confidences = runner.recover_signed_number(
+    "-2.3",
+    FakeImage(),
+    object(),
+    lambda _crop: next(digits),
+)
+runner.horizontal_component_groups = original_grouping
+assert recovered == "\u221212.3"
+assert confidences == [0.95, 0.96, 0.97]
+`;
+  const child = spawnSync("python3", ["-c", source], {
+    encoding: "utf8",
+    env: {
+      ...process.env,
+      GENERATOR_PATH: resolve(generatorPath),
+      PYTHONDONTWRITEBYTECODE: "1",
+      RUNNER_PATH: resolve(runnerPath),
+    },
+  });
+  assert.equal(child.status, 0, child.stderr || child.stdout);
+});
+
 test("runner and generator bind installed, model, adapter, and font bytes", () => {
   const runner = readFileSync(runnerPath, "utf8");
   const generator = readFileSync(generatorPath, "utf8");
   for (const required of [
     "S236B_CANDIDATE_LOCK_DIGEST_MISMATCH",
     "S236B_RUNNER_DIGEST_MISMATCH",
+    "S236B_RUNNER_LOCK_ADAPTER_DIGEST_MISMATCH",
     "S236B_RUNNER_SBOM_DIGEST_MISMATCH",
     "S236B_RUNNER_PYTHON_VERSION_MISMATCH",
     "verify_execution_dependencies(",
@@ -2091,7 +2296,7 @@ test("S235B exact 16-input and seven-dimension contracts are preserved", () => {
 });
 
 test("exact source and evidence hashes are bound", () => {
-  for (const row of contract.benchmarkHarness.scriptIdentitiesAtExecution) {
+  for (const row of contract.benchmarkHarness.currentScriptIdentities) {
     assert.equal(fileSha256(row.path), row.sha256, row.path);
   }
   assert.equal(
@@ -2120,11 +2325,34 @@ test("exact source and evidence hashes are bound", () => {
   );
   assert.equal(
     result.candidate_configuration_sha256,
-    contract.candidateContract.candidateConfigurationSha256,
+    contract.benchmarkHarness.recordedResultBinding
+      .candidateConfigurationSha256,
   );
   assert.equal(
     result.benchmark_configuration_bundle_sha256,
-    contract.candidateContract.benchmarkConfigurationBundleSha256,
+    contract.benchmarkHarness.recordedResultBinding
+      .benchmarkConfigurationBundleSha256,
+  );
+  assert.equal(
+    result.runner_sha256,
+    contract.benchmarkHarness.recordedResultBinding.runnerSha256,
+  );
+  assert.notEqual(
+    result.candidate_configuration_sha256,
+    contract.candidateContract.candidateConfigurationSha256,
+  );
+  assert.equal(
+    fileSha256(runnerPath),
+    contract.benchmarkHarness.currentOwnerImpactIteration.runnerSha256,
+  );
+  assert.equal(
+    candidateLock.coherenceRoots.candidateConfigurationSha256,
+    contract.benchmarkHarness.currentOwnerImpactIteration
+      .candidateConfigurationSha256,
+  );
+  assert.equal(
+    contract.candidateContract.currentFullBenchmarkEvidenceStatus,
+    "not_regenerated_exact_installed_inventory_binding_unavailable",
   );
 });
 

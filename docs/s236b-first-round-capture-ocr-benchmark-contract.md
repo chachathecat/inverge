@@ -37,18 +37,22 @@ OpenCV and PaddleOCR remain `proposed`.
 | Identity | SHA-256 |
 |---|---|
 | Candidate set | `68bed995d8e8bd1cb76ec59a8daacbb9423f4b71b69858c3146f07986d068993` |
-| Candidate configuration | `f06aff888510e2a5cd71a93c6360a8b52386baa7ab9170927dbaeb9f8ff9b327` |
-| Benchmark bundle | `b89a61d6938a51828b13c71585e13ac045dc58bc98559d2096002fa8d3bd82c6` |
-| Candidate rows | `8d4f00815be0bc6cd00a089e5695e826fec98ee91acb5490aa166007df3f2021` |
+| Candidate configuration | `d9d5afe8aedaeb09955595f09afc4c2019311eb675f47ecda0d3a1ad38790e04` |
+| Benchmark bundle | `10020f4f24b091ebb8203731527cfd2d32127843ee0eec635b65d58abda69972` |
+| Candidate rows | `033516037ad3ae1186c54e8d526176ae618169ceb560b583ebca6803e4974b11` |
 | Runtime component set | `d723a41e8a02496e195bf9851e5eab9d3d6d316d50d2871f8ba9f1d9b154a328` |
 
-The executed path was `opencv-python-headless==4.13.0.92`, this repository's
-adapter, `paddlepaddle==3.3.1`, and the exact
-`korean_PP-OCRv5_mobile_rec` archive. The stock PaddleOCR/PaddleX source path
-was not executed. The runner segments declared five-row and 2x2 inputs using
-only field count and image aspect ratio, then recognizes each region in visual
-order. It receives no risk labels, expected values, or expected coordinates.
-This remains field-crop text-recognition evidence only.
+The historical full-result path was `opencv-python-headless==4.13.0.92`, the
+earlier repository adapter, `paddlepaddle==3.3.1`, and the exact
+`korean_PP-OCRv5_mobile_rec` archive. It was bound to candidate configuration
+`f06aff888510e2a5cd71a93c6360a8b52386baa7ab9170927dbaeb9f8ff9b327`.
+The stock PaddleOCR/PaddleX source path was not executed.
+
+The current runner remains a field-crop text-recognition adapter. It segments
+declared five-row and 2x2 inputs using only field count and image aspect ratio,
+then recognizes each region in visual order. Its Owner-impact recovery uses
+candidate text and conservative image geometry; it receives no risk labels,
+expected values, or expected coordinates.
 
 All isolated Python distributions were inventoried before fixture generation.
 Selected installed-distribution inventories and imported module origins were
@@ -59,11 +63,11 @@ model-mount enforcement were not verified.
 
 ## Fixtures, held-out boundary, and scoring
 
-The run used 32 newly generated synthetic images with 60 fields. Real learner,
-copyrighted private, and separately authorized private fixture counts are all
-zero. Korean pseudo-words draw only from a closed 70-syllable author-created
-set. The committed manifest contains only IDs, hashes, HMACs, dimensions, and
-structure coordinates.
+The historical run used 32 newly generated synthetic images with 60 fields.
+Real learner, copyrighted private, and separately authorized private fixture
+counts are all zero. Korean pseudo-words draw only from a closed 70-syllable
+author-created set. The committed manifest contains only IDs, hashes, HMACs,
+dimensions, and structure coordinates.
 
 Runner and authority roots were distinct and non-nested. The authority path
 was not supplied to the runner, and output was committed before evaluator
@@ -75,12 +79,31 @@ Failure causes are diagnosed from observed token differences. Ambiguous
 mismatches are unclassified. Five-choice and table success requires exact
 candidate-produced ordered structure.
 
-The recorded segmented run scored 33/60 fields (55%) with no abstentions.
-A same-fixture execution of the pre-change runner scored 12/60 (20%) with 36
-abstentions. Table fields improved to 16/16; choice fields reached 5/20.
-Signs and formulas remain 0/4, Law dates and choice order remain 1/4 groups,
-and multi-crop p95 latency is 577.082 ms. Those are non-blocking P2 follow-ups,
-not Production-fitness claims.
+The historical recorded segmented run scored 33/60 fields (55%) with no
+abstentions. A same-fixture execution of its predecessor scored 12/60 (20%)
+with 36 abstentions. Table fields reached 16/16; choice fields reached 5/20.
+The historical signs, Law dates, and formulas scores were 0/4, 1/4, and 0/4.
+
+The current Owner-impact iteration changes only signs, formulas, and Law
+dates. A local synthetic same-fixture diagnostic changed overall accuracy from
+40/60 to 51/60 and those in-scope fields from 1/12 to 12/12: signs 1/4 to
+4/4, Law dates 0/4 to 4/4, and formulas 0/4 to 4/4. All 20 non-target fixture
+outputs and all four table fixture outputs were unchanged. Five additional
+synthetic robustness batches scored 60/60 in-scope fields with zero
+abstentions after the one permitted corrective round.
+
+The formula fixtures preserve canonical editable Unicode expectations while
+rendering script digits as distinguishable smaller ASCII digits at explicit
+vertical offsets. Recovery relies only on model output, CTC sequence scores,
+digit crops, and conservative connected-component geometry. It does not cross
+the Trust Evidence boundary.
+
+The diagnostic is local and nonqualifying. The historical exact installed
+inventory could not be reproduced byte-for-byte, so no current full
+inventory-bound artifact was regenerated. The 55% result, SBOM, rights, and
+rollback rows stay historical evidence. Five-choice ordering, multi-crop
+performance, and any other remaining accuracy work are P2 with no automatic
+follow-up.
 
 ## Original and native revision boundary
 

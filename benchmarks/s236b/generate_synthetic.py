@@ -9,6 +9,7 @@ import hashlib
 import hmac
 import importlib.metadata
 import json
+import re
 import secrets
 import sys
 import unicodedata
@@ -33,6 +34,14 @@ SYNTHETIC_HANGUL_SYLLABLES = (
     "고노도로모보소오조초코토포호"
     "구누두루무부수우주추쿠투푸후"
     "기니디리미비시이지치키티피히"
+)
+
+SUPERSCRIPT_DIGITS = "¹²³⁴⁵⁶⁷⁸"
+SUBSCRIPT_DIGITS = "₁₂₃₄₅₆₇₈"
+ASCII_SCRIPT_DIGITS = "12345678"
+FORMULA_PATTERN = re.compile(
+    rf"\(x([{SUPERSCRIPT_DIGITS}])−y÷([1-8])\)"
+    rf"\+z([{SUBSCRIPT_DIGITS}])=0"
 )
 
 
@@ -224,6 +233,79 @@ def structural_coordinates(risk_field: str, count: int) -> list[dict[str, int]]:
     ]
 
 
+def formula_render_runs(value: str) -> list[tuple[str, str]]:
+    """Keep every expected script digit visually distinguishable.
+
+    The pinned Korean font renders part of the Unicode superscript/subscript
+    range as the same missing-glyph box. Render the equivalent ASCII digit at
+    an explicit vertical offset instead, while the sealed expected value keeps
+    the canonical Unicode formula.
+    """
+    match = FORMULA_PATTERN.fullmatch(value)
+    if match is None:
+        raise ValueError("S236B_INVALID_SYNTHETIC_FORMULA")
+    superscript, divisor, subscript = match.groups()
+    superscript_digit = ASCII_SCRIPT_DIGITS[
+        SUPERSCRIPT_DIGITS.index(superscript)
+    ]
+    subscript_digit = ASCII_SCRIPT_DIGITS[
+        SUBSCRIPT_DIGITS.index(subscript)
+    ]
+    return [
+        ("(x", "baseline"),
+        (superscript_digit, "superscript"),
+        ("−y÷", "baseline"),
+        (divisor, "baseline"),
+        (")+z", "baseline"),
+        (subscript_digit, "subscript"),
+        ("=0", "baseline"),
+    ]
+
+
+def draw_formula(
+    draw,
+    value: str,
+    *,
+    width: int,
+    height: int,
+    font_path: Path,
+    font_size: int,
+    ink: int,
+) -> None:
+    from PIL import ImageFont
+
+    baseline_font = ImageFont.truetype(str(font_path), font_size)
+    script_font = ImageFont.truetype(str(font_path), round(font_size * 0.68))
+    runs = formula_render_runs(value)
+    run_widths = [
+        draw.textlength(
+            text,
+            font=script_font if position != "baseline" else baseline_font,
+        )
+        for text, position in runs
+    ]
+    cursor = max(10.0, (width - sum(run_widths)) / 2)
+    baseline_y = height / 2 + font_size * 0.42
+    for (text, position), run_width in zip(runs, run_widths):
+        selected_font = (
+            script_font if position != "baseline" else baseline_font
+        )
+        if position == "superscript":
+            selected_baseline = baseline_y - font_size * 0.38
+        elif position == "subscript":
+            selected_baseline = baseline_y + font_size * 0.26
+        else:
+            selected_baseline = baseline_y
+        draw.text(
+            (cursor, selected_baseline),
+            text,
+            fill=ink,
+            font=selected_font,
+            anchor="ls",
+        )
+        cursor += run_width
+
+
 def render_fixture(
     values: list[str],
     risk_field: str,
@@ -264,6 +346,16 @@ def render_fixture(
                 fill=ink,
                 font=font,
             )
+    elif risk_field == "formulas":
+        draw_formula(
+            draw,
+            values[0],
+            width=width,
+            height=height,
+            font_path=font_path,
+            font_size=font_size,
+            ink=ink,
+        )
     else:
         value = values[0]
         box = draw.textbbox((0, 0), value, font=font)

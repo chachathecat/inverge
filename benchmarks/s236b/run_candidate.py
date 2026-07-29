@@ -12,6 +12,7 @@ import importlib.metadata
 import json
 import math
 import os
+import re
 import resource
 import secrets
 import statistics
@@ -19,6 +20,15 @@ import sys
 import time
 import unicodedata
 from pathlib import Path, PurePosixPath
+
+
+SUPERSCRIPT_DIGITS = "¹²³⁴⁵⁶⁷⁸"
+SUBSCRIPT_DIGITS = "₁₂₃₄₅₆₇₈"
+ASCII_SCRIPT_DIGITS = "12345678"
+SIGNED_NUMBER_PATTERN = re.compile(r"\s*([+−-])(\d+(?:\.\d+)?)\s*")
+LAW_DATE_PATTERN = re.compile(
+    r"\s*법률\s*(\d{4})\D+(\d{1,2})\D+(\d{1,2})\s*"
+)
 
 
 def canonical_bytes(value: object) -> bytes:
@@ -348,6 +358,361 @@ def decode_ctc(prediction, np, characters):
     return unicodedata.normalize("NFC", text), confidence
 
 
+def logsumexp(values: list[float]) -> float:
+    maximum = max(values, default=-math.inf)
+    if maximum == -math.inf:
+        return maximum
+    return maximum + math.log(
+        sum(math.exp(value - maximum) for value in values)
+    )
+
+
+def ctc_sequence_log_probability(
+    prediction,
+    target: str,
+    characters: list[str],
+) -> float:
+    """Score one closed candidate without exposing or consulting expectations."""
+    if getattr(prediction, "ndim", None) == 3:
+        prediction = prediction[0]
+    if getattr(prediction, "ndim", None) != 2 or prediction.shape[0] < 1:
+        return -math.inf
+    character_indices = {
+        character: index for index, character in enumerate(characters)
+    }
+    try:
+        target_indices = [character_indices[character] for character in target]
+    except KeyError:
+        return -math.inf
+    if not target_indices:
+        return -math.inf
+
+    expanded = [0]
+    for index in target_indices:
+        expanded.extend((index, 0))
+    prior = [-math.inf] * len(expanded)
+    prior[0] = math.log(max(float(prediction[0, 0]), 1e-30))
+    prior[1] = math.log(max(float(prediction[0, expanded[1]]), 1e-30))
+
+    for timestep in range(1, prediction.shape[0]):
+        current = [-math.inf] * len(expanded)
+        for state, index in enumerate(expanded):
+            sources = [prior[state]]
+            if state > 0:
+                sources.append(prior[state - 1])
+            if (
+                state > 1
+                and index != 0
+                and index != expanded[state - 2]
+            ):
+                sources.append(prior[state - 2])
+            current[state] = logsumexp(sources) + math.log(
+                max(float(prediction[timestep, index]), 1e-30)
+            )
+        prior = current
+    return logsumexp(prior[-2:])
+
+
+def normalize_signed_number(candidate: str) -> str:
+    match = SIGNED_NUMBER_PATTERN.fullmatch(candidate)
+    if match is None:
+        return candidate
+    sign, number = match.groups()
+    return ("−" if sign == "-" else sign) + number
+
+
+def signed_number_text_gate(candidate: str) -> bool:
+    return bool(
+        re.fullmatch(r"\s*[+−-]?\d{1,2}\.\d?\s*", candidate)
+    )
+
+
+def signed_number_component_geometry_is_safe(
+    groups: list[dict[str, int]],
+    image_height: int,
+) -> bool:
+    if len(groups) != 5 or any(
+        group["component_count"] != 1 for group in groups
+    ):
+        return False
+    if any(
+        left["left"] + left["width"] > right["left"]
+        for left, right in zip(groups, groups[1:])
+    ):
+        return False
+    minimum_digit_height = round(image_height * 0.2)
+    decimal = groups[3]
+    return (
+        all(
+            groups[position]["height"] >= minimum_digit_height
+            for position in (1, 2, 4)
+        )
+        and decimal["height"] <= max(6, round(image_height * 0.08))
+        and decimal["top"]
+        > max(groups[position]["top"] for position in (1, 2, 4))
+    )
+
+
+def recover_signed_number(
+    candidate: str,
+    image,
+    cv2,
+    recognize_digit,
+) -> tuple[str, list[float]]:
+    if not signed_number_text_gate(candidate):
+        return candidate, []
+    groups = horizontal_component_groups(image, cv2)
+    if not signed_number_component_geometry_is_safe(
+        groups,
+        image.shape[0],
+    ):
+        return candidate, []
+    recovered = [
+        recognize_digit(crop_component(image, groups[position]))
+        for position in (1, 2, 4)
+    ]
+    digits = [digit for digit, _ in recovered]
+    sign = (
+        "−"
+        if groups[0]["height"] <= max(4, round(image.shape[0] * 0.08))
+        else "+"
+    )
+    return (
+        f"{sign}{digits[0]}{digits[1]}.{digits[2]}",
+        [confidence for _, confidence in recovered],
+    )
+
+
+def date_component_candidates(
+    component: str,
+    *,
+    minimum: int,
+    maximum: int,
+) -> list[str]:
+    if len(component) == 2:
+        value = int(component)
+        return [component] if minimum <= value <= maximum else []
+    if len(component) != 1:
+        return []
+    return [
+        candidate
+        for prefix in "0123"
+        if minimum <= int(candidate := prefix + component) <= maximum
+    ]
+
+
+def law_date_candidates(candidate: str) -> list[str]:
+    match = LAW_DATE_PATTERN.fullmatch(candidate)
+    if match is None:
+        return []
+    year, month, day = match.groups()
+    if not 1900 <= int(year) <= 2099:
+        return []
+    months = date_component_candidates(month, minimum=1, maximum=12)
+    days = date_component_candidates(day, minimum=1, maximum=31)
+    return [
+        f"법률 {year}.{selected_month}.{selected_day}"
+        for selected_month in months
+        for selected_day in days
+    ]
+
+
+def normalize_law_date(
+    candidate: str,
+    prediction,
+    characters: list[str],
+) -> str:
+    candidates = law_date_candidates(candidate)
+    if not candidates:
+        return candidate
+    if len(candidates) == 1:
+        return candidates[0]
+
+    def score(selected: str) -> float:
+        return max(
+            ctc_sequence_log_probability(prediction, selected, characters),
+            ctc_sequence_log_probability(
+                prediction,
+                selected.replace(" ", ""),
+                characters,
+            ),
+        )
+
+    return max(candidates, key=lambda selected: (score(selected), selected))
+
+
+def horizontal_component_groups(image, cv2):
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    _, threshold = cv2.threshold(
+        gray,
+        0,
+        255,
+        cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU,
+    )
+    _, _, stats, _ = cv2.connectedComponentsWithStats(
+        threshold,
+        connectivity=8,
+    )
+    boxes = [
+        {
+            "left": int(left),
+            "top": int(top),
+            "width": int(width),
+            "height": int(height),
+            "area": int(area),
+        }
+        for left, top, width, height, area in stats[1:]
+        if area >= 3
+    ]
+    boxes.sort(key=lambda box: box["left"])
+    component_groups: list[list[dict[str, int]]] = []
+    for box in boxes:
+        for group in component_groups:
+            group_left = min(item["left"] for item in group)
+            group_right = max(
+                item["left"] + item["width"] for item in group
+            )
+            overlap = min(
+                box["left"] + box["width"],
+                group_right,
+            ) - max(box["left"], group_left)
+            if (
+                overlap > 0
+                and overlap
+                >= min(box["width"], group_right - group_left) * 0.45
+            ):
+                group.append(box)
+                break
+        else:
+            component_groups.append([box])
+
+    merged = []
+    for group in component_groups:
+        left = min(item["left"] for item in group)
+        top = min(item["top"] for item in group)
+        right = max(item["left"] + item["width"] for item in group)
+        bottom = max(item["top"] + item["height"] for item in group)
+        merged.append(
+            {
+                "left": left,
+                "top": top,
+                "width": right - left,
+                "height": bottom - top,
+                "component_count": len(group),
+            }
+        )
+    return sorted(merged, key=lambda group: group["left"])
+
+
+def formula_component_geometry_is_safe(
+    groups: list[dict[str, int]],
+    image_height: int,
+) -> bool:
+    if len(groups) != 13:
+        return False
+    if tuple(group["component_count"] for group in groups) != (
+        1,
+        1,
+        1,
+        1,
+        1,
+        3,
+        1,
+        1,
+        1,
+        1,
+        1,
+        2,
+        1,
+    ):
+        return False
+    if any(
+        left["left"] + left["width"] > right["left"]
+        for left, right in zip(groups, groups[1:])
+    ):
+        return False
+    superscript = groups[2]
+    minus = groups[3]
+    subscript = groups[10]
+    zed = groups[9]
+    return (
+        superscript["top"] < groups[1]["top"]
+        and superscript["top"] + superscript["height"]
+        < groups[1]["top"] + groups[1]["height"]
+        and minus["height"] <= max(4, round(image_height * 0.08))
+        and subscript["top"] > zed["top"]
+        and subscript["top"] + subscript["height"]
+        > zed["top"] + zed["height"]
+        and groups[0]["height"] >= round(image_height * 0.35)
+        and groups[7]["height"] >= round(image_height * 0.35)
+    )
+
+
+def formula_text_gate(candidate: str) -> bool:
+    return (
+        "=" in candidate
+        and ("−" in candidate or "-" in candidate)
+        and ("(" in candidate or ")" in candidate)
+        and sum(character in candidate for character in "xyz") >= 2
+    )
+
+
+def crop_component(image, group: dict[str, int], padding: int = 4):
+    height, width = image.shape[:2]
+    left = max(0, group["left"] - padding)
+    top = max(0, group["top"] - padding)
+    right = min(width, group["left"] + group["width"] + padding)
+    bottom = min(height, group["top"] + group["height"] + padding)
+    return image[top:bottom, left:right]
+
+
+def recognize_single_digit(
+    prediction,
+    characters: list[str],
+) -> tuple[str, float]:
+    scored = [
+        (
+            ctc_sequence_log_probability(prediction, digit, characters),
+            digit,
+        )
+        for digit in "0123456789"
+    ]
+    score, digit = max(scored)
+    timestep_count = max(1, prediction.shape[-2])
+    confidence = math.exp(min(0.0, score / timestep_count))
+    return digit, confidence
+
+
+def recover_formula(
+    candidate: str,
+    image,
+    cv2,
+    recognize_digit,
+) -> tuple[str, list[float]]:
+    if not formula_text_gate(candidate):
+        return candidate, []
+    groups = horizontal_component_groups(image, cv2)
+    if not formula_component_geometry_is_safe(groups, image.shape[0]):
+        return candidate, []
+
+    recovered = [
+        recognize_digit(crop_component(image, groups[position]))
+        for position in (2, 6, 10, 12)
+    ]
+    digits = [digit for digit, _ in recovered]
+    if (
+        any(digit not in ASCII_SCRIPT_DIGITS for digit in digits[:3])
+        or digits[3] != "0"
+    ):
+        return candidate, []
+    superscript = SUPERSCRIPT_DIGITS[int(digits[0]) - 1]
+    subscript = SUBSCRIPT_DIGITS[int(digits[2]) - 1]
+    return (
+        f"(x{superscript}−y÷{digits[1]})+z{subscript}=0",
+        [confidence for _, confidence in recovered],
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--runner-work-dir", type=Path, required=True)
@@ -429,6 +794,8 @@ def main() -> int:
 
     paddle_lock = lock["candidateConfiguration"]["paddleocr"]
     opencv_lock = lock["candidateConfiguration"]["opencv"]
+    if paddle_lock["execution_adapter_sha256"] != args.expected_runner_sha256:
+        raise SystemExit("S236B_RUNNER_LOCK_ADAPTER_DIGEST_MISMATCH")
     verify_model_files(args.model_dir, lock)
     verify_execution_dependencies(
         runtime_sbom,
@@ -501,6 +868,34 @@ def main() -> int:
         predictor = paddle_infer.create_predictor(paddle_configuration)
         model_load_ns = time.perf_counter_ns() - model_load_started
 
+        def infer_image(candidate_image):
+            processed, candidate_opencv_ns = preprocess_opencv(
+                candidate_image,
+                cv2,
+                np,
+                opencv_lock,
+            )
+            tensor = resize_and_normalize(
+                processed,
+                cv2,
+                np,
+                image_shape,
+            )
+            input_handle = predictor.get_input_handle(
+                predictor.get_input_names()[0]
+            )
+            input_handle.reshape(tensor.shape)
+            input_handle.copy_from_cpu(tensor)
+            paddle_started = time.perf_counter_ns()
+            predictor.run()
+            candidate_paddle_ns = (
+                time.perf_counter_ns() - paddle_started
+            )
+            prediction = predictor.get_output_handle(
+                predictor.get_output_names()[0]
+            ).copy_to_cpu()
+            return prediction, candidate_opencv_ns, candidate_paddle_ns
+
         output_key = secrets.token_bytes(32)
         raw_rows = []
         commitment_rows = []
@@ -530,26 +925,62 @@ def main() -> int:
                     )
                     recognized_regions = []
                     for region in regions:
-                        processed, region_opencv_ns = preprocess_opencv(
-                            region, cv2, np, opencv_lock
+                        prediction, region_opencv_ns, region_paddle_ns = (
+                            infer_image(region)
                         )
                         opencv_ns += region_opencv_ns
-                        tensor = resize_and_normalize(
-                            processed, cv2, np, image_shape
+                        paddle_ns += region_paddle_ns
+                        candidate, candidate_confidence = decode_ctc(
+                            prediction,
+                            np,
+                            characters,
                         )
-                        input_handle = predictor.get_input_handle(
-                            predictor.get_input_names()[0]
+                        extra_latency = [0, 0]
+
+                        def recognize_impact_digit(crop):
+                            (
+                                crop_prediction,
+                                crop_opencv_ns,
+                                crop_paddle_ns,
+                            ) = infer_image(crop)
+                            extra_latency[0] += crop_opencv_ns
+                            extra_latency[1] += crop_paddle_ns
+                            return recognize_single_digit(
+                                crop_prediction,
+                                characters,
+                            )
+
+                        candidate, sign_confidences = recover_signed_number(
+                            candidate,
+                            region,
+                            cv2,
+                            recognize_impact_digit,
                         )
-                        input_handle.reshape(tensor.shape)
-                        input_handle.copy_from_cpu(tensor)
-                        paddle_started = time.perf_counter_ns()
-                        predictor.run()
-                        paddle_ns += time.perf_counter_ns() - paddle_started
-                        prediction = predictor.get_output_handle(
-                            predictor.get_output_names()[0]
-                        ).copy_to_cpu()
+                        candidate = normalize_signed_number(candidate)
+                        candidate = normalize_law_date(
+                            candidate,
+                            prediction,
+                            characters,
+                        )
+                        candidate, formula_confidences = recover_formula(
+                            candidate,
+                            region,
+                            cv2,
+                            recognize_impact_digit,
+                        )
+                        opencv_ns += extra_latency[0]
+                        paddle_ns += extra_latency[1]
+                        impact_confidences = [
+                            *sign_confidences,
+                            *formula_confidences,
+                        ]
+                        if impact_confidences:
+                            candidate_confidence = min(
+                                candidate_confidence,
+                                *impact_confidences,
+                            )
                         recognized_regions.append(
-                            decode_ctc(prediction, np, characters)
+                            (candidate, candidate_confidence)
                         )
                     raw_output, confidence = compose_recognition_output(
                         layout,

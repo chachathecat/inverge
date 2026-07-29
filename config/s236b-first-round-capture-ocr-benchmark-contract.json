@@ -132,24 +132,90 @@
       "mayQualifyAsS236BAcceptanceEvidence": false,
       "freshPostPacketExecutionRequired": true,
       "ownerDeviationDispositionOrPassingEntryPacketRequiredBeforeAnyQualifyingRerun": true
+    },
+    "currentScriptIdentities": [
+      {
+        "path": "benchmarks/s236b/generate_synthetic.py",
+        "sha256": "32b22bc90469cbc17efdb908a8f0acd5037cdea25255962a030d3522a1f10364"
+      },
+      {
+        "path": "benchmarks/s236b/run_candidate.py",
+        "sha256": "07ac87f1e7f5f3937e8dd6fff8c039cb6af36f5c651d4c7cac8cda0344e3565c"
+      },
+      {
+        "path": "benchmarks/s236b/evaluate_bodyless.py",
+        "sha256": "0bff5e08576ad855a0e74bf845fdf88153f9003750aae5647315549eeb7e6139"
+      },
+      {
+        "path": "benchmarks/s236b/cleanup_ephemeral.py",
+        "sha256": "3710044d780932ef73356b4b397300972fcdfb18a1674268f91fb5bddef84620"
+      },
+      {
+        "path": "benchmarks/s236b/exercise_rollback_fault.py",
+        "sha256": "bda1d768537119e023176ecc9b39cd50b7bb3c480a0842f50c00c886a11da210"
+      },
+      {
+        "path": "benchmarks/s236b/scan_runtime_sbom.py",
+        "sha256": "c1e059f5a52d09585f743b9b8c65ead6fe1d7f0aed6ddc4b66a5c73ae21aabaf"
+      },
+      {
+        "path": "benchmarks/s236b/network_deny.c",
+        "sha256": "5c96a4825ffa0721c41bde31eb10569fb24616a918ad9cc74210336faeb75e1f"
+      }
+    ],
+    "recordedResultBinding": {
+      "status": "historical_pre_owner_impact_iteration",
+      "candidateConfigurationSha256": "f06aff888510e2a5cd71a93c6360a8b52386baa7ab9170927dbaeb9f8ff9b327",
+      "benchmarkConfigurationBundleSha256": "b89a61d6938a51828b13c71585e13ac045dc58bc98559d2096002fa8d3bd82c6",
+      "candidateLockSha256": "94baec6ce16f1979fb137e19e00b10cd41e526ea0bc323e6bd2d3a07a2f5bc94",
+      "runtimeSbomFileSha256": "3f2f9d06fe2c8b16a604b7e9669ffbb7234e11da6b281983ac43fa4f97cfa833",
+      "generatorSha256": "995be9eac085be5062455484fbe137ee3f4bc801e62212c85fb4b083e2924952",
+      "runnerSha256": "bdbfbb2e3af2a3d64c041071ec424840aefe0c241707736508d0e7e08e691496"
+    },
+    "currentOwnerImpactIteration": {
+      "status": "local_nonqualifying_synthetic_same_fixture_diagnostic",
+      "qualifyingEvidence": false,
+      "exactInstalledInventoryBoundRunCompleted": false,
+      "generatorSha256": "32b22bc90469cbc17efdb908a8f0acd5037cdea25255962a030d3522a1f10364",
+      "runnerSha256": "07ac87f1e7f5f3937e8dd6fff8c039cb6af36f5c651d4c7cac8cda0344e3565c",
+      "candidateConfigurationSha256": "d9d5afe8aedaeb09955595f09afc4c2019311eb675f47ecda0d3a1ad38790e04",
+      "benchmarkConfigurationBundleSha256": "10020f4f24b091ebb8203731527cfd2d32127843ee0eec635b65d58abda69972",
+      "sameFixtureOverallBeforeCorrect": 40,
+      "sameFixtureOverallAfterCorrect": 51,
+      "sameFixtureFieldDenominator": 60,
+      "sameFixtureTargetBeforeCorrect": 1,
+      "sameFixtureTargetAfterCorrect": 12,
+      "sameFixtureTargetDenominator": 12,
+      "sameFixtureNonTargetOutputUnchangedFixtureCount": 20,
+      "sameFixtureNonTargetOutputFixtureCount": 20,
+      "recordedTableCorrectCount": 16,
+      "recordedTableDenominator": 16,
+      "tableOutputChangedFixtureCount": 0,
+      "tableOutputComparedFixtureCount": 4,
+      "robustnessBatchCount": 5,
+      "robustnessTargetCorrect": 60,
+      "robustnessTargetDenominator": 60,
+      "robustnessAbstainCount": 0,
+      "correctiveRoundCount": 1,
+      "remainingAccuracyWorkClassification": "p2_only_no_automatic_follow_up"
     }
   },
   "candidateContract": {
     "sourceContractVersion": "appraiser.first.capture_benchmark.protocol.v1",
     "candidateLockPath": "benchmarks/s236b/candidate-lock.json",
-    "candidateLockFileSha256": "94baec6ce16f1979fb137e19e00b10cd41e526ea0bc323e6bd2d3a07a2f5bc94",
+    "candidateLockFileSha256": "380851411bf6ba250a12b508c32932f4c6bb09d79a4877a26f5be4870ed72a86",
     "canonicalization": "RFC_8785_JSON_Canonicalization_Scheme",
     "candidateSetSha256": "68bed995d8e8bd1cb76ec59a8daacbb9423f4b71b69858c3146f07986d068993",
-    "candidateConfigurationSha256": "f06aff888510e2a5cd71a93c6360a8b52386baa7ab9170927dbaeb9f8ff9b327",
-    "benchmarkConfigurationBundleSha256": "b89a61d6938a51828b13c71585e13ac045dc58bc98559d2096002fa8d3bd82c6",
-    "orderedCandidateRowsDigest": "8d4f00815be0bc6cd00a089e5695e826fec98ee91acb5490aa166007df3f2021",
+    "candidateConfigurationSha256": "d9d5afe8aedaeb09955595f09afc4c2019311eb675f47ecda0d3a1ad38790e04",
+    "benchmarkConfigurationBundleSha256": "10020f4f24b091ebb8203731527cfd2d32127843ee0eec635b65d58abda69972",
+    "orderedCandidateRowsDigest": "033516037ad3ae1186c54e8d526176ae618169ceb560b583ebca6803e4974b11",
     "componentSetSha256": "d723a41e8a02496e195bf9851e5eab9d3d6d316d50d2871f8ba9f1d9b154a328",
     "orderedCandidateNames": [
       "OpenCV",
       "PaddleOCR"
     ],
     "opencvPinnedVersion": "opencv-python-headless==4.13.0.92;cv2==4.13.0",
-    "paddlePinnedVersion": "PaddleOCR-family:korean_PP-OCRv5_mobile_rec@a6261f800ad335aa6ef77b6f7c4dcedfd5e11b95f4d70982d41ee31c2ace5e66;adapter@bdbfbb2e3af2a3d64c041071ec424840aefe0c241707736508d0e7e08e691496;paddlepaddle==3.3.1",
+    "paddlePinnedVersion": "PaddleOCR-family:korean_PP-OCRv5_mobile_rec@a6261f800ad335aa6ef77b6f7c4dcedfd5e11b95f4d70982d41ee31c2ace5e66;adapter@07ac87f1e7f5f3937e8dd6fff8c039cb6af36f5c651d4c7cac8cda0344e3565c;paddlepaddle==3.3.1",
     "paddleOcrFamilyReferenceRepository": "PaddlePaddle/PaddleOCR",
     "paddleOcrFamilyReferenceTag": "v3.7.0",
     "paddleOcrFamilyReferenceCommitSha": "b03f46425e8ff4442b268ce449e3eef758146cd4",
@@ -187,7 +253,8 @@
       "wheelPinsLinkedToInstalledArtifactsByReceipt": false
     },
     "preEntryExecutionQualifiesForS236BGate": false,
-    "performanceClaimAllowed": false
+    "performanceClaimAllowed": false,
+    "currentFullBenchmarkEvidenceStatus": "not_regenerated_exact_installed_inventory_binding_unavailable"
   },
   "fixtureAndGroundTruthContract": {
     "fixtureSourceClass": "author_created_nondeterministic_synthetic_only",
@@ -381,7 +448,8 @@
     "namedSupplyChainReviewer": null,
     "namedRightsReviewer": null,
     "status": "incomplete",
-    "decision": "not_a_verified_license_SBOM_or_model_asset_rights_receipt"
+    "decision": "not_a_verified_license_SBOM_or_model_asset_rights_receipt",
+    "currentCandidateProjectionStatus": "historical_rows_not_regenerated_current_adapter_projection_pending"
   },
   "environmentAndRollback": {
     "evidencePath": "benchmarks/s236b/rollback-evidence.json",

@@ -29,22 +29,31 @@ the run into qualifying S236B gate evidence.
 | Identity | SHA-256 |
 |---|---|
 | Candidate set | `68bed995d8e8bd1cb76ec59a8daacbb9423f4b71b69858c3146f07986d068993` |
-| Candidate configuration | `f06aff888510e2a5cd71a93c6360a8b52386baa7ab9170927dbaeb9f8ff9b327` |
-| Benchmark bundle | `b89a61d6938a51828b13c71585e13ac045dc58bc98559d2096002fa8d3bd82c6` |
-| Candidate rows | `8d4f00815be0bc6cd00a089e5695e826fec98ee91acb5490aa166007df3f2021` |
+| Candidate configuration | `d9d5afe8aedaeb09955595f09afc4c2019311eb675f47ecda0d3a1ad38790e04` |
+| Benchmark bundle | `10020f4f24b091ebb8203731527cfd2d32127843ee0eec635b65d58abda69972` |
+| Candidate rows | `033516037ad3ae1186c54e8d526176ae618169ceb560b583ebca6803e4974b11` |
 | Runtime component set | `d723a41e8a02496e195bf9851e5eab9d3d6d316d50d2871f8ba9f1d9b154a328` |
-| Generator | `995be9eac085be5062455484fbe137ee3f4bc801e62212c85fb4b083e2924952` |
-| Runner | `bdbfbb2e3af2a3d64c041071ec424840aefe0c241707736508d0e7e08e691496` |
+| Generator | `32b22bc90469cbc17efdb908a8f0acd5037cdea25255962a030d3522a1f10364` |
+| Runner | `07ac87f1e7f5f3937e8dd6fff8c039cb6af36f5c651d4c7cac8cda0344e3565c` |
 
-The scanner inventoried 17 installed distributions. The generator and runner
-matched selected installed-distribution inventories and imported module
-origins; model hashes were checked before and after inference. Python
-executable bytes, native dependency closure, wheel-to-install provenance,
-allowlisted `sys.path`, and read-only mount enforcement were not verified.
+The full benchmark result is historical evidence bound to generator
+`995be9eac085be5062455484fbe137ee3f4bc801e62212c85fb4b083e2924952`,
+runner
+`bdbfbb2e3af2a3d64c041071ec424840aefe0c241707736508d0e7e08e691496`,
+candidate configuration
+`f06aff888510e2a5cd71a93c6360a8b52386baa7ab9170927dbaeb9f8ff9b327`,
+and benchmark bundle
+`b89a61d6938a51828b13c71585e13ac045dc58bc98559d2096002fa8d3bd82c6`.
+That execution inventoried 17 installed distributions, matched selected
+inventories and imported module origins, and checked model hashes before and
+after inference. Its Python executable bytes, native dependency closure,
+wheel-to-install provenance, allowlisted `sys.path`, and read-only mount
+enforcement were not verified.
 
 ## Accuracy
 
-The run used 32 synthetic images and 60 fields: 15 calibration and 45 hidden.
+The historical run used 32 synthetic images and 60 fields: 15 calibration and
+45 hidden.
 Real learner and copyrighted private-content counts are zero. Korean
 pseudo-words are sampled only from a closed 70-syllable, author-created set.
 The runner receives field count but no risk label, expected value, or expected
@@ -77,6 +86,38 @@ The controlled same-fixture A/B comparison was:
 This is a +35 percentage-point change with 36 fewer abstentions. The original
 PR evidence was 7/60 (11.6666%) on a different random fixture set and is not
 used as the causal A/B baseline.
+
+### Owner-impact iteration
+
+The current implementation corrects only signs, formulas, and Law dates. The
+direct causes were ASCII hyphen/final-decimal-digit loss, Law-date spacing or
+leading-digit loss, and formula script digits that were absent from the model
+dictionary and collapsed to identical missing-glyph boxes in the pinned font.
+The generator now renders canonical script digits as smaller, vertically
+offset ASCII digit runs; the runner uses candidate text, conservative pixel
+geometry, CTC candidate scoring, and separate digit crops. Expected values,
+risk labels, and expected coordinates stay outside candidate inference.
+
+| Diagnostic | Before | After |
+|---|---:|---:|
+| Overall same-fixture fields | 40/60 | 51/60 |
+| Signs | 1/4 | 4/4 |
+| Law dates | 0/4 | 4/4 |
+| Formulas | 0/4 | 4/4 |
+| In-scope total | 1/12 | 12/12 |
+| Abstentions | 0 | 0 |
+
+All 20 non-target fixture outputs were unchanged, including all four table
+fixture outputs. The committed historical result remains tables 16/16. Across
+five additional synthetic robustness batches, the final implementation scored
+60/60 in-scope fields with zero abstentions after one corrective round.
+
+These are local, nonqualifying synthetic diagnostics. A current full
+inventory-bound result was not generated because the historical installed
+inventory could not be reproduced byte-for-byte. The committed SBOM, rights,
+rollback, and 55% result remain historical adapter evidence rather than a
+current projection. Remaining accuracy and performance work is P2 and has no
+automatic follow-up.
 
 ## Failure taxonomy
 
@@ -165,7 +206,8 @@ descriptors, direct syscalls, kernel/provider isolation, and secret-exposure
 absence are not proven. The execution environment inherited non-allowlisted
 process variables, so trusted isolation remains open.
 
-These rollback identities were produced by the earlier adapter configuration.
+These rollback identities were produced by the historical adapter
+configuration.
 They remain truthful historical evidence, but are not a current signed
 coherence receipt for the segmented runner.
 
