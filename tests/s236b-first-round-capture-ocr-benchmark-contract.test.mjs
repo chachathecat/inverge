@@ -25,6 +25,8 @@ const fieldManifestPath =
 const sbomPath = "benchmarks/s236b/runtime-sbom.json";
 const rightsPath = "benchmarks/s236b/model-rights-review.json";
 const rollbackPath = "benchmarks/s236b/rollback-evidence.json";
+const generatorPath = "benchmarks/s236b/generate_synthetic.py";
+const runnerPath = "benchmarks/s236b/run_candidate.py";
 const evaluatorPath = "benchmarks/s236b/evaluate_bodyless.py";
 const cleanupPath = "benchmarks/s236b/cleanup_ephemeral.py";
 const faultProducerPath = "benchmarks/s236b/exercise_rollback_fault.py";
@@ -124,7 +126,7 @@ const expectedSharedFilesHeldForLaneA = [
 const expectedGateReadiness = [
   ["s235b_merged_sha_and_tree", "observed_at_live_start", "pending_final_exact_head_and_tree_review"],
   ["ocr_benchmark_contract_version", "bound", "pending_named_contract_reviewer"],
-  ["private_capture_boundary", "local_zero_residual_scan_with_thirty_nine_unresolved_members_or_sink_proofs", "blocked_local_remote_and_provider_sink_proofs"],
+  ["private_capture_boundary", "local_zero_residual_scan_with_nine_unresolved_members_or_sink_proofs", "blocked_local_remote_and_provider_sink_proofs"],
   ["risk_field_taxonomy", "complete_bodyless", "pending_named_contract_reviewer"],
   ["synthetic_or_separately_authorized_private_fixture_manifest", "synthetic_field_manifest_committed_bodylessly", "pending_named_fixture_reviewer_and_heldout_attestation"],
   ["proposed_candidate_lifecycle_and_benchmark_only_ceiling", "complete", "pending_named_contract_reviewer"],
@@ -136,7 +138,7 @@ const expectedGateReadiness = [
   ["named_benchmark_owner", "missing", "blocked_named_human_owner_required"],
   ["tested_rollback_receipt", "normal_actual_roots_cleaned_four_failure_probes_used_proxy_fault_roots_actual_pre_evaluator_failure_cleanup_unproven", "blocked_actual_root_failure_supervision_and_named_rollback_reviewer"],
   ["source_and_rights_manifest_version", "bodyless_manifest_version_bound", "pending_named_rights_reviewer"],
-  ["no_real_content_import_proof", "local_zero_residual_with_thirty_nine_unresolved_and_remote_pending", "blocked_exact_head_remote_provider_and_post_merge_scans"],
+  ["no_real_content_import_proof", "local_zero_residual_with_nine_unresolved_and_remote_pending", "blocked_exact_head_remote_provider_and_post_merge_scans"],
   ["explicit_manual_owner_selection", "request_scope_observed_not_a_signed_receipt", "blocked_named_human_signed_owner_selection_required"],
 ].map(([inputName, machineEvidenceStatus, gateReceiptStatus]) => ({
   inputName,
@@ -166,7 +168,6 @@ const expectedBlockingItems = [
   "named benchmark owner and named supply-chain, rights, environment, rollback, fallback, contract, fixture, and gate reviewers are absent",
   "signed root-key registry, trust-anchor projection, per-input receipts, passing packet, and seven-dimension coherence receipt are absent",
   "post-squash merged-main evidence cannot exist before merge",
-  "Lane A priority requires final shared-file and live-main reconciliation",
 ];
 
 const expectedAcceptanceAndMergePolicy = {
@@ -182,7 +183,7 @@ const expectedAcceptanceAndMergePolicy = {
   mergeMethodIfEveryGatePasses: "explicit_squash_only",
   mergeApprovedNow: false,
   reason:
-    "pre-entry exploratory execution plus absent human, rights, supply-chain, privacy, isolation, held-out, root-trust, Lane-A serialization, exact-head CI, and hostile-review gates",
+    "pre-entry exploratory execution plus absent human, rights, supply-chain, privacy, isolation, held-out, root-trust, exact-head CI, and hostile-review gates",
 };
 
 function canonicalJson(value) {
@@ -306,8 +307,8 @@ function collectErrors(candidate) {
   if (
     JSON.stringify(candidate.liveStart) !==
     JSON.stringify({
-      mainCommitSha: "f28ef275d918c3b6ee2afcd0a393959fd4763fb3",
-      mainTreeSha: "95d1efcf5e3eed12516fbd58da2dcc81bf604064",
+      mainCommitSha: "a49b51acef38a9901789b9e2037c5cbbb31605fe",
+      mainTreeSha: "59aa044b3975165e3e612bd9e1d2bb128cd3b7bb",
       s235bMergedPullRequest: 657,
       s235bCorrectivePullRequest: 658,
       s235bMergedComposition: "merged_657_plus_corrective_658",
@@ -529,7 +530,7 @@ function collectErrors(candidate) {
     JSON.stringify(candidate.privacyBoundary.requiredSinkIdsExactly) !==
       JSON.stringify(requiredSinks) ||
     candidate.privacyBoundary.localResidualCount !== 0 ||
-    candidate.privacyBoundary.localUnresolvedCount !== 39 ||
+    candidate.privacyBoundary.localUnresolvedCount !== 9 ||
     candidate.privacyBoundary.completeZeroResidualProof !== false ||
     candidate.privacyBoundary.directRawTextValueScanPerformed !== false ||
     candidate.privacyBoundary.repositoryPathAndHeadTreeStatusBound !== true ||
@@ -922,12 +923,12 @@ test("bodyless result partitions every field and preserves failed structures", (
     result.ordered_failure_rows.reduce((sum, row) => sum + row.count, 0),
     result.miss_count + result.abstain_count + result.timeout_count,
   );
-  assert.equal(result.correct_count, 7);
-  assert.equal(result.miss_count, 17);
-  assert.equal(result.abstain_count, 36);
-  assert.equal(result.overall_accuracy_ppm, 116666);
+  assert.equal(result.correct_count, 33);
+  assert.equal(result.miss_count, 27);
+  assert.equal(result.abstain_count, 0);
+  assert.equal(result.overall_accuracy_ppm, 550000);
   assert.equal(result.process_failure_count, 0);
-  assert.equal(result.unclassified_failure_count, 12);
+  assert.equal(result.unclassified_failure_count, 10);
   assert.equal(result.latency.per_fixture_timeout_supervision, false);
   assert.equal(
     result.failure_taxonomy_completeness_status,
@@ -942,14 +943,19 @@ test("bodyless result partitions every field and preserves failed structures", (
     contract.benchmarkEvidence.failureTaxonomySha256,
   );
 
-  for (const risk of ["choice_order", "tables"]) {
-    const row = result.ordered_group_structure_rows.find(
-      (candidate) => candidate.risk_field === risk,
-    );
-    assert.ok(row);
-    assert.equal(row.candidate_structure_observed_count, 0);
-    assert.equal(row.group_correct, 0);
-  }
+  const choiceStructure = result.ordered_group_structure_rows.find(
+    (candidate) => candidate.risk_field === "choice_order",
+  );
+  assert.ok(choiceStructure);
+  assert.equal(choiceStructure.candidate_structure_observed_count, 4);
+  assert.equal(choiceStructure.group_correct, 1);
+
+  const tableStructure = result.ordered_group_structure_rows.find(
+    (candidate) => candidate.risk_field === "tables",
+  );
+  assert.ok(tableStructure);
+  assert.equal(tableStructure.candidate_structure_observed_count, 4);
+  assert.equal(tableStructure.group_correct, 4);
   assert.equal(result.s236b_gate_packet_satisfied, false);
   assert.equal(result.production_fitness_claim_allowed, false);
   assert.equal(result.decision, "not_accepted_S236B_benchmark_evidence");
@@ -1303,9 +1309,9 @@ test("committed JSON is bodyless and all 12 privacy sinks fail closed", () => {
   );
   assert.equal(
     localRows.reduce((sum, row) => sum + row.unresolved_count, 0),
-    38,
+    8,
   );
-  assert.equal(result.local_privacy_scan.unresolved_count, 39);
+  assert.equal(result.local_privacy_scan.unresolved_count, 9);
   assert.equal(result.local_privacy_scan.complete_zero_residual_proof, false);
   assert.equal(result.local_privacy_scan.direct_raw_text_value_scan, false);
   assert.equal(
@@ -1509,12 +1515,130 @@ test("runtime inventory and asset rights remain truthfully unresolved", () => {
   assert.equal(rights.decision, "not_a_verified_model_asset_rights_receipt");
 });
 
+test("runner segments declared multi-field images without expectation labels", () => {
+  const source = String.raw`
+import importlib.util
+import inspect
+import os
+
+spec = importlib.util.spec_from_file_location(
+    "s236b_runner",
+    os.environ["RUNNER_PATH"],
+)
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+
+class FakeImage:
+    def __init__(self, height, width):
+        self.shape = (height, width, 3)
+
+    def __getitem__(self, key):
+        row_slice, column_slice = key
+        height, width = self.shape[:2]
+        row_start = 0 if row_slice.start is None else row_slice.start
+        row_end = height if row_slice.stop is None else row_slice.stop
+        column_start = 0 if column_slice.start is None else column_slice.start
+        column_end = width if column_slice.stop is None else column_slice.stop
+        return FakeImage(row_end - row_start, column_end - column_start)
+
+assert tuple(inspect.signature(module.segment_recognition_regions).parameters) == (
+    "image",
+    "field_count",
+)
+
+single_layout, single_regions = module.segment_recognition_regions(
+    FakeImage(84, 448),
+    1,
+)
+assert single_layout == "single"
+assert [region.shape[:2] for region in single_regions] == [(84, 448)]
+
+row_layout, row_regions = module.segment_recognition_regions(
+    FakeImage(300, 448),
+    5,
+)
+assert row_layout == "five_rows"
+assert [region.shape[:2] for region in row_regions] == [
+    (66, 448),
+    (72, 448),
+    (72, 448),
+    (72, 448),
+    (66, 448),
+]
+
+grid_layout, grid_regions = module.segment_recognition_regions(
+    FakeImage(220, 448),
+    4,
+)
+assert grid_layout == "two_by_two"
+assert [region.shape[:2] for region in grid_regions] == [(92, 206)] * 4
+
+choice, choice_confidence = module.compose_recognition_output(
+    "five_rows",
+    [(f"{index})value", 0.9 - index / 10) for index in range(1, 6)],
+)
+assert choice == "1)value\n2)value\n3)value\n4)value\n5)value"
+assert choice_confidence == 0.4
+
+table, table_confidence = module.compose_recognition_output(
+    "two_by_two",
+    [("A1", 0.9), ("B2", 0.8), ("C3", 0.7), ("D4", 0.6)],
+)
+assert table == "A1\tB2\nC3\tD4"
+assert table_confidence == 0.6
+
+for invalid_count in (0, -1, 2, 3, 6):
+    try:
+        module.segment_recognition_regions(FakeImage(100, 100), invalid_count)
+        raise AssertionError("invalid layout accepted")
+    except ValueError:
+        pass
+`;
+  const child = spawnSync("python3", ["-c", source], {
+    encoding: "utf8",
+    env: {
+      ...process.env,
+      PYTHONDONTWRITEBYTECODE: "1",
+      RUNNER_PATH: resolve(runnerPath),
+    },
+  });
+  assert.equal(child.status, 0, child.stderr || child.stdout);
+});
+
+test("synthetic Korean tokens stay inside the closed author-created syllable set", () => {
+  const source = String.raw`
+import importlib.util
+import os
+
+spec = importlib.util.spec_from_file_location(
+    "s236b_generator",
+    os.environ["GENERATOR_PATH"],
+)
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+
+allowed = module.SYNTHETIC_HANGUL_SYLLABLES
+assert len(allowed) == 70
+assert len(set(allowed)) == len(allowed)
+sample = module.hangul_token(1000)
+assert len(sample) == 1000
+assert set(sample).issubset(set(allowed))
+assert all(0xAC00 <= ord(character) <= 0xD7A3 for character in sample)
+`;
+  const child = spawnSync("python3", ["-c", source], {
+    encoding: "utf8",
+    env: {
+      ...process.env,
+      GENERATOR_PATH: resolve(generatorPath),
+      PYTHONDONTWRITEBYTECODE: "1",
+    },
+  });
+  assert.equal(child.status, 0, child.stderr || child.stdout);
+});
+
 test("runner and generator bind installed, model, adapter, and font bytes", () => {
-  const runner = readFileSync("benchmarks/s236b/run_candidate.py", "utf8");
-  const generator = readFileSync(
-    "benchmarks/s236b/generate_synthetic.py",
-    "utf8",
-  );
+  const runner = readFileSync(runnerPath, "utf8");
+  const generator = readFileSync(generatorPath, "utf8");
   for (const required of [
     "S236B_CANDIDATE_LOCK_DIGEST_MISMATCH",
     "S236B_RUNNER_DIGEST_MISMATCH",

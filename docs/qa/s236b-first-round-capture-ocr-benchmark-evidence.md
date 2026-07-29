@@ -1,37 +1,40 @@
 # S236B First-Round Capture and OCR Benchmark Evidence
 
-- Evidence date: 2026-07-24
-- Live start: `f28ef275d918c3b6ee2afcd0a393959fd4763fb3`
-- Live-start tree: `95d1efcf5e3eed12516fbd58da2dcc81bf604064`
+- Evidence date: 2026-07-29
+- Reconciled main: `a49b51acef38a9901789b9e2037c5cbbb31605fe`
+- Reconciled main tree: `59aa044b3975165e3e612bd9e1d2bb128cd3b7bb`
 - S235B contract file:
   `fcc8c806492e5f0f585fc64a68bf9dd5d11167cbf2c63de9a5ee28662eb224b6`
 - Result artifact:
-  `6e28d55b9bedce369b622c9fd4d9cf0c5d087eaa51369df811ab303e8e913cb9`
+  `e17707dac4ee89b2e4263622098923f5de672dee8506097bc0c0bdbb18950a8e`
 - Fixture manifest:
-  `a9493e825e581f2873dacf4b7f7f1c350e3de95f1798bc6ce9c5ba9d355b6630`
+  `34f70ca7a4c9e343c840ae11d70f83ccb8e2020269dd47fe48d7c78905939c73`
 - Decision: disposable pre-entry run; not accepted S236B evidence
 
 ## Start-gate reconciliation
 
-- Live `main` matched the requested commit and tree.
+- The branch was five commits behind `main`; the Owner explicitly authorized
+  a non-force reconciliation.
+- Live `main` was merged without force at the exact commit and tree above.
 - S235B is merged #657 plus corrective #658.
-- S236B was queued, with no pre-existing S236B/O3B branch or PR.
 - Lane B's `first-capture-benchmark` lock is independent from Lane A.
-- Shared roadmap/control-plane files remain unchanged for Lane A priority.
+- Relative to reconciled `main`, only the 19 S236B-owned files differ.
 
-The required S235B entry packet did not exist before execution. This run is
-non-qualifying history; it cannot be retroactively authorized.
+The required S235B entry packet did not exist before execution. The Owner's
+fast-iteration authorization permits this accuracy work but does not convert
+the run into qualifying S236B gate evidence.
 
 ## Candidate identity
 
 | Identity | SHA-256 |
 |---|---|
 | Candidate set | `68bed995d8e8bd1cb76ec59a8daacbb9423f4b71b69858c3146f07986d068993` |
-| Candidate configuration | `87e2db2aae8fc129d1104916bb83b0a80b23e2128e4eab325c5652782ddc1ee9` |
-| Benchmark bundle | `42b440d63b6ac2a7b81147bba3a03d5d4d76c5781abeccded68c8a94fe18107e` |
-| Candidate rows | `66218a91b90f95d0282c006fb1107e0827065195bc7ba8d21f1fc2913aa8594e` |
-| OpenCV artifact | `6d0ebc2c4134a37aacec364f057e91ba9e2fe1814df1ecc7ee3ed9c9f0cc9b50` |
-| Paddle adapter/model path | `b1ef804eb5257af61db8a2a844a5447e7a859870d68d1fd7fbf586b12ac4173e` |
+| Candidate configuration | `f06aff888510e2a5cd71a93c6360a8b52386baa7ab9170927dbaeb9f8ff9b327` |
+| Benchmark bundle | `b89a61d6938a51828b13c71585e13ac045dc58bc98559d2096002fa8d3bd82c6` |
+| Candidate rows | `8d4f00815be0bc6cd00a089e5695e826fec98ee91acb5490aa166007df3f2021` |
+| Runtime component set | `d723a41e8a02496e195bf9851e5eab9d3d6d316d50d2871f8ba9f1d9b154a328` |
+| Generator | `995be9eac085be5062455484fbe137ee3f4bc801e62212c85fb4b083e2924952` |
+| Runner | `bdbfbb2e3af2a3d64c041071ec424840aefe0c241707736508d0e7e08e691496` |
 
 The scanner inventoried 17 installed distributions. The generator and runner
 matched selected installed-distribution inventories and imported module
@@ -42,34 +45,49 @@ allowlisted `sys.path`, and read-only mount enforcement were not verified.
 ## Accuracy
 
 The run used 32 synthetic images and 60 fields: 15 calibration and 45 hidden.
-Real learner and copyrighted private-content counts are zero.
+Real learner and copyrighted private-content counts are zero. Korean
+pseudo-words are sampled only from a closed 70-syllable, author-created set.
+The runner receives field count but no risk label, expected value, or expected
+coordinates. It uses field count and image aspect ratio to recognize five-row
+and 2x2 layouts in visual order.
 
 | Risk | Correct | Miss | Abstain | Total | Accuracy |
 |---|---:|---:|---:|---:|---:|
-| Negation | 0 | 4 | 0 | 4 | 0% |
-| Numbers | 2 | 2 | 0 | 4 | 50% |
-| Signs | 2 | 2 | 0 | 4 | 50% |
-| Percentages | 3 | 1 | 0 | 4 | 75% |
-| Five-choice order | 0 | 0 | 20 | 20 | 0% |
-| Law dates | 0 | 4 | 0 | 4 | 0% |
-| Tables | 0 | 0 | 16 | 16 | 0% |
+| Negation | 3 | 1 | 0 | 4 | 75% |
+| Numbers | 4 | 0 | 0 | 4 | 100% |
+| Signs | 0 | 4 | 0 | 4 | 0% |
+| Percentages | 4 | 0 | 0 | 4 | 100% |
+| Five-choice order | 5 | 15 | 0 | 20 | 25% |
+| Law dates | 1 | 3 | 0 | 4 | 25% |
+| Tables | 16 | 0 | 0 | 16 | 100% |
 | Formulas | 0 | 4 | 0 | 4 | 0% |
-| **Overall** | **7** | **17** | **36** | **60** | **11.6666%** |
+| **Overall** | **33** | **27** | **0** | **60** | **55%** |
 
-Candidate-produced valid choice and table structure counts were both zero.
+Candidate-produced structure was observed for all four choice groups and all
+four table groups. One choice group and all four table groups were exact.
 Ground-truth coordinates were not substituted.
+
+The controlled same-fixture A/B comparison was:
+
+| Runner | Correct | Miss | Abstain | Accuracy |
+|---|---:|---:|---:|---:|
+| PR #660 pre-change runner | 12 | 12 | 36 | 20% |
+| Segmented runner | 33 | 27 | 0 | 55% |
+
+This is a +35 percentage-point change with 36 fewer abstentions. The original
+PR evidence was 7/60 (11.6666%) on a different random fixture set and is not
+used as the causal A/B baseline.
 
 ## Failure taxonomy
 
-The 48 non-correct fields partition into:
+The 27 non-correct fields partition into:
 
 | Failure code | Count |
 |---|---:|
-| `digit_or_decimal_substitution` | 1 |
-| `sign_loss_or_flip` | 1 |
-| `formula_token_or_structure_loss` | 3 |
-| `blank_output` | 36 |
-| `unclassified_review_required` | 12 |
+| `sign_loss_or_flip` | 3 |
+| `choice_omission_or_reorder` | 10 |
+| `formula_token_or_structure_loss` | 4 |
+| `unclassified_review_required` | 10 |
 | Every other code | 0 |
 
 Causes are inferred only from supported token differences. Fixture risk labels
@@ -82,11 +100,11 @@ Clock: monotonic `time.perf_counter_ns`; CPU; one thread; FP32; batch 1.
 
 | Stage | p50 | p95 | p99 / max |
 |---|---:|---:|---:|
-| OpenCV preprocess | 26.840 ms | 86.772 ms | 87.507 ms |
-| Paddle model-direct | 90.806 ms | 102.547 ms | 131.813 ms |
-| End to end | 122.885 ms | 178.457 ms | 181.394 ms |
+| OpenCV preprocess | 25.695 ms | 111.451 ms | 111.895 ms |
+| Paddle model-direct | 95.058 ms | 461.085 ms | 475.343 ms |
+| End to end | 121.728 ms | 577.082 ms | 589.852 ms |
 
-Model load was 89.618 ms and peak RSS was 389,456 KiB. These are local machine
+Model load was 85.039 ms and peak RSS was 388,740 KiB. These are local machine
 observations, not public performance claims.
 
 ## Held-out and revision boundary
@@ -111,7 +129,7 @@ named-human fallback receipt.
 ## Supply chain and rights
 
 SBOM self-digest:
-`bfb6a8aa46fd7a5e45928797594dc5bcdc2e07e2e4ba81e5199d0cd5734a28bf`.
+`9f1233064bc3047b126224a3c9e993cf1f43a7d904f7d539fd57c95bf2417400`.
 
 Unexpected, missing, and version-mismatched Python distributions are zero.
 Native OS/drivers, declared wheel pins for 15 components, verified
@@ -147,6 +165,10 @@ descriptors, direct syscalls, kernel/provider isolation, and secret-exposure
 absence are not proven. The execution environment inherited non-allowlisted
 process variables, so trusted isolation remains open.
 
+These rollback identities were produced by the earlier adapter configuration.
+They remain truthful historical evidence, but are not a current signed
+coherence receipt for the segmented runner.
+
 ## Privacy
 
 The evaluator disabled replacement objects, bound its own repository plus
@@ -157,14 +179,13 @@ zero residual matches.
 
 The scan is incomplete:
 
-- 30 repository members were unresolved, primarily symlink boundaries;
 - protocol-redirection and cache-environment execution bindings remain
   unresolved even when selected bytes scan clean;
 - provider/host sink proofs and direct raw-text provenance remain unresolved;
 - exact-head GitHub PR/review/check/artifact scans are pending;
 - the post-merge GitHub/cache scan is pending.
 
-The evaluator recorded 39 unresolved members or sink proofs and required
+The evaluator recorded nine unresolved members or sink proofs and required
 explicit incomplete-exploratory mode. Complete zero-residual/no-import proof
 is false.
 
@@ -176,8 +197,8 @@ registries, and expiry triggers. All coherence common values remain `null`;
 the displayed local hashes are observations, not signed S235B coherence.
 
 No passing packet exists. Rights, supply chain, isolation, held-out, privacy,
-named owner/reviewers, root trust, Lane A reconciliation, final exact-head CI,
-and P0/P1-zero hostile review are missing.
+named owner/reviewers, root trust, final exact-head CI, and P0/P1-zero hostile
+review are missing. Main reconciliation itself is complete.
 
 PR disposition must remain draft and non-mergeable. O3B, S237B, learner
 runtime, Production activation, and downstream automatic start remain off.

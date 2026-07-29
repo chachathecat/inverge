@@ -27,6 +27,14 @@ RISK_FIELDS = (
     "formulas",
 )
 
+SYNTHETIC_HANGUL_SYLLABLES = (
+    "가나다라마바사아자차카타파하"
+    "거너더러머버서어저처커터퍼허"
+    "고노도로모보소오조초코토포호"
+    "구누두루무부수우주추쿠투푸후"
+    "기니디리미비시이지치키티피히"
+)
+
 
 def canonical_bytes(value: object) -> bytes:
     return json.dumps(
@@ -165,7 +173,9 @@ def write_owner_sentinel(
 
 
 def hangul_token(length: int) -> str:
-    return "".join(chr(0xAC00 + secrets.randbelow(11172)) for _ in range(length))
+    return "".join(
+        secrets.choice(SYNTHETIC_HANGUL_SYLLABLES) for _ in range(length)
+    )
 
 
 def digits(length: int) -> str:

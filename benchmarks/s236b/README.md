@@ -28,9 +28,9 @@ formula-model, Production-fitness, or PaddleOCR-source claim is made.
 | Identity | SHA-256 |
 |---|---|
 | Candidate set | `68bed995d8e8bd1cb76ec59a8daacbb9423f4b71b69858c3146f07986d068993` |
-| Candidate configuration | `87e2db2aae8fc129d1104916bb83b0a80b23e2128e4eab325c5652782ddc1ee9` |
-| Benchmark configuration bundle | `42b440d63b6ac2a7b81147bba3a03d5d4d76c5781abeccded68c8a94fe18107e` |
-| Candidate lock file | `2be5422b02e89d37cc1fb1c4cad7ca94d73b4e1282d77e7bd730777f59b20a93` |
+| Candidate configuration | `f06aff888510e2a5cd71a93c6360a8b52386baa7ab9170927dbaeb9f8ff9b327` |
+| Benchmark configuration bundle | `b89a61d6938a51828b13c71585e13ac045dc58bc98559d2096002fa8d3bd82c6` |
+| Candidate lock file | `94baec6ce16f1979fb137e19e00b10cd41e526ea0bc323e6bd2d3a07a2f5bc94` |
 
 ## Safe execution boundary
 
@@ -51,8 +51,8 @@ blockers.
 Current execution identities:
 
 ```text
-generator  3b6d973567faec7b272f700ede21f4ade653ef6a127333621344dcdd64c1a718
-runner     b19fda61e284ccf913e78bd01a133b24a8b0543467395412cbc7bfb4fc89a4fd
+generator  995be9eac085be5062455484fbe137ee3f4bc801e62212c85fb4b083e2924952
+runner     bdbfbb2e3af2a3d64c041071ec424840aefe0c241707736508d0e7e08e691496
 evaluator  0bff5e08576ad855a0e74bf845fdf88153f9003750aae5647315549eeb7e6139
 cleanup    3710044d780932ef73356b4b397300972fcdfb18a1674268f91fb5bddef84620
 fault tool bda1d768537119e023176ecc9b39cd50b7bb3c480a0842f50c00c886a11da210
@@ -83,9 +83,22 @@ formulas. Five-choice and 2x2 table correctness requires exact
 candidate-produced ordered structure. Expected coordinates never substitute
 for candidate output.
 
+Korean pseudo-words use a closed, author-created set of 70 common compositional
+syllables rather than arbitrary Unicode Hangul. The runner gets only the
+declared field count and image pixels. Field count plus aspect ratio selects a
+single crop, five visual rows, or a 2x2 visual grid; risk labels, expected text,
+and expected coordinates are never available to candidate inference.
+
 Mismatch causes are assigned only where the observed token difference supports
 the cause. Ambiguous mismatches are
 `unclassified_review_required`; fixture risk labels are not treated as causes.
+
+The recorded segmented run scored 33/60 fields (55%) with zero abstentions.
+On the exact same fixture set, the pre-change runner scored 12/60 (20%) with
+36 abstentions. Table fields reached 16/16 and choice fields reached 5/20.
+Signs and formulas remain 0/4, and p95 increased to 577.082 ms because
+multi-field images now run multiple recognition crops. These remain P2
+accuracy/performance follow-ups, not Production claims.
 
 ## Native fallback and cleanup
 
@@ -112,9 +125,10 @@ empty-state SHA-256 was:
 
 ## Fail-closed status
 
-The local run found zero raw-body residuals, but 39 members or sink proofs are
-unresolved, including repository symlinks and provider-level sinks. Remote
-exact-head and post-merge scans are pending. Rights, license policy, native
+The local run found zero raw-body residuals, but nine members or sink proofs are
+unresolved, including protocol/cache execution bindings, direct raw-text
+provenance, and provider-level sinks. Remote exact-head and post-merge scans
+are pending. Rights, license policy, native
 SBOM, vulnerability, trusted isolation, held-out, named-human, root-trust, and
 signed seven-dimension coherence receipts are absent.
 

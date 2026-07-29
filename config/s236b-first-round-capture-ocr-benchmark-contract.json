@@ -4,8 +4,8 @@
   "selectedAt": "2026-07-24",
   "contractState": "disposable_pre_entry_exploratory_evidence_complete_S236B_entry_gate_not_satisfied",
   "liveStart": {
-    "mainCommitSha": "f28ef275d918c3b6ee2afcd0a393959fd4763fb3",
-    "mainTreeSha": "95d1efcf5e3eed12516fbd58da2dcc81bf604064",
+    "mainCommitSha": "a49b51acef38a9901789b9e2037c5cbbb31605fe",
+    "mainTreeSha": "59aa044b3975165e3e612bd9e1d2bb128cd3b7bb",
     "s235bMergedPullRequest": 657,
     "s235bCorrectivePullRequest": 658,
     "s235bMergedComposition": "merged_657_plus_corrective_658",
@@ -90,11 +90,11 @@
     "scriptIdentitiesAtExecution": [
       {
         "path": "benchmarks/s236b/generate_synthetic.py",
-        "sha256": "3b6d973567faec7b272f700ede21f4ade653ef6a127333621344dcdd64c1a718"
+        "sha256": "995be9eac085be5062455484fbe137ee3f4bc801e62212c85fb4b083e2924952"
       },
       {
         "path": "benchmarks/s236b/run_candidate.py",
-        "sha256": "b19fda61e284ccf913e78bd01a133b24a8b0543467395412cbc7bfb4fc89a4fd"
+        "sha256": "bdbfbb2e3af2a3d64c041071ec424840aefe0c241707736508d0e7e08e691496"
       },
       {
         "path": "benchmarks/s236b/evaluate_bodyless.py",
@@ -118,11 +118,11 @@
       }
     ],
     "bodylessBenchmarkResultPath": "benchmarks/s236b/bodyless-benchmark-result.json",
-    "bodylessBenchmarkResultFileSha256": "0ec8847df5c20a3714c2613fe5a65d7713d2bcc2bb145577c23ba4c586690ee6",
+    "bodylessBenchmarkResultFileSha256": "62403855168b5c711d34abd4ba3f9cf0018f8924ac2792193bd9f75af13c5c33",
     "fieldGroundTruthManifestPath": "benchmarks/s236b/field-ground-truth-manifest.json",
-    "fieldGroundTruthManifestFileSha256": "a9493e825e581f2873dacf4b7f7f1c350e3de95f1798bc6ce9c5ba9d355b6630",
+    "fieldGroundTruthManifestFileSha256": "34f70ca7a4c9e343c840ae11d70f83ccb8e2020269dd47fe48d7c78905939c73",
     "runtimeSbomPath": "benchmarks/s236b/runtime-sbom.json",
-    "runtimeSbomFileSha256": "bfa90857b835721b94c1d7fda8332a58aaf2b5cf4c71b8b920fc1af1bcb8e515",
+    "runtimeSbomFileSha256": "3f2f9d06fe2c8b16a604b7e9669ffbb7234e11da6b281983ac43fa4f97cfa833",
     "rollbackEvidencePath": "benchmarks/s236b/rollback-evidence.json",
     "rollbackEvidenceFileSha256": "4e61d58567139b7ee3161530bb9542b3083921d182a41d4c65b729d0054ee3f3",
     "preEntryExecutionAuthorization": {
@@ -137,24 +137,24 @@
   "candidateContract": {
     "sourceContractVersion": "appraiser.first.capture_benchmark.protocol.v1",
     "candidateLockPath": "benchmarks/s236b/candidate-lock.json",
-    "candidateLockFileSha256": "2be5422b02e89d37cc1fb1c4cad7ca94d73b4e1282d77e7bd730777f59b20a93",
+    "candidateLockFileSha256": "94baec6ce16f1979fb137e19e00b10cd41e526ea0bc323e6bd2d3a07a2f5bc94",
     "canonicalization": "RFC_8785_JSON_Canonicalization_Scheme",
     "candidateSetSha256": "68bed995d8e8bd1cb76ec59a8daacbb9423f4b71b69858c3146f07986d068993",
-    "candidateConfigurationSha256": "87e2db2aae8fc129d1104916bb83b0a80b23e2128e4eab325c5652782ddc1ee9",
-    "benchmarkConfigurationBundleSha256": "42b440d63b6ac2a7b81147bba3a03d5d4d76c5781abeccded68c8a94fe18107e",
-    "orderedCandidateRowsDigest": "66218a91b90f95d0282c006fb1107e0827065195bc7ba8d21f1fc2913aa8594e",
-    "componentSetSha256": "d1c80b368062b00a8afa1e18d049a11f1ddcbf6951bdbf4f79762cf7e42c8d8c",
+    "candidateConfigurationSha256": "f06aff888510e2a5cd71a93c6360a8b52386baa7ab9170927dbaeb9f8ff9b327",
+    "benchmarkConfigurationBundleSha256": "b89a61d6938a51828b13c71585e13ac045dc58bc98559d2096002fa8d3bd82c6",
+    "orderedCandidateRowsDigest": "8d4f00815be0bc6cd00a089e5695e826fec98ee91acb5490aa166007df3f2021",
+    "componentSetSha256": "d723a41e8a02496e195bf9851e5eab9d3d6d316d50d2871f8ba9f1d9b154a328",
     "orderedCandidateNames": [
       "OpenCV",
       "PaddleOCR"
     ],
     "opencvPinnedVersion": "opencv-python-headless==4.13.0.92;cv2==4.13.0",
-    "paddlePinnedVersion": "PaddleOCR-family:korean_PP-OCRv5_mobile_rec@a6261f800ad335aa6ef77b6f7c4dcedfd5e11b95f4d70982d41ee31c2ace5e66;adapter@b19fda61e284ccf913e78bd01a133b24a8b0543467395412cbc7bfb4fc89a4fd;paddlepaddle==3.3.1",
+    "paddlePinnedVersion": "PaddleOCR-family:korean_PP-OCRv5_mobile_rec@a6261f800ad335aa6ef77b6f7c4dcedfd5e11b95f4d70982d41ee31c2ace5e66;adapter@bdbfbb2e3af2a3d64c041071ec424840aefe0c241707736508d0e7e08e691496;paddlepaddle==3.3.1",
     "paddleOcrFamilyReferenceRepository": "PaddlePaddle/PaddleOCR",
     "paddleOcrFamilyReferenceTag": "v3.7.0",
     "paddleOcrFamilyReferenceCommitSha": "b03f46425e8ff4442b268ce449e3eef758146cd4",
     "paddleOcrFamilySourceCodeExecuted": false,
-    "executedScope": "opencv_preprocessing_plus_repository_adapter_plus_exported_paddle_text_recognition_model_direct_inference",
+    "executedScope": "opencv_preprocessing_plus_field_count_and_aspect_ratio_layout_segmentation_plus_repository_adapter_plus_exported_paddle_text_recognition_model_direct_inference",
     "installedRuntimeAndModelBytesVerifiedBeforeExecution": false,
     "perFixtureTimeoutSupervision": false,
     "fullPageLayoutCoverageClaimed": false,
@@ -191,9 +191,9 @@
   },
   "fixtureAndGroundTruthContract": {
     "fixtureSourceClass": "author_created_nondeterministic_synthetic_only",
-    "fixtureManifestSha256": "a9493e825e581f2873dacf4b7f7f1c350e3de95f1798bc6ce9c5ba9d355b6630",
-    "expectedResultManifestSha256": "7ffa8dad8986be38c2f7e33b32c467be55c9093fc4094aafb7f4954cb5ae11ba",
-    "outputCommitmentManifestSha256": "d3e593917aa3688c54c2534d8b77f7cf6ac6bdd2e8be116e0179082977351911",
+    "fixtureManifestSha256": "34f70ca7a4c9e343c840ae11d70f83ccb8e2020269dd47fe48d7c78905939c73",
+    "expectedResultManifestSha256": "6387e8009e00f1d185ab8339c49515725841afcee5ba595f319614b56d41b852",
+    "outputCommitmentManifestSha256": "1089e765f2bb65c0eeccca77ad831a413b8f8caf711aa00e6eba47aeee6da4bc",
     "fixtureImageCount": 32,
     "fieldCount": 60,
     "syntheticFieldCount": 60,
@@ -252,29 +252,29 @@
     "decision": "not_verified_held_out_integrity_pre_entry_exploratory_run_only"
   },
   "benchmarkEvidence": {
-    "resultArtifactSha256": "6e28d55b9bedce369b622c9fd4d9cf0c5d087eaa51369df811ab303e8e913cb9",
-    "failureTaxonomySha256": "81eb5b496705bed357e38c04835cbb3f4c2e9971bd436e1d1bba906ea9771649",
-    "fieldAccuracyRowsSha256": "da08efc9f7bd195031eedef8b2c4ab97342841907019f2b3bb96bad6d8ddd49d",
-    "groupStructureRowsSha256": "929a3ecd0cc28e428042993a95a68764b3ca1662dfd58df639dae5d90a0be31a",
+    "resultArtifactSha256": "e17707dac4ee89b2e4263622098923f5de672dee8506097bc0c0bdbb18950a8e",
+    "failureTaxonomySha256": "5e14d258d054292df6b94b7f57e5ff31014bb5168a6e9cef85b5bcee013d7776",
+    "fieldAccuracyRowsSha256": "5b91e800b3951f05b44e18564565f52e5cd311e4bbca306f3c6f7bd19345bf5a",
+    "groupStructureRowsSha256": "254e9b689cff80250ffda81db82518b2f392ba65610ccfcd8945a5a61796e7f6",
     "fixtureCount": 32,
     "fieldCount": 60,
-    "correctCount": 7,
-    "missCount": 17,
-    "abstainCount": 36,
+    "correctCount": 33,
+    "missCount": 27,
+    "abstainCount": 0,
     "timeoutCount": 0,
-    "overallAccuracyPpm": 116666,
-    "candidateProducedChoiceStructureCount": 0,
-    "candidateProducedTableStructureCount": 0,
+    "overallAccuracyPpm": 550000,
+    "candidateProducedChoiceStructureCount": 4,
+    "candidateProducedTableStructureCount": 4,
     "processFailureCount": 0,
-    "unclassifiedFailureCount": 12,
+    "unclassifiedFailureCount": 10,
     "latencyClock": "time.perf_counter_ns_monotonic",
     "latencySampleCount": 32,
-    "modelLoadNs": 89617707,
-    "endToEndP50Ns": 122884981,
-    "endToEndP95Ns": 178457496,
-    "endToEndP99Ns": 181393646,
-    "endToEndMaxNs": 181393646,
-    "peakRssKib": 389456,
+    "modelLoadNs": 85038864,
+    "endToEndP50Ns": 121728206,
+    "endToEndP95Ns": 577081780,
+    "endToEndP99Ns": 589851920,
+    "endToEndMaxNs": 589851920,
+    "peakRssKib": 388740,
     "failureTaxonomyCompletenessStatus": "diagnosed_causes_only_ambiguous_mismatches_unclassified_and_per_fixture_timeout_supervision_absent",
     "status": "exploratory_machine_run_gate_inputs_and_reviews_pending",
     "decision": "not_accepted_S236B_benchmark_evidence"
@@ -320,15 +320,15 @@
     "rawOcrBodyAllowedInGitHub": false,
     "rawBodyAllowedInLogsTelemetryScreenshotsCachesOrSharedCorpora": false,
     "localScannerVersion": "s236b.bound-repository-raw-value-and-decoded-git-blob-scanner.v4",
-    "gitWorktreeAndDotGitScannedMemberCount": 36534,
+    "gitWorktreeAndDotGitScannedMemberCount": 1495,
     "localResidualCount": 0,
-    "localUnresolvedCount": 39,
+    "localUnresolvedCount": 9,
     "repositoryPathAndHeadTreeStatusBound": true,
     "executionRepositoryIdentityBefore": {
-      "headSha": "96f9f356de2680fb6a0a1b98e0addaf3659e6c6c",
-      "treeSha": "47e38f1a393dbad1c7a04c984428adf08581486f",
-      "statusSha256": "ff65626e5a98348d0845dca4590e0ae045980ba4d76ca42bf03c7692c87979c1",
-      "worktreeStateSha256": "22c6b62cdd4404035aaf2779b0db35dcf1fa49b3fc04448654c8c68de63a5d0e"
+      "headSha": "804cf8c056311d5d34c670de3bbc76158776f770",
+      "treeSha": "6630fe1bdf169f83829f1e88c6733d22c5cbaf74",
+      "statusSha256": "b1f2b15affcd41fabc68153e120bfb3142a8e1b03310b0f41da4ec9a72f3a03c",
+      "worktreeStateSha256": "8a633ca410b18d761f1592bfdb17a22fe87a7d97e32cdeba79d88d0ade999030"
     },
     "executionRepositoryIdentityUnchangedDuringScan": true,
     "gitReplaceObjectsDisabled": true,
@@ -352,15 +352,15 @@
       "persistent_database_and_object_storage",
       "post_merge_github_and_cache_rescan"
     ],
-    "localMachineScanStatus": "zero_residual_observed_with_thirty_nine_unresolved_members_or_sink_proofs",
+    "localMachineScanStatus": "zero_residual_observed_with_nine_unresolved_members_or_sink_proofs",
     "remoteExactHeadScanStatus": "pending",
     "postMergeScanStatus": "pending",
     "completeSignedNoRealContentImportProofStatus": "pending",
     "mergeBlockedUntilAllRequiredSinksHaveZeroResidualAndZeroUnresolved": true,
-    "decodedGitBlobCount": 4487
+    "decodedGitBlobCount": 1535
   },
   "supplyChainAndRights": {
-    "runtimeSbomSha256": "bfb6a8aa46fd7a5e45928797594dc5bcdc2e07e2e4ba81e5199d0cd5734a28bf",
+    "runtimeSbomSha256": "9f1233064bc3047b126224a3c9e993cf1f43a7d904f7d539fd57c95bf2417400",
     "runtimeComponentCount": 17,
     "inventoryScope": "isolated_python_distributions_only",
     "nativeOsAndDriverInventoryStatus": "not_inventoried",
@@ -377,7 +377,7 @@
     "offlineVulnerabilityScanStatus": "not_run_offline_database_snapshot_unavailable",
     "unresolvedModelAndFixtureAssetRightsCount": 2,
     "modelRightsReviewPath": "benchmarks/s236b/model-rights-review.json",
-    "modelRightsReviewFileSha256": "137fc477180c5ac2bc173ede2eb867b4127c9f1aaabcfd5876fc8f18b8fadfec",
+    "modelRightsReviewFileSha256": "eb6b4b8c9c11625cc7852163b59d02b7ee66eb18f78d37630f520c077087d159",
     "namedSupplyChainReviewer": null,
     "namedRightsReviewer": null,
     "status": "incomplete",
@@ -457,7 +457,7 @@
       },
       {
         "inputName": "private_capture_boundary",
-        "machineEvidenceStatus": "local_zero_residual_scan_with_thirty_nine_unresolved_members_or_sink_proofs",
+        "machineEvidenceStatus": "local_zero_residual_scan_with_nine_unresolved_members_or_sink_proofs",
         "gateReceiptStatus": "blocked_local_remote_and_provider_sink_proofs"
       },
       {
@@ -517,7 +517,7 @@
       },
       {
         "inputName": "no_real_content_import_proof",
-        "machineEvidenceStatus": "local_zero_residual_with_thirty_nine_unresolved_and_remote_pending",
+        "machineEvidenceStatus": "local_zero_residual_with_nine_unresolved_and_remote_pending",
         "gateReceiptStatus": "blocked_exact_head_remote_provider_and_post_merge_scans"
       },
       {
@@ -639,7 +639,7 @@
           "model_asset_rights_receipt": "S236B.candidate_configuration_preimage.model_asset_rights_receipt.v2"
         },
         "machineCommonValueOrNull": null,
-        "rawLocalObservationOrNull": "87e2db2aae8fc129d1104916bb83b0a80b23e2128e4eab325c5652782ddc1ee9",
+        "rawLocalObservationOrNull": "f06aff888510e2a5cd71a93c6360a8b52386baa7ab9170927dbaeb9f8ff9b327",
         "machineCarrierProjectionStatus": "raw_local_observation_not_current_signed_S235B_coherence",
         "signedCoherenceStatus": "pending"
       },
@@ -664,7 +664,7 @@
           "tested_rollback_receipt": "S236B.candidate_configuration_scalar_carriers.tested_rollback_receipt.v2"
         },
         "machineCommonValueOrNull": null,
-        "rawLocalObservationOrNull": "87e2db2aae8fc129d1104916bb83b0a80b23e2128e4eab325c5652782ddc1ee9",
+        "rawLocalObservationOrNull": "f06aff888510e2a5cd71a93c6360a8b52386baa7ab9170927dbaeb9f8ff9b327",
         "machineCarrierProjectionStatus": "raw_local_observation_not_current_signed_S235B_coherence",
         "signedCoherenceStatus": "pending"
       },
@@ -689,7 +689,7 @@
           "tested_rollback_receipt": "S236B.fixture_manifest_sha256.tested_rollback_receipt.v1"
         },
         "machineCommonValueOrNull": null,
-        "rawLocalObservationOrNull": "a9493e825e581f2873dacf4b7f7f1c350e3de95f1798bc6ce9c5ba9d355b6630",
+        "rawLocalObservationOrNull": "34f70ca7a4c9e343c840ae11d70f83ccb8e2020269dd47fe48d7c78905939c73",
         "machineCarrierProjectionStatus": "raw_local_observation_not_current_signed_S235B_coherence",
         "signedCoherenceStatus": "pending"
       },
@@ -759,8 +759,7 @@
     "four failure cleanup observations use proxy fault roots; actual pre-evaluator runner and authority failure cleanup is not proven",
     "named benchmark owner and named supply-chain, rights, environment, rollback, fallback, contract, fixture, and gate reviewers are absent",
     "signed root-key registry, trust-anchor projection, per-input receipts, passing packet, and seven-dimension coherence receipt are absent",
-    "post-squash merged-main evidence cannot exist before merge",
-    "Lane A priority requires final shared-file and live-main reconciliation"
+    "post-squash merged-main evidence cannot exist before merge"
   ],
   "acceptanceAndMergePolicy": {
     "focusedTestsRequired": true,
@@ -774,7 +773,7 @@
     "autoMergeAllowed": false,
     "mergeMethodIfEveryGatePasses": "explicit_squash_only",
     "mergeApprovedNow": false,
-    "reason": "pre-entry exploratory execution plus absent human, rights, supply-chain, privacy, isolation, held-out, root-trust, Lane-A serialization, exact-head CI, and hostile-review gates"
+    "reason": "pre-entry exploratory execution plus absent human, rights, supply-chain, privacy, isolation, held-out, root-trust, exact-head CI, and hostile-review gates"
   },
   "postMergeSafeState": {
     "o3bStatusExpected": "queued_not_started",

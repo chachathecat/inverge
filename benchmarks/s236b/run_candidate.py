@@ -233,6 +233,75 @@ def preprocess_opencv(image, cv2, np, configuration):
     return result, time.perf_counter_ns() - started
 
 
+def segment_recognition_regions(image, field_count: int):
+    """Split only the benchmark's declared multi-field layouts.
+
+    The runner receives the field count before the expectation authority is
+    opened. It does not receive expected values or structural coordinates.
+    Layout selection therefore uses only that count and the image aspect
+    ratio, and every returned region remains in visual reading order.
+    """
+    if type(field_count) is not int or field_count < 1:
+        raise ValueError("S236B_INVALID_FIELD_COUNT")
+
+    height, width = image.shape[:2]
+    if height < 1 or width < 1:
+        raise ValueError("S236B_EMPTY_IMAGE")
+
+    if field_count == 5 and height * 2 >= width:
+        overlap = max(2, round(height / 50))
+        regions = []
+        for index in range(field_count):
+            start = max(0, round(index * height / field_count) - overlap)
+            end = min(
+                height,
+                round((index + 1) * height / field_count) + overlap,
+            )
+            regions.append(image[start:end, :])
+        return "five_rows", regions
+
+    if field_count == 4 and width * 2 >= height * 3:
+        inset = max(4, round(min(height, width) / 24))
+        row_boundaries = (0, height // 2, height)
+        column_boundaries = (0, width // 2, width)
+        regions = []
+        for row_index in range(2):
+            for column_index in range(2):
+                top = row_boundaries[row_index] + inset
+                bottom = row_boundaries[row_index + 1] - inset
+                left = column_boundaries[column_index] + inset
+                right = column_boundaries[column_index + 1] - inset
+                if top >= bottom or left >= right:
+                    raise ValueError("S236B_INVALID_GRID_REGION")
+                regions.append(image[top:bottom, left:right])
+        return "two_by_two", regions
+
+    if field_count != 1:
+        raise ValueError("S236B_UNSUPPORTED_FIELD_LAYOUT")
+    return "single", [image]
+
+
+def compose_recognition_output(
+    layout: str,
+    recognized_regions: list[tuple[str, float]],
+) -> tuple[str, float]:
+    if not recognized_regions:
+        raise ValueError("S236B_EMPTY_RECOGNITION_REGION_SET")
+
+    texts = [text for text, _ in recognized_regions]
+    confidences = [confidence for _, confidence in recognized_regions]
+    if layout == "single" and len(texts) == 1:
+        output = texts[0]
+    elif layout == "five_rows" and len(texts) == 5:
+        output = "\n".join(texts)
+    elif layout == "two_by_two" and len(texts) == 4:
+        output = "\t".join(texts[:2]) + "\n" + "\t".join(texts[2:])
+    else:
+        raise ValueError("S236B_RECOGNITION_LAYOUT_MISMATCH")
+
+    return output, min(confidences)
+
+
 def resize_and_normalize(image, cv2, np, image_shape):
     image_channels, image_height, base_width = image_shape
     if image_channels != 3:
@@ -455,25 +524,36 @@ def main() -> int:
                 elif file_sha256(fixture_path) != row["image_sha256"]:
                     status = "fixture_digest_mismatch"
                 else:
-                    processed, opencv_ns = preprocess_opencv(
-                        image, cv2, np, opencv_lock
+                    layout, regions = segment_recognition_regions(
+                        image,
+                        row["field_count"],
                     )
-                    tensor = resize_and_normalize(
-                        processed, cv2, np, image_shape
-                    )
-                    input_handle = predictor.get_input_handle(
-                        predictor.get_input_names()[0]
-                    )
-                    input_handle.reshape(tensor.shape)
-                    input_handle.copy_from_cpu(tensor)
-                    paddle_started = time.perf_counter_ns()
-                    predictor.run()
-                    paddle_ns = time.perf_counter_ns() - paddle_started
-                    prediction = predictor.get_output_handle(
-                        predictor.get_output_names()[0]
-                    ).copy_to_cpu()
-                    raw_output, confidence = decode_ctc(
-                        prediction, np, characters
+                    recognized_regions = []
+                    for region in regions:
+                        processed, region_opencv_ns = preprocess_opencv(
+                            region, cv2, np, opencv_lock
+                        )
+                        opencv_ns += region_opencv_ns
+                        tensor = resize_and_normalize(
+                            processed, cv2, np, image_shape
+                        )
+                        input_handle = predictor.get_input_handle(
+                            predictor.get_input_names()[0]
+                        )
+                        input_handle.reshape(tensor.shape)
+                        input_handle.copy_from_cpu(tensor)
+                        paddle_started = time.perf_counter_ns()
+                        predictor.run()
+                        paddle_ns += time.perf_counter_ns() - paddle_started
+                        prediction = predictor.get_output_handle(
+                            predictor.get_output_names()[0]
+                        ).copy_to_cpu()
+                        recognized_regions.append(
+                            decode_ctc(prediction, np, characters)
+                        )
+                    raw_output, confidence = compose_recognition_output(
+                        layout,
+                        recognized_regions,
                     )
             except MemoryError:
                 status = "out_of_memory"

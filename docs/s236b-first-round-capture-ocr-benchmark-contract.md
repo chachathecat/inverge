@@ -1,9 +1,9 @@
 # S236B First-Round Capture and OCR Benchmark Contract
 
-- Selected: 2026-07-24
+- Selected: 2026-07-24; accuracy iteration: 2026-07-29
 - Lane / lock: B / `first-capture-benchmark`
-- Live start: `f28ef275d918c3b6ee2afcd0a393959fd4763fb3`
-- Live-start tree: `95d1efcf5e3eed12516fbd58da2dcc81bf604064`
+- Reconciled main: `a49b51acef38a9901789b9e2037c5cbbb31605fe`
+- Reconciled main tree: `59aa044b3975165e3e612bd9e1d2bb128cd3b7bb`
 - Tracking issue: #659
 - State: disposable pre-entry exploration; S236B entry gate not satisfied
 
@@ -20,14 +20,15 @@ models, telemetry, or content; change shared schema, persistence, auth/RLS, or
 billing; claim QTI, xAPI, or Caliper conformance; or automatically start a
 downstream item.
 
-Lane A has priority over the 19 shared roadmap/control-plane closeout files.
-This branch changes none of them. Any Lane A merge requires a rebase,
-reconciliation, and complete exact-head evidence regeneration.
+The branch was reconciled with the exact live `main` above using a non-force
+merge. Relative to that main tree, this branch changes only its 19 S236B-owned
+files. Any later main drift requires another reconciliation and complete
+exact-head evidence regeneration.
 
 The benchmark execution was not authorized by a passing S235B entry packet.
-It cannot be repaired retroactively or used as qualifying S236B evidence. A
-fresh qualifying run is required after a passing packet, or after an explicit
-Owner disposition that acknowledges the deviation without backdating it.
+The Owner separately authorized this fast accuracy iteration; that permission
+does not backdate or satisfy the S236B entry gate. A fresh qualifying run is
+required after a passing packet or an explicit gate disposition.
 
 ## Candidate and configuration lock
 
@@ -36,15 +37,18 @@ OpenCV and PaddleOCR remain `proposed`.
 | Identity | SHA-256 |
 |---|---|
 | Candidate set | `68bed995d8e8bd1cb76ec59a8daacbb9423f4b71b69858c3146f07986d068993` |
-| Candidate configuration | `87e2db2aae8fc129d1104916bb83b0a80b23e2128e4eab325c5652782ddc1ee9` |
-| Benchmark bundle | `42b440d63b6ac2a7b81147bba3a03d5d4d76c5781abeccded68c8a94fe18107e` |
-| Candidate rows | `66218a91b90f95d0282c006fb1107e0827065195bc7ba8d21f1fc2913aa8594e` |
-| Runtime component set | `d1c80b368062b00a8afa1e18d049a11f1ddcbf6951bdbf4f79762cf7e42c8d8c` |
+| Candidate configuration | `f06aff888510e2a5cd71a93c6360a8b52386baa7ab9170927dbaeb9f8ff9b327` |
+| Benchmark bundle | `b89a61d6938a51828b13c71585e13ac045dc58bc98559d2096002fa8d3bd82c6` |
+| Candidate rows | `8d4f00815be0bc6cd00a089e5695e826fec98ee91acb5490aa166007df3f2021` |
+| Runtime component set | `d723a41e8a02496e195bf9851e5eab9d3d6d316d50d2871f8ba9f1d9b154a328` |
 
 The executed path was `opencv-python-headless==4.13.0.92`, this repository's
 adapter, `paddlepaddle==3.3.1`, and the exact
 `korean_PP-OCRv5_mobile_rec` archive. The stock PaddleOCR/PaddleX source path
-was not executed. This is field-crop text-recognition evidence only.
+was not executed. The runner segments declared five-row and 2x2 inputs using
+only field count and image aspect ratio, then recognizes each region in visual
+order. It receives no risk labels, expected values, or expected coordinates.
+This remains field-crop text-recognition evidence only.
 
 All isolated Python distributions were inventoried before fixture generation.
 Selected installed-distribution inventories and imported module origins were
@@ -57,8 +61,9 @@ model-mount enforcement were not verified.
 
 The run used 32 newly generated synthetic images with 60 fields. Real learner,
 copyrighted private, and separately authorized private fixture counts are all
-zero. The committed manifest contains only IDs, hashes, HMACs, dimensions,
-and structure coordinates.
+zero. Korean pseudo-words draw only from a closed 70-syllable author-created
+set. The committed manifest contains only IDs, hashes, HMACs, dimensions, and
+structure coordinates.
 
 Runner and authority roots were distinct and non-nested. The authority path
 was not supplied to the runner, and output was committed before evaluator
@@ -69,6 +74,13 @@ readiness-ineligible.
 Failure causes are diagnosed from observed token differences. Ambiguous
 mismatches are unclassified. Five-choice and table success requires exact
 candidate-produced ordered structure.
+
+The recorded segmented run scored 33/60 fields (55%) with no abstentions.
+A same-fixture execution of the pre-change runner scored 12/60 (20%) with 36
+abstentions. Table fields improved to 16/16; choice fields reached 5/20.
+Signs and formulas remain 0/4, Law dates and choice order remain 1/4 groups,
+and multi-crop p95 latency is 577.082 ms. Those are non-blocking P2 follow-ups,
+not Production-fitness claims.
 
 ## Original and native revision boundary
 
@@ -92,6 +104,10 @@ blocker. All recorded cleanup receipts ended at the common empty-state root
 `84e9b2125391f4d68a6f50bac3d0b1d55c41764c464d47cba50ba5d8dada7aaa`.
 The richer receipt-set digest is separate and does not replace the S235B
 rollback-state scalar.
+
+The rollback receipt set predates the segmented runner configuration. It
+remains historical machine evidence and is not promoted to current signed
+cross-input coherence.
 
 The preload shim passed IPv4, IPv6, and DNS denial probes but remains partial
 process isolation. It does not cover direct syscalls, inherited descriptors,
@@ -143,7 +159,8 @@ S235B coherence. The global status is `not_constructed_fail_closed`.
 There is no passing packet, named benchmark owner, signed owner selection,
 root-key registry, trust-anchor projection, current per-input receipt set, or
 signed coherence receipt. Rights, supply chain, isolation, held-out, privacy,
-Lane A serialization, exact-head CI, and hostile review also remain open.
+exact-head CI, and hostile review also remain open. Main reconciliation is
+complete.
 
 Merge is not approved. Auto-merge is prohibited. The only eventual method is
 explicit squash after every exact-head gate passes and a final live-state
