@@ -61,7 +61,11 @@ test("fast Owner Preview rejects signup and billing mutations before request par
   for (const source of [signup, checkout, subscription]) {
     const guardIndex = source.indexOf("isFastOwnerPreviewDeployment()");
     const parseIndex = Math.min(
-      ...["request.json()", "request.json().catch", "requireRequestUserId(request)"]
+      ...[
+        "request.json()",
+        "request.json().catch",
+        "requireRequestUserId(request)",
+      ]
         .map((needle) => source.indexOf(needle))
         .filter((index) => index >= 0),
     );
@@ -80,4 +84,67 @@ test("fast Owner Preview boundary is wired into the default node suite", async (
   const runner = await read("scripts/run-node-tests.mjs");
 
   assert.match(runner, /tests\/fast-owner-preview-boundary\.test\.mjs/);
+});
+
+test("readiness endpoint discloses environment booleans only", async () => {
+  const source = await read("app/api/preview/fast-owner-status/route.ts");
+
+  assert.match(source, /isFastOwnerPreviewDeployment\(\)/);
+  assert.match(source, /vajcduseyicjhyhrclax\.supabase\.co/);
+  assert.match(source, /ownerAllowlistExactlyOne/);
+  assert.match(source, /selectedDeploymentIsPreview/);
+  assert.match(source, /status: ready \? 200 : 503/);
+  assert.doesNotMatch(
+    source,
+    /listUsers|from\("profiles"\)|isAllowedAdminEmail/,
+  );
+  assert.doesNotMatch(
+    source,
+    /NextResponse\.json\([\s\S]*?(?:ALPHA_ADMIN_EMAILS|GEMINI_API_KEY|SUPABASE_SERVICE_ROLE_KEY|NEXT_PUBLIC_SUPABASE_ANON_KEY)[\s\S]*?\)/,
+  );
+});
+
+test("dedicated Preview runtime acceptance is exact-head, protected, and mutation-denying", async () => {
+  const workflow = await read(
+    ".github/workflows/fast-owner-preview-runtime.yml",
+  );
+
+  for (const token of [
+    "agent/fast-owner-preview",
+    "production_environment === false",
+    "x-vercel-protection-bypass",
+    "/api/runtime/version",
+    "/api/preview/fast-owner-status",
+    "/api/auth/sign-up",
+    "/api/inverge/checkout",
+    "/api/inverge/subscription",
+    'OWNER_ALPHA_UNIVERSAL_PRACTICE_ENABLED: "false"',
+    "VERCEL_GIT_COMMIT_REF: agent/fast-owner-preview",
+    "verify-owner-alpha-practice-runtime.mjs",
+    "fast_owner_preview_runtime.v1",
+    "owner.assertions.length !== expectedAssertions.size",
+    'E2E_BASE_URL: ""',
+    "actions: read",
+    "git diff --quiet",
+    "centralRuntimeGateFailClosed: true",
+    "EXPECTED_GATE_RUN_ID",
+  ]) {
+    assert.match(
+      workflow,
+      new RegExp(token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
+    );
+  }
+
+  assert.match(workflow, /deploymentEnvironment: "Preview"/);
+  assert.match(workflow, /productionEnvironment: false/);
+  assert.match(workflow, /production_environment === true/);
+  assert.match(workflow, /value\.draft !== true/);
+  assert.match(workflow, /value\.auto_merge !== null/);
+  assert.match(workflow, /--data '\{'/);
+  assert.match(workflow, /credentialsCaptured: false/);
+  assert.match(workflow, /rawLearnerContentCaptured: false/);
+  assert.doesNotMatch(
+    workflow,
+    /workflow_dispatch|target=production|--prod|\bpromote\b|enable_auto_merge|merge_pull_request|gh pr merge/,
+  );
 });

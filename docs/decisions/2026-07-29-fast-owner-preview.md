@@ -75,17 +75,30 @@ claim, commercial readiness, or Production readiness.
 The Preview may be handed to the Owner only after all of the following are
 observed on the exact branch head:
 
-- required CI is successful;
+- source CI and the dedicated `FAST OWNER PREVIEW Runtime` acceptance are
+  successful;
 - GitHub reports an exact-head Vercel Preview deployment;
 - an unauthenticated request is blocked by Vercel deployment protection;
 - `/api/runtime/version` reports the exact deployment SHA through an authorized
   verification path;
+- `ALPHA_ADMIN_EMAILS` contains exactly one non-empty Preview entry without
+  exposing that value;
 - the Owner Alpha page/API still fail closed without valid Owner auth;
 - sign-up, checkout, and subscription POST paths return `404` in the Preview;
 - the Owner's existing profile is invited or active; and
 - the seven Owner Alpha persistence tables and exact per-user RLS remain live.
 
 If any condition is unobservable or false, do not call the Preview open.
+
+Automation does not enter or retain the Owner's credentials. The positive
+Owner session begins only when the Owner uses the verified login handoff; a
+failed allowlist match remains a masked `404` and stops first use.
+
+The repository-wide `Runtime Gate` intentionally remains fail-closed because
+its only closed adapter is the S233A migration adapter; it cannot consume this
+auth-sensitive Preview evidence. That red gate keeps this Draft PR
+non-mergeable. It must not be weakened, bypassed, or reinterpreted as O4V
+evidence.
 
 ## Rollback
 
